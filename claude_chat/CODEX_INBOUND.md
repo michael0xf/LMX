@@ -32,7 +32,9 @@ This polls status every three seconds for a bounded period; it is not a persiste
 
 ## Verification status
 
-INBOUND-ACTIVE-52916 arrived in this same running Codex task through the client as native incoming delegation. This proves active-turn delivery. The Grok-originated idle-wakeup test is still pending; record completion only after the new message starts a turn following completion of the previous turn.
+INBOUND-ACTIVE-52916 arrived in this same running Codex task through the client as native incoming delegation. This proves active-turn delivery.
+
+CODEX-IDLE-WAKE-68143 then verified idle wakeup: a separate hidden local process waited for idle, sent once through the client, and the message started a new turn in the same Codex task after its previous final response. No keyboard input was used. The sender was the local LMX test process, not Grok. Grok can invoke the identical client, but a Grok-originated test was not run because its console input was nonempty; the console adapter refused to touch it. Do not confuse verified receiver wakeup with verification of the sender's environment.
 
 ## Implementation source and limitations
 

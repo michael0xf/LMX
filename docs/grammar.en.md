@@ -33,7 +33,7 @@
 
 ## 1. Scope and sources
 
-This document collects LMX spelling and structural parsing rules from the previous `Lingvamyxa_spec.txt`: lexing, forms, levels, separators, closers, Mix, and grammatical profile boundaries. Message internals, arenas, graph copying, invocation, and typing are not imported. The new semantics are in the [adjacent document](semantics.en.md).
+This document collects LMX spelling and structural parsing rules from the previous `Lingvamyxa_spec.txt`: lexing, forms, levels, separators, closers, Mix, and grammatical profile boundaries. Message internals, arenas, graph copying, invocation, and typing are not imported. The new semantics are in the [adjacent document](LMX_semantics.en.md).
 
 The primary source is `lingvamyxa/Lingvamyxa_spec.txt`; the `L1/Lingvamyxa_spec.txt` copy was compared separately. Previous section and line numbers identify provenance, not new semantic rules. The [source comparison](source-comparison.en.md) lists changes. RU/EN have identical sections and source excerpts.
 
@@ -1769,7 +1769,7 @@ An empty vertical body is an empty Structure, synonymous with `()`. It is alread
 
 The “colon receiver without arguments” error concerns an absent argument, not a present empty Structure argument. Validation runs after assembling and preserving an explicitly formed vertical body. The old “zero fields after assembly means error” rule needs correction wherever assembly loses an empty vertical body. Historical rejection expectations in that case are not the LMX norm.
 
-`f()`, `()`, and an admitted bare nullary `f` remain distinct permitted forms. An empty inline tail followed by a nonempty vertical body is also valid. Bare `end` remains separately forbidden. This clarification changes the grammar and future test expectations; old parsers have not yet been modified as part of documentation extraction.
+`f()`, `()`, and an admitted bare nullary `f` remain distinct permitted forms. An empty inline tail followed by a nonempty vertical body is also valid. Bare `end` remains separately forbidden.
 
 **Valid: an empty Structure argument** — author / автор, 2026-09-19.
 
@@ -2600,6 +2600,6 @@ Extraction is not a claim that an old or new translator already implements every
 
 The author’s 2026-09-19 clarification corrects the previous rejection of empty vertical bodies: they are empty Structure arguments, not absent arguments. Old empty-body examples are retained; lack of internal fields alone does not make them errors. Also, §4.3 gives a flat normal form for mixed inline/vertical continuation, whereas §§4.2.1 and 15.0 require retaining the down/up Structure boundary. This inconsistency between source descriptions is recorded explicitly; it is not resolved by inventing a new rule.
 
-Detailed diagnostics for malformed Mix marks inside strings and the specific `{#...}` form are not separately defined in the two compared specifications. They must not be invented during extraction. The documented rules are common P0 brace parsing, shielded outer-literal boundaries, isolated internal marks, and unchanged string values. Checking the historical implementation and its tests is a separate next stage.
+Detailed diagnostics for malformed Mix marks inside strings and the specific `{#...}` form are not separately defined in the two compared specifications. The documented rules are common P0 brace parsing, shielded outer-literal boundaries, isolated internal marks, and unchanged string values.
 
 References to Message, methods, ABI, and memory in old grammatical chapters have not become new semantics. Complete catalogs of receivers, numerical libraries, network protocols, and runtime services remain outside the general grammar: their names use the ordinary forms already described.

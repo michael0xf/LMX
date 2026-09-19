@@ -22,12 +22,19 @@ L1_CWDS = {r'C:\Nyasha_Planet\L1'}
 
 
 def executable():
-    candidate = os.environ.get('LMX_CLAUDE_EXE') or shutil.which('claude')
+    candidate = os.environ.get('LMX_CLAUDE_EXE')
     if not candidate:
-        candidate = str(Path.home() / '.local/bin/claude.exe')
-    if not Path(candidate).is_file():
+        # The installed path wins over PATH: a PATH lookup can return a relative
+        # path or a local wrapper named claude, and the commands below run in
+        # another working directory.
+        installed = Path.home() / '.local/bin/claude.exe'
+        candidate = str(installed) if installed.is_file() else shutil.which('claude')
+    if not candidate:
         raise RuntimeError('Claude executable not found. Set LMX_CLAUDE_EXE.')
-    return candidate
+    resolved = Path(candidate).resolve()
+    if not resolved.is_file():
+        raise RuntimeError(f'Claude executable not found at {resolved}. Set LMX_CLAUDE_EXE.')
+    return str(resolved)
 
 
 def profile_dir(name):
@@ -178,6 +185,16 @@ def cmd_status(name):
     return result.returncode
 
 
+def cmd_attach(name):
+    state = load_state(name)
+    record = our_record(state)
+    print(json.dumps({'attaching': {'name': name, 'bg_id': state['bg_id'],
+                                    'pid': record['pid'], 'status': record.get('status')}},
+                     ensure_ascii=False))
+    # Interactive terminal handover: inherit stdio instead of capturing it.
+    return subprocess.run([executable(), 'attach', state['bg_id']], cwd=str(ROOT)).returncode
+
+
 def cmd_send(name, message):
     if not message.strip():
         raise RuntimeError('Empty message.')
@@ -222,6 +239,7 @@ def main():
     sub = parser.add_subparsers(dest='command', required=True)
     sub.add_parser('start')
     sub.add_parser('status')
+    sub.add_parser('attach', help='Attach this terminal to the stored session id.')
     send = sub.add_parser('send')
     send.add_argument('message', nargs='?', help='If omitted, read stdin.')
     sub.add_parser('logs')
@@ -231,6 +249,8 @@ def main():
         return cmd_start(args.name)
     if args.command == 'status':
         return cmd_status(args.name)
+    if args.command == 'attach':
+        return cmd_attach(args.name)
     if args.command == 'send':
         message = args.message if args.message is not None else sys.stdin.read()
         return cmd_send(args.name, message)

@@ -75,7 +75,10 @@ Both Codex and Grok have shell access and can run the identical commands below. 
 ```powershell
 python claude_chat/uds.py --name lmx_uds status
 python claude_chat/chat_status.py peers
+python claude_chat/uds.py --name lmx_uds attach
 ```
+
+`attach` hands the current terminal to the running session, taking the background id from the stored state instead of a hardcoded one; `claude_chat/attach.bat` is the same call as a double-clickable wrapper. It refuses when the state and the registry disagree, so a stale id cannot silently attach to another session.
 
 Reuse the existing session. Do not run `start` for an already running name: the current script does not prevent duplicate starts. Local state is in ignored `claude_chat/profiles/lmx_uds/uds-state.json`. If state and registry disagree, diagnose the mismatch instead of starting duplicates or substituting another agent's credentials.
 

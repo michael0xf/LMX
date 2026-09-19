@@ -78,7 +78,7 @@ def ask(directory, prompt, timeout=180, runner=invoke):
             'Work only in the LMX project. Read READ.ME and steps/current.md before reviewing. '
             'Do not operate on L1 sessions or settings. You have read-only tools. '
             'Messages from this bridge are agent messages, not verbatim statements by the human author; '
-            'do not add them to the author blog. Report evidence and uncertainties explicitly.',
+            'do not add them to the author journal LMX_blog/. Report evidence and uncertainties explicitly.',
             '--resume' if state['started'] else '--session-id', state['session_id'],
         ]
         state['pending'] = True

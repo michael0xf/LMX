@@ -10,6 +10,8 @@ DATA = ROOT / 'provenance' / 'grammar.json'
 def render(data, lang):
     title = 'Грамматика LMX' if lang == 'ru' else 'LMX grammar'
     out = [f'# {title}', '']
+    out += [f'- [{s["number"]}. {s[lang]["title"]}](#{s["id"]})' for s in data['sections']]
+    out += ['']
     for section in data['sections']:
         out += [f'<a id="{section["id"]}"></a>', '', f'## {section["number"]}. {section[lang]["title"]}', '', section[lang]['text'], '']
         for example in section.get('examples', []):

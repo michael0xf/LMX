@@ -1,5 +1,34 @@
 # LMX grammar
 
+- [1. Scope and sources](#scope)
+- [2. Structures, fields, and Frames](#structure)
+- [3. Source bytes, lines, and coordinates](#positions)
+- [4. Numeric literals](#numbers)
+- [5. Bare and exact identifiers](#identifiers)
+- [6. Ordinary strings and character constants](#c-strings)
+- [7. Triple quotes](#raw-quotes)
+- [8. Block text and encodings](#block-text)
+- [9. Comments and disabled blocks](#comments)
+- [10. Compact, short, and vertical forms](#frames)
+- [11. Comma, semicolon, and positional skips](#separators)
+- [12. Anonymous containers and repeatable forms](#anonymous)
+- [13. No hidden signature-based grouping](#no-inference)
+- [14. Bounded forms: brackets](#bounded)
+- [15. Source levels and indentation](#levels)
+- [16. Dotted delimiters and dash fences](#markers)
+- [17. Named closure and terminal forms](#close)
+- [18. Missing arguments and an empty vertical body](#empty-colon)
+- [19. Braces and Mix anchoring](#mix)
+- [20. Spelling intersecting marks](#mix-overlay)
+- [21. Operator tokens and expression boundaries](#operators)
+- [22. Address, index, and path forms](#paths)
+- [23. Explicit C surface and profile boundaries](#foreign)
+- [24. The single P0 automaton](#automaton)
+- [25. Surface-form EBNF](#ebnf)
+- [26. Structural-result EBNF](#normal-form)
+- [27. Original literal-boundary examples](#fixtures)
+- [28. Extraction boundaries and source inconsistencies](#source-limits)
+
 <a id="scope"></a>
 
 ## 1. Scope and sources
@@ -1747,6 +1776,12 @@ The “colon receiver without arguments” error concerns an absent argument, no
 ````text
 receiver:
 ---
+````
+
+**Valid: the same empty Structure argument** — author / автор, 2026-09-19.
+
+````text
+receiver: ()
 ````
 
 **Valid nonempty vertical return body** — `Lingvamyxa_spec.txt`, 8985–8987.

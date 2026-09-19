@@ -1,5 +1,7 @@
 # Codex ↔ Grok: verified direct conversation
 
+Common operational guide for Codex and Grok: [chat_config.md](../chat_config.md).
+
 The client is `claude_chat/grok.py`. It talks directly to the installed **Grok CLI** over ACP JSON-RPC on stdin/stdout. Claude Code, `lmx_uds`, named pipes, and filesystem mailboxes are not involved.
 
 ## Run from the LMX root

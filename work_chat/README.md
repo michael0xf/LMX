@@ -9,7 +9,18 @@ This directory contains instructions, not filesystem mailboxes. Read this guide 
 - **Codex:** the existing desktop task bound by codex_inbound.py. Only the intended Codex task should run `bind`; it refreshes the local desktop pipe after restart and selects the recipient. External agents must not rebind it.
 - **Grok CLI:** the user's existing terminal conversation. Discover its current ID using the command below. The separate grok.py ACP conversation is a different recipient.
 - **Grok Bot:** the desktop assistant that wrote [grok_bot.md](../grok_bot.md), local agent ID `2ff57700-9d3b-4933-a349-76bbe9f8aac7`. It is not listed as a Grok CLI session.
-- **Claude Code:** discover names and addresses through ListAgents inside Claude, or the local metadata reader below. lmx_uds is the dedicated Claude relay, not Codex or Grok.
+- **Claude Code:** every session starts under a fixed name set by its launcher (table below). Discover live addresses through ListAgents inside Claude, or the local metadata reader below. lmx_uds is the dedicated Claude relay, not Codex or Grok.
+
+### Permanent Claude session names
+
+| Name | Launcher | Model and provider | Working directory |
+| --- | --- | --- | --- |
+| `lmx_uds` | `python claude_chat/uds.py --name lmx_uds start`; attach a terminal with `C:\claude\claude.bat` | Anthropic, background relay session | `C:\Nyasha_Planet\LMX\claude_chat` |
+| `fable` | `C:\claude\fable.bat` | Anthropic Fable, effort xhigh | the directory it is started from |
+| `deepseek` | `C:\deepseek\deepseek.bat` | deepseek-flash through the DeepSeek Anthropic endpoint | `C:\Nyasha_Planet\L1` |
+| `openrouter` | `C:\openrouter\openrouter.bat` | poolside/laguna-s-2.1 through OpenRouter | `C:\Nyasha_Planet\L1` |
+
+Each launcher passes the CLI `--name` flag, so these names survive restarts and can be used directly as `SendMessage` recipients and as `chat_status.py read --name` arguments, without rediscovering a name first. The earlier names `l1-c9`, `l1-91` and `l1-98` were derived by the CLI from the working directory plus a random suffix and changed at every start; they are obsolete and must not be reintroduced into instructions. A name takes effect from the next start of that launcher. Two concurrent copies of one launcher would register the same name twice, which `chat_status.py read --name` rejects; `fable.bat` accepts `LMX_FABLE_NAME` to give a second instance a distinct name. The launchers themselves live outside this repository, under `C:\claude`, `C:\deepseek` and `C:\openrouter`.
 
 ```powershell
 Set-Location C:\Nyasha_Planet\LMX
@@ -17,7 +28,7 @@ python claude_chat/chat_status.py peers
 python claude_chat/codex_inbound.py status
 ```
 
-Names/PIDs can change. Resolve recipients before sending; do not create a replacement conversation merely because an old address stopped working. Ask the user only if the intended recipient is absent or ambiguous. Configuration and credentials stay outside tracked documentation.
+PIDs and session IDs change at every start; the four names above do not. Resolve PIDs before sending; do not create a replacement conversation merely because an old address stopped working. Ask the user only if the intended recipient is absent or ambiguous. Configuration and credentials stay outside tracked documentation.
 
 ## Recommended routes: all directed combinations
 
@@ -53,7 +64,7 @@ Any authorized local sender:
 python claude_chat/codex_inbound.py send --sender Grok_bot --request-id UNIQUE-CODE "Your message and explicit reply route"
 ```
 
-Use the real sender label, such as Grok, Grok_bot or Claude-l1-c9. This is a label, not authenticated identity. A message is framed as peer input, not additional user approval. The client preserves model/effort and targets the bound existing task. Optional `--wait-idle 300` waits for idle before sending once; it does not install a watcher.
+Use the real sender label, such as Grok, Grok_bot or Claude-deepseek. This is a label, not authenticated identity. A message is framed as peer input, not additional user approval. The client preserves model/effort and targets the bound existing task. Optional `--wait-idle 300` waits for idle before sending once; it does not install a watcher.
 
 `python claude_chat/codex_inbound.py read` can return empty items even for a completed turn with a real visible answer. Grok Bot observed this for GROK-BOT-HELLO-73186; Codex actually received it and produced its ACK. Do not infer no response from empty items. Prefer an explicit return message to the sender's endpoint; fixing text retrieval remains outstanding. See [Codex setup](../claude_chat/CODEX_INBOUND.md).
 
@@ -63,7 +74,7 @@ Reuse the existing relay:
 
 ```powershell
 python claude_chat/uds.py --name lmx_uds status
-python claude_chat/uds.py --name lmx_uds send "From Grok_bot, request UNIQUE-CODE. Resolve l1-c9 with ListAgents. SendMessage asking it to reply ACK UNIQUE-CODE to your sender address. Print its actual reply here. No code changes."
+python claude_chat/uds.py --name lmx_uds send "From Grok_bot, request UNIQUE-CODE. Resolve deepseek with ListAgents. SendMessage asking it to reply ACK UNIQUE-CODE to your sender address. Print its actual reply here. No code changes."
 python claude_chat/chat_status.py read --name lmx_uds --contains UNIQUE-CODE
 ```
 

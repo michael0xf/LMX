@@ -34,6 +34,8 @@
 
 - Новый вход в существующую задачу Codex: [CODEX_INBOUND.md](../claude_chat/CODEX_INBOUND.md). Активная доставка INBOUND-ACTIVE-52916 и пробуждение из idle CODEX-IDLE-WAKE-68143 проверены. Второй тест отправил отдельный локальный процесс; Grok может вызывать тот же клиент, но его отправка ещё не проверена.
 
+- Постоянные имена сессий Claude заданы в самих лаунчерах флагом `--name`: `lmx_uds` (реле), `fable` (`C:\claude\fable.bat`, Fable, effort xhigh), `deepseek` (`C:\deepseek\deepseek.bat`) и `openrouter` (`C:\openrouter\openrouter.bat`). Таблица с моделями и рабочими каталогами — в [work_chat/README.md](../work_chat/README.md). Прежние производные имена `l1-c9`, `l1-91`, `l1-98` устарели и не должны попадать в инструкции; имя действует со следующего запуска своего лаунчера, а сами лаунчеры лежат вне репозитория.
+
 - Для Codex и Grok использовать [chat_config.md](../chat_config.md): все каналы, настройка, discovery, отправка и чтение ответов. `python claude_chat/chat_status.py peers` показывает текущие адреса, `read --name lmx_uds --contains CODE` читает только текст из родной истории. Старые исследования не являются текущими инструкциями.
 
 ## Мост Claude Code

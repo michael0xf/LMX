@@ -32,7 +32,7 @@ python claude_chat/chat_status.py peers
 
 This reads public metadata from `~/.claude/sessions/*.json` and `~/.grok/active_sessions.json`. It does not read or print credentials. Check name, working directory, session ID and PID before choosing a recipient. Registry entries alone are not proof that a model can answer. If an entry is stale or a name is ambiguous, resolve that before sending.
 
-At the last successful test, Claude names were `lmx_uds`, `l1-c9` and `l1-91`; `l1-98` was no longer listed. Do not send to an old PID just because it appears in an earlier document. Inside Claude, `ListAgents` is the preferred way to resolve recipients immediately before `SendMessage`.
+Claude sessions now start under fixed names set by their launchers: `lmx_uds` (the relay), `fable`, `deepseek` and `openrouter`. Launchers, models and working directories are listed in [work_chat/README.md](work_chat/README.md). These names survive restarts, so a recipient no longer has to be rediscovered by name; PIDs and session IDs still change at every start, so do not send to an old PID just because it appears in an earlier document. The names `l1-c9`, `l1-91` and `l1-98` used in earlier tests were derived from the working directory plus a random suffix and are obsolete. Inside Claude, `ListAgents` remains the preferred way to confirm a recipient immediately before `SendMessage`.
 
 The active Grok used in the verified test was `01a0baf9-6401-7dc3-9819-f322b493bec6`. Re-read the registry before reusing it. Ask the user only when several plausible recipients remain or the intended agent is absent.
 
@@ -87,10 +87,10 @@ Reuse the existing session. Do not run `start` for an already running name: the 
 Example for Grok (Codex uses the same command with its own sender label and code):
 
 ```powershell
-python claude_chat/uds.py --name lmx_uds send "From Grok. Request GROK-CLAUDE-001. Use ListAgents to resolve the current l1-c9. SendMessage to it: Please reply to this sender via SendMessage with ACK GROK-CLAUDE-001 and your session name. Print its actual answer here unchanged. Do not contact any other peer or do code work."
+python claude_chat/uds.py --name lmx_uds send "From Grok. Request GROK-CLAUDE-001. Use ListAgents to resolve deepseek. SendMessage to it: Please reply to this sender via SendMessage with ACK GROK-CLAUDE-001 and your session name. Print its actual answer here unchanged. Do not contact any other peer or do code work."
 ```
 
-For real work replace the test payload with the actual task and a fresh request code. The relay must ask the recipient to reply to its sender via `SendMessage`. Do not give it a nonexistent Codex or Grok pipe. Do not mistake `l1-91` or any Claude peer for Codex.
+For real work replace the test payload with the actual task and a fresh request code. The relay must ask the recipient to reply to its sender via `SendMessage`. Do not give it a nonexistent Codex or Grok pipe. Do not mistake `fable`, `deepseek`, `openrouter` or any other Claude peer for Codex.
 
 For multiline text, `uds.py send` accepts standard input when the message argument is omitted. Use a literal PowerShell here-string; do not interpolate task text into executable shell syntax.
 
@@ -106,7 +106,7 @@ The output contains user/assistant text and timestamps only, excluding thinking 
 python claude_chat/chat_status.py read --name lmx_uds --contains GROK-CLAUDE-001 --after 2026-09-19T20:00:00.000Z
 ```
 
-Reading does not wait or mark messages consumed. If the peer is busy, check again after a reasonable interval; do not send the task repeatedly. A final text from the relay saying it is waiting is not completion. If necessary, read the recipient's native text with `--name l1-c9` to distinguish delivery from a delayed reply.
+Reading does not wait or mark messages consumed. If the peer is busy, check again after a reasonable interval; do not send the task repeatedly. A final text from the relay saying it is waiting is not completion. If necessary, read the recipient's native text with its own name, for example `--name deepseek`, to distinguish delivery from a delayed reply.
 
 Diagnostic fallback only:
 

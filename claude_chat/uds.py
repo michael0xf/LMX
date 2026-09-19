@@ -17,7 +17,9 @@ WORK = Path(__file__).resolve().parent
 PROFILES = WORK / 'profiles'
 SESSIONS = Path.home() / '.claude' / 'sessions'
 PIPE_PREFIX = r'\\.\pipe\LOCAL\cc-msg-'
-L1_NAMES = {'l1-98', 'l1-c9'}
+# The fixed launcher names, plus the derived ones seen before those launchers
+# passed --name. A name can still change; L1_CWDS is what always holds.
+L1_NAMES = {'l1-98', 'l1-c9', 'deepseek', 'openrouter'}
 L1_CWDS = {r'C:\Nyasha_Planet\L1'}
 
 

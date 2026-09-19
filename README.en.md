@@ -3,6 +3,8 @@
 The new project starts with documentation. The previous kernel design is not imported.
 
 - [Semantics](docs/LMX_semantics.en.md): the opening supplied by the author and levels L0–L3.
+- [L1 and core implementation](docs/L1_spec_en.md).
+- [Low-level L2 operations](docs/L2_spec_en.md).
 - [Grammar](docs/LMX_grammar.en.md): P0 rules and original examples, separate from the kernel.
 - [Comparison of previous specifications](docs/source-comparison.en.md).
 - [Parser tests and migration status](tests/parser/README.en.md).

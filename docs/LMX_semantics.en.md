@@ -10,5 +10,5 @@ LMX is also a grammar capable of representing both data in a complex, uniquely s
 
 - **L0** is native code: microprocessor instructions or virtual-machine instructions. For a microprocessor, the translation chain is **L3 → L2 → L1 → C99 → L0**; for a virtual machine, it is **L3 → L0** directly. Arrows denote translation stages.
 - **L1** is the level of the L1 language and C99, described in [L1_spec_en.md](L1_spec_en.md) and [L1_spec_ru.md](L1_spec_ru.md).
-- **L2** is LMX itself with low-level operations.
-- **L3** is pure, hermetic LMX.
+- **L2** is LMX itself with low-level operations, described in the [L2 specification](L2_spec_en.md).
+- **L3** is pure, hermetic LMX. Its semantics are the subject of this main specification.

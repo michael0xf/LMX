@@ -1,3 +1,9 @@
 # L1 specification
 
-The scope of this specification is the L1 language and C99, level L1 in the [main LMX specification](LMX_semantics.en.md).
+This specification covers the L1 language, its translation to C99, and the precise implementation of the L2 core in L1 and C. Data representation, memory placement, access from threads, and execution mechanisms are part of this specification, including details on which preservation of the language model depends.
+
+The semantics of pure, hermetic LMX (L3) are defined in the [main specification](LMX_semantics.en.md). Special low-level L2 operations and their meaning are described in the [L2 specification](L2_spec_en.md); their implementation belongs to this specification.
+
+## Atomic handshake flags
+
+Atomic handshake flags reside in the parent's arena. Multiple threads may access these flags, including modifying them, without synchronization. Multiple threads may also access immutable constant branches; unlike these branches, the flags are mutable.

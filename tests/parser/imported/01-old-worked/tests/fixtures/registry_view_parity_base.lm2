@@ -1,0 +1,97 @@
+table:
+    source
+    name: `registry.view.parity.lookup`
+    columns: (class: class) (@: char value)
+    rows:
+             default      baseDefault
+             baseExact    baseExactValue
+             shadow       baseShadowValue
+             duplicate    baseDuplicateFirst
+             duplicate    baseDuplicateLast
+end: `registry.view.parity.lookup`
+
+table:
+    source
+    name: `registry.view.parity.multi`
+    columns: (class: class) (@: char left) (@: char right)
+    rows:
+             baseMulti    baseLeft          None
+             sharedMulti  baseSharedLeft    baseSharedRight
+end: `registry.view.parity.multi`
+
+table:
+    source
+    name: `registry.view.parity.dotted`
+    columns: (class: class) (@: char value)
+    rows:
+             dottedKey  baseDottedValue
+end: `registry.view.parity.dotted`
+
+table:
+    source
+    name: `registry.view.parity.keyonly`
+    columns: (class: class)
+    rows:
+             baseKeyOnly
+             duplicateKeyOnly
+end: `registry.view.parity.keyonly`
+
+table:
+    source
+    name: `registry.view.parity.allnone`
+    columns: (class: class) (@: char left) (@: char middle) (@: char right)
+    rows:
+             baseAllNone  None  None  None
+end: `registry.view.parity.allnone`
+
+table:
+    source
+    name: `registry.view.parity.duplicateColumns`
+    columns: (class: class) (@: char value) (@: char value)
+    rows:
+             baseDuplicateColumns  baseFirst  baseSecond
+end: `registry.view.parity.duplicateColumns`
+
+table:
+    source
+    name: registryViewParityWideA
+    columns: (class: class) (@: char left) (@: char middle) (@: char right)
+    rows:
+             wideAFirst    aLeft       None       aRight
+             sharedWide    aShared     aMiddle    None
+             wideAAllNone  None        None       None
+end: registryViewParityWideA
+
+table:
+    source
+    name: registryViewParityWideB
+    columns: (class: class) (@: char left) (@: char middle) (@: char right)
+    rows:
+             wideBFirst    bLeft       bMiddle    bRight
+             sharedWide    bShared     None       bRight
+             wideBAllNone  None        None       None
+end: registryViewParityWideB
+
+table:
+    source
+    name: registryViewParityJoinBase
+    columns: (class: class) (@: char value)
+    rows:
+             baseJoin  baseJoinValue
+end: registryViewParityJoinBase
+
+table:
+    source
+    name: registryViewParityNamespaceBase
+    columns: (class: class) (class: `receiver.type`)
+    rows:
+             registryViewParityAssert  `receiver.statement`
+end: registryViewParityNamespaceBase
+
+table:
+    source
+    name: `receiver.statement`
+    columns: (class: class) (binding: receiver)
+    rows:
+             registryViewParityAssert  lm_trans_statement_emit_assert
+end: `receiver.statement`

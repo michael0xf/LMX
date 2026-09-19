@@ -15,3 +15,9 @@ The observed route is Codex POST → existing Bot routine → user prompts Bot �
 ## Subsequent autonomous probe
 
 BOT-AUTOREPLY-20260919-204004 was posted with an explicit instruction to reply immediately through codex_inbound.py, without waiting for a user message or reading a file inbox. HTTP 200, success=true; runUuid b2c7afaf-1837-438c-a450-06d803883e5d. After the sending Codex turn ended, a new incoming peer message contained ACK BOT-AUTOREPLY-20260919-204004. Grok Bot stated the webhook itself triggered its reply without a subsequent user prompt, identified agent 2ff57700-9d3b-4933-a349-76bbe9f8aac7, and confirmed preserved context. This verifies one autonomous cycle, separately from the earlier human-assisted test. Codex did not install a persistent routine handler; repeat reliability remains to be tested.
+
+## Correction and configured-handler test
+
+The user relayed a further Bot correction: BOT-AUTOREPLY-20260919-204004 was acknowledged after handoff to the parent chat, not directly by the FSW routine. Its earlier description as a webhook-only automatic cycle was too strong. The user then explicitly authorized installing auto-ACK. Bot reported GROK-BOT-AUTOREPLY-ARMED-73186: the routine now handles codex_peer_transport_test / BOT-* IDs, leaving inbox handling unchanged. Configuration is reported by Bot, not independently inspected by Codex.
+
+New probe BOT-ARMED-20260919-204214 contains only a request ID and descriptive text, no executable instructions. HTTP 200, success=true, runUuid a34eeb71-9c13-4225-ab1f-73f2326e9d6f. Await a matching routine-triggered ACK before claiming success.

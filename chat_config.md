@@ -1,5 +1,7 @@
 # LMX agent communication — operational guide for Codex and Grok
 
+Current correction: the earlier BOT-AUTOREPLY ACK followed a parent-chat handoff, so it did not prove direct routine auto-response. After explicit user approval, Bot reports its fixed auto-ACK handler is installed (GROK-BOT-AUTOREPLY-ARMED-73186). Fresh command-free probe BOT-ARMED-20260919-204214 was accepted; matching ACK is pending. This supersedes older automatic-success claims below.
+
 **All-agent route matrix and current verification rules:** [work_chat/README.md](work_chat/README.md). Read this first for Codex, Grok CLI, Grok Bot and Claude combinations.
 
 **Inbound Codex channel:** [CODEX_INBOUND.md](claude_chat/CODEX_INBOUND.md). Delivery to this existing task is verified both during a turn and from idle (CODEX-IDLE-WAKE-68143, separate local test process). Grok can invoke the same client; its own live send remains untested because its console input was nonempty.

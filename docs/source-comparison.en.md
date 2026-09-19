@@ -17,7 +17,7 @@ Substantive L1 changes:
 | §19.29.7.1 | Reduces `copy-only` to creating a copy through merge in its own arena and transferring that arena; no separate mechanism is introduced. Removes `create_id`/tombstone idempotence, deduplication keys, and a separate envelope entity. Clarifies timeouts, the root thread's parent, and completion flags. |
 | §20.5.7 | Retains `synchronized` as a general L2 capability; synchronization restrictions of a particular kernel are not declared a language prohibition. |
 
-These provisions were not imported into the [new semantics](semantics.en.md). The new semantics contain only the opening supplied by the author and the transition to grammar.
+These provisions were not imported into the [new semantics](semantics.en.md). At initial extraction it contained only the opening supplied by the author and the transition to grammar; further sections are added at the author's direction.
 
 A separate new author clarification on 2026-09-19 states that an empty vertical body is a present empty Structure argument, equivalent to `()`. `receiver:` followed by a `---` line is valid. This clarification **was not a difference between the two old files**; it is incorporated into the [new grammar](grammar.en.md#empty-colon) and separate current tests.
 

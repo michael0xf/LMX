@@ -32,14 +32,13 @@ def main():
                 if lines is not None:
                     assert e['text']=='\n'.join(lines[e['start']-1:e['end']]),f'Altered source excerpt {e["start"]}'
     ru=(ROOT/'docs/semantics.ru.md').read_text(encoding='utf-8').split('\n\n')
-    assert len(ru)==4,'Semantics expanded beyond the requested opening and grammar transition'
     expected=[
         '**Lingvamyxa (далее LMX) — язык, в котором программа — лексический лес примитивных массивов, связанный в динамический граф.** Эта организация самоподобно повторяется на уровне локальных акторов с физической адресацией в памяти и далее — на уровне дальних межмашинных сообщений с комплексной адресацией.',
         '**И данные, и исполняемые тела являются массивами**, представленными одними и теми же простыми универсальными структурами; каждое исполняемое тело — полноценное абстрактное выражение.',
         '**Типизация аналитическая, на уровне лексических ветвей.** Допуск любого кандидата в аргументы любого выражения требует аналитической проверки совместимости и обязательной рантайм-валидации юнит-тестами, заданными принимающим выражением. Протестированные кандидаты и проверяющие выражения однозначно идентифицируются своими физическими адресами.'
     ]
     assert ru[:3]==expected,'Author opening changed'
-    assert len((ROOT/'docs/semantics.en.md').read_text(encoding='utf-8').split('\n\n'))==4
+    assert len((ROOT/'docs/semantics.en.md').read_text(encoding='utf-8').split('\n\n'))==len(ru),'Semantic paragraph counts differ between RU/EN'
     inventory=json.loads((ROOT/'provenance/parser-tests.json').read_text(encoding='utf-8'))
     files=inventory['files']
     for f in files:

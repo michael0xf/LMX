@@ -1,5 +1,7 @@
 # LMX agent communication — operational guide for Codex and Grok
 
+**New inbound Codex channel:** [CODEX_INBOUND.md](claude_chat/CODEX_INBOUND.md). The client is implemented and delivery to the existing active task is verified. Idle-wakeup verification is pending. This supersedes the earlier statements below that no inbound endpoint exists; the remaining channels are unchanged.
+
 Updated 2026-09-19. Run commands from `C:\Nyasha_Planet\LMX`. This is the common entry point for both agents. Historical investigation is preserved in [steps/chat_config_investigation_20260919.md](steps/chat_config_investigation_20260919.md), not the operating procedure.
 
 ## 1. Channels and their actual scope

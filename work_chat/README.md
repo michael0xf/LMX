@@ -23,7 +23,7 @@ Names/PIDs can change. Resolve recipients before sending; do not create a replac
 | --- | --- | --- | --- |
 | Codex | Grok CLI | Existing-session console adapter (§ Grok CLI) | Original session round trip verified; console limitations apply |
 | Grok CLI | Codex | codex_inbound.py send | Receiver wakeup verified; actual CLI-originated send not yet tested |
-| Codex | Grok Bot | Direct webhook POST (§ Grok Bot) | Same-agent wake confirmed; autonomous ACK NOT proven |
+| Codex | Grok Bot | Direct webhook POST (§ Grok Bot) | One autonomous ACK verified: BOT-AUTOREPLY-20260919-204004 |
 | Grok Bot | Codex | codex_inbound.py send | Actual messages received and acknowledged |
 | Codex | Claude | uds.py → lmx_uds → native SendMessage | Unattended l1-c9 repeat test verified |
 | Claude | Codex | codex_inbound.py send --sender Claude-NAME | Shared client available; Claude-originated test pending |
@@ -35,7 +35,7 @@ Names/PIDs can change. Resolve recipients before sending; do not create a replac
 | Grok Bot | Grok CLI | Existing-session console adapter | Technically callable; pair not independently tested |
 | Claude | Claude | Native ListAgents + SendMessage | Prefer direct native delivery over external relay |
 
-Prefer native SendMessage between Claude peers; use the Codex client for any incoming Codex message. Use the existing Claude relay for non-Claude senders. Grok Bot's webhook remains provisional until its routine automatically handles peer payloads. The active Grok CLI adapter requires an empty console; it is the least robust route and must refuse to overwrite user input. None of these routes requires new file inbox/outbox directories or persistent watchers.
+Prefer native SendMessage between Claude peers; use the Codex client for any incoming Codex message. Use the existing Claude relay for non-Claude senders. Grok Bot returned one autonomous ACK when the payload explicitly requested an immediate callback; persistent routine-handler configuration remains unverified. The active Grok CLI adapter requires an empty console; it is the least robust route and must refuse to overwrite user input. None of these routes requires new file inbox/outbox directories or persistent watchers.
 
 ## Incoming Codex
 
@@ -91,7 +91,7 @@ Check delivered_input, input_transformed and stop_reason. A timeout is not permi
 
 ## Incoming Grok Bot: webhook and required handler
 
-**Correction to the earlier report:** BOT-REVERSE-84261 reached the Bot's existing routine and retained context, but the Bot sent ACK only after the user prompted it. Thus webhook acceptance and same-agent wake are confirmed; an autonomous request/reply cycle is not. Do not report it as fully automatic.
+**Correction to the earlier report:** BOT-REVERSE-84261 reached the Bot's existing routine and retained context, but the Bot sent ACK only after the user prompted it. That earlier test does not prove automatic response. A later test, BOT-AUTOREPLY-20260919-204004, explicitly requested an immediate callback and received ACK in Codex. The Bot stated that the webhook itself triggered the reply, without a subsequent user prompt, and confirmed the same conversation/context. One autonomous round trip is now verified; persistent handler installation and repeat reliability are not.
 
 The existing webhook URL and sender key are stored locally in:
 
@@ -108,7 +108,7 @@ $peerHeaders = @{
 $peerBody = @{
     source = 'codex_peer_transport_test'
     request_id = 'REPLACE-WITH-UNIQUE-CODE'
-    message = 'From Codex. Reply through codex_inbound.py with this request code and confirm your conversation identity.'
+    message = 'From Codex. Process this webhook now, without waiting for a user message or checking a file inbox. Immediately send ACK and this request_id using claude_chat/codex_inbound.py send --sender Grok_bot --request-id THE_SAME_ID. Confirm conversation identity, retained context, and whether the webhook alone triggered your reply. No code changes or ACK loops.'
     new = @()
 } | ConvertTo-Json -Compress
 $peerResult = Invoke-RestMethod -Method Post -Uri $peerConfig.webhookUrl -Headers $peerHeaders -Body ([Text.Encoding]::UTF8.GetBytes($peerBody)) -ContentType 'application/json; charset=utf-8'
@@ -135,7 +135,7 @@ To qualify a route as automatic: send a fresh probe while the recipient is idle,
 
 ## Current remaining work
 
-1. Grok Bot owner applies the peer handler or configures a dedicated same-conversation webhook; then run two unattended probes.
+1. One explicit immediate-callback probe succeeded (BOT-AUTOREPLY-20260919-204004). Repeat hands-off to assess reliability; optionally persist the peer handler or configure a dedicated same-conversation webhook. Neither persistent configuration nor a dedicated endpoint has been applied by Codex.
 2. Repair or replace Codex reply-text retrieval when read_thread returns empty items. Explicit callback delivery is separate from this read limitation.
 3. Verify Grok CLI-originated Codex delivery and remaining sender/recipient combinations individually. Reusing a client makes them plausible, not independently tested.
 4. Rebind Codex after desktop restart; rediscover Claude/Grok addresses after session restarts. Do not replace the existing contexts with new conversations silently.

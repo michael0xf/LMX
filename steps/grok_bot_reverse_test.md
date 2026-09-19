@@ -11,3 +11,7 @@ Observed result: HTTP 200, success=true, with a runUuid field. Subsequently Code
 Grok Bot → Codex is already confirmed by actual receipt and ACK of GROK-BOT-HELLO-73186 and GROK-BOT-MD-READY-73186. The Bot's inability to retrieve that ACK using read_thread is a separate reply-reading limitation.
 
 The observed route is Codex POST → existing Bot routine → user prompts Bot → codex_inbound.py reply → existing Codex task. A peer-message handler and a fresh hands-off test are required to prove automatic response. See [work_chat](../work_chat/README.md) for the proposed handler and all routes. A dedicated peer routine would decouple the channel from the historical FSW routine; it has not been implemented.
+
+## Subsequent autonomous probe
+
+BOT-AUTOREPLY-20260919-204004 was posted with an explicit instruction to reply immediately through codex_inbound.py, without waiting for a user message or reading a file inbox. HTTP 200, success=true; runUuid b2c7afaf-1837-438c-a450-06d803883e5d. After the sending Codex turn ended, a new incoming peer message contained ACK BOT-AUTOREPLY-20260919-204004. Grok Bot stated the webhook itself triggered its reply without a subsequent user prompt, identified agent 2ff57700-9d3b-4933-a349-76bbe9f8aac7, and confirmed preserved context. This verifies one autonomous cycle, separately from the earlier human-assisted test. Codex did not install a persistent routine handler; repeat reliability remains to be tested.

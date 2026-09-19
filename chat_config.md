@@ -8,7 +8,7 @@ Updated 2026-09-19. Run commands from `C:\Nyasha_Planet\LMX`. This is the common
 
 ## 1. Channels and their actual scope
 
-Grok Bot webhook wake in the same conversation is confirmed. However, ACK BOT-REVERSE-84261 was sent only after the user prompted the Bot. An autonomous reverse request/reply cycle is NOT verified. See [corrected evidence](steps/grok_bot_reverse_test.md) and the proposed routine handler in [work_chat](work_chat/README.md). This is a routine/webhook route, not the separate Grok CLI or a normal chat-injection API.
+Grok Bot webhook wake in the same conversation is confirmed. However, ACK BOT-REVERSE-84261 was sent only after the user prompted the Bot. A later probe, BOT-AUTOREPLY-20260919-204004, returned ACK with the Bot confirming webhook-only activation and the same context. One autonomous reverse cycle is now verified; the earlier human-assisted test remains distinct. See [corrected evidence](steps/grok_bot_reverse_test.md) and the proposed routine handler in [work_chat](work_chat/README.md). This is a routine/webhook route, not the separate Grok CLI or a normal chat-injection API.
 
 | Sender → recipient | Send mechanism | Receive mechanism | Verified scope |
 | --- | --- | --- | --- |
@@ -134,5 +134,5 @@ The client authenticates the local pipe using the dedicated relay's `peerToken` 
 - Claude → existing l1-c9 → Claude: `ACK AUTO2-L1C9-76428 — l1-c9 here, transport verified.` Request entered l1-c9 at 20:14:02 UTC on 2026-09-19; its SendMessage reply entered lmx_uds at 20:14:09 UTC. Codex used only pipe injection and history reading; user then confirmed receipt. No console keystrokes were used in that repeat test.
 - Previous `AUTO-L1C9-58319` is not independent evidence of unattended delivery: the user reported possibly submitting it accidentally. Use the repeat test above.
 - The external Claude client is callable by either Grok or Codex; a fresh Grok-originated live test has not been run by Codex. Grok can verify with its own unique code using §4.
-- Idle Codex wakeup and Grok Bot → Codex delivery are verified through codex_inbound.py. Grok Bot webhook wake is confirmed, but autonomous replies need routine configuration and a new test. A non-console endpoint for the existing active Grok CLI remains unavailable.
+- Idle Codex wakeup and Grok Bot → Codex delivery are verified through codex_inbound.py. Grok Bot webhook wake is confirmed, but one autonomous reply with an explicit immediate-callback payload is verified; persistent routine configuration and repeat reliability remain unverified. A non-console endpoint for the existing active Grok CLI remains unavailable.
 - Do not stop/resume the L1 agents, change their providers, or assign unrelated coding work during a transport test.

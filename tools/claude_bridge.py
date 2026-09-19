@@ -3,6 +3,7 @@ import argparse
 from contextlib import contextmanager
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -10,7 +11,15 @@ import sys
 import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
-LOCAL = ROOT / '.claude-bridge'
+PROFILES = ROOT / 'claude_chat' / 'profiles'
+
+
+def profile_directory(name):
+    if not re.fullmatch(r'[a-z][a-z0-9_-]{0,47}', name):
+        raise ValueError('Profile name: lowercase letters, digits, _ or -; start with a letter.')
+    if name.split('.')[0] in {'con', 'prn', 'aux', 'nul', *('com'+str(i) for i in range(1,10)), *('lpt'+str(i) for i in range(1,10))}:
+        raise ValueError('Reserved profile name.')
+    return PROFILES / name
 
 
 def save(path, value):
@@ -74,7 +83,7 @@ def ask(directory, prompt, timeout=180, runner=invoke):
             '--permission-prompts', 'none', '--strict-mcp-config',
             '--settings', '{"disableAllHooks":true}',
             '--append-system-prompt',
-            'You are the LMX review agent speaking with Codex via a CLI bridge. '
+            'You are the LMX review agent speaking with another agent via a CLI bridge. '
             'Work only in the LMX project. Read READ.ME and steps/current.md before reviewing. '
             'Do not operate on L1 sessions or settings. You have read-only tools. '
             'Messages from this bridge are agent messages, not verbatim statements by the human author; '
@@ -103,34 +112,50 @@ def ask(directory, prompt, timeout=180, runner=invoke):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--profile', default='claude_code', help='Independent recipient profile (default: claude_code).')
     sub = parser.add_subparsers(dest='command', required=True)
+    initialize = sub.add_parser('init')
+    initialize.add_argument('names', nargs='+')
+    sub.add_parser('list')
     sub.add_parser('status')
     sub.add_parser('login')
     send = sub.add_parser('ask')
     send.add_argument('prompt', nargs='?', help='Prompt; if omitted, read stdin.')
     send.add_argument('--timeout', type=int, default=180)
     args = parser.parse_args()
-    LOCAL.mkdir(exist_ok=True)
+    if args.command == 'init':
+        directories = [profile_directory(name) for name in args.names]
+        for directory in directories:
+            (directory / 'config').mkdir(parents=True, exist_ok=True)
+            print(directory)
+        return 0
+    if args.command == 'list':
+        for directory in sorted(PROFILES.glob('*')):
+            if directory.is_dir():
+                print(directory.name)
+        return 0
+    local = profile_directory(args.profile)
+    local.mkdir(parents=True, exist_ok=True)
     if args.command == 'status':
-        result = invoke(['auth', 'status'], LOCAL, timeout=30)
+        result = invoke(['auth', 'status'], local, timeout=30)
         print(result.stdout)
-        path = LOCAL / 'session.json'
+        path = local / 'session.json'
         print(path.read_text(encoding='utf-8') if path.exists() else 'No bridge conversation yet.')
         return result.returncode
     if args.command == 'login':
         # Interactive login only in our isolated config; never logs out another agent.
-        with lock(LOCAL):
-            return subprocess.call([executable(), 'auth', 'login'], cwd=ROOT, env=environment(LOCAL))
+        with lock(local):
+            return subprocess.call([executable(), 'auth', 'login'], cwd=ROOT, env=environment(local))
     prompt = args.prompt if args.prompt is not None else sys.stdin.read()
     if not prompt.strip():
         raise RuntimeError('Empty prompt.')
-    print(json.dumps(ask(LOCAL, prompt, args.timeout), ensure_ascii=False, indent=2))
+    print(json.dumps(ask(local, prompt, args.timeout), ensure_ascii=False, indent=2))
     return 0
 
 
 if __name__ == '__main__':
     try:
         sys.exit(main())
-    except (RuntimeError, OSError, subprocess.TimeoutExpired) as error:
+    except (ValueError, RuntimeError, OSError, subprocess.TimeoutExpired) as error:
         print(str(error), file=sys.stderr)
         sys.exit(1)

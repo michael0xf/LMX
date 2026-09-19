@@ -55,7 +55,7 @@ def main():
         for p in (base/'tests').rglob('*.lmx'):
             assert p.relative_to(base).as_posix() in represented,f'Missing parser input {p}'
     # Check only authored documentation; historical fixture links belong to their source trees.
-    docs=[*ROOT.glob('README*.md'),*ROOT.glob('docs/*.md'),*ROOT.glob('steps/*.md'),ROOT/'AGENTS.md',*ROOT.glob('tests/parser/README*.md')]
+    docs=[*ROOT.glob('README*.md'),*ROOT.glob('docs/*.md'),*ROOT.glob('steps/*.md'),*ROOT.glob('claude_chat/*.md'),ROOT/'AGENTS.md',*ROOT.glob('tests/parser/README*.md')]
     for path in docs:
         text=path.read_text(encoding='utf-8')
         text=re.sub(r'(?ms)^(`{3,}).*?^\1\s*$','',text)

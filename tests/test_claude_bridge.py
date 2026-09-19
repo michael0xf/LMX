@@ -11,6 +11,20 @@ spec.loader.exec_module(bridge)
 
 
 class BridgeTest(unittest.TestCase):
+    def test_profiles_are_separate(self):
+        self.assertNotEqual(bridge.profile_directory('grok'), bridge.profile_directory('claude_code'))
+        for name in ('../L1', 'C:/L1', '', 'con', 'grok/other'):
+            with self.assertRaises(ValueError):
+                bridge.profile_directory(name)
+
+    def test_two_profiles_have_different_sessions(self):
+        def runner(args, directory, prompt, timeout):
+            return subprocess.CompletedProcess(args, 0, json.dumps({'session_id': args[-1], 'result': 'ok'}), '')
+        with tempfile.TemporaryDirectory() as tmp:
+            a = bridge.ask(Path(tmp)/'a', 'one', runner=runner)
+            b = bridge.ask(Path(tmp)/'b', 'two', runner=runner)
+            self.assertNotEqual(a['session_id'], b['session_id'])
+
     def test_new_then_resume_same_session(self):
         calls = []
         def runner(args, directory, prompt, timeout):

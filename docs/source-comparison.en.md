@@ -19,7 +19,7 @@ Substantive L1 changes:
 
 These provisions were not imported into the [new semantics](LMX_semantics.en.md). At initial extraction it contained only the opening supplied by the author and the transition to grammar.
 
-A separate new author clarification on 2026-09-19 states that an empty vertical body is a present empty Structure argument, equivalent to `()`. `receiver:` followed by a `---` line is valid. This clarification **was not a difference between the two old files**; it is incorporated into the [new grammar](grammar.en.md#empty-colon) and separate current tests.
+A separate new author clarification on 2026-09-19 states that an empty vertical body is a present empty Structure argument, equivalent to `()`. `receiver:` followed by a `---` line is valid. This clarification **was not a difference between the two old files**; it is incorporated into the [new grammar](LMX_grammar.en.md#empty-colon) and separate current tests.
 
 Source SHA-256:
 

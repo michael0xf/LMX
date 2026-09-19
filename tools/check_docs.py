@@ -10,7 +10,7 @@ ROOT=Path(__file__).resolve().parents[1]
 def main():
     data=json.loads((ROOT/'provenance/grammar.json').read_text(encoding='utf-8'))
     for lang in ('ru','en'):
-        path=ROOT/'docs'/f'grammar.{lang}.md'
+        path=ROOT/'docs'/f'LMX_grammar.{lang}.md'
         assert path.read_text(encoding='utf-8')==render(data,lang),f'Out of sync: {path}'
     ids=[s['id'] for s in data['sections']]
     assert len(ids)==len(set(ids))

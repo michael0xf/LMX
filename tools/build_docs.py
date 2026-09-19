@@ -23,7 +23,7 @@ def render(data, lang):
 def main():
     data = json.loads(DATA.read_text(encoding='utf-8'))
     for lang in ('ru', 'en'):
-        (ROOT / 'docs' / f'grammar.{lang}.md').write_text(render(data, lang), encoding='utf-8', newline='\n')
+        (ROOT / 'docs' / f'LMX_grammar.{lang}.md').write_text(render(data, lang), encoding='utf-8', newline='\n')
     examples = [e for s in data['sections'] for e in s.get('examples', [])]
     print(f'{len(data["sections"])} paired sections; {len(examples)} source excerpts')
 

@@ -1,3 +1,3 @@
 # LMX
 
-Read and follow [the mandatory guide for all models](READ.ME), then [current working instructions](steps/current.md). Archive every user message verbatim in `blog/` before acting on it.
+Read and follow [the mandatory guide for all models](READ.ME), then [current working instructions](steps/current.md). Archive in `blog/` only the author’s technical language clarifications that directly affect the specification; exclude organizational messages. Follow the quotation rules in READ.ME.

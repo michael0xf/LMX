@@ -62,7 +62,7 @@ def inject(pid, message):
             raise ctypes.WinError(ctypes.get_last_error())
         # Do not mix with the user's draft or type into a shell/permission dialog.
         line = buf.value
-        if '❯' not in line or line.split('❯', 1)[1].strip(' │') or info.cursor.X > 8:
+        if '❯' not in line or line.split('❯', 1)[1].replace('│', '').strip() or info.cursor.X > 8:
             raise RuntimeError('Grok input is not visibly empty; no message sent.')
         handle = k.CreateFileW('CONIN$', 0x40000000, 3, None, 3, 0, None)
         handles.append(handle)

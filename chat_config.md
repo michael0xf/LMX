@@ -6,6 +6,8 @@ Updated 2026-09-19. Run commands from `C:\Nyasha_Planet\LMX`. This is the common
 
 ## 1. Channels and their actual scope
 
+Grok Bot reverse exchange is now verified: direct POST to its existing configured webhook woke its routine in the same conversation, and ACK BOT-REVERSE-84261 returned via codex_inbound.py with confirmation of retained context. No filesystem mailbox or local watcher was used. See [test evidence](steps/grok_bot_reverse_test.md). This is a routine/webhook route, not the separate Grok CLI or a normal chat-injection API.
+
 | Sender → recipient | Send mechanism | Receive mechanism | Verified scope |
 | --- | --- | --- | --- |
 | Codex → existing active Grok → Codex | `grok_active.py`, Windows console input | Same Grok session's native transcript; client returns JSON | Real existing Grok chat, verified challenge and follow-up |

@@ -32,6 +32,8 @@ This polls status every three seconds for a bounded period; it is not a persiste
 
 ## Verification status
 
+Grok Bot subsequently sent GROK-BOT-HELLO-73186 and GROK-BOT-MD-READY-73186; Codex received and acknowledged both. The Bot's read_thread calls returned empty items, so the read command is not a reliable source of answer text on this build. Do not mistake that for failed delivery. Use an explicit reply endpoint where available. All-agent routes and current limitations: [work_chat](../work_chat/README.md).
+
 INBOUND-ACTIVE-52916 arrived in this same running Codex task through the client as native incoming delegation. This proves active-turn delivery.
 
 CODEX-IDLE-WAKE-68143 then verified idle wakeup: a separate hidden local process waited for idle, sent once through the client, and the message started a new turn in the same Codex task after its previous final response. No keyboard input was used. The sender was the local LMX test process, not Grok. Grok can invoke the identical client, but a Grok-originated test was not run because its console input was nonempty; the console adapter refused to touch it. Do not confuse verified receiver wakeup with verification of the sender's environment.

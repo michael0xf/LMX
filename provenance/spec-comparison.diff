@@ -1,0 +1,754 @@
+--- lingvamyxa/Lingvamyxa_spec.txt
++++ L1/Lingvamyxa_spec.txt
+@@ -1043,6 +1043,84 @@
+         void *data;
+     };
+ 
++A Message's own record beside it (Mikhail, 2026-09-15: "двигайтесь к"
++this form; "Все остальное -- не Message и должно в итоге перевестись на LMX
++то есть стать внутренностью Message"; the handoff flag confirmed by him the
++same day):
++
++    typedef struct LmxMsg {
++        volatile uint_fast8_t running;       /* 1 at launch; polled while root executes; 0 is the
++                                                parent's stop request, and is set at exit */
++        volatile uint_fast8_t success;       /* 0 at launch; 1 is written by user code */
++        volatile uint_fast8_t handoff_safe;  /* 1 is written by the Message itself when it has left
++                                                its last turn and nothing native uses its arena:
++                                                the arena may be attached (19.29.7, 19.29.8) */
++        Lmx *root;                           /* the root of its graph; its arena is reached from it */
++        unsigned index;                      /* its index at its parent: the whole of what the
++                                                hierarchical address a.b.c.d... adds at this level;
++                                                the full address is composed by walking the parent
++                                                links, and a letter carries the destination address
++                                                in full (Mikhail, 2026-09-16: the address arrays are
++                                                optimized to the index at the parent); the address
++                                                changes with the parent at a parent change;
++                                                delivery is hop by hop through parents' inboxes, every
++                                                L3 Thread a postman for one step deciding by address
++                                                (Mikhail, 2026-09-16, verbatim in 19.29.7) */
++    } LmxMsg;
++
++Mikhail, 2026-09-15, verbatim, on the two flags: "success && !running, с выходом выставляется running = 0. Просто running опрашивается при выполнении Lmx* root и я же не знаю как кокнретный планировщик устроен и когда выйдет. Но условия выхода очевидно есть!" (one that
++ended by success is success and not running; at exit running = 0 is set; running is
++simply polled while Lmx* root executes, and how a particular scheduler is
++arranged and when it exits is not fixed here, but the exit conditions
++obviously exist).
++
++Everything else is not Message and is, in the end, written in LMX as the
++inside of a Message (its Structure data in its own arena): an L3 Thread's
++record adds its mailbox (the one synchronized collection of Messages) and
++its scheduler and maintenance state as such data.
++Mikhail, 2026-09-15, verbatim, on that inside: "и транслируется в LMX как внутренность Message." -- то есть записывается в "struct Lmx *root; " , и на L1 нужно сделать имитацию (то есть не имитацию а код вкоторый L2 и L3 будут разворачиваться) and, correcting
++himself the same minute: "то есть записывается в "struct Lmx *root;"" это уже на L2 там лежит код который с этими Message и работает. А на L1 просто тот код который _будет порождаться_. (that inside is written into what
++`root` reaches; on L2 that is where the code working with these Messages
++lies; on L1 there is simply the code that will be generated). And on the
++shape of that code: "В точности как имитируется L2 на Си -- функция с аргументами ,скрытми ргументами и узлом графа." (exactly as L2 is imitated in C: a function
++with arguments, hidden arguments and the graph node). Hence, verbatim:
++"Поэтому структура Message как данные остается и на Си -- в точности как стуктура Lmx" (therefore the Message structure as data stays in C as well,
++exactly like the Lmx structure): the record above is a C data type beside
++Lmx, not something later rewritten in LMX. And on a sentence of the
++coordinator's that stood here, "the C keeps only the native primitives (the
++thread, the mailbox's monitor)", verbatim: "the C keeps only the native primitives (the thread, the mailbox's monitor)»" -- это для L3 Thread? Он тоже пишется на L1,переноситс на L2 и остаток на L3. Разумеется на L2 остается низкий уровень, а причем тут вообще Си? Ты же не пишешьв Си на ассемблере встаквки "потому что надо компилировать". Удаляй (is that about the L3
++Thread? it too is written in L1, moved to L2 and the remainder to L3; of
++course the low level stays on L2, but what has C to do with it; you do not
++write assembler insertions in C "because it has to compile"; delete it).
++And, the same day, on the whole of the synchronization, verbatim: "синхронизации только по inbox outbox более чем достаточно, многократно проговоренная мной схема по которой ребенок  иродитель взаимно опрашиваются (в приоритете ребенок опрашивает -- он и должен оставлять след что живой) тоже совершенна надежна, никаких утечек там никогда не будет так как от пользовательского L3 однопоточного кода это не зависит. L2 и L1 это уже ответственность юзера, но мы можем писать без этого"
++(synchronization only on inbox and outbox is more than enough; the scheme
++he has stated many times, the child and the parent polling each other
++mutually, with the child's poll the priority since it is the child that
++must leave the trace that it is alive, is perfectly reliable too; there
++will never be leaks there, since it does not depend on the user's
++single-threaded L3 code; L2 and L1 are the user's responsibility, but we
++can write without that). And on why nothing can hang, verbatim: "если у тебя у каждого родителя стоит таймаут на ребенка и у ребенка на родителя таймаут и в каждой буквально точке (цикл, вход, выход) проверяетс running, у одной арены строго один поток, то у тебя зависание никогда не будет дольше чем таймаут, это схема железобетонная. Программа может упасть, но завсинуть -- с чего, на чем? На ресурсах или что-то в этом роде? В Си есть механизм прибить поток принудительно (потом реализуем, сейчас бы хоть ядро запустить) , в конце концов по таймауту сработает корневой поток и тупо выйдет из процесс ОС. Тут не может быть никаких зависаний"
++(if every parent has a timeout on its child and every child a timeout on
++its parent, and at literally every point, loop, entry, exit, running is
++checked, and one arena has strictly one thread, then no hang ever lasts
++longer than the timeout; the scheme is reinforced concrete; a program
++can crash, but hang on what, resources or the like? C has a way to kill
++a thread by force, to be done later, now the kernel has to run at all;
++in the end the root thread's timeout fires and simply leaves the OS
++process; there can be no hangs here). And on deadlock, verbatim: "deadlock никогда не случится если синхронизация только внутри очереди сообщений на чтение-запись письма в минималистическом java-стиле. Там вообще нечему зависать"
++(a deadlock never happens if synchronization is only inside the message
++queue, on reading and writing a letter, in the minimalist Java style;
++there is nothing there to hang on).
++And on what L1 is for, verbatim: "Вы пытаетесь писать на Си, а на Си (L1) надо просто пилить ядро _на котором_ уже пилить дальнейший функционал самого ядра. Это как я бы попросил на goto имитировать все циклы, а вы бы заменили задание на "написать примеры while и for"  -- совершенно разне задачи" (you are trying to write in
++C, while in C, that is L1, one simply builds the kernel on which the further
++functionality of the kernel itself is then built; as if I asked you to
++imitate all loops with goto and you replaced the task with "write examples
++of while and for": entirely different tasks). And, the same day, on what
++the whole is, verbatim: "Это полноценный ООП язык, объект --Message, исполняемый  объект -- L3 Thread. Такие же странные вопросы ты можешь задавать любому языку программирования высокого уровня.Потому он и называется "L3 Thread"" (this is a full object-oriented
++language: the object is Message, the executing object is L3 Thread; the
++same strange questions could be asked of any high-level language; that is
++why it is called "L3 Thread").
++
+ `node` is the Structure's lexical parent. Merge and Message creation copy the
+ complete used graph with the same traversal, including lexical node chains to
+ zero. In the destination, node values are explicitly rewritten to the copied
+@@ -1129,6 +1207,61 @@
+ Explicit copying/merge constructs a distinct result; it does not move existing
+ identities. Array backing replacement is a separate explicit operation, not
+ relocation of the Array descriptor or the service pool.
++
++The arena and its table (Mikhail, 2026-09-17). An arena provides N arrays and one
++table address -> descriptor of the contents, for typing `void *`, and it may attach
++another arena; that is the whole mechanism and nothing else is needed (verbatim: "У
++нас есть арена (там менеджер) она предоставляет N массивов и таблицу
++адрес->дескриптор содержимого для типизации void *, также может присоединять другую
++арену. ЧТО ЕЩЁ НАДО?"). The arrays never move, so it is the table ENTRIES that are
++ordered and bisected, never the arrays (verbatim: "У тебя есть N массивов в арене.
++Как ты можешь его отсортировать если у каждого массива адрес фиксирован?!!!! Ты
++должен сделать _таблицу адрес->дескриптор массива_ и после вставку в таблицу делает
++менеджер арены (в том числе когда он присоединяет другую арену)"). Lookups are
++bisection, not a walk of the table (verbatim: "надеюсь не простым перебором а
++нормальным бинарным"). Only the arena's manager inserts, and it inserts for each array
++that joins the arena, including when the arena attaches another one; attaching appends
++arrays, moves no address, and leaves the existing entries exactly where they are.
++
++For every Array type the arena keeps its own array of descriptors - length and a typed
++pointer to the data (verbatim: "ДЛЯ КАЖДОГО ТИП МАССИВА АРЕНА ЗАВОДИТ СВОЙ МАССИВ
++ДЕСКРИПТОРОВ (длиина и типизированный указатель на дату) И ПОЕХАЛИ"). A descriptor
++carries no type field: its type follows from which descriptor array the descriptor
++itself lies in, not from anything the descriptor holds. Typing lies exclusively in the
++address range, and as many ranges (types) as needed may be created; a primitive is
++laid down directly, a composite type lays down its descriptor, and that is all
++(verbatim: "то есть типизация лежит исключительно в диапазоне адресов и вы можете этих
++диапазонов (типов) заводить сколько вам угодно. Примитивы ложить прямо, для составных
++типов класть их дескрипторы -- ВСЁ"). Arrays are not a special case
++of anything (verbatim: "ЧЕМ МАССИВЫ ОТЛИЧАЮТСЯ ОТ ВСЕГО ОСТАЛЬНОГО? НИЧЕМ!!!"): a
++Structure's child-pointer array is an array of the arena like every other and is in the
++table like every other. What a slot address does not do is type the child stored in it
++- that is the child's VALUE, and it is classified on its own by the table above.
++
++Nothing gates writing into a cell. Code that holds a reference, having determined its
++type once, casts the pointer and writes STRAIGHT into the cell, because a cell's
++address never changes; this is obligatory (verbatim: "_Получив дескриптор типа код
++сразу делает приведение типа указателя и пишет напрямую в ячейку_ _Это обязательно_";
++"Код как раз обладая ссылкой и определив один раз ее тип _может писать прямо в массив
++так как адрес ячейки не меняется_"). The table is consulted only where the type is NOT
++known - an untyped `void *` arriving from elsewhere; where the type is known
++statically, no lookup happens at all. There is no per-owner inventory of ranges and no
++other side list: the arrays, their descriptors and the table are the whole of it.
++
++Eternal branches are a different mechanism (verbatim: "«вечная ветка» это совершенно
++другой механизм"). Inside an eternal branch every `void * data` points into the root
++Message's arena - not the whole of it, its immutable part (verbatim: "В вечной ветке
++всё void * data по идее должно было указывать на арену корневого Message, причем не на
++всю а на ее неизменяемую часть"). Eternal branches and eternal values have addresses
++like everything else, so the translator substitutes their direct values and explicit
++types into the code, as `const`, a thousand times over, and nothing more is needed
++there (verbatim: "Но у вечных веток и вечных значений так же самое есть адреса.
++_ЗНАЧИТ ТРАНСЛЯТОР ЛЕГКО ПОДСТАВЛЯЕТ В КОД ПРЯМЫЕ ЗНАЧЕНИЯ И ЯВНЫЕ ТИПЫ ЕЩЕ и ДЕЛАЯ
++ИХ ТЫСЯЧУ РАЗ CONST_ -- РАЗВЕ НЕ ТАК? ТАМ ЖЕ ВООБЩЕ НИЧЕГО БОЛЬШЕ НЕ НУЖНО"). A
++reference from a mutable field to an eternal branch is an ordinary reference to that
++branch's descriptor in its own arena (verbatim: "Ссылка же в изменяемом поле на вечную
++ветку это обычная ссылка на дескриптор ветки в собственной арене -- разве не так?").
++No eternal-range list and no other side table exists as a mechanism.
+ 
+ Structures/Arrays pass and return reference values without copying referents.
+ Explicit copy, serialization and runtime `merge` may allocate. C activations
+@@ -4407,6 +4540,16 @@
+ its storage ranges. Arena ownership transfer carries those descriptions without
+ moving payloads. Immutable domains are Message-local too; there is no shared
+ LMX domain outside or across Messages. See 19.29.6.
++
++For every Array type T the arena keeps its own array of descriptors - length and a
++typed pointer to the data - and a descriptor's type follows from which descriptor
++array the descriptor itself lies in, never from a field it holds. The arena provides
++N arrays and one table address -> descriptor of the contents, for typing `void *`;
++the arrays never move, so the table's ENTRIES are what is ordered and bisected, and
++only the arena's manager inserts into it, including when the arena attaches another
++arena (2, Mikhail, 2026-09-17, verbatim there). No per-owner inventory of ranges and
++no eternal-range list is part of the mechanism; an eternal branch is a different
++mechanism, settled in 2.
+ 
+ Each typed service pool may contain several non-moving blocks. Growth allocates
+ another block and registers its own address range with the same type; addresses
+@@ -11473,6 +11616,165 @@
+ its threads. Native thread, wait/wake and per-mailbox synchronization primitives
+ support Message and do not own its scheduling policy or family tree.
+ 
++Clarification (2026-09-14, Mikhail). An L3 Thread is a Message: a Message is
++simply an isolated LMX graph, and an L3 Thread is a Message that can attach
++and/or execute any Message. Every L3 Thread is a Message; not every Message is
++an L3 Thread (a template and a letter have no turn; a launched child does).
++The mailbox and the provision for a turn exist only at an L3 Thread, even when
++it is executed from outside and no thread of its own is started. An L3 Thread
++launches Messages; being launched is not an obligatory property of a Message.
++The scheduler exists only in varieties of L3 Thread: it allocates execution to
++the Messages that L3 Thread attached (a consumer schedules the Messages it
++attached) and removes on timeout as judged by the children's own checks; it
++does not manage running children in full: in normal operation children close
++themselves and schedule their own children the same way. Polling has one
++direction, child to parent (19.29.7.1); a child closes itself after prolonged
++absence of its parent, and closing from above is the second, emergency
++mechanism.
++
++Clarification (2026-09-14, Mikhail): one arena, one lane, one writer. A
++Message's scheduler and management state is written only on that Message's
++own lane; no other thread writes into a Message's data, and this holds for
++the C runtime exactly as for L2, because it is not a property of the graph
++system but of the Message. A parent therefore
++keeps no list that another thread appends to: a child pushing itself into
++its parent's ready list from the child's thread, and a UI thread writing
++into many parents' lists, are implementation errors of the L1 prototype and
++are removed from it, not carried into L2. A request to another lane (mapping
++a child onto the UI lane) is a Message to that lane's mailbox; the mailbox's
++admission lock is the one cross-lane synchronization the model permits
++(19.29.6).
++Ownership of cells, for the rule "written only on the owner's lane"
++(2026-09-14): (1) a Message owns its arena, its scheduler record and cursor,
++its mailbox except admission, its native
++users and handoff-safe marks, its success, and its own running clear at
++end_turn; its lane is whichever thread holds its turn, so a host-driven turn
++is that Message's lane. (2) The parent owns the supervision cells about its
++direct children wherever they sit physically: committed, tracked, the
++last-heard time, the execution mapping written at bind (so the authority to
++bind, rebind or unbind a Message is its parent's lane, or the host outside
++any turn while the bootstrap is the host; a Message does not map or unmap
++itself and a sibling's turn does not; the settling lane's unbind at release
++is the parent's write, or the host's for an orphan; clarified 2026-09-14), the family chain
++(first and last child, siblings' links, the parent link at link, unlink and
++supervision handoff), and the settle writes (the storage moved into the
++parent, the child's graph and init at settle). (3) Control flags are single
++cells with one designated cross-lane writer, by the flags' philosophy: the
++parent writes a child's running=0 and closing (stop).
++What is removed by this rule: a parent's ready lists and context lists
++appended by a child's, a sender's or a UI thread's lane; a child unlinking
++itself from its parent's list; the parent's step reads its children's own
++cells instead.
++Mikhail, 2026-09-15, on the child's readiness flag this paragraph used to
++name (written by the sender at admission, read by the parent's step),
++verbatim: "готовность ребёнка его собственным" --готовность к чему?! Удаляй (readiness for what? delete it): the flag and its
++sentences are removed above; a Message's mail is what its own loop finds in
++its mailbox. The same day, on a delivery history the L1 runtime kept
++(the last ids per sender, dropping repeats), verbatim: "ящик помнил последние id от каждого отправителя и отбрасывал повторы («не более одного раза»)." -- какая-то выдумка. Удаляй все. (some
++invention; delete it all): no such mechanism in the core.
++
++Clarification (2026-09-15, Mikhail, verbatim): "Там не должно быть общих
++блокировок. У очереди писем только своя внутренняя блокировка коллекции,
++всё" (there must be no shared locks; the mail queue has only its own internal
++collection lock, that is all); "блокировка только локальная у коллекции
++сообщений может быть, больше блокировокне требуется даже локальных -- их в
++проекте не длолжно быть больше вообще" (the only lock there may be is the
++local lock of the message collection; no other locks are needed, not even
++local ones; there must be none of them in the project at all); "значит
++реализуйте полноценную арену для каждого MEssage, как описано в спеке. Без
++этого Message не имеет смысла" (so implement a full arena for each Message,
++as described in the spec (19.29.2); without it a Message makes no sense).
++Deleted the same day by his order: the former item (5) of the ownership list
++above (runtime-level structures kept under the executor's lock), written
++2026-09-14 by the review chat as its own consequence, never his words.
++Clarification (2026-09-15, Mikhail). On closing a parent whose children have no
++thread of their own, verbatim: "Закрытие родителя это авария. Каждый ребенок
++закрывает себя сам и для его детей это такая же авария. Если дети L3 Thread
++но реализация такая что у них нет своего потока, а они последовательно
++выполняются, то это нюансы реализации. Разумеется в этом случае закрытие
++родителя затягивается так как планировщик должен пройтись и выполнить чужую
++работу -- но зачем вам вообще сейчас такие потоки если вы не можете даже ядро
++архитектуры запилить точно по спеке?" (closing a parent is an emergency; each
++child closes itself, and for its children it is the same emergency; children
++that are L3 Threads without a thread of their own, run sequentially, are an
++implementation nuance that drags the parent's close out with others' work; but
++why have such threads at all now, when the core is not yet built exactly by the
++spec?). The reading that "for now every L3 Thread runs on its own OS thread, and the
++sequential mapping is removed from the runtime" is withdrawn -- Mikhail,
++2026-09-17, verbatim: "я такого не говорил, это модели издеваются. Я сказал
++что lmx_thread имеет API и реализации могут быть разными. В том числе
++бегающая и небегающая." So the object carries an API and its implementation
++is open by design: an OS thread of its own and being stepped by its parent
++are both admissible, and nothing here requires either one. This agrees with
++11541, 11548-11549 and 12649 above ("no dedicated OS thread per Message is
++required") and with 19.29.6's own definition of a running Message as a
++logical serial execution lane.
++Confirmed by Mikhail the same day ("да") in this wording, on the runtime-level
++structures the L1 implementation kept under its executor's lock: there is no
++root list (the root is one, R0, and its children are an ordinary child list in
++R0's arena); there is no walk at deletion (the close is R0's own closing
++end-turn); the slot list served only the L1 delete loop and its address lookup
++and goes without replacement; the retire queue goes (a closed child's storage
++is its parent's settle write); a lane's own queue is that Message's mailbox.
++Mikhail, 2026-09-15, verbatim: "Синхронизация только локальная в почтовом
++ящике каждого L3 Thread -- больше в проекте нет (за исключением поддержки
++ресивера \"synchronized\")" (synchronization is only local, in the mailbox
++of each L3 Thread; there is none else in the project, except the support of
++the receiver "synchronized", 20.5.7).
++Mikhail, 2026-09-15, verbatim, on the UI lane (until then a Message without a
++thread of its own, stepped by the root's turn, which he called a crooked
++implementation): "Полоса на экране не может не быть L3 Thread. Message без L3 Thread это просто письмо. Полоса же это полноценный объект. Объектов у нас не так много как в SmallTalk но все равно много. Поэтому реализация L3 Thread планировщика который не запускает потоки детей а бегает по ним сам -- ближайшая задача для myxa_manager" (a lane on the screen cannot fail to be an
++L3 Thread; a Message without an L3 Thread is just a letter; a lane is a full
++object; we do not have as many objects as Smalltalk, but still many; so the
++implementation of an L3 Thread scheduler that does not launch its children's
++threads but runs over them itself is the nearest task for mixa_manager).
++Mikhail, 2026-09-15, verbatim, on the host's Win32 message loop (the
++coordinator had called its blocking GetMessage a property of Win32 outside
++the model): "ну так для того и существует отличие ядра Message, которое полностью подн контролем языка, от платформенных реализаций L3 Thread! Просто положите Win32 GetMessage в потомка L3 Thread (потомки у нас создаются merge) и все, в чем проблема? Будет заполнять inbox который свой поток будет читать." (that is what the difference between the Message
++kernel, wholly under the language's control, and the platform
++implementations of L3 Thread is for: put Win32 GetMessage into a descendant
++L3 Thread, descendants being created by merge, and that is all; it fills an
++inbox that its own thread reads).
++Mikhail, 2026-09-15, verbatim, on the mailbox's synchronization: "тупейший вложенный synchronized по локу на чтение и запись как в Java, без остальных усложнений вообще. "notify получает не «поток», а поток-владелец ящика" -- ну а смысл его нотифицировать если он занят в turn?!!! Выйдет и посмотрит" (the
++dumbest nested synchronized on the lock for reading and writing, as in Java,
++with no other complications at all; what is the point of notifying the owner
++thread if it is busy in a turn? it comes out and looks). And on the owner
++thread when its mailbox is empty after a turn: ""завершается ли поток владельца при пустом ящике после выхода из turn'а" -- нет!!!! L3 Thread точно так же завершается только по success пользовательским кодом. Каким образом вы будете код писать иначе?" (no; an L3 Thread ends
++only by success set by user code, like everything else; how else would you
++write code?). And: "никакого success у многих фоновых задач вообще нет, то есть это не может быть правилом ядра \"в ящике ничего нет поэтому ухожу\"" (many background tasks have no success at all, so "nothing in the mailbox, therefore I leave" cannot be a rule of the core). And, confirming that the owner thread's loop
++runs on between turns and looks into its mailbox each time round: "иначе не
++реализуешь цикл бесконечный -- он тупо не будет проверять почту!!!"
++(otherwise you cannot implement the infinite loop; it simply will not check
++the mail).
++And on the coordinator's words "the thread with its infinite loop", the same
++day, verbatim: "поток с бесконечным циклом" -- цикл в L3 Thread очеивдно прерывается по success==1 (the loop in an L3 Thread obviously
++breaks on success==1). And, the same hour, verbatim: "success && !running, с выходом выставляется running = 0. Просто running опрашивается при выполнении Lmx* root и я же не знаю как кокнретный планировщик устроен и когда выйдет. Но условия выхода очевидно есть!": the
++exit conditions exist: by the model no turn of root repeats once success ==
++1, since success belongs to Lmx* root, the main functionality; what the L3
++Thread's scheduler does with its children after that is implementation, as
++children may run on the same thread, and so is where the return stands
++(verbatim,
++the same day, to the lead's "the loop leaves on success == 1 is a
++description of the implementation, not of the model": "«цикл выходит по success == 1», а это описание реализации, а не модели." -- просто по модели L3 Thread не может повторять turn когда success == 1, это не деталь реализации. Деталь реализации это где будет стоять return." and, narrowing it: "Однако планировщик L3 Thread может что-то делать со своими детьми (вот это зависит отреализации так как дети могут крутиться на том же потоке) так как success относится к Lmx* root -- то есть к основной функциональности." and, closing the point: "Однако так как при остановке родителя останавливаются и дети (там в обе стороны проверки) то очеивдно что в конечном итоге по success==1 ыикл прервется. От реализации зависит только в каком месте" (since the children stop when the parent stops, the checks
++going both ways, the loop does in the end break on success == 1; only
++where is up to the implementation)); user
++code sets success, running is polled while root executes, and at exit
++running is set to 0; an ended L3 Thread reads !running, and success says
++whether it ended by success, verbatim: "завершённый L3 Thread читается как success && !running" -- если пользовательский код не поставит success=1 то success останется 0 если running стал 0 (if user code does not set
++success = 1, success stays 0 when running became 0). And:
++"то есть цикл не бесконечный -- из него есть выход хоть по return хоть как" (that is, the loop is not infinite: there is a way out of it,
++by return or however). And on the round between turns, verbatim: "L3 Thread нечего делать на endturn???"
++(has an L3 Thread nothing to do at end_turn?): the round after a turn is
++the L3 Thread's own work at end_turn (its supervision of its direct
++children and their polling, 19.29.7.1; its closing and settling, 19.29.8;
++its arena maintenance), then the look into its mailbox; a round is never
++empty in the model. And, to the lead's "running = 0 is the parent's stop
++request, not the loop's exit", verbatim: "L3 Thread это модель же а не реализация. Да, 0 это запрос остановки от родителя. Что значит "не выход из цикла"? Как можно остановить не выходя в конечном итоге из цикла?" (the L3 Thread is a
++model, not an implementation; yes, 0 is the parent's stop request; what
++would "not the loop's exit" mean? how can one stop without, in the end,
++leaving the loop?): the parent's running = 0 is the stop request that in
++the end leaves the loop.
++
+ Execution mapping is not inherited transitively: a child executed on its
+ parent's thread may itself start threads for its own children through its own
+ scheduler. For example, P executes A's turns sequentially on P's thread, while
+@@ -12207,6 +12509,9 @@
+ Every Message, inactive or running, owns one logical arena throughout its
+ turns and worker migration. L3 source does not select it, and Lmx has no arena
+ field. The arena may contain multiple non-overlapping blocks/address domains.
++(Mikhail, 2026-09-15, verbatim: "Одна арена на Message, арены присоединяются
++при потреблении -- это ядро", one arena per Message, arenas attach on
++consumption, that is the core.)
+ 
+ Adopting a non-executing Message or a handoff-safe failed child adds its blocks
+ and registered domains to this same logical arena (19.29.7--8). It creates no
+@@ -12465,6 +12770,106 @@
+ (temporarily L1/native bootstrap); no other core or standard-package component
+ uses private low-level synchronization. Parent supervision uses its own child
+ list, not a scan of a shared process-wide Message table.
++
++Release of a Message and its family (clarification 2026-09-14, Mikhail). A
++released branch is never retained: releasing a Message releases its whole
++subtree, and release does not wait for the children to finish. Every close
++and free behaviour follows from three rules. (1) A parent that forcibly
++releases a child starts a chain reaction: the child closes and releases its
++own direct children the same way (each Message services its own direct
++children, 19.28.R2.2), and the branch's slots and arenas are freed by that
++chain, never at process end. (2) A child's own orderly close after sustained
++absence of its parent starts the same chain for its subtree. (3) The runtime
++never sets success on a parent whose children are still running=1 with
++success=0; when the parent's own algorithm sets success in that state it
++thereby declares the children's work unneeded, and the same chain closes and
++releases them. The endpoint step of an orderly close (the parent may first
++take a stopped child's final state or storage; model sections 32 and 34) is
++a step inside the chain, not a reason to keep a closed branch's slots.
++(4) There is no release of a child "into the open": the only way a running
++Message (running=1) survives the closing of its parent is a handoff of
++supervision to another LIVE parent, chosen by the closing parent among the
++Messages whose capability it holds, and not necessarily the closing parent's
++own parent (corrected 2026-09-14, Mikhail). Supervision handoff moves the
++child's parent capability and its place in a scheduler; the child keeps its
++own arena, mailbox and turn. It is distinct from storage adoption, which
++still requires a non-executing, handoff-safe source (19.29.7). A child not
++handed over closes with the chain. For the root Message the only possible
++new parent is the virtual ancestor, the World Wide Mix placement (19.28.10)
++at the level of the OS process, so a handoff from the root means "launch an
++OS process"; that target is a refusing stub with its own status until World
++Wide Mix (19.28.10) and the transport of section 35 are implemented, since
++the tree above the root exists algorithmically and is not implemented
++(Mikhail, 2026-09-14: the stub stays until World Wide Mix is implemented);
++stage 5, which makes OS startup the root Message, fixes only the call site
++and the ancestor's address.
++(5) Adoption closes the adopted (Mikhail, 2026-09-14): the storage transfer
++of an arena adoption closes the adopted Message; it does not remain a live
++Message beside its transferred storage. Whatever the adopter then spawns from
++the adopted content is a child of the adopter, the Message that processed it,
++not of the adopted one. The fork is strict, and it is the L3 Thread / Message
++distinction of 19.28.R2.2: a Message either works itself, which makes it an
++L3 Thread (its own turn and its own place under the Message that launched
++it), or is worked on by others, which is what a plain Message is (attached,
++adopted, closed by the L3 Thread that processes it); the two have a different
++genesis and therefore a different place in the hierarchy. Supervision
++handoff (rule 4) moves a live Message; adoption moves storage and ends the
++Message. Hence exactly two ways keep a line of descendants beyond the closing
++of their parent (Mikhail, 2026-09-14): (i) spawn a plain Message and send it,
++so that whatever it spawns at the receiver is the receiver's line; (ii) spawn
++an L3 Thread and hand its supervision to another branch. A subtree that is
++neither closes with the chain.
++Three consequences of rules (1)-(3) for the runtime, read together with
++19.29.8, which selects the settling policy (review chat, 2026-09-14; corrected
++the same day against 19.29.8): (i) the parent's dispose of a settled failed
++child settles it as 19.29.8 says: the runtime transfers the child's logical
++arena to the parent without copying and retains the failed root there, then
++releases the child's slot; the parent neither drops a failed arena nor has to
++call the adoption itself, and a dispose of a failed child with storage is not
++refused; a successful child's history is reclaimed by default; (ii) release
++does not wait for the children to be disposed one by one: a parent's dispose
++or adopt of a child settles that child's whole settled subtree by the chain,
++bottom-up as 19.29.8 describes (G's arena joins C, then C's joins P), and the
++guards that remain are that the child is not running, is handoff-safe and has
++no native users; (iii) a descendant still running at release time is closed
++by the chain (its closing flag set, as by any stop) and becomes an orphan: a
++successful orphan is settled at its end-turn and reclaimed, arena and slot,
++by the settling lane at the root's next maintenance point (the host's drive
++today, the root's between-turns maintenance from stage 5 (c) on), the same
++on the host path and the mapped path (clarified 2026-09-14: one reclaim
++site, never retained, never adopted); a failed orphan
++keeps its handoff-safe arena under the separate parent-loss/orphan-retention
++timeout of 19.29.8 and self-reclaims when it expires (an orphan is settled
++only by that policy, never by its supervising root's ordinary settle step:
++once orphans are the root Message's children, stage 5 (d), the parent's
++settle chain skips a child marked orphan; clarified 2026-09-14); the parent's release
++returns at once, and the branch is drained, not retained, while those turns
++and timeouts run. An orphan is re-rooted at the runtime for its drain (a
++top-level Message with no parent, reachable like any root, closing by the
++chain); stage 5, which makes OS startup the root Message, makes it that root
++Message's child. The children of a stopped Message (clarified 2026-09-14): a
++stopped Message has no lane, so nothing runs its children's turns from it;
++its stop requests their close; a child whose inbox is empty is closed by the
++maintenance without a turn, and a child on its own context runs its closing
++turn there; a child with pending input under a host-mapped stopped parent
++waits until the parent is disposed, when the chain re-roots it under the
++root Message, whose step runs its closing turn like any child's; nothing
++else steps it (no ancestor rule, no maintenance step, no authority of a
++stopped Message). An unbound closing Message has no handler and no lane, so
++its close is end-turn bookkeeping written by the maintaining lane (the
++host's drive today, the root's maintenance later), not a step, and it
++leaves the Message stopped and handoff-safe so that its parent's dispose or
++adopt can settle it; a Message that nothing could ever settle would be the
++retention rule (1) forbids (clarified 2026-09-14). The orphan-retention timeout is a runtime policy value with
++a default, settable per runtime like the liveness deadlines. A settled
++Message (not running, handoff-safe) has no lane; the lane that settles it
++writes its cells (the endpoint step), which is how the chain's writes fit
++the one-lane rule of 19.28.R2.2.
++On deleting the runtime, the root Message's close (Mikhail, 2026-09-15,
++verbatim): "running=0 is set, and at the end of its turn the closing Message
++does the same to its children; that is all"; "the executor frees its own
++memory"; "each of our L3 Threads has its own scheduler and garbage
++collector".
+ 
+ For concurrent writers M1...Mn, send the complete operation to the state owner
+ M0. M0 performs read-modify-write in its own serial turn; senders never acquire
+@@ -12521,7 +12926,32 @@
+ authorizes shared mutable LMX pools or catalogs disguised as runtime substrate.
+ The first execution thread raises the initial settings/configuration as its
+ Message, with user input already supplied by the system at entry. Subsequent
+-communication uses Messages only. Creation through `merge` copies the chosen
++communication uses Messages only.
++
++Stage 5 clarifications (2026-09-14, review chat, derived from this section,
++9.1.4 and 1.7 for the lead's stage-5 design; none of them needed a new
++ruling): (i) the runtime is never without its root: creating the runtime
++creates the root Message R0 (address 1, the only Message without a parent
++capability), and a rootless runtime "for embedding" does not exist, since an
++embedder is outside LMX and reaches the runtime only through R0's mailbox
++admission; (ii) the process entry (1.7) runs inside R0's own turns: the first
++execution thread's Message is R0, its initial Message carries the settings
++and the user input supplied at entry, and the entry program is R0's handler,
++not a child spawned for it (9.1.4: the translator does not implicitly spawn
++further Messages); (iii) nothing remains of a "host" outside any turn: every
++authority the L1 bootstrap gave the host (ingress, drive, the UI lane's step,
++the parent's step over top-level Messages, the logical clock, teardown)
++belongs to R0's turn loop, and the historical host ingress V0 is not
++normative; (iv) there is one top level: Messages created without a parent
++become R0's children, orphans are re-rooted under R0 keeping their retention
++policy (19.29.8: R0 is the lane that assigns a failed orphan's deadline and
++reclaims it; nobody adopts an orphan's arena), and the UI lane of 19.28.R2.2
++is R0's child mapped to R0's lane, the main thread; (v) the supervision
++handoff from R0 to the virtual World Wide Mix ancestor stays a refusing stub
++with its own status until 19.28.10 and the transport of section 35 are
++implemented; stage 5 fixes only the call site and the ancestor's address.
++
++Creation through `merge` copies the chosen
+ template's settings and explicit additions, not the parent's entire context.
+ It does not implicitly consult the parent's live settings. Ordinary settings
+ are copied; explicit references to admitted eternal branches retain their
+@@ -12545,14 +12975,107 @@
+ must not silently cross the boundary. Ordinary incoming LMX text is
+ added to the receiver's one logical arena with ownership transfer.
+ Ordinary local delivery does not deep-copy a graph, replace its identities or
+-rewrite its internal pointers. The delivered storage must be independently
++rewrite its internal pointers. (Mikhail, 2026-09-15, verbatim, on a sent
++Message: "У нас нет никаких копий message. Есть только он сам и у него своя
++арена. Пускай это будет один alloc но это его собственный. При получении
++Message который не L3 Thread присоединяется к арене получателя. Всё", there
++are no copies of a message; there is only the message itself, and it has its
++own arena, be it one alloc, its own; on receipt a Message that is not an L3
++Thread attaches to the recipient's arena; that is all.) A capability is the
++target's id, and a Message is found by its id (Mikhail, 2026-09-16, on the
++removed 2026-09-15 wording that kept a closed Message's mailbox alive in its
++parent for late senders: "У вас проблема без id найти Message?"); a closed
++Message's slot and arena are freed by the release chain as 19.29.6 says, a
++late send resolves the id and is refused with a status when the target is
++not found or closed, and there is no count of holders. The resolution is a
++mail service, itself a Message, R0: it keeps a sorted list of addresses as
++its own data on its own lane and answers membership in bounded time, never
++by scanning one by one; every send resolves there and is refused with a
++status when the address is absent, whether the target or its whole parent
++chain is gone; a later migration to another send/receive model stays within
++Message (Mikhail, 2026-09-16, verbatim: "я же вам писал что всё надо свести к Message. Какая вообще проблема не заводить специальный монитор, а завести почтовый сервис который будет хранить сортированный список адресов и давать за конечное время (только не перебором по одному) вхождение?!!!!  Тот же самый R0. Даже если запланирована потом миграция на какую-то другую моель полуения-отправки , она все равно будет в рамках MEssage"; and on a parent
++already gone: ""родитель отвечает отправителю отказом со статусом (kind REJECTED) из своего списк" -- а если родителя уже нет?", answered by the service: an absent address is
++refused by the service, not by any parent). The service is not a new entity:
++every Message is created from the root Message by the chain, so the root
++passes itself as the mail service at merge, and every Message holds the
++service's address from its creation; the service handed down the chain may
++be any Message, not only the root: the membership check by the service
++itself, the delivery by a postman Message, the list of postmen held by the
++service, and so on, everything written and optimized within Messages.
++[МЕТКА 2026-09-18, распоряжение Михаила: ИЕРАХИЧЕСКИЙ АДРЕС a.b.c.d ОТНОСИТСЯ ТОЛЬКО К
++ WorldWideMix. Этот модуль ещё НЕ РЕАЛИЗОВАН. В ядре L2 адрес — ФИЗИЧЕСКИЙ АДРЕС, и только
++ он. Читать абзац ниже как спецификацию WorldWideMix, а не как требование к ядру L2.]
++
++The address and the delivery, ruled the same day: every Message carries its
++hierarchical address a.b.c.d..., one string field holding a length and an
++unsigned array of indices, unbounded in count, with no further fields around
++it; when a Message changes parent its address changes, composed from the
++parent's address and its index; [МЕТКА 2026-09-18, поправка Михаила: пошаговая доставка почтальоном НЕ требует
++ иерархического адреса — родитель знает своих детей, ребёнок знает родителя, и шаг
++ решается по ФИЗИЧЕСКИМ адресам («это я? это один из моих детей? — вниз, иначе вверх»).
++ К WorldWideMix относится только СОСТАВЛЕНИЕ адреса a.b.c.d (обход parent-ссылок,
++ сортированный список адресов, поиск бисекцией), а не сам шаг доставки.]
++
++delivery goes through the parent's inbox,
++hop by hop along the chain, every L3 Thread a postman for one step that
++decides by the address whether to hand the Message to its parent or to one
++of its children; a mail service may exist beside this but is not required
++for delivery. The Message's own address field reduces to its index at its
++parent, since that is all the address adds at each level; the full address
++is composed by walking the parent links when needed. A letter carries no
++destination address: the target's address is the physical address of the
++target's L3 Thread and nothing else, and an unknown address is refused with
++a status instead of a letter falling off a node that does not exist
++(Mikhail, 2026-09-17, verbatim: "адрес цели сейчас будет просто физический
++адрес lmx_thread и всё"). The earlier wording that a letter carries its
++destination address in full is withdrawn here. Two methods carry this:
++getAddress, which returns a Message's
++address by walking the tree up to the root, and a send to a given address.
++The shape for now, until the map algorithm of include_languages/com.mtk.map
++(com/mtk/map: the author's hash tables, arrays and cursors) is rewritten onto
++Message: every Message receives from the root, at its creation, the reference
++to the mail service; getAddress and the hop-by-hop delivery below are an
++addition to that service, its delivery mechanism today, since the map
++algorithm is not easily rewritten as event-driven at once; the service delivers
++directly by the memory address of the target, since addresses do not move.
++The settled shape (Mikhail, 2026-09-16): a letter carries no address field;
++the sender hands the service the target's memory address, the handle it
++holds, and the service admits the letter into the target's inbox under that
++mailbox's monitor; getAddress computes a.b.c.d dynamically from the indices
++up the chain whenever a string address is needed; the hop-by-hop chain by
++string address is an addition to the service, not its main path; the
++service's reference is not a field of the kernel record beside running but a
++field of the Message's LMX, born with the Message and set from its parent,
++reassignable, never a global, and the service's API is common, so that any L3
++Thread can take the role; the common mail API and getAddress are made at
++once, as scaffolding, because rewriting them later would be expensive, and
++today's body for any L3 Thread used as the service is a stub: it looks at its
++own mail-service field and delegates to it (Mikhail, 2026-09-16, verbatim:
++"то есть общее почтовое API и getAddress это пока просто заготовки,но надо их сделать сразу потому что потом переписывать будет дорого. Сейчас должна быть заглушка -- L3 Thread в роли почтового сервиса (если его используют так) просто смотрит свое поле почтового сервиса и делегирует ему"; and: "То есть почтовый сервис это не дополнительное поле рядом c running, а поле уже LMX, а вот API надо сделать общим -- чтобы любой L3 Thread мог выступать в этой роли"); and the service keeps
++its own set of live records (registration at create and removal at release,
++its own acts on its own lane or letters to it, membership in bounded time),
++refusing an unknown address with a status rather than dereferencing it,
++which is what makes delivery by memory address safe with no count of
++holders (verbatim: "то есть поле адреса в письме нет, адрес вычисляется динамически по индексам как в том алгоритме -- есть getAddress, а доставку сейчас по адресу памяти делает почтовый сервис, только сслка на него не глобальная где-то лежит, а приходит от родителя"; "то есть "приходит от родителя" значит порождается вместе с Message как его переназначемое поле."; and, to the coordinator's
++statement of the live set, "да"). The earlier sentence (Mikhail, 2026-09-16, verbatim: "Почтовый сервис будет доставлять сразу по адресу в памяти так как адреса не двигаются"; and: "в общем смотри, вот этот алгоритм мы будем потом переписывать на Messge: C:\Nyasha_Planet\lingvamyxa\include_languages\com.mtk.map\com\mtk\map\ Так как пока это сложно -- оставьте пока getAddress и второй описнный механизм доставки, но сделайте его дополнением к почтовому сервису ссылка на который передаётся от root. Так как алгоритм выше вы вряд ли сразу легко перепишите на event-driven").
++No route is computed and nothing is checked before a send: the sender
++obtains the destination's address once, anywhere in its code, and keeps it;
++the letter is given to the sender's parent, and each Message that holds the
++letter decides alone whether to hand it to its own parent or to one of its
++children, by comparing the destination address with its own (Mikhail,
++2026-09-16, verbatim: "Отправителю достаточно один раз где-то в коде получить адрес и сохранить. Адрес перед отправкой никто не проверяет. Я же описал алгоритм -- письмо дается родителю который решает передать своем родителю или ребенку. Где здесь поиск пути?"; and: "То есть сделать метод getAddress который отдаёт адрес проверяя дерево до корня, и пото метод который посылает по какому-то адресу"; and: "Адресные массивы здесь кажется можно оптимиировать применительно к тому адресу который лежит в самом Message. Так как фактически это просто индекс у родителя. Адрес доставки можно писать и полностью пока -- он просто будет отваливаться на несуществующих узлах. Можете сразу закодить более-менее умно?"; and: "В исходном коде Message-у присваивался адрес a.b.c.d... Мы его убрали вчера вместе со всем остальным-- бывает. Мое последнее объяснение можно считать верным-- никто не мешает дрежать почтовый сревис, но надо вернуть строку адреса в виде неограниченного числом индексов, только не плодить вокруг нее больше полей, поле строки которое соержит len и uint*.  При смене родителя ментть и адрес -- составлять из адреса родителя и индекса. Доставку сделать через inbox родителя -- то есть передавать по цепочке и каждый L3 Thread сделать почтальоном наодин шаг -- он уже по адресу решает отдавать Message своему родителю или ребенку. Сделайте пожалуйста так.Это понятно?"). Written and optimized within Messages
++(Mikhail, 2026-09-16, verbatim: ""Отправка — письмо R0:" -- это может быть _любой_ Message которого R0 передаёт по цепочке при создании L1 Thread. В том числе проверку наличия по списку доступных может делать сам почтовый сервис, а конкретно доставку -- специальный почтальон, список почтальонов может держать почтовый сервис  и так далее -- вы можете _всё_ написать и всё оптимизировать в этой парадигме"; and earlier the same day: "Не плодите постоянно лишних сущностей. Так как все Message порождаются из root Message (по цепочке)то он может при merge передавать себя как почтовый сервис. В чем проблема?"). The delivered storage must be independently
+ transferable: a running sender cannot also keep using it through mutable aliases.
+ An explicit copy, merge, materialization or transport/codec contract may allocate
+ fresh state; this is not a runtime choice to clone ordinary delivery. Activation preserves
+ the activated Message's existing arena. Explicit launch of received
+ text as a separate L3 child gives that child its own arena. Storage from a
+ formerly running Message may be adopted only after it is non-executing and
+-handoff-safe. A running Message is not transferred to another parent/supervisor.
++handoff-safe. A running Message's storage is not transferred to another
++parent/supervisor; its supervision may be handed to another live parent
++(19.29.6, rule 4 of the 2026-09-14 clarification), which moves no storage.
++Adoption of a Message's storage closes that Message (19.29.6, rule 5); what
++the adopter spawns from the adopted content is the adopter's child.
+ 
+ A delivery address/capability is not a graph reference into another Message's
+ mutable arena. Adoption of a non-executing Message at the consuming end-turn
+@@ -12599,16 +13122,31 @@
+ delivery and not a replacement of the one-arena model. Do not
+ generalize those malloc copies into the source ontology.
+ 
+-Clarification (2026-09-14): "copy-only" names no additional mechanism.
+-It restates what merge does: a Message sent to another Message is
+-created by merge, as one copy in its own arena, and is delivered by
+-ownership transfer of that arena (19.29.7). This holds for every
+-Message; there is no separate envelope entity, and the Message wrapper
+-is the same for executed and non-executed Messages (19.28.R2.2). The
+-number/byte envelope of the prototype above is an implementation
+-shortcut of the L1 bootstrap, not a model entity. An L2 implementation
++Clarification (2026-09-14, restated 2026-09-17): "copy-only" names no
++additional mechanism. It restates what merge does: a Message sent to
++another Message is created by merge, as one copy in its own arena, and is
++delivered by ownership transfer of that arena (19.29.7). This holds for
++every Message, and the Message wrapper is the same for executed and
++non-executed Messages (19.28.R2.2). The envelope IS the Message: the record
++of running, success, handoff_ready, graph and index is the letter's
++envelope, so the entity exists and nothing wraps it in a second entity; the
++low-level queue bookkeeping a mailbox needs is what the translator emits on
++top of that structure, not a model entity (Mikhail, 2026-09-17, verbatim:
++"это писал агент с моих объяснений о том что Message это и есть конверт.
++Сущность есть. Просто он помещал сущность в сущность зачем-то. То что мы
++сейчас описали lmx_message -- и есть конверт. С точки зрения L2-L3 кода
++отправляется LMX структура созданная merge, явно оборачивать ее в низкий
++уровень не надо -- это должен сделать транслятор."). The number/byte
++envelope of the prototype above is an implementation shortcut of the L1
++bootstrap, not a model entity. An L2 implementation
+ of this section uses Message creation by merge and arena transfer for
+ all delivery, and keeps management state as Structure data.
++Isolation of a Message is a ladder (2026-09-14, Mikhail): by merge (one copy
++in its own arena) and by validation at admission; where the transport
++requires it, by authenticated encryption (libsodium-grade) of the transferred
++bytes; and at the top by placing Messages in N OS processes, where the
++control flags are managed by the transport. Levels: L2 sees all of C through
++`c.`; only L3 sees no C.
+ 
+ Historical prototype, not the normative management architecture:
+ Host ingress V0 (`LMX_MSG_HOST_INGRESS_VERSION` 0) lets a foreign
+@@ -12637,7 +13175,7 @@
+ Language-facing operations (names follow existing thread/send/stop
+ contracts; `spawn` here is English, not a new parser intrinsic):
+ 
+-    create/spawn(handler, initialData, create_id) -> MessageAddress
++    create/spawn(handler, initialData) -> MessageAddress
+         Reserve a child identity and a distinct INACTIVE arena during
+         the parent turn. Copy initialData (numbers and exact byte/text
+         payloads) into that reserved child's arena. This is not a send
+@@ -12647,19 +13185,13 @@
+         when parent is the host root). Concatenation, not arithmetic
+         on the whole address: parent `34.3` yields `34.3.1`, then
+         `34.3.2`; that child's first child is `34.3.1.1`. First
+-        allocated child is 1. Retry of the same (parent, create_id)
+-        returns the same child and the same path and does not consume
+-        another counter value. An aborted reservation is not reused;
+-        a later retry of that create_id gets a new slot and a new
+-        path segment. The internal mailbox slot (`LmxMsgAddr`) is
++        allocated child is 1. The internal mailbox slot (`LmxMsgAddr`) is
+         not the Mix path. This path names Message placement; it does
+         not make every Mix cell a running Message. Externally issued
+         addresses and packed mixed-radix ints are not this allocator.
+-        While the child is still live, retry of the same
+-        (parent, create_id) returns that child (no second committed
+-        child). An aborted uncommitted reservation is released
+-        (tombstone); retry must not return the freed handle.
+-        The child does not run before the creator's successful
++        (The create-retry idempotence keyed by (parent, create_id), with its
++        tombstone rule, was removed by Mikhail's order of 2026-09-15:
++        "убирайте".) The child does not run before the creator's successful
+         end-turn publication. Third-party send cannot activate an
+         uncommitted reservation. A failed parent turn releases
+         uncommitted children. Send to that reserved
+@@ -12688,11 +13220,13 @@
+         stopped before admission, the transport copy is dropped.
+         A newly reserved inactive child's initial-state arena
+         (create, above) is a different case and must not be
+-        generalized to send-into-running. Dedup key is
+-        (recipient, sender, id) so two senders' local id=1 do not
+-        collide. Sender staging is not visible to the receiver;
+-        unpublished staged requests cannot be deduped by the
+-        destination.
++        generalized to send-into-running. Sender staging is not visible to
++        the receiver. There is no dedup key and no id the kernel remembers
++        per sender: the mailbox keeps no such mechanism, and an earlier
++        sentence here about a dedup key was a prototype invention (Mikhail,
++        2026-09-15, verbatim: "ящик помнил последние id от каждого
++        отправителя и отбрасывал повторы («не более одного раза»)." --
++        какая-то выдумка. Удаляй все.).
+         This describes envelope transport, not a running Message moving to
+         this recipient. For Message/arena delivery and delivery-only assignment
+         completion, see 19.29.7 and Completion below (success/running).
+@@ -12719,11 +13253,9 @@
+         orphan-continuation exception for copy jobs. Send after
+         STOPPED is not admitted.
+ 
+-Envelope fields for this slice: id (stable logical request identity
+-across transport attempts), correlation (19.31.4: semantic
+-result/failure is an ordinary Message whose correlation equals the
+-request id), replyTo. Delivery-policy fields may be added later
+-without positional churn.
++This slice defines no envelope entity and no envelope fields: the envelope
++is the Message itself, and correlation/result semantics live in 19.31.4
++rather than in fields of a separate envelope (Mikhail, 2026-09-17).
+ 
+ Activation of an existing inactive Message (first publication of a
+ reserved child, or start of a constructed inactive Message) is this
+@@ -12814,7 +13346,14 @@
+ STOPPED, RELEASED, or sustained-nonresponsive while in a handler,
+ the child requests its own orderly close (same end_turn path as
+ stop). A live idle parent keeps children alive. Host/system parent
+-anchors roots. Cadence and timeout are host settings, not language
++anchors roots. (Mikhail, 2026-09-15, verbatim, on his sentence that in the
++end the root thread's timeout fires and leaves the OS process: "в конце концов по таймауту сработает корневой поток и тупо выйдет из процесс ОС. " -- то есть я выше просил заглушку "родитель корневого L3 Thread";
++that is, the stub "parent of the root L3 Thread" he asked for is this
++host/system parent: it holds the parent's timeout on the root and, on
++expiry, leaves the OS process; the model's section 19.29.7.1 records his
++2026-09-14 sentence that the root's only parent is the virtual grandparent
++at the OS-process level, a stub until World Wide Mix and the transport
++exist.) Cadence and timeout are host settings, not language
+ constants and not the mail-watcher interval. The child's own scheduling/lifecycle
+ mechanism owns the cadence, pending query and timeout decision. Platform clock
+ and wake primitives support it; no global scan owns this responsibility.
+@@ -12883,6 +13422,19 @@
+ revive it. Both normal completion and emergency cancellation use running=0.
+ Only actual completion of the assigned operation sets success=1. A cancellation
+ request does not manufacture success and need not wait for ordinary end_turn.
++
++Clarification (2026-09-14, Mikhail). Completion sets success=1 only;
++running=0 follows success=1 only at the turn boundary, in end_turn. Inside a
++turn running stays 1, so running=0 observed inside a turn is a stop request,
++never the Message's own completion. The running flag is written by whoever
++executed the Message: a Message executed on its own turn clears it at its
++end_turn; a Message consumed by attachment (an ordinary letter) is executed by
++the consumer's thread and mailbox, and the consumer clears it at the boundary
++of its own turn. In transit a letter therefore stays running=1, success=0;
++running=0 with success=0 at a boundary is the failed outcome that the parent
++settles through the handoff boundary below. The sentence "it sets success=1
++and then running=0" in the closing paragraph below is read with this order:
++the two writes are separated by the turn boundary.
+ 
+ The parent's scheduler checks its direct children's control state on each own
+ turn and maintains their individual liveness deadlines. It need not send a
+@@ -14897,6 +15449,17 @@
+ it, or other low-level synchronization, only inside the Message mechanism;
+ their other components coordinate through Messages (19.28.R2.2).
+ 
++This is settled, not open. Mikhail, 2026-09-17, verbatim, on being asked whether
++the capability should be struck: "оставляем synchronized как общую возможность
++языка L2 -- уже много раз говорил. КАК ТЫ БУДЕШЬ ПЕРЕПИСЫВАТЬ НА L2 БЕЗ
++SYNCHRONIZED?!!!" The project's "no locks" rule governs the KERNEL's own
++implementation -- the only lock the design takes there is a mailbox's admission --
++and never removes the language's ability to express synchronization. A language
++without it could not be used to rewrite the very mechanisms that need it.
++
++Its scope, Mikhail, 2026-09-17, verbatim: "Никаких локов за пределами почтового
++ящика. Локов вообще как сущности нет только в L3 по спеке."
++
+ In the minimal L2 profile, `synchronized` has an object-expression plus
+ statement-tail receiver signature. The source after `synchronized:` is still the
+ ordinary P0 argument Structure.

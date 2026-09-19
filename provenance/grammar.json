@@ -1,0 +1,1571 @@
+{
+  "source": {
+    "path": "C:\\Nyasha_Planet\\lingvamyxa\\Lingvamyxa_spec.txt",
+    "sha256": "d4bb1e70c9d660b185ec084ed4c636ce75bc08dd100786c754401017cade221c"
+  },
+  "sections": [
+    {
+      "id": "scope",
+      "number": 1,
+      "ru": {
+        "title": "Область документа и источники",
+        "text": "Здесь собраны правила записи и структурного разбора LMX из прежней `Lingvamyxa_spec.txt`: лексика, формы, уровни, разделители, закрытия, Mix и грамматические границы профилей. Устройство Message, арен, графового копирования, вызовов и типизации сюда не переносится. Новая семантика находится в [соседнем документе](semantics.ru.md).\n\nОсновной источник — `lingvamyxa/Lingvamyxa_spec.txt`; копия `L1/Lingvamyxa_spec.txt` сверена отдельно. Номера прежних разделов и строк служат указателями происхождения, а не ссылками на новую семантику. [Сравнение источников](source-comparison.ru.md) перечисляет изменения. RU/EN имеют одинаковые разделы и исходные фрагменты.\n\nПравила ниже объединяют повторяющиеся пояснения источника. Примеры и нормальные формы скопированы, включая пробелы, комментарии, строки и имена: язык кода в RU/EN не переводится. Некоторые фрагменты показывают только часть конструкции или её условную запись, а не самостоятельную программу. Общий отступ в четыре пробела у иллюстраций исходной спеки — отступ представления; требование колонки 0 для оград относится к исходному тексту после снятия этого отступа.\n\nДокумент не дополняет неописанные профили выдуманными правилами. EBNF — проекция автомата P0; ограничения автомата и лексических режимов обязательны вместе с ней."
+      },
+      "en": {
+        "title": "Scope and sources",
+        "text": "This document collects LMX spelling and structural parsing rules from the previous `Lingvamyxa_spec.txt`: lexing, forms, levels, separators, closers, Mix, and grammatical profile boundaries. Message internals, arenas, graph copying, invocation, and typing are not imported. The new semantics are in the [adjacent document](semantics.en.md).\n\nThe primary source is `lingvamyxa/Lingvamyxa_spec.txt`; the `L1/Lingvamyxa_spec.txt` copy was compared separately. Previous section and line numbers identify provenance, not new semantic rules. The [source comparison](source-comparison.en.md) lists changes. RU/EN have identical sections and source excerpts.\n\nThe rules below consolidate repeated source explanations. Examples and normal forms are copied, including whitespace, comments, strings, and names: code is not translated between RU/EN. Some excerpts show only part of a construct or schematic notation, not a standalone program. The common four-space indent in source-spec illustrations is presentation indentation; column-0 fence requirements apply after removing that presentation indent.\n\nThis document does not invent rules for unspecified profiles. EBNF is a projection of the P0 automaton; automaton and lexical-mode constraints apply together with it."
+      },
+      "examples": []
+    },
+    {
+      "id": "structure",
+      "number": 2,
+      "ru": {
+        "title": "Структуры, поля и Frame",
+        "text": "Источник: §§0, 3.2–3.4, 4.0, 4.8–4.9, 5, 15.\n\nP0 строит упорядоченные структуры, именованные Frame, атомы и узлы Mix с исходными диапазонами. Frame состоит из головы и одной структуры аргументов. Порядок полей сохраняется; анонимная структура тоже является полем. Физическая строка не является контейнером абстрактного дерева.\n\nДвоеточие отделяет голову от её аргументной структуры. Оно само по себе не означает присваивание, пару ключ–значение или аннотацию типа. `fn:`, `if:`, `int:`, `[]:` и пользовательские головы используют одну форму. Значение головы и роли её полей определяет принимающий профиль после разбора. Вложенная структура не становится исполняемой из-за самого факта вложенности.\n\nПозиционные поля сохраняют порядок. Именованные входы записываются обычными вложенными Frame. Имена параметров, смысл таблицы, число её столбцов, проверка именованных аргументов и исполнение не выводятся P0 из визуального выравнивания. Синтаксис не имеет отдельной формы анонимной функции или метки; `outerLoop:` с телом — обычный Frame."
+      },
+      "en": {
+        "title": "Structures, fields, and Frames",
+        "text": "Sources: §§0, 3.2–3.4, 4.0, 4.8–4.9, 5, 15.\n\nP0 builds ordered Structures, named Frames, atoms, and Mix nodes with source spans. A Frame has a head and one argument Structure. Field order is preserved; an anonymous Structure is also a field. A physical line is not an abstract-tree container.\n\nThe colon separates a head from its argument Structure. It does not by itself mean assignment, a key–value pair, or a type annotation. `fn:`, `if:`, `int:`, `[]:`, and user heads use the same form. A consuming profile determines the head's meaning and field roles after parsing. Nesting alone does not make a Structure executable.\n\nPositional fields retain their order. Named inputs are ordinary nested Frames. Parameter names, table meaning, column count, named-argument validation, and execution are not inferred by P0 from visual alignment. There is no separate anonymous-function or label grammar; `outerLoop:` with a body is an ordinary Frame."
+      },
+      "examples": [
+        {
+          "start": 2148,
+          "end": 2148,
+          "text": "    f(a, b, c)"
+        },
+        {
+          "start": 2152,
+          "end": 2159,
+          "text": "    Frame(\n      name(f),\n      args(\n        field0(a),\n        field1(b),\n        field2(c)\n      )\n    )"
+        },
+        {
+          "start": 2630,
+          "end": 2636,
+          "text": "    fn: ...\n    if: ...\n    return: ...\n    int: ...\n    []: ...\n    model: ...\n    operator: ..."
+        },
+        {
+          "start": 2644,
+          "end": 2644,
+          "text": "    x: value"
+        },
+        {
+          "start": 2653,
+          "end": 2653,
+          "text": "    Type: x"
+        },
+        {
+          "start": 2662,
+          "end": 2662,
+          "text": "    name: Alice"
+        },
+        {
+          "start": 3949,
+          "end": 3952,
+          "text": "model:\n    name: PlantBed\n    condition: plantBedCondition\nend: model"
+        },
+        {
+          "start": 3956,
+          "end": 3959,
+          "text": "    model(\n      name(PlantBed),\n      condition(plantBedCondition)\n    )"
+        },
+        {
+          "start": 3971,
+          "end": 3974,
+          "text": "branch: a\n    doSomething\n    doOtherThing\nend: branch"
+        },
+        {
+          "start": 3980,
+          "end": 3985,
+          "text": "branch: a\n    first:\n        doSomething\n    second:\n        doOtherThing\nend: branch"
+        },
+        {
+          "start": 3991,
+          "end": 3994,
+          "text": "config:\n    batchSize: 500\n    reportMode: Daily\nend: config"
+        }
+      ]
+    },
+    {
+      "id": "positions",
+      "number": 3,
+      "ru": {
+        "title": "Исходные байты, строки и координаты",
+        "text": "Источник: §15.0.\n\nПозиции и диапазоны P0 относятся к исходным байтам. Для диагностики CRLF — один перенос шириной два байта; LF и одиночный CR — перенос шириной один байт. Буфер не переписывается ради нормализации строк. В последовательности `a`, CR, LF, `b` байт `b` имеет смещение 3 и координаты 2:1 при базе 1:1. Позиция на LF пары CRLF имеет координаты после её CR. Правая граница среза исключительная: CRLF, обрезанный между CR и LF, внутри среза считается одиночным CR.\n\nДекодирование строкового значения отделено от координат исходника. Генерируемые текстовые файлы используют LF; вход может содержать LF, CRLF и одиночный CR. Переносы внутри защищённого литерала не создают событий уровней внешней структуры."
+      },
+      "en": {
+        "title": "Source bytes, lines, and coordinates",
+        "text": "Source: §15.0.\n\nP0 positions and spans refer to original bytes. For diagnostics, CRLF is one line break of width two bytes; LF and lone CR are breaks of width one byte. The buffer is not rewritten to normalize lines. In `a`, CR, LF, `b`, byte `b` has offset 3 and coordinates 2:1 with a 1:1 base. A position on the LF of a CRLF pair has the coordinates after its CR. Slice ends are exclusive: a CRLF cut between CR and LF counts as a lone CR within that slice.\n\nString-value decoding is separate from source coordinates. Generated text files use LF; input may contain LF, CRLF, and lone CR. Line breaks within a shielded literal do not produce outer Structure level events."
+      },
+      "examples": []
+    },
+    {
+      "id": "numbers",
+      "number": 4,
+      "ru": {
+        "title": "Числовые литералы",
+        "text": "Источник: §3.4.1.\n\nФормы целых и вещественных литералов следуют ANSI C/C99: десятичные, восьмеричные и шестнадцатеричные целые, суффиксы целых типов, десятичные и шестнадцатеричные вещественные числа, показатели степени и суффиксы вещественных типов. Пробел разделяет соседние числовые поля; знак операции остаётся частью общего потока токенов согласно правилам лексера, а не новым способом именования. Числоподобный текст в обратных кавычках — точный идентификатор."
+      },
+      "en": {
+        "title": "Numeric literals",
+        "text": "Source: §3.4.1.\n\nInteger and floating literal forms follow ANSI C/C99: decimal, octal, and hexadecimal integers, integer suffixes, decimal and hexadecimal floating constants, exponents, and floating suffixes. Whitespace separates neighboring numeric fields; operator spelling remains in the common token stream according to lexer rules, rather than introducing a new naming form. Numeric-looking text in backticks is an exact identifier."
+      },
+      "examples": [
+        {
+          "start": 2187,
+          "end": 2194,
+          "text": "    0\n    123\n    0123\n    0x7B\n    123u\n    123UL\n    123ll\n    0xffULL"
+        },
+        {
+          "start": 2198,
+          "end": 2206,
+          "text": "    1.0\n    .5\n    1.\n    1e9\n    1.25e-3\n    1.0f\n    1.0L\n    0x1.8p+2\n    0x1p-4"
+        },
+        {
+          "start": 2210,
+          "end": 2210,
+          "text": "    print: 1 2 3"
+        },
+        {
+          "start": 2214,
+          "end": 2214,
+          "text": "    print(1, 2, 3)"
+        },
+        {
+          "start": 2273,
+          "end": 2273,
+          "text": "    1 2 3"
+        },
+        {
+          "start": 2277,
+          "end": 2277,
+          "text": "    fields `1`, `2`, `3`"
+        }
+      ]
+    },
+    {
+      "id": "identifiers",
+      "number": 5,
+      "ru": {
+        "title": "Обычные и точные идентификаторы",
+        "text": "Источник: §§3.4.2–3.4.3.\n\nПереносимый обычный идентификатор имеет форму `[A-Za-z_][A-Za-z0-9_]*`. Пробелы не входят в него. Точный идентификатор ограничен обратными кавычками; удвоенная обратная кавычка внутри означает одну буквальную. Остальные байты, пробелы, пунктуация, переводы строк и отступы сохраняются. Пустое имя допустимо; NUL до закрывающей кавычки — ошибка. Обратная косая черта здесь не вводит отдельного экранирования.\n\nЗначение имени — содержимое после снятия границ и замены удвоенных обратных кавычек. Если оно допустимо без кавычек, обе записи обозначают одно имя. Точный токен атомарен в голове, аргументе и выражении; операторы, комментарии и уровни внутри него не распознаются. Кавычки не снимают семантическое резервирование имени: в старом языковом профиле `node` и `` `node` `` одинаково зарезервированы. Сама общая грамматика не устанавливает рантайм-смысл этого имени."
+      },
+      "en": {
+        "title": "Bare and exact identifiers",
+        "text": "Sources: §§3.4.2–3.4.3.\n\nA portable bare identifier has the form `[A-Za-z_][A-Za-z0-9_]*`. It contains no spaces. An exact identifier is delimited by backticks; a doubled backtick inside denotes one literal backtick. Other bytes, spaces, punctuation, line breaks, and indentation are preserved. An empty name is allowed; NUL before the closing delimiter is an error. Backslash introduces no separate escape mechanism here.\n\nThe identifier value is its content after delimiter removal and doubled-backtick unescaping. If that value is valid unquoted, both spellings denote the same name. An exact token is atomic in head, argument, and expression positions; operators, comments, and levels are not recognized inside it. Quoting does not escape semantic name reservation: in the old language profile, `node` and `` `node` `` are equally reserved. The general grammar itself does not prescribe that name's runtime meaning."
+      },
+      "examples": [
+        {
+          "start": 2224,
+          "end": 2224,
+          "text": "    [A-Za-z_][A-Za-z0-9_]*"
+        },
+        {
+          "start": 2228,
+          "end": 2230,
+          "text": "    PlantBed\n    branch\n    very_long_name"
+        },
+        {
+          "start": 2243,
+          "end": 2243,
+          "text": "    red apples",
+          "ru": "Не одно обычное имя",
+          "en": "Not one bare name"
+        },
+        {
+          "start": 2249,
+          "end": 2251,
+          "text": "    `red apples`\n    `estimate harvest`\n    `2 dim example`"
+        },
+        {
+          "start": 2258,
+          "end": 2259,
+          "text": "    variable\n    `variable`"
+        },
+        {
+          "start": 2281,
+          "end": 2281,
+          "text": "    head: PlantBed `2 dim`"
+        },
+        {
+          "start": 2285,
+          "end": 2286,
+          "text": "    PlantBed\n    `2 dim`"
+        },
+        {
+          "start": 2297,
+          "end": 2297,
+          "text": "    `exact name`"
+        },
+        {
+          "start": 2320,
+          "end": 2327,
+          "text": "    `a,b`\n    `x.y`\n    `return`\n    `1 2`\n    `a  b`\n    `line\n        continued`\n    ``"
+        },
+        {
+          "start": 2331,
+          "end": 2331,
+          "text": "    `a``b`"
+        },
+        {
+          "start": 2335,
+          "end": 2335,
+          "text": "    a`b",
+          "ru": "Значение имени",
+          "en": "Identifier value"
+        },
+        {
+          "start": 2339,
+          "end": 2340,
+          "text": "    int: `a``b`\n    `a``b`: 10"
+        },
+        {
+          "start": 2350,
+          "end": 2351,
+          "text": "    `line\n        continued`"
+        }
+      ]
+    },
+    {
+      "id": "c-strings",
+      "number": 6,
+      "ru": {
+        "title": "Обычные строки и символьные константы",
+        "text": "Источник: §§3.4.4, 3.4.4.2.\n\nСтроки в двойных кавычках и символьные константы в одинарных следуют ANSI C/C99, включая широкие формы `L\"...\"`, `L'...'`, escape-последовательности и склейку обратной косой черты с немедленно следующим физическим переносом. Неэкранированный физический перенос до закрытия обычной строки — ошибка. Склеенный перенос не входит в значение; пробелы следующей физической строки сохраняются внутри литерала, а не становятся внешним отступом.\n\nВосьмеричный escape поглощает до трёх цифр, `\\x` — следующие шестнадцатеричные цифры по правилу C, `\\uXXXX` и `\\UXXXXXXXX` — универсальные обозначения символов. Символьная константа имеет числовое значение; многосимвольные и широкие константы следуют выбранному C-профилю.\n\nСразу после закрывающей кавычки нужна граница поля: горизонтальный пробел, перенос, запятая, точка с запятой, `(`, `)` или конец элемента. Иной символ — ошибка пропущенного разделителя. Соседние строковые литералы — отдельные поля, а не неявная C-конкатенация. Строка и точный идентификатор различаются."
+      },
+      "en": {
+        "title": "Ordinary strings and character constants",
+        "text": "Sources: §§3.4.4, 3.4.4.2.\n\nDouble-quoted strings and single-quoted character constants follow ANSI C/C99, including wide forms `L\"...\"`, `L'...'`, escapes, and splicing of a backslash immediately followed by a physical line ending. An unescaped physical newline before an ordinary string closes is an error. A spliced newline contributes no value character; spaces on the following physical line remain inside the literal rather than becoming outer indentation.\n\nAn octal escape consumes up to three digits, `\\x` consumes following hexadecimal digits under the C rule, and `\\uXXXX` and `\\UXXXXXXXX` are universal character names. A character constant has a numeric value; multicharacter and wide constants follow the selected C profile.\n\nA closing quote must be followed by a field boundary: horizontal space, newline, comma, semicolon, `(`, `)`, or the end of the item. Another character is a missing-separator error. Adjacent string literals are separate fields, not implicit C concatenation. A string and an exact identifier are distinct."
+      },
+      "examples": [
+        {
+          "start": 2365,
+          "end": 2376,
+          "text": "    \"hello\"\n    \"line one\\nline two\"\n    \"tab\\tseparated\"\n    \"quote: \\\"\"\n    \"backslash: \\\\\"\n    \"question: \\?\"\n    \"alert\\a backspace\\b formfeed\\f newline\\n carriage\\r tab\\t vertical\\v\"\n    \"octal A: \\101\"\n    \"hex A: \\x41\"\n    \"lambda: \\u03BB\"\n    \"grinning face: \\U0001F600\"\n    L\"wide text\""
+        },
+        {
+          "start": 2380,
+          "end": 2381,
+          "text": "\"physical\\\nline break\""
+        },
+        {
+          "start": 2393,
+          "end": 2393,
+          "text": "    print: \"hello\" \"world\""
+        },
+        {
+          "start": 2397,
+          "end": 2397,
+          "text": "    print(\"hello\", \"world\")"
+        },
+        {
+          "start": 2401,
+          "end": 2403,
+          "text": "    []: labels\n    . \"red\" \"green\" \"blue\"\n    . \"cyan\" \"magenta\" \"yellow\""
+        },
+        {
+          "start": 2410,
+          "end": 2410,
+          "text": "    \"hello\""
+        },
+        {
+          "start": 2414,
+          "end": 2414,
+          "text": "    `hello`"
+        },
+        {
+          "start": 2479,
+          "end": 2483,
+          "text": "    'A'\n    '\\n'\n    '\\101'\n    '\\x41'\n    L'A'"
+        }
+      ]
+    },
+    {
+      "id": "raw-quotes",
+      "number": 7,
+      "ru": {
+        "title": "Тройные кавычки",
+        "text": "Источник: §3.4.4.1.\n\nТри двойные или три одинарные кавычки в позиции токена открывают сырой строковый литерал. Он закрывается серией ровно из трёх кавычек того же вида. Серия из N ≥ 4 таких кавычек остаётся содержимым и даёт N − 1 кавычек в значении; одна или две — обычное содержимое. Кавычки другого вида всегда обычные символы. Обратная косая черта не экранирует; C-escape, склейки строк и неявной конкатенации нет.\n\nПереносы, NUL, комментариеподобный текст, скобки и двоеточия внутри — содержимое литерала с длиной. Его внутренние строки не создают внешних событий уровней. После закрытия последовательность полей продолжается на той же строке при наличии границы: пробела, переноса, `,`, `;`, `(`, `)`, `[`, `]` или конца элемента.\n\nP0 сохраняет исходную запись вместе с тройными границами. Сокращение серий кавычек и нормализация переносов значения относятся к слою декодирования. Многострочный литерал — один атом, а не самостоятельный блок уровней; в вертикальном теле ему нужен обычный уровень ребёнка."
+      },
+      "en": {
+        "title": "Triple quotes",
+        "text": "Source: §3.4.4.1.\n\nThree double quotes or three single quotes in token position open a raw string literal. It closes at a run of exactly three matching quotes. A run of N ≥ 4 matching quotes remains content and contributes N − 1 quotes to the value; one or two are ordinary content. The opposite quote character is always ordinary. Backslash does not escape; there are no C escapes, line splicing, or implicit concatenation.\n\nNewlines, NUL, comment-looking text, brackets, and colons inside are content of a length-bearing literal. Its internal lines do not produce outer level events. After closure, the field sequence continues on the same line when separated by space, newline, `,`, `;`, `(`, `)`, `[`, `]`, or item end.\n\nP0 preserves the source spelling including triple delimiters. Quote-run shortening and value-newline normalization belong to decoding. A multiline literal is one atom, not a source-level block of its own; it needs the ordinary child level within a vertical body."
+      },
+      "examples": [
+        {
+          "start": 2422,
+          "end": 2423,
+          "text": "    \"\"\"text\"\"\"\n    '''text'''"
+        },
+        {
+          "start": 2450,
+          "end": 2452,
+          "text": "    text: \"\"\"line one\n    line two # not a comment\n    line three: not a frame\"\"\""
+        },
+        {
+          "start": 2454,
+          "end": 2456,
+          "text": "    text: '''single-quote form\n    four quotes produce three: ''''\n    still text'''"
+        },
+        {
+          "start": 2468,
+          "end": 2471,
+          "text": "    doc:\n    . \"\"\"text child\n    still text\"\"\"\n    end: doc"
+        }
+      ]
+    },
+    {
+      "id": "block-text",
+      "number": 8,
+      "ru": {
+        "title": "Блочный текст и кодировки",
+        "text": "Источник: §3.4.4.3.\n\nСтрока в колонке 0 из 3–80 знаков `=` с необязательными конечными пробелами/табуляциями открывает блочный текст. Закрывает его только такая же чистая строка с точно тем же числом `=`. Ни начальный отступ, ни заголовок, ни комментарий на строке ограды не допускаются. Иная длина ограды внутри — содержимое; вложенности оград нет. Открывающая и закрывающая строки не входят в значение. Незакрытая ограда — ошибка.\n\nСодержимое сырое, с длиной: NUL допустим, обратная косая черта не экранирует, серии кавычек не сокращаются. Межстрочные переносы значения сохраняются после нормализации переносов. Ограда сама не меняет уровень и передаёт значение текущему открытому телу, в том числе самому внутреннему открытому короткому Frame.\n\nВсе три сырые формы могут нести байты выбранного представления текста. `utf8`, `utf16`, `utf32` и указания ширины — обычные данные/приёмники, не особые правила P0. Проверка кодировки и перекодирование относятся к потребителю."
+      },
+      "en": {
+        "title": "Block text and encodings",
+        "text": "Source: §3.4.4.3.\n\nA column-0 line of 3–80 `=` characters with optional trailing spaces/tabs opens block text. Only a matching pure line with exactly the same number of `=` closes it. Leading indentation, titles, and comments on a fence line are not allowed. A different-length fence inside is content; fences do not nest. Opening and closing lines are excluded from the value. An unclosed fence is an error.\n\nThe content is raw and length-bearing: NUL is allowed, backslash does not escape, and quote runs are not shortened. Interline value breaks are preserved after newline normalization. A fence does not itself change the level and supplies its value to the current open body, including the innermost open short Frame.\n\nAll three raw forms can carry bytes of a selected text representation. `utf8`, `utf16`, `utf32`, and width markers are ordinary data/receivers, not special P0 rules. Encoding validation and transcoding belong to the consumer."
+      },
+      "examples": [
+        {
+          "start": 2495,
+          "end": 2496,
+          "text": "    ===\n    ===="
+        },
+        {
+          "start": 2521,
+          "end": 2527,
+          "text": "    @: u32 utf32:\n    ===\n    текст utf32\n    ===\n\n    @: u16 utf16: '''текст utf16'''\n    @: u32 utf32: \"\"\"текст utf32\"\"\""
+        },
+        {
+          "start": 2531,
+          "end": 2537,
+          "text": "    String: u32 utf32:\n    ===\n    текст utf32\n    ===\n\n    String: u16 utf16: '''текст utf16'''\n    String: u32 utf32: \"\"\"текст utf32\"\"\""
+        },
+        {
+          "start": 2549,
+          "end": 2552,
+          "text": "===\nline one\nline two\n==="
+        },
+        {
+          "start": 2558,
+          "end": 2560,
+          "text": "====\nThis line may contain === without closing the block.\n===="
+        }
+      ]
+    },
+    {
+      "id": "comments",
+      "number": 9,
+      "ru": {
+        "title": "Комментарии и отключённые блоки",
+        "text": "Источник: §4.10.\n\nВне защищённого литерала `#` начинает комментарий до конца физической строки; предшествующий код разбирается обычно. `%` в начале элемента после зоны отступа отключает элемент и всё его вертикальное тело. Пробел после `%` необязателен, знак не влияет на уровень. P0 сохраняет неактивный заполнитель, а не обычное поддерево тела. Облегчённая проверка всё ещё контролирует уровни, допустимые закрытия, сбалансированность ограниченных форм и закрытие литералов. Обычный семантический разбор и регистрация определений отключённого тела не выполняются.\n\nСырая файловая ограда — строка в колонке 0 из 3–80 `*`, только с необязательными конечными пробелами/табуляциями. Закрывающая ограда должна иметь ту же длину. Строки внутри полностью игнорируются, в том числе некорректный синтаксис; уровни и закрытия не проверяются. Ограждения не вкладываются, серия иной длины — содержимое. Отсутствие закрывающей ограды — ошибка файла. У такой ограды нельзя добавлять название или `#`-комментарий."
+      },
+      "en": {
+        "title": "Comments and disabled blocks",
+        "text": "Source: §4.10.\n\nOutside a shielded literal, `#` starts a comment through physical line end; preceding code is parsed normally. `%` at the start of an item after its indentation zone disables that item and its vertical body. Space after `%` is optional; the marker does not affect the level. P0 retains an inactive placeholder rather than the body's ordinary subtree. Lightweight validation still checks levels, admitted closers, balanced bounded forms, and literal closure. Ordinary semantic processing and definition registration are not performed for the disabled body.\n\nA raw file-comment fence is a column-0 line of 3–80 `*` characters with only optional trailing spaces/tabs. Its closing fence must have the same length. Interior lines are ignored completely, including malformed syntax; levels and closers are not checked. Fences do not nest; a different-length run is content. A missing closing fence is a file error. A title or `#` comment cannot be added to such a fence."
+      },
+      "examples": [
+        {
+          "start": 4016,
+          "end": 4017,
+          "text": "print: count # print the current value of count\n# this whole physical line is a comment"
+        },
+        {
+          "start": 4033,
+          "end": 4039,
+          "text": "%branch: mode = debug\n    first:\n        print: debug branch\n    ---\n    second:\n        print: release branch\n    ---"
+        },
+        {
+          "start": 4046,
+          "end": 4052,
+          "text": "branch: mode = debug\n    %first:\n        print: disabled first branch\n    ---\n    second:\n        print: active second branch\n    ---"
+        },
+        {
+          "start": 4061,
+          "end": 4063,
+          "text": "    ***\n    ****\n    *****"
+        },
+        {
+          "start": 4073,
+          "end": 4077,
+          "text": "***\nThis text is ignored by the parser.\nBroken Lingvamyxa source may appear here:\n    if (\n***"
+        },
+        {
+          "start": 4081,
+          "end": 4085,
+          "text": "*****\nThis line is ignored.\n***       # ignored raw comment content, because the opener has length 5\n****      # also ignored raw comment content\n*****"
+        }
+      ]
+    },
+    {
+      "id": "frames",
+      "number": 10,
+      "ru": {
+        "title": "Компактная, короткая и вертикальная формы",
+        "text": "Источник: §§4.0–4.3.\n\n`f(a, b, c)` — компактный Frame с ограниченной структурой аргументов. `f: a b c` открывает короткую форму на уровне N; её хвост находится на неявном уровне N + 1. Пустой хвост на строке открытия может продолжиться вертикальными детьми. Двоеточие допускает обычную, точную или символическую голову.\n\nГоризонтальные пробелы и запятые разделяют поля текущего хвоста. Перенос физической строки возвращает счётчик на уровень этой физической строки, но сам по себе не завершает Frame. Следующий элемент на N + 1 продолжает тело, на N завершает текущую форму и становится соседом, ниже N завершает её с применением правил закрытия. Более глубокий элемент требует допускающего вложение предшественника и допустимого изменения уровня.\n\nЕсли после уже имеющихся строчных аргументов идёт вложенное тело, переход вниз/вверх уровней сохраняет границу нового структурного поля. Нельзя просто склеивать все вертикальные токены с плоским строчным хвостом. Обычный P0 не угадывает число аргументов по сигнатуре головы."
+      },
+      "en": {
+        "title": "Compact, short, and vertical forms",
+        "text": "Sources: §§4.0–4.3.\n\n`f(a, b, c)` is a compact Frame with a bounded argument Structure. `f: a b c` opens a short form at level N; its tail is at implicit level N + 1. An empty opening-line tail may continue with vertical children. A colon admits a bare, exact, or symbolic head.\n\nHorizontal whitespace and commas separate fields of the current tail. A physical newline resets the counter to that physical line's level but does not by itself complete the Frame. A following item at N + 1 continues the body, at N completes the current form and becomes a sibling, and below N completes it under the closing rules. A deeper item requires a predecessor admitting nesting and a valid level transition.\n\nWhen an indented body follows existing inline arguments, the down/up level transition preserves a new Structure-field boundary. Vertical tokens must not simply be flattened into the inline tail. Ordinary P0 does not infer argument counts from head signatures."
+      },
+      "examples": [
+        {
+          "start": 2606,
+          "end": 2606,
+          "text": "    head: tail"
+        },
+        {
+          "start": 2744,
+          "end": 2744,
+          "text": "    f(a, b, c)"
+        },
+        {
+          "start": 2753,
+          "end": 2756,
+          "text": "    include: \"<direct.h>\";\n===\n...\n==="
+        },
+        {
+          "start": 2760,
+          "end": 2764,
+          "text": "    f(\n      field0(a),\n      field1(b),\n      field2(c)\n    )"
+        },
+        {
+          "start": 2770,
+          "end": 2770,
+          "text": "    f: a b c"
+        },
+        {
+          "start": 2774,
+          "end": 2774,
+          "text": "    f(a, b, c)"
+        },
+        {
+          "start": 2784,
+          "end": 2791,
+          "text": "L2:\n. []: `1 dimension variable`\n. . 1 2\n. . 3 4\n. []: `2 dimension variable`\n. . []: 1 2\n. . []: 3 4\nend: L2"
+        },
+        {
+          "start": 2795,
+          "end": 2803,
+          "text": "L2:\n    []: `1d variable`\n      1 2\n      3 4\n    ---\n    [][]: `2d variable`\n      []: 1 2\n      []: 3 4\n---"
+        },
+        {
+          "start": 2807,
+          "end": 2815,
+          "text": "L2:\n    []: `1d variable`\n      1 2\n      3 4\n .  ---\n    [][]: `2d variable`\n      []: 1 2\n      []: 3 4\n---"
+        },
+        {
+          "start": 2819,
+          "end": 2826,
+          "text": "L2:\n    []: `1d variable`\n      1 2\n      3 4\n    [][]: `2d variable`\n      []: 1 2\n      []: 3 4\n---"
+        },
+        {
+          "start": 2841,
+          "end": 2841,
+          "text": "    head: arg0 arg1 arg2"
+        },
+        {
+          "start": 2845,
+          "end": 2845,
+          "text": "    head(arg0, arg1, arg2)"
+        },
+        {
+          "start": 2849,
+          "end": 2849,
+          "text": "    head: PlantBed `2 dim`"
+        },
+        {
+          "start": 2853,
+          "end": 2853,
+          "text": "    head(PlantBed, `2 dim`)"
+        },
+        {
+          "start": 2896,
+          "end": 2896,
+          "text": "    receiver: arg0 arg1 arg2"
+        },
+        {
+          "start": 2901,
+          "end": 2904,
+          "text": "    receiver:\n    . arg0\n    . arg1\n    . arg2"
+        },
+        {
+          "start": 2910,
+          "end": 2913,
+          "text": "    fn: test (int: arg) (int)\n    . body\n    . body\n    end: test"
+        },
+        {
+          "start": 2932,
+          "end": 2935,
+          "text": "    L1: utf8:\n    ===\n    raw text\n    ==="
+        },
+        {
+          "start": 2939,
+          "end": 2943,
+          "text": "    L1:\n    . utf8:\n    ===\n    raw text\n    ==="
+        },
+        {
+          "start": 3194,
+          "end": 3198,
+          "text": "f:\n. a\n. b\n. c\nend: f"
+        },
+        {
+          "start": 3202,
+          "end": 3202,
+          "text": "    f(a, b, c)"
+        },
+        {
+          "start": 3208,
+          "end": 3211,
+          "text": "    f: a\n    . b\n    . c\n    end: f"
+        },
+        {
+          "start": 3215,
+          "end": 3215,
+          "text": "    f(a, b, c)"
+        }
+      ]
+    },
+    {
+      "id": "separators",
+      "number": 11,
+      "ru": {
+        "title": "Запятая, точка с запятой и пропуски",
+        "text": "Источник: §§4.1, 4.2.1–4.2.1.1, 15.\n\nЗапятая разделяет поля и не завершает открытый короткий хвост. Точка с запятой на текущей глубине сканирования немедленно завершает текущую короткую форму, затем отделяет следующий элемент/сегмент на этой же глубине. Разделитель внутри более глубоких скобок принадлежит этим скобкам. Если открытого короткого хвоста нет, запятая — обычный разделитель, точка с запятой — разделитель элементов; одиночный конечный разделитель допустим, включая корень файла.\n\nСоседний после `;` безголовый сегмент может быть представлен отдельной анонимной структурой. P0 не добавляет его к уже завершённому хвосту и не решает, является ли он повторным объявлением. Это решает принимающий профиль.\n\nПовторные разделители `a,,c`, `a;;c`, `a,;c`, `a;,c` обозначают позиционный пропуск, если контекст допускает пустые позиции; начальный разделитель может пропустить первую позицию. P0 сохраняет пропуск, не сдвигая остальные аргументы. Потребитель допускает его только для аргумента с разрешённым значением по умолчанию, иначе сообщает ошибку. `()` — присутствующая пустая структура, не пропуск."
+      },
+      "en": {
+        "title": "Comma, semicolon, and positional skips",
+        "text": "Sources: §§4.1, 4.2.1–4.2.1.1, 15.\n\nA comma separates fields and does not terminate an open short tail. A semicolon at the current scan depth immediately terminates the current short form, then separates the next item/segment at that depth. A separator inside deeper brackets belongs to those brackets. With no open short tail, comma is an ordinary separator and semicolon an item separator; a single trailing separator is allowed, including at file root.\n\nA neighboring headless segment after `;` may be represented as a separate anonymous Structure. P0 does not append it to the completed tail or decide whether it repeats a declaration. The consuming profile decides that.\n\nRepeated separators `a,,c`, `a;;c`, `a,;c`, `a;,c` denote a positional skip where the context admits empty positions; a leading separator may skip the first position. P0 preserves the skip without shifting the other arguments. A consumer admits it only for an argument with an allowed default, otherwise reporting an error. `()` is a present empty Structure, not a skip."
+      },
+      "examples": [
+        {
+          "start": 2950,
+          "end": 2950,
+          "text": "    head: arg0, arg1"
+        },
+        {
+          "start": 2958,
+          "end": 2958,
+          "text": "    head: arg0; arg1"
+        },
+        {
+          "start": 3027,
+          "end": 3027,
+          "text": "    call(int: a b; ret: int)"
+        },
+        {
+          "start": 3031,
+          "end": 3031,
+          "text": "    call(int(a, b), ret(int))"
+        },
+        {
+          "start": 3035,
+          "end": 3035,
+          "text": "    call(int: a; b)"
+        },
+        {
+          "start": 3039,
+          "end": 3039,
+          "text": "    call(int(a), (b))"
+        },
+        {
+          "start": 3045,
+          "end": 3045,
+          "text": "    print: a b; c"
+        },
+        {
+          "start": 3049,
+          "end": 3050,
+          "text": "    print(a, b)\n    (c)"
+        },
+        {
+          "start": 9167,
+          "end": 9167,
+          "text": "        call(cast: Type value, other)"
+        },
+        {
+          "start": 9173,
+          "end": 9173,
+          "text": "        call(cast: Type value; other)"
+        }
+      ]
+    },
+    {
+      "id": "anonymous",
+      "number": 12,
+      "ru": {
+        "title": "Анонимный контейнер и повторяемые формы",
+        "text": "Источник: §§4.0.1, 4.2.1, 4.6.1.\n\nСписок аргументов сам является структурой. Единственный анонимный контейнер всей позиционной последовательности прозрачен для потребления: получатель читает его поля как аргументы. Анонимная структура среди других полей остаётся одним полем. Именованный аргумент может явно удерживать структуру как одно значение.\n\nПрофиль объявлений может читать соседние безголовые структуры как повторы предыдущего шаблона. Указательный шаблон включает глубину и базовый тип; массивный — форму головы и префикс типа. Следующий сегмент может заменить тип своим допустимым типом хранения. Это правило потребления, не поиск имён и не скрытая группировка на этапе P0; соседние выражения не исчезают."
+      },
+      "en": {
+        "title": "Anonymous containers and repeatable forms",
+        "text": "Sources: §§4.0.1, 4.2.1, 4.6.1.\n\nAn argument list is itself a Structure. A sole anonymous container of the entire positional sequence is transparent to consumption: the receiver reads its fields as arguments. An anonymous Structure among other fields remains one field. A named argument can explicitly retain a Structure as one value.\n\nA declaration profile may consume neighboring headless Structures as repetitions of the preceding template. A pointer template includes depth and base type; an array template includes the head shape and type prefix. The next segment may replace the type with its own valid storage type. This is a consumption rule, not name lookup or hidden grouping at P0; neighboring expressions do not disappear."
+      },
+      "examples": [
+        {
+          "start": 2709,
+          "end": 2714,
+          "text": "    f: a b c\n    f: (a b c)\n    f:\n        a\n        b\n        c"
+        },
+        {
+          "start": 2719,
+          "end": 2719,
+          "text": "    int: x, 5; y, 10"
+        },
+        {
+          "start": 2723,
+          "end": 2723,
+          "text": "    int: (x, 5); (y, 10)"
+        },
+        {
+          "start": 2729,
+          "end": 2729,
+          "text": "    f: a (1 2 3) b"
+        },
+        {
+          "start": 2735,
+          "end": 2735,
+          "text": "    f( arg: 1 2 3 )"
+        },
+        {
+          "start": 2970,
+          "end": 2970,
+          "text": "    int: x, 5; y, 10; z, 15"
+        },
+        {
+          "start": 2974,
+          "end": 2976,
+          "text": "    int: x, 5\n    int: y, 10\n    int: z, 15"
+        },
+        {
+          "start": 2980,
+          "end": 2980,
+          "text": "    int(x, 5) (y, 10) (z, 15)"
+        },
+        {
+          "start": 2989,
+          "end": 2990,
+          "text": "    @: int px 0; py 0\n    @@: char ppa 0; ppb 0"
+        },
+        {
+          "start": 2998,
+          "end": 2999,
+          "text": "    []: int arr 3 1 2 3; other 3 4 5 6\n    [n][m]: int matrix; matrix2"
+        },
+        {
+          "start": 3003,
+          "end": 3003,
+          "text": "    [n][m]: (int matrix); (matrix2)"
+        },
+        {
+          "start": 3011,
+          "end": 3012,
+          "text": "    @: int px; char pc\n    [n][m]: int matrix; char matrix2"
+        },
+        {
+          "start": 3852,
+          "end": 3854,
+          "text": "branch: a\n. doSomething\nend: branch"
+        },
+        {
+          "start": 3858,
+          "end": 3863,
+          "text": "    branch(\n      a,\n      (\n        doSomething\n      )\n    )"
+        },
+        {
+          "start": 3869,
+          "end": 3871,
+          "text": "branch: a\n    doSomething\nend: branch"
+        },
+        {
+          "start": 3875,
+          "end": 3880,
+          "text": "branch: a\n    ---\n        doSomething\n    ---\n        doOtherThing\nend: branch"
+        },
+        {
+          "start": 3884,
+          "end": 3892,
+          "text": "    branch(\n      a,\n      (\n        doSomething\n      ),\n      (\n        doOtherThing\n      )\n    )"
+        },
+        {
+          "start": 3896,
+          "end": 3901,
+          "text": "branch: a\n. first:\n. . doSomething\n. second:\n. . doOtherThing\nend: branch"
+        },
+        {
+          "start": 3905,
+          "end": 3910,
+          "text": "branch: a\n    first:\n        doSomething\n    second:\n        doOtherThing\nend: branch"
+        },
+        {
+          "start": 3916,
+          "end": 3916,
+          "text": "    branch: a doSomething"
+        },
+        {
+          "start": 3924,
+          "end": 3925,
+          "text": "    f: a (1 2 3) b\n    f( arg: 1 2 3 )"
+        }
+      ]
+    },
+    {
+      "id": "no-inference",
+      "number": 13,
+      "ru": {
+        "title": "Без скрытой группировки по сигнатуре",
+        "text": "Источник: §§4.2.2–4.2.3, 4.4, 6.1–6.3.\n\nПробел отделяет поля. `print: getTypedValue values[i]` не превращается в вызов `getTypedValue(values[i])`. Для вложенности нужны скобки, компактный Frame или вертикальная структура. `args: int(v, j)`, `args: (int: v j)` и вертикальная вложенная форма явно задают вложение.\n\nВыражениеподобные последовательности состоят из атомов и операторных полей. `print: a+b c` и `print: a + b c` дают одинаковое структурное разбиение. Префиксную, постфиксную или инфиксную роль, приоритет и смысл операции определяет профиль выражений после P0. В C-проекции сохраняются приоритеты и ассоциативность ANSI C; для иных бэкендов это отдельный профиль, а не новая структурная грамматика."
+      },
+      "en": {
+        "title": "No hidden signature-based grouping",
+        "text": "Sources: §§4.2.2–4.2.3, 4.4, 6.1–6.3.\n\nWhitespace separates fields. `print: getTypedValue values[i]` does not turn into `getTypedValue(values[i])`. Nesting requires parentheses, a compact Frame, or a vertical Structure. `args: int(v, j)`, `args: (int: v j)`, and the vertical nested form express nesting explicitly.\n\nExpression-like sequences consist of atoms and operator fields. `print: a+b c` and `print: a + b c` produce the same structural split. The expression profile determines prefix, postfix, or infix roles, precedence, and operation meaning after P0. The C projection preserves ANSI C precedence and associativity; other backends use a separate profile, not a new structural grammar."
+      },
+      "examples": [
+        {
+          "start": 3105,
+          "end": 3105,
+          "text": "    print: 1 + 2"
+        },
+        {
+          "start": 3109,
+          "end": 3109,
+          "text": "    print(1, +, 2)"
+        },
+        {
+          "start": 3115,
+          "end": 3115,
+          "text": "    print: a + b c"
+        },
+        {
+          "start": 3119,
+          "end": 3119,
+          "text": "    print(a, +, b, c)"
+        },
+        {
+          "start": 3123,
+          "end": 3123,
+          "text": "    print: a+b c"
+        },
+        {
+          "start": 3127,
+          "end": 3127,
+          "text": "    print(a, +, b, c)"
+        },
+        {
+          "start": 3136,
+          "end": 3136,
+          "text": "    print: `a+b`"
+        },
+        {
+          "start": 3140,
+          "end": 3140,
+          "text": "    print: (a + b)"
+        },
+        {
+          "start": 3150,
+          "end": 3150,
+          "text": "    print: getTypedValue values[i]"
+        },
+        {
+          "start": 3154,
+          "end": 3154,
+          "text": "    print(getTypedValue, values[i])"
+        },
+        {
+          "start": 3158,
+          "end": 3158,
+          "text": "    print(getTypedValue(values[i]))",
+          "ru": "Не является нормализацией предыдущего примера",
+          "en": "Not the normalization of the preceding example"
+        },
+        {
+          "start": 3166,
+          "end": 3166,
+          "text": "    args: int(v, j)"
+        },
+        {
+          "start": 3172,
+          "end": 3172,
+          "text": "    args: (int: v j)"
+        },
+        {
+          "start": 3176,
+          "end": 3177,
+          "text": "    args:\n    . int: v j"
+        },
+        {
+          "start": 3294,
+          "end": 3294,
+          "text": "    route( i = 1, print(choose, hello), print(choose, world) )"
+        },
+        {
+          "start": 3298,
+          "end": 3306,
+          "text": "    field0 -> <expression Structure for `i = 1`>\n    field1 -> (print(choose, hello))\n    field2 -> (print(choose, world))\n\nReceiver-signature roles:\n\n    field0 -> selector\n    field1 -> onTrue\n    field2 -> onFalse"
+        }
+      ]
+    },
+    {
+      "id": "bounded",
+      "number": 14,
+      "ru": {
+        "title": "Ограниченные формы: скобки",
+        "text": "Источник: §§4.4, 4.5.2.1, 15.\n\n`(...)` ограничивает структуру; пустая `()` допустима. `f()` — пустой компактный Frame. `(): value` — отдельная форма головы `()`, как `[]:`; это не пустая структура с добавленным значением. Внутри скобок действуют те же короткие формы, разделители и уровни. Соответствующая `)` или `]` завершает и ограниченную форму, и оставшуюся внутри короткую форму.\n\nПосле физического переноса продолжение скобочной формы должно оставаться глубже строки открытия: на соответствующем точечном уровне или в большей колонке отступа. На уровень открытия может вернуться строка, чей следующий токен — соответствующая закрывающая скобка. `end:` и терминальные закрытия не заменяют недостающие `)`/`]`.\n\n`target[...]` — присоединённый индексный суффикс. `[]:` — символическая голова. Самостоятельное `[a b]` не является переносимой заменой `(a b)` без явного допуска профилем. Содержимое индекса разбирается тем же P0 и может содержать вложенные вызовы, скобки, строки и операторы."
+      },
+      "en": {
+        "title": "Bounded forms: brackets",
+        "text": "Sources: §§4.4, 4.5.2.1, 15.\n\n`(...)` bounds a Structure; empty `()` is allowed. `f()` is an empty compact Frame. `(): value` is a distinct form with head `()`, like `[]:`; it is not an empty Structure with an added value. The same short forms, separators, and levels apply inside brackets. A matching `)` or `]` completes both the bounded form and any short form still open inside it.\n\nAfter a physical newline, a bounded continuation must remain deeper than the opening line: at the corresponding dotted level or a deeper indentation column. A line whose next token is the matching closer may return to the opener level. `end:` and terminal closers do not replace missing `)`/`]`.\n\n`target[...]` is an attached index suffix. `[]:` is a symbolic head. Standalone `[a b]` is not a portable replacement for `(a b)` without explicit profile admission. Index contents use the same P0 and may contain nested calls, brackets, strings, and operators."
+      },
+      "examples": [
+        {
+          "start": 3227,
+          "end": 3228,
+          "text": "    (a b c)\n    ()"
+        },
+        {
+          "start": 3232,
+          "end": 3234,
+          "text": "    (a b c)\n    (a, b, c)\n    (a b c,)"
+        },
+        {
+          "start": 3253,
+          "end": 3253,
+          "text": "    call(int: a b; ret: int)"
+        },
+        {
+          "start": 3257,
+          "end": 3260,
+          "text": "    call(\n    . int: a b\n    . ret: int\n    )"
+        },
+        {
+          "start": 3273,
+          "end": 3275,
+          "text": "    value (1\n    . +\n    . 1)"
+        },
+        {
+          "start": 3279,
+          "end": 3281,
+          "text": "    value (1\n        +\n        1)"
+        },
+        {
+          "start": 3286,
+          "end": 3288,
+          "text": "    value (1\n    +\n    1)",
+          "ru": "Недопустимое продолжение",
+          "en": "Invalid continuation"
+        }
+      ]
+    },
+    {
+      "id": "levels",
+      "number": 15,
+      "ru": {
+        "title": "Уровни исходника и отступы",
+        "text": "Источник: §§4.2.1.1, 4.5–4.5.2.1, 15.0.\n\nКаноническая ведущая зона содержит точки, пробелы и табуляции; число точек задаёт абсолютный уровень, пробелы и табуляции глубину не меняют. В свободной записи стек колонок отступа отображается на те же целочисленные уровни. Первая более глубокая колонка создаёт один следующий уровень независимо от числа добавленных пробелов. Точечные разделители остаются допустимыми в свободной записи.\n\nАтомарный подъём K → K + 1 открывает структурное поле, K → K создаёт соседа с учётом текущего короткого/скобочного контекста, K → K − 1 закрывает текущую вертикальную структуру. Подъём больше одного уровня запрещён. Обычное снижение больше одного уровня запрещено; нужен допустимый отсекатель хвоста. Скалярный элемент не становится головой только из-за следующего большего отступа.\n\nПустая физическая строка — событие границы уровня 0. Она может закрыть хвост уровня 1 обычным снижением, но не заменяет видимый разделитель соседних анонимных секций на более глубоких уровнях. Перенос после вложенных коротких форм возвращает счётчик к уровню физической строки, а не к самому глубокому строчному приёмнику."
+      },
+      "en": {
+        "title": "Source levels and indentation",
+        "text": "Sources: §§4.2.1.1, 4.5–4.5.2.1, 15.0.\n\nThe canonical leading zone contains dots, spaces, and tabs; the dot count gives the absolute level, while spaces and tabs do not affect depth. In relaxed notation, an indentation-column stack maps to the same integer levels. The first deeper column creates one next level regardless of the number of added spaces. Dotted delimiters remain valid in relaxed notation.\n\nAn atomic increase K → K + 1 opens a Structure field, K → K creates a sibling subject to the current short/bounded context, and K → K − 1 closes the current vertical Structure. An increase exceeding one level is forbidden. An ordinary decrease exceeding one level is forbidden; it requires an admitted tail cutter. A scalar item does not become a head merely because deeper indentation follows.\n\nAn empty physical line is a level-0 boundary event. It may close a level-1 tail by ordinary decrease but does not replace a visible delimiter between anonymous sibling sections at deeper levels. A newline after nested short forms resets the counter to the physical line's level, not the deepest inline receiver."
+      },
+      "examples": [
+        {
+          "start": 3076,
+          "end": 3079,
+          "text": "ShortForm1: 1 ShortForm2: 2\n. . ShortForm2_arg2\n. ShortForm1_arg3\n---",
+          "ru": "Недопустимый скачок уровня; исходник ожидает ошибку P0 13 в 2:5",
+          "en": "Invalid level jump; source expects P0 error 13 at 2:5"
+        },
+        {
+          "start": 3085,
+          "end": 3088,
+          "text": "ShortForm1: 1\n. ShortForm2: 2\n. . ShortForm2_arg2\n. ShortForm1_arg3",
+          "ru": "Правильные последовательные переходы",
+          "en": "Correct consecutive transitions"
+        },
+        {
+          "start": 3320,
+          "end": 3322,
+          "text": "    ....call\n    . . . . call\n    .\t. .\t.     call"
+        },
+        {
+          "start": 3407,
+          "end": 3409,
+          "text": "    head\n    body Structure\n    trailer"
+        },
+        {
+          "start": 3417,
+          "end": 3421,
+          "text": "    .                               # head: open anonymous positional Structure\n    . . body1                       # body\n    .                               # trailer of previous + head of next anonymous Structure\n    . . body2                       # body\n    .                               # trailer"
+        },
+        {
+          "start": 3428,
+          "end": 3432,
+          "text": "fn: outer () (int)\n    fn: inner (int: a) (int)\n        return: a + 1\n    int: a 1\nreturn: inner(a)"
+        },
+        {
+          "start": 3439,
+          "end": 3445,
+          "text": "fn: outer () (int)\n    fn: inner (int: a) (int)\n        return: a + 1\n    end: inner\n\n    int: a 1\nreturn: inner(a)"
+        },
+        {
+          "start": 3463,
+          "end": 3469,
+          "text": ".\n. . block0\n. . block0\n. trailer_word\n. . block1\n. . block1\n."
+        }
+      ]
+    },
+    {
+      "id": "markers",
+      "number": 16,
+      "ru": {
+        "title": "Точечные разделители и ограды из дефисов",
+        "text": "Источник: §§4.5.1–4.5.3.\n\nТочечная строка содержит только ведущую зону с хотя бы одной точкой и допустимым комментарием. На уровне K она обозначает анонимную структуру, если дальше идут дети на K + 1; иначе разделяет или закрывает секцию. Один маркер может одновременно закрыть предыдущую анонимную структуру и открыть следующую. Соседние анонимные секции на одном уровне требуют видимого маркера.\n\nОграда из 3–80 дефисов после ведущей зоны играет ту же роль. После неё допускаются только горизонтальные пробелы и `#`-комментарий. Она не вызывает приёмник, не имеет аргумента и не может быть префиксом `else:`, `return:` или другого элемента. При снижении ограда допускает закрытие нескольких открытых уровней до собственного уровня K; следующий элемент K + 1 может открыть новую анонимную структуру.\n\nАнонимная структура продолжается до следующего маркера на K, обычного элемента K − 1, допустимого именованного/терминального закрытия или EOF. Замена именованного закрытия на ограду зависит от допуска профиля и однозначности. Матричные строки и вложенные массивы используют те же правила, без отдельного табличного синтаксиса.\n\nУточнение автора 2026-09-19: явно оформленное пустое вертикальное тело также материализуется как структура-аргумент; отсутствие более глубоких элементов не разрешает его выбросить. См. [пустое тело](#empty-colon)."
+      },
+      "en": {
+        "title": "Dotted delimiters and dash fences",
+        "text": "Sources: §§4.5.1–4.5.3.\n\nA dotted line contains only a leading zone with at least one dot and an admitted comment. At level K it denotes an anonymous Structure when children at K + 1 follow; otherwise it separates or closes the section. One marker may close the preceding anonymous Structure and open the next. Anonymous sibling sections at the same level require a visible marker.\n\nA fence of 3–80 dashes after the leading zone has the same role. Only horizontal whitespace and a `#` comment may follow it. It calls no receiver, has no argument, and cannot prefix `else:`, `return:`, or another item. On a decrease, it admits closing several open levels down to its own level K; a following K + 1 item may open a new anonymous Structure.\n\nAn anonymous Structure continues until another marker at K, an ordinary item at K − 1, an admitted named/terminal close, or EOF. Replacing a named close with a fence depends on profile admission and lack of ambiguity. Matrix rows and nested arrays use the same rules, without separate table syntax.\n\nAuthor clarification, 2026-09-19: an explicitly formed empty vertical body also materializes as a Structure argument; absence of deeper items does not permit discarding it. See [empty bodies](#empty-colon)."
+      },
+      "examples": [
+        {
+          "start": 3496,
+          "end": 3504,
+          "text": "match: value\n.\n. . 1\n. . print: World\n.\n. . 2\n. . print: Hello\n.\nend: match"
+        },
+        {
+          "start": 3508,
+          "end": 3518,
+          "text": "    match(\n      value,\n      (\n        1,\n        print(World)\n      ),\n      (\n        2,\n        print(Hello)\n      )\n    )"
+        },
+        {
+          "start": 3524,
+          "end": 3529,
+          "text": "match: value\n. 1\n. print: World\n. 2\n. print: Hello\nend: match"
+        },
+        {
+          "start": 3533,
+          "end": 3533,
+          "text": "    match(value, 1, print(World), 2, print(Hello))"
+        },
+        {
+          "start": 3564,
+          "end": 3566,
+          "text": "    ---\n    ----\n    -----"
+        },
+        {
+          "start": 3601,
+          "end": 3605,
+          "text": "    ---\n    ----\n    --- # anonymous branch delimiter\n    .---\n    . ---- # automatically rewritten dotted separator"
+        },
+        {
+          "start": 3609,
+          "end": 3613,
+          "text": "    ---else:\n    ----else:\n    --- return: x\n    --- int: x\n    --- trailer word",
+          "ru": "Недопустимые строки ограды",
+          "en": "Invalid fence lines"
+        },
+        {
+          "start": 3623,
+          "end": 3630,
+          "text": "match: value\n    ---\n        1\n        print: World\n    ---\n        2\n        print: Hello\n---"
+        },
+        {
+          "start": 3634,
+          "end": 3644,
+          "text": "    match(\n      value,\n      (\n        1,\n        print(World)\n      ),\n      (\n        2,\n        print(Hello)\n      )\n    )"
+        },
+        {
+          "start": 3652,
+          "end": 3657,
+          "text": "branch: condition\n    ---\n        firstBody\n    ---\n        secondBody\nend: branch"
+        },
+        {
+          "start": 3671,
+          "end": 3676,
+          "text": "match: value\n    1\n    print: World\n    2\n    print: Hello\n---"
+        },
+        {
+          "start": 3680,
+          "end": 3680,
+          "text": "    match(value, 1, print(World), 2, print(Hello))"
+        },
+        {
+          "start": 3684,
+          "end": 3689,
+          "text": "branch: condition\n    ---\n        firstBody\n    ---\n        secondBody\nend: branch"
+        },
+        {
+          "start": 3695,
+          "end": 3700,
+          "text": "branch: a\n. first:\n. . doSomething\n. second:\n. . doOtherThing\nend: branch"
+        },
+        {
+          "start": 3704,
+          "end": 3709,
+          "text": "branch: condition\n    ---\n        # doSomething\n    ---\n        # doOtherThing\nend: branch",
+          "ru": "Исходный пример пустых тел",
+          "en": "Original empty-body example"
+        },
+        {
+          "start": 3711,
+          "end": 3716,
+          "text": "branch: condition\n    ---\n        # doSomething\n    second: # This named receiver is at the correct level and therefore automatically closes the previous block.\n        # doOtherThing\nend: branch",
+          "ru": "Исходный пример пустых тел",
+          "en": "Original empty-body example"
+        },
+        {
+          "start": 3724,
+          "end": 3732,
+          "text": "outerLoop:\n    for: int(i, 1) (i <= 3) i++\n        for: int(j, 1) (j <= 3) j++\n            if: i = 2 && j = 2\n                System\\out\\println: \"--- continue outerLoop ---\"\n                continue: outerLoop\n            ---\n            System\\out\\println: \"i: \" + i + \", j: \" + j\nend: outerLoop"
+        },
+        {
+          "start": 3736,
+          "end": 3744,
+          "text": "outerLoop:\n. for: int(i, 1) (i <= 3) i++\n. . for: int(j, 1) (j <= 3) j++\n. . . if: i = 2 && j = 2\n. . . . System\\out\\println: \"--- continue outerLoop ---\"\n. . . . continue: outerLoop\n. . .\n. . . System\\out\\println: \"i: \" + i + \", j: \" + j\nend: outerLoop"
+        },
+        {
+          "start": 3754,
+          "end": 3756,
+          "text": "[]: `2 dim example`\n. 1 2\n. 3 4"
+        },
+        {
+          "start": 3760,
+          "end": 3763,
+          "text": "[]: `2 dim example`\n    1 2\n    3 4\n---"
+        },
+        {
+          "start": 3767,
+          "end": 3767,
+          "text": "    [](`2 dim example`, (1, 2), (3, 4))"
+        },
+        {
+          "start": 3773,
+          "end": 3775,
+          "text": "[]: `2 dim example`\n. a b\n. 3 4"
+        },
+        {
+          "start": 3779,
+          "end": 3779,
+          "text": "    [](`2 dim example`, (a, b), (3, 4))"
+        },
+        {
+          "start": 3783,
+          "end": 3788,
+          "text": "[]: matrix\n. []: row1\n. . 1 2\n. []: row2\n. . 3 4\nend: matrix"
+        },
+        {
+          "start": 3661,
+          "end": 3665,
+          "text": "    level 0: branch\n    level 1: explicit marker\n    level 2: first anonymous body\n    level 1: explicit marker\n    level 2: second anonymous body"
+        }
+      ]
+    },
+    {
+      "id": "close",
+      "number": 17,
+      "ru": {
+        "title": "Именованное закрытие и терминальные формы",
+        "text": "Источник: §§4.6, 7.5, 8.1–8.4, 15.\n\n`end: target` — проверяемое структурное закрытие. Его аргумент — буквальная цель, не вычисляемое выражение. Приёмник предоставляет допустимые цели: обычно своё имя головы и каноническое имя из аргумента `name` либо позиции имени. Имя должно быть одним допустимым атомом; точная форма сравнивается как значение атома. Если допустимого имени нет, используется голова. Таблица целей закрытия может принимать не только исполняемые идентификаторы, но и строковые/операторные атомы.\n\n`end: matrix` закрывает `[]: matrix`; не `end: [] matrix`. `end: fn` может быть альтернативой `end: square`, если открыта соответствующая функция. Закрытие может пересечь несколько открытых неявных уровней, если позиция и профиль допускают это, но не незакрытые ограниченные скобки. Именованному Frame не обязательно иметь явный `end:`: обычный допустимый срез уровня тоже закрывает его. Bare `end` и `end <target>` запрещены.\n\n`return`, `return: value`, `until: condition` являются кандидатами в терминальные формы только в допускающих их контекстах. Терминальный `return` на уровне открытия исполняемого Frame добавляет возврат в конец его тела и закрывает Frame. Тот же приёмник на уровне тела или глубже — обычный внутренний возврат, не закрытие определения. `until:` может закрывать тело постусловного цикла. Эти слова не становятся универсальными отсекателями только по написанию.\n\nПри одинаковой цели на разных уровнях учитывается уровень строки закрытия: закрытие на уровне родителя выбирает родительскую цель и отсекает её открытый хвост; закрытие на внутреннем уровне выбирает внутреннюю цель. Неоднозначная, невидимая или недопустимая в этой позиции цель отвергается. `end:` в обычной позиции тела не является исполняемой командой и отвергается слоем проверки закрытий, если профиль явно не определяет иной неисполняемый смысл."
+      },
+      "en": {
+        "title": "Named closure and terminal forms",
+        "text": "Sources: §§4.6, 7.5, 8.1–8.4, 15.\n\n`end: target` is a checked structural close. Its argument is a literal target, not an evaluated expression. The receiver supplies admitted targets: normally its head name and the canonical name from a `name` argument or name position. The name must be one admitted atom; exact spelling is compared as an atom value. With no valid name, the head is used. The close-target table may admit string/operator atoms as well as executable identifiers.\n\n`end: matrix` closes `[]: matrix`; not `end: [] matrix`. `end: fn` may be an alternative to `end: square` for the corresponding open function. Closure may cross several open implicit levels where position and profile admit it, but not unmatched bounded brackets. A named Frame does not require explicit `end:`: an ordinary admitted level cut also closes it. Bare `end` and `end <target>` are forbidden.\n\n`return`, `return: value`, and `until: condition` are terminal-form candidates only in admitting contexts. Terminal `return` at an executable Frame's opening level appends a return to its body and closes the Frame. The same receiver at body level or deeper is an internal return, not definition closure. `until:` may close a postcondition-loop body. Their spelling alone does not make these words universal tail cutters.\n\nWhen identical targets occur at different levels, the closing line’s level participates: a parent-level close selects the parent target and cuts its open tail; an inner-level close selects the inner target. Ambiguous, invisible, or positionally invalid targets are rejected. `end:` in an ordinary body position is not executable and is rejected by close validation unless a profile explicitly defines another non-runtime meaning."
+      },
+      "examples": [
+        {
+          "start": 3802,
+          "end": 3802,
+          "text": "    end: <target>"
+        },
+        {
+          "start": 3808,
+          "end": 3808,
+          "text": "    end: matrix"
+        },
+        {
+          "start": 3812,
+          "end": 3812,
+          "text": "    end: [] matrix",
+          "ru": "Неверная цель закрытия",
+          "en": "Incorrect close target"
+        },
+        {
+          "start": 3837,
+          "end": 3842,
+          "text": "outerLoop:\n. for: int(i, 1) (i <= 3) i++\n. . for: int(j, 1) (j <= 3) j++\n. . . if: i = 2 && j = 2\n. . . . continue: outerLoop\nend: outerLoop"
+        },
+        {
+          "start": 6554,
+          "end": 6557,
+          "text": "readLoop:\n    readNext: record\n    process: record\nuntil: endOfInput(record)"
+        },
+        {
+          "start": 6622,
+          "end": 6623,
+          "text": "fn: square (int(x)) (int)\nreturn: x * x"
+        },
+        {
+          "start": 6627,
+          "end": 6627,
+          "text": "    return(x * x)"
+        },
+        {
+          "start": 6631,
+          "end": 6634,
+          "text": "fn: factorial (int(n)) (int)\n    if: n <= 1\n        return: 1\nreturn: n * factorial(n - 1)"
+        },
+        {
+          "start": 6660,
+          "end": 6661,
+          "text": "fn: square (int(x)) (int)\nreturn: x * x"
+        },
+        {
+          "start": 6665,
+          "end": 6667,
+          "text": "fn: square (int(x)) (int)\n    return: x * x\nend: square"
+        },
+        {
+          "start": 6393,
+          "end": 6398,
+          "text": "if: condition\n    bodyCall()\nend: if\nelse:\n    fallbackCall()\nend: else"
+        },
+        {
+          "start": 6402,
+          "end": 6405,
+          "text": "if: condition\n    bodyCall()\nelse:\n    fallbackCall()"
+        },
+        {
+          "start": 6410,
+          "end": 6412,
+          "text": "fn: myFunc (int(i)) (int(r))\n    return: i\nend: myFunc"
+        },
+        {
+          "start": 6417,
+          "end": 6427,
+          "text": "fn:\n    name: myFunc\n    args:\n        int: i\n    ---\n    ret:\n        int: r\n    ---\n    body:\n        return: i\nend: myFunc"
+        },
+        {
+          "start": 6432,
+          "end": 6442,
+          "text": "fn:\n    args:\n        int: i\n    ---\n    name: myFunc\n    ret:\n        int: r\n    ---\n    body:\n        return: i\nend: myFunc"
+        },
+        {
+          "start": 6451,
+          "end": 6454,
+          "text": "hello: name: world\n. \"!\"\n. \"!\"\nend: world"
+        },
+        {
+          "start": 6461,
+          "end": 6466,
+          "text": "hello: name: world  # world #1, opened at level 0\n. \"1\"\n. hello: name: world  # world #2, opened at level 1\n. . \"2\"\n. . \"!\"\nend: world  # closes world #1 and also closes its still-open tail"
+        },
+        {
+          "start": 6471,
+          "end": 6477,
+          "text": "hello: name: world  # world #1\n. \"1\"\n. hello: name: world  # world #2\n. . \"2\"\n. . \"!\"\n. end: world  # closes world #2\nend: world    # closes world #1"
+        }
+      ]
+    },
+    {
+      "id": "empty-colon",
+      "number": 18,
+      "ru": {
+        "title": "Отсутствие аргументов и пустое вертикальное тело",
+        "text": "Источник: §15 прежней спеки, исправленный прямым уточнением автора 2026-09-19.\n\nПустое вертикальное тело — пустая структура, синоним `()`. Оно уже является аргументом, даже если внутри нет ни одного поля. В частности, приведённая автором форма `receiver:` с последующей строкой `---` допустима и передаёт пустую структуру. Парсер обязан сохранить её присутствие; нельзя спутать число полей внутри этого аргумента с числом аргументов получателя.\n\nОшибка «приёмник с двоеточием без аргументов» относится к отсутствию аргумента, а не к наличию пустой структуры-аргумента. Проверка выполняется после сборки и сохранения явно оформленного вертикального тела. Старое правило «после сборки ноль полей — ошибка» требует исправления там, где сборка теряет пустое вертикальное тело. Исторические ожидаемые отказы в этом случае не являются нормой LMX.\n\n`f()`, `()` и допустимый голый нульарный `f` остаются отдельными разрешёнными формами. Пустой строчный хвост с последующим непустым вертикальным телом тоже допустим. Bare `end` остаётся отдельно запрещённым. Это уточнение меняет грамматику и будущие ожидания тестов; изменения старых парсеров в рамках переноса документации ещё не выполнялись."
+      },
+      "en": {
+        "title": "Missing arguments and an empty vertical body",
+        "text": "Source: §15 of the previous specification, corrected by the author's direct clarification on 2026-09-19.\n\nAn empty vertical body is an empty Structure, synonymous with `()`. It is already an argument even when it contains no fields. In particular, the author's `receiver:` followed by a `---` line is valid and supplies an empty Structure. The parser must preserve its presence; the number of fields inside that argument must not be confused with the receiver's argument count.\n\nThe “colon receiver without arguments” error concerns an absent argument, not a present empty Structure argument. Validation runs after assembling and preserving an explicitly formed vertical body. The old “zero fields after assembly means error” rule needs correction wherever assembly loses an empty vertical body. Historical rejection expectations in that case are not the LMX norm.\n\n`f()`, `()`, and an admitted bare nullary `f` remain distinct permitted forms. An empty inline tail followed by a nonempty vertical body is also valid. Bare `end` remains separately forbidden. This clarification changes the grammar and future test expectations; old parsers have not yet been modified as part of documentation extraction."
+      },
+      "examples": [
+        {
+          "origin": "author / автор, 2026-09-19",
+          "text": "receiver:\n---",
+          "ru": "Допустимо: пустая структура-аргумент",
+          "en": "Valid: an empty Structure argument"
+        },
+        {
+          "start": 8985,
+          "end": 8987,
+          "text": "    fn: test () int\n    return:\n    . 5 + 5",
+          "ru": "Допустимое непустое вертикальное тело return",
+          "en": "Valid nonempty vertical return body"
+        }
+      ]
+    },
+    {
+      "id": "mix",
+      "number": 19,
+      "ru": {
+        "title": "Фигурные скобки и привязка Mix",
+        "text": "Источник: §§0.0.2, 3.4.4.4, 15.0.\n\n`{...}` — ограниченная форма Mix. Вне защищённого литерала/комментария `{` запускает тот же P0 в локальном контексте уровня 0; колонка открывающей скобки не становится базой отступа. Внутри действуют обычные кавычки, комментарии, уровни и вложенные формы. `}` внутри защищённого содержимого не закрывает внешнюю форму. Результат сразу сохраняется узлом структуры с признаком Mix и исходным диапазоном. Внутренние переносы не создают внешних событий уровня.\n\nMix внутри строки элемента или в его хвосте входит в текущую последовательность полей. Ведущий Mix перед обычным элементом помещается перед ним на уровне этого элемента. В свободной записи ширина ведущей метки может занимать часть отступа; в точечной записи уровень по-прежнему задают точки. Строки в колонке 0, содержащие только Mix-формы, накапливаются по порядку и привязываются к следующему обычному элементу; при EOF — к текущему контексту/концу документа. Остальные самостоятельные Mix-строки используют обычный уровень.\n\nОбычный потребитель может пропускать Mix-узлы; документный — строить интервалы. Это не автоматическое исполнение или подстановка. Сначала выделяется внешний строковый payload, затем его внутренние метки рассматриваются в собственном ограниченном контексте. Они не должны менять границы внешней строки или попадать в наружный активный индекс. Исходное значение строки не меняется от наличия меток."
+      },
+      "en": {
+        "title": "Braces and Mix anchoring",
+        "text": "Sources: §§0.0.2, 3.4.4.4, 15.0.\n\n`{...}` is a bounded Mix form. Outside a shielded literal/comment, `{` enters the same P0 in a local level-0 context; the opener column does not become the indentation base. Ordinary quotes, comments, levels, and nested forms apply inside. A `}` within shielded content does not close the outer form. The result is immediately retained as a Structure node with a Mix flag and source span. Internal newlines do not produce outer level events.\n\nInline or tail Mix belongs to the current field sequence. Leading Mix before an ordinary item is placed before it at that item's level. In relaxed notation, prefix width may occupy part of indentation; in dotted notation, dots still determine the level. Column-0 lines containing only Mix forms are queued in order and anchored to the next ordinary item, or to the current/document-end context at EOF. Other standalone Mix lines use ordinary levels.\n\nAn ordinary consumer may skip Mix nodes; a document consumer may build intervals. This is not automatic execution or substitution. The outer string payload is delimited first; its internal marks are then considered in their own bounded context. They must not alter the outer string's bounds or enter its surrounding active index. The presence of marks does not change the original string value."
+      },
+      "examples": [
+        {
+          "start": 212,
+          "end": 213,
+          "text": "    item: {color: red} value\n    item: value {color: red}"
+        },
+        {
+          "start": 218,
+          "end": 218,
+          "text": "    {color: red}    item: value"
+        },
+        {
+          "start": 226,
+          "end": 227,
+          "text": "    {color: red}\n        item: value"
+        },
+        {
+          "start": 242,
+          "end": 242,
+          "text": "    {color: red}"
+        },
+        {
+          "start": 2572,
+          "end": 2572,
+          "text": "    SQL: \"select * from users where id = {userId}\""
+        }
+      ]
+    },
+    {
+      "id": "mix-overlay",
+      "number": 20,
+      "ru": {
+        "title": "Запись пересекающихся меток",
+        "text": "Источник: §0.0.2. Этот раздел сохраняет правила документного профиля Mix, необходимые для чтения примеров; он не задаёт семантику нового исполняемого ядра.\n\n`{color: red}` открывает запись с головой `color` и значением закрытия `red`. `{end}` закрывает последнюю активную явную метку, `{end: name}` — последнюю активную метку с таким значением закрытия независимо от головы. Закрытие одной метки не закрывает более поздние метки с другими значениями, поэтому интервалы могут пересекаться. Совпадающие значения выбираются от последнего открытого. Незакрытые записи остаются учтёнными до границы документа/профиля; выбор диагностики или интервала до конца относится к профилю.\n\nАктивные записи не сводятся P0 к одной плоской таблице победивших значений. Рендерер может выбрать последнее значение, но полная цепочка/множество сохраняет остальные. Внутренние строковые метки имеют собственный изолированный контекст. `{end}` — форма этого Mix-профиля; запрет голого `end` в обычном LMX-источнике нельзя механически переносить на неё."
+      },
+      "en": {
+        "title": "Spelling intersecting marks",
+        "text": "Source: §0.0.2. This section retains the Mix document-profile rules needed to read the examples; it does not define the new executable kernel's semantics.\n\n`{color: red}` opens an entry with head `color` and close value `red`. `{end}` closes the latest active explicit mark; `{end: name}` closes the latest active mark with that close value regardless of head. Closing one mark does not close later marks with other values, so intervals can intersect. Duplicate values are selected latest-first. Unclosed entries remain tracked until the document/profile boundary; diagnostics or an interval extending to the end are profile choices.\n\nP0 does not reduce active entries to one flat table of winning values. A renderer may choose the latest value, but the full chain/set retains the others. Internal string marks have their own isolated context. `{end}` belongs to this Mix profile; the ban on bare `end` in ordinary LMX source must not be mechanically applied to it."
+      },
+      "examples": [
+        {
+          "start": 253,
+          "end": 257,
+          "text": "    {color: red}\n    {color: green}\n    text\n    {end: red}\n    {end: green}"
+        },
+        {
+          "start": 267,
+          "end": 270,
+          "text": "    {style: red}\n    {color: red}\n    text\n    {end: red}"
+        },
+        {
+          "start": 99,
+          "end": 123,
+          "text": "dataset: harvest\n    meta:\n        title: \"Regional harvest report\"\n        season: 2026\n        source:\n            organization: `Field Bureau`\n            system: `manual survey`\n        ---\n        location:\n            country: Uruguay\n            region: `north field group`\n        ---\n        note:\n            \"This part is XML-like tree data: nested named Structures.\"\n    ---\n\n    table:\n        columns: (serial \"id\") region           crop    (real \"tons\") (decimal \"moisture\")\n        rows:\n                 1             \"north field\"    wheat   12.50         0.14\n                 2             \"south field\"    corn    8.75          0.19\n                 3             \"east ridge\"     barley  10.00         0.16\n                 4             \"river lowland\"  rice    21.30         0.22\n        ---\nend: harvest"
+        },
+        {
+          "start": 292,
+          "end": 325,
+          "text": "{style: system}\ndataset: harvest\n    meta:\n{style: title} {color: blue}\n        title: \"Regional harvest report\"\n{style: date}\n        season: 2026\n{end: title}\n        month: April\n{end: date}\n        source:\n            organization: `Field Bureau`\n            system: `manual survey`\n        ---\n        location: {color: green}\n            country: Uruguay\n            region: `north field group`\n        ---\n        note:\n            \"This part is {red} marked {end} document data over ordinary Structures.\"\n\n    --- {end: blue}\n\n    table:\n        columns: (serial \"id\") region           crop    (real \"tons\") (decimal \"moisture\")\n{end: green}\n        rows:\n{gray}           1             \"north field\"    wheat   12.50         0.14\n{cyan}           2             \"south field\"    corn    8.75          0.19\n{gray}           3             \"east ridge\"     barley  10.00         0.16\n{cyan}           4             \"river lowland\"  rice    21.30         0.22\n        ---\nend: harvest\n{end: system}"
+        }
+      ]
+    },
+    {
+      "id": "operators",
+      "number": 21,
+      "ru": {
+        "title": "Операторные токены и граница выражений",
+        "text": "Источник: §§4.2.2, 4.7, 6.1–6.4, 20.3.\n\nСимволы операций не являются обычными идентификаторами. P0 разделяет компактные некавыченные записи вроде `a+b*c==d` на обычные поля и токены операций. Точные идентификаторы не делятся. Операторное поле само по себе не является именованной головой и не требует двоеточия.\n\nПеречисленный в прежнем минимальном L2-профиле набор: группировка `(expr)`; префиксы `@`, `\\`, `++`, `--`, `+`, `-`, `!`, `~`; постфиксы `++`, `--`; инфиксы `+`, `-`, `*`, `/`, `%`, `=`, `!=`, `<`, `<=`, `>`, `>=`, `&&`, `||`, `&`, `|`, `^`; индексный суффикс. Примыкание префикса к операнду — стиль записи, не обязательная граница P0.\n\n`=` в этом профиле — сравнение, не синтаксис присваивания и не именованное поле. Обновление имеет обычную форму головы `i: newValue`, смысл которой определяется позднее. Полный набор операций, преобразования, ошибки вычисления и порядок эффектов не добавляются к грамматике предположениями."
+      },
+      "en": {
+        "title": "Operator tokens and expression boundaries",
+        "text": "Sources: §§4.2.2, 4.7, 6.1–6.4, 20.3.\n\nOperator symbols are not bare identifiers. P0 splits compact unquoted spellings such as `a+b*c==d` into ordinary fields and operator tokens. Exact identifiers are not split. An operator field is not by itself a named head and requires no colon.\n\nThe previous minimal L2 profile lists grouping `(expr)`; prefixes `@`, `\\`, `++`, `--`, `+`, `-`, `!`, `~`; postfixes `++`, `--`; infixes `+`, `-`, `*`, `/`, `%`, `=`, `!=`, `<`, `<=`, `>`, `>=`, `&&`, `||`, `&`, `|`, `^`; and the index suffix. Writing a prefix adjacent to its operand is style, not a mandatory P0 boundary.\n\nIn this profile, `=` is comparison, not assignment syntax or a named field. Updates use the ordinary head form `i: newValue`, whose meaning is determined later. The grammar does not invent a complete operation set, conversions, evaluation errors, or effect ordering."
+      },
+      "examples": [
+        {
+          "start": 4242,
+          "end": 4251,
+          "text": "    =\n    !=\n    <\n    >\n    <=\n    >=\n    +\n    -\n    *\n    /"
+        },
+        {
+          "start": 4259,
+          "end": 4259,
+          "text": "    i = 1"
+        },
+        {
+          "start": 4263,
+          "end": 4263,
+          "text": "    (i, =, 1)"
+        },
+        {
+          "start": 4271,
+          "end": 4271,
+          "text": "    print: 1 + 2"
+        },
+        {
+          "start": 4275,
+          "end": 4275,
+          "text": "    print(1, +, 2)"
+        },
+        {
+          "start": 4285,
+          "end": 4285,
+          "text": "    print: 1 + 2"
+        },
+        {
+          "start": 4289,
+          "end": 4289,
+          "text": "    print(1, +, 2)"
+        },
+        {
+          "start": 4293,
+          "end": 4293,
+          "text": "    print: 1+2"
+        },
+        {
+          "start": 4299,
+          "end": 4299,
+          "text": "    print(1, +, 2)"
+        },
+        {
+          "start": 4307,
+          "end": 4308,
+          "text": "    `1+2`\n    `a+b`"
+        },
+        {
+          "start": 4350,
+          "end": 4350,
+          "text": "    --i"
+        },
+        {
+          "start": 4355,
+          "end": 4355,
+          "text": "    decBefore(\"i\")"
+        },
+        {
+          "start": 4365,
+          "end": 4365,
+          "text": "    i: newValue"
+        }
+      ]
+    },
+    {
+      "id": "paths",
+      "number": 22,
+      "ru": {
+        "title": "Адресные, индексные и путевые формы",
+        "text": "Источник: §§11.2–11.3, 12–13, 20.1–20.3. Здесь фиксируются написание и различение форм, а не устройство значений.\n\n`@ⁿ:` — семейство зарезервированных голов глубины адреса: `@:`, `@@:`, `@@@:` и далее; произвольного предела n нет. Базовый тип и имя — отдельные поля хвоста. `@x` — префиксная адресная форма; дополнительные уровни записываются объявлениями слотов и адресами этих слотов, а не выдуманным преобразованием повторных `@` в выражении. В старом профиле адресные формы принадлежат L2, не L3.\n\nДва положения обратной косой черты различаются строго: `\\address` — префиксная загрузка, `value\\field` — следование полю. `value\\[occurrence]field` задаёт номер совпадающего имени, а `value\\field[index]` индексирует уже выбранное значение. Это разные места квадратных скобок. В прежнем профиле отсутствие номера соответствует `[0]`.\n\n`target[index]` отличается от голов `[]:`, `[][]:`, `[n][m]:`. Круглые скобки в выражении и ограниченные аргументы индекса разбирает тот же структурный механизм. Обычный путь LMX не получает C-написание `.` или `->`; явная дверь `c.` рассматривается отдельно. Конкретное отображение адресов, типов и операций относится к семантическому профилю.\n\nЦепочки следования полям и индексов связываются сильнее префиксных `@` и `\\`. `*` остаётся умножением, `&` не является взятием адреса, `^` не является разыменованием. `.` задаёт уровень только в ведущей зоне и не обозначает обычный доступ к полю; `->` не является оператором следования LMX."
+      },
+      "en": {
+        "title": "Address, index, and path forms",
+        "text": "Sources: §§11.2–11.3, 12–13, 20.1–20.3. This section records spelling and form distinctions, not value internals.\n\n`@ⁿ:` is the reserved address-depth head family: `@:`, `@@:`, `@@@:`, and so on; there is no arbitrary limit on n. Base type and name are separate tail fields. `@x` is the prefix address form; further levels use slot declarations and addresses of those slots, not an invented interpretation of repeated `@` in expressions. In the old profile, address forms belong to L2, not L3.\n\nThe two backslash positions are distinct: `\\address` is prefix load, while `value\\field` is field follow. `value\\[occurrence]field` specifies the matching-name ordinal, whereas `value\\field[index]` indexes the selected value. These are different bracket positions. In the previous profile, an omitted ordinal means `[0]`.\n\n`target[index]` differs from heads `[]:`, `[][]:`, and `[n][m]:`. Expression parentheses and bounded index arguments use the same structural mechanism. Ordinary LMX paths do not acquire C `.` or `->` spelling; the explicit `c.` door is separate. Concrete address, type, and operation mappings belong to the semantic profile.\n\nField-follow and index chains bind tighter than prefix `@` and `\\`. `*` remains multiplication, `&` is not address-of, and `^` is not dereference. `.` specifies a level only in the leading zone and is not ordinary field access; `->` is not an LMX field-follow operator."
+      },
+      "examples": [
+        {
+          "start": 7458,
+          "end": 7460,
+          "text": "    @\n    @@\n    @@@"
+        },
+        {
+          "start": 7479,
+          "end": 7481,
+          "text": "    @: BaseType name\n    @@: BaseType name\n    @@@: BaseType name"
+        },
+        {
+          "start": 7485,
+          "end": 7487,
+          "text": "    @: int p\n    @@: int pp\n    @@@: int ppp"
+        },
+        {
+          "start": 7497,
+          "end": 7497,
+          "text": "    @@@: int ppp"
+        },
+        {
+          "start": 7501,
+          "end": 7501,
+          "text": "    @@@: int; ppp",
+          "ru": "Точка с запятой завершает хвост до имени",
+          "en": "Semicolon ends the tail before the name"
+        },
+        {
+          "start": 7507,
+          "end": 7514,
+          "text": "    int: x 5\n    @: int p\n    @@: int pp\n    @@@: int ppp\n\n    p: @x\n    pp: @p\n    ppp: @pp"
+        },
+        {
+          "start": 8215,
+          "end": 8215,
+          "text": "    result\\harvest"
+        },
+        {
+          "start": 8238,
+          "end": 8238,
+          "text": "    value\\[occurrence]field"
+        },
+        {
+          "start": 8251,
+          "end": 8252,
+          "text": "    \\address      raw L2 load from an address expression\n    value\\field   typed field follow/access"
+        }
+      ]
+    },
+    {
+      "id": "foreign",
+      "number": 23,
+      "ru": {
+        "title": "Явная C-поверхность и границы профилей",
+        "text": "Источник: §§6.6.6, 20.2.2–20.3.\n\n`c.name` — явная форма C-поверхности, а не обычное поле LMX. Компактный токен с `c.` продолжается до границы LMX: горизонтального пробела, переноса, `,`, `;`, `(`, `)`, `:`, начала комментария или конца элемента. Точки продолжения остаются C-поверхностью; вызовы и индексы используют ограниченные формы общего потока. Точная зарегистрированная голова вроде `c.struct:`, `c.union:`, `c.enum:`, `c.array:` в позиции головы имеет приоритет над общей формой.\n\nТиповые головы `int`, `char`, `size_t` и другие не требуют `c.`. Неразрешённое обычное имя не становится C-именем автоматически. `c.` не является универсальным синтаксисом декларатора, метки или C-тега. `C:` отдельно принимает явно переданный строковый текст; сама строка не становится кодом только потому, что находится внутри `L1:`, `L2:` или `L3:`.\n\nСуффикс файла `.lm1` в прежнем прямом L1-профиле задаёт неявное корневое тело L1; явная обёртка `L1:` в этом профиле недопустима. `L2:` и `L3:` — обычные приёмники выбора профиля второго транслятора. Это границы конкретных профилей, не изменение общей структуры P0. Каталог всех библиотечных приёмников не является грамматикой."
+      },
+      "en": {
+        "title": "Explicit C surface and profile boundaries",
+        "text": "Sources: §§6.6.6, 20.2.2–20.3.\n\n`c.name` is an explicit C-surface form, not an ordinary LMX field. A compact token beginning with `c.` continues to an LMX boundary: horizontal space, newline, `,`, `;`, `(`, `)`, `:`, comment start, or item end. Dotted continuations remain C surface; calls and indices use bounded forms in the common stream. An exact registered head such as `c.struct:`, `c.union:`, `c.enum:`, or `c.array:` takes precedence in head position over the generic form.\n\nType heads such as `int`, `char`, and `size_t` do not require `c.`. An unresolved ordinary name does not automatically become a C name. `c.` is not universal declarator, label, or C-tag syntax. `C:` separately accepts explicitly supplied string text; a string does not become code merely by appearing within `L1:`, `L2:`, or `L3:`.\n\nThe `.lm1` file suffix in the previous direct L1 profile selects an implicit root L1 body; an explicit `L1:` wrapper is invalid in that profile. `L2:` and `L3:` are ordinary profile-selecting receivers of the second translator. These are specific profile boundaries, not changes to general P0 structure. A catalog of all library receivers is not grammar."
+      },
+      "examples": [
+        {
+          "start": 5150,
+          "end": 5150,
+          "text": "    c.name"
+        },
+        {
+          "start": 5169,
+          "end": 5169,
+          "text": "    c.tree.branch"
+        },
+        {
+          "start": 5173,
+          "end": 5175,
+          "text": "---ANSI C---\ntree.branch\n---ANSI C---"
+        },
+        {
+          "start": 5196,
+          "end": 5198,
+          "text": "L2:\n    c.boxes[1].value: 7\n    return: c.boxes[1].value != 7"
+        },
+        {
+          "start": 5202,
+          "end": 5205,
+          "text": "---ANSI C---\nboxes[1].value = 7;\nreturn boxes[1].value != 7;\n---ANSI C---"
+        },
+        {
+          "start": 5215,
+          "end": 5224,
+          "text": "L2:\n    fn: main () int\n        c.printf: \"Hello C\\n\"\n        c.printf: \"%s\\n\" \"message\"\n        size_t: n c.strlen(\"abc\")\n        FILE: file\n        c.puts: \"Hello C\"\n        return: 0\n    end: main\nend: L2"
+        },
+        {
+          "start": 5258,
+          "end": 5264,
+          "text": "    int: x\n    char: ch\n    @: int p\n    @@: char pp\n    []: int values 16\n    \\p\n    p\\field"
+        },
+        {
+          "start": 5285,
+          "end": 5288,
+          "text": "C:\n===\nprintf(\"Hello C\\n\");\n==="
+        }
+      ]
+    },
+    {
+      "id": "automaton",
+      "number": 24,
+      "ru": {
+        "title": "Единый автомат P0",
+        "text": "Источник: §15.0; это нормативная модель распознавания, а EBNF ниже — её проекция.\n\n`P0 = (S, E, delta, O)`. Состояние S содержит исходную позицию/базу диапазона, лексический режим, нормализованный уровень, стек форм и курсор вставки результата. Режимы: `SOURCE`, `C_STRING`, `EXACT_IDENTIFIER`, `PYTHON_RAW_QUOTE`, `BLOCK_STRING`, `RAW_COMMENT`, `LINE_COMMENT`. Формы стека: корень уровня 0, вертикальная форма K, короткая голова N с телом N + 1, круглые/индексные скобки с базой B, Mix с локальной базой 0.\n\nСобытия E: `LEVEL(K)`, `ATOM(value)`, `HEAD(value)`, `COLON`, `NEWLINE`, `COMMA_SEPARATOR`, `SEMICOLON_SEPARATOR`, открытие/закрытие круглых, квадратных и Mix-скобок, кандидат `TAIL_CUTTER`, `EOF`. Переходы определяются предыдущими разделами. Не существует отдельного P0-парсера строк, скобок, фигурных скобок или выражений: все ограниченные формы входят в рекурсивный контекст того же автомата.\n\nВ защищённом лексическом режиме знаки скобок, разделители, двоеточия, точки и слова закрытия — содержимое до закрытия режима. Поиск парной скобки обязан учитывать те же лексические режимы; простой отдельный счётчик символов недостаточен. Пассивный просмотр меток внутри уже выделенного строкового payload — отдельный ограниченный контекст, не отмена этой защиты.\n\nEOF завершает корень после всех допускающих EOF форм. Незакрытые скобки или лексические режимы остаются ошибками. Результат O сохраняет Structure, Frame, атомы, Mix-флаги и диапазоны; P0 не исполняет код, не разрешает функции и не назначает типы."
+      },
+      "en": {
+        "title": "The single P0 automaton",
+        "text": "Source: §15.0; this is the normative recognition model, and the EBNF below is its projection.\n\n`P0 = (S, E, delta, O)`. State S contains source position/span base, lexical mode, normalized level, form stack, and output insertion cursor. Modes are `SOURCE`, `C_STRING`, `EXACT_IDENTIFIER`, `PYTHON_RAW_QUOTE`, `BLOCK_STRING`, `RAW_COMMENT`, and `LINE_COMMENT`. Stack forms are the level-0 root, vertical form K, short head N with body N + 1, parenthesized/index forms with base B, and Mix with local base 0.\n\nEvents E are `LEVEL(K)`, `ATOM(value)`, `HEAD(value)`, `COLON`, `NEWLINE`, `COMMA_SEPARATOR`, `SEMICOLON_SEPARATOR`, opening/closing parenthesis, index, and Mix delimiters, a `TAIL_CUTTER` candidate, and `EOF`. Transitions follow the preceding sections. There is no separate P0 line, bracket, brace, or expression parser: all bounded forms enter recursive contexts of the same automaton.\n\nIn a shielded lexical mode, brackets, separators, colons, dots, and closer words are content until the mode closes. Matching-delimiter search must use those same modes; a separate character counter is insufficient. Passive mark inspection within an already delimited string payload is a separate bounded context, not removal of this shielding.\n\nEOF completes the root after all forms admitting EOF closure. Unclosed bounded forms or lexical modes remain errors. Output O retains Structures, Frames, atoms, Mix flags, and spans; P0 does not execute code, resolve functions, or assign types."
+      },
+      "examples": []
+    },
+    {
+      "id": "ebnf",
+      "number": 25,
+      "ru": {
+        "title": "EBNF исходных форм",
+        "text": "Источник: §15.0. Ниже дословно сохранена формальная запись вместе с её исходными пояснениями. Это общий неизменяемый фрагмент источника в обеих языковых версиях; перевод всех ограничений дан в разделах выше. `name`, `atom_or_value`, `symbolic_head` и события уровней читаются вместе с лексическими правилами, а не как разрешение произвольных символов. Условные английские пояснения внутри записи не являются токенами языка.\n\nЭта EBNF не заменяет автомат: в частности, необязательный строчный хвост после двоеточия требует наличия аргумента, которым может быть пустое вертикальное тело, а `newline/source-level composition` означает описанные переходы, не произвольный пробельный разделитель.\n\nПоправка 2026-09-19 имеет приоритет над старым пояснением внутри дословной EBNF: пустое вертикальное тело присутствует как аргумент `()`, а не как отсутствие полей получателя. Историческую формальную запись ниже следует читать с этим явным дополнением."
+      },
+      "en": {
+        "title": "Surface-form EBNF",
+        "text": "Source: §15.0. The formal notation and its original annotations are retained verbatim below. This is the same immutable source excerpt in both language versions; all constraints are explained in the preceding sections. `name`, `atom_or_value`, `symbolic_head`, and level events are read with the lexical rules, not as permission for arbitrary characters. English annotations within the notation are not language tokens.\n\nThis EBNF does not replace the automaton: in particular, an optional inline colon tail still requires a present argument, which may be an empty vertical body, and `newline/source-level composition` denotes the specified transitions, not an arbitrary whitespace separator.\n\nThe 2026-09-19 correction takes precedence over the old annotation inside the verbatim EBNF: an empty vertical body is present as a `()` argument, not absent receiver fields. Read the historical formal notation below with this explicit amendment."
+      },
+      "examples": [
+        {
+          "start": 8760,
+          "end": 8946,
+          "text": "    program             ::= { empty_line | physical_item }\n\n    physical_item       ::= raw_file_comment_block\n                          | block_string_literal\n                          | logical_line\n\n    raw_file_comment_block\n                        ::= raw_comment_fence(N) trailing_horizontal_space newline\n                              raw_ignored_line*\n                            raw_comment_fence(N) trailing_horizontal_space newline\n                            where 3 <= N <= 80\n\n    raw_comment_fence(N)\n                        ::= exactly N \"*\" characters at column 0\n\n    block_string_literal\n                        ::= block_string_fence(N) trailing_horizontal_space newline\n                              block_string_content_line*\n                            block_string_fence(N) trailing_horizontal_space newline\n                            where 3 <= N <= 80\n\n    block_string_fence(N)\n                        ::= exactly N \"=\" characters at column 0\n\n    trailing_horizontal_space\n                        ::= { \" \" | tab }\n\n    horizontal_space    ::= \" \" | tab\n\n    logical_line        ::= source_level line_content newline\n\n    indentation         ::= { \".\" | \" \" | tab }\n\n    source_level        ::= integer source level assigned by the\n                            source-level normalization prepass\n\n    source-level normalization prepass:\n                            maps the physical source spelling to source-level\n                            item/level events\n                            before the structural grammar consumes it;\n                            in canonical dotted notation, source_level is the\n                            count of leading dot characters;\n                            in relaxed indentation notation, source_level is\n                            computed by the indentation-stack rule.\n\n    empty_line          ::= trailing_horizontal_space newline\n                            level-0 structural boundary event;\n                            closes an open level-1 vertical tail by ordinary\n                            source-level decrease, but is not a same-level\n                            delimiter below level 1\n\n    line_content        ::= dot_only_marker [ comment_body ]\n                          | comment_body\n                          | disabled_body [ comment_body ]\n                          | line_item_sequence [ comment_body ]\n\n    dot_only_marker     ::= empty content after indentation\n                            valid only if source_level > 0;\n                            may delimit/open an anonymous Structure at that level\n\n    comment_body        ::= \"#\" ignored_until_newline\n\n    disabled_body       ::= \"%\" enabled_line_body\n\n    enabled_line_body   ::= line_item_sequence\n\n    compact_frame       ::= name \"(\" [ argument_list ] \")\"\n\n    line_frame          ::= source_level line_item_sequence newline\n\n    line_item_sequence  ::= source_item\n                            { semicolon_segment_separator source_item }\n                            [ semicolon_segment_separator ]\n\n    source_item         ::= colon_frame_body\n                          | nullary_line_body\n                          | structural_value\n\n    colon_frame_body    ::= head \":\" [ line_arguments ]\n                            inline tail and following vertical children at\n                            N+1 together form the assembled body; a colon\n                            Frame with zero argument fields after that\n                            assembly is a current-P0 syntax error. Compact\n                            `name()` and `()` are not this production.\n                            Historical 620db86 P0 allowed the empty form.\n\n    semicolon_segment_separator\n                         ::= \";\"\n\n    // Semicolon terminates the current open short form/source item at the\n    // current scan depth and separates the next source item or argument\n    // segment. Comma is an ordinary field separator and never terminates the\n    // current open short form.\n\n    head                ::= bare_identifier\n                          | exact_identifier\n                          | symbolic_head\n\n    nullary_line_body   ::= name\n                            valid in executable statement position only when\n                            `name` resolves to a zero-argument consumable binding:\n                            registered nullary operator/receiver or visible zero-argument fn/sub\n\n    line_arguments      ::= short_tail\n\n    short_tail          ::= short_field\n                            { short_tail_field_separator short_field }\n                            [ \",\" ]\n\n    short_tail_field_separator\n                         ::= horizontal_space+\n                          | \",\"\n\n    short_field         ::= colon_frame_body\n                          | structural_value\n\n    // In ordinary physical short-line form, comma separates fields in the\n    // current short form. Semicolon is not a short-tail field separator: it\n    // terminates the current short form and exposes the following segment at\n    // the surrounding scan depth.\n    // Physical newline is not a short-form trailer; after newline, the next\n    // source-level event decides whether the open frame receives more fields\n    // or is completed by level rules.\n    // Operator-token consumption is deferred to a later consumer.\n\n    argument_list       ::= bounded_item_sequence\n\n    bounded_item_sequence\n                         ::= bounded_item { bounded_item_separator bounded_item }\n                             [ bounded_item_separator ]\n\n    bounded_item_separator\n                         ::= horizontal_space+\n                          | comma_field_separator\n                          | semicolon_segment_separator\n                          | newline/source-level composition\n\n    comma_field_separator\n                         ::= \",\"\n\n    bounded_item        ::= colon_frame_body\n                          | nullary_line_body\n                          | structural_value\n\n    // Inside bounded Structures, short colon-forms may appear inline.\n    // Horizontal whitespace separates simple bounded fields only when no\n    // short colon-form is open. Inside an open short colon-form it remains\n    // the short-tail field separator. Comma is also a short-tail field\n    // separator and never closes the short form. Semicolon terminates an open\n    // short form at any scan depth and then separates the following bounded\n    // item/argument segment.\n    // Newline/source-level composition is not a short-form\n    // trailer by itself; the following source level determines continuation\n    // or closure. Inside a bounded form that continues across a physical\n    // newline, the next physical line must remain inside that bounded form:\n    // it must be at the corresponding deeper dotted source level or, in\n    // relaxed notation, at an indentation column deeper than the line that\n    // opened the bounded form. A line whose next source token is the matching\n    // RPAREN/RBRACKET is the closing line and may return to the opener level.\n    // The matching RPAREN/RBRACKET closes the bounded Structure; if a short\n    // form is still open inside it, that short form is completed as part of\n    // closing the bounded context.\n\n    bounded_structure   ::= \"(\" [ argument_list | vertical_argument_list ] \")\"\n\n    source_fragment     ::= P0 source parsed in a local level-0 context\n\n    mix_structure       ::= \"{\" source_fragment \"}\"\n                            parsed by the same P0 source/token rules in a\n                            local level-0 context and stored as a Mix-flagged\n                            Structure node\n\n    index_access_suffix ::= \"[\" [ argument_list | vertical_argument_list ] \"]\"\n                            attached to a preceding target by an expression,\n                            update or receiver profile that admits index/access\n                            syntax\n\n    vertical_argument_list\n                         ::= newline source_line { source_line }\n                            where each contained source_line follows the same\n                            source-level rules as ordinary vertical composition\n\n    structural_value\n                         ::= compact_frame\n                          | bounded_structure\n                          | mix_structure\n                          | atom_or_value"
+        }
+      ]
+    },
+    {
+      "id": "normal-form",
+      "number": 26,
+      "ru": {
+        "title": "EBNF структурного результата",
+        "text": "Источник: §15.1. Это запись результата разбора, не вторая поверхностная грамматика и не семантика исполнения. `Structure(...)` и `Frame(...)` обозначают конструкцию результата. Текст исходной формальной записи сохраняется одинаково в RU/EN.\n\n`FrameTrailer` отделён от аргументных полей. Запятая добавляет/разделяет поля хвоста, точка с запятой сначала завершает короткую форму на текущей глубине. Скобочный закрыватель закрывает соответствующий контекст; изменение уровня и допускаемые приёмником закрытия сохраняют разные причины завершения. Обычный элемент на меньшем уровне остаётся обычным элементом после закрытия предыдущего; его текст не превращается автоматически в приёмник закрытия."
+      },
+      "en": {
+        "title": "Structural-result EBNF",
+        "text": "Source: §15.1. This describes the parse result, not a second surface grammar or execution semantics. `Structure(...)` and `Frame(...)` denote result construction. The original formal notation is retained identically in RU/EN.\n\n`FrameTrailer` is separate from argument fields. Comma appends/separates tail fields; semicolon first completes the short form at the current depth. A bounded closer closes its matching context; level transitions and receiver-admitted closers retain their distinct completion reasons. An ordinary item at a smaller level remains ordinary after the preceding form closes; its text does not automatically become a closing receiver."
+      },
+      "examples": [
+        {
+          "start": 9051,
+          "end": 9109,
+          "text": "    SourceFile\n        ::= RootBlock\n\n    RootBlock\n        ::= Block(0)\n\n    Block(K)\n        ::= Structure({ BlockElement(K) })\n\n    BlockElement(K)\n        ::= FrameElement(K)\n         |  ValueElement(K)\n         |  ExpressionElement(K)\n         |  AnonymousStructure(K)\n\n    FrameElement(K)\n        ::= Frame(Head, BodyStructure, FrameTrailer)\n\n    Head\n        ::= BareIdentifier\n         |  ExactIdentifier\n         |  SymbolicHead\n         |  ProfileHeadPath\n\n    BodyStructure\n        ::= Structure({ Field })\n\n    Field\n        ::= FrameElement(current)\n         |  ValueElement(current)\n         |  ExpressionElement(current)\n         |  BoundedStructure\n         |  CompactFrame\n         |  AnonymousStructure(current)\n\n    ValueElement(K)\n        ::= NumericLiteral\n         |  StringLiteral\n         |  BareIdentifier\n         |  ExactIdentifier\n\n    ExpressionElement(K)\n        ::= ExpressionStructure\n\n    CompactFrame\n        ::= Frame(Head, BoundedBody, RPAREN_BOUNDED)\n\n    BoundedStructure\n        ::= Structure({ BoundedElement }, RPAREN_BOUNDED | RBRACKET_BOUNDED)\n\n    BoundedElement\n        ::= FrameElement(bounded)\n         |  ValueElement(bounded)\n         |  ExpressionElement(bounded)\n         |  CompactFrame\n         |  BoundedStructure\n\n    AnonymousStructure(K)\n        ::= Structure({ BlockElement(K + 1) })"
+        },
+        {
+          "start": 9113,
+          "end": 9149,
+          "text": "    ShortTail\n        ::= Field { (HorizontalSpace+ | COMMA_FIELD_SEPARATOR) Field }\n            [ COMMA_FIELD_SEPARATOR ]\n\n    BoundedBody\n        ::= [ BoundedElement { BoundedSeparator BoundedElement }\n             [ BoundedSeparator ] ]\n\n    BoundedSeparator\n        ::= HorizontalSpace+\n         |  COMMA_FIELD_SEPARATOR\n         |  SEMICOLON_SEGMENT_SEPARATOR\n         |  NewlineSourceComposition\n\n    COMMA_FIELD_SEPARATOR\n        ::= COMMA_SEPARATOR\n\n    SEMICOLON_SEGMENT_SEPARATOR\n        ::= SEMICOLON_SEPARATOR\n\n    SEMICOLON_SHORT\n        ::= SEMICOLON_SEPARATOR\n\n    FrameTrailer\n        ::= SEMICOLON_SHORT\n         |  RPAREN_BOUNDED\n         |  RBRACKET_BOUNDED\n         |  LEVEL_DROP\n         |  DELIM_NAMELESS\n         |  RECEIVER_TRAILER\n         |  EOF_TRAILER\n\n    RECEIVER_TRAILER\n        ::= END_NAMED\n         |  UNTIL_CLOSE\n         |  TERMINAL_RETURN\n         |  ProfileTrailer"
+        }
+      ]
+    },
+    {
+      "id": "fixtures",
+      "number": 27,
+      "ru": {
+        "title": "Исходные примеры границ литералов",
+        "text": "Источник: §16.4. Эти примеры взяты из перечисленных там парсерных тестов. Они проверяют границы содержимого, а не поведение методов. Общий отступ представления в четыре пробела снимается при копировании в исходный файл.\n\nПо порядку: `python_string_in_paren.lmx` — скобки и комментариеподобный текст внутри сырых строк; `python_string_inline_multiline_tail.lmx` — продолжение полей после закрытия литерала; `block_string_equals_fence.lmx` — более короткая ограда как содержимое; `raw_comment.lmx` — некорректный код внутри игнорируемого комментария; `string_continuation_indent.lmx` — сохранение четырёх пробелов после C-склейки переноса."
+      },
+      "en": {
+        "title": "Original literal-boundary examples",
+        "text": "Source: §16.4. These examples come from the parser tests named there. They check payload boundaries, not method behavior. Remove the common four-space presentation indent when copying them into a source file.\n\nIn order: `python_string_in_paren.lmx` checks brackets and comment-looking text within raw strings; `python_string_inline_multiline_tail.lmx` checks fields continuing after literal closure; `block_string_equals_fence.lmx` checks a shorter fence as content; `raw_comment.lmx` checks malformed code inside an ignored comment; `string_continuation_indent.lmx` checks preservation of four spaces after C line splicing."
+      },
+      "examples": [
+        {
+          "start": 9297,
+          "end": 9303,
+          "text": "    f(\"\"\"a\n    ) # not syntax\n    \"\"\"\" stays data\n    b\"\"\", '''c\n    ( # not syntax\n    '''' stays data\n    d''', tail)"
+        },
+        {
+          "start": 9308,
+          "end": 9311,
+          "text": "    print: \"\"\"hello\n    \"\"\" world\n    print: '''hello\n    ''' world"
+        },
+        {
+          "start": 9315,
+          "end": 9321,
+          "text": "    doc:\n    ====\n    alpha\n    === literal content\n    beta\n    ====\n    end: doc"
+        },
+        {
+          "start": 9326,
+          "end": 9331,
+          "text": "    root: before\n    ****\n    ignored \" bad\n    . broken:\n    ****\n    root: after"
+        },
+        {
+          "start": 9336,
+          "end": 9339,
+          "text": "    doc:\n        text: \"alpha\\\n        beta\"\n    end: doc"
+        }
+      ]
+    },
+    {
+      "id": "source-limits",
+      "number": 28,
+      "ru": {
+        "title": "Границы переноса и расхождения внутри источника",
+        "text": "Перенос не является заявлением, что старый или новый транслятор уже реализует каждый пункт. Источник сам называет грамматический эскиз неполным в части полного смысла обновления, индексации, типов и отношений. Здесь все найденные правила записи этих форм вынесены отдельно; отсутствующая семантика не достраивается.\n\nУточнение автора 2026-09-19 исправляет прежний запрет пустого вертикального тела: это пустая структура-аргумент, а не отсутствие аргументов. Старые примеры с пустыми телами сохранены; их нельзя объявлять ошибочными только из-за отсутствия внутренних полей. Кроме того, §4.3 показывает плоскую нормальную форму смеси строчного и вертикального продолжения, тогда как §§4.2.1 и 15.0 требуют сохранять структурную границу перехода вниз/вверх. Это расхождение исходных описаний сохранено явно; оно не решается новым придуманным правилом.\n\nПодробная диагностика повреждённых Mix-меток внутри строк и конкретная форма `{#...}` отдельно не определены в двух сравниваемых спеках. Не следует изобретать её при переносе. Зафиксированы общий P0-разбор фигурных скобок, защищённые границы внешнего литерала, изоляция внутренних меток и неизменность строкового значения. Проверка исторической реализации и её тестов — отдельный следующий этап.\n\nСсылки на Message, методы, ABI и память из прежних грамматических глав не превращены в новую семантику. Полные каталоги приёмников, численных библиотек, сетевых протоколов и рантайма остаются вне общей грамматики: их названия записываются уже описанными обычными формами."
+      },
+      "en": {
+        "title": "Extraction boundaries and source inconsistencies",
+        "text": "Extraction is not a claim that an old or new translator already implements every rule. The source itself calls the grammar sketch incomplete regarding full update, indexing, type, and relation meanings. All located spelling rules for these forms are separated here; missing semantics are not invented.\n\nThe author’s 2026-09-19 clarification corrects the previous rejection of empty vertical bodies: they are empty Structure arguments, not absent arguments. Old empty-body examples are retained; lack of internal fields alone does not make them errors. Also, §4.3 gives a flat normal form for mixed inline/vertical continuation, whereas §§4.2.1 and 15.0 require retaining the down/up Structure boundary. This inconsistency between source descriptions is recorded explicitly; it is not resolved by inventing a new rule.\n\nDetailed diagnostics for malformed Mix marks inside strings and the specific `{#...}` form are not separately defined in the two compared specifications. They must not be invented during extraction. The documented rules are common P0 brace parsing, shielded outer-literal boundaries, isolated internal marks, and unchanged string values. Checking the historical implementation and its tests is a separate next stage.\n\nReferences to Message, methods, ABI, and memory in old grammatical chapters have not become new semantics. Complete catalogs of receivers, numerical libraries, network protocols, and runtime services remain outside the general grammar: their names use the ordinary forms already described."
+      },
+      "examples": []
+    }
+  ]
+}

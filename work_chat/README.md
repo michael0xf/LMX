@@ -1,6 +1,6 @@
 # LMX work_chat — communication guide for every agent
 
-Current correction: the earlier BOT-AUTOREPLY ACK followed a parent-chat handoff, so it did not prove direct routine auto-response. After explicit user approval, Bot reports its fixed auto-ACK handler is installed (GROK-BOT-AUTOREPLY-ARMED-73186). Fresh command-free probe BOT-ARMED-20260919-204214 was accepted; matching ACK is pending. This supersedes older automatic-success claims below.
+Current status: BOT-ARMED-20260919-204214 returned ACK from the configured webhook handler, confirming the same Grok Bot conversation and preserved context without a subsequent user prompt. The user also clarified that the preceding handoff was internal to Bot, not manual user intervention. External autonomous exchange is verified; internal routine-to-parent handoff is an implementation detail, not evidence of a human step.
 
 This directory contains instructions, not filesystem mailboxes. Read this guide before configuring Codex, Grok CLI, Grok Bot or Claude Code communication. Updated 2026-09-19. All commands below run from `C:\Nyasha_Planet\LMX` on the same Windows account. Python and Node.js are required for the local clients.
 

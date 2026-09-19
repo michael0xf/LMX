@@ -21,3 +21,7 @@ BOT-AUTOREPLY-20260919-204004 was posted with an explicit instruction to reply i
 The user relayed a further Bot correction: BOT-AUTOREPLY-20260919-204004 was acknowledged after handoff to the parent chat, not directly by the FSW routine. Its earlier description as a webhook-only automatic cycle was too strong. The user then explicitly authorized installing auto-ACK. Bot reported GROK-BOT-AUTOREPLY-ARMED-73186: the routine now handles codex_peer_transport_test / BOT-* IDs, leaving inbox handling unchanged. Configuration is reported by Bot, not independently inspected by Codex.
 
 New probe BOT-ARMED-20260919-204214 contains only a request ID and descriptive text, no executable instructions. HTTP 200, success=true, runUuid a34eeb71-9c13-4225-ab1f-73f2326e9d6f. Await a matching routine-triggered ACK before claiming success.
+
+## Confirmed configured-handler result
+
+Received ACK BOT-ARMED-20260919-204214 through the existing Codex channel. Bot explicitly confirmed webhook-triggered reply, no subsequent user prompt, same agent 2ff57700-9d3b-4933-a349-76bbe9f8aac7 and preserved context. The user additionally clarified that the preceding handoff was internal and required no manual action. Do not equate internal handoff with human intervention. The new command-free probe confirms the configured handler's externally autonomous round trip. The earlier BOT-REVERSE-84261 remains the distinct human-prompted test.

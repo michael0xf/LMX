@@ -237,7 +237,7 @@ A foreign handle requires an explicit high-level wrapper and contracts for owner
 <a id="construction"></a>
 ## 8. Value construction
 
-A structural expression constructs a value when execution reaches it. Declaring a name, importing a unit or providing a description does not eagerly create every instance. Named and anonymous Structures share one mechanism: determine the lexical parent, create fields with stable identity, evaluate initializers in source order, establish links and publish the successfully initialized result. An `independent` root has no external lexical parent.
+A structural expression constructs a value when execution reaches it. Declaring a name, importing a unit or providing a description does not eagerly create every instance. Named and anonymous Structures share one mechanism: determine the lexical parent, create fields with stable identity, evaluate initializers in source order, establish links and publish the successfully initialized result. An `independent` root has `node = 0`; that is exactly what absence of an external lexical parent means.
 
 In declarations `u32: id`, `Text: crop`, `f64: harvest 0.0`, the constructor operation consumes the following identifier as a proposed name rather than evaluating its previous value. `PlantBed: bed` requires an available `PlantBed` construction operation: a same-named description does not become a constructor by itself. Redeclaration of an existing field is subject to the remaining receiving expressions' requirements; it creates neither a new type nor a hidden name table.
 
@@ -272,7 +272,7 @@ Qualification is applied only after successful complete preflight. Failure leave
 
 Protection applies to writes through every path and to publication of working fields. A known-invalid write is rejected before execution; a dynamically selected write is checked during execution. Calling a method is allowed but does not remove protection. Changing a local argument copy or rebinding a local reference does not modify the protected value. Constructing a new value, including through `merge`, does not thaw the source.
 
-Construction-time `independent` establishes the absence of an external lexical parent. Internal tree links and own fields remain. The qualification neither clears existing objects' `node` links nor prohibits explicitly supplied references, current-caller dynamic arguments, Messages or selection of a callable by a compatible signature. It does not require purity or an interface closed over explicit arguments alone.
+Construction-time `independent` sets the root's `node = 0`; that is exactly the absence of an external lexical parent. Internal tree `node` links and own fields remain. The qualification neither retroactively clears existing objects' `node` links nor prohibits explicitly supplied references, current-caller dynamic arguments, Messages or selection of a callable by a compatible signature. It does not require purity or an interface closed over explicit arguments alone.
 
 For example, a method inside independent Structure S can use S's field through its internal lexical link. Required `x` can come from the current caller. If `x` exists only in S's former textual surroundings, implicit external access is unavailable. An explicitly passed large Array neither shrinks nor gets copied because of `independent`. The special lifetime of the three qualifications together is described under [eternal branches](#eternal).
 
@@ -696,7 +696,7 @@ A foreign resource has a separate ownership, retention, release and transfer con
 <a id="eternal"></a>
 ## 22. Eternal branches and shared methods
 
-Combined qualification `independent: const: immutable` establishes an eternal branch: its root has no external lexical parent, contents and protected bindings are immutable, and storage lasts until process termination. Any one qualification alone does not establish this sharing contract.
+Combined qualification `independent: const: immutable` establishes an eternal branch: its root has `node = 0`, contents and protected bindings are immutable, and storage lasts until process termination. Any one qualification alone does not establish this sharing contract.
 
 The process's first, root Message retains all such branches from all Messages in a fixed immutable reference Array. The branch set is translation-known; `merge` and Message creation do not append entries. Placement in the retention Array does not reparent a branch's lexical tree. Permitted runtime-value initialization occurs before publication without increasing the entry set.
 

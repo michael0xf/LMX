@@ -306,7 +306,7 @@ A foreign handle requires an explicit high-level wrapper and contracts for owner
 
 @@ construction | Построение значений | Value construction | 9.1–9.2; 19.20
 [RU]
-Структурное выражение строит значение, когда исполнение достигает этого выражения. Объявление имени, импорт или наличие описания не создаёт заранее все экземпляры. Для именованных и анонимных структур действует один механизм: определить лексического родителя, создать поля с устойчивой идентичностью, вычислить инициализаторы в исходном порядке, установить ссылки и опубликовать успешно инициализированный результат. У корня `independent` внешний лексический родитель отсутствует.
+Структурное выражение строит значение, когда исполнение достигает этого выражения. Объявление имени, импорт или наличие описания не создаёт заранее все экземпляры. Для именованных и анонимных структур действует один механизм: определить лексического родителя, создать поля с устойчивой идентичностью, вычислить инициализаторы в исходном порядке, установить ссылки и опубликовать успешно инициализированный результат. У корня `independent` поле `node` равно нулю (`node = 0`); именно это означает отсутствие внешнего лексического родителя.
 
 В объявлении `u32: id`, `Text: crop`, `f64: harvest 0.0` операция-конструктор принимает следующий идентификатор как предлагаемое имя, а не вычисляет прежнее значение этого имени. Форма `PlantBed: bed` требует доступной операции построения `PlantBed`: одноимённое описание само по себе конструктором не становится. Повторное объявление существующего поля подчиняется требованиям оставшихся принимающих выражений; оно не создаёт новый тип или скрытую таблицу имён.
 
@@ -324,7 +324,7 @@ end: result
 
 Именование не добавляет к объекту дескриптор, класс или специальную раскладку. Построение отличается от [композиции](#composition): оно создаёт выраженный граф, тогда как `merge` копирует граф своих операндов. Политика повторного вычисления и повторного использования значения верхнеуровневого именованного построения ещё требует определения; предварительное создание всех значений при трансляции из этого не следует.
 [EN]
-A structural expression constructs a value when execution reaches it. Declaring a name, importing a unit or providing a description does not eagerly create every instance. Named and anonymous Structures share one mechanism: determine the lexical parent, create fields with stable identity, evaluate initializers in source order, establish links and publish the successfully initialized result. An `independent` root has no external lexical parent.
+A structural expression constructs a value when execution reaches it. Declaring a name, importing a unit or providing a description does not eagerly create every instance. Named and anonymous Structures share one mechanism: determine the lexical parent, create fields with stable identity, evaluate initializers in source order, establish links and publish the successfully initialized result. An `independent` root has `node = 0`; that is exactly what absence of an external lexical parent means.
 
 In declarations `u32: id`, `Text: crop`, `f64: harvest 0.0`, the constructor operation consumes the following identifier as a proposed name rather than evaluating its previous value. `PlantBed: bed` requires an available `PlantBed` construction operation: a same-named description does not become a constructor by itself. Redeclaration of an existing field is subject to the remaining receiving expressions' requirements; it creates neither a new type nor a hidden name table.
 
@@ -358,7 +358,7 @@ Naming does not add a descriptor, class or special layout to the object. Constru
 
 Защита обязательна для записей через любой путь и для публикации рабочих полей. Заведомо недопустимая запись отвергается до исполнения, динамически выбранная — проверяется при исполнении. Вызов метода разрешён, но не снимает защиты. Изменение локальной копии аргумента или перепривязка локальной ссылки не меняют защищённое значение. Построение нового значения, в том числе `merge`, не размораживает исходное.
 
-`independent` при построении устанавливает отсутствие внешнего лексического родителя. Внутренние связи дерева и собственные поля сохраняются. Квалификация не очищает `node` существующих объектов и не запрещает явно переданные ссылки, динамические аргументы текущего вызывающего выражения, сообщения или выбор вызываемого выражения по совместимой сигнатуре. Это не требование чистоты и не закрытый интерфейс только из явных аргументов.
+`independent` при построении устанавливает у корня `node = 0`; это и есть отсутствие внешнего лексического родителя. Внутренние связи `node` дерева и собственные поля сохраняются. Квалификация не обнуляет задним числом `node` уже существующих объектов и не запрещает явно переданные ссылки, динамические аргументы текущего вызывающего выражения, сообщения или выбор вызываемого выражения по совместимой сигнатуре. Это не требование чистоты и не закрытый интерфейс только из явных аргументов.
 
 Например, метод внутри независимой структуры S может использовать поле S через внутреннюю лексическую связь. Требуемое `x` может прийти из текущего вызывающего выражения. Если `x` находится только в прежнем текстовом окружении S, внешнего неявного доступа к нему нет. Явно переданный большой массив не становится меньше и не копируется из-за `independent`. Особый срок жизни сочетания трёх квалификаций описан в [вечных ветвях](#eternal).
 [EN]
@@ -376,7 +376,7 @@ Qualification is applied only after successful complete preflight. Failure leave
 
 Protection applies to writes through every path and to publication of working fields. A known-invalid write is rejected before execution; a dynamically selected write is checked during execution. Calling a method is allowed but does not remove protection. Changing a local argument copy or rebinding a local reference does not modify the protected value. Constructing a new value, including through `merge`, does not thaw the source.
 
-Construction-time `independent` establishes the absence of an external lexical parent. Internal tree links and own fields remain. The qualification neither clears existing objects' `node` links nor prohibits explicitly supplied references, current-caller dynamic arguments, Messages or selection of a callable by a compatible signature. It does not require purity or an interface closed over explicit arguments alone.
+Construction-time `independent` sets the root's `node = 0`; that is exactly the absence of an external lexical parent. Internal tree `node` links and own fields remain. The qualification neither retroactively clears existing objects' `node` links nor prohibits explicitly supplied references, current-caller dynamic arguments, Messages or selection of a callable by a compatible signature. It does not require purity or an interface closed over explicit arguments alone.
 
 For example, a method inside independent Structure S can use S's field through its internal lexical link. Required `x` can come from the current caller. If `x` exists only in S's former textual surroundings, implicit external access is unavailable. An explicitly passed large Array neither shrinks nor gets copied because of `independent`. The special lifetime of the three qualifications together is described under [eternal branches](#eternal).
 
@@ -860,7 +860,7 @@ A foreign resource has a separate ownership, retention, release and transfer con
 
 @@ eternal | Вечные ветви и общие методы | Eternal branches and shared methods | 9.1.4; 19.29.6; 19.29.9
 [RU]
-Совместная квалификация `independent: const: immutable` задаёт вечную ветвь: её корень не имеет внешнего лексического родителя, содержимое и защищённые привязки неизменяемы, срок хранения — до завершения процесса. Одна из квалификаций отдельно не даёт этого контракта общего использования.
+Совместная квалификация `independent: const: immutable` задаёт вечную ветвь: у её корня `node = 0`, содержимое и защищённые привязки неизменяемы, срок хранения — до завершения процесса. Одна из квалификаций отдельно не даёт этого контракта общего использования.
 
 Первый, корневой Message процесса удерживает все такие ветви всех Message в фиксированном неизменяемом массиве ссылок. Множество ветвей известно трансляции; массив не пополняется при каждом `merge` или создании Message. Размещение ссылки в этом массиве не переподчиняет лексическое дерево ветви. Допустимая инициализация значениями времени выполнения происходит до публикации и не увеличивает множество записей.
 
@@ -872,7 +872,7 @@ A foreign resource has a separate ownership, retention, release and transfer con
 
 Например, A и созданный из его шаблона B могут иметь один адрес вечной E и разные ячейки изменяемого x. Завершение A и B не освобождает E. Одинаковое содержимое двух отдельно построенных ветвей не означает их автоматического интернирования. При переносе в другой процесс нативный адрес не становится сетевой идентичностью: нужен явный кодек.
 [EN]
-Combined qualification `independent: const: immutable` establishes an eternal branch: its root has no external lexical parent, contents and protected bindings are immutable, and storage lasts until process termination. Any one qualification alone does not establish this sharing contract.
+Combined qualification `independent: const: immutable` establishes an eternal branch: its root has `node = 0`, contents and protected bindings are immutable, and storage lasts until process termination. Any one qualification alone does not establish this sharing contract.
 
 The process's first, root Message retains all such branches from all Messages in a fixed immutable reference Array. The branch set is translation-known; `merge` and Message creation do not append entries. Placement in the retention Array does not reparent a branch's lexical tree. Permitted runtime-value initialization occurs before publication without increasing the entry set.
 

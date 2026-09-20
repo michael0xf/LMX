@@ -1,4 +1,7 @@
 predef: "l2src/lmx_child.h.lm1"
+# The store's bind and lookup (LMX-ETERNAL-R0-44D): a child arena inherits its source's store
+# BEFORE the copy.  Header only -- the unit's bodies are never pulled in.
+predef: "l2src/lmx_perm.h.lm1"
 predef: "l2src/lmx_service.lm1"
 predef: "lmx_graph_copy_owned.lm1"
 predef: "lmx_arena_refs.h.lm1"
@@ -28,6 +31,20 @@ fn: lmx_child_create (@: LmxArena src_arena; @: LmxArena child_arena; @: Lmx par
     if: parent\data = 0 || parent\len <= 0
         return: 0
     if: slot >= (cast: (size_t) parent\len)
+        return: 0
+    ---
+    # BIND BEFORE MARK, not merely before the copy (LMX-ETERNAL-R0-44D).  Two reasons, and the
+    # first is the one that shapes the line: the child's arena must be able to answer for what it
+    # is about to RECEIVE from the source arena's store before a single block is marked, so that a
+    # revert-to-mark on any later failure cannot leave a half-bound arena behind.  The second is
+    # that the copy itself resolves addresses through classify, and a bound child answers for the
+    # store's ranges while an unbound one would call a valid eternal pointer foreign.
+    #
+    # An arena whose source has NO store is left unbound on purpose: there is nothing to inherit,
+    # and binding it to nothing would refuse every ordinary child creation in a storeless runtime.
+    # lmx_perm_bind then enforces the rest -- 0 -> store binds, same -> same is a no-op, and a
+    # DIFFERENT live store is refused, which is what keeps two runtimes apart across a handoff.
+    if: lmx_perm_store_of(src_arena) != 0 && lmx_perm_bind(child_arena, lmx_perm_store_of(src_arena)) != 0
         return: 0
     ---
     mark: lmx_arena_mark(child_arena)

@@ -2313,11 +2313,41 @@ fn: l1_emit_param (@: FILE out; const: @(LmP0Node node); const: @(char path)) in
         extra: field\next
         while: extra != 0 && l1_node_ignored(extra\value)
             extra: extra\next
-        if: extra != 0
-            return: l1_error(path, node, "qualifier parameter has extra fields; write `const: @(type name)` or place the qualifier last")
         if: l1_write_cstr(out, "const ") != 0
             return: 1
-        return: l1_emit_param(out, field\value, path)
+        ---
+        # No name follows (prototype shorthand): recurse on the type node so the
+        # type is emitted the same way the non-const path would emit it.
+        if: extra = 0
+            return: l1_emit_param(out, field\value, path)
+        ---
+        # Has name: emit the type and the name inline, following the [] branch
+        # at :2321-2345 (same type-token call, same extra-name scan, same name
+        # write).  `extra` holds the name field found above; it is not touched
+        # by the `field` advance into the type node's body.
+        if: l1_emit_type_token(out, field\value, path) != 0
+            return: 1
+        field: field\next
+        while: field != 0 && l1_node_ignored(field\value)
+            field: field\next
+        ---
+        while: field != 0 && field\value != 0 && field\value\kind = c.LM_P0_NODE_ATOM && l1_is_type_name(field\value\as\atom)
+            if: l1_write_cstr(out, " ") != 0
+                return: 1
+            if: l1_write_type_spelling(out, field\value\as\atom, path, field\value) != 0
+                return: 1
+            field: field\next
+            while: field != 0 && l1_node_ignored(field\value)
+                field: field\next
+            ---
+        ---
+        if: extra\value = 0 || extra\value\kind != c.LM_P0_NODE_ATOM
+            return: l1_error(path, node, "const parameter missing name")
+        if: l1_write_cstr(out, " ") != 0
+            return: 1
+        if: l1_write_ident(out, extra\value\as\atom, path, extra\value) != 0
+            return: 1
+        return: 0
     if: l1_text_eq(head, "[]")
         if: field = 0 || field\value = 0
             return: l1_error(path, node, "array parameter missing type")

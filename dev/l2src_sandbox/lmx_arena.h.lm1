@@ -31,6 +31,18 @@ struct: LmxArena
     # descriptors + address stability; no GC pass; no multi-chunk growth per array.
     # Cleared by release / left 0 after attach empties the donor.
     unsigned: simple
+    # 1 = THIS arena is the runtime's PERMANENT STORE: the storage of branches qualified
+    # `independent: const: immutable` (LMX-ETERNAL-R0-44D, lmx_perm.h.lm1).  Its chunks are
+    # process-lifetime: no collection pass marks or sweeps them (lmx_gc_collect short-circuits
+    # on this flag exactly as it does on `simple`), a stray lmx_arena_release refuses it, and
+    # it is never a donor in lmx_arena_attach.  The one release is lmx_perm_close.
+    unsigned: permanent
+    # The store THIS arena answers for, or 0.  NON-OWNING: it is never freed through, and it
+    # is the SAME pointer an arena's classify fallback consults (lmx_range.lm1).  Binding is
+    # lmx_perm_bind's act and refusable, which is what keeps two runtimes isolated.  The store
+    # itself leaves this 0, so a fallback that lands on a store stops there instead of
+    # recursing.
+    @: LmxArena perm
 end: LmxArena
 
 prototype:

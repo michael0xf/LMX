@@ -1,0 +1,63 @@
+predef: "l2src/lmx_arena.h.lm1"
+
+# lmx_perm.h.lm1 -- the PERMANENT STORE: the storage of branches qualified
+# `independent: const: immutable` (LMX-ETERNAL-R0-44D, author's invariant).
+#
+# THE INVARIANT.  Such branches are translation-known, stored by Root Thread R0 for the
+# lifetime of the process, arena GC MUST NOT TOUCH them, and pointers to them may occur in
+# other Messages.
+#
+# WHY A STORE AND NOT A GC ROOT.  The previous shape kept the branches in R0's ordinary
+# arena and let them survive because the retention array was a root of R0's own graph.  That
+# is the opposite property: it survives because the collector VISITS and KEEPS it.  Here the
+# collector must not visit it at all, and the reason is in the language itself:
+# tests/unit_eternal_shape.lm2:10 admits `E: self`, a branch that references itself.  A cyclic
+# immutable graph cannot be walked without a visited set, and the only visited set in this
+# kernel is the per-chunk `mark` stamp (lmx_gc.lm1:110-117) -- so walking the store would mean
+# WRITING INTO IT.  "Never visit" is therefore not the cheap option, it is the only one that
+# holds with self-reference in the corpus.
+#
+# WHY THAT IS SOUND.  The translator admits into a branch only size_t and char leaves, inline
+# nested Structures, and references to OTHER STORE-RESIDENT branches (corpus:
+# tests/unit_eternal_shape.lm2:21 `E: peer`, tests/unit_eternal_xref.lm2:18 `deep: into`).
+# The store is CLOSED UNDER REFERENCE, so nothing that lives only in an ordinary arena can be
+# reachable through it, and skipping it cannot lose anything.
+#
+# THE ONE RULE THAT MAKES IT WORK, and it is a split, not a flag:
+#   * classify / type_of / stride answer "WHAT KIND OF THING IS THIS" and fall back
+#     local-first, then the bound store.  A pointer into the store therefore has a visible
+#     kind, type and stride from ANY Message.
+#   * lmx_range_pool answers "WHOSE STORAGE IS THIS" and stays STRICTLY LOCAL.  GC's early
+#     return (lmx_gc.lm1:105-107) then answers "not mine to walk" for a store address with no
+#     new code and no per-edge cost.  If pool ever gained the fallback, the collector would
+#     hand back the STORE's descriptor and stamp the store's chunk -- the exact mutation the
+#     invariant forbids.
+#
+# OWNERSHIP.  The store is EMBEDDED in LmxRoot by value (`LmxArena perm`), so R0 owns it
+# explicitly: it is not a leaked descriptor and there is no registry anywhere.  A Message
+# arena holds a NON-OWNING link to it and is never freed through it.  Two runtimes therefore
+# share nothing, which is what keeps multiple roots in one process possible.
+
+prototype:
+    # Open a cleared arena as a store.  A store is an ordinary arena plus the role flag, so it
+    # bump-allocates over blocks like any other and needs no pre-sizing: the eternal counts the
+    # translator now emits are NOT a byte estimate.
+    fn: lmx_perm_open (@: LmxArena store) int
+    # Release a store exactly once.  Clears the role flag first, then releases the arena like
+    # any other, so the process-lifetime storage goes only through this call -- a stray
+    # lmx_arena_release on a store is refused (lmx_arena_release) rather than freeing it.
+    fn: lmx_perm_close (@: LmxArena store) int
+    # Bind an arena to its runtime's store.  0 -> store binds; same -> same is a no-op; a
+    # DIFFERENT live store is refused, and so is binding a store to a store.  This is what
+    # keeps two runtimes isolated: an arena can never be made to answer for another root's
+    # storage.
+    fn: lmx_perm_bind (@: LmxArena arena; @: LmxArena store) int
+    # The store this arena is bound to, or 0.  Read-only; the link is non-owning.
+    fn: lmx_perm_store_of (@: LmxArena arena) @: LmxArena
+    # Kind of an address that lives in the store, or LMX_KIND_NONE.  A thin delegate, and the
+    # point of it: the store's own `perm` link is 0, so this call cannot recurse -- external
+    # callers (copy, merge) say plainly that they are asking about PERMANENT storage.
+    fn: lmx_perm_classify (@: LmxArena store; @: void p) int
+    # 1 when this arena carries the store role.  The one predicate the lifecycle needs.
+    fn: lmx_perm_is_store (@: LmxArena arena) int
+end: prototype

@@ -1,0 +1,78 @@
+predef: "l2src/lmx_perm.h.lm1"
+
+# lmx_perm.lm1 -- the permanent store's lifecycle (LMX-ETERNAL-R0-44D).
+#
+# Small on purpose: the store IS an arena, so allocation, growth, the address->descriptor
+# index and address stability are lmx_arena's acts, not new ones.  What lives here is only
+# what differs -- the role flag, the non-owning bind, and the one-place release.
+
+# Open a cleared arena as the runtime's store.  The role flag is set AFTER lmx_arena_open,
+# which clears both new fields: an arena that is opened again can never inherit a stale role
+# or a stale link.
+fn: lmx_perm_open (@: LmxArena store) int
+    if: store = 0
+        return: 1
+    if: lmx_arena_open(store) != 0
+        return: 1
+    ---
+    store\permanent: 1U
+    # The store does NOT link to itself.  That is deliberate and load-bearing: it is what
+    # makes every store-consulting path terminate, because a fallback that lands here finds
+    # `perm = 0` and stops one step later instead of recursing.
+    store\perm: 0
+return: 0
+
+# Release the store, exactly once.  The role flag is cleared FIRST so that lmx_arena_release
+# -- which refuses a store -- carries the act out, and the storage goes through this call and
+# no other.
+fn: lmx_perm_close (@: LmxArena store) int
+    int: status 0
+    if: store = 0
+        return: 1
+    if: store\permanent = 0U
+        return: 1
+    ---
+    store\permanent: 0U
+    status: lmx_arena_release(store)
+    store\perm: 0
+return: status
+
+# Bind an arena to its runtime's store.  Three answers, and the middle one is the whole point
+# of the function: 0 -> store binds, same -> same is a no-op, ANY OTHER combination is
+# refused.  A refusable bind is what keeps two runtimes in one process from answering for each
+# other's storage, and it is why the link may be non-owning without being unsafe.
+fn: lmx_perm_bind (@: LmxArena arena; @: LmxArena store) int
+    if: arena = 0 || store = 0
+        return: 1
+    if: store\permanent = 0U
+        return: 1
+    if: arena = store || arena\permanent != 0U
+        return: 1
+    ---
+    if: arena\perm = 0
+        arena\perm: store
+        return: 0
+    ---
+    if: arena\perm = store
+        return: 0
+return: 1
+
+fn: lmx_perm_store_of (@: LmxArena arena) @: LmxArena
+    if: arena = 0
+        return: 0
+return: arena\perm
+
+# Kind of an address that lives in the store, or NONE.  The store's own `perm` is 0, so this
+# delegates to the LOCAL bisection and cannot recurse; external callers use this name to say
+# plainly that they are asking about permanent storage rather than about a Message's own.
+fn: lmx_perm_classify (@: LmxArena store; @: void p) int
+    if: store = 0
+        return: c.LMX_KIND_NONE
+return: lmx_range_classify(store, p)
+
+fn: lmx_perm_is_store (@: LmxArena arena) int
+    if: arena = 0
+        return: 0
+    if: arena\permanent != 0U
+        return: 1
+return: 0

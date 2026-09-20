@@ -192,6 +192,18 @@ fn: lmx_range_classify (@: LmxArena arena; @: void p) int
             low: mid + 1U
         ---
     ---
+    # LOCAL FIRST, THEN THE BOUND STORE (LMX-ETERNAL-R0-44D).  A branch qualified
+    # `independent: const: immutable` lives in the runtime's permanent store, NOT in this
+    # arena, and a pointer to it may occur in any Message -- so its KIND must be visible from
+    # here.  The store's own link is 0 (lmx_perm_open leaves it so), therefore this call
+    # bisects the store LOCALLY and stops one step later instead of recursing.
+    #
+    # It calls ITSELF rather than lmx_perm_classify on purpose: a call into lmx_perm.o would
+    # add a link edge to every program that links lmx_range.o, and this module sits at the
+    # bottom of nearly every closure in the kernel.  Same act, no new edge.
+    if: arena\perm != 0
+        return: lmx_range_classify(arena\perm, p)
+    ---
 return: c.LMX_KIND_NONE
 
 # Which element type the array containing the address holds.  The same bisection, read
@@ -216,6 +228,11 @@ fn: lmx_range_type_of (@: LmxArena arena; @: void p) int
             low: mid + 1U
         ---
     ---
+    # Same split as in classify: the TYPE of a store-resident address is part of what is
+    # visible from a Message, while OWNERSHIP is not (see lmx_range_pool, which stays local).
+    if: arena\perm != 0
+        return: lmx_range_type_of(arena\perm, p)
+    ---
 return: c.LMX_TYPE_NONE
 
 # How many bytes one entry of that array occupies.  Read from the same entry, never
@@ -239,6 +256,9 @@ fn: lmx_range_stride (@: LmxArena arena; @: void p) size_t
             ---
             low: mid + 1U
         ---
+    ---
+    if: arena\perm != 0
+        return: lmx_range_stride(arena\perm, p)
     ---
 return: 0U
 

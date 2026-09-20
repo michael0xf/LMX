@@ -273,6 +273,15 @@ fn: lmx_gc_collect (@: LmxArena arena; @: LmxThread t) int
     if: arena\simple != 0U
         return: c.LMX_GC_OK
     ---
+    # THE PERMANENT STORE IS NEVER COLLECTED -- and, unlike the old survival-as-a-root shape,
+    # never VISITED either (LMX-ETERNAL-R0-44D, lmx_perm.h.lm1).  Nothing else is needed to
+    # keep a collection pass off the store: its addresses are in no Message's index, so
+    # lmx_gc_mark_value's existing early return (lmx_range_pool = 0, "an address this arena
+    # never handed out") already answers "not mine to walk", with no per-edge cost.  This
+    # short-circuit covers the other direction -- a pass asked to collect the store itself.
+    if: arena\permanent != 0U
+        return: c.LMX_GC_OK
+    ---
     gen: lmx_gc_mark(arena, t)
     if: gen = 0U
         # The walk could not be completed: an object it never reached might be live, and a

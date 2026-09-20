@@ -31,6 +31,10 @@ fn: lmx_arena_open (@: LmxArena arena) int
     ---
     arena\generation: 0U
     arena\simple: 0U
+    # Opening clears the store role and the store LINK as well: an arena that is opened again
+    # must not inherit either (lmx_perm.h.lm1).
+    arena\permanent: 0U
+    arena\perm: 0
 return: 0
 
 # Letter-scale arena: open, mark simple, pre-reserve a small fixed index so a
@@ -208,6 +212,23 @@ fn: lmx_arena_attach (@: LmxArena arena; @: LmxArena other) int
         return: 1
     if: arena = other
         return: 1
+    # A STORE IS NEVER A DONOR: attaching one would move process-lifetime storage into a
+    # Message's block list, where the sweep would claim it (lmx_perm.h.lm1).
+    if: other\permanent != 0U
+        return: 1
+    ---
+    # ...AND NEVER A RECEIVER EITHER: attach folds the donor's blocks into the receiver's block
+    # list by design, so without this a MUTABLE donor's storage would land inside the permanent
+    # store and become process-lifetime by accident -- kept alive, never swept, freed only at
+    # root close.  Both directions are refused, and the cross-root check below stays.
+    if: arena\permanent != 0U
+        return: 1
+    ---
+    # Two runtimes must not answer for each other's storage: a donor bound to a DIFFERENT
+    # live store than the receiver is refused, and the receiver's link is left as it was.
+    if: arena\perm != 0 && other\perm != 0 && arena\perm != other\perm
+        return: 1
+    ---
     if: other\count = 0U && other\arrays = 0 && other\blocks = 0
         return: 0
     ---
@@ -241,6 +262,14 @@ fn: lmx_arena_attach (@: LmxArena arena; @: LmxArena other) int
     other\capacity: 0U
     other\generation: 0U
     other\simple: 0U
+    # The donor's arrays now live in the receiver, so what they reference must stay
+    # classifiable there: a receiver with no link of its own adopts the donor's store, and the
+    # donor -- which holds nothing at all now -- drops it.  The equal-store and both-empty
+    # cases fall out of this as no-ops.
+    if: arena\perm = 0
+        arena\perm: other\perm
+    ---
+    other\perm: 0
 return: lmx_arena_blocks_move_all(@ arena\blocks, @ other\blocks)
 
 # Release everything the arena owns: every entry it holds is retired, then the storage
@@ -251,6 +280,12 @@ fn: lmx_arena_release (@: LmxArena arena) int
     int: status 0
     if: arena = 0
         return: 1
+    # A STORE IS REFUSED HERE ON PURPOSE (lmx_perm.h.lm1): its storage is process-lifetime and
+    # leaves exactly once, through lmx_perm_close, which clears the role before calling this.
+    # Without the refusal a stray release would free storage that live Messages still point at.
+    if: arena\permanent != 0U
+        return: 1
+    ---
     node: arena\blocks
     while: node != 0
         next: node\next
@@ -269,6 +304,8 @@ fn: lmx_arena_release (@: LmxArena arena) int
     arena\capacity: 0U
     arena\generation: 0U
     arena\simple: 0U
+    # The link dies with the arena: it is non-owning, so clearing it is the whole act.
+    arena\perm: 0
 return: status
 
 # The next mark generation for a collection pass.  Bumping is the whole act: a chunk's stamp

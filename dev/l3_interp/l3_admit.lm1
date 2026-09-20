@@ -1,4 +1,5 @@
 predef: "l3_recv.h.lm1"
+predef: "l3_path.lm1"
 predef: "l3_exec.lm1"
 predef: "../l2src_sandbox/lmx_arena_refs.h.lm1"
 predef: "../l2src_sandbox/lmx_value_owned.h.lm1"
@@ -9,48 +10,6 @@ predef: "../l2src_sandbox/lmx_implements.h.lm1"
 # Receiver: [0] paths Structure, [1] tests Structure of callables.
 # Empty used-path set is OK analytically; tests are still required.
 # lmx_runtime_implements is not this predicate.
-
-fn: l3_follow_path (@: LmxArena arena; @: Lmx start; @: Lmx path) int
-    @: Lmx cur
-    @: void step
-    @: void next
-    size_t: i
-    int: idx
-    if: arena = 0 || start = 0 || path = 0
-        return: c.L3_INVALID
-    if: lmx_domain_kind(arena, (cast: (@: void) path)) != c.LMX_KIND_STRUCT
-        return: c.L3_UNSUPPORTED
-    cur: start
-    i: 0U
-    while: i < (cast: (size_t) path\len)
-        step: lmx_arena_ref_value(path, i)
-        if: step = 0
-            return: c.L3_ABSENT
-        if: lmx_domain_kind(arena, step) != c.LMX_KIND_PRIMITIVE
-            return: c.L3_UNSUPPORTED
-        if: lmx_domain_type(arena, step) != c.LMX_TYPE_INT
-            return: c.L3_UNSUPPORTED
-        idx: lmx_int_value_known(step)
-        if: idx < 0
-            return: c.L3_ABSENT
-        if: lmx_domain_kind(arena, (cast: (@: void) cur)) != c.LMX_KIND_STRUCT
-            return: c.L3_ABSENT
-        if: idx >= cur\len
-            return: c.L3_ABSENT
-        next: lmx_arena_ref_value(cur, (cast: (size_t) idx))
-        if: next = 0
-            return: c.L3_ABSENT
-        if: lmx_domain_kind(arena, next) = c.LMX_KIND_STRUCT
-            cur: (cast: (@: Lmx) next)
-        ---
-        if: lmx_domain_kind(arena, next) != c.LMX_KIND_STRUCT
-            if: i + 1U < (cast: (size_t) path\len)
-                return: c.L3_ABSENT
-            ---
-        ---
-        i: i + 1U
-    ---
-return: c.L3_OK
 
 fn: l3_implements_paths (@: LmxArena arena; @: Lmx candidate; @: Lmx paths) int
     size_t: i
@@ -76,7 +35,7 @@ fn: l3_implements_paths (@: LmxArena arena; @: Lmx candidate; @: Lmx paths) int
     ---
 return: c.L3_OK
 
-fn: l3_run_tests (@: LmxArena arena; @: Lmx tests) int
+fn: l3_run_tests (@: LmxArena arena; @: Lmx tests; @: Lmx candidate) int
     size_t: i
     @: void item
     @: Lmx m
@@ -101,7 +60,7 @@ fn: l3_run_tests (@: LmxArena arena; @: Lmx tests) int
         head: lmx_arena_ref_value(m, 0U)
         if: head = 0 || lmx_domain_kind(arena, head) != c.LMX_DOMAIN_KIND_CALLABLE
             return: c.L3_UNSUPPORTED
-        st: l3_exec_run(arena, m)
+        st: l3_exec_run_on(arena, m, candidate)
         if: st != c.L3_OK
             return: st
         i: i + 1U
@@ -133,4 +92,4 @@ fn: l3_admit (@: LmxArena arena; @: Lmx candidate; @: Lmx receiver) int
     st: l3_implements_paths(arena, candidate, paths)
     if: st != c.L3_OK
         return: st
-return: l3_run_tests(arena, tests)
+return: l3_run_tests(arena, tests, candidate)

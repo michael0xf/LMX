@@ -1,0 +1,290 @@
+predef: "../l3_admit.lm1"
+predef: "../../l2src_sandbox/lmx_arena.lm1"
+predef: "../../l2src_sandbox/lmx_arena_blocks.lm1"
+predef: "../../l2src_sandbox/lmx_range.lm1"
+predef: "../../l2src_sandbox/lmx_implements.lm1"
+predef: "../../l2src_sandbox/lmx_value_owned.lm1"
+predef: "../../l2src_sandbox/lmx_arena_refs.lm1"
+predef: "../../l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# Fourteen admission recipes (#admission-case-1 .. 14). Index paths, then tests.
+
+sub: fail (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: fail
+
+fn: mk_int (@: LmxArena a; int: n) @: void
+    @: void cell
+    cell: lmx_int_new_owned(a)
+    if: cell = 0
+        return: 0
+    lmx_int_store_known(cell, n)
+return: cell
+
+fn: mk_path1 (@: LmxArena a; int: i0) @: Lmx
+    @: Lmx p
+    p: lmx_node_new_owned(a)
+    if: p = 0 || lmx_arena_refs_open_owned(a, p, 1U) != 0
+        return: 0
+    lmx_arena_ref_store(p, 0U, mk_int(a, i0))
+return: p
+
+fn: mk_paths1 (@: LmxArena a; @: Lmx path) @: Lmx
+    @: Lmx s
+    s: lmx_node_new_owned(a)
+    if: s = 0 || path = 0 || lmx_arena_refs_open_owned(a, s, 1U) != 0
+        return: 0
+    lmx_arena_ref_store(s, 0U, (cast: (@: void) path))
+return: s
+
+fn: mk_return_test (@: LmxArena a) @: Lmx
+    @: Lmx m
+    @: LmxCallable info
+    @: LmxMethod meth
+    @: Lmx stmt
+    @: LmxOp op
+    m: lmx_node_new_owned(a)
+    info: lmx_callable_new_owned(a)
+    meth: lmx_method_new_owned(a)
+    stmt: lmx_node_new_owned(a)
+    op: lmx_op_new_owned(a, c.L3_NODE_RETURN)
+    if: m = 0 || info = 0 || meth = 0 || stmt = 0 || op = 0
+        return: 0
+    if: lmx_arena_refs_open_owned(a, m, 2U) != 0 || lmx_arena_refs_open_owned(a, stmt, 1U) != 0
+        return: 0
+    info\method: meth
+    lmx_arena_ref_store(stmt, 0U, (cast: (@: void) op))
+    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
+    lmx_arena_ref_store(m, 1U, (cast: (@: void) stmt))
+return: m
+
+fn: mk_throw_test (@: LmxArena a) @: Lmx
+    @: Lmx m
+    @: LmxCallable info
+    @: LmxMethod meth
+    @: Lmx stmt
+    @: LmxOp op
+    m: lmx_node_new_owned(a)
+    info: lmx_callable_new_owned(a)
+    meth: lmx_method_new_owned(a)
+    stmt: lmx_node_new_owned(a)
+    op: lmx_op_new_owned(a, c.L3_NODE_THROW)
+    if: m = 0 || info = 0 || meth = 0 || stmt = 0 || op = 0
+        return: 0
+    if: lmx_arena_refs_open_owned(a, m, 2U) != 0 || lmx_arena_refs_open_owned(a, stmt, 1U) != 0
+        return: 0
+    info\method: meth
+    lmx_arena_ref_store(stmt, 0U, (cast: (@: void) op))
+    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
+    lmx_arena_ref_store(m, 1U, (cast: (@: void) stmt))
+return: m
+
+fn: mk_expect_test (@: LmxArena a; @: Lmx path; int: want) @: Lmx
+    @: Lmx m
+    @: LmxCallable info
+    @: LmxMethod meth
+    @: Lmx stmt
+    @: LmxOp op
+    m: lmx_node_new_owned(a)
+    info: lmx_callable_new_owned(a)
+    meth: lmx_method_new_owned(a)
+    stmt: lmx_node_new_owned(a)
+    op: lmx_op_new_owned(a, c.L3_NODE_EXPECT_INT)
+    if: m = 0 || info = 0 || meth = 0 || stmt = 0 || op = 0 || path = 0
+        return: 0
+    if: lmx_arena_refs_open_owned(a, m, 2U) != 0 || lmx_arena_refs_open_owned(a, stmt, 3U) != 0
+        return: 0
+    info\method: meth
+    lmx_arena_ref_store(stmt, 0U, (cast: (@: void) op))
+    lmx_arena_ref_store(stmt, 1U, (cast: (@: void) path))
+    lmx_arena_ref_store(stmt, 2U, mk_int(a, want))
+    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
+    lmx_arena_ref_store(m, 1U, (cast: (@: void) stmt))
+return: m
+
+fn: mk_tests1 (@: LmxArena a; @: Lmx t) @: Lmx
+    @: Lmx s
+    s: lmx_node_new_owned(a)
+    if: s = 0 || t = 0 || lmx_arena_refs_open_owned(a, s, 1U) != 0
+        return: 0
+    lmx_arena_ref_store(s, 0U, (cast: (@: void) t))
+return: s
+
+fn: mk_recv (@: LmxArena a; @: Lmx paths; @: Lmx tests) @: Lmx
+    @: Lmx r
+    r: lmx_node_new_owned(a)
+    if: r = 0 || paths = 0 || tests = 0 || lmx_arena_refs_open_owned(a, r, 2U) != 0
+        return: 0
+    lmx_arena_ref_store(r, 0U, (cast: (@: void) paths))
+    lmx_arena_ref_store(r, 1U, (cast: (@: void) tests))
+return: r
+
+fn: mk_callable_val (@: LmxArena a) @: Lmx
+return: mk_return_test(a)
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxArena: arena
+    @: LmxArena a 0
+    @: Lmx cand 0
+    @: Lmx cand2 0
+    @: Lmx inner 0
+    @: Lmx inner2 0
+    @: Lmx recv 0
+    @: void shared 0
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ arena) != 0
+        fputs("l3_recipes: arena\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    a: @ arena
+
+    # 1. One receiver, two shapes, same used path 0.
+    cand: lmx_node_new_owned(a)
+    cand2: lmx_node_new_owned(a)
+    if: cand = 0 || cand2 = 0 || lmx_arena_refs_open_owned(a, cand, 2U) != 0 || lmx_arena_refs_open_owned(a, cand2, 3U) != 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(cand, 0U, mk_int(a, 1))
+    lmx_arena_ref_store(cand, 1U, mk_int(a, 2))
+    lmx_arena_ref_store(cand2, 0U, mk_int(a, 1))
+    lmx_arena_ref_store(cand2, 1U, mk_int(a, 8))
+    lmx_arena_ref_store(cand2, 2U, mk_int(a, 9))
+    recv: mk_recv(a, mk_paths1(a, mk_path1(a, 0)), mk_tests1(a, mk_return_test(a)))
+    fail(counts, l3_admit(a, cand, recv) = c.L3_OK && l3_admit(a, cand2, recv) = c.L3_OK, "case1 two shapes same used path")
+
+    # 2. Unused fields not required; empty paths do not prove thick leaves.
+    fail(counts, l3_implements_paths(a, cand, lmx_node_new_owned(a)) = c.L3_OK, "case2 empty used-paths analytic")
+    recv: mk_recv(a, lmx_node_new_owned(a), mk_tests1(a, mk_return_test(a)))
+    fail(counts, l3_admit(a, cand, recv) = c.L3_OK, "case2 tests still required after empty analysis")
+
+    # 3. Meter path [0] vs foot-only missing [0] — wait foot has slot0. Meter is path [0], foot candidate empty struct.
+    cand2: lmx_node_new_owned(a)
+    recv: mk_recv(a, mk_paths1(a, mk_path1(a, 0)), mk_tests1(a, mk_return_test(a)))
+    fail(counts, l3_admit(a, cand, recv) = c.L3_OK, "case3 meter path present")
+    fail(counts, l3_admit(a, cand2, recv) = c.L3_ABSENT, "case3 foot-only lacks used Meter path")
+
+    # 4. Scalar leaf: path present, EXPECT 32 vs 64.
+    cand: lmx_node_new_owned(a)
+    if: cand = 0 || lmx_arena_refs_open_owned(a, cand, 1U) != 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(cand, 0U, mk_int(a, 32))
+    recv: mk_recv(a, mk_paths1(a, mk_path1(a, 0)), mk_tests1(a, mk_expect_test(a, mk_path1(a, 0), 32)))
+    fail(counts, l3_admit(a, cand, recv) = c.L3_OK, "case4 width 32")
+    recv: mk_recv(a, mk_paths1(a, mk_path1(a, 0)), mk_tests1(a, mk_expect_test(a, mk_path1(a, 0), 64)))
+    fail(counts, l3_admit(a, cand, recv) = c.L3_ABSENT, "case4 width 32 is not 64")
+
+    # 5. Alias: two fields, one cell.
+    shared: mk_int(a, 5)
+    cand: lmx_node_new_owned(a)
+    if: cand = 0 || lmx_arena_refs_open_owned(a, cand, 2U) != 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(cand, 0U, shared)
+    lmx_arena_ref_store(cand, 1U, shared)
+    recv: mk_recv(a, mk_paths1(a, mk_path1(a, 0)), mk_tests1(a, mk_return_test(a)))
+    fail(counts, l3_admit(a, cand, recv) = c.L3_OK && lmx_arena_ref_value(cand, 0U) = lmx_arena_ref_value(cand, 1U), "case5 alias same cell")
+
+    # 6. Independent copies: two inners.
+    inner: lmx_node_new_owned(a)
+    inner2: lmx_node_new_owned(a)
+    cand: lmx_node_new_owned(a)
+    if: inner = 0 || inner2 = 0 || cand = 0 || lmx_arena_refs_open_owned(a, cand, 1U) != 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(cand, 0U, (cast: (@: void) inner))
+    cand2: lmx_node_new_owned(a)
+    if: cand2 = 0 || lmx_arena_refs_open_owned(a, cand2, 1U) != 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(cand2, 0U, (cast: (@: void) inner2))
+    recv: mk_recv(a, mk_paths1(a, mk_path1(a, 0)), mk_tests1(a, mk_return_test(a)))
+    fail(counts, l3_admit(a, cand, recv) = c.L3_OK && l3_admit(a, cand2, recv) = c.L3_OK && lmx_arena_ref_value(cand, 0U) != lmx_arena_ref_value(cand2, 0U), "case6 independent copies")
+
+    # 7. Callable field present; unused inner own not required.
+    cand: lmx_node_new_owned(a)
+    if: cand = 0 || lmx_arena_refs_open_owned(a, cand, 1U) != 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(cand, 0U, (cast: (@: void) mk_callable_val(a)))
+    recv: mk_recv(a, mk_paths1(a, mk_path1(a, 0)), mk_tests1(a, mk_return_test(a)))
+    fail(counts, l3_admit(a, cand, recv) = c.L3_OK, "case7 used m path only")
+
+    # 8. Passing callable is not calling it; same analytic, exec separately.
+    fail(counts, l3_exec_run(a, (cast: (@: Lmx) lmx_arena_ref_value(cand, 0U))) = c.L3_OK, "case8 later call of passed callable")
+
+    # 9. Same paths, failing test = callers must re-check.
+    recv: mk_recv(a, mk_paths1(a, mk_path1(a, 0)), mk_tests1(a, mk_throw_test(a)))
+    fail(counts, l3_admit(a, cand, recv) = c.L3_UNSUPPORTED, "case9 same paths failing tests")
+
+    # 10. merge order: [0] vs [1].
+    cand: lmx_node_new_owned(a)
+    if: cand = 0 || lmx_arena_refs_open_owned(a, cand, 2U) != 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(cand, 0U, mk_int(a, 10))
+    lmx_arena_ref_store(cand, 1U, mk_int(a, 11))
+    recv: mk_recv(a, mk_paths1(a, mk_path1(a, 0)), mk_tests1(a, mk_expect_test(a, mk_path1(a, 0), 10)))
+    fail(counts, l3_admit(a, cand, recv) = c.L3_OK, "case10 first read")
+    recv: mk_recv(a, mk_paths1(a, mk_path1(a, 1)), mk_tests1(a, mk_expect_test(a, mk_path1(a, 1), 11)))
+    fail(counts, l3_admit(a, cand, recv) = c.L3_OK, "case10 second read")
+
+    # 11. Fixed arity: path 2 absent; replace field 0 still path 0.
+    recv: mk_recv(a, mk_paths1(a, mk_path1(a, 2)), mk_tests1(a, mk_return_test(a)))
+    fail(counts, l3_admit(a, cand, recv) = c.L3_ABSENT, "case11 cannot grow fields")
+    lmx_arena_ref_store(cand, 0U, mk_int(a, 99))
+    recv: mk_recv(a, mk_paths1(a, mk_path1(a, 0)), mk_tests1(a, mk_return_test(a)))
+    fail(counts, l3_admit(a, cand, recv) = c.L3_OK, "case11 replace existing slot")
+
+    # 12. Range: 255 ok, 256 not, no wrap.
+    cand: lmx_node_new_owned(a)
+    if: cand = 0 || lmx_arena_refs_open_owned(a, cand, 1U) != 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(cand, 0U, mk_int(a, 255))
+    recv: mk_recv(a, mk_paths1(a, mk_path1(a, 0)), mk_tests1(a, mk_expect_test(a, mk_path1(a, 0), 255)))
+    fail(counts, l3_admit(a, cand, recv) = c.L3_OK, "case12 255")
+    lmx_arena_ref_store(cand, 0U, mk_int(a, 256))
+    recv: mk_recv(a, mk_paths1(a, mk_path1(a, 0)), mk_tests1(a, mk_expect_test(a, mk_path1(a, 0), 255)))
+    fail(counts, l3_admit(a, cand, recv) = c.L3_ABSENT, "case12 256 is not wrap to 0")
+
+    # 13. Extra unused converter field does not change used paths.
+    cand: lmx_node_new_owned(a)
+    if: cand = 0 || lmx_arena_refs_open_owned(a, cand, 2U) != 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(cand, 0U, mk_int(a, 1))
+    lmx_arena_ref_store(cand, 1U, mk_int(a, 2))
+    recv: mk_recv(a, mk_paths1(a, mk_path1(a, 0)), mk_tests1(a, mk_return_test(a)))
+    fail(counts, l3_admit(a, cand, recv) = c.L3_OK, "case13 extra key unused")
+
+    # 14. Thin FILE leaf: path not enough; failing resource test rejects.
+    recv: mk_recv(a, mk_paths1(a, mk_path1(a, 0)), mk_tests1(a, mk_throw_test(a)))
+    fail(counts, l3_admit(a, cand, recv) = c.L3_UNSUPPORTED, "case14 thin leaf plus failing tests")
+
+    if: counts[1] != 0
+        c.printf("%d failed of %d\n", counts[1], counts[0])
+        free(counts)
+        return: 1
+    ---
+    c.printf("l3_recipes: %d checks\n", counts[0])
+    free(counts)
+return: 0

@@ -4,6 +4,9 @@ predef: "../l2src_sandbox/lmx_own.h.lm1"
 predef: "../l2src_sandbox/lmx_interp.h.lm1"
 predef: "../l2src_sandbox/lmx_implements.h.lm1"
 predef: "../l2src_sandbox/lmx_value_owned.h.lm1"
+predef: "l3_path.lm1"
+
+@: Lmx l3_subject 0
 
 # L3-02 N4-N8. return: encoded as LmxOp RETURN in the body, not ISA 3-14.
 # Never execute METHOD.addr.
@@ -74,6 +77,29 @@ fn: l3_exec_op (@: LmxArena arena; @: Lmx host; @: LmxOp op; @: LmxOwnLocal owns
     ---
     if: code = c.L3_NODE_MATCH || code = c.L3_NODE_EACH || code = c.L3_NODE_YIELD || code = c.L3_NODE_FINALLY || code = c.L3_NODE_THROW
         return: c.L3_UNSUPPORTED
+    ---
+    if: code = c.L3_NODE_EXPECT_INT
+        @: void leaf 0
+        @: void want
+        @: Lmx path
+        if: l3_subject = 0
+            return: c.L3_UNSUPPORTED
+        if: host = 0 || host\len < 3
+            return: c.L3_INVALID
+        if: lmx_domain_kind(arena, lmx_arena_ref_value(host, 1U)) != c.LMX_KIND_STRUCT
+            return: c.L3_UNSUPPORTED
+        path: (cast: (@: Lmx) lmx_arena_ref_value(host, 1U))
+        st: l3_path_leaf(arena, l3_subject, path, @ leaf)
+        if: st != c.L3_OK
+            return: st
+        want: lmx_arena_ref_value(host, 2U)
+        if: leaf = 0 || want = 0
+            return: c.L3_ABSENT
+        if: lmx_domain_type(arena, leaf) != c.LMX_TYPE_INT
+            return: c.L3_ABSENT
+        if: lmx_int_value_known(leaf) != lmx_int_value_known(want)
+            return: c.L3_ABSENT
+        return: c.L3_OK
     ---
     if: host = 0
         return: c.L3_INVALID
@@ -163,28 +189,43 @@ fn: l3_exec_range (@: LmxArena arena; @: Lmx node; size_t: from; @: LmxOwnLocal 
 return: c.L3_OK
 
 fn: l3_exec_run (@: LmxArena arena; @: Lmx node) int
+return: l3_exec_run_on(arena, node, 0)
+
+fn: l3_exec_run_on (@: LmxArena arena; @: Lmx node; @: Lmx subject) int
     LmxOwnLocal: owns[32]
     int: nown 0
     int: st
     @: void head
     int: hk
+    @: Lmx prev
+    prev: l3_subject
+    l3_subject: subject
     if: arena = 0 || node = 0
+        l3_subject: prev
         return: c.L3_INVALID
     if: lmx_domain_kind(arena, (cast: (@: void) node)) != c.LMX_KIND_STRUCT
+        l3_subject: prev
         return: c.L3_UNSUPPORTED
     if: node\len < 1
+        l3_subject: prev
         return: c.L3_UNSUPPORTED
     head: lmx_arena_ref_value(node, 0U)
     if: head = 0
+        l3_subject: prev
         return: c.L3_UNSUPPORTED
     hk: lmx_domain_kind(arena, head)
     if: hk = c.LMX_KIND_METHOD
+        l3_subject: prev
         return: c.L3_UNSUPPORTED
     if: hk != c.LMX_DOMAIN_KIND_CALLABLE
+        l3_subject: prev
         return: c.L3_UNSUPPORTED
     if: l3_own_load_ints(arena, node, @ owns[0], @ nown) != 0
+        l3_subject: prev
         return: c.L3_INVALID
     st: l3_exec_range(arena, node, 1U, @ owns[0], nown)
     if: st = c.L3_RETURN
+        l3_subject: prev
         return: c.L3_OK
+    l3_subject: prev
 return: st

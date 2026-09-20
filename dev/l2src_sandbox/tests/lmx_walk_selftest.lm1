@@ -126,6 +126,11 @@ fn: main () int
     @: Lmx faller 0
     @: Lmx direct 0
     @: Lmx stopper 0
+    @: Lmx refuser 0
+    @: Lmx orderer 0
+    LmxWalkFrame: frame
+    @: LmxWalkFrame pf 0
+    @: LmxWalkOwn po 0
     @: Lmx copy 0
     @: void cell 0
     @: void xcell 0
@@ -141,7 +146,7 @@ fn: main () int
     ga: pa
     args: (cast: (@: int) calloc(1U, c.sizeof(int)))
     unit: lmx_node_new_owned(ga)
-    if: args = 0 || unit = 0 || lmx_arena_refs_open_owned(ga, unit, 11U) != 0
+    if: args = 0 || unit = 0 || lmx_arena_refs_open_owned(ga, unit, 13U) != 0
         fputs("lmx_walk: unit\n", l1_stdout())
         return: 2
     ---
@@ -265,6 +270,41 @@ fn: main () int
     own1(n, 1U, 1U)
     lit(n, 2U, 11)
 
+    # unit[11] refuser:  own v 0;  v: 5;  if: 1 { } else { <a node with an op code nobody reads> }
+    # The unsupported node sits in a branch that would never be taken.
+    refuser: mk_m(unit, 11U, 4U)
+    icell(refuser, 1U, 0)
+    n: fr(refuser, 2U, c.LMX_WALK_OP_SET, 3U)
+    own1(n, 1U, 1U)
+    lit(n, 2U, 5)
+    n: fr(refuser, 3U, c.LMX_WALK_OP_IF, 4U)
+    lit(n, 1U, 1)
+    pl(n, 2U, 0U)
+    b: pl(n, 3U, 1U)
+    e: pl(b, 0U, 1U)
+    if: e = 0 || lmx_arena_ref_store(e, 0U, (cast: (@: void) lmx_op_new_owned(ga, 99))) != 0
+        broken: broken + 1
+    ---
+
+    # unit[12] orderer:  own a 0; own b 0;  b: 2;  while: 0 { own t 0;  t: 3 };  a: 1
+    # The body mentions b, then t, then a; lexically the fields stand a, b, t.
+    orderer: mk_m(unit, 12U, 6U)
+    icell(orderer, 1U, 0)
+    icell(orderer, 2U, 0)
+    n: fr(orderer, 3U, c.LMX_WALK_OP_SET, 3U)
+    own1(n, 1U, 2U)
+    lit(n, 2U, 2)
+    n: fr(orderer, 4U, c.LMX_WALK_OP_WHILE, 3U)
+    lit(n, 1U, 0)
+    b: pl(n, 2U, 2U)
+    icell(b, 0U, 0)
+    e: fr(b, 1U, c.LMX_WALK_OP_SET, 3U)
+    own3(e, 1U, 4U, 2U, 0U)
+    lit(e, 2U, 3)
+    n: fr(orderer, 5U, c.LMX_WALK_OP_SET, 3U)
+    own1(n, 1U, 1U)
+    lit(n, 2U, 1)
+
     check(c.LMX_WALK_OP_RET = c.LMX_OP_RETURN && c.LMX_WALK_OP_CALL = c.LMX_OP_CALL, "codes agree with lmx_interp.h")
     check(broken = 0, "construction")
     if: broken != 0
@@ -333,6 +373,27 @@ fn: main () int
     check(st = c.LMX_WALK_OK && r = 3, "direct callee in child 1 of the call")
     st: lmx_walk_run(ga, stopper, 0, 0U, @ r)
     check(st = c.LMX_WALK_OK && lmx_int_value_known(lmx_arena_ref_value(stopper, 1U)) = 9, "bare return publishes and stops")
+
+    # A node outside the slice is reported at entry, wherever it sits, and nothing of the
+    # activation runs: the assignment before it is neither executed nor published.
+    st: lmx_walk_run(ga, refuser, 0, 0U, @ r)
+    check(st = c.LMX_WALK_UNSUPPORTED, "an unread op code is UNSUPPORTED, not skipped")
+    check(lmx_int_value_known(lmx_arena_ref_value(refuser, 1U)) = 0, "nothing ran before the refusal")
+
+    # Entry keeps the own records in the lexical order of the fields, which is the order
+    # of every checkpoint -- not the order in which the body mentions them.
+    pf: @ frame
+    st: lmx_walk_enter(pf, ga, orderer, 0, 0U)
+    check(st = c.LMX_WALK_OK && pf\nowns = 3U, "orderer loads three own fields")
+    if: st = c.LMX_WALK_OK && pf\nowns = 3U
+        po: pf\owns
+        check(po\from = lmx_arena_ref_cell(orderer, 1U), "first record is field a")
+        po: pf\owns + 1U
+        check(po\from = lmx_arena_ref_cell(orderer, 2U), "second record is field b")
+        po: pf\owns + 2U
+        check(po\from = lmx_arena_ref_cell(lmx_arena_ref_struct(lmx_arena_ref_struct(orderer, 4U), 2U), 0U), "third record is the loop body's field t")
+    ---
+    lmx_walk_leave(pf)
 
     # A COPY of M runs unchanged on its own state: body nodes hold positions, so nothing
     # in them points back into the original; child[0] is shared by address.

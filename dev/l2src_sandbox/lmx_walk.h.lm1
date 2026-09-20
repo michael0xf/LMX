@@ -59,6 +59,14 @@ predef: "l2src/lmx_call.h.lm1"
 # inputs are int; a return carries 0 or 1 value; no throw, no poll
 # (lmx_msg_poll_escape), no arrays, no char/size_t/pointer own fields, no dynamic
 # inputs of 21.3, and `header` of LmxCallable is not read.
+#
+# What is outside the slice is REPORTED, never skipped and never handed to native code
+# (docs/LMX_semantics.ru.md, #l3-receiver: a restricted profile reports an unsupported
+# construct explicitly; an implementation address does not make an operation
+# admissible).  A frame node whose LmxOp code this unit does not read makes the whole
+# activation LMX_WALK_UNSUPPORTED at ENTRY, before any step runs and wherever in M the
+# node sits, a branch never taken included.  There is no fallback to METHOD.addr: a
+# callable with no body node is LMX_WALK_NO_GRAPH and that is all.
 
 define: LMX_WALK_OK 0
 # Malformed body tree, not a callable, a path that selects nothing, a missing input.
@@ -68,10 +76,14 @@ define: LMX_WALK_NO_GRAPH 2
 define: LMX_WALK_NOMEM 3
 # A dirty own value could not be published (21.6: checkpoint failure, never silent).
 define: LMX_WALK_CHECKPOINT 4
+# A body node this slice does not read.  Nothing of the activation has run.
+define: LMX_WALK_UNSUPPORTED 5
 
 # The values of LmxOp.code this unit reads.  RET and CALL ARE lmx_interp.h.lm1's
 # LMX_OP_RETURN 1 and LMX_OP_CALL 2 (the selftest checks the equality); the rest continue
 # that numbering and belong in that header once agreed.
+# What lmx_walk_op answers for a frame node whose code is not one of those below.
+define: LMX_WALK_OP_UNKNOWN -1
 define: LMX_WALK_OP_NONE 0
 define: LMX_WALK_OP_RET 1
 define: LMX_WALK_OP_CALL 2
@@ -90,9 +102,14 @@ define: LMX_WALK_OP_WHILE 14
 define: LMX_WALK_OP_COUNT 15
 
 # One own field of the running M as this activation sees it: the slot it was loaded from
-# (the publication target), the working value, and the dirty state of 21.6.
+# (the publication target), the `own` node whose steps are the field's LEXICAL POSITION,
+# the working value, and the dirty state of 21.6.  The records of an activation are kept
+# in the lexical order of the fields (LMX_blog/2026-09-20.md, "Поля Lmx лексические"),
+# which is therefore the order of every checkpoint -- not the order in which the body
+# happens to mention them.
 struct: LmxWalkOwn
     @@: void from
+    @: Lmx position
     int: value
     int: dirty
 end: LmxWalkOwn
@@ -116,6 +133,11 @@ prototype:
     # One activation of the callable occurrence `node` with `nargs` int inputs.  The value
     # of an executed `ret` is written through `result` (left alone by a void return).
     fn: lmx_walk_run (@: LmxArena arena; @: Lmx node; @: int args; size_t: nargs; @: int result) int
+    # The two ends of an activation, separate so that a test can look at what entry
+    # loaded.  enter: recognise M, refuse what is unsupported, load the own fields the
+    # body uses (21.5).  leave: release the activation; it publishes nothing.
+    fn: lmx_walk_enter (@: LmxWalkFrame f; @: LmxArena arena; @: Lmx node; @: int args; size_t: nargs) int
+    sub: lmx_walk_leave (@: LmxWalkFrame f)
 
     # Construction of body nodes, for a translator and for tests.  A node is a fresh
     # Structure of `arena` with `children` slots; a frame node gets a fresh LmxOp of

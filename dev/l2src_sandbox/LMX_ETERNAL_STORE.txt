@@ -1,0 +1,98 @@
+LMX_ETERNAL_STORE — storage for `independent: const: immutable` branches (LMX-ETERNAL-R0-44D)
+Written 20.09.2026 by deepseek, BEFORE any edit, as the durable form of the claim sent to Codex
+under 44D.  Status: proposal.  No kernel file has been changed for it yet.
+
+THE INVARIANT (author's wording, as relayed)
+  Branches qualified `independent: const: immutable` are translation-known, stored by Root Thread
+  R0 for process lifetime, arena GC must not touch them, while pointers to them may occur in other
+  Messages.
+
+THREE MECHANISMS OF THE SAME MACHINE: STORE / CLASSIFY / TERMINAL
+  A permanent store = an ordinary LmxArena carrying a NEW role flag, owned by R0, holding the
+  eternal arrays and every branch body.  Every other arena carries a NON-OWNING pointer to it.
+  GC never marks, never stamps and never sweeps it -- and never visits it at all.  classify gains
+  ONE fallback: local bisection first, then the store's bisection, so a pointer into the store
+  resolves from ANY Message with no per-Message classifier list.  copy/merge calls store-resident
+  values terminal, so a pointer is SHARED, not cloned.
+
+WHY THIS SHAPE (measured anchors, all under dev/l2src_sandbox)
+  1. Today's storage is wrong by construction.  lmx_root.lm1:84-100 allocates the two retention
+     arrays with lmx_node_new_owned(@ root\arena) + lmx_arena_refs_open_owned -- R0's OWN arena --
+     and lmx_turn.lm1:134-147 hands that same arena to lmx_gc_collect.  GC therefore traverses
+     them.  The comment at lmx_root.lm1:79-83 states the arrays survive "without the collector
+     knowing anything about branches": that is the property the author has now rejected, so the
+     comment is rewritten, not preserved.
+  2. The translator already knows.  l2trans.lm1:9168 does l2_ns_eternal[root] = l2_ebr_n after
+     l2_ebr_reserve(l2_ebr_n + 1).  The generated open is `lmx_root_open(..., 0U, 0U)`
+     (l2trans.lm1:11913) -- a value that was never PASSED, not a value that could not be computed.
+     Sizing needs no estimate: the store is an arena (bump allocation over blocks), not one
+     pre-sized malloc.
+  3. The cross-arena gap is solved for the store and ONLY for the store.  Split, and the split is
+     load-bearing: classify / type_of = "what kind of thing is this" and MAY consult the store;
+     range_pool = "whose storage is this" and stays LOCAL to one arena.  If range_pool gained the
+     fallback, GC's early return at lmx_gc.lm1:105-118 would hand back the STORE's pool and the
+     next lines would stamp the store's chunk -- the exact mutation the invariant forbids.
+
+THE ADMISSION RULE IS THE LANGUAGE'S, NOT MINE (evidence, not opinion)
+  tests/unit_eternal_shape.lm2:  E = {size_t a, char mark, inline (): inner, E: self, size_t z};
+                                 F = {E: peer, size_t c};
+                                 Holder = {E: kept, size_t mutable_cell};
+                                 main: `R: merge: E Holder`, reads E\a, E\mark, E\inner\b.
+  tests/unit_eternal_xref.lm2:   E has inline (): deep; F has `deep: into`; main reads E\deep\d.
+  Three consequences:
+    * CLOSED UNDER REFERENCE is already the admitted shape (F: E: peer; deep: into) -- so no
+      arena-resident object can be reachable only through the store, and GC may skip it entirely.
+    * SELF-REFERENCE (`E: self`) is why "never visit" beats "visit but do not free": a cyclic
+      immutable graph needs a visited set, and this kernel's only visited set is the per-chunk
+      `mark` stamp (lmx_gc.lm1:110-117).  Visiting would mean writing into the store.
+    * POINTERS FROM MUTABLE STATE are already in the corpus: `Holder: E: kept` is an ordinary
+      mutable Structure holding an eternal, and the corpus then MERGES them.  That is why
+      lmx_copy_is_terminal changes instead of a pre-check at each call site.
+  Consequence to keep on the record: a branch pointing at ordinary arena state becomes
+  INEXPRESSIBLE rather than refused at runtime.  If the author ever wants that, this design must be
+  revisited whole -- the admission rule is what buys GC's silence.
+
+EXACT ABI
+  A) lmx_arena.h.lm1:19-34, two new fields (the whole ABI cost, subject to Codex's agreement):
+       @: LmxArena perm    non-owning; 0 = no store; never freed through it
+       unsigned: permanent 1 = THIS arena is a store; chunks are process-lifetime; GC never
+                           marks/sweeps them; only lmx_perm_close releases it
+     Precedent for a role flag on the arena already exists: lmx_gc_collect:273 short-circuits
+     `if: arena\simple != 0U return: c.LMX_GC_OK`.
+  B) NEW lmx_perm.h.lm1 / lmx_perm.lm1: lmx_perm_open(root, eternal, methods),
+     lmx_perm_store(root), lmx_perm_contains(perm, p), lmx_perm_classify(perm, p),
+     lmx_perm_close(root).
+  C) Changed, signatures unchanged: lmx_range_classify / lmx_range_type_of gain the fallback;
+     lmx_gc_collect gains the permanent short-circuit beside :273; lmx_gc_mark_value gains one
+     lmx_perm_contains test BEFORE lmx_range_pool (answer "not mine to walk" with no stamp and no
+     descent); lmx_copy_is_terminal gains store-resident => 1.  The KIND_NONE => UNSUPPORTED branch
+     (lmx_graph_copy_owned.lm1:249-254) stays, and the comment at :206 becomes true by
+     construction instead of by assumption.
+  D) Attachment in THREE kernel sites, no caller and no selftest learning a new call: R0's arena in
+     lmx_root_open; child arenas by propagation in lmx_child_handoff; letter arenas in
+     lmx_service_post.  lmx_message.h.lm1 and lmx_thread.lm1 are NOT touched -- LmxMsg has no arena
+     field and LmxThread stores no arena, and none is added.
+
+WHAT THE REPLACEMENT TEST MUST ASSERT (and why the old one cannot stay)
+  tests/lmx_root_selftest.lm1:205-207 today asserts the branch survives BECAUSE the array is a GC
+  root, and proves it with `lmx_range_classify(arena, branch) = LMX_KIND_STRUCT` where `arena` is
+  R0's own -- true only because the branch sits in that arena.  That is evidence for the opposite
+  property.  The replacement (new tests/lmx_perm_selftest.lm1) asserts the pair that separates
+  ownership from resolvability:
+    * lmx_range_pool(r0_arena, branch) = 0        -- R0's arena does NOT own it (today: non-zero)
+    * lmx_range_classify(r0_arena, branch) = LMX_KIND_STRUCT   -- resolvable through the store
+    * lmx_range_classify(child_arena, branch) = LMX_KIND_STRUCT -- from another Message too
+    * checksum of the store's bytes identical before and after lmx_gc_collect on the child arena
+      AND on R0's arena -- the strong form of "GC does not touch", replacing survival-by-root
+    * the branch's cell still reads 7 after both collections
+    * lmx_copy_is_terminal(store-resident) = 1, and a same-shape MUTABLE graph still copies/frees
+      normally (control), and two roots/runtimes stay isolated (no process-global state)
+  Then the full dev kernel gate, with command, target count, exit code and evidence path recorded.
+
+OPEN QUESTIONS PUT TO CODEX (before any edit)
+  1. Agreement for A): two LmxArena fields, or one role word?
+  2. lmx_graph_copy_owned.lm1 -- who makes the is_terminal change (Fable has 4 authorized lines
+     there)?
+  3. (answered in this document's evidence section) is "closed under reference" the intended
+     semantics?  The corpus says yes; if a branch must be able to reference arena state, the design
+     changes shape.

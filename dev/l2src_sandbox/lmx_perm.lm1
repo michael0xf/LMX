@@ -9,9 +9,24 @@ predef: "l2src/lmx_perm.h.lm1"
 # Open a cleared arena as the runtime's store.  The role flag is set AFTER lmx_arena_open,
 # which clears both new fields: an arena that is opened again can never inherit a stale role
 # or a stale link.
+#
+# THE CLEARING IS HERE, not at the call site.  LmxRoot carries the store BY VALUE, so it arrives
+# holding whatever was on the stack, and lmx_arena_open refuses a non-empty arena by design
+# ("a by-value arena must be cleared before it is opened").  Zeroing the nine fields where the
+# role is defined keeps that list in one place instead of nine lines in the middle of
+# lmx_root_open's already long open path.
 fn: lmx_perm_open (@: LmxArena store) int
     if: store = 0
         return: 1
+    store\blocks: 0
+    store\arrays: 0
+    store\index: 0
+    store\count: 0U
+    store\capacity: 0U
+    store\generation: 0U
+    store\simple: 0U
+    store\permanent: 0U
+    store\perm: 0
     if: lmx_arena_open(store) != 0
         return: 1
     ---

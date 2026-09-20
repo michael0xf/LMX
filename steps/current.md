@@ -1,5 +1,7 @@
 # LMX documentation-first restart
 
+Актуальный совместный план Codex/Grok: [implementation-plan.md](implementation-plan.md). Поручение от 20.09 о полной замене `implements` и последующей валидации интерпретатором графа расширяет прежний этап documentation-first; последовательность и распределение работ указаны в плане.
+
 - Start from `docs/LMX_semantics.ru.md` / `docs/LMX_semantics.en.md` and the user's current instructions. Do not import old Message/arena/runtime designs as new requirements.
 - Keep RU/EN documents synchronized in meaning, order, examples, and cross-references. Preserve the author's Russian semantic opening verbatim.
 - Grammar source: `provenance/grammar.json`; render using `python tools/build_docs.py`. Preserve copied examples and their source ranges.

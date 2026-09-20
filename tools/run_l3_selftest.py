@@ -98,7 +98,7 @@ def main():
     translate('l2src/l2_libc.lm1', generated / 'l2_libc.c', 'translate-l2_libc')
 
     exe = output / (f'{stem}.exe' if os.name == 'nt' else stem)
-    command = [args.cc, '-std=c99', '-Wall', '-Wextra', '-Wpedantic',
+    command = [args.cc, '-std=c11', '-Wall', '-Wextra', '-Wpedantic',
                '-Werror=incompatible-pointer-types', '-Werror=discarded-qualifiers',
                '-Werror=implicit-function-declaration', '-Werror=implicit-int',
                '-I', str(generated), '-I', str(unit_root), '-o', str(exe),

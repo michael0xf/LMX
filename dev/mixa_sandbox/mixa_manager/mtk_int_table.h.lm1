@@ -1,0 +1,33 @@
+include: "<stddef.h>"
+predef: "mixa_manager/mtk_const.h.lm1"
+predef: "mixa_manager/mtk_int_array.h.lm1"
+predef: "mixa_manager/mtk_array.h.lm1"
+
+# mtk_int_table.h.lm1 - IntTable ported from IntTable.java (com.mtk.map).
+# Maps arbitrary keys (void*) to int values.  Keys are stored in sorted
+# hash-code order (mirroring HashArray<T> code in Java), values in a
+# parallel MtkIntArray.  The caller supplies hash and equals fptrs.
+# Sub-objects are heap-allocated (pointer fields) per the project rule
+# "no valued or dot member access".
+
+struct: MtkIntTable
+    @: MtkIntArray codes
+    @: MtkArray keys
+    @: MtkIntArray values
+end: MtkIntTable
+
+fnptr: MtkIntTableHashFn (const: @(void key)) int
+fnptr: MtkIntTableEqualsFn (const: @(void a); const: @(void b)) int
+
+prototype:
+    fn: mtk_int_table_init (@: MtkIntTable t; size_t: key_sz) int
+    fn: mtk_int_table_destroy (@: MtkIntTable t) void
+    fn: mtk_int_table_size (const: @(MtkIntTable t)) int
+    fn: mtk_int_table_is_empty (const: @(MtkIntTable t)) int
+    fn: mtk_int_table_clear (@: MtkIntTable t) void
+    fn: mtk_int_table_contains_key (const: @(MtkIntTable t); const: @(void key); MtkIntTableHashFn: hash_fn; MtkIntTableEqualsFn: eq_fn) int
+    fn: mtk_int_table_get (const: @(MtkIntTable t); const: @(void key); MtkIntTableHashFn: hash_fn; MtkIntTableEqualsFn: eq_fn) int
+    fn: mtk_int_table_put (@: MtkIntTable t; const: @(void key); int: val; MtkIntTableHashFn: hash_fn; MtkIntTableEqualsFn: eq_fn) int
+    fn: mtk_int_table_remove (@: MtkIntTable t; const: @(void key); MtkIntTableHashFn: hash_fn; MtkIntTableEqualsFn: eq_fn) int
+    fn: mtk_int_table_key_at (const: @(MtkIntTable t); int: i) const: @(void)
+end: prototype

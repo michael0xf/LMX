@@ -1,0 +1,97 @@
+include: "<windows.h>" "<stdio.h>" "<stdlib.h>"
+include: "l2src/lmx_message.h"
+include: "l2src/lmx_message_host.h"
+
+# mixa_ingress_host_harness.lm1 — L1 port of mixa_ingress_host_harness.c
+# Win32 foreign-event ingress demo for LMX_MSG_HOST_INGRESS_V0.
+
+define: JOIN_WAIT_MS 5000U
+
+int: g_checks 0
+int: g_failures 0
+@: void g_rt 0
+@: void g_dest 0
+@: void g_posted_event 0
+int: g_foreign_posted 0
+
+fn: check (int: cond; const: @(char what)) void
+    g_checks: g_checks + 1
+    if: cond = 0
+        g_failures: g_failures + 1
+        c.fprintf(c.stderr, "FAIL: %s", what)
+    ---
+    ---
+    c.printf("ok: %s", what)
+
+fn: foreign_poster (@: void arg) int
+    @: void env
+    int: st
+    env: (cast: (@: void) c.malloc(c.sizeof(c.LmxMsgEnv)))
+    if: env = 0
+        return: 1
+    ---
+    c.memset(env, 0, c.sizeof(c.LmxMsgEnv))
+    c.printf("evidence foreign_tid")
+    st: c.lmx_msg_host_post(g_rt, g_dest, env)
+    c.free(env)
+    if: st = c.LMX_MSG_OK
+        g_foreign_posted: 1
+        c.printf("foreign_poster: host_post OK")
+    ---
+    return: 0
+
+fn: hang_poster (@: void arg) int
+    c.Sleep(60000U)
+    return: 0
+
+fn: join_checked (@: void thp; const: @(char label)) int
+    @: void th
+    uint: wr
+    th: (cast: (@: void) thp)
+    if: th = 0
+        check(0, label)
+        return: 1
+    ---
+    wr: c.WaitForSingleObject(th, JOIN_WAIT_MS)
+    if: wr = c.WAIT_OBJECT_0
+        c.CloseHandle(th)
+        check(1, label)
+        return: 0
+    ---
+    c.TerminateThread(th, 1U)
+    c.CloseHandle(th)
+    check(0, label)
+    return: 1
+
+fn: main (int: argc; @: @(char) argv) int
+    @: void th
+    int: rc
+
+    g_checks: 0
+    g_failures: 0
+    g_rt: c.lmx_msg_runtime_new()
+    if: g_rt = 0
+        c.fprintf(c.stderr, "host_post: runtime_new failed")
+        return: 1
+    ---
+
+    g_posted_event: c.CreateEventA(0, 0, 0, 0)
+    if: g_posted_event = 0
+        c.fprintf(c.stderr, "CreateEvent failed")
+        c.lmx_msg_runtime_delete(g_rt)
+        return: 1
+    ---
+
+    th: c.CreateThread(0, 0, (cast: (@: void) foreign_poster), 0, 0, 0)
+    if: th = 0
+        c.fprintf(c.stderr, "CreateThread failed")
+        return: 1
+    ---
+
+    join_checked(th, "foreign_poster join")
+    check(g_foreign_posted != 0, "foreign posted")
+
+    c.lmx_msg_runtime_delete(g_rt)
+    c.CloseHandle(g_posted_event)
+    c.printf("ingress_host_harness: checks")
+    return: g_failures

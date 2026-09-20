@@ -1,0 +1,26 @@
+include: "<stddef.h>"
+predef: "mixa_manager/mixa_core.h.lm1"
+predef: "mixa_manager/mixa_file_manager.h.lm1"
+
+define: MIXA_APP_FMPANEL_OK 0
+define: MIXA_APP_FMPANEL_ERR_ARG 1
+define: MIXA_APP_FMPANEL_ERR_NOMEM 2
+
+# Opaque API. Concrete fields live in mixa_app_fmpanel_impl.h.lm1 (same-file
+# completion — l1trans drops struct bodies across predef, ticket 20260917-083000).
+type: MixaAppFmPanel struct MixaAppFmPanel
+
+prototype:
+    fn: mixa_app_fmpanel_open (@@: MixaAppFmPanel out; @: MixaFm fm; size_t: list_row; size_t: list_col; size_t: list_rows; size_t: list_cols; size_t: action_row; size_t: action_col) int
+    fn: mixa_app_fmpanel_close (@: MixaAppFmPanel p) void
+    fn: mixa_app_fmpanel_render (@: MixaAppFmPanel p; @: MixaTextRect rect) int
+    fn: mixa_app_fmpanel_hit (@: MixaAppFmPanel p; @: MixaTextRect rect; size_t: cell_row; size_t: cell_col) int
+    fn: mixa_app_fmpanel_confirm_is_open (const: @(MixaAppFmPanel p)) int
+    fn: mixa_app_fmpanel_report_copy_result (@: MixaAppFmPanel p; int: status) void
+    fn: mixa_app_fmpanel_key (@: MixaAppFmPanel p; int: keycode) int
+    fn: mixa_app_fmpanel_wheel (@: MixaAppFmPanel p; size_t: cell_row; size_t: cell_col; int: notches) int
+    fn: mixa_app_fmpanel_release (@: MixaAppFmPanel p) int
+    fn: mixa_app_fmpanel_view_top (const: @(MixaAppFmPanel p)) size_t
+    fn: mixa_app_fmpanel_highlight_index (const: @(MixaAppFmPanel p)) int
+    fn: mixa_app_fmpanel_drag_active (const: @(MixaAppFmPanel p)) int
+end: prototype

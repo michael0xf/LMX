@@ -1,0 +1,117 @@
+include: "<stddef.h>"
+include: "mixa_manager/mixa_selection.h"
+predef: "mixa_manager/mixa_dir.h.lm1"
+
+# OS-independent file-manager navigation and list state (ticket
+# 20260912-075000, first bounded file-manager stage). Sits entirely on
+# the accepted mixa_dir_list_open/next/close seam: this module contains
+# no Win32 directory calls of its own and no filesystem knowledge beyond
+# path separators.
+#
+# Reference: ClearShell's StorageList (clearshell_reference/com/mtk/
+# shell/StorageList.java). Mapping and the two deliberate divergences
+# are written out in mixa_file_manager.txt; the short form is that
+# openFile2/refresh/backDir map onto mixa_fm_enter/mixa_fm_refresh/
+# mixa_fm_parent, that scroll positions are UI state this stage does not
+# own, and that a failed refresh preserves the current directory here
+# instead of walking up to the nearest surviving ancestor as the
+# reference does (this ticket requires preservation explicitly).
+#
+# This stage owns navigation, the list snapshot, and view-level
+# selection ONLY. No copy/move/delete/rename/search/sort, no live
+# Message pump, no threads or locks.
+#
+# Transactional replacement is the core invariant: every navigation and
+# refresh enumerates into a COMPLETELY NEW snapshot and installs it only
+# after the last allocation has succeeded. A failure at any step --
+# missing directory, access refusal, mid-enumeration error, allocation
+# failure, or path overflow -- leaves the previous current directory,
+# list and selection exactly as they were, and returns the exact status
+# for the stage that refused.
+#
+# Selection is the accepted lazy selected-tree of SELECTION_MODEL.txt /
+# mixa_selection.h, and this model holds NO selection state of its own.
+# A select/deselect gesture calls mixa_selection_select/deselect with the
+# entry's owned full path, and mixa_fm_is_selected answers by asking
+# mixa_selection_query about that same path. There is deliberately no
+# cached flag anywhere: the accepted model is the single authority, so
+# selection persists across directory changes, inherited selection from
+# an ancestor shows up on entries the user never touched, and stored
+# exceptions show as unselected -- all for free, with nothing here to
+# fall out of step with it.
+#
+# Note that mixa_selection_query consolidates as it reads, by the
+# accepted model's own design (SELECTION_MODEL.txt section 3.3), so
+# painting a directory listing is not a read-only operation on the
+# selection. That is the reference's behaviour and is deliberate.
+#
+# Ownership and lifetime: the MixaSelection is BORROWED. The caller
+# creates it, owns it, and must keep it alive for at least as long as
+# this MixaFm; mixa_fm_release does NOT release it, because a session
+# outlives any one directory view. Passing null is allowed and means
+# "no selection in this session": mixa_fm_is_selected is then always 0
+# and mixa_fm_select refuses with MIXA_FM_ERR_ARG.
+#
+# Allocation goes through MixaFmAllocVTable so that an out-of-memory
+# refusal at any owned step can be tested deterministically. A null
+# vtable means the ordinary C allocator. This is an explicit, per-
+# instance dependency on purpose: a test-only global counter inside the
+# module would be exactly the always-on production global that was
+# removed from mixa_share_win32.lm1 for being a real shared-state risk.
+
+define: MIXA_FM_OK 0
+define: MIXA_FM_ERR_ARG 1
+define: MIXA_FM_ERR_MISSING 2
+define: MIXA_FM_ERR_ACCESS 3
+define: MIXA_FM_ERR_ENUM 4
+define: MIXA_FM_ERR_NOMEM 5
+define: MIXA_FM_ERR_PATH 6
+define: MIXA_FM_ERR_ROOT 7
+define: MIXA_FM_ERR_NOTDIR 8
+define: MIXA_FM_ERR_RANGE 9
+
+define: MIXA_FM_PATH_MAX 1024
+
+fnptr: MixaFmAllocFn (size_t: n) @: void
+fnptr: MixaFmFreeFn (@: void p) void
+
+struct: MixaFmAllocVTable
+    MixaFmAllocFn: alloc
+    MixaFmFreeFn: free
+end: MixaFmAllocVTable
+
+struct: MixaFmEntry
+    @: char name
+    @: char path
+    int: is_dir
+end: MixaFmEntry
+
+struct: MixaFm
+    @: char root_dir
+    @: char cur_dir
+    @: MixaFmEntry entries
+    size_t: count
+    const: @: MixaFmAllocVTable av
+    @: MixaSelection sel
+    int: last_dir_status
+    int: is_open
+end: MixaFm
+
+prototype:
+    fn: mixa_fm_init (@: MixaFm fm; const: @(char root_utf8); @: MixaSelection sel; const: @(MixaFmAllocVTable av)) int
+    sub: mixa_fm_release (@: MixaFm fm)
+    fn: mixa_fm_refresh (@: MixaFm fm) int
+    fn: mixa_fm_enter (@: MixaFm fm; size_t: index) int
+    fn: mixa_fm_parent (@: MixaFm fm) int
+    fn: mixa_fm_goto_root (@: MixaFm fm) int
+    fn: mixa_fm_select (@: MixaFm fm; size_t: index; int: on) int
+    fn: mixa_fm_count (@: MixaFm fm) size_t
+    fn: mixa_fm_name (@: MixaFm fm; size_t: index) const: @(char)
+    fn: mixa_fm_path (@: MixaFm fm; size_t: index) const: @(char)
+    fn: mixa_fm_is_dir (@: MixaFm fm; size_t: index) int
+    fn: mixa_fm_is_selected (@: MixaFm fm; size_t: index) int
+    fn: mixa_fm_cur_dir (@: MixaFm fm) const: @(char)
+    fn: mixa_fm_root_dir (@: MixaFm fm) const: @(char)
+    fn: mixa_fm_last_dir_status (@: MixaFm fm) int
+    fn: mixa_fm_at_root (@: MixaFm fm) int
+end: prototype

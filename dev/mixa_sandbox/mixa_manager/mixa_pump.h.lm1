@@ -1,0 +1,16 @@
+include: "<stddef.h>"
+predef: "mixa_manager/mixa_backend.h.lm1"
+predef: "mixa_manager/mixa_event_fifo.h.lm1"
+
+struct: MixaPump
+    MixaEventFifo: inbox
+    int: is_open
+end: MixaPump
+
+prototype:
+    fn: mixa_pump_open (@: MixaPump pump) int
+    fn: mixa_pump_release (@: MixaPump pump) void
+    fn: mixa_pump_drain (@: MixaPump pump; @: MixaBackend backend) int
+    fn: mixa_pump_next (@: MixaPump pump; @: MixaEvent out) int
+    fn: mixa_pump_pending (const: @(MixaPump pump)) size_t
+end: prototype

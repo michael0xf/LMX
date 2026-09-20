@@ -1,0 +1,323 @@
+predef: "mixa_manager/mixa_app_controller.h.lm1"
+predef: "mixa_manager/mixa_backend_headless.h.lm1"
+predef: "mixa_manager/mixa_file_manager.h.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>" "<windows.h>"
+
+# mixa_sticky_header_selftest.lm1 -- ЛИПКИЙ ЗАГОЛОВОК СПИСКА, ЗАМЕРЕНО (20.09).
+#
+# ДОК, UI_MODEL 1.1: «a LIST panel belongs to its list and is drawn as that list's HEADER...
+# The header is STICKY: scrolling the list up and down does not carry it away»; 1.0: «The row
+# of lists IS THE PATH».
+#
+# ПОЧЕМУ ЗАМЕР, А НЕ ГЛАЗА. Сказать «заголовок не уезжает» можно и не глядя: строка пути
+# рисуется КАЖДЫЙ кадр из текущего каталога, а строки записей идут со смещением view_top.
+# Но это чтение кода, а не свойство. Поэтому проба берёт НАСТОЯЩИЙ контроллер с настоящим
+# каталогом (31 запись на 21 видимую строку), снимает БАЙТЫ строки заголовка до прокрутки,
+# прокручивает список клавишами до view_top > 0, снимает те же байты снова и сравнивает.
+# Сравниваются КЛЕТКИ, а не пиксели: DRAWING 4 -- «Drawer tests assert cell contents... they
+# are exact, they need no font, and they stay valid unchanged when real glyphs arrive».
+#
+# ЗАОДНО проверяется, что прокрутка ВООБЩЕ была: строка записи обязана ИЗМЕНИТЬСЯ. Иначе
+# «заголовок не сдвинулся» означало бы «ничего не сдвинулось», то есть ничего.
+
+sub: t_touch (const: @(char path); const: @(char content))
+    []: (@: void) fh 1
+    fh[0]: c.fopen(path, "wb")
+    if: fh[0] != 0
+        c.fputs(content, fh[0])
+        c.fclose(fh[0])
+    ---
+end: t_touch
+
+sub: t_push_key (@: MixaBackend backend; int: keycode)
+    @: MixaEvent ev
+    ev: (cast: (@: MixaEvent) c.calloc(1U, c.sizeof(c.MixaEvent)))
+    ev\kind: MIXA_EVENT_KEY
+    ev\keycode: keycode
+    ev\codepoint: 0U
+    mixa_headless_push_event(backend, ev)
+    c.free(ev)
+end: t_push_key
+
+sub: t_key_down (@: MixaBackend backend; @: MixaAppController ctrl)
+    int: had_error
+    t_push_key(backend, 2)
+    mixa_app_controller_step(ctrl, @ had_error)
+end: t_key_down
+
+# Движение мыши: указатель едет, панель не трогается.  Нужно только чтобы кадр был нарисован.
+sub: t_mouse_move (@: MixaBackend backend; @: MixaAppController ctrl; size_t: half_row; size_t: half_col)
+    @: MixaEvent ev
+    int: had_error
+    ev: (cast: (@: MixaEvent) c.calloc(1U, c.sizeof(c.MixaEvent)))
+    ev\kind: MIXA_EVENT_MOUSE
+    ev\row: half_row
+    ev\col: half_col
+    ev\buttons: 0U
+    mixa_headless_push_event(backend, ev)
+    c.free(ev)
+    mixa_app_controller_step(ctrl, @ had_error)
+end: t_mouse_move
+
+# Снять строку клеток верхнего слоя в буфер (побайтово -- сравнение точное).
+sub: t_snap_row (const: @(MixaTextRect rect); size_t: row; @: MixaCell buf; size_t: cells)
+    const: @(MixaCell src)
+    size_t: i
+    if: rect = 0 || buf = 0 || row >= rect\rows
+        return
+    ---
+    src: rect\cells + (row * rect\cols)
+    i: 0U
+    while: i < cells
+        buf[i]: src[i]
+        i: i + 1U
+    ---
+end: t_snap_row
+
+# Найти строку верхнего слоя, клетки которой складываются в текст (например "Dir:").
+# Заголовок списка ищется ПО СОДЕРЖИМОМУ, а не по номеру: 1.0 -- «The row of lists IS THE PATH»,
+# и проба берёт ту строку, которая несёт путь, какой бы она ни была.
+fn: t_row_with (const: @(MixaTextRect rect); const: @(char text)) int
+    size_t: row
+    size_t: col
+    size_t: n
+    unsigned: cp
+    const: @(MixaCell cell)
+    n: c.strlen(text)
+    if: rect = 0 || n = 0U
+        return: -1
+    ---
+    row: 0U
+    while: row < rect\rows
+        col: 0U
+        while: (col + n) <= rect\cols
+            size_t: k
+            int: hit
+            hit: 1
+            k: 0U
+            while: k < n
+                cell: rect\cells + (row * rect\cols + col + k)
+                cp: cell\codepoint
+                if: cp != (cast: (unsigned) (cast: (unsigned char) text[k]))
+                    hit: 0
+                    k: n
+                ---
+                k: k + 1U
+            ---
+            if: hit != 0
+                return: (cast: (int) row)
+            ---
+            col: col + 1U
+        ---
+        row: row + 1U
+    ---
+return: -1
+
+# Первая непустая строка НИЖЕ заголовка -- строка записи списка.
+fn: t_entry_row_below (const: @(MixaTextRect rect); size_t: from) int
+    size_t: row
+    size_t: col
+    const: @(MixaCell cell)
+    unsigned: cp
+    row: from + 1U
+    while: row < rect\rows
+        col: 0U
+        while: col < rect\cols
+            cell: rect\cells + (row * rect\cols + col)
+            cp: cell\codepoint
+            if: cp != 0U && cp != 0x20U
+                return: (cast: (int) row)
+            ---
+            col: col + 1U
+        ---
+        row: row + 1U
+    ---
+return: -1
+
+fn: main (int: argc; @: @(char) argv) int
+    []: char base 520
+    []: char name_buf 64
+    []: char path_buf 1200
+    []: char cmd 2400
+    []: char console_path 600
+    const: @(MixaBackendVTable vt)
+    @: MixaAppController ctrl
+    @: MixaBackend backend
+    @: MixaFm fm
+    @: MixaAppFmPanel panel
+    const: @(MixaTextRect upper)
+    @: MixaCell header_before 0
+    @: MixaCell header_after 0
+    @: MixaCell entry_before 0
+    @: MixaCell entry_after 0
+    size_t: cells
+    size_t: bytes
+    size_t: list_row
+    size_t: entry_index
+    int: entry_row
+    int: rc
+    int: i
+    int: failures
+    int: checks
+    int: header_same
+    int: entry_same
+    size_t: view_top
+    c.setbuf((cast: (@: void) c.stdout), 0)
+    failures: 0
+    checks: 0
+
+    if: argc >= 2
+        c.snprintf(base, 520U, "%s", argv[1])
+    else:
+        c.snprintf(base, 520U, "build/mixa/claude/sticky_header/tmp")
+    ---
+    c.snprintf(cmd, 2400U, "cmd /c mkdir \"%s\" 2>nul", base)
+    c.system(cmd)
+    c.snprintf(console_path, 600U, "%s\\mixa-console.log", base)
+    c.remove(console_path)
+    # 30 файлов: больше 20 видимых строк, иначе прокручивать нечего.
+    i: 0
+    while: i < 30
+        c.snprintf(name_buf, 64U, "e%02d.txt", i)
+        c.snprintf(path_buf, 1200U, "%s\\%s", base, name_buf)
+        t_touch(path_buf, "x")
+        i: i + 1
+    ---
+
+    vt: mixa_backend_headless_table()
+    checks: checks + 1
+    if: vt = 0
+        failures: failures + 1
+        c.printf("sticky_header: headless table unavailable\n")
+        return: 1
+    ---
+    ctrl: 0
+    rc: mixa_app_controller_open(@ ctrl, vt, base)
+    checks: checks + 1
+    if: rc != MIXA_APP_CONTROLLER_OK || ctrl = 0
+        failures: failures + 1
+        c.printf("sticky_header: controller open failed rc=%d\n", rc)
+        return: 1
+    ---
+    backend: mixa_app_controller_backend(ctrl)
+    fm: mixa_app_controller_fm(ctrl)
+    panel: mixa_app_controller_fmpanel(ctrl)
+    upper: mixa_app_controller_upper_rect(ctrl)
+    checks: checks + 1
+    if: backend = 0 || fm = 0 || panel = 0 || upper = 0
+        failures: failures + 1
+        c.printf("sticky_header: backend/fm/panel/upper unavailable\n")
+        return: 1
+    ---
+    checks: checks + 1
+    if: mixa_fm_count(fm) < 30U
+        failures: failures + 1
+        c.printf("sticky_header: expected at least 30 entries, got %zu\n", mixa_fm_count(fm))
+        return: 1
+    ---
+    # Строка заголовка ищется ПО СОДЕРЖИМОМУ -- по пути, который она несёт. Номер строки
+    # панели здесь не читается нарочно: MixaAppFmPanel -- тип opaque, и проба, которой нужен
+    # именно ЗАГОЛОВОК, обязана узнавать его по тому, чем он является («The row of lists IS
+    # THE PATH», 1.0), а не по полю структуры.
+    entry_row: t_row_with(upper, "Dir:")
+    checks: checks + 1
+    if: entry_row < 0
+        failures: failures + 1
+        c.printf("sticky_header: no path row in the panel -- nothing to measure\n")
+        return: 1
+    ---
+    list_row: (cast: (size_t) entry_row)
+    entry_row: t_entry_row_below(upper, list_row)
+    checks: checks + 1
+    if: entry_row < 0
+        failures: failures + 1
+        c.printf("sticky_header: no entry row under the header\n")
+        return: 1
+    ---
+    entry_index: (cast: (size_t) entry_row)
+
+    cells: upper\cols
+    bytes: cells * c.sizeof(c.MixaCell)
+    header_before: (cast: (@: MixaCell) c.calloc(cells, c.sizeof(c.MixaCell)))
+    header_after: (cast: (@: MixaCell) c.calloc(cells, c.sizeof(c.MixaCell)))
+    entry_before: (cast: (@: MixaCell) c.calloc(cells, c.sizeof(c.MixaCell)))
+    entry_after: (cast: (@: MixaCell) c.calloc(cells, c.sizeof(c.MixaCell)))
+    if: header_before = 0 || header_after = 0 || entry_before = 0 || entry_after = 0
+        c.printf("sticky_header: snapshot alloc failed\n")
+        return: 2
+    ---
+    checks: checks + 1
+    if: mixa_app_fmpanel_view_top(panel) != 0U
+        failures: failures + 1
+        c.printf("sticky_header: the view did not start at the top\n")
+    ---
+    # ПРИНУДИТЕЛЬНЫЙ КАДР ПЕРЕД ПЕРВЫМ СНИМКОМ.  Контроллер рисует кадр на старте и дальше --
+    # на каждое событие, которое что-то изменило; если первый снимок взять сразу после open, он
+    # может прийтись на ещё не нарисованную панель, и тогда «заголовок сдвинулся» будет означать
+    # «первый снимок был пуст», а не дефект.  Движение мыши панель не трогает -- оно двигает
+    # только указатель (UI_MODEL 6), поэтому кадр гарантируется, а состояние списка -- нет.
+    t_mouse_move(backend, ctrl, 0U, 0U)
+    t_snap_row(upper, list_row, header_before, cells)
+    t_snap_row(upper, entry_index, entry_before, cells)
+
+    # Прокрутка клавишами: 25 нажатий вниз -- подсветка уходит за видимое окно (21 строка),
+    # и вид обязан поехать (5.7.1: вид следует за подсветкой, только когда та ушла).
+    i: 0
+    while: i < 25
+        t_key_down(backend, ctrl)
+        i: i + 1
+    ---
+    view_top: mixa_app_fmpanel_view_top(panel)
+    checks: checks + 1
+    if: view_top = 0U
+        failures: failures + 1
+        c.printf("sticky_header: the list did not scroll at all -- nothing to measure\n")
+    ---
+
+    t_snap_row(upper, list_row, header_after, cells)
+    t_snap_row(upper, entry_index, entry_after, cells)
+    header_same: c.memcmp(header_before, header_after, bytes)
+    entry_same: c.memcmp(entry_before, entry_after, bytes)
+    @: MixaCell dbg 0
+    c.printf("STICKY entry_before: ")
+    i: 2
+    while: i < 14
+        dbg: entry_before + i
+        c.printf("%u ", dbg\codepoint)
+        i: i + 1
+    ---
+    c.printf("---")
+    c.printf("STICKY entry_after:  ")
+    i: 2
+    while: i < 14
+        dbg: entry_after + i
+        c.printf("%u ", dbg\codepoint)
+        i: i + 1
+    ---
+    c.printf("---")
+
+    checks: checks + 1
+    if: header_same != 0
+        failures: failures + 1
+        c.printf("sticky_header: THE HEADER MOVED with the list (view_top=%zu)\n", view_top)
+    ---
+    checks: checks + 1
+    if: entry_same = 0
+        failures: failures + 1
+        c.printf("sticky_header: an entry row did NOT change -- the list did not scroll\n")
+    ---
+
+    # header_moved=0 -- байты строки заголовка те же (ЛИПКИЙ); entry_diff=1 -- строка записи
+    # стала другой, то есть список ДЕЙСТВИТЕЛЬНО поехал.  Оба числа печатаются рядом нарочно:
+    # «заголовок не сдвинулся» без второго числа неотличимо от «кадр не нарисовался».
+    c.printf("STICKY header row=%zu cells=%zu bytes=%zu view_top=%zu header_moved=%d entry_diff=%d\n",
+             list_row, cells, bytes, view_top, header_same, (entry_same != 0))
+    failures: failures
+    c.printf("mixa_sticky_header checks=%d failures=%d\n", checks, failures)
+    c.fflush(0)
+    c.free(header_before)
+    c.free(header_after)
+    c.free(entry_before)
+    c.free(entry_after)
+    mixa_app_controller_close(ctrl)
+return: failures

@@ -1,0 +1,13 @@
+predef: "mixa_manager/mixa_selection.h.lm1"
+predef: "mixa_manager/mixa_share.h.lm1"
+include: "<stddef.h>"
+
+# Public declarations for mixa_share_action.lm1 (ticket 20260918-063608).
+# Callers must predef THIS header — never the .lm1 body — or l1trans inlines
+# the full send/strdup definitions and the link fails with multiple definition
+# when both mixa_share_action.o and the caller .o are linked (go.sh).
+
+prototype:
+    fn: mixa_share_action_strdup (const: @(char s)) @: char
+    fn: mixa_share_action_send (@: MixaSelection sel; const: @(MixaShareVTable vt); const: @(char text_utf8); @@: MixaShareRequest out_r; @: size_t out_sent_count; @: size_t out_skipped_dirs) int
+end: prototype

@@ -1,0 +1,137 @@
+predef: "mixa_manager/mixa_notification_log.h.lm1"
+include: "<stdlib.h>" "<string.h>" "<stdio.h>"
+
+# mixa_notification_log.lm1 — tab-separated UTF-8 file log (ticket 20260918-125450).
+
+fn: mixa_notif_log_map_file (int: st) int
+    if: st = MIXA_FILE_OK
+        return: MIXA_NOTIF_LOG_OK
+    if: st = MIXA_FILE_ERR_ARG
+        return: MIXA_NOTIF_LOG_ERR_ARG
+    if: st = MIXA_FILE_ERR_MISSING
+        return: MIXA_NOTIF_LOG_ERR_MISSING
+    if: st = MIXA_FILE_ERR_NOMEM
+        return: MIXA_NOTIF_LOG_ERR_NOMEM
+return: MIXA_NOTIF_LOG_ERR_IO
+
+fn: mixa_notif_log_add (const: @(char path_utf8); const: @(char timestamp_utf8); const: @(char app_utf8); const: @(char title_utf8); const: @(char text_utf8)) int
+    @: MixaFile f
+    []: (@: MixaFile) fslot 1
+    @: char line
+    size_t: need
+    size_t: n
+    int: sn
+    []: size_t wrote 1
+    int: st
+    const: @(char ts)
+    const: @(char app)
+    const: @(char title)
+    const: @(char text)
+    if: path_utf8 = 0
+        return: MIXA_NOTIF_LOG_ERR_ARG
+    ---
+    ts: timestamp_utf8
+    app: app_utf8
+    title: title_utf8
+    text: text_utf8
+    if: ts = 0
+        ts: ""
+    ---
+    if: app = 0
+        app: ""
+    ---
+    if: title = 0
+        title: ""
+    ---
+    if: text = 0
+        text: ""
+    ---
+    need: c.strlen(ts) + c.strlen(app) + c.strlen(title) + c.strlen(text) + 8U
+    line: (cast: (@: char) c.malloc(need))
+    if: line = 0
+        return: MIXA_NOTIF_LOG_ERR_NOMEM
+    ---
+    sn: c.snprintf(line, need, "%s\t%s\t%s\t%s\n", ts, app, title, text)
+    if: sn <= 0 || (cast: (size_t) sn) >= need
+        c.free(line)
+        return: MIXA_NOTIF_LOG_ERR_IO
+    ---
+    n: (cast: (size_t) sn)
+    fslot[0]: 0
+    st: mixa_file_open(fslot, path_utf8, MIXA_FILE_MODE_APPEND)
+    if: st != MIXA_FILE_OK
+        c.free(line)
+        return: mixa_notif_log_map_file(st)
+    ---
+    f: fslot[0]
+    wrote[0]: 0U
+    st: mixa_file_append(f, (cast: (const: @: void) line), n, wrote)
+    mixa_file_close(f)
+    c.free(line)
+    if: st != MIXA_FILE_OK
+        return: mixa_notif_log_map_file(st)
+    ---
+    if: wrote[0] != n
+        return: MIXA_NOTIF_LOG_ERR_IO
+    ---
+return: MIXA_NOTIF_LOG_OK
+
+fn: mixa_notif_log_read (const: @(char path_utf8); @@: char out_buf; @: size_t out_len) int
+    @: MixaFile f
+    []: (@: MixaFile) fslot 1
+    size_t: sz
+    []: size_t szslot 1
+    @: char buf
+    size_t: got
+    []: size_t gotslot 1
+    size_t: off
+    int: st
+    if: out_buf = 0 || out_len = 0
+        return: MIXA_NOTIF_LOG_ERR_ARG
+    out_buf[0]: 0
+    out_len[0]: 0U
+    if: path_utf8 = 0
+        return: MIXA_NOTIF_LOG_ERR_ARG
+    fslot[0]: 0
+    st: mixa_file_open(fslot, path_utf8, MIXA_FILE_MODE_READ)
+    if: st != MIXA_FILE_OK
+        return: mixa_notif_log_map_file(st)
+    ---
+    f: fslot[0]
+    szslot[0]: 0U
+    st: mixa_file_size(f, szslot)
+    if: st != MIXA_FILE_OK
+        mixa_file_close(f)
+        return: mixa_notif_log_map_file(st)
+    ---
+    sz: szslot[0]
+    if: sz > ((cast: (size_t) -1) - 1U)
+        mixa_file_close(f)
+        return: MIXA_NOTIF_LOG_ERR_NOMEM
+    ---
+    buf: (cast: (@: char) c.malloc(sz + 1U))
+    if: buf = 0
+        mixa_file_close(f)
+        return: MIXA_NOTIF_LOG_ERR_NOMEM
+    ---
+    off: 0U
+    while: off < sz
+        gotslot[0]: 0U
+        st: mixa_file_read(f, (cast: (@: void) (buf + off)), sz - off, gotslot)
+        if: st != MIXA_FILE_OK
+            c.free(buf)
+            mixa_file_close(f)
+            return: mixa_notif_log_map_file(st)
+        ---
+        got: gotslot[0]
+        if: got = 0U
+            break
+        ---
+        off: off + got
+    ---
+    buf[off]: 0
+    mixa_file_close(f)
+    out_buf[0]: buf
+    out_len[0]: off
+return: MIXA_NOTIF_LOG_OK
+

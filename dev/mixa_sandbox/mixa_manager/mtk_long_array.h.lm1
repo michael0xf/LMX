@@ -1,0 +1,29 @@
+include: "<stddef.h>"
+predef: "mixa_manager/mtk_const.h.lm1"
+
+# mtk_long_array.h.lm1 - Growable long array ported from LongArray.java (com.mtk.map).
+# Mirrors IntArray but with long elements.
+
+struct: MtkLongArray
+    int: amount
+    @: long arr
+end: MtkLongArray
+
+prototype:
+    fn: mtk_long_array_init (@: MtkLongArray a) int
+    fn: mtk_long_array_destroy (@: MtkLongArray a) void
+    fn: mtk_long_array_size (const: @(MtkLongArray a)) int
+    fn: mtk_long_array_element_at (const: @(MtkLongArray a); int: i) long
+    fn: mtk_long_array_first_element (const: @(MtkLongArray a)) long
+    fn: mtk_long_array_last_element (const: @(MtkLongArray a)) long
+    fn: mtk_long_array_add_element (@: MtkLongArray a; long: obj) int
+    fn: mtk_long_array_insert_element_at (@: MtkLongArray a; long: obj; int: index) int
+    fn: mtk_long_array_remove_element_at (@: MtkLongArray a; int: index) long
+    fn: mtk_long_array_set_elementAt (@: MtkLongArray a; long: obj; int: index) long
+    fn: mtk_long_array_remove_element (@: MtkLongArray a; long: obj) int
+    fn: mtk_long_array_pop (@: MtkLongArray a) long
+    fn: mtk_long_array_clear (@: MtkLongArray a) void
+    fn: mtk_long_array_remove_all_elements (@: MtkLongArray a) void
+    fn: mtk_long_array_remove_elements_from (@: MtkLongArray a; int: index; int: len) void
+    fn: mtk_long_array_reverse (@: MtkLongArray a; int: index; int: newindex) void
+end: prototype

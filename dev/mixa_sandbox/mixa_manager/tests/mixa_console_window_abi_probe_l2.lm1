@@ -1,0 +1,30 @@
+# ABI parity guard — L1 port of mixa_console_window_abi_probe_l2.c (ticket 20260918-082421).
+# offsetof is a C macro with no L1 spelling (c. pastes a call, not a preprocessor
+# name). Field offsets are computed at run time via pointer arithmetic on a local
+# store (same pattern as l2src/lmx_message_selftest.lm1). Output format strings
+# are kept byte-identical to the C probe so L2-vs-real parity still diffs stdout.
+predef: "mixa_manager/mixa_console_window_l2.h.lm1"
+include: "<stdio.h>"
+
+fn: main () int
+    MixaConsolePending: store0
+    @: MixaConsolePending p0
+    p0: @ store0
+    MixaConsoleView: store1
+    @: MixaConsoleView p1
+    p1: @ store1
+
+    c.printf("MixaConsoleView sizeof=%zu\n", c.sizeof(c.MixaConsoleView))
+    c.printf("MixaConsoleView file=%zu\n", (cast: (size_t) @ p1\file) - (cast: (size_t) p1))
+    c.printf("MixaConsoleView rows=%zu\n", (cast: (size_t) @ p1\rows) - (cast: (size_t) p1))
+    c.printf("MixaConsoleView cols=%zu\n", (cast: (size_t) @ p1\cols) - (cast: (size_t) p1))
+    c.printf("MixaConsoleView top_offset=%zu\n", (cast: (size_t) @ p1\top_offset) - (cast: (size_t) p1))
+    c.printf("MixaConsoleView cursor_row=%zu\n", (cast: (size_t) @ p1\cursor_row) - (cast: (size_t) p1))
+    c.printf("MixaConsoleView cursor_col=%zu\n", (cast: (size_t) @ p1\cursor_col) - (cast: (size_t) p1))
+    c.printf("MixaConsoleView file_size=%zu\n", (cast: (size_t) @ p1\file_size) - (cast: (size_t) p1))
+    c.printf("MixaConsolePending sizeof=%zu\n", c.sizeof(c.MixaConsolePending))
+    c.printf("MixaConsolePending cps=%zu\n", (cast: (size_t) @ p0\cps) - (cast: (size_t) p0))
+    c.printf("MixaConsolePending len=%zu\n", (cast: (size_t) @ p0\len) - (cast: (size_t) p0))
+    c.printf("MixaConsolePending cursor=%zu\n", (cast: (size_t) @ p0\cursor) - (cast: (size_t) p0))
+    return: 0
+

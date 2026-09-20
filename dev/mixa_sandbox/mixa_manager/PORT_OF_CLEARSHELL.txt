@@ -1,0 +1,573 @@
+Mixa Manager - a desktop port of ClearShell
+Framing document. Read this before the others.
+
+
+1. What this project is
+
+Mixa Manager is a DESKTOP PORT OF CLEARSHELL, with its functionality, its
+layout and its behaviour, with the owner's original changes to individual
+interface elements and desktop execution. These deltas can change every
+element; they are not merely cosmetic. This document maps them to their
+current subject specifications.
+
+Stated by the language owner on 2026-09-09, and it changes how the other
+documents should be read. They are not an independent design that happens to
+cite ClearShell; they are a DELTA against it. Where they are silent, ClearShell's
+behaviour is the answer - not "undefined", not "our choice later".
+
+Priority: the owner's latest decisions and the current mixa_manager specification
+take precedence over ClearShell. They define what is different in this port.
+The reference fills unspecified, unchanged details; its code, colours or layout
+must never override an explicit application requirement. Ask about a genuine
+ambiguity rather than silently reverting a documented delta to the original.
+
+    reference used for this port (read-only, in this repository):
+    mixa_manager/clearshell_reference/
+
+    upstream origin of that snapshot:
+    C:\Nyasha_Planet\git\clear_shell\ClearShell\app\src\main\
+
+    owner-confirmed reference location, 2026-09-11:
+    C:\Nyasha_Planet\git\gitlab_lmx\mixa_manager\clearshell_reference\
+
+On that date all 90 files at this location matched the repository snapshot
+byte-for-byte. Use the local read-only snapshot; compare again if it is refreshed.
+
+The practical rule that follows: before designing anything, look at how
+ClearShell does it. Reinventing something it already solves is the error mode
+here, and inventing a DIFFERENT solution to a problem it solved is worse than
+copying the solution badly.
+
+1.1. Develop modules now; integrate Message execution when ready
+
+Owner clarification, 2026-09-11: the mixa_manager specification is primary and
+defines the changes. ClearShell supplies the baseline for unchanged business
+logic, user algorithms, button colours and placement rules. The port uses LMX
+and its own documented desktop interface. Preserve the recorded deltas below;
+neither invent a replacement product nor copy Android widgets/Java shared-heap
+mechanics as the implementation.
+
+Most functionality can be ported and tested as independent L1 modules before
+Grok delivers the concurrent Message runtime. Do not make that runtime a blanket
+dependency for selection/navigation, filesystem algorithms, layout/colour
+calculation, command preparation or console processing. FIRST_VERSION remains
+a delivery milestone, not the limit of the functionality to port.
+
+ClearShell is already modular: classes, interfaces and wrappers define the
+boundaries even when collected in one large source file. Port and test those
+logical modules; file size is not evidence of a monolithic design. The owner
+identifies the editor (provided there by an Android library), short-message
+windows and system menus as the main gaps without reusable application-owned
+implementations. This is a reference inventory, not a claim that the L1 port
+is already complete or tested.
+
+Design the eventual Message boundary now: each module has an explicit owner,
+inputs/results and ordinary callable operations. Mutable module state belongs
+to that owner. Ordinary local Message delivery transfers independently owned
+payload storage without cloning it; copying requires an explicit operation.
+Keep native OS handles with their owner and isolate platform calls. A module is
+not automatically a Message or a thread; several modules may share one owner.
+Single-owner tests may call operations directly. Later Message handlers invoke
+those same operations after delivery, without rewriting the business logic.
+
+For M1...Mn writing M0, send the complete operation to M0's FIFO; M0 executes it
+serially. No application locks, extra parent grants or shared foreign pointers.
+Special order uses an explicit sorter/handler, not a changed base FIFO. See
+Lingvamyxa_spec.txt 19.29.6 and PROCESS_SEAM.txt sections 6-7.
+
+Track each bounded port task by reference source/method, applicable owner delta,
+module/API and behaviour tests. Missing Message transport is an integration gap,
+not a reason to stop unrelated modules or add a temporary C concurrency scheme.
+Do not claim concurrent app acceptance from direct-call tests; that requires the
+verified runtime and responsive UI/parallel-job checks in PROCESS_SEAM.
+
+Next port priority (owner, 2026-09-11): after the current bounded calculator
+syntax module, implement the file manager's original file operations and all
+button/panel behaviour. Preserve ClearShell algorithms and ordering where no
+current app delta overrides them. Inventory and reuse existing modules rather
+than overwrite them; test each bounded operation and then wire its action.
+
+Button fidelity clarification (owner, 2026-09-11): port the ClearShell buttons
+literally: inventory, labels, ordering and actions, including App and MP3.
+The established app-specific rendering, layering and scrolling deltas still
+apply; literal port does not restore Android system-widget layout. F1 Help
+is the explicitly recalled added control, not an exhaustive whitelist.
+The point is to reuse the already implemented reference behavior, rather than
+spend time designing it again. Extra buttons are not important enough to block
+the port or require a separate approval/provenance audit. Keep implementing
+the existing functionality, subject to the established app-specific deltas.
+
+Current queued OpenCode sequence: nested same-app short-message window,
+then App/shortcut adapters, then MP3/audio adapters. These bounded slices
+continue the file-manager/button port; they do not replace its remaining work.
+
+An action whose function is not yet implemented opens a nested instance of the
+same reduced application interface: text "нет функции" and one dismiss button
+are enough. Appearance may be minimal; nesting and self-reproduction must work.
+Do not substitute an OS dialog, unrelated popup framework, console-only warning
+or silent no-op. This also applies while the full panels are being connected.
+
+
+2. The deltas established so far
+
+INCOMPLETE. The language owner began listing differences and the list is not
+finished; these are the ones fixed so far. Add to it rather than deducing new
+differences from silence.
+
+Current cross-element map (details have one owner, not duplicate definitions):
+  UI_MODEL7 / BACKEND_SEAM10.5-10.8: even physical cells, shared text/UI font,
+    upper grid inset by half a text cell; mouse coordinates in half-cells.
+  DRAWING5.4 / UI_MODEL5: one moving double-box focus frame, preserving
+    underlying colour/alpha; not a second tile family or per-button decoration.
+  UI_MODEL6: eight pointer arrows from last nonzero displacement, initial
+    down-right; no smoothing/latch. Font fallback and contrast remain open.
+  FIRST_VERSION: file-backed console, cursor below the overlay, F1 Help first;
+    mode0.1.2 is a milestone, not removal of the full file-manager feature set.
+  PROCESS_SEAM6-7: jobs become isolated Message participants rather than shared
+    Java closures; current parent/child close and completion rules follow the
+    current Lingvamyxa specification, not the superseded initial API ticket.
+
+2.0. Reuse behaviour and algorithms; replace platform-specific presentation
+
+Port ClearShell's behaviour, algorithms, wording, colours and layout subject to
+the application deltas. Replace Android widgets and platform-specific plumbing
+with the application's own components, not a second UI framework.
+
+Owner clarification, 2026-09-11: ClearShell's calculator is fully its own
+implementation. Port it directly, including its current computation logic, and
+test it now. Keep that logic behind a callable
+module boundary so the L3 interpreter can later replace the computation core
+without replacing the calculator interface. This supersedes the earlier blanket
+instruction not to port its internals; L3 readiness must not block this module.
+
+Owner correction, 2026-09-11: the reference's conversion of decimal literals
+through Double.parseDouble is a BUG, not behaviour to preserve. Use the core's
+C decNumber backend from third_party/decNumber.zip for calculator decimal
+values, direct text conversion and arithmetic. Do not implement a second
+decimal library or replace decimal operations with double/fixed epsilon.
+Keep the reference arithmetic precision/rounding policy unless separately
+changed; test 0.1+0.2=0.3 and 9007199254740993+1=9007199254740994. Functions that
+currently use binary Math need an explicit numeric contract; this correction
+does not silently make a binary implementation decimal-accurate.
+
+Only the editing-window implementation is missing from the reusable reference:
+it delegates editing to an Android library. The required replacement is simple
+file editing with a cursor, not a new full-featured editor framework. Reuse the
+file-backed text/cursor work; FIRST_VERSION specifies character wrapping, not
+word wrapping. The owner's recollection about wrapping in the Android editor
+is tentative, not a new rule cancelling that documented desktop behaviour.
+Short-message windows and menus should be nested windows
+of this same application, built from its existing buttons and lists, rather
+than separate native dialogs/menu systems. See UI_MODEL section 1. Their event
+routing and state use the same application model and eventual Message ownership.
+
+2.0.1. Everything visible becomes pseudographics - "pseudo-pseudographics"
+
+In ClearShell a button IS a system widget. Here it is DRAWN: characters in
+cells, through the one drawing API. So what ports is the button's appearance and
+geometry, never the widget.
+
+That needs no new drawer primitive - a button is a framed label, which is text
+plus pseudographics - and it must not be allowed to grow one. See DRAWING.txt:
+if the text layer could not accept the call, it does not belong in the drawer.
+
+It does have one consequence that is easy to miss. Android gives ClearShell
+hit-testing for free: a view knows it was touched. A DRAWN button knows nothing.
+So mapping a click to a button is OUR work, and it is why the backend seam
+reports mouse position in CELL coordinates rather than pixels - the backend
+converts once and every consumer agrees.
+
+2.1. Rendering
+
+  ClearShell    Android widgets draw the text; the output lives in a system
+                editing widget and is saved by a button
+  here          two CELL GRIDS drawn by us, one drawer for both, glyphs from
+                the system font used pixel for pixel and never scaled.
+                See Mixa_Manager_RENDERING_DOCTRINE.txt
+
+2.2. The console
+
+  ClearShell    output kept in memory with head, line and tail limits; the
+                middle is dropped when a command is noisy; there is an editing
+                widget behind it
+  here          the scrollback IS A FILE. There is no editing widget to hold
+                it and we render it ourselves anyway. See FILE_SEAM.txt
+
+2.3. Layer arrangement
+
+  ClearShell    text input attached at the TOP; beneath it, the camera image
+  here          Norton-style: input on the BOTTOM line, output scrolling
+                upward, and the panel layer semi-transparent OVER the console
+                so the output stays readable beneath it.
+                That is the STEADY state. The console is FILE-ANCHORED: line one
+                is drawn at the top and the view follows the cursor, so an empty
+                file puts the cursor at the TOP and nothing is pinned to the
+                bottom row until the file outgrows the screen - FIRST_VERSION 5
+
+2.4. The button panels
+
+  ClearShell    the application panel is at the top
+  here          the application panel LIES AT THE BOTTOM, on the upper layer,
+                because that is where a Norton-style command line already is.
+                It is not a band below the console: the console's text screen
+                runs full height underneath it and the cursor can pass beneath
+                the panel - UI_MODEL 1.1
+
+  unchanged     the per-list panel is that list's header, and the header is
+                STICKY - scrolling the list does not carry it away
+                Each button panel has its OWN horizontal scrolling, independent
+                of other button panels and of the shared list-row viewport.
+
+2.4.1. What drives the panel's horizontal scroll
+
+  ClearShell    a touch gesture, independent of anything - there is no highlight
+                to be independent of, a finger lands on the button it wants
+  here          moving the HIGHLIGHT. No separate scroll action on the keyboard:
+                the highlight moves to the next button and the panel scrolls to
+                bring it in. The mouse may move the view alone, and then any
+                highlight movement brings the view back - UI_MODEL 5.7
+
+2.5. Vertical scrolling
+
+  ClearShell    the whole panel moves vertically - a concession to a narrow
+                phone screen
+  here          each list scrolls inside its own bounds and keeps its own
+                position, with its own vertical scrollbar; one shared
+                horizontal scrollbar for the row of lists
+
+2.6. Graphics
+
+  ClearShell    Android views, images, a camera preview
+  here          NO graphical elements at all. Everything is pseudographics in
+                cells. Images are a future third layer, a plain buffer, and are
+                kept out of the drawer on purpose. See DRAWING.txt
+
+
+2.7. Keyboard: FAR Manager, not ClearShell
+
+Take as many hot keys from FAR Manager as apply, and invent the rest.
+
+So there are TWO reference sources and they do not overlap:
+
+    ClearShell    appearance, layout, behaviour, feature set
+    FAR Manager   key bindings
+
+Where they conflict, that split decides it: the keys come from FAR, the look
+from ClearShell. Where a FAR key implies a feature ClearShell does not have,
+that is one of the things we invent - and it gets written down here, like every
+other delta.
+
+2.8. Focus and highlighting: absent from the source, must be built
+
+ClearShell has no highlighting, and that is not an omission - it is a touch
+interface, where there is no "current element" to show. FAR and Norton are
+KEYBOARD interfaces: something is always current, and focus moves between
+elements. That difference is not a detail; it is a whole mechanism the port
+cannot copy because the source does not contain it.
+
+So we build:
+
+    a focus model - which element is current, and how focus moves between
+      lists, items, buttons and panels
+    a highlighted rendering for ANY element, not only list rows
+
+What it looks like was settled on 2026-09-10 by the language owner: a
+double-line box frame - U+2554 U+2557 U+255A U+255D and U+2550 U+2551 - drawn
+OVER the highlighted element in white, leaving the element's own coloured fill
+untouched beneath it. One frame, moving with focus. See DRAWING.txt 5.4.
+
+It needs NO new drawing capability, which this paragraph said originally, then
+retracted, and now says again. The retraction was mine and it was wrong: I had
+designed a procedural tile family for the border and duly recorded that the
+compositor would have to grow. The owner then named the six double-line box
+characters, all of which mixa_draw already emits and already merges at
+junctions, and the capability turned out to have been there the whole time.
+
+One thing genuinely is new, and it is small: the highlight writes the FOREGROUND
+of the cells it covers and must leave their background alone, so the button
+keeps its colour under the frame. Every other drawing call in the API sets both.
+DRAWING.txt 5.4.2.
+
+Preserve the underlying ClearShell fill when drawing the new focus frame.
+Do not confuse ordinary c* text alpha240 with b* background alpha96; the
+colour-role mapping and actual selected-state exceptions are in UI_MODEL3/5.4.
+
+
+3. What is ported unchanged, and must not be redesigned
+
+3.1. The layout METHOD
+
+One quantity is MEASURED - the height of real text in the real font - and
+everything else is an integer shift of it: button height, width at 1.75 of the
+height, margin at a thirty-second. No pixel constants and no fractions.
+ClearShell.java, init(), around line 697.
+
+Our measured unit is the CELL, so the translation is direct: every dimension is
+an integer number of cells.
+
+3.1.1. The exact source lines, so nothing has to be re-derived
+
+Mikhail, 20.09: "все ширины и расчеты позиций [берутся] в прототипе на java" --
+so they are TAKEN from there and not invented here, and the file that has them is
+ClearShell.java:706-711:
+
+    hb     = button.getMeasuredHeight() + (hb >> 2);   // measured, plus a quarter
+    wb     = (hb << 1) - (hb >> 2);                    // 1.75 * hb
+    margin = hb >> 5;                                  // a thirty-second
+    wb2    = wb >> 1;   hb2 = hb >> 1;
+
+hb is the measured height of a REAL BUTTON.  What is measured is TEXT, and text is
+drawn in a font -- BUT THE FONT IS NOT TAKEN FROM THE PROTOTYPE.  Mikhail, 20.09:
+"шрифты из прототипа на java не берем!  По шрифтам была подробная документация --
+документация в приоритете над прототипом".
+
+The fonts are governed by the documentation, and it is explicit:
+
+    BACKEND_SEAM 9.1   NEVER RESIZE THE FONT.  Take the glyph at whatever native
+                       pixel size the system gives and use it pixel for pixel;
+                       compute fractionally, then snap.  "If only one size is
+                       available, use it.  A larger window does not mean larger
+                       letters - it means MORE letters."
+    BACKEND_SEAM 9.2   the cell is a CONSEQUENCE of the font's native metrics, not an
+                       input: "The caller chooses how many cells fit; it does not
+                       choose how big a cell is."
+    BACKEND_SEAM 10.3  choosing a size: the available size NEAREST to the target.
+    BACKEND_SEAM 10.6  the pointer's font: the text size or slightly above, by 10.3.
+    BACKEND_SEAM 10.8  the CELL (not the font) is ours, and it is even, one pixel
+                       larger where the system gave an odd extent.
+
+AND THE FONT IS MONOSPACED -- a CONSOLE font (Mikhail, 20.09: "моноширинные разумеется --
+консольные").  A grid of cells only exists because the letters are all one width; a
+proportional face would make "how many cells fit" meaningless.  mixa_backend_win32
+therefore walks six monospaced faces -- MS Gothic, NSimSun, Consolas, Cascadia Mono,
+Lucida Console, Courier New -- and for each measures real text, taking the whole size
+nearest the target.  Nothing is stretched to fit: the system's glyphs are used as they
+come.
+
+The port follows those: mixa_backend_win32 asks the system for the monospace size
+nearest its target (mixa_win32_pick_font(..., 16U, ...)), shares that one HFONT
+between text and upper ("one font on both layers"), asks for the pointer one step
+above the cell, and rounds the CELL up to even -- the font is never scaled.
+
+The Android resources that arrived with the full project on 2026-09-20 carry sp
+values for the prototype's widgets (res/values/styles.xml: fontButton 11sp,
+fontSelButton 9sp, font0..font3 14sp).  They are recorded here as part of the
+prototype and are NOT a source for the port's fonts -- see the rule above.  The
+colours in res/values/colors.xml are the Android Studio template's defaults and
+have nothing to do with the interface; the interface's colours are the java fields
+at 635-691 (3.3).
+
+and the width of one button from its own label, ClearShell.java:510-520 (normalize):
+
+    length < 4   ->  w = hb                     (UNLESS the label holds < or >)
+    length < 3   ->  hb, and the label is additionally enlarged
+    otherwise    ->  w = wb - (wb >> 2)         // 1.3125 * hb
+
+What follows from this, and what the port therefore does:
+
+  * wb is DERIVED from hb, never passed in: mixa_button_panel_init computes it
+    with the same shift arithmetic, and nothing else sets it.  A caller states
+    hb; the panel derives the rest.  (This was mis-read once: a probe reported
+    "wb is never set" because the probe itself overrode the derived value --
+    the derivation was there from the start.)
+  * the source MEASURES hb (a real button's height); the port's hb is a count of
+    CELLS, since the cell is our measured unit (3.1).  Everything else in the
+    panel -- width, margin, separator advance, panel extents -- stays the same
+    integer shift of it, exactly as in the source;
+  * the micro-gap of 5.1 is the same margin (hb >> 5); where that shift would
+    give zero at our cell sizes, the port floors it at one pixel, and that floor
+    is the port's, stated in mixa_tiles.
+
+The rule, stated once: NO pixel constant and NO fraction is introduced in the
+port for anything the source computes.  If a dimension is missing here, it is
+missing in the source too and the answer is to go and read it -- not to pick a
+number that looks right.
+
+3.2. The button panel algorithm
+
+ClearShell.java, freshLayout(), around line 1772:
+
+    buttons are arranged in EXPLICIT LINES, not auto-wrapped
+    within a line   x += button width + margin
+    between lines   y += button height + margin
+    a null entry is a SEPARATOR, advancing x by half a button height
+    panel height is max(y + button height), width is max(x + button width)
+    the panel sits inside a HORIZONTAL SCROLL
+
+The last point is the one to port carefully, because it is the reason the
+interface survives any screen. When the buttons do not fit, they are NOT
+shrunk, NOT re-wrapped and NOT dropped - the panel SCROLLS. Overflow is a
+scrolling problem, never a scaling problem, which is the rendering doctrine
+appearing again in a place that has nothing to do with fonts.
+
+3.3. Colours
+
+Preserve the source palette and per-element background opacity, as reconfirmed
+with Android screenshot Screenshot_20260909-151047.png on2026-09-10. Ordinary
+backgrounds are alpha96, not240; the latter is generally TEXT alpha. See
+UI_MODEL3/5.4 for exact source pairs. The owner confirmed opaque glyphs on
+2026-09-10: preserve text RGB, force alpha255; only backgrounds are translucent.
+The screenshot's camera-composited pixels are not RGBA
+constants. UI_MODEL's visual-reference note maps the panel/scroll/layer deltas.
+
+3.4. Functionality
+
+The feature set is ClearShell's and is to be read from its source rather than
+guessed: roots list, name filter, sorts including by time, zip archives browsed
+as directories, rename, remove selected, create, save and save-as, load, run OS
+command, viewers, links, help. This document does not restate it - it names
+where it lives.
+
+
+4. Standing instruction: the ORDER to consult
+
+Stated by the language owner after I invented a cursor rule that the old
+document already answered differently. There are several sources now, and
+without an explicit precedence I will keep inventing where an answer already
+exists.
+
+Consult in this order, and stop at the first that answers:
+
+    1. THE NEW DOCUMENTS in this directory - BACKEND_SEAM, UI_MODEL, DRAWING,
+       FILE_SEAM, SELECTION_MODEL, CODING_RULES - and
+       Mixa_Manager_RENDERING_DOCTRINE.txt at the root.
+
+    2. Old_Mixa_Manager_Qt_model.txt. IF IT IS NOT IN THE NEW DOCS, LOOK IN THE
+       OLD ONE. Its sections 1 to 14 remain authoritative for the visual model,
+       and it answers more than it looks like it does - composition order, glyph
+       and Unicode requirements, input levels, resize, clipboard, mouse.
+       Everything about Qt as the renderer is superseded; the model is not.
+
+    3. ClearShell's source, in clearshell_reference/, for behaviour and features.
+
+    4. FAR Manager, for key bindings.
+
+    5. If no source answers a behaviour/product choice, ask the owner. Once
+       agreed, write the delta in its subject document and link it here.
+       Implementation choices within that contract need no new UI semantics.
+
+4.1. And when you diverge, say that you diverged
+
+Finding an answer in an older source and choosing differently is legitimate -
+the layers have changed since, so some of it no longer fits. What is not
+legitimate is diverging silently, which leaves two documents contradicting each
+other and no way to tell which was considered.
+
+UI_MODEL 1.0.3 is the worked example: the old model draws the cursor above the
+overlay, we now put it in the lower layer, and the section says so and says why.
+
+5. Observations from reading the source
+
+The source is now in the repository at mixa_manager/clearshell_reference/ - Java
+only, Android manifest and res/ deliberately omitted. Line numbers below are
+from that copy and were correct when written; if one has drifted, the name is
+what to search for.
+
+Recorded here at the END of this document, and appended to rather than
+rewritten, so the reasoning stays with the port that used it.
+
+5.1. Layout is derived, never constant
+    com/mtk/shell/ClearShell.java  init(), ~697
+
+One quantity is MEASURED - a real Button, real font, real text, then
+getMeasuredHeight(). Everything else is an integer shift of it: height plus a
+quarter, width (h<<1)-(h>>2), margin h>>5, and 1.5 of the longer screen side.
+There is no pixel constant and no fraction anywhere in it. This is the reason it
+works from a tablet to an mp3 player, and it is the rendering doctrine written
+before we wrote it down.
+
+5.2. Overflow is a SCROLLING problem, never a scaling one
+    com/mtk/shell/ClearShell.java  freshLayout(), ~1772
+
+Buttons sit in EXPLICIT LINES, not auto-wrap. Inside a line x += width + margin;
+between lines y += height + margin; a null entry is a separator advancing
+h>>1. Panel height and width come from the maxima. The panel then sits inside a
+horizontal scroll - so when buttons do not fit they are not shrunk, not
+re-wrapped and not dropped. They scroll.
+
+5.3. The row of lists IS the path
+    com/mtk/shell/StorageList.java  initParent() ~287, up-operation ~185,
+    dirs.get(position) ~468
+
+dirs holds the chain from the disk root to the CURRENT directory - the last
+element is where you are, not the parent - and positions holds, per level, the
+index of the entry descended through. Going up pops the rightmost list and
+restores its remembered cursor.
+
+5.4. There is no ".." and the parent concept is still richer than ".."
+    com/mtk/shell/ClearShell.java  getView() ~4889
+
+The literal string does not occur anywhere in the source. Instead every list
+opens with an ancestor block: isParent is position < dirsSize(), so the first
+rows are the whole path - roots entry, disk root, down to the current directory
+- before the directory's own contents. Directories then files.
+
+I searched for the string, failed to find it, and concluded the mechanism was
+absent. It was not. Do not repeat that: absence of a spelling is not absence of
+a concept.
+
+5.5. The ancestor gradient is COMMENTED OUT
+    com/mtk/shell/ClearShell.java  ~9452
+
+A scale factor shading ancestor rows by depth exists but is disabled. Do not
+port it as live behaviour without asking - "fixing" a deliberate omission is a
+way to make the port wrong while looking careful.
+
+5.6. Command execution, and what the console log needs
+    com/mtk/shell/ClearShell.java  ~13700 and ShellOutputCapture ~13464
+
+The command is wrapped in a script that prints a MARKER line carrying exit
+status and working directory, tab separated. stderr is merged into stdout, and
+stdin is closed so that a command like cat does not wait forever. Output is then
+captured with head, line and tail limits, and the MIDDLE IS DROPPED when a
+command is noisy - which is what we do not port, because our scrollback is a
+file. The marker line we do port; see FILE_SEAM.txt.
+
+5.7. mtk/map and com/mtk/map are a LIBRARY, not shell code
+
+They are a published one - OverlappingTreesPlainMap, shipped as mtkmap-*.jar.
+Item, Tag, Array and the tables live there. Item is worth reading for its own
+sake: Named, IValue, IPointer, ISrc, IStorage, children addressed by name,
+pointers, tags - which is recognisably the same ontology as Lmx, arrived at
+independently in Java.
+
+5.8. The selection model
+    com/mtk/shell/FSync.java
+
+Documented separately and at length in SELECTION_MODEL.txt, including the
+consolidation loop that I twice suspected of being a defect and which testing
+showed to be correct and load-bearing.
+
+5.9. Audio playback and the "MP3" button
+    com/mtk/shell/ClearShell.java (~198-280, ~7634-8120)
+    com/mtk/shell/AudioServiceBinder.java
+
+The MP3 button is a distinct subsystem; it is not part of the directory/console
+user experience. It owns its own audio device, its own playlist, and its own
+poll loop. Ported slice: mixa_audio (see mixa_audio.txt; ticket 20260911-154950).
+
+What maps directly:
+* Playlist state machine (positions, old position, mode, loop flag, next/prev
+  with wrap when looping) -> the portable controller's MixaAudio state machine
+  in mixa_audio.lm1. next/prev move one position and the play_* helpers reset
+  to the start of the file, matching the button-intent even though the binder's
+  internals bump the track by one second.
+* End-of-track behaviour: the binder listens for onCompletion; we have no
+  message loop in this slice, so the controller exposes mixa_audio_poll(),
+  which queries the device's 'status mode' and advances when playback stopped.
+* Codecs: ClearShell rides the Android MediaPlayer; the desktop port rides the
+  Windows MCI layer (mixa_audio_win32.lm1, linked -lwinmm). WAV is guaranteed
+  via the waveaudio MCI driver; MP3 requires the mpegvideo MCI type and thus a
+  system MP3 renderer. Any machine lacking one will fail at load time with
+  MIXA_AUDIO_ERR_BACKEND (honest, not silently silent).
+
+Dropped / deferred (deliberate):
+* System-level audio (MediaSessionManager, audio focus, media buttons, the
+  Android service lifecycle) has no desktop equivalent and is not ported.
+* Notifications / lockscreen / NowPlaying surface: out of scope for the slice;
+  a UI hook-up ticket is pending (main executable still has no audio wiring).
+* The binder's one-second pre-roll when resuming from stop is not carried into
+  the controller; stop()/resume semantics are exact-position instead, which is
+  what the desktop "MP3" button actually shows.
+
+L1 port notes are recorded in mixa_audio.txt under "Known L1 findings".

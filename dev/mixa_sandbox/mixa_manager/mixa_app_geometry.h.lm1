@@ -1,0 +1,31 @@
+include: "<stddef.h>"
+
+# mixa_app_geometry.h.lm1 -- ГЕОМЕТРИЯ СЕТОК ПРИЛОЖЕНИЯ (UI_MODEL 7.1, BACKEND_SEAM 10.5).
+#
+# Отдельный заголовок, потому что константы нужны ДВУМ сторонам: контроллеру (он их
+# применяет) и пробам (они по ним считают клики и строки).  Контроллер predef'ит
+# mixa_app_controller_impl.h.lm1, пробы -- mixa_app_controller.h.lm1, и класть одно и
+# то же в оба значило бы дублировать define; поэтому оба predef'ят ЭТОТ файл.
+#
+# ЧИСЛА -- ПЕРЕВОД ДОКА, А НЕ ВЫБОР:
+#   * «LOWER -- the text screen. cols x rows, origin at 0,0.  Unchanged - it is the full
+#     screen and everything else is measured against it»  -> 24x80;
+#   * «UPPER -- the UI.  (cols-1) x (rows-1) cells, origin at +cw/2, +ch/2.  Shrinking by
+#     one is what makes the offset fit: pushed half a cell right and down, a full-width
+#     grid would hang half a cell off the far edge»  -> 23x79;
+#   * смещение в пикселях применяет краситель и получает его ПАРАМЕТРОМ: BACKEND_SEAM 10.5
+#     «The offset and the shrink are the application's layout, computed from metrics the
+#     seam already reports.  The seam is not told where the upper layer sits, because it
+#     does not composite».
+#
+# ПОЛОСЫ ВНУТРИ ВЕРХНЕГО СЛОЯ (23 строки), снизу вверх, как их кладёт приложение:
+#   строка 0            -- консольная строка/заголовок списка (липкий, см. UI_MODEL 1.1);
+#   строки 0..20        -- список: заголовок + 20 записей;
+#   строка 21           -- строка действий (Delete / Copy Here);
+#   строка 22 (последняя) -- панель приложения, F1 первой кнопкой слева.
+define: MIXA_APP_TEXT_ROWS 24U
+define: MIXA_APP_TEXT_COLS 80U
+define: MIXA_APP_UPPER_ROWS 23U
+define: MIXA_APP_UPPER_COLS 79U
+define: MIXA_APP_FMPANEL_ROWS 21U
+define: MIXA_APP_FMPANEL_ACTION_ROW 21U

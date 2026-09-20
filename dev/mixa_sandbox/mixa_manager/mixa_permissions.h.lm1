@@ -1,0 +1,28 @@
+include: "<stddef.h>"
+
+# mixa_permissions.h.lm1 — AppPermissionsActivity desktop port
+# (ticket 20260918-125450).
+#
+# Android AppPermissionsActivity is a large Settings-routing UI over
+# PackageManager / special permissions (MANAGE_EXTERNAL_STORAGE, overlay,
+# notification listener, exact alarm, …). There is no honest 1:1 desktop
+# equivalent: Win32 desktop processes are not gated by Android runtime
+# permissions.
+#
+# Desktop policy (documented gap, not a fake Android layer):
+#   permissions_check   — returns MIXA_PERMISSIONS_GRANTED for any non-empty name
+#   permissions_request — no-op that returns MIXA_PERMISSIONS_OK (already granted)
+#
+# Callers that need real OS elevation (UAC, ACL) must use a dedicated
+# Win32 seam later; do not pretend this module talks to Android Settings.
+
+define: MIXA_PERMISSIONS_OK 0
+define: MIXA_PERMISSIONS_DENIED 0
+define: MIXA_PERMISSIONS_GRANTED 1
+define: MIXA_PERMISSIONS_ERR_ARG 2
+
+prototype:
+    fn: mixa_permissions_request (const: @(char name_utf8)) int
+    fn: mixa_permissions_check (const: @(char name_utf8)) int
+end: prototype
+

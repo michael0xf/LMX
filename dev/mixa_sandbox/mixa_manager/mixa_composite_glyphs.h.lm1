@@ -1,0 +1,17 @@
+predef: "mixa_manager/mixa_composite.h.lm1"
+predef: "mixa_manager/mixa_backend.h.lm1"
+
+# Header unit for the REAL glyph painter -- the counterpart of mixa_composite, which is the
+# HEADLESS STUB ("glyphs are always opaque full-cell stub fills with palette[fg]", its own
+# comment).  Both were always in the tree; the difference is which one a frame is built with.
+#
+# WHY THIS HEADER EXISTS (measured 19.09): the application built its frame through the STUB --
+# `mixa_console_window_present` called `mixa_composite` -- while `mixa_composite_glyphs` was
+# called only by tests.  The result was a window painted in solid blocks: a cell holding 'A'
+# became a full-cell rectangle of the foreground colour, so a screen of text looked like a blank
+# page (the console's own roll of the frame: `nonzero=983040 white255=935808 of 983040`).
+# A production path takes the glyph painter; only headless/parity work takes the stub, and it
+# takes it deliberately.
+prototype:
+    fn: mixa_composite_glyphs (@: MixaBackend backend; const: @(MixaTextRect text_rect); size_t: text_cw; size_t: text_ch; const: @(MixaTextRect upper_rect); size_t: upper_cw; size_t: upper_ch; size_t: upper_ox; size_t: upper_oy; @: MixaU8 out_rgba; size_t: out_size; size_t: width; size_t: height) int
+end: prototype

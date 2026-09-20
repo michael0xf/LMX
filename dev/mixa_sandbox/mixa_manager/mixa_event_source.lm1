@@ -1,0 +1,39 @@
+predef: "mixa_manager/mixa_event_source.h.lm1"
+include: "l2src/lmx_message.h" "<stdlib.h>"
+
+# Port of mixa_event_source.c (ticket 20260918-063608).
+# Packs a small event (kind + param) into LmxMsgEnv and sends via host-ingress
+# LmxMsg API. No C: receiver.
+# L1 `\` always emits C `->`, so the envelope is a heap @: LmxMsgEnv (same
+# pattern as vendor lmx_message.lm1's lmx_msg_stop) — not a stack aggregate.
+
+fn: mixa_event_source_emit (@: LmxMsgRuntime rt; LmxMsgAddr: target; int: event_kind; int: param) int
+    @: LmxMsgEnv env
+    []: uchar buf 8
+    size_t: n
+    int: st
+
+    if: rt = 0 || target = 0U
+        return: -1
+
+    env: (cast: (@: LmxMsgEnv) c.calloc(1U, c.sizeof(c.LmxMsgEnv)))
+    if: env = 0
+        return: -2
+
+    buf[0]: (cast: (uchar) (event_kind & 255))
+    buf[1]: (cast: (uchar) (param & 255))
+    n: 2U
+
+    env\id: (cast: (unsigned) event_kind)
+    env\correlation: 0U
+    env\reply_to: 0U
+    env\kind: c.LMX_MSG_KIND_ITEM
+    env\number: param
+    env\bytes: @ buf[0]
+    env\n: n
+
+    st: lmx_msg_send(rt, 0U, target, env)
+    c.free((cast: (@: void) env))
+    if: st != c.LMX_MSG_OK
+        return: -2
+return: 0

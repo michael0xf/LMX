@@ -1,0 +1,973 @@
+What the Lingvamyxa spec requires of Mixa Manager
+==================================================
+Read 2026-09-11 against Lingvamyxa_spec.txt at 82a1901 (15320 lines).
+
+This is a DIGEST FOR THIS APPLICATION, not a summary of the language. It records
+what the Message model obliges us to do and what it forbids, with line numbers,
+so the app does not have to re-derive it. The spec is the authority; where this
+file and the spec disagree, the spec wins and this file is stale.
+
+SCOPE OF THE READING, stated so nobody over-trusts it. Read closely: 19.28.R2.1
+through R2.6 (11157-11400), 19.29.6 Running Message (12106), 19.29.7 Boundary
+(12209), 19.29.7.1 the implementable slice (12237-12623) in full, 19.29.7.2
+(12623), 19.29.8 handoff through today's diff, and 19.32.10-21 crypto by
+heading. NOT read: the language core 0-19.27, 19.28.10 World Wide Mix, and
+sections 20 and 21 beyond what the Message text cites.
+
+
+1. THE ONE THING THAT BINDS US MOST
+
+19.28.R2.2, near line 11225:
+
+    "Throughout the language core and complete standard distribution, low-level
+    synchronization is used only inside the Message mechanism... Other
+    components, including Mix, builders and bundled applications, coordinate
+    through Messages, not their own locks, atomics, shared mutable management
+    tables or private worker schedulers."
+
+mixa_manager is a bundled application. So we get no mutex, no atomic, no shared
+management table, no private worker pool of our own - ever, not merely for now.
+Everything concurrent we want must be Messages.
+
+Reinforced at 19.28.R2.6: "A C worker pool owning a shared process-wide Message
+registry is forbidden", and in 19.29.7.1 the exec-host prototype
+(LMX_MSG_EXEC_HOST_V0.txt) is called "evidence, not the accepted architecture"
+and "must not be promoted to the application as-is."
+
+
+2. THE MESSAGE API IS NOW REAL
+
+It was not callable when PROCESS_SEAM was written. It is now:
+
+    stg/l1_baseline/l2src/lmx_message.h        245 lines
+    stg/l1_baseline/l2src/lmx_message.lm1      implementation
+    lmx_message_selftest.lm1                   selftest
+
+    lmx_msg_runtime_new / _delete
+    lmx_msg_create(rt, parent, create_id, init, n, out)
+    lmx_msg_send(rt, from, to, env)
+    lmx_msg_stop(rt, from, to)
+    lmx_msg_end_turn(rt, who, success)
+    lmx_msg_pump(rt) / _recv(rt, who, out) / _env_release
+    lmx_msg_fail / _state / _inbox_n / _init_copy
+    lmx_msg_set_now / _poll / _drive
+    lmx_msg_path_n / _path_seg / _child_n / _child_at
+    lmx_msg_runtime_shutdown
+    lmx_msg_host_post / _host_drain / _host_wait     host ingress V0
+    lmx_msg_exec_bind                                exec prototype - avoid
+
+The spec names us directly at 19.29.7.1: "mixa must not rebuild default gen2."
+
+Two of these are prototypes the spec disowns as architecture. lmx_msg_drive is
+"historical prototype only", a single host loop that must be replaced by
+per-Message lifecycle mechanisms, and lmx_msg_exec_bind belongs to the rejected
+worker-pool sketch. Use create/send/stop/end_turn/pump/recv.
+
+
+3. THE SHAPE OF A TURN
+
+19.28.R2.3 (11302) and 19.29.6 (12106):
+
+    one turn dequeues AT MOST ONE admitted input from the FIFO
+    -> policy combination -> execute an admitted callable
+    -> stage results and outgoing Messages in FIFO order
+    -> common cleanup / publication / scheduling boundary
+
+    no more than one turn of a Message executes at a time
+    serial turns make arena mutation safe with no source-visible lock
+    the C stack is the sole implicit activation history and is NEVER copied
+      into the Message graph automatically
+
+21.10 yield is an activation dirty-only checkpoint. 19.29.7.1: "Staging then
+yield in one turn does not commit." Publication happens at end_turn.
+
+A failed turn discards its staged outbox and does NOT undo external effects
+already performed.
+
+
+4. CREATE, SEND, STOP - the contract we will actually call
+
+create (19.29.7.1, from 12280)
+    reserves a child identity and a DISTINCT INACTIVE ARENA during the parent's
+      turn, and copies initialData into it
+    Mix path = parent path with one integer APPENDED from the parent's child
+      counter. Concatenation, not arithmetic: 34.3 gives 34.3.1 then 34.3.2,
+      and that child's first child is 34.3.1.1. First allocated child is 1.
+    retry of the same (parent, create_id) returns the SAME child and path and
+      consumes no counter value
+    an ABORTED reservation is not reused - a later retry of that create_id gets
+      a new slot and a NEW path segment
+    the child DOES NOT RUN before the creator's successful end-turn publication
+    a failed parent turn releases uncommitted children
+    LmxMsgAddr, the mailbox slot, is NOT the Mix path
+
+send (from 12330)
+    stages a transport-owned COPY of the envelope. No raw pointer, no caller
+      closure, NO UI OBJECT crosses.
+    staging status means only that the sending turn accepted it for its outbox.
+      It is not admission and it is not execution.
+    dedup key is (recipient, sender, id), so two senders' local id=1 do not
+      collide
+    sender staging is invisible to the receiver
+
+stop (from 12363)
+    KIND_STOP is internal close control, NOT KIND_CANCELLED outcome data
+    admission sets a CLOSING FLAG. It does not enqueue handler-visible work,
+      does not mark STOPPED, does not free an executing arena.
+    the target finishes its current turn, then at end_turn exits its loop and
+      requests the same orderly close of its children
+    ordinary end_turn WITHOUT a close request does not terminate the Message
+
+envelope fields: id, correlation (19.31.4 - the result or failure is an ordinary
+Message whose correlation equals the request id), replyTo.
+
+
+5. WHO OWNS A COPY JOB - and what the spec actually says
+
+An earlier revision of this section said flatly that a long copy is NOT a child
+of the window. Mikhail corrected it: copying IS a child of the window, and if
+the window wants to hand the job to some task owner it does that through a
+Message and closes. He is right, and the spec is narrower than I made it.
+
+19.29.7.1, near 12376, is CONDITIONAL on intent:
+
+    "Jobs MEANT TO OUTLIVE A UI are created under an explicitly longer-lived
+    controller; the UI is only a reply target."
+
+It says nothing against a copy being the window's own child. That is the
+ordinary case, and the natural one: the copy is the window's business, it
+reports to the window, and it goes when the window goes.
+
+What the spec does refuse is the OTHER thing - expecting a child to keep running
+after its parent closed. In the same stop() paragraph:
+
+    "there is no orphan-continuation exception for copy jobs"
+
+A closing parent asks its direct children to close at its end_turn, and a child
+whose parent vanished requests its own close through the liveness poll. So
+"child of the window" and "survives the window" are simply incompatible; nothing
+grants copy jobs an exemption.
+
+5.1. So the decision is made AT CREATE TIME, by whoever creates
+
+    window creates the worker        the copy is the window's, and closes with it
+    controller creates the worker    it outlives the window; window is replyTo
+
+Both are legitimate. Which one to use is an application choice about what the
+job is FOR, not a rule the language imposes.
+
+5.2. Handing off later: the spec has no operation for it
+
+Mikhail asked whether the spec really says that, and how the author intends a
+Message to be forwarded at all when its whole control surface is two flags. The
+honest answer, after re-reading the text rather than my note about it:
+
+THE SPEC DOES NOT SAY RE-PARENTING IS DEFERRED. It does not mention re-parenting
+at all. An earlier revision of this section claimed the deferred list covered
+it; that was wrong. The deferred list (19.29.7.2, verbatim) is ARENA and GRAPH
+work:
+
+    graph-copy and graph-reference retargeting; join/splice of already-running
+    live arenas; codec/wire serialization; multi-owner split/link as addressed
+    request/result; activation of an already-running Message; full incoming
+    LMX-text/arena ownership transfer
+
+Those are about MEMORY. A parent-child link is a different thing entirely - by
+12315 it is two authorities: "the child's authority to observe parent liveness
+and the parent's authority to request stop". Merging arenas and reassigning
+supervision are not the same operation, and I treated one as evidence about the
+other.
+
+What IS true is narrower and, for our purposes, the same in effect: no operation
+exists that moves a RUNNING Message anywhere.
+
+    create      makes a new child under the creator
+    send        moves an ENVELOPE, not a Message
+    stop        closes; it does not relocate
+    adoption    exists only for a NON-EXECUTING Message (19.29.7) and for a
+                FAILED arena going to its parent (19.29.8)
+    lmx_message.h has no transfer, adopt-running or reparent entry point
+
+And "activation of an already-running Message" is explicitly deferred, which
+closes the one route that might have been read as a transfer.
+
+So a running job today can be closed or left alone. Moving it means re-issuing
+the remaining work to another owner, which the spec supports through "Recorded
+progress may survive separately" - the new owner creates its OWN child and
+resumes from the carried progress.
+
+5.2.1. RESOLVED - the question was mine and it was malformed
+
+Mikhail answered it, and the answer is already in the spec; I had assembled the
+pieces wrongly rather than found a gap.
+
+    A DELIVERED MESSAGE HAS NO PARENT. It writes success=1 and running=0 and
+    joins the receiver's arena. From that moment the parent treats it as
+    delivered and removes it from its list. In normal operation a Message
+    schedules itself; shutting it down on a timeout is force majeure. And a
+    Message closes ITSELF when the parent stops answering its periodic polls.
+
+Verified in the text, 12595-12601:
+
+    "When the child finishes its assigned operation, it sets success=1 and then
+    running=0. This also applies to a DELIVERY-ONLY MESSAGE with no executing
+    thread; its executor marks the completed delivery. The parent's
+    control-state check observes success and removes the child from active
+    assignment/liveness tracking."
+
+with 19.29.7: adoption of a NON-EXECUTING Message at the consuming end-turn
+transfers ownership into the receiver's one logical arena, with stable block
+addresses.
+
+So a running Message is never moved, because nothing needs moving. What travels
+is DELIVERY AS AN ASSIGNMENT: a Message whose job is its own delivery completes
+by arriving, leaves its parent's list, and its storage joins the receiver. No
+parent changes, so the Mix-path objection I raised dissolves with it - there is
+no path to reassign.
+
+Why I got it wrong, since the shape is worth recognising: I was looking for an
+operation that moves a running worker between supervisors. The model has no such
+operation and needs none, and its absence read to me as a missing feature rather
+than as a different design. Absence of an operation is evidence about the model
+before it is evidence about a gap.
+
+5.3. Staging is not completion - this part stands
+
+At 12500:
+
+    "Deliver(Message, target) completes when that delivery finishes; CopyFile
+    (source, target) completes when that file copy finishes. Enqueueing or
+    staging a copy request is not completion of CopyFile."
+
+A progress bar that advances when the request is staged is reporting something
+that has not happened. Per-item progress and failure are KIND_PROGRESS /
+KIND_ITEM payload data, and continue-versus-stop is APPLICATION POLICY carried
+in the request, not a core intrinsic - ours to decide and to write down.
+
+A worker may send KIND_CANCELLED to a UI without shutting the UI down, and
+explicit stop(worker) closes that worker only.
+
+
+6. CONTROL FLAGS - the supervision mechanism, and what it does not prove
+
+19.29.7.1, from 12525:
+
+    every Message starts running=1, success=0, including one with no executing
+      thread
+    uint_fast8_t, belonging to the MESSAGE, not to its arena
+    running means PERMISSION TO CONTINUE, not that an OS thread exists. Zero
+      requests closure for that incarnation and is never reset to revive it.
+    only ACTUAL COMPLETION of the assigned operation sets success=1; on finish
+      the child sets success=1 and THEN running=0
+    the parent's scheduler READS its direct children's flags on each of its own
+      turns - no Message needed for that - and may set a child's running=0 on an
+      emergency deadline without waiting or freeing the child's arena
+    generated code checks the flag on method entry before loading used own
+      fields, on loop backedges, and on method exit. On 0 it aborts to the
+      execution root of that L3 Thread, never terminating an OS thread that may
+      also run the parent or siblings.
+
+What the flags DO NOT mean, spelled out in the spec because it is the obvious
+wrong reading:
+
+    success=0 means success has NOT BEEN OBSERVED, not proof of failure, even
+      when running=0
+    neither running=0 nor running=0 with success=0 proves quiescence or final
+      failure
+    observers must not rely on an indivisible snapshot of both flags, nor infer
+      arena reclamation from either
+    a liveness response (alive) is NOT completion
+    all children reporting DELIVERY success is not an application-result barrier
+
+6.1. L2 STRUCTURE HOSTING - full research record, 2026-09-11
+
+Everything in 6.1.x was read directly out of
+stg/l1_baseline/l2src/l2trans.lm1 (7277 lines), read-only, on the stable
+translator's sources. Nothing here was built or modified; where a claim needed
+running and could not be run, that is said so at the point of the claim.
+
+Reading order for someone picking this up: 6.1.0 for the machinery inventory,
+6.1.1-6.1.2 for what is and is not reified, 6.1.3.1 for the defect, 6.1.3.2 for
+the proposed rule and the verdict.
+
+6.1.0. The machinery, by name
+
+    l2_own_*     the per-field table. name, mi (owning method), ty, host,
+                 fid/fchild (host and index within it), uchild (index under
+                 node when unhosted), live.
+    l2_for_*     the HOST table: node (an LmP0Node pointer), uchild, nkid.
+                 l2_for_find(node) compares that pointer - nothing in the table
+                 is `for`-specific except its name.
+    l2_m_*       per-method, indexed l2_own_off(mi, i): uses, alias, own, ret,
+                 body.
+    l2_scope_*   the lexical scope stack: at[], n, push, pop, host, has.
+    l2_unit_base the next free child index after the layout has run.
+
+    counts, to size any change: 72 references to l2_for_*, of which only 8 are
+    actual `for`-SYNTAX guards; 95 to l2_scope_*; 24 to l2_own_host.
+
+6.1.0.1. Three passes, three entry points
+
+    l2_check_body    validation      entered at 1837, 5135, 5140
+    l2_collect_decls layout/hosting  entered at 4692
+    l2_emit_body     emission        entered at 2013
+
+They are separate walks over the same tree, and 6.1.3.1 is what happens when
+they disagree about where to walk.
+
+6.1.0.2. Two `for` spellings, only one of which can host
+
+l2_for_cstyle requires the frame body to have EXACTLY FIVE active fields - the
+c-style `for: int(i, 0) (i < 10) i++` with its block as the fifth. The condition
+form `for: a < b` fails that test, so every scope push is skipped for it and it
+hosts nothing. Two spellings of one receiver, one of which is a host and one of
+which is not, with no diagnostic marking the difference.
+
+6.1.0.3. Aliased fields take a different path entirely
+
+Everything the prologue restores is guarded by l2_m_alias[...] < 0. A field
+whose name is shared with an argument (the same-name bind) is NOT restored at
+entry; it is loaded lazily at 6746 and 6788, guarded by
+"if: l2_q{k}_from = 0 -> load it". So there are already two restore paths, and
+the lazy one is the one a general conditional-host scheme would have to widen.
+
+6.1.0.4. Standard receivers are not methods, and the poll placement is literal
+
+This is the original question that started the investigation, and it matches
+19.29.7.1 exactly.
+
+STANDARD RECEIVERS ARE NOT METHODS. `if`, `while` and `for` carry no method
+identity, no own-state loading, no dirty flags and no checkpoint:
+
+    methods exist only from fn:/sub:  - l2_fn_close(fr, nm, "fn") / "sub" at
+      4591/4593; everything method-scoped is indexed by a method index into the
+      l2_m_* tables
+    if/while emit straight through   - 6543 and 6579 write the L1 `if:` /
+      `while:` with the condition token and nothing else
+    the checkpoint is method-keyed   - l2_emit_checkpoint opens with
+      "if: mi < 0 || ind = 0 -> return: 0" and then iterates
+      l2_m_uses[l2_own_off(mi, i)], the per-method used-own table. No method,
+      no checkpoint. It is emitted after actuals, immediately before a call and
+      before return - never on entering a block.
+    own-field loading EXCLUDES if    - the two lazy load sites, 6746 and 6788,
+      are both guarded by l2_frame_head(stmt, "if") = 0, and a nested-if own
+      declaration is refused outright (3306, "unsupported own declaration").
+
+6.1.1. But a `for` DOES have fields, and they ARE restored at method entry
+
+This is the part that surprised me, so it is written out. A non-method nested
+structure is not uniformly stateless - `for` and `if` differ, and the difference
+is `l2_scope_push`.
+
+    only `for` pushes a scope. All five l2_scope_push sites (3183, 3274, 3509,
+      4938, 6605) are guarded by l2_for_cstyle or an end-named `for`. `if` never
+      pushes one.
+    so an own declaration nested in a `for` is ACCEPTED (l2_scope_n != 0), and
+      one nested in an `if` is REFUSED. Depth alone decides nothing; the scope
+      stack does.
+
+And the prologue restores them, in two passes after the entry poll (7019-7060):
+
+    pass 1, per `for` structure: if any used own field belongs to it
+      (l2_own_fid[oi] = k), emit a handle for the STRUCTURE ITSELF -
+          l2_h{k}: lmx_branch_child(node, {l2_for_uchild[k]}U)
+      so the `for` is a real Lmx child of the method node with a fixed child
+      index, not a syntactic bracket.
+
+    pass 2, per used own field: declare the working local, its graph handle and
+      its dirty flag, then resolve the handle THROUGH ITS OWNER -
+          fid >= 0   l2_q{k}_from: lmx_branch_child(l2_h{fid}, {fchild}U)
+          fid <  0   l2_q{k}_from: lmx_branch_child(node, {uchild}U)
+      and load the value: lmx_int_value / lmx_size_value / lmx_char_value of
+      l2_q{k}_from\data.
+
+So the answer to "are the fields of nested non-method structures restored on
+method entry" is: for a `for`, YES - in bulk, in the prologue, through the
+`for`'s own graph node. For an `if`, the question does not arise, because it
+cannot own a field.
+
+Note the whole prologue path is guarded by l2_m_alias[...] < 0 - aliased fields
+(a same-named argument sharing the own declaration) are not restored here. Those
+are the lazy 6746/6788 sites.
+
+6.1.2. `if` substructures are VIRTUAL - they get no runtime graph identity
+
+Mikhail asked: an `if` has at least two substructures, so are they virtual? In
+the current implementation, yes. The child-index layout function (4036-4064)
+builds the runtime graph under a method node like this:
+
+    node
+      +-- own field 0          uchild 0      direct fields first,
+      +-- own field 1          uchild 1        consecutive
+      +-- for#0                uchild 2      the `for` IS a node
+      |     +-- hosted field   fchild 0        its fields are ITS children
+      |     +-- hosted field   fchild 1
+      +-- for#1                uchild 3
+    l2_unit_base = next free index
+
+An own field with host 0 gets a uchild under node; one with a host gets an
+fchild under that host's `for`. Then every `for` in the table takes a uchild of
+its own. `if` appears NOWHERE in this: there is no l2_if_* table anywhere in
+l2trans.lm1, no index, no handle, no entry in the layout.
+
+So the two bodies of an `if` exist in the parse tree as LM_P0_NODE_STRUCTURE and
+become nested L1 control flow in the output, and that is all they are. They have
+no runtime node to hold anything.
+
+What reifies a structure is HOSTING A FIELD, and only `for` can host one -
+l2_scope_host() returns the innermost pushed scope, and only `for` pushes. The
+prologue goes further and emits a `for` handle only when some used field
+actually belongs to it (the `hu` test at 7020-7029), so even a `for` is reified
+at runtime only when it has something to hold.
+
+6.1.3. Cost of generalising the host mechanism - measured, not guessed
+
+Asked how hard a later extension would be, given the mechanism already exists
+for methods and loops.
+
+CHEAP, and more so than it looks. The host table is ALREADY GENERIC:
+
+    l2_for_find(node) compares a plain LmP0Node pointer - nothing in the table
+      is for-specific, only its name
+    8 of 72 l2_for_* references are actual for-SYNTAX guards (l2_for_cstyle,
+      end-named "for"). The other ~89% is generic host machinery.
+    l2_scope_has walks the WHOLE scope stack, so arbitrary lexical nesting is
+      already resolved correctly for name lookup
+
+So "let another frame kind host fields" is: relax eight guards, push a scope for
+that kind, rename the table. Small.
+
+EXPENSIVE, and none of it is about naming:
+
+    CONDITIONAL EXISTENCE. A `for` handle is materialised in the prologue
+      unconditionally. An `if` body may never execute. Either nodes appear for
+      branches that never ran, or handle resolution becomes lazy - and the lazy
+      path today (6746/6788) exists only for aliased fields. Generalising it
+      costs the property that makes this model easy to reason about: one restore
+      point, at entry.
+
+    THE LAYOUT IS FLAT AND POSITIONAL. Every host takes an index from one
+      counter under node (4058-4063), so a `for` inside a `for` is its SIBLING
+      in the graph, not its child. A real parent chain is a small table change.
+      The indices are the problem: they are positional integers baked into the
+      emitted lmx_branch_child(node, 7U). Any new host kind renumbers
+      everything. Irrelevant while graphs are rebuilt each run - and not
+      irrelevant once a graph outlives the code that wrote it, which is the
+      Message world of transferred blocks with stable addresses and adopted
+      failed arenas (section 8). Positional layout plus persisted graphs is a
+      combination to settle before, not after.
+
+    `if` IS NOT ONE STRUCTURE. One construct, two or more bodies, with `else` a
+      SIBLING field in the parse tree. The scope stack holds one node per push,
+      so hosting would have to push bodies rather than statements - changing
+      what l2_own_host means, across its 24 references.
+
+6.1.3.1. A `for` INSIDE an `if`: the three passes disagree
+
+Asked what happens in that case. The answer is not "it works" or "it is
+refused" - the passes do different things, and the divergence is invisible until
+exactly this nesting appears.
+
+    l2_check_body   DESCENDS into an if body (4892) and an else body (4899),
+                    depth + 1
+    l2_emit_body    DESCENDS into both (6545, 6552)
+    l2_collect_decls DOES NOT. Its if-branch advances `field` past the if and
+                    its else and returns - no recursion at all. Its only
+                    body recursion (3297) is into a `for`.
+
+collect_decls is the pass that calls l2_for_add, assigns hosts and lays out
+child indices. So for a `for` nested in an `if`:
+
+    collect  never sees it. Not added to the for table, no uchild, no prologue
+             handle, no place in the layout.
+    check    walks into the if, meets the for, PUSHES A SCOPE (4938) and walks
+             its body - so a field declared there sees depth > 0 and
+             l2_scope_n != 0 and PASSES the 5030 guard.
+    emit     walks into the if, meets the for, pushes a scope, emits the loop
+             and the declaration.
+
+So a field declared in a `for` inside an `if` is validated as legal and reaches
+emission, while never having been registered by the pass that gives it a graph
+slot. The own-field emission sites are guarded by oi >= 0, and a lookup that
+was never registered returns -1.
+
+WHAT I HAVE NOT ESTABLISHED: what actually comes out. l2trans.exe is not built
+here and building it would compile their WIP l2src, which is not mine to do. So
+the three line numbers above are proven and the failure mode is not. It could be
+a clean diagnostic, a silently plain local, or a bad emission - and which it is
+matters.
+
+The fixture that settles it, in the shape of unit_forj_bare.lm2:
+
+    fn: test (int: a) int
+        if: a > 0
+            for: int(i, 0) (i < 10) i++
+                int: j i
+            end: for
+        return: 0
+    end: test
+    fn: main () int
+        return: test(1)
+    end: main
+
+Worth running before anyone relies on nesting a loop inside a branch. Note the
+simple case hides it: an `if` containing no declarations behaves identically
+under all three passes, which is why this has not shown up.
+
+6.1.3.0. OUTCOME: ADOPTED AS SPEC 21.5.1 - and one of my arguments was rejected
+
+Read 6.1.3.2 and 6.1.3.3 below as HISTORY, not as a pending proposal. The rule
+is normative as of 5c6a02f, 2026-09-11: spec 21.5.1 "Executable Bodies and
+Receiver Arguments", plus a sharpened paragraph at 3141 and a decision entry in
+stg/l1_baseline/l2src/OPEN_POINTS.txt. Implementation is deferred until the
+current Message work lands; the handoff notes cite 6.1.3.1 below as the record
+of the three-pass divergence.
+
+WHAT THE SPEC TOOK, that this file argued for:
+
+    nested bodies form a CONTAINMENT HIERARCHY, not a flat list under the method
+    the host is the INDIVIDUAL BODY, not the whole control statement, so `if`
+      and `else` bodies are hosts on the same footing as `for` and `while`
+    "Declaration collection, validation and emission must agree on these roles.
+      A `for` inside an `if` must not be validated and emitted while omitted
+      from graph layout." - 6.1.3.1, written in as a requirement
+    "it must not depend on a special case for the C-style `for` header" -
+      6.1.0.2, written in as a requirement; OPEN_POINTS calls the current
+      for-only hosting an implementation gap
+
+WHAT THE SPEC REJECTED, and it was my main supporting argument:
+
+    "It is a semantic consumption rule, NOT a test of whether a Frame's last
+    syntactic field happens to be a Structure."
+
+6.1.3.2 below builds its case on exactly that syntactic test - last field, must
+be a STRUCTURE - and calls the rule "already half-implemented" because if, while
+and for all use it. That evidence is weaker than I made it. The new text at 3141
+explains why: an `fn` frame's fields are function name, formal parameter
+Structure, return type and executable body, and "Runtime graph hosting follows
+those consumption roles, not the parser's generic argument container." Last-field
+happens to be right for three control receivers whose spellings put the block
+last. It is a coincidence of those spellings, not the principle, and building on
+it would have produced a rule that breaks on the first receiver spelled
+differently.
+
+The conclusion survived; the argument for it did not. Worth separating, because
+a right answer reached through a wrong argument is the kind that fails later in
+a case the argument did not cover.
+
+WHAT THE SPEC ANSWERED that I had left open:
+
+    TRAILER BODIES - 6.1.3.2 asked, since a trailer is not a field and the
+      last-field test cannot reach it. Answered by consumption role, both ways:
+      in `return:` with a nested expression the expression stays an ARGUMENT,
+      while "any receiver, including a trailer, that consumes a Structure as a
+      statement-by-statement body gives that body the ordinary graph-hosting
+      semantics."
+    CONDITIONAL EXISTENCE - 6.1.3 listed this as the expensive part. Dissolved:
+      "Graph presence does not mean both branches run: only an executed
+      assignment dirties a cache. An untaken branch performs none of its
+      assignments." The node exists; nothing happens in it.
+
+AND ONE GUARD I DID NOT RAISE, which matters more than either: making a body a
+graph host "does not introduce a method activation or a new through-parameter
+boundary at each body. Through visibility crosses nested methods, not ordinary
+nested Structures (21.3)." A host is a place for fields, not a frame. I had
+treated hosting and activation as separable without saying so; the spec says it.
+
+6.1.3.2. The owner's proposed rule, and why it is already half-implemented
+
+Mikhail, 2026-09-11: leave arguments "flying" - structures and other receiver
+ARGUMENTS are not written to the graph - and give `if` the same mechanism as
+`for`, under one general rule: EXECUTABLE BODIES, the ones run line by line, are
+all written. His reason: arguments come from somewhere and are therefore already
+tracked as data, so the rule that needs to be uniform is the one for executable
+code.
+
+I think the line is right, and the strongest evidence is that l2trans ALREADY
+DRAWS IT - three times, independently, without naming it:
+
+    if      4885-4892   walk to the LAST field; require LM_P0_NODE_STRUCTURE
+    while   4918-4925   walk to the LAST field; require LM_P0_NODE_STRUCTURE
+    for     4952-4960   walk to the LAST field; require LM_P0_NODE_STRUCTURE
+
+So the mechanical test the rule needs already exists in practice: THE BLOCK OF A
+FRAME IS ITS LAST FIELD WHEN THAT FIELD IS A STRUCTURE; EVERYTHING BEFORE IT IS
+ARGUMENTS. The parser gives no kind of its own - LmP0Structure carries only
+fields and a trailer - but it does not need to: the position plus the node kind
+is the test, and the code trusts it already.
+
+That matters because naming the rule converts three coincidences into one
+invariant, and an invariant is checkable.
+
+WHAT IT FIXES, rather than patches. The three-pass divergence of 6.1.3.1 exists
+because collect_decls alone does not apply that test to `if`. If every block is
+a host, collect_decls must descend into every block, and check/emit/collect
+agree BY CONSTRUCTION. The bug stops being possible instead of being fixed.
+
+WHAT IT COSTS, which is less than it looks. The obvious objection is that every
+body becoming a host makes the prologue O(bodies) instead of O(fields). It does
+not: the prologue already emits a host handle only when a USED field belongs to
+it - the `hu` test at 7019-7029. A block that declares nothing gets nothing
+emitted. So the prologue stays proportional to blocks that actually hold state,
+which is what it is proportional to today.
+
+WHAT IT ACTUALLY COSTS is the flat layout. Every host currently takes a uchild
+from one counter under node (4058-4063), so a `for` inside a `for` is its
+SIBLING in the graph rather than its child. Under a uniform rule that is already
+wrong, and nesting blocks makes it visibly wrong. The layout needs a real parent
+chain, and the prologue must then resolve hosts in depth order before the fields
+that hang off them. That is the work, and it is work the uniform rule makes
+necessary AND makes correct.
+
+TWO THINGS TO DECIDE EXPLICITLY
+
+    HOST THE BLOCK, NOT THE STATEMENT. The scope stack currently pushes the
+      `for` STATEMENT (l2_scope_push(stmt)). An `if` is one statement with two
+      blocks, and `else` is a sibling field. Push blocks instead and `else`
+      stops being a special case at all - it is simply another block. This also
+      removes the two-body wrinkle I listed earlier as a cost; under the
+      block-hosting reading it is not one.
+
+    TRAILER BODIES. LmP0Trailer carries a `body` of its own, and l2_ret_tr
+      already reads one. Is a trailer body an executable block for this purpose?
+      The last-field test does not answer it, because a trailer is not a field.
+      This is the one place the rule needs a stated answer rather than an
+      inherited one.
+
+6.1.3.3. VERDICT: ADOPT THE RULE
+
+Adopt it. Stated for someone who reads only this subsection:
+
+    RULE. Receiver ARGUMENTS are never written to the graph. Every EXECUTABLE
+    BLOCK is. The block of a frame is its last field when that field is a
+    STRUCTURE; everything before it is arguments. A block hosts the own fields
+    declared directly in it, and a block nested in a block is that block's
+    child.
+
+Four reasons, in order of weight:
+
+    1. The translator already applies the test three times (if 4885-4892,
+       while 4918-4925, for 4952-4960) without naming it. The rule does not
+       introduce a convention; it names one that is load-bearing already.
+    2. It makes 6.1.3.1 impossible rather than fixed. The pass divergence exists
+       only because collect_decls alone skips `if`; a uniform rule forces all
+       three walks to agree by construction.
+    3. It replaces a per-receiver list with a PROPERTY. "Unsupported own
+       declaration" becomes either legal or a stated consequence of the rule,
+       and nobody has to maintain a set of blessed receivers.
+    4. The costed objection does not survive contact: the prologue already emits
+       a host handle only for hosts with used fields, so blocks that declare
+       nothing cost nothing.
+
+The bill: the flat layout has to become a real parent chain, and the prologue
+has to resolve hosts in depth order. That work is owed anyway - a `for` nested
+in a `for` is currently its own SIBLING in the graph, which is a defect waiting
+for someone to depend on it.
+
+Two decisions the rule does not make for you, from 6.1.3.2: host the BLOCK
+rather than the statement, which retires `else` as a special case; and say
+whether a trailer body is an executable block, which the last-field test cannot
+answer because a trailer is not a field.
+
+6.1.3.4. How much slower? Almost certainly not at all, and here is the shape
+
+Asked how much the new implementation will cost. Working from what the current
+emitter actually produces.
+
+PER CALL, TODAY, a method pays:
+
+    1 flag load + test            entry poll
+    1 branch_child + null test    per HOSTING body that has used fields (the
+                                  `hu` guard at 7019-7029 - a body that declares
+                                  nothing emits nothing)
+    1 branch_child + null test    per used own field, from its host or from node
+    1 value load                  per used own field (lmx_int_value / size /
+                                  char of from\data)
+    1 dirty test                  per used own field, at EVERY checkpoint - and
+                                  a checkpoint sits after actuals, immediately
+                                  before each call, and before return
+    1 flag load + test            per loop iteration, backedge poll
+
+FOR CODE THAT COMPILES TODAY, the new rule changes ONE of those lines. Same
+fields, same hosts, same resolutions - except that a host nested inside another
+host now resolves through its parent instead of from node. So a field two levels
+deep costs 2 branch_child instead of 1. That is per CALL, not per iteration, and
+it is bounded by nesting depth. Today a `for` inside a `for` is flat, which is
+cheaper and wrong; the hierarchy is the correctness fix and the extra hop is its
+price.
+
+Everything else is unchanged, because the fields and hosts are the same ones.
+
+WHAT GROWS IS WHAT BECOMES EXPRESSIBLE. A program that now declares fields in an
+`if` body pays exactly the unit costs above for them - nothing new per unit.
+That is the feature being used, not the same program running slower.
+
+THE ONE PLACE IT COULD ACTUALLY BITE is not in the rule but in a pattern the
+rule makes reachable, and it is worth naming before someone hits it: a field
+declared in a cold branch still gets its dirty test in EVERY checkpoint of that
+method, and there are checkpoints before every call and every return. Ten
+branches each declaring a field means ten dirty tests at each of those points,
+whichever branch ran. The prologue cost is once per call; the checkpoint cost is
+once per call SITE.
+
+WHICH RAISES A DESIGN QUESTION the spec does not settle. 21.5.1 says graph
+presence is not execution - an untaken branch performs none of its assignments -
+but it says nothing about WHEN a host handle resolves. Today all handles resolve
+eagerly in the prologue. With ten branches that is ten branch_child calls per
+invocation even though one branch runs.
+
+Lazy resolution already exists in this emitter: the aliased-field path at 6746
+and 6788 does exactly "if: l2_q{k}_from = 0 -> load it". Widening that to host
+handles would make the cost proportional to the path actually taken rather than
+to the static branch count. It costs the single-restore-point property (6.1.3),
+which is worth something for reasoning about a turn - so it is a trade, not an
+obvious win. Raising it because the rule is what makes it worth asking; under
+for-only hosting the static branch count was never large enough to matter.
+
+A SECOND-ORDER NOTE, translator-side rather than runtime: l2_own_off(mi, oi) is
+a METHOD x FIELD matrix. More hostable places means more distinct own fields per
+unit, and that matrix grows as the product. Small at current sizes, but it is
+the one cost that is not proportional to what a program uses.
+
+6.1.3.5. Style and cost - FOUR CLAIMS OF MINE CORRECTED, and one measured
+
+An earlier revision of this section concluded that good style "mostly speeds
+things up". Codex took it apart point by point and was right on every one. The
+corrected version follows; the original claims are stated so the errors are
+visible rather than quietly replaced.
+
+WHAT I GOT WRONG, and the single mistake underneath all of it
+
+    WRONG: "early-return style multiplies checkpoint sites, and each one tests
+      every used field."
+      Static count, not executed cost. One call executes ONE return, hence one
+      exit checkpoint. Five alternative exits are not five executed checkpoints,
+      and an early exit may SHORTEN the work.
+
+    WRONG: "method extraction is lazy hosting" - free laziness.
+      It defers field loading to call time, which is real. But it adds the call,
+      the argument passing and the checkpoint that sits immediately before the
+      call. And in LMX extraction creates a THROUGH-VISIBILITY BOUNDARY (21.3)
+      and can change which method owns a field. It is a refactor with semantic
+      consequences, not a free rearrangement of the same program.
+
+    WRONG: "a host at depth D costs D hops per call" summed per field.
+      If parent handles are resolved once and reused - which the prologue
+      already does for `for` - a shared path prefix is paid once. The cost is
+      the number of DISTINCT hosts, not the sum of each field's depth. Shallow
+      structure is still convenient; I overcounted its advantage.
+
+    WRONG: "finer methods cancel faster."
+      Responsiveness is the MAXIMUM INTERVAL BETWEEN POLLS, not method size.
+      More boundaries can help, but a small method making one long external
+      call still stops checking running for exactly as long as that call takes.
+      Method count is a weak proxy for the property that actually matters.
+
+The one mistake underneath: I read the emitted code and reported its SHAPE as
+its COST. Counting emission sites, summing static depths, comparing one side of
+a refactor. Generated code tells you what exists, not what runs - and the second
+question needs the executed path or a measurement.
+
+THE WRITE FLAG: MEASURED, and the answer depends on the build
+
+Codex's fifth point was that an always-zero dirty local and its unreachable
+publication are what a C compiler deletes anyway, so the win needs measuring
+rather than asserting. Measured it, on the exact shape the emitter produces -
+a field loaded, used, never assigned, with two checkpoints guarding stores:
+
+    gcc -O0    3 references to the store remain
+    gcc -O1    0
+    gcc -O2    0
+
+At -O1 and above the checkpoint vanishes completely; the emitted body holds only
+the two real calls. So for an optimised build the runtime win is ZERO and the
+value is generation simplicity alone.
+
+But this project does not build optimised. run_mixa.ps1 line 77 is
+
+    gcc -std=c99 -Wall -Wextra -Wpedantic @guards -I . $c -o $exe
+
+with no -O anywhere in it or in the l2 runner, and gcc's default is -O0. So AS
+CURRENTLY BUILT the dead checkpoints are really emitted and really executed. The
+flag would help here - and so would -O1, which would also delete them and much
+else besides. Which of those two is the right fix is not a question about the
+flag.
+
+WHAT SURVIVES
+
+    the write flag is worth having as a GENERATION simplification - smaller
+      emitted code, less for a reader to skip - and it must mean precisely
+      "this activation may dirty the field's working cache": initialisation,
+      assignment, increment, same-name argument bind. Another method changing
+      the graph value does NOT dirty our cache.
+    shallow structure is convenient, by distinct host count
+    small methods do defer field loading to call time, at the price of a call,
+      its arguments, its pre-call checkpoint and a visibility boundary
+
+AND A FRAMING I SHOULD NOT HAVE USED. I leaned on "many branches is bad style
+anyway" to wave away a cost instead of costing it. Parsers and dispatchers have
+many branches for good reasons. It is good if legible code turns out cheap, but
+that is something to verify on the executed path, not to assume from style.
+
+6.1.4. But "persist every structure" is a different question, not a bigger one
+
+Mikhail's own observation is the strongest argument here: ARGUMENT structures
+are not in the graph either. That is not an oversight, it is the line the spec
+draws - 21.5 puts own fields in C working locals and declared/dynamic values in
+the activation. The graph holds what must SURVIVE A TURN; the activation holds
+what must not.
+
+By that rule the current behaviour is already coherent: a structure gets a node
+when it hosts state that outlives the turn, and `for` qualifies only because a
+field can be declared in it. An `if` body has no such state - unless someone
+declares a field there, and whether that should mean anything is the actual
+question.
+
+So the decision worth making is not "can if be supported" but "what belongs in
+the graph". If the rule above is the rule, writing it down turns "unsupported
+own declaration" from a limitation into a statement of the model - and the
+extension cost above stops being a roadmap item at all.
+
+6.1.5. Open question worth putting to Codex
+
+Is this a decision or a limitation? The wording in the generated notes is
+"Nested if own-decl is UNSUPPORTED own declaration", and "unsupported" reads
+like the latter. In the language model a Structure is a Structure; if an `if`
+body is one, a field declared inside it must eventually have somewhere to live,
+and the layout function above has no slot to give it. Either the layout grows a
+host kind, or the refusal is principled and should say why rather than
+"unsupported". Not ours to answer.
+
+
+
+THE ONE THING A LOOP DOES GET is the cancellation poll, and it is not activation
+state - one flag load and test, c.lmx_msg_poll_escape(). l2_emit_poll is called
+at exactly three kinds of site:
+
+    6589, 6679   inside the loop body after the condition is retested - backedge
+    7016         the method prologue - entry
+    6705/6758/6768   before return - exit
+
+which is 19.29.7.1's "method entry before loading used own fields, on loop
+backedges, and on method exit", implemented literally.
+
+Note the poll is NOT method-bound the way the checkpoint is: l2_emit_poll uses
+mi only to choose the return form, and with mi < 0 it still emits a poll.
+
+Fast path: an ordinary load and test. Relaxed atomics are permitted ONLY where
+they compile to the same instructions as a volatile load or store of that type;
+no lock, no read-modify-write, no fence, no helper call. Verify per target, and
+if it does not hold, REPORT the unsupported fast path rather than substituting
+something more expensive.
+
+
+7. LIVENESS - who watches whom
+
+Automatic polling has ONE direction: CHILD TO PARENT (12466). The child's
+end_turn is the check and send opportunity. If the parent is absent, DEAD,
+STOPPED, RELEASED or sustained-nonresponsive, the child requests its OWN orderly
+close. A live idle parent keeps children alive.
+
+Do NOT add a second mandatory automatic parent-to-child probe. But observation
+is SYMMETRIC in effect: a parent may track expected communication from a direct
+child and request its close after prolonged silence under its own policy, and
+the parent reads the child's control flags directly during its own turns.
+
+Timeout means LACK OF EXPECTED COMMUNICATION. Not proof of death, not proof of
+completion.
+
+Normal parent close already asks children to close at the parent's end_turn; the
+poll is only the fallback for a parent that died abruptly.
+
+Cadence and timeout are host settings - explicitly "not language constants and
+not the mail-watcher interval."
+
+
+8. ARENAS, AND THE HANDOFF RULE ADDED TODAY
+
+Every Message owns exactly ONE logical arena. Ordinary local delivery TRANSFERS
+OWNERSHIP WITHOUT CLONING; the delivered storage must be independently
+transferable, and the sender cannot keep using it through mutable aliases.
+Native addresses of transferred blocks stay stable. Copy and serialization
+require an explicit operation or codec contract.
+
+19.29.8, changed 2026-09-11:
+
+    after final SUCCESSFUL completion, reclaim the Message's own execution
+      history by default; keeping it requires explicit program data
+    after final NON-SUCCESSFUL completion, TRANSFER its logical arena to its
+      direct parent's lifecycle endpoint WITHOUT COPYING. The parent adopts the
+      blocks and retains the failed root.
+    each closing Message settles only its DIRECT children. In P -> C -> G with C
+      and G failed: G's blocks join C, then C's blocks join P. No ancestor scan
+      of grandchildren, no global crash manager, no graph clone.
+    required external-resource cleanup precedes handoff; retaining a failed
+      graph does not retain live file, socket or device handles
+
+So failure evidence travels UP and survives in the parent, while success is
+discarded. Consistent with worker death, where the KIND_DEAD diagnostic "lives
+in the survivor, not in the dying arena."
+
+8.1. And the sediment does not accumulate - resolved in the spec, 12740-12750
+
+The obvious worry about a rule that pushes failed arenas upward is that they
+pile up. They do not, and the resolution is one sentence:
+
+    "The outcome belongs to the Message itself, not to the errors recorded
+    inside it."
+
+So if P adopts a failed child's history and then completes SUCCESSFULLY, P is
+successful. Its parent controls disposal of P's whole handoff-safe arena,
+inherited history included, and there is no automatic upward forwarding of the
+failed descendants separately from successful P. If P wants that history it
+must explicitly retain or transfer it AS PROGRAM DATA before disposal - because
+"the runtime cannot infer why P handled the error". If P itself fails, its
+aggregated failed arena moves up under the same rule as any other.
+
+Which gives the shape: failure ascends only as far as someone who succeeds, and
+stops there. A caught and handled failure leaves nothing behind unless the
+program asked for it; an unhandled one keeps climbing.
+
+Retention budgets and remote full-graph diagnostic transfer remain open. The
+successful-parent case does not - an earlier revision of this file listed it as
+open, which it no longer is.
+
+
+9. WHAT THE OWNER ASKED FOR NEXT (PORT_OF_CLEARSHELL, 2026-09-11)
+
+After the bounded calculator syntax module: the file manager's ORIGINAL FILE
+OPERATIONS and ALL BUTTON AND PANEL BEHAVIOUR. Preserve ClearShell algorithms
+and ordering where no app delta overrides them. INVENTORY AND REUSE existing
+modules rather than overwrite them. Test each bounded operation, then wire its
+action.
+
+And one unusual requirement worth not losing:
+
+    an action whose function is not yet implemented OPENS A NESTED INSTANCE OF
+    THE SAME REDUCED APPLICATION INTERFACE - the text for "no such function" and
+    one dismiss button. Appearance may be minimal; NESTING AND SELF-REPRODUCTION
+    MUST WORK. Not an OS dialog, not a popup framework, not a console-only
+    warning, not a silent no-op.
+
+The application is its own dialog. That is an architectural requirement wearing
+the clothes of a placeholder, and building it the easy way once makes the hard
+way impossible later.
+
+
+10. ALSO NEW, FOR AWARENESS ONLY
+
+19.32.10-21 defines a Crypto Provider contract. L3 owns intent, key
+relationships, policy and algorithm identity; the provider owns primitives,
+secret representation and target storage. KeyRef is an opaque handle, never a
+byte array by definition, and generation must not publish private bytes into the
+Lmx graph. Targets: C99 with libsodium as one provider - also serving MIR, Wasm
+linear memory and RISC-V through the L2 to L1 to C99 route - plus direct L3 JVM,
+Wasm-GC, Lua and .NET CIL binding the same contract to JCA, a WebCrypto or host
+capability, a Lua host module and System.Security.Cryptography. Detail in
+include_languages/Lingvamyxa_Crypto_Provider_Seven_Targets_Implementation_EN.md.
+Nothing here touches mixa_manager yet.
+
+A managed L3 backend may MOVE objects while preserving reference identity; the
+native profile must not - live nodes and service-pool entries stay at stable
+addresses, and compaction by relocation is forbidden rather than merely
+deferred. Our backend is native.

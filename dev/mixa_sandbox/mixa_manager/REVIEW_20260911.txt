@@ -1,0 +1,189 @@
+Review of mixa_manager activity, 2026-09-11
+===========================================
+Looked at the port work done since 2026-09-10 by the model working in this
+directory. Everything below was RUN or GREPPED, not inferred. Where I nearly
+reported something that turned out to be correct, I have said so, because a
+review that only lists faults misrepresents the work.
+
+Context for the ordering: modules are being ported from ClearShell now, and
+wrapped in Message once the core is ready. Message is the only synchronization
+mode this project uses; the others stay possible and unused. The findings are
+ordered by when they will bite, and the one that bites AT the wrapping step is
+the vendored pin.
+
+
+WHAT IS BEING DONE WELL
+
+Header units are in use. Five modules now carry authored .h.lm1 headers -
+calculator_syntax, console_window, dir, dir_win32, process_marker. That is the
+capability confirmed on 2026-09-10 to be present in the promoted translator, put
+to work within a day, and it is what keeps new modules from needing hand-written
+C headers.
+
+The vendored Message pin is disciplined, not a copy-paste. The MANIFEST names
+the pinned code and contract commits, the git blob ids AND the SHA256 of each
+file, the include convention, and an explicit constraint - at ee4b2d9,
+lmx_message.lm1 includes ONLY host.h, not exec.h, and lmx_message_exec must not
+be included - which is precisely the prototype the spec disowns as architecture.
+Verified: both pinned files still match their recorded hashes exactly.
+
+No application-level concurrency. Grepped every .lm1 and .c outside vendor and
+the reference for CreateThread, CRITICAL_SECTION, Interlocked, pthread, atomic,
+CreateMutex, CreateEvent and WaitForSingleObject. The only hits are in
+tests/mixa_ingress_host_harness.c, which exists to play the part of a FOREIGN
+thread posting into host ingress - the intended use of that seam, not the
+application coordinating its own work. Spec 19.28.R2.2 is respected.
+
+The ingress harness asserts its injected failure properly, and I almost reported
+it as a defect. run_mixa.ps1 prints a harness FAIL line and still exits 0, which
+looks exactly like the fail-that-cannot-fail defect I fixed twice in my own
+runner. It is not: run_ingress_harness.ps1 requires exit=1 from the
+force-join-timeout injection, then checks four separate evidence markers and
+throws if any is missing, including a negative check that the evidence must NOT
+inspect poster fields. The FAIL line is the injected condition being verified.
+
+
+1. THE PIN HAS NO STALENESS POLICY - the one that bites at wrapping
+
+Codex agrees, with a correction to the remedy: what is needed is an explicit
+RE-PIN STAGE before full Message is wired - a verified core version, an agreed
+contract, integration tests. A commit counter is useful as a warning and nothing
+more: it does not prove incompatibility and must never auto-update the
+dependency. Recorded that way rather than as "add a counter".
+
+The pin is correct and it is already far behind. Since the pinned code commit
+ee4b2d9, 48 commits have landed on stg/l1_baseline/l2src/lmx_message.*, and at
+least eight touch lmx_message.h - the CONTRACT, not the implementation:
+
+    6dc4f9e  exec lookups use turn_self; no live reparenting on adopt
+    c8c5556  Message handoff preflights and moves owner-local ranges with blocks
+    3b12267  owned envelope move; transfer requires disposed children
+    e842932  dispose only successful settled children; transfer to parent
+    a61421b  Message lifecycle uses Codex lmx_msg_blocks lists
+    c193fcc  wrap Message outbox under mail_lock (exec then mail)
+    09fc43d  inbox readers take mail_lock with exec-then-mail nesting
+    4b064a3  arena split contract; recv uses turn_self
+
+Those are the arena-handoff and disposal semantics that the spec gained TODAY in
+19.29.8 - failed arenas transferring to the parent, successful histories
+reclaimed. The app is pinned to a Message contract from before that existed.
+
+Fine while modules are only being ported. It stops being fine the moment modules
+are wrapped in Message, which is the stated next phase.
+
+What is missing is not a re-pin. It is a TRIGGER: nothing in the manifest or any
+runner says when the pin must be revisited, and nothing reports that 48 commits
+have passed. A pin without a staleness check is indistinguishable from a fork
+until the day it matters. The cheapest fix is a line in run_mixa.ps1 that counts
+commits on the pinned paths since the recorded commit and prints the number -
+not failing, just refusing to be silent.
+
+
+2. THE SUITE HAS FRAGMENTED, AND TWO PIECES ARE RED RIGHT NOW
+
+Ten runners now. run_mixa.ps1 builds eight units; EIGHT selftests exist that it
+does not run, each with its own script:
+
+    mixa_calculator_syntax_selftest      mixa_console_window_minimal_test
+    mixa_console_window_selftest         mixa_dir_selftest
+    mixa_file_selftest                   mixa_highlight_restore_selftest
+    mixa_pointer_bounds_selftest         mixa_process_marker_selftest
+
+Ran all eight. Two are RED:
+
+    run_file_selftest                RED
+    run_console_window_minimal_test  RED
+
+while run_mixa.ps1 reports green. So "the suite is green" currently means "the
+2026-09-10 subset is green", and two modules have been broken with nothing
+saying so. That is not a prediction of decay; it is decay already measured.
+
+The fix is not one more runner. It is run_mixa.ps1 invoking the others, or the
+new units joining its list, so one command still answers the question. Codex
+adds the shape it should have: one full run reporting each suite as PASS, FAIL
+or a JUSTIFIED SKIP - a skip that has to state its reason cannot quietly become
+a hole.
+
+
+3. WRONG - mixa_file_selftest IS NOT BLOCKED. Corrected by Codex.
+
+I reported that array-of-pointer has no correct spelling and that the module was
+waiting on L1 open point 10.15. Both halves were wrong, and the answer was one
+file away.
+
+    []: (@: wchar_t) wslot 1   ->   wchar_t * wslot[1];      WORKS
+
+Verified here after Codex pointed at it. And it is already in use at
+mixa_file_win32.lm1:34 - the very module whose selftest I declared blocked
+declares its array that way on line 34.
+
+I probed four spellings and stopped at four. The parenthesised form is the same
+convention I had written into my own digest the day before - const: @(VT p) puts
+the name inside the parens, cast: (@: MixaU8) parenthesises the pointer type -
+and I did not try it. Worse, the cheapest check was not a probe at all: GREP THE
+NEIGHBOURS. One look at how the module itself spells an array of pointers would
+have answered it in a second and without a single probe.
+
+Codex also notes the array is unnecessary for this particular out-parameter: the
+address of an ordinary pointer variable, @wpath, will do. So there are two fixes
+and neither needs the language to change.
+
+The general open point 10.15 is untouched by this - it stays open. What is
+withdrawn is the claim that THIS test is blocked by it.
+
+3.1. The second red test, cause found by Codex
+
+    []: unsigned(char) buf 16   ->   unsigned buf[16];       WRONG, silently
+    []: unsigned char buf 16    ->   unsigned char buf[16];  correct
+
+Verified both. The first drops "char" without a word and the caller expects
+unsigned char *, so the saved C fails on pointer incompatibility. Same family as
+section 4: a spelling adjacent to a correct one, accepted, producing a type the
+source does not say.
+
+After either fix, a FULL re-run is needed - neither red test having a known cause
+is evidence that nothing else is wrong.
+
+
+4. TWO SILENT-OUTPUT L1 DEFECTS, SAME FAMILY AS THE ONES FIXED YESTERDAY
+
+    []: @ wchar_t wslot 1       ->   @ wchar_t[wslot] = {1};
+    []: unsigned(char) buf 16   ->   unsigned buf[16];
+
+Neither is refused; both return 0. In the first the stray @ survives into the
+output, the NAME becomes the array SIZE and the size becomes an initializer. In
+the second the element type quietly loses half of itself.
+
+Same shape as the three const cases Grok fixed in 5f03a70: a spelling adjacent
+to a correct one, accepted, emitting C the source does not say. Codex confirms
+both and agrees an unsupported form should be rejected.
+
+Recorded here rather than reported: verifying against l1src before calling
+something a defect is the standing rule.
+
+
+5. HOUSEKEEPING, CHEAP, BEFORE IT IS COMMITTED BY ACCIDENT
+
+    mixa_manager/mixa_console_window.c   44 lines, GENERATED by l1trans
+    mixa_manager/test.c                  91 lines, the SAME generated output
+                                         under a junk name
+    mixa_manager/recovery_20260910_222730/   196K of recovery dump
+
+The two .c files are translator output written into the source tree, not
+hand-written C - their first line says so. But there is no .gitignore in
+mixa_manager, so nothing stops them being staged, and test.c reads as a
+hand-written test to anyone glancing at the directory. We spent 2026-09-10
+removing the last hand-written C source from here; two files that merely LOOK
+like one are worth a gitignore line.
+
+Codex agrees and adds the constraint: TARGETED rules, not a blanket *.c ban -
+that would hide the permitted foreign seams and third-party sources, which are
+legitimately C.
+
+
+WHAT I DID NOT CHECK
+
+Whether the ported modules match ClearShell's algorithms - that is a source
+comparison and I did not do it. Whether the two red runners are red for the same
+cause; I diagnosed only mixa_file_selftest. The calculator syntax module beyond
+noting its runner is green. Nothing in vendor beyond pin integrity.

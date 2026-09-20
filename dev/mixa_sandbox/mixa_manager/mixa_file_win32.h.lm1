@@ -1,0 +1,31 @@
+include: "<stddef.h>"
+include: "mixa_manager/mixa_file_win32_l2_win.h"
+
+# Concrete Win32 MixaFile. Do NOT predef mixa_file.h.lm1: l1trans does not
+# emit struct bodies when completing a type brought in via predef (probe
+# 20260917-083000); same-file type: + struct: completion works.
+
+define: MIXA_FILE_MODE_READ 1
+define: MIXA_FILE_MODE_APPEND 2
+define: MIXA_FILE_OK 0
+define: MIXA_FILE_ERR_ARG 1
+define: MIXA_FILE_ERR_MISSING 2
+define: MIXA_FILE_ERR_IO 3
+define: MIXA_FILE_ERR_NOMEM 4
+
+type: MixaFile struct MixaFile
+
+struct: MixaFile
+    @: void handle
+    int: mode
+    int: is_open
+end: MixaFile
+
+prototype:
+    fn: mixa_file_open (@@: MixaFile out; const: @(char path_utf8); int: mode) int
+    fn: mixa_file_close (@: MixaFile f) void
+    fn: mixa_file_append (@: MixaFile f; const: @(void buf); size_t: n; @: size_t wrote) int
+    fn: mixa_file_read (@: MixaFile f; @: void buf; size_t: n; @: size_t got) int
+    fn: mixa_file_seek (@: MixaFile f; size_t: abs_off) int
+    fn: mixa_file_size (@: MixaFile f; @: size_t out) int
+end: prototype

@@ -1,0 +1,665 @@
+include: "<stddef.h>" "<stdlib.h>" "<stdio.h>" "<windows.h>"
+predef: "mixa_manager/mixa_app_message.h.lm1"
+predef: "mixa_manager/mixa_app_controller.h.lm1"
+predef: "mixa_manager/mixa_backend_win32.h.lm1"
+
+fn: mixa_backend_default_table () const: @(MixaBackendVTable)
+
+# mixa_app_main_msg.lm1 — Message-based entry for mixa_manager.
+# Architecture (approved l1-98 + Михайл, 19.09 directive):
+#   ALL FOUR L3 Threads are RUNNING via lmx_manager_running_init — each Thread
+#   gets its OWN OS-thread lane (lmx_manager_running.lm1).  One manager per
+#   root, rebound to the running implementation AFTER lmx_root_open. STEPPED
+#   (lmx_manager_init) was checked and rejected on 2026-09-19 as emulation:
+#   "многопоточно и сообщениями, без локов и без потоков вне только что
+#   запиленного Message и Thread" (Mikhail).  The R0 cycle manages lanes
+#   (start/reap) but does NOT run children's turns — they run on their own
+#   threads.  Межнитевое общение: только lmx_service_post(serv, addr, letter,
+#   letter_arena), ни одного лока.
+#
+# Per Михайл: no C except thin Win32 bridge. l1-98 verified all acts exist.
+#
+# Ticket 20260918-081317: UI Thread turn entry wires mixa_app_controller
+# (open once / step every turn / running check / close on shutdown).
+# The pump is PeekMessageA inside mixa_app_controller_step — one non-blocking
+# pass per turn, never GetMessage (each Thread runs in its own OS lane).
+#
+# Graph layout per child (4 slots, source template opened with 4 children):
+#   [0] method (callable)   [1] turns counter   [2] body_id   [3] accepted letter
+# l1-98: "минимальное честное тело для воркера — забрать из ящика, записать
+# счётчик ходов в ГРАФ, вернуться". Тела трёх воркеров — file/audio/process.
+
+# --- R0 module-level globals ---
+@: LmxRoot rt_root 0
+@: LmxArena rt_child_arena 0
+
+# THE FOUR THREAD ARENAS' STORAGE IS IN main, AND THESE ARE THE HANDLES TO IT (2026-09-19,
+# assembly lead).  They used to be declared INSIDE mixa_app_entry -- on the R0 turn's stack --
+# and that was two bugs at once: `lmx_arena_open` takes a CLEAN by-value handle (a stack local
+# arrives holding garbage), and the header was gone the moment the entry returned, while the
+# kernel keeps pointing at it through each child's `slot\arena` (the GC and the settle read it).
+# MEASURED: the first run of the assembled app died in lmx_arena_find <- lmx_arena_take <-
+# mixa_app_entry before printing a single line.  The pattern is the app's own (rt_child_arena):
+# by-value storage in main (memset, then open), a module-level pointer for everyone else, the
+# pointer IS the arena at the call sites.
+@: LmxArena rt_ui_arena 0
+@: LmxArena rt_file_arena 0
+@: LmxArena rt_audio_arena 0
+@: LmxArena rt_proc_arena 0
+@: Lmx rt_source 0
+@: LmxMsg rt_child 0
+@: LmxThread rt_child_thread 0
+size_t: rt_ready 0U
+# World-cell for root supervision (l1-98 stub 6874f5f): the watchdog writes the
+# clock tick here each second; the root reads it and, if the cell is older than
+# root\slot\limit (10s), stops itself. This makes a dead watchdog = root shutdown,
+# not a hang.  size_t (8 bytes Win64) — NOT ulong (4 bytes), the kernel reads it as
+# size_t and a width mismatch leaves garbage in the high half.
+size_t: mixa_world_cell 0U
+@: char rt_root_utf8 0
+
+# --- L3 Thread records (allocated in child arena, registered in service) ---
+@: LmxThread ui_thread 0
+@: LmxThread file_thread 0
+@: LmxThread audio_thread 0
+@: LmxThread process_thread 0
+
+# --- UI controller (owned by UI Thread turn entry) ---
+@: MixaAppController ui_controller 0
+size_t: ui_controller_opened 0U
+size_t: ui_controller_closed 0U
+
+define: MIXA_MAIN_OK 0
+define: MIXA_MAIN_FAIL 1
+
+
+# UI Thread turn entry (LmxCallEntry). Open controller once; step every turn;
+# close and signal completion when not running or on step error.
+# Driven via lmx_thread_turn(ui_thread, 0) — the caller's entry=0 means the
+# callable is found from the thread's own graph (lmx_call0). The body's return
+# value is not a stop (model 31); completion is signaled by setting the Message's
+# flags: success=1 + running=0 so the turn boundary settles the thread.
+fn: mixa_app_ui_entry (@: Lmx node) int
+    const: @(MixaBackendVTable vt)
+    @: LmxThread t
+    int: had_error
+    int: rc
+
+    t: lmx_thread_current()
+
+    if: ui_controller_opened = 0U
+        vt: mixa_backend_win32_table()
+        if: vt = 0
+            vt: mixa_backend_default_table()
+        ---
+        if: vt = 0
+            c.printf("mixa_app_ui: no backend table\n")
+            return: 0
+        ---
+        if: rt_root_utf8 = 0
+            c.printf("mixa_app_ui: root path missing\n")
+            return: 0
+        ---
+        rc: mixa_app_controller_open(@ ui_controller, vt, rt_root_utf8)
+        if: rc != MIXA_APP_CONTROLLER_OK
+            c.printf("mixa_app_ui: controller open failed (%d)\n", rc)
+            return: 0
+        ---
+        ui_controller_opened: 1U
+        c.printf("mixa_app_ui: controller opened\n")
+    ---
+
+    if: ui_controller = 0
+        return: 0
+    ---
+
+    if: mixa_app_controller_running(ui_controller) = 0
+        if: ui_controller_closed = 0U
+            mixa_app_controller_close(ui_controller)
+            ui_controller: 0
+            ui_controller_closed: 1U
+            c.printf("mixa_app_ui: controller closed (not running)\n")
+        ---
+        # Signal completion: success=1 + running=0 — the boundary (lmx_thread_leave)
+        # sees the work is over, sets handoff_ready, and clears running.
+        if: t != 0 && t\message != 0
+            t\message\success: 1
+            t\message\running: 0
+        ---
+        return: 0
+    ---
+
+    # One non-blocking pump: PeekMessageA + dispatch (never GetMessage).
+    had_error: 0
+    mixa_app_controller_step(ui_controller, @ had_error)
+    if: had_error != 0
+        c.printf("mixa_app_ui: controller step error - closing\n")
+        if: ui_controller_closed = 0U
+            mixa_app_controller_close(ui_controller)
+            ui_controller: 0
+            ui_controller_closed: 1U
+        ---
+        # Signal failure completion: running=0 (success stays 0 → emergency stop).
+        if: t != 0 && t\message != 0
+            t\message\running: 0
+        ---
+        return: 0
+    ---
+    return: 0
+
+
+# Minimal honest worker body. Proves the thread is alive and processing mail:
+# increments a turn counter rooted in the graph, drains one inbox letter into
+# graph[3], and returns without setting success (runs indefinitely until root
+# closes — l1-98 cascade release handles cleanup).  body_id distinguishes
+# workers in traces (11=file, 22=audio, 33=process).
+fn: mixa_app_file_entry (@: Lmx node) int
+    @: LmxThread t
+    @: Lmx graph
+    @: void turns_cell
+    @: void body_cell
+    @: void letter
+    size_t: turns
+    t: lmx_thread_current()
+    if: t = 0 || t\message = 0 || t\message\graph = 0
+        return: 0
+    ---
+    graph: t\message\graph
+    turns_cell: (cast: (@: void) lmx_arena_ref_value(graph, 1U))
+    body_cell: (cast: (@: void) lmx_arena_ref_value(graph, 2U))
+    if: turns_cell = 0 || body_cell = 0
+        return: 0
+    ---
+    lmx_size_store_known(body_cell, 11U)
+    turns: lmx_size_value_known(turns_cell) + 1U
+    lmx_size_store_known(turns_cell, turns)
+    if: lmx_thread_mail_count(t, c.LMX_POST_INBOX) > 0U
+        letter: lmx_thread_mail_take(t, c.LMX_POST_INBOX)
+        if: letter != 0
+            lmx_arena_ref_store(graph, 3U, letter)
+        ---
+    ---
+return: 0
+
+
+fn: mixa_app_audio_entry (@: Lmx node) int
+    @: LmxThread t
+    @: Lmx graph
+    @: void turns_cell
+    @: void body_cell
+    @: void letter
+    size_t: turns
+    t: lmx_thread_current()
+    if: t = 0 || t\message = 0 || t\message\graph = 0
+        return: 0
+    ---
+    graph: t\message\graph
+    turns_cell: (cast: (@: void) lmx_arena_ref_value(graph, 1U))
+    body_cell: (cast: (@: void) lmx_arena_ref_value(graph, 2U))
+    if: turns_cell = 0 || body_cell = 0
+        return: 0
+    ---
+    lmx_size_store_known(body_cell, 22U)
+    turns: lmx_size_value_known(turns_cell) + 1U
+    lmx_size_store_known(turns_cell, turns)
+    if: lmx_thread_mail_count(t, c.LMX_POST_INBOX) > 0U
+        letter: lmx_thread_mail_take(t, c.LMX_POST_INBOX)
+        if: letter != 0
+            lmx_arena_ref_store(graph, 3U, letter)
+        ---
+    ---
+return: 0
+
+
+fn: mixa_app_process_entry (@: Lmx node) int
+    @: LmxThread t
+    @: Lmx graph
+    @: void turns_cell
+    @: void body_cell
+    @: void letter
+    size_t: turns
+    t: lmx_thread_current()
+    if: t = 0 || t\message = 0 || t\message\graph = 0
+        return: 0
+    ---
+    graph: t\message\graph
+    turns_cell: (cast: (@: void) lmx_arena_ref_value(graph, 1U))
+    body_cell: (cast: (@: void) lmx_arena_ref_value(graph, 2U))
+    if: turns_cell = 0 || body_cell = 0
+        return: 0
+    ---
+    lmx_size_store_known(body_cell, 33U)
+    turns: lmx_size_value_known(turns_cell) + 1U
+    lmx_size_store_known(turns_cell, turns)
+    if: lmx_thread_mail_count(t, c.LMX_POST_INBOX) > 0U
+        letter: lmx_thread_mail_take(t, c.LMX_POST_INBOX)
+        if: letter != 0
+            lmx_arena_ref_store(graph, 3U, letter)
+        ---
+    ---
+return: 0
+
+
+# Watchdog thread (Win32 OS thread, NOT an L3 Thread).  It is SELF-CONTAINED:
+# it touches nothing but two kernel acts (lmx_root_hung, lmx_root_clock) and the
+# Win32 dialog.  No memory allocation, no graph/arena/service access, no locks
+# with the R0 cycle — so it can never hold the cycle and create the very
+# hang it is meant to detect.  Its loop is infinite: it exits only with the
+# process.  The 10s root window (lmx_root_open limit) is a hang detector:
+# keepalive in the R0 cycle renews it; silence past the window → dialog.
+fn: mixa_app_watchdog_body (@: void arg) DWORD
+    int: hung
+    int: rc
+    while: 1
+        # The watchdog IS the supervised world: mark the cell each tick so a live
+        # watchdog = a live root.  A dead watchdog (cell stale > 10s) lets the
+        # root stop itself (LMX_ROOT_DONE on the next cycle).
+        mixa_world_cell: (cast: (size_t) lmx_clock_ticks())
+        # rt_root is set by main BEFORE CreateThread, so it is always valid here.
+        hung: lmx_root_hung(rt_root, lmx_clock_ticks())
+        if: hung != 0
+            # MB_OKCANCEL|MB_ICONHAND|MB_SYSTEMMODAL|MB_SETFOREGROUND|MB_TOPMOST|MB_SERVICE_NOTIFICATION
+            # = 0x1|0x10|0x1000|0x10000|0x40000|0x200000 = 2428945 (OR = sum for disjoint bits)
+            rc: (cast: (int) c.MessageBoxA(0,
+                (cast: (@: char) "mixa_manager ne otvechaet bolee 10 sekund.\nZakryt' prilozhenie?"),
+                (cast: (@: char) "mixa_manager"),
+                2428945U))
+            if: rc = 1
+                c.ExitProcess(1U)
+            ---
+        ---
+        c.Sleep(1000U)
+    ---
+return: 0U
+
+
+# R0's entry: runs INSIDE lmx_root_turn.  Creates the L3 Threads.
+fn: mixa_app_entry (@: Lmx node) int
+    @: LmxArena root_arena
+    @: LmxThread ui_t
+    @: LmxPost ui_mail
+    @: LmxSchedule ui_sched
+    @: LmxMsg ui_child
+    @: LmxPool ui_method_pool
+    @: LmxMethod ui_method
+    @: LmxThread file_t
+    @: LmxPost file_mail
+    @: LmxSchedule file_sched
+    @: LmxMsg file_child
+    @: LmxPool file_method_pool
+    @: LmxMethod file_method
+    @: void file_turns_cell
+    @: void file_body_cell
+    @: LmxThread audio_t
+    @: LmxPost audio_mail
+    @: LmxSchedule audio_sched
+    @: LmxMsg audio_child
+    @: LmxPool audio_method_pool
+    @: LmxMethod audio_method
+    @: void audio_turns_cell
+    @: void audio_body_cell
+    @: LmxThread proc_t
+    @: LmxPost proc_mail
+    @: LmxSchedule proc_sched
+    @: LmxMsg proc_child
+    @: LmxPool proc_method_pool
+    @: LmxMethod proc_method
+    @: void proc_turns_cell
+    @: void proc_body_cell
+
+    if: rt_ready != 0U || rt_root = 0 || rt_source = 0 || rt_child_arena = 0
+        return: 0
+    ---
+    rt_ready: 1U
+    root_arena: lmx_root_arena(rt_root)
+
+    # --- UI Thread (stepped via R0 manager; PeekMessageA pump in body) ---
+    lmx_arena_open(rt_ui_arena)
+    ui_t: (cast: (@: LmxThread) lmx_arena_take(rt_ui_arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    ui_mail: (cast: (@: LmxPost) lmx_arena_take(rt_ui_arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    ui_sched: (cast: (@: LmxSchedule) lmx_arena_take(rt_ui_arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: ui_t = 0 || ui_mail = 0 || ui_sched = 0
+        return: 0
+    ---
+    ui_child: lmx_root_create(rt_root, rt_ui_arena, 0U, rt_source)
+    if: ui_child = 0
+        return: 0
+    ---
+    ui_method_pool: lmx_pool_make(rt_ui_arena, 2U * c.sizeof(c.LmxMethod), c.sizeof(c.LmxMethod), c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD)
+    if: ui_method_pool = 0
+        return: 0
+    ---
+    ui_method: lmx_method_intern(rt_ui_arena, ui_method_pool, (cast: (LmxEntry) mixa_app_ui_entry), 0U)
+    if: ui_method = 0
+        return: 0
+    ---
+    if: lmx_arena_ref_store(ui_child\graph, 0U, (cast: (@: void) ui_method)) != 0
+        return: 0
+    ---
+    if: lmx_post_init(rt_ui_arena, ui_mail) != c.LMX_POST_OK
+        return: 0
+    ---
+    if: lmx_thread_attach(ui_t, ui_child, ui_mail, ui_sched) != c.LMX_THREAD_OK
+        return: 0
+    ---
+    if: lmx_schedule_init(ui_sched, rt_ui_arena, ui_t, 5000U) != c.LMX_SCHEDULE_OK
+        return: 0
+    ---
+    if: lmx_child_thread(lmx_root_thread(rt_root), ui_child, ui_t) != c.LMX_CHILD_OK
+        return: 0
+    ---
+    ui_thread: ui_t
+    lmx_manager_running_add(lmx_root_manager(rt_root), ui_sched)
+
+    # --- File Worker Thread (stepped via R0 manager) ---
+    lmx_arena_open(rt_file_arena)
+    file_t: (cast: (@: LmxThread) lmx_arena_take(rt_file_arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    file_mail: (cast: (@: LmxPost) lmx_arena_take(rt_file_arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    file_sched: (cast: (@: LmxSchedule) lmx_arena_take(rt_file_arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: file_t = 0 || file_mail = 0 || file_sched = 0
+        return: 0
+    ---
+    file_child: lmx_root_create(rt_root, rt_file_arena, 1U, rt_source)
+    if: file_child = 0
+        return: 0
+    ---
+    file_method_pool: lmx_pool_make(rt_file_arena, 2U * c.sizeof(c.LmxMethod), c.sizeof(c.LmxMethod), c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD)
+    if: file_method_pool = 0
+        return: 0
+    ---
+    file_method: lmx_method_intern(rt_file_arena, file_method_pool, (cast: (LmxEntry) mixa_app_file_entry), 0U)
+    if: file_method = 0
+        return: 0
+    ---
+    file_turns_cell: lmx_size_new_owned(rt_file_arena)
+    file_body_cell: lmx_size_new_owned(rt_file_arena)
+    if: file_turns_cell = 0 || file_body_cell = 0
+        return: 0
+    ---
+    if: lmx_arena_ref_store(file_child\graph, 0U, (cast: (@: void) file_method)) != 0
+        return: 0
+    ---
+    if: lmx_arena_ref_store(file_child\graph, 1U, file_turns_cell) != 0
+        return: 0
+    ---
+    if: lmx_arena_ref_store(file_child\graph, 2U, file_body_cell) != 0
+        return: 0
+    ---
+    if: lmx_post_init(rt_file_arena, file_mail) != c.LMX_POST_OK
+        return: 0
+    ---
+    if: lmx_thread_attach(file_t, file_child, file_mail, file_sched) != c.LMX_THREAD_OK
+        return: 0
+    ---
+    if: lmx_schedule_init(file_sched, rt_file_arena, file_t, 5000U) != c.LMX_SCHEDULE_OK
+        return: 0
+    ---
+    if: lmx_child_thread(lmx_root_thread(rt_root), file_child, file_t) != c.LMX_CHILD_OK
+        return: 0
+    ---
+    file_thread: file_t
+    lmx_manager_running_add(lmx_root_manager(rt_root), file_sched)
+
+    # --- Audio Worker Thread (stepped via R0 manager) ---
+    lmx_arena_open(rt_audio_arena)
+    audio_t: (cast: (@: LmxThread) lmx_arena_take(rt_audio_arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    audio_mail: (cast: (@: LmxPost) lmx_arena_take(rt_audio_arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    audio_sched: (cast: (@: LmxSchedule) lmx_arena_take(rt_audio_arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: audio_t = 0 || audio_mail = 0 || audio_sched = 0
+        return: 0
+    ---
+    audio_child: lmx_root_create(rt_root, rt_audio_arena, 2U, rt_source)
+    if: audio_child = 0
+        return: 0
+    ---
+    audio_method_pool: lmx_pool_make(rt_audio_arena, 2U * c.sizeof(c.LmxMethod), c.sizeof(c.LmxMethod), c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD)
+    if: audio_method_pool = 0
+        return: 0
+    ---
+    audio_method: lmx_method_intern(rt_audio_arena, audio_method_pool, (cast: (LmxEntry) mixa_app_audio_entry), 0U)
+    if: audio_method = 0
+        return: 0
+    ---
+    audio_turns_cell: lmx_size_new_owned(rt_audio_arena)
+    audio_body_cell: lmx_size_new_owned(rt_audio_arena)
+    if: audio_turns_cell = 0 || audio_body_cell = 0
+        return: 0
+    ---
+    if: lmx_arena_ref_store(audio_child\graph, 0U, (cast: (@: void) audio_method)) != 0
+        return: 0
+    ---
+    if: lmx_arena_ref_store(audio_child\graph, 1U, audio_turns_cell) != 0
+        return: 0
+    ---
+    if: lmx_arena_ref_store(audio_child\graph, 2U, audio_body_cell) != 0
+        return: 0
+    ---
+    if: lmx_post_init(rt_audio_arena, audio_mail) != c.LMX_POST_OK
+        return: 0
+    ---
+    if: lmx_thread_attach(audio_t, audio_child, audio_mail, audio_sched) != c.LMX_THREAD_OK
+        return: 0
+    ---
+    if: lmx_schedule_init(audio_sched, rt_audio_arena, audio_t, 5000U) != c.LMX_SCHEDULE_OK
+        return: 0
+    ---
+    if: lmx_child_thread(lmx_root_thread(rt_root), audio_child, audio_t) != c.LMX_CHILD_OK
+        return: 0
+    ---
+    audio_thread: audio_t
+    lmx_manager_running_add(lmx_root_manager(rt_root), audio_sched)
+
+    # --- Process Worker Thread (stepped via R0 manager) ---
+    lmx_arena_open(rt_proc_arena)
+    proc_t: (cast: (@: LmxThread) lmx_arena_take(rt_proc_arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    proc_mail: (cast: (@: LmxPost) lmx_arena_take(rt_proc_arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    proc_sched: (cast: (@: LmxSchedule) lmx_arena_take(rt_proc_arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: proc_t = 0 || proc_mail = 0 || proc_sched = 0
+        return: 0
+    ---
+    proc_child: lmx_root_create(rt_root, rt_proc_arena, 3U, rt_source)
+    if: proc_child = 0
+        return: 0
+    ---
+    proc_method_pool: lmx_pool_make(rt_proc_arena, 2U * c.sizeof(c.LmxMethod), c.sizeof(c.LmxMethod), c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD)
+    if: proc_method_pool = 0
+        return: 0
+    ---
+    proc_method: lmx_method_intern(rt_proc_arena, proc_method_pool, (cast: (LmxEntry) mixa_app_process_entry), 0U)
+    if: proc_method = 0
+        return: 0
+    ---
+    proc_turns_cell: lmx_size_new_owned(rt_proc_arena)
+    proc_body_cell: lmx_size_new_owned(rt_proc_arena)
+    if: proc_turns_cell = 0 || proc_body_cell = 0
+        return: 0
+    ---
+    if: lmx_arena_ref_store(proc_child\graph, 0U, (cast: (@: void) proc_method)) != 0
+        return: 0
+    ---
+    if: lmx_arena_ref_store(proc_child\graph, 1U, proc_turns_cell) != 0
+        return: 0
+    ---
+    if: lmx_arena_ref_store(proc_child\graph, 2U, proc_body_cell) != 0
+        return: 0
+    ---
+    if: lmx_post_init(rt_proc_arena, proc_mail) != c.LMX_POST_OK
+        return: 0
+    ---
+    if: lmx_thread_attach(proc_t, proc_child, proc_mail, proc_sched) != c.LMX_THREAD_OK
+        return: 0
+    ---
+    if: lmx_schedule_init(proc_sched, rt_proc_arena, proc_t, 5000U) != c.LMX_SCHEDULE_OK
+        return: 0
+    ---
+    if: lmx_child_thread(lmx_root_thread(rt_root), proc_child, proc_t) != c.LMX_CHILD_OK
+        return: 0
+    ---
+    process_thread: proc_t
+    lmx_manager_running_add(lmx_root_manager(rt_root), proc_sched)
+
+    c.printf("mixa_app: 4 L3 Threads created (UI + file + audio + process)\n")
+    return: 0
+
+
+# Host main: opens runtime, runs cycles, closes.
+# R0 cycle runs mixa_app_entry (creates threads on first turn).  The manager
+# is RUNNING: lmx_root_cycle dispatches to lmx_manager_running_round, which
+# starts OS-thread lanes for each child — they run on their OWN threads, not
+# here.  UI Thread body does one non-blocking PeekMessageA pump per turn.
+# l1-98 cascade (f9f8f3e): lmx_root_close releases live children's arenas —
+# do NOT read child state after close.
+fn: main (int: argc; @: @(char) argv) int
+    LmxRoot: root
+    LmxArena: child_arena
+    # THE FOUR THREAD ARENAS' STORAGE LIVES HERE, IN main (2026-09-19, assembly lead).
+    # They used to be locals of mixa_app_entry -- the R0 turn's stack -- and that was two bugs
+    # at once: `lmx_arena_open` takes a CLEAN by-value handle (a stack local arrives holding
+    # garbage), and the header was gone the moment the entry returned, while the kernel keeps
+    # pointing at it through each child's `slotrena`.  Measured: SIGSEGV in lmx_arena_find <-
+    # lmx_arena_take <- mixa_app_entry on the first run of the assembled app.
+    LmxArena: ui_arena
+    LmxArena: file_arena
+    LmxArena: audio_arena
+    LmxArena: proc_arena
+    @: LmxArena root_arena
+    @: Lmx source
+    int: running
+    int: had_error
+    int: cycle_rc
+    int: world_silent 0
+
+    c.memset((cast: (@: void) (@ root)), 0, c.sizeof(c.LmxRoot))
+    c.memset((cast: (@: void) (@ child_arena)), 0, c.sizeof(c.LmxArena))
+
+    if: lmx_arena_open(@ child_arena) != 0
+        c.printf("mixa_app: child arena open failed\n")
+        return: MIXA_MAIN_FAIL
+    ---
+
+    c.memset((cast: (@: void) (@ ui_arena)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@: void) (@ file_arena)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@: void) (@ audio_arena)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@: void) (@ proc_arena)), 0, c.sizeof(c.LmxArena))
+    rt_ui_arena: @ ui_arena
+    rt_file_arena: @ file_arena
+    rt_audio_arena: @ audio_arena
+    rt_proc_arena: @ proc_arena
+    rt_root: @ root
+    rt_child_arena: @ child_arena
+    if: argc >= 2
+        rt_root_utf8: argv[1]
+    else:
+        rt_root_utf8: "."
+    ---
+
+    # R0 limit = 10000 ticks (10s per Mikhail): a silence detector, not a timer. The
+    # root has no parent to stamp for it, so it rings its own window via
+    # lmx_root_keepalive each cycle (l1-98 stub, commit 6874f5f). Silence past the
+    # window → root closes itself (LMX_ROOT_DONE). lmx_root_hung polls the window
+    # from a side observer context (future watchdog); not called here.
+    if: lmx_root_open(@ root, mixa_app_entry, 10000U, 0U, 0U) != c.LMX_ROOT_OK
+        c.printf("mixa_app: root open failed\n")
+        return: MIXA_MAIN_FAIL
+    ---
+    # Register the world cell with the root's supervision stub.  A zero cell
+    # is refused (lmx_root_supervise_world: "ноль старился бы с начала времён").
+    mixa_world_cell: (cast: (size_t) lmx_clock_ticks())
+    if: lmx_root_supervise_world(@ root, @ mixa_world_cell) != c.LMX_ROOT_OK
+        c.printf("mixa_app: root supervise_world failed\n")
+        return: MIXA_MAIN_FAIL
+    ---
+    root_arena: lmx_root_arena(@ root)
+
+    # Source template: 4 child slots per child graph (0=method, 1=turns, 2=body_id, 3=letter)
+    source: lmx_node_new_owned(root_arena)
+    if: source = 0 || lmx_arena_refs_open_owned(root_arena, source, 4U) != 0
+        c.printf("mixa_app: source template build failed\n")
+        return: MIXA_MAIN_FAIL
+    ---
+    rt_source: source
+
+    # Rebind R0's manager from STEPPED (lmx_root_open default) to RUNNING:
+    # each child gets its own OS-thread lane (lmx_manager_running.lm1).
+    # Mikhail: "многопоточно и сообщениями" — four threads, four lanes, message
+    # delivery by address, no locks.  The cycle manages lanes (start/reap) but
+    # does NOT run children's turns — they run on their own threads.
+    if: lmx_manager_running_init(lmx_root_manager(@ root)) != c.LMX_MANAGER_OK
+        c.printf("mixa_app: running manager bind failed\n")
+        return: MIXA_MAIN_FAIL
+    ---
+
+    # Watchdog thread: a plain OS thread (NOT a fifth L3 Thread).  Why: it must
+    # outlive the L3 runtime's own teardown — an L3 Thread in a lane would be
+    # stopped by the close cascade it is meant to report on.  It touches only
+    # lmx_root_hung + lmx_clock_ticks (read-only) + Sleep + MessageBoxA/ExitProcess.
+    # No graph, no arena, no service, no locks — cannot interfere with the cycle.
+    if: (cast: (@: void) c.CreateThread(0, 0,
+            (cast: (LPTHREAD_START_ROUTINE) mixa_app_watchdog_body), 0, 0, 0)) = 0
+        c.printf("mixa_app: watchdog thread start failed\n")
+        return: MIXA_MAIN_FAIL
+    ---
+
+    # MAIN LOOP: R0 cycle.  The manager is RUNNING so lmx_root_cycle dispatches
+    # to lmx_manager_running_round — which starts/reaps OS-thread lanes for each
+    # child.  The children's turns run on their OWN threads, not here.  The R0
+    # thread does only: R0's turn, keepalive ring, orphan maintain, settle.
+    # UI Thread body pumps one non-blocking PeekMessageA per turn.
+    #
+    # Order per iteration: cycle -> keepalive -> UI close check.
+    # keepalive renews the root's 10s window; silence past the window → watchdog dialog.
+    running: 1
+    had_error: 0
+    while: running != 0 && had_error = 0
+        cycle_rc: lmx_root_cycle(@ root, 1U)
+        if: cycle_rc = c.LMX_ROOT_OK
+            # Cycle OK — ring the root's wait window (keepalive).
+            if: lmx_root_keepalive(@ root, lmx_root_clock(@ root)) != 0
+                c.printf("mixa_app: root keepalive refused (closed or invalid)\n")
+                running: 0
+            ---
+        else:
+            # LMX_ROOT_DONE: the root stopped itself (silent world > 10s window).
+            # This is NOT an error — it is a sanctioned shutdown. LMX_ROOT_INVALID
+            # and others are real failures. (l1-98: "не мешай этот случай с had_error".)
+            if: cycle_rc != c.LMX_ROOT_DONE
+                c.printf("mixa_app: root cycle failed (%d)\n", (cast: (int) cycle_rc))
+                had_error: 1
+            else:
+                # World went silent (watchdog died): the watchdog is the root's
+                # only supervisor.  A dead watchdog = no hang detection = degraded
+                # runtime.  Exit non-zero so wrappers detect it.
+                # NOTE (l1-98): this is NOT a graph/arena error — do NOT mix with
+                # had_error.  lmx_root_close still runs (it is the teardown).
+                c.printf("mixa_app: root self-stopped (world silent)\n")
+                running: 0
+                world_silent: 1
+            ---
+        ---
+        if: ui_controller_closed != 0U
+            running: 0
+        ---
+        # Yield: a GUI app must not pin the CPU between cycles.  The UI thread's
+        # PeekMessageA in mixa_app_controller_step provides idle time when there
+        # are no messages, but the R0 cycle here still busy-waits without it.
+        c.Sleep(1U)
+    ---
+
+    if: lmx_root_close(@ root) != c.LMX_ROOT_OK
+        c.printf("mixa_app: root close failed\n")
+        return: MIXA_MAIN_FAIL
+    ---
+
+    # A failed cycle sets had_error but lets lmx_root_close run (it must
+    # always be called).  The error is reported here -- exit non-zero so
+    # probes and wrappers can see the failure.
+    if: had_error != 0
+        return: MIXA_MAIN_FAIL
+    ---
+
+    # World-silence exit (watchdog died): non-zero, but NOT a graph/arena error.
+    if: world_silent != 0
+        return: MIXA_MAIN_FAIL
+    ---
+
+    return: MIXA_MAIN_OK

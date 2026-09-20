@@ -1,0 +1,435 @@
+mixa_process_marker -- PROCESS_SEAM 4.1 in-band marker (ticket 20260912-145000)
+================================================================================
+
+Scope
+-----
+A PURE, owner-local module, separate from the six process operations:
+identity generation, the shell command wrapper, and an INCREMENTAL
+streaming parser. No Message queues, threads, mutexes, or application
+shared state -- the identity generator's own counter is a caller-owned
+struct field (MixaProcessMarkerGen), never a module-global.
+
+Recovery material inspected first, per the ticket: the untracked
+mixa_process_marker.h.lm1/.lm1 implemented a WHOLE-PAYLOAD (non-
+incremental) parser using i32/i64 typedefs and bitwise `|`/`&` in place
+of `||`/`&&`, neither of which are established forms elsewhere in this
+codebase, and it had no shell-wrapper or identity-generation code at
+all. Reused only the CONCEPT (marker TAB status TAB cwd); rewritten from
+scratch to match the incremental, byte-stream contract this ticket
+actually asks for.
+
+Identity generation
+--------------------
+mixa_process_marker_generate(gen, out) formats "MIXA_MARK_<counter:hex>_
+<QueryPerformanceCounter HighPart:hex><LowPart:hex>" and advances gen's
+own owner-held counter. Sized exactly via snprintf's own two-pass
+length-then-format idiom (no fixed capacity for the OUTPUT beyond a
+small fixed-shape numeric format, never user-controlled length).
+
+The shell command wrapper -- a real cmd.exe pitfall found and fixed live
+----------------------------------------------------------------------
+PROCESS_SEAM 4.1 wants the child's own exit status and final working
+directory printed in-band after the user's command. The first design
+attempt used cmd.exe's %errorlevel%/!errorlevel! pseudo-variables inline
+within the ALREADY-ACCEPTED mixa_process_spawn's own fixed `cmd.exe /c
+"..."` wrapping (so as not to touch that already-reviewed code). This
+was MEASURED, not assumed, to be broken: a direct probe of `cmd /c "cmd
+/c exit /b 5 & echo %errorlevel%"` prints the STALE pre-command value
+(0), because cmd.exe substitutes %VAR% at PARSE TIME of the whole `/c`
+argument, before any part of it executes. Enabling delayed expansion
+INLINE via `setlocal enabledelayedexpansion` on the SAME line, tried
+next, was independently measured NOT to fix it either (the `!var!`
+tokens are apparently not even recognized as delayed-expansion syntax if
+delayed expansion was OFF at the moment cmd.exe first parsed that whole
+line, which is before the inline setlocal statement itself runs) --
+`!errorlevel!` came back completely literal. The textbook fix (a nested
+`cmd /V:ON /c "..."` invocation) was tried third and found fragile: it
+requires nested double-quotes inside spawn()'s own single already-fixed
+quote pair, and a direct probe of that nesting broke immediately
+("... is not recognized").
+
+The actually working, measured-live design: a real temporary BATCH FILE
+(GetTempFileNameW -- collision-proof by construction, not a guessed
+name -- then renamed in place from its default ".tmp" extension to
+".bat", since cmd.exe only recognizes a real script extension when given
+a bare path; the original .tmp reservation is deleted). Batch files
+process one line at a time, so %errorlevel% after the user's own command
+line is genuinely that line's own real value -- no delayed expansion, no
+nested-quote fragility, confirmed working with the SAME direct probe
+technique (`cmd /c exit /b 5` then `echo %errorlevel%` as two REAL batch
+lines correctly printed 5). The batch content: `@echo off` (suppressing
+cmd's own command-echo noise, which would otherwise duplicate the marker
+text once per line as a command trace before it even runs), the user's
+own command verbatim, the marker echo line (marker TAB %errorlevel% TAB
+%cd%), then a self-delete (`del "%~f0"`) so nothing is left behind.
+Written with a UTF-8 BOM so a non-ASCII user command is read correctly
+by modern cmd.exe. Sized from the caller's own command length via
+checked arithmetic -- no fixed command cap.
+
+The incremental streaming parser
+----------------------------------
+MixaProcessMarkerScanner holds only the bytes since the CURRENT tentative
+match attempt began (`pending`, grown via checked doubling, never a
+fixed cap) plus a small state machine: SCAN (looking for the marker) ->
+STATUS_SEP (the ONE byte that must be the marker/status separator TAB,
+a genuinely separate one-shot state -- see "a real bug found live"
+below) -> STATUS (digit collection) -> CWD (byte collection until line
+end) -> DONE.
+
+Ordinary output bytes are reported via a sink callback (the same "sink
+with a function pointer" idiom mixa_copy.h.lm1 already established for
+this codebase) THE MOMENT they are confirmed not part of a marker
+record -- never buffered past that point, and always in stream order.
+A byte that starts matching the marker but then diverges triggers a
+NAIVE RESTART SEARCH within the buffered `pending` bytes (find the
+smallest offset whose suffix is itself a valid marker prefix, emit
+everything before that offset as ordinary, keep the rest tentative) --
+correct for any marker text, including one that happens to self-overlap,
+not just the specific format this module generates.
+
+A REAL BUG FOUND LIVE, not merely by inspection: the very first
+implementation transitioned SCAN straight to a single STATUS state on a
+full marker match, and treated ANY tab seen in STATUS as the STATUS/CWD
+terminator. This meant the marker's OWN immediately-following tab (the
+marker/status separator) was mistaken for the terminator on the very
+first byte processed in STATUS, leaving an EMPTY digit field every
+single time -- confirmed by a dedicated isolated scanner-only test
+harness (not the full spawn+parse path, to isolate the bug fast) which
+showed every real marker record being rejected as malformed and flushed
+as ordinary output instead of recognized. Fixed by splitting STATUS into
+two genuinely distinct states: STATUS_SEP (consumes exactly the one
+separator tab, advances status_start past it, transitions to STATUS) and
+STATUS (digit collection, terminated by the SECOND tab). Re-verified via
+the same isolated harness before touching the full test suite.
+
+Item 6's embedded-NUL rule ("if text paths exclude NUL, reject it
+explicitly rather than truncating"): a NUL byte encountered in STATUS or
+CWD state is treated as malformed (the whole tentative record flushed as
+ordinary, including the NUL byte itself) -- explicit rejection, not a
+silent truncation at the NUL. NUL bytes in genuinely ORDINARY output
+(outside any marker match attempt) pass through unchanged, byte-oriented,
+matching FILE_SEAM's own "preserves NUL" philosophy elsewhere in this
+codebase.
+
+Testing
+-------
+tests/mixa_process_marker_selftest.lm1 (43/0, two hash-identical runs,
+marker-impl hash 2F4E2DA3ADC374901507E822637B7CD50DED2583150AD470D37ACFC
+FB840ABF8 both times). "Every split position" is covered by feeding the
+scanner ONE BYTE AT A TIME by default in every scenario (the algorithm's
+own logic has no chunk-size-dependent branch anywhere, so if byte-at-a-
+time is correct, any coarser real read() fragmentation is too) -- the
+first scenario additionally proves whole-buffer feeding agrees exactly.
+Covered: multiple ordinary lines before the marker; zero, positive, and
+negative exit status; spaces, non-ASCII (UTF-8 Cyrillic), and quotes in
+the final directory; a DECEPTIVE marker-like string with the right
+prefix but WRONG identity (never matched, emitted as ordinary,
+surrounding text intact); a genuinely INCOMPLETE partial match that
+breaks mid-way, proving the restart logic recovers and still finds the
+real marker afterward; the marker text EMBEDDED but not at a real record
+boundary (no tab immediately after); malformed integer (a letter where a
+digit belongs); integer overflow (14 digits, far past i32); a CRLF line
+ending (CR correctly stripped from the recovered cwd); EOF with no
+marker ever (everything flushed as ordinary, done stays false -- PROCESS
+_SEAM's own "no status" case); EOF exactly mid-marker-match (a genuine
+partial prefix, flushed verbatim); eof() called AFTER an already-
+complete record (a documented no-op, does not re-flush or corrupt the
+result); embedded NUL inside the cwd field (explicitly rejected, no
+completed record); two generated markers proven unique; argument
+negatives across every entry point; and TWO real end-to-end scenarios
+(a real spawned shell-wrapper child with real merged ordinary output
+plus a real recovered exit code and cwd; a real nonzero exit code via a
+NESTED `cmd /c exit /b 9` -- a bare `exit /b` was tried first and found
+to legitimately terminate the whole wrapper batch before its own marker
+line could ever run, which is correct behavior, not a bug, and is why
+the nested form is used for this scenario specifically).
+
+Regressions, all green, re-run fresh: process (six-operation) selftest
+122/0, mixa_file_selftest ok, console_window 37/0, app_loop 28/0 (native
+entrypoint still built, not executed). Full run_mixa.ps1 pass (once):
+every unit/test "ok", including the ingress host harness's own already-
+known expected-failure diagnostic.
+
+Known gaps, stated honestly
+----------------------------
+- Allocation-failure testing (ticket item 7's own explicit ask) is NOT
+  implemented: mixa_marker_buf_ensure calls c.realloc/c.malloc directly,
+  with no injectable allocator seam the way mixa_fileio's own
+  MixaFioFaultVTable lets a test force a failure at an exact byte
+  offset. Building that seam for this module was judged out of the
+  remaining scope for this stage; the growth path itself IS written to
+  fail safely on a real allocation failure (flushes whatever is already
+  buffered as ordinary output via mixa_marker_flush_pending, returns
+  MIXA_PROCESS_MARKER_ERR_NOMEM, leaks nothing already-allocated), but
+  this claim is not backed by a deterministic forced-failure test the
+  way every other module's own NOMEM path in this codebase has been.
+- The self-delete batch line (`del "%~f0"`) occasionally raced with
+  cmd.exe's own read-ahead during earlier development (observed once as
+  a harmless "The batch file cannot be found." stderr line AFTER the
+  marker was already correctly printed and parsed) -- not reproducing
+  after the `@echo off` fix, not specifically hardened against further
+  (e.g. via the `(goto) 2>nul & del` idiom), and not blocking correctness
+  of the marker record itself since it always arrives before the
+  self-delete line runs.
+- Not folded in, per the ticket's own instruction: the later Message/
+  inbox/outbox attachment (PROCESS_SEAM section 6).
+
+Part II -- review corrections (ticket 20260912-151000)
+=======================================================
+Independent review of commit e9ed0dbb found seven numbered contract/code
+gaps plus one "also inspect" item. All eight are corrected here, on top
+of Part I's design, without touching the accepted six-operation process
+seam (mixa_process.h/.lm1, mixa_process_win32.h/.lm1) or starting Message
+integration, per the review's own explicit instructions.
+
+1. Sink-error propagation. mixa_marker_emit and mixa_marker_flush_pending
+   are now `fn: ... int` (were `sub:`), returning the sink's own result
+   verbatim. Every call site in feed()/eof() checks this return and stops
+   immediately, setting *consumed to exactly how many input bytes were
+   processed before the failure (the failing byte included, since its
+   effect -- the sink call itself -- already happened). Tests: scenario
+   20 (feed() fails deterministically on the 3rd ordinary byte of
+   "abcdef", asserting rc=7, consumed=3, and that only "ab" reached the
+   accumulated ordinary output); scenario 21 (eof()'s own flush of a
+   buffered partial match fails on its first -- and only -- sink call).
+
+2. Record-boundary gating. MixaProcessMarkerScanner gained an
+   `at_line_start` field: true at scanner_open and immediately after any
+   ordinary emission whose LAST byte was LF, false otherwise. A marker
+   match may only BEGIN when at_line_start is true. This is the review's
+   own "preferred" option for a marker *line*. A consequence, reasoned
+   through and taken: since the marker text itself never contains LF, no
+   position within a previously-buffered tentative match can ever itself
+   satisfy the line-start rule unless it IS the original line start --
+   so the old "find the smallest valid restart offset within pending"
+   search is no longer needed or correct to keep; a SCAN-state mismatch
+   now simply flushes the WHOLE pending buffer as ordinary and resets to
+   a fresh SCAN state, relying on the normal at_line_start bookkeeping to
+   re-evaluate later bytes correctly. Tests: scenario 9b (the exact,
+   otherwise fully valid marker/status/cwd record placed immediately
+   after a non-newline byte -- stays entirely ordinary, done stays
+   false); scenario 9c (the identical record placed genuinely after LF --
+   recognized), proving the gate is positional, not about content;
+   scenario 8 was adjusted so its "broken partial match" now begins at a
+   real line start (the mismatch-flush no longer performs any restart
+   search, so a broken match starting mid-line would never have been
+   eligible to begin matching in the first place -- this is now the
+   correct, not incidental, behavior).
+
+3. No fixed path caps. mixa_marker_get_temp_dir uses GetTempPathW's own
+   documented two-call protocol (call with nBufferLength=0 to get the
+   required length, allocate exactly that, call again) -- no 1024-wchar_t
+   stack buffer anywhere. mixa_marker_utf8_to_wide / _wide_to_utf8 size
+   their own output from MultiByteToWideChar/WideCharToMultiByte's own
+   "tell me the length" mode (buffer=NULL) the same way. No replacement
+   guessed bound was introduced anywhere in this file.
+
+4. Collision-proof wrapper file creation. GetTempFileNameW (which only
+   reserves a `.tmp` name) plus a rename to a sibling `.bat` path is
+   GONE. mixa_marker_create_wrapper_file now builds its own candidate
+   `.bat` filename directly (process id + QueryPerformanceCounter's own
+   high/low bits + a retry-attempt counter, all embedded in the name) and
+   creates it via CreateFileW(..., CREATE_NEW, ...) in a bounded (64
+   attempts) retry loop: CREATE_NEW is atomic at the OS level (fails with
+   ERROR_FILE_EXISTS if that exact path already exists, and ONLY that
+   error triggers a retry with a freshly-derived candidate -- any other
+   CreateFileW failure is reported as ERR_IO immediately, never silently
+   swallowed). No foreign file is ever opened with CREATE_ALWAYS or
+   otherwise overwritten. Test: scenario 26 -- twenty rapid consecutive
+   build_wrapper calls, each producing a provably distinct wrapper path
+   (no two of the twenty paths collide). This is indirect load evidence
+   of the atomic-create-with-retry design, not a forced exact-collision
+   reproduction: the candidate name has no test-only seam for pinning it
+   to a chosen value (adding one would work against keeping this module
+   owner-local, which the review itself also asked to preserve), so a
+   real ERROR_FILE_EXISTS retry firing has not been directly observed
+   under test -- disclosed honestly, not silently skipped.
+
+5. Wrapper I/O and cleanup completeness. Every Win32 call in
+   mixa_marker_create_wrapper_file and mixa_process_marker_build_wrapper
+   is now return-checked: QueryPerformanceCounter, every WriteFile call
+   (looped until the full requested byte count is confirmed written, not
+   just checked once), CloseHandle, DeleteFileW, and every encoding
+   conversion. Every failure path AFTER the wrapper file is created closes
+   the handle (if still open) and deletes the file before returning; every
+   allocation/conversion failure releases every buffer already owned at
+   that point (no leaks on any exit path). Ownership is now explicit in
+   both the header and the signature: build_wrapper returns BOTH
+   out_wrapper_command (quoted, for mixa_process_spawn) and
+   out_wrapper_path (the same path, unquoted, owned separately) so a
+   caller whose subsequent mixa_process_spawn call itself fails to launch
+   the wrapper (meaning the batch's own self-delete line never runs) can
+   explicitly clean it up via the new mixa_process_marker_cleanup_wrapper
+   (best-effort, safe to call on an already-gone or never-created path,
+   safe to call with a null argument). Tests: scenario 24 (a forced
+   allocation failure on build_wrapper's own very first allocation --
+   both out params provably stay null, nothing to clean up); scenario 25
+   (a real successful build_wrapper call, asserting the quoted command
+   genuinely contains the unquoted path, then two consecutive
+   cleanup_wrapper calls on the same path -- both OK, proving the second,
+   already-gone-file case is handled -- plus cleanup_wrapper(0)).
+
+6. Header accuracy. mixa_process_marker.h.lm1 has been rewritten
+   throughout to describe ONLY the final, actually-shipped design (the
+   CREATE_NEW batch-file wrapper, the at_line_start gate, the consumed
+   out-parameter, the fault vtable) -- the abandoned inline delayed-
+   expansion / nested `cmd /V:ON` attempts are described in this .txt
+   file's own Part I history section, not claimed as a live code path in
+   the header's comments.
+
+7. Deterministic allocation-failure coverage. A MixaProcessMarkerFaultFn/
+   MixaProcessMarkerFaultVTable pair (the same borrowed-vtable idiom
+   mixa_fileio.h.lm1's own MixaFioFaultVTable already established) is
+   threaded through scanner_open's own new `fault` parameter (stored on
+   the scanner, consulted by every mixa_marker_buf_ensure growth call)
+   and through build_wrapper's own new `fault` parameter (consulted by
+   every one of its allocation sites: the temp-dir buffer, each wide/
+   UTF-8 conversion buffer, the wrapper-body buffer). Nullable throughout
+   -- passing 0 means real, uninjected allocation, used by every scenario
+   that is not itself testing this mechanism. Tests: scenario 23 (a
+   forced failure on the scanner's own FIRST pending-buffer growth, i.e.
+   the very moment a tentative marker match begins -- asserts
+   ERR_NOMEM and *consumed==1, the failing byte); scenario 24 (described
+   above, for build_wrapper). mixa_process_marker_generate's own single
+   small fixed-shape allocation remains NOT threaded through this
+   mechanism -- named honestly in the header's own comment as a
+   disclosed, smaller-risk simplification, not silently skipped.
+
+8. The consumed-bytes contract ("also inspect" item). feed() gained a
+   new `@: size_t consumed` out-parameter with a fully specified
+   contract, documented in the header: on ordinary success *consumed ==
+   len; if a complete record is recognized partway through this call's
+   own bytes, *consumed < len and the REMAINING bytes are NOT examined at
+   all (explicitly handed back uninspected -- never silently dropped); on
+   a sink or allocation failure, *consumed is exactly how many bytes were
+   processed before the failure, failing byte included; once the scanner
+   is already DONE at entry, feed() is a no-op with *consumed=0. Tests:
+   scenario 1's own whole-buffer feed now also asserts consumed == the
+   full input length when the record consumes the entire buffer; scenario
+   22 -- a record followed immediately by extra unrelated bytes in the
+   SAME feed() call: asserts consumed stops exactly at 41 (the record's
+   own length: a 35-byte marker plus "\t0\t/z\n"), asserts the trailing
+   "EXTRA_BYTES_AFTER" text was never examined or emitted (g_out_len
+   stays 0), then feeds those same trailing bytes into the now-done
+   scanner and confirms the no-op contract (MIXA_PROCESS_MARKER_OK,
+   scanner state untouched).
+
+Testing (Part II totals)
+-------------------------
+tests/mixa_process_marker_selftest.lm1 now: 66 checks, 0 failures, two
+hash-identical runs via run_process_marker_selftest.ps1
+  run_20260912_152057_453_c5a399e7 (SUCCESS)
+  run_20260912_152105_427_1923af09 (SUCCESS)
+  identical marker-impl hash both runs:
+  87387234D9E6C9D1665A8DEA0F179949755E7C5B80279B2FAAE840E173A54798
+
+Regressions, all re-run fresh and green: process (six-operation)
+selftest SUCCESS (122 checks, unchanged -- this file was not touched, per
+the ticket's own instruction not to alter the accepted process seam);
+mixa_file_selftest ok; console_window selftest SUCCESS; app_loop selftest
+SUCCESS (native entrypoint still built, not executed); full run_mixa.ps1
+pass (once), every tracked unit "ok", including the ingress host
+harness's own already-known expected-failure diagnostic.
+
+Known gaps, stated honestly (Part II)
+--------------------------------------
+- Item 4's collision-proofing is structurally correct (atomic CREATE_NEW,
+  retry only on ERROR_FILE_EXISTS, never an overwrite) but not proven via
+  a forced, reproduced exact collision -- see item 4 above for why no
+  test-only seam was added, and the indirect 20-way uniqueness stress
+  test used instead.
+- mixa_process_marker_generate's own allocation remains outside the
+  fault-injection mechanism (see item 7 above) -- a disclosed,
+  intentionally smaller-risk simplification, not a gap that was missed.
+- The self-delete batch line's own rare, previously-observed benign race
+  (noted in Part I) has not resurfaced but remains unhardened, as before.
+- Not folded in, per the ticket's own instruction: the later Message/
+  inbox/outbox attachment (PROCESS_SEAM section 6).
+
+Part III -- final cap correction (ticket 20260912-153000)
+===========================================================
+Two explicit acceptance points from Part II remained unmet; both are
+closed here, on top of Part II's design, without touching the process
+seam or starting Message integration.
+
+1. The fixed 64-attempt CREATE_NEW retry cap is GONE.
+   mixa_marker_create_wrapper_file's retry loop is now `while: 1`, not
+   `while: attempt < 64`. `attempt` is now `ulong:` (was `int:`).
+   Exhaustion is derived from the actual integer domain: before each
+   increment, the loop checks `attempt = (cast: (ulong) -1)` (the type's
+   own maximum) and only THEN returns ERR_IO -- no replacement guessed
+   constant anywhere. The implementation itself never compares attempt
+   against any number other than its own type's maximum.
+
+   To prove this deterministically without needing to predict or pin the
+   real candidate filename (PID + QueryPerformanceCounter bits + attempt
+   -- still exactly as before, unchanged), the fault vtable gained a
+   second, independent hook: MixaProcessMarkerCollideFn / the vtable's
+   new `on_collide` field. Consulted by the retry loop immediately BEFORE
+   each real CreateFileW attempt: a nonzero return makes this module
+   treat the CURRENT attempt as a real ERROR_FILE_EXISTS collision
+   WITHOUT touching the filesystem at all for that attempt (no probing,
+   no real CreateFileW call); a zero return means proceed with the real
+   call, unmodified. This does not change what candidate name would be
+   tried -- it only lets a test force a chosen run of "collisions" on
+   whatever name generation would have produced anyway.
+
+   Test: scenario 28 sets on_collide to force exactly 65 consecutive
+   collisions, then let the 66th attempt through for real. Verified: the
+   call succeeds (MIXA_PROCESS_MARKER_OK), the hook was invoked exactly
+   66 times (65 forced collisions + 1 real, successful attempt), and
+   both wrapper outputs are set. This proves the retry loop survives a
+   run of 65 straight collisions with zero coded cap anywhere in the
+   implementation -- not merely "more than 64".
+
+2. mixa_process_marker_generate's own allocation is no longer exempt
+   from the fault-injection sweep. Its signature gained the same
+   nullable `fault` parameter every other function in this module
+   already took; its one `c.malloc` call is now preceded by the same
+   `mixa_marker_check_fault` call as every other allocation site (moved
+   ABOVE generate() in file order -- the L1 self-hosted translator
+   compiles predef-merged files in literal definition order, and a
+   forward call from generate() to a function defined later in the same
+   file translates at the L1 level but does not reliably reach the
+   generated C with a matching prototype, which surfaced as a genuine
+   `-Werror=implicit-function-declaration` gcc failure caught before
+   this correction was committed -- fixed by moving
+   mixa_marker_check_fault's own definition above generate(), not by
+   adding a workaround).
+
+   Test: scenario 27 forces generate()'s own one allocation to fail --
+   asserts MIXA_PROCESS_MARKER_ERR_NOMEM and that out_marker stays null.
+   Every scenario that is not itself testing this mechanism continues to
+   pass 0 (real, uninjected allocation) for generate()'s new fault
+   parameter, per the established nullable-hook convention.
+
+   The prior ticket's own disclosed exception for this site is now
+   closed; every allocation/growth site in mixa_process_marker.lm1 is
+   swept by the fault seam with no remaining exceptions.
+
+Testing (Part III totals)
+--------------------------
+tests/mixa_process_marker_selftest.lm1 now: 71 checks, 0 failures, two
+hash-identical runs via run_process_marker_selftest.ps1
+  run_20260912_154333_630_a63e4060 (SUCCESS)
+  run_20260912_154341_801_f1be0d86 (SUCCESS)
+  identical marker-impl hash both runs:
+  A38D1B6489209E6F0668B054FA710C2DE45C3B0C56BBD98FB4DD11A9943E3544
+
+Aggregate regression: full run_mixa.ps1 pass (once, exit 0), every
+tracked unit "ok". Process (six-operation) selftest re-run fresh,
+SUCCESS, unchanged (that file was not touched, per the ticket's own
+instruction).
+
+Known gaps, stated honestly (Part III)
+-----------------------------------------
+- Neither of Part II's two explicit acceptance points remains open.
+- The collision hook (on_collide) is a TEST-ONLY seam: it does not run
+  in any production code path unless a caller explicitly supplies a
+  fault vtable with on_collide set, which no real caller in this
+  codebase currently does. This is by design (the same as every other
+  nullable fault hook in this module), named here only so it is not
+  mistaken for an unused/dead code path.
+- Not folded in, per the ticket's own instruction: the later Message/
+  inbox/outbox attachment (PROCESS_SEAM section 6). Message integration
+  was not started, per this ticket's own instruction as well.

@@ -1,0 +1,219 @@
+predef: "mixa_manager/mtk_int_array.h.lm1"
+include: "<stdlib.h>" "<string.h>"
+
+# Grow the backing buffer so arr[index] is writable. Returns 0 on success,
+# non-zero on allocation failure (matching Java's automatic growth semantics
+# where expand doubles capacity, capped at 1 + (amount << 1)).
+
+fn: mtk_int_array_init (@: MtkIntArray a) int
+    if: a = 0
+        return: 1
+    a\amount: 0
+    a\arr: 0
+return: 0
+
+sub: mtk_int_array_destroy (@: MtkIntArray a)
+    if: a != 0
+        if: a\arr != 0
+            c.free(a\arr)
+        a\arr: 0
+        a\amount: 0
+    ---
+end: mtk_int_array_destroy
+
+fn: mtk_int_array_size (const: @(MtkIntArray a)) int
+    if: a = 0
+        return: 0
+return: a\amount
+
+fn: mtk_int_array_element_at (const: @(MtkIntArray a); int: i) int
+    if: a = 0 || i >= a\amount
+        return: MTK_CONST_NIL
+    return: a\arr[i]
+
+fn: mtk_int_array_first_element (const: @(MtkIntArray a)) int
+    if: a = 0 || a\amount = 0
+        return: MTK_CONST_NIL
+    return: a\arr[0]
+
+fn: mtk_int_array_last_element (const: @(MtkIntArray a)) int
+    if: a = 0
+        return: MTK_CONST_NIL
+    if: a\amount = 0
+        return: MTK_CONST_NIL
+    ---
+    return: a\arr[a\amount - 1]
+
+# Grow internal buffer to hold at least new_size elements.
+fn: mtk_int_array_grow (@: MtkIntArray a; size_t: new_size) void
+    size_t: new_cap
+    int: half
+    @: int new_arr
+    if: a = 0
+        return
+    if: a\arr != 0 && new_size <= (cast: (size_t) a\amount)
+        return
+    new_cap: (cast: (size_t) a\amount) << 1
+    if: new_cap < 2U
+        new_cap: 2U
+    if: new_cap < new_size
+        new_cap: new_size
+    new_arr: (cast: (@: int) c.calloc(new_cap, c.sizeof(int)))
+    if: new_arr = 0
+        return
+    if: a\arr != 0 && a\amount > 0
+        c.memcpy(new_arr, a\arr, (cast: (size_t) a\amount) * c.sizeof(int))
+        c.free(a\arr)
+    a\arr: new_arr
+    return
+
+fn: mtk_int_array_add_element (@: MtkIntArray a; int: obj) int
+    int: new_amount
+    if: a = 0
+        return: MTK_CONST_NIL
+    new_amount: a\amount + 1
+    mtk_int_array_grow(a, (cast: (size_t) new_amount))
+    if: a\arr = 0
+        return: MTK_CONST_NIL
+    a\arr[a\amount]: obj
+    a\amount: new_amount
+return: a\amount - 1
+
+fn: mtk_int_array_insert_element_at (@: MtkIntArray a; int: obj; int: index) int
+    int: i
+    if: a = 0 || index < 0
+        return: MTK_CONST_NIL
+    if: a\amount = 0
+        mtk_int_array_add_element(a, obj)
+        return: 0
+    ---
+    mtk_int_array_grow(a, (cast: (size_t) a\amount + 2U))
+    if: a\arr = 0
+        return: MTK_CONST_NIL
+    if: index >= a\amount
+        a\arr[a\amount]: obj
+        a\amount: a\amount + 1
+        return: a\amount - 1
+    ---
+    i: a\amount
+    while: i > index
+        a\arr[i]: a\arr[i - 1]
+        i: i - 1
+    ---
+    a\arr[index]: obj
+    a\amount: a\amount + 1
+return: index
+
+fn: mtk_int_array_remove_element_at (@: MtkIntArray a; int: index) int
+    int: ret
+    int: i
+    if: a = 0
+        return: MTK_CONST_NIL
+    if: index < 0 || index >= a\amount
+        return: MTK_CONST_NIL
+    ret: a\arr[index]
+    i: index
+    while: i < a\amount - 1
+        a\arr[i]: a\arr[i + 1]
+        i: i + 1
+    ---
+    a\amount: a\amount - 1
+    if: a\amount >= 0
+        a\arr[a\amount]: 0
+    return: ret
+
+fn: mtk_int_array_set_elementAt (@: MtkIntArray a; int: obj; int: index) int
+    int: ret
+    if: a = 0 || index < 0
+        return: MTK_CONST_NIL
+    mtk_int_array_grow(a, (cast: (size_t) index + 1U))
+    if: a\arr = 0
+        return: MTK_CONST_NIL
+    if: index >= a\amount
+        ret: MTK_CONST_NIL
+        a\amount: index + 1
+    else:
+        ret: a\arr[index]
+    ---
+    a\arr[index]: obj
+return: ret
+
+fn: mtk_int_array_remove_element (@: MtkIntArray a; int: obj) int
+    int: i
+    i: mtk_int_array_find(a\arr, obj, a\amount)
+    if: i < 0
+        return: MTK_CONST_NIL
+    mtk_int_array_remove_element_at(a, i)
+return: i
+
+fn: mtk_int_array_pop (@: MtkIntArray a) int
+    if: a = 0 || a\amount <= 0
+        return: MTK_CONST_NIL
+    a\amount: a\amount - 1
+return: a\arr[a\amount]
+
+fn: mtk_int_array_clear (@: MtkIntArray a) void
+    if: a != 0
+        a\amount: 0
+    ---
+end: mtk_int_array_clear
+
+fn: mtk_int_array_remove_all_elements (@: MtkIntArray a) void
+    mtk_int_array_clear(a)
+end: mtk_int_array_remove_all_elements
+
+fn: mtk_int_array_remove_elements_from (@: MtkIntArray a; int: index; int: len) void
+    int: i
+    if: a = 0 || index < 0 || index >= a\amount
+        return
+    if: index + len > a\amount
+        len: a\amount - index
+    ---
+    i: index
+    while: i < a\amount - len
+        a\arr[i]: a\arr[i + len]
+        i: i + 1
+    ---
+    a\amount: a\amount - len
+    return
+end: mtk_int_array_remove_elements_from
+
+fn: mtk_int_array_reverse (@: MtkIntArray a; int: index; int: newindex) void
+    int: obj
+    int: count
+    int: i
+    if: a = 0 || index < 0 || index >= a\amount || newindex < 0 || newindex >= a\amount
+        return
+    ---
+    if: newindex < index
+        obj: a\arr[index]
+        count: index - newindex
+        i: index
+        while: i > newindex
+            a\arr[i]: a\arr[i - 1]
+            i: i - 1
+        ---
+        a\arr[newindex]: obj
+    else if: index < newindex
+        obj: a\arr[index]
+        count: newindex - index
+        i: index
+        while: i < newindex
+            a\arr[i]: a\arr[i + 1]
+            i: i + 1
+        ---
+        a\arr[newindex]: obj
+    ---
+    return
+end: mtk_int_array_reverse
+
+fn: mtk_int_array_find (@: int arr; int: obj; int: amount) int
+    int: i
+    i: 0
+    while: i < amount
+        if: arr[i] = obj
+            return: i
+        ---
+        i: i + 1
+    ---
+return: MTK_CONST_NIL

@@ -1,0 +1,23 @@
+include: "<stddef.h>"
+
+# mixa_file.h.lm1 - portable console-file seam. Opaque MixaFile; body in mixa_file_win32.h.lm1.
+
+define: MIXA_FILE_MODE_READ 1
+define: MIXA_FILE_MODE_APPEND 2
+define: MIXA_FILE_OK 0
+define: MIXA_FILE_ERR_ARG 1
+define: MIXA_FILE_ERR_MISSING 2
+define: MIXA_FILE_ERR_IO 3
+define: MIXA_FILE_ERR_NOMEM 4
+
+# Incomplete/opaque: concrete fields in mixa_file_win32.h.lm1
+type: MixaFile struct MixaFile
+
+prototype:
+    fn: mixa_file_open (@@: MixaFile out; const: @(char path_utf8); int: mode) int
+    fn: mixa_file_close (@: MixaFile f) void
+    fn: mixa_file_append (@: MixaFile f; const: @(void buf); size_t: n; @: size_t wrote) int
+    fn: mixa_file_read (@: MixaFile f; @: void buf; size_t: n; @: size_t got) int
+    fn: mixa_file_seek (@: MixaFile f; size_t: abs_off) int
+    fn: mixa_file_size (@: MixaFile f; @: size_t out) int
+end: prototype

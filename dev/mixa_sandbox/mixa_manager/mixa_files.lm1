@@ -1,0 +1,225 @@
+predef: "mixa_manager/mixa_files.h.lm1"
+include: "<stdlib.h>" "<string.h>"
+
+# Thin Files facade (ticket 20260918-125450). All real I/O is delegated.
+# Concrete MixaDir / MixaFile / MixaFio come through mixa_files.h.lm1 predefs.
+
+fn: mixa_files_map_dir (int: st) int
+    if: st = MIXA_DIR_OK
+        return: MIXA_FILES_OK
+    if: st = MIXA_DIR_ERR_ARG
+        return: MIXA_FILES_ERR_ARG
+    if: st = MIXA_DIR_ERR_MISSING
+        return: MIXA_FILES_ERR_MISSING
+    if: st = MIXA_DIR_ERR_NOMEM
+        return: MIXA_FILES_ERR_NOMEM
+    if: st = MIXA_DIR_ERR_EXISTS
+        return: MIXA_FILES_ERR_EXISTS
+return: MIXA_FILES_ERR_IO
+
+fn: mixa_files_map_file (int: st) int
+    if: st = MIXA_FILE_OK
+        return: MIXA_FILES_OK
+    if: st = MIXA_FILE_ERR_ARG
+        return: MIXA_FILES_ERR_ARG
+    if: st = MIXA_FILE_ERR_MISSING
+        return: MIXA_FILES_ERR_MISSING
+    if: st = MIXA_FILE_ERR_NOMEM
+        return: MIXA_FILES_ERR_NOMEM
+return: MIXA_FILES_ERR_IO
+
+fn: mixa_files_map_fio (int: st) int
+    if: st = MIXA_FIO_OK
+        return: MIXA_FILES_OK
+    if: st = MIXA_FIO_ERR_ARG
+        return: MIXA_FILES_ERR_ARG
+    if: st = MIXA_FIO_ERR_MISSING
+        return: MIXA_FILES_ERR_MISSING
+    if: st = MIXA_FIO_ERR_EXISTS
+        return: MIXA_FILES_ERR_EXISTS
+    if: st = MIXA_FIO_ERR_ACCESS
+        return: MIXA_FILES_ERR_ACCESS
+    if: st = MIXA_FIO_ERR_NOMEM
+        return: MIXA_FILES_ERR_NOMEM
+return: MIXA_FILES_ERR_IO
+
+fn: mixa_files_list_dir (const: @(char path_utf8); @@: char out_listing) int
+    @: MixaDir d
+    []: (@: MixaDir) dslot 1
+    @: MixaDirEntry ent
+    @: char buf
+    @: char grown
+    size_t: cap
+    size_t: len
+    size_t: nlen
+    size_t: need
+    int: st
+    const: @(char name)
+    if: out_listing = 0
+        return: MIXA_FILES_ERR_ARG
+    out_listing[0]: 0
+    if: path_utf8 = 0
+        return: MIXA_FILES_ERR_ARG
+    dslot[0]: 0
+    st: mixa_dir_list_open(dslot, path_utf8)
+    if: st != MIXA_DIR_OK
+        return: mixa_files_map_dir(st)
+    ---
+    d: dslot[0]
+    cap: 256U
+    len: 0U
+    buf: (cast: (@: char) c.malloc(cap))
+    if: buf = 0
+        mixa_dir_list_close(d)
+        return: MIXA_FILES_ERR_NOMEM
+    ---
+    buf[0]: 0
+    ent: (cast: (@: MixaDirEntry) c.calloc(1U, c.sizeof(c.MixaDirEntry)))
+    if: ent = 0
+        c.free(buf)
+        mixa_dir_list_close(d)
+        return: MIXA_FILES_ERR_NOMEM
+    ---
+    while: 1
+        st: mixa_dir_list_next(d, ent)
+        if: st = MIXA_DIR_END
+            break
+        ---
+        if: st != MIXA_DIR_OK
+            c.free(ent)
+            c.free(buf)
+            mixa_dir_list_close(d)
+            return: mixa_files_map_dir(st)
+        ---
+        name: mixa_dir_entry_name(ent)
+        if: name != 0
+            nlen: c.strlen(name)
+            need: len + nlen + 2U
+            if: need > cap
+                while: cap < need
+                    if: cap > ((cast: (size_t) -1) / 2U)
+                        c.free(ent)
+                        c.free(buf)
+                        mixa_dir_list_close(d)
+                        return: MIXA_FILES_ERR_NOMEM
+                    ---
+                    cap: cap * 2U
+                ---
+                grown: (cast: (@: char) c.realloc((cast: (@: void) buf), cap))
+                if: grown = 0
+                    c.free(ent)
+                    c.free(buf)
+                    mixa_dir_list_close(d)
+                    return: MIXA_FILES_ERR_NOMEM
+                ---
+                buf: grown
+            ---
+            if: len > 0U
+                buf[len]: (cast: (char) 10)
+                len: len + 1U
+            ---
+            c.memcpy(buf + len, name, nlen)
+            len: len + nlen
+            buf[len]: 0
+        ---
+    ---
+    c.free(ent)
+    mixa_dir_list_close(d)
+    out_listing[0]: buf
+return: MIXA_FILES_OK
+
+fn: mixa_files_read (const: @(char path_utf8); @@: char out_buf; @: size_t out_len) int
+    @: MixaFile f
+    []: (@: MixaFile) fslot 1
+    size_t: sz
+    []: size_t szslot 1
+    @: char buf
+    size_t: got
+    []: size_t gotslot 1
+    size_t: off
+    int: st
+    if: out_buf = 0 || out_len = 0
+        return: MIXA_FILES_ERR_ARG
+    out_buf[0]: 0
+    out_len[0]: 0U
+    if: path_utf8 = 0
+        return: MIXA_FILES_ERR_ARG
+    fslot[0]: 0
+    st: mixa_file_open(fslot, path_utf8, MIXA_FILE_MODE_READ)
+    if: st != MIXA_FILE_OK
+        return: mixa_files_map_file(st)
+    ---
+    f: fslot[0]
+    szslot[0]: 0U
+    st: mixa_file_size(f, szslot)
+    if: st != MIXA_FILE_OK
+        mixa_file_close(f)
+        return: mixa_files_map_file(st)
+    ---
+    sz: szslot[0]
+    if: sz > ((cast: (size_t) -1) - 1U)
+        mixa_file_close(f)
+        return: MIXA_FILES_ERR_NOMEM
+    ---
+    buf: (cast: (@: char) c.malloc(sz + 1U))
+    if: buf = 0
+        mixa_file_close(f)
+        return: MIXA_FILES_ERR_NOMEM
+    ---
+    off: 0U
+    while: off < sz
+        gotslot[0]: 0U
+        st: mixa_file_read(f, (cast: (@: void) (buf + off)), sz - off, gotslot)
+        if: st != MIXA_FILE_OK
+            c.free(buf)
+            mixa_file_close(f)
+            return: mixa_files_map_file(st)
+        ---
+        got: gotslot[0]
+        if: got = 0U
+            break
+        ---
+        off: off + got
+    ---
+    buf[off]: 0
+    mixa_file_close(f)
+    out_buf[0]: buf
+    out_len[0]: off
+return: MIXA_FILES_OK
+
+fn: mixa_files_write (const: @(char path_utf8); const: @(void data); size_t: len) int
+    @: MixaFio fw
+    []: (@: MixaFio) fwslot 1
+    int: st
+    int: del
+    if: path_utf8 = 0
+        return: MIXA_FILES_ERR_ARG
+    if: len > 0U && data = 0
+        return: MIXA_FILES_ERR_ARG
+    ---
+    # Overwrite = remove-if-present then CREATE_NEW (existing fio contract).
+    del: mixa_dir_remove(path_utf8)
+    if: del != MIXA_DIR_OK && del != MIXA_DIR_ERR_MISSING
+        return: mixa_files_map_dir(del)
+    ---
+    fwslot[0]: 0
+    st: mixa_fio_open_write_new(fwslot, path_utf8)
+    if: st != MIXA_FIO_OK
+        return: mixa_files_map_fio(st)
+    ---
+    fw: fwslot[0]
+    if: len > 0U
+        st: mixa_fio_write(fw, data, len, 0, 0U)
+        if: st != MIXA_FIO_OK
+            mixa_fio_close(fw)
+            return: mixa_files_map_fio(st)
+        ---
+    ---
+    mixa_fio_close(fw)
+return: MIXA_FILES_OK
+
+fn: mixa_files_delete (const: @(char path_utf8)) int
+    if: path_utf8 = 0
+        return: MIXA_FILES_ERR_ARG
+return: mixa_files_map_dir(mixa_dir_remove(path_utf8))
+

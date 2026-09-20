@@ -1,0 +1,1539 @@
+mixa_share — file-share seam (ClearShell "Send e-mail" button, ticket 20260911-210200)
+========================================================================================
+
+Purpose
+-------
+The portable request/lifecycle API for ClearShell's "Send e-mail" action,
+generalized to the native OS share surface, plus a real Windows adapter
+(IDataTransferManagerInterop / DataTransferManager / DataRequested /
+ShowShareUIForWindow; see NEXT_CLAUDE_TICKET_FILE_SHARE_20260911.md section 4),
+text-only in this slice. Verified against BOTH a deterministic fake backend
+and a real native window exercising the actual WinRT round trip (see
+Testing below) -- not just translated/compiled, actually run and passing.
+File attachment and button integration are the remaining, honestly-not-done
+stages (see "Remaining stages" below).
+
+Reference behavior (ported from ClearShell.java)
+-------------------------------------------------
+Read directly, not summarized secondhand:
+  ClearShell.java  email() / email(Contact) / email2(Contact) / sendEmail(...)
+                   ~L12500-12635
+  FSync.java       popSelectedListFroEmail() ~L1604
+
+  - The "Send e-mail" button (ClearShell.this::email, ~L2218) calls
+    email() -> email(extractEmails()) -> email2(contact) -> sendEmail(...).
+  - popSelectedListFroEmail() pops only FILES from the current selection
+    (removeSelect() as it goes -- consuming selection is a side effect of
+    the reference action); directories are skipped with a warning dialog,
+    not silently dropped and not a hard failure.
+  - sendEmail derives a title from the message text: the first two
+    non-blank space-delimited words, concatenated as " word1 word2"
+    (note the reference's own leading space from `title = title + " " +
+    word`, preserved here exactly, not "fixed"). If no such words exist
+    (blank/all-whitespace text), title falls back to the text itself,
+    truncated to the first 32 characters.
+  - ACTION_SEND for 0-1 files, ACTION_SEND_MULTIPLE for >1; file content
+    goes through FileProvider URIs with granted read permission; an app
+    chooser is shown. This module models that shape (single vs multiple,
+    a chooser/share-UI hand-off) without being Android-specific.
+
+Files (owned slice)
+--------------------
+  mixa_manager/mixa_share_win32.h.lm1     concrete unit (opaque fields; see "L1 findings")
+  mixa_manager/mixa_share.h.lm1           portable contract (types + prototypes)
+  mixa_manager/mixa_share.lm1             portable controller (request lifecycle)
+  mixa_manager/mixa_share_win32.lm1       Windows adapter (real COM/WinRT calls)
+  mixa_manager/tests/mixa_share_selftest.lm1        headless selftest + fake backend
+  mixa_manager/tests/mixa_share_native_smoke.lm1    real-window WinRT smoke test
+  mixa_manager/run_share_selftest.ps1     isolated fake-backend runner (stable compiler hash)
+  mixa_manager/run_share_native_smoke.ps1 isolated native-smoke runner (needs the
+                                           Windows SDK winrt include dir; see below)
+  mixa_manager/mixa_share.txt             this note
+
+Public API
+----------
+  int  mixa_share_create(MixaShareRequest **out, const MixaShareVTable *vt);
+  int  mixa_share_set_text(MixaShareRequest *r, const char *text_utf8);        // also derives title
+  int  mixa_share_set_title(MixaShareRequest *r, const char *title_utf8);     // explicit override
+  int  mixa_share_set_files(MixaShareRequest *r, char **paths_utf8, size_t count, size_t *out_skipped);
+  int  mixa_share_set_context(MixaShareRequest *r, void *platform_ctx);
+  int  mixa_share_begin(MixaShareRequest *r);
+  int  mixa_share_poll(MixaShareRequest *r, int *out_event, int *out_status);
+  int  mixa_share_cancel(MixaShareRequest *r);
+  void mixa_share_destroy(MixaShareRequest *r);
+  int  mixa_share_caps(const MixaShareVTable *vt);
+  const char *mixa_share_text(const MixaShareRequest *r);
+  const char *mixa_share_title(const MixaShareRequest *r);
+  size_t mixa_share_file_count(const MixaShareRequest *r);
+  const char *mixa_share_file_at(const MixaShareRequest *r, size_t idx);
+  int mixa_share_event(const MixaShareRequest *r);
+  int mixa_share_status(const MixaShareRequest *r);
+
+Design decisions
+----------------
+* No process-global mutable state in the PORTABLE controller (the lesson
+  from the audio-seam review): every field lives on MixaShareRequest,
+  allocated per-instance. The win32 backend must follow the same rule once
+  it's implemented (a real DataTransferManager registration is inherently
+  per-window, not per-process, so this should hold naturally).
+* Text/title/file paths are owned strdup'd allocations, never a fixed
+  staging buffer -- the reference's own title derivation has no length cap
+  on the two-word branch, and Unicode/space/apostrophe paths are data, not
+  shell syntax, so nothing here silently truncates.
+* set_files probes every path before committing anything (atomic replace):
+  a genuinely missing/unreadable path is a hard MIXA_SHARE_ERR_MISSING (no
+  partial commit), while a directory in the selection is soft-skipped and
+  counted via out_skipped -- matching the reference's "warn, don't fail"
+  handling of directories in popSelectedListFroEmail, while still treating
+  an outright missing file as the caller's bug (unlike the reference, whose
+  selection can't reference nonexistent files by construction).
+* Async model is POLL-based, not callback-reentrant: begin() marks the
+  request PENDING and hands off to the backend; poll() is the only point
+  where backend state (a real DataRequested/dispatcher-queue callback, one
+  day) is allowed to update portable request state, keeping OS-affine work
+  off any thread that might be touching Message-owned data directly.
+* mixa_share_destroy() calls the backend's destroy() BEFORE freeing any
+  portable field, specifically so a real backend can unregister a pending
+  native callback/token while the request is still fully valid. The fake
+  backend's stale-registration tests in the selftest exist to keep this
+  ordering honest: destroying a request mid-flight must free its backend
+  registration slot, and a second, independent request must then be able
+  to begin() cleanly (proving no leaked handler blocks or cross-contaminates
+  an unrelated request).
+* begin() only allows the transition from MIXA_SHARE_EVENT_NONE (a fresh,
+  never-started request). Every other event -- PENDING, HANDED_OFF,
+  CANCELLED, FAILED -- is terminal for that request; call destroy() and
+  create a new one instead. The header documented this from the start; an
+  early implementation only checked for PENDING, silently allowing a
+  restart after HANDED_OFF/CANCELLED/FAILED (caught in review, fixed, and
+  covered by dedicated tests for all three terminal events plus the
+  NONE-allows-first-begin case).
+* The concrete win32 stub header does not `include: "<windows.h>"` (or any
+  other platform header) even though it will need COM/WinRT declarations
+  once the Windows adapter is implemented (caught in review; the initial
+  stub had a copy-pasted include it didn't yet use for anything). Second
+  review round: removing the include there is NOT by itself sufficient --
+  the portable header still `predef:`s the concrete one, and predef order
+  pulls the concrete file's content into any translation unit that only
+  wanted the portable contract, includes and all. Adding a native include
+  to the concrete header once the adapter needs one would restore the
+  exact same leak, just relocated. The actual portable->concrete
+  dependency needs resolving (or native includes isolated behind a
+  boundary nothing portable-only predefs) before that point, not assumed
+  solved by which specific file the include line lives in. mixa_audio_
+  win32.h.lm1 and mixa_app_win32.h.lm1 have this identical structural leak
+  today (both predef'd by their portable headers, both already including
+  windows.h) -- a systemic characteristic of this predef pattern, not
+  something introduced here or unique to Share.
+
+L1 findings while porting
+--------------------------
+* mixa_audio.lm1's own `@@: char items` convention (not `const char**`) is
+  the correct spelling for a caller-owned array-of-strings parameter here
+  too: C does not allow an implicit char** -> const char** conversion (a
+  well-known qualifier-safety rule), so a `const: @(@(char) ...)` prototype
+  parameter rejects a plain `char *arr[N]` argument at the call site with
+  -Werror=incompatible-pointer-types. Matched the existing convention
+  instead of fighting the language.
+* A global test-only pointer for the fake backend's single pending-request
+  slot is a PLAIN pointer declaration (`@: MixaShareRequest g_fake_pending`),
+  not the array-style `@: (@: Type) name` pattern (which declares a pointer-
+  to-pointer) -- easy to reach for the wrong one when copying an existing
+  array declaration as a template.
+* There is no `(void): expr` discard/cast-to-void spelling in this L1; an
+  unused function parameter that isn't otherwise dead code doesn't need one
+  (argc was already used later in this file's main(), making the attempted
+  suppression both invalid syntax and unnecessary).
+* A literal `"` character in a Windows filename is illegal at the OS level
+  (NTFS forbids `< > : " / \ | ? *`); fopen() on such a path fails silently
+  and the resulting "missing" file is a test-fixture bug, not a module bug.
+  Found by getting an unrelated-looking crash (strcmp on a NULL returned by
+  file_at after the whole probe-everything-first set_files call correctly
+  aborted with ERR_MISSING) and tracing it back with gdb + a temporary debug
+  printf, not by guessing. The Unicode/space/apostrophe coverage in the
+  selftest keeps the metacharacter-handling intent without an illegal name.
+
+Testing
+-------
+Run from mixa_manager:
+
+    ./run_share_selftest.ps1
+
+45 checks, 0 failures. Covers: title derivation (two-word, one-word,
+long-word, all-blank-fallback, UTF-8-safe 32-byte truncation, explicit
+override), single-file and multi-file begin/poll-to-completion, cancel(),
+text-only sharing (with and without CAP_TEXT_ONLY), multi-file rejection
+without CAP_MULTIPLE, incomplete-vtable rejection at create, missing-file
+hard error with no partial commit, directory-in-selection soft-skip,
+begin() rejecting a missing required platform context, destroy-before-
+completion correctly freeing the backend's pending-registration slot (and
+a subsequent independent request completing cleanly afterward -- the
+stale-callback/leak scenario from the ticket's acceptance criteria),
+begin() rejected on every terminal event (PENDING, HANDED_OFF, CANCELLED,
+FAILED individually) while NONE still allows the first begin(), and
+null-argument negatives throughout.
+
+This is a fake-backend-only, platform-independent test; it does not exercise
+real Windows share UI and is not offered as such (see remaining stages).
+
+Windows-adapter feasibility (researched, not yet implemented)
+----------------------------------------------------------------
+Checked whether this toolchain can express the required COM/WinRT calls
+before committing to an implementation, per the ticket's explicit
+instruction. Findings, in the order needed:
+
+* IDataTransferManagerInterop (the classic-HWND -> WinRT bridge) is
+  declared as a plain-C ABI struct (a `lpVtbl` member, not a C++ class) in
+  MinGW's own bundled header, x86_64-w64-mingw32/include/shobjidl.h, along
+  with convenience call macros (IDataTransferManagerInterop_GetForWindow,
+  _ShowShareUIForWindow) that hide the This->lpVtbl->Method(This,...)
+  double-indirection behind a normal-looking macro call -- no two-level
+  member chain needs writing in L1 source for these.
+* RoGetActivationFactory (roapi.h) and WindowsCreateString (winstring.h),
+  needed to obtain the interop factory from a runtime-class-name HSTRING,
+  are both in MinGW's bundled headers too.
+* The actual WinRT interfaces the interop bridge hands back --
+  IDataTransferManager, IDataPackage, IDataRequestedEventArgs -- are NOT in
+  MinGW's bundled headers, but ARE present as plain-C MIDL-generated ABI
+  declarations (the __x_ABI_CWindows_C... naming convention, ordinary
+  vtable structs, not C++/WinRT's winrt:: template projection) in the full
+  Windows 10 SDK already installed on this machine at
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\winrt\
+  windows.applicationmodel.datatransfer.h. Using them needs an extra -I
+  path added to the compile step; not an L1 language limitation, a build-
+  configuration one.
+* The harder-looking piece: registering a DataRequested event handler
+  means IMPLEMENTING a callback interface (providing a vtable), not just
+  consuming one -- a different shape from anything the app/audio seams
+  needed so far. Confirmed this specific instantiation --
+  ITypedEventHandler<DataTransferManager*, DataRequestedEventArgs*> --
+  has a genuine plain-C fallback declaration in the same SDK header
+  (search for __FITypedEventHandler_2_Windows__CApplicationModel__
+  CDataTransfer__CDataTransferManager_Windows__CApplicationModel__
+  CDataTransfer__CDataRequestedEventArgs): a 4-method vtable struct
+  (QueryInterface, AddRef, Release, Invoke) and an interface struct with a
+  single `lpVtbl` member -- structurally identical to every vtable this
+  codebase already builds via calloc + sequential `\field: fn` assignment
+  (mixa_audio_win32_table, mixa_app's table, this module's own
+  fake-backend vtables). Building the SAME shape to hand OUT to Windows,
+  instead of only ever consuming one, should not need anything new from L1
+  itself -- the memory layout is what the ABI cares about, not which
+  direction the vtable is used in.
+
+Minimal reproducer, actually built (not just read from headers): an L1
+unit declaring pointers of type `IDataTransferManagerInterop` and
+`__x_ABI_CWindows_CApplicationModel_CDataTransfer_CIDataTransferManager`,
+including all of windows.h/roapi.h/winstring.h/shobjidl.h/windows.
+applicationmodel.datatransfer.h. l1trans translated it cleanly (exit 0),
+confirming these unusually long SDK identifiers are not an L1 parser
+problem. The first compile attempt failed: adding the SDK's winrt
+directory via plain `-I` shadows MinGW's OWN compatible roapi.h with the
+SDK's MSVC-oriented one (`#pragma region` -- not something GCC's
+preprocessor accepts), because -I search order puts it before MinGW's
+bundled headers. Fixed by using `-idirafter` for the SDK path instead of
+-I: MinGW's own headers (which already have everything except the WinRT
+interfaces) are found first, and the SDK path is only consulted for what's
+genuinely missing (windows.applicationmodel.datatransfer.h itself, plus
+whatever headers it internally chains to, e.g. Windows.Foundation.h,
+IVectorChangedEventArgs.h). With that one flag, the reproducer compiled
+with zero warnings and ran correctly. The exact working compile line:
+
+    gcc -std=c99 <other existing flags> \
+      -idirafter "C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\winrt" \
+      <source>.c -o <exe>
+
+Conclusion at the time: nothing found required handwritten C or a C++
+dependency. Implemented next -- see below, not left as research only.
+
+Windows adapter implementation (mixa_share_win32.lm1) -- DONE, text-only
+--------------------------------------------------------------------------
+Real COM/WinRT calls, no fakes: RoGetActivationFactory ->
+IDataTransferManagerInterop -> GetForWindow -> IDataTransferManager ->
+add_DataRequested(our handler) -> ShowShareUIForWindow. Our handler is a
+plain-C COM object (MixaShareHandlerObj/MixaShareHandlerVtbl in the header):
+its Invoke() reads the owning MixaShareRequest's text/title via a
+ctx->req back-pointer, calls get_Request -> get_Data to reach the real
+IDataPackage, then SetText (+ get_Properties -> put_Title if a title is
+set). Synchronous population, no deferral -- file attachment is the only
+piece that would need one (see "Remaining stages").
+
+Concrete L1/toolchain findings from actually building this (not just the
+earlier research), each one a real, fixed problem:
+
+* `(cast: (@: LongType) expr)\field: value` -- casting an expression and
+  immediately member-assigning through the cast result -- translates to
+  garbage (`*(Field) = value;` with the field name alone, no target).
+  Fix: hoist the cast into its own properly-typed local variable first
+  (`p: (cast: (@: T) expr)` as a separate statement), then use `p\field:`
+  on that local. This is the same general caution already logged for
+  audio/app ("casting inside an if:/while: condition"), now confirmed for
+  cast-then-member-assign too.
+* A stack array-of-one struct VALUE (`[]: SomeStruct s 1`, the established
+  pattern for a local instance of a `struct` L1 can't declare as a bare
+  non-pointer local) does NOT support `s[0]\field:` -- L1's `\` always
+  emits C's `->`, which is invalid on a non-pointer. Fix: take the address
+  first (`p: @ s[0]`) into a genuinely pointer-typed local, then use
+  `p\field:` on that. Needed for EventRegistrationToken and WNDCLASSEXW in
+  this module; likely relevant anywhere else a value-typed OS struct is
+  used as a local.
+* A `fn:` parameter type must be the bare type name (`EventRegistrationToken:
+  tok`), never `c.EventRegistrationToken: tok` -- the `c.` prefix belongs on
+  function/value references, not type declarations, and leaks verbatim
+  into the generated C parameter type otherwise (an immediate compile
+  error, not a subtle one).
+* `struct:` may only be declared in a `.h.lm1` header, never inside a
+  `.lm1` implementation file ("unsupported L1 form" from l1trans). Any
+  implementation-private struct still needs a header to live in; here that
+  is the module's own concrete header (MixaShareHandlerObj/Vtbl), which
+  stays opaque toward the portable layer regardless.
+* Giant SDK identifiers (`__x_ABI_CWindows_CApplicationModel_CDataTransfer_
+  CIDataTransferManager`, `__FITypedEventHandler_2_...`) are NOT an L1
+  parsing problem (confirmed by the earlier reproducer), but writing a
+  vtable-population section against one repeatedly is unwieldy and was the
+  proximate trigger for the cast-then-assign bug above. Defining our own
+  short-named vtable struct with matching field order/signatures (see
+  "MixaShareHandlerVtbl" above) is ABI-compatible -- WinRT calls through a
+  vtable via memory layout and calling convention only, never by the
+  C-source struct name -- and avoids the giant names entirely except at
+  the one unavoidable cast (handing our object to add_DataRequested).
+* Every `(This)->lpVtbl->Method(...)` convenience macro
+  (`__x_ABI_..._get_Request`, `_get_Data`, `_SetText`, `_get_Properties`,
+  `_put_Title`, `_add_DataRequested`, `_remove_DataRequested`) requires
+  `This` to be cast to its EXACT typed pointer, not left as `void*` --
+  `void*` does not support `->` in C, so passing an untyped opaque pointer
+  through one of these macros fails to compile with the identical
+  "invalid type argument of '->'" error as the value-array case above. Out
+  parameters have the same requirement one level deeper: `&some_void_ptr`
+  is `void**`, but these functions want `TypedThing**`, so the address
+  itself needs casting too (`(cast: (@@: TypedThing) @ some_void_ptr)`),
+  not just the primary argument.
+* These COBJMACROS-gated convenience macros
+  (`__x_ABI_..._SetText(This, value)` etc.) do not exist at all unless
+  `COBJMACROS` is defined before including the SDK headers -- otherwise
+  they resolve as plain undeclared functions ("implicit declaration"),
+  which reads like a missing-library problem but is actually a missing
+  `#define`. Fixed with `define: COBJMACROS 1` before the `include:` line.
+* `IID_IDataTransferManagerInterop` (from MinGW's own shobjidl.h) needs
+  `define: INITGUID 1` before its include to get an actual linkable
+  definition instead of an unresolvable `extern` declaration -- standard
+  Windows-SDK behavior, not L1-specific.
+* `IID___x_ABI_CWindows_CApplicationModel_CDataTransfer_CIDataTransferManager`
+  (from the Windows 10 SDK's windows.applicationmodel.datatransfer.h) is
+  declared `EXTERN_C const IID ...;` with NO corresponding `DEFINE_GUID`
+  anywhere in that header, so `INITGUID` does not help -- there is no
+  storage for it anywhere this MinGW toolchain links against. Worked
+  around by constructing the GUID inline as a local variable from the
+  exact byte values in that header's own
+  `MIDL_INTERFACE("a5caee9b-8708-49d1-8d36-67d25a8da00c")` annotation on
+  IDataTransferManager, rather than referencing the SDK's unlinkable
+  symbol. If a future interface needs the same treatment, its GUID string
+  is always visible the same way, right above the interface's own
+  declaration in the SDK header.
+* Uninitialized struct fields matter even for OS APIs that "mostly" read a
+  few fields: `RegisterClassExW` failed with GLE 87 (ERROR_INVALID_PARAMETER)
+  until the WNDCLASSEXW was explicitly zeroed before setting the four
+  fields actually used -- the other fields were stack garbage, not
+  implicitly zero. Not an L1-specific finding, but easy to reproduce by
+  skipping it, as the smoke test's own history shows.
+* `Start-Process -ArgumentList` given a PowerShell string array does NOT
+  quote elements containing spaces -- it naively joins them, silently
+  splitting a path like "C:\Program Files (x86)\Windows Kits\..." into
+  several broken arguments passed to the child process. Reproduced
+  directly (gcc received "Files:", "(x86)\Windows:" etc. as separate,
+  nonexistent linker inputs). Fixed in run_share_native_smoke.ps1 by
+  wrapping the affected arguments in explicit literal quotes
+  (`"`"$Path`""`) before adding them to the array. The other existing
+  runners have not hit this because their own paths (under the repo root)
+  never contain spaces -- a latent risk there, not something this ticket
+  needed to fix, but worth knowing if one is ever pointed somewhere that does.
+
+Fault-injection testing (tickets 225400/230500)
+------------------------------------------------
+Added per-instance test-only fault injection (MixaShareRequest::test_force_fail,
+set via mixa_share_test_set_force_fail), mirroring the codebase's existing
+force_gdi_error pattern. Four bits: TOKEN_ALLOC (skip the real token calloc
+in begin()), GET_DATA, SET_TEXT, PUT_TITLE (each skips the real WinRT call
+and substitutes a fixed failure HRESULT, same branch shape for all four --
+this is deliberate: substituting the HRESULT only after still making the
+real call would test our status bookkeeping but not the actual error-handling
+branch). mixa_share_native_smoke.lm1 exercises all four against the real
+adapter plus a "clean request after 4 faults" check (no leaked registration/
+reference blocks a subsequent request) and the pre-existing successful-flow
+assertion -- five real ShowShareUIForWindow/DataRequested round trips in one
+process, run_share_selftest.ps1's 45 checks unaffected throughout.
+
+Diagnostic detour -- an observed, reproducible failure with an UNRESOLVED
+cause (revised after ticket 20260911-234500's review; the earlier version
+of this section claimed more than the evidence supported and has been
+replaced, not merely amended):
+
+While adding fault-injection coverage, every fault test after the first
+real DataRequested invocation (GET_DATA) hung permanently at PENDING, and
+every real invocation after the first hang in the same process also hung.
+Four hypotheses were tried; the first three were disproven by re-running,
+and are kept here as a record of what was ruled out, not as a path to the
+real cause, which remains unknown:
+  1. Hypothesis: SET_TEXT/PUT_TITLE's "skip the real call" left a real,
+     non-empty IDataPackage unpopulated before Release, violating a WinRT
+     postcondition that wedges later DataRequested delivery. Fix tried:
+     always call the real SetText/put_Title, substitute only the HRESULT
+     we report. Result: identical hang, byte-for-byte same failing output.
+     Disproven.
+  2. Hypothesis: the real OS share flyout from the first successful
+     invocation stays on screen and blocks a second concurrent
+     ShowShareUIForWindow on the SAME hwnd. Fix tried: send Escape + pump
+     to dismiss the flyout after every fault test, same as the existing
+     final-test dismissal. Result: identical hang. Disproven.
+  3. Hypothesis: something about reusing one hwnd across many real
+     invocations (not the flyout specifically) confuses the broker. Fix
+     tried: give every request -- fault tests and the final flow alike --
+     its own freshly created/destroyed hwnd (mixa_share_smoke_new_window).
+     Result under RoInitialize(RO_INIT_MULTITHREADED) (an apartment-type
+     bug present at the time, see below): hangs became less frequent but
+     did not go away, and which specific test hung was not consistent
+     between runs. TOKEN_ALLOC and GET_DATA -- always the first two real
+     invocations tried in the process -- succeeded in every run observed.
+     Partially disproven (window identity is not the deciding factor; see
+     item 4's sharper repro) but the reduced-frequency result itself
+     turned out to be an artifact of the wrong apartment type, not of
+     window handling.
+  4. THE ACTUAL, CURRENTLY REPRODUCIBLE PATTERN, found after fixing the
+     apartment-type bug below: under a genuine STA apartment
+     (RO_INIT_SINGLETHREADED), the behavior is NOT intermittent at all --
+     it is fully deterministic. TOKEN_ALLOC and GET_DATA (the first two
+     real ShowShareUIForWindow/DataRequested round trips attempted in the
+     process) succeed every time; every real invocation after those first
+     two -- SET_TEXT, PUT_TITLE, the post-fault clean request, an explicit
+     two-calls-on-one-shared-hwnd diagnostic (mixa_share_smoke_run_on_hwnd,
+     added specifically to rule out window identity), and the final
+     confirmation -- hangs permanently at PENDING, confirmed identically
+     across three consecutive full runs, including 3 fresh-window retries
+     each that all still hang. Window identity (fresh per request vs. one
+     shared window) makes no observable difference once past the first two
+     invocations, which rules out per-window state as the mechanism.
+     At the time, the cause was not established. RESOLVED -- see item 6
+     below: the missing piece was SetForegroundWindow.
+  5. Instrumentation (ticket 20260912-001200's explicit ask: instrument
+     the exact registration/callback/unregister/lifetime path rather than
+     just re-confirming the hang). Temporarily traced the HRESULT of
+     every step -- GetForWindow, add_DataRequested (with the returned
+     EventRegistrationToken's value), ShowShareUIForWindow, and
+     remove_DataRequested -- across a full run, then removed the
+     instrumentation once the data was captured (kept out of the shipped
+     adapter; this file is the record). RESULT: every one of those calls
+     reports HRESULT S_OK (hr=0) on EVERY attempt in the run, including
+     every attempt whose DataRequested callback never arrives. This rules
+     out one specific, narrow mechanism -- "some registration or cleanup
+     call is silently failing and we are not checking its HRESULT" -- our
+     own call chain reports success at every step, on every attempt,
+     successful or hung alike. CORRECTION (ticket 20260912-004800): my
+     first write-up of this overstated the conclusion, claiming the
+     failure "happens entirely on the OS/broker's side" and that "going
+     further needs OS-level tracing" as if those were established. They
+     are not. S_OK at those four specific calls does not prove the
+     application window's state, activation/message-pump timing, the
+     callback/handler object's actual lifetime, or a PRIOR request's
+     complete teardown are correct at the moments that matter -- it only
+     rules out the one narrow mechanism above. Heap addresses for `mgr`
+     and `hwnd` were observed being reused across different, unrelated
+     calls later in the same run (ordinary heap/handle recycling after a
+     clean Release()/DestroyWindow(), not evidence of a leak by itself,
+     but also not verified to be innocuous beyond that observation).
+     Whether OS-level tracing (ETW, Process Monitor) is actually needed,
+     versus a decisive answer being reachable with more app-level
+     instrumentation (e.g. a controlled clean-only baseline, or explicit
+     registration/refcount/foreground-window checks at each boundary), is
+     itself not established -- not asserted here as a foregone
+     conclusion. See the next diagnostic attempt below for what was tried
+     instead of repeating this same trace.
+  6. RESOLVED. Per ticket 20260912-004800's explicit next-step ask ("use
+     fresh-process clean-only successive requests as the baseline before
+     any injected-failure or cross-thread request; compare one
+     failure-then-clean sequence with the same window/pump/teardown
+     conditions"), built a separate, minimal diagnostic
+     (mixa_manager/tests/mixa_share_baseline_diag.lm1,
+     run_share_baseline_diag.ps1 -- deliberately apart from
+     run_share_native_smoke.ps1 so iterating on it did not mean replaying
+     the full known-hanging suite each edit) that runs requests with NO
+     retry (retries would mask the exact pattern being investigated) and
+     additionally records, at each boundary, whether the request's window
+     was actually the OS foreground window (GetForegroundWindow() ==
+     hwnd) at the moment begin() was called -- a factor no earlier attempt
+     had checked.
+     Scenario A (baseline): three clean, non-fault-injected requests in a
+     row, fresh window each -- the first three real invocations attempted
+     IN THIS PROCESS. Scenario B runs immediately after, in the SAME
+     process: one GET_DATA-faulted request followed by one clean request,
+     same conditions. Correction (ticket 20260912-011300): the first
+     version of this writeup called these "two fresh-process scenarios",
+     which was wrong -- both run in one continuous process, one binary
+     invocation. "Baseline" here means "the first invocations attempted in
+     this process, before any fault injection", not a separate process; a
+     single run of this binary is one data point about invocation order
+     within a process, not a controlled experiment across process
+     boundaries. The diagnostic was also fixed to actually assert expected
+     outcomes and exit non-zero on a setup or expected-event mismatch
+     (mixa_share_diag_run_one now takes an expect_failed flag and returns
+     whether the result matched) -- the original version always exited 0
+     regardless of what the individual requests did, which the same review
+     correctly called out as not a strict acceptance test.
+     With an explicit SetForegroundWindow() call added when each
+     diagnostic window is created, ALL FIVE real invocations across both
+     scenarios succeeded (event=HANDED_OFF or the correct FAILED for the
+     faulted one), confirmed stably across two full runs (10/10 real
+     invocations total). SetForegroundWindow's own return value is logged
+     (not assumed): it reported success every time observed here, but this
+     is a supported LOCAL diagnosis, not a proved universal OS rule --
+     Windows can decline the call under its own foreground-lock
+     restrictions, the production adapter ignores its return value by
+     design (a best-effort nudge, not a precondition it enforces), and
+     whether ShowShareUIForWindow still works when SetForegroundWindow is
+     declined (e.g. because the window happens to already be foreground
+     through some other means) has not been observed either way -- that
+     refusal case is not proved harmless, only unencountered so far.
+     ShowWindow()+UpdateWindow() alone
+     -- what every earlier attempt used -- do not make a newly-created
+     window the actual foreground window once some other window (e.g. an
+     earlier request's own real Share flyout) has held focus; Windows
+     restricts which windows may take foreground focus for themselves.
+     ShowShareUIForWindow silently never delivers DataRequested when its
+     target window is not genuinely foreground at call time -- no error,
+     just no callback, exactly matching every symptom observed across the
+     whole investigation (a fixed small number of successes, independent
+     of fault type; item 5's clean HRESULTs; item 3's fresh-window-still-
+     failing result, since a newly created but non-foreground window fails
+     exactly the same way).
+     Applied to run_share_native_smoke.ps1: added SetForegroundWindow() to
+     mixa_share_smoke_new_window() (fresh-window case) AND re-asserted it
+     inside mixa_share_smoke_run_on_hwnd() before each call (window-reuse
+     case) -- the fresh-window fix alone left the same-window-reuse
+     diagnostic's second call still hanging, confirming reuse needs the
+     SAME fix reapplied per call, not just once at window creation. With
+     both applied, the FULL suite (all fault-injection tests, the
+     cross-thread/apartment regressions, the same-window-reuse diagnostic,
+     and the final confirmation) passed with zero failures in three runs
+     taken right after this fix landed. Per ticket 20260912-011300's
+     correction, those three runs were NOT three identical repeats of one
+     fixed source -- the source was still being edited between them (a
+     per-call SetForegroundWindow reassertion was added partway through) --
+     so read this as "the fix worked, checked three times as it was being
+     refined," not as three confirmations of one unchanged state. See
+     "CURRENT STATUS" below for the run whose hashes are verified against
+     today's source.
+     Also applied defensively inside the production adapter itself
+     (mixa_share_win32_begin(), immediately before ShowShareUIForWindow):
+     a real application's own "Share" trigger almost always fires from an
+     already-foreground window, so this is normally a no-op reassertion,
+     not a focus steal against user intent, and harmless if the OS
+     declines it (foreground changes are always subject to Windows' own
+     foreground-lock rules, so this cannot be relied on as a guarantee,
+     only a now-necessary best-effort nudge).
+
+Separately, a genuine bug (not related to the above): the native smoke
+test called RoInitialize(1U). Checked against MinGW's own roapi.h
+(RO_INIT_TYPE): SINGLETHREADED=0, MULTITHREADED=1 -- 1U is
+RO_INIT_MULTITHREADED, directly contradicting mixa_share_win32.h.lm1's own
+documented justification for MixaShareHandlerObj's non-atomic refcount
+("only ever touched under RO_INIT_SINGLETHREADED"). Fixed to
+RoInitialize(RO_INIT_SINGLETHREADED) -- the symbolic constant, not a
+numeric literal, per the review's explicit instruction not to assume a
+numeric value means STA without checking the SDK's actual enum.
+
+Also added: owner-thread contract enforcement at the begin/poll/cancel/
+destroy/Invoke boundaries (MixaShareWin32Ctx::owner_tid, set to
+GetCurrentThreadId() in begin(), checked by
+mixa_share_win32_check_thread() everywhere else including inside the
+Invoke callback itself as a self-check that the apartment model actually
+behaved as documented rather than an assumption). Rationale: begin/poll/
+cancel/destroy are plain C calls, not COM interface calls, so nothing
+marshals a wrong-thread call onto the owning STA thread the way a real COM
+proxy would. poll()/cancel() return the new MIXA_SHARE_ERR_THREAD status
+on a mismatch without touching any WinRT reference; destroy() (void, no
+error channel) silently refuses and leaks rather than risk corrupting
+apartment-affine COM state from the wrong thread -- a caller contract
+violation is not something this function can safely paper over.
+Not yet covered by a dedicated cross-thread test (spawning a real second
+OS thread and asserting rejection) -- open for the next increment,
+alongside the item-4 hang above.
+
+The retry-with-fresh-window mitigation added while investigating this
+(mixa_share_smoke_run_fault wraps mixa_share_smoke_run_fault_once, logging
+every retry by mask and attempt number) is still in place and still
+harmless, but given item 4's finding it should not be read as evidence the
+underlying defect is fixed or intermittent -- it currently never succeeds
+past the second real invocation in a process, retries included.
+
+Two concrete lifetime/correctness defects (ticket 20260912-001200), found
+and fixed AFTER the above, and independent of the item-4 hang:
+
+1. Use-after-free in the PORTABLE mixa_share_destroy() (mixa_share.lm1),
+   not the backend: it called r->vt->destroy(r) then unconditionally freed
+   r->text/r->title/files/r itself, regardless of what the backend did.
+   Once mixa_share_win32_destroy() started refusing a wrong-thread call
+   (leaving ctx alive, still registered, with ctx->req == r), the portable
+   layer freed r right afterward anyway -- a later, legitimately-delivered
+   callback on the real owning thread would then dereference freed memory.
+   My own commit/outbox reply describing this as "an intentional leak" was
+   wrong; testing only the backend function directly (as I had) missed
+   that the portable wrapper still causes the free. Fixed: MixaShareDestroyFn
+   now returns int (MIXA_SHARE_OK or a refusal status); the portable
+   destroy() only frees the request when the backend actually returns OK,
+   and leaks the whole request (not just the backend's ctx) on refusal.
+   The fake backend's destroy() updated to match (always returns OK).
+   Verified with a focused regression that calls the PUBLIC
+   mixa_share_destroy() -- not the backend function -- from a real second
+   OS thread on a request begin() succeeded on the main thread.
+   Scope of the proof, stated precisely (ticket 20260912-011300 correctly
+   pushed back on an earlier, looser version of this claim): the test uses
+   MixaShareRequest::free_counter, a test-only int* the request holds
+   (mixa_share_test_set_free_counter()), incremented by exactly one
+   statement inside mixa_share_destroy() at the single point it commits to
+   freeing text/title/files/r as one unconditional sequence. This proves
+   "the portable destroy() did or did not reach that commit point" -- it
+   does NOT independently observe ctx's own release, the handler/token
+   frees inside the backend, or each individual payload's free. Given the
+   code's actual control flow (once backend_rc == MIXA_SHARE_OK, ALL of
+   ctx-owning-function-call, text, title, files, r are freed together with
+   no partial-free path), this is a sound proxy for THIS specific defect,
+   but is not a general per-resource lifetime audit; the async file-
+   attachment stage (new resources: an async op handle, a deferral object,
+   an IStorageFile reference) will need its own, more granular lifetime
+   counters when it's built, not an extension of this one.
+   The regression also checks CreateThread's return and
+   WaitForSingleObject's actual result explicitly. A failed CreateThread
+   means no worker exists, so the owning thread cleans up immediately
+   (safe, nothing else could be touching the request). A WaitForSingleObject
+   timeout means the worker may still be inside mixa_share_destroy() --
+   the test does NOT touch, free, or destroy the shared request/window in
+   that case (a stale field reading "still PENDING" was never proof of
+   non-freeing to begin with, since freed heap bytes can retain that
+   value; touching it further after a timeout would compound the risk,
+   not just leave the run inconclusive) and instead reports the failure
+   and terminates the whole test process immediately (ExitProcess), so no
+   later test can run concurrently with a possibly-still-live worker. If
+   free_counter ever shows the wrong-thread call DID free the request
+   (a regression), the test does not call mixa_share_destroy() on it
+   again -- doing so on a possibly-already-freed pointer would be a
+   double-free in the test itself, which the initial version of this
+   regression did not guard against.
+
+2. Recording GetCurrentThreadId() at begin() is not an apartment check: a
+   thread that never initialized COM/WinRT as STA (e.g. MTA) could still
+   call begin(), have its thread ID recorded as owner, and pass every
+   later same-thread check -- the enforcement added earlier only proved
+   "the same thread called every boundary," never that the thread was
+   actually STA, which is what MixaShareHandlerObj's non-atomic refcount
+   depends on. Fixed: mixa_share_win32_check_apartment() calls the real
+   CoGetApartmentType and only accepts APTTYPE_STA/APTTYPE_MAINSTA,
+   called once at the start of begin() before anything is allocated.
+   Also fixed a related bug in Invoke()'s own thread self-check: on a
+   mismatch it was writing ctx->invoke_status/ctx->pending anyway, an
+   unsynchronized write to the very fields this header claims are safe as
+   plain (non-atomic) ints specifically because nothing off-thread ever
+   touches them -- now a mismatch returns the failure HRESULT and leaves
+   ctx untouched (the request is left permanently PENDING rather than
+   risk a second violation on top of the first). Verified with a focused
+   regression that spawns a real second OS thread, has it call
+   RoInitialize(RO_INIT_MULTITHREADED) then the full public create/
+   set_text/set_context/begin/destroy sequence, and asserts begin()
+   returns MIXA_SHARE_ERR_THREAD, not MIXA_SHARE_OK.
+
+3. poll()/cancel() cross-thread coverage (closing the gap this file
+   itself flagged: they share mixa_share_win32_check_thread() with
+   destroy(), but only destroy() had a dedicated test). poll() from a
+   real second OS thread on a request begun on the owner thread correctly
+   returns MIXA_SHARE_ERR_THREAD, and a subsequent owner-thread poll()
+   still reads PENDING normally afterward. cancel() is more limited on
+   this backend: the win32 vtable never sets MIXA_SHARE_CAP_CANCEL, so
+   the PORTABLE mixa_share_cancel() always refuses with
+   MIXA_SHARE_ERR_UNSUPPORTED via its capability gate before ever
+   reaching mixa_share_win32_cancel()'s own thread check, regardless of
+   which thread calls it -- the public API cannot exercise that specific
+   backend function's thread check on this backend. What the test DOES
+   verify is that a wrong-thread cancel() call is still safe (a stable,
+   expected error, no crash, no state corruption, the request stays
+   PENDING) even though the mechanism proven is the capability gate, not
+   the thread check. Both new regressions use the same CreateThread/
+   WaitForSingleObject-result checking as the destroy regression (a
+   failed launch is safe immediate owner cleanup; a timeout aborts the
+   whole process rather than launching a second thread against a
+   possibly-still-live first one).
+
+These three regressions do not depend on the item-4 hang (begin()
+succeeding, or a wrong apartment/thread/capability being rejected, does
+not require a delivered DataRequested callback), so they are meaningful
+evidence independent of that issue. Per ticket 20260912-011300's
+correction: do not cite multiple past runs as "identical" or "stable
+across N runs" unless their recorded hashes actually match the CURRENT
+source -- several early runs of these regressions were mistakenly
+described that way while the source was still being revised between
+them. See Testing below for the specific run whose hashes match the
+current source, and treat any other cited run strictly as a record of
+what an EARLIER revision showed, not as repeat confirmation of the
+current one.
+
+Testing
+-------
+Fake-backend selftest (run_share_selftest.ps1): 45 checks, 0 failures,
+platform-independent, deterministic. Does not exercise real Windows UI.
+
+Native smoke test (run_share_native_smoke.ps1): a REAL window, REAL
+RoInitialize/RoGetActivationFactory/GetForWindow/add_DataRequested/
+ShowShareUIForWindow call sequence, against the actual OS. Asserts only
+what the backend can honestly know -- that begin() reaches PENDING and the
+OS invokes our DataRequested handler within a bounded ~5s wait, transitioning
+poll() to HANDED_OFF/OK. Does not and cannot assert a human saw the share
+UI or picked a target (see "honest platform behavior" above).
+
+CURRENT STATUS (ticket 20260912-011300: cite the run whose hashes actually
+match the current source, not several runs from differing revisions
+lumped together as "identical"): PASSING. Verified run
+build/mixa/claude/share_native_smoke/run_20260912_012018_229_cd58cbd1/ --
+its recorded concrete-header, portable-header, portable-impl, concrete-
+impl, and test-source hashes were individually diffed against this
+repository's current files and match exactly (case-insensitive). That run
+shows every fault-injection assertion, all three cross-thread regressions
+(destroy with the free_counter proof; poll correctly refused with a
+working owner-thread poll afterward; cancel safely refused via the
+capability gate), the real-MTA wrong-apartment regression, the same-
+window-reuse diagnostic (both calls succeeding), and the final
+confirmation, all passing with zero retries. Earlier cited runs
+(run_20260912_005853_076_132b4c0c/, run_20260912_010115_825_8a76e2de/,
+run_20260912_010209_547_9d2d7ccc/, and the 001943/002243 pair before
+them) are kept as historical records of what THEIR OWN, now-superseded
+source revisions showed -- each reflects real changes made between runs
+(the per-call SetForegroundWindow reassertion, the production
+SetForegroundWindow fix, the poll/cancel regressions, the cancel
+expectation fix, the CreateThread/timeout safety fixes), not repeat
+confirmations of one unchanged state. Do not treat any "N FAILURES" line,
+or any older "ok" line, as the current result without checking its
+hashes first. Requires
+the Windows 10 SDK's winrt include directory (not bundled with MinGW); the
+runner takes -WindowsSdkIncludeRoot to override the default path if a
+different SDK version is installed.
+
+UPDATE (file attachment stage 1 added, then its CO_E_NOT_SUPPORTED
+blocker RESOLVED -- see "Remaining stages" item 1): the suite passes
+"ok" again, including the new file-attachment assertion (share a real,
+harmless, test-owned temp file), which now correctly reports FAILED/
+ERR_UNSUPPORTED (stage 1 resolves the file honestly but does not attach
+it -- stage 2 is still open). There was a brief interval where this
+assertion failed with CO_E_NOT_SUPPORTED before the fix landed; that is
+no longer the current state. Verified run
+build/mixa/claude/share_native_smoke/run_20260912_021339_197_5c2da3bf/ --
+its five recorded hashes (concrete header, portable header, portable
+impl, concrete impl, test source) were individually diffed against this
+repository's current files and match exactly (case-insensitive), stable
+across two consecutive runs.
+
+UPDATE (ticket 20260912-022300: file attachment stage 2 -- SetStorageItems
+-- implemented; see "Remaining stages" item 1's full writeup below): the
+file-attachment assertion now expects and gets HANDED_OFF/OK, not FAILED/
+ERR_UNSUPPORTED -- the real file is actually attached to the DataPackage,
+not merely resolved. This is checked two ways, not just the returned
+HRESULT: the event/status pair (HANDED_OFF/OK), AND a new test-only
+counter (mixa_share_win32_test_get_iter_vend_count()) that the custom
+IIterator<IStorageItem*> increments every time the OS's real
+SetStorageItems implementation actually calls get_Current or GetMany on
+it -- proving the DataPackage genuinely walked our iterable rather than
+silently accepting-and-ignoring it (a real risk this whole stage exists to
+rule out, per the "HANDED_OFF must require actual data population"
+principle already applied to stage 1). Observed vend_count=1 for the
+single-file test, confirming the OS actually pulled the one item we
+offered. Verified runs
+build/mixa/claude/share_native_smoke/run_20260912_024919_992_ef6b6d06/ and
+build/mixa/claude/share_native_smoke/run_20260912_025034_248_d729ecc9/ --
+both from byte-identical source (impl/concrete-header/test-source hashes
+diffed between the two runs and against this repository's current files,
+all match), both "ok", both showing "file attachment handed off (stage 2)"
+and "DataPackage actually walked our IIterable, vend_count=1". Only a
+single file was exercised end to end natively at that point; multi-file
+coverage followed immediately after (see the next UPDATE below).
+
+UPDATE (multi-file end to end, same ticket): two more native tests added
+and passing -- a real two-file share (vend_count=2, both files walked)
+and a mid-chain failure (second file deleted from disk after set_files
+but before begin(), so its GetFileFromPathAsync fails for real; result
+FAILED/ERR_BACKEND with vend_count=0, proving the already-resolved first
+item is released rather than leaked or partially attached). This also
+surfaced and fixed a real, separate gap: the win32 vtable had never
+advertised MIXA_SHARE_CAP_MULTIPLE, so the portable mixa_share_begin()
+gate refused any 2+-file request outright regardless of the backend --
+see "Remaining stages" DONE note for the full writeup. Verified runs
+build/mixa/claude/share_native_smoke/run_20260912_025917_839_0a1d5baf/ and
+build/mixa/claude/share_native_smoke/run_20260912_030022_073_94f9d55f/,
+both from byte-identical source (hashes diffed between the two runs),
+both "ok". run_share_selftest.ps1 unaffected (45 checks, 0 failures,
+run_20260912_030129_102_e5237fb5/).
+
+UPDATE (ticket 20260912-025800: real lifetime bug found and fixed in
+review, same day as stage 2 shipped): MixaStorageItemIterableObj/
+MixaStorageItemIterObj originally BORROWED ctx->pending_items directly
+and were released immediately after SetStorageItems returned, by analogy
+with how the SetText/put_Title HSTRINGs are only needed for the duration
+of their own call. That analogy was WRONG: an HSTRING is copied BY VALUE
+into the DataPackage, but IIterable<T> is a retainable COM interface
+reference, and nothing in SetStorageItems' documented contract promises
+synchronous, one-shot consumption -- Share's own architecture already
+leans on DEFERRED consumption elsewhere (IDataRequestDeferral), so a
+real implementation legitimately choosing to retain the iterable (or an
+iterator obtained from it) for later, lazy enumeration was a live
+possibility that had gone unconsidered, not a reproduced crash but an
+unproven assumption load-bearing enough to be worth fixing before it
+became one.
+
+Fixed by making both objects properly self-sufficient, the standard COM
+pattern: mixa_share_win32_make_storage_item_iterable now AddRefs every
+item into a FRESH, INDEPENDENTLY-OWNED array at construction (instead of
+borrowing the caller's array), released by the iterable's own Release()
+when its own refcount reaches 0 -- entirely decoupled from whatever ctx
+does with its own array afterward (ctx keeps releasing its own separate
+references exactly as before, unaffected). mixa_storage_item_iterable_first
+now AddRefs the owning iterable itself into the returned iterator's new
+owner_iterable field, Released in the iterator's own Release() -- so a
+retained iterator keeps its backing iterable (and therefore the array it
+owns) alive for as long as the iterator itself lives, regardless of how
+many other references to the iterable come and go in the meantime.
+
+Verification: a new deterministic, OS-independent regression
+(mixa_share_native_smoke.lm1) resolves one real IStorageItem*
+synchronously (RoGetActivationFactory/GetFileFromPathAsync/a manual
+IAsyncInfo::get_Status poll loop -- no window, no Share UI, no dependency
+on the real DataPackage's own consumption timing), builds an iterable
+from it, calls First() TWICE for two independent iterators, releases the
+iterable's own creator-side reference, then exercises iter1
+(get_HasCurrent/get_Current) -- proving it is still valid with the
+iterable's own reference already gone -- releases iter1, then exercises
+iter2 the same way, proving the two iterators do not interfere with each
+other's lifetime. No crash, both checks pass, process exits cleanly (a
+real use-after-free here would very likely have crashed or returned
+garbage from a genuinely freed WinRT object, not silently succeeded).
+Two consecutive hash-identical-source runs pass; run_share_selftest.ps1
+unaffected (45 checks, 0 failures). Verified runs
+build/mixa/claude/share_native_smoke/run_20260912_031257_332_ed7d5fab/ and
+build/mixa/claude/share_native_smoke/run_20260912_031403_691_83070d42/.
+
+This does not prove the real OS never retains the iterable longer than
+this test's own synchronous sequence exercises -- it proves the COM
+CONTRACT is now sound regardless of how long a legitimate consumer
+retains it, which is the actual thing under our control to guarantee.
+
+UPDATE (ticket 20260912-030600: source-side count/order/path readback,
+correcting my own earlier claim): I had written that order/count could
+not be independently verified without a receiving app -- WRONG. WinRT
+exposes a SOURCE-side readback: IDataPackage::GetView() ->
+IDataPackageView::GetStorageItemsAsync() -> IVectorView<IStorageItem*>::
+GetAt()/get_Size(), all reachable from the producer's own process, no
+receiver needed. Implemented and wired into the two-file native test.
+
+Reading the real DataPackage back needed a pointer to it, which the test
+never had (mixa_share_win32.lm1's internals own it entirely). Added a new
+test-only opt-in, mirroring the existing test_force_fail bit pattern
+exactly: MIXA_SHARE_TEST_CAPTURE_PACKAGE (mixa_share.h.lm1), checked only
+in mixa_file_op_handler_invoke's SetStorageItems success branch -- when
+set, takes one extra AddRef into a file-scope test-only global
+(g_mixa_storage_item_last_package), released again if a previous capture
+was never collected. A real share never sets this bit, so it costs
+nothing in production; mixa_share_win32_test_take_last_package() lets the
+test collect the reference under its own timing. The test collects it
+right after poll() reports HANDED_OFF/OK -- i.e. strictly AFTER
+mixa_file_op_handler_invoke's own cleanup already ran and released ITS
+references, so this genuinely reads the DataPackage back after the
+producer let go of it, the same lifetime property item 1b's fix
+guarantees, now confirmed through the real OS's own view object rather
+than only our internal vend-count instrumentation.
+
+Result: GetStorageItemsAsync's vector reports get_Size()=2, and GetAt(0)/
+GetAt(1)'s get_Path() match the two requested files in exactly that
+order (compared as wide strings via WindowsGetStringRawBuffer, since
+HSTRING has no narrow-string API). "count/order" from ticket 20260912-
+022300's original acceptance criteria is now actually verified, not
+reasoned about from construction alone. Two consecutive hash-identical-
+source runs pass; run_share_selftest.ps1 unaffected (45 checks, 0
+failures). Verified runs
+build/mixa/claude/share_native_smoke/run_20260912_032222_957_e503fdaa/ and
+build/mixa/claude/share_native_smoke/run_20260912_032325_022_3cc440b3/.
+
+Also flagged in the same review, NOT yet done: vend_count=0 on the
+mid-chain-failure test proves SetStorageItems was never enumerated, but
+does not itself prove the already-resolved first item's IStorageItem
+reference was actually Released (balanced, non-leaking) rather than just
+"never handed to the OS" -- the code path releases it (see
+mixa_file_op_handler_invoke's ok=0 branch), but there is no dedicated
+counter/instrument proving that specific Release happened the expected
+number of times, only that the process didn't visibly leak across many
+runs. Left as an open, named gap rather than silently assumed covered.
+
+UPDATE (ticket 20260912-032000: file-op handler async lifetime
+boundaries -- immediate/delayed completion, reentrant Cancel/cleanup):
+these all reduce to the SAME single mechanism -- mixa_file_op_handler_
+invoke reads self->owner_ctx first and returns immediately, without
+dereferencing async_info AT ALL, once destroy() has nulled it (destroy()
+nulls owner_ctx BEFORE calling the real IAsyncInfo::Cancel(), per item
+1's own earlier fix). There is no separate code path for "the callback
+fires reentrantly from inside Cancel()" versus "the callback fires
+genuinely later, after destroy() already returned" -- both hit the exact
+same owner_ctx==0 check. Proving that check works once, deterministically,
+proves both scenarios.
+
+Added two tests rather than building a fake WinRT async source (would
+have meant a real production seam/injection point this ticket did not
+ask for): (1) a deterministic, no-fake-COM-objects-needed check --
+allocate a MixaFileOpHandlerObj by hand (owner_ctx left at calloc's zero
+default, exactly what destroy() leaves it at), call
+mixa_file_op_handler_invoke() on it directly with a deliberately invalid,
+non-null async_info pointer (0x1) instead of a real COM object -- proving
+by construction that async_info is genuinely never touched on this path,
+since dereferencing that poison value would crash. Confirmed: returns
+E_FAIL, no crash. (2) A real-OS complement -- begin() a real file-
+attaching share, then call destroy() immediately with NO polling at all,
+deliberately racing this test against the real GetFileFromPathAsync
+completion; whichever side wins, no crash. This is the one real WinRT
+path for this stage, kept alongside the deterministic check rather than
+replaced by it.
+
+Two consecutive hash-identical-source runs pass; run_share_selftest.ps1
+unaffected (45 checks, 0 failures). Verified runs
+build/mixa/claude/share_native_smoke/run_20260912_033242_510_f89002f6/ and
+build/mixa/claude/share_native_smoke/run_20260912_033347_882_de19b25b/.
+
+This closes every item ticket 20260912-022300 explicitly named except the
+Release-balance instrumentation noted just above (still open) and the
+Unicode-natively and multi-file-order items already tracked below.
+
+UPDATE (ticket 20260912-033900, corrected on review): the two tests above
+(a hand-built detached handler; a real begin()-then-immediate-destroy()
+race) proved owner_ctx==0 is a safe no-op and that destroy() does not
+crash racing the real OS, but neither one actually exercised the three
+named transitions -- immediate/synchronous completion from inside
+put_Completed, IAsyncInfo::Cancel invoking the handler reentrantly, and a
+completion delivered after destroy() has already freed ctx. A real WinRT
+timing race cannot force any of these three on demand, so a deterministic
+test-only seam was built: a fake IAsyncOperation<StorageFile*> (a plain-C
+COM object implementing BOTH the real AsyncOperation-shaped vtable and,
+via the standard COM sub-object technique, a second IAsyncInfo-shaped
+view at one pointer-width past the first field), plus minimal fakes for
+IDataPackage/IDataRequestDeferral. No production call site changed --
+mixa_file_op_handler_invoke and mixa_share_win32_destroy are exercised
+directly, for real, with only the async SOURCE faked.
+
+Three focused tests, using exact-once EXTERNAL counters (a pointer to a
+test-owned int, incremented the moment each fake actually frees itself --
+not an internal field, since production always Releases most of these
+objects right after using them, before a test could otherwise read back
+whether it happened):
+  1. put_Completed invokes the handler synchronously, before returning.
+     Confirmed handler/op/package/deferral all reach exactly 1.
+  2. IAsyncInfo::Cancel invokes the handler reentrantly from inside
+     destroy()'s own Cancel() call. Confirmed the same exact-once result
+     despite the reentrancy, and confirmed by construction that this
+     relies on the SAME owner_ctx==0 check item 1's fix already
+     installed -- there is no separate code path for "reentrant" vs
+     "delayed".
+  3. A completion delivered AFTER destroy() has fully returned and freed
+     ctx: an extra AddRef on the fake op (simulating "the OS's own
+     internal scheduler independently holds a reference") keeps the
+     handler alive through destroy()'s own cleanup; the delayed
+     Invoke() call is confirmed to find owner_ctx already detached
+     without reading the freed ctx, and only the FINAL simulated
+     OS-side Release actually frees the handler and the fake op --
+     checked as four separate assertions (package/deferral released by
+     destroy() alone; handler/op deliberately still alive after
+     destroy(); the delayed callback's own safety; final exact-once
+     release).
+
+Two real bugs found and fixed while building this seam, both concrete
+enough to be worth recording:
+  - A genuine CRASH: the fake's IAsyncInfo-shaped vtable was built with
+    only 8 slots (QueryInterface/AddRef/Release/get_Id/get_Status/
+    get_ErrorCode/Cancel/Close), assuming those 5 "new" methods were
+    IAsyncInfo's whole vtable. Wrong: asyncinfo.h's own IAsyncInfoVtbl is
+    IInspectable-derived like every other WinRT interface, carrying
+    GetIids/GetRuntimeClassName/GetTrustLevel BEFORE those 5 -- 11 slots
+    total, Cancel at index 9, not 6. destroy()'s real Cancel() call read
+    3 slots past this struct's actual end and crashed calling whatever
+    was there. Found by bisecting exactly where a silent
+    -1073741819/STATUS_ACCESS_VIOLATION exit was happening (see the next
+    bullet for why that took extra work) and re-reading asyncinfo.h's
+    actual vtable definition rather than assuming the shape from memory.
+  - A real evidence gap while diagnosing the above: stdout is fully
+    buffered once redirected to a file rather than a TTY, so the crash
+    lost every prior printf too -- test_stdout.log came back completely
+    empty despite roughly 30 checks having already run and passed. Fixed
+    by calling setbuf(stdout, NULL) at the top of main(), kept
+    permanently rather than reverted, so a future crash preserves
+    whatever ran before it.
+  - Separately (a real toolchain quirk, not a bug in this code): l1trans
+    enforces a small limit on the total number of fnptr:/struct: type
+    names visible in one translation unit ("too many header type
+    names"), and a header predef'd by the main test unit must ALSO be
+    translatable standalone (the test runner does this for every
+    predef'd header, mirroring what it already did for
+    mixa_share_win32.h.lm1/mixa_share.h.lm1, to produce the companion
+    file l1trans's generated C expects to #include). Both are documented
+    in mixa_share_native_smoke_fakes.h.lm1's own comments and
+    run_share_native_smoke.ps1's new header-translation step, since
+    neither is obvious and both cost real time to isolate.
+
+Two consecutive hash-identical-source runs pass (now six input hashes:
+compiler, both concrete/portable headers, portable impl, the new fakes
+header, test source); run_share_selftest.ps1 unaffected (45 checks, 0
+failures). Verified runs
+build/mixa/claude/share_native_smoke/run_20260912_042855_317_1339b08e/
+and
+build/mixa/claude/share_native_smoke/run_20260912_043013_219_e4e9b164/.
+
+UPDATE (ticket 20260912-043851: the two remaining Share-native evidence
+gaps, closed together): both are new tests in
+mixa_share_native_smoke.lm1, no production behavior change beyond one
+new always-on counter (see below).
+
+1. Unicode-native attachment. A new fixture helper
+   (mixa_share_smoke_make_unicode_test_file) creates a real test-owned
+   file whose name contains "café" -- a genuine non-ASCII code point
+   (U+00E9, not a space/apostrophe) -- using CreateFileW from the start
+   so fixture creation does not depend on the process's active ANSI code
+   page; only the same UTF-8<->UTF-16 conversion already used throughout
+   this file (mixa_share_win32_utf8_to_wide) is trusted, matching what a
+   real caller's Unicode filename would go through via the public UTF-8
+   Share API. Shared as a single file through the real path (identical to
+   the existing single-file test), then read back exactly like the
+   multi-file test's own DataPackageView readback: GetView() ->
+   GetStorageItemsAsync() -> GetAt(0) -> get_Path(), compared as wide
+   strings. Result: HANDED_OFF/OK, vend_count>=1 (the OS actually walked
+   the iterable), and the StorageItem's own Path equals the requested
+   Unicode path exactly -- proving café survives UTF-8 -> wide -> HSTRING
+   -> real WinRT StorageFile resolution -> real DataPackage storage ->
+   source-side readback intact, not merely that some file attached.
+
+2. Mid-chain resolved-item Release-balance. The existing real-OS
+   mid-chain-failure test (kept unchanged, as explicitly asked, as
+   complementary coverage) proves vend_count=0 -- SetStorageItems was
+   never enumerated -- which does not by itself prove the already-
+   resolved FIRST item's own IStorageItem reference was actually
+   released rather than merely never handed to the OS. Added a fully
+   deterministic, self-contained test: mixa_share_smoke_make_async_
+   lifetime_ctx was generalized to accept an item_total and an optional
+   preresolved_item, letting a test place a real interface-shaped fake
+   (reusing FakeUnkObj's bare 3-slot shape -- the abort loop only ever
+   calls Release() on pending_items[i], exactly what FakeUnkObj answers)
+   directly into pending_items[0] with pending_item_total=2/
+   pending_item_next=1, matching exactly what the chain's own bookkeeping
+   looks like right after a real first file resolves and before a second
+   one fails -- without needing to inject a second fake into
+   begin_file_resolution's own real-OS wiring (which stays untouched). A
+   single synchronous put_Completed (the fake op's GetResults always
+   fails, simulating "file 2 failed") then drives the production abort
+   loop directly, with the fake item's own external free_counter, plus
+   the already-established handler/op/package/deferral counters, all
+   read back afterward: exactly 1 each, not 0 (leaked) or 2 (double-
+   released).
+
+   Correction (ticket 20260912-045346): an earlier version of this stage
+   also added a production-side counter, g_mixa_storage_item_release_count,
+   incremented unconditionally in mixa_file_op_handler_invoke's abort loop
+   and mixa_share_win32_destroy's teardown loop. It was described as
+   "test-only" and "zero cost," but it was not gated by any test flag --
+   it ran, and mutated process-global state, on every real share's
+   production abort/destroy path, which the ticket correctly identified as
+   a real cost (a data race across independent concurrent requests) for no
+   evidence the fake item's own free_counter didn't already provide.
+   Removed entirely (declaration, getter, reset, both increment sites);
+   the fake item's free_counter above is the sole mechanism proving the
+   abort loop's Release() on pending_items[0].
+
+Two consecutive hash-identical-source runs pass (same six input hashes
+as the previous checkpoint); run_share_selftest.ps1 unaffected (45
+checks, 0 failures). Verified runs
+build/mixa/claude/share_native_smoke/run_20260912_044733_535_8dd0e4f5/
+and
+build/mixa/claude/share_native_smoke/run_20260912_044857_862_60a6729f/.
+
+Limitations, stated honestly: "café" exercises one non-ASCII code point
+in the Basic Multilingual Plane's Latin-1 Supplement block (a single
+UTF-16 code unit); a surrogate-pair (astral-plane, e.g. emoji) filename
+has not been exercised. The item-release test's fake is a bare 3-slot
+IUnknown shape, not a full IStorageItem -- correct because
+mixa_file_op_handler_invoke's abort loop never calls anything else on
+`items[i]`, but it does not exercise a REAL WinRT StorageItem's own
+Release() semantics under this exact failure ordering (the real-OS
+delete-second-file test, kept as complementary coverage, is the one that
+does, without an isolated per-item counter). This closes both items
+20260912-043851 named; the Share backlog's only remaining open items are
+the selection/button/nested-failure UI integration and the full audio
+backlog, both already assigned and unstarted.
+
+Remaining stages (honest status)
+----------------------------------
+DONE since the last checkpoint: begin/token-OOM and get_Data/SetText/
+put_Title fault-injection coverage against the real adapter, exercising
+the real error-handling branches (see "Fault-injection testing" above).
+The RoInitialize(MULTITHREADED) bug fixed to RoInitialize(RO_INIT_
+SINGLETHREADED); owner-thread contract enforcement added at begin/poll/
+cancel/destroy/Invoke (MixaShareWin32Ctx::owner_tid +
+mixa_share_win32_check_thread()); the real apartment-type check at begin()
+(mixa_share_win32_check_apartment(), CoGetApartmentType); the portable-
+layer use-after-free on wrong-thread destroy (MixaShareDestroyFn now
+returns int, checked by mixa_share_destroy() before freeing anything);
+strengthened regressions for destroy/poll/cancel using a real free_counter
+lifetime proof and checked CreateThread/WaitForSingleObject/RoInitialize
+results, including safe cleanup on a CreateThread failure and no further
+shared-object teardown after a timeout (see "Two concrete lifetime/
+correctness defects" above). AND: the item-4 hang itself is RESOLVED --
+see "Diagnostic detour" item 6 (missing SetForegroundWindow). The full
+native smoke suite passes end to end -- see "CURRENT STATUS" under
+Testing above for the specific hash-verified run, rather than a repeated
+"stably across N runs" claim spanning different source revisions.
+
+DONE (closing the item-0b gap this file previously flagged): poll()/
+cancel() cross-thread coverage added -- see "Two concrete lifetime/
+correctness defects" item 3. poll()'s thread check is directly confirmed;
+cancel()'s is confirmed safe but not specifically exercised on this
+backend, since win32 doesn't advertise MIXA_SHARE_CAP_CANCEL at all (the
+portable capability gate refuses first, regardless of thread) -- narrowed
+honestly in that section rather than claimed as full coverage.
+
+DONE: file attachment stage 1 (async GetFileFromPathAsync resolution +
+IDataRequest deferral) implemented, its registration blocker
+(CO_E_NOT_SUPPORTED) root-caused and fixed (the completion handler
+interface's real IID was findable after all, via a different annotation
+style than the first search checked), and two further concrete lifetime
+hazards from the same review fixed (registration-ordering race;
+destroy/Cancel reentrancy). Native smoke test coverage added and passing
+(a real, harmless, test-owned file, correctly reporting
+FAILED/ERR_UNSUPPORTED since stage 2 doesn't attach the file yet, not a
+false HANDED_OFF). See item 1's full writeup below for the complete
+history (including the two wrong fix attempts, kept as a record of what
+not to do, not silently removed).
+
+Full detail on the stage-1 resolution just summarized above (kept as its
+own numbered item since it was tracked as "NOT done" for a while and the
+history matters -- not filed under "NOT done yet" below, which is
+current, remaining gaps only):
+  1. File attachment, stage 1 (async StorageFile resolution + deferral):
+     RESOLVED. Ticket 20260912-020800 found the exact fix.
+
+     What works, confirmed by direct reproduction: mixa_share_handler_invoke,
+     after SetText/put_Title succeed, checks mixa_share_file_count(req) > 0
+     and if so calls IDataRequest::GetDeferral(), gets the
+     "Windows.Storage.StorageFile" activation factory via
+     RoGetActivationFactory with IID_IStorageFileStatics constructed inline
+     from windows.storage.h's own MIDL_INTERFACE annotation
+     (5984c710-daf2-43c8-8bb4-a4d3eacfd03f), and calls
+     IStorageFileStatics::GetFileFromPathAsync() on the request's first
+     file path -- all three succeed, confirmed resolving a REAL test-owned
+     temp file on disk.
+
+     The actual blocker (recorded here as the earlier, wrong analysis is
+     replaced, not silently edited): registering the completion handler
+     via IAsyncOperation<StorageFile*>::put_Completed() failed with
+     CO_E_NOT_SUPPORTED (0x80004021). The earlier writeup claimed no
+     literal GUID exists anywhere for the parameterized
+     IAsyncOperationCompletedHandler<StorageFile*> interface -- WRONG.
+     Ticket 20260912-020800 found it at windows.storage.h line ~2260:
+     __declspec(uuid("e521c894-2c26-5946-9e61-2b5e188d01ed")) on the C++
+     template specialization for
+     IAsyncOperationCompletedHandler<ABI::Windows::Storage::StorageFile*>
+     -- a DIFFERENT annotation spelling (__declspec(uuid(...)), not
+     MIDL_INTERFACE("...")) than the one an earlier search looked for,
+     which is why it was missed the first time, not because it doesn't
+     exist. Two prior fix attempts (documented below as what NOT to do,
+     kept for the record) were both diagnosing symptoms of this same
+     missing IID, not independent problems:
+       a. QueryInterface too strict (IUnknown only) -> E_NOINTERFACE.
+          Correctly showed put_Completed DOES QueryInterface for the real
+          IID (unlike add_DataRequested, never observed doing this) --
+          but the WRONG fix was tried next.
+       b. QueryInterface made to accept ANY riid (reasoning: the delegate
+          interface has only QueryInterface/AddRef/Release/Invoke -- no
+          IInspectable methods -- so any IUnknown-derived 4-slot vtable
+          request is "layout-compatible"). This was the actual mistake:
+          falsely answering yes to probes for IMarshal/IAgileObject/
+          IWeakReferenceSource (which COM/WinRT's own marshaling
+          infrastructure uses to DECIDE how to deliver calls to an
+          object) misdirected that infrastructure into a path this object
+          could not actually support -- CO_E_NOT_SUPPORTED. Compounded by
+          also aggregating a free-threaded marshaler
+          (CoCreateFreeThreadedMarshaler) and delegating
+          QueryInterface(IID_IMarshal) to it, reasoning GetFileFromPathAsync's
+          completion needed cross-apartment delivery. Both the aggregation
+          and the accept-any QueryInterface were WRONG and have been
+          REMOVED, not kept: FTM does not marshal calls onto the owner STA
+          thread the way this design needs -- it grants OTHER apartments
+          direct, UNSYNCHRONIZED access to the raw object, the opposite of
+          what a single-threaded, non-atomic-refcount design requires.
+     Fix actually applied: QueryInterface now accepts ONLY IUnknown and
+     the verified handler IID above, rejecting everything else with
+     E_NOINTERFACE + null ppv (mixa_file_op_handler_iid_matches, the exact
+     same strict pattern mixa_share_handler_iid_matches already used for
+     the non-generic DataRequested handler). No FTM, no claimed agility --
+     WinRT's own universal marshaler handles a correctly-identified
+     delegate transparently, the same way it already does for
+     add_DataRequested's ITypedEventHandler<...> (also a parameterized/
+     generic delegate, which is why that registration always worked
+     without any of this machinery -- the earlier "parameterized
+     interfaces need infrastructure this process lacks" framing was
+     itself wrong, since the real issue was simply not having the right
+     IID for THIS specific interface).
+     Two further correctness fixes from the same review, both concrete
+     lifetime hazards rather than the main blocker:
+       - Registration-ordering race: ctx->pending_package/file_op/
+         file_handler are now set BEFORE calling put_Completed, not after.
+         If the async operation has already finished by the time it's
+         registered (a real, documented WinRT possibility), the completion
+         can fire SYNCHRONOUSLY/reentrantly from inside put_Completed
+         itself, before it returns -- the handler needs to find these
+         fields already populated in that case. On a put_Completed
+         failure, they are explicitly rolled back to 0 (one clear owner
+         for that failure path, not left for the caller to guess about).
+       - Destroy/Cancel reentrancy: mixa_share_win32_destroy nulled the
+         file handler's owner_ctx AFTER calling IAsyncInfo::Cancel(), not
+         before. Cancel can trigger the completion callback synchronously/
+         reentrantly from inside the Cancel() call itself -- with the old
+         ordering, a reentrant callback would run its full cleanup
+         (releasing pending_package/file_op/the deferral, then itself)
+         while destroy() was still in the middle of the SAME cleanup, so
+         by the time control returned, ctx->file_op could already be null
+         and destroy() would call Release() through a null pointer's
+         vtable -- a real crash, not just a leak. Fixed by nulling
+         owner_ctx first, making any reentrant call from inside Cancel a
+         guaranteed no-op (matching mixa_file_op_handler_invoke's existing
+         owner_ctx==0 check), so destroy() remains the sole cleanup owner.
+     Also fixed the success-path status: resolving the file successfully
+     no longer reports MIXA_SHARE_OK (which would let poll() claim
+     HANDED_OFF even though the file was never actually attached to the
+     DataPackage -- stage 2 doesn't exist yet). It now reports
+     MIXA_SHARE_ERR_UNSUPPORTED honestly ("HANDED_OFF must require actual
+     data population, not just resolving a file and discarding it",
+     per the same review). The native smoke test's file-attachment
+     assertion was updated to expect exactly this (FAILED/ERR_UNSUPPORTED),
+     not a false HANDED_OFF/OK.
+     Verified: the file-attachment assertion now passes (previously the
+     only failure in the suite), stable across two consecutive runs;
+     every other assertion (fault-injection, cross-thread/apartment
+     regressions, same-window-reuse diagnostic, final text-only
+     confirmation) and run_share_selftest.ps1's 45 checks are unaffected.
+
+  1b. File attachment, stage 2 (attaching the resolved file to the
+     DataPackage): RESOLVED, ticket 20260912-022300.
+     IDataPackage::SetStorageItems(IIterable<IStorageItem*>* value,
+     boolean readOnly) needed a custom IIterable<IStorageItem*>/
+     IIterator<IStorageItem*> pair (no activatable "vector" WinRT class is
+     reachable from plain C -- C++/WinRT's single_threaded_vector is a
+     header-only template, not an OS-provided activatable class). Both
+     GUIDs found via __declspec(uuid(...)) on the template specializations
+     in windows.storage.h (checked that annotation style up front this
+     time, having been burned once already on the file-op handler's own
+     IID -- see item 1 above): IIterator<IStorageItem*>
+     05b487c2-3830-5d3c-98da-25fa11542dbd, IIterable<IStorageItem*>
+     bb8b8418-65d1-544b-b083-6d172f568c73. Unlike the delegate handlers
+     (ITypedEventHandler/IAsyncOperationCompletedHandler, IUnknown-derived
+     only), these are real WinRT runtime interfaces derived from
+     IInspectable, so their vtables carry GetIids/GetRuntimeClassName/
+     GetTrustLevel before their own methods -- implemented minimally
+     (E_NOTIMPL/E_NOTIMPL/a real BaseTrust value), since DataPackage's own
+     consumption path only ever exercises First()/get_HasCurrent/
+     get_Current/MoveNext or GetMany, never those three.
+     mixa_file_op_handler_invoke was restructured from a single-file
+     resolver into a chain: each resolved IStorageFile* is QueryInterface'd
+     for IStorageItem* (IID 4207a996-ca2f-42f7-bde8-8b10457a7f30, same
+     "construct inline" situation as every other IID in this file) and
+     stored in ctx->pending_items; if more files remain, it calls
+     mixa_share_win32_begin_file_resolution again for the next one (moved
+     earlier in the file for this mutual forward reference, alongside an
+     in-file `prototype:` forward declaration for
+     mixa_file_op_handler_invoke itself -- genuinely mutual, not one-
+     directional, since begin_file_resolution assigns invoke into a vtable
+     slot while invoke calls begin_file_resolution to chain); once the
+     last file resolves, all of them are wrapped in a one-shot IIterable
+     and handed to SetStorageItems, released immediately after (the same
+     "transient object for one call" pattern as the HSTRINGs built for
+     SetText/put_Title). ANY failure at any point in the chain (a file, or
+     starting the next one) aborts the WHOLE request and releases every
+     item resolved so far, rather than attaching a partial set -- "No
+     silent first-file-only success" per the ticket. Sized to the whole
+     request up front (calloc'd once to file_count, not grown per file),
+     so a mid-chain allocation failure cannot happen after files already
+     resolved.
+     One concrete bug caught and fixed before this shipped: the first
+     chaining attempt released ctx->pending_package after calling
+     begin_file_resolution again, but that function's OWN failure-rollback
+     (on a put_Completed failure specifically) zeroes ctx->pending_package
+     itself, which would have made the release dereference a null pointer.
+     Fixed by capturing the package pointer into a local BEFORE the call
+     and releasing that local instead, regardless of which of
+     begin_file_resolution's failure paths was hit -- mirrors how the
+     very first (non-chained) call site already used its own local
+     `package` variable for exactly this reason, which the chained case
+     had not accounted for.
+     Verification is not just "SetStorageItems returned S_OK": a test-only
+     counter (mixa_share_win32_test_get_iter_vend_count(), reset once per
+     share ATTEMPT -- when the resolution chain begins, not only when an
+     iterable is actually built, so it reads a meaningful 0 for an aborted
+     chain too, not a stale count from a previous attempt) increments on
+     every real get_Current/GetMany call the OS's own DataPackage
+     implementation makes against our iterator, covering both ways a
+     consumer may walk a WinRT collection (the classic HasCurrent/Current/
+     MoveNext loop, or a single bulk GetMany). Observed vend_count=1 for a
+     one-file share and vend_count=2 for a two-file share -- the OS
+     genuinely pulled every item offered, not merely accepted-and-ignored
+     the iterable. See "CURRENT STATUS" above for the specific hash-
+     verified runs.
+     L1 lessons from this stage, kept for the next person touching this
+     file: (a) `(cast: (@: T) ptr)[0]: value` is not valid as an
+     assignment target -- l1trans reports "declaration expects a name" at
+     the LOCAL-VARIABLE-DECLARATION step for a bare `const: @(char) x`
+     local (that form only works as a return type or in a `cast:`
+     expression, not a plain local declaration -- inline the producing
+     call instead, or use a non-const `@: char` local), and separately
+     gcc reports "'cast' undeclared"/"stray '@'" if you try to write
+     through a cast result directly -- both need an intermediate local
+     variable (`pcount: (cast: (@: unsigned) out_count)` then
+     `pcount[0]: value`), the same pattern this file already used for
+     every OTHER pointer-typed local, just not yet tried as an assignment
+     target until this stage. (b) genuinely MUTUAL forward references
+     (not just "A calls B, defined below" but "A calls B and B's vtable
+     assignment names A") need an in-file `prototype:` block (the same
+     syntax mixa_calculator_syntax.lm1 already uses for mc_parse_expression/
+     mc_parse_factor), not just reordering -- reordering alone only ever
+     fixes a one-directional forward reference.
+
+DONE: Multiple files through stage 2, end to end against the real OS.
+Two native tests added. (a) Two real, distinct, test-owned files shared
+together: HANDED_OFF/OK, and vend_count=2 (not 1) confirms the OS's
+DataPackage actually walked BOTH, not just the first -- order is not
+independently checkable from outside the DataPackage (no receiving app in
+this test), but is guaranteed by construction, since the chain resolves
+file[i] strictly before starting file[i+1]. (b) A mid-chain failure: two
+files both pass mixa_share_set_files' own existence check, then the
+SECOND is deleted from disk before begin() so its GetFileFromPathAsync
+resolution genuinely fails against the real OS (not a synthetic fault
+bit) -- the FIRST file resolves successfully first, so this specifically
+proves the chain releases an already-resolved item on a later failure
+instead of leaking it or silently attaching a partial set. Result:
+FAILED/ERR_BACKEND, vend_count=0 (SetStorageItems never even called for
+an aborted chain). Both stable across two consecutive hash-identical-
+source runs; run_share_selftest.ps1 unaffected (45 checks, 0 failures).
+
+One real bug this uncovered before the tests could pass at all: the win32
+backend's own advertised MixaShareVTable::caps was still just
+MIXA_SHARE_CAP_TEXT_ONLY -- mixa_share_begin()'s OWN portable-layer
+capability gate (file_count > 1 needs CAP_MULTIPLE, same mechanism that
+already gates CAP_CANCEL) refused any 2+-file request with
+MIXA_SHARE_ERR_UNSUPPORTED before this backend's begin() was ever called,
+regardless of what the chain itself could do -- a leftover from before
+stage 2 existed, not something introduced by this change, but something
+stage 2 must fix to actually be usable for more than one file. Fixed by
+adding MIXA_SHARE_CAP_MULTIPLE to the win32 vtable now that the chain
+genuinely supports it.
+
+Unicode paths specifically: still only verified at the fake-backend/
+portable layer (mixa_share_set_files stores them correctly, covered by
+the selftest); not yet exercised as a real file natively (would need a
+test-owned temp file with a non-ASCII name, not attempted this
+checkpoint).
+
+NOT done yet:
+  1. DONE (ticket 20260912-043851) -- see the UPDATE above. A real
+     Unicode-named ("café") test-owned file is now exercised against the
+     actual OS share/DataPackage path, with source-side readback
+     confirming the stored StorageItem's Path equals the requested
+     Unicode path exactly. Only one BMP code point exercised (see that
+     UPDATE's own "Limitations" line) -- an astral-plane/surrogate-pair
+     filename has not been tried.
+  2. DONE (ticket 20260912-033900, superseding the narrower 032000
+     checkpoint) -- see the UPDATE above. File-op handler async lifetime
+     boundaries (immediate/synchronous completion, reentrant Cancel,
+     delayed completion after destroy) now have a dedicated deterministic
+     seam exercising the real production functions with exact-once
+     external counters, not just the shared owner_ctx==0 branch.
+  3. Button integration: wiring "Send e-mail"'s equivalent button to an
+     actual selection source and this module, using the existing nested
+     "нет функции"-style window for unsupported/failure paths. Depends on
+     the selection/button-dispatch modules already in this codebase, which
+     this checkpoint did not touch.
+     HALF DONE (ticket 20260912-045346's "proceed directly to selection/
+     button/nested-failure UI" next step): the selection-to-Share half is
+     now built and tested in mixa_share_action.lm1 (new file) --
+     mixa_share_action_send(sel, vt, text, out_r, out_sent, out_skipped)
+     pops the individually-SELECTED files out of a MixaSelection (ClearShell
+     FSync.popSelectedListFroEmail port), deselecting each one exactly like
+     the reference's removeSelect(src) on success, leaves any individually-
+     selected DIRECTORY entries untouched and still selected (matching the
+     reference, which never removeSelect()s those either), and drives one
+     MixaShareRequest over the result. Proven by
+     tests/mixa_share_action_selftest.lm1 (fake backend, 13/0): correct
+     file/skip counts, ORIGINAL left-to-right selection order preserved in
+     the popped list (the walk itself goes back-to-front for deselect-safety
+     -- see the file's own comment for why that does not reverse the
+     result), untouched directory entry still selected afterward, and a
+     hard probe failure (selected file since deleted) aborts cleanly with
+     the real error code and no crash/leak. Two hash-identical runs:
+     build/mixa/claude/share_action/run_20260912_051630_655_1c101dfa/ and
+     run_20260912_051650_250_e43f6eaf/. Explicit scope limit (mirrors
+     STATUS.txt3's deferred lazy file-manager work, stated in the file's own
+     header comment too): this walks sel->selected[] directly, i.e. only
+     individually-selected paths -- it does NOT expand an ancestor-level
+     "select all under this folder except these" entry recorded only in
+     sel->revs, since mixa_selection.h has no directory-listing-based
+     enumeration primitive for that yet. The reference's own "some selected
+     directories were missed" warning dialog is also not reproduced here
+     (only counted, via out_skipped_dirs) -- STILL OPEN: the actual button
+     panel entry, its hit-dispatch (an unwired button opening the "нет
+     функции" nested window; a wired one calling this new function), and
+     that warning surfaced through the nested-window UI. These need
+     mixa_buttons.h/mixa_app_window.h.lm1's own header chain, deliberately
+     kept OUT of this stage's translation unit to avoid re-hitting the
+     "too many header type names" cap documented under ticket 20260912-
+     033900's entry above (Share's own header chain already uses a
+     meaningful fraction of that budget) -- planned as its own next,
+     separately-committed stage.
+     NOW DONE, same checkpoint: mixa_button_dispatch.h.lm1/.lm1 (new,
+     separate files/translation unit, exactly as planned above) add
+     mixa_button_dispatch_hit(panel, cell_row, cell_col, actions,
+     action_count, fallback_stack, fallback_rect, fallback_window_row/
+     col/nrows/ncols/hb, fallback_message, out_action_result): hit-tests
+     panel; a hit matching an entry in the caller's action table calls
+     that entry's function pointer (forwarding its own ctx) and returns
+     its result; a hit matching NOTHING opens the real, existing "нет
+     функции" nested window (mixa_app_window_open, unmodified) with the
+     caller-supplied fallback geometry/message; no hit at all does
+     neither. This is deliberately generic (not Share-specific) since
+     PORT_OF_CLEARSHELL.txt's own "нет функции" rule applies to every
+     unimplemented button, not just Send -- mixa_share_action_send above
+     is one candidate action to wire through it, not baked into this
+     module. Proven by tests/mixa_button_dispatch_selftest.lm1 (real
+     button panel + real nested window, no mocks; 17/0, two hash-
+     identical runs build/mixa/claude/button_dispatch/
+     run_20260912_052527_392_e3419919/ and
+     run_20260912_052540_709_8c969d2b/): a wired hit runs the action
+     (return value and ctx both forwarded correctly) and opens no window;
+     an unwired hit opens a window whose drawn message matches "нет
+     функции" exactly (read back cell-by-cell) and which dismisses
+     through the real mixa_app_window_hit; a miss (gap/outside) does
+     neither; a null/empty action table on a real hit still falls back to
+     the window safely. A real layout-math bug surfaced and was fixed
+     while building this test, not glossed over: mixa_button_width's own
+     "label length < 4 -> square" rule means a 4-letter label ("Send") is
+     WIDE (wb-(wb>>2)), not square (hb), so a naive assumption that two
+     short button labels sit at fixed hb-spaced columns is wrong -- the
+     test's hit coordinates and comments now state the actual computed
+     column, not an assumed one. mixa_app_window_selftest.lm1 (unmodified)
+     re-run unaffected. STILL OPEN at that checkpoint: nothing actually
+     called mixa_button_dispatch_hit from a running app yet, and the two
+     halves (selection-to-Share, button-to-нет-функции) had never been
+     COMPOSED into one real path together -- correctly caught by ticket
+     20260912-052823, addressed below.
+
+     CLOSED (ticket 20260912-052823): mixa_share_button.h.lm1/.lm1 (new)
+     add mixa_share_send_button_action, a thin MixaButtonActionFn-shaped
+     adapter (ctx = MixaShareSendCtx: sel, vt, text, out_r, sent_count,
+     skipped_dirs, last_status) that calls mixa_share_action_send and
+     reports the result back through those fields, transferring the
+     resulting MixaShareRequest to its caller under that function's own
+     existing ownership contract. It deliberately does NOT itself decide
+     to open any follow-up window -- mixa_button_dispatch_hit stays
+     action-agnostic by design (any action can be wired through it, not
+     just Share), so a failure/skipped-directory nested window is the
+     CALLER's decision after reading these fields back, exactly as
+     tests/mixa_share_button_selftest.lm1 (new) now exercises: the real
+     MixaSelection, the real button panel, the real adapter above (calling
+     the real mixa_share_action_send), and the real mixa_app_window stack,
+     composed through the real mixa_button_dispatch_hit -- not three
+     isolated selftests. 20/0, two hash-identical runs
+     build/mixa/claude/share_button/run_20260912_053730_514_bf06a6af/ and
+     run_20260912_053747_873_4d6b95fa/. Scenarios: (1) a wired Send hit
+     transfers 2 real selected files in original order via the real
+     adapter, leaves the selected directory-shaped path still selected,
+     and (status OK, skipped_dirs=1) the CALLER opens/verifies/dismisses a
+     warning window reading exactly "share: 1 folder(s) skipped"; (2) a
+     wired Send hit whose selected file has since been deleted fails with
+     MIXA_SHARE_ERR_MISSING (out_r correctly left null per the existing
+     contract), and the caller opens/verifies/dismisses an error window
+     reading exactly "share failed: status=5" -- the exact code preserved
+     both in ctx->last_status (programmatic) and in the shown text; (3) an
+     unwired hit still opens the real, unmodified "нет функции" window
+     (content re-verified by decoded Unicode codepoint, not raw UTF-8
+     bytes -- see the next paragraph). run_share_selftest.ps1 (45/0),
+     run_share_action_selftest.ps1 (13/0) and
+     run_button_dispatch_selftest.ps1 (17/0) all re-run unaffected.
+
+     The combined-header-cap worry ticket 20260912-052700 stated as
+     established fact was checked directly, not re-asserted: predef-ing
+     Share's full chain (mixa_share_win32.h.lm1 + mixa_share.h.lm1, 41
+     fnptr/struct names) alongside mixa_app_window.h.lm1 +
+     mixa_button_dispatch.h.lm1 (4 more, 45 total) in ONE translation unit
+     compiles and runs cleanly -- it does NOT re-hit the cap documented
+     under ticket 20260912-033900. That earlier claim was wrong; corrected
+     here rather than left standing.
+
+     Two real bugs were found and fixed while building this composed test,
+     neither known from the isolated component tests: (a) a `.h.lm1`
+     header file cannot itself predef a plain `.lm1` implementation file
+     (l1trans: "header unit predef expects a header source") -- only
+     another `.h.lm1`; a header needing a plain-C struct type (MixaSelection,
+     from mixa_selection.h) must reach it via a plain `include:`, exactly
+     like mixa_app_window.h.lm1 already does for MixaButtonPanel from
+     mixa_buttons.h. Fixed in mixa_share_button.h.lm1. (b) `TypeName:
+     varname` bare local struct declarations (the
+     `MixaAppWindowStack: stack_storage` pattern used by
+     mixa_app_window_selftest.lm1 and reused here) are NOT zero-initialized
+     by l1trans -- confirmed by inspecting the generated C, a plain
+     `MixaAppWindowStack stack_storage;` with no initializer. This file's
+     particular stack layout happened to leave nonzero garbage in
+     `is_open`, so mixa_app_window_stack_init's own guard silently refused
+     to run and every window operation afterward touched an uninitialized
+     struct -- a real STATUS_ACCESS_VIOLATION crash, diagnosed by adding
+     `c.setbuf(stdout, NULL)` (this file did not have it originally,
+     unlike the native smoke test, and the crash lost the diagnostic
+     printfs added to bisect it, same lesson as ticket 20260912-033900's
+     own stdout-buffering gap) plus bisecting printfs, then fixed with an
+     explicit `c.memset` before first use. mixa_app_window_selftest.lm1
+     itself has the same latent pattern and merely has not hit non-zero
+     garbage there by chance; flagging it here rather than treating this
+     file's fix as the only place it matters, though not changing that
+     file in this ticket's scope.
+
+     CLOSED (ticket 20260912-054054): mixa_app_window_selftest.lm1 now
+     explicitly c.memset's stack_storage to zero before its first
+     mixa_app_window_stack_init call, instead of depending on this file's
+     own stack layout happening to leave zero bytes there (180 checks, 0
+     failures, two hash-identical runs, unchanged from before -- the fix
+     only removes a latent hazard, it does not change behavior).
+     mixa_share_button_selftest.lm1 gained normal end-of-test cleanup:
+     mixa_app_window_stack_release + mixa_button_panel_release + frees for
+     rect/panel/actions/ctx/ctx2 (every outstanding MixaShareRequest was
+     already destroyed inline per scenario, and sel/sel2 already released
+     inline too). 20 checks, 0 failures, two hash-identical runs
+     build/mixa/claude/share_button/run_20260912_054406_786_8197ad95/ and
+     run_20260912_054423_237_315f21ba/. run_share_selftest.ps1 re-run
+     unaffected (45/0).
+
+     STILL OPEN, honestly: no running pump-loop orchestrator exists in
+     this codebase (confirmed again, unchanged from the last checkpoint)
+     to call any of this from a real event; the "some selected directories
+     were missed" warning and the error window are exercised here exactly
+     as a real caller would use them, but no live caller exists yet. The
+     lazy ancestor ("select all except") enumeration limitation is
+     unchanged and still not attempted.
+  4. The portable/concrete predef-leak question (raised in ticket
+     20260911-221400, tracked in mixa_share_win32.h.lm1's own comments) is
+     satisfied for THIS slice (every field stays opaque `@: void`/`@: Mixa
+     ShareHandler*`, never a Windows type), but has not been generalized
+     into a codebase-wide fix for mixa_audio_win32.h.lm1/mixa_app_win32.h.lm1,
+     which still have the same latent leak via their own typed fields
+     (wchar_t*, etc.).
+  5. DONE (ticket 20260912-043851, corrected by 20260912-045346) -- see
+     the UPDATE above. A deterministic, self-contained test proves the
+     already-resolved first item's own reference is released exactly
+     once (not leaked, not double-released) when a later file in the
+     chain fails, via the fake item's own external free_counter. (An
+     earlier always-on production counter for this was removed per
+     20260912-045346 -- it was unconditional production-path mutable
+     global state, not test-only as first described.)
+
+With items 1, 2 and 5 above closed, the only open items left in this
+file are 3 (button integration) and 4 (the codebase-wide predef-leak
+generalization, out of scope for this module alone) -- the Share
+adapter's own remaining work is otherwise the audio backlog and UI
+integration, tracked outside this file.

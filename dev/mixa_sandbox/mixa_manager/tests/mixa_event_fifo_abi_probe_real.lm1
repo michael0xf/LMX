@@ -1,0 +1,36 @@
+# ABI parity guard — L1 port of mixa_event_fifo_abi_probe_real.c (ticket 20260918-082421).
+# offsetof is a C macro with no L1 spelling (c. pastes a call, not a preprocessor
+# name). Field offsets are computed at run time via pointer arithmetic on a local
+# store (same pattern as l2src/lmx_message_selftest.lm1). Output format strings
+# are kept byte-identical to the C probe so L2-vs-real parity still diffs stdout.
+predef: "mixa_manager/mixa_backend.h.lm1"
+predef: "mixa_manager/mixa_event_fifo.h.lm1"
+include: "<stdio.h>"
+
+fn: main () int
+    MixaEvent: store0
+    @: MixaEvent p0
+    p0: @ store0
+    MixaEventFifo: store1
+    @: MixaEventFifo p1
+    p1: @ store1
+
+    c.printf("MixaEvent sizeof=%zu\n", c.sizeof(c.MixaEvent))
+    c.printf("MixaEvent kind=%zu\n", (cast: (size_t) @ p0\kind) - (cast: (size_t) p0))
+    c.printf("MixaEvent codepoint=%zu\n", (cast: (size_t) @ p0\codepoint) - (cast: (size_t) p0))
+    c.printf("MixaEvent keycode=%zu\n", (cast: (size_t) @ p0\keycode) - (cast: (size_t) p0))
+    c.printf("MixaEvent modifiers=%zu\n", (cast: (size_t) @ p0\modifiers) - (cast: (size_t) p0))
+    c.printf("MixaEvent row=%zu\n", (cast: (size_t) @ p0\row) - (cast: (size_t) p0))
+    c.printf("MixaEvent col=%zu\n", (cast: (size_t) @ p0\col) - (cast: (size_t) p0))
+    c.printf("MixaEvent buttons=%zu\n", (cast: (size_t) @ p0\buttons) - (cast: (size_t) p0))
+    c.printf("MixaEvent cols=%zu\n", (cast: (size_t) @ p0\cols) - (cast: (size_t) p0))
+    c.printf("MixaEvent rows=%zu\n", (cast: (size_t) @ p0\rows) - (cast: (size_t) p0))
+    c.printf("MixaEvent wheel_delta=%zu\n", (cast: (size_t) @ p0\wheel_delta) - (cast: (size_t) p0))
+    c.printf("MixaEventFifo sizeof=%zu\n", c.sizeof(c.MixaEventFifo))
+    c.printf("MixaEventFifo items=%zu\n", (cast: (size_t) @ p1\items) - (cast: (size_t) p1))
+    c.printf("MixaEventFifo capacity=%zu\n", (cast: (size_t) @ p1\capacity) - (cast: (size_t) p1))
+    c.printf("MixaEventFifo head=%zu\n", (cast: (size_t) @ p1\head) - (cast: (size_t) p1))
+    c.printf("MixaEventFifo count=%zu\n", (cast: (size_t) @ p1\count) - (cast: (size_t) p1))
+    c.printf("MixaEventFifo is_open=%zu\n", (cast: (size_t) @ p1\is_open) - (cast: (size_t) p1))
+    return: 0
+

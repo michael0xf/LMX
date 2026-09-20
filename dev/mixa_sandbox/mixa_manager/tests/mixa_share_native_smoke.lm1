@@ -1,0 +1,2494 @@
+predef: "mixa_manager/mixa_share_win32.h.lm1"
+predef: "mixa_manager/mixa_share.h.lm1"
+predef: "mixa_manager/mixa_share.lm1"
+predef: "mixa_manager/mixa_share_win32.lm1"
+predef: "mixa_manager/tests/mixa_share_native_smoke_fakes.h.lm1"
+include: "<stdio.h>" "<windows.h>" "<roapi.h>"
+
+# Native Windows Share smoke test (ticket 20260911-210200). Real
+# IDataTransferManagerInterop/DataTransferManager/DataRequested/
+# ShowShareUIForWindow round trip against a real (visible, message-pumped)
+# window -- distinct from and in addition to the deterministic fake-backend
+# selftest, not a replacement for it. This asserts only what the backend
+# actually knows: that begin() reaches PENDING, the OS calls our
+# DataRequested handler (Invoke) and hands the request off, i.e. event
+# transitions PENDING -> HANDED_OFF within a bounded wait. It does NOT (and
+# cannot) assert that a human saw the share UI or chose a target -- see
+# mixa_share.txt's "honest platform behavior" note.
+#
+# Text-only: no file is shared or opened, matching this slice's scope.
+# Best-effort dismissal: sends Escape after a short delay to close the
+# real OS share flyout if it appeared, so the test does not require manual
+# interaction to finish; the pass/fail result does not depend on whether
+# dismissal succeeded.
+
+fn: mixa_share_smoke_wndproc (HWND: hwnd; UINT: msg; WPARAM: wparam; LPARAM: lparam) LRESULT
+return: c.DefWindowProcW(hwnd, msg, wparam, lparam)
+
+# Regression for ticket 20260912-001200 item 1: the portable
+# mixa_share_destroy() used to free r/text/title/files unconditionally
+# even when the backend's own destroy refused (wrong thread) -- a
+# use-after-free waiting for a later, legitimately-delivered callback on
+# the real owning thread. This thread proc calls the PUBLIC portable
+# mixa_share_destroy() (not the backend function directly -- the review's
+# explicit point was that testing the backend alone missed the portable
+# wrapper's bug) on a request it does not own, from a real second OS
+# thread. param is the MixaShareRequest* to (attempt to) destroy.
+fn: mixa_share_smoke_destroy_thread_proc (@: void param) ulong
+    mixa_share_destroy((cast: (@: MixaShareRequest) param))
+return: 0U
+
+# Regression for ticket 20260912-001200 item 2: begin() must reject a
+# genuinely wrong apartment, not just record whatever thread happened to
+# call it. This thread proc initializes ITSELF as MTA (RO_INIT_
+# MULTITHREADED) -- deliberately the wrong apartment for this handler --
+# then calls the full public create/set_text/set_context/begin/destroy
+# sequence, writing begin()'s return code to the global below (single
+# in-flight test, no concurrent access, so a plain global is fine -- this
+# thread proc cannot use an L1 struct parameter since `struct:` is only
+# permitted in .h.lm1 files, not this .lm1). param is the HWND to use.
+# g_wrong_apt_ro_hr records RoInitialize's own HRESULT (ticket
+# 20260912-004800: the test must confirm RoInitialize actually SUCCEEDED
+# in establishing MTA on this thread, not just call it and assume so --
+# a failed call would leave the thread's real apartment state unproven,
+# making a "begin correctly rejected MTA" conclusion baseless).
+int: g_wrong_apt_begin_rc
+long: g_wrong_apt_ro_hr
+fn: mixa_share_smoke_wrong_apartment_thread_proc (@: void param) ulong
+    @: MixaShareRequest r3
+    int: st
+    long: ro_hr
+    g_wrong_apt_begin_rc: -1
+    g_wrong_apt_ro_hr: -1
+    ro_hr: c.RoInitialize(c.RO_INIT_MULTITHREADED)
+    g_wrong_apt_ro_hr: ro_hr
+    if: ro_hr != 0
+        return: 0U
+    st: mixa_share_create(@ r3, mixa_share_win32_table())
+    if: st != MIXA_SHARE_OK
+        g_wrong_apt_begin_rc: st
+        c.RoUninitialize()
+        return: 0U
+    mixa_share_set_text(r3, "wrong apartment test")
+    mixa_share_set_context(r3, param)
+    st: mixa_share_begin(r3)
+    g_wrong_apt_begin_rc: st
+    mixa_share_destroy(r3)
+    c.RoUninitialize()
+return: 0U
+
+# Gap flagged in mixa_share.txt after ticket 20260912-001200: poll() and
+# cancel() share mixa_share_win32_check_thread() with destroy(), but only
+# destroy() had a dedicated cross-thread test -- that sharing was an
+# inference from reading the code, not something a test had confirmed for
+# these two specifically. Same pattern as the destroy thread proc: call
+# the PUBLIC function from a real second OS thread on a request begun on
+# the owner thread, record the return code for the main thread to check.
+int: g_cross_thread_poll_rc
+fn: mixa_share_smoke_poll_thread_proc (@: void param) ulong
+    []: int ev 1
+    []: int status 1
+    ev[0]: -1
+    status[0]: -1
+    g_cross_thread_poll_rc: mixa_share_poll((cast: (@: MixaShareRequest) param), @ ev[0], @ status[0])
+return: 0U
+
+int: g_cross_thread_cancel_rc
+fn: mixa_share_smoke_cancel_thread_proc (@: void param) ulong
+    g_cross_thread_cancel_rc: mixa_share_cancel((cast: (@: MixaShareRequest) param))
+return: 0U
+
+# Creates a small, harmless, TEST-OWNED file for the file-attachment
+# smoke test (ticket 20260911-210200 section 7: "use a harmless test-owned
+# file, open the share UI, then cancel"). Uses the plain ANSI Win32 API
+# (GetTempPathA/GetTempFileNameA) rather than wide strings specifically so
+# the resulting path is usable directly as the UTF-8 argument
+# mixa_share_set_files expects, with no wide-to-UTF8 conversion helper
+# needed -- a real Windows temp path is ASCII, which is valid UTF-8
+# unchanged. out_path must be at least MAX_PATH (260) bytes, per
+# GetTempFileNameA's own contract. Returns 1 on success, 0 on failure.
+fn: mixa_share_smoke_make_test_file (@: char out_path) int
+    []: char tmp_dir 512
+    @: void hfile
+    []: DWORD written 1
+    if: c.GetTempPathA(512U, tmp_dir) = 0U
+        return: 0
+    if: c.GetTempFileNameA(tmp_dir, "mxs", 0U, out_path) = 0U
+        return: 0
+    hfile: (cast: (@: void) c.CreateFileA(out_path, 0x40000000U, 0U, 0, 2U, 0x80U, 0))
+    if: hfile = (cast: (@: void) -1)
+        return: 0
+    written[0]: 0U
+    c.WriteFile(hfile, "mixa share native smoke test file\r\n", 36U, @ written[0], 0)
+    c.CloseHandle(hfile)
+return: 1
+
+# Creates a small, harmless, TEST-OWNED file whose NAME contains a
+# genuine non-ASCII code point (ticket 20260912-043851 item 1: "spaces/
+# apostrophes alone are insufficient"). Built with the WIDE Win32 API
+# (CreateFileW) from the start, not GetTempFileNameA/CreateFileA, so
+# fixture creation itself never depends on the process's active ANSI
+# code page correctly representing the chosen character -- only the
+# UTF-8<->UTF-16 conversion already used throughout this file
+# (mixa_share_win32_utf8_to_wide) is trusted, the same path a real
+# caller's Unicode filename would take through the public UTF-8 Share
+# API. out_path receives the UTF-8 form (what mixa_share_set_files
+# expects); must be at least 1040 bytes.
+fn: mixa_share_smoke_make_unicode_test_file (@: char out_path) int
+    []: char tmp_dir 512
+    @: void wpath
+    @: void hfile
+    []: DWORD written 1
+    if: c.GetTempPathA(512U, tmp_dir) = 0U
+        return: 0
+    # "caf\xC3\xA9" -- café (Latin small letter e with acute,
+    # U+00E9, UTF-8 C3 A9), a single unambiguous non-ASCII code point.
+    # GetTickCount() keeps the name unique across repeated runs, the
+    # same role GetTempFileNameA's own uniqueness plays for the ASCII
+    # fixture above.
+    c.snprintf(out_path, 1040U, "%smxs_caf\xC3\xA9_%lu.txt", tmp_dir, c.GetTickCount())
+    wpath: mixa_share_win32_utf8_to_wide(out_path)
+    if: wpath = 0
+        return: 0
+    hfile: (cast: (@: void) c.CreateFileW((cast: (const: @(wchar_t)) wpath), 0x40000000U, 0U, 0, 2U, 0x80U, 0))
+    c.free(wpath)
+    if: hfile = (cast: (@: void) -1)
+        return: 0
+    written[0]: 0U
+    c.WriteFile(hfile, "mixa share native smoke unicode test file\r\n", 44U, @ written[0], 0)
+    c.CloseHandle(hfile)
+return: 1
+
+fn: mixa_share_smoke_pump_once (@: MSG pmsg) void
+    while: c.PeekMessageW(pmsg, 0, 0U, 0U, 1U) != 0
+        c.TranslateMessage(pmsg)
+        c.DispatchMessageW(pmsg)
+end: mixa_share_smoke_pump_once
+
+# Resolves ONE real IStorageItem* synchronously, entirely independent of
+# the DataRequested/Share UI flow -- used only by the iterable/iterator
+# lifetime regression below (ticket 20260912-025800) to obtain a genuine
+# WinRT COM object to exercise MixaStorageItemIterableObj/
+# MixaStorageItemIterObj's ownership contract against, without needing a
+# live share request or window. Mirrors the same
+# RoGetActivationFactory/GetFileFromPathAsync/QueryInterface(IStorageItem)
+# sequence mixa_share_win32_begin_file_resolution and
+# mixa_file_op_handler_invoke already use for the real async path, but
+# blocks the calling thread on a manual IAsyncInfo::get_Status poll loop
+# instead of registering a completion handler -- this IS the STA thread
+# WinRT would deliver a completion on, so polling here is safe and never
+# competes with a real callback. Returns 1 and an OWNED IStorageItem*
+# reference via out_item on success; 0 (out_item untouched) on any
+# failure.
+fn: mixa_share_smoke_resolve_one_item_sync (const: @(char path_utf8); @@: void out_item) int
+    @: void hstr_class
+    @: void statics
+    []: GUID statics_iid 1
+    @: GUID pstatics_iid
+    @: void hpath
+    @: void file_op
+    @: void async_info
+    []: int status_out 1
+    long: hr
+    @: void file
+    []: GUID item_iid 1
+    @: GUID pitem_iid
+    int: i2b
+    []: MSG fmsg2 1
+    hstr_class: 0
+    if: mixa_share_win32_hstring_from_utf8("Windows.Storage.StorageFile", @ hstr_class) != MIXA_SHARE_OK
+        return: 0
+    pstatics_iid: @ statics_iid[0]
+    pstatics_iid\Data1: (cast: (unsigned long) 0x5984c710U)
+    pstatics_iid\Data2: (cast: (unsigned short) 0xdaf2U)
+    pstatics_iid\Data3: (cast: (unsigned short) 0x43c8U)
+    pstatics_iid\Data4[0]: (cast: (char) 0x8b)
+    pstatics_iid\Data4[1]: (cast: (char) 0xb4)
+    pstatics_iid\Data4[2]: (cast: (char) 0xa4)
+    pstatics_iid\Data4[3]: (cast: (char) 0xd3)
+    pstatics_iid\Data4[4]: (cast: (char) 0xea)
+    pstatics_iid\Data4[5]: (cast: (char) 0xcf)
+    pstatics_iid\Data4[6]: (cast: (char) 0xd0)
+    pstatics_iid\Data4[7]: (cast: (char) 0x3f)
+    statics: 0
+    hr: c.RoGetActivationFactory((cast: (HSTRING) hstr_class), (cast: (const: @(IID)) pstatics_iid), @ statics)
+    c.WindowsDeleteString((cast: (HSTRING) hstr_class))
+    if: hr != 0 || statics = 0
+        return: 0
+    hpath: 0
+    if: mixa_share_win32_hstring_from_utf8(path_utf8, @ hpath) != MIXA_SHARE_OK
+        c.__x_ABI_CWindows_CStorage_CIStorageFileStatics_Release((cast: (@: __x_ABI_CWindows_CStorage_CIStorageFileStatics) statics))
+        return: 0
+    file_op: 0
+    hr: c.__x_ABI_CWindows_CStorage_CIStorageFileStatics_GetFileFromPathAsync((cast: (@: __x_ABI_CWindows_CStorage_CIStorageFileStatics) statics), (cast: (HSTRING) hpath), (cast: (@@: __FIAsyncOperation_1_Windows__CStorage__CStorageFile) @ file_op))
+    c.WindowsDeleteString((cast: (HSTRING) hpath))
+    c.__x_ABI_CWindows_CStorage_CIStorageFileStatics_Release((cast: (@: __x_ABI_CWindows_CStorage_CIStorageFileStatics) statics))
+    if: hr != 0 || file_op = 0
+        return: 0
+    async_info: 0
+    hr: c.__FIAsyncOperation_1_Windows__CStorage__CStorageFile_QueryInterface((cast: (@: __FIAsyncOperation_1_Windows__CStorage__CStorageFile) file_op), (cast: (const: @(IID)) @ c.IID_IAsyncInfo), @ async_info)
+    if: hr != 0 || async_info = 0
+        c.__FIAsyncOperation_1_Windows__CStorage__CStorageFile_Release((cast: (@: __FIAsyncOperation_1_Windows__CStorage__CStorageFile) file_op))
+        return: 0
+    status_out[0]: 0
+    i2b: 0
+    while: i2b < 100
+        mixa_share_smoke_pump_once(@ fmsg2[0])
+        hr: c.IAsyncInfo_get_Status((cast: (@: IAsyncInfo) async_info), (cast: (@: AsyncStatus) @ status_out[0]))
+        if: hr = 0 && status_out[0] != 0
+            break
+        c.Sleep(20U)
+        i2b: i2b + 1
+    c.IAsyncInfo_Release((cast: (@: IAsyncInfo) async_info))
+    if: status_out[0] != 1
+        c.__FIAsyncOperation_1_Windows__CStorage__CStorageFile_Release((cast: (@: __FIAsyncOperation_1_Windows__CStorage__CStorageFile) file_op))
+        return: 0
+    file: 0
+    hr: c.__FIAsyncOperation_1_Windows__CStorage__CStorageFile_GetResults((cast: (@: __FIAsyncOperation_1_Windows__CStorage__CStorageFile) file_op), (cast: (@@: __x_ABI_CWindows_CStorage_CIStorageFile) @ file))
+    c.__FIAsyncOperation_1_Windows__CStorage__CStorageFile_Release((cast: (@: __FIAsyncOperation_1_Windows__CStorage__CStorageFile) file_op))
+    if: hr != 0 || file = 0
+        return: 0
+    pitem_iid: @ item_iid[0]
+    pitem_iid\Data1: (cast: (unsigned long) 0x4207a996U)
+    pitem_iid\Data2: (cast: (unsigned short) 0xca2fU)
+    pitem_iid\Data3: (cast: (unsigned short) 0x42f7U)
+    pitem_iid\Data4[0]: (cast: (char) 0xbd)
+    pitem_iid\Data4[1]: (cast: (char) 0xe8)
+    pitem_iid\Data4[2]: (cast: (char) 0x8b)
+    pitem_iid\Data4[3]: (cast: (char) 0x10)
+    pitem_iid\Data4[4]: (cast: (char) 0x45)
+    pitem_iid\Data4[5]: (cast: (char) 0x7a)
+    pitem_iid\Data4[6]: (cast: (char) 0x7f)
+    pitem_iid\Data4[7]: (cast: (char) 0x30)
+    hr: c.__x_ABI_CWindows_CStorage_CIStorageFile_QueryInterface((cast: (@: __x_ABI_CWindows_CStorage_CIStorageFile) file), (cast: (const: @(IID)) pitem_iid), out_item)
+    c.__x_ABI_CWindows_CStorage_CIStorageFile_Release((cast: (@: __x_ABI_CWindows_CStorage_CIStorageFile) file))
+    if: hr != 0 || out_item[0] = 0
+        return: 0
+return: 1
+
+# Creates a fresh top-level window from the already-registered smoke
+# window class. Diagnostic (ticket follow-up): reusing a single hwnd
+# across several back-to-back real ShowShareUIForWindow round trips left
+# every round trip after the first permanently PENDING, even after
+# dismissing the OS share flyout with Escape between them -- so the
+# fix under test is per-request window isolation instead, matching real
+# app usage where a share request originates from whatever window is
+# frontmost at that moment, not a single long-lived window reused
+# thousands of times.
+fn: mixa_share_smoke_new_window (@: void hinst) @: void
+    @: void hwnd
+    hwnd: (cast: (@: void) c.CreateWindowExW(0U, (cast: (@: wchar_t) L"MixaShareNativeSmokeWnd"), (cast: (@: wchar_t) L"mixa share native smoke"), 13565952U, 100, 100, 320, 200, 0, 0, (cast: (HINSTANCE) hinst), 0))
+    if: hwnd = 0
+        c.printf("mixa share native smoke: CreateWindowExW (per-request) failed gle=%lu\n", c.GetLastError())
+        return: 0
+    c.ShowWindow((cast: (HWND) hwnd), 5)
+    c.UpdateWindow((cast: (HWND) hwnd))
+    # Decisive fix (ticket 20260912-004800's bounded baseline diagnostic,
+    # mixa_share_baseline_diag.lm1): ShowWindow/UpdateWindow alone do not
+    # make a newly-created window the actual foreground window once
+    # another window (e.g. an earlier request's real Share flyout) has
+    # held focus -- Windows restricts which windows may take foreground
+    # focus for themselves. Without an explicit SetForegroundWindow, only
+    # the first one or two real ShowShareUIForWindow calls in a process
+    # ever got a DataRequested callback; with it, 10/10 real invocations
+    # succeeded across two full diagnostic runs (3 clean-only in a row,
+    # then a fault-then-clean pair). See mixa_share.txt's "Diagnostic
+    # detour" item 6 for the full writeup.
+    c.SetForegroundWindow((cast: (HWND) hwnd))
+return: hwnd
+
+# Diagnostic (ticket 20260911-234500 item: "verify ordinary successive
+# requests on the SAME live app window; fresh HWND per request does not
+# cover UI reuse"): runs one request against a CALLER-OWNED window, doing
+# no window creation/destruction of its own, so two calls in a row on the
+# same hwnd can be compared against the fresh-window-per-request results
+# above. Does not retry -- this is meant to observe the real behavior, not
+# to make it pass.
+fn: mixa_share_smoke_run_on_hwnd (@: void hwnd; int: fail_mask; @: int out_event; @: int out_status) void
+    @: MixaShareRequest rr
+    []: MSG lmsg 1
+    int: st
+    int: ev
+    int: status
+    int: i
+    st: mixa_share_create(@ rr, mixa_share_win32_table())
+    if: st != MIXA_SHARE_OK
+        out_event[0]: -1
+        out_status[0]: st
+        return
+    mixa_share_set_text(rr, "mixa same-window diagnostic text")
+    mixa_share_set_context(rr, hwnd)
+    mixa_share_test_set_force_fail(rr, fail_mask)
+    # Re-assert foreground before EACH call, not just once when the window
+    # was first created: testing whether the fresh-window fix's mechanism
+    # (SetForegroundWindow) also resolves same-window reuse when reasserted
+    # per-call, or whether reuse has a separate remaining cause.
+    c.SetForegroundWindow((cast: (HWND) hwnd))
+    st: mixa_share_begin(rr)
+    if: st != MIXA_SHARE_OK
+        out_event[0]: mixa_share_event(rr)
+        out_status[0]: st
+        mixa_share_destroy(rr)
+        return
+    ev: MIXA_SHARE_EVENT_PENDING
+    i: 0
+    while: i < 100
+        mixa_share_smoke_pump_once(@ lmsg[0])
+        mixa_share_poll(rr, @ ev, @ status)
+        if: ev != MIXA_SHARE_EVENT_PENDING
+            break
+        c.Sleep(50U)
+        i: i + 1
+    out_event[0]: ev
+    out_status[0]: status
+    mixa_share_destroy(rr)
+    i: 0
+    while: i < 20
+        mixa_share_smoke_pump_once(@ lmsg[0])
+        c.Sleep(50U)
+        i: i + 1
+    c.keybd_event(27U, 0U, 0U, 0U)
+    c.keybd_event(27U, 0U, 2U, 0U)
+    i: 0
+    while: i < 20
+        mixa_share_smoke_pump_once(@ lmsg[0])
+        c.Sleep(50U)
+        i: i + 1
+end: mixa_share_smoke_run_on_hwnd
+
+# Single attempt: create a fresh window, run one request to completion
+# against the real adapter with the given fault-injection mask (0 for
+# none), pumping messages for a bounded wait, tear the window down, and
+# report the terminal (event, status) pair. See mixa_share_smoke_run_fault
+# below for why callers retry a PENDING result instead of treating it as
+# final.
+fn: mixa_share_smoke_run_fault_once (@: void hinst; int: fail_mask; @: int out_event; @: int out_status) void
+    @: MixaShareRequest rr
+    []: MSG lmsg 1
+    @: void hwnd
+    int: st
+    int: ev
+    int: status
+    int: i
+    hwnd: mixa_share_smoke_new_window(hinst)
+    if: hwnd = 0
+        out_event[0]: -1
+        out_status[0]: MIXA_SHARE_ERR_BACKEND
+        return
+    # Let the new window fully settle (created, shown, painted) before
+    # asking the OS for its DataTransferManager.
+    i: 0
+    while: i < 10
+        mixa_share_smoke_pump_once(@ lmsg[0])
+        c.Sleep(50U)
+        i: i + 1
+    st: mixa_share_create(@ rr, mixa_share_win32_table())
+    if: st != MIXA_SHARE_OK
+        out_event[0]: -1
+        out_status[0]: st
+        c.DestroyWindow((cast: (HWND) hwnd))
+        return
+    mixa_share_set_text(rr, "mixa fault-injection test text")
+    mixa_share_set_context(rr, hwnd)
+    mixa_share_test_set_force_fail(rr, fail_mask)
+    st: mixa_share_begin(rr)
+    if: st != MIXA_SHARE_OK
+        out_event[0]: mixa_share_event(rr)
+        out_status[0]: st
+        mixa_share_destroy(rr)
+        c.DestroyWindow((cast: (HWND) hwnd))
+        return
+    ev: MIXA_SHARE_EVENT_PENDING
+    i: 0
+    while: i < 100
+        mixa_share_smoke_pump_once(@ lmsg[0])
+        mixa_share_poll(rr, @ ev, @ status)
+        if: ev != MIXA_SHARE_EVENT_PENDING
+            break
+        c.Sleep(50U)
+        i: i + 1
+    out_event[0]: ev
+    out_status[0]: status
+    mixa_share_destroy(rr)
+    i: 0
+    while: i < 20
+        mixa_share_smoke_pump_once(@ lmsg[0])
+        c.Sleep(50U)
+        i: i + 1
+    c.keybd_event(27U, 0U, 0U, 0U)
+    c.keybd_event(27U, 0U, 2U, 0U)
+    i: 0
+    while: i < 20
+        mixa_share_smoke_pump_once(@ lmsg[0])
+        c.Sleep(50U)
+        i: i + 1
+    c.DestroyWindow((cast: (HWND) hwnd))
+    i: 0
+    while: i < 10
+        mixa_share_smoke_pump_once(@ lmsg[0])
+        c.Sleep(50U)
+        i: i + 1
+end: mixa_share_smoke_run_fault_once
+
+# Diagnostic findings, in order tried, against real ShowShareUIForWindow/
+# DataRequested round trips on this machine:
+#  1. Dismissing the OS share flyout with Escape between back-to-back real
+#     calls on the SAME reused hwnd did not fix a permanent-PENDING hang
+#     from the second real round trip onward -- ruled out "leftover flyout
+#     left on screen".
+#  2. Giving every request its own freshly-created hwnd instead reduced
+#     but did not eliminate the hangs, and which specific fault test hung
+#     was NOT consistent between runs (e.g. one run hung on SET_TEXT then
+#     recovered for PUT_TITLE then hung again for the clean request; another
+#     run instead had SET_TEXT succeed and PUT_TITLE hang). Under the
+#     apartment-type bug present at the time (RO_INIT_MULTITHREADED instead
+#     of SINGLETHREADED, fixed separately), TOKEN_ALLOC and GET_DATA -- the
+#     first two real invocations in the process -- succeeded in every run
+#     observed; later ones failed unpredictably regardless of which field
+#     was under test, window identity, or added inter-request delay. Once
+#     the apartment type was fixed to genuine STA, this became a fully
+#     deterministic "exactly the first two real invocations succeed, every
+#     one after that hangs" pattern instead (see mixa_share.txt's
+#     "Diagnostic detour" item 4) -- CAUSE NOT ESTABLISHED. Per ticket
+#     20260912-004800's review: an app-level HRESULT trace of every
+#     registration/callback/unregister step showed S_OK at each one, but
+#     that does not prove the application window, activation/pump,
+#     callback lifetime, or a prior request's teardown were actually
+#     correct -- it only rules out an unchecked failing HRESULT in that
+#     specific call chain. Separately, and independently of this open hang,
+#     our own fault-injection/status-propagation logic DID report the
+#     correct FAILED event and non-OK status for every one of the four
+#     fault types whenever the real callback did arrive.
+# Given that, a single flaky real invocation is treated as inconclusive and
+# retried (with a brand-new window each attempt, same as every other call)
+# rather than as a genuine fault-handling defect; only a result that is
+# never anything but PENDING across every attempt is reported as a failure.
+fn: mixa_share_smoke_run_fault (@: void hinst; int: fail_mask; @: int out_event; @: int out_status) void
+    int: attempt
+    attempt: 0
+    while: attempt < 3
+        mixa_share_smoke_run_fault_once(hinst, fail_mask, out_event, out_status)
+        if: out_event[0] != MIXA_SHARE_EVENT_PENDING
+            if: attempt > 0
+                c.printf("mixa share native smoke: mask=%d needed retry (attempt %d) -- cause of the PENDING attempt(s) before this is not established\n", fail_mask, attempt + 1)
+            return
+        c.printf("mixa share native smoke: mask=%d attempt %d stayed PENDING (cause not established), retrying with a fresh window\n", fail_mask, attempt + 1)
+        attempt: attempt + 1
+end: mixa_share_smoke_run_fault
+
+# --- test-only deterministic seam: fake IAsyncOperation<StorageFile*> ---
+# (ticket 20260912-033900). Stands in for the real GetFileFromPathAsync
+# result so mixa_file_op_handler_invoke and mixa_share_win32_destroy can
+# be driven through registration/completion/cancellation orderings a real
+# WinRT timing race cannot reliably force on demand: immediate/synchronous
+# completion from inside put_Completed, IAsyncInfo::Cancel invoking the
+# handler reentrantly, and a completion delivered after destroy() has
+# already freed ctx. No production call site changes -- this is called
+# directly by the tests below in place of begin_file_resolution's own
+# RoGetActivationFactory/GetFileFromPathAsync chain, exercising
+# mixa_file_op_handler_invoke/mixa_share_win32_destroy themselves for
+# real, with everything else (the async source) faked.
+#
+# Type declarations (FakeAOVtbl/FakeAIVtbl/FakeAsyncOpObj and friends)
+# live in mixa_share_native_smoke_fakes.h.lm1, predef'd above -- L1
+# requires fnptr:/struct: declarations in a predef'd header, not inline
+# in a .lm1 file (confirmed by trial: an identical block placed directly
+# here was rejected with "unsupported L1 form" at its own first line).
+# Only the function BODIES live here.
+#
+# Implements TWO real SDK-shaped vtables on ONE allocation, the standard
+# COM "sub-object" technique: lpVtbl (first field) is a genuine
+# __FIAsyncOperation_1_Windows__CStorage__CStorageFileVtbl-shaped view --
+# a pointer to this struct's own address is usable anywhere that type is
+# expected. lpVtbl_info (second field, one pointer-width later) is a
+# genuine IAsyncInfoVtbl-shaped view; QueryInterface(IID_IAsyncInfo)
+# returns the ADDRESS OF THAT FIELD, not the object's own base address --
+# a different pointer value, correctly reachable by taking that field's
+# address. The two SDK vtables are NOT layout-compatible beyond their
+# first 3 slots (QueryInterface/AddRef/Release), so this is not optional:
+# reusing one vtable region for both call patterns would call whatever
+# function pointer happens to occupy the wrong interface's slot, with
+# whatever argument list the CALLER'S macro generates for a DIFFERENT
+# real method -- undefined behavior, not a shortcut. AddRef/Release/
+# Cancel/etc. reached through the lpVtbl_info view recover the OUTER
+# object's address by subtracting one pointer-width (the exact, padding-
+# free byte offset of a struct's second pointer-sized field) so they can
+# manipulate the single shared refcount and state.
+
+# Forward declaration: query_interface calls add_ref, defined just below
+# it (single-pass translation unit).
+prototype:
+    fn: fake_ao_add_ref (@: void this_raw) ulong
+end: prototype
+
+fn: fake_ao_query_interface (@: void this_raw; @: void riid; @@: void ppv) long
+    @: FakeAsyncOpObj self
+    if: this_raw = 0 || ppv = 0
+        return: -2147467261
+    ppv[0]: 0
+    self: (cast: (@: FakeAsyncOpObj) this_raw)
+    if: riid != 0 && c.memcmp(riid, (cast: (const: @(void)) @ c.IID_IAsyncInfo), c.sizeof(c.GUID)) = 0
+        fake_ao_add_ref(this_raw)
+        ppv[0]: (cast: (@: void) @ self\lpVtbl_info)
+        return: 0
+    ---
+    fake_ao_add_ref(this_raw)
+    ppv[0]: this_raw
+return: 0
+
+fn: fake_ao_add_ref (@: void this_raw) ulong
+    @: FakeAsyncOpObj self
+    if: this_raw = 0
+        return: 0U
+    self: (cast: (@: FakeAsyncOpObj) this_raw)
+    self\refcount: self\refcount + 1
+return: (cast: (ulong) self\refcount)
+
+fn: fake_ao_release (@: void this_raw) ulong
+    @: FakeAsyncOpObj self
+    int: n
+    if: this_raw = 0
+        return: 0U
+    self: (cast: (@: FakeAsyncOpObj) this_raw)
+    self\refcount: self\refcount - 1
+    n: self\refcount
+    if: n <= 0
+        if: self\completed_handler != 0
+            mixa_file_op_handler_release(self\completed_handler)
+        ---
+        if: self\free_counter != 0
+            self\free_counter[0]: self\free_counter[0] + 1
+        ---
+        c.free(self)
+        return: 0U
+    ---
+return: (cast: (ulong) n)
+
+fn: fake_ao_get_iids (@: void this_raw; @: void a; @@: void b) long
+return: -2147467263
+
+fn: fake_ao_get_runtime_class_name (@: void this_raw; @@: void a) long
+return: -2147467263
+
+fn: fake_ao_get_trust_level (@: void this_raw; @: void a) long
+return: 0
+
+fn: fake_ao_get_completed (@: void this_raw; @@: void a) long
+return: -2147467263
+
+# Registers the handler (with an owning AddRef -- see the struct's own
+# comment) and, if complete_synchronously is set, invokes it SYNCHRONOUSLY
+# right here, before returning -- exactly the "immediate completion
+# during put_Completed" scenario a real WinRT timing race cannot reliably
+# force on demand. self/this_raw must not be touched after the Invoke()
+# call: a synchronous completion can release this very object from
+# inside that call (Invoke releases ctx->file_op as part of its own
+# normal cleanup), so this function reads nothing from self afterward.
+fn: fake_ao_put_completed (@: void this_raw; @: void handler) long
+    @: FakeAsyncOpObj self
+    int: sync_now
+    int: status_now
+    if: this_raw = 0 || handler = 0
+        return: -2147467261
+    self: (cast: (@: FakeAsyncOpObj) this_raw)
+    self\put_completed_called: self\put_completed_called + 1
+    self\completed_handler: handler
+    mixa_file_op_handler_add_ref(handler)
+    sync_now: self\complete_synchronously
+    status_now: self\result_status
+    if: sync_now != 0
+        c.__FIAsyncOperationCompletedHandler_1_Windows__CStorage__CStorageFile_Invoke((cast: (@: __FIAsyncOperationCompletedHandler_1_Windows__CStorage__CStorageFile) handler), (cast: (@: __FIAsyncOperation_1_Windows__CStorage__CStorageFile) this_raw), status_now)
+    ---
+return: 0
+
+# Always fails: none of the three registration/cancellation scenarios
+# this seam exists for need a real resolved file, only the surrounding
+# lifecycle (see mixa_file_op_handler_invoke's own ok=0 branch, which
+# never touches `file` beyond this call when GetResults itself fails).
+fn: fake_ao_get_results (@: void this_raw; @@: void out_file) long
+    if: out_file != 0
+        out_file[0]: 0
+    ---
+return: -2147467259
+
+fn: fake_ai_query_interface (@: void this_raw; @: void riid; @@: void ppv) long
+    @: FakeAsyncOpObj outer
+    if: this_raw = 0 || ppv = 0
+        return: -2147467261
+    ppv[0]: 0
+    outer: (cast: (@: FakeAsyncOpObj) ((cast: (size_t) this_raw) - c.sizeof(@: void)))
+    fake_ao_add_ref((cast: (@: void) outer))
+    ppv[0]: this_raw
+return: 0
+
+fn: fake_ai_add_ref (@: void this_raw) ulong
+    @: FakeAsyncOpObj outer
+    if: this_raw = 0
+        return: 0U
+    outer: (cast: (@: FakeAsyncOpObj) ((cast: (size_t) this_raw) - c.sizeof(@: void)))
+return: fake_ao_add_ref((cast: (@: void) outer))
+
+fn: fake_ai_release (@: void this_raw) ulong
+    @: FakeAsyncOpObj outer
+    if: this_raw = 0
+        return: 0U
+    outer: (cast: (@: FakeAsyncOpObj) ((cast: (size_t) this_raw) - c.sizeof(@: void)))
+return: fake_ao_release((cast: (@: void) outer))
+
+fn: fake_ai_get_id (@: void this_raw; @: void a) long
+return: -2147467263
+
+fn: fake_ai_get_status (@: void this_raw; @: void a) long
+return: -2147467263
+
+fn: fake_ai_get_error_code (@: void this_raw; @: void a) long
+return: -2147467263
+
+# Reentrant-Cancel scenario: if cancel_reentrant is set and a handler is
+# registered, invokes it SYNCHRONOUSLY from inside Cancel() itself,
+# exactly as mixa_share_win32_destroy's own comment documents as a real,
+# not merely defensive, WinRT possibility. `outer` must not be touched
+# after the Invoke() call for the same reason as put_Completed above.
+fn: fake_ai_cancel (@: void this_raw) long
+    @: FakeAsyncOpObj outer
+    @: void h
+    int: reentrant_now
+    int: status_now
+    if: this_raw = 0
+        return: -2147467261
+    outer: (cast: (@: FakeAsyncOpObj) ((cast: (size_t) this_raw) - c.sizeof(@: void)))
+    outer\cancel_called: outer\cancel_called + 1
+    reentrant_now: outer\cancel_reentrant
+    h: outer\completed_handler
+    status_now: outer\result_status
+    if: reentrant_now != 0 && h != 0
+        c.__FIAsyncOperationCompletedHandler_1_Windows__CStorage__CStorageFile_Invoke((cast: (@: __FIAsyncOperationCompletedHandler_1_Windows__CStorage__CStorageFile) h), (cast: (@: __FIAsyncOperation_1_Windows__CStorage__CStorageFile) outer), status_now)
+    ---
+return: 0
+
+fn: fake_ai_close (@: void this_raw) long
+return: 0
+
+fn: fake_async_op_create (int: complete_synchronously; int: cancel_reentrant; int: result_status; @: int free_counter) @: void
+    @: FakeAsyncOpObj obj
+    @: FakeAOVtbl vtbl
+    @: FakeAIVtbl vtbl_info
+    obj: (cast: (@: FakeAsyncOpObj) c.calloc(1U, c.sizeof(c.FakeAsyncOpObj)))
+    if: obj = 0
+        return: 0
+    vtbl: (cast: (@: FakeAOVtbl) c.calloc(1U, c.sizeof(c.FakeAOVtbl)))
+    if: vtbl = 0
+        c.free(obj)
+        return: 0
+    vtbl_info: (cast: (@: FakeAIVtbl) c.calloc(1U, c.sizeof(c.FakeAIVtbl)))
+    if: vtbl_info = 0
+        c.free(vtbl)
+        c.free(obj)
+        return: 0
+    vtbl\QueryInterface: fake_ao_query_interface
+    vtbl\AddRef: fake_ao_add_ref
+    vtbl\Release: fake_ao_release
+    vtbl\GetIids: fake_ao_get_iids
+    vtbl\GetRuntimeClassName: fake_ao_get_runtime_class_name
+    vtbl\GetTrustLevel: fake_ao_get_trust_level
+    vtbl\put_Completed: fake_ao_put_completed
+    vtbl\get_Completed: fake_ao_get_completed
+    vtbl\GetResults: fake_ao_get_results
+    obj\lpVtbl: vtbl
+    vtbl_info\QueryInterface: fake_ai_query_interface
+    vtbl_info\AddRef: fake_ai_add_ref
+    vtbl_info\Release: fake_ai_release
+    # Reusing the AO-side stubs here too: same E_NOTIMPL/BaseTrust shapes
+    # (see the header's own note on why IAsyncInfo needs these three
+    # IInspectable slots at all).
+    vtbl_info\GetIids: fake_ao_get_iids
+    vtbl_info\GetRuntimeClassName: fake_ao_get_runtime_class_name
+    vtbl_info\GetTrustLevel: fake_ao_get_trust_level
+    vtbl_info\get_Id: fake_ai_get_id
+    vtbl_info\get_Status: fake_ai_get_status
+    vtbl_info\get_ErrorCode: fake_ai_get_error_code
+    vtbl_info\Cancel: fake_ai_cancel
+    vtbl_info\Close: fake_ai_close
+    obj\lpVtbl_info: vtbl_info
+    obj\refcount: 1
+    obj\complete_synchronously: complete_synchronously
+    obj\cancel_reentrant: cancel_reentrant
+    obj\result_status: result_status
+    obj\free_counter: free_counter
+return: (cast: (@: void) obj)
+
+# --- test-only minimal fakes for DataPackage/DataRequestDeferral -------
+# Only Release() is ever called on the package in the failure paths these
+# tests exercise (mixa_file_op_handler_invoke never reaches
+# SetStorageItems when GetResults itself fails), so a bare 3-slot
+# IUnknown-shaped vtable is ABI-safe cast to the real, much larger
+# IDataPackage type -- same "fewer slots than the real interface, but
+# never call past what's provided" precedent already used in production
+# for MixaShareHandlerVtbl/MixaFileOpHandlerVtbl. Type declarations
+# (FakeUnkVtbl/FakeUnkObj) live in mixa_share_native_smoke_fakes.h.lm1.
+prototype:
+    fn: fake_unk_add_ref (@: void this_raw) ulong
+end: prototype
+
+fn: fake_unk_query_interface (@: void this_raw; @: void riid; @@: void ppv) long
+    if: this_raw = 0 || ppv = 0
+        return: -2147467261
+    fake_unk_add_ref(this_raw)
+    ppv[0]: this_raw
+return: 0
+
+fn: fake_unk_add_ref (@: void this_raw) ulong
+    @: FakeUnkObj self
+    if: this_raw = 0
+        return: 0U
+    self: (cast: (@: FakeUnkObj) this_raw)
+    self\refcount: self\refcount + 1
+return: (cast: (ulong) self\refcount)
+
+fn: fake_unk_release (@: void this_raw) ulong
+    @: FakeUnkObj self
+    int: n
+    if: this_raw = 0
+        return: 0U
+    self: (cast: (@: FakeUnkObj) this_raw)
+    self\refcount: self\refcount - 1
+    n: self\refcount
+    if: n <= 0
+        if: self\free_counter != 0
+            self\free_counter[0]: self\free_counter[0] + 1
+        ---
+        c.free(self)
+        return: 0U
+    ---
+return: (cast: (ulong) n)
+
+fn: fake_unk_create (@: int free_counter) @: void
+    @: FakeUnkObj obj
+    @: FakeUnkVtbl vtbl
+    obj: (cast: (@: FakeUnkObj) c.calloc(1U, c.sizeof(c.FakeUnkObj)))
+    if: obj = 0
+        return: 0
+    vtbl: (cast: (@: FakeUnkVtbl) c.calloc(1U, c.sizeof(c.FakeUnkVtbl)))
+    if: vtbl = 0
+        c.free(obj)
+        return: 0
+    vtbl\QueryInterface: fake_unk_query_interface
+    vtbl\AddRef: fake_unk_add_ref
+    vtbl\Release: fake_unk_release
+    obj\lpVtbl: vtbl
+    obj\refcount: 1
+    obj\free_counter: free_counter
+return: (cast: (@: void) obj)
+
+# The deferral needs Complete() too (slot 6, after the 3 real + 3 unused
+# IInspectable slots the real 7-slot IDataRequestDeferral vtable has
+# before it) -- Release() alone is not enough here since
+# mixa_file_op_handler_invoke always calls Complete() then Release().
+# Type declarations (FakeDeferVtbl/FakeDeferObj) live in
+# mixa_share_native_smoke_fakes.h.lm1.
+prototype:
+    fn: fake_defer_add_ref (@: void this_raw) ulong
+end: prototype
+
+fn: fake_defer_query_interface (@: void this_raw; @: void riid; @@: void ppv) long
+    if: this_raw = 0 || ppv = 0
+        return: -2147467261
+    fake_defer_add_ref(this_raw)
+    ppv[0]: this_raw
+return: 0
+
+fn: fake_defer_add_ref (@: void this_raw) ulong
+    @: FakeDeferObj self
+    if: this_raw = 0
+        return: 0U
+    self: (cast: (@: FakeDeferObj) this_raw)
+    self\refcount: self\refcount + 1
+return: (cast: (ulong) self\refcount)
+
+fn: fake_defer_release (@: void this_raw) ulong
+    @: FakeDeferObj self
+    int: n
+    if: this_raw = 0
+        return: 0U
+    self: (cast: (@: FakeDeferObj) this_raw)
+    self\refcount: self\refcount - 1
+    n: self\refcount
+    if: n <= 0
+        if: self\free_counter != 0
+            self\free_counter[0]: self\free_counter[0] + 1
+        ---
+        c.free(self)
+        return: 0U
+    ---
+return: (cast: (ulong) n)
+
+fn: fake_defer_get_iids (@: void this_raw; @: void a; @@: void b) long
+return: -2147467263
+
+fn: fake_defer_get_runtime_class_name (@: void this_raw; @@: void a) long
+return: -2147467263
+
+fn: fake_defer_get_trust_level (@: void this_raw; @: void a) long
+return: 0
+
+fn: fake_defer_complete (@: void this_raw) long
+    @: FakeDeferObj self
+    if: this_raw = 0
+        return: -2147467261
+    self: (cast: (@: FakeDeferObj) this_raw)
+    if: self\complete_counter != 0
+        self\complete_counter[0]: self\complete_counter[0] + 1
+    ---
+return: 0
+
+fn: fake_defer_create (@: int free_counter; @: int complete_counter) @: void
+    @: FakeDeferObj obj
+    @: FakeDeferVtbl vtbl
+    obj: (cast: (@: FakeDeferObj) c.calloc(1U, c.sizeof(c.FakeDeferObj)))
+    if: obj = 0
+        return: 0
+    vtbl: (cast: (@: FakeDeferVtbl) c.calloc(1U, c.sizeof(c.FakeDeferVtbl)))
+    if: vtbl = 0
+        c.free(obj)
+        return: 0
+    vtbl\QueryInterface: fake_defer_query_interface
+    vtbl\AddRef: fake_defer_add_ref
+    vtbl\Release: fake_defer_release
+    vtbl\GetIids: fake_defer_get_iids
+    vtbl\GetRuntimeClassName: fake_defer_get_runtime_class_name
+    vtbl\GetTrustLevel: fake_defer_get_trust_level
+    vtbl\Complete: fake_defer_complete
+    obj\lpVtbl: vtbl
+    obj\refcount: 1
+    obj\complete_counter: complete_counter
+    obj\free_counter: free_counter
+return: (cast: (@: void) obj)
+
+# Builds a real MixaShareRequest (via mixa_share_create against the real
+# win32 vtable, though begin() is never called -- these tests drive
+# mixa_file_op_handler_invoke/mixa_share_win32_destroy directly) and a
+# hand-built MixaShareWin32Ctx wired up exactly as
+# mixa_share_win32_begin_file_resolution would have left it mid-flight:
+# owner_tid set to the calling (test) thread, one file pending, the given
+# fake package/deferral/async-op/handler all installed. Returns 1 on
+# success with every out-pointer populated, 0 on any allocation failure
+# (nothing partially built is leaked on that path).
+fn: mixa_share_smoke_make_async_lifetime_ctx (@: void fake_pkg; @: void fake_defer; @: void fake_op; @: int handler_free_counter; int: item_total; @: void preresolved_item; @@: void out_r; @@: void out_ctx; @@: void out_handler) int
+    @: MixaShareRequest r
+    @: MixaShareWin32Ctx ctx
+    @: MixaFileOpHandlerObj handler
+    @: MixaFileOpHandlerVtbl vtbl
+    @@: void items_arr
+    int: st
+    r: 0
+    st: mixa_share_create(@ r, mixa_share_win32_table())
+    if: st != MIXA_SHARE_OK || r = 0
+        return: 0
+    ctx: (cast: (@: MixaShareWin32Ctx) c.calloc(1U, c.sizeof(c.MixaShareWin32Ctx)))
+    if: ctx = 0
+        mixa_share_destroy(r)
+        return: 0
+    handler: (cast: (@: MixaFileOpHandlerObj) c.calloc(1U, c.sizeof(c.MixaFileOpHandlerObj)))
+    if: handler = 0
+        c.free(ctx)
+        mixa_share_destroy(r)
+        return: 0
+    vtbl: (cast: (@: MixaFileOpHandlerVtbl) c.calloc(1U, c.sizeof(c.MixaFileOpHandlerVtbl)))
+    if: vtbl = 0
+        c.free(handler)
+        c.free(ctx)
+        mixa_share_destroy(r)
+        return: 0
+    vtbl\QueryInterface: mixa_file_op_handler_query_interface
+    vtbl\AddRef: mixa_file_op_handler_add_ref
+    vtbl\Release: mixa_file_op_handler_release
+    vtbl\Invoke: mixa_file_op_handler_invoke
+    handler\lpVtbl: vtbl
+    handler\refcount: 1
+    handler\owner_ctx: (cast: (@: void) ctx)
+    handler\free_counter: handler_free_counter
+    ctx\owner_tid: c.GetCurrentThreadId()
+    ctx\req: (cast: (@: void) r)
+    ctx\pending: 1
+    ctx\pending_package: fake_pkg
+    ctx\file_deferral: fake_defer
+    ctx\file_op: fake_op
+    ctx\file_handler: (cast: (@: void) handler)
+    ctx\pending_items: c.calloc((cast: (size_t) item_total), c.sizeof(@: void))
+    ctx\pending_item_total: item_total
+    ctx\pending_item_next: 0
+    # Optional: simulate "one file already resolved" for a mid-chain
+    # deterministic test (ticket 20260912-043851) -- placed at index 0,
+    # matching the chain's own ordering, so the very next Invoke() call
+    # (for whatever occupies file_op/file_handler above) exercises the
+    # abort loop's Release() on THIS item specifically.
+    if: preresolved_item != 0 && ctx\pending_items != 0
+        items_arr: (cast: (@@: void) ctx\pending_items)
+        items_arr[0]: preresolved_item
+        ctx\pending_item_next: 1
+    ---
+    r\impl: (cast: (@: void) ctx)
+    out_r[0]: (cast: (@: void) r)
+    out_ctx[0]: (cast: (@: void) ctx)
+    out_handler[0]: (cast: (@: void) handler)
+return: 1
+
+fn: main () int
+    @: void hinst
+    []: WNDCLASSEXW wc 1
+    @: WNDCLASSEXW pwc
+    @: void hwnd
+    @: MixaShareRequest r2
+    @: void thr
+    []: DWORD thr_id 1
+    []: int fev 1
+    []: int fst 1
+    []: char test_file_path 260
+    []: char test_file_path2 260
+    []: char test_file_path3 260
+    []: (@: char) file_paths 2
+    []: size_t out_skipped 1
+    @: void item_for_lifetime
+    []: (@: void) items_for_lifetime 1
+    int: lt_rc
+    @: void iterable_lt
+    @: void iter1_lt
+    @: void iter2_lt
+    @: void cur_item_lt
+    []: char has_cur_lt 1
+    @: void captured_pkg
+    @: void dpv
+    @: void items_async_op
+    @: void items_async_info
+    []: int items_status_out 1
+    @: void items_vector
+    []: unsigned items_size 1
+    @: void one_item
+    @: void one_path_hstr
+    @: void expected_wide
+    int: order_ok
+    long: hr
+    @: void handler_for_ac
+    @: MixaFileOpHandlerObj handler_for_ac_typed
+    ulong: my_thread_id
+    ulong: cb_thread_id
+    int: cb_apt_type
+    @: void fake_pkg_a
+    @: void fake_defer_a
+    @: void fake_op_a
+    @: void r_a
+    @: void ctx_a
+    @: void handler_a
+    @: MixaShareRequest r_a_typed
+    @: MixaShareWin32Ctx ctx_a_typed
+    int: fc_handler
+    int: fc_op
+    int: fc_pkg
+    int: fc_defer_release
+    int: fc_defer_complete
+    @: void fake_item1
+    int: fc_item1
+    []: char unicode_test_file_path 1040
+    @: void unicode_path_wide
+    @: void captured_pkg_u
+    @: void dpv_u
+    @: void items_async_op_u
+    @: void items_async_info_u
+    []: int items_status_out_u 1
+    @: void items_vector_u
+    []: unsigned items_size_u 1
+    @: void one_item_u
+    @: void one_path_hstr_u
+    []: MSG fmsg 1
+    int: fc
+    int: i2
+    ulong: wait_rc
+    int: st
+    long: ro_hr
+    int: failures
+    int: checks
+
+    failures: 0
+    checks: 0
+    # stdout is fully buffered once redirected to a file (not a TTY), so
+    # a hard crash anywhere below can lose ALL prior output -- exactly
+    # what happened diagnosing the FakeAIVtbl slot-count bug this file's
+    # own fake async-op seam once had (ticket 20260912-033900): the run
+    # summary just said "exit -1073741819" with an EMPTY test_stdout.log,
+    # even though every check up to the crash had already printed.
+    # Unbuffered keeps that evidence available for whatever crashes next.
+    c.setbuf((cast: (@: void) c.stdout), 0)
+    # Verified against MinGW's own roapi.h (RO_INIT_TYPE): SINGLETHREADED=0,
+    # MULTITHREADED=1. This adapter's handler object (mixa_share_win32.h.lm1,
+    # MixaShareHandlerObj) documents plain non-atomic refcounts on the STA
+    # assumption that COM marshals every call onto one apartment thread --
+    # the smoke test previously initialized with the numeric literal 1U,
+    # which is actually RO_INIT_MULTITHREADED, contradicting that assumption
+    # instead of exercising it. Fixed to the symbolic STA constant.
+    ro_hr: c.RoInitialize(c.RO_INIT_SINGLETHREADED)
+    c.printf("mixa share native smoke: RoInitialize hr=%ld\n", ro_hr)
+
+    # Direct QueryInterface coverage (ticket 20260911-225400 item 1): an
+    # unsupported riid must be refused with E_NOINTERFACE and a null ppv,
+    # not silently satisfied with the wrong object. Exercises the handler's
+    # vtable functions directly -- no WinRT round trip needed for this part.
+    []: MixaShareHandlerObj hobj 1
+    []: MixaShareHandlerVtbl hvt 1
+    @: MixaShareHandlerObj phobj
+    @: MixaShareHandlerVtbl phvt
+    []: GUID bogus_iid 1
+    @: GUID pbogus
+    []: (@: void) qi_out 1
+    long: qi_hr
+
+    phobj: @ hobj[0]
+    phvt: @ hvt[0]
+    phvt\QueryInterface: mixa_share_handler_query_interface
+    phvt\AddRef: mixa_share_handler_add_ref
+    phvt\Release: mixa_share_handler_release
+    phvt\Invoke: mixa_share_handler_invoke
+    phobj\lpVtbl: phvt
+    phobj\refcount: 1
+    phobj\owner_ctx: 0
+
+    pbogus: @ bogus_iid[0]
+    pbogus\Data1: (cast: (unsigned long) 0x11111111U)
+    pbogus\Data2: (cast: (unsigned short) 0x2222U)
+    pbogus\Data3: (cast: (unsigned short) 0x3333U)
+    pbogus\Data4[0]: (cast: (char) 0x44)
+    pbogus\Data4[1]: (cast: (char) 0x44)
+    pbogus\Data4[2]: (cast: (char) 0x44)
+    pbogus\Data4[3]: (cast: (char) 0x44)
+    pbogus\Data4[4]: (cast: (char) 0x44)
+    pbogus\Data4[5]: (cast: (char) 0x44)
+    pbogus\Data4[6]: (cast: (char) 0x44)
+    pbogus\Data4[7]: (cast: (char) 0x44)
+
+    qi_out[0]: (cast: (@: void) 1)
+    qi_hr: mixa_share_handler_query_interface((cast: (@: void) phobj), pbogus, @ qi_out[0])
+    if: qi_hr != -2147467262 || qi_out[0] != 0
+        failures: failures + 1
+        c.printf("mixa share native smoke: QueryInterface(bogus) hr=%ld ppv=%p (want E_NOINTERFACE/null)\n", qi_hr, qi_out[0])
+    else:
+        c.printf("mixa share native smoke: QueryInterface(bogus) correctly refused (E_NOINTERFACE, ppv null)\n")
+    ---
+
+    []: GUID unk_iid 1
+    @: GUID punk
+    punk: @ unk_iid[0]
+    punk\Data1: (cast: (unsigned long) 0x00000000U)
+    punk\Data2: (cast: (unsigned short) 0x0000U)
+    punk\Data3: (cast: (unsigned short) 0x0000U)
+    punk\Data4[0]: (cast: (char) 0xc0)
+    punk\Data4[1]: (cast: (char) 0x00)
+    punk\Data4[2]: (cast: (char) 0x00)
+    punk\Data4[3]: (cast: (char) 0x00)
+    punk\Data4[4]: (cast: (char) 0x00)
+    punk\Data4[5]: (cast: (char) 0x00)
+    punk\Data4[6]: (cast: (char) 0x00)
+    punk\Data4[7]: (cast: (char) 0x46)
+    qi_out[0]: 0
+    qi_hr: mixa_share_handler_query_interface((cast: (@: void) phobj), punk, @ qi_out[0])
+    if: qi_hr != 0 || qi_out[0] = 0 || phobj\refcount != 2
+        failures: failures + 1
+        c.printf("mixa share native smoke: QueryInterface(IUnknown) hr=%ld ppv=%p refcount=%d (want OK/non-null/2)\n", qi_hr, qi_out[0], phobj\refcount)
+    else:
+        c.printf("mixa share native smoke: QueryInterface(IUnknown) correctly accepted (refcount now %d)\n", phobj\refcount)
+    ---
+
+    hinst: (cast: (@: void) c.GetModuleHandleW(0))
+    pwc: @ wc[0]
+    c.memset(pwc, 0, c.sizeof(c.WNDCLASSEXW))
+    pwc\cbSize: (cast: (UINT) c.sizeof(c.WNDCLASSEXW))
+    pwc\lpfnWndProc: mixa_share_smoke_wndproc
+    pwc\hInstance: (cast: (HINSTANCE) hinst)
+    pwc\lpszClassName: (cast: (@: wchar_t) L"MixaShareNativeSmokeWnd")
+    if: c.RegisterClassExW(pwc) = 0
+        c.printf("mixa share native smoke: RegisterClassExW failed gle=%lu\n", c.GetLastError())
+        return: 1
+
+    # Sanity check only: confirms class registration actually produces a
+    # working window (fails fast with a clear GLE if not) before any real
+    # WinRT round trip is attempted. Not reused below -- every real
+    # invocation (including the final one) gets its own fresh window via
+    # mixa_share_smoke_run_fault/mixa_share_smoke_new_window.
+    hwnd: (cast: (@: void) c.CreateWindowExW(0U, (cast: (@: wchar_t) L"MixaShareNativeSmokeWnd"), (cast: (@: wchar_t) L"mixa share native smoke"), 13565952U, 100, 100, 320, 200, 0, 0, (cast: (HINSTANCE) hinst), 0))
+    if: hwnd = 0
+        c.printf("mixa share native smoke: CreateWindowExW failed gle=%lu\n", c.GetLastError())
+        return: 1
+    c.ShowWindow((cast: (HWND) hwnd), 5)
+    c.UpdateWindow((cast: (HWND) hwnd))
+    c.DestroyWindow((cast: (HWND) hwnd))
+
+    # Regression (ticket 20260912-001200 item 1, strengthened per ticket
+    # 20260912-004800 item 2): destroying a request from a thread that
+    # does not own it must NOT free it. Reading mixa_share_event() back as
+    # still PENDING is NOT proof of that -- freed heap bytes can trivially
+    # still hold the same enum value -- so this uses the real
+    # free_counter hook: mixa_share_destroy() increments it exactly once,
+    # only at the point it actually commits to freeing text/title/files/r.
+    # Sets BOTH text and title (004800: "retain meaningful title/text
+    # payloads") so the request has real heap allocations at stake, not
+    # just its own struct. Also (004800 item 1): CreateThread's return
+    # and WaitForSingleObject's actual result are both checked -- a
+    # failed thread launch or a timeout is a test FAILURE, not a silently
+    # accepted pass, and this function does NOT touch/free the shared
+    # request afterward unless the worker is confirmed to have actually
+    # finished (a timeout is not worker quiescence; touching/freeing a
+    # request the worker might still be inside would be a real race, not
+    # just an inconclusive result).
+    checks: checks + 1
+    hwnd: mixa_share_smoke_new_window(hinst)
+    if: hwnd = 0
+        failures: failures + 1
+        c.printf("mixa share native smoke: cross-thread destroy regression: window creation failed, cannot run\n")
+    else:
+        st: mixa_share_create(@ r2, mixa_share_win32_table())
+        if: st = MIXA_SHARE_OK
+            fc: 0
+            mixa_share_test_set_free_counter(r2, @ fc)
+            mixa_share_set_text(r2, "cross-thread destroy regression text")
+            mixa_share_set_title(r2, "cross-thread destroy regression title")
+            mixa_share_set_context(r2, hwnd)
+            st: mixa_share_begin(r2)
+            if: st = MIXA_SHARE_OK
+                thr: c.CreateThread(0, (cast: (SIZE_T) 0U), mixa_share_smoke_destroy_thread_proc, (cast: (@: void) r2), 0U, @ thr_id[0])
+                if: thr = 0
+                    # No worker was ever launched, so nothing else can be
+                    # touching r2/hwnd -- safe to do normal owner cleanup
+                    # right here instead of leaking.
+                    failures: failures + 1
+                    c.printf("mixa share native smoke: cross-thread destroy: CreateThread failed gle=%lu -- no worker launched, cleaning up normally\n", c.GetLastError())
+                    mixa_share_destroy(r2)
+                    c.DestroyWindow((cast: (HWND) hwnd))
+                else:
+                    wait_rc: c.WaitForSingleObject(thr, 5000U)
+                    c.CloseHandle(thr)
+                    if: wait_rc != 0U
+                        # The worker may still be inside mixa_share_destroy,
+                        # possibly still touching r2/ctx/hwnd. Do NOT free,
+                        # destroy, or otherwise touch either -- leak both
+                        # deliberately and abort the whole test process now
+                        # rather than let later tests run concurrently with
+                        # a thread that might still be live.
+                        failures: failures + 1
+                        c.printf("mixa share native smoke: cross-thread destroy: worker did not finish (WaitForSingleObject=%lu, want WAIT_OBJECT_0) -- leaking request/window, aborting\n", wait_rc)
+                        c.printf("mixa share native smoke: %d FAILURES (aborted early, worker may still be live)\n", failures)
+                        c.ExitProcess(1U)
+                    else:
+                        if: fc != 0
+                            # The wrong-thread call actually freed it: r2 is
+                            # now a dangling pointer. Do NOT call
+                            # mixa_share_destroy(r2) again -- that would be
+                            # a double-free/use-after-free in the TEST
+                            # itself. Ticket 20260912-012800: this observed
+                            # corruption gets the same treatment as an
+                            # unjoined timeout, not just "don't touch r2
+                            # again" -- if this ever fires for real, ctx's
+                            # own state (was it actually unregistered too?)
+                            # is not independently confirmed by free_counter
+                            # alone (see item 3's narrowed proof scope), so
+                            # every later test's message pumping could
+                            # dispatch a dangling DataRequested callback
+                            # into freed memory. Abort the whole process
+                            # immediately instead of continuing.
+                            failures: failures + 1
+                            c.printf("mixa share native smoke: cross-thread destroy actually freed the request (free_counter=%d, want 0) -- aborting, later pumps could dispatch a dangling callback\n", fc)
+                            c.printf("mixa share native smoke: %d FAILURES (aborted early, request corruption observed)\n", failures)
+                            c.ExitProcess(1U)
+                        else:
+                            c.printf("mixa share native smoke: cross-thread destroy correctly refused (free_counter=0)\n")
+                            mixa_share_destroy(r2)
+                            checks: checks + 1
+                            if: fc != 1
+                                failures: failures + 1
+                                c.printf("mixa share native smoke: owner-thread destroy did not tear down exactly once (free_counter=%d, want 1)\n", fc)
+                            else:
+                                c.printf("mixa share native smoke: owner-thread destroy correctly tore down exactly once\n")
+                            ---
+                            c.DestroyWindow((cast: (HWND) hwnd))
+                        ---
+                    ---
+                ---
+            else:
+                failures: failures + 1
+                c.printf("mixa share native smoke: cross-thread destroy regression setup: begin rc=%d (want OK)\n", st)
+                mixa_share_destroy(r2)
+                c.DestroyWindow((cast: (HWND) hwnd))
+            ---
+        else:
+            failures: failures + 1
+            c.printf("mixa share native smoke: cross-thread destroy regression setup: create rc=%d (want OK)\n", st)
+            c.DestroyWindow((cast: (HWND) hwnd))
+        ---
+    ---
+
+    # Regression (closes the mixa_share.txt-flagged gap: poll()/cancel()
+    # share mixa_share_win32_check_thread() with destroy(), but only
+    # destroy() had a dedicated cross-thread test). Same CreateThread/
+    # WaitForSingleObject checking as the destroy regression above -- a
+    # failed launch or a timeout is a reported failure, not a silent pass,
+    # and a timeout aborts the whole process (ExitProcess) rather than
+    # continuing to run a SECOND thread (the cancel test) against a
+    # request/window a first, possibly-still-live worker might still be
+    # touching.
+    checks: checks + 1
+    hwnd: mixa_share_smoke_new_window(hinst)
+    if: hwnd = 0
+        failures: failures + 1
+        c.printf("mixa share native smoke: cross-thread poll/cancel regression: window creation failed, cannot run\n")
+    else:
+        st: mixa_share_create(@ r2, mixa_share_win32_table())
+        if: st = MIXA_SHARE_OK
+            mixa_share_set_text(r2, "cross-thread poll/cancel regression")
+            mixa_share_set_context(r2, hwnd)
+            st: mixa_share_begin(r2)
+            if: st = MIXA_SHARE_OK
+                g_cross_thread_poll_rc: -1
+                thr: c.CreateThread(0, (cast: (SIZE_T) 0U), mixa_share_smoke_poll_thread_proc, (cast: (@: void) r2), 0U, @ thr_id[0])
+                if: thr != 0
+                    wait_rc: c.WaitForSingleObject(thr, 5000U)
+                    c.CloseHandle(thr)
+                    if: wait_rc != 0U
+                        failures: failures + 1
+                        c.printf("mixa share native smoke: cross-thread poll: worker did not finish (WaitForSingleObject=%lu) -- leaking request/window, aborting\n", wait_rc)
+                        c.printf("mixa share native smoke: %d FAILURES (aborted early, worker may still be live)\n", failures)
+                        c.ExitProcess(1U)
+                    ---
+                    if: g_cross_thread_poll_rc != MIXA_SHARE_ERR_THREAD
+                        failures: failures + 1
+                        c.printf("mixa share native smoke: cross-thread poll rc=%d (want MIXA_SHARE_ERR_THREAD=%d)\n", g_cross_thread_poll_rc, MIXA_SHARE_ERR_THREAD)
+                    else:
+                        c.printf("mixa share native smoke: cross-thread poll correctly refused\n")
+                    ---
+                    checks: checks + 1
+                    st: mixa_share_poll(r2, @ fev[0], @ fst[0])
+                    if: st != MIXA_SHARE_OK || fev[0] != MIXA_SHARE_EVENT_PENDING
+                        failures: failures + 1
+                        c.printf("mixa share native smoke: owner-thread poll after cross-thread attempt: rc=%d event=%d (want OK/PENDING)\n", st, fev[0])
+                    else:
+                        c.printf("mixa share native smoke: owner-thread poll still works normally after the cross-thread attempt\n")
+                    ---
+                else:
+                    # No worker was launched -- nothing else touches r2, so
+                    # this is just a reported failure, not an unsafe state.
+                    failures: failures + 1
+                    c.printf("mixa share native smoke: cross-thread poll: CreateThread failed gle=%lu\n", c.GetLastError())
+                ---
+                # Reaching here means the poll thread (if any) completed
+                # safely or never existed -- safe to launch the cancel test.
+                g_cross_thread_cancel_rc: -1
+                thr: c.CreateThread(0, (cast: (SIZE_T) 0U), mixa_share_smoke_cancel_thread_proc, (cast: (@: void) r2), 0U, @ thr_id[0])
+                if: thr != 0
+                    wait_rc: c.WaitForSingleObject(thr, 5000U)
+                    c.CloseHandle(thr)
+                    if: wait_rc != 0U
+                        failures: failures + 1
+                        c.printf("mixa share native smoke: cross-thread cancel: worker did not finish (WaitForSingleObject=%lu) -- leaking request/window, aborting\n", wait_rc)
+                        c.printf("mixa share native smoke: %d FAILURES (aborted early, worker may still be live)\n", failures)
+                        c.ExitProcess(1U)
+                    ---
+                    # The win32 backend never sets MIXA_SHARE_CAP_CANCEL,
+                    # so the PORTABLE mixa_share_cancel() always refuses
+                    # with ERR_UNSUPPORTED before ever reaching
+                    # mixa_share_win32_cancel()'s own thread check --
+                    # regardless of which thread calls it. This cannot
+                    # exercise that backend function's thread-check via
+                    # the public API on this backend; what it DOES prove
+                    # is that a wrong-thread call is safe (returns a
+                    # stable, expected error, does not crash or corrupt
+                    # anything) even though the mechanism is the
+                    # capability gate, not the thread check.
+                    if: g_cross_thread_cancel_rc != MIXA_SHARE_ERR_UNSUPPORTED
+                        failures: failures + 1
+                        c.printf("mixa share native smoke: cross-thread cancel rc=%d (want MIXA_SHARE_ERR_UNSUPPORTED=%d, since this backend does not advertise CAP_CANCEL)\n", g_cross_thread_cancel_rc, MIXA_SHARE_ERR_UNSUPPORTED)
+                    else:
+                        c.printf("mixa share native smoke: cross-thread cancel safely refused (ERR_UNSUPPORTED -- capability gate, not this backend's thread check)\n")
+                    ---
+                    checks: checks + 1
+                    st: mixa_share_poll(r2, @ fev[0], @ fst[0])
+                    if: st != MIXA_SHARE_OK || fev[0] != MIXA_SHARE_EVENT_PENDING
+                        failures: failures + 1
+                        c.printf("mixa share native smoke: owner-thread poll after cross-thread cancel attempt: rc=%d event=%d (want OK/PENDING, i.e. the cancel did NOT take effect)\n", st, fev[0])
+                    else:
+                        c.printf("mixa share native smoke: request still PENDING after the cross-thread cancel attempt (correctly did not take effect)\n")
+                    ---
+                else:
+                    failures: failures + 1
+                    c.printf("mixa share native smoke: cross-thread cancel: CreateThread failed gle=%lu\n", c.GetLastError())
+                ---
+                # Reaching here means both worker threads (if launched)
+                # completed within the timeout -- safe to tear down.
+                mixa_share_destroy(r2)
+                c.DestroyWindow((cast: (HWND) hwnd))
+            else:
+                failures: failures + 1
+                c.printf("mixa share native smoke: cross-thread poll/cancel regression setup: begin rc=%d (want OK)\n", st)
+                mixa_share_destroy(r2)
+                c.DestroyWindow((cast: (HWND) hwnd))
+            ---
+        else:
+            failures: failures + 1
+            c.printf("mixa share native smoke: cross-thread poll/cancel regression setup: create rc=%d (want OK)\n", st)
+            c.DestroyWindow((cast: (HWND) hwnd))
+        ---
+    ---
+
+    # Regression (ticket 20260912-001200 item 2, strengthened per ticket
+    # 20260912-004800 item 1): begin() must reject a genuinely wrong
+    # apartment (MTA), not just record whatever thread happens to call
+    # it. A real second OS thread initializes itself as MTA and calls the
+    # full public sequence; begin() must return MIXA_SHARE_ERR_THREAD.
+    # CreateThread/WaitForSingleObject are checked the same way as above
+    # (a failed launch or a timeout is a failure, not a silent pass), and
+    # the thread's own RoInitialize HRESULT is checked too -- a failed
+    # RoInitialize would leave the thread's actual apartment unproven,
+    # so g_wrong_apt_begin_rc is only meaningful when g_wrong_apt_ro_hr
+    # confirms MTA was really established.
+    checks: checks + 1
+    hwnd: mixa_share_smoke_new_window(hinst)
+    if: hwnd = 0
+        failures: failures + 1
+        c.printf("mixa share native smoke: wrong-apartment begin regression: window creation failed, cannot run\n")
+    else:
+        g_wrong_apt_begin_rc: -1
+        g_wrong_apt_ro_hr: -1
+        thr: c.CreateThread(0, (cast: (SIZE_T) 0U), mixa_share_smoke_wrong_apartment_thread_proc, hwnd, 0U, @ thr_id[0])
+        if: thr = 0
+            # No worker was launched -- hwnd is untouched by anything else,
+            # safe to destroy immediately.
+            failures: failures + 1
+            c.printf("mixa share native smoke: wrong-apartment begin: CreateThread failed gle=%lu -- no worker launched, cleaning up normally\n", c.GetLastError())
+            c.DestroyWindow((cast: (HWND) hwnd))
+        else:
+            wait_rc: c.WaitForSingleObject(thr, 5000U)
+            c.CloseHandle(thr)
+            if: wait_rc != 0U
+                # The worker may still be using hwnd (set_context/begin
+                # inside the thread proc) -- do not destroy it, and abort
+                # rather than let later tests run alongside a possibly
+                # still-live thread.
+                failures: failures + 1
+                c.printf("mixa share native smoke: wrong-apartment begin: worker did not finish (WaitForSingleObject=%lu, want WAIT_OBJECT_0) -- leaking window, aborting\n", wait_rc)
+                c.printf("mixa share native smoke: %d FAILURES (aborted early, worker may still be live)\n", failures)
+                c.ExitProcess(1U)
+            else:
+                if: g_wrong_apt_ro_hr != 0
+                    failures: failures + 1
+                    c.printf("mixa share native smoke: wrong-apartment begin: worker's RoInitialize(MULTITHREADED) hr=%ld (want 0/S_OK) -- MTA not actually established, this run cannot conclude\n", g_wrong_apt_ro_hr)
+                else:
+                    if: g_wrong_apt_begin_rc != MIXA_SHARE_ERR_THREAD
+                        failures: failures + 1
+                        c.printf("mixa share native smoke: wrong-apartment begin rc=%d (want MIXA_SHARE_ERR_THREAD=%d)\n", g_wrong_apt_begin_rc, MIXA_SHARE_ERR_THREAD)
+                    else:
+                        c.printf("mixa share native smoke: wrong-apartment begin correctly refused (confirmed real MTA)\n")
+                    ---
+                ---
+                c.DestroyWindow((cast: (HWND) hwnd))
+            ---
+        ---
+    ---
+
+    # Fault-injection coverage (tickets 225400/230500 item 4 and the
+    # begin/get_Data/SetText/put_Title failure paths): each forced failure
+    # must surface as MIXA_SHARE_EVENT_FAILED with a non-OK status, not be
+    # silently reported as HANDED_OFF, and must not leave any registration/
+    # reference behind that would block a subsequent clean request.
+    mixa_share_smoke_run_fault(hinst, MIXA_SHARE_TEST_FAIL_TOKEN_ALLOC, @ fev[0], @ fst[0])
+    checks: checks + 1
+    if: fev[0] != MIXA_SHARE_EVENT_FAILED || fst[0] != MIXA_SHARE_ERR_NOMEM
+        failures: failures + 1
+        c.printf("mixa share native smoke: TOKEN_ALLOC fault event=%d status=%d (want FAILED or begin-rc NOMEM)\n", fev[0], fst[0])
+    else:
+        c.printf("mixa share native smoke: TOKEN_ALLOC fault correctly surfaced (event=%d status=%d)\n", fev[0], fst[0])
+    ---
+
+    mixa_share_smoke_run_fault(hinst, MIXA_SHARE_TEST_FAIL_GET_DATA, @ fev[0], @ fst[0])
+    checks: checks + 1
+    if: fev[0] != MIXA_SHARE_EVENT_FAILED || fst[0] = MIXA_SHARE_OK
+        failures: failures + 1
+        c.printf("mixa share native smoke: GET_DATA fault event=%d status=%d (want FAILED/non-OK)\n", fev[0], fst[0])
+    else:
+        c.printf("mixa share native smoke: GET_DATA fault correctly surfaced (event=%d status=%d)\n", fev[0], fst[0])
+    ---
+
+    mixa_share_smoke_run_fault(hinst, MIXA_SHARE_TEST_FAIL_SET_TEXT, @ fev[0], @ fst[0])
+    checks: checks + 1
+    if: fev[0] != MIXA_SHARE_EVENT_FAILED || fst[0] = MIXA_SHARE_OK
+        failures: failures + 1
+        c.printf("mixa share native smoke: SET_TEXT fault event=%d status=%d (want FAILED/non-OK)\n", fev[0], fst[0])
+    else:
+        c.printf("mixa share native smoke: SET_TEXT fault correctly surfaced (event=%d status=%d)\n", fev[0], fst[0])
+    ---
+
+    mixa_share_smoke_run_fault(hinst, MIXA_SHARE_TEST_FAIL_PUT_TITLE, @ fev[0], @ fst[0])
+    checks: checks + 1
+    if: fev[0] != MIXA_SHARE_EVENT_FAILED || fst[0] = MIXA_SHARE_OK
+        failures: failures + 1
+        c.printf("mixa share native smoke: PUT_TITLE fault event=%d status=%d (want FAILED/non-OK)\n", fev[0], fst[0])
+    else:
+        c.printf("mixa share native smoke: PUT_TITLE fault correctly surfaced (event=%d status=%d)\n", fev[0], fst[0])
+    ---
+
+    # Clean request immediately after four failures: no leaked
+    # registration/reference from any of them may block this.
+    mixa_share_smoke_run_fault(hinst, 0, @ fev[0], @ fst[0])
+    checks: checks + 1
+    if: fev[0] != MIXA_SHARE_EVENT_HANDED_OFF || fst[0] != MIXA_SHARE_OK
+        failures: failures + 1
+        c.printf("mixa share native smoke: clean request after 4 faults event=%d status=%d (want HANDED_OFF/OK)\n", fev[0], fst[0])
+    else:
+        c.printf("mixa share native smoke: clean request after 4 faults still succeeds (no leaked state)\n")
+    ---
+
+    # Same-window diagnostic (ticket 234500): two consecutive real
+    # invocations on ONE shared window, informational only -- not counted
+    # toward `failures` since this is deliberately probing an already-
+    # documented, unresolved failure mode, not asserting it is fixed.
+    hwnd: mixa_share_smoke_new_window(hinst)
+    if: hwnd != 0
+        mixa_share_smoke_run_on_hwnd(hwnd, 0, @ fev[0], @ fst[0])
+        c.printf("mixa share native smoke: same-window diagnostic call 1: event=%d status=%d\n", fev[0], fst[0])
+        mixa_share_smoke_run_on_hwnd(hwnd, 0, @ fev[0], @ fst[0])
+        c.printf("mixa share native smoke: same-window diagnostic call 2: event=%d status=%d\n", fev[0], fst[0])
+        c.DestroyWindow((cast: (HWND) hwnd))
+    ---
+
+    # File attachment (ticket 20260911-210200 section 7's acceptance
+    # test): share a single, harmless, TEST-OWNED file through the real
+    # adapter, proving the async StorageFile.GetFileFromPathAsync +
+    # deferral mechanics (stage 1) complete end to end -- HANDED_OFF, not
+    # stuck PENDING or FAILED. Stage 2 (ticket 20260912-022300) actually
+    # attaches the resolved file to the DataPackage via a custom
+    # IIterable<IStorageItem*>/IIterator pair, so a real success here is
+    # HANDED_OFF/OK, checked below against
+    # mixa_share_win32_test_get_iter_vend_count() (not just the returned
+    # HRESULT) to prove the OS's own DataPackage/SetStorageItems machinery
+    # actually walked our iterable rather than silently ignoring it while
+    # still returning success -- the same "resolving is not the same as
+    # attaching" honesty this whole feature was built around. Dismisses
+    # (Escape) rather than actually sending, per the ticket's explicit
+    # instruction; no real recipient is contacted, matching every other
+    # real invocation in this suite.
+    if: mixa_share_smoke_make_test_file(test_file_path) = 0
+        failures: failures + 1
+        checks: checks + 1
+        c.printf("mixa share native smoke: file attachment: could not create the test-owned file, cannot run\n")
+    else:
+        checks: checks + 1
+        hwnd: mixa_share_smoke_new_window(hinst)
+        if: hwnd = 0
+            failures: failures + 1
+            c.printf("mixa share native smoke: file attachment: window creation failed, cannot run\n")
+        else:
+            st: mixa_share_create(@ r2, mixa_share_win32_table())
+            if: st = MIXA_SHARE_OK
+                mixa_share_set_text(r2, "mixa file attachment smoke text")
+                file_paths[0]: test_file_path
+                st: mixa_share_set_files(r2, file_paths, 1U, @ out_skipped[0])
+                if: st = MIXA_SHARE_OK
+                    # Ticket 20260912-033900 item 4: capture the real
+                    # completion callback's thread/apartment so it can be
+                    # checked against this test's own (owner) thread below.
+                    mixa_share_test_set_force_fail(r2, MIXA_SHARE_TEST_CAPTURE_CALLBACK_THREAD)
+                    mixa_share_set_context(r2, hwnd)
+                    st: mixa_share_begin(r2)
+                    if: st = MIXA_SHARE_OK
+                        fev[0]: MIXA_SHARE_EVENT_PENDING
+                        i2: 0
+                        while: i2 < 100
+                            mixa_share_smoke_pump_once(@ fmsg[0])
+                            mixa_share_poll(r2, @ fev[0], @ fst[0])
+                            if: fev[0] != MIXA_SHARE_EVENT_PENDING
+                                break
+                            c.Sleep(50U)
+                            i2: i2 + 1
+                        # Ticket 20260912-020800/022300: HANDED_OFF must
+                        # require actual data population. Checking the
+                        # event/status pair alone is not enough evidence --
+                        # a SetStorageItems call that returned S_OK while
+                        # never actually walking our iterable would look
+                        # identical from here, which is exactly the
+                        # "silent success" failure mode the whole stage 2
+                        # design exists to rule out. The vend-count check
+                        # below is the real proof.
+                        checks: checks + 1
+                        if: fev[0] != MIXA_SHARE_EVENT_HANDED_OFF || fst[0] != MIXA_SHARE_OK
+                            failures: failures + 1
+                            c.printf("mixa share native smoke: file attachment event=%d status=%d (want HANDED_OFF/OK) after %d iterations\n", fev[0], fst[0], i2)
+                        else:
+                            c.printf("mixa share native smoke: file attachment handed off (stage 2) after %d iterations\n", i2)
+                        ---
+                        checks: checks + 1
+                        if: mixa_share_win32_test_get_iter_vend_count() < 1
+                            failures: failures + 1
+                            c.printf("mixa share native smoke: file attachment vend_count=%d (want >= 1 -- DataPackage never actually walked our IIterable)\n", mixa_share_win32_test_get_iter_vend_count())
+                        else:
+                            c.printf("mixa share native smoke: file attachment DataPackage actually walked our IIterable, vend_count=%d\n", mixa_share_win32_test_get_iter_vend_count())
+                        ---
+                        # Ticket 20260912-033900 item 4: a real successful
+                        # completion must run on the request's owner STA
+                        # thread, not merely "some thread consistent with
+                        # itself" (which is all mixa_share_win32_check_
+                        # thread's own comparison establishes).
+                        checks: checks + 1
+                        my_thread_id: c.GetCurrentThreadId()
+                        cb_thread_id: mixa_share_win32_test_get_last_invoke_thread_id()
+                        cb_apt_type: -1
+                        mixa_share_win32_test_get_last_invoke_apt_type(@ cb_apt_type)
+                        if: cb_thread_id != my_thread_id || (cb_apt_type != 0 && cb_apt_type != 3)
+                            failures: failures + 1
+                            c.printf("mixa share native smoke: file attachment callback thread=%lu (want %lu) apt_type=%d (want STA=0 or MAINSTA=3)\n", cb_thread_id, my_thread_id, cb_apt_type)
+                        else:
+                            c.printf("mixa share native smoke: file attachment callback confirmed on owner thread, apt_type=%d\n", cb_apt_type)
+                        ---
+                        i2: 0
+                        while: i2 < 20
+                            mixa_share_smoke_pump_once(@ fmsg[0])
+                            c.Sleep(50U)
+                            i2: i2 + 1
+                        c.keybd_event(27U, 0U, 0U, 0U)
+                        c.keybd_event(27U, 0U, 2U, 0U)
+                        i2: 0
+                        while: i2 < 20
+                            mixa_share_smoke_pump_once(@ fmsg[0])
+                            c.Sleep(50U)
+                            i2: i2 + 1
+                        ---
+                    else:
+                        failures: failures + 1
+                        c.printf("mixa share native smoke: file attachment begin rc=%d (want OK)\n", st)
+                    ---
+                else:
+                    failures: failures + 1
+                    c.printf("mixa share native smoke: file attachment set_files rc=%d (want OK, skipped=%llu)\n", st, (cast: (unsigned long long) out_skipped[0]))
+                ---
+                mixa_share_destroy(r2)
+            else:
+                failures: failures + 1
+                c.printf("mixa share native smoke: file attachment create rc=%d (want OK)\n", st)
+            ---
+            c.DestroyWindow((cast: (HWND) hwnd))
+        ---
+        c.DeleteFileA(test_file_path)
+    ---
+
+    # Multi-file attachment (ticket 20260912-022300 item 1: stage 2's
+    # chain is written for N files, not just one -- exercise N=2 against
+    # the real OS, not only the fake-backend selftest). Order is not
+    # independently verifiable from outside the DataPackage (no receiving
+    # app in this test), but is guaranteed by construction: the chain
+    # resolves file[i] strictly before starting file[i+1] (see
+    # mixa_file_op_handler_invoke), so ctx->pending_items ends up in
+    # request order regardless of how fast either individual resolution
+    # completes.
+    if: mixa_share_smoke_make_test_file(test_file_path) = 0 || mixa_share_smoke_make_test_file(test_file_path2) = 0
+        failures: failures + 1
+        checks: checks + 1
+        c.printf("mixa share native smoke: multi-file attachment: could not create the test-owned files, cannot run\n")
+    else:
+        checks: checks + 1
+        hwnd: mixa_share_smoke_new_window(hinst)
+        if: hwnd = 0
+            failures: failures + 1
+            c.printf("mixa share native smoke: multi-file attachment: window creation failed, cannot run\n")
+        else:
+            st: mixa_share_create(@ r2, mixa_share_win32_table())
+            if: st = MIXA_SHARE_OK
+                mixa_share_set_text(r2, "mixa multi-file attachment smoke text")
+                file_paths[0]: test_file_path
+                file_paths[1]: test_file_path2
+                st: mixa_share_set_files(r2, file_paths, 2U, @ out_skipped[0])
+                if: st = MIXA_SHARE_OK
+                    # Opt into capturing the real DataPackage (ticket
+                    # 20260912-030600) so it can be read back from the
+                    # SOURCE side below, after the producer's own
+                    # cleanup -- never touched by a real share (see
+                    # MIXA_SHARE_TEST_CAPTURE_PACKAGE's own comment).
+                    mixa_share_test_set_force_fail(r2, MIXA_SHARE_TEST_CAPTURE_PACKAGE)
+                    mixa_share_set_context(r2, hwnd)
+                    st: mixa_share_begin(r2)
+                    if: st = MIXA_SHARE_OK
+                        fev[0]: MIXA_SHARE_EVENT_PENDING
+                        i2: 0
+                        while: i2 < 100
+                            mixa_share_smoke_pump_once(@ fmsg[0])
+                            mixa_share_poll(r2, @ fev[0], @ fst[0])
+                            if: fev[0] != MIXA_SHARE_EVENT_PENDING
+                                break
+                            c.Sleep(50U)
+                            i2: i2 + 1
+                        checks: checks + 1
+                        if: fev[0] != MIXA_SHARE_EVENT_HANDED_OFF || fst[0] != MIXA_SHARE_OK
+                            failures: failures + 1
+                            c.printf("mixa share native smoke: multi-file attachment event=%d status=%d (want HANDED_OFF/OK) after %d iterations\n", fev[0], fst[0], i2)
+                        else:
+                            c.printf("mixa share native smoke: multi-file attachment handed off after %d iterations\n", i2)
+                        ---
+                        checks: checks + 1
+                        if: mixa_share_win32_test_get_iter_vend_count() < 2
+                            failures: failures + 1
+                            c.printf("mixa share native smoke: multi-file attachment vend_count=%d (want >= 2 -- both files must be walked, not just the first)\n", mixa_share_win32_test_get_iter_vend_count())
+                        else:
+                            c.printf("mixa share native smoke: multi-file attachment DataPackage walked both files, vend_count=%d\n", mixa_share_win32_test_get_iter_vend_count())
+                        ---
+                        # Source-side readback (ticket 20260912-030600):
+                        # the captured package was released by the
+                        # producer's OWN cleanup before poll() ever
+                        # reported HANDED_OFF (mixa_file_op_handler_invoke
+                        # releases its reference before clearing
+                        # ctx\pending; the test's captured copy is a
+                        # SEPARATE AddRef taken at SetStorageItems time),
+                        # so reading it back here genuinely exercises
+                        # "does the DataPackage still hold real items
+                        # after the producer let go", not merely "right
+                        # after SetStorageItems returned". No receiving
+                        # app needed -- GetView()/GetStorageItemsAsync()
+                        # is a source-side API.
+                        checks: checks + 1
+                        captured_pkg: 0
+                        if: mixa_share_win32_test_take_last_package(@ captured_pkg) = 0 || captured_pkg = 0
+                            failures: failures + 1
+                            c.printf("mixa share native smoke: multi-file attachment: no package was captured for readback\n")
+                        else:
+                            dpv: 0
+                            hr: c.__x_ABI_CWindows_CApplicationModel_CDataTransfer_CIDataPackage_GetView((cast: (@: __x_ABI_CWindows_CApplicationModel_CDataTransfer_CIDataPackage) captured_pkg), (cast: (@@: __x_ABI_CWindows_CApplicationModel_CDataTransfer_CIDataPackageView) @ dpv))
+                            if: hr != 0 || dpv = 0
+                                failures: failures + 1
+                                c.printf("mixa share native smoke: multi-file attachment: GetView failed hr=%ld\n", hr)
+                            else:
+                                items_async_op: 0
+                                hr: c.__x_ABI_CWindows_CApplicationModel_CDataTransfer_CIDataPackageView_GetStorageItemsAsync((cast: (@: __x_ABI_CWindows_CApplicationModel_CDataTransfer_CIDataPackageView) dpv), (cast: (@@: __FIAsyncOperation_1___FIVectorView_1_Windows__CStorage__CIStorageItem) @ items_async_op))
+                                if: hr != 0 || items_async_op = 0
+                                    failures: failures + 1
+                                    c.printf("mixa share native smoke: multi-file attachment: GetStorageItemsAsync failed hr=%ld\n", hr)
+                                else:
+                                    items_async_info: 0
+                                    hr: c.__FIAsyncOperation_1___FIVectorView_1_Windows__CStorage__CIStorageItem_QueryInterface((cast: (@: __FIAsyncOperation_1___FIVectorView_1_Windows__CStorage__CIStorageItem) items_async_op), (cast: (const: @(IID)) @ c.IID_IAsyncInfo), @ items_async_info)
+                                    items_status_out[0]: 0
+                                    if: hr = 0 && items_async_info != 0
+                                        i2: 0
+                                        while: i2 < 100
+                                            mixa_share_smoke_pump_once(@ fmsg[0])
+                                            hr: c.IAsyncInfo_get_Status((cast: (@: IAsyncInfo) items_async_info), (cast: (@: AsyncStatus) @ items_status_out[0]))
+                                            if: hr = 0 && items_status_out[0] != 0
+                                                break
+                                            c.Sleep(20U)
+                                            i2: i2 + 1
+                                        c.IAsyncInfo_Release((cast: (@: IAsyncInfo) items_async_info))
+                                    ---
+                                    if: items_status_out[0] != 1
+                                        failures: failures + 1
+                                        c.printf("mixa share native smoke: multi-file attachment: GetStorageItemsAsync did not complete successfully, status=%d\n", items_status_out[0])
+                                    else:
+                                        items_vector: 0
+                                        hr: c.__FIAsyncOperation_1___FIVectorView_1_Windows__CStorage__CIStorageItem_GetResults((cast: (@: __FIAsyncOperation_1___FIVectorView_1_Windows__CStorage__CIStorageItem) items_async_op), (cast: (@@: __FIVectorView_1_Windows__CStorage__CIStorageItem) @ items_vector))
+                                        if: hr != 0 || items_vector = 0
+                                            failures: failures + 1
+                                            c.printf("mixa share native smoke: multi-file attachment: GetResults(vector) failed hr=%ld\n", hr)
+                                        else:
+                                            items_size[0]: 0U
+                                            c.__FIVectorView_1_Windows__CStorage__CIStorageItem_get_Size((cast: (@: __FIVectorView_1_Windows__CStorage__CIStorageItem) items_vector), @ items_size[0])
+                                            if: items_size[0] != 2U
+                                                failures: failures + 1
+                                                c.printf("mixa share native smoke: multi-file attachment: DataPackageView holds %u items (want 2)\n", items_size[0])
+                                            else:
+                                                order_ok: 1
+                                                i2: 0
+                                                while: i2 < 2
+                                                    one_item: 0
+                                                    c.__FIVectorView_1_Windows__CStorage__CIStorageItem_GetAt((cast: (@: __FIVectorView_1_Windows__CStorage__CIStorageItem) items_vector), (cast: (unsigned) i2), (cast: (@@: __x_ABI_CWindows_CStorage_CIStorageItem) @ one_item))
+                                                    if: one_item = 0
+                                                        order_ok: 0
+                                                    else:
+                                                        one_path_hstr: 0
+                                                        c.__x_ABI_CWindows_CStorage_CIStorageItem_get_Path((cast: (@: __x_ABI_CWindows_CStorage_CIStorageItem) one_item), (cast: (@: void) @ one_path_hstr))
+                                                        expected_wide: 0
+                                                        if: i2 = 0
+                                                            expected_wide: mixa_share_win32_utf8_to_wide(test_file_path)
+                                                        else:
+                                                            expected_wide: mixa_share_win32_utf8_to_wide(test_file_path2)
+                                                        ---
+                                                        if: one_path_hstr = 0 || expected_wide = 0 || c.wcscmp((cast: (const: @(wchar_t)) expected_wide), c.WindowsGetStringRawBuffer((cast: (HSTRING) one_path_hstr), 0)) != 0
+                                                            order_ok: 0
+                                                        ---
+                                                        if: expected_wide != 0
+                                                            c.free(expected_wide)
+                                                        ---
+                                                        if: one_path_hstr != 0
+                                                            c.WindowsDeleteString((cast: (HSTRING) one_path_hstr))
+                                                        ---
+                                                        c.__x_ABI_CWindows_CStorage_CIStorageItem_Release((cast: (@: __x_ABI_CWindows_CStorage_CIStorageItem) one_item))
+                                                    ---
+                                                    i2: i2 + 1
+                                                if: order_ok = 0
+                                                    failures: failures + 1
+                                                    c.printf("mixa share native smoke: multi-file attachment: DataPackageView items do not match the requested files in order\n")
+                                                else:
+                                                    c.printf("mixa share native smoke: multi-file attachment: DataPackageView holds exactly the 2 requested files, in order, read back from the source side\n")
+                                                ---
+                                            ---
+                                        ---
+                                    ---
+                                    c.__FIAsyncOperation_1___FIVectorView_1_Windows__CStorage__CIStorageItem_Release((cast: (@: __FIAsyncOperation_1___FIVectorView_1_Windows__CStorage__CIStorageItem) items_async_op))
+                                ---
+                                c.__x_ABI_CWindows_CApplicationModel_CDataTransfer_CIDataPackageView_Release((cast: (@: __x_ABI_CWindows_CApplicationModel_CDataTransfer_CIDataPackageView) dpv))
+                            ---
+                            c.__x_ABI_CWindows_CApplicationModel_CDataTransfer_CIDataPackage_Release((cast: (@: __x_ABI_CWindows_CApplicationModel_CDataTransfer_CIDataPackage) captured_pkg))
+                        ---
+                        i2: 0
+                        while: i2 < 20
+                            mixa_share_smoke_pump_once(@ fmsg[0])
+                            c.Sleep(50U)
+                            i2: i2 + 1
+                        c.keybd_event(27U, 0U, 0U, 0U)
+                        c.keybd_event(27U, 0U, 2U, 0U)
+                        i2: 0
+                        while: i2 < 20
+                            mixa_share_smoke_pump_once(@ fmsg[0])
+                            c.Sleep(50U)
+                            i2: i2 + 1
+                        ---
+                    else:
+                        failures: failures + 1
+                        c.printf("mixa share native smoke: multi-file attachment begin rc=%d (want OK)\n", st)
+                    ---
+                else:
+                    failures: failures + 1
+                    c.printf("mixa share native smoke: multi-file attachment set_files rc=%d (want OK, skipped=%llu)\n", st, (cast: (unsigned long long) out_skipped[0]))
+                ---
+                mixa_share_destroy(r2)
+            else:
+                failures: failures + 1
+                c.printf("mixa share native smoke: multi-file attachment create rc=%d (want OK)\n", st)
+            ---
+            c.DestroyWindow((cast: (HWND) hwnd))
+        ---
+        c.DeleteFileA(test_file_path)
+        c.DeleteFileA(test_file_path2)
+    ---
+
+    # Mid-chain failure (ticket 20260912-022300: "missing/invalid paths...
+    # must remain explicit"; also exercises the abort-after-partial-
+    # success branch in mixa_file_op_handler_invoke, releasing an already-
+    # resolved item rather than leaking it). Both paths pass
+    # mixa_share_set_files' own probe_file existence check at set_files()
+    # time (that pre-check only rejects what's missing/a directory BEFORE
+    # begin() ever runs, which is a real but different, pre-existing
+    # guarantee -- see mixa_share.lm1's mixa_share_set_files), then the
+    # SECOND file is deleted from disk before begin() so its async
+    # GetFileFromPathAsync resolution genuinely fails against the real OS,
+    # not a synthetic fault bit. The FIRST file resolves successfully
+    # before that happens, so this specifically proves the chain releases
+    # an already-resolved item on a later failure instead of leaking it or
+    # silently attaching just the first file.
+    if: mixa_share_smoke_make_test_file(test_file_path) = 0 || mixa_share_smoke_make_test_file(test_file_path3) = 0
+        failures: failures + 1
+        checks: checks + 1
+        c.printf("mixa share native smoke: mid-chain failure: could not create the test-owned files, cannot run\n")
+    else:
+        checks: checks + 1
+        hwnd: mixa_share_smoke_new_window(hinst)
+        if: hwnd = 0
+            failures: failures + 1
+            c.printf("mixa share native smoke: mid-chain failure: window creation failed, cannot run\n")
+        else:
+            st: mixa_share_create(@ r2, mixa_share_win32_table())
+            if: st = MIXA_SHARE_OK
+                mixa_share_set_text(r2, "mixa mid-chain failure smoke text")
+                file_paths[0]: test_file_path
+                file_paths[1]: test_file_path3
+                st: mixa_share_set_files(r2, file_paths, 2U, @ out_skipped[0])
+                if: st = MIXA_SHARE_OK
+                    # Deleted AFTER set_files' own probe_file existence
+                    # check already passed (both files were real at that
+                    # point), so the failure below comes from
+                    # GetFileFromPathAsync's own real, async lookup during
+                    # begin() -- exercising the chain's OWN abort logic,
+                    # not set_files' separate, pre-existing early check.
+                    c.DeleteFileA(test_file_path3)
+                    mixa_share_set_context(r2, hwnd)
+                    st: mixa_share_begin(r2)
+                    if: st = MIXA_SHARE_OK
+                        fev[0]: MIXA_SHARE_EVENT_PENDING
+                        i2: 0
+                        while: i2 < 100
+                            mixa_share_smoke_pump_once(@ fmsg[0])
+                            mixa_share_poll(r2, @ fev[0], @ fst[0])
+                            if: fev[0] != MIXA_SHARE_EVENT_PENDING
+                                break
+                            c.Sleep(50U)
+                            i2: i2 + 1
+                        checks: checks + 1
+                        if: fev[0] != MIXA_SHARE_EVENT_FAILED || fst[0] = MIXA_SHARE_OK
+                            failures: failures + 1
+                            c.printf("mixa share native smoke: mid-chain failure event=%d status=%d (want FAILED/non-OK -- the vanished second file must not be silently dropped) after %d iterations\n", fev[0], fst[0], i2)
+                        else:
+                            c.printf("mixa share native smoke: mid-chain failure correctly reported as FAILED, status=%d, after %d iterations\n", fst[0], i2)
+                        ---
+                        checks: checks + 1
+                        if: mixa_share_win32_test_get_iter_vend_count() != 0
+                            failures: failures + 1
+                            c.printf("mixa share native smoke: mid-chain failure vend_count=%d (want 0 -- SetStorageItems must never be called for an aborted chain)\n", mixa_share_win32_test_get_iter_vend_count())
+                        else:
+                            c.printf("mixa share native smoke: mid-chain failure correctly never reached SetStorageItems, vend_count=0\n")
+                        ---
+                    else:
+                        # Deletion happens strictly after set_files() and
+                        # begin() only registers/shows the share UI --
+                        # the DataRequested callback that actually
+                        # resolves files runs later, asynchronously, so a
+                        # begin() failure here is unrelated to the
+                        # deleted file and is a genuine test failure.
+                        failures: failures + 1
+                        c.printf("mixa share native smoke: mid-chain failure begin rc=%d (want OK -- deletion happens after set_files, begin() itself should be unaffected)\n", st)
+                    ---
+                else:
+                    # Both files were still real when set_files() probed
+                    # them (deletion happens after this call), so a
+                    # failure here is unrelated to the deleted-file
+                    # scenario under test and is a genuine test failure.
+                    failures: failures + 1
+                    c.printf("mixa share native smoke: mid-chain failure set_files rc=%d (want OK -- both files still exist at this point)\n", st)
+                ---
+                mixa_share_destroy(r2)
+            else:
+                failures: failures + 1
+                c.printf("mixa share native smoke: mid-chain failure create rc=%d (want OK)\n", st)
+            ---
+            c.DestroyWindow((cast: (HWND) hwnd))
+        ---
+        c.DeleteFileA(test_file_path)
+    ---
+
+    # Iterable/iterator lifetime contract (ticket 20260912-025800):
+    # deterministic, OS-independent regression proving a retained iterator
+    # stays valid after every other reference to its owning iterable --
+    # including the one that created it -- has been released, and that
+    # two independent iterators from the same iterable (First() called
+    # twice) do not interfere with each other. Uses one real, synchronously
+    # resolved IStorageItem* (no window, no Share UI, no dependency on the
+    # real DataPackage's own consumption timing) so this does not depend
+    # on how or when the actual OS chooses to walk a real share's iterable.
+    if: mixa_share_smoke_make_test_file(test_file_path) = 0
+        failures: failures + 1
+        checks: checks + 1
+        c.printf("mixa share native smoke: lifetime test: could not create the test-owned file, cannot run\n")
+    else:
+        checks: checks + 1
+        item_for_lifetime: 0
+        if: mixa_share_smoke_resolve_one_item_sync(test_file_path, @ item_for_lifetime) = 0
+            failures: failures + 1
+            c.printf("mixa share native smoke: lifetime test: could not synchronously resolve a real IStorageItem, cannot run\n")
+        else:
+            items_for_lifetime[0]: item_for_lifetime
+            iterable_lt: 0
+            lt_rc: mixa_share_win32_make_storage_item_iterable((cast: (@: void) items_for_lifetime), 1, @ iterable_lt)
+            if: lt_rc != MIXA_SHARE_OK || iterable_lt = 0
+                failures: failures + 1
+                c.printf("mixa share native smoke: lifetime test: make_storage_item_iterable failed rc=%d\n", lt_rc)
+                # Test-only cleanup gap (ticket 20260912-032000): the
+                # iterable never took ownership of this reference on a
+                # construction failure, so the test's own local copy is
+                # still ours to release here.
+                c.__x_ABI_CWindows_CStorage_CIStorageItem_Release((cast: (@: __x_ABI_CWindows_CStorage_CIStorageItem) item_for_lifetime))
+            else:
+                # Our own local reference to the resolved item is no
+                # longer needed -- the iterable took its OWN independent
+                # AddRef'd copy at construction (see
+                # mixa_share_win32_make_storage_item_iterable), so
+                # releasing this one must not affect the iterable's copy.
+                c.__x_ABI_CWindows_CStorage_CIStorageItem_Release((cast: (@: __x_ABI_CWindows_CStorage_CIStorageItem) item_for_lifetime))
+                iter1_lt: 0
+                iter2_lt: 0
+                hr: c.__FIIterable_1_Windows__CStorage__CIStorageItem_First((cast: (@: __FIIterable_1_Windows__CStorage__CIStorageItem) iterable_lt), (cast: (@@: __FIIterator_1_Windows__CStorage__CIStorageItem) @ iter1_lt))
+                if: hr != 0
+                    iter1_lt: 0
+                ---
+                hr: c.__FIIterable_1_Windows__CStorage__CIStorageItem_First((cast: (@: __FIIterable_1_Windows__CStorage__CIStorageItem) iterable_lt), (cast: (@@: __FIIterator_1_Windows__CStorage__CIStorageItem) @ iter2_lt))
+                if: hr != 0
+                    iter2_lt: 0
+                ---
+                checks: checks + 1
+                if: iter1_lt = 0 || iter2_lt = 0
+                    failures: failures + 1
+                    c.printf("mixa share native smoke: lifetime test: First() failed to produce two independent iterators\n")
+                    # Test-only cleanup gap (ticket 20260912-032000):
+                    # release whichever of the two DID succeed, plus the
+                    # creator's own reference to the iterable itself --
+                    # none of that is released on this failure path
+                    # otherwise.
+                    if: iter1_lt != 0
+                        c.__FIIterator_1_Windows__CStorage__CIStorageItem_Release((cast: (@: __FIIterator_1_Windows__CStorage__CIStorageItem) iter1_lt))
+                    ---
+                    if: iter2_lt != 0
+                        c.__FIIterator_1_Windows__CStorage__CIStorageItem_Release((cast: (@: __FIIterator_1_Windows__CStorage__CIStorageItem) iter2_lt))
+                    ---
+                    c.__FIIterable_1_Windows__CStorage__CIStorageItem_Release((cast: (@: __FIIterable_1_Windows__CStorage__CIStorageItem) iterable_lt))
+                else:
+                    # Release the CREATOR's own reference to the iterable
+                    # now, before touching either iterator -- each
+                    # iterator holds its own independent AddRef on the
+                    # iterable (taken in First()), so this must not free
+                    # it while either iterator can still reach it.
+                    c.__FIIterable_1_Windows__CStorage__CIStorageItem_Release((cast: (@: __FIIterable_1_Windows__CStorage__CIStorageItem) iterable_lt))
+                    checks: checks + 1
+                    has_cur_lt[0]: (cast: (char) 0)
+                    hr: c.__FIIterator_1_Windows__CStorage__CIStorageItem_get_HasCurrent((cast: (@: __FIIterator_1_Windows__CStorage__CIStorageItem) iter1_lt), (cast: (@: boolean) @ has_cur_lt[0]))
+                    cur_item_lt: 0
+                    if: hr = 0
+                        hr: c.__FIIterator_1_Windows__CStorage__CIStorageItem_get_Current((cast: (@: __FIIterator_1_Windows__CStorage__CIStorageItem) iter1_lt), (cast: (@@: __x_ABI_CWindows_CStorage_CIStorageItem) @ cur_item_lt))
+                    ---
+                    if: hr != 0 || has_cur_lt[0] = (cast: (char) 0) || cur_item_lt = 0
+                        failures: failures + 1
+                        c.printf("mixa share native smoke: lifetime test: iter1 unusable after the iterable's own creator-side reference was released (hr=%ld, has_current=%d, current=%p)\n", hr, (cast: (int) has_cur_lt[0]), cur_item_lt)
+                    else:
+                        c.__x_ABI_CWindows_CStorage_CIStorageItem_Release((cast: (@: __x_ABI_CWindows_CStorage_CIStorageItem) cur_item_lt))
+                        c.printf("mixa share native smoke: lifetime test: iter1 still valid after the iterable's creator-side reference was released\n")
+                    ---
+                    c.__FIIterator_1_Windows__CStorage__CIStorageItem_Release((cast: (@: __FIIterator_1_Windows__CStorage__CIStorageItem) iter1_lt))
+                    checks: checks + 1
+                    has_cur_lt[0]: (cast: (char) 0)
+                    hr: c.__FIIterator_1_Windows__CStorage__CIStorageItem_get_HasCurrent((cast: (@: __FIIterator_1_Windows__CStorage__CIStorageItem) iter2_lt), (cast: (@: boolean) @ has_cur_lt[0]))
+                    cur_item_lt: 0
+                    if: hr = 0
+                        hr: c.__FIIterator_1_Windows__CStorage__CIStorageItem_get_Current((cast: (@: __FIIterator_1_Windows__CStorage__CIStorageItem) iter2_lt), (cast: (@@: __x_ABI_CWindows_CStorage_CIStorageItem) @ cur_item_lt))
+                    ---
+                    if: hr != 0 || has_cur_lt[0] = (cast: (char) 0) || cur_item_lt = 0
+                        failures: failures + 1
+                        c.printf("mixa share native smoke: lifetime test: iter2 unusable after iter1 was released (hr=%ld, has_current=%d, current=%p) -- independent iterators must not interfere\n", hr, (cast: (int) has_cur_lt[0]), cur_item_lt)
+                    else:
+                        c.__x_ABI_CWindows_CStorage_CIStorageItem_Release((cast: (@: __x_ABI_CWindows_CStorage_CIStorageItem) cur_item_lt))
+                        c.printf("mixa share native smoke: lifetime test: iter2 still independently valid after iter1 was released\n")
+                    ---
+                    c.__FIIterator_1_Windows__CStorage__CIStorageItem_Release((cast: (@: __FIIterator_1_Windows__CStorage__CIStorageItem) iter2_lt))
+                ---
+            ---
+        ---
+        c.DeleteFileA(test_file_path)
+    ---
+
+    # File-op handler async lifetime boundaries (ticket 20260912-032000):
+    # "delayed completion after destroy" and "reentrant Cancel/cleanup"
+    # both rely on the SAME single mechanism -- mixa_file_op_handler_invoke
+    # checks self->owner_ctx and no-ops (returns without touching ctx or
+    # dereferencing async_info at all) once destroy() has nulled it, which
+    # is exactly what makes a callback firing reentrantly from INSIDE
+    # destroy()'s own IAsyncInfo::Cancel() call (or genuinely later, after
+    # destroy() has already returned) equally safe -- there is no separate
+    # code path for "reentrant" vs "delayed", so proving one deterministic
+    # instance of "owner_ctx already 0" proves both. No fake WinRT source
+    # needed for this specific check since the whole point is that
+    # async_info is never dereferenced on this path -- passing a
+    # deliberately invalid, non-null pointer for it and confirming no
+    # crash is itself part of the proof.
+    checks: checks + 1
+    handler_for_ac: (cast: (@: void) c.calloc(1U, c.sizeof(c.MixaFileOpHandlerObj)))
+    if: handler_for_ac = 0
+        failures: failures + 1
+        c.printf("mixa share native smoke: async lifetime: could not allocate a handler, cannot run\n")
+    else:
+        # refcount=1, owner_ctx left at calloc's zero default -- exactly
+        # the state mixa_share_win32_destroy leaves a file handler in
+        # right before Releasing it, whether that Release happens because
+        # destroy() ran first or because a genuinely late completion is
+        # what triggers this handler's own final Release.
+        handler_for_ac_typed: (cast: (@: MixaFileOpHandlerObj) handler_for_ac)
+        handler_for_ac_typed\refcount: 1
+        hr: mixa_file_op_handler_invoke(handler_for_ac, (cast: (@: void) 1), 1)
+        if: hr != -2147467259
+            failures: failures + 1
+            c.printf("mixa share native smoke: async lifetime: Invoke() on a detached handler returned hr=%ld (want E_FAIL, -2147467259)\n", hr)
+        else:
+            c.printf("mixa share native smoke: async lifetime: Invoke() on a detached (owner_ctx=0) handler safely no-opped without dereferencing async_info\n")
+        ---
+        mixa_file_op_handler_release(handler_for_ac)
+    ---
+
+    # Real-OS complement to the deterministic check above: begin() a real
+    # file-attaching share, then call destroy() IMMEDIATELY with no
+    # polling at all, racing this test against the real OS's own
+    # GetFileFromPathAsync completion. Whichever side wins that race --
+    # destroy() nulls owner_ctx and cancels first, or the real completion
+    # fires first and destroy() then tears down an already-finished
+    # request -- must not crash or hang. This is the one real WinRT path
+    # for this stage (deliberately not simulated), complementing rather
+    # than duplicating the deterministic check above.
+    if: mixa_share_smoke_make_test_file(test_file_path) = 0
+        failures: failures + 1
+        checks: checks + 1
+        c.printf("mixa share native smoke: async lifetime (real): could not create the test-owned file, cannot run\n")
+    else:
+        checks: checks + 1
+        hwnd: mixa_share_smoke_new_window(hinst)
+        if: hwnd = 0
+            failures: failures + 1
+            c.printf("mixa share native smoke: async lifetime (real): window creation failed, cannot run\n")
+        else:
+            st: mixa_share_create(@ r2, mixa_share_win32_table())
+            if: st = MIXA_SHARE_OK
+                mixa_share_set_text(r2, "mixa async lifetime race smoke text")
+                file_paths[0]: test_file_path
+                st: mixa_share_set_files(r2, file_paths, 1U, @ out_skipped[0])
+                if: st = MIXA_SHARE_OK
+                    mixa_share_set_context(r2, hwnd)
+                    st: mixa_share_begin(r2)
+                    if: st = MIXA_SHARE_OK
+                        # No polling at all -- destroy() races the real
+                        # async resolution deliberately.
+                        mixa_share_destroy(r2)
+                        i2: 0
+                        while: i2 < 20
+                            mixa_share_smoke_pump_once(@ fmsg[0])
+                            c.Sleep(50U)
+                            i2: i2 + 1
+                        c.printf("mixa share native smoke: async lifetime (real): destroy() raced against real async resolution without crashing\n")
+                    else:
+                        failures: failures + 1
+                        c.printf("mixa share native smoke: async lifetime (real): begin rc=%d (want OK)\n", st)
+                        mixa_share_destroy(r2)
+                    ---
+                else:
+                    failures: failures + 1
+                    c.printf("mixa share native smoke: async lifetime (real): set_files rc=%d (want OK, skipped=%llu)\n", st, (cast: (unsigned long long) out_skipped[0]))
+                    mixa_share_destroy(r2)
+                ---
+            else:
+                failures: failures + 1
+                c.printf("mixa share native smoke: async lifetime (real): create rc=%d (want OK)\n", st)
+            ---
+            c.DestroyWindow((cast: (HWND) hwnd))
+        ---
+        c.DeleteFileA(test_file_path)
+    ---
+
+    # --- fake async-op seam: the three named registration/cancellation
+    # transitions a real WinRT race cannot reliably force on demand
+    # (ticket 20260912-033900) --------------------------------------
+
+    # Scenario 1: put_Completed invokes the handler SYNCHRONOUSLY, before
+    # returning. Exercises the real mixa_file_op_handler_invoke (through
+    # the real SDK Invoke macro, called by our own fake put_Completed)
+    # with a deterministic result_status=Error (3) so it takes the
+    # failure branch, which is enough to prove every resource involved is
+    # torn down exactly once even when completion is as immediate as
+    # possible.
+    checks: checks + 1
+    fc_handler: 0
+    fc_op: 0
+    fc_pkg: 0
+    fc_defer_release: 0
+    fc_defer_complete: 0
+    fake_pkg_a: fake_unk_create(@ fc_pkg)
+    fake_defer_a: fake_defer_create(@ fc_defer_release, @ fc_defer_complete)
+    fake_op_a: fake_async_op_create(1, 0, 3, @ fc_op)
+    if: fake_pkg_a = 0 || fake_defer_a = 0 || fake_op_a = 0
+        failures: failures + 1
+        c.printf("mixa share native smoke: scenario1 (immediate completion): could not allocate fakes\n")
+    else:
+        r_a: 0
+        ctx_a: 0
+        handler_a: 0
+        if: mixa_share_smoke_make_async_lifetime_ctx(fake_pkg_a, fake_defer_a, fake_op_a, @ fc_handler, 1, 0, @ r_a, @ ctx_a, @ handler_a) = 0
+            failures: failures + 1
+            c.printf("mixa share native smoke: scenario1 (immediate completion): could not build ctx\n")
+        else:
+            # Registers the handler exactly like begin_file_resolution
+            # does; complete_synchronously=1 makes THIS call invoke the
+            # handler synchronously before returning.
+            c.__FIAsyncOperation_1_Windows__CStorage__CStorageFile_put_Completed((cast: (@: __FIAsyncOperation_1_Windows__CStorage__CStorageFile) fake_op_a), (cast: (@: __FIAsyncOperationCompletedHandler_1_Windows__CStorage__CStorageFile) handler_a))
+            checks: checks + 1
+            if: fc_handler != 1 || fc_op != 1 || fc_pkg != 1 || fc_defer_release != 1 || fc_defer_complete != 1
+                failures: failures + 1
+                c.printf("mixa share native smoke: scenario1 (immediate completion): exact-once cleanup failed (handler=%d op=%d pkg=%d defer_release=%d defer_complete=%d, want all 1)\n", fc_handler, fc_op, fc_pkg, fc_defer_release, fc_defer_complete)
+            else:
+                c.printf("mixa share native smoke: scenario1 (immediate completion): put_Completed's synchronous Invoke() cleaned up every resource exactly once\n")
+            ---
+            r_a_typed: (cast: (@: MixaShareRequest) r_a)
+            ctx_a_typed: (cast: (@: MixaShareWin32Ctx) ctx_a)
+            checks: checks + 1
+            if: ctx_a_typed\pending != 0 || ctx_a_typed\invoke_status != MIXA_SHARE_ERR_BACKEND
+                failures: failures + 1
+                c.printf("mixa share native smoke: scenario1 (immediate completion): ctx state pending=%d invoke_status=%d (want 0/ERR_BACKEND)\n", ctx_a_typed\pending, ctx_a_typed\invoke_status)
+            else:
+                c.printf("mixa share native smoke: scenario1 (immediate completion): ctx correctly reports the failed resolution\n")
+            ---
+            r_a_typed\impl: 0
+            c.free(ctx_a)
+            mixa_share_destroy(r_a)
+        ---
+    ---
+
+    # Scenario 2: IAsyncInfo::Cancel invokes the handler REENTRANTLY, from
+    # inside destroy()'s own Cancel() call, while ctx is still mid-
+    # teardown. Exercises the real mixa_share_win32_destroy (through the
+    # real portable mixa_share_destroy) end to end -- destroy() must null
+    # the handler's owner_ctx BEFORE calling Cancel() (already fixed, see
+    # item 1's own writeup) so the reentrant Invoke() takes the detached
+    # branch and destroy() remains the sole owner of every release.
+    checks: checks + 1
+    fc_handler: 0
+    fc_op: 0
+    fc_pkg: 0
+    fc_defer_release: 0
+    fc_defer_complete: 0
+    fake_pkg_a: fake_unk_create(@ fc_pkg)
+    fake_defer_a: fake_defer_create(@ fc_defer_release, @ fc_defer_complete)
+    fake_op_a: fake_async_op_create(0, 1, 3, @ fc_op)
+    if: fake_pkg_a = 0 || fake_defer_a = 0 || fake_op_a = 0
+        failures: failures + 1
+        c.printf("mixa share native smoke: scenario2 (reentrant cancel): could not allocate fakes\n")
+    else:
+        r_a: 0
+        ctx_a: 0
+        handler_a: 0
+        if: mixa_share_smoke_make_async_lifetime_ctx(fake_pkg_a, fake_defer_a, fake_op_a, @ fc_handler, 1, 0, @ r_a, @ ctx_a, @ handler_a) = 0
+            failures: failures + 1
+            c.printf("mixa share native smoke: scenario2 (reentrant cancel): could not build ctx\n")
+        else:
+            c.__FIAsyncOperation_1_Windows__CStorage__CStorageFile_put_Completed((cast: (@: __FIAsyncOperation_1_Windows__CStorage__CStorageFile) fake_op_a), (cast: (@: __FIAsyncOperationCompletedHandler_1_Windows__CStorage__CStorageFile) handler_a))
+            # destroy() nulls owner_ctx, then QueryInterface(IAsyncInfo)+
+            # Cancel()s our fake, which reentrantly invokes the handler
+            # from inside that Cancel() call -- ctx_a/r_a are both fully
+            # freed by the time this returns; nothing after this may
+            # touch either.
+            mixa_share_destroy(r_a)
+            checks: checks + 1
+            if: fc_handler != 1 || fc_op != 1 || fc_pkg != 1 || fc_defer_release != 1 || fc_defer_complete != 1
+                failures: failures + 1
+                c.printf("mixa share native smoke: scenario2 (reentrant cancel): exact-once cleanup failed (handler=%d op=%d pkg=%d defer_release=%d defer_complete=%d, want all 1)\n", fc_handler, fc_op, fc_pkg, fc_defer_release, fc_defer_complete)
+            else:
+                c.printf("mixa share native smoke: scenario2 (reentrant cancel): destroy() alone completed/released every resource exactly once despite the reentrant Invoke() from inside Cancel()\n")
+            ---
+        ---
+    ---
+
+    # Scenario 3: a completion delivered AFTER destroy() has already
+    # returned and freed ctx -- the "OS's own internal scheduler still
+    # holds the handler" case. An extra AddRef on the fake op (taken
+    # before destroy(), simulating that independent OS-side reference)
+    # keeps the fake -- and the handler it holds -- alive through
+    # destroy()'s own Release(ctx->file_op), which would otherwise free
+    # both immediately as part of destroy()'s normal cleanup. The
+    # "delayed" callback must find owner_ctx already detached (nulled by
+    # destroy() before it ever touched Cancel) without reading the
+    # now-freed ctx or async_info, and every reference must still balance
+    # exactly once the simulated OS reference is finally dropped too.
+    checks: checks + 1
+    fc_handler: 0
+    fc_op: 0
+    fc_pkg: 0
+    fc_defer_release: 0
+    fc_defer_complete: 0
+    fake_pkg_a: fake_unk_create(@ fc_pkg)
+    fake_defer_a: fake_defer_create(@ fc_defer_release, @ fc_defer_complete)
+    fake_op_a: fake_async_op_create(0, 0, 3, @ fc_op)
+    if: fake_pkg_a = 0 || fake_defer_a = 0 || fake_op_a = 0
+        failures: failures + 1
+        c.printf("mixa share native smoke: scenario3 (delayed after destroy): could not allocate fakes\n")
+    else:
+        r_a: 0
+        ctx_a: 0
+        handler_a: 0
+        if: mixa_share_smoke_make_async_lifetime_ctx(fake_pkg_a, fake_defer_a, fake_op_a, @ fc_handler, 1, 0, @ r_a, @ ctx_a, @ handler_a) = 0
+            failures: failures + 1
+            c.printf("mixa share native smoke: scenario3 (delayed after destroy): could not build ctx\n")
+        else:
+            c.__FIAsyncOperation_1_Windows__CStorage__CStorageFile_put_Completed((cast: (@: __FIAsyncOperation_1_Windows__CStorage__CStorageFile) fake_op_a), (cast: (@: __FIAsyncOperationCompletedHandler_1_Windows__CStorage__CStorageFile) handler_a))
+            c.__FIAsyncOperation_1_Windows__CStorage__CStorageFile_AddRef((cast: (@: __FIAsyncOperation_1_Windows__CStorage__CStorageFile) fake_op_a))
+            mixa_share_destroy(r_a)
+            checks: checks + 1
+            if: fc_pkg != 1 || fc_defer_release != 1 || fc_defer_complete != 1
+                failures: failures + 1
+                c.printf("mixa share native smoke: scenario3 (delayed after destroy): destroy() did not clean up package/deferral exactly once (pkg=%d defer_release=%d defer_complete=%d)\n", fc_pkg, fc_defer_release, fc_defer_complete)
+            else:
+                c.printf("mixa share native smoke: scenario3 (delayed after destroy): destroy() correctly cleaned up package/deferral even with the async op still retained\n")
+            ---
+            checks: checks + 1
+            if: fc_handler != 0 || fc_op != 0
+                failures: failures + 1
+                c.printf("mixa share native smoke: scenario3 (delayed after destroy): handler/op freed too early by destroy() alone (handler=%d op=%d, want both still 0 -- the extra retained reference should have kept them alive)\n", fc_handler, fc_op)
+            else:
+                c.printf("mixa share native smoke: scenario3 (delayed after destroy): handler/op correctly still alive after destroy(), retained by the simulated OS reference\n")
+            ---
+            hr: c.__FIAsyncOperationCompletedHandler_1_Windows__CStorage__CStorageFile_Invoke((cast: (@: __FIAsyncOperationCompletedHandler_1_Windows__CStorage__CStorageFile) handler_a), (cast: (@: __FIAsyncOperation_1_Windows__CStorage__CStorageFile) fake_op_a), 1)
+            checks: checks + 1
+            if: hr != -2147467259 || fc_handler != 0
+                failures: failures + 1
+                c.printf("mixa share native smoke: scenario3 (delayed after destroy): delayed callback hr=%ld handler_free=%d (want E_FAIL/-2147467259 and still 0 -- must not read freed ctx or release early)\n", hr, fc_handler)
+            else:
+                c.printf("mixa share native smoke: scenario3 (delayed after destroy): delayed callback correctly found owner_ctx already detached, no premature release\n")
+            ---
+            c.__FIAsyncOperation_1_Windows__CStorage__CStorageFile_Release((cast: (@: __FIAsyncOperation_1_Windows__CStorage__CStorageFile) fake_op_a))
+            checks: checks + 1
+            if: fc_handler != 1 || fc_op != 1
+                failures: failures + 1
+                c.printf("mixa share native smoke: scenario3 (delayed after destroy): final release handler_free=%d op_free=%d (want both 1)\n", fc_handler, fc_op)
+            else:
+                c.printf("mixa share native smoke: scenario3 (delayed after destroy): handler and fake op both released exactly once after the simulated delayed OS cleanup\n")
+            ---
+        ---
+    ---
+
+    # Scenario 4: mid-chain resolved-item Release-balance (ticket
+    # 20260912-043851 item 2). The existing real-OS mid-chain-failure
+    # test (above) proves vend_count=0 -- SetStorageItems was never
+    # enumerated -- but that alone does not prove the already-resolved
+    # FIRST item's own IStorageItem reference was actually released
+    # rather than merely never handed to the OS. Simulates "file 1
+    # already resolved, file 2 about to fail" directly and
+    # deterministically: a real interface-shaped fake item (reusing
+    # FakeUnkObj's bare 3-slot shape -- the abort loop only ever calls
+    # Release() on pending_items[i], exactly what FakeUnkObj answers) is
+    # placed at pending_items[0] by the test helper BEFORE any Invoke()
+    # call runs, with pending_item_total=2/pending_item_next=1 --
+    # matching exactly what the chain's own bookkeeping looks like right
+    # after a real first file resolves and before a real second one
+    # fails. A single synchronous put_Completed (GetResults always fails
+    # on this fake, matching "file 2's resolution failed") then drives
+    # the production abort loop directly, with every one of the five
+    # resources it tears down (item, handler, op, package, deferral)
+    # independently observable via its own external free_counter. The
+    # existing real-OS delete-second-file test is kept as complementary
+    # coverage, not replaced -- this one adds the specific evidence that
+    # was missing, deterministically.
+    checks: checks + 1
+    fc_handler: 0
+    fc_op: 0
+    fc_pkg: 0
+    fc_defer_release: 0
+    fc_defer_complete: 0
+    fc_item1: 0
+    fake_pkg_a: fake_unk_create(@ fc_pkg)
+    fake_defer_a: fake_defer_create(@ fc_defer_release, @ fc_defer_complete)
+    fake_op_a: fake_async_op_create(1, 0, 3, @ fc_op)
+    fake_item1: fake_unk_create(@ fc_item1)
+    if: fake_pkg_a = 0 || fake_defer_a = 0 || fake_op_a = 0 || fake_item1 = 0
+        failures: failures + 1
+        c.printf("mixa share native smoke: scenario4 (mid-chain item release): could not allocate fakes\n")
+    else:
+        r_a: 0
+        ctx_a: 0
+        handler_a: 0
+        if: mixa_share_smoke_make_async_lifetime_ctx(fake_pkg_a, fake_defer_a, fake_op_a, @ fc_handler, 2, fake_item1, @ r_a, @ ctx_a, @ handler_a) = 0
+            failures: failures + 1
+            c.printf("mixa share native smoke: scenario4 (mid-chain item release): could not build ctx\n")
+        else:
+            # complete_synchronously=1: this one call resolves "file 2",
+            # which always fails (fake_ao_get_results never succeeds),
+            # so Invoke() takes the abort branch and releases
+            # pending_items[0] (fake_item1) as part of the same
+            # synchronous call.
+            c.__FIAsyncOperation_1_Windows__CStorage__CStorageFile_put_Completed((cast: (@: __FIAsyncOperation_1_Windows__CStorage__CStorageFile) fake_op_a), (cast: (@: __FIAsyncOperationCompletedHandler_1_Windows__CStorage__CStorageFile) handler_a))
+            checks: checks + 1
+            if: fc_handler != 1 || fc_op != 1 || fc_pkg != 1 || fc_defer_release != 1 || fc_defer_complete != 1 || fc_item1 != 1
+                failures: failures + 1
+                c.printf("mixa share native smoke: scenario4 (mid-chain item release): exact-once cleanup failed (handler=%d op=%d pkg=%d defer_release=%d defer_complete=%d item1=%d, want all 1)\n", fc_handler, fc_op, fc_pkg, fc_defer_release, fc_defer_complete, fc_item1)
+            else:
+                c.printf("mixa share native smoke: scenario4 (mid-chain item release): already-resolved first item released exactly once, alongside every other resource, when the second file failed\n")
+            ---
+            r_a_typed: (cast: (@: MixaShareRequest) r_a)
+            ctx_a_typed: (cast: (@: MixaShareWin32Ctx) ctx_a)
+            checks: checks + 1
+            if: ctx_a_typed\pending != 0 || ctx_a_typed\invoke_status != MIXA_SHARE_ERR_BACKEND
+                failures: failures + 1
+                c.printf("mixa share native smoke: scenario4 (mid-chain item release): ctx state pending=%d invoke_status=%d (want 0/ERR_BACKEND)\n", ctx_a_typed\pending, ctx_a_typed\invoke_status)
+            else:
+                c.printf("mixa share native smoke: scenario4 (mid-chain item release): ctx correctly reports the failed chain\n")
+            ---
+            r_a_typed\impl: 0
+            c.free(ctx_a)
+            mixa_share_destroy(r_a)
+        ---
+    ---
+
+    # Unicode-native file attachment (ticket 20260912-043851 item 1): a
+    # real test-owned file whose NAME contains a genuine non-ASCII code
+    # point (not just a space/apostrophe), created with CreateFileW so
+    # fixture creation does not depend on the active ANSI code page.
+    # Exercises the exact same real WinRT StorageFile -> IStorageItem ->
+    # SetStorageItems path as the earlier single-file test, plus the same
+    # source-side DataPackageView readback the multi-file test already
+    # uses -- proving the Unicode path survives UTF-8 -> wide -> HSTRING
+    # -> real OS resolution -> real DataPackage storage -> readback
+    # intact, not just that SOME file attached successfully.
+    if: mixa_share_smoke_make_unicode_test_file(unicode_test_file_path) = 0
+        failures: failures + 1
+        checks: checks + 1
+        c.printf("mixa share native smoke: unicode attachment: could not create the Unicode-named test-owned file, cannot run\n")
+    else:
+        checks: checks + 1
+        hwnd: mixa_share_smoke_new_window(hinst)
+        if: hwnd = 0
+            failures: failures + 1
+            c.printf("mixa share native smoke: unicode attachment: window creation failed, cannot run\n")
+        else:
+            st: mixa_share_create(@ r2, mixa_share_win32_table())
+            if: st = MIXA_SHARE_OK
+                mixa_share_set_text(r2, "mixa unicode attachment smoke text")
+                file_paths[0]: unicode_test_file_path
+                st: mixa_share_set_files(r2, file_paths, 1U, @ out_skipped[0])
+                if: st = MIXA_SHARE_OK
+                    mixa_share_test_set_force_fail(r2, MIXA_SHARE_TEST_CAPTURE_PACKAGE)
+                    mixa_share_set_context(r2, hwnd)
+                    st: mixa_share_begin(r2)
+                    if: st = MIXA_SHARE_OK
+                        fev[0]: MIXA_SHARE_EVENT_PENDING
+                        i2: 0
+                        while: i2 < 100
+                            mixa_share_smoke_pump_once(@ fmsg[0])
+                            mixa_share_poll(r2, @ fev[0], @ fst[0])
+                            if: fev[0] != MIXA_SHARE_EVENT_PENDING
+                                break
+                            c.Sleep(50U)
+                            i2: i2 + 1
+                        checks: checks + 1
+                        if: fev[0] != MIXA_SHARE_EVENT_HANDED_OFF || fst[0] != MIXA_SHARE_OK
+                            failures: failures + 1
+                            c.printf("mixa share native smoke: unicode attachment event=%d status=%d (want HANDED_OFF/OK) after %d iterations\n", fev[0], fst[0], i2)
+                        else:
+                            c.printf("mixa share native smoke: unicode attachment handed off after %d iterations\n", i2)
+                        ---
+                        checks: checks + 1
+                        if: mixa_share_win32_test_get_iter_vend_count() < 1
+                            failures: failures + 1
+                            c.printf("mixa share native smoke: unicode attachment vend_count=%d (want >= 1 -- DataPackage never actually walked our IIterable)\n", mixa_share_win32_test_get_iter_vend_count())
+                        else:
+                            c.printf("mixa share native smoke: unicode attachment DataPackage actually walked our IIterable, vend_count=%d\n", mixa_share_win32_test_get_iter_vend_count())
+                        ---
+                        checks: checks + 1
+                        captured_pkg_u: 0
+                        if: mixa_share_win32_test_take_last_package(@ captured_pkg_u) = 0 || captured_pkg_u = 0
+                            failures: failures + 1
+                            c.printf("mixa share native smoke: unicode attachment: no package was captured for readback\n")
+                        else:
+                            dpv_u: 0
+                            hr: c.__x_ABI_CWindows_CApplicationModel_CDataTransfer_CIDataPackage_GetView((cast: (@: __x_ABI_CWindows_CApplicationModel_CDataTransfer_CIDataPackage) captured_pkg_u), (cast: (@@: __x_ABI_CWindows_CApplicationModel_CDataTransfer_CIDataPackageView) @ dpv_u))
+                            if: hr != 0 || dpv_u = 0
+                                failures: failures + 1
+                                c.printf("mixa share native smoke: unicode attachment: GetView failed hr=%ld\n", hr)
+                            else:
+                                items_async_op_u: 0
+                                hr: c.__x_ABI_CWindows_CApplicationModel_CDataTransfer_CIDataPackageView_GetStorageItemsAsync((cast: (@: __x_ABI_CWindows_CApplicationModel_CDataTransfer_CIDataPackageView) dpv_u), (cast: (@@: __FIAsyncOperation_1___FIVectorView_1_Windows__CStorage__CIStorageItem) @ items_async_op_u))
+                                if: hr != 0 || items_async_op_u = 0
+                                    failures: failures + 1
+                                    c.printf("mixa share native smoke: unicode attachment: GetStorageItemsAsync failed hr=%ld\n", hr)
+                                else:
+                                    items_async_info_u: 0
+                                    hr: c.__FIAsyncOperation_1___FIVectorView_1_Windows__CStorage__CIStorageItem_QueryInterface((cast: (@: __FIAsyncOperation_1___FIVectorView_1_Windows__CStorage__CIStorageItem) items_async_op_u), (cast: (const: @(IID)) @ c.IID_IAsyncInfo), @ items_async_info_u)
+                                    items_status_out_u[0]: 0
+                                    if: hr = 0 && items_async_info_u != 0
+                                        i2: 0
+                                        while: i2 < 100
+                                            mixa_share_smoke_pump_once(@ fmsg[0])
+                                            hr: c.IAsyncInfo_get_Status((cast: (@: IAsyncInfo) items_async_info_u), (cast: (@: AsyncStatus) @ items_status_out_u[0]))
+                                            if: hr = 0 && items_status_out_u[0] != 0
+                                                break
+                                            c.Sleep(20U)
+                                            i2: i2 + 1
+                                        c.IAsyncInfo_Release((cast: (@: IAsyncInfo) items_async_info_u))
+                                    ---
+                                    if: items_status_out_u[0] != 1
+                                        failures: failures + 1
+                                        c.printf("mixa share native smoke: unicode attachment: GetStorageItemsAsync did not complete successfully, status=%d\n", items_status_out_u[0])
+                                    else:
+                                        items_vector_u: 0
+                                        hr: c.__FIAsyncOperation_1___FIVectorView_1_Windows__CStorage__CIStorageItem_GetResults((cast: (@: __FIAsyncOperation_1___FIVectorView_1_Windows__CStorage__CIStorageItem) items_async_op_u), (cast: (@@: __FIVectorView_1_Windows__CStorage__CIStorageItem) @ items_vector_u))
+                                        if: hr != 0 || items_vector_u = 0
+                                            failures: failures + 1
+                                            c.printf("mixa share native smoke: unicode attachment: GetResults(vector) failed hr=%ld\n", hr)
+                                        else:
+                                            items_size_u[0]: 0U
+                                            c.__FIVectorView_1_Windows__CStorage__CIStorageItem_get_Size((cast: (@: __FIVectorView_1_Windows__CStorage__CIStorageItem) items_vector_u), @ items_size_u[0])
+                                            if: items_size_u[0] != 1U
+                                                failures: failures + 1
+                                                c.printf("mixa share native smoke: unicode attachment: DataPackageView holds %u items (want 1)\n", items_size_u[0])
+                                            else:
+                                                one_item_u: 0
+                                                c.__FIVectorView_1_Windows__CStorage__CIStorageItem_GetAt((cast: (@: __FIVectorView_1_Windows__CStorage__CIStorageItem) items_vector_u), 0U, (cast: (@@: __x_ABI_CWindows_CStorage_CIStorageItem) @ one_item_u))
+                                                if: one_item_u = 0
+                                                    failures: failures + 1
+                                                    c.printf("mixa share native smoke: unicode attachment: GetAt(0) returned no item\n")
+                                                else:
+                                                    one_path_hstr_u: 0
+                                                    c.__x_ABI_CWindows_CStorage_CIStorageItem_get_Path((cast: (@: __x_ABI_CWindows_CStorage_CIStorageItem) one_item_u), (cast: (@: void) @ one_path_hstr_u))
+                                                    unicode_path_wide: mixa_share_win32_utf8_to_wide(unicode_test_file_path)
+                                                    if: one_path_hstr_u = 0 || unicode_path_wide = 0 || c.wcscmp((cast: (const: @(wchar_t)) unicode_path_wide), c.WindowsGetStringRawBuffer((cast: (HSTRING) one_path_hstr_u), 0)) != 0
+                                                        failures: failures + 1
+                                                        c.printf("mixa share native smoke: unicode attachment: DataPackageView StorageItem Path does not equal the requested Unicode path\n")
+                                                    else:
+                                                        c.printf("mixa share native smoke: unicode attachment: DataPackageView StorageItem Path equals the requested Unicode path, read back from the source side\n")
+                                                    ---
+                                                    if: unicode_path_wide != 0
+                                                        c.free(unicode_path_wide)
+                                                    ---
+                                                    if: one_path_hstr_u != 0
+                                                        c.WindowsDeleteString((cast: (HSTRING) one_path_hstr_u))
+                                                    ---
+                                                    c.__x_ABI_CWindows_CStorage_CIStorageItem_Release((cast: (@: __x_ABI_CWindows_CStorage_CIStorageItem) one_item_u))
+                                                ---
+                                            ---
+                                        ---
+                                    ---
+                                    c.__FIAsyncOperation_1___FIVectorView_1_Windows__CStorage__CIStorageItem_Release((cast: (@: __FIAsyncOperation_1___FIVectorView_1_Windows__CStorage__CIStorageItem) items_async_op_u))
+                                ---
+                                c.__x_ABI_CWindows_CApplicationModel_CDataTransfer_CIDataPackageView_Release((cast: (@: __x_ABI_CWindows_CApplicationModel_CDataTransfer_CIDataPackageView) dpv_u))
+                            ---
+                            c.__x_ABI_CWindows_CApplicationModel_CDataTransfer_CIDataPackage_Release((cast: (@: __x_ABI_CWindows_CApplicationModel_CDataTransfer_CIDataPackage) captured_pkg_u))
+                        ---
+                        i2: 0
+                        while: i2 < 20
+                            mixa_share_smoke_pump_once(@ fmsg[0])
+                            c.Sleep(50U)
+                            i2: i2 + 1
+                        c.keybd_event(27U, 0U, 0U, 0U)
+                        c.keybd_event(27U, 0U, 2U, 0U)
+                        i2: 0
+                        while: i2 < 20
+                            mixa_share_smoke_pump_once(@ fmsg[0])
+                            c.Sleep(50U)
+                            i2: i2 + 1
+                        ---
+                    else:
+                        failures: failures + 1
+                        c.printf("mixa share native smoke: unicode attachment begin rc=%d (want OK)\n", st)
+                    ---
+                else:
+                    failures: failures + 1
+                    c.printf("mixa share native smoke: unicode attachment set_files rc=%d (want OK, skipped=%llu)\n", st, (cast: (unsigned long long) out_skipped[0]))
+                ---
+                mixa_share_destroy(r2)
+            else:
+                failures: failures + 1
+                c.printf("mixa share native smoke: unicode attachment create rc=%d (want OK)\n", st)
+            ---
+            c.DestroyWindow((cast: (HWND) hwnd))
+        ---
+        unicode_path_wide: mixa_share_win32_utf8_to_wide(unicode_test_file_path)
+        if: unicode_path_wide != 0
+            c.DeleteFileW((cast: (const: @(wchar_t)) unicode_path_wide))
+            c.free(unicode_path_wide)
+        ---
+    ---
+
+    # Final confirmation, through the same retry-protected path as every
+    # other real invocation above (this used to be a standalone one-shot
+    # call with no retry; observed to flake with the exact same symptom
+    # documented in mixa_share.txt once the earlier tests started using
+    # fresh windows and retries -- treating it any differently would just
+    # mean this ticket's evidence depends on which test happens to run
+    # last, which is not a meaningful distinction).
+    mixa_share_smoke_run_fault(hinst, 0, @ fev[0], @ fst[0])
+    checks: checks + 1
+    if: fev[0] != MIXA_SHARE_EVENT_HANDED_OFF || fst[0] != MIXA_SHARE_OK
+        failures: failures + 1
+        c.printf("mixa share native smoke: DataRequested never handed off (event=%d status=%d)\n", fev[0], fst[0])
+    else:
+        c.printf("mixa share native smoke: DataRequested handed off (final confirmation)\n")
+    ---
+
+    if: failures = 0
+        c.printf("mixa share native smoke: ok\n")
+    else:
+        c.printf("mixa share native smoke: %d FAILURES\n", failures)
+return: failures

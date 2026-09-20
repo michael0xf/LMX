@@ -1,0 +1,18 @@
+include: "<stddef.h>"
+predef: "mixa_manager/mixa_core.h.lm1"
+
+define: MIXA_DRAW_OK 0
+define: MIXA_DRAW_ERR 1
+define: MIXA_DRAW_SINGLE 0
+define: MIXA_DRAW_DOUBLE 1
+define: MIXA_DRAW_HORIZ 0
+define: MIXA_DRAW_VERT 1
+define: MIXA_DRAW_KEEP_BG 0x100U
+
+prototype:
+    fn: mixa_draw_utf8_next (@: char s; @: unsigned out_cp) @: char
+    fn: mixa_draw_text (@: MixaTextRect rect; size_t: row; size_t: col; const: @(char text); unsigned: fg; unsigned: bg; unsigned: flags; unsigned: alpha) int
+    fn: mixa_draw_fill (@: MixaTextRect rect; size_t: row; size_t: col; size_t: nrows; size_t: ncols; unsigned: codepoint; unsigned: fg; unsigned: bg; unsigned: flags; unsigned: alpha) int
+    fn: mixa_draw_line (@: MixaTextRect rect; size_t: row; size_t: col; size_t: len; int: orient; int: style; unsigned: fg; unsigned: bg; unsigned: flags; unsigned: alpha) int
+    fn: mixa_draw_frame (@: MixaTextRect rect; size_t: row; size_t: col; size_t: nrows; size_t: ncols; int: style; unsigned: fg; unsigned: bg; unsigned: flags; unsigned: alpha) int
+end: prototype

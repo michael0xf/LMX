@@ -1,0 +1,29 @@
+include: "<stddef.h>"
+predef: "mixa_manager/mixa_backend.h.lm1"
+predef: "mixa_manager/mixa_app_geometry.h.lm1"
+predef: "mixa_manager/mixa_core.h.lm1"
+predef: "mixa_manager/mixa_app_fmpanel.h.lm1"
+
+define: MIXA_APP_CONTROLLER_OK 0
+define: MIXA_APP_CONTROLLER_ERR_ARG 1
+define: MIXA_APP_CONTROLLER_ERR_OPEN 2
+
+type: MixaAppController struct MixaAppController
+
+prototype:
+    fn: mixa_app_controller_open (@@: MixaAppController out; const: @(MixaBackendVTable vt); const: @(char root_utf8)) int
+    fn: mixa_app_controller_step (@: MixaAppController c; @: int out_had_error) int
+    fn: mixa_app_controller_running (const: @(MixaAppController c)) int
+    fn: mixa_app_controller_close (@: MixaAppController c) void
+    fn: mixa_app_controller_backend (const: @(MixaAppController c)) @: MixaBackend
+    fn: mixa_app_controller_text_rect (const: @(MixaAppController c)) const: @(MixaTextRect)
+    fn: mixa_app_controller_upper_rect (const: @(MixaAppController c)) const: @(MixaTextRect)
+    fn: mixa_app_controller_command_running (const: @(MixaAppController c)) int
+    fn: mixa_app_controller_last_exit_code (const: @(MixaAppController c)) int
+    fn: mixa_app_controller_cwd (const: @(MixaAppController c)) const: @(char)
+    fn: mixa_app_controller_cursor_row (const: @(MixaAppController c)) size_t
+    fn: mixa_app_controller_cursor_col (const: @(MixaAppController c)) size_t
+    fn: mixa_app_controller_file_size (const: @(MixaAppController c)) size_t
+    fn: mixa_app_controller_fm (const: @(MixaAppController c)) @: MixaFm
+    fn: mixa_app_controller_fmpanel (const: @(MixaAppController c)) @: MixaAppFmPanel
+end: prototype

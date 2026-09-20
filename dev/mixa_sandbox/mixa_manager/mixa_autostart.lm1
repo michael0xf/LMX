@@ -1,0 +1,134 @@
+predef: "mixa_manager/mixa_autostart.h.lm1"
+include: "<stdlib.h>" "<string.h>" "<windows.h>"
+
+# mixa_autostart.lm1 — HKCU Run key registration (ticket 20260918-125450).
+# Replaces the incomplete prior draft (no struct body, on_boot + malloc LmxMsg).
+
+fn: mixa_autostart_utf8_to_wide (const: @(char s_utf8)) @: wchar_t
+    int: nwide
+    @: wchar_t wbuf
+    if: s_utf8 = 0
+        return: 0
+    nwide: c.MultiByteToWideChar(65001, 0U, s_utf8, -1, 0, 0)
+    if: nwide <= 0
+        return: 0
+    wbuf: (cast: (@: wchar_t) c.calloc((cast: (size_t) nwide), c.sizeof(c.wchar_t)))
+    if: wbuf = 0
+        return: 0
+    if: c.MultiByteToWideChar(65001, 0U, s_utf8, -1, wbuf, nwide) = 0
+        c.free(wbuf)
+        return: 0
+    ---
+return: wbuf
+
+fn: mixa_autostart_value_name (const: @(char value_name_utf8)) const: @(char)
+    if: value_name_utf8 = 0
+        return: "MixaClearShell"
+    if: value_name_utf8[0] = 0
+        return: "MixaClearShell"
+return: value_name_utf8
+
+fn: mixa_autostart_init (const: @(char exe_path_utf8); const: @(char value_name_utf8)) int
+    @: wchar_t wpath
+    @: wchar_t wname
+    @: wchar_t wsub
+    @: void hkey
+    []: (@: void) hslot 1
+    []: ulong dslot 1
+    int: ok
+    size_t: bytes
+    const: @(char vname)
+    @: void hkcu
+    if: exe_path_utf8 = 0 || exe_path_utf8[0] = 0
+        return: MIXA_AUTOSTART_ERR_ARG
+    ---
+    vname: mixa_autostart_value_name(value_name_utf8)
+    wpath: mixa_autostart_utf8_to_wide(exe_path_utf8)
+    if: wpath = 0
+        return: MIXA_AUTOSTART_ERR_NOMEM
+    ---
+    wname: mixa_autostart_utf8_to_wide(vname)
+    if: wname = 0
+        c.free(wpath)
+        return: MIXA_AUTOSTART_ERR_NOMEM
+    ---
+    wsub: mixa_autostart_utf8_to_wide("Software\\Microsoft\\Windows\\CurrentVersion\\Run")
+    if: wsub = 0
+        c.free(wpath)
+        c.free(wname)
+        return: MIXA_AUTOSTART_ERR_NOMEM
+    ---
+    # HKEY_CURRENT_USER = (HKEY)(ULONG_PTR)0x80000001
+    hkcu: (cast: (@: void) (cast: (size_t) 2147483649U))
+    hslot[0]: 0
+    dslot[0]: 0U
+    # KEY_SET_VALUE|KEY_QUERY_VALUE = 3; REG_OPTION_NON_VOLATILE = 0
+    ok: c.RegCreateKeyExW(hkcu, wsub, 0U, 0, 0U, 3U, 0, (cast: (@: void) hslot), dslot)
+    if: ok != 0
+        c.free(wpath)
+        c.free(wname)
+        c.free(wsub)
+        return: MIXA_AUTOSTART_ERR_IO
+    ---
+    hkey: hslot[0]
+    bytes: (c.wcslen(wpath) + 1U) * c.sizeof(c.wchar_t)
+    # REG_SZ = 1
+    ok: c.RegSetValueExW(hkey, wname, 0U, 1U, (cast: (const: @: void) wpath), (cast: (ulong) bytes))
+    c.RegCloseKey(hkey)
+    c.free(wpath)
+    c.free(wname)
+    c.free(wsub)
+    if: ok != 0
+        return: MIXA_AUTOSTART_ERR_IO
+    ---
+return: MIXA_AUTOSTART_OK
+
+fn: mixa_autostart_is_running (const: @(char value_name_utf8); @: int out_registered) int
+    @: wchar_t wname
+    @: wchar_t wsub
+    @: void hkey
+    []: (@: void) hslot 1
+    @: void hkcu
+    []: ulong tslot 1
+    []: ulong cslot 1
+    int: ok
+    const: @(char vname)
+    if: out_registered = 0
+        return: MIXA_AUTOSTART_ERR_ARG
+    out_registered[0]: 0
+    vname: mixa_autostart_value_name(value_name_utf8)
+    wname: mixa_autostart_utf8_to_wide(vname)
+    if: wname = 0
+        return: MIXA_AUTOSTART_ERR_NOMEM
+    ---
+    wsub: mixa_autostart_utf8_to_wide("Software\\Microsoft\\Windows\\CurrentVersion\\Run")
+    if: wsub = 0
+        c.free(wname)
+        return: MIXA_AUTOSTART_ERR_NOMEM
+    ---
+    hkcu: (cast: (@: void) (cast: (size_t) 2147483649U))
+    hslot[0]: 0
+    # KEY_QUERY_VALUE = 1
+    ok: c.RegOpenKeyExW(hkcu, wsub, 0U, 1U, (cast: (@: void) hslot))
+    if: ok != 0
+        c.free(wname)
+        c.free(wsub)
+        return: MIXA_AUTOSTART_OK
+    ---
+    hkey: hslot[0]
+    tslot[0]: 0U
+    cslot[0]: 0U
+    ok: c.RegQueryValueExW(hkey, wname, 0, tslot, 0, cslot)
+    c.RegCloseKey(hkey)
+    c.free(wname)
+    c.free(wsub)
+    if: ok = 0
+        out_registered[0]: 1
+        return: MIXA_AUTOSTART_OK
+    ---
+    # ERROR_FILE_NOT_FOUND = 2 → not registered
+    if: ok = 2
+        return: MIXA_AUTOSTART_OK
+    ---
+return: MIXA_AUTOSTART_ERR_IO
+

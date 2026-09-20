@@ -1,0 +1,18 @@
+include: "<stddef.h>"
+
+define: MIXA_APP_PATH_OK 0
+define: MIXA_APP_PATH_ERR_ARG 1
+define: MIXA_APP_PATH_ERR_NOMEM 2
+define: MIXA_APP_PATH_ERR_OVERFLOW 3
+
+fnptr: MixaAppPathFaultFn (@: void ctx; size_t: requested_size) int
+
+struct: MixaAppPathFaultVTable
+    MixaAppPathFaultFn: on_alloc
+    @: void ctx
+end: MixaAppPathFaultVTable
+
+prototype:
+    fn: mixa_app_path_total (size_t: a_len; size_t: b_len; @: size_t out_total) int
+    fn: mixa_app_path_join (const: @(char a); const: @(char b); const: @(MixaAppPathFaultVTable fault); @@: char out) int
+end: prototype

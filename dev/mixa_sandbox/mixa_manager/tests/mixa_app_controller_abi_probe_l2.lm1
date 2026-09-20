@@ -1,0 +1,45 @@
+# ABI parity guard — L1 port of mixa_app_controller_abi_probe_l2.c (ticket 20260918-082421).
+# offsetof is a C macro with no L1 spelling (c. pastes a call, not a preprocessor
+# name). Field offsets are computed at run time via pointer arithmetic on a local
+# store (same pattern as l2src/lmx_message_selftest.lm1). Output format strings
+# are kept byte-identical to the C probe so L2-vs-real parity still diffs stdout.
+predef: "mixa_manager/mixa_app_controller_l2.h.lm1"
+include: "<stdio.h>"
+
+fn: main () int
+    MixaAppController: store0
+    @: MixaAppController p0
+    p0: @ store0
+
+    c.printf("MixaAppController sizeof=%zu\n", c.sizeof(c.MixaAppController))
+    c.printf("MixaAppController root=%zu\n", (cast: (size_t) @ p0\root) - (cast: (size_t) p0))
+    c.printf("MixaAppController loop=%zu\n", (cast: (size_t) @ p0\loop) - (cast: (size_t) p0))
+    c.printf("MixaAppController m=%zu\n", (cast: (size_t) @ p0\m) - (cast: (size_t) p0))
+    c.printf("MixaAppController ev=%zu\n", (cast: (size_t) @ p0\ev) - (cast: (size_t) p0))
+    c.printf("MixaAppController av=%zu\n", (cast: (size_t) @ p0\av) - (cast: (size_t) p0))
+    c.printf("MixaAppController vt=%zu\n", (cast: (size_t) @ p0\vt) - (cast: (size_t) p0))
+    c.printf("MixaAppController console_path=%zu\n", (cast: (size_t) @ p0\console_path) - (cast: (size_t) p0))
+    c.printf("MixaAppController console_file=%zu\n", (cast: (size_t) @ p0\console_file) - (cast: (size_t) p0))
+    c.printf("MixaAppController console_file_append=%zu\n", (cast: (size_t) @ p0\console_file_append) - (cast: (size_t) p0))
+    c.printf("MixaAppController view=%zu\n", (cast: (size_t) @ p0\view) - (cast: (size_t) p0))
+    c.printf("MixaAppController text_rect=%zu\n", (cast: (size_t) @ p0\text_rect) - (cast: (size_t) p0))
+    c.printf("MixaAppController upper_rect=%zu\n", (cast: (size_t) @ p0\upper_rect) - (cast: (size_t) p0))
+    c.printf("MixaAppController rgba=%zu\n", (cast: (size_t) @ p0\rgba) - (cast: (size_t) p0))
+    c.printf("MixaAppController width_px=%zu\n", (cast: (size_t) @ p0\width_px) - (cast: (size_t) p0))
+    c.printf("MixaAppController height_px=%zu\n", (cast: (size_t) @ p0\height_px) - (cast: (size_t) p0))
+    c.printf("MixaAppController rgba_size=%zu\n", (cast: (size_t) @ p0\rgba_size) - (cast: (size_t) p0))
+    c.printf("MixaAppController help_ctx=%zu\n", (cast: (size_t) @ p0\help_ctx) - (cast: (size_t) p0))
+    c.printf("MixaAppController help_btn_row=%zu\n", (cast: (size_t) @ p0\help_btn_row) - (cast: (size_t) p0))
+    c.printf("MixaAppController help_btn_col=%zu\n", (cast: (size_t) @ p0\help_btn_col) - (cast: (size_t) p0))
+    c.printf("MixaAppController help_btn_nrows=%zu\n", (cast: (size_t) @ p0\help_btn_nrows) - (cast: (size_t) p0))
+    c.printf("MixaAppController help_btn_ncols=%zu\n", (cast: (size_t) @ p0\help_btn_ncols) - (cast: (size_t) p0))
+    c.printf("MixaAppController cmdline=%zu\n", (cast: (size_t) @ p0\cmdline) - (cast: (size_t) p0))
+    c.printf("MixaAppController dispatch=%zu\n", (cast: (size_t) @ p0\dispatch) - (cast: (size_t) p0))
+    c.printf("MixaAppController cwd_owned=%zu\n", (cast: (size_t) @ p0\cwd_owned) - (cast: (size_t) p0))
+    c.printf("MixaAppController cwd_cur=%zu\n", (cast: (size_t) @ p0\cwd_cur) - (cast: (size_t) p0))
+    c.printf("MixaAppController pending_view=%zu\n", (cast: (size_t) @ p0\pending_view) - (cast: (size_t) p0))
+    c.printf("MixaAppController last_exit_code=%zu\n", (cast: (size_t) @ p0\last_exit_code) - (cast: (size_t) p0))
+    c.printf("MixaAppController fmpanel=%zu\n", (cast: (size_t) @ p0\fmpanel) - (cast: (size_t) p0))
+    c.printf("MixaAppController copy_sink=%zu\n", (cast: (size_t) @ p0\copy_sink) - (cast: (size_t) p0))
+    return: 0
+

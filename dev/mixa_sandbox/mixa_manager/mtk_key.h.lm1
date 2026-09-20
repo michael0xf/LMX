@@ -1,0 +1,38 @@
+include: "<stddef.h>"
+predef: "mixa_manager/mtk_const.h.lm1"
+predef: "mixa_manager/mtk_table.h.lm1"
+
+# mtk_key.h.lm1 - Key ported from Key.java (com.mtk.map).
+# Java Key wraps an Object (String or Bytes).  In L1 we represent the
+# backing data as a const char* (null-terminated UTF-8), which covers the
+# common String-key case; the Bytes-key case is a future extension.
+# The static HTable all is a thread_local unit global (model 30: no locks;
+# each OS thread sees its own key table).
+
+struct: MtkKey
+    const: @: char name
+    int: hash
+end: MtkKey
+
+# The static HTable all is a thread_local unit global (defined in mtk_key.lm1).
+# It is internal to the Key module; callers use mtk_key_all() /
+# mtk_key_get_or_new_str() instead of referencing the table directly.
+# thread_local definitions live in .lm1 units only (L1 spec: header units
+# do not admit thread_local).
+
+fnptr: MtkKeyHashFn (const: @(void key)) int
+fnptr: MtkKeyEqualsFn (const: @(void a); const: @(void b)) int
+
+prototype:
+    fn: mtk_key_hash (const: @(void key)) int
+    fn: mtk_key_equals (const: @(void a); const: @(void b)) int
+    fn: mtk_key_all () @: MtkHTable
+    fn: mtk_key_get_or_new_str (const: @(char s)) @: MtkKey
+    fn: mtk_key_get_str (const: @(char s)) @: MtkKey
+    fn: mtk_key_get_name (const: @(MtkKey k)) const: @(MtkKey)
+    fn: mtk_key_to_string (const: @(MtkKey k)) const: @(char)
+    fn: mtk_key_index_of (const: @(MtkKey k); int: c) int
+    fn: mtk_key_length (const: @(MtkKey k)) int
+    fn: mtk_key_equals_obj (const: @(MtkKey k); const: @(void o)) int
+    fn: mtk_key_hash_code (const: @(MtkKey k)) int
+end: prototype

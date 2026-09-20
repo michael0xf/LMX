@@ -1,0 +1,65 @@
+include: "<stddef.h>"
+predef: "mixa_manager/mtk_const.h.lm1"
+
+# mtk_bytes.h.lm1 - Byte buffer ported from Bytes.java (com.mtk.map).
+# Java byte[] becomes char* in L1 (byte-level access).  The buffer is
+# a view into an external byte array with an offset and length, plus lazy
+# hash caching.  Static fields from Bytes.java become defines.
+
+define: MTK_BYTES_UTF8 2
+define: MTK_BYTES_END_SYMBOL 62      # '>'
+define: MTK_BYTES_START_SYMBOL 32    # ' '
+define: MTK_BYTES_AMP 38             # '&'
+define: MTK_BYTES_SEMICOLON 59       # ';'
+define: MTK_BYTES_SPACE 32           # ' '
+
+struct: MtkBytes
+    @: char arr          # backing byte array
+    int: offset
+    int: amount
+    int: hash
+    int: utf16
+end: MtkBytes
+
+prototype:
+    fn: mtk_bytes_init (@: MtkBytes b; @: char arr; int: offset; int: amount; int: utf16) void
+    fn: mtk_bytes_size (const: @(MtkBytes b)) int
+    fn: mtk_bytes_offset (const: @(MtkBytes b)) int
+    fn: mtk_bytes_get (const: @(MtkBytes b); int: num) int
+    fn: mtk_bytes_get_abs (const: @(MtkBytes b); int: num) int
+    fn: mtk_bytes_hash_code (const: @(MtkBytes b)) int
+    fn: mtk_bytes_to_string (const: @(MtkBytes b)) const: @(char)
+    fn: mtk_bytes_to_string_utf8 (const: @(MtkBytes b)) const: @(char)
+    fn: mtk_bytes_to_string_utf16 (const: @(MtkBytes b)) const: @(char)
+    fn: mtk_bytes_to_string_range (const: @(MtkBytes b); int: start; int: len) const: @(char)
+    fn: mtk_bytes_index_of (const: @(MtkBytes b); int: ch) int
+    fn: mtk_bytes_last_index_of (const: @(MtkBytes b); int: ch) int
+    fn: mtk_bytes_set_element_at (@: MtkBytes b; int: c; int: index) void
+    fn: mtk_bytes_set_byte (@: MtkBytes b; int: num; int: c) void
+    fn: mtk_bytes_set (@: MtkBytes b; int: to; int: from) void
+    fn: mtk_bytes_equals_str (@: MtkBytes b; const: @(char s)) int
+    fn: mtk_bytes_equals_bytes (@: MtkBytes b; const: @(MtkBytes other)) int
+    fn: mtk_bytes_find (@: MtkBytes b; int: c) int
+    fn: mtk_bytes_find_range (@: MtkBytes b; int: c; int: begin; int: end) int
+    fn: mtk_bytes_find_bytes (@: MtkBytes b; const: @(int) chars; int: nchars) int
+    fn: mtk_bytes_find_back (@: MtkBytes b; int: val1; int: val2; int: begin; int: end) int
+    fn: mtk_bytes_trim (@: MtkBytes b) void
+    fn: mtk_bytes_trim_begin (@: MtkBytes b) void
+    fn: mtk_bytes_collapse (@: MtkBytes b; int: begin; int: ignore; int: len) int
+    fn: mtk_bytes_divide (@: MtkBytes b; int: end_symbol) const: @(MtkBytes)
+    fn: mtk_bytes_div_at (@: MtkBytes b; int: i) const: @(MtkBytes)
+    fn: mtk_bytes_clone (const: @(MtkBytes b)) @: MtkBytes
+    fn: mtk_bytes_clear (@: MtkBytes b) void
+    fn: mtk_bytes_is_utf16 (const: @(MtkBytes b)) int
+    fn: mtk_bytes_new (@: MtkBytes b; int: len; int: utf16) void
+    fn: mtk_bytes_set_len (@: MtkBytes b; int: val) void
+    fn: mtk_bytes_increase_offset (@: MtkBytes b) void
+    fn: mtk_bytes_decrease_offset (@: MtkBytes b) void
+    fn: mtk_bytes_unsigned_at (const: @(MtkBytes b); int: i) int
+    fn: mtk_bytes_sub_bytes (const: @(MtkBytes b); int: begin; int: end) const: @(MtkBytes)
+    fn: mtk_bytes_copy (@: MtkBytes b; const: @(char) src; int: src_offset; int: count; int: to) void
+    fn: mtk_bytes_remove_first_line (@: MtkBytes b) const: @(MtkBytes)
+    fn: mtk_bytes_find_of_text_or_end (@: MtkBytes b; int: begin; int: end; int: end_symbol) int
+    fn: mtk_bytes_find_of_letter (@: MtkBytes b; int: begin; int: end) int
+    fn: mtk_bytes_find_of_nondigit (@: MtkBytes b; int: begin; int: end) int
+end: prototype

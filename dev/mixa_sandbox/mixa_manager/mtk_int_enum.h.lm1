@@ -1,0 +1,24 @@
+# mtk_int_enum.h.lm1 - Interface ported from IntEnum.java (com.mtk.map).
+# Java interface becomes L1 fnptr type declarations + vtable struct.
+# Callers store a pointer to an implementor's vtable and invoke through
+# the fnptr, mirroring the interface dispatch contract.
+
+fnptr: MtkIntEnumNextElementFn (@: void self) int
+fnptr: MtkIntEnumPrevElementFn (@: void self) int
+fnptr: MtkIntEnumPreviousPositionFn (@: void self) int
+fnptr: MtkIntEnumNextPositionFn (@: void self) int
+fnptr: MtkIntEnumToFirstFn (@: void self) void
+fnptr: MtkIntEnumToLastFn (@: void self) void
+fnptr: MtkIntEnumFreeFn (@: void self) void
+fnptr: MtkIntEnumSizeFn (const: @(void self)) int
+
+struct: MtkIntEnum
+    MtkIntEnumNextElementFn: next_element
+    MtkIntEnumPrevElementFn: prev_element
+    MtkIntEnumPreviousPositionFn: previous_position
+    MtkIntEnumNextPositionFn: next_position
+    MtkIntEnumToFirstFn: to_first
+    MtkIntEnumToLastFn: to_last
+    MtkIntEnumFreeFn: free_fn
+    MtkIntEnumSizeFn: size_fn
+end: MtkIntEnum

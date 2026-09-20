@@ -1,0 +1,21 @@
+predef: "mixa_manager/mixa_permissions.h.lm1"
+
+# mixa_permissions.lm1 — desktop always-granted stub (ticket 20260918-125450).
+
+fn: mixa_permissions_request (const: @(char name_utf8)) int
+    if: name_utf8 = 0
+        return: MIXA_PERMISSIONS_ERR_ARG
+    if: name_utf8[0] = 0
+        return: MIXA_PERMISSIONS_ERR_ARG
+    ---
+    # Desktop: nothing to prompt; already effectively granted.
+return: MIXA_PERMISSIONS_OK
+
+fn: mixa_permissions_check (const: @(char name_utf8)) int
+    if: name_utf8 = 0
+        return: MIXA_PERMISSIONS_ERR_ARG
+    if: name_utf8[0] = 0
+        return: MIXA_PERMISSIONS_ERR_ARG
+    ---
+return: MIXA_PERMISSIONS_GRANTED
+

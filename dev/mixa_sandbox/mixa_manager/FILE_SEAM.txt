@@ -1,0 +1,148 @@
+Mixa Manager - the file seam
+Second seam. Separate from the backend seam on purpose.
+
+
+1. Why this is not part of the backend seam
+
+BACKEND_SEAM.txt is the display and input boundary: pixels out, events in, six
+operations plus glyphs. Files are a different platform boundary - names and
+bytes - and they change for different reasons. Folding them together would make
+each port carry the other's problems, and would mean a headless test backend had
+to pretend to have a filesystem.
+
+So: two seams, each small, each portable on its own.
+
+
+2. The console is never in the void: it writes to a file
+
+The console does not hold its scrollback in memory. Its scrollback IS a file,
+appended to as output arrives and read back for display.
+
+The reason is architectural, not a judgement about limits. ClearShell keeps its
+output in memory because there is a SYSTEM EDITING WIDGET behind it holding the
+text; memory is the natural place for it, and saving is a button the user
+presses. We have no such widget. There is no ready-made one in the system that
+would suit a strict cell grid, and if there were we would not want it - the
+whole point of TextRect is that we draw the cells ourselves.
+
+So the file is not primarily a safety measure. It is simply the only place the
+text lives, and we render it from there because we were going to render it
+ourselves regardless.
+
+What follows from that is nevertheless worth having:
+
+    nothing is discarded - no head, tail or middle truncation, which matters
+      the first time someone needs the middle of a long build log
+    memory is bounded by the VIEW rather than by the output
+    it survives the process, so a crashed build stays inspectable
+    it is an ordinary file, so the manager's own viewer, search, copy and open
+      work on it with no special case
+    a child in delegation mode can be pointed straight at it
+
+2.0. What this is right now
+
+Not a terminal host. There is no PTY or ConPTY yet, no terminal emulation and
+no child screen. For now the console is IMITATED: lines are written to the file
+and drawn from it.
+
+That is deliberate and it is the useful order. The file, the writing, the
+reading window and the drawing are all needed no matter which producer fills
+the file later - own UI, a real embedded terminal, or a delegated child - so
+they are built first and the producer is swapped in behind them. Nothing built
+now has to be undone to host a real shell.
+
+2.1. Naming
+
+Following ClearShell's shape - a lowercase hyphenated role, then a unique
+suffix after an underscore, as in its shell-process-<generation>_<hex>.pid:
+
+    mixa-console_<yyyymmdd-hhmmss>-<hex>.log
+
+The timestamp first so a directory listing sorts chronologically without
+parsing; the hex tail so two sessions started in the same second do not collide.
+One per session, in the session directory. Older ones are ordinary files and are
+the user's to keep or delete - the manager does not silently reap them.
+
+2.2. What is written
+
+Output bytes exactly as produced, stdout and stderr merged in arrival order -
+splitting them reorders them, and for reading a build log the order is the
+information.
+
+Command boundaries are marked in-band, the way ClearShell does it, with a marker
+line carrying exit status and working directory separated by tabs. In-band means
+the log stays a plain readable file with no sidecar index, and the marker is
+what lets the display fold a command, jump between commands, or colour a failed
+one without re-parsing shell semantics.
+
+
+3. Layer roles, which this serves
+
+Fixed by the language owner on 2026-09-09. Norton-style, not ClearShell-style:
+
+    lower layer, small font    the console. Input on the BOTTOM line, output
+                               scrolling UPWARD above it
+    upper layer, larger font   the panels and menus, SEMI-TRANSPARENT, so the
+                               console output continues to be readable beneath
+                               them
+
+ClearShell differs: there the text input is attached at the top and what lies
+beneath is the camera image, not the console. Here the thing beneath the panel
+is the console, which is why the upper layer's transparency is functional rather
+than decorative.
+
+
+3.5. What the FIRST version needs, which is almost none of section 4
+
+Section 4 lists the operations THE MANAGER will need. It is not a list of things
+to implement now, and reading it as one would build panels' machinery before
+there are panels.
+
+The first runnable version needs exactly this much:
+
+    append to a file
+    read it back
+    its size
+
+Nothing else. No listing, no stat, no mkdir, remove or rename - those exist for
+the file panels, and there are no panels yet.
+
+So implement the SLICE, not the seam. The rest arrives when something needs it,
+which is how it stays possible to tell whether an operation is right: an
+operation with a caller can be judged, and one without can only be guessed at.
+
+4. Operations
+
+Deliberately small, and deliberately not a POSIX wrapper. Each is something the
+manager actually does.
+
+    open      by path, for read, write or append; returns an opaque handle
+    close
+    read      into a caller's buffer at the current position
+    write     from a caller's buffer
+    seek      absolute position, plus a way to ask the current one
+    size
+
+    list      a directory, yielding one entry at a time rather than an array,
+              so a directory with a million entries does not have to be
+              materialised before the first line can be drawn
+    stat      name, size, modification time, and whether it is a directory
+    mkdir
+    remove
+    rename
+
+Encoding: paths cross the seam as UTF-8 bytes. Platforms that use something else
+convert inside their own implementation, exactly as the display backend
+converts to CF_UNICODETEXT for the clipboard - the seam does not learn about
+UTF-16 because one platform has it.
+
+Errors: every operation reports failure, and failure is never a silent
+substitution. A missing file is a missing file, not an empty one.
+
+
+5. What is NOT here
+
+No globbing, no recursive walk, no copy, no move-across-devices, no permissions
+model, no watching. Those are built ON this seam in Lingvamyxa, not behind it -
+each of them is policy, and policy belongs where it can be read, not inside a
+per-platform implementation that must be rewritten to change it.

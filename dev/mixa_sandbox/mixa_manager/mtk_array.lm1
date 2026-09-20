@@ -1,0 +1,225 @@
+predef: "mixa_manager/mtk_array.h.lm1"
+include: "<stdlib.h>" "<string.h>"
+
+fn: mtk_array_init (@: MtkArray a; size_t: elem_size) int
+    if: a = 0
+        return: 1
+    a\amount: 0
+    a\elem_size: elem_size
+    a\arr: 0
+return: 0
+
+sub: mtk_array_destroy (@: MtkArray a)
+    if: a != 0
+        if: a\arr != 0
+            c.free(a\arr)
+        a\arr: 0
+        a\amount: 0
+    ---
+end: mtk_array_destroy
+
+fn: mtk_array_size (const: @(MtkArray a)) int
+    if: a = 0
+        return: 0
+return: a\amount
+
+fn: mtk_array_element_at (const: @(MtkArray a); int: i) const: @(void)
+    if: a = 0 || i >= a\amount || i < 0
+        return: 0
+    if: a\arr = 0
+        return: 0
+    return: (cast: (const: @(void)) ((cast: (@@: void) a\arr)[i]))
+
+fn: mtk_array_first_element (const: @(MtkArray a)) const: @(void)
+    if: a = 0 || a\amount = 0
+        return: 0
+    return: (cast: (const: @(void)) ((cast: (@@: void) a\arr)[0]))
+
+fn: mtk_array_last_element (const: @(MtkArray a)) const: @(void)
+    if: a = 0 || a\amount = 0
+        return: 0
+return: (cast: (const: @(void)) ((cast: (@@: void) a\arr)[a\amount - 1]))
+
+# Grow internal buffer to hold at least new_size elements.
+fn: mtk_array_grow (@: MtkArray a; size_t: new_size) void
+    size_t: new_cap
+    @@: void new_arr
+    if: a = 0
+        return
+    if: a\arr != 0 && new_size <= (cast: (size_t) a\amount)
+        return
+    new_cap: (cast: (size_t) a\amount) << 1
+    if: new_cap < 2U
+        new_cap: 2U
+    if: new_cap < new_size
+        new_cap: new_size
+    new_arr: (cast: (@@: void) c.calloc(new_cap, a\elem_size))
+    if: new_arr = 0
+        return
+    if: a\arr != 0 && a\amount > 0
+        c.memcpy(new_arr, a\arr, (cast: (size_t) a\amount) * a\elem_size)
+        c.free(a\arr)
+    a\arr: new_arr
+    return
+
+fn: mtk_array_add_element (@: MtkArray a; const: @(void obj)) int
+    int: new_amount
+    @@: void dst
+    if: a = 0 || obj = 0
+        return: MTK_CONST_NIL
+    new_amount: a\amount + 1
+    mtk_array_grow(a, (cast: (size_t) new_amount))
+    if: a\arr = 0
+        return: MTK_CONST_NIL
+    dst: (cast: (@@: void) a\arr)
+    c.memcpy(dst + a\amount, obj, a\elem_size)
+    a\amount: new_amount
+return: a\amount - 1
+
+fn: mtk_array_insert_element_at (@: MtkArray a; const: @(void obj); int: index) int
+    int: i
+    int: shift
+    @@: void dst
+    if: a = 0 || index < 0 || obj = 0
+        return: MTK_CONST_NIL
+    if: a\amount = 0
+        return: mtk_array_add_element(a, obj)
+    ---
+    mtk_array_grow(a, (cast: (size_t) a\amount + 2U))
+    if: a\arr = 0
+        return: MTK_CONST_NIL
+    dst: (cast: (@@: void) a\arr)
+    if: index >= a\amount
+        c.memcpy(dst + a\amount, obj, a\elem_size)
+        a\amount: a\amount + 1
+        return: a\amount - 1
+    ---
+    # Shift elements to the right
+    i: a\amount - 1
+    while: i >= index
+        c.memcpy(dst + (cast: (size_t) i + 1U) * a\elem_size, dst + (cast: (size_t) i) * a\elem_size, a\elem_size)
+        i: i - 1
+    ---
+    c.memcpy(dst + (cast: (size_t) index) * a\elem_size, obj, a\elem_size)
+    a\amount: a\amount + 1
+return: index
+
+fn: mtk_array_remove_element_at (@: MtkArray a; int: index) const: @(void)
+    const: @(void) ret
+    int: i
+    @@: void src
+    if: a = 0 || index < 0 || index >= a\amount
+        return: 0
+    src: (cast: (@@: void) a\arr)
+    ret: (cast: (const: @(void)) src[index])
+    i: index
+    while: i < a\amount - 1
+        c.memcpy(src + (cast: (size_t) i) * a\elem_size, src + (cast: (size_t) i + 1U) * a\elem_size, a\elem_size)
+        i: i + 1
+    ---
+    a\amount: a\amount - 1
+return: ret
+
+fn: mtk_array_set_element_at (@: MtkArray a; const: @(void obj); int: index) const: @(void)
+    const: @(void) ret
+    @@: void dst
+    if: a = 0 || index < 0 || obj = 0
+        return: 0
+    mtk_array_grow(a, (cast: (size_t) index + 1U))
+    if: a\arr = 0
+        return: 0
+    dst: (cast: (@@: void) a\arr)
+    if: index >= a\amount
+        ret: 0
+        a\amount: index + 1
+    else:
+        ret: (cast: (const: @(void)) dst[index])
+    ---
+    c.memcpy(dst + (cast: (size_t) index) * a\elem_size, obj, a\elem_size)
+return: ret
+
+fn: mtk_array_remove_element (@: MtkArray a; const: @(void obj)) int
+    @@: void src
+    int: i
+    int: n
+    if: a = 0 || obj = 0 || a\arr = 0
+        return: MTK_CONST_NIL
+    src: (cast: (@@: void) a\arr)
+    n: a\amount
+    i: 0
+    while: i < n
+        if: c.memcmp(src + (cast: (size_t) i) * a\elem_size, obj, a\elem_size) = 0
+            mtk_array_remove_element_at(a, i)
+            return: i
+        ---
+        i: i + 1
+    ---
+return: MTK_CONST_NIL
+
+fn: mtk_array_pop (@: MtkArray a) const: @(void)
+    @@: void src
+    if: a = 0 || a\amount <= 0
+        return: 0
+    src: (cast: (@@: void) a\arr)
+    a\amount: a\amount - 1
+return: (cast: (const: @(void)) src[a\amount])
+
+fn: mtk_array_clear (@: MtkArray a) void
+    if: a != 0
+        a\amount: 0
+    ---
+end: mtk_array_clear
+
+fn: mtk_array_clear_from_at (@: MtkArray a; int: begin) int
+    int: ret
+    if: a = 0
+        return: 0
+    ret: 0
+    if: begin < a\amount
+        ret: a\amount - begin
+        a\amount: begin
+    ---
+return: ret
+
+fn: mtk_array_reverse (@: MtkArray a; int: index; int: newindex) void
+    @@: void dst
+    int: i
+    int: tmp_sz
+    if: a = 0 || a\arr = 0 || index < 0 || index >= a\amount || newindex < 0 || newindex >= a\amount
+        return
+    ---
+    dst: (cast: (@@: void) a\arr)
+    if: newindex < index
+        i: index
+        while: i > newindex
+            c.memcpy(dst + (cast: (size_t) i) * a\elem_size, dst + (cast: (size_t) i - 1U) * a\elem_size, a\elem_size)
+            i: i - 1
+        ---
+    else if: index < newindex
+        i: index
+        while: i < newindex
+            c.memcpy(dst + (cast: (size_t) i) * a\elem_size, dst + (cast: (size_t) i + 1U) * a\elem_size, a\elem_size)
+            i: i + 1
+        ---
+    ---
+    return
+end: mtk_array_reverse
+
+fn: mtk_array_remove_elements_from (@: MtkArray a; int: index; int: len) void
+    int: i
+    @@: void src
+    if: a = 0 || a\arr = 0 || index < 0 || index >= a\amount
+        return
+    ---
+    if: index + len > a\amount
+        len: a\amount - index
+    ---
+    src: (cast: (@@: void) a\arr)
+    i: index
+    while: i < a\amount - len
+        c.memcpy(src + (cast: (size_t) i) * a\elem_size, src + (cast: (size_t) i + (size_t) len) * a\elem_size, a\elem_size)
+        i: i + 1
+    ---
+    a\amount: a\amount - len
+    return
+end: mtk_array_remove_elements_from

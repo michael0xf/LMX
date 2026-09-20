@@ -1,0 +1,154 @@
+predef: "mixa_manager/mtk_key.h.lm1"
+include: "<stdlib.h>" "<string.h>"
+
+# Thread-local static HTable all (Java: static HTable all;).
+# Model 30: no locks; each OS thread sees its own key table.
+thread_local: @: MtkHTable mtk_key_all_table 0
+
+# ---- hash / equals for string keys (mirrors Java String.hashCode / equals) ----
+
+fn: mtk_key_hash (const: @(void key)) int
+    const: @(char s)
+    int: h
+    int: i
+    if: key = 0
+        return: 0
+    s: (cast: (const: @(char)) key)
+    h: 0
+    i: 0
+    while: s[i] != 0
+        h: (31 * h) + (cast: (int) s[i])
+        i: i + 1
+    ---
+return: h
+
+fn: mtk_key_equals (const: @(void a); const: @(void b)) int
+    const: @(char sa)
+    const: @(char sb)
+    int: i
+    if: a = 0 || b = 0
+        return: 0
+    if: a = b
+        return: 1
+    sa: (cast: (const: @(char)) a)
+    sb: (cast: (const: @(char)) b)
+    i: 0
+    while: sa[i] != 0 && sb[i] != 0
+        if: sa[i] != sb[i]
+            return: 0
+        ---
+        i: i + 1
+    ---
+    if: sa[i] = 0 && sb[i] = 0
+        return: 1
+    ---
+return: 0
+
+# ---- static HTable all() lazy init ----
+
+fn: mtk_key_all () @: MtkHTable
+    int: rc
+    if: mtk_key_all_table = 0
+        mtk_key_all_table: (cast: (@: MtkHTable) c.calloc(1, c.sizeof(c.MtkHTable)))
+        if: mtk_key_all_table != 0
+            rc: mtk_table_init(mtk_key_all_table, (cast: (size_t) c.sizeof(@: char)), (cast: (size_t) c.sizeof(@: MtkKey)))
+            if: rc != 0
+                c.free(mtk_key_all_table)
+                mtk_key_all_table: 0
+                return: 0
+            ---
+        ---
+    ---
+return: mtk_key_all_table
+
+# ---- get / getOrNew ----
+
+fn: mtk_key_get_str (const: @(char s)) @: MtkKey
+    @: MtkHTable table
+    const: @(void found)
+    if: s = 0
+        return: 0
+    table: mtk_key_all()
+    if: table = 0
+        return: 0
+    found: mtk_table_get(table, (cast: (const: @(void)) s), mtk_key_hash, mtk_key_equals)
+    if: found = 0
+        return: 0
+    return: (cast: (@: MtkKey) found)
+
+fn: mtk_key_get_or_new_str (const: @(char s)) @: MtkKey
+    @: MtkHTable table
+    @: MtkKey ret
+    const: @(void found)
+    if: s = 0
+        return: 0
+    table: mtk_key_all()
+    if: table = 0
+        return: 0
+    found: mtk_table_get(table, (cast: (const: @(void)) s), mtk_key_hash, mtk_key_equals)
+    if: found != 0
+        return: (cast: (@: MtkKey) found)
+    ---
+    # Not found: create a new Key and register it.
+    ret: (cast: (@: MtkKey) c.calloc(1, c.sizeof(c.MtkKey)))
+    if: ret = 0
+        return: 0
+    ret\name: s
+    ret\hash: mtk_key_hash((cast: (const: @(void)) s))
+    mtk_table_put(table, (cast: (const: @(void)) s), (cast: (const: @(void)) ret), mtk_key_hash, mtk_key_equals)
+return: ret
+
+# ---- Named interface implementation ----
+
+fn: mtk_key_get_name (const: @(MtkKey k)) const: @(MtkKey)
+    if: k = 0
+        return: 0
+return: k
+
+# ---- accessors ----
+
+fn: mtk_key_to_string (const: @(MtkKey k)) const: @(char)
+    if: k = 0
+        return: 0
+return: k\name
+
+fn: mtk_key_length (const: @(MtkKey k)) int
+    int: n
+    int: i
+    if: k = 0 || k\name = 0
+        return: 0
+    n: 0
+    i: 0
+    while: k\name[i] != 0
+        i: i + 1
+        n: n + 1
+    ---
+return: n
+
+fn: mtk_key_index_of (const: @(MtkKey k); int: ch) int
+    int: i
+    if: k = 0 || k\name = 0
+        return: -1
+    i: 0
+    while: k\name[i] != 0
+        if: k\name[i] = ch
+            return: i
+        ---
+        i: i + 1
+    ---
+return: -1
+
+fn: mtk_key_hash_code (const: @(MtkKey k)) int
+    if: k = 0
+        return: 0
+return: k\hash
+
+fn: mtk_key_equals_obj (const: @(MtkKey k); const: @(void o)) int
+    const: @(char s)
+    if: k = 0 || o = 0
+        return: 0
+    if: k\name = 0
+        return: 0
+    s: (cast: (const: @(char)) o)
+    # String equality: compare by content
+return: mtk_key_equals((cast: (const: @(void)) k\name), s)

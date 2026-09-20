@@ -1,0 +1,28 @@
+include: "<stddef.h>"
+
+# mixa_autostart.h.lm1 — AutoStartClearShell desktop port (ticket 20260918-125450).
+#
+# Android AutoStartClearShell.java: BroadcastReceiver on BOOT_COMPLETED starts
+# ClearShell. Desktop port = honest Win32 autostart seam: HKCU\
+# Software\Microsoft\Windows\CurrentVersion\Run (REG_SZ = exe path UTF-8→wide).
+#
+# Ticket API: autostart_init, autostart_is_running.
+#   init            — register (or refresh) the Run value for this app
+#   is_running      — 1 if the Run value exists (registered for boot), else 0
+#
+# Boot→letter posting into an L3 Thread (prior draft mixa_autostart_on_boot)
+# belongs in the platform bridge / mixa_app_main_msg once a real boot signal
+# exists — not invented here. This module only owns the OS autostart registration.
+#
+# Default value name when value_name_utf8 is null/empty: "MixaClearShell".
+
+define: MIXA_AUTOSTART_OK 0
+define: MIXA_AUTOSTART_ERR_ARG 1
+define: MIXA_AUTOSTART_ERR_NOMEM 2
+define: MIXA_AUTOSTART_ERR_IO 3
+
+prototype:
+    fn: mixa_autostart_init (const: @(char exe_path_utf8); const: @(char value_name_utf8)) int
+    fn: mixa_autostart_is_running (const: @(char value_name_utf8); @: int out_registered) int
+end: prototype
+

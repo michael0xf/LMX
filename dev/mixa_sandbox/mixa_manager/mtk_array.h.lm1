@@ -1,0 +1,31 @@
+include: "<stddef.h>"
+predef: "mixa_manager/mtk_const.h.lm1"
+
+# mtk_array.h.lm1 - Growable Object array ported from Array.java (com.mtk.map).
+# Java generic T becomes void* in L1. The "Class c" field (reflection) is
+# replaced by elem_size (bytes per element) since L1 has no generics.
+
+struct: MtkArray
+    int: amount
+    size_t: elem_size
+    @@: void arr
+end: MtkArray
+
+prototype:
+    fn: mtk_array_init (@: MtkArray a; size_t: elem_size) int
+    fn: mtk_array_destroy (@: MtkArray a) void
+    fn: mtk_array_size (const: @(MtkArray a)) int
+    fn: mtk_array_element_at (const: @(MtkArray a); int: i) const: @(void)
+    fn: mtk_array_first_element (const: @(MtkArray a)) const: @(void)
+    fn: mtk_array_last_element (const: @(MtkArray a)) const: @(void)
+    fn: mtk_array_add_element (@: MtkArray a; const: @(void obj)) int
+    fn: mtk_array_insert_element_at (@: MtkArray a; const: @(void obj); int: index) int
+    fn: mtk_array_remove_element_at (@: MtkArray a; int: index) const: @(void)
+    fn: mtk_array_set_element_at (@: MtkArray a; const: @(void obj); int: index) const: @(void)
+    fn: mtk_array_remove_element (@: MtkArray a; const: @(void obj)) int
+    fn: mtk_array_pop (@: MtkArray a) const: @(void)
+    fn: mtk_array_clear (@: MtkArray a) void
+    fn: mtk_array_clear_from_at (@: MtkArray a; int: begin) int
+    fn: mtk_array_reverse (@: MtkArray a; int: index; int: newindex) void
+    fn: mtk_array_remove_elements_from (@: MtkArray a; int: index; int: len) void
+end: prototype

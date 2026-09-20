@@ -1,0 +1,142 @@
+predef: "mixa_manager/mixa_palette.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# mixa_palette_selftest.lm1 -- СВЕРКА ПАЛИТРЫ С ИСТОЧНИКОМ (20.09).
+#
+# ЗАЧЕМ: UI_MODEL 5.4 отдаёт пары цветов таблицей, а PORT_OF_CLEARSHELL 3.3 требует
+# «Preserve the source palette»; источник -- ClearShell.java.  Проба берёт каждую пару
+# ИЗ ТАБЛИЦЫ и сверяет её с тем, что записано в источнике, значение за значением.  Если
+# кто-то «поправит» пару на глаз, проба покраснеет и назовёт имя пары.
+#
+# ЧТО МЕРИТСЯ:
+#   * все индексы 0..COUNT-1 существуют и отвечают (нет дыр в таблице);
+#   * каждая пара равна своей строке ClearShell.java (текст и фон, канал за каналом);
+#   * псевдонимы 5.4 (Off/Error/Text) указывают на те же пары, что Gray/Red/Gray;
+#   * Selected НЕПРОЗРАЧНА (альфа фона 255), bPleaseWait -- 64, обычные фоны -- 96:
+#     «alpha varies BY ELEMENT» (UI_MODEL 3);
+#   * таблица имён не пуста и имена не повторяются.
+
+sub: pal_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: pal_check
+
+# Ожидание -- это СТРОКА ИСТОЧНИКА: argb(alpha, r, g, b), как в ClearShell.java.
+sub: pal_expect (@: int counts; unsigned: index; unsigned: ta; unsigned: tr; unsigned: tg; unsigned: tb; unsigned: ba; unsigned: br; unsigned: bg; unsigned: bb)
+    []: MixaU8 r 1
+    []: MixaU8 g 1
+    []: MixaU8 b 1
+    []: MixaU8 a 1
+    []: char label 96
+    int: ok
+    ok: 1
+    # ВНИМАНИЕ: текст и фон читаются в ОДНИ И ТЕ ЖЕ выходные байты, поэтому сверка текста
+    # идёт ДО второго чтения -- иначе фон затирает прочитанный текст и проба врёт.
+    if: mixa_palette_text(index, r, g, b, a) != MIXA_PALETTE_OK
+        ok: 0
+    ---
+    if: (cast: (unsigned) a[0]) != ta || (cast: (unsigned) r[0]) != tr || (cast: (unsigned) g[0]) != tg || (cast: (unsigned) b[0]) != tb
+        c.printf("  text of %s: got %u,%u,%u,%u want %u,%u,%u,%u\n", mixa_palette_name(index), (cast: (unsigned) r[0]), (cast: (unsigned) g[0]), (cast: (unsigned) b[0]), (cast: (unsigned) a[0]), tr, tg, tb, ta)
+        ok: 0
+    ---
+    if: mixa_palette_bg(index, r, g, b, a) != MIXA_PALETTE_OK
+        ok: 0
+    ---
+    if: (cast: (unsigned) a[0]) != ba || (cast: (unsigned) r[0]) != br || (cast: (unsigned) g[0]) != bg || (cast: (unsigned) b[0]) != bb
+        c.printf("  bg of %s: got %u,%u,%u,%u want %u,%u,%u,%u\n", mixa_palette_name(index), (cast: (unsigned) r[0]), (cast: (unsigned) g[0]), (cast: (unsigned) b[0]), (cast: (unsigned) a[0]), br, bg, bb, ba)
+        ok: 0
+    ---
+    c.sprintf(label, "pair %s matches ClearShell.java", mixa_palette_name(index))
+    pal_check(counts, ok, label)
+end: pal_expect
+
+fn: pal_unique_names () int
+    unsigned: i
+    unsigned: j
+    int: ok
+    ok: 1
+    i: 0U
+    while: i < MIXA_PAL_COUNT
+        if: mixa_palette_name(i) = 0 || mixa_palette_name(i)[0] = 0
+            c.printf("FAIL pair %u has no name\n", i)
+            ok: 0
+        ---
+        j: i + 1U
+        while: j < MIXA_PAL_COUNT
+            if: c.strcmp(mixa_palette_name(i), mixa_palette_name(j)) = 0
+                c.printf("FAIL pairs %u and %u share the name %s\n", i, j, mixa_palette_name(i))
+                ok: 0
+            ---
+            j: j + 1U
+        ---
+        i: i + 1U
+    ---
+return: ok
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    unsigned: i
+    int: failures
+    if: counts = 0
+        return: 2
+    ---
+    # ТАБЛИЦА ИСТОЧНИКА, строка за строкой: ClearShell.java:635-691.
+    pal_expect(counts, MIXA_PAL_BLACK, 240U, 255U, 255U, 255U, 96U, 0U, 0U, 0U)
+    pal_expect(counts, MIXA_PAL_GREEN, 240U, 0U, 16U, 0U, 96U, 128U, 255U, 128U)
+    pal_expect(counts, MIXA_PAL_GREEN1, 240U, 0U, 16U, 16U, 96U, 64U, 255U, 192U)
+    pal_expect(counts, MIXA_PAL_BLUE, 240U, 0U, 0U, 96U, 96U, 0U, 192U, 255U)
+    pal_expect(counts, MIXA_PAL_PLEASE_WAIT, 240U, 0U, 0U, 96U, 64U, 128U, 192U, 255U)
+    pal_expect(counts, MIXA_PAL_CYAN, 240U, 0U, 0U, 96U, 96U, 64U, 255U, 255U)
+    pal_expect(counts, MIXA_PAL_ROSE, 240U, 0U, 0U, 96U, 96U, 255U, 192U, 255U)
+    pal_expect(counts, MIXA_PAL_GRAY, 240U, 0U, 0U, 0U, 96U, 128U, 128U, 128U)
+    pal_expect(counts, MIXA_PAL_LIGHT, 240U, 32U, 32U, 32U, 96U, 192U, 192U, 192U)
+    pal_expect(counts, MIXA_PAL_RED, 240U, 32U, 0U, 0U, 96U, 255U, 128U, 128U)
+    pal_expect(counts, MIXA_PAL_RED1, 240U, 0U, 0U, 32U, 96U, 255U, 192U, 192U)
+    pal_expect(counts, MIXA_PAL_MAGENTA, 240U, 32U, 0U, 32U, 96U, 255U, 128U, 255U)
+    pal_expect(counts, MIXA_PAL_BROWN, 240U, 16U, 16U, 0U, 96U, 192U, 192U, 96U)
+    pal_expect(counts, MIXA_PAL_YELLOW, 240U, 16U, 16U, 0U, 96U, 255U, 192U, 128U)
+    pal_expect(counts, MIXA_PAL_YELLOW2, 240U, 16U, 16U, 0U, 96U, 255U, 160U, 216U)
+    pal_expect(counts, MIXA_PAL_YELLOW1, 240U, 0U, 16U, 0U, 96U, 255U, 255U, 192U)
+    pal_expect(counts, MIXA_PAL_ORANGE, 240U, 48U, 24U, 0U, 96U, 255U, 192U, 0U)
+    # Selected -- ЕДИНСТВЕННАЯ непрозрачная: cSel = 0xFFFFFF40, bSel = 0xFF000060.
+    pal_expect(counts, MIXA_PAL_SEL, 255U, 255U, 255U, 64U, 255U, 0U, 0U, 96U)
+    pal_expect(counts, MIXA_PAL_SEL1, 240U, 0U, 0U, 96U, 96U, 255U, 255U, 64U)
+    pal_expect(counts, MIXA_PAL_C0, 240U, 32U, 32U, 0U, 96U, 255U, 255U, 192U)
+
+    # Псевдонимы 5.4: «Off, Error and Text are aliases of Gray, Red and Gray».
+    pal_check(counts, MIXA_PAL_OFF = MIXA_PAL_GRAY, "Off is not Gray")
+    pal_check(counts, MIXA_PAL_ERROR = MIXA_PAL_RED, "Error is not Red")
+    pal_check(counts, MIXA_PAL_TEXT = MIXA_PAL_GRAY, "Text is not Gray")
+    pal_check(counts, MIXA_PAL_CONSOLE = MIXA_PAL_BLACK, "the console is not dressed in the black pair")
+
+    # Дыр в таблице нет: каждый индекс отвечает, и ничего за COUNT -- нет.
+    i: 0U
+    while: i < MIXA_PAL_COUNT
+        pal_check(counts, mixa_palette_is_pair(i) != 0, "an index inside the table is not a pair")
+        pal_check(counts, mixa_palette_pair(i, 0, 0) != MIXA_PALETTE_ERR_INDEX, "an index inside the table has no pair body")
+        i: i + 1U
+    ---
+    pal_check(counts, mixa_palette_is_pair(MIXA_PAL_COUNT) = 0, "an index past the table claims to be a pair")
+    # За таблицей -- ERR_INDEX, но спрашивать надо С НАСТОЯЩИМИ приёмниками: с нулевыми
+    # первым срабатывает сторож аргументов (ERR_ARG), и это правильный порядок.
+    []: unsigned pt 1
+    []: unsigned pb 1
+    pal_check(counts, mixa_palette_pair(MIXA_PAL_COUNT, pt, pb) = MIXA_PALETTE_ERR_INDEX, "an index past the table resolved anyway")
+    pal_check(counts, mixa_palette_pair(MIXA_PAL_GREEN, 0, 0) = MIXA_PALETTE_ERR_ARG, "a null out-parameter was accepted")
+    pal_check(counts, mixa_palette_bg_alpha(1000U) = 0U, "an index past the table has an alpha")
+    pal_check(counts, pal_unique_names() != 0, "the name table repeats itself")
+
+    # Альфы источника: обычный фон 96, bPleaseWait 64, Selected 255 -- «alpha varies BY
+    # ELEMENT» (UI_MODEL 3).  Так видно и то, что 64 в таблице -- не опечатка.
+    pal_check(counts, mixa_palette_bg_alpha(MIXA_PAL_GREEN) = 96U, "an ordinary background is not 96")
+    pal_check(counts, mixa_palette_bg_alpha(MIXA_PAL_PLEASE_WAIT) = 64U, "bPleaseWait is not 64")
+    pal_check(counts, mixa_palette_bg_alpha(MIXA_PAL_SEL) = 255U, "Selected is not opaque")
+
+    failures: counts[1]
+    c.printf("MIXA_PALETTE pairs=%u checks=%d failures=%d\n", MIXA_PAL_COUNT, counts[0], failures)
+    c.fflush(0)
+    free(counts)
+return: failures

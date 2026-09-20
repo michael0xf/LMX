@@ -1,0 +1,218 @@
+predef: "mixa_manager/mixa_buttons.lm1"
+predef: "mixa_manager/mixa_palette.h.lm1"
+predef: "mixa_manager/mixa_text_rect.h.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# mixa_panel_scroll_selftest.lm1 -- СВОЯ ГОРИЗОНТАЛЬНАЯ ПРОКРУТКА У КАЖДОЙ ПАНЕЛИ (20.09).
+#
+# ДОК, UI_MODEL 1.1: «EVERY button panel has its OWN horizontal scroll position, including
+# each list's header. Scrolling one panel's buttons does not scroll another panel or the
+# shared row of list-windows»; 5.7.2: подсветка, ушедшая на кнопку за краем, подкручивает
+# панель РОВНО настолько, чтобы та стала видна.
+#
+# ЧТО МЕРИТСЯ (и почему именно так):
+#   * у панели, чьи кнопки не влезают, прокрутка вообще ЕСТЬ (иначе мерить нечего);
+#   * прокрутка ОДНОЙ панели не двигает ВТОРУЮ -- сверяются БАЙТЫ клеток, а не мнение:
+#     обе панели рисуются в один и тот же прямоугольник до и после, и область второй
+#     обязана совпасть побайтово (DRAWING 4: содержимое клеток точно и без шрифта);
+#   * прокрутка ДЕЙСТВИТЕЛЬНО произошла -- область первой панели обязана отличаться;
+#   * подвод кнопки (5.7.2) приводит последнюю кнопку в вид и не двигает панель больше,
+#     чем нужно: вид не прыгает (5.7.1: «the symmetric version looks tidier and is wrong»).
+
+[]: int g_counts 1
+
+sub: t_check (int: ok; const: @(char label))
+    g_counts[0]: g_counts[0] + 1
+    if: ok = 0
+        c.printf("FAIL %s\n", label)
+        g_counts[0]: g_counts[0] + 1
+    ---
+end: t_check
+
+# Кнопки: шесть wide-кнопок в одну строку.  view_w нарочно узкое, чтобы они не влезли.
+fn: t_panel_open (@: MixaButtonPanel p; size_t: origin_row; size_t: origin_col; size_t: view_w) int
+    []: char label 32
+    int: i
+    if: mixa_button_panel_init(p, 1U) != MIXA_BUTTONS_OK
+        return: 1
+    ---
+    # wb -- ширина, от которой считается wide-кнопка (5.2: «length < 4 -> width = hb,
+    # otherwise width = wb - (wb >> 2)»).  Поле объявлено в самой панели, но НИ ОДИН
+    # вызывающий в порту его не ставит, поэтому у широких подписей ширина выходит нулевой.
+    # Ставится ДО добавления кнопок: ширину считает само добавление.
+    p\wb: 10U
+    i: 0
+    while: i < 6
+        c.snprintf(label, 32U, "button%02d", i)
+        if: mixa_button_panel_add(p, 0U, label, MIXA_PAL_GREEN, MIXA_PAL_GREEN, 96U) != MIXA_BUTTONS_OK
+            return: 1
+        ---
+        i: i + 1
+    ---
+    p\origin_row: origin_row
+    p\origin_col: origin_col
+    p\view_w: view_w
+    if: mixa_button_panel_layout(p) != MIXA_BUTTONS_OK
+        return: 1
+    ---
+return: 0
+
+# Снять область панели (строки от row на nrows) в буфер.
+sub: t_snap (@: MixaTextRect rect; size_t: row; size_t: nrows; @: MixaCell buf)
+    const: @(MixaCell src)
+    size_t: n
+    size_t: i
+    n: nrows * rect\cols
+    src: rect\cells + (row * rect\cols)
+    i: 0U
+    while: i < n
+        buf[i]: src[i]
+        i: i + 1U
+    ---
+end: t_snap
+
+fn: main () int
+    @: MixaButtonPanel pa 0
+    @: MixaButtonPanel pb 0
+    @: MixaTextRect rect 0
+    @: MixaCell before_b 0
+    @: MixaCell after_b 0
+    @: MixaCell before_a 0
+    @: MixaCell after_a 0
+    size_t: need
+    size_t: rows_a
+    size_t: rows_b
+    int: last
+    int: rc
+    int: rc2
+    int: failures
+    size_t: sx_b0
+    size_t: sx_a1
+    size_t: sx_a2
+    size_t: btn_left
+    size_t: btn_right
+    size_t: view
+    @: MixaButtonPanel pt 0
+    @: MixaButtonPanel qt 0
+    size_t: col
+    int: found
+    c.setbuf((cast: (@: void) c.stdout), 0)
+    failures: 0
+    g_counts[0]: 0
+
+    pa: (cast: (@: MixaButtonPanel) c.calloc(1U, c.sizeof(c.MixaButtonPanel)))
+    pb: (cast: (@: MixaButtonPanel) c.calloc(1U, c.sizeof(c.MixaButtonPanel)))
+    rect: (cast: (@: MixaTextRect) c.calloc(1U, c.sizeof(c.MixaTextRect)))
+    if: pa = 0 || pb = 0 || rect = 0
+        c.printf("panel_scroll: allocation failed\n")
+        return: 2
+    ---
+    pt: pa
+    qt: pb
+    if: mixa_rect_open(rect, 6U, 80U) != 0
+        c.printf("panel_scroll: rect open failed\n")
+        return: 2
+    ---
+
+    # Панель A -- строки 0..1, панель B -- строки 2..3; окно у обеих узкое (16 столбцов).
+    if: t_panel_open(pa, 0U, 0U, 16U) != 0 || t_panel_open(pb, 2U, 0U, 16U) != 0
+        c.printf("panel_scroll: panel open failed\n")
+        return: 2
+    ---
+    rows_a: 2U
+    rows_b: 2U
+    need: 6U * 80U
+    before_a: (cast: (@: MixaCell) c.calloc(need, c.sizeof(c.MixaCell)))
+    after_a: (cast: (@: MixaCell) c.calloc(need, c.sizeof(c.MixaCell)))
+    before_b: (cast: (@: MixaCell) c.calloc(need, c.sizeof(c.MixaCell)))
+    after_b: (cast: (@: MixaCell) c.calloc(need, c.sizeof(c.MixaCell)))
+    if: before_a = 0 || after_a = 0 || before_b = 0 || after_b = 0
+        c.printf("panel_scroll: snapshot alloc failed\n")
+        return: 2
+    ---
+
+    # 1. Прокручивать есть что: содержимое панели шире её окна.
+    t_check((cast: (int) (mixa_button_panel_content_w(pa) > pa\view_w)), "panel A has nothing to scroll")
+    t_check((cast: (int) (mixa_button_panel_scroll_max(pa) > 0U)), "panel A's scroll range is empty")
+    view: mixa_button_panel_scroll_max(pa)
+
+    # 2. Кадр до прокрутки: обе панели рисуются в один и тот же прямоугольник.
+    mixa_rect_fill(rect, 0U, 0U, 0U, 0U)
+    rc: mixa_button_panel_draw(pt, rect)
+    rc2: mixa_button_panel_draw(qt, rect)
+    if: rc != MIXA_BUTTONS_OK || rc2 != MIXA_BUTTONS_OK
+        c.printf("panel_scroll: draw failed rc=%d rc2=%d\n", rc, rc2)
+        return: 2
+    ---
+    t_snap(rect, 0U, rows_a, before_a)
+    t_snap(rect, pa\origin_row + 2U, rows_b, before_b)
+
+    # 3. Прокрутить ТОЛЬКО панель A.
+    t_check(mixa_button_panel_scroll_by(pt, 3) = MIXA_BUTTONS_OK, "the scroll was refused")
+    sx_a1: mixa_button_panel_scroll_x(pt)
+    sx_b0: mixa_button_panel_scroll_x(qt)
+    t_check(sx_a1 = 3U, "panel A did not move to 3")
+    t_check(sx_b0 = 0U, "panel B moved with panel A")
+
+    # 4. Кадр после: область B обязана совпасть побайтово, область A -- отличаться.
+    mixa_rect_fill(rect, 0U, 0U, 0U, 0U)
+    if: mixa_button_panel_draw(pt, rect) != MIXA_BUTTONS_OK || mixa_button_panel_draw(qt, rect) != MIXA_BUTTONS_OK
+        c.printf("panel_scroll: redraw failed\n")
+        return: 2
+    ---
+    t_snap(rect, 0U, rows_a, after_a)
+    t_snap(rect, pa\origin_row + 2U, rows_b, after_b)
+    t_check(c.memcmp(before_b, after_b, rows_b * rect\cols * c.sizeof(c.MixaCell)) = 0, "panel B's pixels changed when panel A scrolled")
+    t_check(c.memcmp(before_a, after_a, rows_a * rect\cols * c.sizeof(c.MixaCell)) != 0, "panel A's pixels did NOT change when it scrolled")
+    c.printf("PANEL_SCROLL own=%zu other=%zu content=%zu view=%zu max=%zu\n",
+             sx_a1, sx_b0, mixa_button_panel_content_w(pa), pa\view_w, view)
+
+    # 5. Подвод кнопки (5.7.2): последняя кнопка становится видна, и не более того.
+    last: (cast: (int) (mixa_button_panel_count(pt) - 1U))
+    t_check(mixa_button_panel_reveal(pt, last) = MIXA_BUTTONS_OK, "the reveal was refused")
+    sx_a2: mixa_button_panel_scroll_x(pt)
+    # Доступность кнопки проверяется У ПАНЕЛИ, а не по полям её структуры: hit() уже
+    # учитывает и начало панели, и её прокрутку (5.7.2 -- «bring that button into view»,
+    # а не «поставь такое-то число»).  Ищем последнюю кнопку в окне попаданием.
+    btn_left: 0U
+    btn_right: 0U
+    found: 0
+    col: 0U
+    while: col < pa\view_w
+        if: mixa_button_panel_hit(pt, pa\origin_row, pa\origin_col + col) = last
+            if: found = 0
+                btn_left: col
+            ---
+            btn_right: col + 1U
+            found: 1
+        ---
+        col: col + 1U
+    ---
+    t_check(found != 0, "the revealed button is not reachable anywhere in the view")
+    t_check(sx_a2 = view, "the reveal scrolled further than the last button needs")
+    c.printf("PANEL_REVEAL last=%d first_col=%zu last_col=%zu scroll=%zu window=%zu\n",
+             last, btn_left, btn_right, sx_a2, pa\view_w)
+
+    # 6. И обратно: подвод к первой кнопке возвращает вид в начало.
+    t_check(mixa_button_panel_reveal(pt, 0) = MIXA_BUTTONS_OK, "the reveal back to the first was refused")
+    t_check(mixa_button_panel_scroll_x(pt) = 0U, "the reveal did not bring the first button back")
+    # Заодно: подвод к НЕвидимой кнопке не должен двигать вид, если она и так видна.
+    t_check(mixa_button_panel_scroll_by(pt, 1000) = MIXA_BUTTONS_OK, "a large scroll was refused")
+    t_check(mixa_button_panel_scroll_x(pt) = view, "the scroll was not clamped to the content")
+    t_check(mixa_button_panel_reveal(pt, 0) = MIXA_BUTTONS_OK, "the reveal was refused")
+    t_check(mixa_button_panel_scroll_x(pt) = 0U, "the view stayed where it was")
+    c.printf("PANEL_SCROLL clamp=%zu back=%zu\n", view, mixa_button_panel_scroll_x(pt))
+
+    failures: g_counts[1]
+    c.printf("mixa_panel_scroll checks=%d failures=%d\n", g_counts[0], failures)
+    c.fflush(0)
+    mixa_button_panel_release(pt)
+    mixa_button_panel_release(qt)
+    c.free(pa)
+    c.free(pb)
+    c.free(rect)
+    c.free(before_a)
+    c.free(after_a)
+    c.free(before_b)
+    c.free(after_b)
+return: failures

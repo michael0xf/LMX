@@ -1,0 +1,339 @@
+Mixa Manager - the process seam
+Third seam. Display, files, processes: three boundaries, three small surfaces.
+
+
+1. Why a third seam rather than a corner of an existing one
+
+BACKEND_SEAM is pixels out and events in. FILE_SEAM is names and bytes. Running
+a program is neither: it is a child with its own lifetime, two streams and an
+exit status, and it fails in ways neither of the others has - a command that does
+not exist, one that never terminates, one that waits on input nobody will send.
+
+Folding it into either would make both harder to port and would force a headless
+display backend to know about processes.
+
+
+2. What it is for, exactly
+
+The first user of this is deliberately small, from the language owner:
+
+    the console holds text. Pressing Enter takes the line from its start up to
+    the CURSOR, sends it plus a newline to the OS, and the child's output
+    arrives at the same place - as if the cursor itself were writing. All of it
+    lands in the file.
+
+That is ClearShell's "Run OS Command" and it is mode 0.1.2 from the old model -
+delegation, not terminal hosting. There is no PTY, no terminal emulation and no
+child screen. The child gets a command and a place to write.
+
+Which settles a design question before it is asked: THE CONSOLE IS NOT A
+TERMINAL. It is a text file being edited, into which a child's output is
+appended. Everything a terminal implies - cursor addressing, colour escapes,
+alternate screens - is out of scope until mode 0.1.1, and this seam is not the
+place it will arrive.
+
+
+3. Operations
+
+    spawn      a command line, a working directory. Returns a handle, or
+               reports that it could not start - which is DIFFERENT from a
+               command that started and failed, and callers need to tell them
+               apart
+
+    read       drain available output into a caller's buffer. NEVER BLOCKS,
+               for the same reason poll does not: the loop belongs to the
+               Message, and a read that waits puts the wait inside a source
+               that cannot see the Message's other work
+
+    write      send bytes to the child's input
+
+    status     running, or exited with a code
+
+    kill       terminate it, and mean it - the child and its children
+
+    close      release the handle
+
+Six again, and not by imitation: the same lifetime shape produces the same
+count. If a seventh is needed it will be because something here cannot be
+expressed, and that is evidence rather than an inconvenience.
+
+
+4. Rules taken from ClearShell, which has run this for years
+
+Read out of its ProcessBuilder use rather than invented:
+
+    STDERR IS MERGED INTO STDOUT, in arrival order. Splitting them reorders
+      them, and for reading a build log the order IS the information.
+
+    STDIN IS CLOSED unless the caller means to write. ClearShell closes it
+      explicitly, with the comment that otherwise a command like `cat` waits
+      forever for input nobody will send. That is a real hang, not a theoretical
+      one.
+
+    THE CHILD RUNS IN A PROCESS GROUP where the platform supports it, so that
+      kill reaches its descendants. A shell that spawns a compiler must not
+      leave the compiler running.
+
+    THE WORKING DIRECTORY IS EXPLICIT, and the command may change it. ClearShell
+      recovers the new one by having the script print it after the command,
+      alongside the exit status.
+
+4.1. The marker line
+
+The child's exit status and final directory come back IN BAND, printed after the
+command as a marker line carrying both, tab separated - ClearShell's approach,
+and we keep it.
+
+In band looks like a hack and is not. The console's scrollback is an ordinary
+file that the user can open, search and copy; a sidecar index of command
+boundaries would have to be kept in step with it, and would be wrong the moment
+someone edited the file. A marker line travels with the text it describes.
+
+It follows that the marker must be unguessable enough not to occur in real
+output - ClearShell derives one per command from a counter and a high-resolution
+time - and that a caller which finds no marker must treat the command as having
+produced no status rather than inventing one.
+
+
+5. What this seam does NOT do
+
+No PTY, no ConPTY, no terminal emulation, no job control, no shell parsing - the
+command line goes to the platform's shell as one string, and what that shell
+does with it is the shell's business.
+
+No output limits. ClearShell keeps head, line and tail limits and drops the
+middle of noisy output because it holds the text in memory. Ours goes to a file,
+so there is nothing to drop; see FILE_SEAM section 2.
+
+
+6. Background jobs become MESSAGES, and ClearShell already has the right shape
+
+Module development does not wait for Message runtime delivery. Implement and
+test explicit owner-local operations with inputs/results now; attach their
+cross-owner delivery/execution boundary when the verified runtime is available.
+Do not create a temporary shared-memory model that will need rewriting. Several
+modules can live in one Message. See PORT_OF_CLEARSHELL.txt 1.1 for the reference-
+driven workflow and the distinction between module and concurrency acceptance.
+
+Mandatory application architecture, reconfirmed2026-09-10: concurrent work and
+cross-thread coordination use Message, not private synchronization inside C
+fragments. Each live Message owns its arena and executes its turns serially;
+different Messages may run concurrently. C/OS adapters are isolated boundaries,
+not owners of a parallel shared-mutable application model.
+
+Required runnable milestone, explicitly confirmed2026-09-10: actual parallel
+execution of DIFFERENT Message handlers, not merely concurrent producers feeding
+one serial dispatcher. A long-running job must not occupy the UI execution lane
+or prevent unrelated Messages from progressing. Each individual Message remains
+serial and owns one arena; UI-affine work remains on the UI owner thread.
+Host ingress V0 is a prerequisite, not completion of this requirement.
+
+Acceptance must show two independently executing job Messages and responsive
+UI event handling while work is still active, ordered turns without simultaneous
+entry of one Message, copied/owned cross-Message data, and parent/child close
+and late-event handling. A long CPU task or blocked job must not monopolize a
+global dispatcher lock. Normal closure and emergency cancellation follow the
+current specification's end-turn and instrumented safe-escape rules; neither
+permits a foreign observer to forcibly free an active arena.
+
+No application mutexes, atomics, shared cancellation flags or custom synchronized
+queues hidden in C headers/adapters. The Message runtime/host boundary owns
+cross-thread delivery; app adapters use that boundary instead of recreating it.
+Ordinary calls within one Message remain ordinary calls. They must not smuggle
+another worker's mutable state into the caller's arena.
+
+Inventory SYSTEM event sources as well as explicitly started workers: window
+and input callbacks, timers, filesystem notifications, process I/O/completion,
+and other platform callbacks used by the port. Record each source's execution
+context, owning Message, payload lifetime and close/late-event policy. A foreign
+callback hands off an owned/copyable event through Message ingress; it does not
+mutate the UI graph concurrently. Keep thread-affine OS handles with their owner.
+An OS callback is not automatically a new Message or a new native thread.
+
+This is required NOW for the L1 application so the later L2 port preserves the
+architecture. A serialized prototype is useful for tests but is not evidence
+that concurrent ingress is implemented safely. Missing Message host operations
+are explicit integration tasks, not permission to add a temporary C lock scheme.
+
+Instruction from the language owner: shape ClearShell's concurrent activities
+as Message-owned jobs with inbox and outbox. This supplies application coverage
+beyond the translator's historically single-root execution; core concurrency
+tests do not by themselves establish working application integration.
+
+6.1. The mapping, and it is NOT one to one
+
+I first wrote "one to one". That is wrong and the language owner said so:
+ClearShell has no Messages. What carries over is the RHYTHM - where it posts per
+directory, we take a turn per directory. The MECHANISM is entirely different,
+and the difference is the whole cost of the port.
+
+    each background job          a Message with its own arena
+    runOnUiThread                a send to the UI Message's inbox
+    the UI's drain-and-process   the pump, which already exists and is tested
+
+A Java thread SHARES THE HEAP with the UI thread. A Message does not: it has its
+own arena and nothing crosses without an explicit copy. So a posted closure and
+a sent message are not the same thing wearing different clothes.
+
+6.1.1. What that actually costs, from a real closure
+
+FolderCalculator's post, in FSync.java:
+
+    if (item.adapter.closed)      { sizes().remove(directory); run = false; }
+    else if (!isSelect(item))     { sizes().remove(directory); run = false; }
+    item.format();
+    item.panel.invalidate();
+
+That is not "post a result". It READS UI state to decide whether the job should
+continue, WRITES run = false INTO THE BACKGROUND JOB to stop it, mutates a
+shared table, and triggers a redraw.
+
+Under the Message model none of it works directly. The job cannot hold a
+reference to item - that is another Message's graph. The UI cannot set a flag
+inside the job's arena. The shared table cannot be shared.
+
+So the port INVERTS THE CONTROL FLOW: the job sends a RESULT, the UI decides for
+itself, and if it wants the job stopped it sends a CANCEL to the job's inbox.
+One shared closure becomes two messages travelling in opposite directions.
+
+Which is why the inbox/outbox pair is needed per job in BOTH directions, not
+only job to UI.
+
+6.1.2. And it closes the loop on chunking
+
+A job can only notice a cancel BETWEEN CHUNKS. So turn-per-chunk is not only
+about not losing progress to a failed turn - it is the only place cancellation
+can be observed at all. Two independent reasons for the same structure, which is
+usually a sign the structure is right.
+
+Four jobs, from clearshell_reference: FSync (copy, move, overwrite),
+FolderCalculator (directory sizes), FileNameFinder (search by name), and command
+execution.
+
+6.2. Two rules from the spec that a file manager must not get wrong
+
+19.29.14: a FAILED TURN DISCARDS ITS STAGED OUTBOX. So a long job must publish
+per turn rather than accumulate - computing a whole tree in one turn and staging
+every result means a failure at the end discards all of them. That is
+structural, not a performance choice.
+
+CHECKED, AND CLEARSHELL ALREADY CHUNKS THIS WAY. FolderCalculator posts inside
+its loop, one directory at a time, not at the end. So the GRANULARITY carries
+over and we do not have to invent it - but only the granularity, see 6.1. The answer was in the source and
+I derived it from the spec instead - the same answer, but PORT_OF_CLEARSHELL
+section 4 says to look at the source first for a reason.
+
+19.29.14 again: "Outbox rollback does not roll back previously published
+own-field or explicit graph mutations." A FAILED COPY LEAVES FILES COPIED - they
+cannot be uncopied - so the protocol must report WHAT WAS DONE rather than
+present the operation as all or nothing. For a manager that is not a detail:
+"the copy failed" without "900 of 1000 arrived" is the difference between a
+recoverable situation and a mess.
+
+6.3. Message shape, already decided elsewhere
+
+19.31.4: "the semantic result/failure is an ordinary LMX Message with
+correlation equal to the request id". So request/reply correlation is settled
+and does not need inventing.
+
+6.4. Selected first transport slice
+
+Lingvamyxa_spec19.29.7.1 defines the initial number/exact-byte-copy participant
+slice. It is not awaiting selection. General graph operations remain separately
+deferred under19.29.7.2. Each live Message owns one arena; cross-Message work
+does not share mutable UI objects. Section7 distinguishes the prototype API
+from its still-pending integration into this application.
+
+
+7. Current Message contract and application integration
+
+Follow the CURRENT Lingvamyxa_spec19.29.7.1/19.29.7.2 and19.31.4, not the
+superseded initial ticket191200. A prototype header DOES exist:
+stg/l1_baseline/l2src/lmx_message.h. It exposes lmx_msg_create/send/stop,
+poll/drive and other participant operations. It is a serialized in-process
+number/bytes prototype, not proof that this app uses it or that the full L2
+pipeline is self-hosted. Do not make the app build depend on the mutable core
+checkout without a reviewed, versioned integration seam. Existing ordinary calls
+describe the current single-owner stage only. New concurrent jobs must use the
+Message boundary in section6; do not postpone it until after the L2 rewrite.
+
+7.1. Conceptual operations (not literal source syntax or exact C prototypes)
+
+    addr = create(worker_handler, initial_copy)
+    send(addr, envelope{ id, correlation, replyTo, payload })
+    stop(destination)
+
+7.2. The timing rules, which are not obvious
+
+    a child DOES NOT RUN before the parent's turn publishes successfully
+    a failed parent turn RELEASES the unactivated child
+    sending to a just-created child in the SAME turn is allowed - FIFO with
+      activation
+    normal parent close requests its children close at the parent's end_turn;
+      each child exits normally at its own end_turn
+    after abrupt parent death, child-to-parent liveness checks trigger child
+      self-close after the configured policy; no permanently orphaned workers
+    an unresponsive child unable to reach end_turn requires the exceptional
+      host/supervisor failure path, not a claim of completed safe cleanup
+
+Automatic polling is CHILD TO PARENT, at end_turn or a host-timer cadence.
+A live idle parent is not a failed parent. This does not restrict ordinary
+messages in either direction. Do not add a mandatory parent-to-child poll.
+Prototype lmx_msg_poll/drive needs a host-driven clock/loop; there is no
+automatic timer or one-native-thread-per-Message guarantee in that prototype.
+
+7.3. Staging, admission, execution are three different moments
+
+    send() STAGES a copy
+    admission is FIFO at the receiver
+    execution is a LATER SERIAL TURN of the receiver
+
+A reply or failure is an ordinary Message with correlation equal to the request
+id (19.31.4).
+
+Completion means the assigned operation finished: a copy worker completed the
+file copy, a delivery worker completed delivery. Admission is not completion,
+and a liveness response is not completion. Failure/cancellation remain distinct.
+For local child completion alone, the parent observes the child's Message-owned
+running/success control state under the current specification; no redundant
+completion-only reply is required. Result data still uses ordinary correlated
+Messages. Control flags are not application locks or permission to read a
+foreign mutable arena.
+
+Concurrent modules sending operations to one owner require only its normal
+Message FIFO and serial own turns, not another permission/locking protocol.
+Arrival order is unspecified until admission, then fixed. Send a complete
+read-modify-write operation; separate read and write requests can lose updates.
+Application-specific sorting/batching is an explicit handler, not base FIFO.
+
+7.4. YIELD IS NOT PUBLICATION - this corrects what I assumed
+
+"Yield (21.10) is a dirty-only checkpoint, not outbox publication. Stage-then-
+yield in one turn is not committed."
+
+So progress needs MANY SMALL SUCCESSFUL TURNS plus explicit job state. Yield
+does not substitute for a turn boundary. I had reached "many turns" from the
+failure rules and from ClearShell's chunking; this says why yield is not the
+alternative.
+
+7.5. Failure and cancellation
+
+    an uncaught failed turn discards the uncommitted outbox
+    already-performed external effects STAY - files copied remain copied
+    report partial state on a LATER SUCCESSFUL REPORTING TURN, if the I/O
+      failure was caught
+    stop() is explicit; late replies after a stop are rejected at admission
+    do not resume an assert-terminated Message
+    transport resend is not semantic replay is not local retry - three
+      different things
+
+7.6. Duplicates
+
+A stable request id, and a RETRIED CREATE MUST NOT SPAWN A SECOND CHILD. Worth
+naming because a retry that quietly starts a second copy operation is the kind
+of bug a file manager cannot survive.
+
+7.7. Deferred, so do not design around them
+
+graph-copy, adoption, join, live-graph activation, wire serialization,
+multi-owner atomic split/link, durable exactly-once.

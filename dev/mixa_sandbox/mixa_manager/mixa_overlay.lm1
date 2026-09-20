@@ -1,0 +1,117 @@
+predef: "mixa_manager/mixa_overlay.h.lm1"
+
+# Body of mixa_palette_rgb (was static inline in mixa_overlay.h).
+# Classic 16-color VGA-style palette; index modulo 16.
+
+sub: mixa_palette_rgb (unsigned: index; @: MixaU8 out_r; @: MixaU8 out_g; @: MixaU8 out_b)
+    unsigned: i
+    unsigned: r
+    unsigned: g
+    unsigned: b
+    i: index & 15U
+    r: 0U
+    g: 0U
+    b: 0U
+    if: i = 0U
+        r: 0U
+        g: 0U
+        b: 0U
+    else:
+        if: i = 1U
+            r: 170U
+            g: 0U
+            b: 0U
+        else:
+            if: i = 2U
+                r: 0U
+                g: 170U
+                b: 0U
+            else:
+                if: i = 3U
+                    r: 170U
+                    g: 85U
+                    b: 0U
+                else:
+                    if: i = 4U
+                        r: 0U
+                        g: 0U
+                        b: 170U
+                    else:
+                        if: i = 5U
+                            r: 170U
+                            g: 0U
+                            b: 170U
+                        else:
+                            if: i = 6U
+                                r: 0U
+                                g: 170U
+                                b: 170U
+                            else:
+                                if: i = 7U
+                                    r: 170U
+                                    g: 170U
+                                    b: 170U
+                                else:
+                                    if: i = 8U
+                                        r: 85U
+                                        g: 85U
+                                        b: 85U
+                                    else:
+                                        if: i = 9U
+                                            r: 255U
+                                            g: 85U
+                                            b: 85U
+                                        else:
+                                            if: i = 10U
+                                                r: 85U
+                                                g: 255U
+                                                b: 85U
+                                            else:
+                                                if: i = 11U
+                                                    r: 255U
+                                                    g: 255U
+                                                    b: 85U
+                                                else:
+                                                    if: i = 12U
+                                                        r: 85U
+                                                        g: 85U
+                                                        b: 255U
+                                                    else:
+                                                        if: i = 13U
+                                                            r: 255U
+                                                            g: 85U
+                                                            b: 255U
+                                                        else:
+                                                            if: i = 14U
+                                                                r: 85U
+                                                                g: 255U
+                                                                b: 255U
+                                                            else:
+                                                                r: 255U
+                                                                g: 255U
+                                                                b: 255U
+                                                            ---
+                                                        ---
+                                                    ---
+                                                ---
+                                            ---
+                                        ---
+                                    ---
+                                ---
+                            ---
+                        ---
+                    ---
+                ---
+            ---
+        ---
+    ---
+    if: out_r != 0
+        out_r[0]: (cast: (MixaU8) r)
+    ---
+    if: out_g != 0
+        out_g[0]: (cast: (MixaU8) g)
+    ---
+    if: out_b != 0
+        out_b[0]: (cast: (MixaU8) b)
+    ---
+end: mixa_palette_rgb

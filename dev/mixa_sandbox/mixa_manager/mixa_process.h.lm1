@@ -1,0 +1,19 @@
+include: "<stddef.h>"
+
+define: MIXA_PROC_OK 0
+define: MIXA_PROC_ERR_ARG 1
+define: MIXA_PROC_ERR_SPAWN 2
+define: MIXA_PROC_ERR_IO 3
+define: MIXA_PROC_ERR_NOMEM 4
+define: MIXA_PROC_EOF 5
+
+type: MixaProcess struct MixaProcess
+
+prototype:
+    fn: mixa_process_spawn (@@: MixaProcess out; const: @(char command_line_utf8); const: @(char cwd_utf8); int: stdin_enabled) int
+    fn: mixa_process_read (@: MixaProcess p; @: void buf; size_t: cap; @: size_t got) int
+    fn: mixa_process_write (@: MixaProcess p; const: @(void buf); size_t: n; @: size_t wrote) int
+    fn: mixa_process_status (@: MixaProcess p; @: int running; @: int exit_code) int
+    fn: mixa_process_kill (@: MixaProcess p) int
+    fn: mixa_process_close (@@: MixaProcess p) void
+end: prototype

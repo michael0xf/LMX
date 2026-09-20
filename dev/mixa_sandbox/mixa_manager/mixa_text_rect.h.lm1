@@ -1,0 +1,15 @@
+include: "<stddef.h>"
+predef: "mixa_manager/mixa_core.h.lm1"
+
+# TextRect allocate / address / fill / put / dump (bodies in mixa_text_rect.lm1).
+# Header-only so callers do not embed bodies (ticket 20260917-103358 link greening).
+
+prototype:
+    fn: mixa_rect_open (@: MixaTextRect rect; size_t: rows; size_t: cols) int
+    fn: mixa_rect_release (@: MixaTextRect rect) void
+    fn: mixa_cell_at (@: MixaTextRect rect; size_t: row; size_t: col) @: MixaCell
+    fn: mixa_cell_at_const (const: @(MixaTextRect rect); size_t: row; size_t: col) const: @(MixaCell)
+    fn: mixa_rect_fill (@: MixaTextRect rect; unsigned: codepoint; unsigned: fg; unsigned: bg; unsigned: flags) void
+    fn: mixa_rect_put_text (@: MixaTextRect rect; size_t: row; size_t: col; const: @(char text); unsigned: fg; unsigned: bg; unsigned: flags) size_t
+    fn: mixa_rect_dump (const: @(MixaTextRect rect); @: char out; size_t: out_size) size_t
+end: prototype

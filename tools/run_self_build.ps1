@@ -1,16 +1,21 @@
 # Self-build of the live L1 chain at the repository root (Mikhail 2026-09-15: the
 # self-build's target is the root's l1src; one build root after the self-build).
 #
-# B0 is gcc of the root's committed lm1/build/l1trans.lm1.c. Pass 1: B0 regenerates
-# the eight generated files of l1src/buildCore.lm1's lm_build_generate_all map into
-# a stamped directory. B1 from pass 1's l1trans.lm1.c, pass 2; B2 from pass 2's,
-# pass 3. Green is the fixed point (pass 3 == pass 2 byte for byte) and the
-# committed generated C equal to that fixed point by git blob id (hash-object
-# --path applies .gitattributes). B0's agreement with the committed C is reported
-# and does not decide. Executables are compared by nothing: gcc output here is not
-# byte-reproducible from identical C.
+# B0 is gcc of lm1/build/l1trans.lm1.c AS CHECKED OUT.  The seed is VERSIONED now -- until Codex's
+# audit (LMX-L1FIXPOINT-AUDIT-20260920-01) it was hidden by .gitignore's build/ rule, and without
+# it the self-build could not start at all.  Pass 1: B0 regenerates the eight generated files of
+# l1src/buildCore.lm1's lm_build_generate_all map into a stamped directory. B1 from pass 1's
+# l1trans.lm1.c, pass 2; B2 from pass 2's, pass 3.  Green is the fixed point (pass 3 == pass 2
+# byte for byte).
+# TWO seed comparisons are reported beside it, and they answer DIFFERENT questions:
+#   * working-tree seed vs fixed point -- is the file on disk what the build converges to;
+#   * HEAD:path blob vs fixed point    -- is what a CLEAN CLONE gets the same.  This second one is
+#     the property that makes a checkout reproducible, and it is not the same question: a local
+#     edit to the seed moves the first and not the second.  hash-object --path applies
+#     .gitattributes, so both sides are normalised the same way.
+# Executables are compared by nothing: gcc output here is not byte-reproducible from identical C.
 #
-#   powershell -NoProfile -ExecutionPolicy Bypass -File l2src/run_self_build.ps1
+#   powershell -NoProfile -ExecutionPolicy Bypass -File tools/run_self_build.ps1
 param([string]$OutDir)
 $ErrorActionPreference = 'Continue'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
@@ -66,7 +71,7 @@ $b2 = Join-Path $OutDir 'b2\l1trans.exe'
 if (Test-Path -LiteralPath (Join-Path $p2 'lm1\build\l1trans.lm1.c')) { Invoke-SelfBuildGcc 'b2' (Join-Path $p2 'lm1\build') (Join-Path $p2 'lm1\build\l1trans.lm1.c') $b2 }
 if (Test-Path -LiteralPath $b2) { Invoke-SelfBuildPass 'pass3' $b2 $p3 }
 
-$fixed = 0; $committedEq = 0; $b0Eq = 0
+$fixed = 0; $committedEq = 0; $b0Eq = 0; $headEq = 0
 foreach ($e in $map) {
     $rel = $e[1] -replace '/', '\'
     $f1 = Join-Path $p1 $rel; $f2 = Join-Path $p2 $rel; $f3 = Join-Path $p3 $rel
@@ -84,15 +89,13 @@ foreach ($e in $map) {
         $script:red += ('committed ' + $e[1] + ' ' + $(if ($committedBlob) { $committedBlob.Substring(0, 8) } else { 'absent' }) + ' differs from the fixed point ' + $(if ($fixedBlob) { $fixedBlob.Substring(0, 8) } else { 'absent' }) + $line)
     }
     if ($committedBlob -and $committedBlob -eq (Get-SelfBuildBlob $e[1] $f1)) { $b0Eq++ }
+    # What a CLEAN CLONE would get: the blob in HEAD, not the file on disk.
+    $headBlob = ((git rev-parse ('HEAD:' + $e[1])) -join '')
+    if ($headBlob -and $headBlob -eq $fixedBlob) { $headEq++ }
 }
 $sec = [int]((Get-Date) - $started).TotalSeconds
 Write-Output ('working-tree seed (B0 input) regenerates ' + $b0Eq + ' of 8 committed files unchanged (reported, not decisive)')
-# WHERE THE SEED SIDE COMES FROM, said out loud: Get-SelfBuildBlob hashes the file ON DISK
-# (git hash-object -- <path>), NOT the blob in HEAD.  Found by Codex's audit
-# (LMX-L1FIXPOINT-AUDIT-20260920-01) and it decides what this run proves: an untracked or
-# ignored seed passes here and still does not exist in a clean clone.  Run `git ls-files` for
-# what a clone would actually get.
-Write-Output ('note: seed side = WORKING-TREE file, not HEAD; a clone may not have it (git ls-files shows what it would)')
+Write-Output ('HEAD:path seed blobs ' + $headEq + ' of 8 equal to the fixed point -- this is what a CLEAN CLONE gets (the working-tree count above is a different question)')
 foreach ($r in $script:red) { Write-Output ('RED ' + $r) }
 if ($script:red.Count) {
     Write-Output ('self-build FAIL: fixed point ' + $fixed + ' of 8 (pass 3 == pass 2), working-tree seed C ' + $committedEq + ' of 8 equal to the fixed point, in ' + $sec + 's; evidence ' + $OutDir)

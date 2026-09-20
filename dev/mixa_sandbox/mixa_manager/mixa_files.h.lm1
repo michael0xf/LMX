@@ -1,0 +1,37 @@
+include: "<stddef.h>"
+predef: "mixa_manager/mixa_dir.h.lm1"
+predef: "mixa_manager/mixa_file_win32.h.lm1"
+predef: "mixa_manager/mixa_fileio.h.lm1"
+
+# mixa_files.h.lm1 — thin Files.java facade over existing dir/file/fio seams
+# (ticket 20260918-125450). ClearShell Files.java is only an ArrayList<File>
+# with a cursor; desktop port exposes list/read/write/delete as owned-buffer
+# / status APIs that DELEGATE to mixa_dir_* / mixa_file_* / mixa_fio_* —
+# no second Win32 filesystem implementation here.
+#
+# Ownership:
+#   mixa_files_list_dir / mixa_files_read return an OWNED UTF-8 buffer in
+#   *out (caller c.free). list_dir is one name per line.
+#   mixa_files_write overwrites by mixa_dir_remove (ignore missing) then
+#   mixa_fio_open_write_new + write + close — CREATE_NEW after delete, not a
+#   new Win32 create mode invented here.
+#   mixa_files_delete is mixa_dir_remove.
+#
+# Predef note: mixa_file_win32.h.lm1 (concrete MixaFile), NOT mixa_file.h.lm1
+# (incomplete type:) — loading both is a duplicate-type error in l1trans.
+
+define: MIXA_FILES_OK 0
+define: MIXA_FILES_ERR_ARG 1
+define: MIXA_FILES_ERR_MISSING 2
+define: MIXA_FILES_ERR_IO 3
+define: MIXA_FILES_ERR_NOMEM 4
+define: MIXA_FILES_ERR_EXISTS 5
+define: MIXA_FILES_ERR_ACCESS 6
+
+prototype:
+    fn: mixa_files_list_dir (const: @(char path_utf8); @@: char out_listing) int
+    fn: mixa_files_read (const: @(char path_utf8); @@: char out_buf; @: size_t out_len) int
+    fn: mixa_files_write (const: @(char path_utf8); const: @(void data); size_t: len) int
+    fn: mixa_files_delete (const: @(char path_utf8)) int
+end: prototype
+

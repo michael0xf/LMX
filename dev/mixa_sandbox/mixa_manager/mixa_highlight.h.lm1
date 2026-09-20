@@ -1,0 +1,29 @@
+include: "<stddef.h>"
+predef: "mixa_manager/mixa_core.h.lm1"
+
+define: MIXA_HIGHLIGHT_OK 0
+define: MIXA_HIGHLIGHT_ERR 1
+
+struct: MixaHighlight
+    int: is_open
+    int: is_active
+    size_t: row
+    size_t: col
+    size_t: nrows
+    size_t: ncols
+    unsigned: fg
+    @: MixaCell saved
+    size_t: saved_count
+    size_t: saved_cap
+    @: MixaTextRect target_rect
+    @: MixaCell target_cells
+    size_t: target_rows
+    size_t: target_cols
+end: MixaHighlight
+
+prototype:
+    fn: mixa_highlight_init (@: MixaHighlight hl) int
+    fn: mixa_highlight_release (@: MixaHighlight hl) void
+    fn: mixa_highlight_set (@: MixaHighlight hl; @: MixaTextRect rect; size_t: row; size_t: col; size_t: nrows; size_t: ncols; unsigned: fg) int
+    fn: mixa_highlight_clear (@: MixaHighlight hl; @: MixaTextRect rect) int
+end: prototype

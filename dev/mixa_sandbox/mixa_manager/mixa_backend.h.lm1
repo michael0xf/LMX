@@ -1,0 +1,139 @@
+include: "<stddef.h>"
+predef: "mixa_manager/mixa_overlay.h.lm1"
+
+# mixa_backend.h.lm1 - platform seam.
+# L1 rename: enum MixaButton (mouse bits) -> MixaMouseButton to avoid collision
+# with struct MixaButton (C defect mixa_backend.h:126 / mixa_buttons.h:16).
+
+enum: MixaEventKind
+    MIXA_EVENT_NONE 0
+    MIXA_EVENT_KEY 1
+    MIXA_EVENT_MOUSE 2
+    MIXA_EVENT_RESIZE 3
+    MIXA_EVENT_CLOSE 4
+    MIXA_EVENT_MOUSE_WHEEL 5
+end: MixaEventKind
+
+enum: MixaKeyCode
+    MIXA_KEY_NONE 0
+    MIXA_KEY_UP 1
+    MIXA_KEY_DOWN 2
+    MIXA_KEY_LEFT 3
+    MIXA_KEY_RIGHT 4
+    MIXA_KEY_HOME 5
+    MIXA_KEY_END 6
+    MIXA_KEY_PAGE_UP 7
+    MIXA_KEY_PAGE_DOWN 8
+    MIXA_KEY_INSERT 9
+    MIXA_KEY_DELETE 10
+    MIXA_KEY_BACKSPACE 11
+    MIXA_KEY_TAB 12
+    MIXA_KEY_ENTER 13
+    MIXA_KEY_ESCAPE 14
+    MIXA_KEY_F1 15
+    MIXA_KEY_F2 16
+    MIXA_KEY_F3 17
+    MIXA_KEY_F4 18
+    MIXA_KEY_F5 19
+    MIXA_KEY_F6 20
+    MIXA_KEY_F7 21
+    MIXA_KEY_F8 22
+    MIXA_KEY_F9 23
+    MIXA_KEY_F10 24
+    MIXA_KEY_F11 25
+    MIXA_KEY_F12 26
+end: MixaKeyCode
+
+enum: MixaModifier
+    MIXA_MOD_SHIFT 1
+    MIXA_MOD_CTRL 2
+    MIXA_MOD_ALT 4
+    MIXA_MOD_META 8
+end: MixaModifier
+
+enum: MixaMouseButton
+    MIXA_BUTTON_LEFT 1
+    MIXA_BUTTON_MIDDLE 2
+    MIXA_BUTTON_RIGHT 4
+end: MixaMouseButton
+
+enum: MixaGlyphLayer
+    MIXA_LAYER_TEXT 0
+    MIXA_LAYER_UPPER 1
+    MIXA_LAYER_POINTER 2
+end: MixaGlyphLayer
+
+struct: MixaEvent
+    int: kind
+    unsigned: codepoint
+    int: keycode
+    unsigned: modifiers
+    size_t: row
+    size_t: col
+    unsigned: buttons
+    size_t: cols
+    size_t: rows
+    int: wheel_delta
+end: MixaEvent
+
+struct: MixaCellMetrics
+    size_t: text_cell_width
+    size_t: text_cell_height
+    size_t: upper_cell_width
+    size_t: upper_cell_height
+    size_t: pointer_cell_width
+    size_t: pointer_cell_height
+end: MixaCellMetrics
+
+struct: MixaGlyph
+    size_t: width
+    size_t: height
+    int: bearing_x
+    int: bearing_y
+    size_t: advance
+    const: @: MixaU8 coverage
+    int: missing
+end: MixaGlyph
+
+# Incomplete handle so fnptrs can name MixaBackend* before the vtable body.
+type: MixaBackend struct MixaBackend
+
+fnptr: MixaBackendOpenFn (@@: MixaBackend out; size_t: cols; size_t: rows; @: MixaCellMetrics metrics) int
+fnptr: MixaBackendPresentFn (@: MixaBackend backend; const: @(MixaU8 rgba); size_t: bytes) int
+fnptr: MixaBackendPollFn (@: MixaBackend backend; @: MixaEvent out) int
+fnptr: MixaBackendClipboardGetFn (const: @(MixaBackend backend); @: char out; size_t: cap) size_t
+fnptr: MixaBackendClipboardSetFn (@: MixaBackend backend; const: @(char text)) int
+fnptr: MixaBackendGlyphFn (@: MixaBackend backend; int: layer; unsigned: codepoint; @: MixaGlyph out) int
+fnptr: MixaBackendCloseFn (@: MixaBackend backend) void
+
+struct: MixaBackendVTable
+    const: @: char name
+    MixaBackendOpenFn: open
+    MixaBackendPresentFn: present
+    MixaBackendPollFn: poll
+    MixaBackendClipboardGetFn: clipboard_get
+    MixaBackendClipboardSetFn: clipboard_set
+    MixaBackendGlyphFn: glyph
+    MixaBackendCloseFn: close
+end: MixaBackendVTable
+
+# Complete the incomplete MixaBackend (needs L1 allow typedef-tag + struct body).
+struct: MixaBackend
+    const: @: MixaBackendVTable vt
+end: MixaBackend
+
+include: "mixa_manager/mixa_backend_tableref.h"
+
+prototype:
+    fn: mixa_backend_open (const: @(MixaBackendVTable vt); @@: MixaBackend out; size_t: cols; size_t: rows; @: MixaCellMetrics metrics) int
+    fn: mixa_backend_present (@: MixaBackend backend; const: @(MixaU8 rgba); size_t: bytes) int
+    fn: mixa_backend_poll (@: MixaBackend backend; @: MixaEvent out) int
+    fn: mixa_backend_clipboard_get (const: @(MixaBackend backend); @: char out; size_t: cap) size_t
+    fn: mixa_backend_clipboard_set (@: MixaBackend backend; const: @(char text)) int
+    fn: mixa_backend_close (@: MixaBackend backend) void
+    fn: mixa_backend_glyph (@: MixaBackend backend; int: layer; unsigned: codepoint; @: MixaGlyph out) int
+    fn: mixa_backend_table_valid (const: @(MixaBackendVTable vt)) int
+    fn: mixa_backend_table_by_name (const: @(char name)) const: @(MixaBackendVTable)
+    fn: mixa_backend_default_table () const: @(MixaBackendVTable)
+    fn: mixa_backend_tables (@: size_t count) const: @(MixaBackendTableRef)
+end: prototype

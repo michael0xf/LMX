@@ -1,0 +1,156 @@
+include: "<stddef.h>" "<stdint.h>"
+
+# mixa_app_message.h.lm1 — kernel Message API declarations for mixa_manager.
+#
+# Approach: declare opaque L1 types (type: struct) + include the GENERATED C
+# headers (l2src_kernel/*.lm1.h) so gcc has the full struct layout for
+# sizeof/field access.  The kernel .lm1 implementations are compiled
+# separately and linked at the end.
+#
+# Per Mikhail: no C in L1 except a thin Win32 bridge.  Per l1-98: all acts
+# verified, address depth <= 64, lmx_thread_turn is per-thread (not R0).
+# l1-98: "lmx_root_open clears the root itself" — caller just provides storage.
+
+# Opaque L1 types (forward-declared structs, completed by the C includes below)
+type: LmxRoot struct LmxRoot
+type: Lmx struct Lmx
+type: LmxArena struct LmxArena
+type: LmxMsg struct LmxMsg
+type: LmxThread struct LmxThread
+type: LmxService struct LmxService
+type: LmxPost struct LmxPost
+type: LmxSchedule struct LmxSchedule
+type: LmxManager struct LmxManager
+
+# L1-promoted constants (from kernel headers via include below)
+define: MIXA_APP_OK 0
+define: MIXA_APP_FAIL 1
+
+# LmxCallEntry: entry function type (runs inside a thread's turn)
+fnptr: LmxCallEntry (@: Lmx node) int
+fnptr: LmxEntry () void
+
+# Include the generated C struct definitions (gcc include path has l2src_kernel/)
+# These provide the full layout for Lmx, LmxRoot, LmxArena, LmxMsg, LmxThread, etc.
+include: "l2src_kernel/lmx.lm1.h"
+include: "l2src_kernel/lmx_root.lm1.h"
+include: "l2src_kernel/lmx_arena.lm1.h"
+include: "l2src_kernel/lmx_message.lm1.h"
+include: "l2src_kernel/lmx_thread.lm1.h"
+include: "l2src_kernel/lmx_service.lm1.h"
+include: "l2src_kernel/lmx_post.lm1.h"
+include: "l2src_kernel/lmx_schedule.lm1.h"
+include: "l2src_kernel/lmx_pool.lm1.h"
+include: "l2src_kernel/lmx_manager.lm1.h"
+include: "l2src_kernel/lmx_own.lm1.h"
+include: "l2src_kernel/lmx_implements.lm1.h"
+include: "l2src_kernel/lmx_child.lm1.h"
+include: "l2src_kernel/lmx_call.lm1.h"
+
+# R0 API (lmx_root.h.lm1)
+prototype:
+    fn: lmx_root_open (@: LmxRoot root; LmxCallEntry: entry; ulong: limit; size_t: eternal; size_t: methods) int
+    fn: lmx_root_cycle (@: LmxRoot root; unsigned: ticks) int
+    fn: lmx_root_close (@: LmxRoot root) int
+    fn: lmx_root_clock (@: LmxRoot root) ulong
+    fn: lmx_root_keepalive (@: LmxRoot root; ulong: now) int
+    fn: lmx_root_arena (@: LmxRoot root) @: LmxArena
+    fn: lmx_root_thread (@: LmxRoot root) @: LmxThread
+    fn: lmx_root_service (@: LmxRoot root) @: LmxService
+    fn: lmx_root_create (@: LmxRoot root; @: LmxArena child_arena; size_t: slot; @: Lmx source) @: LmxMsg
+    fn: lmx_root_hung (@: LmxRoot root; ulong: now) int
+    fn: lmx_root_supervise_world (@: LmxRoot root; @: void world) int
+end: prototype
+
+# Clock API (lmx_clock.h.lm1)
+prototype:
+    fn: lmx_clock_ticks () ulong
+end: prototype
+
+# Thread API (lmx_thread.h.lm1)
+prototype:
+    fn: lmx_thread_attach (@: LmxThread t; @: LmxMsg message; @: LmxPost mail; @: LmxSchedule slot) int
+    # SYNCED 2026-09-19 (assembly lead): the kernel gained the cycle's reading as the third
+    # parameter -- "every operation that ages a wait is GIVEN the reading" (lmx_manager.h.lm1).
+    # The app itself never calls this act (all four threads are STEPPED through the manager), so
+    # the stale prototype was the only thing here; it made gcc refuse mixa_app_main_msg with
+    # "conflicting types for 'lmx_thread_turn'".
+    fn: lmx_thread_turn (@: LmxThread t; LmxCallEntry: entry; ulong: now) int
+    fn: lmx_thread_running (@: LmxThread t) int
+    fn: lmx_thread_current () @: LmxThread
+    fn: lmx_thread_parent (@: LmxThread t) @: LmxThread
+    fn: lmx_thread_entry (@: LmxThread t) @: void
+    fn: lmx_thread_mail_accept (@: LmxArena arena; @: LmxThread t; @: void target; int: lane) int
+    fn: lmx_thread_mail_take (@: LmxThread t; int: lane) @: void
+    fn: lmx_thread_mail_count (@: LmxThread t; int: lane) size_t
+end: prototype
+
+# Service API (lmx_service.h.lm1) — delivery by address
+prototype:
+    fn: lmx_service_open (@: LmxService service) int
+    fn: lmx_service_register (@: LmxService service; @: LmxThread target; @: LmxArena target_arena) int
+    fn: lmx_service_find (@: LmxService service; @: void address) @: void
+    fn: lmx_service_post (@: LmxService service; @: void address; @: LmxMsg letter; @: LmxArena letter_arena) int
+end: prototype
+
+
+# Arena API (lmx_arena.h.lm1)
+prototype:
+    fn: lmx_arena_open (@: LmxArena arena) int
+    fn: lmx_arena_take (@: LmxArena arena; size_t: size; int: kind; int: type) @: void
+end: prototype
+
+# Ownership (lmx_value_owned.h.lm1, lmx_arena_refs.h.lm1)
+prototype:
+    fn: lmx_node_new_owned (@: LmxArena arena) @: Lmx
+    fn: lmx_arena_refs_open_owned (@: LmxArena arena; @: Lmx parent; size_t: children) int
+    fn: lmx_arena_ref_value (@: Lmx parent; size_t: index) @: void
+    fn: lmx_arena_ref_store (@: Lmx parent; size_t: index; @: void value) int
+    fn: lmx_size_new_owned (@: LmxArena arena) @: void
+    fn: lmx_size_store_known (@: void cell; size_t: value) int
+    fn: lmx_size_value_known (@: void cell) size_t
+end: prototype
+
+# Post / child (used by mixa_app_main_msg)
+prototype:
+    fn: lmx_post_init (@: LmxArena arena; @: LmxPost box) int
+    fn: lmx_child_thread (@: LmxThread parent; @: LmxMsg child; @: LmxThread thread) int
+end: prototype
+
+# Win32 bridge (single thin C adapter — explicit exception per Mikhail's rule).
+# DWORD and LPTHREAD_START_ROUTINE come from <windows.h> (no foreign: needed —
+# the include makes them visible).  Constants (MB_*, IDOK, IDCANCEL) are C macros
+# from <windows.h>, accessed as c.MB_OKCANCEL etc.
+include: "<windows.h>"
+
+# --- Kernel additions (2026-09-19): schedule init + arena attach ---
+prototype:
+    fn: lmx_schedule_init (@: LmxSchedule slot; @: LmxArena arena; @: void owner; ulong: limit) int
+    fn: lmx_arena_open_simple (@: LmxArena arena) int
+    fn: lmx_arena_attach (@: LmxArena arena; @: LmxArena other) int
+end: prototype
+
+# --- Schedule management: RUNNING driver (Mikhail's rule: "многопоточно и
+# сообщениями, без локов и без потоков вне только что запиленного Message и
+# Thread").  One manager, rebinding to the running implementation after open:
+# each child gets its OWN OS-thread lane (lmx_manager_running.lm1).
+# The stepped binding (lmx_manager_init/add) is NOT used by this app -- it was
+# an emulation checked and corrected on 2026-09-19 (l1-98 peer review found
+# "a manager is one implementation per root, chosen once at binding"; the real
+# model is running, not stepped).
+# ---
+prototype:
+    fn: lmx_root_manager (@: LmxRoot root) @: LmxManager
+    fn: lmx_manager_running_init (@: LmxManager m) int
+    fn: lmx_manager_running_add (@: LmxManager m; @: LmxSchedule slot) int
+    fn: lmx_manager_running_round (@: LmxManager m; unsigned: ticks; ulong: now) int
+    fn: lmx_manager_running_close (@: LmxManager m) int
+end: prototype
+
+# --- Callable creation (for thread graphs) ---
+type: LmxPool struct LmxPool
+type: LmxMethod struct LmxMethod
+prototype:
+    fn: lmx_pool_make (@: LmxArena arena; size_t: bytes; size_t: stride; int: kind; int: type) @: LmxPool
+    fn: lmx_method_intern (@: LmxArena arena; @: LmxPool pool; LmxEntry: addr; unsigned: sig) @: LmxMethod
+end: prototype

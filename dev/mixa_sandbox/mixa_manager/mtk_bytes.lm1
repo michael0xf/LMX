@@ -1,0 +1,598 @@
+predef: "mixa_manager/mtk_bytes.h.lm1"
+include: "<stdlib.h>" "<string.h>"
+
+# ---- core lifecycle ----
+
+fn: mtk_bytes_init (@: MtkBytes b; @: char arr; int: offset; int: amount; int: utf16) void
+    int: i
+    int: h
+    if: b = 0
+        return:
+    b\arr: arr
+    b\offset: offset
+    b\amount: amount
+    b\utf16: utf16
+    h: 0
+    i: offset
+    while: i < offset + amount
+        h: (cast: (int) arr[i]) + ((h << 5) - h)
+        i: i + 1
+    ---
+    b\hash: h
+    return:
+end: mtk_bytes_init
+
+fn: mtk_bytes_size (const: @(MtkBytes b)) int
+    if: b = 0
+        return: 0
+return: b\amount
+
+fn: mtk_bytes_offset (const: @(MtkBytes b)) int
+    if: b = 0
+        return: 0
+return: b\offset
+
+fn: mtk_bytes_get (const: @(MtkBytes b); int: num) int
+    if: b = 0 || b\arr = 0 || num >= b\amount
+        return: MTK_CONST_NIL
+    return: (cast: (int) b\arr[b\offset + num])
+
+fn: mtk_bytes_get_abs (const: @(MtkBytes b); int: num) int
+    if: b = 0 || b\arr = 0
+        return: MTK_CONST_NIL
+return: (cast: (int) b\arr[num])
+
+fn: mtk_bytes_hash_code (const: @(MtkBytes b)) int
+    int: h
+    int: i
+    int: end
+    if: b = 0 || b\arr = 0
+        return: 0
+    if: b\hash != 0
+        return: b\hash
+    ---
+    h: 0
+    end: b\offset + b\amount
+    i: b\offset
+    while: i < end
+        h: (cast: (int) b\arr[i]) + ((h << 5) - h)
+        i: i + 1
+    ---
+    # Java stores hash even if 0 (but Java skips storing 0)
+    # In Java, if computed hash is 0, hash field stays 0 and recomputation occurs.
+    # We replicate: store the computed value.
+    # (b is const, so we cannot store; caller uses result directly)
+return: h
+
+fn: mtk_bytes_is_utf16 (const: @(MtkBytes b)) int
+    if: b = 0
+        return: 0
+return: b\utf16
+
+fn: mtk_bytes_set_len (@: MtkBytes b; int: val) void
+    if: b != 0
+        b\amount: val
+        b\hash: 0
+    ---
+end: mtk_bytes_set_len
+
+fn: mtk_bytes_increase_offset (@: MtkBytes b) void
+    if: b != 0
+        if: b\offset >= 0 && b\amount > 0
+            b\offset: b\offset + 1
+            b\amount: b\amount - 1
+            b\hash: 0
+        ---
+    ---
+end: mtk_bytes_increase_offset
+
+fn: mtk_bytes_decrease_offset (@: MtkBytes b) void
+    if: b != 0
+        if: b\offset > 0
+            b\offset: b\offset - 1
+            b\amount: b\amount + 1
+            b\hash: 0
+        ---
+    ---
+end: mtk_bytes_decrease_offset
+
+fn: mtk_bytes_set_element_at (@: MtkBytes b; int: c; int: index) void
+    if: b = 0 || b\arr = 0 || index >= b\amount
+        return:
+    b\arr[b\offset + index]: (cast: (char) c)
+    b\hash: 0
+    return:
+end: mtk_bytes_set_element_at
+
+fn: mtk_bytes_set_byte (@: MtkBytes b; int: num; int: c) void
+    if: b = 0 || b\arr = 0
+        return:
+    b\arr[b\offset + num]: (cast: (char) c)
+    b\hash: 0
+    return:
+end: mtk_bytes_set_byte
+
+fn: mtk_bytes_set (@: MtkBytes b; int: to; int: from) void
+    if: b = 0 || b\arr = 0
+        return:
+    b\arr[b\offset + to]: b\arr[b\offset + from]
+    b\hash: 0
+    return:
+end: mtk_bytes_set
+
+fn: mtk_bytes_unsigned_at (const: @(MtkBytes b); int: i) int
+    int: ret
+    if: b = 0 || b\arr = 0 || i >= b\amount || i < 0
+        return: MTK_CONST_NIL
+    ret: (cast: (int) b\arr[b\offset + i])
+    if: ret < 0
+        return: 256 + ret
+    ---
+return: ret
+
+# ---- string conversion ----
+
+fn: mtk_bytes_to_string (const: @(MtkBytes b)) const: @(char)
+    if: b = 0 || b\arr = 0 || b\amount = 0
+        return: 0
+    if: b\utf16
+        # UTF-16 decoding: pairs of bytes form a char
+        return: mtk_bytes_to_string_utf16(b)
+    ---
+return: mtk_bytes_to_string_utf8(b)
+
+fn: mtk_bytes_to_string_utf8 (const: @(MtkBytes b)) const: @(char)
+    @: char ret
+    int: i
+    if: b\arr = 0
+        return: 0
+    ret: (cast: (@: char) c.calloc(1, (cast: (size_t) b\amount + 1U)))
+    if: ret = 0
+        return: 0
+    i: 0
+    while: i < b\amount
+        ret[i]: b\arr[b\offset + i]
+        i: i + 1
+    ---
+    ret[b\amount]: 0
+return: ret
+
+fn: mtk_bytes_to_string_utf16 (const: @(MtkBytes b)) const: @(char)
+    @: char ret
+    int: i
+    int: out_i
+    int: c1
+    int: c0
+    int: out_cap
+    int: ch
+    if: b\arr = 0
+        return: 0
+    out_cap: b\amount + 1
+    ret: (cast: (@: char) c.calloc(1, (cast: (size_t) out_cap)))
+    if: ret = 0
+        return: 0
+    out_i: 0
+    i: 0
+    while: i < b\amount
+        c1: (cast: (int) b\arr[b\offset + i])
+        if: c1 = 0 && i + 2 < b\amount
+            i: i + 1
+            c1: (cast: (int) b\arr[b\offset + i])
+            i: i + 1
+            c0: (cast: (int) b\arr[b\offset + i])
+            ch: (c1 << 8) + c0
+            ret[out_i]: (cast: (char) ch)
+            out_i: out_i + 1
+        else:
+            ret[out_i]: (cast: (char) c1)
+            out_i: out_i + 1
+        ---
+        i: i + 1
+    ---
+    ret[out_i]: 0
+return: ret
+
+fn: mtk_bytes_to_string_range (const: @(MtkBytes b); int: start; int: len) const: @(char)
+    @: char ret
+    int: i
+    if: b = 0 || b\arr = 0
+        return: 0
+    if: len > b\amount
+        len: b\amount - start
+    if: len <= 0
+        return: 0
+    ret: (cast: (@: char) c.calloc(1, (cast: (size_t) len + 1U)))
+    if: ret = 0
+        return: 0
+    i: 0
+    while: i < len
+        ret[i]: b\arr[b\offset + start + i]
+        i: i + 1
+    ---
+    ret[len]: 0
+return: ret
+
+# ---- search ----
+
+fn: mtk_bytes_index_of (const: @(MtkBytes b); int: ch) int
+    int: i
+    if: b = 0 || b\arr = 0
+        return: -1
+    i: 0
+    while: i < b\amount
+        if: (cast: (int) b\arr[b\offset + i]) = ch
+            return: i
+        ---
+        i: i + 1
+    ---
+return: -1
+
+fn: mtk_bytes_last_index_of (const: @(MtkBytes b); int: ch) int
+    int: i
+    if: b = 0 || b\arr = 0
+        return: -1
+    i: b\amount - 1
+    while: i >= 0
+        if: (cast: (int) b\arr[b\offset + i]) = ch
+            return: i
+        ---
+        i: i - 1
+    ---
+return: -1
+
+fn: mtk_bytes_find (@: MtkBytes b; int: c) int
+    if: b = 0 || b\arr = 0
+        return: MTK_CONST_NIL
+return: mtk_bytes_find_range(b, c, 0, b\amount)
+
+fn: mtk_bytes_find_range (@: MtkBytes b; int: c; int: begin; int: end) int
+    int: i
+    if: b = 0 || b\arr = 0
+        return: MTK_CONST_NIL
+    begin: begin + b\offset
+    end: end + b\offset
+    i: begin
+    while: i < end
+        if: (cast: (int) b\arr[i]) = c
+            return: i - b\offset
+        ---
+        i: i + 1
+    ---
+return: MTK_CONST_NIL
+
+fn: mtk_bytes_find_bytes (@: MtkBytes b; const: @(int) chars; int: nchars) int
+    int: i
+    int: j
+    if: b = 0 || b\arr = 0 || chars = 0 || nchars <= 0
+        return: MTK_CONST_NIL
+    i: b\offset
+    while: i < b\offset + b\amount
+        j: 0
+        while: j < nchars
+            if: (cast: (int) b\arr[i]) = chars[j]
+                return: i - b\offset
+            ---
+            j: j + 1
+        ---
+        i: i + 1
+    ---
+return: MTK_CONST_NIL
+
+fn: mtk_bytes_find_back (@: MtkBytes b; int: val1; int: val2; int: begin; int: end) int
+    int: i
+    if: b = 0 || b\arr = 0
+        return: MTK_CONST_NIL
+    begin: begin + b\offset
+    end: end + b\offset
+    i: end
+    while: i >= begin
+        if: (cast: (int) b\arr[i]) = val1 || (cast: (int) b\arr[i]) = val2
+            return: i - b\offset
+        ---
+        i: i - 1
+    ---
+return: MTK_CONST_NIL
+
+fn: mtk_bytes_find_of_text_or_end (@: MtkBytes b; int: begin; int: end; int: end_symbol) int
+    int: i
+    if: b = 0 || b\arr = 0
+        return: MTK_CONST_NIL
+    begin: begin + b\offset
+    end: end + b\offset
+    i: begin
+    while: i <= end
+        if: ((cast: (int) b\arr[i]) >= 33 && (cast: (int) b\arr[i]) <= 38) || ((cast: (int) b\arr[i]) >= 42 && (cast: (int) b\arr[i]) <= 57) || (cast: (int) b\arr[i]) > 64 || (cast: (int) b\arr[i]) = end_symbol
+            return: i - b\offset
+        ---
+        i: i + 1
+    ---
+return: MTK_CONST_NIL
+
+fn: mtk_bytes_find_of_letter (@: MtkBytes b; int: begin; int: end) int
+    int: i
+    if: b = 0 || b\arr = 0
+        return: MTK_CONST_NIL
+    begin: begin + b\offset
+    end: end + b\offset
+    i: begin
+    while: i <= end
+        if: ((cast: (int) b\arr[i]) >= 48 && (cast: (int) b\arr[i]) <= 57) || (cast: (int) b\arr[i]) > 64
+            return: i - b\offset
+        ---
+        i: i + 1
+    ---
+return: MTK_CONST_NIL
+
+fn: mtk_bytes_find_of_nondigit (@: MtkBytes b; int: begin; int: end) int
+    int: i
+    if: b = 0 || b\arr = 0
+        return: MTK_CONST_NIL
+    begin: begin + b\offset
+    end: end + b\offset
+    i: begin
+    while: i <= end
+        if: (cast: (int) b\arr[i]) < 48 || (cast: (int) b\arr[i]) > 57
+            return: i - b\offset
+        ---
+        i: i + 1
+    ---
+return: MTK_CONST_NIL
+
+# ---- equality ----
+
+fn: mtk_bytes_equals_str (@: MtkBytes b; const: @(char s)) int
+    int: i
+    int: len
+    int: s_hash
+    int: b_hash
+    if: b = 0 || b\arr = 0 || s = 0
+        return: 0
+    # Compute s.hashCode() for quick check (Java path)
+    s_hash: 0
+    i: 0
+    while: s[i] != 0
+        s_hash: (cast: (int) s[i]) + ((s_hash << 5) - s_hash)
+        i: i + 1
+    ---
+    len: i
+    if: len != b\amount
+        return: 0
+    ---
+    i: 0
+    while: i < len
+        if: (cast: (int) s[i]) != (cast: (int) b\arr[b\offset + i])
+            return: 0
+        ---
+        i: i + 1
+    ---
+return: 1
+
+fn: mtk_bytes_equals_bytes (@: MtkBytes b; const: @(MtkBytes other)) int
+    int: i
+    int: len
+    if: b = 0 || other = 0 || b\arr = 0 || other\arr = 0
+        return: 0
+    if: other\amount != b\amount
+        return: 0
+    ---
+    len: b\amount
+    i: 0
+    while: i < len
+        if: (cast: (int) b\arr[b\offset + i]) != (cast: (int) other\arr[other\offset + i])
+            return: 0
+        ---
+        i: i + 1
+    ---
+return: 1
+
+# ---- trim / collapse ----
+
+fn: mtk_bytes_trim (@: MtkBytes b) void
+    int: end
+    int: i
+    if: b = 0 || b\arr = 0
+        return:
+    ---
+    end: b\offset + b\amount
+    i: b\offset
+    while: i < end
+        if: (cast: (int) b\arr[i]) < 33
+            i: i + 1
+        else:
+            break
+    ---
+    if: i != b\offset
+        b\offset: i
+        b\amount: end - i
+        b\hash: 0
+    ---
+    end: b\offset + b\amount
+    i: end - 1
+    while: i >= b\offset
+        if: (cast: (int) b\arr[i]) < 33
+            i: i - 1
+        else:
+            break
+    ---
+    if: i != end - 1
+        b\amount: i - b\offset + 1
+        b\hash: 0
+    ---
+    return:
+end: mtk_bytes_trim
+
+fn: mtk_bytes_trim_begin (@: MtkBytes b) void
+    int: end
+    int: i
+    if: b = 0 || b\arr = 0
+        return:
+    ---
+    end: b\offset + b\amount
+    i: b\offset
+    while: i < end
+        if: (cast: (int) b\arr[i]) < 33
+            i: i + 1
+        else:
+            break
+    ---
+    if: i != b\offset
+        b\offset: i
+        b\amount: end - i
+        b\hash: 0
+    ---
+end: mtk_bytes_trim_begin
+
+# collapse: remove consecutive `ignore` chars in [begin, begin+len), return new length.
+fn: mtk_bytes_collapse (@: MtkBytes b; int: begin; int: ignore; int: len) int
+    int: i
+    int: meter
+    int: actual
+    if: b = 0 || b\arr = 0
+        return: 0
+    if: len > b\amount
+        len: b\amount
+    ---
+    begin: begin + b\offset
+    len: len + b\offset
+    meter: -1
+    i: begin
+    while: i < len
+        if: b\arr[i] = (cast: (char) ignore)
+            if: meter < 0
+                meter: i
+            ---
+        else if: meter >= 0
+            b\arr[meter]: b\arr[i]
+            b\arr[i]: (cast: (char) ignore)
+            b\hash: 0
+            meter: meter + 1
+        ---
+        i: i + 1
+    ---
+    if: meter > -1
+return: meter - b\offset
+    return: len - b\offset
+    ---
+return: 0
+
+# ---- sub / divide / clone ----
+
+fn: mtk_bytes_sub_bytes (const: @(MtkBytes b); int: begin; int: end) const: @(MtkBytes)
+    @: MtkBytes ret
+    if: b = 0 || b\arr = 0
+        return: 0
+    ret: (cast: (@: MtkBytes) c.calloc(1, c.sizeof(c.MtkBytes)))
+    if: ret = 0
+        return: 0
+    ret\arr: b\arr
+    ret\offset: b\offset + begin
+    ret\amount: end - begin
+    ret\utf16: b\utf16
+    ret\hash: 0
+return: ret
+
+fn: mtk_bytes_copy (@: MtkBytes b; const: @(char) src; int: src_offset; int: count; int: to) void
+    int: i
+    int: j
+    if: b = 0 || b\arr = 0 || src = 0
+        return:
+    ---
+    i: 0
+    j: b\offset + to
+    while: i < count
+        b\arr[j]: src[src_offset + i]
+        i: i + 1
+        j: j + 1
+    ---
+    return:
+end: mtk_bytes_copy
+
+fn: mtk_bytes_clone (const: @(MtkBytes b)) @: MtkBytes
+    @: MtkBytes ret
+    if: b = 0
+        return: 0
+    ret: (cast: (@: MtkBytes) c.calloc(1, c.sizeof(c.MtkBytes)))
+    if: ret = 0
+        return: 0
+    ret\utf16: b\utf16
+    ret\offset: b\offset
+    ret\amount: b\amount
+    ret\hash: b\hash
+    ret\arr: b\arr
+return: ret
+
+fn: mtk_bytes_clear (@: MtkBytes b) void
+    if: b != 0
+        b\utf16: 0
+        b\offset: MTK_CONST_NIL
+        b\amount: 0
+        b\arr: 0
+        b\hash: 0
+    ---
+end: mtk_bytes_clear
+
+fn: mtk_bytes_new (@: MtkBytes b; int: len; int: utf16) void
+    if: b = 0
+        return:
+    ---
+    mtk_bytes_clear(b)
+    b\arr: (cast: (@: char) c.calloc((cast: (size_t) len), c.sizeof(char)))
+    b\amount: len
+    b\utf16: utf16
+    b\hash: 0
+    return:
+end: mtk_bytes_new
+
+fn: mtk_bytes_divide (@: MtkBytes b; int: end_symbol) const: @(MtkBytes)
+    int: i
+    i: mtk_bytes_find(b, end_symbol)
+return: mtk_bytes_div_at(b, i)
+
+fn: mtk_bytes_div_at (@: MtkBytes b; int: i) const: @(MtkBytes)
+    @: MtkBytes ret
+    if: b = 0 || b\arr = 0
+        return: 0
+    if: i > 0
+        ret: (cast: (@: MtkBytes) c.calloc(1, c.sizeof(c.MtkBytes)))
+        if: ret = 0
+            return: 0
+        ret\arr: b\arr
+        ret\offset: b\offset + i + 1
+        ret\amount: b\amount - i - 1
+        ret\utf16: b\utf16
+        ret\hash: 0
+        b\amount: i
+        b\hash: 0
+        mtk_bytes_trim(ret)
+        mtk_bytes_trim(b)
+    return: ret
+
+fn: mtk_bytes_remove_first_line (@: MtkBytes b) const: @(MtkBytes)
+    int: i
+    int: new_amount
+    int: new_offset
+    @: MtkBytes ret
+    if: b = 0 || b\arr = 0 || b\amount = 0
+        return: 0
+    i: mtk_bytes_find_range(b, 10, 0, b\amount)  # 10 = '\n'
+    if: i < 0
+        i: b\amount
+    ---
+    ret: (cast: (@: MtkBytes) c.calloc(1, c.sizeof(c.MtkBytes)))
+    if: ret = 0
+        return: 0
+    ret\arr: b\arr
+    ret\offset: b\offset
+    ret\amount: i
+    ret\utf16: b\utf16
+    ret\hash: 0
+    new_amount: b\amount - i - 1
+    if: new_amount < 0
+        new_amount: 0
+    ---
+    new_offset: b\offset + i + 1
+    b\offset: new_offset
+    b\amount: new_amount
+    b\hash: 0
+    mtk_bytes_trim(ret)
+return: ret

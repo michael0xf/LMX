@@ -1,0 +1,1274 @@
+mixa_app_fmpanel -- first visible file-manager panel in the production controller
+================================================================================
+(ticket 20260913-032000, PORT_OF_CLEARSHELL.txt section 1.1 priority)
+
+What this closes
+-----------------
+Makes the accepted production controller (mixa_app_controller.lm1, the
+SAME code the real Win32 entrypoint runs) visibly render and operate the
+first real file-manager panel: the current directory path, its entry
+listing, and a Delete action reaching the already-accepted mixa_fm_
+remove_selected operation behind a real, drawn, same-app Cancel/OK
+confirmation. This is the production integration boundary the prior two
+tickets' own reusable modules (mixa_remove/mixa_fm_remove, ticket
+20260913-021200; mixa_remove_confirm, ticket 20260913-023700) were built
+toward -- and, as it turned out, could not be wired in AS WRITTEN, for
+two real, measured reasons recorded below.
+
+Two genuine architectural blockers found, and how each was resolved
+-------------------------------------------------------------------------
+
+1. A real MixaButton naming collision. mixa_backend.h declares `typedef
+   enum MixaButton {MIXA_BUTTON_LEFT, MIDDLE, RIGHT} MixaButton;` (mouse
+   buttons); mixa_buttons.h declares `typedef struct MixaButton {char
+   *label; ...} MixaButton;` (one UI button). Both are real, already-
+   accepted, unrelated headers -- but mixa_app_controller.lm1's own
+   translation unit needs mixa_backend.h (for MixaEvent), and reusing
+   mixa_app_window.h.lm1 (the accepted nested-window module, which
+   itself needs mixa_buttons.h) would need BOTH in the same translation
+   unit. Confirmed as a real, reproducible compile error by actually
+   trying the combination (via a probe extending mixa_console_window.lm1
+   with a buttons predef, immediately reverted once this surfaced) --
+   not assumed from reading the headers alone.
+
+   Resolution: every "button" mixa_app_fmpanel draws is a raw drawn cell
+   region with a raw bounds-check hit-test -- the exact same style
+   mixa_help's own F1 button and mixa_fm_copy_here_hit's own rect check
+   already establish, for the identical reason category (this codebase
+   already has TWO precedents for "avoid the button-panel machinery
+   inside the production controller's own translation unit," both
+   predating this ticket). mixa_app_window.h.lm1/.lm1 and mixa_remove_
+   confirm.h.lm1/.lm1 remain exactly as accepted -- untouched, still
+   fully tested by their own selftests -- for callers that do not share
+   mixa_app_controller.lm1's own mixa_backend.h dependency.
+
+2. A real duplicate-symbol risk. mixa_app_controller.lm1 already predefs
+   mixa_fm_copy.lm1 (real), which itself real-compiles mixa_file_
+   manager.lm1/mixa_selection.lm1/mixa_selection_walk.lm1/mixa_dir_
+   win32.lm1 into mixa_app_controller.o. Predef-ing mixa_remove.h.lm1 or
+   mixa_fm_remove.h.lm1 (even header-only) into mixa_app_controller.lm1
+   itself overflows its own already-documented-at-ceiling import table
+   (confirmed directly: a probe copy with those two predef lines added
+   produced "import path table full", not inferred). And even from a
+   FRESH sibling file with its own budget, predef-ing mixa_remove.lm1/
+   mixa_fm_remove.lm1's REAL implementations would double-define mixa_
+   fm_.../mixa_selection_.../mixa_dir_... symbols against mixa_app_
+   controller.o's own already-real copies of the exact same functions
+   at final link -- the identical class of hazard mixa_console_window.
+   lm1's own header comment already documents for draw/text_rect/
+   composite/tiles, just for a different symbol family.
+
+   Resolution: mixa_app_fmpanel.lm1 predefs ONLY the relevant HEADERS
+   (mixa_file_manager.h.lm1, mixa_selection_walk.h.lm1) -- giving it
+   types and prototypes, compiling NO real mixa_fm_.../mixa_selection_
+   .../mixa_dir_... symbols of its own -- and reimplements the small
+   (~40-line) delete walk-glue (on_dir_enter/on_file/on_dir_done,
+   mirroring mixa_remove.lm1's own logic exactly) directly against
+   symbols that are ALREADY real and ALREADY linked via mixa_app_
+   controller.o's own existing mixa_fm_copy.lm1 chain (mixa_selection_
+   walk, mixa_dir_remove, mixa_selection_deselect). A deliberate, small,
+   disclosed local duplication to escape a confirmed toolchain
+   constraint -- not a divergent reimplementation of the operation's own
+   semantics, and not touching mixa_remove.lm1/mixa_fm_remove.lm1
+   themselves at all (both remain exactly as accepted, still used
+   wherever the button-panel/no-mixa_backend.h constraint does not
+   apply -- mixa_remove_confirm's own selftest, for instance).
+
+New module: mixa_app_fmpanel.h / _impl.h / .lm1
+----------------------------------------------------
+Same opaque-handle split mixa_app_controller.h/_impl.h already
+establish. mixa_app_fmpanel_open/_close/_render/_hit/_confirm_is_open --
+see mixa_app_fmpanel.h's own comment for the full contract. Rendering:
+row 0 is the current directory path (mixa_fm_cur_dir); rows 1 through
+however many the given geometry offers are entry names (mixa_fm_name),
+prefixed with a marker when mixa_fm_is_selected -- clipped to real
+screen rows, never capping fm's own entry count (no arbitrary entry/path
+limit anywhere: fm's own snapshot and MixaSelection remain exactly the
+already-accepted, uncapped, growable structures). The action row (Delete,
+Copy Here) draws only once at least one entry is selected.
+
+Confirmation is a small, self-contained save/restore (the same MixaCell-
+snapshot-and-restore mechanic mixa_app_window.lm1 already established,
+reimplemented here buttons-free for the same reason as the walk-glue
+above) with two raw hit regions (Cancel, OK). OK invokes the walk-glue
+exactly once, refreshes fm afterward (mixa_fm_refresh, matching mixa_fm_
+remove_selected's own unconditional-refresh discipline), and -- only on
+an observed failure -- leaves the confirmation's own dismissal followed
+by a plain informational relabel of the SAME region showing the exact
+failing path and status, dismissed the same way. Cancel never calls the
+walk-glue at all, so it cannot touch the filesystem or selection by
+construction.
+
+Copy Here's own label is drawn but its click is NOT invoked from inside
+this module: mixa_app_fmpanel_hit returns a distinct value (2) for it,
+and mixa_app_controller.lm1's own step() -- which already owns the real
+MixaFmCopyHereCtx via c\loop\ctx -- calls mixa_fm_copy_here_action
+itself on seeing that value. This keeps mixa_app_fmpanel free of any
+dependency on MixaFmCopyHereCtx and reuses the EXACT SAME accepted
+action its keyboard (Ctrl+V) path already invokes -- one function, two
+real ways to reach it, never a second implementation.
+
+Wiring into mixa_app_controller.lm1
+----------------------------------------
+Purely additive: one new `include:` (mixa_app_fmpanel.h, a plain header,
+zero import-table cost, the same "include:, not predef:" discipline
+mixa_app_path.h/mixa_help.h/mixa_cmdline_dispatch.h already establish),
+one new opaque field on MixaAppController (`struct MixaAppFmPanel
+*fmpanel;`), one open() call (geometry: list rows 0-21, action row 22 --
+one row above F1 Help's own row 23, never overlapping it), one render()
+call at each of the three existing mixa_console_window_present call
+sites (the exact cadence pending-line refresh already uses), one close()
+call, and the mouse-hit dispatch checked FIRST in step()'s own existing
+mouse-handling block (before mixa_help_hit) -- while fmpanel's own
+confirmation is open, every click belongs to it, mirroring mixa_app_
+window's own already-established "top nested surface only" contract, so
+F1 Help correctly never reacts to a click meant for the confirmation
+underneath it. Existing console/F1/window-visibility behavior is
+untouched: no existing function's own body changed, only new calls
+added alongside them.
+
+mixa_app_controller.h also gained one small, borrowed, read-only
+getter -- mixa_app_controller_fm -- for exactly the same reason its
+existing introspection functions (text_rect/upper_rect/cwd/etc.) exist:
+so a real production-controller test can select real entries through the
+real mixa_fm_select API before driving a synthetic click, without a
+second, test-only selection model.
+
+Testing
+---------
+tests/mixa_app_fmpanel_e2e_selftest.lm1 (run_app_fmpanel_e2e_selftest.
+ps1): 15 checks, 0 failures, two hash-identical runs. Drives the REAL
+production orchestration (mixa_app_controller.h/.lm1, unchanged from
+what mixa_app_main.lm1 itself uses) through the existing headless
+backend with a real temporary fixture directory -- no window opens
+anywhere in this run, and no parallel test-only copy of the panel/
+confirm/delete logic exists. Click coordinates are real PIXEL values
+(matching the real Win32 backend's own WM_MOUSEMOVE contract): the
+headless backend converts pixel to half-cell the same way mixa_win32_
+poll's own real formula does, verified empirically against this exact
+build rather than assumed, before computing the exact pixel values that
+land on the real, drawn Delete/Cancel/OK regions.
+
+Covers: the real fixture directory's own entry appears in the real
+rendered listing; clicking the real, drawn Delete label opens the
+confirmation without deleting anything yet; Cancel dismisses and changes
+nothing (file survives, selection survives); a fresh Delete-then-OK
+cycle actually deletes the real file and leaves the real, refreshed
+listing without it; a REAL partial failure (a genuine read-only-file
+DeleteFileW refusal via a real `attrib +r` -- no synthetic delete-fault
+hook exists or was invented here either) survives visibly and remains
+selected/retryable; dismissing the failure report and clearing the real
+fault, a repeated confirm-and-OK then succeeds.
+
+Full regression sweep after these changes, all green, no regressions:
+run_app_loop_selftest.ps1 (29/0, native entrypoint still builds and
+links, now also carrying mixa_app_fmpanel.o), run_app_window_selftest.
+ps1 (180/0, unchanged -- mixa_app_window.h.lm1/.lm1 themselves were not
+touched), run_button_dispatch_selftest.ps1, run_app_controller_e2e_
+selftest.ps1 (22/0, unchanged -- now also linking mixa_app_fmpanel.o,
+which every mixa_app_controller.o build must from this ticket forward),
+run_win32_smoke_selftest.ps1 (17/0, unchanged -- the real Win32 window
+still shows, F1/console/process behavior all identical to before this
+ticket), and full run_mixa.ps1.
+
+A test-authoring mistake found and fixed along the way (not a product
+bug)
+-------------------------------------------------------------------------
+The first draft's click coordinates assumed MixaEvent's mouse row/col
+were already half-cell values (per mixa_backend.h's own documented "text
+cell = half >> 1" contract) and computed them directly. Empirically none
+of the resulting clicks landed anywhere near their intended targets. A
+temporary debug trace (printing the RAW event row/col mixa_app_
+controller.lm1's own step() actually received, alongside what fmpanel_
+hit was called with) showed the headless backend does its own pixel-to-
+half-cell conversion first (dividing by cell_dim/2, exactly mirroring
+mixa_win32_poll's own real `cx*2/cell_width` formula for actual Win32
+mouse messages) -- so the test needed to push PIXEL coordinates, not
+pre-converted half-cell ones. Fixed by computing pixel_row = desired_
+half_row * (text_cell_height/2), pixel_col = desired_half_col *
+(text_cell_width/2), verified against the exact build's own real cell
+metrics (8x16) rather than assumed. All temporary debug printf calls (in
+both mixa_app_controller.lm1 and mixa_app_fmpanel.lm1) were removed
+before the final passing run recorded above.
+
+Concrete inventory: what is visible now, what still is not
+-------------------------------------------------------------
+Now real, drawn, and clickable in the actual production controller:
+  - the current directory path (row 0 of the panel's own list area).
+  - the entry listing (rows 1+, clipped to available screen rows, a
+    selected-marker prefix per entry).
+  - a Delete label that opens a real Cancel/OK confirmation and, on OK,
+    performs a real recursive delete with real disk/selection/view
+    effects and a real, visible failure report on a real failure.
+  - a Copy Here label that invokes the already-accepted mixa_fm_copy_
+    here_action (previously reachable only via Ctrl+V).
+
+Still not present, disclosed rather than silently left implicit:
+  - no click-to-select/deselect on an entry row. This ticket's own
+    acceptance criteria (confirm, cancel, successful OK, refreshed
+    listing, a failure staying visible/retryable) do not require it --
+    selection is set through the real mixa_fm_select API in this
+    ticket's own test, exactly as a later selection-gesture ticket would
+    wire a real click to the same API. Left as the next concrete,
+    nameable gap rather than something this ticket quietly assumed away.
+  - no vertical scrolling of the entry list beyond simple row-clipping
+    (an entry list longer than the available rows is truncated to what
+    fits, not scrolled) -- fm's own entry count itself remains uncapped;
+    only the VISIBLE window onto it is bounded by real screen rows,
+    exactly like the console view's own real-screen-row bound already
+    established for the console text.
+  - Copy Here's own label has no confirmation and no visible failure
+    report (it never did -- this ticket did not change its own accepted
+    behavior, only added a second, visible way to reach the identical
+    function the keyboard path already calls).
+  - no F8/Delete keyboard shortcut: grepped UI_MODEL.txt/PORT_OF_
+    CLEARSHELL.txt/FIRST_VERSION.txt/SELECTION_MODEL.txt again for this
+    ticket; still no documented FAR-style convention exists, so per the
+    ticket's own explicit instruction, none was invented. Mouse only.
+
+Part II -- production file-manager row selection by click (ticket 20260913-040213)
+=======================================================================================
+Closes the exact "not present" item Part I named first: clicking a
+visible entry row now selects or deselects that REAL entry through the
+existing mixa_fm_select/MixaSelection API -- no second, panel-only
+selection model anywhere.
+
+mixa_app_fmpanel_hit gained one new region check, ordered after the
+confirm-open and action-row checks (so Cancel/OK and Delete/Copy Here
+keep first claim on their own rows, unchanged from Part I) and before
+the final miss return: a click landing in the list area's own entry
+rows (list_row+1 .. list_row+list_rows-1, matching render()'s own row
+mapping exactly) re-derives the entry index fresh from the CURRENT
+cell_row and re-reads mixa_fm_is_selected(fm, idx) -- never a cached or
+panel-stored selection flag -- then calls mixa_fm_select(fm, idx, !is_
+selected) accordingly. A row past fm's own real current count (a blank
+clipped row when the directory has fewer entries than the list area has
+rows) or a column outside list_col..list_col+list_cols is a genuine
+miss: the existing `idx < mixa_fm_count(fm)` guard (already present for
+render()'s own clipping) means a fixed cap was never needed here either.
+
+Row-to-index mapping never goes stale across a refresh because it is
+never cached in the first place -- every hit recomputes `idx` from
+whatever mixa_fm_count/is_selected report AT THE MOMENT of the click,
+which is always the CURRENT post-refresh snapshot once mixa_fm_remove_
+selected's own unconditional refresh (already established in Part I)
+has run. The same real mixa_fm_select call already used by every other
+selection path (a future click-to-select ticket, this test) means this
+required no change to mixa_fm_remove_selected/mixa_remove_selected_run
+themselves.
+
+Testing
+---------
+tests/mixa_app_fmpanel_select_e2e_selftest.lm1 (run_app_fmpanel_select_
+e2e_selftest.ps1): 20 checks, 0 failures, two hash-identical runs.
+Drives the same real production orchestration headless, with a real
+two-file fixture directory. Covers: a click on a real entry's own
+current row selects EXACTLY that entry (mixa_fm_is_selected, the real
+model, checked for both the clicked and the other entry); clicking the
+identical row again deselects it (both directions read the real model,
+never a panel-only flag); the path row, a blank clipped row (an index
+far past the real 2-entry count), and a column outside the panel's own
+range are all confirmed no-ops (selection count unchanged); the action
+row itself never toggles a selection, and Delete/Copy Here's own event
+dispatch (open confirmation, Cancel leaving the selection untouched)
+still works exactly as Part I's own selftest already proved -- no
+regression; and, after a real successful delete refreshes fm's own
+listing, clicking b.txt's OWN new row (whatever index it now occupies)
+selects b.txt correctly rather than whatever used to occupy that row
+number before the delete -- the concrete proof against a stale-index
+regression the ticket's own acceptance criteria named directly.
+
+Two test-authoring mistakes found and fixed along the way (not product
+bugs): an "outside the panel" probe column (79) was actually still
+inside the real 80-column list area (list_cols=80, valid columns 0-79)
+-- moved to 90. And the post-delete re-selection step first tried
+re-clicking a.txt's own entry row (which, since Part I's own scenario 4
+had left a.txt already selected from an earlier check, would have
+toggled it OFF instead of opening the Delete confirmation as intended)
+-- fixed to click the actual Delete action row.
+
+Full regression sweep after this change, all green, no regressions:
+run_app_fmpanel_e2e_selftest.ps1 (15/0, Part I's own selftest,
+unchanged), run_app_loop_selftest.ps1 (29/0), run_app_controller_e2e_
+selftest.ps1 (22/0), run_win32_smoke_selftest.ps1 (17/0, real window
+still visible, unchanged), run_button_dispatch_selftest.ps1, and full
+run_mixa.ps1.
+
+Remaining scope: vertical navigation/scrolling
+---------------------------------------------------
+Per this ticket's own closing instruction, checked whether the current
+UI model already defines the needed vertical-navigation/scrolling
+contract before considering it a next stage: UI_MODEL.txt's own section
+5.7.2 names "focus-driven simultaneous horizontal/vertical scrolling" as
+an EXPLICITLY OPEN product/integration choice (STATUS.txt section 5 lists
+it the same way), not a settled contract this ticket could implement
+against. Reporting this exact gap rather than inventing a scrolling
+behavior of this module's own: a genuinely longer entry list than the
+panel's own visible rows is still simple-clipped (Part I's own disclosed
+limitation, unchanged), and the next concrete step needs that product
+choice settled first, not a bounded coding task on its own.
+
+Part III -- show the real Copy Here outcome in the production panel (ticket 20260913-041656)
+=====================================================================================================
+Closes the "Copy Here's own label has no confirmation and no visible
+failure report" item Part I named. Both the mouse route (clicking the
+Copy Here label) and the keyboard route (Ctrl+V) now feed the SAME
+visible result display, using the SAME existing action and the SAME
+existing status field -- no second copy implementation, no second status
+channel, exactly as the ticket required.
+
+mixa_app_fmpanel gained mixa_app_fmpanel_report_copy_result(p, status), a
+plain setter (has_copy_result:1, copy_last_status:status) with no copy
+logic of its own, and render() now unconditionally draws a small text
+block at a fixed offset on the action row: "Copy: OK" for MIXA_COPY_OK,
+"Copy: FAIL <code>" (via snprintf of the real numeric status) otherwise,
+or blanks when no result has been reported yet or after dismissal.
+mixa_app_fmpanel_hit gained one new region check (after Delete/Copy Here,
+before entry-row selection) that clears has_copy_result on a click inside
+that same fixed region -- an explicit, minimal dismiss/retry gesture that
+does not overlap Delete, Copy Here, entry rows, or F1 Help, per the
+ticket's own constraint.
+
+Wiring is the same "return a distinct hit value, let the controller call
+the existing action" split Part I already established for Copy Here
+itself: mixa_app_controller_step calls mixa_app_fmpanel_report_copy_
+result(c\fmpanel, ...) in exactly two places -- right after mixa_fm_
+copy_here_action's own return value on the mouse route, and right after
+mixa_app_loop_step when its return equals MIXA_COPY_HERE_HIT_ACTION (the
+existing, unmodified signal mixa_fm_copy_here_pump_dispatch already sets
+for the Ctrl+V route) -- reading c\loop\ctx\last_status, the SAME
+MixaFmCopyHereCtx field the action itself already sets. Neither route
+performs a second copy or maintains a second status of its own.
+
+A real, previously-undiscovered production bug found and fixed
+-------------------------------------------------------------------
+This ticket's own E2E test's first Ctrl+V invocation displayed "Copy:
+FAIL 101" (MIXA_COPY_ERR_ARG) where a real "copy onto own parent"
+conflict (MIXA_COPY_ERR_EXISTS, 104) was expected. Tracing the real call
+chain found mixa_fm_copy_selection's own existing null-pointer guard
+(`if: fm=0 || dest_root_utf8=0 || sink=0 -> return: MIXA_COPY_ERR_ARG`)
+rejecting the call outright, because mixa_app_controller.lm1's own
+mixa_app_loop_open call had ALWAYS passed a literal `0` (a true null
+pointer, not a zeroed struct) for the sink parameter -- since the feature
+was first wired, in every prior ticket this session that exercised Copy
+Here. Copy Here has never performed a real copy in production before
+this fix; every invocation short-circuited with ERR_ARG before ever
+reaching mixa_copy_run.
+
+Fixed by adding `struct MixaCopySink *copy_sink;` to MixaAppController's
+own concrete struct (mixa_app_controller_impl.h), allocating it via
+c.calloc(1U, c.sizeof(c.MixaCopySink)) alongside the controller's other
+Stage-2 allocations, passing c\copy_sink (not `0`) to mixa_app_loop_open,
+and freeing it in mixa_app_controller_close. A zeroed MixaCopySink still
+has every callback field null, so mixa_copy_invoke's own already-
+established "f=0 -> propagate status or GO" default behavior is entirely
+unchanged -- only the OUTER pointer is no longer null, satisfying the
+guard without altering the filesystem/copy semantic contract this
+ticket's own scope explicitly forbade touching. This is the single most
+significant finding of this ticket: a real end-to-end test caught a
+production defect no unit test could have (mixa_fm_copy_selection's own
+existing unit coverage necessarily passes a real sink, since exercising
+the ERR_ARG branch on purpose is exactly what a unit test for that guard
+would do -- only driving the actual production wiring end to end surfaces
+that the wiring itself never passed one).
+
+Data-seam limitation disclosed, not worked around
+-------------------------------------------------------
+The ticket asked, if the existing status lacks enough information to
+show the exact failed path, to report that exact limitation rather than
+invent one. MixaFmCopyHereCtx\last_status is a bare numeric status code
+with no accompanying path field at all (unlike MixaRemoveConfirmCtx,
+which does track failing_path from its own walk-glue). The copy-result
+display therefore shows only the real STATUS ("Copy: FAIL 104"), never a
+specific failing path -- disclosed here rather than crossing into a new
+file API or inventing a parallel path-tracking mechanism, both of which
+the ticket explicitly forbade.
+
+Testing
+---------
+tests/mixa_app_fmpanel_copyresult_e2e_selftest.lm1 (run_app_fmpanel_
+copyresult_e2e_selftest.ps1): 17 checks, 0 failures, two hash-identical
+runs (all 9 tracked hashes -- compiler, app_controller header/impl/impl-
+header, fmpanel header/impl/impl-header, test source, runner -- byte-
+identical across both runs). Drives the same real production
+orchestration headless. Covers: no result shown before any invocation;
+Ctrl+V on a real file already selected in its own parent directory
+produces the real MIXA_COPY_ERR_EXISTS (104), selection left untouched;
+an unrelated click elsewhere leaves the display unchanged; a dismiss
+click clears it while leaving selection intact; the mouse route (clicking
+the Copy Here label) shows the identical real FAIL/104 for the identical
+conflict; and, after entering the real fixture's own subdirectory (re-
+querying its index fresh via the existing entry-lookup helper, since Copy
+Here's own unconditional-when-dest=cur refresh, established in Part I,
+had already reshuffled indices from the two prior invocations) and
+retrying, a real MIXA_COPY_OK success is shown and the copied file is
+confirmed to exist on disk via a raw fopen check.
+
+Full regression sweep after this change, all green, no regressions:
+run_app_fmpanel_e2e_selftest.ps1 (15/0), run_app_fmpanel_select_e2e_
+selftest.ps1 (20/0), run_app_loop_selftest.ps1 (29/0, native entrypoint
+still builds), run_app_controller_e2e_selftest.ps1 (22/0), run_win32_
+smoke_selftest.ps1 (17/0 -- re-verified for the first time after the
+copy_sink fix, since that fix touches mixa_app_controller.lm1/_impl.h
+which the real Win32 build also links; the real window still opens,
+F1/console/process/close behavior all unchanged), run_button_dispatch_
+selftest.ps1, and full run_mixa.ps1.
+
+Remaining UI limits, disclosed
+-------------------------------------
+  - Copy-result display shows STATUS only, never a failing path (data-
+    seam limitation above).
+  - Dismiss is a single fixed click region, not a general "any key/click
+    dismisses" gesture -- deliberately minimal per the ticket's own
+    "minimal explicit click region" allowance.
+  - No keyboard dismiss shortcut: no documented convention for one exists
+    in UI_MODEL.txt/PORT_OF_CLEARSHELL.txt/FIRST_VERSION.txt, so per this
+    session's own established discipline (Part I's own F8 finding), none
+    was invented.
+  - The vertical-scrolling gap Part II already disclosed remains
+    unchanged and unrelated to this ticket's own scope.
+
+Part IV -- production file-manager panel vertical scrolling (ticket 20260913-044900)
+============================================================================================
+Closes the vertical-scrolling gap Parts I/II both disclosed: UI_MODEL 1/
+5.7.2's own "a single list -- vertically, in its own bounds and its own
+scrollbar" and 5.7.1's own asymmetric view/highlight rule, PORT_OF_
+CLEARSHELL 2.5's "each list scrolls inside its own bounds and keeps its
+own position, with its own vertical scrollbar."
+
+What was added
+-----------------
+MixaAppFmPanel gained two pieces of real state: view_top (the index of
+the first entry currently drawn) and highlight_idx (the keyboard-moved
+CURRENT entry, -1 meaning none established yet -- mouse click-to-select
+from Part II is entirely unaffected and stays selection-based, never
+highlight-based; the two are deliberately independent, exactly FAR/
+Norton's own "marked" vs "cursor" distinction).
+
+The list's own rightmost column (list_col+list_cols-1) is now a real,
+drawn vertical scrollbar, reserved unconditionally so the entry-column
+width and the scrollbar's own hit-test region never shift depending on
+the current entry count. render() draws a dim track over the visible
+rows and a single brighter thumb cell at a position proportional to
+view_top/max_scroll (an integer computation, no scaling, per Mixa_
+Manager_RENDERING_DOCTRINE.txt). hit() maps a click on that column to a
+proportional view_top, touching no selection and no highlight -- UI_
+MODEL 5.7.1's own "the view may leave the highlight" mouse-only rule.
+
+Keyboard Up/Down (mixa_app_fmpanel_key, called from mixa_app_controller.
+lm1's step() before its existing cmdline key chain -- neither key had any
+prior meaning there, so nothing is stolen from the console) move highlight_
+idx by one, establishing it at 0 on the very first Up or Down if none
+exists yet, clamped to fm's own real [0, count-1] range -- no fixed cap
+invented. Every highlight move re-derives whether the view must follow it
+("any HIGHLIGHT movement brings the view back," 5.7.1) using the same
+"first/last visible row" arithmetic render() itself uses.
+
+A directory CHANGE (detected by comparing mixa_fm_cur_dir's own string
+against what the panel last saw) resets both view_top and highlight_idx
+to the top of the NEW listing -- an old scroll position from an unrelated
+directory would point at meaningless entries once the listing is entirely
+different. A refresh WITHIN the same directory (e.g. after Delete) only
+CLAMPS view_top to the new, possibly smaller max_scroll and clamps
+highlight_idx into the new count -- it does not reset either, since the
+identity of what is being looked at has not changed, only its contents.
+Both rules live in one new helper, mixa_app_fmpanel_clamp_view, called at
+the top of every render() (and, redundantly but harmlessly, at the top of
+mixa_app_fmpanel_key -- see the real bug below for why that redundancy is
+NOT hiding the actual view-following logic).
+
+A real bug found and fixed while writing this ticket's own E2E test
+-------------------------------------------------------------------------
+The scrollbar's own click-to-scroll worked in isolation but a click ALSO
+disappeared the instant the very next frame rendered -- the scroll always
+snapped straight back to wherever the (still-established, from an earlier
+Up/Down) keyboard highlight was. The first version of mixa_app_fmpanel_
+clamp_view had copied the SAME "bring the view back to the highlight"
+logic that belongs in mixa_app_fmpanel_key into clamp_view itself -- and
+clamp_view runs unconditionally on EVERY render(), not only after an
+actual highlight move. So a mouse-driven scroll would take effect for
+exactly one hit(), then get overwritten by the very next render()'s own
+clamp_view call before the test (or a real user) ever saw it settle.
+UI_MODEL 5.7.1 is explicit that this must NOT happen: "the VIEW may leave
+the highlight" via a mouse move, and only a highlight MOVE -- not a
+render -- brings the view back. Fixed by removing the view-follows-
+highlight branch from clamp_view entirely, leaving it only in mixa_app_
+fmpanel_key (the one place a highlight actually just moved); clamp_view
+itself only clamps view_top to the current max_scroll and highlight_idx
+to the current count, both real invariants that must hold on every
+render regardless of how the count changed. Caught only because the E2E
+test drove a REAL scrollbar click through a REAL subsequent render
+tick, not a single isolated hit() call -- the same "a genuine end-to-end
+proof catches what a narrower check cannot" pattern this session has hit
+repeatedly (the sink=0 Copy Here bug in Part III, the READ/APPEND
+console-handle bug from ticket 010249).
+
+The double-box focus frame was not used for the highlight
+-------------------------------------------------------------------------
+PORT_OF_CLEARSHELL 2.8/DRAWING.txt 5.4 specify a double-line box frame
+(mixa_draw_frame, DOUBLE style) as the general highlight for ANY element.
+Checked directly against mixa_draw_frame's own real implementation
+(mixa_draw.lm1): it refuses nrows<2. A file-manager list row is exactly
+one text row tall, so it cannot host a 2-row-minimum border without
+overlapping the entry above or below it. PORT_OF_CLEARSHELL 2.8 itself
+describes the general focus-frame mechanism (which element is current
+across lists, items, buttons, panels) as a whole-app decision still open,
+not something this ticket's own narrow scrolling scope settles. The
+keyboard-highlighted row instead gets a plain reverse-video swap (fg/bg
+exchanged) via the SAME already-available draw_row helper -- a real,
+functional, testable stand-in, disclosed here rather than silently
+decided or worked around by inventing a new drawing capability.
+
+Mouse wheel is not in the backend seam
+---------------------------------------------
+mixa_backend.h's own MixaEvent carries only mouse buttons/row/col for
+MIXA_EVENT_MOUSE -- no wheel delta of any kind exists anywhere in the
+seam (confirmed by reading the struct and its own MixaEventKind enum
+directly). "Mouse ... movement changes the view" is therefore implemented
+as a real click on the scrollbar's own track using the EXISTING mouse
+event contract, not an actual wheel gesture -- extending the backend
+seam itself (Win32 poll, headless push, a new event kind) is out of this
+ticket's mixa_manager-only, non-backend scope and a much larger, cross-
+cutting change than this ticket asked for. Disclosed rather than worked
+around by quietly inventing a new event kind.
+
+Testing
+---------
+tests/mixa_app_fmpanel_scroll_e2e_selftest.lm1 (run_app_fmpanel_scroll_
+e2e_selftest.ps1): 62 checks, 0 failures, two hash-identical runs (all 9
+tracked hashes -- compiler, app_controller header/impl/impl-header,
+fmpanel header/impl/impl-header, test source, runner -- byte-identical
+across both runs). Drives the same real production orchestration
+headless, with a real 30-file + 1-subdirectory fixture (31 real entries
+against a 21-row visible list area, so scrolling is actually exercised,
+never assumed). Covers: the view starts at the top with no keyboard
+highlight; Down establishes the highlight at entry 0 on the first press;
+highlight movement stays put while still visible, then drags the view
+along once it would go off either edge (top, middle, and the real bottom
+of a 31-entry listing, and back to a real top again); Up/Down never walk
+past the real [0, count-1] bounds; a scrollbar click moves the view alone
+without disturbing the keyboard highlight or any selection; after
+scrolling, a click on an entry row selects the REAL entry CURRENTLY drawn
+there (view_top-aware), never a stale view_top=0 mapping; entering a real
+subdirectory resets both view_top and the highlight to the top of the new
+listing; returning to root and deleting entries through the SAME real
+Delete confirmation path used by every earlier ticket's own selftest
+clamps the view back to the top and the highlight into the new, smaller
+real count, checked by real entry-name presence/absence rather than a
+bare total (see the console-log fixture-cohabitation note below).
+
+A real, disclosed test-fixture artifact (not a product bug)
+-------------------------------------------------------------------
+The test's own fixture directory is also the app root mixa_app_
+controller_open opens (matching every earlier ticket's own test), and
+mixa_app_controller_open creates its console scrollback file (mixa-
+console.log) directly inside that root. That file does not exist yet
+when mixa_fm's own FIRST listing is taken (mixa_app_loop_open, Stage 3,
+runs before Stage 4/5 create the log), so an early "mixa_fm_count = 31"
+check is exact and correct -- but any LATER refresh (mixa_fm_parent's own
+re-scan, used by this test to return from the real subdirectory) picks
+the log file up as one additional real entry. Caught directly during this
+ticket's own test-writing (an exact "16 real entries left" assertion
+failed with 17), and fixed by asserting real entry-name presence/absence
+after that point instead of a bare total -- a more precise check anyway,
+and one immune to this real, disclosed cohabitation artifact rather than
+hiding it behind a hand-adjusted magic number.
+
+Full regression sweep after this change, all green, no regressions:
+run_app_fmpanel_e2e_selftest.ps1 (15/0), run_app_fmpanel_select_e2e_
+selftest.ps1 (20/0), run_app_fmpanel_copyresult_e2e_selftest.ps1 (17/0),
+run_app_loop_selftest.ps1 (29/0, native entrypoint still builds/links),
+run_app_controller_e2e_selftest.ps1 (22/0), run_win32_smoke_selftest.ps1
+(17/0 -- the real window still opens, F1/console/process/close behavior
+all unchanged even though this ticket's Up/Down interception sits in the
+SAME step() the real Win32 message pump drives), run_button_dispatch_
+selftest.ps1, and full run_mixa.ps1.
+
+Remaining UI limits, disclosed (as of Part IV; the mouse-wheel gap named
+here was closed by Part V below)
+-------------------------------------
+  - No mouse wheel: scrollbar click only (backend-seam gap above).
+  - The highlighted row uses reverse-video, not the double-box focus
+    frame (a real mixa_draw_frame constraint, not a stylistic choice --
+    see above); the general focus-frame mechanism for every UI element
+    remains PORT_OF_CLEARSHELL 2.8's own open, whole-app decision.
+  - No scrollbar thumb DRAG, only click-to-jump on the track -- a
+    minimal, real, working interaction; a draggable thumb would need
+    tracking a mouse-down/mouse-move/mouse-up sequence this module does
+    not currently receive as such (only discrete click events), which is
+    a larger interaction-model question than this ticket's own scope.
+  - No horizontal scrolling of a single list's own content, and no
+    scrolling of the ROW of lists (UI_MODEL 5.7.2's own other two
+    "same rule, three places" cases) -- this ticket is the single-list
+    vertical case only; there is currently only one list in the
+    production controller, so the other two cases have no real subject
+    yet to test against.
+
+Part V -- real mouse-wheel event and file-panel scrolling (ticket 20260913-053000)
+==========================================================================================
+Closes the "No mouse wheel" gap Part IV named: mixa_backend.h's own
+MixaEvent contract gains a real wheel representation, populated from the
+real Win32 window input path, routed through the production controller
+to mixa_app_fmpanel -- not a scrollbar-click stand-in this time, an
+actual wheel gesture.
+
+Backend-seam extension (mixa_backend.h, hand-written C header)
+--------------------------------------------------------------------
+A new MixaEventKind, MIXA_EVENT_MOUSE_WHEEL, distinct from MIXA_EVENT_
+MOUSE rather than a flag on it: a wheel event carries a DIRECTION/
+MAGNITUDE instead of a button state, and a distinct kind means every
+existing MIXA_EVENT_MOUSE consumer (every button/click hit-test in this
+codebase) simply never sees it, rather than having to newly ignore a
+zero button mask on a mouse-shaped event it did not expect. MixaEvent
+gains one field, `int wheel_delta` -- already-normalized NOTCH count
+(Win32's own WM_MOUSEWHEEL delta pre-divided by WHEEL_DELTA=120, so no
+consumer needs that constant), positive away from the user ("scroll
+up"), negative toward ("scroll down") -- Win32's own sign convention,
+kept rather than inverted so a future port does not have to guess which
+way is which. row/col are reused unchanged (same HALF-cell contract
+mouse events already use); buttons is 0 for a wheel event, not a new
+"no buttons" sentinel.
+
+Win32 backend (mixa_backend_win32.lm1)
+------------------------------------------
+mixa_win32_poll gained one new branch for WM_MOUSEWHEEL (522), alongside
+the existing WM_LBUTTONDOWN/UP/RBUTTONDOWN/UP/MBUTTONDOWN/UP/MOUSEMOVE
+branch it already had. The one real Win32 quirk this message has that no
+other handled message in this file does: its lParam is SCREEN
+coordinates, not client-relative like every other mouse message here --
+so a single ScreenToClient call converts it before the SAME pixel ->
+half-cell division every other mouse branch already performs. wParam's
+high word is the signed delta (divided by 120 here, once, so mixa_app_
+fmpanel_wheel and any future consumer never has to); the low word carries
+the identical MK_* flag bits mixa_win32_mouse_mods already reads, so the
+full wParam is passed through unmodified exactly like the click branch
+already does. A delta that divides to exactly 0 (a sub-notch smooth-wheel
+report, rarer but real) is treated as no event at all -- the poll loop
+simply continues to the next message rather than delivering a wheel
+event with nothing to do.
+
+Headless backend (mixa_backend_headless.lm1)
+-------------------------------------------------
+mixa_headless_push_event's own pixel -> half-cell conversion, previously
+gated on `kind = MIXA_EVENT_MOUSE` only, now also covers MIXA_EVENT_
+MOUSE_WHEEL -- the identical conversion, extended to the new kind rather
+than duplicated, so a pushed wheel event's row/col behave exactly like a
+pushed mouse event's for any test driving the headless backend.
+
+mixa_app_fmpanel (new function: mixa_app_fmpanel_wheel)
+-------------------------------------------------------------
+Takes the already-converted upper-cell (cell_row, cell_col) and a signed
+notch count. UI_MODEL 5.7.1's own asymmetric rule, already applied
+identically to the scrollbar-track click in Part IV: moves the view
+ALONE, touching neither the keyboard highlight nor any selection. Anywhere
+over this panel's own list area (the path row, every entry row, and the
+scrollbar column alike -- an ordinary file manager scrolls on a wheel
+turn no matter which of those the pointer happens to sit over) consumes
+the event and moves view_top by notches (clamped to the current real
+[0, count-visible] range, one row of movement per notch -- a deliberate,
+disclosed simplification; no OS-configurable "lines per notch" setting
+is read or invented). The action row and anything outside the panel's
+own bounds is a genuine miss (returns 0), so the caller's other handlers
+still see it.
+
+Wiring into mixa_app_controller.lm1
+----------------------------------------
+A new branch in step(), parallel to the existing MIXA_EVENT_MOUSE click
+branch and gated the same way (help_rc = MIXA_HELP_HIT_NONE first): the
+SAME half-cell -> upper-cell conversion the click branch already uses,
+then straight into mixa_app_fmpanel_wheel. No new state on MixaAppController
+itself -- the wheel handler needs nothing beyond what it is already
+handed.
+
+Testing
+---------
+tests/mixa_app_fmpanel_wheel_e2e_selftest.lm1 (run_app_fmpanel_wheel_
+e2e_selftest.ps1): 39 checks, 0 failures, two hash-identical runs (all 12
+tracked hashes -- compiler, app_controller header/impl/impl-header,
+fmpanel header/impl/impl-header, the backend header and the win32/
+headless backend implementations, test source, runner -- byte-identical
+across both runs; the backend files were added to this runner's own
+HashFiles set specifically because this ticket touches them, unlike
+every earlier fmpanel ticket). Drives the same real production
+orchestration headless, with a real 30-file fixture (more than the
+21-row visible window). Covers: a real selection and a real keyboard
+highlight established first, so every later check can prove BOTH stay
+untouched; a negative wheel delta scrolls the view down, a positive one
+scrolls it up, neither touching the highlight or the selection; wheeling
+far past the top clamps at 0, far past the bottom clamps at the real
+max_scroll, never wrapping or overshooting; a wheel event landing on the
+action row is not consumed by the list-scrolling logic at all; and,
+after a real Delete-confirmed deletion shrinks the count below the
+visible window (the same real confirmation path every earlier ticket's
+own selftest uses), a further wheel event cannot push the view away from
+its already-clamped 0 in either direction.
+
+A real, disclosed test finding: an unrelated selection is not preserved by mass-delete (not a wheel-event bug)
+---------------------------------------------------------------------------------------------------------------------------
+An early draft of this test asserted that an ENTRY selected in setup
+(e00.txt) would still be selected after an unrelated set of OTHER entries
+(e10..e29) was selected and deleted through the real Delete confirmation.
+It is not: mixa_fm_is_selected read 0 for e00.txt immediately after the
+real OK click, even though e00.txt was never selected for deletion and
+never touched by the walk-glue's own on_file/on_dir_done. Traced directly
+(a temporary debug trace, since removed, confirmed exactly when the flag
+flipped) to mixa_selection's own already-accepted, already-documented
+consolidation behavior (mixa_file_manager.h.lm1's own header comment:
+"mixa_selection_query consolidates as it reads... painting a directory
+listing is not a read-only operation on the selection") -- a real
+property of a module this ticket does not own and must not silently
+"fix," not anything the wheel-event work introduces. Removed the wrong
+assertion rather than either papering over it or reaching into mixa_
+selection.lm1 to change accepted, unrelated semantics; the two directly
+relevant checks (that a WHEEL event itself never touches selection, in
+Scenarios 1 and 4) remain and pass.
+
+Foreign/native operations and new L1 constructs, per this ticket's own request
+-------------------------------------------------------------------------------------------
+Checked directly rather than assumed: this ticket needed exactly ONE new
+native call, ScreenToClient, for WM_MOUSEWHEEL's own documented screen-
+coordinate lParam (the only Win32 message in this codebase whose
+coordinates are not already client-relative). It is called the SAME way
+every other Win32 API in mixa_backend_win32.lm1 already is -- c.
+ScreenToClient(hwnd, pt), resolved against the real prototype visible
+through this file's own #include <windows.h> chain, identical in kind to
+the already-established PeekMessageA/DispatchMessageA/TranslateMessage/
+ShowWindow/DestroyWindow/OpenClipboard/SelectObject calls already present
+in this same file. No new L1 construct, no new foreign-call CATEGORY, no
+C macro metaprogramming, and no hidden global callback state was added --
+mixa_app_fmpanel_wheel's own view-clamping logic is stateless per call
+beyond the panel's own already-existing view_top field, exactly like the
+scrollbar-click handler it sits beside. Nothing here needs new core-port
+inventory attention beyond what the existing Win32-message-polling
+pattern already requires.
+
+Full regression sweep after this change, all green, no regressions:
+run_app_fmpanel_e2e_selftest.ps1 (15/0), run_app_fmpanel_select_e2e_
+selftest.ps1 (20/0), run_app_fmpanel_copyresult_e2e_selftest.ps1 (17/0),
+run_app_fmpanel_scroll_e2e_selftest.ps1 (62/0), run_app_loop_selftest.ps1
+(29/0, native entrypoint still builds/links), run_app_controller_e2e_
+selftest.ps1 (22/0), run_win32_smoke_selftest.ps1 (17/0 -- the real
+window still opens and responds identically; F1/console/process/close
+behavior all unchanged even though the backend files this ticket touches
+are the SAME ones the real Win32 build links), run_button_dispatch_
+selftest.ps1, and full run_mixa.ps1.
+
+Remaining UI limits, disclosed (as of Part V; scrollbar-thumb dragging,
+named here as still missing, was added by Part VI below)
+-------------------------------------
+  - One row of view movement per wheel notch, not an OS-configurable
+    "lines per notch" setting -- a deliberate, disclosed simplification.
+  - The highlighted row still uses reverse-video, not the double-box
+    focus frame (Part IV's own real mixa_draw_frame constraint, unrelated
+    to and unchanged by this ticket).
+  - No scrollbar thumb DRAG (Part IV's own disclosed gap, unchanged).
+  - No horizontal single-list scrolling and no row-of-lists scrolling
+    (Part IV's own disclosed gap, unchanged) -- still no real second list
+    to test the row-of-lists case against.
+  - Selection is not preserved across an unrelated mass-delete -- a real,
+    pre-existing property of the accepted mixa_selection module (see
+    above), not something this or any fmpanel ticket has introduced,
+    changed, or is in scope to change. CORRECTED by Part VIII (ticket
+    20260913-071906): this was a misdiagnosis on my own part, not a real
+    defect -- see that Part for the investigation and why.
+
+Part VI -- real vertical scrollbar-thumb dragging (ticket 20260913-060000)
+==================================================================================
+Closes the "No scrollbar thumb DRAG" gap Part V named, building on main
+commits 7b4a5676 (vertical scrolling) and 81061041 (mouse wheel).
+
+The thumb becomes proportionally sized
+------------------------------------------
+Part IV's own thumb was a fixed 1 row tall -- a disclosed simplification
+that had no way to express "grabbed away from its own first row," since
+there was only ever one row to grab. This ticket needed that concept for
+real, so the thumb's own height is now the classic scrollbar ratio:
+thumb_h = visible^2 / count (integer division), clamped to [1, visible].
+A new shared helper, mixa_app_fmpanel_scroll_geom, computes visible/
+count/max_scroll/thumb_h/track_room (track_room = visible - thumb_h, how
+many track rows the thumb has left to move within) once, used by
+render(), the track/thumb hit-test, and the drag-continue path alike --
+so the three can never compute a different thumb position from the same
+state. mixa_app_fmpanel_thumb_off(view_top, max_scroll, track_room) maps
+the CURRENT view_top onto that room proportionally; it is the exact
+formula render() already used in Part IV/V, extracted so hit() can ask
+"is this click on the thumb" using the identical position render() just
+drew.
+
+Drag state
+--------------
+Two new fields on MixaAppFmPanel, ordinary per-instance state, not
+globals: drag_active (nonzero while a drag is in progress) and
+drag_grab_offset (the row within the thumb, 0 = its own first row, where
+the press landed -- fixed for the whole drag). A press exactly on the
+current thumb sets both and changes nothing else (requirement 1's own
+"without changing file selection or keyboard highlight," and no
+immediate view jump either -- the one thing a naive "snap the thumb's
+top under the cursor" implementation would get wrong, and exactly why
+requirement 2 asks for a defined, tested grab offset). A press elsewhere
+on the track keeps the EXACT Part IV jump-to-position formula unchanged
+(requirement 5).
+
+This backend seam does not distinguish "just pressed" from "still held
+and moving," and that turns out not to matter
+-----------------------------------------------------------------------------------
+mixa_backend.h's own MIXA_EVENT_MOUSE carries only a buttons bitmask and
+a position -- there is no separate "this is WM_LBUTTONDOWN" vs "this is
+WM_MOUSEMOVE while held" signal anywhere in the seam, and adding one was
+out of this ticket's own scope (it did not ask for a backend change, and
+this ticket needed none). So mixa_app_fmpanel_hit's own drag-continue
+branch is checked FIRST, before anything else in the function, and
+treats EVERY call while drag_active is set as "the drag continues,"
+regardless of whether the underlying platform event was a fresh press or
+a held move -- both report identically at this seam, and both should do
+the identical thing (move the thumb to track the cursor's current row,
+honoring the grab offset). The only place this could matter is a
+double-click landing exactly back on the thumb while STILL dragging,
+which would just be interpreted as "still dragging, moved to this row" --
+indistinguishable in effect from an ordinary drag continuation, so this
+is not a real gap.
+
+Release
+----------
+mixa_app_fmpanel_release(p) clears drag_active unconditionally
+(idempotent when no drag is active). mixa_app_controller.lm1's step()
+calls it on every MIXA_EVENT_MOUSE where the left button is NOT held --
+a real button-up and an ordinary hover-move with no button at all report
+identically (buttons=0) at this seam, and mixa_app_fmpanel_release
+treats them identically on purpose: requirement 3's own "motion without
+an active drag changes nothing" holds either way, since a drag that was
+never active has nothing to end, and a real release correctly ends one
+that was.
+
+Shrink/refresh safety during a drag
+------------------------------------------
+The drag-continue path recomputes mixa_app_fmpanel_scroll_geom fresh
+from the CURRENT real mixa_fm_count on every single call -- never a
+value cached at drag-start. If a shrink (e.g. a real refresh triggered
+from outside the click UI, the exact scenario this ticket's own test
+proves) leaves no track room to drag within (max_scroll = 0 or
+track_room = 0), the drag ends gracefully right there rather than
+dividing by a room that no longer exists; the SAME clamp_view() call
+render() already makes every frame (Part IV) independently pulls view_
+top down to the new bound regardless, so even a stale value between the
+drag ending and the next render is corrected before anything is drawn.
+
+L1-to-L2 portability, per this ticket's own request
+--------------------------------------------------------
+Checked directly: this ticket added no new L1 construct, no new foreign/
+native operation, and no C macro metaprogramming. Every new function
+(mixa_app_fmpanel_release, _drag_active, _scroll_geom, _thumb_off) is
+ordinary L1 -- integer arithmetic, if/else, one multi-out-param helper
+using the SAME `@ local_var` address-of-a-local convention already used
+throughout this codebase (mixa_process_close(@ p), mixa_share_win32_
+test_get_last_invoke_apt_type(@ cb_apt_type), etc.) for an out-parameter,
+not a new pattern. No hidden global callback state was added -- every
+piece of drag state lives on MixaAppFmPanel itself, the same struct
+already carrying view_top/highlight_idx/confirm_open, read and written
+only by this module's own functions. Nothing here needs core-port
+inventory attention.
+
+Testing
+---------
+tests/mixa_app_fmpanel_drag_e2e_selftest.lm1 (run_app_fmpanel_drag_e2e_
+selftest.ps1): 28 checks, 0 failures, two hash-identical runs (all 12
+tracked hashes -- compiler, app_controller header/impl/impl-header,
+fmpanel header/impl/impl-header, the backend header and win32/headless
+implementations, test source, runner -- byte-identical across both
+runs). Drives the same real production orchestration headless, with a
+real 30-file fixture (visible=21, so thumb_h=(21*21)/30=14, track_room=7,
+max_scroll=9 -- every expected view_top in the test is computed from
+these four numbers directly). Covers: pressing the thumb 5 rows below
+its own first row starts a drag WITHOUT jumping the view or touching
+selection/highlight; dragging to both real extremes (view_top 0 and 9)
+and a real middle position (view_top 6) all honor the same grab offset,
+proving the mapping is NOT "cursor row = view_top" but genuinely offset-
+aware; a real button-up ends the drag; an ordinary hover-move afterward
+changes nothing; and, re-grabbing the thumb and then shrinking the real
+listing to 5 entries via a DIRECT filesystem delete + mixa_fm_refresh
+(deliberately bypassing the click UI, since a click while dragging would
+itself be swallowed as a drag continuation rather than a Delete click)
+ends the drag gracefully and clamps view_top to 0 on the very next drag-
+continue event.
+
+A real, disclosed test-fixture artifact (same one as Part IV, hit again)
+-------------------------------------------------------------------------------
+The shrink scenario's own exact-count assertion first read 6 instead of
+the expected 5, for the identical reason Part IV already disclosed: this
+fixture directory doubles as the app root, and mixa_app_controller_
+open's own console scrollback file is picked up as one extra real entry
+by the mixa_fm_refresh this scenario deliberately calls. Fixed the same
+way Part IV was: asserting real entry-name presence/absence (e00..e04
+survive, e05..e29 are gone) rather than a bare total.
+
+Full regression sweep after this change, all green, no regressions:
+run_app_fmpanel_e2e_selftest.ps1 (15/0), run_app_fmpanel_select_e2e_
+selftest.ps1 (20/0), run_app_fmpanel_copyresult_e2e_selftest.ps1 (17/0),
+run_app_fmpanel_scroll_e2e_selftest.ps1 (62/0), run_app_fmpanel_wheel_
+e2e_selftest.ps1 (39/0), run_app_loop_selftest.ps1 (29/0, native
+entrypoint still builds/links), run_app_controller_e2e_selftest.ps1
+(22/0), run_win32_smoke_selftest.ps1 (17/0 -- the real window still
+opens and responds identically), run_button_dispatch_selftest.ps1, and
+full run_mixa.ps1.
+
+Remaining UI limits, disclosed (as of Part VI; the reverse-video stand-in
+named here was replaced by Part VII's own real focus frame below)
+-------------------------------------
+  - Dragging only recognizes a press that lands EXACTLY on the thumb;
+    real OS scrollbars sometimes treat a click-and-hold on the track as
+    an auto-repeating page-step that can turn into a drag once the thumb
+    reaches the cursor -- not implemented, and not asked for.
+  - One row of view movement per wheel notch (Part V's own disclosed
+    simplification, unchanged).
+  - The highlighted row still uses reverse-video, not the double-box
+    focus frame (Part IV's own real mixa_draw_frame constraint, unchanged).
+  - No horizontal single-list scrolling and no row-of-lists scrolling
+    (Part IV's own disclosed gap, unchanged) -- still only one real list
+    to test against.
+  - Selection is not preserved across an unrelated mass-delete (Part V's
+    own disclosed, pre-existing mixa_selection property, unchanged).
+    CORRECTED by Part VIII (ticket 20260913-071906) -- misdiagnosis, not
+    a real defect.
+
+Part VII -- real moving double-box keyboard focus frame (ticket 20260913-064500)
+========================================================================================
+Closes the "reverse-video, not the double-box focus frame" gap every
+earlier Part in this document disclosed: the highlighted entry now uses
+DRAWING.txt 5.4/PORT_OF_CLEARSHELL 2.8's own already-implemented,
+already-accepted mixa_highlight module (mixa_highlight.h/.lm1, committed
+2026-09-12, previously unused by any production code -- this is the
+FIRST ticket to wire it into the real controller) rather than a fg/bg
+swap. Requirement 1's own "reuse the existing mixa_highlight / MIXA_
+DRAW_KEEP_BG snapshot-safe path; do not create a second frame
+implementation" is met literally: mixa_app_fmpanel calls mixa_highlight_
+init/set/clear/release, and touches nothing else in that module.
+
+The real geometry problem, and why a "focus gutter" was the answer
+------------------------------------------------------------------------------
+mixa_highlight_set calls mixa_draw_frame, which refuses nrows<2 (a real,
+measured constraint -- Part IV already found this reading mixa_draw.lm1
+directly, which is exactly why Part IV used reverse-video as a disclosed
+stand-in instead). A real list entry is exactly one text row tall.
+Framing the full entry row would need 2 real rows, and mixa_draw_frame's
+own top/bottom edges span the FULL frame width between the corners --
+so a naive 2-row-tall, full-width frame would overwrite a NEIGHBORING
+entry's own name text with border glyphs, which requirement 1's own "do
+not... overwrite the underlying row fill" explicitly forbids.
+
+The fix: reserve a fixed, permanently-blank 2-column "focus gutter"
+(MIXA_APP_FMPANEL_FOCUS_GUTTER_COLS) at the START of every entry row AND
+the path row. Framing a NARROW 2-row x 2-col region entirely inside that
+gutter never touches real text on either row, on either side of it --
+for a 2x2 region, mixa_draw_frame's own top/bottom edges have ZERO width
+between the corners (c_last = col+1 is the SAME column the corner loop
+already covers), so the frame draws EXACTLY 4 corner glyphs and nothing
+else. This is a real, disclosed rendering-only change: the entry-row
+HIT-TEST region (list_col..list_col+entry_cols) is completely unchanged,
+so no click-based test from any earlier ticket needed to change; only
+one existing test (mixa_app_fmpanel_e2e_selftest.lm1) asserted the exact
+COLUMN a rendered character appears at, and was updated (col2 -> col4)
+with a comment explaining why.
+
+Which adjacent row the frame borrows
+------------------------------------------
+The highlighted entry's own row is always one half of the 2-row frame;
+the frame prefers extending DOWN into the next row (blank gutter there
+too, safe) unless that would reach the action row's own real Delete/
+Copy Here/result content (requirement 1's own "row fill" concern again,
+this time for a DIFFERENT row's real content) -- in that one case (the
+LAST visible entry row) it extends UP instead, which is always safe
+since the row above a real entry row is either another real entry row
+or the path row, both gutter-reserved.
+
+Move, scroll off/on, and cleanup
+-------------------------------------
+mixa_highlight_set's own already-accepted contract does the "move"
+half of requirement 2 for free: calling it again at a NEW position
+automatically restores the OLD one first (same target rect only), so
+render() just calls it fresh with the CURRENT frame position on every
+tick a highlight is visible -- no separate move/redraw logic needed.
+
+"Disappear when off-screen due to mouse-only viewport movement"
+(requirement 2's other half) falls out of the SAME visibility check
+Part IV's own render() already performs for drawing the highlighted
+row's own marker: highlight_idx visible iff view_top <= highlight_idx <
+view_top+visible, re-derived from the CURRENT view_top on every render,
+never cached. A scrollbar/wheel/drag move (UI_MODEL 5.7.1's own
+asymmetric rule, established across tickets 044900/053000/060000) can
+change view_top without moving highlight_idx, so the SAME highlighted
+entry can go from visible to not visible across two renders with no
+index change at all -- exactly this check catches that and calls mixa_
+highlight_clear.
+
+Cleanup (mixa_app_fmpanel_close) calls mixa_highlight_release, which
+frees bookkeeping only (its own documented contract -- it does not
+restore cells, since by the time a panel closes there is usually nothing
+sensible left to restore into). The embedded MixaHighlight (a complete,
+plain-C struct, not opaque) needs no separate allocation of its own --
+mixa_app_fmpanel_open/close just call mixa_highlight_init/release on the
+address of the embedded field, the same "one struct owns everything it
+needs" shape MixaAppFmPanel itself already has inside MixaAppController.
+
+Selection stays a separate, real state (requirement 4)
+-------------------------------------------------------------
+The mouse-driven "* " selection marker (an entirely different, pre-
+existing mechanism) is drawn exactly as before; the keyboard-focused
+row's TEXT no longer changes color at all (the reverse-video swap is
+gone) -- focus is now shown ENTIRELY by the frame in the gutter, not by
+anything touching the entry's own text cells. An entry can be selected,
+focused, both, or neither, independently and simultaneously, exactly the
+FAR/Norton "marked" vs "cursor" distinction this document has named
+since Part IV.
+
+A real, measured duplicate-symbol conflict found and fixed
+-------------------------------------------------------------------
+mixa_highlight.lm1 itself predefs mixa_draw.lm1 (needed for its own
+internal mixa_draw_frame/mixa_cell_at calls). Compiling it as its OWN
+separate object (needed so mixa_app_fmpanel.lm1 could call its real
+functions, exactly the "predef only the header, link the real
+implementation separately" pattern this session has used repeatedly)
+and linking it alongside mixa_console_window.o -- which ALSO predefs
+mixa_draw.lm1, for its own console-rendering needs -- produced a real,
+measured multiple-definition link error across every mixa_draw_*/mixa_
+rect_*/mixa_cell_* symbol. This had never surfaced before because
+mixa_highlight.o had never been linked alongside mixa_console_window.o
+until this ticket -- its own existing selftest (mixa_highlight_
+selftest.lm1) compiles as a single, standalone translation unit with no
+other real object linked in at all, so the duplication was entirely
+latent until now.
+
+Fixed by removing mixa_highlight.lm1's OWN predef of mixa_draw.lm1: it
+now gets mixa_draw_frame's prototype transitively (mixa_highlight.h
+already includes mixa_draw.h) and forward-declares mixa_cell_at locally
+(the "declare then link" convention this session has used repeatedly --
+mixa_cell_at has no plain-C header of its own, an already-known gap;
+the real symbol resolves at link time from mixa_console_window.o's own
+predef chain in every build that links this module alongside it). A
+missing <stdlib.h> (previously reached transitively through the removed
+predef chain) surfaced as a real compile error and was added directly.
+mixa_highlight_selftest.lm1's OWN standalone build -- unaffected by any
+of this in principle, since it links no other object -- was updated to
+predef mixa_draw.lm1 directly itself (one line), keeping its own single-
+translation-unit shape exactly as before; verified by compiling and
+running it standalone (translate + compile + execute, not just build) --
+still "mixa highlight selftest ok", unchanged.
+
+Testing
+---------
+tests/mixa_app_fmpanel_focus_e2e_selftest.lm1 (run_app_fmpanel_focus_
+e2e_selftest.ps1): 21 checks, 0 failures, two hash-identical runs (all
+14 tracked hashes -- compiler, app_controller header/impl/impl-header,
+fmpanel header/impl/impl-header, backend header/win32/headless impl,
+highlight header/impl, test source, runner -- byte-identical across both
+runs). Verified through the REAL rendered cells (a frame is "present"
+when all 4 of its own corner cells are non-blank; "absent" is checked
+across the WHOLE visible list area, not just one row), never a second,
+test-only model of what should be drawn. Real 30-file fixture. Covers:
+no frame before any Up/Down; a real selection (e05) and a real keyboard
+highlight (e00, via the first Down) coexist correctly -- e05's own row
+shows its marker and no frame, e00's own row shows the frame and no
+marker; moving the highlight (two more Downs, to index 2) restores the
+OLD frame position exactly (blank again) and shows it at the new one,
+leaving the unrelated selection marker completely undisturbed; a mouse-
+only wheel scroll far enough to take the highlighted entry off-screen
+clears the frame everywhere in the list area WITHOUT moving highlight_
+idx itself, and scrolling back reveals it again at its own row; deleting
+the real entry currently at the highlighted index (through the same real
+Delete confirmation path every earlier ticket's own selftest already
+used, captured and checked by NAME rather than an assumed index-to-name
+mapping) clamps highlight_idx into the new count and the frame follows
+to wherever it now visibly sits; and closing the controller with an
+ACTIVE frame still bound does not crash.
+
+Full regression sweep after this change, all green, no regressions:
+run_app_fmpanel_e2e_selftest.ps1 (15/0, one pre-existing assertion
+updated for the new col4 text offset, disclosed above),
+run_app_fmpanel_select_e2e_selftest.ps1 (20/0), run_app_fmpanel_
+copyresult_e2e_selftest.ps1 (17/0), run_app_fmpanel_scroll_e2e_
+selftest.ps1 (62/0), run_app_fmpanel_wheel_e2e_selftest.ps1 (39/0),
+run_app_fmpanel_drag_e2e_selftest.ps1 (28/0), run_app_loop_selftest.ps1
+(29/0, native entrypoint still builds/links), run_app_controller_e2e_
+selftest.ps1 (22/0), run_win32_smoke_selftest.ps1 (17/0 -- the real
+window still opens and behaves identically; F1/console/process/close all
+unchanged, the SAME linked mixa_highlight.o the fmpanel tests use now
+compiles into the real production entrypoint too), run_button_dispatch_
+selftest.ps1, mixa_highlight_selftest.lm1 itself (standalone, unaffected
+by the predef change -- still "mixa highlight selftest ok"), and full
+run_mixa.ps1.
+
+Visual inspection: pending (requirement 3)
+------------------------------------------------
+Per requirement 3's own explicit instruction, the still-open visual
+taste/contrast question (does the frame in a 2-column gutter, using the
+existing double-line glyph set and fg=15U/white, actually look right
+next to real entry text) is NOT settled here -- this headless E2E run
+proves the geometry is implemented correctly and safely (right cells,
+right rows, right restore/clear timing) but cannot judge appearance.
+Real visual inspection against the actual Win32 window remains pending.
+
+Remaining UI limits, disclosed (as of Part VII; the selection claim named
+here was CORRECTED, not fixed, by Part VIII below)
+-------------------------------------
+  - Visual appearance of the gutter-based frame is unverified (pending
+    real visual inspection, per requirement 3, above).
+  - The frame occupies a dedicated 2-column gutter rather than framing
+    the entry's own full row -- a real, disclosed consequence of mixa_
+    draw_frame's own nrows>=2 constraint colliding with a 1-row-tall
+    entry (see above), not a stylistic choice.
+  - Dragging only recognizes a press that lands EXACTLY on the thumb
+    (Part VI's own disclosed gap, unchanged).
+  - One row of view movement per wheel notch (Part V's own disclosed
+    simplification, unchanged).
+  - No horizontal single-list scrolling and no row-of-lists scrolling
+    (Part IV's own disclosed gap, unchanged) -- still only one real list
+    to test against.
+  - Selection is not preserved across an unrelated mass-delete (Part V's
+    own disclosed, pre-existing mixa_selection property, unchanged).
+    CORRECTED by Part VIII (ticket 20260913-071906) -- misdiagnosis, not
+    a real defect.
+
+Part VIII -- selection preserved by stable path identity: a correction, not a fix (ticket 20260913-071906)
+====================================================================================================================
+This ticket asked to fix "the concrete portable state bug disclosed in
+mixa_app_fmpanel.txt Part V/VII: an unrelated selected entry is lost
+when a delete/refresh rebuilds the directory listing." Investigating it
+properly (not just re-asserting the earlier claim) found that IT DOES
+NOT REPRODUCE AS A DEFECT. This Part documents the investigation, why
+the earlier disclosure was wrong, and the real (unmodified) mechanism
+that already does the right thing -- correcting Parts V and VII above
+rather than leaving a stale claim standing.
+
+What Part V/VII actually observed
+--------------------------------------
+Both earlier tickets' own selftests selected an entry (e00.txt in the
+wheel ticket, e05.txt in the focus-frame ticket) in an EARLY scenario,
+then in a LATER, unrelated scenario selected and deleted a DIFFERENT set
+of entries (e10..e29, or whichever real entry sat at index 2) WITHOUT
+ever deselecting the first one. Both selftests then observed that first
+entry gone too, and both concluded its selection had been "lost."
+
+Traced directly with a temporary debug trace inside mixa_sel_remove_
+selected_at (added, used to print exactly what mixa_selection_walk's own
+delete-glue was removing and why, then fully removed -- never committed):
+the first entry (e00.txt / e05.txt) was the VERY FIRST thing removed
+from mixa_selection's own `selected` array during the delete walk --
+because it was STILL AN EXPLICIT, ACTIVE SELECTION at that exact moment,
+never having been deselected since the earlier scenario. mixa_selection_
+walk (SELECTION_MODEL.txt's own accepted, unmodified design) walks EVERY
+currently-selected root, not "whatever was selected in this particular
+gesture" -- there is no such narrower scope anywhere in the model. So
+the first entry was correctly, intentionally deleted ALONGSIDE the
+entries the test author actually meant to delete, because it genuinely
+was still part of "the current selection" the whole time.
+
+This is not data loss. SELECTION_MODEL.txt's own stated design (section
+2, "used INSTEAD OF select-all-then-exclude... the same mechanism works
+on the directory tree at any depth") is explicit that selection is
+PERSISTENT and CUMULATIVE across gestures by design -- and this ticket's
+own requirement 5 ("do not change... delete semantics") confirms Delete
+must keep operating on the WHOLE current selection, not a narrower
+per-gesture subset. An entry left marked from an earlier, forgotten
+gesture being swept into a later delete of the WHOLE selection is
+exactly what a persistent multi-select model is supposed to do. The
+actual defect was in the two EARLIER TESTS' OWN construction (forgetting
+to deselect the "control" entry between scenarios), not in mixa_
+selection, mixa_file_manager, or mixa_app_fmpanel.
+
+The one construction where "distinct" can actually hold
+-------------------------------------------------------------
+For "select A, delete distinct B, A remains selected" to be achievable
+AT ALL without changing delete semantics, A must not be part of the
+selected set the delete walks -- meaning B's own removal cannot go
+through the SAME real, selection-driven Delete gesture A is also marked
+for. The only construction consistent with that AND with every other
+constraint this ticket sets (no delete-semantic change, no core/L2
+touch) is B being removed EXTERNALLY (any real disk change outside the
+app's own selection-based Delete UI) followed by a same-directory mixa_
+fm_refresh. Verified directly with a throwaway scratch probe before
+writing the real test (translated, compiled, and linked against the
+actual, already-built production objects from a prior real test run;
+executed; output inspected; then deleted -- never part of any committed
+source): selecting a.txt, removing a DISTINCT, never-selected b.txt with
+a raw `c.remove`, then calling mixa_fm_refresh, already reports a.txt
+still selected with its own index correctly re-resolved -- zero source
+changes needed anywhere.
+
+Why this already works, mechanically
+------------------------------------------
+mixa_selection stores its OWN independently-owned copies of every
+selected path string (mixa_sel_strdup, on mixa_selection_select).
+mixa_fm_refresh only rebuilds mixa_fm's own entries array (mixa_fm_
+build re-enumerates and re-allocates fresh MixaFmEntry objects with
+fresh path strings) -- it never touches mixa_selection at all, and
+mixa_fm_is_selected always re-derives its answer by re-reading the
+CURRENT entry's own fresh path string and asking mixa_selection_query
+with it, never from a cached index-to-selected mapping. So a refresh
+that removes an unrelated entry, adds new ones, or reorders everyone
+else's own index cannot desynchronize a surviving entry's own selection
+from its own (possibly new) index -- the query is always keyed by the
+entry's actual current path, at the moment it is asked, not by any
+numeric position. The requirement's own "no new entry may become
+selected because its numeric index was reused" is therefore
+structurally impossible already, not merely untested -- verified
+directly rather than left as an assumption (this ticket's own test
+proves it: five brand-new sibling files, never selected, added right
+before a refresh that also renumbers a surviving selected entry, and
+none of the five ever reports selected).
+
+Testing
+---------
+tests/mixa_app_fmpanel_selrefresh_e2e_selftest.lm1 (run_app_fmpanel_
+selrefresh_e2e_selftest.ps1): 22 checks, 0 failures, two hash-identical
+runs (all 17 tracked hashes -- compiler, app_controller header/impl/
+impl-header, fmpanel header/impl/impl-header, backend header/win32/
+headless impl, highlight header/impl, selection header/impl, file_
+manager header, test source, runner -- byte-identical across both
+runs). Drives the real production orchestration headless against the
+real, UNMODIFIED mixa_selection/mixa_file_manager. Covers exactly the
+ticket's own acceptance list: (1) select A, externally remove a
+distinct, never-selected B, refresh -- A remains selected, B is gone,
+an untouched third entry (c.txt) is not accidentally selected; (2)
+delete A itself through the real Delete confirmation UI -- it is
+removed from the real listing, and whatever entry now occupies its
+former index is not mistakenly reported selected; (3) a refresh that
+both shrinks (removes two entries ahead of a surviving selected one,
+changing its own index) and grows (adds five brand-new siblings) the
+real listing preserves the surviving entry's own selection at its NEW
+index and leaks nothing onto any of the five new ones; (4) an out-of-
+range index answers a safe 0, and shrinking all the way down to a
+single real entry leaves its own selection intact with no crash.
+
+A real, disclosed test-fixture artifact (the same one named in Parts
+IV/VI, hit again)
+-------------------------------------------------------------------------------------
+Scenario 3's own exact-count assertion first read 2 instead of an
+expected 1 for the identical reason already disclosed twice: this
+fixture directory doubles as the app root, and mixa_app_controller_
+open's own console scrollback file is picked up as one extra real entry
+by a refresh. Fixed the same way both earlier times: bounding the count
+(<=2, not =1) and checking the entry that actually matters by name.
+
+Full regression sweep after this ticket, all green, NO SOURCE CHANGES
+to verify against -- this ticket added only a test and this design-doc
+correction: run_app_fmpanel_e2e_selftest.ps1 (15/0), run_app_fmpanel_
+select_e2e_selftest.ps1 (20/0), run_app_fmpanel_copyresult_e2e_
+selftest.ps1 (17/0), run_app_fmpanel_scroll_e2e_selftest.ps1 (62/0),
+run_app_fmpanel_wheel_e2e_selftest.ps1 (39/0), run_app_fmpanel_drag_e2e_
+selftest.ps1 (28/0), run_app_fmpanel_focus_e2e_selftest.ps1 (21/0),
+run_app_loop_selftest.ps1 (29/0, native entrypoint still builds/links),
+run_app_controller_e2e_selftest.ps1 (22/0), run_win32_smoke_selftest.ps1
+(17/0), run_button_dispatch_selftest.ps1, and full run_mixa.ps1 (exit 0,
+no "FAIL", no "NativeCommandError" -- the ingress harness fix from
+ticket 063500 holds).
+
+Remaining UI limits, disclosed
+-------------------------------------
+  - Selecting entry A, then ALSO selecting entry B without deselecting
+    A, then pressing Delete, deletes BOTH -- by design (requirement 5's
+    own "do not change delete semantics" plus SELECTION_MODEL.txt's own
+    persistent, cumulative selection model). This is not a limitation to
+    fix; it is documented here so a future reader does not rediscover
+    Part V/VII's own original misdiagnosis from scratch.
+  - Every other limit disclosed through Part VII remains exactly as
+    stated there -- this ticket touches only the selection-preservation
+    claim, nothing else.

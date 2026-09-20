@@ -1,0 +1,55 @@
+predef: "mixa_manager/mixa_backend.h.lm1"
+include: "<stddef.h>"
+include: "<windows.h>"
+
+# Concrete Win32 backend. HWND/HDC/HBITMAP/HFONT as @: void (HANDLE-family).
+
+struct: MixaWin32GlyphEntry
+    unsigned: codepoint
+    int: layer
+    int: missing
+    size_t: width
+    size_t: height
+    int: bearing_x
+    int: bearing_y
+    size_t: advance
+    @: MixaU8 coverage
+    @: MixaWin32GlyphEntry next
+end: MixaWin32GlyphEntry
+
+struct: MixaWin32
+    const: @: MixaBackendVTable vt
+    int: is_open
+    @: void hwnd
+    @: void hdc_mem
+    @: void hbmp
+    @: void hbmp_old
+    @: MixaU8 bits
+    size_t: cols
+    size_t: rows
+    size_t: cell_width
+    size_t: cell_height
+    size_t: upper_cell_width
+    size_t: upper_cell_height
+    size_t: pointer_cell_width
+    size_t: pointer_cell_height
+    size_t: frame_w
+    size_t: frame_h
+    size_t: frame_bytes
+    @: void hfont_text
+    @: void hfont_upper
+    @: void hfont_pointer
+    @: void hdc_glyph
+    int: text_ascent
+    int: upper_ascent
+    int: pointer_ascent
+    @: MixaWin32GlyphEntry glyph_cache
+    int: force_gdi_error
+end: MixaWin32
+
+prototype:
+    fn: mixa_backend_win32_table () const: @(MixaBackendVTable)
+    fn: mixa_backend_win32_hidden_table () const: @(MixaBackendVTable)
+    fn: mixa_win32_frame_at (const: @(MixaBackend backend); size_t: x; size_t: y; @: MixaU8 out) int
+    fn: mixa_win32_test_set_force_ggo_error (@: MixaBackend backend; int: on) int
+end: prototype

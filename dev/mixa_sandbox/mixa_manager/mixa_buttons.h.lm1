@@ -1,0 +1,62 @@
+include: "<stddef.h>"
+predef: "mixa_manager/mixa_core.h.lm1"
+predef: "mixa_manager/mixa_tiles.h.lm1"
+
+# UI button panel. NOTE: C mixa_backend.h also typedef-enums MixaButton for mouse
+# bits — name collision with this struct (documented defect; fmpanel avoids both).
+
+define: MIXA_BUTTONS_OK 0
+define: MIXA_BUTTONS_ERR 1
+define: MIXA_BUTTON_NONE -1
+
+struct: MixaButton
+    @: char label
+    size_t: row
+    size_t: col
+    size_t: nrows
+    size_t: ncols
+    unsigned: fg
+    unsigned: bg
+    unsigned: alpha
+    int: is_sep
+    int: enlarge
+end: MixaButton
+
+struct: MixaButtonLine
+    @: MixaButton items
+    size_t: count
+    size_t: cap
+end: MixaButtonLine
+
+struct: MixaButtonPanel
+    @: MixaButtonLine lines
+    size_t: line_count
+    size_t: line_cap
+    size_t: hb
+    size_t: wb
+    size_t: margin
+    size_t: panel_w
+    size_t: panel_h
+    size_t: origin_row
+    size_t: origin_col
+    size_t: view_w
+    size_t: scroll_x
+    int: is_open
+end: MixaButtonPanel
+
+prototype:
+    fn: mixa_button_panel_init (@: MixaButtonPanel panel; size_t: hb) int
+    fn: mixa_button_panel_release (@: MixaButtonPanel panel) void
+    fn: mixa_button_width (size_t: hb; size_t: wb; const: @(char label)) size_t
+    fn: mixa_button_panel_add (@: MixaButtonPanel panel; size_t: line; const: @(char label); unsigned: fg; unsigned: bg; unsigned: alpha) int
+    fn: mixa_button_panel_add_sep (@: MixaButtonPanel panel; size_t: line) int
+    fn: mixa_button_panel_layout (@: MixaButtonPanel panel) int
+    fn: mixa_button_panel_hit (const: @(MixaButtonPanel panel); size_t: cell_row; size_t: cell_col) int
+    fn: mixa_button_panel_draw (const: @(MixaButtonPanel panel); @: MixaTextRect rect) int
+    fn: mixa_button_panel_count (const: @(MixaButtonPanel panel)) size_t
+    fn: mixa_button_panel_content_w (const: @(MixaButtonPanel panel)) size_t
+    fn: mixa_button_panel_scroll_max (const: @(MixaButtonPanel panel)) size_t
+    fn: mixa_button_panel_scroll_by (@: MixaButtonPanel panel; int: delta) int
+    fn: mixa_button_panel_reveal (@: MixaButtonPanel panel; int: index) int
+    fn: mixa_button_panel_scroll_x (const: @(MixaButtonPanel panel)) size_t
+end: prototype

@@ -1,0 +1,207 @@
+predef: "mixa_manager/mixa_pointer.lm1"
+predef: "mixa_manager/mixa_composite_glyphs.lm1"
+predef: "mixa_manager/mixa_composite.h.lm1"
+predef: "mixa_manager/mixa_backend_win32.lm1"
+predef: "mixa_manager/mixa_tiles.lm1"
+predef: "mixa_manager/mixa_text_rect.h.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# mixa_pointer_frame_selftest.lm1 -- СТРЕЛКА В КАДРЕ, а не на снимке экрана (20.09).
+#
+# ЗАЧЕМ: подключение указателя (UI_MODEL 6) было сделано и собрано, но проверить его снимком
+# экрана не удалось -- окно уезжает из области захвата, и «не вижу» неотличимо от «не нарисовано».
+# Поэтому проверка идёт ПО КАДРУ: проба собирает кадр ровно так, как это делает приложение
+# (слой текста + слой UI через глиф-краситель), кладёт в клетку указателя то, что положил бы
+# контроллер, и СЧИТАЕТ ПИКСЕЛИ в этой клетке.  Ноль пикселей -- стрелки нет, и это число,
+# а не мнение.
+#
+# ЧТО МЕРИТСЯ:
+#   * задаёт ли смещение октант (mixa_pointer_nudge) -- здесь (3, -2), то есть вверх-вправо;
+#   * какой кодпойнт несёт клетка указателя;
+#   * ЕСТЬ ЛИ ЭТОТ ГЛИФ В ШРИФТЕ (док называет U+2B06..U+2B09, а STATUS.txt уже замерял, что
+#     все восемь отсутствуют: «All eight arrow glyph indices were absent (0xFFFF)»);
+#   * сколько пикселей стрелка занимает в кадре -- и для кодпойнта дока, и для запасного
+#     набора, чтобы видно было, что именно рисуется.
+
+@: MixaBackend pf_backend 0
+@: MixaTextRect pf_text 0
+@: MixaTextRect pf_upper 0
+@: MixaU8 pf_rgba 0
+size_t: pf_w 0U
+size_t: pf_h 0U
+size_t: pf_rgba_size 0U
+
+sub: pf_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+    c.fflush(0)
+end: pf_check
+
+# Сколько пикселей в клетке (row, col) слоя UI отличается от фона кадра.
+fn: pf_cell_ink (size_t: row; size_t: col; size_t: cell_w; size_t: cell_h) size_t
+    size_t: x
+    size_t: y
+    size_t: n
+    @: MixaU8 p
+    n: 0U
+    y: 0U
+    while: y < cell_h
+        x: 0U
+        while: x < cell_w
+            p: pf_rgba + (((row * cell_h + y) * pf_w + (col * cell_w + x)) * 4U)
+            if: p[0] != 0U || p[1] != 0U || p[2] != 0U
+                n: n + 1U
+            ---
+            x: x + 1U
+        ---
+        y: y + 1U
+    ---
+return: n
+
+# Собрать кадр с одной клеткой UI: указатель в (p_row, p_col) с кодпойнтом cp.
+fn: pf_frame (@: MixaPointer ptr; size_t: p_row; size_t: p_col; unsigned: cp) size_t
+    int: rc
+    @: MixaCell cell
+    @: MixaCell tcell
+    size_t: i
+    # Верхний слой стирается в ноль (codepoint 0, фон 0) -- и сравнивать будем ДВА кадра,
+    # с кодпойнтом указателя и с пустым, чтобы число не зависело от того, что ещё лежит в слое.
+    mixa_rect_fill(pf_upper, 0U, 0U, 0U, 0U)
+    # Текстовая строка, чтобы кадр был не пустым: она и покажет, что под верхним слоем видно.
+    tcell: (cast: (@: MixaCell) 0)
+    i: 0U
+    while: i < pf_text\cols
+        tcell: pf_text\cells + i
+        tcell\codepoint: 0x41U
+        tcell\fg: MIXA_PAL_CONSOLE
+        tcell\bg: MIXA_PAL_CONSOLE
+        tcell\flags: 0U
+        tcell\width: 1U
+        tcell\alpha: 255U
+        i: i + 1U
+    ---
+    cell: pf_upper\cells + (p_row * pf_upper\cols + p_col)
+    cell\codepoint: cp
+    cell\fg: MIXA_PAL_BLACK
+    cell\bg: MIXA_PAL_BLACK
+    cell\flags: 0U
+    cell\width: 1U
+    cell\alpha: 0U
+    rc: mixa_composite_glyphs(pf_backend, pf_text, 8U, 16U, pf_upper, 16U, 32U, 0U, 0U, pf_rgba, pf_rgba_size, pf_w, pf_h)
+    if: rc != 0
+        c.printf("FAIL composite refused rc=%d\n", rc)
+        return: 0U
+    ---
+    # Клетка указателя -- клетка ВЕРХНЕГО слоя, и считается она в ЕГО пикселях: (col*16, row*32),
+    # а не (col*32, row*32).  Проба сначала умножила и строку, и столбец на 2 (остаток от
+    # текстовых клеток) и считала чернила в пустом небе -- получался ноль при ЖИВОМ глифе.
+return: pf_cell_ink(p_row, p_col, 16U, 32U)
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    int: failures
+    int: rc
+    MixaPointer: ptr
+    MixaCellMetrics: metrics
+    @: MixaCellMetrics mp 0
+    @: MixaPointer pp 0
+    size_t: ink_doc
+    size_t: ink_fallback
+    size_t: ink_blank
+    unsigned: cp_doc
+    unsigned: cp_fb
+    int: octant
+    int: g_missing
+    @: MixaGlyph g
+    if: counts = 0
+        return: 2
+    ---
+    memset((cast: (@: void) (@ metrics)), 0, c.sizeof(c.MixaCellMetrics))
+    mp: @ metrics
+    pp: @ ptr
+    mp\text_cell_width: 8U
+    mp\text_cell_height: 16U
+    mp\upper_cell_width: 16U
+    mp\upper_cell_height: 32U
+    mp\pointer_cell_width: 8U
+    mp\pointer_cell_height: 16U
+    rc: mixa_backend_open(mixa_backend_win32_table(), @ pf_backend, 80U, 24U, mp)
+    if: rc != 0 || pf_backend = 0
+        c.printf("FAIL backend open rc=%d\n", rc)
+        return: 2
+    ---
+    # Метрики, которые backend ПЕРЕЗАПИСАЛ своими (BACKEND_SEAM 9.2): по ним и считаем клетку.
+    pf_w: 80U * mp\text_cell_width
+    pf_h: 24U * mp\text_cell_height
+    pf_rgba_size: pf_w * pf_h * 4U
+    pf_rgba: (cast: (@: MixaU8) c.calloc(pf_rgba_size, 1U))
+    pf_text: (cast: (@: MixaTextRect) c.calloc(1U, c.sizeof(c.MixaTextRect)))
+    pf_upper: (cast: (@: MixaTextRect) c.calloc(1U, c.sizeof(c.MixaTextRect)))
+    if: pf_rgba = 0 || pf_text = 0 || pf_upper = 0
+        c.printf("FAIL allocation\n")
+        return: 2
+    ---
+    if: mixa_rect_open(pf_text, 24U, 80U) != 0 || mixa_rect_open(pf_upper, 24U, 80U) != 0
+        c.printf("FAIL rect open\n")
+        return: 2
+    ---
+    pf_check(counts, mixa_pointer_init(@ ptr) = c.MIXA_POINTER_OK, "the pointer did not open")
+    # СНАЧАЛА СДВИНУТЬ ОТ КРАЯ.  Указатель живёт на поверхности и за неё не выходит: толчок
+    # вверх-вправо из строки 0 -- это уход за верхний край, и отказ тут ПРАВИЛЬНЫЙ (проба
+    # сначала толкала именно так и получала отказ -- отказ был по делу, а сценарий мой).
+    pf_check(counts, mixa_pointer_move_to(@ ptr, 4U, 10U) = c.MIXA_POINTER_OK, "the pointer did not move inside the surface")
+    octant: mixa_pointer_octant_from_delta(3, -2, pp\octant)
+    pf_check(counts, octant = c.MIXA_POINTER_UP_RIGHT, "a nudge up-right is not up-right")
+    pf_check(counts, mixa_pointer_nudge(@ ptr, 3, -2) = c.MIXA_POINTER_OK, "the nudge was refused")
+    pf_check(counts, pp\octant = c.MIXA_POINTER_UP_RIGHT, "the pointer kept another arrow")
+    pf_check(counts, pp\row = 2U && pp\col = 13U, "the pointer did not land where the nudge pointed")
+    cp_doc: mixa_pointer_codepoint(@ ptr)
+    pf_check(counts, cp_doc = c.MIXA_POINTER_CP_UP_RIGHT, "the pointer did not choose the doc's arrow")
+    # Есть ли этот кодпойнт в шрифте -- вопрос к backend'у, а не к вере.
+    g: (cast: (@: MixaGlyph) c.calloc(1U, c.sizeof(c.MixaGlyph)))
+    if: g = 0
+        c.printf("FAIL glyph alloc\n")
+        return: 2
+    ---
+    pf_check(counts, mixa_backend_glyph(pf_backend, 1, cp_doc, g) = 0, "the backend refused to answer about the arrow")
+    g_missing: g\missing
+    c.printf("POINTER doc cp=U+%04X missing=%d\n", cp_doc, g_missing)
+    c.free(g)
+    # Кадр 1: кодпойнт дока.  Кадр 2: запасной (ровно тот, что подставляет контроллер, --
+    # mixa_pointer_fallback, UP_RIGHT = 0x25E5).  Пустой кадр -- та же сцена без стрелки:
+    # разница и есть пиксели стрелки, чем бы ни был заполнен слой.  Так число не зависит ни от
+    # фона, ни от прозрачности, ни от шрифта.
+    # Клетка берётся ТА, в которой указатель стоит после толчка (2,13), а не выдуманная.
+    pf_check(counts, pp\row < 12U && pp\col < 40U, "the pointer stands outside the composed frame")
+    ink_blank: pf_frame(@ ptr, pp\row, pp\col, 0U)
+    ink_doc: pf_frame(@ ptr, pp\row, pp\col, cp_doc)
+    cp_fb: mixa_pointer_fallback(pp\octant)
+    pf_check(counts, cp_fb = 0x25E5U, "the fallback for up-right is not the arrow the app draws")
+    # И о ЗАПАСНОМ знаке backend спрашивается так же -- иначе «нет чернил» не отличить от
+    # «нет знака», а это два разных вывода.
+    g: (cast: (@: MixaGlyph) c.calloc(1U, c.sizeof(c.MixaGlyph)))
+    if: g = 0
+        c.printf("FAIL glyph alloc for the fallback\n")
+        return: 2
+    ---
+    pf_check(counts, mixa_backend_glyph(pf_backend, 1, cp_fb, g) = 0, "the backend refused to answer about the fallback")
+    c.printf("POINTER fallback cp=U+%04X missing=%d\n", cp_fb, g\missing)
+    c.free(g)
+    ink_fallback: pf_frame(@ ptr, pp\row, pp\col, cp_fb)
+    c.printf("POINTER frame blank_ink=%u doc_ink=%u fallback_ink=%u\n", ink_blank, ink_doc, ink_fallback)
+    # ПРИЁМКА: стрелка В КАДРЕ -- любым из двух путей.  Док называет U+2B0x; STATUS.txt уже
+    # замерял, что этих знаков в шрифте нет, и тогда приложение обязано нарисовать запасной.
+    # Поэтому проверка не «док победил», а «победил кто-то из двух»: если глиф дока есть --
+    # чернила его, если нет -- чернила запасного, и число печатается в обоих случаях.
+    pf_check(counts, (g_missing = 0 && ink_doc > ink_blank) || (g_missing != 0 && ink_fallback > ink_blank), "the arrow is in the frame by neither path")
+    failures: counts[1]
+    c.printf("mixa_pointer_frame checks=%d failures=%d\n", counts[0], failures)
+    c.fflush(0)
+    if: pf_backend != 0
+        mixa_backend_close(pf_backend)
+    ---
+    free(counts)
+return: failures

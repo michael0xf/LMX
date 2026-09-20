@@ -1,0 +1,2225 @@
+========== mixa_core.h ==========
+#ifndef MIXA_CORE_H
+#define MIXA_CORE_H
+
+#include <stddef.h>
+
+/* Style bits for MixaCell.flags. Model section 1 says "style flags" with no
+ * list; section 14 names bold, underline and inverse among glyph issues.
+ * Only these three are defined here. Optional metadata is intentionally
+ * omitted — the model marks it optional, and this header does not invent it.
+ */
+typedef enum MixaStyle {
+    MIXA_STYLE_BOLD = 1,
+    MIXA_STYLE_UNDERLINE = 2,
+    MIXA_STYLE_REVERSE = 4
+} MixaStyle;
+
+typedef struct MixaCell {
+    unsigned int codepoint;   /* Unicode scalar; 0 = empty cell */
+    unsigned char fg;         /* palette index */
+    unsigned char bg;         /* palette index */
+    unsigned char flags;      /* MixaStyle bits */
+    unsigned char width;      /* 1 or 2, see model section 14 */
+    unsigned char alpha;      /* background alpha: 0=transparent, 255=opaque */
+} MixaCell;
+
+typedef struct MixaTextRect {
+    size_t rows;
+    size_t cols;
+    MixaCell *cells;          /* rows*cols, ROW-MAJOR, contiguous */
+} MixaTextRect;
+
+#endif
+
+========== mixa_tiles.h ==========
+#ifndef MIXA_TILES_H
+#define MIXA_TILES_H
+
+#include <stddef.h>
+#include "mixa_manager/mixa_core.h"
+#include "mixa_manager/mixa_overlay.h"
+
+/* Nine-slice button tiles at private-use U+E000..U+E00F (DRAWING.txt section 5).
+ * Low 4 bits are gap flags: left/right/top/bottom. Compositor recognises the
+ * range and paints procedurally; colour from cell bg + alpha; gaps stay
+ * transparent. No MixaCell field added.
+ *
+ * Classic nine-slice uses nine of the sixteen flag combos; 1x1 and 1-row /
+ * 1-col buttons need the other combos (notably all-four gaps for 1x1).
+ */
+
+#define MIXA_TILE_BASE   0xE000U
+#define MIXA_TILE_LAST   0xE00FU
+
+#define MIXA_TILE_GAP_L  0x1U
+#define MIXA_TILE_GAP_R  0x2U
+#define MIXA_TILE_GAP_T  0x4U
+#define MIXA_TILE_GAP_B  0x8U
+
+/* Named classic nine (and the 1x1 all-gap tile). */
+#define MIXA_TILE_FILL   (MIXA_TILE_BASE)
+#define MIXA_TILE_W      (MIXA_TILE_BASE | MIXA_TILE_GAP_L)
+#define MIXA_TILE_E      (MIXA_TILE_BASE | MIXA_TILE_GAP_R)
+#define MIXA_TILE_N      (MIXA_TILE_BASE | MIXA_TILE_GAP_T)
+#define MIXA_TILE_S      (MIXA_TILE_BASE | MIXA_TILE_GAP_B)
+#define MIXA_TILE_NW     (MIXA_TILE_BASE | MIXA_TILE_GAP_L | MIXA_TILE_GAP_T)
+#define MIXA_TILE_NE     (MIXA_TILE_BASE | MIXA_TILE_GAP_R | MIXA_TILE_GAP_T)
+#define MIXA_TILE_SW     (MIXA_TILE_BASE | MIXA_TILE_GAP_L | MIXA_TILE_GAP_B)
+#define MIXA_TILE_SE     (MIXA_TILE_BASE | MIXA_TILE_GAP_R | MIXA_TILE_GAP_B)
+#define MIXA_TILE_ALL    (MIXA_TILE_BASE | MIXA_TILE_GAP_L | MIXA_TILE_GAP_R | MIXA_TILE_GAP_T | MIXA_TILE_GAP_B)
+
+/* Gap in pixels: cell_h >> 5, floored at 1. */
+size_t mixa_tile_gap_px(size_t cell_h);
+
+/* Non-zero if codepoint is in the private-use tile range. */
+int mixa_tile_is(unsigned codepoint);
+
+/* Gap flags from a tile codepoint (0 if not a tile). */
+unsigned mixa_tile_gaps(unsigned codepoint);
+
+/* Build a tile codepoint from gap flags (flags masked to 4 bits). */
+unsigned mixa_tile_from_gaps(unsigned gaps);
+
+/* 1 if local pixel (lx,ly) inside cell is SOLID for this tile; 0 if gap. */
+int mixa_tile_pixel_solid(unsigned codepoint, size_t lx, size_t ly,
+                          size_t cell_w, size_t cell_h);
+
+/* Paint one cell's tile into an RGBA buffer. Solid pixels: palette[bg] with
+ * cell alpha (src-over). Gap pixels untouched. Returns 0 ok, 1 err.
+ */
+int mixa_tile_paint_cell(unsigned codepoint, unsigned bg, unsigned alpha,
+                         size_t cell_x, size_t cell_y, size_t cell_w, size_t cell_h,
+                         MixaU8 *out_rgba, size_t width, size_t height);
+
+/* Place nine-slice (or degenerate) tiles into a rect of cells. */
+int mixa_tile_fill_button(MixaTextRect *rect, size_t row, size_t col,
+                          size_t nrows, size_t ncols,
+                          unsigned fg, unsigned bg, unsigned alpha);
+
+#endif
+
+
+========== mixa_buttons.h ==========
+#ifndef MIXA_BUTTONS_H
+#define MIXA_BUTTONS_H
+
+#include <stddef.h>
+#include "mixa_manager/mixa_core.h"
+#include "mixa_manager/mixa_tiles.h"
+
+/* Application button panel — ClearShell freshLayout / normalize rules
+ * (UI_MODEL.txt section 5). Sizes in CELLS. Micro-gap is a tile concern.
+ */
+
+#define MIXA_BUTTONS_OK   0
+#define MIXA_BUTTONS_ERR  1
+#define MIXA_BUTTON_NONE  (-1)
+
+typedef struct MixaButton {
+    char *label;       /* owned copy; NULL if separator */
+    size_t row;        /* content-cell origin after layout */
+    size_t col;
+    size_t nrows;      /* = panel hb */
+    size_t ncols;      /* label-driven width */
+    unsigned fg;
+    unsigned bg;
+    unsigned alpha;
+    int is_sep;        /* non-zero: separator, advances x by hb>>1 */
+    int enlarge;       /* non-zero: label length < 3 on square path */
+} MixaButton;
+
+typedef struct MixaButtonLine {
+    MixaButton *items;
+    size_t count;
+    size_t cap;
+} MixaButtonLine;
+
+typedef struct MixaButtonPanel {
+    MixaButtonLine *lines;
+    size_t line_count;
+    size_t line_cap;
+    size_t hb;          /* button height in cells */
+    size_t wb;          /* (hb<<1)-(hb>>2) */
+    size_t margin;      /* hb>>5 cell gap between buttons (may be 0) */
+    size_t panel_w;     /* content maxima after layout */
+    size_t panel_h;
+    size_t origin_row;  /* panel position on the surface (cells) */
+    size_t origin_col;
+    size_t view_w;      /* visible width; overflow scrolls horizontally */
+    size_t scroll_x;    /* horizontal scroll in cells */
+    int is_open;
+} MixaButtonPanel;
+
+int mixa_button_panel_init(MixaButtonPanel *panel, size_t hb);
+void mixa_button_panel_release(MixaButtonPanel *panel);
+
+/* Label-driven width (UI_MODEL 5.2 / ClearShell normalize). */
+size_t mixa_button_width(size_t hb, size_t wb, const char *label);
+
+/* Append a button on line (0-based). Creates the line if needed. */
+int mixa_button_panel_add(MixaButtonPanel *panel, size_t line,
+                          const char *label, unsigned fg, unsigned bg,
+                          unsigned alpha);
+
+/* Append a null-separator on line. */
+int mixa_button_panel_add_sep(MixaButtonPanel *panel, size_t line);
+
+/* Run freshLayout: positions, panel_w/panel_h from maxima. */
+int mixa_button_panel_layout(MixaButtonPanel *panel);
+
+/* Hit-test surface cell coords -> button index among non-separators
+ * (0..n-1 in add order), or MIXA_BUTTON_NONE. Gap / outside -> NONE.
+ */
+int mixa_button_panel_hit(const MixaButtonPanel *panel,
+                          size_t cell_row, size_t cell_col);
+
+/* Draw all non-sep buttons' tiles into rect at origin + layout - scroll. */
+int mixa_button_panel_draw(const MixaButtonPanel *panel, MixaTextRect *rect);
+
+/* Count non-separator buttons (hit-test index domain). */
+size_t mixa_button_panel_count(const MixaButtonPanel *panel);
+
+#endif
+
+
+========== mixa_backend.h ==========
+/* mixa_backend.h - the one seam between Mixa Manager and a platform.
+ *
+ * Design: mixa_manager/BACKEND_SEAM.txt. Distribution model:
+ * Mixa_Manager_DISTRIBUTION_MODEL.txt section 5.
+ *
+ * Every target reimplements exactly what is declared here and nothing else, so
+ * this file is the whole porting cost. Keep it small.
+ *
+ * Written as a hand-written C header for now. Converting it to a .h.lm1 header
+ * unit is H2, and ONE of the two things it was blocked on has gone away.
+ *
+ *   1. WAS: "the header-unit L1 lives in l1src and has not been promoted into
+ *      stg/l1_baseline; probed 2026-09-09, the baseline rejects struct:
+ *      outright." NO LONGER TRUE. Codex corrected it on 2026-09-10 and it
+ *      checks out: the STG source carries l1_emit_hdr_fnptr, p0.h.lm1 is there,
+ *      and the promoted 65D5A5ED translator accepts BOTH forms - fnptr: emits
+ *      `typedef int (*OpenFn)(int a);` and struct: emits a complete struct
+ *      definition with its forward typedef. Re-probed here before writing this.
+ *      Whether the old probe was wrong or the promotion of 01:37 fixed it, the
+ *      claim above was stale and it was discouraging work that is now possible.
+ *   2. STILL TRUE: run_mixa.ps1 has to translate .h.lm1 into .lm1.h before
+ *      compiling the units that include it. That conversion is not written.
+ *
+ * Codex confirmed on 2026-09-09 that the promotion is intended, in a scoped
+ * integration window once the root L1 settles, and that the timing is
+ * coordinated rather than promised. An earlier revision of this comment said
+ * the new parser had been found not to match the old one and that the
+ * translator would be wholesale REPLACED; Codex corrected both, and the
+ * correction is recorded here rather than quietly dropped. What is actually
+ * established as of 2026-09-09: a parity effort is running against
+ * lingvamyxa_old_worked_version, the 119 historical fixtures AGREE across the
+ * available runners, coverage is incomplete rather than proof of equivalence,
+ * and some divergence from the old parser is a DELIBERATE grammar change by
+ * the language owner - empty colon frames must now fail - not a regression.
+ *
+ * So this file stays hand-written until both parts above land, which is a known
+ * exception to the hermeticity the distribution model asks for, not the final
+ * shape.
+ *
+ * What does follow, and is the reason run_mixa.ps1 reports translator identity:
+ * mixa_manager builds against a translator it does not own and cannot pin. Any
+ * change to that floor, coordinated or not, lands here as a suite result, so
+ * the suite has to stay fast, complete, and explicit about what produced a
+ * green run.
+ */
+#ifndef MIXA_BACKEND_H
+#define MIXA_BACKEND_H
+
+#include <stddef.h>
+#include "mixa_manager/mixa_overlay.h"   /* MixaU8 */
+
+/* The backend owns its own state, including its own allocation. Callers hold a
+ * pointer to this base and never see a platform handle.
+ *
+ * MixaBackend is COMPLETE and carries exactly one field: the dispatch table the
+ * handle was opened with. Every concrete backend declares its own struct with
+ * the same pointer as its FIRST member and casts between the two, which is what
+ * lets several backends link into one binary and be chosen at startup - see
+ * BACKEND_SEAM.txt section 11. The six non-open operations below are plain
+ * forwards through this field, so their call sites did not have to change when
+ * dispatch arrived; they read backend->vt and nothing else. */
+typedef struct MixaBackendVTable MixaBackendVTable;
+typedef struct MixaBackend MixaBackend;
+
+struct MixaBackend {
+    const MixaBackendVTable *vt; /* never null between open and close */
+};
+
+typedef enum MixaEventKind {
+    MIXA_EVENT_NONE = 0,
+    MIXA_EVENT_KEY,
+    MIXA_EVENT_MOUSE,
+    MIXA_EVENT_RESIZE,
+    MIXA_EVENT_CLOSE,
+    /* A real mouse wheel notch (ticket 20260913-053000). Distinct from
+     * MIXA_EVENT_MOUSE rather than a flag on it: a wheel carries a
+     * DIRECTION/MAGNITUDE (wheel_delta below) instead of a button state,
+     * and giving it its own kind keeps every existing MIXA_EVENT_MOUSE
+     * consumer (button/click hit-testing) untouched -- it simply never
+     * sees this kind, rather than having to newly ignore a zero button
+     * mask on every mouse-shaped event it already handles. */
+    MIXA_EVENT_MOUSE_WHEEL
+} MixaEventKind;
+
+/* Non-text keys. Text arrives as a codepoint instead, never as one of these.
+ * The split is deliberate: merging them would force every platform to invent
+ * private values for the non-text keys, which is the private protocol the model
+ * warns against in section 0.2. */
+typedef enum MixaKeyCode {
+    MIXA_KEY_NONE = 0,
+    MIXA_KEY_UP,
+    MIXA_KEY_DOWN,
+    MIXA_KEY_LEFT,
+    MIXA_KEY_RIGHT,
+    MIXA_KEY_HOME,
+    MIXA_KEY_END,
+    MIXA_KEY_PAGE_UP,
+    MIXA_KEY_PAGE_DOWN,
+    MIXA_KEY_INSERT,
+    MIXA_KEY_DELETE,
+    MIXA_KEY_BACKSPACE,
+    MIXA_KEY_TAB,
+    MIXA_KEY_ENTER,
+    MIXA_KEY_ESCAPE,
+    MIXA_KEY_F1,
+    MIXA_KEY_F2,
+    MIXA_KEY_F3,
+    MIXA_KEY_F4,
+    MIXA_KEY_F5,
+    MIXA_KEY_F6,
+    MIXA_KEY_F7,
+    MIXA_KEY_F8,
+    MIXA_KEY_F9,
+    MIXA_KEY_F10,
+    MIXA_KEY_F11,
+    MIXA_KEY_F12
+} MixaKeyCode;
+
+typedef enum MixaModifier {
+    MIXA_MOD_SHIFT = 1,
+    MIXA_MOD_CTRL = 2,
+    MIXA_MOD_ALT = 4,
+    MIXA_MOD_META = 8
+} MixaModifier;
+
+typedef enum MixaButton {
+    MIXA_BUTTON_LEFT = 1,
+    MIXA_BUTTON_MIDDLE = 2,
+    MIXA_BUTTON_RIGHT = 4
+} MixaButton;
+
+/* One shape for every kind, so the seam does not grow a variant per platform.
+ *
+ * A key event carries EITHER a codepoint (text) OR a keycode (not text), never
+ * both.
+ *
+ * Mouse coordinates are HALF-CELLS of the TEXT layer, not pixels: the backend
+ * knows the geometry from open and converts once, so consumers cannot drift.
+ *
+ * Half, rather than whole, because the pointer moves on a lattice of half a
+ * text cell (UI_MODEL 7). That is the finest step at which BOTH grids have
+ * defined positions - a text cell is two steps, an upper cell is also two,
+ * offset by one - so the mapping is arithmetic with no rounding and no floating
+ * point anywhere:
+ *
+ *     text cell  = half >> 1
+ *     upper cell = (half - 1) >> 1, and half == 0 lies outside the upper layer
+ *
+ * The unit is the TEXT layer's cell even when the upper layer runs a different
+ * font, because the text layer is the full screen and the upper one is inset
+ * and derived from it. */
+typedef struct MixaEvent {
+    int kind;               /* MixaEventKind */
+    unsigned int codepoint; /* key: Unicode scalar, 0 when not text */
+    int keycode;            /* key: MixaKeyCode, MIXA_KEY_NONE when text */
+    unsigned int modifiers; /* key, mouse and wheel: MixaModifier bits */
+    size_t row;             /* mouse and wheel: HALF-cell row, see below */
+    size_t col;             /* mouse and wheel: HALF-cell column */
+    unsigned int buttons;   /* mouse: MixaButton bits, 0 for a wheel event */
+    size_t cols;            /* resize: new geometry */
+    size_t rows;
+    /* wheel: signed NOTCH count (one full detent = +-1, the ordinary
+     * mouse-wheel unit, already divided down from whatever raw delta the
+     * platform reports -- e.g. Win32's WM_MOUSEWHEEL delta / WHEEL_DELTA
+     * (120), so a consumer never has to know that constant). Positive is
+     * AWAY from the user (the ordinary "scroll up"/"scroll back" turn);
+     * negative is TOWARD the user ("scroll down"/"scroll forward") --
+     * Win32's own WM_MOUSEWHEEL sign convention, kept rather than
+     * inverted so a port does not have to guess which way is which. Zero
+     * only when kind is not MIXA_EVENT_MOUSE_WHEEL. */
+    int wheel_delta;
+} MixaEvent;
+
+/* Seam operations. Resize arrives as an event (not a function). Glyph is the
+ * seventh operation - see MixaGlyph below / BACKEND_SEAM 9.4. */
+
+/* Cell metrics for every layer, reported by open.
+ *
+ * THESE ARE CELLS, NOT FONT SIZES. The two are different things and the
+ * distinction is load-bearing - see BACKEND_SEAM.txt 10.8. The font is the
+ * system's, taken at a size the system offers and never scaled. The cell is
+ * OURS: at least large enough for that font, and rounded UP to an EVEN number
+ * of pixels in both dimensions.
+ *
+ * Even because the mouse lattice is half a cell. Half an odd number of pixels
+ * is not a number of pixels, so an odd cell would put every second pointer
+ * position on a fraction. With an even cell, cw/2 and ch/2 are whole pixels and
+ * all four pointer positions per character are exact.
+ *
+ * The odd pixel from rounding goes at the RIGHT and BOTTOM, so the cell origin
+ * stays coincident with the glyph origin and the bearings from
+ * mixa_backend_glyph remain valid unchanged.
+ *
+ * The rounding belongs here, in the backend, for the same reason the
+ * pixel-to-half-cell conversion does: this is the one place that knows the
+ * font, so it is the one place that can round without a second party guessing.
+ *
+ * Both layers are CELL GRIDS - see BACKEND_SEAM.txt section 10. The upper layer
+ * is not a raster: it is a second grid with a larger monospace font, drawn
+ * semi-transparently over the text layer by the same pseudographics drawer.
+ *
+ * A struct rather than out-parameters because a third layer for images is
+ * explicitly anticipated, and a struct grows without breaking this signature
+ * again.
+ *
+ * A backend with only one font reports the same metrics twice. That is a
+ * legitimate answer, not a failure. */
+typedef struct MixaCellMetrics {
+    size_t text_cell_width;
+    size_t text_cell_height;
+    size_t upper_cell_width;
+    size_t upper_cell_height;
+    /* The mouse pointer's font. Not a third cell grid - see UI_MODEL 7.3. The
+     * pointer is one glyph at a position on a half-cell lattice, so this sizes
+     * the glyph and nothing else; a pointer larger than its half step is
+     * allowed and expected. Target is the text size or slightly above, chosen
+     * by the rule in BACKEND_SEAM 10.3 - the available system size nearest the
+     * target, used as it comes. */
+    size_t pointer_cell_width;
+    size_t pointer_cell_height;
+} MixaCellMetrics;
+
+/* Creates the surface. Cols and rows in; the CELL METRICS ARE IN/OUT.
+ *
+ * The caller fills in the cells it would like and the backend writes back the
+ * cells it actually has. A backend with a font overwrites the request with that
+ * font's native metrics, because the rendering doctrine forbids scaling a font
+ * to fit a request - see BACKEND_SEAM.txt section 9. A backend without a font,
+ * such as the headless one, honours the request exactly, which is what keeps it
+ * usable as a fixture on a machine with no font at all.
+ *
+ * In/out rather than a separate metrics query, so that ignoring the answer is
+ * awkward: a caller that states a wish and never reads back what it got is
+ * precisely the mistake that produces stretched, blurred text.
+ *
+ * The metrics pointer is required and no value in it may be zero.
+ *
+ * THE BACKEND ALLOCATES. vt selects which one; out receives the handle and is
+ * written only on success.
+ *
+ * An earlier revision had the CALLER own the storage and zero it before the
+ * first open. That cannot survive dispatch: owning the storage means knowing
+ * the concrete size, knowing the concrete size means including one concrete
+ * backend's header, and that include is exactly the hard binding to a platform
+ * that section 11 exists to remove. A table cannot undo it - the #ifdef simply
+ * moves from the call to the allocation.
+ *
+ * It also retires a footgun that revision documented against itself: open could
+ * not tell a never-opened backend from uninitialised memory. Now there is
+ * nothing to mistake.
+ *
+ * close frees the handle. Every successful open is paired with exactly one
+ * close, and close is a no-op on a null pointer. */
+int mixa_backend_open(const MixaBackendVTable *vt, MixaBackend **out,
+                      size_t cols, size_t rows, MixaCellMetrics *metrics);
+
+/* One composited frame. The buffer is borrowed for the call and not retained.
+ * Refused unless it holds at least a whole frame at the CURRENT geometry - see
+ * poll, which is where the geometry can change. */
+int mixa_backend_present(MixaBackend *backend, const MixaU8 *rgba, size_t bytes);
+
+/* Next pending event, or MIXA_EVENT_NONE. Never blocks.
+ *
+ * Not blocking is the contract, not an omission. The loop belongs to the
+ * Message: a running Message is an L3 Thread with a FIFO inbox and one serial
+ * lane (Lingvamyxa_spec.txt 19.29.6), and the backend is an event source
+ * feeding it, so poll is a drain. A blocking poll would move the wait inside
+ * the event source, which would then be deciding how long to wait on behalf of
+ * a Message whose other work it cannot see. BACKEND_SEAM.txt section 7.
+ *
+ * Delivering MIXA_EVENT_RESIZE also ADOPTS the new geometry, because by the
+ * time a platform tells you it resized, its surface already has. poll re-derives
+ * the frame from the event's cols/rows and the cell size fixed at open, so from
+ * this call onward present validates against the new size. Frame contents after
+ * an adoption are undefined: composite and present a full frame.
+ *
+ * This is what keeps resize from needing a seventh function - the event is the
+ * resize, not a notification that one should be requested.
+ *
+ * Returns non-zero if the new size could not be adopted (it overflows, or the
+ * allocation failed). The event is still written to out and the old surface is
+ * left intact, so a caller that ignores the result keeps a working surface at
+ * the old size rather than a half-resized one. */
+int mixa_backend_poll(MixaBackend *backend, MixaEvent *out);
+
+/* UTF-8 both ways.
+ *
+ * clipboard_get returns the clipboard length in bytes, excluding the
+ * terminator, whether or not it fit. It writes out only when cap is at least
+ * that length plus one, and leaves out untouched otherwise - never a silent
+ * truncation. Returning the length needed rather than the number written is
+ * what lets a caller tell an empty clipboard (0) from a buffer that was too
+ * small (result + 1 > cap); both are ordinary conditions and they call for
+ * opposite reactions.
+ *
+ * This carries more weight than its size suggests. It is the practical path for
+ * entering text a keyboard cannot easily produce - copy a name from the panel,
+ * paste it into the rename dialog - which is why full IME integration can be
+ * deferred without making those locales unusable. */
+size_t mixa_backend_clipboard_get(const MixaBackend *backend, char *out, size_t cap);
+int mixa_backend_clipboard_set(MixaBackend *backend, const char *text);
+
+void mixa_backend_close(MixaBackend *backend);
+
+/* Seventh seam operation: one glyph at the font's NATIVE size.
+ *
+ * Design: BACKEND_SEAM.txt section 9.4 / Mixa_Manager_RENDERING_DOCTRINE.txt.
+ * Returns an 8-bit alpha COVERAGE bitmap - never scaled - plus bearing to place
+ * it in the cell and advance width so the application can detect a WIDE glyph
+ * (two cells). The backend reports; the application decides.
+ *
+ * layer selects which cell-grid font (text vs upper). Cache is per-backend and
+ * keyed by (codepoint, layer); coverage storage is owned by the backend.
+ *
+ * A codepoint the platform cannot render is reported missing (out->missing != 0)
+ * rather than silently substituted - font fallback stays an application choice.
+ */
+typedef enum MixaGlyphLayer {
+    MIXA_LAYER_TEXT = 0,
+    MIXA_LAYER_UPPER = 1,
+    MIXA_LAYER_POINTER = 2
+} MixaGlyphLayer;
+
+typedef struct MixaGlyph {
+    size_t width;           /* bitmap width in pixels */
+    size_t height;          /* bitmap height in pixels */
+    int bearing_x;          /* offset from cell left to bitmap left */
+    int bearing_y;          /* offset from cell top to bitmap top */
+    size_t advance;         /* pen advance in pixels */
+    const MixaU8 *coverage; /* width*height bytes, backend-owned; NULL if missing */
+    int missing;            /* non-zero: platform has no glyph for this codepoint */
+} MixaGlyph;
+
+/* Rasterize one codepoint for the given layer into out. out may be stack-
+ * allocated; coverage points into the backend cache and must not be freed by
+ * the caller. Returns non-zero on hard failure (null args / not open); a
+ * missing codepoint is a successful call with out->missing set. */
+int mixa_backend_glyph(MixaBackend *backend, int layer, unsigned int codepoint,
+                       MixaGlyph *out);
+
+
+/* ---- Dispatch: one table per backend, chosen at startup ----------------- *
+ *
+ * Design: BACKEND_SEAM.txt section 11. The seam already said a target
+ * reimplements what mixa_backend.h declares and nothing else; the table is that
+ * sentence made checkable. A new platform adds a unit and a constructor. It
+ * does not edit a call site, an #ifdef, or this header.
+ *
+ * One typedef per operation rather than inline function-pointer syntax: the
+ * table then reads as a list of operations, and a reviewer can hold it beside
+ * the declarations above and see a missing one. Slot order matches declaration
+ * order for the same reason. */
+typedef int    (*MixaBackendOpenFn)(MixaBackend **out, size_t cols, size_t rows,
+                                    MixaCellMetrics *metrics);
+typedef int    (*MixaBackendPresentFn)(MixaBackend *backend, const MixaU8 *rgba,
+                                       size_t bytes);
+typedef int    (*MixaBackendPollFn)(MixaBackend *backend, MixaEvent *out);
+typedef size_t (*MixaBackendClipboardGetFn)(const MixaBackend *backend,
+                                            char *out, size_t cap);
+typedef int    (*MixaBackendClipboardSetFn)(MixaBackend *backend,
+                                            const char *text);
+typedef int    (*MixaBackendGlyphFn)(MixaBackend *backend, int layer,
+                                     unsigned int codepoint, MixaGlyph *out);
+typedef void   (*MixaBackendCloseFn)(MixaBackend *backend);
+
+/* name is for selection and diagnostics: short, lowercase, stable ("headless",
+ * "win32"). It is compared, so it is part of the contract, not a comment. */
+struct MixaBackendVTable {
+    const char *name;
+    MixaBackendOpenFn open;
+    MixaBackendPresentFn present;
+    MixaBackendPollFn poll;
+    MixaBackendClipboardGetFn clipboard_get;
+    MixaBackendClipboardSetFn clipboard_set;
+    MixaBackendGlyphFn glyph;
+    MixaBackendCloseFn close;
+};
+
+/* The registry's element type, named so that a qualifier can reach the POINTER.
+ *
+ * L1 has no spelling for a const-qualified pointer - every const: form reaches
+ * the referent, none reaches the slot (L1_spec open point 10.13). Naming the
+ * inner pointer type sidesteps it: qualifying a typedef'd pointer type
+ * qualifies the POINTER, so `const: @(MixaBackendTableRef)` in L1 generates
+ * `const MixaBackendTableRef *`, which IS `const MixaBackendVTable *const *`.
+ *
+ * Verified on the stable translator and on Grok's iso_033430 candidate:
+ * compatible with the prototype below under -Werror, writes to a slot and
+ * writes through a slot both rejected, reads unaffected. Fixtures in
+ * mixa_manager/tests/l1_gaps.
+ *
+ * This is a WORKAROUND with a name, not a design choice. Proposed by Codex,
+ * 2026-09-10. It exists so the registry can be ordinary L1 instead of a
+ * hand-written C source; when 10.13 is settled it should go. */
+typedef const MixaBackendVTable *MixaBackendTableRef;
+
+/* All-or-nothing. Non-zero when name is present and non-empty AND every slot is
+ * filled; zero otherwise, with no attempt to say WHICH slot is missing.
+ *
+ * Partial tables are the failure this exists to stop, and they are a
+ * PORTING-TIME mistake, not a runtime condition: someone adds an operation to
+ * the seam and one backend does not grow it. A table that half works fails
+ * later, in whatever feature happened to reach the empty slot, and the port
+ * looks finished until then. Validated once at selection, it fails at startup
+ * with the backend named.
+ *
+ * Non-zero means VALID. A predicate named _valid that returns 0 for valid is a
+ * trap for every call site that reads like English. */
+int mixa_backend_table_valid(const MixaBackendVTable *vt);
+
+/* The tables compiled into THIS build, in the order the build listed them.
+ * count is required; the array is static and outlives every caller. */
+const MixaBackendVTable *const *mixa_backend_tables(size_t *count);
+/* Equivalently, and this is what the L1 definition spells:
+ *     const MixaBackendTableRef *mixa_backend_tables(size_t *count);
+ * The two declarations are the same type. */
+
+/* Selection at startup. Both return NULL rather than a partial or unknown
+ * table, and neither ever returns one that mixa_backend_table_valid rejects.
+ *
+ * by_name is the explicit choice - a command line flag, or a test picking the
+ * headless fixture on a machine that also has a real window. default_table is
+ * the first valid entry, which is why the build lists the real backend before
+ * the fixture. */
+const MixaBackendVTable *mixa_backend_table_by_name(const char *name);
+const MixaBackendVTable *mixa_backend_default_table(void);
+
+/* Each backend exports exactly one public symbol. Declared in the backend's own
+ * concrete header, not here, so that adding a platform does not touch the seam:
+ *
+ *     const MixaBackendVTable *mixa_backend_headless_table(void);
+ *     const MixaBackendVTable *mixa_backend_win32_table(void);
+ *
+ * A constructor returns a validated singleton. It does not fill a caller's
+ * table: a table is immutable once built, and handing out a pointer to the one
+ * copy is both cheaper and harder to corrupt than copying seven pointers into
+ * whatever storage the caller happened to provide. */
+
+#endif
+
+
+========== mixa_backend_headless.h ==========
+/* mixa_backend_headless.h - concrete headless backend; vt is first member.
+ *
+ * Test helpers are not part of the seam. Constructor returns a singleton table.
+ */
+#ifndef MIXA_BACKEND_HEADLESS_H
+#define MIXA_BACKEND_HEADLESS_H
+
+#include "mixa_manager/mixa_backend.h"
+#include "mixa_manager/mixa_event_fifo.h"
+
+typedef struct MixaHeadless {
+    const MixaBackendVTable *vt; /* MUST be first - same layout as MixaBackend */
+    int is_open;
+    size_t cols;
+    size_t rows;
+    size_t cell_width;
+    size_t cell_height;
+    size_t frame_w;
+    size_t frame_h;
+    size_t frame_bytes;
+    MixaU8 *frame;
+    char *clipboard;
+    size_t clipboard_len; /* bytes, excluding NUL */
+    /* Heap fifo so L1 can pass it without taking & of an embedded field.
+     * Allocated and inited in open; released in close. */
+    MixaEventFifo *inbox;
+} MixaHeadless;
+
+const MixaBackendVTable *mixa_backend_headless_table(void);
+
+/* Headless-only: append a synthetic event. For MIXA_EVENT_MOUSE, incoming
+ * col/row are PIXEL coordinates and are converted to HALF-cells of the text
+ * layer here (BACKEND_SEAM 10.5). */
+int mixa_headless_push_event(MixaBackend *backend, const MixaEvent *ev);
+
+/* Headless-only: copy one RGBA pixel of the last presented frame into out[4]. */
+int mixa_headless_frame_at(const MixaBackend *backend, size_t x, size_t y, MixaU8 *out);
+
+#endif
+
+========== mixa_backend_win32.h ==========
+/* mixa_backend_win32.h - concrete Win32 backend; vt is first member.
+ *
+ * Test helper mixa_win32_frame_at is not part of the seam.
+ * Constructor returns a singleton table.
+ */
+#ifndef MIXA_BACKEND_WIN32_H
+#define MIXA_BACKEND_WIN32_H
+
+#include <windows.h>
+#include "mixa_manager/mixa_backend.h"
+
+/* Per-backend glyph cache entry: keyed by (codepoint, layer). */
+typedef struct MixaWin32GlyphEntry {
+    unsigned int codepoint;
+    int layer;
+    int missing;
+    size_t width;
+    size_t height;
+    int bearing_x;
+    int bearing_y;
+    size_t advance;
+    MixaU8 *coverage; /* owned; NULL when missing */
+    struct MixaWin32GlyphEntry *next;
+} MixaWin32GlyphEntry;
+
+typedef struct MixaWin32 {
+    const MixaBackendVTable *vt; /* MUST be first - same layout as MixaBackend */
+    int is_open;
+    HWND hwnd;
+    HDC hdc_mem;
+    HBITMAP hbmp;
+    HBITMAP hbmp_old;
+    MixaU8 *bits; /* DIB section bits, BGRA32 top-down; owned by hbmp */
+    size_t cols;
+    size_t rows;
+    size_t cell_width;       /* text-layer cell; drives frame + mouse/resize */
+    size_t cell_height;
+    size_t upper_cell_width;
+    size_t upper_cell_height;
+    size_t pointer_cell_width;
+    size_t pointer_cell_height;
+    size_t frame_w;
+    size_t frame_h;
+    size_t frame_bytes;
+    HFONT hfont_text;
+    HFONT hfont_upper;
+    HFONT hfont_pointer;     /* third font size for the mouse glyph; not a grid */
+    HDC hdc_glyph;           /* memory DC for GetGlyphOutline / metrics */
+    int text_ascent;         /* tmAscent for text font (placement) */
+    int upper_ascent;
+    int pointer_ascent;
+    MixaWin32GlyphEntry *glyph_cache;
+    /* Per-instance test-only GDI fault injection (not seam ABI). Zero in production use.
+     * bit0=GetGlyphOutlineW size-query, bit1=buffer-fill, bit2=GetGlyphIndicesW. */
+    int force_gdi_error;
+} MixaWin32;
+
+const MixaBackendVTable *mixa_backend_win32_table(void);
+
+/* Test-only, explicit unattended variant (ticket 20260913-015530): a real
+ * HWND/DC/messages, identical to "win32" in every way except its window
+ * opens with SW_HIDE instead of SW_SHOW, so a suite needing a genuine
+ * Win32 backend can still run without popping a visible window. An
+ * explicit, named construction choice -- never an env var or a mutable
+ * process-global switch. */
+const MixaBackendVTable *mixa_backend_win32_hidden_table(void);
+
+/* Win32-only test helper: copy one RGBA pixel of the last presented frame. */
+int mixa_win32_frame_at(const MixaBackend *backend, size_t x, size_t y, MixaU8 *out);
+
+/* Win32-only test helper: per-backend GDI_ERROR injection mask (bits above). */
+int mixa_win32_test_set_force_ggo_error(MixaBackend *backend, int on);
+
+#endif
+
+========== mixa_event_fifo.h ==========
+/* mixa_event_fifo.h - concrete growable FIFO of MixaEvent.
+ *
+ * One lane, FIFO order. Growth: seed 8, double; all three overflow guards
+ * (addition, doubling, sizeof product) as in l1src/own.lm1. Replaces the
+ * hand-rolled ring previously inside the headless backend.
+ */
+#ifndef MIXA_EVENT_FIFO_H
+#define MIXA_EVENT_FIFO_H
+
+#include <stddef.h>
+#include "mixa_manager/mixa_backend.h"   /* MixaEvent */
+
+typedef struct MixaEventFifo {
+    MixaEvent *items;
+    size_t capacity;
+    size_t head;
+    size_t count;
+    int is_open;
+} MixaEventFifo;
+
+int mixa_event_fifo_init(MixaEventFifo *fifo);
+void mixa_event_fifo_release(MixaEventFifo *fifo);
+int mixa_event_fifo_push(MixaEventFifo *fifo, const MixaEvent *ev);
+int mixa_event_fifo_pop(MixaEventFifo *fifo, MixaEvent *out);
+size_t mixa_event_fifo_count(const MixaEventFifo *fifo);
+
+#endif
+
+========== mixa_draw.h ==========
+#ifndef MIXA_DRAW_H
+#define MIXA_DRAW_H
+
+#include "mixa_manager/mixa_core.h"
+
+/* Single drawing API (DRAWING.txt). Draws into a MixaTextRect cell surface.
+ * Does not know which layer the surface belongs to.
+ */
+
+#define MIXA_DRAW_OK  0
+#define MIXA_DRAW_ERR 1
+
+#define MIXA_DRAW_SINGLE 0
+#define MIXA_DRAW_DOUBLE 1
+
+#define MIXA_DRAW_HORIZ 0
+#define MIXA_DRAW_VERT 1
+
+/* API alpha > 255: write glyph/fg/flags only; leave cell bg+alpha untouched. */
+#define MIXA_DRAW_KEEP_BG 0x100U
+
+/* UTF-8 text from (row,col) with attrs. Clips at edges. OOB start -> ERR. */
+int mixa_draw_text(MixaTextRect *rect, size_t row, size_t col,
+                   const char *text, unsigned fg, unsigned bg,
+                   unsigned flags, unsigned alpha);
+
+/* Fill rectangle of cells. Extents must lie in-bounds; else ERR. */
+int mixa_draw_fill(MixaTextRect *rect, size_t row, size_t col,
+                   size_t nrows, size_t ncols, unsigned codepoint,
+                   unsigned fg, unsigned bg, unsigned flags, unsigned alpha);
+
+/* Horizontal or vertical line, single or double. Merges box stubs. */
+int mixa_draw_line(MixaTextRect *rect, size_t row, size_t col,
+                   size_t len, int orient, int style,
+                   unsigned fg, unsigned bg, unsigned flags, unsigned alpha);
+
+/* Rectangle border, single or double. Merges box stubs. nrows/ncols >= 2. */
+int mixa_draw_frame(MixaTextRect *rect, size_t row, size_t col,
+                    size_t nrows, size_t ncols, int style,
+                    unsigned fg, unsigned bg, unsigned flags, unsigned alpha);
+
+#endif
+
+========== mixa_overlay.h ==========
+#ifndef MIXA_OVERLAY_H
+#define MIXA_OVERLAY_H
+
+#include <stddef.h>
+
+/* Shared pixel byte type + classic 16-color VGA-style palette.
+ * OverlayRect raster unit removed (TASK17): upper layer is a MixaTextRect.
+ * This header remains so mixa_backend.h can keep #include for MixaU8. */
+
+typedef unsigned char MixaU8;
+
+/* Classic 16-color VGA-style palette: index 0..15 -> RGB. */
+static const unsigned char MIXA_PALETTE[16][3] = {
+    {0, 0, 0},
+    {170, 0, 0},
+    {0, 170, 0},
+    {170, 85, 0},
+    {0, 0, 170},
+    {170, 0, 170},
+    {0, 170, 170},
+    {170, 170, 170},
+    {85, 85, 85},
+    {255, 85, 85},
+    {85, 255, 85},
+    {255, 255, 85},
+    {85, 85, 255},
+    {255, 85, 255},
+    {85, 255, 255},
+    {255, 255, 255}
+};
+
+/* Resolve palette index to RGB. Index is taken modulo 16. */
+static void mixa_palette_rgb(unsigned index, MixaU8 *out_r, MixaU8 *out_g, MixaU8 *out_b)
+{
+    unsigned i = index & 15U;
+    if (out_r) {
+        *out_r = MIXA_PALETTE[i][0];
+    }
+    if (out_g) {
+        *out_g = MIXA_PALETTE[i][1];
+    }
+    if (out_b) {
+        *out_b = MIXA_PALETTE[i][2];
+    }
+}
+
+#endif
+
+========== mixa_file.h ==========
+/* mixa_file.h - portable console-file seam (FILE_SEAM.txt section 3.5).
+ *
+ * First slice only: open/close, append, read, size, and absolute seek for
+ * bounded offset reads. No list/stat/mkdir/remove/rename. Paths are UTF-8.
+ * Handles are opaque and owner-held. Short I/O is reported, never silent.
+ * Platform conversion and OS primitives live behind the concrete unit.
+ */
+#ifndef MIXA_FILE_H
+#define MIXA_FILE_H
+
+#include <stddef.h>
+
+typedef struct MixaFile MixaFile;
+
+/* Open modes. */
+#define MIXA_FILE_MODE_READ   1
+#define MIXA_FILE_MODE_APPEND 2
+
+/* Explicit status: 0 success; nonzero is a failure class (never silent empty). */
+#define MIXA_FILE_OK          0
+#define MIXA_FILE_ERR_ARG     1
+#define MIXA_FILE_ERR_MISSING 2
+#define MIXA_FILE_ERR_IO      3
+#define MIXA_FILE_ERR_NOMEM   4
+
+/* Open by UTF-8 path. On success *out holds an owned handle; caller closes.
+ * READ on a missing path -> MIXA_FILE_ERR_MISSING (not an empty file).
+ * APPEND creates the file when absent. */
+int mixa_file_open(MixaFile **out, const char *path_utf8, int mode);
+
+/* Close and release. Null-safe. After return the pointer must not be used. */
+void mixa_file_close(MixaFile *f);
+
+/* Append bytes. *wrote receives the count actually written (may be short).
+ * Returns MIXA_FILE_OK when the call completed; short write is not an error. */
+int mixa_file_append(MixaFile *f, const void *buf, size_t n, size_t *wrote);
+
+/* Read at the current position into buf. *got may be short or 0 at EOF.
+ * Returns MIXA_FILE_OK when the call completed; short/EOF is not an error. */
+int mixa_file_read(MixaFile *f, void *buf, size_t n, size_t *got);
+
+/* Absolute seek from start of file (for bounded offset reads). */
+int mixa_file_seek(MixaFile *f, size_t abs_off);
+
+/* Current size in bytes. */
+int mixa_file_size(MixaFile *f, size_t *out);
+
+#endif
+
+
+========== mixa_file_win32.h ==========
+/* mixa_file_win32.h - concrete Win32 file handle; portable API in mixa_file.h.
+ *
+ * Opaque to callers of mixa_file.h. Owner holds MixaFile* and closes it.
+ */
+#ifndef MIXA_FILE_WIN32_H
+#define MIXA_FILE_WIN32_H
+
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include "mixa_manager/mixa_file.h"
+
+struct MixaFile {
+    HANDLE handle; /* INVALID_HANDLE_VALUE when closed */
+    int mode;
+    int is_open;
+};
+
+#endif
+
+
+========== mixa_file_win32_l2_win.h ==========
+/* mixa_file_win32_l2_win.h - minimal system-header adapter for the clean
+ * L2 port of mixa_file_win32 (ticket 20260913-114500).
+ *
+ * The real mixa_file_win32.h combines "#define WIN32_LEAN_AND_MEAN" with
+ * "#include <windows.h>" before declaring the concrete MixaFile struct.
+ * L1's own include: line syntax only ever emits bare #include directives
+ * (no interleaved #define), so this tiny wrapper reproduces the same
+ * WIN32_LEAN_AND_MEAN + <windows.h> pairing as its own standalone system
+ * header -- it declares nothing of mixa_manager's own, only the same
+ * standard Win32 API surface every other manager module already links
+ * against (CreateFileW/ReadFile/WriteFile/CloseHandle/GetFileSize/
+ * SetFilePointer/GetLastError/SetLastError/MultiByteToWideChar, all via
+ * -lkernel32, matching mixa_file_win32.lm1's own real link line).
+ */
+#ifndef MIXA_FILE_WIN32_L2_WIN_H
+#define MIXA_FILE_WIN32_L2_WIN_H
+
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
+#endif
+
+
+========== mixa_help.h ==========
+#ifndef MIXA_HELP_H
+#define MIXA_HELP_H
+
+/* F1 Help (FIRST_VERSION.txt section 2/4/5, ticket 20260912-235847):
+ * "one button on it: F1 help, which writes its text into the console,
+ * ending with a newline" / "F1 here corresponds to ClearShell's About,
+ * which calls mainHelp. Ours writes its help text into the console
+ * rather than opening a dialog."
+ *
+ * The text is ClearShell's own mainHelp() message verbatim (ClearShell.
+ * java, mainHelp(): the String shown as its About dialog's body) --
+ * see MIXA_HELP_TEXT below. This is console OUTPUT, not a modal: the
+ * action appends bytes to the already-open console file, the same file
+ * the console view already reads and the same file a real child process
+ * would write to (FIRST_VERSION: "the child gets a command and a place
+ * to write, and that is all" -- Help writes to that same place).
+ *
+ * Two trigger paths reach the SAME action, mirroring the shape already
+ * established by mixa_fm_copy_here_key_event/_hit for Ctrl+V/Copy Here:
+ * a plain F1 key press (mixa_help_key_event) and a hit-test against the
+ * button's own on-screen rect (mixa_help_hit). Both are pure functions
+ * taking raw geometry (row/col/nrows/ncols), not a MixaButtonPanel --
+ * same decoupling Copy Here's own hit function already uses, so this is
+ * testable without constructing a real button panel or opening a
+ * window.
+ *
+ * Deliberately excluded (out of this milestone, FIRST_VERSION section
+ * 3): no terminal emulation, no modal/dialog, no new synchronization
+ * primitive. The single mixa_file_append call this makes either writes
+ * the whole message or writes nothing -- "no partial publication" is
+ * enforced by treating a short write as a failure (never claimed as
+ * success), not by inventing transactional semantics FILE_SEAM itself
+ * does not offer.
+ */
+
+#include <stddef.h>
+#include "mixa_manager/mixa_file.h"
+#include "mixa_manager/mixa_backend.h"
+
+#define MIXA_HELP_OK 0
+#define MIXA_HELP_ERR_ARG 1
+#define MIXA_HELP_ERR_NOMEM 2
+#define MIXA_HELP_ERR_IO 3
+
+#define MIXA_HELP_HIT_NONE 0
+#define MIXA_HELP_HIT_ACTION 1
+
+/* Verbatim from ClearShell.java's mainHelp(): the exact String passed to
+ * AlertDialog.Builder.setMessage(m). No CRLF/newline of its own --
+ * mixa_help_action appends "\r\n" itself, matching the ticket's own
+ * instruction to end with CRLF. A function rather than an exported
+ * array, matching mixa_app_panel_entry_label's own const-char-pointer-
+ * return shape elsewhere in this codebase. */
+const char *mixa_help_text(void);
+
+typedef struct MixaHelpCtx {
+    MixaFile *console_file; /* borrowed; not owned, not closed here */
+    int last_status;
+} MixaHelpCtx;
+
+/* Appends MIXA_HELP_TEXT + "\r\n" to ctx->console_file in ONE mixa_file_
+ * append call. Returns MIXA_HELP_OK only if every byte was accepted;
+ * any short write or append failure is reported (MIXA_HELP_ERR_IO),
+ * never silently treated as success. ctx->last_status mirrors the
+ * return value for a caller that reached this indirectly through
+ * mixa_help_key_event/_hit. */
+int mixa_help_action(void *ctx_raw);
+
+/* Recognizes a bare F1 key press on a MIXA_EVENT_KEY event (any
+ * modifier state -- F1 is F1 regardless of incidental Shift/Alt/Ctrl/
+ * Meta noise; no modifier gating is specified anywhere in FIRST_VERSION
+ * or PORT_OF_CLEARSHELL, unlike Copy Here's own Ctrl+V, which explicitly
+ * requires MIXA_MOD_CTRL). On a match, runs the action and returns
+ * MIXA_HELP_HIT_ACTION; otherwise MIXA_HELP_HIT_NONE, touching nothing. */
+int mixa_help_key_event(MixaHelpCtx *ctx, const MixaEvent *ev);
+
+/* Rect hit-test in TEXT-LAYER cells (matching mixa_fm_copy_here_hit's own
+ * shape exactly) -- a hit inside [btn_row, btn_row+btn_nrows) x
+ * [btn_col, btn_col+btn_ncols) runs the action and returns MIXA_HELP_
+ * HIT_ACTION; anything else returns MIXA_HELP_HIT_NONE untouched. */
+int mixa_help_hit(MixaHelpCtx *ctx, size_t cell_row, size_t cell_col,
+                  size_t btn_row, size_t btn_col, size_t btn_nrows,
+                  size_t btn_ncols);
+
+#endif
+
+
+========== mixa_highlight.h ==========
+#ifndef MIXA_HIGHLIGHT_H
+#define MIXA_HIGHLIGHT_H
+
+#include <stddef.h>
+#include "mixa_manager/mixa_core.h"
+#include "mixa_manager/mixa_draw.h"
+
+/* One moving double-box focus frame (DRAWING.txt 5.4 / PORT_OF_CLEARSHELL 2.8).
+ * Overlays outermost cells; restores them when focus moves or clears.
+ *
+ * Lifetime / redraw contract while active:
+ *   - The target MixaTextRect's cell storage must stay live and unchanged in
+ *     identity (same cells pointer) and geometry (rows/cols).
+ *   - Clear (or move on the same rect) before repainting underlying perimeter
+ *     content, or before destroying/resizing the rectangle. Otherwise a later
+ *     restore can overwrite newer content, or a mismatched target is rejected.
+ *   - release() frees bookkeeping only; it does not restore cells. Call clear
+ *     on the bound target first if a visible overlay must be removed.
+ */
+
+#define MIXA_HIGHLIGHT_OK  0
+#define MIXA_HIGHLIGHT_ERR 1
+
+typedef struct MixaHighlight {
+    int is_open;
+    int is_active;
+    size_t row;
+    size_t col;
+    size_t nrows;
+    size_t ncols;
+    unsigned fg;
+    MixaCell *saved;
+    size_t saved_count;
+    size_t saved_cap;
+    /* Bound while active: reject restore/move if target identity drifts. */
+    MixaTextRect *target_rect;
+    MixaCell *target_cells;
+    size_t target_rows;
+    size_t target_cols;
+} MixaHighlight;
+
+int mixa_highlight_init(MixaHighlight *hl);
+void mixa_highlight_release(MixaHighlight *hl);
+
+/* Place or move the double frame on the same bound target. Restores any
+ * previous perimeter first (same rect only). Uses MIXA_DRAW_KEEP_BG so
+ * element backgrounds stay. fg is monochrome palette.
+ * Rejects if an active snapshot is bound to a different rect/storage/geometry.
+ */
+int mixa_highlight_set(MixaHighlight *hl, MixaTextRect *rect,
+                       size_t row, size_t col, size_t nrows, size_t ncols,
+                       unsigned fg);
+
+/* Restore saved perimeter cells and clear active state.
+ * Rejects (leaves active intact) if rect is not the bound target or its
+ * storage/geometry changed, or if restore bounds cannot be preflighted.
+ */
+int mixa_highlight_clear(MixaHighlight *hl, MixaTextRect *rect);
+
+#endif
+
+========== mixa_pointer.h ==========
+#ifndef MIXA_POINTER_H
+#define MIXA_POINTER_H
+
+#include <stddef.h>
+#include <stdint.h>
+
+/* Mouse pointer: one half-cell position + one octant arrow (UI_MODEL 6).
+ * Octant is the last NONZERO half-cell displacement; zero leaves it unchanged.
+ * No latch, smoothing, hysteresis, accumulation, floats, or trig.
+ */
+
+#define MIXA_POINTER_OK  0
+#define MIXA_POINTER_ERR 1
+
+/* Clockwise from up. Initial before any move: DOWN_RIGHT. */
+#define MIXA_POINTER_UP          0
+#define MIXA_POINTER_UP_RIGHT    1
+#define MIXA_POINTER_RIGHT       2
+#define MIXA_POINTER_DOWN_RIGHT  3
+#define MIXA_POINTER_DOWN        4
+#define MIXA_POINTER_DOWN_LEFT   5
+#define MIXA_POINTER_LEFT        6
+#define MIXA_POINTER_UP_LEFT     7
+
+#define MIXA_POINTER_CP_UP         0x2B06U
+#define MIXA_POINTER_CP_UP_RIGHT   0x2B08U
+#define MIXA_POINTER_CP_RIGHT      0x2B95U
+#define MIXA_POINTER_CP_DOWN_RIGHT 0x2B0AU
+#define MIXA_POINTER_CP_DOWN       0x2B07U
+#define MIXA_POINTER_CP_DOWN_LEFT  0x2B0BU
+#define MIXA_POINTER_CP_LEFT       0x2B05U
+#define MIXA_POINTER_CP_UP_LEFT    0x2B09U
+
+typedef struct MixaPointer {
+    int is_open;
+    int octant;
+    size_t row; /* half-cell */
+    size_t col; /* half-cell */
+} MixaPointer;
+
+int mixa_pointer_init(MixaPointer *p);
+void mixa_pointer_release(MixaPointer *p);
+
+/* Unicode scalar for the current octant (ordinary codepoint). */
+unsigned mixa_pointer_codepoint(const MixaPointer *p);
+unsigned mixa_pointer_codepoint_for_octant(int octant);
+
+/* Classify a displacement. Zero dx and dy returns prev_octant unchanged. */
+int mixa_pointer_octant_from_delta(int32_t dx, int32_t dy, int prev_octant);
+
+/* Apply a half-cell displacement: update octant if nonzero, then position.
+ * Position updates are checked against size_t range.
+ */
+int mixa_pointer_nudge(MixaPointer *p, int32_t dx, int32_t dy);
+
+/* Move to an absolute half-cell; displacement = to - current. */
+int mixa_pointer_move_to(MixaPointer *p, size_t row, size_t col);
+
+#endif
+
+========== mixa_process.h ==========
+/* mixa_process.h - portable owner-local process seam (PROCESS_SEAM.txt
+ * section 3). Six operations: spawn/read/write/status/kill/close.
+ *
+ * THE CONSOLE IS NOT A TERMINAL (PROCESS_SEAM 2): no PTY, no ConPTY, no
+ * escape-sequence interpretation. The command line genuinely goes to the
+ * platform shell as one string -- spawn() delegates to the platform
+ * command interpreter itself (cmd.exe on Windows), not to whatever the
+ * first token of the command line happens to name directly.
+ *
+ * Handles are opaque and owner-held; close() takes MixaProcess** and
+ * frees the object itself, nulling the caller's own slot -- there is no
+ * separate free() obligation, and a second close() call on the same
+ * (now-null) slot is a safe no-op by construction, not by convention.
+ * read() never blocks (PROCESS_SEAM 3: the loop belongs to the Message,
+ * not to this seam). No Message/thread/mutex/queue integration lives
+ * here -- PROCESS_SEAM section 6 names that as later work.
+ */
+#ifndef MIXA_PROCESS_H
+#define MIXA_PROCESS_H
+
+#include <stddef.h>
+
+typedef struct MixaProcess MixaProcess;
+
+/* Explicit status: 0 success; nonzero is a failure class, never a silent
+ * substitution. ERR_SPAWN means the platform shell itself never started
+ * -- distinct from a shell that started and ran an unknown/failing
+ * command, which is a normally-started child whose own exit code and
+ * merged output are observed through status()/read() like any other,
+ * never compressed into spawn()'s own return value. */
+#define MIXA_PROC_OK          0
+#define MIXA_PROC_ERR_ARG     1
+#define MIXA_PROC_ERR_SPAWN   2
+#define MIXA_PROC_ERR_IO      3
+#define MIXA_PROC_ERR_NOMEM   4
+/* read() only: the child's output stream is confirmed closed (the child
+ * exited and every write handle to the merged stdout+stderr pipe is
+ * gone) -- no more bytes will ever arrive. Distinct from MIXA_PROC_OK
+ * with *got==0, which means "nothing available right now, try again
+ * later" (the child may still be running and quiet). */
+#define MIXA_PROC_EOF         5
+
+/* Starts command_line_utf8 THROUGH THE PLATFORM SHELL (cmd.exe on
+ * Windows) with cwd_utf8 as its working directory (required; the
+ * working directory is always explicit, per PROCESS_SEAM 4).
+ * stdin_enabled selects the exact lifetime PROCESS_SEAM 4/ticket item 2
+ * asks for -- a real stdin pipe is created in BOTH cases (the child
+ * always inherits a genuine pipe read end, never an unset/invalid
+ * standard handle):
+ *   0  our own write end is closed once the child is confirmed started,
+ *      so a child that reads stdin (e.g. `cat`) sees ordinary pipe EOF
+ *      immediately rather than hanging forever waiting for input nobody
+ *      will send, and rather than inheriting some other, unrelated
+ *      standard handle. write() on such a handle always fails
+ *      MIXA_PROC_ERR_ARG (there is no live pipe to write into).
+ *   nonzero  the write path stays open for explicit write() calls,
+ *      exactly as the caller sends them; the caller ends stdin by
+ *      calling close() or kill() (there is no separate "close stdin
+ *      only" operation -- both end the whole child's lifetime, matching
+ *      the seam's own six-operation shape).
+ * On success *out holds an owned handle; the caller calls close()
+ * exactly once. On MIXA_PROC_ERR_SPAWN the shell process itself never
+ * started (e.g. an invalid working directory) -- *out is left null and
+ * every handle this call opened is already released. A shell that
+ * starts but is given an unknown command is NOT a spawn failure: it is
+ * an ordinary started child, observed the same way any other is.
+ */
+int mixa_process_spawn(MixaProcess **out, const char *command_line_utf8,
+                        const char *cwd_utf8, int stdin_enabled);
+
+/* Drains whatever of the merged stdout+stderr stream is already
+ * available into buf, up to cap bytes. NEVER BLOCKS: a quiet running
+ * child returns MIXA_PROC_OK with *got==0 promptly, not after waiting
+ * for output. Returns MIXA_PROC_EOF (not MIXA_PROC_OK) once the stream
+ * is confirmed closed and drained -- a caller sees this at most once per
+ * process's own lifetime, after which further read() calls keep
+ * returning MIXA_PROC_EOF with *got==0. */
+int mixa_process_read(MixaProcess *p, void *buf, size_t cap, size_t *got);
+
+/* Writes to the child's stdin. *wrote receives the count actually
+ * written (may be short); a short write is not itself an error. Fails
+ * MIXA_PROC_ERR_ARG if stdin was disabled at spawn() or the write path
+ * is already closed (close()/kill() already called). */
+int mixa_process_write(MixaProcess *p, const void *buf, size_t n, size_t *wrote);
+
+/* *running is 1 while the child has not exited, 0 once it has.
+ * *exit_code is only meaningful when *running==0, and is then the
+ * child's own real exit code, preserved verbatim -- never compressed
+ * into one generic failure value. */
+int mixa_process_status(MixaProcess *p, int *running, int *exit_code);
+
+/* Terminates the child AND every descendant it spawned (a Windows Job
+ * Object with kill-on-job-close, or an equivalently proven process-tree
+ * mechanism on other platforms) and mean it -- PROCESS_SEAM 3's own
+ * wording. Safe to call on an already-exited child (a no-op status-wise,
+ * still releases nothing by itself -- call close() afterward). */
+int mixa_process_kill(MixaProcess *p);
+
+/* Releases every OS handle this MixaProcess owns AND frees the object
+ * itself, then sets *p to NULL. Idempotent by construction: *p==NULL on
+ * entry (already closed, or a process that failed mid-spawn and was
+ * never assigned) is a safe no-op -- there is nothing left to touch.
+ * Null-safe on p itself too. */
+void mixa_process_close(MixaProcess **p);
+
+#endif
+
+
+========== mixa_process_win32.h ==========
+/* mixa_process_win32.h - concrete Win32 process handle; portable API in
+ * mixa_process.h. Opaque to callers of that header.
+ *
+ * A Windows Job Object with JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE is the
+ * process-tree mechanism (ticket 20260912-144000 item 3): the child is
+ * spawned suspended, assigned to the job BEFORE it ever runs a single
+ * instruction (eliminating the classic "child already spawned its own
+ * descendant before assignment" race), then resumed. kill() calls
+ * TerminateJobObject; closing the job handle also kills everything still
+ * in it, so even a caller that only calls close() (skipping kill())
+ * cannot leave an orphaned tree running.
+ */
+#ifndef MIXA_PROCESS_WIN32_H
+#define MIXA_PROCESS_WIN32_H
+
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include "mixa_manager/mixa_process.h"
+
+struct MixaProcess {
+    HANDLE h_process;
+    HANDLE h_thread;
+    HANDLE h_job;
+    HANDLE h_out_read;  /* ours: read end of the merged stdout+stderr pipe */
+    HANDLE h_in_write;  /* ours: write end of the stdin pipe; NULL if disabled or closed */
+    int stdin_enabled;
+    int eof_seen;
+    int is_closed;
+};
+
+#endif
+
+
+========== mixa_pump.h ==========
+/* mixa_pump.h - drain backend poll into a FIFO inbox, then process.
+ *
+ * BACKEND_SEAM 7.1 groundwork: never act on an event where it is polled.
+ * One lane, FIFO order. No scheduler / priorities / blocking wait.
+ * No staged outbox in this unit (later ticket).
+ */
+#ifndef MIXA_PUMP_H
+#define MIXA_PUMP_H
+
+#include <stddef.h>
+#include "mixa_manager/mixa_backend.h"
+#include "mixa_manager/mixa_event_fifo.h"
+
+typedef struct MixaPump {
+    MixaEventFifo inbox;
+    int is_open;
+} MixaPump;
+
+int mixa_pump_open(MixaPump *pump);
+void mixa_pump_release(MixaPump *pump);
+
+/* Drain mixa_backend_poll until MIXA_EVENT_NONE into the inbox.
+ * Returns 0 on success, non-zero on failure. How many were taken is
+ * mixa_pump_pending after the call. On RESIZE adoption failure from poll,
+ * the event is still pushed and counted, and drain returns failure. */
+int mixa_pump_drain(MixaPump *pump, MixaBackend *backend);
+
+int mixa_pump_next(MixaPump *pump, MixaEvent *out);
+size_t mixa_pump_pending(const MixaPump *pump);
+
+#endif
+
+
+========== mixa_selection.h ==========
+#ifndef MIXA_SELECTION_H
+#define MIXA_SELECTION_H
+
+#include <stddef.h>
+
+/* Selection model: explicit paths + exceptions + reverse index.
+ * See mixa_manager/SELECTION_MODEL.txt. Growable arrays; seed 8, double.
+ */
+
+#define MIXA_SEL_OK        0
+#define MIXA_SEL_CONFLICT  1
+#define MIXA_SEL_NOTHING   2
+#define MIXA_SEL_ERR       3
+
+typedef struct MixaSelRev {
+    char *ancestor;
+    char **paths;
+    size_t count;
+    size_t capacity;
+} MixaSelRev;
+
+typedef struct MixaSelection {
+    char **selected;
+    size_t selected_count;
+    size_t selected_cap;
+
+    char **exc_paths;
+    char **exc_from;
+    size_t exc_count;
+    size_t exc_cap;
+
+    MixaSelRev *revs;
+    size_t rev_count;
+    size_t rev_cap;
+
+    int is_open;
+} MixaSelection;
+
+int mixa_selection_init(MixaSelection *sel);
+void mixa_selection_release(MixaSelection *sel);
+int mixa_selection_select(MixaSelection *sel, const char *path);
+int mixa_selection_deselect(MixaSelection *sel, const char *path);
+int mixa_selection_query(MixaSelection *sel, const char *path);
+
+#endif
+
+
+========== mixa_cmdline.h ==========
+#ifndef MIXA_CMDLINE_H
+#define MIXA_CMDLINE_H
+
+/* Editable command line (ticket 20260913-002013, FIRST_VERSION.txt
+ * section 2/4: "edits lines, wrapping BY CHARACTER, never by word - as
+ * a console does" / "a cursor in the lower layer" / "Enter takes the
+ * line from its start UP TO THE CURSOR, sends it plus a newline to the
+ * OS"). This is the PENDING line only -- text typed but not yet sent.
+ * It is never written into the console file itself (FILE_SEAM is
+ * append-only; a file cannot represent backspace), and the console's
+ * own scrollback stays exactly what it always was: committed history,
+ * "not a buffer" (FIRST_VERSION line 39). Only mixa_cmdline_extract_to_
+ * cursor_utf8's own OUTPUT -- the line up to the cursor, at Enter -- is
+ * ever appended to the file, by the caller, once.
+ *
+ * Codepoints, not bytes: the key event seam already delivers text as a
+ * Unicode scalar per keystroke (mixa_backend.h's own MixaEvent.
+ * codepoint), so this stores an array of those directly. Insert/delete/
+ * cursor-move are therefore trivial index arithmetic with no UTF-8
+ * boundary logic anywhere in the EDITING path -- UTF-8 encoding happens
+ * exactly once, at extract time, for exactly the bytes about to leave
+ * this module.
+ *
+ * No fixed capacity anywhere: the codepoint array grows by checked
+ * doubling (mixa_cmdline_check_fault, mirroring mixa_process_marker's
+ * own established fault-injection idiom) and extract's own output
+ * buffer is sized exactly from the substring's real UTF-8 length.
+ *
+ * Wrapping: mixa_cmdline_char_position is pure arithmetic answering
+ * "where does character index i land, given the line starts at
+ * (start_row, start_col) and the screen is screen_cols wide" -- BY
+ * CHARACTER, never by word, per FIRST_VERSION's own explicit
+ * instruction. It does not touch a MixaTextRect or draw anything; the
+ * caller (the real entrypoint, which cannot be exercised by an
+ * automated suite) uses the returned coordinates to write cells
+ * directly, the same way it already draws the F1 Help button. Rows
+ * that would fall below screen_rows are reported as such rather than
+ * silently wrapping into a location that does not exist -- this
+ * milestone does not implement scrolling the PENDING line (only
+ * committed file content scrolls, via the already-accepted console
+ * view's own recompute); a line long enough to need that is named as a
+ * known limitation, not silently mishandled.
+ */
+
+#include <stddef.h>
+
+#define MIXA_CMDLINE_OK 0
+#define MIXA_CMDLINE_ERR_ARG 1
+#define MIXA_CMDLINE_ERR_NOMEM 2
+
+typedef int (*MixaCmdLineFaultFn)(void *ctx, size_t requested_size);
+
+typedef struct MixaCmdLineFaultVTable {
+    MixaCmdLineFaultFn on_alloc;
+    void *ctx;
+} MixaCmdLineFaultVTable;
+
+typedef struct MixaCmdLine {
+    unsigned int *cps;
+    size_t len;
+    size_t cap;
+    size_t cursor;
+} MixaCmdLine;
+
+/* Zeroes the struct; no allocation happens until the first insert. */
+void mixa_cmdline_init(MixaCmdLine *cl);
+
+/* Frees the owned codepoint array and zeroes the struct. Safe on an
+ * already-released or never-inserted-into line. */
+void mixa_cmdline_release(MixaCmdLine *cl);
+
+/* Inserts codepoint at the cursor, shifting anything after it right,
+ * and advances the cursor past the inserted character. fault is
+ * nullable (see MixaCmdLineFaultVTable). */
+int mixa_cmdline_insert(MixaCmdLine *cl, const MixaCmdLineFaultVTable *fault,
+                        unsigned int codepoint);
+
+/* Removes the character immediately BEFORE the cursor and moves the
+ * cursor back by one. A no-op (not an error) at cursor 0. */
+void mixa_cmdline_backspace(MixaCmdLine *cl);
+
+/* Removes the character immediately AT the cursor (the next one to the
+ * right), cursor unchanged. A no-op (not an error) at the line's end. */
+void mixa_cmdline_delete_forward(MixaCmdLine *cl);
+
+void mixa_cmdline_move_left(MixaCmdLine *cl);
+void mixa_cmdline_move_right(MixaCmdLine *cl);
+void mixa_cmdline_move_home(MixaCmdLine *cl);
+void mixa_cmdline_move_end(MixaCmdLine *cl);
+
+/* Resets to an empty line at cursor 0 WITHOUT freeing the owned array
+ * (cheap reuse for the very next command) -- call after Enter commits
+ * the extracted prefix. */
+void mixa_cmdline_clear(MixaCmdLine *cl);
+
+/* Encodes cps[0..cursor) as UTF-8 into a freshly allocated, exactly
+ * sized, NUL-terminated buffer the caller owns and frees with free().
+ * This is FIRST_VERSION's own "line from its start UP TO THE CURSOR" --
+ * characters after the cursor are never included, matching the spec
+ * verbatim rather than sending the whole line. *out is set to 0 on
+ * every failure path. */
+int mixa_cmdline_extract_to_cursor_utf8(const MixaCmdLine *cl,
+                                        const MixaCmdLineFaultVTable *fault,
+                                        char **out);
+
+/* Pure arithmetic, BY CHARACTER (never by word): character index i of a
+ * line beginning at (start_row, start_col) on a screen screen_cols wide
+ * lands at column (start_col + i) % screen_cols, row start_row +
+ * (start_col + i) / screen_cols. Returns MIXA_CMDLINE_OK with *out_row/
+ * *out_col set when that row is < screen_rows; returns
+ * MIXA_CMDLINE_ERR_ARG (out_row/out_col left untouched) when the
+ * character would land at or past screen_rows -- this milestone does
+ * not scroll the pending line, so such a character is reported, never
+ * drawn at a wrong or wrapped-around location. */
+int mixa_cmdline_char_position(size_t start_row, size_t start_col,
+                               size_t screen_cols, size_t screen_rows,
+                               size_t index, size_t *out_row,
+                               size_t *out_col);
+
+#endif
+
+
+========== mixa_cmdline_dispatch.h ==========
+#ifndef MIXA_CMDLINE_DISPATCH_H
+#define MIXA_CMDLINE_DISPATCH_H
+
+/* Enter dispatch (ticket 20260913-002013). FIRST_VERSION.txt section 2 /
+ * PROCESS_SEAM.txt section 2: "Pressing Enter takes the line from its
+ * start up to the CURSOR, sends it plus a newline to the OS, and the
+ * child's output arrives at the same place - as if the cursor itself
+ * were writing. All of it lands in the file." That is PROCESS_SEAM's own
+ * "Run OS Command": ONE FRESH PROCESS PER COMMAND LINE (the in-band
+ * marker line records that command's own exit status and final working
+ * directory, PROCESS_SEAM 4.1) -- not a persistent shell session.
+ *
+ * This module composes three ALREADY-ACCEPTED seams end to end: the
+ * process-marker wrapper, the raw process seam, and the console file --
+ * no new spawning, streaming or marker logic of its own, only real
+ * wiring. A plain C header, opaque to callers, reached via include: --
+ * NOT predef'd -- for the same measured reason mixa_app_path/mixa_help
+ * are: this entrypoint's own import path table is already at its
+ * documented limit (mixa_app_main.lm1's own comment), and predef'ing
+ * even this module's own small header (which itself would need to
+ * predef mixa_process_marker.h.lm1) was tried and measured to overflow
+ * it directly ("import path table full" at mixa_process_marker.h.lm1
+ * when added alongside the existing fm_copy+console_window chain).
+ * MixaCmdDispatch's own concrete fields live in mixa_cmdline_dispatch_
+ * impl.h, included ONLY by mixa_cmdline_dispatch.lm1 -- the same
+ * opaque-handle split mixa_file.h/mixa_file_win32.h already establish.
+ *
+ * Ownership and lifetime: start() spawns a REAL child and returns a
+ * handle the caller must poll() every tick until it reports DONE, then
+ * release() (release() also KILLS the child if the caller abandons it
+ * early -- PROCESS_SEAM's own "kill and mean it", never an orphaned
+ * process). Exactly one command may be in flight per MixaCmdDispatch;
+ * a caller wanting to refuse a second Enter while one is running (this
+ * milestone's own choice, see this ticket's own outbox report) simply
+ * does not call start() again until the previous handle reports DONE.
+ *
+ * Non-blocking (PROCESS_SEAM 3, this ticket's own explicit
+ * "UI responsiveness/nonblocking behavior"): poll() performs AT MOST
+ * ONE real mixa_process_read call and returns immediately either way,
+ * mirroring the exact per-tick shape mixa_app_loop_step's own pump
+ * drain already uses. It never blocks waiting for output. */
+
+#include <stddef.h>
+#include "mixa_manager/mixa_file.h"
+
+typedef struct MixaCmdDispatch MixaCmdDispatch;
+
+#define MIXA_CMD_DISPATCH_OK 0
+#define MIXA_CMD_DISPATCH_ERR_ARG 1
+#define MIXA_CMD_DISPATCH_ERR_NOMEM 2
+#define MIXA_CMD_DISPATCH_ERR_IO 3
+#define MIXA_CMD_DISPATCH_ERR_SPAWN 4
+
+#define MIXA_CMD_DISPATCH_RUNNING 0
+#define MIXA_CMD_DISPATCH_DONE 1
+
+/* Spawns command_utf8 rooted at cwd_utf8 through the accepted process-
+ * marker wrapper, and appends command_utf8 followed by CRLF to
+ * console_file immediately (best-effort: a failure to echo does not
+ * undo an already-started command, since the command is real and
+ * running regardless). On success *out is a new, owned handle; on any
+ * failure *out is left null and every resource this call itself
+ * acquired is already released (MIXA_CMD_DISPATCH_ERR_SPAWN means the
+ * platform shell itself never started, matching mixa_process_spawn's
+ * own MIXA_PROC_ERR_SPAWN meaning exactly -- never a command that
+ * started and failed, which is an ordinary running/exited child
+ * observed through poll() like any other). console_file is BORROWED:
+ * this module never closes it. */
+int mixa_cmd_dispatch_start(const char *command_utf8, const char *cwd_utf8,
+                            MixaFile *console_file, MixaCmdDispatch **out);
+
+/* One non-blocking tick. Drains whatever output is currently available
+ * (at most one real read) and appends every ordinary byte to
+ * console_file as it is confirmed ordinary, in order -- exactly the
+ * already-accepted marker-scanner sink contract. Returns MIXA_CMD_
+ * DISPATCH_RUNNING while the command has not yet completed (out_
+ * exit_code/out_new_cwd untouched) or MIXA_CMD_DISPATCH_DONE once a
+ * complete marker record was recognized OR the child's own output
+ * stream is confirmed closed with no marker ever found (PROCESS_SEAM
+ * 4.1's own "a caller which finds no marker must treat the command as
+ * having produced no status rather than inventing one" -- in that case
+ * *out_exit_code is left at 0 and *out_new_cwd at NULL, exactly the
+ * "no status" case, never a fabricated success). *out_new_cwd, when
+ * non-null, is a freshly allocated string the CALLER owns and frees;
+ * either out pointer may be null if the caller does not need it. Once
+ * DONE is returned, further poll() calls are a no-op also returning
+ * DONE with the SAME already-recorded status (idempotent; never
+ * re-reads a closed process). */
+int mixa_cmd_dispatch_poll(MixaCmdDispatch *d, int *out_exit_code,
+                           char **out_new_cwd);
+
+/* Nonzero while still running (a convenience wrapper a caller can check
+ * without calling poll() -- e.g. to decide whether Enter should be
+ * accepted this tick). */
+int mixa_cmd_dispatch_running(const MixaCmdDispatch *d);
+
+/* Releases everything: kills the child first if it is still running
+ * (PROCESS_SEAM's own "kill and mean it" -- a caller must never be able
+ * to abandon a live child by simply dropping this handle), then closes
+ * the process handle, releases the scanner, and cleans up the wrapper
+ * file. Null-safe. Does NOT touch console_file (borrowed, not owned). */
+void mixa_cmd_dispatch_release(MixaCmdDispatch *d);
+
+#endif
+
+
+========== mixa_cmdline_dispatch_impl.h ==========
+#ifndef MIXA_CMDLINE_DISPATCH_IMPL_H
+#define MIXA_CMDLINE_DISPATCH_IMPL_H
+
+/* Concrete MixaCmdDispatch; opaque to callers of mixa_cmdline_dispatch.h.
+ * Owner holds MixaCmdDispatch* and releases it -- the same opaque-handle
+ * split mixa_file.h/mixa_file_win32.h already establish. Included ONLY
+ * by mixa_cmdline_dispatch.lm1.
+ *
+ * `struct MixaProcessMarkerScanner` is referenced here by TAG only
+ * (never through the typedef name), so this header never needs to see
+ * -- or forward-declare -- the typedef itself: a bare `struct TAG *`
+ * field implicitly declares an incomplete struct in this scope, which
+ * is all a pointer field ever needs. mixa_cmdline_dispatch.lm1's own
+ * predef of mixa_process_marker.h.lm1 compiles the REAL, complete
+ * `struct MixaProcessMarkerScanner { ... }` into the SAME translation
+ * unit (confirmed by translating and compiling this exact combination);
+ * every function in that .lm1 file that actually dereferences \field on
+ * a scanner sees that complete definition, this header never needs to.
+ */
+
+#include "mixa_manager/mixa_cmdline_dispatch.h"
+#include "mixa_manager/mixa_process.h"
+
+struct MixaCmdDispatch {
+    MixaProcess *proc;
+    struct MixaProcessMarkerScanner *scanner;
+    MixaFile *console_file;
+    char *wrapper_path;
+    int done;
+    int exit_code;
+    char *new_cwd;
+};
+
+#endif
+
+
+========== mixa_app_path.h ==========
+#ifndef MIXA_APP_PATH_H
+#define MIXA_APP_PATH_H
+
+/* Exact, checked path construction for the real app entrypoint (ticket
+ * 20260912-233811). mixa_app_main.lm1 previously copied argv[1] into a
+ * fixed char[1040] and formatted the console path into a fixed
+ * char[1100] via snprintf -- both SILENTLY TRUNCATING, and both
+ * arbitrary capacity constants standing in as semantic limits. This unit
+ * replaces them with exact byte storage sized from strlen plus the
+ * suffix, with every size addition overflow-checked before allocation.
+ *
+ * A plain hand-written C header (the same form mixa_process.h /
+ * mixa_process_win32.h already use) rather than a .h.lm1 predef, for a
+ * measured reason: mixa_app_main.lm1's own comment records that its
+ * import path table is already at the limit (the 15-file fm_copy chain
+ * plus the console header fits at exactly 16, and both full chains
+ * together overflow). An `include:` of a plain C header costs that table
+ * nothing, so the entrypoint can call these without giving up the
+ * console render hook. The bodies live in mixa_app_path.lm1, compiled as
+ * its own translation unit and linked in -- ordinary separate
+ * compilation, the same way mixa_console_window.lm1 already reaches this
+ * entrypoint.
+ *
+ * NO path policy of any kind lives here: no normalization, no separator
+ * rewriting, no MAX_PATH opinion, no Win32 long-path prefixing. Bytes in
+ * are bytes out. FILE_SEAM and the Win32 long-path question are
+ * deliberately untouched by this unit.
+ */
+
+#include <stddef.h>
+
+#define MIXA_APP_PATH_OK 0
+#define MIXA_APP_PATH_ERR_ARG 1
+#define MIXA_APP_PATH_ERR_NOMEM 2
+#define MIXA_APP_PATH_ERR_OVERFLOW 3
+
+/* Deterministic allocation-fault injection, the same borrowed-vtable
+ * idiom already established by mixa_fileio's MixaFioFaultVTable and
+ * mixa_process_marker's MixaProcessMarkerFaultVTable. Nullable: pass 0
+ * (or a vtable with a null on_alloc) for real, uninjected allocation. A
+ * nonzero return forces that ONE attempt to fail with
+ * MIXA_APP_PATH_ERR_NOMEM, so the caller's own release path is provable
+ * rather than hoped for. */
+typedef int (*MixaAppPathFaultFn)(void *ctx, size_t requested_size);
+
+typedef struct MixaAppPathFaultVTable {
+    MixaAppPathFaultFn on_alloc;
+    void *ctx;
+} MixaAppPathFaultVTable;
+
+/* The size arithmetic, split out as its own pure function precisely so
+ * the overflow guard is DIRECTLY testable: a real join can never reach
+ * the wrap point (it would need a ~SIZE_MAX-byte input string), but this
+ * takes the two lengths as values, so SIZE_MAX cases are exercised for
+ * real instead of merely asserted in a comment.
+ *
+ * *out_total receives a_len + b_len + 1 (the NUL) on success. Returns
+ * MIXA_APP_PATH_ERR_OVERFLOW if that sum would wrap size_t, checked
+ * BEFORE any addition is performed, and MIXA_APP_PATH_ERR_ARG if
+ * out_total is null. *out_total is set to 0 on every failure. */
+int mixa_app_path_total(size_t a_len, size_t b_len, size_t *out_total);
+
+/* Allocates and returns, in *out, exactly a's bytes followed by b's
+ * bytes plus a terminating NUL -- sized from their real strlen, never a
+ * fixed capacity, never truncated. The caller owns *out and frees it
+ * with free(). *out is set to 0 on every failure path, and nothing is
+ * left allocated on any of them.
+ *
+ * An exact COPY of one string is join(src, "") -- that is the intended
+ * use for argv[1], not a separate duplicate-me entry point.
+ *
+ * fault (nullable, borrowed) is consulted immediately before the one
+ * allocation this function performs. */
+int mixa_app_path_join(const char *a, const char *b,
+                       const MixaAppPathFaultVTable *fault, char **out);
+
+#endif
+
+
+========== mixa_app_controller.h ==========
+#ifndef MIXA_APP_CONTROLLER_H
+#define MIXA_APP_CONTROLLER_H
+
+/* The reusable app-controller seam (ticket 20260913-010249). FIRST_
+ * VERSION.txt's own feature list (glyphs, process seam, console, Enter,
+ * F1) is now real, but every previous ticket wired it directly into
+ * mixa_app_main.lm1's own main() -- build-only, since that file opens a
+ * real window and can never run in an automated suite. This module
+ * extracts that SAME orchestration (open the app loop, the console
+ * view/file, F1 Help, the editable command line and its Enter dispatch,
+ * the render surfaces; one non-blocking tick; release everything) into
+ * its own callable seam, so the identical production logic can be
+ * driven by EITHER a real Win32 backend (the real entrypoint, now a
+ * thin owner that only supplies vt/root_utf8 and drives the loop) OR
+ * the existing headless backend with a real temporary file (an
+ * automated end-to-end test) -- never a parallel test-only copy of the
+ * orchestration.
+ *
+ * MixaAppController is opaque: a plain C header, reached via include:
+ * not predef:, for the same measured import-table reason mixa_app_path/
+ * mixa_help/mixa_cmdline_dispatch already are. Its concrete fields live
+ * in mixa_app_controller_impl.h, included ONLY by mixa_app_controller.
+ * lm1 -- the same opaque-handle split mixa_file.h/mixa_file_win32.h and
+ * mixa_cmdline_dispatch.h/_impl.h already establish.
+ *
+ * Driving shape: open() once, then the CALLER's own while loop calls
+ * step() repeatedly while running() is nonzero, then close() once. This
+ * function does not loop internally, which is exactly what lets the
+ * SAME step() implementation serve a real window's own message pump
+ * (Win32) and a synthetic, test-injected event stream (headless) with
+ * no branching on which backend is in use anywhere in this seam. */
+
+#include <stddef.h>
+#include "mixa_manager/mixa_backend.h"
+#include "mixa_manager/mixa_core.h"
+
+typedef struct MixaAppController MixaAppController;
+typedef struct MixaFm MixaFm;
+
+#define MIXA_APP_CONTROLLER_OK 0
+#define MIXA_APP_CONTROLLER_ERR_ARG 1
+#define MIXA_APP_CONTROLLER_ERR_OPEN 2
+
+/* Opens everything the production loop needs. vt selects the backend
+ * (win32 for the real entrypoint, headless for an automated end-to-end
+ * test); root_utf8 is joined verbatim into an exact, owned copy (no
+ * normalization, no truncation -- mixa_app_path's own already-tested
+ * contract). On success *out is a new, owned handle; on any failure
+ * *out is left null and everything this call itself acquired is
+ * already released. */
+int mixa_app_controller_open(MixaAppController **out,
+                             const MixaBackendVTable *vt,
+                             const char *root_utf8);
+
+/* One tick: polls any in-flight command (never blocking -- at most one
+ * real process read), drains the backend's own pump for at most one
+ * event, and dispatches it through Copy Here / F1 Help / command-line
+ * editing / Enter exactly as the production loop always has, then
+ * presents one frame whenever either the event or the command poll made
+ * progress (an idle tick with neither sleeps 1ms). *out_had_error is
+ * set nonzero the one tick the underlying step reports a real error
+ * (the caller should stop calling step() once running() goes to 0
+ * afterward). The caller's own loop decides when to stop -- this
+ * function never loops internally. */
+int mixa_app_controller_step(MixaAppController *c, int *out_had_error);
+
+/* Nonzero while the underlying app loop has not yet seen a CLOSE event
+ * (mirrors mixa_app_loop_running exactly). */
+int mixa_app_controller_running(const MixaAppController *c);
+
+/* Releases everything this controller owns, in the reverse of
+ * acquisition order. Null-safe. */
+void mixa_app_controller_close(MixaAppController *c);
+
+/* --- Introspection, all borrowed and read-only. Lets a headless
+ * end-to-end test inject synthetic events and inspect exactly what the
+ * SAME production code rendered/decided, without a parallel test-only
+ * copy of any orchestration logic. */
+MixaBackend *mixa_app_controller_backend(const MixaAppController *c);
+const MixaTextRect *mixa_app_controller_text_rect(const MixaAppController *c);
+const MixaTextRect *mixa_app_controller_upper_rect(const MixaAppController *c);
+int mixa_app_controller_command_running(const MixaAppController *c);
+int mixa_app_controller_last_exit_code(const MixaAppController *c);
+const char *mixa_app_controller_cwd(const MixaAppController *c);
+size_t mixa_app_controller_cursor_row(const MixaAppController *c);
+size_t mixa_app_controller_cursor_col(const MixaAppController *c);
+size_t mixa_app_controller_file_size(const MixaAppController *c);
+
+/* Borrowed, read-only introspection for the same reason as the block
+ * above (ticket 20260913-032000's own real production-controller test):
+ * the MixaFm the app-loop already owns, so a test can select real
+ * entries through the real mixa_fm_select API before driving a synthetic
+ * click on the visible Delete/Copy Here row -- never a second, test-only
+ * selection model. The caller must predef mixa_file_manager.h.lm1 itself
+ * to reach mixa_fm_select/_count/_name's own prototypes; this header
+ * only forward-declares the opaque type, exactly like mixa_app_fmpanel.h
+ * already does for the identical reason. */
+MixaFm *mixa_app_controller_fm(const MixaAppController *c);
+
+/* Same reasoning, for the vertical-scroll/keyboard-highlight state
+ * (ticket 20260913-044900): a test can read mixa_app_fmpanel_view_top/
+ * _highlight_index on the SAME real panel the production controller
+ * renders, never a second copy of that state. Declared with the bare
+ * struct tag (no typedef here) so this header does not need to know
+ * about MixaAppFmPanel at all beyond the pointer type -- the caller
+ * includes mixa_app_fmpanel.h itself for the real typedef and the
+ * getter prototypes, exactly like the mixa_fm_select() note above. */
+struct MixaAppFmPanel *mixa_app_controller_fmpanel(const MixaAppController *c);
+
+#endif
+
+
+========== mixa_app_controller_impl.h ==========
+#ifndef MIXA_APP_CONTROLLER_IMPL_H
+#define MIXA_APP_CONTROLLER_IMPL_H
+
+/* Concrete MixaAppController; opaque to callers of mixa_app_controller.
+ * h. Owner holds MixaAppController* and closes it -- the same opaque-
+ * handle split mixa_file.h/mixa_file_win32.h and mixa_cmdline_dispatch.
+ * h/_impl.h already establish. Included ONLY by mixa_app_controller.
+ * lm1.
+ *
+ * struct MixaAppLoop / MixaConsoleView / MixaConsolePending /
+ * MixaFmAllocVTable are referenced here by STRUCT TAG ONLY (never
+ * through their own typedef names), exactly the mixa_cmdline_dispatch_
+ * impl.h precedent for MixaProcessMarkerScanner: a bare `struct TAG *`
+ * field implicitly forward-declares an incomplete struct in this scope,
+ * needing no typedef and risking no redeclaration conflict once mixa_
+ * app_controller.lm1's own predef of mixa_fm_copy.h.lm1/mixa_console_
+ * window.h.lm1 compiles the REAL, complete definitions into the same
+ * translation unit.
+ */
+
+#include "mixa_manager/mixa_app_controller.h"
+#include "mixa_manager/mixa_file.h"
+#include "mixa_manager/mixa_help.h"
+#include "mixa_manager/mixa_cmdline.h"
+#include "mixa_manager/mixa_cmdline_dispatch.h"
+
+struct MixaAppController {
+    char *root;
+    struct MixaAppLoop *loop;
+    MixaCellMetrics *m;
+    MixaEvent *ev;
+    struct MixaFmAllocVTable *av;
+    const MixaBackendVTable *vt;
+    char *console_path;
+    MixaFile *console_file;
+    MixaFile *console_file_append;
+    struct MixaConsoleView *view;
+    MixaTextRect *text_rect;
+    MixaTextRect *upper_rect;
+    MixaU8 *rgba;
+    size_t width_px;
+    size_t height_px;
+    size_t rgba_size;
+    MixaHelpCtx *help_ctx;
+    size_t help_btn_row;
+    size_t help_btn_col;
+    size_t help_btn_nrows;
+    size_t help_btn_ncols;
+    MixaCmdLine *cmdline;
+    MixaCmdDispatch *dispatch;
+    char *cwd_owned;
+    const char *cwd_cur;
+    struct MixaConsolePending *pending_view;
+    int last_exit_code;
+    struct MixaAppFmPanel *fmpanel;
+    /* A real, allocated (but all-zero-callback) MixaCopySink -- ticket
+     * 20260913-041656 found mixa_fm_copy_selection's own null-pointer
+     * check (`if: ... sink = 0 -> ERR_ARG`) was rejecting Copy Here
+     * OUTRIGHT every single time in production, since this field had
+     * always been passed as a literal 0 to mixa_app_loop_open, never a
+     * real (if callback-less) struct. A zeroed struct's every callback
+     * field is still 0, so mixa_copy_invoke's own established "f=0 ->
+     * propagate status or GO" default behavior is unchanged -- only the
+     * OUTER pointer itself is no longer null. */
+    struct MixaCopySink *copy_sink;
+};
+
+#endif
+
+
+========== mixa_app_fmpanel.h ==========
+#ifndef MIXA_APP_FMPANEL_H
+#define MIXA_APP_FMPANEL_H
+
+/* First visible file-manager panel in the production controller (ticket
+ * 20260913-032000). Renders MixaFm's own owned snapshot (current
+ * directory + entry listing) and a small action row exposing the
+ * already-accepted Delete operation (mixa_remove_selected_run/mixa_
+ * dir_remove, reused -- their WALK-GLUE re-implemented locally here, see
+ * mixa_app_fmpanel.txt for why) behind a real, drawn, same-app Cancel/OK
+ * confirmation.
+ *
+ * Deliberately does NOT reuse mixa_app_window.h.lm1/mixa_buttons.h: this
+ * module's own translation unit also needs mixa_backend.h (for MixaEvent,
+ * reached transitively the same way mixa_app_controller.lm1 already
+ * does), and mixa_backend.h's own MixaButton (an enum: MIXA_BUTTON_LEFT/
+ * MIDDLE/RIGHT for mouse buttons) collides on the bare type name with
+ * mixa_buttons.h's OWN MixaButton (a struct: one UI button) -- confirmed
+ * as a real, reproducible compile error by actually trying it (see mixa_
+ * app_fmpanel.txt), not assumed. Every "button" here is therefore a raw
+ * drawn cell region with a raw bounds-check hit-test, the exact same
+ * style mixa_help's own F1 button and mixa_fm_copy_here_hit's own rect
+ * check already establish for the identical reason category (avoiding a
+ * predef/type-collision cost inside the production controller's own
+ * translation unit) -- not a new pattern invented for this ticket.
+ *
+ * Deliberately does NOT predef mixa_remove.h.lm1/mixa_fm_remove.h.lm1/
+ * mixa_remove_confirm.h.lm1 either: mixa_app_controller.lm1's own import
+ * table is already documented at its ceiling (measured directly: adding
+ * either header alone overflows it), and even from a FRESH file, predef-
+ * ing the REAL mixa_remove.lm1/mixa_fm_remove.lm1 implementations would
+ * double-define mixa_fm_..., mixa_selection_..., mixa_dir_... symbols against
+ * mixa_app_controller.o's own already-real copies of the exact same
+ * functions (reached via ITS OWN existing mixa_fm_copy.lm1 predef chain).
+ * This module instead predefs ONLY the relevant HEADERS (mixa_file_
+ * manager.h.lm1, mixa_selection_walk.h.lm1) for types/prototypes, and
+ * reimplements the small (~40-line) walk-glue (on_file/on_dir_done,
+ * mirroring mixa_remove.lm1's own logic) directly against those already-
+ * real, already-linked symbols -- a deliberate, small, disclosed local
+ * duplication to escape a confirmed toolchain constraint, not a
+ * divergent reimplementation of the operation's own semantics.
+ */
+
+#include <stddef.h>
+#include "mixa_manager/mixa_core.h"
+
+typedef struct MixaFm MixaFm;
+typedef struct MixaAppFmPanel MixaAppFmPanel;
+
+#define MIXA_APP_FMPANEL_OK 0
+#define MIXA_APP_FMPANEL_ERR_ARG 1
+#define MIXA_APP_FMPANEL_ERR_NOMEM 2
+
+/* list_row/col/rows/cols: where the path + entry listing draws (rows
+ * clipped to whatever is available -- no cap on fm's own entry count,
+ * only on how many VISIBLE rows this geometry offers, exactly like the
+ * console view's own real-screen-row bound). action_row/col: where the
+ * "Delete"/"Copy Here" labels draw, one row, both reached via the
+ * SAME rect. */
+int mixa_app_fmpanel_open(MixaAppFmPanel **out, MixaFm *fm,
+                          size_t list_row, size_t list_col,
+                          size_t list_rows, size_t list_cols,
+                          size_t action_row, size_t action_col);
+void mixa_app_fmpanel_close(MixaAppFmPanel *p);
+
+/* Redraws the whole panel (path, entries, action labels, and -- if a
+ * confirmation is currently open -- the confirmation surface on top of
+ * it) into rect. Call every present() tick, same cadence as the pending-
+ * line refresh. */
+int mixa_app_fmpanel_render(MixaAppFmPanel *p, MixaTextRect *rect);
+
+/* One popped mouse-click cell coordinate (SAME upper-layer cell space
+ * mixa_help_hit already uses). Returns:
+ *   0 -- not mine; the caller's other hit-tests (F1 Help, console)
+ *        should still see it.
+ *   1 -- consumed: the Delete label (opens the nested confirmation), or
+ *        -- while a confirmation is open -- ANY cell (input routes to
+ *        the top nested surface only while one is open, mirroring
+ *        mixa_app_window's own established contract; Cancel/OK inside
+ *        it are both handled here).
+ *   2 -- the Copy Here label was hit. This module never touches
+ *        MixaFmCopyHereCtx (owned elsewhere); the caller runs the
+ *        already-accepted mixa_fm_copy_here_action itself on seeing
+ *        this, the exact same action its own Ctrl+V path already
+ *        invokes today. */
+int mixa_app_fmpanel_hit(MixaAppFmPanel *p, MixaTextRect *rect,
+                         size_t cell_row, size_t cell_col);
+
+int mixa_app_fmpanel_confirm_is_open(const MixaAppFmPanel *p);
+
+/* Copy Here's own visible result (ticket 20260913-041656). Call this
+ * with the EXACT status mixa_fm_copy_here_action (via MixaFmCopyHereCtx.
+ * last_status) already returned -- never a synthesized or guessed one --
+ * immediately after EITHER real invocation route: the mouse route (hit()
+ * returning 2, the caller then calls the action itself and reports its
+ * result here) or the keyboard route (mixa_app_loop_step returning
+ * MIXA_COPY_HERE_HIT_ACTION -- the same signal that already means
+ * "Ctrl+V/V just ran the action this tick"). The result persists across
+ * unrelated events (no other event touches it) until either a later
+ * invocation replaces it or a dismiss click (hit() on the result text
+ * itself, a region distinct from Delete/Copy Here/entry rows/F1 Help)
+ * clears it. */
+void mixa_app_fmpanel_report_copy_result(MixaAppFmPanel *p, int status);
+
+/* Vertical scrolling + keyboard highlight (ticket 20260913-044900). The
+ * list's own rightmost column is a real, drawn scrollbar (UI_MODEL 1/5.7.2:
+ * "a single list -- vertically, in its own bounds and its own scrollbar"),
+ * clickable to move the view alone (hit() handles this; no separate entry
+ * point). Keyboard Up/Down move a highlighted CURRENT entry -- there is no
+ * such notion until the first Up/Down, matching mouse click-to-select
+ * (established, unrelated) staying entirely selection-based, never
+ * highlight-based. The view follows the highlight (never the reverse):
+ * moving it into view when it would otherwise scroll off, exactly UI_MODEL
+ * 5.7.1's own asymmetric rule ("the VIEW may leave the highlight [via a
+ * mouse-only move]... any HIGHLIGHT movement brings the view back").
+ *
+ * At the time this was written, a mouse WHEEL was not in mixa_backend.h's
+ * own MixaEvent contract at all -- only MIXA_EVENT_MOUSE with buttons/row/
+ * col existed, no wheel delta. Closed by ticket 20260913-053000: see mixa_
+ * app_fmpanel_wheel below. */
+int mixa_app_fmpanel_key(MixaAppFmPanel *p, int keycode);
+
+/* A real mouse-wheel notch (ticket 20260913-053000, MIXA_EVENT_MOUSE_WHEEL
+ * in mixa_backend.h) at half-cell-derived upper-cell (cell_row, cell_col).
+ * Same UI_MODEL 5.7.1 asymmetric rule as the scrollbar-track click above:
+ * moves the view ALONE, touching neither the keyboard highlight nor any
+ * selection. notches is signed (positive = away from the user / "scroll
+ * up", negative = toward the user / "scroll down", the caller's own
+ * MixaEvent.wheel_delta passed through unchanged) and may be more than one
+ * per call on a fast wheel turn -- one row of view movement per notch, no
+ * OS-configurable multiplier, a deliberate, disclosed simplification.
+ * Returns 0 (not consumed, coordinates fall outside this panel's own list
+ * area -- the caller's other handlers should still see the event) or 1
+ * (consumed). Never touches the confirmation surface: like every other hit
+ * region, a wheel event arriving while the confirmation is open is not
+ * consumed here at all (the confirmation itself has no scrollable content,
+ * so there is nothing for this function to do while it is open). */
+int mixa_app_fmpanel_wheel(MixaAppFmPanel *p, size_t cell_row, size_t cell_col,
+                           int notches);
+
+/* Scrollbar-thumb dragging (ticket 20260913-060000). Pressing the left
+ * button (hit() sees this the same way it already sees a click: a mouse
+ * event with the left bit set) exactly on the CURRENT thumb starts a drag
+ * instead of the existing jump-to-position behavior a track click elsewhere
+ * still gets (requirement 5's own "preserve existing track-click"); no
+ * separate entry point exists for starting one, matching every other
+ * gesture this module owns. Once active, EVERY subsequent hit() call (an
+ * ordinary mouse-move-while-held, indistinguishable at this seam from a
+ * repeated press -- see mixa_app_fmpanel.txt's own Part VI for why that is
+ * fine) moves the view following the cursor row, honoring the grab offset
+ * captured at the press so the thumb does not jump to align its own first
+ * row under the cursor. The mapping is recomputed fresh from the CURRENT
+ * real entry count on every call, so a shrink/refresh mid-drag clamps
+ * safely rather than leaving a stale view_top. Never touches the keyboard
+ * highlight or any selection.
+ *
+ * mixa_app_fmpanel_release ends an active drag; call it on every mouse
+ * event where the left button is NOT held (a real button-up, or an
+ * ordinary hover-move with no button at all) -- idempotent when no drag is
+ * active, so the caller does not need to track that state itself. */
+int mixa_app_fmpanel_release(MixaAppFmPanel *p);
+
+/* Introspection for tests (same reason mixa_app_controller_fm exists):
+ * the index of the first entry currently drawn, and the keyboard-highlighted
+ * entry's index or -1 if none has been established yet. */
+size_t mixa_app_fmpanel_view_top(const MixaAppFmPanel *p);
+int mixa_app_fmpanel_highlight_index(const MixaAppFmPanel *p);
+
+/* Introspection for tests (ticket 20260913-060000): whether a scrollbar
+ * drag is currently active. */
+int mixa_app_fmpanel_drag_active(const MixaAppFmPanel *p);
+
+#endif
+
+
+========== mixa_app_fmpanel_impl.h ==========
+#ifndef MIXA_APP_FMPANEL_IMPL_H
+#define MIXA_APP_FMPANEL_IMPL_H
+
+/* Concrete MixaAppFmPanel; opaque to callers of mixa_app_fmpanel.h.
+ * Included ONLY by mixa_app_fmpanel.lm1 -- the same opaque-handle split
+ * mixa_app_controller.h/_impl.h already establish.
+ *
+ * struct MixaSelection is referenced by STRUCT TAG ONLY (mixa_selection.h
+ * is a plain C header with the real, complete definition already
+ * available wherever it is include:'d -- referencing it here by tag only
+ * keeps this header from needing to include it itself).
+ */
+
+#include "mixa_manager/mixa_app_fmpanel.h"
+#include "mixa_manager/mixa_highlight.h"
+
+#define MIXA_APP_FMPANEL_PATH_MAX 1024
+
+struct MixaAppFmPanel {
+    MixaFm *fm;
+    size_t list_row;
+    size_t list_col;
+    size_t list_rows;
+    size_t list_cols;
+    size_t action_row;
+    size_t action_col;
+
+    /* Raw, buttons-free confirmation surface (see mixa_app_fmpanel.h's
+     * own comment for why this does not reuse mixa_app_window). */
+    int confirm_open;
+    size_t confirm_row;
+    size_t confirm_col;
+    size_t confirm_rows;
+    size_t confirm_cols;
+    size_t cancel_row;
+    size_t cancel_col;
+    size_t cancel_w;
+    size_t ok_row;
+    size_t ok_col;
+    size_t ok_w;
+    MixaCell *saved;
+    size_t saved_count;
+    size_t saved_row;
+    size_t saved_col;
+    size_t saved_rows;
+    size_t saved_cols;
+
+    int invocations;
+    int has_failure;
+    int last_status;
+    char failing_path[MIXA_APP_FMPANEL_PATH_MAX];
+
+    /* Copy Here's own visible result (ticket 20260913-041656) -- the
+     * SAME MixaFmCopyHereCtx.last_status the accepted action already
+     * sets, never a second status channel. Persists until an explicit
+     * dismiss click on the result text itself, or a later invocation
+     * replaces it. */
+    int has_copy_result;
+    int copy_last_status;
+
+    /* Vertical scrolling + keyboard highlight (ticket 20260913-044900).
+     * view_top is the index of the first entry currently drawn in the
+     * list area; highlight_idx is the keyboard-moved current entry, -1
+     * meaning no keyboard highlight has been established yet (mouse-only
+     * selection, from earlier tickets, still works with no highlight at
+     * all). last_dir/has_last_dir detect a directory change between
+     * renders so the view resets to the top of the NEW listing instead
+     * of keeping an old scroll position that no longer means anything --
+     * see mixa_app_fmpanel_clamp_view's own comment in the .lm1. */
+    size_t view_top;
+    int highlight_idx;
+    char last_dir[MIXA_APP_FMPANEL_PATH_MAX];
+    int has_last_dir;
+
+    /* Scrollbar-thumb dragging (ticket 20260913-060000). drag_active is
+     * nonzero from the tick the left button is pressed exactly on the
+     * CURRENT thumb until the tick it is released (mixa_app_fmpanel_
+     * release, called on every button-up mouse event, always clears it --
+     * idempotent when no drag is active). drag_grab_offset is the row
+     * within the thumb (0 = its own first/top row) where the press
+     * landed, fixed for the whole drag so the thumb tracks the cursor at
+     * that same relative row rather than snapping its top row under it --
+     * requirement 2's own "does not jump when grabbed away from its
+     * first row". Both are ordinary per-instance state, not globals. */
+    int drag_active;
+    size_t drag_grab_offset;
+
+    /* Moving double-box keyboard focus frame (ticket 20260913-064500),
+     * replacing the reverse-video stand-in Part IV disclosed. Embedded by
+     * VALUE (MixaHighlight is a complete, plain-C struct, not opaque) so
+     * open()/close() need no separate allocation for it -- mirrors how
+     * this struct itself is embedded directly in the caller's own
+     * MixaAppController rather than through a second pointer indirection.
+     * See mixa_app_fmpanel.txt's own Part VII for why this needs a
+     * dedicated blank "focus gutter" column pair rather than framing the
+     * full entry row: mixa_draw_frame (which mixa_highlight_set calls)
+     * refuses nrows<2, and a real list entry is exactly one text row
+     * tall -- framing two real rows would overwrite a NEIGHBORING
+     * entry's own text with border glyphs, which requirement 1's own "do
+     * not... overwrite the underlying row fill" forbids. */
+    MixaHighlight focus;
+};
+
+#endif
+
+
+========== tests\l1_gaps\vt.h ==========
+#ifndef L1GAPS_VT_H
+#define L1GAPS_VT_H
+#include <stddef.h>
+typedef struct VT { int x; } VT;
+
+/* The bridge: name the inner pointer type, then qualify the ALIAS. */
+typedef const VT *VTRef;
+
+/* The exact prototype the bridge must match. */
+const VT *const *reg_tables(size_t *count);
+#endif
+
+

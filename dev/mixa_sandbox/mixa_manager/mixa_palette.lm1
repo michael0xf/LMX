@@ -1,0 +1,293 @@
+predef: "mixa_manager/mixa_palette.h.lm1"
+
+# Тело палитры: пары ClearShell, перенесённые построчно.
+#
+# Пара упакована в два 32-битных значения 0xAARRGGBB -- РОВНО в том виде, в каком она
+# записана в источнике (Color.argb), чтобы сверка с ClearShell.java была построчной и не
+# требовала пересчёта в голове.  Цитата источника стоит рядом с каждой парой.
+#
+# Замечание о c0/b0 (UI_MODEL 3 называет их цветами консоли): в ClearShell.java они
+# объявлены (строки 690-691) и НЕ ИСПОЛЬЗУЮТСЯ НИ РАЗУ -- консоль (TextView) одета
+# cBlack/bBlack (строки 2453-2454).  Пара c0/b0 всё равно внесена в таблицу (индекс 19),
+# чтобы названное документом не потерялось, но рисует консоль та пара, которой её одел
+# источник.
+
+fn: mixa_palette_pair (unsigned: index; @: unsigned out_text; @: unsigned out_bg) int
+    if: out_text = 0 || out_bg = 0
+        return: MIXA_PALETTE_ERR_ARG
+    ---
+    # cBlack = Color.argb(240, 255, 255, 255)   ClearShell.java:646
+    # bBlack = Color.argb(96, 0, 0, 0)          ClearShell.java:647
+    if: index = MIXA_PAL_BLACK
+        out_text[0]: 0xF0FFFFFFU
+        out_bg[0]: 0x60000000U
+        return: MIXA_PALETTE_OK
+    ---
+    # cGreen = Color.argb(240, 0, 16, 0)        ClearShell.java:635
+    # bGreen = Color.argb(96, 128, 255, 128)    ClearShell.java:636
+    if: index = MIXA_PAL_GREEN
+        out_text[0]: 0xF0001000U
+        out_bg[0]: 0x6080FF80U
+        return: MIXA_PALETTE_OK
+    ---
+    # cGreen1 = Color.argb(240, 0, 16, 16)      ClearShell.java:638
+    # bGreen1 = Color.argb(96, 64, 255, 192)    ClearShell.java:639
+    if: index = MIXA_PAL_GREEN1
+        out_text[0]: 0xF0001010U
+        out_bg[0]: 0x6040FFC0U
+        return: MIXA_PALETTE_OK
+    ---
+    # cBlue = Color.argb(240, 0, 0, 96)         ClearShell.java:641
+    # bBlue = Color.argb(96, 0, 192, 255)       ClearShell.java:642
+    if: index = MIXA_PAL_BLUE
+        out_text[0]: 0xF0000060U
+        out_bg[0]: 0x6000C0FFU
+        return: MIXA_PALETTE_OK
+    ---
+    # текст -- cBlue (641); bPleaseWait = Color.argb(64, 128, 192, 255)  ClearShell.java:643
+    # Единственный фон с альфой 64: «bPleaseWait uses 64» (UI_MODEL 3).
+    if: index = MIXA_PAL_PLEASE_WAIT
+        out_text[0]: 0xF0000060U
+        out_bg[0]: 0x4080C0FFU
+        return: MIXA_PALETTE_OK
+    ---
+    # cCyan = Color.argb(240, 0, 0, 96)         ClearShell.java:644
+    # bCyan = Color.argb(96, 64, 255, 255)      ClearShell.java:645
+    if: index = MIXA_PAL_CYAN
+        out_text[0]: 0xF0000060U
+        out_bg[0]: 0x6040FFFFU
+        return: MIXA_PALETTE_OK
+    ---
+    # cRose = cBlue (648); bRose = Color.argb(96, 255, 192, 255)  ClearShell.java:649
+    if: index = MIXA_PAL_ROSE
+        out_text[0]: 0xF0000060U
+        out_bg[0]: 0x60FFC0FFU
+        return: MIXA_PALETTE_OK
+    ---
+    # cGray = Color.argb(240, 0, 0, 0)          ClearShell.java:650
+    # bGray = Color.argb(96, 128, 128, 128)     ClearShell.java:651
+    if: index = MIXA_PAL_GRAY
+        out_text[0]: 0xF0000000U
+        out_bg[0]: 0x60808080U
+        return: MIXA_PALETTE_OK
+    ---
+    # cLight = Color.argb(240, 32, 32, 32)      ClearShell.java:653
+    # bLight = Color.argb(96, 192, 192, 192)    ClearShell.java:654
+    # Этой парой одета строка пути: filePath.setBackgroundColor(bLight);
+    # filePath.setTextColor(cLight);            ClearShell.java:2508-2509
+    if: index = MIXA_PAL_LIGHT
+        out_text[0]: 0xF0202020U
+        out_bg[0]: 0x60C0C0C0U
+        return: MIXA_PALETTE_OK
+    ---
+    # cRed = Color.argb(240, 32, 0, 0)          ClearShell.java:655
+    # bRed = Color.argb(96, 255, 128, 128)      ClearShell.java:656
+    if: index = MIXA_PAL_RED
+        out_text[0]: 0xF0200000U
+        out_bg[0]: 0x60FF8080U
+        return: MIXA_PALETTE_OK
+    ---
+    # cRed1 = Color.argb(240, 0, 0, 32)         ClearShell.java:657
+    # bRed1 = Color.argb(96, 255, 192, 192)     ClearShell.java:658
+    if: index = MIXA_PAL_RED1
+        out_text[0]: 0xF0000020U
+        out_bg[0]: 0x60FFC0C0U
+        return: MIXA_PALETTE_OK
+    ---
+    # cMangeta = Color.argb(240, 32, 0, 32)     ClearShell.java:660
+    # bMangeta = Color.argb(96, 255, 128, 255)  ClearShell.java:661
+    # Имя в источнике пишется cMangeta/bMangeta; в документе 5.4 та же пара -- Magenta.
+    if: index = MIXA_PAL_MAGENTA
+        out_text[0]: 0xF0200020U
+        out_bg[0]: 0x60FF80FFU
+        return: MIXA_PALETTE_OK
+    ---
+    # cBrown = Color.argb(240, 16, 16, 0)       ClearShell.java:663
+    # bBrown = Color.argb(96, 192, 192, 96)     ClearShell.java:664
+    if: index = MIXA_PAL_BROWN
+        out_text[0]: 0xF0101000U
+        out_bg[0]: 0x60C0C060U
+        return: MIXA_PALETTE_OK
+    ---
+    # cYellow = Color.argb(240, 16, 16, 0)      ClearShell.java:666
+    # bYellow = Color.argb(96, 255, 192, 128)   ClearShell.java:667
+    if: index = MIXA_PAL_YELLOW
+        out_text[0]: 0xF0101000U
+        out_bg[0]: 0x60FFC080U
+        return: MIXA_PALETTE_OK
+    ---
+    # текст -- cYellow (666); bYellow2 = Color.argb(96, 255, 160, 216)  ClearShell.java:668
+    if: index = MIXA_PAL_YELLOW2
+        out_text[0]: 0xF0101000U
+        out_bg[0]: 0x60FFA0D8U
+        return: MIXA_PALETTE_OK
+    ---
+    # cYellow1 = cGreen (670); bYellow1 = Color.argb(96, 255, 255, 192)  ClearShell.java:671
+    if: index = MIXA_PAL_YELLOW1
+        out_text[0]: 0xF0001000U
+        out_bg[0]: 0x60FFFFC0U
+        return: MIXA_PALETTE_OK
+    ---
+    # cOrange = Color.argb(240, 48, 24, 0)      ClearShell.java:673
+    # bOrange = Color.argb(96, 255, 192, 0)     ClearShell.java:674
+    if: index = MIXA_PAL_ORANGE
+        out_text[0]: 0xF0301800U
+        out_bg[0]: 0x60FFC000U
+        return: MIXA_PALETTE_OK
+    ---
+    # bSel = 0xFF000060; cSel = 0xFFFFFF40      ClearShell.java:677-678
+    # ЕДИНСТВЕННАЯ НЕПРОЗРАЧНАЯ ПАРА, и это нарочно: «Selected being opaque where
+    # everything else is translucent is worth preserving rather than regularising: it is
+    # what makes a selection read as selected» (UI_MODEL 5.4).
+    if: index = MIXA_PAL_SEL
+        out_text[0]: 0xFFFFFF40U
+        out_bg[0]: 0xFF000060U
+        return: MIXA_PALETTE_OK
+    ---
+    # bSel1 = Color.argb(96, 255, 255, 0x40)    ClearShell.java:679
+    # cSel1 = Color.argb(240, 00, 00, 0x60)     ClearShell.java:680
+    if: index = MIXA_PAL_SEL1
+        out_text[0]: 0xF0000060U
+        out_bg[0]: 0x60FFFF40U
+        return: MIXA_PALETTE_OK
+    ---
+    # c0 = Color.argb(240, 32, 32, 0)           ClearShell.java:690
+    # b0 = Color.argb(96, 255, 255, 192)        ClearShell.java:691
+    # Документ (UI_MODEL 3) называет эту пару цветами консоли; источник её не использует
+    # ни разу -- см. заголовок файла.  Внесена, чтобы названное документом не пропало.
+    if: index = MIXA_PAL_C0
+        out_text[0]: 0xF0202000U
+        out_bg[0]: 0x60FFFFC0U
+        return: MIXA_PALETTE_OK
+    ---
+return: MIXA_PALETTE_ERR_INDEX
+
+fn: mixa_palette_is_pair (unsigned: index) int
+    if: index < MIXA_PAL_COUNT
+        return: 1
+return: 0
+
+# Текст пары: RGB и альфа источника (240 у обычных, 255 у Selected).  Рисовать букву
+# всё равно непрозрачной -- DRAWING 2; эта альфа нужна вызывающему как ДАННЫЕ.
+fn: mixa_palette_text (unsigned: index; @: MixaU8 out_r; @: MixaU8 out_g; @: MixaU8 out_b; @: MixaU8 out_a) int
+    []: unsigned t 1
+    []: unsigned b 1
+    if: out_r = 0 || out_g = 0 || out_b = 0 || out_a = 0
+        return: MIXA_PALETTE_ERR_ARG
+    ---
+    if: mixa_palette_pair(index, t, b) != MIXA_PALETTE_OK
+        return: MIXA_PALETTE_ERR_INDEX
+    ---
+    out_a[0]: (cast: (MixaU8) ((t[0] >> 24U) & 0xFFU))
+    out_r[0]: (cast: (MixaU8) ((t[0] >> 16U) & 0xFFU))
+    out_g[0]: (cast: (MixaU8) ((t[0] >> 8U) & 0xFFU))
+    out_b[0]: (cast: (MixaU8) (t[0] & 0xFFU))
+return: MIXA_PALETTE_OK
+
+# Фон пары: RGB и СВОЯ альфа источника (96 обычный фон, 64 bPleaseWait, 255 bSel).
+fn: mixa_palette_bg (unsigned: index; @: MixaU8 out_r; @: MixaU8 out_g; @: MixaU8 out_b; @: MixaU8 out_a) int
+    []: unsigned t 1
+    []: unsigned b 1
+    if: out_r = 0 || out_g = 0 || out_b = 0 || out_a = 0
+        return: MIXA_PALETTE_ERR_ARG
+    ---
+    if: mixa_palette_pair(index, t, b) != MIXA_PALETTE_OK
+        return: MIXA_PALETTE_ERR_INDEX
+    ---
+    out_a[0]: (cast: (MixaU8) ((b[0] >> 24U) & 0xFFU))
+    out_r[0]: (cast: (MixaU8) ((b[0] >> 16U) & 0xFFU))
+    out_g[0]: (cast: (MixaU8) ((b[0] >> 8U) & 0xFFU))
+    out_b[0]: (cast: (MixaU8) (b[0] & 0xFFU))
+return: MIXA_PALETTE_OK
+
+# Цвет буквы для красителя: RGB без альфы (глифы непрозрачны, DRAWING 2).
+fn: mixa_palette_text_rgb (unsigned: index; @: MixaU8 out_r; @: MixaU8 out_g; @: MixaU8 out_b) int
+    []: MixaU8 a 1
+    if: out_r = 0 || out_g = 0 || out_b = 0
+        return: MIXA_PALETTE_ERR_ARG
+    ---
+return: mixa_palette_text(index, out_r, out_g, out_b, a)
+
+# Цвет фона клетки: RGB без альфы -- альфу несёт САМА КЛЕТКА (DRAWING 2.1).
+fn: mixa_palette_bg_rgb (unsigned: index; @: MixaU8 out_r; @: MixaU8 out_g; @: MixaU8 out_b) int
+    []: MixaU8 a 1
+    if: out_r = 0 || out_g = 0 || out_b = 0
+        return: MIXA_PALETTE_ERR_ARG
+    ---
+return: mixa_palette_bg(index, out_r, out_g, out_b, a)
+
+# Альфа, которой источник одевает фон этой пары: 96 обычная, 64 bPleaseWait, 255 bSel.
+# Вызывающий берёт её, когда хочет «как в источнике»; нарисовано будет по альфе клетки.
+fn: mixa_palette_bg_alpha (unsigned: index) unsigned
+    []: MixaU8 r 1
+    []: MixaU8 g 1
+    []: MixaU8 b 1
+    []: MixaU8 a 1
+    if: mixa_palette_bg(index, r, g, b, a) != MIXA_PALETTE_OK
+        return: 0U
+    ---
+return: (cast: (unsigned) a[0])
+
+# Таблица имён (UI_MODEL 5.4): имя пары -- то же, что стоит в ClearShell.java.
+fn: mixa_palette_name (unsigned: index) const: @(char)
+    if: index = MIXA_PAL_BLACK
+        return: "Black"
+    ---
+    if: index = MIXA_PAL_GREEN
+        return: "Green"
+    ---
+    if: index = MIXA_PAL_GREEN1
+        return: "Green1"
+    ---
+    if: index = MIXA_PAL_BLUE
+        return: "Blue"
+    ---
+    if: index = MIXA_PAL_PLEASE_WAIT
+        return: "PleaseWait"
+    ---
+    if: index = MIXA_PAL_CYAN
+        return: "Cyan"
+    ---
+    if: index = MIXA_PAL_ROSE
+        return: "Rose"
+    ---
+    if: index = MIXA_PAL_GRAY
+        return: "Gray"
+    ---
+    if: index = MIXA_PAL_LIGHT
+        return: "Light"
+    ---
+    if: index = MIXA_PAL_RED
+        return: "Red"
+    ---
+    if: index = MIXA_PAL_RED1
+        return: "Red1"
+    ---
+    if: index = MIXA_PAL_MAGENTA
+        return: "Magenta"
+    ---
+    if: index = MIXA_PAL_BROWN
+        return: "Brown"
+    ---
+    if: index = MIXA_PAL_YELLOW
+        return: "Yellow"
+    ---
+    if: index = MIXA_PAL_YELLOW2
+        return: "Yellow2"
+    ---
+    if: index = MIXA_PAL_YELLOW1
+        return: "Yellow1"
+    ---
+    if: index = MIXA_PAL_ORANGE
+        return: "Orange"
+    ---
+    if: index = MIXA_PAL_SEL
+        return: "Selected"
+    ---
+    if: index = MIXA_PAL_SEL1
+        return: "Selected1"
+    ---
+    if: index = MIXA_PAL_C0
+        return: "C0"
+    ---
+return: "?"

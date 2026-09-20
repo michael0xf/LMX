@@ -1,0 +1,576 @@
+mixa_audio — audio playback seam (ClearShell "MP3" button, ticket 20260911-154950)
+==================================================================================
+
+Purpose
+-------
+One bounded slice: portable playback API for the desktop ClearShell port, backed
+on Windows by the system MCI layer. The main executable is NOT wired to it yet
+(same honest status as the app seam): this slice delivers the self-contained
+playback core, its deterministic headless selftest, and a real win32/MCI smoke
+test.
+
+Design
+------
+A PORTABLE controller (mixa_audio.lm1) owns all playlist/state-machine logic and
+talks to a DEVICE through a function-pointer vtable (MixaAudioVTable in
+mixa_audio.h.lm1). Two devices exist:
+
+  * mixa_audio_win32.lm1    real backend: MCI (winmm), links -lwinmm
+  * fake (test-only)        deterministic backend embedded in the selftest
+
+The win32 device is an MCI alias owned by one MixaAudio instance:
+  open "<path>" type <waveaudio|mpegvideo> alias mixa<N>
+  set mixa<N> time format milliseconds
+  status mixa<N> length|position|mode
+  play / seek / stop / close
+
+WAV is guaranteed via the waveaudio MCI driver. MP3 rides the mpegvideo MCI type
+and therefore depends on a system MP3 renderer (declared honestly: on machines
+without one, MP3 probe succeeds but load fails with MIXA_AUDIO_ERR_BACKEND).
+
+End of track is NOT signalled to us (no MCINOTIFY in this slice): the caller (or
+a future loop) calls mixa_audio_poll(), which queries 'status mode' and advances
+to the next item when the device reports stopped. Documented, not hidden.
+
+Files (owned slice)
+-------------------
+  mixa_manager/mixa_audio_win32.h.lm1       concrete unit (MixaAudioWin32Ctx)
+  mixa_manager/mixa_audio.h.lm1             portable contract (types + prototypes)
+  mixa_manager/mixa_audio_win32.lm1         Windows/MCI implementation
+  mixa_manager/mixa_audio.lm1               portable controller (state machine)
+  mixa_manager/tests/mixa_audio_selftest.lm1        headless fake-device selftest
+  mixa_manager/tests/mixa_audio_native_selftest.lm1 real MCI smoke test (fixture WAV)
+  mixa_manager/run_audio_selftest.ps1       fake selftest runner (no audio libs)
+  mixa_manager/run_audio_native_selftest.ps1 native runner (-lwinmm, writes WAV fixture)
+  mixa_manager/mixa_audio.txt               this note
+
+Public API (portable; works with any device)
+--------------------------------------------
+  int  mixa_audio_create(MixaAudio **out, const MixaAudioVTable *vt);
+  int  mixa_audio_set_list(MixaAudio *a, char *const *items, size_t count, size_t pos);
+  int  mixa_audio_ini(MixaAudio *a, size_t pos, unsigned long seek_ms);   // internal-ish
+  int  mixa_audio_start(MixaAudio *a, size_t pos, unsigned long seek_ms);
+  int  mixa_audio_play(MixaAudio *a);
+  int  mixa_audio_stop(MixaAudio *a);
+  int  mixa_audio_seek_to(MixaAudio *a, unsigned long ms);
+  int  mixa_audio_position(MixaAudio *a, unsigned long *out_ms);
+  int  mixa_audio_duration(MixaAudio *a, unsigned long *out_ms);
+  unsigned long mixa_audio_progress(MixaAudio *a, unsigned long max);
+  int  mixa_audio_is_playing(MixaAudio *a);
+  int  mixa_audio_poll(MixaAudio *a);                 // advances on end-of-track
+  const char *mixa_audio_cur_file(MixaAudio *a);
+  int  mixa_audio_cur_state(MixaAudio *a);
+  unsigned long mixa_audio_pos(MixaAudio *a);         // playlist INDEX, not ms
+  unsigned long mixa_audio_count(MixaAudio *a);
+  int  mixa_audio_next_file(MixaAudio *a);
+  int  mixa_audio_prev_file(MixaAudio *a);
+  int  mixa_audio_play_next(MixaAudio *a);            // resets to track start
+  int  mixa_audio_play_prev(MixaAudio *a);
+  int  mixa_audio_is_audio_path(MixaAudio *a, const char *path_utf8);
+  void mixa_audio_destroy(MixaAudio *a);
+
+Semantics (reference parity: AudioServiceBinder)
+------------------------------------------------
+* next/prev move the playlist position by ONE and reset to the start of that
+  file (the binder's "bump one second" behavior is not carried over; the
+  ClearShell UI buttons mean skip).
+* next/prev on the last/first item wrap ONLY when is_loop is set; otherwise the
+  mode machine just ends (MIXA_AUDIO_MODE_ENDED) / rewinds.
+* next_file/prev_file probe candidates and skip files that fail probe
+  (missing, dir, unsupported ext); play_* also re-ini so stop() remembers the
+  exact seek point of the OLD track in set_list order.
+* Classify is purely extension-based, case-insensitive: "mp3" and "wav" from
+  the device's audio_exts. Only Probe (which checks existence) wraps missing
+  files as MIXA_AUDIO_ERR_MISSING, dirs/unknown ext as ERR_UNSUPPORTED.
+* is_random priority is NOT the reference's: AudioServiceBinder.nextFile/
+  prevFile treat isRandom as a full REPLACEMENT for the sequential scan (a
+  fully random pick with its own random-order retry, never touching the
+  sequential/isLoop paths at all). This port instead always tries the
+  immediate sequential neighbor FIRST regardless of is_random, falling back
+  to the random pick only when that fails -- so a valid immediate neighbor
+  is always played sequentially even with "shuffle" on. This is an existing,
+  already-tested, intentional simplification (see tests/mixa_audio_selftest.
+  lm1's own T12 comment, "the linear next scan has no candidates at the
+  tail" -- the test author deliberately picked a starting position where
+  the sequential scan is guaranteed empty specifically to exercise the
+  random fallback), not a newly found defect; recorded here explicitly so
+  it reads as a documented delta rather than something nobody noticed.
+
+Fixed (ticket 20260912-054054's audio-backlog review): mixa_audio_next_file
+and mixa_audio_prev_file's is_loop wrap now retry the CURRENT position
+itself once every OTHER index has been exhausted, matching
+AudioServiceBinder.nextFile/prevFile's own final `if (checkFile(start))
+return true;` inside their isLoop branch, which this port had dropped.
+Without it, a looped playlist where the current track is the ONLY entry
+that still probes OK reported END instead of restarting it. New tests
+mixa_audio_selftest.lm1 T13b: a 2-item list where the OTHER item is marked
+skip and the current one is not, for both next_file (pos=0) and prev_file
+(pos=last); a companion no-is_loop check on the identical setup confirms
+the retry is gated to the isLoop branch only, exactly like the reference
+(genuinely ends there). Confirmed the fix is load-bearing by reverting it
+and re-running: the new next_file check fails with END (rc=8) as expected,
+not a vacuous pass. 85 checks, 0 failures, two hash-identical runs
+build/mixa/opencode/audio_seam/run_20260912_054916_355_a5ff9849/ and
+run_20260912_054930_357_72943f15/. run_audio_native_selftest.ps1 (24/0,
+real MCI, run_20260912_054949_248_7d8bb9f8/) unaffected -- next_file/
+prev_file's is_loop wrap is portable-layer logic, not device-specific.
+
+Modes: IDLE -> LOADED -> PLAYING <-> PAUSED(future) -> LOADED -> ENDED
+----------------------------------------------------------------------
+
+Testing
+-------
+Run from mixa_manager:
+
+    ./run_audio_selftest.ps1         # fake device, deterministic, 85 checks
+    ./run_audio_native_selftest.ps1  # real MCI, 30 checks (plays ~8 s silence)
+
+Both runners pin the compiler SHA256 (65D5A5ED127CA1BAEBDD1D500A5B74CEEA63EC
+1985EAC52EDEF28EFEB261C936), translate the concrete header first (the portable
+header predefs it), use strict gcc flags, and run in isolated
+build/mixa/opencode/<seam>/run_<timestamp>_<guid>/ dirs.
+
+The fake selftest covers: create with per-table name/exts, classification,
+probe of every device error class, full start/stop/resume/seek/progress/
+duration/position/poll cycles in both loop modes, next/prev wrap + play_next/
+play_prev rewind, skip-on-failed-probe, END handling, destroy, and null-argument
+negatives, plus is_loop wrap-retry-current coverage (85 checks, 0 failures).
+
+The native selftest drives the REAL win32 backend: it generates an 8 kHz /
+8-bit / 8 s digital-silence WAV named "My Sound 8s.wav" (space in the path to
+exercise MCI quoting) and asserts create/cur_file-empty, classification,
+missing-file start returns ERR_MISSING, play reports playing, poll does NOT
+advance a playing track, duration ~8000 ms, seek-to-3000 while playing, stop
+remembers the position, and resume, plus native MCI failure coverage (T5b,
+added under ticket 20260912-054054's audio backlog): a plain-text file named
+with a ".wav" extension passes probe (which only checks existence/extension,
+not content -- mixa_audio_win32_dev_probe's own GetFileAttributesW +
+extension check) but must fail at load() when MCI's real "open ... type
+waveaudio" command rejects its non-RIFF content -- a genuine backend
+failure, not an injected fault. Asserts the exact MIXA_AUDIO_ERR_BACKEND
+code, that is_playing() stays false, and that a SUBSEQUENT legitimate load
+on the good fixture still succeeds afterward -- the failed MCI open does
+not leak the alias or leave device state stuck (30 checks, 0 failures, two
+hash-identical runs
+build/mixa/opencode/audio_native_seam/run_20260912_055506_092_def998fe/ and
+run_20260912_055517_067_a75a8f1d/). The runner now also hashes both
+implementation files (mixa_audio_win32.lm1, mixa_audio.lm1), not just their
+headers -- closing the gap ticket 20260912-011300 flagged ("Audio runner
+still omits implementation hash: add it at its next affected stage").
+
+Known L1 findings while porting (see also PORT_OF_CLEARSHELL.txt)
+-----------------------------------------------------------------
+* Const pointers are spelled `const: @(char name)` (name INSIDE the parens) for
+  BOTH parameters and locals; `const: @(char) name` fails to translate.
+* Casting a subscript/array element or casting inside an if:/while: condition
+  is miscompiled by l1trans; use the double-cast form
+  `(cast: (int) (cast: (unsigned char) expr))` or hoist into an int local.
+* `(cast: unsigned) expr` always miscompiles; declare `unsigned: v` and compare
+  directly against literals (GetFileAttributesW attribute checks).
+* The common header predefs the concrete header, so cross-header types
+  (MixaAudioVTable) must live in the COMMON header; the concrete header alone
+  cannot reference them. The win32 table prototype therefore sits in
+  mixa_audio.h.lm1, and the fake-only selftest simply never calls it.
+* In wide string formatting `%s` is the NARROW-string specifier and `%ls` the
+  wide one; passing a char* to %ls silently mangles MCI commands (status
+  length/position came back 0 until the %s fix).
+
+No part of this slice runs at startup or touches the main executable. The next
+wiring step (separate ticket) attaches the "MP3" button to a MixaAudio instance
+built from mixa_audio_win32_table(), feeding it a directory listing and calling
+mixa_audio_start/poll/play_next/play_prev/stop/progress.
+
+Button/App integration scope (ticket 20260912-055800): checked directly
+against the reference before building anything, rather than assumed. The
+"MP3" button (ClearShell.mp3(), ~L7634) and "App" button
+(ClearShell.app(), ~L7564) each open a WHOLE nested sub-panel of their
+own (Mp3Adapter: prevFile/prev/pause/next/nextFile/random/repeat buttons
+plus a SeekBar and duration/timer display; App similarly opens its own
+adapter panel) -- neither is a single hit-one-button-call-one-function
+integration like Share's Send button was. PORT_OF_CLEARSHELL.txt already
+sequences both as their OWN later stages ("Current queued OpenCode
+sequence: nested same-app short-message window, then App/shortcut
+adapters, then MP3/audio adapters"), consistent with STATUS.txt's "Full
+file-manager features come later... not an excuse to expand the first
+runnable milestone." Building either full sub-panel now would be
+inventing scope, not closing a small backlog item.
+
+What already works today with zero new code: mixa_button_dispatch_hit
+(mixa_manager/mixa_button_dispatch.h.lm1/.lm1, built for Share) is
+generic -- any button with no wired action already opens the real "нет
+функции" window. That is the honest, currently-correct behavior for a
+hypothetical MP3 or App button until their real sub-panels exist. Closing
+the audio backlog's "button/App integration" item at this milestone on
+that basis; the real Mp3Adapter/appAdapter sub-panels remain queued as
+their own future stage per the sequencing above, not silently dropped.
+
+REVISED (ticket 20260912-055917, after the App button integration landed
+as its own real component): the owner directed the App panel work to
+proceed as a real integration (see mixa_app.txt), and the MP3 sub-panel
+to follow the same path in bounded, separately-committed stages -- "first
+its panel/control adapter over the accepted MixaAudio, then composed
+button/window integration including reference controls (prevFile, prev,
+pause/play, next, nextFile, random, repeat) and observable progress/
+duration/poll behavior." The нет-функции-is-sufficient closure above is
+superseded by that direction; tracked here as stage 1 of that work.
+
+Stage 1 DONE: mixa_audio_button.h.lm1/.lm1 (new) wraps AudioServiceBinder's
+seven reference controls as MixaButtonActionFn-shaped functions
+(mixa_audio_action_prev_file/_prev/_toggle_play/_next/_next_file/
+_toggle_random/_toggle_loop), each operating through the real, accepted
+MixaAudio controller via a small MixaAudioButtonCtx {a, last_status}. No
+window/button-panel drawing in this stage -- that is the next, separately-
+committed stage, per the ticket's own explicit sequencing.
+
+Two small getters were added to the ALREADY-ACCEPTED audio module itself
+(mixa_audio_is_random/is_loop) because the reference's "random"/"repeat"
+buttons are real TOGGLES, and mixa_audio_set_random/set_loop are write-
+only -- a toggle needs to read the current flag before flipping it. This
+is a minimal, additive change (two one-line getters reading fields the
+struct already carries), not a rewrite; verified with the existing 85/0
+fake and 30/0 native runs re-run unaffected after adding them.
+
+tests/mixa_audio_button_selftest.lm1 (new, 26/0, two hash-identical runs
+build/mixa/claude/audio_button/run_20260912_062755_427_3ce99a29/ and
+run_20260912_062811_380_cbb92634/) drives all seven actions through a
+minimal deterministic fake device: nextFile/prevFile perform a real track
+skip (mixa_audio_pos changes); next/prev perform the reference's own
++-1000ms bump WITHOUT changing track (the documented distinction from
+next_file/prev_file, re-verified here rather than assumed); toggle_play
+correctly flips is_playing() in both directions via is_playing()-gated
+stop()/play(); toggle_random/toggle_loop correctly read-then-flip via the
+new getters, verified in both directions; all seven reject a null ctx
+with MIXA_AUDIO_ERR_ARG. run_audio_selftest.ps1 (85/0) and
+run_audio_native_selftest.ps1 (30/0) both re-run unaffected.
+
+Limitation, stated honestly: this stage has no window/button-panel/hit-
+dispatch integration at all -- it is pure control-layer glue, not yet
+wired through mixa_button_dispatch_hit or any nested panel. That
+composition, plus observable progress/duration/poll rendering and
+directory/playlist navigation through the accepted file-manager seam, is
+the next, separately-committed stage.
+
+Stage-1 contract correction (ticket 20260912-063130): random/repeat's
+toggle actions previously returned a false MIXA_AUDIO_OK when a non-null
+ctx carried a null ctx->a (mixa_audio_is_random(0)/set_random(0,...) both
+tolerate a null device silently, so the adapter itself never surfaced
+this as an error). All seven actions now check ctx->a explicitly and
+return/record MIXA_AUDIO_ERR_ARG in that case, matching the existing
+null-ctx behavior exactly (ctx->last_status is set to the same code
+being returned, so a caller reading either sees the identical value).
+tests/mixa_audio_button_selftest.lm1 grew from 26 to 33 checks covering
+all seven with a non-null-ctx/null-a combination, 0 failures, two hash-
+identical runs.
+
+Stage 2 DONE: mixa_audio_panel.h.lm1/.lm1 (new) is the real composed MP3
+nested panel -- a real nested same-app window (mixa_app_window, UNMODIFIED)
+showing the seven reference controls (prevFile, prev, pause/play, next,
+nextFile, random, repeat), IN THAT EXACT ORDER, with those EXACT stable
+labels, as a real button panel wired one-for-one to the accepted
+mixa_audio_action_* functions from stage 1. A real hit dispatches exactly
+one matching action and preserves its exact status (mixa_audio_panel_hit
+returns HIT_ACTION with the action's own status in an out-param). Below
+the controls, mixa_audio_panel_poll is the deterministic poll/update
+entry point: it calls mixa_audio_poll, reads position/duration, and
+redraws a progress/timer line (state word + position/duration in seconds
++ random/repeat on/off) -- this is where "toggle state rendering follows
+the controller state" happens; the seven button LABELS themselves never
+change. Hitting the underlying window's own OK button dismisses the
+panel and releases every owned allocation (the button ctx, the button
+panel, this struct's own fields) -- the same lifetime discipline as the
+accepted mixa_app_panel, including the same geometry preflight (reject
+before opening/painting anything if the controls' row, the progress row
+below it, and the underlying OK-button row do not all fit).
+
+Scope, exactly as directed: a test-owned MixaAudio configured only
+through the accepted mixa_audio_set_list seam. No directory/file-manager
+enumeration dependency of any kind -- mixa_file* in the shared tree is
+untracked legacy work and was never touched or imported; directory-to-
+playlist feeding remains a later main/file-manager wiring stage.
+
+tests/mixa_audio_panel_selftest.lm1 (new, 45/0, two hash-identical runs
+build/mixa/claude/audio_panel/run_20260912_064601_861_fc20d6ee/ and
+run_20260912_064621_012_83996430/) exercises this with a deterministic
+fake device: initial progress line correct on open; nextFile/prevFile
+perform real track moves (deliberately tested without wrapping, since
+wrap-with-loop is already covered by mixa_audio_selftest.lm1's own T10/
+T11); next/prev bump without changing track; pause/play toggles
+is_playing() and the progress line's own state word in both directions;
+random/repeat toggle the controller flags and the progress line's own
+R:/L: words in both directions; a genuine miss (inside the window, on
+neither a control nor the OK button) does nothing; zero/unavailable
+duration renders ".../--" instead of a bogus fraction; a real stopped/
+end-of-track poll auto-advances exactly like the accepted mixa_audio
+T14; a real position/duration/mode backend failure during poll returns
+the exact status AND leaves the last successfully-drawn progress line
+completely unchanged (checked byte-for-byte, not merely "no crash");
+dismiss via the real OK button releases everything; geometry exhaustion
+(both width and height) rejects before opening/painting anything; reopen
+with a genuinely different MixaAudio shows only that audio's own state,
+no stale progress/ctx from the first one. The geometry fix was confirmed
+load-bearing, not a vacuous pass, by reverting it and re-running (7 of
+the 45 checks failed as predicted), then restoring it returned to green.
+run_audio_button_selftest.ps1 (33/0), run_audio_selftest.ps1 (85/0), and
+run_app_window_selftest.ps1 (180/0) all re-run unaffected.
+
+Two real bugs were found and fixed while building this test, not
+glossed over: (1) mixa_audio_prev_file at position 0 with is_loop off
+correctly returns END rather than wrapping (wrapping is loop-gated, per
+mixa_audio.lm1's own logic) -- an initial test comment wrongly assumed
+prevFile would wrap unconditionally; fixed by testing nextFile before
+prevFile so both moves land on a real adjacent track instead of the
+boundary case. (2) the test's own fake device's position() reported a
+single global g_fake_pos that was never reset on a fresh load, so a
+track-advance appeared to "keep" the old track's simulated position;
+fixed by resetting it inside fake_dev_load, matching how a real device
+naturally starts a freshly-loaded file at position 0.
+
+Remaining limitation, stated honestly: no live pump-loop orchestrator
+exists in this codebase to drive this from a real MP3-button event or
+real native playback -- this closes the component/integration-test
+boundary, not a running application, matching every other panel stage
+in this codebase. Per the ticket's own direction, the next stage is
+main/file-manager/live-event wiring, not another standalone panel.
+
+MP3 stage 3 -- directory-to-playlist feeding + top-level MP3 button
+-------------------------------------------------------------------
+Ticket 20260912-065230 asked for one composed stage: accepted directory-
+to-playlist feeding plus a real top-level MP3-button dispatch opening
+the accepted audio panel, all exercised by a single test. That shape ran
+into a hard toolchain limit, so what shipped is the same functionality
+split across two real modules with two real test suites. The limit, the
+split and what is NOT covered are all recorded below rather than
+smoothed over.
+
+The limit: l1trans's "import path table" holds exactly 16 imports
+--------------------------------------------------------------------
+This is a DIFFERENT limit from the "too many header type names" one
+already recorded above; that one is generous and this combined chain
+does not trip it. Bisected against the pinned stable65D5 compiler
+(SHA256 65D5A5ED...C936) with predef-only probe files that contain no
+logic at all -- so the count is of FILES reached transitively, not of
+code:
+
+  probe with 16 imports (mixa_audio_panel chain 13 + mixa_dir chain 3)
+      -> exit 0, translates cleanly
+  the same probe plus ONE more import (mixa_audio_launch.h.lm1)
+      -> exit 1, "l1trans error: mixa_manager/mixa_audio_launch.h.lm1:
+         0:0: import path table full"
+
+Smallest reproducer (7 predef lines, no test logic whatsoever):
+
+  predef: "mixa_manager/mixa_audio_panel.h.lm1"
+  predef: "mixa_manager/mixa_audio_panel.lm1"
+  predef: "mixa_manager/mixa_dir.h.lm1"
+  predef: "mixa_manager/mixa_dir_win32.h.lm1"
+  predef: "mixa_manager/mixa_dir_win32.lm1"
+  predef: "mixa_manager/mixa_audio_launch.h.lm1"
+  predef: "mixa_manager/mixa_audio_launch.lm1"
+  (plus an empty main that returns 0)
+
+Two things were checked and ruled out before concluding this, because
+both looked plausible at first and both are wrong. (1) It is not caused
+by redundant top-level predefs in a test file: trimming a test's own
+predef block from 12 lines to 4 moved which file the error was reported
+against but did not fix it. (2) It is not an edge/statement count that
+redundant paths inflate: removing a genuinely redundant predef edge
+(mixa_audio_launch.h.lm1's own predef of mixa_dir.h.lm1, which
+mixa_dir_win32.lm1 already reaches anyway) changed nothing at all,
+because the target file was still in the set. The table counts distinct
+files reached, and 17 of them is one too many.
+
+What this rules out
+-------------------
+A single module that both enumerates a directory and opens the panel
+needs the mixa_dir chain (3 files) AND the mixa_audio_panel chain (13
+files) plus its own 2 = 18. That is over the table no matter how the
+test around it is written, because the cost is in the TYPES the unit
+must see, not in the test code -- a one-line smoke test of that module
+costs exactly as many imports as an exhaustive one. Wiring the dispatch
+through the accepted mixa_button_dispatch_hit is over the table for the
+same reason: it re-pulls mixa_app_window (2 files already reachable via
+mixa_audio_panel) plus its own 2.
+
+What shipped instead
+--------------------
+mixa_audio_scan.h.lm1 / .lm1 (8 imports): directory-to-playlist
+scanning only. Enumerates ONLY through mixa_dir_list_open/next/close,
+preserves that seam's own observed order append-only, skips directory
+entries, builds full UTF-8 paths under a checked bound, and filters ONLY
+through mixa_audio_is_audio_path. No duplicated Win32 directory calls
+and no duplicated codec-extension rules. Hands back an owned snapshot in
+MixaAudioScanResult; on any failure hands back nothing and frees
+everything that attempt allocated, closing the directory on every path.
+The snapshot travels in a struct rather than through a char*** out-
+parameter because a triple pointer is a form this codebase has nowhere
+else, while an owned struct field is what every module here already uses.
+
+mixa_audio_launch.h.lm1 / .lm1 (15 imports): everything after scanning.
+Takes an owned snapshot via mixa_audio_launch_set_items, feeds it
+through the accepted mixa_audio_set_list, starts playback, and opens the
+accepted MixaAudioPanel, driven by a real top-level button hit through
+mixa_audio_launch_hit. That hit-test is manual -- mixa_button_panel_hit,
+the same primitive mixa_button_dispatch_hit dispatches on, in the same
+manual pattern already accepted inside mixa_app_panel_hit and
+mixa_audio_panel_hit -- because the accepted dispatch module does not
+fit, as recorded above. A miss returns NONE and opens nothing, leaving
+the fallback decision to the caller exactly as a dispatch miss does.
+List/audio/panel statuses are kept separate (list_status, audio_status,
+panel_status) so a caller can show the exact failing stage in the
+existing nested error window.
+
+Evidence
+--------
+run_audio_scan_selftest.ps1 -- 16 checks, 0 failures, two hash-identical
+runs. Real on-disk fixtures created by the test itself under its own run
+directory: dir1 with a subdirectory, a non-audio readme.txt, and two
+audio files (one ASCII, one UTF-8 Cyrillic); dir2 with one different
+track; an empty directory; a missing directory. Order is proven against
+an INDEPENDENT oracle that walks the same directory with raw mixa_dir
+calls and its own filter, so the expected sequence comes from what
+mixa_dir actually observed on this machine rather than an assumed
+alphabetical or creation order. Both assertions were confirmed load-
+bearing by breaking the module and re-running: bypassing the
+is_audio_path filter let readme.txt through (count 3, caught), and
+building names without the directory prefix failed all three path
+comparisons (caught) -- then restoring returned to green.
+
+run_audio_launch_selftest.ps1 -- 45 checks, 0 failures, two hash-
+identical runs. One real top-level hit opens the real panel exactly
+once; all seven inner controls are driven through real hits on the
+launched panel with their own observable effects, plus a control-row
+miss; dismiss through the real OK button clears the stack; reopening
+restarts at item 0 with random/loop cleared rather than inheriting the
+torn-down session's state; a changed snapshot shows only its own track
+with no stale entry or count; an empty snapshot fails with its own
+distinct list_status leaving no device and no window, and its exact
+status renders in the existing nested error window; panel geometry too
+small to hold the controls fails at the panel stage only, destroying the
+device it had just created and pushing no window; toolbar miss, null
+ctx, null toolbar, null items-with-count and null action context are all
+refused.
+
+Regressions re-run unaffected: run_audio_panel_selftest.ps1 (45/0),
+run_audio_button_selftest.ps1 (33/0), run_audio_selftest.ps1 (85/0),
+run_app_window_selftest.ps1 (180/0), run_app_panel_selftest.ps1 (44/0).
+
+NOT done -- stated plainly
+--------------------------
+1. The two-call glue that joins the halves (scan a directory, hand the
+   snapshot to the launch context) needs all 18 imports again and
+   therefore cannot be compiled in ANY single translation unit under
+   stable65D5. It is not written and is not claimed. It belongs with the
+   App/main-loop wiring this ticket already defers; until the toolchain
+   table grows, joining these two halves has to happen in a unit that
+   does not also carry both chains' types.
+2. mixa_audio_scan's own per-entry 300-byte path bound is defensive-only
+   on this platform and is NOT exercised. Reaching it needs a full path
+   over 300 bytes, and a stock Windows MAX_PATH is 260: no such file can
+   be created to enumerate, and a 290-byte path string naming a real
+   directory is refused by the directory open itself (measured:
+   MIXA_DIR_ERR_MISSING, which the suite does assert). Testing it for
+   real would need long-path support through the mixa_dir seam.
+3. Still no live pump-loop orchestrator, unchanged from stage 2: this
+   closes the component/integration-test boundary, not a running
+   application. No real native playback and no user media were touched;
+   every fixture is an empty stub file the test creates itself.
+
+
+MP3 composition -- the blocked stage, unblocked
+------------------------------------------------
+Ticket 20260912-084943. Codex delivered a candidate compiler whose
+import storage grows instead of capping at 16, which is what the split
+recorded above was working around. The two halves are now joined.
+
+Files: mixa_audio_mp3.h.lm1, mixa_audio_mp3.lm1,
+tests/mixa_audio_mp3_selftest.lm1, run_mp3_selftest.ps1.
+
+Verified before use, not taken on report
+-----------------------------------------
+  candidate SHA256 24A1B57B...290B09 -- matches what Codex published
+  stable65D5 SHA256 65D5A5ED...61C936 -- unchanged, not modified
+  the seven-predef reproducer recorded above: still FAILS under
+      stable65D5 ("import path table full"), translates under the
+      candidate, exit 0
+  the composed unit itself: fails under stable65D5 at
+      mixa_buttons.lm1, builds and runs under the candidate
+
+So the blocker is genuinely gone rather than reported gone, and the
+before/after is on this stage's own code rather than a synthetic case.
+
+What was built
+--------------
+mixa_mp3_open_dir scans a directory through mixa_audio_scan and hands
+the snapshot to mixa_audio_launch_set_items, then runs the launch.
+mixa_mp3_hit is the real top-level button: a hit re-scans the directory
+it is pointed at and opens the panel over what is there NOW, which is
+what a user pressing MP3 expects; a miss takes no action, opens nothing
+and does not even scan.
+
+The scan runs to completion BEFORE any teardown, so a directory that has
+gone missing or refused enumeration leaves the context exactly as it
+was. A failed refresh cannot blank a working panel. The selftest asserts
+this by capturing the audio instance pointer before the failed hit and
+requiring it to be the same pointer afterwards -- proving nothing
+changed, rather than merely proving something is non-null.
+
+The split is KEPT even though it could now be folded back. Only this
+composition module and its test need the candidate; mixa_audio_scan (8
+imports) and mixa_audio_launch (15) each still build and test under
+stable65D5, so nothing already accepted starts depending on an
+unpromoted compiler.
+
+The scratch instance, stated rather than hidden: scanning filters
+through the accepted mixa_audio_is_audio_path, whose signature takes a
+MixaAudio even though it only reads the vtable's audio_exts. So
+mixa_mp3_open_dir creates one MixaAudio purely to ask that question and
+destroys it before the launch creates the instance that actually plays
+-- one extra device open and close per press. A vtable-level extension
+predicate on the accepted audio seam would remove it; that is a change
+to an accepted API and was not made unasked.
+
+Evidence
+--------
+run_mp3_selftest.ps1 -- 35 checks, 0 failures, two hash-identical runs.
+The runner pins the CANDIDATE hash and additionally verifies stable65D5
+is unchanged on every run, and the summary records both.
+
+Real fixtures under the run's own directory: dir1 with a subdirectory to
+skip, a non-audio file to filter out and two audio files (one ASCII, one
+UTF-8 Cyrillic); dir2 with one different track; an empty directory; a
+missing path. Enumeration order is matched against an INDEPENDENT
+raw-mixa_dir oracle, so nothing assumes filesystem sorting.
+
+Covered: ONE real top-level hit performing the whole composed path and
+opening the panel exactly once, with the playlist equal to the oracle's
+own sequence and playback started; the opened panel driven through its
+own real hits (nextFile landing on the oracle's second entry, random
+toggling) and dismissed through its real OK button; pressing again
+re-scanning and reopening from the top with no stale position or mode;
+a changed directory really re-scanned with no stale entry or count; a
+missing directory reporting the seam's own status while changing
+nothing, with its exact failure rendered in the existing nested error
+window; a directory with no supported audio refused at the playlist
+stage with its own distinct status; a toolbar miss that opens nothing
+and does not scan (asserted by a device-open counter); and argument
+negatives including a caller that does not want the scan status.
+
+Confirmed load-bearing by breaking the module: dropping the
+set_items hand-over so the scan result never reaches the playlist failed
+the hit, the window count, the statuses and the playlist contents.
+Restoring returned to green.
+
+Regressions under stable65D5, all green and unaffected: audio_scan 16/0,
+audio_launch 45/0, audio_panel 45/0, file_manager 144/0,
+selection_walk 95/0.
+
+Limitations, unchanged and stated plainly
+------------------------------------------
+1. Still no live Message pump: this closes the composed component
+   boundary, not a running application. A real hit is delivered by the
+   test, not by an event loop.
+2. Deterministic fake audio device only. No real native playback and no
+   user media; every fixture is an empty stub file the test creates.
+3. The candidate compiler is an isolated candidate, not a promotion.
+   Only this unit depends on it, deliberately.
+4. The scratch device open per press, above.

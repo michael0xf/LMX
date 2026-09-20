@@ -1,0 +1,12 @@
+# mtk_named.h.lm1 - Named interface ported from Named.java (com.mtk.map).
+# Java interface: Key getName().  In L1, a fnptr type + vtable struct
+# model the interface contract.  Callers store a pointer to the
+# implementing struct's vtable and dispatch through get_name.
+
+predef: "mixa_manager/mtk_key.h.lm1"
+
+fnptr: MtkNamedGetNameFn (const: @(void self)) const: @(MtkKey)
+
+struct: MtkNamed
+    MtkNamedGetNameFn: get_name
+end: MtkNamed

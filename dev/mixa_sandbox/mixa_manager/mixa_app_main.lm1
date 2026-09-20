@@ -1,0 +1,69 @@
+predef: "mixa_manager/mixa_app_controller.h.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<windows.h>"
+
+fn: mixa_backend_default_table () const: @(MixaBackendVTable)
+
+# Minimal native entrypoint (ticket 20260912-133300; thinned to a real
+# resource-owning shell by ticket 20260913-010249). ALL of the actual
+# orchestration -- open the app loop, the console view/file, F1 Help,
+# the editable command line and its Enter dispatch, the render surfaces,
+# one non-blocking tick -- now lives in mixa_app_controller.h/.lm1, the
+# SAME code an automated headless end-to-end test drives directly (see
+# tests/mixa_app_controller_e2e_selftest.lm1). This file's own job is
+# reduced to exactly what only a real window can supply: the real Win32
+# backend table and argv[1] as the console's own root directory. It is
+# compiled by this module's own runner as a build-only check -- NEVER
+# executed by any automated suite, since running it opens a real
+# interactive window.
+#
+# Because ALL of the heavy predef weight (mixa_fm_copy's own 15-file
+# chain plus the console_window header, 16 total -- this module's own
+# prior comments already measured that as the exact limit) moved to
+# mixa_app_controller.lm1's own SEPARATE translation unit, this file no
+# longer predefs anything at all: mixa_app_controller.h is a plain C
+# header, reached via include:, exactly like mixa_app_path/mixa_help/
+# mixa_cmdline/mixa_cmdline_dispatch already are.
+#
+# REVIEWED (ticket 20260912-140500 item 5, preserved verbatim through
+# this refactor): the idle strategy is still a stopgap, not a real
+# scheduler -- see mixa_app_controller.h's own header comment for why
+# (BACKEND_SEAM 7.2/8.1: the seam deliberately exposes no blocking wait,
+# and the real fix is a Message-owned scheduler that does not exist in
+# this codebase yet). mixa_app_controller_step's own per-tick idle
+# behavior (Sleep(1) only on a truly quiet tick) is unchanged from what
+# main() used to do inline.
+
+fn: main (int: argc; @: @(char) argv) int
+    const: @(char root_utf8)
+    const: @(MixaBackendVTable vt)
+    @: MixaAppController c
+    int: had_error
+    int: rc
+    if: argc >= 2
+        root_utf8: argv[1]
+    else:
+        root_utf8: "."
+    ---
+    vt: mixa_backend_default_table()
+    if: vt = 0
+        c.printf("mixa_app_main: no backend table available\n")
+        return: 1
+    ---
+    c: 0
+    rc: mixa_app_controller_open(@ c, vt, root_utf8)
+    if: rc != MIXA_APP_CONTROLLER_OK
+        c.printf("mixa_app_main: controller open failed (%d)\n", rc)
+        return: 1
+    ---
+    had_error: 0
+    while: mixa_app_controller_running(c) != 0 && had_error = 0
+        mixa_app_controller_step(c, @ had_error)
+        if: had_error != 0
+            c.printf("mixa_app_main: controller reported an error -- terminating cleanly\n")
+        ---
+    ---
+    mixa_app_controller_close(c)
+    if: had_error != 0
+        return: 1
+    ---
+return: 0

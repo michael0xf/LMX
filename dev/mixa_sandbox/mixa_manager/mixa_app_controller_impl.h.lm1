@@ -1,0 +1,85 @@
+predef: "mixa_manager/mixa_fm_copy.h.lm1"
+predef: "mixa_manager/mixa_app_geometry.h.lm1"
+predef: "mixa_manager/mixa_console_window.h.lm1"
+predef: "mixa_manager/mixa_app_fmpanel.h.lm1"
+predef: "mixa_manager/mixa_file.h.lm1"
+predef: "mixa_manager/mixa_pointer.h.lm1"
+predef: "mixa_manager/mixa_palette.h.lm1"
+# Кнопка F1 рисуется nine-slice'ом (mixa_tile_fill_button), и ОБЪЯВЛЕНИЕ этой функции
+# контроллеру нужно на виду: без него вызов молча становится неявным, и крепкий гейт
+# (-Werror=implicit-function-declaration) его справедливо валит, а обычная сборка
+# приложения -- нет (обычный gcc даёт только предупреждение).  Дефект был именно такой:
+# приложение работало «по счастливой случайности соглашения о вызове».
+predef: "mixa_manager/mixa_tiles.h.lm1"
+predef: "mixa_manager/mixa_help.h.lm1"
+predef: "mixa_manager/mixa_cmdline.h.lm1"
+predef: "mixa_manager/mixa_cmdline_dispatch.h.lm1"
+predef: "mixa_manager/mixa_backend.h.lm1"
+predef: "mixa_manager/mixa_core.h.lm1"
+predef: "mixa_manager/mixa_overlay.h.lm1"
+include: "<stddef.h>"
+
+define: MIXA_APP_CONTROLLER_OK 0
+define: MIXA_APP_CONTROLLER_ERR_ARG 1
+define: MIXA_APP_CONTROLLER_ERR_OPEN 2
+
+# Same-file completion (do not predef mixa_app_controller.h.lm1 — across-predef
+# struct: drops the body, ticket 20260917-083000). Pointer fields use opaque
+# fmpanel/cmdline_dispatch headers (not *_impl) to stay under type-name budget.
+
+type: MixaAppController struct MixaAppController
+
+struct: MixaAppController
+    @: char root
+    @: MixaAppLoop loop
+    @: MixaCellMetrics m
+    @: MixaEvent ev
+    @: MixaFmAllocVTable av
+    const: @: MixaBackendVTable vt
+    @: char console_path
+    @: MixaFile console_file
+    @: MixaFile console_file_append
+    @: MixaConsoleView view
+    @: MixaTextRect text_rect
+    @: MixaTextRect upper_rect
+    @: MixaU8 rgba
+    size_t: width_px
+    size_t: height_px
+    size_t: rgba_size
+    @: MixaHelpCtx help_ctx
+    size_t: help_btn_row
+    size_t: help_btn_col
+    size_t: help_btn_nrows
+    size_t: help_btn_ncols
+    @: MixaCmdLine cmdline
+    @: MixaCmdDispatch dispatch
+    @: char cwd_owned
+    const: @: char cwd_cur
+    @: MixaConsolePending pending_view
+    int: last_exit_code
+    @: MixaAppFmPanel fmpanel
+    @: MixaCopySink copy_sink
+    # THE MOUSE POINTER (UI_MODEL 6): one cell, eight arrows, and it spins.  It lives here rather
+    # than in the panel because it belongs to the whole upper layer -- the panel is a surface it
+    # moves over, not its owner.  `octant` is the last direction of travel, so a still mouse keeps
+    # the arrow it had (6.0: "A displacement of zero changes nothing").
+    MixaPointer: pointer
+end: MixaAppController
+
+prototype:
+    fn: mixa_app_controller_open (@@: MixaAppController out; const: @(MixaBackendVTable vt); const: @(char root_utf8)) int
+    fn: mixa_app_controller_step (@: MixaAppController c; @: int out_had_error) int
+    fn: mixa_app_controller_running (const: @(MixaAppController c)) int
+    fn: mixa_app_controller_close (@: MixaAppController c) void
+    fn: mixa_app_controller_backend (const: @(MixaAppController c)) @: MixaBackend
+    fn: mixa_app_controller_text_rect (const: @(MixaAppController c)) const: @(MixaTextRect)
+    fn: mixa_app_controller_upper_rect (const: @(MixaAppController c)) const: @(MixaTextRect)
+    fn: mixa_app_controller_command_running (const: @(MixaAppController c)) int
+    fn: mixa_app_controller_last_exit_code (const: @(MixaAppController c)) int
+    fn: mixa_app_controller_cwd (const: @(MixaAppController c)) const: @(char)
+    fn: mixa_app_controller_cursor_row (const: @(MixaAppController c)) size_t
+    fn: mixa_app_controller_cursor_col (const: @(MixaAppController c)) size_t
+    fn: mixa_app_controller_file_size (const: @(MixaAppController c)) size_t
+    fn: mixa_app_controller_fm (const: @(MixaAppController c)) @: MixaFm
+    fn: mixa_app_controller_fmpanel (const: @(MixaAppController c)) @: MixaAppFmPanel
+end: prototype

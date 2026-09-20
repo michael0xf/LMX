@@ -1,0 +1,61 @@
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+define: WIN32_LEAN_AND_MEAN 1
+include: "<windows.h>"
+
+# mixa_process_fixture.lm1 — L1 port of mixa_process_fixture.c
+# Test fixture for mixa_process_win32 selftest. Modes (argv[1]):
+#   echo    — stdin line loop, "E:<line>\n", quit on "QUIT"
+#   exit    — exit code from argv[2]
+#   stdincheck — one ReadFile on STD_INPUT_HANDLE
+
+fn: main (int: argc; @: @(char) argv) int
+    []: char line 4096
+    int: n
+    @: void hstdin
+    ulong: got
+    int: ok
+    ulong: gle
+
+    c.setvbuf(c.stdout, 0, c._IONBF, 0)
+
+    if: argc >= 2 && c.strcmp(argv[1], "echo") = 0
+        while: c.fgets(line, 4096, c.stdin) != 0
+            n: c.strlen(line)
+            while: n > 0 && (line[n - 1] = 10 || line[n - 1] = 13)
+                n: n - 1
+                line[n]: 0
+            ---
+            if: c.strcmp(line, "QUIT") = 0
+                return: 0
+            ---
+            c.printf("E:%s\n", line)
+        ---
+        return: 0
+    ---
+
+    if: argc >= 3 && c.strcmp(argv[1], "exit") = 0
+        return: c.atoi(argv[2])
+    ---
+
+    if: argc >= 2 && c.strcmp(argv[1], "stdincheck") = 0
+        hstdin: c.GetStdHandle(c.STD_INPUT_HANDLE)
+        got: 0
+        ok: c.ReadFile(hstdin, line, 16U, @ got, 0)
+        if: ok != 0
+            if: got = 0U
+                c.printf("EOF\n")
+            else:
+                c.printf("DATA:%lu\n", (cast: (@: ulong) got))
+            ---
+        else:
+            gle: c.GetLastError()
+            if: gle = 109U
+                c.printf("EOF\n")
+            else:
+                c.printf("INVALID:%lu\n", (cast: (@: ulong) gle))
+            ---
+        ---
+        return: 0
+    ---
+
+    return: 0

@@ -1,0 +1,226 @@
+predef: "mixa_manager/mtk_table.h.lm1"
+include: "<stdlib.h>" "<string.h>"
+
+fn: mtk_table_init (@: MtkHTable t; size_t: key_sz; size_t: val_sz) int
+    int: rc
+    if: t = 0
+        return: 1
+    t\seed: 0
+    # Allocate and init sub-objects as heap pointers.
+    t\codes: (cast: (@: MtkIntArray) c.calloc(1, c.sizeof(c.MtkIntArray)))
+    if: t\codes = 0
+        return: 1
+    rc: mtk_int_array_init(t\codes)
+    if: rc != 0
+        c.free(t\codes)
+        return: rc
+    ---
+    t\keys: (cast: (@: MtkArray) c.calloc(1, c.sizeof(c.MtkArray)))
+    if: t\keys = 0
+        mtk_int_array_destroy(t\codes)
+        c.free(t\codes)
+        return: 1
+    ---
+    rc: mtk_array_init(t\keys, key_sz)
+    if: rc != 0
+        mtk_int_array_destroy(t\codes)
+        c.free(t\codes)
+        c.free(t\keys)
+        return: rc
+    ---
+    t\values: (cast: (@: MtkArray) c.calloc(1, c.sizeof(c.MtkArray)))
+    if: t\values = 0
+        mtk_int_array_destroy(t\codes)
+        mtk_array_destroy(t\keys)
+        c.free(t\codes)
+        c.free(t\keys)
+        return: 1
+    ---
+    rc: mtk_array_init(t\values, val_sz)
+    if: rc != 0
+        mtk_int_array_destroy(t\codes)
+        mtk_array_destroy(t\keys)
+        mtk_array_destroy(t\values)
+        c.free(t\codes)
+        c.free(t\keys)
+        c.free(t\values)
+        return: rc
+    ---
+return: 0
+
+sub: mtk_table_destroy (@: MtkHTable t)
+    if: t != 0
+        if: t\codes != 0
+            mtk_int_array_destroy(t\codes)
+            c.free(t\codes)
+        ---
+        if: t\keys != 0
+            mtk_array_destroy(t\keys)
+            c.free(t\keys)
+        ---
+        if: t\values != 0
+            mtk_array_destroy(t\values)
+            c.free(t\values)
+        ---
+        t\codes: 0
+        t\keys: 0
+        t\values: 0
+        t\seed: 0
+    ---
+end: mtk_table_destroy
+
+fn: mtk_table_size (const: @(MtkHTable t)) int
+    if: t = 0
+        return: 0
+return: t\codes\amount
+
+fn: mtk_table_is_empty (const: @(MtkHTable t)) int
+    if: t = 0
+        return: 1
+return: t\codes\amount = 0
+
+sub: mtk_table_clear (@: MtkHTable t)
+    if: t != 0
+        mtk_int_array_clear(t\codes)
+        mtk_array_clear(t\keys)
+        mtk_array_clear(t\values)
+    ---
+end: mtk_table_clear
+
+# Binary search for the first index at the given hash-code range.
+fn: mtk_table_find_middle (const: @(MtkHTable t); int: code) int
+    int: min
+    int: count
+    int: middle
+    int: hash
+    if: t = 0 || t\codes = 0
+        return: MTK_CONST_NIL
+    min: 0
+    count: t\codes\amount
+    while: count > 0
+        count: count >> 1
+        middle: min + count
+        if: middle < t\codes\amount
+            hash: t\codes\arr[middle]
+            if: code > hash
+                min: middle + 1
+            else:
+                if: code = hash
+                    return: middle
+                ---
+            ---
+        else:
+            if: count = 0
+                return: t\codes\amount
+            ---
+        ---
+    return: min
+
+fn: mtk_table_contains_key (const: @(MtkHTable t); const: @(void key); MtkTableHashFn: hash_fn; MtkTableEqualsFn: eq_fn) int
+    int: code
+    int: i
+    const: @(void) k
+    if: t = 0 || key = 0 || hash_fn = 0 || t\codes = 0 || t\keys = 0
+        return: 0
+    code: hash_fn(key)
+    i: mtk_table_find_middle(t, code)
+    if: i < 0 || i >= t\codes\amount || t\codes\arr[i] != code
+        return: 0
+    ---
+    while: i < t\codes\amount && t\codes\arr[i] = code
+        k: mtk_array_element_at(t\keys, i)
+        if: eq_fn(k, key) != 0
+            return: 1
+        ---
+        i: i + 1
+    ---
+return: 0
+
+fn: mtk_table_get (const: @(MtkHTable t); const: @(void key); MtkTableHashFn: hash_fn; MtkTableEqualsFn: eq_fn) const: @(void)
+    int: code
+    int: i
+    const: @(void) k
+    if: t = 0 || key = 0 || hash_fn = 0 || eq_fn = 0 || t\codes = 0 || t\keys = 0 || t\values = 0
+        return: 0
+    code: hash_fn(key)
+    i: mtk_table_find_middle(t, code)
+    if: i < 0 || i >= t\codes\amount || t\codes\arr[i] != code
+        return: 0
+    ---
+    while: i < t\codes\amount && t\codes\arr[i] = code
+        k: mtk_array_element_at(t\keys, i)
+        if: eq_fn(k, key) != 0
+            return: mtk_array_element_at(t\values, i)
+        ---
+        i: i + 1
+    ---
+return: 0
+
+fn: mtk_table_put (@: MtkHTable t; const: @(void key); const: @(void val); MtkTableHashFn: hash_fn; MtkTableEqualsFn: eq_fn) const: @(void)
+    int: code
+    int: idx
+    const: @(void) old_val
+    if: t = 0 || key = 0 || hash_fn = 0 || eq_fn = 0 || t\codes = 0 || t\keys = 0 || t\values = 0
+        return: 0
+    code: hash_fn(key)
+    # Check for existing entry
+    idx: mtk_table_find_middle(t, code)
+    if: idx >= 0 && idx < t\codes\amount && t\codes\arr[idx] = code
+        while: idx < t\codes\amount && t\codes\arr[idx] = code
+            if: eq_fn(mtk_array_element_at(t\keys, idx), key) != 0
+                old_val: mtk_array_element_at(t\values, idx)
+                mtk_array_set_element_at(t\values, val, idx)
+                return: old_val
+            ---
+            idx: idx + 1
+        ---
+    ---
+    # New entry
+    mtk_int_array_insert_element_at(t\codes, code, idx)
+    mtk_array_insert_element_at(t\keys, key, idx)
+    mtk_array_insert_element_at(t\values, val, idx)
+return: 0
+
+fn: mtk_table_remove (@: MtkHTable t; const: @(void key); MtkTableHashFn: hash_fn; MtkTableEqualsFn: eq_fn) const: @(void)
+    int: code
+    int: i
+    int: ret_code
+    const: @(void) ret_val
+    if: t = 0 || key = 0 || hash_fn = 0 || eq_fn = 0 || t\codes = 0 || t\keys = 0 || t\values = 0
+        return: 0
+    code: hash_fn(key)
+    i: mtk_table_find_middle(t, code)
+    if: i < 0 || i >= t\codes\amount || t\codes\arr[i] != code
+        return: 0
+    ---
+    while: i < t\codes\amount && t\codes\arr[i] = code
+        if: eq_fn(mtk_array_element_at(t\keys, i), key) != 0
+            ret_val: mtk_array_element_at(t\values, i)
+            mtk_int_array_remove_element_at(t\codes, i)
+            mtk_array_remove_element_at(t\keys, i)
+            mtk_array_remove_element_at(t\values, i)
+            return: ret_val
+        ---
+        i: i + 1
+    ---
+return: 0
+
+fn: mtk_table_key_at (const: @(MtkHTable t); int: i) const: @(void)
+    if: t = 0 || t\keys = 0 || i < 0 || i >= t\codes\amount
+        return: 0
+return: mtk_array_element_at(t\keys, i)
+
+fn: mtk_table_value_at (const: @(MtkHTable t); int: i) const: @(void)
+    if: t = 0 || t\values = 0 || i < 0 || i >= t\codes\amount
+        return: 0
+return: mtk_array_element_at(t\values, i)
+
+fn: mtk_table_pop (@: MtkHTable t) const: @(void)
+    if: t = 0 || t\values = 0 || t\codes\amount = 0
+        return: 0
+return: mtk_array_pop(t\values)
+
+fn: mtk_table_pop_key (@: MtkHTable t) const: @(void)
+    if: t = 0 || t\keys = 0 || t\codes\amount = 0
+        return: 0
+return: mtk_array_pop(t\keys)

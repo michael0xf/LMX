@@ -1,0 +1,37 @@
+include: "<stddef.h>"
+predef: "mixa_manager/mtk_const.h.lm1"
+predef: "mixa_manager/mtk_int_array.h.lm1"
+predef: "mixa_manager/mtk_array.h.lm1"
+
+# mtk_table.h.lm1 - Hash table ported from HTable.java (com.mtk.map).
+# Java generic <T0, T1> becomes void* in L1. Keys are sorted by their
+# Java hashCode (MtkIntArray codes, parallel to keys/values, mirroring
+# HashArray's sorted layout). Values walk in lock-step with keys.
+# Sub-objects are heap-allocated (pointer fields) to comply with the
+# project rule "no valued or dot member access".
+
+struct: MtkHTable
+    @: MtkIntArray codes
+    @: MtkArray keys
+    @: MtkArray values
+    int: seed
+end: MtkHTable
+
+fnptr: MtkTableHashFn (const: @(void key)) int
+fnptr: MtkTableEqualsFn (const: @(void a); const: @(void b)) int
+
+prototype:
+    fn: mtk_table_init (@: MtkHTable t; size_t: key_sz; size_t: val_sz) int
+    fn: mtk_table_destroy (@: MtkHTable t) void
+    fn: mtk_table_size (const: @(MtkHTable t)) int
+    fn: mtk_table_is_empty (const: @(MtkHTable t)) int
+    fn: mtk_table_clear (@: MtkHTable t) void
+    fn: mtk_table_contains_key (const: @(MtkHTable t); const: @(void key); MtkTableHashFn: hash_fn; MtkTableEqualsFn: eq_fn) int
+    fn: mtk_table_get (const: @(MtkHTable t); const: @(void key); MtkTableHashFn: hash_fn; MtkTableEqualsFn: eq_fn) const: @(void)
+    fn: mtk_table_put (@: MtkHTable t; const: @(void key); const: @(void val); MtkTableHashFn: hash_fn; MtkTableEqualsFn: eq_fn) const: @(void)
+    fn: mtk_table_remove (@: MtkHTable t; const: @(void key); MtkTableHashFn: hash_fn; MtkTableEqualsFn: eq_fn) const: @(void)
+    fn: mtk_table_key_at (const: @(MtkHTable t); int: i) const: @(void)
+    fn: mtk_table_value_at (const: @(MtkHTable t); int: i) const: @(void)
+    fn: mtk_table_pop (@: MtkHTable t) const: @(void)
+    fn: mtk_table_pop_key (@: MtkHTable t) const: @(void)
+end: prototype

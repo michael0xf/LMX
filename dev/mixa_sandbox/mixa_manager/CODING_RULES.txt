@@ -1,0 +1,269 @@
+Mixa Manager - rules for writing the L1 in this subtree
+Short, and each one earned rather than assumed.
+
+
+0. Why L1 and not C, since L1 is awkward and C is not
+
+Written down because the awkwardness is real, the temptation is obvious, and
+someone has already given in to it: 620 lines of the selection model arrived as
+C inside a header, with a five-line .lm1 wrapper.
+
+L1 is a TEMPORARY AUXILIARY TOOL that becomes a PERMANENT INTERMEDIATE LINK. It
+looks strange because it is a thin, syntax-directed lowering to C - an
+intermediate representation, not a language designed to be pleasant to write.
+Today we author the app in L1 while the independent L2 implementation is still
+being completed. L2 translates DOWN THROUGH L1 into C; L3 may also be interpreted.
+
+That is the whole argument, and it is not about purity:
+
+    L2 translates to L1, not to C.
+
+So L1 written today already sits where the chain passes. When it is rewritten
+in L2 it lowers to the same L1, and nothing is thrown away. C written today sits
+BESIDE the chain: it has to be rewritten to get onto it, and until it is, the
+part of the program written in C is the part the language cannot see, optimise
+or reason about - including the const and immutable optimisations section 1 is
+about.
+
+So the awkwardness is not a reason to escape into C. It is the shape of the
+thing we are standing on. If L1 genuinely cannot express something, that is a
+finding worth reporting - it is how L1 gets fixed, and several have been fixed
+that way already. Writing C instead reports nothing and fixes nothing.
+
+0.1. This subtree is not just an application
+
+Worth knowing before deciding that a shortcut is harmless.
+
+mixa_manager is the first substantial body of REAL APPLICATION CODE written in
+L1. Everything before it was the translator writing itself, which exercises a
+narrow and self-selected slice of the language: l1trans only needs what l1trans
+happens to use.
+
+So this subtree is where we find out what L2 must actually provide. The L2
+translator is being built RIGHT NOW, in parallel, by other people - and what we
+write here is what it will have to translate when L1 is rewritten into L2 and
+L3 blocks are lifted out of it. At L3 the language may be interpreted outright,
+which constrains further what has to lower cleanly.
+
+That gives every awkward moment a second value. A place where L1 makes something
+hard is not lost time: it is a REQUIREMENT DISCOVERED, found by real use rather
+than guessed at in a specification. Report it and it becomes an input to the
+translator being written this week.
+
+Which sharpens the objection to C past "it is off the chain": C teaches the L2
+translator NOTHING. It produces no requirement, no evidence, no pressure on the
+design. It is invisible to the very effort this code exists to inform.
+
+
+0.2. Concurrency stays visible as Message
+
+All application cross-thread coordination is through Message (PROCESS_SEAM6).
+Isolate C/OS fragments; no private mutex/atomic/shared-flag synchronization or
+parallel application state hidden there. Include system callbacks and timers
+in the ownership review, not just explicit worker creation. A required host
+ingress capability belongs at the Message runtime boundary and must be reported
+if missing. This rule applies to L1 now, not only to the future L2 version.
+
+1. const on everything that only reads
+
+Qualify pointer parameters wherever their referenced data is only read. Apply
+this consistently, while checking what the actual L1 spelling qualifies.
+
+Use the CURRENT L1 contract, not an inferred L2 qualifier rule. For example,
+const: @(MixaEvent ev) generates const MixaEvent *ev: the referent is read-only
+through that pointer; this does not make the pointer variable itself const.
+L1_spec open point10.13 covers pointer-qualification spelling. The typedef
+bridge used by the backend registry is documented in STATUS.txt.
+
+immutable: is AVAILABLE in stable65D5, verified by direct translation on
+2026-09-10. It groups declarations under the L1 C-const qualification rules:
+
+    immutable:
+        int: frozen_value 7
+        @: char frozen_text "abc"
+    end: immutable
+
+emits const int frozen_value = 7 and const char *frozen_text = "abc".
+The second pointer can be reassigned; the pointed-to characters are const.
+Use it where the declarations really are read-only, not around arbitrary
+control-flow bodies. L1_spec section5 defines admitted forms and diagnostics.
+
+L2 const (binding) and immutable (contents) remain separate concepts. Do not
+claim this L1 grouping performs runtime graph freezing, freezes every alias,
+or implements every future L2 optimisation. Recording actual read-only intent
+now helps the later port, but the emitted C type is the present guarantee.
+
+1.1. Use the PARENTHESISED form
+
+    const: @(MixaEvent ev)          use this
+    const: @: MixaEvent ev          refused, with a diagnostic
+
+The current translator refuses the second form when more fields follow, and the
+diagnostic tells you the fix:
+
+    qualifier parameter has extra fields; write `const: @(type name)` or place
+    the qualifier last
+
+So the paren form is the spelling to use, and nothing silently breaks if you
+forget - the build stops and tells you.
+
+An earlier version of this section said the non-paren form SILENTLY LOSES THE
+REST OF THE PARAMETER LIST. That WAS true once and is not now: L1_spec section 5
+records both parameter defects as fixed in c8ceb67, and the fix was exactly this
+diagnostic rather than a wider parse. I had read that sentence the same day and
+still carried the vivid description of the defect forward instead of the line
+saying it was repaired. Verified by probe on the current translator before
+correcting.
+
+Keep checking parameter counts in the generated C after a wide const change -
+but as ordinary care, not because something is lying to you.
+
+2. Never edit .lm1 through a tool that processes backslashes
+
+`\` is the field-follow operator, and layered escaping eats it silently: `\type`
+has become a TAB and `\b` a backspace byte, with nothing reported. Use a quoted
+heredoc, or an anchored edit. After any bulk change, grep for a literal tab and
+for the backspace byte.
+
+
+3. No valued or dot member access
+
+Banned project-wide. The only door is the explicit C one, `c.value.field`.
+
+
+4. What verifies a change here
+
+run_mixa.ps1, and that is all. Do NOT run stg/l1_baseline/gate.ps1 for
+mixa_manager work: it rebuilds the shared translator, which cannot be affected
+by anything in this subtree, and doing so has already collided with someone
+else's integration. The gate is for L1.
+
+
+5. What writing the selection model in L1 actually cost
+
+Kept because this subtree is where L2's requirements are found, and because the
+evidence is worthless if it is not written down while it is fresh.
+
+CLASSIFIED RATHER THAN LISTED, at Codex's insistence and he is right: I sent
+these as one list and they are three different kinds of thing. "We needed a
+linear scan here" is not "L2 must provide a hash map", and a manual L1
+allocation pattern is not the L2 storage model. Conflating them turns an
+observation into an unearned mandate.
+
+5.1. Library convenience - wants a library, not a language change
+
+    no strdup, no strrchr surface; the parent path is cut by scanning for '/'
+    growable arrays are hand-rolled each time
+
+These are answered by an L1 library unit, the way mixa_event_fifo.lm1 already
+answers one. Nothing about the language needs to change.
+
+5.2. L1 limitations - real, and expected of an intermediate representation
+
+    no map or set, so linear scans with manual shift-compaction
+    no valued or dot access, so struct shuffling goes through c.memcpy
+    `[]: size_t cap 1` as a one-slot out-parameter works but is easy to misuse
+
+L1 is a thin lowering to C and is not supposed to have these. Recorded so nobody
+re-derives them, not as complaints.
+
+5.3. The two worth L2's attention
+
+    PARALLEL GROWABLE ARRAYS. Growing one array and bumping a shared capacity
+      before growing the other leaves the second null, because the next call
+      takes the count < cap early-out. Nothing detects it.
+
+    ALIASED POINTERS WITH SINGLE OWNERSHIP. The reverse index holds pointers
+      that also live in the exception list. Correct behaviour depends on freeing
+      exactly one of them, and nothing expresses which.
+
+These two are different in kind from 5.1 and 5.2: the language offers nothing at
+all, and the programmer simply must not make a mistake. That is the shape of
+thing a higher level exists to remove - but it is EVIDENCE for the L2 design
+discussion, not a requirement already granted.
+
+One more, not about the language: appending to a .ps1 through a PowerShell
+here-string injected a U+FEFF mid-file. Twice today, from two different agents,
+so it is not one person's slip. Cause not established. Prefer anchored patches,
+and check the diff for U+FEFF after writing a .ps1.
+
+
+6. Former L1 workarounds - REMOVED (baseline promoted)
+
+Two defects this subtree reported were fixed in root and are now in the
+promoted stable translator. The workarounds have been removed from the L1;
+do not reintroduce them.
+
+Current promoted baseline mark (run_mixa.ps1 prints both every run):
+
+    translator binary        65D5A5ED
+    generated-source         09A06E45
+
+6.1. c.sizeof of a pointer type - DONE
+
+Fixed in root 56e4b2d. `c.sizeof(@: char)` now emits `sizeof(char *)`
+(correct), not `sizeof(&char)`.
+
+Sites now use the type directly (no probe array):
+
+    mixa_selection.lm1  mixa_sel_grow_ptrs / mixa_sel_add_exception /
+                        mixa_selection_query
+                        ptr_sz: c.sizeof(@: char)
+
+6.2. multiword element types in [] declarations - DONE
+
+Fixed in root 6b58e51. `[]: WORD gi 1` now emits a valid stack array, not
+the broken `unsigned short[arr] = {2}` form.
+
+Site now uses a stack array (no calloc/free):
+
+    mixa_backend_win32.lm1  mixa_backend_glyph
+                            []: WORD gi 1
+
+6.3. What is NOT a workaround and must stay
+
+    the `c.value.field` door for embedded by-value struct fields - that is the
+      documented design, not a defect
+    a by-value local of a header type still cannot be declared; unchanged by
+      the promotion, per Codex
+    the empty-colon rule is a deliberate grammar change. We have NO bare
+      `receiver:` without a following block anywhere - checked across every
+      .lm1 in this subtree - so it costs us nothing.
+
+7. Closing blocks: when `---` is actually needed
+
+Verified on the stable stg translator 65D5A5ED, 2026-09-10, all four cases run.
+Written down because I got it wrong twice and cost grok_bot a correction each
+time.
+
+`---` is required in EXACTLY ONE situation: a dedent of two or more levels in
+the middle of a body. Everywhere else it is noise.
+
+  a) dedent by ONE level, no cutter          accepted
+  b) dedent by TWO OR MORE, no cutter        parse error 13, "source level
+                                             decrease must be one step unless a
+                                             tail cutter is used"
+  c) end of unit, any depth, no cutter       accepted, all braces emitted
+  d) a trailer at an admitted position       cuts ANY number of levels
+
+(d) is the one that removes most of the `---`. A `return` written at the level
+of its own `fn:` opening closes the whole nest under it:
+
+    fn: f (int: a) int
+        if: a > 0
+            if: a < 9
+                a: a + 1
+    return: a          -> closes both ifs and the function
+
+7.1. The two refusals look alike and are not
+
+    "source level decrease must be one step unless a tail cutter is used"
+        -> you stepped out too far with nothing to do it. Add `---`.
+
+    "tail-cutter target is not valid for this receiver"
+        -> your trailer is at a level whose construct it may not close - a
+           `return` indented into an `if`, typically. MOVE IT OUT. Adding `---`
+           does not fix this one, and reading it as a depth limit is what led me
+           to report a nonexistent one-level restriction to Codex.
+
+Position selects the trailer's target. That is the whole rule; the rest follows.

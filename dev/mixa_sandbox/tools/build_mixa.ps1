@@ -1,0 +1,401 @@
+# build_mixa.ps1 -- translate mixa_manager under dev\mixa_sandbox to C and compile.
+# Modeled on tools\build_l2src.ps1. L2 core comes from C:\Nyasha_Planet\L1\l2src
+# (already translated), not lingvamyxa\l2src.
+#
+#   powershell -NoProfile -ExecutionPolicy Bypass -File dev\mixa_sandbox\tools\build_mixa.ps1 -Run
+param(
+    [string]$Translator,
+    [string]$OutDir,
+    [switch]$Run,
+    [switch]$Strict,
+    # -BuildOnly: build and link everything, run NO probe (rows say "linked (build only)").
+    # -RunOnly <stamp>: run the probes of an already built evidence dir, translating and
+    # compiling nothing.  Both exist because a run can be killed BY THE SYSTEM (low memory,
+    # measured 20.09 05:33) and phases must be repeatable separately.
+    [switch]$BuildOnly,
+    [string]$RunOnly
+)
+$ErrorActionPreference = 'Stop'
+$migRoot = Split-Path -Parent $PSScriptRoot
+$l1Root = Split-Path -Parent (Split-Path -Parent $migRoot)  # .../L1
+if (-not (Test-Path (Join-Path $l1Root 'bin\l1trans.exe'))) {
+    # migRoot = L1\dev\mixa_sandbox; parent of migRoot is L1 when nested under L1\dev
+    $l1Root = Split-Path -Parent $migRoot
+}
+# The port moved to LMX (Mikhail, 20.09: "перенесите все текущие дела в LMX").  There the
+# derivation above lands on C:\Nyasha_Planet, which has no core at all, so walk up to the
+# nearest ancestor that actually holds a PINNED translator.
+if (-not (Test-Path (Join-Path $l1Root 'bin\l1trans.exe'))) {
+    $walk = $migRoot
+    for ($i = 0; $i -lt 4 -and $walk; $i++) {
+        $walk = Split-Path -Parent $walk
+        if ($walk -and (Test-Path (Join-Path $walk 'bin\l1trans.exe'))) { $l1Root = $walk; break }
+    }
+}
+# ...but the translator is not the whole story.  The KERNEL BUILD and lm1/build may be missing
+# from this tree (the kernel is the other line's to migrate), so each is resolved ON ITS OWN and
+# from an EXPLICIT fallback, and the fallback ANNOUNCES ITSELF: a silent one would look like
+# self-sufficiency and would hide the day this tree stops needing L1.
+# ON ITS OWN is the fix from Codex's audit (LMX-L1FIXPOINT-AUDIT-20260920-01): my first cut
+# switched both when either was missing, so a tree that HAS the seed still dragged lm1/build
+# back to L1 -- measured on LMX, where lm1/build was already staged.
+$l1Fallback = 'C:\Nyasha_Planet\L1'
+$kernelRoot = $l1Root
+if (-not (Test-Path (Join-Path $l1Root 'dev\l2src_sandbox\build\l2src'))) { $kernelRoot = $l1Fallback }
+$lm1Root = $l1Root
+if (-not (Test-Path (Join-Path $l1Root 'lm1\build'))) { $lm1Root = $l1Fallback }
+$foreign = @()
+if ($kernelRoot -ne $l1Root) { $foreign += "kernel headers from $kernelRoot" }
+if ($lm1Root -ne $l1Root) { $foreign += "lm1/build from $lm1Root" }
+if ($foreign.Count -gt 0) {
+    Write-Output ("build_mixa: NOTE this tree is NOT self-contained -- " + ($foreign -join '; '))
+}
+
+Set-Location $migRoot
+
+if (-not $Translator) { $Translator = Join-Path $l1Root 'bin\l1trans.exe' }
+if (-not (Test-Path -LiteralPath $Translator)) { throw "translator not found: $Translator" }
+$pinFile = Join-Path $l1Root 'L1_PIN.txt'
+$pinChecked = 'not checked (a translator was named explicitly)'
+if ($Translator -eq (Join-Path $l1Root 'bin\l1trans.exe')) {
+    if (-not (Test-Path -LiteralPath $pinFile)) { throw "missing $pinFile" }
+    $pin = (Get-Content -LiteralPath $pinFile -TotalCount 1).Trim()
+    if ($pin -notmatch '^[0-9A-Fa-f]{64}$') { throw "L1_PIN.txt must hold one 64-hex SHA256, got '$pin'" }
+    $got = (Get-FileHash -LiteralPath $Translator -Algorithm SHA256).Hash
+    if ($got -ne $pin.ToUpper()) { throw "translator pin mismatch: bin\l1trans.exe is $got, L1_PIN.txt says $pin" }
+    $pinChecked = "matches L1_PIN.txt ($($pin.Substring(0,16))...)"
+}
+$stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
+if (-not $OutDir) { $OutDir = Join-Path $migRoot "build\$stamp" }
+$headers = Join-Path $OutDir 'headers'
+$objDir = Join-Path $OutDir 'obj'
+$binDir = Join-Path $OutDir 'bin'
+$logDir = Join-Path $OutDir 'logs'
+foreach ($d in @($headers, (Join-Path $headers 'mixa_manager'), (Join-Path $headers 'mixa_manager\tests\l1_gaps'), $objDir, $binDir, $logDir)) {
+    New-Item -ItemType Directory -Force -Path $d | Out-Null
+}
+$gcc = (Get-Command gcc -ErrorAction Stop).Source
+$nm = (Get-Command nm -ErrorAction Stop).Source
+$winrtSdk = 'C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\winrt'
+$flags = @('-std=c99', '-Wall', '-Wextra', '-Wpedantic',
+           '-I', $migRoot, '-I', $l1Root, '-I', (Join-Path $lm1Root 'lm1\build'), '-I', $headers,
+           '-Werror=incompatible-pointer-types', '-Werror=discarded-qualifiers',
+           '-Werror=implicit-function-declaration', '-Werror=implicit-int')
+# WinRT headers for mixa_share_win32 (must be -idirafter, not -I — see mixa_share.txt)
+if (Test-Path -LiteralPath $winrtSdk) { $flags += @('-idirafter', $winrtSdk) }
+if ($Strict) { $flags += @('-Werror', '-O2') }
+
+$rows = @()
+$failed = @()
+# Rows are RECORDED here and PRINTED ONCE, AT THE END, from $rows -- never from inside a helper.
+# A helper that writes its row to the output stream has it CAPTURED by the caller's
+# `if (Compile-C ...)`: the row disappears from the log, and the captured @(row, $false) array is
+# non-empty and therefore TRUTHY, so the caller adds an OK row for a target that just failed.
+# Measured 20260919: 13 targets failed to build and every one of them printed OK, which is worse
+# than printing nothing -- the log claimed work that was never done.
+function Add-Row([string]$State, [string]$Label, [string]$Note) {
+    $script:rows += ('{0,-4} {1,-48} {2}' -f $State, $Label, $Note)
+    if ($State -eq 'FAIL') { $script:failed += $Label }
+}
+function Get-SafeName([string]$Name) { return ($Name -replace '[:/\\*?"<>|]', '_') }
+function Invoke-Captured([string]$Label, [string]$Exe, [string[]]$ArgList, [string]$LogName) {
+    $log = Join-Path $logDir ((Get-SafeName $LogName) + '.log')
+    $eap = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    $text = & $Exe @ArgList 2>&1 | Out-String
+    $code = $LASTEXITCODE
+    $ErrorActionPreference = $eap
+    Set-Content -LiteralPath $log -Value ("invoke: `"$Exe`" " + ($ArgList -join ' ') + "`r`n" + $text)
+    return $code
+}
+function Convert-Source([string]$Label, [string]$RelSource, [string]$Target) {
+    $parent = Split-Path -Parent $Target
+    if ($parent) { New-Item -ItemType Directory -Force -Path $parent | Out-Null }
+    $code = Invoke-Captured $Label $Translator @($RelSource, $Target) $Label
+    if ($code -ne 0 -or -not (Test-Path -LiteralPath $Target)) {
+        Add-Row 'FAIL' $Label "translate exit $code; log $logDir"
+        return $false
+    }
+    return $true
+}
+function Compile-C([string]$Label, [string]$Source, [string]$Object) {
+    $code = Invoke-Captured $Label $gcc ($flags + @('-c', $Source, '-o', $Object)) $Label
+    if ($code -ne 0 -or -not (Test-Path -LiteralPath $Object)) {
+        Add-Row 'FAIL' $Label "gcc exit $code; log $logDir"
+        return $false
+    }
+    return $true
+}
+function Get-Symbols([string]$File, [switch]$Undefined) {
+    # An object that is not there has no symbols -- and must not TAKE THE WHOLE GATE DOWN.
+    # Measured 20260919: a unit whose compile was reported (wrongly) as OK left no .o, `nm` wrote
+    # its complaint to stderr, $ErrorActionPreference='Stop' turned that into a terminating error,
+    # and the script died before printing any verdict at all.
+    if (-not (Test-Path -LiteralPath $File)) { return @() }
+    $opt = if ($Undefined) { '-u' } else { '--defined-only' }
+    $eap = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    $out = & $nm $opt $File 2>&1 | Out-String
+    $ErrorActionPreference = $eap
+    $syms = @()
+    foreach ($line in ($out -split "`r?`n")) {
+        $parts = @($line.Trim() -split '\s+' | Where-Object { $_ })
+        if ($parts.Count -ge 2 -and $parts[-1] -match '^[A-Za-z_][A-Za-z_0-9]*$') { $syms += $parts[-1] }
+    }
+    return $syms
+}
+function Resolve-Link([string]$SelftestObject, [string[]]$AllObjects) {
+    $chosen = @(); $selected = @{}
+    for ($round = 0; $round -lt 64; $round++) {
+        $need = @{}; $have = @{}
+        foreach ($s in @(Get-Symbols $SelftestObject -Undefined)) { $need[$s] = $true }
+        foreach ($o in $chosen) {
+            foreach ($s in @(Get-Symbols $o -Undefined)) { $need[$s] = $true }
+            foreach ($s in @(Get-Symbols $o)) { $have[$s] = $true }
+        }
+        $missing = @($need.Keys | Where-Object { -not $have.ContainsKey($_) })
+        if ($missing.Count -eq 0) { break }
+        $added = $false
+        foreach ($o in $AllObjects) {
+            if ($selected.ContainsKey($o)) { continue }
+            $defs = @(Get-Symbols $o)
+            foreach ($s in $missing) {
+                if ($defs -contains $s) { $chosen += $o; $selected[$o] = $true; $added = $true; break }
+            }
+            if ($added) { break }
+        }
+        if (-not $added) { break }
+    }
+    return $chosen
+}
+
+Write-Output "build_mixa: translator $Translator ($pinChecked)"
+Write-Output "build_mixa: gcc $gcc"
+Write-Output "build_mixa: migRoot $migRoot"
+Write-Output "build_mixa: l1Root $l1Root"
+# Provenance, for the audit Codex asked for (LMX-L1FIXPOINT-AUDIT-20260920-01): which tool, by
+# which hash, and which tree each dependency actually came from.  A NOTE alone is a claim; these
+# are the paths an auditor can re-hash.
+$translatorHash = (Get-FileHash -LiteralPath $Translator -Algorithm SHA256).Hash
+Write-Output "build_mixa: resolved translator $Translator sha256 $($translatorHash.Substring(0,16))"
+Write-Output "build_mixa: resolved kernelRoot $kernelRoot | lm1Root $lm1Root"
+Write-Output "build_mixa: evidence $OutDir"
+
+$sourceDir = Join-Path $migRoot 'mixa_manager'
+
+# Targets that CANNOT pass in THIS tree, and why.  Each one depends on a runner or a layout
+# that exists only in the frozen lingvamyxa project, so its red row says nothing about the port
+# and only buries the real failures.  They are SKIPPED WITH A REASON, never dropped silently:
+# the row stays in the verdict, so the record keeps showing them and the count stays honest
+# (Mikhail's rule: knowledge must not live only in chat; and my own earlier mistake -- calling
+# this set "seven" from memory, when measurement says three -- is exactly why the reason is
+# written down next to each).
+$skipTargets = @{
+    'selftest:tests_mixa_app_selftest'          = 'fixture (real .lnk via WScript + a marker exe) prepared by frozen-lingvamyxa runner run_app_selftest.ps1; not ported'
+    'selftest:tests_mixa_audio_native_selftest' = 'fixture WAV prepared by frozen-lingvamyxa runner run_audio_native_selftest.ps1:138; not ported'
+    'selftest:tests_mixa_app_panel_selftest'     = 'fixture dir apppaneldir (a.link/b.link) prepared by frozen-lingvamyxa runner run_app_panel_selftest.ps1; not ported -- and the probe now SAYS SO instead of segfaulting'
+    'unit:tests_mixa_ingress_host_harness'      = 'needs l2src/lmx_message_host.h in the vendor/ layout; build-system gap, not a port defect'
+}
+
+# -RunOnly <stamp>: run the probes of an ALREADY BUILT evidence directory, translating and
+# compiling nothing.  Rationale from experience: a run can be killed by the system during the
+# probe phase (critically low memory, 20.09 05:33) while build\<stamp>\{bin,obj} survives
+# intact -- without this the whole ~20 minutes is repeated for a verdict that was one phase away.
+if ($RunOnly) {
+    $OutDir = Join-Path $migRoot "build\$RunOnly"
+    $binDir = Join-Path $OutDir 'bin'
+    $logDir = Join-Path $OutDir 'logs'
+    Write-Output "build_mixa: RUN-ONLY over $OutDir (no translation, no compilation)"
+    if (-not (Test-Path -LiteralPath $binDir)) { throw "RunOnly: no bin directory in $OutDir" }
+    foreach ($e in @(Get-ChildItem -LiteralPath $binDir -Filter '*_selftest.exe' -File | Sort-Object Name)) {
+        $label = "selftest:$($e.BaseName)"
+        if ($skipTargets.ContainsKey($label)) { Add-Row 'SKIP' $label $skipTargets[$label]; continue }
+        $argvForProbe = @()
+        if ($probeArgv.ContainsKey($label)) { $argvForProbe = $probeArgv[$label] }
+        $code = Invoke-Captured "run:$label" $e.FullName $argvForProbe "run:$label"
+        if ($code -eq 0) { Add-Row 'OK' $label 'ran, exit 0' }
+        else { Add-Row 'FAIL' $label "ran, exit $code" }
+    }
+    foreach ($r in $rows) { Write-Output $r }
+    Write-Output ''
+    if ($failed.Count -gt 0) {
+        Write-Output ("build_mixa RED (run-only, probes only): {0} of {1} failed ({2}); evidence {3}" -f $failed.Count, $rows.Count, ($failed -join ', '), $OutDir)
+        exit 1
+    }
+    Write-Output ("build_mixa GREEN (run-only, probes only): {0} probes, no failures; evidence {1}" -f $rows.Count, $OutDir)
+    exit 0
+}
+
+# 1) headers
+$hdrFiles = @(Get-ChildItem -LiteralPath $sourceDir -Filter '*.h.lm1' -File -Recurse |
+    Where-Object { $_.FullName -notmatch '\\vendor\\|\\recovery_' } | Sort-Object FullName)
+foreach ($h in $hdrFiles) {
+    $rel = $h.FullName.Substring($migRoot.Length + 1).Replace('\','/')
+    $baseRel = $rel -replace '\.h\.lm1$','.lm1.h'
+    $target = Join-Path $headers ($baseRel -replace '/','\')
+    $label = 'header:' + ($rel -replace '^mixa_manager/','' -replace '\.h\.lm1$','')
+    if (Convert-Source $label $rel $target) { Add-Row 'OK' $label '' }
+}
+
+# 1b) Copy l2src kernel headers into the include path.  The mixa headers include
+# l2src_kernel/*.lm1.h, but the l2src build produces them under l2src/.  Find the
+# latest l2src build and link them into BOTH directories: l2src/ for internal
+# includes (l2src headers reference each other as l2src/...) and l2src_kernel/
+# for the mixa include: directives.  If no l2src build exists, skip silently —
+# units that need kernel types will FAIL at compile time with a clear message.
+$l2srcSandbox = Join-Path $kernelRoot 'dev\l2src_sandbox'
+if (Test-Path -LiteralPath $l2srcSandbox) {
+    # A build directory is a STAMP (yyyyMMdd_HHmmss) and the newest one is the newest BY NAME.
+    # Sorting every directory by name alone picked `trace_app_min` -- letters sort above digits --
+    # so the gate compiled the app against a kernel snapshot from days earlier and every
+    # kernel-facing unit failed with "conflicting types for lmx_thread_turn" (measured 20260919).
+    # Named directories are still usable, but only as a fallback, and the choice is printed.
+    $allBuilds = @(Get-ChildItem -LiteralPath (Join-Path $l2srcSandbox 'build\l2src') -Directory -ErrorAction SilentlyContinue |
+        Where-Object { Test-Path (Join-Path $_.FullName 'headers\l2src') })
+    $l2srcBuilds = @($allBuilds | Where-Object { $_.Name -match '^\d{8}_\d{6}$' } | Sort-Object Name -Descending)
+    if ($l2srcBuilds.Count -eq 0) { $l2srcBuilds = @($allBuilds | Sort-Object LastWriteTime -Descending) }
+    if ($l2srcBuilds.Count -gt 0) {
+        $l2srcHeaders = Join-Path $l2srcBuilds[0].FullName 'headers\l2src'
+        $kernelsDir = Join-Path $headers 'l2src_kernel'
+        $srcDir = Join-Path $headers 'l2src'
+        foreach ($d in @($kernelsDir, $srcDir)) {
+            New-Item -ItemType Directory -Force -Path $d | Out-Null
+        }
+        foreach ($f in @(Get-ChildItem -LiteralPath $l2srcHeaders -Filter '*.lm1.h' -File)) {
+            Copy-Item -LiteralPath $f.FullName -Destination (Join-Path $srcDir $f.Name) -Force
+            Copy-Item -LiteralPath $f.FullName -Destination (Join-Path $kernelsDir $f.Name) -Force
+        }
+        Write-Output "build_mixa: l2src kernel headers linked from $($l2srcBuilds[0].Name)"
+    } else {
+        Write-Output "build_mixa: WARNING no l2src build found at $l2srcSandbox\build\l2src\<stamp>\headers\l2src — kernel-dependent units will FAIL"
+    }
+}
+
+# 2) units (skip selftests, skip .h.lm1)
+$objects = @()
+$unitFiles = @(Get-ChildItem -LiteralPath $sourceDir -Filter '*.lm1' -File -Recurse |
+    Where-Object {
+        $_.Name -notlike '*.h.lm1' -and $_.Name -notlike '*_selftest.lm1' -and
+        $_.FullName -notmatch '\\vendor\\|\\recovery_'
+    } | Sort-Object FullName)
+foreach ($u in $unitFiles) {
+    $rel = $u.FullName.Substring($migRoot.Length + 1).Replace('\','/')
+    $safe = ($rel -replace '^mixa_manager/','' -replace '[\\/]','_' -replace '\.lm1$','')
+    $cFile = Join-Path $objDir "$safe.c"
+    $objFile = Join-Path $objDir "$safe.o"
+    $label = "unit:$safe"
+    if ($skipTargets.ContainsKey($label)) { Add-Row 'SKIP' $label $skipTargets[$label]; continue }
+    if (-not (Convert-Source $label $rel $cFile)) { continue }
+    if (Compile-C $label $cFile $objFile) { $objects += $objFile; Add-Row 'OK' $label '' }
+}
+
+# 2b) fixture PROGRAMS.  Files named *_fixture*.lm1 carry their own `fn: main` and are meant
+# to be RUN by probes, which look them up by a RELATIVE name in the sandbox root
+# (mixa_process_selftest.lm1:89 asks for "mixa_process_fixture.exe").  The unit pass above
+# only compiles everything to OBJECTS, so a fixture was never linked and never staged: the
+# probe spawned a name that did not exist and cmd answered "not recognized", which the probe
+# reported as exit code 1 instead of 0 and instead of 7 (gate RED 27/361, 20.09).  This is the
+# runner role the gate was missing; the staged copy lands in the sandbox root because that is
+# where the probes' relative path points.
+foreach ($fp in @(Get-ChildItem -LiteralPath $sourceDir -Filter '*_fixture*.lm1' -File -Recurse |
+    Where-Object { $_.FullName -notmatch '\\vendor\\|\\recovery_' } | Sort-Object FullName)) {
+    $rel = $fp.FullName.Substring($migRoot.Length + 1).Replace('\','/')
+    $safe = ($rel -replace '^mixa_manager/','' -replace '[\\/]','_' -replace '\.lm1$','')
+    $staged = ($safe -replace '^tests_','')
+    $fixtureObj = Join-Path $objDir "$safe.o"
+    if (-not (Test-Path -LiteralPath $fixtureObj)) { continue }
+    $exe = Join-Path $binDir "$staged.exe"
+    $link = $flags + @('-o', $exe, $fixtureObj) + (Resolve-Link $fixtureObj $objects)
+    $link += @('-lkernel32', '-luser32', '-lgdi32', '-lwinmm', '-lole32', '-luuid', '-lshell32')
+    $code = Invoke-Captured "fixture:$staged" $gcc $link "fixture:$staged"
+    if ($code -ne 0 -or -not (Test-Path -LiteralPath $exe)) {
+        Add-Row 'FAIL' "fixture:$staged" "link exit $code; log $logDir\$(Get-SafeName "fixture:$staged").log"
+        continue
+    }
+    Copy-Item -LiteralPath $exe -Destination (Join-Path $migRoot "$staged.exe") -Force
+    Add-Row 'OK' "fixture:$staged" 'linked and staged into the sandbox root'
+}
+
+# 2c) Probes that consume a fixture PROGRAM must be TOLD where it is.  Staging alone is not
+# enough: the probe starts its child with the FIXTURE DIRECTORY as the child's working
+# directory (mixa_process_selftest.lm1:251 passes `base` to mixa_process_spawn), so the default
+# relative name "mixa_process_fixture.exe" resolves against that directory and never against
+# the sandbox root where the file is staged -- measured: the probe reported
+# `'"mixa_process_fixture.exe"' is not recognized as an internal or external command` even
+# though the staged file was present and the gate said OK.  The probe already accepts both
+# paths as argv[1] (base) and argv[2] (fixture) at :80-89; the gate is the only party that
+# knows the staged location.  argv[1] must be passed too -- argv[2] alone would be read as base.
+$probeArgv = @{
+    'selftest:tests_mixa_process_selftest' = @('build/mixa/claude/process/tmp', (Join-Path $migRoot 'mixa_process_fixture.exe'))
+}
+
+# 3) conscious hand-written C kept on purpose
+$keepC = @(
+    'mixa_backend_tableref.h',  # header only
+    'mixa_file_win32_l2_win.h',
+    'tests\l1_gaps\vt.h',
+    'tests\mixa_win32_smoke_harness.c',
+    'tests\mixa_ingress_host_harness.c'
+)
+# Compile remaining top-level .c that are NOT harness/vendor/recovery/abi (abi later)
+foreach ($c in @(Get-ChildItem -LiteralPath $sourceDir -Filter '*.c' -File | Sort-Object Name)) {
+    if ($c.Name -eq 'test.c') {
+        Add-Row 'SKIP' "handC:$($c.BaseName)" 'generated draft / dead probe — see CONVERSION.md'
+        continue
+    }
+    # Prefer .lm1 twin: do not compile residual .c when unit .lm1 already exists (ticket 20260917-081239)
+    $lm1Twin = Join-Path $sourceDir ($c.BaseName + '.lm1')
+    if (Test-Path -LiteralPath $lm1Twin) {
+        Add-Row 'SKIP' "handC:$($c.BaseName)" 'residual .c; .lm1 twin preferred — see CONVERSION.md'
+        continue
+    }
+    # mixa_event_source.c needs L1\l2src\lmx_message.h (only .h.lm1 exists) — skip until converted
+    if ($c.Name -eq 'mixa_event_source.c') {
+        Add-Row 'SKIP' "handC:$($c.BaseName)" 'pending .lm1; L1\l2src has lmx_message.h.lm1 only (no plain .h)'
+        continue
+    }
+    $objFile = Join-Path $objDir "$($c.BaseName).o"
+    if (Compile-C "handC:$($c.BaseName)" $c.FullName $objFile) {
+        $objects += $objFile; Add-Row 'OK' "handC:$($c.BaseName)" 'still-C unit pending .lm1'
+    }
+}
+
+# 4) selftests
+$selftests = @(Get-ChildItem -LiteralPath $sourceDir -Filter '*_selftest.lm1' -File -Recurse |
+    Where-Object { $_.FullName -notmatch '\\vendor\\|\\recovery_' } | Sort-Object FullName)
+foreach ($t in $selftests) {
+    $rel = $t.FullName.Substring($migRoot.Length + 1).Replace('\','/')
+    $safe = ($rel -replace '^mixa_manager/','' -replace '[\\/]','_' -replace '\.lm1$','')
+    $cFile = Join-Path $objDir "$safe.c"
+    $testObj = Join-Path $objDir "$safe.selftest.o"
+    $exe = Join-Path $binDir "$safe.exe"
+    $label = "selftest:$safe"
+    if ($skipTargets.ContainsKey($label)) { Add-Row 'SKIP' $label $skipTargets[$label]; continue }
+    if (-not (Convert-Source $label $rel $cFile)) { continue }
+    if (-not (Compile-C $label $cFile $testObj)) { continue }
+    $linkObjects = Resolve-Link $testObj $objects
+    $link = $flags + @('-o', $exe, $testObj) + $linkObjects
+    # Win32 libs commonly needed
+    $link += @('-lkernel32', '-luser32', '-lgdi32', '-lwinmm', '-lole32', '-luuid', '-lshell32')
+    $code = Invoke-Captured $label $gcc $link $label
+    if ($code -ne 0 -or -not (Test-Path -LiteralPath $exe)) {
+        Add-Row 'FAIL' $label "link exit $code; log $logDir\$(Get-SafeName $label).log"
+        continue
+    }
+    if (-not $Run -or $BuildOnly) { Add-Row 'OK' $label 'linked (build only)'; continue }
+    $argvForProbe = @()
+    if ($probeArgv.ContainsKey($label)) { $argvForProbe = $probeArgv[$label] }
+    $code = Invoke-Captured "run:$label" $exe $argvForProbe "run:$label"
+    if ($code -eq 0) { Add-Row 'OK' $label 'ran, exit 0' }
+    else { Add-Row 'FAIL' $label "ran, exit $code" }
+}
+
+# The one place rows reach the log: the whole ordered record, every target with its true state.
+foreach ($r in $rows) { Write-Output $r }
+Write-Output ''
+if ($failed.Count -gt 0) {
+    Write-Output ("build_mixa RED: {0} of {1} targets failed ({2}); evidence {3}" -f $failed.Count, $rows.Count, ($failed -join ', '), $OutDir)
+    exit 1
+}
+Write-Output ("build_mixa GREEN: {0} targets, no failures; evidence {1}" -f $rows.Count, $OutDir)
+exit 0

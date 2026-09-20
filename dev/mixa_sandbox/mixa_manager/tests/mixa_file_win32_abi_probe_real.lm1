@@ -1,0 +1,19 @@
+# ABI parity guard — L1 port of mixa_file_win32_abi_probe_real.c (ticket 20260918-082421).
+# offsetof is a C macro with no L1 spelling (c. pastes a call, not a preprocessor
+# name). Field offsets are computed at run time via pointer arithmetic on a local
+# store (same pattern as l2src/lmx_message_selftest.lm1). Output format strings
+# are kept byte-identical to the C probe so L2-vs-real parity still diffs stdout.
+predef: "mixa_manager/mixa_file_win32.h.lm1"
+include: "<stdio.h>"
+
+fn: main () int
+    MixaFile: store0
+    @: MixaFile p0
+    p0: @ store0
+
+    c.printf("MixaFile sizeof=%zu\n", c.sizeof(c.MixaFile))
+    c.printf("MixaFile handle=%zu\n", (cast: (size_t) @ p0\handle) - (cast: (size_t) p0))
+    c.printf("MixaFile mode=%zu\n", (cast: (size_t) @ p0\mode) - (cast: (size_t) p0))
+    c.printf("MixaFile is_open=%zu\n", (cast: (size_t) @ p0\is_open) - (cast: (size_t) p0))
+    return: 0
+

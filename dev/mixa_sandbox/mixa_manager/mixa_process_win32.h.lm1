@@ -1,0 +1,33 @@
+include: "<stddef.h>"
+include: "mixa_manager/mixa_file_win32_l2_win.h"
+
+# Concrete Win32 MixaProcess. Same-file completion (see mixa_file_win32.h.lm1).
+
+define: MIXA_PROC_OK 0
+define: MIXA_PROC_ERR_ARG 1
+define: MIXA_PROC_ERR_SPAWN 2
+define: MIXA_PROC_ERR_IO 3
+define: MIXA_PROC_ERR_NOMEM 4
+define: MIXA_PROC_EOF 5
+
+type: MixaProcess struct MixaProcess
+
+struct: MixaProcess
+    @: void h_process
+    @: void h_thread
+    @: void h_job
+    @: void h_out_read
+    @: void h_in_write
+    int: stdin_enabled
+    int: eof_seen
+    int: is_closed
+end: MixaProcess
+
+prototype:
+    fn: mixa_process_spawn (@@: MixaProcess out; const: @(char command_line_utf8); const: @(char cwd_utf8); int: stdin_enabled) int
+    fn: mixa_process_read (@: MixaProcess p; @: void buf; size_t: cap; @: size_t got) int
+    fn: mixa_process_write (@: MixaProcess p; const: @(void buf); size_t: n; @: size_t wrote) int
+    fn: mixa_process_status (@: MixaProcess p; @: int running; @: int exit_code) int
+    fn: mixa_process_kill (@: MixaProcess p) int
+    fn: mixa_process_close (@@: MixaProcess p) void
+end: prototype

@@ -1,0 +1,39 @@
+include: "<stdlib.h>"
+
+# mixa_selection_alloc_fault.lm1 — L1 port of mixa_selection_alloc_fault.c.
+# Allocation-fault injection for mixa_selection parity harness (ticket
+# 20260913-083100). Linked ONLY into parity test binaries.
+#
+# The -Dmalloc=test_malloc / -Dcalloc=test_calloc redirect is applied at
+# the GCC stage (run_mixa_l2_parity.ps1), not in L1 source. The .lm1
+# defines the test_malloc/test_calloc wrappers + counters; the build
+# script substitutes them for malloc/calloc in mixa_selection.
+
+int: g_fail_at -1
+int: g_call_count 0
+
+fn: mixa_test_fault_set (int: n) void
+    g_fail_at: n
+    g_call_count: 0
+
+fn: mixa_test_fault_clear () void
+    # Deliberately does NOT reset g_call_count: callers compare it to
+    # determine which allocation number triggered the fault.
+    g_fail_at: -1
+
+fn: mixa_test_fault_calls () int
+    return: g_call_count
+
+fn: test_malloc (size_t: n) @: void
+    g_call_count: g_call_count + 1
+    if: g_fail_at >= 0 && g_call_count = g_fail_at
+        return: 0
+    ---
+    return: (cast: (@: void) c.malloc(n))
+
+fn: test_calloc (size_t: n; size_t: s) @: void
+    g_call_count: g_call_count + 1
+    if: g_fail_at >= 0 && g_call_count = g_fail_at
+        return: 0
+    ---
+    return: (cast: (@: void) c.calloc(n, s))

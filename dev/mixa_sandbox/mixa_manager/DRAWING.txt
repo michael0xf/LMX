@@ -1,0 +1,198 @@
+Mixa Manager - the single drawing API
+One drawer. Text and pseudographics. Both layers. No third case.
+
+
+1. The rule
+
+There is ONE drawing API. It draws text and pseudographics into a CELL SURFACE,
+and it does not know which layer the surface belongs to.
+
+Fixed by the language owner on 2026-09-09, as the deliberate simplification
+away from ClearShell: simpler and more discrete, one API that draws into the
+graphical window and the text window alike.
+
+The consequence to guard is the interesting one. If the drawer ever learns which
+layer it is drawing into - a special case for the panel, a graphics call that
+only the upper layer has - the property is gone and the two layers stop being
+interchangeable. Every future addition is measured against that: can the text
+layer accept this call too? If not, it does not belong in the drawer.
+
+
+2. What this means for the two surfaces
+
+Today TextRect is a cell grid and OverlayRect is an RGBA raster with some cell
+helpers bolted on. That asymmetry is the thing to remove: the upper layer
+becomes a cell grid of the SAME TYPE, and the raster disappears.
+
+They then differ in exactly two ways, neither of which the drawer sees:
+
+    cell size    each layer has its own, from its own font - section 10.3 of
+                 BACKEND_SEAM
+    alpha        the upper layer is drawn semi-transparently so the console
+                 stays readable underneath. The text layer simply uses opaque
+                 everywhere
+
+So MixaCell gains a background alpha. One byte, per cell rather than per
+surface, because a panel is a translucent background carrying OPAQUE text and a
+selected row may be opaque while the rest is not. A per-surface constant cannot
+express that; a per-cell byte expresses it without any special case.
+
+Glyphs are always drawn opaque. Translucency belongs to the background, not to
+the letters - text that fades into whatever lies beneath is the unreadable
+result this whole design is avoiding.
+
+2.1. This is the terminal model, and it answers the question people ask
+
+"How does a symbol on the graphics layer get its background - do we skip drawing
+it, or pass a colour?" is a question that comes up because the two look like
+different mechanisms. They are the same one, at different values, and it is
+exactly how a terminal works: EVERY CELL CARRIES FOREGROUND AND BACKGROUND. The
+renderer fills the cell with the background, then draws the glyph in the
+foreground.
+
+We add one thing to that: the background has an ALPHA.
+
+    alpha 0     the background is not painted at all - whatever is beneath
+                shows through, and only the glyph is drawn
+    alpha 96    a translucent body, which is ClearShell's button
+    alpha 255   opaque, which is the text layer everywhere
+
+So "do not draw the background" and "use this background" are not two APIs to
+choose between. They are one field. All four cases are covered by tests in the
+overlay selftest, including the one that matters most for a button: a
+translucent background carrying an opaque glyph.
+
+
+3. What the drawer draws
+
+Text, and pseudographics. Nothing else, ever - the old model's section 14 asks
+for box drawing that aligns exactly with the cell grid, and the interface has no
+graphical elements at all.
+
+    text        a UTF-8 string from a cell position, with colours and style
+    fill        a rectangle of cells with a codepoint and attributes
+    line        horizontal or vertical, in cells
+    frame       a rectangle border
+
+Line style is single or double, because Norton-style interfaces use both and
+choosing between them is not the caller's business to spell out per character.
+
+3.1. Junctions are the actual work
+
+Drawing a line is trivial. What makes pseudographics look right or wrong is what
+happens where lines MEET: a T where a divider joins a frame, a cross where two
+dividers cross, a corner that must not overwrite the edge it lands on.
+
+So a line or frame does not blindly overwrite. Where it lands on a cell that
+already holds a box-drawing character, it MERGES: the result is the character
+carrying the union of the two sets of stubs. Drawing a vertical divider across a
+horizontal rule produces a cross; ending it on a frame edge produces a T.
+
+This is the difference between an interface that looks made and one that looks
+assembled, and it is cheap to do once in the drawer and impossible to fix later
+in every caller.
+
+
+4. Why this comes before glyph rasterization
+
+The drawer writes CELLS. Whether a cell later becomes a real glyph from the
+system font or the current placeholder is downstream of it.
+
+That ordering is not only the instruction; it is what keeps the tests. Drawer
+tests assert cell contents - this position holds this codepoint with these
+attributes - so they are exact, they need no font, they run headless, and they
+stay valid unchanged when real glyphs arrive. Tests written against pixels
+would have to be rewritten the moment the font appears.
+
+
+5. Tiles: cell content that is not a glyph
+
+Buttons in ClearShell have NO BORDER. What separates them is a MICRO-GAP - the
+margin, hb >> 5, about one pixel. There is no frame to draw, and box-drawing
+characters cannot express "a solid block inset by one pixel on two sides".
+
+So buttons need a different material: NINE TILES per colour - four corners, four
+sides, one solid fill - each a cell-sized block of the button colour with the
+gap left TRANSPARENT on whichever sides face outward. A button of any size is
+then covered by them exactly as a nine-slice.
+
+5.1. How they reach a cell without changing MixaCell
+
+A PRIVATE-USE CODEPOINT RANGE. The nine tiles get codepoints in U+E000..; the
+compositor recognises that range and draws the tile procedurally instead of
+asking the backend for a glyph.
+
+Chosen over adding a tile field to MixaCell because it changes nothing:
+
+    the drawer places them with the existing fill - it never learns they are
+      special, so the single-API property survives untouched
+    the colour comes from the cell's own fg and bg, like everything else, so
+      the nine tiles serve EVERY button colour rather than needing nine per
+      colour
+    the alpha comes from the cell's bg alpha, which is how a translucent button
+      body is already expressed
+
+5.2. The gap is derived, not chosen
+
+Per the doctrine: an integer number of pixels, derived from the cell, never a
+fraction and never a constant. ClearShell uses hb >> 5 of a button height; ours
+is the same shift of the CELL height, floored at one pixel - a gap that rounds
+to zero is not a gap, and at that point the buttons touch and the design is lost.
+
+5.3. What this does NOT replace
+
+Frames and line junctions stay. Buttons do not use them, but panels, list
+headers and dividers do - and those are ClearShell's own borders around
+containers, not around buttons. Section 3.1 stands unchanged.
+
+
+5.4. The highlight border: the double box set
+
+    corners  U+2554 U+2557 U+255A U+255D
+    lines    U+2550 U+2551
+
+That is the whole specification. Mikhail named the set and, when an earlier
+revision of this section built an argument on top of an earlier phrasing of his,
+withdrew the phrasing: "I was wrong, use this set and that is all."
+
+Nothing new is drawn. mixa_draw_frame already takes a style, the DOUBLE branch
+of mixa_draw_mask_to_cp already returns exactly these six codepoints, and
+junction merging already covers them - so section 3.1 carries the feature whole.
+Colour is the cell's fg, white to begin with; foreground elements here are
+always fully opaque (UI_MODEL 3).
+
+5.4.1. A deleted design, kept as a warning not to rebuild it
+
+An earlier revision specified a second procedural TILE family at
+U+E010..U+E01F with a thickness derived as cell_h >> 4, painted by an extension
+of mixa_tile_paint_cell. All deleted. It was designed to satisfy a description
+that the existing pseudographics already satisfied, one section above, in this
+same file.
+
+The general lesson, and it is not about this feature: before designing a
+capability to meet a description, check whether the code already has one.
+
+5.4.2. The frame goes OVER the element, and takes only the foreground
+
+Answered by Mikhail before it could be asked: the centre of the button stays the
+coloured fill as it is, and the border runs over the top in black and white.
+That is all.
+
+So there is ONE frame and it MOVES - "runs" - from element to element as focus
+does. It is not a decoration each button owns and it is not a second widget.
+
+    the frame overlays the OUTERMOST CELLS of the highlighted element
+    the element's own background stays: colour, alpha, everything
+    only the FOREGROUND of those cells changes - the box glyph, monochrome
+
+The last line is the mechanical requirement, and it is easy to get wrong.
+mixa_draw_frame takes bg and alpha like every other drawing call, and passing a
+background here would repaint the button's body along its edge and lose the
+colour that is supposed to stay. Drawing the highlight needs a way to say KEEP
+THE CELL'S BACKGROUND and write the glyph only. That is the one piece of work
+this feature actually has.
+
+Nothing is displaced by the overlay: the glyph replaces whatever character
+occupied those edge cells, and on a button those are the nine-slice border cells
+rather than label. A square button is the case to look at, and looking is the
+method - first version, then judge.

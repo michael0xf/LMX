@@ -1,0 +1,77 @@
+/* mixa_event_source.c — small C event source for mixa_app, per user direction.
+ * Does NOT modify the LmxMsg struct. Creates messages and puts them in
+ * the L3 Thread's mailbox via the portable lmx_message API (host layer).
+ * Compiled alongside mixa_manager L1 modules; linked WITHOUT
+ * lmx_message_exec.c (the AD-stage executor that has unresolved
+ * ui_pending/affinity-Ui references on this tree).
+ *
+ * Builds as both a standalone test (main below) and a library function
+ * for the app_main harness to call.
+ */
+#include <stdio.h>
+#include <string.h>
+#include "l2src/lmx_message.h"
+
+#define EVT_BUTTON_PRESS 1
+#define EVT_KEY_PRESS    2
+
+int mixa_event_source_emit(LmxMsgRuntime *rt, LmxMsgAddr target,
+                           int event_kind, int param) {
+    LmxMsgEnv env;
+    unsigned char buf[8];
+    int n;
+
+    if (rt == 0 || target == 0) { return -1; }
+
+    /* Pack the event as a small message body: kind + param, little-endian. */
+    buf[0] = (unsigned char)(event_kind & 0xFF);
+    buf[1] = (unsigned char)(param & 0xFF);
+    n = 2;
+
+    env.id = (unsigned)event_kind;
+    env.correlation = 0;
+    env.reply_to = 0U;
+    env.kind = LMX_MSG_KIND_ITEM;
+    env.number = param;
+    env.bytes = buf;
+    env.n = (size_t)n;
+
+    if (lmx_msg_send(rt, 0U, target, &env) != LMX_MSG_OK) {
+        return -2;
+    }
+    return 0;
+}
+
+#ifdef MIXA_EVENT_SOURCE_STANDALONE
+int main(void) {
+    LmxMsgRuntime *rt = lmx_msg_runtime_new();
+    if (rt == 0) {
+        fprintf(stderr, "runtime_new failed\n");
+        return 1;
+    }
+
+    /* Create a root message (acts as the host root, per spec 19.29.6). */
+    static const unsigned char init[] = { 'r', 'o', 'o', 't' };
+    LmxMsgAddr root = 0;
+    int rc = lmx_msg_create(rt, 0U, 0U, init, sizeof(init), &root);
+    if (rc != LMX_MSG_OK || root == 0) {
+        fprintf(stderr, "create root: rc=%d\n", rc);
+        lmx_msg_runtime_delete(rt);
+        return 1;
+    }
+    fprintf(stderr, "event_source: root=%u\n", root);
+
+    /* Emit two events into the root's mailbox as a test. */
+    mixa_event_source_emit(rt, root, EVT_BUTTON_PRESS, 1);
+    mixa_event_source_emit(rt, root, EVT_KEY_PRESS, 7);
+
+    /* Drive the runtime once to process pending messages. */
+    lmx_msg_end_turn(rt, root, 1);
+
+    unsigned inbox = (unsigned)lmx_msg_inbox_n(rt, root);
+    fprintf(stderr, "event_source: inbox_n=%u done\n", inbox);
+
+    lmx_msg_runtime_delete(rt);
+    return 0;
+}
+#endif

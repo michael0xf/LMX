@@ -1,0 +1,20 @@
+predef: "l2src/lmx_message.h.lm1" "<stddef.h>"
+
+# mixa_event_source — L1 port of the small C event source for mixa_app
+# (ticket 20260918-063608). Uses the pinned host-ingress LmxMsg API
+# (vendor/lmx_msg_host_ingress_v0). Types/constants come from the C header;
+# function bodies live in kernel lmx_message.lm1 (+ host.c). Callers and this
+# unit declare prototypes here so we never predef the vendor body.
+
+define: EVT_BUTTON_PRESS 1
+define: EVT_KEY_PRESS 2
+
+prototype:
+    fn: lmx_msg_runtime_new () @: LmxMsgRuntime
+    sub: lmx_msg_runtime_delete (@: LmxMsgRuntime rt)
+    fn: lmx_msg_create (@: LmxMsgRuntime rt; LmxMsgAddr: parent; unsigned: create_id; const: @(uchar init); size_t: n; @: LmxMsgAddr out) int
+    fn: lmx_msg_send (@: LmxMsgRuntime rt; LmxMsgAddr: from; LmxMsgAddr: to; const: @(LmxMsgEnv env)) int
+    fn: lmx_msg_end_turn (@: LmxMsgRuntime rt; LmxMsgAddr: who; int: success) int
+    fn: lmx_msg_inbox_n (@: LmxMsgRuntime rt; LmxMsgAddr: who) int
+    fn: mixa_event_source_emit (@: LmxMsgRuntime rt; LmxMsgAddr: target; int: event_kind; int: param) int
+end: prototype

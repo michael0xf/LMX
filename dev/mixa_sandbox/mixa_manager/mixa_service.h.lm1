@@ -1,0 +1,38 @@
+include: "<stddef.h>"
+
+# mixa_service.h.lm1 — ClearShellService desktop port (ticket 20260918-125450).
+#
+# Android ClearShellService.java is an empty Service stub (onBind → null).
+# Desktop model (mixa_app_main_msg.lm1): R0 creates L3 Threads; cross-thread
+# letters go through lmx_service_post (physical address, mixa_app_message.h.lm1).
+#
+# This module owns an APP handle only:
+#   - open stores a borrowed LmxService* (typically lmx_root_service)
+#   - post forwards to lmx_service_post(service, address, letter)
+#   - close frees the handle; it does NOT release the LmxService (root-owned)
+#
+# L3 Thread creation / turn entries stay in mixa_app_main_msg — this is the
+# letter-delivery seam ClearShellService would sit on, not a second Message
+# runtime. Opaque void* for service/address/letter so this unit does not pull
+# l2src_kernel C headers (same opaque pattern as mixa_app_message for types).
+
+define: MIXA_SERVICE_OK 0
+define: MIXA_SERVICE_ERR_ARG 1
+define: MIXA_SERVICE_ERR_NOMEM 2
+define: MIXA_SERVICE_ERR_STATE 3
+define: MIXA_SERVICE_ERR_POST 4
+
+struct: MixaService
+    @: void lmx_service
+    int: is_open
+end: MixaService
+
+# Declared here so mixa_service.lm1 can call the kernel act without including
+# generated C headers. Signature matches mixa_app_message.h.lm1 (physical addr).
+prototype:
+    fn: lmx_service_post (@: void service; @: void address; @: void letter) int
+    fn: mixa_service_open (@@: MixaService out; @: void lmx_service) int
+    fn: mixa_service_close (@: MixaService s) void
+    fn: mixa_service_post (@: MixaService s; @: void address; @: void letter) int
+end: prototype
+

@@ -1,0 +1,333 @@
+include: "<stddef.h>"
+include: "mixa_manager/mixa_backend.h"
+include: "mixa_manager/mixa_pump.h"
+predef: "mixa_manager/mixa_file_manager.h.lm1"
+predef: "mixa_manager/mixa_copy.h.lm1"
+
+# Wires the accepted copy operation to the file-manager view (ticket
+# 20260912-121231). Does not duplicate mixa_selection_walk's traversal
+# or mixa_fileio's I/O -- mixa_fm_copy_selection is a thin call straight
+# into mixa_copy_run, using the MixaFm's own borrowed MixaSelection
+# (fm\sel, already wired by the earlier selection-walk stage) as the
+# operation source. Every contract mixa_copy.h.lm1 already documents and
+# tests -- draining on a clean completion, leaving an unfinished root
+# selected on cancellation or failure, refusing an existing destination
+# file, merging an existing destination directory, refusing destination-
+# inside-source before any descent -- is unchanged, because this module
+# adds no logic of its own to the copy path itself.
+#
+# Reference: ClearShell FSync.copy(fileAdapter) reads
+# fileAdapter.getStorageList().getCurrentDir() as the destination, and
+# a completed action's invalidate(path) calls item.adapter.refresh() for
+# whichever adapter is showing that path. The same shape here: the
+# destination is a plain path the caller already has (from wherever the
+# view's own "current directory" is, or any other path a future
+# destination-picker supplies), and this module refreshes the FM's view
+# afterward ONLY when that destination is the directory currently being
+# looked at -- copy never touches a SOURCE directory's own listing, so
+# refreshing anything else would be a wasted, meaningless re-scan.
+#
+# The refresh matters for a real reason, not a cosmetic one: fm's own
+# entries array is a replaceable snapshot (mixa_fm_refresh performs
+# mixa_file_manager's already-accepted transactional replacement), and
+# this module never reads or retains an mixa_fm_path()/mixa_fm_name()
+# pointer across the mixa_copy_run call -- the destination path the
+# caller passes in is the caller's own string, not one borrowed from a
+# snapshot that copy or a later refresh could invalidate underneath it.
+# A caller of THIS function must observe the same discipline: read
+# whatever fm entries you need BEFORE calling this, not after, since a
+# refresh triggered inside it (on match) replaces the snapshot.
+#
+# No destination-picker UI exists yet in the accepted Win32 surface, so
+# this stays at the headless action boundary the ticket asked for: a
+# real UI trigger (a button, a paste gesture) can call this function
+# directly once one exists, exactly like mixa_mp3_hit calls into
+# mixa_mp3_open_dir today. Inventing a folder-picker dialog to close
+# this ticket was explicitly out of scope and was not done.
+
+prototype:
+    fn: mixa_fm_copy_selection (@: MixaFm fm; const: @(char dest_root_utf8); const: @(MixaCopySink sink); const: @(MixaFioFaultVTable fv)) int
+end: prototype
+
+
+# Copy Here (ticket 20260912-122500): exposes mixa_fm_copy_selection as
+# a real button-shaped action, following the exact MixaButtonActionFn
+# adapter shape mixa_share_button.h.lm1 already established -- (@: void
+# ctx) int, with the exact result surfaced back through this struct's
+# own fields for the caller to read after the call returns, the same
+# convention mixa_share_send_button_action and its selftest already use.
+# The destination is always the file manager's own current directory,
+# matching ClearShell's own "Paste selected" gesture (FSync.copy reads
+# fileAdapter.getStorageList().getCurrentDir() as the destination).
+#
+# Added directly into this ALREADY-ACCEPTED module rather than as a
+# separate mixa_fm_copy_here pair of files, and that choice is load-
+# bearing, not stylistic: l1trans's import path table holds exactly 16
+# imports (mixa_audio.txt records the first bisected reproducer), and
+# this module's own existing chain -- mixa_file_manager, mixa_copy,
+# mixa_selection_walk, mixa_fileio, this file itself -- already reaches
+# 15. A separate pair of new files for Copy Here would add 2 more,
+# reaching 17 and overflowing by exactly one; reproduced directly with a
+# minimal probe before choosing this structure instead. Extending the
+# module that is already in the chain costs zero additional files.
+#
+# The same table is also why this is NOT wired through
+# mixa_button_dispatch_hit or mixa_buttons' MixaButtonPanel /
+# mixa_button_panel_hit: both are measurably unaffordable in this same
+# combination. Reproduced directly, both ways this could have gone:
+#
+#   this module's own 15-file chain + mixa_button_dispatch.h.lm1/.lm1
+#     -> "import path table full" at mixa_button_dispatch.h.lm1
+#   that same chain + mixa_buttons.lm1 ALONE (no dispatch, no app_window)
+#     -> "import path table full" at mixa_tiles.lm1
+#
+# So even the narrower manual-dispatch primitive mixa_button_panel_hit
+# depends on is unaffordable here -- one level past what forced MP3
+# stage 3's own manual-dispatch substitution for mixa_button_dispatch_
+# hit, since here even that substitute's own dependency is over budget.
+# mixa_fm_copy_here_hit below is therefore a small, LOCAL, dependency-
+# free rectangle hit-test -- explicit row/col bounds the caller
+# supplies, no MixaButtonPanel involved at all -- standing in for the
+# accepted primitive for exactly this reason. It is not a claim of being
+# that accepted mechanism, and it is not a modal framework: a handful of
+# comparisons, nothing more.
+#
+# mixa_fm_copy_here_action is the real, reusable deliverable regardless
+# of which hit-test calls it: any future real dispatch mechanism -- the
+# generic mixa_button_dispatch_hit, the manual pattern, or something
+# else the accepted top-level wiring eventually adopts once it fits its
+# own budget -- can call it directly, exactly like
+# mixa_share_send_button_action already can today.
+#
+# Empty selection is an explicit, distinct, tested outcome
+# (MIXA_COPY_HERE_NOTHING_SELECTED) rather than silently doing nothing
+# or reusing an unrelated error code -- satisfying the ticket's own
+# "disabled/no-op state must be explicit" requirement. Chosen well
+# outside both the walk's 0-7 range and mixa_copy's own rebased 100+
+# range, so it cannot be mistaken for either.
+#
+# Path lifetime across the call (the ticket's own requirement 3): the
+# action takes an OWNED copy of mixa_fm_cur_dir(fm) before calling
+# mixa_fm_copy_selection and frees it after. The borrowed pointer is not
+# safe to pass through directly -- mixa_fm_copy_selection's own
+# completion refresh, on the match this scenario always produces since
+# the destination IS the current directory, frees and reallocates fm's
+# own cur_dir through mixa_fm_refresh WHILE that same call is still
+# running. Proven, not just asserted: the selftest's own poisoning
+# allocator regression shows the borrowed-pointer version reading
+# corrupted content after that free.
+
+define: MIXA_COPY_HERE_HIT_NONE 0
+define: MIXA_COPY_HERE_HIT_ACTION 1
+define: MIXA_COPY_HERE_NOTHING_SELECTED 200
+
+struct: MixaFmCopyHereCtx
+    @: MixaFm fm
+    const: @: MixaCopySink sink
+    const: @: MixaFioFaultVTable fv
+    int: last_status
+end: MixaFmCopyHereCtx
+
+prototype:
+    fn: mixa_fm_copy_here_action (@: void ctx_raw) int
+    fn: mixa_fm_copy_here_hit (@: MixaFmCopyHereCtx ctx; size_t: cell_row; size_t: cell_col; size_t: btn_row; size_t: btn_col; size_t: btn_nrows; size_t: btn_ncols) int
+end: prototype
+
+# Key-event trigger (ticket 20260912-124720): recognizes the ordinary
+# Ctrl+V paste gesture on a MIXA_EVENT_KEY event through the existing
+# mixa_backend.h seam and calls mixa_fm_copy_here_action -- no new UI
+# framework, no application loop, no backend polling of its own. The
+# caller (whoever already owns draining mixa_backend_poll/mixa_pump) hands
+# this function the one event it just received.
+#
+# mixa_backend.h is a hand-written C header included with a plain
+# include:, not predef:'d as an L1 header unit, so it costs nothing
+# against l1trans's 16-file import table -- the same route mixa_pump.lm1
+# already uses to reach MixaEvent. This module's own chain stays at the
+# 15 files measured for Copy Here's button trigger.
+#
+# Per MixaEvent's own documented shape (mixa_backend.h): a key event
+# carries EITHER a codepoint (text) OR a keycode (not text), never both,
+# and modifiers is a MixaModifier bit set. Two portable spellings of
+# Ctrl+V are accepted, because real Win32 input does not use only one of
+# them (BACKEND_SEAM.txt 8.2: GetKeyState does not reflect a synthetic
+# WM_CHAR, so a test cannot prove real Ctrl through that path -- this
+# does not claim to, and is driven by a real MixaEvent round-tripped
+# through the headless backend's own push/poll instead):
+#   - codepoint 'v' or 'V' (118 / 86) WITH the MIXA_MOD_CTRL bit set --
+#     the portable text+modifier spelling the struct's own comment
+#     documents;
+#   - codepoint 0x16 (22, ASCII SYN) alone -- the C0 control code real
+#     WM_CHAR delivers for a genuine Ctrl+V keypress, which already
+#     unambiguously encodes Ctrl+V by construction and needs no modifier
+#     bit to confirm it.
+# Anything else -- a bare 'v'/'V' with no Ctrl bit, Ctrl held with a
+# different codepoint, any non-KEY event kind, a null ctx or event --
+# returns MIXA_COPY_HERE_HIT_NONE and touches neither the selection, the
+# filesystem, nor the view. A recognized gesture returns
+# MIXA_COPY_HERE_HIT_ACTION and the exact Copy Here outcome is the same
+# ctx\last_status mixa_fm_copy_here_action already sets -- no separate
+# status channel for this entry point.
+
+prototype:
+    fn: mixa_fm_copy_here_key_event (@: MixaFmCopyHereCtx ctx; const: @(MixaEvent ev)) int
+end: prototype
+
+# Top-level drain/dispatch (ticket 20260912-131700): the real remaining
+# boundary named by the 124720 report -- no native/top-level event loop
+# in this codebase yet calls mixa_backend_poll or mixa_pump_drain and
+# forwards the result into mixa_fm_copy_here_key_event. This closes that
+# gap at the seam boundary: the narrow, reusable drain-and-dispatch unit
+# a future native loop will call once per tick, exercised here through
+# the real headless backend's own push seam rather than a hand-filled
+# event, since no such native loop exists in this codebase to call it
+# from yet (confirmed by reading mixa_app_window.txt's own "Integration
+# point still pending" section and mixa_app.txt's own "no live pump-loop
+# orchestrator exists" -- the same honest gap recorded for the App/MP3
+# panels applies here unchanged; this ticket does not close it, only
+# narrows exactly what a real loop still has to call).
+#
+# mixa_pump.h is a hand-written C header (mixa_pump_drain, mixa_pump_next),
+# reached the same include:-not-predef: way as mixa_backend.h -- costs
+# nothing against l1trans's 16-file table. This module's own predef chain
+# stays at the measured 15 files.
+#
+# mixa_fm_copy_here_pump_dispatch(pump, backend, ctx, out) is a drop-in
+# replacement for a native loop's own "drain then pop one event" step,
+# not a second event loop: it calls mixa_pump_drain(pump, backend) once
+# (same as the loop would already do to keep the fifo current), pops
+# exactly ONE event via mixa_pump_next into out (same event a native
+# loop would already receive and switch on for close/resize/mouse/
+# unrelated keys -- their existing handling and order are UNCHANGED,
+# since out is a plain MixaEvent the caller inspects however it already
+# does), then hands that SAME popped event to the already-accepted
+# mixa_fm_copy_here_key_event exactly once. Ctrl+V is dispatched to Copy
+# Here from inside that one call; every other event kind/codepoint
+# already returns MIXA_COPY_HERE_HIT_NONE there without touching
+# anything, so this function adds nothing beyond one extra no-op check
+# for events the loop was already going to see and handle itself.
+#
+# Return value is disjoint from every status already used in this file:
+#   MIXA_COPY_HERE_PUMP_ERR_ARG (-2)  null pump/backend/out; out untouched
+#   MIXA_COPY_HERE_PUMP_EMPTY   (-1)  nothing was pending; out untouched
+#   MIXA_COPY_HERE_HIT_NONE      (0)  an event WAS popped into out (the
+#                                      caller must still handle it as it
+#                                      always would) but it was not the
+#                                      Ctrl+V gesture
+#   MIXA_COPY_HERE_HIT_ACTION    (1)  an event was popped into out AND it
+#                                      was Ctrl+V -- Copy Here already ran
+#                                      exactly once; ctx\last_status holds
+#                                      the exact outcome, the same single
+#                                      status channel every other Copy
+#                                      Here entry point already uses.
+# A caller that wants to also see the raw key event for its own purposes
+# (e.g. logging) may still read out\kind/codepoint/modifiers after a
+# HIT_ACTION return -- the event is not consumed or hidden, only acted
+# on once by this function.
+
+define: MIXA_COPY_HERE_PUMP_ERR_ARG -2
+define: MIXA_COPY_HERE_PUMP_EMPTY -1
+
+prototype:
+    fn: mixa_fm_copy_here_pump_dispatch (@: MixaPump pump; @: MixaBackend backend; @: MixaFmCopyHereCtx ctx; @: MixaEvent out) int
+end: prototype
+
+# Bounded native-loop foundation (ticket 20260912-133300), closing the
+# "no live pump-loop orchestrator exists" gap repeated verbatim in
+# mixa_app.txt and mixa_app_window.txt for their own components. Read
+# before writing this: mixa_backend_ctors_headless.lm1/mixa_backend_
+# ctors_win32.lm1 (the existing constructor lists), mixa_pump.lm1/.h (the
+# existing drain primitive), mixa_app.txt/mixa_app_window.txt (both
+# record the identical still-open gap for App/App-window), mixa_file_
+# manager.lm1's own mixa_fm_init (ownership/teardown shape reused
+# verbatim), and run_mixa.ps1 (the existing host harness/build profile
+# this stays consistent with).
+#
+# This is NOT a second event loop, scheduler or UI framework: it is the
+# smallest real OWNER of the three pieces a native loop needs (MixaBackend,
+# MixaPump, MixaFm+MixaSelection+MixaFmCopyHereCtx), composed around the
+# already-accepted mixa_fm_copy_here_pump_dispatch just above, with
+# open/step/close matching this codebase's own established open/release
+# pairing (mixa_pump_open/_release, mixa_fm_init/_release, mixa_backend_
+# open/_close, mixa_selection_init/_release) rather than inventing new
+# lifecycle vocabulary.
+#
+# MEASURED, NOT GUESSED, why this lives here instead of in its own
+# mixa_app_loop.h.lm1/.lm1 pair: a first version DID add it as separate
+# files, predefing this already-15-file chain from ITS OWN header. That
+# translated fine in isolation (as the ROOT file, which is never counted
+# against its own import table) -- but a selftest that then predef'd
+# THAT file as a NESTED import failed with l1trans's own "import path
+# table full", because as a nested import the new pair's own full
+# transitive closure (itself + this file's already-15-file chain) counts
+# as 17 from the top translation unit, one over budget. Reproduced
+# directly before choosing this structure, exactly the same shape as the
+# Copy Here button/key-event/pump-dispatch stages before it: extending
+# the module ALREADY in every consumer's chain costs zero additional
+# files, where a new pair would not fit. This module's own chain stays
+# at the measured 15.
+#
+# Ownership: open() allocates nothing the caller must free separately --
+# every owned resource (backend, pump's own fifo, fm's own entries/
+# cur_dir, selection's own array) is released by close() in the same
+# order open() acquired them, mirroring mixa_pump_release/mixa_fm_
+# release/mixa_selection_release/mixa_backend_close's own existing
+# teardown contracts exactly, called once each, nothing invented.
+
+struct: MixaAppLoop
+    @: MixaBackend backend
+    @: MixaPump pump
+    @: MixaSelection sel
+    @: MixaFm fm
+    @: MixaFmCopyHereCtx ctx
+    int: is_open
+    int: running
+end: MixaAppLoop
+
+# open() constructs the backend via vt (any already-registered
+# MixaBackendVTable -- headless for tests, win32 for the native
+# entrypoint), a real MixaPump, a real MixaFm rooted at root_utf8 with
+# its own MixaSelection, and wires ctx to that fm/sink/fv -- the same
+# ctx shape mixa_fm_copy_here_action/_hit/_key_event/_pump_dispatch
+# already use, so Ctrl+V reaches the already-accepted action through the
+# unmodified existing path. running is set to 1 on success; 0 on any
+# failure, with everything acquired so far released before returning.
+prototype:
+    fn: mixa_app_loop_open (@: MixaAppLoop loop; const: @(MixaBackendVTable vt); size_t: cols; size_t: rows; @: MixaCellMetrics metrics; const: @(char root_utf8); const: @(MixaFmAllocVTable av); const: @(MixaCopySink sink); const: @(MixaFioFaultVTable fv)) int
+end: prototype
+
+# step() is ONE tick: drains and dispatches at most one event through the
+# already-accepted mixa_fm_copy_here_pump_dispatch, exactly as documented
+# there -- Ctrl+V reaches Copy Here exactly once, every other event kind
+# (CLOSE, RESIZE, MOUSE, an unrelated KEY) is written into out UNCHANGED
+# for the caller's own existing switch, in the same FIFO order the pump
+# already delivers. The ONLY new behavior this function adds on top of
+# the dispatcher: when out\kind is MIXA_EVENT_CLOSE, running is cleared
+# to 0 -- the "terminates on the existing CLOSE event" requirement,
+# implemented as a one-line flag flip, not a second dispatch table. A
+# caller still receives the CLOSE event itself in out and may act on it
+# (e.g. its own final repaint) before checking mixa_app_loop_running().
+# Return value is mixa_fm_copy_here_pump_dispatch's own value verbatim
+# (PUMP_ERR_ARG/PUMP_EMPTY/HIT_NONE/HIT_ACTION) -- no new status domain.
+# PUMP_EMPTY on a drained queue is not busy-waited here or by the pump
+# beneath it (mixa_backend_poll is documented never to block); a caller
+# that sees PUMP_EMPTY decides its own idle strategy, exactly as
+# mixa_backend.h's own poll() comment already assigns that choice to the
+# caller, not this function.
+prototype:
+    fn: mixa_app_loop_step (@: MixaAppLoop loop; @: MixaEvent out) int
+end: prototype
+
+prototype:
+    fn: mixa_app_loop_running (const: @(MixaAppLoop loop)) int
+end: prototype
+
+# close() releases every owned resource acquired by open(), in reverse
+# order, and is safe to call once after any open() outcome (including a
+# failed one, which already cleaned up its own partial state and left
+# is_open at 0 -- close() on an unopened loop is a no-op, matching this
+# codebase's own close-is-idempotent-on-not-open precedent, e.g.
+# mixa_backend_close on a null pointer).
+prototype:
+    fn: mixa_app_loop_close (@: MixaAppLoop loop) int
+end: prototype

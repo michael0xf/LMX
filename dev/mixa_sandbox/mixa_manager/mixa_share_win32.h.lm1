@@ -1,0 +1,296 @@
+# Windows concrete unit for the file-share seam. Portable header predefs this
+# one (mirrors mixa_audio_win32.h.lm1's relationship to mixa_audio.h.lm1):
+# MixaShareRequest itself only ever touches this backend through the opaque
+# `impl: @: void` field, so nothing here is part of the portable ABI.
+#
+# RESOLUTION of the portable->concrete include-leak (raised in ticket
+# 20260911-221400 review): every field here is kept opaque (`@: void`),
+# never a real WinRT/COM type name. That means THIS header never needs
+# `include: "<windows.h>"` or any WinRT header at all -- not now, not once
+# the adapter is implemented. The real COM/WinRT types and includes live
+# only in mixa_share_win32.lm1 (the implementation, which casts these
+# opaque fields to their real pointer types internally), which nothing
+# except the final application predefs. That is a stronger fix than
+# "don't include it yet" -- it structurally cannot leak, regardless of
+# what the implementation later needs. mixa_audio_win32.h.lm1's own
+# `@: wchar_t wpath` field is why ITS header needs windows.h/wchar.h; if
+# it used an opaque `@: void` there too, it could drop that include the
+# same way. Not fixed here (out of this ticket's scope), but the same
+# pattern would apply.
+#
+# Field meaning (all opaque, cast to the real type only inside the .lm1):
+#   hwnd     - HWND owning the share request (real window handle)
+#   req      - back-pointer to the owning MixaShareRequest, so our
+#              DataRequested handler's Invoke() can read its text/title
+#              (the request outlives the async Invoke call by contract:
+#              mixa_share_destroy() unregisters the handler before this
+#              ctx is freed, see mixa_share_win32_destroy)
+#   mgr      - IDataTransferManager* (obtained via GetForWindow), an OWNED
+#              reference held for the lifetime of the request (needed again
+#              by remove_DataRequested on cleanup/cancel) and Released
+#              exactly once in mixa_share_win32_destroy
+#   handler  - our own DataRequested callback object (see mixa_share_win32.lm1
+#              for its vtable); embeds a back-pointer to this ctx
+#   token    - malloc'd 8-byte buffer holding the opaque
+#              EventRegistrationToken from add_DataRequested, needed
+#              unchanged by remove_DataRequested on cleanup/cancel
+#   invoke_status - set by the DataRequested handler's Invoke() on the SDK
+#              call that actually failed (get_Request/get_Data/SetText/
+#              get_Properties/put_Title); MIXA_SHARE_OK until then. poll()
+#              reports this as the terminal status instead of always
+#              claiming success once pending clears -- a callback firing is
+#              not proof the data was actually populated.
+#   owner_tid - the OS thread ID (GetCurrentThreadId()) that called begin(),
+#              i.e. the STA thread that owns this request and its live COM
+#              references. poll/cancel/destroy check the calling thread
+#              against this before touching any real WinRT object -- our
+#              own plain C functions are not COM interface calls, so
+#              nothing marshals a wrong-thread call onto the right
+#              apartment for us the way a real COM proxy would. Stored as
+#              `ulong` (DWORD's actual underlying type on this platform),
+#              not `DWORD`, so this stays a portable/leak-free opaque-
+#              shaped header field per this file's own predef-leak
+#              resolution above.
+
+#   file_deferral - the IDataRequestDeferral* obtained from IDataRequest
+#              when the request has one or more files to attach; keeps
+#              the OS's DataRequested session open across the async
+#              StorageFile.GetFileFromPathAsync wait. Held only while a
+#              file resolution is in flight; released (Complete() called
+#              first) once it finishes, or by destroy()/cancel() if the
+#              request is torn down first.
+#   file_op  - the pending IAsyncOperation<StorageFile*>* from
+#              GetFileFromPathAsync, an OWNED reference kept alive so its
+#              GetResults() can be called from the completion handler;
+#              released once that handler has run (or by destroy()/
+#              cancel() if torn down first).
+#   file_handler - our own async-completion callback object (see
+#              MixaFileOpHandlerObj below); embeds a back-pointer to this
+#              ctx the same way `handler` does.
+#   pending_package - the IDataPackage* obtained from the DataRequest,
+#              an OWNED reference kept alive across the async wait so
+#              SetStorageItems can be called on it once the file
+#              resolves; released right after that call (or by destroy()/
+#              cancel() if torn down first).
+#   pending_items - stage 2: malloc'd array of `void*`, each slot an OWNED
+#              IStorageItem* obtained (via QueryInterface on the resolved
+#              IStorageFile*) as each file in the request finishes
+#              resolving in turn. Sized to pending_item_total at the start
+#              of the chain; each entry Released and the array freed once
+#              SetStorageItems has been called (success or failure) or by
+#              destroy()/cancel() if torn down mid-chain -- see
+#              mixa_file_op_handler_invoke.
+#   pending_item_total - mixa_share_file_count(req) at the moment file
+#              resolution began; how many entries pending_items holds.
+#   pending_item_next - how many files have finished resolving so far
+#              (also the index of the file currently in flight, and the
+#              index mixa_file_op_handler_invoke writes its result to).
+#              Chain is complete once this equals pending_item_total.
+struct: MixaShareWin32Ctx
+    @: void hwnd
+    @: void req
+    @: void mgr
+    @: void handler
+    @: void token
+    int: registered
+    int: pending
+    int: invoke_status
+    ulong: owner_tid
+    @: void file_deferral
+    @: void file_op
+    @: void file_handler
+    @: void pending_package
+    @: void pending_items
+    int: pending_item_total
+    int: pending_item_next
+end: MixaShareWin32Ctx
+
+# Our own DataRequested handler: a plain-C COM object whose first field is
+# a pointer to OUR OWN populated vtable, matching the "first field is a
+# vtable pointer" shape every WinRT/COM interface already has. WinRT calls
+# through this vtable using only the pointer's memory layout and calling
+# convention -- it never inspects the C-source-level struct/type name, so
+# our own short-named struct here (matching field order/count/signatures
+# exactly: QueryInterface, AddRef, Release, Invoke) is ABI-compatible with
+# the SDK's giant-named __FITypedEventHandler_2_...Vtbl without ever
+# spelling that name for this struct. The one place that DOES need the
+# exact SDK type is casting a handler pointer when passing it to
+# add_DataRequested, in mixa_share_win32.lm1. lpVtbl is typed as our own
+# MixaShareHandlerVtbl* (not opaque @: void) so the .lm1 can populate its
+# fields directly (`vtbl\QueryInterface: fn`) without the cast-then-
+# assign-through-cast pattern that l1trans does not translate correctly
+# (see mixa_share.txt's L1 findings) -- neither type here is a Windows/COM
+# declaration, so this does not reintroduce the portable-header leak.
+fnptr: MixaShareHandlerQIFn (@: void this_raw; @: void riid; @@: void ppv) long
+fnptr: MixaShareHandlerAddRefFn (@: void this_raw) ulong
+fnptr: MixaShareHandlerReleaseFn (@: void this_raw) ulong
+fnptr: MixaShareHandlerInvokeFn (@: void this_raw; @: void sender; @: void args) long
+
+struct: MixaShareHandlerVtbl
+    MixaShareHandlerQIFn: QueryInterface
+    MixaShareHandlerAddRefFn: AddRef
+    MixaShareHandlerReleaseFn: Release
+    MixaShareHandlerInvokeFn: Invoke
+end: MixaShareHandlerVtbl
+
+# refcount is a plain int, not an interlocked/atomic counter: this handler
+# is only ever touched under RO_INIT_SINGLETHREADED (STA). Every call into
+# it (QueryInterface/AddRef/Release/Invoke) is marshaled by COM onto the
+# apartment's own thread -- the same thread that creates and owns it --
+# so there is no concurrent access to serialize against. Adding atomics
+# here would be exactly the "application-private ... atomic workaround"
+# the ticket's own constraints rule out, for a race that the apartment
+# model already prevents by construction.
+struct: MixaShareHandlerObj
+    @: MixaShareHandlerVtbl lpVtbl
+    int: refcount
+    @: void owner_ctx
+end: MixaShareHandlerObj
+
+# File attachment, stage 1 (StorageFile async resolution + deferral only --
+# NOT yet wired to IDataPackage::SetStorageItems, which needs a custom
+# IIterable<IStorageItem*>/IIterator<IStorageItem*> pair since no
+# activatable "vector" WinRT class is reachable from plain C; that is
+# stage 2). Same "plain-C COM object, first field a vtable pointer" shape
+# as MixaShareHandlerObj above, but for IAsyncOperationCompletedHandler<
+# StorageFile*> instead of ITypedEventHandler<DataTransferManager*,
+# DataRequestedEventArgs*>: Invoke here takes (asyncInfo, asyncStatus),
+# not (sender, args). owner_ctx is the same MixaShareWin32Ctx the
+# DataRequested Invoke() call is suspended in (via GetDeferral()), so this
+# handler's Invoke can find the deferral to Complete() once the file is
+# resolved (or the attempt has failed).
+fnptr: MixaFileOpHandlerQIFn (@: void this_raw; @: void riid; @@: void ppv) long
+fnptr: MixaFileOpHandlerAddRefFn (@: void this_raw) ulong
+fnptr: MixaFileOpHandlerReleaseFn (@: void this_raw) ulong
+fnptr: MixaFileOpHandlerInvokeFn (@: void this_raw; @: void async_info; int: async_status) long
+
+struct: MixaFileOpHandlerVtbl
+    MixaFileOpHandlerQIFn: QueryInterface
+    MixaFileOpHandlerAddRefFn: AddRef
+    MixaFileOpHandlerReleaseFn: Release
+    MixaFileOpHandlerInvokeFn: Invoke
+end: MixaFileOpHandlerVtbl
+
+# Same non-atomic-refcount justification as MixaShareHandlerObj: only ever
+# touched under RO_INIT_SINGLETHREADED, so COM marshals every call onto
+# the one apartment thread that owns it. (A free-threaded marshaler was
+# tried and removed again -- see mixa_share_win32.lm1's comment on
+# mixa_file_op_handler_query_interface: FTM does not marshal calls onto
+# the owner STA thread, it grants OTHER apartments direct unsynchronized
+# access to the object, which is the opposite of what this single-
+# threaded design needs.)
+struct: MixaFileOpHandlerObj
+    @: MixaFileOpHandlerVtbl lpVtbl
+    int: refcount
+    @: void owner_ctx
+    # Test-only lifetime proof (ticket 20260912-033900), same pattern as
+    # MixaShareRequest's own free_counter: when non-null, incremented
+    # exactly once, at the point Release() actually frees this object.
+    # Null (calloc's default) in every production allocation; costs
+    # nothing there.
+    @: int free_counter
+end: MixaFileOpHandlerObj
+
+# Stage 2: IDataPackage::SetStorageItems needs an
+# IIterable<IStorageItem*>/IIterator<IStorageItem*> pair -- no activatable
+# WinRT "vector" class is reachable from plain C (C++/WinRT's
+# single_threaded_vector is a header-only template, not an OS-provided
+# activatable class), so both are implemented here the same way as the
+# handler objects above: plain-C COM objects whose first field is a
+# pointer to our own populated vtable. Unlike the delegate handlers above
+# (ITypedEventHandler/IAsyncOperationCompletedHandler, both IUnknown-
+# derived only), IIterable/IIterator are real WinRT runtime interfaces
+# derived from IInspectable, so their vtables carry the three IInspectable
+# methods (GetIids/GetRuntimeClassName/GetTrustLevel) before their own --
+# see mixa_share_win32.lm1 for why GetIids/GetRuntimeClassName return
+# E_NOTIMPL (never exercised by DataPackage's own consumption path, which
+# only walks First()/get_HasCurrent/get_Current/MoveNext) while
+# GetTrustLevel returns a real BaseTrust value.
+#
+# Lifetime (ticket 20260912-025800, correcting an earlier, wrong design):
+# `items`/`count` are OWNED by the ITERABLE, not borrowed from ctx --
+# mixa_share_win32_make_storage_item_iterable AddRefs each item into its
+# own freshly-allocated array at construction, independent of whatever
+# ctx does with ITS OWN array afterward. The earlier version borrowed
+# ctx->pending_items directly and assumed SetStorageItems only needs it
+# for the duration of that one call, by analogy with SetText/HSTRING --
+# WRONG: HSTRING is copied by value into the DataPackage, but IIterable is
+# a retainable COM interface reference, and nothing in the documented
+# SetStorageItems contract promises synchronous, one-shot consumption
+# (Share's own architecture already leans on DEFERRED consumption
+# elsewhere, via IDataRequestDeferral -- assuming eager consumption here
+# was an unproven analogy, not a read contract). A consumer that legally
+# retains the iterable (or an iterator obtained from it) past the
+# SetStorageItems call must still find a live, valid collection.
+# MixaStorageItemIterObj mirrors this: it AddRefs the OWNING iterable at
+# construction (First()) and Releases it in its own Release(), so a
+# retained iterator keeps the iterable (and therefore its owned items)
+# alive even after every other reference to the iterable -- including
+# ours -- has been dropped. `items`/`count` here are then just a cached
+# copy of the owning iterable's own fields, safe to read for the
+# iterator's whole lifetime because that AddRef guarantees the iterable
+# object itself (and the array it owns) has not been freed.
+fnptr: MixaStorageItemIterQIFn (@: void this_raw; @: void riid; @@: void ppv) long
+fnptr: MixaStorageItemIterAddRefFn (@: void this_raw) ulong
+fnptr: MixaStorageItemIterReleaseFn (@: void this_raw) ulong
+fnptr: MixaStorageItemIterGetIidsFn (@: void this_raw; @: void out_count; @@: void out_iids) long
+fnptr: MixaStorageItemIterGetRuntimeClassNameFn (@: void this_raw; @@: void out_hstr) long
+fnptr: MixaStorageItemIterGetTrustLevelFn (@: void this_raw; @: void out_trust) long
+fnptr: MixaStorageItemIterGetCurrentFn (@: void this_raw; @@: void out_item) long
+fnptr: MixaStorageItemIterGetHasCurrentFn (@: void this_raw; @: void out_has) long
+fnptr: MixaStorageItemIterMoveNextFn (@: void this_raw; @: void out_has) long
+fnptr: MixaStorageItemIterGetManyFn (@: void this_raw; unsigned: items_length; @@: void out_items; @: void out_count) long
+
+struct: MixaStorageItemIterVtbl
+    MixaStorageItemIterQIFn: QueryInterface
+    MixaStorageItemIterAddRefFn: AddRef
+    MixaStorageItemIterReleaseFn: Release
+    MixaStorageItemIterGetIidsFn: GetIids
+    MixaStorageItemIterGetRuntimeClassNameFn: GetRuntimeClassName
+    MixaStorageItemIterGetTrustLevelFn: GetTrustLevel
+    MixaStorageItemIterGetCurrentFn: get_Current
+    MixaStorageItemIterGetHasCurrentFn: get_HasCurrent
+    MixaStorageItemIterMoveNextFn: MoveNext
+    MixaStorageItemIterGetManyFn: GetMany
+end: MixaStorageItemIterVtbl
+
+# refcount is plain int, non-atomic: same STA-only-touch justification as
+# MixaShareHandlerObj -- WinRT's own universal marshaler (not a free-
+# threaded marshaler, see mixa_share_win32.lm1's comment on
+# mixa_file_op_handler_query_interface for why FTM was wrong even for the
+# delegate handler) delivers any cross-apartment call onto this object's
+# owning thread, the same way add_DataRequested's ITypedEventHandler
+# already does without one.
+struct: MixaStorageItemIterObj
+    @: MixaStorageItemIterVtbl lpVtbl
+    int: refcount
+    @: void items
+    int: count
+    int: index
+    @: void owner_iterable
+end: MixaStorageItemIterObj
+
+fnptr: MixaStorageItemIterableQIFn (@: void this_raw; @: void riid; @@: void ppv) long
+fnptr: MixaStorageItemIterableAddRefFn (@: void this_raw) ulong
+fnptr: MixaStorageItemIterableReleaseFn (@: void this_raw) ulong
+fnptr: MixaStorageItemIterableGetIidsFn (@: void this_raw; @: void out_count; @@: void out_iids) long
+fnptr: MixaStorageItemIterableGetRuntimeClassNameFn (@: void this_raw; @@: void out_hstr) long
+fnptr: MixaStorageItemIterableGetTrustLevelFn (@: void this_raw; @: void out_trust) long
+fnptr: MixaStorageItemIterableFirstFn (@: void this_raw; @@: void out_iter) long
+
+struct: MixaStorageItemIterableVtbl
+    MixaStorageItemIterableQIFn: QueryInterface
+    MixaStorageItemIterableAddRefFn: AddRef
+    MixaStorageItemIterableReleaseFn: Release
+    MixaStorageItemIterableGetIidsFn: GetIids
+    MixaStorageItemIterableGetRuntimeClassNameFn: GetRuntimeClassName
+    MixaStorageItemIterableGetTrustLevelFn: GetTrustLevel
+    MixaStorageItemIterableFirstFn: First
+end: MixaStorageItemIterableVtbl
+
+struct: MixaStorageItemIterableObj
+    @: MixaStorageItemIterableVtbl lpVtbl
+    int: refcount
+    @: void items
+    int: count
+end: MixaStorageItemIterableObj

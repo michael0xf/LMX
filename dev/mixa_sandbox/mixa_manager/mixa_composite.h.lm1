@@ -1,0 +1,11 @@
+include: "<stddef.h>"
+predef: "mixa_manager/mixa_core.h.lm1"
+predef: "mixa_manager/mixa_overlay.h.lm1"
+
+# Composite API (bodies in mixa_composite.lm1). Header-only to avoid embedding
+# text_rect/tiles bodies into every caller (ticket 20260917-103358).
+
+prototype:
+    fn: mixa_composite_blend_bg (@: MixaU8 p; unsigned: sr; unsigned: sg; unsigned: sb; unsigned: sa) int
+    fn: mixa_composite (const: @(MixaTextRect text_rect); size_t: text_cw; size_t: text_ch; const: @(MixaTextRect upper_rect); size_t: upper_cw; size_t: upper_ch; size_t: upper_ox; size_t: upper_oy; @: MixaU8 out_rgba; size_t: out_size; size_t: width; size_t: height) int
+end: prototype

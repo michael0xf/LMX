@@ -1,0 +1,31 @@
+include: "<stddef.h>"
+predef: "mixa_manager/mtk_const.h.lm1"
+
+# mtk_int_array.h.lm1 - Growable int array ported from IntArray.java (com.mtk.map).
+# Fields mirror IntArray: a growable int[] and an element count.
+# MTK_CONST_NIL is the absent/out-of-range sentinel (Java Integer.MIN_VALUE).
+
+struct: MtkIntArray
+    int: amount
+    @: int arr
+end: MtkIntArray
+
+prototype:
+    fn: mtk_int_array_init (@: MtkIntArray a) int
+    fn: mtk_int_array_destroy (@: MtkIntArray a) void
+    fn: mtk_int_array_size (const: @(MtkIntArray a)) int
+    fn: mtk_int_array_element_at (const: @(MtkIntArray a); int: i) int
+    fn: mtk_int_array_first_element (const: @(MtkIntArray a)) int
+    fn: mtk_int_array_last_element (const: @(MtkIntArray a)) int
+    fn: mtk_int_array_add_element (@: MtkIntArray a; int: obj) int
+    fn: mtk_int_array_insert_element_at (@: MtkIntArray a; int: obj; int: index) int
+    fn: mtk_int_array_remove_element_at (@: MtkIntArray a; int: index) int
+    fn: mtk_int_array_set_elementAt (@: MtkIntArray a; int: obj; int: index) int
+    fn: mtk_int_array_remove_element (@: MtkIntArray a; int: obj) int
+    fn: mtk_int_array_pop (@: MtkIntArray a) int
+    fn: mtk_int_array_clear (@: MtkIntArray a) void
+    fn: mtk_int_array_remove_all_elements (@: MtkIntArray a) void
+    fn: mtk_int_array_remove_elements_from (@: MtkIntArray a; int: index; int: len) void
+    fn: mtk_int_array_reverse (@: MtkIntArray a; int: index; int: newindex) void
+    fn: mtk_int_array_find (@: int arr; int: obj; int: amount) int
+end: prototype

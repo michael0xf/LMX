@@ -1,0 +1,151 @@
+predef: "mixa_manager/mixa_composite_glyphs.lm1"
+predef: "mixa_manager/mixa_text_rect.h.lm1"
+predef: "mixa_manager/mixa_backend_win32.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# mixa_palette_frame_selftest.lm1 -- ПАЛИТРА В КАДРЕ (20.09).
+#
+# ЗАЧЕМ: mixa_palette_selftest доказывает, что ТАБЛИЦА совпадает с ClearShell.java, а пробы
+# красителей -- что краситель берёт пару.  Не хватает третьего звена: что цвета ПРИЛОЖЕНИЯ
+# (те самые MIXA_PAL_*, которыми оно одето) доезжают до ПИКСЕЛЕЙ кадра.  Проба собирает
+# кадр ровно как приложение и сверяет конкретные точки с числами, ВЫВЕДЕННЫМИ ИЗ ПАРЫ --
+# вручную, а не снятыми с вывода.
+#
+# ЧТО МЕРИТСЯ (все ожидания -- из ClearShell.java через пары, с арифметикой в комментарии):
+#   * консоль (текстовый слой, пара Black, альфа 255 по DRAWING 2)  -> {0,0,0};
+#   * строка пути (пара Light, фон bLight {192,192,192} при альфе 96) -> 192*96/255 = 72;
+#   * кнопка (текст cMangenta, фон bYellow {255,192,128} при альфе 96) -> 96, 72, 48;
+#   * строка списка (пара Text = Gray, фон bGray {128,128,128})       -> 48, 48, 48.
+# Если палитра «приделана» мимо (или альфа взята не от пары), хотя бы одно из чисел
+# разойдётся, и это будет видно как число, а не как мнение.
+
+[]: int g_counts 2
+
+sub: pf_set (@: MixaTextRect rect; size_t: row; size_t: col; unsigned: cp; unsigned: fg; unsigned: bg; unsigned: alpha)
+    @: MixaCell cell
+    if: rect = 0 || row >= rect\rows || col >= rect\cols
+        return
+    ---
+    cell: rect\cells + (row * rect\cols + col)
+    cell\codepoint: cp
+    cell\fg: fg
+    cell\bg: bg
+    cell\flags: 0U
+    cell\width: 1U
+    cell\alpha: alpha
+end: pf_set
+
+fn: pf_at (@: MixaU8 rgba; size_t: width; size_t: x; size_t: y; unsigned: chan) unsigned
+    @: MixaU8 p
+    p: rgba + ((y * width + x) * 4U)
+return: (cast: (unsigned) p[chan])
+
+sub: pf_expect (int: got; int: want; const: @(char label))
+    g_counts[0]: g_counts[0] + 1
+    if: got != want
+        g_counts[1]: g_counts[1] + 1
+        c.printf("FAIL %s got=%d want=%d\n", label, got, want)
+    ---
+end: pf_expect
+
+
+fn: main () int
+    @: MixaBackend backend 0
+    MixaCellMetrics: metrics
+    @: MixaCellMetrics mp 0
+    size_t: w
+    size_t: h
+    size_t: size
+    @: MixaU8 rgba 0
+    @: MixaTextRect text 0
+    @: MixaTextRect upper 0
+    size_t: r
+    size_t: c
+    int: rc
+    memset((cast: (@: void) (@ metrics)), 0, c.sizeof(c.MixaCellMetrics))
+    mp: @ metrics
+    mp\text_cell_width: 8U
+    mp\text_cell_height: 16U
+    mp\upper_cell_width: 16U
+    mp\upper_cell_height: 32U
+    mp\pointer_cell_width: 8U
+    mp\pointer_cell_height: 16U
+    rc: mixa_backend_open(mixa_backend_win32_table(), @ backend, 80U, 24U, mp)
+    if: rc != 0 || backend = 0
+        c.printf("FAIL backend open rc=%d\n", rc)
+        return: 2
+    ---
+    w: 80U * mp\text_cell_width
+    h: 24U * mp\text_cell_height
+    size: w * h * 4U
+    rgba: (cast: (@: MixaU8) c.calloc(size, 1U))
+    text: (cast: (@: MixaTextRect) c.calloc(1U, c.sizeof(c.MixaTextRect)))
+    upper: (cast: (@: MixaTextRect) c.calloc(1U, c.sizeof(c.MixaTextRect)))
+    if: rgba = 0 || text = 0 || upper = 0
+        c.printf("FAIL allocation\n")
+        return: 2
+    ---
+    if: mixa_rect_open(text, 24U, 80U) != 0 || mixa_rect_open(upper, 24U, 80U) != 0
+        c.printf("FAIL rect open\n")
+        return: 2
+    ---
+    # КОНСОЛЬ: весь текстовый слой -- пара Black, альфа 255 (DRAWING 2: текстовая
+    # поверхность непрозрачна; сам источник одевает консоль cBlack/bBlack, 2453-2454).
+    r: 0U
+    while: r < text\rows
+        c: 0U
+        while: c < text\cols
+            # codepoint 0 значит «знака нет»: пиксели консоли -- ЧИСТЫЙ фон пары, и арифметика
+            # верхнего слоя поверяется без вклада буквы (иначе в точку попадает штрих глифа).
+            pf_set(text, r, c, 0U, MIXA_PAL_CONSOLE, MIXA_PAL_CONSOLE, 255U)
+            c: c + 1U
+        ---
+        r: r + 1U
+    ---
+    # ВЕРХНИЙ СЛОЙ: строка 0 -- заголовок списка (пара Light), строка 1 -- полоса кнопки
+    # (текст cMangenta на фоне bYellow), строка 2 -- строка списка (пара Text).  Везде альфа --
+    # СВОЯ у пары (mixa_palette_bg_alpha), как это делает приложение.  Кодовая точка везде 0:
+    # проба поверяет ЦВЕТА ФОНА, а штрих буквы в точке замера только смазал бы число
+    # (замерено: буква 'T' в этой точке давала 18 вместо 48 -- глиф накрыл пиксель).
+    c: 0U
+    while: c < upper\cols
+        pf_set(upper, 0U, c, 0U, MIXA_PAL_LIGHT, MIXA_PAL_LIGHT, mixa_palette_bg_alpha(MIXA_PAL_LIGHT))
+        # Кнопка -- как у ClearShell «About»: текст cMangenta, фон bYellow (2328-2331).
+        pf_set(upper, 1U, c, 0U, MIXA_PAL_MAGENTA, MIXA_PAL_YELLOW, mixa_palette_bg_alpha(MIXA_PAL_YELLOW))
+        pf_set(upper, 2U, c, 0U, MIXA_PAL_TEXT, MIXA_PAL_TEXT, mixa_palette_bg_alpha(MIXA_PAL_TEXT))
+        c: c + 1U
+    ---
+    rc: mixa_composite_glyphs(backend, text, 8U, 16U, upper, 16U, 32U, 0U, 0U, rgba, size, w, h)
+    if: rc != 0
+        c.printf("FAIL composite rc=%d\n", rc)
+        return: 2
+    ---
+    # 1. Консоль подальше от панели: пиксель (4, 300) -- за пределами верхних строк.
+    pf_expect((cast: (int) pf_at(rgba, w, 4U, 300U, 0U)), 0, "console r")
+    pf_expect((cast: (int) pf_at(rgba, w, 4U, 300U, 1U)), 0, "console g")
+    pf_expect((cast: (int) pf_at(rgba, w, 4U, 300U, 2U)), 0, "console b")
+    # 2. Строка пути (верхняя строка 0 -> пиксели y 0..31, x 0..15): фон bLight {192,192,192}
+    #    при альфе 96 над чёрной консолью: (192*96 + 0*159) / 255 = 72.
+    pf_expect((cast: (int) pf_at(rgba, w, 4U, 4U, 0U)), 72, "path row r")
+    pf_expect((cast: (int) pf_at(rgba, w, 4U, 4U, 1U)), 72, "path row g")
+    pf_expect((cast: (int) pf_at(rgba, w, 4U, 4U, 2U)), 72, "path row b")
+    # 3. Полоса кнопки (верхняя строка 1 -> y 32..63): фон bYellow {255,192,128} при альфе 96:
+    #    r = 255*96/255 = 96; g = 192*96/255 = 72.28 -> 72; b = 128*96/255 = 48.18 -> 48.
+    pf_expect((cast: (int) pf_at(rgba, w, 4U, 40U, 0U)), 96, "button r")
+    pf_expect((cast: (int) pf_at(rgba, w, 4U, 40U, 1U)), 72, "button g")
+    pf_expect((cast: (int) pf_at(rgba, w, 4U, 40U, 2U)), 48, "button b")
+    # 4. Строка списка (верхняя строка 2 -> y 64..95): фон bGray {128,128,128} при альфе 96:
+    #    (128*96)/255 = 48.18 -> 48.
+    pf_expect((cast: (int) pf_at(rgba, w, 4U, 70U, 0U)), 48, "list row r")
+    pf_expect((cast: (int) pf_at(rgba, w, 4U, 70U, 1U)), 48, "list row g")
+    pf_expect((cast: (int) pf_at(rgba, w, 4U, 70U, 2U)), 48, "list row b")
+    c.printf("PALETTE_FRAME console=%d,%d,%d path=%d,%d,%d button=%d,%d,%d row=%d,%d,%d\n",
+             (cast: (int) pf_at(rgba, w, 4U, 300U, 0U)), (cast: (int) pf_at(rgba, w, 4U, 300U, 1U)), (cast: (int) pf_at(rgba, w, 4U, 300U, 2U)),
+             (cast: (int) pf_at(rgba, w, 4U, 4U, 0U)), (cast: (int) pf_at(rgba, w, 4U, 4U, 1U)), (cast: (int) pf_at(rgba, w, 4U, 4U, 2U)),
+             (cast: (int) pf_at(rgba, w, 4U, 40U, 0U)), (cast: (int) pf_at(rgba, w, 4U, 40U, 1U)), (cast: (int) pf_at(rgba, w, 4U, 40U, 2U)),
+             (cast: (int) pf_at(rgba, w, 4U, 70U, 0U)), (cast: (int) pf_at(rgba, w, 4U, 70U, 1U)), (cast: (int) pf_at(rgba, w, 4U, 70U, 2U)))
+
+    c.printf("mixa_palette_frame checks=%d failures=%d\n", g_counts[0], g_counts[1])
+    c.fflush(0)
+    mixa_backend_close(backend)
+return: g_counts[1]

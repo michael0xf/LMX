@@ -1,0 +1,25 @@
+L1 gaps probe transcript
+generated  2026-09-19 07:48:07 -0300
+translator /c/Nyasha_Planet/lingvamyxa/stg/l1_baseline/build/l1trans/gen2/l1trans.exe
+sha256     722ac86e256d28eb462ee244d92b5e7188792ec0a0f5b300957622672ebab466
+
+== 1. BRIDGE: const: @(MixaBackendTableRef)-shaped return ==
+   translator status 0
+   ok:   translate bridge_ok.lm1 (ok, status 0)
+   generated:
+         VTRef * g_tables;
+     const VTRef * reg_tables(size_t * count)
+   ok:   bridge matches const VT *const * under -Werror (ok, status 0)
+
+== 2. NEGATIVE WRITES - must NOT compile, and for the RIGHT reason ==
+     assignment of read-only location '*t'
+   ok:   neg_slot rejected (fail, status 1)
+   ok:   neg_slot diagnostic is the const one ("read-only location")
+     assignment of member 'x' in read-only object
+   ok:   neg_pointee rejected (fail, status 1)
+   ok:   neg_pointee diagnostic is the const one ("read-only object")
+
+== 3. POSITIVE READ - must compile clean ==
+   ok:   pos_read (ok, status 0)
+
+RESULT: all expectations met

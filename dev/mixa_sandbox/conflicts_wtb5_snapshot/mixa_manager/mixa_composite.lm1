@@ -1,0 +1,179 @@
+predef: "mixa_manager/mixa_text_rect.lm1" "mixa_manager/mixa_tiles.lm1"
+include: "mixa_manager/mixa_overlay.h" "<string.h>"
+
+# Composite two cell grids (text + upper) into an opaque RGBA framebuffer.
+# Layers may differ in cell size and cols/rows; they share pixel extent
+# (width, height). Per pixel: base palette[0], then text cell, then upper cell.
+# Cell background uses cell.alpha (src-over non-premultiplied); glyphs are
+# always opaque full-cell stub fills with palette[fg]. Real glyphs live in
+# mixa_composite_glyphs.lm1 (Win32); this stub keeps headless/overlay byte-exact.
+#
+# Private-use tiles (U+E000..): procedural nine-slice bodies — solid from cell
+# bg+alpha, gap sides left transparent. No stub glyph paint for those cps.
+#
+# Blend: out = (src * sa + dst * (255 - sa)) / 255; destination alpha stays 255.
+
+fn: mixa_composite_blend_bg (@: MixaU8 p; unsigned: sr; unsigned: sg; unsigned: sb; unsigned: sa) int
+    unsigned: inv
+    unsigned: dr
+    unsigned: dg
+    unsigned: db
+    if: p = 0
+        return: 1
+    if: sa = 0U
+        return: 0
+    if: sa = 255U
+        p[0]: (cast: (MixaU8) sr)
+        p[1]: (cast: (MixaU8) sg)
+        p[2]: (cast: (MixaU8) sb)
+        p[3]: (cast: (MixaU8) 255)
+        return: 0
+    ---
+    inv: 255U - sa
+    dr: p[0]
+    dg: p[1]
+    db: p[2]
+    p[0]: (cast: (MixaU8) ((sr * sa + dr * inv) / 255U))
+    p[1]: (cast: (MixaU8) ((sg * sa + dg * inv) / 255U))
+    p[2]: (cast: (MixaU8) ((sb * sa + db * inv) / 255U))
+    p[3]: (cast: (MixaU8) 255)
+return: 0
+
+fn: mixa_composite (const: @(MixaTextRect text_rect); size_t: text_cw; size_t: text_ch; const: @(MixaTextRect upper_rect); size_t: upper_cw; size_t: upper_ch; @: MixaU8 out_rgba; size_t: out_size; size_t: width; size_t: height) int
+    size_t: need
+    size_t: x
+    size_t: y
+    size_t: col
+    size_t: row
+    size_t: i
+    size_t: n
+    size_t: lx
+    size_t: ly
+    const: @(MixaCell cell)
+    @: MixaU8 p
+    unsigned: cp
+    unsigned: bg
+    unsigned: fg
+    unsigned: sa
+    []: MixaU8 pr 1
+    []: MixaU8 pg 1
+    []: MixaU8 pb 1
+
+    if: text_rect = 0
+        return: 1
+    if: upper_rect = 0
+        return: 1
+    if: out_rgba = 0
+        return: 1
+    if: text_rect\cells = 0
+        return: 1
+    if: upper_rect\cells = 0
+        return: 1
+    if: text_cw = 0U
+        return: 1
+    if: text_ch = 0U
+        return: 1
+    if: upper_cw = 0U
+        return: 1
+    if: upper_ch = 0U
+        return: 1
+    if: width = 0U
+        return: 1
+    if: height = 0U
+        return: 1
+    if: (width * height) > ((cast: (size_t) -1) / 4U)
+        return: 1
+    need: width * height * 4U
+    if: out_size < need
+        return: 1
+
+    # 1. background = palette[0] opaque
+    c.mixa_palette_rgb(0U, pr, pg, pb)
+    i: 0U
+    n: width * height
+    while: i < n
+        p: out_rgba + (i * 4U)
+        p[0]: pr[0]
+        p[1]: pg[0]
+        p[2]: pb[0]
+        p[3]: (cast: (MixaU8) 255)
+        i: i + 1U
+    ---
+
+    y: 0U
+    while: y < height
+        x: 0U
+        while: x < width
+            p: out_rgba + ((y * width + x) * 4U)
+
+            # 2. text layer cell
+            col: x / text_cw
+            row: y / text_ch
+            if: row < text_rect\rows && col < text_rect\cols
+                cell: mixa_cell_at_const(text_rect, row, col)
+                cp: cell\codepoint
+                if: mixa_tile_is(cp) != 0
+                    lx: x - (col * text_cw)
+                    ly: y - (row * text_ch)
+                    if: mixa_tile_pixel_solid(cp, lx, ly, text_cw, text_ch) != 0
+                        sa: cell\alpha
+                        bg: cell\bg
+                        c.mixa_palette_rgb(bg, pr, pg, pb)
+                        mixa_composite_blend_bg(p, pr[0], pg[0], pb[0], sa)
+                    ---
+                else:
+                    sa: cell\alpha
+                    if: sa != 0U
+                        bg: cell\bg
+                        c.mixa_palette_rgb(bg, pr, pg, pb)
+                        mixa_composite_blend_bg(p, pr[0], pg[0], pb[0], sa)
+                    ---
+                    if: cp != 0U
+                        fg: cell\fg
+                        c.mixa_palette_rgb(fg, pr, pg, pb)
+                        p[0]: pr[0]
+                        p[1]: pg[0]
+                        p[2]: pb[0]
+                        p[3]: (cast: (MixaU8) 255)
+                    ---
+                ---
+            ---
+
+            # 3. upper layer cell
+            col: x / upper_cw
+            row: y / upper_ch
+            if: row < upper_rect\rows && col < upper_rect\cols
+                cell: mixa_cell_at_const(upper_rect, row, col)
+                cp: cell\codepoint
+                if: mixa_tile_is(cp) != 0
+                    lx: x - (col * upper_cw)
+                    ly: y - (row * upper_ch)
+                    if: mixa_tile_pixel_solid(cp, lx, ly, upper_cw, upper_ch) != 0
+                        sa: cell\alpha
+                        bg: cell\bg
+                        c.mixa_palette_rgb(bg, pr, pg, pb)
+                        mixa_composite_blend_bg(p, pr[0], pg[0], pb[0], sa)
+                    ---
+                else:
+                    sa: cell\alpha
+                    if: sa != 0U
+                        bg: cell\bg
+                        c.mixa_palette_rgb(bg, pr, pg, pb)
+                        mixa_composite_blend_bg(p, pr[0], pg[0], pb[0], sa)
+                    ---
+                    if: cp != 0U
+                        fg: cell\fg
+                        c.mixa_palette_rgb(fg, pr, pg, pb)
+                        p[0]: pr[0]
+                        p[1]: pg[0]
+                        p[2]: pb[0]
+                        p[3]: (cast: (MixaU8) 255)
+                    ---
+                ---
+            ---
+
+            x: x + 1U
+        ---
+        y: y + 1U
+    ---
+return: 0

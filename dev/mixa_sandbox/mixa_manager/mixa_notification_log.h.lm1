@@ -1,0 +1,34 @@
+include: "<stddef.h>"
+predef: "mixa_manager/mixa_file_win32.h.lm1"
+
+# mixa_notification_log.h.lm1 — NotificationLogService FILE log core
+# (ticket 20260918-125450). MODULE_PLAN.md names this mixa_notifications;
+# ticket basename is mixa_notification_log — keep that filename; treat
+# "mixa_notifications" as an alias in comments only (do not rename MODULE_PLAN).
+#
+# Android NotificationLogService extends NotificationListenerService and
+# appends one UTF-8 tab-separated line per notification. Desktop port keeps
+# ONLY the file-log core (no NotificationListenerService / Android binder):
+#
+#   line = timestamp \t app \t title \t text \n
+#
+# Fields are written as-is (no Java escape() yet — callers should avoid raw
+# tabs/newlines in fields, or a later ticket can add escaping). Path is
+# caller-owned (Java used context.getNoBackupFilesDir()/notifications.txt).
+#
+# notif_log_add  — append one line via mixa_file APPEND
+# notif_log_read — read whole file into an OWNED buffer (*out_buf, caller free)
+#
+# Predef: concrete mixa_file_win32.h.lm1 only (not mixa_file.h.lm1 incomplete).
+
+define: MIXA_NOTIF_LOG_OK 0
+define: MIXA_NOTIF_LOG_ERR_ARG 1
+define: MIXA_NOTIF_LOG_ERR_MISSING 2
+define: MIXA_NOTIF_LOG_ERR_IO 3
+define: MIXA_NOTIF_LOG_ERR_NOMEM 4
+
+prototype:
+    fn: mixa_notif_log_add (const: @(char path_utf8); const: @(char timestamp_utf8); const: @(char app_utf8); const: @(char title_utf8); const: @(char text_utf8)) int
+    fn: mixa_notif_log_read (const: @(char path_utf8); @@: char out_buf; @: size_t out_len) int
+end: prototype
+

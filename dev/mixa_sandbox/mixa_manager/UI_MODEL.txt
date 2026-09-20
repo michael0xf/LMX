@@ -1,0 +1,698 @@
+Mixa Manager - the UI model
+Where the resemblance to Norton and FAR ends.
+
+Visual reference confirmed by the owner, 2026-09-10
+-------------------------------------------------
+The supplied Android screenshot Screenshot_20260909-151047.png illustrates
+the ClearShell appearance to preserve: its colour families, translucent fills,
+and the distinction between application buttons and each list's own buttons.
+Use the checked-in source for colour/alpha values, not pixels sampled from a
+screenshot already composited over a camera image. This is a visual reference,
+not a request to reproduce Android system bars, camera integration or dimensions.
+
+The desktop deltas remain exactly those in sections1/1.1: the top APPLICATION
+button panel moves to the bottom of layer2; each list-window has its own vertical
+scrollbar; one horizontal scrollbar moves the entire row of list-windows.
+This shared list-row scroll is not the button panel's own overflow scroll (5.7).
+Per-list button headers retain their separate role; not all buttons move down.
+
+Layer1 carries the text/input surface UNDER layer2, in the depth position
+occupied by the camera background in the Android reference. It is not an input
+strip beside the lists on the same layer. The overlay neither reserves console
+rows nor reduces its height. Existing first-version cursor/scrollback rules
+remain unchanged. These are confirmations, not a new layout design.
+
+
+1. Lists, and there are not two of them
+
+The console and the upper layer are where the Norton/FAR likeness stops.
+
+    ANY NUMBER of lists, running horizontally one after another. Not two
+      panels. Two is a special case of the model, not the model.
+    each list scrolls UP AND DOWN on its own, with its OWN vertical scrollbar
+    the whole row scrolls LEFT AND RIGHT together, with ONE shared horizontal
+      scrollbar for the set
+
+1.0.2. The cursor belongs to the LOWER layer only
+
+Two things that are easy to conflate, because both mark "where you are" and both
+are drawn as cell attributes:
+
+    CURSOR      the text caret. LOWER layer only - the console, at its command
+                input line. The lower layer is a full text surface and this is
+                what a text surface has.
+
+    HIGHLIGHT   the current element in a list, a button, a panel. UPPER layer.
+                Keyboard interfaces always have a current element; see
+                PORT_OF_CLEARSHELL 2.8, where this had to be invented because a
+                touch interface has no such notion. It is drawn as a double-line box
+                FRAME over the element, monochrome, leaving the element's own
+                background intact - DRAWING.txt 5.4.
+
+    POINTER     the mouse. UPPER layer, one cell, EIGHT arrows chosen by the
+                angle of the last displacement, so it spins as the mouse turns.
+                A different thing from the CURSOR above and not a
+                counter-example to the rule below - see section 6.
+
+THERE IS NO CURSOR IN THE UPPER LAYER. Not "not yet" - it is not wanted. Panels
+are navigated by moving the highlight, not by placing a caret, and adding one
+would give the user two competing indications of where they are.
+
+Neither needs anything new from the drawer: both are attribute changes on cells
+the drawer already writes, so it never learns about either. A blinking cursor is
+a timer in the turn loop, not a drawing capability.
+
+1.0.3. The old model's composition order is APPROXIMATE here
+
+I first recorded this as a deliberate divergence from the old document. That
+overstated both the old document's precision and our departure from it, and the
+language owner corrected me.
+
+Old_Mixa_Manager_Qt_model.txt section 1 lists:
+
+    1. background
+    2. text cell backgrounds
+    3. glyphs / text
+    4. transparent raster/vector overlay
+    5. optional cursor / selection / UI decorations
+
+Read literally, the cursor belongs to no layer and is drawn above everything. It
+is not meant that precisely. The intended reading:
+
+    layer 1 IS THE CONSOLE - a real text window, and that is where the cursor
+      blinks. It is a text surface; a caret is what a text surface has.
+    steps 2 and 3 describe drawing a text surface generally, and apply to the
+      OVERLAY's own text as much as to the console's.
+    the cursor at step 5 is a loose placement in a sketch, not an assignment.
+
+So the cursor being in the lower layer is a CLARIFICATION of an approximate
+passage, not a decision against it.
+
+The stronger reason it belongs there: the lower layer may HOST ANOTHER
+APPLICATION - mode 0.1.1, a child terminal through PTY or ConPTY. A hosted vim
+or FAR draws its own cursor, and it draws it into that surface. So the console
+needs a cursor regardless of our command line, and there is nowhere else it
+could go.
+
+The upper layer needs no cursor by default, and certainly not in the first
+version. Panels are navigated by moving the highlight.
+
+Selection and UI decorations also sit at step 5 and are NOT settled here. They
+remain open.
+
+1.1. Two KINDS of button panel, not two positions
+
+An earlier version of this section said "a button panel at the top and another
+at the bottom". That was wrong: the two panels differ in KIND, not in where
+they happen to sit. ClearShell has one panel belonging to the LIST and one
+belonging to the APPLICATION, and the distinction is what decides where each
+goes.
+
+    the APPLICATION panel LIES AT THE BOTTOM of the upper layer. In ClearShell
+      it is at the top; here it moves down, because the bottom is where a
+      Norton-style command line already lives and the application's buttons
+      belong beside it.
+
+    a LIST panel belongs to its list and is drawn as that list's HEADER. There
+      is one per list, so N lists have N of them.
+
+The header is STICKY: scrolling the list up and down does not carry it away.
+Confirmed2026-09-10: neither application nor per-list button panels leave their
+vertical anchor when list contents scroll. EVERY button panel has its OWN
+horizontal scroll position, including each list's header. Scrolling one panel's
+buttons does not scroll another panel or the shared row of list-windows.
+That is already true in ClearShell and it is kept deliberately - a list whose
+own buttons scroll out of reach is a list you have to scroll back to before you
+can act on it.
+
+The two layers do not share a layout. The LOWER layer is a FULL TEXT SCREEN,
+edge to edge: the console owns every cell of it, including the cells beneath the
+panel, and the cursor may travel under the panel like anywhere else. The UPPER
+layer is the UI system, floating over that screen semi-transparently - the
+application panel at the bottom, the lists, each with its own header.
+
+That is a correction, and the thing it corrects is worth naming because it is
+the sort of mistake that quietly shapes code. An earlier revision said the
+application panel is glued to the bottom "BELOW the console input line", and
+listed the screen bottom-upward as panel, then input line, then output. That
+describes one layout in stacked bands, which is what a single-layer terminal
+would have to do. We have two layers and there is nothing to stack: the panel
+does not reserve rows, does not push the console up, and does not shorten it.
+
+The consequences are all simplifications:
+
+    console geometry is the whole screen. A resize does not subtract panel rows
+      from it, and there is no arithmetic tying one layer's height to the other.
+    text under the panel stays readable - that is what the translucency is FOR,
+      and it stops being decoration once something is actually underneath it.
+    nothing reflows when the panel changes. Adding a button, or hiding the panel
+      entirely, does not move a single console cell.
+    hit-testing is by layer and not by region: the upper layer gets the event
+      first wherever it has something at that cell, and the console gets it
+      otherwise.
+
+ClearShell moves the whole panel vertically instead of scrolling a list inside
+its own frame. That is a concession to a narrow phone screen, and it is
+explicitly NOT what we do: here a list scrolls within its own bounds and keeps
+its own position, so the other lists do not move when one of them does.
+
+Lists are the universal element. Panels are lists, menus are lists. There is no
+second mechanism for "a menu" - if it looks like a menu it is a list drawn in
+the upper layer.
+
+Short-message windows and menus are nested application windows composed from
+the same buttons and lists, not separate native dialog/menu implementations
+(owner clarification, 2026-09-11). Reuse the existing drawing, focus and event
+routing model; do not introduce another UI toolkit for these surfaces.
+
+1.0. The row of lists IS THE PATH
+
+This is the navigation model, and it explains why there is any number of lists
+rather than two. Read out of ClearShell's StorageList rather than designed:
+
+    dirs        the chain of directories from the disk root to the current one
+    positions   for each level, the index of the entry the user descended
+                THROUGH
+
+So list i shows directory i, and its cursor already sits on the child that list
+i+1 is showing. The number of lists is the depth of the path.
+
+Going up pops the rightmost list and RESTORES the remembered cursor position in
+the one that becomes last - StorageList around line 185. Descending pushes a
+list. Scrolling the row left is therefore not a separate navigation mechanism;
+it is looking at where you already are.
+
+1.0.1. Each list BEGINS with its ancestor chain, in a different colour
+
+There is no ".." entry - but do not conclude from that, as I first did, that the
+parent concept is absent. It is present and richer than "..". I searched for the
+literal string, did not find it, and concluded the mechanism did not exist. The
+string is absent; the mechanism is not.
+
+Every list opens with a block of ANCESTOR ROWS before its own contents, drawn in
+a different colour from ordinary entries. From ClearShell: a row is an ancestor
+row when its index is below dirsSize(), and row i shows dirs[i], where dirs is
+[null, disk root, ..., immediate parent].
+
+So, top of a list downward - confirmed against a screenshot of the running app,
+not only from the source:
+
+    *** LIST OF ROOTS ***      the null entry, no row number
+    <parent> 0                 the disk root
+    <parent> Music             descending the tree
+    <parent> Download          THE CURRENT DIRECTORY ITSELF
+    <dir> ...                  subdirectories
+    <dir> ...
+    file ...                   files last
+    file ...
+
+Two corrections to what I first wrote, both from the screenshot.
+
+The last ancestor row is THE CURRENT DIRECTORY, not its parent. The code agrees:
+dirs.get(dirs.size() - 1) is used elsewhere as the current path. So the block is
+the full path INCLUDING where you are, which is why the owner describes it as
+running "up to the native one".
+
+And the ordering below the ancestors is DIRECTORIES THEN FILES, not a single
+mixed list.
+
+Row anatomy, also from the screenshot:
+
+    a number in the left gutter, continuous across ancestors, directories and
+      files, starting at 1 on the first ancestor - the roots row has none
+    a kind tag drawn as literal text: <parent>, <dir>, or a type glyph for a
+      file
+    the name, then the metadata - date for a directory, size and date for a
+      file
+    a "..." button at the right edge of every row, opening that row's own menu
+
+Ancestors, directories and files are each drawn in their own colour band.
+
+So the parent is reachable in TWO ways, and that is the point: as the list to
+the LEFT, already scrolled to the entry you came through, and as a row at the
+top of THIS list. Norton's ".." offers one entry; this offers the whole path,
+addressable at any depth, from inside any list.
+
+Verified by reading initParent, the up operation, getView's isParent test and
+StorageList's dirs indexing. That descending pushes a list is the obvious
+complement and was not separately traced. The gradient that once shaded ancestor
+rows by depth is present but COMMENTED OUT in ClearShell - do not port it as
+live behaviour without asking.
+
+
+2. Take the layout method from ClearShell, not just its numbers
+
+ClearShell computes its geometry correctly on any screen from a tablet to an
+mp3 player, and the reason is worth stating because it is the same rule this
+project already adopted for rendering.
+
+ClearShell.java, init(), around line 697:
+
+    button.setTextAppearance(...); button.setText("Hello world!");
+    button.measure(...);
+    hb = button.getMeasuredHeight() + (hb >> 2);   button height
+    wb = (hb << 1) - (hb >> 2);                    width = 1.75 * hb
+    margin = hb >> 5;                              margin = hb / 32
+    max = longer + (longer >> 1);                  1.5 * the longer side
+    listW = shorter - hb;
+
+Note what is absent: any pixel constant, and any fraction. ONE quantity is
+MEASURED - the height of real text in the real font - and everything else is
+derived from it by integer shifts. That is exactly
+Mixa_Manager_RENDERING_DOCTRINE.txt: compute from something real, arrive at
+integers, never scale.
+
+So ClearShell's layout is not a thing to copy numerically; it is an existing
+instance of the doctrine, and the translation to our case is direct. Our
+measured unit is already there by construction: THE CELL. Button heights,
+margins, scrollbar widths and list widths are integer multiples of a cell, and
+nothing in the interface is expressed in pixels.
+
+Where a concrete proportion is wanted rather than derived, ClearShell's are
+sound and there is no reason to invent others: a button 1.75 times its height
+wide, a margin at a thirty-second of it.
+
+
+3. Colours, and what they confirm
+
+From ClearShell.java, used directly:
+
+    argb(240, 32, 32, 0)     c0 text colour - nearly opaque
+    argb(96, 255, 255, 192)  b0 background - clearly translucent
+    argb(96, 255, 192, 0), argb(96, 128, 255, 128), argb(96, 64, 255, 255)
+                             further translucent accents
+    0xFFFFFF40               cSel selected foreground, fully opaque
+    0xFF000060               bSel selected background, fully opaque
+
+Two things follow.
+
+Alpha varies BY ELEMENT: ordinary b* fills use 96, bPleaseWait uses 64, and
+bSel uses 255. The c* text colours generally use 240, not panel bodies. This is
+evidence for putting alpha on the CELL rather than on the surface - a per-surface
+constant could not express a translucent panel carrying an opaque selected row.
+
+The owner CONFIRMED on2026-09-10: glyphs are fully opaque (alpha255); only
+backgrounds may be translucent, as DRAWING.txt requires. Preserve source text
+RGB but use alpha255 instead of ordinary ClearShell text alpha240. The source
+pairs in5.4 are reference values, not an instruction to make letters translucent.
+Background colours and their individual opacity are preserved, not made uniform.
+
+
+4. What is deliberately not decided here
+
+This section does not enumerate scrollbar styling, keys or panel/list content.
+Consult the later sections and PORT_OF_CLEARSHELL for the recorded decisions
+and reference behaviour; omission here is not permission to redesign. The shape is: any
+number of lists, independent vertical scrolling, one shared horizontal scroll,
+two button panels, everything sized in cells.
+
+
+5. Buttons: the values, taken from ClearShell rather than invented
+
+All from ClearShell.java. Ported, not designed - see PORT_OF_CLEARSHELL section
+2.0: the presentation is ported in full.
+
+5.1. No borders. A micro-gap instead.
+
+Buttons carry NO frame. They are separated by the margin alone - hb >> 5, about
+a pixel. See DRAWING.txt section 5 for the nine tiles that produce this.
+
+5.2. Width depends on the LABEL, which is real logic and not a detail
+
+    normalize(text):
+        length < 4   ->  width = hb, a square button
+                         UNLESS the label contains "<" or ">"
+        length < 3   ->  the label is additionally enlarged
+        otherwise    ->  width = wb - (wb >> 2), three quarters of wb
+
+So "F1" is a square button and "Find filename" is a wide one, and that follows
+from the label rather than from a table someone maintains.
+
+5.3. Placement
+
+From freshLayout(): explicit lines, not auto-wrap. Within a line
+x += width + margin; between lines y += height + margin; a null entry is a
+SEPARATOR advancing x by hb >> 1. Panel height and width come from the maxima,
+and the panel sits inside a horizontal scroll - so buttons that do not fit
+SCROLL rather than shrinking or re-wrapping.
+
+5.4. Colours, as pairs
+
+Every button is a (text, background) pair, and the pattern is uniform: text
+nearly opaque at alpha 240 and dark, background translucent at alpha 96 and
+light.
+
+    Green    240,0,16,0      /  96,128,255,128
+    Green1   240,0,16,16     /  96,64,255,192
+    Blue     240,0,0,96      /  96,0,192,255
+    Cyan     240,0,0,96      /  96,64,255,255
+    Rose     = cBlue         /  96,255,192,255
+    Red      240,32,0,0      /  96,255,128,128
+    Red1     240,0,0,32      /  96,255,192,192
+    Magenta  240,32,0,32     /  96,255,128,255
+    Brown    240,16,16,0     /  96,192,192,96
+    Yellow   240,16,16,0     /  96,255,192,128
+    Yellow1  = cGreen        /  96,255,255,192
+    Orange   240,48,24,0     /  96,255,192,0
+    Gray     240,0,0,0       /  96,128,128,128
+    Light    240,32,32,32    /  96,192,192,192
+    Black    240,255,255,255 /  96,0,0,0
+    Selected 0xFFFFFF40      /  0xFF000060   - fully opaque, the odd one out
+
+Off, Error and Text are aliases of Gray, Red and Gray. Selected being opaque
+where everything else is translucent is worth preserving rather than
+regularising: it is what makes a selection read as selected.
+
+5.5. Where the panel sits
+
+The application panel was at the TOP in ClearShell and lies at the BOTTOM here.
+So F1, its first button, lands BOTTOM LEFT.
+
+It lies there on the UPPER layer - see 1.1. It is not a band at the bottom of
+one screen: the console's text screen runs full height underneath it, and the
+cursor can pass beneath the panel.
+
+5.6. The eight characters are the BORDER, not the width
+
+Mikhail, 2026-09-10: the application panel sits at the bottom, "8 characters
+with a micro-gap and the button fill".
+
+The eight are the pseudographic BORDER of the button - the nine-slice minus its
+centre. Four corners and four sides, drawn as cells; the ninth is the fill named
+in the same sentence, and the micro-gap of 5.1 is what stands in for a border
+line. That is exactly what mixa_tiles.h already provides at U+E000..U+E00F:
+FILL, N, S, W, E, NW, NE, SW, SE.
+
+So nothing about WIDTH changes. ClearShell's values stand as section 2 has them:
+
+    wide button      (hb << 1) - (hb >> 2)      1.75 * hb
+    square button    hb, for a label under four characters
+    micro-gap        cell_h >> 5, floored at 1 pixel
+    fill             the button's own translucent background
+
+An earlier revision of this section read the eight as a WIDTH IN CELLS and
+replaced the 1.75 rule with a constant. That was wrong, and it was wrong in an
+instructive way: the derivation I built on top of it - that 1.75 * hb has no
+whole-cell solution at eight, so the proportion had to give way - was sound
+arithmetic resting on a misread sentence, and sound reasoning downstream of a
+bad premise is the hardest kind to catch from the inside. The sentence never
+mentioned width; it listed the three things a button is DRAWN from. Committed as
+a696d0c, corrected here.
+
+
+5.7. The panel scrolls HORIZONTALLY, and the highlight is what scrolls it
+
+Mikhail, 2026-09-10: "the button panel scrolls horizontally. On Android that is
+easy, here it will have to be scrolled jointly with moving the highlight."
+
+5.3 already had the mechanism - buttons that do not fit SCROLL, they do not
+shrink and do not re-wrap. What was missing is what DRIVES the scroll, and it is
+not the same thing on the two platforms.
+
+    ClearShell   a touch gesture. Independent of anything else, because there is
+                 no highlight to be independent OF - a finger lands directly on
+                 the button it wants, and the scroll exists only to bring that
+                 button under the finger.
+
+    here         moving the HIGHLIGHT. Panels are navigated by moving it (1.0),
+                 so a keyboard has no separate "scroll the panel" action and
+                 should not grow one. The highlight moves to the next button;
+                 if that button is past the visible edge, the panel scrolls to
+                 bring it in. One action, not two.
+
+So the panel never scrolls by itself. Its horizontal position is a FUNCTION of
+where the highlight is, and the only input that changes it is the same keystroke
+that moves the highlight.
+
+5.7.1. What happens when the mouse scrolls it instead
+
+We do have mouse events in the seam, so the view can be moved without the
+highlight moving. The rule, and this is my call rather than something read out
+of ClearShell - there is nothing to read, the original has no highlight:
+
+    the VIEW may leave the highlight. A mouse scroll moves the view alone, and
+      the highlight is allowed to go off-screen. Forcing it to follow would mean
+      the mouse silently changing what Enter acts on.
+
+    any HIGHLIGHT movement brings the view back, so that the highlight is
+      visible again before it moves. Keyboard navigation is therefore always
+      coherent: you never move a highlight you cannot see.
+
+That asymmetry is the ordinary behaviour of every keyboard-and-mouse list, and
+it is worth stating because the symmetric version - view always follows
+highlight - looks tidier and is wrong: it makes a scroll gesture jump the view
+back the instant you release it.
+
+5.7.2. The same rule, in three places
+
+This is one rule and it applies wherever there is a highlight and a viewport:
+
+    EACH button panel     horizontally, in its OWN independent viewport
+    a single list         vertically, in its own bounds and its own scrollbar
+    the ROW of lists      horizontally, on the one shared scrollbar - moving the
+                          highlight into a list that is off to the side scrolls
+                          the row to bring that list into view
+
+The third is the one with a wrinkle: a highlight move can require scrolling TWO
+viewports at once - the row horizontally to reach the list, and that list
+vertically to reach the element. Both follow from the same rule, but they are
+separate scrolls and the order they are applied in is visible to the user.
+Not settled here; noted so it is not discovered late.
+
+
+6. The mouse pointer: one cell, eight arrows, and it spins
+
+Mikhail, 2026-09-10: "let us make the mouse FUNNY - let it spin, by a simple
+algorithm. Divide the circle into 8, compute the angle of the last displacement
+(at low precision) and pick one of the 8."
+
+    U+2B06  UPWARDS BLACK ARROW           up
+    U+2B08  NORTH EAST BLACK ARROW        up-right
+    U+2B95  RIGHTWARDS BLACK ARROW        right
+    U+2B0A  SOUTH EAST BLACK ARROW        down-right
+    U+2B07  DOWNWARDS BLACK ARROW         down
+    U+2B0B  SOUTH WEST BLACK ARROW        down-left
+    U+2B05  LEFTWARDS BLACK ARROW         left
+    U+2B09  NORTH WEST BLACK ARROW        up-left
+
+The arrow points WHERE THE MOUSE IS GOING, not back at its own hotspot the way a
+desktop pointer does. That follows from choosing the picture by direction of
+travel rather than being a separate decision.
+
+Still no animation. The pointer jumps between the eight; it does not ease
+between them. "Smooth I dislike on purely logical grounds."
+
+6.0. The angle, at low precision, with no trigonometry
+
+An octant boundary sits at 22.5 degrees, where |dy| = tan(22.5) * |dx| and
+tan(22.5) = sqrt(2) - 1 = 0.41421. Approximate it as 5/12 = 0.41667 and the
+boundary lands at 22.62 degrees - 0.12 off, which is far inside "low precision"
+and costs two multiplications:
+
+    horizontal sector   12 * |dy| < 5 * |dx|      ->  left or right by sign of dx
+    vertical sector     12 * |dx| < 5 * |dy|      ->  up or down by sign of dy
+    otherwise           a diagonal, by both signs
+
+No atan2, no floating point, no table, and the eight sectors come out equal to
+within a fifth of a degree - which matters here, because unequal sectors would
+make the spin stutter at four points of the circle and the spin is the feature.
+
+A displacement of zero changes nothing: the pointer keeps the arrow it had.
+
+6.0.1. What replaced what, and why the old shape could not grow
+
+An earlier revision had FOUR arrows chosen by two latched per-axis signs - last
+non-zero dx sign, last non-zero dy sign. The latch existed because with only
+four diagonal pictures there was no way to draw "moving purely sideways", so
+each axis had to keep its last answer and pretend.
+
+With eight there is a picture for every direction, so the latch is gone: the
+angle of the last non-zero displacement is the whole state. One value instead of
+two, and no pretending.
+
+6.0.2. The artefact this will have, stated in advance
+
+Mouse events arrive in HALF-CELLS (section 7), which is a coarse unit. A slow
+diagonal drag therefore arrives as (1,0) then (0,1) then (1,0), and the arrow
+will flip between right and down rather than settling on down-right.
+
+Kept, not fixed. It is honest to the input we actually get, the alternative is
+accumulating displacement over a time window - which is state, tuning, and the
+first step towards the smoothing that was explicitly not wanted - and a pointer
+that twitches while you drag it slowly is arguably the funny part. Recorded so
+that when it shows up it is recognised as this decision rather than reported as
+a bug.
+
+6.1. Why this is not a contradiction of "no cursor in the upper layer"
+
+Section 0 says the upper layer has no cursor and that this is wanted, not
+pending. It stays true. A CURSOR is a text caret: it marks an insertion point in
+a text surface, it belongs to whatever is being edited, and the upper layer
+edits nothing. A POINTER marks where a physical device is aimed and belongs to
+no surface at all. They are different objects that happen to share the English
+word "cursor", and the upper layer has the second, not the first.
+
+6.2. It costs nothing new, and that is worth checking rather than asserting
+
+    the codepoints are ORDINARY Unicode, so they take the normal glyph path
+      through mixa_backend_glyph. No tile family, unlike the highlight border.
+    mouse events already arrive in CELLS - the backend converts once from pixels
+      and consumers never see pixels (mixa_backend.h, MixaEvent row/col). So a
+      cell-quantised pointer is what the seam was already delivering.
+    "one cell" is the doctrine, not a simplification: compute fractionally,
+      then snap to integer positions. A pointer that moved in pixels over a grid
+      that moves in cells would be the one thing in the interface not on the
+      grid.
+
+State is one octant and a cell, both in the application. The octant is
+recomputed from each non-zero displacement and needs no history; a zero
+displacement leaves it alone.
+
+6.3. Decided rather than read
+
+    START DIRECTION. Before the first move there is no travel and so no answer.
+      South-east (U+2B0A), arbitrarily but not randomly: it is the direction of
+      travel from a pointer parked at the top left, which is where one starts.
+    COLOUR. The cell's fg, fully opaque, white by default - foreground elements
+      here never vary alpha (section 3). "BLACK ARROW" is only the Unicode name
+      of the shape; the colour is ours.
+    CONTRAST, and this one is genuinely open. A solid white arrow over a light
+      panel is invisible, and these glyphs are filled shapes with no outline. A
+      desktop pointer solves it with a black keyline. Left unsolved rather than
+      guessed - it needs to be looked at once something is on screen, which is
+      exactly what "let us see how it looks" is for.
+    MISSING GLYPH, and one of the eight is a known risk. The seam reports a
+      codepoint the platform cannot render (MixaGlyph.missing) rather than
+      substituting, so the pointer must not silently vanish - fall back to
+      something present and say so. Not designed here; noted so it is not
+      discovered as a blank screen.
+
+      The one to check first is U+2B95, rightwards. Its three siblings - left,
+      up and down at U+2B05..U+2B07 - are long-established, while the rightwards
+      arrow was added to Unicode later to fill that exact gap, so it is the one
+      most likely to be absent from a given system font. A hole at precisely one
+      of the eight would read as a bug in the spin rather than as a missing
+      glyph, which is why it is worth testing for by name on each platform
+      rather than testing "the arrows" as a set.
+
+
+7. The three grids: text, UI, and the mouse's half step
+
+Mikhail, 2026-09-10, four points:
+
+    1  keep the ABILITY to run a different font on each layer
+    2  for now use ONE font on both
+    3  make the upper layer one character SHORTER in height and width, and
+       start drawing it half a character down and right
+    4  add a third VIRTUAL cellular layer for the mouse alone, step exactly
+       1/2 - not a third screen, only its coordinates - and choose a font for
+       it by the same algorithm, the same size or slightly larger, its glyphs
+       placed strictly on the half step. A larger pointer glyph is fine.
+
+    "So that the document text and the UI do not quite coincide."
+
+That last line is the reason and it is worth keeping in front of the other four.
+The point is NOT alignment. It is deliberate MISalignment: two grids that nearly
+match are read as one grid drawn badly, while two grids offset by half a cell
+are read as two things. 10.3 of BACKEND_SEAM had already accepted that the
+grids do not generally align when the fonts differ; this makes the offset
+deliberate and constant instead of a by-product of font sizes.
+
+7.1. The geometry
+
+Let the text cell be cw by ch, and the screen cols by rows.
+
+    LOWER   the text screen. cols x rows, origin at 0,0. Unchanged - it is the
+            full screen and everything else is measured against it.
+
+    UPPER   the UI. (cols-1) x (rows-1) cells, origin at +cw/2, +ch/2.
+
+            Shrinking by one is what makes the offset fit: pushed half a cell
+            right and down, a full-width grid would hang half a cell off the
+            far edge. One cell narrower leaves half a cell of margin on each
+            side, so the UI floats centred inside the text screen with an even
+            border of half a cell all round.
+
+    MOUSE   a coordinate lattice, not a surface. Step cw/2 by ch/2, so
+            (2*cols) x (2*rows) positions over the same area.
+
+7.2. Why the half step is the natural one
+
+It is the finest step at which BOTH grids have well-defined positions. A text
+cell is two mouse steps; an upper cell is also two mouse steps, offset by one.
+So every mouse position lands either on a shared boundary or exactly at the
+centre of one cell and the boundary of the other. There is no third case, and
+no rounding anywhere.
+
+That is what makes the pointer twice as precise as the text grid while staying
+discrete. Mikhail dislikes smooth motion on logical grounds (section 6); this
+gives resolution without giving up the grid.
+
+7.3. What I am deciding, since the description does not say
+
+    ANCHOR. The half step is half of the LOWER cell. With one font on both
+      layers this is moot; with two fonts it is not, and the lower layer is the
+      right anchor because it is the full screen and always exists, while the
+      upper one is inset and derived from it.
+
+    COORDINATE UNIT AT THE SEAM. Mouse events already arrive in CELLS, converted
+      once in the backend so consumers cannot drift (mixa_backend.h). They now
+      arrive in HALF-CELLS of the lower layer, which keeps that property exactly
+      - one conversion, in the one place that knows the geometry.
+
+      Mapping is then arithmetic and needs no floating point:
+          text cell   = half >> 1
+          upper cell  = (half - 1) >> 1, and half = 0 is outside the upper layer
+      A pointer at an odd half-coordinate is at the centre of a text cell and on
+      an upper-cell boundary; at an even one, the reverse.
+
+    A THIRD GLYPH LAYER, NOT A THIRD SCREEN. The pointer needs its own font
+      size, so the seam grows MIXA_LAYER_POINTER for rasterising and metrics for
+      it. It does NOT grow a third cell grid to composite: there is nothing to
+      lay out, only one glyph to place.
+
+7.4. The pointer glyph may be bigger than its step, and that is allowed
+
+"If the mouse symbol is larger, that is fine too." Explicitly so. The pointer is
+one glyph at a POSITION, not content in a cell, so it has no box to overflow.
+The half step governs where it is placed, never how large it is drawn.
+
+Which also means the pointer is the only element in the interface whose size is
+not a cell. That is consistent rather than an exception: section 6 established
+it belongs to no surface, and something belonging to no surface has no cell.
+
+7.5. The cell is not the font, and it is even
+
+Added by Mikhail once the half step existed: decouple the cell size from the
+font size for all the screens; for the first two, fit the cell to the font. If
+the system hands us an odd width or height, make the cell one pixel larger so it
+is even, and leave the font exactly as the system gave it.
+
+That is what makes 7.2 true rather than approximately true. Half of an odd
+number of pixels is not a number of pixels, so an odd cell would put every
+second pointer position on a fraction. With an even cell all four positions per
+character are exact. BACKEND_SEAM 10.8.
+
+The font stays untouchable and the cell becomes ours - which is the doctrine
+finally saying what the cell IS, rather than assuming it equals the font.
+
+7.6. One font, and where the second one would really come from
+
+Mikhail expects one font to stay. If different fonts are ever wanted they
+arrive as further VIRTUAL SCREENS laid over the top, not as a second font on an
+existing layer - which is the same growth direction the seam already anticipates
+for images.
+
+So the per-layer metrics are a mechanism held open rather than a case about to
+be exercised. Both points are already true of the seam: MixaCellMetrics carries separate
+metrics per layer, mixa_backend_glyph takes a layer, and "a backend with only
+one font reports the same metrics twice" is written into the header as a
+legitimate answer rather than a failure.
+
+So today upper_cell equals text_cell and the offset of 7.1 is the ONLY thing
+distinguishing the two grids. That is the interesting case to look at, because
+it is the one where the misalignment is doing all the work by itself.
+
+The pointer font follows 10.3's rule - the available system size NEAREST the
+target, used as it comes - with the target being the text size or slightly
+above, rather than 1.5x.

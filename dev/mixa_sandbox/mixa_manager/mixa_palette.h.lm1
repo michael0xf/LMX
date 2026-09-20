@@ -1,0 +1,79 @@
+include: "<stddef.h>"
+predef: "mixa_manager/mixa_overlay.h.lm1"
+
+# mixa_palette.h.lm1 -- ПАЛИТРА: пары цветов ClearShell, перенесённые, а не придуманные.
+#
+# ЧТО ЗДЕСЬ: таблица ИМЁН и ПАР.  UI_MODEL 5.4 "Colours, as pairs": «Every button is a
+# (text, background) pair, and the pattern is uniform: text nearly opaque at alpha 240 and
+# dark, background translucent at alpha 96 and light».  PORT_OF_CLEARSHELL 3.3: «Preserve
+# the source palette and per-element background opacity... See UI_MODEL 3/5.4 for exact
+# source pairs».  Источник -- ClearShell.java (clearshell_reference/ClearShell/app/src/main/java/com/mtk/shell,
+# строки 635..690), и он перенесён ЗДЕСЬ БЕЗ ПЕРЕНОМЕРОВАНИЯ И БЕЗ ПЕРЕСЧЁТА: те же
+# имена, те же значения argb.
+#
+# ГДЕ ЧТО ЖИВЁТ (разбор, подтверждённый l1-c9):
+#   * ПАРА (текст 240 / фон 96, таблица имён) живёт в ПАЛИТРЕ -- здесь;
+#   * КЛЕТКА несёт 8-битный ИНДЕКС в неё (MixaCell.fg и MixaCell.bg, оба MixaCellByte)
+#     и альфу ФОНА -- DRAWING 2.1: «EVERY CELL CARRIES FOREGROUND AND BACKGROUND... the
+#     background has an ALPHA», и UI_MODEL 3: «Alpha varies BY ELEMENT... evidence for
+#     putting alpha on the CELL rather than on the surface».
+# Поэтому альфа пары (240 у текста, 96/64/255 у фона) хранится здесь КАК ДАННЫЕ
+# источника и выдаётся наружу (mixa_palette_bg_alpha), а смешивание идёт по альфе КЛЕТКИ:
+# один механизм, никакой двойной альфы.
+#
+# ГЛИФЫ ВСЕГДА НЕПРОЗРАЧНЫ (владелец, 2026-09-10; DRAWING 2: «Glyphs are always drawn
+# opaque. Translucency belongs to the background, not to the letters»).  Поэтому
+# mixa_palette_text_rgb возвращает RGB БЕЗ альфы: 240 у текста -- значение источника для
+# справки (mixa_palette_text), а рисуется буква непрозрачной, как и предписано
+# («Preserve source text RGB but use alpha255 instead of ordinary ClearShell text alpha240»).
+#
+# ИНДЕКС 0 -- ЧЁРНАЯ ПАРА (cBlack/bBlack), ею одета консоль (ClearShell.java:2453:
+# text.setTextColor(cBlack); text.setBackgroundColor(bBlack)).  Так нулевая клетка значит
+# «чёрная пара», а не случайность нумерации.
+#
+# ПСЕВДОНИМЫ -- по документу 5.4: «Off, Error and Text are aliases of Gray, Red and Gray».
+# В Java это отдельные имена (bOff = bGray и т.д.), здесь -- те же индексы под другими
+# именами: пара у них одна и та же.
+
+define: MIXA_PALETTE_OK 0
+define: MIXA_PALETTE_ERR_ARG 1
+define: MIXA_PALETTE_ERR_INDEX 2
+
+define: MIXA_PAL_BLACK 0U
+define: MIXA_PAL_GREEN 1U
+define: MIXA_PAL_GREEN1 2U
+define: MIXA_PAL_BLUE 3U
+define: MIXA_PAL_PLEASE_WAIT 4U
+define: MIXA_PAL_CYAN 5U
+define: MIXA_PAL_ROSE 6U
+define: MIXA_PAL_GRAY 7U
+define: MIXA_PAL_LIGHT 8U
+define: MIXA_PAL_RED 9U
+define: MIXA_PAL_RED1 10U
+define: MIXA_PAL_MAGENTA 11U
+define: MIXA_PAL_BROWN 12U
+define: MIXA_PAL_YELLOW 13U
+define: MIXA_PAL_YELLOW2 14U
+define: MIXA_PAL_YELLOW1 15U
+define: MIXA_PAL_ORANGE 16U
+define: MIXA_PAL_SEL 17U
+define: MIXA_PAL_SEL1 18U
+define: MIXA_PAL_C0 19U
+define: MIXA_PAL_COUNT 20U
+
+# Псевдонимы (5.4): та же пара под другим именем.
+define: MIXA_PAL_OFF (MIXA_PAL_GRAY)
+define: MIXA_PAL_ERROR (MIXA_PAL_RED)
+define: MIXA_PAL_TEXT (MIXA_PAL_GRAY)
+# Консоль -- чёрная пара: одно и то же имя для того, что читается как роль.
+define: MIXA_PAL_CONSOLE (MIXA_PAL_BLACK)
+
+prototype:
+    fn: mixa_palette_text (unsigned: index; @: MixaU8 out_r; @: MixaU8 out_g; @: MixaU8 out_b; @: MixaU8 out_a) int
+    fn: mixa_palette_bg (unsigned: index; @: MixaU8 out_r; @: MixaU8 out_g; @: MixaU8 out_b; @: MixaU8 out_a) int
+    fn: mixa_palette_text_rgb (unsigned: index; @: MixaU8 out_r; @: MixaU8 out_g; @: MixaU8 out_b) int
+    fn: mixa_palette_bg_rgb (unsigned: index; @: MixaU8 out_r; @: MixaU8 out_g; @: MixaU8 out_b) int
+    fn: mixa_palette_bg_alpha (unsigned: index) unsigned
+    fn: mixa_palette_name (unsigned: index) const: @(char)
+    fn: mixa_palette_is_pair (unsigned: index) int
+end: prototype

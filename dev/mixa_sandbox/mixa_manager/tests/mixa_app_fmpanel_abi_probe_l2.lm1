@@ -1,0 +1,53 @@
+# ABI parity guard — L1 port of mixa_app_fmpanel_abi_probe_l2.c (ticket 20260918-082421).
+# offsetof is a C macro with no L1 spelling (c. pastes a call, not a preprocessor
+# name). Field offsets are computed at run time via pointer arithmetic on a local
+# store (same pattern as l2src/lmx_message_selftest.lm1). Output format strings
+# are kept byte-identical to the C probe so L2-vs-real parity still diffs stdout.
+predef: "mixa_manager/mixa_app_fmpanel_l2.h.lm1"
+include: "<stdio.h>"
+
+fn: main () int
+    MixaAppFmPanel: store0
+    @: MixaAppFmPanel p0
+    p0: @ store0
+
+    c.printf("MixaAppFmPanel sizeof=%zu\n", c.sizeof(c.MixaAppFmPanel))
+    c.printf("MixaAppFmPanel fm=%zu\n", (cast: (size_t) @ p0\fm) - (cast: (size_t) p0))
+    c.printf("MixaAppFmPanel list_row=%zu\n", (cast: (size_t) @ p0\list_row) - (cast: (size_t) p0))
+    c.printf("MixaAppFmPanel list_col=%zu\n", (cast: (size_t) @ p0\list_col) - (cast: (size_t) p0))
+    c.printf("MixaAppFmPanel list_rows=%zu\n", (cast: (size_t) @ p0\list_rows) - (cast: (size_t) p0))
+    c.printf("MixaAppFmPanel list_cols=%zu\n", (cast: (size_t) @ p0\list_cols) - (cast: (size_t) p0))
+    c.printf("MixaAppFmPanel action_row=%zu\n", (cast: (size_t) @ p0\action_row) - (cast: (size_t) p0))
+    c.printf("MixaAppFmPanel action_col=%zu\n", (cast: (size_t) @ p0\action_col) - (cast: (size_t) p0))
+    c.printf("MixaAppFmPanel confirm_open=%zu\n", (cast: (size_t) @ p0\confirm_open) - (cast: (size_t) p0))
+    c.printf("MixaAppFmPanel confirm_row=%zu\n", (cast: (size_t) @ p0\confirm_row) - (cast: (size_t) p0))
+    c.printf("MixaAppFmPanel confirm_col=%zu\n", (cast: (size_t) @ p0\confirm_col) - (cast: (size_t) p0))
+    c.printf("MixaAppFmPanel confirm_rows=%zu\n", (cast: (size_t) @ p0\confirm_rows) - (cast: (size_t) p0))
+    c.printf("MixaAppFmPanel confirm_cols=%zu\n", (cast: (size_t) @ p0\confirm_cols) - (cast: (size_t) p0))
+    c.printf("MixaAppFmPanel cancel_row=%zu\n", (cast: (size_t) @ p0\cancel_row) - (cast: (size_t) p0))
+    c.printf("MixaAppFmPanel cancel_col=%zu\n", (cast: (size_t) @ p0\cancel_col) - (cast: (size_t) p0))
+    c.printf("MixaAppFmPanel cancel_w=%zu\n", (cast: (size_t) @ p0\cancel_w) - (cast: (size_t) p0))
+    c.printf("MixaAppFmPanel ok_row=%zu\n", (cast: (size_t) @ p0\ok_row) - (cast: (size_t) p0))
+    c.printf("MixaAppFmPanel ok_col=%zu\n", (cast: (size_t) @ p0\ok_col) - (cast: (size_t) p0))
+    c.printf("MixaAppFmPanel ok_w=%zu\n", (cast: (size_t) @ p0\ok_w) - (cast: (size_t) p0))
+    c.printf("MixaAppFmPanel saved=%zu\n", (cast: (size_t) @ p0\saved) - (cast: (size_t) p0))
+    c.printf("MixaAppFmPanel saved_count=%zu\n", (cast: (size_t) @ p0\saved_count) - (cast: (size_t) p0))
+    c.printf("MixaAppFmPanel saved_row=%zu\n", (cast: (size_t) @ p0\saved_row) - (cast: (size_t) p0))
+    c.printf("MixaAppFmPanel saved_col=%zu\n", (cast: (size_t) @ p0\saved_col) - (cast: (size_t) p0))
+    c.printf("MixaAppFmPanel saved_rows=%zu\n", (cast: (size_t) @ p0\saved_rows) - (cast: (size_t) p0))
+    c.printf("MixaAppFmPanel saved_cols=%zu\n", (cast: (size_t) @ p0\saved_cols) - (cast: (size_t) p0))
+    c.printf("MixaAppFmPanel invocations=%zu\n", (cast: (size_t) @ p0\invocations) - (cast: (size_t) p0))
+    c.printf("MixaAppFmPanel has_failure=%zu\n", (cast: (size_t) @ p0\has_failure) - (cast: (size_t) p0))
+    c.printf("MixaAppFmPanel last_status=%zu\n", (cast: (size_t) @ p0\last_status) - (cast: (size_t) p0))
+    c.printf("MixaAppFmPanel failing_path=%zu\n", (cast: (size_t) @ p0\failing_path) - (cast: (size_t) p0))
+    c.printf("MixaAppFmPanel has_copy_result=%zu\n", (cast: (size_t) @ p0\has_copy_result) - (cast: (size_t) p0))
+    c.printf("MixaAppFmPanel copy_last_status=%zu\n", (cast: (size_t) @ p0\copy_last_status) - (cast: (size_t) p0))
+    c.printf("MixaAppFmPanel view_top=%zu\n", (cast: (size_t) @ p0\view_top) - (cast: (size_t) p0))
+    c.printf("MixaAppFmPanel highlight_idx=%zu\n", (cast: (size_t) @ p0\highlight_idx) - (cast: (size_t) p0))
+    c.printf("MixaAppFmPanel last_dir=%zu\n", (cast: (size_t) @ p0\last_dir) - (cast: (size_t) p0))
+    c.printf("MixaAppFmPanel has_last_dir=%zu\n", (cast: (size_t) @ p0\has_last_dir) - (cast: (size_t) p0))
+    c.printf("MixaAppFmPanel drag_active=%zu\n", (cast: (size_t) @ p0\drag_active) - (cast: (size_t) p0))
+    c.printf("MixaAppFmPanel drag_grab_offset=%zu\n", (cast: (size_t) @ p0\drag_grab_offset) - (cast: (size_t) p0))
+    c.printf("MixaAppFmPanel focus=%zu\n", (cast: (size_t) @ p0\focus) - (cast: (size_t) p0))
+    return: 0
+

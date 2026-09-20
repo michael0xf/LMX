@@ -1,0 +1,44 @@
+predef: "mixa_manager/mixa_service.h.lm1"
+include: "<stdlib.h>" "<string.h>"
+
+# mixa_service.lm1 — app-owned ClearShellService handle (ticket 20260918-125450).
+
+fn: mixa_service_open (@@: MixaService out; @: void lmx_service) int
+    @: MixaService s
+    if: out = 0
+        return: MIXA_SERVICE_ERR_ARG
+    out[0]: 0
+    if: lmx_service = 0
+        return: MIXA_SERVICE_ERR_ARG
+    ---
+    s: (cast: (@: MixaService) c.calloc(1U, c.sizeof(c.MixaService)))
+    if: s = 0
+        return: MIXA_SERVICE_ERR_NOMEM
+    ---
+    s\lmx_service: lmx_service
+    s\is_open: 1
+    out[0]: s
+return: MIXA_SERVICE_OK
+
+sub: mixa_service_close (@: MixaService s)
+    if: s = 0
+        return
+    ---
+    s\lmx_service: 0
+    s\is_open: 0
+    c.free(s)
+end: mixa_service_close
+
+fn: mixa_service_post (@: MixaService s; @: void address; @: void letter) int
+    int: rc
+    if: s = 0 || address = 0 || letter = 0
+        return: MIXA_SERVICE_ERR_ARG
+    if: s\is_open = 0 || s\lmx_service = 0
+        return: MIXA_SERVICE_ERR_STATE
+    ---
+    rc: lmx_service_post(s\lmx_service, address, letter)
+    if: rc != 0
+        return: MIXA_SERVICE_ERR_POST
+    ---
+return: MIXA_SERVICE_OK
+

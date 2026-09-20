@@ -171,6 +171,21 @@ struct: LmxMethod
     unsigned: sig
 end: LmxMethod
 
+# Callable descriptor in physical child[0] of an ordinary Structure M.
+# Slot 0 used to hold LmxMethod {addr,sig} only. The interpreter and return
+# trailers need more, so child[0] now points at this record (same place, richer
+# type). M itself stays the three-field Lmx; nothing is added to Lmx.
+# header / body / return_arg are REFERENCES (21.5.1: trailer arguments are not
+# own-fields merely by being arguments). addr may be 0 when only the interpreter
+# runs the body graph.
+struct: LmxCallable
+    LmxEntry: addr
+    unsigned: sig
+    @: Lmx header
+    @: Lmx body
+    @: void return_arg
+end: LmxCallable
+
 # 6.5: an Array descriptor has exactly two values and no Lmx node.
 struct: LmxArrayDesc
     size_t: len

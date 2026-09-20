@@ -6,11 +6,9 @@ predef: "l2src/lmx_own.h.lm1"
 # Graph interpreter: execute the SAME Lmx graph native METHOD.addr would run.
 # Work only in dev/l2src_sandbox. Root l2src stays stable.
 #
-# Slot 0 is already the METHOD record (lmx.h.lm1). Extra slots that REFERENCE
-# the method header and the `return:` trailer argument are required so the
-# interpreter does not rebuild a second tree. They are references, not own-fields
-# of formals (Lingvamyxa_spec.txt 21.5.1). Exact indexes after slot 0 are open
-# until fable/lmx_uds agree; do not invent a third header on Lmx.
+# Slot 0 holds LmxCallable (dev): addr/sig plus references to method header,
+# body graph, and return-trailer argument. Lmx stays three fields. Old METHOD
+# in slot 0 is still recognized by lmx_call_ready.
 
 define: LMX_INTERP_OK 0
 define: LMX_INTERP_INVALID 1

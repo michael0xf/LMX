@@ -15,6 +15,8 @@ L3 сохраняет изменение графа, структурные вы
 
 Исполнение следует разрешённым ссылкам и позициям бинарного графа, а не исходным именам; диагностическая таблица адресов и имён не участвует в выполнении, см. [имена и пути](#fields). Высокоуровневая операция может иметь явно выбранную машинную реализацию с L3-контрактом, как описано в [границе числовых и машинных операций](#mathematics); это не разрешает произвольный вызов `c.*` из интерпретируемой программы.
 
+Представление исполняемого графа в первую очередь использует физические ссылки. Числовой код применяется только там, где физическую ссылку сохранить или передать невозможно; после разрешения такого кода дальнейшее исполнение снова следует полученной ссылке. Текстовые имена не участвуют в распознавании операций, выборе принимающего выражения или диспетчеризации. Внутренний числовой тег реализации допустим как локальная оптимизация интерпретатора, но сам по себе не устанавливает смысл узла L3.
+
 Простейшая программа скриптового профиля:
 
 ```text
@@ -35,6 +37,8 @@ The model supports interpretation of the constructed L3 graph and translation pr
 The L3 receiving expression defines the contract for consuming a constructed graph as an L3 program. It determines the supported subset and the selected profile's entry point; the mere presence of a syntax tree does not establish program admissibility. An unsupported operation does not become admissible because a machine implementation address exists. A restricted execution profile must explicitly report an unsupported construct rather than silently skip it or execute it as L2. This profile restriction does not replace the [single candidate-admission mechanism](#admission).
 
 Execution follows resolved references and positions in the binary graph, not source names; the diagnostic address-to-name table does not participate in execution, as specified under [names and paths](#fields). A high-level operation may have an explicitly selected machine implementation with an L3 contract, as described at the [numeric/machine-operation boundary](#mathematics); this does not authorize arbitrary `c.*` calls from the interpreted program.
+
+The executable graph representation uses physical references wherever possible. A numeric code is used only where a physical reference cannot be retained or transported; after such a code is resolved, subsequent execution again follows the resulting reference. Textual names do not participate in operation recognition, receiving-expression selection, or dispatch. An internal numeric implementation tag may be used as a local interpreter optimization, but it does not by itself establish the meaning of an L3 node.
 
 The simplest script-profile program is:
 

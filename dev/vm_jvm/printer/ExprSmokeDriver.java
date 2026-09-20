@@ -39,6 +39,13 @@ public final class ExprSmokeDriver {
         testArgOutOfRangeRejected();
         testProbeOnceLeftToRight();
 
+        testLocalsSetGet();
+        testLocalsOrderedOverwrite();
+        testLocalsRhsOnce();
+        testLocalsNestedCallIsolation();
+        testLocalsTwoFreshCalls();
+        testLocalsRejected();
+
         if (fails != 0) {
             System.out.println("FAIL ExprSmokeDriver checks=" + checks + " failures=" + fails);
             System.exit(1);
@@ -246,6 +253,71 @@ public final class ExprSmokeDriver {
         check("probe ticks exactly twice", ArgEvalCounter.get() == 2);
     }
 
+
+    private static void testLocalsSetGet() throws Exception {
+        Class<?> cls = loadPrinted(L3ExprFixture.localsSetGet());
+        Method eval = cls.getMethod("eval", LmxOccurrence.class);
+        Object r = eval.invoke(null, LmxOccurrence.independent(Integer.valueOf(0)));
+        check("locals set/get -> 5", Integer.valueOf(5).equals(r));
+    }
+
+    private static void testLocalsOrderedOverwrite() throws Exception {
+        Class<?> cls = loadPrinted(L3ExprFixture.localsOrderedOverwrite());
+        Method eval = cls.getMethod("eval", LmxOccurrence.class);
+        Object r = eval.invoke(null, LmxOccurrence.independent(Integer.valueOf(0)));
+        check("locals overwrite -> 2", Integer.valueOf(2).equals(r));
+    }
+
+    private static void testLocalsRhsOnce() throws Exception {
+        ArgEvalCounter.reset();
+        Class<?> cls = loadPrinted(L3ExprFixture.localsRhsOnce());
+        Method eval = cls.getMethod("eval", LmxOccurrence.class);
+        ArgEvalCounter.reset();
+        Object r = eval.invoke(null, LmxOccurrence.independent(Integer.valueOf(0)));
+        check("LOCAL_SET RHS probe once yields 1", Integer.valueOf(1).equals(r));
+        check("probe ticks exactly once for LOCAL_SET RHS", ArgEvalCounter.get() == 1);
+    }
+
+    private static void testLocalsNestedCallIsolation() throws Exception {
+        Class<?> cls = loadPrinted(L3ExprFixture.localsNestedCallIsolation());
+        Method eval = cls.getMethod("eval", LmxOccurrence.class);
+        Object r = eval.invoke(null, LmxOccurrence.independent(Integer.valueOf(0)));
+        check("nested CALL does not overwrite caller local -> 10", Integer.valueOf(10).equals(r));
+    }
+
+    private static void testLocalsTwoFreshCalls() throws Exception {
+        Class<?> cls = loadPrinted(L3ExprFixture.callerTwoFreshLocalCalls());
+        Method eval = cls.getMethod("eval", LmxOccurrence.class);
+        Object r = eval.invoke(null, LmxOccurrence.independent(Integer.valueOf(0)));
+        check("two calls fresh locals 5+7=12", Integer.valueOf(12).equals(r));
+    }
+
+    private static void testLocalsRejected() {
+        boolean neg = false;
+        try { L3ClassfilePrinter.emitCallable(L3ExprFixture.localsNegativeGet()); }
+        catch (IllegalArgumentException e) { neg = true; }
+        check("LOCAL_GET negative rejected", neg);
+
+        boolean oor = false;
+        try { L3ClassfilePrinter.emitCallable(L3ExprFixture.localsOutOfRangeGet()); }
+        catch (IllegalArgumentException e) { oor = true; }
+        check("LOCAL_GET out of range rejected", oor);
+
+        boolean uninit = false;
+        try { L3ClassfilePrinter.emitCallable(L3ExprFixture.localsUninitializedGet()); }
+        catch (IllegalArgumentException e) { uninit = true; }
+        check("LOCAL_GET uninitialized rejected", uninit);
+
+        boolean seq = false;
+        try { L3ClassfilePrinter.emitCallable(L3ExprFixture.localsMalformedSequence()); }
+        catch (IllegalArgumentException e) { seq = true; }
+        check("empty SEQUENCE rejected", seq);
+
+        boolean set = false;
+        try { L3ClassfilePrinter.emitCallable(L3ExprFixture.localsMalformedSet()); }
+        catch (IllegalArgumentException e) { set = true; }
+        check("LOCAL_SET without RHS rejected", set);
+    }
     private static boolean hasMethods(Class<?> cls, String... want) {
         Set<String> names = new HashSet<String>();
         for (Method m : cls.getDeclaredMethods()) {

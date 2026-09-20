@@ -70,3 +70,17 @@ javac -cp "dev/vm_jvm/out;build/vm_jvm/asm-9.7.1.jar" -d dev/vm_jvm/out printer/
 java -cp "dev/vm_jvm/out;build/vm_jvm/asm-9.7.1.jar" printer.ExprSmokeDriver
 java -cp "dev/vm_jvm/out" smoke.HelloStructureSmoke
 ```
+## GROK-BOT-JVM-L3-LOCALS-20260920-58B (2026-09-20 22:52 UTC)
+
+Path-B activation locals (SEQUENCE, LOCAL_GET, LOCAL_SET).
+
+- ExprSmokeDriver PASS checks=43 failures=0; HelloStructureSmoke PASS checks=25 failures=0.
+- Covers: set/get, overwrite, RHS once, nested CALL isolation, two fresh activations, negative/OOR/uninit/malformed reject.
+
+Verify:
+```
+javac -d dev/vm_jvm/out lmx/*.java graph/*.java smoke/*.java
+javac -cp "dev/vm_jvm/out;build/vm_jvm/asm-9.7.1.jar" -d dev/vm_jvm/out printer/*.java
+java -cp "dev/vm_jvm/out;build/vm_jvm/asm-9.7.1.jar" printer.ExprSmokeDriver
+java -cp "dev/vm_jvm/out" smoke.HelloStructureSmoke
+```

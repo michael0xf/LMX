@@ -216,6 +216,98 @@ public final class L3ExprFixture {
         return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, call));
     }
 
+
+    /** {@code return SEQUENCE(LOCAL_SET(0, 5), LOCAL_GET(0))} → 5. */
+    public static L3Node localsSetGet() {
+        L3Node set = new L3Node(L3Role.LOCAL_SET, 0, L3Node.ofInt(L3Role.INT_LITERAL, 5));
+        L3Node get = L3Node.ofInt(L3Role.LOCAL_GET, 0);
+        L3Node seq = L3Node.of(L3Role.SEQUENCE, set, get);
+        return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, seq));
+    }
+
+    /** {@code return SEQUENCE(LOCAL_SET(0,1), LOCAL_SET(0,2), LOCAL_GET(0))} → 2. */
+    public static L3Node localsOrderedOverwrite() {
+        L3Node s1 = new L3Node(L3Role.LOCAL_SET, 0, L3Node.ofInt(L3Role.INT_LITERAL, 1));
+        L3Node s2 = new L3Node(L3Role.LOCAL_SET, 0, L3Node.ofInt(L3Role.INT_LITERAL, 2));
+        L3Node get = L3Node.ofInt(L3Role.LOCAL_GET, 0);
+        return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, L3Node.of(L3Role.SEQUENCE, s1, s2, get)));
+    }
+
+    /** LOCAL_SET RHS is PROBE once; return stored value. */
+    public static L3Node localsRhsOnce() {
+        L3Node set = new L3Node(L3Role.LOCAL_SET, 0, L3Node.of(L3Role.PROBE));
+        return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, set));
+    }
+
+    /**
+     * Caller: SEQUENCE(LOCAL_SET(0,10), CALL(callee), LOCAL_GET(0)).
+     * Callee: LOCAL_SET(0,99) then return 99. Caller local must stay 10.
+     */
+    public static L3Node localsNestedCallIsolation() {
+        L3Node calleeBody = new L3Node(L3Role.LOCAL_SET, 0, L3Node.ofInt(L3Role.INT_LITERAL, 99));
+        L3Node callee = L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, calleeBody));
+        L3Node set = new L3Node(L3Role.LOCAL_SET, 0, L3Node.ofInt(L3Role.INT_LITERAL, 10));
+        L3Node call = L3Node.of(L3Role.CALL, callee, L3Node.of(L3Role.SUBJECT_REF));
+        L3Node get = L3Node.ofInt(L3Role.LOCAL_GET, 0);
+        L3Node seq = L3Node.of(L3Role.SEQUENCE, set, call, get);
+        return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, seq));
+    }
+
+    /**
+     * Callee: SEQUENCE(LOCAL_SET(0,0), LOCAL_SET(0, LOCAL_GET(0)+ARG(1)), LOCAL_GET(0)).
+     * Two calls with 5 then 7 must yield 5 and 7 (fresh locals each activation).
+     */
+    public static L3Node calleeFreshLocalsAddArg() {
+        L3Node zero = new L3Node(L3Role.LOCAL_SET, 0, L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        L3Node add = L3Node.of(L3Role.ADD, L3Node.ofInt(L3Role.LOCAL_GET, 0), L3Node.ofInt(L3Role.ARG, 1));
+        L3Node set = new L3Node(L3Role.LOCAL_SET, 0, add);
+        L3Node get = L3Node.ofInt(L3Role.LOCAL_GET, 0);
+        L3Node seq = L3Node.of(L3Role.SEQUENCE, zero, set, get);
+        return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, seq));
+    }
+
+    /** Entry calling fresh-locals callee twice: return CALL(...,5) + CALL(...,7) → 12. */
+    public static L3Node callerTwoFreshLocalCalls() {
+        L3Node callee = calleeFreshLocalsAddArg();
+        L3Node c1 = L3Node.of(
+                L3Role.CALL, callee, L3Node.of(L3Role.SUBJECT_REF), L3Node.ofInt(L3Role.INT_LITERAL, 5));
+        L3Node c2 = L3Node.of(
+                L3Role.CALL, callee, L3Node.of(L3Role.SUBJECT_REF), L3Node.ofInt(L3Role.INT_LITERAL, 7));
+        L3Node add = L3Node.of(L3Role.ADD, c1, c2);
+        return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, add));
+    }
+
+    public static L3Node localsNegativeGet() {
+        return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, L3Node.ofInt(L3Role.LOCAL_GET, -1)));
+    }
+
+    /** SET slot 0 then GET slot 1 → out of range (slotCount=1). */
+    public static L3Node localsOutOfRangeGet() {
+        L3Node set = new L3Node(L3Role.LOCAL_SET, 0, L3Node.ofInt(L3Role.INT_LITERAL, 1));
+        L3Node get = L3Node.ofInt(L3Role.LOCAL_GET, 1);
+        return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, L3Node.of(L3Role.SEQUENCE, set, get)));
+    }
+
+    /** GET without SET → uninitialized (also OOR if slotCount 0 — use SET in untaken IF branch). */
+    public static L3Node localsUninitializedGet() {
+        // IF(0, LOCAL_SET(0,1), 0) then LOCAL_GET(0): after IF slot not definitely assigned
+        L3Node set = new L3Node(L3Role.LOCAL_SET, 0, L3Node.ofInt(L3Role.INT_LITERAL, 1));
+        L3Node iff = L3Node.of(
+                L3Role.IF,
+                L3Node.ofInt(L3Role.INT_LITERAL, 0),
+                set,
+                L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        L3Node get = L3Node.ofInt(L3Role.LOCAL_GET, 0);
+        return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, L3Node.of(L3Role.SEQUENCE, iff, get)));
+    }
+
+    public static L3Node localsMalformedSequence() {
+        return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, L3Node.of(L3Role.SEQUENCE)));
+    }
+
+    public static L3Node localsMalformedSet() {
+        return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, L3Node.ofInt(L3Role.LOCAL_SET, 0)));
+    }
     public static final class CallGraphWithOrphan {
         public final L3Node entry;
         public final L3Node orphan;

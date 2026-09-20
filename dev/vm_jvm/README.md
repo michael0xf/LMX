@@ -61,3 +61,9 @@ Fixture: entry `return CALL(leaf, subject) + 5` where leaf is `return subject[0]
 - JVM descriptor fixed per callable: `(LmxOccurrence;I*)I`. CALL sites must pass exactly that many args; args evaluated once left-to-right.
 - `L3Role.PROBE` (smoke): `ArgEvalCounter.tick()` for exactly-once evaluation order.
 - No varargs, no WHILE, no recursion. IF and reachable-only emission preserved.
+## Locals / SEQUENCE (Path B slice 58B)
+
+- SEQUENCE: evaluate children left-to-right; yield the last int.
+- LOCAL_SET / LOCAL_GET: compile-time slot index; JVM local = arity + slot (after subject/args). Per CALL activation; no TLS/shared array/name table.
+- Slot count from LOCAL_SET indices only. Definite assignment rejects uninitialized LOCAL_GET. Negative / out-of-range / malformed arity rejected before class bytes.
+- WHILE, recursion, and reference locals still deferred. Int-only boundary kept.

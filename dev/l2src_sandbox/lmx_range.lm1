@@ -177,7 +177,12 @@ fn: lmx_range_classify (@: LmxArena arena; @: void p) int
     size_t: low 0U
     size_t: high
     size_t: mid
-    if: arena = 0 || p = 0 || arena\index = 0
+    # `arena\index = 0` IS NOT A REFUSAL HERE.  A freshly bound child or letter arena has allocated
+    # nothing yet, and "I own no ranges" is not a reason to withhold an answer when a store is
+    # bound -- it is the reason the fallback below exists.  Null arena and null address still return
+    # at once.  lmx_range_pool keeps the opposite reading on purpose: there, an empty index IS the
+    # answer, because the question is ownership.
+    if: arena = 0 || p = 0
         return: c.LMX_KIND_NONE
     high: arena\count
     while: low < high
@@ -213,7 +218,9 @@ fn: lmx_range_type_of (@: LmxArena arena; @: void p) int
     size_t: low 0U
     size_t: high
     size_t: mid
-    if: arena = 0 || p = 0 || arena\index = 0
+    # Same reading as in classify: an empty LOCAL index is not a refusal, it is a reason to ask the
+    # bound store (see the long note there).
+    if: arena = 0 || p = 0
         return: c.LMX_TYPE_NONE
     high: arena\count
     while: low < high
@@ -242,7 +249,8 @@ fn: lmx_range_stride (@: LmxArena arena; @: void p) size_t
     size_t: low 0U
     size_t: high
     size_t: mid
-    if: arena = 0 || p = 0 || arena\index = 0
+    # Same reading again: an empty LOCAL index falls through to the bound store.
+    if: arena = 0 || p = 0
         return: 0U
     high: arena\count
     while: low < high

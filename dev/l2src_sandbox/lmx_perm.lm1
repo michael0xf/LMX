@@ -77,13 +77,9 @@ fn: lmx_perm_store_of (@: LmxArena arena) @: LmxArena
         return: 0
 return: arena\perm
 
-# Kind of an address that lives in the store, or NONE.  The store's own `perm` is 0, so this
-# delegates to the LOCAL bisection and cannot recurse; external callers use this name to say
-# plainly that they are asking about permanent storage rather than about a Message's own.
-fn: lmx_perm_classify (@: LmxArena store; @: void p) int
-    if: store = 0
-        return: c.LMX_KIND_NONE
-return: lmx_range_classify(store, p)
+# NO lmx_perm_classify.  The qualified type of a branch is decided by the address falling in this
+# store's ranges, and that question is asked with the common machinery (lmx_range_classify and
+# friends); the header says why a wrapper is not merely redundant but harmful here.
 
 fn: lmx_perm_is_store (@: LmxArena arena) int
     if: arena = 0

@@ -54,10 +54,13 @@ prototype:
     fn: lmx_perm_bind (@: LmxArena arena; @: LmxArena store) int
     # The store this arena is bound to, or 0.  Read-only; the link is non-owning.
     fn: lmx_perm_store_of (@: LmxArena arena) @: LmxArena
-    # Kind of an address that lives in the store, or LMX_KIND_NONE.  A thin delegate, and the
-    # point of it: the store's own `perm` link is 0, so this call cannot recurse -- external
-    # callers (copy, merge) say plainly that they are asking about PERMANENT storage.
-    fn: lmx_perm_classify (@: LmxArena store; @: void p) int
+    # THERE IS NO CLASSIFIER HERE, and its absence is the design (author, 20.09: «все типы можно
+    # определять только по вхождению адреса»).  Membership in this store's ranges IS the qualified
+    # type `independent: const: immutable`, and it is asked through the COMMON machinery --
+    # lmx_range_classify / _type_of / _stride, which are local-first and, on an arena bound to this
+    # store, fall back here by themselves.  A wrapper would be a second name for the same bisection,
+    # and the one attempt to route a caller through such a name put a link edge from lmx_range.o
+    # into lmx_perm.o and cost 21 multiple-definition failures.  So: ask the store DIRECTLY.
     # 1 when this arena carries the store role.  The one predicate the lifecycle needs.
     fn: lmx_perm_is_store (@: LmxArena arena) int
 end: prototype

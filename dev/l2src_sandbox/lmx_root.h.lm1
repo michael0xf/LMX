@@ -109,6 +109,13 @@ define: LMX_ROOT_DONE 2
 struct: LmxRoot
     # R0's own arena: the runtime's storage, and the index that answers for it.
     LmxArena: arena
+    # R0's PERMANENT STORE (LMX-ETERNAL-R0-44D): process-lifetime storage holding the two
+    # retention arrays and every branch qualified `independent: const: immutable`.  An arena of
+    # the same type for the same reason the field above is one, and EMBEDDED for the same reason:
+    # R0 owns it, so nothing can leak it and no registry has to find it.  What differs is the ROLE
+    # FLAG inside, not the type -- GC never visits it, and its one release is lmx_perm_close
+    # (lmx_perm.h.lm1).  It is NEVER a type test: which range table answered is the qualifier.
+    LmxArena: perm
     # R0 itself: the Message at index 1, a cell of that arena.
     @: LmxMsg message
     # R0 as an L3 Thread -- it has a mailbox and a turn, which is what makes it one.  A

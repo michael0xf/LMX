@@ -1,5 +1,8 @@
 predef: "l2src/lmx_root.h.lm1"
 predef: "l2src/lmx_arena.lm1"
+# The store's lifecycle lives in lmx_perm (LMX-ETERNAL-R0-44D): R0 opens it, binds its own arena
+# to it and closes it.  The header is pulled, never the unit's body.
+predef: "l2src/lmx_perm.h.lm1"
 predef: "l2src/lmx_arena_refs.lm1"
 predef: "l2src/lmx_child.lm1"
 predef: "l2src/lmx_clock.lm1"
@@ -69,35 +72,59 @@ fn: lmx_root_open (@: LmxRoot root; LmxCallEntry: entry; ulong: limit; size_t: e
     root\state: c.LMX_ROOT_CLOSED
     if: lmx_arena_open(@ root\arena) != 0
         return: c.LMX_ROOT_INVALID
+    ---
+    # THE PERMANENT STORE, opened BEFORE anything that lives in it, and the BINDING that lets this
+    # Message classify what lives there.  lmx_perm_open clears the by-value fields itself, so no
+    # zeroing belongs here.  A failure past this point must close the store as well as the arena:
+    # the two lines travel together on every failure path below.
+    if: lmx_perm_open(@ root\perm) != 0
+        lmx_perm_close(@ root\perm)
+        lmx_arena_release(@ root\arena)
+        return: c.LMX_ROOT_INVALID
+    ---
+    if: lmx_perm_bind(@ root\arena, @ root\perm) != 0
+        lmx_perm_close(@ root\perm)
+        lmx_arena_release(@ root\arena)
+        return: c.LMX_ROOT_INVALID
+    ---
     # R0's graph root: a lexical root Structure whose child array is the top level's slots.
     # A Message's graph is a value of ITS arena, so this too is a cell like any other.
     graph: lmx_node_new_owned(@ root\arena)
     if: graph = 0 || lmx_arena_refs_open_owned(@ root\arena, graph, c.LMX_ROOT_SLOTS) != 0
+        lmx_perm_close(@ root\perm)
         lmx_arena_release(@ root\arena)
         return: c.LMX_ROOT_INVALID
     ---
     # R0's two const:immutable retention arrays (model 20): the eternal branches and the known
     # method descriptors.  Their set is known at TRANSLATION time, so their size arrives here and
     # nothing at runtime grows them; an empty set is one of the two states and needs no storage.
-    # They live in R0's graph, which is what makes them roots of R0's own collection and what
-    # keeps a borrowed branch alive without the collector knowing anything about branches.
-    eternal_graph: lmx_node_new_owned(@ root\arena)
-    methods_graph: lmx_node_new_owned(@ root\arena)
+    #
+    # THEY LIVE IN THE PERMANENT STORE, NOT IN R0's GRAPH.  The previous shape kept them in R0's
+    # own arena and let them survive because the array was a root of R0's graph -- survival by
+    # being VISITED and KEPT, which is the opposite of the invariant now required.  In the store
+    # they are outside every Message's index, so a collection pass on R0's arena cannot reach them
+    # at all, and their ranges are what answers for their kind from any Message.
+    eternal_graph: lmx_node_new_owned(@ root\perm)
+    methods_graph: lmx_node_new_owned(@ root\perm)
     if: eternal_graph = 0 || methods_graph = 0
+        lmx_perm_close(@ root\perm)
         lmx_arena_release(@ root\arena)
         return: c.LMX_ROOT_INVALID
     ---
-    if: eternal > 0U && lmx_arena_refs_open_owned(@ root\arena, eternal_graph, eternal) != 0
+    if: eternal > 0U && lmx_arena_refs_open_owned(@ root\perm, eternal_graph, eternal) != 0
+        lmx_perm_close(@ root\perm)
         lmx_arena_release(@ root\arena)
         return: c.LMX_ROOT_INVALID
     ---
-    if: methods > 0U && lmx_arena_refs_open_owned(@ root\arena, methods_graph, methods) != 0
+    if: methods > 0U && lmx_arena_refs_open_owned(@ root\perm, methods_graph, methods) != 0
+        lmx_perm_close(@ root\perm)
         lmx_arena_release(@ root\arena)
         return: c.LMX_ROOT_INVALID
     ---
     root\eternal: eternal_graph
     root\methods: methods_graph
     if: lmx_arena_ref_store(graph, c.LMX_ROOT_ETERNAL_SLOT, (cast: (@: void) eternal_graph)) != 0 || lmx_arena_ref_store(graph, c.LMX_ROOT_METHOD_SLOT, (cast: (@: void) methods_graph)) != 0
+        lmx_perm_close(@ root\perm)
         lmx_arena_release(@ root\arena)
         return: c.LMX_ROOT_INVALID
     ---
@@ -105,6 +132,7 @@ fn: lmx_root_open (@: LmxRoot root; LmxCallEntry: entry; ulong: limit; size_t: e
     # because there is nothing above it -- it is the only Message with no parent.
     message: (cast: (@: LmxMsg) lmx_arena_take(@ root\arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
     if: message = 0
+        lmx_perm_close(@ root\perm)
         lmx_arena_release(@ root\arena)
         return: c.LMX_ROOT_INVALID
     ---
@@ -119,20 +147,24 @@ fn: lmx_root_open (@: LmxRoot root; LmxCallEntry: entry; ulong: limit; size_t: e
     thread: (cast: (@: LmxThread) lmx_arena_take(@ root\arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
     slot: (cast: (@: LmxSchedule) lmx_arena_take(@ root\arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
     if: thread = 0 || slot = 0
+        lmx_perm_close(@ root\perm)
         lmx_arena_release(@ root\arena)
         return: c.LMX_ROOT_INVALID
     ---
     root\thread: thread
     root\slot: slot
     if: lmx_post_init(@ root\arena, @ root\mail) != c.LMX_POST_OK
+        lmx_perm_close(@ root\perm)
         lmx_arena_release(@ root\arena)
         return: c.LMX_ROOT_INVALID
     ---
     if: lmx_thread_attach(root\thread, message, @ root\mail, root\slot) != c.LMX_THREAD_OK
+        lmx_perm_close(@ root\perm)
         lmx_arena_release(@ root\arena)
         return: c.LMX_ROOT_INVALID
     ---
     if: lmx_manager_init(@ root\manager) != c.LMX_MANAGER_OK
+        lmx_perm_close(@ root\perm)
         lmx_arena_release(@ root\arena)
         return: c.LMX_ROOT_INVALID
     ---
@@ -140,21 +172,25 @@ fn: lmx_root_open (@: LmxRoot root; LmxCallEntry: entry; ulong: limit; size_t: e
     # so the end-turn collection runs on the band that holds the turn and finds the storage it
     # collects here (model 24) without any queue having to know it.
     if: lmx_schedule_init(root\slot, @ root\arena, (cast: (@: void) root\thread), limit) != c.LMX_SCHEDULE_OK
+        lmx_perm_close(@ root\perm)
         lmx_arena_release(@ root\arena)
         return: c.LMX_ROOT_INVALID
     ---
     # The runtime's mail service: R0 opens it and registers ITSELF under its physical address.
     if: lmx_service_open(@ root\service) != c.LMX_SERVICE_OK
+        lmx_perm_close(@ root\perm)
         lmx_arena_release(@ root\arena)
         return: c.LMX_ROOT_INVALID
     ---
     if: lmx_service_register(@ root\service, root\thread, @ root\arena) != c.LMX_SERVICE_OK
+        lmx_perm_close(@ root\perm)
         lmx_arena_release(@ root\arena)
         return: c.LMX_ROOT_INVALID
     ---
     # R0's retention of orphans (19.29.8): the ledger opens empty and the policy starts at its
     # default, from which a caller may set its own before the first release happens.
     if: lmx_orphan_init(@ root\orphans) != c.LMX_ORPHAN_OK
+        lmx_perm_close(@ root\perm)
         lmx_arena_release(@ root\arena)
         return: c.LMX_ROOT_INVALID
     ---

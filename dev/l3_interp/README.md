@@ -18,4 +18,4 @@
 | ветвления/циклы как тела в графе | сырой METHOD.addr как смысл программы |
 | аналитический implements + тесты ресивера | позиционный `lmx_runtime_implements` как семантика |
 
-Codex подтвердил якорь `#l3-receiver` и шаги L3-01…04. Узлы: [V1.md](V1.md). L3-01…N10, 14 рецептов, bind такта: `l3_thread.lm1`. Только `LMX/dev`.
+Codex подтвердил якорь `#l3-receiver`. Узлы: [V1.md](V1.md). Прогон: `python tools/run_l3_selftest.py`. `return:` читает аргумент. Только `LMX/dev`.

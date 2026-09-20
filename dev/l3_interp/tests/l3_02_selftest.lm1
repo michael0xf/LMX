@@ -1,12 +1,12 @@
-predef: "../l3_exec.lm1"
-predef: "../../l2src_sandbox/lmx_arena.lm1"
-predef: "../../l2src_sandbox/lmx_arena_blocks.lm1"
-predef: "../../l2src_sandbox/lmx_range.lm1"
-predef: "../../l2src_sandbox/lmx_implements.lm1"
-predef: "../../l2src_sandbox/lmx_value_owned.lm1"
-predef: "../../l2src_sandbox/lmx_arena_refs.lm1"
-predef: "../../l2src_sandbox/lmx_own.lm1"
-predef: "../../l1src/libc_abi.lm1"
+predef: "l3_interp/l3_exec.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_own.lm1"
+predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
 # N4-N8 smoke. Not admission.
@@ -29,6 +29,22 @@ fn: mk_return (@: LmxArena a) @: Lmx
     if: lmx_arena_refs_open_owned(a, stmt, 1U) != 0
         return: 0
     lmx_arena_ref_store(stmt, 0U, (cast: (@: void) op))
+return: stmt
+
+fn: mk_return_int (@: LmxArena a; int: n) @: Lmx
+    @: Lmx stmt
+    @: LmxOp op
+    @: void cell
+    stmt: lmx_node_new_owned(a)
+    op: lmx_op_new_owned(a, c.L3_NODE_RETURN)
+    cell: lmx_int_new_owned(a)
+    if: stmt = 0 || op = 0 || cell = 0
+        return: 0
+    if: lmx_arena_refs_open_owned(a, stmt, 2U) != 0
+        return: 0
+    lmx_int_store_known(cell, n)
+    lmx_arena_ref_store(stmt, 0U, (cast: (@: void) op))
+    lmx_arena_ref_store(stmt, 1U, cell)
 return: stmt
 
 fn: main () int
@@ -76,6 +92,19 @@ fn: main () int
     lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
     lmx_arena_ref_store(m, 1U, (cast: (@: void) stmt))
     fail(counts, l3_exec_run(a, m) = c.L3_OK, "N5/N6 return: in body after slot 0")
+    fail(counts, l3_returned_present() = 0, "void return has no value")
+
+    info: lmx_callable_new_owned(a)
+    m: lmx_node_new_owned(a)
+    if: info = 0 || m = 0 || lmx_arena_refs_open_owned(a, m, 2U) != 0
+        free(counts)
+        return: 2
+    ---
+    info\method: meth
+    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
+    lmx_arena_ref_store(m, 1U, (cast: (@: void) mk_return_int(a, 7)))
+    fail(counts, l3_exec_run(a, m) = c.L3_OK, "N6 return argument is read")
+    fail(counts, l3_returned_present() != 0 && l3_returned_int() = 7, "N6 returned int 7")
 
     # Nested call then return (N7).
     info2: lmx_callable_new_owned(a)

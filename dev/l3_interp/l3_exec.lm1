@@ -9,6 +9,7 @@ predef: "l2src/lmx_interp.h.lm1"
 predef: "l2src/lmx_implements.h.lm1"
 predef: "l2src/lmx_value_owned.h.lm1"
 predef: "l3_interp/l3_path.lm1"
+predef: "l3_interp/l3_plan.lm1"
 include: "<string.h>"
 
 prototype:
@@ -22,43 +23,41 @@ prototype:
 end: prototype
 
 fn: l3_own_load_ints (@: LmxArena arena; @: L3Frame f; @: Lmx node) int
-    size_t: i
-    size_t: n 0U
-    @: void v
+    @: LmxCallable info
+    @: Lmx plan
     @: void slice 0
+    @@: void slot
+    @: LmxOwnLocal loc
+    size_t: n
+    size_t: i
     f\nown: 0
     f\owns: 0
     if: arena = 0 || f = 0 || node = 0 || f\scratch = 0
         return: 1
-    i: 1U
-    while: i < (cast: (size_t) node\len)
-        v: lmx_arena_ref_value(node, i)
-        if: v != 0 && lmx_domain_kind(arena, v) = c.LMX_KIND_PRIMITIVE
-            if: lmx_domain_type(arena, v) = c.LMX_TYPE_INT
-                n: n + 1U
-            ---
-        ---
-        i: i + 1U
-    ---
+    if: l3_plan_prepare(arena, node) != 0
+        return: 1
+    info: lmx_call_callable(arena, node)
+    if: info = 0
+        return: 1
+    plan: info\header
+    n: lmx_plan_entry_count(plan)
     if: n = 0U
         return: 0
     if: lmx_scratch_take(f\scratch, n * c.sizeof(c.LmxOwnLocal), @ slice) != c.LMX_SCRATCH_OK
         return: 1
     f\owns: (cast: (@: LmxOwnLocal) slice)
-    i: 1U
-    while: i < (cast: (size_t) node\len)
-        v: lmx_arena_ref_value(node, i)
-        if: v != 0 && lmx_domain_kind(arena, v) = c.LMX_KIND_PRIMITIVE
-            if: lmx_domain_type(arena, v) = c.LMX_TYPE_INT
-                if: lmx_own_load(@ f\owns[f\nown], node, i) != 0
-                    return: 1
-                f\nown: f\nown + 1
-            ---
-        ---
+    i: 0U
+    while: i < n
+        slot: lmx_plan_slot_known(node, plan, i)
+        if: slot = 0
+            return: 1
+        loc: f\owns + i
+        loc\from: slot
+        loc\value: slot[0]
+        loc\dirty: 0
         i: i + 1U
     ---
-    if: (cast: (size_t) f\nown) != n
-        return: 1
+    f\nown: (cast: (int) n)
 return: 0
 
 fn: l3_own_checkpoint_all (@: L3Frame f) int

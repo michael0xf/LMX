@@ -148,6 +148,7 @@ fn: main () int
     lmx_arena_ref_store(m, 1U, cell)
     lmx_arena_ref_store(m, 2U, (cast: (@: void) mk_return(a)))
     fail(counts, l3_exec_run(a, m) = c.L3_OK, "N8 run with own int")
+    fail(counts, info\header != 0, "L3 adapter published activation plan on header")
     fail(counts, lmx_int_value_known(cell) = 1, "N8 clean own not flushed over")
 
     # Dirty assign publishes. Data Structure with a nested return is not a body.

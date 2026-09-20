@@ -34,7 +34,7 @@ This reads public metadata from `~/.claude/sessions/*.json` and `~/.grok/active_
 
 Claude sessions now start under fixed names set by their launchers: `lmx_uds` (the relay), `fable`, `deepseek` and `openrouter`. Launchers, models and working directories are listed in [work_chat/README.md](work_chat/README.md). These names survive restarts, so a recipient no longer has to be rediscovered by name; PIDs and session IDs still change at every start, so do not send to an old PID just because it appears in an earlier document. The names `l1-c9`, `l1-91` and `l1-98` used in earlier tests were derived from the working directory plus a random suffix and are obsolete. Inside Claude, `ListAgents` remains the preferred way to confirm a recipient immediately before `SendMessage`.
 
-The active Grok used in the verified test was `01a0baf9-6401-7dc3-9819-f322b493bec6`. Re-read the registry before reusing it. Ask the user only when several plausible recipients remain or the intended agent is absent.
+The active Grok CLI is named **grok** (LMX cwd; launcher `C:\grok\grok.bat`). Do not confuse it with Grok Bot. Re-read the registry for the current PID/UUID before injecting; `grok_active.py --session grok` resolves the unique LMX CLI session. Ask the user only when several plausible recipients remain or the intended agent is absent.
 
 ## 3. Codex ↔ the existing active Grok
 
@@ -44,7 +44,7 @@ Requires Windows, Python, the existing signed-in Grok CLI process, its accessibl
 
 ```powershell
 python claude_chat/chat_status.py peers
-python claude_chat/grok_active.py --session <current-session-id> --timeout 120 "Message to the existing Grok chat"
+C:\grok\grok.bat send --timeout 120 "Message to the existing Grok chat"
 ```
 
 Replace `<current-session-id>` with the discovered ID. Send only while Grok is idle and its visible prompt is empty. Do not type concurrently. The client refuses a nonempty prompt or unfinished turn; do not clear the user's draft or bypass the refusal.

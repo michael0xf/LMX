@@ -93,10 +93,10 @@ The user profile's crossSessionInbound=accept was authorized and hot-reloaded on
 
 ```powershell
 python claude_chat/chat_status.py peers
-python claude_chat/grok_active.py --session CURRENT-ID --timeout 120 "From Codex. Request UNIQUE-CODE. Reply ACK UNIQUE-CODE in this turn."
+C:\grok\grok.bat send --timeout 120 "From Codex. Request UNIQUE-CODE. Reply ACK UNIQUE-CODE in this turn."
 ```
 
-Substitute the discovered ID. Requires an idle CLI, accessible Windows console and empty prompt. Do not erase a draft, press keys concurrently, or bypass the client's refusal. The adapter injects into that console and returns the real reply from that session's native history. It currently prefixes messages as Codex; other callers must explicitly identify themselves in the payload rather than treating that prefix as identity proof.
+`--session grok` is the Grok CLI in LMX, not Grok Bot. Requires an idle CLI, accessible Windows console and empty prompt. Do not erase a draft, press keys concurrently, or bypass the client's refusal. The adapter injects into that console and returns the real reply from that session's native history. It currently prefixes messages as Codex; other callers must explicitly identify themselves in the payload rather than treating that prefix as identity proof.
 
 Check delivered_input, input_transformed and stop_reason. A timeout is not permission to resend: delivery may already have happened. The original round trip was verified, but later input-correlation/whitespace refinements have not had a full new regression. Details: [GROK_ACTIVE.md](../claude_chat/GROK_ACTIVE.md).
 

@@ -32,7 +32,7 @@ This document describes connectivity from **this** Grok Bot conversation (not a 
 **Important distinction (verified by docs + registry):**
 
 - **This conversation** = Grok Bot assistant chat.
-- **Grok CLI active session** in registry: `01a0baf9-6401-7dc3-9819-f322b493bec6` (cwd `C:\Nyasha_Planet\LMX`) — reachable by `grok_active.py`, **not** this Grok Bot chat.
+- **Grok CLI** named **grok** (cwd `C:\Nyasha_Planet\LMX`, `grok_active.py --session grok`) — **not** this Grok Bot chat.
 - **Codex bound task** (inbound): thread `01a092e9-eb6e-7d61-8880-c0f88197317a` (title “Update 30-minute watchers and FSW”).
 
 App version of the Grok Bot desktop shell itself is **not** exposed as a single reliable string in the tools available to this agent; do not invent one. The agent profile and live Shell access are verified.
@@ -194,7 +194,7 @@ python claude_chat/codex_inbound.py send --sender Grok_bot --request-id GROK-BOT
 ### 7.3 Not used (wrong destination)
 
 ```powershell
-python claude_chat/grok_active.py --session 01a0baf9-6401-7dc3-9819-f322b493bec6 --timeout 120 "..."
+C:\grok\grok.bat send --timeout 120 "..."
 python claude_chat/grok.py ask "..."
 ```
 

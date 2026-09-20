@@ -32,7 +32,7 @@ This verifies **Codex → actual Grok → Codex**, a question from Grok answered
 
 ## Exact scope
 
-This is a new managed Grok conversation for LMX. It is not the user's already open Grok terminal conversation (`01a0baf9-6401-7dc3-9819-f322b493bec6` at the time of investigation), and it does not inherit that conversation. Existing Grok and L1 sessions were not resumed, stopped, or modified.
+This is a new managed Grok conversation for LMX. It is not the user's already open Grok terminal conversation named **grok**, and it does not inherit that conversation. Existing Grok and L1 sessions were not resumed, stopped, or modified.
 
 The bridge supports conversations initiated by the calling agent. It does not push unsolicited messages into an idle Codex UI task, attach an inbound address to that task, or connect Grok Bot. A model's response and follow-up question reach Codex as tool output during the call. These limits must not be described as an all-agent chat network.
 

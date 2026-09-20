@@ -39,3 +39,19 @@ java -cp "dev/vm_jvm/out;build/vm_jvm/asm-9.7.1.jar" printer.ExprSmokeDriver
 java -cp "dev/vm_jvm/out" smoke.HelloStructureSmoke
 ```
 
+## GROK-BOT-JVM-L3-IF-20260920-56B (2026-09-20 22:46 UTC)
+
+Path-B IF (int condition) + EOF hygiene on this file and `dev/vm_jvm/README.md`.
+
+- `L3Role.IF`: condition / then / else; JVM branch bytecode; one arm evaluated.
+- Nested CALL in selected branch; bad arity / non-int condition rejected pre-emit.
+- WHILE deferred. Loader fix: generate `PrintedL3Expr` without parent classpath cache.
+- `ExprSmokeDriver` PASS checks=22 failures=0; `HelloStructureSmoke` PASS checks=25 failures=0.
+
+Verify:
+```
+javac -d dev/vm_jvm/out lmx/*.java graph/*.java smoke/*.java
+javac -cp "dev/vm_jvm/out;build/vm_jvm/asm-9.7.1.jar" -d dev/vm_jvm/out printer/*.java
+java -cp "dev/vm_jvm/out;build/vm_jvm/asm-9.7.1.jar" printer.ExprSmokeDriver
+java -cp "dev/vm_jvm/out" smoke.HelloStructureSmoke
+```

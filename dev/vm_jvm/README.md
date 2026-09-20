@@ -45,3 +45,11 @@ Expect: `PASS ExprSmokeDriver checks=7 failures=0` and `PASS HelloStructureSmoke
 
 Fixture: entry `return CALL(leaf, subject) + 5` where leaf is `return subject[0]`.
 
+## IF (Path B slice 56B)
+
+- Role `L3Role.IF`: children are condition, then, else (arity 3).
+- Condition is an int expression (zero = false, nonzero = true). Emit `IFEQ` / `GOTO`; exactly one branch runs.
+- Nested physical `CALL` allowed in either branch; reachability walk visits IF children.
+- Malformed arity and non-int conditions (`SUBJECT_REF` alone, `UNSUPPORTED`) rejected before class bytes.
+- Untaken branch is not evaluated (smoke: CHECKCAST-failing field follow in untaken arm).
+- WHILE deferred. Recursion still deferred.

@@ -16,6 +16,12 @@ public final class L3Role {
      * argument expressions (this slice: exactly one subject). Recursion deferred.
      */
     public static final L3Role CALL = new L3Role();
+    /**
+     * Integer IF: children are condition, then, else.
+     * Condition is an int expression (zero = false, nonzero = true).
+     * Exactly one branch is evaluated at runtime. WHILE deferred.
+     */
+    public static final L3Role IF = new L3Role();
     public static final L3Role UNSUPPORTED = new L3Role();
 
     private L3Role() {}

@@ -7,6 +7,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
@@ -14,11 +15,12 @@ import org.objectweb.asm.Opcodes;
  * Emits one JVM method per reachable {@link L3Role#CALLABLE}.
  * Method names are {@code c0}..{@code cN} from a deterministic traversal map (numeric only).
  * {@link L3Role#CALL} follows the callee by physical child reference, not text.
- * Recursion is deferred (not supported in this slice).
+ * {@link L3Role#IF} emits branch bytecode (int condition: zero=false). WHILE deferred.
+ * Recursion is deferred.
  */
 public final class L3ClassfilePrinter implements Opcodes {
     public static final String GEN_INTERNAL = "lmx/gen/PrintedL3Expr";
-    public static final String EVAL = "eval"; // alias for entry method c0 when entry is first
+    public static final String EVAL = "eval";
 
     private L3ClassfilePrinter() {}
 
@@ -45,7 +47,6 @@ public final class L3ClassfilePrinter implements Opcodes {
         for (int i = 0; i < order.size(); i++) {
             emitOneCallable(cw, order.get(i), i, map);
         }
-        // Convenience alias: eval == c0 (entry is always index 0)
         MethodVisitor alias = cw.visitMethod(
                 ACC_PUBLIC | ACC_STATIC, EVAL, "(Llmx/LmxOccurrence;)I", null, null);
         alias.visitCode();
@@ -59,7 +60,6 @@ public final class L3ClassfilePrinter implements Opcodes {
         return cw.toByteArray();
     }
 
-    /** Deterministic preorder: entry first, then callees as CALL edges are seen. */
     private static void collectCallables(L3Node entry, List<L3Node> order, Map<L3Node, Integer> map) {
         walk(entry, order, map);
     }
@@ -98,16 +98,14 @@ public final class L3ClassfilePrinter implements Opcodes {
             if (c.children.length != 1 || c.children[0].role != L3Role.RETURN) {
                 throw new IllegalArgumentException("CALLABLE body must be a single RETURN");
             }
-            validateExpr(c.children[0].children[0], map, c);
+            validateIntExpr(c.children[0].children[0], map, c);
         }
     }
 
-    private static void validateExpr(L3Node expr, Map<L3Node, Integer> map, L3Node currentCallable) {
+    /** Int-producing expression for the current int-only slice. */
+    private static void validateIntExpr(L3Node expr, Map<L3Node, Integer> map, L3Node currentCallable) {
         L3Role r = expr.role;
         if (r == L3Role.INT_LITERAL) {
-            return;
-        }
-        if (r == L3Role.SUBJECT_REF) {
             return;
         }
         if (r == L3Role.FIELD_FOLLOW) {
@@ -121,8 +119,8 @@ public final class L3ClassfilePrinter implements Opcodes {
             if (expr.children.length != 2) {
                 throw new IllegalArgumentException("ADD arity");
             }
-            validateExpr(expr.children[0], map, currentCallable);
-            validateExpr(expr.children[1], map, currentCallable);
+            validateIntExpr(expr.children[0], map, currentCallable);
+            validateIntExpr(expr.children[1], map, currentCallable);
             return;
         }
         if (r == L3Role.CALL) {
@@ -141,6 +139,18 @@ public final class L3ClassfilePrinter implements Opcodes {
             }
             validateOccurrence(expr.children[1]);
             return;
+        }
+        if (r == L3Role.IF) {
+            if (expr.children.length != 3) {
+                throw new IllegalArgumentException("IF arity: need condition, then, else");
+            }
+            validateIntExpr(expr.children[0], map, currentCallable);
+            validateIntExpr(expr.children[1], map, currentCallable);
+            validateIntExpr(expr.children[2], map, currentCallable);
+            return;
+        }
+        if (r == L3Role.SUBJECT_REF) {
+            throw new IllegalArgumentException("unsupported condition/value type: SUBJECT_REF is not an int expression");
         }
         if (r == L3Role.UNSUPPORTED) {
             throw new IllegalArgumentException("unsupported role");
@@ -161,13 +171,13 @@ public final class L3ClassfilePrinter implements Opcodes {
                 ACC_PUBLIC | ACC_STATIC, name, "(Llmx/LmxOccurrence;)I", null, null);
         mv.visitCode();
         L3Node ret = callable.children[0];
-        emitExpr(mv, ret.children[0], map);
+        emitIntExpr(mv, ret.children[0], map);
         mv.visitInsn(IRETURN);
         mv.visitMaxs(0, 0);
         mv.visitEnd();
     }
 
-    private static void emitExpr(MethodVisitor mv, L3Node expr, Map<L3Node, Integer> map) {
+    private static void emitIntExpr(MethodVisitor mv, L3Node expr, Map<L3Node, Integer> map) {
         L3Role r = expr.role;
         if (r == L3Role.INT_LITERAL) {
             mv.visitLdcInsn(Integer.valueOf(expr.intPayload));
@@ -178,18 +188,27 @@ public final class L3ClassfilePrinter implements Opcodes {
             mv.visitTypeInsn(CHECKCAST, "java/lang/Integer");
             mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Integer", "intValue", "()I", false);
         } else if (r == L3Role.ADD) {
-            emitExpr(mv, expr.children[0], map);
-            emitExpr(mv, expr.children[1], map);
+            emitIntExpr(mv, expr.children[0], map);
+            emitIntExpr(mv, expr.children[1], map);
             mv.visitInsn(IADD);
         } else if (r == L3Role.CALL) {
-            // forward subject arg, then invoke mapped callee method
             emitOccurrence(mv, expr.children[1]);
             int calleeIndex = map.get(expr.children[0]).intValue();
             String calleeName = "c" + calleeIndex;
             mv.visitMethodInsn(
                     INVOKESTATIC, GEN_INTERNAL, calleeName, "(Llmx/LmxOccurrence;)I", false);
+        } else if (r == L3Role.IF) {
+            Label elseL = new Label();
+            Label endL = new Label();
+            emitIntExpr(mv, expr.children[0], map);
+            mv.visitJumpInsn(IFEQ, elseL);
+            emitIntExpr(mv, expr.children[1], map);
+            mv.visitJumpInsn(GOTO, endL);
+            mv.visitLabel(elseL);
+            emitIntExpr(mv, expr.children[2], map);
+            mv.visitLabel(endL);
         } else if (r == L3Role.SUBJECT_REF) {
-            throw new IllegalArgumentException("SUBJECT_REF is not an int expression alone");
+            throw new IllegalArgumentException("SUBJECT_REF is not an int expression");
         } else {
             throw new IllegalArgumentException("unsupported role");
         }
@@ -203,7 +222,6 @@ public final class L3ClassfilePrinter implements Opcodes {
         }
     }
 
-    /** Exposed for tests: method names that would be emitted for an entry graph. */
     public static List<String> plannedMethodNames(L3Node entry) {
         List<L3Node> order = new ArrayList<L3Node>();
         Map<L3Node, Integer> map = new IdentityHashMap<L3Node, Integer>();

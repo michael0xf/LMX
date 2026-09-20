@@ -27,6 +27,12 @@ public final class ExprSmokeDriver {
         testSubjectIdentityAcrossCall();
         testUnreachableNotEmitted();
 
+        testIfTrueFalseLiterals();
+        testIfUntakenBranchNotEvaluated();
+        testIfNestedCall();
+        testIfBadArityRejected();
+        testIfBadConditionRejected();
+
         if (fails != 0) {
             System.out.println("FAIL ExprSmokeDriver checks=" + checks + " failures=" + fails);
             System.exit(1);
@@ -69,7 +75,6 @@ public final class ExprSmokeDriver {
         Method eval = cls.getMethod("eval", LmxOccurrence.class);
         LmxOccurrence subject = LmxOccurrence.independent(Integer.valueOf(10));
         Object result = eval.invoke(null, subject);
-        // leaf returns subject[0]=10; caller returns 10+5=15
         check("call+add+return 10+5=15", Integer.valueOf(15).equals(result));
         check("c0 and c1 both present", hasMethods(cls, "c0", "c1", "eval"));
     }
@@ -99,8 +104,72 @@ public final class ExprSmokeDriver {
             names.add(m.getName());
         }
         check("runtime methods c0 c1 eval only", names.equals(new HashSet<String>(Arrays.asList("c0", "c1", "eval"))));
-        // orphan exists as object but was never linked ? still only 2 callables emitted
         check("orphan is CALLABLE but unreachable", g.orphan.role == graph.L3Role.CALLABLE && g.orphan != g.entry);
+    }
+
+    private static void testIfTrueFalseLiterals() throws Exception {
+        Class<?> t = loadPrinted(L3ExprFixture.ifLiteralBranches(1, 10, 20));
+        Method evalT = t.getMethod("eval", LmxOccurrence.class);
+        Object rt = evalT.invoke(null, LmxOccurrence.independent(Integer.valueOf(0)));
+        check("IF true selects then=10", Integer.valueOf(10).equals(rt));
+
+        Class<?> f = loadPrinted(L3ExprFixture.ifLiteralBranches(0, 10, 20));
+        Method evalF = f.getMethod("eval", LmxOccurrence.class);
+        Object rf = evalF.invoke(null, LmxOccurrence.independent(Integer.valueOf(0)));
+        check("IF false selects else=20", Integer.valueOf(20).equals(rf));
+    }
+
+    private static void testIfUntakenBranchNotEvaluated() throws Exception {
+        // true path: subject[0]=1 Integer, subject[1]=String ? else FIELD_FOLLOW(1) would fail
+        Class<?> t = loadPrinted(L3ExprFixture.ifTrueUntakenElseInvalid());
+        Method evalT = t.getMethod("eval", LmxOccurrence.class);
+        LmxOccurrence subT = LmxOccurrence.independent(Integer.valueOf(1), "boom");
+        Object rt = evalT.invoke(null, subT);
+        check("IF true untaken else not evaluated ? 42", Integer.valueOf(42).equals(rt));
+
+        // false path: subject[0]=0, subject[1]=String ? then would fail if evaluated
+        Class<?> f = loadPrinted(L3ExprFixture.ifFalseUntakenThenInvalid());
+        Method evalF = f.getMethod("eval", LmxOccurrence.class);
+        LmxOccurrence subF = LmxOccurrence.independent(Integer.valueOf(0), "boom");
+        Object rf = evalF.invoke(null, subF);
+        check("IF false untaken then not evaluated ? 7", Integer.valueOf(7).equals(rf));
+    }
+
+    private static void testIfNestedCall() throws Exception {
+        Class<?> cls = loadPrinted(L3ExprFixture.ifNestedCallThen());
+        Method eval = cls.getMethod("eval", LmxOccurrence.class);
+        LmxOccurrence subject = LmxOccurrence.independent(Integer.valueOf(3));
+        Object r = eval.invoke(null, subject);
+        check("IF selects nested CALL ? 3", Integer.valueOf(3).equals(r));
+        check("nested CALL emits c0 c1", hasMethods(cls, "c0", "c1", "eval"));
+    }
+
+    private static void testIfBadArityRejected() {
+        boolean threw = false;
+        try {
+            L3ClassfilePrinter.emitCallable(L3ExprFixture.ifBadArity());
+        } catch (IllegalArgumentException e) {
+            threw = true;
+        }
+        check("IF bad arity rejected", threw);
+    }
+
+    private static void testIfBadConditionRejected() {
+        boolean threwSub = false;
+        try {
+            L3ClassfilePrinter.emitCallable(L3ExprFixture.ifBadConditionSubjectRef());
+        } catch (IllegalArgumentException e) {
+            threwSub = true;
+        }
+        check("IF SUBJECT_REF condition rejected", threwSub);
+
+        boolean threwUn = false;
+        try {
+            L3ClassfilePrinter.emitCallable(L3ExprFixture.ifBadConditionUnsupported());
+        } catch (IllegalArgumentException e) {
+            threwUn = true;
+        }
+        check("IF UNSUPPORTED condition rejected", threwUn);
     }
 
     private static boolean hasMethods(Class<?> cls, String... want) {
@@ -117,22 +186,26 @@ public final class ExprSmokeDriver {
     }
 
     private static Class<?> loadPrinted(L3Node entry) throws Exception {
-        byte[] bytes = L3ClassfilePrinter.emitCallable(entry);
-        Path outDir = Paths.get("dev/vm_jvm/out/lmx/gen");
-        Files.createDirectories(outDir);
-        Path classFile = outDir.resolve("PrintedL3Expr.class");
-        Files.write(classFile, bytes);
+        final byte[] bytes = L3ClassfilePrinter.emitCallable(entry);
+        // Do not put generated bytes on the app classpath: parent would cache the first
+        // PrintedL3Expr and later fixtures would silently reuse it.
         ClassLoader parent = ExprSmokeDriver.class.getClassLoader();
         ClassLoader loader = new ClassLoader(parent) {
             @Override
-            protected Class<?> findClass(String name) throws ClassNotFoundException {
-                try {
-                    Path p = Paths.get("dev/vm_jvm/out").resolve(name.replace('.', '/') + ".class");
-                    byte[] b = Files.readAllBytes(p);
-                    return defineClass(name, b, 0, b.length);
-                } catch (Exception e) {
-                    throw new ClassNotFoundException(name, e);
+            protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
+                if ("lmx.gen.PrintedL3Expr".equals(name)) {
+                    synchronized (this) {
+                        Class<?> c = findLoadedClass(name);
+                        if (c == null) {
+                            c = defineClass(name, bytes, 0, bytes.length);
+                        }
+                        if (resolve) {
+                            resolveClass(c);
+                        }
+                        return c;
+                    }
                 }
+                return super.loadClass(name, resolve);
             }
         };
         return loader.loadClass("lmx.gen.PrintedL3Expr");

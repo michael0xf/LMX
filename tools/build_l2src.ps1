@@ -269,6 +269,14 @@ function Resolve-Link([string]$SelftestObject, [string[]]$AllObjects) {
         foreach ($s in @(Get-Symbols $SelftestObject -Undefined)) { $need[$s] = $true }
         foreach ($o in $chosen) { foreach ($s in @(Get-Symbols $o -Undefined)) { $need[$s] = $true } }
         $have = @{}
+        # THE PROGRAM'S OWN OBJECT COUNTS AS A PROVIDER.  It IS linked into the result, so a symbol
+        # it defines is not missing -- and treating it as missing made the resolver pick a module
+        # object defining the same symbol, which ld then reported as "multiple definition"
+        # (measured 20260920: 21 logs, 47 targets, once a new unit entered a closure that a selftest
+        # already carried through its own predefs; the module object was always the DUPLICATE and the
+        # selftest the "first defined here").  Seeding here is the same act every round, not a
+        # special case for round 0: the selftest's definitions are this program's throughout.
+        foreach ($s in @(Get-Symbols $SelftestObject)) { $have[$s] = $true }
         foreach ($o in $chosen) { foreach ($s in @(Get-Symbols $o)) { $have[$s] = $true } }
         $missing = @($need.Keys | Where-Object { -not $have.ContainsKey($_) })
         if ($missing.Count -eq 0) { break }

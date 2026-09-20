@@ -192,6 +192,14 @@ prototype:
     # (iv): a Message created without a parent is created through R0, in slot `slot` of
     # R0's own graph.  Null when the root is not open or the creation refused; a refusal
     # publishes nothing (lmx_child_create).
+    #
+    # `source` MUST LIVE IN R0'S OWN ARENA.  There is no parameter for the source's arena
+    # because there is no choice to make: this passes @ root\arena as the copy's src_arena,
+    # and by lmx_graph_copy_owned.h.lm1 the source arena is the only thing that answers what
+    # an address is.  A graph built anywhere else is foreign to the arena asked about it, so
+    # the copy refuses a root it cannot type and this returns null -- it is not copied and
+    # not diagnosed further.  The one exception is the exception everywhere: a store-resident
+    # source is classifiable from a bound arena and is kept by address, not copied.
     fn: lmx_root_create (@: LmxRoot root; @: LmxArena child_arena; size_t: slot; @: Lmx source) @: LmxMsg
     # (v): hand the world's place its stamp cell -- the LOCAL STUB PARENT, still standing in for
     # World Wide Mix (lmx_root.lm1).  `world` is the caller's `size_t` cell: the stub writes its

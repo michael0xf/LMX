@@ -131,7 +131,6 @@ end: cc_check
 fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxRoot: root
-    LmxArena: parent_arena
     LmxArena: child_arena
     LmxArena: child_arena_2
     @: LmxArena parent_at 0
@@ -153,14 +152,11 @@ fn: main () int
         return: 2
     ---
     memset((cast: (@: void) (@ root)), 0, c.sizeof(c.LmxRoot))
-    memset((cast: (@: void) (@ parent_arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ child_arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ child_arena_2)), 0, c.sizeof(c.LmxArena))
-    parent_at: @ parent_arena
     child_at: @ child_arena
     child_at_2: @ child_arena_2
     cc_root: @ root
-    cc_parent_arena: @ parent_arena
     cc_child_arena: @ child_arena
     cc_child_arena_2: @ child_arena_2
 
@@ -176,6 +172,12 @@ fn: main () int
         return: 2
     ---
 
+    # The template is the SOURCE of the child's copy, and lmx_root_create asks R0's OWN arena to
+    # classify it (lmx_root.lm1:308 passes @ root\arena as src_arena), so the template must LIVE
+    # there.  The parent here IS R0: a template built in a separate arena is foreign to the only
+    # arena that answers for it, and the copy refuses a root it cannot type.
+    parent_at: lmx_root_arena(@ root)
+    cc_parent_arena: parent_at
     tmpl: lmx_node_new_owned(parent_at)
     cc_check(counts, tmpl != 0 && lmx_arena_refs_open_owned(parent_at, tmpl, 1U) = 0, "child template was not built")
     if: tmpl = 0
@@ -190,6 +192,15 @@ fn: main () int
     # The parent's turn reserves, wires and publishes the child -- and the child stays LIVE.
     cc_check(counts, lmx_root_cycle(@ root, 4U) = c.LMX_ROOT_OK, "create cycle did not run")
     cc_check(counts, cc_phase = 1U && child_msg != 0 && child_t != 0, "child was not wired")
+    # AND STOP IF IT WAS NOT.  Everything below reads through child_msg and child_t, so a
+    # wiring failure used to arrive as an access violation two checks later instead of as the
+    # FAIL above -- which is exactly how the 44D regression hid its own cause.  A refusal is
+    # reported, never faulted on.
+    if: child_msg = 0 || child_t = 0 || child_msg_2 = 0 || child_t_2 = 0
+        c.printf("lmx_close_chain checks=%d failures=%d STOPPED: the children were not wired\n", counts[0], counts[1])
+        free(counts)
+        return: 2
+    ---
     cc_check(counts, lmx_arena_ref_value(graph, 0U) = (cast: (@: void) child_msg), "child was not published")
     cc_check(counts, lmx_thread_child_is(r0, child_t) != 0, "child is not a live direct child of R0")
     cc_check(counts, child_msg\running = 1 && child_msg\success = 0, "the child was not left running")

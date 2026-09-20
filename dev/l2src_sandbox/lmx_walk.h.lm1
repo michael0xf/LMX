@@ -1,6 +1,7 @@
 predef: "l2src/lmx.h.lm1"
 predef: "l2src/lmx_arena.h.lm1"
 predef: "l2src/lmx_call.h.lm1"
+predef: "l2src/lmx_scratch.h.lm1"
 
 # lmx_walk.h - the walk of a callable's body tree: one activation of the graph interpreter.
 #
@@ -14,9 +15,17 @@ predef: "l2src/lmx_call.h.lm1"
 #     tree and there may be many (lmx.h.lm1, LmxCallable; dev/graph_interp/README.md);
 #   * the graph is binary and carries no names; the address->name table is never read
 #     (LMX_blog/2026-09-20.md, "Бинарный граф без имён");
-#   * an activation lives on the ordinary C stack (same file, "Тело метода общее,
-#     активация на стеке"): a recursive call is a recursive C call of lmx_walk_run on
-#     the same published M, and nothing per-activation is ever put into the graph;
+#   * entering an interpreted method never copies M, its body or the graph; an
+#     activation keeps the same choice of what is local, the same own load and the same
+#     dirty behaviour as native code (LMX_blog/2026-09-20.md, "Тело метода общее,
+#     активация на стеке" and the entry on stack activation).  A recursive call is a
+#     recursive C call of lmx_walk_run on the same published M.  What an activation needs
+#     beyond its C frame -- the records of its own fields, the values of a callee's
+#     declared inputs -- is taken from the execution context's temporary-frame store
+#     (lmx_scratch.h.lm1) between a mark and a rewind: this unit allocates nothing and
+#     owns nothing, and after warm-up an entry allocates nothing at all.  The only thing
+#     an activation writes into the graph is the publication of a dirty own value (and
+#     whatever the program itself writes through an explicit field);
 #   * what carries identity in the executable graph (LMX_blog/2026-09-20.md, "Приоритет
 #     ссылок в исполняемом графе"): as many PHYSICAL REFERENCES as possible, a numeric
 #     code only where a physical reference is impossible, text nowhere.  So a node refers
@@ -34,16 +43,29 @@ predef: "l2src/lmx_call.h.lm1"
 #     in the lexical order of the fields -> return (l2trans.lm1 l2_emit_ret_tr, `return`
 #     in l2_emit_body; LMX_blog/2026-09-20.md, "Поля Lmx лексические").
 #
-# The shape of a body node is Grok's (lmx.h.lm1, LmxOp; lmx_interp.lm1): a FRAME node is
-# an ordinary Structure whose child[0] refers to its ROLE and whose remaining children
-# are its operands, in order.  The role is a physical reference: ONE shared record per
-# role (lmx_walk_roles_open), so two nodes of the same role point at the same record and
-# the address is the role.  The record is an LmxOp; its `code` is only the discriminator
-# this unit switches on AFTER the reference is resolved and the arena's index has said
-# the referent is a role record -- it is not the node's persistent identity.  (A node
-# built elsewhere with a record of its own is still read: lmx_interp's tests do that.)
-# A bare role record as a child, with code RETURN, is a void return, as lmx_interp_exec
-# reads it.  A BODY (of `if`, of `while`) is a plain Structure whose children are, in
+# The shape of a body node is Grok's (lmx.h.lm1, LmxOp): a FRAME node is an ordinary
+# Structure whose child[0] refers to its ROLE and whose remaining children are its
+# operands, in order.  The role is a physical reference: ONE shared record per role
+# (lmx_walk_roles_open), and a node is recognised by COMPARING the address in its
+# child[0] with the program's role records -- no classification of the role, no number,
+# no text.  A Structure whose child[0] is some OTHER op record is a step of a role this
+# program does not have: it is refused, never skipped.  A bare role record as a child,
+# for the role `ret`, is a void return.
+#
+# What is still classified, and why.  The fields of a body are, in lexical order, own
+# cells and frame nodes mixed, so telling a Structure from a cell there needs the arena's
+# index once per field.  The OPERANDS of a frame node sit at positions the role fixes and
+# are put there by whoever builds the graph, so execution reads them as nodes without
+# asking -- the same precondition the *_known accessors state (lmx_value_owned.h.lm1).
+# Until the activation plan of the callable's descriptor exists (decided, layout not
+# chosen: steps/l3-receiver.md), the entry pass is what checks the operands of a
+# hand-built graph; that check belongs to the preparation of the plan, not to every
+# activation.
+#
+# Do not unify two things that look alike.  Inside a body, a node names the Structure
+# that holds a field BY ADDRESS, and that is right because the copier remaps the address
+# with the copy.  The activation plan, shared by every occurrence of one callable, must
+# name the same fields by RELATIVE position and never by address.  A BODY (of `if`, of `while`) is a plain Structure whose children are, in
 # order, own cells and frame nodes -- the same shape as M after child[0].
 #
 #   ret   [ret, value?]               a return; no value for a void callable
@@ -89,11 +111,11 @@ define: LMX_WALK_CHECKPOINT 4
 # A body node this slice does not read.  Nothing of the activation has run.
 define: LMX_WALK_UNSUPPORTED 5
 
-# The values of LmxOp.code this unit reads.  RET and CALL ARE lmx_interp.h.lm1's
-# LMX_OP_RETURN 1 and LMX_OP_CALL 2 (the selftest checks the equality); the rest continue
-# that numbering and belong in that header once agreed.
 # What lmx_walk_op answers for a frame node whose code is not one of those below.
 define: LMX_WALK_OP_UNKNOWN -1
+# The discriminators of this slice's roles: the index of a role's record in the roles
+# Structure and the `code` of that record.  They are not the identity of a node -- the
+# address of the record is -- and they are not an L3 instruction set.
 define: LMX_WALK_OP_NONE 0
 define: LMX_WALK_OP_RET 1
 define: LMX_WALK_OP_CALL 2
@@ -122,9 +144,23 @@ struct: LmxWalkOwn
     int: dirty
 end: LmxWalkOwn
 
-# One activation.  An automatic object of lmx_walk_run; nothing of it is in the graph.
-struct: LmxWalkFrame
+# What graph mode needs from its surroundings, for one Message on one thread: the
+# Message's arena (to tell a Structure from a cell among the fields of a body), the
+# execution context's temporary-frame store, and the program's role records.  Whoever
+# runs the turn builds it; this unit only reads it.
+struct: LmxWalkContext
     @: LmxArena arena
+    @: LmxScratch scratch
+    @: Lmx roles
+end: LmxWalkContext
+
+# One activation.  An automatic object of lmx_walk_run; nothing of it is in the graph.
+# `found` and `owns` are slices of the context's store, taken after this activation's
+# mark and gone with its rewind.
+struct: LmxWalkFrame
+    @: LmxWalkContext context
+    @: LmxArena arena
+    @: Lmx roles
     @: Lmx node
     @: int args
     size_t: nargs
@@ -142,12 +178,12 @@ end: LmxWalkFrame
 prototype:
     # One activation of the callable occurrence `node` with `nargs` int inputs.  The value
     # of an executed `ret` is written through `result` (left alone by a void return).
-    fn: lmx_walk_run (@: LmxArena arena; @: Lmx node; @: int args; size_t: nargs; @: int result) int
-    # The two ends of an activation, separate so that a test can look at what entry
-    # loaded.  enter: recognise M, refuse what is unsupported, load the own fields the
-    # body uses (21.5).  leave: release the activation; it publishes nothing.
-    fn: lmx_walk_enter (@: LmxWalkFrame f; @: LmxArena arena; @: Lmx node; @: int args; size_t: nargs) int
-    sub: lmx_walk_leave (@: LmxWalkFrame f)
+    fn: lmx_walk_run (@: LmxWalkContext context; @: Lmx node; @: int args; size_t: nargs; @: int result) int
+    # Entry, separate so that a test can look at what it loaded: recognise M, refuse what
+    # is unsupported, take the records from the store and load the own fields the body
+    # uses, in their lexical order (21.5).  The CALLER has marked the store and rewinds
+    # it; enter itself releases nothing.
+    fn: lmx_walk_enter (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx node; @: int args; size_t: nargs) int
 
     # The roles of a program: a plain Structure whose child k is THE record of role k.
     # Opened once per program graph; every frame node refers to these records.

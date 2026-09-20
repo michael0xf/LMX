@@ -1,5 +1,4 @@
 predef: "l2src/lmx_walk.lm1"
-predef: "l2src/lmx_interp.lm1"
 predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_arena_blocks.lm1"
@@ -19,6 +18,7 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
 @: LmxArena ga 0
 @: Lmx groles 0
+@: LmxWalkContext gctx 0
 int: broken 0
 int: checks 0
 int: failures 0
@@ -99,9 +99,65 @@ fn: mk_m (@: Lmx unit; size_t: slot; size_t: children) @: Lmx
     ---
 return: m
 
+# Cells every array of the arena has handed out so far: an allocation anywhere moves it.
+fn: handed (@: LmxArena a) size_t
+    @: LmxPool pool 0
+    size_t: n 0U
+    if: a = 0
+        return: 0U
+    pool: a\arrays
+    while: pool != 0
+        n: n + lmx_pool_count(pool)
+        pool: pool\next
+    ---
+return: n
+
+# A sum over every byte the arena's arrays have handed out -- cells, slot arrays and
+# Structure headers alike: any write anywhere in the graph moves it.
+fn: digest (@: LmxArena a) size_t
+    @: LmxPool pool 0
+    @: LmxChunk chunk 0
+    @: char bytes 0
+    size_t: sum 0U
+    size_t: n
+    size_t: i
+    if: a = 0
+        return: 0U
+    pool: a\arrays
+    while: pool != 0
+        chunk: lmx_pool_chunk_head(pool)
+        while: chunk != 0
+            bytes: (cast: (@: char) chunk\base)
+            n: chunk\count * pool\stride
+            i: 0U
+            while: i < n
+                sum: (sum * 31U) + (cast: (size_t) ((cast: (int) bytes[i]) & 255))
+                i: i + 1U
+            ---
+            chunk: chunk\next
+        ---
+        pool: pool\next
+    ---
+return: sum
+
 fn: main () int
     LmxArena: arena
+    LmxArena: context_arena
+    LmxPool: context_cells
+    LmxScratch: store
+    LmxWalkContext: context
+    LmxScratchMark: mark
     LmxWalkFrame: frame
+    @: LmxArena pca 0
+    @: LmxScratch ps 0
+    @: LmxWalkContext pc 0
+    @: LmxScratchMark pm 0
+    @: LmxArenaBlock blocks 0
+    @: Lmx impostor 0
+    size_t: before
+    size_t: sum_before
+    size_t: warm
+    int: i 0
     @: LmxArena pa 0
     @: LmxWalkFrame pf 0
     @: LmxWalkOwn po 0
@@ -136,9 +192,25 @@ fn: main () int
     pa: @ arena
     ga: pa
     groles: lmx_walk_roles_open(ga)
+    # The execution context: an ordinary arena of its own, never attached to the graph's,
+    # the temporary-frame store in it, and the program's roles.
+    memset((cast: (@: void) (@ context_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ context_cells)), 0, c.sizeof(c.LmxPool))
+    memset((cast: (@: void) (@ store)), 0, c.sizeof(c.LmxScratch))
+    pca: @ context_arena
+    ps: @ store
+    pc: @ context
+    pm: @ mark
+    if: lmx_arena_open(pca) != 0 || lmx_scratch_open(ps, pca, @ context_cells, 16U) != c.LMX_SCRATCH_OK
+        fputs("lmx_walk: context\n", l1_stdout())
+        return: 2
+    pc\arena: ga
+    pc\scratch: ps
+    pc\roles: groles
+    gctx: pc
     args: (cast: (@: int) calloc(1U, c.sizeof(int)))
     unit: lmx_node_new_owned(ga)
-    if: groles = 0 || args = 0 || unit = 0 || lmx_arena_refs_open_owned(ga, unit, 13U) != 0
+    if: groles = 0 || args = 0 || unit = 0 || lmx_arena_refs_open_owned(ga, unit, 14U) != 0
         fputs("lmx_walk: unit\n", l1_stdout())
         return: 2
     ---
@@ -158,6 +230,7 @@ fn: main () int
     refuser: mk_m(unit, 10U, 4U)
     orderer: mk_m(unit, 11U, 6U)
     stranger: mk_m(unit, 12U, 2U)
+    impostor: mk_m(unit, 13U, 2U)
 
     # counter:   own n 0;  n: n + 1;  return: n
     cell: icell(counter, 1U, 0)
@@ -298,7 +371,13 @@ fn: main () int
     n: fr(stranger, 1U, c.LMX_WALK_OP_RET, 2U)
     own(n, 1U, counter, 1U)
 
-    check(c.LMX_WALK_OP_RET = c.LMX_OP_RETURN && c.LMX_WALK_OP_CALL = c.LMX_OP_CALL, "codes agree with lmx_interp.h")
+    # impostor:  <a node whose child[0] is a PRIVATE op record with the number of `ret`>
+    # The role is the shared record's address; the same number in another record is not it.
+    n: pl(impostor, 1U, 1U)
+    if: n = 0 || lmx_arena_ref_store(n, 0U, (cast: (@: void) lmx_op_new_owned(ga, c.LMX_WALK_OP_RET))) != 0
+        broken: broken + 1
+    ---
+
     check(broken = 0, "construction")
     if: broken != 0
         c.printf("lmx_walk: %d construction steps failed\n", broken)
@@ -312,71 +391,72 @@ fn: main () int
     # counter: the executed assignment is published at the return, and the next
     # activation starts from the published value.
     r: -1
-    st: lmx_walk_run(ga, counter, 0, 0U, @ r)
+    st: lmx_walk_run(gctx, counter, 0, 0U, @ r)
     check(st = c.LMX_WALK_OK && r = 1, "counter first run returns 1")
     check(lmx_int_value_known(cell) = 1, "counter published n = 1")
-    st: lmx_walk_run(ga, counter, 0, 0U, @ r)
+    st: lmx_walk_run(gctx, counter, 0, 0U, @ r)
     check(st = c.LMX_WALK_OK && r = 2, "counter second run returns 2")
 
     # 21.6: inner rewrote outer's graph field; outer's clean working value is neither
     # reloaded (it returns its entry snapshot) nor republished over the newer value.
     r: -1
-    st: lmx_walk_run(ga, outer, 0, 0U, @ r)
+    st: lmx_walk_run(gctx, outer, 0, 0U, @ r)
     check(st = c.LMX_WALK_OK && r = 1, "outer returns its entry snapshot, no reload")
     check(lmx_int_value_known(xcell) = 2, "clean own value was not republished")
 
     # 21.6: a dirty value is published before the outbound call.
     r: -1
-    st: lmx_walk_run(ga, publisher, 0, 0U, @ r)
+    st: lmx_walk_run(gctx, publisher, 0, 0U, @ r)
     check(st = c.LMX_WALK_OK && r = 5, "dirty value published before the call")
 
     # Recursion is recursion of the C stack on one published M; an early return inside
     # a nested body ends the activation, the last return is never reached then.
     r: -1
     args[0]: 4
-    st: lmx_walk_run(ga, summer, args, 1U, @ r)
+    st: lmx_walk_run(gctx, summer, args, 1U, @ r)
     check(st = c.LMX_WALK_OK && r = 10, "summer(4) = 10")
     r: -1
     args[0]: 0
-    st: lmx_walk_run(ga, summer, args, 1U, @ r)
+    st: lmx_walk_run(gctx, summer, args, 1U, @ r)
     check(st = c.LMX_WALK_OK && r = 0, "summer(0) takes the early return")
-    st: lmx_walk_run(ga, summer, 0, 0U, @ r)
+    st: lmx_walk_run(gctx, summer, 0, 0U, @ r)
     check(st = c.LMX_WALK_INVALID, "a missing declared input is refused")
 
     # A field of a nested body is an own field too; its holder is the body.
     r: -1
     args[0]: 4
-    st: lmx_walk_run(ga, looper, args, 1U, @ r)
+    st: lmx_walk_run(gctx, looper, args, 1U, @ r)
     check(st = c.LMX_WALK_OK && r = 10, "looper(4) = 10")
     check(lmx_int_value_known(lmx_arena_ref_value(looper, 1U)) = 10, "looper published acc")
     check(lmx_int_value_known(lmx_arena_ref_value(looper, 2U)) = 4, "looper published i")
 
     # No body node: nothing to walk, nothing is invented, nothing native is called.
-    st: lmx_walk_run(ga, bare, 0, 0U, @ r)
+    st: lmx_walk_run(gctx, bare, 0, 0U, @ r)
     check(st = c.LMX_WALK_NO_GRAPH, "a callable without body nodes is NO_GRAPH")
-    st: lmx_walk_run(ga, unit, 0, 0U, @ r)
+    st: lmx_walk_run(gctx, unit, 0, 0U, @ r)
     check(st = c.LMX_WALK_INVALID, "a Structure that is not a callable is refused")
 
     # Falling off the end is an exit: the dirty value is published, no result is written.
     r: -77
-    st: lmx_walk_run(ga, faller, 0, 0U, @ r)
+    st: lmx_walk_run(gctx, faller, 0, 0U, @ r)
     check(st = c.LMX_WALK_OK && r = -77, "void fall-off leaves the result alone")
     check(lmx_int_value_known(lmx_arena_ref_value(faller, 1U)) = 7, "void fall-off published z")
 
     # A bare role record as a return still publishes what is dirty, and ends the body.
-    st: lmx_walk_run(ga, stopper, 0, 0U, @ r)
+    st: lmx_walk_run(gctx, stopper, 0, 0U, @ r)
     check(st = c.LMX_WALK_OK && lmx_int_value_known(lmx_arena_ref_value(stopper, 1U)) = 9, "bare return publishes and stops")
 
     # A node outside the slice is reported at entry, wherever it sits, and nothing of the
     # activation runs: the assignment before it is neither executed nor published.
-    st: lmx_walk_run(ga, refuser, 0, 0U, @ r)
+    st: lmx_walk_run(gctx, refuser, 0, 0U, @ r)
     check(st = c.LMX_WALK_UNSUPPORTED, "an unread role is UNSUPPORTED, not skipped")
     check(lmx_int_value_known(lmx_arena_ref_value(refuser, 1U)) = 0, "nothing ran before the refusal")
 
     # Entry keeps the own records in the lexical order of the fields, which is the order
     # of every checkpoint -- not the order in which the body mentions them.
     pf: @ frame
-    st: lmx_walk_enter(pf, ga, orderer, 0, 0U)
+    lmx_scratch_mark(ps, pm)
+    st: lmx_walk_enter(pf, gctx, orderer, 0, 0U)
     check(st = c.LMX_WALK_OK && pf\nowns = 3U, "orderer loads three own fields")
     if: st = c.LMX_WALK_OK && pf\nowns = 3U
         po: pf\owns
@@ -386,25 +466,62 @@ fn: main () int
         po: pf\owns + 2U
         check(po\from = lmx_arena_ref_cell(lmx_arena_ref_struct(lmx_arena_ref_struct(orderer, 4U), 2U), 0U), "third record is the loop body's field t")
     ---
-    lmx_walk_leave(pf)
+    check(lmx_scratch_rewind(ps, pm) = c.LMX_SCRATCH_OK && ps\used = 0U && ps\top = 0U, "the store is empty again after the rewind")
+
+    # The role is a physical reference: the right NUMBER in a record of one's own is not
+    # the role, and such a step is refused rather than skipped or guessed.
+    st: lmx_walk_run(gctx, impostor, 0, 0U, @ r)
+    check(st = c.LMX_WALK_UNSUPPORTED, "a private op record with the number of `ret` is not the role `ret`")
+
+    # An invocation is not a copy.  Twenty-one activations of summer neither allocate a
+    # cell in the graph's arena nor change a byte of it; and once the store is warm they
+    # add no block to the context's arena either, and leave the store empty.
+    args[0]: 20
+    lmx_walk_run(gctx, summer, args, 1U, @ r)
+    before: handed(ga)
+    sum_before: digest(ga)
+    blocks: lmx_arena_mark(pca)
+    warm: lmx_pool_count(@ context_cells)
+    i: 0
+    while: i < 50
+        st: lmx_walk_run(gctx, summer, args, 1U, @ r)
+        i: i + 1
+    ---
+    check(st = c.LMX_WALK_OK && r = 210, "summer(20) = 210, fifty times")
+    check(handed(ga) = before, "invocations allocate nothing in the graph's arena")
+    check(digest(ga) = sum_before, "and write nothing into it")
+    check(lmx_arena_mark(pca) = blocks && lmx_pool_count(@ context_cells) = warm, "and, once warm, nothing in the context's arena")
+    check(ps\used = 0U && ps\top = 0U, "every activation rewound what it took")
+
+    # The ONLY write of an activation is the publication of a dirty own value: counter
+    # changes the graph, and putting n back restores it byte for byte.
+    sum_before: digest(ga)
+    before: handed(ga)
+    r: lmx_int_value_known(cell)
+    st: lmx_walk_run(gctx, counter, 0, 0U, @ i)
+    check(st = c.LMX_WALK_OK && digest(ga) != sum_before && handed(ga) = before, "counter wrote, and allocated nothing")
+    lmx_int_store_known(cell, r)
+    check(digest(ga) = sum_before, "undoing the one published value restores the whole graph")
 
     # An own field is a field of M or of a body inside M.  Somebody else's field named as
     # own is refused at entry; it is reachable only as an explicit field (`at` / `put`).
-    st: lmx_walk_run(ga, stranger, 0, 0U, @ r)
+    st: lmx_walk_run(gctx, stranger, 0, 0U, @ r)
     check(st = c.LMX_WALK_INVALID, "another occurrence's field is not an own field")
 
     # A COPY of M runs unchanged on its own state: the copier remaps the references of
     # the body along with the rest of M's tree, so the copy's nodes point at the copy;
     # child[0] and the role records are shared by address.
+    before: handed(ga)
     st: lmx_graph_copy_owned(counter, 0, ga, ga, @ copy)
     check(st = c.LMX_GRAPH_COPY_OK && copy != 0 && copy != counter, "counter copied")
+    check(handed(ga) > before, "an explicit copy DOES allocate in the graph's arena; an invocation never did")
     if: copy != 0
         check(lmx_arena_ref_value(copy, 0U) = lmx_arena_ref_value(counter, 0U), "copy shares child[0]")
         check(lmx_arena_ref_value(copy, 1U) != cell, "copy has its own n")
         check(lmx_arena_ref_value(lmx_arena_ref_struct(copy, 3U), 0U) = lmx_arena_ref_value(lmx_arena_ref_struct(counter, 3U), 0U), "copy shares the role records")
         check(lmx_arena_ref_struct(lmx_arena_ref_struct(lmx_arena_ref_struct(copy, 3U), 1U), 1U) = copy, "the copy's node refers to the copy, not to the original")
         r: -1
-        st: lmx_walk_run(ga, copy, 0, 0U, @ r)
+        st: lmx_walk_run(gctx, copy, 0, 0U, @ r)
         check(st = c.LMX_WALK_OK && r = 3, "copy continues from the copied value")
         check(lmx_int_value_known(cell) = 2, "original n untouched by the copy's run")
         check(lmx_int_value_known(lmx_arena_ref_value(copy, 1U)) = 3, "copy published into its own n")

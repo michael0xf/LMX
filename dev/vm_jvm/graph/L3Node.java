@@ -1,11 +1,10 @@
 package graph;
 
-/**
- * In-memory L3 graph node: role is a physical reference to a shared {@link L3Role}.
- */
+/** In-memory L3 graph node; {@link #role} is a physical shared record. */
 public final class L3Node {
     public final L3Role role;
     public final L3Node[] children;
+    /** Literal int or field index, depending on role. */
     public final int intPayload;
 
     public L3Node(L3Role role, int intPayload, L3Node... children) {
@@ -14,7 +13,7 @@ public final class L3Node {
         }
         this.role = role;
         this.intPayload = intPayload;
-        this.children = children == null ? new L3Node[0] : children;
+        this.children = children == null ? new L3Node[0] : children.clone();
     }
 
     public static L3Node of(L3Role role, L3Node... children) {

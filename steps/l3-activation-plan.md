@@ -1,6 +1,6 @@
 # Immutable activation plan — binary ABI (revised)
 
-Status: **revised design** for `LMX-ACTIVATION-PLAN-REVISION-20260920-29G`.
+Status: **ABI fix** for `LMX-ACTIVATION-PLAN-ABI-FIX-20260920-32G` (on top of `db1dfa6` / 29G).
 Owned file: this document only. No code edits in this checkpoint.
 
 Base: committed ABI at `4f8f52b`. Revision incorporates the **confirmed Fable read-only audit** (consumer owner, gaps 1–4 and lexical-order correction) as relayed through Codex / `lmx_uds`. At revision time, a completed OpenRouter reply for `LMX-ACTIVATION-PLAN-ABI-AUDIT-20260920-28` was **not** available via `lmx_uds` / `chat_status` — this document does **not** invent one.
@@ -43,7 +43,7 @@ Exact rule:
 - While an occurrence’s slot 0 points at a given `LmxCallable` record, that occurrence’s **executable shape** (body Structure tree shape and which cells are own endpoints) is **immutable**.
 - **Data values** in own cells, and rebinding a slot to another cell of the **same data kind**, may change freely and do **not** invalidate the plan.
 - A **structural** mutation (change which Structures/ops exist, change path endpoints’ kinds, replace the body shape) must install a **fresh** `LmxCallable { method, header = 0 }` into **that occurrence’s slot 0 only**, before the new shape is visible to execution. Never clear or rewrite `header` on a **shared** descriptor that other unchanged occurrences still use.
-- `lmx_plan_validate` is **preparation / test-only** (rebuild-and-compare or shape checks offline). Walk must **not** call it per activation.
+- `lmx_plan_validate_shape(arena, plan_roles, M, P)` is **preparation / test-only**: checks plan representation and resolves every path on the concrete occurrence `M` with classified access. Walk must **not** call it per activation. It cannot know whether the receiver omitted an own from the body — that belongs only to `lmx_walk_prepare`.
 
 ## 4. Physical role records — domain pair
 
@@ -146,20 +146,32 @@ int lmx_plan_build_from_paths(
     size_t N,
     Lmx **out_P);
 
-/* Preparation/test only — not for walk hot path. */
-int lmx_plan_validate_shape(LmxArena *arena, Lmx *plan_roles, Lmx *P);
+/*
+ * Preparation/test only — not for walk hot path.
+ * Receives concrete occurrence M so it can:
+ *   - validate plan representation (roles, shapes, same-arena P/paths/indices);
+ *   - resolve every path on M with checked (classified) access;
+ *   - require intermediate path components to be Structures;
+ *   - require final slot addresses distinct.
+ * Does NOT detect missing/extra own vs the body (no body-role knowledge).
+ */
+int lmx_plan_validate_shape(LmxArena *arena, Lmx *plan_roles, Lmx *M, Lmx *P);
 
 /*
- * Publish P into callable->header. callable must be KIND_CALLABLE in arena.
- * Does not scan a body. Replaces previous header pointer (old P left immutable).
+ * Checked publication through occurrence M (not an arbitrary callable pointer).
+ * Safe simple API with no hidden validation token:
+ *   1) require M.slot0 is KIND_CALLABLE in arena (that is the target descriptor);
+ *   2) call lmx_plan_validate_shape(arena, plan_roles, M, P) and require LMX_PLAN_OK;
+ *   3) only then write that descriptor's header = P (old P left immutable).
+ * Refuses unrelated descriptors and wrong-arena plans. Does not scan a body.
  */
-int lmx_plan_publish(LmxArena *arena, LmxCallable *callable, Lmx *P);
+int lmx_plan_publish(LmxArena *arena, Lmx *plan_roles, Lmx *M, Lmx *P);
 
 /*
  * Fast resolver: ADDRESS OF THE SLOT in current occurrence M.
- * No arena argument, no classification, no allocation.
+ * No arena argument, no classification, no allocation, no validation.
  * Prepared paths use known child access; intermediate Structure shape is a
- * producer precondition checked only at preparation.
+ * producer precondition checked only at preparation (validate_shape / publish).
  */
 void **lmx_plan_slot_known(Lmx *M, Lmx *P, size_t entry_index);
 
@@ -169,7 +181,11 @@ size_t lmx_plan_entry_count(Lmx *P);
 Receiver-owned (not in the generic module):
 
 ```text
-/* Scans body once; builds paths in lexical own order; build_from_paths + publish. */
+/*
+ * Scans body once with role/operand knowledge; builds paths in lexical own order;
+ * build_from_paths + publish. Missing or extra own relative to the body scan is
+ * detected HERE only — never in generic validate_shape.
+ */
 int lmx_walk_prepare(LmxWalkContext *context, Lmx *M);
 ```
 
@@ -205,7 +221,7 @@ When `header == 0` (cold):
 
 | Producer | Duty |
 | --- | --- |
-| `lmx_walk_prepare` / receiver tests **now** | Body scan + `build_from_paths` + `publish` in the callable’s arena |
+| `lmx_walk_prepare` / receiver tests **now** | Body scan (missing/extra own) + `build_from_paths` + publish(arena, plan_roles, M, P) in the callable arena |
 | `l2trans` **later** | Only after it emits `LmxCallable` + L3 body nodes; must emit **lexical** own order, not `l2_layout_owns` order |
 
 ## 12. Acceptance tests A–I
@@ -215,10 +231,10 @@ When `header == 0` (cold):
 | **A** | Generic plan module builds/publishes/resolves **without** any `lmx_walk` predef |
 | **B** | Lexical order `own a; while { own t }; own b` → plan entries **a, t, b** (not a,b,t) |
 | **C** | Original and graph-copy share the same `P`; `lmx_plan_slot_known` returns **different** slot addresses |
-| **D** | Publish refused when callable is not `KIND_CALLABLE` in the plan’s arena (wrong-arena / wrong-kind) |
+| **D** | `lmx_plan_publish` refused when M.slot0 is not `KIND_CALLABLE` in the plan arena, or `validate_shape` fails (wrong-arena / wrong-kind / unresolvable paths) |
 | **E** | One-occurrence invalidation: replace that M’s slot 0 with fresh callable `header=0`; other sharers unchanged |
 | **F** | Data writes into own cells do **not** require a new plan / do not clear header |
-| **G** | Missing or extra own relative to prepared paths → preparation/validate-shape **INVALID** (test-only path) |
+| **G** | **Receiver** lmx_walk_prepare rejects missing/extra own vs the body scan. **Generic** lmx_plan_validate_shape rejects malformed / unresolvable / duplicate paths on M — it cannot know omitted owns |
 | **H** | Classification count on resolve path: **≤ 5** total around a prepared enter, and **zero inside** `lmx_plan_slot_known` |
 | **I** | After warm-up, prepared enter + resolve adds **no** arena/scratch block allocation beyond the activation’s marked scratch slice |
 
@@ -227,7 +243,7 @@ When `header == 0` (cold):
 1. Generic storage/check/fast resolve ≠ body scanning (walk prepare owns the scan).
 2. No digest; structural immutability while slot 0 holds that callable; validate is prep/test-only.
 3. Role domain 33 / kind 19; stride `sizeof(void*)`; copy terminal.
-4. One arena with the published callable; checked publish; never plan-in-copy-arena.
+4. One-arena with the published callable; publish(arena, plan_roles, M, P) validates then writes M.slot0 header; never plan-in-copy-arena.
 5. Fast API is `lmx_plan_slot_known(M, P, i)` → slot address; no arena/classify/alloc.
 6. Lexical own order; reject `l2_layout_owns` as lexical authority.
 7. `header != 0` drops four walk entry passes; `header == 0` cold NO_GRAPH/UNSUPPORTED; eval = holder+slot → slot address → linear own lookup.

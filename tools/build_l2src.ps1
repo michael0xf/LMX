@@ -291,7 +291,18 @@ Write-Output "build_l2src: gcc $gcc"
 Write-Output "build_l2src: evidence $OutDir"
 
 # 1) predef headers of the units
-$sourceDir = Join-Path $root 'l2src'
+# $sourceDir was RESOLVED EARLIER (the staging block above chooses between the live sandbox and the
+# published root, and prints which).  This line used to assign it unconditionally, which silently
+# threw the staged tree away: the CWD stayed in the staged root, so `predef: "l1src/..."` resolved
+# there and the l1_stdout fix took effect, while every SOURCE compiled from here on came from the
+# root snapshot -- one tree for predefs, another for sources.  Measured consequence: the green stamp
+# held 47 probe objects (the root's count) while 49 probes had been staged, and the two that exist
+# only in the sandbox (lmx_walk_selftest, lmx_callable_selftest) had no log at all -- never
+# enumerated.  Found by lmx_uds reading this file, not by me.  The header loop below uses the
+# CWD-relative "l2src/<name>" path, so it follows whichever tree was resolved.
+if (-not (Test-Path -LiteralPath (Join-Path $sourceDir 'lmx.h.lm1'))) {
+    throw "no kernel headers under the resolved source dir: $sourceDir"
+}
 foreach ($h in @(Get-ChildItem -LiteralPath $sourceDir -Filter '*.h.lm1' -File | Sort-Object Name)) {
     $base = $h.Name.Substring(0, $h.Name.Length - '.h.lm1'.Length)
     $target = Join-Path $headers "l2src\$base.lm1.h"

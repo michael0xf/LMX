@@ -1,0 +1,16 @@
+predef: "../l2src_sandbox/lmx.h.lm1"
+predef: "../l2src_sandbox/lmx_arena.h.lm1"
+predef: "../l2src_sandbox/lmx_implements.h.lm1"
+
+# L3-01 receiver: consume an already-built graph as the L3 subset
+# N1-N3. Not admission (#admission). Unsupported nodes fail; never METHOD.addr.
+
+define: L3_OK 0
+define: L3_INVALID 1
+define: L3_UNSUPPORTED 2
+define: L3_ABSENT 3
+
+prototype:
+    # Root must be a Structure (empty is present). Walks fields by index.
+    fn: l3_recv_eval (@: LmxArena arena; @: Lmx root) int
+end: prototype

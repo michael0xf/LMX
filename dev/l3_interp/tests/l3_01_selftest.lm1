@@ -1,0 +1,80 @@
+predef: "../l3_recv.lm1"
+predef: "../../l2src_sandbox/lmx_arena.lm1"
+predef: "../../l2src_sandbox/lmx_arena_blocks.lm1"
+predef: "../../l2src_sandbox/lmx_range.lm1"
+predef: "../../l2src_sandbox/lmx_implements.lm1"
+predef: "../../l2src_sandbox/lmx_value_owned.lm1"
+predef: "../../l2src_sandbox/lmx_arena_refs.lm1"
+predef: "../../l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# L3-01 smoke: N1 empty Structure, N2 field refs, N3 int cell.
+# METHOD in a field is unsupported — not a native call. Not admission.
+
+sub: fail (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: fail
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxArena: arena
+    @: LmxArena a 0
+    @: Lmx empty 0
+    @: Lmx root 0
+    @: Lmx inner 0
+    @: void cell 0
+    @: LmxMethod method 0
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ arena) != 0
+        fputs("l3_01: arena\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    a: @ arena
+    empty: lmx_node_new_owned(a)
+    fail(counts, empty != 0 && l3_recv_eval(a, empty) = c.L3_OK, "N1 empty Structure is present")
+    fail(counts, l3_recv_eval(a, 0) = c.L3_INVALID, "null root is not an empty Structure")
+
+    root: lmx_node_new_owned(a)
+    inner: lmx_node_new_owned(a)
+    if: root = 0 || inner = 0 || lmx_arena_refs_open_owned(a, root, 1U) != 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(root, 0U, (cast: (@: void) inner))
+    fail(counts, l3_recv_eval(a, root) = c.L3_OK, "N1 empty Structure as a present field")
+
+    lmx_arena_ref_store(root, 0U, 0)
+    fail(counts, l3_recv_eval(a, root) = c.L3_ABSENT, "null field is absent, not empty")
+
+    cell: lmx_int_new_owned(a)
+    if: cell = 0
+        free(counts)
+        return: 2
+    ---
+    lmx_int_store_known(cell, 7)
+    lmx_arena_ref_store(root, 0U, cell)
+    fail(counts, l3_recv_eval(a, root) = c.L3_OK, "N3 int cell in a field")
+
+    method: lmx_method_new_owned(a)
+    if: method = 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(root, 0U, (cast: (@: void) method))
+    fail(counts, l3_recv_eval(a, root) = c.L3_UNSUPPORTED, "METHOD is not L3-01 and not native escape")
+
+    if: counts[1] != 0
+        c.printf("%d failed of %d\n", counts[1], counts[0])
+        free(counts)
+        return: 1
+    ---
+    c.printf("l3_01: %d checks\n", counts[0])
+    free(counts)
+return: 0

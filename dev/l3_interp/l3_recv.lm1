@@ -1,0 +1,76 @@
+predef: "l3_recv.h.lm1"
+predef: "../l2src_sandbox/lmx_arena_refs.h.lm1"
+include: "<stdlib.h>"
+
+# L3-01: empty Structure, ordered field refs, int cells. Cycles: same address
+# is identity, not a new walk. Null field = absent argument.
+
+define: L3_SEEN_CAP 256
+define: L3_DEPTH_MAX 64
+
+prototype:
+    fn: l3_eval_value (@: LmxArena arena; @: void v; @@: void seen; @: int nseen; int: depth) int
+end: prototype
+
+fn: l3_seen_has (@@: void seen; int: nseen; @: void v) int
+    int: i 0
+    while: i < nseen
+        if: seen[i] = v
+            return: 1
+        i: i + 1
+    ---
+return: 0
+
+fn: l3_eval_value (@: LmxArena arena; @: void v; @@: void seen; @: int nseen; int: depth) int
+    @: Lmx host
+    int: kind
+    int: typ
+    int: st
+    size_t: i
+    if: v = 0
+        return: c.L3_ABSENT
+    if: depth >= c.L3_DEPTH_MAX
+        return: c.L3_UNSUPPORTED
+    if: l3_seen_has(seen, \nseen, v) != 0
+        return: c.L3_OK
+    if: \nseen >= c.L3_SEEN_CAP
+        return: c.L3_UNSUPPORTED
+    seen[\nseen]: v
+    \nseen: \nseen + 1
+    kind: lmx_domain_kind(arena, v)
+    if: kind = c.LMX_KIND_STRUCT
+        host: (cast: (@: Lmx) v)
+        if: host\len < 0
+            return: c.L3_INVALID
+        i: 0U
+        while: i < (cast: (size_t) host\len)
+            st: l3_eval_value(arena, lmx_arena_ref_value(host, i), seen, nseen, depth + 1)
+            if: st != c.L3_OK
+                return: st
+            i: i + 1U
+        ---
+        return: c.L3_OK
+    ---
+    if: kind = c.LMX_KIND_PRIMITIVE
+        typ: lmx_domain_type(arena, v)
+        if: typ = c.LMX_TYPE_INT
+            return: c.L3_OK
+        return: c.L3_UNSUPPORTED
+    ---
+return: c.L3_UNSUPPORTED
+
+fn: l3_recv_eval (@: LmxArena arena; @: Lmx root) int
+    @@: void seen 0
+    @: void poke 0
+    int: nseen 0
+    int: st
+    if: arena = 0 || root = 0
+        return: c.L3_INVALID
+    if: lmx_domain_kind(arena, (cast: (@: void) root)) != c.LMX_KIND_STRUCT
+        return: c.L3_UNSUPPORTED
+    seen: (cast: (@@: void) calloc((cast: (size_t) c.L3_SEEN_CAP), c.sizeof(poke)))
+    if: seen = 0
+        return: c.L3_INVALID
+    st: l3_eval_value(arena, (cast: (@: void) root), seen, @ nseen, 0)
+    free((cast: (@: void) seen))
+return: st

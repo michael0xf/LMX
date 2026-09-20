@@ -213,11 +213,7 @@ WHAT IS NOT DONE, EXACTLY
         BY DETECTING A FAILURE, which is what says the harness is not blind.  The remaining order
         of work is therefore: the missing header, then move the emission into the store, then
         pass the counts -- and the harness is what can now say whether each one worked.  The
-        missing header is done; THE NEXT EXACT SYMBOL IS l2trans.lm1's emission of
-        l2_nsp[k] for an eternal k, today lmx_node_new_owned(l2_program_arena), which has to
-        become an allocation in lmx_perm_store_of(l2_program_arena) -- the store is already
-        reachable from the generated program without any new kernel act, because
-        lmx_root.lm1:85 binds R0's arena to it.
+        missing header is done, and so is the allocation (49U, below).
       - MULTI-ROOT IS NOT REPRESENTABLE, SO THE TU-GLOBAL TOTALS ARE THE RIGHT EXPRESSIONS.
         l2trans.lm1:14612 calls l2_emit_library_wrappers() and l2trans.lm1:14616 is its `else`
         emitting main, so one translation unit emits EITHER the library wrapper OR the program,
@@ -230,6 +226,41 @@ WHAT IS NOT DONE, EXACTLY
         TODO: "need persistent LmxRoot storage (by-value aggregate is illegal at module scope --
         currently local, so open cannot stay open across calls)".  On that path the root dies at
         return, so sizing its store would size storage that is released immediately.
+  * THE ALLOCATION IS IN THE STORE NOW (49U), AND THE RETENTION WIRING IS NOT.  A qualified
+    branch, its reference slots and its cells are emitted into lmx_perm_store_of(l2_program_arena)
+    instead of l2_program_arena.  No kernel act was added: lmx_root.lm1:85 binds R0's arena to the
+    store, so the store is already a value the generated program can name, and the EXPRESSION is
+    emitted rather than a generated variable so no prologue changes and an absent store is caught
+    by the `= 0` check each site already emits.  l2trans.lm1 gained l2_ns_in_eternal, because
+    l2_ns_eternal is set on the ROOT alone -- asking it of a nested member would have called every
+    member of an eternal branch ordinary -- and l2_ns_arena, which returns the arena expression and
+    returns the old spelling for everything mutable, so ordinary emission did not move.  The
+    lmx_perm.h.lm1 predef is emitted when l2_ebr_n is non-zero; unlike the one removed in 48U, that
+    header exists.
+    STILL NOT DONE, and the emitted marker now says exactly this and nothing more: the branch is in
+    the store but is NOT entered in R0's retention array, and the counts are still 0U, 0U.  That
+    order is deliberate -- a count that sizes an array nothing fills would be worse than no count.
+    The three field-level DEBT markers are gone because they are discharged: a cell built in the
+    store is answered by the store's ranges from any bound Message, which is what they asked for.
+    l2_branches stays in the Message arena on purpose: it is the program's array OF branch
+    pointers, not something reachable inside a branch, and a collection that walks it asks
+    lmx_range_pool, which is local, and is told the branch is not its to keep or free.
+    MEASURED as a red-then-green pair across two harness runs rather than asserted: the generated
+    L1 at build/l2_harness/20260920_190213 contains l2_nsp[0]: lmx_node_new_owned(l2_program_arena)
+    and not the store form; at 20260920_192730 it is the other way round, 1 -> 0 and 0 -> 1.  The
+    fixture's first version had a needle that matched the PROGRAM UNIT's own constructor, which is
+    that same call and correct forever, so it passed while proving nothing; the strings are exact
+    now, with the unit kept as the same-shape mutable control that must NOT move.
+  * WHAT IS NOT YET PROVEN ON A GENERATED PROGRAM, and the reason is mechanical, not semantic.
+    That the branch classifies from a SECOND bound Message arena, that lmx_range_pool is null
+    there, and that a collection leaves the store's bytes unchanged are all proven for the store
+    itself by tests/lmx_perm_selftest.lm1 (60 checks).  Proving them on a program the translator
+    WROTE needs that program to run, and generated C includes l2src/<unit>.lm1.h and must link the
+    kernel's resolved object closure -- linking every object fails on duplicate main and
+    lm_own_new_zero (measured).  The resolver for that already exists, at
+    tools/build_l2src.ps1:258-287 (Resolve-Link, with Get-Symbols above it).  The next step is to
+    SHARE it with tools/l2_harness.ps1 rather than copy it, since a second copy of a link resolver
+    is the kind of duplicate this tree has been paying for elsewhere.
   * lmx_service_post does not bind a letter's arena.  It performs no copy today (only
     lmx_arena_attach), so nothing is wrong yet; a letter that ever copied from a bound source
     would need the bind first, and that is the condition to watch, not a defect to fix now.

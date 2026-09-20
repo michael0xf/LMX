@@ -136,6 +136,17 @@ const: @: char l2_src 0
 # working directory has to resolve both: a consumer outside stg/l1_baseline
 # sets L2_RUNTIME_ROOT and everything else keeps the historical "l2src/".
 const: @: char l2_rt_root "l2src/"
+
+# WHICH ARENA AN EMITTED CONSTRUCTOR ALLOCATES IN (49U).  A branch qualified
+# `independent: const: immutable`, and every cell and array backing reachable inside it, belongs
+# to the PERMANENT STORE and not to the Message arena -- otherwise it survives only by being a
+# GC root, which is the shape the invariant rejects (lmx_root.lm1:102-106).  The store needs no
+# new kernel act to reach: lmx_root_open binds R0's arena to it, so lmx_perm_store_of of the
+# Message arena IS the store (LMX_ETERNAL_STORE.txt).  The EXPRESSION is emitted rather than a
+# generated variable, so no prologue changes and an absent store is caught by the `= 0` check
+# every one of these sites already emits after its constructor.
+const: @: char l2_arena_msg "l2_program_arena"
+const: @: char l2_arena_eternal "lmx_perm_store_of(l2_program_arena)"
 @: LmP0Structure l2_main_body 0
 const: @: LmP0Node l2_main_node 0
 int: l2_entry_n 0
@@ -353,6 +364,8 @@ prototype:
     fn: l2_ns_find (const: @(LmP0Text t)) int
     fn: l2_ebr_find (const: @(LmP0Text t)) int
     fn: l2_ns_rank (int: ni) int
+    fn: l2_ns_in_eternal (int: ni) int
+    fn: l2_ns_arena (int: ni) const: @: char
     fn: l2_ns_top_count () int
     fn: l2_ns_field_in_parent (int: ni) int
     fn: l2_ns_push (const: @(LmP0Text name); int: parent) int
@@ -575,6 +588,31 @@ fn: l2_ns_rank (int: ni) int
         i: i + 1
     ---
 return: r
+
+# Is this namespace entry INSIDE a qualified eternal branch?  l2_ns_eternal is set on the ROOT
+# alone -- the declaration does l2_ns_eternal[root] = l2_ebr_n -- so a nested member answers by
+# the chain it hangs from, never by itself, and asking l2_ns_eternal[k] of a member would call
+# every member of an eternal branch ordinary.
+fn: l2_ns_in_eternal (int: ni) int
+    int: at ni
+    if: at < 0
+        return: 0
+    ---
+    while: l2_ns_parent[at] >= 0
+        at: l2_ns_parent[at]
+    ---
+    if: l2_ns_eternal[at] >= 0
+        return: 1
+    ---
+return: 0
+
+# The arena expression a constructor emitted for this entry must take.  For everything ordinary
+# this is the Message arena, spelled exactly as before, so mutable emission does not move.
+fn: l2_ns_arena (int: ni) const: @: char
+    if: l2_ns_in_eternal(ni) != 0
+        return: l2_arena_eternal
+    ---
+return: l2_arena_msg
 
 fn: l2_ns_top_count () int
     int: i 0
@@ -13916,6 +13954,12 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: l2_merge_max != 0 && c.fprintf(l2_out, "predef: \"%slmx_merge_owned.h.lm1\"\n", l2_rt_root) < 0
         fclose(l2_out)
         return: 1
+    # An eternal branch is built in the permanent store, and lmx_perm_store_of is how the
+    # generated program names it (49U).  This header EXISTS -- unlike the one that stood in this
+    # block until 48U, which is why the condition is the same shape but the file is real.
+    if: l2_ebr_n != 0 && c.fprintf(l2_out, "predef: \"%slmx_perm.h.lm1\"\n", l2_rt_root) < 0
+        fclose(l2_out)
+        return: 1
     i: 0
     while: i < l2_pd_n
         if: fputs("predef: ", l2_out) < 0 || l2_write_text(l2_out, l2_pd[i]) != 0 || fputs("\n", l2_out) < 0
@@ -14474,19 +14518,19 @@ fn: l2_emit_unit (const: @(char out_path)) int
         # A qualified root has NO lexical parent: that is what independent
         # means. The generated program checks it before and after the
         # declaration-site store.
-        if: l2_ns_parent[k] < 0 && l2_ns_eternal[k] >= 0 && c.fprintf(l2_out, "        l2_nsp[%d]: lmx_node_new_owned(l2_program_arena)\n        if: l2_nsp[%d] = 0\n            return: 1\n        if: l2_nsp[%d]\\node != 0\n            return: 1\n", k, k, k) < 0
+        if: l2_ns_parent[k] < 0 && l2_ns_eternal[k] >= 0 && c.fprintf(l2_out, "        l2_nsp[%d]: lmx_node_new_owned(%s)\n        if: l2_nsp[%d] = 0\n            return: 1\n        if: l2_nsp[%d]\\node != 0\n            return: 1\n", k, l2_ns_arena(k), k, k) < 0
             fclose(l2_out)
             return: 1
-        if: l2_ns_parent[k] >= 0 && c.fprintf(l2_out, "        l2_nsp[%d]: lmx_struct_new_owned(l2_nsp[%d], l2_program_arena)\n", k, l2_ns_parent[k]) < 0
+        if: l2_ns_parent[k] >= 0 && c.fprintf(l2_out, "        l2_nsp[%d]: lmx_struct_new_owned(l2_nsp[%d], %s)\n", k, l2_ns_parent[k], l2_ns_arena(k)) < 0
             fclose(l2_out)
             return: 1
-        if: c.fprintf(l2_out, "        if: l2_nsp[%d] = 0\n            return: 1\n        if: lmx_arena_refs_open_owned(l2_program_arena, l2_nsp[%d], %uU) != 0\n            return: 1\n", k, k, (cast: (unsigned) l2_ns_count[k])) < 0
+        if: c.fprintf(l2_out, "        if: l2_nsp[%d] = 0\n            return: 1\n        if: lmx_arena_refs_open_owned(%s, l2_nsp[%d], %uU) != 0\n            return: 1\n", k, l2_ns_arena(k), k, (cast: (unsigned) l2_ns_count[k])) < 0
             fclose(l2_out)
             return: 1
         # Every owned typed range reachable inside a qualified branch is
         # admitted through the Message classifier. No per-node flag, no
         # name, no registry: the admitted RANGE is the metadata.
-        if: l2_ns_eternal[k] >= 0 && c.fprintf(l2_out, "        # DEBT: eternal ranges/bootstrap-admit absent in new kernel (nsp %d)\n", k) < 0
+        if: l2_ns_eternal[k] >= 0 && c.fprintf(l2_out, "        # DEBT: nsp %d is IN the permanent store, but not yet in R0's retention array (49U)\n", k) < 0
             fclose(l2_out)
             return: 1
         if: l2_ns_parent[k] < 0 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(unit, %uU, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", (cast: (unsigned) (l2_ns_base + l2_ns_rank(k))), k) < 0
@@ -14504,30 +14548,19 @@ fn: l2_emit_unit (const: @(char out_path)) int
         oi: 0
         fx: 0
         while: fx < l2_nsf_n
-            if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 0 && c.fprintf(l2_out, "        slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: slot = 0\n            return: 1\n        slot[0]: lmx_size_new_owned(l2_program_arena)\n        if: slot[0] = 0\n            return: 1\n        if: lmx_size_store_known(slot[0], %zuU) != 0\n            return: 1\n", k, (cast: (unsigned) oi), l2_nsf_val[fx]) < 0
-                fclose(l2_out)
-                return: 1
-            if: l2_ns_eternal[k] >= 0 && l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 0 && fputs("        # DEBT: eternal bootstrap-admit / eternal-ranges absent\n", l2_out) < 0
+            if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 0 && c.fprintf(l2_out, "        slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: slot = 0\n            return: 1\n        slot[0]: lmx_size_new_owned(%s)\n        if: slot[0] = 0\n            return: 1\n        if: lmx_size_store_known(slot[0], %zuU) != 0\n            return: 1\n", k, (cast: (unsigned) oi), l2_ns_arena(k), l2_nsf_val[fx]) < 0
                 fclose(l2_out)
                 return: 1
             if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 1 && c.fprintf(l2_out, "        slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: slot = 0\n            return: 1\n        slot[0]: lmx_char_cell_known(process_chars, %d)\n        if: slot[0] = 0\n            return: 1\n", k, (cast: (unsigned) oi), (cast: (int) l2_nsf_val[fx])) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_ns_eternal[k] >= 0 && l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 1 && fputs("        # DEBT: eternal bootstrap-admit / eternal-ranges absent\n", l2_out) < 0
-                fclose(l2_out)
-                return: 1
             # An ARRAY field: one record plus its backing, both owned by the
             # Message. The copier already classifies them by address, so
             # nothing here is special to arrays beyond building them.
-            if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 5 && l2_nsf_ref[fx] = 0 && c.fprintf(l2_out, "        slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: slot = 0\n            return: 1\n        slot[0]: (cast: (@: void) lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, %zuU, l2_program_arena))\n        if: slot[0] = 0\n            return: 1\n", k, (cast: (unsigned) oi), l2_nsf_val[fx]) < 0
+            if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 5 && l2_nsf_ref[fx] = 0 && c.fprintf(l2_out, "        slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: slot = 0\n            return: 1\n        slot[0]: (cast: (@: void) lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, %zuU, %s))\n        if: slot[0] = 0\n            return: 1\n", k, (cast: (unsigned) oi), l2_nsf_val[fx], l2_ns_arena(k)) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 5 && l2_nsf_ref[fx] = 1 && c.fprintf(l2_out, "        slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: slot = 0\n            return: 1\n        slot[0]: (cast: (@: void) lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, %zuU, l2_program_arena))\n        if: slot[0] = 0\n            return: 1\n", k, (cast: (unsigned) oi), l2_nsf_val[fx]) < 0
-                fclose(l2_out)
-                return: 1
-            # Inside a qualified branch BOTH ranges are admitted: the record
-            # and the backing it addresses.
-            if: l2_ns_eternal[k] >= 0 && l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 5 && fputs("        # DEBT: eternal array bootstrap-admit / eternal-ranges absent\n", l2_out) < 0
+            if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 5 && l2_nsf_ref[fx] = 1 && c.fprintf(l2_out, "        slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: slot = 0\n            return: 1\n        slot[0]: (cast: (@: void) lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, %zuU, %s))\n        if: slot[0] = 0\n            return: 1\n", k, (cast: (unsigned) oi), l2_nsf_val[fx], l2_ns_arena(k)) < 0
                 fclose(l2_out)
                 return: 1
             if: l2_nsf_owner[fx] = k

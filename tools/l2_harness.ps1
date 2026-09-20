@@ -143,22 +143,44 @@ if ($built) {
 #                           in Debt must still be THERE.  This is for a gap that no longer stops
 #                           the toolchain but is not fixed, and the asymmetry is the point.
 #
-# WHY A COMPILING, RUNNING PROGRAM IS NOT SUCCESS HERE.  unit_eternal_branch declares an
-# `independent: const: immutable` branch, and the generated L1 allocates it with
-# lmx_node_new_owned(l2_program_arena) -- R0's ORDINARY arena -- while emitting
-# lmx_root_open(..., 0U, 0U), so the permanent store is opened empty and nothing goes in it.
-# Such a program can compile and exit 0 while having none of the eternal semantics: GC still
-# traverses the branch, and nothing is shared by address.  An exit code cannot tell those two
-# worlds apart, so this fixture does not ask for one.  It reads the generated L1 instead and
-# pins the debt EXACTLY where it is.  When the emission moves into the store, these Debt
-# strings stop appearing, this row fails, and that failure is the signal the work landed.
+# WHY THIS FIXTURE READS THE GENERATED L1 AND NOT AN EXIT CODE.  A program whose eternal
+# branch sits in the ordinary Message arena compiles and exits 0 exactly like one whose branch
+# is in the permanent store: the difference is WHICH ARENA OWNS THE ADDRESS, and no exit code
+# can see it.  So this fixture names both sides.  Absent are the strings that meant the old
+# world; Debt is what must still be there, and it is written to be SPECIFIC -- the first
+# version of this row asked only for "lmx_node_new_owned(l2_program_arena)" and passed while
+# the emission had already moved, because the PROGRAM UNIT is built with that same call and
+# always will be.  A needle that matches a line which is correct forever measures nothing.
+#
+# The rows now pin, by exact text: the eternal root, its reference slots and its cells built in
+# lmx_perm_store_of(l2_program_arena); the program unit still built in l2_program_arena, which
+# is the same-shape mutable control and must NOT move; and the one debt that genuinely remains,
+# the branch not yet entered in R0's retention array.
+#
+# WHAT THIS STILL DOES NOT PROVE, exactly: that the generated branch classifies from a SECOND
+# bound Message arena, that lmx_range_pool is null there, and that a collection leaves the
+# store's bytes alone.  Those three are proven for the store itself by
+# dev/l2src_sandbox/tests/lmx_perm_selftest.lm1 (60 checks), but not yet on a GENERATED
+# program, and the reason is mechanical rather than semantic: generated C includes
+# l2src/<unit>.lm1.h and must link the kernel's resolved object closure, so running one needs
+# the symbol-by-symbol resolver that tools/build_l2src.ps1 already has at Resolve-Link. Sharing
+# that resolver -- not copying it -- is the next step, and until it exists this row says what
+# it checked and no more.
 $fixtures = @(
     [pscustomobject]@{ Name = 'entry_return7.lm2'; Expect = 'runs'; Exit = 7; Needle = ''; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'entry_ret_tr_bad.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'unsupported body'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_eternal_branch.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
-        Absent = @('lmx_owned_ranges');
-        Debt = @('DEBT: eternal ranges/bootstrap-admit absent in new kernel',
-                 'lmx_node_new_owned(l2_program_arena)',
+        Absent = @('lmx_owned_ranges',
+                   'DEBT: eternal ranges/bootstrap-admit absent in new kernel',
+                   'DEBT: eternal bootstrap-admit / eternal-ranges absent',
+                   'DEBT: eternal array bootstrap-admit / eternal-ranges absent',
+                   'l2_nsp[0]: lmx_node_new_owned(l2_program_arena)');
+        Debt = @('predef: "l2src/lmx_perm.h.lm1"',
+                 'l2_nsp[0]: lmx_node_new_owned(lmx_perm_store_of(l2_program_arena))',
+                 'lmx_arena_refs_open_owned(lmx_perm_store_of(l2_program_arena), l2_nsp[0], 1U)',
+                 'slot[0]: lmx_size_new_owned(lmx_perm_store_of(l2_program_arena))',
+                 'unit: lmx_node_new_owned(l2_program_arena)',
+                 'DEBT: nsp 0 is IN the permanent store, but not yet in R0''s retention array (49U)',
                  'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U, 0U, 0U)') }
 )
 
@@ -192,7 +214,7 @@ foreach ($fx in $fixtures) {
             if ($why -eq '' -and $l1 -notmatch [regex]::Escape($d)) { $why = 'the recorded debt "' + $d + '" is GONE -- update this fixture, the gap has closed' }
         }
         if ($why -ne '') { Add-Row 'FAIL' ('fixture:' + $stem) $why; continue }
-        Add-Row 'OK' ('fixture:' + $stem) ('translated; debt still exactly where it was (' + $fx.Debt.Count + ' markers, ordinary-arena eternal)'); continue
+        Add-Row 'OK' ('fixture:' + $stem) ('eternal in the store, mutable unmoved (' + $fx.Debt.Count + ' required, ' + $fx.Absent.Count + ' forbidden)'); continue
     }
     if (-not $made2) { Add-Row 'FAIL' ('fixture:' + $stem) 'l1trans produced no C from the generated L1; see the log'; continue }
 

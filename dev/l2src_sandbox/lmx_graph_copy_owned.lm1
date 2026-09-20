@@ -1,4 +1,4 @@
-predef: "lmx_graph_copy_owned.h.lm1" "lmx_arena_refs.h.lm1" "lmx_value_owned.h.lm1" "lmx_chars_owned.h.lm1" "lmx_array_owned.h.lm1" "lmx_array_ref_owned.h.lm1" "lmx_range.lm1"
+predef: "lmx_graph_copy_owned.h.lm1" "lmx_arena_refs.h.lm1" "lmx_value_owned.h.lm1" "lmx_chars_owned.h.lm1" "lmx_array_owned.h.lm1" "lmx_array_ref_owned.h.lm1" "lmx_range.lm1" "lmx_implements.h.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdlib.h>" "<string.h>" "<stdint.h>"
 
@@ -186,9 +186,13 @@ end: lmx_copy_stack_dispose
 # A METHOD descriptor is a copy terminal: shared by address (header note). The
 # answer is the source arena's table's, never a list the caller passed in. Null-safe.
 fn: lmx_copy_is_terminal (@: LmxArena src_arena; @: void p) int
+    int: kind
     if: p = 0
         return: 0
-    if: lmx_range_classify(src_arena, p) = c.LMX_KIND_METHOD
+    kind: lmx_range_classify(src_arena, p)
+    if: kind = c.LMX_KIND_METHOD
+        return: 1
+    if: kind = c.LMX_DOMAIN_KIND_CALLABLE
         return: 1
     return: 0
 
@@ -446,6 +450,8 @@ fn: lmx_graph_copy_many_owned (@@: Lmx sources; size_t: count; @: char dst_chars
             return: LMX_GRAPH_COPY_INVALID
         if: lmx_range_classify(src_arena, (cast: (@: void) sources[r])) = c.LMX_KIND_METHOD
             # A METHOD record is not a Structure and cannot be copied as a root.
+            return: LMX_GRAPH_COPY_INVALID
+        if: lmx_range_classify(src_arena, (cast: (@: void) sources[r])) = c.LMX_DOMAIN_KIND_CALLABLE
             return: LMX_GRAPH_COPY_INVALID
         outs[r]: 0
         r: r + 1U

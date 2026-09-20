@@ -72,6 +72,20 @@ The two admission conditions established in the opening serve different purposes
 
 Analytical compatibility concerns the receiving expression's particular use of the candidate. One expression's requirements do not establish the candidate's suitability for all other expressions. Checking the available requirements does not certify unknown properties.
 
+<a id="analytical-tree"></a>
+### 7.1. Tree-based checking
+
+Analytical checking traverses the receiving expression's tree to establish which named paths it uses on the argument. The candidate must provide the corresponding paths and satisfy the requirements of their use. Unused fields of the reference value do not become requirements merely by being present.
+
+Matching follows named paths, including nested accesses. Reordering differently named fields while preserving those paths and their values does not change the analytical result. Matching physical field indices between candidate and reference value is not required. Repeated names follow the [occurrence-selection rule](#fields): a permutation that changes the selected occurrence may change the meaning of the path.
+
+An absence of used paths means an absence of the corresponding structural requirements. It does not waive the mandatory runtime validation established in the opening.
+
+<a id="graph-tests"></a>
+### 7.2. Executing tests on the graph
+
+Runtime validation is to use an interpreter that executes the receiving expression's unit tests on the graph against the candidate. Analytical traversal establishes structural compatibility; the interpreter executes the specified behavioral checks. Together, these stages determine candidate admission.
+
 <a id="execution"></a>
 ## 8. Data and execution
 

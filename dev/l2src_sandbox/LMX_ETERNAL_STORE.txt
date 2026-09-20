@@ -1,6 +1,8 @@
 LMX_ETERNAL_STORE — storage for `independent: const: immutable` branches (LMX-ETERNAL-R0-44D)
 Written 20.09.2026 by deepseek, BEFORE any edit, as the durable form of the claim sent to Codex
-under 44D.  Status: proposal.  No kernel file has been changed for it yet.
+under 44D.  Status: ACCEPTED AND LANDED -- see the closing section, which records what the
+kernel actually does and every place it departs from the proposal below.  The body of this
+document is kept as written, because the reasoning is what the code is answerable to.
 
 THE INVARIANT (author's wording, as relayed)
   Branches qualified `independent: const: immutable` are translation-known, stored by Root Thread
@@ -96,3 +98,70 @@ OPEN QUESTIONS PUT TO CODEX (before any edit)
   3. (answered in this document's evidence section) is "closed under reference" the intended
      semantics?  The corpus says yes; if a branch must be able to reference arena state, the design
      changes shape.
+
+WHAT LANDED (20.09.2026), AND WHERE IT DEPARTS FROM THE PROPOSAL ABOVE
+  A) AS PROPOSED.  Two fields on LmxArena: the non-owning store link and the role flag.  Open
+     question 1 is answered -- two fields, not one role word.
+  B) SMALLER, AND THE DIFFERENCE IS DELIBERATE.  lmx_perm.lm1 has exactly five functions:
+     lmx_perm_open(store), lmx_perm_close(store), lmx_perm_bind(arena, store),
+     lmx_perm_store_of(arena), lmx_perm_is_store(arena).  There is NO lmx_perm_contains and NO
+     lmx_perm_classify -- the qualified type of a branch is decided by membership in the store's
+     ranges, and lmx_range_classify and friends already ask that.  A wrapper would be a second
+     way to ask one question, and the header says why that is harmful rather than merely
+     redundant.  The signatures also lost their root argument: a store IS an arena, so nothing
+     in lmx_perm needs to know what an LmxRoot is.
+  C) THE FALLBACK LANDED; ONE PROPOSED GC EDIT DID NOT, BECAUSE IT PROVED UNNECESSARY.
+     lmx_range_classify, lmx_range_type_of and lmx_range_stride each gained the fallback;
+     lmx_gc_collect gained the permanent short-circuit; lmx_copy_is_terminal gained
+     store-resident => 1.  But lmx_gc_mark_value needs NO membership test: because
+     lmx_range_pool stays LOCAL by contract, its existing early return already answers "an
+     address this arena never handed out" for every store address, at no per-edge cost.  The
+     comment at lmx_gc.lm1:276-283 carries that reasoning, so the absence is a decision.
+  D) ATTACHMENT LANDED EARLIER THAN PROPOSED, AND ELSEWHERE.  R0's arena binds in lmx_root_open
+     as proposed.  A child's arena binds in lmx_child_create BEFORE THE MARK -- not in
+     lmx_child_handoff -- so that a revert on any later failure cannot leave a half-bound arena
+     behind, and so that the copy itself can resolve store addresses while it runs.
+
+  BEYOND THE PROPOSAL, found while landing it:
+    * A CLOSED STORE IS NOT A STORE.  lmx_perm_close releases the store and clears its role, but
+      nothing clears the link in the arenas bound to it, and there is no unbind anywhere -- a
+      store deliberately does not know its binders, so no walk at close is possible.  The link
+      is therefore made to answer for itself: lmx_perm_store_of and the three range fallbacks
+      follow it only while the target still carries the role.  Lifecycle, not classification:
+      it asks whether the store still EXISTS, never what a value is.
+    * THE SOURCE ARENA IS THE ARENA THE SOURCE LIVES IN, and lmx_root.h.lm1 now states it on
+      lmx_root_create.  Two red tests on 20.09 were violations of exactly that rule, and neither
+      presented as one: the first as a service failure, the second as an access violation.
+
+  OPEN QUESTION 2 is answered: the is_terminal change is at lmx_graph_copy_owned.lm1:194 and
+  uses the pool pair, not a new constant.  OPEN QUESTION 3 stands as answered above -- the
+  corpus says closed under reference.
+
+WHAT IS MEASURED, AND WHERE
+  tests/lmx_root_selftest.lm1:216-240 -- the single-runtime half: resolvable from R0's arena and
+  not owned by it, type and stride agreeing with the store's, node = 0, the cell reading 7, a
+  permanent root copying to the same address, a mutable control still copying.
+  tests/lmx_perm_selftest.lm1 -- the half nothing asked, and the one where a wrong answer is a
+  leak rather than a refusal: resolution from a SECOND Message of the same runtime; two runtimes
+  in one process isolated in both directions, including a live store refusing an arena already
+  bound elsewhere; the store's bytes unchanged across collections of two different bound arenas,
+  with the instrument FIRST shown able to see a change at all; an eternal root returning itself
+  rather than a silent OK with a null; an ordinary address of a third arena still refused with a
+  null out; an eternal callable ready, resolved and run from another Message and refused to
+  another runtime; merge sharing an eternal cell instead of cloning it, with the destination not
+  coming to own it.
+  tests/lmx_perm_child_selftest.lm1 -- creation from a store-bound source, and the release pair
+  in both directions.
+
+WHAT IS NOT DONE, EXACTLY
+  * THE TRANSLATOR STILL DOES NOT PASS THE COUNT.  l2trans.lm1:9168 already computes
+    l2_ns_eternal[root] = l2_ebr_n, and l2trans.lm1:11913 still emits lmx_root_open(..., 0U, 0U).
+    Until that value is passed, no .lm2 program populates the store and every measurement above
+    builds its branches by hand.  This is the next symbol, and it is an emission change, not a
+    kernel one.
+  * lmx_service_post does not bind a letter's arena.  It performs no copy today (only
+    lmx_arena_attach), so nothing is wrong yet; a letter that ever copied from a bound source
+    would need the bind first, and that is the condition to watch, not a defect to fix now.
+  * The three range fallbacks' role guard is held for consistency with lmx_perm_store_of but is
+    NOT independently measured: a released store answers nothing anyway, because its own index
+    is gone.  The store_of guard itself IS measured, as a red-then-green pair.

@@ -1,0 +1,314 @@
+predef: "l2src/lmx_perm.h.lm1"
+predef: "l2src/lmx_gc.lm1"
+predef: "l2src/lmx_turn.lm1"
+predef: "l2src/lmx_child.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_manager.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_merge_owned.lm1"
+predef: "l2src/lmx_call.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# lmx_perm_selftest.lm1 -- the eternal-R0 boundary, measured (LMX-ETERNAL-R0-44D,
+# LMX_ETERNAL_STORE.txt "WHAT THE REPLACEMENT TEST MUST ASSERT").
+#
+# lmx_root_selftest.lm1:216-240 already measures the single-runtime half: the branch is
+# resolvable from R0's arena, R0's arena does not own it, type and stride agree with the
+# store's, a permanent root copies to the SAME address and a mutable control still copies.
+# This file measures the half nothing asked, and it is the half where a wrong answer is a
+# leak rather than a refusal:
+#
+#   FROM ANOTHER MESSAGE.  The whole point of the fallback is that a pointer into the store
+#   resolves from ANY Message with no per-Message classifier list.  One bound arena proves
+#   nothing about a second one.
+#
+#   TWO RUNTIMES IN ONE PROCESS.  There is no global registry and no process-wide store, so
+#   a second runtime's arena must answer NOTHING about the first runtime's branch -- not
+#   "some kind", not "not mine to free", nothing -- and a live store must refuse to adopt an
+#   arena that already answers to another.  This is the check that would catch the design
+#   silently becoming process-global.
+#
+#   GC DOES NOT TOUCH THE STORE, in the strong form.  Survival-by-reachability is the property
+#   the author rejected, so survival is not evidence.  What is evidence is that the store's
+#   bytes are IDENTICAL across collections of two different bound arenas -- a visit would have
+#   to write a chunk's mark stamp, and a stamp is a byte.
+#
+#   AND WHAT MUST STILL FAIL.  An ordinary address of an arena that is neither the source nor
+#   its store is refused by the copy, with a null out and a status that says so; a permanent
+#   root is NOT refused, and does not come back as a silent OK with a null.
+
+# What an ETERNAL callable runs.  Nothing about it is special: the point is only that the
+# descriptor reaching it lives in the store and is found from a different Message.
+fn: pm_entry (@: Lmx node) int
+    if: node = 0
+        return: 0
+return: 11
+
+sub: pm_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: pm_check
+
+# Every byte the arena's blocks hold.  A GC pass that VISITED the store would stamp a chunk's
+# mark, and the stamp lives in one of these blocks -- so an unchanged sum is the strong form of
+# "never visited", the one that does not rely on the branch merely surviving.
+fn: pm_bytes (@: LmxArena arena) unsigned
+    @: LmxArenaBlock node
+    @: char p
+    unsigned: sum 0U
+    size_t: i
+    if: arena = 0
+        return: 0U
+    node: arena\blocks
+    while: node != 0
+        if: node\base != 0 && node\n != 0U
+            p: (cast: (@: char) node\base)
+            i: 0U
+            while: i < node\n
+                sum: sum + (cast: (unsigned) p[i])
+                i: i + 1U
+            ---
+        ---
+        node: node\next
+    ---
+return: sum
+
+# A Message just complete enough for lmx_gc_collect to run over its arena: a record, an object
+# that holds the turns, a mailbox, a schedule record and a live graph.  Nothing here is about
+# the store -- it is the machinery a collection needs before it can be asked to leave the store
+# alone.
+fn: pm_world (@: LmxArena arena; @: LmxPost mail; @@: LmxThread out_thread) int
+    @: LmxMsg message
+    @: LmxThread thread
+    @: LmxSchedule slot
+    @: Lmx graph
+    message: (cast: (@: LmxMsg) lmx_arena_take(arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    thread: (cast: (@: LmxThread) lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    slot: (cast: (@: LmxSchedule) lmx_arena_take(arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    graph: lmx_node_new_owned(arena)
+    if: message = 0 || thread = 0 || slot = 0 || graph = 0
+        return: 0
+    if: lmx_arena_refs_open_owned(arena, graph, 2U) != 0
+        return: 0
+    ---
+    message\running: 1
+    message\success: 0
+    message\handoff_ready: 0
+    message\graph: graph
+    message\index: 1U
+    if: lmx_post_init(arena, mail) != c.LMX_POST_OK
+        return: 0
+    if: lmx_thread_attach(thread, message, mail, slot) != c.LMX_THREAD_OK
+        return: 0
+    if: lmx_schedule_init(slot, arena, (cast: (@: void) thread), 8U) != c.LMX_SCHEDULE_OK
+        return: 0
+    ---
+    \out_thread: thread
+return: 1
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    # Runtime A: its store, the arena that stands for R0's, and one more bound arena that
+    # stands for a child Message of the same runtime.
+    LmxArena: store_a
+    LmxArena: a_main
+    LmxArena: a_child
+    # Runtime B: a SECOND store in the SAME process, and one arena bound to it.
+    LmxArena: store_b
+    LmxArena: b_main
+    # And an arena bound to nothing at all.
+    LmxArena: plain
+    LmxPost: mail_main
+    LmxPost: mail_child
+    @: LmxThread t_main 0
+    @: LmxThread t_child 0
+    @: Lmx branch 0
+    @: Lmx mutable 0
+    @: Lmx foreign 0
+    @: Lmx copied 0
+    @: void cell 0
+    @: LmxCallable e_info 0
+    @: LmxMethod e_meth 0
+    @: Lmx e_call 0
+    @: Lmx container 0
+    @: Lmx merged 0
+    @@: Lmx operands 0
+    unsigned: own_before 0U
+    unsigned: before 0U
+    unsigned: between 0U
+    unsigned: after 0U
+    int: failures
+    if: counts = 0
+        return: 2
+    ---
+    memset((cast: (@: void) (@ store_a)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ a_main)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ a_child)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ store_b)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ b_main)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ plain)), 0, c.sizeof(c.LmxArena))
+
+    # 1. Two runtimes, side by side, and one arena outside both.
+    pm_check(counts, lmx_perm_open(@ store_a) = 0, "runtime A's store did not open")
+    pm_check(counts, lmx_perm_open(@ store_b) = 0, "runtime B's store did not open")
+    pm_check(counts, lmx_arena_open(@ a_main) = 0 && lmx_arena_open(@ a_child) = 0, "runtime A's arenas did not open")
+    pm_check(counts, lmx_arena_open(@ b_main) = 0 && lmx_arena_open(@ plain) = 0, "runtime B's arena or the unbound one did not open")
+    pm_check(counts, lmx_perm_bind(@ a_main, @ store_a) = 0 && lmx_perm_bind(@ a_child, @ store_a) = 0, "runtime A's arenas did not bind")
+    pm_check(counts, lmx_perm_bind(@ b_main, @ store_b) = 0, "runtime B's arena did not bind")
+
+    # 2. The eternal branch itself, built IN the store: a Structure with one slot holding 7.
+    branch: lmx_node_new_owned(@ store_a)
+    cell: lmx_int_new_owned(@ store_a)
+    pm_check(counts, branch != 0 && cell != 0, "the eternal branch was not built")
+    if: branch = 0 || cell = 0
+        free(counts)
+        return: 2
+    ---
+    pm_check(counts, lmx_arena_refs_open_owned(@ store_a, branch, 1U) = 0, "the eternal branch did not open its slot")
+    lmx_int_store_known(cell, 7)
+    lmx_arena_ref_store(branch, 0U, cell)
+    pm_check(counts, branch\node = 0, "an independent branch root has a lexical parent")
+
+    # 3. OWNERSHIP IS NOT RESOLVABILITY, and the second bound arena is the point: the fallback
+    #    has to answer from ANY Message of the runtime, not just from the one that opened it.
+    pm_check(counts, lmx_range_pool(@ store_a, (cast: (@: void) branch)) != 0, "the store does not own its own branch")
+    pm_check(counts, lmx_range_pool(@ a_main, (cast: (@: void) branch)) = 0, "a bound arena claims to OWN the branch")
+    pm_check(counts, lmx_range_pool(@ a_child, (cast: (@: void) branch)) = 0, "a second bound arena claims to OWN the branch")
+    pm_check(counts, lmx_range_classify(@ a_main, (cast: (@: void) branch)) = c.LMX_KIND_STRUCT, "the branch does not resolve from the runtime's first arena")
+    pm_check(counts, lmx_range_classify(@ a_child, (cast: (@: void) branch)) = c.LMX_KIND_STRUCT, "THE BRANCH DOES NOT RESOLVE FROM ANOTHER MESSAGE OF THE SAME RUNTIME")
+    pm_check(counts, lmx_range_type_of(@ a_child, (cast: (@: void) branch)) = lmx_range_type_of(@ store_a, (cast: (@: void) branch)), "the second arena and the store disagree on the branch's type")
+    pm_check(counts, lmx_range_stride(@ a_child, (cast: (@: void) branch)) = lmx_range_stride(@ store_a, (cast: (@: void) branch)), "the second arena and the store disagree on the branch's stride")
+
+    # 4. TWO RUNTIMES DO NOT LEAK INTO EACH OTHER.  Nothing here is process-global, so B's arena
+    #    must answer NOTHING about A's branch, and a live store must refuse an arena that
+    #    already answers to another.
+    pm_check(counts, lmx_range_classify(@ b_main, (cast: (@: void) branch)) = c.LMX_KIND_NONE, "ANOTHER RUNTIME'S ARENA RESOLVES THIS RUNTIME'S BRANCH")
+    pm_check(counts, lmx_range_pool(@ b_main, (cast: (@: void) branch)) = 0, "another runtime's arena claims the branch")
+    pm_check(counts, lmx_range_classify(@ plain, (cast: (@: void) branch)) = c.LMX_KIND_NONE, "an arena bound to no store resolves a store address")
+    pm_check(counts, lmx_perm_bind(@ a_main, @ store_b) != 0, "an arena bound to one live store was adopted by another")
+    pm_check(counts, lmx_perm_store_of(@ a_main) = (@ store_a), "the refused bind moved the arena to the other store")
+
+    # 5. COPY.  A permanent value is the SAME physical pointer, a mutable one of the same shape
+    #    is copied, an eternal lexical parent is kept by address, and an ordinary address of a
+    #    third arena is refused -- with a null out, never a silent OK.
+    pm_check(counts, lmx_copy_is_terminal(@ a_main, (cast: (@: void) branch)) = 1, "a store-resident value is not a copy terminal")
+    pm_check(counts, lmx_copy_is_terminal(@ b_main, (cast: (@: void) branch)) = 0, "another runtime's value is a copy terminal here")
+    copied: 0
+    pm_check(counts, lmx_graph_copy_owned(branch, 0, @ a_main, @ a_child, @ copied) = c.LMX_GRAPH_COPY_OK, "a permanent root was not copied")
+    pm_check(counts, copied = branch, "AN ETERNAL ROOT CAME BACK AS SOMETHING OTHER THAN ITSELF")
+    mutable: lmx_node_new_owned(@ a_main)
+    pm_check(counts, mutable != 0, "the mutable control was not built")
+    if: mutable != 0
+        mutable\node: branch
+        copied: 0
+        pm_check(counts, lmx_graph_copy_owned(mutable, 0, @ a_main, @ a_child, @ copied) = c.LMX_GRAPH_COPY_OK, "a mutable Structure with an eternal parent did not copy")
+        pm_check(counts, copied != 0 && copied != mutable, "the mutable control was retained instead of copied")
+        if: copied != 0
+            pm_check(counts, copied\node = branch, "the copy's lexical parent is not the eternal parent's own address")
+            pm_check(counts, lmx_range_pool(@ a_child, (cast: (@: void) copied\node)) = 0, "the destination took ownership of the eternal parent")
+        ---
+    ---
+    foreign: lmx_node_new_owned(@ plain)
+    pm_check(counts, foreign != 0, "the foreign control was not built")
+    copied: 0
+    pm_check(counts, lmx_graph_copy_owned(foreign, 0, @ a_main, @ a_child, @ copied) != c.LMX_GRAPH_COPY_OK, "an ordinary address of a third arena was accepted as a root")
+    pm_check(counts, copied = 0, "a refused copy still handed back a root")
+
+    # 5b. CALL, across the same boundary.  lmx_domain_kind IS lmx_range_classify
+    #     (lmx_implements.lm1:28-29), so a callable whose descriptor lives in the store is found
+    #     from any Message of the runtime -- and from no Message of another one.
+    e_info: lmx_callable_new_owned(@ store_a)
+    e_meth: lmx_method_new_owned(@ store_a)
+    e_call: lmx_node_new_owned(@ store_a)
+    pm_check(counts, e_info != 0 && e_meth != 0 && e_call != 0, "the eternal callable was not built")
+    if: e_info = 0 || e_meth = 0 || e_call = 0
+        free(counts)
+        return: 2
+    ---
+    pm_check(counts, lmx_arena_refs_open_owned(@ store_a, e_call, 1U) = 0, "the eternal callable did not open its slot")
+    e_meth\addr: (cast: (LmxEntry) pm_entry)
+    e_meth\sig: 0U
+    e_info\method: e_meth
+    lmx_arena_ref_store(e_call, 0U, (cast: (@: void) e_info))
+    pm_check(counts, lmx_domain_kind(@ a_child, (cast: (@: void) e_info)) = c.LMX_DOMAIN_KIND_CALLABLE, "an eternal callable record is not kind CALLABLE from another Message")
+    pm_check(counts, lmx_call_ready(@ a_child, e_call) = c.LMX_CALL_OK, "AN ETERNAL CALLABLE IS NOT READY FROM ANOTHER MESSAGE")
+    pm_check(counts, lmx_call_method(@ a_child, e_call) = e_meth, "the eternal callable's METHOD is not the store's own descriptor")
+    pm_check(counts, lmx_call0(@ a_child, e_call) = 11, "an eternal callable did not run from another Message")
+    pm_check(counts, lmx_call_ready(@ b_main, e_call) != c.LMX_CALL_OK, "ANOTHER RUNTIME CALLED THIS RUNTIME'S ETERNAL CALLABLE")
+
+    # 5c. MERGE, which is the SAME traversal (lmx_merge_owned.lm1:122 calls the copier), so the
+    #     boundary it inherits is the one measured above: an eternal cell is SHARED into the
+    #     result, and the destination does not come to own it.
+    container: lmx_node_new_owned(@ a_main)
+    operands: (cast: (@@: Lmx) calloc(1U, c.sizeof(@: void)))
+    pm_check(counts, container != 0 && operands != 0, "the merge container was not built")
+    if: container = 0 || operands = 0
+        free(counts)
+        return: 2
+    ---
+    operands[0]: branch
+    merged: 0
+    pm_check(counts, lmx_merge_owned(operands, 1U, 0, container, 0, @ a_main, @ a_child, @ merged) = c.LMX_MERGE_OK, "merging an eternal operand was refused")
+    pm_check(counts, merged != 0 && merged != branch, "the merge result is not a new structure")
+    if: merged != 0
+        pm_check(counts, lmx_arena_ref_value(merged, 0U) = cell, "MERGE CLONED AN ETERNAL CELL INSTEAD OF SHARING IT")
+        pm_check(counts, lmx_range_pool(@ a_child, lmx_arena_ref_value(merged, 0U)) = 0, "the merge destination took ownership of an eternal cell")
+    ---
+    free((cast: (@: void) operands))
+
+    # 6. GC NEVER VISITS THE STORE.  Two collections, over two DIFFERENT arenas bound to the same
+    #    store, and the store's bytes must be identical across both -- a visit would stamp a
+    #    chunk's mark, and a stamp is a byte.
+    pm_check(counts, pm_world(@ a_main, @ mail_main, @ t_main) != 0, "runtime A's first Message was not built")
+    pm_check(counts, pm_world(@ a_child, @ mail_child, @ t_child) != 0, "runtime A's second Message was not built")
+    if: t_main = 0 || t_child = 0
+        free(counts)
+        return: 2
+    ---
+    # THE INSTRUMENT FIRST.  An unchanged sum means nothing unless a changed one is possible,
+    # so the collected arena's OWN bytes are measured across its own pass: the mark stamp is
+    # written there, and if that sum did not move, pm_bytes would be blind and every store
+    # check below would be vacuous.
+    own_before: pm_bytes(@ a_child)
+    before: pm_bytes(@ store_a)
+    pm_check(counts, before != 0U, "the store holds no bytes to compare")
+    pm_check(counts, lmx_gc_collect(@ a_child, t_child) = c.LMX_GC_OK, "the collection over the second arena did not run")
+    pm_check(counts, pm_bytes(@ a_child) != own_before, "THE INSTRUMENT IS BLIND: a collection left even its OWN arena's bytes unchanged")
+    between: pm_bytes(@ store_a)
+    pm_check(counts, lmx_gc_collect(@ a_main, t_main) = c.LMX_GC_OK, "the collection over the first arena did not run")
+    after: pm_bytes(@ store_a)
+    pm_check(counts, between = before, "A COLLECTION OVER A BOUND ARENA WROTE INTO THE STORE")
+    pm_check(counts, after = before, "A SECOND COLLECTION OVER A BOUND ARENA WROTE INTO THE STORE")
+    pm_check(counts, lmx_int_value_known(lmx_arena_ref_value(branch, 0U)) = 7, "the eternal branch's cell did not survive the collections")
+    pm_check(counts, lmx_range_classify(@ a_child, (cast: (@: void) branch)) = c.LMX_KIND_STRUCT, "the branch stopped resolving after the collections")
+
+    # And the other direction: a pass asked to collect the store ITSELF is a no-op, not a sweep.
+    pm_check(counts, lmx_gc_collect(@ store_a, t_main) = c.LMX_GC_OK, "a collection over the store did not return OK")
+    pm_check(counts, pm_bytes(@ store_a) = before, "A COLLECTION ASKED TO SWEEP THE STORE TOUCHED IT")
+
+    # 7. Teardown, in the order the lifecycle requires: the ordinary arenas first, then each
+    #    store exactly once through its own close.
+    pm_check(counts, lmx_arena_release(@ a_child) = 0 && lmx_arena_release(@ a_main) = 0, "runtime A's arenas did not release")
+    pm_check(counts, lmx_arena_release(@ b_main) = 0 && lmx_arena_release(@ plain) = 0, "runtime B's arena or the unbound one did not release")
+    pm_check(counts, lmx_perm_close(@ store_a) = 0 && lmx_perm_close(@ store_b) = 0, "a store did not close")
+
+    failures: counts[1]
+    c.printf("lmx_perm checks=%d failures=%d\n", counts[0], failures)
+    free(counts)
+return: failures

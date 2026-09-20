@@ -70,6 +70,33 @@ Use the real sender label, such as Grok, Grok_bot or Claude-deepseek. This is a 
 
 ## Incoming Claude Code
 
+### Mandatory reply route to Codex
+
+Every task sent by Codex must name the return channel literally. Do not write
+only “reply to the sender” or “report back”. Use the applicable instruction:
+
+```text
+For deepseek, openrouter, or fable:
+Ответить Codex обязательно через SendMessage(to="lmx_uds", message="REPLY <REQUEST_ID> ...полный содержательный ответ..."). Обычный ответ в своём окне чата не считается доставкой Codex.
+
+For Grok:
+Ответить Codex обязательно командой из C:\Nyasha_Planet\LMX:
+python claude_chat/uds.py --name lmx_uds send "From Grok. REPLY <REQUEST_ID>. ...полный содержательный ответ..."
+Обычный ответ в окне Grok не считается доставкой Codex.
+```
+
+When `lmx_uds` receives either callback, it must complete the final hop instead
+of leaving the answer only in its own transcript:
+
+```powershell
+python claude_chat/codex_inbound.py send --sender <actual-peer-name> --request-id <REQUEST_ID> "<full substantive reply>"
+```
+
+The `codex_inbound.py` command must succeed before `lmx_uds` says that Codex
+received the answer. `lmx_uds` also keeps the same text in its native transcript
+for audit and recovery. A peer's ordinary chat response, a pipe write receipt,
+or the relay's promise to forward is not delivery to Codex.
+
 Reuse the existing relay:
 
 ```powershell
@@ -78,7 +105,7 @@ python claude_chat/uds.py --name lmx_uds send "From Grok_bot, request UNIQUE-COD
 python claude_chat/chat_status.py read --name lmx_uds --contains UNIQUE-CODE
 ```
 
-The external sender reads the real incoming peer reply, not merely the relay's promise to send. For unsolicited replies to Codex, explicitly ask the Claude recipient to execute codex_inbound.py with the request code. For a reply to Bot, use its webhook only after applying the handler below; otherwise do not promise automatic delivery.
+The external sender reads the real incoming peer reply, not merely the relay's promise to send. For Codex-originated work, the mandatory route above applies: the peer returns to `lmx_uds`, and `lmx_uds` executes `codex_inbound.py`. For a reply to Bot, use its webhook only after applying the handler below; otherwise do not promise automatic delivery.
 
 Inside a Claude session, use its tools directly:
 

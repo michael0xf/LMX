@@ -11948,7 +11948,7 @@ return: 0
 fn: l2_emit_library_wrappers () int
     int: i 0
     int: j
-    if: fputs("\n@: LmxMsg l2_library_message 0\n@: Lmx l2_library_unit 0\nint: l2_library_opened 0\n\nfn: l2_library_open () int\n    LmxRoot: l2_library_root\n    if: l2_library_opened != 0\n        return: 0\n    memset((cast: (@: void) (@ l2_library_root)), 0, c.sizeof(c.LmxRoot))\n    if: lmx_root_open(@ l2_library_root, l2_program_entry, 5000U, 0U, 0U) != c.LMX_ROOT_OK\n        return: 1\n    l2_program_arena: lmx_root_arena(@ l2_library_root)\n    if: l2_program_arena = 0\n        lmx_root_close(@ l2_library_root)\n        return: 1\n    if: lmx_root_turn(@ l2_library_root, lmx_clock_ticks()) != c.LMX_ROOT_OK\n        lmx_root_close(@ l2_library_root)\n        return: 1\n    l2_library_message: lmx_root_message(@ l2_library_root)\n    if: l2_library_message = 0\n        lmx_root_close(@ l2_library_root)\n        return: 1\n    # TODO(kernel): no act returning the program-unit Lmx from root/message (see lmx_root.h.lm1 / lmx_message.h.lm1).\n    # Need approved act for l2_library_unit; also need persistent LmxRoot storage (by-value aggregate is illegal at module scope — currently local, so open cannot stay open across calls).\n    l2_library_unit: 0\n    if: l2_library_unit = 0\n        lmx_root_close(@ l2_library_root)\n        l2_library_message: 0\n        return: 1\n    l2_library_opened: 1\n    return: 0\n\n", l2_out) < 0
+    if: c.fprintf(l2_out, "\n@: LmxMsg l2_library_message 0\n@: Lmx l2_library_unit 0\nint: l2_library_opened 0\n\nfn: l2_library_open () int\n    LmxRoot: l2_library_root\n    if: l2_library_opened != 0\n        return: 0\n    memset((cast: (@: void) (@ l2_library_root)), 0, c.sizeof(c.LmxRoot))\n    if: lmx_root_open(@ l2_library_root, l2_program_entry, 5000U, %uU, 0U) != c.LMX_ROOT_OK\n        return: 1\n    l2_program_arena: lmx_root_arena(@ l2_library_root)\n    if: l2_program_arena = 0\n        lmx_root_close(@ l2_library_root)\n        return: 1\n    if: lmx_root_turn(@ l2_library_root, lmx_clock_ticks()) != c.LMX_ROOT_OK\n        lmx_root_close(@ l2_library_root)\n        return: 1\n    l2_library_message: lmx_root_message(@ l2_library_root)\n    if: l2_library_message = 0\n        lmx_root_close(@ l2_library_root)\n        return: 1\n    # TODO(kernel): no act returning the program-unit Lmx from root/message (see lmx_root.h.lm1 / lmx_message.h.lm1).\n    # Need approved act for l2_library_unit; also need persistent LmxRoot storage (by-value aggregate is illegal at module scope — currently local, so open cannot stay open across calls).\n    l2_library_unit: 0\n    if: l2_library_unit = 0\n        lmx_root_close(@ l2_library_root)\n        l2_library_message: 0\n        return: 1\n    l2_library_opened: 1\n    return: 0\n\n", (cast: (unsigned) l2_ebr_n)) < 0
         return: 1
     while: i < l2_m_n
         if: fputs("external:\n", l2_out) < 0
@@ -14283,7 +14283,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: l2_entry_n != 0 && fputs("\n        # DEBT: argc/argv not on LmxCallEntry; formals not threaded\n", l2_out) < 0
         fclose(l2_out)
         return: 1
-    if: fputs(") int\n        @: Lmx unit 0\n        @: Lmx leaf 0\n        @@: void slot 0\n        @: LmxMethod rec 0\n        @: LmxArrayDesc l2_methods 0\n        @@: LmxMethod l2_method_refs 0\n        @: LmxArrayDesc l2_branches 0\n        @@: Lmx l2_branch_refs 0\n        @: Lmx l2_ebr 0\n        @: Lmx l2_fkid 0\n        @: Lmx l2_pst 0\n        @@: void l2_pxp 0\n", l2_out) < 0
+    if: fputs(") int\n        @: Lmx unit 0\n        @: Lmx leaf 0\n        @@: void slot 0\n        @: LmxMethod rec 0\n        @: LmxArrayDesc l2_methods 0\n        @@: LmxMethod l2_method_refs 0\n        @: LmxArrayDesc l2_branches 0\n        @@: Lmx l2_branch_refs 0\n        @: Lmx l2_retained 0\n        @: Lmx l2_ebr 0\n        @: Lmx l2_fkid 0\n        @: Lmx l2_pst 0\n        @@: void l2_pxp 0\n", l2_out) < 0
         fclose(l2_out)
         return: 1
     # Construction-time handles preserve the exact parent of every executable
@@ -14494,10 +14494,22 @@ fn: l2_emit_unit (const: @(char out_path)) int
             return: 1
         i: i + 1
     # The eternal branches. Each root is built with node = 0, which is what
-    # independent means. It then gets TWO references and neither reparents it:
-    # an ordinary declaration-site child of the unit graph, and an entry in the
-    # separate retention array, which never holds a descriptor (SPEC 9.1.4).
+    # independent means. It then gets its references and none of them reparents it:
+    # an ordinary declaration-site child of the unit graph, an entry of the
+    # program's own branch array, and an entry of R0's eternal retention array,
+    # which never holds a descriptor (SPEC 9.1.4).
     if: l2_ebr_n != 0 && c.fprintf(l2_out, "        l2_branches: lmx_array_ref_new_positive_owned(c.LMX_TYPE_ARRAY_OF_LMX, %uU, l2_program_arena)\n        if: l2_branches = 0\n            return: 1\n        l2_branch_refs: (cast: (@@: Lmx) l2_branches\\data)\n", (cast: (unsigned) l2_ebr_n)) < 0
+        fclose(l2_out)
+        return: 1
+    # R0'S RETENTION ARRAY (model 20, lmx_root.h.lm1).  The entry is handed R0's graph
+    # (lmx_thread_dispatch_native: entry(t\message\graph)), and lmx_root_open stored the
+    # array's address in that graph at LMX_ROOT_ETERNAL_SLOT, opened with exactly the number
+    # of reference slots main asked for below -- l2_ebr_n, the translation-known COUNT of
+    # qualified roots (l2_ns_eternal[k] is a root's INDEX in it, never the count).  So the
+    # array is reached by one ordinary reference read; nothing is looked up by name or by
+    # number, no second registry is kept, and nothing here grows at run time: a capacity
+    # that is not the count stops the program.
+    if: l2_ebr_n != 0 && c.fprintf(l2_out, "        l2_retained: lmx_arena_ref_struct(node, c.LMX_ROOT_ETERNAL_SLOT)\n        if: l2_retained = 0\n            return: 1\n        if: l2_retained\\len != %d\n            return: 1\n", l2_ebr_n) < 0
         fclose(l2_out)
         return: 1
     # Separation, checked by the generated program itself: ordinary graph
@@ -14530,16 +14542,16 @@ fn: l2_emit_unit (const: @(char out_path)) int
         # Every owned typed range reachable inside a qualified branch is
         # admitted through the Message classifier. No per-node flag, no
         # name, no registry: the admitted RANGE is the metadata.
-        if: l2_ns_eternal[k] >= 0 && c.fprintf(l2_out, "        # DEBT: nsp %d is IN the permanent store, but not yet in R0's retention array (49U)\n", k) < 0
-            fclose(l2_out)
-            return: 1
         if: l2_ns_parent[k] < 0 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(unit, %uU, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", (cast: (unsigned) (l2_ns_base + l2_ns_rank(k))), k) < 0
             fclose(l2_out)
             return: 1
-        # TWO references to a qualified root and no more: the declaration
-        # site in the unit graph, and one entry of the fixed retention
-        # array. Neither reparents it.
-        if: l2_ns_parent[k] < 0 && l2_ns_eternal[k] >= 0 && c.fprintf(l2_out, "        l2_branch_refs[%uU]: l2_nsp[%d]\n        if: lmx_arena_ref_store(unit, %uU, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n        if: l2_nsp[%d]\\node != 0\n            return: 1\n        l2_ebr%u: l2_nsp[%d]\n", (cast: (unsigned) l2_ns_eternal[k]), k, (cast: (unsigned) (l2_unit_base + l2_m_n + 2 + l2_ns_eternal[k])), k, k, (cast: (unsigned) l2_ns_eternal[k]), k) < 0
+        # The references to a qualified root, and none of them reparents it: the
+        # declaration site in the unit graph, the program's own branch array, and --
+        # the one that RETAINS it -- entry l2_ns_eternal[k] of R0's eternal array.  That
+        # entry is the root's own physical address, stored with the ordinary reference
+        # act and read back; the root stays node = 0.  A member nested in the branch gets
+        # no entry: it is reached through its root.
+        if: l2_ns_parent[k] < 0 && l2_ns_eternal[k] >= 0 && c.fprintf(l2_out, "        l2_branch_refs[%uU]: l2_nsp[%d]\n        if: lmx_arena_ref_store(l2_retained, %uU, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n        if: lmx_arena_ref_value(l2_retained, %uU) != (cast: (@: void) l2_nsp[%d])\n            return: 1\n        if: lmx_arena_ref_store(unit, %uU, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n        if: l2_nsp[%d]\\node != 0\n            return: 1\n        l2_ebr%u: l2_nsp[%d]\n", (cast: (unsigned) l2_ns_eternal[k]), k, (cast: (unsigned) l2_ns_eternal[k]), k, (cast: (unsigned) l2_ns_eternal[k]), k, (cast: (unsigned) (l2_unit_base + l2_m_n + 2 + l2_ns_eternal[k])), k, k, (cast: (unsigned) l2_ns_eternal[k]), k) < 0
             fclose(l2_out)
             return: 1
         if: l2_ns_parent[k] >= 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_nsp[%d], %uU, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n        if: l2_nsp[%d]\\node != l2_nsp[%d]\n            return: 1\n", l2_ns_parent[k], (cast: (unsigned) l2_ns_field_in_parent(k)), k, k, l2_ns_parent[k]) < 0
@@ -14662,7 +14674,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
         if: l2_entry_n != 0 && fputs("int: argc; @@: char argv", l2_out) < 0
             fclose(l2_out)
             return: 1
-        if: fputs(") int\n        LmxRoot: l2_program_root\n        int: process_status 0\n        int: process_result 1\n        memset((cast: (@: void) (@ l2_program_root)), 0, c.sizeof(c.LmxRoot))\n        if: lmx_root_open(@ l2_program_root, l2_program_entry, 5000U, 0U, 0U) != c.LMX_ROOT_OK\n            return: 1\n        l2_program_arena: lmx_root_arena(@ l2_program_root)\n        if: l2_program_arena = 0\n            lmx_root_close(@ l2_program_root)\n            return: 1\n        # DEBT: argc/argv not threaded through LmxCallEntry / lmx_root_turn\n        process_status: lmx_root_turn(@ l2_program_root, lmx_clock_ticks())\n        if: process_status = c.LMX_ROOT_OK\n            process_result: 0\n        ---\n        lmx_root_close(@ l2_program_root)\n        return: process_result\n    end: main\nend: external\n", l2_out) < 0
+        if: c.fprintf(l2_out, ") int\n        LmxRoot: l2_program_root\n        int: process_status 0\n        int: process_result 1\n        memset((cast: (@: void) (@ l2_program_root)), 0, c.sizeof(c.LmxRoot))\n        if: lmx_root_open(@ l2_program_root, l2_program_entry, 5000U, %uU, 0U) != c.LMX_ROOT_OK\n            return: 1\n        l2_program_arena: lmx_root_arena(@ l2_program_root)\n        if: l2_program_arena = 0\n            lmx_root_close(@ l2_program_root)\n            return: 1\n        # DEBT: argc/argv not threaded through LmxCallEntry / lmx_root_turn\n        process_status: lmx_root_turn(@ l2_program_root, lmx_clock_ticks())\n        if: process_status = c.LMX_ROOT_OK\n            process_result: 0\n        ---\n        lmx_root_close(@ l2_program_root)\n        return: process_result\n    end: main\nend: external\n", (cast: (unsigned) l2_ebr_n)) < 0
             fclose(l2_out)
             return: 1
     ---

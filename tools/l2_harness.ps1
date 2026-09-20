@@ -21,6 +21,12 @@
 #   3. RUN THE FIXTURES.  Each one: l2trans .lm2 -> generated .lm1; l1trans that -> .c; gcc; run.
 #      A fixture declares how far it is expected to get, and getting further is as much a failure
 #      as stopping early.
+#   4. A GENERATED PROGRAM THAT USES THE KERNEL is run through a DRIVER
+#      (dev\l2src_sandbox\harness\l2_eternal_driver.lm1).  Its C includes the kernel's headers
+#      and expects the kernel's objects; the driver predefs the kernel's BODIES, so the driver's
+#      one object IS that closure and no link resolver is needed.  The generated C is compiled
+#      UNCHANGED, with two renames on the command line (main, lmx_root_close), so the driver
+#      looks at the very root the generated main opened, after its turn and before its close.
 #
 # NEITHER TRANSLATOR SETS AN EXIT CODE ON A DIAGNOSTIC -- both print and return 0 (measured).  So
 # a step here counts as done only if its OUTPUT FILE was produced, and the printed text is what
@@ -133,6 +139,36 @@ if ($built) {
     exit 1
 }
 
+# ---- 2b. the kernel's headers and the driver of generated programs ----------------------------
+# Generated C says #include "l2src/<unit>.lm1.h": every staged header is translated once, to
+# <out>\headers\l2src\.  The driver is staged NEXT TO l2src\, not inside it: it is not a unit.
+$headers = Join-Path $OutDir 'headers'
+New-Item -ItemType Directory -Force -Path (Join-Path $headers 'l2src') | Out-Null
+$kflags = @('-std=c99', '-I', $root, '-I', (Join-Path $root 'lm1\build'), '-I', $src, '-I', $headers)
+$driverSource = Join-Path $sandbox 'harness\l2_eternal_driver.lm1'
+$driverC = Join-Path $gen 'l2_eternal_driver.c'
+$driverO = Join-Path $gen 'l2_eternal_driver.o'
+$driver = $true
+$made = 0
+foreach ($h in @(Get-ChildItem -LiteralPath (Join-Path $src 'l2src') -File -Filter '*.h.lm1' | Sort-Object Name)) {
+    $base = $h.Name.Substring(0, $h.Name.Length - '.h.lm1'.Length)
+    $target = Join-Path $headers ('l2src\' + $base + '.lm1.h')
+    if (Step-Made ('header.' + $base) $Translator @(('l2src/' + $h.Name), $target) $src $target) { $made++ }
+    else { Add-Row 'FAIL' ('header:' + $base) 'l1trans produced no header; see the log'; $driver = $false }
+}
+if (-not (Test-Path -LiteralPath $driverSource)) { Add-Row 'FAIL' 'build:eternal_driver' 'driver source is missing'; $driver = $false }
+if ($driver) {
+    Copy-Item -LiteralPath $driverSource -Destination (Join-Path $src 'l2_eternal_driver.lm1') -Force
+    if (-not (Step-Made 'build.eternal_driver.translate' $Translator @('l2_eternal_driver.lm1', $driverC) $src $driverC)) {
+        Add-Row 'FAIL' 'build:eternal_driver translate' 'l1trans produced no C; see the log'; $driver = $false
+    }
+}
+if ($driver) {
+    $code = Invoke-Step 'build.eternal_driver.compile' $gcc ($kflags + @('-c', $driverC, '-o', $driverO)) $root
+    if ($code -ne 0 -or -not (Test-Path -LiteralPath $driverO)) { Add-Row 'FAIL' 'build:eternal_driver compile' "gcc exit $code"; $driver = $false }
+}
+if ($driver) { Add-Row 'OK' 'build:eternal_driver' ($made.ToString() + ' kernel headers; the driver object is the kernel closure') }
+
 # ---- 3. the fixtures ------------------------------------------------------------------------
 # `Expect` says how far this fixture is supposed to get, and each value is a claim about the
 # translator, not about this script:
@@ -141,47 +177,116 @@ if ($built) {
 #   translates-with-debt -- the whole translator chain succeeds, AND the generated L1 is then
 #                           read: every string in Absent must be GONE from it and every string
 #                           in Debt must still be THERE.  This is for a gap that no longer stops
-#                           the toolchain but is not fixed, and the asymmetry is the point.
+#                           the toolchain but is not fixed, and the asymmetry is the point.  No
+#                           row uses it today; the kind stays for the next such gap.
+#   eternal-runs         -- a program with `independent: const: immutable` branches.  The
+#                           generated L1 is read (Absent / Debt, as above -- here Debt is simply
+#                           what must be there), and then the program RUNS under the driver,
+#                           which is given Args: the number of roots and facts about them (the
+#                           driver's header lists the words).  Exit 0 or the row is red.
 #
-# WHY THIS FIXTURE READS THE GENERATED L1 AND NOT AN EXIT CODE.  A program whose eternal
-# branch sits in the ordinary Message arena compiles and exits 0 exactly like one whose branch
-# is in the permanent store: the difference is WHICH ARENA OWNS THE ADDRESS, and no exit code
-# can see it.  So this fixture names both sides.  Absent are the strings that meant the old
-# world; Debt is what must still be there, and it is written to be SPECIFIC -- the first
-# version of this row asked only for "lmx_node_new_owned(l2_program_arena)" and passed while
+# WHY THESE ROWS READ THE GENERATED L1 AS WELL AS RUN IT.  A program whose eternal branch sits
+# in the ordinary Message arena compiles and exits 0 exactly like one whose branch is in the
+# permanent store: the difference is WHICH ARENA OWNS THE ADDRESS.  The driver sees that from
+# outside; the text pins HOW it came about -- and both are written to be SPECIFIC.  The first
+# version of the text row asked only for "lmx_node_new_owned(l2_program_arena)" and passed while
 # the emission had already moved, because the PROGRAM UNIT is built with that same call and
 # always will be.  A needle that matches a line which is correct forever measures nothing.
 #
-# The rows now pin, by exact text: the eternal root, its reference slots and its cells built in
+# The text pins: the eternal root, its reference slots and its cells built in
 # lmx_perm_store_of(l2_program_arena); the program unit still built in l2_program_arena, which
-# is the same-shape mutable control and must NOT move; and the one debt that genuinely remains,
-# the branch not yet entered in R0's retention array.
+# is the same-shape mutable control and must NOT move; R0's eternal array sized with the COUNT
+# of roots in lmx_root_open (FABLE-L2-R0-RETENTION-20260920-01 -- the method capacity beside it
+# stays 0U, that contract is not this one); the array reached by one reference read from the
+# graph the entry is handed; and each root stored into its own entry by its physical address.
+# Forbidden: the old world's strings, the 49U debt line, and the unsized lmx_root_open.
+#
+# The run proves, on the GENERATED program and from outside it: the capacity is the count and
+# not zero; R0's graph holds the array's address; the array and every root are owned by the
+# store, are Structures by R0's ranges, are not owned by R0's arena, and have node = 0; the
+# declared values identify each entry as THAT branch, in lexical order; a reference field that
+# names a branch IS the retained root's address and a cross-reference IS the other branch's
+# member; a collection over R0's arena -- instrument first -- leaves the store byte for byte and
+# every entry the same physical root; and the invariants still hold after a further turn.
 #
 # WHAT THIS STILL DOES NOT PROVE, exactly: that the generated branch classifies from a SECOND
-# bound Message arena, that lmx_range_pool is null there, and that a collection leaves the
-# store's bytes alone.  Those three are proven for the store itself by
-# dev/l2src_sandbox/tests/lmx_perm_selftest.lm1 (60 checks), but not yet on a GENERATED
-# program, and the reason is mechanical rather than semantic: generated C includes
-# l2src/<unit>.lm1.h and must link the kernel's resolved object closure, so running one needs
-# the symbol-by-symbol resolver that tools/build_l2src.ps1 already has at Resolve-Link. Sharing
-# that resolver -- not copying it -- is the next step, and until it exists this row says what
-# it checked and no more.
+# bound Message arena (dev/l2src_sandbox/tests/lmx_perm_selftest.lm1 and
+# tests/lmx_walk_perm_selftest.lm1 prove that for the store, not on a generated program: a
+# generated program has no second Message yet).  And one thing the driver PRINTS rather than
+# asserts, because it is a debt of the entry and not of retention: a further turn of R0 runs
+# the generated entry AGAIN, which builds the branches again in the store and republishes new
+# roots.  The generated main takes exactly one turn, so it is latent today.
+#
+# Sharing tools/build_l2src.ps1's Resolve-Link with this script is still the way to run a
+# generated program against the kernel's separate OBJECTS; the driver does not replace that, it
+# makes the question answerable before it exists.
 $fixtures = @(
     [pscustomobject]@{ Name = 'entry_return7.lm2'; Expect = 'runs'; Exit = 7; Needle = ''; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'entry_ret_tr_bad.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'unsupported body'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_eternal_branch.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+    [pscustomobject]@{ Name = 'unit_eternal_branch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('1', 'size', '0', '0', '7');
         Absent = @('lmx_owned_ranges',
                    'DEBT: eternal ranges/bootstrap-admit absent in new kernel',
                    'DEBT: eternal bootstrap-admit / eternal-ranges absent',
                    'DEBT: eternal array bootstrap-admit / eternal-ranges absent',
-                   'l2_nsp[0]: lmx_node_new_owned(l2_program_arena)');
+                   'l2_nsp[0]: lmx_node_new_owned(l2_program_arena)',
+                   'not yet in R0''s retention array',
+                   'l2_program_entry, 5000U, 0U, 0U)');
         Debt = @('predef: "l2src/lmx_perm.h.lm1"',
                  'l2_nsp[0]: lmx_node_new_owned(lmx_perm_store_of(l2_program_arena))',
                  'lmx_arena_refs_open_owned(lmx_perm_store_of(l2_program_arena), l2_nsp[0], 1U)',
                  'slot[0]: lmx_size_new_owned(lmx_perm_store_of(l2_program_arena))',
                  'unit: lmx_node_new_owned(l2_program_arena)',
-                 'DEBT: nsp 0 is IN the permanent store, but not yet in R0''s retention array (49U)',
-                 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U, 0U, 0U)') }
+                 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U, 1U, 0U)',
+                 'l2_retained: lmx_arena_ref_struct(node, c.LMX_ROOT_ETERNAL_SLOT)',
+                 'if: l2_retained\len != 1',
+                 'if: lmx_arena_ref_store(l2_retained, 0U, (cast: (@: void) l2_nsp[0])) != 0',
+                 'if: lmx_arena_ref_value(l2_retained, 0U) != (cast: (@: void) l2_nsp[0])') },
+    [pscustomobject]@{ Name = 'unit_eternal_two.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('2', 'size', '0', '0', '7', 'size', '1', '0', '9');
+        Absent = @('not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
+        Debt = @('lmx_root_open(@ l2_program_root, l2_program_entry, 5000U, 2U, 0U)',
+                 'if: l2_retained\len != 2',
+                 'if: lmx_arena_ref_store(l2_retained, 0U, (cast: (@: void) l2_nsp[0])) != 0',
+                 'if: lmx_arena_ref_store(l2_retained, 1U, (cast: (@: void) l2_nsp[1])) != 0') },
+    # Seventy roots: the capacity is the COUNT.  Sizing by a root's INDEX -- the trap the two
+    # tables invite, l2_ns_eternal[k] beside l2_ebr_n -- would pass every smaller fixture's text.
+    [pscustomobject]@{ Name = 'unit_eternal_many.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('70', 'size', '0', '0', '1', 'size', '35', '0', '36', 'size', '69', '0', '70');
+        Absent = @('not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
+        Debt = @('lmx_root_open(@ l2_program_root, l2_program_entry, 5000U, 70U, 0U)',
+                 'if: l2_retained\len != 70',
+                 'if: lmx_arena_ref_store(l2_retained, 69U, (cast: (@: void) l2_nsp[69])) != 0') },
+    # A nested member, a reference to the branch itself, a reference to the OTHER branch, and a
+    # mutable Holder beside them: two roots are retained, the nested member and Holder are not.
+    [pscustomobject]@{ Name = 'unit_eternal_shape.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('2', 'size', '0', '0', '7', 'size', '0', '4', '13', 'same', '0', '3', '0', 'same', '1', '0', '0', 'size', '1', '1', '17');
+        Absent = @('not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
+        Debt = @('lmx_root_open(@ l2_program_root, l2_program_entry, 5000U, 2U, 0U)',
+                 'if: l2_retained\len != 2') },
+    # A cross-reference INTO another branch: F\into is E's member `deep`, not a copy of it.
+    [pscustomobject]@{ Name = 'unit_eternal_xref.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('2', 'slot', '1', '0', '0', '0', 'size', '0', '1', '7', 'size', '1', '1', '23');
+        Absent = @('not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
+        Debt = @('lmx_root_open(@ l2_program_root, l2_program_entry, 5000U, 2U, 0U)',
+                 'if: l2_retained\len != 2') },
+    # The other fixtures that happen to declare eternal branches: array fields whose record and
+    # backing are built in the store, and merge sites naming a branch.  Count and ownership only.
+    # (unit_merge_in_method.lm2 has one too, but its generated C never compiled -- a method
+    # parameter is emitted twice, `l2_m0(Lmx * node, Lmx * node, ...` -- before this row kind
+    # existed and independently of retention, so it is not listed as if it ran.)
+    [pscustomobject]@{ Name = 'unit_array_empty.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('1');
+        Absent = @('not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
+        Debt = @('lmx_root_open(@ l2_program_root, l2_program_entry, 5000U, 1U, 0U)') },
+    [pscustomobject]@{ Name = 'unit_array_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('1');
+        Absent = @('not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
+        Debt = @('lmx_root_open(@ l2_program_root, l2_program_entry, 5000U, 1U, 0U)') },
+    [pscustomobject]@{ Name = 'unit_merge_site.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('3');
+        Absent = @('not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
+        Debt = @('lmx_root_open(@ l2_program_root, l2_program_entry, 5000U, 3U, 0U)') }
 )
 
 foreach ($fx in $fixtures) {
@@ -217,6 +322,30 @@ foreach ($fx in $fixtures) {
         Add-Row 'OK' ('fixture:' + $stem) ('eternal in the store, mutable unmoved (' + $fx.Debt.Count + ' required, ' + $fx.Absent.Count + ' forbidden)'); continue
     }
     if (-not $made2) { Add-Row 'FAIL' ('fixture:' + $stem) 'l1trans produced no C from the generated L1; see the log'; continue }
+
+    if ($fx.Expect -eq 'eternal-runs') {
+        $l1 = (Get-Content -LiteralPath $genLm1 -Raw)
+        $why = ''
+        foreach ($a in $fx.Absent) {
+            if ($why -eq '' -and $l1 -match [regex]::Escape($a)) { $why = 'the generated L1 still names "' + $a + '"' }
+        }
+        foreach ($d in $fx.Debt) {
+            if ($why -eq '' -and $l1 -notmatch [regex]::Escape($d)) { $why = 'the generated L1 lacks "' + $d + '"' }
+        }
+        if ($why -ne '') { Add-Row 'FAIL' ('fixture:' + $stem) $why; continue }
+        if (-not $driver) { Add-Row 'FAIL' ('fixture:' + $stem) 'the driver did not build, so the program cannot be run'; continue }
+        $genO = Join-Path $gen ($stem + '.o')
+        $exe = Join-Path $bin ($stem + '.exe')
+        # The generated C is compiled AS IT IS; the two renames are what hands its root to the driver.
+        $code = Invoke-Step ('fixture.' + $stem + '.compile') $gcc ($kflags + @('-Dmain=l2_generated_main', '-Dlmx_root_close=l2_driver_root_close', '-c', $genC, '-o', $genO)) $root
+        if ($code -ne 0 -or -not (Test-Path -LiteralPath $genO)) { Add-Row 'FAIL' ('fixture:' + $stem) "gcc exit $code on the generated C"; continue }
+        $code = Invoke-Step ('fixture.' + $stem + '.link') $gcc @('-o', $exe, $driverO, $genO, $l2libcO) $root
+        if ($code -ne 0 -or -not (Test-Path -LiteralPath $exe)) { Add-Row 'FAIL' ('fixture:' + $stem) "link exit $code"; continue }
+        $ran = Invoke-Step ('fixture.' + $stem + '.run') $exe $fx.Args $bin
+        $said = ((Log-Text ('fixture.' + $stem + '.run')) -split "`r?`n" | Where-Object { $_ -match '^l2_eternal_driver: \d+ checks' } | Select-Object -Last 1)
+        if ($ran -ne $fx.Exit -or -not $said) { Add-Row 'FAIL' ('fixture:' + $stem) ('ran under the driver, exit ' + $ran + '; see the log'); continue }
+        Add-Row 'OK' ('fixture:' + $stem) (($said -replace '^l2_eternal_driver: ', '') + ', retained in R0, survives a collection (' + $fx.Debt.Count + ' required, ' + $fx.Absent.Count + ' forbidden in the text)'); continue
+    }
 
     $exe = Join-Path $bin ($stem + '.exe')
     $code = Invoke-Step ('fixture.' + $stem + '.compile') $gcc ($cflags + @('-o', $exe, $genC)) $root

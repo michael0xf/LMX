@@ -1,0 +1,24 @@
+predef: "l3_thread.h.lm1"
+predef: "l3_exec.lm1"
+
+# Bind L3 exec to Thread interpreted dispatch. Receives only the Thread.
+# Never native entry, never METHOD.addr.
+
+fn: l3_thread_dispatch (@: LmxThread t) int
+    @: Lmx graph
+    @: LmxArena arena
+    if: t = 0 || t\message = 0
+        return: c.L3_INVALID
+    graph: t\message\graph
+    if: graph = 0
+        return: c.L3_INVALID
+    arena: 0
+    if: t\slot != 0
+        arena: t\slot\arena
+    ---
+    if: arena = 0
+        return: c.L3_INVALID
+return: l3_exec_run(arena, graph)
+
+fn: l3_thread_bind (@: LmxThread t) int
+return: lmx_thread_interpreter_set(t, l3_thread_dispatch)

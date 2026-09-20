@@ -13896,15 +13896,24 @@ fn: l2_emit_unit (const: @(char out_path)) int
         fclose(l2_out)
         return: 1
     # The root descriptor array is emitted unconditionally, so its constructor
-    # is always needed. Qualified eternal storage additionally needs the range
-    # table, because the admitted eternal set IS a range list.
+    # is always needed.
+    #
+    # WHAT STOOD HERE AND IS GONE (48U): a second predef, lmx_owned_ranges.h.lm1,
+    # emitted whenever l2_ebr_n was non-zero, justified as "the admitted eternal
+    # set IS a range list".  That unit does not exist and never did in this
+    # repository -- git knows the path at no commit, and
+    # tests/lmx_merge_selftest.lm1:36 records absorbing the coverage of its
+    # deleted selftest -- while this emitter went on naming it.  The effect was
+    # that EVERY program with an eternal branch emitted L1 no translator could
+    # read, which is why the gap was never measured rather than never hit.
+    # Nothing generated here calls a symbol of it: an eternal branch's qualified
+    # type is answered by the permanent store's address ranges through
+    # lmx_range_classify, never by a per-program range list
+    # (LMX_ETERNAL_STORE.txt).
     if: c.fprintf(l2_out, "predef: \"%slmx_array_ref_owned.h.lm1\"\n", l2_rt_root) < 0
         fclose(l2_out)
         return: 1
     if: l2_merge_max != 0 && c.fprintf(l2_out, "predef: \"%slmx_merge_owned.h.lm1\"\n", l2_rt_root) < 0
-        fclose(l2_out)
-        return: 1
-    if: l2_ebr_n != 0 && c.fprintf(l2_out, "predef: \"%slmx_owned_ranges.h.lm1\"\n", l2_rt_root) < 0
         fclose(l2_out)
         return: 1
     i: 0

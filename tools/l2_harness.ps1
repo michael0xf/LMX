@@ -136,15 +136,30 @@ if ($built) {
 # ---- 3. the fixtures ------------------------------------------------------------------------
 # `Expect` says how far this fixture is supposed to get, and each value is a claim about the
 # translator, not about this script:
-#   runs            -- the whole chain, and the program's exit code is Exit.
-#   l2trans-refuses -- l2trans must REFUSE it and say why; Needle must appear in what it printed.
-#   l1trans-blocked -- l2trans accepts it, and the generated L1 is then refused by l1trans with
-#                      Needle.  This is a KNOWN GAP held under measurement, not a passing case:
-#                      when the gap closes, this row fails and is meant to.
+#   runs                 -- the whole chain, and the program's exit code is Exit.
+#   l2trans-refuses      -- l2trans must REFUSE it; Needle must appear in what it printed.
+#   translates-with-debt -- the whole translator chain succeeds, AND the generated L1 is then
+#                           read: every string in Absent must be GONE from it and every string
+#                           in Debt must still be THERE.  This is for a gap that no longer stops
+#                           the toolchain but is not fixed, and the asymmetry is the point.
+#
+# WHY A COMPILING, RUNNING PROGRAM IS NOT SUCCESS HERE.  unit_eternal_branch declares an
+# `independent: const: immutable` branch, and the generated L1 allocates it with
+# lmx_node_new_owned(l2_program_arena) -- R0's ORDINARY arena -- while emitting
+# lmx_root_open(..., 0U, 0U), so the permanent store is opened empty and nothing goes in it.
+# Such a program can compile and exit 0 while having none of the eternal semantics: GC still
+# traverses the branch, and nothing is shared by address.  An exit code cannot tell those two
+# worlds apart, so this fixture does not ask for one.  It reads the generated L1 instead and
+# pins the debt EXACTLY where it is.  When the emission moves into the store, these Debt
+# strings stop appearing, this row fails, and that failure is the signal the work landed.
 $fixtures = @(
-    [pscustomobject]@{ Name = 'entry_return7.lm2'; Expect = 'runs'; Exit = 7; Needle = '' },
-    [pscustomobject]@{ Name = 'entry_ret_tr_bad.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'unsupported body' },
-    [pscustomobject]@{ Name = 'unit_eternal_branch.lm2'; Expect = 'l1trans-blocked'; Exit = 0; Needle = 'cannot read import l2src/lmx_owned_ranges.h.lm1' }
+    [pscustomobject]@{ Name = 'entry_return7.lm2'; Expect = 'runs'; Exit = 7; Needle = ''; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_ret_tr_bad.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'unsupported body'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_eternal_branch.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+        Absent = @('lmx_owned_ranges');
+        Debt = @('DEBT: eternal ranges/bootstrap-admit absent in new kernel',
+                 'lmx_node_new_owned(l2_program_arena)',
+                 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U, 0U, 0U)') }
 )
 
 foreach ($fx in $fixtures) {
@@ -166,10 +181,18 @@ foreach ($fx in $fixtures) {
     $label2 = 'fixture.' + $stem + '.l1trans'
     $made2 = Step-Made $label2 $Translator @($genLm1, $genC) $src $genC
 
-    if ($fx.Expect -eq 'l1trans-blocked') {
-        if ($made2) { Add-Row 'FAIL' ('fixture:' + $stem) 'the known blocker is GONE -- update this fixture, the gap has closed'; continue }
-        if ((Log-Text $label2) -notmatch [regex]::Escape($fx.Needle)) { Add-Row 'FAIL' ('fixture:' + $stem) ('blocked, but not on "' + $fx.Needle + '"'); continue }
-        Add-Row 'OK' ('fixture:' + $stem) ('reached the known blocker: ' + $fx.Needle); continue
+    if ($fx.Expect -eq 'translates-with-debt') {
+        if (-not $made2) { Add-Row 'FAIL' ('fixture:' + $stem) 'l1trans produced no C from the generated L1; see the log'; continue }
+        $l1 = (Get-Content -LiteralPath $genLm1 -Raw)
+        $why = ''
+        foreach ($a in $fx.Absent) {
+            if ($why -eq '' -and $l1 -match [regex]::Escape($a)) { $why = 'the generated L1 still names "' + $a + '"' }
+        }
+        foreach ($d in $fx.Debt) {
+            if ($why -eq '' -and $l1 -notmatch [regex]::Escape($d)) { $why = 'the recorded debt "' + $d + '" is GONE -- update this fixture, the gap has closed' }
+        }
+        if ($why -ne '') { Add-Row 'FAIL' ('fixture:' + $stem) $why; continue }
+        Add-Row 'OK' ('fixture:' + $stem) ('translated; debt still exactly where it was (' + $fx.Debt.Count + ' markers, ordinary-arena eternal)'); continue
     }
     if (-not $made2) { Add-Row 'FAIL' ('fixture:' + $stem) 'l1trans produced no C from the generated L1; see the log'; continue }
 

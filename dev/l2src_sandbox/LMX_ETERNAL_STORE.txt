@@ -182,11 +182,24 @@ WHAT IS NOT DONE, EXACTLY
         Both call sites hardcode the pair today: l2trans.lm1:11913 (the library open) and
         l2trans.lm1:14623 (the program open), each inside a single fputs of a literal string, so
         passing anything at all also means turning those into fprintf.
-      - AND THE ETERNAL PATH DOES NOT BUILD TODAY.  l2trans.lm1:13907 emits, whenever l2_ebr_n is
-        non-zero, a predef of lmx_owned_ranges.h.lm1 -- a file that exists NOWHERE in this
-        repository, neither under dev/l2src_sandbox nor under l2src.  Any program with an eternal
-        branch therefore emits L1 source with an unresolvable predef, before any of the above
-        matters.  This is the first thing to fix and the cheapest.
+      - THE STALE IMPORT IS GONE (48U), AND THE PATH NOW TRANSLATES END TO END.  l2trans.lm1
+        used to emit, whenever l2_ebr_n was non-zero, a predef of lmx_owned_ranges.h.lm1 -- a
+        unit that exists nowhere in this repository and appears in its history at no commit,
+        while tests/lmx_merge_selftest.lm1:36 records absorbing the coverage of its DELETED
+        selftest.  Nothing generated calls a symbol of it, so the predef was removed from both
+        copies of the translator (dev/l2src_sandbox and l2src, byte identical) along with the
+        comment that justified it as "the admitted eternal set IS a range list", which stopped
+        being true when classification became address-range membership through the store.
+        Measured with tools/l2_harness.ps1: unit_eternal_branch.lm2 now goes .lm2 -> generated
+        L1 -> C with no refusal anywhere.
+        WHAT THAT DOES NOT MEAN is that the branch is eternal.  The generated L1 still allocates
+        it with lmx_node_new_owned(l2_program_arena) and still opens the root with 0U, 0U, so
+        the store is opened EMPTY and the collector still traverses the branch.  A program in
+        that state compiles and exits 0 while having none of the semantics, and no exit code can
+        tell the two apart -- which is why the harness fixture reads the generated L1 and
+        asserts the DEBT MARKERS ARE STILL THERE instead of asking for a successful run.  When
+        the emission moves into the store those markers vanish, the fixture fails, and that
+        failure is the signal.
       - NOTHING RAN .lm2 HERE UNTIL 47U, AND NOW SOMETHING DOES.  tools/build_l2src.ps1 still
         neither builds l2trans nor translates a fixture, and dev/l2src_sandbox/run_self_build.ps1
         is the L1 chain, so until 47U the 280 .lm2 files under tests/ were reachable only by
@@ -199,7 +212,12 @@ WHAT IS NOT DONE, EXACTLY
         the missing-header blocker below instead of being skipped.  Two of those three rows pass
         BY DETECTING A FAILURE, which is what says the harness is not blind.  The remaining order
         of work is therefore: the missing header, then move the emission into the store, then
-        pass the counts -- and the harness is what can now say whether each one worked.
+        pass the counts -- and the harness is what can now say whether each one worked.  The
+        missing header is done; THE NEXT EXACT SYMBOL IS l2trans.lm1's emission of
+        l2_nsp[k] for an eternal k, today lmx_node_new_owned(l2_program_arena), which has to
+        become an allocation in lmx_perm_store_of(l2_program_arena) -- the store is already
+        reachable from the generated program without any new kernel act, because
+        lmx_root.lm1:85 binds R0's arena to it.
       - MULTI-ROOT IS NOT REPRESENTABLE, SO THE TU-GLOBAL TOTALS ARE THE RIGHT EXPRESSIONS.
         l2trans.lm1:14612 calls l2_emit_library_wrappers() and l2trans.lm1:14616 is its `else`
         emitting main, so one translation unit emits EITHER the library wrapper OR the program,

@@ -147,6 +147,63 @@ def wait_for_session(name, pipe, timeout=30):
     raise RuntimeError('Session started but did not publish a registry entry.')
 
 
+def adopt_record(name, state, timeout=30):
+    """Fill session_id/kind/cwd from the registry once the child publishes them."""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        for record in registry_records():
+            if record.get('pid') == state['pid'] and record.get('messagingSocketPath') == state['pipe']:
+                assert_not_l1(record)
+                state['session_id'] = record.get('sessionId')
+                state['kind'] = record.get('kind')
+                state['cwd'] = record.get('cwd')
+                save_state(name, state)
+                return True
+        time.sleep(0.2)
+    return False
+
+
+def background_id(state):
+    if not state.get('bg_id'):
+        raise RuntimeError(
+            f"Session {state['name']} was started with serve, in its own window: "
+            'it has no background id. Use that window, or stop it and run start.')
+    return state['bg_id']
+
+
+def cmd_serve(name):
+    """Run the session in THIS window instead of --bg.
+
+    A background session forces the fullscreen renderer before it ever looks at
+    CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN, so an attached terminal loses its own
+    scrollback. An ordinary session honours that variable. The price is that the
+    relay lives only as long as this window.
+    """
+    if name in L1_NAMES:
+        raise RuntimeError('Refusing L1 session names.')
+    pipe = new_pipe()
+    debug = profile_dir(name) / 'uds_debug.log'
+    debug.parent.mkdir(parents=True, exist_ok=True)
+    args = [executable(), '--name', name,
+            '--messaging-socket-path', pipe,
+            '--debug-file', str(debug)]
+    # Inherit stdio: the child owns this console, and nothing may be printed
+    # over its screen, so this command stays silent unless it fails.
+    process = subprocess.Popen(args, cwd=str(ROOT))
+    state = {
+        'name': name,
+        'bg_id': None,
+        'pid': process.pid,
+        'session_id': None,
+        'pipe': pipe,
+        'kind': 'interactive',
+        'cwd': str(ROOT),
+    }
+    save_state(name, state)
+    adopt_record(name, state)
+    return process.wait()
+
+
 def cmd_start(name):
     if name in L1_NAMES:
         raise RuntimeError('Refusing L1 session names.')
@@ -190,11 +247,12 @@ def cmd_status(name):
 def cmd_attach(name):
     state = load_state(name)
     record = our_record(state)
-    print(json.dumps({'attaching': {'name': name, 'bg_id': state['bg_id'],
+    bg_id = background_id(state)
+    print(json.dumps({'attaching': {'name': name, 'bg_id': bg_id,
                                     'pid': record['pid'], 'status': record.get('status')}},
                      ensure_ascii=False))
     # Interactive terminal handover: inherit stdio instead of capturing it.
-    return subprocess.run([executable(), 'attach', state['bg_id']], cwd=str(ROOT)).returncode
+    return subprocess.run([executable(), 'attach', bg_id], cwd=str(ROOT)).returncode
 
 
 def cmd_send(name, message):
@@ -216,7 +274,7 @@ def cmd_send(name, message):
 
 def cmd_logs(name):
     state = load_state(name)
-    result = claude(['logs', state['bg_id']], timeout=30)
+    result = claude(['logs', background_id(state)], timeout=30)
     sys.stdout.write(result.stdout)
     if result.stderr:
         sys.stderr.write(result.stderr)
@@ -230,7 +288,7 @@ def cmd_stop(name):
     except RuntimeError as error:
         if 'L1' in str(error):
             raise
-    result = claude(['stop', state['bg_id']])
+    result = claude(['stop', background_id(state)])
     sys.stdout.write(result.stdout or result.stderr)
     return result.returncode
 
@@ -240,6 +298,7 @@ def main():
     parser.add_argument('--name', default='lmx_uds', help='Independent session name (not an L1 name).')
     sub = parser.add_subparsers(dest='command', required=True)
     sub.add_parser('start')
+    sub.add_parser('serve', help='Run in this window (scrollback works); not --bg.')
     sub.add_parser('status')
     sub.add_parser('attach', help='Attach this terminal to the stored session id.')
     send = sub.add_parser('send')
@@ -249,6 +308,8 @@ def main():
     args = parser.parse_args()
     if args.command == 'start':
         return cmd_start(args.name)
+    if args.command == 'serve':
+        return cmd_serve(args.name)
     if args.command == 'status':
         return cmd_status(args.name)
     if args.command == 'attach':

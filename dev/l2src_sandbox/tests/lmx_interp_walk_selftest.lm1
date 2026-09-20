@@ -91,6 +91,7 @@ fn: perm_descriptor_case () int
         return: 2
     ---
     check(lmx_plan_home(am, (cast: (@: void) info)) = sa, "store descriptor: home is the bound store")
+    check(lmx_walk_prepare(@ context, am, plan_roles, m) = c.LMX_WALK_INVALID && info\header = 0, "prepare with the Message arena is INVALID for a store descriptor; nothing published")
     check(lmx_interp_run(@ context, m) = c.LMX_INTERP_OK, "void return through walk with a store descriptor")
     header: info\header
     check(header != 0, "store descriptor: prepare published the plan")

@@ -48,7 +48,7 @@ Excluded: `build/**`. Not copied: root `L1\l2src`, mixa stage snapshots, session
 <a id="dual-l2src"></a>
 ### Dual `l2src`
 
-Root vs sandbox divergence (22 / 84 / 49). LMX currently holds the sandbox because the last GREEN gate was measured there. Canonical copy is **not** declared.
+Author 2026-09-20: copy the freshest tree into L1 **root**, commit and push. Done in lingvamyxa-l1 `2a60beb`: `L1/l2src` is now a mirror of `dev/l2src_sandbox/l2src` (511 files, 22 stale root-only units removed). Byte-identical with LMX `l2src/` and the sandbox. Mixa dirty files were not part of that commit.
 
 <a id="handshake-flags"></a>
 ### Handshake flags

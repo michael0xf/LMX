@@ -115,7 +115,7 @@ Low-level operations in this snapshot include: address classification, taking an
 
 Do not invent missing mechanisms. Measured and reported by deepseek, not closed by the author here:
 
-- two diverged `l2src` copies (L1 root vs sandbox); LMX holds the sandbox;
+- the author required the freshest `l2src` in L1 root: L1 `2a60beb` mirrors the sandbox; LMX `l2src/` matches it;
 - placement of atomic handshake flags relative to parent/child arenas;
 - implementation of the single [admission mechanism](LMX_semantics.en.md#admission): analytical `implements` requires rewriting, followed by unit tests through the graph interpreter;
 - a complete L2→L1 translator.

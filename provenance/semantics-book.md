@@ -360,6 +360,8 @@ Naming does not add a descriptor, class or special layout to the object. Constru
 
 `independent` при построении устанавливает у корня `node = 0`; это и есть отсутствие внешнего лексического родителя. Внутренние связи `node` дерева и собственные поля сохраняются. Квалификация не обнуляет задним числом `node` уже существующих объектов и не запрещает явно переданные ссылки, динамические аргументы текущего вызывающего выражения, сообщения или выбор вызываемого выражения по совместимой сигнатуре. Это не требование чистоты и не закрытый интерфейс только из явных аргументов.
 
+`const`, `immutable` и `independent` являются принимающими выражениями; их композиция задаёт квалифицированный тип результата. Физическое представление этого типа определяется общим механизмом попадания адреса в типизированный диапазон, описанным в [L2](L2_spec_ru.md#type-by-range), а не отдельными признаками на каждом значении или особым классификатором для конкретной цепочки квалификаторов. Нулевой `node` корня остаётся структурным следствием `independent`, а не заменой классификации типа.
+
 Например, метод внутри независимой структуры S может использовать поле S через внутреннюю лексическую связь. Требуемое `x` может прийти из текущего вызывающего выражения. Если `x` находится только в прежнем текстовом окружении S, внешнего неявного доступа к нему нет. Явно переданный большой массив не становится меньше и не копируется из-за `independent`. Особый срок жизни сочетания трёх квалификаций описан в [вечных ветвях](#eternal).
 [EN]
 `const` protects a binding: it cannot be assigned, rebound or replaced. The value behind a protected reference may remain mutable. `immutable` protects the value itself for its entire life through every alias; a variable holding its reference may remain rebindable. `const: immutable` combines both guarantees. They are independent qualifications, not degrees of one scale.
@@ -377,6 +379,8 @@ Qualification is applied only after successful complete preflight. Failure leave
 Protection applies to writes through every path and to publication of working fields. A known-invalid write is rejected before execution; a dynamically selected write is checked during execution. Calling a method is allowed but does not remove protection. Changing a local argument copy or rebinding a local reference does not modify the protected value. Constructing a new value, including through `merge`, does not thaw the source.
 
 Construction-time `independent` sets the root's `node = 0`; that is exactly the absence of an external lexical parent. Internal tree `node` links and own fields remain. The qualification neither retroactively clears existing objects' `node` links nor prohibits explicitly supplied references, current-caller dynamic arguments, Messages or selection of a callable by a compatible signature. It does not require purity or an interface closed over explicit arguments alone.
+
+`const`, `immutable` and `independent` are receiving expressions; their composition establishes the result's qualified type. The physical representation of that type is determined by the common typed-address-range membership mechanism described in [L2](L2_spec_en.md#type-by-range), rather than by per-value flags or a special classifier for one particular qualifier chain. A zero root `node` remains the structural consequence of `independent`, not a replacement for type classification.
 
 For example, a method inside independent Structure S can use S's field through its internal lexical link. Required `x` can come from the current caller. If `x` exists only in S's former textual surroundings, implicit external access is unavailable. An explicitly passed large Array neither shrinks nor gets copied because of `independent`. The special lifetime of the three qualifications together is described under [eternal branches](#eternal).
 
@@ -866,6 +870,8 @@ A foreign resource has a separate ownership, retention, release and transfer con
 
 Сами опубликованные ветви размещаются в постоянной неизменяемой части хранилища Root Thread (`R0`), отдельно от обычных собираемых арен. Сборщики мусора арен не маркируют, не обходят, не изменяют и не освобождают это хранилище; ссылка на вечную ветвь в другом Message является внешним терминалом для его сборщика и не переносит владение. Постоянное хранилище освобождается один раз при завершении владеющего корня/процесса.
 
+Принадлежность значения типу вечной ветви устанавливается тем же индексом типизированных диапазонов адресов, что и принадлежность другим физическим типам. Отдельная роль постоянного хранилища управляет только его временем жизни и запретом сбора; она не заменяет классификацию по диапазону и не является флагом отдельной ветви.
+
 Второй отдельный фиксированный массив того же владельца содержит известные записи методов. Метод не хранит лексического родителя; его конкретное вызываемое вхождение предоставляет собственную структуру. Разделяемые записи остаются живы после завершения заимствующего дочернего Message. Это хранилище корневого Message, не бесхозный глобальный реестр.
 
 `merge` и создание Message сохраняют явно переданные ссылки на допущенные вечные ветви и записи методов как терминалы. Получение одной ветви не раскрывает массив удержания, настройки корня или остальные ветви. Изменяемое состояние по-прежнему копируется отдельно. Все ссылки внутри опубликованной вечной ветви должны иметь достаточный срок жизни; квалификация не делает случайную ссылку на освобождаемую память вечной.
@@ -877,6 +883,8 @@ Combined qualification `independent: const: immutable` establishes an eternal br
 The process's first, root Message retains all such branches from all Messages in a fixed immutable reference Array. The branch set is translation-known; `merge` and Message creation do not append entries. Placement in the retention Array does not reparent a branch's lexical tree. Permitted runtime-value initialization occurs before publication without increasing the entry set.
 
 The published branches themselves reside in the Root Thread's (`R0`) permanent immutable storage, separate from ordinary collectable arenas. Arena garbage collectors do not mark, traverse, mutate or release that storage; a reference to an eternal branch in another Message is an external terminal for that Message's collector and does not transfer ownership. The permanent storage is released once when its owning root/process terminates.
+
+Membership in the eternal-branch type is established by the same typed-address-range index used for all other physical types. A separate permanent-store role controls only storage lifetime and exclusion from collection; it neither replaces range classification nor becomes a flag on each branch.
 
 A second separate fixed Array owned by the same Message contains known method records. A method stores no lexical parent; its concrete callable occurrence supplies its own Structure. Shared records remain live after a borrowing child Message terminates. This is root-Message-owned storage, not an ownerless global registry.
 

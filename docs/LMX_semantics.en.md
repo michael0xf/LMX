@@ -274,6 +274,8 @@ Protection applies to writes through every path and to publication of working fi
 
 Construction-time `independent` sets the root's `node = 0`; that is exactly the absence of an external lexical parent. Internal tree `node` links and own fields remain. The qualification neither retroactively clears existing objects' `node` links nor prohibits explicitly supplied references, current-caller dynamic arguments, Messages or selection of a callable by a compatible signature. It does not require purity or an interface closed over explicit arguments alone.
 
+`const`, `immutable` and `independent` are receiving expressions; their composition establishes the result's qualified type. The physical representation of that type is determined by the common typed-address-range membership mechanism described in [L2](L2_spec_en.md#type-by-range), rather than by per-value flags or a special classifier for one particular qualifier chain. A zero root `node` remains the structural consequence of `independent`, not a replacement for type classification.
+
 For example, a method inside independent Structure S can use S's field through its internal lexical link. Required `x` can come from the current caller. If `x` exists only in S's former textual surroundings, implicit external access is unavailable. An explicitly passed large Array neither shrinks nor gets copied because of `independent`. The special lifetime of the three qualifications together is described under [eternal branches](#eternal).
 
 <a id="execution"></a>
@@ -701,6 +703,8 @@ Combined qualification `independent: const: immutable` establishes an eternal br
 The process's first, root Message retains all such branches from all Messages in a fixed immutable reference Array. The branch set is translation-known; `merge` and Message creation do not append entries. Placement in the retention Array does not reparent a branch's lexical tree. Permitted runtime-value initialization occurs before publication without increasing the entry set.
 
 The published branches themselves reside in the Root Thread's (`R0`) permanent immutable storage, separate from ordinary collectable arenas. Arena garbage collectors do not mark, traverse, mutate or release that storage; a reference to an eternal branch in another Message is an external terminal for that Message's collector and does not transfer ownership. The permanent storage is released once when its owning root/process terminates.
+
+Membership in the eternal-branch type is established by the same typed-address-range index used for all other physical types. A separate permanent-store role controls only storage lifetime and exclusion from collection; it neither replaces range classification nor becomes a flag on each branch.
 
 A second separate fixed Array owned by the same Message contains known method records. A method stores no lexical parent; its concrete callable occurrence supplies its own Structure. Shared records remain live after a borrowing child Message terminates. This is root-Message-owned storage, not an ownerless global registry.
 

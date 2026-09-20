@@ -482,6 +482,21 @@ fn: lmx_root_close (@: LmxRoot root) int
     # The service owns its entry array; give it back before the arena that holds the records goes.
     lmx_service_release(@ root\service)
     lmx_arena_release(@ root\arena)
+    # ...AND THE STORE LAST, AND ONLY HERE.  This line is reached only when no live child is left:
+    # the early return above releases NEITHER the arena nor the store, because a child that has just
+    # been given the stop request may still hold addresses into it.  So the store's one release
+    # lives on this path alone -- ordinary arena first, store second, exactly once.
+    #
+    # RESIDUAL GAP, stated rather than closed (Codex, 44D lifecycle decision): when live children
+    # remain, the store is not released here, and THE CURRENT KERNEL HAS NO LATER PROCESS-OWNER
+    # CALLBACK that could release it once those children finish.  The exactly-once release is
+    # therefore not implemented for that case.  It is an implementation gap of THIS RUNTIME, not
+    # language semantics: "the branch lives for the process lifetime" stays the rule, and the
+    # missing callback is recorded in LMX_ETERNAL_STORE.txt and steps/ rather than turned into a
+    # norm here.  Searched for such a callback before stating its absence: lmx_root_close is the
+    # only teardown entry point in this file, and lmx_thread_child_first is the only liveness test
+    # the close consults.
+    lmx_perm_close(@ root\perm)
     root\state: c.LMX_ROOT_CLOSED
 return: c.LMX_ROOT_OK
 

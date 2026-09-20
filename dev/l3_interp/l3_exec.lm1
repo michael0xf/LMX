@@ -3,6 +3,7 @@ predef: "../l2src_sandbox/lmx_arena_refs.h.lm1"
 predef: "../l2src_sandbox/lmx_own.h.lm1"
 predef: "../l2src_sandbox/lmx_interp.h.lm1"
 predef: "../l2src_sandbox/lmx_implements.h.lm1"
+predef: "../l2src_sandbox/lmx_value_owned.h.lm1"
 
 # L3-02 N4-N8. return: encoded as LmxOp RETURN in the body, not ISA 3-14.
 # Never execute METHOD.addr.
@@ -12,6 +13,8 @@ define: L3_OWN_CAP 32
 prototype:
     fn: l3_exec_stmt (@: LmxArena arena; @: Lmx node; @: void v; @: LmxOwnLocal owns; int: nown) int
     fn: l3_exec_range (@: LmxArena arena; @: Lmx node; size_t: from; @: LmxOwnLocal owns; int: nown) int
+    fn: l3_exec_op (@: LmxArena arena; @: Lmx host; @: LmxOp op; @: LmxOwnLocal owns; int: nown) int
+    fn: l3_cond_int (@: LmxArena arena; @: void v; @: int out) int
     fn: l3_own_load_ints (@: LmxArena arena; @: Lmx node; @: LmxOwnLocal owns; @: int nown) int
     fn: l3_own_checkpoint_all (@: LmxOwnLocal owns; int: nown) int
 end: prototype
@@ -45,6 +48,68 @@ fn: l3_own_checkpoint_all (@: LmxOwnLocal owns; int: nown) int
     ---
 return: 0
 
+fn: l3_cond_int (@: LmxArena arena; @: void v; @: int out) int
+    if: v = 0
+        return: c.L3_ABSENT
+    if: lmx_domain_kind(arena, v) != c.LMX_KIND_PRIMITIVE
+        return: c.L3_UNSUPPORTED
+    if: lmx_domain_type(arena, v) != c.LMX_TYPE_INT
+        return: c.L3_UNSUPPORTED
+    \out: lmx_int_value_known(v)
+return: c.L3_OK
+
+fn: l3_exec_op (@: LmxArena arena; @: Lmx host; @: LmxOp op; @: LmxOwnLocal owns; int: nown) int
+    int: code
+    int: st
+    int: cond 0
+    int: n 0
+    @: void body
+    if: op = 0
+        return: c.L3_INVALID
+    code: op\code
+    if: code = c.L3_NODE_RETURN
+        if: l3_own_checkpoint_all(owns, nown) != 0
+            return: c.L3_INVALID
+        return: c.L3_RETURN
+    ---
+    if: code = c.L3_NODE_MATCH || code = c.L3_NODE_EACH || code = c.L3_NODE_YIELD || code = c.L3_NODE_FINALLY || code = c.L3_NODE_THROW
+        return: c.L3_UNSUPPORTED
+    ---
+    if: host = 0
+        return: c.L3_INVALID
+    if: code = c.L3_NODE_IF
+        if: host\len < 3
+            return: c.L3_INVALID
+        st: l3_cond_int(arena, lmx_arena_ref_value(host, 1U), @ cond)
+        if: st != c.L3_OK
+            return: st
+        if: cond != 0
+            return: l3_exec_stmt(arena, host, lmx_arena_ref_value(host, 2U), owns, nown)
+        if: host\len > 3
+            return: l3_exec_stmt(arena, host, lmx_arena_ref_value(host, 3U), owns, nown)
+        return: c.L3_OK
+    ---
+    if: code = c.L3_NODE_WHILE
+        if: host\len < 3
+            return: c.L3_INVALID
+        body: lmx_arena_ref_value(host, 2U)
+        while: n < c.L3_WHILE_CAP
+            st: l3_cond_int(arena, lmx_arena_ref_value(host, 1U), @ cond)
+            if: st != c.L3_OK
+                return: st
+            if: cond = 0
+                return: c.L3_OK
+            st: l3_exec_stmt(arena, host, body, owns, nown)
+            if: st = c.L3_RETURN
+                return: c.L3_RETURN
+            if: st != c.L3_OK
+                return: st
+            n: n + 1
+        ---
+        return: c.L3_UNSUPPORTED
+    ---
+return: c.L3_UNSUPPORTED
+
 fn: l3_exec_stmt (@: LmxArena arena; @: Lmx node; @: void v; @: LmxOwnLocal owns; int: nown) int
     @: Lmx host
     @: void head
@@ -57,14 +122,7 @@ fn: l3_exec_stmt (@: LmxArena arena; @: Lmx node; @: void v; @: LmxOwnLocal owns
     if: kind = c.LMX_KIND_PRIMITIVE
         return: c.L3_OK
     if: kind = c.LMX_DOMAIN_KIND_OP
-        op: (cast: (@: LmxOp) v)
-        if: op = 0
-            return: c.L3_INVALID
-        if: op\code = c.LMX_OP_RETURN
-            if: l3_own_checkpoint_all(owns, nown) != 0
-                return: c.L3_INVALID
-            return: c.L3_RETURN
-        return: c.L3_UNSUPPORTED
+        return: l3_exec_op(arena, node, (cast: (@: LmxOp) v), owns, nown)
     ---
     if: kind = c.LMX_KIND_STRUCT
         host: (cast: (@: Lmx) v)
@@ -75,7 +133,7 @@ fn: l3_exec_stmt (@: LmxArena arena; @: Lmx node; @: void v; @: LmxOwnLocal owns
             return: c.L3_OK
         hk: lmx_domain_kind(arena, head)
         if: hk = c.LMX_DOMAIN_KIND_OP
-            return: l3_exec_stmt(arena, node, head, owns, nown)
+            return: l3_exec_op(arena, host, (cast: (@: LmxOp) head), owns, nown)
         if: hk = c.LMX_DOMAIN_KIND_CALLABLE
             return: l3_exec_run(arena, host)
         if: hk = c.LMX_KIND_METHOD

@@ -18,4 +18,4 @@
 | ветвления/циклы как тела в графе | сырой METHOD.addr как смысл программы |
 | аналитический implements + тесты ресивера | позиционный `lmx_runtime_implements` как семантика |
 
-Codex подтвердил якорь `#l3-receiver` и шаги L3-01…04. Узлы: [V1.md](V1.md). L3-01: `l3_recv.lm1`. L3-02 N4–N8: `l3_exec.lm1`. Только `LMX/dev`.
+Codex подтвердил якорь `#l3-receiver` и шаги L3-01…04. Узлы: [V1.md](V1.md). L3-01 `l3_recv`. L3-02 N4–N8 `l3_exec`. L3-03 N9 `if`/`while`. Только `LMX/dev`.

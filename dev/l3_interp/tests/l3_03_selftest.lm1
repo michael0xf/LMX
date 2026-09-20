@@ -1,0 +1,157 @@
+predef: "../l3_exec.lm1"
+predef: "../../l2src_sandbox/lmx_arena.lm1"
+predef: "../../l2src_sandbox/lmx_arena_blocks.lm1"
+predef: "../../l2src_sandbox/lmx_range.lm1"
+predef: "../../l2src_sandbox/lmx_implements.lm1"
+predef: "../../l2src_sandbox/lmx_value_owned.lm1"
+predef: "../../l2src_sandbox/lmx_arena_refs.lm1"
+predef: "../../l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# N9: if/else, while. match/each/yield/finally/throw = unsupported.
+
+sub: fail (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: fail
+
+fn: mk_op_host (@: LmxArena a; int: code; size_t: n) @: Lmx
+    @: Lmx host
+    @: LmxOp op
+    host: lmx_node_new_owned(a)
+    op: lmx_op_new_owned(a, code)
+    if: host = 0 || op = 0
+        return: 0
+    if: lmx_arena_refs_open_owned(a, host, n) != 0
+        return: 0
+    lmx_arena_ref_store(host, 0U, (cast: (@: void) op))
+return: host
+
+fn: mk_return (@: LmxArena a) @: Lmx
+return: mk_op_host(a, c.L3_NODE_RETURN, 1U)
+
+fn: mk_callable (@: LmxArena a; @: LmxMethod meth; size_t: n) @: Lmx
+    @: Lmx m
+    @: LmxCallable info
+    m: lmx_node_new_owned(a)
+    info: lmx_callable_new_owned(a)
+    if: m = 0 || info = 0 || meth = 0
+        return: 0
+    if: lmx_arena_refs_open_owned(a, m, n) != 0
+        return: 0
+    info\method: meth
+    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
+return: m
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxArena: arena
+    @: LmxArena a 0
+    @: Lmx m 0
+    @: Lmx iff 0
+    @: Lmx w 0
+    @: LmxMethod meth 0
+    @: void one 0
+    @: void zero 0
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ arena) != 0
+        fputs("l3_03: arena\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    a: @ arena
+    meth: lmx_method_new_owned(a)
+    one: lmx_int_new_owned(a)
+    zero: lmx_int_new_owned(a)
+    if: meth = 0 || one = 0 || zero = 0
+        free(counts)
+        return: 2
+    ---
+    lmx_int_store_known(one, 1)
+    lmx_int_store_known(zero, 0)
+
+    # if 1 then return
+    iff: mk_op_host(a, c.L3_NODE_IF, 3U)
+    m: mk_callable(a, meth, 2U)
+    if: iff = 0 || m = 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(iff, 1U, one)
+    lmx_arena_ref_store(iff, 2U, (cast: (@: void) mk_return(a)))
+    lmx_arena_ref_store(m, 1U, (cast: (@: void) iff))
+    fail(counts, l3_exec_run(a, m) = c.L3_OK, "if true then return")
+
+    # if 0 else return
+    iff: mk_op_host(a, c.L3_NODE_IF, 4U)
+    m: mk_callable(a, meth, 2U)
+    if: iff = 0 || m = 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(iff, 1U, zero)
+    lmx_arena_ref_store(iff, 2U, (cast: (@: void) lmx_node_new_owned(a)))
+    lmx_arena_ref_store(iff, 3U, (cast: (@: void) mk_return(a)))
+    lmx_arena_ref_store(m, 1U, (cast: (@: void) iff))
+    fail(counts, l3_exec_run(a, m) = c.L3_OK, "if false else return")
+
+    # if 0, no else, no later return -> OK
+    iff: mk_op_host(a, c.L3_NODE_IF, 3U)
+    m: mk_callable(a, meth, 2U)
+    if: iff = 0 || m = 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(iff, 1U, zero)
+    lmx_arena_ref_store(iff, 2U, (cast: (@: void) mk_return(a)))
+    lmx_arena_ref_store(m, 1U, (cast: (@: void) iff))
+    fail(counts, l3_exec_run(a, m) = c.L3_OK, "if false without else")
+
+    # while 0: body must not run (body is return — if it ran, still OK actually)
+    # distinguish: while 0 then a MATCH after would still fail if we continued...
+    # while 0 then MATCH: if while skips, MATCH runs -> UNSUPPORTED
+    w: mk_op_host(a, c.L3_NODE_WHILE, 3U)
+    m: mk_callable(a, meth, 3U)
+    if: w = 0 || m = 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(w, 1U, zero)
+    lmx_arena_ref_store(w, 2U, (cast: (@: void) mk_return(a)))
+    lmx_arena_ref_store(m, 1U, (cast: (@: void) w))
+    lmx_arena_ref_store(m, 2U, (cast: (@: void) mk_op_host(a, c.L3_NODE_MATCH, 1U)))
+    fail(counts, l3_exec_run(a, m) = c.L3_UNSUPPORTED, "while 0 skips body; match is unsupported")
+
+    # while 1: body return exits
+    w: mk_op_host(a, c.L3_NODE_WHILE, 3U)
+    m: mk_callable(a, meth, 2U)
+    if: w = 0 || m = 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(w, 1U, one)
+    lmx_arena_ref_store(w, 2U, (cast: (@: void) mk_return(a)))
+    lmx_arena_ref_store(m, 1U, (cast: (@: void) w))
+    fail(counts, l3_exec_run(a, m) = c.L3_OK, "while true body return")
+
+    m: mk_callable(a, meth, 2U)
+    if: m = 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(m, 1U, (cast: (@: void) mk_op_host(a, c.L3_NODE_THROW, 1U)))
+    fail(counts, l3_exec_run(a, m) = c.L3_UNSUPPORTED, "throw is diagnostic, not simplified")
+
+    if: counts[1] != 0
+        c.printf("%d failed of %d\n", counts[1], counts[0])
+        free(counts)
+        return: 1
+    ---
+    c.printf("l3_03: %d checks\n", counts[0])
+    free(counts)
+return: 0

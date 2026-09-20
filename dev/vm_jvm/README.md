@@ -33,3 +33,15 @@ java -cp "dev/vm_jvm/out" smoke.HelloStructureSmoke
 ```
 
 Expect: `PASS ExprSmokeDriver checks=7 failures=0` and `PASS HelloStructureSmoke checks=25 failures=0`.
+
+## CALL (Path B slice 55B)
+
+- Role `L3Role.CALL`: child[0] is a **physical** `L3Node` reference to a `CALLABLE` (object identity); remaining children are argument expressions (this slice: one `SUBJECT_REF`).
+- Printer collects reachable callables with a deterministic preorder IdentityHashMap (`c0` = entry, then callees as CALL edges are seen). One JVM static method per reachable callable; `eval` aliases `c0`.
+- No language-level name/text lookup for callees or method ids.
+- Unsupported arity / non-CALLABLE callee / unsupported roles reject **before** class bytes.
+- Unreachable CALLABLE (orphan not linked from entry) is **not** emitted.
+- Recursion: deferred (self-CALL rejected with clear error).
+
+Fixture: entry `return CALL(leaf, subject) + 5` where leaf is `return subject[0]`.
+

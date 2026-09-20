@@ -18,3 +18,24 @@ javac -cp out;asm ?printer? ? exit 0
 java ? ExprSmokeDriver ? PASS checks=7 failures=0 exit 0
 java ? HelloStructureSmoke ? PASS checks=25 failures=0 exit 0
 ```
+
+## GROK-BOT-JVM-L3-CALL-20260920-55B (2026-09-20 22:42 UTC)
+
+Path-B CALL between physical callable graph nodes.
+
+- Commit follows this note (source/docs only under `dev/vm_jvm` + this file).
+- `L3Role.CALL`: callee = physical child[0] CALLABLE; arg = SUBJECT_REF.
+- Methods `c0`..`cN` from deterministic traversal map; `eval` ? `c0`.
+- `ExprSmokeDriver` PASS checks=13 failures=0 (unsupported, bad arity, bad callee, call+add+return, subject identity, unreachable not emitted).
+- `HelloStructureSmoke` PASS checks=25 failures=0.
+- Recursion deferred (documented).
+- Forbidden trees untouched; no jar/class in commit.
+
+Verify:
+```
+javac -d dev/vm_jvm/out lmx/*.java graph/*.java smoke/*.java
+javac -cp "dev/vm_jvm/out;build/vm_jvm/asm-9.7.1.jar" -d dev/vm_jvm/out printer/*.java
+java -cp "dev/vm_jvm/out;build/vm_jvm/asm-9.7.1.jar" printer.ExprSmokeDriver
+java -cp "dev/vm_jvm/out" smoke.HelloStructureSmoke
+```
+

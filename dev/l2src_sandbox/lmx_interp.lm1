@@ -1,9 +1,16 @@
 predef: "lmx_interp.h.lm1"
 predef: "lmx_call.lm1"
 predef: "lmx_arena_refs.lm1"
+predef: "lmx_implements.h.lm1"
+predef: "lmx_value_owned.h.lm1"
 
-# First slice: classify a callable the same way native call does.
-# Full statement walk and return-trailer slot land after the helper layout.
+# Execute the same graph native METHOD.addr is compiled from.
+# Body = children of M after slot 0, in order. return: is LmxOp in that tree.
+
+prototype:
+    fn: lmx_interp_exec (@: LmxArena arena; @: void v) int
+    fn: lmx_interp_walk (@: LmxArena arena; @: Lmx node; size_t: from) int
+end: prototype
 
 fn: lmx_interp_callable (@: LmxArena arena; @: Lmx node) int
 return: lmx_call_ready(arena, node)
@@ -11,14 +18,91 @@ return: lmx_call_ready(arena, node)
 fn: lmx_interp_method (@: LmxArena arena; @: Lmx node) @: LmxMethod
 return: lmx_call_method(arena, node)
 
+fn: lmx_interp_walk (@: LmxArena arena; @: Lmx node; size_t: from) int
+    size_t: i
+    int: st
+    if: arena = 0 || node = 0
+        return: c.LMX_INTERP_INVALID
+    if: node\len < 0
+        return: c.LMX_INTERP_INVALID
+    i: from
+    while: i < (cast: (size_t) node\len)
+        st: lmx_interp_exec(arena, lmx_arena_ref_value(node, i))
+        if: st = c.LMX_INTERP_RETURN
+            return: c.LMX_INTERP_RETURN
+        if: st != c.LMX_INTERP_OK
+            return: st
+        i: i + 1U
+    ---
+return: c.LMX_INTERP_OK
+
+fn: lmx_interp_exec (@: LmxArena arena; @: void v) int
+    @: Lmx host
+    @: LmxOp op
+    @: void head
+    int: kind
+    int: hk
+    if: v = 0
+        return: c.LMX_INTERP_OK
+    kind: lmx_domain_kind(arena, v)
+    if: kind = c.LMX_DOMAIN_KIND_OP
+        op: (cast: (@: LmxOp) v)
+        if: op = 0
+            return: c.LMX_INTERP_INVALID
+        if: op\code = c.LMX_OP_RETURN
+            return: c.LMX_INTERP_RETURN
+        return: c.LMX_INTERP_INVALID
+    ---
+    if: kind != c.LMX_KIND_STRUCT
+        return: c.LMX_INTERP_OK
+    host: (cast: (@: Lmx) v)
+    if: host\len < 1
+        return: lmx_interp_walk(arena, host, 0U)
+    head: lmx_arena_ref_value(host, 0U)
+    if: head = 0
+        return: lmx_interp_walk(arena, host, 1U)
+    hk: lmx_domain_kind(arena, head)
+    if: hk = c.LMX_DOMAIN_KIND_OP
+        op: (cast: (@: LmxOp) head)
+        if: op = 0
+            return: c.LMX_INTERP_INVALID
+        if: op\code = c.LMX_OP_RETURN
+            return: c.LMX_INTERP_RETURN
+        if: op\code = c.LMX_OP_CALL
+            if: host\len < 2
+                return: c.LMX_INTERP_INVALID
+            return: lmx_interp_run(arena, (cast: (@: Lmx) lmx_arena_ref_value(host, 1U)))
+        return: c.LMX_INTERP_INVALID
+    ---
+    if: hk = c.LMX_DOMAIN_KIND_CALLABLE
+        return: lmx_interp_run(arena, host)
+    if: hk = c.LMX_KIND_METHOD
+        return: lmx_call0(arena, host)
+return: lmx_interp_walk(arena, host, 0U)
+
 fn: lmx_interp_run (@: LmxArena arena; @: Lmx node) int
     @: LmxCallable info
+    @: LmxMethod method
+    int: st
     if: lmx_interp_callable(arena, node) != c.LMX_CALL_OK
-        return: LMX_INTERP_INVALID
+        return: c.LMX_INTERP_INVALID
     info: lmx_call_callable(arena, node)
     if: info = 0
-        return: LMX_INTERP_INVALID
-    # Body is M after child[0], in order. return: nodes live in that tree.
-    if: node = 0 || node\len <= 1
-        return: LMX_INTERP_NO_GRAPH
-return: LMX_INTERP_NO_GRAPH
+        st: lmx_call0(arena, node)
+        if: st = c.LMX_CALL_NOT_CALLABLE
+            return: c.LMX_INTERP_INVALID
+        return: c.LMX_INTERP_OK
+    ---
+    if: node\len > 1
+        st: lmx_interp_walk(arena, node, 1U)
+        if: st = c.LMX_INTERP_RETURN
+            return: c.LMX_INTERP_OK
+        return: st
+    ---
+    method: info\method
+    if: method != 0 && method\addr != 0
+        st: lmx_call0(arena, node)
+        if: st = c.LMX_CALL_NOT_CALLABLE
+            return: c.LMX_INTERP_INVALID
+        return: c.LMX_INTERP_OK
+return: c.LMX_INTERP_NO_GRAPH

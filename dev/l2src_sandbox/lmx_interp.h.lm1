@@ -6,19 +6,19 @@ predef: "l2src/lmx_own.h.lm1"
 # Graph interpreter: execute the SAME Lmx graph native METHOD.addr would run.
 # Work only in dev/l2src_sandbox. Root l2src stays stable.
 #
-# Slot 0 holds LmxCallable (dev): addr/sig plus references to method header,
-# body graph, and return-trailer argument. Lmx stays three fields. Old METHOD
-# in slot 0 is still recognized by lmx_call_ready.
+# Slot 0 holds LmxCallable: native METHOD reference plus header tree.
+# Body is M after slot 0, in order. Each return: is an LmxOp in that tree.
 
 define: LMX_INTERP_OK 0
 define: LMX_INTERP_INVALID 1
 define: LMX_INTERP_NO_GRAPH 2
+define: LMX_INTERP_RETURN 3
+
+define: LMX_OP_RETURN 1
+define: LMX_OP_CALL 2
 
 prototype:
-    # True when child[0] is a METHOD in this arena (same test as lmx_call_ready).
     fn: lmx_interp_callable (@: LmxArena arena; @: Lmx node) int
-    # Native entry of that METHOD, or null. Interpreter may ignore addr and walk fields.
     fn: lmx_interp_method (@: LmxArena arena; @: Lmx node) @: LmxMethod
-    # Walk executable fields of `node` with own load/dirty rules. Does not parse source.
     fn: lmx_interp_run (@: LmxArena arena; @: Lmx node) int
 end: prototype

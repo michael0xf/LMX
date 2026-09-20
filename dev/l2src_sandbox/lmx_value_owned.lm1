@@ -55,6 +55,13 @@ fn: lmx_callable_new_owned (@: LmxArena arena) @: LmxCallable
     ---
     return: value
 
+fn: lmx_op_new_owned (@: LmxArena arena; int: code) @: LmxOp
+    @: LmxOp value (cast: (@: LmxOp) lmx_value_allocate_owned(arena, c.sizeof(c.LmxOp), c.LMX_DOMAIN_KIND_OP, c.LMX_DOMAIN_OP))
+    if: value != 0
+        value\code: code
+    ---
+    return: value
+
 fn: lmx_int_new_owned (@: LmxArena arena) @: void
     int: zero 0
     @: int value (cast: (@: int) lmx_value_allocate_owned(arena, c.sizeof(zero), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT))

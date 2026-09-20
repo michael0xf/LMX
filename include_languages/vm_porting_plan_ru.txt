@@ -1,0 +1,718 @@
+CURRENT CORE MODEL / ДЕЙСТВУЮЩАЯ МОДЕЛЬ (2026-09-12)
+Read L2_CORE_AND_MESSAGE_MODEL_20260912.md at repository root: parts I-III
+describe the full core/Message mechanism; part IV records implementation limits,
+and only the final part is the work plan. SPEC and Revision 2 remain normative.
+This file's dated prototype/evidence sections describe their stated revisions;
+they are not permission to restore old layouts, pointer-only merge, unchanged
+copied node links, or a new arbitrary capacity limit. Non-copying adoption and
+shared METHOD/eternal terminals retain addresses under their separate contracts.
+
+Проще всего -- загнал generated-C и собрал стандартным инструментом:
+    1    MIR            L1        MIR.md + C API           L1/L2 №2 #как первый опыт
+    2    WASM linear    L1        W3C core + binary        L1/L2 №1 #в каждом браузере
+    3    RISC-V ISA     L1        unprivileged spec        L1/L2 №5
+Популярней всего, JVM в каждом устройстве = реальная польза, но надо написать компилятор:
+    4    JVM classfile  L3        JVMS                     L3 №1
+Много браузеров, связан с 2 но тоже надо писать компилятор:
+    5    WASM GC        L3        W3C GC (Wasm 3.0)        L3 №2
+Игровая индустрия громадная:
+    6    Lua 5.4        L3        lopcodes / manual        L3 №5
+Много VM, но там где уже заведомо есть EXE и JVM, Lua по охвату больше Unity:
+    7    .NET CIL       L3        ECMA-335 III             L3 №3
+
+Вычеркиваем:
+Больше похож на мультиплатформенный язык чем на платформу для языков,
+ломает герметичность:
+* BEAM           L3        формат OTP beam          L3 №4
+"Годность L1: да, тяжело." -- не катит для команды из нескольких ИИ-агентов:
+* LLVM IR / bitcode  (.bc) + lli / ORC JIT  [L1]
+
+
+План портирования на VM -- порядок работ (русский)
+==================================================
+
+Статус
+
+Снимок 2026-09-09. Это не план поставки и не обязательство делать
+второй бэкенд. Сводка из:
+
+    L1_to_vm_research_ru.txt    C-машины для Translator-L1
+    L2_to_vm_research_ru.txt    ядро L2 = машина L1 + Lmx/Messages
+    L3_to_vm_research_ru.txt    высокоуровневое подмножество
+                                (управляемый рейтинг)
+
+English text: vm_porting_plan_en.txt
+
+Это файл *порядка внедрения*, не рейтинг популярности и не порядок
+технической годности из заметок L1/L2/L3. Пункты 1-3 -- путь A:
+generated C99 в готовую утилиту, без нового принтера. Пункты 4-7 --
+принтер bytecode L3. BEAM и LLVM остаются в списке как отказы.
+
+Generated-C из Translator-L1 -- ANSI C99 (L1_spec.txt, `-std=c99`),
+не C11.
+
+
+0. Две поверхности
+------------------
+Выбранная поверхность *ядра* по-прежнему **Translator-L1**.
+
+      L2  ->  Translator-L2  ->  текст L1 (P-L1text)
+          ->  Translator-L1  ->  C99
+
+P-C99 (C напрямую из L2) отвергнут. VM, которая может гонять живое
+ядро, -- это VM для L1 (Layer M).
+
+  Путь A -- оставить C-принтер; скормить .c в C-to-VM. Без правок
+  l1trans. Это пункты 1-3.
+
+  Путь B -- второй принтер внутри l1trans.lm1. Не новый язык. Имеет
+  смысл, только если шаг C -- проблема.
+
+L3 -- другая поверхность (спека 1.4): нет адресной арифметики, нет
+префикса `@`. Обычные значения L3 -- ссылки на Structure/callable,
+ссылки на дескриптор Array и примитивы, не указатели C. Пункты 4-7
+-- принтеры L3 плюс библиотека рантайма Lmx на этой VM. Объекты/
+таблицы/термы VM *не* есть L3. Онтология L3 -- Lmx `{node, len,
+data}`: число детей фиксировано при постройке; `merge` копирует в
+новый корень (19.17, 21.11); обычное присваивание меняет ссылку в
+поле, не `len`; тождество -- вхождение, не класс Java и не таблица
+Lua.
+
+Managed-маршрут: L3 -> байткод целевой VM + её рантайм Lmx, без дерева машинных
+операций L2. L2-only исходник отвергается до managed lowering. Высокоуровневому
+контракту нужен provider для этой VM; наличие только native-реализации означает
+ошибку сборки/линковки, а не компиляцию её L2-кода в JVM. Native `{addr, sig}` --
+одно представление семантической пары `{entry, sig}`.
+
+Managed-ссылка сохраняет наблюдаемое тождество при перемещении объекта GC;
+native-узлы и пулы остаются неподвижны. Обе реализации сохраняют одну логическую
+арену на Message, отсутствие изменяемых межаренных ссылок между исполнителями
+и локальную доставку передачей владения без клонирования. Передача арены сбойного
+ребёнка требует прекращения доступа, cleanup и сохранённого корня (спека 19.29.8).
+GC меняет физическое освобождение, не этот контракт. Это требования к будущему
+backend, не готовая JVM-реализация и не смена приоритета Message/самосборки.
+
+Mix -- не ISA Java. com.mtk.map -- шаблон пересекающихся деревьев,
+не Mix. Целевая перепись: сотрудничающие Message в модели стиля
+Smalltalk (спека 19.29.2.1, WorldWideMix.txt). Mix -- библиотека/
+рантайм на выбранной VM, независимо от JVM/CIL.
+
+Отображения не сливать. Линейная память WASM -- куча L1; wasm-gc --
+куча L3. CIL в этом плане -- только managed L3 (unmanaged CIL для
+L1 не берём). У JVM и Lua 5.4 нет строки L1.
+
+L2 по-прежнему важен как *рантайм* на VM L1: bump-арены,
+неперемещаемые узлы, FIFO-ходы Message. Линейный WASM и C-VM это
+уже дают.
+
+
+1. MIR  (vnmakarov/mir)  [L1]  -- первый опыт Path A
+---------------------------------------------------
+Лучшая выделенная C-виртуальная машина. Нет в каталоге.
+Типизированный C-подобный IR, текст и двоичная форма,
+интерпретатор, JIT, C API. Операнды памяти C-образные. alloca,
+хостовый printf, goto, switch, метка-как-значение. Двоичный MIR
+~в 10 раз меньше и быстрее читается, чем текст. JIT geomean ~91%
+gcc -O2 на их малом C-наборе; интерпретатор ~в 6-10 раз медленнее
+JIT. Десятки KLOC C, не LLVM. Хосты: x86_64, aarch64, ppc64le,
+s390x, riscv64 Linux; x86_64/aarch64 macOS.
+
+Почему это место: самый дешёвый способ увидеть C99 из L1 как
+виртуальный код без нового принтера и без многогигабайтного SDK.
+Первый *опыт*, не первый продукт. `c2m` менее «стандартный», чем
+clang; выигрывает размером и тем, что это C-VM, которую можно
+прочитать.
+
+Годность L1/L2: да (заметки L1/L2 №2). Хостовый libc, настоящие
+указатели, нет изоляции в стиле Wasm. L3: только через L1; куча C
+больше машины, чем нужно исходному L3.
+
+c2m рекламирует подмножество C11 без VLA / complex / atomics / TLS
+плюс часть GNU-расширений. L1 выдаёт C99, не C11. L1 не выдаёт VLA
+и `_Complex` (прямоугольные массивы фиксированного размера;
+L1_spec.txt §3). Риск -- съест ли `c2m` конкретный C99 из
+`l1trans`, а не дыра C11.
+
+Процесс:
+
+  1. Клонировать и собрать (ставить в систему не обязательно):
+
+         git clone https://github.com/vnmakarov/mir
+         cd mir && mkdir build && cd build && cmake .. && cmake --build .
+
+     Документация в дереве: MIR.md (ISA, типы, модули), mir.h,
+     c2mir/. Утилиты: c2m, m2b, b2m. Отдельного SDK-тарбола нет --
+     это git-дерево.
+
+  2. Получить C99 из L1, как сейчас:
+
+         l1trans  <unit.lm1>  -o  unit.c
+         # или tracked-снимки lm1/build/*.lm1.c
+
+     Флаги образа C99: `-std=c99 -Wall -Wextra -Wpedantic`
+     (L1_spec.txt §3).
+
+  3. Скормить c2m (имена из MIR.md; `-ei` = скомпилировать и
+     выполнить):
+
+         c2m -ei unit.c
+         c2m unit.c -o unit.mir          # текстовый MIR
+         m2b unit.mir unit.bmir          # двоичный MIR
+
+  4. Фикстуры, сначала самые дешёвые:
+         smoke L1 в stg/l1_baseline
+         libc_abi (fopen / memcpy / FILE*)
+         указатели own.lm1
+         затем самотесты Lmx в l2src, если ядро в скоупе
+
+  Успех: parser.lm1 / own.lm1 проходят c2m+run на хосте.
+  Провал: GNU-измы или углы libc, которые c2m отвергает -- тогда
+  урезать образ C или переходить к пункту 2 (wasi-sdk -- полный
+  clang).
+
+Путь B позже: принтер L1 -> MIR с тем же локальным отображением,
+что у C-принтера. Не первая неделя.
+
+Документация bytecode:
+    https://github.com/vnmakarov/mir
+    MIR.md ; mir.h ; утилиты c2m, m2b, b2m
+
+
+2. WASM, линейная память  (include_wasm.txt)  [L1]  -- первый продукт
+--------------------------------------------------------------------
+Bytecode W3C. .wasm и .wat заданы так, чтобы компиляторы выдавали
+модули. Линейная память wasm32 -- куча C; i32/i64/f32/f64;
+br / br_if / br_table закрывают goto/switch; указатели на функции
+-> table + call_indirect. WASI preview 1 закрывает ввод-вывод
+класса FILE* через preopen (`wasmtime --dir=.`). Рантаймы каталога:
+Wasmtime C-API, Wasmer, WAMR, wasm3.
+
+Почему это место: VM стоит в каждом крупном браузере; WASI/wasmtime
+даёт переносимый *файл*. Путь A -- настоящий clang (wasi-sdk),
+годность C99 сильнее, чем у c2m. «Плагины в каждом браузере»
+перепродаёт этот путь: wasi-sdk выдаёт WASI-модуль для
+wasmtime/WAMR, не расширение Chrome. В страницу нужен JS-клей
+(Emscripten или небольшой WASI-shim). Продукт -- образ .wasm
+(кли, edge, потом веб).
+
+Годность L1: да (L1/L2 №1). Лимиты: wasm32 4 ГБ (memory64 сырой);
+нет тождества хостового FILE*; у WASI p1 нет сети; указатели
+guest/host копируются (include_wasm.txt §5.4). L2: линейная память
+не переезжает -- тождество Lmx родное. L3: только как L3 -> L1 ->
+C -> wasi-sdk; больше машины, чем нужно исходному L3. Для WASM L3
+см. пункт 5.
+
+Процесс:
+
+  1. wasi-sdk (clang + wasi-libc, компилятор C):
+
+         https://github.com/WebAssembly/wasi-sdk/releases
+
+     Распаковать, выставить WASI_SDK_PATH. Типично:
+
+         $WASI_SDK_PATH/bin/clang --target=wasm32-wasip1 \
+             -std=c99 -O2 -o unit.wasm unit.c
+
+  2. Гонять на WASI-хосте (не в браузере, сначала):
+
+         https://github.com/bytecodealliance/wasmtime/releases
+             wasmtime-vNN-<triple>.tar.xz
+         # или C-API тарбол, та же организация, для встраивания
+         #   wasmtime-vNN-<triple>-c-api.tar.xz
+         # triple: x86_64-linux, aarch64-linux,
+         #         x86_64-macos, aarch64-macos, x86_64-windows
+
+         wasmtime --dir=. unit.wasm
+
+     Альтернативы из include_wasm.txt: Wasmer, WAMR
+     (github.com/bytecodealliance/wasm-micro-runtime), wasm3
+     (малый интерпретатор). WAMR/wasm3, если цель -- крошечный
+     in-process embed, а не полный JIT Wasmtime.
+
+  3. Те же фикстуры L1, что в пункте 1. Дополнительно: fopen через
+     preopen; memcpy в линейной памяти; нет алиаса хостового
+     указателя.
+
+  4. Браузер (необязательно, позже): тот же .wasm -- не плагин.
+     Варианты: Emscripten вместо wasi-sdk, если нужен DOM; или
+     инстанцировать WASI-модуль с JS-полифилом WASI. Chrome
+     Platform Status: ~5.5% визитов попадают на страницу с каким-то
+     Wasm -- это установленная VM, не «наш модуль уже ездит».
+
+  include_wasm.txt остаётся *обратной* задачей каталога
+  (Lingvamyxa хостит wasm-гостя). Этот пункт -- L1 компилируется
+  *в* wasm.
+
+Путь B: принтер L1 -> wasm, только если шаг C/wasi-sdk -- проблема.
+
+Документация bytecode:
+    https://webassembly.github.io/spec/
+    https://www.w3.org/TR/wasm-core-2/
+    глава Binary Format ядерной спеки.
+
+
+3. RISC-V как переносимая ISA  [L1]  -- Path A, не продукт
+---------------------------------------------------------
+Не скриптовая VM: настоящий набор инструкций с публичной
+кодировкой. Скомпилировать C99 из L1 тулчейном riscv32/riscv64;
+гонять на QEMU user, Spike или mini-rv32ima. Указатели, newlib,
+goto -- родные. «Bytecode» здесь -- машинная кодировка RISC-V.
+
+Почему это место: тот же Path A, что 1-2 (C99 в готовый компилятор
++ эмулятор), и gcc/clang для RISC-V -- полный компилятор C99,
+часто лучшая проверка «съест наш C», чем c2m. В браузерах его нет.
+Нет истории «отправил файл», сравнимой с .wasm. Использование
+железа большое (embedded SoC); как *программная* VM -- учёба
+(QEMU, Spike). Третья дешёвая проверка C99, не боевой бэкенд.
+
+Годность L1/L2: да (L1/L2 №5). Один hart / одно адресное
+пространство, если рантайм сам не режет память. L3: только через
+L1.
+
+Процесс:
+
+  1. Тулчейн, выбрать один:
+
+         # пакеты дистрибутива (класс Debian/Ubuntu)
+         gcc-riscv64-linux-gnu
+         gcc-riscv64-unknown-elf          # newlib, без Linux ABI
+
+         # или дерево GNU с апстрима
+         https://github.com/riscv-collab/riscv-gnu-toolchain
+
+         # или пребилды xPack / SiFive, если нужен тарбол
+
+     Кросс-компиляция того же unit.c:
+
+         riscv64-unknown-elf-gcc -std=c99 -O2 -o unit.elf unit.c
+         # или riscv32 для 32-битного hart (mini-rv32ima)
+
+  2. Запуск:
+
+         qemu-riscv64  unit.elf           # user-mode, Linux ABI
+         qemu-riscv32  unit.elf
+
+         # Spike (симулятор ISA, ближе к спеке)
+         https://github.com/riscv-software-src/riscv-isa-sim
+         spike  pk  unit.elf              # pk = proxy kernel
+
+         # крошечный встраиваемый эмулятор (RV32IMA)
+         https://github.com/cnlohr/mini-rv32ima
+
+  3. Те же фикстуры L1. Дополнительно: FILE* newlib против
+     сисвызовов Linux -- какой gcc взяли, такой ABI; не мешать
+     elf и linux-gnu в одном эксперименте.
+
+Документация ISA:
+    https://riscv.org/technical/specifications/
+    главы RV32/RV64I Base Integer Instruction Set.
+
+
+4. JVM classfile  (include_openjdk.txt)  [L3]  -- первый принтер L3
+------------------------------------------------------------------
+Самая используемая прикладная bytecode-VM. JVMS документирует
+classfile и набор инструкций. Публичные писатели: javac, ASM, BCEL,
+каждый JVM-язык (Kotlin, Scala, Clojure, Groovy). Android ART
+исполняет DEX, полученный из classfile.
+
+Почему это место: Java TIOBE №4, SlashData ~23.2 млн разработчиков,
+Android и серверы. Это польза, которую Path A не покупает -- место,
+где bytecode уже гоняют. Path A из C99 нет: javac не ест C.
+NestedVM / LLJVM / Cibyl были мучительны. Нужен принтер L3.
+
+Годность L3: лучшее в каталоге отображение объектов/массивов
+(заметка L3 №1) как *подложка рантайма Lmx*, не потому что классы
+Java -- это Structure. Спека 2: Structure -- не класс Java.
+Посадить Lmx `{node, len, data}` на JVM (один объект на вхождение
+или небольшой пул узлов); `merge` выделяет новое дерево; число
+детей не растёт; присваивание пишет `data`, не `len`. Mix не Java
+-- com.mtk.map шаблон. FIFO Message -- библиотека очереди на этой
+VM (сотрудничающие Message в стиле Smalltalk, 19.29.2.1).
+
+Годность L1/L2: нет. Нет сырых указателей; слово класса;
+перемещающий GC. Не выдавать classfile из Translator-L1.
+
+Процесс:
+
+  1. JDK для хоста (прогон и, позже, javac дымовых компаньонов).
+     В каталоге по умолчанию -- переносимый JRE, без системной
+     Java:
+
+         https://adoptium.net/          сборки Temurin
+         include_openjdk.txt            схема fetch / stage
+
+     JVMS:
+         https://docs.oracle.com/javase/specs/
+
+  2. Библиотека писателя bytecode (не начинать с сырого
+     DataOutputStream):
+
+         ASM     https://asm.ow2.io/          (org.ow2.asm)
+         или BCEL https://commons.apache.org/bcel/
+
+     ASM ClassWriter / MethodVisitor -- обычная форма компилятора
+     (Scala, Kotlin и другие).
+
+  3. Первый семантический эксперимент -- подмножество L3, не ядро:
+         hello.lm3: print, fn/sub, each/for, field-follow
+         Structure, table
+         -> classfile
+         Массивы с проверкой границ обязательны (спека 1.4).
+
+     Рантайм на JVM (библиотека, не «класс на каждый Structure»):
+         вхождение Lmx {node, len, data}
+         merge = копия в новый корень (19.17)
+         FIFO Message = объекты + очередь; Mix остаётся
+         Message-моделью
+
+  4. Не протаскивать hosted Namespace/дескрипторы Java как
+     семантику L3 (L1_language spec 4.1). include_openjdk.txt --
+     обратная задача каталога (Lingvamyxa хостит JVM).
+
+  Успех: hello.lm3 бежит на вендоренном JRE с правилами merge/
+  вхождений (`[0]name` / `[1]name`, без last-wins). Провал:
+  отобразить Structure на обычные классы Java и считать готовым.
+
+Документация bytecode:
+    Java Virtual Machine Specification
+    https://docs.oracle.com/javase/specs/
+
+
+5. WASM GC  [L3]  -- L3 на хосте пункта 2
+----------------------------------------
+Та же VM W3C, что в пункте 2, другая куча: reference types,
+structs, arrays; ими управляет GC хоста. Стандартизирована в
+Wasm 3.0. Хост по-прежнему Wasmtime / WAMR из include_wasm.txt.
+Это не линейная память wasm32 (пункт 2) и не wasm-gc как куча L2
+(L2 отвергает, потому что L2 наблюдает адреса).
+
+Почему это место: после пункта 2 рантайм уже стоит. Все крупные
+браузеры возят GC (Chrome 119, Firefox 120, Safari 18.2). Факт
+использования мал (~0.224% загрузок Chrome против ~5.5% у Wasm
+вообще). Компиляторы сегодня: Kotlin/Wasm, Dart/Flutter, TeaVM.
+Это WASM формы L3, не новый рынок. Дешевле нового мира VM, когда
+линейный WASM есть; не дешевле JVM как первого принтера L3
+(пользователи, лор compile-to-classfile).
+
+Не Path A: C99 через wasi-sdk -- линейная память. wasm-gc нужен
+принтер L3 (structs/arrays), тот же класс работы, что пункт 4.
+
+Годность L3: да, переносимо (заметка L3 №2). Проверка границ и
+перемещающий GC родные. Lmx всё равно сажать на GC-структуры --
+структура GC это хранилище, не Structure. Годность L1/L2: нет.
+
+Процесс:
+
+  1. Повторно использовать хост пункта 2. Проверить GC:
+
+         wasmtime --version             # Wasm 3.0 / GC
+         # WAMR: сборка с включённым GC proposal
+
+     Спека:
+         https://webassembly.github.io/spec/
+         GC / heap types в ядерной спеке (Wasm 3.0)
+         https://github.com/WebAssembly/gc
+
+  2. Инструменты писателя (текст или двоичный):
+
+         wasm-tools    https://github.com/bytecodealliance/wasm-tools
+                       разбор/проверка/печать .wat включая типы GC
+         binaryen      https://github.com/WebAssembly/binaryen
+         # или выдать .wat руками для подмножества hello.lm3 и
+         # собрать wasm-tools
+
+  3. То же подмножество hello.lm3, что в пункте 4, в GC
+     structs/arrays плюс гостевая библиотека merge / FIFO
+     Message. Не понижать L3 через L1 в wasi-sdk и называть это
+     wasm-gc.
+
+  4. Ограничение последовательности: не начинать раньше пункта 2.
+     Без линейного WASM это VM с нуля; с ним -- апгрейд L3 того
+     же хоста.
+
+Документация bytecode: та же ядерная спека W3C, главы GC.
+
+
+6. Lua 5.4  (include_lua.txt)  [L3]  -- игры как культура embed
+--------------------------------------------------------------
+Документированная opcode-VM (lopcodes, lua_dump / lua_load). Малое
+дерево C (~250 КБ). Таблицы могут нести граф; указатели не нужны.
+GC PUC Lua не правило стабильности L3. Корутины -- не FIFO-ходы
+Message.
+
+Почему это место: SlashData ~2.3 млн разработчиков Lua; игры и
+встраивания (WoW, Roblox/Luau как диалект, движки вообще). Этот
+мир использует Lua как *гостя* (хост встроил и eval), обратное к
+компиляции L3 *в* Lua. Движков больше, чем Unity, поэтому как
+дверца в игры бьёт CIL. Годность L3 -- набросок (заметка L3 №5):
+таблицы last-wins -- не вхождения Lmx. Самый дешёвый *эмиттер*
+среди принтеров L3 (малый набор опкодов, `luac -l`); не первая
+боевая ISA -- это по-прежнему JVM.
+
+Годность L1/L2: нет. Теговые значения, нет кучи C. LuaJIT -- не
+этот пункт (FFI -- лазейка L2).
+
+Процесс:
+
+  1. Вендорить PUC Lua 5.4 (каталог это уже описывает):
+
+         https://www.lua.org/ftp/lua-5.4.7.tar.gz
+         # sha256 на той же ftp-странице; запинить
+         include_lua.txt                src/*.c без lua.c / luac.c
+
+     luac оставить для эксперимента (`luac -l`). Bytecode
+     привязан к версии 5.4; не мешать 5.1/LuaJIT.
+
+  2. Писатель: либо
+         - выдавать bytecode Lua 5.4 (lopcodes.h, ldump.c как
+           учитель формата), либо
+         - выдавать исходник .lua и прогонять luac (проще, слабее
+           -- не принтер ISA).
+
+         https://www.lua.org/manual/5.4/
+         https://www.lua.org/source/5.4/lopcodes.h.html
+
+  3. Библиотека рантайма на таблицах, не «таблица и есть
+     Structure»:
+         закодировать Lmx {node, len, data}
+         заморозить число детей при постройке
+         merge копирует; `[0]` / `[1]` различны, не override
+         FIFO Message -- очередь Lua, не корутина
+
+  4. Снова первое подмножество: hello.lm3. Успех -- правила
+     вхождений, не «оно print()ит». include_lua.txt -- обратное
+     встраивание.
+
+Документация bytecode: руководство Lua 5.4 + lopcodes.h / ldump.c.
+
+
+7. .NET CIL  (include_dotnet.txt)  [L3]  -- последнее, слабая дверца
+-------------------------------------------------------------------
+Настоящая bytecode-VM. ECMA-335 Partition III = CIL; Partition II
+= метаданные. Публичные писатели: ilasm, ildasm,
+System.Reflection.Emit, Mono.Cecil, dnlib. CoreCLR MIT
+(dotnet/runtime). В этом плане CIL + CoreCLR, не NativeAOT
+(Removed в каталоге: полный SDK, сборка под каждую цель).
+
+Почему это место: C# большой (TIOBE №5, ~11.1 млн разработчиков),
+и CIL ближе к CPU, чем BEAM (стековая машина, целые, переходы;
+unmanaged даже с указателями -- здесь не используем). Лишняя
+продуктовая дверца тонкая: на Windows уже есть EXE (Path A) и
+JVM; серверы с CoreCLR гоняют и JVM; Unity -- один движок, Lua
+покрывает больше. На Android CIL не заходит. Blazor -- CIL дальше
+в Wasm (пункты 2/5). Оставлен как пункт 7, не вычеркнут: ровная
+дорога compiler-to-CIL, если когда-нибудь понадобится лавка C#.
+Unmanaged CIL для L1 не берём (тяжело, те же машины, что gcc).
+
+Годность L3: да как подложка (заметка L3 №3), тот же класс работы,
+что JVM -- запись Lmx, мутация `data`, merge копирует. Mix не
+выбирает C# или Java. Годность L1 здесь не используется.
+
+Ближе к CPU, чем BEAM; дальше от CPU, чем пункты 1-3. Не «C# в
+опкодах» в той мере, в какой BEAM -- Erlang в опкодах, но объектная
+модель CLI всё равно рантайм поверх стековой ISA.
+
+Процесс:
+
+  1. .NET SDK (здесь живёт ilasm; рантайм -- CoreCLR):
+
+         https://dotnet.microsoft.com/download
+         include_dotnet.txt             схема tarball nethost
+                                        (обратное: хостить CLR как гостя)
+
+     Спека:
+         ECMA-335 6-е изд., Partition III (CIL), II (Metadata)
+         https://www.ecma-international.org/publications-and-standards/standards/ecma-335/
+
+  2. Писатель:
+         ilasm / ildasm                 (SDK)
+         Mono.Cecil                     https://github.com/jbevain/cecil
+         dnlib                          https://github.com/0xd4d/dnlib
+         System.Reflection.Emit         in-process
+
+     Для компилятора -- Cecil/dnlib, ilasm -- чтобы читать дым.
+
+  3. Та же форма библиотеки Lmx, что в пункте 4, на managed-типах.
+     Unsafe-куча для L3 не нужна. Подмножество hello.lm3. Один
+     CoreCLR на процесс; прогрев JIT.
+
+  4. Не начинать отсюда. Если пункт 4 есть, это второй
+     управляемый принтер с меньшей дверцей.
+
+Документация bytecode: ECMA-335, как выше.
+
+
+8. Вычеркнуты -- остаются в списке
+----------------------------------
+
+* BEAM (Erlang / Elixir)  [L3]  -- отказ как цель порта
+
+        Настоящая VM: файл .beam в стиле IFF, OTP genop.tab,
+        достаточно документирован, чтобы писать. Изолированные
+        кучи, FIFO-почта, один ход -- ближайший аналог Message
+        Thread, и цель Mix в стиле Smalltalk рифмуется с
+        процессами.
+
+        Отказ, потому что ISA *есть* Erlang: атомы, кортежи,
+        spawn/send, проверки тегов терма. В регистрах теговые
+        термы, не байты. Компилировать L3 в BEAM -- писать диалект
+        Erlang, а не сажать Lmx `{node,len,data}` на CPU-подобную
+        машину. Таксономически это язык в bytecode (токены
+        Sinclair BASIC -- тот же класс: кодировка и есть язык,
+        даже когда хост не Z80). Это промышленный рантайм; это не
+        делает его платформой для чужих языков.
+
+        Герметичность: образ -- не запечатанный модуль. OTP везёт
+        таблицу атомов, code server, планировщик и модель термов.
+        L3-в-BEAM втаскивает этот мир сквозь границу подмножества
+        L3. Контраст: .bmir / .wasm / .class.
+
+        Оставить как *метафору* FIFO Message и Mix. Принтер не
+        писать. Каталог уже убрал BEAM как in-process embed
+        (C-node / sidecar).
+
+        Документация (не работа):
+            https://www.erlang.org/doc/man/beam_lib.html
+            OTP lib/compiler/src/genop.tab
+            https://happi.github.io/theBeamBook
+
+* LLVM IR / bitcode (.bc) + lli / ORC JIT  [L1]  -- отказ
+
+        Промышленный compiler IR. LangRef документирует каждую
+        инструкцию. Путь A есть: clang -emit-llvm на C99 из L1,
+        затем lli / ORC. llvm-project огромный (~40 тыс. звёзд);
+        bitcode в собственной документации LLVM не стабильная
+        сериализация (выдавать текстовый IR или C++ API).
+
+        Годность L1: да, тяжело (L1/L2 №3). Ломает правило
+        каталога «без многогигабайтного SDK» как вендоренный
+        embed. Почти никто не возит lli как промышленную VM.
+
+        Отказ для команды из нескольких ИИ-агентов: после Path A
+        вы живёте внутри LLVM (понижение C ABI, IRBuilder, чужой
+        компилятор целиком). Это не VM-бэкенд, это взять чужой
+        компилятор. Пункты 1-2 уже дают Path A на малой C-VM и
+        на переносимом .wasm.
+
+        Документация (не работа):
+            https://llvm.org/docs/LangRef.html
+            https://llvm.org/docs/BitCodeFormat.html
+
+
+9. Намеренно отсутствует
+------------------------
+Натив, не bytecode-VM (L1 их любит; сняты правилом «писать
+bytecode»):
+
+    TinyCC / libtcc   самый короткий in-process прогон C99 из L1
+    QBE               нативный SSA-бэкенд
+    sljit             уже вендорен; JIT-ассемблер
+    Cranelift и др.   библиотеки codegen / JIT
+
+Не рекомендуется как ISA ни для L1, ни для L3:
+
+    bytecode Python, JS-движки, LuaJIT, Pawn/AMX, Umka,
+    AngelScript, семейство CPython, HashLink (слабая спека
+    писателя), com.mtk.map как ISA (шаблон, не Mix)
+
+Ещё не существует: собственный bytecode L2/L3 (Layer I).
+Исполнялся бы *на* пунктах 1-7.
+
+
+10. Таблица (порядок этого файла)
+---------------------------------
+    №    Цель           Поверхн.  Спека писателя         Заметка
+    --   -------------  --------  ---------------------  -------
+    1    MIR            L1        MIR.md + C API         Path A, первый опыт
+    2    WASM linear    L1        W3C core + binary      Path A, первый продукт
+    3    RISC-V ISA     L1        unprivileged spec      Path A, не продукт
+    4    JVM classfile  L3        JVMS                   первый принтер L3
+    5    WASM GC        L3        W3C GC (Wasm 3.0)      L3 на пункте 2
+    6    Lua 5.4        L3        lopcodes / manual      игры, набросок ISA
+    7    .NET CIL       L3        ECMA-335 III           слабая дверца
+
+    *    BEAM           L3        формат OTP beam        отказ: язык в bytecode
+    *    LLVM IR        L1        LangRef                отказ: слишком тяжело
+
+Тех.ранги в оглавлении -- места в L1_to_vm_research_ru.txt /
+Layer M L2 или в L3_to_vm_research_ru.txt. Не внедрять в порядке
+популярности; эта таблица -- порядок работ.
+
+    ---- не в этом плане ----
+
+         TinyCC/QBE/JIT     нет переносимого bytecode
+         Python/JS/LuaJIT   не рекомендуется для L1 и L3
+         HashLink           слаб у L3; нет первоклассной спеки
+         Layer I bc         не существует
+
+
+11. Если когда-нибудь пробовать бэкенд
+--------------------------------------
+По оглавлению. Поверхности не смешивать.
+
+  L1 (пункты 1-3), путь A:
+
+  1. Поверхность -- Translator-L1, не Layer S L2, не L3-в-JVM.
+  2. MIR (пункт 1): C из l1trans через c2m. Фикстуры: smoke L1,
+     libc_abi, own.lm1.
+  3. Линейный WASM (пункт 2): тот же C через wasi-sdk, прогон
+     wasmtime --dir=.. Одна память/инстанс на Message, если
+     изоляция на границе VM.
+  4. RISC-V (пункт 3): тот же C через riscv gcc, QEMU или Spike.
+  5. Не начинать L1 с CIL, JVM, Lua, wasm-gc, BEAM или LLVM.
+
+  L3 (пункты 4-7), принтеры:
+
+  6. При хостинге L3 сохранять неперемещаемые адреса общего ядра L1/L2.
+     Отдельное VM-native представление требует доказательства эквивалентности;
+     moving GC не разрешается автоматически. Сохранить число детей, deep merge
+     с node fixups, общие методы/вечные терминалы и identity вхождений.
+  7. Первый принтер: hello.lm3 -> classfile JVM (пункт 4).
+  8. Второй, если есть пункт 2: hello.lm3 -> wasm-gc (пункт 5).
+  9. Lua (пункт 6) как малый эмиттер / эксперимент игрового
+     embed, не вместо JVM.
+  10. CIL (пункт 7), только если точка -- лавка C#.
+  11. Mix -- сотрудничающие Message (19.29.2.1), библиотека на
+      VM, не остаток Java.
+  12. Не писать L3-в-BEAM. Не брать LLVM как рантайм.
+
+Путь A повторно использует self-host. Путь B -- второй принтер в
+l1trans.lm1. Принтер L3-в-JVM / L3-в-wasm-gc -- новый профиль, не
+текущий гейт P-L1text.
+
+
+12. Ссылки
+----------
+    L1_to_vm_research_ru.txt            таблица C-машин
+    L2_to_vm_research_ru.txt            Layer M / Layer S
+    L3_to_vm_research_ru.txt            управляемый рейтинг
+    L1_spec.txt                         реализованный L1 / образ C99
+    L1_language_and_translator_spec.txt выбран P-L1text
+    Lingvamyxa_spec.txt                 L2/L3: 1.3-1.7, 2, 19-21
+    lingva_bindings.txt                 каталог встраивания (обратный вопрос)
+    include_wasm.txt                    хост WASM (обратное к 2)
+    include_dotnet.txt                  хост CoreCLR (обратное к 7)
+    include_tinycc.txt                  натив, не в этом списке
+    include_openjdk.txt                 хост JVM (обратное к 4)
+    include_lua.txt                     встраивание Lua 5.4 (обратное к 6)
+    vm_porting_plan_en.txt              английский текст этой заметки
+    https://github.com/vnmakarov/mir
+    https://github.com/WebAssembly/wasi-sdk
+    https://github.com/bytecodealliance/wasmtime/releases
+    https://webassembly.github.io/spec/
+    https://github.com/WebAssembly/gc
+    https://github.com/bytecodealliance/wasm-tools
+    https://riscv.org/technical/specifications/
+    https://github.com/riscv-collab/riscv-gnu-toolchain
+    https://github.com/cnlohr/mini-rv32ima
+    https://docs.oracle.com/javase/specs/
+    https://asm.ow2.io/
+    https://adoptium.net/
+    https://www.lua.org/manual/5.4/
+    https://www.lua.org/ftp/
+    https://www.ecma-international.org/publications-and-standards/standards/ecma-335/
+    https://github.com/jbevain/cecil
+    https://llvm.org/docs/LangRef.html
+    https://www.erlang.org/doc/man/beam_lib.html
+
+Конец vm_porting_plan_ru.txt.

@@ -1,0 +1,714 @@
+CURRENT CORE MODEL / ДЕЙСТВУЮЩАЯ МОДЕЛЬ (2026-09-12)
+Read L2_CORE_AND_MESSAGE_MODEL_20260912.md at repository root: parts I-III
+describe the full core/Message mechanism; part IV records implementation limits,
+and only the final part is the work plan. SPEC and Revision 2 remain normative.
+This file's dated prototype/evidence sections describe their stated revisions;
+they are not permission to restore old layouts, pointer-only merge, unchanged
+copied node links, or a new arbitrary capacity limit. Non-copying adoption and
+shared METHOD/eternal terminals retain addresses under their separate contracts.
+
+Cheapest -- feed generated C to a stock tool:
+    1    MIR            L1        MIR.md + C API           L1/L2 #2  #first experiment
+    2    WASM linear    L1        W3C core + binary        L1/L2 #1  #every browser
+    3    RISC-V ISA     L1        unprivileged spec        L1/L2 #5
+Most used, JVM on every device = real payoff, but a compiler:
+    4    JVM classfile  L3        JVMS                     L3 #1
+Many browsers, tied to 2, also a compiler:
+    5    WASM GC        L3        W3C GC (Wasm 3.0)        L3 #2
+Huge game industry:
+    6    Lua 5.4        L3        lopcodes / manual        L3 #5
+Many VMs, but where EXE and JVM already exist; Lua covers more
+engines than Unity:
+    7    .NET CIL       L3        ECMA-335 III             L3 #3
+
+Struck:
+More a multi-platform language than a platform for languages;
+breaks hermeticity:
+* BEAM           L3        OTP beam format          L3 #4
+"L1 fit: yes, heavy." -- not for a team of a few AI agents:
+* LLVM IR / bitcode (.bc) + lli / ORC JIT  [L1]
+
+
+VM porting plan -- implementation order (English)
+=================================================
+
+Status
+
+Research snapshot 2026-09-09. Not a provisioning plan and not a
+commitment to a second backend. Distilled from:
+
+    L1_to_vm_research_en.txt    C-machine targets for Translator-L1
+    L2_to_vm_research_en.txt    L2 kernel = L1 machine + Lmx/Messages
+    L3_to_vm_research_en.txt    high-level subset (managed ranking)
+
+Russian text: vm_porting_plan_ru.txt
+
+This file is an *implementation* order, not a popularity ranking and
+not the technical-fit order of the L1/L2/L3 notes. Items 1-3 are
+Path A: generated C99 into a stock tool, no new printer. Items 4-7
+need an L3 bytecode printer. BEAM and LLVM stay in the roster as
+refusals.
+
+Generated C from Translator-L1 is ANSI C99 (L1_spec.txt, `-std=c99`),
+not C11.
+
+
+0. Two surfaces
+---------------
+Chosen *kernel* surface remains **Translator-L1**.
+
+      L2  ->  Translator-L2  ->  L1 text (P-L1text)
+          ->  Translator-L1  ->  C99
+
+P-C99 (C directly from L2) is rejected. A VM that can run the live
+kernel is a VM for L1 (Layer M).
+
+  Path A -- keep the C printer; feed the .c to a C-to-VM. No
+  l1trans change. This is items 1-3.
+
+  Path B -- a second printer inside l1trans.lm1. Not a new language.
+  Worth it only if the C step is the problem.
+
+L3 is a different surface (spec 1.4): no address arithmetic, no
+prefix `@`. Ordinary L3 values are Structure/callable references,
+Array-descriptor references and primitives -- not C pointers.
+Items 4-7 are L3 printers plus an Lmx runtime library on that VM.
+The VM's objects/tables/terms are *not* L3. L3 ontology is Lmx
+`{node, len, data}`: child count is fixed at construction; `merge`
+copies into a new root (19.17, 21.11); ordinary assignment changes
+the reference a field holds, never `len`; identity is the
+occurrence, not a Java class or Lua table.
+
+Managed route: L3 -> target bytecode + target Lmx runtime, not through an L2
+machine tree. Reject L2-only source before managed lowering. An L3 callable
+contract needs a provider for this target; native-only availability is a target
+build/link error, not permission to compile its L2 implementation into JVM.
+Native `{addr, sig}` is one representation of semantic `{entry, sig}`.
+
+Managed references preserve observable identity even if GC moves objects.
+Native pointers/pools remain non-moving. Both preserve one logical ownership
+arena per Message, no concurrent mutable cross-owner graph aliases, and local
+delivery by ownership transfer without cloning. Failed-arena adoption requires
+quiescence, cleanup and retained roots (spec 19.29.8); managed GC changes physical
+reclamation, not this contract. These are target requirements, not implemented
+JVM support or an instruction to postpone the native Message/self-host work.
+
+Mix is not a Java ISA. com.mtk.map is a template of overlapping
+trees, not Mix. Target rewrite: cooperating Messages in a
+Smalltalk-style model (spec 19.29.2.1, WorldWideMix.txt). Mix is
+library/runtime on the chosen VM, independent of JVM/CIL.
+
+Do not collapse mappings. WASM linear memory is the L1 heap;
+wasm-gc is the L3 heap. CIL in this plan is L3 managed only
+(unmanaged L1 CIL is not pursued). JVM and Lua 5.4 have no L1 row.
+
+L2 still matters as a *runtime* on an L1 VM: bump arenas,
+non-moving nodes, FIFO Message turns. Linear WASM and C VMs
+already give that.
+
+
+1. MIR  (vnmakarov/mir)  [L1]  -- first Path A experiment
+---------------------------------------------------------
+Best dedicated C virtual machine. Not in the catalog. Typed C-like
+IR, text and binary forms, interpreter, JIT, C API. Memory operands
+are C-shaped. alloca, host printf, goto, switch, label-as-value.
+Binary MIR ~10x smaller/faster to read than text. JIT geomean ~91%
+of gcc -O2 on their small C suite; interpreter ~6-10x slower than
+the JIT. Tens of KLOC of C, not LLVM. Hosts: x86_64, aarch64,
+ppc64le, s390x, riscv64 Linux; x86_64/aarch64 macOS.
+
+Why this rank: cheapest way to see L1 C99 run as virtual code
+without a new printer and without a multi-gigabyte SDK. First
+*experience*, not first product. `c2m` is less "standard" than
+clang; it wins on size and on being a C VM you can read.
+
+L1/L2 fit: yes (L1/L2 notes #2). Host libc, real pointers, no
+Wasm-style isolation. L3: via-L1 only; C heap is more machine than
+L3 source needs.
+
+c2m advertises a C11 subset without VLA / complex / atomics / TLS,
+plus some GNU extensions. L1 emits C99, not C11. L1 does not emit
+VLA or `_Complex` (rectangular fixed arrays; L1_spec.txt §3). The
+risk is whether `c2m` swallows the actual C99 `l1trans` writes, not
+a C11 gap.
+
+Process:
+
+  1. Clone and build (no install required):
+
+         git clone https://github.com/vnmakarov/mir
+         cd mir && mkdir build && cd build && cmake .. && cmake --build .
+
+     Docs in-tree: MIR.md (ISA, types, modules), mir.h, c2mir/.
+     Tools: c2m, m2b, b2m. Releases are the git tree; there is no
+     separate SDK tarball.
+
+  2. Produce C99 from L1, same as today:
+
+         l1trans  <unit.lm1>  -o  unit.c
+         # or use tracked snapshots under lm1/build/*.lm1.c
+
+     Compile flags of the C99 image: `-std=c99 -Wall -Wextra
+     -Wpedantic` (L1_spec.txt §3).
+
+  3. Feed c2m (names from MIR.md; `-ei` = compile and run):
+
+         c2m -ei unit.c
+         c2m unit.c -o unit.mir          # text MIR
+         m2b unit.mir unit.bmir          # binary MIR
+         # or c2m paths that emit .bmir directly
+
+  4. Fixtures, cheapest first:
+         stg/l1_baseline L1 smoke
+         libc_abi (fopen / memcpy / FILE*)
+         own.lm1 pointer traffic
+         then l2src Lmx selftests if the kernel is in scope
+
+  Success: parser.lm1 / own.lm1 survive c2m+run on the host.
+  Failure mode: GNU-isms or libc corners c2m rejects -- then
+  either trim the C image or skip to item 2 (wasi-sdk is a
+  full clang).
+
+Path B later: L1 printer -> MIR with the same local mapping as
+the C printer. Not the first week.
+
+Bytecode docs:
+    https://github.com/vnmakarov/mir
+    MIR.md ; mir.h ; tools c2m, m2b, b2m
+
+
+2. WASM linear memory  (include_wasm.txt)  [L1]  -- first product
+----------------------------------------------------------------
+W3C bytecode. .wasm and .wat specified so compilers emit modules.
+wasm32 linear memory is the C heap; i32/i64/f32/f64; br / br_if /
+br_table cover goto/switch; function pointers -> table +
+call_indirect. WASI preview 1 covers FILE*-class I/O via preopens
+(`wasmtime --dir=.`). Catalog runtimes: Wasmtime C-API, Wasmer,
+WAMR, wasm3.
+
+Why this rank: every major browser ships the VM; WASI/wasmtime
+gives a portable *file* you can send. Path A uses a real clang
+(wasi-sdk), so C99 fit is stronger than c2m. "Plugins in every
+browser" oversells this path: wasi-sdk emits a WASI module for
+wasmtime/WAMR, not a Chrome extension. A page needs JS glue
+(Emscripten, or a small WASI-in-browser shim). The product is
+the .wasm image (cli, edge, then web).
+
+L1 fit: yes (L1/L2 #1). Limits: wasm32 4 GB (memory64 immature);
+no host FILE* identity; WASI p1 has no networking; guest/host
+pointers copy (include_wasm.txt §5.4). L2: linear memory does not
+relocate -- Lmx identity is native. L3: only as L3 -> L1 -> C ->
+wasi-sdk; more machine than L3 source needs. For L3 WASM see
+item 5.
+
+Process:
+
+  1. wasi-sdk (clang + wasi-libc, the C compiler):
+
+         https://github.com/WebAssembly/wasi-sdk/releases
+
+     Unpack, set WASI_SDK_PATH. Typical:
+
+         $WASI_SDK_PATH/bin/clang --target=wasm32-wasip1 \
+             -std=c99 -O2 -o unit.wasm unit.c
+
+  2. Run on a WASI host (not the browser, first):
+
+         https://github.com/bytecodealliance/wasmtime/releases
+             wasmtime-vNN-<triple>.tar.xz
+         # or C-API tarball, same org, for embedding
+         #   wasmtime-vNN-<triple>-c-api.tar.xz
+         # triples: x86_64-linux, aarch64-linux,
+         #          x86_64-macos, aarch64-macos, x86_64-windows
+
+         wasmtime --dir=. unit.wasm
+
+     Alternatives already named in include_wasm.txt: Wasmer,
+     WAMR (github.com/bytecodealliance/wasm-micro-runtime),
+     wasm3 (small interpreter). WAMR/wasm3 if the goal is a
+     tiny in-process embed rather than the full Wasmtime JIT.
+
+  3. Same L1 fixtures as item 1. Extra checks: fopen through a
+     preopen; memcpy in linear memory; no host pointer alias.
+
+  4. Browser (optional, later): the same .wasm is not a plugin.
+     Options: Emscripten instead of wasi-sdk if the DOM is the
+     point; or instantiate the WASI module with a JS WASI polyfill.
+     Chrome Platform Status ~5.5% of visits hit a page that uses
+     some Wasm -- that is installed VM, not "our module ships".
+
+  include_wasm.txt remains the *inverse* catalog job (Lingvamyxa
+  hosts a wasm guest). This item is L1 compiling *to* wasm.
+
+Path B: L1 printer -> wasm, only if the C/wasi-sdk step is the
+problem.
+
+Bytecode docs:
+    https://webassembly.github.io/spec/
+    https://www.w3.org/TR/wasm-core-2/
+    Binary Format chapter of the core spec.
+
+
+3. RISC-V as a portable ISA  [L1]  -- Path A, not a product
+----------------------------------------------------------
+Not a scripting VM: a real instruction set with a public encoding.
+Compile L1 C99 with a riscv32/riscv64 toolchain; run on QEMU user,
+Spike, or mini-rv32ima. Pointers, newlib, goto are native.
+"Bytecode" here is the RISC-V machine encoding.
+
+Why this rank: same Path A shape as 1-2 (C99 into a stock compiler
++ emulator), and gcc/clang for RISC-V is a full C99 compiler --
+often a better *swallow-our-C* test than c2m. It is not in
+browsers. No "send a file" story comparable to .wasm. Hardware
+usage is large (embedded SoCs); as a *software* VM it is
+educational (QEMU, Spike). Keep it as the third cheap C99 check,
+not as a shipping backend.
+
+L1/L2 fit: yes (L1/L2 #5). One hart / one address space unless
+the runtime splits memories by convention. L3: via-L1 only.
+
+Process:
+
+  1. Toolchain, pick one:
+
+         # distro packages (Debian/Ubuntu-class)
+         gcc-riscv64-linux-gnu
+         gcc-riscv64-unknown-elf          # newlib, no Linux ABI
+
+         # or the upstream GNU tree
+         https://github.com/riscv-collab/riscv-gnu-toolchain
+
+         # or xPack / SiFive prebuilts if a tarball is wanted
+
+     Cross-compile the same unit.c:
+
+         riscv64-unknown-elf-gcc -std=c99 -O2 -o unit.elf unit.c
+         # or riscv32 for a 32-bit hart (mini-rv32ima)
+
+  2. Run:
+
+         qemu-riscv64  unit.elf           # user-mode, Linux ABI
+         qemu-riscv32  unit.elf
+
+         # Spike (ISA simulator, closer to the spec)
+         https://github.com/riscv-software-src/riscv-isa-sim
+         spike  pk  unit.elf              # pk = proxy kernel
+
+         # tiny embeddable emulator (RV32IMA)
+         https://github.com/cnlohr/mini-rv32ima
+
+  3. Same L1 fixtures. Extra: newlib FILE* vs Linux syscalls
+     depending on which gcc you picked; keep one ABI and do not
+     mix elf vs linux-gnu in the same experiment.
+
+ISA docs:
+    https://riscv.org/technical/specifications/
+    RV32/RV64I Base Integer Instruction Set chapters.
+
+
+4. JVM classfile  (include_openjdk.txt)  [L3]  -- first L3 printer
+-----------------------------------------------------------------
+Most used application bytecode VM. JVMS documents the classfile
+and the instruction set. Public writers: javac, ASM, BCEL, every
+JVM language (Kotlin, Scala, Clojure, Groovy). Android ART runs
+DEX derived from that classfile.
+
+Why this rank: Java TIOBE #4, SlashData ~23.2M developers, Android
+plus servers. This is the payoff that Path A does not buy -- a
+place people already run bytecode. There is no Path A from C99:
+javac does not eat C. NestedVM / LLJVM / Cibyl were painful.
+Need an L3 printer.
+
+L3 fit: best catalog object/array mapping (L3 note #1) as a
+*substrate for an Lmx runtime*, not because Java classes are
+Structures. Spec 2: a Structure is not a Java class. Implement
+Lmx `{node, len, data}` on the JVM (one object per occurrence, or
+a small node pool); `merge` allocates a new tree; child count
+stays fixed; assignment writes `data`, not `len`. Mix is not
+Java -- com.mtk.map is a template. Message FIFO is a queue
+library on this VM (Smalltalk-style cooperating Messages,
+19.29.2.1).
+
+L1/L2 fit: no. No raw pointers; class word; moving GC. Do not
+emit classfiles from Translator-L1.
+
+Process:
+
+  1. JDK for the host (run and, later, javac of smoke
+     companions). Catalog default is a relocatable JRE, no
+     system Java:
+
+         https://adoptium.net/          Temurin builds
+         include_openjdk.txt            fetch / stage pattern
+
+     JVMS:
+         https://docs.oracle.com/javase/specs/
+
+  2. Bytecode writer library (do not start from raw DataOutputStream):
+
+         ASM     https://asm.ow2.io/          (org.ow2.asm)
+         or BCEL https://commons.apache.org/bcel/
+
+     ASM ClassWriter / MethodVisitor is the usual compiler shape
+     (Scala, Kotlin, many others).
+
+  3. First semantic experiment -- L3 subset, not the kernel:
+         hello.lm3: print, fn/sub, each/for, Structure
+         field-follow, table
+         -> classfiles
+         Bounds-checked arrays required (spec 1.4).
+
+     Runtime on the JVM (library, not "a class per Structure"):
+         Lmx occurrence {node, len, data}
+         merge = copy to a new root (19.17)
+         Message FIFO = objects + queue; Mix stays Message-model
+
+  4. Do not smuggle hosted Namespace/descriptor Java as L3
+     semantics (L1_language spec 4.1). include_openjdk.txt is
+     the inverse catalog job (Lingvamyxa hosts a JVM).
+
+  Success: hello.lm3 runs on the bundled JRE with merge/occurrence
+  rules intact (`[0]name` / `[1]name`, no last-wins). Failure
+  mode: mapping Structures to ordinary Java classes and calling
+  it done.
+
+Bytecode docs:
+    Java Virtual Machine Specification
+    https://docs.oracle.com/javase/specs/
+
+
+5. WASM GC  [L3]  -- L3 on the item-2 host
+-----------------------------------------
+Same W3C VM as item 2, different heap: reference types, structs,
+arrays; the host GC manages them. Standardized in Wasm 3.0. Host
+can still be Wasmtime / WAMR from include_wasm.txt. Not wasm32
+linear memory (item 2) and not wasm-gc as an L2 heap (L2 rejects
+it because L2 observes addresses).
+
+Why this rank: after item 2 the runtime is already there. All
+major browsers ship GC (Chrome 119, Firefox 120, Safari 18.2).
+Actual use is small (~0.224% of Chrome page loads vs ~5.5% for
+any Wasm). Compilers today: Kotlin/Wasm, Dart/Flutter, TeaVM.
+This is the L3-shaped WASM, not a new market. Cheaper than a
+new VM world once linear WASM exists; not cheaper than JVM as
+the first L3 printer (users, compile-to-classfile lore).
+
+Not Path A: C99 through wasi-sdk is linear memory. wasm-gc needs
+an L3 printer (structs/arrays), same class of work as item 4.
+
+L3 fit: yes, portable (L3 note #2). Bounds checks and a moving
+GC are native. Still implement Lmx on GC structs -- the GC
+struct is storage, not a Structure. L1/L2 fit: no.
+
+Process:
+
+  1. Reuse the item-2 host. Confirm GC:
+
+         wasmtime --version             # Wasm 3.0 / GC
+         # WAMR: build with GC proposal enabled
+
+     Spec:
+         https://webassembly.github.io/spec/
+         GC / heap types in the core spec (Wasm 3.0)
+         https://github.com/WebAssembly/gc
+
+  2. Writer tooling (text or binary):
+
+         wasm-tools    https://github.com/bytecodealliance/wasm-tools
+                       parse/validate/print .wat including GC types
+         binaryen      https://github.com/WebAssembly/binaryen
+         # or emit .wat by hand for the hello.lm3 subset and
+         # assemble with wasm-tools
+
+  3. Same hello.lm3 subset as item 4, targeting GC structs/arrays
+     plus a guest library for merge / Message FIFO. Do not lower
+     L3 through L1 to wasi-sdk and call it wasm-gc.
+
+  4. Sequence constraint: do not start this before item 2. Without
+     linear WASM this is a VM from zero; with it, it is an L3
+     upgrade of the same host.
+
+Bytecode docs: same W3C core spec, GC chapters.
+
+
+6. Lua 5.4  (include_lua.txt)  [L3]  -- games as embed culture
+-------------------------------------------------------------
+Documented opcode VM (lopcodes, lua_dump / lua_load). Small C
+tree (~250 KB). Tables can host a graph; no pointers required.
+PUC Lua GC is irrelevant as an L3 stability rule. Coroutines are
+not FIFO Message turns.
+
+Why this rank: SlashData ~2.3M Lua developers; games and embeds
+(WoW, Roblox/Luau as a dialect, engines in general). That world
+uses Lua as a *guest* (host embeds and evals), the inverse of
+compiling L3 *to* Lua. More engines than Unity, so as a game
+door it beats CIL. L3 fit is a sketch (L3 note #5): last-wins
+tables are not Lmx occurrences. Cheapest *emitter* of the L3
+printers (small opcode set, `luac -l`); not the first production
+ISA -- that remains JVM.
+
+L1/L2 fit: no. Tagged values, no C heap. LuaJIT is not this
+entry (FFI is an L2 escape).
+
+Process:
+
+  1. Vendor PUC Lua 5.4 (catalog already describes this):
+
+         https://www.lua.org/ftp/lua-5.4.7.tar.gz
+         # sha256 on the same ftp page; pin it
+         include_lua.txt                src/*.c minus lua.c / luac.c
+
+     Keep luac for the experiment (disassemble with `luac -l`).
+     Bytecode is version-locked to 5.4; do not mix 5.1/LuaJIT.
+
+  2. Writer: either
+         - emit Lua 5.4 bytecode (lopcodes.h, ldump.c as the
+           format teacher), or
+         - emit .lua source and luac it (easier, weaker -- not
+           an ISA printer).
+
+         https://www.lua.org/manual/5.4/
+         https://www.lua.org/source/5.4/lopcodes.h.html
+
+  3. Runtime library on tables, not "a table is a Structure":
+         encode Lmx {node, len, data}
+         freeze child count at construction
+         merge copies; `[0]` / `[1]` are distinct, not override
+         Message FIFO is a Lua queue, not a coroutine
+
+  4. First subset again: hello.lm3. Success is occurrence rules,
+     not "it print()s". include_lua.txt is the inverse embed.
+
+Bytecode docs: Lua 5.4 manual + lopcodes.h / ldump.c.
+
+
+7. .NET CIL  (include_dotnet.txt)  [L3]  -- last, weak extra door
+----------------------------------------------------------------
+Real bytecode VM. ECMA-335 Partition III = CIL; Partition II =
+metadata. Public writers: ilasm, ildasm, System.Reflection.Emit,
+Mono.Cecil, dnlib. CoreCLR MIT (dotnet/runtime). This plan uses
+CIL + CoreCLR, not NativeAOT (Removed in the catalog: full SDK,
+per-target compile).
+
+Why this rank: C# is large (TIOBE #5, ~11.1M developers) and CIL
+is closer to a CPU than BEAM (stack machine, ints, branches;
+unmanaged even has pointers -- not used here). Product extra is
+thin: Windows already has EXE (Path A) and JVM; servers that run
+CoreCLR also run JVM; Unity is one engine, Lua covers more.
+CIL does not open Android. Blazor is CIL compiled onward to Wasm
+(item 2/5). Kept as item 7, not struck: paved compiler-to-CIL
+road if a C# shop is ever the point. Unmanaged L1 CIL is not
+pursued (heavy, same machines as gcc).
+
+L3 fit: yes as a substrate (L3 note #3), same class of work as
+JVM -- define an Lmx record, mutate `data`, merge copies. Mix
+does not pick C# or Java. L1 fit unused here.
+
+Closer to a CPU than BEAM; further from a CPU than items 1-3.
+Not "C# in opcodes" the way BEAM is Erlang in opcodes, but the
+CLI object model is still a runtime on top of a stack ISA.
+
+Process:
+
+  1. .NET SDK (ilasm lives here; runtime is CoreCLR):
+
+         https://dotnet.microsoft.com/download
+         include_dotnet.txt             nethost tarball pattern
+                                        (inverse: host CLR as guest)
+
+     Spec:
+         ECMA-335 6th ed., Partition III (CIL), II (Metadata)
+         https://www.ecma-international.org/publications-and-standards/standards/ecma-335/
+
+  2. Writer:
+         ilasm / ildasm                 (SDK)
+         Mono.Cecil                     https://github.com/jbevain/cecil
+         dnlib                          https://github.com/0xd4d/dnlib
+         System.Reflection.Emit         in-process
+
+     Prefer Cecil/dnlib for a compiler, ilasm for reading smoke.
+
+  3. Same Lmx library shape as item 4, on managed types. No
+     unsafe heap for L3. hello.lm3 subset. One CoreCLR per
+     process; JIT warmup.
+
+  4. Do not start here. If item 4 exists, this is a second
+     managed printer with a smaller door.
+
+Bytecode docs: ECMA-335 as above.
+
+
+8. Struck -- still in the roster
+--------------------------------
+
+* BEAM (Erlang / Elixir)  [L3]  -- refused as a port target
+
+        Real VM: .beam IFF file, OTP genop.tab, documented enough
+        to write. Isolated heaps, FIFO mailboxes, one turn -- the
+        closest Message Thread analog, and Mix's Smalltalk-style
+        target rhymes with processes.
+
+        Refused because the ISA *is* Erlang: atoms, tuples,
+        spawn/send, tests on term tags. Registers hold tagged
+        terms, not bytes. Compiling L3 to BEAM is writing a
+        dialect of Erlang, not seating Lmx `{node,len,data}` on
+        a CPU-like machine. Taxonomically this is a language in
+        bytecode (Sinclair BASIC's tokens are the same class:
+        the encoding is the language, even when the host is not
+        a Z80). It is a production runtime; that does not make
+        it a platform for other languages.
+
+        Hermeticity: an image is not a sealed module. OTP brings
+        an atom table, code server, scheduler and the term model.
+        L3-to-BEAM imports that world through the L3 subset
+        boundary. Contrast .bmir / .wasm / .class.
+
+        Keep as a *metaphor* for Message FIFO and Mix. Do not
+        write a printer. Catalog already Removed BEAM as an
+        in-process embed (C-node / sidecar).
+
+        Docs (not a work item):
+            https://www.erlang.org/doc/man/beam_lib.html
+            OTP lib/compiler/src/genop.tab
+            https://happi.github.io/theBeamBook
+
+* LLVM IR / bitcode (.bc) + lli / ORC JIT  [L1]  -- refused
+
+        Industry compiler IR. LangRef documents every
+        instruction. Path A exists: clang -emit-llvm on L1 C99,
+        then lli / ORC. llvm-project is huge (~40k GitHub stars);
+        bitcode is not a stable serialization in LLVM's own docs
+        (emit text IR or the C++ API).
+
+        L1 fit: yes, heavy (L1/L2 #3). Fails the catalog "no
+        multi-gigabyte SDK" rule as a vendored embed. Almost
+        nobody ships lli as a production VM.
+
+        Refused for a team of a few AI agents: after Path A you
+        live inside LLVM (C ABI lowering, IRBuilder, a full
+        compiler). That is not a VM backend, it is adopting
+        someone else's compiler. Items 1-2 already give Path A
+        on a small C VM and on a portable .wasm.
+
+        Docs (not a work item):
+            https://llvm.org/docs/LangRef.html
+            https://llvm.org/docs/BitCodeFormat.html
+
+
+9. Intentionally absent
+-----------------------
+Native, not a bytecode VM (L1 likes them; excluded by "write
+bytecode"):
+
+    TinyCC / libtcc   shortest in-process run of L1 C99
+    QBE               native SSA backend
+    sljit             already vendored; JIT assembler
+    Cranelift etc.    codegen / JIT libraries
+
+Not recommended as an ISA for L1 or L3:
+
+    Python bytecode, JS engines, LuaJIT, Pawn/AMX, Umka,
+    AngelScript, CPython family, HashLink (weak writer spec),
+    com.mtk.map as an ISA (template, not Mix)
+
+Does not exist yet: dedicated L2/L3 bytecode (Layer I). Would
+run *on* items 1-7.
+
+
+10. Scoreboard (this file's order)
+----------------------------------
+    #    Target         Surface  Writer spec           Notes
+    --   -------------  -------  --------------------  -----
+    1    MIR            L1       MIR.md + C API        Path A, first experiment
+    2    WASM linear    L1       W3C core + binary     Path A, first product
+    3    RISC-V ISA     L1       unprivileged spec     Path A, not a product
+    4    JVM classfile  L3       JVMS                  first L3 printer
+    5    WASM GC        L3       W3C GC (Wasm 3.0)     L3 on item 2
+    6    Lua 5.4        L3       lopcodes / manual     games, sketch ISA
+    7    .NET CIL       L3       ECMA-335 III          weak extra door
+
+    *    BEAM           L3       OTP beam format       refused: language in bytecode
+    *    LLVM IR        L1       LangRef               refused: too heavy
+
+Tech-fit numbers in the TOC are ranks in L1_to_vm_research_en.txt
+/ L2 Layer M, or L3_to_vm_research_en.txt. Do not implement in
+popularity order; this table is the work order.
+
+    ---- not in this plan ----
+
+         TinyCC/QBE/JIT     no portable bytecode
+         Python/JS/LuaJIT   not recommended for L1 or L3
+         HashLink           L3-weak; no first-class writer spec
+         Layer I bc         does not exist
+
+
+11. If a backend is ever tried
+------------------------------
+Follow the TOC. Do not mix surfaces.
+
+  L1 (items 1-3), Path A:
+
+  1. Surface is Translator-L1, not L2 Layer S, not L3-to-JVM.
+  2. MIR (item 1): l1trans C through c2m. Fixtures: L1 smoke,
+     libc_abi, own.lm1.
+  3. WASM linear (item 2): same C through wasi-sdk, run on
+     wasmtime --dir=.. One memory/instance per Message if
+     isolation is encoded at the VM boundary.
+  4. RISC-V (item 3): same C through a riscv gcc, QEMU or Spike.
+  5. Do not start L1 with CIL, JVM, Lua, wasm-gc, BEAM, or LLVM.
+
+  L3 (items 4-7), printers:
+
+  6. Preserve the common L1/L2 core's nonmoving addresses when hosting L3.
+     A distinct VM-native representation requires its own equivalence proof;
+     no implicit moving GC is authorized. Preserve fixed child count, used-graph
+     merge/node fixups, shared methods/eternal terminals and occurrence identity.
+  7. First printer: hello.lm3 -> JVM classfiles (item 4).
+  8. Second, if item 2 exists: hello.lm3 -> wasm-gc (item 5).
+  9. Lua (item 6) as a small emitter / game-embed experiment,
+     not instead of JVM.
+  10. CIL (item 7) only if a C# shop is the point.
+  11. Mix is cooperating Messages (19.29.2.1), library on the
+      VM, not Java leftover.
+  12. Do not write L3-to-BEAM. Do not adopt LLVM as the runtime.
+
+Path A reuses the self-host. Path B is a second printer in
+l1trans.lm1. An L3-to-JVM / L3-to-wasm-gc printer is a new
+profile, not the current P-L1text gate.
+
+
+12. References
+--------------
+    L1_to_vm_research_en.txt            C-machine scoreboard
+    L2_to_vm_research_en.txt            Layer M / Layer S
+    L3_to_vm_research_en.txt            managed ranking
+    L1_spec.txt                         implemented L1 / C99 image
+    L1_language_and_translator_spec.txt P-L1text selected
+    Lingvamyxa_spec.txt                 L2/L3: 1.3-1.7, 2, 19-21
+    lingva_bindings.txt                 embed catalog (inverse)
+    include_wasm.txt                    WASM host (inverse of 2)
+    include_dotnet.txt                  CoreCLR host (inverse of 7)
+    include_tinycc.txt                  native, not in this list
+    include_openjdk.txt                 JVM host (inverse of 4)
+    include_lua.txt                     Lua 5.4 embed (inverse of 6)
+    vm_porting_plan_ru.txt              Russian text of this note
+    https://github.com/vnmakarov/mir
+    https://github.com/WebAssembly/wasi-sdk
+    https://github.com/bytecodealliance/wasmtime/releases
+    https://webassembly.github.io/spec/
+    https://github.com/WebAssembly/gc
+    https://github.com/bytecodealliance/wasm-tools
+    https://riscv.org/technical/specifications/
+    https://github.com/riscv-collab/riscv-gnu-toolchain
+    https://github.com/cnlohr/mini-rv32ima
+    https://docs.oracle.com/javase/specs/
+    https://asm.ow2.io/
+    https://adoptium.net/
+    https://www.lua.org/manual/5.4/
+    https://www.lua.org/ftp/
+    https://www.ecma-international.org/publications-and-standards/standards/ecma-335/
+    https://github.com/jbevain/cecil
+    https://llvm.org/docs/LangRef.html
+    https://www.erlang.org/doc/man/beam_lib.html
+
+End of vm_porting_plan_en.txt.

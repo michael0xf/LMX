@@ -864,6 +864,8 @@ A foreign resource has a separate ownership, retention, release and transfer con
 
 Первый, корневой Message процесса удерживает все такие ветви всех Message в фиксированном неизменяемом массиве ссылок. Множество ветвей известно трансляции; массив не пополняется при каждом `merge` или создании Message. Размещение ссылки в этом массиве не переподчиняет лексическое дерево ветви. Допустимая инициализация значениями времени выполнения происходит до публикации и не увеличивает множество записей.
 
+Сами опубликованные ветви размещаются в постоянной неизменяемой части хранилища Root Thread (`R0`), отдельно от обычных собираемых арен. Сборщики мусора арен не маркируют, не обходят, не изменяют и не освобождают это хранилище; ссылка на вечную ветвь в другом Message является внешним терминалом для его сборщика и не переносит владение. Постоянное хранилище освобождается один раз при завершении владеющего корня/процесса.
+
 Второй отдельный фиксированный массив того же владельца содержит известные записи методов. Метод не хранит лексического родителя; его конкретное вызываемое вхождение предоставляет собственную структуру. Разделяемые записи остаются живы после завершения заимствующего дочернего Message. Это хранилище корневого Message, не бесхозный глобальный реестр.
 
 `merge` и создание Message сохраняют явно переданные ссылки на допущенные вечные ветви и записи методов как терминалы. Получение одной ветви не раскрывает массив удержания, настройки корня или остальные ветви. Изменяемое состояние по-прежнему копируется отдельно. Все ссылки внутри опубликованной вечной ветви должны иметь достаточный срок жизни; квалификация не делает случайную ссылку на освобождаемую память вечной.
@@ -873,6 +875,8 @@ A foreign resource has a separate ownership, retention, release and transfer con
 Combined qualification `independent: const: immutable` establishes an eternal branch: its root has no external lexical parent, contents and protected bindings are immutable, and storage lasts until process termination. Any one qualification alone does not establish this sharing contract.
 
 The process's first, root Message retains all such branches from all Messages in a fixed immutable reference Array. The branch set is translation-known; `merge` and Message creation do not append entries. Placement in the retention Array does not reparent a branch's lexical tree. Permitted runtime-value initialization occurs before publication without increasing the entry set.
+
+The published branches themselves reside in the Root Thread's (`R0`) permanent immutable storage, separate from ordinary collectable arenas. Arena garbage collectors do not mark, traverse, mutate or release that storage; a reference to an eternal branch in another Message is an external terminal for that Message's collector and does not transfer ownership. The permanent storage is released once when its owning root/process terminates.
 
 A second separate fixed Array owned by the same Message contains known method records. A method stores no lexical parent; its concrete callable occurrence supplies its own Structure. Shared records remain live after a borrowing child Message terminates. This is root-Message-owned storage, not an ownerless global registry.
 

@@ -700,6 +700,8 @@ Combined qualification `independent: const: immutable` establishes an eternal br
 
 The process's first, root Message retains all such branches from all Messages in a fixed immutable reference Array. The branch set is translation-known; `merge` and Message creation do not append entries. Placement in the retention Array does not reparent a branch's lexical tree. Permitted runtime-value initialization occurs before publication without increasing the entry set.
 
+The published branches themselves reside in the Root Thread's (`R0`) permanent immutable storage, separate from ordinary collectable arenas. Arena garbage collectors do not mark, traverse, mutate or release that storage; a reference to an eternal branch in another Message is an external terminal for that Message's collector and does not transfer ownership. The permanent storage is released once when its owning root/process terminates.
+
 A second separate fixed Array owned by the same Message contains known method records. A method stores no lexical parent; its concrete callable occurrence supplies its own Structure. Shared records remain live after a borrowing child Message terminates. This is root-Message-owned storage, not an ownerless global registry.
 
 `merge` and Message creation retain explicitly supplied references to admitted eternal branches and method records as terminals. Receiving one branch does not expose its retention Array, root settings or unrelated branches. Mutable state is still copied separately. Every reference within a published eternal branch must have sufficient lifetime; qualification does not make an arbitrary reference to reclaimable storage eternal.

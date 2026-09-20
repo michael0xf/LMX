@@ -71,4 +71,9 @@ Fixture: entry `return CALL(leaf, subject) + 5` where leaf is `return subject[0]
 
 - Pre-test WHILE: children condition, body. Int condition (zero=false); ordinary JVM back-edge; no fuel cap.
 - Statement only: valid solely as a **non-final** SEQUENCE child (no invented int result). Rejected in value/final-expression context before class bytes.
-- BREAK / CONTINUE / UNTIL / FOR / recursion still deferred.
+- UNTIL / FOR / recursion still deferred. BREAK/CONTINUE: see below.
+## BREAK / CONTINUE (Path B slice 60B)
+
+- Statement-only BREAK / CONTINUE for the **nearest** active WHILE via an explicit compile-time loop-label stack (no named labels).
+- BREAK → loop exit; CONTINUE → condition recheck. Rejected outside a loop or in value/final-expression context before class bytes.
+- Stmt-position IF may carry BREAK/CONTINUE in a branch. REDO/RETRY/cleanup/finally/UNTIL/FOR/recursion deferred.

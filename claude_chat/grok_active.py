@@ -265,6 +265,14 @@ def inject(pid, message):
         k.FreeConsole()
 
 
+def console_single_line(message):
+    """Preserve queued prose while making it safe for one console submission."""
+    message = message.replace('\r\n', ' ').replace('\r', ' ').replace('\n', ' ').replace('\t', ' ')
+    if any(ord(c) < 32 for c in message):
+        raise ValueError('Queued prompt contains an unsupported control character.')
+    return message
+
+
 def wait_reply(stream, marker, outbound, deadline):
     seen, chunks, partial, delivered = False, [], '', None
     while time.monotonic() < deadline:
@@ -295,7 +303,8 @@ def deliver_one(record, path, text, deadline):
     wait_turn_idle(path, deadline)
     wait_prompt_ready(record['pid'], deadline)
     marker = '[Codex message ' + uuid.uuid4().hex + '] '
-    outbound = marker + text
+    original_outbound = marker + text
+    outbound = console_single_line(original_outbound)
     try:
         inject(record['pid'], outbound)
     except RuntimeError as error:
@@ -307,7 +316,7 @@ def deliver_one(record, path, text, deadline):
         delivered, reply, stop = wait_reply(stream, marker, outbound, deadline)
     return {
         'stop_reason': stop,
-        'input_transformed': delivered != outbound,
+        'input_transformed': delivered != original_outbound,
         'delivered_input': delivered,
         'text': reply,
     }

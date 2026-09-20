@@ -14,7 +14,7 @@ The migration contains 184 versions of P0 `.lmx` inputs; 301 frozen `printTree.l
 
 All 119 `.lmx` inputs in `lingvamyxa_prev` were additionally checked: every one is already represented by a byte-identical copy. Their provenance was added to those same manifest records.
 
-The current portable harness is `tools/run_parser.py`. It accepts an externally supplied `printTree`; the new project does not yet contain a parser implementation. Historical scripts are retained for migrating additional checks and contain their original project paths/dependencies; they are archived harnesses, not a promise of standalone execution in LMX.
+The current portable harness is `tools/run_parser.py`. It accepts a supplied `printTree`. Stable P0 has been migrated to `l1src`; the corrected dev copy and its driver are in [dev/l1src_sandbox](../../dev/l1src_sandbox/README.md). Historical scripts are retained for migrating additional checks and contain their original project paths/dependencies; they are archived harnesses, not a promise of standalone execution in LMX.
 
 From the LMX root:
 
@@ -34,6 +34,8 @@ Verified on 2026-09-19:
 - New `receiver:` / `---`: current L1 rejects with `P0 parse error 32 at 1:1`; the historical parser accepts but loses the empty Structure argument. Neither conforms to the author's clarification.
 - Control `receiver: ()`: both parsers retain one field containing an empty Structure.
 
-Exact executable hashes and results are in the [migration verification report](../../provenance/parser-verification.json). The new rule already has a positive test; its parser still needs migration/correction. Other migrated scenarios and metadata/expression checks are retained, but this run is not claimed as their complete execution.
+Exact executable hashes and results of that historical run are in the [migration verification report](../../provenance/parser-verification.json). Other migrated scenarios and metadata/expression checks are retained, but that run is not claimed as their complete execution.
+
+The September 20 correction was separately verified in `dev/l1src_sandbox`: **13/13 current tests** and **131/131 previous-L1 expectations**. Exact trees cover both forms, comments, a nested body, an empty colon trailer and two consecutive receivers. Actual argument absence before EOF, `;` or `)` still produces error 32. Stable sources are unchanged; the new behavior requires the dev driver documented above. Its `predef` explicitly selects the dev parser because the translator embeds dependencies in C.
 
 Do not regenerate historical goldens to obtain a green result. New-language tests and old snapshots must remain distinguishable. In particular, check the presence of the empty Structure, not merely a successful exit code.

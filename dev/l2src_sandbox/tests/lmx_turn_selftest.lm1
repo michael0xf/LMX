@@ -1,0 +1,211 @@
+predef: "l2src/lmx_turn.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_child.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# The end-turn boundary (spec 19.29.4.1, model 27 and 28; the gaps note's item 3 -- "публикация
+# и видимость").  What this file pins:
+#
+#   * what a turn STAGES is not outgoing: nothing takes it, nothing counts it as outgoing, and
+#     a reader of the outbox does not see it;
+#   * the successful end-turn PUBLISHES it, in admission order (FIFO), and a later failed turn
+#     cannot disturb what an earlier successful one published;
+#   * the failed end-turn DISCARDS its own staging, and its nodes come back from the free list
+#     (the pool is not asked again -- a discard is not a leak);
+#   * a reserved child is INVISIBLE in the parent's slot until the boundary, and the boundary
+#     is what makes it visible: "до успешной публикации turn'а родителя ребёнок недоступен";
+#   * a failed turn DROPS its reservations: the slot stays unwritten and the reserved child's
+#     own arena goes with it;
+#   * the outcome is read from the Message's two flags, and needs no third meaning;
+#   * reserving outside a turn is refused: a parent reserves in its own turn (model 26).
+
+sub: turn_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: turn_check
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxArena: arena
+    LmxArena: child
+    LmxArena: dropped
+    @: LmxPost mail 0
+    LmxSchedule: slot
+    @: LmxThread t 0
+    @: LmxMsg letter 0
+    @: LmxMsg target1 0
+    @: LmxMsg target2 0
+    @: Lmx parent 0
+    @: Lmx source 0
+    @: LmxMsg child_message 0
+    @: void taken 0
+    size_t: held 0U
+    int: failures
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ child)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ dropped)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ arena) != 0 || lmx_arena_open(@ child) != 0 || lmx_arena_open(@ dropped) != 0
+        fputs("lmx_turn: an arena did not open\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    # The turn's world: the Message whose turn it is, two letters it will send, its mailbox and
+    # its object, and the structures a reservation needs (a parent with two slots and a
+    # template to copy).
+    letter: (cast: (@: LmxMsg) lmx_arena_take(@ arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    target1: (cast: (@: LmxMsg) lmx_arena_take(@ arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    target2: (cast: (@: LmxMsg) lmx_arena_take(@ arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    parent: lmx_node_new_owned(@ arena)
+    source: lmx_node_new_owned(@ arena)
+    if: letter = 0 || target1 = 0 || target2 = 0 || parent = 0 || source = 0
+        fputs("lmx_turn: the world was not built\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    if: lmx_arena_refs_open_owned(@ arena, parent, 2U) != 0 || lmx_arena_refs_open_owned(@ arena, source, 1U) != 0
+        fputs("lmx_turn: the structures did not open their slots\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    letter\running: 1
+    letter\success: 0
+    letter\handoff_ready: 0
+    letter\graph: source
+    letter\index: 1U
+    target1\index: 2U
+    target2\index: 3U
+    # The mailbox is a POINTER here, not a by-value local: `@ mail\nodes` (the pool's count) is
+    # a field-follow, and L1's `\` is a pointer step -- through a by-value record it would be
+    # emitted as another `->` (the limitation 5c documents in L1_spec.txt).
+    mail: (cast: (@: LmxPost) malloc(c.sizeof(c.LmxPost)))
+    if: mail = 0
+        fputs("lmx_turn: the mailbox could not be allocated\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    if: lmx_post_init(@ arena, mail) != c.LMX_POST_OK
+        fputs("lmx_turn: the mailbox did not initialize\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    t: (cast: (@: LmxThread) lmx_arena_take(@ arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    if: t = 0 || lmx_thread_attach(t, letter, mail, @ slot) != c.LMX_THREAD_OK
+        fputs("lmx_turn: the object did not attach\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+
+    # 0. The boundary's own refusals, and the outcome of a running Message.
+    turn_check(counts, lmx_turn_outcome(t) = c.LMX_TURN_SUCCESS, "a running Message's turn does not read as successful")
+    turn_check(counts, lmx_turn_end(0, lmx_clock_ticks()) = c.LMX_TURN_INVALID, "the boundary ran on no object")
+    turn_check(counts, lmx_turn_outcome(0) = c.LMX_TURN_INVALID, "an outcome was read of no object")
+    turn_check(counts, lmx_child_reserve(t, @ arena, @ child, parent, 0U, source) = 0, "a reservation OUTSIDE a turn was accepted")
+    turn_check(counts, lmx_post_count(mail, c.LMX_POST_OUTBOX) = 0U, "a fresh mailbox has outgoing mail")
+
+    # 1. What a turn stages is not outgoing yet: nobody takes it, and it is not counted as
+    #    outgoing -- only as staged.
+    turn_check(counts, lmx_thread_enter(t) = c.LMX_THREAD_OK, "the first turn did not open")
+    turn_check(counts, lmx_post_accept(@ arena, mail, (cast: (@: void) target1), c.LMX_POST_OUTBOX) = c.LMX_POST_OK, "the turn could not stage a letter")
+    turn_check(counts, lmx_post_accept(@ arena, mail, (cast: (@: void) target2), c.LMX_POST_OUTBOX) = c.LMX_POST_OK, "the turn could not stage a second letter")
+    turn_check(counts, lmx_post_count(mail, c.LMX_POST_OUTBOX) = 0U, "a staged letter is already outgoing")
+    turn_check(counts, lmx_post_count(mail, c.LMX_POST_STAGED) = 2U, "the staged lane does not hold the prepared letters")
+    turn_check(counts, lmx_post_take(mail, c.LMX_POST_OUTBOX) = 0, "a staged letter was taken as outgoing")
+    turn_check(counts, lmx_post_take(mail, c.LMX_POST_STAGED) = 0, "the staged lane was taken from")
+    turn_check(counts, lmx_post_count(mail, 9) = 0U, "a lane that does not exist reports mail")
+
+    # 2. A successful end-turn publishes them, in admission order.
+    turn_check(counts, lmx_thread_leave(t) = c.LMX_THREAD_OK, "the first turn did not close")
+    turn_check(counts, lmx_turn_end(t, lmx_clock_ticks()) = c.LMX_TURN_OK, "the boundary refused a successful turn")
+    turn_check(counts, lmx_post_count(mail, c.LMX_POST_STAGED) = 0U, "the staged lane survived its publication")
+    turn_check(counts, lmx_post_count(mail, c.LMX_POST_OUTBOX) = 2U, "the published letters are not outgoing")
+    taken: lmx_post_take(mail, c.LMX_POST_OUTBOX)
+    turn_check(counts, taken = (cast: (@: void) target1), "the first outgoing letter is not the first admitted")
+    taken: lmx_post_take(mail, c.LMX_POST_OUTBOX)
+    turn_check(counts, taken = (cast: (@: void) target2), "the outgoing order is not admission order")
+    turn_check(counts, lmx_post_count(mail, c.LMX_POST_OUTBOX) = 0U, "the outbox did not empty")
+
+    # 3. A failed turn discards its OWN staging and nothing else: what the previous successful
+    #    turn published stays, and the discarded nodes come back from the free list.
+    turn_check(counts, lmx_thread_enter(t) = c.LMX_THREAD_OK, "the second turn did not open")
+    turn_check(counts, lmx_post_accept(@ arena, mail, (cast: (@: void) target1), c.LMX_POST_OUTBOX) = c.LMX_POST_OK, "the second turn could not stage")
+    turn_check(counts, lmx_thread_leave(t) = c.LMX_THREAD_OK, "the second turn did not close")
+    turn_check(counts, lmx_turn_end(t, lmx_clock_ticks()) = c.LMX_TURN_OK, "the boundary refused the second successful turn")
+    turn_check(counts, lmx_thread_enter(t) = c.LMX_THREAD_OK, "the failing turn did not open")
+    turn_check(counts, lmx_post_accept(@ arena, mail, (cast: (@: void) target2), c.LMX_POST_OUTBOX) = c.LMX_POST_OK, "the failing turn could not stage")
+    held: lmx_pool_count(@ mail\nodes)
+    letter\running: 0
+    turn_check(counts, lmx_turn_outcome(t) = c.LMX_TURN_FAILED, "a stopped Message's turn does not read as failed")
+    turn_check(counts, lmx_thread_leave(t) = c.LMX_THREAD_OK, "the failing turn did not close")
+    turn_check(counts, lmx_turn_end(t, lmx_clock_ticks()) = c.LMX_TURN_OK, "the boundary refused a failed turn")
+    turn_check(counts, lmx_post_count(mail, c.LMX_POST_STAGED) = 0U, "the failed turn's staging survived")
+    turn_check(counts, lmx_post_count(mail, c.LMX_POST_OUTBOX) = 1U, "the failed turn disturbed what an earlier turn published")
+    taken: lmx_post_take(mail, c.LMX_POST_OUTBOX)
+    turn_check(counts, taken = (cast: (@: void) target1), "the surviving outgoing letter is not the earlier turn's")
+    letter\running: 1
+    turn_check(counts, lmx_thread_enter(t) = c.LMX_THREAD_OK, "the fourth turn did not open")
+    turn_check(counts, lmx_post_accept(@ arena, mail, (cast: (@: void) target2), c.LMX_POST_OUTBOX) = c.LMX_POST_OK, "the fourth turn could not stage")
+    turn_check(counts, lmx_pool_count(@ mail\nodes) = held, "a discarded node did not come back from the free list")
+    turn_check(counts, lmx_thread_leave(t) = c.LMX_THREAD_OK, "the fourth turn did not close")
+    turn_check(counts, lmx_turn_end(t, lmx_clock_ticks()) = c.LMX_TURN_OK, "the boundary refused the fourth turn")
+    turn_check(counts, lmx_post_take(mail, c.LMX_POST_OUTBOX) != 0, "the fourth turn's letter was not published")
+
+    # 4. A reserved child is invisible until the boundary, and the boundary publishes it.
+    turn_check(counts, lmx_thread_enter(t) = c.LMX_THREAD_OK, "the reserving turn did not open")
+    child_message: lmx_child_reserve(t, @ arena, @ child, parent, 0U, source)
+    turn_check(counts, child_message != 0, "a child was not reserved in its parent's turn")
+    turn_check(counts, lmx_arena_ref_value(parent, 0U) = 0, "a reserved child is already visible in the parent's slot")
+    turn_check(counts, lmx_thread_leave(t) = c.LMX_THREAD_OK, "the reserving turn did not close")
+    turn_check(counts, lmx_turn_end(t, lmx_clock_ticks()) = c.LMX_TURN_OK, "the boundary refused the reserving turn")
+    turn_check(counts, lmx_arena_ref_value(parent, 0U) = (cast: (@: void) child_message), "the boundary did not publish the reserved child")
+    turn_check(counts, lmx_range_classify(@ child, (cast: (@: void) child_message)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "the published child's record does not answer in its own arena")
+
+    # 5. A failed turn DROPS its reservations: the slot stays unwritten and the child's arena
+    #    goes with the reservation that was never published.
+    turn_check(counts, lmx_thread_enter(t) = c.LMX_THREAD_OK, "the failing reserving turn did not open")
+    child_message: lmx_child_reserve(t, @ arena, @ dropped, parent, 1U, source)
+    turn_check(counts, child_message != 0, "the second child was not reserved")
+    letter\running: 0
+    turn_check(counts, lmx_thread_leave(t) = c.LMX_THREAD_OK, "the failing reserving turn did not close")
+    turn_check(counts, lmx_turn_end(t, lmx_clock_ticks()) = c.LMX_TURN_OK, "the boundary refused the failing reserving turn")
+    turn_check(counts, lmx_arena_ref_value(parent, 1U) = 0, "a dropped reservation left the parent's slot written")
+    turn_check(counts, lmx_range_classify(@ dropped, (cast: (@: void) child_message)) = c.LMX_KIND_NONE, "a dropped child's arena survived the drop")
+
+    # 6. The outcome is the two flags, and nothing else: stopped-without-completion is failure,
+    #    anything else -- including a completed Message whose running is already cleared --
+    #    publishes.
+    turn_check(counts, lmx_turn_outcome(t) = c.LMX_TURN_FAILED, "a stopped, uncompleted Message is not a failed turn")
+    letter\success: 1
+    turn_check(counts, lmx_turn_outcome(t) = c.LMX_TURN_SUCCESS, "a completed Message's turn is not successful")
+    letter\success: 0
+    letter\running: 1
+    turn_check(counts, lmx_turn_outcome(t) = c.LMX_TURN_SUCCESS, "a continuing turn is not successful")
+
+    # 7. A turn that prepared nothing is not an error: the boundary publishes nothing and says
+    #    so, and the mailbox is left exactly as it was.
+    turn_check(counts, lmx_turn_end(t, lmx_clock_ticks()) = c.LMX_TURN_OK, "an empty boundary did not run")
+    turn_check(counts, lmx_post_count(mail, c.LMX_POST_STAGED) = 0U && lmx_post_count(mail, c.LMX_POST_OUTBOX) = 0U, "an empty boundary left mail behind")
+
+    failures: counts[1]
+    c.printf("lmx_turn checks=%d failures=%d\n", counts[0], counts[1])
+    free(mail)
+    free(counts)
+return: failures

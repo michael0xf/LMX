@@ -1,0 +1,270 @@
+predef: "l2src/lmx_arena.h.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdlib.h>" "<stddef.h>"
+
+# The arena's index of its arrays. Lingvamyxa_spec.txt 2, 6.5, 12.1.
+#
+# A field carries no type tag. `data` is a pointer, and its type is whichever array of
+# the arena contains it: the index maps an address to the DESCRIPTOR of that array -- one
+# entry per INTERVAL, not per array (an array that grew by a chunk has several intervals,
+# and every one of them names the same descriptor; Mikhail, 2026-09-17, verbatim: "У тебя
+# есть N массивов в арене.  Как
+# ты можешь его отсортировать если у каждого массива адрес фиксирован?!!!! Ты должен
+# сделать _таблицу адрес->дескриптор массива_ и после вставку в таблицу делает менеджер
+# арены (в том числе когда он присоединяет другую арену)").  The arrays never move, so
+# it is the ENTRIES that are ordered and bisected, never the arrays.
+#
+# The index lives INSIDE the arena: range metadata belongs to the Message that arena
+# belongs to (6.5), not to a module.  In this kernel the arena is not yet owned by a
+# Message, but it is already an object of its own.
+#
+# Nothing here gates writing into the cells: code that holds a reference and has
+# determined its type once writes STRAIGHT into the array, because a cell's address never
+# changes (verbatim: "Код как раз обладая ссылкой и определив один раз ее тип _может
+# писать прямо в массив так как адрес ячейки не меняется_").  The index is consulted
+# only where the type is NOT known -- an untyped void * arriving from elsewhere.
+
+# The table GROWS instead of refusing: as many ranges (types) as needed may be created
+# (verbatim: "вы можете этих диапазонов (типов) заводить сколько вам угодно"), so a full
+# table is not an error and no fixed cap exists.  Nothing holds a pointer into the table
+# across calls -- every access is `arena\index + index` -- so the entries may move; the
+# ARRAYS they name never do.
+fn: lmx_range_reserve (@: LmxArena arena; size_t: need) int
+    LmxRange: probe
+    size_t: capacity
+    @: LmxRange grown
+    if: arena = 0
+        return: 1
+    if: need <= arena\capacity
+        return: 0
+    # Letter-scale: index stays, but does not grow without bound (Mikhail 19.09).
+    if: arena\simple != 0U && need > 32U
+        return: 1
+    ---
+    capacity: arena\capacity
+    if: capacity = 0U
+        capacity: 16U
+    ---
+    while: capacity < need
+        if: capacity > ((cast: (size_t) -1) / 2U)
+            return: 1
+        ---
+        capacity: capacity * 2U
+        if: arena\simple != 0U && capacity > 32U
+            capacity: 32U
+            if: capacity < need
+                return: 1
+            ---
+            break
+        ---
+    ---
+    if: capacity > ((cast: (size_t) -1) / c.sizeof(probe))
+        return: 1
+    grown: (cast: (@: LmxRange) realloc((cast: (@: void) arena\index), capacity * c.sizeof(probe)))
+    if: grown = 0
+        return: 1
+    ---
+    arena\index: grown
+    arena\capacity: capacity
+return: 0
+
+# One interval of one array joins the index.  This IS the insertion into the table, and
+# only the arena's manager performs it (lmx_arena_span is the only caller).
+fn: lmx_range_add (@: LmxArena arena; @: LmxPool array; @: void lo; @: void hi) int
+    @: LmxRange entry
+    @: LmxRange slot
+    size_t: at
+    size_t: index
+    size_t: low 0U
+    size_t: high
+    size_t: mid
+    if: arena = 0
+        return: 1
+    if: array = 0
+        return: 1
+    if: array\stride = 0U
+        return: 1
+    if: lo = 0
+        return: 1
+    if: hi <= lo
+        return: 1
+    if: lmx_range_reserve(arena, arena\count + 1U) != 0
+        return: 1
+    # The entry names ONE array and its interval; stride, kind and type are the array's
+    # and stay there.  The table is kept SORTED by base address, because the lookups
+    # find an entry by BISECTION, not by walking it (verbatim: "надеюсь не простым
+    # перебором а нормальным бинарным"), and the position for a new interval is found
+    # the same way.  A registration walks the tail up one place; lmx_range_drop keeps the
+    # order by shifting the tail down, so both operations preserve it.
+    high: arena\count
+    while: low < high
+        mid: low + (high - low) / 2U
+        slot: arena\index + mid
+        if: lo < slot\lo
+            high: mid
+        else:
+            low: mid + 1U
+        ---
+    ---
+    at: low
+    # An address falls in exactly ONE array of the arena (6.5), so two arrays may not
+    # share a cell.  Touching intervals are fine (half-open); overlapping ones would make
+    # both the lookup and the retirement ambiguous, and they are refused here rather than
+    # registered twice.  The neighbours are exactly the two entries the bisection landed
+    # between.
+    if: at > 0U
+        slot: arena\index + (at - 1U)
+        if: lo < slot\hi
+            return: 1
+        ---
+    ---
+    if: at < arena\count
+        slot: arena\index + at
+        if: hi > slot\lo
+            return: 1
+        ---
+    ---
+    index: arena\count
+    while: index > at
+        entry: arena\index + index
+        slot: arena\index + (index - 1U)
+        entry\lo: slot\lo
+        entry\hi: slot\hi
+        entry\array: slot\array
+        index: index - 1U
+    ---
+    entry: arena\index + at
+    entry\lo: lo
+    entry\hi: hi
+    entry\array: array
+    arena\count: arena\count + 1U
+return: 0
+
+# One interval leaves the index.  The caller is the arena's manager, retiring an entry
+# with the block that carried it, or an array whose chunk is released.
+fn: lmx_range_drop (@: LmxArena arena; @: void lo; @: void hi) int
+    @: LmxRange entry
+    @: LmxRange next
+    size_t: index
+    if: arena = 0 || lo = 0 || hi = 0 || arena\index = 0
+        return: 1
+    index: 0U
+    while: index < arena\count
+        entry: arena\index + index
+        if: entry\lo = lo && entry\hi = hi
+            while: index + 1U < arena\count
+                next: entry + 1
+                entry\lo: next\lo
+                entry\hi: next\hi
+                entry\array: next\array
+                index: index + 1U
+                entry: next
+            ---
+            entry\lo: 0
+            entry\hi: 0
+            entry\array: 0
+            arena\count: arena\count - 1U
+            return: 0
+        index: index + 1U
+    ---
+return: 1
+
+# The whole mechanism: no tag is read, only membership is tested.  One entry per
+# interval of one array of the arena: the address says WHICH array contains it, and that
+# array's descriptor says what is in it.  Both are answered by the address alone.
+fn: lmx_range_classify (@: LmxArena arena; @: void p) int
+    @: LmxRange entry
+    size_t: low 0U
+    size_t: high
+    size_t: mid
+    if: arena = 0 || p = 0 || arena\index = 0
+        return: c.LMX_KIND_NONE
+    high: arena\count
+    while: low < high
+        mid: low + (high - low) / 2U
+        entry: arena\index + mid
+        if: p < entry\lo
+            high: mid
+        else:
+            if: p < entry\hi
+                return: entry\array\kind
+            ---
+            low: mid + 1U
+        ---
+    ---
+return: c.LMX_KIND_NONE
+
+# Which element type the array containing the address holds.  The same bisection, read
+# from the descriptor the entry names.
+fn: lmx_range_type_of (@: LmxArena arena; @: void p) int
+    @: LmxRange entry
+    size_t: low 0U
+    size_t: high
+    size_t: mid
+    if: arena = 0 || p = 0 || arena\index = 0
+        return: c.LMX_TYPE_NONE
+    high: arena\count
+    while: low < high
+        mid: low + (high - low) / 2U
+        entry: arena\index + mid
+        if: p < entry\lo
+            high: mid
+        else:
+            if: p < entry\hi
+                return: entry\array\type
+            ---
+            low: mid + 1U
+        ---
+    ---
+return: c.LMX_TYPE_NONE
+
+# How many bytes one entry of that array occupies.  Read from the same entry, never
+# guessed from the address arithmetic; 0 when the address lies in no array of the arena.
+fn: lmx_range_stride (@: LmxArena arena; @: void p) size_t
+    @: LmxRange entry
+    size_t: low 0U
+    size_t: high
+    size_t: mid
+    if: arena = 0 || p = 0 || arena\index = 0
+        return: 0U
+    high: arena\count
+    while: low < high
+        mid: low + (high - low) / 2U
+        entry: arena\index + mid
+        if: p < entry\lo
+            high: mid
+        else:
+            if: p < entry\hi
+                return: entry\array\stride
+            ---
+            low: mid + 1U
+        ---
+    ---
+return: 0U
+
+# The DESCRIPTOR of the array that contains this address: the array itself, with its
+# stride, kind and type.  This is what a classifier hands back to code that then casts
+# the pointer and writes straight into the cell, because a cell's address never changes
+# (verbatim: "_Получив дескриптор типа код сразу делает приведение типа указателя и
+# пишет напрямую в ячейку_ _Это обязательно_").  Null when no array of the arena has it.
+fn: lmx_range_pool (@: LmxArena arena; @: void p) @: LmxPool
+    @: LmxRange entry
+    size_t: low 0U
+    size_t: high
+    size_t: mid
+    if: arena = 0 || p = 0 || arena\index = 0
+        return: 0
+    high: arena\count
+    while: low < high
+        mid: low + (high - low) / 2U
+        entry: arena\index + mid
+        if: p < entry\lo
+            high: mid
+        else:
+            if: p < entry\hi
+                return: entry\array
+            ---
+            low: mid + 1U
+        ---
+    ---
+return: 0

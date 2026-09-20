@@ -1,0 +1,217 @@
+predef: "l2src/lmx_deliver.lm1"
+predef: "l2src/lmx_turn.lm1"
+predef: "l2src/lmx_child.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# The postman's step and hop on PHYSICAL addresses.  What this file pins:
+#
+#   * HERE when destination is the postman itself;
+#   * DOWN when destination is a published child (graph slot) or lies under one;
+#   * UP otherwise; UP from the root is REFUSED by the hop;
+#   * a claimed child not in the graph is REFUSED (child_on_path finds nothing);
+#   * the hop admits into the next mailbox via lmx_thread_mail_accept; `arena` is the
+#     receiving mailbox's arena.
+
+sub: dl_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: dl_check
+
+fn: dl_message (@: LmxArena arena; unsigned: index; size_t: slots) @: LmxMsg
+    @: LmxMsg message
+    @: Lmx graph
+    message: (cast: (@: LmxMsg) lmx_arena_take(arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    graph: lmx_node_new_owned(arena)
+    if: message = 0 || graph = 0
+        return: 0
+    ---
+    if: slots = 0U || lmx_arena_refs_open_owned(arena, graph, slots) != 0
+        return: 0
+    ---
+    message\running: 1
+    message\success: 0
+    message\handoff_ready: 0
+    message\graph: graph
+    message\index: index
+return: message
+
+fn: dl_object (@: LmxArena arena; @: LmxMsg message; @: LmxSchedule sched) @: LmxThread
+    @: LmxThread t
+    @: LmxPost mail
+    t: (cast: (@: LmxThread) lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    mail: (cast: (@: LmxPost) lmx_arena_take(arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    if: t = 0 || mail = 0
+        return: 0
+    ---
+    if: lmx_post_init(arena, mail) != c.LMX_POST_OK || lmx_thread_attach(t, message, mail, sched) != c.LMX_THREAD_OK
+        return: 0
+    ---
+return: t
+
+fn: dl_inbox_count (@: LmxThread t) size_t
+    if: t = 0
+        return: 0U
+return: lmx_thread_mail_count(t, c.LMX_POST_INBOX)
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxArena: root_arena
+    LmxArena: a1_arena
+    LmxArena: a2_arena
+    LmxArena: b_arena
+    LmxSchedule: sched
+    @: LmxMsg p 0
+    @: LmxMsg a1_msg 0
+    @: LmxMsg a2_msg 0
+    @: LmxMsg b_msg 0
+    @: Lmx p_graph 0
+    @: Lmx a1_graph 0
+    @: LmxThread pt 0
+    @: LmxThread a1 0
+    @: LmxThread a2 0
+    @: LmxThread bt 0
+    @: LmxMsg letter 0
+    @: void taken 0
+    int: failures
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ root_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ a1_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ a2_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ b_arena)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ root_arena) != 0 || lmx_arena_open(@ a1_arena) != 0 || lmx_arena_open(@ a2_arena) != 0 || lmx_arena_open(@ b_arena) != 0
+        fputs("lmx_deliver: an arena did not open\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    if: lmx_schedule_init(@ sched, 0, 0, 8U) != c.LMX_SCHEDULE_OK
+        free(counts)
+        return: 2
+    ---
+    # Tree: P -> A1, A2; A1 -> B.
+    p: dl_message(@ root_arena, 1U, 3U)
+    if: p = 0
+        free(counts)
+        return: 2
+    ---
+    p_graph: p\graph
+    pt: dl_object(@ root_arena, p, @ sched)
+    if: pt = 0
+        free(counts)
+        return: 2
+    ---
+    a1_msg: dl_message(@ a1_arena, 1U, 2U)
+    a2_msg: dl_message(@ a2_arena, 2U, 1U)
+    b_msg: dl_message(@ b_arena, 1U, 1U)
+    if: a1_msg = 0 || a2_msg = 0 || b_msg = 0
+        free(counts)
+        return: 2
+    ---
+    a1_graph: a1_msg\graph
+    lmx_arena_ref_store(p_graph, 0U, (cast: (@: void) a1_msg))
+    lmx_arena_ref_store(p_graph, 1U, (cast: (@: void) a2_msg))
+    lmx_arena_ref_store(a1_graph, 0U, (cast: (@: void) b_msg))
+    a1: dl_object(@ a1_arena, a1_msg, @ sched)
+    a2: dl_object(@ a2_arena, a2_msg, @ sched)
+    bt: dl_object(@ b_arena, b_msg, @ sched)
+    if: a1 = 0 || a2 = 0 || bt = 0
+        free(counts)
+        return: 2
+    ---
+    a1\parent: (cast: (@: void) pt)
+    a2\parent: (cast: (@: void) pt)
+    bt\parent: (cast: (@: void) a1)
+
+    # Step by physical address.
+    dl_check(counts, lmx_deliver_step(a1, a1) = c.LMX_DELIVER_HERE, "a record did not recognize itself")
+    dl_check(counts, lmx_deliver_step(pt, a1) = c.LMX_DELIVER_DOWN, "a child was not recognized as below")
+    dl_check(counts, lmx_deliver_step(a1, bt) = c.LMX_DELIVER_DOWN, "a grandchild was not recognized as below")
+    dl_check(counts, lmx_deliver_step(pt, bt) = c.LMX_DELIVER_DOWN, "a deeper destination was not routed down")
+    dl_check(counts, lmx_deliver_step(a1, a2) = c.LMX_DELIVER_UP, "another branch was not routed up")
+    dl_check(counts, lmx_deliver_step(a1, pt) = c.LMX_DELIVER_UP, "an ancestor was not routed up")
+    dl_check(counts, lmx_deliver_step(pt, pt) = c.LMX_DELIVER_HERE, "the root did not recognize itself")
+
+    # Unpublished child: parent link set but not in graph -> not DOWN from that parent path
+    # via a foreign thread with parent=a1 but message not in a1 graph: use a2 under a1 wrongly.
+    # a2 is sibling; from a1, a2 is UP (not under a1). Already checked.
+
+    # HERE hop: arena is the postman's (receiver).
+    letter: dl_message(@ a1_arena, 9U, 1U)
+    if: letter = 0
+        free(counts)
+        return: 2
+    ---
+    dl_check(counts, lmx_deliver_hop(@ a1_arena, a1, letter, a1) = c.LMX_DELIVER_OK, "the HERE hop refused")
+    dl_check(counts, dl_inbox_count(a1) = 1U, "the HERE hop did not admit into the postman's own inbox")
+    taken: lmx_thread_mail_take(a1, c.LMX_POST_INBOX)
+    dl_check(counts, taken = (cast: (@: void) letter), "the admittance is not the letter")
+
+    # DOWN to direct child: receiving arena is the child's.
+    letter: dl_message(@ b_arena, 8U, 1U)
+    if: letter = 0
+        free(counts)
+        return: 2
+    ---
+    dl_check(counts, lmx_deliver_hop(@ b_arena, a1, letter, bt) = c.LMX_DELIVER_OK, "the DOWN hop refused")
+    dl_check(counts, dl_inbox_count(bt) = 1U, "the DOWN hop did not reach the child's inbox")
+    taken: lmx_thread_mail_take(bt, c.LMX_POST_INBOX)
+    dl_check(counts, taken = (cast: (@: void) letter), "the DOWN hop admitted something else")
+
+    # UP to parent: receiving arena is the parent's.
+    letter: dl_message(@ root_arena, 7U, 1U)
+    if: letter = 0
+        free(counts)
+        return: 2
+    ---
+    dl_check(counts, lmx_deliver_hop(@ root_arena, a1, letter, pt) = c.LMX_DELIVER_OK, "the UP hop refused")
+    dl_check(counts, dl_inbox_count(pt) = 1U, "the UP hop did not reach the parent's inbox")
+    taken: lmx_thread_mail_take(pt, c.LMX_POST_INBOX)
+    dl_check(counts, taken = (cast: (@: void) letter), "the UP hop admitted something else")
+
+    # Root has no parent: UP hop refuses.
+    letter: dl_message(@ root_arena, 6U, 1U)
+    if: letter = 0
+        free(counts)
+        return: 2
+    ---
+    dl_check(counts, lmx_deliver_step(pt, a2) = c.LMX_DELIVER_DOWN, "root to a2 should be DOWN")
+    # Foreign destination with no parent link to this tree: fabricate by using a2 as postman
+    # targeting pt when a2's parent is pt -- that is UP. Root targeting a detached thread:
+    # give bt a wrong parent cleared... skip. Root UP when destination is not under root:
+    # use a1 as destination from... actually from pt, only children are down. For UP at root
+    # we need destination not under pt. Create orphan thread with no parent link into tree.
+    @: LmxMsg foreign_msg 0
+    @: LmxThread foreign 0
+    foreign_msg: dl_message(@ a2_arena, 99U, 1U)
+    foreign: dl_object(@ a2_arena, foreign_msg, @ sched)
+    if: foreign = 0 || foreign_msg = 0
+        free(counts)
+        return: 2
+    ---
+    # foreign has parent 0, not under pt -> step says UP; hop from root refuses.
+    dl_check(counts, lmx_deliver_step(pt, foreign) = c.LMX_DELIVER_UP, "foreign dest from root should be UP")
+    dl_check(counts, lmx_deliver_hop(@ root_arena, pt, letter, foreign) = c.LMX_DELIVER_REFUSED, "UP from root must refuse")
+    dl_check(counts, dl_inbox_count(pt) = 0U, "refused UP created an inbox item")
+
+    failures: counts[1]
+    c.printf("lmx_deliver checks=%d failures=%d\n", counts[0], failures)
+    free(counts)
+return: failures

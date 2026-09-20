@@ -1,0 +1,43 @@
+﻿include: "<stddef.h>"
+predef: "l2src/lmx.h.lm1"
+predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_message.h.lm1"
+predef: "l2src/lmx_thread.h.lm1"
+predef: "l2src/lmx_post.h.lm1"
+
+# lmx_deliver.h.lm1 - the postman's one step (spec 19.29.7; delivery).
+#
+# Mikhail, 2026-09-18: hierarchical a.b.c.d is WorldWideMix-only. In the L2 kernel the
+# destination is the physical address of an LmxThread. The step compares that pointer to
+# the postman itself and to the postman's published children (graph slots hold the child
+# Messages; the child Thread is found by walking destination's parent links until the
+# postman). Not self and not under a published child -> hand up to the parent.
+#
+# Decisions:
+#   HERE      destination IS this postman -- letter joins this record's inbox;
+#   DOWN      destination is this postman or lies under a published child -- letter goes
+#             to that direct child (one hop);
+#   UP        everything else -- letter goes to this record's parent;
+#   REFUSED   no such hop (root has no parent; a claimed child is not in the graph).
+#
+# The hop admits into the NEXT hop's mailbox via lmx_thread_mail_accept. `arena` is the
+# arena of THAT mailbox (the receiver of this hop), which is what lmx_post_accept needs
+# for the queue node and the domain question -- the arena of the mailbox that receives this hop.
+define: LMX_DELIVER_OK 0
+define: LMX_DELIVER_HERE 0
+define: LMX_DELIVER_UP 1
+define: LMX_DELIVER_DOWN 2
+define: LMX_DELIVER_REFUSED 3
+define: LMX_DELIVER_INVALID 4
+
+prototype:
+    # Where this physical destination goes from this postman: the decision alone.
+    fn: lmx_deliver_step (@: LmxThread postman; @: LmxThread destination) int
+    # The direct child of `postman` on the parent-chain path to `destination`, or null.
+    # Zero when destination is not under postman, or the published graph does not hold it.
+    fn: lmx_deliver_child_on_path (@: LmxThread postman; @: LmxThread destination) @: LmxThread
+    # The step and its act: the letter joins the next hop's inbox.
+    # `arena` is the RECEIVING mailbox's arena (postman's for HERE; the child's for DOWN;
+    # the parent's for UP).
+    fn: lmx_deliver_hop (@: LmxArena arena; @: LmxThread postman; @: LmxMsg letter; @: LmxThread destination) int
+end: prototype

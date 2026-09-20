@@ -1,0 +1,19 @@
+predef: "lmx_interp.h.lm1"
+predef: "lmx_call.lm1"
+predef: "lmx_arena_refs.lm1"
+
+# First slice: classify a callable the same way native call does.
+# Full statement walk and return-trailer slot land after the helper layout.
+
+fn: lmx_interp_callable (@: LmxArena arena; @: Lmx node) int
+return: lmx_call_ready(arena, node)
+
+fn: lmx_interp_method (@: LmxArena arena; @: Lmx node) @: LmxMethod
+return: lmx_call_method(arena, node)
+
+fn: lmx_interp_run (@: LmxArena arena; @: Lmx node) int
+    if: lmx_interp_callable(arena, node) = 0
+        return: LMX_INTERP_INVALID
+    # TODO: walk body fields; resolve return-trailer reference slot; own load/dirty.
+    # Native path remains METHOD.addr via lmx_call0. Both must see the same node.
+return: LMX_INTERP_NO_GRAPH

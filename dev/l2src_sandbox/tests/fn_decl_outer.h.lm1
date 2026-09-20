@@ -1,0 +1,10 @@
+# Declares one function itself and reaches the other through its own predef -- the
+# way mixa_pump.h reaches mixa_event_fifo_init.  It used to be mutual with
+# fn_decl_inner.h under include guards, which L1's predef refuses as a cycle, so the
+# direction is one way now: a consumer of either header still reaches both
+# declarations.
+predef: "l2src/tests/fn_decl_inner.h.lm1"
+
+prototype:
+    fn: l2_test_outer_fn (int: x) int
+end: prototype

@@ -1,0 +1,153 @@
+predef: "l2src/lmx_call.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# Calling a callable occurrence (spec 7.1, 21.2, 21.8, 21.13.4; the gaps note's item 8).  What
+# this file pins:
+#
+#   * a callable is an ordinary Structure whose PHYSICAL CHILD[0] identifies the shared method
+#     record: nothing is stored to say so, and the check is the domain of the value in that slot;
+#   * the reserved node of a call is the selected M ITSELF -- not its lexical parent, and not the
+#     method record, which stores no node;
+#   * the entry is reached THROUGH the method record and handed that node: the entry below sees
+#     the callable, and its status is what the call answers;
+#   * the occurrence's own fields (the slots after child[0]) are untouched by the call: the shared
+#     record carries {addr, sig} and nothing of this occurrence;
+#   * a value that is not a callable is refused, not called: a primitive, a Structure with an
+#     empty child[0], a Structure whose child[0] holds something that is not a METHOD -- and a
+#     method record whose addr is zero is a method but has nothing to call.
+
+size_t: call_taken 0U
+@: Lmx call_seen 0
+
+# The typed entry of the occurrence: the reserved node first, the status out (19.29.5, 21.13.4).
+fn: call_entry (@: Lmx node) int
+    call_taken: call_taken + 1U
+    call_seen: node
+return: 7
+
+sub: call_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: call_check
+
+# A Structure with `slots` children, in this arena.
+fn: call_struct (@: LmxArena arena; size_t: slots) @: Lmx
+    @: Lmx structure
+    structure: lmx_node_new_owned(arena)
+    if: structure = 0
+        return: 0
+    ---
+    if: lmx_arena_refs_open_owned(arena, structure, slots) != 0
+        return: 0
+    ---
+return: structure
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxArena: arena
+    LmxPool: methods
+    @: LmxArena arena_at 0
+    @: Lmx callable 0
+    @: Lmx empty 0
+    @: Lmx plain 0
+    @: Lmx zero_callable 0
+    @: LmxMethod method 0
+    @: LmxMethod zero_method 0
+    @: void cell 0
+    @: void own_field 0
+    int: answer 0
+    int: failures
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ arena) != 0
+        fputs("lmx_call: the arena did not open\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    arena_at: @ arena
+    # The pool is a by-value local and opening one that already holds a chunk is refused, so its
+    # fields are cleared first (lmx_pool.h.lm1's rule for every owner).
+    memset((cast: (@: void) (@ methods)), 0, c.sizeof(c.LmxPool))
+    if: lmx_pool_open(@ arena, @ methods, c.sizeof(c.LmxMethod), 2U, c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD) != 0
+        fputs("lmx_call: the method pool did not open\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    method: lmx_method_intern(@ arena, @ methods, (cast: (LmxEntry) call_entry), 1U)
+    if: method = 0
+        fputs("lmx_call: the method record was not interned\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+
+    # The occurrence M: an ordinary Structure, the shared method in physical child[0], its own
+    # field after it.
+    callable: call_struct(@ arena, 2U)
+    own_field: lmx_int_new_owned(@ arena)
+    if: callable = 0 || own_field = 0
+        free(counts)
+        return: 2
+    ---
+    lmx_int_store_known(own_field, 4242)
+    lmx_arena_ref_store(callable, 0U, (cast: (@: void) method))
+    lmx_arena_ref_store(callable, 1U, own_field)
+
+    call_check(counts, lmx_call_ready(arena_at, callable) = c.LMX_CALL_OK, "a callable occurrence was not recognized")
+    call_check(counts, lmx_call_method(arena_at, callable) = method, "the call did not select the method in physical child[0]")
+    call_check(counts, lmx_call_node(callable) = callable, "the reserved node of a call is not the selected M itself")
+    call_check(counts, method\sig = 1U, "the shared record lost its signature")
+
+    # The call: the entry is reached through the record and handed the node.
+    answer: lmx_call0(arena_at, callable)
+    call_check(counts, answer = 7, "the call did not answer the entry's status")
+    call_check(counts, call_taken = 1U, "the entry was not called exactly once")
+    call_check(counts, call_seen = callable, "the entry did not receive the selected M as its reserved node")
+    call_check(counts, lmx_arena_ref_value(callable, 1U) = own_field, "the call disturbed the occurrence's own field")
+    call_check(counts, lmx_int_value_known(own_field) = 4242, "the occurrence's own field lost its value")
+
+    # What is not callable is refused, not called.
+    cell: lmx_int_new_owned(@ arena)
+    call_check(counts, cell != 0 && lmx_call_ready(arena_at, (cast: (@: Lmx) cell)) = c.LMX_CALL_NOT_CALLABLE, "a primitive was taken for a callable")
+    call_check(counts, lmx_call_ready(arena_at, 0) = c.LMX_CALL_NOT_CALLABLE, "no value was taken for a callable")
+    call_check(counts, lmx_call0(arena_at, 0) = c.LMX_CALL_NOT_CALLABLE, "a call was made on no value")
+    empty: call_struct(@ arena, 1U)
+    call_check(counts, empty != 0 && lmx_call_ready(arena_at, empty) = c.LMX_CALL_NOT_CALLABLE, "a Structure with an empty child[0] was taken for a callable")
+    call_check(counts, lmx_call0(arena_at, empty) = c.LMX_CALL_NOT_CALLABLE, "a Structure with an empty child[0] was called")
+    plain: call_struct(@ arena, 1U)
+    if: plain != 0
+        lmx_arena_ref_store(plain, 0U, own_field)
+    ---
+    call_check(counts, plain != 0 && lmx_call_ready(arena_at, plain) = c.LMX_CALL_NOT_CALLABLE, "a child[0] that is not a METHOD was taken for a callable")
+
+    # A method record whose addr is zero is still a method -- and there is nothing to call.
+    zero_method: (cast: (@: LmxMethod) lmx_pool_take(@ arena, @ methods))
+    zero_callable: call_struct(@ arena, 1U)
+    if: zero_method = 0 || zero_callable = 0
+        free(counts)
+        return: 2
+    ---
+    zero_method\addr: 0
+    zero_method\sig: 3U
+    lmx_arena_ref_store(zero_callable, 0U, (cast: (@: void) zero_method))
+    call_check(counts, lmx_call_ready(arena_at, zero_callable) = c.LMX_CALL_OK, "a method record was not recognized for what it is")
+    call_check(counts, lmx_call0(arena_at, zero_callable) = c.LMX_CALL_NOT_CALLABLE, "a callable with no entry was called")
+    call_check(counts, call_taken = 1U, "a refused call reached an entry")
+
+    failures: counts[1]
+    c.printf("lmx_call checks=%d failures=%d\n", counts[0], failures)
+    free(counts)
+    lmx_arena_release(@ arena)
+return: failures

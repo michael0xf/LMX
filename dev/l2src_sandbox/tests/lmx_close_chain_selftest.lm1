@@ -1,0 +1,277 @@
+predef: "l2src/lmx_root.lm1"
+predef: "l2src/lmx_settle.lm1"
+predef: "l2src/lmx_service.lm1"
+predef: "l2src/lmx_turn.lm1"
+predef: "l2src/lmx_child.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_manager.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_gc.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_call.lm1"
+predef: "l2src/lmx_clock.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# lmx_close_chain_selftest.lm1 -- what does closing a parent do to a child that is STILL LIVE?
+#
+# This file has asked that question twice, and the two answers are the history of 19.09:
+#
+#   FIRST (written to prove the cascade): the kernel walked the live-children list in three places
+#   and none of them looked below the child it acted on, so a live child's arena survived a close.
+#   The file measured that, and a cascade (lmx_release_children) was written for it.
+#
+#   NOW (rewritten after Mikhail's ruling, 19.09): the cascade was WRONG.  "Как может работающая
+#   на том же потоке арена освобождаться без закрытия?!"  Each Thread owns its arena and its own
+#   scheduler and works on ITS OWN thread, so a close may only STOP a live child -- the stop request
+#   is the whole act, and the child's own polling code breaks out to its end-turn and does
+#   everything itself.  Nothing of a live child's is freed: not here, not by any other act.
+#
+# So the question now is two questions, and this file answers both: after lmx_root_close with two
+# live children -- (a) are they STOPPED, and (b) is their storage UNTOUCHED?  What the close does
+# free is R0's own arena, which is where the attached !success arenas of failed children live --
+# and freeing those is user code's business, this close being its minimal case.
+#
+#   AND A THIRD ANSWER, added 19.09 in the evening: the stop is a REQUEST and does not write the
+#   handoff mark -- not even for a child with an empty inbox.  The mark says "I have left my last
+#   turn", and only the child's own boundary (or, later, the window of the maintenance rule) may
+#   say it: writing it from the stop was measured a lie for a child inside its turn, and the next
+#   boundary took that child's arena and freed it under a turn still in flight
+#   (tests\lmx_app_reroot_forbidden_selftest.lm1, run 3).  The checks below measure that the close
+#   leaves its children stopped AND un-ended, with every byte of theirs where it was.
+#
+# It is mixa's own shape: main's loop ends and closes R0 while threads may still be live.
+
+@: LmxRoot cc_root 0
+@: LmxArena cc_parent_arena 0
+@: LmxArena cc_child_arena 0
+@: LmxArena cc_child_arena_2 0
+@: Lmx source 0
+@: LmxMsg child_msg 0
+@: LmxThread child_t 0
+@: LmxSchedule child_sched 0
+@: LmxMsg child_msg_2 0
+@: LmxThread child_t_2 0
+@: LmxSchedule child_sched_2 0
+size_t: cc_phase 0U
+
+# Wire ONE child: reserve it in this turn, give it its own arena's mail/object/schedule, link it to
+# R0.  The child is deliberately left RUNNING (running=1, success=0) and never takes a turn -- this
+# file is about what a CLOSE does to what is still live.
+fn: cc_wire (@: LmxArena arena; size_t: slot; @@: LmxMsg out_msg; @@: LmxThread out_thread; @@: LmxSchedule out_sched) int
+    @: LmxMsg child
+    @: LmxThread child_thread
+    @: LmxPost child_mail
+    @: LmxSchedule child_schedule
+    if: arena = 0 || cc_root = 0 || source = 0
+        return: 0
+    ---
+    child: lmx_root_create(cc_root, arena, slot, source)
+    if: child = 0
+        return: 0
+    ---
+    child_mail: (cast: (@: LmxPost) lmx_arena_take(arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    child_thread: (cast: (@: LmxThread) lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    child_schedule: (cast: (@: LmxSchedule) lmx_arena_take(arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: child_mail = 0 || child_thread = 0 || child_schedule = 0
+        return: 0
+    ---
+    if: lmx_post_init(arena, child_mail) != c.LMX_POST_OK
+        return: 0
+    ---
+    if: lmx_schedule_init(child_schedule, arena, (cast: (@: void) child_thread), 100000U) != c.LMX_SCHEDULE_OK
+        return: 0
+    ---
+    if: lmx_thread_attach(child_thread, child, child_mail, child_schedule) != c.LMX_THREAD_OK
+        return: 0
+    ---
+    if: lmx_child_thread(lmx_root_thread(cc_root), child, child_thread) != c.LMX_CHILD_OK
+        return: 0
+    ---
+    \out_msg: child
+    \out_thread: child_thread
+    \out_sched: child_schedule
+return: 1
+
+fn: cc_entry (@: Lmx node) int
+    if: cc_phase != 0U || cc_root = 0 || cc_child_arena = 0 || cc_child_arena_2 = 0 || source = 0
+        return: 0
+    ---
+    # TWO live children, not one: mixa closes R0 with four threads still live, so "the chain walks
+    # the list" has to be measured with a list longer than a single element.
+    if: cc_wire(cc_child_arena, 0U, @ child_msg, @ child_t, @ child_sched) = 0
+        return: 0
+    ---
+    if: cc_wire(cc_child_arena_2, 1U, @ child_msg_2, @ child_t_2, @ child_sched_2) = 0
+        return: 0
+    ---
+    cc_phase: 1U
+return: 0
+
+sub: cc_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+    c.fflush(c.stdout)
+end: cc_check
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxRoot: root
+    LmxArena: parent_arena
+    LmxArena: child_arena
+    LmxArena: child_arena_2
+    @: LmxArena parent_at 0
+    @: LmxArena child_at 0
+    @: LmxArena child_at_2 0
+    @: LmxArena root_at 0
+    @: LmxMsg message 0
+    @: LmxThread r0 0
+    @: Lmx graph 0
+    @: Lmx tmpl 0
+    @: LmxService service 0
+    @: LmxManager manager 0
+    size_t: child_blocks_before 0U
+    size_t: child_blocks_after 0U
+    size_t: second_blocks_before 0U
+    size_t: second_blocks_after 0U
+    int: failures
+    if: counts = 0
+        return: 2
+    ---
+    memset((cast: (@: void) (@ root)), 0, c.sizeof(c.LmxRoot))
+    memset((cast: (@: void) (@ parent_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ child_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ child_arena_2)), 0, c.sizeof(c.LmxArena))
+    parent_at: @ parent_arena
+    child_at: @ child_arena
+    child_at_2: @ child_arena_2
+    cc_root: @ root
+    cc_parent_arena: @ parent_arena
+    cc_child_arena: @ child_arena
+    cc_child_arena_2: @ child_arena_2
+
+    cc_check(counts, lmx_root_open(@ root, cc_entry, 120000U, 0U, 0U) = c.LMX_ROOT_OK, "R0 did not open")
+    message: lmx_root_message(@ root)
+    r0: lmx_root_thread(@ root)
+    graph: message\graph
+    service: lmx_root_service(@ root)
+    manager: lmx_root_manager(@ root)
+    cc_check(counts, message != 0 && r0 != 0 && graph != 0, "R0 missing pieces")
+    if: message = 0 || r0 = 0
+        free(counts)
+        return: 2
+    ---
+
+    tmpl: lmx_node_new_owned(parent_at)
+    cc_check(counts, tmpl != 0 && lmx_arena_refs_open_owned(parent_at, tmpl, 1U) = 0, "child template was not built")
+    if: tmpl = 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(graph, 7U, (cast: (@: void) tmpl))
+    source: tmpl
+    cc_check(counts, lmx_arena_open(child_at) = 0, "child arena did not open")
+    cc_check(counts, lmx_arena_open(child_at_2) = 0, "second child arena did not open")
+
+    # The parent's turn reserves, wires and publishes the child -- and the child stays LIVE.
+    cc_check(counts, lmx_root_cycle(@ root, 4U) = c.LMX_ROOT_OK, "create cycle did not run")
+    cc_check(counts, cc_phase = 1U && child_msg != 0 && child_t != 0, "child was not wired")
+    cc_check(counts, lmx_arena_ref_value(graph, 0U) = (cast: (@: void) child_msg), "child was not published")
+    cc_check(counts, lmx_thread_child_is(r0, child_t) != 0, "child is not a live direct child of R0")
+    cc_check(counts, child_msg\running = 1 && child_msg\success = 0, "the child was not left running")
+    cc_check(counts, lmx_service_find(service, (cast: (@: void) child_t)) = (cast: (@: void) child_t), "child is not in the service")
+    cc_check(counts, lmx_manager_count(manager) = 0U, "the probe bound the child: it must NOT be bound (it runs no turn)")
+
+    # TWO live children, not one: mixa closes R0 with four threads still live, so "the chain walks
+    # the list" is measured on a list longer than one element -- and both arenas must come back.
+    cc_check(counts, child_msg_2 != 0 && child_t_2 != 0, "the second child was not wired")
+    cc_check(counts, lmx_arena_ref_value(graph, 1U) = (cast: (@: void) child_msg_2), "the second child was not published in slot 1")
+    cc_check(counts, lmx_thread_child_is(r0, child_t_2) != 0, "the second child is not a live direct child of R0")
+    cc_check(counts, lmx_service_count(service) = 3U, "the service does not hold R0 and both live children")
+    child_blocks_before: child_at\count
+    second_blocks_before: child_at_2\count
+    cc_check(counts, child_at\blocks != 0 && child_blocks_before > 0U, "the child's arena holds nothing before the close")
+    cc_check(counts, child_at_2\blocks != 0 && second_blocks_before > 0U, "the second child's arena holds nothing before the close")
+
+    # THE QUESTION: closing the parent while the child is still live.  R0's OWN arena is taken
+    # here by its address (the header lives inside the probe's own root record), so that what the
+    # close returned can be read afterwards without touching anything the close freed.
+    root_at: lmx_root_arena(@ root)
+    cc_check(counts, lmx_root_close(@ root) = c.LMX_ROOT_OK, "R0 did not close")
+    cc_check(counts, lmx_root_state(@ root) = c.LMX_ROOT_CLOSED, "closed root does not say closed")
+
+    child_blocks_after: child_at\count
+    second_blocks_after: child_at_2\count
+
+    # THE MEASURED FACT, and it is the opposite of what this file first asserted (rewritten 19.09
+    # after Mikhail's ruling): a close does NOT free a live child.  Each Thread owns its arena and
+    # its scheduler and works on ITS OWN thread, so the close may only STOP the child -- the child's
+    # own polling code breaks out to its end-turn and does everything itself; and nothing of a live
+    # child's is freed, here or anywhere else (that is exactly what the removed cascade got wrong).
+    # What this close DOES free is R0's own arena below -- where the attached !success arenas of
+    # failed children live, which is user code's business (the root's close being its minimal case).
+    cc_check(counts, child_msg\running = 0, "the close did not reach the live child (running still set)")
+    cc_check(counts, child_msg_2\running = 0, "the close did not reach the second live child")
+    # ... AND THE CLOSE DOES NOT FAKE THE END EITHER (rewritten 19.09, evening).  The stop is a
+    # REQUEST: it writes `running=0` and NOTHING else -- the mark "I have left my last turn" belongs
+    # to the child's own boundary, and a child that reaches no boundary of its own is closed later,
+    # by the maintenance rule, when its own window has passed (lmx_thread.h.lm1, lmx_stop_children).
+    # Until then it reads stopped and NOT handoff-safe, and that is the point: the old rule wrote the
+    # mark here whenever the inbox was empty, and that was measured a lie for a child INSIDE its turn
+    # (tests\lmx_app_reroot_forbidden_selftest.lm1, run 3: the next boundary took its arena and freed
+    # it under a turn still in flight).
+    cc_check(counts, child_msg\running = 0 && child_msg\handoff_ready = 0, "the close closed the child instead of asking it")
+    cc_check(counts, child_msg_2\running = 0 && child_msg_2\handoff_ready = 0, "the close closed the second child instead of asking it")
+    # Its storage is untouched -- the whole point: a live child's arena may not be taken, and a
+    # stopped child has not ended yet either.
+    cc_check(counts, child_blocks_after = child_blocks_before, "CLOSE TOUCHED THE LIVE CHILD'S ARENA")
+    cc_check(counts, second_blocks_after = second_blocks_before, "CLOSE TOUCHED THE SECOND LIVE CHILD'S ARENA")
+    cc_check(counts, child_at\blocks != 0 && child_at_2\blocks != 0, "CLOSE FREED A LIVE CHILD'S ARENA (the removed cascade, back again)")
+    # ... and the child's own index still answers for the child's own record: the arena is not just
+    # non-empty, it is intact.
+    cc_check(counts, lmx_range_classify(child_at, (cast: (@: void) child_msg)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "the child's record no longer answers in its own arena")
+    # R0's OWN arena is NOT returned either, and that is the model, not an oversight: the handshake
+    # word of every live child is an ATOMIC in the PARENT's arena, written by the children's own
+    # threads -- so the arena may not go while one of them can still write into it (Mikhail, 19.09).
+    # This is also why a parent that merely hangs destroys nothing.  The arena goes with the process.
+    cc_check(counts, root_at\blocks != 0, "R0's arena was released while its children could still write into it")
+    cc_check(counts, root_at\count != 0U, "R0's arena was half-released while its children were live")
+    # ... and the whole route table went back with it: lmx_root_close releases R0's service AFTER
+    # the chain, so what a sound check can read here is that the service is EMPTY, not that it
+    # holds one entry.
+    #
+    # The two checks that CANNOT be made here, and why -- written down because I made both
+    # mistakes in the first version of this very file:
+    #   * lmx_thread_child_is(r0, child_t) -- `r0` is R0's own thread record, and it lives in
+    #     R0's arena, which the close just released.  Reading it is a use-after-free; the check
+    #     "passed" only because freed memory still held the old bytes.
+    #   * service count = 1 -- that is the idiom of the SETTLE tests, where the service outlives
+    #     the child.  A CLOSE releases the service itself (lmx_service_release zeroes its count),
+    #     so the honest reading of a closed root is zero.
+    # After a close, read only what the TEST owns or addresses it remembered -- never a record
+    # that lived in an arena the close returned.
+    # The SERVICE goes with the arena and for the same reason: it is the children's route table, and
+    # they are live.  So a closed root with live children holds R0 + both children -- and the root's
+    # own record is the probe's stack object, which is what makes this reading sound at all.
+    cc_check(counts, lmx_service_count(service) = 3U, "the service lost the routes of still-live children")
+
+    failures: counts[1]
+    c.printf("lmx_close_chain checks=%d failures=%d child_blocks_before=%d child_blocks_after=%d child_arena_released=%d child1_running=%d child1_handoff=%d\n",
+             counts[0], failures, child_blocks_before, child_blocks_after, child_blocks_after = 0U,
+             child_msg\running, child_msg\handoff_ready)
+    free(counts)
+return: failures

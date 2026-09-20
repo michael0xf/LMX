@@ -1,0 +1,26 @@
+predef: "l2src/lmx.h.lm1"
+predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_call.h.lm1"
+predef: "l2src/lmx_own.h.lm1"
+
+# Graph interpreter: execute the SAME Lmx graph native METHOD.addr would run.
+# Work only in dev/l2src_sandbox. Root l2src stays stable.
+#
+# Slot 0 is already the METHOD record (lmx.h.lm1). Extra slots that REFERENCE
+# the method header and the `return:` trailer argument are required so the
+# interpreter does not rebuild a second tree. They are references, not own-fields
+# of formals (Lingvamyxa_spec.txt 21.5.1). Exact indexes after slot 0 are open
+# until fable/lmx_uds agree; do not invent a third header on Lmx.
+
+define: LMX_INTERP_OK 0
+define: LMX_INTERP_INVALID 1
+define: LMX_INTERP_NO_GRAPH 2
+
+prototype:
+    # True when child[0] is a METHOD in this arena (same test as lmx_call_ready).
+    fn: lmx_interp_callable (@: LmxArena arena; @: Lmx node) int
+    # Native entry of that METHOD, or null. Interpreter may ignore addr and walk fields.
+    fn: lmx_interp_method (@: LmxArena arena; @: Lmx node) @: LmxMethod
+    # Walk executable fields of `node` with own load/dirty rules. Does not parse source.
+    fn: lmx_interp_run (@: LmxArena arena; @: Lmx node) int
+end: prototype

@@ -1,0 +1,15 @@
+# Two C declaration shapes the manager headers use for aggregate handles: a forward
+# typedef of an incomplete struct, and a complete struct whose body contains a
+# function pointer inside braces.  Both in L1; the generated C header is
+# struct_typedef.lm1.h.
+#
+# The incomplete handle is a plain type alias to the struct tag, which is exactly
+# what "typedef struct X X;" says and needs no body.
+type: L2TestOpaque struct L2TestOpaque
+
+fnptr: L2TestCallback (int: value) int
+
+struct: L2TestRecord
+    int: value
+    L2TestCallback: callback
+end: L2TestRecord

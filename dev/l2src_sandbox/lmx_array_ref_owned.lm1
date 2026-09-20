@@ -1,0 +1,54 @@
+predef: "lmx_array_ref_owned.h.lm1"
+predef: "l2src/lmx_pool.h.lm1"
+include: "<stdlib.h>"
+
+# An Array whose elements are references (Lmx headers, Array descriptors or METHOD
+# records): TWO arrays of the arena, exactly as the scalar case -- a cell of the array of
+# Array descriptors of that type, and the backing array of pointer cells it points at.
+# The arena allocates both and owns both, each has its own descriptor in the index, and a
+# refusal anywhere reverts the arena to the mark taken before the first one.
+
+fn: lmx_array_ref_new_owned (int: type; size_t: count; @: LmxArena arena) @: LmxArrayDesc
+    size_t: stride
+    int: element_type
+    @: LmxArrayDesc desc
+    @: void backing
+    if: arena = 0
+        return: 0
+    stride: c.sizeof(@: void)
+    if: type = c.LMX_TYPE_ARRAY_OF_LMX
+        element_type: c.LMX_TYPE_LMX
+    else:
+        if: type = c.LMX_TYPE_ARRAY_OF_DESC
+            element_type: c.LMX_TYPE_DESC
+        else:
+            if: type != c.LMX_TYPE_ARRAY_OF_METHOD
+                return: 0
+            element_type: c.LMX_TYPE_METHOD
+        ---
+    ---
+    if: count != 0U && count > ((cast: (size_t) -1) / stride)
+        return: 0
+    ---
+    # The descriptor is one cell of the array of Array descriptors of this type; the
+    # backing is `count` consecutive pointer cells of the array of that element type.
+    # Both are the arena's arrays: found if the arena has them, made here if it does not.
+    desc: (cast: (@: LmxArrayDesc) lmx_arena_take(arena, c.sizeof(c.LmxArrayDesc), c.LMX_KIND_ARRAY, type))
+    if: desc = 0
+        return: 0
+    ---
+    desc\len: count
+    desc\data: 0
+    if: count != 0U
+        backing: lmx_arena_take_n(arena, stride, c.LMX_KIND_REF, element_type, count)
+        if: backing = 0
+            return: 0
+        ---
+        desc\data: backing
+    ---
+return: desc
+
+fn: lmx_array_ref_new_positive_owned (int: type; size_t: count; @: LmxArena arena) @: LmxArrayDesc
+    if: count = 0U
+        return: 0
+    return: lmx_array_ref_new_owned(type, count, arena)

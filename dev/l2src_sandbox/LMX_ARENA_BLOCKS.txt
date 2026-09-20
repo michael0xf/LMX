@@ -1,0 +1,105 @@
+CURRENT CORE MODEL / ДЕЙСТВУЮЩАЯ МОДЕЛЬ (2026-09-12)
+Read L2_CORE_AND_MESSAGE_MODEL_20260912.md at repository root: parts I-III
+describe the full core/Message mechanism; part IV records implementation limits,
+and only the final part is the work plan. SPEC and Revision 2 remain normative.
+This file's dated prototype/evidence sections describe their stated revisions;
+they are not permission to restore old layouts, pointer-only merge, unchanged
+copied node links, or a new arbitrary capacity limit. Non-copying adoption and
+shared METHOD/eternal terminals retain addresses under their separate contracts.
+
+Message-owned block storage (L1)
+===============================
+
+Scope
+-----
+lmx_arena_blocks.h.lm1 and lmx_arena_blocks.lm1 implement the storage-only API
+agreed in LMX_MSG_ARENA_SPLIT.txt. No scheduler, Message registry, global state,
+lock, running/success flag, timeout or lifecycle decision is added here.
+It is NOT yet integration of full graph ranges, failure roots or Message queues.
+
+A metadata node owns one nonmoving allocation: base, byte count n, opaque class,
+optional dispose(base,n), and next. class belongs to allocation bookkeeping, not
+the Lmx header or payload. Moving metadata neither relocates nor rewrites graph
+nodes, descriptor entries, pointers, aliases or containment parents.
+
+Caller obligations
+------------------
+The caller owns exclusive access to valid metadata and disjoint payload storage.
+Head slots are separate owner variables, not links inside the lists being moved
+or disposed. Metadata nodes are separately allocated and free()-compatible.
+No node or payload allocation is owned by another list. References inside the
+transferred graph may remain; live mutable aliases in the former owner may not.
+These low-level helpers cannot detect arbitrary escaped aliases or native users.
+
+Message lifecycle code decides authority, quiescence, final outcome, child
+settlement and external-resource cleanup BEFORE a transfer or disposal. A zero
+running flag alone is not permission. Stop propagation remains direct-child-only.
+The helpers do not introduce a process-wide coordinator or lock to enforce this.
+
+Operations (0 = OK, 1 = INVALID)
+------------------------------
+push(&head,node): prepend a detached caller-allocated node. No allocation.
+Reject null arguments, linked/already-present nodes, cycles in the destination,
+and nonzero n with null base. Failure leaves ownership unchanged.
+
+can_move(&dst,&src): read-only preflight for move_all; no writes or callbacks.
+It validates head slots, cycles and intersections, not payload alias safety.
+The caller must retain exclusive ownership from preflight through the move.
+
+remove(&head,node): unlink one exact member of an acyclic owner list and clear
+that member's next link. Null arguments, an absent member or a cyclic list return
+INVALID without mutation. The caller retains ownership of the detached node and
+its payload. No allocation, disposal, callback, range access or graph write occurs.
+The remaining list keeps its order and addresses. This is the ordinary bookkeeping
+primitive requested for selective sweeping, not a collector or a reachability
+decision. The collector must retire covering ranges before freeing a dead block;
+the existing disposer can consume the detached one-member list. A failed remove
+must not be followed by freeing the still-owned allocation.
+
+move_all(&dst,&src): preserve order inside each list; prepend src's entire chain
+to dst; clear src. No allocation, payload copy, free or callback. Empty source
+is a no-op. Null/same head slots, cycles and intersecting metadata chains fail
+without mutation. Validation scans metadata; the transfer changes three pointers.
+Ordering of this storage list is not a Message scheduling/graph traversal rule.
+
+dispose_all(&head): validate acyclicity, detach the list (head becomes null),
+then dispose each payload and free its metadata node. A null disposer means
+free(base); otherwise invoke it once with the exact base and n. The callback
+owns payload cleanup, must return normally, and must not mutate or traverse the
+detached list or depend on another block remaining alive. Reentrant cleanup of
+the same now-empty head and later repeated cleanup are no-ops. Null head slot or
+cyclic metadata returns INVALID before any free. Null base with n=0 is allowed.
+
+Build and verification
+----------------------
+Run l2src/run_msg_blocks.ps1 from any directory. It reads pinned gen2, translates
+the header to private headers/l2src/lmx_arena_blocks.lm1.h and the body to C, then
+checks an independent production object. Its only direct external dependency
+must be free: no allocator, registry, thread or mutex calls.
+
+Checked-in L1 selftests use real Lmx graph payloads and a test-only GNU linker
+free wrapper (also L1). The default runs O2 once; -Optimization O0, or O0,O2
+(a comma list also works through powershell -File), selects extra
+configurations explicitly. Invalid/empty selections are rejected;
+duplicates are removed. Existing cases check source invalidation, graph pointer/alias
+identity, metadata preservation, invalid operations without mutation, callback
+reentry, mixed custom/default cleanup, and 65 blocks without a fixed cap.
+The selective-removal cases additionally cover head/middle/tail/only member,
+null/empty/absent/cyclic rejection, no frees/callbacks during removal, unchanged
+survivor graph links, and explicit disposal of only the detached allocation.
+Historical evidence was 115 checks at O0/O2. The extended fixture passed at O2:
+143 checks, 147 frees and 2 callbacks; strict C99 warnings and the production
+object import check passed (free remains its only external dependency).
+Evidence: build/codex/msg_blocks/20260911_180637_285_d7a54d58/evidence.json.
+Runner syntax/default/normalization/invalid-option checks also passed without
+another compilation. Only O2 was executed for this checkpoint; no nativeExec,
+family test or stable self-build was repeated. This is a selective-removal helper
+result, NOT a pass of the still-RED unrooted-adoption collector acceptance probe.
+Generated sources, executables, logs and SHA256 evidence stay in build/codex.
+The runner does not rebuild/promote gen2 or touch Grok's shared build/l2 outputs.
+
+Integration: predef the header from L1; generate that header in the consumer's
+private header tree; translate/link the module once. Native substrate can include
+the generated l2src/lmx_arena_blocks.lm1.h. No hand-authored C wrapper is needed.
+The standalone test imports only the header and links the separately compiled
+module, checking the same public ABI used by a consumer.

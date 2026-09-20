@@ -1,0 +1,82 @@
+﻿predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# Letter-scale arena (Mikhail 19.09 / POLL 19.29.7.1 section 5): every Message owns one
+# logical arena; a short letter must not pay full GC. What this file pins (without
+# pulling Message/domain units — index+descriptor+stability only):
+#
+#   * open_simple marks simple and primes a small index capacity;
+#   * address->descriptor index, array descriptors and address stability still work;
+#   * generation_next refuses (no GC pass on simple);
+#   * a second chunk on the same array is refused (no multi-chunk growth);
+#   * attach into a full arena still transfers ownership with stable addresses.
+
+sub: sm_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: sm_check
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxArena: letter
+    LmxArena: keep
+    @: LmxArena letter_at
+    @: LmxArena keep_at
+    @: void int_cell 0
+    @: LmxPool pool 0
+    @: void second 0
+    unsigned: gen_before
+    int: failures
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ letter)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ keep)), 0, c.sizeof(c.LmxArena))
+    letter_at: @ letter
+    keep_at: @ keep
+    sm_check(counts, lmx_arena_open_simple(@ letter) = 0, "open_simple refused")
+    sm_check(counts, letter_at\simple = 1U, "open_simple left simple unset")
+    sm_check(counts, letter_at\capacity >= 8U, "open_simple did not prime index capacity")
+    int_cell: lmx_int_new_owned(@ letter)
+    sm_check(counts, int_cell != 0, "int cell was not taken from simple arena")
+    sm_check(counts, lmx_range_classify(@ letter, int_cell) = c.LMX_KIND_PRIMITIVE, "simple index does not classify")
+    sm_check(counts, lmx_range_type_of(@ letter, int_cell) = c.LMX_TYPE_INT, "simple index lost type")
+    sm_check(counts, lmx_range_pool(@ letter, int_cell) != 0, "simple index has no array descriptor")
+    lmx_int_store_known(int_cell, 42)
+    sm_check(counts, lmx_int_value_known(int_cell) = 42, "cell in simple arena not stable/writable")
+
+    # GC pass skipped on simple: generation_next refuses.
+    gen_before: letter_at\generation
+    sm_check(counts, lmx_arena_generation_next(@ letter) = 0U, "simple generation_next must refuse")
+    sm_check(counts, letter_at\generation = gen_before, "simple generation was bumped")
+
+    # Multi-chunk growth refused: fill the int array chunk, next take must fail.
+    pool: lmx_range_pool(@ letter, int_cell)
+    sm_check(counts, pool != 0, "int pool missing for chunk test")
+    if: pool != 0
+        second: lmx_pool_take(@ letter, pool)
+        while: second != 0
+            second: lmx_pool_take(@ letter, pool)
+        ---
+        second: lmx_pool_take(@ letter, pool)
+        sm_check(counts, second = 0, "simple arena allowed a second chunk")
+    ---
+
+    # Attach into a full arena: addresses still classify there; letter emptied.
+    sm_check(counts, lmx_arena_open(@ keep) = 0, "keep arena did not open")
+    sm_check(counts, lmx_arena_attach(@ keep, @ letter) = 0, "attach from simple refused")
+    sm_check(counts, letter_at\blocks = 0 && letter_at\index = 0 && letter_at\simple = 0U, "donor not emptied after attach")
+    sm_check(counts, lmx_range_classify(@ keep, int_cell) = c.LMX_KIND_PRIMITIVE, "attached cell lost classification")
+    sm_check(counts, lmx_int_value_known(int_cell) = 42, "attached cell address not stable")
+    sm_check(counts, lmx_arena_release(@ keep) = 0, "keep release refused")
+
+    failures: counts[1]
+    c.printf("arena simple checks=%d failures=%d\n", counts[0], failures)
+    free(counts)
+return: failures != 0

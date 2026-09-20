@@ -1,0 +1,503 @@
+predef: "l2src/lmx_root.h.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_child.lm1"
+predef: "l2src/lmx_clock.lm1"
+predef: "l2src/lmx_implements.h.lm1"
+predef: "l2src/lmx_manager.lm1"
+# THE ROOT CARRIES ITS RUNNING BINDING (19.09).  A runtime has TWO manager bindings -- stepped
+# (records advanced by whoever runs the cycle) and running (every record gets a lane of its own, an
+# OS thread) -- and a program that wants real multithreading calls lmx_manager_running_init/add.
+# The binding has to arrive WITH the root and in ONE copy: `predef:` pulls whole sources, so
+# lmx_manager_running.o built as its own unit carries the whole core that lmx_root.o already
+# carries, and linking both gives 76 "multiple definition" (measured: lmx_child_create,
+# lmx_clock_now, lmx_array_desc_new ...).  Held here, the lanes are part of the runtime the root
+# already owns, and a caller links nothing extra -- the same reason lmx_settle and lmx_service
+# are predef'd here rather than left to each program.
+predef: "l2src/lmx_manager_running.lm1"
+predef: "l2src/lmx_orphan.lm1"
+predef: "l2src/lmx_settle.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_service.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_turn.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+
+# lmx_root.lm1 - creating the runtime's root, running its turns, its cycle and its teardown.
+#
+# The header carries what 25 (i)-(v) require.  What is worth spelling out here is the order
+# of the construction, because the order is the guarantee again: R0's arena first (every
+# other cell is a cell of it), then the graph, then the message record, then the mechanisms
+# that point at it -- and the OPEN state written LAST.  A construction that refuses releases
+# the arena and leaves the handle CLOSED, so a half-made root is reachable from nowhere.
+
+fn: lmx_root_open (@: LmxRoot root; LmxCallEntry: entry; ulong: limit; size_t: eternal; size_t: methods) int
+    @: LmxArena arena
+    @: Lmx graph
+    @: Lmx eternal_graph
+    @: Lmx methods_graph
+    @: LmxMsg message
+    @: LmxThread thread
+    @: LmxSchedule slot
+    if: root = 0 || limit = 0U
+        return: c.LMX_ROOT_INVALID
+    # The handle is cleared field by field before anything is opened on it: opening an arena
+    # that already holds something is REFUSED (lmx_arena_open), and a handle in a by-value
+    # local arrives holding whatever was on the stack.  The arena's own fields are cleared
+    # through a pointer because `\` is a pointer step in L1: a chain through the by-value
+    # field `root\arena` would be emitted as another `->`.  The mailbox and the schedule
+    # clear their own fields when they are initialized, so they need nothing here.
+    arena: @ root\arena
+    arena\blocks: 0
+    arena\arrays: 0
+    arena\index: 0
+    arena\count: 0U
+    arena\capacity: 0U
+    arena\generation: 0U
+    root\message: 0
+    root\thread: 0
+    root\slot: 0
+    root\eternal: 0
+    root\methods: 0
+    root\entry: entry
+    # No world yet: a by-value handle arrives holding whatever was on the stack, and a garbage
+    # world pointer would be watched as if it were a stub (19.09).
+    root\world: 0
+    root\now: 0U
+    root\limit: limit
+    root\state: c.LMX_ROOT_CLOSED
+    if: lmx_arena_open(@ root\arena) != 0
+        return: c.LMX_ROOT_INVALID
+    # R0's graph root: a lexical root Structure whose child array is the top level's slots.
+    # A Message's graph is a value of ITS arena, so this too is a cell like any other.
+    graph: lmx_node_new_owned(@ root\arena)
+    if: graph = 0 || lmx_arena_refs_open_owned(@ root\arena, graph, c.LMX_ROOT_SLOTS) != 0
+        lmx_arena_release(@ root\arena)
+        return: c.LMX_ROOT_INVALID
+    ---
+    # R0's two const:immutable retention arrays (model 20): the eternal branches and the known
+    # method descriptors.  Their set is known at TRANSLATION time, so their size arrives here and
+    # nothing at runtime grows them; an empty set is one of the two states and needs no storage.
+    # They live in R0's graph, which is what makes them roots of R0's own collection and what
+    # keeps a borrowed branch alive without the collector knowing anything about branches.
+    eternal_graph: lmx_node_new_owned(@ root\arena)
+    methods_graph: lmx_node_new_owned(@ root\arena)
+    if: eternal_graph = 0 || methods_graph = 0
+        lmx_arena_release(@ root\arena)
+        return: c.LMX_ROOT_INVALID
+    ---
+    if: eternal > 0U && lmx_arena_refs_open_owned(@ root\arena, eternal_graph, eternal) != 0
+        lmx_arena_release(@ root\arena)
+        return: c.LMX_ROOT_INVALID
+    ---
+    if: methods > 0U && lmx_arena_refs_open_owned(@ root\arena, methods_graph, methods) != 0
+        lmx_arena_release(@ root\arena)
+        return: c.LMX_ROOT_INVALID
+    ---
+    root\eternal: eternal_graph
+    root\methods: methods_graph
+    if: lmx_arena_ref_store(graph, c.LMX_ROOT_ETERNAL_SLOT, (cast: (@: void) eternal_graph)) != 0 || lmx_arena_ref_store(graph, c.LMX_ROOT_METHOD_SLOT, (cast: (@: void) methods_graph)) != 0
+        lmx_arena_release(@ root\arena)
+        return: c.LMX_ROOT_INVALID
+    ---
+    # R0 itself: the five fields of the closed record, and nothing else.  `index` is 1
+    # because there is nothing above it -- it is the only Message with no parent.
+    message: (cast: (@: LmxMsg) lmx_arena_take(@ root\arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    if: message = 0
+        lmx_arena_release(@ root\arena)
+        return: c.LMX_ROOT_INVALID
+    ---
+    message\running: 1
+    message\success: 0
+    message\handoff_ready: 0
+    message\graph: graph
+    message\index: c.LMX_ROOT_INDEX
+    root\message: message
+    # R0 as an executable object, and its own record.  Both are cells of R0's arena, so the
+    # domain question about the record's owner answers in R0's own index.
+    thread: (cast: (@: LmxThread) lmx_arena_take(@ root\arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    slot: (cast: (@: LmxSchedule) lmx_arena_take(@ root\arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: thread = 0 || slot = 0
+        lmx_arena_release(@ root\arena)
+        return: c.LMX_ROOT_INVALID
+    ---
+    root\thread: thread
+    root\slot: slot
+    if: lmx_post_init(@ root\arena, @ root\mail) != c.LMX_POST_OK
+        lmx_arena_release(@ root\arena)
+        return: c.LMX_ROOT_INVALID
+    ---
+    if: lmx_thread_attach(root\thread, message, @ root\mail, root\slot) != c.LMX_THREAD_OK
+        lmx_arena_release(@ root\arena)
+        return: c.LMX_ROOT_INVALID
+    ---
+    if: lmx_manager_init(@ root\manager) != c.LMX_MANAGER_OK
+        lmx_arena_release(@ root\arena)
+        return: c.LMX_ROOT_INVALID
+    ---
+    # R0's record names R0's arena as its BAND: the creation act is what writes it (lmx_schedule.h.lm1),
+    # so the end-turn collection runs on the band that holds the turn and finds the storage it
+    # collects here (model 24) without any queue having to know it.
+    if: lmx_schedule_init(root\slot, @ root\arena, (cast: (@: void) root\thread), limit) != c.LMX_SCHEDULE_OK
+        lmx_arena_release(@ root\arena)
+        return: c.LMX_ROOT_INVALID
+    ---
+    # The runtime's mail service: R0 opens it and registers ITSELF under its physical address.
+    if: lmx_service_open(@ root\service) != c.LMX_SERVICE_OK
+        lmx_arena_release(@ root\arena)
+        return: c.LMX_ROOT_INVALID
+    ---
+    if: lmx_service_register(@ root\service, root\thread, @ root\arena) != c.LMX_SERVICE_OK
+        lmx_arena_release(@ root\arena)
+        return: c.LMX_ROOT_INVALID
+    ---
+    # R0's retention of orphans (19.29.8): the ledger opens empty and the policy starts at its
+    # default, from which a caller may set its own before the first release happens.
+    if: lmx_orphan_init(@ root\orphans) != c.LMX_ORPHAN_OK
+        lmx_arena_release(@ root\arena)
+        return: c.LMX_ROOT_INVALID
+    ---
+    root\retention: c.LMX_ROOT_ORPHAN_RETENTION
+    # The runtime's own wait starts at open -- this is the cycle's first reading.  From here
+    # on every reading is handed down by lmx_root_cycle_at, and no other cell reads a clock.
+    root\now: lmx_clock_ticks()
+    lmx_schedule_wait(root\slot, root\now)
+    root\state: c.LMX_ROOT_OPEN
+return: c.LMX_ROOT_OK
+
+# One turn of R0.  The entry program is called from HERE and from nowhere else, and it is
+# called between enter and leave: that is the whole of 25 (ii) -- the entry runs inside a
+# turn of R0, so the current object is R0's thread while it runs.  The turn itself is the
+# object's ordinary turn (lmx_thread_turn): the only thing R0 adds is the handler, which the
+# runtime was GIVEN at open and which is not a graph callable.
+fn: lmx_root_turn (@: LmxRoot root; ulong: now) int
+    int: code
+    if: root = 0 || root\state != c.LMX_ROOT_OPEN
+        return: c.LMX_ROOT_INVALID
+    code: lmx_thread_turn(root\thread, root\entry, now)
+    # The boundary refused the turn -- R0 is stopped or already successful.  That is R0's own work
+    # being over, and a close is never resurrected (lmx_thread_enter).
+    if: code = c.LMX_THREAD_STOPPED
+        return: c.LMX_ROOT_DONE
+    ---
+    if: code != c.LMX_THREAD_OK
+        return: c.LMX_ROOT_INVALID
+    ---
+return: c.LMX_ROOT_OK
+
+# The cycle, with the reading supplied: the seam of the logical clock, and the shape a test
+# can drive without sleeping.  The clock belongs to the cycle (25 (iii)) -- whoever runs the
+# cycle reads it once and everything below ages against that one number.
+fn: lmx_root_cycle_at (@: LmxRoot root; unsigned: ticks; ulong: now) int
+    int: code
+    size_t: world_reading
+    if: root = 0 || root\state != c.LMX_ROOT_OPEN || ticks = 0U
+        return: c.LMX_ROOT_INVALID
+    root\now: now
+    # R0's own turn: ingress, the entry program, and the handling of what arrived.
+    if: lmx_root_turn(root, now) != c.LMX_ROOT_OK
+        return: c.LMX_ROOT_DONE
+    ---
+    # R0's keep-alive, aged against the same reading: the runtime itself may not wait
+    # forever either (model 33).
+    lmx_schedule_tick(root\slot, now)
+    if: lmx_schedule_state(root\slot) = c.LMX_SCHEDULE_OVERDUE
+        return: c.LMX_ROOT_DONE
+    ---
+    # THE WORLD'S SILENCE (19.09): the root POLLS the world it was handed (Mikhail: "заглушка не
+    # зависла которую опрашивает root").  A registered world that has not written its cell for
+    # longer than R0's own limit is gone or hung -- and a child whose parent went silent ENDS
+    # rather than outliving it, the same rule lmx_turn_end applies to every other object here.
+    # The end is the graceful one: `running = 0` is the sanctioned stop, and the next turn's
+    # entrance refuses it (lmx_thread_enter), so the cycle returns DONE and the app closes R0
+    # through the ordinary road.  Nothing is freed here: the root's storage is user code's.
+    if: root\world != 0
+        world_reading: c.__atomic_load_n((cast: (@: size_t) root\world), c.__ATOMIC_RELAXED)
+        if: world_reading != 0U
+            if: now - (cast: (ulong) world_reading) >= root\slot\limit
+                if: root\message != 0
+                    root\message\running: 0
+                ---
+                return: c.LMX_ROOT_DONE
+            ---
+        ---
+    ---
+    # The parent's step over the top level: bounded by the caller's budget, never blocking,
+    # and handed the same reading.
+    code: lmx_manager_round(@ root\manager, ticks, now)
+    if: code != c.LMX_MANAGER_OK
+        return: c.LMX_ROOT_INVALID
+    ---
+    # The maintenance point (19.29.8): the one reclaim site for orphans, run after the top level's
+    # step and inside the same reading of the clock, so everything that aged in this cycle aged
+    # against one number.
+    if: lmx_root_orphan_maintain(root, now) != c.LMX_ORPHAN_OK
+        return: c.LMX_ROOT_INVALID
+    ---
+    # R0's own settling (19.29.8: "Each closing Message settles only its direct children"), at the
+    # same serialized owner-only boundary and inside the same reading of the clock.  R0's direct
+    # children are the top level, so a child that finished during this cycle is reclaimed here
+    # (successful) or its arena joins R0's and its failure root is retained (unsuccessful).
+    # An ORPHAN is not this act's case: 19.29.8 settles an orphan only by its own policy, "never
+    # by its supervising root's ordinary settle step" -- that is the pass just above.
+    if: lmx_settle_children(root\thread, @ root\arena, @ root\service, @ root\manager, now) != c.LMX_SETTLE_OK
+        return: c.LMX_ROOT_INVALID
+    ---
+return: c.LMX_ROOT_OK
+
+# The cycle as the runtime runs it: one reading of the cycle's clock, then the same cycle.
+fn: lmx_root_cycle (@: LmxRoot root; unsigned: ticks) int
+    if: root = 0 || root\state != c.LMX_ROOT_OPEN
+        return: c.LMX_ROOT_INVALID
+return: lmx_root_cycle_at(root, ticks, lmx_clock_ticks())
+
+# 25 (iv): a Message created without a parent is created THROUGH R0.  The parent the child
+# path reserves against is R0's own graph root, so the child's parent capability is R0's, its
+# index is its slot at R0, and no second top level can appear.  The child is RESERVED in R0's
+# own turn (model 26) and becomes visible in R0's graph at the end of that turn -- the
+# boundary of the cycle -- or never, if that turn failed.
+fn: lmx_root_create (@: LmxRoot root; @: LmxArena child_arena; size_t: slot; @: Lmx source) @: LmxMsg
+    @: Lmx graph
+    if: root = 0 || root\state != c.LMX_ROOT_OPEN || root\message = 0
+        return: 0
+    graph: root\message\graph
+    if: graph = 0 || root\thread = 0
+        return: 0
+    # The two retention arrays have slots of their own at the end of R0's graph, and they are NOT
+    # the top level: a child belongs in a child's slot and nowhere else.
+    if: slot >= (cast: (size_t) c.LMX_ROOT_CHILDREN)
+        return: 0
+    ---
+return: lmx_child_reserve(root\thread, @ root\arena, child_arena, graph, slot, source)
+
+# 25 (v): the place of the call and the grandparent's address are all that stage 5 fixed.
+# Supervision is NOT handed over, nothing is written, and the answer says exactly that.
+#
+# ... AND SINCE 19.09 THE WORLD IS REAL, AND IT IS THE DIRECTION THAT MATTERS (Mikhail:
+# "сделай заглушку-родителя который опрашивает root на предмет зависаний ... а сам живет вечно" и
+# "заглушка не зависла которую опрашивает root").  Two directions, both standard here:
+#
+#   * THE WORLD POLLS THE ROOT: `lmx_root_hung` below -- the stub above asks whether the root has
+#     been silent longer than its own window.  It is the stub, and not the root, that shows the
+#     system dialog "not responding -- close?", and that is why the stub itself must not hang:
+#     a dialog can only come from a live questioner.
+#   * THE ROOT POLLS THE WORLD: what `world` names -- the STUB'S OWN STAMP CELL, a size_t the
+#     caller owns, handed over here.  The stub writes its reading there while it lives; R0 watches
+#     it at every boundary (lmx_root_cycle_at) and STOPS ITSELF when the world has been silent
+#     longer than R0's own limit.  A child whose parent went silent ends rather than outliving it
+#     -- the same rule lmx_turn_end applies to every other object in this kernel.
+fn: lmx_root_supervise_world (@: LmxRoot root; @: void world) int
+    if: root = 0 || root\state != c.LMX_ROOT_OPEN || world = 0
+        return: c.LMX_ROOT_INVALID
+    # A world that has never written its cell is not a world this root can watch: the first stamp
+    # comes BEFORE the handover, and the refusal says so (an unwritten cell reads zero, and zero
+    # would age as "silent since the beginning of time" -- the root would end at once, which is
+    # the opposite of what the stub is for).
+    if: c.__atomic_load_n((cast: (@: size_t) world), c.__ATOMIC_RELAXED) = 0U
+        return: c.LMX_ROOT_INVALID
+    ---
+    root\world: world
+return: c.LMX_ROOT_OK
+
+# THE STUB PARENT, AND THE TWO HALVES OF ITS STANDARD MECHANISM (Mikhail, 19.09: "сделай
+# заглушку-родителя который опрашивает root на предмет зависаний (стандартный механизм) а сам
+# живет вечно"; in lingvamyxa the same place was held by the WorldWideMix stub, and
+# lmx_root_supervise_world above is still that place).
+#
+# The root has no parent in this kernel -- there is nothing above it to own a handshake word for
+# it (lmx_turn.lm1: a Thread with no parent neither stamps nor ages out).  So the mechanism runs
+# the other way round, and it is the same arithmetic as every other wait here:
+#
+#   * the RING: `lmx_root_keepalive` renews the root's own wait.  Its record IS the liveness
+#     record -- the wait's start is the last time the root was seen, and its limit is the window
+#     the stub allows it.  A stub that rings every cycle makes the limit a HANG detector instead
+#     of a death timer.
+#   * the POLL: `lmx_root_hung` is the stub's question -- has the root gone silent longer than
+#     its own window?  It ages the record against the reading it is GIVEN, exactly as
+#     lmx_schedule_tick does for every other wait.
+#
+# MEASURED, and it is why this exists (tests\lmx_app_root_stub_selftest.lm1): with a limit of
+# 5000U the assembled myxa_manager ran exactly 5068 ms and died by its own root, because
+# lmx_root_cycle_at ticks R0's schedule and returns LMX_ROOT_DONE once it is overdue -- a
+# GUI application was killed by a timer nobody meant as one.  The stub lives as long as the
+# process (its own "forever" is the loop's condition, not a limit), rings for the root and asks
+# that question; the root then dies only when the stub stops ringing.
+fn: lmx_root_keepalive (@: LmxRoot root; ulong: now) int
+    if: root = 0 || root\state != c.LMX_ROOT_OPEN || root\slot = 0
+        return: c.LMX_ROOT_INVALID
+return: lmx_schedule_wait(root\slot, now)
+
+fn: lmx_root_hung (@: LmxRoot root; ulong: now) int
+    @: LmxSchedule slot
+    if: root = 0 || root\state != c.LMX_ROOT_OPEN
+        return: 0
+    slot: root\slot
+    if: slot = 0
+        return: 0
+    ---
+    # ONE reading, given and not taken: the record ages against the caller's number, never
+    # against the platform (lmx_manager.h.lm1).
+    lmx_schedule_tick(slot, now)
+    if: lmx_schedule_state(slot) = c.LMX_SCHEDULE_OVERDUE
+        return: 1
+    ---
+return: 0
+
+    # (iv), 19.29.8: re-root an orphan under R0.  The root supplies everything the act needs from its
+    # own state -- its graph, its object, its schedule and its retention policy -- and
+    # the reading of the clock is the caller's, so a cycle and a test drive the policy the same way.
+    # The orphan's own scheduler record goes into R0's schedule, which is what makes the root's step
+    # run the orphan's turns like a child's (the drain).
+fn: lmx_root_orphan_adopt (@: LmxRoot root; @: LmxMsg orphan; @: LmxArena orphan_arena; @: LmxThread thread; ulong: now) int
+    @: LmxMsg message
+    if: root = 0 || root\state != c.LMX_ROOT_OPEN
+        return: c.LMX_ORPHAN_INVALID
+    message: root\message
+    if: message = 0 || message\graph = 0
+        return: c.LMX_ORPHAN_INVALID
+    ---
+return: lmx_orphan_adopt(@ root\orphans, message\graph, orphan, orphan_arena, thread, root\thread, @ root\service, @ root\manager, now, root\retention)
+
+fn: lmx_root_retention_set (@: LmxRoot root; ulong: limit) int
+    if: root = 0 || root\state != c.LMX_ROOT_OPEN || limit = 0U
+        return: c.LMX_ROOT_INVALID
+    root\retention: limit
+return: c.LMX_ROOT_OK
+
+# The maintenance point, reachable on its own: the cycle runs it at the end of every cycle, and a
+# caller that wants the policy without the top level's step runs it here with its own reading.
+fn: lmx_root_orphan_maintain (@: LmxRoot root; ulong: now) int
+    @: LmxMsg message
+    if: root = 0 || root\state != c.LMX_ROOT_OPEN
+        return: c.LMX_ORPHAN_INVALID
+    message: root\message
+    if: message = 0
+        return: c.LMX_ORPHAN_INVALID
+    ---
+return: lmx_orphan_maintain(@ root\orphans, message\graph, @ root\service, @ root\manager, now)
+
+# Teardown.  Order matters twice over: the stop request goes first (it is what a turn
+# boundary obeys, so anything still in flight leaves at its next boundary), the mailbox hands
+# its node pool back before the arena that owns the storage goes, and the arena's release is
+# one release of one owner -- R0's cells, its graph, and every attached child's storage.
+fn: lmx_root_close (@: LmxRoot root) int
+    @: LmxMsg message
+    @: Lmx graph 0
+    # ONE reading for both acts below: the close is a boundary of its own, exactly as a cycle is
+    # (lmx_manager.h.lm1: every operation that ages a wait is GIVEN the reading).
+    ulong: reading 0U
+    if: root = 0
+        return: c.LMX_ROOT_INVALID
+    if: root\state != c.LMX_ROOT_OPEN
+        return: c.LMX_ROOT_INVALID
+    ---
+    message: root\message
+    if: message != 0
+        message\running: 0
+        graph: message\graph
+    ---
+    lmx_post_close(@ root\arena, @ root\mail)
+    # THE ORDER OF THE TWO ACTS IS THE WHOLE POINT, and it was measured the wrong way round once
+    # (20260919, ticket lmx_close_chain): settle FIRST, stop SECOND.
+    #
+    # (3) What is ALREADY CLOSED goes through the ORDINARY settle: a successful child's execution
+    #     history is reclaimed, a failed child's arena is attached to R0 -- and the attached ones
+    #     are freed below, by R0's own release, which is user code's business, this close being its
+    #     minimal case (Mikhail, 19.09: "on all four points").
+    #     ONE reading, taken HERE: this close is a boundary of its own, exactly as a cycle is, and
+    #     the reading is given to both acts below rather than read again inside them.
+    reading: lmx_clock_ticks()
+    lmx_settle_children(root\thread, @ root\arena, @ root\service, @ root\manager, reading)
+    # (1) The STILL-LIVE children are STOPPED, and not one byte of theirs is freed: each Thread owns
+    #     its own arena and its own scheduler and works on ITS OWN thread (Mikhail, 19.09), so its
+    #     storage may not be taken from this thread while its own thread is still on it.  The stop
+    #     request is the whole act -- the child's own polling code breaks out to its end-turn and
+    #     does everything itself.
+    #
+    #     WHY THE STOP IS SECOND: the stop is the one act that may write the close mark for a child
+    #     that reaches no boundary of its own (after that child's own window -- lmx_thread.h.lm1,
+    #     lmx_stop_children).  A settle run AFTER it would not tell a child that closed itself from
+    #     one this close has just closed, and would reap the second kind as well -- measured: both
+    #     live children of lmx_close_chain_selftest were attached to R0's arena within the same
+    #     close (`HANDOFF parent=<R0 arena> child=<child arena> ready=1`), and their storage went
+    #     with R0's release.  That is the same defect as the removed cascade, one call further down.
+    #     Spec 19.29.8 names the rule the stop must not be able to fake: "Transfer or reclamation
+    #     requires the handoff-safe boundary in 19.29.7.1, NOT MERELY A STOP REQUEST" -- and since
+    #     19.09 the request really is only a request (it writes `running=0` and, when the child's
+    #     window has passed, the close), which is what keeps the order here a matter of what is
+    #     already closed rather than of who was just asked to close.
+    lmx_stop_children(root\thread, reading)
+    # THE ARENA MAY NOT GO WHILE A LIVE CHILD STILL WRITES INTO IT (Mikhail, 19.09): the handshake
+    # word of every child is an ATOMIC in the PARENT's arena -- the one sanctioned cross-thread cell
+    # there, because the children's own threads write their milliseconds into it.  That is also why a
+    # parent that merely HANGS destroys nothing: its children go on writing, and the arena stays
+    # needed.  So the close releases its own arena only when no live child is left; what is still
+    # live was just given the stop request above and will end on its own thread, and the arena then
+    # belongs to whoever ends the process -- "в минимальном варианте -- закрытие приложения" (his
+    # words).  The root is closed either way: state is the root's, the storage is the children's.
+    if: lmx_thread_child_first(root\thread) != 0
+        root\state: c.LMX_ROOT_CLOSED
+        return: c.LMX_ROOT_OK
+    ---
+    # Every retained orphan goes back first: its arena was never R0's and no adopter will ever take
+    # it, so this ledger is the only thing that can return it.
+    lmx_orphan_release(@ root\orphans, graph, @ root\service, @ root\manager)
+    # The service owns its entry array; give it back before the arena that holds the records goes.
+    lmx_service_release(@ root\service)
+    lmx_arena_release(@ root\arena)
+    root\state: c.LMX_ROOT_CLOSED
+return: c.LMX_ROOT_OK
+
+fn: lmx_root_message (@: LmxRoot root) @: LmxMsg
+    if: root = 0
+        return: 0
+return: root\message
+
+fn: lmx_root_thread (@: LmxRoot root) @: LmxThread
+    if: root = 0
+        return: 0
+return: root\thread
+
+fn: lmx_root_arena (@: LmxRoot root) @: LmxArena
+    if: root = 0
+        return: 0
+return: @ root\arena
+
+fn: lmx_root_eternal (@: LmxRoot root) @: Lmx
+    if: root = 0
+        return: 0
+return: root\eternal
+
+fn: lmx_root_methods (@: LmxRoot root) @: Lmx
+    if: root = 0
+        return: 0
+return: root\methods
+
+# R0's own schedule: the queue its cycle steps -- the top level's children AND every record a
+# re-rooted orphan brought with it (the drain puts them in the same queue).  A caller reads it to
+# know what work the root still holds.
+
+fn: lmx_root_service (@: LmxRoot root) @: LmxService
+    if: root = 0
+        return: 0
+return: @ root\service
+fn: lmx_root_manager (@: LmxRoot root) @: LmxManager
+    if: root = 0
+        return: 0
+return: @ root\manager
+
+fn: lmx_root_orphans (@: LmxRoot root) @: LmxOrphanLedger
+    if: root = 0
+        return: 0
+return: @ root\orphans
+
+fn: lmx_root_clock (@: LmxRoot root) ulong
+    if: root = 0
+        return: 0U
+return: root\now
+
+fn: lmx_root_state (@: LmxRoot root) int
+    if: root = 0
+        return: c.LMX_ROOT_CLOSED
+return: root\state

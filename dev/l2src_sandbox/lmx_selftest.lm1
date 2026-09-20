@@ -1,0 +1,95 @@
+predef: "lmx_arena.lm1"
+predef: "lmx_pool.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<string.h>"
+
+# Exercises the one claim of this unit: the type of a `void *` field is decided
+# by the array of the arena the address falls into, and by nothing stored on the
+# node. The arena is opened by this test and the table is its own; composed with
+# `predef:` so this stays a single translation unit; L1 has no settled multi-TU /
+# init-before-main story yet (L1_spec.txt OPEN 10.8).
+
+[]: char chars_pool 4 65 66 67 68
+[]: int ints_pool 3 10 20 30
+
+fn: main () int
+    @: void slot
+    int: failures
+    LmxArena: arena
+    # The arena is a by-value local, so every call takes its address (`@ arena`).
+    # A FIELD read needs a pointer of its own: L1's `\` emits `->`, and the address
+    # of a by-value field is not expressible -- taking the address of the whole
+    # local first is the spelling that works.
+    @: LmxArena arena_at
+    # Every array of the arena has a descriptor, and the index's entries name it.
+    # These two are the test's own storage, so the descriptor records live in this
+    # frame and nothing owns them but the test itself.
+    LmxPool: chars_of
+    LmxChunk: chars_chunk
+    LmxPool: arrays_of
+    LmxChunk: arrays_chunk
+    LmxPool: spare_of
+    LmxChunk: spare_chunk
+    failures: 0
+    # A by-value arena must be cleared before it is opened.
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    arena_at: @ arena
+    if: lmx_arena_open(@ arena) != 0
+        fputs("lmx: arena open failed\n", l1_stdout())
+        return: 1
+    if: lmx_pool_over(@ arena, @ chars_of, @ chars_chunk, (cast: (@: void) chars_pool), 4U, c.sizeof(chars_pool[0]), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR) != 0
+        fputs("lmx: primitive pool registration failed\n", l1_stdout())
+        return: 1
+    if: lmx_pool_over(@ arena, @ arrays_of, @ arrays_chunk, (cast: (@: void) ints_pool), 3U * c.sizeof(ints_pool[0]), c.sizeof(ints_pool[0]), c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_INT) != 0
+        fputs("lmx: array pool registration failed\n", l1_stdout())
+        return: 1
+
+    # A malformed range is refused rather than silently accepted.
+    if: lmx_pool_over(@ arena, @ spare_of, @ spare_chunk, (cast: (@: void) chars_pool), 0U, 1U, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR) = 0
+        fputs("lmx: empty range was accepted\n", l1_stdout())
+        failures: failures + 1
+    if: lmx_pool_over(@ arena, @ spare_of, @ spare_chunk, (cast: (@: void) 0), 1U, 1U, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR) = 0
+        fputs("lmx: null low bound was accepted\n", l1_stdout())
+        failures: failures + 1
+    # An address falls in exactly one array of the arena: a second interval over the
+    # same cells is refused, not registered twice.
+    if: lmx_pool_over(@ arena, @ spare_of, @ spare_chunk, (cast: (@: void) chars_pool), 2U, 1U, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR) = 0
+        fputs("lmx: overlapping range was accepted\n", l1_stdout())
+        failures: failures + 1
+    if: arena_at\count != 2U
+        fputs("lmx: a refused registration still added an entry\n", l1_stdout())
+        failures: failures + 1
+
+    if: lmx_range_classify(@ arena, cast: (@: void) (chars_pool + 1)) != c.LMX_KIND_PRIMITIVE
+        fputs("lmx: char pool address not classified as primitive\n", l1_stdout())
+        failures: failures + 1
+    if: lmx_range_classify(@ arena, cast: (@: void) (ints_pool + 2)) != c.LMX_KIND_ARRAY
+        fputs("lmx: int pool address not classified as array\n", l1_stdout())
+        failures: failures + 1
+    if: lmx_range_classify(@ arena, cast: (@: void) 0) != c.LMX_KIND_NONE
+        fputs("lmx: null classified as a value\n", l1_stdout())
+        failures: failures + 1
+
+    # An address one past the end of a pool belongs to no range: the bound is
+    # half-open, so adjacent pools cannot bleed into each other.
+    if: lmx_range_classify(@ arena, cast: (@: void) (chars_pool + 4)) != c.LMX_KIND_NONE
+        fputs("lmx: one-past-end address was classified\n", l1_stdout())
+        failures: failures + 1
+
+    # The point of the whole unit: a child slot carries no tag, and the value
+    # stored in it is classified by exactly the same rule as a bare pointer
+    # (SPEC 2, ABI 3.3). The slot is a void * cell, not an Lmx with a payload.
+    slot: (cast: (@: void) (chars_pool + 2))
+    if: lmx_range_classify(@ arena, slot) != c.LMX_KIND_PRIMITIVE
+        fputs("lmx: a stored child value is not classified as primitive\n", l1_stdout())
+        failures: failures + 1
+    if: lmx_range_classify(@ arena, cast: (@: void) (@ slot)) != c.LMX_KIND_NONE
+        fputs("lmx: the address of the slot itself was classified as its child\n", l1_stdout())
+        failures: failures + 1
+    lmx_arena_release(@ arena)
+
+    if: failures != 0
+        c.printf("lmx range selftest FAILED checks=%d\n", failures)
+        return: 1
+    fputs("lmx range selftest ok\n", l1_stdout())
+    return: 0

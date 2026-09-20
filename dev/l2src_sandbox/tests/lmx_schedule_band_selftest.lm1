@@ -1,0 +1,214 @@
+predef: "l2src/lmx_manager.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_call.lm1"
+predef: "l2src/lmx_turn.lm1"
+predef: "l2src/lmx_child.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_gc.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_clock.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# THE RECORD'S OWN BAND (lmx_schedule.h.lm1; model 24).  What this file pins:
+#
+#   * the band is written by the record's CREATION act (lmx_schedule_init) -- a record in a by-value
+#     local arrives holding whatever was on the stack, and the band is a cell of the record;
+#   * a QUEUE never moves a record between bands: admission, a step and a round name no arena at all
+#     (lmx_manager.h.lm1), and the band the manager read is the band the record still has;
+#   * the turn's boundary collects THE RECORD'S OWN BAND and nothing else: one round of one manager
+#     steps records of two different arenas, and each turn's collection touches its own band.  The
+#     proof is a block pushed into each arena by hand with a disposer that counts (the gc test's
+#     instrument): the band's block goes exactly once, the other band's block is untouched;
+#   * the arena question is asked of the same band, so a graph that is a callable in ITS band runs
+#     its body -- and the same graph in another band would name nothing.
+
+size_t: sb_calls 0U
+
+fn: sb_body (@: Lmx node) int
+    sb_calls: sb_calls + 1U
+return: 1
+
+# The disposal this file can SEE, one counter per arena.
+size_t: sb_disposed_a 0U
+size_t: sb_disposed_b 0U
+
+fn: sb_dispose_a (@: void base; size_t: n) void
+    sb_disposed_a: sb_disposed_a + 1U
+    if: base != 0
+        free(base)
+    ---
+
+fn: sb_dispose_b (@: void base; size_t: n) void
+    sb_disposed_b: sb_disposed_b + 1U
+    if: base != 0
+        free(base)
+    ---
+
+# A block of this arena's list that NOTHING in the arena reaches: storage the arena owns and a
+# boundary of that band must release.  Joined with a disposer, so the release is counted.
+fn: sb_block (@: LmxArena arena; LmxArenaBlockDisposer: disposer) int
+    @: LmxArenaBlock block
+    block: (cast: (@: LmxArenaBlock) calloc(1U, c.sizeof(c.LmxArenaBlock)))
+    if: block = 0
+        return: 0
+    ---
+    block\base: calloc(1U, 64U)
+    block\n: 64U
+    block\class: 0
+    block\dispose: disposer
+    block\next: 0
+    if: block\base = 0 || lmx_arena_blocks_push(@ arena\blocks, block) != c.LMX_ARENA_BLOCKS_OK
+        return: 0
+    ---
+return: 1
+
+fn: sb_struct (@: LmxArena arena; size_t: slots) @: Lmx
+    @: Lmx structure
+    structure: lmx_node_new_owned(arena)
+    if: structure = 0
+        return: 0
+    ---
+    if: lmx_arena_refs_open_owned(arena, structure, slots) != 0
+        return: 0
+    ---
+return: structure
+
+# A Message of this arena, its graph a callable of the SAME arena, with its own object, mailbox and
+# schedule record -- the record created with THIS arena as its band.
+fn: sb_message (@: LmxArena arena; @: LmxPool pool; @@: LmxMsg out_message; @@: LmxThread out_thread; @@: LmxSchedule out_sched) int
+    @: Lmx graph
+    @: Lmx own_field
+    @: LmxMsg message
+    @: LmxThread t
+    @: LmxPost mail
+    @: LmxSchedule sched
+    @: LmxMethod method
+    \out_message: 0
+    \out_thread: 0
+    \out_sched: 0
+    method: lmx_method_intern(arena, pool, (cast: (LmxEntry) sb_body), 1U)
+    graph: sb_struct(arena, 2U)
+    own_field: lmx_int_new_owned(arena)
+    message: (cast: (@: LmxMsg) lmx_arena_take(arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    t: (cast: (@: LmxThread) lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    mail: (cast: (@: LmxPost) lmx_arena_take(arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    sched: (cast: (@: LmxSchedule) lmx_arena_take(arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: method = 0 || graph = 0 || own_field = 0 || message = 0 || t = 0 || mail = 0 || sched = 0
+        return: 0
+    ---
+    lmx_arena_ref_store(graph, 0U, (cast: (@: void) method))
+    lmx_arena_ref_store(graph, 1U, own_field)
+    message\running: 1
+    message\success: 0
+    message\handoff_ready: 0
+    message\graph: graph
+    message\index: 1U
+    if: lmx_post_init(arena, mail) != c.LMX_POST_OK || lmx_thread_attach(t, message, mail, sched) != c.LMX_THREAD_OK
+        return: 0
+    ---
+    if: lmx_schedule_init(sched, arena, (cast: (@: void) t), 1000U) != c.LMX_SCHEDULE_OK
+        return: 0
+    ---
+    \out_message: message
+    \out_thread: t
+    \out_sched: sched
+return: 1
+
+sub: sb_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: sb_check
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxArena: arena_a
+    LmxArena: arena_b
+    LmxPool: pool_a
+    LmxPool: pool_b
+    LmxManager: mgr
+    @: LmxArena a 0
+    @: LmxArena b 0
+    @: LmxMsg message_a 0
+    @: LmxMsg message_b 0
+    @: LmxThread thread_a 0
+    @: LmxThread thread_b 0
+    @: LmxSchedule sched_a 0
+    @: LmxSchedule sched_b 0
+    int: built
+    int: failures
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ arena_a)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ arena_b)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ pool_a)), 0, c.sizeof(c.LmxPool))
+    memset((cast: (@: void) (@ pool_b)), 0, c.sizeof(c.LmxPool))
+    if: lmx_arena_open(@ arena_a) != 0 || lmx_arena_open(@ arena_b) != 0
+        fputs("lmx_schedule_band: an arena did not open\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    a: @ arena_a
+    b: @ arena_b
+    if: lmx_pool_open(a, @ pool_a, c.sizeof(c.LmxMethod), 2U, c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD) != 0 || lmx_pool_open(b, @ pool_b, c.sizeof(c.LmxMethod), 2U, c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD) != 0
+        fputs("lmx_schedule_band: a method pool did not open\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+
+    # BOTH towns in one schedule: the same manager holds two records of two different bands.  That is
+    # the whole point -- a queue that needed an arena of its own could not do this.
+    built: sb_message(@ arena_a, @ pool_a, @ message_a, @ thread_a, @ sched_a)
+    sb_check(counts, built != 0, "the first Message was not built")
+    built: sb_message(@ arena_b, @ pool_b, @ message_b, @ thread_b, @ sched_b)
+    sb_check(counts, built != 0, "the second Message was not built")
+    if: message_a = 0 || message_b = 0
+        free(counts)
+        return: 2
+    ---
+    sb_check(counts, sched_a\arena = a && sched_b\arena = b, "a record was not created with its own band")
+    sb_check(counts, lmx_manager_init(@ mgr) = c.LMX_MANAGER_OK, "the manager was not initialized")
+    sb_check(counts, lmx_manager_add(@ mgr, sched_a) = c.LMX_MANAGER_OK, "the first record did not join")
+    sb_check(counts, lmx_manager_add(@ mgr, sched_b) = c.LMX_MANAGER_OK, "the second record did not join")
+    # The queue read the band and left it alone: this is what a conflation breaks first.
+    sb_check(counts, sched_a\arena = a && sched_b\arena = b, "the queue moved a record between bands")
+
+    # One unrooted block in each band, then BOTH records are stepped by the same manager.
+    sb_disposed_a: 0U
+    sb_disposed_b: 0U
+    sb_check(counts, sb_block(a, sb_dispose_a) != 0 && sb_block(b, sb_dispose_b) != 0, "an unrooted block was not pushed")
+
+    # A's turn: its boundary collects A -- A's block goes, B's does not.
+    sb_check(counts, lmx_manager_step(@ mgr, 10U) = c.LMX_MANAGER_OK, "the first step was refused")
+    sb_check(counts, sb_calls = 1U, "the first turn ran no body")
+    sb_check(counts, sb_disposed_a = 1U, "the first turn's boundary did not collect its own band")
+    sb_check(counts, sb_disposed_b = 0U, "the first turn's boundary collected the OTHER band")
+
+    # B's turn: the other way round.
+    sb_check(counts, lmx_manager_step(@ mgr, 20U) = c.LMX_MANAGER_OK, "the second step was refused")
+    sb_check(counts, sb_calls = 2U, "the second turn ran no body")
+    sb_check(counts, sb_disposed_a = 1U, "the second turn's boundary collected the OTHER band")
+    sb_check(counts, sb_disposed_b = 1U, "the second turn's boundary did not collect its own band")
+    sb_check(counts, sched_a\arena = a && sched_b\arena = b, "a step moved a record between bands")
+
+    # Both records are still running, so both went back to the queue: one round, two bands.
+    sb_check(counts, lmx_manager_count(@ mgr) = 2U, "a running record did not return to the schedule")
+
+    failures: counts[1]
+    c.printf("lmx_schedule_band checks=%d failures=%d\n", counts[0], failures)
+    free(counts)
+return: failures

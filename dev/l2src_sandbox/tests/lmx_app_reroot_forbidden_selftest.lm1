@@ -1,0 +1,642 @@
+predef: "l2src/lmx_root.lm1"
+predef: "l2src/lmx_settle.lm1"
+predef: "l2src/lmx_service.lm1"
+predef: "l2src/lmx_turn.lm1"
+predef: "l2src/lmx_child.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_manager.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_gc.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_call.lm1"
+predef: "l2src/lmx_clock.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# lmx_app_reroot_forbidden_selftest.lm1 -- ticket 20260919-194000 (перекоренение, шаг 2 плана
+# docs\REROOTING_PLAN.md: «проба запрета»).
+#
+# ЧТО МЕРИТСЯ. Запрет модели: родитель уходит, оставив ребёнка, КОТОРЫЙ НЕ ЗАКОНЧИЛСЯ, -- и тогда
+# утилизация родителя не усыновляет его и не освобождает ничего, под чем живо.  Один акт
+# утилизации не должен ни унести арену родителя, ни пришить (attach) арену ребёнка, ни позвать
+# акты сирот.
+#
+# ИСТОРИЯ ЭТОЙ ПРОБЫ В ТРЁХ ШАГАХ (19.09, вечер) -- она сама стала замером, который переписал
+# правило закрытия:
+#
+#  ШАГ 1. Развилка §3 предполагала, что утилизация родителя с живым ребёнком -- это перекоренение
+#  или мёртвый код.  Проба показала третье: остановленному ребёнку с НЕПУСТЫМ ящиком закрывающий
+#  ход не даётся (`lmx_thread_enter` отказывает по тому же полю `running`, которое писала
+#  остановка), и родитель удержан НАВСЕГДА (прогон live=0, pending=1: `enter=2`, `a_retained=1`).
+#  Третьего исхода в плане не было.
+#
+#  ШАГ 2. Модель ответила: закрытое не ждёт писем (Михаил, 19.09).  Тогда третий прогон
+#  (в ходу, ящик ПУСТ) измерил, почему нельзя просто дописать метку в остановке: старая правило
+#  «пустой ящик -> handoff_ready=1» писало метку ребёнку, который ещё ВНУТРИ хода, и первого же
+#  следующего барьера хватило, чтобы его арену пришили и освободили под работающей границей
+#  (`TAKEN_IN_FLIGHT: b_count 7->0 a_count 9->0 svc 3->1 b_handoff_was=1`).  Пустой ящик НЕ значит
+#  «не в ходу»: своё письмо тело забирает в начале хода.
+#
+#  ШАГ 3 (правило, которое проба теперь стережёт).  Остановка -- только ПРОСЬБА (`running=0`, и
+#  момент первой просьбы ложится в узел родителя), метку пишет только собственная граница
+#  ребёнка; а ребёнка, который до своей границы не дошёл за СВОЁ окно (`slot\limit`), закрывает
+#  без хода правило обслуживания 19.29.8 -- «ничего не удерживается вечно», с письмом или без.
+#  Так закрыты оба конца: ни вечного удержания, ни освобождения под работающим.
+#
+# Почему проба не выставляет B «handoff_ready != 0, пустой ящик», как в первой редакции §2 плана:
+# по коду того времени ребёнок с ПУСТЫМ ящиком помечался handoff-safe прямо в остановке и потому
+# читался settle-ready (lmx_settle.lm1:9) -- он считался УЖЕ закончившимся, и такая граница
+# доводила цепочку целиком.  Отсрочка (LMX_SETTLE_DEFERRED, lmx_settle.lm1:92) достижима только
+# для ребёнка, который не закончился.  Такой ребёнок бывает двух родов, и оба здесь:
+#
+#  1) ЯЩИК НЕПУСТ, хода нет: письмо пришло после последней границы ребёнка.  Остановка пишет
+#     running=0 и НЕ закрывает его -- закрывающего хода ему не дают (прогон 2 меряет `enter=2`),
+#     и ожидание кончает окно: `RF WINDOW_CLOSED` и сход цепочки (прогон 2).
+#  2) ХОД В ПОЛЁТЕ: ребёнок уже в своей границе, и остановка приходит в середину хода (так это и
+#     бывает на своей полосе).  Его собственная граница закрывает его, и только она (прогоны 1 и
+#     3: `RF LIVE_CHILD`), -- прогон 3 -- тот самый, где старое правило писало метку чужой рукой.
+#
+# Схема дерева -- как в chain_settle: R0 -> A -> B; A создаёт B в своей границе, R0 и A
+# публикуют записи в своих графах; чужие указатели в графах не читаются после освобождения.
+#
+# Первая граница (R0 утилизирует своих детей, пока A закрылся, а B жив) обязана: вернуть
+# LMX_SETTLE_OK, не тронуть ни A, ни B, оставить A в цепи R0, в графе R0 и в службе, оставить B
+# остановленным, но НЕ handoff-safe, не потерять письмо B и не усыновить никого (ledger сирот R0
+# остаётся 0).  Вторая граница -- после того, как собственная граница B его закрыла, -- доводит
+# цепочку: арена B пришивается к арене A (провал: A передаёт свой провал наверх), A освобождается
+# целиком (успех), служба остаётся с одним R0.
+#
+# Разница между двумя прогонами -- только в том, был ли закрывающий ход ребёнка в полёте, когда
+# остановка его настигла.  Это и есть та дорога, которую искала развилка §3 плана.
+
+@: LmxRoot rf_root 0
+@: LmxArena rf_arena_a 0
+@: LmxArena rf_arena_b 0
+@: Lmx rf_source_a 0
+@: LmxMsg rf_msg_a 0
+@: LmxThread rf_t_a 0
+@: LmxSchedule rf_sched_a 0
+@: LmxMsg rf_msg_b 0
+@: LmxThread rf_t_b 0
+@: LmxSchedule rf_sched_b 0
+size_t: rf_phase 0U
+size_t: rf_entry_diag 0U
+size_t: rf_a_turns 0U
+size_t: rf_create_diag 0U
+size_t: rf_end_diag 0U
+size_t: rf_letters_a 0U
+
+# A's body: turn 1 creates B in A's arena (B stays LIVE: no success, no ending), turn 2 declares
+# A's own work done while B is still live.  The ending boundary is what the probe wants to see.
+fn: rf_body_a (@: Lmx node) int
+    @: LmxThread t
+    @: Lmx graph_a
+    @: Lmx source_b
+    @: LmxMsg child_b
+    @: LmxThread t_b
+    @: LmxPost mail_b
+    @: LmxSchedule sched_b
+    @: void letter
+    t: lmx_thread_current()
+    if: t = 0 || t\message = 0 || t\message\graph = 0
+        rf_create_diag: 1U
+        return: 0
+    ---
+    if: rf_arena_a = 0 || rf_arena_b = 0
+        rf_create_diag: 2U
+        return: 0
+    ---
+    rf_a_turns: rf_a_turns + 1U
+    graph_a: t\message\graph
+    if: lmx_thread_mail_count(t, c.LMX_POST_INBOX) > 0U
+        letter: lmx_thread_mail_take(t, c.LMX_POST_INBOX)
+        if: letter != 0
+            rf_letters_a: rf_letters_a + 1U
+        ---
+    ---
+    if: rf_a_turns = 1U
+        # A's source for B: 2 slots, opened, so graph_A can hold method at 0 and B at 1.
+        source_b: lmx_node_new_owned(rf_arena_a)
+        if: source_b = 0 || lmx_arena_refs_open_owned(rf_arena_a, source_b, 2U) != 0
+            rf_create_diag: 3U
+            return: 0
+        ---
+        child_b: lmx_child_reserve(t, rf_arena_a, rf_arena_b, graph_a, 1U, source_b)
+        if: child_b = 0
+            rf_create_diag: 4U
+            return: 0
+        ---
+        mail_b: (cast: (@: LmxPost) lmx_arena_take(rf_arena_b, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+        t_b: (cast: (@: LmxThread) lmx_arena_take(rf_arena_b, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+        sched_b: (cast: (@: LmxSchedule) lmx_arena_take(rf_arena_b, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+        if: mail_b = 0 || t_b = 0 || sched_b = 0
+            rf_create_diag: 5U
+            return: 0
+        ---
+        if: lmx_post_init(rf_arena_b, mail_b) != c.LMX_POST_OK
+            rf_create_diag: 6U
+            return: 0
+        ---
+        if: lmx_schedule_init(sched_b, rf_arena_b, (cast: (@: void) t_b), 100000U) != c.LMX_SCHEDULE_OK
+            rf_create_diag: 7U
+            return: 0
+        ---
+        if: lmx_thread_attach(t_b, child_b, mail_b, sched_b) != c.LMX_THREAD_OK
+            rf_create_diag: 8U
+            return: 0
+        ---
+        if: lmx_child_thread(t, child_b, t_b) != c.LMX_CHILD_OK
+            rf_create_diag: 9U
+            return: 0
+        ---
+        rf_msg_b: child_b
+        rf_t_b: t_b
+        rf_sched_b: sched_b
+        rf_create_diag: 10U
+        # B lives: this turn does NOT set A's success -- A must end on a LATER boundary.
+        return: 0
+    ---
+    # The ending turn: A's own work is done, and B, created in an earlier turn, is STILL LIVE.
+    t\message\success: 1
+    rf_end_diag: 20U
+return: 0
+
+fn: rf_root_entry (@: Lmx node) int
+    @: LmxMsg child
+    @: LmxThread child_t
+    @: LmxPost child_mail
+    @: LmxSchedule child_sched
+    @: LmxMethod method
+    @: LmxPool methods
+    @: Lmx graph
+    if: rf_phase != 0U || rf_root = 0 || rf_arena_a = 0 || rf_source_a = 0
+        rf_entry_diag: 1U
+        return: 0
+    ---
+    child: lmx_root_create(rf_root, rf_arena_a, 0U, rf_source_a)
+    if: child = 0
+        rf_entry_diag: 2U
+        return: 0
+    ---
+    rf_msg_a: child
+    methods: lmx_pool_make(rf_arena_a, 2U * c.sizeof(c.LmxMethod), c.sizeof(c.LmxMethod),
+                           c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD)
+    if: methods = 0
+        rf_entry_diag: 3U
+        return: 0
+    ---
+    method: lmx_method_intern(rf_arena_a, methods, (cast: (LmxEntry) rf_body_a), 1U)
+    graph: child\graph
+    if: method = 0 || graph = 0
+        rf_entry_diag: 4U
+        return: 0
+    ---
+    lmx_arena_ref_store(graph, 0U, (cast: (@: void) method))
+    child_mail: (cast: (@: LmxPost) lmx_arena_take(rf_arena_a, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    child_t: (cast: (@: LmxThread) lmx_arena_take(rf_arena_a, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    child_sched: (cast: (@: LmxSchedule) lmx_arena_take(rf_arena_a, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: child_mail = 0 || child_t = 0 || child_sched = 0
+        rf_entry_diag: 5U
+        return: 0
+    ---
+    if: lmx_post_init(rf_arena_a, child_mail) != c.LMX_POST_OK
+        rf_entry_diag: 6U
+        return: 0
+    ---
+    if: lmx_schedule_init(child_sched, rf_arena_a, (cast: (@: void) child_t), 100000U) != c.LMX_SCHEDULE_OK
+        rf_entry_diag: 7U
+        return: 0
+    ---
+    if: lmx_thread_attach(child_t, child, child_mail, child_sched) != c.LMX_THREAD_OK
+        rf_entry_diag: 8U
+        return: 0
+    ---
+    if: lmx_child_thread(lmx_root_thread(rf_root), child, child_t) != c.LMX_CHILD_OK
+        rf_entry_diag: 9U
+        return: 0
+    ---
+    rf_t_a: child_t
+    rf_sched_a: child_sched
+    rf_phase: 1U
+    rf_entry_diag: 10U
+return: 0
+
+sub: rf_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+    c.fflush(0)
+end: rf_check
+
+# One run of the tree.  `live` != 0: B's closing turn is IN FLIGHT when the stop reaches it.
+# `pending` != 0: B's inbox holds a letter the stop cannot close it over.
+#
+# The two flags cross the ONE question the whole file is about -- can the parent's stop tell a
+# child that is INSIDE its turn from one that is not? -- and the three runs answer it:
+#   (live, pending)  the child is mid-turn AND its box is not empty  -> defer   (measured: run 1)
+#   (0,    pending)  the child is not in a turn, box not empty       -> the ROAD (measured: run 2)
+#   (live, 0)        the child is mid-turn, box EMPTY                -> the empty-box shortcut
+#                    fires while the child's own boundary is still in flight: what follows is the
+#                    measurement, and if the child's arena is taken there, the shortcut is a lie.
+fn: rf_scenario (int: live; int: pending; @: int counts) int
+    LmxRoot: root
+    LmxArena: arena_a
+    LmxArena: arena_b
+    LmxArena: letter_arena_1
+    LmxArena: letter_arena_2
+    LmxArena: letter_arena_3
+    @: LmxArena a_at 0
+    @: LmxArena b_at 0
+    @: LmxArena la1 0
+    @: LmxArena la2 0
+    @: LmxArena la3 0
+    @: LmxArena root_arena 0
+    @: LmxMsg message 0
+    @: LmxThread r0 0
+    @: Lmx graph 0
+    @: Lmx source_a 0
+    @: LmxMsg letter 0
+    @: LmxMsg msg_a 0
+    @: LmxThread t_a 0
+    @: LmxThread t_b 0
+    @: LmxMsg msg_b 0
+    @: LmxService service 0
+    @: LmxManager manager 0
+    @: Lmx graph_a 0
+    @: LmxOrphanLedger orphans 0
+    int: failures
+    int: first_code
+    int: second_code
+    int: timeout_code
+    int: enter_code
+    size_t: a_count_pre_turn 0U
+    size_t: b_count_pre_turn 0U
+    size_t: a_count_before 0U
+    size_t: b_count_before 0U
+    size_t: a_count_after 0U
+    size_t: b_count_after 0U
+    size_t: a_blocks_after 0U
+    size_t: b_blocks_after 0U
+    size_t: svc_before 0U
+    size_t: svc_after 0U
+    size_t: svc_end 0U
+    size_t: spins 0U
+    size_t: mail_expect 0U
+    memset((cast: (@: void) (@ root)), 0, c.sizeof(c.LmxRoot))
+    memset((cast: (@: void) (@ arena_a)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ arena_b)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ letter_arena_1)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ letter_arena_2)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ letter_arena_3)), 0, c.sizeof(c.LmxArena))
+    rf_root: @ root
+    rf_arena_a: 0
+    rf_arena_b: 0
+    rf_msg_a: 0
+    rf_t_a: 0
+    rf_sched_a: 0
+    rf_msg_b: 0
+    rf_t_b: 0
+    rf_sched_b: 0
+    rf_phase: 0U
+    rf_entry_diag: 0U
+    rf_a_turns: 0U
+    rf_create_diag: 0U
+    rf_end_diag: 0U
+    rf_letters_a: 0U
+    rf_check(counts, lmx_root_open(@ root, rf_root_entry, 120000U, 0U, 0U) = c.LMX_ROOT_OK, "R0 did not open")
+    message: lmx_root_message(@ root)
+    r0: lmx_root_thread(@ root)
+    root_arena: lmx_root_arena(@ root)
+    graph: message\graph
+    service: lmx_root_service(@ root)
+    manager: lmx_root_manager(@ root)
+    orphans: lmx_root_orphans(@ root)
+    rf_check(counts, message != 0 && r0 != 0 && root_arena != 0 && service != 0 && manager != 0 && orphans != 0, "R0 missing pieces")
+    if: message = 0 || r0 = 0 || service = 0 || manager = 0 || orphans = 0
+        failures: counts[1]
+        c.printf("rf_scenario live=%d checks=%d failures=%d entry_diag=%u (abort open)\n",
+                 live, counts[0], failures, (cast: (unsigned) rf_entry_diag))
+        c.fflush(0)
+        return: failures
+    ---
+    # A's template: 2 slots so graph_A can hold method at 0 and publish B at 1.
+    source_a: lmx_node_new_owned(root_arena)
+    rf_check(counts, source_a != 0 && lmx_arena_refs_open_owned(root_arena, source_a, 2U) = 0, "template A not built")
+    if: source_a = 0
+        failures: counts[1]
+        c.printf("rf_scenario live=%d checks=%d failures=%d entry_diag=%u (abort template)\n",
+                 live, counts[0], failures, (cast: (unsigned) rf_entry_diag))
+        c.fflush(0)
+        return: failures
+    ---
+    lmx_arena_ref_store(graph, 3U, (cast: (@: void) source_a))
+    rf_source_a: source_a
+    a_at: @ arena_a
+    b_at: @ arena_b
+    la1: @ letter_arena_1
+    la2: @ letter_arena_2
+    la3: @ letter_arena_3
+    # Both arenas open BEFORE R0's creating cycle: A's body checks B's arena is ready.
+    rf_check(counts, lmx_arena_open(@ arena_a) = 0, "arena A did not open")
+    rf_check(counts, lmx_arena_open(@ arena_b) = 0, "arena B did not open")
+    rf_check(counts, lmx_arena_open_simple(@ letter_arena_1) = 0, "letter arena 1 did not open")
+    rf_check(counts, lmx_arena_open_simple(@ letter_arena_2) = 0, "letter arena 2 did not open")
+    rf_check(counts, lmx_arena_open_simple(@ letter_arena_3) = 0, "letter arena 3 did not open")
+    rf_arena_a: @ arena_a
+    rf_arena_b: @ arena_b
+
+    # R0 creates A: A is a live direct child from here on.
+    rf_check(counts, lmx_root_cycle(@ root, 4U) = c.LMX_ROOT_OK, "A-create cycle did not run")
+    rf_check(counts, rf_phase = 1U && rf_msg_a != 0 && rf_t_a != 0, "A was not wired")
+    if: rf_msg_a = 0 || rf_t_a = 0
+        failures: counts[1]
+        c.printf("rf_scenario live=%d checks=%d failures=%d entry_diag=%u (abort A create)\n",
+                 live, counts[0], failures, (cast: (unsigned) rf_entry_diag))
+        c.fflush(0)
+        return: failures
+    ---
+    msg_a: rf_msg_a
+    t_a: rf_t_a
+    graph_a: msg_a\graph
+    rf_check(counts, lmx_arena_ref_value(graph, 0U) = (cast: (@: void) msg_a), "A not published")
+    rf_check(counts, lmx_range_classify(@ arena_a, (cast: (@: void) msg_a)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "A not in own arena")
+    rf_check(counts, lmx_thread_child_is(r0, t_a) != 0, "A not live child of R0")
+    rf_check(counts, graph_a != 0 && graph_a\len >= 2, "A graph has no slot for B")
+    rf_check(counts, lmx_schedule_wait(rf_sched_a, lmx_root_clock(@ root)) = c.LMX_SCHEDULE_OK, "A schedule wait failed")
+    rf_check(counts, lmx_manager_add(manager, rf_sched_a) = c.LMX_MANAGER_OK, "A not in manager")
+    rf_check(counts, lmx_service_find(service, (cast: (@: void) t_a)) = (cast: (@: void) t_a), "A not in service")
+
+    # Letter 1 -> A: the wake for A's CREATING turn.
+    letter: (cast: (@: LmxMsg) lmx_arena_take(la1, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    rf_check(counts, letter != 0, "letter 1 missing")
+    if: letter != 0
+        letter\running: 1
+        letter\success: 0
+        letter\handoff_ready: 0
+        letter\graph: 0
+        letter\index: 0U
+    ---
+    rf_check(counts, lmx_service_post(service, (cast: (@: void) t_a), letter, la1) = c.LMX_SERVICE_OK, "post 1 to A refused")
+    rf_check(counts, lmx_thread_mail_count(t_a, c.LMX_POST_INBOX) = 1U, "A inbox empty after post 1")
+    rf_check(counts, lmx_manager_round(manager, 1U, lmx_clock_ticks()) = c.LMX_MANAGER_OK, "A creating round did not run")
+    rf_check(counts, rf_a_turns = 1U && rf_letters_a = 1U, "A did not take its creating turn")
+    rf_check(counts, rf_create_diag = 10U && rf_msg_b != 0 && rf_t_b != 0, "A did not create B in its turn")
+    if: rf_msg_b = 0 || rf_t_b = 0 || rf_create_diag != 10U
+        failures: counts[1]
+        c.printf("rf_scenario live=%d checks=%d failures=%d create_diag=%u (STOP: A cannot create B)\n",
+                 live, counts[0], failures, (cast: (unsigned) rf_create_diag))
+        c.fflush(0)
+        return: failures
+    ---
+    msg_b: rf_msg_b
+    t_b: rf_t_b
+    # A's creating turn is ORDINARY (A still running): nothing is stopped by its boundary yet.
+    rf_check(counts, msg_a\running = 1 && msg_a\success = 0, "A stopped at its creating boundary")
+    rf_check(counts, msg_b\running = 1 && msg_b\success = 0, "B was not left live")
+    rf_check(counts, msg_b\handoff_ready = 0, "B reads handoff-safe before it ever ended")
+    rf_check(counts, lmx_thread_child_is(t_a, t_b) != 0, "B not live child of A after publish")
+    rf_check(counts, lmx_service_find(service, (cast: (@: void) t_b)) = (cast: (@: void) t_b), "B not in service")
+    rf_check(counts, lmx_arena_ref_value(graph_a, 1U) = (cast: (@: void) msg_b), "B not published in A's slot 1")
+
+    # Letter 2 -> B: PENDING INPUT.  It is what the stop cannot close without the child's own turn
+    # (and in the (live, 0) run it is deliberately NOT sent, so the box is empty).
+    mail_expect: 0U
+    if: pending != 0
+        mail_expect: 1U
+        letter: (cast: (@: LmxMsg) lmx_arena_take(la2, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+        rf_check(counts, letter != 0, "letter 2 missing")
+        if: letter != 0
+            letter\running: 1
+            letter\success: 0
+            letter\handoff_ready: 0
+            letter\graph: 0
+            letter\index: 0U
+        ---
+        rf_check(counts, lmx_service_post(service, (cast: (@: void) t_b), letter, la2) = c.LMX_SERVICE_OK, "post to B refused")
+        rf_check(counts, lmx_thread_mail_count(t_b, c.LMX_POST_INBOX) = 1U, "B inbox empty after post")
+        rf_check(counts, la2\count = 0U, "letter 2 arena not attached to B")
+    ---
+
+    # B's CLOSING turn in flight (the run that says so): entered while B is still live, so the
+    # stop that comes next lands INSIDE the child's own turn -- the way it lands on its own lane.
+    if: live != 0
+        rf_check(counts, lmx_thread_enter(t_b) = c.LMX_THREAD_OK, "B's turn was refused while it was live")
+        rf_check(counts, msg_b\running = 1, "B was not mid-turn at its own boundary")
+    ---
+
+    # Letter 3 -> A: the wake for A's ENDING turn (the turn that leaves B behind).
+    letter: (cast: (@: LmxMsg) lmx_arena_take(la3, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    rf_check(counts, letter != 0, "letter 3 missing")
+    if: letter != 0
+        letter\running: 1
+        letter\success: 0
+        letter\handoff_ready: 0
+        letter\graph: 0
+        letter\index: 0U
+    ---
+    rf_check(counts, lmx_service_post(service, (cast: (@: void) t_a), letter, la3) = c.LMX_SERVICE_OK, "post 3 to A refused")
+
+    a_count_pre_turn: a_at\count
+    b_count_pre_turn: b_at\count
+    rf_check(counts, a_count_pre_turn > 0U && a_at\blocks != 0, "A arena empty before A's ending turn")
+    rf_check(counts, b_count_pre_turn > 0U && b_at\blocks != 0, "B arena empty before A's ending turn")
+    rf_check(counts, lmx_service_count(service) = 3U, "service not R0+A+B before A's ending turn")
+
+    # A'S ENDING TURN, through the manager -- the driver's ordinary road.
+    rf_check(counts, lmx_manager_round(manager, 1U, lmx_clock_ticks()) = c.LMX_MANAGER_OK, "A ending round did not run")
+    rf_check(counts, rf_end_diag = 20U, "A did not take its ending turn")
+    rf_check(counts, msg_a\success = 1 && msg_a\running = 0, "A did not end by success")
+    rf_check(counts, msg_a\handoff_ready != 0, "A did not mark itself handoff-safe")
+    # THE CASCADE AT A'S OWN BOUNDARY (spec 32): the ending Message stops its live child.  With
+    # pending input the stop is a REQUEST: running goes to 0 and the handoff mark is NOT written.
+    rf_check(counts, msg_b\running = 0, "A's own boundary did not stop its live child")
+    if: pending != 0
+        rf_check(counts, msg_b\handoff_ready = 0, "B reads handoff-safe although its inbox is not empty")
+        rf_check(counts, lmx_settle_ready(msg_b) = 0, "a stopped child with pending input reads settle-ready")
+    else:
+        # AN EMPTY BOX IS NOT THE CLOSE (19.09: this is the run that measured the old rule writing
+        # the mark onto a child whose own boundary had not run -- see the header).  The stop is a
+        # request here too, and the only hand that may write the mark is the child's own.
+        rf_check(counts, msg_b\handoff_ready = 0, "the empty-box stop closed the child instead of asking it")
+    ---
+    rf_check(counts, lmx_thread_mail_count(t_b, c.LMX_POST_INBOX) = mail_expect, "B's mail changed at A's boundary")
+    rf_check(counts, lmx_thread_child_is(t_a, t_b) != 0, "B left A's chain at A's boundary")
+
+    # ==========================================================================================
+    # THE FIRST BOUNDARY: one ordinary settle of R0's own children, with A ended and B NOT ended.
+    # The snapshot is taken HERE and not before A's ending turn: A's own boundary collects its own
+    # band (lmx_turn_end's GC), and that collection is the model's, not the settle's -- what must
+    # stand unchanged is what the settle finds at its own entry.
+    # ==========================================================================================
+    a_count_before: a_at\count
+    b_count_before: b_at\count
+    svc_before: lmx_service_count(service)
+    rf_check(counts, a_count_before > 0U && a_at\blocks != 0, "A arena empty at the first boundary")
+    rf_check(counts, b_count_before > 0U && b_at\blocks != 0, "B arena empty at the first boundary")
+    rf_check(counts, svc_before = 3U, "service not R0+A+B at the first boundary")
+    first_code: lmx_settle_children(r0, root_arena, service, manager, lmx_clock_ticks())
+    rf_check(counts, first_code = c.LMX_SETTLE_OK, "first settle did not run")
+    a_count_after: a_at\count
+    b_count_after: b_at\count
+    a_blocks_after: a_at\blocks
+    b_blocks_after: b_at\blocks
+    svc_after: lmx_service_count(service)
+    # PROBE-OWNED FACTS FIRST.  The arena headers are this scenario's own stack cells, and R0's
+    # chain, the graph slot and the service answer by VALUE -- all of them are safe to read whether
+    # or not the settle took anything.  Only past them may the child's own record be read, and only
+    # if its arena is still there (the lesson of HOW_TO_DEBUG_A_SELFTEST: the read order IS the
+    # safety).  A is RETAINED whenever something under it has not ended.
+    rf_check(counts, lmx_thread_child_is(r0, t_a) != 0, "A left R0's chain at the first boundary")
+    rf_check(counts, lmx_arena_ref_value(graph, 0U) = (cast: (@: void) msg_a), "A's slot in R0 no longer names A")
+    rf_check(counts, svc_after = 3U, "service is not R0+A+B after the first boundary")
+    rf_check(counts, a_count_after = a_count_before && a_blocks_after != 0, "A's arena was touched at the first boundary")
+    rf_check(counts, b_count_after = b_count_before && b_blocks_after != 0, "B's arena was touched at the first boundary")
+    if: b_blocks_after = 0
+        # TAKEN WHILE IN FLIGHT: the child's storage went while its own closing boundary had not
+        # run.  Nothing of B's is read after this line -- that is the point of the finding.
+        c.printf("RF TAKEN_IN_FLIGHT live=%d pending=%d b_count %u->%u a_count %u->%u svc %u->%u a_live=%d b_handoff_was=%d\n",
+                 live, pending,
+                 (cast: (unsigned) b_count_before), (cast: (unsigned) b_count_after),
+                 (cast: (unsigned) a_count_before), (cast: (unsigned) a_count_after),
+                 (cast: (unsigned) svc_before), (cast: (unsigned) svc_after),
+                 lmx_thread_child_is(r0, t_a), msg_b\handoff_ready)
+        c.fflush(0)
+        failures: counts[1]
+        return: failures
+    ---
+    # B is retained WHOLE: its own turn has not ended.
+    rf_check(counts, lmx_thread_child_is(t_a, t_b) != 0, "B left A's chain at the first boundary")
+    rf_check(counts, lmx_service_find(service, (cast: (@: void) t_b)) = (cast: (@: void) t_b), "B left the service at the first boundary")
+    rf_check(counts, msg_b\running = 0, "B was not left stopped")
+    rf_check(counts, msg_b\handoff_ready = 0, "B was marked handoff-safe without ending its own turn")
+    rf_check(counts, lmx_thread_mail_count(t_b, c.LMX_POST_INBOX) = mail_expect, "B's mail changed at the first boundary")
+    # NO ADOPTION, NO REROUTE: the ledger of R0's orphans stays empty through the whole boundary.
+    rf_check(counts, lmx_orphan_count(orphans) = 0U, "an adoption happened at the first boundary")
+    rf_check(counts, lmx_orphan_reclaimed(orphans) = 0U, "an orphan was reclaimed at the first boundary")
+    rf_check(counts, lmx_root_orphans(@ root) = orphans, "R0's ledger moved")
+    c.printf("RF FIRST_BOUNDARY live=%d pending=%d code=%d svc %u->%u a_count %u(pre_turn %u)->%u b_count %u->%u b_running=%d b_handoff=%d b_mail=%u orphans=%u\n",
+             live, pending, first_code,
+             (cast: (unsigned) svc_before), (cast: (unsigned) svc_after),
+             (cast: (unsigned) a_count_before), (cast: (unsigned) a_count_pre_turn), (cast: (unsigned) a_count_after),
+             (cast: (unsigned) b_count_before), (cast: (unsigned) b_count_after),
+             msg_b\running, msg_b\handoff_ready,
+             (cast: (unsigned) lmx_thread_mail_count(t_b, c.LMX_POST_INBOX)),
+             (cast: (unsigned) lmx_orphan_count(orphans)))
+    c.fflush(0)
+
+    if: live != 0
+        # B's OWN BOUNDARY: the closing turn in flight reaches its end and does the rest itself.
+        lmx_thread_leave(t_b)
+        rf_check(counts, msg_b\handoff_ready != 0, "B's own boundary did not mark it handoff-safe")
+        rf_check(counts, lmx_turn_end(t_b, lmx_clock_ticks()) = c.LMX_TURN_OK, "B's closing boundary refused")
+        rf_check(counts, msg_b\running = 0 && msg_b\success = 0, "B's closing boundary did not leave it stopped")
+        # THE SECOND BOUNDARY: now nothing under A is alive, so the chain goes down-first.
+        second_code: lmx_settle_children(r0, root_arena, service, manager, lmx_clock_ticks())
+        rf_check(counts, second_code = c.LMX_SETTLE_OK, "second settle did not run")
+        rf_check(counts, b_at\count = 0U && b_at\blocks = 0, "B's arena did not attach into A's at the second boundary")
+        rf_check(counts, a_at\count = 0U && a_at\blocks = 0, "A's arena was not released whole at the second boundary")
+        rf_check(counts, lmx_arena_ref_value(graph, 0U) = 0, "A's slot in R0 still names a gone record")
+        svc_end: lmx_service_count(service)
+        rf_check(counts, svc_end = 1U, "service is not R0 alone after the chain")
+        rf_check(counts, lmx_service_find(service, (cast: (@: void) t_b)) = 0, "B still in service after the chain")
+        rf_check(counts, lmx_service_find(service, (cast: (@: void) t_a)) = 0, "A still in service after the chain")
+        rf_check(counts, lmx_thread_child_is(r0, t_a) = 0, "A still live under R0 after the chain")
+        rf_check(counts, lmx_orphan_count(orphans) = 0U && lmx_orphan_reclaimed(orphans) = 0U, "the chain was rerouted instead of settled")
+        c.printf("RF LIVE_CHILD live=%d pending=%d a_turns=%u letters=%u b_count %u->%u svc %u->%u svc_end=%u orphan=%u\n",
+                 live, pending, (cast: (unsigned) rf_a_turns), (cast: (unsigned) rf_letters_a),
+                 (cast: (unsigned) b_count_before), (cast: (unsigned) b_at\count),
+                 (cast: (unsigned) svc_before), (cast: (unsigned) svc_after),
+                 (cast: (unsigned) svc_end), (cast: (unsigned) lmx_orphan_count(orphans)))
+    else:
+        # THE ROAD: the stop landed on a child that was NOT in a turn and has PENDING input.
+        # The model says its closing turn runs on its own context -- ask for that turn.
+        enter_code: lmx_thread_enter(t_b)
+        rf_check(counts, enter_code = c.LMX_THREAD_STOPPED, "a stopped child with pending input took a closing turn (the road CHANGED -- re-read REROOTING_PLAN 6.3)")
+        # More ordinary boundaries: nothing changes, because nothing under A can end.
+        spins: 0U
+        while: spins < 3U
+            lmx_settle_children(r0, root_arena, service, manager, lmx_clock_ticks())
+            spins: spins + 1U
+        ---
+        rf_check(counts, lmx_thread_child_is(r0, t_a) != 0, "A left R0's chain with no closing turn taken")
+        rf_check(counts, lmx_arena_ref_value(graph, 0U) = (cast: (@: void) msg_a), "A's slot in R0 was cleared with no closing turn taken")
+        rf_check(counts, msg_b\handoff_ready = 0, "B became handoff-safe with no closing turn")
+        rf_check(counts, lmx_thread_mail_count(t_b, c.LMX_POST_INBOX) = mail_expect, "B's input was dropped with no closing turn")
+        rf_check(counts, lmx_service_count(service) = 3U, "service changed with no closing turn")
+        rf_check(counts, lmx_orphan_count(orphans) = 0U, "an adoption happened with no closing turn")
+        c.printf("RF NO_CLOSING_TURN live=%d pending=%d enter=%d handoff=%d mail=%u svc=%u a_retained=%d b_count=%u\n",
+                 live, pending, enter_code, msg_b\handoff_ready,
+                 (cast: (unsigned) lmx_thread_mail_count(t_b, c.LMX_POST_INBOX)),
+                 (cast: (unsigned) lmx_service_count(service)),
+                 lmx_thread_child_is(r0, t_a),
+                 (cast: (unsigned) b_at\count))
+        c.fflush(0)
+        # THE WAIT ENDS BY THE WINDOW (19.09): the child reached no boundary of its own, so the
+        # maintenance rule of 19.29.8 closes it -- WITHOUT a turn, and without reading the letter
+        # (a stopped Message does not wait for letters: Mikhail, 19.09).  The window is the child's
+        # own band's limit, counted from the first request, which the parent wrote into its own
+        # node; this reading is past it.  That same boundary then reaps the chain -- and the reap
+        # IS the proof of the close: a child that had not been closed could not be attached and
+        # reaped here, because the gate above is settle-ready and nothing else.
+        # Nothing of B's record is read past this line: its storage goes with A's, which is the
+        # whole point (the reads are probe-owned headers, R0's chain and slot, the service, the
+        # ledger -- all of them answer by value).
+        timeout_code: lmx_settle_children(r0, root_arena, service, manager, lmx_clock_ticks() + 100001U)
+        rf_check(counts, timeout_code = c.LMX_SETTLE_OK, "the settle at the window did not run")
+        rf_check(counts, b_at\count = 0U && b_at\blocks = 0, "the window boundary did not attach B's arena into A's")
+        rf_check(counts, a_at\count = 0U && a_at\blocks = 0, "the window boundary did not reap A whole")
+        rf_check(counts, lmx_arena_ref_value(graph, 0U) = 0, "A's slot in R0 still names a gone record")
+        rf_check(counts, lmx_service_count(service) = 1U, "service is not R0 alone after the window")
+        rf_check(counts, lmx_orphan_count(orphans) = 0U && lmx_orphan_reclaimed(orphans) = 0U, "the chain was rerouted instead of closed")
+        c.printf("RF WINDOW_CLOSED live=%d pending=%d b_count %u->%u a_count %u->%u svc=%u orphan=%u\n",
+                 live, pending,
+                 (cast: (unsigned) b_count_before), (cast: (unsigned) b_at\count),
+                 (cast: (unsigned) a_count_before), (cast: (unsigned) a_at\count),
+                 (cast: (unsigned) lmx_service_count(service)),
+                 (cast: (unsigned) lmx_orphan_count(orphans)))
+        c.fflush(0)
+        rf_check(counts, lmx_service_count(service) = 1U, "service is not R0 alone after the closing boundary")
+        rf_check(counts, lmx_orphan_count(orphans) = 0U, "the chain was rerouted instead of settled (2)")
+        c.printf("RF NO_CLOSING_TURN_DONE pending=%d b_count=%u a_count=%u svc=%u orphan=%u\n",
+                 pending, (cast: (unsigned) b_at\count), (cast: (unsigned) a_at\count),
+                 (cast: (unsigned) lmx_service_count(service)),
+                 (cast: (unsigned) lmx_orphan_count(orphans)))
+    ---
+    rf_check(counts, lmx_root_close(@ root) = c.LMX_ROOT_OK, "R0 did not close")
+    rf_check(counts, lmx_root_state(@ root) = c.LMX_ROOT_CLOSED, "closed root not closed")
+    failures: counts[1]
+return: failures
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    int: failures
+    if: counts = 0
+        return: 2
+    ---
+    # Run 1: the child's closing turn is in flight when its parent's stop reaches it, and its
+    # inbox holds a letter (the stop is a request: the child ends at its own boundary).
+    rf_scenario(1, 1, counts)
+    # Run 2: the same stop reaches a child that is not in a turn, with the letter still pending
+    # (the ROAD: no closing turn is given, and the parent is retained).
+    rf_scenario(0, 1, counts)
+    # Run 3: the child is in flight and its box is EMPTY -- the empty-box shortcut fires while the
+    # child's own boundary has not run.  This run measures what that shortcut costs.
+    rf_scenario(1, 0, counts)
+    failures: counts[1]
+    c.printf("lmx_app_reroot_forbidden checks=%d failures=%d\n", counts[0], failures)
+    c.fflush(0)
+    free(counts)
+return: failures

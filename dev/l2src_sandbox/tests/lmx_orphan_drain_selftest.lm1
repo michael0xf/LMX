@@ -1,0 +1,325 @@
+predef: "l2src/lmx_root.lm1"
+predef: "l2src/lmx_orphan.lm1"
+predef: "l2src/lmx_manager.lm1"
+predef: "l2src/lmx_child.lm1"
+predef: "l2src/lmx_call.lm1"
+predef: "l2src/lmx_turn.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_gc.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_clock.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# THE DRAIN (spec 19.29.8; model 25 (iv)).  What this file pins:
+#
+#   * re-rooting is not only the address: the orphan's OWN scheduler record -- the one its builder
+#     created, carrying ITS band -- starts its wait and joins the ROOT'S OWN SCHEDULE at adoption, so
+#     the root's round steps the orphan like one of its children;
+#   * that step RUNS THE ORPHAN'S BODY: the callable its graph names is called with the graph as the
+#     reserved node, inside the orphan's own turn (the current object is the orphan's thread);
+#   * each of those turns collects THE ORPHAN'S ARENA and never the root's: two counted blocks --
+#     one in each arena -- prove both halves, and this is the hazard that kept the drain undone
+#     while a queue still wrote the round's arena into every record it held;
+#   * a still-running orphan with pending input IS left to its turns inside its window; once the
+#     window passes the maintenance closes it (it will get no closing turn) and, the window being
+#     the same, reclaims it in that one pass -- nothing is retained forever;
+#   * a settled failed orphan stays retained until its window, then goes -- arena, slot, entry.
+
+size_t: dr_calls 0U
+@: Lmx dr_node 0
+@: LmxThread dr_current 0
+@: LmxMsg dr_stop_target 0
+size_t: dr_stop_after 0U
+
+# The body of the re-rooted Message: a translated Message's body is the callable its own graph names.
+# It stops itself at the call the test asks for -- the shape of a program that finishes its work on
+# the input it was holding.
+fn: dr_body (@: Lmx node) int
+    dr_calls: dr_calls + 1U
+    dr_node: node
+    dr_current: lmx_thread_current()
+    if: dr_stop_target != 0 && dr_stop_after != 0U && dr_calls >= dr_stop_after
+        dr_stop_target\running: 0
+    ---
+return: 0
+
+# The disposal this file can SEE, one counter per arena (the gc test's instrument).
+size_t: dr_disposed_orphan 0U
+size_t: dr_disposed_root 0U
+
+fn: dr_dispose_orphan (@: void base; size_t: n) void
+    dr_disposed_orphan: dr_disposed_orphan + 1U
+    if: base != 0
+        free(base)
+    ---
+
+fn: dr_dispose_root (@: void base; size_t: n) void
+    dr_disposed_root: dr_disposed_root + 1U
+    if: base != 0
+        free(base)
+    ---
+
+# An unrooted block of this arena's list, joined with a disposer so its release is counted.
+fn: dr_block (@: LmxArena arena; LmxArenaBlockDisposer: disposer) int
+    @: LmxArenaBlock block
+    block: (cast: (@: LmxArenaBlock) calloc(1U, c.sizeof(c.LmxArenaBlock)))
+    if: block = 0
+        return: 0
+    ---
+    block\base: calloc(1U, 64U)
+    block\n: 64U
+    block\class: 0
+    block\dispose: disposer
+    block\next: 0
+    if: block\base = 0 || lmx_arena_blocks_push(@ arena\blocks, block) != c.LMX_ARENA_BLOCKS_OK
+        return: 0
+    ---
+return: 1
+
+fn: dr_struct (@: LmxArena arena; size_t: slots) @: Lmx
+    @: Lmx structure
+    structure: lmx_node_new_owned(arena)
+    if: structure = 0
+        return: 0
+    ---
+    if: lmx_arena_refs_open_owned(arena, structure, slots) != 0
+        return: 0
+    ---
+return: structure
+
+# A Message of its OWN arena whose graph is a callable of the same arena, with its object, mailbox
+# and scheduler record (the record created with this arena as its band), and one letter pending in
+# its inbox -- the orphan of 19.29.8 that has input and will be re-rooted for its drain.
+fn: dr_orphan (@: LmxArena arena; @: LmxPool pool; ulong: window; @@: LmxMsg out_message; @@: LmxThread out_thread; @@: LmxSchedule out_sched) int
+    @: Lmx graph
+    @: Lmx own_field
+    @: LmxMsg message
+    @: LmxMsg letter
+    @: LmxThread t
+    @: LmxPost mail
+    @: LmxSchedule sched
+    @: LmxMethod method
+    \out_message: 0
+    \out_thread: 0
+    \out_sched: 0
+    method: lmx_method_intern(arena, pool, (cast: (LmxEntry) dr_body), 1U)
+    graph: dr_struct(arena, 2U)
+    own_field: lmx_int_new_owned(arena)
+    message: (cast: (@: LmxMsg) lmx_arena_take(arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    letter: (cast: (@: LmxMsg) lmx_arena_take(arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    t: (cast: (@: LmxThread) lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    mail: (cast: (@: LmxPost) lmx_arena_take(arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    sched: (cast: (@: LmxSchedule) lmx_arena_take(arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: method = 0 || graph = 0 || own_field = 0 || message = 0 || letter = 0 || t = 0 || mail = 0 || sched = 0
+        return: 0
+    ---
+    lmx_arena_ref_store(graph, 0U, (cast: (@: void) method))
+    lmx_arena_ref_store(graph, 1U, own_field)
+    message\running: 1
+    message\success: 0
+    message\handoff_ready: 0
+    message\graph: graph
+    message\index: 7U
+    letter\running: 1
+    letter\success: 0
+    letter\handoff_ready: 0
+    letter\graph: 0
+    letter\index: 8U
+    if: lmx_post_init(arena, mail) != c.LMX_POST_OK || lmx_thread_attach(t, message, mail, sched) != c.LMX_THREAD_OK
+        return: 0
+    ---
+    if: lmx_schedule_init(sched, arena, (cast: (@: void) t), window) != c.LMX_SCHEDULE_OK
+        return: 0
+    ---
+    if: lmx_post_accept(arena, mail, (cast: (@: void) letter), c.LMX_POST_INBOX) != c.LMX_POST_OK
+        return: 0
+    ---
+    \out_message: message
+    \out_thread: t
+    \out_sched: sched
+return: 1
+
+sub: dr_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: dr_check
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxRoot: root
+    LmxArena: orph_a
+    LmxArena: orph_b
+    LmxArena: orph_c
+    LmxPool: pool_a
+    LmxPool: pool_b
+    LmxPool: pool_c
+    @: LmxArena root_arena 0
+    @: LmxArena arena_a 0
+    @: LmxArena arena_b 0
+    @: LmxArena arena_c 0
+    @: LmxMsg message_c 0
+    @: LmxThread thread_c 0
+    @: LmxSchedule sched_c 0
+    @: Lmx graph_root 0
+    @: LmxMsg orphan_a 0
+    @: LmxMsg orphan_b 0
+    @: LmxThread thread_a 0
+    @: LmxThread thread_b 0
+    @: LmxSchedule sched_a 0
+    @: LmxSchedule sched_b 0
+    @: Lmx graph_a 0
+    @: LmxOrphanLedger ledger 0
+    ulong: base
+    unsigned: gen_root 0U
+    unsigned: gen_a 0U
+    int: built
+    int: failures
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ root)), 0, c.sizeof(c.LmxRoot))
+    memset((cast: (@: void) (@ orph_a)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ orph_b)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ orph_c)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ pool_a)), 0, c.sizeof(c.LmxPool))
+    memset((cast: (@: void) (@ pool_b)), 0, c.sizeof(c.LmxPool))
+    memset((cast: (@: void) (@ pool_c)), 0, c.sizeof(c.LmxPool))
+    if: lmx_arena_open(@ orph_a) != 0 || lmx_arena_open(@ orph_b) != 0 || lmx_arena_open(@ orph_c) != 0
+        fputs("lmx_orphan_drain: an orphan arena did not open\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    arena_a: @ orph_a
+    arena_b: @ orph_b
+    arena_c: @ orph_c
+    if: lmx_pool_open(arena_a, @ pool_a, c.sizeof(c.LmxMethod), 2U, c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD) != 0 || lmx_pool_open(arena_b, @ pool_b, c.sizeof(c.LmxMethod), 2U, c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD) != 0 || lmx_pool_open(arena_c, @ pool_c, c.sizeof(c.LmxMethod), 2U, c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD) != 0
+        fputs("lmx_orphan_drain: a method pool did not open\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    dr_check(counts, lmx_root_open(@ root, 0, 100000U, 0U, 0U) = c.LMX_ROOT_OK, "the runtime did not open")
+    root_arena: lmx_root_arena(@ root)
+    ledger: lmx_root_orphans(@ root)
+    graph_root: lmx_root_message(@ root)\graph
+    dr_check(counts, lmx_root_retention_set(@ root, 5000U) = c.LMX_ROOT_OK, "the retention policy was not set")
+    # The readings age against the CLOCK, as a cycle's do: R0's own wait started at open, so a
+    # literal reading below it would read as its own deadline having passed.
+    base: lmx_clock_ticks()
+
+    # The orphan of 19.29.8: still running, input pending, its world its own -- and its record's
+    # band its own arena.
+    built: dr_orphan(@ orph_a, @ pool_a, 5000U, @ orphan_a, @ thread_a, @ sched_a)
+    dr_check(counts, built != 0, "the orphan was not built")
+    built: dr_orphan(@ orph_b, @ pool_b, 5000U, @ orphan_b, @ thread_b, @ sched_b)
+    dr_check(counts, built != 0, "the second orphan was not built")
+    if: orphan_a = 0 || orphan_b = 0
+        free(counts)
+        return: 2
+    ---
+    graph_a: orphan_a\graph
+    # One unrooted block in the orphan's arena and one in the ROOT's: the drain's turn must collect
+    # the first and must not touch the second.
+    dr_disposed_orphan: 0U
+    dr_disposed_root: 0U
+    dr_check(counts, dr_block(arena_a, dr_dispose_orphan) != 0 && dr_block(root_arena, dr_dispose_root) != 0, "a counted block was not pushed")
+    gen_root: root_arena\generation
+    gen_a: arena_a\generation
+
+    # --- adoption re-roots AND schedules -------------------------------------------------------
+    dr_check(counts, lmx_root_orphan_adopt(@ root, orphan_a, arena_a, thread_a, base + 1000U) = c.LMX_ORPHAN_OK, "the orphan was not adopted")
+    dr_check(counts, lmx_orphan_count(ledger) = 1U, "the ledger did not take the adopted orphan")
+    dr_check(counts, orphan_a\index = 1U && lmx_thread_parent(thread_a) = lmx_root_thread(@ root), "the re-rooted record kept the index of its dying branch")
+    dr_check(counts, lmx_schedule_state(sched_a) = c.LMX_SCHEDULE_WAITING, "the orphan's own record is not waiting for its turns")
+    dr_check(counts, lmx_manager_count(lmx_root_manager(@ root)) = 1U, "the adopted orphan did not join the root's own schedule")
+
+    # --- THE DRAIN: the root's cycle steps the orphan, and its turn is a whole turn -------------
+    dr_check(counts, lmx_root_cycle_at(@ root, 1U, base + 1100U) = c.LMX_ROOT_OK, "the cycle that drains the orphan did not run")
+    dr_check(counts, dr_calls = 1U, "the root's step did not run the orphan's body")
+    dr_check(counts, dr_node = graph_a, "the orphan's body was not handed its own graph")
+    dr_check(counts, dr_current = thread_a, "the orphan's body did not run inside its own turn")
+    dr_check(counts, dr_disposed_orphan = 1U, "the orphan's turn did not collect the orphan's own band")
+    # R0's own turn runs once per cycle and collects R0's arena: one pass, so its block goes and
+    # the generation moves by exactly one.  The orphan's turn must not add a pass of its own.
+    dr_check(counts, dr_disposed_root = 1U, "the ROOT's arena was not collected by the root's own turn")
+    dr_check(counts, root_arena\generation - gen_root = 1U, "the orphan's turn collected the ROOT's band")
+    dr_check(counts, arena_a\generation - gen_a = 1U, "the orphan's turn did not collect its own band")
+    dr_check(counts, orphan_a\running = 1 && orphan_a\success = 0, "the drain's turn was taken for a stop")
+
+    # --- the body finishes its work: the next turn stops it ------------------------------------
+    dr_stop_target: orphan_a
+    dr_stop_after: 2U
+    dr_check(counts, dr_block(arena_a, dr_dispose_orphan) != 0, "the second counted block was not pushed")
+    dr_check(counts, lmx_root_cycle_at(@ root, 1U, base + 1200U) = c.LMX_ROOT_OK, "the cycle that stops the orphan did not run")
+    dr_check(counts, dr_calls = 2U, "the orphan's second turn did not run")
+    dr_check(counts, orphan_a\running = 0, "the stop the body wrote did not stand")
+    dr_check(counts, orphan_a\handoff_ready = 1, "leaving its last turn did not mark the orphan handoff-safe")
+    dr_check(counts, dr_disposed_orphan = 2U && dr_disposed_root = 1U, "a turn collected the wrong band")
+
+    # A settled FAILED orphan is retained until its window: the very next maintenance keeps it.
+    dr_check(counts, lmx_root_orphan_maintain(@ root, base + 1300U) = c.LMX_ORPHAN_OK, "the maintenance pass was refused")
+    dr_check(counts, lmx_orphan_count(ledger) = 1U && lmx_orphan_reclaimed(ledger) = 0U, "a failed orphan was reclaimed before its window")
+    # ... and at its window it goes: arena, slot, entry.
+    dr_check(counts, lmx_root_orphan_maintain(@ root, base + 6001U) = c.LMX_ORPHAN_OK, "the maintenance pass was refused")
+    dr_check(counts, lmx_orphan_count(ledger) = 0U && lmx_orphan_reclaimed(ledger) = 1U, "the expired orphan was not reclaimed")
+    dr_check(counts, arena_a\blocks = 0 && arena_a\count = 0U, "the reclaim did not return the orphan's whole arena")
+    # Nothing but the two cycles above ran a turn: a maintenance pass runs none, and the block of
+    # the ROOT's arena is long gone (the root's own turns collected their band once each).
+    dr_check(counts, dr_disposed_root = 1U, "a maintenance pass ran a turn on the ROOT's band")
+    # And the queue no longer holds the reclaimed record: a cycle after the reclaim steps nothing.
+    dr_check(counts, lmx_manager_count(lmx_root_manager(@ root)) = 0U, "the reclaim left the record in the root's schedule")
+    dr_check(counts, lmx_root_cycle_at(@ root, 2U, base + 6002U) = c.LMX_ROOT_OK, "the cycle after the reclaim did not run")
+    dr_check(counts, dr_calls = 2U, "a reclaimed orphan's record was stepped")
+
+    # --- a refusal leaves NOTHING behind: the adoption is one act or none of it -----------------
+    # The drain needs the record's OWN band, and a record created without one cannot join a schedule
+    # (the domain question answers NONE for a bandless record).  The act must therefore take itself
+    # back COMPLETELY: the root's slot, the index and up-link it rewrote
+    # entry, the ledger, the schedule.  Anything left is a record half-way re-rooted.
+    built: dr_orphan(@ orph_c, @ pool_c, 5000U, @ message_c, @ thread_c, @ sched_c)
+    dr_check(counts, built != 0, "the bandless orphan was not built")
+    dr_check(counts, lmx_schedule_init(sched_c, 0, (cast: (@: void) thread_c), 5000U) = c.LMX_SCHEDULE_OK, "the bandless record did not initialize")
+    dr_check(counts, lmx_root_orphan_adopt(@ root, message_c, arena_c, thread_c, base + 9000U) = c.LMX_ORPHAN_INVALID, "an orphan that cannot join the schedule was adopted")
+    dr_check(counts, message_c\index = 7U, "the refused adoption kept the new index")
+    dr_check(counts, lmx_thread_parent(thread_c) = 0, "the refused adoption kept the new up-link")
+    dr_check(counts, lmx_arena_ref_value(graph_root, 0U) = 0, "the refused adoption kept the root's slot")
+    dr_check(counts, lmx_orphan_count(ledger) = 0U, "the refused adoption entered the ledger")
+    dr_check(counts, lmx_manager_count(lmx_root_manager(@ root)) = 0U, "the refused adoption entered the root's schedule")
+
+    # --- the window is the bound: an orphan whose turn never came is closed and reclaimed -------
+    # Still running, input still pending, window passed: it gets no closing turn now, and nothing may
+    # be retained forever -- so one pass closes it AND reclaims it.
+    dr_check(counts, lmx_root_orphan_adopt(@ root, orphan_b, arena_b, thread_b, base + 7000U) = c.LMX_ORPHAN_OK, "the second orphan was not adopted")
+    dr_check(counts, lmx_orphan_count(ledger) = 1U, "the ledger did not take the second orphan")
+    dr_check(counts, orphan_b\index = 1U, "the second orphan did not take the slot the refusal gave back")
+    dr_check(counts, lmx_root_orphan_maintain(@ root, base + 12001U) = c.LMX_ORPHAN_OK, "the maintenance pass was refused")
+    # The record itself is GONE by now (the pass closed and reclaimed it in one go), so the claims
+    # are the ledger's: a reclaim of a RUNNING record is not a thing this policy does, which is what
+    # makes "counted as reclaimed in the same pass" the evidence that it was closed first.
+    dr_check(counts, lmx_orphan_count(ledger) = 0U && lmx_orphan_reclaimed(ledger) = 2U, "an orphan past its window was retained")
+    dr_check(counts, arena_b\blocks = 0 && arena_b\count = 0U, "the closed orphan's arena was not returned")
+    # THIS record was never stepped, so it was still IN the root's queue when the pass reclaimed it:
+    # a reclaim that left it there would hand a freed record to the root's next round.
+    dr_check(counts, lmx_manager_count(lmx_root_manager(@ root)) = 0U, "the reclaim left a queued record behind")
+
+    # The bandless world was never adopted, so no ledger will ever return it: this test does.
+    dr_check(counts, lmx_arena_release(@ orph_c) = 0, "the bandless world's arena was not released")
+    dr_check(counts, lmx_root_close(@ root) = c.LMX_ROOT_OK, "the runtime did not close")
+    failures: counts[1]
+    c.printf("lmx_orphan_drain checks=%d failures=%d\n", counts[0], failures)
+    free(counts)
+return: failures

@@ -1,0 +1,289 @@
+predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_pool.h.lm1"
+predef: "lmx_arena_blocks.lm1"
+predef: "lmx_range.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdlib.h>"
+
+# The manager of the arena. Lingvamyxa_spec.txt 2, 6.5; Mikhail, 2026-09-17: "У нас есть
+# арена (там менеджер)".
+#
+# It is the only writer of the index (through lmx_range_add / lmx_range_drop), the only
+# holder of the arena's arrays (the descriptors linked through LmxPool.next) and the only
+# owner of the arena's storage (the block list of lmx_arena_blocks).  Ownership and typing
+# move together: a block's storage IS the interval it registered, so a block never leaves
+# the list with its entry still in the index, and no entry ever names storage no arena
+# holds -- and every array the list holds is live as well, because the block that carries
+# an array's descriptor record goes with the array (lmx_arena_drop takes the array off
+# the list as that block leaves).
+#
+# A by-value arena must be cleared before it is opened; opening a non-empty one is
+# refused, exactly as a pool refuses to be opened twice.
+
+fn: lmx_arena_open (@: LmxArena arena) int
+    if: arena = 0
+        return: 1
+    if: arena\blocks != 0 || arena\arrays != 0 || arena\index != 0
+        return: 1
+    ---
+    if: arena\count != 0U || arena\capacity != 0U
+        return: 1
+    ---
+    arena\generation: 0U
+    arena\simple: 0U
+return: 0
+
+# Letter-scale arena: open, mark simple, pre-reserve a small fixed index so a
+# short letter does not pay full GC / unbounded growth. The address->descriptor
+# index, array descriptors and address stability are the same acts as a full arena.
+fn: lmx_arena_open_simple (@: LmxArena arena) int
+    if: lmx_arena_open(arena) != 0
+        return: 1
+    ---
+    arena\simple: 1U
+    # Eight intervals cover a typical letter (Message + a few arrays); further
+    # growth is still allowed up to a small cap in lmx_range_reserve for simple.
+    if: lmx_range_reserve(arena, 8U) != 0
+        arena\simple: 0U
+        return: 1
+    ---
+return: 0
+
+# The arena's array of this kind and type, or null when it has none yet.
+fn: lmx_arena_find (@: LmxArena arena; int: kind; int: type) @: LmxPool
+    @: LmxPool pool
+    if: arena = 0
+        return: 0
+    pool: arena\arrays
+    while: pool != 0
+        if: pool\kind = kind && pool\type = type
+            return: pool
+        ---
+        pool: pool\next
+    ---
+return: 0
+
+# An array joins the arena: its descriptor is linked into the arena's list of its N arrays
+# (never twice), and the block that carries the descriptor -- when the array has one of
+# its own -- joins the arena's block list, so the arena owns what describes it.
+fn: lmx_arena_array (@: LmxArena arena; @: LmxPool array; @: LmxArenaBlock record) int
+    @: LmxPool pool
+    if: arena = 0 || array = 0
+        return: 1
+    pool: arena\arrays
+    while: pool != 0
+        if: pool = array
+            return: 1
+        ---
+        pool: pool\next
+    ---
+    if: record != 0
+        if: lmx_arena_blocks_push(@ arena\blocks, record) != c.LMX_ARENA_BLOCKS_OK
+            return: 1
+        ---
+    ---
+    array\next: arena\arrays
+    arena\arrays: array
+return: 0
+
+# An array leaves the arena's list: it is no longer one of the arena's N arrays.  Its
+# intervals are retired one by one by the caller (a chunk at a time), because only the
+# caller knows which chunk is going.
+fn: lmx_arena_array_drop (@: LmxArena arena; @: LmxPool array) int
+    @@: LmxPool slot
+    @: LmxPool pool
+    if: arena = 0 || array = 0
+        return: 1
+    slot: @ arena\arrays
+    pool: \slot
+    while: pool != 0
+        if: pool = array
+            \slot: pool\next
+            pool\next: 0
+            return: 0
+        ---
+        slot: @ pool\next
+        pool: \slot
+    ---
+return: 1
+
+# One interval [base, base + bytes) of one array joins the arena's index.  This is the
+# insertion into the table -- the manager's act, and the only one.
+fn: lmx_arena_span (@: LmxArena arena; @: LmxPool array; @: void base; size_t: bytes) int
+    if: arena = 0 || array = 0 || base = 0 || bytes = 0U
+        return: 1
+    if: bytes % array\stride != 0U
+        return: 1
+    ---
+return: lmx_range_add(arena, array, base, (cast: (@: void) ((cast: (@: char) base) + bytes)))
+
+# One block leaves the arena: its interval leaves the index FIRST, then the block leaves
+# the list.  The interval is exactly [base, base + n), because a block of the arena holds
+# the very storage it registered; a block that registered nothing (the record carrying an
+# array's descriptor) drops as a miss and nothing else happens.
+#
+# The block that CARRIES a descriptor goes with its array: as the block leaves, the array
+# it describes leaves the arena's list of its N arrays too, so the arena never keeps a
+# descriptor whose record it has given up -- whether the block is dropped by a revert or
+# by a release.  Every other block drops as a MISS on that walk: a payload block's base is
+# storage and not a descriptor, and the walk only compares addresses (it never
+# dereferences what it compares), so a block that carries no descriptor leaves exactly as
+# it did before.  A miss is not a failure here: the block's own removal is what this call
+# reports, and that is the same answer either way.
+fn: lmx_arena_drop (@: LmxArena arena; @: LmxArenaBlock node) int
+    if: arena = 0 || node = 0
+        return: 1
+    lmx_arena_array_drop(arena, (cast: (@: LmxPool) node\base))
+    if: node\base != 0 && node\n != 0U
+        lmx_range_drop(arena, node\base, (cast: (@: void) ((cast: (@: char) node\base) + node\n)))
+    ---
+return: lmx_arena_blocks_remove(@ arena\blocks, node)
+
+# A restore point: the arena's block list as it stands now.  The list is a stack, so the
+# mark is simply its head.
+fn: lmx_arena_mark (@: LmxArena arena) @: LmxArenaBlock
+    if: arena = 0
+        return: 0
+    ---
+return: arena\blocks
+
+# Drop every block added since the mark, retiring each one's interval first.  Blocks the
+# arena already held before the mark are untouched, so a construction that fails leaves
+# no half-made array behind and disturbs nothing that was already there -- "the whole, or
+# nothing", exactly as merge and graph copy require.
+fn: lmx_arena_revert (@: LmxArena arena; @: LmxArenaBlock mark) int
+    if: arena = 0
+        return: 1
+    while: arena\blocks != 0 && arena\blocks != mark
+        lmx_arena_drop(arena, arena\blocks)
+    ---
+return: 0
+
+# A cell of the arena's array of this kind and type.  The array is the arena's own: it is
+# found among the arena's N arrays, or MADE when the arena has none of that kind and type
+# yet.  So a mutable value is an element of the big array of its type (Mikhail,
+# 2026-09-17: "N массивов где лежат дескрипторы или примитивные значения") and never an
+# array of its own -- which is what keeps the index one line per array instead of one per
+# value.
+fn: lmx_arena_take_n (@: LmxArena arena; size_t: stride; int: kind; int: type; size_t: count) @: void
+    @: LmxPool array
+    if: arena = 0 || stride = 0U || count = 0U
+        return: 0
+    if: count > ((cast: (size_t) -1) / stride)
+        return: 0
+    ---
+    array: lmx_arena_find(arena, kind, type)
+    if: array = 0
+        # The first request of that kind and type creates the array with exactly the room
+        # it asks for; every later request of the same kind and type is seated there.
+        array: lmx_pool_make(arena, count * stride, stride, kind, type)
+        if: array = 0
+            return: 0
+        ---
+        return: array\head\base
+    ---
+    if: array\stride != stride
+        return: 0
+    ---
+return: lmx_pool_take_n(arena, array, count)
+
+fn: lmx_arena_take (@: LmxArena arena; size_t: stride; int: kind; int: type) @: void
+return: lmx_arena_take_n(arena, stride, kind, type, 1U)
+
+# Another arena attaches to this one.  The whole act is "increase the number of arrays and
+# do not worry about the addresses": the attached arena's intervals join this index (their
+# addresses are unchanged, so every entry still names the very same interval and the very
+# same descriptor -- only the table that holds it changes), its arrays join this arena's
+# list of its N arrays, and its blocks join this arena's block list, so ONE arena owns
+# both and after this call the attached arena is empty.  Nothing is copied and nothing
+# moves, which is what attaching exists for.  A refusal part-way takes back exactly the
+# entries this call added and disturbs nothing else.
+fn: lmx_arena_attach (@: LmxArena arena; @: LmxArena other) int
+    @: LmxRange entry
+    @: LmxPool pool
+    @: LmxPool next
+    size_t: index 0U
+    size_t: mark 0U
+    if: arena = 0 || other = 0
+        return: 1
+    if: arena = other
+        return: 1
+    if: other\count = 0U && other\arrays = 0 && other\blocks = 0
+        return: 0
+    ---
+    mark: arena\count
+    index: 0U
+    while: index < other\count
+        entry: other\index + index
+        if: lmx_range_add(arena, entry\array, entry\lo, entry\hi) != 0
+            while: arena\count > mark
+                lmx_range_drop(arena, (arena\index + (arena\count - 1U))\lo, (arena\index + (arena\count - 1U))\hi)
+            ---
+            return: 1
+        ---
+        index: index + 1U
+    ---
+    # The arrays follow the entries, and the storage follows the arrays: after this the
+    # attached arena holds nothing at all.
+    pool: other\arrays
+    while: pool != 0
+        next: pool\next
+        pool\next: arena\arrays
+        arena\arrays: pool
+        pool: next
+    ---
+    other\arrays: 0
+    other\count: 0U
+    if: other\index != 0
+        free((cast: (@: void) other\index))
+    ---
+    other\index: 0
+    other\capacity: 0U
+    other\generation: 0U
+    other\simple: 0U
+return: lmx_arena_blocks_move_all(@ arena\blocks, @ other\blocks)
+
+# Release everything the arena owns: every entry it holds is retired, then the storage
+# goes.  The arrays themselves live inside those blocks, so nothing else is freed.
+fn: lmx_arena_release (@: LmxArena arena) int
+    @: LmxArenaBlock node
+    @: LmxArenaBlock next
+    int: status 0
+    if: arena = 0
+        return: 1
+    node: arena\blocks
+    while: node != 0
+        next: node\next
+        if: node\base != 0 && node\n != 0U
+            lmx_range_drop(arena, node\base, (cast: (@: void) ((cast: (@: char) node\base) + node\n)))
+        ---
+        node: next
+    ---
+    status: lmx_arena_blocks_dispose_all(@ arena\blocks)
+    arena\arrays: 0
+    if: arena\index != 0
+        free((cast: (@: void) arena\index))
+    ---
+    arena\index: 0
+    arena\count: 0U
+    arena\capacity: 0U
+    arena\generation: 0U
+    arena\simple: 0U
+return: status
+
+# The next mark generation for a collection pass.  Bumping is the whole act: a chunk's stamp
+# is compared with this value, so a pass never clears anything and never walks a chunk twice.
+# Zero is never returned -- a freshly cleared chunk holds zero and must not match the first
+# pass's stamp.
+fn: lmx_arena_generation_next (@: LmxArena arena) unsigned
+    if: arena = 0
+        return: 0U
+    # Letter-scale arenas have no GC pass (Mikhail 19.09 simplified).
+    if: arena\simple != 0U
+        return: 0U
+    ---
+    arena\generation: arena\generation + 1U
+    if: arena\generation = 0U
+        arena\generation: 1U
+    ---
+return: arena\generation

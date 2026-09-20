@@ -1,0 +1,388 @@
+predef: "l2src/lmx_root.lm1"
+predef: "l2src/lmx_settle.lm1"
+predef: "l2src/lmx_service.lm1"
+predef: "l2src/lmx_turn.lm1"
+predef: "l2src/lmx_child.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_manager.lm1"
+predef: "l2src/lmx_manager_running.lm1"
+predef: "l2src/lmx_manager_running.h.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_gc.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_call.lm1"
+predef: "l2src/lmx_clock.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>" "<windows.h>"
+
+# lmx_app_lanes_mail_selftest.lm1 -- ЗАМЕР НАСТОЯЩЕЙ МНОГОПОТОЧНОСТИ (19.09).
+#
+# Михаил: «надо использовать именно многопоточность а не только эмуляцию»; «ядро надо было
+# проверять с настоящей реализацией многопоточности а не детской — смысла в этих сообщениях
+# вообще нет особого если поток один».
+#
+# Прежние пробы (и приложение до этой правки) шагали записи ОДНИМ потоком ОС — сообщения в них
+# ходят, но проверить этим нечего: доставка между двумя вызовами в одном потоке не есть доставка
+# между потоками. Здесь ДВЕ записи получают КАЖДАЯ СВОЮ ПОЛОСУ (свой поток ОС, running binding),
+# и письма идут из одной полосы в другую, пока обе крутятся параллельно.
+#
+# ЧТО МЕРИТСЯ (числа, не слова):
+#   * каждая нить записывает в СВОЙ граф идентификатор потока ОС (GetCurrentThreadId) — если он
+#     у двух нитей РАЗНЫЙ, многопоточность настоящая, а не эмуляция;
+#   * A кладёт N писем в ящик B через lmx_thread_mail_accept ИЗ СВОЕЙ ПОЛОСЫ;
+#   * B вынимает их ИЗ СВОЕЙ и считает в своём графе;
+#   * сходятся ли числа: положил A ровно N, принял B ровно N.
+# Локов нет ни одного — синхронизация только ящиком, как и требует правило.
+#
+# ЧТО ОНА НАШЛА (первый прогон, 19.09 -- тогда проба была КРАСНОЙ и осталась бы такой, если бы
+# расхождение оказалось в самой пробе):
+#     posted=64 got=11..17 turns_a=2001 turns_b=42..56 elapsed_ms=31578
+#   Полоса A работала 2001 ход, полоса B -- 56, и B стояла ЖИВОЙ (thread_running=1,
+#   sched_state=WAITING, lane != 0), то есть застряла ВНУТРИ хода.  Причина в ящике: очередь
+#   входящих и список свободных узлов правились ДВУМЯ нитями обычными чтениями-записями
+#   (lmx_post_accept: `link: free_nodes; free_nodes: link\next`; lmx_post_take:
+#   `link\next: free_nodes; free_nodes: link`), поэтому узел мог попасть в очередь ДВАЖДЫ --
+#   и вычерпывание получателя становилось бесконечным.  Вдобавок узел выделялся в арене
+#   ПОЛУЧАТЕЛЯ из нити отправителя (lmx_pool_take(arena, ...)) -- то есть в арене, которой ход
+#   получателя в это же время владел.
+#   ПОЧИНЕНО в lmx_post: входящая очередь стала КОЛЬЦОМ заранее нарезанных слотов с атомарными
+#   head/tail (release/acquire), узлы между полосами не ходят вовсе, а полный ящик ОТКАЗЫВАЕТ
+#   (LMX_POST_FULL) вместо того, чтобы просить арену у чужой нити.
+# ЗАМЕР ПОСЛЕ: posted=64 got=64, ходов у обеих полос ~65, всё за ~1 с.
+
+define: LM_N 64
+define: LM_LANE 0
+
+@: LmxRoot lm_root 0
+@: LmxArena lm_a_arena 0
+@: LmxArena lm_b_arena 0
+@: Lmx lm_source 0
+@: LmxThread lm_a_t 0
+@: LmxThread lm_b_t 0
+@: LmxSchedule lm_a_sched 0
+@: LmxSchedule lm_b_sched 0
+@: LmxMsg lm_a_msg 0
+@: LmxMsg lm_b_msg 0
+@: void lm_letter 0
+size_t: lm_phase 0U
+size_t: lm_diag 0U
+size_t: lm_turns_a 0U
+size_t: lm_turns_b 0U
+size_t: lm_t0 0U
+
+# A: кладёт письма в чужой ящик ИЗ СВОЕЙ ПОЛОСЫ, свой счёт ведёт в своём графе.
+fn: lm_a_body (@: Lmx node) int
+    @: LmxThread t
+    @: Lmx graph
+    @: void posted_cell
+    @: void tid_cell
+    size_t: posted
+    int: acc_rc 0
+    t: lmx_thread_current()
+    if: t = 0 || t\message = 0 || t\message\graph = 0
+        return: 0
+    ---
+    graph: t\message\graph
+    posted_cell: lmx_arena_ref_value(graph, 1U)
+    tid_cell: lmx_arena_ref_value(graph, 2U)
+    if: posted_cell = 0 || tid_cell = 0
+        return: 0
+    ---
+    if: lmx_size_value_known(tid_cell) = 0U
+        lmx_size_store_known(tid_cell, (cast: (size_t) c.GetCurrentThreadId()))
+    ---
+    posted: lmx_size_value_known(posted_cell)
+    lm_turns_a: lm_turns_a + 1U
+    if: posted < LM_N
+        if: lm_b_t != 0 && lm_letter != 0
+            # Письмо -- НАСТОЯЩАЯ клетка арены получателя (её создал он сам): приём спрашивает
+            # арену, её ли это значение, и голое число он отверг бы (замерено: posted=0).
+            acc_rc: lmx_thread_mail_accept(lm_b_arena, lm_b_t, lm_letter, LM_LANE)
+            if: acc_rc = c.LMX_POST_OK
+                lmx_size_store_known(posted_cell, posted + 1U)
+            else:
+                if: lm_diag = 0U
+                    lm_diag: (cast: (size_t) (1000 + acc_rc))
+                ---
+            ---
+        else:
+            if: lm_diag = 0U
+                lm_diag: 999U
+            ---
+        ---
+    ---
+    # success не ставим: полоса должна жить, пока её не кончит окно/закрытие.
+return: 0
+
+# B: вынимает письма из СВОЕГО ящика ИЗ СВОЕЙ ПОЛОСЫ и считает их в своём графе.
+fn: lm_b_body (@: Lmx node) int
+    @: LmxThread t
+    @: Lmx graph
+    @: void got_cell
+    @: void tid_cell
+    size_t: got
+    @: void turns_cell 0
+    size_t: dbg_turns 0U
+    size_t: seen 0U
+    t: lmx_thread_current()
+    if: t = 0 || t\message = 0 || t\message\graph = 0
+        return: 0
+    ---
+    graph: t\message\graph
+    got_cell: lmx_arena_ref_value(graph, 1U)
+    tid_cell: lmx_arena_ref_value(graph, 2U)
+    if: got_cell = 0 || tid_cell = 0
+        return: 0
+    ---
+    if: lmx_size_value_known(tid_cell) = 0U
+        lmx_size_store_known(tid_cell, (cast: (size_t) c.GetCurrentThreadId()))
+    ---
+    lm_turns_b: lm_turns_b + 1U
+    got: lmx_size_value_known(got_cell)
+    dbg_turns: dbg_turns + 1U
+    seen: lmx_thread_mail_count(t, LM_LANE)
+    while: lmx_thread_mail_count(t, LM_LANE) > 0U
+        lmx_thread_mail_take(t, LM_LANE)
+        got: got + 1U
+    ---
+    if: dbg_turns <= 12U
+        c.printf("B turn=%u seen=%u got=%u\n", dbg_turns, seen, got)
+    ---
+    lmx_size_store_known(got_cell, got)
+    # Ходы B: без этого числа не отличить «полоса кончилась» от «письма не видно из чужой нити».
+    turns_cell: lmx_arena_ref_value(graph, 4U)
+    if: turns_cell != 0
+        lmx_size_store_known(turns_cell, lmx_size_value_known(turns_cell) + 1U)
+    ---
+return: 0
+
+# Собрать одну запись: граф (метод, счётчик, клетка потока), ящик, нить, расписание.
+# Возвращает нить записи; схема та же, что у lmx_app_running_lane_selftest.
+fn: lm_make_child (@: LmxArena child_arena; @: Lmx source; LmxEntry: body; size_t: slot; size_t: which) int
+    @: LmxMsg child
+    @: LmxThread child_t
+    @: LmxPost child_mail
+    @: LmxSchedule child_sched
+    @: LmxMethod method
+    @: LmxPool methods
+    @: Lmx graph
+    @: void cell1
+    @: void cell2
+    child: lmx_root_create(lm_root, child_arena, slot, lm_source)
+    if: child = 0
+        return: 1
+    ---
+    methods: lmx_pool_make(child_arena, 2U * c.sizeof(c.LmxMethod), c.sizeof(c.LmxMethod), c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD)
+    graph: child\graph
+    if: methods = 0 || graph = 0
+        return: 2
+    ---
+    method: lmx_method_intern(child_arena, methods, body, 1U)
+    if: method = 0
+        return: 3
+    ---
+    lmx_arena_ref_store(graph, 0U, (cast: (@: void) method))
+    cell1: lmx_size_new_owned(child_arena)
+    cell2: lmx_size_new_owned(child_arena)
+    if: cell1 = 0 || cell2 = 0
+        return: 4
+    ---
+    if: lmx_arena_ref_store(graph, 1U, cell1) != 0 || lmx_arena_ref_store(graph, 2U, cell2) != 0
+        return: 5
+    ---
+    child_mail: (cast: (@: LmxPost) lmx_arena_take(child_arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    child_t: (cast: (@: LmxThread) lmx_arena_take(child_arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    child_sched: (cast: (@: LmxSchedule) lmx_arena_take(child_arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: child_mail = 0 || child_t = 0 || child_sched = 0
+        return: 6
+    ---
+    if: lmx_post_init(child_arena, child_mail) != c.LMX_POST_OK
+        return: 7
+    ---
+    # Широкое окно: полоса не должна кончиться по переросшему окну, пока идёт замер.
+    if: lmx_schedule_init(child_sched, child_arena, (cast: (@: void) child_t), 100000U) != c.LMX_SCHEDULE_OK
+        return: 8
+    ---
+    if: lmx_thread_attach(child_t, child, child_mail, child_sched) != c.LMX_THREAD_OK
+        return: 9
+    ---
+    if: lmx_child_thread(lmx_root_thread(lm_root), child, child_t) != c.LMX_CHILD_OK
+        return: 10
+    ---
+    # Обе записи кладём в модульные глобалы: out-параметр вида `@: LmxThread` транслируется как
+    # указатель на ЗНАЧЕНИЕ, а хранить в нём надо указатель -- проще писать прямо в глобал.
+    if: which = 0U
+        lm_a_sched: child_sched
+        lm_a_t: child_t
+        lm_a_msg: child
+    else:
+        lm_b_sched: child_sched
+        lm_b_t: child_t
+        lm_b_msg: child
+        # ПИСЬМО живёт в арене получателя и является ЗАПИСЬЮ (Message): приём пропускает только
+        # запись Message или Thread (`lmx_post_admits`), всё прочее отвергается -- замерено:
+        # и клетка-счётчик, и структурный узел получали LMX_POST_REFUSED=2.  Настоящее письмо
+        # делает ядро своим же актом -- lmx_root_create, как для ребёнка (слот 2 графа R0).
+        lm_letter: (cast: (@: void) lmx_root_create(lm_root, child_arena, 2U, lm_source))
+        if: lm_letter = 0
+            return: 11
+        ---
+        if: lmx_arena_ref_store(graph, 3U, lm_letter) != 0
+            return: 12
+        ---
+    ---
+return: 0
+
+fn: lm_entry (@: Lmx node) int
+    int: rc
+    if: lm_phase != 0U
+        return: 0
+    ---
+    rc: lm_make_child(lm_a_arena, lm_source, (cast: (LmxEntry) lm_a_body), 0U, 0U)
+    if: rc != 0
+        lm_diag: (cast: (size_t) rc)
+        return: 0
+    ---
+    rc: lm_make_child(lm_b_arena, lm_source, (cast: (LmxEntry) lm_b_body), 1U, 1U)
+    if: rc != 0
+        lm_diag: (cast: (size_t) (100 + rc))
+        return: 0
+    ---
+    lm_phase: 1U
+return: 0
+
+sub: lm_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+    c.fflush(0)
+end: lm_check
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    int: failures
+    LmxRoot: root
+    LmxArena: a_arena
+    LmxArena: b_arena
+    @: LmxArena root_arena 0
+    @: LmxService service 0
+    @: LmxManager manager 0
+    @: Lmx source 0
+    @: Lmx graph_a 0
+    @: Lmx graph_b 0
+    @: void cell_a 0
+    @: void cell_b 0
+    size_t: posted 0U
+    size_t: got 0U
+    size_t: tid_a 0U
+    size_t: tid_b 0U
+    size_t: spins 0U
+    size_t: b_turns 0U
+    size_t: elapsed 0U
+    int: close_rc 0
+    int: cycle_rc 0
+    int: round_rc 0
+    if: counts = 0
+        return: 2
+    ---
+    c.printf("LANES N=%u\n", LM_N)
+    lm_source: 0
+    if: lmx_root_open(@ root, lm_entry, 100000U, 0U, 0U) != c.LMX_ROOT_OK
+        c.printf("FAIL R0 did not open\n")
+        return: 2
+    ---
+    root_arena: lmx_root_arena(@ root)
+    lm_root: @ root
+    # Шаблон дочернего графа: 4 слота, как открывает lmx_root_create.
+    source: lmx_node_new_owned(root_arena)
+    if: source = 0 || lmx_arena_refs_open_owned(root_arena, source, 5U) != 0
+        c.printf("FAIL source template build failed\n")
+        return: 2
+    ---
+    lm_source: source
+    # Арена по значению приходит с мусором со стека, а открыть непустую арена отказывается
+    # ("a by-value arena must be cleared before it is opened") -- чистим обе.
+    memset((cast: (@: void) (@ a_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ b_arena)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ a_arena) != 0 || lmx_arena_open(@ b_arena) != 0
+        c.printf("FAIL child arenas did not open\n")
+        return: 2
+    ---
+    lm_a_arena: @ a_arena
+    lm_b_arena: @ b_arena
+    # Один ход R0: запись входа собирает обе дочерние записи.
+    cycle_rc: lmx_root_cycle_at(@ root, 1U, lmx_clock_ticks())
+    lm_check(counts, lm_phase = 1U, "the entry did not build both children")
+    if: lm_phase != 1U
+        c.printf("LANES diag=%u\n", lm_diag)
+        return: 2
+    ---
+    service: lmx_root_service(@ root)
+    manager: lmx_root_manager(@ root)
+    lm_check(counts, service != 0 && manager != 0, "R0 has no service or no manager")
+    # ПЕРЕПРИВЯЗКА МЕНЕДЖЕРА НА ПОЛОСЫ: каждая запись получает свой поток ОС.
+    lm_check(counts, lmx_manager_running_init(manager) = c.LMX_MANAGER_OK, "running manager did not initialize")
+    # Записи надо ПОСТАВИТЬ В ОЖИДАНИЕ до запуска полосы: цикл полосы идёт, пока состояние
+    # WAITING (lmx_manager_running_body), и без этого шага полоса кончается, не сделав ни хода --
+    # замерено: posted=0 got=0 tid=0 при исправном запуске полос.
+    lm_check(counts, lmx_schedule_wait(lm_a_sched, lmx_clock_ticks()) = c.LMX_SCHEDULE_OK, "A did not enter its wait")
+    lm_check(counts, lmx_schedule_wait(lm_b_sched, lmx_clock_ticks()) = c.LMX_SCHEDULE_OK, "B did not enter its wait")
+    lm_check(counts, lmx_manager_running_add(manager, lm_a_sched) = c.LMX_MANAGER_OK, "A not in the running manager")
+    lm_check(counts, lmx_manager_running_add(manager, lm_b_sched) = c.LMX_MANAGER_OK, "B not in the running manager")
+    round_rc: lmx_manager_running_round(manager, 1U, lmx_clock_ticks())
+    lm_t0: lmx_clock_ticks()
+    lm_check(counts, round_rc = c.LMX_MANAGER_OK, "the running round did not start the lanes")
+    # Ждём, пока письма дойдут: счётчики живут в графах детей, читаем их как значения.
+    graph_a: lm_a_msg\graph
+    graph_b: lm_b_msg\graph
+    cell_a: lmx_arena_ref_value(graph_a, 1U)
+    cell_b: lmx_arena_ref_value(graph_b, 1U)
+    while: spins < 2000U
+        posted: lmx_size_value_known(cell_a)
+        got: lmx_size_value_known(cell_b)
+        if: got >= LM_N
+            spins: 2000U
+        else:
+            spins: spins + 1U
+            c.Sleep(1U)
+        ---
+    ---
+    posted: lmx_size_value_known(cell_a)
+    got: lmx_size_value_known(cell_b)
+    tid_a: lmx_size_value_known(lmx_arena_ref_value(graph_a, 2U))
+    tid_b: lmx_size_value_known(lmx_arena_ref_value(graph_b, 2U))
+    elapsed: lmx_clock_ticks() - lm_t0
+    c.printf("LANES posted=%u got=%u turns_a=%u turns_b=%u elapsed_ms=%u tid_a=%u tid_b=%u diag=%u\n",
+             posted, got, lm_turns_a, lm_turns_b, elapsed, tid_a, tid_b, lm_diag)
+    # ПОЧЕМУ B ВСТАЛ: состояние его записи и его расписания -- три разные причины, три разных числа.
+    c.printf("LANES B state: thread_running=%d sched_state=%d lane=%p msg_running=%d success=%d\n",
+             lmx_thread_running(lm_b_t), lmx_schedule_state(lm_b_sched),
+             (cast: (@: void) lm_b_sched\lane),
+             (cast: (int) lm_b_msg\running), (cast: (int) lm_b_msg\success))
+    c.printf("LANES A state: thread_running=%d sched_state=%d lane=%p\n",
+             lmx_thread_running(lm_a_t), lmx_schedule_state(lm_a_sched), (cast: (@: void) lm_a_sched\lane))
+    lm_check(counts, posted = LM_N, "A did not post all its letters")
+    lm_check(counts, got = LM_N, "B did not take all the letters")
+    lm_check(counts, tid_a != 0U && tid_b != 0U, "a lane never recorded its OS thread id")
+    lm_check(counts, tid_a != tid_b, "both lanes ran on the SAME OS thread -- this is emulation, not multithreading")
+    # Останавливаем полосы: без этого процесс остаётся жить после выхода из main (замерено:
+    # два экземпляра висели в списке процессов), а проба должна кончаться сама.
+    close_rc: lmx_manager_running_close(manager)
+    failures: counts[1]
+    c.printf("lmx_app_lanes_mail checks=%d failures=%d\n", counts[0], failures)
+    c.fflush(0)
+    free(counts)
+return: failures

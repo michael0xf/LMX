@@ -1,0 +1,243 @@
+predef: "l2src/lmx_merge_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# Runtime merge under the arena's table, with NO inventories (Mikhail,
+# 2026-09-17). The act has two sides, and this file names both: `src_arena` is
+# the arena every classification question is asked of, `dst_arena` is the arena
+# that holds every copy. What this file pins:
+#
+#   * an operand is admitted because the source arena's table classifies it as a
+#     Structure -- a METHOD record, a primitive cell or a raw address is refused;
+#   * a METHOD child is a TERMINAL, kept by the very same address (2's
+#     all_methods_array row), because classification says METHOD;
+#   * a mutable primitive child is COPIED -- a new cell in the destination
+#     arena, the same value, the source cell untouched;
+#   * a child the table does not classify at all (a raw pointer) makes the whole
+#     merge UNSUPPORTED and leaves out null -- the copier refuses it instead of
+#     retaining a pointer whose lifetime nobody admitted;
+#   * a refusal is ATOMIC: the destination arena's own mark is taken before the
+#     first block is added and every refusal reverts to it, so a refused merge
+#     leaves the destination arena with exactly the entries AND exactly the arrays
+#     it had before -- the blocks a refused attempt added go, their entries go with
+#     them, and the arrays those blocks described go out of the destination's list
+#     of its N arrays as well (the block that carries a descriptor leaves with the
+#     array it describes);
+#   * two structures in, three out: the operands are never written.
+#
+# It replaces the coverage of the deleted lmx_owned_ranges_selftest for the
+# merge path: the ranges a caller used to pass in are now what the arena's table
+# answers by itself.
+
+sub: merge_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: merge_check
+
+# How many arrays the arena holds -- the length of its list of its N arrays.
+fn: merge_arrays (@: LmxArena arena) size_t
+    @: LmxPool pool
+    size_t: total 0U
+    if: arena = 0
+        return: 0U
+    pool: arena\arrays
+    while: pool != 0
+        total: total + 1U
+        pool: pool\next
+    ---
+return: total
+
+# Every array on the arena's list is a LIVE array: the arena still classifies the
+# storage of its first chunk as that array.  An array whose block left the arena (a
+# rollback that did not take the array off the list with its descriptor's block)
+# would answer nothing here -- so this is how the file says "no array is left
+# hanging".  It is a check, not a walk: it returns 1 when the list is consistent.
+fn: merge_arrays_live (@: LmxArena arena) int
+    @: LmxPool pool
+    if: arena = 0
+        return: 0
+    pool: arena\arrays
+    while: pool != 0
+        if: pool\head = 0 || lmx_range_pool(arena, pool\head\base) != pool
+            return: 0
+        ---
+        pool: pool\next
+    ---
+return: 1
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxArena: arena
+    LmxArena: dst
+    # Each arena is a by-value local, so every call takes its address (`@ arena`).
+    # A FIELD read needs a pointer of its own: L1's `\` emits `->`, and the address
+    # of a by-value field is not expressible -- taking the address of the whole
+    # local first is the spelling that works.
+    @: LmxArena arena_at
+    @: LmxArena dst_at
+    @: Lmx a 0
+    @: Lmx b 0
+    @: Lmx bad 0
+    @: Lmx container 0
+    @: Lmx result 0
+    @: LmxMethod method 0
+    @: void char_cell 0
+    @: void int_cell 0
+    @: Lmx copied 0
+    @: Lmx refused 0
+    @: char table 0
+    @@: Lmx operands 0
+    @: void slot_addr 0
+    int: raw_value 7
+    @: void raw 0
+    size_t: held 0U
+    size_t: held_arrays 0U
+    int: status LMX_MERGE_OK
+    int: failures
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ dst)), 0, c.sizeof(c.LmxArena))
+    arena_at: @ arena
+    dst_at: @ dst
+    if: lmx_arena_open(@ arena) != 0 || lmx_arena_open(@ dst) != 0
+        fputs("lmx: arena open failed\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    operands: (cast: (@@: Lmx) calloc(2U, c.sizeof(@: void)))
+    if: operands = 0
+        free(counts)
+        return: 2
+    ---
+
+    # The source arena: an interned character table, a mutable int cell, a
+    # shared METHOD record, and three structures.
+    table: lmx_chars_new_owned(@ arena)
+    char_cell: lmx_char_cell_known(table, 33)
+    int_cell: lmx_int_new_owned(@ arena)
+    lmx_int_store_known(int_cell, 42)
+    method: lmx_method_new_owned(@ arena)
+    container: lmx_node_new_owned(@ arena)
+    a: lmx_node_new_owned(@ arena)
+    b: lmx_node_new_owned(@ arena)
+    bad: lmx_node_new_owned(@ arena)
+    merge_check(counts, table != 0 && char_cell != 0 && int_cell != 0, "source arena constructed")
+    merge_check(counts, method != 0 && lmx_range_classify(@ arena, (cast: (@: void) method)) = c.LMX_KIND_METHOD, "the shared record classifies as METHOD")
+    if: a = 0 || b = 0 || bad = 0 || container = 0
+        fputs("lmx: structures not constructed\n", l1_stdout())
+        lmx_arena_release(@ arena)
+        free((cast: (@: void) operands))
+        free(counts)
+        return: 2
+    ---
+    merge_check(counts, lmx_arena_refs_open_owned(@ arena, a, 2U) = 0, "operand a opened")
+    merge_check(counts, lmx_arena_refs_open_owned(@ arena, b, 1U) = 0, "operand b opened")
+    lmx_arena_ref_store(a, 0U, char_cell)
+    lmx_arena_ref_store(a, 1U, int_cell)
+    lmx_arena_ref_store(b, 0U, (cast: (@: void) method))
+
+    # 1. Two structures in, three out.
+    operands[0]: a
+    operands[1]: b
+    status: lmx_merge_owned(operands, 2U, 0, container, 0, @ arena, @ dst, @ result)
+    merge_check(counts, status = LMX_MERGE_OK, "merge succeeded")
+    merge_check(counts, result != 0 && result != a && result != b, "the result is a third independent structure")
+    merge_check(counts, result\node = container, "the result's node is the execution container")
+    merge_check(counts, result\len = 3, "two operands, three slots")
+    merge_check(counts, a\len = 2 && b\len = 1, "the operands were not written")
+    merge_check(counts, dst_at\count != 0U, "the destination arena holds the copies")
+    # The positive side of the same walk, so a walker that could only fail would
+    # show up here rather than hide in the refusal below: after a merge that
+    # succeeded, every array the destination holds is a live array.
+    merge_check(counts, merge_arrays_live(@ dst) = 1, "every array of the destination is a live array")
+
+    # 2. An interned character keeps its address; a mutable int is copied.
+    copied: lmx_arena_ref_value(result, 0U)
+    merge_check(counts, copied = char_cell, "an immutable character child stays by address")
+    copied: lmx_arena_ref_value(result, 1U)
+    merge_check(counts, copied != 0 && copied != int_cell, "a mutable primitive child is copied")
+    merge_check(counts, lmx_int_value_known(copied) = 42, "the copied cell carries the value")
+    merge_check(counts, lmx_int_value_known(int_cell) = 42, "the source cell is untouched")
+    merge_check(counts, lmx_range_classify(@ dst, copied) = c.LMX_KIND_PRIMITIVE, "the copy lives in the destination arena")
+
+    # 3. A METHOD child is a terminal: the very same descriptor address.
+    copied: lmx_arena_ref_value(result, 2U)
+    merge_check(counts, copied = (cast: (@: void) method), "a METHOD child is shared by address")
+    merge_check(counts, lmx_range_classify(@ arena, copied) = c.LMX_KIND_METHOD, "the shared child still classifies as METHOD")
+
+    # 3b. A child-pointer array is an array of the arena like every other: it has its
+    # own descriptor and its own entry, and a slot ADDRESS classifies as the storage
+    # location it is -- never as the child stored in it (Mikhail, 2026-09-17: "ЧЕМ
+    # МАССИВЫ ОТЛИЧАЮТСЯ ОТ ВСЕГО ОСТАЛЬНОГО? НИЧЕМ!!!").
+    slot_addr: lmx_arena_ref_cell(a, 0U)
+    merge_check(counts, slot_addr != 0 && lmx_range_classify(@ arena, slot_addr) = c.LMX_KIND_CHILDREN, "a slot address is slot storage")
+    merge_check(counts, lmx_range_type_of(@ arena, slot_addr) = c.LMX_TYPE_REFS, "the slot array answers with its own type")
+    merge_check(counts, lmx_range_pool(@ arena, slot_addr) != 0, "the entry names the slot array's descriptor")
+    merge_check(counts, lmx_range_stride(@ arena, slot_addr) = c.sizeof(@: void), "a slot is one pointer wide")
+    merge_check(counts, lmx_range_type_of(@ arena, lmx_arena_ref_value(a, 0U)) = c.LMX_TYPE_CHAR, "the child in the slot keeps its own type")
+
+    # 4. An operand that is not a Structure is refused. The refusal is decided before
+    # the destination's mark is taken, so the destination is not even touched -- and
+    # that is what the entry count and the array count say.
+    held: dst_at\count
+    held_arrays: merge_arrays(@ dst)
+    operands[0]: (cast: (@: Lmx) int_cell)
+    refused: 0
+    status: lmx_merge_owned(operands, 1U, 0, container, 0, @ arena, @ dst, @ refused)
+    merge_check(counts, status = LMX_MERGE_INVALID && refused = 0, "a non-Structure operand is refused")
+    merge_check(counts, dst_at\count = held, "a refusal before the mark left the destination untouched")
+    merge_check(counts, merge_arrays(@ dst) = held_arrays && merge_arrays_live(@ dst) = 1, "a refusal before the mark left the destination with the arrays it had")
+    operands[0]: a
+
+    # 5. A raw pointer the table does not classify refuses the whole merge. This
+    # refusal happens AFTER the destination was touched: the copy of the bad structure
+    # is registered (lmx_copy_ensure_struct takes a header cell, which grows the
+    # destination's array of headers when its last chunk is full) and its child-pointer
+    # array is opened (lmx_copy_process makes a new array of the arena), both after the
+    # copier's own mark. So what the destination got is taken back, and the model
+    # wording is exactly this: the blocks added after the mark are returned, their
+    # entries are removed with them, and no array of the destination is left hanging --
+    # the array the copy opened leaves the destination's list of its N arrays together
+    # with the block that carried its descriptor, and every array that remains is one
+    # the destination can still classify.
+    raw: (cast: (@: void) (@ raw_value))
+    merge_check(counts, lmx_range_classify(@ arena, raw) = c.LMX_KIND_NONE, "the raw address is in no array")
+    merge_check(counts, lmx_arena_refs_open_owned(@ arena, bad, 1U) = 0, "bad structure opened")
+    lmx_arena_ref_store(bad, 0U, raw)
+    operands[0]: bad
+    refused: 0
+    status: lmx_merge_owned(operands, 1U, 0, container, 0, @ arena, @ dst, @ refused)
+    merge_check(counts, status = LMX_MERGE_UNSUPPORTED && refused = 0, "an unclassified child refuses the merge")
+    merge_check(counts, bad\len = 1, "the refused source is untouched")
+    merge_check(counts, dst_at\count = held, "a refused merge left the destination arena as it was")
+    merge_check(counts, merge_arrays(@ dst) = held_arrays, "a refused merge left the destination with the arrays it had")
+    merge_check(counts, merge_arrays_live(@ dst) = 1, "a refused merge left no array of the destination hanging")
+    # The same refusal a second time: the destination is reusable after a rollback --
+    # the arrays the first attempt opened left with their blocks, so the second attempt
+    # starts from the same state and leaves the same state.
+    refused: 0
+    status: lmx_merge_owned(operands, 1U, 0, container, 0, @ arena, @ dst, @ refused)
+    merge_check(counts, status = LMX_MERGE_UNSUPPORTED && refused = 0, "the same refusal a second time is refused the same way")
+    merge_check(counts, dst_at\count = held && merge_arrays(@ dst) = held_arrays && merge_arrays_live(@ dst) = 1, "the destination is exactly as it was after a second refusal")
+
+    merge_check(counts, arena_at\count > 0U && dst_at\count > 0U, "entries exist while the arenas do")
+    merge_check(counts, lmx_arena_release(@ dst) = 0, "destination arena released")
+    merge_check(counts, lmx_arena_release(@ arena) = 0, "source arena released")
+    merge_check(counts, arena_at\count = 0U && dst_at\count = 0U, "releasing an arena retires every entry it held")
+    failures: counts[1]
+    c.printf("merge checks=%d failures=%d\n", counts[0], failures)
+    free((cast: (@: void) operands))
+    free(counts)
+return: failures != 0

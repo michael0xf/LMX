@@ -1,0 +1,2867 @@
+Graph ABI candidate recovered from Fable's completed local stage
+==============================================================
+
+2026-09-12. Fable implemented this stage in build/fable/graph-abi on
+9e717ee6. The user reported Fable unavailable for 1 hour 10 minutes before
+the commit/handoff. Codex copied the six changed modules and the two new
+test/runner files into build/codex/fable-abi-review, leaving Fable's working
+copy untouched. The candidate branch starts at main 4c35d99e, where these
+six modules still matched Fable's original base. It is not merged to main.
+
+Representation and API
+----------------------
+Lmx is Structure-only: Lmx *node; int len; void *data. len is child count,
+data addresses void * slots. A stored child value points directly to the
+appropriate typed target; the address of its slot does not give child type.
+
+lmx_branch_slot_known(parent, i)  -> void **, address of the slot
+lmx_branch_child_known(parent, i) -> void *, current target (ABI changed)
+lmx_branch_store_known(parent, i, value) -> stores the new target
+lmx_branch_struct_known(parent, i) -> Lmx *, compiler-proven Structure only
+lmx_node_new_owned(...) -> root Structure, STRUCT kind/type
+lmx_struct_new_owned(parent, ...) -> nested Structure initialized with parent
+lmx_charptr_* -> typed char * cell, directly pointing to a C string
+
+Slot storage is CHILDREN/BRANCH, stride sizeof(void *). Structure headers
+are STRUCT/STRUCT. Primitives, Array records and method records have no Lmx
+wrapper. The emitter constructs nested headers separately and uses slots
+for field access, caches and checkpoint publication.
+
+Codex corrected stale COMMENTS in lmx.h and the two API headers only:
+there is no node-freeze rule. Used-graph copying rewrites destination node
+and ordinary references; shared method-descriptor pointers stay unchanged.
+No implementation or test expectation was changed by that correction.
+
+Verified saved evidence (no repeated build)
+-------------------------------------------
+Evidence root, relative to repository root:
+build/fable/graph-abi/build/fable/graph_abi/
+  run_20260912_092003_134_0747d4c2/evidence.json
+  run_20260912_092129_269_915f9634/evidence.json
+
+Both: PASS, direct ABI selftest 63 checks / 0 failures, all 95 historical
+positive fixtures passed L2 -> L1 -> C -> exe and their pinned exit/stdout
+expectations. Direct selftest has zero warnings after the unused variable
+was removed. Earlier failed build attempts are not acceptance evidence.
+
+Codex matched all 12 manifest source hashes, the runner and read-only L1
+compiler 65D5A5ED, all 19 saved support object hashes, and all 190 recorded
+fixture outcomes. Sources/runner/compiler/selftest match between runs.
+The generated L2 translator C is byte-identical; the two translator EXEs
+differ only in their PE timestamp and checksum bytes, not executable code.
+Review manifest: build/codex/fable_stage_review.json in the main checkout.
+These runs used Fable's 9e717ee6 Message runtime. They do not test the
+newer D7 runtime in this candidate's parent. The runner did not record a
+GCC binary hash; do not describe its manifest as a complete toolchain lock.
+
+Required integration work (not a completed core)
+------------------------------------------------
+1. Grok's 54b5802c and 73c9f1ef migrated graph collection, Structure root
+   registration, failure-history classification and the Exec fixtures to
+   void * slot values. Their copies are included in this candidate. The
+   selected Exec suite passed on that ABI branch's older D7 base, including
+   the three generated-array collection drivers. Grok's merge 7fd9f1bb then
+   combined main D7 through 040af5d2; its 10:27:18 selected Exec run passed
+   with exact source/tool hashes reconciled. Two earlier timeouts on the
+   same revision remain unexplained; no hang fix is claimed. Evidence is
+   main build/codex/combined_exec_20260912_102718/review.json. Grok continues
+   drive_tree work. This private branch still uses its older D7 runtime.
+2. The handwritten splice bodies and assertions in run_l2trans.ps1 still
+   spell leaf->data / inline children. The runner support module list and
+   eight-method assertion are now repaired (checkpoint below); the bodies
+   still need migration. The 95 positive fixtures exclude
+   those splice drivers and the negative suite. Migrate their representation
+   assumptions without weakening their expected behavior. The three external
+   generated-array collection drivers and L1 snapshots are now migrated and
+   verified (checkpoint below). The scanner parity driver is also migrated
+   and verified below. Still migrate tests/cancel_spin_host.c and
+   tests/l2_message_root_driver.lm1. run_candidate_c_scanners.ps1 retains its
+   old pinned compiler snapshot; use the explicit ABI parity replay below.
+3. Legacy lmx_branch.lm1 and its shallow inline-header copy, plus other old
+   Core-suite fixtures, are not conformance implementations. Inventory and
+   retire/migrate their callers; do not revive shallow merge to satisfy them.
+4. The shared used-graph copy helper and merge lowering do not exist yet.
+   Fable retains that next stage; Grok integrates its API into Message
+   create/set_graph. Preserve aliases/cycles, rewrite node to copied parents,
+   stop at independent's zero, and reuse shared method descriptors.
+   Current emitted methods are allocated in Message-owned storage: their
+   shared descriptor lifetime must survive any graph copy that retains them.
+5. Existing checkpoint failure paths still emit return: 0; the settled
+   model requires assert on checkpoint-store failure. This layout stage
+   does not claim to implement the full checkpoint/type-change semantics.
+
+The private stage is reviewable and recoverable while Fable is unavailable.
+It must not replace the main graph ABI before its runtime consumers are
+migrated and the relevant integration checks pass. Stable L1 is unchanged.
+
+
+Generated-array collection checkpoint — 2026-09-12 09:49
+-------------------------------------------------------
+Codex regenerated unit_own_array_index, unit_own_array_char_index and
+unit_for_own_arrays L1 from their unchanged L2 fixtures using Fable's pinned
+successful translator. The three corresponding C collection drivers now
+read Array targets directly from child pointers; a nested Structure is
+accessed with lmx_branch_struct_known. No runtime source/header changed.
+
+All three native tests passed against Grok's 54b5802c collector support
+objects (copied and hash-checked before use). They retain the original
+value, Array type, end_turn retention, unreachable-neighbor collection and
+unroot/reclamation assertions. INT writes 7/0/9; CHAR writes 65/0/62;
+for-host arrays contain INT10/0/1 and CHAR65/0/0/62. Source, translator,
+compiler, generated L1/C, object and executable hashes plus exits are in:
+build/codex/graph_array_migration/20260912_094912/evidence.json
+under the main checkout. Reproduction script in that checkout:
+build/codex/run_graph_array_migration.py.
+
+These three checks do not require rerunning the 95 positive fixtures or
+rebuilding L1/L2. Grok still owns the failed legacy wrappers in Exec-selftest
+(the first reported failure was rooted array collected, before emit-array
+cases), runtime root registration and the remaining collection integration.
+Main D7 through 040af5d2 is not yet included in these older ABI runtime
+objects. This checkpoint is not complete Exec or main-ABI acceptance.
+
+Historical runner prerequisites checkpoint — 2026-09-12 10:25
+-----------------------------------------------------------
+run_l2trans.ps1 now builds all 19 required Message support objects, adding
+liveness, failure history, stale roots and Array references. Its eight-method
+assertion checks storage of each descriptor pointer in its ordered child
+slot. It no longer requires the withdrawn inline-child construction.
+
+Verified the actual runner helper functions, with production flags and no
+LMX_MSG_EXEC_TEST define: all 19 objects compiled, the saved unit_eight C
+linked and returned 0, and the corrected graph assertion passed. The old
+assertion rejected this same accepted generated L1. The literal historical
+inventory remains 106 inputs with its existing digest. This differs from
+the dedicated ABI runner's 95 positive inputs; neither list was changed.
+
+Reused the hash-verified L1/C fixture from Fable's successful second run;
+no L1/L2 self-build or repeated 95-fixture run. Compiler, source, generated
+header/object and executable hashes plus the exit are recorded in the main
+checkout at build/codex/historical_runner/20260912_102450/evidence.json.
+Replay: build/codex/check_historical_runner.ps1 (main checkout).
+
+This bounded check uses this candidate's older D7 runtime. It does not claim
+the full handwritten splice/negative suite or combined current-D7 acceptance.
+Grok retains runtime/Exec integration; frontend and shared-copy work remains
+with Fable. The historical splice migration remains an integration task.
+
+Scanner parity driver checkpoint — 2026-09-12 10:33
+-------------------------------------------------
+tests/l2_c_scanners_parse_driver.lm1 now reads each hit counter directly
+from its primitive child target. It no longer casts the target to a Structure
+and dereferences a nonexistent data field. The existing parity/context and
+cleanup assertions are preserved.
+
+Native validation: 118 parser parity cases, 1048 diagnostic slices, 3548
+layout checks, 704 Python cases, 512 boundary bytes, all 15 quoted diagnostic
+codes and 349 node-span comparisons passed. Separate Message counters,
+root/method allocation failure and retry paths passed; all 902 tracked graph
+allocations were freed exactly once.
+
+The accepted instrumented scanner L2 unit was regenerated using Fable's
+hash-verified ABI compiler. The saved frozen oracle and adapter C inputs
+were hash-verified and recompiled with the ABI headers. Reused the 19 checked
+production support objects from the preceding runner checkpoint. No L1/L2
+self-build or repeated full fixture suite. Compiler/tool/input/object hashes,
+actual header dependencies and native exit0 are recorded in the main checkout:
+build/codex/graph_abi_scanners/20260912_103246/evidence.json.
+Replay: build/codex/check_graph_abi_scanners.py (main checkout).
+
+This is parity on the candidate's older D7 production runtime. The legacy
+run_candidate_c_scanners.ps1 still pins the pre-ABI compiler evidence and
+has not been generalized by this fixture-only change. Shared-copy lowering,
+full self-hosting and the remaining historical drivers are not complete.
+
+
+Used-graph copier checkpoint (Fable) — 2026-09-12 10:43
+------------------------------------------------------
+New files, branch fable/graph-copy from codex/fable-abi-review e06966ee:
+  l2src/lmx_graph_copy_owned.h.lm1, l2src/lmx_graph_copy_owned.lm1,
+  l2src/tests/lmx_graph_copy_selftest.lm1; run_graph_abi.ps1 gained the
+  module and a copy-selftest stage. No runtime, emitter or Grok file changed.
+
+API (SPEC 2.3, ABI 8.2, user decisions 2026-09-12):
+  fn: lmx_graph_copy_owned (@: Lmx source; @: LmxOwnedRange src_ranges;
+      @: char dst_chars; @@: LmxArenaBlock dst_blocks;
+      @@: LmxOwnedRange dst_ranges; @@: Lmx out) int
+  0 OK, 1 INVALID, 2 NOMEM, 3 UNSUPPORTED.
+
+Traversal. Seed the source and its lexical chain to node = 0; each queued
+Structure gets a destination header registered in the operation-local map
+BEFORE its edges are followed; processing copies every slot and queues the
+lexical parent, so the whole reachable lexical tree is copied (this is the
+conservative whole-tree reading of "used"; independent bounds it with its
+zero root). Per child value, classified by src_ranges: STRUCT -> copied
+Structure (and its own lexical chain); INT/SIZE_T/CHAR_PTR cells -> new cells
+with equal values, once per source address (aliases preserved); interned
+CHAR -> the same byte in dst_chars, or the source cell when dst_chars is 0
+(same-Message copy); METHOD -> the same descriptor pointer (methods are
+shared); Array record -> new record plus new backing (memcpy for CHAR/INT
+backing; element-wise copy for LMX/DESC/METHOD reference arrays, registered
+before following elements so cycles terminate); a value not classified by
+src_ranges is kept as is (not language-owned storage of the source). After
+processing, every copied Structure's node is rewritten to the copy of its
+lexical parent or zero. All destination storage is prepared under private
+heads and admitted with one storage_move_all; on any failure the prepared
+storage is disposed, the destination heads and the source are untouched,
+and out stays null.
+
+Selftest (44 checks): source graph r0 -> s1 -> s2 plus an independent root
+i0, with an int cell reached from two slots, a Structure reached through a
+slot, a node link and a reference array, a back-reference cycle s2 -> s1,
+an int Array, a char* cell and a size_t cell. Copy from s2 into another
+owner with its own char table: r0/s1/s2/i0 copied, node links point at the
+copies, the root's node is zero, i0's copy keeps node zero, cells and Array
+backing are new with equal contents, the interned char maps into the
+destination table, the METHOD pointer is identical, the shared int cell has
+exactly one copy, writing the copy leaves the source at 7, source nodes and
+slots unchanged. Same-owner copy shares the interned char cell and the
+METHOD pointer while cells are new. Null arguments rejected. Allocation
+failure injected at every allocation position (per-object -Dmalloc/-Dfree
+substitution of the graph-lane objects; the selftest prints the number of
+positions exercised): each returns NOMEM, out null, destination heads still
+empty, live-allocation count unchanged; the first non-failing attempt
+succeeds. Teardown releases every counted allocation.
+
+Limits and obligations, explicit:
+- Superseded implementation status (2026-09-13): `lmx_msg_create_graph` uses
+  this copier transactionally, runtime/source merge lowering is integrated,
+  and `lmx_msg_transfer_graph` provides a separate rooted no-copy handoff for a
+  completed direct child. The paragraph this replaces described the original
+  pre-integration checkpoint, not a remaining model restriction.
+- "Used" is the whole reachable lexical tree; no static narrowing yet.
+- Zero-length Arrays are UNSUPPORTED (empty representation, ABI 14.3).
+- A child value not in src_ranges is kept as a raw reference (foreign or
+  unowned storage); nothing validates it.
+- Shared METHOD descriptors currently live in Message-owned storage
+  (emitter allocates them with lmx_method_new_owned). Keeping the same
+  pointer is correct under the shared-method rule, but a copy that
+  outlives its source Message must not dangle: the integration acceptance
+  must include source teardown followed by invocation through the
+  surviving copy, resolved within the shared-method model (static or
+  otherwise longer-lived descriptor placement is the user's optional
+  arrangement). Recorded from Codex 103916; not addressed by this
+  checkpoint.
+- lmx_message.lm1's collector walk is Grok's; the copier does not touch it.
+
+
+Copier refinement (Fable) — 2026-09-12 10:55, after Codex 104635/104850
+----------------------------------------------------------------------
+API now:
+  fn: lmx_graph_copy_many_owned (@@: Lmx sources; size_t: count;
+      @: LmxOwnedRange src_ranges; @: LmxOwnedRange eternal_ranges;
+      @: char dst_chars; @@: LmxArenaBlock dst_blocks;
+      @@: LmxOwnedRange dst_ranges; @@: Lmx outs) int
+  fn: lmx_graph_copy_owned (source, src_ranges, eternal_ranges, dst_chars,
+      dst_blocks, dst_ranges, out) int      (count = 1 wrapper)
+
+- One map spans the whole operation across all roots (merge with several
+  operands): a Structure or cell reachable from two roots is copied once and
+  both outputs refer to that one copy; outs[i] is the copy of sources[i].
+- Eternal branches (user decision: independent: const: immutable published
+  branches retained by the process root) are copy terminals. The caller
+  supplies the root's retention ranges as eternal_ranges; any value found
+  there, reached through a slot, an array element or a lexical chain, is kept
+  by address, never traversed, cloned or node-rewritten; a copied Structure
+  whose lexical parent is eternal gets that parent's own address as node. An
+  eternal root itself is refused as a copy source (INVALID). The root
+  retention array is never discovered or traversed by the copier.
+- A child value classified by neither src_ranges nor eternal_ranges is no
+  longer kept silently: the copy reports UNSUPPORTED and admits nothing.
+  Explicit foreign-handle domains, when an L2 profile defines them, will need
+  their own terminal rule; there is none yet. METHOD descriptors remain the
+  one shared-by-pointer exception.
+- Selftest now 55 checks: adds an eternal branch reached from the
+  independent root (same pointer in the copy, node still zero, cell untouched,
+  not classified in the destination), a two-root copy (s1, s2) with one map
+  (copies linked, shared cell copied once, eternal terminal reached through
+  both), refusals for an eternal root, for an unadmitted branch reference
+  when no eternal ranges are given, and for a raw C address in a slot; the
+  37-position allocation-failure sweep still passes.
+- merge lowering is deliberately NOT started: the user asked to wait for
+  Codex's comprehensive core/Message document, and the settled throw carrier
+  (throws merge(args), status plus typed out-parameters) is not lowered yet;
+  a source-visible merge failure will not be emitted as return 0.
+
+
+Checkpoint publication failure (Fable) - 2026-09-12 11:16
+---------------------------------------------------------
+SPEC 21.6 / ABI 14.23, and Codex 111428 answering the open half of the
+question: a failure to publish an already-bound dirty own field is CHECKPOINT
+failure and takes the diagnostic assert route. Entry admission of a missing
+field is a separate case and is untouched here.
+
+l2_emit_checkpoint now emits, inside each field's "if dirty" block:
+  - a guard for a null slot pointer: diagnostic line on stderr, then c.abort();
+  - for char, a verification that the rebind produced a live cell, same route;
+  - for int and size_t, the store-failure branch aborts instead of the previous
+    silent "return: 0".
+Nothing on the success path changed, so the graph is left exactly as it was
+before a failed store. The previous lowering could return a normal result after
+losing a published field; that is the behaviour this removes.
+
+Still legacy at entry: the prologue's slot lookup emits "return: 0" when a
+required own field is absent. That is admission, not checkpoint, and waits for
+the typed result/throw carrier rather than being turned into an abort here.
+
+Legacy Core units (same stage): lmx_branch/lmx_own/lmx_ref and their three
+selftests are migrated to slots and pass. lmx_cell_init in lmx_range.lm1 still
+builds a leaf Lmx with a payload; its callers are the range/pool selftests and
+are the remaining item of this inventory.
+
+Inline-model inventory closed - 2026-09-12 11:22
+------------------------------------------------
+lmx_cell_init is REMOVED from lmx_range.lm1. It built a leaf Lmx whose data
+was a classified payload, which is the withdrawn model, and its comment still
+described len's unit as open. Its three callers used the Lmx only as a
+stand-in for "a field holding a value", so each now uses the thing that
+actually is one: a void * slot.
+
+  lmx_selftest        a stored child value classifies as its own kind, and the
+                      address of the slot holding it classifies as neither.
+  lmx_pool_selftest   one slot rebound from an Array record to a method record
+                      reclassifies, and the descriptor entry is undisturbed.
+  lmx_chars_selftest  two fields holding one interned character hold one
+                      address; rebinding one moves neither the other nor the
+                      cell.
+
+All seven legacy Core selftests translate, compile without warnings and exit 0:
+range, pool, chars, branch, own, ref, size. No Lmx header is now read from a
+non-Structure target anywhere in l2src, and no unit outside the selftests
+depends on the inline-child layout.
+
+Checkpoint failure routes to the turn diagnostic root - 2026-09-12 11:29
+-----------------------------------------------------------------------
+Correcting the previous entry after Codex review 112535. c.abort() ends the
+whole OS process; SPEC 19.13 terminates only the executing Message. The
+emitted failure path is now:
+
+    c.fprintf(c.stderr, <which field>)
+    if: c.lmx_msg_poll_abort() != 0
+        c.abort()
+
+lmx_msg_poll_abort is the existing seam: under the executor it longjmps to the
+turn root installed in lmx_message_exec.c, which fails this Message's turn
+through the ordinary end_turn(0) path and leaves the host and sibling Messages
+running. It returns nonzero only when no turn root is installed, and then there
+is no Message boundary to honour.
+
+INTEGRATION GAP, explicit: a standalone generated program calls
+l2_program_entry directly from main, so no turn root is installed and the path
+ends in abort. Running generated code under the executor is the missing seam;
+it is Grok's file and was not touched. Until then the Message-side behaviour of
+this path is unexercised.
+
+Stage 5 step (a), 2026-09-14 (lead): the seam above is closed for the entry.
+The source body is emitted as l2_program_body. l2_program_entry is an adapter
+that refuses (LMX_MSG_INVALID) outside its own Message's turn and hands the
+program's value back through a result cell. The generated main and
+l2_library_open reach it only through lmx_msg_run_entry_turn, which runs the
+root Message's turn on the host thread, so run_one's turn root is installed
+while the body runs. run_entry_turn.ps1 measures the refusal, the bootstrap
+and a library opened from inside another runtime's turn. The abort path's exit
+status under that turn root is not separately exercised there.
+
+Correction to the earlier claim: the previous note said the abort leaves the
+graph as before the store. That was wrong for char, which assigned the rebind
+result into the slot before checking it. The order is fixed: char now validates
+the rebind before assigning, and the int/size_t helpers do not write a rejected
+cell, so a FAILED field keeps its old value. Fields published earlier in the
+same checkpoint keep their new values; no transactional rollback is claimed.
+
+run_graph_abi.ps1 now asserts per fixture that the count of emitted c.abort()
+lines equals the count of diagnostic-root escapes, so a bare process abort
+cannot reappear in generated code unnoticed.
+
+Settled merge and eternal-sharing model - 2026-09-12, consolidated 12:10
+------------------------------------------------------------------------
+Replaces two duplicated and partly overbroad blocks that stood here, at the
+request of Codex 114154. The superseded wording said the result of merge shares
+NOTHING except methods; that omitted the admitted eternal branches, which is an
+exception I had myself preserved elsewhere. Nothing below is appended as a
+correction under an older rule: this is the current rule.
+
+WHAT MERGE DOES
+
+1. merge copies the COMPLETE USED graph down to node = 0, exactly as creating a
+   Message does. The only optimisation is pruning branches that are not used.
+2. The result is a THIRD INDEPENDENT structure. It overlaps the operands and
+   their ancestors in exactly two things and nothing else:
+     - METHOD descriptor addresses, and
+     - admitted eternal branch references, that is branches qualified
+       independent: const: immutable and retained by the first Message.
+   Both are copy TERMINALS: the copy substitutes the existing admitted address
+   and stops there. Merge and Message creation never append to either root
+   array, and holding one entry gives no access to the array itself
+   (SPEC 7196, 7198).
+3. The operands are NOT destroyed or altered. Two structures existed, now there
+   are three. Each operand keeps its own layout and its own calls keep working.
+   What does not exist is a sub-container inside the result that is a copy of an
+   operand root retaining that operand layout.
+4. Ordinary mutable state is fully copied and independent: a cell in the result
+   is a distinct cell, and a write to it does not reach the source.
+5. Reachability decides, not the word independent. If the used graph genuinely
+   refers to an operand root, whether by self-reference or lexical dependency,
+   the map still gives that root a destination and every reference resolves to
+   it. Independence is from SOURCE STORAGE, not a prohibition on copying a
+   reachable node. Pinned by selftest block 2b, where one root is reached both
+   as another root lexical parent and as a child slot, and gets one destination.
+6. Copied internal child order is preserved. merge reorders the top level of
+   the result; it never renumbers the inside of a node it copies.
+
+WHAT FOLLOWS FOR THIS LANE
+
+- The copier is correct as it stands: METHOD shared by pointer, eternal ranges
+  as terminals, everything else copied, unclassified raw targets refused.
+- Eternal metadata stays the explicit eternal_ranges argument for this stage,
+  per Codex 115917, derived from the translator-built qualified first-Message
+  graph and passed as trusted internal copy metadata. It must match the actual
+  fixed qualified storage. A pointer does not become eternal because a caller
+  guessed it. Not to be replaced by a recognisable array node so a generic
+  copier can rediscover global state.
+- Descriptor placement in the emitter is CORRECT: process_message is the first
+  Message. See FABLE_CALLABLE_NODE_AND_MERGE.txt part 5 for the withdrawal of
+  the gap I wrongly reported here.
+- Open frontend work, in Codex order: per-callable Structure first (115036),
+  then the two dedicated const: immutable arrays with qualifier emission.
+
+Named Structures: char, nested and reference fields (2026-09-13, 73576eb1)
+--------------------------------------------------------------------------
+Option (a) declarations carry four field kinds, all in the existing graph
+representation, no new language surface:
+
+  0 size_t literal    a size_t cell
+  1 char literal      a POINTER CELL into the Message char table. Not a
+                      string descriptor, not inline storage in the parent.
+  2 inline nested     (): name ... end: name, built in place as a child of
+                      its parent with node = the parent
+  3 reference         Name: field, sharing the pointer of an earlier
+                      COMPLETED unit-level declaration, WITHOUT reparenting
+
+Only unit-level declarations are children of the unit. A nested entry is a
+child of its parent and nothing else. Source field order and the fixed child
+count are preserved. Emission builds every entry through a generated
+l2_nsp[] array, parents before children, then wires reference fields in a
+second pass.
+
+The field table is FLAT and interleaved: a nested body pushes its fields in
+between its parent's, so a per-entry range is NOT contiguous. Every walk
+selects by the l2_nsf_owner column. l2_ns_first/l2_ns_count are still the
+declaration order, not a slice.
+
+A reference may only name a COMPLETED earlier unit-level declaration.
+l2_ns_push registers an entry BEFORE reading its fields, so without the
+l2_ns_done flag an entry could name itself or an enclosing one and close a
+cycle through the unit graph.
+
+Three defects this shape exposed, all invisible to the previous fixtures:
+
+1. A MISSING PROTOTYPE SILENTLY TRUNCATES A POINTER. The char table was
+   created but predef "l2src/lmx_chars_owned.h.lm1" was gated only on
+   l2_has_own_ty(1), so a named Structure's char field reached
+   lmx_chars_new_owned with no declaration in scope. C took the return as
+   int and cut the upper 32 bits. The symptom appeared three layers away,
+   as LMX_MERGE_UNSUPPORTED, because lmx_owned_ranges_find could not
+   classify the cell. Diagnosis: print the pointer next to the registered
+   range; table=0x000000001afd6748 against lo=0x000002891afd6748 is the
+   whole answer. Any time a generated program emits a call, the predef that
+   declares it must be emitted under the SAME condition.
+
+2. READ BEFORE WRITE IN THE MERGE WIDTH LOOP. The operand lookup
+   ni: l2_ns_find(...) sat at the BOTTOM of the loop, so every named
+   operand contributed the PREVIOUS operand's width and literals. Two
+   operands of 2 and 4 predicted 4 instead of 6. Also "bfirst = 0U" was
+   used as a not-set-yet marker, which is wrong for a literal zero; the
+   first end is now taken at k = 0.
+
+3. AN END HAS A KIND. The result-content checks compared every end through
+   lmx_size_value_known. A char end is now checked through
+   lmx_char_value_known instead, and an end that is a nested Structure or a
+   reference is left UNPINNED rather than compared against a value it does
+   not hold. Verified non-vacuous by mutating the expected 83 to 84 in the
+   generated program: exit 74.
+
+Fixture unit_named_nested.lm2 pins the whole shape: Point{x 3, y 4} and
+Shape{char tag 'S', nested origin{px 7, char mark 'o', nested deep{depth 9}},
+Point: corner, sides 6}, merged with a body field extra 11. Merged width is
+2 + 4 + 1 = 7: an operand contributes its OWN direct children, and merge
+deep-copies the nested subtrees behind them.
+
+CORRECTION (2026-09-13, ceb911bc): references admit aliases and cycles
+----------------------------------------------------------------------
+The completed-only/source-order restriction described above was MY
+implementation gap, not an L2 rule. Codex corrected it the same night. The
+graph model permits aliases and cycles and the copier preserves them through
+one operation-local map, so a reference field may name:
+
+  - a declaration that appears LATER in the source (forward)
+  - its own declaration (self)
+  - a declaration that names it back (mutual cycle)
+  - a NESTED declaration
+
+Construction is two-phase. The collector records only the NAME; the whole unit
+is read first and l2_ns_resolve_refs then resolves every reference field.
+Unknown and ambiguous names stay errors, with distinct causes. l2_ns_done is
+gone.
+
+The node check had to be generalised with this: a nested target hangs under
+its own parent, not the unit, so the generated program checks the target
+against the lexical parent it was built with. A reference never reparents its
+target in either case.
+
+Merge proves the aliases survive. Where field j of an operand names an entry
+which in turn names an entry the operand ALSO names at slot j2, one map means
+both paths must arrive at the SAME copy, and the generated program checks
+exactly that. unit_named_alias.lm2 emits three such checks.
+
+Lesson worth keeping: when a shape is awkward to build, the refusal I reach
+for is an implementation convenience, and I should say so out loud rather than
+ship it as if it were a rule. The two-phase construction that lifts the
+restriction was no harder than the restriction was.
+
+Source field paths (2026-09-13, 60ed1f16)
+------------------------------------------
+Two spellings, both already produced by the parser, checked with printTree:
+
+  R\x: 5U          UPDATE: the whole path is ONE frame head text
+  v: R\x           VALUE:  atoms around separator atoms in the body
+
+They are joined into one byte span and resolved identically, which is why the
+path helpers take (data, length) rather than an LmP0Text: a value-position
+path has no single text to point at, and an LmP0Text cannot be declared as a
+local in L1 (unknown type name).
+
+Resolution is entirely at translation:
+  - a declaration's field is matched by the name it was DECLARED with
+    (l2_nsf_fname), and the slot index is its position among that owner's
+    fields in the flat table;
+  - a merged result has NO names of its own. Its slots are resolved through
+    the field that CONTRIBUTED each slot: l2_mrs_* is a per-result slot map
+    built while the merge is lowered, from each operand in order and then the
+    body fields. A qualified-branch operand contributes one anonymous row.
+Nothing is looked up by name at run time and no runtime name table exists.
+
+Primitive semantics, as the ticket pinned them:
+  size_t   lmx_size_store_known on the addressed cell, IN PLACE
+  char     lmx_char_rebind_known on the field's POINTER CELL. The table bytes
+           are never written and no new cell is allocated. Emitting
+           lmx_char_cell_known here would also be observably correct but is
+           the wrong operation: rebinding is what a char assignment is.
+
+SCOPE, stated rather than hidden: a path is lowered where the unit is
+addressable. Inside a method the unit is not reachable -- the executing
+Message arrives as a dynamic input that is not lowered in this emitter yet --
+so a path inside a method is refused with its own cause, the same boundary
+the merge site already carries. Lifting it is the same work as lifting the
+merge-in-method refusal.
+
+Two mistakes worth remembering:
+
+1. The dispatcher first took ANY head with two or more segments. That
+   swallowed out_payload\data in parser_text_views.lm2, an ordinary out
+   parameter field, and only the HISTORICAL gate caught it -- the graph ABI
+   gate was green. A new statement form must be recognized by what its root
+   RESOLVES to, never by its shape alone.
+
+2. l2_join_path validated the alternation with the flag inverted, so every
+   well-formed path was rejected and the error surfaced as "unresolved name"
+   on the first atom, far from the cause.
+
+Merge result names are now reserved in l2_parse_unit, before any statement is
+checked: a path rooted at a bound result is otherwise an unknown head when the
+unsupported-body guard runs. The scan is idempotent.
+
+Field paths inside methods (2026-09-13, b6165de8)
+--------------------------------------------------
+The refusal recorded above is withdrawn. Inside a method the root of a unit
+declaration or a bound merge result is the callable's LEXICAL PARENT, spelled
+through l2_unit_ref, which is already "unit" at the entry and node\node in a
+method body. Own and callable fields keep using node. One walk serves both
+places; there is no second category and the Message is never derived from
+node. None of these paths allocate, so none of them needs the Message.
+
+Three real defects this exposed, and the first is the instructive one:
+
+1. THE RESERVED UNIT-CHILD BASES WERE COMPUTED TOO LATE.
+   l2_mres_base and l2_ns_base were derived while the ENTRY's child count was
+   assembled -- after every method body had already been written. In a method
+   both were still zero, so a declaration and a bound result both resolved to
+   child 0 of the unit.
+
+   The fixture PASSED anyway. Seven independence checks, all green, on a
+   program where A and R addressed the same Structure. I only caught it by
+   reading the emitted roots and noticing every one of them said 0U. Write the
+   assertion that would have caught it: the runner now pins that in-method
+   paths reach two DISTINCT roots and that none of them is child 0.
+
+   General form: a value that is a LAYOUT DECISION must be computed before the
+   first thing that spells it, and a test that only checks end values cannot
+   see two names collapsing onto one slot.
+
+2. The result-slot map was built during merge LOWERING, so a method emitted
+   before main could not resolve a field of a result whose merge statement
+   lives in main. It is built in the PRE-SCAN now, beside the name reservation.
+
+3. l2_scan_ident turned the root atom of a value-position path into an untyped
+   dynamic input, and l2_dyn_typed then refused the method. A unit-level
+   declaration and a bound merge result are names IN SCOPE reached through the
+   unit; they are not free names.
+
+A path load inside a method writes an OWN field -- cached value plus dirty
+flag, published at the next checkpoint like any other own-field assignment.
+A resolved-but-missing slot leaves a method through l2_emit_path_bail:
+checkpoint first, then that method's own return shape, rather than the
+int-only code the entry uses.
+
+Callable fields and calls through a path (2026-09-13, 43ca961a)
+---------------------------------------------------------------
+A declaration holds a CALLABLE FIELD spelled with the reserved head:
+
+    A:
+        fn: M          # field named M, value = M's own Structure
+        size_t: tag 1U
+    end: A
+
+The value stored is the unit child at l2_unit_base + mi, whose slot 0 holds
+the shared METHOD descriptor. Nothing about it is special to merge: the copier
+sees an ordinary Structure, copies it, and keeps the descriptor as a terminal
+because it is classified by method_ranges. Field kind 4; resolved with the
+reference fields after the whole unit is read, since M may come later.
+l2_ns_field_mi is deliberately separate from l2_ns_field_ref -- one indexes
+methods, the other declarations, and confusing them emitted unit child
+4294967295.
+
+A call through a path is the SAME call: same method, same signature, same
+typed actuals, same throw closure. Only the reserved argument differs -- the
+occurrence the path selected (l2_pst), never the unit child and never the
+enclosing result. l2_head_method answers "which method does this head name"
+for the checker, the statement dispatcher and the emitter, so all three agree;
+they used to disagree, and the disagreement showed up as "unsupported body".
+
+WHERE THE GRAMMAR DOES NOT DECIDE.
+printTree, on the same file:
+
+    A\x: 5U      ->  frame head="A\x" body=structure fields=1  atom "5U"
+    A\x(5U)      ->  frame head="A\x" body=structure fields=1  atom "5U"
+    A\x()        ->  frame head="A\x" body=structure fields=0
+
+The first two are INDISTINGUISHABLE. So the spelling alone cannot separate an
+update from a one-argument call, and only two things can:
+  - the path ends at a CALLABLE field, which an update could never target;
+  - the argument list is EMPTY, which an update could never be.
+Everything else with a path head is an update. This is why the precise call
+diagnostics exist only for those two shapes -- anywhere else, claiming a call
+was meant would be guessing.
+
+WHAT THE GENERATED PROGRAM PROVES (addresses, not values):
+  77  the copy inside the result is a DIFFERENT occurrence
+  78  its child 0 is the SAME descriptor terminal, never cloned
+  79  its first own cell is a DIFFERENT address
+Each was inverted once to confirm it fails: 77, 78, 79 respectively.
+
+Lexical lookup through a copied M was TESTED, not assumed. M reads B\y through
+its own node; for the copy, node is the copied unit, and the declaration is
+still at the same child index, so the read succeeds. A copy that could not see
+B would return 0 and fail the fixture. Do not weaken that read: it is the only
+thing holding the remapped-node contract down.
+
+Qualified branches: the full immutable body (2026-09-13, 772e147f)
+-------------------------------------------------------------------
+The qualification is unchanged; only the BODY generalised. It is now the
+ordinary named-Structure field model -- size_t and char pointer-cell leaves,
+inline nested Structures, translation-known references -- which is the whole
+point: QUALIFICATION DECIDES STORAGE ADMISSION AND IMMUTABILITY, NOT SHAPE.
+l2_take_eternal therefore calls l2_take_ns_body, and the emitter grew one
+column (l2_ns_eternal) instead of a second emitter.
+
+A qualified entry differs from an ordinary declaration in exactly three ways:
+  1. its ROOT is lmx_node_new_owned -- node = 0, not a child of the unit;
+  2. it is bound at its own reserved unit child, not among the declarations,
+     which is why l2_ns_rank and l2_ns_top_count skip it;
+  3. every owned typed range inside it is admitted through the Message
+     classifier: the root, each nested Structure, each leaf cell.
+Nested Structures keep ordinary internal node links. Only the root has none.
+
+Enforcement, all at translation:
+  - an update whose resolved target lies inside a branch is refused at any
+    depth (l2_path_in_eternal walks the whole path, not just the root);
+  - a reference out of a branch into ordinary mutable storage is refused --
+    qualification admits an address range, it cannot make a mutable target
+    eternal;
+  - a callable field inside a branch is refused outright: a method's own
+    fields ARE mutable storage.
+
+merge and the admitted branch:
+  - a branch is reached as an OPERAND through its qualified index, NEVER as an
+    ordinary declaration. It is a terminal, so its direct children appear in
+    the result at the SAME ADDRESSES (code 80), and the copy-map alias walk
+    must not run over it -- it demanded copies merge correctly refuses to make.
+  - an ORDINARY Structure holding a reference to a branch IS copied, and the
+    reference must still point at the same branch (code 80 again), while a
+    neighbouring mutable size_t cell comes out at a DIFFERENT address (code
+    90). Those two together are the whole value of an eternal branch.
+  - a char child is deliberately NOT checked for distinctness: the copier
+    returns the same table cell when the destination keeps that table, so its
+    address is equal by design rather than by accident.
+
+Two defects this exposed:
+  - the reference node check asserted "node = unit" for every unit-level
+    target. False for a qualified root, which has no lexical parent at all.
+  - putting branches in the shared declaration table made l2_ns_find succeed
+    for them, which silently changed the collision cause and let the alias
+    walk in. Sharing a table means auditing every reader of it, not just the
+    writer.
+
+Array fields (2026-09-13, 85680bae)
+------------------------------------
+The core plan's remaining frontend item, taken without a ticket under Codex's
+standing instruction. The spelling is the one L2 already uses for an own
+array, unchanged:
+
+    []: int xs 3
+    []: char cs 2
+
+head "[]", then element type, name, count. Field kind 5. The count is the
+value; the ELEMENT TYPE rides in the ref column and is read ONLY through
+l2_ns_field_elem. That column already means a declaration index for a
+reference and a method index for a callable -- three meanings in one column is
+the most that stays honest, and only because each has its own accessor.
+
+A record and its backing are TWO owned ranges. Inside a qualified branch both
+are admitted: the rule is every owned range reachable inside the branch, and
+the backing is reachable through the record.
+
+The predef gate was widened in the SAME edit as the emitted call. This is the
+char-table lesson applied before it could bite: an emitted constructor without
+its emitted prototype returns int, the pointer loses its upper half, and the
+symptom appears layers away as a merge refusal.
+
+merge separates the two cases and the generated program checks both:
+  91  an ORDINARY operand's array child is copied -- new record, new backing,
+      declared length preserved
+  80  an ADMITTED branch's array child keeps its exact address
+Mutating the expected copied length fails with 91.
+
+Not supported, and said so in the commit rather than left to be discovered:
+an array field cannot be indexed or updated through a source path, and only
+int and char elements are admitted -- no array of Lmx or of descriptors in a
+declaration.
+
+The lexical unit rule, generalised (2026-09-13, e2a01e96)
+---------------------------------------------------------
+Codex hit this in integration and I folded the fix back into the lane.
+
+RULE: anything the emitter writes that reaches a UNIT-OWNED object must spell
+the root through l2_unit_ref, never "unit" and never an entry-local binding.
+l2_unit_ref is "unit" at the entry and node\node inside a method; a method has
+neither the name nor the locals of the entry.
+
+That covers, in the merge lowering: the operand array, the admitted-branch
+child identity checks, the held-reference identity check, the callable copy
+proofs and the ordinary copy proofs. A qualified branch is addressed at its
+reserved unit child (l2_unit_base + l2_m_n + 2 + k), not through l2_ebrN.
+The comparison temporaries l2_mxp / l2_myp / l2_malias are declared in method
+bodies as well as the entry.
+
+WHY MY GATE COULD NOT SEE IT: this lane still refuses merge inside a method,
+so no fixture here could reach the broken spelling. Only the combined branch,
+where that refusal is lifted, compiled it. A green gate proves what the gate
+can reach, and a refusal I still carry is a hole in my own coverage -- when a
+refusal is lifted downstream, everything written under it must be re-read.
+
+Same shape as the "layout decision computed too late" note above: both are
+cases where the thing that was wrong could not be exercised locally.
+
+The Message dynamic input and the throw call side (2026-09-13, ef006bbe)
+-------------------------------------------------------------------------
+THE MESSAGE. l2_m_msg marks every method that merges, then closes over the
+call graph: a caller of a Message-dependent method is Message-dependent. It is
+a COMPILER-SELECTED dynamic input -- not a source name, never from node, never
+global -- and it travels as the LAST hidden input:
+
+    fn: l2_m0 (@: Lmx node; @: LmxMsg process_message; @: int l2_out_result; @@: Lmx l2_out_throw) int
+
+The interned METHOD signature carries a column for it, so two methods that
+differ only by this dependency cannot share a descriptor signature. That
+column is a full parallel column of the intern -- grown, copied, freed and
+reset beside l2_it_dyn -- because the alternative was encoding it into an
+existing number, which is the kind of overloading that already cost me one
+defect.
+
+THE CALL SIDE OF THE DECLARED-THROW ABI, unfinished since df097919:
+
+    status = fn(M, explicit..., hidden..., message, @ result, @ throw)
+
+The caller branches on the status BEFORE the normal result is read. On a
+nonzero status only the FAILURE GRAPH travels: a throwing caller forwards it
+through its own out_throw, the entry stops with a distinguished code, and in
+neither case is the ordinary result read or published -- on failure it does
+not exist. That ordering is what the runner pins, not just the presence of a
+branch.
+
+MERGE INSIDE A METHOD is lowered; the refusal and its negative are withdrawn.
+The merge allocates in that Message and takes the method's LEXICAL unit as its
+container (node\node). The FULL merge local set is declared in method bodies,
+not only the comparison temporaries -- I had declared only the temporaries
+when preserving Codex's fix, and the operand array and result were still
+missing.
+
+Three gaps this exposed, all in name resolution rather than emission:
+  - a merge result bound inside a METHOD must be reserved before any name is
+    resolved, not at emission time, or the result name reads as a free name;
+  - the free-name scan must skip a merge statement ENTIRELY: its head binds a
+    result, its operands are declarations already in scope, and its body
+    fields are new. None of it is a dynamic input;
+  - the merge container and the result binding were still spelled "unit",
+    which the lexical unit rule above should have caught and did not, because
+    no fixture could reach them while merge-in-method was refused. Exactly the
+    hole the previous note describes.
+
+A failure has to go somewhere (2026-09-13, 109ac7db)
+-----------------------------------------------------
+Found by re-reading my own call-side lowering an hour after landing it. No
+gate caught it, because no fixture had a non-throwing caller of a throwing
+method.
+
+The defect: a method that merely CALLS a throwing method did not carry the
+throw ABI, so on a nonzero status the branch emitted "return: 0" in it. A
+caller declared int then reported 0 on failure -- indistinguishable from a
+legitimate success -- and the failure graph was dropped. "Propagate only the
+failure graph" is not satisfiable when there is no channel to propagate
+through.
+
+RULE: the throw dependency is TRANSITIVE, like the Message dependency beside
+it. A caller of a throwing method is itself throwing; both fixed points run
+together over the same call graph. The entry has no channel and stops with its
+distinguished code.
+
+The branch that used to return 0 is now a translator assertion. Unreachable by
+construction, and an assertion rather than a silent return PRECISELY BECAUSE
+the silent return was the bug: if the invariant ever breaks, it must fail
+loudly where it broke.
+
+Consequence worth remembering separately: l2_merge_max was reset AFTER the
+per-method scans had measured it, so a method that merged while main did not
+got no operand array. The operand array is a local of EVERY body that merges,
+not only the entry -- the comment saying otherwise was written when only the
+entry could merge, and stayed true-looking after that stopped being so.
+
+Pattern, now three times in this series: the dangerous code is the code my own
+fixtures cannot reach. Here it was a shape no fixture had; before it was code
+behind a refusal; before that a layout value computed too late. Reading new
+code against shapes the fixtures do NOT contain is not optional.
+
+Argument-as-own bind (2026-09-13, 780c58c1)
+--------------------------------------------
+Model section 11. An explicit argument is a private activation value until an
+executed same-name bind; the bind keeps the SAME variable, does not preload
+the graph slot over the incoming value, becomes dirty at the executed write,
+and publishes at the checkpoint. It never writes back to the caller.
+
+WHAT WAS ACTUALLY MISSING: almost nothing. l2_collect_asgn_body already bound
+an assigned formal, and the emitter already did every part above. The gap was
+one type guard -- int was excluded while char and size_t were admitted -- and
+the model's own example is an int.
+
+I started by writing a SECOND implementation in l2_collect_decls before
+noticing the first. It duplicated the mechanism and reordered the own table,
+which broke a historical assertion. Look for the existing mechanism before
+building a parallel one: the reorder was the only visible symptom, and it
+would have been an invisible layout change in a less tested area.
+
+TWO BIND POINTS, AND WHICH WINS. An explicit same-name DECLARATION is the bind
+point, and writes before it stay activation-local:
+
+    fn: bind32 (char: n32) int
+        n32: 3          # activation-local: the declaration below is the bind
+        char: n32       # bind point
+        n32: n32        # published
+
+unit_own32_pub in the historical gate encodes exactly this, and it is what
+caught my first attempt. When there is no declaration, the assignment is the
+bind, as in the model's example.
+
+l2_param_ty RETURNS 0 FOR BOTH "int" AND "NOT A PARAMETER". Admitting int on
+the type alone bound every ordinary own field too. Membership is a separate
+question from type and now has l2_param_is. This is the third time in this
+series that two meanings shared one number and cost a defect -- the ref column
+was the first, the entry-local bindings the second.
+
+Limitation: an own declaration inside a nested if body is still unsupported,
+so a bind introduced only there is unavailable. A conditional ARGUMENT bind
+does work, and publishes only in the taken branch.
+
+Callable recursion (2026-09-13, 94e7e9af)
+------------------------------------------
+The refusal was a whole-call-graph DFS in the frontend ("unsupported
+recursion"). Lifting it was the entire change: recursion was already correct
+underneath, and that is the finding worth keeping.
+
+WHY NOTHING ELSE NEEDED CHANGING:
+  - the own cache and its dirty flag are C LOCALS of the generated function,
+    so every activation has its own without any extra machinery;
+  - the published fields of the one callable Structure are shared, so the last
+    executed dirty store wins -- which is what the model says publication
+    means;
+  - there is no post-call reload, so an outer activation keeps its own value;
+  - the dynamic-input, Message and throw propagations are all FIXED POINTS, so
+    they converge over cycles. Had any of them been a single pass, a cycle
+    would have silently under-propagated.
+
+The recursive call passes the SELECTED occurrence: node\node + index for a
+direct self-call, l2_pst for one reached through a path. M.node stays the
+lexical parent; slot 0 stays the shared descriptor.
+
+HOW THE FIXTURE PROVES SEPARATE ACTIVATIONS: each method returns its OWN
+activation's value while the recursion overwrites the shared published field.
+Injecting a post-call reload into the generated L1 -- exactly what a shared
+cache would look like -- makes it exit 81. A fixture that only checked the
+final answer would pass either way.
+
+THREE HISTORICAL EXPECTATIONS THIS RETIRES, in run_l2trans.ps1, which is NOT
+in my boundary: unit_rec (direct), unit_cycle (mutual), unit_cycle32 (a
+32-method cycle). All three assert the refusal. I verified on a throwaway copy
+that retiring exactly those three leaves the historical gate green, then
+deleted the copy. Reporting a conflict with the evidence of its extent beats
+either editing someone else's gate or claiming green.
+
+
+================================================================================
+POINTER LOCALS INSIDE A METHOD BODY: A SEPARATE COMPILE-TIME TABLE
+================================================================================
+
+The entry's local table (l2_loc_*) is the entry activation's namespace. A
+method body cannot share it. Two reasons, and both are about the model rather
+than about convenience:
+
+  - the same spelling names different things in different methods. `scratch`
+    is an unsigned* in one and a void* in another, and neither method can see
+    the other's declaration, so one flat table would have to reject the second
+    one as a duplicate;
+  - recursion needs one storage per activation. A method local is a C local of
+    the generated function, which gives that for free; a shared table would
+    suggest a shared name, and a shared name is exactly the thing recursion
+    must not have.
+
+So method bodies get their own table, l2_ml_*, and the entry's is untouched:
+its array kinds, its slot kinds, its duplicate rule, all unchanged. The two
+tables never merge and never consult each other.
+
+THE TABLE IS SCRATCH. l2_ml_rebuild clears it and collects one method body,
+and it is called immediately before each of the three phases that walk that
+body -- scan, check, emit. No phase inherits what another left behind, so no
+phase can see a name another does not. This is the shape the earlier attempt
+got wrong: one table filled once and read by two phases meant the emitter was
+reading the checker's leftovers, and the entry regressed.
+
+WHAT THE TABLE DOES NOT CLAIM. `@: char`, `@: LmP0Text`, `@: size_t` and
+`@: LmP0IndentStack` in a method body are the 11.2.1 ADDRESS SLOT form, not
+activation locals: the method preamble declares them and l2_slot_find resolves
+reads of them. l2_ml_collect skips anything l2_slot_decl_ty claims, so those
+keep their existing meaning exactly. The first version of this slice did not,
+and the generated method declared `scratch` twice -- once as its slot
+`l2_s1_0` and once as a local -- while the read still resolved to the slot.
+The fixture's second method was rewritten from `@: char` to `@: void` for
+this reason: `@: char` was never in question, it was already a slot.
+
+THE THREE PHASES:
+
+  - scan: a name the body declares is a name IN SCOPE of its own activation,
+    so it is not a free name and must not be inferred as a dynamic input.
+    l2_scan_ident returns 0 for it, next to the formals and the slots. The
+    exemption is method-only for free, because l2_scan_ident returns at the
+    top when mi < 0;
+  - check: for mi >= 0 the declaration is accepted (the table already holds
+    it) and an assignment whose head the table knows is checked as an ordinary
+    assignment. Both are separate branches from the entry's, which keep their
+    mi < 0 gate;
+  - emit: in a method body exactly two shapes are admitted -- the pointer-local
+    declaration whose name the table owns, and an assignment to a name the
+    table owns. Everything else below that guard is entry-only and stays gated
+    on mi < 0: the array local, the array-element assignment, the immutable
+    block, the const local, and the l2_loc_find assignment path.
+
+Reads need no emitter work at all: l2_prep's atom fallback is l2_tok_text, the
+name verbatim, which is what the declaration spells. Only the CHECKER had to
+learn the name, which is where the first run failed -- "unresolved name" on
+`if: scratch != 0`, three lines after a declaration the emitter would have
+been happy to print.
+
+FIXTURE unit_ptr_local_scope.lm2 pins all four cases in one unit: two methods
+declaring the same name at different pointer types, a recursive method with a
+pointer local, and the entry declaring the same name again. The assertions
+check each method body separately -- the span between `fn: l2_mN (` and
+`end: l2_mN` -- so a leak in either direction fails: neither method may
+contain the other's type, and the count of scratch declarations must be
+exactly four, each indented inside its own body, none at column 0.
+
+Gates: run_graph_abi.ps1 122/122 (the new fixture tripwired first, to prove
+its assertion block executes rather than trusting the count). run_l2trans.ps1
+green end to end EXCEPT the three stale "unsupported recursion" negatives
+already reported -- unit_rec, unit_cycle, unit_cycle32 -- which HEAD's own
+translator also translates with exit 0. They are stale against the landed
+recursion support, not a regression from this slice; run_l2trans.ps1 is not
+in my boundary, so they stay for its owner to retire.
+
+
+================================================================================
+FIRST RUNTIME MODULE IN L2: lmx_arena_storage
+================================================================================
+
+The module is two operations over four owner head slots: a preflight that asks
+whether a paired move is legal, and a move that re-asks and then performs it.
+It allocates nothing, owns nothing and decides nothing about lifecycle. That
+is why it goes first: the port is about the SOURCE PATH, not about inventing
+behaviour, and this module has the least behaviour to get wrong.
+
+WHAT L2 WAS MISSING: the four list operations themselves. The module is
+nothing but calls to lmx_arena_blocks_can_move / move_all and
+lmx_owned_ranges_can_move / move_all, and unknown c.* is rejected -- correctly.
+So the smallest frontend support is those four names, admitted by NAME and by
+SHAPE: two owner head slots in, a status out, nothing else. A neighbouring
+real operation of the same lists -- lmx_arena_blocks_remove, say -- is still an
+unknown method, which negative msg_bad_call pins.
+
+No predef was needed. l2src/lmx_message.h already includes the blocks and
+ranges headers, and every generated program includes lmx_message.h, so the
+prototypes are in scope wherever the emitter can put a call. I checked this
+rather than assuming it: a missing generated declaration is how a pointer got
+truncated to int two slices ago, and the symptom landed layers away.
+
+THE STATUS LITERALS. L2 has no define form, so the .lm2 spells 0 and 1 where
+the L1 module spells LMX_ARENA_STORAGE_OK and LMX_ARENA_STORAGE_INVALID. They are
+those defines -- OK is 0 and INVALID is 1 in all three headers -- but the
+source no longer says so, and a comment is not a guarantee. What guarantees it
+is the parity runner, twice over: it drives the module's OWN selftest, which
+spells the names, against the generated implementation -- and it reads the
+three headers and asserts the six defines still are 0 and 1. The selftest
+alone would not catch a header renumbered under a source file that can no
+longer refer to it. I renumbered one and watched the runner say which literal
+had drifted.
+
+PARITY WITHOUT A MODULE EMISSION MODE. The emitter produces closed programs:
+methods are l2_m{i} and the entry builds the unit graph, so there are no
+exported source symbols to link against. Codex settled that observable parity
+through the existing mangled-entry/splice-drive mechanism is the acceptance
+method for this slice, and that a reusable module emission mode is a later
+self-build boundary.
+
+The runner therefore:
+  - builds the same support object set the graph gate links;
+  - runs the existing selftest against the handwritten module. That is the
+    REFERENCE: exit and stdout;
+  - translates l2src/lmx_arena_storage.lm2 with the translator built from THIS
+    checkout, splices the generated entry to publish the two selected
+    callables, and compiles the selftest a second time with its two call sites
+    redirected by -D onto wrappers over l2_m0 and l2_m1;
+  - requires the parity run to match the reference exactly, twice.
+
+ONE THING THAT DOES NOT WORK, AND WHY. The obvious move -- export the real
+symbols from the wrappers and let everything call the generated code --
+deadlocks. Building the unit graph is itself a storage move: lmx_branch_owned,
+lmx_value_owned, lmx_chars_owned and the array modules all call
+lmx_arena_storage_move_all while allocating. So the wrappers would be called
+before the entry had published the callables they select, the construction
+would fail, and the program would exit before printing anything. That is
+exactly what the first version did: exit 1, no output. The graph construction
+keeps the handwritten module; only the selftest's own call sites are
+redirected. The port is what the TEST exercises, not what the runtime
+bootstraps on -- which is the honest scope of this slice anyway.
+
+A redirection that silently did not happen would pass every check and prove
+nothing, so the driven entry counts the calls that actually reached the
+generated methods and the runner pins that count at 31. I also armed two
+tripwires and watched them fire: dropping the ranges preflight call (caught
+statically, by the lowering assertions) and keeping the call but inverting its
+verdict (caught dynamically -- the parity binary crashed where the reference
+exits 0).
+
+ALLOCATION FAILURE: there is none to exercise here. Neither operation
+allocates, which the runner asserts of the generated C rather than taking on
+trust. The allocation-failure behaviour of the storage lists lives in
+lmx_arena_blocks and lmx_owned_ranges, which this slice does not touch.
+
+TWO DIFFERENCES BETWEEN THE GENERATED AND THE HANDWRITTEN MODULE, both from
+the standard method prologue rather than from the port:
+  - a generated method begins with `if: node = 0 / return: 0`, and 0 is OK.
+    The handwritten module has no such guard. It cannot fire here, because the
+    wrapper passes a callable the entry has already checked, but it is a
+    difference in the emitted contract worth recording;
+  - every return is preceded by an escape poll that returns 0 on escape,
+    which is again OK. Same reasoning, same note.
+Neither is mine to change in this slice; both are properties of every method
+the emitter has ever produced.
+
+NOT DONE, DELIBERATELY: the L1 module is untouched and still the one every
+other module links. This slice establishes a verified source path, nothing
+more. lmx_msg_path_storage and lmx_msg_slots wait for review, per the ticket.
+
+
+================================================================================
+SECOND RUNTIME MODULE IN L2: lmx_msg_slots
+================================================================================
+
+Two read-only operations over the runtime's slot list: a count that is the
+owner's cached n, never a traversal, and an enumeration that follows alloc_next
+and nothing else. The four adapter fields it needs -- rt\n, rt\slots,
+m\alloc_next, m\addr -- were the ones approved for the staged adapter and had
+already landed, so this port needed vocabulary rather than mechanism.
+
+WHAT L2 WAS MISSING, four things, each small:
+
+  1. LmxMsgAddr as a RETURN type. It is a typedef of unsigned, so its zero is
+     0U and it shares every "the zero of this return type is unsigned"
+     decision with size_t. Rather than copy fourteen conditions, the two now
+     ask l2_ret_uns(mi), which says yes for both; they part company only where
+     the type itself is printed, in three places.
+  2. A const pointer local of a foreign type: const: @(LmxMsg m), the cursor
+     an enumeration walks with. Const pointee, mutable pointer, exactly as the
+     handwritten module declares it.
+  3. That const local had to become an activation local rather than an entry
+     one, which is the method-local table from the previous slice, extended to
+     collect const declarations as well as pointer ones.
+  4. A const declaration is not a reference. The free-name scan read the TYPE
+     atom of const: @(LmxMsg m) as a name, inferred "LmxMsg" as an untyped
+     dynamic input, and refused the method as an "unresolved name" that names
+     nothing the source wrote. This is the same defect link 5 fixed for
+     pointer-local declarations, in the branch next door. I found it the same
+     way: by printing the offending name's length rather than reasoning about
+     it. Length 6 is LmxMsg, not m.
+
+ONE PLACE THE LOWERING CANNOT SPELL THE TYPE. A call result lands in a
+generated temp, and L1's LOCAL type vocabulary is its own: "LmxMsgAddr: l2_t1"
+is an unknown type name there. The temp is therefore the underlying unsigned.
+That is not a workaround -- it is why the handwritten module spells LmxMsgAddr
+only in a return position too. The gate asserts the unsigned temp, so the
+assertion says what the lowering does rather than what I first assumed it
+would.
+
+A REAL DIFFERENCE FROM THE HANDWRITTEN MODULE, and it is the model, not a
+defect. In L2 a method's ordinary declarations ARE fields of its callable, so
+there is no such thing as a scratch int that lives nowhere. The enumeration
+decrements its index argument, and a write inside an executable body publishes
+into that body's host: the generated method therefore takes a slot and a dirty
+flag for the counter and checkpoints it. The handwritten module keeps the same
+counter in a register. Nothing observable to the caller changes -- the
+selftest's checks on the fixture's own memory and on every returned address
+pass identically -- but the generated version does write its own callable
+Structure while enumerating, and a reader of the two sources should know that
+before concluding they are the same program. Any counter would cost this; the
+alternative is not a cheaper lowering but a different model.
+
+PARITY IS STRONGER HERE THAN FOR STORAGE. Nothing in the runtime calls these
+two while a graph is being built -- the only non-test callers are two
+forwarders in lmx_message_exec.c -- so the wrappers EXPORT THE REAL SYMBOLS
+and the selftest links against lmx_msg_slots_n and lmx_msg_slots_at by name,
+exactly as any other caller would. No -D redirection, no edited test. The
+storage module could not do this: building the unit graph is itself a storage
+move, so its wrappers would have run before the entry published the callables
+they select.
+
+I did not want that to be a belief. The wrappers count their calls AND count
+separately any call arriving before publication; the runner pins 279 calls and
+requires zero early ones. If this module ever acquires the bootstrap problem,
+the runner says so in those words instead of quietly returning zeros.
+
+Tripwire: an off-by-one in the traversal (i >= 0 instead of i > 0), which
+leaves every signature, every field access and every lowering assertion intact
+and changes only the answer. The parity run failed on "allocation order
+independent of address, state and graph", which is the selftest's own words.
+
+ALLOCATION FAILURE: none to exercise. Neither operation allocates, which the
+runner asserts of the generated output rather than taking on trust.
+
+Gates: run_port_msg_slots.ps1 PASS, 278 checks, 0 failures, both runs
+identical. run_port_msg_storage.ps1 still PASS, 77 checks. run_graph_abi.ps1
+124/124 with 41 negatives, the new assertion block tripwired first.
+run_l2trans.ps1 green except the three stale recursion negatives.
+
+
+================================================================================
+THIRD RUNTIME MODULE IN L2: lmx_msg_path_storage
+================================================================================
+
+One function, and the only one of the three that allocates. It grows a PRIVATE
+placement-path buffer the owner holds in two slots: an unsigned** for the
+buffer and an int* for its capacity. The header is explicit that this is never
+graph or arena storage, which is the whole reason it may use realloc at all.
+
+FIVE CONSTRUCTS, all of them decided by Codex rather than guessed by me:
+
+  1. READ AND WRITE THROUGH AN OUT-PARAMETER, with ordinary C pointer
+     semantics. Reading (path_cap[0] >= need) and storing a non-literal
+     (path_cap[0]: cap) already worked; what did not was doing either through
+     an unsigned** owner slot, because l2_index_head admitted only the int,
+     size_t and char out-parameter kinds. An unsigned** owner slot is the same
+     kind of out-parameter, one indirection wider.
+  2. c.realloc, as a foreign door FOR THIS BUFFER ONLY. It is not exposed as a
+     graph-storage operation: it is one admitted name emitted as itself, and
+     negative bad_alloc_door pins that c.malloc next door is still an unknown
+     method.
+  3. c.sizeof of the machine unsigned.
+  4. cast, as an ordinary C-style low-level conversion, with the target type
+     VALIDATED against a closed list: size_t and unsigned*. Negative
+     cast_bad_type pins that a target outside the pair is "unknown cast type",
+     not a hole.
+  5. The chunk size pinned to the header. The parity runner reads
+     lmx_msg_path_storage.h.lm1 and asserts all four defines before it builds
+     anything -- and this one matters more than a status code does, because a
+     status is observable through the selftest and a chunk size is not. I
+     renumbered LMX_MSG_PATH_STORAGE_CHUNK to 8 and watched the runner name the
+     literal that had drifted.
+
+TWO THINGS THE PARSER DECIDES, NOT ME:
+
+  - c.sizeof(unsigned) collapses into a SINGLE ATOM, because "unsigned" is a
+     reserved word; c.sizeof(c.Foo) does not. So the L2 source spells
+     c.sizeof(c.unsigned), which reaches the translator as a call, and the
+     emitted L1 is the bare c.sizeof(unsigned) that L1 itself spells. Both
+     halves are asserted: the L2 spelling must not leak into L1.
+  - -1 is one atom when glued to the minus and two when spaced. l2_num refused
+     any leading minus, so (cast: (size_t) -1) -- the largest size_t, and how
+     the handwritten guard is written -- was not a number. A glued leading
+     minus is part of the literal; l2_digits, and therefore l2_int_fits, is
+     untouched, so nothing that measures an int literal changed.
+
+A CAST IS NOT A REFERENCE. Same defect as link 5 and the const-local one, third
+occurrence: the free-name scan read the word "cast" and the type it names as
+identifiers. A cast scans only its operand now. Three branches of the same
+mistake have now been fixed one at a time; if a fourth declaration form appears
+it will have it too, and that is worth saying out loud rather than fixing
+quietly again.
+
+THE BOOTSTRAP PROBLEM, MEASURED BEFORE WRITING THE RUNNER rather than found as
+a crash: lmx_msg_assign_path calls lmx_msg_path_grow from inside
+lmx_msg_create, so the runtime grows a placement path while creating the very
+Message whose graph the generated callable lives in. Exporting the real symbol
+would call the generated method before the entry published it -- the storage
+module's failure exactly. So the selftest's one call site is redirected by -D
+and the runtime keeps the handwritten module. lmx_msg_slots remains the only
+one of the three that can export its real symbols.
+
+That redirection has a consequence worth naming: the runtime's own path_grow
+during Message creation goes through the selftest's __wrap_realloc, so it would
+shift every absolute allocation count in the test. The drive takes and clears
+the counters immediately before the test and REPORTS what it took, on stderr;
+the runner requires that number to be exactly 1. A reset that silently
+swallowed the count would hide the day the runtime starts growing two.
+
+ALLOCATION FAILURE IS THE POINT HERE, unlike the other two modules. The
+selftest injects failures through --wrap=realloc; the runner requires at least
+eleven wrapped allocations, so a link that lost the wrap fails loudly instead
+of quietly skipping the entire NOMEM half of the test.
+
+FAILURE ATOMICITY is asserted twice over. Statically: the publication of the
+buffer must be the last thing in the method, with no refusal reachable after
+it. Dynamically: I moved the capacity publication ahead of the realloc -- which
+leaves every signature, guard and lowering assertion intact -- and the parity
+run failed on "failed initial allocation leaves empty owner", the selftest's
+own words.
+
+Gates: run_port_msg_path_storage.ps1 PASS, 541 checks, 0 failures, 11 wrapped
+allocations, 0 size-guard checks (this is a 64-bit run; the selftest documents
+why the 32-bit byte-size branch is unreachable here and refuses to pretend
+otherwise). storage 77 and slots 278 still PASS. run_graph_abi.ps1 125/125 with
+43 negatives, the new block tripwired first. run_l2trans.ps1 green except the
+three stale recursion negatives.
+
+
+================================================================================
+MODULES FOUR AND FIVE: SOURCE-COMPLETE, WAITING ON A COMPILER SLICE I DO NOT OWN
+================================================================================
+
+lmx_arena_blocks and lmx_owned_ranges are written in clean L2 and neither
+translates yet. That is the honest state and the runners say so in those words.
+
+WHY THEY ARE NOT LIKE THE FIRST THREE. Storage needed one construct, slots
+four, path_storage five. These two need nine and ten, and most of them live in
+one place: the foreign-type and foreign-field adapter. The first three modules
+read the Message runtime through a staged, read-only adapter with four approved
+fields. These two RELINK it: they are list surgery on LmxArenaBlock and
+LmxOwnedRange, so they need pointer formals and locals of a foreign struct,
+stores into foreign fields, the ADDRESS of a foreign field as a cursor, and a
+pointer-to-pointer local. That is not a bigger port; it is a different kind of
+access to the same C ABI.
+
+MEASURED, AND REPORTED TO CODEX IN 20260913-094000 WITH THE SITE OF EACH:
+
+  present already: else, continue, a discarded call result, calls between the
+  module's own functions, a two-step field chain (rt\slots\addr), an @: void
+  formal.
+
+  missing, for blocks:  a single-pointer formal of a foreign struct; break;
+  c.free; a store into a foreign field; the address of a foreign field; a
+  pointer-to-pointer local; a pointer local of a foreign struct type; the field
+  names next/base/dispose; a function-pointer local with an indirect call.
+
+  missing, additionally for owned_ranges: a uintptr_t cast target; the modulo
+  operator; a foreign-struct pointer RETURN type. It needs no break, no c.free
+  and no function pointer -- it has no disposer and calls no allocator at all.
+
+THE ONE THAT IS A LANGUAGE SURFACE, NOT A LOWERING: a function-pointer local
+and an indirect call through it. lmx_arena_blocks_dispose_all reads a disposer
+out of a node and calls it; that disposer is the module's extension point and
+its ABI. Every other item on the list is a missing spelling for something L2
+already means. I said so to Codex rather than growing the surface quietly out
+of a port.
+
+WHAT I DID NOT DO. I implemented break and c.free, ran the graph gate green at
+125/125, and then WITHDREW both when Codex answered that his open compiler
+slice already touches c.free, foreign aggregate pointer types, foreign field
+stores, indexed foreign stores and pointer locals, and that a cherry-pick would
+still combine divergent global compiler tables. The work was cheap and the
+merge would not have been. l2trans.lm1 on this branch is untouched by this
+ticket.
+
+THE RUNNERS HAVE TWO VERDICTS, and this is the part worth keeping.
+
+  PENDING -- the L1 oracle passes AND l2trans rejects the .lm2 at exactly the
+             pinned construct.
+  PASS    -- l2trans accepts it and the generated implementation agrees with
+             the oracle on both runs.
+
+The pinned rejection makes the runner fail in BOTH directions. It fails if the
+oracle breaks. It fails if the rejection moves to a different construct,
+because then the remaining-work list is wrong. And it fails if l2trans starts
+ACCEPTING the source, because then the runner is lying by saying PENDING -- its
+message in that case is an instruction to enable the parity half and delete the
+pin. A pending state that cannot notice its own end is just a disabled test.
+
+I proved the second of those rather than assuming it: making the first function
+of owned_ranges acceptable moved the rejection from line 20 to line 28, and the
+runner refused with "the pending rejection moved: expected ... at line 20, got
+'unknown foreign type' at line 28".
+
+WHAT THE PARITY HALF WILL NEED, measured now so it is not rediscovered later:
+
+  - blocks has the BOOTSTRAP PROBLEM. Every arena allocation calls
+    lmx_arena_storage_move_all (lmx_branch_owned.lm1:61, and the same line in
+    lmx_value_owned, lmx_chars_owned and both array modules), which calls
+    lmx_arena_blocks_can_move and lmx_arena_blocks_move_all. So its generated
+    methods would be called while the unit graph that holds them is still being
+    built. Redirect the selftest's call sites; do not export real symbols. The
+    runner's header says so where whoever enables it will read it.
+  - blocks wraps free and counts both default disposal and the custom disposer
+    (oracle: 143 checks, 147 frees, 2 callbacks), so the drive must take and
+    REPORT the counters graph construction spends, as path_storage does.
+  - owned_ranges allocates nothing and frees nothing, so it has no
+    allocation-failure path of its own and needs no wrap. Its oracle is 439
+    checks. Whether it has the bootstrap problem is not yet measured; I will
+    measure it when the parity half can run rather than guess now.
+
+Oracles, today: blocks 143 checks 0 failures 147 frees 2 callbacks;
+owned_ranges 439 checks 0 failures. run_graph_abi.ps1 125/125 with 43
+negatives, unchanged, because no compiler section was touched.
+
+================================================================================
+MODULES FOUR AND FIVE, DONE: WHAT THE LIBRARY UNIT CHANGED, AND ONE AMBIGUITY
+================================================================================
+
+All five runtime modules now have clean-L2 sources with parity against their L1
+oracles. The last two arrived after Codex's compiler slice (7d7ec87c), and the
+slice changed the shape of the work rather than just unblocking it.
+
+LIBRARY EMISSION REPLACED THE SPLICE. A .lm2 with no entry is a library unit:
+module-unique internals plus public wrappers carrying the source signatures. The
+first three runners had to splice the generated entry, publish selected
+callables into file-scope pointers and hand-write wrappers; these two do none of
+that. That was the boundary I had asked about, and it is gone.
+
+WHAT IT DID NOT SOLVE, AND WHY. A library unit cannot take the exported ABI
+names of a module the runtime calls while allocating. l2_library_open builds the
+unit's graph on first use, allocating; every arena allocation calls
+lmx_arena_storage_move_all, which calls lmx_arena_blocks_can_move and
+lmx_owned_ranges_can_move. So those two units name their operations blocks_*
+and ranges_*, the selftests are redirected onto those names, and the runtime
+keeps the handwritten modules -- which is also what lets l2_library_open work at
+all. Measured for all five now: only lmx_msg_slots is free of it.
+
+ONE REAL AMBIGUITY, and the reason it did not become a grammar extension.
+"d: value" and "d(value)" are the SAME parse tree: a frame with a head and a
+body. For a method the name registry decides which it is. For a
+function-pointer local there is no registry, so the language cannot express
+both spellings for one name -- and lmx_arena_blocks needs both, because it reads
+a disposer out of a node and then calls it.
+
+I did not extend the grammar. The disposer is declared WITH its value, the form
+the language already has for pointer locals, and the head then only ever
+appears as a call. Before that the emitter read the call as an assignment and
+produced "disposer: item\baseitem\n" -- two operands glued together, which is
+not even the wrong operation.
+
+Worth stating plainly: this is the first thing in five modules that was a
+LANGUAGE surface rather than a missing spelling. Everything else on the list --
+casts over field reads, modulo, an address prefix, the address of a method
+local, the adapter types in a public signature -- was L2 already meaning
+something it could not yet say.
+
+FOURTH OCCURRENCE OF ONE DEFECT. A declaration is a TYPE and a name, and
+neither is a reference. The free-name scan has now read the type of a pointer
+local (bc1d2fa0), a const local (cae0097e), a cast (f5a399f9) and a
+function-pointer local as identifiers, each time refusing the whole method as
+an "unresolved name" that names nothing the source wrote. Four branches, four
+fixes, one rule. A fifth declaration form will have it too.
+
+A GAP WITH NO DIAGNOSTIC, which cost more than the gap. A library unit whose
+formal was @@: LmxOwnedRange failed with exit 1 and no output at all, because
+l2_emit_public_sig had no case for the four staged adapter types. It now
+handles them and SAYS which type it cannot spell if another appears. A silent
+return is a worse defect than a missing case: the missing case takes minutes,
+the silence took an hour and a bisect.
+
+AND ONE CORRECTION TO MY OWN TOOLING: a probe that reported "translates" by
+checking whether stderr was empty, while the exit code was 1. It told me
+owned_ranges was done when it was not. Check the exit code, not the noise.
+
+Evidence: blocks 143 checks, 0 failures, 147 frees, 2 disposer callbacks;
+ranges 439 checks, 0 failures; both agree with their oracles on two runs.
+run_graph_abi.ps1 134/134 with 41 negatives. run_l2trans.ps1 "l2trans gen2 ok"
+end to end -- and the three stale recursion negatives that used to stop it are
+gone, so the shared gate finally runs clean with nothing skipped.
+
+================================================================================
+2026-09-13, integration: a prefix raw load is one actual in argument position
+================================================================================
+
+Found while bringing the five runtime-module parity runners back to green after
+the integration merge. Codex's 8dc3fae5 restored the strict pointer surface, so
+both list modules now pass an owner slot as a prefix raw load:
+
+    if: ranges_valid(\head) = 0          lmx_owned_ranges.lm2:76
+    if: blocks_tail(\head, @ tail) != 0  lmx_arena_blocks.lm2:64
+
+Both were rejected with "incompatible entry signature". The cause is one line
+of counting, not a type rule: l2_expr_span already knew that an ADDRESS prefix
+belongs to the expression it addresses ("@ item\next" is one actual), but it had
+no such rule for the raw LOAD prefix. So "\head" counted as two actuals, and
+l2_check_primary's arity comparison against l2_m_arity rejected a well-formed
+call. l2_prep, which emits the arguments, uses the same helper, so both the
+check and the emission were wrong in the same way and are fixed together.
+
+Fix: the same shape as the address-prefix rule, immediately after it.
+Evidence: fixture l2src/tests/unit_prefix_load_arg.lm2 (registered), plus
+run_port_owned_ranges 439/0 and run_port_msg_blocks 143/0 restored.
+
+Two things this uncovered, recorded rather than tidied away:
+
+1. unit_ptr_grow was ORPHANED by the merge. Its assertion block survived in
+   run_graph_abi.ps1 but its registration line did not, so from the merge until
+   now the fixture was asserted and never run -- the gate reported 136/136 with
+   one of its cases dead. Registration restored; the count is now 138 (that
+   case plus the new one). This is the "a green test can hide a dead case"
+   failure mode, and the merge is exactly where it got in: the conflict hunk had
+   one side adding unit_define/unit_void_fn and the other adding unit_ptr_grow,
+   and taking one side wholesale dropped the other's line. When a conflict is
+   two ADDITIONS to the same list, the resolution is the union, always.
+
+2. A new silent gap, reproduced and saved as
+   l2src/tests/known_gap_prefix_load_live_chain.lm2 (not registered anywhere):
+   when main drives a live call edge into a method that passes a prefix raw
+   load onward, l2trans exits 1 with NOTHING on stderr. Every smaller variant
+   translates: the same chain with an empty main, main calling a method that
+   passes nothing on, main calling the leaf directly with a plain pointer. The
+   silence is the important half -- a bare `return: 1` inside the translator is
+   its own defect class and has cost a day before.
+
+Also fixed, same discipline: three assertions in the port runners pinned ONE
+spelling of an owner slot (`x[0]`) and failed when the emitter produced the
+strict prefix form (`\x`) for identical behaviour. They now accept either and
+still fail on anything else, because the property being asserted is "through
+the slot, not through a copy" and "detach before the first disposal", never the
+syntax.
+
+Translator note: the integrated tree's generated L1 needs an L1 newer than the
+65D5 pin -- addresses of depth three and positional backslash. The graph gate
+and the port runners were run with the pin building l2trans and the merged
+tree's own gen2 translating the generated L1.
+
+================================================================================
+2026-09-13: the generated unit has to resolve TWO roots, so the runtime root is
+no longer hardcoded
+================================================================================
+
+Five mixa modules translate through l2trans cleanly and then die in the L1
+translator with "cannot read import l2src/lmx_array_ref_owned.h.lm1". The
+generated unit mixes two roots and no single working directory resolves both:
+
+    predef: "l2src/lmx_array_ref_owned.h.lm1"      <- relative to stg/l1_baseline
+    predef: "mixa_manager/mixa_app_panel_l2.h.lm1" <- relative to the repo root
+
+The second path is the caller's own, copied through from the .lm2. The first was
+hardcoded in ten places in the emitter, which silently assumed every consumer
+translates from stg/l1_baseline. The graph gate does; the manager does not.
+
+Two halves, and both were needed:
+
+1. l2_rt_root, read once in main from L2_RUNTIME_ROOT, default "l2src/". The ten
+   emission sites now print it. Unset, the output is byte-identical to before.
+2. The handwritten .lm1 and .h.lm1 under l2src/ now predef each other by BARE
+   name. L1 resolves a bare predef relative to the importing SOURCE, so the
+   header chain resolves wherever it is translated from; the prefixed form only
+   resolved from one directory. Without this the override moved the failure one
+   level deeper instead of fixing it.
+
+What did NOT change, and the reason is worth keeping: the .lm2 sources keep
+`predef: "l2src/..."`. l2trans resolves a predef relative to the CURRENT
+DIRECTORY, not to the source file, so a bare name there fails to open and the
+type comes back unknown -- `lmx_owned_ranges.lm2:35:18: unknown foreign type` is
+what that looks like, which is a long way from the cause. The two translators
+resolve predefs by different rules and that asymmetry should either be closed
+deliberately or written into the L1/L2 specs; it is not closed here.
+
+Verified: graph ABI 138/138 with 41 negatives, l2 lmx gen2 ok, all five port
+runners PASS (77/278/541/439/143), and mixa_app_panel.lm2 translated with
+L2_RUNTIME_ROOT=stg/l1_baseline/l2src/ produces an L1 unit that the L1
+translator compiles from the repository root -- 149 KB of C, no import error.
+The manager runners still need one line each to set the variable; that is
+Claude's side and he has the ticket.
+
+================================================================================
+2026-09-14: a C typedef reached through a predef'd header is a known type
+================================================================================
+
+Eight manager modules stopped in the translator with "unknown foreign type", and
+every caret sat on a formal whose type is a manager handle: MixaPump, MixaProcess,
+MixaBackendVTable, MixaFile, MixaFm, MixaSelection, MixaCmdDispatch -- and
+WIN32_FIND_DATAW in dir_win32, which is a different case (below).
+
+The cause was reachability, not recognition. Measured with one function taking
+`@: MixaPump`, translated twice by the same l2trans:
+
+    include: "mixa_manager/mixa_pump.h" at the top of the unit   -> exit 0
+    the same include inside a predef'd .h.lm1                    -> unknown foreign type
+
+The C fallback, l2_include_has_simple_typedef, parses both shapes the manager uses
+-- `typedef struct X X;` and `typedef struct X { ...(*fn)(...)... } X;` -- but it
+only ever scanned l2_inc, and l2_inc is filled by l2_take_include from the unit's
+OWN include frames. The predef walk, l2_predef_file_has_type, followed a header's
+predef edges and its generated foo.lm1.h edges, and silently ignored a plain C
+header included one level down. Every manager module reaches its handle types
+exactly that way, through its _l2.h.lm1.
+
+Fix, kept deliberately small:
+
+- The scanner body is now l2_list_has_simple_typedef(name, list, count); the
+  only change inside it is l2_inc -> list and l2_inc_n -> count (eight and one
+  uses, and a check that none survives).
+- l2_include_has_simple_typedef keeps its name and signature as a one-line
+  wrapper over the globals, so its three existing callers and its return value
+  of 8 for an unsigned-char typedef are unchanged.
+- The predef walk's include branch now asks the scanner about a quoted header
+  that is neither a generated .lm1.h nor a <system> header, with a one-element
+  list.
+
+Fixture: l2src/tests/library_include_typedef_transitive.lm2, predefing a .h.lm1
+that includes l2src/tests/struct_typedef.h, which carries both shapes. Registered
+in run_l2trans.ps1 next to library_include_typedef, asserting both types survive
+into the emitted L1. It fails on the unfixed translator with
+"library_include_typedef_transitive.lm2:8:29: unknown foreign type" -- run before
+the fix, not assumed.
+
+Not covered, on purpose: WIN32_FIND_DATAW. It comes from <windows.h>; the scanner
+reads only quoted headers, and parsing system headers is not a direction to take
+by accident.
+
+MEASURED RESULTS
+
+run_graph_abi: PASS, fixtures 138/138, selftests 63/75/21/261 -- no regression.
+run_l2trans: exit 0, "l2trans gen2 ok", including the new transitive fixture.
+
+The eight manager runners that stopped at "unknown foreign type", before -> after:
+
+    fm_copy           98:38  ->  past l2trans; stops at the import-root harness layer
+    remove_confirm     4:89  ->  5:5    unsupported own array declaration
+    selection_walk    61:34  ->  62:5   unsupported own array declaration
+    cmdline_dispatch  48:84  ->  130:9  unsupported body
+    app_controller    74:58  ->  532:1  still unknown foreign type, 458 lines on
+    pump               7:21  ->  24:40  still unknown foreign type, first formal now resolves
+    process_win32    105:25  ->  105:25 unchanged
+    dir_win32         54:34  ->  54:34  unchanged, WIN32_FIND_DATAW as predicted
+
+Six of eight moved; four left this diagnostic entirely.
+
+The prediction for process_win32 was wrong, and why is the next layer: MixaProcess
+is declared in mixa_process.h, which that module reaches only through a C #include
+INSIDE mixa_process_win32.h. pump is the same: mixa_pump.h #includes
+mixa_manager/mixa_backend.h, where MixaBackend lives. The scanner reads the header
+a predef'd file names; it does not yet follow that header's own #include lines.
+
+================================================================================
+2026-09-14: a C typedef behind a C #include inside a C header is a known type
+================================================================================
+
+The previous change made the predef walk consult a plain C header that a
+predef'd .h.lm1 includes. Two modules did not move, and the reason was one level
+further: the typedef lived in a header that header only #includes.
+
+    mixa_process_win32_l2.h.lm1 -> mixa_process_win32.h -> #include "mixa_manager/mixa_process.h"
+                                                            typedef struct MixaProcess MixaProcess;
+    mixa_pump_l2.h.lm1          -> mixa_pump.h          -> #include "mixa_manager/mixa_backend.h"
+                                                            (MixaBackend, pump's second formal)
+
+The scanner reads the file it is given; it does not follow that file's own
+#include lines. So the walk does now, for quoted includes only:
+
+- l2_c_header_chain_has_typedef(name, quoted) runs one query: it strips the
+  quotes and walks from that header.
+- l2_c_header_walk(name, path) asks the existing scanner about this one file,
+  and failing that reads it for lines of the form  #  include "X"  (spaces and
+  tabs allowed around '#') and walks each X.
+- Termination is a per-query SEEN SET of paths, not a depth limit -- the project
+  does not take semantic caps, and C headers routinely include each other under
+  guards. l2_hdr_seen_add grows by doubling; an allocation failure reports the
+  path as seen, which ends the walk instead of looping.
+- The seen set, its strings and the array itself are all released before the
+  query returns.
+
+<system> headers are still not read; <windows.h> types such as WIN32_FIND_DATAW
+remain out of scope by design.
+
+Fixture: l2src/tests/library_include_typedef_nested.lm2, whose predef'd .h.lm1
+includes struct_typedef_outer.h, which declares L2TestOuter and #includes
+struct_typedef_inner.h, which declares L2TestInner and #includes the outer header
+back. Registered in run_l2trans.ps1. On the translator carrying only the previous
+change it failed exactly on the SECOND formal, 14:28 -- the first formal already
+resolved in the same run, so the run proved both the old level and the missing
+one.
+
+Measured on the fixture set with L2_ALLOC_LOG: nested, transitive and direct all
+exit 0 with live=0 (the free=n+2 offset is present on the untouched direct
+fixture too, so it predates this change). The guarded cycle terminates. No new
+compiler warnings: both builds emit the same twelve.
+
+MEASURED RESULTS
+
+run_graph_abi: PASS, fixtures 138/138, selftests 63/75/21/261.
+run_l2trans: exit 0, "l2trans gen2 ok", with the nested fixture registered.
+
+The three manager runners still at "unknown foreign type" after the previous
+change, before -> after:
+
+    process_win32  105:25 -> 308:5  unsupported own array declaration
+    pump            24:40 -> 12:9   unknown method
+    app_controller  532:1 -> 532:1  unchanged
+
+Both predicted modules left the diagnostic. Of the original eight, six have now
+left it entirely; app_controller and dir_win32 remain.
+
+pump's new stop is the same reachability gap on the FUNCTION side:
+mixa_event_fifo_init is declared in mixa_event_fifo.h, reached only through a
+C #include inside mixa_pump.h. l2_predef_file_has_function already consults a
+header a predef'd .h.lm1 includes (via l2_quoted_has_function), but not that
+header's own #includes. Next change.
+
+app_controller is NOT a reachability gap. MixaTextRect is reachable two ways and
+declared as `typedef struct MixaTextRect {...} MixaTextRect;`. The error is raised
+against the whole fn frame in l2_collect_method's const-pointer return branch,
+which admits exactly one base, char (return code 35), and rejects every other
+base without consulting any lookup. `const: @(MixaTextRect)` fails by shape.
+That is the remainder of the const-pointer-return barrier, closed for char only;
+a separate design question, not addressed here.
+
+================================================================================
+2026-09-14: the same header walk for C function declarations
+================================================================================
+
+After the typedef walk, pump moved from "unknown foreign type" to
+`mixa_pump.lm2:12:9: unknown method` on `mixa_event_fifo_init(@ pump\inbox)`.
+That function is declared in mixa_event_fifo.h, which mixa_pump.h reaches only
+through its own #include. Function lookup had the same shape of gap as types:
+l2_predef_file_has_function already asked l2_quoted_has_function about a header
+a predef'd .h.lm1 includes -- one level, covered -- and never followed that
+header's #include lines.
+
+No second walk. The existing one takes a flag:
+
+- l2_c_header_walk(name, path, want_fn) asks l2_quoted_has_function about each
+  file when want_fn is set, and the typedef scanner otherwise; the seen set, the
+  #include parsing and the release are unchanged.
+- l2_c_header_chain_has(name, quoted, want_fn) is the query;
+  l2_c_header_chain_has_typedef keeps its name and its single call site as a
+  one-line wrapper, and l2_c_header_chain_has_function is the new wrapper.
+- l2_predef_file_has_function's include branch calls the function wrapper where
+  it called l2_quoted_has_function. A <system> entry fails to open exactly as it
+  did, so every result that was 1 or 0 before is the same except where a
+  declaration sits behind a #include.
+
+Fixture library_include_fn_nested.lm2 calls l2_test_outer_fn, declared in the
+header the .h.lm1 includes, then l2_test_inner_fn, declared behind that header's
+#include; the two headers include each other under guards. Registered in
+run_l2trans.ps1. Before this change it failed with `unknown method`, detail
+`frame=l2_test_inner_fn`, while a copy calling only the outer function passed --
+so the same translator proved the old level and the missing one.
+
+The patch was dry-run against a scratch copy before touching the real file. Its
+first draft had two definition anchors that also matched the indented prototype
+lines, caught by counting every anchor before any write; the applied version
+anchors definitions on a preceding newline.
+
+MEASURED RESULTS
+
+Fixtures, same build: library_include_fn_nested exit 0 (was "unknown method" on
+the inner call); the nested, transitive and direct typedef fixtures still exit 0;
+live=0 under L2_ALLOC_LOG for all four. Compiler warnings unchanged at twelve.
+
+run_graph_abi: PASS, fixtures 138/138, selftests 63/75/21/261.
+run_l2trans: exit 0, "l2trans gen2 ok", with library_include_fn_nested registered.
+
+pump: 12:9 "unknown method" -> past the translator. It now stops at the harness
+import-root layer ("cannot read import l2src/lmx_array_ref_owned.h.lm1"), the
+same place fm_copy stopped: its runner lacks L2_RUNTIME_ROOT, the generated
+runtime header tree and the runtime objects on the L2 link.
+
+Regression check, because this change sits in the lookup every external call in
+a manager module goes through: fm_remove, event_fifo, cmdline, buttons and
+app_panel were re-run on this build and all five still report PASS.
+
+Later the same night, with Claude's shared runner helper (790f0404) supplying the
+harness pieces, pump went on to PASS real oracle-versus-L2 parity -- so the
+function walk is exercised end to end by a real module, not only by the fixture.
+
+
+OWN ARRAY COUNT NAMED BY A define:, 2026-09-13
+
+Every manager module sizes its path and message buffers with a header constant:
+`[]: char msg MIXA_REMOVE_CONFIRM_MSG_MAX`, `define: MIXA_REMOVE_CONFIRM_MSG_MAX 256`
+in the predef'd .h.lm1. l2_own_array_count accepted only a literal count, so all
+four modules that do this (remove_confirm, selection_walk, copy, file_manager)
+stopped at `unsupported own array declaration`. Every real value is plain digits.
+
+What changed
+- l2_own_array_count: a literal count is returned as before; any other atom goes
+  to l2_define_count. A name nothing defines still returns 0 and gets the same
+  refusal as before.
+- l2_define_count(name): first the unit's own define: table (l2_def), whose nodes
+  belong to the unit document the [] statement itself lives in, so the value atom
+  is returned directly; then each of the unit's predef targets (l2_pd) through
+  l2_predef_file_define.
+- l2_predef_file_define(name, quoted): parses the header, looks for a top-level
+  `define: NAME VALUE` with exactly two atoms, and follows single-file `predef:`
+  as l2_predef_file_has_type does. Only a value l2_array_count_is accepts
+  resolves; a define whose value is another name stays refused.
+- The header document is destroyed before the count is used, so a found value is
+  copied by l2_cnt_keep into an owned table (l2_cnt, l2_cnt_n, l2_cnt_cap), one
+  copy per distinct text because l2_own_array_count runs several times per
+  statement. l2_cnt_free runs in l2_release only, not in the per-unit reset:
+  counts are read while methods are emitted.
+- The resolved literal is what reaches lmx_array_new_owned and the bounds check,
+  so `buf[8]` against a count of 8 is refused exactly as against a literal 8.
+- Ordering needs nothing new: l2_translate_unit's first loop takes predef:,
+  define: and include:, and own declarations are collected after it.
+
+Fixtures
+- entry_own_array_define.lm2 with own_array_count_define.h.lm1: one count from the
+  predef'd header (8), one from the unit (4); writes and reads each last valid
+  index. Registered as Invoke-Entry: the L1 must contain
+  `LMX_TYPE_ARRAY_OF_CHAR, 8U` and `LMX_TYPE_ARRAY_OF_CHAR, 4U` (both taken from
+  the real generated L1 before being written as needles), and the exe exits 0.
+  The header's .lm1.h is generated first, as unit_foreign_type's is.
+- own_array_define_oob.lm2: `buf[8]` against the header count 8. Registered as
+  Invoke-Negative with `own array index requires an in-bounds primitive literal`.
+- Tripwire: on the translator before this change both failed, the positive at
+  11:5 and the negative at 8:5, each with `unsupported own array declaration`;
+  neither needle could match.
+- Adding an Invoke-Entry line moves run_l2trans's historical input pin from 124 to
+  125. Recorded in L2_MESSAGE_ROOT.txt, with the one-case catalog check.
+
+Patch procedure
+Written through the Write tool with @B placeholders for the field-follow
+backslash; dry-run on a scratch copy first. It asserts each anchor is unique, and
+that every callee is either prototyped or defined above the insertion point
+(l2_array_count_is is defined later, so it has to be prototyped). A bash heredoc
+version of the same script never ran: bash rejected the heredoc.
+
+MEASURED RESULTS
+
+Same build: entry_own_array_define exit 0; own_array_define_oob exit 1 at 9:5
+with the bounds diagnostic; library_include_fn_nested, _typedef_nested and
+_typedef_transitive still exit 0; live=0 under L2_ALLOC_LOG for all five.
+Compiler warnings unchanged at twelve.
+
+run_graph_abi: PASS, fixtures 138/138, selftests 63/75/21/261.
+run_l2trans: exit 0, "l2trans gen2 ok", with both fixtures and the 125-case pin.
+Two earlier full runs failed for harness reasons and are not results: an absolute
+-OutputDirectory breaks the runner's Join-Path (Get-Location) reads (line 243),
+and the first registration lacked the generated own_array_count_define.lm1.h.
+
+Manager modules, each runner rebuilding l2trans from this source:
+- remove_confirm: 5:5 own array -> 91:13 `unknown field path root`
+- selection_walk: 62:5 own array -> 81:1 `incompatible entry signature`
+- copy: own array -> 192:23 `incompatible entry signature`
+- file_manager: own array -> 16:9 `unknown method`
+Each is a new first stop, not yet diagnosed. fm_copy, pump, fm_remove, event_fifo,
+cmdline, buttons and app_panel still report PASS.
+
+
+FUNCTION-POINTER LOCAL: COMPACT IS A CALL, COLON IS AN ASSIGNMENT, 2026-09-13
+
+mixa_file_manager reaches its allocator as
+
+    MixaFmAllocFn: f
+    f: av\alloc
+    ...
+    return: f(n)
+
+It stopped at 16:9 `unknown method`. Minimal repros, run through l2trans:
+- the call inside an expression failed wherever the local came from;
+- the same call as a statement passed;
+- the split assignment `f: av\alloc` translated with exit 0, and was emitted as
+  `f(l2_p0_0\alloc)`: a call through a pointer that was never set. That is a
+  silent miscompile, not a refusal.
+
+The rule b0fd2276 recorded ("`d: value` and `d(value)` are the SAME tree") holds
+for the frame kind, but not for the flags. The parser marks `head(` with
+LM_P0_FRAME_COMPACT (parser.lm1: `node\as\frame\flags: c.LM_P0_FRAME_COMPACT`),
+and l2_head_is_call already decides `p\fn(...)` against `p\field: value` on that
+flag. A function-pointer local (l2_ml type 40) now follows the same rule:
+- statement check and emission: the call path is taken only with COMPACT, so a
+  colon statement reaches the ordinary local-assignment path and is emitted as
+  `f: l2_p0_0\alloc`;
+- expression check and emission: a COMPACT call through a type-40 local is
+  admitted through the l2_emit_ccall door, the one a C function uses. The head is
+  written as the source name, which method locals keep.
+Declaring with a value (`MixaFmAllocFn: f av\alloc`) still works exactly as
+before; lmx_arena_blocks' comment calling the split form inexpressible is now
+out of date, but that file is not changed here.
+
+Fixture library_fnptr_local_forms.lm2 with fnptr_local_forms.h.lm1 (the
+file_manager shape, without depending on mixa_manager). Registered through
+Invoke-LibraryEmit. Needles, taken from the real output: `f: l2_p0_0\alloc`
+present, `f(l2_p0_0\alloc)` absent, `return: f(l2_p0_1)` present. On the
+translator before this change it failed at 13:9 `unknown method`, frame=f.
+
+PUBLIC SIGNATURE SPELLS @@: LmxMsgCopy (TYPE 31), 2026-09-13
+
+Reported by the runtime-L2 port of lmx_msg_mail_chain with a minimal repro: a
+library formal `@@: LmxMsgCopy` failed with "a library signature cannot spell
+formal type 31", while `@: LmxMsgCopy` and `const: @(LmxMsgCopy)` translated.
+The method signature and the adapter table (5255) spelled 31; l2_emit_public_sig
+had neither the spelling nor 31 in its admitted list. Both added, in the same
+form as the other `@@:` pointer formals (no closing parenthesis).
+
+Fixture library_msgcopy_pp_formal.lm2, predef'ing l2src/lmx_msg_mail_chain.h.lm1.
+Needle: `fn: fx_pp (@@: LmxMsgCopy head) int`. On the translator before this change it
+failed with the type-31 message; after it, exit 0 and live=0.
+
+Neither fixture is an Invoke-Entry/Leaf line, so the historical input pin stays
+at 125.
+
+MEASURED RESULTS (both changes, same build)
+
+run_l2trans: exit 0, "l2trans gen2 ok", both fixtures registered; historical input
+pin recomputed, still 125 / B9789EC6...
+run_graph_abi: PASS, fixtures 138/138. Compiler warnings unchanged at twelve.
+The four fnptr repros: split assignment emitted `f: l2_p0_0\alloc`; the statement
+call and `return: f(l2_p0_1)` emitted as calls; declare-with-value unchanged.
+Manager modules: fm_copy, pump, fm_remove, event_fifo, cmdline, buttons, app_panel
+still PASS. file_manager left 16:9 `unknown method`; it now stops at the harness
+import root (`cannot read import l2src/lmx_array_owned.h.lm1`), its runner's gap.
+remove_confirm unchanged at 91:13 (the unit-field field write, next).
+
+run_port_msg_blocks is red on this tree, and not because of these changes.
+lmx_arena_blocks.lm2 translates to byte-identical L1 on every l2trans build of the
+night (89f74224's source, 648e2d13's, fnptr only, fnptr plus type 31), and that L1
+also matches the last green run's generated.lm1 (18:55, 53908EC87F5B). The
+generated C differs (29520 -> 29490 bytes), and so does every runtime C file of
+that runner. Its L1 translator defaults to stg/l1_baseline/build/l1trans/gen2,
+which since 20:49 holds the 65D5 pin copy (provisioned for the mixa runners),
+where the green run used a current-source L1. The emitted failure is a
+module-internal call:
+`l2_u..._m0(lmx_branch_struct_known(node->node, 0U)->l2_p1_0, &tail)`.
+Run with the candidate L1 (stg gen3, 722AC86E...) as -TranslatorPath: PASS, 143
+checks, 0 failures, 147 frees, 2 disposer callbacks, both runs agree; its
+generated.c is byte-identical to the green 18:55 run (43A503F7C6C9). So the 65D5
+pin miscompiles that module-internal call and the current-source L1 does not.
+That is a runtime module the pin cannot build correctly, and a concrete reason to
+promote the pin, not a defect in l2trans.
+
+
+c.sizeof(@: void) AND A TRANSLATOR THAT NEVER FAILS SILENTLY, 2026-09-14
+
+Reported by the runtime-L2 port of lmx_graph_copy_owned: `b: cap * c.sizeof(@: void)`
+and `c.malloc(cap * c.sizeof(@: void))` exited 1 with no diagnostic at all.
+
+How it was found. A missing output file proves nothing: l2trans writes through a
+temporary and publishes only on success, so the first guess ("fails before
+emission") came from a probe that could not tell. A -g -O0 build of the same
+l2trans.c was run under gdb with a breakpoint on each of 108 check/emit/scan
+functions, logging entries only. (`finish` inside breakpoint commands swallows the
+nested hits, and `rbreak` with that pattern set none, so both were dropped.) The
+last entries before exit were
+l2_eval_fields -> l2_emit_fields -> l2_emit_ccall -> l2_own_index_tail, and
+l2_error was never entered.
+
+Three causes, all needed for the silence:
+- l2_quoted_has_function decides "declared C function" by text: the name,
+  word-bounded, followed by `(`. For `c.sizeof` it strips `c.` and finds
+  `sizeof(` in l2src/lmx.h, which the unit's predef header includes. A C keyword
+  became a header function.
+- Emission tested the C-call door before its own `c.sizeof` branch; checking has
+  the branch first. So the check passed, and emission sent the call to
+  l2_emit_ccall, which gives up on the type frame `@: void` without a message.
+- Without that header, the same line fails loudly but still wrongly:
+  l2_scan_node walked into the argument and registered `void` as a free name
+  ("unresolved dynamic=void").
+
+Fixes:
+- l2_quoted_has_function returns 0 for sizeof, defined, _Alignof, return, if,
+  while, for, switch.
+- The C-call door in expression emission excludes `c.sizeof`.
+- l2_scan_node returns 0 for a `c.sizeof` frame, as it already ignores a cast's
+  type.
+- A diagnostic net: l2_error counts what it prints (l2_diag_n), and main reports
+  a nonzero result that printed nothing:
+  `l2trans error: <path>: translation failed with no located diagnostic`.
+
+The net went in first, alone, as its own tripwire. On that build the old silent
+case printed the new line; a located failure (own_array_define_oob) got no extra
+line; a success printed nothing. Paths that report with a bare fprintf, not
+l2_error (for example the library-signature spelling message), also get the
+line; it says "no located diagnostic", which is true for them.
+
+Not a workaround: the atom form `c.sizeof(void)` translates to C `sizeof(void)`,
+which is 1 under GCC, not a pointer size.
+
+Fixture library_sizeof_ptr_forms.lm2, predef'ing the header that triggered the
+false match. On the net-only build it fails with the net's line; on the new build
+exit 0, live=0. Its L1 has `l2_q0: l2_p0_0 * c.sizeof(@: void)` and
+`c.malloc(l2_p1_0 * c.sizeof(@: void))`. Through the pinned L1 the C has exactly
+two `sizeof(void *)` and no `sizeof(void)`. The runner asserts all of that. The six
+local repros (in an assignment, either side of `*`, inside a call argument, with
+and without the header) all translate.
+
+MEASURED RESULTS (pin 722AC86E, same worktree)
+run_l2trans: exit 0 with the fixture registered; run_graph_abi 138/138;
+run_port_msg_blocks PASS 143/0; compiler warnings unchanged at twelve;
+fm_copy, pump, fm_remove, event_fifo, cmdline, buttons, app_panel, help PASS.
+
+
+BY-VALUE LOCAL OF A HEADER STRUCT, 2026-09-14
+
+lmx_graph_copy_owned keeps its map and work list on the C stack, in the same shape
+as its oracle:
+
+    LmxCopyMap: map_storage
+    LmxCopyStack: todo_storage
+    ...
+    map: @ map_storage
+
+It stopped at 481:5 with "unsupported body, frame=LmxCopyMap". Spec 20.2.2
+applies: a struct: from a header emits the requested C layout, and a local of it
+is ordinary C. It is activation storage, never an own field, so it is neither a
+graph cell nor a Structure.
+
+Recognised as an l2_ml method local, type 41, by l2_struct_local:
+- the frame head is a type the predef'd header declares with struct:
+  (l2_predef_has_type), and is not a fnptr:;
+- the frame is not COMPACT, since `T(x)` is a call;
+- the body is exactly one identifier.
+It mirrors the function-pointer local (type 40) at every point that local is
+recognised:
+- collection;
+- the free-name scan skips the declaration;
+- checking accepts it;
+- l2_emit_loc_stmt's entry condition;
+- emission, as a textual copy of the fnptr branch, so the declaration is spelled
+  as written.
+The address is new. l2_check_addr accepts `@ name` for a type-41 local, and
+l2_prep_addr emits `@ name` with the source name, which method locals keep.
+
+Deliberately not covered: an initialiser (a struct has no scalar initialiser
+here), and field access through the by-value name (`storage\a`). The copier
+does neither; it takes the address and works through the pointer, which the
+foreign-pointer local already supports. An index head on a type-41 local stays
+"unsupported index", which is correct.
+
+Fixture library_struct_local_forms.lm2 with struct_local_forms.h.lm1 (a
+two-int struct, no functions, so nothing needs linking). On f95125d4's
+translator it fails at 8:5, "unsupported body, frame=L2TestPair". After the
+change: exit 0, live=0; the L1 has `L2TestPair: storage` and `p: @ storage`;
+through the pinned L1 the C has `L2TestPair storage;` and `p = & storage;`.
+e2's minimal repro q11 on lmx_graph_copy_owned.h.lm1 also translates.
+
+
+A FAILED LIBRARY OPEN IS REPORTED, 2026-09-14
+
+Found by e2: a generated public wrapper answered a failed l2_library_open with
+`return`, `return: 0U` or `return: 0`. For a status ABI such as
+lmx_graph_copy_owned, where 0 means OK, an open failure read as success.
+
+Ruling (e2, reported to Mikhail as reversible): this is the settled checkpoint
+rule applied to a new site, not a new rule. It follows SPEC 21.6 / 21.13.3 and
+ABI 14.23, and the same route as a failed checkpoint publication. Every failed
+wrapper call prints
+`lmx: library open failed: l2_u<module hash> <operation>`, then
+`if: c.lmx_msg_poll_abort() != 0` -> `c.abort()`. Without abort it returns the
+same zero as before. No distinct code is invented for arbitrary return types; a
+status ABI that needs one declares it (model §14, no process-static throw
+channel). l2_library_open already retries when the runtime is 0, so the report
+repeats on every call. The rule is also recorded in model §14.
+
+Fixture library_open_failure.lm2 (`lof_status` returns 7) with the L1 driver
+library_open_failure_driver.lm1. The driver wraps lmx_msg_runtime_new to fail
+twice and lmx_msg_poll_abort to return the policy picked by its argument, then
+calls twice and prints, then calls again. Linked against the real Message core
+objects.
+- no abort ("n"): exit 0, stdout `r1=0 r2=0` / `r3=7`, two report lines;
+- abort ("a"): exit 3, no stdout, one report line.
+Tripwire: the same driver linked against a94461b2's output prints no report in
+either mode, and in "a" runs to completion. So the silent zero was real, and the
+fixture cannot pass without the route.
+
+
+FOREIGN C IS c.name; THE TRANSLATOR READS NO C HEADER TEXT (STAGE A), 2026-09-14
+
+Mikhail's rulings, through e2 and to this chat directly:
+- Delete the checks of whether a c.name is declared: "Уберите из кода всю эту
+  паранойю".
+- Require c. for every foreign C call ("Требовать c. для всех C"). A C function
+  called without c. is a namespace bug.
+- Standing rule: if the spec does not require a check, delete it with its
+  diagnostics and write the deletion down.
+
+Rule, from spec 6.6.6 and 20.2.2:
+- `c.name(args)` and `c.NAME` are the foreign door. They are emitted as written;
+  the C compiler checks the declaration and the ABI.
+- A bare `name(args)` is an L2 call, resolved only against unit methods and
+  parsed `prototype:` fn/sub declarations of predef'd .h.lm1. An unresolved one
+  gets the unresolved-method diagnostic, never a trip to gcc.
+- Whether a callee takes c. is decided by where it is IMPLEMENTED, not where it
+  is declared (e2):
+  - libc, Win32, and the hand-written lmx_message_exec.c / lmx_message_host.c /
+    lmx_poll_stub.c / lmx_dec.c / mixa_console_window.c take c.;
+  - L1/L2-implemented functions (mixa_*, lmx_msg_*, runtime modules) take a
+    prototype: declaration, never c..
+
+Deleted:
+- l2_include_has_function: its text scan of quoted include files for `name(`.
+- l2_quoted_has_function: the same scan per header, with the keyword guard
+  f95125d4 added to it.
+- l2_c_header_chain_has_function, and the function half of l2_c_header_walk.
+  The typedef half stays until Stage B.
+- The include: branch of l2_predef_file_has_function, which followed a .h.lm1
+  into C header text.
+- l2_predef_has_function's second loop, a verbatim duplicate of the first
+  pass's prototype parse.
+- The closed known-name lists in l2_is_known, including the bare C names getenv,
+  system, strcmp, strlen, memcpy, fopen, fclose, fread, fwrite, ferror.
+- The same closed lists at the expression C-call door and the statement C-call
+  door.
+- The generated-unit comment "Known C: ... Unknown c.* is rejected".
+
+Kept, and why each is not admission:
+- Include flags a name implies (c.malloc and kin -> <stdlib.h>, c.strcmp and kin
+  -> <string.h>, lm_p0_* / c.lm_p0_set_diagnostic -> the p0 adapter). They are
+  emission needs and fail open: an unknown c. name gets no include and no
+  diagnostic, and the unit spells its own include:.
+- Profile-installed adapter names: lm_p0_parse_file, lm_p0_document_destroy,
+  lm_p0_dump_alloc, lm_p0_free, lm_p0_document_diagnostic, lm_own_new_zero,
+  lm_own_copy_bytes, lm_own_delete, lm_own_resize, l2_immut_query_fill,
+  l2_hash_compare_q. Each has its own lowering. They are LMX functions
+  implemented in L1, installed by the L2 profile (spec 9.0/9.2). This is the
+  adapter of 6.6.6, not admission: they need neither c. nor a header. The
+  make_l2trans_lm2.ps1 rule once planned to spell lm_p0_* as c. is retired; it
+  would have been wrong.
+- c.-headed forms with their own lowering stay out of the generic door. Both
+  doors exclude c.sizeof, c.puts and c.array; the expression door also excludes
+  c.memset, c.memcpy, c.strlen, c.memcmp and the four Message block/range move
+  operations. c.puts and c.array are not admitted as calls at all, so a c.puts
+  after return is still refused with "unsupported body".
+
+Two doors: l2_c_door (expression) and l2_c_stmt_door (statement) take every
+other c.name.
+
+Candidate measured before the tree changed:
+- Built from a scratch copy; warnings 12.
+- `return: c.no_such_function(1)` translates, L1 emits
+  `return no_such_function(1);`, and gcc fails with "implicit declaration of
+  function 'no_such_function'". That is now fixture unit_unknown_c, which used to
+  expect l2trans's "unknown method".
+- A translate-only sweep of all 333 .lm2 (l2src, l2src/tests, mixa_manager)
+  against the 9570123b build changed exactly 9: unit_unknown_c, plus eight
+  mixa_manager units whose callees were admitted only by the header text scan
+  (pump 12:9, fm_copy 102:5, file_manager 454:9, app_fmpanel 672:13,
+  share_action 119:13, audio_launch 148:10, audio_mp3 56:10, audio_panel). Those
+  are respelled in 5e's lane by the implementation rule.
+- Fixtures respelled: entry_strcmp (c.strcmp, libc) and
+  library_include_fn_nested (c.l2_test_outer_fn / c.l2_test_inner_fn, declared
+  only in C headers).
+
+Three wrong turns, caught before anything landed:
+- The first candidate cut only the comments above two deleted functions; the
+  patch's own "still mentioned" assertion stopped it.
+- It renamed the adapter helpers to c.lm_own_*, which e2's implementation rule
+  showed was the namespace bug in the other direction. Reverted.
+- It let the new statement door take c.puts, turning a refused c.puts-after-
+  return into a success, and then, once excluded from the door but still
+  admitted, into a failure with no located diagnostic. The net made that
+  visible; c.puts / c.array are now outside admission.
+
+MEASURED RESULTS (Stage A in the tree, pin 722AC86E, with 5e's prototype
+declarations 3ec09f90 merged)
+- run_l2trans: exit 0. unit_unknown_c asserts that l2trans accepts
+  c.no_such_function and gcc refuses it with "implicit declaration of function
+  'no_such_function'".
+- run_graph_abi: PASS, fixtures 138/138. The negative msg_bad_call pinned the
+  deleted name list with `c.lmx_arena_blocks_remove(h, s)`. It now pins the rule:
+  the bare, undeclared `lmx_arena_blocks_remove(h, s)` is an unknown method.
+  lmx_arena_blocks_remove is implemented in L1, so c. on it was the namespace bug.
+- run_port_msg_blocks: PASS 143/0.
+- fm_copy, pump, fm_remove, event_fifo, cmdline, buttons, app_panel, help: PASS.
+
+
+THE ULONG OWNED DOMAIN (TRANSLATOR HALF), 2026-09-14
+
+Ruling (e2, reported to Mikhail as reversible): a by-value local of a
+language numeric type is a Message-owned typed cell, like int (spec 21.5.1 makes
+every executable body part of the graph; 6.6 lists ulong, u8..i64, float and
+double as language numeric types). The four runtime types before this were the
+implemented subset, not the value model. Foreign C aggregates (the type-41
+struct local) stay activation-local substrate, as spec 20.2.1 keeps raw
+substrate out of the Lmx model. The runtime half is 6e846894.
+
+Codes: a `ulong: x` local is own code 36 (cell); `[]: ulong x N` is own code 37
+(Array). Both are unused in every type space. Code 9 was free among own codes
+but is the formal code of `@: size_t`, and l2_bind_own compares formal and own
+codes for a same-named argument; reusing it would give one number two meanings.
+
+What changed, each a twin of the existing unsigned (code 3/6) path:
+- Recognition: "ulong" -> 36 in l2_own_decl_ty; "ulong" as an own-Array element
+  -> 37; l2_own_is_array takes 37; "ulong" joins the two statement-shape filters
+  that name the primitive declaration heads.
+- The four lists of numeric own codes and the one exclusion list take 36.
+- Every unsigned emission branch (12) has a ulong twin: cache declaration and
+  preload at entry, graph load, cast, the two checkpoint stores, the two direct
+  stores, unit-slot construction and initial store, and body-slot construction.
+  lmx_unsigned_* becomes lmx_ulong_* and the declared C type becomes ulong. They
+  were generated from the unsigned lines, so no path was written by hand.
+- The Array pointer and element-load spelling take "ulong" for 37. The two
+  Array constructions emit LMX_TYPE_ARRAY_OF_ULONG. Element store goes through
+  the same typed data pointer.
+- A unit-level ulong field takes a literal initialiser.
+
+Loud refusal: l2_unimpl_numeric names a by-value float, double, long, llong,
+ullong, uint, u8..u64, i8..i64 or wchar_t local and refuses it with
+"by-value <type> local not yet implemented", in both body checks (method and
+entry). It is never emitted as activation C storage. Formal parameters and
+returns are C parameters and are not affected.
+
+Fixtures:
+- unit_ulong_local (Leaf, exit 0): a ulong local and a `[]: ulong slot 1` with
+  4000000000 stored, loaded, compared and decremented. The runner also asserts
+  its L1 lowers to lmx_ulong_new_owned, lmx_ulong_store_known and
+  c.LMX_TYPE_ARRAY_OF_ULONG. On 6d72b0d0 it failed at 7:5, "unsupported own array
+  declaration". It is the 126th historical input; the pin and its record in
+  L2_MESSAGE_ROOT.txt moved with it.
+- unit_float_local_refused (negative): a float local in a method. On 6d72b0d0
+  it failed with "unsupported body"; now with the refusal text.
+- entry_bad_body keeps its point (a float local in the entry body) with the
+  precise text.
+
+Candidate sweep, all 335 .lm2 against 6d72b0d0, changed 7, each explained:
+- the two fixtures above and entry_bad_body;
+- mixa_audio_panel translates;
+- mixa_file_win32 moves 122:5 -> 173:5, its next own Array, `[]: long`;
+- mixa_process_marker moves 278:5 -> 30:5, its next stop;
+- mixa_process_win32 moves 308:5 -> 46:64 "unknown foreign type" (Stage B).
+
+One site the generated twins missed: the condition that emits
+`predef: "lmx_array_owned.h.lm1"` lists the Array own codes (4/5/7/8, pointer
+Arrays, named-Structure Arrays). It mentions neither unsigned nor an Array
+construction, so neither search found it. The translate-only checks passed. The
+first full run_l2trans failed at gcc with "implicit declaration of function
+'lmx_array_new_owned'" in unit_ulong_local.c, and the graph gate failed on the
+same fixture. 37 was added to that condition. A fixture that is only translated
+would not have shown it; this one is built and run.
+
+ULONG IN THE SIGNATURE, 2026-09-14
+
+Landed after the locals: 38cc44dc. A ulong formal and a ulong return use code
+36 in l2_ft and l2_m_ret. That is the ulong own code, and it is chosen on
+purpose: l2_bind_own compares a formal's code with the own code of the field
+the formal becomes, so a written ulong formal binds to a ulong own field with
+nothing to translate.
+
+The formal becomes an own field when it is written: an executed `v: ...` makes
+the argument an own field from that point (SPEC 11.3.1, 21.5.1). int, char and
+size_t formals already did this; 36 joins that list. Its checkpoint is the
+existing `lmx_ulong_store_known(l2_qN_from[0], l2_pM_K)`.
+
+Sites, each an unsigned (34 / 33) twin:
+- l2_int_formal head and l2_typed_formal: 36;
+- the return atom and its "incompatible entry signature" exclusion;
+- l2_ret_uns, so a failed or null-node return is 0U;
+- a formal naming an index;
+- the call-result temporary `ulong: l2_tN`;
+- l2_emit_sig formal, the throw ABI `@: ulong l2_out_result`, `) ulong`;
+- l2_emit_public_sig formal, its spellable-code list, `) ulong`.
+
+Fixtures:
+- unit_ulong_signature (built and run): the actuals and results are above
+  the int range and `v` is written;
+- library_ulong: the public signature `ulong_value (ulong: value) ulong`.
+Checked in scratch before the gates, against a translator built from the
+patched source: both fixtures plus unit_ulong_local and library_second went
+through L2 and L1, and the three runner regexes matched.
+
+Gates: run_l2trans gen2 ok; graph ABI 140/140 (merge selftest 261/0);
+port_msg_blocks PASS; array_owned 929/0. The 127th historical input is
+unit_ulong_signature, pin 333F3CA3.
+
+Mixa sweep: all 54 .lm2, HEAD translator against patched translator, both built
+in scratch. 2 changed, both now past their ulong signature:
+- mixa_audio_win32: 73:1 "incompatible entry signature" -> 74:5
+  "unsupported own array declaration" (`[]: wchar_t cmd 64`);
+- mixa_fileio_win32: 30:23 -> 39:25 "unknown foreign type" (Stage B).
+app_win32, audio and share_win32 stop earlier than their ulong signatures, so
+the patch does not change them.
+
+Not changed: an unsigned formal (34) that is written does not become an own
+field. The own code for unsigned is 3 and its formal code is 34, so l2_bind_own
+would refuse the pair. That is a separate gap and is recorded here only.
+
+THE PUBLIC SIGNATURE SPELLS EVERY METHOD-SIGNATURE FORMAL, 2026-09-14
+
+Reported by 5e while porting l1src/parser_text.lm1: a library with
+`fn: p0_probe (const: @(LmP0Text text)) int` stopped with "l2trans: a library
+signature cannot spell formal type 4" and no located diagnostic. That blocked
+p0_text_equals and p0_identifier_payload.
+
+l2_emit_sig spelled seven formal codes that l2_emit_public_sig refused:
+- 4 const LmP0Text, 6 const L2ImmutQuery, 7 @ L2ImmutQuery;
+- 10 LmP0TrailerRole;
+- 13 @ LmP0Document, 14 @ LmP0IndentStack, 15 const LmP0IndentStack.
+Nothing in the spec or the ABI separates the public adapter's formals from the
+method's. The list was simply the codes some library had needed so far. All
+seven are now spelled as l2_emit_sig spells them, and 4/6/15 get the `)` closer
+like 3/28/29/30. The refusal is still there, but it now names only codes that
+exist in neither signature.
+
+Fixture library_p0_text is 5e's repro, run through Invoke-LibraryEmit, and the
+runner checks for `p0_probe (const: @(LmP0Text text)) int`. The HEAD translator
+refuses it with the message above. The patched one emits it, and its L1, like
+the L1 of the other three library fixtures, goes through the output
+translator.
+
+THREE STOPS FROM THE RUNTIME PORTS: CAST @ INT, @ ULONG, C.SIZEOF, 2026-09-14
+
+e2 reported all three from lmx_value_owned and lmx_array_owned, with 9-line
+repros (runtime-l2 scratch_mail fx5/fx6).
+
+1. `(cast: (@: int) v)` failed with "unsupported cast type". Both pointer
+   branches of l2_cast_type require l2_ident on the pointee, and l2_ident
+   reserves `int`. `@: char`, `@: size_t` and `@: unsigned` passed only because
+   they are identifiers. `int` is now admitted there too.
+
+2. A `@: ulong` local failed with "unsupported body, frame=@". The pointer
+   types knew unsigned and not ulong, so ulong fell into l2_foreign_intern,
+   which returns -2. New codes follow unsigned (25/24): 38 is `@: ulong` and 39
+   is `@@: ulong`. They are added to:
+   - both pointer-declarator parsers;
+   - l2_pointer_depth;
+   - the raw pointer spelling and the own-pointer cache declaration;
+   - the local declaration;
+   - the typed formals and the index formal list;
+   - l2_emit_sig, l2_emit_public_sig and the entry formal emitter.
+   `(cast: (@: ulong) v)` already passed; it was only hidden behind the
+   declaration.
+
+3. `c.sizeof(<variable>)` reached C under its source name. The parser returns
+   `c.sizeof(...)` as a single C surface atom, so l2_prep's atom branch copied
+   it with l2_tok_text, and the checker admits every `c.` atom. The c.sizeof
+   frame branches in l2_check_primary and l2_prep were never reached for it.
+   The defect was wider than own fields. `c.sizeof(nonexistent)` translated,
+   and `c.sizeof(v)` on a formal came out as `v` instead of l2_p0_0.
+   l2_prep_sizeof_name now runs first in the atom branch and looks at an
+   operand that is a single name:
+   - a formal becomes `c.sizeof(l2_pM_K)`;
+   - an own scalar field (int, char, size_t, unsigned, ulong), resolved in
+     l2_own_find's order, becomes a zero temporary of its declared type, then
+     `c.sizeof(l2_tN)`. sizeof does not evaluate, so nothing is loaded from the
+     graph, and a field used only inside sizeof needs no working local;
+   - any other own field type is refused by name;
+   - any other operand (a type such as c.int, a foreign name, an expression)
+     stays foreign C as written.
+   Why a temporary and not a type name: L1 copies `c.sizeof(ulong)` literally,
+   giving `sizeof(ulong)`, which is not C. L1 also refuses a nested cast inside
+   a compact c. call. Both were probed in scratch.
+
+Fixtures, each built and run: unit_cast_ptr_int, unit_ulong_ptr_local (the
+load goes through a real ulong Array element of 4000000000U), and
+unit_sizeof_own_local (an own int, an own ulong used only in sizeof, a ulong
+formal, and a c.int type operand). They are historical inputs 128-130, pin
+91C4D5A3. Before the gates, a translator built in scratch from the patched
+source took e2's three original files and the three fixtures through L2 and
+L1.
+
+Landed c926fb11. A fourth shape followed from e2's lmx_msg_visit:
+`c.sizeof(s\v[0])`, the element stride. This one arrives as a c.sizeof frame,
+not the surface atom, and its body holds several fields (s, \, v, [0]). Both
+c.sizeof branches accepted only one atom or a `@: T` frame, so even a plain
+`c.sizeof(s\v)` was "unknown foreign type". Passing it as written would reach
+C as `s`, and `s` is an L2 variable (here the formal l2_p0_0). An operand of
+several fields is therefore an L2 expression: l2_check_primary checks it with
+l2_check_fields, and l2_prep emits it with l2_emit_fields, with a 256-byte
+guard, as `c.sizeof(l2_p0_0\v[0])`. sizeof does not evaluate, so a null
+pointer is never dereferenced. Fixture unit_sizeof_expr (built and run) uses
+`c.sizeof(t\data[0]) + c.sizeof(t\length)` on a const LmP0Text formal called
+with 0. e2's fx7 file and a `c.sizeof(s\v)` variant go through L2 and L1 on a
+translator built in scratch from the patched source.
+
+A FOREIGN C CALL WITH NO ARGUMENTS, 2026-09-14
+
+e2 found that `v: c.rand()`, `if: c.rand() < 0` and `c.abort()` as a
+statement were all "unsupported body". lmx_message needs five of them
+(lmx_msg_slot_new(), the test fault hooks). A one-argument call to an
+undeclared name translated, so the name was not the problem. The parser gives
+an empty call an empty body. The known-call branch of l2_check_primary passed
+its 0 fields to l2_check_fields, which refuses n <= 0 as "unsupported body".
+l2_emit_ccall also returned 1 when the frame had no body.
+
+Now a generic C call (l2_c_stmt_door, so still not c.sizeof, c.puts or c.array)
+with no body or an empty one is a zero-argument call. l2_emit_ccall treats a
+missing body as no actuals and emits the call as written. L1 already lowers
+`c.rand()` to `rand()` and `c.abort()` to `abort();`; that was probed in
+scratch before the change. Fixture unit_c_empty_call is built and run with all
+three positions, and the runner checks that the generated L1 keeps the calls
+as written.
+
+The first graph gate on this fixture was red: "generated L1 has 11 abort(s)
+but 10 diagnostic-root escapes". The gate counted every `c.abort()` line as a
+checkpoint abort. The eleventh was the fixture's own `c.abort()` statement,
+which is foreign C the program wrote, not a checkpoint policy site. The gate
+keeps SPEC 19.13's invariant for generated code. Each
+`if: c.lmx_msg_poll_abort() != 0` must guard an abort directly, and the aborts
+in the L1 beyond those the L2 source spells must equal the escapes. After
+that change the gate is 145/145.
+
+TWO MISCOMPILES FROM LMX_MESSAGE, 2026-09-14
+
+Found by e2. Fixtures are e2's (038aae34): l2_and_foreign_call_own_local and
+l2_index_store_reassigned_formal. Both produced C that does not compile.
+
+1. A boxed C-call actual renamed the condition temporary. In
+   `if: a != 0U && c.lmx_msg_exec_bind_held_locked(rt, i) = 0`, `i` is an own
+   int. l2_emit_ccall boxes such an actual into a temporary, and took its
+   name through the shared l2_tok buffer, which was also the destination the
+   && evaluation had just named. The condition temp became the box temp, so the
+   call received its own result, `l2_t4: (c.f(l2_p0_0, l2_t4) = 0) != 0`, and
+   the `if:` read a name declared one block in. The box name now has its own
+   buffer in l2_emit_ccall. The condition temp `l2_t3` is declared and read in
+   one block, and the call gets `l2_t4`, declared and assigned `l2_q0` (own
+   field `i`).
+
+2. An index token ignored the formal binding. In `out[n]: m\addr` followed by
+   `n: n + 1`, the write makes `n` an own field bound to the formal
+   (l2_bind_own, l2_m_alias). Such a field has no working local; the formal
+   is its storage, and its checkpoint stores `l2_p0_3`. l2_index_token (plain
+   index and index expression) and the prefix-path token still spelled it
+   l2_q0, which is never declared. They now spell an aliased own field as its
+   formal, as the atom path already did: `l2_p0_1[l2_p0_3]: l2_p0_0\addr`.
+
+Invoke-CompileObject in run_l2trans translates a unit without main, lowers it
+and compiles it with gcc -c against the Message support headers. Both
+fixtures go through it, with e2's falsifiers as checks. The translator at HEAD
+fails gcc on both ("'l2_t4' undeclared", "'l2_q0' undeclared"); the patched
+one compiles both. Compile-only cases are not historical inputs.
+
+STAGE B, STEP 1: A FOREIGN POINTER TYPE IS SPELLED AS WRITTEN, 2026-09-14
+
+Mikhail's ruling: foreign types are spelled as written, and a check the spec
+does not require is deleted together with its diagnostic. l2_foreign_intern
+used to return -2 ("unknown foreign type") unless the name was a primitive,
+wchar_t or FILE, or unless l2_predef_has_type or the C-header text walk
+(l2_include_has_simple_typedef) found it. That admission is deleted. Any
+identifier in a pointer type (`@: T`, `@@: T`, `const: @(T name)`, and the
+matching returns) is interned and emitted as written, and the C compiler
+checks it. The eight branches that turned -2 into "unknown foreign type"
+became unreachable and are deleted as well.
+
+Deleted negatives:
+- run_graph_abi msg_bad_type (`const: @(LmxMsgQueue q)`);
+- run_graph_abi msg_bad_cursor (a const local `const: @(LmxMsgQueue m)`,
+  refused as "unsupported body"). It went red on the first gate run of this
+  step because the local now translates as written;
+- run_l2trans unit_unknown_type, which is now a positive check that
+  `const: @(Foo l2_p0_0)` is emitted as written.
+entry_argc_bad (`main (@@: float argv)`) is still refused, now by the entry
+signature check ("incompatible entry signature"), so only its needle changed.
+
+Measured before the tree changed. Translators were built in scratch from HEAD
+and from HEAD plus this step, and all 345 .lm2 files (mixa_manager, l2src,
+l2src/tests) were translated with both. 42 changed, all forward:
+- mixa_app_path, mixa_cmdline, mixa_help and mixa_selection_l2_probe now
+  translate;
+- most others now stop at later Stage B items, chiefly own Arrays of an
+  alias or uchar typedef ("unsupported own array declaration") and the
+  remaining "unknown foreign type" sites.
+Those remaining sites are the c.sizeof type operand check and the
+const-pointer return that admits only char. They are step 2, together with
+the typedef text walk that l2_predef_has_type still calls.
+
+Landed 06a940e5.
+
+STAGE B, STEP 2A: C.SIZEOF TYPE OPERANDS AS WRITTEN, 2026-09-14
+
+As a C call argument, `c.sizeof(...)` arrives as a frame, not as the surface
+atom that l2_prep_sizeof_name handles. A single operand in that form was
+checked against a closed list (LmP0Text, LmP0IndentStack, size_t, char, int,
+unsigned, void and their c. spellings) or a predef header lookup. Anything
+else was "unknown foreign type"; 5e hit this with
+`c.calloc(n, c.sizeof(c.wchar_t))` in fileio_win32. The list and the lookup
+are deleted.
+
+The operand core of the surface-atom helper moves into l2_sizeof_name_bytes,
+which both forms now call. A formal becomes `c.sizeof(l2_pM_K)`, and an own
+scalar field becomes a zero temporary of its type. Any other single operand
+(`c.wchar_t`, `c.T`, a bare foreign type) is emitted as written, and C checks
+it. The existing spellings `c.sizeof(c.LmP0Text)`, `c.sizeof(c.LmP0IndentStack)`
+and `c.sizeof(c.size_t)` are unchanged.
+
+Fixture unit_sizeof_arg, built and run, puts `c.sizeof` directly in `c.abs(...)`
+arguments: `c.wchar_t`, an own int, a ulong formal and `c.int`. HEAD refuses it
+at 9:15. Before the tree changed, the patched translator ran it to exit 0 in
+scratch, and unit_sizeof_own_local and unit_sizeof_expr emitted exactly as
+before. mixa_fileio_win32 moves from 20:64 to 111:5 ("unsupported body").
+
+The first gate run of this step stopped run_l2trans at its unit_bad_sizeof
+negative. `lm_own_copy_bytes(0, c.sizeof(c.Foo))` had been refused as "unknown
+foreign type" and now translates, as the ruling intends. run_l2trans stops at
+its first failure, so every stage after that one went unmeasured. The negative
+is now a positive check that the L1 spells `c.sizeof(c.Foo)` as written.
+run_l2trans was rerun in full after the change; the other gates had already
+passed on this translator.
+
+Landed 2620d3f5.
+
+STAGE B, STEP 2B: BY-VALUE FOREIGN FORMALS AND RETURNS, 2026-09-14
+
+A by-value formal `T: name` or return `T` of a foreign type had no code. Only
+the primitives, LmP0TrailerRole and LmxMsgAddr (return only) were spelled.
+Anything else was "incompatible entry signature", including 5e's LmP0NodeKind
+formals and e2's `LmxMsgAddr: addr` / `c.LmxMsgAddr: addr` formals.
+
+A by-value foreign type is now a foreign code with depth 0.
+- l2_foreign_intern accepts depth 0.
+- l2_foreign_byvalue interns `T`, or `T` from `c.T` with the prefix stripped.
+- l2_typed_formal takes `T: name` and `c.T: name` for any T not already handled.
+- The return-type atom check sends every unlisted name through the same
+  helper.
+- The four foreign emitters spell depth 0 as a value:
+  - `T: name` in the public signature;
+  - `; T: l2_pM_K` in the method signature;
+  - `) T` as the return;
+  - `T: l2_tN` for a call-result temporary.
+l2_pointer_depth already reports depth 0 as a non-pointer.
+
+The limit L1 sets. A body declaration `T: name`, which is how a call-result
+temporary is spelled, belongs to L1. l1trans refuses a colon declaration whose
+head it does not know as a type: "unknown type name" (l1trans.lm1 3515, 4768,
+5286; l1_head_is_unknown_type). It knows its built-in list, which includes
+the LmP0* aliases, and `type:` / `struct:` from a predef'd .h.lm1. So
+formals and returns of any T work. A temporary or local of T also needs L1
+to know T. LmxMsgAddr is declared in no .h.lm1, which e2 knows. A lowercase C
+typedef such as int32_t cannot be declared in an L1 body at all. That was
+probed in scratch: `int32_t: a` lowers to the assignment `int32_t = a;`, and
+`c.int32_t: a 0` lowers to a call.
+
+Fixture unit_byvalue_foreign, built and run, covers `LmP0NodeKind: k` with an
+LmP0NodeKind return, and `c.LmP0FrameFlags: f` with a `c.LmP0FrameFlags`
+return; the value crosses above the int range. HEAD refuses it at 10:16. The
+patched translator emits both signatures and temporaries, and the program runs
+to exit 0.
+
+Scratch sweep, HEAD vs patched, 347 .lm2: 3 changed, all forward
+(mixa_pointer and mixa_remove get past their by-value formals, plus the
+fixture). No file whose verdict is unchanged emits different L1.
+
+Deleted negative: run_graph_abi msg_bad_ret, a by-value return `LmxMsgQueue`
+refused as "incompatible entry signature". It went red on the first gate run
+of this step, because such a return is now spelled as written.
+
+Landed 642b6700.
+
+STAGE B, STEP 3: LMP0DOCUMENT IS A FOREIGN POINTER TYPE, 2026-09-14
+
+Field access on a `@: LmP0Document` formal or local was "unknown foreign field"
+for every field, while LmP0Frame fields worked (5e, parser Stage c:
+`document\tree_arena`). l2_typed_formal and the pointer-local parser gave
+LmP0Document the fixed code 13. The name\field path (l2_raw_path) resolves
+fields only for foreign-interned types (code >= 100), so the fixed code shut
+LmP0Document out of it. The two special cases are deleted, apart from setting
+l2_need_p0. LmP0Document now interns like LmP0Frame. The code-13 emitters
+spelled `@: LmP0Document name`, exactly what the foreign emitters spell, so
+signatures and declarations do not change. Return code 13 is still
+LmP0IndentStack; the two meanings of 13 were never shared by one value, and
+this step removes the formal and local one.
+
+Fixture unit_p0_document_field, built and run: `doc\source_length` read on a
+formal, and `d\source_length: 7U` written on a calloc'd local. HEAD refuses it
+at 11:5. The patched translator runs it to exit 0.
+
+Scratch sweep, HEAD vs patched, 348 .lm2: 1 changed, the fixture. No existing
+LmP0Document user emits different L1, which confirms that the code-13
+spelling and the foreign spelling were identical.
+
+Landed f7390ded (main fb7ab80c).
+
+THREE STOPS FROM 5E'S MODULE RUNS, 2026-09-14
+
+5e reported these after running their own table on 06a940e5/2620d3f5 (their
+STATUS fc3cd54b).
+
+1. A two-word cast type. `(cast: (unsigned long) pc\HighPart)` in
+   mixa_process_marker 212:71 was "unsupported cast type": the two-atom branch
+   of l2_cast_type admitted only `unsigned char`. It now takes any pair of C
+   type words (unsigned, signed, long, short, int, char, double), emitted as
+   written.
+
+2. An index that is itself an indexed load. `buf[off[0]]: ch` in
+   mixa_app_win32 211:5 and mixa_share 110:17 was "unsupported index".
+   l2_index_head and l2_index_token took the LAST '[' as the start of the
+   index, so the base became `buf[off`. Both now start at the '[' that matches
+   the final ']', and the index expression is renamed as before:
+   `l2_p0_0[l2_p0_2[0]]: l2_p0_3`.
+
+3. A unit's own prototype: block. mixa_calculator_syntax 89:1 forward-declares
+   a method defined later in the same unit. The top-level dispatch sent every
+   unrecognised frame to l2_take_named, and the named-Structure reader refused
+   its `fn:` line ("a callable field needs a method name"). Unit methods
+   resolve in any order, so the block declares nothing the unit needs, and it
+   is skipped. It does not declare foreign C: a bare call still resolves only
+   against unit methods and predef prototype: declarations (Stage A).
+
+Fixtures, both built and run: unit_nested_index_cast (the out-parameter store
+plus an `unsigned long` cast, driven through own Arrays) and
+unit_unit_prototype (a forward-declared method used before its definition).
+HEAD refuses them at 11:5 and 8:1. Before the tree changed, the patched
+translator ran both to exit 0 in scratch, and mixa_calculator_syntax and
+mixa_process_marker translated completely.
+
+Scratch sweep, HEAD vs patched, 350 .lm2: 5 changed, all forward.
+mixa_calculator_syntax, mixa_process_marker and mixa_share now translate
+completely, and both fixtures translate. No file whose verdict is unchanged
+emits different L1.
+
+Landed d24373ca.
+
+STAGE B: A CONST-POINTER RETURN OF ANY FOREIGN TYPE, 2026-09-14
+
+`fn: f (...) const: @(T)` had a code only for T = char (35). Any other pointee
+was "unknown foreign type", the last site of that diagnostic outside the
+typedef walk. Now any other T is interned as a const foreign pointer
+(l2_foreign_intern(T, 1, 1)) and spelled as written. l2_emit_foreign_return
+spells it `) const: @(T)`, and l2_emit_foreign_temp spells the call-result
+temporary `const: @(T l2_tN)`. Both emitters used to refuse any const foreign
+code. char keeps code 35.
+
+Not changed, and recorded: a throwing method (`merge:` throw ABI) whose return
+is a foreign pointer still declares its out result as `@: int l2_out_result`.
+The foreign case is missing from that list, for const and non-const alike. It
+predates this step, and no fixture reaches it.
+
+Fixture unit_const_foreign_return, built and run: `same_text (const:
+@(LmP0Text t)) const: @(LmP0Text)` returns its argument, and the result is
+compared with the calloc'd pointer. HEAD refuses it at 7:1. The first version
+of the fixture spelled the return `const: (@: LmP0Text)`, which is not the L2
+spelling (unit_const_char_return writes `const: @(char)`); both translators
+refused it identically, so that fixture proved nothing and was corrected
+before any conclusion was drawn.
+
+Scratch sweep, HEAD vs patched, 351 .lm2: 3 changed, all forward.
+mixa_text_rect now translates completely. mixa_app_controller moves from
+532:1 (the signature) to 14:5 ("unsupported body"). The earlier line is
+reached because l2trans collects every method signature before it checks any
+body: the signature at 532 used to stop the collect pass, and with it passing,
+the first body stop appears. No file whose verdict is unchanged emits
+different L1.
+
+Landed b1c2aa46 (main f7cec195).
+
+`PROFILE: RUNTIME`: A RUNTIME UNIT IS EMITTED WITHOUT ESCAPE POLLS, 2026-09-14
+
+Mikhail's ruling, decision 12 in LEAD_REVIEW_20260914.md section 6, relayed by
+e2. A child has the right to declare its work done: `complete` sets only
+success=1. running=0 after success=1 is set only in end_turn, at the turn
+boundary, so during a successful turn running stays 1 and running=0 always
+means a requested stop. User units therefore keep the single-flag
+`if: c.lmx_msg_poll_escape() != 0` exactly as today. The success-aware
+lmx_msg_poll_stop shape that had been prepared is dropped.
+
+A runtime-profile unit implements the running/stop protocol that the polls
+consult, and the executor calls it during its own unwind, where a polled
+end_turn would escape again. So such a unit is emitted with no escape polls.
+The mark is a top-level directive, `profile: runtime`, not a file-name rule.
+l2_take_profile takes it (declared in the prototype block, because the
+directive loop comes before the definition) and sets l2_profile_runtime. Any
+other profile name is "unknown profile", and the top-level dispatch skips the
+directive. l2_emit_poll, the only source of the three escape spellings,
+returns without emitting when the flag is set. The checkpoint failure paths
+(`if: c.lmx_msg_poll_abort() != 0 / c.abort()` after a failed own-field store
+or a lost slot) stay in both profiles. A failed store is a real state failure,
+and during an unwind a second poll_abort finds ready = 0 and aborts the
+process with the diagnostic line (e2).
+
+Fixture unit_profile_runtime, built and run: a while loop with two exits. It
+emits 0 escape polls, keeps its 2 checkpoint aborts and runs to exit 0. The
+same unit without the directive emits 5 escape polls and also runs to exit 0.
+
+ONE C CALL EMITTER; OWN ARRAY ELEMENTS IN AN INDEX, 2026-09-14
+
+Two miscompiles from 5e's mixa_manager port, reproduced from 5e's fixtures
+(sonnet/parser-l2 62863393). Both translated with exit 0 and failed in gcc.
+
+In value position, c.memcmp, c.strlen, c.memcpy, c.memset and the four
+storage-list calls (lmx_arena_blocks_can_move/move_all,
+lmx_owned_ranges_can_move/move_all) did not reach l2_emit_ccall. l2_c_door
+excluded them, and l2_prep lowered each with its own branch that read exactly
+two, three or five actuals of one field each (three for memcmp with a
+`name\field` exception). `c.memcmp(expr + p\offset, expected, n)` therefore
+became `c.memcmp(l2_p0_0, +, p\offset)`, and gcc reported too few
+arguments. A foreign C call is emitted as written and checked by the C
+compiler, so no name fixes an arity. The eight branches and the exclusion are
+deleted, and the generic emitter lowers every C call, whose actuals it already
+walks by expression span. The calls now appear in place (`if:
+c.lmx_arena_blocks_can_move(l2_p0_0, l2_p0_2) != 0`) instead of through a typed
+temporary. The graph gate's unit_msg_storage_calls check had required that
+temporary; it now requires the call on two head slots with its status
+tested.
+
+Deleting the special cases exposed a second defect: l2_ccall_into, the value
+destination, is one global. In `(cast: (@: char) c.malloc(c.strlen(s) + 3U))`
+the nested strlen set and cleared it, so the outer malloc lost its destination,
+was printed as a statement, and the cast was left empty (process_marker in
+the first sweep). l2_emit_ccall takes the destination into a local at entry.
+
+`buf[off[0]]: v` with `[]: size_t off 1` was spelled `l2_p0_0[l2_q0[0]]`.
+l2_index_token renames an own field to its working local l2_qN, but an own
+Array has none; its elements live behind the Array descriptor. When the own
+field is an Array followed by `[literal]`, l2_index_token (which now takes the
+indentation) emits the element load through l2_emit_array_load and spells the
+temporary. The index may be compound (`buf[off[0] + 1U]`).
+
+Fixtures unit_ccall_value_expr (an expression actual first and last, a C call
+nested in a C call, two C calls in one expression) and unit_index_own_array
+(5e's word-wrap loop), both compiled with gcc -c. Every check fails on HEAD's
+output and passes on the patched output. Scratch sweep of 369 .lm2: 15 changed.
+With temp numbers normalised, every difference is a call now inlined, plus
+mixa_share, whose two `buf[off[0]]` stores are the fix.
+
+Landed a274faec (main 96f474e7).
+
+RUNTIME STRUCT FIELDS AS WRITTEN, 2026-09-14
+
+e2's stage 2 of the runtime plan adds LmxMsgCopy.delivered, and the L2 mirror
+of lmx_message stopped at `src\delivered`: "unknown foreign field". The cause
+was l2_raw_path. It accepted a field of LmxMsgRuntime (formal code 28), LmxMsg
+(29) or LmxMsgCopy (30) only if l2_raw_fixed_field listed it, so that
+function held a copy of each struct's field names. Every field those structs
+gained was refused until the copy was edited, and the header, not the copy,
+is what the C compiler checks.
+
+The lists and l2_raw_fixed_field are deleted. A field on a formal, a slot or
+a method local of codes 28-30 now takes the same branch as any foreign type
+(>= 100): out_fld 5, spelled as written. The p0 codes that name fixed
+LmP0Text-family fields (data, length, columns, count, capacity) are
+untouched.
+
+Fixture unit_runtime_struct_field reads LmxMsg.sched_queued (in lmx_message.h,
+never in the list) on a const formal and LmxMsgCopy.owned and .n (both in the
+list). It is compiled with gcc -c against lmx_message.h. HEAD refuses it at
+7:9 "unknown foreign field"; the patched translator emits
+`if: l2_p0_0\sched_queued != 0`. Scratch sweep of 370 .lm2: the fixture is
+the only change.
+
+The graph gate's negative msg_bad_field expected `rt\zzz` on an
+LmxMsgRuntime formal to be refused. It went red, as the deletion requires,
+and it is deleted with a retirement comment beside msg_bad_type,
+msg_bad_cursor and msg_bad_ret.
+
+Landed 45166cd4 (main 57b5a178).
+
+2026-09-14 (lead): LmxMsg.sched_ready, sched_ready_tail, sched_next and
+sched_queued are deleted from lmx_message.h, since nothing has read them since
+the lmx_msg_sched_ready unit was retired (0c, 3c-2). The fixture now reads
+LmxMsg.ui_pending, another header field that was never in the list, so the
+check is the same one.
+
+C99 OCTAL AND HEXADECIMAL INTEGER CONSTANTS, 2026-09-14
+
+Spec 3.4.1 says numeric literals use the ANSI C / C99 model, and its integer
+examples include 0123. l2_num refused any decimal literal longer than one
+character that began with 0 (since 62d0f4f4). That did not matter until
+770e83e6 routed the own-Array extent through l2_num. From then on
+run_l2_message_root's `[]: int buf 003` stopped at array_entry_L2_to_L1
+(0c's bisection), and seven l2src/tests fixtures with leading-zero extents
+were refused as "unsupported own array declaration".
+
+l2_num and l2_signed_num now accept 0, or -0, followed by octal digits.
+`09` is still refused, because C99 refuses it. The value side had its own
+defect: l2_positive_decimal, l2_literal_value and l2_array_literal each
+parsed decimal digits only, so a hexadecimal extent such as 0x3 counted 0.
+All three now compute through l2_c99_value, which reads a hexadecimal, octal
+or decimal constant in a byte range and returns an overflow status. `010`
+therefore counts 8, the same value as in the C it is emitted to.
+l2_array_count_is used to tell a valid zero extent from an overflow by
+checking for a leading `0`. It now uses that status, since `00` is also a
+valid zero.
+
+Fixture unit_octal_literals, compiled with gcc -c: extent 010 emits
+`LMX_TYPE_ARRAY_OF_INT, 8U`, `buf[07]` emits `l2_a0_data[7U]`, and extent
+0x3 emits `LMX_TYPE_ARRAY_OF_CHAR, 3U`. Scratch sweep of 371 .lm2: the
+seven fixtures move from refused to translating, and no other file's verdict
+or L1 text changed.
+
+Landed fe000dd6 (main 68d00f7d).
+
+A FUNCTION PASSED AS A VALUE IS ITSELF, 2026-09-14
+
+5e's port of l1src/parser.lm1's lm_p0_dump_stack_new passes a callback the way
+the oracle does: `lm_own_ptr_stack_init(stack, lm_own_delete_plain)`.
+lm_own_delete_plain is declared only in the unit's predef'd prototype:
+block. 5e's repro (sonnet/parser-l2 7e0f3a9a) separates two cases: the
+prototype function, refused as "unresolved name", and a same-unit L2
+callable, which translated.
+
+The prototype function was refused by l2_check_expr's atom branch. That
+branch accepts formals, a method name (its public C ABI wrapper), entry and
+method locals, `c.` names, own fields and slots, but not a prototype
+function. In call position the same name resolves through
+l2_predef_has_function, and the value branch now accepts it the same way.
+
+With that accepted, the dry build showed the second defect, which the L2
+callable already had: `int: l2_t0 / l2_t0: lm_own_delete_plain` before the
+call. l2_ccall_box_int boxes into an int temporary any actual it cannot
+type from an entry local, method local, formal, own field or slot. It
+reaches its final `return: 1` for a function name, so 5e's "working" case
+translated but handed C a function pointer in an int. A method or prototype
+function now returns 0 there and is passed as itself.
+
+Fixture unit_fnptr_prototype_value is 5e's repro with its predef renamed; its
+header is generated from the .h.lm1 and it is compiled with gcc -c. Both calls
+are emitted as `lm_own_ptr_stack_init(stack, <function>)`, and no line
+assigns a function to a temporary. HEAD refuses the fixture at 32:38.
+
+Landed 05a4464c (main aec85b3b).
+
+`@` ON AN OWN ARRAY ELEMENT IS REFUSED AGAIN, 2026-09-14
+
+0c brought run_l2_message_root back to its index_invalid group, and there
+element_address was accepted: `return: @ buf[0]` translated to
+`return: @ l2_t2`, the address of a temporary copy returned as int.
+0c's bisection ends at 485f15cc ("reconcile the ports with the integrated
+compiler slice"). That commit admitted `@` in flat-field position so that
+foreign-pointer call actuals such as `@ tail` and `@ item\next` count as one
+actual. It gave l2_check_fields a skip with the comment "What it addresses is
+checked by the fields that follow it", and gave l2_emit_fields the matching
+"@ ". The fields that follow were checked as ordinary reads, so an own Array
+element access checked fine as a value load, and `@` was prefixed to its
+temporary.
+
+The spec leaves no room for that form. 11.3 specifies `@x` for the kinds in
+11.3.1 and for address-of-address of an L2 address slot. 11.3.1 says an
+Array field's `@` names its classified descriptor data, "not the element
+backing". 12.2 says a raw element-storage pointer is a different value,
+obtained through an explicit low-level adapter.
+
+l2_check_fields now looks at the field after a flat-field `@`. If
+l2_own_index_tail reports an own Array element access there (exit status 0
+or 2, which includes the `for\` and `node\` forms), the check fails with
+"address of an Array element needs an explicit adapter". The translator exits
+1 and publishes nothing, which is the shape run_l2_message_root checks.
+Parameters, own scalar fields and foreign-pointer actuals do not reach the
+refusal. Nor does `@ buf` on a whole Array field, but it is still wrong: it
+emits `@ l2_a0_data`, the address of a C local, not the descriptor address of
+11.3.1. It is the next step, together with `return: buf` (the backing
+pointer used as a value); 0c's array_invalid sweep found both.
+
+Landed 3b00f53a (main cb53e7e9).
+
+AN OWN ARRAY DECAYS ONLY AS A CALL ACTUAL OR CAST OPERAND, 2026-09-14
+
+In 7d7ec87c, l2_check_primary gained an admission: an own Array field in
+expression position is "its backing pointer, matching ordinary C array
+decay". It sat directly above the refusal "own array use not yet supported",
+which it made dead code. With 485f15cc's flat-field `@`, two wrong programs
+translated. `return: buf` became `return: l2_a0_data`, an int* returned as
+int. `return: @ buf` became `return: @ l2_a0_data`, the address of a C local.
+0c's run_l2_message_root array_invalid group caught both, and 0c bisected
+them.
+
+Spec 12.2 says an Array reference denotes its descriptor. A raw
+element-storage pointer is a different value, obtained through an explicit
+low-level adapter when admitted.
+
+Deleting the admission outright is not an option. A sweep refused six mixa
+modules (app_path, audio, fileio_win32, process_marker, process_win32,
+selection) and two core fixtures. Every one of those uses passes an own
+Array as a call actual (an L2 out-parameter such as `[]: size_t total 1`, or
+a C buffer such as `c.snprintf(cand_utf8, ...)`) or as a cast operand. That
+positional decay is the admitted adapter, and nothing else is.
+
+l2_decay_ok counts the positions that admit it. l2_check_actual_fields and
+l2_check_actual_primary raise it around L2 method actuals, the C-call,
+predef-function, function-pointer and raw-head call bodies, and the cast
+operand. The admission in l2_check_primary holds only while the counter is
+positive, so everywhere else the old refusal applies. Separately, `@`
+followed by a whole own Array field is refused with "address of an Array
+field is not lowered to its descriptor yet". 11.3.1's descriptor address is
+not implemented, and the previous output was the address of a C local.
+
+Negative fixtures array_field_value and address_array_field. Scratch sweep of
+375 .lm2: 0 changed. Removal proof: HEAD translates and publishes both
+fixtures and 0c's two gate shapes; the patched translator exits 1 on all
+four and publishes nothing.
+
+Landed cd7c7e21 (main fb7b12d8).
+
+A SAME-NAME PARAMETER WRITE IN A BODY PUBLISHES TO THE METHOD, 2026-09-14
+
+0c's final run_l2_message_root gate read 240 instead of 88 in
+unit_own_dirty_rhs. In that fixture, observe does `if: quote = 65` /
+`quote: 88` / `else:` / `quote: 11`, with `quote` the hidden through
+parameter. Since 043e1d41 ("host executable control bodies in graph") each
+body write registered its own OwnUsed field in that body's host Structure.
+One source name reached three storages: the method's cache, the if host's
+slot and the else host's slot. M's child 1 became the if-body Structure,
+and the drive read a byte of it. The same commit had moved run_l2trans.ps1's
+$d6 drive to the if-host slot and added a unit_body_hosts assertion that
+an executed argument bind publishes into its while-body host, so gen2
+stayed green.
+
+The spec decides between the two readings. From 7794-7797: "The
+through-boundary is method nesting / activation, not Structure or `if`
+nesting ... Do not invent a shadow field for an assignment in an ordinary
+nested block that already sees the enclosing binding." From 7804-7808:
+"Once this method's own-field bind exists ... Subsequent bare reads and
+writes share that variable. Dirty-only publication writes this method's own
+node field". Only fields declared in a body are that body's own fields.
+
+l2_collect_asgn_body used to register the parameter's field under
+l2_scope_host(). Now it first resolves a field declared in an enclosing body
+that is in scope (l2_own_find); a type mismatch with that field is
+"incompatible entry signature". If there is none, it registers the field on
+the method through l2_own_add with l2_own_at_method set, which makes both the
+lookup and the stamp use host 0. l2_translate_unit collects methods and their
+body declarations before it parses assignments, so a body-declared field
+already exists when a write to it is resolved; unit_bind_ifdecl stays hosted
+in its body.
+
+Runner: the $d6 drive reads M child 1 again. unit_body_hosts now asserts
+`leaf, 6U`, the flag bind at `node, 1U`, and exactly three body-host
+publishes (the declared yes, no and loop). Scratch sweep of 377 .lm2: 15
+files change L1 text, and no verdict changes. Removal proof on the sweep
+outputs: HEAD fails all four checks, and the patched translator passes all
+four.
+
+043e1d41 had also moved the unit_asgn_branch drive's only_if read into the
+if-body host (run_l2trans.ps1 line 2063); that read goes back to `method, 1U`
+like its two sibling methods. Gates: run_l2trans gen2 ok (unit_own_dirty_rhs
+65/88, unit_asgn_branch, unit_bind_ifdecl 65, the unit_body_hosts checks),
+graph ABI 152/152, run_port_message PASS, run_model_scenario36 5/5,
+run_port_msg_slots 278/0, mixa selection parity byte-identical.
+
+Landed 28cc0d71 (main 765d00dc).
+
+Negative fixtures address_array_element and address_array_element_sum both
+translate on HEAD.

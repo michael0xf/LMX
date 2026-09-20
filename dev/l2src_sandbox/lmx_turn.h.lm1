@@ -1,0 +1,48 @@
+predef: "l2src/lmx_thread.h.lm1"
+
+# lmx_turn.h.lm1 - the end-turn boundary (spec 19.29.4.1, model 27 and 28).
+#
+# 19.29.4.1 fixes exactly one local boundary at end-turn, and it has three acts:
+#
+#     determine turn outcome
+#         -> publish successful FIFO outbox OR discard failed staged outbox
+#         -> release completed inbox/turn roots
+#         -> collect the owning Message arena
+#
+# This module is the first act, the outcome it turns on, and -- since the collection exists
+# (lmx_gc) -- the two acts after it: the turn's temporary roots are gone by the time the
+# outgoing is published or discarded, and the owning arena is collected right after, on the
+# band that held the turn (the arena is the record's own band, lmx_schedule_init wrote it).
+# The whole boundary of 19.29.4.1 is therefore here, in this order, for both bindings and for
+# the root's own turn.
+#
+# The outcome is read from the Message's own two flags and needs no third meaning:
+#
+#   stopped without completing (running=0, success=0) -> the turn FAILED: what it prepared was
+#       never published, so the staged outbox is discarded and the turn's reserved children are
+#       dropped (model 26: "при неуспехе ... неопубликованные резервации ... убираются").
+#   anything else -- the work is still running, or it completed -> the turn SUCCEEDED: the
+#       staged outbox is published in FIFO order and the reserved children are published, one
+#       store each (model 28: "При успехе публикуются исходящие и подготовленные дети").
+#
+# A failure here is NOT a rollback: the turn's graph writes stand (spec 19.29.4.1: "This does
+# not roll back earlier graph mutations"), and what an EARLIER successful turn published stands
+# too ("failure discards its staged outbox, but not already published graph/own-field writes").
+# What goes is exactly what this turn prepared and never exposed.
+#
+# Neither act here asks the arena anything, so a lane performs the boundary without holding
+# one -- which is what lets the running binding call it from its own loop (lmx_manager_running).
+# The collection does need the arena, and it is found on the record, not handed in.
+
+define: LMX_TURN_OK 0
+define: LMX_TURN_INVALID 1
+define: LMX_TURN_SUCCESS 0
+define: LMX_TURN_FAILED 1
+
+prototype:
+    # What this turn's outcome is, from the Message's own flags (see above).
+    fn: lmx_turn_outcome (@: LmxThread t) int
+    # The boundary: publish or discard, and publish or drop the reservations.  Called once per
+    # turn, after the turn has been left (lmx_thread_leave), by whichever binding ran it.
+    fn: lmx_turn_end (@: LmxThread t; ulong: now) int
+end: prototype

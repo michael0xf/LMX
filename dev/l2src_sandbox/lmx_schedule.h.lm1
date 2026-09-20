@@ -1,0 +1,61 @@
+include: "<stddef.h>"
+predef: "l2src/lmx_arena.h.lm1"
+
+define: LMX_SCHEDULE_OK 0
+define: LMX_SCHEDULE_INVALID 1
+define: LMX_SCHEDULE_IDLE 0
+define: LMX_SCHEDULE_WAITING 1
+define: LMX_SCHEDULE_OVERDUE 2
+
+# The scheduler's own record for one executable object: how long it may wait, how
+# long it has waited, and the link the scheduler threads it with.
+#
+# This is one of the cells that used to be piled into the record.  It is the
+# scheduler's data and it lives in the scheduler's queue -- the letter stays the
+# five fields it is, the base Structure stays three, and neither is extended to
+# carry it (LmxMsg and Lmx are closed; see the notes in those two headers).
+#
+# `owner` is an address, not a typed field: what it points at is answered by the
+# registered range the address falls into (lmx_implements), never by a tag stored
+# here.  A record whose owner is not an executable object is refused by the
+# scheduler rather than trusted.
+#
+# The limit is what makes a wait bounded.  Model 33 and Mikhail's rule that a
+# program may crash but cannot hang: every parent has a timeout on its child and
+# every child on its parent, so no wait is longer than the timeout.  The limit and the
+# start are readings of the CYCLE's clock (lmx_clock): the record does not own time, it
+# only remembers when it started and how long it may last, and every call that ages a
+# wait is handed the reading by the cycle.
+struct: LmxSchedule
+    @: void owner
+    # The record's OWN band: the arena it was CREATED in, written once by lmx_schedule_init and
+    # never moved.  The end-turn collection runs on the band that holds the turn (model 24) -- the
+    # object's own storage is what is collected, and only that band may collect it -- so the record
+    # carries its band from the moment it exists and a queue never has to know it: a record created
+    # in one Message's arena stays that arena's even while a root's round steps it.  Zero is the
+    # creator naming none: that turn's boundary collects nothing (lmx_turn_end), which is a
+    # legitimate state for a world whose values are held outside any arena.
+    @: LmxArena arena
+    # The wait's own arithmetic, in the cycle's milliseconds.  A 32-bit reading is
+    # enough: `now - started` stays correct across a wrap because the arithmetic is
+    # modulo 2^32 and a limit is small.
+    ulong: started
+    ulong: limit
+    int: state
+    @: LmxSchedule next
+    # The OS thread running this lane, when the manager in use is the RUNNING one
+    # (lmx_manager_running.lm1).  Zero means this lane has no thread of its own --
+    # which is the normal state under the stepped manager.  The field is the
+    # scheduler's bookkeeping, never a cell of the letter or of the object.
+    @: void lane
+end: LmxSchedule
+
+prototype:
+    # The record's creation act: its owner, the band it will be collected on, and how long a wait it
+    # may have.  A record with no band is refused (see the field above).
+    fn: lmx_schedule_init (@: LmxSchedule slot; @: LmxArena arena; @: void owner; ulong: limit) int
+    # `now` is the cycle's reading: the wait starts there, and the caller owns the clock.
+    fn: lmx_schedule_wait (@: LmxSchedule slot; ulong: now) int
+    fn: lmx_schedule_tick (@: LmxSchedule slot; ulong: now) int
+    fn: lmx_schedule_state (@: LmxSchedule slot) int
+end: prototype

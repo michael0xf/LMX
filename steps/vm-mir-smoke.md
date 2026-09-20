@@ -32,7 +32,8 @@ Chosen path: **WSL Ubuntu** (MIR documents Linux/macOS; do not treat Win32 MinGW
 
 ```
 cd build/vm/mir-build
-make SRC_DIR=../mir -f ../mir/GNUmakefile -j```
+make SRC_DIR=../mir -f ../mir/GNUmakefile -j$(nproc)
+```
 
 - Build exit: **0**. Produced local `c2m`, `m2b`, `b2m`, `mir-bin-run` (not installed system-wide).
 

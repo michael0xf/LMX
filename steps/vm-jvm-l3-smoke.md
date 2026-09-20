@@ -84,3 +84,19 @@ javac -cp "dev/vm_jvm/out;build/vm_jvm/asm-9.7.1.jar" -d dev/vm_jvm/out printer/
 java -cp "dev/vm_jvm/out;build/vm_jvm/asm-9.7.1.jar" printer.ExprSmokeDriver
 java -cp "dev/vm_jvm/out" smoke.HelloStructureSmoke
 ```
+
+## GROK-BOT-JVM-L3-WHILE-20260920-59B (2026-09-20 22:55 UTC)
+
+Path-B pre-test WHILE (statement-only in SEQUENCE).
+
+- ExprSmokeDriver PASS checks=51 failures=0; HelloStructureSmoke PASS checks=25 failures=0.
+- Zero iters; three iters to 0; cond/body probe counts 4+3; nested CALL isolation; arity/value/final reject.
+- Commits use `git commit --only -- <exact paths>` (no shared index sweep).
+
+Verify:
+```
+javac -d dev/vm_jvm/out lmx/*.java graph/*.java smoke/*.java
+javac -cp "dev/vm_jvm/out;build/vm_jvm/asm-9.7.1.jar" -d dev/vm_jvm/out printer/*.java
+java -cp "dev/vm_jvm/out;build/vm_jvm/asm-9.7.1.jar" printer.ExprSmokeDriver
+java -cp "dev/vm_jvm/out" smoke.HelloStructureSmoke
+```

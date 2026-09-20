@@ -67,3 +67,8 @@ Fixture: entry `return CALL(leaf, subject) + 5` where leaf is `return subject[0]
 - LOCAL_SET / LOCAL_GET: compile-time slot index; JVM local = arity + slot (after subject/args). Per CALL activation; no TLS/shared array/name table.
 - Slot count from LOCAL_SET indices only. Definite assignment rejects uninitialized LOCAL_GET. Negative / out-of-range / malformed arity rejected before class bytes.
 - WHILE, recursion, and reference locals still deferred. Int-only boundary kept.
+## WHILE (Path B slice 59B)
+
+- Pre-test WHILE: children condition, body. Int condition (zero=false); ordinary JVM back-edge; no fuel cap.
+- Statement only: valid solely as a **non-final** SEQUENCE child (no invented int result). Rejected in value/final-expression context before class bytes.
+- BREAK / CONTINUE / UNTIL / FOR / recursion still deferred.

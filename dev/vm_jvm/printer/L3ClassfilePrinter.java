@@ -15,7 +15,7 @@ import org.objectweb.asm.Opcodes;
 /**
  * Emits one JVM method per reachable {@link L3Role#CALLABLE}.
  * Method names {@code c0}..{@code cN}; descriptors from arity; activation-local
- * int slots after subject/args. WHILE / recursion deferred.
+ * int slots after subject/args. Pre-test WHILE (statement-only). Recursion deferred.
  */
 public final class L3ClassfilePrinter implements Opcodes {
     public static final String GEN_INTERNAL = "lmx/gen/PrintedL3Expr";
@@ -262,11 +262,22 @@ public final class L3ClassfilePrinter implements Opcodes {
                 throw new IllegalArgumentException("SEQUENCE arity: need >= 1 child");
             }
             BitSet a = assigned;
-            for (int i = 0; i < expr.children.length; i++) {
-                a = validateIntExpr(
+            for (int i = 0; i < expr.children.length - 1; i++) {
+                a = validateStmt(
                         expr.children[i], map, arity, slots, currentCallable, currentArity, slotCount, a);
             }
-            return a;
+            return validateIntExpr(
+                    expr.children[expr.children.length - 1],
+                    map,
+                    arity,
+                    slots,
+                    currentCallable,
+                    currentArity,
+                    slotCount,
+                    a);
+        }
+        if (r == L3Role.WHILE) {
+            throw new IllegalArgumentException("WHILE not allowed in value context");
         }
         if (r == L3Role.FIELD_FOLLOW) {
             if (expr.children.length != 1) {
@@ -349,6 +360,38 @@ public final class L3ClassfilePrinter implements Opcodes {
         throw new IllegalArgumentException("unsupported role");
     }
 
+    /** Statement position (non-final SEQUENCE): WHILE or discarded int expression. */
+    private static BitSet validateStmt(
+            L3Node expr,
+            Map<L3Node, Integer> map,
+            Map<L3Node, Integer> arity,
+            Map<L3Node, Integer> slots,
+            L3Node currentCallable,
+            int currentArity,
+            int slotCount,
+            BitSet assigned) {
+        if (expr.role == L3Role.WHILE) {
+            if (expr.children.length != 2) {
+                throw new IllegalArgumentException("WHILE arity: need condition, body");
+            }
+            BitSet afterCond = validateIntExpr(
+                    expr.children[0], map, arity, slots, currentCallable, currentArity, slotCount, assigned);
+            validateIntExpr(
+                    expr.children[1],
+                    map,
+                    arity,
+                    slots,
+                    currentCallable,
+                    currentArity,
+                    slotCount,
+                    (BitSet) afterCond.clone());
+            // Zero iterations possible: only pre-loop assignments remain definite.
+            return assigned;
+        }
+        return validateIntExpr(
+                expr, map, arity, slots, currentCallable, currentArity, slotCount, assigned);
+    }
+
     private static void validateOccurrence(L3Node n, int currentArity) {
         if (n.role == L3Role.SUBJECT_REF) {
             return;
@@ -408,12 +451,18 @@ public final class L3ClassfilePrinter implements Opcodes {
             mv.visitInsn(DUP);
             mv.visitVarInsn(ISTORE, jvmLocal(currentArity, expr.intPayload));
         } else if (r == L3Role.SEQUENCE) {
-            for (int i = 0; i < expr.children.length; i++) {
-                emitIntExpr(mv, expr.children[i], map, arity, currentArity);
-                if (i + 1 < expr.children.length) {
+            for (int i = 0; i < expr.children.length - 1; i++) {
+                L3Node ch = expr.children[i];
+                if (ch.role == L3Role.WHILE) {
+                    emitWhile(mv, ch, map, arity, currentArity);
+                } else {
+                    emitIntExpr(mv, ch, map, arity, currentArity);
                     mv.visitInsn(POP);
                 }
             }
+            emitIntExpr(mv, expr.children[expr.children.length - 1], map, arity, currentArity);
+        } else if (r == L3Role.WHILE) {
+            throw new IllegalArgumentException("WHILE not allowed in value context");
         } else if (r == L3Role.FIELD_FOLLOW) {
             emitOccurrence(mv, expr.children[0]);
             mv.visitLdcInsn(Integer.valueOf(expr.intPayload));
@@ -453,6 +502,23 @@ public final class L3ClassfilePrinter implements Opcodes {
         } else {
             throw new IllegalArgumentException("unsupported role");
         }
+    }
+
+    private static void emitWhile(
+            MethodVisitor mv,
+            L3Node expr,
+            Map<L3Node, Integer> map,
+            Map<L3Node, Integer> arity,
+            int currentArity) {
+        Label head = new Label();
+        Label done = new Label();
+        mv.visitLabel(head);
+        emitIntExpr(mv, expr.children[0], map, arity, currentArity);
+        mv.visitJumpInsn(IFEQ, done);
+        emitIntExpr(mv, expr.children[1], map, arity, currentArity);
+        mv.visitInsn(POP);
+        mv.visitJumpInsn(GOTO, head);
+        mv.visitLabel(done);
     }
 
     private static void emitOccurrence(MethodVisitor mv, L3Node expr) {

@@ -46,6 +46,12 @@ public final class ExprSmokeDriver {
         testLocalsTwoFreshCalls();
         testLocalsRejected();
 
+        testWhileZeroIterations();
+        testWhileThreeDownToZero();
+        testWhileProbeCounts();
+        testWhileNestedCallIsolation();
+        testWhileRejected();
+
         if (fails != 0) {
             System.out.println("FAIL ExprSmokeDriver checks=" + checks + " failures=" + fails);
             System.exit(1);
@@ -317,6 +323,55 @@ public final class ExprSmokeDriver {
         try { L3ClassfilePrinter.emitCallable(L3ExprFixture.localsMalformedSet()); }
         catch (IllegalArgumentException e) { set = true; }
         check("LOCAL_SET without RHS rejected", set);
+    }
+
+    private static void testWhileZeroIterations() throws Exception {
+        Class<?> cls = loadPrinted(L3ExprFixture.whileZeroIterations());
+        Method eval = cls.getMethod("eval", LmxOccurrence.class);
+        Object r = eval.invoke(null, LmxOccurrence.independent(Integer.valueOf(0)));
+        check("WHILE zero iterations -> 0", Integer.valueOf(0).equals(r));
+    }
+
+    private static void testWhileThreeDownToZero() throws Exception {
+        Class<?> cls = loadPrinted(L3ExprFixture.whileThreeDownToZero());
+        Method eval = cls.getMethod("eval", LmxOccurrence.class);
+        Object r = eval.invoke(null, LmxOccurrence.independent(Integer.valueOf(0)));
+        check("WHILE three iters end at 0", Integer.valueOf(0).equals(r));
+    }
+
+    private static void testWhileProbeCounts() throws Exception {
+        ArgEvalCounter.reset();
+        Class<?> cls = loadPrinted(L3ExprFixture.whileProbeCondAndBody());
+        Method eval = cls.getMethod("eval", LmxOccurrence.class);
+        ArgEvalCounter.reset();
+        Object r = eval.invoke(null, LmxOccurrence.independent(Integer.valueOf(0)));
+        check("WHILE probe loop ends 0", Integer.valueOf(0).equals(r));
+        // cond 4x + body 3x
+        check("WHILE cond+body probes == 7", ArgEvalCounter.get() == 7);
+    }
+
+    private static void testWhileNestedCallIsolation() throws Exception {
+        Class<?> cls = loadPrinted(L3ExprFixture.whileNestedCallIsolation());
+        Method eval = cls.getMethod("eval", LmxOccurrence.class);
+        Object r = eval.invoke(null, LmxOccurrence.independent(Integer.valueOf(0)));
+        check("WHILE in callee leaves caller local 10", Integer.valueOf(10).equals(r));
+    }
+
+    private static void testWhileRejected() {
+        boolean arity = false;
+        try { L3ClassfilePrinter.emitCallable(L3ExprFixture.whileBadArity()); }
+        catch (IllegalArgumentException e) { arity = true; }
+        check("WHILE bad arity rejected", arity);
+
+        boolean val = false;
+        try { L3ClassfilePrinter.emitCallable(L3ExprFixture.whileInValueContextReturn()); }
+        catch (IllegalArgumentException e) { val = true; }
+        check("WHILE in RETURN value context rejected", val);
+
+        boolean fin = false;
+        try { L3ClassfilePrinter.emitCallable(L3ExprFixture.whileInFinalSequence()); }
+        catch (IllegalArgumentException e) { fin = true; }
+        check("WHILE as final SEQUENCE rejected", fin);
     }
     private static boolean hasMethods(Class<?> cls, String... want) {
         Set<String> names = new HashSet<String>();

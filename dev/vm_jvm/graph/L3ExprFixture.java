@@ -308,6 +308,83 @@ public final class L3ExprFixture {
     public static L3Node localsMalformedSet() {
         return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, L3Node.ofInt(L3Role.LOCAL_SET, 0)));
     }
+
+    /** Zero iterations: LOCAL_SET(0,0), WHILE(LOCAL_GET(0), ...), LOCAL_GET(0) → 0. */
+    public static L3Node whileZeroIterations() {
+        L3Node init = new L3Node(L3Role.LOCAL_SET, 0, L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        L3Node body = new L3Node(L3Role.LOCAL_SET, 0, L3Node.ofInt(L3Role.INT_LITERAL, 99));
+        L3Node w = L3Node.of(L3Role.WHILE, L3Node.ofInt(L3Role.LOCAL_GET, 0), body);
+        L3Node get = L3Node.ofInt(L3Role.LOCAL_GET, 0);
+        return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, L3Node.of(L3Role.SEQUENCE, init, w, get)));
+    }
+
+    /**
+     * Three iterations: n=3; while n: n = n + (-1); result LOCAL_GET(0)==0.
+     */
+    public static L3Node whileThreeDownToZero() {
+        L3Node init = new L3Node(L3Role.LOCAL_SET, 0, L3Node.ofInt(L3Role.INT_LITERAL, 3));
+        L3Node dec = L3Node.of(
+                L3Role.ADD, L3Node.ofInt(L3Role.LOCAL_GET, 0), L3Node.ofInt(L3Role.INT_LITERAL, -1));
+        L3Node body = new L3Node(L3Role.LOCAL_SET, 0, dec);
+        L3Node w = L3Node.of(L3Role.WHILE, L3Node.ofInt(L3Role.LOCAL_GET, 0), body);
+        L3Node get = L3Node.ofInt(L3Role.LOCAL_GET, 0);
+        return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, L3Node.of(L3Role.SEQUENCE, init, w, get)));
+    }
+
+    /**
+     * Condition and body each contain PROBE; 3 iters → cond 4 times, body 3 times (total 7).
+     * Ends with LOCAL_GET(0)==0.
+     */
+    public static L3Node whileProbeCondAndBody() {
+        L3Node init = new L3Node(L3Role.LOCAL_SET, 0, L3Node.ofInt(L3Role.INT_LITERAL, 3));
+        L3Node cond = L3Node.of(L3Role.SEQUENCE, L3Node.of(L3Role.PROBE), L3Node.ofInt(L3Role.LOCAL_GET, 0));
+        L3Node dec = L3Node.of(
+                L3Role.ADD, L3Node.ofInt(L3Role.LOCAL_GET, 0), L3Node.ofInt(L3Role.INT_LITERAL, -1));
+        L3Node body = L3Node.of(
+                L3Role.SEQUENCE,
+                L3Node.of(L3Role.PROBE),
+                new L3Node(L3Role.LOCAL_SET, 0, dec));
+        L3Node w = L3Node.of(L3Role.WHILE, cond, body);
+        L3Node get = L3Node.ofInt(L3Role.LOCAL_GET, 0);
+        return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, L3Node.of(L3Role.SEQUENCE, init, w, get)));
+    }
+
+    /**
+     * Caller local 0=10; CALL callee that loops LOCAL_SET(0) down from 3; then LOCAL_GET(0) still 10.
+     */
+    public static L3Node whileNestedCallIsolation() {
+        L3Node callee = whileThreeDownToZero();
+        L3Node set = new L3Node(L3Role.LOCAL_SET, 0, L3Node.ofInt(L3Role.INT_LITERAL, 10));
+        L3Node call = L3Node.of(L3Role.CALL, callee, L3Node.of(L3Role.SUBJECT_REF));
+        L3Node get = L3Node.ofInt(L3Role.LOCAL_GET, 0);
+        return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, L3Node.of(L3Role.SEQUENCE, set, call, get)));
+    }
+
+    public static L3Node whileBadArity() {
+        L3Node w = L3Node.of(L3Role.WHILE, L3Node.ofInt(L3Role.INT_LITERAL, 1));
+        return L3Node.of(
+                L3Role.CALLABLE,
+                L3Node.of(L3Role.RETURN, L3Node.of(L3Role.SEQUENCE, w, L3Node.ofInt(L3Role.INT_LITERAL, 0))));
+    }
+
+    /** WHILE as sole RETURN value — rejected. */
+    public static L3Node whileInValueContextReturn() {
+        L3Node w = L3Node.of(
+                L3Role.WHILE,
+                L3Node.ofInt(L3Role.INT_LITERAL, 0),
+                L3Node.ofInt(L3Role.INT_LITERAL, 1));
+        return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, w));
+    }
+
+    /** WHILE as final SEQUENCE child — rejected. */
+    public static L3Node whileInFinalSequence() {
+        L3Node init = new L3Node(L3Role.LOCAL_SET, 0, L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        L3Node w = L3Node.of(
+                L3Role.WHILE,
+                L3Node.ofInt(L3Role.LOCAL_GET, 0),
+                L3Node.ofInt(L3Role.INT_LITERAL, 1));
+        return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, L3Node.of(L3Role.SEQUENCE, init, w)));
+    }
     public static final class CallGraphWithOrphan {
         public final L3Node entry;
         public final L3Node orphan;

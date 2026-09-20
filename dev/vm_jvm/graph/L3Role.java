@@ -19,7 +19,7 @@ public final class L3Role {
     public static final L3Role CALL = new L3Role();
     /**
      * Integer IF: children are condition, then, else.
-     * Condition is an int expression (zero = false, nonzero = true). WHILE deferred.
+     * Condition is an int expression (zero = false, nonzero = true).
      */
     public static final L3Role IF = new L3Role();
     /**
@@ -34,7 +34,7 @@ public final class L3Role {
     public static final L3Role PROBE = new L3Role();
     /**
      * Sequential evaluation: children left-to-right; yields the last expression's int.
-     * At least one child. Prepares loop/state without WHILE.
+     * At least one child. Non-final children may be statements (e.g. WHILE).
      */
     public static final L3Role SEQUENCE = new L3Role();
     /**
@@ -47,6 +47,12 @@ public final class L3Role {
      * child[0] is the RHS (evaluated once). Yields the stored int.
      */
     public static final L3Role LOCAL_SET = new L3Role();
+    /**
+     * Pre-test loop: children are condition, body. Condition is an int (zero=false).
+     * Statement only — valid solely as a non-final SEQUENCE child; no int result.
+     * Ordinary JVM back-edge; no fuel cap. BREAK/CONTINUE/UNTIL/FOR deferred.
+     */
+    public static final L3Role WHILE = new L3Role();
     public static final L3Role UNSUPPORTED = new L3Role();
 
     private L3Role() {}

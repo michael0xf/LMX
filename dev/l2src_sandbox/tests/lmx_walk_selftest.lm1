@@ -13,10 +13,12 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
 # The walk of a body tree, on graphs built by hand: no translator emits body nodes yet.
 # Every program below is an ordinary callable occurrence M in one unit; its body is M
-# after child[0], and every reference inside it is a position, never a name and never a
-# pointer into M.
+# after child[0].  A node refers to its role, to the Structure that holds a field and to
+# a callee by ADDRESS; the only numbers are the slot of a field inside its Structure and
+# the ordinal of a declared input.  There are no names anywhere.
 
 @: LmxArena ga 0
+@: Lmx groles 0
 int: broken 0
 int: checks 0
 int: failures 0
@@ -31,14 +33,14 @@ end: check
 
 # A frame node under `parent`, stored into parent[slot].
 fn: fr (@: Lmx parent; size_t: slot; int: op; size_t: children) @: Lmx
-    @: Lmx n lmx_walk_frame(ga, parent, op, children)
+    @: Lmx n lmx_walk_frame(ga, groles, parent, op, children)
     if: n = 0 || lmx_arena_ref_store(parent, slot, (cast: (@: void) n)) != 0
         broken: broken + 1
         return: 0
     ---
 return: n
 
-# A plain Structure (a body, a path) under `parent`, stored into parent[slot].
+# A plain Structure (a body) under `parent`, stored into parent[slot].
 fn: pl (@: Lmx parent; size_t: slot; size_t: children) @: Lmx
     @: Lmx n lmx_walk_plain(ga, parent, children)
     if: n = 0 || lmx_arena_ref_store(parent, slot, (cast: (@: void) n)) != 0
@@ -46,6 +48,13 @@ fn: pl (@: Lmx parent; size_t: slot; size_t: children) @: Lmx
         return: 0
     ---
 return: n
+
+# A reference stored into code[slot].
+sub: ref (@: Lmx code; size_t: slot; @: Lmx target)
+    if: code = 0 || target = 0 || lmx_arena_ref_store(code, slot, (cast: (@: void) target)) != 0
+        broken: broken + 1
+    ---
+end: ref
 
 sub: sz (@: Lmx code; size_t: slot; size_t: value)
     if: code = 0 || lmx_walk_store_size(ga, code, slot, value) != c.LMX_WALK_OK
@@ -68,36 +77,16 @@ fn: lit (@: Lmx parent; size_t: slot; int: value) @: Lmx
     ---
 return: n
 
-fn: own1 (@: Lmx parent; size_t: slot; size_t: i0) @: Lmx
-    @: Lmx n fr(parent, slot, c.LMX_WALK_OP_OWN, 2U)
-    sz(n, 1U, i0)
-return: n
-
-fn: own3 (@: Lmx parent; size_t: slot; size_t: i0; size_t: i1; size_t: i2) @: Lmx
-    @: Lmx n fr(parent, slot, c.LMX_WALK_OP_OWN, 4U)
-    sz(n, 1U, i0)
-    sz(n, 2U, i1)
-    sz(n, 3U, i2)
+# [own, holder, slot]: the field `index` of the Structure `holder`, by reference.
+fn: own (@: Lmx parent; size_t: slot; @: Lmx holder; size_t: index) @: Lmx
+    @: Lmx n fr(parent, slot, c.LMX_WALK_OP_OWN, 3U)
+    ref(n, 1U, holder)
+    sz(n, 2U, index)
 return: n
 
 fn: argn (@: Lmx parent; size_t: slot; size_t: k) @: Lmx
     @: Lmx n fr(parent, slot, c.LMX_WALK_OP_ARG, 2U)
     sz(n, 1U, k)
-return: n
-
-# path [up, i0]: a child of a lexical ancestor.
-fn: path2 (@: Lmx parent; size_t: slot; size_t: up; size_t: i0) @: Lmx
-    @: Lmx n pl(parent, slot, 2U)
-    sz(n, 0U, up)
-    sz(n, 1U, i0)
-return: n
-
-# path [up, i0, i1]: a slot of a child of a lexical ancestor.
-fn: path3 (@: Lmx parent; size_t: slot; size_t: up; size_t: i0; size_t: i1) @: Lmx
-    @: Lmx n pl(parent, slot, 3U)
-    sz(n, 0U, up)
-    sz(n, 1U, i0)
-    sz(n, 2U, i1)
 return: n
 
 # A callable occurrence under the unit: child[0] is a fresh LmxCallable, nothing native.
@@ -112,25 +101,27 @@ return: m
 
 fn: main () int
     LmxArena: arena
+    LmxWalkFrame: frame
     @: LmxArena pa 0
+    @: LmxWalkFrame pf 0
+    @: LmxWalkOwn po 0
     @: Lmx unit 0
-    @: Lmx m 0
     @: Lmx n 0
     @: Lmx b 0
     @: Lmx e 0
     @: Lmx counter 0
     @: Lmx outer 0
+    @: Lmx inner 0
+    @: Lmx publisher 0
+    @: Lmx reader 0
     @: Lmx summer 0
     @: Lmx looper 0
     @: Lmx bare 0
     @: Lmx faller 0
-    @: Lmx direct 0
     @: Lmx stopper 0
     @: Lmx refuser 0
     @: Lmx orderer 0
-    LmxWalkFrame: frame
-    @: LmxWalkFrame pf 0
-    @: LmxWalkOwn po 0
+    @: Lmx stranger 0
     @: Lmx copy 0
     @: void cell 0
     @: void xcell 0
@@ -144,54 +135,67 @@ fn: main () int
         return: 2
     pa: @ arena
     ga: pa
+    groles: lmx_walk_roles_open(ga)
     args: (cast: (@: int) calloc(1U, c.sizeof(int)))
     unit: lmx_node_new_owned(ga)
-    if: args = 0 || unit = 0 || lmx_arena_refs_open_owned(ga, unit, 13U) != 0
+    if: groles = 0 || args = 0 || unit = 0 || lmx_arena_refs_open_owned(ga, unit, 13U) != 0
         fputs("lmx_walk: unit\n", l1_stdout())
         return: 2
     ---
 
-    # unit[0] counter:   own n 0;  n: n + 1;  return: n
+    # Every occurrence first: a node refers to a callee and to a holder by address, so
+    # the Structures have to exist before the bodies that point at them.
     counter: mk_m(unit, 0U, 4U)
+    outer: mk_m(unit, 1U, 4U)
+    inner: mk_m(unit, 2U, 2U)
+    publisher: mk_m(unit, 3U, 4U)
+    reader: mk_m(unit, 4U, 2U)
+    summer: mk_m(unit, 5U, 3U)
+    looper: mk_m(unit, 6U, 5U)
+    bare: mk_m(unit, 7U, 2U)
+    faller: mk_m(unit, 8U, 3U)
+    stopper: mk_m(unit, 9U, 5U)
+    refuser: mk_m(unit, 10U, 4U)
+    orderer: mk_m(unit, 11U, 6U)
+    stranger: mk_m(unit, 12U, 2U)
+
+    # counter:   own n 0;  n: n + 1;  return: n
     cell: icell(counter, 1U, 0)
     n: fr(counter, 2U, c.LMX_WALK_OP_SET, 3U)
-    own1(n, 1U, 1U)
+    own(n, 1U, counter, 1U)
     e: fr(n, 2U, c.LMX_WALK_OP_ADD, 3U)
-    own1(e, 1U, 1U)
+    own(e, 1U, counter, 1U)
     lit(e, 2U, 1)
     n: fr(counter, 3U, c.LMX_WALK_OP_RET, 2U)
-    own1(n, 1U, 1U)
+    own(n, 1U, counter, 1U)
 
-    # unit[1] outer:     own x 1;  inner;  return: x          (21.6's worked case)
-    # unit[2] inner:     outer\x: 2                           (explicit path, no cache)
-    outer: mk_m(unit, 1U, 4U)
+    # outer:     own x 1;  inner;  return: x          (21.6's worked case)
+    # inner:     outer\x: 2                           (explicit field write, no cache)
     xcell: icell(outer, 1U, 1)
     n: fr(outer, 2U, c.LMX_WALK_OP_CALL, 2U)
-    path2(n, 1U, 1U, 2U)
+    ref(n, 1U, inner)
     n: fr(outer, 3U, c.LMX_WALK_OP_RET, 2U)
-    own1(n, 1U, 1U)
-    m: mk_m(unit, 2U, 2U)
-    n: fr(m, 1U, c.LMX_WALK_OP_PUT, 3U)
-    path3(n, 1U, 1U, 1U, 1U)
-    lit(n, 2U, 2)
+    own(n, 1U, outer, 1U)
+    n: fr(inner, 1U, c.LMX_WALK_OP_PUT, 4U)
+    ref(n, 1U, outer)
+    sz(n, 2U, 1U)
+    lit(n, 3U, 2)
 
-    # unit[3] publisher: own y 0;  y: 5;  return: reader()    (dirty published before a call)
-    # unit[4] reader:    return: publisher\y                  (reads the graph)
-    m: mk_m(unit, 3U, 4U)
-    icell(m, 1U, 0)
-    n: fr(m, 2U, c.LMX_WALK_OP_SET, 3U)
-    own1(n, 1U, 1U)
+    # publisher: own y 0;  y: 5;  return: reader()    (dirty published before a call)
+    # reader:    return: publisher\y                  (reads the graph)
+    icell(publisher, 1U, 0)
+    n: fr(publisher, 2U, c.LMX_WALK_OP_SET, 3U)
+    own(n, 1U, publisher, 1U)
     lit(n, 2U, 5)
-    n: fr(m, 3U, c.LMX_WALK_OP_RET, 2U)
+    n: fr(publisher, 3U, c.LMX_WALK_OP_RET, 2U)
     e: fr(n, 1U, c.LMX_WALK_OP_CALL, 2U)
-    path2(e, 1U, 1U, 4U)
-    m: mk_m(unit, 4U, 2U)
-    n: fr(m, 1U, c.LMX_WALK_OP_RET, 2U)
-    e: fr(n, 1U, c.LMX_WALK_OP_AT, 2U)
-    path3(e, 1U, 1U, 3U, 1U)
+    ref(e, 1U, reader)
+    n: fr(reader, 1U, c.LMX_WALK_OP_RET, 2U)
+    e: fr(n, 1U, c.LMX_WALK_OP_AT, 3U)
+    ref(e, 1U, publisher)
+    sz(e, 2U, 1U)
 
-    # unit[5] summer (k): if: k < 1 { return: 0 };  return: k + summer(k - 1)
-    summer: mk_m(unit, 5U, 3U)
+    # summer (k): if: k < 1 { return: 0 };  return: k + summer(k - 1)
     n: fr(summer, 1U, c.LMX_WALK_OP_IF, 3U)
     e: fr(n, 1U, c.LMX_WALK_OP_LT, 3U)
     argn(e, 1U, 0U)
@@ -203,79 +207,65 @@ fn: main () int
     e: fr(n, 1U, c.LMX_WALK_OP_ADD, 3U)
     argn(e, 1U, 0U)
     n: fr(e, 2U, c.LMX_WALK_OP_CALL, 3U)
-    path2(n, 1U, 1U, 5U)
+    ref(n, 1U, summer)
     e: fr(n, 2U, c.LMX_WALK_OP_SUB, 3U)
     argn(e, 1U, 0U)
     lit(e, 2U, 1)
 
-    # unit[6] looper (k): own acc 0; own i 0
-    #                     while: i < k { own t 0;  t: i + 1;  acc: acc + t;  i: t }
-    #                     return: acc
-    # `t` is a field of the loop's body: its path from the reserved node is 3, 2, 0.
-    looper: mk_m(unit, 6U, 5U)
+    # looper (k): own acc 0; own i 0
+    #             while: i < k { own t 0;  t: i + 1;  acc: acc + t;  i: t }
+    #             return: acc
+    # `t` is a field of the loop's body: its holder is that body.
     icell(looper, 1U, 0)
     icell(looper, 2U, 0)
     n: fr(looper, 3U, c.LMX_WALK_OP_WHILE, 3U)
     e: fr(n, 1U, c.LMX_WALK_OP_LT, 3U)
-    own1(e, 1U, 2U)
+    own(e, 1U, looper, 2U)
     argn(e, 2U, 0U)
     b: pl(n, 2U, 4U)
     icell(b, 0U, 0)
     n: fr(b, 1U, c.LMX_WALK_OP_SET, 3U)
-    own3(n, 1U, 3U, 2U, 0U)
+    own(n, 1U, b, 0U)
     e: fr(n, 2U, c.LMX_WALK_OP_ADD, 3U)
-    own1(e, 1U, 2U)
+    own(e, 1U, looper, 2U)
     lit(e, 2U, 1)
     n: fr(b, 2U, c.LMX_WALK_OP_SET, 3U)
-    own1(n, 1U, 1U)
+    own(n, 1U, looper, 1U)
     e: fr(n, 2U, c.LMX_WALK_OP_ADD, 3U)
-    own1(e, 1U, 1U)
-    own3(e, 2U, 3U, 2U, 0U)
+    own(e, 1U, looper, 1U)
+    own(e, 2U, b, 0U)
     n: fr(b, 3U, c.LMX_WALK_OP_SET, 3U)
-    own1(n, 1U, 2U)
-    own3(n, 2U, 3U, 2U, 0U)
+    own(n, 1U, looper, 2U)
+    own(n, 2U, b, 0U)
     n: fr(looper, 4U, c.LMX_WALK_OP_RET, 2U)
-    own1(n, 1U, 1U)
+    own(n, 1U, looper, 1U)
 
-    # unit[7] bare:      own q 3                              (no body node at all)
-    bare: mk_m(unit, 7U, 2U)
+    # bare:      own q 3                              (no body node at all)
     icell(bare, 1U, 3)
 
-    # unit[8] faller:    own z 0;  z: 7                       (void: falls off the end)
-    faller: mk_m(unit, 8U, 3U)
+    # faller:    own z 0;  z: 7                       (void: falls off the end)
     icell(faller, 1U, 0)
     n: fr(faller, 2U, c.LMX_WALK_OP_SET, 3U)
-    own1(n, 1U, 1U)
+    own(n, 1U, faller, 1U)
     lit(n, 2U, 7)
 
-    # unit[9] direct:    return: counter()      the callee M stored in child 1 of the call,
-    #                                           the form lmx_interp_exec reads
-    direct: mk_m(unit, 9U, 2U)
-    n: fr(direct, 1U, c.LMX_WALK_OP_RET, 2U)
-    e: fr(n, 1U, c.LMX_WALK_OP_CALL, 2U)
-    if: e = 0 || lmx_arena_ref_store(e, 1U, (cast: (@: void) counter)) != 0
-        broken: broken + 1
-    ---
-
-    # unit[10] stopper:  own w 0;  w: 9;  return;  w: 11      a BARE LmxOp return
-    stopper: mk_m(unit, 10U, 5U)
+    # stopper:   own w 0;  w: 9;  return;  w: 11      (a BARE role record as the return)
     icell(stopper, 1U, 0)
     n: fr(stopper, 2U, c.LMX_WALK_OP_SET, 3U)
-    own1(n, 1U, 1U)
+    own(n, 1U, stopper, 1U)
     lit(n, 2U, 9)
-    if: stopper = 0 || lmx_arena_ref_store(stopper, 3U, (cast: (@: void) lmx_op_new_owned(ga, c.LMX_OP_RETURN))) != 0
+    if: stopper = 0 || lmx_arena_ref_store(stopper, 3U, lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_RET))) != 0
         broken: broken + 1
     ---
     n: fr(stopper, 4U, c.LMX_WALK_OP_SET, 3U)
-    own1(n, 1U, 1U)
+    own(n, 1U, stopper, 1U)
     lit(n, 2U, 11)
 
-    # unit[11] refuser:  own v 0;  v: 5;  if: 1 { } else { <a node with an op code nobody reads> }
+    # refuser:   own v 0;  v: 5;  if: 1 { } else { <a node whose role nobody reads> }
     # The unsupported node sits in a branch that would never be taken.
-    refuser: mk_m(unit, 11U, 4U)
     icell(refuser, 1U, 0)
     n: fr(refuser, 2U, c.LMX_WALK_OP_SET, 3U)
-    own1(n, 1U, 1U)
+    own(n, 1U, refuser, 1U)
     lit(n, 2U, 5)
     n: fr(refuser, 3U, c.LMX_WALK_OP_IF, 4U)
     lit(n, 1U, 1)
@@ -286,24 +276,27 @@ fn: main () int
         broken: broken + 1
     ---
 
-    # unit[12] orderer:  own a 0; own b 0;  b: 2;  while: 0 { own t 0;  t: 3 };  a: 1
+    # orderer:   own a 0; own b 0;  b: 2;  while: 0 { own t 0;  t: 3 };  a: 1
     # The body mentions b, then t, then a; lexically the fields stand a, b, t.
-    orderer: mk_m(unit, 12U, 6U)
     icell(orderer, 1U, 0)
     icell(orderer, 2U, 0)
     n: fr(orderer, 3U, c.LMX_WALK_OP_SET, 3U)
-    own1(n, 1U, 2U)
+    own(n, 1U, orderer, 2U)
     lit(n, 2U, 2)
     n: fr(orderer, 4U, c.LMX_WALK_OP_WHILE, 3U)
     lit(n, 1U, 0)
     b: pl(n, 2U, 2U)
     icell(b, 0U, 0)
     e: fr(b, 1U, c.LMX_WALK_OP_SET, 3U)
-    own3(e, 1U, 4U, 2U, 0U)
+    own(e, 1U, b, 0U)
     lit(e, 2U, 3)
     n: fr(orderer, 5U, c.LMX_WALK_OP_SET, 3U)
-    own1(n, 1U, 1U)
+    own(n, 1U, orderer, 1U)
     lit(n, 2U, 1)
+
+    # stranger:  return: <counter's n, named as if it were stranger's OWN field>
+    n: fr(stranger, 1U, c.LMX_WALK_OP_RET, 2U)
+    own(n, 1U, counter, 1U)
 
     check(c.LMX_WALK_OP_RET = c.LMX_OP_RETURN && c.LMX_WALK_OP_CALL = c.LMX_OP_CALL, "codes agree with lmx_interp.h")
     check(broken = 0, "construction")
@@ -311,6 +304,10 @@ fn: main () int
         c.printf("lmx_walk: %d construction steps failed\n", broken)
         return: 2
     ---
+
+    # The role is the reference: two nodes of one role point at the very same record.
+    check(lmx_arena_ref_value(lmx_arena_ref_struct(counter, 3U), 0U) = lmx_arena_ref_value(lmx_arena_ref_struct(outer, 3U), 0U), "two returns share one role record")
+    check(lmx_arena_ref_value(lmx_arena_ref_struct(counter, 3U), 0U) != lmx_arena_ref_value(lmx_arena_ref_struct(counter, 2U), 0U), "different roles are different records")
 
     # counter: the executed assignment is published at the return, and the next
     # activation starts from the published value.
@@ -330,7 +327,7 @@ fn: main () int
 
     # 21.6: a dirty value is published before the outbound call.
     r: -1
-    st: lmx_walk_run(ga, lmx_arena_ref_struct(unit, 3U), 0, 0U, @ r)
+    st: lmx_walk_run(ga, publisher, 0, 0U, @ r)
     check(st = c.LMX_WALK_OK && r = 5, "dirty value published before the call")
 
     # Recursion is recursion of the C stack on one published M; an early return inside
@@ -346,7 +343,7 @@ fn: main () int
     st: lmx_walk_run(ga, summer, 0, 0U, @ r)
     check(st = c.LMX_WALK_INVALID, "a missing declared input is refused")
 
-    # A field of a nested body is reached by position through the body.
+    # A field of a nested body is an own field too; its holder is the body.
     r: -1
     args[0]: 4
     st: lmx_walk_run(ga, looper, args, 1U, @ r)
@@ -354,7 +351,7 @@ fn: main () int
     check(lmx_int_value_known(lmx_arena_ref_value(looper, 1U)) = 10, "looper published acc")
     check(lmx_int_value_known(lmx_arena_ref_value(looper, 2U)) = 4, "looper published i")
 
-    # No body node: nothing to walk, and nothing is invented.
+    # No body node: nothing to walk, nothing is invented, nothing native is called.
     st: lmx_walk_run(ga, bare, 0, 0U, @ r)
     check(st = c.LMX_WALK_NO_GRAPH, "a callable without body nodes is NO_GRAPH")
     st: lmx_walk_run(ga, unit, 0, 0U, @ r)
@@ -366,18 +363,14 @@ fn: main () int
     check(st = c.LMX_WALK_OK && r = -77, "void fall-off leaves the result alone")
     check(lmx_int_value_known(lmx_arena_ref_value(faller, 1U)) = 7, "void fall-off published z")
 
-    # Grok's forms are read as they are: a callee M stored directly in the call, and a
-    # bare LmxOp return (it still publishes what is dirty, and ends the body there).
-    r: -1
-    st: lmx_walk_run(ga, direct, 0, 0U, @ r)
-    check(st = c.LMX_WALK_OK && r = 3, "direct callee in child 1 of the call")
+    # A bare role record as a return still publishes what is dirty, and ends the body.
     st: lmx_walk_run(ga, stopper, 0, 0U, @ r)
     check(st = c.LMX_WALK_OK && lmx_int_value_known(lmx_arena_ref_value(stopper, 1U)) = 9, "bare return publishes and stops")
 
     # A node outside the slice is reported at entry, wherever it sits, and nothing of the
     # activation runs: the assignment before it is neither executed nor published.
     st: lmx_walk_run(ga, refuser, 0, 0U, @ r)
-    check(st = c.LMX_WALK_UNSUPPORTED, "an unread op code is UNSUPPORTED, not skipped")
+    check(st = c.LMX_WALK_UNSUPPORTED, "an unread role is UNSUPPORTED, not skipped")
     check(lmx_int_value_known(lmx_arena_ref_value(refuser, 1U)) = 0, "nothing ran before the refusal")
 
     # Entry keeps the own records in the lexical order of the fields, which is the order
@@ -395,18 +388,26 @@ fn: main () int
     ---
     lmx_walk_leave(pf)
 
-    # A COPY of M runs unchanged on its own state: body nodes hold positions, so nothing
-    # in them points back into the original; child[0] is shared by address.
+    # An own field is a field of M or of a body inside M.  Somebody else's field named as
+    # own is refused at entry; it is reachable only as an explicit field (`at` / `put`).
+    st: lmx_walk_run(ga, stranger, 0, 0U, @ r)
+    check(st = c.LMX_WALK_INVALID, "another occurrence's field is not an own field")
+
+    # A COPY of M runs unchanged on its own state: the copier remaps the references of
+    # the body along with the rest of M's tree, so the copy's nodes point at the copy;
+    # child[0] and the role records are shared by address.
     st: lmx_graph_copy_owned(counter, 0, ga, ga, @ copy)
     check(st = c.LMX_GRAPH_COPY_OK && copy != 0 && copy != counter, "counter copied")
     if: copy != 0
         check(lmx_arena_ref_value(copy, 0U) = lmx_arena_ref_value(counter, 0U), "copy shares child[0]")
         check(lmx_arena_ref_value(copy, 1U) != cell, "copy has its own n")
+        check(lmx_arena_ref_value(lmx_arena_ref_struct(copy, 3U), 0U) = lmx_arena_ref_value(lmx_arena_ref_struct(counter, 3U), 0U), "copy shares the role records")
+        check(lmx_arena_ref_struct(lmx_arena_ref_struct(lmx_arena_ref_struct(copy, 3U), 1U), 1U) = copy, "the copy's node refers to the copy, not to the original")
         r: -1
         st: lmx_walk_run(ga, copy, 0, 0U, @ r)
-        check(st = c.LMX_WALK_OK && r = 4, "copy continues from the copied value")
-        check(lmx_int_value_known(cell) = 3, "original n untouched by the copy's run")
-        check(lmx_int_value_known(lmx_arena_ref_value(copy, 1U)) = 4, "copy published into its own n")
+        check(st = c.LMX_WALK_OK && r = 3, "copy continues from the copied value")
+        check(lmx_int_value_known(cell) = 2, "original n untouched by the copy's run")
+        check(lmx_int_value_known(lmx_arena_ref_value(copy, 1U)) = 3, "copy published into its own n")
     ---
 
     free((cast: (@: void) args))

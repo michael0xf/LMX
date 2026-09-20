@@ -17,43 +17,52 @@ predef: "l2src/lmx_call.h.lm1"
 #   * an activation lives on the ordinary C stack (same file, "Тело метода общее,
 #     активация на стеке"): a recursive call is a recursive C call of lmx_walk_run on
 #     the same published M, and nothing per-activation is ever put into the graph;
-#   * state is addressed BY POSITION from the reserved node, as native code does
-#     (l2trans.lm1 l2_own_mslot / l2_own_ctr): a body node holds indexes, so a copied M
-#     runs unchanged on its own state;
+#   * what carries identity in the executable graph (LMX_blog/2026-09-20.md, "Приоритет
+#     ссылок в исполняемом графе"): as many PHYSICAL REFERENCES as possible, a numeric
+#     code only where a physical reference is impossible, text nowhere.  So a node refers
+#     to its role, to the Structure that holds a field and to the callee M by address;
+#     the copier remaps those references with the rest of M's tree, so a copied M runs
+#     unchanged on its own state.  Numbers remain only where there is nothing to point
+#     at: the slot of a field inside its Structure (slot storage is not a graph value,
+#     lmx_graph_copy_owned.lm1) and the ordinal of a declared input, which lives on the
+#     stack of the activation and not in the graph;
 #   * own fields the body uses are loaded at entry into activation-local working values,
 #     dirty is set only by an executed assignment, dirty values are published before
 #     every outbound call and every exit, clean ones are never republished, nothing is
 #     reloaded after a call (Lingvamyxa_spec.txt 21.5, 21.6; lmx_own.lm1);
 #   * one exit order for every `return:`: evaluate the argument -> dirty-only checkpoint
-#     in load order -> return (l2trans.lm1 l2_emit_ret_tr, `return` in l2_emit_body).
+#     in the lexical order of the fields -> return (l2trans.lm1 l2_emit_ret_tr, `return`
+#     in l2_emit_body; LMX_blog/2026-09-20.md, "Поля Lmx лексические").
 #
 # The shape of a body node is Grok's (lmx.h.lm1, LmxOp; lmx_interp.lm1): a FRAME node is
-# an ordinary Structure whose child[0] is an LmxOp record -- the arena's index says it is
-# an op, its `code` says which -- and whose remaining children are its operands, in
-# order.  A bare LmxOp child with code RETURN is a void return, as lmx_interp_exec reads
-# it.  What is PROPOSED here and needs the author's word (dev/graph_interp/BODY_NODES.md)
-# is the set of codes beyond RETURN and CALL and the operands of each.  A BODY (of `if`,
-# of `while`) is a plain Structure whose children are, in order, own cells and frame
-# nodes -- the same shape as M after child[0].  Numbers inside a node (a literal, a step
-# of a path) are primitive cells.
+# an ordinary Structure whose child[0] refers to its ROLE and whose remaining children
+# are its operands, in order.  The role is a physical reference: ONE shared record per
+# role (lmx_walk_roles_open), so two nodes of the same role point at the same record and
+# the address is the role.  The record is an LmxOp; its `code` is only the discriminator
+# this unit switches on AFTER the reference is resolved and the arena's index has said
+# the referent is a role record -- it is not the node's persistent identity.  (A node
+# built elsewhere with a record of its own is still read: lmx_interp's tests do that.)
+# A bare role record as a child, with code RETURN, is a void return, as lmx_interp_exec
+# reads it.  A BODY (of `if`, of `while`) is a plain Structure whose children are, in
+# order, own cells and frame nodes -- the same shape as M after child[0].
 #
 #   ret   [ret, value?]               a return; no value for a void callable
-#   call  [call, path, arg ...]       the path selects the callee M; a callee M stored
-#                                     directly in child 1 (lmx_interp_exec's form) is
-#                                     accepted too
-#   lit   [lit, cell]                 int cell
-#   own   [own, i0 .. ik]             size_t cells: steps from the reserved node down
-#                                     through bodies; the last one is the field's slot
+#   call  [call, M, arg ...]          M is the callee occurrence itself, by reference
+#   lit   [lit, cell]                 the int cell that holds the value, by reference
+#   own   [own, holder, slot]         an own field of the running M: `holder` is M or a
+#                                     body lexically inside M, by reference; `slot` is a
+#                                     size_t cell.  Loaded at entry, cached, dirty-tracked
 #   arg   [arg, k]                    k-th declared input of this activation (size_t cell)
-#   path  plain [up, i0 .. ik]        size_t cells: `up` lexical parents of the reserved
-#                                     node, then down by index
-#   at    [at, path]                  explicit graph path read: every execution, never
-#                                     cached (21.5)
-#   put   [put, path, value]          explicit graph path write, never cached
+#   at    [at, holder, slot]          explicit graph field read: every execution, never
+#                                     cached (21.5); `holder` is any Structure, by reference
+#   put   [put, holder, slot, value]  explicit graph field write, never cached
 #   set   [set, own-node, value]      executed assignment of an own field: sets dirty
 #   add sub lt eq  [op, a, b]
 #   if    [if, cond, then, else?]     then / else are bodies
 #   while [while, cond, body]
+#
+# The set of roles beyond RETURN and CALL and the operands of each are a carrier draft
+# for probing the mechanism, not an L3 ISA (dev/graph_interp/BODY_NODES.md).
 #
 # Limits of this slice, stated rather than hidden: values are C int only; declared
 # inputs are int; a return carries 0 or 1 value; no throw, no poll
@@ -69,7 +78,8 @@ predef: "l2src/lmx_call.h.lm1"
 # callable with no body node is LMX_WALK_NO_GRAPH and that is all.
 
 define: LMX_WALK_OK 0
-# Malformed body tree, not a callable, a path that selects nothing, a missing input.
+# Malformed body tree, not a callable, a field reference that selects nothing, an own
+# field that is not lexically inside M, a missing input.
 define: LMX_WALK_INVALID 1
 # A callable with no body node: nothing to walk (the caller may have a native entry).
 define: LMX_WALK_NO_GRAPH 2
@@ -102,14 +112,12 @@ define: LMX_WALK_OP_WHILE 14
 define: LMX_WALK_OP_COUNT 15
 
 # One own field of the running M as this activation sees it: the slot it was loaded from
-# (the publication target), the `own` node whose steps are the field's LEXICAL POSITION,
-# the working value, and the dirty state of 21.6.  The records of an activation are kept
-# in the lexical order of the fields (LMX_blog/2026-09-20.md, "Поля Lmx лексические"),
-# which is therefore the order of every checkpoint -- not the order in which the body
-# happens to mention them.
+# (the publication target), the working value, and the dirty state of 21.6.  The records
+# of an activation are kept in the lexical order of the fields (LMX_blog/2026-09-20.md,
+# "Поля Lmx лексические"), found by walking M's own tree in order at entry; that is the
+# order of every checkpoint -- not the order in which the body happens to mention them.
 struct: LmxWalkOwn
     @@: void from
-    @: Lmx position
     int: value
     int: dirty
 end: LmxWalkOwn
@@ -121,7 +129,9 @@ struct: LmxWalkFrame
     @: int args
     size_t: nargs
     @: LmxWalkOwn owns
+    @: LmxWalkOwn found
     size_t: nowns
+    size_t: nfound
     size_t: cap
     int: counting
     int: returned
@@ -139,10 +149,14 @@ prototype:
     fn: lmx_walk_enter (@: LmxWalkFrame f; @: LmxArena arena; @: Lmx node; @: int args; size_t: nargs) int
     sub: lmx_walk_leave (@: LmxWalkFrame f)
 
+    # The roles of a program: a plain Structure whose child k is THE record of role k.
+    # Opened once per program graph; every frame node refers to these records.
+    fn: lmx_walk_roles_open (@: LmxArena arena) @: Lmx
     # Construction of body nodes, for a translator and for tests.  A node is a fresh
-    # Structure of `arena` with `children` slots; a frame node gets a fresh LmxOp of
-    # `code` in child[0].  The caller stores it into its parent's slot.
-    fn: lmx_walk_frame (@: LmxArena arena; @: Lmx parent; int: code; size_t: children) @: Lmx
+    # Structure of `arena` with `children` slots and lexical parent `parent`; a frame
+    # node gets the shared record of role `code` in child[0].  The caller stores the node
+    # into its parent's slot.
+    fn: lmx_walk_frame (@: LmxArena arena; @: Lmx roles; @: Lmx parent; int: code; size_t: children) @: Lmx
     fn: lmx_walk_plain (@: LmxArena arena; @: Lmx parent; size_t: children) @: Lmx
     fn: lmx_walk_store_size (@: LmxArena arena; @: Lmx code; size_t: slot; size_t: value) int
     fn: lmx_walk_store_int (@: LmxArena arena; @: Lmx code; size_t: slot; int: value) int

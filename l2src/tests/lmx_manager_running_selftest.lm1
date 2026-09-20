@@ -1,0 +1,147 @@
+predef: "l2src/lmx_manager_running.lm1"
+predef: "l2src/lmx_manager_running.h.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_call.lm1"
+predef: "l2src/lmx_turn.lm1"
+predef: "l2src/lmx_child.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_gc.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_clock.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# A LANE RUNS A WHOLE TURN (lmx_manager_running.lm1; the commit that made it use lmx_thread_turn).
+# What this file pins -- the claim that had no test when the lane was switched to the shared turn act:
+#
+#   * the lane's turn runs the BODY the object's own graph names, not only the boundary: the entry
+#     below counts its own calls, and the count is the evidence;
+#   * the body runs INSIDE the lane's own turn: the object the body sees as current is the very
+#     thread whose turn it is;
+#   * the lane's turn is whole: its boundary collects the record's own band (the arena's generation
+#     moves), and this thread's current object is never touched by the lane (it is a per-thread cell).
+#
+# The lane is an OS thread, so this test WAITS for the state the next call requires (the count) and
+# never asserts on a race: it sleeps a bounded time, then asks.
+
+size_t: rb_calls 0U
+@: Lmx rb_node 0
+@: LmxThread rb_current 0
+
+fn: rb_body (@: Lmx node) int
+    rb_calls: rb_calls + 1U
+    rb_node: node
+    rb_current: lmx_thread_current()
+return: 0
+
+fn: rb_struct (@: LmxArena arena; size_t: slots) @: Lmx
+    @: Lmx structure
+    structure: lmx_node_new_owned(arena)
+    if: structure = 0
+        return: 0
+    ---
+    if: lmx_arena_refs_open_owned(arena, structure, slots) != 0
+        return: 0
+    ---
+return: structure
+
+sub: rb_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: rb_check
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxArena: arena
+    LmxPool: methods
+    LmxManager: running
+    @: LmxArena arena_at 0
+    @: Lmx graph 0
+    @: Lmx own_field 0
+    @: LmxMethod method 0
+    @: LmxMsg message 0
+    @: LmxThread t 0
+    @: LmxPost mail 0
+    @: LmxSchedule sched 0
+    @: LmxSchedule slotp 0
+    unsigned: gen
+    int: failures
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ methods)), 0, c.sizeof(c.LmxPool))
+    if: lmx_arena_open(@ arena) != 0
+        fputs("lmx_manager_running: the arena did not open\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    arena_at: @ arena
+    if: lmx_pool_open(arena_at, @ methods, c.sizeof(c.LmxMethod), 2U, c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD) != 0
+        fputs("lmx_manager_running: the method pool did not open\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    method: lmx_method_intern(arena_at, @ methods, (cast: (LmxEntry) rb_body), 1U)
+    graph: rb_struct(arena_at, 2U)
+    own_field: lmx_int_new_owned(arena_at)
+    message: (cast: (@: LmxMsg) lmx_arena_take(arena_at, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    t: (cast: (@: LmxThread) lmx_arena_take(arena_at, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    mail: (cast: (@: LmxPost) lmx_arena_take(arena_at, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    sched: (cast: (@: LmxSchedule) lmx_arena_take(arena_at, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: method = 0 || graph = 0 || own_field = 0 || message = 0 || t = 0 || mail = 0 || sched = 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(graph, 0U, (cast: (@: void) method))
+    lmx_arena_ref_store(graph, 1U, own_field)
+    message\running: 1
+    message\success: 0
+    message\handoff_ready: 0
+    message\graph: graph
+    message\index: 1U
+    rb_check(counts, lmx_post_init(arena_at, mail) = c.LMX_POST_OK && lmx_thread_attach(t, message, mail, sched) = c.LMX_THREAD_OK, "the object did not attach")
+    # The record's own band, and a window wide enough that the lane's own ticks never end the wait.
+    rb_check(counts, lmx_schedule_init(sched, arena_at, (cast: (@: void) t), 100000U) = c.LMX_SCHEDULE_OK, "the record did not initialize")
+    rb_check(counts, lmx_schedule_wait(sched, lmx_clock_ticks()) = c.LMX_SCHEDULE_OK, "the record's wait did not start")
+
+    rb_check(counts, lmx_manager_running_init(@ running) = c.LMX_MANAGER_OK, "the running manager did not initialize")
+    rb_check(counts, lmx_manager_running_add(@ running, sched) = c.LMX_MANAGER_OK, "the record did not join the running schedule")
+    gen: arena_at\generation
+    rb_check(counts, lmx_manager_running_round(@ running, 1U, 0U) = c.LMX_MANAGER_OK, "the running round did not start a lane")
+    slotp: sched
+    rb_check(counts, slotp\lane != 0, "the running manager did not give the record a lane")
+
+    # Wait for the state the next call requires: the lane is an OS thread, so the count is what says
+    # it ran, and a bounded sleep is how this test asks.
+    c.Sleep(60U)
+    rb_check(counts, rb_calls >= 1U, "the lane ran no body")
+    rb_check(counts, rb_current = t, "the lane's body did not run inside its own turn")
+    rb_check(counts, rb_node = graph, "the lane's body was not handed its own graph")
+    rb_check(counts, lmx_thread_current() = 0, "the lane wrote this thread's current object")
+    rb_check(counts, arena_at\generation > gen, "the lane's turn did not collect the record's own band")
+
+    # Stop it and let the lane end by itself, then join.
+    message\running: 0
+    c.Sleep(60U)
+    rb_check(counts, lmx_manager_running_close(@ running) = c.LMX_MANAGER_OK, "the running manager did not join its lanes")
+    rb_check(counts, slotp\lane = 0, "the lane was not released")
+    rb_check(counts, rb_calls = 0U || rb_calls >= 1U, "the lane's count went backwards")
+
+    failures: counts[1]
+    c.printf("lmx_manager_running checks=%d failures=%d calls=%d\n", counts[0], failures, rb_calls)
+    free(counts)
+return: failures

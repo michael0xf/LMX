@@ -1,0 +1,20 @@
+predef: "l2src/lmx_clock.h.lm1"
+
+# The cycle's clock.  One reading and one difference, nothing else: a record's arithmetic
+# stays in the record, and the platform is asked in exactly one place.
+
+fn: lmx_clock_now () ULONGLONG
+return: c.GetTickCount64()
+
+# The same reading as the 32-bit count a scheduler record keeps.  The difference between
+# two readings stays correct across a wrap (`now - started`, modulo 2^32), which is why a
+# record may hold a narrow reading at all.
+fn: lmx_clock_ticks () ulong
+return: (cast: (ulong) c.GetTickCount64())
+
+fn: lmx_clock_since (ULONGLONG: start) ULONGLONG
+    ULONGLONG: now c.GetTickCount64()
+    if: now < start
+        return: 0U
+    ---
+return: now - start

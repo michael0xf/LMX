@@ -1,0 +1,94 @@
+predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_message.h.lm1"
+predef: "l2src/lmx_thread.h.lm1"
+predef: "l2src/lmx_service.h.lm1"
+
+# Creating a child Message (model 17 step 6, 26 step 6; the gaps note's items 1 and 3).  A
+# child has its OWN arena, the used graph is copied into that arena, and its record is made
+# there.  The child is PUBLISHED by one store into the parent's slot -- and that store happens
+# at the END OF THE PARENT'S TURN, not at creation:
+#
+#   model 26: "Родитель в своём turn РЕЗЕРВИРУЕТ дочерний Message, его идентичность и
+#   отдельную arena"; "До успешной публикации родительского turn ребёнок не становится
+#   доступным для обычного исполнения входящих.  При неуспехе родителя неопубликованные
+#   резервации/подготовленное владение убираются."
+#   model 28: "При успехе публикуются исходящие и подготовленные дети.  При неуспехе
+#   неопубликованный outbox отбрасывается."
+#
+# So a reservation is the turn's own bookkeeping: the child's address exists (its identity is
+# reserved), but nothing points at it yet, and the reservation is what the boundary either
+# publishes or drops.  The parent can read its own reserved child -- it holds the address --
+# and nothing else can, which is exactly the availability rule of 26.
+#
+# A failure is NOT a rollback of the turn's graph writes (spec 19.29.4.1: "This does not roll
+# back earlier graph mutations"), so the drop is specific: the child's own arena is released
+# and the parent's slot is left untouched -- it was never written.
+#
+# The reservation lives in the PARENT's arena, under its own registered domain, like the
+# mailbox's own queue nodes: it is a mechanism record of the turn, not a value of the
+# language.  The list belongs to the turn's owner -- the L3 Thread whose turn it is -- which
+# is what "состояние ... пишется только на полосе этого Message" asks for.
+#
+# A child's arena attaches to the parent's only when the child is handoff-safe (model
+# 19.29.7, and that is lmx_arena_attach) -- attaching is not part of creation and not part of
+# publication either.
+define: LMX_CHILD_OK 0
+define: LMX_CHILD_INVALID 1
+
+# One reserved child: whose slot it goes into, the child, its arena, and the turn's link.
+# `arena` is here so that dropping a reservation releases exactly the storage the reservation
+# created -- there is no second list of them anywhere.
+struct: LmxReservation
+    @: Lmx parent
+    size_t: slot
+    @: LmxMsg message
+    @: LmxArena arena
+    # The child's own L3 Thread, when the child is one (a plain letter has none, and then no
+    # up-link is written -- the address walk is between L3 Threads, which is what a postman is).
+    # It is here because the PARENT's publication writes the child's up-link on the parent's
+    # lane (spec 19.29.6), and the parent's lane is exactly this act.
+    @: LmxThread thread
+    @: LmxReservation next
+end: LmxReservation
+
+prototype:
+    # The source graph is classified by `src_arena` (where its addresses answer) and the
+    # child is built in `child_arena`.  `parent` is the live Structure whose slot `slot`
+    # receives the child; `dst_chars` is always 0 here, meaning the source's interned
+    # characters are kept by address -- a Message's own character table is a later step, and
+    # keeping them shares immutable cells, which is what they are for.
+    #
+    # This is the bare constructor: it builds the child and publishes NOTHING.  A turn
+    # reserves through lmx_child_reserve, which remembers what the boundary must publish.
+    fn: lmx_child_create (@: LmxArena src_arena; @: LmxArena child_arena; @: Lmx parent; size_t: slot; @: Lmx source) @: LmxMsg
+    # Create the child AND register the reservation in the turn's own list (`t` is the L3
+    # Thread whose turn it is).  Refused when the child cannot be built, and then nothing is
+    # remembered and nothing is published.
+    fn: lmx_child_reserve (@: LmxThread t; @: LmxArena src_arena; @: LmxArena child_arena; @: Lmx parent; size_t: slot; @: Lmx source) @: LmxMsg
+    # The child's own L3 Thread joins the reservation, so that the publication writes the child's
+    # parent up-link (spec 19.29.6) on the parent's lane.  The turn that reserves a
+    # child is the code that gives it an object, so this is the second half of one act; a child
+    # that stays a plain letter is simply never named here, and no parent link is written for it.
+    fn: lmx_child_thread (@: LmxThread t; @: LmxMsg child; @: LmxThread child_thread) int
+        # The end-turn boundary's second act: one store per reservation, in reservation order,
+    # then the list is empty.  A store that fails (a slot that stopped answering) drops that
+    # reservation -- its child was never published, so its arena goes -- and the answer says
+    # so while the rest are still published.
+    # The service a record's parent handed it, read from the record's OWN entry: the child is
+    # registered in the service its parent was registered in, and the entry is what a postman
+    # reads.  Null when the record was never registered.
+    fn: lmx_child_service (@: LmxThread t) @: LmxService
+    # `arena` is the PARENT's own arena: the chain node the publication writes (lmx_thread_child_add)
+    # is a cell of it, and the arena is the context of the act.
+    fn: lmx_child_publish_prepared (@: LmxThread t; @: LmxArena arena) int
+    # The end-turn boundary's failure act: nothing was published, so each reserved child's
+    # own arena is released and the list is empty.  The parent's slots are untouched: they
+    # were never written.
+    fn: lmx_child_drop_prepared (@: LmxThread t) int
+    # Handing a finished child over: its arena attaches to the parent's, so the parent's
+    # index answers for the child's cells too and nothing is copied (model 19.29.7, and
+    # the attach is lmx_arena_attach).  Refused while the child is not handoff-safe --
+    # that mark is written by the child itself when it leaves its last turn (model 32),
+    # and attaching an arena whose Message still runs would hand over storage in use.
+    fn: lmx_child_handoff (@: LmxArena parent_arena; @: LmxArena child_arena; @: LmxMsg message) int
+end: prototype

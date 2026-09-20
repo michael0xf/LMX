@@ -1,0 +1,298 @@
+predef: "l2src/lmx_post.h.lm1"
+predef: "l2src/lmx_pool.h.lm1"
+predef: "l2src/lmx_implements.h.lm1"
+
+# lmx_post.lm1 - the mail.
+#
+# The mailbox distinguishes a LETTER from an EXECUTABLE OBJECT, and it does it the
+# way this kernel distinguishes everything: by the array of the arena the address
+# falls into.  Nothing is stored on a letter to say that it is one -- a child
+# carries no type tag (lmx.h, spec 2 and 6.5) -- so `is this a letter, is this an
+# object` is asked of the address, through lmx_implements.  That is why this
+# module works with lmx_message without adding anything to it: what the mailbox
+# needs is the letter's ADDRESS, its running/success flags (read where a turn
+# boundary reads them) and its graph root.  All five fields already carry that.
+#
+# Model 27: sending, publishing, receiving and executing are five different steps, and this
+# unit holds two of them apart: ACCEPT puts a target in a lane, and PUBLISH (the end-turn
+# boundary's first act, spec 19.29.4.1) is what makes a turn's prepared outgoing visible.
+# "Успешное завершение turn публикует подготовленный outbox", and a turn that failed
+# "discards its staged outbox, but not already published graph/own-field writes".
+#
+# Those two steps are why accept into LMX_POST_OUTBOX goes to the STAGED queue and not to the
+# outbox: during a turn nothing of it is outgoing yet, and a reader of the outbox must not see
+# a target that a failing turn is about to take apart.  The three lanes are the whole state:
+# inbox (admitted, to be taken), outbox (published, a transport's business) and staged (this
+# turn's preparation, nobody else's).
+#
+# Every lane is FIFO, and that is spec, not convenience: "publish successful FIFO outbox"
+# (19.29.4.1), and model 27 -- "FIFO задаётся порядком admission у конкретного получателя".
+# Admission order is the order a reader sees, so a node is appended at the tail and taken
+# from the head; the tail link is what keeps appending free of a list scan.
+#
+# Queue-node storage is the mailbox's own typed pool (lmx_pool).  The pool adds
+# chunks of LmxPostLink nodes and registers each chunk as one more array interval of
+# the POST_LINK domain, so a node is classified by the address it lands in -- and no
+# node is ever malloc'd, neither per node nor per mailbox.  A pool never takes a
+# node back, so a node released by lmx_post_take goes on this mailbox's free list
+# and is handed out again: without that list a long-running mailbox would grow the
+# pool without end, which is what makes the free list part of the mechanism and not
+# an optimisation.
+#
+# The arena is the context of every act that touches the pool or asks the table a
+# question, so those acts name it: init (the pool's first chunk), accept (a node,
+# and the target's domain), close (the pool back to the arena).  take, count, publish
+# and discard ask nothing of either, so they keep their signatures -- which is what
+# lets a lane perform the end-turn boundary without holding an arena.  The mailbox
+# stores no arena of its own.
+
+fn: lmx_post_admits (@: LmxArena arena; @: void target) int
+    int: kind
+    if: target = 0
+        return: c.LMX_POST_REFUSED
+    kind: lmx_domain_kind(arena, target)
+    if: kind = c.LMX_DOMAIN_KIND_MSG_RECORD
+        return: c.LMX_POST_OK
+    if: kind = c.LMX_DOMAIN_KIND_THREAD
+        return: c.LMX_POST_OK
+return: c.LMX_POST_REFUSED
+
+# One queue node: from the free list when the mailbox has one, otherwise from the
+# pool, which adds a chunk when the last chunk is full.  A zero answer is the
+# mailbox's only failure mode, and lmx_post_accept turns it into LMX_POST_FULL.
+fn: lmx_post_new_node (@: LmxArena arena; @: LmxPost box) @: LmxPostLink
+    @: LmxPostLink link
+    if: box = 0
+        return: 0
+    if: box\free_nodes != 0
+        link: box\free_nodes
+        box\free_nodes: link\next
+        link\next: 0
+        return: link
+    link: (cast: (@: LmxPostLink) lmx_pool_take(arena, @ box\nodes))
+return: link
+
+fn: lmx_post_init (@: LmxArena arena; @: LmxPost box) int
+    if: arena = 0 || box = 0
+        return: c.LMX_POST_INVALID
+    # THE INBOX RING: one block of slots, taken by the OWNER here, in its own thread.  Taking it
+    # now is half of why the ring exists -- after this, admitting a letter allocates nothing, so a
+    # sender never touches an arena the owner may be collecting at the same moment.
+    box\inbox_slots: lmx_arena_take(arena, c.LMX_POST_INBOX_SLOTS * c.sizeof(c.size_t), c.LMX_DOMAIN_KIND_POST_RING, c.LMX_DOMAIN_POST_RING)
+    box\inbox_head: 0U
+    box\inbox_tail: 0U
+    box\inbox_count: 0U
+    box\outbox: 0
+    box\outbox_tail: 0
+    box\staged: 0
+    box\staged_tail: 0
+    box\free_nodes: 0
+    box\outbox_count: 0U
+    box\staged_count: 0U
+    if: box\inbox_slots = 0
+        return: c.LMX_POST_INVALID
+    ---
+    # The pool refuses to open over one that already holds a chunk, and a mailbox may
+    # be a by-value local whose memory is whatever was on the stack.  So the pool's
+    # own fields are cleared before it is opened: that check is the pool guarding
+    # itself, and without this the open fails on garbage and the mailbox is left
+    # holding an uninitialised pool.  The arena is the caller's and is already open:
+    # a by-value arena is cleared and opened by whoever made it (lmx_arena_open).
+    box\nodes.head: 0
+    box\nodes.tail: 0
+    box\nodes.stride: 0U
+    box\nodes.chunk_capacity: 0U
+    box\nodes.kind: 0
+    box\nodes.type: 0
+    if: lmx_pool_open(arena, @ box\nodes, c.sizeof(c.LmxPostLink), c.LMX_POST_NODE_CHUNK, c.LMX_DOMAIN_KIND_POST_LINK, c.LMX_DOMAIN_POST_LINK) != 0
+        return: c.LMX_POST_INVALID
+    box\api.accept: lmx_post_accept
+    box\api.take: lmx_post_take
+    box\api.count: lmx_post_count
+    box\api.close: lmx_post_close
+return: c.LMX_POST_OK
+
+# The mailbox's interface, handed out as one table.  A caller that holds this holds
+# the mailbox's API and nothing else; the thread's mail API is a separate table that
+# delegates here (lmx_thread.lm1).
+fn: lmx_post_api (@: LmxPost box) @: LmxPostApi
+    if: box = 0
+        return: 0
+return: @ box\api
+
+# Accept one target into one lane.  The check is the discrimination itself: an
+# address of no known domain is refused, not queued and complained about later.
+#
+# An incoming target is appended to the inbox and is visible at once -- admission is what a
+# receiver sees.  An outgoing target is appended to the STAGED queue and is visible to nobody
+# but its own turn until the boundary publishes it.
+fn: lmx_post_accept (@: LmxArena arena; @: LmxPost box; @: void target; int: lane) int
+    @: LmxPostLink link
+    ulong: tail_read
+    ulong: head_read
+    @: size_t slots
+    if: box = 0 || (lane != c.LMX_POST_INBOX && lane != c.LMX_POST_OUTBOX)
+        return: c.LMX_POST_INVALID
+    if: lmx_post_admits(arena, target) != c.LMX_POST_OK
+        return: c.LMX_POST_REFUSED
+    # THE INBOX: one slot of the ring, published with a RELEASE store of the tail.  No node, no
+    # free list, no allocation -- several lanes may be here at once and none of them touches
+    # anything the owner owns except the two atomic counters.
+    if: lane = c.LMX_POST_INBOX
+        if: box\inbox_slots = 0
+            return: c.LMX_POST_INVALID
+        ---
+        tail_read: (cast: (ulong) c.__atomic_load_n((cast: (@: ulong) (@ box\inbox_tail)), c.__ATOMIC_RELAXED))
+        head_read: (cast: (ulong) c.__atomic_load_n((cast: (@: ulong) (@ box\inbox_head)), c.__ATOMIC_ACQUIRE))
+        if: (tail_read - head_read) >= c.LMX_POST_INBOX_SLOTS
+            return: c.LMX_POST_FULL
+        ---
+        slots: (cast: (@: size_t) box\inbox_slots)
+        slots[tail_read % c.LMX_POST_INBOX_SLOTS]: (cast: (size_t) target)
+        c.__atomic_store_n((cast: (@: ulong) (@ box\inbox_tail)), tail_read + 1U, c.__ATOMIC_RELEASE)
+        c.__atomic_fetch_add((cast: (@: size_t) (@ box\inbox_count)), 1U, c.__ATOMIC_RELAXED)
+        return: c.LMX_POST_OK
+    ---
+    link: lmx_post_new_node(arena, box)
+    if: link = 0
+        return: c.LMX_POST_FULL
+    ---
+    link\target: target
+    link\next: 0
+    if: box\staged_tail = 0
+        box\staged: link
+    else:
+        box\staged_tail\next: link
+    ---
+    box\staged_tail: link
+    box\staged_count: box\staged_count + 1U
+return: c.LMX_POST_OK
+
+# Take the oldest target out of a lane.  The queue node is not freed and not
+# returned to the pool: it goes on the mailbox's free list and is handed out again.
+# Only the target comes back, and the mailbox never owned it -- the one that made it
+# is the one that releases it.
+#
+# The staged lane is not takeable: narrowing a turn's preparation one item at a time is not
+# a step the model has -- it is published whole or discarded whole (lmx_post_publish,
+# lmx_post_discard).
+fn: lmx_post_take (@: LmxPost box; int: lane) @: void
+    @: LmxPostLink link
+    @: void target
+    ulong: head_read
+    ulong: tail_read
+    @: size_t slots
+    if: box = 0 || (lane != c.LMX_POST_INBOX && lane != c.LMX_POST_OUTBOX)
+        return: 0
+    # THE INBOX: the owner reads its head (relaxed), asks the tail for what has been PUBLISHED
+    # (acquire), and only then reads the slot -- the producer wrote that slot before it moved the
+    # tail, so an acquire read of the tail is what makes the slot's contents visible here.  The
+    # head moves with a release store, which is what lets a later sender reuse that slot.
+    if: lane = c.LMX_POST_INBOX
+        if: box\inbox_slots = 0
+            return: 0
+        ---
+        head_read: (cast: (ulong) c.__atomic_load_n((cast: (@: ulong) (@ box\inbox_head)), c.__ATOMIC_RELAXED))
+        tail_read: (cast: (ulong) c.__atomic_load_n((cast: (@: ulong) (@ box\inbox_tail)), c.__ATOMIC_ACQUIRE))
+        if: head_read = tail_read
+            return: 0
+        ---
+        slots: (cast: (@: size_t) box\inbox_slots)
+        target: (cast: (@: void) slots[head_read % c.LMX_POST_INBOX_SLOTS])
+        c.__atomic_store_n((cast: (@: ulong) (@ box\inbox_head)), head_read + 1U, c.__ATOMIC_RELEASE)
+        c.__atomic_fetch_sub((cast: (@: size_t) (@ box\inbox_count)), 1U, c.__ATOMIC_RELAXED)
+        return: target
+    ---
+    link: box\outbox
+    if: link = 0
+        return: 0
+    ---
+    # The only lane left here is the OUTBOX, and it is OWNER-LOCAL by the model: a turn takes
+    # from what an earlier successful turn published, and no other lane touches it -- which is
+    # why it may stay a plain list while the inbox could not.
+    box\outbox: link\next
+    if: box\outbox = 0
+        box\outbox_tail: 0
+    ---
+    box\outbox_count: box\outbox_count - 1U
+    target: link\target
+    link\target: 0
+    link\next: box\free_nodes
+    box\free_nodes: link
+return: target
+
+fn: lmx_post_count (@: LmxPost box; int: lane) size_t
+    if: box = 0
+        return: 0U
+    if: lane = c.LMX_POST_INBOX
+        # The count is an ATOMIC: a sender raises it, the owner lowers it, and a reader in a third
+        # lane may ask at any moment -- the relaxed load is the whole of what a count needs.
+        return: c.__atomic_load_n((cast: (@: size_t) (@ box\inbox_count)), c.__ATOMIC_RELAXED)
+    if: lane = c.LMX_POST_OUTBOX
+        return: box\outbox_count
+    if: lane = c.LMX_POST_STAGED
+        return: box\staged_count
+return: 0U
+
+# The end-turn boundary, success: the whole staged queue joins the tail of the outbox in ONE
+# step, so the order across turns stays admission order and not a single node is touched.  A
+# mailbox with nothing staged publishes nothing and answers OK -- a turn that sent nothing is
+# not an error.
+fn: lmx_post_publish (@: LmxPost box) int
+    if: box = 0
+        return: c.LMX_POST_INVALID
+    if: box\staged = 0
+        return: c.LMX_POST_OK
+    ---
+    if: box\outbox_tail = 0
+        box\outbox: box\staged
+    else:
+        box\outbox_tail\next: box\staged
+    ---
+    box\outbox_tail: box\staged_tail
+    box\outbox_count: box\outbox_count + box\staged_count
+    box\staged: 0
+    box\staged_tail: 0
+    box\staged_count: 0U
+return: c.LMX_POST_OK
+
+# The end-turn boundary, failure: what the turn prepared is taken apart -- its nodes go back
+# on the free list and nothing of it is ever seen.  What an EARLIER successful turn published
+# is not touched (spec 19.29.4.1: "failure discards its staged outbox, but not already
+# published graph/own-field writes"), and neither is anything already in the inbox.
+fn: lmx_post_discard (@: LmxPost box) int
+    @: LmxPostLink link
+    @: LmxPostLink next
+    if: box = 0
+        return: c.LMX_POST_INVALID
+    link: box\staged
+    while: link != 0
+        next: link\next
+        link\target: 0
+        link\next: box\free_nodes
+        box\free_nodes: link
+        link: next
+    ---
+    box\staged: 0
+    box\staged_tail: 0
+    box\staged_count: 0U
+return: c.LMX_POST_OK
+
+# Close the mailbox: every chunk of the node pool is unregistered from the arena's
+# index and released, and the mailbox is left empty and openable again.
+fn: lmx_post_close (@: LmxArena arena; @: LmxPost box) int
+    if: box = 0
+        return: c.LMX_POST_INVALID
+    lmx_pool_release(arena, @ box\nodes)
+    box\inbox_slots: 0
+    box\inbox_head: 0U
+    box\inbox_tail: 0U
+    box\outbox: 0
+    box\outbox_tail: 0
+    box\staged: 0
+    box\staged_tail: 0
+    box\free_nodes: 0
+    box\inbox_count: 0U
+    box\outbox_count: 0U
+    box\staged_count: 0U
+return: c.LMX_POST_OK

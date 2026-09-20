@@ -1,0 +1,26 @@
+lmx_dec: narrow L1-facing decimal backend over vendored C decNumber.
+
+Sources (unchanged ICU 3.68): third_party/decNumber/decNumber-icu-368/
+  compile decNumber.c + decContext.c only, with -DDECNUMDIGITS=34.
+  Do not compile decBasic.c / decCommon.c as separate TUs.
+  Incompatible DECNUMDIGITS is a compile error (fixed 34-digit ABI).
+
+Wrapper: l2src/lmx_dec.h + lmx_dec.c
+  ctx_init / from_text / add / sub / mul / div / neg / pow / compare
+  / quantize_places / to_text
+  Owner-local LmxDecCtx. ctx.set.digits must stay in 1..34 or ops fail.
+
+Status
+  Each call uses an operation-local context with status=0, then ORs that
+  result into the owner ctx (sticky history). Return 0 iff THIS operation's
+  DEC_Errors is empty. A second 1/0 or second bad parse still returns 1.
+  Inexact is not an error. ctx_clear is explicit; ops never clear history.
+
+Profile (explicit, not IEEE-128 storage)
+  digits=34, default round HALF_EVEN, traps=0
+  exponent range DEC_INIT_BASE (±999999999), not decimal128 ±6143
+  quantize_places may use HALF_UP for calculator divisor-zero scale
+  without changing the default HALF_EVEN context round.
+
+Calculator should call this C API; do not add a second decimal impl.
+Consumer wiring and portable bootstrap-source closure are still pending.

@@ -1,0 +1,172 @@
+predef: "l2src/lmx_implements.h.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_arena_refs.h.lm1"
+predef: "l2src/lmx_pool.h.lm1"
+
+# lmx_implements.lm1 - the domain questions, answered from the address alone.
+#
+# The whole mechanism is the arena's index (lmx_range_classify, lmx_range_type_of):
+# membership in one of the arena's arrays, no tag read.  This unit adds two things
+# and nothing else -- a way to register a whole domain (count * stride) in one call,
+# and the compatibility primitive itself.  The table is not created here: it is the
+# arena's, opened by the caller with lmx_arena_open, which is why every question
+# below names the arena it is asked of.
+
+# Register one domain's storage: a domain is one array of the arena like every
+# other, so the caller supplies the two records that describe it and the array's
+# interval is registered against them. Nothing is owned here: the storage is the
+# caller's frame or the arena's block list, never this unit's.
+fn: lmx_domain_register (@: LmxArena arena; @: LmxPool pool; @: LmxChunk chunk; @: void lo; size_t: count; size_t: stride; int: kind; int: type) int
+    if: arena = 0 || lo = 0 || count = 0U || stride = 0U
+        return: c.LMX_DOMAIN_REGISTER_FAIL
+    if: count > ((cast: (size_t) -1) / stride)
+        return: c.LMX_DOMAIN_REGISTER_FAIL
+    if: lmx_pool_over(arena, pool, chunk, lo, count * stride, stride, kind, type) != 0
+        return: c.LMX_DOMAIN_REGISTER_FAIL
+return: c.LMX_DOMAIN_REGISTER_OK
+
+fn: lmx_domain_kind (@: LmxArena arena; @: void p) int
+return: lmx_range_classify(arena, p)
+
+fn: lmx_domain_type (@: LmxArena arena; @: void p) int
+return: lmx_range_type_of(arena, p)
+
+fn: lmx_domain_known (@: LmxArena arena; @: void p) int
+    if: p = 0
+        return: c.LMX_IMPLEMENTS_NO
+    if: lmx_range_classify(arena, p) = c.LMX_KIND_NONE
+        return: c.LMX_IMPLEMENTS_NO
+return: c.LMX_IMPLEMENTS_YES
+
+# implements(varA, varB, Consumer) -- the first stage of 2.1.
+# Both operands must be of one registered domain: same kind, same type, and
+# neither of them unknown.  That is exactly what a mailbox has to ask before it
+# accepts a letter or an executable object, and it is asked here once rather than
+# spelled again in every caller.
+#
+# Directionality is preserved the L2 way: this stage is symmetric only because the
+# question it answers is symmetric (are these the same domain).  The consumer-
+# relative direction of 2.1 -- varA providing what varB's consumer uses -- is the
+# RUNTIME walk at the end of this unit (lmx_runtime_implements), which reads the
+# Consumer's own shape; the SOURCE check stays the translator's, over requirements
+# known at the site.
+#
+# The arena is the one whose index answers for both operands: a domain question is
+# asked of an address, and the answer comes from the arena the address lives in.
+fn: lmx_implements (@: LmxArena arena; @: void varA; @: void varB; @: void consumer) int
+    int: kindA
+    int: typeA
+    if: varA = 0 || varB = 0
+        return: c.LMX_IMPLEMENTS_NO
+    kindA: lmx_range_classify(arena, varA)
+    typeA: lmx_range_type_of(arena, varA)
+    if: kindA = c.LMX_KIND_NONE || typeA = c.LMX_TYPE_NONE
+        return: c.LMX_IMPLEMENTS_NO
+    if: lmx_range_classify(arena, varB) != kindA
+        return: c.LMX_IMPLEMENTS_NO
+    if: lmx_range_type_of(arena, varB) != typeA
+        return: c.LMX_IMPLEMENTS_NO
+return: c.LMX_IMPLEMENTS_YES
+
+# RuntimeImplements(varA, varB, Consumer) -- the second predicate of 2.1: the same used-path,
+# leaf and signature rules, applied to what is AVAILABLE at run time.
+#
+# The Consumer here is a STRUCTURE, and that is what makes a runtime walk possible at all: "the
+# used tree is the contract" (2.5.1) -- the Consumer's own shape gives the paths it uses, because
+# names are absent from ordinary LMX execution (spec 1178) and every path is an index path.  A
+# child of the Consumer that is UNSET is not a used path ("An empty `uses` is true: there is
+# nothing to use"), so a Consumer with no children is satisfied by anything.
+#
+# Per used path, in the order the spec gives it:
+#   * the path must be PRESENT on both operands -- "every path in uses(Consumer varB) is present
+#     on varA";
+#   * the leaf must be ADMITTED: one domain kind and one type on all three (2.2.3's primitive-leaf
+#     admission -- an address is admitted where its domain is);
+#   * at a callable ON a used path the METHOD signatures must be EQUAL -- "at every callable path
+#     p actually invoked by Consumer: sig(varA.p) == sig(varB.p) == ExpectedSig(Consumer, p)".
+#     A runtime cannot see which callable a Consumer invokes and which it only names, so a callable
+#     on a used path is taken as invoked: that reading can only refuse a substitution it might have
+#     allowed, never accept one whose generated typed call would be invalid.
+#
+# Everything the walk cannot inspect -- an address of no known domain, a signature that is not
+# there, a path deeper than the working bound -- is UNKNOWN, and UNKNOWN is never YES: "Unavailable
+# information is not invented and is not certified by success" (2.5.1).  A KNOWN mismatch is NO.
+fn: lmx_implements_signature (@: LmxMethod a; @: LmxMethod b; @: LmxMethod c) int
+    if: a = 0 || b = 0 || c = 0
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    if: a\sig = 0U || b\sig = 0U || c\sig = 0U
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    ---
+    if: a\sig != b\sig || a\sig != c\sig
+        return: c.LMX_IMPLEMENTS_NO
+    ---
+return: c.LMX_IMPLEMENTS_YES
+
+fn: lmx_implements_walk (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx consumer; int: depth) int
+    size_t: index
+    @: void a
+    @: void b
+    @: void c
+    int: kindA
+    int: kindB
+    int: kindC
+    int: answer
+    if: depth > c.LMX_IMPLEMENTS_DEPTH
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    if: consumer = 0
+        return: c.LMX_IMPLEMENTS_YES
+    if: varA = 0 || varB = 0
+        return: c.LMX_IMPLEMENTS_NO
+    if: lmx_domain_kind(arena, (cast: (@: void) consumer)) = c.LMX_KIND_NONE
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    if: lmx_domain_kind(arena, (cast: (@: void) consumer)) != c.LMX_KIND_STRUCT
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    if: lmx_domain_kind(arena, (cast: (@: void) varA)) = c.LMX_KIND_NONE || lmx_domain_kind(arena, (cast: (@: void) varB)) = c.LMX_KIND_NONE
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    if: lmx_domain_kind(arena, (cast: (@: void) varA)) != c.LMX_KIND_STRUCT || lmx_domain_kind(arena, (cast: (@: void) varB)) != c.LMX_KIND_STRUCT
+        return: c.LMX_IMPLEMENTS_NO
+    ---
+    index: 0U
+    while: index < (cast: (size_t) consumer\len)
+        c: lmx_arena_ref_value(consumer, index)
+        if: c != 0
+            a: lmx_arena_ref_value(varA, index)
+            b: lmx_arena_ref_value(varB, index)
+            if: a = 0 || b = 0
+                return: c.LMX_IMPLEMENTS_NO
+            ---
+            kindA: lmx_domain_kind(arena, a)
+            kindB: lmx_domain_kind(arena, b)
+            kindC: lmx_domain_kind(arena, c)
+            if: kindA = c.LMX_KIND_NONE || kindB = c.LMX_KIND_NONE || kindC = c.LMX_KIND_NONE
+                return: c.LMX_IMPLEMENTS_UNKNOWN
+            ---
+            if: kindA != kindC || kindB != kindC
+                return: c.LMX_IMPLEMENTS_NO
+            ---
+            if: kindC = c.LMX_KIND_METHOD
+                answer: lmx_implements_signature((cast: (@: LmxMethod) a), (cast: (@: LmxMethod) b), (cast: (@: LmxMethod) c))
+                if: answer != c.LMX_IMPLEMENTS_YES
+                    return: answer
+                ---
+            else:
+                if: kindC = c.LMX_KIND_STRUCT
+                    answer: lmx_implements_walk(arena, (cast: (@: Lmx) a), (cast: (@: Lmx) b), (cast: (@: Lmx) c), depth + 1)
+                    if: answer != c.LMX_IMPLEMENTS_YES
+                        return: answer
+                    ---
+                else:
+                    if: lmx_domain_type(arena, a) != lmx_domain_type(arena, c) || lmx_domain_type(arena, b) != lmx_domain_type(arena, c)
+                        return: c.LMX_IMPLEMENTS_NO
+                    ---
+                ---
+            ---
+        ---
+        index: index + 1U
+    ---
+return: c.LMX_IMPLEMENTS_YES
+
+fn: lmx_runtime_implements (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx consumer) int
+    if: arena = 0
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+return: lmx_implements_walk(arena, varA, varB, consumer, 0)

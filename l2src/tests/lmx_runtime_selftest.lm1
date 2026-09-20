@@ -1,0 +1,172 @@
+predef: "l2src/lmx_root.lm1"
+predef: "l2src/lmx_deliver.lm1"
+predef: "l2src/lmx_child.lm1"
+predef: "l2src/lmx_turn.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_manager.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_clock.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# THE RUNTIME, assembled without hierarchical address or mail service.  What this file pins:
+#
+#   * R0 opens with arena, mailbox and schedule; no address service;
+#   * a child a turn publishes is linked by graph slot + parent up-link (lmx_arena_ref_store);
+#   * a letter is delivered by PHYSICAL address through lmx_deliver (step + hop) into the
+#     target mailbox via lmx_thread_mail_accept;
+#   * teardown closes the runtime cleanly.
+
+sub: rt_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: rt_check
+
+@: LmxRoot rt_root 0
+@: Lmx rt_source 0
+@: LmxArena rt_child_arena 0
+@: LmxMsg rt_child 0
+@: LmxThread rt_child_thread 0
+size_t: rt_ready 0U
+
+fn: rt_entry (@: Lmx node) int
+    @: LmxThread t
+    @: LmxPost mail
+    @: LmxSchedule sched
+    if: rt_ready != 0U || rt_root = 0 || rt_source = 0 || rt_child_arena = 0
+        return: 0
+    ---
+    rt_ready: 1U
+    rt_child: lmx_root_create(rt_root, rt_child_arena, 0U, rt_source)
+    if: rt_child = 0
+        return: 0
+    ---
+    t: (cast: (@: LmxThread) lmx_arena_take(rt_child_arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    mail: (cast: (@: LmxPost) lmx_arena_take(rt_child_arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    sched: (cast: (@: LmxSchedule) lmx_arena_take(rt_child_arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: t = 0 || mail = 0 || sched = 0
+        return: 0
+    ---
+    if: lmx_post_init(rt_child_arena, mail) != c.LMX_POST_OK || lmx_thread_attach(t, rt_child, mail, sched) != c.LMX_THREAD_OK
+        return: 0
+    ---
+    if: lmx_child_thread(lmx_root_thread(rt_root), rt_child, t) != c.LMX_CHILD_OK
+        return: 0
+    ---
+    rt_child_thread: t
+return: 0
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxRoot: root
+    LmxArena: child_arena
+    @: Lmx source 0
+    @: LmxArena arena 0
+    @: LmxMsg top_thread_msg 0
+    @: LmxMsg letter 0
+    @: void taken 0
+    @: LmxThread root_thread 0
+    int: failures
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ root)), 0, c.sizeof(c.LmxRoot))
+    memset((cast: (@: void) (@ child_arena)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ child_arena) != 0
+        fputs("lmx_runtime: the child's arena did not open\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    rt_root: @ root
+    rt_child_arena: @ child_arena
+
+    rt_check(counts, lmx_root_open(@ root, rt_entry, 5000U, 0U, 0U) = c.LMX_ROOT_OK, "the runtime did not open")
+    arena: lmx_root_arena(@ root)
+    root_thread: lmx_root_thread(@ root)
+    source: lmx_node_new_owned(arena)
+    if: source = 0 || lmx_arena_refs_open_owned(arena, source, 1U) != 0
+        fputs("lmx_runtime: the template was not built\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    rt_source: source
+    rt_check(counts, arena != 0 && root_thread != 0, "the root has no arena or thread")
+    top_thread_msg: lmx_thread_message(root_thread)
+    rt_check(counts, top_thread_msg != 0 && top_thread_msg\index = 1U, "the root's own Message is not index 1")
+    rt_check(counts, lmx_thread_mail_count(root_thread, c.LMX_POST_INBOX) = 0U, "the root inbox is not empty at open")
+
+    rt_check(counts, lmx_root_cycle(@ root, 4U) = c.LMX_ROOT_OK, "the cycle that creates the child did not run")
+    rt_check(counts, rt_child != 0 && rt_child_thread != 0, "the entry did not build the child")
+    rt_check(counts, rt_child_thread\parent = (cast: (@: void) root_thread), "the child's up-link is not the root's object")
+    rt_check(counts, lmx_arena_ref_value(top_thread_msg\graph, 0U) = (cast: (@: void) rt_child), "the child was not published into the root graph")
+
+    # DOWN: physical destination is the child thread; receiving arena is the child's.
+    letter: (cast: (@: LmxMsg) lmx_arena_take(@ child_arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    if: letter = 0
+        free(counts)
+        return: 2
+    ---
+    letter\running: 1
+    letter\success: 0
+    letter\handoff_ready: 0
+    letter\graph: 0
+    letter\index: 5U
+    rt_check(counts, lmx_deliver_step(root_thread, rt_child_thread) = c.LMX_DELIVER_DOWN, "the root does not see the child below")
+    rt_check(counts, lmx_deliver_hop(@ child_arena, root_thread, letter, rt_child_thread) = c.LMX_DELIVER_OK, "the delivery to the child failed")
+    rt_check(counts, lmx_thread_mail_count(rt_child_thread, c.LMX_POST_INBOX) = 1U, "the letter did not land in the child's inbox")
+    taken: lmx_thread_mail_take(rt_child_thread, c.LMX_POST_INBOX)
+    rt_check(counts, taken = (cast: (@: void) letter), "the child's inbox holds something else")
+
+    # UP: destination is the root; receiving arena is the root's.
+    letter: (cast: (@: LmxMsg) lmx_arena_take(arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    if: letter = 0
+        free(counts)
+        return: 2
+    ---
+    letter\running: 1
+    letter\success: 0
+    letter\handoff_ready: 0
+    letter\graph: 0
+    letter\index: 6U
+    rt_check(counts, lmx_deliver_step(rt_child_thread, root_thread) = c.LMX_DELIVER_UP, "the child does not see its parent above")
+    rt_check(counts, lmx_deliver_hop(arena, rt_child_thread, letter, root_thread) = c.LMX_DELIVER_OK, "the delivery to the parent failed")
+    rt_check(counts, lmx_thread_mail_count(root_thread, c.LMX_POST_INBOX) = 1U, "the letter did not land in the root's inbox")
+    taken: lmx_thread_mail_take(root_thread, c.LMX_POST_INBOX)
+    rt_check(counts, taken = (cast: (@: void) letter), "the root's inbox holds something else")
+
+    # HERE accept path directly.
+    letter: (cast: (@: LmxMsg) lmx_arena_take(arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    if: letter = 0
+        free(counts)
+        return: 2
+    ---
+    letter\running: 1
+    letter\success: 0
+    letter\handoff_ready: 0
+    letter\graph: 0
+    letter\index: 7U
+    rt_check(counts, lmx_thread_mail_accept(arena, root_thread, (cast: (@: void) letter), c.LMX_POST_INBOX) = c.LMX_POST_OK, "mail_accept into root failed")
+    rt_check(counts, lmx_thread_mail_count(root_thread, c.LMX_POST_INBOX) = 1U, "mail_accept did not fill the inbox")
+    taken: lmx_thread_mail_take(root_thread, c.LMX_POST_INBOX)
+    rt_check(counts, taken = (cast: (@: void) letter), "mail_accept admitted something else")
+
+    rt_check(counts, lmx_root_close(@ root) = c.LMX_ROOT_OK, "the runtime did not close")
+
+    failures: counts[1]
+    c.printf("lmx_runtime checks=%d failures=%d\n", counts[0], failures)
+    free(counts)
+return: failures

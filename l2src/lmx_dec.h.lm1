@@ -1,0 +1,52 @@
+predef: "l2src/lmx_dec_config.h.lm1"
+include: "decNumber.h" "<stddef.h>" "<stdint.h>"
+
+# lmx_dec.h.lm1 - narrow owner-local decimal backend over vendored C decNumber.
+# Written in L1; the C header lmx_dec.lm1.h is generated from it.
+#
+# Storage digits=34.  Default ctx: BASE emax/emin (+-999999999), HALF_EVEN, traps
+# off.  That is not IEEE decimal128 encoding or exponent range.  ctx.set.digits must
+# stay in 1..LMX_DEC_DIGITS or ops fail (no silent overwrite of LmxDec storage).
+#
+# Return 0 = this call added no DEC_Errors bits.  Status is sticky on ctx
+# (diagnostic history).  Callers that need a clean slate use ctx_clear.
+# Inexact/Rounded/Clamped are information, not return-1.
+#
+# decContext and decNumber are decNumber's own types, declared by the header
+# included above: L1 learns the names with foreign: and emits nothing for them.
+# Its rounding type is a C enum TAG (`enum rounding`), which no L1 name can spell,
+# so the tag is named as foreign too and the alias carries the tag spelling:
+# `type: LmxDecRounding enum rounding` emits `typedef enum rounding LmxDecRounding;`.
+foreign: decContext
+foreign: decNumber
+foreign: rounding
+type: LmxDecRounding enum rounding
+
+define: LMX_DEC_DIGITS DECNUMDIGITS
+define: LMX_DEC_TEXT_MIN (DECNUMDIGITS + 14)
+
+struct: LmxDecCtx
+    decContext: set
+end: LmxDecCtx
+
+struct: LmxDec
+    decNumber: n
+end: LmxDec
+
+prototype:
+    fn: lmx_dec_digits () int
+    fn: lmx_dec_ctx_init (@: LmxDecCtx ctx) int
+    fn: lmx_dec_ctx_status (const: @(LmxDecCtx ctx)) unsigned
+    fn: lmx_dec_ctx_clear (@: LmxDecCtx ctx) void
+    fn: lmx_dec_ctx_set_digits (@: LmxDecCtx ctx; int: digits) int
+    fn: lmx_dec_from_text (@: LmxDec out; const: @(char text); @: LmxDecCtx ctx) int
+    fn: lmx_dec_add (@: LmxDec out; const: @(LmxDec a); const: @(LmxDec b); @: LmxDecCtx ctx) int
+    fn: lmx_dec_sub (@: LmxDec out; const: @(LmxDec a); const: @(LmxDec b); @: LmxDecCtx ctx) int
+    fn: lmx_dec_mul (@: LmxDec out; const: @(LmxDec a); const: @(LmxDec b); @: LmxDecCtx ctx) int
+    fn: lmx_dec_div (@: LmxDec out; const: @(LmxDec a); const: @(LmxDec b); @: LmxDecCtx ctx) int
+    fn: lmx_dec_neg (@: LmxDec out; const: @(LmxDec a); @: LmxDecCtx ctx) int
+    fn: lmx_dec_pow (@: LmxDec out; const: @(LmxDec a); const: @(LmxDec b); @: LmxDecCtx ctx) int
+    fn: lmx_dec_compare (const: @(LmxDec a); const: @(LmxDec b); @: LmxDecCtx ctx; @: int rel) int
+    fn: lmx_dec_quantize_places (@: LmxDec out; const: @(LmxDec a); int: places; LmxDecRounding: round; @: LmxDecCtx ctx) int
+    fn: lmx_dec_to_text (const: @(LmxDec a); @: char buf; size_t: n) int
+end: prototype

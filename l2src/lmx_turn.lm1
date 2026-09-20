@@ -1,0 +1,150 @@
+predef: "l2src/lmx_turn.h.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_child.lm1"
+predef: "l2src/lmx_gc.lm1"
+predef: "l2src/lmx_clock.lm1"
+
+# lmx_turn.lm1 - the end-turn boundary's first act.  See the header for what 19.29.4.1 fixes
+# and why the other two acts are not here.
+#
+# The order inside the boundary is the model's: the outcome is read ONCE and decides both
+# acts, so a turn can never publish its outgoing and drop its children (or the other way
+# round) -- the queue and the reservations belong to one turn and share one verdict.
+
+fn: lmx_turn_outcome (@: LmxThread t) int
+    if: t = 0 || t\message = 0
+        return: c.LMX_TURN_INVALID
+    # Stopped without completing: the incarnation ended, nothing it prepared may be seen.
+    if: t\message\running = 0 && t\message\success = 0
+        return: c.LMX_TURN_FAILED
+return: c.LMX_TURN_SUCCESS
+
+fn: lmx_turn_cycle_reading (ulong: v) ulong
+return: v
+
+# Translator quirk (measured 20260919): a ulong formal used as assignment RHS or in
+# arithmetic is ALSO emitted as a local of the same name, which then conflicts with the
+# parameter.  manager_step is fine because it only PASSES the formal as a call argument.
+# Copy once through a call, then age against that local reading.
+fn: lmx_turn_end (@: LmxThread t; ulong: now) int
+    int: outcome
+    @: LmxArena arena
+    size_t: mark
+    ulong: reading
+    ulong: stamp
+    @: LmxSchedule slot
+    @: LmxArena band
+    int: overdue
+    reading: lmx_turn_cycle_reading(now)
+    if: t = 0 || t\message = 0
+        return: c.LMX_TURN_INVALID
+    # Every L3 Thread has a mailbox (lmx_thread_attach refuses without one), so a thread whose
+    # mail is missing is not a turn that prepared nothing -- it is a broken object, and the
+    # boundary refuses rather than silently publishing nothing.
+    if: t\mail = 0
+        return: c.LMX_TURN_INVALID
+    ---
+    outcome: lmx_turn_outcome(t)
+    if: outcome = c.LMX_TURN_FAILED
+        # The failed staged outbox and the turn's reservations: neither was ever visible.
+        lmx_post_discard(t\mail)
+        lmx_child_drop_prepared(t)
+    else:
+        # Success: the prepared outgoing becomes outgoing, and one store per reservation
+        # publishes the children this turn made.
+        lmx_post_publish(t\mail)
+        # The parent's own band (the arena of the record it was attached with) is where the chain
+        # node of a published child goes; computed once here and given to the act.
+        band: 0
+        if: t\slot != 0
+            band: t\slot\arena
+        ---
+        if: lmx_child_publish_prepared(t, band) != c.LMX_CHILD_OK
+            return: c.LMX_TURN_INVALID
+        ---
+    ---
+    # Child half of 19.29.7.1 (ticket 20260919-113000): time-stamp handshake (RELAXED).
+    # alive holds low-32 clock (not a counter). Zero = parent answered -> write stamp.
+    # Non-zero = my prior stamp: fresh -> wait; stale vs slot\limit -> SELF-CLOSE (priority).
+    # Stamp 0 collides with answered: if ticks low-32 is 0, store 1. Modulo 2^32; no fences.
+    # The reading is GIVEN by the cycle that runs this turn (lmx_manager.h.lm1: "Time belongs to
+    # the cycle ... every operation that ages a wait is GIVEN the reading: one cycle, one
+    # reading, and every record in it ages against that one number").
+    # A Thread with NO PARENT (the root, or a record nobody linked) has no handshake at all: the
+    # word lives in the parent's own cell (LmxLink), and there is no parent to own one.  It neither
+    # stamps nor ages out -- nothing supervises it but the process.  The two acts are one branch
+    # for exactly that reason: a parentless thread that only skipped the STAMP would still fall
+    # into the aging branch below with a zero mark, read itself as long overdue, and close itself
+    # (measured 20260919: that is what made R0 stop itself at its own boundary, and the settle
+    # then attached a live child's arena).
+    if: lmx_thread_alive_cell(t) != 0
+        mark: c.__atomic_load_n(lmx_thread_alive_cell(t), c.__ATOMIC_RELAXED)
+        if: mark = 0U
+            # The parent has answered (zeroed my word): the work continues, so I stamp again.
+            stamp: reading
+            if: stamp = 0U
+                stamp: 1U
+            ---
+            c.__atomic_store_n(lmx_thread_alive_cell(t), (cast: (size_t) stamp), c.__ATOMIC_RELAXED)
+        else:
+            # My own prior stamp is still there: the parent has NOT answered it.  Fresh -> wait;
+            # older than my own band's limit -> the symmetric timeout, and I close myself.
+            overdue: 0
+            slot: t\slot
+            if: slot != 0 && slot\limit != 0U
+                if: reading - (cast: (ulong) mark) >= slot\limit
+                    overdue: 1
+                ---
+            ---
+            if: overdue != 0
+                t\message\running: 0
+                t\message\handoff_ready: 1
+            ---
+        ---
+    ---
+    # Parent half: answer fresh stamps / emergency-close stale (not zero-kill).
+    lmx_poll_answer_children(t, reading)
+    # THE CASCADE, one level per boundary, each level on ITS OWN thread (Mikhail, 19.09).  The two
+    # halves above are the handshake's other directions -- my own stamp, and my children's stamps
+    # aged out.  This one is what the model demands the moment an incarnation ends, and it is not a
+    # timeout: spec 32, verbatim, "a stopped Message has no lane, so nothing runs its children's
+    # turns from it; ITS STOP REQUESTS THEIR CLOSE".  A live child with a FRESH stamp would never be
+    # reached by the poll above -- the parent is healthy and answering, which is exactly why nothing
+    # ages out -- so the closing Message is what stops it, here.
+    #
+    # `running = 0` is the whole test, and it is exact at this point: lmx_thread_leave has just run
+    # (lmx_thread_turn: enter -> body -> leave -> end-turn), so an incarnation that has ended -- by
+    # success, by the parent's stop request, or by its own handshake timeout -- reads 0 here, while
+    # an ordinary turn still reads 1.  Nothing is freed by this act: it is the stop request, the
+    # child ends on its own thread, and ITS boundary does the same to its own children, down to the
+    # leaves.  That is the cascade of forced stops the model describes; the settle is what comes
+    # later and only for what has already ended.
+    if: t\message\running = 0
+        # The reading is this boundary's own (`reading` above) and is handed to the act unchanged:
+        # it starts the close request's window and may end it, per child, with the close itself
+        # (lmx_thread.h.lm1, lmx_stop_children).
+        lmx_stop_children(t, reading)
+    ---
+    # The boundary's second and third acts (19.29.4.1): the turn's temporary roots are gone --
+    # a target taken from a queue and a reservation are both resolved above, one way or the
+    # other -- and whatever this Message's own roots can no longer reach is garbage NOW.  The
+    # arena is the record's OWN band (lmx_schedule_init wrote it at the record's creation), so the
+    # band that held the turn is the band that collects, which is the model's one-writer rule -- and
+    # a queue that steps records of several bands collects each one on its own.
+    arena: 0
+    if: t\slot != 0
+        arena: t\slot\arena
+    ---
+    if: arena = 0
+        # A thread that never joined a schedule has no arena this boundary may collect.  The
+        # publication above stands (it asks no storage), and the collection is simply not this
+        # boundary's to make -- not a failure of the turn.
+        return: c.LMX_TURN_OK
+    ---
+    if: lmx_gc_collect(arena, t) = c.LMX_GC_PARTIAL
+        # The mark could not be completed, so NOTHING was swept: the boundary refuses instead
+        # of reporting an arena it did not collect.
+        return: c.LMX_TURN_INVALID
+    ---
+return: c.LMX_TURN_OK
+

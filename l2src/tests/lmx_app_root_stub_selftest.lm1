@@ -1,0 +1,147 @@
+predef: "l2src/lmx_root.lm1"
+predef: "l2src/lmx_settle.lm1"
+predef: "l2src/lmx_service.lm1"
+predef: "l2src/lmx_turn.lm1"
+predef: "l2src/lmx_child.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_manager.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_gc.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_call.lm1"
+predef: "l2src/lmx_clock.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# lmx_app_root_stub_selftest.lm1 -- ticket 20260919-221000 (заглушка-родитель корня).
+#
+# ПРЕДМЕТ. Михаил (19.09): «сделай заглушку-родителя который опрашивает root на предмет зависаний
+# (стандартный механизм) а сам живет вечно».  В прошлом проекте (lingvamyxa) это место держала
+# заглушка под WorldWideMix -- и в ядре оно и сейчас есть: `lmx_root_supervise_world`
+# («supervision is NOT handed over») возвращает LMX_ROOT_NO_WORLD.  Механизм вокруг него
+# достроен в lmx_root.lm1, и это те же две половины, что у всякого рукопожатия здесь:
+#
+#   * КОЛЬЦО -- `lmx_root_keepalive(root, now)`: корень отмечается у заглушки.  Запись этого
+#     ожидания И ЕСТЬ запись живости корня: начало ожидания -- когда корень видели в последний
+#     раз, предел -- окно, которое ему даёт заглушка.  У корня нет родителя в ядре, которому
+#     можно было бы засечку, -- потому и наоборот: заглушка спрашивает, корень отвечает.
+#   * ОПРОС -- `lmx_root_hung(root, now)`: «молчит ли корень дольше своего окна?»  Запись старится
+#     против ПЕРЕДАННОГО чтения, как всякая запись ожидания в этом ядре.
+#
+# ПОЧЕМУ ЭТО НУЖНО (замер, а не догадка).  Собранный myxa_manager с пределом корня 5000U прожил
+# ровно 5068 мс и умер САМ: `lmx_root_cycle_at` тикает запись корня и возвращает LMX_ROOT_DONE,
+# когда окно вышло.  То есть GUI-приложение убивал таймер, которого никто не заводил как таймер.
+# Заглушка (её «вечно» -- условие цикла приложения, не предел) ring'ует корень каждый цикл, и
+# предел становится ДЕТЕКТОРОМ ЗАВИСАНИЯ: корень умирает только тогда, когда заглушка перестала
+# его отмечать.
+#
+# ЗАМЕРЫ ЗДЕСЬ (3 сцены, все -- арифметикой чтений, без гонки с часами):
+#   1) БЕЗ КОЛЬЦА корень умирает на своём пределе: цикл возвращает LMX_ROOT_DONE, опрос видит 1.
+#   2) С КОЛЬЦОМ (10 циклов по 60U при пределе 100U -- то есть в шесть раз дольше окна) корень жив:
+#      LMX_ROOT_OK и опрос видит 0.
+#   3) КОЛЬЦО ПРЕКРАТИЛОСЬ -- и то же окно теперь меряет тишину: опрос видит 1, цикл -- DONE.
+
+fn: rs_entry (@: Lmx node) int
+return: 0
+
+sub: rs_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+    c.fflush(0)
+end: rs_check
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    int: failures
+    LmxRoot: root
+    @: LmxRoot root_handle 0
+    @: LmxMsg root_message 0
+    ulong: base 0U
+    ulong: now 0U
+    size_t: i 0U
+    size_t: world_cell 0U
+    int: code
+    int: hung
+    memset((cast: (@: void) (@ root)), 0, c.sizeof(c.LmxRoot))
+    if: counts = 0
+        return: 2
+    ---
+    base: lmx_clock_ticks()
+
+    # --- 1. WITHOUT THE STUB'S RING: the root's own wait is a death timer -------------------
+    rs_check(counts, lmx_root_open(@ root, rs_entry, 100U, 0U, 0U) = c.LMX_ROOT_OK, "R0 did not open")
+    rs_check(counts, lmx_root_cycle_at(@ root, 1U, base + 50U) = c.LMX_ROOT_OK, "a cycle inside the window refused")
+    rs_check(counts, lmx_root_hung(@ root, base + 50U) = 0, "a fresh root reads hung")
+    rs_check(counts, lmx_root_cycle_at(@ root, 1U, base + 101U) = c.LMX_ROOT_DONE, "the root outlived its own window with no ring")
+    rs_check(counts, lmx_root_close(@ root) = c.LMX_ROOT_OK, "R0 did not close")
+
+    # --- 2. THE STUB RINGS EVERY CYCLE: the same window, but the root is never silent ------
+    memset((cast: (@: void) (@ root)), 0, c.sizeof(c.LmxRoot))
+    rs_check(counts, lmx_root_open(@ root, rs_entry, 100U, 0U, 0U) = c.LMX_ROOT_OK, "the second R0 did not open")
+    i: 0U
+    while: i < 10U
+        now: base + (cast: (ulong) i) * 60U
+        rs_check(counts, lmx_root_keepalive(@ root, now) = c.LMX_ROOT_OK, "the ring was refused")
+        code: lmx_root_cycle_at(@ root, 1U, now)
+        rs_check(counts, code = c.LMX_ROOT_OK, "a ringed root died")
+        i: i + 1U
+    ---
+    now: base + 540U
+    hung: lmx_root_hung(@ root, now)
+    rs_check(counts, hung = 0, "a ringed root reads hung")
+
+    # --- 3. THE STUB STOPS RINGING: now the same window measures silence -- and it is SEEN --
+    rs_check(counts, lmx_root_cycle_at(@ root, 1U, base + 641U) = c.LMX_ROOT_DONE, "the root did not die when the ring stopped")
+    hung: lmx_root_hung(@ root, base + 641U)
+    rs_check(counts, hung = 1, "the poll did not see the silent root")
+    rs_check(counts, lmx_root_close(@ root) = c.LMX_ROOT_OK, "the second R0 did not close")
+
+    # --- 4. THE ROOT POLLS THE WORLD: a silent world ends the root GRACEFULLY ----------------
+    # The other direction (Mikhail: "заглушка не зависла которую опрашивает root"): the world
+    # owns a stamp cell and writes its reading there while it lives.  A world that never wrote
+    # one is refused (zero would age as "silent since the beginning of time"); a world that
+    # stopped writing ends the root -- and the end is the sanctioned stop (running = 0), not a
+    # kill: the next turn's entrance refuses it.
+    memset((cast: (@: void) (@ root)), 0, c.sizeof(c.LmxRoot))
+    rs_check(counts, lmx_root_open(@ root, rs_entry, 100U, 0U, 0U) = c.LMX_ROOT_OK, "the third R0 did not open")
+    rs_check(counts, lmx_root_supervise_world(@ root, 0) = c.LMX_ROOT_INVALID, "a null world was accepted")
+    world_cell: 0U
+    rs_check(counts, lmx_root_supervise_world(@ root, @ world_cell) = c.LMX_ROOT_INVALID, "a world that never wrote its cell was accepted")
+    world_cell: base + 600U
+    rs_check(counts, lmx_root_supervise_world(@ root, @ world_cell) = c.LMX_ROOT_OK, "the world was not registered")
+    rs_check(counts, lmx_root_keepalive(@ root, base + 600U) = c.LMX_ROOT_OK, "the ring was refused at the world's handover")
+    rs_check(counts, lmx_root_cycle_at(@ root, 1U, base + 650U) = c.LMX_ROOT_OK, "the cycle refused while the world was fresh")
+    rs_check(counts, lmx_root_hung(@ root, base + 650U) = 0, "the root reads hung while the world is fresh")
+    rs_check(counts, lmx_root_keepalive(@ root, base + 750U) = c.LMX_ROOT_OK, "the ring was refused before the silent-world cycle")
+    rs_check(counts, lmx_root_cycle_at(@ root, 1U, base + 751U) = c.LMX_ROOT_DONE, "the root outlived a silent world")
+    # THROUGH A POINTER, never through the by-value handle: the translator emits every `\` step as
+    # `->`, so `root\message` on a by-value local does not compile at all (the quirk
+    # lmx_root_open documents -- that is why the kernel keeps `arena: @ root\arena`).
+    root_handle: @ root
+    root_message: root_handle\message
+    rs_check(counts, root_message != 0 && root_message\running = 0, "a silent world did not stop the root (the sanctioned stop)")
+    rs_check(counts, lmx_root_close(@ root) = c.LMX_ROOT_OK, "the third R0 did not close")
+
+    failures: counts[1]
+    # `hung` is the value scene 3 read BEFORE the root was closed (a closed root reads 0 by its
+    # own state, and reading it again would print that instead of the measurement).
+    c.printf("RS STUB window=100U cycles=10 last_ring=%u silence_at=%u hung_after_silence=%d\n",
+             (cast: (unsigned) (base + 540U)), (cast: (unsigned) (base + 641U)), hung)
+    c.printf("lmx_app_root_stub checks=%d failures=%d\n", counts[0], failures)
+    c.fflush(0)
+    free(counts)
+return: failures

@@ -1,0 +1,266 @@
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_call.lm1"
+predef: "l2src/lmx_turn.lm1"
+predef: "l2src/lmx_child.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_manager.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_gc.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_clock.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# ONE TURN of a Message: the boundary, the body, the boundary (spec 1.7, 19.29.4.1, 19.29.5;
+# model 8: "all executable bodies are part of the graph").  What this file pins:
+#
+#   * the body of a translated Message is the CALLABLE ITS OWN GRAPH names, and the call goes
+#     through the ordinary guard -- a graph that is not a callable is nothing to run, not an error;
+#   * the reserved node of that call is the graph ITSELF ("the typed entry receives its own node");
+#   * the body runs INSIDE the turn: the object that is current while it runs is the very thread
+#     whose turn it is, and the cursor is cleared afterwards;
+#   * the boundary is part of the same act: what the turn staged is published by it;
+#   * the body's status is its own report and never a stop -- the Message's flags are what end work;
+#   * a handler GIVEN FROM OUTSIDE (R0's shape) is used instead of the graph's, because the host's
+#     entry program has no METHOD record: it is not a graph callable;
+#   * a stopped or completed object runs no turn at all: the boundary refuses it, and a close is
+#     never resurrected -- while leaving that turn is what marks the object handoff-safe.
+
+size_t: tt_calls 0U
+size_t: tt_host_calls 0U
+@: Lmx tt_node 0
+@: LmxThread tt_current 0
+
+# The body of a translated Message.  It records what it was handed and who was current while it ran.
+fn: tt_body (@: Lmx node) int
+    tt_calls: tt_calls + 1U
+    tt_node: node
+    tt_current: lmx_thread_current()
+return: 7
+
+# A handler given from OUTSIDE -- R0's shape (25 (ii)): there is no METHOD record for it.
+fn: tt_host (@: Lmx node) int
+    tt_host_calls: tt_host_calls + 1U
+    tt_node: node
+    tt_current: lmx_thread_current()
+return: 3
+
+# The stop written from INSIDE a turn -- the shape a poll in the middle of the body has: the turn
+# still runs to its leave, which is where the handoff mark is written.
+@: LmxMsg tt_stop_target 0
+
+fn: tt_stop_host (@: Lmx node) int
+    tt_host_calls: tt_host_calls + 1U
+    if: tt_stop_target != 0
+        tt_stop_target\running: 0
+    ---
+return: 0
+
+fn: tt_struct (@: LmxArena arena; size_t: slots) @: Lmx
+    @: Lmx structure
+    structure: lmx_node_new_owned(arena)
+    if: structure = 0
+        return: 0
+    ---
+    if: lmx_arena_refs_open_owned(arena, structure, slots) != 0
+        return: 0
+    ---
+return: structure
+
+sub: tt_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: tt_check
+
+# A Message of this arena whose graph is `graph`, with its own object, mailbox and schedule record.
+fn: tt_message (@: LmxArena arena; @: Lmx graph; @@: LmxMsg out_message; @@: LmxThread out_thread; @@: LmxPost out_mail; @@: LmxSchedule out_sched) int
+    @: LmxMsg message
+    @: LmxThread t
+    @: LmxPost mail
+    @: LmxSchedule sched
+    \out_message: 0
+    \out_thread: 0
+    message: (cast: (@: LmxMsg) lmx_arena_take(arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    t: (cast: (@: LmxThread) lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    mail: (cast: (@: LmxPost) lmx_arena_take(arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    sched: (cast: (@: LmxSchedule) lmx_arena_take(arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: message = 0 || t = 0 || mail = 0 || sched = 0
+        return: 0
+    ---
+    message\running: 1
+    message\success: 0
+    message\handoff_ready: 0
+    message\graph: graph
+    message\index: 1U
+    if: lmx_post_init(arena, mail) != c.LMX_POST_OK || lmx_thread_attach(t, message, mail, sched) != c.LMX_THREAD_OK
+        return: 0
+    ---
+    if: lmx_schedule_init(sched, arena, (cast: (@: void) t), 1000U) != c.LMX_SCHEDULE_OK
+        return: 0
+    ---
+    \out_message: message
+    \out_thread: t
+    \out_mail: mail
+    \out_sched: sched
+return: 1
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxArena: arena
+    LmxArena: bare_arena
+    LmxPool: methods
+    LmxManager: mgr
+    @: LmxArena arena_at 0
+    @: LmxMsg message 0
+    @: LmxThread t 0
+    @: LmxPost mail 0
+    @: LmxSchedule sched 0
+    @: LmxMsg plain_message 0
+    @: LmxThread plain_thread 0
+    @: LmxPost plain_mail 0
+    @: LmxSchedule plain_sched 0
+    @: LmxMsg done_message 0
+    @: LmxThread done_thread 0
+    @: LmxPost done_mail 0
+    @: LmxSchedule done_sched 0
+    @: Lmx graph 0
+    @: Lmx plain 0
+    @: Lmx own_field 0
+    @: LmxMethod method 0
+    @: void tt_taken 0
+    int: built
+    int: failures
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ bare_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ methods)), 0, c.sizeof(c.LmxPool))
+    if: lmx_arena_open(@ arena) != 0 || lmx_arena_open(@ bare_arena) != 0
+        fputs("lmx_thread_turn: an arena did not open\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    arena_at: @ arena
+    if: lmx_pool_open(@ arena, @ methods, c.sizeof(c.LmxMethod), 2U, c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD) != 0
+        fputs("lmx_thread_turn: the method pool did not open\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    method: lmx_method_intern(@ arena, @ methods, (cast: (LmxEntry) tt_body), 1U)
+    if: method = 0
+        free(counts)
+        return: 2
+    ---
+
+    # The Message's graph: an ordinary Structure that IS a callable occurrence -- the shared method
+    # record in physical child[0], one own field after it.
+    graph: tt_struct(@ arena, 2U)
+    own_field: lmx_int_new_owned(@ arena)
+    # In the OTHER arena on purpose: a graph is a value of the band its Message belongs to.
+    plain: tt_struct(@ bare_arena, 1U)
+    if: graph = 0 || own_field = 0 || plain = 0
+        free(counts)
+        return: 2
+    ---
+    lmx_int_store_known(own_field, 4242)
+    lmx_arena_ref_store(graph, 0U, (cast: (@: void) method))
+    lmx_arena_ref_store(graph, 1U, own_field)
+
+    built: tt_message(@ arena, graph, @ message, @ t, @ mail, @ sched)
+    tt_check(counts, built != 0 && message != 0 && t != 0 && mail != 0 && sched != 0, "the Message was not built")
+    if: built = 0
+        free(counts)
+        return: 2
+    ---
+    tt_check(counts, lmx_manager_init(@ mgr) = c.LMX_MANAGER_OK, "the manager was not initialized")
+    tt_check(counts, lmx_manager_add(@ mgr, sched) = c.LMX_MANAGER_OK, "the record did not join the schedule")
+
+    # --- the turn through the SCHEDULE: the body runs inside it, the boundary follows ---------
+    # What the turn stages before it runs: the boundary must publish it, because the record is still
+    # running and its turn therefore did not fail.
+    tt_check(counts, lmx_post_accept(arena_at, mail, (cast: (@: void) message), c.LMX_POST_OUTBOX) = c.LMX_POST_OK, "the staged target was not accepted")
+    tt_check(counts, lmx_post_count(mail, c.LMX_POST_STAGED) = 1U, "the accepted target was not staged")
+    tt_check(counts, lmx_manager_step(@ mgr, 10U) = c.LMX_MANAGER_OK, "the step was refused")
+    tt_check(counts, tt_calls = 1U, "the graph's body did not run in the turn")
+    tt_check(counts, tt_node = graph, "the body was not handed its own graph as the reserved node")
+    tt_check(counts, tt_current = t, "the body did not run inside the turn")
+    tt_check(counts, lmx_thread_current() = 0, "the turn left a current object behind")
+    tt_check(counts, lmx_post_count(mail, c.LMX_POST_OUTBOX) = 1U && lmx_post_count(mail, c.LMX_POST_STAGED) = 0U, "the boundary did not publish what the turn staged")
+    tt_check(counts, message\running = 1 && message\success = 0, "the body's status was taken for a stop")
+    tt_check(counts, lmx_int_value_known(own_field) = 4242, "the call disturbed the occurrence's own field")
+    tt_check(counts, lmx_manager_count(@ mgr) = 1U, "a running record did not return to the schedule")
+
+    # A running object's turns REPEAT: the second step runs the body again.
+    tt_check(counts, lmx_manager_step(@ mgr, 20U) = c.LMX_MANAGER_OK, "the second step was refused")
+    tt_check(counts, tt_calls = 2U, "the second turn did not run the body")
+
+    # --- the handler from outside wins: R0's shape, no METHOD record -------------------------
+    tt_check(counts, lmx_thread_turn(t, tt_host, 30U) = c.LMX_THREAD_OK, "the turn with a host handler was refused")
+    tt_check(counts, tt_host_calls = 1U && tt_calls = 2U, "the host handler did not replace the graph's body")
+    tt_check(counts, tt_node = graph && tt_current = t, "the host handler was handed something else")
+
+    # --- a graph that names nothing: pure boundary work, not an error -------------------------
+    # Its own world in its OWN arena: a turn's boundary collects the band of the record, and the
+    # callable above lives in another arena -- so a turn over a graph that names nothing can never
+    # collect it (this is what carrying a band means).
+    built: tt_message(@ bare_arena, plain, @ plain_message, @ plain_thread, @ plain_mail, @ plain_sched)
+    tt_check(counts, built != 0, "the second Message was not built")
+    if: built = 0
+        free(counts)
+        return: 2
+    ---
+    tt_check(counts, lmx_thread_turn(plain_thread, 0, 30U) = c.LMX_THREAD_OK, "a turn over a graph that is not callable was refused")
+    tt_check(counts, tt_calls = 2U, "a graph that names no callable ran something")
+    # And with no graph at all: the same boundary work.  `plain` stops being reachable here, which is
+    # exactly what this turn's boundary is for.
+    plain_message\graph: 0
+    tt_check(counts, lmx_thread_turn(plain_thread, 0, 30U) = c.LMX_THREAD_OK, "a turn over no graph was refused")
+    tt_check(counts, tt_calls = 2U, "a Message with no graph ran something")
+
+    # --- a stop that arrives DURING the turn: the boundary fails, and leaving marks the object ---
+    # The stop is written from INSIDE the body -- the shape a poll in the middle of a turn has -- so
+    # the turn runs through to its leave, and the mark is written there.  Its outcome is FAILED
+    # (running=0, success=0), so what it staged is DISCARDED, never published.
+    tt_stop_target: message
+    # The earlier turn's published marker leaves the outbox first, so what is left after the failed
+    # turn can only be what THIS turn prepared -- and that must be nothing.
+    tt_taken: lmx_post_take(mail, c.LMX_POST_OUTBOX)
+    tt_check(counts, tt_taken = (cast: (@: void) message), "the published target was not in the outbox")
+    tt_check(counts, lmx_post_accept(arena_at, mail, (cast: (@: void) message), c.LMX_POST_OUTBOX) = c.LMX_POST_OK, "the second staged target was not accepted")
+    tt_check(counts, lmx_thread_turn(t, tt_stop_host, 30U) = c.LMX_THREAD_OK, "the turn that stops itself was refused")
+    tt_check(counts, tt_host_calls = 2U, "the stopping handler did not run")
+    tt_check(counts, message\running = 0, "the stop written inside the turn did not stand")
+    tt_check(counts, message\handoff_ready = 1, "leaving the last turn did not mark the object handoff-safe")
+    tt_check(counts, lmx_post_count(mail, c.LMX_POST_STAGED) = 0U && lmx_post_count(mail, c.LMX_POST_OUTBOX) = 0U, "a failed turn published what it staged")
+
+    # --- a stopped object: no turn at all, and no body ---------------------------------------
+    tt_check(counts, lmx_thread_turn(t, 0, 30U) = c.LMX_THREAD_STOPPED, "a stopped object ran a turn")
+    tt_check(counts, tt_calls = 2U, "a stopped object ran its body")
+
+    # --- a completed object: same refusal, by its own flag -----------------------------------
+    built: tt_message(@ arena, graph, @ done_message, @ done_thread, @ done_mail, @ done_sched)
+    if: built = 0
+        free(counts)
+        return: 2
+    ---
+    done_message\success: 1
+    tt_check(counts, lmx_thread_turn(done_thread, 0, 30U) = c.LMX_THREAD_STOPPED, "a completed object ran a turn")
+    tt_check(counts, tt_calls = 2U, "a completed object ran its body")
+
+    failures: counts[1]
+    c.printf("lmx_thread_turn checks=%d failures=%d\n", counts[0], failures)
+    free(counts)
+return: failures

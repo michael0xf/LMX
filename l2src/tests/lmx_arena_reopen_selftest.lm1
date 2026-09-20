@@ -1,0 +1,81 @@
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# lmx_arena_reopen_selftest.lm1 -- release is the INVERSE of open.
+#
+# Why this file exists (ticket 20260919-130000, the end-to-end run): the miniature app tried to
+# create a SECOND child in the SAME R0, lmx_root_create answered 0, and the executor worked
+# around it by running success and failure as two separate R0 sessions.  A workaround is not an
+# answer: a long-lived R0 whose children come and go (which is exactly what mixa_manager is) MUST
+# be able to release a finished child's arena and open it again.
+#
+# No test in the tree did release -> open on the SAME arena before this one, so the property was
+# neither held nor broken by measurement -- it was simply never asked.  This file asks it, for
+# both kinds of arena: the ordinary one and the letter-scale one.
+#
+# What release must leave behind for open to accept the arena again (lmx_arena_open refuses a
+# non-zero blocks/arrays/index or a non-zero count/capacity): lmx_arena_release clears all of
+# them.  If any of those checks fails, the refusal above is REAL and is the defect to fix.
+
+sub: ro_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: ro_check
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxArena: arena
+    LmxArena: simple
+    @: LmxArena arena_at
+    @: LmxArena simple_at
+    @: void cell 0
+    @: void again 0
+    int: failures
+    if: counts = 0
+        return: 2
+    ---
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ simple)), 0, c.sizeof(c.LmxArena))
+    arena_at: @ arena
+    simple_at: @ simple
+
+    # 1. The first cycle: open, take, release -- and what release leaves behind.
+    ro_check(counts, lmx_arena_open(@ arena) = 0, "the first open refused")
+    cell: lmx_int_new_owned(@ arena)
+    ro_check(counts, cell != 0 && lmx_range_classify(@ arena, cell) = c.LMX_KIND_PRIMITIVE, "the first cell does not answer in the index")
+    ro_check(counts, lmx_arena_release(@ arena) = 0, "the first release refused")
+    ro_check(counts, arena_at\count = 0U, "release left a non-zero count")
+    ro_check(counts, arena_at\blocks = 0, "release left a non-null block list")
+    ro_check(counts, arena_at\arrays = 0, "release left a non-null array list")
+    ro_check(counts, arena_at\index = 0, "release left a non-null index")
+
+    # 2. THE POINT: the same arena, opened again.  A released arena is a free one.
+    ro_check(counts, lmx_arena_open(@ arena) = 0, "OPEN AFTER RELEASE WAS REFUSED")
+    again: lmx_int_new_owned(@ arena)
+    ro_check(counts, again != 0 && lmx_range_classify(@ arena, again) = c.LMX_KIND_PRIMITIVE, "a cell of the reopened arena does not answer")
+    ro_check(counts, lmx_arena_release(@ arena) = 0, "the second release refused")
+
+    # 3. And once more, so that a cycle is a cycle and not a one-off.
+    ro_check(counts, lmx_arena_open(@ arena) = 0, "the third open refused")
+    ro_check(counts, lmx_arena_release(@ arena) = 0, "the third release refused")
+
+    # 4. The letter-scale arena obeys the same rule (a letter's arena is released by the mail
+    #    service on a miss, and the same cell is used again for the next letter).
+    ro_check(counts, lmx_arena_open_simple(@ simple) = 0, "open_simple refused")
+    cell: lmx_int_new_owned(@ simple)
+    ro_check(counts, cell != 0 && simple_at\simple = 1U, "the simple arena did not take a cell / lost its mark")
+    ro_check(counts, lmx_arena_release(@ simple) = 0, "the simple release refused")
+    ro_check(counts, lmx_arena_open_simple(@ simple) = 0, "OPEN_SIMPLE AFTER RELEASE WAS REFUSED")
+    ro_check(counts, lmx_arena_release(@ simple) = 0, "the simple release refused the second time")
+
+    failures: counts[1]
+    c.printf("lmx_arena_reopen checks=%d failures=%d\n", counts[0], failures)
+    free(counts)
+return: failures

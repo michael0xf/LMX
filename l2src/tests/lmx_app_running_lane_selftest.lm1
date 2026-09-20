@@ -1,0 +1,322 @@
+predef: "l2src/lmx_root.lm1"
+predef: "l2src/lmx_settle.lm1"
+predef: "l2src/lmx_service.lm1"
+predef: "l2src/lmx_turn.lm1"
+predef: "l2src/lmx_child.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_manager.lm1"
+predef: "l2src/lmx_manager_running.lm1"
+predef: "l2src/lmx_manager_running.h.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_gc.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_call.lm1"
+predef: "l2src/lmx_clock.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# lmx_app_running_lane_selftest.lm1 -- ticket 20260919-134000
+# Measure: close R0 while a running-manager lane is still alive races with cascade free
+# (commit f9f8f3e / lmx_release_children frees live children arenas on parent close;
+#  a running lane has its own OS thread and ends by itself -- it is not joined).
+#
+# 1) R0 manager rebound to running (lmx_manager_running_init); child via
+#    lmx_manager_running_add; body counts turns in ITS OWN GRAPH (like many_turns).
+# 2) Let the lane take several turns; verify the graph counter grows.
+# 3) Close R0 WHILE the lane is still alive (message still running; lane handle live).
+# 4) Numbers that belong to the probe after close: child arena blocks; remembered lane
+#    HANDLE wait.  Do not read the child graph / records after close (they lived in the
+#    freed arena).  Crash / UAF / lane-still-alive-after-arena-release IS the result.
+
+@: LmxRoot rl_root 0
+@: LmxArena rl_child_arena 0
+@: Lmx rl_source 0
+@: LmxMsg rl_child_msg 0
+@: LmxThread rl_child_t 0
+@: LmxSchedule rl_child_sched 0
+size_t: rl_phase 0U
+size_t: rl_entry_diag 0U
+
+fn: rl_child_body (@: Lmx node) int
+    @: LmxThread t
+    @: Lmx graph
+    @: void turns_cell
+    size_t: turns
+    t: lmx_thread_current()
+    if: t = 0 || t\message = 0 || t\message\graph = 0
+        return: 0
+    ---
+    graph: t\message\graph
+    turns_cell: lmx_arena_ref_value(graph, 1U)
+    if: turns_cell = 0
+        return: 0
+    ---
+    turns: lmx_size_value_known(turns_cell) + 1U
+    lmx_size_store_known(turns_cell, turns)
+    # Never set success: the lane must stay alive until R0 close (the race under test).
+return: 0
+
+fn: rl_root_entry (@: Lmx node) int
+    @: LmxMsg child
+    @: LmxThread child_t
+    @: LmxPost child_mail
+    @: LmxSchedule child_sched
+    @: LmxMethod method
+    @: LmxPool methods
+    @: Lmx graph
+    @: void turns_cell
+    if: rl_phase != 0U || rl_root = 0 || rl_child_arena = 0 || rl_source = 0
+        rl_entry_diag: 1U
+        return: 0
+    ---
+    child: lmx_root_create(rl_root, rl_child_arena, 0U, rl_source)
+    if: child = 0
+        rl_entry_diag: 2U
+        return: 0
+    ---
+    rl_child_msg: child
+    methods: lmx_pool_make(rl_child_arena, 2U * c.sizeof(c.LmxMethod), c.sizeof(c.LmxMethod),
+                           c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD)
+    if: methods = 0
+        rl_entry_diag: 3U
+        return: 0
+    ---
+    method: lmx_method_intern(rl_child_arena, methods, (cast: (LmxEntry) rl_child_body), 1U)
+    graph: child\graph
+    if: method = 0 || graph = 0
+        rl_entry_diag: 4U
+        return: 0
+    ---
+    lmx_arena_ref_store(graph, 0U, (cast: (@: void) method))
+    turns_cell: lmx_size_new_owned(rl_child_arena)
+    if: turns_cell = 0
+        rl_entry_diag: 5U
+        return: 0
+    ---
+    if: lmx_arena_ref_store(graph, 1U, turns_cell) != 0
+        rl_entry_diag: 6U
+        return: 0
+    ---
+    child_mail: (cast: (@: LmxPost) lmx_arena_take(rl_child_arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    child_t: (cast: (@: LmxThread) lmx_arena_take(rl_child_arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    child_sched: (cast: (@: LmxSchedule) lmx_arena_take(rl_child_arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: child_mail = 0 || child_t = 0 || child_sched = 0
+        rl_entry_diag: 7U
+        return: 0
+    ---
+    if: lmx_post_init(rl_child_arena, child_mail) != c.LMX_POST_OK
+        rl_entry_diag: 8U
+        return: 0
+    ---
+    # Wide limit: the lane must not end by overdue before we close R0.
+    if: lmx_schedule_init(child_sched, rl_child_arena, (cast: (@: void) child_t), 100000U) != c.LMX_SCHEDULE_OK
+        rl_entry_diag: 9U
+        return: 0
+    ---
+    if: lmx_thread_attach(child_t, child, child_mail, child_sched) != c.LMX_THREAD_OK
+        rl_entry_diag: 10U
+        return: 0
+    ---
+    if: lmx_child_thread(lmx_root_thread(rl_root), child, child_t) != c.LMX_CHILD_OK
+        rl_entry_diag: 11U
+        return: 0
+    ---
+    rl_child_t: child_t
+    rl_child_sched: child_sched
+    rl_phase: 1U
+    rl_entry_diag: 12U
+return: 0
+
+sub: rl_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+    c.fflush(0)
+end: rl_check
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    int: failures
+    LmxRoot: root
+    LmxArena: child_arena
+    @: LmxArena child_at 0
+    @: LmxArena root_arena 0
+    @: LmxMsg message 0
+    @: LmxThread r0 0
+    @: Lmx graph 0
+    @: Lmx source 0
+    @: LmxMsg child_msg 0
+    @: LmxThread child_t 0
+    @: LmxSchedule child_sched 0
+    @: LmxService service 0
+    @: LmxManager manager 0
+    @: Lmx child_graph 0
+    @: void turns_cell 0
+    @: void lane_handle 0
+    size_t: turns_before 0U
+    size_t: turns_mid 0U
+    size_t: child_blocks_before 0U
+    size_t: child_blocks_after 0U
+    size_t: wait_spins 0U
+    unsigned: lane_wait_code 0U
+    int: arena_released 0
+    int: lane_ended 0
+    int: close_ok 0
+    if: counts = 0
+        return: 2
+    ---
+    memset((cast: (@: void) (@ root)), 0, c.sizeof(c.LmxRoot))
+    memset((cast: (@: void) (@ child_arena)), 0, c.sizeof(c.LmxArena))
+    rl_root: @ root
+    child_at: @ child_arena
+    rl_phase: 0U
+    rl_child_msg: 0
+    rl_child_t: 0
+    rl_child_sched: 0
+    rl_entry_diag: 0U
+    rl_check(counts, lmx_root_open(@ root, rl_root_entry, 120000U, 0U, 0U) = c.LMX_ROOT_OK, "R0 did not open")
+    message: lmx_root_message(@ root)
+    r0: lmx_root_thread(@ root)
+    root_arena: lmx_root_arena(@ root)
+    graph: message\graph
+    service: lmx_root_service(@ root)
+    manager: lmx_root_manager(@ root)
+    rl_check(counts, message != 0 && r0 != 0 && root_arena != 0 && service != 0 && manager != 0, "R0 missing pieces")
+    if: message = 0 || r0 = 0 || manager = 0
+        failures: counts[1]
+        c.printf("lmx_app_running_lane checks=%d failures=%d entry_diag=%u (abort open)\n", counts[0], failures, (cast: (unsigned) rl_entry_diag))
+        c.fflush(0)
+        free(counts)
+        return: failures
+    ---
+    source: lmx_node_new_owned(root_arena)
+    rl_check(counts, source != 0 && lmx_arena_refs_open_owned(root_arena, source, 2U) = 0, "template not built")
+    if: source = 0
+        failures: counts[1]
+        c.printf("lmx_app_running_lane checks=%d failures=%d entry_diag=%u (abort source)\n", counts[0], failures, (cast: (unsigned) rl_entry_diag))
+        c.fflush(0)
+        free(counts)
+        return: failures
+    ---
+    lmx_arena_ref_store(graph, 3U, (cast: (@: void) source))
+    rl_source: source
+    rl_check(counts, lmx_arena_open(@ child_arena) = 0, "child arena did not open")
+    rl_child_arena: @ child_arena
+    # Create+wire the child on R0's turn (stepped round inside root_cycle). Child is NOT yet
+    # on a running lane.
+    rl_check(counts, lmx_root_cycle(@ root, 4U) = c.LMX_ROOT_OK, "create cycle did not run")
+    rl_check(counts, rl_phase = 1U && rl_child_msg != 0 && rl_child_t != 0 && rl_child_sched != 0, "child was not wired")
+    if: rl_child_msg = 0 || rl_child_t = 0 || rl_child_sched = 0
+        failures: counts[1]
+        c.printf("lmx_app_running_lane checks=%d failures=%d entry_diag=%u (abort wire)\n", counts[0], failures, (cast: (unsigned) rl_entry_diag))
+        c.fflush(0)
+        free(counts)
+        return: failures
+    ---
+    child_msg: rl_child_msg
+    child_t: rl_child_t
+    child_sched: rl_child_sched
+    child_graph: child_msg\graph
+    rl_check(counts, lmx_arena_ref_value(graph, 0U) = (cast: (@: void) child_msg), "child not published")
+    rl_check(counts, lmx_range_classify(@ child_arena, (cast: (@: void) child_msg)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "child not in own arena")
+    rl_check(counts, lmx_thread_child_is(r0, child_t) != 0, "child not live after publish")
+    rl_check(counts, child_msg\running = 1 && child_msg\success = 0, "child not left running")
+    rl_check(counts, child_graph != 0, "child graph missing")
+    turns_cell: lmx_arena_ref_value(child_graph, 1U)
+    rl_check(counts, turns_cell != 0, "graph turns cell not rooted")
+
+    # R0 manager := running binding (ticket: manager R0 is running).
+    rl_check(counts, lmx_manager_running_init(manager) = c.LMX_MANAGER_OK, "running manager did not initialize")
+    rl_check(counts, lmx_schedule_wait(child_sched, lmx_clock_ticks()) = c.LMX_SCHEDULE_OK, "schedule wait failed")
+    rl_check(counts, lmx_manager_running_add(manager, child_sched) = c.LMX_MANAGER_OK, "child not in running manager")
+    rl_check(counts, lmx_manager_running_count(manager) = 1U, "running manager count != 1")
+    rl_check(counts, lmx_manager_running_round(manager, 1U, 0U) = c.LMX_MANAGER_OK, "running round did not start a lane")
+    rl_check(counts, child_sched\lane != 0, "running manager did not give the record a lane")
+
+    # Let the lane take several turns; counter lives in the child graph.
+    wait_spins: 0U
+    turns_before: lmx_size_value_known(lmx_arena_ref_value(child_graph, 1U))
+    while: wait_spins < 50U && turns_before < 3U
+        c.Sleep(20U)
+        turns_before: lmx_size_value_known(lmx_arena_ref_value(child_graph, 1U))
+        wait_spins: wait_spins + 1U
+    ---
+    rl_check(counts, turns_before >= 3U, "lane did not grow graph turns (>=3)")
+    c.Sleep(40U)
+    turns_mid: lmx_size_value_known(lmx_arena_ref_value(child_graph, 1U))
+    rl_check(counts, turns_mid > turns_before, "graph turns did not keep growing")
+    rl_check(counts, child_msg\running = 1, "child stopped before close")
+    rl_check(counts, child_sched\lane != 0, "lane gone before close")
+
+    # Snapshot what the probe owns / remembers BEFORE close (after close the child arena
+    # and the schedule record are the cascade's to free).
+    lane_handle: child_sched\lane
+    child_blocks_before: child_at\count
+    rl_check(counts, child_at\blocks != 0 && child_blocks_before > 0U, "child arena empty before close")
+    c.printf("PRE_CLOSE turns=%u turns_mid=%u lane=%p child_blocks=%u running=%d\n",
+             (cast: (unsigned) turns_before), (cast: (unsigned) turns_mid),
+             lane_handle, (cast: (unsigned) child_blocks_before), child_msg\running)
+    c.fflush(0)
+
+    # THE QUESTION: close R0 while the lane is still alive.
+    close_ok: lmx_root_close(@ root) = c.LMX_ROOT_OK
+    rl_check(counts, close_ok != 0, "R0 did not close")
+    rl_check(counts, lmx_root_state(@ root) = c.LMX_ROOT_CLOSED, "closed root not closed")
+
+    # Give the lane a moment to touch freed storage if it will (crash = the finding).
+    c.Sleep(100U)
+
+    # After close: read ONLY probe-owned state (stack arena header; remembered HANDLE).
+    child_blocks_after: child_at\count
+    arena_released: child_blocks_after = 0U
+    lane_wait_code: (cast: (unsigned) c.WaitForSingleObject(lane_handle, 0U))
+    if: lane_wait_code = (cast: (unsigned) c.WAIT_OBJECT_0)
+        lane_ended: 1
+        c.CloseHandle(lane_handle)
+    else:
+        lane_ended: 0
+    ---
+
+    c.printf("POST_CLOSE child_blocks_before=%u child_blocks_after=%u arena_released=%d lane_ended=%d lane_wait=0x%x turns_pre=%u turns_mid=%u\n",
+             (cast: (unsigned) child_blocks_before), (cast: (unsigned) child_blocks_after),
+             arena_released, lane_ended, lane_wait_code,
+             (cast: (unsigned) turns_before), (cast: (unsigned) turns_mid))
+    c.fflush(0)
+
+    # Observable race: cascade freed the live child's arena under a still-running lane.
+    if: arena_released != 0 && lane_ended = 0
+        c.printf("STOP RACE: child arena released while lane still alive (UAF window)\n")
+        c.fflush(0)
+        counts[1]: counts[1] + 1
+        counts[0]: counts[0] + 1
+    ---
+    if: arena_released != 0 && lane_ended != 0
+        c.printf("NOTE: arena released and lane already ended by close time (join-or-self-end)\n")
+        c.fflush(0)
+    ---
+    if: arena_released = 0
+        c.printf("NOTE: child arena NOT released on close (cascade did not free)\n")
+        c.fflush(0)
+    ---
+
+    failures: counts[1]
+    c.printf("lmx_app_running_lane checks=%d failures=%d turns_pre=%u turns_mid=%u blocks_before=%u blocks_after=%u arena_released=%d lane_ended=%d entry_diag=%u\n",
+             counts[0], failures, (cast: (unsigned) turns_before), (cast: (unsigned) turns_mid),
+             (cast: (unsigned) child_blocks_before), (cast: (unsigned) child_blocks_after),
+             arena_released, lane_ended, (cast: (unsigned) rl_entry_diag))
+    c.fflush(0)
+    free(counts)
+return: failures

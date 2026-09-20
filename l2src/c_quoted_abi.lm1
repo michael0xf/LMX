@@ -1,0 +1,43 @@
+# C ABI: frozen parser quoted-token symbols -> their L2 callables.
+predef: "l2src/lmx.h.lm1"
+predef: "l2src/lmx_arena_refs.h.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stddef.h>" "<stdio.h>"
+
+extern: @: Lmx l2_cquoted_unit
+
+prototype:
+    fn: l2_cquoted_boot () int
+    fn: l2_cquoted_m2 (@: Lmx node; const: @(char text); size_t: end_index; size_t: start) size_t
+    fn: l2_cquoted_m3 (@: Lmx node; const: @(char text); size_t: end_index; size_t: start) int
+    fn: l2_cquoted_m4 (@: Lmx node; const: @(char text); size_t: end_index; size_t: start) size_t
+    fn: l2_cquoted_m5 (@: Lmx node; const: @(char text); size_t: end_index; size_t: start) size_t
+end: prototype
+
+int: l2_cquoted_calls 0
+
+fn: l2_cquoted_ensure () void
+    if: l2_cquoted_unit = 0
+        if: c.l2_cquoted_boot() != 0 || l2_cquoted_unit = 0
+            fputs("l2_cquoted_boot failed\n", l1_stderr())
+---
+
+fn: lm_p0_scan_c_quoted_token (const: @(char text); size_t: end_index; size_t: quote_index) size_t
+    l2_cquoted_ensure()
+    l2_cquoted_calls: l2_cquoted_calls + 1
+    return: c.l2_cquoted_m2(c.lmx_arena_ref_struct(l2_cquoted_unit, 2U), text, end_index, quote_index)
+
+fn: lm_p0_starts_c_prefixed_quote (const: @(char text); size_t: end_index; size_t: start) int
+    l2_cquoted_ensure()
+    l2_cquoted_calls: l2_cquoted_calls + 1
+    return: c.l2_cquoted_m3(c.lmx_arena_ref_struct(l2_cquoted_unit, 3U), text, end_index, start)
+
+fn: lm_p0_scan_c_char_token (const: @(char text); size_t: end_index; size_t: start) size_t
+    l2_cquoted_ensure()
+    l2_cquoted_calls: l2_cquoted_calls + 1
+    return: c.l2_cquoted_m4(c.lmx_arena_ref_struct(l2_cquoted_unit, 4U), text, end_index, start)
+
+fn: lm_p0_scan_c_prefixed_quote_token (const: @(char text); size_t: end_index; size_t: start) size_t
+    l2_cquoted_ensure()
+    l2_cquoted_calls: l2_cquoted_calls + 1
+    return: c.l2_cquoted_m5(c.lmx_arena_ref_struct(l2_cquoted_unit, 5U), text, end_index, start)

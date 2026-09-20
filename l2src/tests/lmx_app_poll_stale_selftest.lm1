@@ -1,0 +1,448 @@
+predef: "l2src/lmx_root.lm1"
+predef: "l2src/lmx_settle.lm1"
+predef: "l2src/lmx_service.lm1"
+predef: "l2src/lmx_turn.lm1"
+predef: "l2src/lmx_child.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_manager.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_gc.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_call.lm1"
+predef: "l2src/lmx_clock.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# lmx_app_poll_stale_selftest.lm1 -- ticket 20260919-211000 (остаток правила закрытия детей:
+# «ящик пуст» в опросе рукопожатия, lmx_poll_answer_children).
+#
+# ПРЕДМЕТ. Опрос рукопожатия -- та половина родителя, что отвечает на свежие засечки ребёнка и
+# закрывает ЗАМОЛЧАВШЕГО (засечка старше окна ребёнка = «не работаешь», тот же счёт, что у
+# рукописи и у обслуживания сирот).  Сегодня закрытие в нём сделано ПО ЯЩИКУ: `running=0` всем
+# замолчавшим, а метку `handoff_ready` -- только тем, у кого ящик ПУСТ.  Ящик не признак
+# (Михаил, 19.09: закрытое писем не ждёт), и у этой развилки ДВА конца, оба мерятся здесь:
+#
+#  1) ЗАМОЛЧАВШИЙ С ПИСЬМОМ остаётся остановленным и НЕ помеченным -- и хода ему никто не даст
+#     (вход отказывает по тому же полю running, которое только что записал опрос).  Если родитель
+#     к тому же жив и не кончается, до отсрочки утилизации дело не доходит: момент просьбы нигде
+#     не записан (`LmxLink\stopped` = 0), окно не тикает, и ребёнок с письмом удержан вечно.
+#  2) МЕТКА, НАПИСАННАЯ ОПРОСОМ, -- та же ложь, что была у остановки до правки 70ba526: опрос
+#     ставит её, не зная, не внутри ли хода ребёнок.  Прогон 3 пробы запрета замерил, чего это
+#     стоит (`TAKEN_IN_FLIGHT`: арену пришили и освободили под работающей границей).
+#
+# ПРАВИЛО, которое проба стережёт (одно на всё ядро, 70ba526): просьба -- это `running=0` плюс
+# МОМЕНТ первой просьбы в узле родителя; метку пишет только собственная граница ребёнка; кого
+# никто не проводит -- закрывает БЕЗ хода точка обслуживания по СВОЁМУ окну ребёнка.  Опрос --
+# такой же просящий, как каскад и отсрочка, и его замолчавший ребёнок проходит тот же путь.
+#
+# ЧИСЛА (2 прогона: с письмом у B и с пустым ящиком):
+#   * после опроса: `running=0`, у B записан момент просьбы (`stopped != 0`), метки НЕТ;
+#   * окно (1000 у B, тем же числом мерится и его молчание): на следующем барьере родителя B
+#     закрыт без хода -- с письмом или без, письмо не прочитано;
+#   * затем A кончается, и утилизация доводит цепочку: арена B уходит в арену A, A освобождён
+#     целиком, служба остаётся с одним R0, сирот не усыновлялось.
+#
+# Арифметика чтений -- своя, без гонки с часами: у B окно 1000U, у A -- 1000000U (поэтому скачок
+# чтения делает замолчавшим ровно B и не трогает A), и все чтения идут через шов
+# (`lmx_manager_round(manager, 1U, reading)` / `lmx_root_cycle_at`).
+
+@: LmxRoot pw_root 0
+@: LmxArena pw_arena_a 0
+@: LmxArena pw_arena_b 0
+@: Lmx pw_source_a 0
+@: LmxMsg pw_msg_a 0
+@: LmxThread pw_t_a 0
+@: LmxSchedule pw_sched_a 0
+@: LmxMsg pw_msg_b 0
+@: LmxThread pw_t_b 0
+@: LmxSchedule pw_sched_b 0
+@: LmxLink pw_node_b 0
+size_t: pw_phase 0U
+size_t: pw_entry_diag 0U
+size_t: pw_a_turns 0U
+size_t: pw_create_diag 0U
+int: pw_with_mail 0
+
+# A's body: turn 1 creates B in A's arena (with B's own window: 1000U), later turns only take
+# letters, and the LAST turn (pw_a_turns >= 4U) declares A's own work done -- so the poll of turns
+# 2 and 3 is what the probe measures, and the cascade is out of the way until A ends.
+fn: pw_body_a (@: Lmx node) int
+    @: LmxThread t
+    @: Lmx graph_a
+    @: Lmx source_b
+    @: LmxMsg child_b
+    @: LmxThread t_b
+    @: LmxPost mail_b
+    @: LmxSchedule sched_b
+    @: void letter
+    t: lmx_thread_current()
+    if: t = 0 || t\message = 0 || t\message\graph = 0
+        pw_create_diag: 1U
+        return: 0
+    ---
+    if: pw_arena_a = 0 || pw_arena_b = 0
+        pw_create_diag: 2U
+        return: 0
+    ---
+    pw_a_turns: pw_a_turns + 1U
+    graph_a: t\message\graph
+    if: lmx_thread_mail_count(t, c.LMX_POST_INBOX) > 0U
+        letter: lmx_thread_mail_take(t, c.LMX_POST_INBOX)
+    ---
+    if: pw_a_turns = 1U
+        source_b: lmx_node_new_owned(pw_arena_a)
+        if: source_b = 0 || lmx_arena_refs_open_owned(pw_arena_a, source_b, 2U) != 0
+            pw_create_diag: 3U
+            return: 0
+        ---
+        child_b: lmx_child_reserve(t, pw_arena_a, pw_arena_b, graph_a, 1U, source_b)
+        if: child_b = 0
+            pw_create_diag: 4U
+            return: 0
+        ---
+        mail_b: (cast: (@: LmxPost) lmx_arena_take(pw_arena_b, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+        t_b: (cast: (@: LmxThread) lmx_arena_take(pw_arena_b, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+        sched_b: (cast: (@: LmxSchedule) lmx_arena_take(pw_arena_b, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+        if: mail_b = 0 || t_b = 0 || sched_b = 0
+            pw_create_diag: 5U
+            return: 0
+        ---
+        if: lmx_post_init(pw_arena_b, mail_b) != c.LMX_POST_OK
+            pw_create_diag: 6U
+            return: 0
+        ---
+        # B's OWN window: 1000U -- the number that will measure its silence AND close it.
+        if: lmx_schedule_init(sched_b, pw_arena_b, (cast: (@: void) t_b), 1000U) != c.LMX_SCHEDULE_OK
+            pw_create_diag: 7U
+            return: 0
+        ---
+        if: lmx_thread_attach(t_b, child_b, mail_b, sched_b) != c.LMX_THREAD_OK
+            pw_create_diag: 8U
+            return: 0
+        ---
+        if: lmx_child_thread(t, child_b, t_b) != c.LMX_CHILD_OK
+            pw_create_diag: 9U
+            return: 0
+        ---
+        pw_msg_b: child_b
+        pw_t_b: t_b
+        pw_sched_b: sched_b
+        pw_create_diag: 10U
+        return: 0
+    ---
+    if: pw_a_turns >= 4U
+        t\message\success: 1
+    ---
+return: 0
+
+fn: pw_root_entry (@: Lmx node) int
+    @: LmxMsg child
+    @: LmxThread child_t
+    @: LmxPost child_mail
+    @: LmxSchedule child_sched
+    @: LmxMethod method
+    @: LmxPool methods
+    @: Lmx graph
+    if: pw_phase != 0U || pw_root = 0 || pw_arena_a = 0 || pw_source_a = 0
+        pw_entry_diag: 1U
+        return: 0
+    ---
+    child: lmx_root_create(pw_root, pw_arena_a, 0U, pw_source_a)
+    if: child = 0
+        pw_entry_diag: 2U
+        return: 0
+    ---
+    pw_msg_a: child
+    methods: lmx_pool_make(pw_arena_a, 2U * c.sizeof(c.LmxMethod), c.sizeof(c.LmxMethod),
+                           c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD)
+    if: methods = 0
+        pw_entry_diag: 3U
+        return: 0
+    ---
+    method: lmx_method_intern(pw_arena_a, methods, (cast: (LmxEntry) pw_body_a), 1U)
+    graph: child\graph
+    if: method = 0 || graph = 0
+        pw_entry_diag: 4U
+        return: 0
+    ---
+    lmx_arena_ref_store(graph, 0U, (cast: (@: void) method))
+    child_mail: (cast: (@: LmxPost) lmx_arena_take(pw_arena_a, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    child_t: (cast: (@: LmxThread) lmx_arena_take(pw_arena_a, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    child_sched: (cast: (@: LmxSchedule) lmx_arena_take(pw_arena_a, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: child_mail = 0 || child_t = 0 || child_sched = 0
+        pw_entry_diag: 5U
+        return: 0
+    ---
+    if: lmx_post_init(pw_arena_a, child_mail) != c.LMX_POST_OK
+        pw_entry_diag: 6U
+        return: 0
+    ---
+    # A's own window is WIDE (1000000U): the reading that makes B silent must leave A fresh.
+    if: lmx_schedule_init(child_sched, pw_arena_a, (cast: (@: void) child_t), 1000000U) != c.LMX_SCHEDULE_OK
+        pw_entry_diag: 7U
+        return: 0
+    ---
+    if: lmx_thread_attach(child_t, child, child_mail, child_sched) != c.LMX_THREAD_OK
+        pw_entry_diag: 8U
+        return: 0
+    ---
+    if: lmx_child_thread(lmx_root_thread(pw_root), child, child_t) != c.LMX_CHILD_OK
+        pw_entry_diag: 9U
+        return: 0
+    ---
+    pw_t_a: child_t
+    pw_sched_a: child_sched
+    pw_phase: 1U
+    pw_entry_diag: 10U
+return: 0
+
+sub: pw_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+    c.fflush(0)
+end: pw_check
+
+# One run.  `with_mail` != 0: B's inbox holds a letter when the poll finds it silent.
+fn: pw_scenario (int: with_mail; @: int counts) int
+    LmxRoot: root
+    LmxArena: arena_a
+    LmxArena: arena_b
+    LmxArena: letter_arena
+    @: LmxArena a_at 0
+    @: LmxArena b_at 0
+    @: LmxArena la 0
+    @: LmxArena root_arena 0
+    @: LmxMsg message 0
+    @: LmxThread r0 0
+    @: Lmx graph 0
+    @: Lmx source_a 0
+    @: LmxMsg letter 0
+    @: LmxMsg msg_a 0
+    @: LmxThread t_a 0
+    @: LmxThread t_b 0
+    @: LmxMsg msg_b 0
+    @: LmxLink node_b 0
+    @: LmxService service 0
+    @: LmxManager manager 0
+    @: Lmx graph_a 0
+    @: LmxOrphanLedger orphans 0
+    int: failures
+    size_t: stamp 0U
+    size_t: stopped_before 0U
+    size_t: stopped_after 0U
+    size_t: b_count_before 0U
+    size_t: a_count_before 0U
+    size_t: svc_end 0U
+    ulong: base 0U
+    memset((cast: (@: void) (@ root)), 0, c.sizeof(c.LmxRoot))
+    memset((cast: (@: void) (@ arena_a)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ arena_b)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ letter_arena)), 0, c.sizeof(c.LmxArena))
+    pw_root: @ root
+    pw_arena_a: 0
+    pw_arena_b: 0
+    pw_msg_a: 0
+    pw_t_a: 0
+    pw_sched_a: 0
+    pw_msg_b: 0
+    pw_t_b: 0
+    pw_sched_b: 0
+    pw_node_b: 0
+    pw_phase: 0U
+    pw_entry_diag: 0U
+    pw_a_turns: 0U
+    pw_create_diag: 0U
+    pw_with_mail: with_mail
+    pw_check(counts, lmx_root_open(@ root, pw_root_entry, 120000U, 0U, 0U) = c.LMX_ROOT_OK, "R0 did not open")
+    message: lmx_root_message(@ root)
+    r0: lmx_root_thread(@ root)
+    root_arena: lmx_root_arena(@ root)
+    graph: message\graph
+    service: lmx_root_service(@ root)
+    manager: lmx_root_manager(@ root)
+    orphans: lmx_root_orphans(@ root)
+    pw_check(counts, message != 0 && r0 != 0 && root_arena != 0 && service != 0 && manager != 0 && orphans != 0, "R0 missing pieces")
+    if: message = 0 || r0 = 0 || service = 0 || manager = 0 || orphans = 0
+        failures: counts[1]
+        c.printf("pw_scenario mail=%d checks=%d failures=%d entry_diag=%u (abort open)\n",
+                 with_mail, counts[0], failures, (cast: (unsigned) pw_entry_diag))
+        c.fflush(0)
+        return: failures
+    ---
+    source_a: lmx_node_new_owned(root_arena)
+    pw_check(counts, source_a != 0 && lmx_arena_refs_open_owned(root_arena, source_a, 2U) = 0, "template A not built")
+    if: source_a = 0
+        failures: counts[1]
+        c.printf("pw_scenario mail=%d checks=%d failures=%d entry_diag=%u (abort template)\n",
+                 with_mail, counts[0], failures, (cast: (unsigned) pw_entry_diag))
+        c.fflush(0)
+        return: failures
+    ---
+    lmx_arena_ref_store(graph, 3U, (cast: (@: void) source_a))
+    pw_source_a: source_a
+    a_at: @ arena_a
+    b_at: @ arena_b
+    la: @ letter_arena
+    pw_check(counts, lmx_arena_open(@ arena_a) = 0, "arena A did not open")
+    pw_check(counts, lmx_arena_open(@ arena_b) = 0, "arena B did not open")
+    pw_check(counts, lmx_arena_open_simple(@ letter_arena) = 0, "letter arena did not open")
+    pw_arena_a: @ arena_a
+    pw_arena_b: @ arena_b
+
+    # R0 creates A; A is a live direct child from here on.
+    pw_check(counts, lmx_root_cycle(@ root, 4U) = c.LMX_ROOT_OK, "A-create cycle did not run")
+    pw_check(counts, pw_phase = 1U && pw_msg_a != 0 && pw_t_a != 0, "A was not wired")
+    if: pw_msg_a = 0 || pw_t_a = 0
+        failures: counts[1]
+        c.printf("pw_scenario mail=%d checks=%d failures=%d entry_diag=%u (abort A create)\n",
+                 with_mail, counts[0], failures, (cast: (unsigned) pw_entry_diag))
+        c.fflush(0)
+        return: failures
+    ---
+    msg_a: pw_msg_a
+    t_a: pw_t_a
+    graph_a: msg_a\graph
+    pw_check(counts, lmx_schedule_wait(pw_sched_a, lmx_root_clock(@ root)) = c.LMX_SCHEDULE_OK, "A schedule wait failed")
+    pw_check(counts, lmx_manager_add(manager, pw_sched_a) = c.LMX_MANAGER_OK, "A not in manager")
+    pw_check(counts, lmx_service_find(service, (cast: (@: void) t_a)) = (cast: (@: void) t_a), "A not in service")
+
+    # A's turn 1: B is created (B's own window is 1000U).
+    letter: (cast: (@: LmxMsg) lmx_arena_take(la, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    pw_check(counts, letter != 0, "letter 1 missing")
+    if: letter != 0
+        letter\running: 1
+        letter\success: 0
+        letter\handoff_ready: 0
+        letter\graph: 0
+        letter\index: 0U
+    ---
+    pw_check(counts, lmx_service_post(service, (cast: (@: void) t_a), letter, la) = c.LMX_SERVICE_OK, "post 1 to A refused")
+    pw_check(counts, lmx_manager_round(manager, 1U, lmx_root_clock(@ root)) = c.LMX_MANAGER_OK, "A creating round did not run")
+    pw_check(counts, pw_a_turns = 1U && pw_create_diag = 10U && pw_msg_b != 0 && pw_t_b != 0, "A did not create B in its turn")
+    if: pw_msg_b = 0 || pw_t_b = 0 || pw_create_diag != 10U
+        failures: counts[1]
+        c.printf("pw_scenario mail=%d checks=%d failures=%d create_diag=%u (STOP: A cannot create B)\n",
+                 with_mail, counts[0], failures, (cast: (unsigned) pw_create_diag))
+        c.fflush(0)
+        return: failures
+    ---
+    msg_b: pw_msg_b
+    t_b: pw_t_b
+    node_b: lmx_thread_link(t_b)
+    pw_check(counts, node_b != 0, "B has no node in its parent's chain")
+    pw_check(counts, lmx_thread_child_is(t_a, t_b) != 0, "B not live child of A after publish")
+
+    # B'S SILENT TURN: it runs one turn of its own and stamps the handshake -- and then goes quiet.
+    base: lmx_clock_ticks()
+    pw_check(counts, lmx_thread_enter(t_b) = c.LMX_THREAD_OK, "B's silent turn was refused")
+    lmx_thread_leave(t_b)
+    pw_check(counts, lmx_turn_end(t_b, base) = c.LMX_TURN_OK, "B's silent turn boundary refused")
+    stamp: c.__atomic_load_n(lmx_thread_alive_cell(t_b), c.__ATOMIC_RELAXED)
+    pw_check(counts, stamp != 0U && stamp = (cast: (size_t) base), "B did not stamp the handshake with its own reading")
+    pw_check(counts, msg_b\running = 1 && msg_b\success = 0 && msg_b\handoff_ready = 0, "B did not stay live after its silent turn")
+
+    # ... and only NOW the letter, if this run has one: the poll will find it waiting.
+    if: with_mail != 0
+        pw_check(counts, lmx_arena_open_simple(@ letter_arena) = 0, "second letter arena did not open")
+        letter: (cast: (@: LmxMsg) lmx_arena_take(la, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+        pw_check(counts, letter != 0, "letter 2 missing")
+        if: letter != 0
+            letter\running: 1
+            letter\success: 0
+            letter\handoff_ready: 0
+            letter\graph: 0
+            letter\index: 0U
+        ---
+        pw_check(counts, lmx_service_post(service, (cast: (@: void) t_b), letter, la) = c.LMX_SERVICE_OK, "post to B refused")
+        pw_check(counts, lmx_thread_mail_count(t_b, c.LMX_POST_INBOX) = 1U, "B inbox empty after post")
+    ---
+
+    # A's turn 2 -- ITS BOUNDARY IS THE POLL'S: the reading is past B's window (1000U) and well
+    # inside A's (1000000U), so B has gone silent and A has not.  Nothing else acts here: A has not
+    # ended (the cascade has not fired), and no stop has ever been requested for B.
+    pw_check(counts, lmx_manager_round(manager, 1U, base + 1001U) = c.LMX_MANAGER_OK, "A poll round did not run")
+    pw_check(counts, pw_a_turns = 2U, "A did not take its poll turn")
+    pw_check(counts, msg_b\running = 0, "the poll did not reach the silent child")
+    # THE PIECE THIS FILE IS ABOUT: the request's MOMENT must be recorded in the parent's node, or
+    # nothing can ever end the child's wait (the window ages against it).
+    stopped_after: (cast: (size_t) node_b\stopped)
+    pw_check(counts, stopped_after != 0U, "the poll stopped the child without recording the request")
+    # ... and the mark is NOT the poll's to write: that is the child's own boundary, or the window.
+    pw_check(counts, msg_b\handoff_ready = 0, "the poll wrote the handoff mark instead of asking")
+    pw_check(counts, lmx_settle_ready(msg_b) = 0, "the poll's child reads settle-ready at once")
+    pw_check(counts, lmx_thread_mail_count(t_b, c.LMX_POST_INBOX) = (cast: (size_t) with_mail), "B's mail changed at the poll")
+    pw_check(counts, lmx_thread_child_is(t_a, t_b) != 0, "B left A's chain at the poll")
+    pw_check(counts, lmx_service_find(service, (cast: (@: void) t_b)) = (cast: (@: void) t_b), "B left the service at the poll")
+
+    # THE WINDOW: one more boundary of A, past the REQUEST's window -- and B is closed WITHOUT a
+    # turn, mail or no mail (a stopped Message does not wait for letters).
+    pw_check(counts, lmx_manager_round(manager, 1U, base + 2002U) = c.LMX_MANAGER_OK, "A window round did not run")
+    pw_check(counts, pw_a_turns = 3U, "A did not take its window turn")
+    pw_check(counts, msg_b\running = 0 && msg_b\handoff_ready != 0, "the silent child was not closed at its window")
+    pw_check(counts, lmx_settle_ready(msg_b) != 0, "the closed child did not become settlable")
+    pw_check(counts, lmx_thread_mail_count(t_b, c.LMX_POST_INBOX) = (cast: (size_t) with_mail), "the letter was read by someone at the window")
+    b_count_before: b_at\count
+    a_count_before: a_at\count
+    pw_check(counts, b_count_before > 0U && b_at\blocks != 0, "B arena empty at the window")
+    pw_check(counts, lmx_orphan_count(orphans) = 0U, "something was adopted at the window")
+    c.printf("PW POLL mail=%d stamp=%u stopped=%u b_running=%d b_handoff=%d b_mail=%u svc=%u\n",
+             with_mail, (cast: (unsigned) stamp), (cast: (unsigned) stopped_after),
+             msg_b\running, msg_b\handoff_ready,
+             (cast: (unsigned) lmx_thread_mail_count(t_b, c.LMX_POST_INBOX)),
+             (cast: (unsigned) lmx_service_count(service)))
+    c.fflush(0)
+
+    # A'S ENDING TURN, then the ordinary chain: B failed (success = 0) -> its arena joins A's; A
+    # succeeded -> reaped whole.  Nothing of B's is read past the settle (its storage goes with A's).
+    pw_check(counts, lmx_manager_round(manager, 1U, base + 2003U) = c.LMX_MANAGER_OK, "A ending round did not run")
+    pw_check(counts, pw_a_turns = 4U && msg_a\success = 1 && msg_a\running = 0, "A did not end by success")
+    pw_check(counts, msg_a\handoff_ready != 0, "A did not mark itself handoff-safe")
+    pw_check(counts, lmx_settle_children(r0, root_arena, service, manager, base + 2003U) = c.LMX_SETTLE_OK, "the chain settle did not run")
+    pw_check(counts, b_at\count = 0U && b_at\blocks = 0, "B's arena did not attach into A's")
+    pw_check(counts, a_at\count = 0U && a_at\blocks = 0, "A's arena was not released whole")
+    pw_check(counts, lmx_arena_ref_value(graph, 0U) = 0, "A's slot in R0 still names a gone record")
+    svc_end: lmx_service_count(service)
+    pw_check(counts, svc_end = 1U, "service is not R0 alone after the chain")
+    pw_check(counts, lmx_thread_child_is(r0, t_a) = 0, "A still live under R0 after the chain")
+    pw_check(counts, lmx_orphan_count(orphans) = 0U && lmx_orphan_reclaimed(orphans) = 0U, "the chain was rerouted instead of closed")
+    c.printf("PW CHAIN mail=%d a_turns=%u b_count %u->%u svc_end=%u orphans=%u\n",
+             with_mail, (cast: (unsigned) pw_a_turns),
+             (cast: (unsigned) b_count_before), (cast: (unsigned) b_at\count),
+             (cast: (unsigned) svc_end),
+             (cast: (unsigned) lmx_orphan_count(orphans)))
+    c.fflush(0)
+
+    pw_check(counts, lmx_root_close(@ root) = c.LMX_ROOT_OK, "R0 did not close")
+    pw_check(counts, lmx_root_state(@ root) = c.LMX_ROOT_CLOSED, "closed root not closed")
+    failures: counts[1]
+return: failures
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    int: failures
+    if: counts = 0
+        return: 2
+    ---
+    # Run 1: the silent child has PENDING mail -- the case the box condition refused to close.
+    pw_scenario(1, counts)
+    # Run 2: the same silent child with an EMPTY box -- the case the box condition did close.
+    pw_scenario(0, counts)
+    failures: counts[1]
+    c.printf("lmx_app_poll_stale checks=%d failures=%d\n", counts[0], failures)
+    c.fflush(0)
+    free(counts)
+return: failures

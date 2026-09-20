@@ -1,0 +1,233 @@
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# The arena's index of its arrays, asserted where it is written: by the storage
+# constructors themselves. An owner keeps no range list -- an ARRAY of the arena
+# does not move, so the only orderable thing is the address->descriptor table,
+# which the arena holds together with its block list (Mikhail, 2026-09-17:
+# "У тебя есть N массивов в арене ... _таблицу адрес->дескриптор массива_ и после
+# вставку в таблицу делает менеджер арены"). This file replaces the deleted
+# lmx_arena_storage_selftest: that one passed an owner's ranges in together with
+# its blocks, and the arena now holds both itself.
+#
+# Construction goes through the real constructors, never through hand-built
+# records, so what is under test is the push-then-register order: ownership
+# first, the table second, and a refused or reverted construction undoing both.
+#
+# The arena is opened here, at the caller, which is what replaced the removed
+# lmx_domain_table_init (and the global lmx_ranges_init this file used to call).
+#
+# WHAT ONE ENTRY IS NOW. A value has no array of its own: a mutable value is a
+# CELL of the arena's array of its kind and type, and the table carries one entry
+# per ARRAY/INTERVAL -- never one per value and never one per constructor call.
+# So the counters below count what the model counts: the arena's list of its N
+# arrays (`table_arrays`), the intervals one array holds (`table_intervals_of`),
+# and the entries in the index (`arena\count`). An array grows by adding a chunk,
+# which is one more interval of the SAME array, so a second request for the same
+# kind and type adds an entry and NO array.
+
+sub: table_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: table_check
+
+# How many arrays the arena holds -- the length of its list of its N arrays.
+fn: table_arrays (@: LmxArena arena) size_t
+    @: LmxPool pool
+    size_t: total 0U
+    if: arena = 0
+        return: 0U
+    pool: arena\arrays
+    while: pool != 0
+        total: total + 1U
+        pool: pool\next
+    ---
+return: total
+
+# How many index entries name this one array -- how many intervals it holds.
+fn: table_intervals_of (@: LmxArena arena; @: LmxPool array) size_t
+    @: LmxRange entry
+    size_t: index 0U
+    size_t: total 0U
+    if: arena = 0 || array = 0
+        return: 0U
+    while: index < arena\count
+        entry: arena\index + index
+        if: entry\array = array
+            total: total + 1U
+        ---
+        index: index + 1U
+    ---
+return: total
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    @: LmxArenaBlock mark 0
+    LmxArena: arena
+    LmxArena: other
+    # Each arena is a by-value local, so every call takes its address (`@ arena`).
+    # A FIELD read needs a pointer of its own: L1's `\` emits `->`, and the address
+    # of a by-value field is not expressible -- taking the address of the whole
+    # local first is the spelling that works.
+    @: LmxArena arena_at
+    @: LmxArena other_at
+    @: LmxArrayDesc desc
+    @: LmxArrayDesc fits
+    @: LmxArrayDesc grown
+    @: LmxArrayDesc doomed
+    @: LmxArrayDesc renewed
+    @: LmxPool pool_seen
+    @: LmxPool stale_desc
+    @: LmxPool stale_backing
+    @: LmxPool table_array
+    @: void backing 0
+    @: int cells
+    @: char table
+    @: char second
+    int: failures
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    arena_at: @ arena
+    if: lmx_arena_open(@ arena) != 0
+        fputs("lmx: arena open failed\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+
+    # 1. An array of int is two arrays of one arena: the descriptor and its
+    # backing, two blocks and two entries.
+    desc: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, 3U, @ arena)
+    table_check(counts, desc != 0, "array joins the arena's block list")
+    table_check(counts, arena_at\count = 2U, "descriptor and backing are two entries")
+    table_check(counts, lmx_range_classify(@ arena, (cast: (@: void) desc)) = c.LMX_KIND_ARRAY, "descriptor kind")
+    table_check(counts, lmx_range_type_of(@ arena, (cast: (@: void) desc)) = c.LMX_TYPE_ARRAY_OF_INT, "descriptor type")
+    table_check(counts, lmx_range_classify(@ arena, (cast: (@: void) (desc + 1))) = c.LMX_KIND_NONE, "descriptor interval is exact")
+    backing: desc\data
+    table_check(counts, backing != 0 && desc\len = 3U, "descriptor publishes its backing")
+    table_check(counts, lmx_range_classify(@ arena, backing) = c.LMX_KIND_PRIMITIVE && lmx_range_type_of(@ arena, backing) = c.LMX_TYPE_INT, "backing kind and type")
+    table_check(counts, table_arrays(@ arena) = 2U, "one array of descriptors and one array of int cells")
+    cells: (cast: (@: int) backing)
+    table_check(counts, lmx_range_classify(@ arena, (cast: (@: void) (cells + 2))) = c.LMX_KIND_PRIMITIVE, "last element is inside")
+    table_check(counts, lmx_range_classify(@ arena, (cast: (@: void) (cells + 3))) = c.LMX_KIND_NONE, "one past the last element is outside")
+
+    # A typed reference writes straight into its cell; the table is consulted
+    # only where the type is NOT known.
+    cells[1]: 73
+    table_check(counts, cells[1] = 73, "typed write reaches the cell")
+    table_check(counts, lmx_range_classify(@ arena, (cast: (@: void) (cells + 1))) = c.LMX_KIND_PRIMITIVE && lmx_range_type_of(@ arena, (cast: (@: void) (cells + 1))) = c.LMX_TYPE_INT, "the written cell is the registered one")
+
+    # 2. All-or-nothing is the ARENA's own act: a mark is taken, activity follows,
+    # and the revert takes exactly what that activity added -- its own blocks and
+    # its own entries -- away, leaving every earlier entry exactly where it was.
+    # (Passing an owner's ranges to another owner is lmx_arena_attach, whose stage
+    # is D3; the entries never move either way, because no address moves.)
+    #
+    # WHAT THE REVERT CAN UN-MAKE. An entry is one per array/interval now, so
+    # activity that is seated in an array the arena already had adds no BLOCK --
+    # there is nothing of it the block list could take back. What a revert does
+    # un-make is a construction that makes an ARRAY: both blocks of it, the one
+    # carrying the storage and the one carrying the descriptor, were added after
+    # the mark. So the marked activity below MAKES TWO NEW ARRAYS: this arena has
+    # arrays of int only, and an Array of size_t brings its own array of size_t
+    # descriptors and its own array of size_t cells.
+    mark: lmx_arena_mark(@ arena)
+    doomed: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_SIZE_T, 2U, @ arena)
+    table_check(counts, doomed != 0, "a marked construction that makes new arrays succeeds")
+    table_check(counts, arena_at\count = 4U, "the marked construction adds its own entries")
+    stale_desc: lmx_range_pool(@ arena, (cast: (@: void) doomed))
+    stale_backing: lmx_range_pool(@ arena, doomed\data)
+    table_check(counts, stale_desc != 0 && stale_backing != 0 && stale_desc != stale_backing, "the two new arrays have descriptors of their own")
+    table_check(counts, lmx_arena_find(@ arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_SIZE_T) = stale_backing, "the new array of cells is the arena's")
+    table_check(counts, table_arrays(@ arena) = 4U, "the arena's list of its N arrays gained the two")
+    table_check(counts, lmx_arena_revert(@ arena, mark) = 0, "the revert accepts the mark")
+    table_check(counts, arena_at\count = 2U, "the revert takes the marked entries away")
+    table_check(counts, lmx_range_classify(@ arena, (cast: (@: void) doomed)) = c.LMX_KIND_NONE, "a reverted construction no longer classifies")
+    # The block that CARRIES a descriptor goes with the array it describes: as
+    # those blocks left the arena, the arrays they described left the arena's list
+    # of its N arrays too. So after the rollback the arena names no array that is
+    # gone -- a lookup of that kind and type finds nothing (it does NOT hand back
+    # the descriptor of an array the arena no longer holds), and the list itself is
+    # walked below and is back to exactly the arrays the mark held, with no entry
+    # the revert left behind.
+    table_check(counts, lmx_arena_find(@ arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_SIZE_T) = 0, "the array of cells the mark made is out of the arena's list")
+    table_check(counts, lmx_arena_find(@ arena, c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_SIZE_T) = 0, "the array of descriptors the mark made is out of the arena's list")
+    table_check(counts, table_arrays(@ arena) = 2U, "the arena's list of its N arrays is back to what the mark held")
+    table_check(counts, lmx_range_classify(@ arena, (cast: (@: void) desc)) = c.LMX_KIND_ARRAY && lmx_range_type_of(@ arena, (cast: (@: void) desc)) = c.LMX_TYPE_ARRAY_OF_INT, "descriptor entry stayed put")
+    table_check(counts, lmx_range_classify(@ arena, (cast: (@: void) (cells + 1))) = c.LMX_KIND_PRIMITIVE && lmx_range_type_of(@ arena, (cast: (@: void) (cells + 1))) = c.LMX_TYPE_INT, "backing entry stayed put")
+
+    # The arena is whole after the rollback: it still answers for that kind and
+    # type, and the cells it hands out belong to arrays it holds NOW. The arrays
+    # the mark made are gone from the arena but their storage is still the detached
+    # blocks' (a revert takes blocks off the list; it frees nothing), so a fresh
+    # construction cannot land on them -- the descriptors below are addresses OTHER
+    # than the ones the mark's construction made. A lookup that still returned the
+    # gone descriptors would seat these cells in an array the arena does not hold.
+    renewed: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_SIZE_T, 2U, @ arena)
+    table_check(counts, renewed != 0 && renewed != doomed && arena_at\count = 4U, "a later request for that kind and type makes the arrays anew")
+    table_check(counts, lmx_range_pool(@ arena, (cast: (@: void) renewed)) != stale_desc && lmx_range_pool(@ arena, renewed\data) != stale_backing, "the new cells come from fresh arrays, not from the gone ones")
+    table_check(counts, table_arrays(@ arena) = 4U, "the arena's list holds the fresh arrays")
+    table_check(counts, lmx_arena_revert(@ arena, mark) = 0 && arena_at\count = 2U && table_arrays(@ arena) = 2U, "the second revert takes the renewed arrays away too")
+    table_check(counts, desc\data = backing && cells[1] = 73, "addresses and payload unchanged by the revert")
+
+    # 3. A one-array constructor: one array of the arena, one entry. The table
+    # takes 256 consecutive cells of the array of char primitives -- the first
+    # request for that kind and type, so the array is made here with exactly the
+    # 256 cells asked for.
+    table: lmx_chars_new_owned(@ arena)
+    table_check(counts, table != 0, "character table constructed")
+    table_check(counts, arena_at\count = 3U, "one array, one entry")
+    table_check(counts, lmx_range_classify(@ arena, (cast: (@: void) table)) = c.LMX_KIND_PRIMITIVE && lmx_range_type_of(@ arena, (cast: (@: void) table)) = c.LMX_TYPE_CHAR, "character table kind and type")
+    table_check(counts, table[65] = 65, "initialised cell read through its own pointer")
+    table_check(counts, lmx_range_classify(@ arena, (cast: (@: void) (table + 256U))) = c.LMX_KIND_NONE, "character interval ends at 256")
+    table_array: lmx_arena_find(@ arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR)
+    table_check(counts, table_array != 0 && table_intervals_of(@ arena, table_array) = 1U, "the table is one interval of the arena's array of char cells")
+    # A second table takes another 256 cells of the SAME array: one more INTERVAL
+    # of it, one more entry naming the SAME descriptor. It is never an array of its
+    # own -- an array is made once per kind and type, and a value is seated in the
+    # array of its type -- so the arena's list of its N arrays does not grow here.
+    second: lmx_chars_new_owned(@ arena)
+    table_check(counts, second != 0 && second != table && arena_at\count = 4U, "a second table is another interval of the same array -- one more entry")
+    table_check(counts, lmx_range_pool(@ arena, (cast: (@: void) table)) = table_array && lmx_range_pool(@ arena, (cast: (@: void) second)) = table_array, "both tables name the same descriptor")
+    table_check(counts, table_intervals_of(@ arena, table_array) = 2U && table_arrays(@ arena) = 3U, "two intervals, one array: the arena's list of its N arrays did not grow")
+
+    # 4. The table GROWS. A second arena, opened fresh and asked for room for one
+    # entry, takes a two-array construction (descriptor and backing) and then one
+    # more array without refusing: as many ranges (types) as needed may be
+    # created, so a full table is not an error condition and no fixed cap exists
+    # (Mikhail, 2026-09-17: "вы можете этих диапазонов (типов) заводить сколько
+    # вам угодно").
+    memset((cast: (@: void) (@ other)), 0, c.sizeof(c.LmxArena))
+    other_at: @ other
+    table_check(counts, lmx_arena_open(@ other) = 0, "a second arena opened empty")
+    table_check(counts, lmx_range_reserve(@ other, 1U) = 0, "room for one entry")
+    grown: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, 2U, @ other)
+    table_check(counts, grown != 0, "a two-array construction grows the table")
+    table_check(counts, other_at\count = 2U, "both arrays are registered")
+    table_check(counts, lmx_range_classify(@ other, (cast: (@: void) grown)) = c.LMX_KIND_ARRAY, "the descriptor is still classified")
+    table_check(counts, lmx_range_stride(@ other, grown\data) = c.sizeof(c.int), "the step comes from the array, not the entry")
+    pool_seen: lmx_range_pool(@ other, grown\data)
+    table_check(counts, pool_seen != 0 && pool_seen\kind = c.LMX_KIND_PRIMITIVE && pool_seen\type = c.LMX_TYPE_INT, "the entry names the array's own descriptor")
+    fits: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, 0U, @ other)
+    table_check(counts, fits != 0 && other_at\count = 3U, "an empty array is one more entry")
+    table_check(counts, fits != 0 && fits\len = 0U && fits\data = 0, "empty array descriptor")
+    table_check(counts, lmx_range_classify(@ other, (cast: (@: void) fits)) = c.LMX_KIND_ARRAY && lmx_range_type_of(@ other, (cast: (@: void) fits)) = c.LMX_TYPE_ARRAY_OF_INT, "an empty array is still typed")
+    table_check(counts, table_arrays(@ other) = 2U, "one array of descriptors and one array of int cells, again")
+
+    # Releasing an arena retires every entry it held and gives the arena back
+    # empty, so nothing of the first arena is disturbed by releasing the second.
+    table_check(counts, lmx_arena_release(@ other) = 0 && other_at\count = 0U, "the second arena released")
+    table_check(counts, table_arrays(@ other) = 0U, "no array of the released arena is left on its list")
+    table_check(counts, arena_at\count = 4U, "releasing the second arena disturbed the first")
+    table_check(counts, lmx_arena_release(@ arena) = 0 && arena_at\count = 0U, "the arena released")
+    failures: counts[1]
+    c.printf("arena table checks=%d failures=%d\n", counts[0], failures)
+    free(counts)
+return: failures != 0

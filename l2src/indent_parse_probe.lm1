@@ -1,0 +1,73 @@
+predef: "l1src/libc_abi.lm1"
+include: "l1src/p0.h" "<stdio.h>" "<string.h>"
+
+# Evidence: candidate parse_bytes reaches L2 indent_level_from_column.
+#
+# The counters are defined in the per-feature ABI units (indent_stack_abi,
+# layout_prefix_abi, registry_compact_abi, c_quoted_abi, python_string_abi,
+# physical_line_abi, layout_deeper_abi, trailer_role_abi) and linked with this
+# probe; they are declared here, never defined -- a definition would collide with
+# the units' own at link.
+
+extern: int: l2_indent_level_calls
+extern: int: l2_layout_prefix_calls
+extern: int: l2_registry_compact_calls
+extern: int: l2_cquoted_calls
+extern: int: l2_pystr_calls
+extern: int: l2_physical_line_calls
+extern: int: l2_layout_deeper_calls
+extern: int: l2_trailer_role_calls
+
+fn: main () int
+    const: @: char src "a:\n    b: (x\n        y)\n    c: x != y 'q' L\"wide\" \"\"\"py\"\"\"\n"
+    @: LmP0Document document 0
+    int: status
+    l2_indent_level_calls: 0
+    l2_layout_prefix_calls: 0
+    l2_registry_compact_calls: 0
+    l2_cquoted_calls: 0
+    l2_pystr_calls: 0
+    l2_physical_line_calls: 0
+    l2_layout_deeper_calls: 0
+    l2_trailer_role_calls: 0
+    status: lm_p0_parse_bytes(src, strlen(src), @ document)
+    c.printf("parse=%d indent_hits=%d layout_hits=%d registry_hits=%d cquoted_hits=%d pystr_hits=%d physical_hits=%d deeper_hits=%d trailer_hits=%d\n", status, l2_indent_level_calls, l2_layout_prefix_calls, l2_registry_compact_calls, l2_cquoted_calls, l2_pystr_calls, l2_physical_line_calls, l2_layout_deeper_calls, l2_trailer_role_calls)
+    if: document != 0
+        lm_p0_document_destroy(document)
+    ---
+    if: status != 0
+        return: 1
+    ---
+    if: l2_indent_level_calls <= 0
+        fputs("parse_bytes did not call L2 indent_level_from_column\n", l1_stderr())
+        return: 1
+    ---
+    if: l2_layout_prefix_calls <= 0
+        fputs("parse_bytes did not call L2 scan_layout_prefix\n", l1_stderr())
+        return: 1
+    ---
+    if: l2_registry_compact_calls <= 0
+        fputs("parse_bytes did not call L2 compact-atom scanner\n", l1_stderr())
+        return: 1
+    ---
+    if: l2_cquoted_calls <= 0
+        fputs("parse_bytes did not call L2 C quoted-token scanner\n", l1_stderr())
+        return: 1
+    ---
+    if: l2_pystr_calls <= 0
+        fputs("parse_bytes did not call L2 Python-string scanner\n", l1_stderr())
+        return: 1
+    ---
+    if: l2_physical_line_calls <= 0
+        fputs("parse_bytes did not call L2 physical-line helpers\n", l1_stderr())
+        return: 1
+    ---
+    if: l2_layout_deeper_calls <= 0
+        fputs("parse_bytes did not call L2 layout comparison\n", l1_stderr())
+        return: 1
+    ---
+    if: l2_trailer_role_calls <= 0
+        fputs("parse_bytes did not call L2 trailer-role helper\n", l1_stderr())
+        return: 1
+    ---
+    return: 0

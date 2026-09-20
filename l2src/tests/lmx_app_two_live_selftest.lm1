@@ -1,0 +1,500 @@
+predef: "l2src/lmx_root.lm1"
+predef: "l2src/lmx_settle.lm1"
+predef: "l2src/lmx_service.lm1"
+predef: "l2src/lmx_turn.lm1"
+predef: "l2src/lmx_child.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_manager.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_gc.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_call.lm1"
+predef: "l2src/lmx_clock.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# lmx_app_two_live_selftest.lm1 -- ticket 20260919-123500 / settle via lmx_settle_children (20260919-130500)
+# Two live children at once with DIFFERENT bodies (tl_body_a / tl_body_b).
+# Graph layout (source refs = 5):
+#   0 method | 1 turns | 2 body_id (11 vs 22) | 3 letter0 | 4 letter1
+# A: 1 turn then success. B: turn1 take (no success); after A util, turn2 then success.
+
+@: LmxRoot tl_root 0
+@: LmxArena tl_arena_a 0
+@: LmxArena tl_arena_b 0
+@: Lmx tl_source_a 0
+@: Lmx tl_source_b 0
+@: LmxMsg tl_msg_a 0
+@: LmxMsg tl_msg_b 0
+@: LmxThread tl_t_a 0
+@: LmxThread tl_t_b 0
+@: LmxSchedule tl_sched_a 0
+@: LmxSchedule tl_sched_b 0
+size_t: tl_phase 0U
+size_t: tl_entry_diag 0U
+
+fn: tl_body_a (@: Lmx node) int
+    @: LmxThread t
+    @: Lmx graph
+    @: void turns_cell
+    @: void body_cell
+    @: void accepted_cell
+    @: void letter
+    size_t: turns
+    size_t: accepted
+    t: lmx_thread_current()
+    if: t = 0 || t\message = 0 || t\message\graph = 0
+        return: 0
+    ---
+    graph: t\message\graph
+    turns_cell: lmx_arena_ref_value(graph, 1U)
+    body_cell: lmx_arena_ref_value(graph, 2U)
+    if: turns_cell = 0 || body_cell = 0
+        return: 0
+    ---
+    lmx_size_store_known(body_cell, 11U)
+    turns: lmx_size_value_known(turns_cell) + 1U
+    lmx_size_store_known(turns_cell, turns)
+    accepted: 0U
+    while: lmx_thread_mail_count(t, c.LMX_POST_INBOX) > 0U
+        letter: lmx_thread_mail_take(t, c.LMX_POST_INBOX)
+        if: letter != 0
+            if: accepted < 2U
+                lmx_arena_ref_store(graph, 3U + accepted, letter)
+                accepted: accepted + 1U
+            ---
+        ---
+    ---
+    # SUCCESS ON THE SECOND TURN, and that is the probe's cut, not a limitation: a successful
+    # incarnation returns its own arena at the end of its own turn (lmx_thread_finish), so the
+    # graph this body builds is readable only while the body has not finished.  Turn 1 is the
+    # evidence, turn 2 is the ending.
+    if: turns >= 2U && accepted >= 1U
+        t\message\success: 1
+    ---
+return: 0
+
+fn: tl_body_b (@: Lmx node) int
+    @: LmxThread t
+    @: Lmx graph
+    @: void turns_cell
+    @: void body_cell
+    @: void letter
+    size_t: turns
+    size_t: accepted
+    size_t: slot
+    t: lmx_thread_current()
+    if: t = 0 || t\message = 0 || t\message\graph = 0
+        return: 0
+    ---
+    graph: t\message\graph
+    turns_cell: lmx_arena_ref_value(graph, 1U)
+    body_cell: lmx_arena_ref_value(graph, 2U)
+    if: turns_cell = 0 || body_cell = 0
+        return: 0
+    ---
+    lmx_size_store_known(body_cell, 22U)
+    turns: lmx_size_value_known(turns_cell) + 1U
+    lmx_size_store_known(turns_cell, turns)
+    while: lmx_thread_mail_count(t, c.LMX_POST_INBOX) > 0U
+        letter: lmx_thread_mail_take(t, c.LMX_POST_INBOX)
+        if: letter != 0
+            slot: 0U
+            if: lmx_arena_ref_value(graph, 3U) != 0
+                slot: 1U
+            ---
+            if: slot < 2U
+                lmx_arena_ref_store(graph, 3U + slot, letter)
+            ---
+        ---
+    ---
+    accepted: 0U
+    if: lmx_arena_ref_value(graph, 3U) != 0
+        accepted: accepted + 1U
+    ---
+    if: lmx_arena_ref_value(graph, 4U) != 0
+        accepted: accepted + 1U
+    ---
+    # ... and on the THIRD turn, for the same reason as A: everything the probe reads about B is
+    # read from B's own graph, and a successful incarnation returns its arena when it ends.
+    if: turns >= 3U && accepted >= 2U
+        t\message\success: 1
+    ---
+return: 0
+
+fn: tl_wire_child (@: LmxRoot root; @: LmxArena arena; size_t: slot; @: Lmx source; LmxEntry: body;
+                  @: @(LmxMsg) out_msg; @: @(LmxThread) out_t; @: @(LmxSchedule) out_sched) int
+    @: LmxMsg child
+    @: LmxThread child_t
+    @: LmxPost child_mail
+    @: LmxSchedule child_sched
+    @: LmxMethod method
+    @: LmxPool methods
+    @: Lmx graph
+    @: void turns_cell
+    @: void body_cell
+    child: lmx_root_create(root, arena, slot, source)
+    if: child = 0
+        return: 2
+    ---
+    \out_msg: child
+    methods: lmx_pool_make(arena, 2U * c.sizeof(c.LmxMethod), c.sizeof(c.LmxMethod),
+                           c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD)
+    if: methods = 0
+        return: 3
+    ---
+    method: lmx_method_intern(arena, methods, body, 1U)
+    graph: child\graph
+    if: method = 0 || graph = 0
+        return: 4
+    ---
+    lmx_arena_ref_store(graph, 0U, (cast: (@: void) method))
+    turns_cell: lmx_size_new_owned(arena)
+    body_cell: lmx_size_new_owned(arena)
+    if: turns_cell = 0 || body_cell = 0
+        return: 5
+    ---
+    if: lmx_arena_ref_store(graph, 1U, turns_cell) != 0 || lmx_arena_ref_store(graph, 2U, body_cell) != 0
+        return: 6
+    ---
+    child_mail: (cast: (@: LmxPost) lmx_arena_take(arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    child_t: (cast: (@: LmxThread) lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    child_sched: (cast: (@: LmxSchedule) lmx_arena_take(arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: child_mail = 0 || child_t = 0 || child_sched = 0
+        return: 7
+    ---
+    if: lmx_post_init(arena, child_mail) != c.LMX_POST_OK
+        return: 8
+    ---
+    if: lmx_schedule_init(child_sched, arena, (cast: (@: void) child_t), 100000U) != c.LMX_SCHEDULE_OK
+        return: 9
+    ---
+    if: lmx_thread_attach(child_t, child, child_mail, child_sched) != c.LMX_THREAD_OK
+        return: 10
+    ---
+    if: lmx_child_thread(lmx_root_thread(root), child, child_t) != c.LMX_CHILD_OK
+        return: 11
+    ---
+    \out_t: child_t
+    \out_sched: child_sched
+return: 0
+
+fn: tl_root_entry (@: Lmx node) int
+    int: code
+    if: tl_phase != 0U || tl_root = 0 || tl_arena_a = 0 || tl_arena_b = 0 || tl_source_a = 0 || tl_source_b = 0
+        tl_entry_diag: 1U
+        return: 0
+    ---
+    code: tl_wire_child(tl_root, tl_arena_a, 0U, tl_source_a, (cast: (LmxEntry) tl_body_a),
+                        @ tl_msg_a, @ tl_t_a, @ tl_sched_a)
+    if: code != 0
+        tl_entry_diag: (cast: (size_t) (10 + code))
+        return: 0
+    ---
+    code: tl_wire_child(tl_root, tl_arena_b, 1U, tl_source_b, (cast: (LmxEntry) tl_body_b),
+                        @ tl_msg_b, @ tl_t_b, @ tl_sched_b)
+    if: code != 0
+        tl_entry_diag: (cast: (size_t) (30 + code))
+        return: 0
+    ---
+    tl_phase: 1U
+    tl_entry_diag: 12U
+return: 0
+
+sub: tl_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+    c.fflush(0)
+end: tl_check
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    int: failures
+    LmxRoot: root
+    LmxArena: arena_a
+    LmxArena: arena_b
+    LmxArena: letter_arena
+    @: LmxArena arena_a_at 0
+    @: LmxArena arena_b_at 0
+    @: LmxArena letter_at 0
+    @: LmxArena root_arena 0
+    @: LmxMsg message 0
+    @: LmxThread r0 0
+    @: Lmx graph 0
+    @: Lmx source_a 0
+    @: Lmx source_b 0
+    @: LmxMsg letter_a 0
+    @: LmxMsg letter_a2 0
+    @: LmxMsg letter_b3 0
+    @: LmxLink tl_node_b 0
+    @: LmxLink tl_node_a 0
+    @: LmxMsg letter_b1 0
+    @: LmxMsg letter_b2 0
+    @: LmxMsg msg_a 0
+    @: LmxMsg msg_b 0
+    @: LmxThread t_a 0
+    @: LmxThread t_b 0
+    @: LmxService service 0
+    @: LmxManager manager 0
+    @: Lmx graph_a 0
+    @: Lmx graph_b 0
+    size_t: turns_a 0U
+    size_t: turns_b 0U
+    size_t: body_a 0U
+    size_t: body_b 0U
+    size_t: mgr_before 0U
+    size_t: svc_before 0U
+    size_t: mgr_after_a 0U
+    size_t: svc_after_a 0U
+    if: counts = 0
+        return: 2
+    ---
+    memset((cast: (@: void) (@ root)), 0, c.sizeof(c.LmxRoot))
+    memset((cast: (@: void) (@ arena_a)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ arena_b)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ letter_arena)), 0, c.sizeof(c.LmxArena))
+    tl_root: @ root
+    arena_a_at: @ arena_a
+    arena_b_at: @ arena_b
+    letter_at: @ letter_arena
+    tl_phase: 0U
+    tl_msg_a: 0
+    tl_msg_b: 0
+    tl_t_a: 0
+    tl_t_b: 0
+    tl_sched_a: 0
+    tl_sched_b: 0
+    tl_entry_diag: 0U
+    tl_check(counts, lmx_root_open(@ root, tl_root_entry, 120000U, 0U, 0U) = c.LMX_ROOT_OK, "R0 did not open")
+    message: lmx_root_message(@ root)
+    r0: lmx_root_thread(@ root)
+    root_arena: lmx_root_arena(@ root)
+    graph: message\graph
+    service: lmx_root_service(@ root)
+    manager: lmx_root_manager(@ root)
+    tl_check(counts, message != 0 && r0 != 0 && root_arena != 0 && service != 0 && manager != 0, "R0 missing pieces")
+    if: message = 0 || r0 = 0
+        failures: counts[1]
+        c.printf("lmx_app_two_live checks=%d failures=%d entry_diag=%u (abort)\n", counts[0], failures, (cast: (unsigned) tl_entry_diag))
+        c.fflush(0)
+        free(counts)
+        return: failures
+    ---
+    source_a: lmx_node_new_owned(root_arena)
+    source_b: lmx_node_new_owned(root_arena)
+    tl_check(counts, source_a != 0 && lmx_arena_refs_open_owned(root_arena, source_a, 5U) = 0, "template A not built")
+    tl_check(counts, source_b != 0 && lmx_arena_refs_open_owned(root_arena, source_b, 5U) = 0, "template B not built")
+    if: source_a = 0 || source_b = 0
+        failures: counts[1]
+        c.printf("lmx_app_two_live checks=%d failures=%d entry_diag=%u (abort templates)\n", counts[0], failures, (cast: (unsigned) tl_entry_diag))
+        c.fflush(0)
+        free(counts)
+        return: failures
+    ---
+    lmx_arena_ref_store(graph, 3U, (cast: (@: void) source_a))
+    lmx_arena_ref_store(graph, 4U, (cast: (@: void) source_b))
+    tl_source_a: source_a
+    tl_source_b: source_b
+    tl_check(counts, lmx_arena_open(@ arena_a) = 0, "arena A did not open")
+    tl_check(counts, lmx_arena_open(@ arena_b) = 0, "arena B did not open")
+    tl_arena_a: @ arena_a
+    tl_arena_b: @ arena_b
+    tl_check(counts, lmx_root_cycle(@ root, 4U) = c.LMX_ROOT_OK, "create cycle did not run")
+    tl_check(counts, tl_phase = 1U && tl_msg_a != 0 && tl_msg_b != 0 && tl_t_a != 0 && tl_t_b != 0, "both children not wired")
+    if: tl_msg_a = 0 || tl_msg_b = 0 || tl_t_a = 0 || tl_t_b = 0
+        failures: counts[1]
+        c.printf("lmx_app_two_live checks=%d failures=%d entry_diag=%u (abort wire)\n", counts[0], failures, (cast: (unsigned) tl_entry_diag))
+        c.fflush(0)
+        free(counts)
+        return: failures
+    ---
+    msg_a: tl_msg_a
+    msg_b: tl_msg_b
+    t_a: tl_t_a
+    t_b: tl_t_b
+    graph_a: msg_a\graph
+    graph_b: msg_b\graph
+    tl_check(counts, lmx_arena_ref_value(graph, 0U) = (cast: (@: void) msg_a), "child A not published slot0")
+    tl_check(counts, lmx_arena_ref_value(graph, 1U) = (cast: (@: void) msg_b), "child B not published slot1")
+    tl_check(counts, lmx_range_classify(@ arena_a, (cast: (@: void) msg_a)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "A not in own arena")
+    tl_check(counts, lmx_range_classify(@ arena_b, (cast: (@: void) msg_b)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "B not in own arena")
+    tl_check(counts, lmx_thread_child_is(r0, t_a) != 0, "A not live child of R0")
+    tl_check(counts, lmx_thread_child_is(r0, t_b) != 0, "B not live child of R0")
+    tl_check(counts, lmx_schedule_wait(tl_sched_a, lmx_root_clock(@ root)) = c.LMX_SCHEDULE_OK, "A schedule wait failed")
+    tl_check(counts, lmx_schedule_wait(tl_sched_b, lmx_root_clock(@ root)) = c.LMX_SCHEDULE_OK, "B schedule wait failed")
+    tl_check(counts, lmx_manager_add(manager, tl_sched_a) = c.LMX_MANAGER_OK, "A not in manager")
+    tl_check(counts, lmx_manager_add(manager, tl_sched_b) = c.LMX_MANAGER_OK, "B not in manager")
+    tl_check(counts, lmx_service_find(service, (cast: (@: void) t_a)) = (cast: (@: void) t_a), "A not in service")
+    tl_check(counts, lmx_service_find(service, (cast: (@: void) t_b)) = (cast: (@: void) t_b), "B not in service")
+    mgr_before: lmx_manager_count(manager)
+    svc_before: lmx_service_count(service)
+    tl_check(counts, mgr_before = 2U, "manager count not 2 with both live")
+    tl_check(counts, svc_before = 3U, "service count not R0+2 with both live")
+    tl_check(counts, graph_a != 0 && graph_b != 0, "child graphs missing")
+    tl_check(counts, lmx_arena_ref_value(graph_a, 1U) != 0 && lmx_arena_ref_value(graph_a, 2U) != 0, "A counters not rooted")
+    tl_check(counts, lmx_arena_ref_value(graph_b, 1U) != 0 && lmx_arena_ref_value(graph_b, 2U) != 0, "B counters not rooted")
+
+    # Post one letter to EACH via physical address (service bisect).
+    tl_check(counts, lmx_arena_open_simple(@ letter_arena) = 0, "letter_a arena did not open")
+    letter_a: (cast: (@: LmxMsg) lmx_arena_take(@ letter_arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    tl_check(counts, letter_a != 0, "letter_a missing")
+    letter_a\running: 1
+    letter_a\success: 0
+    letter_a\handoff_ready: 0
+    letter_a\graph: 0
+    letter_a\index: 0U
+    tl_check(counts, lmx_service_post(service, (cast: (@: void) t_a), letter_a, @ letter_arena) = c.LMX_SERVICE_OK, "post to A refused")
+    tl_check(counts, letter_at\count = 0U, "letter_a arena not attached")
+    tl_check(counts, lmx_range_classify(@ arena_a, (cast: (@: void) letter_a)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "letter_a not in A arena")
+    tl_check(counts, lmx_range_classify(@ arena_b, (cast: (@: void) letter_a)) = c.LMX_KIND_NONE, "letter_a wrongly in B arena")
+    tl_check(counts, lmx_thread_mail_count(t_a, c.LMX_POST_INBOX) = 1U, "A inbox empty after post")
+    tl_check(counts, lmx_thread_mail_count(t_b, c.LMX_POST_INBOX) = 0U, "B inbox got A's letter")
+
+    tl_check(counts, lmx_arena_open_simple(@ letter_arena) = 0, "letter_b1 arena did not open")
+    letter_b1: (cast: (@: LmxMsg) lmx_arena_take(@ letter_arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    tl_check(counts, letter_b1 != 0, "letter_b1 missing")
+    letter_b1\running: 1
+    letter_b1\success: 0
+    letter_b1\handoff_ready: 0
+    letter_b1\graph: 0
+    letter_b1\index: 0U
+    tl_check(counts, lmx_service_post(service, (cast: (@: void) t_b), letter_b1, @ letter_arena) = c.LMX_SERVICE_OK, "post to B refused")
+    tl_check(counts, lmx_range_classify(@ arena_b, (cast: (@: void) letter_b1)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "letter_b1 not in B arena")
+    tl_check(counts, lmx_range_classify(@ arena_a, (cast: (@: void) letter_b1)) = c.LMX_KIND_NONE, "letter_b1 wrongly in A arena")
+    tl_check(counts, lmx_thread_mail_count(t_b, c.LMX_POST_INBOX) = 1U, "B inbox empty after post")
+    tl_check(counts, lmx_thread_mail_count(t_a, c.LMX_POST_INBOX) = 1U, "A inbox disturbed by B post")
+
+    # One turn each: A finishes; B turn1 keeps alive.
+    tl_check(counts, lmx_manager_round(manager, 1U, lmx_root_clock(@ root)) = c.LMX_MANAGER_OK, "round A did not run")
+    turns_a: lmx_size_value_known(lmx_arena_ref_value(graph_a, 1U))
+    body_a: lmx_size_value_known(lmx_arena_ref_value(graph_a, 2U))
+    tl_check(counts, turns_a = 1U, "A turns != 1 after its round")
+    tl_check(counts, body_a = 11U, "A body_id != 11")
+    tl_check(counts, lmx_arena_ref_value(graph_a, 3U) = (cast: (@: void) letter_a), "A did not store its letter")
+    # After its FIRST turn A is working, not finished: the probe's cut (see tl_body_a) gives A a
+    # second turn to end on, because a successful child returns its own arena when it ends.
+    tl_check(counts, msg_a\success = 0 && msg_a\running = 1, "A finished on its first turn")
+    tl_check(counts, lmx_manager_count(manager) = 2U, "manager should hold both children while A works")
+    tl_check(counts, lmx_thread_child_is(r0, t_b) != 0, "B not live before its first turn")
+    tl_check(counts, msg_b\success = 0 && msg_b\running = 1, "B finished early before its turn")
+
+    tl_check(counts, lmx_manager_round(manager, 1U, lmx_root_clock(@ root)) = c.LMX_MANAGER_OK, "round B1 did not run")
+    turns_b: lmx_size_value_known(lmx_arena_ref_value(graph_b, 1U))
+    body_b: lmx_size_value_known(lmx_arena_ref_value(graph_b, 2U))
+    tl_check(counts, turns_b = 1U, "B turns != 1 after turn1")
+    tl_check(counts, body_b = 22U, "B body_id != 22 (bodies not different)")
+    tl_check(counts, body_a = 11U && body_b = 22U && body_a != body_b, "body ids not observably different")
+    tl_check(counts, lmx_arena_ref_value(graph_b, 3U) = (cast: (@: void) letter_b1), "B did not store letter_b1")
+    tl_check(counts, msg_b\success = 0 && msg_b\running = 1, "B set success on turn1")
+    tl_check(counts, lmx_manager_count(manager) = 2U, "both children should stay in the manager while A works")
+    tl_check(counts, lmx_service_count(service) = 3U, "service still R0+2 before A util")
+    tl_check(counts, lmx_thread_child_is(r0, t_a) != 0, "A not live before util")
+    # A'S SECOND TURN, so that A is CLOSED before the util below -- and the parent's node is
+    # taken first, because after this turn A's own record is returned storage.
+    tl_node_a: lmx_thread_child_link(r0)
+    tl_check(counts, lmx_arena_open_simple(@ letter_arena) = 0, "letter_a2 arena did not open")
+    letter_a2: (cast: (@: LmxMsg) lmx_arena_take(@ letter_arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    tl_check(counts, letter_a2 != 0, "letter_a2 missing")
+    letter_a2\running: 1
+    letter_a2\success: 0
+    letter_a2\handoff_ready: 0
+    letter_a2\graph: 0
+    letter_a2\index: 0U
+    tl_check(counts, lmx_service_post(service, (cast: (@: void) t_a), letter_a2, @ letter_arena) = c.LMX_SERVICE_OK, "post a2 refused")
+    tl_check(counts, lmx_manager_round(manager, 1U, lmx_root_clock(@ root)) = c.LMX_MANAGER_OK, "round A2 did not run")
+    tl_check(counts, tl_node_a != 0 && tl_node_a\success != 0, "A did not leave a success in the parent's node")
+    tl_check(counts, tl_node_a\gone != 0, "the successful A did not return its own arena")
+    tl_check(counts, arena_a_at\blocks = 0 && arena_a_at\count = 0U, "A's arena was not returned by A itself")
+    tl_check(counts, lmx_thread_child_is(r0, t_b) != 0, "B not live before A util")
+
+    # Utilize A via settle_children (same boundary act as root_cycle, no manager_round) so live B gets no empty turn.
+    tl_check(counts, lmx_settle_children(r0, root_arena, service, manager, lmx_clock_ticks()) = c.LMX_SETTLE_OK, "A settle_children did not run")
+    tl_check(counts, lmx_thread_child_is(r0, t_a) = 0, "A stayed live after util")
+    tl_check(counts, lmx_arena_ref_value(graph, 0U) = 0, "A slot not cleared")
+    tl_check(counts, arena_a_at\blocks = 0 && arena_a_at\count = 0U, "A arena not released")
+    svc_after_a: lmx_service_count(service)
+    tl_check(counts, svc_after_a = 2U, "service not R0+1 after A util")
+    mgr_after_a: lmx_manager_count(manager)
+    tl_check(counts, mgr_after_a = 1U, "manager should still hold B after A util")
+    tl_check(counts, lmx_thread_child_is(r0, t_b) != 0, "B not live after A util")
+    tl_check(counts, lmx_arena_ref_value(graph, 1U) = (cast: (@: void) msg_b), "B slot cleared by A util")
+    tl_check(counts, lmx_range_classify(@ arena_b, (cast: (@: void) msg_b)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "B msg not in B arena after A util")
+    tl_check(counts, lmx_range_classify(@ arena_b, (cast: (@: void) letter_b1)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "B letter cell lost after A util")
+    tl_check(counts, lmx_service_find(service, (cast: (@: void) t_b)) = (cast: (@: void) t_b), "B address left service after A util")
+    tl_check(counts, lmx_size_value_known(lmx_arena_ref_value(graph_b, 2U)) = 22U, "B body_id damaged by A util")
+    tl_check(counts, msg_b\success = 0 && msg_b\running = 1, "B finished because of A util")
+    turns_b: lmx_size_value_known(lmx_arena_ref_value(graph_b, 1U))
+    tl_check(counts, turns_b = 1U, "B gained a turn during A util")
+
+    # B second letter + turn AFTER A utilized.
+    tl_check(counts, lmx_arena_open_simple(@ letter_arena) = 0, "letter_b2 arena did not open")
+    letter_b2: (cast: (@: LmxMsg) lmx_arena_take(@ letter_arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    tl_check(counts, letter_b2 != 0, "letter_b2 missing")
+    letter_b2\running: 1
+    letter_b2\success: 0
+    letter_b2\handoff_ready: 0
+    letter_b2\graph: 0
+    letter_b2\index: 0U
+    tl_check(counts, lmx_service_post(service, (cast: (@: void) t_b), letter_b2, @ letter_arena) = c.LMX_SERVICE_OK, "post b2 refused")
+    tl_check(counts, lmx_thread_mail_count(t_b, c.LMX_POST_INBOX) = 1U, "B inbox empty before turn2")
+    tl_check(counts, lmx_manager_round(manager, 1U, lmx_root_clock(@ root)) = c.LMX_MANAGER_OK, "round B2 did not run")
+    turns_b: lmx_size_value_known(lmx_arena_ref_value(graph_b, 1U))
+    body_b: lmx_size_value_known(lmx_arena_ref_value(graph_b, 2U))
+    tl_check(counts, turns_b = 2U, "B turns != 2 after turn2")
+    tl_check(counts, body_b = 22U, "B body_id changed on turn2")
+    tl_check(counts, lmx_arena_ref_value(graph_b, 3U) = (cast: (@: void) letter_b1), "B letter0 swapped")
+    tl_check(counts, lmx_arena_ref_value(graph_b, 4U) = (cast: (@: void) letter_b2), "B did not store letter_b2")
+    tl_check(counts, msg_b\success = 0 && msg_b\running = 1, "B finished before its third turn")
+    # B'S THIRD TURN ends it -- and the parent's node is taken before the round, because after it
+    # B's own record is returned storage (a successful child returns its own arena).
+    tl_node_b: lmx_thread_child_link(r0)
+    tl_check(counts, lmx_arena_open_simple(@ letter_arena) = 0, "letter_b3 arena did not open")
+    letter_b3: (cast: (@: LmxMsg) lmx_arena_take(@ letter_arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    tl_check(counts, letter_b3 != 0, "letter_b3 missing")
+    letter_b3\running: 1
+    letter_b3\success: 0
+    letter_b3\handoff_ready: 0
+    letter_b3\graph: 0
+    letter_b3\index: 0U
+    tl_check(counts, lmx_service_post(service, (cast: (@: void) t_b), letter_b3, @ letter_arena) = c.LMX_SERVICE_OK, "post b3 refused")
+    tl_check(counts, lmx_manager_round(manager, 1U, lmx_root_clock(@ root)) = c.LMX_MANAGER_OK, "round B3 did not run")
+    tl_check(counts, tl_node_b != 0 && tl_node_b\success != 0, "B did not leave a success in the parent's node")
+    tl_check(counts, tl_node_b\gone != 0, "the successful B did not return its own arena")
+    tl_check(counts, arena_b_at\blocks = 0 && arena_b_at\count = 0U, "B's arena was not returned by B itself")
+    tl_check(counts, lmx_manager_count(manager) = 0U, "manager not empty after B finished")
+
+    tl_check(counts, lmx_settle_children(r0, root_arena, service, manager, lmx_clock_ticks()) = c.LMX_SETTLE_OK, "B settle_children did not run")
+    tl_check(counts, lmx_thread_child_is(r0, t_b) = 0, "B stayed live after util")
+    tl_check(counts, lmx_arena_ref_value(graph, 1U) = 0, "B slot not cleared")
+    tl_check(counts, arena_b_at\blocks = 0 && arena_b_at\count = 0U, "B arena not released")
+    tl_check(counts, lmx_manager_count(manager) = 0U, "manager not empty after B util")
+    tl_check(counts, lmx_service_count(service) = 1U, "service should hold only R0 after B util")
+    tl_check(counts, lmx_root_close(@ root) = c.LMX_ROOT_OK, "R0 did not close")
+    tl_check(counts, lmx_root_state(@ root) = c.LMX_ROOT_CLOSED, "closed root not closed")
+
+    failures: counts[1]
+    c.printf("lmx_app_two_live checks=%d failures=%d body_a=%u body_b=%u turns_a=%u turns_b=%u mgr %u->%u svc %u->%u entry_diag=%u\n",
+             counts[0], failures,
+             (cast: (unsigned) body_a), (cast: (unsigned) body_b),
+             (cast: (unsigned) turns_a), (cast: (unsigned) turns_b),
+             (cast: (unsigned) mgr_before), (cast: (unsigned) mgr_after_a),
+             (cast: (unsigned) svc_before), (cast: (unsigned) svc_after_a),
+             (cast: (unsigned) tl_entry_diag))
+    c.fflush(0)
+    free(counts)
+return: failures
+

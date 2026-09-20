@@ -1,0 +1,429 @@
+﻿predef: "l2src/lmx_root.lm1"
+predef: "l2src/lmx_settle.lm1"
+predef: "l2src/lmx_service.lm1"
+predef: "l2src/lmx_turn.lm1"
+predef: "l2src/lmx_child.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_manager.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_gc.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_call.lm1"
+predef: "l2src/lmx_clock.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# lmx_app_chain_settle_selftest.lm1 -- ticket 20260919-131500, expectations rewritten 19.09 (l1-98)
+# R0 -> A -> B (grandchild). A creates B IN A's turn; B stays live (no turns).
+# A sets success=1 -> R0's settle reaches a CLOSED A that still has a LIVE child.
+#
+# REVISED 19.09 (evening): the close of a child that reaches no boundary of its own is now a WAIT,
+# and the wait is over at the child's own band's window -- the stop is a request and writes no
+# handoff mark (lmx_thread.h.lm1, lmx_stop_children; the old empty-box rule was measured a lie for
+# a child inside its turn: tests\lmx_app_reroot_forbidden_selftest.lm1, run 3).  So this file now
+# measures THREE boundaries where it measured one before: the request, the window, the reap -- and
+# every reading is the file's own, so the sequence is arithmetic and not a race with the clock.
+#
+# The first version of this file expected the settle to cascade a RELEASE into B.  That rule is
+# gone (Mikhail, 19.09: "не освобождать ничего, что ещё живо"; each Thread owns its arena and its
+# scheduler and works on ITS OWN thread).  What the settle does now is measured below, at the two
+# boundaries it takes: boundary 1 stops B and postpones, boundary 2 runs B's ending and then A's.
+#
+# Graph A (source refs = 2): 0 method | 1 slot for B
+# B source built in A's arena during A's turn (2 slots); B never runs a turn.
+# After A util: only a_at\count, b_at\count, service/manager counts, R0 graph slot —
+# never read cells inside arena A or arena B (B's record lived in A's arena).
+
+@: LmxRoot cs_root 0
+@: LmxArena cs_arena_a 0
+@: LmxArena cs_arena_b 0
+@: Lmx cs_source_a 0
+@: LmxMsg cs_msg_a 0
+@: LmxThread cs_t_a 0
+@: LmxSchedule cs_sched_a 0
+@: LmxMsg cs_msg_b 0
+@: LmxThread cs_t_b 0
+@: LmxSchedule cs_sched_b 0
+@: LmxMsg cs_letter 0
+size_t: cs_phase 0U
+size_t: cs_entry_diag 0U
+size_t: cs_a_turns 0U
+size_t: cs_a_create_diag 0U
+size_t: cs_letters_taken 0U
+
+fn: cs_body_a (@: Lmx node) int
+    @: LmxThread t
+    @: Lmx graph_a
+    @: Lmx source_b
+    @: LmxMsg child_b
+    @: LmxThread t_b
+    @: LmxPost mail_b
+    @: LmxSchedule sched_b
+    @: void letter
+    t: lmx_thread_current()
+    if: t = 0 || t\message = 0 || t\message\graph = 0
+        cs_a_create_diag: 1U
+        return: 0
+    ---
+    if: cs_arena_a = 0 || cs_arena_b = 0
+        cs_a_create_diag: 2U
+        return: 0
+    ---
+    cs_a_turns: cs_a_turns + 1U
+    graph_a: t\message\graph
+    if: lmx_thread_mail_count(t, c.LMX_POST_INBOX) > 0U
+        letter: lmx_thread_mail_take(t, c.LMX_POST_INBOX)
+        if: letter != 0
+            cs_letters_taken: cs_letters_taken + 1U
+            cs_letter: (cast: (@: LmxMsg) letter)
+        ---
+    ---
+    # Build B's source template in A's arena (2 slots: 0=method, 1 spare).
+    source_b: lmx_node_new_owned(cs_arena_a)
+    if: source_b = 0 || lmx_arena_refs_open_owned(cs_arena_a, source_b, 2U) != 0
+        cs_a_create_diag: 3U
+        return: 0
+    ---
+    child_b: lmx_child_reserve(t, cs_arena_a, cs_arena_b, graph_a, 1U, source_b)
+    if: child_b = 0
+        cs_a_create_diag: 4U
+        return: 0
+    ---
+    mail_b: (cast: (@: LmxPost) lmx_arena_take(cs_arena_b, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    t_b: (cast: (@: LmxThread) lmx_arena_take(cs_arena_b, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    sched_b: (cast: (@: LmxSchedule) lmx_arena_take(cs_arena_b, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: mail_b = 0 || t_b = 0 || sched_b = 0
+        cs_a_create_diag: 5U
+        return: 0
+    ---
+    if: lmx_post_init(cs_arena_b, mail_b) != c.LMX_POST_OK
+        cs_a_create_diag: 6U
+        return: 0
+    ---
+    if: lmx_schedule_init(sched_b, cs_arena_b, (cast: (@: void) t_b), 100000U) != c.LMX_SCHEDULE_OK
+        cs_a_create_diag: 7U
+        return: 0
+    ---
+    if: lmx_thread_attach(t_b, child_b, mail_b, sched_b) != c.LMX_THREAD_OK
+        cs_a_create_diag: 8U
+        return: 0
+    ---
+    if: lmx_child_thread(t, child_b, t_b) != c.LMX_CHILD_OK
+        cs_a_create_diag: 9U
+        return: 0
+    ---
+    cs_msg_b: child_b
+    cs_t_b: t_b
+    cs_sched_b: sched_b
+    cs_a_create_diag: 10U
+    # SUCCESS path: A declares its own work done -- and B, created in this very turn, is STILL
+    # LIVE.  What the settle does about that is what this file now measures (two boundaries).
+    t\message\success: 1
+return: 0
+
+fn: cs_root_entry (@: Lmx node) int
+    @: LmxMsg child
+    @: LmxThread child_t
+    @: LmxPost child_mail
+    @: LmxSchedule child_sched
+    @: LmxMethod method
+    @: LmxPool methods
+    @: Lmx graph
+    if: cs_phase != 0U || cs_root = 0 || cs_arena_a = 0 || cs_source_a = 0
+        cs_entry_diag: 1U
+        return: 0
+    ---
+    child: lmx_root_create(cs_root, cs_arena_a, 0U, cs_source_a)
+    if: child = 0
+        cs_entry_diag: 2U
+        return: 0
+    ---
+    cs_msg_a: child
+    methods: lmx_pool_make(cs_arena_a, 2U * c.sizeof(c.LmxMethod), c.sizeof(c.LmxMethod),
+                           c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD)
+    if: methods = 0
+        cs_entry_diag: 3U
+        return: 0
+    ---
+    method: lmx_method_intern(cs_arena_a, methods, (cast: (LmxEntry) cs_body_a), 1U)
+    graph: child\graph
+    if: method = 0 || graph = 0
+        cs_entry_diag: 4U
+        return: 0
+    ---
+    lmx_arena_ref_store(graph, 0U, (cast: (@: void) method))
+    child_mail: (cast: (@: LmxPost) lmx_arena_take(cs_arena_a, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    child_t: (cast: (@: LmxThread) lmx_arena_take(cs_arena_a, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    child_sched: (cast: (@: LmxSchedule) lmx_arena_take(cs_arena_a, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: child_mail = 0 || child_t = 0 || child_sched = 0
+        cs_entry_diag: 5U
+        return: 0
+    ---
+    if: lmx_post_init(cs_arena_a, child_mail) != c.LMX_POST_OK
+        cs_entry_diag: 6U
+        return: 0
+    ---
+    if: lmx_schedule_init(child_sched, cs_arena_a, (cast: (@: void) child_t), 100000U) != c.LMX_SCHEDULE_OK
+        cs_entry_diag: 7U
+        return: 0
+    ---
+    if: lmx_thread_attach(child_t, child, child_mail, child_sched) != c.LMX_THREAD_OK
+        cs_entry_diag: 8U
+        return: 0
+    ---
+    if: lmx_child_thread(lmx_root_thread(cs_root), child, child_t) != c.LMX_CHILD_OK
+        cs_entry_diag: 9U
+        return: 0
+    ---
+    cs_t_a: child_t
+    cs_sched_a: child_sched
+    cs_phase: 1U
+    cs_entry_diag: 10U
+return: 0
+
+sub: cs_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+    c.fflush(0)
+end: cs_check
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    int: failures
+    LmxRoot: root
+    LmxArena: arena_a
+    LmxArena: arena_b
+    LmxArena: letter_arena
+    @: LmxArena a_at 0
+    @: LmxArena b_at 0
+    @: LmxArena letter_at 0
+    @: LmxArena root_arena 0
+    @: LmxMsg message 0
+    @: LmxThread r0 0
+    @: Lmx graph 0
+    @: Lmx source_a 0
+    @: LmxMsg letter 0
+    @: LmxMsg msg_a 0
+    @: LmxThread t_a 0
+    @: LmxThread t_b 0
+    @: LmxMsg msg_b 0
+    @: LmxService service 0
+    @: LmxManager manager 0
+    @: Lmx graph_a 0
+    size_t: b_count_before 0U
+    size_t: svc_stopped 0U
+    size_t: a_count_before 0U
+    size_t: svc_before 0U
+    size_t: mgr_before 0U
+    size_t: svc_after 0U
+    size_t: mgr_after 0U
+    ulong: base 0U
+    if: counts = 0
+        return: 2
+    ---
+    memset((cast: (@: void) (@ root)), 0, c.sizeof(c.LmxRoot))
+    memset((cast: (@: void) (@ arena_a)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ arena_b)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ letter_arena)), 0, c.sizeof(c.LmxArena))
+    cs_root: @ root
+    a_at: @ arena_a
+    b_at: @ arena_b
+    letter_at: @ letter_arena
+    cs_phase: 0U
+    cs_msg_a: 0
+    cs_t_a: 0
+    cs_sched_a: 0
+    cs_msg_b: 0
+    cs_t_b: 0
+    cs_sched_b: 0
+    cs_letter: 0
+    cs_a_turns: 0U
+    cs_a_create_diag: 0U
+    cs_letters_taken: 0U
+    cs_entry_diag: 0U
+    cs_check(counts, lmx_root_open(@ root, cs_root_entry, 120000U, 0U, 0U) = c.LMX_ROOT_OK, "R0 did not open")
+    message: lmx_root_message(@ root)
+    r0: lmx_root_thread(@ root)
+    root_arena: lmx_root_arena(@ root)
+    graph: message\graph
+    service: lmx_root_service(@ root)
+    manager: lmx_root_manager(@ root)
+    cs_check(counts, message != 0 && r0 != 0 && root_arena != 0 && service != 0 && manager != 0, "R0 missing pieces")
+    if: message = 0 || r0 = 0
+        failures: counts[1]
+        c.printf("lmx_app_chain_settle checks=%d failures=%d entry_diag=%u create_diag=%u (abort)\n",
+                 counts[0], failures, (cast: (unsigned) cs_entry_diag), (cast: (unsigned) cs_a_create_diag))
+        c.fflush(0)
+        free(counts)
+        return: failures
+    ---
+    # A's template: 2 slots so graph_A can hold method at 0 and publish B at 1.
+    source_a: lmx_node_new_owned(root_arena)
+    cs_check(counts, source_a != 0 && lmx_arena_refs_open_owned(root_arena, source_a, 2U) = 0, "template A not built")
+    if: source_a = 0
+        failures: counts[1]
+        c.printf("lmx_app_chain_settle checks=%d failures=%d entry_diag=%u create_diag=%u (abort templates)\n",
+                 counts[0], failures, (cast: (unsigned) cs_entry_diag), (cast: (unsigned) cs_a_create_diag))
+        c.fflush(0)
+        free(counts)
+        return: failures
+    ---
+    lmx_arena_ref_store(graph, 3U, (cast: (@: void) source_a))
+    cs_source_a: source_a
+    cs_check(counts, lmx_arena_open(@ arena_a) = 0, "arena A did not open")
+    cs_arena_a: @ arena_a
+
+    # R0 creates A (live direct child).
+    cs_check(counts, lmx_root_cycle(@ root, 4U) = c.LMX_ROOT_OK, "A-create cycle did not run")
+    cs_check(counts, cs_phase = 1U && cs_msg_a != 0 && cs_t_a != 0, "A was not wired")
+    if: cs_msg_a = 0 || cs_t_a = 0
+        failures: counts[1]
+        c.printf("lmx_app_chain_settle checks=%d failures=%d entry_diag=%u create_diag=%u (abort A create)\n",
+                 counts[0], failures, (cast: (unsigned) cs_entry_diag), (cast: (unsigned) cs_a_create_diag))
+        c.fflush(0)
+        free(counts)
+        return: failures
+    ---
+    msg_a: cs_msg_a
+    t_a: cs_t_a
+    graph_a: msg_a\graph
+    cs_check(counts, lmx_arena_ref_value(graph, 0U) = (cast: (@: void) msg_a), "A not published")
+    cs_check(counts, lmx_range_classify(@ arena_a, (cast: (@: void) msg_a)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "A not in own arena")
+    cs_check(counts, lmx_thread_child_is(r0, t_a) != 0, "A not live child of R0")
+    cs_check(counts, graph_a != 0 && graph_a\len >= 2, "A graph has no slot for B")
+    cs_check(counts, lmx_schedule_wait(cs_sched_a, lmx_root_clock(@ root)) = c.LMX_SCHEDULE_OK, "A schedule wait failed")
+    cs_check(counts, lmx_manager_add(manager, cs_sched_a) = c.LMX_MANAGER_OK, "A not in manager")
+    cs_check(counts, lmx_service_find(service, (cast: (@: void) t_a)) = (cast: (@: void) t_a), "A not in service")
+
+    # B's arena ready before A's turn (A creates B mid-turn into this arena).
+    cs_check(counts, lmx_arena_open(@ arena_b) = 0, "arena B did not open")
+    cs_arena_b: @ arena_b
+
+    # Letter wakes A's turn so A can create B and set success.
+    cs_check(counts, lmx_arena_open_simple(@ letter_arena) = 0, "letter arena did not open")
+    letter: (cast: (@: LmxMsg) lmx_arena_take(@ letter_arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    cs_check(counts, letter != 0, "letter missing")
+    letter\running: 1
+    letter\success: 0
+    letter\handoff_ready: 0
+    letter\graph: 0
+    letter\index: 0U
+    cs_check(counts, lmx_service_post(service, (cast: (@: void) t_a), letter, @ letter_arena) = c.LMX_SERVICE_OK, "post to A refused")
+    cs_check(counts, letter_at\count = 0U, "letter arena not attached")
+    cs_check(counts, lmx_thread_mail_count(t_a, c.LMX_POST_INBOX) = 1U, "A inbox empty after post")
+
+    # ONE reading for the rest of the file: A's ending boundary takes it (the moment of its close
+    # request is written into R0's node with THIS number), and every settle below ages against the
+    # same one.  The seam exists for exactly this: a test drives the policy with its own reading.
+    base: lmx_clock_ticks()
+    cs_check(counts, lmx_manager_round(manager, 1U, base) = c.LMX_MANAGER_OK, "A turn manager round did not run")
+    cs_check(counts, cs_a_turns >= 1U && cs_letters_taken = 1U, "A did not take its letter")
+    cs_check(counts, cs_a_create_diag = 10U && cs_msg_b != 0 && cs_t_b != 0, "A did not create B in its turn")
+    if: cs_msg_b = 0 || cs_t_b = 0 || cs_a_create_diag != 10U
+        failures: counts[1]
+        c.printf("lmx_app_chain_settle checks=%d failures=%d entry_diag=%u create_diag=%u (STOP: A cannot create B in turn)\n",
+                 counts[0], failures, (cast: (unsigned) cs_entry_diag), (cast: (unsigned) cs_a_create_diag))
+        c.fflush(0)
+        free(counts)
+        return: failures
+    ---
+    msg_b: cs_msg_b
+    t_b: cs_t_b
+    cs_check(counts, msg_a\success = 1, "A body did not set success")
+    cs_check(counts, msg_a\running = 0, "kernel did not clear A running")
+    cs_check(counts, msg_a\handoff_ready != 0, "kernel did not mark A handoff_ready")
+    cs_check(counts, lmx_settle_ready(msg_a) != 0, "A not settle_ready")
+    cs_check(counts, lmx_arena_ref_value(graph_a, 1U) = (cast: (@: void) msg_b), "B not published in A's slot 1")
+    # THE CASCADE, measured at its own boundary: A has just ENDED its incarnation (success=1,
+    # running cleared by its end-turn), and that boundary is where the model makes it stop its own
+    # live child -- spec 32: "a stopped Message has no lane, so nothing runs its children's turns
+    # from it; ITS STOP REQUESTS THEIR CLOSE".  Nothing is freed here: B still answers in its own
+    # arena, it is only asked to end.
+    cs_check(counts, msg_b\running = 0, "A's own boundary did not stop its live child (no cascade)")
+    cs_check(counts, msg_b\success = 0, "B was marked successful by someone else")
+    # ... AND THE STOP IS ONLY A REQUEST (19.09): the mark "I have left my last turn" is NOT written
+    # here.  B has reached no boundary of its own, and the wait for it is counted from this request,
+    # in R0's own node -- it ends when B's own band's window has passed, and only then.  Writing it
+    # here by the shape of the inbox was measured a lie for a child inside its turn
+    # (tests\lmx_app_reroot_forbidden_selftest.lm1, run 3).
+    cs_check(counts, msg_b\handoff_ready = 0, "the stop closed B instead of asking it")
+    cs_check(counts, lmx_settle_ready(msg_b) = 0, "a child asked to close reads settle-ready at once")
+    cs_check(counts, lmx_thread_child_is(t_a, t_b) != 0, "B not live child of A before util")
+    cs_check(counts, lmx_service_find(service, (cast: (@: void) t_b)) = (cast: (@: void) t_b), "B not in service before util")
+    b_count_before: b_at\count
+    a_count_before: a_at\count
+    cs_check(counts, b_count_before > 0U, "B arena empty before util")
+    cs_check(counts, a_count_before > 0U, "A arena empty before util")
+    svc_before: lmx_service_count(service)
+    mgr_before: lmx_manager_count(manager)
+    cs_check(counts, svc_before = 3U, "service not R0+A+B before util")
+    cs_check(counts, mgr_before = 0U, "manager should be empty (A finished; B never bound)")
+    cs_check(counts, lmx_thread_child_is(r0, t_a) != 0, "A not live under R0 before util")
+
+    # ==========================================================================================
+    # WHAT THE BOUNDARIES DO NOW -- TWO READINGS, ONE STORY (model of 19.09, lmx_thread.h.lm1):
+    #   (1) at the request's own reading nothing is reaped: B has reached no boundary of its own,
+    #       so its wait is not over, and A -- whose child has not ended -- is RETAINED whole;
+    #   (2) one window later the wait is over: B reached no boundary of its own, so the maintenance
+    #       rule of 19.29.8 closes it WITHOUT a turn, and this same boundary runs the chain DOWN
+    #       FIRST -- B's ending (it never set success: FAILURE -> its arena ATTACHES to A's, one
+    #       level down), and only then A itself, with nothing live under it (SUCCESS -> reaped
+    #       whole).  WHY THE SAME BOUNDARY: the walk asks the gate after the close, so a child
+    #       whose window has passed is closed AND reaped in one pass -- and for a DIRECT child of
+    #       the root (which reaches no deferral) that pass is the only one there is.
+    # ==========================================================================================
+    cs_check(counts, lmx_settle_children(r0, root_arena, service, manager, base) = c.LMX_SETTLE_OK, "the settle at the request did not run")
+    cs_check(counts, lmx_thread_child_is(r0, t_a) != 0, "A was settled before its child's wait was over")
+    cs_check(counts, lmx_thread_child_is(t_a, t_b) != 0, "B left A's chain before its window")
+    cs_check(counts, b_at\count = b_count_before && b_at\blocks != 0, "B's arena was touched before its window")
+    cs_check(counts, lmx_service_count(service) = 3U, "the service changed before B's window")
+    cs_check(counts, lmx_orphan_count(lmx_root_orphans(@ root)) = 0U, "something was adopted before B's window")
+
+    # (2) THE WINDOW, AND THE REAP IN THE SAME BOUNDARY.  The wait is over: B reached no boundary of
+    #     its own, so the maintenance rule of 19.29.8 closes it WITHOUT a turn -- and the walk asks
+    #     the gate AFTER the close (lmx_settle.lm1, lmx_settle_children), so this same boundary runs
+    #     the chain down-first: B's failure attaches its arena to A's, and A, with nothing live
+    #     under it, is reaped whole.  Nothing of B's own record is read past this line: its storage
+    #     goes with A's, which is the point (checked below, probe-owned only).
+    cs_check(counts, lmx_settle_children(r0, root_arena, service, manager, base + 100001U) = c.LMX_SETTLE_OK, "the settle at the window did not run")
+
+    # AFTER: probe-owned only (no reads inside arena A or B cells).
+    cs_check(counts, b_at\count = 0U && b_at\blocks = 0, "B's arena did not attach to A's")
+    cs_check(counts, a_at\count = 0U && a_at\blocks = 0, "A arena not released (not SUCCESS path?)")
+    cs_check(counts, lmx_arena_ref_value(graph, 0U) = 0, "A slot not cleared (not SUCCESS path)")
+    svc_after: lmx_service_count(service)
+    mgr_after: lmx_manager_count(manager)
+    cs_check(counts, svc_after = 1U, "service should hold only R0 after cascade")
+    cs_check(counts, mgr_after = 0U, "manager not empty after cascade")
+    cs_check(counts, lmx_service_find(service, (cast: (@: void) t_b)) = 0, "B still in service after cascade")
+    cs_check(counts, lmx_service_find(service, (cast: (@: void) t_a)) = 0, "A still in service after cascade")
+
+    cs_check(counts, lmx_root_close(@ root) = c.LMX_ROOT_OK, "R0 did not close")
+    cs_check(counts, lmx_root_state(@ root) = c.LMX_ROOT_CLOSED, "closed root not closed")
+
+    failures: counts[1]
+    c.printf("lmx_app_chain_settle checks=%d failures=%d a_turns=%u create_diag=%u b_count %u->%u svc %u->%u mgr %u->%u entry_diag=%u\n",
+             counts[0], failures,
+             (cast: (unsigned) cs_a_turns), (cast: (unsigned) cs_a_create_diag),
+             (cast: (unsigned) b_count_before), (cast: (unsigned) b_at\count),
+             (cast: (unsigned) svc_before), (cast: (unsigned) svc_after),
+             (cast: (unsigned) mgr_before), (cast: (unsigned) mgr_after),
+             (cast: (unsigned) cs_entry_diag))
+    c.fflush(0)
+    free(counts)
+return: failures
+

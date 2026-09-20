@@ -1,0 +1,146 @@
+fn: lm_p0_is_horizontal_space (char: value) int
+    return: value = 32 || value = 9
+end: lm_p0_is_horizontal_space
+fn: lm_p0_is_line_break (char: value) int
+    return: value = 10 || value = 13
+end: lm_p0_is_line_break
+fn: lm_p0_index_is_line_start (const: @(char text); size_t: index) int
+    if: index = 0U
+        return: 1
+    return: text[index - 1U] = 10 || text[index - 1U] = 13
+end: lm_p0_index_is_line_start
+fn: lm_p0_find_physical_line_end (const: @(char source); size_t: length; size_t: start) size_t
+    size_t: i
+    char: ch
+    i: start
+    while: i < length
+        ch: source[i]
+        if: lm_p0_is_line_break(ch) != 0
+            return: i
+        i: i + 1U
+    return: i
+end: lm_p0_find_physical_line_end
+fn: lm_p0_line_rest_is_horizontal_space (const: @(char source); size_t: start; size_t: end) int
+    size_t: i
+    char: ch
+    i: start
+    while: i < end
+        ch: source[i]
+        if: lm_p0_is_horizontal_space(ch) = 0
+            return: 0
+        i: i + 1U
+    return: 1
+end: lm_p0_line_rest_is_horizontal_space
+fn: lm_p0_line_break_width_at (const: @(char source); size_t: length; size_t: index) size_t
+    if: index >= length
+        return: 0U
+    if: source[index] = 13
+        if: index + 1U < length && source[index + 1U] = 10
+            return: 2U
+        return: 1U
+    if: source[index] = 10
+        return: 1U
+    return: 0U
+end: lm_p0_line_break_width_at
+fn: lm_p0_count_line_breaks (const: @(char source); size_t: start; size_t: end) size_t
+    size_t: count
+    size_t: i
+    size_t: width
+    count: 0U
+    i: start
+    while: i < end
+        width: lm_p0_line_break_width_at(source, end, i)
+        if: width != 0U
+            count: count + 1U
+            i: i + width
+            continue
+        i: i + 1U
+    return: count
+end: lm_p0_count_line_breaks
+sub: lm_p0_position_in_slice (const: @(char text); size_t: length; size_t: index; size_t: base_line; size_t: base_column; @: size_t out_line; @: size_t out_column)
+    size_t: i
+    size_t: line
+    size_t: column
+    size_t: width
+    line: base_line
+    column: base_column
+    if: index > length
+        index: length
+    i: 0U
+    while: i < index
+        width: lm_p0_line_break_width_at(text, index, i)
+        if: width != 0U
+            line: line + 1U
+            column: 1U
+            i: i + width
+            continue
+        column: column + 1U
+        i: i + 1U
+    out_line[0]: line
+    out_column[0]: column
+end: lm_p0_position_in_slice
+fn: lm_p0_indent_tab_column (size_t: column) size_t
+    return: ((column / 8U) + 1U) * 8U
+end: lm_p0_indent_tab_column
+fn: lm_p0_visual_column_between (const: @(char source); size_t: start; size_t: end) size_t
+    size_t: p
+    size_t: column
+    p: start
+    column: 0U
+    while: p < end
+        if: source[p] = 13 && p + 1U < end && source[p + 1U] = 10
+            p: p + 1U
+        if: source[p] = 13
+            column: 0U
+            p: p + 1U
+            continue
+        if: source[p] = 10
+            column: 0U
+            p: p + 1U
+            continue
+        if: source[p] = 9
+            column: lm_p0_indent_tab_column(column)
+            p: p + 1U
+            continue
+        column: column + 1U
+        p: p + 1U
+    return: column
+end: lm_p0_visual_column_between
+sub: lm_p0_scan_indent_column (const: @(char source); size_t: start; size_t: end; @: size_t out_offset; @: size_t out_column)
+    size_t: p
+    size_t: column
+    char: ch
+    p: start
+    column: 0U
+    while: p < end
+        ch: source[p]
+        if: lm_p0_is_horizontal_space(ch) = 0
+            out_offset[0]: p
+            out_column[0]: column
+            return
+        if: ch = 9
+            column: lm_p0_indent_tab_column(column)
+            p: p + 1U
+            continue
+        column: column + 1U
+        p: p + 1U
+    out_offset[0]: p
+    out_column[0]: column
+end: lm_p0_scan_indent_column
+sub: lm_p0_advance_layout_line (const: @(char source); size_t: length; size_t: line_start; size_t: line_end; @: size_t offset; @: size_t line)
+    size_t: next_offset
+    size_t: line_breaks
+    size_t: width
+    next_offset: line_end
+    line_breaks: lm_p0_count_line_breaks(source, line_start, line_end)
+    width: lm_p0_line_break_width_at(source, length, next_offset)
+    if: width != 0U
+        line_breaks: line_breaks + 1U
+        next_offset: next_offset + width
+    offset[0]: next_offset
+    line[0]: line[0] + line_breaks
+end: lm_p0_advance_layout_line
+fn: main () int
+    return: 0
+end: main
+

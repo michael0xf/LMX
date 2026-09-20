@@ -1,0 +1,77 @@
+include: "<stddef.h>"
+predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_pool.h.lm1"
+predef: "l2src/lmx_thread.h.lm1"
+
+# lmx_gc.h.lm1 - the end-turn collection (Lingvamyxa_spec.txt 19.29.4 and 19.29.4.1, model 24;
+# the gaps note's item 4).
+#
+# The model's contract, and what this module owes it:
+#
+#   * "Arena membership is not liveness": a cell stays because something REACHABLE from a root
+#     points at it, never because the arena handed it out once.
+#   * The pass is LOCAL (one Message's arena), NON-MOVING (live cells and their index entries
+#     keep every address) and runs exactly once, at the end-turn boundary, after the outbox has
+#     been published or discarded.
+#   * Roots are the Message's own cells: its record, its object, its mailbox (and the queue
+#     nodes of that mailbox's own array), its record of the schedule, and the live graph.  An
+#     incoming turn whose message was taken from a queue is still reachable through that queue,
+#     so a letter in flight is never collected out from under its receiver.
+#   * "Adoption alone does not make every transferred allocation a permanent root": a graph
+#     that arrived by attach and is retained by nothing is garbage at THIS boundary -- and that
+#     is the acceptance case of 19.29.4, which the selftest pins.
+#   * An error means NO SWEEP: "Недостаток памяти у рабочего стека mark не даёт права
+#     освободить ещё не посещённый потенциально живой объект.  При ошибке нужен безопасный
+#     отказ/сохранение живого, а не частичный sweep как успех" (model 24).  A deeper chain
+#     than the tracer's stack allows is exactly such an error, and it answers LMX_GC_PARTIAL.
+#
+# How liveness is remembered: a chunk of one of the arena's arrays is the unit, because a chunk
+# is one arena block and a block is what can be freed without moving anything.  The pass bumps
+# the arena's generation and stamps every chunk it walks; "was this chunk reached by the
+# current pass" is one comparison, and nothing has to be cleared between passes.
+#
+# What the tracer follows, per the domain the cell's address falls into (the kernel's own way
+# of asking "what is this"):
+#   STRUCT   the header's `node` and its child-slot array -- the slots are then cells of a
+#            CHILDREN array, and each slot holds a child VALUE, which is followed in turn;
+#   ARRAY    the descriptor's backing, whose own chunk kind decides what happens next;
+#   CHILDREN / REF / pointer-backed PRIMITIVE   each cell is a word that may be an address;
+#   scalar PRIMITIVE (char, int, size_t, ulong, unsigned)   a VALUE, never a reference: the
+#            model forbids reading a reference out of it ("Нельзя читать `target->node` у INT"),
+#            and nothing inside such a chunk is followed;
+#   METHOD   a terminal: the descriptor lives as long as the process, not as long as a graph;
+#   the kernel's own record domains (Message record, thread, schedule, manager, post link,
+#   reservation)   their fields ARE references, so every pointer-sized word is treated as a
+#   candidate address.  An address that does not resolve in this arena is not this arena's to
+#   keep or to free, so it is a terminal -- which is what makes a foreign pointer harmless and
+#   a function pointer in a table inert.
+#
+# The one error this rule can make is OVER-retention (a word that happens to look like one of
+# this arena's addresses), and over-retention is the safe direction: the pass may keep a block
+# it could have freed, never free a block something still points at.
+define: LMX_GC_OK 0
+define: LMX_GC_INVALID 1
+# The walk could not be completed, so NOTHING is swept this pass.
+define: LMX_GC_PARTIAL 2
+
+# How deep the tracer follows references.  The bound is on the WORKING STACK, not a claim about
+# the graph: a deeper chain is refused (LMX_GC_PARTIAL) rather than walked on a stack that
+# cannot hold it -- the model's rule that an incomplete mark must not sweep.
+define: LMX_GC_DEPTH 64
+
+prototype:
+    # Mark from this object's roots.  Returns the generation it stamped, or 0 when the walk
+    # could not be completed -- and then a sweep must NOT run.
+    fn: lmx_gc_mark (@: LmxArena arena; @: LmxThread t) unsigned
+    # Free every block the marked pass did not reach, retiring its interval first.  Nothing
+    # moves, and a block already gone is not seen again (the block list is the authority).
+    fn: lmx_gc_sweep (@: LmxArena arena; unsigned: gen) int
+    # The whole boundary pass: mark, then sweep; a mark that could not be completed sweeps
+    # nothing and says so.
+    fn: lmx_gc_collect (@: LmxArena arena; @: LmxThread t) int
+    # The tracer's own mutual recursion, declared here because L1 needs a name before its use
+    # and these three call each other: a value's chunk, the cells of a chunk, an array's chunks.
+    fn: lmx_gc_mark_value (@: LmxArena arena; @: void p; unsigned: gen; int: depth) int
+    fn: lmx_gc_cells (@: LmxArena arena; @: LmxPool pool; @: LmxChunk chunk; unsigned: gen; int: depth) int
+    fn: lmx_gc_mark_pool (@: LmxArena arena; @: LmxPool pool; unsigned: gen) int
+end: prototype

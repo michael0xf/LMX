@@ -1,0 +1,269 @@
+predef: "l2src/lmx_service.lm1"
+predef: "l2src/lmx_turn.lm1"
+predef: "l2src/lmx_child.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>" "<stdint.h>"
+
+# The mail service (spec 2 and 19.29.7; physical-address form).  What this file pins:
+#
+#   * entries are ordered BY PHYSICAL ADDRESS (uintptr of the LmxThread*), and membership
+#     is a bisection -- not a walk;
+#   * a record registers under ITS OWN physical address -- the caller does not hand a
+#     composed hierarchical address (lmx_address is gone);
+#   * the entry array GROWS (the entries move, the records never do);
+#   * an address no live record has is refused by the service (MISSING / null find) -- and
+#     the unknown address is never dereferenced;
+#   * former hierarchical rule "a PREFIX sorts before its extension" does NOT apply.
+#   * a record leaves by its own physical address, and the order is still the order afterwards;
+#   * on LMX_SERVICE_MISSING, lmx_service_post releases the letter's OWN arena (19.29.2 /
+#     Mikhail 19.09): undelivered letter = release that arena (letter_arena param, choice B);
+#   * on successful post, letter_arena is attached to the receiver arena (19.28.R2.5).
+
+sub: sv_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: sv_check
+
+fn: sv_message (@: LmxArena arena; unsigned: index; size_t: slots) @: LmxMsg
+    @: LmxMsg message
+    @: Lmx graph
+    message: (cast: (@: LmxMsg) lmx_arena_take(arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    graph: lmx_node_new_owned(arena)
+    if: message = 0 || graph = 0
+        return: 0
+    ---
+    if: slots = 0U || lmx_arena_refs_open_owned(arena, graph, slots) != 0
+        return: 0
+    ---
+    message\running: 1
+    message\success: 0
+    message\handoff_ready: 0
+    message\graph: graph
+    message\index: index
+return: message
+
+fn: sv_object (@: LmxArena arena; @: LmxMsg message; @: LmxPost mail; @: LmxSchedule sched) @: LmxThread
+    @: LmxThread t
+    t: (cast: (@: LmxThread) lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    if: t = 0
+        return: 0
+    ---
+    if: lmx_thread_attach(t, message, mail, sched) != c.LMX_THREAD_OK
+        return: 0
+    ---
+return: t
+
+fn: sv_link (@: LmxThread parent; @: LmxArena src; @: LmxArena child_arena; @: Lmx parent_graph; size_t: slot; @: Lmx source; @: LmxPost mail; @: LmxSchedule sched) @: LmxThread
+    @: LmxMsg child
+    @: LmxThread t
+    if: lmx_thread_enter(parent) != c.LMX_THREAD_OK
+        return: 0
+    ---
+    child: lmx_child_reserve(parent, src, child_arena, parent_graph, slot, source)
+    if: child = 0
+        return: 0
+    ---
+    t: sv_object(child_arena, child, mail, sched)
+    if: t = 0 || lmx_child_thread(parent, child, t) != c.LMX_CHILD_OK
+        return: 0
+    ---
+    lmx_thread_leave(parent)
+    if: lmx_turn_end(parent, lmx_clock_ticks()) != c.LMX_TURN_OK
+        return: 0
+    ---
+return: t
+
+# Physical-address lookup: the key IS the LmxThread pointer.
+fn: sv_lookup (@: LmxService service; @: LmxThread target) @: void
+return: lmx_service_find(service, (cast: (@: void) target))
+
+# True when the service's at(i) sequence is strictly ascending by physical address.
+fn: sv_order_ok (@: LmxService service) int
+    size_t: i
+    @: void prev
+    @: void cur
+    if: service = 0 || service\count = 0U
+        return: 1
+    ---
+    prev: lmx_service_at(service, 0U)
+    i: 1U
+    while: i < service\count
+        cur: lmx_service_at(service, i)
+        if: (cast: (uintptr_t) prev) >= (cast: (uintptr_t) cur)
+            return: 0
+        ---
+        prev: cur
+        i: i + 1U
+    ---
+return: 1
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxArena: root_arena
+    LmxArena: a1_arena
+    LmxArena: a2_arena
+    LmxArena: a3_arena
+    LmxArena: a4_arena
+    LmxArena: a5_arena
+    LmxArena: b_arena
+    LmxArena: letter_arena
+    LmxService: service
+    LmxPost: mail
+    LmxSchedule: sched
+    @: LmxMsg p 0
+    @: Lmx p_graph 0
+    @: Lmx template 0
+    @: LmxThread pt 0
+    @: LmxThread a1 0
+    @: LmxThread a2 0
+    @: LmxThread a3 0
+    @: LmxThread a4 0
+    @: LmxThread a5 0
+    @: LmxThread bt 0
+    @: LmxMsg a1_message 0
+    @: LmxMsg letter 0
+    @: LmxArena letter_arena_p 0
+    @: void unknown 0
+    int: failures
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ root_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ a1_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ a2_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ a3_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ a4_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ a5_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ b_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ service)), 0, c.sizeof(c.LmxService))
+    if: lmx_arena_open(@ root_arena) != 0 || lmx_arena_open(@ a1_arena) != 0 || lmx_arena_open(@ a2_arena) != 0 || lmx_arena_open(@ a3_arena) != 0 || lmx_arena_open(@ a4_arena) != 0 || lmx_arena_open(@ a5_arena) != 0 || lmx_arena_open(@ b_arena) != 0
+        fputs("lmx_service: an arena did not open\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    if: lmx_post_init(@ root_arena, @ mail) != c.LMX_POST_OK || lmx_schedule_init(@ sched, 0, 0, 8U) != c.LMX_SCHEDULE_OK
+        free(counts)
+        return: 2
+    ---
+    sv_check(counts, lmx_service_open(@ service) = c.LMX_SERVICE_OK, "the service did not open")
+    p: sv_message(@ root_arena, 1U, 5U)
+    template: lmx_node_new_owned(@ root_arena)
+    if: p = 0 || template = 0 || lmx_arena_refs_open_owned(@ root_arena, template, 1U) != 0
+        free(counts)
+        return: 2
+    ---
+    p_graph: p\graph
+    pt: sv_object(@ root_arena, p, @ mail, @ sched)
+    if: pt = 0
+        free(counts)
+        return: 2
+    ---
+    # The tree: P -> A1..A5, and B under A1.  Hierarchy is for linking only -- service keys are physical.
+    a1: sv_link(pt, @ root_arena, @ a1_arena, p_graph, 0U, template, @ mail, @ sched)
+    a2: sv_link(pt, @ root_arena, @ a2_arena, p_graph, 1U, template, @ mail, @ sched)
+    a3: sv_link(pt, @ root_arena, @ a3_arena, p_graph, 2U, template, @ mail, @ sched)
+    a4: sv_link(pt, @ root_arena, @ a4_arena, p_graph, 3U, template, @ mail, @ sched)
+    a5: sv_link(pt, @ root_arena, @ a5_arena, p_graph, 4U, template, @ mail, @ sched)
+    sv_check(counts, a1 != 0 && a2 != 0 && a3 != 0 && a4 != 0 && a5 != 0, "the children were not linked")
+    a1_message: lmx_thread_message(a1)
+    bt: sv_link(a1, @ a1_arena, @ b_arena, a1_message\graph, 0U, template, @ mail, @ sched)
+    sv_check(counts, bt != 0, "the grandchild was not linked")
+
+    # Registered in a scrambled order, so the ORDER the service keeps is its own doing.
+    sv_check(counts, lmx_service_register(@ service,bt, @ b_arena) = c.LMX_SERVICE_OK, "the grandchild was not registered")
+    sv_check(counts, lmx_service_register(@ service,a3, @ a3_arena) = c.LMX_SERVICE_OK, "the third child was not registered")
+    sv_check(counts, lmx_service_register(@ service,a1, @ a1_arena) = c.LMX_SERVICE_OK, "the first child was not registered")
+    sv_check(counts, lmx_service_register(@ service,pt, @ root_arena) = c.LMX_SERVICE_OK, "the root was not registered")
+    sv_check(counts, lmx_service_register(@ service,a5, @ a5_arena) = c.LMX_SERVICE_OK, "the fifth child was not registered")
+    sv_check(counts, lmx_service_register(@ service,a2, @ a2_arena) = c.LMX_SERVICE_OK, "the second child was not registered")
+    sv_check(counts, lmx_service_register(@ service,a4, @ a4_arena) = c.LMX_SERVICE_OK, "the fourth child was not registered")
+    sv_check(counts, lmx_service_count(@ service) = 7U, "the service did not take every record")
+    sv_check(counts, lmx_service_register(@ service,a1, @ a1_arena) = c.LMX_SERVICE_DUPLICATE, "a record was registered twice")
+    sv_check(counts, lmx_service_count(@ service) = 7U, "a duplicate changed the count")
+
+    # Order is by physical address ascending -- NOT by hierarchical prefix.
+    sv_check(counts, sv_order_ok(@ service) != 0, "entries are not ordered by physical address")
+    sv_check(counts, lmx_service_at(@ service, 7U) = 0, "the service answered past its end")
+
+    # Membership, by the records' own physical addresses.
+    sv_check(counts, sv_lookup(@ service, pt) = (cast: (@: void) pt), "the root was not found at its address")
+    sv_check(counts, sv_lookup(@ service, a1) = (cast: (@: void) a1), "the first child was not found")
+    sv_check(counts, sv_lookup(@ service, bt) = (cast: (@: void) bt), "the grandchild was not found")
+    sv_check(counts, sv_lookup(@ service, a4) = (cast: (@: void) a4), "the fourth child was not found")
+
+    # An address no live record has: refused by the service, and never dereferenced.
+    unknown: (cast: (@: void) 0x1)
+    sv_check(counts, lmx_service_find(@ service, unknown) = 0, "an address no record has was answered")
+    sv_check(counts, lmx_service_find(@ service, 0) = 0, "a null address was answered")
+
+    # A record leaves by its own physical address, and the order is still the order.
+    sv_check(counts, lmx_service_unregister(@ service, a3) = c.LMX_SERVICE_OK, "a record did not leave")
+    sv_check(counts, lmx_service_count(@ service) = 6U, "the count did not follow the removal")
+    sv_check(counts, sv_lookup(@ service, a3) = 0, "a removed record is still found")
+    sv_check(counts, sv_order_ok(@ service) != 0, "the order did not close over the gap")
+    sv_check(counts, sv_lookup(@ service, a5) = (cast: (@: void) a5), "the record after the gap was lost")
+    sv_check(counts, lmx_service_unregister(@ service, a3) = c.LMX_SERVICE_MISSING, "a record left twice")
+
+    # 19.28.R2.5: successful delivery attaches the letter arena to the receiver's arena.
+    # Letter lives in its OWN simple arena; after post to a1, letter_arena is empty and the
+    # letter still classifies through a1_arena (ownership transfer, addresses stable).
+    memset((cast: (@: void) (@ letter_arena)), 0, c.sizeof(c.LmxArena))
+    sv_check(counts, lmx_arena_open_simple(@ letter_arena) = 0, "letter simple arena did not open")
+    letter_arena_p: @ letter_arena
+    letter: (cast: (@: LmxMsg) lmx_arena_take(@ letter_arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    sv_check(counts, letter != 0, "attach-test letter was not taken")
+    if: letter != 0
+        letter\running: 1
+        letter\success: 0
+        letter\handoff_ready: 0
+        letter\graph: 0
+        letter\index: 0U
+    ---
+    sv_check(counts, lmx_service_post(@ service, (cast: (@: void) a1), letter, @ letter_arena) = c.LMX_SERVICE_OK, "delivery post refused")
+    sv_check(counts, letter_arena_p\blocks = 0 && letter_arena_p\index = 0 && letter_arena_p\count = 0U, "delivery did not attach/empty letter arena")
+    sv_check(counts, lmx_range_classify(@ a1_arena, (cast: (@: void) letter)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "delivered letter does not classify in receiver arena")
+    sv_check(counts, lmx_thread_mail_count(a1, c.LMX_POST_INBOX) = 1U, "delivery did not admit into a1 inbox")
+    sv_check(counts, lmx_thread_mail_take(a1, c.LMX_POST_INBOX) = (cast: (@: void) letter), "inbox did not hold the delivered letter")
+
+    # Undelivered letter -- service releases the letter's OWN arena on MISSING.
+    # Letter lives in letter_arena (spec 19.29.2); post to an unknown address must MISSING
+    # and leave that arena empty (blocks/index cleared by lmx_arena_release).
+    memset((cast: (@: void) (@ letter_arena)), 0, c.sizeof(c.LmxArena))
+    sv_check(counts, lmx_arena_open(@ letter_arena) = 0, "letter arena did not open")
+    letter_arena_p: @ letter_arena
+    letter: (cast: (@: LmxMsg) lmx_arena_take(@ letter_arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    sv_check(counts, letter != 0, "letter was not taken from its arena")
+    if: letter != 0
+        letter\running: 1
+        letter\success: 0
+        letter\handoff_ready: 0
+        letter\graph: 0
+        letter\index: 0U
+    ---
+    unknown: (cast: (@: void) 0x1)
+    sv_check(counts, lmx_service_post(@ service, unknown, letter, @ letter_arena) = c.LMX_SERVICE_MISSING, "missing post did not refuse")
+    sv_check(counts, letter_arena_p\blocks = 0 && letter_arena_p\index = 0, "missing post did not release the letter arena")
+
+    sv_check(counts, lmx_service_release(@ service) = c.LMX_SERVICE_OK && lmx_service_count(@ service) = 0U, "the service did not release")
+    failures: counts[1]
+    c.printf("lmx_service checks=%d failures=%d\n", counts[0], failures)
+    free(counts)
+return: failures
+
+

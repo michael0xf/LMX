@@ -1,0 +1,60 @@
+include: "<stddef.h>"
+predef: "l2src/lmx.h.lm1"
+predef: "l2src/lmx_arena.h.lm1"
+
+# lmx_call.h.lm1 - calling a callable occurrence (spec 7.1, 21.2, 21.8 and 21.13.4; the gaps
+# note's item 8).
+#
+# The spec, verbatim: "The graph callable itself is an ordinary Structure, with the shared
+# function record in physical child[0] (7.1/21.8)" and "The reserved node argument of a call is
+# the selected M itself".  So a callable is not a new kind of value: it is a Structure whose
+# physical child[0] holds a METHOD record, its later slots hold that occurrence's own fields, and
+# `M.node` is its lexical parent (lmx.h.lm1 spells all of this out for the merge traversal).
+#
+# Nothing is stored to say "this is a callable": the check is the same domain question everything
+# else in this kernel asks -- the VALUE in slot 0 falls into the METHOD domain (spec 1464: "A
+# callable is recognized because its data identifies ..."), and a child carries no type tag.
+#
+# The typed entry of an occurrence receives the RESERVED NODE FIRST, then the arguments its
+# signature lists (19.29.5); its status is the result carrier of 21.13.4.  This header names the
+# ZERO-ARGUMENT shape, which is the one this kernel calls today.
+#
+# WHAT IS ACTUALLY MISSING, corrected 2026-09-18 (the earlier note here blamed an encoding that
+# is not the blocker, and cited `OPEN_POINTS.txt`, which is NOT in this tree -- that file lives
+# only in the frozen project's worktrees):
+#
+#   * the ORDER of the arguments is settled, not open: spec 518 -- the signature "begins with
+#     reserved `Lmx *node` and lists declared/dynamic values in DETERMINISTIC ORDER";
+#   * `sig` is a DISPATCH contract, not a call contract: "Exact callable sig is a separate method
+#     contract (SPEC 21.8); this table neither encodes it nor blocks method dispatch"
+#     (OPEN_POINTS.txt, frozen tree).  So the call mechanics do not wait for the `sig` encoding --
+#     the CALLER (the translator) knows its own argument order, because it wrote the signature.
+#
+# ADMISSION IS DECIDED, and decided AGAINST for this stage -- Mikhail, 2026-09-18, verbatim:
+# "сверок на данном этапе надо не больше чем в Си. Так как полная типизация будет делаться
+# отдельно".  So there is NO signature check here: like C, the call goes through the loaded
+# child[0] METHOD target and its typed `addr`, and matching the signature to the call site is the
+# TRANSLATOR's business, because the translator is what wrote both.  Full typing is a separate,
+# later effort; `sig` stays what it is (the dispatch contract of 21.8) and nothing here decodes it.
+fnptr: LmxCallEntry (@: Lmx node) int
+
+define: LMX_CALL_OK 0
+define: LMX_CALL_INVALID 1
+# Not callable: not a Structure, no physical child[0], or a child[0] that is not a METHOD record.
+define: LMX_CALL_NOT_CALLABLE 2
+
+prototype:
+    # Is this value a callable occurrence?  The answer is the structure's own shape, asked of the
+    # arena's index.
+    fn: lmx_call_ready (@: LmxArena arena; @: Lmx callable) int
+    # The shared method record of a callable: what holds {addr, sig}.  Null when the value is not
+    # a callable occurrence.
+    fn: lmx_call_method (@: LmxArena arena; @: Lmx callable) @: LmxMethod
+    # The reserved node of a call on this callable: the selected M itself -- not its lexical
+    # parent, and not the method record, which stores no node (lmx.h.lm1).
+    fn: lmx_call_node (@: Lmx callable) @: Lmx
+    # The call, for the zero-argument shape: the entry is reached through the method record and
+    # handed the reserved node.  Returns the entry's status, or LMX_CALL_NOT_CALLABLE when there
+    # is nothing to call.
+    fn: lmx_call0 (@: LmxArena arena; @: Lmx callable) int
+end: prototype

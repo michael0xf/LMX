@@ -1,0 +1,97 @@
+CURRENT CORE MODEL / ДЕЙСТВУЮЩАЯ МОДЕЛЬ (2026-09-12)
+Read L2_CORE_AND_MESSAGE_MODEL_20260912.md at repository root: parts I-III
+describe the full core/Message mechanism; part IV records implementation limits,
+and only the final part is the work plan. SPEC and Revision 2 remain normative.
+This file's dated prototype/evidence sections describe their stated revisions;
+they are not permission to restore old layouts, pointer-only merge, unchanged
+copied node links, or a new arbitrary capacity limit. Non-copying adoption and
+shared METHOD/eternal terminals retain addresses under their separate contracts.
+
+LMX_CHARS_OWNED: explicit owner-local character-table construction
+================================================================
+
+Grok confirmed the five-file helper slice in 20260911-211100. This is a
+storage primitive for Message-local immutable characters. The separate graph-
+unit compiler integration below now uses it; this is not complete Message
+execution/collector integration. Legacy leaf paths remain separate.
+
+lmx_chars_new_owned(blocks) returns a fresh complete 256-byte table or null.
+It receives one exclusive owner head slot, the arena's block list. It does not
+look up a Message or decide lifecycle. Before publication it initializes each
+byte, attaches the whole allocation as one block of the arena, and then registers
+the 256 cells as one entry of the arena's address table. Null slots, OOM and
+failed registration leave the existing owner untouched; prepared allocations are
+released on failure (a registration refusal detaches the block first, so the
+owner's list never names freed storage).
+
+The payload allocation begins with a leading alignment offset the size of
+LmxOwnedRange, followed by 256 char cells; that space used to hold an embedded
+range record and is now plain padding, so cell addresses are unchanged. The
+entry covers only the cells, with stride 1, primitive kind and CHAR type. The
+separately allocated LmxArenaBlock tracks the whole allocation. Allocation size
+uses checked addition; char needs no padding.
+
+lmx_char_cell_known(table, value) returns the stable cell address for 0..255,
+otherwise null. A nonnull table must be a live base returned by construction;
+this helper does not validate foreign/stale pointers. Published bytes must
+not be mutated. The existing lmx_char_value_known reader can read these cells.
+Same table/value preserves identity. Different tables never share storage.
+Creation is fresh each time: the caller chooses its canonical table rather
+than the constructor creating a hidden per-Message singleton or registry.
+
+Graph roots retain the table through actual cell references. An unrooted
+table is not immortal. A handoff-safe transfer moves the owner's BLOCKS; the
+address table's entry for the cells does not move with them, because an array of
+the arena never moves -- which is why the owner keeps no range list of its own.
+Final disposal uses ordinary owner blocks; retiring the table's entry for cells
+whose storage is released is the arena manager's act, not this module's.
+The helper neither performs handoff eligibility checks nor registers roots.
+
+Focused runner: l2src/run_chars_owned.ps1
+It uses pinned stable L1 read-only, one O2 C99/Werror object set and test-only
+malloc/free wrapping. Tests cover all byte values and owner classification,
+stable identity, disjoint owners, invalid lookup, both allocation failures,
+rejected admission, retry, address-preserving transfer and one-time disposal.
+Symbol checks reject module data globals and unexpected runtime dependencies.
+This is not an end_turn collector test, a stable promotion or a full L2 port.
+
+Verified 2026-09-11:
+build/codex/chars_owned/20260911_211338_746_fe7792a5/evidence.json
+1585 checks, zero failures, 9 allocations and 9 releases. All four support/
+module objects are built once at O2 with C99/Werror and reused for every case.
+The module imports only malloc, free and paired storage move; no data globals.
+Sources, generated artifacts, compiler and GCC hashes/options are recorded.
+Earlier 211254_508_b52d47c4 failed because the test wrapper counted C runtime
+startup allocations before main; tracking now covers only the explicit test
+operations, excluding startup/shutdown. Only the final run is accepted.
+
+Later integration must pass the selected Message-local table via the agreed
+context and call ABI. No TLS owner lookup, lexical-parent owner search, hidden
+source-method argument or extra per-Lmx field is introduced by this module.
+
+Same-table rebind and graph-unit integration, 2026-09-11
+-----------------------------------------------------
+Grok confirmed inbox/outbox 212500: a proven live cell of the complete immutable
+table can recover its table base by subtracting the unsigned byte it stores.
+lmx_char_rebind_known(cell, value) then selects the new 0..255 cell. Null or an
+invalid new value returns null before reading. An arbitrary standalone char
+pointer is NOT a valid input. No registry or owner/context search is performed.
+This operation preserves the original table after paired storage transfer;
+it does not recanonicalize into another table the recipient already owns.
+
+The graph-unit compiler constructs a table in the synthetic Message entry,
+initializes own char fields from it, then uses same-table rebind at dirty-cache,
+aliased-parameter and explicit-path publication sites. The existing target cell
+supplies provenance; ordinary method signatures need no new parameter. Bytes
+remain immutable and live field references retain the table. No extra graph
+slot, Message singleton or owner-link was introduced.
+
+PASS build/codex/chars_owned/20260911_212728_928_3df774e1/evidence.json:
+67892 checks, 9 allocations/9 releases, one O2 C99/Werror four-object set.
+All 65536 old/new byte pairs, invalid values/null, no allocation/mutation,
+post-transfer identity and distinct recipient table are checked alongside
+the original construction/OOM/admission/disposal tests. Module imports and
+no-data-global checks still pass. run_chars_owned required no harness changes.
+
+Compiler/lifecycle focused evidence is recorded in L2_MESSAGE_ROOT.txt.
+It covers two live Messages and teardown, not collector root completeness.

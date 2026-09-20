@@ -1,0 +1,44 @@
+predef: "l2src/lmx_arena.h.lm1"
+
+# Fresh, unexposed entries in one exclusively held Message's storage. Each entry is a cell
+# of one of the arena's arrays: the arena allocates it, owns it and classifies it, and
+# there is no owner-local range list anywhere.
+prototype:
+    # A lexical root Structure (node = 0) in the STRUCT domain, len 0, no children.
+    fn: lmx_node_new_owned (@: LmxArena arena) @: Lmx
+    # A nested Structure initialized with lexical parent `parent`. Graph-copy
+    # traversal may rewrite destination node links. The caller opens its child array and
+    # stores its address into the parent's slot; nothing here mutates parent.
+    fn: lmx_struct_new_owned (@: Lmx parent; @: LmxArena arena) @: Lmx
+    fn: lmx_method_new_owned (@: LmxArena arena) @: LmxMethod
+    fn: lmx_int_new_owned (@: LmxArena arena) @: void
+    fn: lmx_size_new_owned (@: LmxArena arena) @: void
+    fn: lmx_unsigned_new_owned (@: LmxArena arena) @: void
+    fn: lmx_uchar_new_owned (@: LmxArena arena) @: void
+    fn: lmx_ulong_new_owned (@: LmxArena arena) @: void
+    # `@: char "text"`: a cell in the char * domain whose value points directly
+    # at a C string (SPEC 11.2.1). The string itself is not owned or copied here.
+    fn: lmx_charptr_new_owned (@: LmxArena arena) @: void
+    fn: lmx_charptr_value_known (@: void cell) @: char
+    fn: lmx_charptr_store_known (@: void cell; @: char value) int
+    # One mutable pointer value. `type` must identify the exact source pointer
+    # domain at or above LMX_TYPE_POINTER_BASE; the cell owns only the pointer
+    # value, not an arbitrary foreign referent.
+    fn: lmx_pointer_new_owned (int: type; @: LmxArena arena) @: void
+    fn: lmx_pointer_value_known (@: void cell) @: void
+    fn: lmx_pointer_store_known (@: void cell; @: void value) int
+    # Known accessors require a compiler-proven live cell of this exact type.
+    # They guard null, not arbitrary untyped/raw addresses or owner membership.
+    # Character read: null => -1, live character => unsigned byte 0..255.
+    fn: lmx_char_value_known (@: void cell) int
+    fn: lmx_int_value_known (@: void cell) int
+    fn: lmx_int_store_known (@: void cell; int: value) int
+    fn: lmx_size_value_known (@: void cell) size_t
+    fn: lmx_size_store_known (@: void cell; size_t: value) int
+    fn: lmx_unsigned_value_known (@: void cell) unsigned
+    fn: lmx_unsigned_store_known (@: void cell; unsigned: value) int
+    fn: lmx_uchar_value_known (@: void cell) unsigned
+    fn: lmx_uchar_store_known (@: void cell; unsigned: value) int
+    fn: lmx_ulong_value_known (@: void cell) ulong
+    fn: lmx_ulong_store_known (@: void cell; ulong: value) int
+end: prototype

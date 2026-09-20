@@ -1,0 +1,50 @@
+predef: "l2src/lmx_call.h.lm1"
+predef: "l2src/lmx_arena_refs.h.lm1"
+predef: "l2src/lmx_implements.h.lm1"
+
+# lmx_call.lm1 - the call.  Every check here is the domain question, and the call itself is one
+# cast: the METHOD's `addr` is a typed entry, and the shape this unit names is the zero-argument
+# one.  A generated body for a callable WITH arguments is called by generated code, which knows
+# the signature it emitted; this unit is what a runtime calls when it holds a Structure and must
+# find out whether it can call it at all.
+
+fn: lmx_call_ready (@: LmxArena arena; @: Lmx callable) int
+    @: void target
+    if: arena = 0 || callable = 0
+        return: c.LMX_CALL_NOT_CALLABLE
+    if: lmx_domain_kind(arena, (cast: (@: void) callable)) != c.LMX_KIND_STRUCT
+        return: c.LMX_CALL_NOT_CALLABLE
+    # A callable with no slot has nothing to hold its method; a structure whose len is 0 is a
+    # value, not an occurrence of a callable.
+    if: callable\len < 1
+        return: c.LMX_CALL_NOT_CALLABLE
+    ---
+    target: lmx_arena_ref_value(callable, 0U)
+    if: target = 0
+        return: c.LMX_CALL_NOT_CALLABLE
+    if: lmx_domain_kind(arena, target) != c.LMX_KIND_METHOD
+        return: c.LMX_CALL_NOT_CALLABLE
+    ---
+return: c.LMX_CALL_OK
+
+fn: lmx_call_method (@: LmxArena arena; @: Lmx callable) @: LmxMethod
+    if: lmx_call_ready(arena, callable) != c.LMX_CALL_OK
+        return: 0
+return: (cast: (@: LmxMethod) lmx_arena_ref_value(callable, 0U))
+
+fn: lmx_call_node (@: Lmx callable) @: Lmx
+    if: callable = 0
+        return: 0
+return: callable
+
+fn: lmx_call0 (@: LmxArena arena; @: Lmx callable) int
+    @: LmxMethod method
+    LmxCallEntry: entry
+    if: lmx_call_ready(arena, callable) != c.LMX_CALL_OK
+        return: c.LMX_CALL_NOT_CALLABLE
+    method: (cast: (@: LmxMethod) lmx_arena_ref_value(callable, 0U))
+    if: method = 0 || method\addr = 0
+        return: c.LMX_CALL_NOT_CALLABLE
+    ---
+    entry: (cast: (LmxCallEntry) method\addr)
+return: entry(lmx_call_node(callable))

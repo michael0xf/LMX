@@ -1,0 +1,43 @@
+include: "<windows.h>"
+predef: "l2src/lmx_manager.h.lm1"
+
+# The running manager's platform header.  It is separate from lmx_manager.h.lm1 on
+# purpose: the manager's INTERFACE is portable and lives there, while the thread entry
+# a platform hands to the OS has a platform type this file names once.
+#
+# `foreign:` names types the included C header already declares.  DWORD is needed as a
+# RETURN type (a Win32 thread entry returns DWORD = `unsigned long` on this toolchain,
+# which is NOT uint32_t, and the build guards incompatible pointer types as an error);
+# LPTHREAD_START_ROUTINE is needed to name the thread-entry type at the one call that
+# hands the body to the OS.
+#
+# Neither is spelled as an L1 fnptr with a foreign return: L1 refuses a by-value cycle
+# between such a fnptr typedef and the foreign type ("struct DWORD; make one a
+# pointer"), and the OS's own typedef is the honest thing to use anyway.
+foreign: DWORD
+foreign: LPTHREAD_START_ROUTINE
+
+prototype:
+    fn: lmx_manager_running_init (@: LmxManager m) int
+    # The arena of the Message: admitting a record asks the domain question, and the
+    # index that answers it belongs to the arena.  step and round carry the arena
+    # because they fill the SAME api slots as the stepped binding's (one interface,
+    # one signature); a lane's start and reap ask the table nothing, so the arena is
+    # carried through them, not read.  take, count and close are not api slots and
+    # ask nothing of the table, so they name no arena.
+    #
+    # The reading `now` is carried for exactly the same reason -- it is in the slot's
+    # signature -- and it is not read here either: a LANE is a cycle, so the lane's own
+    # loop reads the clock and ages its record itself (lmx_manager_running_body).  The
+    # stopped path of this file therefore never touches the parameter, and neither does
+    # the started one: there is nothing for it to age from here.
+    fn: lmx_manager_running_add (@: LmxManager m; @: LmxSchedule slot) int
+    # The same removal as the stepped binding's: the queue unlinks the record, and the lane -- if
+    # this record ever had one -- is not joined (a lane ends by itself).
+    fn: lmx_manager_running_remove (@: LmxManager m; @: LmxSchedule slot) int
+    fn: lmx_manager_running_take (@: LmxManager m) @: LmxSchedule
+    fn: lmx_manager_running_count (@: LmxManager m) size_t
+    fn: lmx_manager_running_step (@: LmxManager m; ulong: now) int
+    fn: lmx_manager_running_round (@: LmxManager m; unsigned: ticks; ulong: now) int
+    fn: lmx_manager_running_close (@: LmxManager m) int
+end: prototype

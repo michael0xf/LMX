@@ -1,0 +1,110 @@
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# Attaching another arena (Mikhail, 2026-09-17, verbatim: "У нас есть арена (там менеджер)
+# ... также может присоединять другую арену"; "Если во время работы к арене присоединяется
+# другая -- увеличиваем просто число массивов и не паримся, чтобы ареса не переезжали").
+#
+# What this file pins, and each one is the reason attaching is an act of its own:
+#
+#   * nothing moves -- every address that answered before the attach answers after it,
+#     with the same kind, the same type and the very same descriptor;
+#   * the attaching arena answers for both: its list of its N arrays holds the attached
+#     arrays too, and its index names the attached intervals;
+#   * the attached arena is left EMPTY: no entries, no arrays, no blocks, no index;
+#   * the storage is one arena's after the attach, so releasing the destination releases
+#     what the attached arena used to own -- nothing is leaked and nothing is double-freed.
+
+sub: attach_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: attach_check
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxArena: keep
+    LmxArena: give
+    # A by-value arena is read through a pointer of its own: L1 emits `->` for `\`, and
+    # the address of a by-value field is not expressible.
+    @: LmxArena keep_at
+    @: LmxArena give_at
+    @: char table 0
+    @: void int_cell 0
+    @: Lmx node 0
+    @: LmxMethod method 0
+    @: void slot_base 0
+    @: LmxPool pool_before 0
+    @: LmxPool pool_after 0
+    int: failures
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ keep)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ give)), 0, c.sizeof(c.LmxArena))
+    keep_at: @ keep
+    give_at: @ give
+    if: lmx_arena_open(@ keep) != 0 || lmx_arena_open(@ give) != 0
+        fputs("lmx: arena open failed\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+
+    # Two arenas, each with its own arrays.  Every address below is asked about again
+    # after the attach.
+    table: lmx_chars_new_owned(@ keep)
+    int_cell: lmx_int_new_owned(@ keep)
+    lmx_int_store_known(int_cell, 4242)
+    node: lmx_node_new_owned(@ give)
+    method: lmx_method_new_owned(@ give)
+    attach_check(counts, table != 0 && int_cell != 0 && node != 0 && method != 0, "both arenas built their own arrays")
+    if: lmx_arena_refs_open_owned(@ give, node, 2U) != 0
+        fputs("lmx: the structure's child array was not opened\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    slot_base: node\data
+    pool_before: lmx_range_pool(@ give, slot_base)
+    attach_check(counts, pool_before != 0, "the child array answers before the attach")
+    attach_check(counts, keep_at\count > 0U && give_at\count > 0U, "each arena holds entries of its own")
+
+    # The act.
+    attach_check(counts, lmx_arena_attach(@ keep, @ give) = 0, "the arena attached")
+    attach_check(counts, give_at\blocks = 0 && give_at\arrays = 0, "the attached arena holds no storage and no arrays")
+    attach_check(counts, give_at\index = 0 && give_at\count = 0U && give_at\capacity = 0U, "the attached arena holds no index and no entries")
+    attach_check(counts, keep_at\count > 0U, "the destination kept the entries")
+
+    # Nothing moved: every address answers through the destination, with the very same
+    # kind, type and descriptor.
+    attach_check(counts, lmx_range_classify(@ keep, (cast: (@: void) table)) = c.LMX_KIND_PRIMITIVE, "the character table still classifies")
+    attach_check(counts, lmx_range_type_of(@ keep, (cast: (@: void) table)) = c.LMX_TYPE_CHAR, "the character table kept its type")
+    attach_check(counts, lmx_range_type_of(@ keep, int_cell) = c.LMX_TYPE_INT, "the int cell kept its type")
+    attach_check(counts, lmx_range_classify(@ keep, (cast: (@: void) node)) = c.LMX_KIND_STRUCT, "the attached structure still classifies")
+    attach_check(counts, lmx_range_classify(@ keep, (cast: (@: void) method)) = c.LMX_KIND_METHOD, "the attached method record still classifies")
+    attach_check(counts, lmx_range_classify(@ keep, slot_base) = c.LMX_KIND_CHILDREN, "the attached child array still classifies")
+    pool_after: lmx_range_pool(@ keep, slot_base)
+    attach_check(counts, pool_after = pool_before, "the entry names the very same descriptor")
+    attach_check(counts, lmx_arena_find(@ keep, c.LMX_KIND_CHILDREN, c.LMX_TYPE_REFS) = pool_before, "the destination's array list holds the attached array")
+
+    # Living storage, not just classification: a write through an address taken before
+    # the attach still reaches its cell.
+    lmx_int_store_known(int_cell, 77)
+    attach_check(counts, lmx_int_value_known(int_cell) = 77, "a cell taken before the attach is still writable")
+    attach_check(counts, lmx_arena_ref_store(node, 0U, (cast: (@: void) method)) = 0, "the attached structure's slots still accept children")
+    attach_check(counts, lmx_arena_ref_value(node, 0U) = (cast: (@: void) method), "the child reads back")
+
+    # One owner: releasing the destination releases what both arenas held.
+    attach_check(counts, lmx_arena_release(@ keep) = 0, "the destination released everything")
+    attach_check(counts, keep_at\blocks = 0 && keep_at\arrays = 0 && keep_at\index = 0 && keep_at\count = 0U, "the destination is empty after release")
+
+    failures: counts[1]
+    c.printf("arena attach checks=%d failures=%d\n", counts[0], failures)
+    free(counts)
+return: failures != 0

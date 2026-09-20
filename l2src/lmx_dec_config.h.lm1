@@ -1,0 +1,12 @@
+# Fixed LmxDec ABI: coefficient storage is 34 digits in every TU.
+#
+# The C form this replaces tested the macro before defining it --
+# "#if defined(DECNUMDIGITS) / #if DECNUMDIGITS != 34 / #error ... / #else / #define
+# DECNUMDIGITS 34 / #endif" -- because a different preexisting DECNUMDIGITS must be a
+# compile error, not a resize.  L1 defines the macro; decNumber.h only defines its
+# own default "if not defined", so with this header first 34 wins, and a TU that
+# fixed a different value first gets the compiler's redefinition diagnostic.  What
+# is NOT expressed here is a compile-time ""must equal 34"" test of an already
+# defined macro: L1 has no conditional composition over a defined name (gap
+# recorded, not worked around with raw C -- spec 1.9 forbids the hatch for this).
+define: DECNUMDIGITS 34

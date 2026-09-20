@@ -1,0 +1,79 @@
+predef: "l2src/lmx.h.lm1"
+include: "<stdint.h>"
+
+# lmx_message.h.lm1 - the Message record: the kernel's own five fields, and nothing
+# else.  Written in L1, like the arena's headers; the generated C is
+# lmx_message.lm1.h.
+#
+# THIS RECORD IS CLOSED.  NOTHING IS ADDED TO IT.  Not a queue link, not a
+# deadline, not a mailbox, not a parent or child link, not a scheduler slot, not a
+# flag of convenience.  Every one of those has an owner of its own now: the mail is
+# lmx_post, the scheduler's record is lmx_schedule, the queue is lmx_manager's, the
+# executable object is lmx_thread, the arena is lmx_arena_*, the family chain is
+# the parent's supervision data in the graph.  A new field here is a DEFECT, not a
+# convenience -- this is exactly how the record reached 61 fields once, and every
+# one of them had a good reason at the time.
+#
+# Lingvamyxa_spec.txt 19.29.7.1: "Every Message has running=1 and success=0
+# initially, including a Message without an executing thread. These uint_fast8_t
+# control flags belong to the Message, not to its payload arena. running means
+# permission to continue, not that an OS thread currently exists." 19.29.6 is the
+# Message/L3 Thread itself; L2_CORE_AND_MESSAGE_MODEL_20260912.md 29 (ownership of
+# cells), 31 (running, success and stop), 32 (closing the family).
+#
+# This replaces the 61-field record the previous implementation carried.  The
+# kernel's own fields are these five -- "the kernel record is running, success,
+# handoff_safe, root, index" (Mikhail, 2026-09-16) -- spelled with the C names this
+# build uses for the last two: `graph` is the C projection of the language root,
+# `handoff_ready` is the mark of handoff_safe.  Field order is as Mikhail wrote it.
+#
+# Everything that used to sit beside them belongs elsewhere:
+#   - the arena: its block list is lmx_arena_blocks and its typed arrays are the
+#     constructor modules, each array ONE ENTRY PER INTERVAL of the address table
+#     (lmx_range; an array that grew by a chunk has several intervals and therefore
+#     several entries, all naming the same descriptor), and each entry names the
+#     array's own descriptor, which says what it holds;
+#   - the mailbox, the outgoing queue, the scheduler and the liveness deadlines are
+#     the L3 Thread's own mechanism, not cells of the record;
+#   - the family chain (parent, first and last child, siblings) is the parent's
+#     supervision data in the language graph;
+#   - the executor's bind record is the executor's.
+# A field that is not one of the five must have an LMX owner in the graph, or go.
+
+# The control flags' type is the one the specification names for them,
+# uint_fast8_t.  On this target that is one byte, which is why the record is 24
+# bytes: 1+1+1, padding to the pointer, 8, 4, padded again.
+type: LmxFlag uint_fast8_t
+
+struct: LmxMsg
+    # Permission to continue, and the stop request.  1 while the work is assigned;
+    # cleared at the turn boundary that ends the incarnation.  A 0 read inside a
+    # turn is a stop request, never the Message's own completion (model 31).  One
+    # designated cross-lane writer: the parent stopping a child, or the lane that
+    # takes the turn.
+    LmxFlag: running
+    # Set only by the actual completion of the whole assigned work.  A heartbeat,
+    # an empty inbox, the absence of a physical thread or the end of a single turn
+    # must not set it (model 31).
+    LmxFlag: success
+    # The handoff-safe mark: this Message's storage may be transferred without a
+    # copy.  Read together with the absence of native users (model 32).
+    #
+    # A flag, not an int, and read with the same discipline as `running`: the
+    # decision "not running and handoff-safe" reads the two in ONE predicate, and
+    # it is read from the settling side, so a plain field read would let the
+    # compiler keep the load in a register across the loop that waits for it.  The
+    # house spelling for that is a load helper over this type -- the way lmx.h's
+    # poll hook already reads `running` with __atomic_load_n(p, __ATOMIC_RELAXED) --
+    # never a bare `volatile` qualifier: spec 19.29.7.1 sanctions a relaxed atomic
+    # load ONLY where it compiles to the same instructions as an ordinary volatile
+    # load/store, and forbids paying a fence, a read-modify-write or a helper call
+    # beyond that.
+    LmxFlag: handoff_ready
+    # The Message's own graph root: the C projection of the language root.
+    @: Lmx graph
+    # This Message's index at its parent -- the whole of what the hierarchical
+    # address adds at this level; the full address is composed by walking the
+    # parent links, so no array is stored.  The root's index is 1.
+    unsigned: index
+end: LmxMsg

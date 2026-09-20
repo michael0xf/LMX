@@ -1,0 +1,317 @@
+predef: "l2src/lmx_gc.lm1"
+predef: "l2src/lmx_turn.lm1"
+predef: "l2src/lmx_child.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_manager.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# The end-turn collection (spec 19.29.4 and 19.29.4.1, model 24; the gaps note's item 4).  What
+# this file pins:
+#
+#   * the ACCEPTANCE CASE of 19.29.4: a handoff-safe incoming graph is transferred into B and
+#     retained by NOTHING, so at B's end-turn boundary its storage is released exactly once and
+#     its range/index entries are removed -- the child's record and its graph no longer classify
+#     in B's arena at all;
+#   * a further pass does NOT free it twice: the second pass moves no entry of the index;
+#   * the paired RETAINED case keeps the graph and its addresses alive: a transferred child
+#     published into B's live graph survives every pass;
+#   * "arena membership is not liveness": the Message's own cells, its live graph (with the
+#     interned character and the mutable cell it reaches) and the mailbox's own queue nodes all
+#     stay, because something reachable points at them;
+#   * an incomplete mark sweeps NOTHING: a chain deeper than the tracer's bound answers
+#     LMX_GC_PARTIAL and the index loses no entry (model 24: a partial sweep is not success).
+
+sub: gc_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: gc_check
+
+# The disposal this file can SEE.  19.29.4 asks for "tracked deallocation ... exactly once at
+# that boundary", and a collection that detached a block without freeing its storage would look
+# identical to a correct one from the index alone -- so the block below is pushed by hand with
+# this disposer, and the counter is the evidence.
+size_t: gc_disposed 0U
+
+fn: gc_dispose (@: void base; size_t: n) void
+    gc_disposed: gc_disposed + 1U
+    if: base != 0
+        free(base)
+    ---
+
+# A finished incoming Message: built bare in its OWN arena (so nothing publishes it), made
+# handoff-safe by leaving its last turn, and handed over -- after which its storage answers in
+# the receiving arena and belongs to it.  Whether anything RETAINS it is the caller's business.
+fn: gc_incoming (@: LmxArena arena; @: LmxArena other; @: Lmx parent; size_t: slot; @: Lmx source; @: LmxPost mail; @: LmxSchedule sched) @: LmxMsg
+    @: LmxMsg child
+    @: LmxThread t
+    child: lmx_child_create(arena, other, parent, slot, source)
+    if: child = 0
+        return: 0
+    ---
+    t: (cast: (@: LmxThread) lmx_arena_take(other, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    if: t = 0 || lmx_thread_attach(t, child, mail, sched) != c.LMX_THREAD_OK
+        return: 0
+    ---
+    child\running: 0
+    lmx_thread_enter(t)
+    lmx_thread_leave(t)
+    if: child\handoff_ready = 0
+        return: 0
+    ---
+    if: lmx_child_handoff(arena, other, child) != 0
+        return: 0
+    ---
+return: child
+
+# One level of the deep chain: a lexical-root Structure with one slot, holding the next level.
+fn: gc_link (@: LmxArena arena; @: Lmx next) @: Lmx
+    @: Lmx level
+    level: lmx_node_new_owned(arena)
+    if: level = 0
+        return: 0
+    ---
+    if: lmx_arena_refs_open_owned(arena, level, 1U) != 0
+        return: 0
+    ---
+    lmx_arena_ref_store(level, 0U, (cast: (@: void) next))
+return: level
+
+# How many blocks the arena owns: the count that a pass may only ever LOWER, and only by the
+# blocks it reached and found dead.  It is read here rather than in the collector because a
+# collection that frees the wrong thing is exactly what a boundary must not do silently.
+fn: gc_blocks (@: LmxArena arena) size_t
+    @: LmxArenaBlock node
+    size_t: total
+    total: 0U
+    node: arena\blocks
+    while: node != 0
+        total: total + 1U
+        node: node\next
+    ---
+return: total
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxArena: arena
+    LmxArena: incoming
+    LmxArena: kept
+    @: LmxArena arena_at
+    @: LmxArena incoming_at
+    LmxPost: mail
+    @: LmxSchedule slot 0
+    LmxManager: manager
+    @: LmxThread thread 0
+    @: LmxMsg message 0
+    @: LmxMsg child 0
+    @: LmxMsg retained 0
+    @: LmxMsg letter 0
+    @: Lmx graph 0
+    @: Lmx template 0
+    @: Lmx first_root 0
+    @: Lmx deep 0
+    @: void incoming_record 0
+    @: void incoming_graph 0
+    @: void retained_record 0
+    @: void taken 0
+    @: LmxArenaBlock counted_block 0
+    @: void counted_base 0
+    @: char table 0
+    @: void int_cell 0
+    size_t: entries 0U
+    size_t: blocks 0U
+    int: level 0
+    int: answer 0
+    int: failures
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ incoming)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ kept)), 0, c.sizeof(c.LmxArena))
+    arena_at: @ arena
+    incoming_at: @ incoming
+    if: lmx_arena_open(@ arena) != 0 || lmx_arena_open(@ incoming) != 0 || lmx_arena_open(@ kept) != 0
+        fputs("lmx_gc: an arena did not open\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+
+    # B's world: its own Message, the object that holds its turns, the mailbox, the record of
+    # the schedule -- and a live graph with four slots (a template, a retained child, the head
+    # of a deep chain, and one left spare).
+    message: (cast: (@: LmxMsg) lmx_arena_take(@ arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    thread: (cast: (@: LmxThread) lmx_arena_take(@ arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    slot: (cast: (@: LmxSchedule) lmx_arena_take(@ arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    graph: lmx_node_new_owned(@ arena)
+    template: lmx_node_new_owned(@ arena)
+    table: lmx_chars_new_owned(@ arena)
+    int_cell: lmx_int_new_owned(@ arena)
+    if: message = 0 || thread = 0 || slot = 0 || graph = 0 || template = 0 || table = 0 || int_cell = 0
+        fputs("lmx_gc: B was not built\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    lmx_int_store_known(int_cell, 4242)
+    if: lmx_arena_refs_open_owned(@ arena, graph, 4U) != 0 || lmx_arena_refs_open_owned(@ arena, template, 2U) != 0
+        fputs("lmx_gc: the structures did not open their slots\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(graph, 0U, (cast: (@: void) template))
+    lmx_arena_ref_store(template, 0U, lmx_char_cell_known(table, 33))
+    lmx_arena_ref_store(template, 1U, int_cell)
+    message\running: 1
+    message\success: 0
+    message\handoff_ready: 0
+    message\graph: graph
+    message\index: 1U
+    if: lmx_post_init(@ arena, @ mail) != c.LMX_POST_OK
+        fputs("lmx_gc: the mailbox did not initialize\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    if: lmx_thread_attach(thread, message, @ mail, slot) != c.LMX_THREAD_OK
+        fputs("lmx_gc: B's object did not attach\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    gc_check(counts, lmx_schedule_init(slot, @ arena, (cast: (@: void) thread), 8U) = c.LMX_SCHEDULE_OK, "the scheduler record did not initialize")
+    gc_check(counts, lmx_manager_init(@ manager) = c.LMX_MANAGER_OK, "the scheduler did not initialize")
+    gc_check(counts, lmx_manager_add(@ manager, slot) = c.LMX_MANAGER_OK, "the schedule refused B's own record")
+    gc_check(counts, slot\arena = arena_at, "the record does not carry the band it was created in")
+
+    # THE ACCEPTANCE CASE, part one: an incoming Message whose storage is B's after the handoff
+    # and which NOTHING retains -- not one slot, not one queue.
+    child: gc_incoming(@ arena, @ incoming, graph, 0U, template, @ mail, slot)
+    gc_check(counts, child != 0, "the incoming child was not built and handed over")
+    if: child = 0
+        free(counts)
+        return: 2
+    ---
+    incoming_record: (cast: (@: void) child)
+    incoming_graph: (cast: (@: void) child\graph)
+    gc_check(counts, incoming_at\count = 0U, "the incoming arena kept entries after the handoff")
+    gc_check(counts, lmx_range_classify(@ arena, incoming_record) = c.LMX_DOMAIN_KIND_MSG_RECORD, "the transferred record does not answer in B's arena")
+
+    # A letter waiting in B's own mailbox: those queue nodes are storage of B's arena, and a
+    # collection must not free the mail of a live mailbox.
+    letter: (cast: (@: LmxMsg) lmx_arena_take(@ arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    gc_check(counts, letter != 0 && lmx_post_accept(@ arena, @ mail, (cast: (@: void) letter), c.LMX_POST_INBOX) = c.LMX_POST_OK, "the mailbox did not accept a letter")
+
+    # The counted block: storage the arena owns (its own block of the list) that nothing in
+    # B reaches, so the boundary must release it -- and the disposable counter proves it did,
+    # exactly once.
+    counted_block: (cast: (@: LmxArenaBlock) calloc(1U, c.sizeof(c.LmxArenaBlock)))
+    counted_base: calloc(1U, 64U)
+    if: counted_block = 0 || counted_base = 0
+        fputs("lmx_gc: the counted block was not built\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    counted_block\base: counted_base
+    counted_block\n: 64U
+    counted_block\class: 0
+    counted_block\dispose: gc_dispose
+    counted_block\next: 0
+    gc_disposed: 0U
+    gc_check(counts, lmx_arena_blocks_push(@ arena_at\blocks, counted_block) = c.LMX_ARENA_BLOCKS_OK, "the counted block did not join the arena")
+
+    # THE ACCEPTANCE CASE, part two: at B's boundary the unrooted graph goes -- exactly once,
+    # with its range and index entries removed -- and everything B still reaches stays.
+    entries: arena_at\count
+    blocks: gc_blocks(arena_at)
+    gc_check(counts, lmx_gc_collect(@ arena, thread) = c.LMX_GC_OK, "the collection did not run")
+    gc_check(counts, lmx_range_classify(@ arena, incoming_record) = c.LMX_KIND_NONE, "the unrooted transferred record survived the boundary")
+    gc_check(counts, lmx_range_classify(@ arena, incoming_graph) = c.LMX_KIND_NONE, "the unrooted transferred graph survived the boundary")
+    gc_check(counts, arena_at\count < entries, "the collection retired no entry")
+    gc_check(counts, lmx_range_classify(@ arena, (cast: (@: void) message)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "the collection freed B's own record")
+    gc_check(counts, lmx_range_classify(@ arena, (cast: (@: void) thread)) = c.LMX_DOMAIN_KIND_THREAD, "the collection freed B's own object")
+    gc_check(counts, message\graph = graph, "the collection moved B's graph root")
+    gc_check(counts, lmx_arena_ref_value(graph, 0U) = (cast: (@: void) template), "the collection freed the live template")
+    gc_check(counts, lmx_arena_ref_value(template, 0U) = lmx_char_cell_known(table, 33), "the collection freed the interned character the live graph reaches")
+    gc_check(counts, lmx_arena_ref_value(template, 1U) = int_cell, "the collection freed the live mutable cell")
+    gc_check(counts, lmx_int_value_known(int_cell) = 4242, "the live mutable cell lost its value")
+    gc_check(counts, gc_blocks(arena_at) < blocks, "the collection freed no block at all")
+    gc_check(counts, gc_disposed = 1U, "the boundary did not dispose the block it dropped")
+    taken: lmx_post_take(@ mail, c.LMX_POST_INBOX)
+    gc_check(counts, taken = (cast: (@: void) letter), "the collection freed the mail of a live mailbox")
+    # The letter goes back into the mailbox: a value held only in a C frame is NOT a root (the
+    # model's roots are the Message's own cells and explicit handles), so the next pass would
+    # free it -- which is the rule working, and worth pinning rather than avoiding.
+    gc_check(counts, lmx_post_accept(@ arena, @ mail, (cast: (@: void) letter), c.LMX_POST_INBOX) = c.LMX_POST_OK, "the letter did not return to the mailbox")
+
+    # A further boundary must not free it twice: the second pass reaches everything the first
+    # one did and finds nothing more to release, so neither the index nor the block list moves.
+    entries: arena_at\count
+    blocks: gc_blocks(arena_at)
+    gc_check(counts, lmx_gc_collect(@ arena, thread) = c.LMX_GC_OK, "the second collection did not run")
+    gc_check(counts, arena_at\count = entries, "the second collection moved entries")
+    gc_check(counts, gc_blocks(arena_at) = blocks, "the second collection freed a block")
+    gc_check(counts, gc_disposed = 1U, "the second collection disposed the block a second time")
+    gc_check(counts, lmx_range_classify(@ arena, incoming_record) = c.LMX_KIND_NONE, "the second collection resurrected the freed record")
+
+    # The paired RETAINED case: a second transferred child, this time published into B's live
+    # graph, keeps every address it had across the boundary.
+    retained: gc_incoming(@ arena, @ kept, graph, 1U, template, @ mail, slot)
+    gc_check(counts, retained != 0, "the retained child was not built and handed over")
+    retained_record: (cast: (@: void) retained)
+    lmx_arena_ref_store(graph, 1U, retained_record)
+    gc_check(counts, lmx_gc_collect(@ arena, thread) = c.LMX_GC_OK, "the collection with a retained root did not run")
+    gc_check(counts, lmx_range_classify(@ arena, retained_record) = c.LMX_DOMAIN_KIND_MSG_RECORD, "the retained child's record was freed")
+    gc_check(counts, lmx_arena_ref_value(graph, 1U) = retained_record, "the retained child left its slot")
+    gc_check(counts, lmx_arena_ref_value(retained\graph, 1U) != 0, "the retained child's graph was emptied")
+
+    # An incomplete mark sweeps nothing: a chain deeper than the tracer's bound answers
+    # LMX_GC_PARTIAL, and the index loses no entry because of it.
+    deep: 0
+    level: 0
+    while: level < 70
+        deep: gc_link(@ arena, deep)
+        if: deep = 0
+            fputs("lmx_gc: the deep chain was not built\n", l1_stdout())
+            free(counts)
+            return: 2
+        ---
+        level: level + 1
+    ---
+    first_root: deep
+    lmx_arena_ref_store(graph, 2U, (cast: (@: void) first_root))
+    entries: arena_at\count
+    blocks: gc_blocks(arena_at)
+    gc_check(counts, lmx_gc_collect(@ arena, thread) = c.LMX_GC_PARTIAL, "a chain deeper than the tracer's bound was not refused")
+    gc_check(counts, arena_at\count = entries, "an incomplete mark retired an index entry")
+    gc_check(counts, gc_blocks(arena_at) = blocks, "an incomplete mark freed a block")
+    gc_check(counts, lmx_range_classify(@ arena, (cast: (@: void) first_root)) = c.LMX_KIND_STRUCT, "the chain's head did not survive the refused pass")
+    gc_check(counts, lmx_range_classify(@ arena, retained_record) = c.LMX_DOMAIN_KIND_MSG_RECORD, "the refused pass disturbed a live root")
+
+    answer: 0
+    if: lmx_arena_release(@ kept) != 0
+        answer: 1
+    ---
+    if: lmx_arena_release(@ incoming) != 0
+        answer: 1
+    ---
+    if: lmx_arena_release(@ arena) != 0
+        answer: 1
+    ---
+    gc_check(counts, answer = 0 && arena_at\count = 0U, "the arenas did not release")
+    failures: counts[1]
+    c.printf("lmx_gc checks=%d failures=%d\n", counts[0], failures)
+    free(counts)
+return: failures

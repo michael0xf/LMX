@@ -1,0 +1,314 @@
+predef: "l2src/lmx_root.lm1"
+predef: "l2src/lmx_settle.lm1"
+predef: "l2src/lmx_service.lm1"
+predef: "l2src/lmx_turn.lm1"
+predef: "l2src/lmx_child.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_manager.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_gc.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_call.lm1"
+predef: "l2src/lmx_clock.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# lmx_app_silent_parent_selftest.lm1 -- ticket 20260919-142000
+# PRIORITY handshake path after 7d924ae (now is GIVEN arithmetic):
+#   parent silent -> child self-closes on stale mark -> util via lmx_root_cycle.
+# ONE own time scale everywhere (1000U / 1000U+limit). Never mix lmx_clock_ticks
+# into the handshake readings (lesson from broken thread_turn scale mix).
+# Parent stays silent: only lmx_manager_round between turns — NO lmx_root_cycle
+# (else R0 would answer the handshake). lmx_stop_children is never called.
+#
+# Graph (source refs = 2): 0 method | 1 turns (size_t cell)
+
+@: LmxRoot sp_root 0
+@: LmxArena sp_child_arena 0
+@: Lmx sp_source 0
+@: LmxMsg sp_child_msg 0
+@: LmxThread sp_child_t 0
+@: LmxSchedule sp_child_sched 0
+size_t: sp_phase 0U
+size_t: sp_entry_diag 0U
+ulong: sp_limit 100U
+ulong: sp_reading 1000U
+
+fn: sp_child_body (@: Lmx node) int
+    @: LmxThread t
+    @: Lmx graph
+    @: void turns_cell
+    size_t: turns
+    t: lmx_thread_current()
+    if: t = 0 || t\message = 0 || t\message\graph = 0
+        return: 0
+    ---
+    graph: t\message\graph
+    turns_cell: lmx_arena_ref_value(graph, 1U)
+    if: turns_cell = 0
+        return: 0
+    ---
+    turns: lmx_size_value_known(turns_cell) + 1U
+    lmx_size_store_known(turns_cell, turns)
+return: 0
+
+fn: sp_root_entry (@: Lmx node) int
+    @: LmxMsg child
+    @: LmxThread child_t
+    @: LmxPost child_mail
+    @: LmxSchedule child_sched
+    @: LmxMethod method
+    @: LmxPool methods
+    @: Lmx graph
+    @: void turns_cell
+    if: sp_phase != 0U || sp_root = 0 || sp_child_arena = 0 || sp_source = 0
+        sp_entry_diag: 1U
+        return: 0
+    ---
+    child: lmx_root_create(sp_root, sp_child_arena, 0U, sp_source)
+    if: child = 0
+        sp_entry_diag: 2U
+        return: 0
+    ---
+    sp_child_msg: child
+    methods: lmx_pool_make(sp_child_arena, 2U * c.sizeof(c.LmxMethod), c.sizeof(c.LmxMethod),
+                           c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD)
+    if: methods = 0
+        sp_entry_diag: 3U
+        return: 0
+    ---
+    method: lmx_method_intern(sp_child_arena, methods, (cast: (LmxEntry) sp_child_body), 1U)
+    graph: child\graph
+    if: method = 0 || graph = 0
+        sp_entry_diag: 4U
+        return: 0
+    ---
+    lmx_arena_ref_store(graph, 0U, (cast: (@: void) method))
+    turns_cell: lmx_size_new_owned(sp_child_arena)
+    if: turns_cell = 0
+        sp_entry_diag: 5U
+        return: 0
+    ---
+    if: lmx_arena_ref_store(graph, 1U, turns_cell) != 0
+        sp_entry_diag: 6U
+        return: 0
+    ---
+    child_mail: (cast: (@: LmxPost) lmx_arena_take(sp_child_arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    child_t: (cast: (@: LmxThread) lmx_arena_take(sp_child_arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    child_sched: (cast: (@: LmxSchedule) lmx_arena_take(sp_child_arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: child_mail = 0 || child_t = 0 || child_sched = 0
+        sp_entry_diag: 7U
+        return: 0
+    ---
+    if: lmx_post_init(sp_child_arena, child_mail) != c.LMX_POST_OK
+        sp_entry_diag: 8U
+        return: 0
+    ---
+    # Small schedule limit = silence deadline for the handshake stamp.
+    if: lmx_schedule_init(child_sched, sp_child_arena, (cast: (@: void) child_t), sp_limit) != c.LMX_SCHEDULE_OK
+        sp_entry_diag: 9U
+        return: 0
+    ---
+    if: lmx_thread_attach(child_t, child, child_mail, child_sched) != c.LMX_THREAD_OK
+        sp_entry_diag: 10U
+        return: 0
+    ---
+    if: lmx_child_thread(lmx_root_thread(sp_root), child, child_t) != c.LMX_CHILD_OK
+        sp_entry_diag: 11U
+        return: 0
+    ---
+    sp_child_t: child_t
+    sp_child_sched: child_sched
+    sp_phase: 1U
+    sp_entry_diag: 12U
+return: 0
+
+sub: sp_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+    c.fflush(0)
+end: sp_check
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    int: failures
+    LmxRoot: root
+    LmxArena: child_arena
+    @: LmxArena child_at 0
+    @: LmxArena root_arena 0
+    @: LmxMsg message 0
+    @: LmxThread r0 0
+    @: Lmx graph 0
+    @: Lmx source 0
+    @: LmxMsg child_msg 0
+    @: LmxThread child_t 0
+    @: LmxService service 0
+    @: LmxManager manager 0
+    @: Lmx child_graph 0
+    @: void turns_cell 0
+    size_t: mark_after_t1 0U
+    size_t: turns_after_t1 0U
+    size_t: turns_after_t2 0U
+    size_t: turns_after_refuse 0U
+    size_t: svc_before 0U
+    size_t: mgr_before 0U
+    size_t: svc_after 0U
+    size_t: mgr_after 0U
+    size_t: child_count_before 0U
+    size_t: handoff_after_t2 0U
+    size_t: entry_diag_wire 0U
+    ulong: now1 0U
+    ulong: now2 0U
+    if: counts = 0
+        return: 2
+    ---
+    memset((cast: (@: void) (@ root)), 0, c.sizeof(c.LmxRoot))
+    memset((cast: (@: void) (@ child_arena)), 0, c.sizeof(c.LmxArena))
+    sp_root: @ root
+    child_at: @ child_arena
+    sp_phase: 0U
+    sp_child_msg: 0
+    sp_child_t: 0
+    sp_child_sched: 0
+    sp_entry_diag: 0U
+    sp_limit: 100U
+    sp_reading: 1000U
+    now1: sp_reading
+    now2: sp_reading + sp_limit
+    sp_check(counts, lmx_root_open(@ root, sp_root_entry, 120000U, 0U, 0U) = c.LMX_ROOT_OK, "R0 did not open")
+    message: lmx_root_message(@ root)
+    r0: lmx_root_thread(@ root)
+    root_arena: lmx_root_arena(@ root)
+    graph: message\graph
+    service: lmx_root_service(@ root)
+    manager: lmx_root_manager(@ root)
+    sp_check(counts, message != 0 && r0 != 0 && root_arena != 0 && service != 0 && manager != 0, "R0 missing pieces")
+    if: message = 0 || r0 = 0
+        failures: counts[1]
+        c.printf("lmx_app_silent_parent checks=%d failures=%d entry_diag=%u (abort)\n",
+                 counts[0], failures, (cast: (unsigned) sp_entry_diag))
+        c.fflush(0)
+        free(counts)
+        return: failures
+    ---
+    source: lmx_node_new_owned(root_arena)
+    sp_check(counts, source != 0 && lmx_arena_refs_open_owned(root_arena, source, 2U) = 0, "template not built")
+    if: source = 0
+        failures: counts[1]
+        c.printf("lmx_app_silent_parent checks=%d failures=%d entry_diag=%u (abort templates)\n",
+                 counts[0], failures, (cast: (unsigned) sp_entry_diag))
+        c.fflush(0)
+        free(counts)
+        return: failures
+    ---
+    lmx_arena_ref_store(graph, 3U, (cast: (@: void) source))
+    sp_source: source
+    sp_check(counts, lmx_arena_open(@ child_arena) = 0, "child arena did not open")
+    sp_child_arena: @ child_arena
+    sp_check(counts, lmx_root_cycle(@ root, 4U) = c.LMX_ROOT_OK, "create cycle did not run")
+    sp_check(counts, sp_phase = 1U && sp_child_msg != 0 && sp_child_t != 0, "child was not wired")
+    if: sp_child_msg = 0 || sp_child_t = 0
+        failures: counts[1]
+        c.printf("lmx_app_silent_parent checks=%d failures=%d entry_diag=%u (abort wire)\n",
+                 counts[0], failures, (cast: (unsigned) sp_entry_diag))
+        c.fflush(0)
+        free(counts)
+        return: failures
+    ---
+    child_msg: sp_child_msg
+    child_t: sp_child_t
+    child_graph: child_msg\graph
+    sp_check(counts, lmx_arena_ref_value(graph, 0U) = (cast: (@: void) child_msg), "child not published")
+    sp_check(counts, lmx_range_classify(@ child_arena, (cast: (@: void) child_msg)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "child not in own arena")
+    sp_check(counts, lmx_thread_child_is(r0, child_t) != 0, "child not live after publish")
+    # Wait/start on the SAME own scale as the handshake readings (not platform ticks).
+    sp_check(counts, lmx_schedule_wait(sp_child_sched, now1) = c.LMX_SCHEDULE_OK, "schedule wait failed")
+    sp_check(counts, lmx_manager_add(manager, sp_child_sched) = c.LMX_MANAGER_OK, "child not in manager")
+    sp_check(counts, lmx_service_find(service, (cast: (@: void) child_t)) = (cast: (@: void) child_t), "child not in service")
+    sp_check(counts, child_graph != 0, "child graph missing")
+    turns_cell: lmx_arena_ref_value(child_graph, 1U)
+    sp_check(counts, turns_cell != 0, "turns cell not rooted")
+    sp_check(counts, c.__atomic_load_n(lmx_thread_alive_cell(child_t), c.__ATOMIC_RELAXED) = 0U, "alive starts at 0")
+    sp_check(counts, child_msg\running = 1 && child_msg\handoff_ready = 0, "child not live-running before turn1")
+
+    # --- Turn1: stamp alive = now1; parent will stay silent ---
+    sp_check(counts, lmx_manager_round(manager, 1U, now1) = c.LMX_MANAGER_OK, "turn1 manager round did not run")
+    mark_after_t1: c.__atomic_load_n(lmx_thread_alive_cell(child_t), c.__ATOMIC_RELAXED)
+    turns_after_t1: lmx_size_value_known(lmx_arena_ref_value(child_graph, 1U))
+    sp_check(counts, mark_after_t1 != 0U, "turn1 did not stamp alive")
+    sp_check(counts, mark_after_t1 = (cast: (size_t) now1), "turn1 stamp != own-scale reading")
+    sp_check(counts, turns_after_t1 = 1U, "body turn count after turn1 != 1")
+    sp_check(counts, child_msg\running = 1 && child_msg\handoff_ready = 0, "child self-closed on fresh stamp")
+    sp_check(counts, lmx_manager_count(manager) = 1U, "child left manager after fresh turn1")
+    sp_check(counts, lmx_thread_child_is(r0, child_t) != 0, "child not live after turn1")
+
+    # --- Parent silent: NO lmx_root_cycle, NO lmx_stop_children ---
+    # Turn2: now2 = now1 + limit -> mark stale -> child closes ITSELF (priority path).
+    sp_check(counts, lmx_manager_round(manager, 1U, now2) = c.LMX_MANAGER_OK, "turn2 manager round did not run")
+    turns_after_t2: lmx_size_value_known(lmx_arena_ref_value(child_graph, 1U))
+    sp_check(counts, turns_after_t2 = 2U, "body turn count after turn2 != 2")
+    sp_check(counts, child_msg\running = 0, "stale turn2 did not self-close running")
+    sp_check(counts, child_msg\handoff_ready != 0, "stale turn2 did not set handoff_ready")
+    sp_check(counts, child_msg\success = 0, "self-close must not set success")
+    sp_check(counts, lmx_settle_ready(child_msg) != 0, "self-closed child not settle_ready")
+    # Still live under R0 until util; stop_children was never called (self-close only).
+    sp_check(counts, lmx_thread_child_is(r0, child_t) != 0, "child not live before util (unexpected unlink)")
+    sp_check(counts, lmx_service_find(service, (cast: (@: void) child_t)) = (cast: (@: void) child_t), "child left service before util")
+
+    # A further round must not run the body (STOPPED).
+    sp_check(counts, lmx_manager_round(manager, 1U, now2 + sp_limit) = c.LMX_MANAGER_OK, "post-close manager round refused")
+    turns_after_refuse: lmx_size_value_known(lmx_arena_ref_value(child_graph, 1U))
+    sp_check(counts, turns_after_refuse = 2U, "body ran again after self-close")
+
+    child_count_before: child_at\count
+    handoff_after_t2: (cast: (size_t) child_msg\handoff_ready)
+    entry_diag_wire: sp_entry_diag
+    svc_before: lmx_service_count(service)
+    mgr_before: lmx_manager_count(manager)
+    sp_check(counts, svc_before = 2U, "service not R0+child before util")
+    sp_check(counts, child_count_before > 0U, "child arena empty before util")
+    sp_check(counts, handoff_after_t2 != 0U, "handoff snap lost")
+
+    # --- Util: root_cycle settles the self-closed child (FAILURE path: retain root, handoff arena) ---
+    sp_check(counts, lmx_root_cycle(@ root, 1U) = c.LMX_ROOT_OK, "util cycle did not run")
+    sp_check(counts, lmx_thread_child_is(r0, child_t) = 0, "child stayed live after util")
+    # FAILURE settle retains the failure root in the slot (see min_selftest fail path).
+    sp_check(counts, lmx_arena_ref_value(graph, 0U) = (cast: (@: void) child_msg), "failure root not retained in slot")
+    sp_check(counts, child_at\count = 0U, "child arena not emptied by handoff")
+    svc_after: lmx_service_count(service)
+    mgr_after: lmx_manager_count(manager)
+    sp_check(counts, svc_after = 1U, "service should hold only R0 after util")
+    sp_check(counts, mgr_after = 0U, "manager not empty after util")
+    sp_check(counts, lmx_service_find(service, (cast: (@: void) child_t)) = 0, "child still in service after util")
+
+    sp_check(counts, lmx_root_close(@ root) = c.LMX_ROOT_OK, "R0 did not close")
+    sp_check(counts, lmx_root_state(@ root) = c.LMX_ROOT_CLOSED, "closed root not closed")
+
+    failures: counts[1]
+    c.printf("lmx_app_silent_parent checks=%d failures=%d mark_t1=%u turns=%u/%u/%u handoff=%u svc %u->%u mgr %u->%u count_before=%u slot_retained=1 entry_diag_wire=%u limit=%u now1=%u now2=%u\n",
+             counts[0], failures,
+             (cast: (unsigned) mark_after_t1),
+             (cast: (unsigned) turns_after_t1), (cast: (unsigned) turns_after_t2), (cast: (unsigned) turns_after_refuse),
+             (cast: (unsigned) handoff_after_t2),
+             (cast: (unsigned) svc_before), (cast: (unsigned) svc_after),
+             (cast: (unsigned) mgr_before), (cast: (unsigned) mgr_after),
+             (cast: (unsigned) child_count_before),
+             (cast: (unsigned) entry_diag_wire),
+             (cast: (unsigned) sp_limit), (cast: (unsigned) now1), (cast: (unsigned) now2))
+    c.fflush(0)
+    free(counts)
+return: failures

@@ -1,0 +1,255 @@
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# RuntimeImplements(varA, varB, Consumer) -- the second predicate of spec 2.1.  What this file
+# pins:
+#
+#   * the Consumer IS the used tree: its shape gives the used paths (names are absent at runtime),
+#     and a child it leaves UNSET is not a used path -- "An empty `uses` is true: there is nothing
+#     to use";
+#   * every used path must be PRESENT on both operands, its leaf ADMITTED (one domain kind and one
+#     type on all three), and a callable on a used path must carry the SAME signature on all three;
+#   * a callable is an ordinary Structure, so this falls out of the walk: its physical child[0] is
+#     the METHOD, and that is where the signatures are compared;
+#   * anything the walk cannot inspect is UNKNOWN -- never YES: "Unavailable information is not
+#     invented and is not certified by success" (2.5.1).  A known mismatch is NO.
+
+sub: ri_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: ri_check
+
+# A lexical-root Structure with `slots` children, in this arena.
+fn: ri_struct (@: LmxArena arena; size_t: slots) @: Lmx
+    @: Lmx structure
+    structure: lmx_node_new_owned(arena)
+    if: structure = 0
+        return: 0
+    ---
+    if: lmx_arena_refs_open_owned(arena, structure, slots) != 0
+        return: 0
+    ---
+return: structure
+
+# The entry `lmx_method_intern` needs: it refuses a zero addr, and this file never calls it.
+fn: ri_entry (@: Lmx node) int
+    if: node = 0
+        return: 0
+    ---
+return: 0
+
+# A callable occurrence with `sig`: an ordinary Structure whose physical child[0] is a METHOD.
+fn: ri_callable (@: LmxArena arena; @: LmxPool methods; unsigned: sig) @: Lmx
+    @: LmxMethod method
+    @: Lmx callable
+    method: lmx_method_intern(arena, methods, (cast: (LmxEntry) ri_entry), sig)
+    if: method = 0
+        return: 0
+    ---
+    callable: ri_struct(arena, 1U)
+    if: callable = 0
+        return: 0
+    ---
+    lmx_arena_ref_store(callable, 0U, (cast: (@: void) method))
+return: callable
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxArena: arena
+    LmxPool: methods
+    @: LmxArena arena_at 0
+    @: Lmx int_cell 0
+    @: Lmx char_cell 0
+    @: Lmx char_cell_b 0
+    @: Lmx metro 0
+    @: Lmx metro_ok 0
+    @: Lmx metro_wrong_leaf 0
+    @: Lmx metro_missing 0
+    @: Lmx consumer 0
+    @: Lmx consumer_spare 0
+    @: Lmx consumer_empty 0
+    @: Lmx consumer_call 0
+    @: Lmx consumer_other 0
+    @: Lmx provider_a 0
+    @: Lmx provider_b 0
+    @: Lmx provider_c 0
+    @: Lmx call_a 0
+    @: Lmx call_b 0
+    @: Lmx call_c 0
+    @: Lmx nested_a 0
+    @: Lmx nested_b 0
+    @: Lmx nested_c 0
+    @: Lmx raw 0
+    @: Lmx deep 0
+    @: Lmx walk 0
+    @: char table 0
+    int: level 0
+    int: raw_value 7
+    int: failures
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ methods)), 0, c.sizeof(c.LmxPool))
+    if: lmx_arena_open(@ arena) != 0
+        fputs("lmx_runtime_implements: the arena did not open\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    arena_at: @ arena
+    if: lmx_pool_open(@ arena, @ methods, c.sizeof(c.LmxMethod), 4U, c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD) != 0
+        fputs("lmx_runtime_implements: the method pool did not open\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    table: lmx_chars_new_owned(@ arena)
+    int_cell: lmx_int_new_owned(@ arena)
+    char_cell: lmx_char_cell_known(table, 33)
+    raw: (cast: (@: Lmx) (@ raw_value))
+    if: table = 0 || int_cell = 0 || char_cell = 0
+        free(counts)
+        return: 2
+    ---
+
+    # The used tree the Consumer is: two used paths -- the leaf at [0] (an int, the "meter") and
+    # the nested path at [1], whose own child [0] is a char leaf.
+    consumer: ri_struct(@ arena, 2U)
+    nested_c: ri_struct(@ arena, 1U)
+    if: consumer = 0 || nested_c = 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(consumer, 0U, int_cell)
+    lmx_arena_ref_store(consumer, 1U, (cast: (@: void) nested_c))
+    lmx_arena_ref_store(nested_c, 0U, char_cell)
+
+    # A var that provides the used tree ...
+    metro_ok: ri_struct(@ arena, 2U)
+    nested_a: ri_struct(@ arena, 1U)
+    if: metro_ok = 0 || nested_a = 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(metro_ok, 0U, int_cell)
+    lmx_arena_ref_store(metro_ok, 1U, (cast: (@: void) nested_a))
+    lmx_arena_ref_store(nested_a, 0U, char_cell)
+    # ... and a second var that provides it too (the predicate compares SHAPES, not values).
+    metro: ri_struct(@ arena, 2U)
+    nested_b: ri_struct(@ arena, 1U)
+    char_cell_b: lmx_char_cell_known(table, 34)
+    if: metro = 0 || nested_b = 0 || char_cell_b = 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(metro, 0U, int_cell)
+    lmx_arena_ref_store(metro, 1U, (cast: (@: void) nested_b))
+    lmx_arena_ref_store(nested_b, 0U, char_cell_b)
+
+    ri_check(counts, lmx_runtime_implements(arena_at, metro_ok, metro, consumer) = c.LMX_IMPLEMENTS_YES, "a var that provides the used tree was refused")
+    ri_check(counts, lmx_runtime_implements(arena_at, metro, metro_ok, consumer) = c.LMX_IMPLEMENTS_YES, "the predicate is not symmetric over two providers")
+
+    # The leaf of the wrong domain: same SHAPE, a char where the used path names an int.
+    metro_wrong_leaf: ri_struct(@ arena, 2U)
+    nested_a: ri_struct(@ arena, 1U)
+    if: metro_wrong_leaf = 0 || nested_a = 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(metro_wrong_leaf, 0U, char_cell)
+    lmx_arena_ref_store(metro_wrong_leaf, 1U, (cast: (@: void) nested_a))
+    lmx_arena_ref_store(nested_a, 0U, char_cell)
+    ri_check(counts, lmx_runtime_implements(arena_at, metro_wrong_leaf, metro, consumer) = c.LMX_IMPLEMENTS_NO, "a leaf of another type was admitted")
+
+    # The used path is not present on varA at all.
+    metro_missing: ri_struct(@ arena, 2U)
+    if: metro_missing = 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(metro_missing, 0U, int_cell)
+    ri_check(counts, lmx_runtime_implements(arena_at, metro_missing, metro, consumer) = c.LMX_IMPLEMENTS_NO, "a missing used path was accepted")
+
+    # A child the Consumer leaves UNSET is not a used path: the same var passes a smaller tree.
+    consumer_spare: ri_struct(@ arena, 2U)
+    if: consumer_spare = 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(consumer_spare, 0U, int_cell)
+    ri_check(counts, lmx_runtime_implements(arena_at, metro_missing, metro, consumer_spare) = c.LMX_IMPLEMENTS_YES, "an unset child of the consumer was taken for a used path")
+
+    # "An empty `uses` is true: there is nothing to use."
+    consumer_empty: ri_struct(@ arena, 2U)
+    if: consumer_empty = 0
+        free(counts)
+        return: 2
+    ---
+    ri_check(counts, lmx_runtime_implements(arena_at, metro_missing, metro_missing, consumer_empty) = c.LMX_IMPLEMENTS_YES, "an empty used tree was not satisfied")
+    ri_check(counts, lmx_runtime_implements(arena_at, metro_missing, metro_missing, 0) = c.LMX_IMPLEMENTS_YES, "no consumer at all was not satisfied")
+
+    # A callable on a used path: the Consumer's own value at that path IS the callable it invokes,
+    # and another callable is an ordinary Structure -- so the walk descends into it and compares
+    # the signatures where it arrives: at the physical child[0] of each occurrence.
+    consumer_call: ri_struct(@ arena, 1U)
+    provider_a: ri_struct(@ arena, 1U)
+    provider_b: ri_struct(@ arena, 1U)
+    provider_c: ri_struct(@ arena, 1U)
+    call_a: ri_callable(@ arena, @ methods, 4U)
+    call_b: ri_callable(@ arena, @ methods, 4U)
+    call_c: ri_callable(@ arena, @ methods, 5U)
+    if: consumer_call = 0 || provider_a = 0 || provider_b = 0 || provider_c = 0 || call_a = 0 || call_b = 0 || call_c = 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(consumer_call, 0U, (cast: (@: void) call_a))
+    lmx_arena_ref_store(provider_a, 0U, (cast: (@: void) call_a))
+    lmx_arena_ref_store(provider_b, 0U, (cast: (@: void) call_b))
+    lmx_arena_ref_store(provider_c, 0U, (cast: (@: void) call_c))
+    ri_check(counts, lmx_runtime_implements(arena_at, provider_a, provider_b, consumer_call) = c.LMX_IMPLEMENTS_YES, "two callables of one signature were refused")
+    ri_check(counts, lmx_runtime_implements(arena_at, provider_c, provider_b, consumer_call) = c.LMX_IMPLEMENTS_NO, "a callable of another signature was admitted")
+    # The expected signature is the CONSUMER's own: two providers that agree with each other are
+    # still refused when the consumer expects something else ("== ExpectedSig(Consumer, p)").
+    consumer_other: ri_struct(@ arena, 1U)
+    if: consumer_other = 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(consumer_other, 0U, (cast: (@: void) call_c))
+    ri_check(counts, lmx_runtime_implements(arena_at, provider_a, provider_b, consumer_other) = c.LMX_IMPLEMENTS_NO, "two providers were admitted against a consumer that expects another signature")
+
+    # What cannot be inspected is UNKNOWN, never YES -- and a known mismatch is still NO.
+    ri_check(counts, lmx_runtime_implements(arena_at, raw, metro, consumer) = c.LMX_IMPLEMENTS_UNKNOWN, "an address of no known domain was certified")
+    ri_check(counts, lmx_runtime_implements(arena_at, int_cell, metro, consumer) = c.LMX_IMPLEMENTS_NO, "a var that is not a Structure was admitted")
+    ri_check(counts, lmx_runtime_implements(arena_at, metro, metro, int_cell) = c.LMX_IMPLEMENTS_UNKNOWN, "a consumer that is not a used tree was certified")
+    ri_check(counts, lmx_runtime_implements(0, metro, metro, consumer) = c.LMX_IMPLEMENTS_UNKNOWN, "a walk without an arena was certified")
+
+    # A path deeper than the working bound is UNKNOWN: the walk never invents the rest.
+    deep: 0
+    level: 0
+    while: level < 40
+        deep: ri_struct(@ arena, 1U)
+        if: deep = 0 || lmx_arena_ref_store(deep, 0U, (cast: (@: void) walk)) != 0
+            fputs("lmx_runtime_implements: the deep chain was not built\n", l1_stdout())
+            free(counts)
+            return: 2
+        ---
+        walk: deep
+        level: level + 1
+    ---
+    ri_check(counts, lmx_runtime_implements(arena_at, walk, walk, walk) = c.LMX_IMPLEMENTS_UNKNOWN, "a path deeper than the working bound was certified")
+
+    failures: counts[1]
+    c.printf("lmx_runtime_implements checks=%d failures=%d\n", counts[0], failures)
+    free(counts)
+    lmx_arena_release(@ arena)
+return: failures

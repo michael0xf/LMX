@@ -1,0 +1,252 @@
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<string.h>" "<stddef.h>" "l1src/p0.lm1.h"
+
+# fmt_buf — focused harness for l2_fmt_l1_string / l2_tok_text dest+cap.  Was
+# fmt_buf.c.  L2_FOREIGN_ALLOC/RUN_LMX_TESTS shape: it links against l2trans.c with
+# main renamed to check only the writer side.  No new L2 semantics.
+#
+# The translator is not part of this tree, so the two callees stay prototypes and
+# this unit is compiled, never linked.
+#
+# Conversion notes (was C):
+#   * L1 has no `static`.  A unit's declarations get external linkage, so what the
+#     C original kept file-private carries the fmt_buf_ prefix here (the helpers and
+#     the byte tables); g_fail keeps its name, as the C file already had it at file
+#     scope.
+#   * The C original's `static const char body[]` tables lived inside main.  They are
+#     file-scope `c.array` constants here, with the extents the C left to `[]`.
+#   * `(char)255` is written -1: a cast frame is refused inside an initializer list
+#     ("unsupported initializer"), and the byte is the same.  Both tables that carry
+#     it are marked.
+#   * `LmP0Text t;` is `[]: LmP0Text t 1` below.  LmP0Text comes from the included C
+#     header, and a unit may not declare a *value* of a name only a header knows
+#     (l1trans: "unknown type name"; the `foreign:` form that teaches L1 such a name
+#     is accepted in a header unit only).  A one-element array holds exactly that
+#     object, and `@ t[0]` is its address — the C is `LmP0Text t[1]; &t[0]`.
+
+prototype:
+    fn: l2_fmt_l1_string (@: char dest; size_t: cap; const: @(char data); size_t: n) int
+    fn: l2_tok_text (const: @(LmP0Text t); @: char dest; size_t: cap) int
+end: prototype
+
+int: g_fail 0
+
+c.array: const: [2]: char fmt_buf_qbody 34 0
+c.array: const: [2]: char fmt_buf_bsbody 92 0
+c.array: const: [2]: char fmt_buf_nlbody 10 0
+c.array: const: [2]: char fmt_buf_crbody 13 0
+c.array: const: [2]: char fmt_buf_qmark 63 0
+c.array: const: [1]: char fmt_buf_nulbody 0
+# hibody: bytes 34, 255, 0 -- the C wrote (char)255, -1 is the same byte.
+c.array: const: [2]: char fmt_buf_hibody -1 0
+c.array: const: [3]: char fmt_buf_empty_out 34 34 0
+c.array: const: [4]: char fmt_buf_a_out 34 97 34 0
+c.array: const: [5]: char fmt_buf_q_out 34 92 34 34 0
+c.array: const: [5]: char fmt_buf_bs_out 34 92 92 34 0
+c.array: const: [5]: char fmt_buf_nl_out 34 92 110 34 0
+c.array: const: [5]: char fmt_buf_cr_out 34 92 114 34 0
+c.array: const: [5]: char fmt_buf_qm_out 34 92 63 34 0
+c.array: const: [7]: char fmt_buf_nul_out 34 92 48 48 48 34 0
+c.array: const: [7]: char fmt_buf_hi_out 34 92 51 55 55 34 0
+c.array: const: [4]: char fmt_buf_dq 34 120 34 0
+c.array: const: [4]: char fmt_buf_sq 39 120 39 0
+c.array: const: [9]: char fmt_buf_trip_dq 34 34 34 97 98 34 34 34 0
+c.array: const: [9]: char fmt_buf_trip_sq 39 39 39 97 98 39 39 39 0
+c.array: const: [7]: char fmt_buf_trip_empty_dq 34 34 34 34 34 34 0
+c.array: const: [7]: char fmt_buf_trip_empty_sq 39 39 39 39 39 39 0
+c.array: const: [8]: char fmt_buf_trip_nul_dq 34 34 34 0 34 34 34 0
+# trip_hi_dq: bytes 34, 34, 34, 255, 34, 34, 34, 0 -- same -1 for the C's (char)255.
+c.array: const: [8]: char fmt_buf_trip_hi_dq 34 34 34 -1 34 34 34 0
+c.array: const: [5]: char fmt_buf_ab_out 34 97 98 34 0
+
+sub: fmt_buf_fail (const: @(char msg))
+    c.fprintf(l1_stderr(), "fmt_buf fail: %s\n", msg)
+    g_fail: 1
+end: fmt_buf_fail
+
+fn: fmt_buf_oob (const: @(char arena); size_t: cap; size_t: arena_n) int
+    size_t: i cap
+    while: i < arena_n
+        if: (cast: (uchar) arena[i]) != 0xAAu
+            return: 1
+        ---
+        i: i + 1
+    ---
+    return: 0
+end: fmt_buf_oob
+
+sub: fmt_buf_expect_fmt_ok (size_t: cap; const: @(char data); size_t: n; const: @(char want); size_t: wantn; const: @(char what))
+    c.array: []: char arena 64
+    int: rc
+    memset(arena, 0xAA, c.sizeof(arena))
+    rc: l2_fmt_l1_string(arena, cap, data, n)
+    if: rc != 0
+        fmt_buf_fail(what)
+        fputs("  rejected exact-fit\n", l1_stderr())
+        return
+    ---
+    if: memcmp(arena, want, wantn) != 0
+        fmt_buf_fail(what)
+        fputs("  bytes mismatch\n", l1_stderr())
+        return
+    ---
+    if: fmt_buf_oob(arena, cap, c.sizeof(arena)) != 0
+        fmt_buf_fail(what)
+        fputs("  wrote past cap\n", l1_stderr())
+    ---
+end: fmt_buf_expect_fmt_ok
+
+sub: fmt_buf_expect_fmt_overflow (size_t: cap; const: @(char data); size_t: n; const: @(char what))
+    c.array: []: char arena 64
+    int: rc
+    memset(arena, 0xAA, c.sizeof(arena))
+    rc: l2_fmt_l1_string(arena, cap, data, n)
+    if: rc = 0
+        fmt_buf_fail(what)
+        fputs("  overflow accepted\n", l1_stderr())
+        return
+    ---
+    if: fmt_buf_oob(arena, cap, c.sizeof(arena)) != 0
+        fmt_buf_fail(what)
+        fputs("  overflow wrote past cap\n", l1_stderr())
+    ---
+end: fmt_buf_expect_fmt_overflow
+
+sub: fmt_buf_tok_from (@: LmP0Text t; const: @(char data); size_t: n)
+    t\data: data
+    t\length: n
+end: fmt_buf_tok_from
+
+sub: fmt_buf_expect_tok_ok (size_t: cap; const: @(char data); size_t: n; const: @(char want); size_t: wantn; const: @(char what))
+    c.array: []: char arena 64
+    []: LmP0Text t 1
+    int: rc
+    fmt_buf_tok_from(@ t[0], data, n)
+    memset(arena, 0xAA, c.sizeof(arena))
+    rc: l2_tok_text(@ t[0], arena, cap)
+    if: rc != 0
+        fmt_buf_fail(what)
+        fputs("  tok rejected exact-fit\n", l1_stderr())
+        return
+    ---
+    if: memcmp(arena, want, wantn) != 0
+        fmt_buf_fail(what)
+        fputs("  tok bytes mismatch\n", l1_stderr())
+        return
+    ---
+    if: fmt_buf_oob(arena, cap, c.sizeof(arena)) != 0
+        fmt_buf_fail(what)
+        fputs("  tok wrote past cap\n", l1_stderr())
+    ---
+end: fmt_buf_expect_tok_ok
+
+sub: fmt_buf_expect_tok_overflow (size_t: cap; const: @(char data); size_t: n; int: untouched; const: @(char what))
+    c.array: []: char arena 64
+    []: LmP0Text t 1
+    int: rc
+    fmt_buf_tok_from(@ t[0], data, n)
+    memset(arena, 0xAA, c.sizeof(arena))
+    rc: l2_tok_text(@ t[0], arena, cap)
+    if: rc = 0
+        fmt_buf_fail(what)
+        fputs("  tok overflow accepted\n", l1_stderr())
+        return
+    ---
+    if: fmt_buf_oob(arena, cap, c.sizeof(arena)) != 0
+        fmt_buf_fail(what)
+        fputs("  tok overflow wrote past cap\n", l1_stderr())
+    ---
+    if: untouched != 0 && (cast: (uchar) arena[0]) != 0xAAu
+        fmt_buf_fail(what)
+        fputs("  tok overflow wrote dest\n", l1_stderr())
+    ---
+end: fmt_buf_expect_tok_overflow
+
+fn: main () int
+    c.array: []: char tiny 2
+    []: LmP0Text t 1
+
+    g_fail: 0
+
+    if: l2_fmt_l1_string(0, 8, "", 0) = 0
+        fmt_buf_fail("fmt dest null accepted")
+    ---
+    memset(tiny, 0xAA, c.sizeof(tiny))
+    if: l2_fmt_l1_string(tiny, 2, "", 0) = 0
+        fmt_buf_fail("fmt cap<3 empty accepted")
+    ---
+    if: (cast: (uchar) tiny[0]) != 0xAAu || (cast: (uchar) tiny[1]) != 0xAAu
+        fmt_buf_fail("fmt cap<3 wrote dest")
+    ---
+
+    fmt_buf_expect_fmt_ok(3, "", 0, fmt_buf_empty_out, 3, "fmt empty exact")
+    fmt_buf_expect_fmt_overflow(2, "", 0, "fmt empty overflow")
+
+    fmt_buf_expect_fmt_ok(4, "a", 1, fmt_buf_a_out, 4, "fmt a exact")
+    fmt_buf_expect_fmt_overflow(3, "a", 1, "fmt a overflow")
+
+    fmt_buf_expect_fmt_ok(5, fmt_buf_qbody, 1, fmt_buf_q_out, 5, "fmt quote exact")
+    fmt_buf_expect_fmt_overflow(4, fmt_buf_qbody, 1, "fmt quote overflow")
+
+    fmt_buf_expect_fmt_ok(5, fmt_buf_bsbody, 1, fmt_buf_bs_out, 5, "fmt backslash exact")
+    fmt_buf_expect_fmt_overflow(4, fmt_buf_bsbody, 1, "fmt backslash overflow")
+
+    fmt_buf_expect_fmt_ok(5, fmt_buf_nlbody, 1, fmt_buf_nl_out, 5, "fmt nl exact")
+    fmt_buf_expect_fmt_overflow(4, fmt_buf_nlbody, 1, "fmt nl overflow")
+
+    fmt_buf_expect_fmt_ok(5, fmt_buf_crbody, 1, fmt_buf_cr_out, 5, "fmt cr exact")
+    fmt_buf_expect_fmt_overflow(4, fmt_buf_crbody, 1, "fmt cr overflow")
+
+    fmt_buf_expect_fmt_ok(5, fmt_buf_qmark, 1, fmt_buf_qm_out, 5, "fmt question exact")
+    fmt_buf_expect_fmt_overflow(4, fmt_buf_qmark, 1, "fmt question overflow")
+
+    fmt_buf_expect_fmt_ok(7, fmt_buf_nulbody, 1, fmt_buf_nul_out, 7, "fmt NUL exact")
+    fmt_buf_expect_fmt_overflow(6, fmt_buf_nulbody, 1, "fmt NUL overflow")
+
+    fmt_buf_expect_fmt_ok(7, fmt_buf_hibody, 1, fmt_buf_hi_out, 7, "fmt high exact")
+    fmt_buf_expect_fmt_overflow(6, fmt_buf_hibody, 1, "fmt high overflow")
+
+    fmt_buf_tok_from(@ t[0], "x", 1)
+    if: l2_tok_text(0, tiny, 8) = 0
+        fmt_buf_fail("tok null text accepted")
+    ---
+    if: l2_tok_text(@ t[0], 0, 8) = 0
+        fmt_buf_fail("tok dest null accepted")
+    ---
+    if: l2_tok_text(@ t[0], tiny, 0) = 0
+        fmt_buf_fail("tok cap 0 accepted")
+    ---
+
+    fmt_buf_expect_tok_ok(2, "x", 1, "x", 2, "tok raw exact")
+    fmt_buf_expect_tok_overflow(1, "x", 1, 1, "tok raw overflow")
+
+    fmt_buf_expect_tok_ok(4, fmt_buf_dq, 3, fmt_buf_dq, 4, "tok double-quote atom exact")
+    fmt_buf_expect_tok_overflow(3, fmt_buf_dq, 3, 1, "tok double-quote atom overflow")
+
+    fmt_buf_expect_tok_ok(4, fmt_buf_sq, 3, fmt_buf_sq, 4, "tok single-quote atom exact")
+    fmt_buf_expect_tok_overflow(3, fmt_buf_sq, 3, 1, "tok single-quote atom overflow")
+
+    fmt_buf_expect_tok_ok(5, fmt_buf_trip_dq, 8, fmt_buf_ab_out, 5, "tok triple double exact")
+    fmt_buf_expect_tok_overflow(4, fmt_buf_trip_dq, 8, 0, "tok triple double overflow")
+
+    fmt_buf_expect_tok_ok(5, fmt_buf_trip_sq, 8, fmt_buf_ab_out, 5, "tok triple single exact")
+    fmt_buf_expect_tok_overflow(4, fmt_buf_trip_sq, 8, 0, "tok triple single overflow")
+
+    fmt_buf_expect_tok_ok(3, fmt_buf_trip_empty_dq, 6, fmt_buf_empty_out, 3, "tok triple empty double exact")
+    fmt_buf_expect_tok_overflow(2, fmt_buf_trip_empty_dq, 6, 0, "tok triple empty double overflow")
+
+    fmt_buf_expect_tok_ok(3, fmt_buf_trip_empty_sq, 6, fmt_buf_empty_out, 3, "tok triple empty single exact")
+    fmt_buf_expect_tok_overflow(2, fmt_buf_trip_empty_sq, 6, 0, "tok triple empty single overflow")
+
+    fmt_buf_expect_tok_ok(7, fmt_buf_trip_nul_dq, 7, fmt_buf_nul_out, 7, "tok triple NUL exact")
+    fmt_buf_expect_tok_overflow(6, fmt_buf_trip_nul_dq, 7, 0, "tok triple NUL overflow")
+
+    fmt_buf_expect_tok_ok(7, fmt_buf_trip_hi_dq, 7, fmt_buf_hi_out, 7, "tok triple high exact")
+    fmt_buf_expect_tok_overflow(6, fmt_buf_trip_hi_dq, 7, 0, "tok triple high overflow")
+
+    if: g_fail != 0
+        return: 1
+    ---
+    fputs("fmt_buf ok\n", l1_stdout())
+    return: 0
+end: main

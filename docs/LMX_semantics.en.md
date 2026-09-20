@@ -284,6 +284,8 @@ An executable body is a structural expression. `fn` defines an expression with o
 
 A callable occurrence has its own structural identity and lexical-parent link. Multiple occurrences can reference one immutable method. Graph copying neither creates another method implementation nor changes its signature; state belongs to particular structural occurrences and activations. A nested definition does not capture a caller frame in a hidden environment.
 
+Entering a method does not copy its callable occurrence, body or any other part of the graph. Native and interpreted execution use the same locality model: each activation receives an ordinary stack frame for formal, dynamic and local values, the result, and working copies of used own fields. Those own values are loaded and marked `dirty` under the same rules regardless of execution mode. A recursive call creates another stack frame over the same method; graph memory is copied only by an explicitly expressed operation, not by invocation itself.
+
 Callable selection starts from an explicit reference, structural path or textual path with an explicitly supplied root. Selecting an implementation and providing its arguments are distinct actions. The selected candidate undergoes [admission](#admission); the call must then receive every signature input. A suitable method field does not by itself supply its dynamic inputs. Transporting a method as data is not invoking it.
 
 Positional actual arguments precede named ones. After the first named argument, subsequent arguments must also be named. An unknown name, duplicate assignment to one argument, missing required argument or ordering violation is an error. A named argument's body is supplied as a structural value when that is the receiving expression's specified mode; it does not become an arbitrary sequence of immediate calls.
@@ -710,6 +712,8 @@ For example, A and B constructed from A's template can have the same eternal E a
 A Message is an isolated graph with its own ownership. A template or letter need not execute. An L3 Thread is a Message with turn execution and reception of other Messages; every L3 Thread is a Message, but not conversely. Receiving a letter does not automatically create a thread or actor. Launching a separate child requires an explicit operation.
 
 An executing Message has FIFO mail and at most one active turn at a time. A turn consumes at most one admitted input. Different Messages may execute concurrently. An empty mailbox does not finish a background task: its mechanism keeps checking mail according to its execution mode until a stopping condition.
+
+During a turn, one L3 Message executes on exactly one OS thread; transfer to another worker is allowed only between turns. An L3 Thread has one selected execution mode: either native code or the graph interpreter. These modes are mutually exclusive, not a common or hybrid mode: one turn does not run both paths for one Message. The `endturn` boundary commits the L3 Thread mode for the next turn together with the other boundary state; changing mode neither copies the method nor creates a second concurrent executor.
 
 One arena has one writing lane. A Message's handler, local management, scheduler and service state are mutated on its own lane. A foreign sender neither appends itself to the owner's ready list nor modifies its application data. Mail admission and designated single-cell control protocols belong to the Message mechanism and grant no general access to foreign memory.
 

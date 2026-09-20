@@ -386,6 +386,8 @@ For example, a method inside independent Structure S can use S's field through i
 
 Вызываемое вхождение имеет собственную структурную идентичность и связь с лексическим родителем. Несколько вхождений могут ссылаться на один неизменяемый метод. Копирование графа не создаёт новую реализацию метода и не меняет его сигнатуру; состояние принадлежит конкретным структурным вхождениям и активациям. Вложенное определение не захватывает кадр вызывающего выражения в скрытое окружение.
 
+Вход в метод не копирует его вызываемое вхождение, тело или другую часть графа. Нативное и интерпретируемое исполнение используют одну модель локальности: каждая активация получает обычный стековый кадр формальных, динамических и локальных значений, результата и рабочих копий используемых собственных полей. Эти own-значения загружаются и помечаются `dirty` по одним правилам независимо от способа исполнения. Рекурсивный вызов создаёт новый стековый кадр над тем же методом; память графа копируется только явно выраженной операцией, не самим вызовом.
+
 Выбор вызова начинается с явной ссылки, структурного пути либо текстового пути с явно переданным корнем. Выбор реализации и подача её аргументов — разные действия. Обнаруженный кандидат проходит [допуск](#admission); затем вызов должен получить все входы сигнатуры. Наличие подходящего поля с методом ещё не обеспечивает его динамические входы. Передача метода как данных не равна его вызову.
 
 Позиционные фактические аргументы предшествуют именованным. После первого именованного аргумента последующие также именованные. Неизвестное имя, повторное присваивание одного аргумента, недостающий обязательный аргумент или нарушение порядка — ошибка. Тело именованного аргумента передаётся как структурное значение, если именно такой режим задаёт принимающее выражение; оно не становится произвольной последовательностью немедленных вызовов.
@@ -409,6 +411,8 @@ return: 10 20
 An executable body is a structural expression. `fn` defines an expression with one logical result; `sub` performs execution without a returned value; `fm` has one result Structure whose fields provide a multiple-return surface. The signature defines explicit arguments, required dynamic and lexical inputs, each value's pass mode, the result and declared `throws` exits. Merely having a Structure, label or name does not execute its body.
 
 A callable occurrence has its own structural identity and lexical-parent link. Multiple occurrences can reference one immutable method. Graph copying neither creates another method implementation nor changes its signature; state belongs to particular structural occurrences and activations. A nested definition does not capture a caller frame in a hidden environment.
+
+Entering a method does not copy its callable occurrence, body or any other part of the graph. Native and interpreted execution use the same locality model: each activation receives an ordinary stack frame for formal, dynamic and local values, the result, and working copies of used own fields. Those own values are loaded and marked `dirty` under the same rules regardless of execution mode. A recursive call creates another stack frame over the same method; graph memory is copied only by an explicitly expressed operation, not by invocation itself.
 
 Callable selection starts from an explicit reference, structural path or textual path with an explicitly supplied root. Selecting an implementation and providing its arguments are distinct actions. The selected candidate undergoes [admission](#admission); the call must then receive every signature input. A suitable method field does not by itself supply its dynamic inputs. Transporting a method as data is not invoking it.
 
@@ -882,6 +886,8 @@ Message — изолированный граф с собственным вла
 
 Исполняющийся Message имеет FIFO-почту и не более одного активного такта одновременно. За такт потребляется не более одного допущенного входа. Между разными Message возможна параллельность. Пустой ящик не означает завершение фоновой задачи: механизм продолжает проверять почту согласно своему режиму исполнения до условия остановки.
 
+Во время такта один L3 Message исполняется ровно одним потоком ОС; передача другому рабочему потоку возможна только между тактами. L3 Thread имеет один выбранный режим исполнения: либо нативный код, либо интерпретатор графа. Это взаимоисключающие режимы, не общий или гибридный режим: один такт не запускает оба пути для одного Message. Граница `endturn` фиксирует режим L3 Thread для следующего такта вместе с остальным состоянием границы; смена режима не создаёт копию метода или второй параллельный исполнитель.
+
 Одна арена имеет одну полосу записи. Обработчик, локальное управление, планировщик и служебные данные Message изменяются на его полосе. Чужой отправитель не дописывает себя в ready-list владельца и не меняет его прикладные данные. Исключение приёма почты и специальные одноячеечные протоколы управления относятся к механизму Message, не дают общего доступа к чужой памяти.
 
 Родитель управляет только своими непосредственными детьми и хранит их список и политику планирования у себя. Ребёнок аналогично управляет своими детьми. Нет отдельного глобального планировщика языка, общего изменяемого реестра Message или глобальной блокировки управления. Маршрутизатор, если нужен, сам является Message с собственным состоянием.
@@ -893,6 +899,8 @@ L3 Thread — логическая последовательная полоса
 A Message is an isolated graph with its own ownership. A template or letter need not execute. An L3 Thread is a Message with turn execution and reception of other Messages; every L3 Thread is a Message, but not conversely. Receiving a letter does not automatically create a thread or actor. Launching a separate child requires an explicit operation.
 
 An executing Message has FIFO mail and at most one active turn at a time. A turn consumes at most one admitted input. Different Messages may execute concurrently. An empty mailbox does not finish a background task: its mechanism keeps checking mail according to its execution mode until a stopping condition.
+
+During a turn, one L3 Message executes on exactly one OS thread; transfer to another worker is allowed only between turns. An L3 Thread has one selected execution mode: either native code or the graph interpreter. These modes are mutually exclusive, not a common or hybrid mode: one turn does not run both paths for one Message. The `endturn` boundary commits the L3 Thread mode for the next turn together with the other boundary state; changing mode neither copies the method nor creates a second concurrent executor.
 
 One arena has one writing lane. A Message's handler, local management, scheduler and service state are mutated on its own lane. A foreign sender neither appends itself to the owner's ready list nor modifies its application data. Mail admission and designated single-cell control protocols belong to the Message mechanism and grant no general access to foreign memory.
 

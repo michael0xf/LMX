@@ -53,7 +53,7 @@ Rule: [L2 §7](L2_spec_en.md#message). `type: LmxFlag uint_fast8_t`; `struct: Lm
 <a id="thread"></a>
 ## 9. L3 Thread in L1
 
-Rule: [L2 §8](L2_spec_en.md#thread). `struct: LmxThread` / `LmxLink`: `lmx_thread.h.lm1`; bodies: `lmx_thread.lm1`. A turn is `lmx_thread_turn`. The object's scheduler is `lmx_manager` / `lmx_schedule`, opened by `lmx_thread_scheduler_open`. The child chain is cells of the parent's arena.
+Rule: [L2 §8](L2_spec_en.md#thread). `struct: LmxThread` / `LmxLink`: `lmx_thread.h.lm1`; bodies: `lmx_thread.lm1`. A turn is `lmx_thread_turn`. The object's scheduler is `lmx_manager` / `lmx_schedule`, opened by `lmx_thread_scheduler_open`. The child chain is cells of the parent's arena. One turn selects exactly one body path, native or interpreted; `endturn` commits the next turn's mode. Both paths use the same stack-activation own-load/dirty model and do not copy the method on entry.
 
 <a id="mailbox"></a>
 ## 10. Mailbox in L1

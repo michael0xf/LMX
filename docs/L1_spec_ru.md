@@ -53,7 +53,7 @@ Translator-L1 (`l1src/l1trans.lm1`) — синтаксически направ�
 <a id="thread"></a>
 ## 9. L3 Thread на L1
 
-Правило — [L2 §8](L2_spec_ru.md#thread). `struct: LmxThread` / `LmxLink` — `lmx_thread.h.lm1`; тела — `lmx_thread.lm1`. Ход — `lmx_thread_turn`. Планировщик объекта — `lmx_manager` / `lmx_schedule`, открывается `lmx_thread_scheduler_open`. Цепочка детей — ячейки арены родителя.
+Правило — [L2 §8](L2_spec_ru.md#thread). `struct: LmxThread` / `LmxLink` — `lmx_thread.h.lm1`; тела — `lmx_thread.lm1`. Ход — `lmx_thread_turn`. Планировщик объекта — `lmx_manager` / `lmx_schedule`, открывается `lmx_thread_scheduler_open`. Цепочка детей — ячейки арены родителя. Для одного такта выбирается ровно один путь тела — нативный или интерпретируемый; режим следующего такта фиксирует `endturn`. Стековая активация обоих путей использует одну модель own-load/dirty и не копирует метод при входе.
 
 <a id="mailbox"></a>
 ## 10. Почта на L1

@@ -59,6 +59,8 @@ fn: main () int
     @: LmxMethod meth 0
     @: void cell 0
     @: void cell2 0
+    L3Result: rr
+    @: L3Result prr
     if: counts = 0
         return: 2
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
@@ -68,6 +70,7 @@ fn: main () int
         return: 2
     ---
     a: @ arena
+    prr: @ rr
     meth: lmx_method_new_owned(a)
     fail(counts, meth != 0, "native METHOD cell")
 
@@ -91,8 +94,9 @@ fn: main () int
     info\method: meth
     lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
     lmx_arena_ref_store(m, 1U, (cast: (@: void) stmt))
-    fail(counts, l3_exec_run(a, m) = c.L3_OK, "N5/N6 return: in body after slot 0")
-    fail(counts, l3_returned_present() = 0, "void return has no value")
+    memset((cast: (@: void) (@ rr)), 0, c.sizeof(c.L3Result))
+    fail(counts, l3_exec_run_on(a, m, 0, prr) = c.L3_OK, "N5/N6 return: in body after slot 0")
+    fail(counts, prr\present = 0, "void return has no value")
 
     info: lmx_callable_new_owned(a)
     m: lmx_node_new_owned(a)
@@ -103,8 +107,9 @@ fn: main () int
     info\method: meth
     lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
     lmx_arena_ref_store(m, 1U, (cast: (@: void) mk_return_int(a, 7)))
-    fail(counts, l3_exec_run(a, m) = c.L3_OK, "N6 return argument is read")
-    fail(counts, l3_returned_present() != 0 && l3_returned_int() = 7, "N6 returned int 7")
+    memset((cast: (@: void) (@ rr)), 0, c.sizeof(c.L3Result))
+    fail(counts, l3_exec_run_on(a, m, 0, prr) = c.L3_OK, "N6 return argument is read")
+    fail(counts, prr\present != 0 && prr\value = 7, "N6 returned int 7")
 
     # Nested call then return (N7).
     info2: lmx_callable_new_owned(a)
@@ -188,7 +193,58 @@ fn: main () int
     lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
     lmx_arena_ref_store(m, 1U, (cast: (@: void) inner))
     lmx_arena_ref_store(m, 2U, (cast: (@: void) mk_return_int(a, 3)))
-    fail(counts, l3_exec_run(a, m) = c.L3_OK && l3_returned_int() = 3, "data Structure is not a body")
+    memset((cast: (@: void) (@ rr)), 0, c.sizeof(c.L3Result))
+    fail(counts, l3_exec_run_on(a, m, 0, prr) = c.L3_OK && prr\value = 3, "data Structure is not a body")
+
+    # Child returns 3, parent returns 7: parent result must survive.
+    info2: lmx_callable_new_owned(a)
+    inner: lmx_node_new_owned(a)
+    info: lmx_callable_new_owned(a)
+    m: lmx_node_new_owned(a)
+    if: info2 = 0 || inner = 0 || info = 0 || m = 0
+        free(counts)
+        return: 2
+    ---
+    if: lmx_arena_refs_open_owned(a, inner, 2U) != 0 || lmx_arena_refs_open_owned(a, m, 3U) != 0
+        free(counts)
+        return: 2
+    ---
+    info2\method: meth
+    info\method: meth
+    lmx_arena_ref_store(inner, 0U, (cast: (@: void) info2))
+    lmx_arena_ref_store(inner, 1U, (cast: (@: void) mk_return_int(a, 3)))
+    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
+    lmx_arena_ref_store(m, 1U, (cast: (@: void) inner))
+    lmx_arena_ref_store(m, 2U, (cast: (@: void) mk_return_int(a, 7)))
+    memset((cast: (@: void) (@ rr)), 0, c.sizeof(c.L3Result))
+    fail(counts, l3_exec_run_on(a, m, 0, prr) = c.L3_OK && prr\present != 0 && prr\value = 7, "parent return survives child")
+
+    stmt: lmx_node_new_owned(a)
+    info: lmx_callable_new_owned(a)
+    m: lmx_node_new_owned(a)
+    if: stmt = 0 || info = 0 || m = 0
+        free(counts)
+        return: 2
+    ---
+    if: lmx_arena_refs_open_owned(a, stmt, 3U) != 0 || lmx_arena_refs_open_owned(a, m, 2U) != 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(stmt, 0U, (cast: (@: void) lmx_op_new_owned(a, c.L3_NODE_RETURN)))
+    cell: lmx_int_new_owned(a)
+    cell2: lmx_int_new_owned(a)
+    if: cell = 0 || cell2 = 0
+        free(counts)
+        return: 2
+    ---
+    lmx_int_store_known(cell, 1)
+    lmx_int_store_known(cell2, 2)
+    lmx_arena_ref_store(stmt, 1U, cell)
+    lmx_arena_ref_store(stmt, 2U, cell2)
+    info\method: meth
+    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
+    lmx_arena_ref_store(m, 1U, (cast: (@: void) stmt))
+    fail(counts, l3_exec_run(a, m) = c.L3_UNSUPPORTED, "return arity more than one fails")
 
     if: counts[1] != 0
         c.printf("%d failed of %d\n", counts[1], counts[0])

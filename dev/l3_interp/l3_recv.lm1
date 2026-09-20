@@ -1,29 +1,31 @@
 predef: "l3_interp/l3_recv.h.lm1"
 predef: "l2src/lmx_arena_refs.h.lm1"
 predef: "l2src/lmx_pool.lm1"
-include: "<stdlib.h>"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_scratch.lm1"
+include: "<string.h>"
 
-# L3-01: empty Structure, ordered field refs, int cells. Cycles: same address
-# is identity, not a new walk. Null field = absent argument.
+# L3-01: empty Structure, ordered field refs, int cells. Seen list on L2 scratch.
 
-define: L3_SEEN_CAP 256
 define: L3_DEPTH_MAX 64
 
 prototype:
-    fn: l3_eval_value (@: LmxArena arena; @: void v; @@: void seen; @: int nseen; int: depth) int
+    fn: l3_seen_has (@: L3Seen p; @: void v) int
+    fn: l3_eval_value (@: LmxArena arena; @: void v; @: LmxScratch scratch; @: L3Seen seen; int: depth) int
 end: prototype
 
-fn: l3_seen_has (@@: void seen; int: nseen; @: void v) int
-    int: i 0
-    while: i < nseen
-        if: seen[i] = v
+fn: l3_seen_has (@: L3Seen p; @: void v) int
+    while: p != 0
+        if: p\v = v
             return: 1
-        i: i + 1
+        p: p\next
     ---
 return: 0
 
-fn: l3_eval_value (@: LmxArena arena; @: void v; @@: void seen; @: int nseen; int: depth) int
+fn: l3_eval_value (@: LmxArena arena; @: void v; @: LmxScratch scratch; @: L3Seen seen; int: depth) int
     @: Lmx host
+    @: L3Seen node
+    @: void slice 0
     int: kind
     int: typ
     int: st
@@ -32,12 +34,15 @@ fn: l3_eval_value (@: LmxArena arena; @: void v; @@: void seen; @: int nseen; in
         return: c.L3_ABSENT
     if: depth >= c.L3_DEPTH_MAX
         return: c.L3_UNSUPPORTED
-    if: l3_seen_has(seen, \nseen, v) != 0
+    if: l3_seen_has(seen, v) != 0
         return: c.L3_OK
-    if: \nseen >= c.L3_SEEN_CAP
-        return: c.L3_UNSUPPORTED
-    seen[\nseen]: v
-    \nseen: \nseen + 1
+    if: scratch = 0
+        return: c.L3_INVALID
+    if: lmx_scratch_take(scratch, c.sizeof(c.L3Seen), @ slice) != c.LMX_SCRATCH_OK
+        return: c.L3_INVALID
+    node: (cast: (@: L3Seen) slice)
+    node\v: v
+    node\next: seen
     kind: lmx_domain_kind(arena, v)
     if: kind = c.LMX_KIND_STRUCT
         host: (cast: (@: Lmx) v)
@@ -45,7 +50,7 @@ fn: l3_eval_value (@: LmxArena arena; @: void v; @@: void seen; @: int nseen; in
             return: c.L3_INVALID
         i: 0U
         while: i < (cast: (size_t) host\len)
-            st: l3_eval_value(arena, lmx_arena_ref_value(host, i), seen, nseen, depth + 1)
+            st: l3_eval_value(arena, lmx_arena_ref_value(host, i), scratch, node, depth + 1)
             if: st != c.L3_OK
                 return: st
             i: i + 1U
@@ -61,17 +66,24 @@ fn: l3_eval_value (@: LmxArena arena; @: void v; @@: void seen; @: int nseen; in
 return: c.L3_UNSUPPORTED
 
 fn: l3_recv_eval (@: LmxArena arena; @: Lmx root) int
-    @@: void seen 0
-    @: void poke 0
-    int: nseen 0
+    LmxArena: sa
+    LmxPool: cells
+    LmxScratch: scratch
     int: st
     if: arena = 0 || root = 0
         return: c.L3_INVALID
     if: lmx_domain_kind(arena, (cast: (@: void) root)) != c.LMX_KIND_STRUCT
         return: c.L3_UNSUPPORTED
-    seen: (cast: (@@: void) calloc((cast: (size_t) c.L3_SEEN_CAP), c.sizeof(poke)))
-    if: seen = 0
+    memset((cast: (@: void) (@ sa)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ cells)), 0, c.sizeof(c.LmxPool))
+    memset((cast: (@: void) (@ scratch)), 0, c.sizeof(c.LmxScratch))
+    if: lmx_arena_open(@ sa) != 0
         return: c.L3_INVALID
-    st: l3_eval_value(arena, (cast: (@: void) root), seen, @ nseen, 0)
-    free((cast: (@: void) seen))
+    if: lmx_scratch_open(@ scratch, @ sa, @ cells, 64U) != c.LMX_SCRATCH_OK
+        lmx_arena_release(@ sa)
+        return: c.L3_INVALID
+    ---
+    st: l3_eval_value(arena, (cast: (@: void) root), @ scratch, 0, 0)
+    lmx_scratch_close(@ scratch)
+    lmx_arena_release(@ sa)
 return: st

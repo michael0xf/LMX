@@ -14,6 +14,16 @@ struct: L3Frame
     int: nown
 end: L3Frame
 
+struct: L3Result
+    int: present
+    int: value
+end: L3Result
+
+struct: L3Seen
+    @: void v
+    @: L3Seen next
+end: L3Seen
+
 # L3-01 receiver: consume an already-built graph as the L3 subset
 # N1-N3. Not admission (#admission). Unsupported nodes fail; never METHOD.addr.
 
@@ -42,9 +52,7 @@ prototype:
     fn: l3_recv_eval (@: LmxArena arena; @: Lmx root) int
     # N4-N8: execute callable M. Slot 0 is LmxCallable. Never METHOD.addr.
     fn: l3_exec_run (@: LmxArena arena; @: Lmx node) int
-    fn: l3_returned_int () int
-    fn: l3_returned_present () int
-    fn: l3_exec_run_on (@: LmxArena arena; @: Lmx node; @: Lmx subject) int
+    fn: l3_exec_run_on (@: LmxArena arena; @: Lmx node; @: Lmx subject; @: L3Result out) int
     fn: l3_follow_path (@: LmxArena arena; @: Lmx start; @: Lmx path) int
     fn: l3_path_leaf (@: LmxArena arena; @: Lmx start; @: Lmx path; @@: void out) int
     # N10: used index-paths of receiver, then its test callables. Not names.

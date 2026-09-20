@@ -11,9 +11,6 @@ predef: "l2src/lmx_value_owned.h.lm1"
 predef: "l3_interp/l3_path.lm1"
 include: "<string.h>"
 
-int: l3_last_int 0
-int: l3_has_ret 0
-
 prototype:
     fn: l3_exec_stmt (@: LmxArena arena; @: L3Frame f; @: void v) int
     fn: l3_exec_range (@: LmxArena arena; @: L3Frame f; @: Lmx node; size_t: from) int
@@ -26,12 +23,26 @@ end: prototype
 
 fn: l3_own_load_ints (@: LmxArena arena; @: L3Frame f; @: Lmx node) int
     size_t: i
+    size_t: n 0U
     @: void v
     @: void slice 0
     f\nown: 0
+    f\owns: 0
     if: arena = 0 || f = 0 || node = 0 || f\scratch = 0
         return: 1
-    if: lmx_scratch_take(f\scratch, 32U * c.sizeof(c.LmxOwnLocal), @ slice) != c.LMX_SCRATCH_OK
+    i: 1U
+    while: i < (cast: (size_t) node\len)
+        v: lmx_arena_ref_value(node, i)
+        if: v != 0 && lmx_domain_kind(arena, v) = c.LMX_KIND_PRIMITIVE
+            if: lmx_domain_type(arena, v) = c.LMX_TYPE_INT
+                n: n + 1U
+            ---
+        ---
+        i: i + 1U
+    ---
+    if: n = 0U
+        return: 0
+    if: lmx_scratch_take(f\scratch, n * c.sizeof(c.LmxOwnLocal), @ slice) != c.LMX_SCRATCH_OK
         return: 1
     f\owns: (cast: (@: LmxOwnLocal) slice)
     i: 1U
@@ -81,28 +92,27 @@ fn: l3_exec_op (@: LmxArena arena; @: L3Frame f; @: Lmx host; @: LmxOp op) int
     @: void leaf 0
     @: void want
     @: Lmx path
-    size_t: ai
     if: op = 0 || f = 0
         return: c.L3_INVALID
     code: op\code
     if: code = c.L3_NODE_RETURN
         f\has_ret: 0
-        if: host != 0
-            ai: 1U
-            while: ai < (cast: (size_t) host\len)
-                arg: lmx_arena_ref_value(host, ai)
-                st: l3_exec_stmt(arena, f, arg)
-                if: st != c.L3_OK
-                    return: st
-                if: arg != 0 && lmx_domain_kind(arena, arg) = c.LMX_KIND_PRIMITIVE
-                    if: lmx_domain_type(arena, arg) = c.LMX_TYPE_INT
-                        f\last_int: lmx_int_value_known(arg)
-                        f\has_ret: 1
-                    ---
-                ---
-                ai: ai + 1U
-            ---
+        if: host = 0 || host\len < 2
+            if: l3_own_checkpoint_all(f) != 0
+                return: c.L3_INVALID
+            return: c.L3_RETURN
         ---
+        if: host\len > 2
+            return: c.L3_UNSUPPORTED
+        arg: lmx_arena_ref_value(host, 1U)
+        if: arg = 0
+            return: c.L3_ABSENT
+        if: lmx_domain_kind(arena, arg) != c.LMX_KIND_PRIMITIVE
+            return: c.L3_UNSUPPORTED
+        if: lmx_domain_type(arena, arg) != c.LMX_TYPE_INT
+            return: c.L3_UNSUPPORTED
+        f\last_int: lmx_int_value_known(arg)
+        f\has_ret: 1
         if: l3_own_checkpoint_all(f) != 0
             return: c.L3_INVALID
         return: c.L3_RETURN
@@ -185,12 +195,12 @@ return: c.L3_UNSUPPORTED
 fn: l3_exec_stmt (@: LmxArena arena; @: L3Frame f; @: void v) int
     @: Lmx host
     @: void head
+    @: L3Frame child
+    @: void slice 0
     int: hk
     int: kind
     LmxScratchMark: mark
-    int: saved
     int: st
-    @: LmxOwnLocal saved_owns
     if: v = 0
         return: c.L3_ABSENT
     kind: lmx_domain_kind(arena, v)
@@ -213,15 +223,19 @@ fn: l3_exec_stmt (@: LmxArena arena; @: L3Frame f; @: void v) int
             if: l3_own_checkpoint_all(f) != 0
                 return: c.L3_INVALID
             if: f\scratch = 0
-                return: l3_exec_frame(arena, f, host)
+                return: c.L3_INVALID
             if: lmx_scratch_mark(f\scratch, @ mark) != c.LMX_SCRATCH_OK
                 return: c.L3_INVALID
-            saved: f\nown
-            saved_owns: f\owns
-            st: l3_exec_frame(arena, f, host)
+            if: lmx_scratch_take(f\scratch, c.sizeof(c.L3Frame), @ slice) != c.LMX_SCRATCH_OK
+                lmx_scratch_rewind(f\scratch, @ mark)
+                return: c.L3_INVALID
+            ---
+            child: (cast: (@: L3Frame) slice)
+            memset((cast: (@: void) child), 0, c.sizeof(c.L3Frame))
+            child\scratch: f\scratch
+            child\subject: f\subject
+            st: l3_exec_frame(arena, child, host)
             lmx_scratch_rewind(f\scratch, @ mark)
-            f\nown: saved
-            f\owns: saved_owns
             return: st
         ---
         if: hk = c.LMX_KIND_METHOD
@@ -284,9 +298,9 @@ fn: l3_exec_frame (@: LmxArena arena; @: L3Frame f; @: Lmx node) int
 return: st
 
 fn: l3_exec_run (@: LmxArena arena; @: Lmx node) int
-return: l3_exec_run_on(arena, node, 0)
+return: l3_exec_run_on(arena, node, 0, 0)
 
-fn: l3_exec_run_on (@: LmxArena arena; @: Lmx node; @: Lmx subject) int
+fn: l3_exec_run_on (@: LmxArena arena; @: Lmx node; @: Lmx subject; @: L3Result out) int
     LmxArena: sa
     LmxPool: cells
     LmxScratch: scratch
@@ -305,14 +319,10 @@ fn: l3_exec_run_on (@: LmxArena arena; @: Lmx node; @: Lmx subject) int
     frame.scratch: @ scratch
     frame.subject: subject
     st: l3_exec_frame(arena, @ frame, node)
-    l3_last_int: frame.last_int
-    l3_has_ret: frame.has_ret
+    if: out != 0
+        out\present: frame.has_ret
+        out\value: frame.last_int
+    ---
     lmx_scratch_close(@ scratch)
     lmx_arena_release(@ sa)
 return: st
-
-fn: l3_returned_int () int
-return: l3_last_int
-
-fn: l3_returned_present () int
-return: l3_has_ret

@@ -9,3 +9,11 @@ claude_chat/uds_debug.log
 claude_chat/latest
 claude_chat/.claude/
 .claude/worktrees/
+
+# The L1 self-build's C-seed lives at lm1/build.  It is the ONLY thing under a "build/" path that
+# must be versioned: without it the self-build cannot even start (B0 = gcc of this C), and a clean
+# clone cannot reproduce the fixed point.  Narrow and exact -- this is NOT a general un-ignore of
+# build trees; everything else under any build/ stays ignored.  Written down after Codex's audit
+# LMX-L1FIXPOINT-AUDIT-20260920-01, which measured that the seed was hidden by the `build/` rule.
+!lm1/build/
+!lm1/build/**

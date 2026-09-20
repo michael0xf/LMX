@@ -215,6 +215,9 @@ fn: lmx_walk_scan_node (@: LmxWalkFrame f; @: void node) int
         return: c.LMX_WALK_OK
     if: op = c.LMX_WALK_OP_LIT || op = c.LMX_WALK_OP_ARG || op = c.LMX_WALK_OP_AT
         return: c.LMX_WALK_OK
+    # of [of, value, slot]: one node, then a slot number.
+    if: op = c.LMX_WALK_OP_OF
+        return: lmx_walk_scan_node(f, lmx_arena_ref_value(code, 1U))
     if: op = c.LMX_WALK_OP_IF || op = c.LMX_WALK_OP_WHILE
         status: lmx_walk_scan_node(f, lmx_arena_ref_value(code, 1U))
         i: 2U
@@ -350,15 +353,45 @@ return: c.LMX_WALK_OK
 
 # ---- execution -------------------------------------------------------------------------
 
-fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: int out) int
+# A question to an arena that is not the Message's -- the scratch store's -- through the
+# same counted door.
+fn: lmx_walk_kind_in (@: LmxWalkFrame f; @: LmxArena arena; @: void p) int
+    f\context\classified: f\context\classified + 1U
+return: lmx_range_classify(arena, p)
+
+# A value that LEAVES the activation through `ret`.  Whatever lives in the scratch store
+# dies with some frame's rewind, this one's or one below it on the way up, so such a
+# reference does not leave: the integer it points at is copied into the caller's
+# destination and THAT is the value.  A reference into the graph leaves as it is --
+# nothing of the graph is copied.  Only `arg` and `call` can hand this activation a
+# reference it did not make itself, so only then is the store asked.
+fn: lmx_walk_leaving (@: LmxWalkFrame f; int: producer; @: void value) @: void
+    if: value = 0 || value = f\dest
+        return: value
+    if: producer != c.LMX_WALK_OP_ARG && producer != c.LMX_WALK_OP_CALL
+        return: value
+    if: lmx_walk_kind_in(f, f\context\scratch\arena, value) != c.LMX_DOMAIN_KIND_SCRATCH
+        return: value
+    lmx_int_store_known(f\dest, lmx_int_value_known(value))
+return: f\dest
+
+# [call, M, arg ...].  The callee's inputs are REFERENCES, kept with the cells that hold
+# the integers among them in one scratch slice of this activation; the slice is gone
+# with the rewind below, after the callee has returned.  The callee's destination is
+# this node's own destination, so an integer result lands where this node's consumer
+# expects it and needs no copy on the way.
+fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) int
     LmxScratchMark: mark
     @: LmxScratchMark pm 0
     @: Lmx callee 0
     @: void room 0
-    @: int argv 0
+    @@: void refs 0
+    @@: void cells 0
     size_t: n
     size_t: i 0U
+    int: present 0
     int: status c.LMX_WALK_OK
+    \out: 0
     if: code\len < 2
         return: c.LMX_WALK_INVALID
     # The callee is the occurrence M itself, by reference -- an operand, read as the
@@ -367,18 +400,19 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: int out) int
     if: callee = 0
         return: c.LMX_WALK_INVALID
     n: (cast: (size_t) code\len) - 2U
-    # The values of the callee's declared inputs live in the store until the call is over.
     pm: @ mark
     if: lmx_scratch_mark(f\context\scratch, pm) != c.LMX_SCRATCH_OK
         return: c.LMX_WALK_INVALID
     if: n != 0U
-        if: lmx_scratch_take(f\context\scratch, n * c.sizeof(int), @ room) != c.LMX_SCRATCH_OK
+        if: lmx_scratch_take(f\context\scratch, (n * 2U) * c.sizeof(@: void), @ room) != c.LMX_SCRATCH_OK
             status: c.LMX_WALK_NOMEM
-        argv: (cast: (@: int) room)
+        refs: (cast: (@@: void) room)
+        cells: refs + n
     ---
     while: status = c.LMX_WALK_OK && i < n
-        argv[i]: 0
-        status: lmx_walk_eval(f, lmx_arena_ref_value(code, i + 2U), argv + i)
+        refs[i]: 0
+        cells[i]: 0
+        status: lmx_walk_eval(f, lmx_arena_ref_value(code, i + 2U), (cast: (@: void) (cells + i)), refs + i)
         i: i + 1U
     ---
     # 21.6: dirty values are published before every outbound call, and nothing is
@@ -386,25 +420,30 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: int out) int
     if: status = c.LMX_WALK_OK
         status: lmx_walk_checkpoint(f)
     if: status = c.LMX_WALK_OK
-        status: lmx_walk_run(f\context, callee, argv, n, out, 0)
+        status: lmx_walk_activate(f\context, callee, refs, n, dest, out, @ present)
     if: lmx_scratch_rewind(f\context\scratch, pm) != c.LMX_SCRATCH_OK && status = c.LMX_WALK_OK
         status: c.LMX_WALK_INVALID
     ---
 return: status
 
-fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: int out) int
+# The value of one node.  `dest` is the cell of whoever consumes it; `out` receives the
+# reference that IS the value: `dest` for an integer computed here, a reference into the
+# graph, or 0 for no value.
+fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) int
     @: LmxWalkOwn o 0
     @: Lmx code 0
     @@: void slot 0
-    @: void cell 0
+    @: void value 0
+    @: void other 0
     size_t: index 0U
     int: op
     int: a 0
     int: b 0
     int: going 1
     int: status c.LMX_WALK_OK
-    if: f = 0 || node = 0 || out = 0
+    if: f = 0 || node = 0 || dest = 0 || out = 0
         return: c.LMX_WALK_INVALID
+    \out: 0
     op: lmx_walk_node(f, node)
     if: op = c.LMX_WALK_OP_UNKNOWN
         return: c.LMX_WALK_UNSUPPORTED
@@ -420,84 +459,110 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: int out) int
         return: status
     code: (cast: (@: Lmx) node)
     if: op = c.LMX_WALK_OP_LIT
-        cell: lmx_arena_ref_value(code, 1U)
-        if: cell = 0
+        # The literal's own cell, by reference: reading it copies nothing.
+        value: lmx_arena_ref_value(code, 1U)
+        if: value = 0
             return: c.LMX_WALK_INVALID
-        \out: lmx_int_value_known(cell)
+        \out: value
         return: c.LMX_WALK_OK
     if: op = c.LMX_WALK_OP_OWN
-        # The working value of this activation: no reload from the graph (21.5).
+        # The working value of this activation, not the graph's (21.5) -- and copied, because
+        # the field may be assigned again before this value is used.
         o: lmx_walk_own_in(f\owns, f\nowns, lmx_walk_slot(f, code, 1U))
         if: o = 0
             return: c.LMX_WALK_INVALID
-        \out: o\value
+        lmx_int_store_known(dest, o\value)
+        \out: dest
         return: c.LMX_WALK_OK
     if: op = c.LMX_WALK_OP_ARG
+        # The reference the caller passed, as it is; an absent input is no value.
         index: lmx_size_value_known(lmx_arena_ref_value(code, 1U))
         if: index >= f\nargs || f\args = 0
             return: c.LMX_WALK_INVALID
         \out: f\args[index]
         return: c.LMX_WALK_OK
     if: op = c.LMX_WALK_OP_AT
+        # What the field holds, by reference.
         slot: lmx_walk_slot(f, code, 1U)
         if: slot = 0 || slot[0] = 0
             return: c.LMX_WALK_INVALID
-        \out: lmx_int_value_known(slot[0])
+        \out: slot[0]
+        return: c.LMX_WALK_OK
+    if: op = c.LMX_WALK_OP_OF
+        # A field of a reference value.  Here the kind HAS to be established: reading a
+        # cell as a Structure would read past it, so the arena is asked once.
+        status: lmx_walk_eval(f, lmx_arena_ref_value(code, 1U), (cast: (@: void) (@ a)), @ value)
+        if: status != c.LMX_WALK_OK
+            return: status
+        if: value = 0 || lmx_walk_kind(f, value) != c.LMX_KIND_STRUCT
+            return: c.LMX_WALK_INVALID
+        slot: lmx_arena_ref_cell((cast: (@: Lmx) value), lmx_size_value_known(lmx_arena_ref_value(code, 2U)))
+        if: slot = 0
+            return: c.LMX_WALK_INVALID
+        \out: slot[0]
         return: c.LMX_WALK_OK
     if: op = c.LMX_WALK_OP_PUT
-        status: lmx_walk_eval(f, lmx_arena_ref_value(code, 3U), @ a)
+        status: lmx_walk_eval(f, lmx_arena_ref_value(code, 3U), (cast: (@: void) (@ a)), @ value)
         if: status != c.LMX_WALK_OK
             return: status
         slot: lmx_walk_slot(f, code, 1U)
-        if: slot = 0 || slot[0] = 0 || lmx_int_store_known(slot[0], a) != 0
+        if: value = 0 || slot = 0 || slot[0] = 0 || lmx_int_store_known(slot[0], lmx_int_value_known(value)) != 0
             return: c.LMX_WALK_INVALID
-        \out: a
+        \out: slot[0]
         return: c.LMX_WALK_OK
     if: op = c.LMX_WALK_OP_SET
-        status: lmx_walk_eval(f, lmx_arena_ref_value(code, 2U), @ a)
+        status: lmx_walk_eval(f, lmx_arena_ref_value(code, 2U), (cast: (@: void) (@ a)), @ value)
         if: status != c.LMX_WALK_OK
             return: status
-        if: lmx_walk_node(f, lmx_arena_ref_value(code, 1U)) != c.LMX_WALK_OP_OWN
+        if: value = 0 || lmx_walk_node(f, lmx_arena_ref_value(code, 1U)) != c.LMX_WALK_OP_OWN
             return: c.LMX_WALK_INVALID
         o: lmx_walk_own_in(f\owns, f\nowns, lmx_walk_slot(f, lmx_arena_ref_struct(code, 1U), 1U))
         if: o = 0
             return: c.LMX_WALK_INVALID
         # An executed assignment, and the only thing that sets dirty (21.6).
-        o\value: a
+        o\value: lmx_int_value_known(value)
         o\dirty: 1
-        \out: a
+        lmx_int_store_known(dest, o\value)
+        \out: dest
         return: c.LMX_WALK_OK
     if: op = c.LMX_WALK_OP_ADD || op = c.LMX_WALK_OP_SUB || op = c.LMX_WALK_OP_LT || op = c.LMX_WALK_OP_EQ
-        status: lmx_walk_eval(f, lmx_arena_ref_value(code, 1U), @ a)
+        status: lmx_walk_eval(f, lmx_arena_ref_value(code, 1U), (cast: (@: void) (@ a)), @ value)
         if: status != c.LMX_WALK_OK
             return: status
-        status: lmx_walk_eval(f, lmx_arena_ref_value(code, 2U), @ b)
+        status: lmx_walk_eval(f, lmx_arena_ref_value(code, 2U), (cast: (@: void) (@ b)), @ other)
         if: status != c.LMX_WALK_OK
             return: status
+        if: value = 0 || other = 0
+            return: c.LMX_WALK_INVALID
+        a: lmx_int_value_known(value)
+        b: lmx_int_value_known(other)
         if: op = c.LMX_WALK_OP_ADD
-            \out: a + b
+            lmx_int_store_known(dest, a + b)
         if: op = c.LMX_WALK_OP_SUB
-            \out: a - b
+            lmx_int_store_known(dest, a - b)
         if: op = c.LMX_WALK_OP_LT
-            \out: (cast: (int) (a < b))
+            lmx_int_store_known(dest, (cast: (int) (a < b)))
         if: op = c.LMX_WALK_OP_EQ
-            \out: (cast: (int) (a = b))
+            lmx_int_store_known(dest, (cast: (int) (a = b)))
+        \out: dest
         return: c.LMX_WALK_OK
     if: op = c.LMX_WALK_OP_IF
-        status: lmx_walk_eval(f, lmx_arena_ref_value(code, 1U), @ a)
+        status: lmx_walk_eval(f, lmx_arena_ref_value(code, 1U), (cast: (@: void) (@ a)), @ value)
         if: status != c.LMX_WALK_OK
             return: status
-        \out: 0
-        if: a != 0
+        if: value = 0
+            return: c.LMX_WALK_INVALID
+        if: lmx_int_value_known(value) != 0
             return: lmx_walk_body(f, lmx_arena_ref_struct(code, 2U), 0U)
         if: code\len > 3
             return: lmx_walk_body(f, lmx_arena_ref_struct(code, 3U), 0U)
         return: c.LMX_WALK_OK
     if: op = c.LMX_WALK_OP_WHILE
-        \out: 0
         while: going != 0
-            status: lmx_walk_eval(f, lmx_arena_ref_value(code, 1U), @ a)
-            if: status != c.LMX_WALK_OK || a = 0
+            status: lmx_walk_eval(f, lmx_arena_ref_value(code, 1U), (cast: (@: void) (@ a)), @ value)
+            if: status = c.LMX_WALK_OK && value = 0
+                status: c.LMX_WALK_INVALID
+            if: status != c.LMX_WALK_OK || lmx_int_value_known(value) = 0
                 going: 0
             if: going != 0
                 status: lmx_walk_body(f, lmx_arena_ref_struct(code, 2U), 0U)
@@ -508,31 +573,36 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: int out) int
         ---
         return: status
     if: op = c.LMX_WALK_OP_RET
-        # One exit order: evaluate the argument -> dirty-only checkpoint -> return.
+        # One exit order: evaluate the argument -> dirty-only checkpoint -> return.  The
+        # argument is computed straight into the CALLER's destination.
         if: code\len > 1
-            status: lmx_walk_eval(f, lmx_arena_ref_value(code, 1U), @ a)
+            status: lmx_walk_eval(f, lmx_arena_ref_value(code, 1U), f\dest, @ value)
             if: status != c.LMX_WALK_OK
                 return: status
-            f\result: a
-            f\valued: 1
+            value: lmx_walk_leaving(f, lmx_walk_node(f, lmx_arena_ref_value(code, 1U)), value)
+            f\result: value
+            if: value != 0
+                f\valued: 1
         ---
         status: lmx_walk_checkpoint(f)
         if: status != c.LMX_WALK_OK
             return: status
         f\returned: 1
-        \out: a
+        \out: value
         return: c.LMX_WALK_OK
     if: op = c.LMX_WALK_OP_CALL
-        return: lmx_walk_call(f, code, out)
+        return: lmx_walk_call(f, code, dest, out)
     ---
 return: c.LMX_WALK_INVALID
 
 # The children of a body from `first` on, in order.  Own cells and anything that is not
 # a frame node are data, not steps.  An executed return ends the walk of every enclosing
-# body of this activation.
+# body of this activation.  The value of a step is dropped; its destination is a C int of
+# this very frame.
 fn: lmx_walk_body (@: LmxWalkFrame f; @: Lmx body; size_t: first) int
     @: void child 0
-    int: ignored 0
+    @: void dropped 0
+    int: spare 0
     int: status c.LMX_WALK_OK
     size_t: i first
     if: f = 0 || body = 0
@@ -540,7 +610,7 @@ fn: lmx_walk_body (@: LmxWalkFrame f; @: Lmx body; size_t: first) int
     while: status = c.LMX_WALK_OK && f\returned = 0 && i < (cast: (size_t) body\len)
         child: lmx_arena_ref_value(body, i)
         if: lmx_walk_op(f, child) != c.LMX_WALK_OP_NONE
-            status: lmx_walk_eval(f, child, @ ignored)
+            status: lmx_walk_eval(f, child, (cast: (@: void) (@ spare)), @ dropped)
         i: i + 1U
     ---
 return: status
@@ -577,7 +647,7 @@ fn: lmx_walk_steps (@: LmxWalkFrame f; @: Lmx node) int
     ---
 return: steps
 
-sub: lmx_walk_frame_open (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx node; @: int args; size_t: nargs)
+sub: lmx_walk_frame_open (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx node; @@: void args; size_t: nargs)
     memset((cast: (@: void) f), 0, c.sizeof(c.LmxWalkFrame))
     f\context: context
     f\arena: context\arena
@@ -592,7 +662,7 @@ end: lmx_walk_frame_open
 # lexical order of the fields and hence the order of every checkpoint.  Without a plan a
 # body is refused, never handed to a native entry and never analysed here: that is what
 # lmx_walk_prepare is for.  The CALLER has marked the store and rewinds it.
-fn: lmx_walk_enter (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx node; @: int args; size_t: nargs) int
+fn: lmx_walk_enter (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx node; @@: void args; size_t: nargs) int
     @: LmxCallable info 0
     @: LmxWalkOwn o 0
     @: Lmx plan 0
@@ -779,15 +849,17 @@ fn: lmx_walk_plan_check (@: LmxWalkContext context; @: Lmx node) int
     ---
 return: status
 
-fn: lmx_walk_run (@: LmxWalkContext context; @: Lmx node; @: int args; size_t: nargs; @: int result; @: int valued) int
+fn: lmx_walk_activate (@: LmxWalkContext context; @: Lmx node; @@: void args; size_t: nargs; @: void dest; @@: void result; @: int present) int
     LmxWalkFrame: frame
     LmxScratchMark: mark
     @: LmxWalkFrame f 0
     @: LmxScratchMark pm 0
     int: status
-    if: valued != 0
-        \valued: 0
-    if: context = 0 || context\scratch = 0
+    if: result != 0
+        \result: 0
+    if: present != 0
+        \present: 0
+    if: context = 0 || context\scratch = 0 || dest = 0
         return: c.LMX_WALK_INVALID
     f: @ frame
     pm: @ mark
@@ -797,15 +869,57 @@ fn: lmx_walk_run (@: LmxWalkContext context; @: Lmx node; @: int args; size_t: n
         return: c.LMX_WALK_INVALID
     status: lmx_walk_enter(f, context, node, args, nargs)
     if: status = c.LMX_WALK_OK
+        f\dest: dest
         status: lmx_walk_body(f, node, 1U)
     # Falling off the end is an exit too: dirty values are published (21.6).
     if: status = c.LMX_WALK_OK && f\returned = 0
         status: lmx_walk_checkpoint(f)
-    if: status = c.LMX_WALK_OK && f\valued != 0 && result != 0
-        \result: f\result
-    if: status = c.LMX_WALK_OK && f\valued != 0 && valued != 0
-        \valued: 1
+    if: status = c.LMX_WALK_OK && f\valued != 0
+        if: result != 0
+            \result: f\result
+        if: present != 0
+            \present: 1
+        ---
+    ---
     if: lmx_scratch_rewind(context\scratch, pm) != c.LMX_SCRATCH_OK && status = c.LMX_WALK_OK
         status: c.LMX_WALK_INVALID
+    ---
+return: status
+
+# The public boundary.  What comes in from outside is asked about, once: a reference the
+# context's arena cannot classify -- neither its own nor its bound permanent store's -- is
+# foreign, and nothing runs.
+fn: lmx_walk_run (@: LmxWalkContext context; @: Lmx node; @@: void args; size_t: nargs; @: LmxWalkValue out) int
+    @: void dest 0
+    @: void value 0
+    int: spare 0
+    int: present 0
+    int: status
+    size_t: i 0U
+    if: out != 0
+        out\ref: 0
+        out\number: 0
+        out\present: 0
+    ---
+    if: context = 0 || context\arena = 0
+        return: c.LMX_WALK_INVALID
+    if: nargs != 0U && args = 0
+        return: c.LMX_WALK_INVALID
+    while: i < nargs
+        if: args[i] != 0
+            context\classified: context\classified + 1U
+            if: lmx_range_classify(context\arena, args[i]) = c.LMX_KIND_NONE
+                return: c.LMX_WALK_INVALID
+            ---
+        ---
+        i: i + 1U
+    ---
+    dest: (cast: (@: void) (@ spare))
+    if: out != 0
+        dest: (cast: (@: void) (@ out\number))
+    status: lmx_walk_activate(context, node, args, nargs, dest, @ value, @ present)
+    if: status = c.LMX_WALK_OK && out != 0
+        out\ref: value
+        out\present: present
     ---
 return: status

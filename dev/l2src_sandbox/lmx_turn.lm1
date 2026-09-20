@@ -139,6 +139,9 @@ fn: lmx_turn_end (@: LmxThread t; ulong: now) int
         # A thread that never joined a schedule has no arena this boundary may collect.  The
         # publication above stands (it asks no storage), and the collection is simply not this
         # boundary's to make -- not a failure of the turn.
+        if: lmx_thread_mode_end(t, outcome) != c.LMX_THREAD_OK
+            return: c.LMX_TURN_INVALID
+        ---
         return: c.LMX_TURN_OK
     ---
     if: lmx_gc_collect(arena, t) = c.LMX_GC_PARTIAL
@@ -146,5 +149,7 @@ fn: lmx_turn_end (@: LmxThread t; ulong: now) int
         # of reporting an arena it did not collect.
         return: c.LMX_TURN_INVALID
     ---
+    if: lmx_thread_mode_end(t, outcome) != c.LMX_THREAD_OK
+        return: c.LMX_TURN_INVALID
+    ---
 return: c.LMX_TURN_OK
-

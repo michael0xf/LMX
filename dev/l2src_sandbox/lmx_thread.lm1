@@ -44,6 +44,10 @@ fn: lmx_thread_attach (@: LmxThread t; @: LmxMsg message; @: LmxPost mail; @: Lm
     t\slot: slot
     t\turn: 0U
     t\state: c.LMX_THREAD_IDLE
+    # Bootstrap compatibility is an explicit state, not an inference from entry or graph shape.
+    t\current_mode: c.LMX_THREAD_MODE_NATIVE
+    t\requested_mode: c.LMX_THREAD_MODE_NATIVE
+    t\interpreter_dispatch: 0
     # No turn has run yet, so nothing was reserved, and nothing has linked this object into a
     # family: the up-link of the address walk starts empty (lmx_child's publication writes it).
     t\prepared: 0
@@ -58,6 +62,7 @@ fn: lmx_thread_attach (@: LmxThread t; @: LmxMsg message; @: LmxPost mail; @: Lm
     t\api.leave: lmx_thread_leave
     t\api.running: lmx_thread_running
     t\api.current: lmx_thread_current
+    t\api.request_mode: lmx_thread_request_mode
     t\mail_api.accept: lmx_thread_mail_accept
     t\mail_api.take: lmx_thread_mail_take
     t\mail_api.count: lmx_thread_mail_count
@@ -277,6 +282,48 @@ fn: lmx_thread_running (@: LmxThread t) int
         return: 0
 return: t\message\running
 
+fn: lmx_thread_request_mode (@: LmxThread t; int: mode) int
+    if: t = 0 || t\state = c.LMX_THREAD_DONE
+        return: c.LMX_THREAD_INVALID
+    if: mode != c.LMX_THREAD_MODE_NATIVE && mode != c.LMX_THREAD_MODE_INTERPRETED
+        return: c.LMX_THREAD_INVALID
+    t\requested_mode: mode
+return: c.LMX_THREAD_OK
+
+fn: lmx_thread_mode (@: LmxThread t) int
+    if: t = 0
+        return: 0
+return: t\current_mode
+
+fn: lmx_thread_requested_mode (@: LmxThread t) int
+    if: t = 0
+        return: 0
+return: t\requested_mode
+
+fn: lmx_thread_interpreter_set (@: LmxThread t; LmxThreadDispatch: dispatch) int
+    if: t = 0 || t\state = c.LMX_THREAD_TURN || t\state = c.LMX_THREAD_DONE
+        return: c.LMX_THREAD_INVALID
+    t\interpreter_dispatch: dispatch
+return: c.LMX_THREAD_OK
+
+fn: lmx_thread_mode_end (@: LmxThread t; int: outcome) int
+    if: t = 0
+        return: c.LMX_THREAD_INVALID
+    if: outcome != c.LMX_TURN_SUCCESS && outcome != c.LMX_TURN_FAILED
+        return: c.LMX_THREAD_INVALID
+    if: t\current_mode != c.LMX_THREAD_MODE_NATIVE && t\current_mode != c.LMX_THREAD_MODE_INTERPRETED
+        return: c.LMX_THREAD_INVALID
+    if: t\requested_mode != c.LMX_THREAD_MODE_NATIVE && t\requested_mode != c.LMX_THREAD_MODE_INTERPRETED
+        return: c.LMX_THREAD_INVALID
+    if: t\requested_mode = t\current_mode
+        return: c.LMX_THREAD_OK
+    # Failure-turn commit semantics is intentionally still open.  Preserve both values and make
+    # the unresolved case visible to the caller; do not smuggle in either commit or rollback.
+    if: outcome = c.LMX_TURN_FAILED
+        return: c.LMX_THREAD_INVALID
+    t\current_mode: t\requested_mode
+return: c.LMX_THREAD_OK
+
 # Entering a turn.  Refused when the object is already done (a close never
 # resurrects it) and refused when the boundary says stop: not running, or already
 # successful.  Otherwise the turn cursor advances and this object becomes the
@@ -286,6 +333,8 @@ fn: lmx_thread_enter (@: LmxThread t) int
         return: c.LMX_THREAD_INVALID
     if: t\state = c.LMX_THREAD_DONE
         return: c.LMX_THREAD_STOPPED
+    if: t\state = c.LMX_THREAD_TURN
+        return: c.LMX_THREAD_INVALID
     if: t\message\running = 0 || t\message\success != 0
         t\state: c.LMX_THREAD_DONE
         return: c.LMX_THREAD_STOPPED
@@ -362,27 +411,14 @@ return: c.LMX_THREAD_OK
 # The body's answer is not a stop and is not stored: what ends an object's work is the Message's
 # flags, and a handler that reports a status is reporting its own business (model 31).  A turn the
 # boundary refuses is not a turn, so nothing of it is written.
-fn: lmx_thread_turn (@: LmxThread t; LmxCallEntry: entry; ulong: now) int
+fn: lmx_thread_dispatch_native (@: LmxThread t; LmxCallEntry: entry) int
     @: Lmx graph
     @: LmxArena arena
-    int: code
-    if: t = 0 || t\message = 0
-        return: c.LMX_THREAD_INVALID
-    code: lmx_thread_enter(t)
-    if: code != c.LMX_THREAD_OK
-        return: code
-    ---
     graph: t\message\graph
     if: graph != 0
         if: entry != 0
-            # The handler the caller holds: R0's entry program, which has no METHOD record and is
-            # given to the runtime from outside (25 (ii)).  It receives R0's own node -- the graph.
             entry(graph)
         else:
-            # The object's own body: the callable its graph names, called through the guard that
-            # asks whether the graph really is an occurrence and whether it has anything to call.
-            # The arena the question is asked of is the object's OWN band (the schedule record the
-            # object was attached with), which is the arena its graph is a cell of.
             if: t\slot != 0
                 arena: t\slot\arena
                 if: arena != 0
@@ -390,6 +426,27 @@ fn: lmx_thread_turn (@: LmxThread t; LmxCallEntry: entry; ulong: now) int
                 ---
             ---
         ---
+    ---
+return: c.LMX_THREAD_OK
+
+fn: lmx_thread_turn (@: LmxThread t; LmxCallEntry: entry; ulong: now) int
+    int: code
+    if: t = 0 || t\message = 0
+        return: c.LMX_THREAD_INVALID
+    # Validate the selected path before entering: an unavailable interpreter is not permission
+    # to execute native code, and a refused turn must not advance the cursor.
+    if: t\current_mode != c.LMX_THREAD_MODE_NATIVE && t\current_mode != c.LMX_THREAD_MODE_INTERPRETED
+        return: c.LMX_THREAD_INVALID
+    if: t\current_mode = c.LMX_THREAD_MODE_INTERPRETED && t\interpreter_dispatch = 0
+        return: c.LMX_THREAD_INVALID
+    code: lmx_thread_enter(t)
+    if: code != c.LMX_THREAD_OK
+        return: code
+    ---
+    if: t\current_mode = c.LMX_THREAD_MODE_NATIVE
+        lmx_thread_dispatch_native(t, entry)
+    else:
+        t\interpreter_dispatch(t)
     ---
     lmx_thread_leave(t)
     if: lmx_turn_end(t, now) != c.LMX_TURN_OK

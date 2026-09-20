@@ -12,6 +12,8 @@ define: LMX_THREAD_STOPPED 2
 define: LMX_THREAD_IDLE 0
 define: LMX_THREAD_TURN 1
 define: LMX_THREAD_DONE 2
+define: LMX_THREAD_MODE_NATIVE 1
+define: LMX_THREAD_MODE_INTERPRETED 2
 
 # The object's interfaces, each its own table.  An L3 Thread supports all of them
 # and hands them out SEPARATELY -- a thread API and a mail API, composed, never
@@ -25,6 +27,11 @@ fnptr: LmxThreadEnter (@: LmxThread t) int
 fnptr: LmxThreadLeave (@: LmxThread t) int
 fnptr: LmxThreadRunning (@: LmxThread t) int
 fnptr: LmxThreadCurrent () @: LmxThread
+fnptr: LmxThreadRequestMode (@: LmxThread t; int: mode) int
+# The interpreter is a replaceable L2 boundary until the L3 interpreter has a stable ABI.
+# It receives only the Thread.  In particular it cannot receive or accidentally call the native
+# entry: the ABI itself makes the two paths mutually exclusive.
+fnptr: LmxThreadDispatch (@: LmxThread t) int
 fnptr: LmxThreadMailAccept (@: LmxArena arena; @: LmxThread t; @: void target; int: lane) int
 fnptr: LmxThreadMailTake (@: LmxThread t; int: lane) @: void
 fnptr: LmxThreadMailCount (@: LmxThread t; int: lane) size_t
@@ -70,6 +77,7 @@ struct: LmxThreadApi
     LmxThreadLeave: leave
     LmxThreadRunning: running
     LmxThreadCurrent: current
+    LmxThreadRequestMode: request_mode
 end: LmxThreadApi
 
 # The thread's mail API -- every L3 Thread has one, because the mailbox is what makes
@@ -122,6 +130,14 @@ struct: LmxThread
     @: LmxSchedule slot
     unsigned: turn
     int: state
+    # Execution is a property of the Thread, never an inference from entry, METHOD, graph body,
+    # a previous result or a failure.  A request made before or during a turn is committed only
+    # by that turn's end boundary and therefore selects the following turn.
+    int: current_mode
+    int: requested_mode
+    # Injection seam for the L3 interpreter.  Null in interpreted mode is an explicit refusal;
+    # lmx_thread_turn never falls back to the native path.
+    LmxThreadDispatch: interpreter_dispatch
     # This turn's reserved children (lmx_child.h.lm1): the head of the list the end-turn
     # boundary publishes or drops (model 26, 28 -- "при успехе публикуются ... подготовленные
     # дети").  It is UNTYPED, like every other reference in this kernel: what a node is follows
@@ -161,10 +177,19 @@ prototype:
     fn: lmx_thread_attach (@: LmxThread t; @: LmxMsg message; @: LmxPost mail; @: LmxSchedule slot) int
     fn: lmx_thread_enter (@: LmxThread t) int
     fn: lmx_thread_leave (@: LmxThread t) int
-    # ONE TURN, whole: the boundary, the body, the boundary.  `entry` is a handler GIVEN FROM
-    # OUTSIDE -- the host's for R0 (25 (ii): "the entry program is R0's handler"), which is not a
-    # graph callable and has no METHOD record of its own; zero means the object has no such handler,
-    # so its body is what its OWN GRAPH names.  A translated Message's body is a callable
+    fn: lmx_thread_request_mode (@: LmxThread t; int: mode) int
+    fn: lmx_thread_mode (@: LmxThread t) int
+    fn: lmx_thread_requested_mode (@: LmxThread t) int
+    fn: lmx_thread_interpreter_set (@: LmxThread t; LmxThreadDispatch: dispatch) int
+    # End-boundary hook.  A failed turn carrying a real mode change is deliberately refused:
+    # the author has not yet selected commit-versus-rollback semantics, so current/requested stay
+    # distinct and observable instead of silently choosing either policy.
+    fn: lmx_thread_mode_end (@: LmxThread t; int: outcome) int
+    # ONE TURN, whole: the boundary, the body, the boundary.  In explicit NATIVE mode, `entry` is
+    # a handler GIVEN FROM OUTSIDE -- the host's for R0 (25 (ii): "the entry program is R0's
+    # handler"), which is not a graph callable and has no METHOD record of its own; zero means the
+    # native body is what its OWN GRAPH names.  INTERPRETED mode never receives `entry`.  A
+    # translated Message's body is a callable
     # occurrence, because "all executable bodies are part of the graph" (model 8), and the typed
     # entry receives ITS OWN NODE -- the graph -- as the reserved node of the call (19.29.5).  A
     # graph that names no callable is a legitimate state: the turn is then pure boundary work.

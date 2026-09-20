@@ -16,8 +16,10 @@ fn: lmx_interp_run (@: LmxArena arena; @: Lmx node) int
     if: lmx_interp_callable(arena, node) != c.LMX_CALL_OK
         return: LMX_INTERP_INVALID
     info: lmx_call_callable(arena, node)
-    if: info = 0 || info\body = 0
+    if: info = 0
+        return: LMX_INTERP_INVALID
+    if: info\body = 0 && info\return_arg = 0
         return: LMX_INTERP_NO_GRAPH
-    # TODO: execute info.body with lmx_own_*; return via info.return_arg.
-    # Native still uses info.addr / lmx_call0 on the same node.
+    # No operator graph in the kernel yet (fable F: l2trans stores data only).
+    # Walk will use lmx_own_load(local, node, index) from the reserved node.
 return: LMX_INTERP_NO_GRAPH

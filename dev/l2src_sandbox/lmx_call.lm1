@@ -33,9 +33,18 @@ fn: lmx_call_ready (@: LmxArena arena; @: Lmx callable) int
 return: c.LMX_CALL_OK
 
 fn: lmx_call_method (@: LmxArena arena; @: Lmx callable) @: LmxMethod
+    @: void target
+    @: LmxCallable info
     if: lmx_call_ready(arena, callable) != c.LMX_CALL_OK
         return: 0
-return: (cast: (@: LmxMethod) lmx_arena_ref_value(callable, 0U))
+    target: lmx_arena_ref_value(callable, 0U)
+    if: lmx_domain_kind(arena, target) = c.LMX_DOMAIN_KIND_CALLABLE
+        info: (cast: (@: LmxCallable) target)
+        if: info = 0
+            return: 0
+        return: @ info\method
+    ---
+return: (cast: (@: LmxMethod) target)
 
 fn: lmx_call_node (@: Lmx callable) @: Lmx
     if: callable = 0
@@ -64,7 +73,7 @@ fn: lmx_call0 (@: LmxArena arena; @: Lmx callable) int
     if: lmx_domain_kind(arena, target) = c.LMX_DOMAIN_KIND_CALLABLE
         info: (cast: (@: LmxCallable) target)
         if: info != 0
-            addr: info\addr
+            addr: info\method\addr
         ---
     ---
     if: addr = 0

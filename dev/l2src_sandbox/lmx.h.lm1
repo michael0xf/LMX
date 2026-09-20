@@ -176,11 +176,11 @@ end: LmxMethod
 # trailers need more, so child[0] now points at this record (same place, richer
 # type). M itself stays the three-field Lmx; nothing is added to Lmx.
 # header / body / return_arg are REFERENCES (21.5.1: trailer arguments are not
-# own-fields merely by being arguments). addr may be 0 when only the interpreter
-# runs the body graph.
+# own-fields merely by being arguments). Native addr may be 0 when only the
+# interpreter runs the body. First member is LmxMethod so child[0] still begins
+# with {addr,sig}; copies SHARE this record (not the occurrence M).
 struct: LmxCallable
-    LmxEntry: addr
-    unsigned: sig
+    LmxMethod: method
     @: Lmx header
     @: Lmx body
     @: Lmx return_arg

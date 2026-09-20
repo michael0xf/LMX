@@ -1,0 +1,76 @@
+predef: "l2src/lmx_call.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_interp.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# Registers LMX_DOMAIN_CALLABLE by constructing a record, plants it in child[0],
+# and checks ready/call/interp. Does not invent an operator graph.
+
+size_t: taken 0U
+@: Lmx seen 0
+
+fn: callable_entry (@: Lmx node) int
+    taken: taken + 1U
+    seen: node
+return: 9
+
+sub: fail (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: fail
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxArena: arena
+    @: LmxArena a 0
+    @: Lmx m 0
+    @: LmxCallable info 0
+    @: LmxMethod prefix 0
+    int: answer 0
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ arena) != 0
+        fputs("lmx_callable: arena\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    a: @ arena
+    info: lmx_callable_new_owned(a)
+    m: lmx_node_new_owned(a)
+    if: info = 0 || m = 0 || lmx_arena_refs_open_owned(a, m, 1U) != 0
+        fputs("lmx_callable: construct\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    info\method\addr: (cast: (LmxEntry) callable_entry)
+    info\method\sig: 1U
+    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
+
+    fail(counts, lmx_domain_kind(a, (cast: (@: void) info)) = c.LMX_DOMAIN_KIND_CALLABLE, "new record is not kind 16")
+    fail(counts, lmx_call_ready(a, m) = c.LMX_CALL_OK, "child[0] LmxCallable not ready")
+    prefix: lmx_call_method(a, m)
+    fail(counts, prefix = @ info\method, "call_method is not the nested LmxMethod")
+    fail(counts, lmx_call_callable(a, m) = info, "call_callable missed the record")
+    answer: lmx_call0(a, m)
+    fail(counts, answer = 9, "native addr of nested method")
+    fail(counts, taken = 1U && seen = m, "reserved node")
+    fail(counts, lmx_interp_run(a, m) = c.LMX_INTERP_NO_GRAPH, "no operator graph yet")
+
+    if: counts[1] != 0
+        c.printf("%d failed of %d\n", counts[1], counts[0])
+        free(counts)
+        return: 1
+    ---
+    c.printf("lmx_callable: %d checks\n", counts[0])
+    free(counts)
+return: 0

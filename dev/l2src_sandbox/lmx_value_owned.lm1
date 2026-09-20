@@ -1,4 +1,5 @@
 predef: "lmx_value_owned.h.lm1"
+predef: "lmx_implements.h.lm1"
 include: "<stdlib.h>"
 
 # A cell of one of the arena's arrays (Lingvamyxa_spec.txt 2, 6.5): the arena hands it out
@@ -43,6 +44,17 @@ fn: lmx_method_new_owned (@: LmxArena arena) @: LmxMethod
     if: value != 0
         value\addr: 0
         value\sig: 0U
+    ---
+    return: value
+
+fn: lmx_callable_new_owned (@: LmxArena arena) @: LmxCallable
+    @: LmxCallable value (cast: (@: LmxCallable) lmx_value_allocate_owned(arena, c.sizeof(c.LmxCallable), c.LMX_DOMAIN_KIND_CALLABLE, c.LMX_DOMAIN_CALLABLE))
+    if: value != 0
+        value\method\addr: 0
+        value\method\sig: 0U
+        value\header: 0
+        value\body: 0
+        value\return_arg: 0
     ---
     return: value
 

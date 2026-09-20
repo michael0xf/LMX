@@ -154,11 +154,59 @@ WHAT IS MEASURED, AND WHERE
   in both directions.
 
 WHAT IS NOT DONE, EXACTLY
-  * THE TRANSLATOR STILL DOES NOT PASS THE COUNT.  l2trans.lm1:9168 already computes
-    l2_ns_eternal[root] = l2_ebr_n, and l2trans.lm1:11913 still emits lmx_root_open(..., 0U, 0U).
-    Until that value is passed, no .lm2 program populates the store and every measurement above
-    builds its branches by hand.  This is the next symbol, and it is an emission change, not a
-    kernel one.
+  * THE TRANSLATOR CANNOT POPULATE THE STORE YET, AND "PASS THE COUNT" IS NOT THE WHOLE OF IT.
+    Traced 20.09 at HEAD 523553c (46U), with the proposal's own line numbers corrected where they
+    had drifted:
+      - THE COUNT IS NOT THE SYMBOL THE PROPOSAL NAMED.  l2trans.lm1:9213 sets
+        l2_ns_eternal[root] to l2_ebr_n and l2trans.lm1:9219 then increments l2_ebr_n, so
+        l2_ns_eternal[ni] is an INDEX into the branch table while l2_ebr_n is the COUNT.  The
+        expression to pass is l2_ebr_n, not l2_ns_eternal[root].  The method side is l2_m_n,
+        incremented once per method at l2trans.lm1:9701.
+      - WHAT THE TWO ARGUMENTS ACTUALLY DO.  lmx_root.lm1:107-125 builds two graphs IN THE STORE
+        and opens each with that many REF SLOTS, then puts them in R0's graph at slots 8 and 9.
+        They size the two RETENTION ARRAYS.  They do not allocate a branch body, and they do not
+        move one.
+      - SO PASSING THEM ALONE WOULD BE WRONG, NOT MERELY INCOMPLETE.  The generated program
+        builds its eternal branches with lmx_node_new_owned(l2_program_arena) at
+        l2trans.lm1:14468, and l2_program_arena is lmx_root_arena of the root -- R0's ORDINARY
+        arena.  Passing the counts would create store arrays that nothing fills while the
+        branches stayed GC-visible in R0's arena: exactly the survival-by-being-a-root shape that
+        lmx_root.lm1:102-106 rejects.  The translator already says so, at l2trans.lm1:14480,
+        :14501, :14507 and :14521 -- "DEBT: eternal ranges/bootstrap-admit absent in new kernel".
+        The generated program also builds its own branch array in the program arena
+        (l2trans.lm1:14447), separate from R0's retention array, so there are two arrays and only
+        one of them is in the store.
+      - THE STORE IS REACHABLE WITHOUT INVENTING ABI.  lmx_root.lm1:85 binds R0's arena to the
+        store, so lmx_perm_store_of(lmx_root_arena(root)) IS the store.  Nothing has to be added
+        to lmx_root.h.lm1; the EMISSION has to move, and that is a larger change than two numbers.
+        Both call sites hardcode the pair today: l2trans.lm1:11913 (the library open) and
+        l2trans.lm1:14623 (the program open), each inside a single fputs of a literal string, so
+        passing anything at all also means turning those into fprintf.
+      - AND THE ETERNAL PATH DOES NOT BUILD TODAY.  l2trans.lm1:13907 emits, whenever l2_ebr_n is
+        non-zero, a predef of lmx_owned_ranges.h.lm1 -- a file that exists NOWHERE in this
+        repository, neither under dev/l2src_sandbox nor under l2src.  Any program with an eternal
+        branch therefore emits L1 source with an unresolvable predef, before any of the above
+        matters.  This is the first thing to fix and the cheapest.
+      - NOTHING RUNS .lm2 HERE.  tools/build_l2src.ps1 neither builds l2trans nor translates a
+        fixture; dev/l2src_sandbox/run_self_build.ps1 is the L1 chain and does not mention .lm2;
+        no .ps1 under dev/l2src_sandbox does.  The 280 .lm2 files under tests/ -- including
+        unit_eternal_branch, _many, _shape, _two and _xref -- are referenced only as documentation
+        examples in docs/L2_spec_*.md.  So an end-to-end proof that a GENERATED program shares a
+        branch across Message arenas is not expressible by the present harness, and producing one
+        means building that harness first.  That is the honest order of work: harness, then the
+        missing header, then move the emission into the store, then pass the counts.
+      - MULTI-ROOT IS NOT REPRESENTABLE, SO THE TU-GLOBAL TOTALS ARE THE RIGHT EXPRESSIONS.
+        l2trans.lm1:14612 calls l2_emit_library_wrappers() and l2trans.lm1:14616 is its `else`
+        emitting main, so one translation unit emits EITHER the library wrapper OR the program,
+        never both: exactly one lmx_root_open per generated output.  There is therefore no
+        missing per-root counter -- l2_ebr_n and l2_m_n are TU-global because the root is.  The
+        single-root contract is real but IMPLICIT, and nothing in the translator states or checks
+        it; making it explicit is part of the emission slice, not a separate one.
+      - THE LIBRARY FORM HAS ITS OWN, SEPARATE BLOCKER, AND THE TRANSLATOR STATES IT.  The text
+        emitted at l2trans.lm1:11913 declares LmxRoot as a FUNCTION LOCAL and carries its own
+        TODO: "need persistent LmxRoot storage (by-value aggregate is illegal at module scope --
+        currently local, so open cannot stay open across calls)".  On that path the root dies at
+        return, so sizing its store would size storage that is released immediately.
   * lmx_service_post does not bind a letter's arena.  It performs no copy today (only
     lmx_arena_attach), so nothing is wrong yet; a letter that ever copied from a bound source
     would need the bind first, and that is the condition to watch, not a defect to fix now.

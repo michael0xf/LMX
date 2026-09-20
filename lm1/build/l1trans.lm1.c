@@ -10412,6 +10412,10 @@ int l1_emit_data_decl(FILE * out, const LmP0Node * node, const char * path, int 
     return 1;
     }
     }
+    if (field == 0 && const_init != 0) {
+    field = const_init;
+    const_init = 0;
+    }
     if (field == 0 || field -> value == 0 || field -> value -> kind != LM_P0_NODE_ATOM) {
     return l1_error(path, node, "declaration expects a name");
     }

@@ -3320,6 +3320,13 @@ fn: l1_emit_data_decl (@: FILE out; const: @(LmP0Node node); const: @(char path)
             return: 1
         ---
     ---
+    # For const: declarations, the name lives in const_init (captured at :3284
+    # during const unwrapping), while `field` traverses the type node's body.
+    # If the type node has no name in its own body, fall back to const_init.
+    if: field = 0 && const_init != 0
+        field: const_init
+        const_init: 0
+    ---
     if: field = 0 || field\value = 0 || field\value\kind != c.LM_P0_NODE_ATOM
         return: l1_error(path, node, "declaration expects a name")
     name_node: field\value

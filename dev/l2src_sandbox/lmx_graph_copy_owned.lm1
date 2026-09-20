@@ -183,11 +183,17 @@ sub: lmx_copy_stack_dispose (@: LmxCopyStack s)
     s\n: 0U
 end: lmx_copy_stack_dispose
 
-# METHOD and LmxCallable descriptors are copy terminals: shared by address.
+# Values resident in the bound R0 store, METHOD and runtime descriptors are
+# copy terminals: shared by physical address.
 fn: lmx_copy_is_terminal (@: LmxArena src_arena; @: void p) int
     int: kind
     if: p = 0
         return: 0
+    # Exact store membership uses the common range mechanism.  The local pool
+    # question stays local by contract; the bound store is asked directly.
+    if: src_arena != 0 && src_arena\perm != 0 && lmx_range_pool(src_arena, p) = 0 && lmx_range_pool(src_arena\perm, p) != 0
+        return: 1
+    ---
     kind: lmx_range_classify(src_arena, p)
     if: kind = c.LMX_KIND_METHOD
         return: 1
@@ -406,9 +412,19 @@ fn: lmx_copy_process (@: Lmx src; @: char dst_chars; @: LmxArena src_arena; @: L
     if: dst = 0
         \status: LMX_GRAPH_COPY_INVALID
         return: 1
-    if: src\node != 0 && lmx_range_classify(src_arena, (cast: (@: void) src\node)) = c.LMX_KIND_STRUCT
-        if: lmx_copy_ensure_struct(src\node, map, todo, dst_arena, status) != 0
+    if: src\node != 0
+        if: lmx_range_classify(src_arena, (cast: (@: void) src\node)) != c.LMX_KIND_STRUCT
+            \status: LMX_GRAPH_COPY_INVALID
             return: 1
+        ---
+        # A store-resident lexical parent keeps its physical identity.  It must
+        # never enter the copy map, otherwise the later node fixup would see a
+        # copied parent and could no longer preserve the permanent address.
+        if: src_arena\perm = 0 || lmx_range_pool(src_arena, (cast: (@: void) src\node)) != 0 || lmx_range_pool(src_arena\perm, (cast: (@: void) src\node)) = 0
+            if: lmx_copy_ensure_struct(src\node, map, todo, dst_arena, status) != 0
+                return: 1
+            ---
+        ---
     ---
     if: src\len < 0
         \status: LMX_GRAPH_COPY_INVALID
@@ -445,6 +461,7 @@ fn: lmx_graph_copy_many_owned (@@: Lmx sources; size_t: count; @: char dst_chars
     @: Lmx src
     @: Lmx dst 0
     @: void key
+    int: root_kind
     int: status LMX_GRAPH_COPY_OK
     size_t: i 0U
     size_t: r 0U
@@ -453,11 +470,13 @@ fn: lmx_graph_copy_many_owned (@@: Lmx sources; size_t: count; @: char dst_chars
     while: r < count
         if: sources[r] = 0
             return: LMX_GRAPH_COPY_INVALID
-        if: lmx_range_classify(src_arena, (cast: (@: void) sources[r])) = c.LMX_KIND_METHOD
-            # A METHOD record is not a Structure and cannot be copied as a root.
+        root_kind: lmx_range_classify(src_arena, (cast: (@: void) sources[r]))
+        # Roots are Structures.  Store-resident Structures are admitted below
+        # by address; METHOD/CALLABLE/OP/ROLE and every other representation are
+        # values, not graph roots, and must never succeed with a null output.
+        if: root_kind != c.LMX_KIND_STRUCT
             return: LMX_GRAPH_COPY_INVALID
-        if: lmx_range_classify(src_arena, (cast: (@: void) sources[r])) = c.LMX_DOMAIN_KIND_CALLABLE
-            return: LMX_GRAPH_COPY_INVALID
+        ---
         outs[r]: 0
         r: r + 1U
     ---
@@ -474,14 +493,14 @@ fn: lmx_graph_copy_many_owned (@@: Lmx sources; size_t: count; @: char dst_chars
     if: lmx_copy_map_init(map) != 0
         lmx_arena_revert(dst_arena, mark)
         return: LMX_GRAPH_COPY_NOMEM
-    # Seed: every root and its whole lexical chain up to a zero root. One map
-    # serves all roots.
+    # Seed the roots.  lmx_copy_process validates and queues each ordinary
+    # lexical parent before following it; store-resident parents remain
+    # terminals by physical address.  One map serves all roots.
     r: 0U
     while: r < count && status = LMX_GRAPH_COPY_OK
         src: sources[r]
-        while: src != 0 && status = LMX_GRAPH_COPY_OK && lmx_copy_is_terminal(src_arena, (cast: (@: void) src)) = 0
+        if: lmx_copy_is_terminal(src_arena, (cast: (@: void) src)) = 0
             lmx_copy_ensure_struct(src, map, todo, dst_arena, @ status)
-            src: src\node
         ---
         r: r + 1U
     ---
@@ -508,9 +527,13 @@ fn: lmx_graph_copy_many_owned (@@: Lmx sources; size_t: count; @: char dst_chars
                         if: lmx_range_classify(src_arena, (cast: (@: void) src\node)) != c.LMX_KIND_STRUCT
                             status: LMX_GRAPH_COPY_INVALID
                         else:
-                            dst\node: (cast: (@: Lmx) lmx_copy_map_get(map, (cast: (@: void) src\node)))
-                            if: dst\node = 0
-                                status: LMX_GRAPH_COPY_INVALID
+                            if: src_arena\perm != 0 && lmx_range_pool(src_arena, (cast: (@: void) src\node)) = 0 && lmx_range_pool(src_arena\perm, (cast: (@: void) src\node)) != 0
+                                dst\node: src\node
+                            else:
+                                dst\node: (cast: (@: Lmx) lmx_copy_map_get(map, (cast: (@: void) src\node)))
+                                if: dst\node = 0
+                                    status: LMX_GRAPH_COPY_INVALID
+                                ---
                             ---
                         ---
                     ---
@@ -527,7 +550,11 @@ fn: lmx_graph_copy_many_owned (@@: Lmx sources; size_t: count; @: char dst_chars
     if: status = LMX_GRAPH_COPY_OK
         r: 0U
         while: r < count
-            outs[r]: (cast: (@: Lmx) lmx_copy_map_get(map, (cast: (@: void) sources[r])))
+            if: src_arena\perm != 0 && lmx_range_pool(src_arena, (cast: (@: void) sources[r])) = 0 && lmx_range_pool(src_arena\perm, (cast: (@: void) sources[r])) != 0
+                outs[r]: sources[r]
+            else:
+                outs[r]: (cast: (@: Lmx) lmx_copy_map_get(map, (cast: (@: void) sources[r])))
+            ---
             r: r + 1U
         ---
     ---

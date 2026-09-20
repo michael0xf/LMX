@@ -28,13 +28,14 @@ predef: "l2src/lmx_arena.h.lm1"
 # table -- an address classified LMX_KIND_METHOD -- and by nothing else: no list
 # of METHOD ranges is carried through the copy.
 #
-# An eternal branch is a DIFFERENT mechanism (Mikhail, 2026-09-17: "«вечная
-# ветка» это совершенно другой механизм"): every void * data inside it points
-# into the root Message's arena's immutable part, and the translator substitutes
-# its values and explicit types into the code as const. A reference from a
-# mutable field to such a branch is an ordinary reference to that branch's
-# descriptor in its own arena, so the copier meets an ordinary Structure and
-# copies it like any other. There is no eternal-range list anywhere.
+# A branch qualified `independent: const: immutable` resides in R0's permanent
+# store.  Its type identity is ordinary typed-address-range membership, not a
+# tag, enum or special classifier; `node = 0` is a separate structural property
+# of the branch root.  A Message arena bound to that store can observe its
+# kind/type/stride, while `lmx_range_pool(message_arena, p)` remains a strictly
+# local ownership question.  The copier therefore tests exact membership by
+# asking the local arena and the bound store directly.  Every store-resident
+# value is retained by physical address and never copied.
 #
 # A value the table does not classify at all (LMX_KIND_NONE) is neither
 # language-owned source state nor a terminal: the copy reports UNSUPPORTED

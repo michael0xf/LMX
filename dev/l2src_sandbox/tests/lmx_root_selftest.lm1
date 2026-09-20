@@ -1,4 +1,5 @@
 predef: "l2src/lmx_root.lm1"
+predef: "l2src/lmx_perm.h.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_arena_blocks.lm1"
@@ -9,6 +10,7 @@ predef: "l2src/lmx_chars_owned.lm1"
 predef: "l2src/lmx_arena_refs.lm1"
 predef: "l2src/lmx_array_owned.lm1"
 predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
 predef: "l2src/lmx_thread.lm1"
 predef: "l2src/lmx_post.lm1"
 predef: "l2src/lmx_schedule.lm1"
@@ -51,21 +53,25 @@ size_t: root_witness_tick 0U
 size_t: root_witness_slot_seen 9U
 size_t: root_witness_refused 9U
 
-# The runtime's builder filling R0's eternal array before its first cycle (model 20): a branch
-# whose only reference afterwards is the array itself.  That is what the array is FOR -- "Исчезновение
-# обычных ссылок, завершение Message-заёмщика и его сборка мусора не освобождают ветку" -- and the
-# boundary's collection is what would take it if the array were not a root.
+# The runtime's builder filling R0's permanent store before its first cycle (model 20).
+# The branch and every value owned by it are allocated in that store; the retention
+# array merely names the translation-known set and is not a GC trick.
 fn: root_build_eternal (@: LmxArena arena; @: Lmx array) @: Lmx
+    @: LmxArena store
     @: Lmx branch
     @: void cell
     if: arena = 0 || array = 0
         return: 0
-    branch: lmx_node_new_owned(arena)
-    cell: lmx_int_new_owned(arena)
+    store: lmx_perm_store_of(arena)
+    if: store = 0
+        return: 0
+    ---
+    branch: lmx_node_new_owned(store)
+    cell: lmx_int_new_owned(store)
     if: branch = 0 || cell = 0
         return: 0
     ---
-    if: lmx_arena_refs_open_owned(arena, branch, 1U) != 0
+    if: lmx_arena_refs_open_owned(store, branch, 1U) != 0
         return: 0
     ---
     lmx_int_store_known(cell, 7)
@@ -117,13 +123,17 @@ fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxRoot: root
     LmxArena: child
+    LmxArena: copy_arena
     @: LmxArena arena 0
+    @: LmxArena store 0
     @: LmxMsg message 0
     @: LmxThread thread 0
     @: Lmx graph 0
     @: Lmx eternal_array 0
     @: Lmx methods_array 0
     @: Lmx source 0
+    @: Lmx mutable 0
+    @: Lmx copied 0
     @: LmxMsg child_message 0
     @: LmxMsg refused 0
     # 4b: the finished child's own object -- built in ITS arena, which is also its schedule band.
@@ -155,11 +165,12 @@ fn: main () int
     message: lmx_root_message(@ root)
     thread: lmx_root_thread(@ root)
     arena: lmx_root_arena(@ root)
+    store: lmx_perm_store_of(arena)
     # What the entry needs to find R0's own graph: the entry has no arguments (LmxEntry), so
     # the handle reaches it through the witness, exactly as a generated entry reaches its own.
     root_witness_message: message
-    root_check(counts, message != 0 && thread != 0 && arena != 0, "the root has no message, no object or no arena")
-    if: message = 0 || thread = 0 || arena = 0
+    root_check(counts, message != 0 && thread != 0 && arena != 0 && store != 0, "the root has no message, object, arena or permanent store")
+    if: message = 0 || thread = 0 || arena = 0 || store = 0
         fputs("lmx_root: the root was not built\n", l1_stdout())
         free(counts)
         return: 2
@@ -170,8 +181,8 @@ fn: main () int
     root_check(counts, message\graph != 0, "the root has no graph")
     graph: message\graph
     root_check(counts, graph\len = c.LMX_ROOT_SLOTS, "R0's graph has neither the children's slots nor the two arrays'")
-    # (model 20) The two const:immutable retention arrays: R0's own, built with the set
-    # translation knows, and named by R0's own graph -- which is what makes them roots.
+    # (model 20) The two permanent arrays: R0's own, built with the set translation knows.
+    # R0's graph may name them, but lifetime comes from store residency, not GC reachability.
     eternal_array: lmx_root_eternal(@ root)
     methods_array: lmx_root_methods(@ root)
     root_check(counts, eternal_array != 0 && methods_array != 0 && eternal_array != methods_array, "R0 has no two retention arrays")
@@ -200,11 +211,37 @@ fn: main () int
     root_check(counts, root_witness_turns = 2U, "a turn outside a cycle did not run the entry")
     root_check(counts, root_witness_inside = 2U, "the entry ran outside a turn")
     root_check(counts, thread\turn = 2U, "R0's turn cursor did not follow its turns")
-    # The eternal branch the entry built is held by the retention array ALONE, and the boundary's
-    # collection ran in those very cycles: it survives because the array is a root of R0's graph.
+    # The boundary collection ran in those cycles, but neither visits nor owns the store.
+    # Type is the common range-membership answer; node = 0 is checked separately.
     root_check(counts, root_witness_eternal_branch != 0, "the runtime's builder did not fill the eternal array")
     root_check(counts, lmx_range_classify(arena, (cast: (@: void) root_witness_eternal_branch)) = c.LMX_KIND_STRUCT, "the eternal branch did not survive the boundary")
+    root_check(counts, lmx_range_classify(store, (cast: (@: void) root_witness_eternal_branch)) = c.LMX_KIND_STRUCT, "the permanent store does not classify its branch")
+    root_check(counts, lmx_range_type_of(arena, (cast: (@: void) root_witness_eternal_branch)) = lmx_range_type_of(store, (cast: (@: void) root_witness_eternal_branch)), "the bound arena and store disagree on the branch's physical type")
+    root_check(counts, lmx_range_stride(arena, (cast: (@: void) root_witness_eternal_branch)) = lmx_range_stride(store, (cast: (@: void) root_witness_eternal_branch)), "the bound arena and store disagree on the branch's stride")
+    root_check(counts, lmx_range_pool(arena, (cast: (@: void) root_witness_eternal_branch)) = 0, "the ordinary arena claims ownership of the permanent branch")
+    root_check(counts, lmx_range_pool(store, (cast: (@: void) root_witness_eternal_branch)) != 0, "the permanent branch is in no store range")
+    root_check(counts, root_witness_eternal_branch\node = 0, "the independent branch root has a lexical parent")
     root_check(counts, lmx_int_value_known(lmx_arena_ref_value(root_witness_eternal_branch, 0U)) = 7, "the eternal branch's cell did not survive the boundary")
+
+    # 2b. Copying observes the same address-range type.  A permanent root is the same
+    # physical object, while an ordinary Structure with a permanent lexical parent is
+    # copied and keeps that parent address.  The destination never owns the parent.
+    memset((cast: (@: void) (@ copy_arena)), 0, c.sizeof(c.LmxArena))
+    root_check(counts, lmx_arena_open(@ copy_arena) = 0, "the copy arena did not open")
+    root_check(counts, lmx_perm_bind(@ copy_arena, store) = 0, "the copy arena did not bind to R0's store")
+    copied: 0
+    root_check(counts, lmx_graph_copy_owned(root_witness_eternal_branch, 0, arena, @ copy_arena, @ copied) = c.LMX_GRAPH_COPY_OK && copied = root_witness_eternal_branch, "copying a permanent root changed its physical address")
+    mutable: lmx_node_new_owned(arena)
+    root_check(counts, mutable != 0, "the mutable copy control did not build")
+    if: mutable != 0
+        mutable\node: root_witness_eternal_branch
+        copied: 0
+        root_check(counts, lmx_graph_copy_owned(mutable, 0, arena, @ copy_arena, @ copied) = c.LMX_GRAPH_COPY_OK, "a mutable Structure with a permanent parent did not copy")
+        root_check(counts, copied != 0 && copied != mutable, "the mutable Structure was retained instead of copied")
+        root_check(counts, copied != 0 && copied\node = root_witness_eternal_branch, "the copy did not preserve its permanent lexical parent")
+        root_check(counts, lmx_range_pool(@ copy_arena, (cast: (@: void) root_witness_eternal_branch)) = 0, "the destination arena claims the permanent parent")
+    ---
+    root_check(counts, lmx_arena_release(@ copy_arena) = 0, "the copy arena did not release")
 
     # 3. (iii) One reading per cycle, handed down: the entry sees THIS cycle's reading, and
     #    the next cycle replaces it.  The readings are taken from the one open started R0's

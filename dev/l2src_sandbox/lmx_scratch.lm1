@@ -78,9 +78,6 @@ fn: lmx_scratch_take (@: LmxScratch s; size_t: bytes; @@: void out) int
     # own size when that is larger than the step -- and the cursor moves to its end.
     got: lmx_pool_take_n(s\arena, s\cells, cells)
     if: got = 0
-        # The pool raised its chunk size to this request before failing to grow; left
-        # like that, every later growth would ask for the same impossible chunk.
-        s\cells\chunk_capacity: s\step
         return: c.LMX_SCRATCH_NOMEM
     s\at: s\cells\tail
     s\used: s\at\count

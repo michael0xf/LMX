@@ -27,7 +27,9 @@ predef: "l2src/lmx_implements.h.lm1"
 #   * a slice taken by a caller stays where it is while its callees take and rewind, and
 #     while the store grows -- pointers into it may be held;
 #   * there is no cap: a request the chunks cannot seat makes the pool add one, and a
-#     request larger than a chunk gets a chunk of its own size (lmx_pool_take_n);
+#     request larger than a chunk gets a chunk of its own size (lmx_pool_take_n).  The
+#     pool then KEEPS that size as its growth step, so the step given to
+#     lmx_scratch_open is where growth starts, not what it stays at;
 #   * the pool's `count` of a chunk is the high-water mark of that chunk and the cursor
 #     never runs ahead of it, which is what keeps the pool from handing out cells that
 #     are live.
@@ -52,9 +54,9 @@ predef: "l2src/lmx_implements.h.lm1"
 define: LMX_SCRATCH_OK 0
 # Null or unopened store, zero size, a size whose rounding overflows, a second open.
 define: LMX_SCRATCH_INVALID 1
-# The pool could not grow.  The store is unchanged and stays usable: lmx_pool_take_n
-# raises the array's chunk size to a request larger than it BEFORE it tries to grow and
-# leaves it raised when growing fails, so after a refused take the step is put back.
+# The pool could not grow.  The store is unchanged and stays usable: a failed growth
+# leaves the array's growth step as it was (lmx_pool_take_n), so a later, smaller
+# request grows normally.
 define: LMX_SCRATCH_NOMEM 2
 # The mark is not the most recent outstanding mark of this store.  Nothing changed.
 define: LMX_SCRATCH_BAD_MARK 3

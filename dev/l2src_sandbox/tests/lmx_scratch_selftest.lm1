@@ -124,6 +124,7 @@ fn: main () int
     @: void second 0
     size_t: word c.sizeof(@: void)
     size_t: was_used
+    size_t: was_step
     size_t: handed
     size_t: chunks
     int: i 0
@@ -221,11 +222,15 @@ fn: main () int
     check((cast: (@: void) ((cast: (@: char) p) + word)) = q, "and occupies a whole cell")
     was_at: s1\at
     was_used: s1\used
+    # The step as the pool holds it NOW: by this point successful requests larger than
+    # the opening step have already raised it (lmx_pool_take_n keeps the largest chunk
+    # size it was asked for), so the honest claim is "unchanged", not "still 8".
+    was_step: pp1\chunk_capacity
     check(lmx_scratch_take(s1, 0U, @ p) = c.LMX_SCRATCH_INVALID && p = 0, "zero bytes is refused")
     check(lmx_scratch_take(s1, (cast: (size_t) -1), @ p) = c.LMX_SCRATCH_INVALID && p = 0, "a size whose rounding wraps is refused")
     check(lmx_scratch_take(s1, ((cast: (size_t) -1) / 2U), @ p) = c.LMX_SCRATCH_NOMEM && p = 0, "a size the pool cannot even count is NOMEM")
     check(lmx_scratch_take(s1, (((cast: (size_t) 1048576U) * 1048576U) * 32U), @ p) = c.LMX_SCRATCH_NOMEM && p = 0, "32 TiB is NOMEM")
-    check(s1\at = was_at && s1\used = was_used && pp1\chunk_capacity = 8U, "the refusals changed nothing, the step included")
+    check(s1\at = was_at && s1\used = was_used && pp1\chunk_capacity = was_step, "the refusals changed nothing, the pool's growth step included")
     check(lmx_scratch_take(s1, 40U * word, @ p) = c.LMX_SCRATCH_OK && p != 0, "and the store still works after them")
     fill(p, 40U * word, 77)
     check(holds(p, 40U * word, 77) != 0, "the slice after the refusals is whole")

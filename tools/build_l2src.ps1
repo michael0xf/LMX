@@ -74,11 +74,12 @@ $nm = (Get-Command nm -ErrorAction Stop).Source
 $directSource = Join-Path $root 'l2src'
 $flatSource = Join-Path $root 'dev\l2src_sandbox'
 $sourceProbe = 'lmx.h.lm1'
-if (Test-Path -LiteralPath (Join-Path $directSource $sourceProbe)) {
-    $sourceDir = $directSource
-    $sourceBase = $root
-    Write-Output "build_l2src: sources $sourceDir (l2src\ layout)"
-} elseif (Test-Path -LiteralPath (Join-Path $flatSource $sourceProbe)) {
+# ORDER MATTERS AND IT IS NOT A PREFERENCE: the LIVE copy is the sandbox, and the root l2src is the
+# published snapshot that lags it (measured 20.09: 165 .lm1 against 159, 7 of them differing, 6 only
+# in the sandbox).  My first cut checked the root first and therefore compiled the OLD snapshot --
+# which is how the 28 probes lost their declaration (see below) and why lmx_callable/lmx_walk were
+# never built at all.  The sandbox is checked first now.
+if (Test-Path -LiteralPath (Join-Path $flatSource $sourceProbe)) {
     $staged = Join-Path $OutDir 'src\l2src'
     New-Item -ItemType Directory -Force -Path $staged | Out-Null
     $stagedCount = 0
@@ -93,11 +94,39 @@ if (Test-Path -LiteralPath (Join-Path $directSource $sourceProbe)) {
             Copy-Item -LiteralPath $f.FullName -Destination (Join-Path $stagedTests $f.Name) -Force; $stagedCount++
         }
     }
+    # AND THE KERNEL-SIDE l1src, which is a DIFFERENT SET FROM THE TRANSLATOR'S -- two different files
+    # both called l1src/libc_abi.lm1.  The probes say `predef: "l1src/libc_abi.lm1"` and need the
+    # KERNEL-side one: it declares `fn: l1_stdout () @: FILE` (:51), while the translator's copy at
+    # LMX\l1src does not declare it at all.  Without this the translator resolves the predef against
+    # $root, finds the translator's copy, l1_stdout stays undeclared, C assumes it returns int, and
+    # fputs(FILE*) fails under -Werror -- which is exactly the 28 probes.  Staged next to the sources
+    # so that $sourceBase, not $root, is what resolves it.
+    $flatL1 = Join-Path $flatSource 'l1src'
+    if (Test-Path -LiteralPath $flatL1) {
+        $stagedL1 = Join-Path (Split-Path -Parent $staged) 'l1src'
+        New-Item -ItemType Directory -Force -Path $stagedL1 | Out-Null
+        foreach ($f in @(Get-ChildItem -LiteralPath $flatL1 -File)) {
+            Copy-Item -LiteralPath $f.FullName -Destination (Join-Path $stagedL1 $f.Name) -Force; $stagedCount++
+        }
+    }
     $sourceDir = $staged
     $sourceBase = Split-Path -Parent $staged
-    Write-Output "build_l2src: sources STAGED from $flatSource -> $staged ($stagedCount .lm1); flat layout has no l2src\ segment, and the sources hardcode it"
+    # THE TRANSLATOR RESOLVES `predef:` ITSELF, FROM THE WORKING DIRECTORY -- gcc's -I does not enter
+    # into it.  With CWD left at $root, `predef: "l1src/libc_abi.lm1"` lands on LMX\l1src, which is
+    # the TRANSLATOR's own source set and does NOT declare l1_stdout; the generated C then calls it
+    # implicitly and -Werror=implicit-function-declaration kills the compile (measured: generated C
+    # line 3934, `fputs(..., l1_stdout())`).  Standing in the staged root makes `l1src/` the
+    # KERNEL-side set and `l2src/` the sources -- the same relationship L1's layout had, which is why
+    # the kernel built there.  The relative source paths below are already "l2src/...", and targets
+    # are absolute, so nothing else moves.
+    Set-Location $sourceBase
+    Write-Output "build_l2src: sources STAGED from $flatSource -> $staged ($stagedCount files, incl. kernel-side l1src); cwd moved to $sourceBase so predef paths resolve there"
+} elseif (Test-Path -LiteralPath (Join-Path $directSource $sourceProbe)) {
+    $sourceDir = $directSource
+    $sourceBase = $root
+    Write-Output "build_l2src: sources $sourceDir (l2src\ layout; the sandbox copy was not found)"
 } else {
-    throw "no kernel sources: found neither $directSource\$sourceProbe nor $flatSource\$sourceProbe"
+    throw "no kernel sources: found neither $flatSource\$sourceProbe nor $directSource\$sourceProbe"
 }
 # The default flags are the L2 port runners' shape: no -O level and -Werror on the
 # four hard guards only. -Strict adds the module runners' blanket -Werror -O2; it

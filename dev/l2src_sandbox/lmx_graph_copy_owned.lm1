@@ -195,6 +195,10 @@ fn: lmx_copy_is_terminal (@: LmxArena src_arena; @: void p) int
         return: 1
     if: kind = c.LMX_DOMAIN_KIND_OP
         return: 1
+    # A role record is an address and nothing else: a copy that duplicated it would
+    # make a node of the copy name a role nobody knows (lmx_plan.h.lm1).
+    if: kind = c.LMX_DOMAIN_KIND_ROLE
+        return: 1
     return: 0
 
 # Register a destination header for a source Structure before any of its edges

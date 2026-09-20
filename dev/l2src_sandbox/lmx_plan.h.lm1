@@ -1,0 +1,93 @@
+predef: "l2src/lmx.h.lm1"
+predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_implements.h.lm1"
+
+# lmx_plan.h - the immutable activation plan of a callable: which own fields its body uses,
+# in the lexical order of the fields, as positions relative to an occurrence.
+# ABI: steps/l3-activation-plan.md.
+#
+# GENERIC.  This unit knows the shape of a plan, the two role records of the plan
+# namespace, how a plan is published into LmxCallable.header, and how a path is resolved
+# on an occurrence.  It knows NOTHING of a body: not its roles, not where a role keeps its
+# operands.  Whoever owns those (the receiver; today lmx_walk_prepare) scans the body once
+# and hands this unit a finished list of paths, already in lexical order.
+#
+# The plan is shared.  LmxCallable is a copy terminal, so every occurrence of one callable
+# -- the original M and each copy -- reaches the same plan.  That is why a plan holds
+# POSITIONS and never an address inside one occurrence: a copy is isomorphic to its source
+# (the copier moves slots index by index), so the same path names the same field in each.
+#
+#   plan root P (= LmxCallable.header)   [ ROOT role, E_0 .. E_{N-1} ]
+#   entry E_i                            [ ENTRY role, p_0 .. p_{L-1} ]   size_t cells
+#
+# A role is the ADDRESS of a shared role record (domain LMX_DOMAIN_ROLE, kind
+# LMX_DOMAIN_KIND_ROLE, pointer-sized, content meaningless, copy terminal).  No number and
+# no text identifies anything here.  The children of an entry after its role are path
+# indices and nothing else -- L is the child count minus one -- so any later addition to
+# an entry must come under a NEW entry role, never as one more child of this one.
+#
+# Resolving entry i on occurrence M:  cur = M;  for every index but the last, cur becomes
+# the Structure in that slot of cur;  the last index names a slot of cur.  What is
+# returned is the ADDRESS OF THAT SLOT (the publication target of a working value), not
+# what the slot holds.
+#
+# Two kinds of access, kept apart on purpose:
+#   * preparation (lmx_plan_validate_shape, lmx_plan_publish) asks the arena's index about
+#     everything it touches -- the plan's own records and every step of every path on M;
+#   * activation (lmx_plan_slot_known, lmx_plan_entry_count) asks nothing: no arena is
+#     even passed.  A path is read as the producer's proof, the same precondition the
+#     *_known accessors and lmx_arena_ref_struct state.  This is also what lets a Message
+#     whose arena cannot classify a plan kept in another arena still run by it.
+#
+# One arena.  The plan root, its entries, their index cells and the role records live in
+# the arena that holds the LmxCallable record they are published into, and that arena
+# outlives every occurrence sharing the descriptor.  lmx_plan_publish refuses an
+# occurrence whose child[0] is not an LmxCallable OF THE GIVEN ARENA, so a copy in a child
+# Message can never hang a plan of its own short-lived arena on a shared descriptor.
+#
+# Trust.  A published plan is trusted for as long as the occurrence keeps that descriptor
+# in child[0]: the executable shape of an occurrence is immutable under its descriptor,
+# only data values change.  An act that changes the shape of ONE occurrence first puts a
+# fresh LmxCallable {method, header = 0} into that occurrence's child[0]; the shared
+# descriptor and its plan are never rewritten.  Nothing is re-validated per activation.
+
+define: LMX_PLAN_OK 0
+# Malformed plan, a role that is not the shared record, a path that does not resolve on
+# the occurrence, two entries naming one slot, child[0] of M named as a field, an
+# occurrence or a plan the given arena does not hold.
+define: LMX_PLAN_INVALID 1
+# A plan is required and absent.
+define: LMX_PLAN_UNSUPPORTED 2
+define: LMX_PLAN_NOMEM 3
+
+# The places of the two role records in the roles Structure.  Positions in a table, not
+# the identity of a role: that is the record's address.
+define: LMX_PLAN_ROLE_ROOT 0
+define: LMX_PLAN_ROLE_ENTRY 1
+define: LMX_PLAN_ROLE_COUNT 2
+
+prototype:
+    # The role records of the plan namespace, made once per descriptor arena: a Structure
+    # whose child LMX_PLAN_ROLE_ROOT / LMX_PLAN_ROLE_ENTRY is THE record of that role.
+    fn: lmx_plan_roles_open (@: LmxArena arena) @: Lmx
+    # A plan from an already enumerated list: paths[i] is lens[i] indices, lens[i] >= 1,
+    # in the caller's order, which must be the lexical order of the fields.  count = 0 is
+    # a plan too: the body was prepared and uses no own field.  All or nothing: on failure
+    # the arena is reverted to where it stood.
+    fn: lmx_plan_build_from_paths (@: LmxArena arena; @: Lmx plan_roles; @@: size_t paths; @: size_t lens; size_t: count; @@: Lmx out_plan) int
+    # Preparation and tests only.  The representation (roles, shapes, everything held by
+    # `arena`), and every path resolved on M with classified access: each step but the last
+    # lands on a Structure, the last names an existing slot, never child[0] of M, and no
+    # two entries name the same slot.  It cannot know whether the body uses a field the
+    # plan omits: that is the receiver's check.
+    fn: lmx_plan_validate_shape (@: LmxArena arena; @: Lmx plan_roles; @: Lmx occurrence; @: Lmx plan) int
+    # Checked publication through an occurrence: child[0] of M must be an LmxCallable of
+    # `arena`, the plan must pass lmx_plan_validate_shape on M, and only then does that
+    # descriptor's header become the plan.  A previous plan is left as it was.
+    fn: lmx_plan_publish (@: LmxArena arena; @: Lmx plan_roles; @: Lmx occurrence; @: Lmx plan) int
+    # Activation time.  The address of the slot entry `index` (from zero) names on this
+    # occurrence; 0 for a null plan or occurrence, an index past the last entry, or a
+    # path that leads nowhere.  No arena, no classification, no allocation, no validation.
+    fn: lmx_plan_slot_known (@: Lmx occurrence; @: Lmx plan; size_t: index) @@: void
+    fn: lmx_plan_entry_count (@: Lmx plan) size_t
+end: prototype

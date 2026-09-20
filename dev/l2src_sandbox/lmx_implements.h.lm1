@@ -76,6 +76,10 @@ define: LMX_DOMAIN_OP 31
 # domain of its own for the reason POST_RING is: the arena seats cells of one (kind, type)
 # in one array by stride, and no other array has this one's meaning.
 define: LMX_DOMAIN_SCRATCH 32
+# A role record (lmx_plan.h.lm1): a cell that exists only to BE an address.  A node names
+# its role by pointing at the shared record of that role; the record's content means
+# nothing and is never read.  Pointer-sized, because the arena refuses a zero stride.
+define: LMX_DOMAIN_ROLE 33
 
 # The same domains as KINDS -- what lmx_range_classify answers -- appended after
 # LmxKind 0..6.
@@ -91,6 +95,7 @@ define: LMX_DOMAIN_KIND_POST_RING 15
 define: LMX_DOMAIN_KIND_CALLABLE 16
 define: LMX_DOMAIN_KIND_OP 17
 define: LMX_DOMAIN_KIND_SCRATCH 18
+define: LMX_DOMAIN_KIND_ROLE 19
 
 prototype:
     # Register one whole domain of the arena's index: count cells of `stride`.

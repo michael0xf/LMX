@@ -71,6 +71,11 @@ define: LMX_DOMAIN_POST_RING 29
 # Descriptor in Structure child[0]: LmxCallable, not the two-field LmxMethod.
 define: LMX_DOMAIN_CALLABLE 30
 define: LMX_DOMAIN_OP 31
+# A cell of a temporary-frame store (lmx_scratch.h.lm1): pointer-sized storage of an
+# execution context, in an arena of its own that is never attached to a Message.  It is a
+# domain of its own for the reason POST_RING is: the arena seats cells of one (kind, type)
+# in one array by stride, and no other array has this one's meaning.
+define: LMX_DOMAIN_SCRATCH 32
 
 # The same domains as KINDS -- what lmx_range_classify answers -- appended after
 # LmxKind 0..6.
@@ -85,6 +90,7 @@ define: LMX_DOMAIN_KIND_LINK 14
 define: LMX_DOMAIN_KIND_POST_RING 15
 define: LMX_DOMAIN_KIND_CALLABLE 16
 define: LMX_DOMAIN_KIND_OP 17
+define: LMX_DOMAIN_KIND_SCRATCH 18
 
 prototype:
     # Register one whole domain of the arena's index: count cells of `stride`.

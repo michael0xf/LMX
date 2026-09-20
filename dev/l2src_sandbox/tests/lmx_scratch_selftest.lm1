@@ -1,0 +1,277 @@
+predef: "l2src/lmx_scratch.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# The temporary-frame store.  What is proved here is what its users rely on: a live slice
+# is never handed out again, neither by the cursor nor by the pool under it; a caller's
+# slice survives everything its callees do, growth included; a rewind gives the same cells
+# back with no new storage; a refusal changes nothing; marks nest and only nest; two
+# stores never see each other.
+
+int: checks 0
+int: failures 0
+
+sub: check (int: ok; const: @(char label))
+    checks: checks + 1
+    if: ok = 0
+        failures: failures + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: check
+
+sub: fill (@: void p; size_t: bytes; int: tag)
+    if: p != 0
+        memset(p, tag, bytes)
+    ---
+end: fill
+
+# Every byte of the slice still carries its tag.
+fn: holds (@: void p; size_t: bytes; int: tag) int
+    @: char q (cast: (@: char) p)
+    size_t: i 0U
+    if: p = 0
+        return: 0
+    while: i < bytes
+        if: ((cast: (int) q[i]) & 255) != (tag & 255)
+            return: 0
+        i: i + 1U
+    ---
+return: 1
+
+# [a, a + na) and [b, b + nb) do not meet.
+fn: apart (@: void a; size_t: na; @: void b; size_t: nb) int
+    @: char x (cast: (@: char) a)
+    @: char y (cast: (@: char) b)
+    if: a = 0 || b = 0
+        return: 0
+    if: x + na <= y || y + nb <= x
+        return: 1
+return: 0
+
+# The cursor is inside its chunk and never ahead of the pool's high-water mark.
+fn: sane (@: LmxScratch s) int
+    if: s = 0 || s\at = 0
+        return: 0
+    if: s\used > s\at\count || s\at\count > s\at\capacity
+        return: 0
+return: 1
+
+fn: chunks_of (@: LmxScratch s) size_t
+    @: LmxChunk chunk lmx_pool_chunk_head(s\cells)
+    size_t: n 0U
+    while: chunk != 0
+        n: n + 1U
+        chunk: chunk\next
+    ---
+return: n
+
+# A caller's slice survives what its callees do: every level takes a slice of its own
+# size, tags it, calls the next level, and then finds its tag and its address untouched.
+fn: nest (@: LmxScratch s; int: depth; int: last) int
+    LmxScratchMark: mark
+    @: LmxScratchMark pm 0
+    @: void mine 0
+    size_t: bytes
+    int: bad 0
+    pm: @ mark
+    bytes: (cast: (size_t) (depth + 1)) * 3U * c.sizeof(@: void)
+    if: lmx_scratch_mark(s, pm) != c.LMX_SCRATCH_OK
+        return: 1
+    if: lmx_scratch_take(s, bytes, @ mine) != c.LMX_SCRATCH_OK
+        return: 1
+    fill(mine, bytes, depth + 1)
+    if: sane(s) = 0
+        bad: bad + 1
+    if: depth < last
+        bad: bad + nest(s, depth + 1, last)
+    if: holds(mine, bytes, depth + 1) = 0
+        bad: bad + 1
+    if: lmx_scratch_rewind(s, pm) != c.LMX_SCRATCH_OK
+        bad: bad + 1
+    ---
+return: bad
+
+fn: main () int
+    LmxArena: arena1
+    LmxArena: arena2
+    LmxPool: pool1
+    LmxPool: pool2
+    LmxScratch: store1
+    LmxScratch: store2
+    LmxScratchMark: mark0
+    LmxScratchMark: mark1
+    LmxScratchMark: stale
+    @: LmxArena a1 0
+    @: LmxArena a2 0
+    @: LmxScratch s1 0
+    @: LmxPool pp1 0
+    @: LmxScratch s2 0
+    @: LmxScratchMark m0 0
+    @: LmxScratchMark m1 0
+    @: LmxScratchMark ms 0
+    @: LmxArenaBlock blocks 0
+    @: LmxChunk was_at 0
+    @: void a 0
+    @: void x 0
+    @: void y 0
+    @: void z 0
+    @: void w 0
+    @: void p 0
+    @: void q 0
+    @: void first 0
+    @: void second 0
+    size_t: word c.sizeof(@: void)
+    size_t: was_used
+    size_t: handed
+    size_t: chunks
+    int: i 0
+    int: same 1
+
+    memset((cast: (@: void) (@ arena1)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ arena2)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ pool1)), 0, c.sizeof(c.LmxPool))
+    memset((cast: (@: void) (@ pool2)), 0, c.sizeof(c.LmxPool))
+    memset((cast: (@: void) (@ store1)), 0, c.sizeof(c.LmxScratch))
+    memset((cast: (@: void) (@ store2)), 0, c.sizeof(c.LmxScratch))
+    a1: @ arena1
+    a2: @ arena2
+    s1: @ store1
+    pp1: @ pool1
+    s2: @ store2
+    m0: @ mark0
+    m1: @ mark1
+    ms: @ stale
+    if: lmx_arena_open(a1) != 0 || lmx_arena_open(a2) != 0
+        fputs("lmx_scratch: arena\n", l1_stdout())
+        return: 2
+    ---
+
+    # ---- open ----
+    check(lmx_scratch_take(s1, 8U, @ p) = c.LMX_SCRATCH_INVALID && p = 0, "an unopened store refuses a take")
+    check(lmx_scratch_open(s1, a1, @ pool1, 0U) = c.LMX_SCRATCH_INVALID, "a zero step is refused")
+    check(lmx_scratch_open(s1, a1, @ pool1, 8U) = c.LMX_SCRATCH_OK, "open, step 8 cells")
+    check(lmx_scratch_open(s1, a1, @ pool1, 8U) = c.LMX_SCRATCH_INVALID, "a second open is refused")
+    check(lmx_range_classify(a1, s1\at\base) = c.LMX_DOMAIN_KIND_SCRATCH, "the cells are the scratch domain of the context's arena")
+    check(sane(s1) != 0 && chunks_of(s1) = 1U, "one chunk, cursor at its start")
+
+    # ---- the cursor never overlaps the pool's high-water mark or a live slice ----
+    # a takes 3 of 8 cells FROM THE POOL (nothing was handed out yet); x takes 4 more;
+    # the rewind to m1 leaves a live and x dead; y re-uses two of x's cells; z needs three
+    # from cell 5, of which the pool has handed out only two -- the missing one must come
+    # from the pool, at the mark, and nothing may land on a or y.
+    lmx_scratch_mark(s1, m0)
+    check(lmx_scratch_take(s1, 3U * word, @ a) = c.LMX_SCRATCH_OK, "a: 3 cells")
+    fill(a, 3U * word, 65)
+    lmx_scratch_mark(s1, m1)
+    check(lmx_scratch_take(s1, 4U * word, @ x) = c.LMX_SCRATCH_OK, "x: 4 cells")
+    check(s1\at\count = 7U && sane(s1) != 0, "the pool's mark stands at 7")
+    check(lmx_scratch_rewind(s1, m1) = c.LMX_SCRATCH_OK && s1\used = 3U, "rewind to m1: cursor back to 3")
+    lmx_scratch_mark(s1, m1)
+    check(lmx_scratch_take(s1, 2U * word, @ y) = c.LMX_SCRATCH_OK && y = x, "y re-uses x's cells")
+    fill(y, 2U * word, 89)
+    check(s1\at\count = 7U, "re-use did not move the pool's mark")
+    check(lmx_scratch_take(s1, 3U * word, @ z) = c.LMX_SCRATCH_OK, "z: 3 cells, one of them new")
+    fill(z, 3U * word, 90)
+    check(s1\at\count = 8U && s1\used = 8U && sane(s1) != 0, "the pool's mark moved WITH the cursor, to 8")
+    check(apart(z, 3U * word, a, 3U * word) != 0 && apart(z, 3U * word, y, 2U * word) != 0, "z meets neither a nor y")
+    check(holds(a, 3U * word, 65) != 0 && holds(y, 2U * word, 89) != 0, "a and y are intact after z")
+    # w does not fit the first chunk any more: the pool grows, and the old chunk stays put.
+    check(lmx_scratch_take(s1, 2U * word, @ w) = c.LMX_SCRATCH_OK && chunks_of(s1) = 2U, "w opens a second chunk")
+    fill(w, 2U * word, 87)
+    check(apart(w, 2U * word, a, 8U * word) != 0, "w is outside the first chunk")
+    check(holds(a, 3U * word, 65) != 0 && holds(y, 2U * word, 89) != 0 && holds(z, 3U * word, 90) != 0, "a, y, z intact after growth")
+    check(lmx_scratch_rewind(s1, m1) = c.LMX_SCRATCH_OK && lmx_scratch_rewind(s1, m0) = c.LMX_SCRATCH_OK, "unwind to empty")
+    check(s1\used = 0U && s1\at = lmx_pool_chunk_head(@ pool1) && s1\top = 0U, "empty: cursor at the head, no mark outstanding")
+
+    # ---- recursion: a parent's slice survives its children, growth included ----
+    # Levels 0..11 take 3, 6, .. 36 cells with a step of 8: most levels need a chunk of
+    # their own size, so the store grows all the way down.
+    check(nest(s1, 0, 11) = 0, "twelve nested frames, every parent intact")
+    check(s1\used = 0U && s1\top = 0U, "empty again after the recursion")
+    blocks: lmx_arena_mark(a1)
+    handed: lmx_pool_count(@ pool1)
+    chunks: chunks_of(s1)
+    check(nest(s1, 0, 11) = 0, "the same recursion again")
+    check(lmx_arena_mark(a1) = blocks && lmx_pool_count(@ pool1) = handed && chunks_of(s1) = chunks, "warm: no new block, no new chunk, no new cell")
+
+    # ---- rewind and re-use: the same cells, and nothing allocated ----
+    i: 0
+    while: i < 1000
+        lmx_scratch_mark(s1, m0)
+        lmx_scratch_take(s1, 5U * word, @ p)
+        lmx_scratch_take(s1, 7U * word, @ q)
+        if: i = 0
+            first: p
+            second: q
+        if: p != first || q != second || p = 0 || q = 0 || sane(s1) = 0
+            same: 0
+        lmx_scratch_rewind(s1, m0)
+        i: i + 1
+    ---
+    check(same != 0, "a thousand rounds return the same two slices")
+    check(lmx_arena_mark(a1) = blocks && lmx_pool_count(@ pool1) = handed, "and allocate nothing")
+
+    # ---- alignment, size overflow, out of memory ----
+    lmx_scratch_mark(s1, m0)
+    lmx_scratch_take(s1, 1U, @ p)
+    lmx_scratch_take(s1, 1U, @ q)
+    check(p != 0 && q != 0 && ((cast: (size_t) p) % word) = 0U && ((cast: (size_t) q) % word) = 0U, "one byte is seated on a cell boundary")
+    check((cast: (@: void) ((cast: (@: char) p) + word)) = q, "and occupies a whole cell")
+    was_at: s1\at
+    was_used: s1\used
+    check(lmx_scratch_take(s1, 0U, @ p) = c.LMX_SCRATCH_INVALID && p = 0, "zero bytes is refused")
+    check(lmx_scratch_take(s1, (cast: (size_t) -1), @ p) = c.LMX_SCRATCH_INVALID && p = 0, "a size whose rounding wraps is refused")
+    check(lmx_scratch_take(s1, ((cast: (size_t) -1) / 2U), @ p) = c.LMX_SCRATCH_NOMEM && p = 0, "a size the pool cannot even count is NOMEM")
+    check(lmx_scratch_take(s1, (((cast: (size_t) 1048576U) * 1048576U) * 32U), @ p) = c.LMX_SCRATCH_NOMEM && p = 0, "32 TiB is NOMEM")
+    check(s1\at = was_at && s1\used = was_used && pp1\chunk_capacity = 8U, "the refusals changed nothing, the step included")
+    check(lmx_scratch_take(s1, 40U * word, @ p) = c.LMX_SCRATCH_OK && p != 0, "and the store still works after them")
+    fill(p, 40U * word, 77)
+    check(holds(p, 40U * word, 77) != 0, "the slice after the refusals is whole")
+    lmx_scratch_rewind(s1, m0)
+
+    # ---- marks: only the most recent outstanding mark of THIS store ----
+    check(lmx_scratch_open(s2, a2, @ pool2, 16U) = c.LMX_SCRATCH_OK, "a second store in a second arena")
+    lmx_scratch_mark(s1, m0)
+    lmx_scratch_take(s1, 2U * word, @ p)
+    fill(p, 2U * word, 33)
+    lmx_scratch_mark(s1, m1)
+    lmx_scratch_take(s1, 2U * word, @ q)
+    was_at: s1\at
+    was_used: s1\used
+    check(lmx_scratch_rewind(s2, m1) = c.LMX_SCRATCH_BAD_MARK, "another store refuses this store's mark")
+    check(lmx_scratch_rewind(s1, m0) = c.LMX_SCRATCH_BAD_MARK, "an older mark is refused while a younger one is outstanding")
+    check(s1\at = was_at && s1\used = was_used && s1\top = m1\serial, "the refusals changed nothing")
+    memcpy((cast: (@: void) ms), (cast: (@: void) m1), c.sizeof(c.LmxScratchMark))
+    check(lmx_scratch_rewind(s1, m1) = c.LMX_SCRATCH_OK, "the most recent mark rewinds")
+    check(lmx_scratch_rewind(s1, m1) = c.LMX_SCRATCH_BAD_MARK, "a mark already rewound is refused")
+    check(lmx_scratch_rewind(s1, ms) = c.LMX_SCRATCH_BAD_MARK, "and so is a copy of it kept from before")
+    check(lmx_scratch_rewind(s1, 0) = c.LMX_SCRATCH_INVALID, "a null mark is invalid")
+
+    # ---- two contexts are isolated ----
+    lmx_scratch_mark(s2, m1)
+    was_at: s1\at
+    was_used: s1\used
+    handed: lmx_pool_count(@ pool1)
+    check(lmx_scratch_take(s2, 100U * word, @ x) = c.LMX_SCRATCH_OK, "the second store grows on its own")
+    fill(x, 100U * word, 50)
+    check(s1\at = was_at && s1\used = was_used && lmx_pool_count(@ pool1) = handed, "the first store did not move")
+    check(lmx_range_classify(a1, x) = c.LMX_KIND_NONE && lmx_range_classify(a2, x) = c.LMX_DOMAIN_KIND_SCRATCH, "its cells belong to its own arena only")
+    check(lmx_range_classify(a2, p) = c.LMX_KIND_NONE, "and the first store's cells are nothing to the second arena")
+    check(holds(p, 2U * word, 33) != 0, "the first store's live slice is untouched")
+
+    # ---- close ----
+    check(lmx_scratch_close(s2) = c.LMX_SCRATCH_BUSY, "close is refused while a mark is outstanding")
+    check(lmx_scratch_rewind(s2, m1) = c.LMX_SCRATCH_OK && lmx_scratch_close(s2) = c.LMX_SCRATCH_OK, "rewind, then close")
+    check(lmx_scratch_take(s2, word, @ p) = c.LMX_SCRATCH_INVALID && p = 0, "a closed store refuses a take")
+    check(lmx_range_classify(a2, x) = c.LMX_KIND_NONE, "its cells left the arena's index")
+    check(lmx_scratch_rewind(s1, m0) = c.LMX_SCRATCH_OK && lmx_scratch_close(s1) = c.LMX_SCRATCH_OK, "the first store closes too")
+    check(lmx_arena_release(a1) = 0 && lmx_arena_release(a2) = 0, "the owner releases the arenas")
+
+    if: failures != 0
+        c.printf("lmx_scratch: %d failed of %d\n", failures, checks)
+        return: 1
+    ---
+    c.printf("lmx_scratch: %d checks\n", checks)
+return: 0

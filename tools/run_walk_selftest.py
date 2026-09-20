@@ -1,4 +1,4 @@
-"""Build and run dev/l2src_sandbox/tests/lmx_walk_selftest.lm1 with an existing L1 translator and GCC.
+"""Build and run a selftest of dev/l2src_sandbox (by default tests/lmx_walk_selftest.lm1) with an existing L1 translator and GCC.
 
 Nothing under dev/ or the stable roots is edited: the sources are copied into a private unit
 root below the output directory, translated there, compiled and run. The output directory
@@ -6,6 +6,7 @@ keeps the evidence: per-step stdout/stderr, the test's own output, its exit code
 manifest with the hashes of the translator and of every source that was used.
 
     python tools/run_walk_selftest.py
+    python tools/run_walk_selftest.py --test tests/lmx_scratch_selftest.lm1
     python tools/run_walk_selftest.py --translator C:/Nyasha_Planet/L1/bin/l1trans.exe \
         --l1src C:/Nyasha_Planet/L1/dev/l2src_sandbox/l1src
 """
@@ -33,8 +34,14 @@ def main():
     ap.add_argument('--l1src', type=Path, default=SANDBOX / 'l1src',
                     help='directory holding the libc layer libc_abi.lm1 that declares l1_stdout')
     ap.add_argument('--cc', default='gcc')
-    ap.add_argument('--output', type=Path, default=SANDBOX / 'build' / 'walk')
+    ap.add_argument('--test', default=TEST, help='selftest unit, relative to dev/l2src_sandbox')
+    ap.add_argument('--output', type=Path, default=None,
+                    help='evidence directory (default: dev/l2src_sandbox/build/<name of the test>)')
     args = ap.parse_args()
+    test = args.test.replace(os.sep, '/')
+    stem = Path(test).name[:-len('.lm1')]
+    if args.output is None:
+        args.output = SANDBOX / 'build' / ('walk' if test == TEST else stem)
 
     translator = args.translator.resolve(strict=True)
     l1src = args.l1src.resolve(strict=True)
@@ -47,7 +54,7 @@ def main():
         shutil.rmtree(output)
     unit_root = output / 'unitroot'
     generated = output / 'generated'
-    (unit_root / 'l2src' / 'tests').mkdir(parents=True)
+    (unit_root / 'l2src' / Path(test).parent).mkdir(parents=True, exist_ok=True)
     (unit_root / 'l1src').mkdir(parents=True)
     (generated / 'l2src').mkdir(parents=True)
     (generated / 'l1src').mkdir(parents=True)
@@ -62,7 +69,7 @@ def main():
     for source in sorted(SANDBOX.glob('lmx*.lm1')):
         take(source, unit_root / 'l2src' / source.name)
     take(SANDBOX / 'l2_libc.lm1', unit_root / 'l2src' / 'l2_libc.lm1')
-    take(SANDBOX / TEST, unit_root / 'l2src' / TEST)
+    take(SANDBOX / test, unit_root / 'l2src' / test)
     for source in sorted(l1src.glob('*.lm1')):
         take(source, unit_root / 'l1src' / source.name)
 
@@ -90,15 +97,15 @@ def main():
         for header in sorted((unit_root / folder).glob('*.h.lm1')):
             name = header.name[:-len('.h.lm1')]
             translate(f'{folder}/{header.name}', generated / folder / f'{name}.lm1.h', f'header-{folder}-{name}')
-    translate(f'l2src/{TEST}', generated / 'lmx_walk_selftest.c', 'translate-selftest')
+    translate(f'l2src/{test}', generated / f'{stem}.c', 'translate-selftest')
     translate('l2src/l2_libc.lm1', generated / 'l2_libc.c', 'translate-l2_libc')
 
-    exe = output / ('lmx_walk_selftest.exe' if os.name == 'nt' else 'lmx_walk_selftest')
+    exe = output / (f'{stem}.exe' if os.name == 'nt' else stem)
     command = [args.cc, '-std=c99', '-Wall', '-Wextra', '-Wpedantic',
                '-Werror=incompatible-pointer-types', '-Werror=discarded-qualifiers',
                '-Werror=implicit-function-declaration', '-Werror=implicit-int',
                '-I', generated, '-I', unit_root, '-o', exe,
-               generated / 'lmx_walk_selftest.c', generated / 'l2_libc.c']
+               generated / f'{stem}.c', generated / 'l2_libc.c']
     run(command, 'gcc')
     manifest['compiler_command'] = [str(x) for x in command]
 

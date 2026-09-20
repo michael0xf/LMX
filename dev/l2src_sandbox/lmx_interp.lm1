@@ -22,7 +22,7 @@ fn: lmx_interp_map (int: st) int
         return: c.LMX_INTERP_INVALID
 return: c.LMX_INTERP_INVALID
 
-fn: lmx_interp_run (@: LmxWalkContext context; @: Lmx node) int
+fn: lmx_interp_apply (@: LmxWalkContext context; @: Lmx node; @@: void args; size_t: nargs) int
     int: st
     if: context = 0 || node = 0 || context\arena = 0
         return: c.LMX_INTERP_INVALID
@@ -33,4 +33,7 @@ fn: lmx_interp_run (@: LmxWalkContext context; @: Lmx node) int
     st: lmx_walk_prepare(context, context\arena, context\plan_roles, node)
     if: st != c.LMX_WALK_OK
         return: lmx_interp_map(st)
-return: lmx_interp_map(lmx_walk_run(context, node, 0, 0, 0))
+return: lmx_interp_map(lmx_walk_run(context, node, args, nargs, 0))
+
+fn: lmx_interp_run (@: LmxWalkContext context; @: Lmx node) int
+return: lmx_interp_apply(context, node, 0, 0U)

@@ -21,10 +21,13 @@ predef: "l2src/lmx_array_ref_owned.lm1"
 predef: "l2src/lmx_graph_copy_owned.lm1"
 predef: "l2src/lmx_clock.lm1"
 predef: "l2src/lmx_plan.lm1"
+predef: "l2src/lmx_scratch.lm1"
+predef: "l2src/lmx_walk.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
-# Interpreted turn uses l3_exec_run on message.graph. No native entry.
+# Interpreted turn: l3_thread_dispatch -> lmx_interp_apply -> lmx_walk_run.
+# Native entry unused. Graph/Message/method not copied.
 
 sub: fail (@: int counts; int: ok; const: @(char label))
     counts[0]: counts[0] + 1
@@ -40,25 +43,35 @@ fn: native_noop (@: Lmx node) int
     native_hits: native_hits + 1
 return: 0
 
-fn: mk_l3_body (@: LmxArena a) @: Lmx
+fn: mk_dummy (@: LmxArena a) @: Lmx
     @: Lmx m
     @: LmxCallable info
-    @: LmxMethod meth
-    @: Lmx stmt
-    @: LmxOp op
     m: lmx_node_new_owned(a)
     info: lmx_callable_new_owned(a)
-    meth: lmx_method_new_owned(a)
-    stmt: lmx_node_new_owned(a)
-    op: lmx_op_new_owned(a, c.L3_NODE_RETURN)
-    if: m = 0 || info = 0 || meth = 0 || stmt = 0 || op = 0
+    if: m = 0 || info = 0 || lmx_arena_refs_open_owned(a, m, 1U) != 0
         return: 0
-    if: lmx_arena_refs_open_owned(a, m, 2U) != 0 || lmx_arena_refs_open_owned(a, stmt, 1U) != 0
-        return: 0
-    info\method: meth
-    lmx_arena_ref_store(stmt, 0U, (cast: (@: void) op))
     lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
-    lmx_arena_ref_store(m, 1U, (cast: (@: void) stmt))
+return: m
+
+fn: mk_walk_void (@: LmxArena a; @: Lmx roles) @: Lmx
+    @: Lmx unit
+    @: Lmx m
+    @: LmxCallable info
+    @: Lmx ret
+    unit: lmx_node_new_owned(a)
+    if: unit = 0 || lmx_arena_refs_open_owned(a, unit, 1U) != 0
+        return: 0
+    m: lmx_walk_plain(a, unit, 2U)
+    info: lmx_callable_new_owned(a)
+    if: m = 0 || info = 0 || roles = 0
+        return: 0
+    if: lmx_arena_ref_store(unit, 0U, (cast: (@: void) m)) != 0
+        return: 0
+    if: lmx_arena_ref_store(m, 0U, (cast: (@: void) info)) != 0
+        return: 0
+    ret: lmx_walk_frame(a, roles, m, c.LMX_WALK_OP_RET, 1U)
+    if: ret = 0 || lmx_arena_ref_store(m, 1U, (cast: (@: void) ret)) != 0
+        return: 0
 return: m
 
 fn: mk_thread (@: LmxArena arena; @: Lmx graph; @@: LmxThread out_t) int
@@ -89,8 +102,10 @@ fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxArena: arena
     @: LmxArena a 0
+    @: Lmx dummy 0
     @: Lmx graph 0
     @: LmxThread t 0
+    @: LmxMsg msg 0
     if: counts = 0
         return: 2
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
@@ -100,8 +115,8 @@ fn: main () int
         return: 2
     ---
     a: @ arena
-    graph: mk_l3_body(a)
-    if: graph = 0 || mk_thread(a, graph, @ t) = 0
+    dummy: mk_dummy(a)
+    if: dummy = 0 || mk_thread(a, dummy, @ t) = 0
         free(counts)
         return: 2
     ---
@@ -110,10 +125,18 @@ fn: main () int
     fail(counts, native_hits = 1, "native handler ran once to commit the request")
     fail(counts, lmx_thread_mode(t) = c.LMX_THREAD_MODE_INTERPRETED, "endturn committed interpreted")
     fail(counts, lmx_thread_turn(t, 0, 2U) = c.LMX_THREAD_INVALID, "interpreted without bind is not native fallback")
-    fail(counts, l3_thread_bind(t) = c.LMX_THREAD_OK, "bind L3 dispatch")
-    fail(counts, lmx_thread_turn(t, native_noop, 3U) = c.LMX_THREAD_OK, "interpreted turn ignores native entry")
+    fail(counts, l3_thread_bind(t) = c.LMX_THREAD_OK, "bind walk dispatch")
+    fail(counts, l3_thread_roles(t) != 0 && l3_thread_plan_roles(t) != 0, "standard walk roles on the graph arena")
+    graph: mk_walk_void(a, l3_thread_roles(t))
+    msg: t\message
+    fail(counts, graph != 0 && msg != 0, "walk body")
+    msg\graph: graph
+    fail(counts, t\message\graph = graph, "graph pointer installed, not copied")
+    fail(counts, lmx_thread_turn(t, native_noop, 3U) = c.LMX_THREAD_OK, "interpreted turn via lmx_walk")
     fail(counts, native_hits = 1, "native handler not used on interpreted turn")
-    fail(counts, lmx_thread_mode(t) = c.LMX_THREAD_MODE_INTERPRETED, "mode stays interpreted")
+    fail(counts, lmx_thread_mode(t) = c.LMX_THREAD_MODE_INTERPRETED, "one mode for the turn")
+    fail(counts, lmx_thread_turn(t, native_noop, 4U) = c.LMX_THREAD_OK, "second interpreted turn")
+    fail(counts, native_hits = 1, "still no native fallback")
 
     if: counts[1] != 0
         c.printf("%d failed of %d\n", counts[1], counts[0])

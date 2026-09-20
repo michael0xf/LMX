@@ -10,4 +10,4 @@
 | откуда стор у dispatch | адаптер сам: `l3_thread_dispatch` → `l3_exec_run` → локальный scratch. ABI Thread не менялся |
 | `lmx_walk` | не вызывается; роли тела walk не импортируются |
 
-`lmx_interp_run(context, node)` — вход в walk: `prepare` + `lmx_walk_run`, без METHOD.addr. Тест `tests/lmx_interp_walk_selftest.lm1` (3 checks). `l3_exec` остаётся ресивером с внутренними тегами N1–N10.
+Thread: `l3_thread_dispatch` больше не зовёт `l3_exec_run`. На такт открывается L2 scratch/context (отдельная арена, не Message). `lmx_interp_apply(ctx, graph, args, 1)` с `args[0] = subject = message.graph`, `out = 0`. Граф/Message/method не копируются. `l3_thread_bind` 14/0.

@@ -3579,19 +3579,6 @@ fn: l1_emit_stmt (@: FILE out; const: @(LmP0Node node); const: @(char path)) int
         if: l1_emit_stmt(out, last\value, path) != 0
             return: 1
         return: l1_write_cstr(out, "    }\n")
-    if: l1_text_eq(head, "else if")
-        last: l1_last_active_field(frame\body)
-        if: last = 0 || last\value = 0 || last\value\kind != c.LM_P0_NODE_STRUCTURE
-            return: l1_error(path, node, "else if without body")
-        if: l1_write_cstr(out, "    else if (") != 0
-            return: 1
-        if: l1_emit_expr_range(out, frame\body\first_field, last, path, 1) != 0
-            return: 1
-        if: l1_write_cstr(out, ") {\n") != 0
-            return: 1
-        if: l1_emit_stmt(out, last\value, path) != 0
-            return: 1
-        return: l1_write_cstr(out, "    }\n")
     if: l1_text_eq(head, "else")
         if: l1_write_cstr(out, "    else {\n") != 0
             return: 1

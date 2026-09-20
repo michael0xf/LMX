@@ -45,6 +45,12 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 #   The link is therefore made to answer for itself -- lmx_perm_store_of and the three range
 #   observers follow it only while the target still carries the role -- and a still-live child
 #   that outlives its runtime's store sees no store rather than a released one.
+#
+# That last check has been SEEN TO FAIL, which is the only reason to trust it: relinking this
+# same object against an lmx_perm unit whose store_of lacks the role test gives 20 checks and
+# exactly one failure, the closed-store one, with the other nineteen unchanged.  The three
+# range fallbacks are held to the same rule for consistency, but they are NOT measured here:
+# a released store answers nothing anyway, because its own index is gone.
 
 sub: pc_check (@: int counts; int: ok; const: @(char label))
     counts[0]: counts[0] + 1

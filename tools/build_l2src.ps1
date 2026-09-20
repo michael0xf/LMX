@@ -186,7 +186,12 @@ function Invoke-Bounded([string]$Label, [string]$Exe, [string[]]$ArgList, [int]$
     return $code
 }
 function Convert-Source([string]$Label, [string]$RelSource, [string]$Target) {
-    $code = Invoke-Captured $Label $Translator @($RelSource, $Target) $Label
+    # The LOG name is not the row label: translate, compile and link of ONE target must not share
+    # a file, because Invoke-Captured writes logs with Set-Content (overwrite) and the label is
+    # identical for all three -- which left only the LAST command visible (measured 20.09: the
+    # failing probe's log held the link invoke and nothing else, so "was the compile even run?"
+    # could not be answered from evidence).
+    $code = Invoke-Captured $Label $Translator @($RelSource, $Target) ("translate_" + $Label)
     if ($code -ne 0 -or -not (Test-Path -LiteralPath $Target)) {
         # NOT piped to Out-Null: the row IS the evidence, and swallowing it left a HOLE in the
         # log -- the target simply vanished from the listing while the summary still counted it
@@ -198,7 +203,7 @@ function Convert-Source([string]$Label, [string]$RelSource, [string]$Target) {
     return $true
 }
 function Compile-C([string]$Label, [string]$Source, [string]$Object) {
-    $code = Invoke-Captured $Label $gcc ($flags + @('-c', $Source, '-o', $Object)) $Label
+    $code = Invoke-Captured $Label $gcc ($flags + @('-c', $Source, '-o', $Object)) ("compile_" + $Label)
     if ($code -ne 0 -or -not (Test-Path -LiteralPath $Object)) {
         Add-Row 'FAIL' $Label "gcc exit $code; log $logDir\$(Get-SafeName $Label).log"
         return $false
@@ -355,7 +360,14 @@ foreach ($c in @(Get-ChildItem -LiteralPath $sourceDir -Filter '*_selftest.c' -F
     $base = $c.Name.Substring(0, $c.Name.Length - '.c'.Length)
     $testObj = Join-Path $objDir "$base.o"
     $exe = Join-Path $binDir "$base.exe"
-    if (-not (Test-Path -LiteralPath $testObj)) { continue }
+    if (-not (Test-Path -LiteralPath $testObj)) {
+        # NOT a silent skip.  A C selftest whose object was never built used to vanish from the
+        # record entirely -- the same class the Convert-Source comment warns about ("swallowing it
+        # left a HOLE in the log"), found again on 20.09 by Grok Bot's read-only pass: this was the
+        # one path where a failure gained no Add-Row, so $failed grew without a line to explain it.
+        Add-Row 'FAIL' "cselftest:$base" "object never built: $testObj (see compile_* log for the C source)"
+        continue
+    }
     $linkObjects = Resolve-Link $testObj ($objects + $thirdPartyObjects)
     $link = $flags + @('-o', $exe, $testObj) + $linkObjects
     $code = Invoke-Captured "cselftest:$base" $gcc $link "cselftest:$base"

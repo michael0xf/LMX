@@ -1,6 +1,18 @@
 predef: "l2src/lmx.h.lm1"
 predef: "l2src/lmx_arena.h.lm1"
 predef: "l2src/lmx_implements.h.lm1"
+predef: "l2src/lmx_own.h.lm1"
+predef: "l2src/lmx_scratch.h.lm1"
+
+struct: L3Frame
+    @: Lmx self
+    @: Lmx subject
+    int: last_int
+    int: has_ret
+    @: LmxScratch scratch
+    @: LmxOwnLocal owns
+    int: nown
+end: L3Frame
 
 # L3-01 receiver: consume an already-built graph as the L3 subset
 # N1-N3. Not admission (#admission). Unsupported nodes fail; never METHOD.addr.
@@ -22,6 +34,7 @@ define: L3_NODE_YIELD 36
 define: L3_NODE_FINALLY 37
 define: L3_NODE_THROW 38
 define: L3_NODE_EXPECT_INT 39
+define: L3_NODE_ASSIGN 40
 define: L3_WHILE_CAP 10000
 
 prototype:

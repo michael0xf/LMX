@@ -1,56 +1,59 @@
 predef: "l3_interp/l3_recv.h.lm1"
 predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_arena_refs.h.lm1"
 predef: "l2src/lmx_own.h.lm1"
 predef: "l2src/lmx_own.lm1"
+predef: "l2src/lmx_scratch.lm1"
 predef: "l2src/lmx_interp.h.lm1"
 predef: "l2src/lmx_implements.h.lm1"
 predef: "l2src/lmx_value_owned.h.lm1"
 predef: "l3_interp/l3_path.lm1"
-include: "<stdlib.h>"
+include: "<string.h>"
 
-@: Lmx l3_subject 0
 int: l3_last_int 0
 int: l3_has_ret 0
 
-# L3-02 N4-N8. return: encoded as LmxOp RETURN in the body, not ISA 3-14.
-# Never execute METHOD.addr.
-
-define: L3_OWN_CAP 32
-
 prototype:
-    fn: l3_exec_stmt (@: LmxArena arena; @: Lmx node; @: void v; @: LmxOwnLocal owns; int: nown) int
-    fn: l3_exec_range (@: LmxArena arena; @: Lmx node; size_t: from; @: LmxOwnLocal owns; int: nown) int
-    fn: l3_exec_op (@: LmxArena arena; @: Lmx host; @: LmxOp op; @: LmxOwnLocal owns; int: nown) int
+    fn: l3_exec_stmt (@: LmxArena arena; @: L3Frame f; @: void v) int
+    fn: l3_exec_range (@: LmxArena arena; @: L3Frame f; @: Lmx node; size_t: from) int
+    fn: l3_exec_op (@: LmxArena arena; @: L3Frame f; @: Lmx host; @: LmxOp op) int
     fn: l3_cond_int (@: LmxArena arena; @: void v; @: int out) int
-    fn: l3_own_load_ints (@: LmxArena arena; @: Lmx node; @: LmxOwnLocal owns; @: int nown) int
-    fn: l3_own_checkpoint_all (@: LmxOwnLocal owns; int: nown) int
+    fn: l3_own_load_ints (@: LmxArena arena; @: L3Frame f; @: Lmx node) int
+    fn: l3_own_checkpoint_all (@: L3Frame f) int
+    fn: l3_exec_frame (@: LmxArena arena; @: L3Frame f; @: Lmx node) int
 end: prototype
 
-fn: l3_own_load_ints (@: LmxArena arena; @: Lmx node; @: LmxOwnLocal owns; @: int nown) int
+fn: l3_own_load_ints (@: LmxArena arena; @: L3Frame f; @: Lmx node) int
     size_t: i
     @: void v
-    \nown: 0
-    if: arena = 0 || node = 0 || owns = 0
+    @: void slice 0
+    f\nown: 0
+    if: arena = 0 || f = 0 || node = 0 || f\scratch = 0
         return: 1
+    if: lmx_scratch_take(f\scratch, 32U * c.sizeof(c.LmxOwnLocal), @ slice) != c.LMX_SCRATCH_OK
+        return: 1
+    f\owns: (cast: (@: LmxOwnLocal) slice)
     i: 1U
-    while: i < (cast: (size_t) node\len) && \nown < c.L3_OWN_CAP
+    while: i < (cast: (size_t) node\len)
         v: lmx_arena_ref_value(node, i)
         if: v != 0 && lmx_domain_kind(arena, v) = c.LMX_KIND_PRIMITIVE
             if: lmx_domain_type(arena, v) = c.LMX_TYPE_INT
-                if: lmx_own_load(@ owns[\nown], node, i) != 0
+                if: lmx_own_load(@ f\owns[f\nown], node, i) != 0
                     return: 1
-                \nown: \nown + 1
+                f\nown: f\nown + 1
             ---
         ---
         i: i + 1U
     ---
 return: 0
 
-fn: l3_own_checkpoint_all (@: LmxOwnLocal owns; int: nown) int
+fn: l3_own_checkpoint_all (@: L3Frame f) int
     int: i 0
-    while: i < nown
-        if: lmx_own_checkpoint(@ owns[i]) != 0
+    if: f = 0
+        return: 1
+    while: i < f\nown
+        if: lmx_own_checkpoint(@ f\owns[i]) != 0
             return: 1
         i: i + 1
     ---
@@ -66,37 +69,41 @@ fn: l3_cond_int (@: LmxArena arena; @: void v; @: int out) int
     \out: lmx_int_value_known(v)
 return: c.L3_OK
 
-fn: l3_exec_op (@: LmxArena arena; @: Lmx host; @: LmxOp op; @: LmxOwnLocal owns; int: nown) int
+fn: l3_exec_op (@: LmxArena arena; @: L3Frame f; @: Lmx host; @: LmxOp op) int
     int: code
     int: st
     int: cond 0
     int: n 0
+    int: idx
+    int: k
     @: void body
-    if: op = 0
+    @: void arg
+    @: void leaf 0
+    @: void want
+    @: Lmx path
+    size_t: ai
+    if: op = 0 || f = 0
         return: c.L3_INVALID
     code: op\code
     if: code = c.L3_NODE_RETURN
-        size_t: ai
-        @: void arg
-        int: rst
-        l3_has_ret: 0
+        f\has_ret: 0
         if: host != 0
             ai: 1U
             while: ai < (cast: (size_t) host\len)
                 arg: lmx_arena_ref_value(host, ai)
-                rst: l3_exec_stmt(arena, host, arg, owns, nown)
-                if: rst != c.L3_OK
-                    return: rst
+                st: l3_exec_stmt(arena, f, arg)
+                if: st != c.L3_OK
+                    return: st
                 if: arg != 0 && lmx_domain_kind(arena, arg) = c.LMX_KIND_PRIMITIVE
                     if: lmx_domain_type(arena, arg) = c.LMX_TYPE_INT
-                        l3_last_int: lmx_int_value_known(arg)
-                        l3_has_ret: 1
+                        f\last_int: lmx_int_value_known(arg)
+                        f\has_ret: 1
                     ---
                 ---
                 ai: ai + 1U
             ---
         ---
-        if: l3_own_checkpoint_all(owns, nown) != 0
+        if: l3_own_checkpoint_all(f) != 0
             return: c.L3_INVALID
         return: c.L3_RETURN
     ---
@@ -104,17 +111,14 @@ fn: l3_exec_op (@: LmxArena arena; @: Lmx host; @: LmxOp op; @: LmxOwnLocal owns
         return: c.L3_UNSUPPORTED
     ---
     if: code = c.L3_NODE_EXPECT_INT
-        @: void leaf 0
-        @: void want
-        @: Lmx path
-        if: l3_subject = 0
+        if: f\subject = 0
             return: c.L3_UNSUPPORTED
         if: host = 0 || host\len < 3
             return: c.L3_INVALID
         if: lmx_domain_kind(arena, lmx_arena_ref_value(host, 1U)) != c.LMX_KIND_STRUCT
             return: c.L3_UNSUPPORTED
         path: (cast: (@: Lmx) lmx_arena_ref_value(host, 1U))
-        st: l3_path_leaf(arena, l3_subject, path, @ leaf)
+        st: l3_path_leaf(arena, f\subject, path, @ leaf)
         if: st != c.L3_OK
             return: st
         want: lmx_arena_ref_value(host, 2U)
@@ -128,6 +132,23 @@ fn: l3_exec_op (@: LmxArena arena; @: Lmx host; @: LmxOp op; @: LmxOwnLocal owns
     ---
     if: host = 0
         return: c.L3_INVALID
+    if: code = c.L3_NODE_ASSIGN
+        if: host\len < 3 || f\self = 0
+            return: c.L3_INVALID
+        st: l3_cond_int(arena, lmx_arena_ref_value(host, 1U), @ idx)
+        if: st != c.L3_OK
+            return: st
+        arg: lmx_arena_ref_value(host, 2U)
+        k: 0
+        while: k < f\nown
+            if: f\owns[k].from = lmx_arena_ref_cell(f\self, (cast: (size_t) idx))
+                lmx_own_write(@ f\owns[k], arg)
+                return: c.L3_OK
+            ---
+            k: k + 1
+        ---
+        return: c.L3_UNSUPPORTED
+    ---
     if: code = c.L3_NODE_IF
         if: host\len < 3
             return: c.L3_INVALID
@@ -135,9 +156,9 @@ fn: l3_exec_op (@: LmxArena arena; @: Lmx host; @: LmxOp op; @: LmxOwnLocal owns
         if: st != c.L3_OK
             return: st
         if: cond != 0
-            return: l3_exec_stmt(arena, host, lmx_arena_ref_value(host, 2U), owns, nown)
+            return: l3_exec_stmt(arena, f, lmx_arena_ref_value(host, 2U))
         if: host\len > 3
-            return: l3_exec_stmt(arena, host, lmx_arena_ref_value(host, 3U), owns, nown)
+            return: l3_exec_stmt(arena, f, lmx_arena_ref_value(host, 3U))
         return: c.L3_OK
     ---
     if: code = c.L3_NODE_WHILE
@@ -150,7 +171,7 @@ fn: l3_exec_op (@: LmxArena arena; @: Lmx host; @: LmxOp op; @: LmxOwnLocal owns
                 return: st
             if: cond = 0
                 return: c.L3_OK
-            st: l3_exec_stmt(arena, host, body, owns, nown)
+            st: l3_exec_stmt(arena, f, body)
             if: st = c.L3_RETURN
                 return: c.L3_RETURN
             if: st != c.L3_OK
@@ -161,19 +182,22 @@ fn: l3_exec_op (@: LmxArena arena; @: Lmx host; @: LmxOp op; @: LmxOwnLocal owns
     ---
 return: c.L3_UNSUPPORTED
 
-fn: l3_exec_stmt (@: LmxArena arena; @: Lmx node; @: void v; @: LmxOwnLocal owns; int: nown) int
+fn: l3_exec_stmt (@: LmxArena arena; @: L3Frame f; @: void v) int
     @: Lmx host
     @: void head
-    @: LmxOp op
     int: hk
     int: kind
+    LmxScratchMark: mark
+    int: saved
+    int: st
+    @: LmxOwnLocal saved_owns
     if: v = 0
         return: c.L3_ABSENT
     kind: lmx_domain_kind(arena, v)
     if: kind = c.LMX_KIND_PRIMITIVE
         return: c.L3_OK
     if: kind = c.LMX_DOMAIN_KIND_OP
-        return: l3_exec_op(arena, 0, (cast: (@: LmxOp) v), owns, nown)
+        return: l3_exec_op(arena, f, 0, (cast: (@: LmxOp) v))
     ---
     if: kind = c.LMX_KIND_STRUCT
         host: (cast: (@: Lmx) v)
@@ -184,12 +208,25 @@ fn: l3_exec_stmt (@: LmxArena arena; @: Lmx node; @: void v; @: LmxOwnLocal owns
             return: c.L3_OK
         hk: lmx_domain_kind(arena, head)
         if: hk = c.LMX_DOMAIN_KIND_OP
-            return: l3_exec_op(arena, host, (cast: (@: LmxOp) head), owns, nown)
+            return: l3_exec_op(arena, f, host, (cast: (@: LmxOp) head))
         if: hk = c.LMX_DOMAIN_KIND_CALLABLE
-            return: l3_exec_run(arena, host)
+            if: l3_own_checkpoint_all(f) != 0
+                return: c.L3_INVALID
+            if: f\scratch = 0
+                return: l3_exec_frame(arena, f, host)
+            if: lmx_scratch_mark(f\scratch, @ mark) != c.LMX_SCRATCH_OK
+                return: c.L3_INVALID
+            saved: f\nown
+            saved_owns: f\owns
+            st: l3_exec_frame(arena, f, host)
+            lmx_scratch_rewind(f\scratch, @ mark)
+            f\nown: saved
+            f\owns: saved_owns
+            return: st
+        ---
         if: hk = c.LMX_KIND_METHOD
             return: c.L3_UNSUPPORTED
-        return: l3_exec_range(arena, host, 0U, owns, nown)
+        return: c.L3_OK
     ---
     if: kind = c.LMX_DOMAIN_KIND_CALLABLE
         return: c.L3_OK
@@ -197,14 +234,14 @@ fn: l3_exec_stmt (@: LmxArena arena; @: Lmx node; @: void v; @: LmxOwnLocal owns
         return: c.L3_UNSUPPORTED
 return: c.L3_UNSUPPORTED
 
-fn: l3_exec_range (@: LmxArena arena; @: Lmx node; size_t: from; @: LmxOwnLocal owns; int: nown) int
+fn: l3_exec_range (@: LmxArena arena; @: L3Frame f; @: Lmx node; size_t: from) int
     size_t: i
     int: st
     if: node = 0
         return: c.L3_INVALID
     i: from
     while: i < (cast: (size_t) node\len)
-        st: l3_exec_stmt(arena, node, lmx_arena_ref_value(node, i), owns, nown)
+        st: l3_exec_stmt(arena, f, lmx_arena_ref_value(node, i))
         if: st = c.L3_RETURN
             return: c.L3_RETURN
         if: st != c.L3_OK
@@ -213,57 +250,65 @@ fn: l3_exec_range (@: LmxArena arena; @: Lmx node; size_t: from; @: LmxOwnLocal 
     ---
 return: c.L3_OK
 
+fn: l3_exec_frame (@: LmxArena arena; @: L3Frame f; @: Lmx node) int
+    @: void head
+    int: hk
+    int: st
+    @: Lmx saved_self
+    if: arena = 0 || f = 0 || node = 0
+        return: c.L3_INVALID
+    if: lmx_domain_kind(arena, (cast: (@: void) node)) != c.LMX_KIND_STRUCT
+        return: c.L3_UNSUPPORTED
+    if: node\len < 1
+        return: c.L3_UNSUPPORTED
+    head: lmx_arena_ref_value(node, 0U)
+    if: head = 0
+        return: c.L3_UNSUPPORTED
+    hk: lmx_domain_kind(arena, head)
+    if: hk = c.LMX_KIND_METHOD
+        return: c.L3_UNSUPPORTED
+    if: hk != c.LMX_DOMAIN_KIND_CALLABLE
+        return: c.L3_UNSUPPORTED
+    saved_self: f\self
+    f\self: node
+    if: l3_own_load_ints(arena, f, node) != 0
+        f\self: saved_self
+        return: c.L3_INVALID
+    st: l3_exec_range(arena, f, node, 1U)
+    if: st != c.L3_RETURN
+        l3_own_checkpoint_all(f)
+    ---
+    f\self: saved_self
+    if: st = c.L3_RETURN
+        return: c.L3_OK
+return: st
+
 fn: l3_exec_run (@: LmxArena arena; @: Lmx node) int
 return: l3_exec_run_on(arena, node, 0)
 
 fn: l3_exec_run_on (@: LmxArena arena; @: Lmx node; @: Lmx subject) int
-    @: LmxOwnLocal owns 0
-    int: nown 0
+    LmxArena: sa
+    LmxPool: cells
+    LmxScratch: scratch
+    L3Frame: frame
     int: st
-    @: void head
-    int: hk
-    @: Lmx prev
-    prev: l3_subject
-    l3_subject: subject
-    l3_has_ret: 0
-    owns: (cast: (@: LmxOwnLocal) calloc(32U, c.sizeof(c.LmxOwnLocal)))
-    if: arena = 0 || node = 0 || owns = 0
-        l3_subject: prev
-        if: owns != 0
-            free((cast: (@: void) owns))
-        ---
+    memset((cast: (@: void) (@ sa)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ cells)), 0, c.sizeof(c.LmxPool))
+    memset((cast: (@: void) (@ scratch)), 0, c.sizeof(c.LmxScratch))
+    memset((cast: (@: void) (@ frame)), 0, c.sizeof(c.L3Frame))
+    if: lmx_arena_open(@ sa) != 0
         return: c.L3_INVALID
-    if: lmx_domain_kind(arena, (cast: (@: void) node)) != c.LMX_KIND_STRUCT
-        l3_subject: prev
-        free((cast: (@: void) owns))
-        return: c.L3_UNSUPPORTED
-    if: node\len < 1
-        l3_subject: prev
-        free((cast: (@: void) owns))
-        return: c.L3_UNSUPPORTED
-    head: lmx_arena_ref_value(node, 0U)
-    if: head = 0
-        l3_subject: prev
-        free((cast: (@: void) owns))
-        return: c.L3_UNSUPPORTED
-    hk: lmx_domain_kind(arena, head)
-    if: hk = c.LMX_KIND_METHOD
-        l3_subject: prev
-        free((cast: (@: void) owns))
-        return: c.L3_UNSUPPORTED
-    if: hk != c.LMX_DOMAIN_KIND_CALLABLE
-        l3_subject: prev
-        free((cast: (@: void) owns))
-        return: c.L3_UNSUPPORTED
-    if: l3_own_load_ints(arena, node, owns, @ nown) != 0
-        l3_subject: prev
-        free((cast: (@: void) owns))
+    if: lmx_scratch_open(@ scratch, @ sa, @ cells, 64U) != c.LMX_SCRATCH_OK
+        lmx_arena_release(@ sa)
         return: c.L3_INVALID
-    st: l3_exec_range(arena, node, 1U, owns, nown)
-    l3_subject: prev
-    free((cast: (@: void) owns))
-    if: st = c.L3_RETURN
-        return: c.L3_OK
+    ---
+    frame.scratch: @ scratch
+    frame.subject: subject
+    st: l3_exec_frame(arena, @ frame, node)
+    l3_last_int: frame.last_int
+    l3_has_ret: frame.has_ret
+    lmx_scratch_close(@ scratch)
+    lmx_arena_release(@ sa)
 return: st
 
 fn: l3_returned_int () int

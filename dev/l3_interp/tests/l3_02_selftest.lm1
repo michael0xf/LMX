@@ -144,6 +144,52 @@ fn: main () int
     fail(counts, l3_exec_run(a, m) = c.L3_OK, "N8 run with own int")
     fail(counts, lmx_int_value_known(cell) = 1, "N8 clean own not flushed over")
 
+    # Dirty assign publishes. Data Structure with a nested return is not a body.
+    info: lmx_callable_new_owned(a)
+    m: lmx_node_new_owned(a)
+    cell: lmx_int_new_owned(a)
+    cell2: lmx_int_new_owned(a)
+    stmt: lmx_node_new_owned(a)
+    if: info = 0 || m = 0 || cell = 0 || cell2 = 0 || stmt = 0
+        free(counts)
+        return: 2
+    ---
+    if: lmx_arena_refs_open_owned(a, m, 4U) != 0 || lmx_arena_refs_open_owned(a, stmt, 3U) != 0
+        free(counts)
+        return: 2
+    ---
+    lmx_int_store_known(cell, 1)
+    lmx_int_store_known(cell2, 99)
+    info\method: meth
+    lmx_arena_ref_store(stmt, 0U, (cast: (@: void) lmx_op_new_owned(a, c.L3_NODE_ASSIGN)))
+    lmx_arena_ref_store(stmt, 1U, lmx_int_new_owned(a))
+    lmx_int_store_known(lmx_arena_ref_value(stmt, 1U), 1)
+    lmx_arena_ref_store(stmt, 2U, cell2)
+    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
+    lmx_arena_ref_store(m, 1U, cell)
+    lmx_arena_ref_store(m, 2U, (cast: (@: void) stmt))
+    lmx_arena_ref_store(m, 3U, (cast: (@: void) mk_return(a)))
+    fail(counts, l3_exec_run(a, m) = c.L3_OK, "N8 assign")
+    fail(counts, lmx_int_value_known(lmx_arena_ref_value(m, 1U)) = 99, "N8 dirty own published")
+
+    inner: lmx_node_new_owned(a)
+    info: lmx_callable_new_owned(a)
+    m: lmx_node_new_owned(a)
+    if: inner = 0 || info = 0 || m = 0
+        free(counts)
+        return: 2
+    ---
+    if: lmx_arena_refs_open_owned(a, inner, 1U) != 0 || lmx_arena_refs_open_owned(a, m, 3U) != 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(inner, 0U, (cast: (@: void) mk_return(a)))
+    info\method: meth
+    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
+    lmx_arena_ref_store(m, 1U, (cast: (@: void) inner))
+    lmx_arena_ref_store(m, 2U, (cast: (@: void) mk_return_int(a, 3)))
+    fail(counts, l3_exec_run(a, m) = c.L3_OK && l3_returned_int() = 3, "data Structure is not a body")
+
     if: counts[1] != 0
         c.printf("%d failed of %d\n", counts[1], counts[0])
         free(counts)

@@ -41,7 +41,12 @@ if (-not (Test-Path (Join-Path $l1Root 'bin\l1trans.exe'))) {
 # back to L1 -- measured on LMX, where lm1/build was already staged.
 $l1Fallback = 'C:\Nyasha_Planet\L1'
 $kernelRoot = $l1Root
-if (-not (Test-Path (Join-Path $l1Root 'dev\l2src_sandbox\build\l2src'))) { $kernelRoot = $l1Fallback }
+# The kernel build may live under the sandbox (L1: dev\l2src_sandbox\build\l2src) or at the tree
+# rook (LMX: build\l2src, which is where tools\build_l2src.ps1 writes).  Both are accepted; what is
+# NOT accepted is silently taking the kernel from another tree while the headers exist locally.
+$kernelBuildHere = (Test-Path -LiteralPath (Join-Path $l1Root 'dev\l2src_sandbox\build\l2src')) -or
+                   (Test-Path -LiteralPath (Join-Path $l1Root 'build\l2src'))
+if (-not $kernelBuildHere) { $kernelRoot = $l1Fallback }
 $lm1Root = $l1Root
 if (-not (Test-Path (Join-Path $l1Root 'lm1\build'))) { $lm1Root = $l1Fallback }
 $foreign = @()
@@ -244,6 +249,13 @@ foreach ($h in $hdrFiles) {
 # for the mixa include: directives.  If no l2src build exists, skip silently —
 # units that need kernel types will FAIL at compile time with a clear message.
 $l2srcSandbox = Join-Path $kernelRoot 'dev\l2src_sandbox'
+# WHERE THE STAMPS ARE.  L1 nests them under the sandbox; LMX keeps them at the tree root (same
+# stamps, different parent).  Both are tried, and if neither holds a headers\ dir the port says so
+# instead of quietly compiling against nothing.
+if (-not (Test-Path -LiteralPath (Join-Path $l2srcSandbox 'build\l2src'))) {
+    if (Test-Path -LiteralPath (Join-Path $kernelRoot 'build\l2src')) { $l2srcSandbox = $kernelRoot }
+}
+Write-Output "build_mixa: kernel evidence searched under $l2srcSandbox\build\l2src"
 if (Test-Path -LiteralPath $l2srcSandbox) {
     # A build directory is a STAMP (yyyyMMdd_HHmmss) and the newest one is the newest BY NAME.
     # Sorting every directory by name alone picked `trace_app_min` -- letters sort above digits --

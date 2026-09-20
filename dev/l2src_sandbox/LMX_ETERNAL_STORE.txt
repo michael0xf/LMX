@@ -27,6 +27,10 @@ WHY THIS SHAPE (measured anchors, all under dev/l2src_sandbox)
   2. The translator already knows.  l2trans.lm1:9168 does l2_ns_eternal[root] = l2_ebr_n after
      l2_ebr_reserve(l2_ebr_n + 1).  The generated open is `lmx_root_open(..., 0U, 0U)`
      (l2trans.lm1:11913) -- a value that was never PASSED, not a value that could not be computed.
+     [NO LONGER TRUE AS OF ea21c94, and the line number had drifted: the assignment is at :9213,
+     l2_ns_eternal is an INDEX while l2_ebr_n is the count, and both program forms now emit
+     lmx_root_open(..., 5000U, <l2_ebr_n>U, 0U).  Kept as written because this paragraph is the
+     reasoning the work answered to; see the closing section for what the kernel actually does.]
      Sizing needs no estimate: the store is an arena (bump allocation over blocks), not one
      pre-sized malloc.
   3. The cross-arena gap is solved for the store and ONLY for the store.  Split, and the split is
@@ -192,12 +196,15 @@ WHAT IS NOT DONE, EXACTLY
         being true when classification became address-range membership through the store.
         Measured with tools/l2_harness.ps1: unit_eternal_branch.lm2 now goes .lm2 -> generated
         L1 -> C with no refusal anywhere.
-        WHAT THAT DOES NOT MEAN is that the branch is eternal.  The generated L1 still allocates
-        it with lmx_node_new_owned(l2_program_arena) and still opens the root with 0U, 0U, so
-        the store is opened EMPTY and the collector still traverses the branch.  A program in
-        that state compiles and exits 0 while having none of the semantics, and no exit code can
-        tell the two apart -- which is why the harness fixture reads the generated L1 and
-        asserts the DEBT MARKERS ARE STILL THERE instead of asking for a successful run.  When
+        WHAT THAT DID NOT MEAN, AT THE TIME, is that the branch was eternal.  The generated L1
+        then still allocated it with lmx_node_new_owned(l2_program_arena) and still opened the
+        root with 0U, 0U, so the store was opened EMPTY and the collector still traversed the
+        branch.  A program in that state compiles and exits 0 while having none of the
+        semantics, and no exit code can tell the two apart -- which is why the harness fixture
+        reads the generated L1 rather than asking for a successful run.  BOTH HALVES ARE CLOSED
+        NOW: 49U moved the allocation into the store and ea21c94 sized and filled R0's retention
+        array, so the fixture's assertions were inverted accordingly and the debt strings it once
+        required are now forbidden.  When
         the emission moves into the store those markers vanish, the fixture fails, and that
         failure is the signal.
       - NOTHING RAN .lm2 HERE UNTIL 47U, AND NOW SOMETHING DOES.  tools/build_l2src.ps1 still
@@ -237,9 +244,36 @@ WHAT IS NOT DONE, EXACTLY
     returns the old spelling for everything mutable, so ordinary emission did not move.  The
     lmx_perm.h.lm1 predef is emitted when l2_ebr_n is non-zero; unlike the one removed in 48U, that
     header exists.
-    STILL NOT DONE, and the emitted marker now says exactly this and nothing more: the branch is in
-    the store but is NOT entered in R0's retention array, and the counts are still 0U, 0U.  That
-    order is deliberate -- a count that sizes an array nothing fills would be worse than no count.
+    AND THE RETENTION WIRING IS DONE TOO, at ea21c94, by fable -- I left this half open at 49U and
+    it is closed.  Both program forms emit lmx_root_open(..., 5000U, <l2_ebr_n>U, 0U), the count
+    and not the index; the generated entry reads R0's array with one ordinary reference read of the
+    graph it is already handed, lmx_arena_ref_struct(node, LMX_ROOT_ETERNAL_SLOT), and refuses a
+    capacity that is not the count; each root is stored into its lexical slot and read back by
+    address, staying node = 0, with nested members getting no entry.  No kernel change, no registry,
+    no new global -- the array reference comes from the entry's own argument.  The order in which
+    the two halves landed was deliberate: a count that sized an array nothing filled would have been
+    worse than no count.
+    PROVEN ON A GENERATED PROGRAM, which 46U said was not expressible and 47U only half fixed.
+    dev/l2src_sandbox/harness/l2_eternal_driver.lm1 predefs the kernel BODIES so the driver itself
+    is the link closure, and the generated C is compiled UNCHANGED with -Dmain=l2_generated_main
+    -Dlmx_root_close=l2_driver_root_close, so the driver inspects the very root the generated main
+    opened, after its turn and before its close.  That is a better answer than the shared
+    Resolve-Link I proposed, and it needs no resolver at all; the driver lives outside the scanned
+    directories precisely because an object carrying a full closure AND a main would otherwise be
+    offered to every program that links.
+    WHAT THE FIVE ETERNAL FIXTURES NOW MEASURE FROM OUTSIDE: capacity equals the count and is not
+    zero; R0's graph slot 8 holds the array; array and every root are store-owned, classify STRUCT
+    through R0's ranges, are NOT owned by R0's arena, have node = 0 and are distinct; declared
+    values identify each entry as that branch in lexical order; E\self and F\peer ARE the retained
+    root's address; F\into IS E's member deep, same address, lexical parent E; and after a
+    collection over R0's arena the store is unchanged byte for byte and cell for cell, with the
+    instrument shown able to see a change first.  The negative control is what makes the twelve
+    green rows evidence: the program generated BEFORE the change, run through the same driver,
+    fails on "capacity is the translation-known number of roots".
+    AND NOTHING ELSE MOVED: all 280 .lm2 fixtures were translated with the old and the new
+    translator -- the same 209 translate and 71 refused, all 280 diagnostic outputs byte identical,
+    168 programs differing by exactly one line (the entry's new local), 32 identical, and 9 -- the
+    ones with eternal branches -- differing by exactly the wiring.
     The three field-level DEBT markers are gone because they are discharged: a cell built in the
     store is answered by the store's ranges from any bound Message, which is what they asked for.
     l2_branches stays in the Message arena on purpose: it is the program's array OF branch
@@ -251,7 +285,27 @@ WHAT IS NOT DONE, EXACTLY
     fixture's first version had a needle that matched the PROGRAM UNIT's own constructor, which is
     that same call and correct forever, so it passed while proving nothing; the strings are exact
     now, with the unit kept as the same-shape mutable control that must NOT move.
-  * WHAT IS NOT YET PROVEN ON A GENERATED PROGRAM, and the reason is mechanical, not semantic.
+  * TWO DEFECTS FOUND WHILE LANDING THE WIRING, NEITHER CAUSED BY IT AND NEITHER OWNED.
+    A. A SECOND TURN REBUILDS THE ETERNAL SET.  A further lmx_root_turn is accepted and RE-RUNS
+       l2_program_entry, so every eternal branch is built AGAIN in the never-collected store and
+       NEW roots are republished into the same entries.  Measured store cells: branch 6 -> 9, two
+       10 -> 16, many 282 -> 492, shape 19 -> 34, xref 15 -> 26.  It is latent only because a
+       generated main happens to take exactly one turn, and it contradicts the invariant this whole
+       line rests on -- the set is translation-known and does not grow at run time -- the moment
+       anything cycles R0.  The fix is not a guard bolted onto the entry: a half-skipped entry would
+       leave the unit unbuilt, so construction has to be separated from the turn body, and that is a
+       decision about what an entry IS.
+    B. A GENERATED SELF-CHECK CANNOT FAIL A RUN.  lmx_thread_dispatch_native discards the entry's
+       returned int (lmx_thread.lm1:420 for the native entry, :425 for the callable path, :430
+       returning LMX_THREAD_OK unconditionally), while lmx_call.h.lm1:39 declares LmxCallEntry
+       returning int.  So every `return: 1` the translator emits into an entry is silent and the
+       process still exits 0.  The design says why -- lmx_thread.lm1:411-412, "the body's answer is
+       not a stop and is not stored" -- so this is a contract question, not a bug to patch: the
+       method's return value, an execution failure and a Message's completion are three different
+       things, and a self-check currently has no channel to the third.  It is also why the eternal
+       evidence above is taken from OUTSIDE the program.
+  * WHAT WAS NOT PROVEN ON A GENERATED PROGRAM UNTIL ea21c94, kept because the reason was
+    mechanical, not semantic, and because the way round it is worth remembering.
     That the branch classifies from a SECOND bound Message arena, that lmx_range_pool is null
     there, and that a collection leaves the store's bytes unchanged are all proven for the store
     itself by tests/lmx_perm_selftest.lm1 (60 checks).  Proving them on a program the translator

@@ -7,7 +7,7 @@ fn: mtk_bytes_init (@: MtkBytes b; @: char arr; int: offset; int: amount; int: u
     int: i
     int: h
     if: b = 0
-        return:
+        return
     b\arr: arr
     b\offset: offset
     b\amount: amount
@@ -19,7 +19,7 @@ fn: mtk_bytes_init (@: MtkBytes b; @: char arr; int: offset; int: amount; int: u
         i: i + 1
     ---
     b\hash: h
-    return:
+    return
 end: mtk_bytes_init
 
 fn: mtk_bytes_size (const: @(MtkBytes b)) int
@@ -98,26 +98,26 @@ end: mtk_bytes_decrease_offset
 
 fn: mtk_bytes_set_element_at (@: MtkBytes b; int: c; int: index) void
     if: b = 0 || b\arr = 0 || index >= b\amount
-        return:
+        return
     b\arr[b\offset + index]: (cast: (char) c)
     b\hash: 0
-    return:
+    return
 end: mtk_bytes_set_element_at
 
 fn: mtk_bytes_set_byte (@: MtkBytes b; int: num; int: c) void
     if: b = 0 || b\arr = 0
-        return:
+        return
     b\arr[b\offset + num]: (cast: (char) c)
     b\hash: 0
-    return:
+    return
 end: mtk_bytes_set_byte
 
 fn: mtk_bytes_set (@: MtkBytes b; int: to; int: from) void
     if: b = 0 || b\arr = 0
-        return:
+        return
     b\arr[b\offset + to]: b\arr[b\offset + from]
     b\hash: 0
-    return:
+    return
 end: mtk_bytes_set
 
 fn: mtk_bytes_unsigned_at (const: @(MtkBytes b); int: i) int
@@ -391,7 +391,7 @@ fn: mtk_bytes_trim (@: MtkBytes b) void
     int: end
     int: i
     if: b = 0 || b\arr = 0
-        return:
+        return
     ---
     end: b\offset + b\amount
     i: b\offset
@@ -418,14 +418,14 @@ fn: mtk_bytes_trim (@: MtkBytes b) void
         b\amount: i - b\offset + 1
         b\hash: 0
     ---
-    return:
+    return
 end: mtk_bytes_trim
 
 fn: mtk_bytes_trim_begin (@: MtkBytes b) void
     int: end
     int: i
     if: b = 0 || b\arr = 0
-        return:
+        return
     ---
     end: b\offset + b\amount
     i: b\offset
@@ -461,16 +461,18 @@ fn: mtk_bytes_collapse (@: MtkBytes b; int: begin; int: ignore; int: len) int
             if: meter < 0
                 meter: i
             ---
-        else if: meter >= 0
-            b\arr[meter]: b\arr[i]
-            b\arr[i]: (cast: (char) ignore)
-            b\hash: 0
-            meter: meter + 1
+        else:
+            if: meter >= 0
+                b\arr[meter]: b\arr[i]
+                b\arr[i]: (cast: (char) ignore)
+                b\hash: 0
+                meter: meter + 1
+            ---
         ---
         i: i + 1
     ---
     if: meter > -1
-return: meter - b\offset
+        return: meter - b\offset
     return: len - b\offset
     ---
 return: 0
@@ -495,7 +497,7 @@ fn: mtk_bytes_copy (@: MtkBytes b; const: @(char) src; int: src_offset; int: cou
     int: i
     int: j
     if: b = 0 || b\arr = 0 || src = 0
-        return:
+        return
     ---
     i: 0
     j: b\offset + to
@@ -504,7 +506,7 @@ fn: mtk_bytes_copy (@: MtkBytes b; const: @(char) src; int: src_offset; int: cou
         i: i + 1
         j: j + 1
     ---
-    return:
+    return
 end: mtk_bytes_copy
 
 fn: mtk_bytes_clone (const: @(MtkBytes b)) @: MtkBytes
@@ -533,14 +535,14 @@ end: mtk_bytes_clear
 
 fn: mtk_bytes_new (@: MtkBytes b; int: len; int: utf16) void
     if: b = 0
-        return:
+        return
     ---
     mtk_bytes_clear(b)
     b\arr: (cast: (@: char) c.calloc((cast: (size_t) len), c.sizeof(char)))
     b\amount: len
     b\utf16: utf16
     b\hash: 0
-    return:
+    return
 end: mtk_bytes_new
 
 fn: mtk_bytes_divide (@: MtkBytes b; int: end_symbol) const: @(MtkBytes)

@@ -187,14 +187,16 @@ fn: mtk_long_array_reverse (@: MtkLongArray a; int: index; int: newindex) void
             i: i - 1
         ---
         a\arr[newindex]: obj
-    else if: index < newindex
-        obj: a\arr[index]
-        i: index
-        while: i < newindex
-            a\arr[i]: a\arr[i + 1]
-            i: i + 1
+    else:
+        if: index < newindex
+            obj: a\arr[index]
+            i: index
+            while: i < newindex
+                a\arr[i]: a\arr[i + 1]
+                i: i + 1
+            ---
+            a\arr[newindex]: obj
         ---
-        a\arr[newindex]: obj
     ---
     return
 end: mtk_long_array_reverse

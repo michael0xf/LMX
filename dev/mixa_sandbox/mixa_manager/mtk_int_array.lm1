@@ -194,15 +194,17 @@ fn: mtk_int_array_reverse (@: MtkIntArray a; int: index; int: newindex) void
             i: i - 1
         ---
         a\arr[newindex]: obj
-    else if: index < newindex
-        obj: a\arr[index]
-        count: newindex - index
-        i: index
-        while: i < newindex
-            a\arr[i]: a\arr[i + 1]
-            i: i + 1
+    else:
+        if: index < newindex
+            obj: a\arr[index]
+            count: newindex - index
+            i: index
+            while: i < newindex
+                a\arr[i]: a\arr[i + 1]
+                i: i + 1
+            ---
+            a\arr[newindex]: obj
         ---
-        a\arr[newindex]: obj
     ---
     return
 end: mtk_int_array_reverse

@@ -83,7 +83,7 @@ Rule: [L2 §13](L2_spec_en.md#copy-merge). `lmx_graph_copy_owned.lm1`, `lmx_merg
 <a id="implements"></a>
 ## 15. `implements` in L1
 
-Rule: [L2 §14](L2_spec_en.md#implements). `lmx_implements` answers “same kind by range”. `lmx_runtime_implements` walks the Consumer used-tree. This is not the full L2 §2.1 source predicate.
+The single admission mechanism is defined in [L3 §7](LMX_semantics.en.md#admission); its L2 role is described in [L2 §14](L2_spec_en.md#implements). In the imported code, `lmx_implements` compares kind and type by range, while `lmx_runtime_implements` matches numerical field positions. The latter does not implement the required named-path checking and must be completely replaced. These functions are called only by their own self-tests in the inspected snapshot. Address-classification functions in the same module remain infrastructure for the shared arena index; mail and calls use them.
 
 <a id="gc"></a>
 ## 16. Collection in L1

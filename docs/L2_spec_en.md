@@ -98,7 +98,7 @@ Modules `lmx_graph_copy_owned` and `lmx_merge_owned`. Traversal matches Message 
 <a id="implements"></a>
 ## 14. `implements`
 
-The L2 source predicate `implements(varA varB Consumer)` checks Consumer paths. In this snapshot the L1 primitive `lmx_implements` / `lmx_runtime_implements` (`lmx_implements.h.lm1`) answers kind-sameness by range, walks the Consumer used-tree as index paths, depth `LMX_IMPLEMENTS_DEPTH` (32). Answers: YES / NO / UNKNOWN. The Consumer argument is reserved on the “same kind” stage and is not the full source predicate. Full source-level `implements` is not claimed. L1: [L1](L1_spec_en.md#implements).
+L2 supports the [single L3 admission mechanism](LMX_semantics.en.md#admission): analytical checking of the tree's used named paths and execution of the receiving expression's unit tests by the graph interpreter. Matching field positions, address kinds or signatures does not constitute an alternative validation mechanism. The current positional `lmx_runtime_implements` does not conform to this model and must be completely replaced; its defect and the infrastructure functions in use are described in [L1 §15](L1_spec_en.md#implements). This snapshot does not implement the test interpreter as part of admission.
 
 <a id="gc"></a>
 ## 15. Collection
@@ -108,7 +108,7 @@ The L2 source predicate `implements(varA varB Consumer)` checks Consumer paths. 
 <a id="special"></a>
 ## 16. Special L2 operations
 
-Low-level operations in this snapshot include: address classification, taking an arena cell, arena attach/revert, mail admission, `lmx_thread_turn`, `lmx_call0`, child reserve/publish, copy/merge, runtime-`implements`, collection. The door to C is `c.` calls in the L1 sources that implement the core; that is not a separate bytecode. The bounded frontend `l2trans.lm1` accepts a narrow `.lm2` subset (see `l2src/README.txt`) and does not replace this core specification.
+Low-level operations in this snapshot include: address classification, taking an arena cell, arena attach/revert, mail enqueueing, `lmx_thread_turn`, `lmx_call0`, child reserve/publish, copy/merge, collection. Semantic admission is defined in [§14](#implements). The door to C is `c.` calls in the L1 sources that implement the core; that is not a separate bytecode. The bounded frontend `l2trans.lm1` accepts a narrow `.lm2` subset (see `l2src/README.txt`) and does not replace this core specification.
 
 <a id="unresolved"></a>
 ## 17. Unresolved in this snapshot
@@ -117,7 +117,7 @@ Do not invent missing mechanisms. Measured and reported by deepseek, not closed 
 
 - two diverged `l2src` copies (L1 root vs sandbox); LMX holds the sandbox;
 - placement of atomic handshake flags relative to parent/child arenas;
-- completeness of source-level `implements` and mandatory unit-test admission on every candidate — not shown by this code as an executed path of every admission;
+- implementation of the single [admission mechanism](LMX_semantics.en.md#admission): analytical `implements` requires rewriting, followed by unit tests through the graph interpreter;
 - a complete L2→L1 translator.
 
 File evidence is in the [log](../steps/l1-l2-migration.md).

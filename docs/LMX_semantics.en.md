@@ -70,6 +70,8 @@ Immutable method records and explicitly published eternal branches retain their 
 
 The two admission conditions established in the opening serve different purposes. Analytical checking establishes conformance to the requirements of a use; the receiving expression's unit tests validate the candidate during execution. Establishing a primitive type, the presence of fields or a matching signature does not replace the second part of admission.
 
+This is the single candidate-validation mechanism: analytical tree-based `implements`, followed by the receiving expression's unit tests executed by the graph interpreter. There is no separate runtime-compatibility predicate or alternative semantic admission mechanism. Classifying a physical address through the arena's table determines the value's representation and is not independent candidate validation.
+
 Analytical compatibility concerns the receiving expression's particular use of the candidate. One expression's requirements do not establish the candidate's suitability for all other expressions. Checking the available requirements does not certify unknown properties.
 
 <a id="analytical-tree"></a>
@@ -84,7 +86,7 @@ An absence of used paths means an absence of the corresponding structural requir
 <a id="graph-tests"></a>
 ### 7.2. Executing tests on the graph
 
-Runtime validation is to use an interpreter that executes the receiving expression's unit tests on the graph against the candidate. Analytical traversal establishes structural compatibility; the interpreter executes the specified behavioral checks. Together, these stages determine candidate admission.
+Runtime validation is to use an interpreter of the already constructed graph. Its input consists of executable Structures and graph links, not source text; text parsing belongs to graph construction. The interpreter executes the receiving expression's unit tests against the candidate. Analytical traversal establishes structural compatibility; the interpreter executes the specified behavioral checks. Together, these stages determine candidate admission.
 
 <a id="execution"></a>
 ## 8. Data and execution

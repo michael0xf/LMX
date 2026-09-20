@@ -10,11 +10,29 @@ include: "<stdio.h>" "<string.h>" "<stdlib.h>"
 # "real App/shortcut button integration"). The real MixaAppPanel (which
 # itself drives the real, accepted mixa_app_list_open/_next/_close/
 # _entry_create/_invoke module and the real, unmodified same-app nested
-# window stack), not three separate module tests. Fake nothing: two real
-# .lnk shortcuts (built by the runner via WScript.Shell, exactly like
-# mixa_app_selftest.lm1's own accepted fixture-invocation seam) pointing
-# at the same harmless fixture exe with distinct -marker arguments: real
-# entries, real enumeration, real invoke, real marker files.
+# window stack), not three separate module tests. Self-contained fixture
+# creation: the test builds its own .lnk shortcuts via WScript.Shell
+# invoked through c.system, pointing at the fixture exe staged by the gate.
+# Real entries, real enumeration, real invoke, real marker files.
+
+# Write text content to a file (wb mode).
+sub: t_touch (const: @(char path); const: @(char content))
+    []: (@: void) fh 1
+    fh[0]: c.fopen(path, "wb")
+    if: fh[0] != 0
+        c.fputs(content, fh[0])
+        c.fclose(fh[0])
+    ---
+end: t_touch
+
+# Create a real .lnk shortcut via PowerShell WScript.Shell.
+# exe_name is resolved via Get-Location (sandbox root). marker_name is
+# a bare filename; the .lnk WorkingDirectory is base_dir.
+sub: t_make_lnk (const: @(char lnk_path); const: @(char exe_name); const: @(char base_dir); const: @(char marker_name))
+    []: char cmd 2048
+    c.snprintf(cmd, 2048U, "powershell -NoProfile -Command \"$w = New-Object -ComObject WScript.Shell; $e = Join-Path (Get-Location) '%s'; $s = $w.CreateShortcut('%s'); $s.TargetPath = $e; $s.Arguments = ('-marker ' + '%s'); $s.WorkingDirectory = '%s'; $s.Save()\"", exe_name, lnk_path, marker_name, base_dir)
+    c.system(cmd)
+end: t_make_lnk
 
 fn: main (int: argc; @: @(char) argv) int
     []: char base 520
@@ -78,8 +96,25 @@ fn: main (int: argc; @: @(char) argv) int
     c.snprintf(apppaneldir2, 1040U, "%s\\apppaneldir2", base)
     c.snprintf(e_ghost, 1040U, "%s\\ghost.link", apppaneldir2)
 
-    # Фикстуру -- каталог apppaneldir с записями a.link/b.link -- готовит ВНЕШНИЙ раннер
-    # run_app_panel_selftest.ps1 (как app_selftest и audio_native), в этом дереве его нет.
+    # ---- self-contained fixture creation ----
+    c.snprintf(cmd, 2400U, "cmd /c rmdir /s /q \"%s\" 2>nul & mkdir \"%s\" 2>nul", base, base)
+    c.system(cmd)
+    # Subdirectories + .lnk shortcuts pointing to the fixture exe.
+    c.snprintf(cmd, 2400U, "cmd /c mkdir \"%s\\apppaneldir\" 2>nul & mkdir \"%s\\emptydir\" 2>nul & mkdir \"%s\\apppaneldir2\" 2>nul", base, base, base)
+    c.system(cmd)
+    t_make_lnk(p_a, "mixa_app_fixture_invoke.exe", base, "marker_a.txt")
+    t_make_lnk(p_b, "mixa_app_fixture_invoke.exe", base, "marker_b.txt")
+    c.snprintf(cmd, 2400U, "powershell -NoProfile -Command \"$w = New-Object -ComObject WScript.Shell; $s = $w.CreateShortcut('%s'); $s.TargetPath = '%s\\no_such_target_xyz.exe'; $s.WorkingDirectory = '%s'; $s.Save()\"", p_ghost, base, base)
+    c.system(cmd)
+    # Placeholder .link files (overwritten by mixa_app_entry_create below).
+    c.snprintf(cmd, 1040U, "%s\\apppaneldir\\a.link", base)
+    t_touch(cmd, "mixa-app-link-v1\nkind=2\nlabel=ab\nhas_icon=0\nicon=\nlaunch=")
+    c.snprintf(cmd, 1040U, "%s\\apppaneldir\\b.link", base)
+    t_touch(cmd, "mixa-app-link-v1\nkind=2\nlabel=cd\nhas_icon=0\nicon=\nlaunch=")
+    c.snprintf(cmd, 1040U, "%s\\apppaneldir2\\ghost.link", base)
+    t_touch(cmd, "mixa-app-link-v1\nkind=2\nlabel=ghost\nhas_icon=0\nicon=\nlaunch=")
+
+    # Fixture is now self-created; the check below verifies the entries exist.
     # Без фикстуры панель пуста, mixa_app_panel_entry_label(panel, 0) возвращает NULL, и
     # проба падала НАРУШЕНИЕМ ДОСТУПА внутри strcmp -- лог при этом пуст, потому что вывод
     # буферизован и гибнет вместе с процессом (разобрано gdb 20.09: SIGSEGV в strcmp из main).
@@ -87,7 +122,7 @@ fn: main (int: argc; @: @(char) argv) int
     # будто дефект в порте.
     mf[0]: c.fopen(e_a, "rb")
     if: mf[0] = 0
-        c.printf("app panel: fixture missing (%s) -- prepared by run_app_panel_selftest.ps1, not ported here\n", e_a)
+        c.printf("app panel: fixture missing (%s) -- should have been created above\n", e_a)
         return: 1
     ---
     c.fclose(mf[0])
@@ -499,4 +534,7 @@ fn: main (int: argc; @: @(char) argv) int
     else:
         c.printf("app panel selftest: %d checks, %d failures\n", checks, failures)
     ---
+    # Cleanup: remove self-created fixtures.
+    c.snprintf(cmd, 2400U, "cmd /c rmdir /s /q \"%s\" 2>nul", base)
+    c.system(cmd)
 return: failures

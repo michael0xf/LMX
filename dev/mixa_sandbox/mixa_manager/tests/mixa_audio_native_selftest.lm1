@@ -4,10 +4,10 @@ predef: "mixa_manager/mixa_audio_win32.lm1"
 include: "<stdio.h>" "<string.h>" "<stdlib.h>"
 
 # AUDIO_SEAM native smoke test (ClearShell MP3 button, 154950): drives the real
-# win32/MCI backend with a fixture WAV the runner writes next to this test
-# ("My Sound 8s.wav": 8000 Hz, 8-bit mono, ~8 s of digital silence). The WAV
-# path deliberately contains spaces to exercise MCI command quoting. Only the
-# portable seam API is used; nothing else is touched on the machine.
+# win32/MCI backend with a self-contained fixture WAV generated at runtime
+# ("My Sound 8s.wav": 8000 Hz, 8-bit mono, ~8 s of digital silence, 0x7F).
+# The WAV path deliberately contains spaces to exercise MCI command quoting.
+# Only the portable seam API is used; nothing else is touched on the machine.
 
 fn: main (int: argc; @: @(char) argv) int
     []: char base 520
@@ -23,6 +23,9 @@ fn: main (int: argc; @: @(char) argv) int
     int: failures
     int: checks
     int: st
+    []: char cmd 2400
+    []: char wav_hdr 44
+    []: char wav_data 64000
     failures: 0
     checks: 0
     h[0]: 0
@@ -39,9 +42,35 @@ fn: main (int: argc; @: @(char) argv) int
     src[0]: p_wav
     src[1]: p_missing
     src_bad[0]: p_bad
+    # ---- self-contained fixture creation ----
+    # Create base dir, the bad-WAV text file, and a real fixture WAV.
+    c.snprintf(cmd, 2400U, "cmd /c rmdir /s /q \"%s\" 2>nul & mkdir \"%s\" 2>nul", base, base)
+    c.system(cmd)
     fh[0]: c.fopen(p_bad, "wb")
     if: fh[0] != 0
         c.fputs("this is plain text, not RIFF/WAVE audio data", fh[0])
+        c.fclose(fh[0])
+    ---
+    # Real WAV: 8000 Hz, 8-bit PCM mono, 64000 bytes of 0x7F (~8s).
+    # RIFF header (44 bytes, little-endian).
+    wav_hdr[0]: 82; wav_hdr[1]: 73; wav_hdr[2]: 70; wav_hdr[3]: 70     # RIFF
+    wav_hdr[4]: 4; wav_hdr[5]: (cast: (char) 250); wav_hdr[6]: 0; wav_hdr[7]: 0 # 64036
+    wav_hdr[8]: 87; wav_hdr[9]: 65; wav_hdr[10]: 86; wav_hdr[11]: 69    # WAVE
+    wav_hdr[12]: 102; wav_hdr[13]: 109; wav_hdr[14]: 116; wav_hdr[15]: 32 # fmt\x20
+    wav_hdr[16]: 16; wav_hdr[17]: 0; wav_hdr[18]: 0; wav_hdr[19]: 0     # subchunk1 16
+    wav_hdr[20]: 1; wav_hdr[21]: 0                                    # PCM
+    wav_hdr[22]: 1; wav_hdr[23]: 0                                    # mono
+    wav_hdr[24]: 64; wav_hdr[25]: 31; wav_hdr[26]: 0; wav_hdr[27]: 0   # 8000
+    wav_hdr[28]: 64; wav_hdr[29]: 31; wav_hdr[30]: 0; wav_hdr[31]: 0   # byte_rate
+    wav_hdr[32]: 1; wav_hdr[33]: 0                                    # block_align
+    wav_hdr[34]: 8; wav_hdr[35]: 0                                    # 8 bits
+    wav_hdr[36]: 100; wav_hdr[37]: 97; wav_hdr[38]: 116; wav_hdr[39]: 97 # data
+    wav_hdr[40]: 0; wav_hdr[41]: (cast: (char) 250); wav_hdr[42]: 0; wav_hdr[43]: 0 # 64000
+    c.memset(wav_data, 127, 64000U)
+    fh[0]: c.fopen(p_wav, "wb")
+    if: fh[0] != 0
+        c.fwrite(wav_hdr, 1U, 44U, fh[0])
+        c.fwrite(wav_data, 1U, 64000U, fh[0])
         c.fclose(fh[0])
     ---
 
@@ -252,6 +281,9 @@ fn: main (int: argc; @: @(char) argv) int
     ---
 
     c.printf("audio native selftest: %d checks, %d failures\n", checks, failures)
+    # Cleanup: remove self-created fixtures.
+    c.snprintf(cmd, 2400U, "cmd /c rmdir /s /q \"%s\" 2>nul", base)
+    c.system(cmd)
     if: failures != 0
         return: 1
 return: 0

@@ -1,23 +1,18 @@
-# JVM / L3 Path B ABI smoke
+# JVM / L3 Path B ? ABI + printer
 
-- `GROK-BOT-JVM-L3-20260920-50B` / `51B` / **`52B`**
-- HEAD at draft: `72fe8a9`
+- `50B`/`51B`/`52B` ABI; **`GROK-BOT-JVM-PRINTER-20260920-53B`** printer
+- HEAD draft `6f5d7ed`
 
-## 52B fix
+## 53B
 
-Removed `bindNestedParents` / reparent-on-store. Two-phase copy: `dst.node = map(src.node)`.
-
-| Test | Proves |
-|---|---|
-| store does not reparent | `A.node` stays `P` when `H` stores `A` |
-| unrelated holder copy | `A_copy.node == P_copy`, not merge root / `H` |
-| hidden lexical ancestor | `P_copy` not a result field |
-| back-edge cycle | self-ref preserved in copy |
-| repeated alias | one copy |
-| operands unchanged | sources intact |
+- Fixture: `dev/vm_jvm/graph/L3SmokeFixture.java` (in-memory; roles = physical `L3Role` records)
+- Printer: `dev/vm_jvm/printer/L3ClassfilePrinter.java`
+- Driver: `dev/vm_jvm/printer/PrinterDriver.java`
+- ASM 9.7.1 ? `build/vm_jvm/` only (SHA-256 `8cadd43ac5eb6d09de05faecca38b917a040bb9139c7edeb4cc81c740b713281`)
 
 ```
-javac ? ? exit 0
-java ? ? exit 0
-PASS HelloStructureSmoke checks=25 failures=0
+java -cp "dev/vm_jvm/out;build/vm_jvm/asm-9.7.1.jar" printer.PrinterDriver
+? WROTE ?/PrintedL3Smoke.class
+? PASS PrintedL3Smoke checks=7 failures=0
+? exit 0
 ```

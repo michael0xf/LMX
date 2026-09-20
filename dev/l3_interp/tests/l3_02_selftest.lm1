@@ -61,6 +61,7 @@ fn: main () int
     @: void cell2 0
     L3Result: rr
     @: L3Result prr
+    size_t: i 0U
     if: counts = 0
         return: 2
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
@@ -245,6 +246,96 @@ fn: main () int
     lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
     lmx_arena_ref_store(m, 1U, (cast: (@: void) stmt))
     fail(counts, l3_exec_run(a, m) = c.L3_UNSUPPORTED, "return arity more than one fails")
+
+    # GROK-L3-FRAME-32: 65 own ints, exact scratch slice, dirty last field.
+    info: lmx_callable_new_owned(a)
+    m: lmx_node_new_owned(a)
+    stmt: lmx_node_new_owned(a)
+    if: info = 0 || m = 0 || stmt = 0
+        free(counts)
+        return: 2
+    ---
+    if: lmx_arena_refs_open_owned(a, m, 68U) != 0 || lmx_arena_refs_open_owned(a, stmt, 3U) != 0
+        free(counts)
+        return: 2
+    ---
+    info\method: meth
+    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
+    i: 1U
+    while: i < 66U
+        cell: lmx_int_new_owned(a)
+        if: cell = 0
+            free(counts)
+            return: 2
+        ---
+        lmx_int_store_known(cell, 0)
+        lmx_arena_ref_store(m, i, cell)
+        i: i + 1U
+    ---
+    cell2: lmx_int_new_owned(a)
+    if: cell2 = 0
+        free(counts)
+        return: 2
+    ---
+    lmx_int_store_known(cell2, 99)
+    lmx_arena_ref_store(stmt, 0U, (cast: (@: void) lmx_op_new_owned(a, c.L3_NODE_ASSIGN)))
+    lmx_arena_ref_store(stmt, 1U, lmx_int_new_owned(a))
+    lmx_int_store_known(lmx_arena_ref_value(stmt, 1U), 65)
+    lmx_arena_ref_store(stmt, 2U, cell2)
+    lmx_arena_ref_store(m, 66U, (cast: (@: void) stmt))
+    lmx_arena_ref_store(m, 67U, (cast: (@: void) mk_return(a)))
+    fail(counts, l3_exec_run(a, m) = c.L3_OK, "65 own ints run")
+    fail(counts, lmx_int_value_known(lmx_arena_ref_value(m, 1U)) = 0, "65: clean own 1 unpublished")
+    fail(counts, lmx_int_value_known(lmx_arena_ref_value(m, 65U)) = 99, "65: dirty own 65 published")
+
+    # Child scratch rewind must leave parent owns writable.
+    info2: lmx_callable_new_owned(a)
+    inner: lmx_node_new_owned(a)
+    info: lmx_callable_new_owned(a)
+    m: lmx_node_new_owned(a)
+    stmt: lmx_node_new_owned(a)
+    if: info2 = 0 || inner = 0 || info = 0 || m = 0 || stmt = 0
+        free(counts)
+        return: 2
+    ---
+    if: lmx_arena_refs_open_owned(a, inner, 42U) != 0 || lmx_arena_refs_open_owned(a, m, 5U) != 0 || lmx_arena_refs_open_owned(a, stmt, 3U) != 0
+        free(counts)
+        return: 2
+    ---
+    info2\method: meth
+    lmx_arena_ref_store(inner, 0U, (cast: (@: void) info2))
+    i: 1U
+    while: i < 41U
+        cell: lmx_int_new_owned(a)
+        if: cell = 0
+            free(counts)
+            return: 2
+        ---
+        lmx_int_store_known(cell, 4)
+        lmx_arena_ref_store(inner, i, cell)
+        i: i + 1U
+    ---
+    lmx_arena_ref_store(inner, 41U, (cast: (@: void) mk_return(a)))
+    info\method: meth
+    cell: lmx_int_new_owned(a)
+    cell2: lmx_int_new_owned(a)
+    if: cell = 0 || cell2 = 0
+        free(counts)
+        return: 2
+    ---
+    lmx_int_store_known(cell, 1)
+    lmx_int_store_known(cell2, 77)
+    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
+    lmx_arena_ref_store(m, 1U, cell)
+    lmx_arena_ref_store(m, 2U, (cast: (@: void) inner))
+    lmx_arena_ref_store(stmt, 0U, (cast: (@: void) lmx_op_new_owned(a, c.L3_NODE_ASSIGN)))
+    lmx_arena_ref_store(stmt, 1U, lmx_int_new_owned(a))
+    lmx_int_store_known(lmx_arena_ref_value(stmt, 1U), 1)
+    lmx_arena_ref_store(stmt, 2U, cell2)
+    lmx_arena_ref_store(m, 3U, (cast: (@: void) stmt))
+    lmx_arena_ref_store(m, 4U, (cast: (@: void) mk_return(a)))
+    fail(counts, l3_exec_run(a, m) = c.L3_OK, "parent owns after child rewind")
+    fail(counts, lmx_int_value_known(lmx_arena_ref_value(m, 1U)) = 77, "parent dirty own published after child rewind")
 
     if: counts[1] != 0
         c.printf("%d failed of %d\n", counts[1], counts[0])

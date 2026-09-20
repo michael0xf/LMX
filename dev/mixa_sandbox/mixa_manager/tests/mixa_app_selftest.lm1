@@ -4,10 +4,33 @@ predef: "mixa_manager/mixa_app_win32.lm1"
 include: "<stdio.h>" "<string.h>" "<stdlib.h>"
 
 # FILE_SEAM section 4 app/shortcut seam selftest (ClearShell "App" button).
-# Uses the seam under test only; the runner prepares fixtures (real .lnk via
-# WScript.Shell, .url INI, junction) plus a harmless invoke-target exe that
-# writes a marker file. Launch is only ever tested against that fixture exe.
+# Self-contained fixture creation: the test builds its own .lnk files (real
+# Windows shortcuts via WScript.Shell invoked through c.system), .url INI,
+# junction, tiny/corrupt .link files, and directory tree. The fixture exe
+# mixa_app_fixture_invoke.exe is already staged by the gate into the sandbox
+# root and is the target of the valid .lnk. No external runner needed.
 # The reserved REGISTERED kind is untestable on Windows in this slice.
+
+# Write text content to a file (wb mode). Returns non-zero on failure.
+sub: t_touch (const: @(char path); const: @(char content))
+    []: (@: void) fh 1
+    fh[0]: c.fopen(path, "wb")
+    if: fh[0] != 0
+        c.fputs(content, fh[0])
+        c.fclose(fh[0])
+    ---
+end: t_touch
+
+# Create a real .lnk shortcut via PowerShell WScript.Shell.
+# lnk_path, exe_name, base_dir, marker_name are UTF-8 filesystem strings.
+# exe_name is resolved via Get-Location (the sandbox root where the gate
+# stages the fixture exe). marker_name is a bare filename; the .lnk's
+# WorkingDirectory is base_dir so the fixture exe writes the marker there.
+sub: t_make_lnk (const: @(char lnk_path); const: @(char exe_name); const: @(char base_dir); const: @(char marker_name))
+    []: char cmd 2048
+    c.snprintf(cmd, 2048U, "powershell -NoProfile -Command \"$w = New-Object -ComObject WScript.Shell; $e = Join-Path (Get-Location) '%s'; $s = $w.CreateShortcut('%s'); $s.TargetPath = $e; $s.Arguments = ('-marker ' + '%s'); $s.WorkingDirectory = '%s'; $s.Save()\"", exe_name, lnk_path, marker_name, base_dir)
+    c.system(cmd)
+end: t_make_lnk
 
 fn: main (int: argc; @: @(char) argv) int
     []: char base 520
@@ -53,6 +76,8 @@ fn: main (int: argc; @: @(char) argv) int
     int: ok2
     int: ok3
     int: ok4
+    []: char cmd 2400
+    []: char p_tinyfiles 1040
     failures: 0
     checks: 0
     seen[0]: 0
@@ -101,6 +126,43 @@ fn: main (int: argc; @: @(char) argv) int
     c.snprintf(e_url, 1040U, "%s\\c_url.link", appdir)
     c.snprintf(e_broken, 1040U, "%s\\d_broken.link", appdir)
     c.snprintf(e_missing, 1040U, "%s\\no_entry.link", appdir)
+    c.snprintf(p_tinyfiles, 1040U, "%s\\tinyfiles", base)
+
+    # ---- self-contained fixture creation ----
+    # All fixtures are created here so the test needs no external runner.
+    # The fixture exe mixa_app_fixture_invoke.exe is staged by the gate root.
+    # Wipe and recreate base dir.
+    c.snprintf(cmd, 2400U, "cmd /c rmdir /s /q \"%s\" 2>nul & mkdir \"%s\" 2>nul", base, base)
+    c.system(cmd)
+    # Create subdirectories.
+    c.snprintf(cmd, 2400U, "cmd /c mkdir \"%s\\appdir\" 2>nul & mkdir \"%s\\emptydir\" 2>nul & mkdir \"%s\\corruptdir\" 2>nul & mkdir \"%s\\tinyfiles\" 2>nul & mkdir \"%s\\dir.lnk\" 2>nul", base, base, base, base, base)
+    c.system(cmd)
+    # Create real .lnk shortcuts via WScript.Shell (PowerShell invoked through cmd).
+    # TargetPath uses Get-Location (the sandbox root where the gate staged the exe)
+    # so the .lnk resolves correctly regardless of CWD. The marker argument is the
+    # bare filename; the .lnk WorkingDirectory is base, so the fixture exe writes
+    # to base\mixa_app_invoked.marker -- matching the test's `marker` variable.
+    t_make_lnk(p_valid, "mixa_app_fixture_invoke.exe", base, "mixa_app_invoked.marker")
+    # broken.lnk -> nonexistent target.
+    c.snprintf(cmd, 2400U, "powershell -NoProfile -Command \"$w = New-Object -ComObject WScript.Shell; $s = $w.CreateShortcut('%s'); $s.TargetPath = '%s\\no_such_target_xyz.exe'; $s.WorkingDirectory = '%s'; $s.Save()\"", p_broken, base, base)
+    c.system(cmd)
+    # unicode-space .lnk (same fixture exe, same marker).
+    t_make_lnk(p_space, "mixa_app_fixture_invoke.exe", base, "mixa_app_invoked.marker")
+    # .url (INI), plain text, corrupt .link, tiny .link files, junction.
+    t_touch(p_url, "[InternetShortcut]\r\nURL=https://example.com/\r\n")
+    t_touch(p_plain, "not a shortcut")
+    c.snprintf(cmd, 2400U, "cmd /c echo this is not a mixa-app-link-v1 entry > \"%s\\corruptdir\\bad.link\"", base)
+    c.system(cmd)
+    # Tiny .link files for T19 (truncated-header guard).
+    c.snprintf(cmd, 1040U, "%s\\tinyfiles\\empty.link", base)
+    t_touch(cmd, "")
+    c.snprintf(cmd, 1040U, "%s\\tinyfiles\\onebyte.link", base)
+    t_touch(cmd, "m")
+    c.snprintf(cmd, 1040U, "%s\\tinyfiles\\sixteen.link", base)
+    t_touch(cmd, "mixa-app-link-v1")
+    # Junction (reparse point) js_link -> appdir.
+    c.snprintf(cmd, 2400U, "cmd /c mklink /J \"%s\\js_link\" \"%s\\appdir\" 2>nul", base, base)
+    c.system(cmd)
 
     # T1: inspect does not launch and never executes anything.
     mf[0]: c.fopen(marker, "rb")
@@ -664,6 +726,9 @@ fn: main (int: argc; @: @(char) argv) int
     ---
 
     c.printf("app seam selftest: %d checks, %d failures\n", checks, failures)
+    # Cleanup: remove fixtures created at setup.
+    c.snprintf(cmd, 2400U, "cmd /c rmdir /s /q \"%s\" 2>nul", base)
+    c.system(cmd)
     if: failures != 0
         return: 1
 return: 0

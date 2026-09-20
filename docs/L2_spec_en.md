@@ -121,3 +121,133 @@ Do not invent missing mechanisms. Measured and reported by deepseek, not closed 
 - a complete L2→L1 translator.
 
 File evidence is in the [log](../steps/l1-l2-migration.md).
+
+<a id="lowlevel-scope"></a>
+## 18. Machine operations: level boundary and status
+
+The following sections retain the former general specification's machine contracts (§11–13, §20) separately from pure L3. They distinguish the **L2 contract** from **support in the migrated translator**. A specified form does not mean `l2trans.lm1` accepts all its variants. L1 is a different profile with direct C semantics; the comparison is in [L1](L1_spec_en.md#lowlevel-scope).
+
+An ordinary Structure remains an `Lmx` graph, an Array a descriptor reference with backing, and a primitive a value in its domain. Machine addresses, raw C storage and foreign ABI do not replace these categories. L3 does not acquire machine operations merely because its reference implementation uses a pointer.
+
+| Family | Purpose | L2 contract | L1 implementation |
+| --- | --- | --- | --- |
+| `@ⁿ:`, `@`, prefix `\` | Address slot, address and load | [Addresses](#lowlevel-address) | [Lowering](L1_spec_en.md#lowlevel-address) |
+| `c.array`, raw index | Rectangular machine storage | [Arrays](#lowlevel-array) | [Emitter](L1_spec_en.md#lowlevel-array) |
+| `cast`, `c.sizeof`, `c.name` | C cast, size, foreign call | [ABI](#lowlevel-abi) | [C99](L1_spec_en.md#lowlevel-abi) |
+| Arithmetic and update | Machine-profile operations | [Expressions](#lowlevel-expression) | [C expressions](L1_spec_en.md#lowlevel-expression) |
+| `synchronized` | Synchronization region | [Synchronization](#lowlevel-sync) | [Support](L1_spec_en.md#lowlevel-sync) |
+
+<a id="lowlevel-address"></a>
+## 19. Typed addresses, loads and stores
+
+### 19.1. Declaration and depth
+
+`@: T p`, `@@: T pp`, `@@@: T ppp` declare machine address slots of depths 1, 2 and 3. The family of `@` heads is reserved for these operations; depth belongs to address slots, not ordinary structural references. Prefix expression `@x` takes one address. The next level addresses an already declared slot:
+
+```text
+int: x 5
+@: int p
+@@: int pp
+@@@: int ppp
+p: @x
+pp: @p
+ppp: @pp
+```
+
+`@:` is not an ordinary Array constructor. Low-level string `@: char "hello"` is an address primitive pointing to a C string; it does not automatically acquire a length descriptor. Ordinary Structure `User` and opaque primitive `FILE` do not become the same value kind because their C representations use pointers. An address primitive need not be a source integer: its target type is defined by the machine profile.
+
+### 19.2. What @x addresses
+
+The operation's common meaning is to obtain the selected data's address, not a temporary copy's. An L2 field's data reside in a typed arena array; different placement does not introduce a second meaning of address-of. The addressable target must separately be identified: field payload, parameter or pointer-holding slot.
+
+| Category of x | Result | Effect of writing through the result |
+| --- | --- | --- |
+| Own graph field | Typed address of its classified payload | Changes the graph; neither assigns nor dirties the working copy |
+| Explicit formal argument | Address of the current activation's parameter | Changes the parameter without copy-back |
+| Dynamic input | Address of the current activation's through-parameter | Changes the local parameter, not the caller's source binding |
+| Machine address slot | Address of the slot itself | Changes the address stored in it |
+
+For an own field this is neither the `void *` slot address, `Lmx.data`, nor the own-cache address. For an Array the former contract requires its descriptor address, not backing. A callable Structure is addressed as a Structure; obtaining its METHOD and executable entry are separate actions. Address-taking alone neither extends lifetime nor constitutes a write.
+
+A local machine slot's address is needed, for example, for an output parameter: [printTree.lm2](../l2src/printTree.lm2) passes `@document` to `lm_p0_parse_file` so the function can store its result pointer. This addresses the pointer variable, not the document. [library_struct_local_forms.lm2](../l2src/tests/library_struct_local_forms.lm2) addresses a local imported C-ABI record. A temporary copy's address does not correctly implement addressing the selected data.
+
+`@array[i]` is a valid L2 expression. It obtains the actual element's address in graph storage; no separate adapter or prior index check is required. Subsequent loads, stores and address arithmetic follow the C machine contract. Address-taking must not be implemented by reading the element into a temporary and then addressing that copy.
+
+Starting with graph and working `x = 5`, `p: @x` followed by `\p: 9` leaves bare working `x` at 5 while an explicit graph read sees 9. If working `x` was not assigned, exit does not republish the old 5. A later assignment to working `x` creates a dirty write published under the ordinary rule. A parameter address exists only for the activation's lifetime; storing it in the graph does not extend that lifetime.
+
+### 19.3. Loads, paths and restrictions
+
+An argument has a distinct same-name own-binding rule: an executed declaration or assignment-as-declaration associates the same local variable with the body's field for subsequent dirty publication. Its address and lifetime remain those of the parameter; the previous graph value is not loaded over the input, and writes before the binding line are not published. This does not permit addressing a temporary copy of an ordinary graph field or Array element. Binding activation and body hosting are specified in [L3](LMX_semantics.en.md#dynamic); complete lowering support requires separate verification.
+
+`\p` loads through a typed address; `\p: value` stores there when permitted. `p\field` follows either an explicitly imported machine ABI field or an ordinary structural path, depending on p's category. These cannot be conflated as universal `->`: a Structure uses the graph, while raw ABI access uses known layout. L2 indexing checks no bounds, for either raw addresses or graph-backed Arrays. Array index and descriptor validation belong to L3. Reading a descriptor to obtain backing is not descriptor validation. Field and index chains bind more tightly than prefix `@` and `\`.
+
+`*` is not source dereference, `&` is not address-of, `^` is not field-follow, and `.`/`->` are not ordinary L2 field access. `*`, `&`, `^` may have distinct arithmetic/bitwise roles. By-value C aggregate access uses an explicit C form such as `c.value.field`, not a redefinition of graph paths.
+
+Writing through an address neither removes `const`/`immutable`, admits a dangling address nor establishes automatic ownership. Receiving-expression admission uses the [unified mechanism](#implements); physical classification uses the [arena index](#type-by-range).
+
+### 19.4. Inspected support
+
+In [l2trans.lm1](../l2src/l2trans.lm1), `l2_check_addr` and `l2_prep_addr` distinguish parameter addresses from own graph payload: a parameter emits `@ l2_p…`, while an own primitive emits a cast of the stored pointer `l2_q…_from[0]`. There are specific branches for `int`, `char`, `size_t`, `unsigned`, `ulong` and pointer own-fields. The direct own-Array case is rejected through `l2_own_is_array`; this is an implementation limit, not evidence that the descriptor contract was withdrawn. Foreign-field following has a separate path; its presence does not establish support for every graph-address expression.
+
+Current negative fixtures [address_array_element](../l2src/tests/address_array_element.lm2) and [address_array_element_sum](../l2src/tests/address_array_element_sum.lm2) encoded an element-address prohibition; following the author's September 20 clarification they do not establish correct L2 expectations. The translator also rejects cases with `own array index requires an in-bounds primitive literal`. These restrictions must become unchecked L2 access, retaining checked access on the L3 side. Existing `l2_emit_array_ptr` already extracts backing from the graph descriptor, whereas `l2_emit_array_load` materializes a temporary value: address lowering must use the former route, not the latter result's address. This documentation revision does not claim executable-code changes are complete.
+
+<a id="lowlevel-array"></a>
+## 20. Raw c.array storage
+
+### 20.1. Input and result
+
+`c.array` consumes exactly one declaration whose head contains one or more bracket groups, optionally inside a single `const`. Unrelated children and extra declarations are outside the minimal contract. Examples: `c.array: [3]: int: values 2 4 6`, `c.array: []: char buffer 256`.
+
+A nonempty group `[rows]` contains its extent. Empty `[]` consumes one extent after the type and name, in dimension order; remaining fields are initializers. A missing extent is an error, not a request to infer it from an initializer. A compound extent belongs inside a nonempty group. The contract admits mixed groups; the implementation is narrower.
+
+The result is a C-storage designator, not an Array value or graph node. It creates no arena, owner, `len`, shape/stride metadata or bounds checks. Conversion to an ordinary Array requires an explicit operation specifying backing address, shape and lifetime.
+
+### 20.2. Indexing, rank and lifetime
+
+Each `[i]` suffix consumes one dimension: two-dimensional C storage uses `a[i][j]`. Partial indexing denotes the remaining subarray; full indexing denotes an element lvalue. This is not a view. Decay of a rank-one remainder follows the C profile; a higher-rank remainder is not flattened into an arbitrary `T **`.
+
+The address of an entire array or subarray is a pointer-to-array, not an ordinary increment of element-pointer depth. The former minimal contract provides no such declarator and requires an unsupported form to be rejected rather than mistyped. A fully selected element may be addressed. `const` qualifies the base element; for pointer arrays it does not automatically make pointer slots const.
+
+Block storage has C automatic lifetime; a runtime extent follows C99 VLA rules and admits no initializer. In the described hosted profile, top-level storage has internal linkage, constant extents and static initialization. Without an initializer, automatic elements are indeterminate and static elements are zero. Initialization zero-fills omitted elements and diagnoses excess or incompatible ones. The conservative multidimensional profile requires explicit nested groups rather than flat brace elision; a top-level address initializer requires its target declaration to have been emitted. These are contract requirements, not a report of full frontend support.
+
+Retaining a local array's address does not extend its lifetime. Escape beyond raw storage lifetime requires an explicit adapter/contract; it must not silently become a live Array. Raw indices are not automatically checked. Statically detectable danger and invalid static initializers belong to machine-profile diagnostics.
+
+### 20.3. Actual snapshot
+
+`l2_array_local` in the [frontend](../l2src/l2trans.lm1) accepts a narrower form: one `[]` head and three atoms, `char`, name and numeric extent. This does not implement all of §20.1. Graph-Array support in `l2_own_*array*`/`l2_emit_array_*` does not automatically extend `c.array`. C lowering is described in [L1](L1_spec_en.md#lowlevel-array). Fixture [entry_array.lm2](../l2src/tests/entry_array.lm2) covers a represented form; its existence is not a fresh test run.
+
+<a id="lowlevel-abi"></a>
+## 21. Foreign types, conversions and calls
+
+`cast: (T) value` is a machine cast, not an [L3 numeric converter](LMX_semantics.en.md#descriptions) or proof of range/lifetime safety. `c.sizeof` requests a machine type/object size, not a Structure field count or Array length. An opaque type can be stored and passed without exposing its fields; raw access requires a known ABI.
+
+`c.name` selects a foreign C symbol. An ordinary L2 function requires no `c.`. Parameters, result, ownership and resource release belong to the adapter contract. Permitting a C call does not wrap its result in a graph or make a pointer a portable Message. In the descriptive contract, `external` wraps one `fn`/`sub` and requests a foreign entry; the adapter preserves the source method contract.
+
+`include` supplies explicit headers, retaining specified `<…>`/quotes; an undelimited path becomes local. `os` selects a written platform branch without changing repeated graph-field order. `predef`/import link selected dependencies without permitting directory scans or eager construction of every Structure.
+
+In [l2trans.lm1](../l2src/l2trans.lm1), support is determined by `l2_cast_type`, `l2_prep_sizeof_name`, `l2_c_door` and foreign-type checks. This is not general C-header parsing. Examples: [unit_cast_ptr_int](../l2src/tests/unit_cast_ptr_int.lm2), [unit_sizeof_arg](../l2src/tests/unit_sizeof_arg.lm2), [unit_sizeof_own_local](../l2src/tests/unit_sizeof_own_local.lm2). The former `C:` escape and proposed `c.struct`/`c.union` are not claimed as supported without a handler. L1's actual surface is documented [separately](L1_spec_en.md#lowlevel-abi).
+
+<a id="lowlevel-expression"></a>
+## 22. Machine expressions and updates
+
+The minimal profile includes grouping; prefix `@`, `\`, `++`, `--`, `+`, `-`, `!`, `~`; postfix `++`/`--`; arithmetic `+ - * / %`; comparisons `= != < <= > >=`; logical `&& ||`; and bitwise `& | ^`. Here `=` compares, while `target: value` writes. Overflow, shifts, division, rounding and conversions depend on the selected machine profile; unconditional checked L3 arithmetic must not be attributed to them.
+
+`target[index]` consumes an index expression. It is not a repeated-field qualifier `target\[index]field` or the constructor head `[]:`. Target category determines how data are located without adding L2 bounds checks. Checked Array operations belong to L3; L2 provides machine access to the selected cell. Assignment neither appends a repeated field nor creates a namespace.
+
+Control forms are `if`/`else`, `while`, `until`, `for(init, condition, step)`, `return`, `break`, `continue` and [synchronized](#lowlevel-sync). Shared branch and loop rules are in [L3](LMX_semantics.en.md#branches); richer L3 operations such as `match`, `each`, `retry`, `yield` do not prove their support in the minimal L2 frontend. Lowering to [L1](L1_spec_en.md#lowlevel-expression) preserves the distinction between graph updates and raw stores.
+
+<a id="lowlevel-sync"></a>
+## 23. synchronized and synchronization boundaries
+
+`synchronized` remains a general low-level L2 capability. Restricting kernel synchronization to the postal mechanism does not remove the language operation. Pure L3 has no raw locks. The contract consumes an object/address expression and structural body rather than an exposed lock/unlock pair.
+
+```text
+synchronized: @object
+    updateObject: object
+```
+
+A nested body is a separate structural argument field. `synchronized: @lock (break)` states it explicitly; `synchronized: @lock break` leaves `break` in the inline sequence and does not allow the parser to silently reinterpret it as the body.
+
+The monitor profile defines entry/exit and, where required, same-thread re-entry. The region is released on normal completion and exiting `return`, `break`, `continue`; the general cleanup protocol governs other exits. A result is retained before release. Calls inside preserve ordinary argument-evaluation and dirty-publication ordering.
+
+A handler search in both migrated translators found no `synchronized` implementation. This contract is therefore retained as a former specification requirement, **not implemented support**. Kernel atomics are a separate [mailbox implementation](#mailbox), not proof of the receiver's presence. L1 status is [here](L1_spec_en.md#lowlevel-sync).

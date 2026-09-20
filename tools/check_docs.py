@@ -4,10 +4,12 @@ import hashlib
 import json
 import re
 from build_docs import render
+from build_semantics import build as check_semantics
 
 ROOT=Path(__file__).resolve().parents[1]
 
 def main():
+    semantic_count=check_semantics(check=True)
     data=json.loads((ROOT/'provenance/grammar.json').read_text(encoding='utf-8'))
     for lang in ('ru','en'):
         path=ROOT/'docs'/f'LMX_grammar.{lang}.md'
@@ -66,6 +68,6 @@ def main():
             assert dest.exists(),f'Broken link in {path}: {target}'
             if anchor:
                 assert f'id="{anchor}"' in dest.read_text(encoding='utf-8'),f'Missing anchor {target}'
-    print(f'OK: {len(ids)} paired grammar sections, {count} verbatim source excerpts, {len(files)} imported files, links, exact semantic opening')
+    print(f'OK: {semantic_count} paired semantic chapters, 14 implements cases, both source snapshots; {len(ids)} paired grammar sections, {count} verbatim source excerpts, {len(files)} imported files, links, exact semantic opening')
 
 if __name__=='__main__':main()

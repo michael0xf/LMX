@@ -50,9 +50,18 @@ public final class L3Role {
     /**
      * Pre-test loop: children are condition, body. Condition is an int (zero=false).
      * Statement only — valid solely as a non-final SEQUENCE child; no int result.
-     * Ordinary JVM back-edge; no fuel cap. BREAK/CONTINUE/UNTIL/FOR deferred.
+     * Ordinary JVM back-edge; no fuel cap. UNTIL/FOR/recursion deferred.
      */
     public static final L3Role WHILE = new L3Role();
+    /**
+     * Exit the nearest active WHILE (statement-only). Compile-time loop-label stack;
+     * no named labels. REDO/RETRY/cleanup deferred.
+     */
+    public static final L3Role BREAK = new L3Role();
+    /**
+     * Jump to the nearest WHILE condition recheck (statement-only).
+     */
+    public static final L3Role CONTINUE = new L3Role();
     public static final L3Role UNSUPPORTED = new L3Role();
 
     private L3Role() {}

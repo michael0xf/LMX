@@ -2,6 +2,7 @@ package printer;
 
 import graph.L3Node;
 import graph.L3Role;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.IdentityHashMap;
@@ -15,11 +16,28 @@ import org.objectweb.asm.Opcodes;
 /**
  * Emits one JVM method per reachable {@link L3Role#CALLABLE}.
  * Method names {@code c0}..{@code cN}; descriptors from arity; activation-local
- * int slots after subject/args. Pre-test WHILE (statement-only). Recursion deferred.
+ * int slots after subject/args. Pre-test WHILE; BREAK/CONTINUE via loop-label stack. Recursion deferred.
  */
 public final class L3ClassfilePrinter implements Opcodes {
     public static final String GEN_INTERNAL = "lmx/gen/PrintedL3Expr";
     public static final String EVAL = "eval";
+
+    /** Compile-time nearest-WHILE nesting for BREAK/CONTINUE validation. */
+    private static final ThreadLocal<Integer> LOOP_DEPTH =
+            new ThreadLocal<Integer>() {
+                @Override
+                protected Integer initialValue() {
+                    return Integer.valueOf(0);
+                }
+            };
+    /** Emit-time label stack: each frame is {continueLabel, breakLabel}. */
+    private static final ThreadLocal<ArrayDeque<Label[]>> LOOP_STACK =
+            new ThreadLocal<ArrayDeque<Label[]>>() {
+                @Override
+                protected ArrayDeque<Label[]> initialValue() {
+                    return new ArrayDeque<Label[]>();
+                }
+            };
 
     private L3ClassfilePrinter() {}
 
@@ -27,6 +45,8 @@ public final class L3ClassfilePrinter implements Opcodes {
         if (entry == null || entry.role != L3Role.CALLABLE) {
             throw new IllegalArgumentException("expected CALLABLE root");
         }
+        LOOP_DEPTH.set(Integer.valueOf(0));
+        LOOP_STACK.get().clear();
         List<L3Node> order = new ArrayList<L3Node>();
         Map<L3Node, Integer> map = new IdentityHashMap<L3Node, Integer>();
         collectCallables(entry, order, map);
@@ -279,6 +299,12 @@ public final class L3ClassfilePrinter implements Opcodes {
         if (r == L3Role.WHILE) {
             throw new IllegalArgumentException("WHILE not allowed in value context");
         }
+        if (r == L3Role.BREAK) {
+            throw new IllegalArgumentException("BREAK not allowed in value context");
+        }
+        if (r == L3Role.CONTINUE) {
+            throw new IllegalArgumentException("CONTINUE not allowed in value context");
+        }
         if (r == L3Role.FIELD_FOLLOW) {
             if (expr.children.length != 1) {
                 throw new IllegalArgumentException("FIELD_FOLLOW arity");
@@ -360,7 +386,10 @@ public final class L3ClassfilePrinter implements Opcodes {
         throw new IllegalArgumentException("unsupported role");
     }
 
-    /** Statement position (non-final SEQUENCE): WHILE or discarded int expression. */
+    /**
+     * Statement position: WHILE / BREAK / CONTINUE / stmt-SEQUENCE / stmt-IF,
+     * or a discarded int expression.
+     */
     private static BitSet validateStmt(
             L3Node expr,
             Map<L3Node, Integer> map,
@@ -370,13 +399,59 @@ public final class L3ClassfilePrinter implements Opcodes {
             int currentArity,
             int slotCount,
             BitSet assigned) {
-        if (expr.role == L3Role.WHILE) {
+        L3Role r = expr.role;
+        if (r == L3Role.BREAK || r == L3Role.CONTINUE) {
+            if (LOOP_DEPTH.get().intValue() < 1) {
+                throw new IllegalArgumentException(r == L3Role.BREAK
+                        ? "BREAK outside loop"
+                        : "CONTINUE outside loop");
+            }
+            if (expr.children.length != 0) {
+                throw new IllegalArgumentException(
+                        r == L3Role.BREAK ? "BREAK arity" : "CONTINUE arity");
+            }
+            return assigned;
+        }
+        if (r == L3Role.WHILE) {
             if (expr.children.length != 2) {
                 throw new IllegalArgumentException("WHILE arity: need condition, body");
             }
             BitSet afterCond = validateIntExpr(
                     expr.children[0], map, arity, slots, currentCallable, currentArity, slotCount, assigned);
-            validateIntExpr(
+            LOOP_DEPTH.set(Integer.valueOf(LOOP_DEPTH.get().intValue() + 1));
+            try {
+                validateStmt(
+                        expr.children[1],
+                        map,
+                        arity,
+                        slots,
+                        currentCallable,
+                        currentArity,
+                        slotCount,
+                        (BitSet) afterCond.clone());
+            } finally {
+                LOOP_DEPTH.set(Integer.valueOf(LOOP_DEPTH.get().intValue() - 1));
+            }
+            return assigned;
+        }
+        if (r == L3Role.SEQUENCE) {
+            if (expr.children.length < 1) {
+                throw new IllegalArgumentException("SEQUENCE arity: need >= 1 child");
+            }
+            BitSet a = assigned;
+            for (int i = 0; i < expr.children.length; i++) {
+                a = validateStmt(
+                        expr.children[i], map, arity, slots, currentCallable, currentArity, slotCount, a);
+            }
+            return a;
+        }
+        if (r == L3Role.IF) {
+            if (expr.children.length != 3) {
+                throw new IllegalArgumentException("IF arity: need condition, then, else");
+            }
+            BitSet afterCond = validateIntExpr(
+                    expr.children[0], map, arity, slots, currentCallable, currentArity, slotCount, assigned);
+            BitSet thenA = validateStmt(
                     expr.children[1],
                     map,
                     arity,
@@ -385,8 +460,17 @@ public final class L3ClassfilePrinter implements Opcodes {
                     currentArity,
                     slotCount,
                     (BitSet) afterCond.clone());
-            // Zero iterations possible: only pre-loop assignments remain definite.
-            return assigned;
+            BitSet elseA = validateStmt(
+                    expr.children[2],
+                    map,
+                    arity,
+                    slots,
+                    currentCallable,
+                    currentArity,
+                    slotCount,
+                    (BitSet) afterCond.clone());
+            thenA.and(elseA);
+            return thenA;
         }
         return validateIntExpr(
                 expr, map, arity, slots, currentCallable, currentArity, slotCount, assigned);
@@ -452,17 +536,15 @@ public final class L3ClassfilePrinter implements Opcodes {
             mv.visitVarInsn(ISTORE, jvmLocal(currentArity, expr.intPayload));
         } else if (r == L3Role.SEQUENCE) {
             for (int i = 0; i < expr.children.length - 1; i++) {
-                L3Node ch = expr.children[i];
-                if (ch.role == L3Role.WHILE) {
-                    emitWhile(mv, ch, map, arity, currentArity);
-                } else {
-                    emitIntExpr(mv, ch, map, arity, currentArity);
-                    mv.visitInsn(POP);
-                }
+                emitStmt(mv, expr.children[i], map, arity, currentArity);
             }
             emitIntExpr(mv, expr.children[expr.children.length - 1], map, arity, currentArity);
         } else if (r == L3Role.WHILE) {
             throw new IllegalArgumentException("WHILE not allowed in value context");
+        } else if (r == L3Role.BREAK) {
+            throw new IllegalArgumentException("BREAK not allowed in value context");
+        } else if (r == L3Role.CONTINUE) {
+            throw new IllegalArgumentException("CONTINUE not allowed in value context");
         } else if (r == L3Role.FIELD_FOLLOW) {
             emitOccurrence(mv, expr.children[0]);
             mv.visitLdcInsn(Integer.valueOf(expr.intPayload));
@@ -504,6 +586,49 @@ public final class L3ClassfilePrinter implements Opcodes {
         }
     }
 
+    private static void emitStmt(
+            MethodVisitor mv,
+            L3Node expr,
+            Map<L3Node, Integer> map,
+            Map<L3Node, Integer> arity,
+            int currentArity) {
+        L3Role r = expr.role;
+        if (r == L3Role.BREAK) {
+            Label[] frame = LOOP_STACK.get().peekFirst();
+            mv.visitJumpInsn(GOTO, frame[1]);
+            return;
+        }
+        if (r == L3Role.CONTINUE) {
+            Label[] frame = LOOP_STACK.get().peekFirst();
+            mv.visitJumpInsn(GOTO, frame[0]);
+            return;
+        }
+        if (r == L3Role.WHILE) {
+            emitWhile(mv, expr, map, arity, currentArity);
+            return;
+        }
+        if (r == L3Role.SEQUENCE) {
+            for (int i = 0; i < expr.children.length; i++) {
+                emitStmt(mv, expr.children[i], map, arity, currentArity);
+            }
+            return;
+        }
+        if (r == L3Role.IF) {
+            Label elseL = new Label();
+            Label endL = new Label();
+            emitIntExpr(mv, expr.children[0], map, arity, currentArity);
+            mv.visitJumpInsn(IFEQ, elseL);
+            emitStmt(mv, expr.children[1], map, arity, currentArity);
+            mv.visitJumpInsn(GOTO, endL);
+            mv.visitLabel(elseL);
+            emitStmt(mv, expr.children[2], map, arity, currentArity);
+            mv.visitLabel(endL);
+            return;
+        }
+        emitIntExpr(mv, expr, map, arity, currentArity);
+        mv.visitInsn(POP);
+    }
+
     private static void emitWhile(
             MethodVisitor mv,
             L3Node expr,
@@ -512,13 +637,17 @@ public final class L3ClassfilePrinter implements Opcodes {
             int currentArity) {
         Label head = new Label();
         Label done = new Label();
-        mv.visitLabel(head);
-        emitIntExpr(mv, expr.children[0], map, arity, currentArity);
-        mv.visitJumpInsn(IFEQ, done);
-        emitIntExpr(mv, expr.children[1], map, arity, currentArity);
-        mv.visitInsn(POP);
-        mv.visitJumpInsn(GOTO, head);
-        mv.visitLabel(done);
+        LOOP_STACK.get().addFirst(new Label[] {head, done});
+        try {
+            mv.visitLabel(head);
+            emitIntExpr(mv, expr.children[0], map, arity, currentArity);
+            mv.visitJumpInsn(IFEQ, done);
+            emitStmt(mv, expr.children[1], map, arity, currentArity);
+            mv.visitJumpInsn(GOTO, head);
+            mv.visitLabel(done);
+        } finally {
+            LOOP_STACK.get().removeFirst();
+        }
     }
 
     private static void emitOccurrence(MethodVisitor mv, L3Node expr) {
@@ -532,6 +661,8 @@ public final class L3ClassfilePrinter implements Opcodes {
     }
 
     public static List<String> plannedMethodNames(L3Node entry) {
+        LOOP_DEPTH.set(Integer.valueOf(0));
+        LOOP_STACK.get().clear();
         List<L3Node> order = new ArrayList<L3Node>();
         Map<L3Node, Integer> map = new IdentityHashMap<L3Node, Integer>();
         collectCallables(entry, order, map);

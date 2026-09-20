@@ -52,6 +52,12 @@ public final class ExprSmokeDriver {
         testWhileNestedCallIsolation();
         testWhileRejected();
 
+        testBreakAfterThree();
+        testContinueSkipsTail();
+        testNestedBreakNearestOnly();
+        testCodeAfterBreakLoop();
+        testBreakContinueRejected();
+
         if (fails != 0) {
             System.out.println("FAIL ExprSmokeDriver checks=" + checks + " failures=" + fails);
             System.exit(1);
@@ -372,6 +378,51 @@ public final class ExprSmokeDriver {
         try { L3ClassfilePrinter.emitCallable(L3ExprFixture.whileInFinalSequence()); }
         catch (IllegalArgumentException e) { fin = true; }
         check("WHILE as final SEQUENCE rejected", fin);
+    }
+
+    private static void testBreakAfterThree() throws Exception {
+        Class<?> cls = loadPrinted(L3ExprFixture.breakAfterThree());
+        Method eval = cls.getMethod("eval", LmxOccurrence.class);
+        Object r = eval.invoke(null, LmxOccurrence.independent(Integer.valueOf(0)));
+        check("BREAK after 3 iters -> 3", Integer.valueOf(3).equals(r));
+    }
+
+    private static void testContinueSkipsTail() throws Exception {
+        Class<?> cls = loadPrinted(L3ExprFixture.continueSkipsTail());
+        Method eval = cls.getMethod("eval", LmxOccurrence.class);
+        Object r = eval.invoke(null, LmxOccurrence.independent(Integer.valueOf(0)));
+        check("CONTINUE skips tail skipped==0", Integer.valueOf(0).equals(r));
+    }
+
+    private static void testNestedBreakNearestOnly() throws Exception {
+        Class<?> cls = loadPrinted(L3ExprFixture.nestedBreakNearestOnly());
+        Method eval = cls.getMethod("eval", LmxOccurrence.class);
+        Object r = eval.invoke(null, LmxOccurrence.independent(Integer.valueOf(0)));
+        check("nested BREAK affects nearest only -> 2", Integer.valueOf(2).equals(r));
+    }
+
+    private static void testCodeAfterBreakLoop() throws Exception {
+        Class<?> cls = loadPrinted(L3ExprFixture.codeAfterBreakLoop());
+        Method eval = cls.getMethod("eval", LmxOccurrence.class);
+        Object r = eval.invoke(null, LmxOccurrence.independent(Integer.valueOf(0)));
+        check("code after BREAK loop -> 7", Integer.valueOf(7).equals(r));
+    }
+
+    private static void testBreakContinueRejected() {
+        boolean out = false;
+        try { L3ClassfilePrinter.emitCallable(L3ExprFixture.breakOutsideLoop()); }
+        catch (IllegalArgumentException e) { out = true; }
+        check("BREAK outside loop rejected", out);
+
+        boolean val = false;
+        try { L3ClassfilePrinter.emitCallable(L3ExprFixture.breakInValueContext()); }
+        catch (IllegalArgumentException e) { val = true; }
+        check("BREAK in value context rejected", val);
+
+        boolean mal = false;
+        try { L3ClassfilePrinter.emitCallable(L3ExprFixture.breakMalformedArity()); }
+        catch (IllegalArgumentException e) { mal = true; }
+        check("BREAK malformed arity rejected", mal);
     }
     private static boolean hasMethods(Class<?> cls, String... want) {
         Set<String> names = new HashSet<String>();

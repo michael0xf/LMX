@@ -1,6 +1,6 @@
 # Immutable activation plan — binary ABI (revised)
 
-Status: **ABI fix** for `LMX-ACTIVATION-PLAN-ABI-FIX-20260920-32G` (on top of `db1dfa6` / 29G).
+Status: **Fable follow-up** for `LMX-ACTIVATION-PLAN-ABI-FIX-20260920-32G-FABLE` (on `320728e` / 32G).
 Owned file: this document only. No code edits in this checkpoint.
 
 Base: committed ABI at `4f8f52b`. Revision incorporates the **confirmed Fable read-only audit** (consumer owner, gaps 1–4 and lexical-order correction) as relayed through Codex / `lmx_uds`. At revision time, a completed OpenRouter reply for `LMX-ACTIVATION-PLAN-ABI-AUDIT-20260920-28` was **not** available via `lmx_uds` / `chat_status` — this document does **not** invent one.
@@ -26,11 +26,20 @@ Knows only plan shapes, plan role records, publication into `LmxCallable.header`
 
 ### 2.2 Receiver / walk owner populates the plan
 
-`lmx_walk_prepare` (name indicative; owned with walk/receiver) runs **once** before execution:
+`lmx_walk_prepare` is **Fable-owned** (consumer). Do **not** freeze the incomplete two-argument form. Future signature:
 
-1. Scan the body with existing walk knowledge (one prepare-time scan, same refusal rules as today’s entry scan).
+```text
+int lmx_walk_prepare(LmxWalkContext *context, LmxArena *descriptor_arena, Lmx *plan_roles, Lmx *M);
+```
+
+- `context` / its arena may be the **copied Message** arena (execution).
+- Plan allocation and publication must use **`descriptor_arena`** — the arena of the shared `LmxCallable` (section 5).
+
+It runs **once** before execution:
+
+1. Scan the body with existing walk knowledge (one prepare-time scan, same refusal rules as today's entry scan).
 2. Emit own finals in **actual lexical own-occurrence order** (section 6).
-3. Call the generic builder to allocate `P` and entries and publish `header`.
+3. Call the generic builder in `descriptor_arena` to allocate `P` and entries and publish `header`.
 
 Generic API never receives a body-role table for discovery. Passing only `body_roles` without operand layouts is **rejected** as insufficient (Fable gap 1 widened).
 
@@ -117,6 +126,8 @@ Paths remain sequences of `size_t` child indices from M through lexical child St
 | 0 | physical ref → `ROLE_PLAN_ENTRY` |
 | 1 .. L | `size_t` cells `p[0] .. p[L-1]` |
 
+v1: children after the role are **path indices only**, so path length `L = P_entry.child_count - 1` (equivalently `entry_index` maps to plan-root child `entry_index + 1`). Future metadata must use a **new** physical entry role/layout; never append metadata under `ROLE_PLAN_ENTRY` where it would be misread as another path index.
+
 Resolve on occurrence `M` (producer precondition: intermediates are Structures):
 
 ```text
@@ -169,6 +180,10 @@ int lmx_plan_publish(LmxArena *arena, Lmx *plan_roles, Lmx *M, Lmx *P);
 
 /*
  * Fast resolver: ADDRESS OF THE SLOT in current occurrence M.
+ * entry_index is zero-based; plan-root child for that entry is entry_index+1.
+ * Returns 0 if P==0 or entry_index >= N — without classification or allocation.
+ * A null *loaded* slot value (empty child) is checked by walk separately; this
+ * API returns the address of the slot itself.
  * No arena argument, no classification, no allocation, no validation.
  * Prepared paths use known child access; intermediate Structure shape is a
  * producer precondition checked only at preparation (validate_shape / publish).
@@ -186,7 +201,7 @@ Receiver-owned (not in the generic module):
  * build_from_paths + publish. Missing or extra own relative to the body scan is
  * detected HERE only — never in generic validate_shape.
  */
-int lmx_walk_prepare(LmxWalkContext *context, Lmx *M);
+int lmx_walk_prepare(LmxWalkContext *context, LmxArena *descriptor_arena, Lmx *plan_roles, Lmx *M);
 ```
 
 ### Status codes
@@ -217,11 +232,17 @@ When `header == 0` (cold):
 - Invalidation of one occurrence: write a **new** `LmxCallable { method, header=0 }` into **that** M’s slot 0 only. Sibling occurrences that still point at the old shared descriptor keep the old plan.
 - Data writes into own cells do **not** invalidate.
 
+### Preparation before sharing
+
+- Only the **descriptor-owner arena** may prepare/publish a plan for that `LmxCallable`.
+- A copied child with `header == 0` returns **UNSUPPORTED** at graph walk and **cannot** prepare in place in the copy's arena.
+- If `header != 0` already, prepare is **idempotent OK** without rescan (same shared plan).
+
 ## 11. Producer insertion points
 
 | Producer | Duty |
 | --- | --- |
-| `lmx_walk_prepare` / receiver tests **now** | Body scan (missing/extra own) + `build_from_paths` + publish(arena, plan_roles, M, P) in the callable arena |
+| `lmx_walk_prepare(context, descriptor_arena, plan_roles, M)` (Fable) **now** | Body scan (missing/extra own) + `build_from_paths` + `publish` in **descriptor_arena**; context arena may be a copy |
 | `l2trans` **later** | Only after it emits `LmxCallable` + L3 body nodes; must emit **lexical** own order, not `l2_layout_owns` order |
 
 ## 12. Acceptance tests A–I
@@ -235,7 +256,7 @@ When `header == 0` (cold):
 | **E** | One-occurrence invalidation: replace that M’s slot 0 with fresh callable `header=0`; other sharers unchanged |
 | **F** | Data writes into own cells do **not** require a new plan / do not clear header |
 | **G** | **Receiver** lmx_walk_prepare rejects missing/extra own vs the body scan. **Generic** lmx_plan_validate_shape rejects malformed / unresolvable / duplicate paths on M — it cannot know omitted owns |
-| **H** | Classification count on resolve path: **≤ 5** total around a prepared enter, and **zero inside** `lmx_plan_slot_known` |
+| **H** | From `lmx_walk_run` to the first body step: exactly **two** classifications (`M` as Structure, slot0 as CALLABLE); **zero** inside `lmx_plan_slot_known`. Body execution adds **one** classification per executed body field. Do not use vague ≤5 wording. |
 | **I** | After warm-up, prepared enter + resolve adds **no** arena/scratch block allocation beyond the activation’s marked scratch slice |
 
 ## 13. Fixed decisions (summary)

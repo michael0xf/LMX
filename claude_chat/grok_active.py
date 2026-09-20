@@ -181,7 +181,21 @@ def wait_turn_idle(path, deadline):
     raise RuntimeError('Timed out waiting for the current Grok turn to finish; message stays queued. Do not resend blindly.')
 
 
-def prompt_ready(pid):
+BOX = set('│─┌┐└┘├┤┬┴┼╭╮╯╰')
+
+
+def user_draft(line):
+    """Text the user typed, or empty. Missing ❯ is not a draft (TUI may park the
+    cursor at 0,0 on a blank row after turn_completed)."""
+    if not line:
+        return ''
+    cleaned = ''.join(ch for ch in line if ch not in BOX)
+    if '❯' in cleaned:
+        return cleaned.split('❯', 1)[1].strip()
+    return cleaned.strip()
+
+
+def read_cursor_line(pid):
     k = ctypes.WinDLL('kernel32', use_last_error=True)
     k.CreateFileW.restype = w.HANDLE
     k.CreateFileW.argtypes = [w.LPCWSTR, w.DWORD, w.DWORD, ctypes.c_void_p, w.DWORD, w.DWORD, w.HANDLE]
@@ -200,12 +214,16 @@ def prompt_ready(pid):
         buf, count = ctypes.create_unicode_buffer(info.size.X + 1), w.DWORD()
         if not k.ReadConsoleOutputCharacterW(output, buf, info.size.X, Coord(0, info.cursor.Y), ctypes.byref(count)):
             raise ctypes.WinError(ctypes.get_last_error())
-        line = buf.value
-        return '❯' in line and not line.split('❯', 1)[1].replace('│', '').strip() and info.cursor.X <= 8
+        return buf.value, info.cursor.X, info.cursor.Y
     finally:
         if output:
             k.CloseHandle(output)
         k.FreeConsole()
+
+
+def prompt_ready(pid):
+    line, _x, _y = read_cursor_line(pid)
+    return user_draft(line) == ''
 
 
 def wait_prompt_ready(pid, deadline):
@@ -240,7 +258,7 @@ def inject(pid, message):
         if not k.ReadConsoleOutputCharacterW(output, buf, info.size.X, Coord(0, info.cursor.Y), ctypes.byref(count)):
             raise ctypes.WinError(ctypes.get_last_error())
         line = buf.value
-        if '❯' not in line or line.split('❯', 1)[1].replace('│', '').strip() or info.cursor.X > 8:
+        if user_draft(line):
             raise RuntimeError('prompt_busy')
         handle = k.CreateFileW('CONIN$', 0x40000000, 3, None, 3, 0, None)
         handles.append(handle)

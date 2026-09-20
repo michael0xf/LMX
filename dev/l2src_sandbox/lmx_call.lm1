@@ -42,7 +42,7 @@ fn: lmx_call_method (@: LmxArena arena; @: Lmx callable) @: LmxMethod
         info: (cast: (@: LmxCallable) target)
         if: info = 0
             return: 0
-        return: @ info\method
+        return: info\method
     ---
 return: (cast: (@: LmxMethod) target)
 
@@ -72,7 +72,7 @@ fn: lmx_call0 (@: LmxArena arena; @: Lmx callable) int
     addr: 0
     if: lmx_domain_kind(arena, target) = c.LMX_DOMAIN_KIND_CALLABLE
         info: (cast: (@: LmxCallable) target)
-        if: info != 0
+        if: info != 0 && info\method != 0
             addr: info\method\addr
         ---
     ---

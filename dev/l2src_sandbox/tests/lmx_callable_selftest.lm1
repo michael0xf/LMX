@@ -34,6 +34,7 @@ fn: main () int
     @: LmxArena a 0
     @: Lmx m 0
     @: LmxCallable info 0
+    @: LmxMethod meth 0
     @: LmxMethod prefix 0
     int: answer 0
     if: counts = 0
@@ -46,20 +47,22 @@ fn: main () int
     ---
     a: @ arena
     info: lmx_callable_new_owned(a)
+    meth: lmx_method_new_owned(a)
     m: lmx_node_new_owned(a)
-    if: info = 0 || m = 0 || lmx_arena_refs_open_owned(a, m, 1U) != 0
+    if: info = 0 || meth = 0 || m = 0 || lmx_arena_refs_open_owned(a, m, 1U) != 0
         fputs("lmx_callable: construct\n", l1_stdout())
         free(counts)
         return: 2
     ---
-    info\method\addr: (cast: (LmxEntry) callable_entry)
-    info\method\sig: 1U
+    meth\addr: (cast: (LmxEntry) callable_entry)
+    meth\sig: 1U
+    info\method: meth
     lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
 
     fail(counts, lmx_domain_kind(a, (cast: (@: void) info)) = c.LMX_DOMAIN_KIND_CALLABLE, "new record is not kind 16")
     fail(counts, lmx_call_ready(a, m) = c.LMX_CALL_OK, "child[0] LmxCallable not ready")
     prefix: lmx_call_method(a, m)
-    fail(counts, prefix = @ info\method, "call_method is not the nested LmxMethod")
+    fail(counts, prefix = info\method, "call_method is not the native METHOD reference")
     fail(counts, lmx_call_callable(a, m) = info, "call_callable missed the record")
     answer: lmx_call0(a, m)
     fail(counts, answer = 9, "native addr of nested method")

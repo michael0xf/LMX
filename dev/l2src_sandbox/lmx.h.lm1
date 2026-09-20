@@ -172,18 +172,13 @@ struct: LmxMethod
 end: LmxMethod
 
 # Callable descriptor in physical child[0] of an ordinary Structure M.
-# Slot 0 used to hold LmxMethod {addr,sig} only. The interpreter and return
-# trailers need more, so child[0] now points at this record (same place, richer
-# type). M itself stays the three-field Lmx; nothing is added to Lmx.
-# header / body / return_arg are REFERENCES (21.5.1: trailer arguments are not
-# own-fields merely by being arguments). Native addr may be 0 when only the
-# interpreter runs the body. First member is LmxMethod so child[0] still begins
-# with {addr,sig}; copies SHARE this record (not the occurrence M).
+# Holds a REFERENCE to the native METHOD record and the descriptor tree itself.
+# The body tree is M after slot 0, in order: every return: and the rest live
+# there (there can be many returns). Copies SHARE this descriptor. M stays
+# the three-field Lmx.
 struct: LmxCallable
-    LmxMethod: method
+    @: LmxMethod method
     @: Lmx header
-    @: Lmx body
-    @: Lmx return_arg
 end: LmxCallable
 
 # 6.5: an Array descriptor has exactly two values and no Lmx node.

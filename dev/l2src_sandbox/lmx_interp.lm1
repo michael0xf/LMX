@@ -18,8 +18,7 @@ fn: lmx_interp_run (@: LmxArena arena; @: Lmx node) int
     info: lmx_call_callable(arena, node)
     if: info = 0
         return: LMX_INTERP_INVALID
-    if: info\body = 0 && info\return_arg = 0
+    # Body is M after child[0], in order. return: nodes live in that tree.
+    if: node = 0 || node\len <= 1
         return: LMX_INTERP_NO_GRAPH
-    # No operator graph in the kernel yet (fable F: l2trans stores data only).
-    # Walk will use lmx_own_load(local, node, index) from the reserved node.
 return: LMX_INTERP_NO_GRAPH

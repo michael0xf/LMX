@@ -62,6 +62,8 @@ DeepSeek должен назвать конкретные единицы ядр�
 
 Критерий завершения этой части — не только отсутствие строки NOTE. Gate должен сообщить фактические пути/хэши локальных L2-заголовков, объектов и транслятора и пройти проверки без обращения к старому дереву L1. Потребитель сейчас ищет `dev/l2src_sandbox/build/l2src/<stamp>/headers/l2src`; способ генерации этих файлов согласует владелец Grok с DeepSeek. Граф и расположение исходников не менять лишь для удовлетворения старого сборщика.
 
+Checkpoint `766c40e` снял этот блокер для локального gate ядра: в LMX перенесены шесть kernel-side единиц `dev/l2src_sandbox/l1src`, а `tools/build_l2src.ps1` собирает staging только из LMX. Codex независимо выполнил `powershell -NoProfile -ExecutionPolicy Bypass -File tools\build_l2src.ps1 -Run`: `GREEN: 200 targets, no failures`, exit 0, evidence `build/l2src/20260920_073313`. В выводе указаны локальные staged sources, локальный `bin/l1trans.exe` с проверенным `L1_PIN.txt` и локальные generated headers; путь `C:\Nyasha_Planet\L1` не потреблялся. Это подтверждает L2 kernel gate на текущем Windows host, но не объявляет завершёнными весь manager, clean-checkout bootstrap и POSIX-переносимость.
+
 ## Связь и следующий checkpoint
 
 На запрос `LMX-SELFBUILD-20260920-01` получен содержательный checkpoint DeepSeek: перенос, цепочка B0/B1/B2, evidence, блокер локального L2 и отсутствие его ответа от Grok. Результат L1 повторён Codex, как описано выше. DeepSeek также сообщил об аудите Bot; отдельного содержательного отчёта самого Bot в этой задаче пока нет.

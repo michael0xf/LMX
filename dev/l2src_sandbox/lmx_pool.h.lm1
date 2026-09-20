@@ -34,7 +34,14 @@ prototype:
     # `count` consecutive cells of one array, in one chunk.  The array grows when the
     # last chunk cannot seat them all, and growth ADDS a chunk (never reallocates), so an
     # address handed out earlier never moves.  A request larger than the array's own
-    # chunk makes that one chunk that big.  Growth is the arena's act: the new chunk's
+    # chunk makes that one chunk that big -- AND RAISES THE POOL'S GROWTH STEP: the
+    # capacity a chunk is allocated at is the pool's, so after one successful oversized
+    # request every LATER chunk is allocated at that size too, for the array's lifetime
+    # (measured: a step of 8 climbed to 36 through SUCCESSFUL requests, not through
+    # failures).  A FAILED growth leaves the step untouched -- it is restored -- so a
+    # refusal cannot poison later, smaller requests.  The cost is memory on a reused
+    # array whose frames differ in size; the gain is that a big frame is not grown
+    # twice.  Growth is the arena's act: the new chunk's
     # storage and the chunk's own record are blocks of the arena's list, so a rollback
     # that drops them drops the interval with them.
     fn: lmx_pool_take_n (@: LmxArena arena; @: LmxPool pool; size_t: count) @: void

@@ -30,6 +30,7 @@ fn: main () int
     @: LmxMethod third
     @: LmxArrayDesc desc
     @: void slot
+    @: LmxPool grow_pool
     int: failures
     size_t: cycle
     LmxArena: arena
@@ -230,27 +231,46 @@ fn: main () int
     if: lmx_range_drop(@ arena, (cast: (@: void) chars_pool), (cast: (@: void) (chars_pool + 4))) = 0
         fputs("lmx: duplicate unregister should fail\n", l1_stdout())
         failures: failures + 1
-    # A FAILED GROWTH MUST NOT POISON THE ARRAY (old_capacity save/restore in lmx_pool_take_n).
-    # The capacity is raised BEFORE the allocation -- there is no other way to ask for a bigger
-    # chunk -- so a failure that does not restore it leaves an impossible size in the record and
-    # every later request retries it, however small.  Measured before the fix: fable wrote the old
-    # step back from lmx_scratch to survive it.  This case asks for a size no allocator can serve,
-    # then for one cell: the one cell must still be granted.
-    slot: (cast: (@: void) calloc(1U, c.sizeof(c.LmxPool)))
-    if: slot = 0 || lmx_pool_open(@ arena, (cast: (@: LmxPool) slot), 4U, 4U, c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_INT) != 0
+    # THE POOL'S GROWTH STEP, PINNED IN BOTH DIRECTIONS.
+    # (1) a SUCCESSFUL oversized take raises the step AND KEEPS IT RAISED.  This assertion makes
+    #     the code's semantics NORMATIVE (lmx_pool.h used to say only "that one chunk"); if the
+    #     semantics are ever deliberately reversed, THIS ASSERTION MOVES TOGETHER WITH THE CODE --
+    #     read on its own afterwards it would look like evidence AGAINST such a change.
+    # (2) a FAILED growth must not poison the array: the step is restored, so a later small request
+    #     still works.  Before the fix it was not restored, one impossible attempt left the
+    #     impossible size in the record, and every later request retried it (fable had to write the
+    #     old step back from lmx_scratch to survive that).
+    grow_pool: (cast: (@: LmxPool) calloc(1U, c.sizeof(c.LmxPool)))
+    if: grow_pool = 0 || lmx_pool_open(@ arena, grow_pool, 4U, 4U, c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_INT) != 0
         fputs("lmx: grow case could not open a pool\n", l1_stdout())
         failures: failures + 1
     ---
-    if: slot != 0 && lmx_pool_take_n(@ arena, (cast: (@: LmxPool) slot), (cast: (size_t) 100000000000)) != 0
+    if: grow_pool != 0 && lmx_pool_take_n(@ arena, grow_pool, 8U) = 0
+        fputs("lmx: an oversized take that should succeed failed\n", l1_stdout())
+        failures: failures + 1
+    ---
+    if: grow_pool != 0 && grow_pool\chunk_capacity != 8U
+        fputs("lmx: a successful oversized take did not raise the pool growth step\n", l1_stdout())
+        failures: failures + 1
+    ---
+    if: grow_pool != 0 && lmx_pool_take_n(@ arena, grow_pool, 1U) = 0
+        fputs("lmx: after a successful growth the array could not serve one cell\n", l1_stdout())
+        failures: failures + 1
+    ---
+    if: grow_pool != 0 && lmx_pool_take_n(@ arena, grow_pool, (cast: (size_t) 100000000000)) != 0
         fputs("lmx: an impossible growth unexpectedly succeeded\n", l1_stdout())
         failures: failures + 1
     ---
-    if: slot != 0 && lmx_pool_take_n(@ arena, (cast: (@: LmxPool) slot), 1U) = 0
+    if: grow_pool != 0 && grow_pool\chunk_capacity != 8U
+        fputs("lmx: a FAILED growth disturbed the pool step -- it must be restored\n", l1_stdout())
+        failures: failures + 1
+    ---
+    if: grow_pool != 0 && lmx_pool_take_n(@ arena, grow_pool, 1U) = 0
         fputs("lmx: a failed growth poisoned the array -- a later small take returned 0\n", l1_stdout())
         failures: failures + 1
     ---
-    if: slot != 0
-        free(slot)
+    if: grow_pool != 0
+        free(grow_pool)
     ---
 
     free(methods)

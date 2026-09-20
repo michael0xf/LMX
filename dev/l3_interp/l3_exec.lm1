@@ -1,0 +1,132 @@
+predef: "l3_recv.h.lm1"
+predef: "../l2src_sandbox/lmx_arena_refs.h.lm1"
+predef: "../l2src_sandbox/lmx_own.h.lm1"
+predef: "../l2src_sandbox/lmx_interp.h.lm1"
+predef: "../l2src_sandbox/lmx_implements.h.lm1"
+
+# L3-02 N4-N8. return: encoded as LmxOp RETURN in the body, not ISA 3-14.
+# Never execute METHOD.addr.
+
+define: L3_OWN_CAP 32
+
+prototype:
+    fn: l3_exec_stmt (@: LmxArena arena; @: Lmx node; @: void v; @: LmxOwnLocal owns; int: nown) int
+    fn: l3_exec_range (@: LmxArena arena; @: Lmx node; size_t: from; @: LmxOwnLocal owns; int: nown) int
+    fn: l3_own_load_ints (@: LmxArena arena; @: Lmx node; @: LmxOwnLocal owns; @: int nown) int
+    fn: l3_own_checkpoint_all (@: LmxOwnLocal owns; int: nown) int
+end: prototype
+
+fn: l3_own_load_ints (@: LmxArena arena; @: Lmx node; @: LmxOwnLocal owns; @: int nown) int
+    size_t: i
+    @: void v
+    \nown: 0
+    if: arena = 0 || node = 0 || owns = 0
+        return: 1
+    i: 1U
+    while: i < (cast: (size_t) node\len) && \nown < c.L3_OWN_CAP
+        v: lmx_arena_ref_value(node, i)
+        if: v != 0 && lmx_domain_kind(arena, v) = c.LMX_KIND_PRIMITIVE
+            if: lmx_domain_type(arena, v) = c.LMX_TYPE_INT
+                if: lmx_own_load(@ owns[\nown], node, i) != 0
+                    return: 1
+                \nown: \nown + 1
+            ---
+        ---
+        i: i + 1U
+    ---
+return: 0
+
+fn: l3_own_checkpoint_all (@: LmxOwnLocal owns; int: nown) int
+    int: i 0
+    while: i < nown
+        if: lmx_own_checkpoint(@ owns[i]) != 0
+            return: 1
+        i: i + 1
+    ---
+return: 0
+
+fn: l3_exec_stmt (@: LmxArena arena; @: Lmx node; @: void v; @: LmxOwnLocal owns; int: nown) int
+    @: Lmx host
+    @: void head
+    @: LmxOp op
+    int: hk
+    int: kind
+    if: v = 0
+        return: c.L3_ABSENT
+    kind: lmx_domain_kind(arena, v)
+    if: kind = c.LMX_KIND_PRIMITIVE
+        return: c.L3_OK
+    if: kind = c.LMX_DOMAIN_KIND_OP
+        op: (cast: (@: LmxOp) v)
+        if: op = 0
+            return: c.L3_INVALID
+        if: op\code = c.LMX_OP_RETURN
+            if: l3_own_checkpoint_all(owns, nown) != 0
+                return: c.L3_INVALID
+            return: c.L3_RETURN
+        return: c.L3_UNSUPPORTED
+    ---
+    if: kind = c.LMX_KIND_STRUCT
+        host: (cast: (@: Lmx) v)
+        if: host\len < 1
+            return: c.L3_OK
+        head: lmx_arena_ref_value(host, 0U)
+        if: head = 0
+            return: c.L3_OK
+        hk: lmx_domain_kind(arena, head)
+        if: hk = c.LMX_DOMAIN_KIND_OP
+            return: l3_exec_stmt(arena, node, head, owns, nown)
+        if: hk = c.LMX_DOMAIN_KIND_CALLABLE
+            return: l3_exec_run(arena, host)
+        if: hk = c.LMX_KIND_METHOD
+            return: c.L3_UNSUPPORTED
+        return: l3_exec_range(arena, host, 0U, owns, nown)
+    ---
+    if: kind = c.LMX_DOMAIN_KIND_CALLABLE
+        return: c.L3_OK
+    if: kind = c.LMX_KIND_METHOD
+        return: c.L3_UNSUPPORTED
+return: c.L3_UNSUPPORTED
+
+fn: l3_exec_range (@: LmxArena arena; @: Lmx node; size_t: from; @: LmxOwnLocal owns; int: nown) int
+    size_t: i
+    int: st
+    if: node = 0
+        return: c.L3_INVALID
+    i: from
+    while: i < (cast: (size_t) node\len)
+        st: l3_exec_stmt(arena, node, lmx_arena_ref_value(node, i), owns, nown)
+        if: st = c.L3_RETURN
+            return: c.L3_RETURN
+        if: st != c.L3_OK
+            return: st
+        i: i + 1U
+    ---
+return: c.L3_OK
+
+fn: l3_exec_run (@: LmxArena arena; @: Lmx node) int
+    LmxOwnLocal: owns[32]
+    int: nown 0
+    int: st
+    @: void head
+    int: hk
+    if: arena = 0 || node = 0
+        return: c.L3_INVALID
+    if: lmx_domain_kind(arena, (cast: (@: void) node)) != c.LMX_KIND_STRUCT
+        return: c.L3_UNSUPPORTED
+    if: node\len < 1
+        return: c.L3_UNSUPPORTED
+    head: lmx_arena_ref_value(node, 0U)
+    if: head = 0
+        return: c.L3_UNSUPPORTED
+    hk: lmx_domain_kind(arena, head)
+    if: hk = c.LMX_KIND_METHOD
+        return: c.L3_UNSUPPORTED
+    if: hk != c.LMX_DOMAIN_KIND_CALLABLE
+        return: c.L3_UNSUPPORTED
+    if: l3_own_load_ints(arena, node, @ owns[0], @ nown) != 0
+        return: c.L3_INVALID
+    st: l3_exec_range(arena, node, 1U, @ owns[0], nown)
+    if: st = c.L3_RETURN
+        return: c.L3_OK
+return: st

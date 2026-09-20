@@ -9,8 +9,11 @@ define: L3_OK 0
 define: L3_INVALID 1
 define: L3_UNSUPPORTED 2
 define: L3_ABSENT 3
+define: L3_RETURN 4
 
 prototype:
     # Root must be a Structure (empty is present). Walks fields by index.
     fn: l3_recv_eval (@: LmxArena arena; @: Lmx root) int
+    # N4-N8: execute callable M. Slot 0 is LmxCallable. Never METHOD.addr.
+    fn: l3_exec_run (@: LmxArena arena; @: Lmx node) int
 end: prototype

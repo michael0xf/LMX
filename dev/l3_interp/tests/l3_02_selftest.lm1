@@ -1,0 +1,125 @@
+predef: "../l3_exec.lm1"
+predef: "../../l2src_sandbox/lmx_arena.lm1"
+predef: "../../l2src_sandbox/lmx_arena_blocks.lm1"
+predef: "../../l2src_sandbox/lmx_range.lm1"
+predef: "../../l2src_sandbox/lmx_implements.lm1"
+predef: "../../l2src_sandbox/lmx_value_owned.lm1"
+predef: "../../l2src_sandbox/lmx_arena_refs.lm1"
+predef: "../../l2src_sandbox/lmx_own.lm1"
+predef: "../../l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# N4-N8 smoke. Not admission.
+
+sub: fail (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: fail
+
+fn: mk_return (@: LmxArena a) @: Lmx
+    @: Lmx stmt
+    @: LmxOp op
+    stmt: lmx_node_new_owned(a)
+    op: lmx_op_new_owned(a, c.LMX_OP_RETURN)
+    if: stmt = 0 || op = 0
+        return: 0
+    if: lmx_arena_refs_open_owned(a, stmt, 1U) != 0
+        return: 0
+    lmx_arena_ref_store(stmt, 0U, (cast: (@: void) op))
+return: stmt
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxArena: arena
+    @: LmxArena a 0
+    @: Lmx m 0
+    @: Lmx inner 0
+    @: Lmx stmt 0
+    @: LmxCallable info 0
+    @: LmxCallable info2 0
+    @: LmxMethod meth 0
+    @: void cell 0
+    @: void cell2 0
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ arena) != 0
+        fputs("l3_02: arena\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    a: @ arena
+    meth: lmx_method_new_owned(a)
+    fail(counts, meth != 0, "native METHOD cell")
+
+    # METHOD in slot 0 is not L3 (N4).
+    m: lmx_node_new_owned(a)
+    if: m = 0 || lmx_arena_refs_open_owned(a, m, 1U) != 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(m, 0U, (cast: (@: void) meth))
+    fail(counts, l3_exec_run(a, m) = c.L3_UNSUPPORTED, "N4 METHOD.addr is not L3")
+
+    # Callable + return in body (N4 N5 N6).
+    info: lmx_callable_new_owned(a)
+    stmt: mk_return(a)
+    m: lmx_node_new_owned(a)
+    if: info = 0 || stmt = 0 || m = 0 || lmx_arena_refs_open_owned(a, m, 2U) != 0
+        free(counts)
+        return: 2
+    ---
+    info\method: meth
+    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
+    lmx_arena_ref_store(m, 1U, (cast: (@: void) stmt))
+    fail(counts, l3_exec_run(a, m) = c.L3_OK, "N5/N6 return: in body after slot 0")
+
+    # Nested call then return (N7).
+    info2: lmx_callable_new_owned(a)
+    inner: lmx_node_new_owned(a)
+    if: info2 = 0 || inner = 0 || lmx_arena_refs_open_owned(a, inner, 2U) != 0
+        free(counts)
+        return: 2
+    ---
+    info2\method: meth
+    lmx_arena_ref_store(inner, 0U, (cast: (@: void) info2))
+    lmx_arena_ref_store(inner, 1U, (cast: (@: void) mk_return(a)))
+    m: lmx_node_new_owned(a)
+    if: m = 0 || lmx_arena_refs_open_owned(a, m, 3U) != 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
+    lmx_arena_ref_store(m, 1U, (cast: (@: void) inner))
+    lmx_arena_ref_store(m, 2U, (cast: (@: void) mk_return(a)))
+    fail(counts, l3_exec_run(a, m) = c.L3_OK, "N7 nested callable then return")
+
+    # Dirty-only (N8): write publishes; clean does not restore.
+    cell: lmx_int_new_owned(a)
+    cell2: lmx_int_new_owned(a)
+    info: lmx_callable_new_owned(a)
+    m: lmx_node_new_owned(a)
+    if: cell = 0 || cell2 = 0 || info = 0 || m = 0 || lmx_arena_refs_open_owned(a, m, 3U) != 0
+        free(counts)
+        return: 2
+    ---
+    lmx_int_store_known(cell, 1)
+    lmx_int_store_known(cell2, 99)
+    info\method: meth
+    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
+    lmx_arena_ref_store(m, 1U, cell)
+    lmx_arena_ref_store(m, 2U, (cast: (@: void) mk_return(a)))
+    fail(counts, l3_exec_run(a, m) = c.L3_OK, "N8 run with own int")
+    fail(counts, lmx_int_value_known(cell) = 1, "N8 clean own not flushed over")
+
+    if: counts[1] != 0
+        c.printf("%d failed of %d\n", counts[1], counts[0])
+        free(counts)
+        return: 1
+    ---
+    c.printf("l3_02: %d checks\n", counts[0])
+    free(counts)
+return: 0

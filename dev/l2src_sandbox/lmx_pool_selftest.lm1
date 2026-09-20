@@ -230,6 +230,29 @@ fn: main () int
     if: lmx_range_drop(@ arena, (cast: (@: void) chars_pool), (cast: (@: void) (chars_pool + 4))) = 0
         fputs("lmx: duplicate unregister should fail\n", l1_stdout())
         failures: failures + 1
+    # A FAILED GROWTH MUST NOT POISON THE ARRAY (old_capacity save/restore in lmx_pool_take_n).
+    # The capacity is raised BEFORE the allocation -- there is no other way to ask for a bigger
+    # chunk -- so a failure that does not restore it leaves an impossible size in the record and
+    # every later request retries it, however small.  Measured before the fix: fable wrote the old
+    # step back from lmx_scratch to survive it.  This case asks for a size no allocator can serve,
+    # then for one cell: the one cell must still be granted.
+    slot: (cast: (@: void) calloc(1U, c.sizeof(c.LmxPool)))
+    if: slot = 0 || lmx_pool_open(@ arena, (cast: (@: LmxPool) slot), 4U, 4U, c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_INT) != 0
+        fputs("lmx: grow case could not open a pool\n", l1_stdout())
+        failures: failures + 1
+    ---
+    if: slot != 0 && lmx_pool_take_n(@ arena, (cast: (@: LmxPool) slot), (cast: (size_t) 100000000000)) != 0
+        fputs("lmx: an impossible growth unexpectedly succeeded\n", l1_stdout())
+        failures: failures + 1
+    ---
+    if: slot != 0 && lmx_pool_take_n(@ arena, (cast: (@: LmxPool) slot), 1U) = 0
+        fputs("lmx: a failed growth poisoned the array -- a later small take returned 0\n", l1_stdout())
+        failures: failures + 1
+    ---
+    if: slot != 0
+        free(slot)
+    ---
+
     free(methods)
     free(arrays)
     lmx_arena_release(@ arena)

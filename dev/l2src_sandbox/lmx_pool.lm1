@@ -191,6 +191,7 @@ fn: lmx_pool_take_n (@: LmxArena arena; @: LmxPool pool; size_t: count) @: void
     @: LmxChunk chunk
     @: void first
     size_t: room 0U
+    size_t: old_capacity 0U
     if: pool = 0 || count = 0U
         return: 0
     chunk: pool\tail
@@ -224,10 +225,26 @@ fn: lmx_pool_take_n (@: LmxArena arena; @: LmxPool pool; size_t: count) @: void
         room: 0U
     ---
     if: room < count
+        # A FAILED GROWTH MUST NOT POISON THE ARRAY.  chunk_capacity is raised BEFORE the
+        # allocation because lmx_pool_add_chunk allocates AT that size (calloc(chunk_capacity,
+        # stride), lmx_pool.lm1:47), so there is no way to ask for a bigger chunk without saying
+        # how big.  But the raise used to stand on the failure path: one failed attempt left the
+        # impossible size in the record, and every later request -- however small -- retried it
+        # and failed for a reason that was no longer true.  Measured: fable had to write the old
+        # step back from lmx_scratch (its :83) to keep a failed growth from crippling the array;
+        # that workaround is what this save/restore replaces.
+        # Two facts a reader of this function should not have to rediscover by measurement:
+        #   * 0 is returned for EVERY reason -- refusal, no arena, allocation failure -- so a
+        #     caller cannot tell a failed growth from a refusal.  Nothing here pretends otherwise.
+        #   * lmx_pool_add_chunk refuses a SIMPLE arena every chunk after the first
+        #     (lmx_pool.lm1:36-38, "Letter-scale: one chunk per array"), which is why a simple
+        #     arena cannot be grown at all -- also not distinguishable from failure by the caller.
+        old_capacity: pool\chunk_capacity
         if: count > pool\chunk_capacity
             pool\chunk_capacity: count
         ---
         if: lmx_pool_add_chunk(arena, pool) != 0
+            pool\chunk_capacity: old_capacity
             return: 0
         chunk: pool\tail
     ---

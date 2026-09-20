@@ -1,0 +1,172 @@
+predef: "../l3_admit.lm1"
+predef: "../../l2src_sandbox/lmx_arena.lm1"
+predef: "../../l2src_sandbox/lmx_arena_blocks.lm1"
+predef: "../../l2src_sandbox/lmx_range.lm1"
+predef: "../../l2src_sandbox/lmx_implements.lm1"
+predef: "../../l2src_sandbox/lmx_value_owned.lm1"
+predef: "../../l2src_sandbox/lmx_arena_refs.lm1"
+predef: "../../l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# N10: used index paths, then receiver tests. Not names. Not admission cache.
+
+sub: fail (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: fail
+
+fn: mk_int (@: LmxArena a; int: n) @: void
+    @: void cell
+    cell: lmx_int_new_owned(a)
+    if: cell = 0
+        return: 0
+    lmx_int_store_known(cell, n)
+return: cell
+
+fn: mk_path1 (@: LmxArena a; int: i0) @: Lmx
+    @: Lmx p
+    p: lmx_node_new_owned(a)
+    if: p = 0 || lmx_arena_refs_open_owned(a, p, 1U) != 0
+        return: 0
+    lmx_arena_ref_store(p, 0U, mk_int(a, i0))
+return: p
+
+fn: mk_path2 (@: LmxArena a; int: i0; int: i1) @: Lmx
+    @: Lmx p
+    p: lmx_node_new_owned(a)
+    if: p = 0 || lmx_arena_refs_open_owned(a, p, 2U) != 0
+        return: 0
+    lmx_arena_ref_store(p, 0U, mk_int(a, i0))
+    lmx_arena_ref_store(p, 1U, mk_int(a, i1))
+return: p
+
+fn: mk_return_test (@: LmxArena a) @: Lmx
+    @: Lmx m
+    @: LmxCallable info
+    @: LmxMethod meth
+    @: Lmx stmt
+    @: LmxOp op
+    m: lmx_node_new_owned(a)
+    info: lmx_callable_new_owned(a)
+    meth: lmx_method_new_owned(a)
+    stmt: lmx_node_new_owned(a)
+    op: lmx_op_new_owned(a, c.L3_NODE_RETURN)
+    if: m = 0 || info = 0 || meth = 0 || stmt = 0 || op = 0
+        return: 0
+    if: lmx_arena_refs_open_owned(a, m, 2U) != 0
+        return: 0
+    if: lmx_arena_refs_open_owned(a, stmt, 1U) != 0
+        return: 0
+    info\method: meth
+    lmx_arena_ref_store(stmt, 0U, (cast: (@: void) op))
+    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
+    lmx_arena_ref_store(m, 1U, (cast: (@: void) stmt))
+return: m
+
+fn: mk_recv (@: LmxArena a; @: Lmx paths; @: Lmx tests) @: Lmx
+    @: Lmx r
+    r: lmx_node_new_owned(a)
+    if: r = 0 || paths = 0 || tests = 0
+        return: 0
+    if: lmx_arena_refs_open_owned(a, r, 2U) != 0
+        return: 0
+    lmx_arena_ref_store(r, 0U, (cast: (@: void) paths))
+    lmx_arena_ref_store(r, 1U, (cast: (@: void) tests))
+return: r
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxArena: arena
+    @: LmxArena a 0
+    @: Lmx cand 0
+    @: Lmx inner 0
+    @: Lmx paths 0
+    @: Lmx tests 0
+    @: Lmx recv 0
+    @: Lmx extra 0
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ arena) != 0
+        fputs("l3_04: arena\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    a: @ arena
+    inner: lmx_node_new_owned(a)
+    cand: lmx_node_new_owned(a)
+    extra: lmx_node_new_owned(a)
+    if: inner = 0 || cand = 0 || extra = 0
+        free(counts)
+        return: 2
+    ---
+    if: lmx_arena_refs_open_owned(a, inner, 1U) != 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(inner, 0U, mk_int(a, 7))
+    if: lmx_arena_refs_open_owned(a, cand, 2U) != 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(cand, 0U, (cast: (@: void) inner))
+    lmx_arena_ref_store(cand, 1U, (cast: (@: void) extra))
+
+    paths: lmx_node_new_owned(a)
+    if: paths = 0 || lmx_arena_refs_open_owned(a, paths, 1U) != 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(paths, 0U, (cast: (@: void) mk_path2(a, 0, 0)))
+    fail(counts, l3_implements_paths(a, cand, paths) = c.L3_OK, "used nested path 0.0 present")
+
+    paths: lmx_node_new_owned(a)
+    if: paths = 0 || lmx_arena_refs_open_owned(a, paths, 1U) != 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(paths, 0U, (cast: (@: void) mk_path2(a, 0, 1)))
+    fail(counts, l3_implements_paths(a, cand, paths) = c.L3_ABSENT, "unused/missing 0.1 is not required if unused; here it is used and missing")
+
+    paths: lmx_node_new_owned(a)
+    fail(counts, paths != 0 && l3_implements_paths(a, cand, paths) = c.L3_OK, "empty used-path set is analytically OK")
+
+    tests: lmx_node_new_owned(a)
+    recv: mk_recv(a, lmx_node_new_owned(a), tests)
+    fail(counts, recv != 0 && l3_admit(a, cand, recv) = c.L3_UNSUPPORTED, "analytic OK without tests is not admission")
+
+    tests: lmx_node_new_owned(a)
+    if: tests = 0 || lmx_arena_refs_open_owned(a, tests, 1U) != 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(tests, 0U, (cast: (@: void) mk_return_test(a)))
+    paths: lmx_node_new_owned(a)
+    if: paths = 0 || lmx_arena_refs_open_owned(a, paths, 1U) != 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(paths, 0U, (cast: (@: void) mk_path1(a, 0)))
+    recv: mk_recv(a, paths, tests)
+    fail(counts, recv != 0 && l3_admit(a, cand, recv) = c.L3_OK, "used path 0 plus passing test admits")
+
+    paths: lmx_node_new_owned(a)
+    if: paths = 0 || lmx_arena_refs_open_owned(a, paths, 1U) != 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(paths, 0U, (cast: (@: void) mk_path1(a, 5)))
+    recv: mk_recv(a, paths, tests)
+    fail(counts, recv != 0 && l3_admit(a, cand, recv) = c.L3_ABSENT, "failed implements does not run as success")
+
+    if: counts[1] != 0
+        c.printf("%d failed of %d\n", counts[1], counts[0])
+        free(counts)
+        return: 1
+    ---
+    c.printf("l3_04: %d checks\n", counts[0])
+    free(counts)
+return: 0

@@ -53,3 +53,11 @@ Fixture: entry `return CALL(leaf, subject) + 5` where leaf is `return subject[0]
 - Malformed arity and non-int conditions (`SUBJECT_REF` alone, `UNSUPPORTED`) rejected before class bytes.
 - Untaken branch is not evaluated (smoke: CHECKCAST-failing field follow in untaken arm).
 - WHILE deferred. Recursion still deferred.
+
+## ARG / CALL args (Path B slice 57B)
+
+- Role `L3Role.ARG`: `intPayload` is the compile-time parameter index (0 = subject `LmxOccurrence` local; 1.. = int locals). No name/text lookup.
+- Callable arity = `max(1, max ARG index + 1)` from that callable's body only (CALL callees excluded from the scan).
+- JVM descriptor fixed per callable: `(LmxOccurrence;I*)I`. CALL sites must pass exactly that many args; args evaluated once left-to-right.
+- `L3Role.PROBE` (smoke): `ArgEvalCounter.tick()` for exactly-once evaluation order.
+- No varargs, no WHILE, no recursion. IF and reachable-only emission preserved.

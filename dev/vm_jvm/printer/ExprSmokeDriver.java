@@ -1,12 +1,10 @@
 package printer;
 
+import graph.ArgEvalCounter;
 import graph.L3ExprFixture;
 import graph.L3Node;
 import lmx.LmxOccurrence;
 import java.lang.reflect.Method;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -32,6 +30,14 @@ public final class ExprSmokeDriver {
         testIfNestedCall();
         testIfBadArityRejected();
         testIfBadConditionRejected();
+
+        testDirectArgReturn();
+        testTwoArgsAdd();
+        testNestedComputedArgs();
+        testArgSubjectIdentity();
+        testArgCountRejected();
+        testArgOutOfRangeRejected();
+        testProbeOnceLeftToRight();
 
         if (fails != 0) {
             System.out.println("FAIL ExprSmokeDriver checks=" + checks + " failures=" + fails);
@@ -120,19 +126,17 @@ public final class ExprSmokeDriver {
     }
 
     private static void testIfUntakenBranchNotEvaluated() throws Exception {
-        // true path: subject[0]=1 Integer, subject[1]=String ? else FIELD_FOLLOW(1) would fail
         Class<?> t = loadPrinted(L3ExprFixture.ifTrueUntakenElseInvalid());
         Method evalT = t.getMethod("eval", LmxOccurrence.class);
         LmxOccurrence subT = LmxOccurrence.independent(Integer.valueOf(1), "boom");
         Object rt = evalT.invoke(null, subT);
-        check("IF true untaken else not evaluated ? 42", Integer.valueOf(42).equals(rt));
+        check("IF true untaken else not evaluated -> 42", Integer.valueOf(42).equals(rt));
 
-        // false path: subject[0]=0, subject[1]=String ? then would fail if evaluated
         Class<?> f = loadPrinted(L3ExprFixture.ifFalseUntakenThenInvalid());
         Method evalF = f.getMethod("eval", LmxOccurrence.class);
         LmxOccurrence subF = LmxOccurrence.independent(Integer.valueOf(0), "boom");
         Object rf = evalF.invoke(null, subF);
-        check("IF false untaken then not evaluated ? 7", Integer.valueOf(7).equals(rf));
+        check("IF false untaken then not evaluated -> 7", Integer.valueOf(7).equals(rf));
     }
 
     private static void testIfNestedCall() throws Exception {
@@ -140,7 +144,7 @@ public final class ExprSmokeDriver {
         Method eval = cls.getMethod("eval", LmxOccurrence.class);
         LmxOccurrence subject = LmxOccurrence.independent(Integer.valueOf(3));
         Object r = eval.invoke(null, subject);
-        check("IF selects nested CALL ? 3", Integer.valueOf(3).equals(r));
+        check("IF selects nested CALL -> 3", Integer.valueOf(3).equals(r));
         check("nested CALL emits c0 c1", hasMethods(cls, "c0", "c1", "eval"));
     }
 
@@ -172,6 +176,76 @@ public final class ExprSmokeDriver {
         check("IF UNSUPPORTED condition rejected", threwUn);
     }
 
+    private static void testDirectArgReturn() throws Exception {
+        Class<?> cls = loadPrinted(L3ExprFixture.callerDirectArgReturn());
+        Method eval = cls.getMethod("eval", LmxOccurrence.class);
+        Object r = eval.invoke(null, LmxOccurrence.independent(Integer.valueOf(0)));
+        check("direct ARG(1) return 42", Integer.valueOf(42).equals(r));
+    }
+
+    private static void testTwoArgsAdd() throws Exception {
+        Class<?> cls = loadPrinted(L3ExprFixture.callerTwoArgsAdd());
+        Method eval = cls.getMethod("eval", LmxOccurrence.class);
+        Object r = eval.invoke(null, LmxOccurrence.independent(Integer.valueOf(0)));
+        check("two args add 3+4=7", Integer.valueOf(7).equals(r));
+    }
+
+    private static void testNestedComputedArgs() throws Exception {
+        Class<?> cls = loadPrinted(L3ExprFixture.callerNestedComputedArgs());
+        Method eval = cls.getMethod("eval", LmxOccurrence.class);
+        Object r = eval.invoke(null, LmxOccurrence.independent(Integer.valueOf(0)));
+        check("nested computed args (1+2)+10=13", Integer.valueOf(13).equals(r));
+    }
+
+    private static void testArgSubjectIdentity() throws Exception {
+        Class<?> cls = loadPrinted(L3ExprFixture.callerArgSubjectIdentity());
+        Method eval = cls.getMethod("eval", LmxOccurrence.class);
+        Integer cell = Integer.valueOf(11);
+        LmxOccurrence subject = LmxOccurrence.independent(cell);
+        Object r = eval.invoke(null, subject);
+        check("ARG(0) field follow returns 11", Integer.valueOf(11).equals(r));
+        check("same subject cell no copy", subject.child(0) == cell);
+    }
+
+    private static void testArgCountRejected() {
+        boolean miss = false;
+        try {
+            L3ClassfilePrinter.emitCallable(L3ExprFixture.callMissingArg());
+        } catch (IllegalArgumentException e) {
+            miss = true;
+        }
+        check("missing CALL arg rejected", miss);
+
+        boolean extra = false;
+        try {
+            L3ClassfilePrinter.emitCallable(L3ExprFixture.callExtraArg());
+        } catch (IllegalArgumentException e) {
+            extra = true;
+        }
+        check("extra CALL arg rejected", extra);
+    }
+
+    private static void testArgOutOfRangeRejected() {
+        boolean threw = false;
+        try {
+            L3ClassfilePrinter.emitCallable(L3ExprFixture.argOutOfRangeNegative());
+        } catch (IllegalArgumentException e) {
+            threw = true;
+        }
+        check("ARG(-1) rejected", threw);
+    }
+
+    private static void testProbeOnceLeftToRight() throws Exception {
+        ArgEvalCounter.reset();
+        Class<?> cls = loadPrinted(L3ExprFixture.callerProbeArgOrder());
+        Method eval = cls.getMethod("eval", LmxOccurrence.class);
+        ArgEvalCounter.reset();
+        Object r = eval.invoke(null, LmxOccurrence.independent(Integer.valueOf(0)));
+        // first PROBE -> 1, second PROBE -> 2, callee returns 1+2=3
+        check("probe args sum 1+2=3", Integer.valueOf(3).equals(r));
+        check("probe ticks exactly twice", ArgEvalCounter.get() == 2);
+    }
+
     private static boolean hasMethods(Class<?> cls, String... want) {
         Set<String> names = new HashSet<String>();
         for (Method m : cls.getDeclaredMethods()) {
@@ -187,8 +261,6 @@ public final class ExprSmokeDriver {
 
     private static Class<?> loadPrinted(L3Node entry) throws Exception {
         final byte[] bytes = L3ClassfilePrinter.emitCallable(entry);
-        // Do not put generated bytes on the app classpath: parent would cache the first
-        // PrintedL3Expr and later fixtures would silently reuse it.
         ClassLoader parent = ExprSmokeDriver.class.getClassLoader();
         ClassLoader loader = new ClassLoader(parent) {
             @Override

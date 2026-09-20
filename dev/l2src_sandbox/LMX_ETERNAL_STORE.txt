@@ -187,14 +187,19 @@ WHAT IS NOT DONE, EXACTLY
         repository, neither under dev/l2src_sandbox nor under l2src.  Any program with an eternal
         branch therefore emits L1 source with an unresolvable predef, before any of the above
         matters.  This is the first thing to fix and the cheapest.
-      - NOTHING RUNS .lm2 HERE.  tools/build_l2src.ps1 neither builds l2trans nor translates a
-        fixture; dev/l2src_sandbox/run_self_build.ps1 is the L1 chain and does not mention .lm2;
-        no .ps1 under dev/l2src_sandbox does.  The 280 .lm2 files under tests/ -- including
-        unit_eternal_branch, _many, _shape, _two and _xref -- are referenced only as documentation
-        examples in docs/L2_spec_*.md.  So an end-to-end proof that a GENERATED program shares a
-        branch across Message arenas is not expressible by the present harness, and producing one
-        means building that harness first.  That is the honest order of work: harness, then the
-        missing header, then move the emission into the store, then pass the counts.
+      - NOTHING RAN .lm2 HERE UNTIL 47U, AND NOW SOMETHING DOES.  tools/build_l2src.ps1 still
+        neither builds l2trans nor translates a fixture, and dev/l2src_sandbox/run_self_build.ps1
+        is the L1 chain, so until 47U the 280 .lm2 files under tests/ were reachable only by
+        reading.  tools/l2_harness.ps1 closes that: it builds l2trans from tracked sources with
+        the pinned translator, takes a fixture .lm2 through generated L1, C, gcc and execution,
+        and judges every step by whether its OUTPUT was produced -- NEITHER TRANSLATOR SETS AN
+        EXIT CODE ON A DIAGNOSTIC, so reading the exit code alone would call every refusal a
+        pass.  Measured on its first run: entry_return7 end to end with exit 7, entry_ret_tr_bad
+        refused with the diagnostic naming an unsupported body, and unit_eternal_branch reaching
+        the missing-header blocker below instead of being skipped.  Two of those three rows pass
+        BY DETECTING A FAILURE, which is what says the harness is not blind.  The remaining order
+        of work is therefore: the missing header, then move the emission into the store, then
+        pass the counts -- and the harness is what can now say whether each one worked.
       - MULTI-ROOT IS NOT REPRESENTABLE, SO THE TU-GLOBAL TOTALS ARE THE RIGHT EXPRESSIONS.
         l2trans.lm1:14612 calls l2_emit_library_wrappers() and l2trans.lm1:14616 is its `else`
         emitting main, so one translation unit emits EITHER the library wrapper OR the program,

@@ -39,11 +39,17 @@ predef: "l2src/lmx_implements.h.lm1"
 #     *_known accessors and lmx_arena_ref_struct state.  This is also what lets a Message
 #     whose arena cannot classify a plan kept in another arena still run by it.
 #
-# One arena.  The plan root, its entries, their index cells and the role records live in
-# the arena that holds the LmxCallable record they are published into, and that arena
-# outlives every occurrence sharing the descriptor.  lmx_plan_publish refuses an
-# occurrence whose child[0] is not an LmxCallable OF THE GIVEN ARENA, so a copy in a child
-# Message can never hang a plan of its own short-lived arena on a shared descriptor.
+# One HOME.  The plan root, its entries and their index cells live where the LmxCallable
+# record they are published into lives, and that place outlives every occurrence sharing
+# the descriptor.  An address has one of two homes as seen from an arena: the arena's own
+# ranges, or the ranges of the permanent store it is bound to (lmx_perm.h.lm1) -- and the
+# store is asked first, so an address of the store is never mistaken for a local one.  A
+# translation-known descriptor lives in the store while its occurrences live in Message
+# arenas; then the plan is built in the store and published through an arena BOUND to it,
+# which can classify both the occurrence and the descriptor.  lmx_plan_publish refuses a
+# plan whose home is not the descriptor's, so a copy in a child Message can never hang a
+# plan of its own short-lived arena on a shared descriptor.  The role records may be of
+# the same home as the plan or of the store, never of a home that dies sooner.
 #
 # Trust.  A published plan is trusted for as long as the occurrence keeps that descriptor
 # in child[0]: the executable shape of an occurrence is immutable under its descriptor,
@@ -81,10 +87,14 @@ prototype:
     # two entries name the same slot.  It cannot know whether the body uses a field the
     # plan omits: that is the receiver's check.
     fn: lmx_plan_validate_shape (@: LmxArena arena; @: Lmx plan_roles; @: Lmx occurrence; @: Lmx plan) int
-    # Checked publication through an occurrence: child[0] of M must be an LmxCallable of
-    # `arena`, the plan must pass lmx_plan_validate_shape on M, and only then does that
-    # descriptor's header become the plan.  A previous plan is left as it was.
+    # Checked publication through an occurrence: child[0] of M must be an LmxCallable that
+    # `arena` can classify, the plan must have the SAME HOME as that descriptor and pass
+    # lmx_plan_validate_shape on M, and only then does the descriptor's header become the
+    # plan.  A previous plan is left as it was.
     fn: lmx_plan_publish (@: LmxArena arena; @: Lmx plan_roles; @: Lmx occurrence; @: Lmx plan) int
+    # Where `p` lives as seen from `arena`: the permanent store the arena is bound to, the
+    # arena itself, or 0 when neither can classify it.  The store is asked first.
+    fn: lmx_plan_home (@: LmxArena arena; @: void p) @: LmxArena
     # Activation time.  The address of the slot entry `index` (from zero) names on this
     # occurrence; 0 for a null plan or occurrence, an index past the last entry, or a
     # path that leads nowhere.  No arena, no classification, no allocation, no validation.

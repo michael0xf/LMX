@@ -95,6 +95,18 @@ fn: lmx_plan_build_from_paths (@: LmxArena arena; @: Lmx plan_roles; @@: size_t 
     \out_plan: plan
 return: c.LMX_PLAN_OK
 
+fn: lmx_plan_home (@: LmxArena arena; @: void p) @: LmxArena
+    if: arena = 0 || p = 0
+        return: 0
+    if: arena\perm != 0 && arena\perm\permanent != 0U
+        if: lmx_range_classify(arena\perm, p) != c.LMX_KIND_NONE
+            return: arena\perm
+        ---
+    ---
+    if: lmx_range_classify(arena, p) != c.LMX_KIND_NONE
+        return: arena
+return: 0
+
 fn: lmx_plan_entry_count (@: Lmx plan) size_t
     if: plan = 0 || plan\len < 1
         return: 0U
@@ -125,6 +137,8 @@ fn: lmx_plan_validate_shape (@: LmxArena arena; @: Lmx plan_roles; @: Lmx occurr
     @: void cell 0
     @: Lmx entry 0
     @: Lmx at 0
+    @: LmxArena home 0
+    @: LmxArena role_home 0
     size_t: count
     size_t: steps
     size_t: slot
@@ -149,10 +163,19 @@ fn: lmx_plan_validate_shape (@: LmxArena arena; @: Lmx plan_roles; @: Lmx occurr
         return: c.LMX_PLAN_INVALID
     if: lmx_arena_ref_value(plan, 0U) != root_role
         return: c.LMX_PLAN_INVALID
+    # One home for the whole plan; the roles of that home or of the store, which outlives it.
+    home: lmx_plan_home(arena, (cast: (@: void) plan))
+    role_home: lmx_plan_home(arena, root_role)
+    if: home = 0 || role_home = 0 || lmx_plan_home(arena, entry_role) != role_home
+        return: c.LMX_PLAN_INVALID
+    if: role_home != home && role_home\permanent = 0U
+        return: c.LMX_PLAN_INVALID
     count: (cast: (size_t) plan\len) - 1U
     while: i < count
         step: lmx_arena_ref_value(plan, i + 1U)
         if: step = 0 || lmx_range_classify(arena, step) != c.LMX_KIND_STRUCT
+            return: c.LMX_PLAN_INVALID
+        if: lmx_plan_home(arena, step) != home
             return: c.LMX_PLAN_INVALID
         entry: (cast: (@: Lmx) step)
         # The role by its address: another record carrying whatever number is not it.
@@ -164,6 +187,8 @@ fn: lmx_plan_validate_shape (@: LmxArena arena; @: Lmx plan_roles; @: Lmx occurr
         while: j <= steps
             cell: lmx_arena_ref_value(entry, j)
             if: cell = 0 || lmx_range_classify(arena, cell) != c.LMX_KIND_PRIMITIVE || lmx_range_type_of(arena, cell) != c.LMX_TYPE_SIZE_T
+                return: c.LMX_PLAN_INVALID
+            if: lmx_plan_home(arena, cell) != home
                 return: c.LMX_PLAN_INVALID
             slot: lmx_size_value_known(cell)
             if: j < steps
@@ -205,10 +230,13 @@ fn: lmx_plan_publish (@: LmxArena arena; @: Lmx plan_roles; @: Lmx occurrence; @
         return: c.LMX_PLAN_INVALID
     if: lmx_range_classify(arena, (cast: (@: void) occurrence)) != c.LMX_KIND_STRUCT
         return: c.LMX_PLAN_INVALID
-    # The descriptor is reached THROUGH the occurrence and must be a record of this arena:
-    # a bare METHOD has no header, and a descriptor of another arena is not ours to write.
+    # The descriptor is reached THROUGH the occurrence.  A bare METHOD has no header; a
+    # descriptor this arena cannot classify is not ours to write; and the plan must live
+    # where the descriptor lives -- a plan of a shorter-lived home would dangle from it.
     target: lmx_arena_ref_value(occurrence, 0U)
     if: target = 0 || lmx_range_classify(arena, target) != c.LMX_DOMAIN_KIND_CALLABLE
+        return: c.LMX_PLAN_INVALID
+    if: lmx_plan_home(arena, target) = 0 || lmx_plan_home(arena, target) != lmx_plan_home(arena, (cast: (@: void) plan))
         return: c.LMX_PLAN_INVALID
     status: lmx_plan_validate_shape(arena, plan_roles, occurrence, plan)
     if: status != c.LMX_PLAN_OK

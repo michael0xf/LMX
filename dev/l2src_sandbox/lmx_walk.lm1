@@ -170,9 +170,17 @@ return: 0
 
 # ---- entry: load the own fields this body uses (21.5) ----------------------------------
 
+# Whether `p` lives in the permanent store this Message's arena is bound to.  Asked only
+# while a body is prepared, never by an activation.
+fn: lmx_walk_eternal (@: LmxWalkFrame f; @: void p) int
+    if: p = 0 || f\arena\perm = 0 || f\arena\perm\permanent = 0U
+        return: 0
+return: (cast: (int) (lmx_walk_kind_in(f, f\arena\perm, p) != c.LMX_KIND_NONE))
+
 fn: lmx_walk_scan_node (@: LmxWalkFrame f; @: void node) int
     @: LmxWalkOwn o 0
     @: Lmx code 0
+    @: void target 0
     @@: void from 0
     int: op
     int: status c.LMX_WALK_OK
@@ -195,6 +203,21 @@ fn: lmx_walk_scan_node (@: LmxWalkFrame f; @: void node) int
     if: f\counting != 0 && (op = c.LMX_WALK_OP_OWN || op = c.LMX_WALK_OP_AT || op = c.LMX_WALK_OP_PUT)
         if: lmx_walk_slot(f, code, 1U) = 0
             return: c.LMX_WALK_INVALID
+    ---
+    # A write into the permanent store is a write into something immutable: refused when
+    # the body is prepared, so such a body is never published and never runs.  Two roles
+    # write: `put` into the holder it names, and `set` into the own field its first operand
+    # names -- which is a field of the store when the occurrence itself is eternal, and
+    # would be written by the next checkpoint.  Reading either is not refused.
+    if: f\counting != 0 && op = c.LMX_WALK_OP_PUT && lmx_walk_eternal(f, lmx_arena_ref_value(code, 1U)) != 0
+        return: c.LMX_WALK_INVALID
+    if: f\counting != 0 && op = c.LMX_WALK_OP_SET
+        target: lmx_arena_ref_value(code, 1U)
+        if: lmx_walk_op(f, target) = c.LMX_WALK_OP_OWN && lmx_walk_bare(f, target) = 0
+            if: lmx_walk_eternal(f, lmx_arena_ref_value((cast: (@: Lmx) target), 1U)) != 0
+                return: c.LMX_WALK_INVALID
+            ---
+        ---
     ---
     if: op = c.LMX_WALK_OP_OWN
         if: f\counting != 0
@@ -771,10 +794,12 @@ fn: lmx_walk_plan_status (int: status) int
         return: c.LMX_WALK_UNSUPPORTED
 return: c.LMX_WALK_INVALID
 
-# PREPARATION, once per callable, before its descriptor is shared.  The plan is built and
-# published in `descriptor_arena` -- the arena of the LmxCallable -- which need not be the
-# context's.  A descriptor that already has a plan is left alone: for an isomorphic copy
-# the published plan is already right, and publishing again would only strand the old one.
+# PREPARATION, once per callable, before its descriptor is shared.  The plan is built in
+# `descriptor_arena` -- where the LmxCallable lives: the context's arena or the permanent
+# store it is bound to -- and published through the context's arena, which refuses a plan
+# whose home is not the descriptor's.  A descriptor that already has a plan is left alone:
+# for an isomorphic copy the published plan is already right, and publishing again would
+# only strand the old one.
 fn: lmx_walk_prepare (@: LmxWalkContext context; @: LmxArena descriptor_arena; @: Lmx plan_roles; @: Lmx node) int
     LmxWalkFrame: frame
     LmxScratchMark: mark
@@ -798,13 +823,19 @@ fn: lmx_walk_prepare (@: LmxWalkContext context; @: LmxArena descriptor_arena; @
         return: status
     if: info\header != 0
         return: c.LMX_WALK_OK
+    # The arena named for the plan must be the descriptor's home.  Asked BEFORE anything is
+    # built, so a refusal strands nothing -- least of all in a store that is never collected.
+    if: lmx_plan_home(context\arena, (cast: (@: void) info)) != descriptor_arena
+        return: c.LMX_WALK_INVALID
     if: lmx_scratch_mark(context\scratch, pm) != c.LMX_SCRATCH_OK
         return: c.LMX_WALK_INVALID
     status: lmx_walk_survey(f, context, node, 1)
     if: status = c.LMX_WALK_OK
         status: lmx_walk_plan_status(lmx_plan_build_from_paths(descriptor_arena, plan_roles, f\paths, f\lens, f\nowns, @ plan))
     if: status = c.LMX_WALK_OK
-        status: lmx_walk_plan_status(lmx_plan_publish(descriptor_arena, plan_roles, node, plan))
+        # Built where the descriptor lives; published through the CONTEXT's arena, which
+        # classifies the occurrence itself and, through its bound store, a descriptor there.
+        status: lmx_walk_plan_status(lmx_plan_publish(context\arena, plan_roles, node, plan))
     if: lmx_scratch_rewind(context\scratch, pm) != c.LMX_SCRATCH_OK && status = c.LMX_WALK_OK
         status: c.LMX_WALK_INVALID
     ---

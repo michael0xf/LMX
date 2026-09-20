@@ -131,12 +131,30 @@ predef: "l2src/lmx_plan.h.lm1"
 # The set of roles beyond RETURN and CALL and the operands of each are a carrier draft
 # for probing the mechanism, not an L3 ISA (dev/graph_interp/BODY_NODES.md).
 #
-# Limits of this slice, stated rather than hidden: a value is an integer, a reference or
-# nothing; arithmetic and own fields are int only, and whether a reference an integer
-# node reads IS an int cell is the producer's proof, not checked here; a return carries
-# 0 or 1 value; no throw, no poll
-# (lmx_msg_poll_escape), no arrays, no char/size_t/pointer own fields, no dynamic
-# inputs of 21.3, and `header` of LmxCallable is not read.
+# THE PERMANENT STORE (lmx_perm.h.lm1; tests/lmx_walk_perm_selftest.lm1).  What a runtime
+# knows at translation and never changes lives in its store: the role records, a shared
+# LmxCallable and its plan, a subject handed in as an input, a whole eternal occurrence.
+# A Message's arena is bound to that store and its ranges answer for it, so nothing here
+# tells the two apart on the way IN: an address of the store is classified like any
+# other, a reference into it is handed on, returned and read through as it is, and an
+# eternal occurrence is entered at its one address from every Message of the runtime.
+# An address of ANOTHER runtime's store classifies as nothing and is refused at the
+# public boundary.  The way OUT is closed when a body is prepared, never at run time:
+# a `put` whose holder is of the store, and a `set` of an own field whose holder is of
+# the store (an eternal occurrence assigning its own field -- the next checkpoint would
+# publish into the store) make lmx_walk_prepare INVALID, so such a body gets no plan and
+# never runs.  Reading either is not refused.  The plan is built in the arena given as
+# the descriptor's and published through the context's arena; lmx_plan_publish refuses a
+# plan whose home is not the descriptor's (lmx_plan.h.lm1, "One HOME").
+#
+# CURRENT UNSUPPORTED LIMITS of this slice -- what this prototype does not do YET, stated
+# rather than hidden, and NOT the final semantics of L3: a value is an integer, a
+# reference or nothing; arithmetic is int only; own fields are int only -- there is no
+# own REFERENCE field, and no char/size_t/pointer own field; whether a reference an
+# integer node reads IS an int cell is the producer's proof, not checked here; a return
+# carries 0 or 1 value; no throw, no poll (lmx_msg_poll_escape), no arrays, no dynamic
+# inputs of 21.3.  Lifting one of them is a new role or a new plan entry role, never a
+# runtime text or a type code carried by a value.
 #
 # What is outside the slice is REPORTED, never skipped and never handed to native code
 # (docs/LMX_semantics.ru.md, #l3-receiver: a restricted profile reports an unsupported
@@ -260,12 +278,15 @@ prototype:
     # The same activation for a caller INSIDE this unit: the inputs are values it produced
     # itself and are not asked about; an integer result goes into `dest`.
     fn: lmx_walk_activate (@: LmxWalkContext context; @: Lmx node; @@: void args; size_t: nargs; @: void dest; @@: void result; @: int present) int
-    # Once per callable, in the arena that holds its descriptor and before the descriptor
-    # is shared: look at the body, build the plan in `descriptor_arena`, publish it.  OK
-    # without looking when the descriptor already has a plan.  A bare METHOD in child[0]
-    # is INVALID (no header); a body with a node outside the slice is UNSUPPORTED and an
-    # `own` node naming somebody else's field is INVALID -- in both cases nothing is
-    # published.  NO_GRAPH when M has no body node.
+    # Once per callable, before the descriptor is shared: look at the body, build the plan
+    # in `descriptor_arena` -- the arena where the LmxCallable of M lives: the context's
+    # own, or the permanent store it is bound to -- and publish it through the context's
+    # arena.  Any other arena is INVALID, asked before anything is built.  OK without looking
+    # when the descriptor already has a plan.  A bare METHOD in child[0] is INVALID (no
+    # header); a body with a node outside the slice is UNSUPPORTED; an `own` node naming
+    # somebody else's field, and a `put` or a `set` that would write into the permanent
+    # store, are INVALID -- in every such case nothing is published.  NO_GRAPH when M has
+    # no body node.
     fn: lmx_walk_prepare (@: LmxWalkContext context; @: LmxArena descriptor_arena; @: Lmx plan_roles; @: Lmx node) int
     # Preparation and tests only: does the published plan say what the body says -- the
     # same fields, no more, in the lexical order?  The generic plan unit cannot know.
@@ -289,6 +310,7 @@ prototype:
 
     # Internal steps, named here because they are mutually recursive.
     fn: lmx_walk_kind (@: LmxWalkFrame f; @: void p) int
+    fn: lmx_walk_kind_in (@: LmxWalkFrame f; @: LmxArena arena; @: void p) int
     fn: lmx_walk_op (@: LmxWalkFrame f; @: void code) int
     fn: lmx_walk_scan (@: LmxWalkFrame f; @: Lmx code; size_t: first) int
     fn: lmx_walk_eval (@: LmxWalkFrame f; @: void code; @: void dest; @@: void out) int

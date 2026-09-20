@@ -1,4 +1,5 @@
 predef: "l2src/lmx_interp.lm1"
+predef: "l2src/lmx_perm.lm1"
 predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_arena_blocks.lm1"
@@ -11,6 +12,7 @@ predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
 # lmx_interp_run is the L3 entry: prepare + lmx_walk_run. No METHOD.addr.
+# Prepare uses lmx_plan_home so a store-resident descriptor is not INVALID.
 
 int: checks 0
 int: failures 0
@@ -22,6 +24,82 @@ sub: check (int: ok; const: @(char label))
         c.printf("FAIL %s\n", label)
     ---
 end: check
+
+# Occurrence and body in a bound Message; LmxCallable and roles in the store.
+# context.arena is the Message. Before ba247c4-aware interp this was INVALID.
+fn: perm_descriptor_case () int
+    LmxArena: store
+    LmxArena: message
+    LmxArena: context_arena
+    LmxPool: context_cells
+    LmxScratch: scratch
+    LmxWalkContext: context
+    @: LmxArena sa 0
+    @: LmxArena am 0
+    @: Lmx roles 0
+    @: Lmx plan_roles 0
+    @: Lmx unit 0
+    @: Lmx m 0
+    @: LmxCallable info 0
+    @: Lmx ret 0
+    @: Lmx header 0
+    memset((cast: (@: void) (@ store)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ message)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ context_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ context_cells)), 0, c.sizeof(c.LmxPool))
+    memset((cast: (@: void) (@ scratch)), 0, c.sizeof(c.LmxScratch))
+    memset((cast: (@: void) (@ context)), 0, c.sizeof(c.LmxWalkContext))
+    if: lmx_perm_open(@ store) != 0
+        fputs("lmx_interp_walk: perm store\n", l1_stdout())
+        return: 2
+    ---
+    sa: @ store
+    if: lmx_arena_open(@ message) != 0
+        fputs("lmx_interp_walk: perm message\n", l1_stdout())
+        return: 2
+    ---
+    am: @ message
+    if: lmx_perm_bind(am, sa) != 0
+        fputs("lmx_interp_walk: perm bind\n", l1_stdout())
+        return: 2
+    ---
+    roles: lmx_walk_roles_open(sa)
+    plan_roles: lmx_plan_roles_open(sa)
+    if: lmx_arena_open(@ context_arena) != 0 || lmx_scratch_open(@ scratch, @ context_arena, @ context_cells, 16U) != c.LMX_SCRATCH_OK
+        fputs("lmx_interp_walk: perm context\n", l1_stdout())
+        return: 2
+    ---
+    context.arena: am
+    context.scratch: @ scratch
+    context.roles: roles
+    context.plan_roles: plan_roles
+    unit: lmx_node_new_owned(am)
+    if: roles = 0 || plan_roles = 0 || unit = 0 || lmx_arena_refs_open_owned(am, unit, 1U) != 0
+        fputs("lmx_interp_walk: perm unit\n", l1_stdout())
+        return: 2
+    ---
+    m: lmx_walk_plain(am, unit, 2U)
+    info: lmx_callable_new_owned(sa)
+    if: m = 0 || info = 0 || lmx_arena_ref_store(unit, 0U, (cast: (@: void) m)) != 0
+        return: 2
+    ---
+    if: lmx_arena_ref_store(m, 0U, (cast: (@: void) info)) != 0
+        return: 2
+    ---
+    ret: lmx_walk_frame(am, roles, m, c.LMX_WALK_OP_RET, 1U)
+    if: ret = 0 || lmx_arena_ref_store(m, 1U, (cast: (@: void) ret)) != 0
+        return: 2
+    ---
+    check(lmx_plan_home(am, (cast: (@: void) info)) = sa, "store descriptor: home is the bound store")
+    check(lmx_interp_run(@ context, m) = c.LMX_INTERP_OK, "void return through walk with a store descriptor")
+    header: info\header
+    check(header != 0, "store descriptor: prepare published the plan")
+    check(lmx_plan_home(am, (cast: (@: void) header)) = sa, "store descriptor: the plan lives in the store")
+    lmx_scratch_close(@ scratch)
+    lmx_arena_release(@ context_arena)
+    lmx_arena_release(am)
+    lmx_perm_close(sa)
+return: 0
 
 fn: main () int
     LmxArena: arena
@@ -36,6 +114,7 @@ fn: main () int
     @: Lmx m 0
     @: LmxCallable info 0
     @: Lmx ret 0
+    @: Lmx header 0
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ context_arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ context_cells)), 0, c.sizeof(c.LmxPool))
@@ -75,7 +154,13 @@ fn: main () int
     ---
     check(lmx_interp_run(0, m) = c.LMX_INTERP_INVALID, "no context")
     check(lmx_interp_run(@ context, m) = c.LMX_INTERP_OK, "void return through walk")
-    check(info\header != 0, "prepare published the plan")
+    header: info\header
+    check(header != 0, "prepare published the plan")
+    check(lmx_plan_home(ga, (cast: (@: void) info)) = ga, "Message-local descriptor lives in the graph arena")
+    check(lmx_plan_home(ga, (cast: (@: void) header)) = ga, "Message-local plan lives with the descriptor")
+    if: perm_descriptor_case() != 0
+        return: 2
+    ---
     if: failures != 0
         c.printf("%d failed of %d\n", failures, checks)
         return: 1

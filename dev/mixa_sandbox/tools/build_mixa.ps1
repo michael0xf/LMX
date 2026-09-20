@@ -188,6 +188,32 @@ Write-Output "build_mixa: evidence $OutDir"
 
 $sourceDir = Join-Path $migRoot 'mixa_manager'
 
+# WHERE `predef: "l2src/..."` RESOLVES.  The translator resolves predefs ITSELF, FROM THE WORKING
+# DIRECTORY -- gcc's -I does not enter into it (the same rule that cost the kernel gate 28 probes).
+# This build stands in $migRoot, and mixa_event_source.lm1:1 asks for "l2src/lmx_message.h.lm1":
+# there is no l2src\ here, so the import cannot resolve however the file is spelled, and the unit
+# failed with "cannot read import" -- which read like a language gap and was nothing of the kind
+# (found by lmx_uds; the file exists in the kernel tree all along).
+# So the kernel's sources are STAGED beside the port, exactly as the kernel gate stages them, and
+# the staging is named out loud.  It is a copy: the kernel tree is not mine to restructure.
+if (-not (Test-Path -LiteralPath (Join-Path $migRoot 'l2src'))) {
+    $kernelForPort = Join-Path $kernelRoot 'dev\l2src_sandbox'
+    if (-not (Test-Path -LiteralPath (Join-Path $kernelForPort 'lmx_message.h.lm1'))) {
+        $kernelForPort = Join-Path $kernelRoot 'l2src'
+    }
+    if (Test-Path -LiteralPath (Join-Path $kernelForPort 'lmx_message.h.lm1')) {
+        $portL2 = Join-Path $migRoot 'l2src'
+        New-Item -ItemType Directory -Force -Path $portL2 | Out-Null
+        $n = 0
+        foreach ($f in @(Get-ChildItem -LiteralPath $kernelForPort -File -Filter '*.lm1')) {
+            Copy-Item -LiteralPath $f.FullName -Destination (Join-Path $portL2 $f.Name) -Force; $n++
+        }
+        Write-Output "build_mixa: staged $n kernel .lm1 into $portL2 so predef 'l2src/...' resolves from the CWD"
+    } else {
+        Write-Output "build_mixa: NOTE no kernel sources found to stage for predef 'l2src/...' (looked in $kernelForPort)"
+    }
+}
+
 # Targets that CANNOT pass in THIS tree, and why.  Each one depends on a runner or a layout
 # that exists only in the frozen lingvamyxa project, so its red row says nothing about the port
 # and only buries the real failures.  They are SKIPPED WITH A REASON, never dropped silently:

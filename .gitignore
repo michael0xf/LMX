@@ -23,3 +23,13 @@ dev/mixa_sandbox/*.pid
 dev/mixa_sandbox/*.err
 dev/mixa_sandbox/build_mixa_*.txt
 dev/mixa_sandbox/**/*.o
+# The port STAGES the kernel's .lm1 beside itself so that `predef: "l2src/..."` resolves from the
+# CWD (the translator resolves predefs itself; gcc's -I does not enter into it).  The staging is a
+# COPY that build_mixa.ps1 recreates whenever it is missing -- so it is never a source, and it must
+# never be swept into a commit: 103 files belonging to the kernel line would land under the port's
+# name, and the next `git add -A` by anyone would carry them.  Ignored by NAME, not by a blanket
+# rule, so the day the staging is replaced by a real resolution this line is the one to delete.
+dev/mixa_sandbox/l2src/
+# The same script stages the FIXTURE PROGRAMS the process probe starts (section 2b): built binaries
+# in the port root, rebuilt on every gate run.
+dev/mixa_sandbox/*.exe

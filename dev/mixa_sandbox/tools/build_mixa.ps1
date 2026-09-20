@@ -214,18 +214,17 @@ if (-not (Test-Path -LiteralPath (Join-Path $migRoot 'l2src'))) {
     }
 }
 
-# Targets that CANNOT pass in THIS tree, and why.  Each one depends on a runner or a layout
-# that exists only in the frozen lingvamyxa project, so its red row says nothing about the port
-# and only buries the real failures.  They are SKIPPED WITH A REASON, never dropped silently:
-# the row stays in the verdict, so the record keeps showing them and the count stays honest
-# (Mikhail's rule: knowledge must not live only in chat; and my own earlier mistake -- calling
-# this set "seven" from memory, when measurement says three -- is exactly why the reason is
-# written down next to each).
+# Targets that CANNOT pass in THIS tree, and why.  They are SKIPPED WITH A REASON, never dropped
+# silently: the row stays in the verdict, so the record keeps showing them and the count stays
+# honest (Mikhail's rule: knowledge must not live only in chat).
+#
+# The set is ONE, and it shrank to one by being re-tested rather than by being forgotten.  Three
+# entries were removed on 20.09 after their probes were made self-contained (727cc0f, 761145e):
+# tests_mixa_app_selftest, tests_mixa_audio_native_selftest and tests_mixa_app_panel_selftest no
+# longer depend on a frozen-lingvamyxa runner's fixture.  A SKIP that outlives its reason hides a
+# real result -- which is how this set got mis-called "seven" from memory once already.
 $skipTargets = @{
-    'selftest:tests_mixa_app_selftest'          = 'fixture (real .lnk via WScript + a marker exe) prepared by frozen-lingvamyxa runner run_app_selftest.ps1; not ported'
-    'selftest:tests_mixa_audio_native_selftest' = 'fixture WAV prepared by frozen-lingvamyxa runner run_audio_native_selftest.ps1:138; not ported'
-    'selftest:tests_mixa_app_panel_selftest'     = 'fixture dir apppaneldir (a.link/b.link) prepared by frozen-lingvamyxa runner run_app_panel_selftest.ps1; not ported -- and the probe now SAYS SO instead of segfaulting'
-    'unit:tests_mixa_ingress_host_harness'      = 'needs l2src/lmx_message_host.h in the vendor/ layout; build-system gap, not a port defect'
+    'unit:tests_mixa_ingress_host_harness'      = 'the host-ingress API (vendor/lmx_msg_host_ingress_v0) was never migrated to LMX: the types it needs (LmxMsgRuntime, LmxMsgEnv, lmx_message_host.h) exist in the frozen project and NOWHERE in this tree -- a migration gap, not a port defect and not a translator gap'
 }
 
 # -RunOnly <stamp>: run the probes of an ALREADY BUILT evidence directory, translating and

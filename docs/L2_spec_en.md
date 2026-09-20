@@ -9,6 +9,8 @@ Both descriptions define one mechanism at their levels. Shared facts are not rep
 
 L2 is the language of the core mechanisms: `Lmx` structures, the arena's typed arrays, Message, mail, an L3 Thread turn, graph copy and call. Core sources in this snapshot are written in L1 (`.lm1`; some `.lm2` are frontend input). The translation chain is L2 → L1 → C99, as in [semantics](LMX_semantics.en.md#scope). A complete L2→L1 translator is not claimed: the tree contains `l2trans.lm1` with a bounded input (see `l2src/README.txt`).
 
+The target source organization, clarified by the [author on 2026-09-20](../LMX_blog/2026-09-20-l3-interpreter.md), is L2 for machine mechanisms and L3 for high-level programs. Existing `.lm1` units are gradually rewritten as `.lm2`; retaining L1 as the maintained source carrier of the graph is not the final model. The L2 → L1 → C99 lowering stage remains: generated intermediate L1 must not be confused with the project's source code. The interpreter consumes only the [L3 graph](LMX_semantics.en.md#l3-receiver), not L2 operations. This is the migration target, not a claim that the current snapshot has already been rewritten.
+
 <a id="lmx"></a>
 ## 2. `Lmx` structure
 

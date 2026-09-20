@@ -58,7 +58,14 @@ L3 retains graph mutation, structural calls, tables, messages and local actors. 
 
 A file extension selects its outer profile: `.lm1` selects direct L1 lowering, `.lm2` L2, and `.lm3` L3. `.lm4` and `.lm5` do not select current profiles. The ordinary L3 script profile executes the file's root body; a `main` function is not required. A service profile may select an explicit function, `start`, a handler or a message send. The entry point receives control after its environment and runtime graph are prepared.
 
-The model supports interpretation of the constructed graph and translation preserving the same semantics. The parser, graph interpreter and translator serve different purposes. Grammatical forms, body boundaries, literals, comments and normalization are defined in the [grammar specification](LMX_grammar.en.md).
+The model supports interpretation of the constructed L3 graph and translation preserving the same semantics. The interpreter executes L3 only: not source text, L1/L2 or `c.*` operations. The interpreter's implementation does not expand the language of the interpreted program. The target maintained sources are divided into L2 and L3; existing `.lm1` units are gradually rewritten in L2. L1 remains an intermediate translation stage, not the source carrier of the executable graph; the migration's current state is distinguished from this target in the [L2 specification](L2_spec_en.md#scope). The parser, graph interpreter and translator serve different purposes. Grammatical forms, body boundaries, literals, comments and normalization are defined in the [grammar specification](LMX_grammar.en.md).
+
+<a id="l3-receiver"></a>
+### L3 receiving expression
+
+The L3 receiving expression defines the contract for consuming a constructed graph as an L3 program. It determines the supported subset and the selected profile's entry point; the mere presence of a syntax tree does not establish program admissibility. An unsupported operation does not become admissible because a machine implementation address exists. A restricted execution profile must explicitly report an unsupported construct rather than silently skip it or execute it as L2. This profile restriction does not replace the [single candidate-admission mechanism](#admission).
+
+Execution follows resolved references and positions in the binary graph, not source names; the diagnostic address-to-name table does not participate in execution, as specified under [names and paths](#fields). A high-level operation may have an explicitly selected machine implementation with an L3 contract, as described at the [numeric/machine-operation boundary](#mathematics); this does not authorize arbitrary `c.*` calls from the interpreted program.
 
 The simplest script-profile program is:
 
@@ -100,7 +107,7 @@ A structural path `object\field\nested` selects graph fields in sequence. Each s
 
 Repeated source names are retained. `name` is equivalent to `[0]name`, selecting the first occurrence; `[1]name` selects the second. A name's occurrence number differs from the physical field index among all fields. A later `merge` part does not automatically override an earlier one. Reordering distinct names does not change a named path; reordering same-name occurrences may change the selected value.
 
-A Structure's field count and positions are fixed at construction. Updating an existing field replaces its stored reference; it does not append an occurrence. A different set of fields requires a new Structure. Array operations follow their own contracts and do not change this Structure rule.
+A Structure's field count and positions are fixed at construction. Graph fields follow strictly lexical order; native-code emission order does not authorize rearranging the graph's fields. Updating an existing field replaces its stored reference; it does not append an occurrence. A different set of fields requires a new Structure. Array operations follow their own contracts and do not change this Structure rule.
 
 <a id="descriptions"></a>
 ## 5. Explicit value descriptions and conversions

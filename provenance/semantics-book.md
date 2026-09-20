@@ -6,7 +6,14 @@ L3 сохраняет изменение графа, структурные вы
 
 Расширение файла выбирает внешний профиль: `.lm1` — прямое понижение L1, `.lm2` — L2, `.lm3` — L3. `.lm4` и `.lm5` не задают действующих профилей. В обычном скриптовом профиле L3 исполняется корневое тело файла; наличие функции `main` не обязательно. Профиль сервиса может выбрать явную функцию, `start`, обработчик или отправку сообщения. Точка входа получает управление после подготовки окружения и графа исполнения.
 
-Модель допускает интерпретацию построенного графа и трансляцию с сохранением той же семантики. Парсер, интерпретатор графа и транслятор имеют разные задачи. Грамматические формы, границы тел, литералы, комментарии и нормализация определены в [спецификации грамматики](LMX_grammar.ru.md).
+Модель допускает интерпретацию построенного графа L3 и трансляцию с сохранением той же семантики. Интерпретатор исполняет только L3: не исходный текст, не L1/L2 и не операции `c.*`. Реализация самого интерпретатора не расширяет язык интерпретируемой программы. Целевые поддерживаемые исходники разделяются на L2 и L3; имеющиеся `.lm1` постепенно переписываются на L2. L1 остаётся промежуточной стадией трансляции, а не исходным носителем исполняемого графа; состояние перехода отделяется от этой цели в [спецификации L2](L2_spec_ru.md#scope). Парсер, интерпретатор графа и транслятор имеют разные задачи. Грамматические формы, границы тел, литералы, комментарии и нормализация определены в [спецификации грамматики](LMX_grammar.ru.md).
+
+<a id="l3-receiver"></a>
+### Принимающее выражение L3
+
+Принимающее выражение L3 задаёт контракт потребления построенного графа как программы L3. Оно определяет поддерживаемое подмножество и точку входа выбранного профиля; наличие синтаксического дерева само по себе не устанавливает допустимость программы. Неподдерживаемая операция не становится допустимой из-за наличия машинного адреса реализации. Ограниченный профиль исполнения должен явно сообщать о неподдерживаемой конструкции, а не молча пропускать её или исполнять как L2. Это ограничение профиля не отменяет [единого механизма допуска кандидатов](#admission).
+
+Исполнение следует разрешённым ссылкам и позициям бинарного графа, а не исходным именам; диагностическая таблица адресов и имён не участвует в выполнении, см. [имена и пути](#fields). Высокоуровневая операция может иметь явно выбранную машинную реализацию с L3-контрактом, как описано в [границе числовых и машинных операций](#mathematics); это не разрешает произвольный вызов `c.*` из интерпретируемой программы.
 
 Простейшая программа скриптового профиля:
 
@@ -20,7 +27,14 @@ L3 retains graph mutation, structural calls, tables, messages and local actors. 
 
 A file extension selects its outer profile: `.lm1` selects direct L1 lowering, `.lm2` L2, and `.lm3` L3. `.lm4` and `.lm5` do not select current profiles. The ordinary L3 script profile executes the file's root body; a `main` function is not required. A service profile may select an explicit function, `start`, a handler or a message send. The entry point receives control after its environment and runtime graph are prepared.
 
-The model supports interpretation of the constructed graph and translation preserving the same semantics. The parser, graph interpreter and translator serve different purposes. Grammatical forms, body boundaries, literals, comments and normalization are defined in the [grammar specification](LMX_grammar.en.md).
+The model supports interpretation of the constructed L3 graph and translation preserving the same semantics. The interpreter executes L3 only: not source text, L1/L2 or `c.*` operations. The interpreter's implementation does not expand the language of the interpreted program. The target maintained sources are divided into L2 and L3; existing `.lm1` units are gradually rewritten in L2. L1 remains an intermediate translation stage, not the source carrier of the executable graph; the migration's current state is distinguished from this target in the [L2 specification](L2_spec_en.md#scope). The parser, graph interpreter and translator serve different purposes. Grammatical forms, body boundaries, literals, comments and normalization are defined in the [grammar specification](LMX_grammar.en.md).
+
+<a id="l3-receiver"></a>
+### L3 receiving expression
+
+The L3 receiving expression defines the contract for consuming a constructed graph as an L3 program. It determines the supported subset and the selected profile's entry point; the mere presence of a syntax tree does not establish program admissibility. An unsupported operation does not become admissible because a machine implementation address exists. A restricted execution profile must explicitly report an unsupported construct rather than silently skip it or execute it as L2. This profile restriction does not replace the [single candidate-admission mechanism](#admission).
+
+Execution follows resolved references and positions in the binary graph, not source names; the diagnostic address-to-name table does not participate in execution, as specified under [names and paths](#fields). A high-level operation may have an explicitly selected machine implementation with an L3 contract, as described at the [numeric/machine-operation boundary](#mathematics); this does not authorize arbitrary `c.*` calls from the interpreted program.
 
 The simplest script-profile program is:
 
@@ -71,7 +85,7 @@ The [independent qualifier](#qualification) cuts the external lexical parent at 
 
 Повторные исходные имена сохраняются. `name` эквивалентно `[0]name`, то есть выбирает первое вхождение; `[1]name` — второе. Номер вхождения имени отличается от физического номера поля среди всех полей. Поздняя часть `merge` не переопределяет раннюю автоматически. Изменение порядка различных имён не меняет именованный путь; изменение порядка одноимённых вхождений может изменить выбранное значение.
 
-Число и расположение полей структуры фиксируются при создании. Обновление существующего поля заменяет содержащуюся в нём ссылку; оно не добавляет новое вхождение. Для иного набора полей создаётся новая структура. Операции над массивом следуют собственному контракту и не изменяют это правило структуры.
+Число и расположение полей структуры фиксируются при создании. Порядок полей графа строго лексический; порядок выдачи нативного кода не разрешает переставлять поля самого графа. Обновление существующего поля заменяет содержащуюся в нём ссылку; оно не добавляет новое вхождение. Для иного набора полей создаётся новая структура. Операции над массивом следуют собственному контракту и не изменяют это правило структуры.
 [EN]
 Names resolve source-level accesses; execution follows the resulting references and positions. A diagnostic mapping from address to short source name is not a variable-binding table, a type or an execution identifier. Construction, copying and calls do not require source-name registration. Anonymous and positional values need no synthetic names.
 
@@ -81,7 +95,7 @@ A structural path `object\field\nested` selects graph fields in sequence. Each s
 
 Repeated source names are retained. `name` is equivalent to `[0]name`, selecting the first occurrence; `[1]name` selects the second. A name's occurrence number differs from the physical field index among all fields. A later `merge` part does not automatically override an earlier one. Reordering distinct names does not change a named path; reordering same-name occurrences may change the selected value.
 
-A Structure's field count and positions are fixed at construction. Updating an existing field replaces its stored reference; it does not append an occurrence. A different set of fields requires a new Structure. Array operations follow their own contracts and do not change this Structure rule.
+A Structure's field count and positions are fixed at construction. Graph fields follow strictly lexical order; native-code emission order does not authorize rearranging the graph's fields. Updating an existing field replaces its stored reference; it does not append an occurrence. A different set of fields requires a new Structure. Array operations follow their own contracts and do not change this Structure rule.
 @@ descriptions | Явные описания значений и преобразования | Explicit value descriptions and conversions | 2.2.2-2.2.4; 2.4; 9.1; 9.1.1; 9.2
 [RU]
 Описание значения — обычная явно доступная структура. Принимающее выражение получает его через аргумент или ссылку. Описание не прикрепляется скрыто к каждому примитиву и не нужно для определения физического типа по адресу. Названия `class`, `class.range` и подобных таблиц обозначают данные конкретного профиля, а не обязательные глобальные сущности языка.

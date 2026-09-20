@@ -10,4 +10,4 @@
 | откуда стор у dispatch | адаптер сам: `l3_thread_dispatch` → `l3_exec_run` → локальный scratch. ABI Thread не менялся |
 | `lmx_walk` | не вызывается; роли тела walk не импортируются |
 
-Числовые `L3_NODE_*` остаются внутренними тегами этого ресивера, не ISA L3. Постоянная идентичность роли — адрес записи (план/walk), когда граф на них переведён.
+`lmx_interp_run(context, node)` — вход в walk: `prepare` + `lmx_walk_run`, без METHOD.addr. Тест `tests/lmx_interp_walk_selftest.lm1` (3 checks). `l3_exec` остаётся ресивером с внутренними тегами N1–N10.

@@ -1,13 +1,10 @@
 predef: "l2src/lmx.h.lm1"
 predef: "l2src/lmx_arena.h.lm1"
 predef: "l2src/lmx_call.h.lm1"
-predef: "l2src/lmx_own.h.lm1"
+predef: "l2src/lmx_walk.h.lm1"
 
-# Graph interpreter: execute the SAME Lmx graph native METHOD.addr would run.
-# Work only in dev/l2src_sandbox. Root l2src stays stable.
-#
-# Slot 0 holds LmxCallable: native METHOD reference plus header tree.
-# Body is M after slot 0, in order. Each return: is an LmxOp in that tree.
+# Graph interpreter entry: recognise a callable, then lmx_walk_run.
+# Never METHOD.addr. Work only in dev/l2src_sandbox.
 
 define: LMX_INTERP_OK 0
 define: LMX_INTERP_INVALID 1
@@ -20,5 +17,5 @@ define: LMX_OP_CALL 2
 prototype:
     fn: lmx_interp_callable (@: LmxArena arena; @: Lmx node) int
     fn: lmx_interp_method (@: LmxArena arena; @: Lmx node) @: LmxMethod
-    fn: lmx_interp_run (@: LmxArena arena; @: Lmx node) int
+    fn: lmx_interp_run (@: LmxWalkContext context; @: Lmx node) int
 end: prototype

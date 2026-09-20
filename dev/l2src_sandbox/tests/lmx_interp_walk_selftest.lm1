@@ -1,0 +1,84 @@
+predef: "l2src/lmx_interp.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# lmx_interp_run is the L3 entry: prepare + lmx_walk_run. No METHOD.addr.
+
+int: checks 0
+int: failures 0
+
+sub: check (int: ok; const: @(char label))
+    checks: checks + 1
+    if: ok = 0
+        failures: failures + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: check
+
+fn: main () int
+    LmxArena: arena
+    LmxArena: context_arena
+    LmxPool: context_cells
+    LmxScratch: store
+    LmxWalkContext: context
+    @: LmxArena ga 0
+    @: Lmx roles 0
+    @: Lmx plan_roles 0
+    @: Lmx unit 0
+    @: Lmx m 0
+    @: LmxCallable info 0
+    @: Lmx ret 0
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ context_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ context_cells)), 0, c.sizeof(c.LmxPool))
+    memset((cast: (@: void) (@ store)), 0, c.sizeof(c.LmxScratch))
+    memset((cast: (@: void) (@ context)), 0, c.sizeof(c.LmxWalkContext))
+    if: lmx_arena_open(@ arena) != 0
+        fputs("lmx_interp_walk: arena\n", l1_stdout())
+        return: 2
+    ---
+    ga: @ arena
+    roles: lmx_walk_roles_open(ga)
+    plan_roles: lmx_plan_roles_open(ga)
+    if: lmx_arena_open(@ context_arena) != 0 || lmx_scratch_open(@ store, @ context_arena, @ context_cells, 16U) != c.LMX_SCRATCH_OK
+        fputs("lmx_interp_walk: context\n", l1_stdout())
+        return: 2
+    ---
+    context.arena: ga
+    context.scratch: @ store
+    context.roles: roles
+    context.plan_roles: plan_roles
+    unit: lmx_node_new_owned(ga)
+    if: roles = 0 || plan_roles = 0 || unit = 0 || lmx_arena_refs_open_owned(ga, unit, 1U) != 0
+        fputs("lmx_interp_walk: unit\n", l1_stdout())
+        return: 2
+    ---
+    m: lmx_walk_plain(ga, unit, 2U)
+    info: lmx_callable_new_owned(ga)
+    if: m = 0 || info = 0 || lmx_arena_ref_store(unit, 0U, (cast: (@: void) m)) != 0
+        return: 2
+    ---
+    if: lmx_arena_ref_store(m, 0U, (cast: (@: void) info)) != 0
+        return: 2
+    ---
+    ret: lmx_walk_frame(ga, roles, m, c.LMX_WALK_OP_RET, 1U)
+    if: ret = 0 || lmx_arena_ref_store(m, 1U, (cast: (@: void) ret)) != 0
+        return: 2
+    ---
+    check(lmx_interp_run(0, m) = c.LMX_INTERP_INVALID, "no context")
+    check(lmx_interp_run(@ context, m) = c.LMX_INTERP_OK, "void return through walk")
+    check(info\header != 0, "prepare published the plan")
+    if: failures != 0
+        c.printf("%d failed of %d\n", failures, checks)
+        return: 1
+    ---
+    c.printf("lmx_interp_walk: %d checks\n", checks)
+return: 0

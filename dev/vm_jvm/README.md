@@ -1,27 +1,15 @@
 # JVM / L3 Path B ? isolated Lmx ABI (`dev/vm_jvm`)
 
-Corrected under `GROK-BOT-JVM-FIX-20260920-51B` (supersedes the Kind-as-node mistake in `69dce94`).
+Latest correction: `GROK-BOT-JVM-NODE-FIX-20260920-52B`.
 
-## Inventory
+## Rules
 
-| Tool | Status |
-|---|---|
-| Host Liberica OpenJDK 11.0.15.1 | used for `javac`/`java` |
-| ASM / BCEL | not required for this ABI slice |
-| L3?classfile printer / `hello.lm3` | still absent (emission blocker unchanged) |
+- `{node, len, data}` with **`node` = lexical parent** (`null` = independent)
+- **Storing a reference in `data` does not reparent** (?8). Use `nested(parent, ?)` for explicit nesting
+- **Bounded `merge`**: two-phase identity map ? allocate shells (data graph + `node` ancestors), then `dst.node = map(src.node)` (never the data-slot container). Hidden ancestors are copied but not result fields. Result root `node == null` (isolated expression; not a full merge entrypoint with expression-location parent)
+- `LmxTerminal` shared by identity under merge
 
-## ABI
-
-`lmx/LmxOccurrence.java`:
-
-- `{node, len, data}` ? **`node` = lexical parent occurrence** (`null` = independent / `node = 0`), not a kind tag
-- `independent(...)` / `nested(parent, ...)` construction; nested children bind `node` to their container (alias-preserving)
-- `merge` ? graph copy with `IdentityHashMap` (shared mutable ? one copy; `node` rewritten into copy; operands unchanged)
-- `lmx/LmxTerminal.java` ? admitted terminal retained by identity under merge (?19 / ?22)
-
-Cites: `docs/LMX_semantics.en.md` ?3, ?8, ?9, ?19, ?22. Merge root `node` is `null` here as an isolated expression (zero parent); full ?parent follows merge expression location? needs an expression frame when a printer exists.
-
-## Smoke
+## Build / run
 
 ```
 javac -d dev/vm_jvm/out \
@@ -31,4 +19,4 @@ javac -d dev/vm_jvm/out \
 java -cp dev/vm_jvm/out smoke.HelloStructureSmoke
 ```
 
-Expect: `PASS HelloStructureSmoke checks=26 failures=0` (exit 0).
+Expect: `PASS HelloStructureSmoke checks=25 failures=0`

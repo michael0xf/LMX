@@ -1,30 +1,23 @@
 # JVM / L3 Path B ABI smoke
 
-- requests: `GROK-BOT-JVM-L3-20260920-50B` (initial), `GROK-BOT-JVM-FIX-20260920-51B` (ABI correction)
-- author: Grok Bot
-- tree at report refresh: `69dce94` (see latest commit for fix)
+- `GROK-BOT-JVM-L3-20260920-50B` / `51B` / **`52B`**
+- HEAD at draft: `72fe8a9`
 
-## Fix (51B)
+## 52B fix
 
-`69dce94` stored `Kind` in `node` and used shallow merge ? **rejected**. New commit redesigns:
+Removed `bindNestedParents` / reparent-on-store. Two-phase copy: `dst.node = map(src.node)`.
 
-| Requirement | Evidence in smoke |
+| Test | Proves |
 |---|---|
-| independent `node == null` | `testIndependentNodeNull` |
-| nested `node` exact parent | `testNestedNodeExactParent` |
-| mutable descendants copied | `testMutableDescendantsCopied` |
-| repeated mutable ref copied once | `testRepeatedMutableCopiedOnce` |
-| copied `node` links in copied graph | `testCopiedNodeLinksInCopiedGraph` |
-| admitted terminal identity shared | `testAdmittedTerminalShared` |
-| operands unchanged | `testOperandsUnchanged` |
-| bounds | `testBounds` |
-
-## Commands / exits (51B)
+| store does not reparent | `A.node` stays `P` when `H` stores `A` |
+| unrelated holder copy | `A_copy.node == P_copy`, not merge root / `H` |
+| hidden lexical ancestor | `P_copy` not a result field |
+| back-edge cycle | self-ref preserved in copy |
+| repeated alias | one copy |
+| operands unchanged | sources intact |
 
 ```
-javac -d dev/vm_jvm/out ? ? exit 0
-java -cp dev/vm_jvm/out smoke.HelloStructureSmoke ? exit 0
-PASS HelloStructureSmoke checks=26 failures=0
+javac ? ? exit 0
+java ? ? exit 0
+PASS HelloStructureSmoke checks=25 failures=0
 ```
-
-No history rewrite of `69dce94`. No edits to `l3_interp` / `lmx_walk` / printer.

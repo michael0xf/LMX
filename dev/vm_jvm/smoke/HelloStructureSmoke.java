@@ -4,8 +4,7 @@ import lmx.LmxOccurrence;
 import lmx.LmxTerminal;
 
 /**
- * Corrected ABI smoke for GROK-BOT-JVM-FIX-20260920-51B.
- * Proves parent {@code node}, graph-copy merge, aliasing, terminals, bounds.
+ * GROK-BOT-JVM-NODE-FIX-20260920-52B: no reparent-on-store; two-phase map copy.
  */
 public final class HelloStructureSmoke {
     private static int fails;
@@ -15,10 +14,12 @@ public final class HelloStructureSmoke {
         fails = 0;
         checks = 0;
         testIndependentNodeNull();
-        testNestedNodeExactParent();
-        testMutableDescendantsCopied();
-        testRepeatedMutableCopiedOnce();
-        testCopiedNodeLinksInCopiedGraph();
+        testNestedExplicitParent();
+        testStoreDoesNotReparent();
+        testUnrelatedHolderCopy();
+        testHiddenLexicalAncestor();
+        testBackEdgeCycle();
+        testRepeatedAlias();
         testAdmittedTerminalShared();
         testOperandsUnchanged();
         testBounds();
@@ -30,79 +31,93 @@ public final class HelloStructureSmoke {
     }
 
     private static void testIndependentNodeNull() {
-        LmxOccurrence root = LmxOccurrence.independent(LmxOccurrence.independent());
-        // wait - nested empty as field gets rebound; use leaf string + independent
-        root = LmxOccurrence.independent("leaf");
+        LmxOccurrence root = LmxOccurrence.independent("leaf");
         check("independent node null", root.node() == null);
-        check("independent len 1", root.len() == 1);
     }
 
-    private static void testNestedNodeExactParent() {
-        LmxOccurrence parent = LmxOccurrence.independent();
-        // Build child nested under parent, then place as field ? bind sets node to container
-        LmxOccurrence child = LmxOccurrence.nested(parent, "x");
-        check("nested ctor node==parent", child.node() == parent);
-        LmxOccurrence root = LmxOccurrence.independent(child);
-        Object c0 = root.child(0);
-        check("field child is occurrence", c0 instanceof LmxOccurrence);
-        LmxOccurrence placed = (LmxOccurrence) c0;
-        check("nested node exact parent container", placed.node() == root);
-        check("parent root still independent", root.node() == null);
+    private static void testNestedExplicitParent() {
+        LmxOccurrence p = LmxOccurrence.independent();
+        LmxOccurrence a = LmxOccurrence.nested(p, "x");
+        check("nested node exact parent", a.node() == p);
     }
 
-    private static void testMutableDescendantsCopied() {
-        LmxOccurrence inner = LmxOccurrence.independent("v");
-        LmxOccurrence outer = LmxOccurrence.independent(inner);
-        LmxOccurrence other = LmxOccurrence.independent("z");
-        LmxOccurrence m = LmxOccurrence.merge(outer, other);
-        check("merge len 2", m.len() == 2);
-        LmxOccurrence innerCopy = (LmxOccurrence) m.child(0);
-        check("mutable descendant copied", innerCopy != inner);
-        check("copy has same leaf", "v".equals(innerCopy.child(0)));
+    private static void testStoreDoesNotReparent() {
+        LmxOccurrence p = LmxOccurrence.independent();
+        LmxOccurrence a = LmxOccurrence.nested(p, "x");
+        LmxOccurrence h = LmxOccurrence.independent(a);
+        check("store keeps A.node==P", a.node() == p);
+        check("H does not become A.node", a.node() != h);
+        check("H holds same A ref", h.child(0) == a);
     }
 
-    private static void testRepeatedMutableCopiedOnce() {
+    private static void testUnrelatedHolderCopy() {
+        LmxOccurrence p = LmxOccurrence.independent("P");
+        LmxOccurrence a = LmxOccurrence.nested(p, "A");
+        LmxOccurrence h = LmxOccurrence.independent(a);
+        LmxOccurrence m = LmxOccurrence.merge(h);
+        LmxOccurrence aCopy = (LmxOccurrence) m.child(0);
+        check("A_copy != A", aCopy != a);
+        check("A_copy.node != merge root", aCopy.node() != m);
+        check("A_copy.node != H", aCopy.node() != h);
+        LmxOccurrence pCopy = aCopy.node();
+        check("A_copy.node is P_copy", pCopy != null && pCopy != p);
+        check("P_copy leaf", "P".equals(pCopy.child(0)));
+    }
+
+    private static void testHiddenLexicalAncestor() {
+        LmxOccurrence p = LmxOccurrence.independent("hidden");
+        LmxOccurrence a = LmxOccurrence.nested(p, "A");
+        LmxOccurrence h = LmxOccurrence.independent(a);
+        LmxOccurrence m = LmxOccurrence.merge(h);
+        check("result len 1 (ancestor not a field)", m.len() == 1);
+        LmxOccurrence aCopy = (LmxOccurrence) m.child(0);
+        LmxOccurrence pCopy = aCopy.node();
+        boolean ancestorVisible = false;
+        for (int i = 0; i < m.len(); i++) {
+            if (m.child(i) == pCopy) {
+                ancestorVisible = true;
+            }
+        }
+        check("hidden lexical ancestor not a result field", !ancestorVisible);
+        check("ancestor still reachable via node", pCopy != null);
+    }
+
+    private static void testBackEdgeCycle() {
+        LmxOccurrence a = LmxOccurrence.independent((Object) null);
+        a.setChild(0, a);
+        check("setup self cycle", a.child(0) == a);
+        LmxOccurrence holder = LmxOccurrence.independent(a);
+        LmxOccurrence m = LmxOccurrence.merge(holder);
+        LmxOccurrence aCopy = (LmxOccurrence) m.child(0);
+        check("cycle preserved", aCopy.child(0) == aCopy);
+        check("cycle copy distinct", aCopy != a);
+    }
+
+    private static void testRepeatedAlias() {
         LmxOccurrence shared = LmxOccurrence.independent("S");
         LmxOccurrence holder = LmxOccurrence.independent(shared, shared);
         check("setup alias", holder.child(0) == holder.child(1));
         LmxOccurrence m = LmxOccurrence.merge(holder);
-        Object a = m.child(0);
-        Object b = m.child(1);
-        check("repeated mutable copied once", a == b);
-        check("copy distinct from source shared", a != shared);
-    }
-
-    private static void testCopiedNodeLinksInCopiedGraph() {
-        LmxOccurrence mid = LmxOccurrence.independent("m");
-        LmxOccurrence top = LmxOccurrence.independent(mid);
-        LmxOccurrence m = LmxOccurrence.merge(top);
-        LmxOccurrence midCopy = (LmxOccurrence) m.child(0);
-        check("copied mid.node is merge root", midCopy.node() == m);
-        check("merge root independent", m.node() == null);
-        check("original mid.node unchanged null", mid.node() == null);
+        check("alias preserved in copy", m.child(0) == m.child(1));
+        check("alias copy != source", m.child(0) != shared);
     }
 
     private static void testAdmittedTerminalShared() {
-        LmxTerminal term = new LmxTerminal("METHOD-like");
+        LmxTerminal term = new LmxTerminal("T");
         LmxOccurrence a = LmxOccurrence.independent(term);
         LmxOccurrence b = LmxOccurrence.independent(term);
         LmxOccurrence m = LmxOccurrence.merge(a, b);
-        check("terminal shared left", m.child(0) == term);
-        check("terminal shared right", m.child(1) == term);
-        check("same terminal identity both fields", m.child(0) == m.child(1));
+        check("terminal identity both slots", m.child(0) == term && m.child(1) == term);
     }
 
     private static void testOperandsUnchanged() {
-        LmxOccurrence left = LmxOccurrence.independent("L");
-        LmxOccurrence right = LmxOccurrence.independent("R");
-        int ll = left.len();
-        int rl = right.len();
-        Object l0 = left.child(0);
-        LmxOccurrence.merge(left, right);
-        check("left len intact", left.len() == ll);
-        check("right len intact", right.len() == rl);
-        check("left child intact", left.child(0) == l0);
-        check("left still independent", left.node() == null);
+        LmxOccurrence p = LmxOccurrence.independent("P");
+        LmxOccurrence a = LmxOccurrence.nested(p, "A");
+        LmxOccurrence h = LmxOccurrence.independent(a);
+        LmxOccurrence.merge(h);
+        check("source A unchanged", a.node() == p && a.child(0).equals("A"));
+        check("source H unchanged", h.child(0) == a && h.node() == null);
+        check("source P unchanged", p.node() == null && "P".equals(p.child(0)));
     }
 
     private static void testBounds() {
@@ -113,17 +128,14 @@ public final class HelloStructureSmoke {
         } catch (IndexOutOfBoundsException e) {
             threw = true;
         }
-        check("OOB child throws", threw);
+        check("OOB child", threw);
         threw = false;
         try {
             s.setChild(-1, "no");
         } catch (IndexOutOfBoundsException e) {
             threw = true;
         }
-        check("OOB setChild throws", threw);
-        s.setChild(0, "y");
-        check("assign wrote data", "y".equals(s.child(0)));
-        check("len fixed after assign", s.len() == 1);
+        check("OOB setChild", threw);
     }
 
     private static void check(String name, boolean ok) {

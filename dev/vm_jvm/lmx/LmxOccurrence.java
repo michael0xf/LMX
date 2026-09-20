@@ -4,21 +4,23 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 
 /**
- * Isolated JVM ABI for an Lmx occurrence {@code {node, len, data}}.
+ * Isolated JVM ABI for {@code {node, len, data}}.
  *
- * <p>{@code node} is the physical reference to the lexical parent occurrence,
- * or {@code null} for an independent root ({@code node = 0} in the native model).
- * It is not a kind/type tag (see docs/LMX_semantics.en.md ?3, ?8, ?9).
+ * <p>{@code node} is the lexical parent occurrence, or {@code null} if independent.
+ * Storing a reference in {@code data} does <em>not</em> reparent the target
+ * (docs/LMX_semantics.en.md ?8: "A field can retain a reference to an existing
+ * object. This neither copies it nor reparents its lexical parent.").
  *
- * <p>{@code merge} copies the used mutable graph into a new root with one
- * source-to-copy identity map: shared mutable targets stay shared, {@code node}
- * links are rewritten into the copy, operands are unchanged. Admitted terminals
- * ({@link LmxTerminal}) and non-occurrence leaves keep identity
- * (docs/LMX_semantics.en.md ?19, ?22).
+ * <p>Lexical nesting is explicit via {@link #nested}. Graph copy / bounded merge
+ * uses a two-phase identity map: allocate all reachable occurrences (data graph
+ * and {@code node} ancestor chains), then rewrite {@code data} edges and set
+ * {@code dst.node = map(src.node)} ? never the data-slot container.
+ *
+ * <p>Bounded merge API: result root {@code node == null} (isolated expression /
+ * zero parent). Not a full merge entrypoint with expression-location parent.
  */
 public final class LmxOccurrence {
-    /** Lexical parent occurrence, or {@code null} if independent. */
-    private final LmxOccurrence node;
+    private LmxOccurrence node;
     private final Object[] data;
 
     private LmxOccurrence(LmxOccurrence node, Object[] data) {
@@ -29,21 +31,26 @@ public final class LmxOccurrence {
         this.data = data;
     }
 
-    /** Independent root: {@code node == null}. */
-    public static LmxOccurrence independent(Object... fields) {
-        LmxOccurrence root = new LmxOccurrence(null, copyFields(fields));
-        bindNestedParents(root);
-        return root;
+    /** Placeholder shell for phase-1 of graph copy (node filled in phase 2). */
+    private LmxOccurrence(int len) {
+        this.node = null;
+        this.data = new Object[len];
     }
 
-    /** Nested occurrence whose lexical parent is exactly {@code parent}. */
+    /** Independent root: {@code node == null}. Does not reparent field targets. */
+    public static LmxOccurrence independent(Object... fields) {
+        return new LmxOccurrence(null, copyFields(fields));
+    }
+
+    /**
+     * Explicit lexical nesting: {@code node == parent}. Does not reparent
+     * arbitrary values stored in {@code fields}.
+     */
     public static LmxOccurrence nested(LmxOccurrence parent, Object... fields) {
         if (parent == null) {
             throw new IllegalArgumentException("parent");
         }
-        LmxOccurrence o = new LmxOccurrence(parent, copyFields(fields));
-        bindNestedParents(o);
-        return o;
+        return new LmxOccurrence(parent, copyFields(fields));
     }
 
     public LmxOccurrence node() {
@@ -59,90 +66,91 @@ public final class LmxOccurrence {
         return data[index];
     }
 
-    /** Assignment writes {@code data[index]}, never {@code len}. */
     public void setChild(int index, Object value) {
         checkBounds(index);
         data[index] = value;
     }
 
     /**
-     * Graph-copy merge (?19): fresh independent root; direct fields = operand
-     * fields in order; mutable {@link LmxOccurrence} graph copied via identity map;
-     * {@link LmxTerminal} and other non-occurrence leaves shared by identity.
-     * New root {@code node} is {@code null} (isolated expression / zero parent).
+     * Bounded graph-copy merge into a fresh independent root ({@code node == null}).
+     * Direct fields = operand fields in order (mapped). Hidden lexical ancestors
+     * are copied into the identity map but are not result fields.
      */
     public static LmxOccurrence merge(LmxOccurrence... parts) {
         if (parts == null || parts.length == 0) {
             throw new IllegalArgumentException("parts");
         }
+        Map<LmxOccurrence, LmxOccurrence> map = new IdentityHashMap<LmxOccurrence, LmxOccurrence>();
         int n = 0;
         for (LmxOccurrence p : parts) {
             if (p == null) {
                 throw new IllegalArgumentException("null part");
             }
             n += p.len();
+            for (int i = 0; i < p.len(); i++) {
+                Object c = p.child(i);
+                if (c instanceof LmxOccurrence) {
+                    ensure((LmxOccurrence) c, map);
+                }
+            }
         }
-        Map<LmxOccurrence, LmxOccurrence> map = new IdentityHashMap<LmxOccurrence, LmxOccurrence>();
+        finishCopy(map);
+
         Object[] fields = new Object[n];
         LmxOccurrence root = new LmxOccurrence(null, fields);
         int k = 0;
         for (LmxOccurrence p : parts) {
             for (int i = 0; i < p.len(); i++) {
-                fields[k++] = copyRef(p.child(i), map, root);
+                fields[k++] = mapRef(p.child(i), map);
             }
         }
         return root;
     }
 
-    private static Object copyRef(Object value, Map<LmxOccurrence, LmxOccurrence> map, LmxOccurrence container) {
-        if (value instanceof LmxOccurrence) {
-            return copyOccurrence((LmxOccurrence) value, map, container);
+    /** Phase 1: allocate shell; walk {@code node} ancestors and data occurrence edges. */
+    private static void ensure(LmxOccurrence src, Map<LmxOccurrence, LmxOccurrence> map) {
+        if (src == null || map.containsKey(src)) {
+            return;
         }
-        // Leaves and admitted terminals: share identity (primitives, LmxTerminal, ?).
-        return value;
-    }
-
-    private static LmxOccurrence copyOccurrence(
-            LmxOccurrence src, Map<LmxOccurrence, LmxOccurrence> map, LmxOccurrence parentForCopy) {
-        LmxOccurrence existing = map.get(src);
-        if (existing != null) {
-            return existing;
-        }
-        Object[] data = new Object[src.len()];
-        LmxOccurrence dst = new LmxOccurrence(parentForCopy, data);
-        map.put(src, dst);
+        map.put(src, new LmxOccurrence(src.len()));
+        ensure(src.node, map);
         for (int i = 0; i < src.len(); i++) {
-            data[i] = copyRef(src.child(i), map, dst);
-        }
-        return dst;
-    }
-
-    /** Nested mutable children in {@code data} get {@code node == container}. */
-    private static void bindNestedParents(LmxOccurrence container) {
-        Map<LmxOccurrence, LmxOccurrence> rebound = new IdentityHashMap<LmxOccurrence, LmxOccurrence>();
-        for (int i = 0; i < container.data.length; i++) {
-            Object c = container.data[i];
+            Object c = src.child(i);
             if (c instanceof LmxOccurrence) {
-                LmxOccurrence child = (LmxOccurrence) c;
-                if (child.node == container) {
-                    continue;
-                }
-                LmxOccurrence fixed = rebound.get(child);
-                if (fixed == null) {
-                    fixed = reparent(child, container);
-                    rebound.put(child, fixed);
-                }
-                container.data[i] = fixed;
+                ensure((LmxOccurrence) c, map);
             }
         }
     }
 
-    private static LmxOccurrence reparent(LmxOccurrence src, LmxOccurrence newParent) {
-        Object[] data = new Object[src.len()];
-        System.arraycopy(src.data, 0, data, 0, src.len());
-        LmxOccurrence o = new LmxOccurrence(newParent, data);
-        bindNestedParents(o);
-        return o;
+    /** Phase 2: rewrite data edges; set {@code dst.node = map(src.node)}. */
+    private static void finishCopy(Map<LmxOccurrence, LmxOccurrence> map) {
+        for (Map.Entry<LmxOccurrence, LmxOccurrence> e : map.entrySet()) {
+            LmxOccurrence src = e.getKey();
+            LmxOccurrence dst = e.getValue();
+            if (src.node == null) {
+                dst.node = null;
+            } else {
+                LmxOccurrence mapped = map.get(src.node);
+                if (mapped == null) {
+                    throw new IllegalStateException("ancestor missing from copy map");
+                }
+                dst.node = mapped;
+            }
+            for (int i = 0; i < src.len(); i++) {
+                dst.data[i] = mapRef(src.child(i), map);
+            }
+        }
+    }
+
+    private static Object mapRef(Object value, Map<LmxOccurrence, LmxOccurrence> map) {
+        if (value instanceof LmxOccurrence) {
+            LmxOccurrence mapped = map.get((LmxOccurrence) value);
+            if (mapped == null) {
+                throw new IllegalStateException("occurrence missing from copy map");
+            }
+            return mapped;
+        }
+        return value;
     }
 
     private static Object[] copyFields(Object[] fields) {

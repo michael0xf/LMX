@@ -386,7 +386,7 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: int out) int
     if: status = c.LMX_WALK_OK
         status: lmx_walk_checkpoint(f)
     if: status = c.LMX_WALK_OK
-        status: lmx_walk_run(f\context, callee, argv, n, out)
+        status: lmx_walk_run(f\context, callee, argv, n, out, 0)
     if: lmx_scratch_rewind(f\context\scratch, pm) != c.LMX_SCRATCH_OK && status = c.LMX_WALK_OK
         status: c.LMX_WALK_INVALID
     ---
@@ -779,12 +779,14 @@ fn: lmx_walk_plan_check (@: LmxWalkContext context; @: Lmx node) int
     ---
 return: status
 
-fn: lmx_walk_run (@: LmxWalkContext context; @: Lmx node; @: int args; size_t: nargs; @: int result) int
+fn: lmx_walk_run (@: LmxWalkContext context; @: Lmx node; @: int args; size_t: nargs; @: int result; @: int valued) int
     LmxWalkFrame: frame
     LmxScratchMark: mark
     @: LmxWalkFrame f 0
     @: LmxScratchMark pm 0
     int: status
+    if: valued != 0
+        \valued: 0
     if: context = 0 || context\scratch = 0
         return: c.LMX_WALK_INVALID
     f: @ frame
@@ -801,6 +803,8 @@ fn: lmx_walk_run (@: LmxWalkContext context; @: Lmx node; @: int args; size_t: n
         status: lmx_walk_checkpoint(f)
     if: status = c.LMX_WALK_OK && f\valued != 0 && result != 0
         \result: f\result
+    if: status = c.LMX_WALK_OK && f\valued != 0 && valued != 0
+        \valued: 1
     if: lmx_scratch_rewind(context\scratch, pm) != c.LMX_SCRATCH_OK && status = c.LMX_WALK_OK
         status: c.LMX_WALK_INVALID
     ---

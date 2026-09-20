@@ -208,8 +208,13 @@ end: LmxWalkFrame
 
 prototype:
     # One activation of the callable occurrence `node` with `nargs` int inputs.  The value
-    # of an executed `ret` is written through `result` (left alone by a void return).
-    fn: lmx_walk_run (@: LmxWalkContext context; @: Lmx node; @: int args; size_t: nargs; @: int result) int
+    # of an executed `ret` is written through `result`; `valued` gets 1 when the
+    # activation returned a value and 0 when it returned none or fell off the end, so a
+    # caller tells a void return from a value without planting a sentinel.  Either may
+    # be 0.  A turn run through a Thread has no use for either: what a turn has to say
+    # it says by a Message (LMX_blog/2026-09-20.md, "Общение только через Message"); they
+    # are for a direct caller, such as a unit test of admission.
+    fn: lmx_walk_run (@: LmxWalkContext context; @: Lmx node; @: int args; size_t: nargs; @: int result; @: int valued) int
     # Once per callable, in the arena that holds its descriptor and before the descriptor
     # is shared: look at the body, build the plan in `descriptor_arena`, publish it.  OK
     # without looking when the descriptor already has a plan.  A bare METHOD in child[0]

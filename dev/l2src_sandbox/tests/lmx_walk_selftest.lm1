@@ -199,6 +199,7 @@ fn: main () int
     @: void xcell 0
     @: int args 0
     int: r 0
+    int: v 0
     int: st 0
 
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
@@ -456,8 +457,8 @@ fn: main () int
     # ---- preparation ----------------------------------------------------------------
     # Unprepared, a body is refused: it is neither analysed at entry nor run natively.
     r: -5
-    st: lmx_walk_run(gctx, counter, 0, 0U, @ r)
-    check(st = c.LMX_WALK_UNSUPPORTED && r = -5 && lmx_int_value_known(cell) = 0, "an unprepared body is UNSUPPORTED and nothing of it runs")
+    st: lmx_walk_run(gctx, counter, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_UNSUPPORTED && r = -5 && v = 0 && lmx_int_value_known(cell) = 0, "an unprepared body is UNSUPPORTED, nothing of it runs, no value is reported")
     check(lmx_walk_plan_check(gctx, counter) = c.LMX_WALK_UNSUPPORTED, "and there is no plan to check")
     check(lmx_walk_prepare(gctx, ga, gplan_roles, counter) = c.LMX_WALK_OK, "counter prepared")
     info: (cast: (@: LmxCallable) lmx_arena_ref_value(counter, 0U))
@@ -494,7 +495,7 @@ fn: main () int
         entry: lmx_arena_ref_struct(plan, 2U)
         check(entry != 0 && entry\len = 4 && lmx_size_value_known(lmx_arena_ref_value(entry, 1U)) = 2U && lmx_size_value_known(lmx_arena_ref_value(entry, 2U)) = 2U && lmx_size_value_known(lmx_arena_ref_value(entry, 3U)) = 0U, "the position of t is 2, 2, 0: through the while node and its body")
     ---
-    st: lmx_walk_run(gctx, lexer, 0, 0U, @ r)
+    st: lmx_walk_run(gctx, lexer, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_OK && lmx_int_value_known(lmx_arena_ref_value(lexer, 1U)) = 1 && lmx_int_value_known(lmx_arena_ref_value(lexer, 3U)) = 2, "lexer ran by its plan")
 
     # G, the receiver's half: a plan that is well formed -- the generic unit publishes it --
@@ -504,7 +505,7 @@ fn: main () int
     paths[0]: flat
     check(lmx_plan_build_from_paths(ga, gplan_roles, paths, lens, 1U, @ plan) = c.LMX_PLAN_OK && lmx_plan_publish(ga, gplan_roles, shorted, plan) = c.LMX_PLAN_OK, "a plan that omits q is well formed and gets published")
     check(lmx_walk_plan_check(gctx, shorted) = c.LMX_WALK_INVALID, "the receiver's check refuses it: the body uses a field the plan omits")
-    st: lmx_walk_run(gctx, shorted, 0, 0U, @ r)
+    st: lmx_walk_run(gctx, shorted, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_INVALID, "and running by it is INVALID, not a guess")
     flat[0]: 1U
     flat[1]: 2U
@@ -517,14 +518,14 @@ fn: main () int
 
     # H: what an entry costs, counted at the one door this unit asks the arena through.
     pc\classified: 0U
-    st: lmx_walk_run(gctx, alone, 0, 0U, @ r)
-    check(st = c.LMX_WALK_OK && pc\classified = 2U, "to the first body step: exactly two questions -- M a Structure, child[0] a CALLABLE")
+    st: lmx_walk_run(gctx, alone, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && v = 0 && pc\classified = 2U, "to the first body step: exactly two questions -- M a Structure, child[0] a CALLABLE; a bare return reports no value")
     pc\classified: 0U
     args[0]: 0
-    st: lmx_walk_run(gctx, summer, args, 1U, @ r)
+    st: lmx_walk_run(gctx, summer, args, 1U, @ r, @ v)
     check(st = c.LMX_WALK_OK && pc\classified = 4U, "summer(0): two, plus one per executed body field -- the if, then the return inside it")
     pc\classified: 0U
-    st: lmx_walk_run(gctx, faller, 0, 0U, @ r)
+    st: lmx_walk_run(gctx, faller, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_OK && pc\classified = 4U, "faller: two, plus its two fields")
     lmx_int_store_known(lmx_arena_ref_value(faller, 1U), 0)
 
@@ -535,64 +536,64 @@ fn: main () int
     # counter: the executed assignment is published at the return, and the next
     # activation starts from the published value.
     r: -1
-    st: lmx_walk_run(gctx, counter, 0, 0U, @ r)
-    check(st = c.LMX_WALK_OK && r = 1, "counter first run returns 1")
+    st: lmx_walk_run(gctx, counter, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && r = 1 && v = 1, "counter first run returns 1, and says it returned a value")
     check(lmx_int_value_known(cell) = 1, "counter published n = 1")
-    st: lmx_walk_run(gctx, counter, 0, 0U, @ r)
+    st: lmx_walk_run(gctx, counter, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_OK && r = 2, "counter second run returns 2")
 
     # 21.6: inner rewrote outer's graph field; outer's clean working value is neither
     # reloaded (it returns its entry snapshot) nor republished over the newer value.
     r: -1
-    st: lmx_walk_run(gctx, outer, 0, 0U, @ r)
+    st: lmx_walk_run(gctx, outer, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_OK && r = 1, "outer returns its entry snapshot, no reload")
     check(lmx_int_value_known(xcell) = 2, "clean own value was not republished")
 
     # 21.6: a dirty value is published before the outbound call.
     r: -1
-    st: lmx_walk_run(gctx, publisher, 0, 0U, @ r)
+    st: lmx_walk_run(gctx, publisher, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_OK && r = 5, "dirty value published before the call")
 
     # Recursion is recursion of the C stack on one published M; an early return inside
     # a nested body ends the activation, the last return is never reached then.
     r: -1
     args[0]: 4
-    st: lmx_walk_run(gctx, summer, args, 1U, @ r)
+    st: lmx_walk_run(gctx, summer, args, 1U, @ r, @ v)
     check(st = c.LMX_WALK_OK && r = 10, "summer(4) = 10")
     r: -1
     args[0]: 0
-    st: lmx_walk_run(gctx, summer, args, 1U, @ r)
+    st: lmx_walk_run(gctx, summer, args, 1U, @ r, @ v)
     check(st = c.LMX_WALK_OK && r = 0, "summer(0) takes the early return")
-    st: lmx_walk_run(gctx, summer, 0, 0U, @ r)
+    st: lmx_walk_run(gctx, summer, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_INVALID, "a missing declared input is refused")
 
     # A field of a nested body is an own field too; its holder is the body.
     r: -1
     args[0]: 4
-    st: lmx_walk_run(gctx, looper, args, 1U, @ r)
+    st: lmx_walk_run(gctx, looper, args, 1U, @ r, @ v)
     check(st = c.LMX_WALK_OK && r = 10, "looper(4) = 10")
     check(lmx_int_value_known(lmx_arena_ref_value(looper, 1U)) = 10, "looper published acc")
     check(lmx_int_value_known(lmx_arena_ref_value(looper, 2U)) = 4, "looper published i")
 
     # No body node: nothing to walk, nothing is invented, nothing native is called.
-    st: lmx_walk_run(gctx, bare, 0, 0U, @ r)
+    st: lmx_walk_run(gctx, bare, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_NO_GRAPH, "a callable without body nodes is NO_GRAPH")
-    st: lmx_walk_run(gctx, unit, 0, 0U, @ r)
+    st: lmx_walk_run(gctx, unit, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_INVALID, "a Structure that is not a callable is refused")
 
     # Falling off the end is an exit: the dirty value is published, no result is written.
     r: -77
-    st: lmx_walk_run(gctx, faller, 0, 0U, @ r)
-    check(st = c.LMX_WALK_OK && r = -77, "void fall-off leaves the result alone")
+    st: lmx_walk_run(gctx, faller, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && r = -77 && v = 0, "void fall-off leaves the result alone and reports no value")
     check(lmx_int_value_known(lmx_arena_ref_value(faller, 1U)) = 7, "void fall-off published z")
 
     # A bare role record as a return still publishes what is dirty, and ends the body.
-    st: lmx_walk_run(gctx, stopper, 0, 0U, @ r)
+    st: lmx_walk_run(gctx, stopper, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_OK && lmx_int_value_known(lmx_arena_ref_value(stopper, 1U)) = 9, "bare return publishes and stops")
 
     # A node outside the slice is reported at entry, wherever it sits, and nothing of the
     # activation runs: the assignment before it is neither executed nor published.
-    st: lmx_walk_run(gctx, refuser, 0, 0U, @ r)
+    st: lmx_walk_run(gctx, refuser, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_UNSUPPORTED, "an unprepared body with an unread role is UNSUPPORTED, not skipped")
     check(lmx_int_value_known(lmx_arena_ref_value(refuser, 1U)) = 0, "nothing ran before the refusal")
 
@@ -614,21 +615,21 @@ fn: main () int
 
     # The role is a physical reference: the right NUMBER in a record of one's own is not
     # the role, and such a step is refused rather than skipped or guessed.
-    st: lmx_walk_run(gctx, impostor, 0, 0U, @ r)
+    st: lmx_walk_run(gctx, impostor, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_UNSUPPORTED, "a private op record with the number of `ret` is not the role `ret`")
 
     # An invocation is not a copy.  Twenty-one activations of summer neither allocate a
     # cell in the graph's arena nor change a byte of it; and once the store is warm they
     # add no block to the context's arena either, and leave the store empty.
     args[0]: 20
-    lmx_walk_run(gctx, summer, args, 1U, @ r)
+    lmx_walk_run(gctx, summer, args, 1U, @ r, @ v)
     before: handed(ga)
     sum_before: digest(ga)
     blocks: lmx_arena_mark(pca)
     warm: lmx_pool_count(@ context_cells)
     i: 0
     while: i < 50
-        st: lmx_walk_run(gctx, summer, args, 1U, @ r)
+        st: lmx_walk_run(gctx, summer, args, 1U, @ r, @ v)
         i: i + 1
     ---
     check(st = c.LMX_WALK_OK && r = 210, "summer(20) = 210, fifty times")
@@ -642,14 +643,14 @@ fn: main () int
     sum_before: digest(ga)
     before: handed(ga)
     r: lmx_int_value_known(cell)
-    st: lmx_walk_run(gctx, counter, 0, 0U, @ i)
+    st: lmx_walk_run(gctx, counter, 0, 0U, @ i, @ v)
     check(st = c.LMX_WALK_OK && digest(ga) != sum_before && handed(ga) = before, "counter wrote, and allocated nothing")
     lmx_int_store_known(cell, r)
     check(digest(ga) = sum_before, "undoing the one published value restores the whole graph")
 
     # An own field is a field of M or of a body inside M.  Somebody else's field named as
     # own is refused at entry; it is reachable only as an explicit field (`at` / `put`).
-    st: lmx_walk_run(gctx, stranger, 0, 0U, @ r)
+    st: lmx_walk_run(gctx, stranger, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_UNSUPPORTED, "stranger could not be prepared, so it does not run")
 
     # F: data writes do not touch a plan.  counter, outer and publisher have all written
@@ -670,7 +671,7 @@ fn: main () int
         check(lmx_arena_ref_value(lmx_arena_ref_struct(copy, 3U), 0U) = lmx_arena_ref_value(lmx_arena_ref_struct(counter, 3U), 0U), "copy shares the role records")
         check(lmx_arena_ref_struct(lmx_arena_ref_struct(lmx_arena_ref_struct(copy, 3U), 1U), 1U) = copy, "the copy's node refers to the copy, not to the original")
         r: -1
-        st: lmx_walk_run(gctx, copy, 0, 0U, @ r)
+        st: lmx_walk_run(gctx, copy, 0, 0U, @ r, @ v)
         check(st = c.LMX_WALK_OK && r = 3, "copy continues from the copied value")
         check(lmx_int_value_known(cell) = 2, "original n untouched by the copy's run")
         check(lmx_int_value_known(lmx_arena_ref_value(copy, 1U)) = 3, "copy published into its own n")
@@ -682,12 +683,12 @@ fn: main () int
         # child[0].  That occurrence is unprepared; the other keeps running by the old plan.
         fresh: lmx_callable_new_owned(ga)
         check(fresh != 0 && lmx_arena_ref_store(copy, 0U, (cast: (@: void) fresh)) = 0, "a fresh descriptor for the copy only")
-        st: lmx_walk_run(gctx, copy, 0, 0U, @ r)
+        st: lmx_walk_run(gctx, copy, 0, 0U, @ r, @ v)
         check(st = c.LMX_WALK_UNSUPPORTED, "the copy is now unprepared")
-        st: lmx_walk_run(gctx, counter, 0, 0U, @ r)
+        st: lmx_walk_run(gctx, counter, 0, 0U, @ r, @ v)
         check(st = c.LMX_WALK_OK && r = 3 && info\header != 0, "the original runs on, its shared plan untouched")
         check(lmx_walk_prepare(gctx, ga, gplan_roles, copy) = c.LMX_WALK_OK && fresh\header != 0 && fresh\header != info\header, "the copy is prepared again, under its own descriptor")
-        st: lmx_walk_run(gctx, copy, 0, 0U, @ r)
+        st: lmx_walk_run(gctx, copy, 0, 0U, @ r, @ v)
         check(st = c.LMX_WALK_OK && r = 4, "and runs again")
     ---
 

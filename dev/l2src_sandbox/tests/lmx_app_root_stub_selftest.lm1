@@ -70,8 +70,11 @@ fn: main () int
     LmxRoot: root
     @: LmxRoot root_handle 0
     @: LmxMsg root_message 0
+    @: LmxSchedule slot 0
     ulong: base 0U
+    ulong: start 0U
     ulong: now 0U
+    ulong: elapsed 0U
     size_t: i 0U
     size_t: world_cell 0U
     int: code
@@ -83,10 +86,35 @@ fn: main () int
     base: lmx_clock_ticks()
 
     # --- 1. WITHOUT THE STUB'S RING: the root's own wait is a death timer -------------------
+    # Anchor this scene to the wait open actually started (root\now / slot\started), never the
+    # pre-open wall sample `base`.  lmx_clock_ticks is GetTickCount64 and steps ~15.6 ms; a
+    # step between `base` and lmx_root_open's own sample (lmx_root.lm1:215) would put
+    # `base + 101` only ~85 into a window of 100, so cycle_at would correctly return OK while
+    # this scene wants DONE.  Explicit time, no sleep: the supplied `now` is start+N.
+    # Decisive cycle returns are captured before the assertion, and the line prints start,
+    # supplied now, elapsed, expected and actual so a PASS and a FAIL cannot be byte-identical.
     rs_check(counts, lmx_root_open(@ root, rs_entry, 100U, 0U, 0U) = c.LMX_ROOT_OK, "R0 did not open")
-    rs_check(counts, lmx_root_cycle_at(@ root, 1U, base + 50U) = c.LMX_ROOT_OK, "a cycle inside the window refused")
-    rs_check(counts, lmx_root_hung(@ root, base + 50U) = 0, "a fresh root reads hung")
-    rs_check(counts, lmx_root_cycle_at(@ root, 1U, base + 101U) = c.LMX_ROOT_DONE, "the root outlived its own window with no ring")
+    root_handle: @ root
+    slot: root_handle\slot
+    start: lmx_root_clock(@ root)
+    rs_check(counts, slot != 0 && slot\started = start, "open's clock is not the wait's start")
+    now: start + 50U
+    elapsed: now - start
+    code: lmx_root_cycle_at(@ root, 1U, now)
+    c.printf("RS SCENE1 start=%u slot_started=%u now=%u elapsed=%u expected=%d actual=%d\n",
+             (cast: (unsigned) start), (cast: (unsigned) slot\started), (cast: (unsigned) now),
+             (cast: (unsigned) elapsed), c.LMX_ROOT_OK, code)
+    c.fflush(0)
+    rs_check(counts, code = c.LMX_ROOT_OK, "a cycle inside the window refused")
+    rs_check(counts, lmx_root_hung(@ root, now) = 0, "a fresh root reads hung")
+    now: start + 101U
+    elapsed: now - start
+    code: lmx_root_cycle_at(@ root, 1U, now)
+    c.printf("RS SCENE1 start=%u slot_started=%u now=%u elapsed=%u expected=%d actual=%d\n",
+             (cast: (unsigned) start), (cast: (unsigned) slot\started), (cast: (unsigned) now),
+             (cast: (unsigned) elapsed), c.LMX_ROOT_DONE, code)
+    c.fflush(0)
+    rs_check(counts, code = c.LMX_ROOT_DONE, "the root outlived its own window with no ring")
     rs_check(counts, lmx_root_close(@ root) = c.LMX_ROOT_OK, "R0 did not close")
 
     # --- 2. THE STUB RINGS EVERY CYCLE: the same window, but the root is never silent ------

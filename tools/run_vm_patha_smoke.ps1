@@ -1,7 +1,9 @@
 #requires -Version 5.1
 param(
     [ValidateSet('mir', 'wasm', 'riscv', 'all')]
-    [string]$Target = 'all'
+    [string]$Target = 'all',
+    [ValidateSet('printTree', 'own')]
+    [string]$Fixture = 'printTree'
 )
 
 $ErrorActionPreference = 'Continue'
@@ -10,12 +12,16 @@ if (-not (Test-Path -LiteralPath (Join-Path $RepoRoot 'lm1\build\printTree.lm1.c
     Write-Error ("Not LMX repo root: {0}" -f $RepoRoot)
     exit 2
 }
+if ($Fixture -eq 'own' -and -not (Test-Path -LiteralPath (Join-Path $RepoRoot 'include_languages\vm\own_harness_main.c'))) {
+    Write-Error 'Missing include_languages/vm/own_harness_main.c'
+    exit 2
+}
 Set-Location -LiteralPath $RepoRoot
 
 $OutRoot = Join-Path $RepoRoot 'build\vm_porting\smoke_runner'
 New-Item -ItemType Directory -Force -Path $OutRoot | Out-Null
 $Stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
-$Log = Join-Path $OutRoot ("run_{0}_{1}.txt" -f $Target, $Stamp)
+$Log = Join-Path $OutRoot ("run_{0}_{1}_{2}.txt" -f $Fixture, $Target, $Stamp)
 
 function Write-Log([string]$Msg) {
     $Msg | Tee-Object -FilePath $Log -Append
@@ -50,10 +56,10 @@ function Add-Result([string]$Name, [string]$Status, [int]$Code, [string]$Detail)
     Write-Log ("RESULT {0} {1} exit={2} {3}" -f $Name, $Status, $Code, $Detail)
 }
 
-Write-Log ("GROK-BOT-VM-PATHA-22 run_vm_patha_smoke Target={0}" -f $Target)
+Write-Log ("GROK-BOT-VM-PATHA-22 run_vm_patha_smoke Fixture={0} Target={1}" -f $Fixture, $Target)
 Write-Log ("RepoRoot={0} Log={1}" -f $RepoRoot, $Log)
 
-function Run-Mir {
+function Run-Mir-PrintTree {
     $c2m = Join-Path $RepoRoot 'build\vm\mir-build\c2m'
     if (-not (Test-Path -LiteralPath $c2m)) { Add-Result 'mir' 'SKIP' 0 'missing c2m'; return }
     if (-not (Test-Wsl)) { Add-Result 'mir' 'SKIP' 0 'WSL required'; return }
@@ -84,7 +90,7 @@ function Run-Mir {
     }
 }
 
-function Run-Wasm {
+function Run-Wasm-PrintTree {
     $clang = Join-Path $RepoRoot 'build\vm\wasi-sdk-34.0-x86_64-linux\bin\clang'
     $wt = Join-Path $RepoRoot 'build\vm\wasmtime-v48.0.2-x86_64-linux\wasmtime'
     if (-not ((Test-Path $clang) -and (Test-Path $wt))) { Add-Result 'wasm' 'SKIP' 0 'missing wasi/wasmtime'; return }
@@ -113,7 +119,7 @@ function Run-Wasm {
     }
 }
 
-function Run-Riscv {
+function Run-Riscv-PrintTree {
     $gcc = Join-Path $RepoRoot 'build\vm\riscv\bin\riscv64-unknown-linux-gnu-gcc'
     $qemu = Join-Path $RepoRoot 'build\vm\qemu-user-static-root\usr\bin\qemu-riscv64-static'
     if (-not ((Test-Path $gcc) -and (Test-Path $qemu))) { Add-Result 'riscv' 'SKIP' 0 'missing riscv/qemu'; return }
@@ -142,6 +148,91 @@ function Run-Riscv {
         Add-Result 'riscv' 'FAIL' $code 'see log'
     }
 }
+
+function Run-Mir-Own {
+    $c2m = Join-Path $RepoRoot 'build\vm\mir-build\c2m'
+    if (-not (Test-Path -LiteralPath $c2m)) { Add-Result 'mir' 'SKIP' 0 'missing c2m'; return }
+    if (-not (Test-Wsl)) { Add-Result 'mir' 'SKIP' 0 'WSL required'; return }
+    $nl = [char]10
+    $body = @(
+        '#!/bin/bash',
+        'set -e',
+        'cd /mnt/c/Nyasha_Planet/LMX',
+        'C2M=build/vm/mir-build/c2m',
+        'OUT=build/vm_porting/smoke_runner',
+        'mkdir -p "$OUT"',
+        '"$C2M" -I. -Ilm1/build include_languages/vm/own_harness_main.c lm1/build/own.lm1.c -ei',
+        'echo OWN_EI=$?'
+    ) -join $nl
+    $r = Invoke-WslBash 'mir_own' $body
+    if ($r.Exit -eq 0 -and $r.Output -match 'VM_OWN_OK checks=') {
+        Add-Result 'mir' 'OK' 0 'own harness -ei'
+    } else {
+        $code = $r.Exit; if ($code -eq 0) { $code = 1 }
+        Add-Result 'mir' 'FAIL' $code 'see log'
+    }
+}
+
+function Run-Wasm-Own {
+    $clang = Join-Path $RepoRoot 'build\vm\wasi-sdk-34.0-x86_64-linux\bin\clang'
+    $wt = Join-Path $RepoRoot 'build\vm\wasmtime-v48.0.2-x86_64-linux\wasmtime'
+    if (-not ((Test-Path $clang) -and (Test-Path $wt))) { Add-Result 'wasm' 'SKIP' 0 'missing wasi/wasmtime'; return }
+    if (-not (Test-Wsl)) { Add-Result 'wasm' 'SKIP' 0 'WSL required'; return }
+    $nl = [char]10
+    $body = @(
+        '#!/bin/bash',
+        'set -e',
+        'cd /mnt/c/Nyasha_Planet/LMX',
+        'CLANG=build/vm/wasi-sdk-34.0-x86_64-linux/bin/clang',
+        'WT=build/vm/wasmtime-v48.0.2-x86_64-linux/wasmtime',
+        'OUT=build/vm_porting/smoke_runner',
+        'mkdir -p "$OUT"',
+        '"$CLANG" --target=wasm32-wasip1 -std=c99 -Wall -O2 -I. -Ilm1/build -o "$OUT/own.wasm" include_languages/vm/own_harness_main.c lm1/build/own.lm1.c',
+        'echo CC=$?',
+        '"$WT" "$OUT/own.wasm"',
+        'echo RUN=$?'
+    ) -join $nl
+    $r = Invoke-WslBash 'wasm_own' $body
+    if ($r.Exit -eq 0 -and $r.Output -match 'VM_OWN_OK checks=') {
+        Add-Result 'wasm' 'OK' 0 'own.wasm build+run'
+    } else {
+        $code = $r.Exit; if ($code -eq 0) { $code = 1 }
+        Add-Result 'wasm' 'FAIL' $code 'see log'
+    }
+}
+
+function Run-Riscv-Own {
+    $gcc = Join-Path $RepoRoot 'build\vm\riscv\bin\riscv64-unknown-linux-gnu-gcc'
+    $qemu = Join-Path $RepoRoot 'build\vm\qemu-user-static-root\usr\bin\qemu-riscv64-static'
+    if (-not ((Test-Path $gcc) -and (Test-Path $qemu))) { Add-Result 'riscv' 'SKIP' 0 'missing riscv/qemu'; return }
+    if (-not (Test-Wsl)) { Add-Result 'riscv' 'SKIP' 0 'WSL required'; return }
+    $nl = [char]10
+    $body = @(
+        '#!/bin/bash',
+        'set -e',
+        'cd /mnt/c/Nyasha_Planet/LMX',
+        'GCC=build/vm/riscv/bin/riscv64-unknown-linux-gnu-gcc',
+        'QEMU=build/vm/qemu-user-static-root/usr/bin/qemu-riscv64-static',
+        'OUT=build/vm_porting/smoke_runner',
+        'mkdir -p "$OUT"',
+        'SYSROOT=$("$GCC" -print-sysroot)',
+        '"$GCC" -std=c99 -Wall -O2 -I. -Ilm1/build -o "$OUT/own_rv.elf" include_languages/vm/own_harness_main.c lm1/build/own.lm1.c',
+        'echo CC=$?',
+        '"$QEMU" -L "$SYSROOT" "$OUT/own_rv.elf"',
+        'echo RUN=$?'
+    ) -join $nl
+    $r = Invoke-WslBash 'riscv_own' $body
+    if ($r.Exit -eq 0 -and $r.Output -match 'VM_OWN_OK checks=') {
+        Add-Result 'riscv' 'OK' 0 'own_rv.elf + qemu'
+    } else {
+        $code = $r.Exit; if ($code -eq 0) { $code = 1 }
+        Add-Result 'riscv' 'FAIL' $code 'see log'
+    }
+}
+
+function Run-Mir { if ($Fixture -eq 'own') { Run-Mir-Own } else { Run-Mir-PrintTree } }
+function Run-Wasm { if ($Fixture -eq 'own') { Run-Wasm-Own } else { Run-Wasm-PrintTree } }
+function Run-Riscv { if ($Fixture -eq 'own') { Run-Riscv-Own } else { Run-Riscv-PrintTree } }
 
 switch ($Target) {
     'mir' { Run-Mir }

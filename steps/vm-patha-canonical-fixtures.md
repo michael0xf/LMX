@@ -139,3 +139,38 @@ Observed on OAK65536 (no harness invented):
 
 They remain compile-only seeds until a main harness exists. Evidence:
 `build/vm_porting/ticket24_next_fixture_audit.txt`.
+
+## Own harness (ticket GROK-BOT-VM-PATHA-OWN-HARNESS-20260921-32)
+
+Tracked seed `lm1/build/own.lm1.c` has **no `main`**. Executable coverage is provided by a
+small tracked C99 harness that **links the seed unchanged**:
+
+- Harness: `include_languages/vm/own_harness_main.c`
+- Header resolution: `-I. -Ilm1/build` so the seed's `#include "l1src/p0.lm1.h"` finds
+  tracked `lm1/build/l1src/p0.lm1.h`
+- Exercises real ownership (not a stub): `lm_own_copy_bytes` content+NUL; pointer-stack
+  push/top/pop/order; arena init/new_zero/copy_bytes/destroy; `lm_own_alloc_fails`
+  allocation-failure control + recovery
+- Stable success line: `VM_OWN_OK checks=21` (exit 0); any mismatch prints `VM_OWN_FAIL …`
+  and exits nonzero
+
+### Observed (OAK65536, 2026-09-21) — all exit 0, same line
+
+| Path | Command sketch | Exit | Output |
+|------|----------------|-----:|--------|
+| Host C99 (oracle) | `gcc -std=c99 -O2 -I. -Ilm1/build -o build/vm_porting/own_harness/own_host.exe include_languages/vm/own_harness_main.c lm1/build/own.lm1.c` then run | **0** | `VM_OWN_OK checks=21` |
+| MIR | `build/vm/mir-build/c2m -I. -Ilm1/build … -ei` | **0** | `VM_OWN_OK checks=21` |
+| WASM | wasi-sdk clang → `own.wasm`; `wasmtime own.wasm` | **0** | `VM_OWN_OK checks=21` |
+| RISC-V | cross gcc → `own_rv.elf`; qemu-riscv64-static | **0** | `VM_OWN_OK checks=21` |
+
+Artifacts only under ignored `build/vm_porting/own_harness/` and `build/vm_porting/smoke_runner/`.
+No seed regeneration; no downloads; no vendor commits.
+
+Smoke integration: `tools/run_vm_patha_smoke.ps1 -Fixture printTree|own` (default **printTree**).
+Default `-Target all` outcome unchanged (printTree path). Own:
+
+```
+powershell -NoProfile -File tools/run_vm_patha_smoke.ps1 -Fixture own -Target all
+```
+
+**Still not an execute fixture:** `parser.lm1.c` (no main; no harness in this ticket).

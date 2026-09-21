@@ -1,0 +1,82 @@
+# FABLE-L2-ARG-ADDRESS-PROOF-20260921-84.  THE ORDINARY CASES IN A PROGRAM OF THEIR OWN.
+#
+# In this program every address is taken AFTER the binding line, so every field's cell is already
+# resolved when the address is taken.  That matters for one wrong translator in particular: the
+# one that raises sticky at the address site whether or not a binding line ever ran.  Next to a
+# before-bind or never-bound activation that translator dies publishing through a cell nobody
+# resolved, and the death hides everything else it gets wrong.  Here it cannot die: it must print
+# OC2 9 9, OC3 9 9, OE 6 6, OD2 9 9 and OD3 9 9, and those are plain wrong lines, not a crash.
+#
+# Each line is "<case> <local> <graph field>".
+fn: poke5 (@: int p) int
+    \p: 5
+    return: 0
+end: poke5
+fn: poke9 (@: int p) int
+    \p: 9
+    return: 0
+end: poke9
+fn: pokez9 (@: size_t p) int
+    \p: 9U
+    return: 0
+end: pokez9
+fn: nop () int
+    return: 0
+end: nop
+
+# A declared formal: bound, then address.  The checkpoint before the call publishes and clears;
+# the write through the address is no assignment and is not published.
+fn: after_bind (int: oc) int
+    int: oc
+    oc: oc + 1
+    nop()
+    c.printf: "OC1 %d %d\n" oc node\oc
+    poke9(@: oc)
+    c.printf: "OC2 %d %d\n" oc node\oc
+    node\oc: 100
+    nop()
+    c.printf: "OC3 %d %d\n" oc node\oc
+    return: 0
+end: after_bind
+
+# The DECLARATION is a binding line: declared, then address, then assigned.
+fn: decl_binds (int: oe) int
+    int: oe
+    poke5(@: oe)
+    oe: oe + 1
+    nop()
+    node\oe: 100
+    nop()
+    c.printf: "OE %d %d\n" oe node\oe
+    return: 0
+end: decl_binds
+
+# A dynamic input: read in the condition (that is what makes it one), bound, then address.
+fn: dyn_after () int
+    if: od = 0U
+        return: 0
+    size_t: od
+    od: od + 1U
+    nop()
+    c.printf: "OD1 %d %d\n" (cast: (int) od) (cast: (int) node\od)
+    pokez9(@: od)
+    c.printf: "OD2 %d %d\n" (cast: (int) od) (cast: (int) node\od)
+    node\od: 100U
+    nop()
+    c.printf: "OD3 %d %d\n" (cast: (int) od) (cast: (int) node\od)
+    return: 0
+end: dyn_after
+
+fn: outer () int
+    size_t: od
+    od: 3U
+    after_bind(3)
+    decl_binds(3)
+    dyn_after()
+    return: 0
+end: outer
+
+fn: main () int
+    outer()
+    return: 0
+end: main

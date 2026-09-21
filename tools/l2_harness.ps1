@@ -110,6 +110,67 @@ function Log-Text([string]$Label) {
     if (Test-Path -LiteralPath $log) { return ((Get-Content -LiteralPath $log -Raw)) }
     return ''
 }
+# THE EMITTER-ORDER ASSERTION OF THE STICKY RULE (FABLE-L2-ARG-ADDRESS-PROOF-20260921-84), read off
+# the generated L1 and not off a run.  It exists because one wrong translator cannot be refuted
+# by any program's output: the one that raises sticky at the address site and changes nothing
+# else publishes through a cell nobody resolved -- in a never-bound activation no text resolves
+# it at all -- so its programs die instead of printing a wrong line, and a death is not a check.
+# What IS checkable, for every own field N that carries the early/bound/sticky flags:
+#   1. `l2_qN_sticky: 1` occurs ONLY as the body of `if: l2_qN_bound = 0 && l2_qN_early != 0`, and
+#      the very next line is `l2_qN_bound: 1` -- sticky is raised at a binding site and nowhere else;
+#   2. that guard is preceded, within the same binding site, by the resolution of the field's cell
+#      -- a sticky field is published by the next checkpoint, so the cell is resolved first;
+#   3. the cell is resolved ONLY at a binding site: every `l2_qN_from: ...` is followed by
+#      `l2_qN_bound: 1` before any call and before any address mark;
+#   4. the address site is exactly `if: l2_qN_bound = 0` / `l2_qN_early: 1`, and from there to the
+#      line that uses the address (`@ l2_p...`) nothing resolves the cell, raises sticky or binds.
+# A binding site sits where its source line sits (inside its `if`, after its early `return`), so
+# "only at a binding site" is "only when that line executes".  Returns '' or the first violation.
+function Test-BindOrder([string]$L1) {
+    $lines = @($L1 -split "`r?`n" | ForEach-Object { $_.Trim() })
+    $owns = @([regex]::Matches($L1, '(?m)^\s*int: l2_q(\d+)_sticky 0\s*$') | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique)
+    if ($owns.Count -eq 0) { return 'no own field carries the early/bound/sticky flags' }
+    foreach ($n in $owns) {
+        $q = 'l2_q' + $n
+        $guard = 'if: ' + $q + '_bound = 0 && ' + $q + '_early != 0'
+        $sticks = 0; $binds = 0; $addrs = 0
+        for ($i = 0; $i -lt $lines.Count; $i++) {
+            $ln = $lines[$i]
+            if ($ln -ceq ($q + '_sticky: 1')) {
+                $sticks++
+                if ($i -lt 1 -or $lines[$i - 1] -cne $guard) { return ($q + ': sticky is raised outside a binding site (line ' + ($i + 1) + ')') }
+                if ($i + 1 -ge $lines.Count -or $lines[$i + 1] -cne ($q + '_bound: 1')) { return ($q + ': sticky is raised but the field is not bound right there (line ' + ($i + 1) + ')') }
+            }
+            if ($ln -ceq ($q + '_bound: 1')) {
+                $binds++
+                if ($i -lt 2 -or $lines[$i - 2] -cne $guard) { return ($q + ': a binding site does not decide sticky (line ' + ($i + 1) + ')') }
+                $resolved = $false
+                for ($k = $i - 3; $k -ge 0 -and $k -ge $i - 8; $k--) { if ($lines[$k].StartsWith($q + '_from: ')) { $resolved = $true } }
+                if (-not $resolved) { return ($q + ': a binding site does not resolve the cell before it can raise sticky (line ' + ($i + 1) + ')') }
+            }
+            if ($ln.StartsWith($q + '_from: ')) {
+                $closed = $false
+                for ($k = $i + 1; $k -lt $lines.Count -and $k -le $i + 16 -and -not $closed; $k++) {
+                    if ($lines[$k] -ceq ($q + '_bound: 1')) { $closed = $true; break }
+                    if ($lines[$k] -match 'l2_m\d+\(' -or $lines[$k] -ceq ($q + '_early: 1')) { break }
+                }
+                if (-not $closed) { return ($q + ': the cell is resolved outside a binding site (line ' + ($i + 1) + ')') }
+            }
+            if ($ln -ceq ($q + '_early: 1')) {
+                $addrs++
+                if ($i -lt 1 -or $lines[$i - 1] -cne ('if: ' + $q + '_bound = 0')) { return ($q + ': the address mark is not guarded by "not bound yet" (line ' + ($i + 1) + ')') }
+                $used = $false
+                for ($k = $i + 1; $k -lt $lines.Count -and -not $used; $k++) {
+                    if ($lines[$k].StartsWith($q + '_from: ') -or $lines[$k] -ceq ($q + '_sticky: 1') -or $lines[$k] -ceq ($q + '_bound: 1')) { return ($q + ': taking the address alone resolves the cell, raises sticky or binds (line ' + ($k + 1) + ')') }
+                    if ($lines[$k] -match '@ l2_p\d+_\d+') { $used = $true }
+                }
+                if (-not $used) { return ($q + ': an address mark with no use of the address after it (line ' + ($i + 1) + ')') }
+            }
+        }
+        if ($addrs -eq 0 -or $binds -eq 0) { return ($q + ': carries the flags but has ' + $addrs + ' address sites and ' + $binds + ' binding sites') }
+    }
+    return ''
+}
 
 Write-Output ('l2_harness on ' + ((git -C $root rev-parse HEAD) -join '').Substring(0, 8) + '; translator ' + $Translator + '; gcc ' + $gcc)
 Write-Output ('l2_harness: evidence ' + $OutDir)
@@ -355,11 +416,15 @@ $fixtures = @(
     # The matrix is mutually discriminating, measured on translator mutants:
     #   A  before-bind, then bind   sticky: A2/A4 are checkpoints that follow NO address-taking call,
     #                               so "raise dirty again after the call returns" fails them too;
-    #   B  never bound              kills "every address-taken parameter is sticky" -- BY A CRASH, not
-    #                               by a check: that program publishes into a cell that was never
-    #                               loaded and dies at the next checkpoint (exit 139).  Only the
-    #                               local can be printed here: a field made by assignment alone
-    #                               cannot be read through node\x by legal L2 today;
+    #   B  never bound              the declaration is at METHOD level (so node\x reads the field) and
+    #                               an early return skips it.  B 5 100 is printed by the never-bound
+    #                               AND by the to-be-bound activation, before the binding line: the
+    #                               graph keeps the 100 written just above through two checkpoints.
+    #                               Kills "an address taken early binds at once" (order respected,
+    #                               no waiting for the binding line): that prints B 5 5 and NOTHING
+    #                               else differs -- this case is its only witness.  (-84; before it
+    #                               the case could print only the local, and the one mutant it
+    #                               killed, it killed by a crash.)
     #   C  bind, then address       kills "sticky if the address was taken at SOME point" (C2, C3);
     #   D  one method, both orders  decided at RUN time, so a verdict from the text alone fails one;
     #   E  declared, then address   the DECLARATION is a binding line too (docs/L2_spec), so an
@@ -367,7 +432,8 @@ $fixtures = @(
     # Before the change the translator printed A2 6 100, A3 9 100, A4 9 200 and D1 6 100.
     [pscustomobject]@{ Name = 'unit_arg_addr_sticky.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
-        Says = @('A1 6 6', 'A2 6 6', 'A3 9 9', 'A4 9 9', 'B 5', 'C1 4 4', 'C2 9 4', 'C3 9 100', 'D1 6 6', 'D0 5 100', 'E 6 100');
+        Says = @('A1 6 6', 'A2 6 6', 'A3 9 9', 'A4 9 9', 'B 5 100', 'B 5 100', 'B+ 6 6', 'B 5 100', 'C1 4 4', 'C2 9 4', 'C3 9 100', 'D1 6 6', 'D0 5 100', 'E 6 100');
+        BindOrder = $true;
         Absent = @();
         Debt = @('int: l2_q0_early 0', 'int: l2_q0_bound 0', 'int: l2_q0_sticky 0',
                  'if: l2_q0_bound = 0',
@@ -380,13 +446,67 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_arg_addr_types.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Says = @('U 51 51', 'Z local 71', 'Z graph 71', 'L local 81', 'L graph 81');
+        BindOrder = $true;
         Absent = @();
         Debt = @('lmx_unsigned_store_known(l2_q0_from[0], l2_p', 'if: l2_q0_dirty != 0 || l2_q0_sticky != 0') },
     [pscustomobject]@{ Name = 'unit_arg_addr_pointer.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Says = @('P local is null');
+        BindOrder = $true;
         Absent = @();
-        Debt = @('lmx_pointer_store_known(l2_q0_from[0], (cast: (@: void) l2_p', 'int: l2_q0_sticky 0') }
+        Debt = @('lmx_pointer_store_known(l2_q0_from[0], (cast: (@: void) l2_p', 'int: l2_q0_sticky 0') },
+    # THE SAME RULE FOR A HIDDEN/DYNAMIC INPUT (FABLE-L2-ARG-ADDRESS-PROOF-20260921-84).  A free name
+    # read before the body's own same-name binding line arrives in a hidden formal, and that line
+    # binds it exactly as it binds a declared formal.  The matrix runs for int and for size_t.
+    # int was SILENTLY WRONG: its storage code doubled as the dynamic code for "not typed yet", so
+    # an int was never passed -- the callee read its own graph field.  Before the change this
+    # program printed IA1 1 1, IA2 1 100, IA3 1 9, IA4 1 200, IB 0 100, IB 100 100, IB+ 101 101,
+    # IB 101 100 and NO IC line at all (the early return saw 0); every Z line was already right.
+    # Debt is the hidden formal itself: `int:` for int_before, and the mixed pair of int_never.
+    [pscustomobject]@{ Name = 'unit_arg_addr_dynamic.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Says = @('IA1 6 6', 'IA2 6 6', 'IA3 9 9', 'IA4 9 9', 'IB 5 100', 'IB 5 100', 'IB+ 6 6', 'IB 5 100', 'IC1 4 4', 'IC2 9 4', 'IC3 9 100',
+                 'ZA1 6 6', 'ZA2 6 6', 'ZA3 9 9', 'ZA4 9 9', 'ZB 5 100', 'ZB 5 100', 'ZB+ 6 6', 'ZB 5 100', 'ZC1 4 4', 'ZC2 9 4', 'ZC3 9 100',
+                 'CALLER 3 3 3 3 3 3');
+        BindOrder = $true;
+        Absent = @();
+        Debt = @('fn: l2_m5 (@: Lmx node; int: l2_p5_0) int',
+                 'fn: l2_m6 (@: Lmx node; int: l2_p6_0; int: l2_p6_1) int',
+                 'fn: l2_m9 (@: Lmx node; int: l2_p9_0; size_t: l2_p9_1) int') },
+    # TYPE IS AN INDEPENDENT AXIS HERE TOO.  Which types could be a dynamic input was five separate
+    # lists (char, size_t).  Before: W -- the translator NEVER FINISHED on a callee reading the
+    # caller's int (the typing fixed point stored "not typed" over "not typed" forever; this row's
+    # old-translator control is a refusal only because the F case is refused first); U, L --
+    # "unresolved name"; F -- "incompatible entry signature", a FORMAL code compared raw with a
+    # dynamic code (34 against 3), the mistake -67 removed from l2_bind_own, alive at a second
+    # site; DP -- "unresolved name".  Debt is each hidden formal spelled with its own type.
+    [pscustomobject]@{ Name = 'unit_arg_addr_dyn_types.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Says = @('W 3', 'U1 6 6', 'U2 6 6', 'L1 6 6', 'L2 6 6', 'F1 6 6', 'F2 6 6', 'DP local is null', 'DP caller keeps its pointer', 'FC 3', 'TC 3 3 3');
+        BindOrder = $true;
+        Absent = @();
+        Debt = @('fn: l2_m4 (@: Lmx node; int: l2_p4_0) int',
+                 'fn: l2_m5 (@: Lmx node; unsigned: l2_p5_0) int',
+                 'fn: l2_m6 (@: Lmx node; ulong: l2_p6_0) int',
+                 'fn: l2_m8 (@: Lmx node; @: int l2_p8_0) int',
+                 'lmx_pointer_store_known(l2_q') },
+    # THE ORDINARY CASES ALONE.  Every address here is taken after the binding line, so every cell
+    # is resolved when it is taken, and the translator that raises sticky at the address site
+    # cannot die here: it prints OC2 9 9, OC3 9 9, OE 6 6, OD2 9 9, OD3 9 9 (measured).  Next to a
+    # before-bind or never-bound activation the same translator dies (exit 139) and the death
+    # hides these lines -- which is why they have a program of their own.
+    [pscustomobject]@{ Name = 'unit_arg_addr_ordinary.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Says = @('OC1 4 4', 'OC2 9 4', 'OC3 9 100', 'OE 6 100', 'OD1 4 4', 'OD2 9 4', 'OD3 9 100');
+        BindOrder = $true;
+        Absent = @();
+        Debt = @('fn: l2_m6 (@: Lmx node; size_t: l2_p6_0) int') },
+    # THE ONE BOUNDARY.  A dynamic input whose SOURCE exists but has no value cell (the caller's
+    # const LmP0Text formal) is refused at the caller, by name.  Before, the same program was an
+    # "unresolved name" at the callee -- as if nobody had supplied it -- and that is what the
+    # pre-change translator still says, so this row fails on it.
+    [pscustomobject]@{ Name = 'unit_arg_addr_dyn_nocell.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'dynamic input type has no value cell'; Absent = @(); Debt = @() }
 )
 
 foreach ($fx in $fixtures) {
@@ -399,7 +519,9 @@ foreach ($fx in $fixtures) {
 
     if ($fx.Expect -eq 'l2trans-refuses') {
         if ($made) { Add-Row 'FAIL' ('fixture:' + $stem) 'l2trans ACCEPTED a fixture that must be refused'; continue }
-        if ((Log-Text $label) -notmatch [regex]::Escape($fx.Needle)) { Add-Row 'FAIL' ('fixture:' + $stem) ('refused, but not with "' + $fx.Needle + '"'); continue }
+        # The log is matched with its line breaks removed: Windows PowerShell wraps a native stderr
+        # line at the console width, and a long fixture path pushes the message across the break.
+        if (((Log-Text $label) -replace "`r?`n", '') -notmatch [regex]::Escape($fx.Needle)) { Add-Row 'FAIL' ('fixture:' + $stem) ('refused, but not with "' + $fx.Needle + '"'); continue }
         Add-Row 'OK' ('fixture:' + $stem) ('refused as expected: ' + $fx.Needle); continue
     }
     if (-not $made) { Add-Row 'FAIL' ('fixture:' + $stem) 'l2trans produced no L1; see the log'; continue }
@@ -432,6 +554,11 @@ foreach ($fx in $fixtures) {
         foreach ($d in $fx.Debt) {
             if ($why -eq '' -and $l1 -notmatch [regex]::Escape($d)) { $why = 'the generated L1 lacks "' + $d + '"' }
         }
+        # `BindOrder`: the emitter-order assertion of the sticky rule, on the text (Test-BindOrder).
+        if ($why -eq '' -and $fx.PSObject.Properties['BindOrder'] -and $fx.BindOrder) {
+            $order = Test-BindOrder $l1
+            if ($order -ne '') { $why = 'binding order in the generated L1: ' + $order }
+        }
         if ($why -ne '') { Add-Row 'FAIL' ('fixture:' + $stem) $why; continue }
         if (-not $driver) { Add-Row 'FAIL' ('fixture:' + $stem) 'the driver did not build, so the program cannot be run'; continue }
         $genO = Join-Path $gen ($stem + '.o')
@@ -460,6 +587,7 @@ foreach ($fx in $fixtures) {
         $what = ', retained in R0, survives a collection ('
         if ($fx.Args[0] -eq '0') { $what = ', no eternal branch: compiled unchanged, linked to the kernel closure, ran to its one close (' }
         if ($fx.PSObject.Properties['Says'] -and $fx.Says) { $what = ', said its ' + $fx.Says.Count + ' lines exactly (' }
+        if ($fx.PSObject.Properties['BindOrder'] -and $fx.BindOrder) { $what = $what + 'binding order asserted in the text, ' }
         Add-Row 'OK' ('fixture:' + $stem) (($said -replace '^l2_eternal_driver: ', '') + $what + $fx.Debt.Count + ' required, ' + $fx.Absent.Count + ' forbidden in the text)'); continue
     }
 

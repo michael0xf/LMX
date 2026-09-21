@@ -50,20 +50,28 @@ fn: before_bind (int: na) int
     return: 0
 end: before_bind
 
-# B. NEVER BOUND: the only binding line sits under a false condition and never executes, so the
-#    parameter stayed a plain local -- the callee's write is seen, nothing is published, and the
-#    checkpoints that follow have nothing to do.  Only the LOCAL can be printed: a field made by
-#    assignment alone cannot be read through `node\x` by legal L2 today (a separate limit, reported
-#    with this fixture), and a declared field would be bound by its declaration.  What this case
-#    pins is that such an activation RUNS: a translator that made every address-taken parameter
-#    sticky publishes here into a cell that was never loaded, and the program dies at `nop()`.
+# B. NEVER BOUND, and now SEEN (FABLE-L2-ARG-ADDRESS-PROOF-20260921-84).  The declaration stays at
+#    METHOD level, so `node\nb` can read the field -- a field declared inside an `if` body lives in
+#    that body's Structure and no path reaches it -- and an early `return` skips it, so with go = 0
+#    its line never executes.  The first line is printed by BOTH activations, before the binding
+#    line: nothing a parameter holds before that line is ever published, so the graph keeps the
+#    100 written just above through two checkpoints while the local already holds the callee's 5.
+#    "Taking the address makes the input publish from then on" prints B 5 5 here.  With go = 1 the
+#    binding line then runs with the address already taken: sticky, B+ 6 6.  The third call is a
+#    never-bound activation AFTER a sticky one: the state belongs to the activation, not the method.
 fn: never_bound (int: nb; int: go) int
     poke5(@: nb)
-    if: go != 0
-        nb: nb + 1
+    node\nb: 100
     nop()
     nop()
-    c.printf: "B %d\n" nb
+    c.printf: "B %d %d\n" nb node\nb
+    if: go = 0
+        return: 0
+    int: nb
+    nb: nb + 1
+    node\nb: 200
+    nop()
+    c.printf: "B+ %d %d\n" nb node\nb
     return: 0
 end: never_bound
 
@@ -113,6 +121,8 @@ end: decl_binds
 
 fn: main () int
     before_bind(3)
+    never_bound(3, 0)
+    never_bound(3, 1)
     never_bound(3, 0)
     after_bind(3)
     either(3, 1)

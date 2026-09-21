@@ -316,6 +316,12 @@ prototype:
     fn: l2_dyn_find (int: mi; const: @(LmP0Text t)) int
     fn: l2_bind_own (int: mi; int: oi; const: @(char path); const: @(LmP0Node at)) int
     fn: l2_own_ty_of_param (int: ft) int
+    fn: l2_ft_of_own (int: oty) int
+    fn: l2_dt_of_own (int: oty) int
+    fn: l2_own_of_dt (int: dt) int
+    fn: l2_dt_of_source (int: oty; const: @(char path); const: @(LmP0Node at); @: int dt) int
+    fn: l2_emit_cell_load (int: oty; const: @(char ind); int: t; const: @(LmP0Node at)) int
+    fn: l2_emit_formal (int: ft; int: mi; int: idx) int
     fn: l2_own_store_helper (int: ty) @: char
     fn: l2_own_store_rebinds (int: ty) int
     fn: l2_own_store_value (int: ty; const: @(char local); @: char dest) int
@@ -5259,8 +5265,8 @@ fn: l2_param_ty (int: mi; const: @(LmP0Text t)) int
     if: fi >= 0
         return: l2_ft(mi, fi)
     di: l2_dyn_find(mi, t)
-    if: di >= 0
-        return: l2_dt(mi, di)
+    if: di >= 0 && l2_dt(mi, di) != 0
+        return: l2_ft_of_own(l2_own_of_dt(l2_dt(mi, di)))
 return: 0
 
 fn: l2_is_asgn (const: @(LmP0Node stmt)) int
@@ -5296,6 +5302,45 @@ fn: l2_own_ty_of_param (int: ft) int
     if: ft = 0 || ft = 1 || ft = 2 || ft = 36
         return: ft
 return: -1
+
+# The inverse: the FORMAL code of an own storage code.
+fn: l2_ft_of_own (int: oty) int
+    if: oty = 3
+        return: 34
+    if: oty >= 1000 && oty < 2000
+        return: oty - 1000
+return: oty
+
+# THE TYPE CODE OF A HIDDEN/DYNAMIC INPUT (FABLE-L2-ARG-ADDRESS-PROOF-20260921-84).  It used to be the
+# own storage code itself with 0 for "not typed yet" -- and int's storage code IS 0.  So an int
+# could not be a dynamic input at all: a callee reading the caller's int never got it, and the
+# typing fixed point never ended (it stored 0 over 0 and reported a change on every pass).
+# Around that hole five separate lists named the types that did work, char and size_t, and one
+# of them compared a FORMAL code with this code raw -- the two-number-spaces mistake once more.
+# Now the code is the own storage code PLUS ONE and 0 alone is "not typed yet".  These two
+# functions are the only place that knows it; nothing else adds or subtracts one.  Eligibility
+# is the question the publication descriptor already answers: is there a value cell.
+fn: l2_dt_of_own (int: oty) int
+    if: oty < 0 || l2_own_store_helper(oty) = 0
+        return: 0
+return: oty + 1
+
+fn: l2_own_of_dt (int: dt) int
+    if: dt <= 0
+        return: -1
+return: dt - 1
+
+# THE ONE BOUNDARY where a type that cannot travel as a dynamic input is refused.  A SOURCE was
+# found -- the caller's own field or formal, or the body's own same-name field -- and its type
+# has no value cell.  That is said here, by name; it must not surface later as a free name
+# nobody could resolve, and never as a formal the signature quietly lacks.
+fn: l2_dt_of_source (int: oty; const: @(char path); const: @(LmP0Node at); @: int dt) int
+    if: dt = 0
+        return: 1
+    \dt: l2_dt_of_own(oty)
+    if: \dt = 0
+        return: l2_error(path, at, "dynamic input type has no value cell")
+return: 0
 
 # The name of parameter k of method mi: a declared formal, or a hidden/dynamic input after them.
 fn: l2_param_name (int: mi; int: k) @: LmP0Text
@@ -5541,6 +5586,7 @@ return: 0
 
 fn: l2_bind_own (int: mi; int: oi; const: @(char path); const: @(LmP0Node at)) int
     int: fi 0
+    int: sdt 0
     if: mi < 0 || oi < 0
         return: 0
     while: fi < l2_m_arity[mi]
@@ -5554,9 +5600,11 @@ fn: l2_bind_own (int: mi; int: oi; const: @(char path); const: @(LmP0Node at)) i
     fi: 0
     while: fi < l2_m_dyn[mi]
         if: l2_text_same(l2_dn(mi, fi), l2_own_name[oi])
-            if: l2_dt(mi, fi) != 0 && l2_dt(mi, fi) != l2_own_ty[oi]
+            if: l2_dt_of_source(l2_own_ty[oi], path, at, @ sdt) != 0
+                return: 1
+            if: l2_dt(mi, fi) != 0 && l2_dt(mi, fi) != sdt
                 return: l2_error(path, at, "incompatible entry signature")
-            if: l2_dt_set(mi, fi, l2_own_ty[oi]) != 0
+            if: l2_dt_set(mi, fi, sdt) != 0
                 return: 1
             l2_m_alias[l2_own_off(mi, oi)]: l2_m_arity[mi] + fi
         fi: fi + 1
@@ -5797,9 +5845,9 @@ fn: l2_scan_ident (int: mi; const: @(LmP0Text t); @: int seen) int
             l2_m_own[mi]: l2_m_own[mi] + 1
         l2_m_uses[l2_own_off(mi, oi)]: 1
         return: 0
-    if: oi >= 0 && l2_m_uses[l2_own_off(mi, oi)] != 0 && (l2_own_ty[oi] = 1 || l2_own_ty[oi] = 2 || l2_own_ty[oi] = 3 || l2_own_ty[oi] = 36) && (seen = 0 || seen[oi] = 0)
+    if: oi >= 0 && l2_m_uses[l2_own_off(mi, oi)] != 0 && l2_dt_of_own(l2_own_ty[oi]) != 0 && (seen = 0 || seen[oi] = 0)
         l2_m_pre[l2_own_off(mi, oi)]: 1
-        ty: l2_own_ty[oi]
+        ty: l2_dt_of_own(l2_own_ty[oi])
         return: l2_dyn_add(mi, t, ty)
     if: oi >= 0 && l2_m_uses[l2_own_off(mi, oi)] != 0
         return: 0
@@ -5984,6 +6032,13 @@ fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
             if: l2_scope_push(stmt) != 0
                 return: 1
             last: l2_next_active(stmt\as\frame\body\first_field)
+            # The init of a C-style for DECLARES its counter and runs before everything else in the
+            # loop: from here on the counter is bound, not a name read before its binding line.
+            if: last != 0 && last\value != 0 && l2_own_decl_name(last\value) != 0
+                oi: l2_own_find(mi, l2_own_decl_name(last\value))
+                if: oi >= 0 && seen != 0
+                    seen[oi]: 1
+            ---
             if: last != 0 && last\value != 0 && last\value\as != 0 && last\value\as\frame != 0 && last\value\as\frame\body != 0 && l2_scan_fields(last\value\as\frame\body\first_field, l2_count_active(last\value\as\frame\body), mi, seen) != 0
                 l2_scope_pop()
                 return: 1
@@ -6070,7 +6125,7 @@ fn: l2_dyn_local (const: @(char path)) int
             return: l2_alloc_or(path, l2_m_node[i], "unsupported body")
         oi: 0
         while: oi < l2_own_n
-            if: l2_m_uses[l2_own_off(i, oi)] != 0 && l2_m_pre[l2_own_off(i, oi)] != 0 && l2_dyn_add(i, l2_own_name[oi], l2_own_ty[oi]) != 0
+            if: l2_m_uses[l2_own_off(i, oi)] != 0 && l2_m_pre[l2_own_off(i, oi)] != 0 && l2_dyn_add(i, l2_own_name[oi], l2_dt_of_own(l2_own_ty[oi])) != 0
                 if: heap != 0
                     l2_xfree((cast: (@: void) seen))
                 return: l2_alloc_or(path, l2_m_node[i], "unsupported body")
@@ -6091,6 +6146,7 @@ fn: l2_dyn_step (const: @(char path); @: int changed) int
     int: src
     int: ty
     int: before
+    int: sdt
     @: LmP0Text nm
     while: m < l2_m_n
         cidx: 0
@@ -6102,9 +6158,12 @@ fn: l2_dyn_step (const: @(char path); @: int changed) int
                 src: l2_param_find(m, nm)
                 if: src < 0
                     src: l2_own_find(m, nm)
-                if: src >= 0 && l2_param_find(m, nm) < 0 && l2_m_uses[l2_own_off(m, src)] != 0 && ty != 0 && l2_own_ty[src] != ty
+                sdt: 0
+                if: src >= 0 && l2_param_find(m, nm) < 0 && l2_m_uses[l2_own_off(m, src)] != 0 && l2_dt_of_source(l2_own_ty[src], path, l2_m_node[m], @ sdt) != 0
+                    return: 1
+                if: src >= 0 && l2_param_find(m, nm) < 0 && l2_m_uses[l2_own_off(m, src)] != 0 && ty != 0 && sdt != ty
                     return: l2_error(path, l2_m_node[m], "incompatible entry signature")
-                if: src >= 0 && l2_param_find(m, nm) < 0 && l2_m_uses[l2_own_off(m, src)] != 0 && ty = 0 && l2_dt_set(cidx, k, l2_own_ty[src]) != 0
+                if: src >= 0 && l2_param_find(m, nm) < 0 && l2_m_uses[l2_own_off(m, src)] != 0 && ty = 0 && l2_dt_set(cidx, k, sdt) != 0
                     return: 1
                 if: src >= 0 && l2_param_find(m, nm) < 0 && l2_m_uses[l2_own_off(m, src)] != 0 && ty = 0
                     \changed: 1
@@ -6114,11 +6173,14 @@ fn: l2_dyn_step (const: @(char path); @: int changed) int
                 if: l2_m_dyn[m] != before
                     \changed: 1
                 src: l2_param_find(m, nm)
-                if: src >= 0 && src < l2_m_arity[m] && ty != 0 && l2_ft(m, src) != ty
-                    return: l2_error(path, l2_m_node[m], "incompatible entry signature")
-                if: src >= 0 && src < l2_m_arity[m] && ty = 0 && (l2_ft(m, src) = 1 || l2_ft(m, src) = 2) && l2_dt_set(cidx, k, l2_ft(m, src)) != 0
+                # A formal code is never compared with a dynamic code raw: both go through the cell.
+                if: src >= 0 && src < l2_m_arity[m] && l2_dt_of_source(l2_own_ty_of_param(l2_ft(m, src)), path, l2_m_node[m], @ sdt) != 0
                     return: 1
-                if: src >= 0 && src < l2_m_arity[m] && ty = 0 && (l2_ft(m, src) = 1 || l2_ft(m, src) = 2)
+                if: src >= 0 && src < l2_m_arity[m] && ty != 0 && sdt != ty
+                    return: l2_error(path, l2_m_node[m], "incompatible entry signature")
+                if: src >= 0 && src < l2_m_arity[m] && ty = 0 && l2_dt_set(cidx, k, sdt) != 0
+                    return: 1
+                if: src >= 0 && src < l2_m_arity[m] && ty = 0
                     \changed: 1
                 if: src >= l2_m_arity[m] && ty != 0 && l2_dt(m, src - l2_m_arity[m]) != 0 && l2_dt(m, src - l2_m_arity[m]) != ty
                     return: l2_error(path, l2_m_node[m], "incompatible entry signature")
@@ -6141,7 +6203,7 @@ fn: l2_dyn_typed (const: @(char path)) int
     while: m < l2_m_n
         k: 0
         while: k < l2_m_dyn[m]
-            if: l2_dt(m, k) != 1 && l2_dt(m, k) != 2
+            if: l2_dt(m, k) = 0
                 if: l2_dn(m, k) != 0
                     c.fprintf(l1_stderr(), "l2trans detail: unresolved dynamic=%.*s\n", (cast: (int) l2_dn(m, k)\length), l2_dn(m, k)\data)
                 return: l2_error(path, l2_m_node[m], "unresolved name")
@@ -10670,6 +10732,29 @@ fn: l2_cat (@: char dest; const: @(char src)) int
     memcpy(dest + nd, src, ns + 1U)
 return: 0
 
+# Declare temp t with the type of own storage code oty and load the value cell l2_xp[0] into it.
+# One emission for every reader of a value cell; a type without one is refused here, by name.
+fn: l2_emit_cell_load (int: oty; const: @(char ind); int: t; const: @(LmP0Node at)) int
+    if: ind = 0
+        return: 1
+    if: l2_own_store_helper(oty) = 0
+        return: l2_error(l2_src, at, "type has no value cell to load from")
+    if: oty = 0 && c.fprintf(l2_out, "%sint: l2_t%d\n%sl2_t%d: lmx_int_value_known(l2_xp[0])\n", ind, t, ind, t) < 0
+        return: 1
+    if: oty = 1 && c.fprintf(l2_out, "%schar: l2_t%d\n%sl2_t%d: (cast: (char) lmx_char_value_known(l2_xp[0]))\n", ind, t, ind, t) < 0
+        return: 1
+    if: oty = 2 && c.fprintf(l2_out, "%ssize_t: l2_t%d\n%sl2_t%d: lmx_size_value_known(l2_xp[0])\n", ind, t, ind, t) < 0
+        return: 1
+    if: oty = 3 && c.fprintf(l2_out, "%sunsigned: l2_t%d\n%sl2_t%d: lmx_unsigned_value_known(l2_xp[0])\n", ind, t, ind, t) < 0
+        return: 1
+    if: oty = 36 && c.fprintf(l2_out, "%sulong: l2_t%d\n%sl2_t%d: lmx_ulong_value_known(l2_xp[0])\n", ind, t, ind, t) < 0
+        return: 1
+    if: l2_own_is_pointer(oty) != 0
+        if: fputs(ind, l2_out) < 0 || l2_emit_own_pointer_type(l2_out, oty) != 0 || c.fprintf(l2_out, " l2_t%d\n%sl2_t%d: (cast: (", t, ind, t) < 0 || l2_emit_own_pointer_type(l2_out, oty) != 0 || fputs(") lmx_pointer_value_known(l2_xp[0]))\n", l2_out) < 0
+            return: 1
+    ---
+return: 0
+
 fn: l2_hidden_from (int: mi; int: callee; int: k; const: @(char ind); @: char dest) int
     @: LmP0Text nm
     int: ty
@@ -10724,9 +10809,7 @@ fn: l2_hidden_from (int: mi; int: callee; int: k; const: @(char ind); @: char de
         return: 1
     t: l2_tn
     l2_tn: l2_tn + 1
-    if: ty = 1 && c.fprintf(l2_out, "%schar: l2_t%d\n%sl2_t%d: (cast: (char) lmx_char_value_known(l2_xp[0]))\n", ind, t, ind, t) < 0
-        return: 1
-    if: ty = 2 && c.fprintf(l2_out, "%ssize_t: l2_t%d\n%sl2_t%d: lmx_size_value_known(l2_xp[0])\n", ind, t, ind, t) < 0
+    if: l2_emit_cell_load(l2_own_of_dt(ty), ind, t, 0) != 0
         return: 1
     if: c.sprintf(dest, "l2_t%d", t) < 0
         return: 1
@@ -11109,20 +11192,8 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
                 l2_tn: l2_tn + 1
                 if: c.fprintf(l2_out, "%sl2_xp: lmx_arena_ref_cell(unit, %uU)\n%sif: l2_xp = 0\n%s    return: 0\n", ind, (cast: (unsigned) l2_own_uchild[idx]), ind, ind) < 0
                     return: 1
-                if: l2_own_ty[idx] = 0 && c.fprintf(l2_out, "%sint: l2_t%d\n%sl2_t%d: lmx_int_value_known(l2_xp[0])\n", ind, t, ind, t) < 0
+                if: l2_emit_cell_load(l2_own_ty[idx], ind, t, node) != 0
                     return: 1
-                if: l2_own_ty[idx] = 1 && c.fprintf(l2_out, "%schar: l2_t%d\n%sl2_t%d: (cast: (char) lmx_char_value_known(l2_xp[0]))\n", ind, t, ind, t) < 0
-                    return: 1
-                if: l2_own_ty[idx] = 2 && c.fprintf(l2_out, "%ssize_t: l2_t%d\n%sl2_t%d: lmx_size_value_known(l2_xp[0])\n", ind, t, ind, t) < 0
-                    return: 1
-                if: l2_own_ty[idx] = 3 && c.fprintf(l2_out, "%sunsigned: l2_t%d\n%sl2_t%d: lmx_unsigned_value_known(l2_xp[0])\n", ind, t, ind, t) < 0
-                    return: 1
-                if: l2_own_ty[idx] = 36 && c.fprintf(l2_out, "%sulong: l2_t%d\n%sl2_t%d: lmx_ulong_value_known(l2_xp[0])\n", ind, t, ind, t) < 0
-                    return: 1
-                if: l2_own_is_pointer(l2_own_ty[idx]) != 0
-                    if: fputs(ind, l2_out) < 0 || l2_emit_own_pointer_type(l2_out, l2_own_ty[idx]) != 0 || c.fprintf(l2_out, " l2_t%d\n%sl2_t%d: (cast: (", t, ind, t) < 0 || l2_emit_own_pointer_type(l2_out, l2_own_ty[idx]) != 0 || fputs(") lmx_pointer_value_known(l2_xp[0]))\n", l2_out) < 0
-                        return: 1
-                ---
                 return: l2_tok_temp(t, dest)
             ---
         return: l2_tok_text(node\as\atom, dest, 256U)
@@ -11846,84 +11917,94 @@ fn: l2_eval_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
         ---
 return: 0
 
+# One formal of a generated signature: its FORMAL type code, the method, and its position among
+# the method's parameters (declared formals first, hidden/dynamic inputs after them).
+fn: l2_emit_formal (int: ft; int: mi; int: idx) int
+    if: ft = 0 && c.fprintf(l2_out, "; int: l2_p%d_%d", mi, idx) < 0
+        return: 1
+    if: ft = 1 && c.fprintf(l2_out, "; char: l2_p%d_%d", mi, idx) < 0
+        return: 1
+    if: ft = 2 && c.fprintf(l2_out, "; size_t: l2_p%d_%d", mi, idx) < 0
+        return: 1
+    if: ft = 34 && c.fprintf(l2_out, "; unsigned: l2_p%d_%d", mi, idx) < 0
+        return: 1
+    if: ft = 36 && c.fprintf(l2_out, "; ulong: l2_p%d_%d", mi, idx) < 0
+        return: 1
+    if: ft = 3 && c.fprintf(l2_out, "; const: @(char l2_p%d_%d)", mi, idx) < 0
+        return: 1
+    if: ft = 4 && c.fprintf(l2_out, "; const: @(LmP0Text l2_p%d_%d)", mi, idx) < 0
+        return: 1
+    if: ft = 5 && c.fprintf(l2_out, "; @: LmP0Text l2_p%d_%d", mi, idx) < 0
+        return: 1
+    if: ft = 6 && c.fprintf(l2_out, "; const: @(L2ImmutQuery l2_p%d_%d)", mi, idx) < 0
+        return: 1
+    if: ft = 7 && c.fprintf(l2_out, "; @: L2ImmutQuery l2_p%d_%d", mi, idx) < 0
+        return: 1
+    if: ft = 9 && c.fprintf(l2_out, "; @: size_t l2_p%d_%d", mi, idx) < 0
+        return: 1
+    if: ft = 10 && c.fprintf(l2_out, "; LmP0TrailerRole: l2_p%d_%d", mi, idx) < 0
+        return: 1
+    if: ft = 11 && c.fprintf(l2_out, "; @: int l2_p%d_%d", mi, idx) < 0
+        return: 1
+    if: ft = 12 && c.fprintf(l2_out, "; @: char l2_p%d_%d", mi, idx) < 0
+        return: 1
+    if: ft = 13 && c.fprintf(l2_out, "; @: LmP0Document l2_p%d_%d", mi, idx) < 0
+        return: 1
+    if: ft = 14 && c.fprintf(l2_out, "; @: LmP0IndentStack l2_p%d_%d", mi, idx) < 0
+        return: 1
+    if: ft = 15 && c.fprintf(l2_out, "; const: @(LmP0IndentStack l2_p%d_%d)", mi, idx) < 0
+        return: 1
+    if: ft = 16 && c.fprintf(l2_out, "; @: void l2_p%d_%d", mi, idx) < 0
+        return: 1
+    if: ft = 17 && c.fprintf(l2_out, "; @@: char l2_p%d_%d", mi, idx) < 0
+        return: 1
+    if: ft = 18 && c.fprintf(l2_out, "; @@: void l2_p%d_%d", mi, idx) < 0
+        return: 1
+    if: ft = 19 && c.fprintf(l2_out, "; @@: int l2_p%d_%d", mi, idx) < 0
+        return: 1
+    if: ft = 24 && c.fprintf(l2_out, "; @@: unsigned l2_p%d_%d", mi, idx) < 0
+        return: 1
+    if: ft = 39 && c.fprintf(l2_out, "; @@: ulong l2_p%d_%d", mi, idx) < 0
+        return: 1
+    if: ft = 26 && c.fprintf(l2_out, "; @@: LmxArenaBlock l2_p%d_%d", mi, idx) < 0
+        return: 1
+    if: ft = 28 && c.fprintf(l2_out, "; @: LmxRoot l2_p%d_%d)", mi, idx) < 0
+        return: 1
+    if: ft = 29 && c.fprintf(l2_out, "; const: @(LmxMsg l2_p%d_%d)", mi, idx) < 0
+        return: 1
+    if: ft = 30 && c.fprintf(l2_out, "; const: @(unsigned l2_p%d_%d)", mi, idx) < 0
+        return: 1
+    if: ft = 31 && c.fprintf(l2_out, "; @@: unsigned l2_p%d_%d", mi, idx) < 0
+        return: 1
+    if: ft = 27 && c.fprintf(l2_out, "; @@: LmxOwnedRange l2_p%d_%d", mi, idx) < 0
+        return: 1
+    if: ft = 25 && c.fprintf(l2_out, "; @: unsigned l2_p%d_%d", mi, idx) < 0
+        return: 1
+    if: ft = 38 && c.fprintf(l2_out, "; @: ulong l2_p%d_%d", mi, idx) < 0
+        return: 1
+    if: ft = 20 && c.fprintf(l2_out, "; @@: size_t l2_p%d_%d", mi, idx) < 0
+        return: 1
+    if: ft >= 100 && l2_emit_foreign_formal(l2_out, ft, mi, idx) != 0
+        return: 1
+return: 0
+
 fn: l2_emit_sig (int: mi) int
     int: j 0
+    long: mark
     if: fputs(" (@: Lmx node", l2_out) < 0
         return: 1
     while: j < l2_m_arity[mi]
-        if: l2_ft(mi, j) = 0 && c.fprintf(l2_out, "; int: l2_p%d_%d", mi, j) < 0
-            return: 1
-        if: l2_ft(mi, j) = 1 && c.fprintf(l2_out, "; char: l2_p%d_%d", mi, j) < 0
-            return: 1
-        if: l2_ft(mi, j) = 2 && c.fprintf(l2_out, "; size_t: l2_p%d_%d", mi, j) < 0
-            return: 1
-        if: l2_ft(mi, j) = 34 && c.fprintf(l2_out, "; unsigned: l2_p%d_%d", mi, j) < 0
-            return: 1
-        if: l2_ft(mi, j) = 36 && c.fprintf(l2_out, "; ulong: l2_p%d_%d", mi, j) < 0
-            return: 1
-        if: l2_ft(mi, j) = 3 && c.fprintf(l2_out, "; const: @(char l2_p%d_%d)", mi, j) < 0
-            return: 1
-        if: l2_ft(mi, j) = 4 && c.fprintf(l2_out, "; const: @(LmP0Text l2_p%d_%d)", mi, j) < 0
-            return: 1
-        if: l2_ft(mi, j) = 5 && c.fprintf(l2_out, "; @: LmP0Text l2_p%d_%d", mi, j) < 0
-            return: 1
-        if: l2_ft(mi, j) = 6 && c.fprintf(l2_out, "; const: @(L2ImmutQuery l2_p%d_%d)", mi, j) < 0
-            return: 1
-        if: l2_ft(mi, j) = 7 && c.fprintf(l2_out, "; @: L2ImmutQuery l2_p%d_%d", mi, j) < 0
-            return: 1
-        if: l2_ft(mi, j) = 9 && c.fprintf(l2_out, "; @: size_t l2_p%d_%d", mi, j) < 0
-            return: 1
-        if: l2_ft(mi, j) = 10 && c.fprintf(l2_out, "; LmP0TrailerRole: l2_p%d_%d", mi, j) < 0
-            return: 1
-        if: l2_ft(mi, j) = 11 && c.fprintf(l2_out, "; @: int l2_p%d_%d", mi, j) < 0
-            return: 1
-        if: l2_ft(mi, j) = 12 && c.fprintf(l2_out, "; @: char l2_p%d_%d", mi, j) < 0
-            return: 1
-        if: l2_ft(mi, j) = 13 && c.fprintf(l2_out, "; @: LmP0Document l2_p%d_%d", mi, j) < 0
-            return: 1
-        if: l2_ft(mi, j) = 14 && c.fprintf(l2_out, "; @: LmP0IndentStack l2_p%d_%d", mi, j) < 0
-            return: 1
-        if: l2_ft(mi, j) = 15 && c.fprintf(l2_out, "; const: @(LmP0IndentStack l2_p%d_%d)", mi, j) < 0
-            return: 1
-        if: l2_ft(mi, j) = 16 && c.fprintf(l2_out, "; @: void l2_p%d_%d", mi, j) < 0
-            return: 1
-        if: l2_ft(mi, j) = 17 && c.fprintf(l2_out, "; @@: char l2_p%d_%d", mi, j) < 0
-            return: 1
-        if: l2_ft(mi, j) = 18 && c.fprintf(l2_out, "; @@: void l2_p%d_%d", mi, j) < 0
-            return: 1
-        if: l2_ft(mi, j) = 19 && c.fprintf(l2_out, "; @@: int l2_p%d_%d", mi, j) < 0
-            return: 1
-        if: l2_ft(mi, j) = 24 && c.fprintf(l2_out, "; @@: unsigned l2_p%d_%d", mi, j) < 0
-            return: 1
-        if: l2_ft(mi, j) = 39 && c.fprintf(l2_out, "; @@: ulong l2_p%d_%d", mi, j) < 0
-            return: 1
-        if: l2_ft(mi, j) = 26 && c.fprintf(l2_out, "; @@: LmxArenaBlock l2_p%d_%d", mi, j) < 0
-            return: 1
-        if: l2_ft(mi, j) = 28 && c.fprintf(l2_out, "; @: LmxRoot l2_p%d_%d)", mi, j) < 0
-            return: 1
-        if: l2_ft(mi, j) = 29 && c.fprintf(l2_out, "; const: @(LmxMsg l2_p%d_%d)", mi, j) < 0
-            return: 1
-        if: l2_ft(mi, j) = 30 && c.fprintf(l2_out, "; const: @(unsigned l2_p%d_%d)", mi, j) < 0
-            return: 1
-        if: l2_ft(mi, j) = 31 && c.fprintf(l2_out, "; @@: unsigned l2_p%d_%d", mi, j) < 0
-            return: 1
-        if: l2_ft(mi, j) = 27 && c.fprintf(l2_out, "; @@: LmxOwnedRange l2_p%d_%d", mi, j) < 0
-            return: 1
-        if: l2_ft(mi, j) = 25 && c.fprintf(l2_out, "; @: unsigned l2_p%d_%d", mi, j) < 0
-            return: 1
-        if: l2_ft(mi, j) = 38 && c.fprintf(l2_out, "; @: ulong l2_p%d_%d", mi, j) < 0
-            return: 1
-        if: l2_ft(mi, j) = 20 && c.fprintf(l2_out, "; @@: size_t l2_p%d_%d", mi, j) < 0
-            return: 1
-        if: l2_ft(mi, j) >= 100 && l2_emit_foreign_formal(l2_out, l2_ft(mi, j), mi, j) != 0
+        if: l2_emit_formal(l2_ft(mi, j), mi, j) != 0
             return: 1
         j: j + 1
     j: 0
     while: j < l2_m_dyn[mi]
-        if: l2_dt(mi, j) = 1 && c.fprintf(l2_out, "; char: l2_p%d_%d", mi, l2_m_arity[mi] + j) < 0
+        # A hidden formal that spells nothing is a signature that quietly lacks a parameter.
+        mark: c.ftell(l2_out)
+        if: l2_emit_formal(l2_ft_of_own(l2_own_of_dt(l2_dt(mi, j))), mi, l2_m_arity[mi] + j) != 0
             return: 1
-        if: l2_dt(mi, j) = 2 && c.fprintf(l2_out, "; size_t: l2_p%d_%d", mi, l2_m_arity[mi] + j) < 0
-            return: 1
+        if: c.ftell(l2_out) = mark
+            return: l2_error(l2_src, l2_m_node[mi], "dynamic input type has no formal spelling")
         j: j + 1
     # `merge:` contributes the executing Message to the existing dynamic-input
     # group. Call-graph closure marks every method that must forward it. Its
@@ -12330,20 +12411,8 @@ fn: l2_emit_path_load (int: mi; int: oi; const: @(char ind); @: char dest) int
         return: 1
     t: l2_tn
     l2_tn: l2_tn + 1
-    if: l2_own_ty[oi] = 0 && c.fprintf(l2_out, "%sint: l2_t%d\n%sl2_t%d: lmx_int_value_known(l2_xp[0])\n", ind, t, ind, t) < 0
+    if: l2_emit_cell_load(l2_own_ty[oi], ind, t, l2_own_decl[oi]) != 0
         return: 1
-    if: l2_own_ty[oi] = 1 && c.fprintf(l2_out, "%schar: l2_t%d\n%sl2_t%d: (cast: (char) lmx_char_value_known(l2_xp[0]))\n", ind, t, ind, t) < 0
-        return: 1
-    if: l2_own_ty[oi] = 2 && c.fprintf(l2_out, "%ssize_t: l2_t%d\n%sl2_t%d: lmx_size_value_known(l2_xp[0])\n", ind, t, ind, t) < 0
-        return: 1
-    if: l2_own_ty[oi] = 3 && c.fprintf(l2_out, "%sunsigned: l2_t%d\n%sl2_t%d: lmx_unsigned_value_known(l2_xp[0])\n", ind, t, ind, t) < 0
-        return: 1
-    if: l2_own_ty[oi] = 36 && c.fprintf(l2_out, "%sulong: l2_t%d\n%sl2_t%d: lmx_ulong_value_known(l2_xp[0])\n", ind, t, ind, t) < 0
-        return: 1
-    if: l2_own_is_pointer(l2_own_ty[oi]) != 0
-        if: fputs(ind, l2_out) < 0 || l2_emit_own_pointer_type(l2_out, l2_own_ty[oi]) != 0 || c.fprintf(l2_out, " l2_t%d\n%sl2_t%d: (cast: (", t, ind, t) < 0 || l2_emit_own_pointer_type(l2_out, l2_own_ty[oi]) != 0 || fputs(") lmx_pointer_value_known(l2_xp[0]))\n", l2_out) < 0
-            return: 1
-    ---
     if: c.sprintf(dest, "l2_t%d", t) < 0
         return: 1
 return: 0

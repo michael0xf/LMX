@@ -109,6 +109,19 @@ fn: main () int
     memset((cast: (@: void) (@ live_arena)), 0, c.sizeof(c.LmxArena))
     # By-value records are cleared before they are opened, exactly as an arena is: the service
     # refuses a handle that already holds entries, and a stack local holds garbage.
+    # THE FOUR SCHEDULE RECORDS ARE POISONED, AND THAT IS DELIBERATE RATHER THAN A CLEAR (poisoned
+    # 2026-09-21; a static inventory found them passed to `st_object` uninitialised).  They arrive at
+    # `lmx_thread_attach` holding 0xAA and are `lmx_schedule_init`-ed only AFTER the attach, two lines
+    # later: the kernel's own contract is that attach must NOT read `slot\arena` ("a record may be
+    # attached with a schedule that is not initialized yet, so reading slot\arena inside attach is
+    # reading garbage" -- measured 20260919), and a ZEROED record could not tell us whether attach
+    # peeked.  The poison keeps that contract under test where a clear would silently delete it; the
+    # value is deterministic, so a run that depends on the record's contents can no longer depend on
+    # the stack instead.
+    memset((cast: (@: void) (@ parent_sched)), 170, c.sizeof(c.LmxSchedule))
+    memset((cast: (@: void) (@ kid_sched)), 170, c.sizeof(c.LmxSchedule))
+    memset((cast: (@: void) (@ fail_sched)), 170, c.sizeof(c.LmxSchedule))
+    memset((cast: (@: void) (@ live_sched)), 170, c.sizeof(c.LmxSchedule))
     memset((cast: (@: void) (@ manager)), 0, c.sizeof(c.LmxManager))
     memset((cast: (@: void) (@ service)), 0, c.sizeof(c.LmxService))
     if: lmx_arena_open(@ parent_arena) != 0 || lmx_arena_open(@ kid_arena) != 0 || lmx_arena_open(@ fail_arena) != 0 || lmx_arena_open(@ live_arena) != 0
@@ -241,13 +254,13 @@ fn: main () int
     #     (run 3), where the old empty-box rule wrote the mark onto a child that was INSIDE its turn
     #     and the next boundary attached and freed its arena under it.
     base: lmx_clock_ticks()
-    st_check(counts, lmx_stop_children(parent_t, base) = c.LMX_SETTLE_OK, "the stop request refused")
+    st_check(counts, lmx_stop_children(parent_t, base, 0U) = c.LMX_SETTLE_OK, "the stop request refused")
     st_check(counts, live_msg\running = 0, "the stop request did not reach the child")
     st_check(counts, live_msg\handoff_ready = 0, "the stop closed a child it had not waited for")
     st_check(counts, lmx_settle_ready(live_msg) = 0, "a child asked to close reads settlable at once")
     st_check(counts, lmx_settle_children(parent_t, @ parent_arena, @ service, @ manager, base) = c.LMX_SETTLE_OK, "the settle at the request refused")
     st_check(counts, lmx_thread_child_is(parent_t, live_t) != 0, "the asked child was settled before its window")
-    st_check(counts, lmx_stop_children(parent_t, base + 9U) = c.LMX_SETTLE_OK, "the same request one window later refused")
+    st_check(counts, lmx_stop_children(parent_t, base + 9U, 0U) = c.LMX_SETTLE_OK, "the same request one window later refused")
     st_check(counts, live_msg\handoff_ready != 0, "a child that reached no boundary within its window was not closed")
     st_check(counts, lmx_settle_ready(live_msg) != 0, "the closed child did not become settlable")
     st_check(counts, lmx_settle_children(parent_t, @ parent_arena, @ service, @ manager, base + 9U) = c.LMX_SETTLE_OK, "the settle after the window refused")

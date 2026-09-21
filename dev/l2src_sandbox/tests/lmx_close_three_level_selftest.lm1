@@ -1,0 +1,339 @@
+predef: "l2src/lmx_root.lm1"
+predef: "l2src/lmx_settle.lm1"
+predef: "l2src/lmx_service.lm1"
+predef: "l2src/lmx_turn.lm1"
+predef: "l2src/lmx_child.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_manager.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_gc.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_call.lm1"
+predef: "l2src/lmx_clock.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# R0 -> A -> B, ONE SYNCHRONOUS CLOSE, AND EACH LEVEL DOES ITS OWN LEVEL
+# (DEEPSEEK-MAIL-CASCADE-FIX-20260921-82).
+#
+# THE CLAIM THIS FILE PINS: a single `lmx_root_close` empties a THREE-level chain, and the level
+# that empties A's chain is A -- not R0 walking a grandchild.  The close requests the stop for its
+# DIRECT children only; each stopped record performs the same one-level act for its own children and
+# publishes its boundary when its own chain is empty; the level above reaps it then.
+#
+# THE DISCRIMINATING ASSERTION is A's own manager queue.  A is given a scheduler by
+# `lmx_thread_scheduler_open(t_a, @ harness_arena)` -- the manager record lives in THIS FILE's arena,
+# so its count is a legal read after the close (nothing the close releases owns it).  B's slot is
+# bound to that manager, and only A's own settle removes a record from A's own queue: with the
+# count at 1 before the close and 0 after, the act that emptied it is measured, not assumed.  An
+# R0 that walked B itself would leave the record where it was.
+#
+# WHAT IS READ AFTER THE CLOSE, and why each read is legal: the two mailboxes are BY-VALUE records
+# of this file (their pools die with the children's arenas; the records are mine), the root's
+# mailbox is embedded in the root record this file owns, and the service is part of that same record.
+# Nothing owned by a released arena is read.
+
+@: LmxRoot t3_root 0
+@: LmxArena t3_arena_a 0
+@: LmxArena t3_arena_b 0
+@: LmxArena t3_harness 0
+@: LmxPost t3_mail_a 0
+@: LmxPost t3_mail_b 0
+@: LmxSchedule t3_sched_a 0
+@: LmxSchedule t3_sched_b 0
+@: LmxThread t3_t_a 0
+@: LmxThread t3_t_b 0
+@: LmxManager t3_manager_a 0
+@: Lmx t3_source_a 0
+@: LmxMsg t3_msg_a 0
+@: LmxMsg t3_msg_b 0
+size_t: t3_phase 0U
+size_t: t3_a_turns 0U
+size_t: t3_b_turns 0U
+size_t: t3_diag 0U
+
+# A's body: ONE job, on its first turn -- build B in A's own arena, wire B under A, and give B's
+# slot to A's OWN manager.  A does not declare itself done: it stays live until the close stops it,
+# which is the case this file is about.
+fn: t3_body_a (@: Lmx node) int
+    @: LmxThread t
+    @: Lmx graph_a
+    @: Lmx source_b
+    @: LmxMsg child_b
+    @: LmxThread t_b
+    @: LmxPost mail_b
+    @: LmxSchedule sched_b
+    t: lmx_thread_current()
+    if: t = 0 || t\message = 0 || t\message\graph = 0
+        t3_diag: 1U
+        return: 0
+    ---
+    t3_a_turns: t3_a_turns + 1U
+    if: t3_phase != 1U
+        return: 0
+    ---
+    if: t3_arena_a = 0 || t3_arena_b = 0 || t3_mail_b = 0
+        t3_diag: 2U
+        return: 0
+    ---
+    graph_a: t\message\graph
+    source_b: lmx_node_new_owned(t3_arena_a)
+    if: source_b = 0 || lmx_arena_refs_open_owned(t3_arena_a, source_b, 2U) != 0
+        t3_diag: 3U
+        return: 0
+    ---
+    child_b: lmx_child_reserve(t, t3_arena_a, t3_arena_b, graph_a, 1U, source_b)
+    if: child_b = 0
+        t3_diag: 4U
+        return: 0
+    ---
+    mail_b: t3_mail_b
+    t_b: (cast: (@: LmxThread) lmx_arena_take(t3_arena_b, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    sched_b: (cast: (@: LmxSchedule) lmx_arena_take(t3_arena_b, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: t_b = 0 || sched_b = 0
+        t3_diag: 5U
+        return: 0
+    ---
+    if: lmx_post_init(t3_arena_b, mail_b) != c.LMX_POST_OK
+        t3_diag: 6U
+        return: 0
+    ---
+    if: lmx_schedule_init(sched_b, t3_arena_b, (cast: (@: void) t_b), 100000U) != c.LMX_SCHEDULE_OK
+        t3_diag: 7U
+        return: 0
+    ---
+    if: lmx_thread_attach(t_b, child_b, mail_b, sched_b) != c.LMX_THREAD_OK
+        t3_diag: 8U
+        return: 0
+    ---
+    if: lmx_child_thread(t, child_b, t_b) != c.LMX_CHILD_OK
+        t3_diag: 9U
+        return: 0
+    ---
+    # B'S QUEUE IS A'S OWN: this is what makes A's one-level act the only act that can empty it.
+    if: lmx_manager_add((cast: (@: LmxManager) lmx_thread_manager(t)), sched_b) != c.LMX_MANAGER_OK
+        t3_diag: 10U
+        return: 0
+    ---
+    t3_msg_b: child_b
+    t3_t_b: t_b
+    t3_sched_b: sched_b
+    t3_phase: 2U
+return: 0
+
+fn: t3_body_b (@: Lmx node) int
+    t3_b_turns: t3_b_turns + 1U
+return: 0
+
+# R0's own create entry: A, A's mailbox, A's scheduler record, A's OWN scheduler (in the harness
+# arena), and A's place in R0's chain and queue.
+fn: t3_root_entry (@: Lmx node) int
+    @: LmxMsg child
+    @: LmxThread child_t
+    @: LmxPost child_mail
+    @: LmxSchedule child_sched
+    @: LmxMethod method
+    @: LmxPool methods
+    @: Lmx graph
+    if: t3_phase != 0U
+        return: 0
+    ---
+    if: t3_root = 0 || t3_arena_a = 0 || t3_source_a = 0 || t3_mail_a = 0
+        t3_diag: 11U
+        return: 0
+    ---
+    child: lmx_root_create(t3_root, t3_arena_a, 0U, t3_source_a)
+    if: child = 0
+        t3_diag: 12U
+        return: 0
+    ---
+    graph: child\graph
+    if: graph = 0
+        t3_diag: 12U
+        return: 0
+    ---
+    methods: lmx_pool_make(t3_arena_a, 2U * c.sizeof(c.LmxMethod), c.sizeof(c.LmxMethod),
+                           c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD)
+    if: methods = 0
+        t3_diag: 13U
+        return: 0
+    ---
+    method: lmx_method_intern(t3_arena_a, methods, (cast: (LmxEntry) t3_body_a), 1U)
+    if: method = 0
+        t3_diag: 14U
+        return: 0
+    ---
+    lmx_arena_ref_store(graph, 0U, (cast: (@: void) method))
+    child_mail: t3_mail_a
+    child_t: (cast: (@: LmxThread) lmx_arena_take(t3_arena_a, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    child_sched: (cast: (@: LmxSchedule) lmx_arena_take(t3_arena_a, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: child_t = 0 || child_sched = 0
+        t3_diag: 15U
+        return: 0
+    ---
+    if: lmx_post_init(t3_arena_a, child_mail) != c.LMX_POST_OK
+        t3_diag: 16U
+        return: 0
+    ---
+    if: lmx_schedule_init(child_sched, t3_arena_a, (cast: (@: void) child_t), 100000U) != c.LMX_SCHEDULE_OK
+        t3_diag: 17U
+        return: 0
+    ---
+    if: lmx_thread_attach(child_t, child, child_mail, child_sched) != c.LMX_THREAD_OK
+        t3_diag: 18U
+        return: 0
+    ---
+    # A'S OWN SCHEDULER, IN THIS FILE'S ARENA: the queue whose count is the discriminator below.
+    if: lmx_thread_scheduler_open(child_t, t3_harness) != c.LMX_THREAD_OK
+        t3_diag: 19U
+        return: 0
+    ---
+    if: lmx_child_thread(lmx_root_thread(t3_root), child, child_t) != c.LMX_CHILD_OK
+        t3_diag: 20U
+        return: 0
+    ---
+    if: lmx_manager_add(lmx_root_manager(t3_root), child_sched) != c.LMX_MANAGER_OK
+        t3_diag: 21U
+        return: 0
+    ---
+    t3_msg_a: child
+    t3_t_a: child_t
+    t3_sched_a: child_sched
+    t3_manager_a: (cast: (@: LmxManager) lmx_thread_manager(child_t))
+    t3_phase: 1U
+return: 0
+
+sub: t3_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+    c.fflush(0)
+end: t3_check
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    int: failures
+    LmxRoot: root
+    LmxArena: arena_a
+    LmxArena: arena_b
+    LmxArena: harness
+    LmxPost: mail_a
+    LmxPost: mail_b
+    @: LmxRoot root_p 0
+    @: LmxPost mail_a_p 0
+    @: LmxPost mail_b_p 0
+    @: LmxPost root_mail_p 0
+    @: LmxArena root_arena 0
+    @: Lmx live_graph 0
+    @: Lmx source 0
+    @: LmxThread r0 0
+    @: LmxMsg message 0
+    @: LmxService service 0
+    if: counts = 0
+        return: 2
+    ---
+    memset((cast: (@: void) (@ root)), 0, c.sizeof(c.LmxRoot))
+    memset((cast: (@: void) (@ arena_a)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ arena_b)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ harness)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ mail_a)), 0, c.sizeof(c.LmxPost))
+    memset((cast: (@: void) (@ mail_b)), 0, c.sizeof(c.LmxPost))
+    root_p: @ root
+    mail_a_p: @ mail_a
+    mail_b_p: @ mail_b
+    t3_root: @ root
+    t3_mail_a: @ mail_a
+    t3_mail_b: @ mail_b
+    t3_arena_a: @ arena_a
+    t3_arena_b: @ arena_b
+    t3_harness: @ harness
+    if: lmx_arena_open(@ arena_a) != 0 || lmx_arena_open(@ arena_b) != 0 || lmx_arena_open(@ harness) != 0
+        c.printf("t3: an arena did not open\n")
+        free(counts)
+        return: 2
+    ---
+    t3_phase: 0U
+    t3_a_turns: 0U
+    t3_b_turns: 0U
+    t3_diag: 0U
+    t3_check(counts, lmx_root_open(@ root, t3_root_entry, 120000U, 0U, 0U) = c.LMX_ROOT_OK, "the R0 of the three-level chain did not open")
+    root_arena: lmx_root_arena(@ root)
+    r0: lmx_root_thread(@ root)
+    message: lmx_root_message(@ root)
+    service: lmx_root_service(@ root)
+    root_mail_p: @ root_p\mail
+    t3_check(counts, root_arena != 0 && r0 != 0 && message != 0 && service != 0 && root_mail_p != 0, "the three-level R0 is missing pieces")
+    live_graph: message\graph
+    source: lmx_node_new_owned(root_arena)
+    t3_check(counts, source != 0 && lmx_arena_refs_open_owned(root_arena, source, 4U) = 0, "the template was not built")
+    lmx_arena_ref_store(live_graph, 3U, (cast: (@: void) source))
+    t3_source_a: source
+    t3_check(counts, lmx_root_cycle(@ root, 1U) = c.LMX_ROOT_OK, "the create cycle did not run")
+    t3_check(counts, t3_msg_a != 0 && t3_t_a != 0 && t3_manager_a != 0, "A was not wired")
+    # A's own turn is what builds B -- the root's queue drives A, and A's queue holds B.
+    t3_check(counts, lmx_root_cycle(@ root, 1U) = c.LMX_ROOT_OK, "the cycle that runs A did not run")
+    t3_check(counts, t3_phase = 2U && t3_msg_b != 0 && t3_t_b != 0 && t3_sched_b != 0, "B was not wired by A's own turn")
+    t3_check(counts, t3_manager_a != 0, "A has no scheduler of its own")
+    t3_check(counts, lmx_manager_count(t3_manager_a) = 1U, "A's own queue does not hold exactly B before the close")
+    t3_check(counts, lmx_thread_child_first(t3_t_a) = t3_t_b, "B is not in A's own chain before the close")
+    t3_check(counts, lmx_service_find(service, (cast: (@: void) t3_t_a)) = (cast: (@: void) t3_t_a), "A has no route before the close")
+    t3_check(counts, lmx_service_find(service, (cast: (@: void) t3_t_b)) = (cast: (@: void) t3_t_b), "B has no route before the close")
+    t3_check(counts, mail_a_p\inbox_slots != 0 && mail_b_p\inbox_slots != 0, "a mailbox was never opened before the close")
+
+    # THE BOUND IS ARMED COARSELY AND SHORT -- 400 ms through the SAME setter a production close
+    # uses for its 60 s default -- so the disarming below is observable in seconds rather than
+    # minutes.  No test-only branch: this is the ordinary arming path.
+    t3_check(counts, lmx_root_close_limit_set(@ root, 400U) = c.LMX_ROOT_OK, "the close limit was not set")
+
+    # THE ONE CLOSE.  R0 stops A; A's own one-level act closes B; when A's chain is empty A is
+    # reaped; R0 then closes its own route, mailbox and storage.
+    t3_check(counts, lmx_root_close(@ root) = c.LMX_ROOT_OK, "the one close did not return OK")
+    # THE DISCRIMINATOR: A's queue is empty because A's own settle emptied it.  If R0 had walked the
+    # grandchild itself, B's record would still be sitting here.
+    t3_check(counts, lmx_manager_count(t3_manager_a) = 0U, "A's own queue still holds B: the level that emptied it was not A")
+    # *** PHASE ONE: PENDING RETENTION (author's two-phase contract, 2026-09-21, via Codex) ***
+    # A and B are stopped and QUIESCENT here: neither ever ends (nothing runs them to a turn that
+    # would end them), so the closer CLAIMS them, closes their subtrees as their own act, and takes
+    # NOTHING: every mailbox stays open, every route stays registered, every arena keeps its blocks.
+    # R0's own close is therefore INCOMPLETE/DEFERRED and R0 retains its mailbox, route, service
+    # membership and arena as well.  An earlier version of this file asserted the FINAL RELEASE here,
+    # which only happens once every direct child has ENDED -- the focused test's phase 2 is where that
+    # outcome is asserted, on a child that really does end.
+    t3_check(counts, mail_b_p\inbox_slots != 0, "PHASE ONE: B's mailbox was closed -- a release before the child finished")
+    t3_check(counts, mail_b_p\inbox_capacity != 0U, "PHASE ONE: B's mailbox lost its capacity")
+    t3_check(counts, mail_a_p\inbox_slots != 0, "PHASE ONE: A's mailbox was closed -- a release before the child finished")
+    t3_check(counts, root_mail_p\inbox_slots != 0, "PHASE ONE: R0's mailbox was closed while a child was retained")
+    t3_check(counts, lmx_service_find(service, (cast: (@: void) t3_t_b)) = (cast: (@: void) t3_t_b), "PHASE ONE: B's route was removed")
+    t3_check(counts, lmx_service_find(service, (cast: (@: void) t3_t_a)) = (cast: (@: void) t3_t_a), "PHASE ONE: A's route was removed")
+    t3_check(counts, lmx_root_state(@ root) = c.LMX_ROOT_CLOSED, "the closed root is not CLOSED")
+    t3_check(counts, t3_diag = 0U, "a wiring step in this file reported a diagnostic")
+
+    # NO LATE WATCHDOG FIRE, AND IT IS ASSERTED BY NAME.  The close returned, so its process
+    # deadline was disarmed before the frame returned; if that disarm had not happened, the armed
+    # bound (400 ms) would have killed this process during the sleep below.  Reaching the next line
+    # IS the proof; the check below records it under a name a reader can search for.
+    c.Sleep(1200U)
+    c.printf("NO LATE WATCHDOG FIRE: the process slept 1200 ms past a 400 ms armed bound after a successful close\n")
+    c.fflush(0)
+    t3_check(counts, lmx_root_state(@ root) = c.LMX_ROOT_CLOSED, "NO LATE WATCHDOG FIRE: the process outlived its own close bound and the root is still CLOSED")
+
+    failures: counts[1]
+    c.printf("lmx_close_three_level a_turns=%u b_turns=%u diag=%u checks=%d failures=%d\n",
+             (cast: (unsigned) t3_a_turns), (cast: (unsigned) t3_b_turns), (cast: (unsigned) t3_diag),
+             counts[0], failures)
+    c.fflush(0)
+    free(counts)
+return: 0

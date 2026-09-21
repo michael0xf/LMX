@@ -328,7 +328,7 @@ fn: main () int
     # WITHOUT a turn, and that same boundary reaps it.  One reading drives the whole sequence --
     # this is what lmx_root_cycle_at is for.
     stop_base: lmx_clock_ticks()
-    app_check(counts, lmx_stop_children(r0, stop_base) = c.LMX_SETTLE_OK, "stop_children refused")
+    app_check(counts, lmx_stop_children(r0, stop_base, 0U) = c.LMX_SETTLE_OK, "stop_children refused")
     app_check(counts, child_msg\running = 0, "stop did not clear running")
     app_check(counts, child_msg\handoff_ready = 0, "stop closed the child before its window")
     app_check(counts, lmx_settle_ready(child_msg) = 0, "a child asked to close reads settle_ready at once")

@@ -224,6 +224,51 @@ function Invoke-Captured([string]$Label, [string]$Exe, [string[]]$ArgList, [stri
 # not a pass, and a silent kill would be the worst of both (measured: an off-by-one in a walk guard
 # looped forever and the whole gate sat there; a selftest here takes well under a second).
 $SelftestTimeoutSec = 120
+function Test-ExpectedFatal([string]$Label, [string]$Exe, [string]$ArgvJoined, [int]$Seconds) {
+    # ONE EXPECTED-FATAL CONTRACT, AND IT IS A CONTRACT RATHER THAN A WHITELIST.  Exactly one target
+    # is allowed to die on purpose -- `lmx_close_watchdog_running_selftest`, whose subject is a lane
+    # that never ends -- and the CALLER is what keys this to that name; nothing here inspects names.
+    # SUCCESS REQUIRES ALL FIVE CLAUSES, and each failure names the clause that failed so a RED line
+    # says which one broke rather than merely that something did:
+    #   * the process started and did NOT hit this harness's own bound;
+    #   * EXACT exit code 3;
+    #   * stdout carries the armed marker;
+    #   * stderr carries one documented close-deadline diagnostic from the accepted family;
+    #   * stdout does NOT carry the returned-close line.
+    # The log keeps the same name and the same header shape the ordinary -Run path writes, plus one
+    # auditable line naming the verdict, so a later reader can see WHY this row is green.
+    # DEEPSEEK-MAIL-CASCADE-FIX-20260921-82; author's ruling via Codex 2026-09-21.
+    $log = Join-Path $logDir ((Get-SafeName $Label) + '.log')
+    $run = Invoke-ProcBounded -Exe $Exe -Argv @() -TimeoutSec $Seconds
+    if (-not $run.Started) {
+        Set-Content -LiteralPath $log -Value ("invoke: `"$Exe`" DID NOT START")
+        return "expected-fatal FAILED: the child did not start"
+    }
+    if ($run.TimedOut) {
+        Set-Content -LiteralPath $log -Value ("invoke: `"$Exe`" BOUNDED $Seconds s -- TIMEOUT, the run was killed`r`n" + $run.Text)
+        return "expected-fatal FAILED: TIMEOUT after $Seconds s -- the WATCHDOG was supposed to end this, not the harness"
+    }
+    $outText = "" + $run.Out
+    $errText = "" + $run.Err
+    $verdict = "expected-fatal contract: exit=$($run.Code), armed stdout=" +
+               ([string]($outText -match 'PROBE-RUNNING armed:')) + ", deadline stderr=" +
+               ([string]($errText -match 'the overall close deadline expired'))
+    Set-Content -LiteralPath $log -Value ("invoke: `"$Exe`" " + $ArgvJoined + "`r`n" + $verdict + "`r`n" + $run.Text)
+    if ($run.Code -ne 3) {
+        return "expected-fatal FAILED: exit $($run.Code), expected exactly 3 (clause: exact exit code)"
+    }
+    if ($outText -notmatch 'PROBE-RUNNING armed:') {
+        return "expected-fatal FAILED: the armed marker is missing from STDOUT (clause: stdout marker)"
+    }
+    if ($outText -match 'PROBE-RUNNING the close RETURNED') {
+        return "expected-fatal FAILED: the close RETURNED -- this probe was supposed to die (clause: no returned close)"
+    }
+    if ($errText -notmatch 'the overall close deadline expired') {
+        return "expected-fatal FAILED: no documented close-deadline diagnostic on STDERR (clause: stderr diagnostic)"
+    }
+    return ''
+}
+
 function Invoke-Bounded([string]$Label, [string]$Exe, [string[]]$ArgList, [int]$Seconds) {
     # Started through the .NET process API, not Start-Process: with redirected streams PS 5.1's
     # -PassThru object does not report the child's exit code (measured: a passing test was reported
@@ -448,6 +493,13 @@ foreach ($t in @($selftests | Sort-Object Name)) {
         continue
     }
     if (-not $Run) { Add-Row 'OK' "selftest:$base" 'linked'; continue }
+    if ($base -eq 'lmx_close_watchdog_running_selftest') {
+        # THE ONE TARGET ALLOWED TO BE FATAL ON PURPOSE, and the only place its name appears.
+        $why = Test-ExpectedFatal "run:selftest:$base" $exe "" $SelftestTimeoutSec
+        if ($why -eq '') { Add-Row 'OK' "selftest:$base" "ran, expected-fatal: exit 3, armed stdout, deadline stderr; log $logDir\$(Get-SafeName "run:selftest:$base").log" }
+        else { Add-Row 'FAIL' "selftest:$base" "$why; log $logDir\$(Get-SafeName "run:selftest:$base").log" }
+        continue
+    }
     $code = Invoke-Bounded "run:selftest:$base" $exe @() $SelftestTimeoutSec
     if ($code -eq 0) { Add-Row 'OK' "selftest:$base" 'ran, exit 0' }
     elseif ($code -eq -1) { Add-Row 'FAIL' "selftest:$base" "TIMEOUT after $SelftestTimeoutSec s (killed); log $logDir\$(Get-SafeName "run:selftest:$base").log" }

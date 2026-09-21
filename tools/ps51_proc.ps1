@@ -78,8 +78,10 @@ function ConvertTo-WinCommandLine {
 
 function Invoke-ProcBounded {
     # Launch $Exe with $Argv as a real argv array, capture both streams, wait at most $TimeoutSec.
-    # Returns: Started / TimedOut / Code / Text  (Text = stdout immediately followed by stderr,
-    # untrimmed, exactly as the two ReadToEndAsync tasks completed -- the caller trims if it wants).
+    # Returns: Started / TimedOut / Code / Text / Out / Err  (Text = stdout immediately followed by
+    # stderr, untrimmed, exactly as the two ReadToEndAsync tasks completed -- the caller trims if it
+    # wants.  Out and Err are the SAME two strings reported separately; Text is always exactly
+    # Out + Err, which is what keeps this extension compatible with every existing caller.)
     #   Started=$false  -> the child could not be started; Code -2, Text ''.  DEVIATION, declared:
     #                      a missing or unlaunchable exe now REACHES the did-not-start branch that
     #                      callers already document, instead of throwing out of Process.Start().
@@ -107,7 +109,7 @@ function Invoke-ProcBounded {
     try { $started = $proc.Start() } catch { $started = $false }
     if (-not $started) {
         if ($Log) { Set-Content -LiteralPath $Log -Value '' }
-        return [pscustomobject]@{ Started = $false; TimedOut = $false; Code = -2; Text = '' }
+        return [pscustomobject]@{ Started = $false; TimedOut = $false; Code = -2; Text = ''; Out = ''; Err = '' }
     }
     # Primed while the child is alive; the exit code is not reliable without it.
     try { $null = $proc.Handle } catch { }
@@ -124,14 +126,22 @@ function Invoke-ProcBounded {
         # order here is tools\build_l2src.ps1's Invoke-Bounded order, kept deliberately.
         try { $proc.Kill() } catch { }
         try { $proc.WaitForExit(5000) | Out-Null } catch { }
-        $killed = ("" + $outTask.Result) + ("" + $errTask.Result)
+        $killedOut = "" + $outTask.Result
+        $killedErr = "" + $errTask.Result
+        $killed = $killedOut + $killedErr
         if ($Log) { Set-Content -LiteralPath $Log -Value $killed }
-        return [pscustomobject]@{ Started = $true; TimedOut = $true; Code = -1; Text = $killed }
+        return [pscustomobject]@{ Started = $true; TimedOut = $true; Code = -1; Text = $killed; Out = $killedOut; Err = $killedErr }
     }
-    $text = ("" + $outTask.Result) + ("" + $errTask.Result)
+    $outText = "" + $outTask.Result
+    $errText = "" + $errTask.Result
+    # OUT AND ERR ARE NOW ALSO REPORTED SEPARATELY, AND Text IS STILL EXACTLY Out + Err: the two
+    # fields are additive, so every existing caller that reads only .Text keeps its byte-for-byte
+    # contract (DEEPSEEK-MAIL-CASCADE-FIX-20260921-82 needs the split: the gate's expected-fatal
+    # contract turns on a marker being in the RIGHT stream, not merely present somewhere).
+    $text = $outText + $errText
     $code = $proc.ExitCode
     if ($Log) { Set-Content -LiteralPath $Log -Value $text }
-    return [pscustomobject]@{ Started = $true; TimedOut = $false; Code = $code; Text = $text }
+    return [pscustomobject]@{ Started = $true; TimedOut = $false; Code = $code; Text = $text; Out = $outText; Err = $errText }
 }
 
 function Invoke-SelfTest {
@@ -193,6 +203,24 @@ exit $Code
     Assert-Equal 'nonzero exit: -Log holds the output' ((Get-Content -LiteralPath $logFile -Raw).Trim()) 'SIDE_EFFECT_OK 7'
 
     # 4) The bound: the child must be KILLED, not merely abandoned -- so it never writes its marker.
+    # 5) STREAM SEPARATION, and it is the case this extension exists for: a callee that writes to
+    #    BOTH streams must land in the right fields, and Text must stay exactly Out followed by Err.
+    #    Asserted with a marker on each side rather than with an empty one, because the whole point
+    #    is that a marker in the WRONG stream must be detectable as wrong.
+    $childBoth = Join-Path $spaceDir 'child_both.ps1'
+    Set-Content -LiteralPath $childBoth -Encoding utf8 -Value @'
+[Console]::Out.WriteLine('OUT_MARKER')
+[Console]::Error.WriteLine('ERR_MARKER')
+exit 3
+'@
+    $r = Invoke-ProcBounded -Exe $psExe -Argv @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $childBoth) -TimeoutSec 60
+    Assert-Equal 'streams: the stdout marker is in Out' ([string]($r.Out -match 'OUT_MARKER')) 'True'
+    Assert-Equal 'streams: the stderr marker is in Err' ([string]($r.Err -match 'ERR_MARKER')) 'True'
+    Assert-Equal 'streams: the stdout marker is NOT in Err' ([string]($r.Err -match 'OUT_MARKER')) 'False'
+    Assert-Equal 'streams: the stderr marker is NOT in Out' ([string]($r.Out -match 'ERR_MARKER')) 'False'
+    Assert-Equal 'streams: Text stays exactly Out followed by Err' ($r.Text) (("" + $r.Out) + ("" + $r.Err))
+    Assert-Equal 'streams: the child''s own code survives the split' ([string]$r.Code) '3'
+
     $marker = Join-Path $spaceDir 'sleep_marker.txt'
     $childSleep = Join-Path $spaceDir 'child_sleep.ps1'
     $sleepSrc = "Start-Sleep -Seconds 6`r`nSet-Content -LiteralPath '" + $marker + "' -Value done`r`n"

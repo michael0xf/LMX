@@ -1,4 +1,5 @@
 predef: "l2src/lmx_root.h.lm1"
+predef: "l2src/lmx_process_deadline.lm1"
 predef: "l2src/lmx_arena.lm1"
 # The store's lifecycle lives in lmx_perm (LMX-ETERNAL-R0-44D): R0 opens it, binds its own arena
 # to it and closes it.  The header is pulled, never the unit's body.
@@ -208,6 +209,7 @@ fn: lmx_root_open (@: LmxRoot root; LmxCallEntry: entry; ulong: limit; size_t: e
         return: c.LMX_ROOT_INVALID
     ---
     root\retention: c.LMX_ROOT_ORPHAN_RETENTION
+    root\close_limit: c.LMX_ROOT_CLOSE_LIMIT
     # The runtime's own wait starts at open -- this is the cycle's first reading.  From here
     # on every reading is handed down by lmx_root_cycle_at, and no other cell reads a clock.
     root\now: lmx_clock_ticks()
@@ -408,6 +410,21 @@ fn: lmx_root_orphan_adopt (@: LmxRoot root; @: LmxMsg orphan; @: LmxArena orphan
     ---
 return: lmx_orphan_adopt(@ root\orphans, message\graph, orphan, orphan_arena, thread, root\thread, @ root\service, @ root\manager, now, root\retention)
 
+fn: lmx_root_close_limit_set (@: LmxRoot root; ulong: limit) int
+    if: root = 0 || root\state != c.LMX_ROOT_OPEN || limit = 0U
+        return: c.LMX_ROOT_INVALID
+    ---
+    # HALF THE WORD RANGE IS THE REFUSAL LINE, and it is the precondition the modular deadline test
+    # depends on (lmx_deadline_passed): a window at or above half the word could span a wrap and the
+    # comparison would read it backwards.  Computed in WORD terms, since the deadline is a word.
+    if: (cast: (size_t) limit) >= lmx_clock_half()
+        return: c.LMX_ROOT_INVALID
+    ---
+    # THE OPEN GUARD IS DELIBERATE, not copied from the retention setter: the close bound must not
+    # change once closing has begun.
+    root\close_limit: limit
+return: c.LMX_ROOT_OK
+
 fn: lmx_root_retention_set (@: LmxRoot root; ulong: limit) int
     if: root = 0 || root\state != c.LMX_ROOT_OPEN || limit = 0U
         return: c.LMX_ROOT_INVALID
@@ -436,6 +453,12 @@ fn: lmx_root_close (@: LmxRoot root) int
     # ONE reading for both acts below: the close is a boundary of its own, exactly as a cycle is
     # (lmx_manager.h.lm1: every operation that ages a wait is GIVEN the reading).
     ulong: reading 0U
+    # THE WATCHDOG'S OWN STATE, and it lives on THIS frame for the length of THIS operation --
+    # nowhere else: not in the root, not in a graph record, not in TLS.  `close_deadline` is the one
+    # word every level of the cascade will read back out of its own node.
+    size_t: close_deadline 0U
+    LmxProcessDeadline: deadline_guard
+    int: code 0
     if: root = 0
         return: c.LMX_ROOT_INVALID
     if: root\state != c.LMX_ROOT_OPEN
@@ -446,7 +469,8 @@ fn: lmx_root_close (@: LmxRoot root) int
         message\running: 0
         graph: message\graph
     ---
-    lmx_post_close(@ root\arena, @ root\mail)
+    # (the early lmx_post_close that used to stand here is GONE: R0's mailbox may not die
+    # before the cascade has left no live child.  See the synchronous loop below.)
     # THE ORDER OF THE TWO ACTS IS THE WHOLE POINT, and it was measured the wrong way round once
     # (20260919, ticket lmx_close_chain): settle FIRST, stop SECOND.
     #
@@ -476,7 +500,22 @@ fn: lmx_root_close (@: LmxRoot root) int
     #     19.09 the request really is only a request (it writes `running=0` and, when the child's
     #     window has passed, the close), which is what keeps the order here a matter of what is
     #     already closed rather than of who was just asked to close.
-    lmx_stop_children(root\thread, reading)
+    # THE CLOSE'S ONE DEADLINE, COMPUTED HERE FROM THE WORD CLOCK AND THE ROOT'S OWN LIMIT, and the
+    # SAME word reaches every level through the children's nodes (LmxLink.close_deadline).  WORD
+    # arithmetic, not `ulong`: the setter refuses a limit at or above half the word range, so the sum
+    # cannot span a wrap -- and the one value that must be reserved is ZERO, the no-closure sentinel,
+    # which the sum can produce exactly at the wrap point.  There the stored deadline moves one tick
+    # past zero rather than being mistaken for "no closure"; minute-scale tolerance, the author's
+    # explicit allowance.
+    close_deadline: lmx_clock_word() + (cast: (size_t) root\close_limit)
+    if: close_deadline = 0U
+        close_deadline: 1U
+    ---
+    # THE WATCHDOG IS ARMED BEFORE ANY CHILD IS ASKED TO STOP, and it is armed from THIS deadline:
+    # the same value the cooperative checks read, so there is no second moving window.  It is the
+    # only guarantee that survives a child body which never returns (lmx_process_deadline).
+    lmx_process_deadline_arm(@ deadline_guard, close_deadline)
+    lmx_stop_children(root\thread, reading, close_deadline)
     # THE ARENA MAY NOT GO WHILE A LIVE CHILD STILL WRITES INTO IT (Mikhail, 19.09): the handshake
     # word of every child is an ATOMIC in the PARENT's arena -- the one sanctioned cross-thread cell
     # there, because the children's own threads write their milliseconds into it.  That is also why a
@@ -485,9 +524,49 @@ fn: lmx_root_close (@: LmxRoot root) int
     # live was just given the stop request above and will end on its own thread, and the arena then
     # belongs to whoever ends the process -- "в минимальном варианте -- закрытие приложения" (his
     # words).  The root is closed either way: state is the root's, the storage is the children's.
-    if: lmx_thread_child_first(root\thread) != 0
+    # THE ONE CLOSE IS SYNCHRONOUS, AND IT WAITS FOR ITS DIRECT CHILDREN ONLY.  `lmx_settle_close_one_level`
+    # asks each direct child to stop and CLAIMS the quiescent ones -- running the child's own terminal
+    # close for it (its subtree, then its own mailbox) rather than waiting out a window that cannot
+    # fire inside this closure's bound.  A child with a live lane is left to that lane and the level
+    # is revisited.  R0 never walks a grandchild: every level claims its own children, and the
+    # child's own close recurses.
+    #
+    # PHASE ONE OF THE CONFIRMED TWO-PHASE CONTRACT (author's ruling, 2026-09-21, via Codex).  When a
+    # direct child was CLOSED IN PLACE rather than ENDED, R0's close is INCOMPLETE/DEFERRED: the child
+    # keeps its record, route and arena, and R0 KEEPS ITS MAILBOX, ROUTE, ARENA BLOCKS AND SERVICE
+    # MEMBERSHIP, because a child that still exists still needs them.  Nothing of R0's is reclaimed in
+    # this phase, and this is NOT the successful-close shape: the final release is the phase below,
+    # and it is reached only when every direct child has ENDED.
+    code: lmx_settle_close_one_level(root\thread, @ root\arena, @ root\service, @ root\manager, close_deadline)
+    if: code = c.LMX_SETTLE_LIVED
+        # A DIRECT CHILD IS STILL LIVE: the level waited and it did not end.  Nothing was taken --
+        # R0's route, mailbox, arena and service membership all stay -- and the caller is told the
+        # closure did NOT complete rather than being handed a partial one.  The process-wide bound
+        # for a child that never ends is the watchdog, which is still armed here.
+        lmx_process_deadline_disarm(@ deadline_guard)
+        return: c.LMX_ROOT_INVALID
+    ---
+    if: code = c.LMX_SETTLE_CLOSED
         root\state: c.LMX_ROOT_CLOSED
+        lmx_process_deadline_disarm(@ deadline_guard)
         return: c.LMX_ROOT_OK
+    ---
+    if: code != c.LMX_SETTLE_OK
+        # A LEVEL COULD NOT BE CLOSED AT ALL.  Nothing was destroyed -- R0's route, mailbox and
+        # storage are all still there -- the watchdog is disarmed because this operation IS returning
+        # rather than running away, and the caller learns INVALID rather than being told a closure
+        # completed that did not.
+        lmx_process_deadline_disarm(@ deadline_guard)
+        return: c.LMX_ROOT_INVALID
+    ---
+    # ROUTE, THEN MAILBOX, THEN STORAGE -- for R0 exactly as for every other record.  The route has
+    # to go first: until it does, a child that has just been reaped could still be addressed, and a
+    # mailbox must never outlive the route that points at it.
+    if: lmx_service_unregister(@ root\service, root\thread) != c.LMX_SERVICE_OK
+        return: c.LMX_ROOT_INVALID
+    ---
+    if: lmx_thread_mail_close(@ root\arena, root\thread) != c.LMX_POST_OK
+        return: c.LMX_ROOT_INVALID
     ---
     # Every retained orphan goes back first: its arena was never R0's and no adopter will ever take
     # it, so this ledger is the only thing that can return it.
@@ -511,6 +590,11 @@ fn: lmx_root_close (@: LmxRoot root) int
     # the close consults.
     lmx_perm_close(@ root\perm)
     root\state: c.LMX_ROOT_CLOSED
+    # THE OPERATION SUCCEEDED, SO THE BOUND IS DISARMED BEFORE THIS FRAME RETURNS: signal the
+    # watchdog, join it, close its handles.  A close that returns is a close that cannot be killed
+    # afterwards -- and the join is what keeps the watchdog from outliving the guard record it was
+    # handed.
+    lmx_process_deadline_disarm(@ deadline_guard)
 return: c.LMX_ROOT_OK
 
 fn: lmx_root_message (@: LmxRoot root) @: LmxMsg

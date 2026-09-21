@@ -160,6 +160,57 @@ else {
 }
 
 
+
+# M: genuinely isolated fixture — NO bin, NO root L1_PIN; explicit translator + KernelEvidenceDir;
+#    stale sandbox L1_PIN decoy must not be read (GROK-BOT-BUILD-MIXA-ROOT-PIN-20260921-130).
+$iso = Join-Path $base 'isolated_nobin'
+$isoTools = Join-Path $iso 'dev\mixa_sandbox\tools'
+New-Item -ItemType Directory -Force -Path $isoTools | Out-Null
+Copy-Item -LiteralPath $RealScript -Destination (Join-Path $isoTools 'build_mixa.ps1') -Force
+New-Item -ItemType Directory -Force -Path (Join-Path $iso 'dev\l2src_sandbox') | Out-Null
+New-Item -ItemType Directory -Force -Path (Join-Path $iso 'lm1\build') | Out-Null
+# stale decoy pin under sandbox only
+Set-Content -LiteralPath (Join-Path $iso 'dev\l2src_sandbox\L1_PIN.txt') -Value '0B3D85B36E72A5935CA43D76B71B8CBBB060AF041CBB6FAE805796595810B2A2' -Encoding ASCII
+# exact kernel evidence under the fixture (not relying on repo stamps)
+$ked = Join-Path $iso 'build\l2src\ked_exact'
+New-Item -ItemType Directory -Force -Path (Join-Path $ked 'headers\l2src') | Out-Null
+Set-Content -LiteralPath (Join-Path $ked 'headers\l2src\iso_probe.lm1.h') -Value '// isolated kernel header' -Encoding ASCII
+# explicit translator from real repo bin, copied outside fixture so fixture has no bin/
+$binExe = Join-Path $RepoRoot 'bin\l1trans.exe'
+if (-not (Test-Path -LiteralPath $binExe)) { Write-Output "FAIL M: need real bin to copy explicit translator"; $fails++ }
+else {
+    $explicit = Join-Path $env:TEMP ("iso_l1trans_" + $PID + ".exe")
+    Copy-Item -LiteralPath $binExe -Destination $explicit -Force
+    $goodHash = (Get-FileHash -LiteralPath $explicit -Algorithm SHA256).Hash.ToUpper()
+    # Prove fixture has neither bin nor root pin
+    if (Test-Path (Join-Path $iso 'bin')) { Write-Output "FAIL M: fixture unexpectedly has bin"; $fails++ }
+    elseif (Test-Path (Join-Path $iso 'L1_PIN.txt')) { Write-Output "FAIL M: fixture unexpectedly has root L1_PIN"; $fails++ }
+    else {
+        $tmpScript = Join-Path $isoTools 'build_mixa.ps1'
+        $arg = '-NoProfile -ExecutionPolicy Bypass -File "' + $tmpScript + '" -ExactChainGuardOnly -Translator "' + $explicit + '" -ExpectedTranslatorSha256 ' + $goodHash + ' -KernelEvidenceDir "' + $ked + '"'
+        $info = New-Object System.Diagnostics.ProcessStartInfo 'powershell'
+        $info.Arguments = $arg
+        $info.WorkingDirectory = $iso
+        $info.RedirectStandardOutput = $true
+        $info.RedirectStandardError = $true
+        $info.UseShellExecute = $false
+        $p = [System.Diagnostics.Process]::Start($info)
+        $out = $p.StandardOutput.ReadToEnd()
+        $err = $p.StandardError.ReadToEnd()
+        $p.WaitForExit()
+        $blob = $out + "`n" + $err
+        $repoFromLayout = (Resolve-Path -LiteralPath $iso).Path
+        if ($p.ExitCode -eq 0 -and $blob -match 'mode=EXPLICIT' -and $blob -match 'EXACT-CHAIN-GUARD PASS' -and $blob -match [regex]::Escape($repoFromLayout) -and $blob -notmatch 'pin file path=' -and $blob -notmatch '0B3D85B3') {
+            Write-Output "PASS M: isolated no-bin/no-root-pin ExactChainGuardOnly; sandbox decoy pin not consulted"
+        } else {
+            Write-Output "FAIL M: rc=$($p.ExitCode) out=$out err=$err"; $fails++
+        }
+    }
+    Remove-Item -Force $explicit -ErrorAction SilentlyContinue
+}
+Remove-Item -Recurse -Force $iso -ErrorAction SilentlyContinue
+
+
 # J: default ValidateInputsOnly / ExactChainGuardOnly prints repository-root pin path, never sandbox pin
 $rootPin = (Resolve-Path -LiteralPath (Join-Path $RepoRoot 'L1_PIN.txt')).Path
 $sandboxPin = Join-Path $RepoRoot 'dev\l2src_sandbox\L1_PIN.txt'
@@ -204,5 +255,5 @@ if ($r.Rc -ne 0 -and $blob -match [regex]::Escape($rootPin) -and $blob -match 'p
 Remove-Item -Recurse -Force $base -ErrorAction SilentlyContinue
 
 if ($fails -gt 0) { Write-Error "PROBE RED: $fails"; exit 1 }
-Write-Output "PROBE GREEN: exact-chain + pinpath + legacy A/B/C guards"
+Write-Output "PROBE GREEN: exact-chain + pinpath + isolated-root + legacy A/B/C guards"
 exit 0

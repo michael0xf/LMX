@@ -39,29 +39,23 @@ param(
     [switch]$ExactChainGuardOnly
 )
 $ErrorActionPreference = 'Stop'
+# Deterministic repo root from layout only (GROK-BOT-BUILD-MIXA-ROOT-PIN-20260921-130):
+#   PSScriptRoot = <repo>/dev/mixa_sandbox/tools
+#   -> mixa_sandbox -> dev -> <repo>
+# Do NOT locate bin/l1trans.exe: a clean clone with explicit B2 and no repo bin must still
+# resolve <repo>, not fall back to <repo>/dev (which made mustHave look for dev/dev/l2src_sandbox).
 $migRoot = Split-Path -Parent $PSScriptRoot
-$l1Root = Split-Path -Parent (Split-Path -Parent $migRoot)  # .../L1
-if (-not (Test-Path (Join-Path $l1Root 'bin\l1trans.exe'))) {
-    # migRoot = L1\dev\mixa_sandbox; parent of migRoot is L1 when nested under L1\dev
-    $l1Root = Split-Path -Parent $migRoot
-}
-# The port moved to LMX (Mikhail, 20.09: "перенесите все текущие дела в LMX").  There the
-# derivation above lands on C:\Nyasha_Planet, which has no core at all, so walk up to the
-# nearest ancestor that actually holds a PINNED translator.
-if (-not (Test-Path (Join-Path $l1Root 'bin\l1trans.exe'))) {
-    $walk = $migRoot
-    for ($i = 0; $i -lt 4 -and $walk; $i++) {
-        $walk = Split-Path -Parent $walk
-        if ($walk -and (Test-Path (Join-Path $walk 'bin\l1trans.exe'))) { $l1Root = $walk; break }
-    }
-}
-# GUARD: every input must be local.  No fallback to C:\Nyasha_Planet\L1 or any
-# external path -- it exists on this disk and would be silently consumed.
-# Fail BEFORE translation with the exact missing path.  The two kernel-evidence
-# locations are ALTERNATIVES (tree-root build/l2src for LMX;
-# dev/l2src_sandbox/build/l2src for L1-nested); either satisfies the requirement.
-$kernelRoot = $l1Root
-$lm1Root = $l1Root
+$devDir = Split-Path -Parent $migRoot
+$repoRoot = Split-Path -Parent $devDir
+if (-not $repoRoot) { throw "build_mixa: failed to derive repository root from PSScriptRoot=$PSScriptRoot" }
+$repoRoot = (Resolve-Path -LiteralPath $repoRoot).Path
+$l1Root = $repoRoot
+$kernelRoot = $repoRoot
+$lm1Root = $repoRoot
+Write-Output ("build_mixa: repo root (from PSScriptRoot)=" + $repoRoot)
+# GUARD: every input must be local to that derived root. No external fallback.
+# Kernel evidence: either <repo>/build/l2src or <repo>/dev/l2src_sandbox/build/l2src, OR
+# an explicit -KernelEvidenceDir (exact-chain).
 # Resolve translator BEFORE mustHave so an explicit non-default path can skip bin/pin.
 $defaultTranslator = Join-Path $l1Root 'bin\l1trans.exe'
 if (-not $Translator) { $Translator = $defaultTranslator }

@@ -38,6 +38,8 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
+$root = (Resolve-Path -LiteralPath $root).Path
+Write-Output ("build_l2src: repository root=" + $root)
 Set-Location $root
 
 $defaultTranslator = Join-Path $root 'bin\l1trans.exe'

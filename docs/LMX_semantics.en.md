@@ -21,7 +21,7 @@ LMX is also a grammar capable of representing both data in a complex, uniquely s
 - [4. Names, paths and repeated occurrences](#fields)
 - [5. Explicit value descriptions and conversions](#descriptions)
 - [6. Analytical checking and candidate validation](#admission)
-- [7. Fourteen practical typing cases](#admission-recipes)
+- [7. Obtaining a required guarantee: fourteen practical cases](#admission-recipes)
 - [8. Value construction](#construction)
 - [9. const, immutable and independent](#qualification)
 - [10. Callable expressions and their interfaces](#callables)
@@ -160,79 +160,81 @@ Ordinary values may store test results and evidence when the program explicitly 
 A statically established violation is reported during analysis. In the earlier model, runtime type-check rejection used `throw: Type` carrying the candidate, required role and Consumer. The exact failure interface of the new unit-test set remains to be settled; handling of declared `throw` is described in [exceptions](#exceptions). Neither validation nor memory reclamation rolls back already published messages or external effects.
 
 <a id="admission-recipes"></a>
-## 7. Fourteen practical typing cases
+## 7. Obtaining a required guarantee: fourteen practical cases
 
-These cases explain the [single admission mechanism](#admission). Its analytical stage checks used paths; substantive constraints belong to the receiving expression's unit tests. The examples specify required behavior, not verified completeness of the current translator.
+Most questions about guarantees reduce to a practical choice: where must a distinction be placed so that the required property is actually checked? A guarantee does not arise from a global strict mode; it arises from the part of a Structure that Consumer must traverse and from the tests defined by the receiving expression. Just as a C `typedef` merely names an alias while a wrapping `struct` creates a separately enforced boundary, LMX relies on the expressed path and its consumption contract.
+
+The following fourteen cases are recipes: what to express, what that expression does not establish, and where the governing rule lives. They apply the [single admission mechanism](#admission): its analytical stage checks used paths, then the graph interpreter must execute the receiving expression's unit tests. The examples specify required behavior, not verified completeness of the current translator.
 
 <a id="admission-case-1"></a>
 ### 1. One receiving expression for multiple data shapes
 
-The expression accesses only the paths it needs. A candidate provides those paths, admitted leaves and the required contracts of expressions actually invoked. No separate generic type-parameter declaration is required. This used-tree check provides structural generality without promising every property of parametric polymorphism.
+Write the receiving expression against the paths it actually needs. Any Structure providing those paths, admitted leaves and the exact signatures of expressions actually invoked can qualify. Structures are ordinary data, material for explicit descriptions and results of composition, so the used tree is the contract. There is no separate generic type-parameter declaration or instantiation operation. Used-tree checking is LMX's structural-generalization mechanism, not a promise of every property of parametric polymorphism.
 
 <a id="admission-case-2"></a>
 ### 2. Knowing what a particular site checks
 
-Consumer determines analytical coverage. Available source accesses and unknown coverage are distinguished explicitly. Analysis is followed by its unit tests through the graph interpreter. Success does not freeze operands or certify every future use. Inputs required by an actual invocation must be available at that invocation.
+Consumer determines analytical coverage; unknown coverage is distinguished from known thin consumption. Analysis is followed by the graph interpreter executing that same receiving expression's unit tests. Every actual call must additionally receive all inputs required by its signature. These stages do not subsume one another: they have different inputs and coverage. Success neither freezes candidate or Consumer nor certifies future uses after either changes. The former split among source `implements`, a separate `RuntimeImplements`, and call admission does not define three alternative mechanisms in the new model: the separate available-graph walk is retired, while unified admission and actual-call input checking retain their distinct obligations.
 
 <a id="admission-case-3"></a>
 ### 3. Distinguishing meanings with the same representation
 
-Encode the distinction in a path the receiving expression actually uses. With `Distance: Meter: 1`, access through `d\Meter` requires that path; a Structure exposing only `Foot` does not provide it. An outer name `Meter`, a field `unit: "meter"` or `const` alone is insufficient. When a field value's meaning matters, a receiving-expression test checks it.
+Encode the distinction in a path the receiving expression actually uses. With `Distance: Meter: 1`, access through `d\Meter` requires that path; a Structure exposing only `Foot` does not provide it. An outer name `Meter`, a field `unit: "meter"` or `const` alone is insufficient: path presence does not compare the value at its leaf. Immutable build-time data may permit preliminary proof of exact equality, but mandatory tests remain part of unified admission; otherwise a receiving-expression test checks the substantive constraint.
 
 <a id="admission-case-4"></a>
 ### 4. Constraining a scalar leaf
 
-State the constraint explicitly and include it in tests. Presence of `x\width` does not establish `width = 32`; a scalar leaf may remain thinly consumed even when a description exists. Immutable build-time data can undergo preliminary analysis, but such a proof is not an alternative runtime-validation mechanism.
+State the constraint explicitly and include it in tests. Presence of `x\width` does not establish `width = 32`: traversing a description requires its used paths, but a terminal scalar may remain thinly consumed. Immutable build-time data may undergo preliminary analysis and exact comparison, but such a proof is not an alternative runtime-validation mechanism.
 
 <a id="admission-case-5"></a>
 ### 5. Making a change visible to other reference holders
 
-Writing `p\x: value` or `a[i]: value` changes the selected object. Bare `x: value` changes the current call's working value: an own field becomes dirty and is published at a boundary, while an ordinary formal, result or dynamic copy remains local. The input-to-own-field binding exception and its activation point are defined under [working state](#dynamic). Neither write implicitly appends a same-name occurrence.
+To make a change visible to other holders, write through an explicit path: `p\x: value` or `a[i]: value` changes the selected referent. Bare `x: value` changes the current activation's working value: an own field remains `dirty` until a checkpoint, while an ordinary formal, result or dynamic copy remains local. The input-to-own-field binding exception and its activation point are defined under [working state](#dynamic). Neither write implicitly appends a same-name occurrence.
 
 <a id="admission-case-6"></a>
 ### 6. Independence from another holder's mutation
 
-Explicit copying creates independent mutable values under its contract; genuine immutability prohibits mutation of the protected value. Ordinary Structure or Array passing copies a reference. Another alias within the Message can therefore change the shared mutable object. An immutable foreign-resource identifier does not make the foreign resource immutable.
+`copy:` creates an independent mutable value only within its copying contract; genuine immutability prohibits mutation of the protected value. Ordinary Structure or Array passing copies the reference, not the referent. Another alias within the Message can therefore change the shared mutable object. An immutable foreign-resource identifier does not make the foreign resource immutable.
 
 <a id="admission-case-7"></a>
 ### 7. Establishing that a call can proceed
 
-The used paths and callable contract must hold, and all dynamic inputs must be supplied. Suppose A and B expose the same `m`, whose body uses bare `x`, while Consumer only invokes `m`. Checking path `m` does not create `x`: the current calling context or permitted lexical fallback must provide it. Analysis is not replaced by expansion of every callee body.
+Both conditions must hold: compatibility covers used paths and the callable's exact signature, and every dynamic input must be available from caller locals, inherited inputs or that callable occurrence's immediate `node\x`. Suppose A and B expose the same `m`, whose body uses bare `x`, while Consumer only invokes `m`: the used-callable check can pass while call admission still rejects a missing `x`. A known case is rejected during translation; a runtime-selected target requires the corresponding runtime boundary. This rule does not add callee-body expansion to `uses`.
 
 <a id="admission-case-8"></a>
 ### 8. Checking a transported callable
 
-Transporting a callable does not execute it or require knowledge of every future contract. The current receiving expression's requirements are checked. At actual invocation, the selected expression must receive its required inputs and satisfy the applicable admission requirements. Equal signatures do not imply equal algorithms.
+Transporting a callable neither executes it nor requires knowledge of every future call contract. Checking occurs at the actual call: the selected expression must have the exact signature, receive every dynamic input and satisfy applicable admission, even if an earlier partial check never inspected it. Equal signatures do not imply equal behavior.
 
 <a id="admission-case-9"></a>
 ### 9. Changing a method body without breaking calls
 
-The body's free dynamic names are part of its interface. Adding one changes `DynRequired` and the signature; known callers require rechecking. An immutable method record does not prohibit explicit replacement of a reference with a compatible callable. Behavioral change under the same signature is a matter for tests and program correctness.
+The body's free dynamic names are part of its interface. Adding one changes `DynRequired` and therefore `sig`; known callers require rechecking, while runtime-selected callables remain subject to actual-call admission. An immutable method record neither makes every occurrence referring to it immutable nor prohibits explicit replacement of a reference with a compatible callable. Behavioral change under the same signature remains a matter for tests and program correctness.
 
 <a id="admission-case-10"></a>
 ### 10. Selecting the intended part of a composition
 
-Select the occurrence explicitly or construct the intended fields. `merge` preserves forward order and does not implement last-wins inheritance. If the result contains A's `read` followed by B's, `result\read` and `result\[0]read` select A; `result\[1]read` selects B. Analytical diagnostics may expose unintended selection after an import or composition changes.
+Select the occurrence explicitly or construct the intended fields. `merge` builds a new tree, preserves forward occurrence order, does not mutate its operands and does not implement last-wins inheritance. If the result contains A's `read` followed by B's, `result\read` and `result\[0]read` select A; `result\[1]read` selects B. Analytical diagnostics may expose an unintended unqualified selection after an import or composition changes. Source parts need not be adjacent or statically available.
 
 <a id="admission-case-11"></a>
 ### 11. Changing an existing Structure
 
-Fields and their count are fixed. References in existing fields may be replaced subject to their use requirements. A different field count requires a new Structure, such as a `merge` result. No conflict policy is introduced for nonexistent operations that remove or move an active field.
+Field count and slots are fixed. Ordinary field operations may replace the `void *` child references stored in existing fields; a change in the target's actual type follows the ordinary rules for such updates and later consumption. A different field count requires a new Structure, such as a `merge` result. No conflict policy is introduced for nonexistent operations that remove or move an active field.
 
 <a id="admission-case-12"></a>
 ### 12. Reliable numeric conversion
 
-Use an available explicitly selected converter with a destination-range contract: `u16(255) → u8` is admitted, while `u16(256) → u8` is a range error. In-range rounding and precision loss are specified separately. Successful analytical checking does not permit silent modular wrapping.
+Use an available explicitly keyed converter with a destination-range contract: `u16(255) → u8` is admitted, while `u16(256) → u8` is a range error, not zero. In-range rounding and precision loss are a separate numeric-profile policy. Successful analytical checking does not permit silent modular wrapping.
 
 <a id="admission-case-13"></a>
 ### 13. What a broad converter table provides
 
-Additional explicit keys widen the available leaf conversions. They do not alter required tree paths or callable contracts. A profile need not provide every pair; a missing converter remains missing. Analytical checking does not execute converters or search for a hidden conversion chain.
+Additional explicit keys widen only the available leaf conversions. They do not alter required structural paths or exact callable signatures, and a profile need not provide every pair. Neither analytical checking nor path-selection tests execute a converter or search for a hidden conversion chain.
 
 <a id="admission-case-14"></a>
 ### 14. Foreign-resource validity
 
-A foreign handle requires an explicit high-level wrapper and contracts for ownership, use and release. A thin `FILE`-like leaf does not establish validity, authority or single close. The receiving expression's unit tests check declared properties within their contract; immutable handle bits do not keep a resource alive. L3 has no ordinary machine-level `own:`/`borrow:`/`move:`, and `copy:` does not invent a foreign resource's duplication policy.
+A foreign handle requires a checked high-level wrapper and explicit resource and cleanup contracts. A thin `FILE`-like leaf does not establish validity, authority or single close. The receiving expression's unit tests check declared properties within their contract; immutable handle bits do not keep a resource alive. L3 has no ordinary machine-level `own:`/`borrow:`/`move:`, and `copy:` does not invent a foreign resource's duplication policy.
 
 <a id="construction"></a>
 ## 8. Value construction
@@ -341,7 +343,49 @@ Dirty state follows an executed write, not value comparison or the presence of a
 
 Consequently, after a nested modification of `node\x`, the caller's bare working `x` can retain its earlier value while an explicit path observes the new value. A later assignment to bare own `x` deliberately creates a new write and publishes it at the next boundary. No automatic reload is part of the semantics, not permission to lose dirty changes.
 
-Recursive calls have separate working values and dirty marks even when using the same callable structural occurrence. One activation's publication does not turn another's working values into references to its stack. A body supplied to a receiving expression as a Structure and an executable call's arguments likewise do not become one hidden environment.
+<a id="activation-history"></a>
+### Activation stack, recursion and explicit history
+
+The activation stack is the sole implicit call history. Native execution uses the ordinary C call stack; the interpreter uses an equivalent control stack. Direct, mutual and callback recursion creates a distinct activation with its own formal and dynamic values, working locals, result and `dirty` marks. No per-call Lmx call/body Structure, hidden activation node, closure environment or global active-argument record is created.
+
+The selected callable Structure holds the method's currently published working state, but it is not a call journal. Recursive calls through one occurrence may publish into the same Structure. Another callable occurrence referring to the same immutable method record publishes into its own copied Structure. A suspended outer activation is not reloaded and retains its working values; it can publish a value later only after another actual modification. The result is determined by the serial order of dirty-only publications, not by implicit restoration of an activation snapshot.
+
+The following recursive trace introduces no new syntax. Method M has callable Structure S (`M = S`) with own field `x`; both calls select the same S, while `n` is a private declared argument in each activation.
+
+| Step | Outer working value | Inner working value | Published `S.x` |
+| --- | --- | --- | --- |
+| Outer entry loads `S.x = 1` | 1, clean | — | 1 |
+| Outer call assigns own `x = 2` | 2, dirty | — | 1 |
+| Pre-call publication, then `M(0)` enters | 2, clean | 2, clean | 2 |
+| Inner call assigns own `x = 9` | 2, clean | 9, dirty | 2 |
+| Inner return crosses publication | 2, clean | frame ends | 9 |
+| Outer call resumes without reload | 2, clean | — | 9 |
+| Outer call returns without assigning `x` | frame ends | — | 9 |
+
+On the resumed outer frame, bare `x` reads 2 and explicit `node\x` reads 9. If the outer frame then executes `x: x + 1`, its working value becomes 3 and is marked `dirty`; the next boundary publishes 3 into S. This is a new outer-activation write, not restoration of its previous snapshot. If `x` were only a dynamically supplied value, its assignment would remain local and none of these own-field stores would occur.
+
+The callable Structure's field therefore combines the persistence of an instance field with the working locality of a stack variable: a used own field is loaded into a typed working value, and only a changed value is written back at a call or exit boundary. The graph stores published state; the stack stores activation history. There is no implicit caller-frame capture, so frames need not be heapified or connected by a hidden closure chain to avoid the upward-funarg problem.
+
+The following call example shows the order among cache, explicit graph read and actual arguments; it is a trace using the established `for:` form, not a new grammar rule. The fixture's graph cell for `j` starts at 0; that is an example condition, not a general initialization rule for `int`. Here `print` is a high-level profile callable, not a `c.*` operation.
+
+```text
+fn: test () int
+    int: acc
+    acc: 0
+    for: int(i, 0) (i < 10) i++
+        int: j i
+        acc: j
+    end: for
+    print: acc for\j
+    return: 0
+end: test
+```
+
+After the loop, working `acc` is 9. `end: for` is not a checkpoint, and neither is an explicit path read by itself. Before the call, declared actual arguments are evaluated into typed temporaries: `acc` contributes 9 from the cache, while `for\j` reads the previously published graph value 0. Publication then writes 9 into the graph, but the call receives the already selected temporaries and prints `9 0`. A later explicit `for\j` read in another statement sees 9. Publication cannot retroactively change actual arguments already evaluated; a same-activation `for\j: 42` writes the graph cell, not the cache.
+
+One logical serial execution lane per Message makes this model safe without locks or memory barriers inside a turn. A suspended caller's working values cannot be raced; other Messages operate on their own arenas. The interpreter may implement the same semantics with a small control stack of return states and declared arguments plus a sparse set of modified working values. It need not copy a method's complete state at each entry: published state remains in the graph and activation history on the stack. Requirements for the frame's standard L2 storage are defined under [callable interfaces](#callables).
+
+A body supplied to a receiving expression as a Structure and an executable call's arguments likewise do not become one hidden environment.
 
 Publication is required at call, return, `throw`, diagnostic termination and `yield` boundaries. An exit with `finally` has the two publications specified under [exits](#exits). `retry` and local loop transfers do not by themselves create a new activation or reload fields. Signatures and the graph retain this model's requirements whether the graph is interpreted or translated.
 

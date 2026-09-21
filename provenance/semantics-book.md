@@ -186,123 +186,127 @@ The candidate and checking expression have physical identities. Successful check
 Ordinary values may store test results and evidence when the program explicitly does so. Such data do not create a second admission predicate or automatically certify new or changed conditions. The former separate available-graph `RuntimeImplements` is not part of the new validation model.
 
 A statically established violation is reported during analysis. In the earlier model, runtime type-check rejection used `throw: Type` carrying the candidate, required role and Consumer. The exact failure interface of the new unit-test set remains to be settled; handling of declared `throw` is described in [exceptions](#exceptions). Neither validation nor memory reclamation rolls back already published messages or external effects.
-@@ admission-recipes | Четырнадцать практических случаев типизации | Fourteen practical typing cases | 2.5.4; 2.5.3; author 2026-09-20
+@@ admission-recipes | Как получить требуемую гарантию: четырнадцать практических случаев | Obtaining a required guarantee: fourteen practical cases | 2.5.4; 2.5.3; author 2026-09-20
 [RU]
-Эти случаи раскрывают применение [единого механизма допуска](#admission). Аналитическая часть проверяет используемые пути; содержательные ограничения входят в юнит-тесты принимающего выражения. Примеры обозначают требуемое поведение, а не подтверждённую полноту нынешнего транслятора.
+Большинство вопросов о гарантиях сводится к практическому выбору: где именно провести различие, чтобы требуемое свойство действительно проверялось. Гарантия возникает не из глобального «строгого режима», а из части структуры, которую обязан пройти Consumer, и из тестов, которые задаёт принимающее выражение. Подобно тому как в C `typedef` лишь называет псевдоним, а оборачивающая `struct` создаёт отдельную проверяемую границу, в LMX существенны выраженный путь и контракт его потребления.
+
+Следующие четырнадцать случаев являются рецептами: что следует выразить, чего такая запись не доказывает и где находится основное правило. Они применяют [единый механизм допуска](#admission): аналитическая часть проверяет используемые пути, затем интерпретатор графа обязательно исполняет юнит-тесты принимающего выражения. Примеры задают требуемое поведение, а не подтверждённую полноту нынешнего транслятора.
 
 ### 1. Одно принимающее выражение для разных форм данных
 
-Выражение обращается только к нужным ему путям. Кандидат предоставляет эти пути, допустимые листья и требуемые контракты реально вызываемых выражений. Отдельное объявление параметров обобщённого типа для этого не требуется. Такая проверка используемого дерева обеспечивает структурное обобщение, но не обещает всех свойств параметрического полиморфизма.
+Принимающее выражение записывается относительно путей, которые ему действительно нужны. Подходит любая структура, предоставляющая эти пути, допустимые листья и точные сигнатуры реально вызываемых выражений. Структуры одновременно являются обычными данными, материалом явных описаний и результатами композиции, поэтому контрактом служит используемое дерево. Отдельного объявления параметров обобщённого типа и отдельной операции инстанцирования нет. Проверка используемого дерева является механизмом структурного обобщения LMX, но не обещает всех свойств параметрического полиморфизма.
 
 ### 2. Понимание того, что проверяется в данном месте
 
-Consumer определяет область аналитической проверки. Доступные исходные обращения и неизвестное покрытие различаются явно. После анализа выполняются его юнит-тесты через интерпретатор графа. Успех не делает операнды неизменяемыми и не подтверждает все будущие способы использования. Требуемые фактическим вызовом входы должны быть доступны на этом вызове.
+Consumer определяет область аналитической проверки; неизвестное покрытие отличается от заведомо тонкого потребления. После анализа интерпретатор графа исполняет юнит-тесты того же принимающего выражения. Каждый реальный вызов дополнительно должен получить все требуемые сигнатурой входы. Эти этапы не поглощают друг друга: у них разные входы и область покрытия. Успех не замораживает кандидата или Consumer и не подтверждает будущие способы использования после их изменения. Прежнее разделение на исходный `implements`, отдельный `RuntimeImplements` и допуск вызова не образует три альтернативных механизма в новой модели: отдельный доступный-граф обход удалён, а единый допуск и проверка фактических входов вызова сохраняют свои разные обязанности.
 
 ### 3. Различение смыслов одинаково представимых значений
 
-Различие выражается путём, который действительно использует принимающее выражение. Для `Distance: Meter: 1` обращение `d\Meter` требует именно этого пути; структура только с `Foot` его не предоставляет. Одного внешнего имени `Meter`, поля `unit: "meter"` или квалификатора `const` недостаточно. Если важен смысл значения поля, его проверяет тест принимающего выражения.
+Различие кодируется именем пути, который действительно использует принимающее выражение. Для `Distance: Meter: 1` обращение `d\Meter` требует именно этого пути; структура только с `Foot` его не предоставляет. Одного внешнего имени `Meter`, поля `unit: "meter"` или квалификатора `const` недостаточно: наличие пути не сравнивает значение его листа. Если значение доступно и неизменно при сборке, анализ может заранее доказать точное равенство, но обязательные тесты остаются частью единого допуска; в остальных случаях содержательное ограничение проверяет тест принимающего выражения.
 
 ### 4. Ограничение скалярного листа
 
-Ограничение формулируется явно и включается в тесты. Наличие `x\width` не доказывает `width = 32`; даже при наличии описания скалярный лист может использоваться тонко. Доступные при сборке неизменяемые данные можно предварительно анализировать, но такое доказательство не объявляется альтернативным механизмом runtime-валидации.
+Ограничение формулируется явно и включается в тесты. Наличие `x\width` не доказывает `width = 32`: обход описания требует использованных путей, но терминальный скаляр может оставаться тонко потреблённым. Доступные при сборке неизменяемые данные можно предварительно анализировать и сравнивать точно, однако такое доказательство не объявляется альтернативным механизмом runtime-валидации.
 
 ### 5. Изменение, видимое другим держателям ссылки
 
-Запись `p\x: value` или `a[i]: value` меняет выбранный объект. Голое `x: value` изменяет рабочее значение текущего вызова: собственное поле становится dirty и публикуется на границе, а обычная формальная, результатная или динамическая копия остаётся локальной. Исключение привязки входа к собственному полю и момент её активации определены в [рабочем состоянии](#dynamic). Ни одна из этих записей не добавляет одноимённое вхождение неявно.
+Чтобы изменение увидели другие держатели значения, запись выполняется через явный путь: `p\x: value` или `a[i]: value` меняет выбранный референт. Голое `x: value` изменяет рабочее значение текущей активации: own-поле становится `dirty` до контрольной точки, а обычная формальная, результатная или динамическая копия остаётся локальной. Исключение привязки входа к own-полю и момент её активации определены в [рабочем состоянии](#dynamic). Ни одна из этих записей не добавляет одноимённое вхождение неявно.
 
 ### 6. Независимость от изменения другим держателем
 
-Явное копирование создаёт независимые изменяемые значения по своему контракту; настоящая неизменяемость запрещает изменение защищённого значения. Обычная передача структуры или массива копирует ссылку. Поэтому внутри Message другой псевдоним может изменить общий изменяемый объект. Неизменяемость идентификатора внешнего ресурса не делает неизменяемым сам внешний ресурс.
+`copy:` создаёт независимое изменяемое значение только в пределах собственного контракта копирования; настоящая неизменяемость запрещает изменение защищённого значения. Обычная передача структуры или массива копирует ссылку, не референт, поэтому внутри Message другой псевдоним может изменить общий изменяемый объект. Неизменяемость идентификатора внешнего ресурса не делает неизменяемым сам внешний ресурс.
 
 ### 7. Гарантия возможности вызова
 
-Нужны используемые пути и контракт вызываемого выражения, а также все его динамические входы. Пусть A и B предоставляют одинаковый `m`, тело которого использует голое `x`, а Consumer лишь вызывает `m`. Проверка пути `m` не создаёт `x`: его должен предоставить текущий вызывающий контекст либо разрешённый лексический поиск. Анализ не подменяется разворачиванием всех тел вызываемых выражений.
+Нужны оба условия: совместимость используемых путей и точной сигнатуры вызываемого выражения, а также наличие всех его динамических входов среди локальных значений вызывающего выражения, уже унаследованных входов или непосредственного `node\x` вызываемого вхождения. Пусть A и B предоставляют одинаковый `m`, тело которого использует голое `x`, а Consumer лишь вызывает `m`: проверка используемого вызываемого пути может пройти, но допуск вызова всё равно отвергнет отсутствие `x`. Известный случай отвергается при трансляции, динамически выбранная цель требует соответствующей runtime-границы. Это правило не добавляет разворачивание тела вызываемого выражения в `uses`.
 
 ### 8. Проверка передаваемого вызываемого значения
 
-Передача вызываемого значения не является его исполнением и не требует знания всех будущих контрактов. Проверяются требования текущего принимающего выражения. Когда значение реально вызывается, выбранное выражение должно получить нужные входы и пройти применимый допуск. Одинаковые сигнатуры не означают одинакового алгоритма.
+Передача вызываемого значения не является его исполнением и не требует знания всех требований будущего вызова. Проверка выполняется на реальном вызове: выбранное выражение должно иметь точную сигнатуру, получить все динамические входы и пройти применимый допуск, даже если прежняя частичная проверка его не исследовала. Одинаковые сигнатуры не означают одинакового поведения.
 
 ### 9. Изменение тела метода без нарушения вызовов
 
-Свободные динамические имена тела входят в его интерфейс. Добавление такого имени меняет `DynRequired` и сигнатуру; известные вызывающие выражения требуется проверить заново. Неизменяемость записи метода не запрещает явную замену ссылки на совместимое вызываемое значение. Изменение поведения при прежней сигнатуре относится к тестам и правильности программы.
+Свободные динамические имена тела входят в его интерфейс. Добавление такого имени меняет `DynRequired`, а следовательно и `sig`; известные вызывающие выражения требуется проверить заново, динамически выбранные остаются под допуском фактического вызова. Неизменяемость записи метода не делает неизменяемым каждое ссылающееся на неё вхождение и не запрещает явную замену ссылки на совместимое вызываемое значение. Изменение поведения при прежней сигнатуре остаётся вопросом тестов и правильности программы.
 
 ### 10. Выбор нужной части композиции
 
-Нужное вхождение выбирается явно либо строится нужный набор полей. `merge` сохраняет прямой порядок и не реализует наследование с правилом «последний победил». Если результат содержит `read` из A, затем из B, `result\read` и `result\[0]read` выбирают A; `result\[1]read` выбирает B. Аналитическая диагностика может обнаружить непреднамеренный выбор после изменения импорта или композиции.
+Нужное вхождение выбирается явно либо строится нужный набор полей. `merge` создаёт новое дерево, сохраняет прямой порядок вхождений, не меняет операнды и не реализует наследование с правилом «последний победил». Если результат содержит `read` из A, затем из B, `result\read` и `result\[0]read` выбирают A; `result\[1]read` выбирает B. Аналитическая диагностика может обнаружить непреднамеренный неквалифицированный выбор после изменения импорта или композиции. Исходные части не обязаны быть соседними или статически доступными.
 
 ### 11. Изменение существующей структуры
 
-Поля и их число фиксированы. Можно заменять ссылки в существующих полях, соблюдая требования их использования. Иное число полей требует новой структуры, например результата `merge`. Не вводится политика разрешения конфликтов для несуществующих операций «удалить или переместить активное поле».
+Число полей и их слоты фиксированы. Обычные полевые операции могут заменять содержащиеся в них ссылки `void *`; изменение фактического типа цели подчиняется обычным правилам таких обновлений и последующего потребления. Иное число полей требует новой структуры, например результата `merge`. Не вводится политика разрешения конфликтов для несуществующих операций «удалить или переместить активное поле».
 
 ### 12. Надёжное численное преобразование
 
-Используется доступный явно выбранный преобразователь с контрактом диапазона назначения: `u16(255) → u8` допустимо, `u16(256) → u8` — ошибка диапазона. Округление и потеря точности внутри диапазона задаются отдельно. Прохождение аналитической проверки не даёт разрешения молча обернуть значение по модулю.
+Используется доступный преобразователь по явному ключу с контрактом диапазона назначения: `u16(255) → u8` допустимо, `u16(256) → u8` — ошибка диапазона, а не ноль. Округление и потеря точности внутри диапазона задаются отдельной политикой численного профиля. Прохождение аналитической проверки не даёт разрешения молча обернуть значение по модулю.
 
 ### 13. Значение широкой таблицы преобразователей
 
-Дополнительные явные ключи расширяют набор доступных преобразований листьев. Они не меняют требуемые пути дерева и контракт вызываемых выражений. Профиль не обязан предоставлять все пары; отсутствующий преобразователь остаётся отсутствующим. Аналитическая проверка не исполняет преобразователи и не ищет скрытую цепочку преобразований.
+Дополнительные явные ключи расширяют только набор допустимых преобразований листьев. Они не меняют требуемые структурные пути и точные сигнатуры вызываемых выражений; профиль не обязан предоставлять все пары. Ни аналитическая часть, ни тест выбора пути не исполняют преобразователь и не ищут скрытую цепочку преобразований.
 
 ### 14. Корректность внешнего ресурса
 
-Для внешнего дескриптора нужны явная высокоуровневая обёртка и контракт владения, использования и освобождения. Тонкий лист наподобие `FILE` не доказывает действительность ресурса, полномочия или однократность закрытия. Юнит-тесты принимающего выражения проверяют заявленные свойства в пределах своего контракта; неизменяемые биты дескриптора не удерживают ресурс живым. В L3 нет обычных машинных `own:`/`borrow:`/`move:`, а `copy:` не изобретает способ дублирования внешнего ресурса.
+Для внешнего дескриптора нужны проверяемая высокоуровневая обёртка и явный контракт ресурса и очистки. Тонкий лист наподобие `FILE` не доказывает действительность ресурса, полномочия или однократность закрытия. Юнит-тесты принимающего выражения проверяют заявленные свойства в пределах своего контракта; неизменяемые биты дескриптора не удерживают ресурс живым. В L3 нет обычных машинных `own:`/`borrow:`/`move:`, а `copy:` не изобретает способ дублирования внешнего ресурса.
 [EN]
-These cases explain the [single admission mechanism](#admission). Its analytical stage checks used paths; substantive constraints belong to the receiving expression's unit tests. The examples specify required behavior, not verified completeness of the current translator.
+Most questions about guarantees reduce to a practical choice: where must a distinction be placed so that the required property is actually checked? A guarantee does not arise from a global strict mode; it arises from the part of a Structure that Consumer must traverse and from the tests defined by the receiving expression. Just as a C `typedef` merely names an alias while a wrapping `struct` creates a separately enforced boundary, LMX relies on the expressed path and its consumption contract.
+
+The following fourteen cases are recipes: what to express, what that expression does not establish, and where the governing rule lives. They apply the [single admission mechanism](#admission): its analytical stage checks used paths, then the graph interpreter must execute the receiving expression's unit tests. The examples specify required behavior, not verified completeness of the current translator.
 
 ### 1. One receiving expression for multiple data shapes
 
-The expression accesses only the paths it needs. A candidate provides those paths, admitted leaves and the required contracts of expressions actually invoked. No separate generic type-parameter declaration is required. This used-tree check provides structural generality without promising every property of parametric polymorphism.
+Write the receiving expression against the paths it actually needs. Any Structure providing those paths, admitted leaves and the exact signatures of expressions actually invoked can qualify. Structures are ordinary data, material for explicit descriptions and results of composition, so the used tree is the contract. There is no separate generic type-parameter declaration or instantiation operation. Used-tree checking is LMX's structural-generalization mechanism, not a promise of every property of parametric polymorphism.
 
 ### 2. Knowing what a particular site checks
 
-Consumer determines analytical coverage. Available source accesses and unknown coverage are distinguished explicitly. Analysis is followed by its unit tests through the graph interpreter. Success does not freeze operands or certify every future use. Inputs required by an actual invocation must be available at that invocation.
+Consumer determines analytical coverage; unknown coverage is distinguished from known thin consumption. Analysis is followed by the graph interpreter executing that same receiving expression's unit tests. Every actual call must additionally receive all inputs required by its signature. These stages do not subsume one another: they have different inputs and coverage. Success neither freezes candidate or Consumer nor certifies future uses after either changes. The former split among source `implements`, a separate `RuntimeImplements`, and call admission does not define three alternative mechanisms in the new model: the separate available-graph walk is retired, while unified admission and actual-call input checking retain their distinct obligations.
 
 ### 3. Distinguishing meanings with the same representation
 
-Encode the distinction in a path the receiving expression actually uses. With `Distance: Meter: 1`, access through `d\Meter` requires that path; a Structure exposing only `Foot` does not provide it. An outer name `Meter`, a field `unit: "meter"` or `const` alone is insufficient. When a field value's meaning matters, a receiving-expression test checks it.
+Encode the distinction in a path the receiving expression actually uses. With `Distance: Meter: 1`, access through `d\Meter` requires that path; a Structure exposing only `Foot` does not provide it. An outer name `Meter`, a field `unit: "meter"` or `const` alone is insufficient: path presence does not compare the value at its leaf. Immutable build-time data may permit preliminary proof of exact equality, but mandatory tests remain part of unified admission; otherwise a receiving-expression test checks the substantive constraint.
 
 ### 4. Constraining a scalar leaf
 
-State the constraint explicitly and include it in tests. Presence of `x\width` does not establish `width = 32`; a scalar leaf may remain thinly consumed even when a description exists. Immutable build-time data can undergo preliminary analysis, but such a proof is not an alternative runtime-validation mechanism.
+State the constraint explicitly and include it in tests. Presence of `x\width` does not establish `width = 32`: traversing a description requires its used paths, but a terminal scalar may remain thinly consumed. Immutable build-time data may undergo preliminary analysis and exact comparison, but such a proof is not an alternative runtime-validation mechanism.
 
 ### 5. Making a change visible to other reference holders
 
-Writing `p\x: value` or `a[i]: value` changes the selected object. Bare `x: value` changes the current call's working value: an own field becomes dirty and is published at a boundary, while an ordinary formal, result or dynamic copy remains local. The input-to-own-field binding exception and its activation point are defined under [working state](#dynamic). Neither write implicitly appends a same-name occurrence.
+To make a change visible to other holders, write through an explicit path: `p\x: value` or `a[i]: value` changes the selected referent. Bare `x: value` changes the current activation's working value: an own field remains `dirty` until a checkpoint, while an ordinary formal, result or dynamic copy remains local. The input-to-own-field binding exception and its activation point are defined under [working state](#dynamic). Neither write implicitly appends a same-name occurrence.
 
 ### 6. Independence from another holder's mutation
 
-Explicit copying creates independent mutable values under its contract; genuine immutability prohibits mutation of the protected value. Ordinary Structure or Array passing copies a reference. Another alias within the Message can therefore change the shared mutable object. An immutable foreign-resource identifier does not make the foreign resource immutable.
+`copy:` creates an independent mutable value only within its copying contract; genuine immutability prohibits mutation of the protected value. Ordinary Structure or Array passing copies the reference, not the referent. Another alias within the Message can therefore change the shared mutable object. An immutable foreign-resource identifier does not make the foreign resource immutable.
 
 ### 7. Establishing that a call can proceed
 
-The used paths and callable contract must hold, and all dynamic inputs must be supplied. Suppose A and B expose the same `m`, whose body uses bare `x`, while Consumer only invokes `m`. Checking path `m` does not create `x`: the current calling context or permitted lexical fallback must provide it. Analysis is not replaced by expansion of every callee body.
+Both conditions must hold: compatibility covers used paths and the callable's exact signature, and every dynamic input must be available from caller locals, inherited inputs or that callable occurrence's immediate `node\x`. Suppose A and B expose the same `m`, whose body uses bare `x`, while Consumer only invokes `m`: the used-callable check can pass while call admission still rejects a missing `x`. A known case is rejected during translation; a runtime-selected target requires the corresponding runtime boundary. This rule does not add callee-body expansion to `uses`.
 
 ### 8. Checking a transported callable
 
-Transporting a callable does not execute it or require knowledge of every future contract. The current receiving expression's requirements are checked. At actual invocation, the selected expression must receive its required inputs and satisfy the applicable admission requirements. Equal signatures do not imply equal algorithms.
+Transporting a callable neither executes it nor requires knowledge of every future call contract. Checking occurs at the actual call: the selected expression must have the exact signature, receive every dynamic input and satisfy applicable admission, even if an earlier partial check never inspected it. Equal signatures do not imply equal behavior.
 
 ### 9. Changing a method body without breaking calls
 
-The body's free dynamic names are part of its interface. Adding one changes `DynRequired` and the signature; known callers require rechecking. An immutable method record does not prohibit explicit replacement of a reference with a compatible callable. Behavioral change under the same signature is a matter for tests and program correctness.
+The body's free dynamic names are part of its interface. Adding one changes `DynRequired` and therefore `sig`; known callers require rechecking, while runtime-selected callables remain subject to actual-call admission. An immutable method record neither makes every occurrence referring to it immutable nor prohibits explicit replacement of a reference with a compatible callable. Behavioral change under the same signature remains a matter for tests and program correctness.
 
 ### 10. Selecting the intended part of a composition
 
-Select the occurrence explicitly or construct the intended fields. `merge` preserves forward order and does not implement last-wins inheritance. If the result contains A's `read` followed by B's, `result\read` and `result\[0]read` select A; `result\[1]read` selects B. Analytical diagnostics may expose unintended selection after an import or composition changes.
+Select the occurrence explicitly or construct the intended fields. `merge` builds a new tree, preserves forward occurrence order, does not mutate its operands and does not implement last-wins inheritance. If the result contains A's `read` followed by B's, `result\read` and `result\[0]read` select A; `result\[1]read` selects B. Analytical diagnostics may expose an unintended unqualified selection after an import or composition changes. Source parts need not be adjacent or statically available.
 
 ### 11. Changing an existing Structure
 
-Fields and their count are fixed. References in existing fields may be replaced subject to their use requirements. A different field count requires a new Structure, such as a `merge` result. No conflict policy is introduced for nonexistent operations that remove or move an active field.
+Field count and slots are fixed. Ordinary field operations may replace the `void *` child references stored in existing fields; a change in the target's actual type follows the ordinary rules for such updates and later consumption. A different field count requires a new Structure, such as a `merge` result. No conflict policy is introduced for nonexistent operations that remove or move an active field.
 
 ### 12. Reliable numeric conversion
 
-Use an available explicitly selected converter with a destination-range contract: `u16(255) → u8` is admitted, while `u16(256) → u8` is a range error. In-range rounding and precision loss are specified separately. Successful analytical checking does not permit silent modular wrapping.
+Use an available explicitly keyed converter with a destination-range contract: `u16(255) → u8` is admitted, while `u16(256) → u8` is a range error, not zero. In-range rounding and precision loss are a separate numeric-profile policy. Successful analytical checking does not permit silent modular wrapping.
 
 ### 13. What a broad converter table provides
 
-Additional explicit keys widen the available leaf conversions. They do not alter required tree paths or callable contracts. A profile need not provide every pair; a missing converter remains missing. Analytical checking does not execute converters or search for a hidden conversion chain.
+Additional explicit keys widen only the available leaf conversions. They do not alter required structural paths or exact callable signatures, and a profile need not provide every pair. Neither analytical checking nor path-selection tests execute a converter or search for a hidden conversion chain.
 
 ### 14. Foreign-resource validity
 
-A foreign handle requires an explicit high-level wrapper and contracts for ownership, use and release. A thin `FILE`-like leaf does not establish validity, authority or single close. The receiving expression's unit tests check declared properties within their contract; immutable handle bits do not keep a resource alive. L3 has no ordinary machine-level `own:`/`borrow:`/`move:`, and `copy:` does not invent a foreign resource's duplication policy.
+A foreign handle requires a checked high-level wrapper and explicit resource and cleanup contracts. A thin `FILE`-like leaf does not establish validity, authority or single close. The receiving expression's unit tests check declared properties within their contract; immutable handle bits do not keep a resource alive. L3 has no ordinary machine-level `own:`/`borrow:`/`move:`, and `copy:` does not invent a foreign resource's duplication policy.
 
 @@ construction | Построение значений | Value construction | 9.1–9.2; 19.20
 [RU]
@@ -469,7 +473,49 @@ Dirty определяется выполненной записью, не ср�
 
 Следовательно, после вложенного изменения `node\x` рабочее голое `x` вызывающего выражения может сохранять прежнее значение, тогда как явный путь видит новое. Позднейшее присваивание голому собственному `x` намеренно создаёт новую запись и опубликует её на следующей границе. Отсутствие автоматического перечитывания — часть семантики, а не разрешение терять отмеченные изменения.
 
-Рекурсивные вызовы получают отдельные рабочие значения и отдельные отметки изменений, даже если используют одно структурное вхождение метода. Публикация одной активации не превращает рабочие значения другой в ссылки на её стек. Тело, переданное принимающему выражению как структура, и аргументы исполняемого вызова также не становятся общим скрытым окружением.
+<a id="activation-history"></a>
+### Стек активаций, рекурсия и явная история
+
+Стек активаций является единственной неявной историей вызовов. Нативное исполнение использует обычный стек вызовов C; интерпретатор — эквивалентный управляющий стек. Прямая, взаимная и callback-рекурсия создаёт отдельную активацию с собственными формальными и динамическими значениями, рабочими локальными значениями, результатом и отметками `dirty`. Для каждого вызова не создаются отдельная Lmx-структура вызова или тела, скрытый узел активации, окружение замыкания либо глобальная запись активных аргументов.
+
+Выбранная вызываемая структура хранит текущее опубликованное рабочее состояние метода, но не журнал вызовов. Рекурсивные вызовы через одно вхождение могут публиковать в одну структуру. Другое вызываемое вхождение, указывающее на ту же неизменяемую запись метода, публикует в собственную скопированную структуру. Приостановленная внешняя активация не перечитывается и сохраняет свои рабочие значения; позже она публикует значение только после нового реального изменения. Итог определяет последовательный порядок публикаций только `dirty`-полей, а не неявное восстановление снимка активации.
+
+Трасса рекурсивного примера ниже не вводит новый синтаксис. Метод M имеет вызываемую структуру S (`M = S`) с собственным полем `x`; оба вызова выбирают ту же S, а `n` является частным объявленным аргументом каждой активации.
+
+| Шаг | Локальное значение внешнего вызова | Локальное значение внутреннего вызова | Опубликованное `S.x` |
+| --- | --- | --- | --- |
+| Внешний вход загружает `S.x = 1` | 1, clean | — | 1 |
+| Внешний вызов присваивает собственному `x` значение 2 | 2, dirty | — | 1 |
+| Публикация перед вызовом, затем вход `M(0)` | 2, clean | 2, clean | 2 |
+| Внутренний вызов присваивает собственному `x` значение 9 | 2, clean | 9, dirty | 2 |
+| Внутренний возврат проходит публикацию | 2, clean | кадр завершён | 9 |
+| Внешний вызов продолжается без перечитывания | 2, clean | — | 9 |
+| Внешний вызов возвращается без присваивания `x` | кадр завершён | — | 9 |
+
+После возобновления внешнего кадра голое `x` читает 2, а явное `node\x` — 9. Если внешний кадр затем выполняет `x: x + 1`, его рабочее значение становится 3 и получает `dirty`; следующая граница публикует 3 в S. Это новая запись внешней активации, не восстановление её прежнего снимка. Если бы `x` был только динамически переданным значением, присваивание осталось бы локальным и ни одна из этих записей own-поля не произошла бы.
+
+Тем самым поле вызываемой структуры сочетает свойства постоянного поля экземпляра с рабочей локальностью стековой переменной: использованное own-поле загружается в типизированное рабочее значение, а обратно перед границей вызова или выхода записывается только изменённое. Граф хранит опубликованное состояние; стек хранит историю активаций. Неявного захвата кадра вызывающего выражения нет, поэтому кадры не приходится размещать в куче или связывать скрытой цепочкой замыканий для решения upward-funarg-проблемы.
+
+Следующий пример вызова показывает порядок между кэшем, явным чтением графа и фактическими аргументами; это трасса установленной формы `for:`, не новое правило грамматики. Ячейка графа `j` в фикстуре начинается с 0 — это условие примера, не общее правило инициализации `int`. `print` здесь — высокоуровневое вызываемое выражение профиля, не операция `c.*`.
+
+```text
+fn: test () int
+    int: acc
+    acc: 0
+    for: int(i, 0) (i < 10) i++
+        int: j i
+        acc: j
+    end: for
+    print: acc for\j
+    return: 0
+end: test
+```
+
+После цикла рабочее `acc` равно 9. `end: for` не является контрольной точкой, как и само явное чтение пути. Перед вызовом объявленные фактические аргументы вычисляются в типизированные временные значения: `acc` даёт 9 из кэша, а `for\j` читает прежнее опубликованное значение графа 0. Затем публикация записывает 9 в граф, но вызов получает уже выбранные временные значения и печатает `9 0`. Последующее явное чтение `for\j` в другом операторе видит 9. Публикация не меняет задним числом уже вычисленные фактические аргументы; запись `for\j: 42` в той же активации меняет ячейку графа, не кэш.
+
+Одна логическая последовательная полоса исполнения каждого Message делает эту модель безопасной без блокировок и барьеров памяти внутри такта. Приостановленные локальные значения вызывающего выражения не участвуют в гонке; другие Message работают со своими аренами. Интерпретатор может реализовать ту же семантику малым управляющим стеком возвратов и объявленных аргументов вместе с разреженным набором изменённых рабочих значений. Ему не нужно копировать полное состояние метода при каждом входе; опубликованное состояние остаётся в графе, а история активаций — на стеке. Требования к стандартному L2-хранилищу такого кадра заданы в [интерфейсе вызываемых выражений](#callables).
+
+Тело, переданное принимающему выражению как структура, и аргументы исполняемого вызова также не становятся общим скрытым окружением.
 
 Публикация обязательна на границах вызова, возврата, `throw`, диагностического прекращения и `yield`. Выход с `finally` имеет две публикации, описанные в [выходах](#exits). `retry` и локальный переход цикла сами по себе не создают новую активацию и не перечитывают поля. Сигнатуры и граф сохраняют требования этой модели независимо от того, исполняется ли граф интерпретатором или транслируется.
 [EN]
@@ -502,7 +548,49 @@ Dirty state follows an executed write, not value comparison or the presence of a
 
 Consequently, after a nested modification of `node\x`, the caller's bare working `x` can retain its earlier value while an explicit path observes the new value. A later assignment to bare own `x` deliberately creates a new write and publishes it at the next boundary. No automatic reload is part of the semantics, not permission to lose dirty changes.
 
-Recursive calls have separate working values and dirty marks even when using the same callable structural occurrence. One activation's publication does not turn another's working values into references to its stack. A body supplied to a receiving expression as a Structure and an executable call's arguments likewise do not become one hidden environment.
+<a id="activation-history"></a>
+### Activation stack, recursion and explicit history
+
+The activation stack is the sole implicit call history. Native execution uses the ordinary C call stack; the interpreter uses an equivalent control stack. Direct, mutual and callback recursion creates a distinct activation with its own formal and dynamic values, working locals, result and `dirty` marks. No per-call Lmx call/body Structure, hidden activation node, closure environment or global active-argument record is created.
+
+The selected callable Structure holds the method's currently published working state, but it is not a call journal. Recursive calls through one occurrence may publish into the same Structure. Another callable occurrence referring to the same immutable method record publishes into its own copied Structure. A suspended outer activation is not reloaded and retains its working values; it can publish a value later only after another actual modification. The result is determined by the serial order of dirty-only publications, not by implicit restoration of an activation snapshot.
+
+The following recursive trace introduces no new syntax. Method M has callable Structure S (`M = S`) with own field `x`; both calls select the same S, while `n` is a private declared argument in each activation.
+
+| Step | Outer working value | Inner working value | Published `S.x` |
+| --- | --- | --- | --- |
+| Outer entry loads `S.x = 1` | 1, clean | — | 1 |
+| Outer call assigns own `x = 2` | 2, dirty | — | 1 |
+| Pre-call publication, then `M(0)` enters | 2, clean | 2, clean | 2 |
+| Inner call assigns own `x = 9` | 2, clean | 9, dirty | 2 |
+| Inner return crosses publication | 2, clean | frame ends | 9 |
+| Outer call resumes without reload | 2, clean | — | 9 |
+| Outer call returns without assigning `x` | frame ends | — | 9 |
+
+On the resumed outer frame, bare `x` reads 2 and explicit `node\x` reads 9. If the outer frame then executes `x: x + 1`, its working value becomes 3 and is marked `dirty`; the next boundary publishes 3 into S. This is a new outer-activation write, not restoration of its previous snapshot. If `x` were only a dynamically supplied value, its assignment would remain local and none of these own-field stores would occur.
+
+The callable Structure's field therefore combines the persistence of an instance field with the working locality of a stack variable: a used own field is loaded into a typed working value, and only a changed value is written back at a call or exit boundary. The graph stores published state; the stack stores activation history. There is no implicit caller-frame capture, so frames need not be heapified or connected by a hidden closure chain to avoid the upward-funarg problem.
+
+The following call example shows the order among cache, explicit graph read and actual arguments; it is a trace using the established `for:` form, not a new grammar rule. The fixture's graph cell for `j` starts at 0; that is an example condition, not a general initialization rule for `int`. Here `print` is a high-level profile callable, not a `c.*` operation.
+
+```text
+fn: test () int
+    int: acc
+    acc: 0
+    for: int(i, 0) (i < 10) i++
+        int: j i
+        acc: j
+    end: for
+    print: acc for\j
+    return: 0
+end: test
+```
+
+After the loop, working `acc` is 9. `end: for` is not a checkpoint, and neither is an explicit path read by itself. Before the call, declared actual arguments are evaluated into typed temporaries: `acc` contributes 9 from the cache, while `for\j` reads the previously published graph value 0. Publication then writes 9 into the graph, but the call receives the already selected temporaries and prints `9 0`. A later explicit `for\j` read in another statement sees 9. Publication cannot retroactively change actual arguments already evaluated; a same-activation `for\j: 42` writes the graph cell, not the cache.
+
+One logical serial execution lane per Message makes this model safe without locks or memory barriers inside a turn. A suspended caller's working values cannot be raced; other Messages operate on their own arenas. The interpreter may implement the same semantics with a small control stack of return states and declared arguments plus a sparse set of modified working values. It need not copy a method's complete state at each entry: published state remains in the graph and activation history on the stack. Requirements for the frame's standard L2 storage are defined under [callable interfaces](#callables).
+
+A body supplied to a receiving expression as a Structure and an executable call's arguments likewise do not become one hidden environment.
 
 Publication is required at call, return, `throw`, diagnostic termination and `yield` boundaries. An exit with `finally` has the two publications specified under [exits](#exits). `retry` and local loop transfers do not by themselves create a new activation or reload fields. Signatures and the graph retain this model's requirements whether the graph is interpreted or translated.
 

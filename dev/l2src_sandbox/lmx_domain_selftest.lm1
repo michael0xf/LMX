@@ -159,6 +159,16 @@ fn: main () int
     check(lmx_post_take(@ mailbox, c.LMX_POST_OUTBOX) = (cast: (@: void) thread), "the outbox did not give back what it accepted")
 
     # 4 - the executable object and its turn boundary
+    # THE RECORD IS POISONED BEFORE IT IS ATTACHED, deliberately and completely.  A schedule in a
+    # by-value local arrives holding whatever was on the stack, so attaching one proves nothing
+    # about the attach contract unless the record is KNOWN to be dirty.  0xAA makes the case
+    # deterministic and path-independent instead of depending on what the stack happened to hold,
+    # and attaching WHILE POISONED keeps the contract exercised: lmx_thread_attach accepts a merely
+    # allocated record and must not read slot\arena (lmx_thread.h.lm1).  The lmx_schedule_init
+    # below is unchanged and still runs AFTER the attach -- this is COVERAGE of an ordering that was
+    # already correct, not a fix for a demonstrated crash (6dced74, the -68 shape).  Measured: attach,
+    # enter and leave do not read the schedule on this path, so the poison discriminates nothing today.
+    memset((cast: (@: void) (@ slot)), 170, c.sizeof(c.LmxSchedule))
     check(lmx_thread_attach(thread, letter, @ mailbox, @ slot) = c.LMX_THREAD_OK, "the object did not attach to its letter")
     check(lmx_schedule_init(@ slot, @ arena, (cast: (@: void) thread), 4U) = c.LMX_SCHEDULE_OK, "the scheduler record did not initialize")
     letter\running: 1
@@ -229,6 +239,16 @@ fn: main () int
         fputs("lmx_domain: registering the second object domain failed\n", l1_stdout())
         return: 1
     check(lmx_post_init(@ arena, @ mail2) = c.LMX_POST_OK, "the second mailbox did not initialize")
+    # THE RECORD IS POISONED BEFORE IT IS ATTACHED, deliberately and completely.  A schedule in a
+    # by-value local arrives holding whatever was on the stack, so attaching one proves nothing
+    # about the attach contract unless the record is KNOWN to be dirty.  0xAA makes the case
+    # deterministic and path-independent instead of depending on what the stack happened to hold,
+    # and attaching WHILE POISONED keeps the contract exercised: lmx_thread_attach accepts a merely
+    # allocated record and must not read slot\arena (lmx_thread.h.lm1).  The lmx_schedule_init
+    # below is unchanged and still runs AFTER the attach -- this is COVERAGE of an ordering that was
+    # already correct, not a fix for a demonstrated crash (6dced74, the -68 shape).  Measured: attach,
+    # enter and leave do not read the schedule on this path, so the poison discriminates nothing today.
+    memset((cast: (@: void) (@ slot2)), 170, c.sizeof(c.LmxSchedule))
     check(lmx_thread_attach(thread2, letter2, @ mail2, @ slot2) = c.LMX_THREAD_OK, "the second object did not attach")
     check(lmx_schedule_init(@ slot2, @ arena, (cast: (@: void) thread2), 500U) = c.LMX_SCHEDULE_OK, "the second scheduler record did not initialize")
     check(lmx_schedule_wait(@ slot2, lmx_clock_ticks()) = c.LMX_SCHEDULE_OK, "the lane's wait did not start")
@@ -250,6 +270,17 @@ fn: main () int
         fputs("lmx_domain: the third object could not be allocated\n", l1_stdout())
         return: 1
     ---
+    # POISONED BEFORE ATTACH, AND THEN DELIBERATELY LEFT UNINITIALIZED for the rest of this test --
+    # the only schedule here that is never initialized, and that is on purpose rather than by
+    # oversight.  MEASURED 2026-09-21: attach, lmx_thread_enter and lmx_thread_leave DO NOT READ the
+    # schedule record on this path (enter reads t\message, t\state, t\turn; leave reads t\state and
+    # t\message), so a poisoned, uninitialized slot3 passes 10 of 10 exactly as the unpoisoned file
+    # does.  There is NO demonstrated missing-init hazard here and none is claimed.
+    # WHAT THE SENTINEL IS FOR: if a future boundary begins reading this record without adding an
+    # explicit initialization at its new use site, 0xAA makes that read FAIL LOUDLY instead of
+    # silently masking the contract expansion.  Initializing it here would have removed that
+    # tripwire, which is why it is not initialized.
+    memset((cast: (@: void) (@ slot3)), 170, c.sizeof(c.LmxSchedule))
     check(lmx_thread_attach(thread3, letter3, @ mail3, @ slot3) = c.LMX_THREAD_OK, "the third object did not attach")
     letter3\running: 1
     letter3\success: 0

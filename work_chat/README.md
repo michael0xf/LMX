@@ -118,6 +118,20 @@ The user profile's crossSessionInbound=accept was authorized and hot-reloaded on
 
 ## Incoming existing Grok CLI
 
+The unattended route is the stateful read-only pull from the live `lmx_uds`
+transcript.  A row is a Grok ticket only when it contains a valid Grok request
+id and positive routing intent: either the literal marker `lmx_uds → grok`
+(`->` is also accepted), or a case-insensitive `From Codex` together with
+`to grok`, `ticket grok-`, or `request grok-`.  A bare request id in a status
+report is narration and is not delivered.  Genuine same-id follow-ups remain
+possible by repeating one of the explicit forms.
+
+Do not quote a previously published marker-bearing route row verbatim unless
+another delivery is intended: the explicit marker deliberately wins even
+inside quoted text.  Grok runs `python claude_chat/grok_uds_pull.py` on its own
+timer and claims handled ids with `--claim`; other agents must not run the pull,
+because doing so advances its cursor.
+
 ```powershell
 python claude_chat/chat_status.py peers
 C:\grok\grok.bat send --timeout 120 "From Codex. Request UNIQUE-CODE. Reply ACK UNIQUE-CODE in this turn."

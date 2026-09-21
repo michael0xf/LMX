@@ -97,13 +97,16 @@ def is_grok_ticket(text):
     if is_outbound_reply(text) or not ids_in(text):
         return False
     lowered = text.casefold()
+    # Delivery requires positive routing intent.  A bare request id in a status report is
+    # narration, not a follow-up; accepting it here used to re-run every claimed ticket each
+    # time lmx_uds reported that ticket back to Codex.
     if 'lmx_uds → grok' in lowered or 'lmx_uds -> grok' in lowered:
         return True
-    if 'From Codex' not in text:
+    if 'from codex' not in lowered:
         return False
     if 'to grok' in lowered or 'ticket grok-' in lowered or 'request grok-' in lowered:
         return True
-    return 'GROK-' in text and 'fable' not in lowered[:200] and 'deepseek' not in lowered[:80] and 'openrouter' not in lowered[:80]
+    return False
 
 
 def newer_id(left, right):

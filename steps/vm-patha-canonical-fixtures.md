@@ -107,3 +107,16 @@ $QEMU -L "$($GCC -print-sysroot)" ./build/vm_porting/printTree_rv.elf
 ```
 
 After ticket 22, prefer: `powershell -NoProfile -File tools/run_vm_patha_smoke.ps1 -Target all`
+
+## Smoke runner (ticket 22)
+
+`tools/run_vm_patha_smoke.ps1` (Windows PowerShell 5.1): `-Target mir|wasm|riscv|all`.
+Uses only tools under ignored `build/vm/…`, writes under ignored `build/vm_porting/smoke_runner/`,
+no downloads or PATH mutation. Observed on OAK65536 (2026-09-21):
+
+| Target | Status | Exit |
+|--------|--------|-----:|
+| mir | OK | 0 |
+| wasm | OK | 0 |
+| riscv | OK | 0 |
+| all | OK | 0 |

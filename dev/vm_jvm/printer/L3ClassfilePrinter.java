@@ -16,7 +16,7 @@ import org.objectweb.asm.Opcodes;
 /**
  * Emits one JVM method per reachable {@link L3Role#CALLABLE}.
  * Method names {@code c0}..{@code cN}; descriptors from arity; activation-local
- * int slots after subject/args. Pre-test WHILE; BREAK/CONTINUE/REDO via loop-label stack;
+ * int slots after subject/args. Pre-test WHILE / post-test UNTIL; BREAK/CONTINUE/REDO via loop-label stack;
  * nested RETURN exits the current CALLABLE (IRETURN). Self/mutual recursive CALL
  * via physical CALLABLE identity (INVOKESTATIC to mapped method).
  * Ownership cycles among non-CALLABLE expression nodes are rejected with gray/black
@@ -28,7 +28,7 @@ public final class L3ClassfilePrinter implements Opcodes {
     public static final String GEN_INTERNAL = "lmx/gen/PrintedL3Expr";
     public static final String EVAL = "eval";
 
-    /** Compile-time nearest-WHILE nesting for BREAK/CONTINUE validation. */
+    /** Compile-time nearest WHILE/UNTIL nesting for BREAK/CONTINUE/REDO validation. */
     private static final ThreadLocal<Integer> LOOP_DEPTH =
             new ThreadLocal<Integer>() {
                 @Override
@@ -52,7 +52,7 @@ public final class L3ClassfilePrinter implements Opcodes {
                     return new IdentityHashMap<L3Node, Boolean>();
                 }
             };
-    /** Emit-time map from physical LOOP_LABEL node to its WHILE frame. */
+    /** Emit-time map from physical LOOP_LABEL node to its WHILE/UNTIL frame. */
     private static final ThreadLocal<IdentityHashMap<L3Node, Label[]>> LABEL_FRAMES =
             new ThreadLocal<IdentityHashMap<L3Node, Label[]>>() {
                 @Override
@@ -196,6 +196,9 @@ public final class L3ClassfilePrinter implements Opcodes {
         if (r == L3Role.WHILE) {
             return "WHILE";
         }
+        if (r == L3Role.UNTIL) {
+            return "UNTIL";
+        }
         if (r == L3Role.REDO) {
             return "REDO";
         }
@@ -270,15 +273,23 @@ public final class L3ClassfilePrinter implements Opcodes {
     }
 
     private static L3Node whileLabelOrNull(L3Node whileNode) {
-        int n = whileNode.childCount();
+        return loopLabelOrNull(whileNode, "WHILE");
+    }
+
+    private static L3Node untilLabelOrNull(L3Node untilNode) {
+        return loopLabelOrNull(untilNode, "UNTIL");
+    }
+
+    private static L3Node loopLabelOrNull(L3Node loopNode, String roleName) {
+        int n = loopNode.childCount();
         if (n == 2) {
             return null;
         }
         if (n != 3) {
-            throw new IllegalArgumentException("WHILE arity: need condition, body[, label]");
+            throw new IllegalArgumentException(roleName + " arity: need condition, body[, label]");
         }
-        requireLoopLabelNode(whileNode.child(2));
-        return whileNode.child(2);
+        requireLoopLabelNode(loopNode.child(2));
+        return loopNode.child(2);
     }
 
 
@@ -655,6 +666,9 @@ public final class L3ClassfilePrinter implements Opcodes {
         if (r == L3Role.WHILE) {
             throw new IllegalArgumentException("WHILE not allowed in value context");
         }
+        if (r == L3Role.UNTIL) {
+            throw new IllegalArgumentException("UNTIL not allowed in value context");
+        }
         if (r == L3Role.BREAK) {
             throw new IllegalArgumentException("BREAK not allowed in value context");
         }
@@ -760,7 +774,7 @@ public final class L3ClassfilePrinter implements Opcodes {
     }
 
     /**
-     * Statement position: WHILE / BREAK / CONTINUE / REDO / RETRYABLE / RETRY / RETURN / stmt-SEQUENCE / stmt-IF,
+     * Statement position: WHILE / UNTIL / BREAK / CONTINUE / REDO / RETRYABLE / RETRY / RETURN / stmt-SEQUENCE / stmt-IF,
      * or a discarded int expression.
      */
     private static BitSet validateStmt(
@@ -862,6 +876,43 @@ public final class L3ClassfilePrinter implements Opcodes {
                         currentArity,
                         slotCount,
                         (BitSet) afterCond.clone());
+            } finally {
+                LOOP_DEPTH.set(Integer.valueOf(LOOP_DEPTH.get().intValue() - 1));
+                if (lab != null) {
+                    ACTIVE_LOOP_LABELS.get().remove(lab);
+                }
+            }
+            return assigned;
+        }
+        if (r == L3Role.UNTIL) {
+            L3Node lab = untilLabelOrNull(expr);
+            if (lab != null) {
+                if (ACTIVE_LOOP_LABELS.get().containsKey(lab)) {
+                    throw new IllegalArgumentException("duplicate active loop label binding");
+                }
+                ACTIVE_LOOP_LABELS.get().put(lab, Boolean.TRUE);
+            }
+            LOOP_DEPTH.set(Integer.valueOf(LOOP_DEPTH.get().intValue() + 1));
+            try {
+                // Post-test: body runs at least once before condition.
+                BitSet afterBody = validateStmt(
+                        expr.child(1),
+                        map,
+                        arity,
+                        slots,
+                        currentCallable,
+                        currentArity,
+                        slotCount,
+                        assigned);
+                validateIntExpr(
+                        expr.child(0),
+                        map,
+                        arity,
+                        slots,
+                        currentCallable,
+                        currentArity,
+                        slotCount,
+                        afterBody);
             } finally {
                 LOOP_DEPTH.set(Integer.valueOf(LOOP_DEPTH.get().intValue() - 1));
                 if (lab != null) {
@@ -1008,6 +1059,8 @@ public final class L3ClassfilePrinter implements Opcodes {
             emitNestedReturn(mv, expr, map, arity, currentArity);
         } else if (r == L3Role.WHILE) {
             throw new IllegalArgumentException("WHILE not allowed in value context");
+        } else if (r == L3Role.UNTIL) {
+            throw new IllegalArgumentException("UNTIL not allowed in value context");
         } else if (r == L3Role.BREAK) {
             throw new IllegalArgumentException("BREAK not allowed in value context");
         } else if (r == L3Role.CONTINUE) {
@@ -1114,6 +1167,10 @@ public final class L3ClassfilePrinter implements Opcodes {
             emitWhile(mv, expr, map, arity, currentArity);
             return;
         }
+        if (r == L3Role.UNTIL) {
+            emitUntil(mv, expr, map, arity, currentArity);
+            return;
+        }
         if (r == L3Role.SEQUENCE) {
             for (int i = 0; i < expr.childCount(); i++) {
                 emitStmt(mv, expr.child(i), map, arity, currentArity);
@@ -1174,6 +1231,38 @@ public final class L3ClassfilePrinter implements Opcodes {
             mv.visitLabel(body);
             emitStmt(mv, expr.child(1), map, arity, currentArity);
             mv.visitJumpInsn(GOTO, cond);
+            mv.visitLabel(done);
+        } finally {
+            if (lab != null) {
+                LABEL_FRAMES.get().remove(lab);
+            }
+            LOOP_STACK.get().removeFirst();
+        }
+    }
+
+    private static void emitUntil(
+            MethodVisitor mv,
+            L3Node expr,
+            Map<L3Node, Integer> map,
+            Map<L3Node, Integer> arity,
+            int currentArity) {
+        // frame[0]=postcondition (CONTINUE), frame[1]=exit (BREAK), frame[2]=body entry (REDO)
+        // Body first; then condition; IFEQ body = repeat while condition is zero.
+        Label cond = new Label();
+        Label done = new Label();
+        Label body = new Label();
+        Label[] frame = new Label[] {cond, done, body};
+        L3Node lab = expr.childCount() == 3 ? expr.child(2) : null;
+        LOOP_STACK.get().addFirst(frame);
+        if (lab != null) {
+            LABEL_FRAMES.get().put(lab, frame);
+        }
+        try {
+            mv.visitLabel(body);
+            emitStmt(mv, expr.child(1), map, arity, currentArity);
+            mv.visitLabel(cond);
+            emitIntExpr(mv, expr.child(0), map, arity, currentArity);
+            mv.visitJumpInsn(IFEQ, body);
             mv.visitLabel(done);
         } finally {
             if (lab != null) {

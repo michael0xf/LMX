@@ -187,3 +187,7 @@ Illegal structural/ownership cycles among non-CALLABLE expression nodes are reje
 ## RETRYABLE / RETRY (GROK-BOT-JVM-L3-RETRYABLE-LOCAL-20260921-96)
 
 `RETRYABLE` is a statement region; `RETRY` restarts its body in the same CALLABLE without a new activation and without rolling back locals/args/probes. Optional physical `RETRY_LABEL` (distinct from `LOOP_LABEL`). Cross-type label use and CALL crossing are rejected. FINALLY/cleanup-on-abandoned-attempt remains deferred.
+
+## UNTIL (GROK-BOT-JVM-L3-UNTIL-20260921-98)
+
+Post-test UNTIL: children condition, body[, LOOP_LABEL] (same shape as WHILE). Body runs first, then condition; repeat while condition is zero (body at least once). BREAK/CONTINUE/REDO reuse the physical loop-label frame {cond, break, body} with CONTINUE → postcondition. Unlabelled transfers target the nearest active WHILE or UNTIL; labelled transfers stay in the same CALLABLE. FOR/FINALLY deferred.

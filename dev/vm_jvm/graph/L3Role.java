@@ -55,28 +55,35 @@ public final class L3Role {
      */
     public static final L3Role LOCAL_SET = new L3Role();
     /**
-     * Pre-test loop: children are condition, body. Condition is an int (zero=false).
+     * Pre-test loop: children are condition, body[, LOOP_LABEL]. Condition is an int (zero=false).
      * Statement only — valid solely as a non-final SEQUENCE child; no int result.
-     * Ordinary JVM back-edge; no fuel cap. UNTIL/FOR deferred.
+     * Ordinary JVM back-edge; no fuel cap. FOR deferred.
      */
     public static final L3Role WHILE = new L3Role();
     /**
-     * Exit the nearest active WHILE (statement-only). Compile-time loop-label stack;
-     * unlabelled or physical LOOP_LABEL. RETRY/cleanup deferred.
+     * Post-test loop (semantics §12): children condition, body[, LOOP_LABEL] (same shape as WHILE).
+     * Body runs first; then condition; repeat while condition is zero. Body executes at least once.
+     * Statement only. BREAK/CONTINUE/REDO reuse the physical LOOP_LABEL framework with WHILE.
+     */
+    public static final L3Role UNTIL = new L3Role();
+    /**
+     * Exit the nearest active WHILE or UNTIL (statement-only). Compile-time loop-label stack;
+     * unlabelled or physical LOOP_LABEL.
      */
     public static final L3Role BREAK = new L3Role();
     /**
-     * Jump to the nearest WHILE condition recheck (statement-only).
+     * Jump to the nearest active loop condition check (WHILE pretest / UNTIL postcondition).
+     * Statement-only.
      */
     public static final L3Role CONTINUE = new L3Role();
     /**
-     * Repeat the nearest WHILE body without rechecking the condition (statement-only).
-     * Unlabelled or physically labelled; cannot cross a CALL boundary. RETRY deferred.
+     * Repeat the nearest active WHILE/UNTIL body without checking the condition (statement-only).
+     * Unlabelled or physically labelled; cannot cross a CALL boundary.
      */
     public static final L3Role REDO = new L3Role();
     /**
      * Physical loop label record. Sealed leaf; object identity only (no text/numeric id).
-     * Referenced by labelled WHILE and labelled BREAK/CONTINUE/REDO.
+     * Referenced by labelled WHILE/UNTIL and labelled BREAK/CONTINUE/REDO.
      */
     public static final L3Role LOOP_LABEL = new L3Role();
     /**

@@ -84,6 +84,7 @@ public final class ExprSmokeDriver {
         testPhysicalLoopLabels();
 
         testRetryableLocal();
+        testUntil();
 
         if (fails != 0) {
             System.out.println("FAIL ExprSmokeDriver checks=" + checks + " failures=" + fails);
@@ -645,6 +646,66 @@ public final class ExprSmokeDriver {
 
 
 
+
+
+    private static void testUntil() throws Exception {
+        Class<?> c1 = loadPrinted(L3ExprFixture.untilInitialTrueRunsOnce());
+        Object r1 = c1.getMethod("eval", lmx.LmxOccurrence.class)
+                .invoke(null, lmx.LmxOccurrence.independent(Integer.valueOf(0)));
+        check("UNTIL initial-true still runs body once -> 1", Integer.valueOf(1).equals(r1));
+
+        Class<?> c2 = loadPrinted(L3ExprFixture.untilFalseRepeatsThenExits());
+        Object r2 = c2.getMethod("eval", lmx.LmxOccurrence.class)
+                .invoke(null, lmx.LmxOccurrence.independent(Integer.valueOf(0)));
+        check("UNTIL false repeats then exits -> 3", Integer.valueOf(3).equals(r2));
+
+        Class<?> c3 = loadPrinted(L3ExprFixture.untilContinueChecksPostcondition());
+        Object r3 = c3.getMethod("eval", lmx.LmxOccurrence.class)
+                .invoke(null, lmx.LmxOccurrence.independent(Integer.valueOf(0)));
+        check("UNTIL CONTINUE checks postcondition -> 2", Integer.valueOf(2).equals(r3));
+
+        ArgEvalCounter.reset();
+        Class<?> c4 = loadPrinted(L3ExprFixture.untilRedoSkipsPostcondition());
+        Object r4 = c4.getMethod("eval", lmx.LmxOccurrence.class)
+                .invoke(null, lmx.LmxOccurrence.independent(Integer.valueOf(0)));
+        check("UNTIL REDO skips postcondition -> n==2", Integer.valueOf(2).equals(r4));
+        check("UNTIL REDO skips postcondition probe ticks 1", ArgEvalCounter.get() == 1);
+
+        Class<?> c5 = loadPrinted(L3ExprFixture.untilNearestNestingWithWhile());
+        Object r5 = c5.getMethod("eval", lmx.LmxOccurrence.class)
+                .invoke(null, lmx.LmxOccurrence.independent(Integer.valueOf(0)));
+        check("UNTIL nearest nesting with WHILE -> 1", Integer.valueOf(1).equals(r5));
+
+        Class<?> c6 = loadPrinted(L3ExprFixture.labelledBreakToOuterUntil());
+        Object r6 = c6.getMethod("eval", lmx.LmxOccurrence.class)
+                .invoke(null, lmx.LmxOccurrence.independent(Integer.valueOf(0)));
+        check("labelled BREAK to outer UNTIL -> 1", Integer.valueOf(1).equals(r6));
+
+        boolean threw = false;
+        try {
+            L3ClassfilePrinter.emitCallable(L3ExprFixture.untilBadArity());
+        } catch (IllegalArgumentException e) {
+            threw = e.getMessage() != null && e.getMessage().contains("UNTIL arity");
+        }
+        check("UNTIL bad arity rejected", threw);
+
+        threw = false;
+        try {
+            L3ClassfilePrinter.emitCallable(L3ExprFixture.untilInValueContextReturn());
+        } catch (IllegalArgumentException e) {
+            threw = e.getMessage() != null && e.getMessage().contains("value context");
+        }
+        check("UNTIL in value context rejected", threw);
+
+        threw = false;
+        try {
+            L3ClassfilePrinter.emitCallable(L3ExprFixture.untilWithRetryLabel());
+        } catch (IllegalArgumentException e) {
+            threw = e.getMessage() != null && (
+                    e.getMessage().contains("LOOP_LABEL") || e.getMessage().contains("RETRY_LABEL"));
+        }
+        check("RETRY_LABEL as UNTIL label rejected", threw);
+    }
 
     private static void testRetryableLocal() throws Exception {
         ArgEvalCounter.reset();

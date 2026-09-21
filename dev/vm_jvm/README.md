@@ -71,12 +71,12 @@ Fixture: entry `return CALL(leaf, subject) + 5` where leaf is `return subject[0]
 
 - Pre-test WHILE: children condition, body. Int condition (zero=false); ordinary JVM back-edge; no fuel cap.
 - Statement only: valid solely as a **non-final** SEQUENCE child (no invented int result). Rejected in value/final-expression context before class bytes.
-- UNTIL / FOR still deferred. BREAK/CONTINUE: see below. Recursion: see below.
+- FOR still deferred. UNTIL: see UNTIL section. BREAK/CONTINUE: see below. Recursion: see below.
 ## BREAK / CONTINUE (Path B slice 60B)
 
 - Statement-only BREAK / CONTINUE for the **nearest** active WHILE via an explicit compile-time loop-label stack (no named labels).
 - BREAK → loop exit; CONTINUE → condition recheck. Rejected outside a loop or in value/final-expression context before class bytes.
-- Stmt-position IF may carry BREAK/CONTINUE in a branch. REDO/RETRY/cleanup/finally/UNTIL/FOR deferred.
+- Stmt-position IF may carry BREAK/CONTINUE in a branch. FOR/FINALLY/cleanup deferred.
 
 ## Nested RETURN (Path B slice NESTED-RETURN / 87)
 
@@ -121,3 +121,7 @@ Illegal structural/ownership cycles among non-CALLABLE expression nodes are reje
 ## RETRYABLE / RETRY (GROK-BOT-JVM-L3-RETRYABLE-LOCAL-20260921-96)
 
 `RETRYABLE` is a statement region; `RETRY` restarts its body in the same CALLABLE without a new activation and without rolling back locals/args/probes. Optional physical `RETRY_LABEL` (distinct from `LOOP_LABEL`). Cross-type label use and CALL crossing are rejected. FINALLY/cleanup-on-abandoned-attempt remains deferred.
+
+## UNTIL (GROK-BOT-JVM-L3-UNTIL-20260921-98)
+
+Post-test UNTIL: children condition, body[, LOOP_LABEL] (same shape as WHILE). Body runs first, then condition; repeat while condition is zero (body at least once). BREAK/CONTINUE/REDO reuse the physical loop-label frame {cond, break, body} with CONTINUE → postcondition. Unlabelled transfers target the nearest active WHILE or UNTIL; labelled transfers stay in the same CALLABLE. FOR/FINALLY deferred.

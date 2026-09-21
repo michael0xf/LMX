@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import queue
+import shutil
 import subprocess
 import sys
 import threading
@@ -13,13 +14,26 @@ import uuid
 PROFILE = Path(__file__).parent / 'profiles/codex_inbound/connection.json'
 
 
+def node_executable():
+    """Find Node even when the Codex desktop bundle is not on PATH."""
+    node = shutil.which('node')
+    if node:
+        return node
+    local_app_data = os.environ.get('LOCALAPPDATA')
+    if local_app_data:
+        bundled = Path(local_app_data) / 'OpenAI/Codex/bin/node.exe'
+        if bundled.is_file():
+            return str(bundled)
+    raise RuntimeError('Node.js not found on PATH or in the Codex desktop bundle.')
+
+
 class Client:
     def __init__(self, config):
         self.config = config
         env = os.environ.copy()
         env['CODEX_APP_TOOLS_PIPE_PATH'] = config['pipe']
         self.proc = subprocess.Popen(
-            ['node', config['server']], env=env, stdin=subprocess.PIPE,
+            [node_executable(), config['server']], env=env, stdin=subprocess.PIPE,
             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
             text=True, encoding='utf-8')
         self.queue = queue.Queue()

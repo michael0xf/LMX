@@ -205,6 +205,21 @@ fn: mk_while () @: Lmx
 return: m
 
 # own n 0; if 1 { n: 11; return }; n: 99
+# Same shape as if-true / while, but child[0] of the frame is a private LmxOp
+# whose .code equals IF/WHILE. Address is not the shared role record.
+fn: plant_fake (@: Lmx m; size_t: slot; int: code) @: LmxOp
+    @: Lmx frame lmx_arena_ref_struct(m, slot)
+    @: LmxOp fake lmx_op_new_owned(gb, code)
+    if: m = 0 || frame = 0 || fake = 0
+        broken: broken + 1
+        return: 0
+    ---
+    if: lmx_arena_ref_store(frame, 0U, (cast: (@: void) fake)) != 0
+        broken: broken + 1
+        return: 0
+    ---
+return: fake
+
 fn: mk_ret_in_if () @: Lmx
     @: Lmx m mk_m(4U)
     @: Lmx n 0
@@ -245,16 +260,31 @@ return: st
 fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxArena: arena
+    LmxArena: context_arena
+    LmxPool: context_cells
+    LmxScratch: store
+    LmxWalkContext: context
     @: Lmx dummy 0
     @: LmxThread t 0
     @: Lmx m 0
     @: Lmx if_role 0
     @: Lmx while_role 0
+    @: LmxOp fake 0
+    @: Lmx frame 0
     if: counts = 0
         return: 2
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ context_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ context_cells)), 0, c.sizeof(c.LmxPool))
+    memset((cast: (@: void) (@ store)), 0, c.sizeof(c.LmxScratch))
+    memset((cast: (@: void) (@ context)), 0, c.sizeof(c.LmxWalkContext))
     if: lmx_arena_open(@ arena) != 0
         fputs("l3_n9_walk: arena\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    if: lmx_arena_open(@ context_arena) != 0 || lmx_scratch_open(@ store, @ context_arena, @ context_cells, 16U) != c.LMX_SCRATCH_OK
+        fputs("l3_n9_walk: context\n", l1_stdout())
         free(counts)
         return: 2
     ---
@@ -302,6 +332,40 @@ fn: main () int
     fail(counts, field(m, 1U) = 11, "return inside if skipped the later assignment")
     fail(counts, native_hits = 1, "ret-in-if did not call native")
     fail(counts, lmx_thread_mode(t) = c.LMX_THREAD_MODE_INTERPRETED, "one mode for every turn")
+
+    # Negative: numeric 13/14 on a private record is not the shared role.
+    context.arena: gb
+    context.scratch: @ store
+    context.roles: groles
+    context.plan_roles: l3_thread_plan_roles(t)
+    m: mk_if_true()
+    if_role: lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_IF))
+    fake: plant_fake(m, 2U, c.LMX_WALK_OP_IF)
+    frame: lmx_arena_ref_struct(m, 2U)
+    fail(counts, broken = 0 && m != 0 && fake != 0 && frame != 0, "if-impostor construction")
+    fail(counts, (cast: (@: void) fake) != if_role, "if-impostor address is not the shared IF record")
+    fail(counts, lmx_arena_ref_value(frame, 0U) = (cast: (@: void) fake), "if-impostor planted at child[0]")
+    fail(counts, lmx_walk_prepare(@ context, gb, l3_thread_plan_roles(t), m) = c.LMX_WALK_UNSUPPORTED, "if-impostor prepare is UNSUPPORTED")
+    fail(counts, lmx_interp_run(@ context, m) = c.LMX_INTERP_INVALID, "if-impostor interp is INVALID")
+    fail(counts, field(m, 1U) = 0, "if-impostor did not run the then-body")
+    fail(counts, run_graph(t, m) = c.LMX_THREAD_OK, "if-impostor turn still ends (dispatch status is dropped)")
+    fail(counts, field(m, 1U) = 0, "if-impostor own cell still 0 after the Thread turn")
+    fail(counts, native_hits = 1, "if-impostor did not call native")
+
+    context.roles: groles
+    context.plan_roles: l3_thread_plan_roles(t)
+    m: mk_while()
+    while_role: lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_WHILE))
+    fake: plant_fake(m, 2U, c.LMX_WALK_OP_WHILE)
+    frame: lmx_arena_ref_struct(m, 2U)
+    fail(counts, broken = 0 && m != 0 && fake != 0 && frame != 0, "while-impostor construction")
+    fail(counts, (cast: (@: void) fake) != while_role, "while-impostor address is not the shared WHILE record")
+    fail(counts, lmx_walk_prepare(@ context, gb, l3_thread_plan_roles(t), m) = c.LMX_WALK_UNSUPPORTED, "while-impostor prepare is UNSUPPORTED")
+    fail(counts, lmx_interp_run(@ context, m) = c.LMX_INTERP_INVALID, "while-impostor interp is INVALID")
+    fail(counts, field(m, 1U) = 0, "while-impostor did not run the loop body")
+    fail(counts, run_graph(t, m) = c.LMX_THREAD_OK, "while-impostor turn still ends (dispatch status is dropped)")
+    fail(counts, field(m, 1U) = 0, "while-impostor own cell still 0 after the Thread turn")
+    fail(counts, native_hits = 1, "while-impostor did not call native")
 
     if: counts[1] != 0
         c.printf("%d failed of %d\n", counts[1], counts[0])

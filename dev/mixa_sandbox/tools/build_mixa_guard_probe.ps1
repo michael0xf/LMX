@@ -159,8 +159,50 @@ else {
     Remove-Item -Force $explicitCopy -ErrorAction SilentlyContinue
 }
 
+
+# J: default ValidateInputsOnly / ExactChainGuardOnly prints repository-root pin path, never sandbox pin
+$rootPin = (Resolve-Path -LiteralPath (Join-Path $RepoRoot 'L1_PIN.txt')).Path
+$sandboxPin = Join-Path $RepoRoot 'dev\l2src_sandbox\L1_PIN.txt'
+$r = Run-RepoMixa @('-ValidateInputsOnly')
+# ValidateInputsOnly exits before pin print in current flow — use ExactChainGuardOnly with default translator
+$stamps = @(Get-ChildItem -LiteralPath (Join-Path $RepoRoot 'build\l2src') -Directory -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -match '^\d{8}_\d{6}$' -and (Test-Path (Join-Path $_.FullName 'headers\l2src')) } |
+    Sort-Object Name -Descending)
+if ($stamps.Count -lt 1) { Write-Output "FAIL J: no L2 stamp"; $fails++ }
+else {
+    $r = Run-RepoMixa @('-ExactChainGuardOnly', '-KernelEvidenceDir', ('"' + $stamps[0].FullName + '"'))
+    $blob = $r.Out + "`n" + $r.Err
+    if ($r.Rc -eq 0 -and $blob -match [regex]::Escape($rootPin) -and $blob -notmatch '(?i)dev[\\/]l2src_sandbox[\\/]L1_PIN') {
+        Write-Output ("PASS J: default path prints root pin only: " + $rootPin)
+    } else {
+        Write-Output "FAIL J: rc=$($r.Rc) out=$($r.Out) err=$($r.Err)"; $fails++
+    }
+}
+
+# K: inspection — stale sandbox pin still present on disk (not deleted) and differs from root
+if ((Test-Path -LiteralPath $sandboxPin) -and ((Get-Content -LiteralPath $sandboxPin -TotalCount 1).Trim().ToUpper() -ne (Get-Content -LiteralPath $rootPin -TotalCount 1).Trim().ToUpper())) {
+    Write-Output "PASS K: stale sandbox pin left in place and differs from root (not selected)"
+} else {
+    Write-Output "FAIL K: sandbox pin missing or equal to root unexpectedly"; $fails++
+}
+
+# L: build_l2src default path prints root pin (wrong-hash early exit still prints pin path first — use matching Expected optional)
+# Invoke with default translator only far enough: use a throw via missing OutDir parent? Instead run with ExpectedTranslatorSha256 matching so it proceeds past pin then we need early stop.
+# Light approach: parse script text / run -? no. Run with Translator=bin and a deliberate early failure by setting OutDir to an invalid device after pin — too heavy.
+# Instead: spawn with -Translator default by omitting it, ExpectedTranslatorSha256 wrong AFTER pin check for default also verifies pin — default with wrong ExpectedTranslatorSha256 fails after pin print.
+$goodHash = (Get-FileHash -LiteralPath (Join-Path $RepoRoot 'bin\l1trans.exe') -Algorithm SHA256).Hash.ToUpper()
+$bad = if ($goodHash[0] -eq 'A') { 'B' + $goodHash.Substring(1) } else { 'A' + $goodHash.Substring(1) }
+$r = Run-RepoL2 @('-ExpectedTranslatorSha256', $bad)
+$blob = $r.Out + "`n" + $r.Err
+if ($r.Rc -ne 0 -and $blob -match [regex]::Escape($rootPin) -and $blob -match 'pin file path=' -and $blob -notmatch '(?i)dev[\\/]l2src_sandbox[\\/]L1_PIN') {
+    Write-Output "PASS L: build_l2src default prints repository-root pin path (sandbox never selected)"
+} else {
+    Write-Output "FAIL L: rc=$($r.Rc) $($r.Out) $($r.Err)"; $fails++
+}
+
+
 Remove-Item -Recurse -Force $base -ErrorAction SilentlyContinue
 
 if ($fails -gt 0) { Write-Error "PROBE RED: $fails"; exit 1 }
-Write-Output "PROBE GREEN: exact-chain + legacy A/B/C guards"
+Write-Output "PROBE GREEN: exact-chain + pinpath + legacy A/B/C guards"
 exit 0

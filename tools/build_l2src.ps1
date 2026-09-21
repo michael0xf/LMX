@@ -52,10 +52,20 @@ $translatorHash = (Get-FileHash -LiteralPath $Translator -Algorithm SHA256).Hash
 $pinChecked = 'not checked (a translator was named explicitly)'
 if ($isDefaultTranslator) {
     if (-not (Test-Path -LiteralPath $pinFile)) { throw "missing $pinFile" }
+    $pinFile = (Resolve-Path -LiteralPath $pinFile).Path
+    Write-Output ("build_l2src: pin file path=" + $pinFile)
+    $rootPinExpected = Join-Path $root 'L1_PIN.txt'
+    if (Test-Path -LiteralPath $rootPinExpected) { $rootPinExpected = (Resolve-Path -LiteralPath $rootPinExpected).Path }
+    if ($pinFile -ne $rootPinExpected) {
+        throw ("build_l2src: pin file is not repository-root L1_PIN.txt: " + $pinFile + " (expected " + $rootPinExpected + ")")
+    }
+    if ($pinFile -match '(?i)[\\/]dev[\\/]l2src_sandbox[\\/]') {
+        throw ("build_l2src: refuse pin under dev/l2src_sandbox: " + $pinFile)
+    }
     $pin = (Get-Content -LiteralPath $pinFile -TotalCount 1).Trim()
     if ($pin -notmatch '^[0-9A-Fa-f]{64}$') { throw "L1_PIN.txt must hold one 64-hex SHA256, got '$pin'" }
     if ($translatorHash -ne $pin.ToUpper()) { throw "translator pin mismatch: bin\l1trans.exe is $translatorHash, L1_PIN.txt says $pin" }
-    $pinChecked = "matches L1_PIN.txt ($($pin.Substring(0,16))...)"
+    $pinChecked = "matches repository-root L1_PIN.txt ($($pin.Substring(0,16))...)"
     if ($ExpectedTranslatorSha256) {
         if ($ExpectedTranslatorSha256 -notmatch '^[0-9A-Fa-f]{64}$') { throw "ExpectedTranslatorSha256 must be 64 hex, got '$ExpectedTranslatorSha256'" }
         if ($translatorHash -ne $ExpectedTranslatorSha256.ToUpper()) {
@@ -63,6 +73,7 @@ if ($isDefaultTranslator) {
         }
     }
 } else {
+    # Explicit non-default translator: ExpectedTranslatorSha256 only — never either pin file.
     if (-not $ExpectedTranslatorSha256) {
         throw "build_l2src: -Translator names a non-default executable; -ExpectedTranslatorSha256 (64 hex) is required"
     }

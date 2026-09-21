@@ -1,0 +1,50 @@
+# FABLE-L2TRANS-CHAR-UCHAR-20260921-86.  A char own field is PUBLISHED -- and the program compiles.
+#
+# A char cell is rebound, not stored into: lmx_char_rebind_known(cell, value) takes the BYTE value,
+# 0..255, and refuses anything else.  The translator spelled that value through an unsigned-char
+# alias that exists only where the translator itself is built, so every program below stopped at
+# the C compiler.  Three emitters wrote it, and each has its line here:
+#
+#   K   the checkpoint of a char own field       (the publication descriptor)
+#   P   an explicit write through a node path    (its direct twin)
+#   M   the program entry writing a unit field   (its other twin)
+#
+# The second line of each pair carries a byte above 127 IN A char: as a signed char 200 is -56, a
+# plain conversion to int hands the rebind -56, the rebind refuses it and answers 0 -- the field's
+# cell is lost.  (A literal would not do: 202 written as a literal is already an int.)
+# Each line is "<case> <local or written byte> <byte read back from the graph>", bytes as 0..255.
+L2:
+    char: mark 'a'
+
+    fn: nop () int
+        return: 0
+    end: nop
+
+    fn: holder (char: hi) int
+        char: kept
+        kept: 65
+        nop()
+        c.printf: "K1 %d %d\n" ((cast: (int) kept) & 255) ((cast: (int) node\kept) & 255)
+        kept: 200
+        nop()
+        c.printf: "K2 %d %d\n" ((cast: (int) kept) & 255) ((cast: (int) node\kept) & 255)
+        node\kept: 66
+        c.printf: "P1 %d %d\n" 66 ((cast: (int) node\kept) & 255)
+        node\kept: hi
+        c.printf: "P2 %d %d\n" ((cast: (int) hi) & 255) ((cast: (int) node\kept) & 255)
+        return: 0
+    end: holder
+
+    fn: main () int
+        char: hi
+        hi: 202
+        mark: 67
+        nop()
+        c.printf: "M1 %d %d\n" 67 ((cast: (int) mark) & 255)
+        mark: hi
+        nop()
+        c.printf: "M2 %d %d\n" ((cast: (int) hi) & 255) ((cast: (int) mark) & 255)
+        holder(hi)
+        return: 0
+    end: main
+end: L2

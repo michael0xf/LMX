@@ -12292,8 +12292,13 @@ return: 0
 fn: l2_own_store_value (int: ty; const: @(char local); @: char dest) int
     if: local = 0 || dest = 0 || c.strlen(local) > 60U
         return: 1
+    # The byte value of a char, 0..255, whatever the host's char signedness: lmx_char_rebind_known
+    # refuses anything else.  It is spelled the way the kernel itself spells it (lmx_char_value_known,
+    # lmx_chars) and needs no type beyond int.  It used to go through the unsigned-char alias of
+    # l1src/p0.h.lm1 -- a type that exists where THIS translator is built and in no program it
+    # generates, so every program that published a char own field stopped at the C compiler.
     if: ty = 1
-        if: c.sprintf(dest, "(cast: (int) (cast: (uchar) %s))", local) < 0
+        if: c.sprintf(dest, "((cast: (int) %s) & 255)", local) < 0
             return: 1
         return: 0
     ---
@@ -14021,7 +14026,7 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
                 return: 1
             if: l2_own_ty[oi] = 0 && c.fprintf(l2_out, "%sif: lmx_int_store_known(l2_xp[0], %s) != 0\n%s    return: 0\n", ind, l2_tok, ind) < 0
                 return: 1
-            if: l2_own_ty[oi] = 1 && c.fprintf(l2_out, "%sl2_xp[0]: lmx_char_rebind_known(l2_xp[0], (cast: (int) (cast: (uchar) %s)))\n%sif: l2_xp[0] = 0\n%s    return: 0\n", ind, l2_tok, ind, ind) < 0
+            if: l2_own_ty[oi] = 1 && c.fprintf(l2_out, "%sl2_xp[0]: lmx_char_rebind_known(l2_xp[0], ((cast: (int) %s) & 255))\n%sif: l2_xp[0] = 0\n%s    return: 0\n", ind, l2_tok, ind, ind) < 0
                 return: 1
             if: l2_own_ty[oi] = 2 && c.fprintf(l2_out, "%sif: lmx_size_store_known(l2_xp[0], %s) != 0\n%s    return: 0\n", ind, l2_tok, ind) < 0
                 return: 1
@@ -14131,7 +14136,7 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && sl >= 0 && l2_ret_uns(mi) = 0 && c.fprintf(l2_out, "%s    %s\n", ind, l2_fail_return(mi)) < 0
             return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && sl >= 0 && l2_own_ty[sl] = 1 && c.fprintf(l2_out, "%sl2_xp[0]: lmx_char_rebind_known(l2_xp[0], (cast: (int) (cast: (uchar) %s)))\n", ind, l2_tok) < 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && sl >= 0 && l2_own_ty[sl] = 1 && c.fprintf(l2_out, "%sl2_xp[0]: lmx_char_rebind_known(l2_xp[0], ((cast: (int) %s) & 255))\n", ind, l2_tok) < 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && sl >= 0 && l2_own_ty[sl] = 2 && c.fprintf(l2_out, "%sif: lmx_size_store_known(l2_xp[0], %s) != 0\n%s    %s\n", ind, l2_tok, ind, l2_fail_return(mi)) < 0
             return: 1

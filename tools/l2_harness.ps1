@@ -506,7 +506,27 @@ $fixtures = @(
     # "unresolved name" at the callee -- as if nobody had supplied it -- and that is what the
     # pre-change translator still says, so this row fails on it.
     [pscustomobject]@{ Name = 'unit_arg_addr_dyn_nocell.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'dynamic input type has no value cell'; Absent = @(); Debt = @() }
+        Needle = 'dynamic input type has no value cell'; Absent = @(); Debt = @() },
+    # A CHAR OWN FIELD IS PUBLISHED, AND THE PROGRAM COMPILES (FABLE-L2TRANS-CHAR-UCHAR-20260921-86).
+    # Three emitters spelled the byte handed to lmx_char_rebind_known through `uchar` -- a type that
+    # is defined where the TRANSLATOR is built (l1src/p0.h.lm1) and in no program it generates
+    # unless that program's author includes p0 himself.  No other row and no gate target drives
+    # these emitters, so before this row nothing could be RED.  The pre-change translator fails it
+    # on the forbidden spelling in the text and, with the text checks taken off, at gcc:
+    # "'uchar' undeclared" (both measured).  The byte is now spelled as the kernel spells it,
+    # ((cast: (int) x) & 255).  Lines are "<case> <byte written> <byte read back>":
+    #   M  the program entry writes a unit char field     K  the checkpoint of a char own field
+    #   P  an explicit write through a node path
+    # The second line of each pair carries a byte above 127 in a CHAR (a literal is already an
+    # int): a plain conversion to int hands the rebind a negative value, which it refuses.
+    # Measured, one mutant per emitter: K2 200 255; the entry stops after M1; P2 202 255.
+    [pscustomobject]@{ Name = 'unit_char_own_publish.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Says = @('M1 67 67', 'M2 202 202', 'K1 65 65', 'K2 200 200', 'P1 66 66', 'P2 202 202');
+        Absent = @('(cast: (uchar)');
+        Debt = @('lmx_char_rebind_known(l2_q1_from[0], ((cast: (int) l2_q1) & 255))',
+                 'lmx_char_rebind_known(l2_xp[0], ((cast: (int) hi) & 255))',
+                 'lmx_char_rebind_known(l2_xp[0], ((cast: (int) l2_p1_0) & 255))') }
 )
 
 foreach ($fx in $fixtures) {

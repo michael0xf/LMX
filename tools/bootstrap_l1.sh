@@ -101,7 +101,7 @@ fi
 
 echo "bootstrap_l1.sh: built $out/l1trans$exe_suffix"
 echo "bootstrap_l1.sh: host compiler $LM_CC; thread provider $thread_provider ($thread_provider_define)"
-echo "bootstrap_l1.sh: this is B0 only -- run tools/run_self_build.ps1 for the fixed-point cycle"
+echo "bootstrap_l1.sh: this is B0 only -- run tools/run_self_build.sh for the fixed-point cycle"
 
 # SMOKE, not decoration: B0 must at least start and answer on this host.  A silent B0 would
 # otherwise be discovered three passes later.

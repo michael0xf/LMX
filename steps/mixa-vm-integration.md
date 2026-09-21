@@ -26,22 +26,31 @@ See [vm-patha-canonical-fixtures.md](vm-patha-canonical-fixtures.md),
 
 ## 2. Shared host surface (reuse first)
 
-Preserve existing Mixa UI, renderer, text-cell layout, overlay composition, and any
-already-working platform backends. Add only missing target-specific adapters.
+**Primary contracts are already in-tree** under
+`dev/mixa_sandbox/mixa_manager/`: [BACKEND_SEAM.txt](../dev/mixa_sandbox/mixa_manager/BACKEND_SEAM.txt),
+[FILE_SEAM.txt](../dev/mixa_sandbox/mixa_manager/FILE_SEAM.txt),
+[PROCESS_SEAM.txt](../dev/mixa_sandbox/mixa_manager/PROCESS_SEAM.txt), plus conversion notes in
+[CONVERSION.md](../dev/mixa_sandbox/mixa_manager/CONVERSION.md).
+`Mixa_Manager_DISTRIBUTION_MODEL.txt` was **not present** in this tree when inspected (2026-09-21);
+BACKEND_SEAM still cites it as design context — treat that citation as **REF-TO-VERIFY** if the file
+returns.
 
-| Surface | Preferred reuse | Optional portable fill | Notes |
+Preserve Mixa UI, renderer, text-cell layout, overlay composition, and the **existing**
+headless + Win32 backend/file/process implementations. VM profiles must **implement or host
+these seams**, not replace them with a new SDL/libuv architecture. Optional libraries (SDL3,
+libuv, libvterm, …) are only candidate **fills behind a seam operation** when a target lacks an
+already-working adapter.
+
+| Seam / surface | In-tree contract | Already present | Still additional |
 | --- | --- | --- | --- |
-| Window / keyboard / mouse / present pixels | Existing display backend | SDL3 (`find_package(SDL3)`; present via texture update) | Do not rewrite panel internals through SDL |
-| Fonts / glyphs | Existing font path | SDL3_ttf only if insufficient | Cell metrics and overlays stay Mixa-owned |
-| Files / dirs / ordinary processes / pipes | Existing native adapter | libuv | Do not replace a working adapter just to add libuv |
-| Embedded terminal screen model (mode 0.1.1) | — | libvterm | Parse child terminal stream; do **not** route Mixa UI through escape sequences |
-| Full interactive terminal session (mode 0.1.1) | — | Unix PTY / Windows ConPTY | Ordinary `spawn` does **not** substitute |
-| Light command / script I/O (mode 0.1.2) | Existing process adapter | pipes + exit callback, or real terminal delegation | Do not claim vim/mc from pipes alone |
+| Display / input (`BACKEND_SEAM`) | `mixa_backend.h` ABI; sections 11.2/11.5 per-handle dispatch; headless + Win32 coexist | Headless (byte-comparable present/poll) and Win32 backends named in seam + CONVERSION | Other OS backends; optional SDL only if a target has no backend |
+| Glyphs / half-cell lattice | BACKEND_SEAM §§9.4, 10.5–10.8 | Part of backend contract | Do not move cell metrics into a foreign UI toolkit |
+| Files (`FILE_SEAM`) | open/close/…; console scrollback **is** a file | File seam + Win32 file unit (`mixa_file_win32`) | Panel-scale listing ops when panels need them |
+| Processes (`PROCESS_SEAM`) | spawn/read/write/status/kill/close; stderr merged; nonblocking read | **Mode 0.1.2 ordinary pipes** (delegation) — Win32 process seam | **Mode 0.1.1** PTY/ConPTY + terminal-state engine (libvterm class) — explicitly out of PROCESS_SEAM today |
+| Modes | 0.1.2 = console file + child pipes; 0.1.1 = real terminal host | 0.1.2 path described as current | 0.1.1 still additional work |
 
-Modes stay distinct: **0.1.1** = real terminal session + terminal-state engine;
-**0.1.2** = delegation or simple process I/O without embedded-terminal claims.
-
-Platform state stays **outside** the LMX Message core.
+Platform / OS affinity stays in adapters; concurrent work uses Message ingress
+(PROCESS_SEAM §6) — not private C locks. Platform state stays **outside** the LMX Message core.
 
 ## 3. Profiles (first fixed set)
 
@@ -215,9 +224,38 @@ implementation:
 - MIR upstream platform list; libriscv embedding/syscall examples
 - CheerpX / WebVM custom console APIs and licensing
 
+
+
+## 11. Addendum — map profiles onto existing seams (ticket 54)
+
+Inspected on OAK65536 under `dev/mixa_sandbox/mixa_manager/` before this rewrite.
+Orientation inventory only (not effort): about **823** manager files and **66** paths whose
+names match `win32` (filename scan 2026-09-21). External brief cited ~799 / ~74 — same order
+of magnitude; do not treat either pair as a cost metric.
+
+Product entrypoint status ([mixa-manager-run-audit.md](mixa-manager-run-audit.md)):
+`mixa_app_main` is a **build-only / not yet proven runnable** interactive Win32 shell in
+automated evidence; gate `bin/` publishes selftests/fixtures, not a headless product manager
+exe. Path A VM smoke remains unrelated to that gap.
+
+| Profile | BACKEND_SEAM | FILE_SEAM | PROCESS_SEAM | What the VM adds |
+| --- | --- | --- | --- | --- |
+| `MIR_NATIVE` | Host MIR loads Mixa; call existing headless/Win32 (or later X11) **backend vtables** via `MIR_load_external` — do not invent a parallel SDL UI | Same file ABI; native Win32/Unix file adapter stays host-side | Keep **0.1.2 pipes** as today; add **0.1.1** PTY/ConPTY + terminal model as a **new** producer behind FILE console, not a PROCESS_SEAM rewrite | JIT/interpreter + import resolver |
+| `WASM_NATIVE_HOST` | Wasmtime host defines imports that forward to the **same** backend/file/process C adapters; guest must not hold raw host HWND/HANDLEs across calls | Host file seam; align guest-visible paths with child cwd | Same: 0.1.2 already; 0.1.1 still host PTY + terminal model | Linear-memory validation; import table |
+| `WASM_BROWSER_BACKEND` | Browser build still targets BACKEND_SEAM ops (present/poll/…); Emscripten/SDL only if used **as one backend implementation** | Browser storage ≠ workspace; file ops go to helper implementing FILE_SEAM semantics | Helper runs 0.1.2 pipes / later 0.1.1 PTY (`node-pty`) and streams into the console-file + eventual terminal model | Protocols + helper — not a replacement seam |
+| `WASM_BROWSER_LINUX_SANDBOX` | Same BACKEND_SEAM front-end | Guest Linux disk is the FILE_SEAM workspace for that profile | PTY inside sandbox → terminal model → present | Extra product (CheerpX class); **REF-TO-VERIFY** |
+| `RISCV64_LINUX` | Guest implements BACKEND_SEAM (existing or SDL fill **behind** the vtable) | Guest filesystem = FILE_SEAM | Guest Linux PTY for 0.1.1; pipes for 0.1.2 | Full guest Linux — distinct from Path A user-mode ELF smoke |
+| `RISCV64_EMBEDDED_LINUX` | KMSDRM/etc. still must satisfy BACKEND_SEAM tests (headless oracle first) | Same Linux FILE_SEAM | Same process modes | Board display risk after desktop Linux |
+| `RISCV_EMBEDDED_HOST` | Like MIR/Wasmtime: native host owns backend/file/process seams | Host FILE_SEAM | Host 0.1.2 now; 0.1.1 later | Guest→host call adapters only |
+| JVM / .NET CIL / Lua / WASM GC (queued) | Foreign runtime must still expose BACKEND/FILE/PROCESS seams to Mixa logic | Same | Same mode split | Packaging/FFI cost; no license to bypass seams |
+
+**Do not:** replace headless/Win32 with SDL “because portability”; fold files into the backend;
+claim 0.1.1 because 0.1.2 pipes are green; treat Path A `run_vm_patha_smoke` as manager
+acceptance; treat `mixa_app_main` build-only linkage as a proven product run.
+
 ## 10. Ticket closure checklist
 
-- [x] Only new file: `steps/mixa-vm-integration.md`
+- [x] Working file: `steps/mixa-vm-integration.md` (created, then addendum-updated against seam docs)
 - [ ] `python tools/check_docs.py` (run at commit time)
 - [ ] `git diff --check` on the new file
 - [ ] Commit/push **only** this path

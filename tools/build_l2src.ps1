@@ -59,6 +59,13 @@ foreach ($d in @($headers, (Join-Path $headers 'l2src'), $objDir, $binDir, $logD
 }
 $gcc = (Get-Command gcc -ErrorAction Stop).Source
 $nm = (Get-Command nm -ErrorAction Stop).Source
+# THE ONE 5.1-SAFE LAUNCHER (DEEPSEEK-PS51-PROC-HELPER-20260920-07), dot-sourced here beside the other
+# tools this gate resolves so that a missing helper fails FAST AND BY NAME.  The first cut of this
+# migration called Invoke-ProcBounded without loading it and died 168 rows in, at the first -Run
+# selftest, with "The term 'Invoke-ProcBounded' is not recognized" and NO verdict line at all.
+$ps51Proc = Join-Path $root 'tools\ps51_proc.ps1'
+if (-not (Test-Path -LiteralPath $ps51Proc)) { throw "missing process helper: $ps51Proc" }
+. $ps51Proc
 
 # WHERE THE KERNEL SOURCES ARE, and why this is not a one-liner.  The sources reference each other
 # as "l2src/<name>.lm1" -- that segment is HARDCODED IN THEIR TEXT -- so the build needs them
@@ -201,36 +208,30 @@ function Invoke-Bounded([string]$Label, [string]$Exe, [string[]]$ArgList, [int]$
     # as a failure), and a bound whose verdict cannot be read is worse than no bound.  The .NET
     # object gives all three things this needs: a real exit code, the captured streams, and a
     # WaitForExit(ms) that can be believed.
+    #
+    # THE LAUNCH ITSELF IS tools\ps51_proc.ps1's Invoke-ProcBounded (DEEPSEEK-PS51-PROC-HELPER-20260920-07):
+    # $ArgList is passed as an ARRAY and the helper builds the command line, so this file no longer
+    # touches ProcessStartInfo.ArgumentList -- which does not exist under Windows PowerShell 5.1 /
+    # .NET Framework and threw "You cannot call a method on a null-valued expression" whenever a
+    # caller passed a NONEMPTY argv (measured live against this function; latent only because both
+    # callers pass @()).  KILL-BEFORE-READ is the helper's order and this function's requirement:
+    # reading the captured streams before the kill would wait out the child and then kill a corpse
+    # while still reporting TIMEOUT.
+    # THE LOG IS COMPOSED HERE, byte for byte as before, from the helper's Started/TimedOut/Text --
+    # the helper writes no log of its own, so every existing line keeps its exact bytes, including
+    # the trailing space the empty-argv join leaves after the closing quote.
     $log = Join-Path $logDir ((Get-SafeName $Label) + '.log')
-    $psi = New-Object System.Diagnostics.ProcessStartInfo
-    $psi.FileName = $Exe
-    if ($null -ne $ArgList -and $ArgList.Count -gt 0) {
-        foreach ($a in $ArgList) { $psi.ArgumentList.Add([string]$a) }
-    }
-    $psi.UseShellExecute = $false
-    $psi.RedirectStandardOutput = $true
-    $psi.RedirectStandardError = $true
-    $psi.CreateNoWindow = $true
-    $proc = New-Object System.Diagnostics.Process
-    $proc.StartInfo = $psi
-    if (-not $proc.Start()) {
+    $run = Invoke-ProcBounded -Exe $Exe -Argv $ArgList -TimeoutSec $Seconds
+    if (-not $run.Started) {
         Set-Content -LiteralPath $log -Value ("invoke: `"$Exe`" DID NOT START")
         return -2
     }
-    $outTask = $proc.StandardOutput.ReadToEndAsync()
-    $errTask = $proc.StandardError.ReadToEndAsync()
-    $finished = $proc.WaitForExit($Seconds * 1000)
-    if (-not $finished) {
-        try { $proc.Kill() } catch { }
-        try { $proc.WaitForExit(5000) | Out-Null } catch { }
-        $text = ("" + $outTask.Result) + ("" + $errTask.Result)
-        Set-Content -LiteralPath $log -Value ("invoke: `"$Exe`" BOUNDED $Seconds s -- TIMEOUT, the run was killed`r`n" + $text)
+    if ($run.TimedOut) {
+        Set-Content -LiteralPath $log -Value ("invoke: `"$Exe`" BOUNDED $Seconds s -- TIMEOUT, the run was killed`r`n" + $run.Text)
         return -1
     }
-    $code = $proc.ExitCode
-    $text = ("" + $outTask.Result) + ("" + $errTask.Result)
-    Set-Content -LiteralPath $log -Value ("invoke: `"$Exe`" " + ($ArgList -join ' ') + "`r`n" + $text)
-    return $code
+    Set-Content -LiteralPath $log -Value ("invoke: `"$Exe`" " + ($ArgList -join ' ') + "`r`n" + $run.Text)
+    return $run.Code
 }
 function Convert-Source([string]$Label, [string]$RelSource, [string]$Target) {
     # The LOG name is not the row label: translate, compile and link of ONE target must not share

@@ -18,6 +18,17 @@ function Write-Log([string]$msg) {
     $msg | Tee-Object -FilePath $Log -Append
 }
 
+# The one PowerShell 5.1-safe launcher (DEEPSEEK-PS51-PROC-HELPER-20260920-07). Its header carries
+# why ProcessStartInfo.ArgumentList is never used: it does not exist under Windows PowerShell 5.1 /
+# .NET Framework, and touching it throws (measured). A missing helper is a hard failure, never a
+# silent fall-back to an ad-hoc command line.
+$ps51Proc = Join-Path $PSScriptRoot '..\..\..\tools\ps51_proc.ps1'
+if (-not (Test-Path -LiteralPath $ps51Proc)) {
+    Write-Log "FAIL: missing helper $ps51Proc"
+    exit 2
+}
+. $ps51Proc
+
 $buildRoot = Join-Path $RepoRoot "dev\mixa_sandbox\build"
 if (-not (Test-Path -LiteralPath $buildRoot)) {
     Write-Log "FAIL: missing evidence root $buildRoot"
@@ -102,36 +113,29 @@ Write-Log "PRODUCT run: $managerExe --headless-smoke <temp root> $smokeSteps (ti
 # THE TIMEOUT IS A SECOND FLOOR UNDER THE STEP BOUND, not the primary one. The bound is what
 # makes the run finite; the timeout catches the case where a single step never returns, which
 # the bound cannot. A run killed here is reported as a TIMEOUT and never as a pass.
-$psi = New-Object System.Diagnostics.ProcessStartInfo
-$psi.FileName = $managerExe
-# ProcessStartInfo.ArgumentList DOES NOT EXIST under Windows PowerShell 5.1 / .NET Framework --
-# it is a .NET Core addition, and touching it here throws 'call a method on a null-valued
-# expression' (measured). tools/build_l2src.ps1 appears to use it only because its selftests are
-# invoked with an EMPTY list and the guarded line never runs. So the argument string is built and
-# quoted here; the root is quoted because a temp path may contain a space.
-$psi.Arguments = '--headless-smoke "' + $smokeRoot + '" ' + $smokeSteps
-$psi.UseShellExecute = $false
-$psi.RedirectStandardOutput = $true
-$psi.RedirectStandardError = $true
-$psi.CreateNoWindow = $true
-$proc = New-Object System.Diagnostics.Process
-$proc.StartInfo = $psi
-if (-not $proc.Start()) {
+# THE ARGUMENTS ARE PASSED AS AN ARRAY and the command line is built by the shared helper
+# (tools\ps51_proc.ps1, DEEPSEEK-PS51-PROC-HELPER-20260920-07). This used to hand-build
+# '--headless-smoke "<root>" <steps>' as one string, which is exactly the shape that silently splits
+# when a value contains a space -- and the temp root below can. The helper quotes every element with
+# the rule the C runtimes parse, so the product, gcc and l1trans all see the same argv.
+# ProcessStartInfo.ArgumentList is never used: it does not exist under Windows PowerShell 5.1 /
+# .NET Framework and touching it throws 'You cannot call a method on a null-valued expression'
+# (measured; the helper's header carries the full note). The helper also returns the child's real
+# exit code -- the thing Start-Process -PassThru with redirected streams could not report
+# (tools\build_l2src.ps1:199-202, measured there).
+$run = Invoke-ProcBounded -Exe $managerExe -Argv @('--headless-smoke', $smokeRoot, [string]$smokeSteps) -TimeoutSec $smokeTimeoutSec
+if (-not $run.Started) {
     Write-Log "PRODUCT_EXIT=did-not-start"
     Write-Log "OVERALL=FAIL (product did not start)"
     exit 5
 }
-$outTask = $proc.StandardOutput.ReadToEndAsync()
-$errTask = $proc.StandardError.ReadToEndAsync()
-if (-not $proc.WaitForExit($smokeTimeoutSec * 1000)) {
-    try { $proc.Kill() } catch { }
-    try { $proc.WaitForExit(5000) | Out-Null } catch { }
+if ($run.TimedOut) {
     Write-Log "PRODUCT_EXIT=timeout after ${smokeTimeoutSec}s -- killed"
     Write-Log "OVERALL=FAIL (headless smoke did not terminate)"
     exit 5
 }
-$rc = $proc.ExitCode
-$summary = (("" + $outTask.Result) + ("" + $errTask.Result)).Trim()
+$rc = $run.Code
+$summary = $run.Text.Trim()
 foreach ($line in ($summary -split "`r?`n")) { if ($line.Trim()) { Write-Log "PRODUCT_OUT $line" } }
 Write-Log "PRODUCT_EXIT=$rc"
 try { Remove-Item -LiteralPath $smokeRoot -Recurse -Force -ErrorAction SilentlyContinue } catch { }

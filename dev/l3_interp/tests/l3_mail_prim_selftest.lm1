@@ -188,11 +188,16 @@ return: m
 fn: mk_non_int_lane () @: Lmx
     @: Lmx m mk_m(2U)
     @: Lmx p 0
+    @: Lmx n 0
     @: Lmx rec l3_thread_mail_count_prim(l3_bound_t)
-    @: Lmx dummy lmx_node_new_owned(gb)
+    @: void sz lmx_size_new_owned(gb)
     p: fr(m, 1U, c.LMX_WALK_OP_PRIM, 3U)
     ref(p, 1U, rec)
-    ref(p, 2U, dummy)
+    n: fr(p, 2U, c.LMX_WALK_OP_LIT, 2U)
+    if: n = 0 || sz = 0 || lmx_size_store_known(sz, 0U) != 0 || lmx_arena_ref_store(n, 1U, sz) != 0
+        broken: broken + 1
+        return: 0
+    ---
 return: m
 
 fn: run_graph (@: LmxThread t; @: Lmx m) int

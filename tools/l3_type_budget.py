@@ -51,6 +51,7 @@ EXPECT = {
     'tests/l3_thread_bind_selftest.lm1': 62,
     'tests/l3_n9_walk_selftest.lm1': 62,
     'tests/l3_n10_walk_selftest.lm1': 62,
+    'tests/l3_mail_prim_selftest.lm1': 62,
 }
 
 PREDEF = re.compile(r'^predef:\s*(.*)$')

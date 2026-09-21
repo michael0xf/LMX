@@ -24,9 +24,19 @@ param(
     # manager target rather than in the choice of evidence.
     [switch]$ManagerLinkOnly,
     [string]$ReuseStamp,
+    # -KernelEvidenceDir <exact stamp dir>: consume THAT directory's headers\l2src only.
+    # No newest-stamp fallback when supplied (GROK-BOT-BUILD-MIXA-EXACT-CHAIN-20260921-128).
+    # Do not collide with -ReuseStamp (object-pool link path).
+    [string]$KernelEvidenceDir,
+    # -ExpectedTranslatorSha256: required when -Translator names a non-default executable.
+    # Default bin\l1trans.exe still uses L1_PIN.txt.
+    [string]$ExpectedTranslatorSha256,
     # -ValidateInputsOnly: run ONLY the local-input guard, print resolved paths.
     # No translation, compilation, or linking.
-    [switch]$ValidateInputsOnly
+    [switch]$ValidateInputsOnly,
+    # -ExactChainGuardOnly: resolve translator + kernel evidence (EXPLICIT/AUTO), print
+    # path/hash/digest, exit — no translation/compile/link.
+    [switch]$ExactChainGuardOnly
 )
 $ErrorActionPreference = 'Stop'
 $migRoot = Split-Path -Parent $PSScriptRoot
@@ -52,47 +62,139 @@ if (-not (Test-Path (Join-Path $l1Root 'bin\l1trans.exe'))) {
 # dev/l2src_sandbox/build/l2src for L1-nested); either satisfies the requirement.
 $kernelRoot = $l1Root
 $lm1Root = $l1Root
+# Resolve translator BEFORE mustHave so an explicit non-default path can skip bin/pin.
+$defaultTranslator = Join-Path $l1Root 'bin\l1trans.exe'
+if (-not $Translator) { $Translator = $defaultTranslator }
+if (-not (Test-Path -LiteralPath $Translator)) { throw "translator not found: $Translator" }
+$Translator = (Resolve-Path -LiteralPath $Translator).Path
+$defaultTranslatorFull = $null
+if (Test-Path -LiteralPath $defaultTranslator) { $defaultTranslatorFull = (Resolve-Path -LiteralPath $defaultTranslator).Path }
+$isDefaultTranslator = ($defaultTranslatorFull -and ($Translator -eq $defaultTranslatorFull)) -or ((-not $defaultTranslatorFull) -and ($Translator -eq $defaultTranslator))
+
 if (-not $ManagerLinkOnly) {
     $mustHave = @(
-        @{ Name = 'translator (bin\l1trans.exe)'; Path = (Join-Path $l1Root 'bin\l1trans.exe') },
-        @{ Name = 'L1_PIN.txt'; Path = (Join-Path $l1Root 'L1_PIN.txt') },
         @{ Name = 'L2 core sources (dev/l2src_sandbox)'; Path = (Join-Path $l1Root 'dev\l2src_sandbox') },
         @{ Name = 'lm1/build'; Path = (Join-Path $l1Root 'lm1\build') }
     )
+    if ($isDefaultTranslator) {
+        $mustHave = @(
+            @{ Name = 'translator (bin\l1trans.exe)'; Path = $defaultTranslator },
+            @{ Name = 'L1_PIN.txt'; Path = (Join-Path $l1Root 'L1_PIN.txt') }
+        ) + $mustHave
+    }
     foreach ($m in $mustHave) {
         if (-not (Test-Path -LiteralPath $m.Path)) {
             throw "build_mixa: missing local input -- $($m.Name) not found at $($m.Path). All inputs must be local; no external fallback."
         }
     }
-    $kernelEvidenceHere = (Test-Path -LiteralPath (Join-Path $l1Root 'build\l2src')) -or
-                          (Test-Path -LiteralPath (Join-Path $l1Root 'dev\l2src_sandbox\build\l2src'))
-    if (-not $kernelEvidenceHere) {
-        throw "build_mixa: missing local input -- kernel evidence not found at $l1Root\build\l2src or $l1Root\dev\l2src_sandbox\build\l2src. All inputs must be local; no external fallback."
+    if ($KernelEvidenceDir) {
+        if (-not (Test-Path -LiteralPath $KernelEvidenceDir)) {
+            throw "build_mixa: KernelEvidenceDir does not exist: $KernelEvidenceDir"
+        }
+        $KernelEvidenceDir = (Resolve-Path -LiteralPath $KernelEvidenceDir).Path
+        $exactHeaders = Join-Path $KernelEvidenceDir 'headers\l2src'
+        if (-not (Test-Path -LiteralPath $exactHeaders)) {
+            throw "build_mixa: KernelEvidenceDir missing headers\l2src: $exactHeaders (no auto fallback when KernelEvidenceDir is supplied)"
+        }
+    } else {
+        $kernelEvidenceHere = (Test-Path -LiteralPath (Join-Path $l1Root 'build\l2src')) -or
+                              (Test-Path -LiteralPath (Join-Path $l1Root 'dev\l2src_sandbox\build\l2src'))
+        if (-not $kernelEvidenceHere) {
+            throw "build_mixa: missing local input -- kernel evidence not found at $l1Root\build\l2src or $l1Root\dev\l2src_sandbox\build\l2src. All inputs must be local; no external fallback."
+        }
     }
+}
+
+$pinFile = Join-Path $l1Root 'L1_PIN.txt'
+$translatorHash = (Get-FileHash -LiteralPath $Translator -Algorithm SHA256).Hash.ToUpper()
+$pinChecked = 'not checked (a translator was named explicitly)'
+if ($isDefaultTranslator) {
+    if (-not (Test-Path -LiteralPath $pinFile)) { throw "missing $pinFile" }
+    $pin = (Get-Content -LiteralPath $pinFile -TotalCount 1).Trim()
+    if ($pin -notmatch '^[0-9A-Fa-f]{64}$') { throw "L1_PIN.txt must hold one 64-hex SHA256, got '$pin'" }
+    if ($translatorHash -ne $pin.ToUpper()) { throw "translator pin mismatch: bin\l1trans.exe is $translatorHash, L1_PIN.txt says $pin" }
+    $pinChecked = "matches L1_PIN.txt ($($pin.Substring(0,16))...)"
+    if ($ExpectedTranslatorSha256) {
+        if ($ExpectedTranslatorSha256 -notmatch '^[0-9A-Fa-f]{64}$') { throw "ExpectedTranslatorSha256 must be 64 hex, got '$ExpectedTranslatorSha256'" }
+        if ($translatorHash -ne $ExpectedTranslatorSha256.ToUpper()) {
+            throw "build_mixa: ExpectedTranslatorSha256 mismatch before work: got $translatorHash expected $($ExpectedTranslatorSha256.ToUpper())"
+        }
+    }
+} else {
+    if (-not $ExpectedTranslatorSha256) {
+        throw "build_mixa: -Translator names a non-default executable; -ExpectedTranslatorSha256 (64 hex) is required"
+    }
+    if ($ExpectedTranslatorSha256 -notmatch '^[0-9A-Fa-f]{64}$') { throw "ExpectedTranslatorSha256 must be 64 hex, got '$ExpectedTranslatorSha256'" }
+    if ($translatorHash -ne $ExpectedTranslatorSha256.ToUpper()) {
+        throw "build_mixa: ExpectedTranslatorSha256 mismatch before work: got $translatorHash expected $($ExpectedTranslatorSha256.ToUpper())"
+    }
+    $pinChecked = "explicit translator ExpectedTranslatorSha256 verified"
+}
+Write-Output ("build_mixa: translator path=" + $Translator)
+Write-Output ("build_mixa: translator sha256=" + $translatorHash + " (" + $pinChecked + ")")
+
+function Get-KernelHeaderDigest([string]$HeadersDir) {
+    $files = @(Get-ChildItem -LiteralPath $HeadersDir -Filter '*.lm1.h' -File -ErrorAction Stop | Sort-Object Name)
+    $lines = New-Object System.Collections.Generic.List[string]
+    foreach ($f in $files) {
+        $h = (Get-FileHash -LiteralPath $f.FullName -Algorithm SHA256).Hash.ToUpper()
+        [void]$lines.Add(($f.Name + ':' + $h))
+    }
+    $payload = [string]::Join([char]10, $lines)
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($payload)
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    $digest = ([BitConverter]::ToString($sha.ComputeHash($bytes)) -replace '-', '').ToUpper()
+    return @{ Count = $files.Count; Digest = $digest }
+}
+
+function Resolve-KernelEvidenceHeaders {
+    if ($KernelEvidenceDir) {
+        $exact = Join-Path $KernelEvidenceDir 'headers\l2src'
+        if (-not (Test-Path -LiteralPath $exact)) {
+            throw "build_mixa: KernelEvidenceDir missing headers\l2src: $exact (no auto fallback)"
+        }
+        $dig = Get-KernelHeaderDigest $exact
+        Write-Output ("build_mixa: kernel evidence mode=EXPLICIT dir=" + $KernelEvidenceDir)
+        Write-Output ("build_mixa: kernel headers count=" + $dig.Count + " digest=" + $dig.Digest)
+        return $exact
+    }
+    # AUTO: newest timestamp stamp (variable name intentionally not $l2srcSandbox=Join-Path $kernelRoot ...)
+    $evidenceSearchRoot = Join-Path $kernelRoot 'dev\l2src_sandbox'
+    if (-not (Test-Path -LiteralPath (Join-Path $evidenceSearchRoot 'build\l2src'))) {
+        if (Test-Path -LiteralPath (Join-Path $kernelRoot 'build\l2src')) { $evidenceSearchRoot = $kernelRoot }
+    }
+    Write-Output ("build_mixa: kernel evidence mode=AUTO searched under " + $evidenceSearchRoot + "\build\l2src")
+    if (-not (Test-Path -LiteralPath $evidenceSearchRoot)) { return $null }
+    $allBuilds = @(Get-ChildItem -LiteralPath (Join-Path $evidenceSearchRoot 'build\l2src') -Directory -ErrorAction SilentlyContinue |
+        Where-Object { Test-Path (Join-Path $_.FullName 'headers\l2src') })
+    $l2srcBuilds = @($allBuilds | Where-Object { $_.Name -match '^\d{8}_\d{6}$' } | Sort-Object Name -Descending)
+    if ($l2srcBuilds.Count -eq 0) { $l2srcBuilds = @($allBuilds | Sort-Object LastWriteTime -Descending) }
+    if ($l2srcBuilds.Count -eq 0) { return $null }
+    $chosen = $l2srcBuilds[0]
+    $exact = Join-Path $chosen.FullName 'headers\l2src'
+    $dig = Get-KernelHeaderDigest $exact
+    Write-Output ("build_mixa: kernel evidence mode=AUTO stamp=" + $chosen.Name)
+    Write-Output ("build_mixa: kernel headers count=" + $dig.Count + " digest=" + $dig.Digest)
+    return $exact
 }
 
 if ($ValidateInputsOnly) {
     Write-Output "build_mixa: VALIDATE-ONLY PASS -- local inputs verified"
-    Write-Output "localRoot: $l1Root"
-    Write-Output "kernelRoot: $kernelRoot"
-    Write-Output "lm1Root: $lm1Root"
+    Write-Output ("localRoot: " + $l1Root)
+    Write-Output ("kernelRoot: " + $kernelRoot)
+    Write-Output ("lm1Root: " + $lm1Root)
+    exit 0
+}
+
+if ($ExactChainGuardOnly) {
+    $hdr = Resolve-KernelEvidenceHeaders
+    if (-not $hdr) { throw "build_mixa: ExactChainGuardOnly: no kernel headers resolved" }
+    Write-Output ("build_mixa: EXACT-CHAIN-GUARD PASS headers=" + $hdr)
     exit 0
 }
 
 Set-Location $migRoot
 
-if (-not $Translator) { $Translator = Join-Path $l1Root 'bin\l1trans.exe' }
-if (-not (Test-Path -LiteralPath $Translator)) { throw "translator not found: $Translator" }
-$pinFile = Join-Path $l1Root 'L1_PIN.txt'
-$pinChecked = 'not checked (a translator was named explicitly)'
-if ($Translator -eq (Join-Path $l1Root 'bin\l1trans.exe')) {
-    if (-not (Test-Path -LiteralPath $pinFile)) { throw "missing $pinFile" }
-    $pin = (Get-Content -LiteralPath $pinFile -TotalCount 1).Trim()
-    if ($pin -notmatch '^[0-9A-Fa-f]{64}$') { throw "L1_PIN.txt must hold one 64-hex SHA256, got '$pin'" }
-    $got = (Get-FileHash -LiteralPath $Translator -Algorithm SHA256).Hash
-    if ($got -ne $pin.ToUpper()) { throw "translator pin mismatch: bin\l1trans.exe is $got, L1_PIN.txt says $pin" }
-    $pinChecked = "matches L1_PIN.txt ($($pin.Substring(0,16))...)"
-}
 $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
 if (-not $OutDir) { $OutDir = Join-Path $migRoot "build\$stamp" }
 $headers = Join-Path $OutDir 'headers'
@@ -244,7 +346,6 @@ Write-Output "build_mixa: l1Root $l1Root"
 # Provenance, for the audit Codex asked for (LMX-L1FIXPOINT-AUDIT-20260920-01): which tool, by
 # which hash, and which tree each dependency actually came from.  A NOTE alone is a claim; these
 # are the paths an auditor can re-hash.
-$translatorHash = (Get-FileHash -LiteralPath $Translator -Algorithm SHA256).Hash
 Write-Output "build_mixa: resolved translator $Translator sha256 $($translatorHash.Substring(0,16))"
 Write-Output "build_mixa: resolved kernelRoot $kernelRoot | lm1Root $lm1Root"
 Write-Output "build_mixa: evidence $OutDir"
@@ -385,39 +486,20 @@ foreach ($h in $hdrFiles) {
 # includes (l2src headers reference each other as l2src/...) and l2src_kernel/
 # for the mixa include: directives.  If no l2src build exists, skip silently —
 # units that need kernel types will FAIL at compile time with a clear message.
-$l2srcSandbox = Join-Path $kernelRoot 'dev\l2src_sandbox'
-# WHERE THE STAMPS ARE.  L1 nests them under the sandbox; LMX keeps them at the tree root (same
-# stamps, different parent).  Both are tried, and if neither holds a headers\ dir the port says so
-# instead of quietly compiling against nothing.
-if (-not (Test-Path -LiteralPath (Join-Path $l2srcSandbox 'build\l2src'))) {
-    if (Test-Path -LiteralPath (Join-Path $kernelRoot 'build\l2src')) { $l2srcSandbox = $kernelRoot }
-}
-Write-Output "build_mixa: kernel evidence searched under $l2srcSandbox\build\l2src"
-if (Test-Path -LiteralPath $l2srcSandbox) {
-    # A build directory is a STAMP (yyyyMMdd_HHmmss) and the newest one is the newest BY NAME.
-    # Sorting every directory by name alone picked `trace_app_min` -- letters sort above digits --
-    # so the gate compiled the app against a kernel snapshot from days earlier and every
-    # kernel-facing unit failed with "conflicting types for lmx_thread_turn" (measured 20260919).
-    # Named directories are still usable, but only as a fallback, and the choice is printed.
-    $allBuilds = @(Get-ChildItem -LiteralPath (Join-Path $l2srcSandbox 'build\l2src') -Directory -ErrorAction SilentlyContinue |
-        Where-Object { Test-Path (Join-Path $_.FullName 'headers\l2src') })
-    $l2srcBuilds = @($allBuilds | Where-Object { $_.Name -match '^\d{8}_\d{6}$' } | Sort-Object Name -Descending)
-    if ($l2srcBuilds.Count -eq 0) { $l2srcBuilds = @($allBuilds | Sort-Object LastWriteTime -Descending) }
-    if ($l2srcBuilds.Count -gt 0) {
-        $l2srcHeaders = Join-Path $l2srcBuilds[0].FullName 'headers\l2src'
-        $kernelsDir = Join-Path $headers 'l2src_kernel'
-        $srcDir = Join-Path $headers 'l2src'
-        foreach ($d in @($kernelsDir, $srcDir)) {
-            New-Item -ItemType Directory -Force -Path $d | Out-Null
-        }
-        foreach ($f in @(Get-ChildItem -LiteralPath $l2srcHeaders -Filter '*.lm1.h' -File)) {
-            Copy-Item -LiteralPath $f.FullName -Destination (Join-Path $srcDir $f.Name) -Force
-            Copy-Item -LiteralPath $f.FullName -Destination (Join-Path $kernelsDir $f.Name) -Force
-        }
-        Write-Output "build_mixa: l2src kernel headers linked from $($l2srcBuilds[0].Name)"
-    } else {
-        Write-Output "build_mixa: WARNING no l2src build found at $l2srcSandbox\build\l2src\<stamp>\headers\l2src — kernel-dependent units will FAIL"
+$l2srcHeaders = Resolve-KernelEvidenceHeaders
+if ($l2srcHeaders) {
+    $kernelsDir = Join-Path $headers 'l2src_kernel'
+    $srcDir = Join-Path $headers 'l2src'
+    foreach ($d in @($kernelsDir, $srcDir)) {
+        New-Item -ItemType Directory -Force -Path $d | Out-Null
     }
+    foreach ($f in @(Get-ChildItem -LiteralPath $l2srcHeaders -Filter '*.lm1.h' -File)) {
+        Copy-Item -LiteralPath $f.FullName -Destination (Join-Path $srcDir $f.Name) -Force
+        Copy-Item -LiteralPath $f.FullName -Destination (Join-Path $kernelsDir $f.Name) -Force
+    }
+    Write-Output ("build_mixa: l2src kernel headers linked from " + $l2srcHeaders)
+} else {
+    Write-Output "build_mixa: WARNING no l2src kernel headers resolved — kernel-dependent units will FAIL"
 }
 
 # 2) units (skip selftests, skip .h.lm1)

@@ -25,29 +25,55 @@
 #
 #   powershell -NoProfile -ExecutionPolicy Bypass -File tools\build_l2src.ps1
 #   ... -Run                    also run every linked selftest
-#   ... -Translator <path>      use another translator (skips the pin check)
+#   ... -Translator <path>      use another translator (requires -ExpectedTranslatorSha256)
+#                               default bin\l1trans.exe still uses L1_PIN.txt
+#   ... -ExpectedTranslatorSha256 <64-hex>  required for explicit non-default -Translator
 param(
     [string]$Translator,
     [string]$OutDir,
     [switch]$Run,
-    [switch]$Strict
+    [switch]$Strict,
+    # Required when -Translator names a non-default executable (same spelling as build_mixa).
+    [string]$ExpectedTranslatorSha256
 )
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
 
-if (-not $Translator) { $Translator = Join-Path $root 'bin\l1trans.exe' }
+$defaultTranslator = Join-Path $root 'bin\l1trans.exe'
+if (-not $Translator) { $Translator = $defaultTranslator }
 if (-not (Test-Path -LiteralPath $Translator)) { throw "translator not found: $Translator" }
+$Translator = (Resolve-Path -LiteralPath $Translator).Path
+$defaultTranslatorFull = $null
+if (Test-Path -LiteralPath $defaultTranslator) { $defaultTranslatorFull = (Resolve-Path -LiteralPath $defaultTranslator).Path }
+$isDefaultTranslator = ($defaultTranslatorFull -and ($Translator -eq $defaultTranslatorFull)) -or ((-not $defaultTranslatorFull) -and ($Translator -eq $defaultTranslator))
 $pinFile = Join-Path $root 'L1_PIN.txt'
+$translatorHash = (Get-FileHash -LiteralPath $Translator -Algorithm SHA256).Hash.ToUpper()
 $pinChecked = 'not checked (a translator was named explicitly)'
-if ($Translator -eq (Join-Path $root 'bin\l1trans.exe')) {
+if ($isDefaultTranslator) {
     if (-not (Test-Path -LiteralPath $pinFile)) { throw "missing $pinFile" }
     $pin = (Get-Content -LiteralPath $pinFile -TotalCount 1).Trim()
     if ($pin -notmatch '^[0-9A-Fa-f]{64}$') { throw "L1_PIN.txt must hold one 64-hex SHA256, got '$pin'" }
-    $got = (Get-FileHash -LiteralPath $Translator -Algorithm SHA256).Hash
-    if ($got -ne $pin.ToUpper()) { throw "translator pin mismatch: bin\l1trans.exe is $got, L1_PIN.txt says $pin" }
+    if ($translatorHash -ne $pin.ToUpper()) { throw "translator pin mismatch: bin\l1trans.exe is $translatorHash, L1_PIN.txt says $pin" }
     $pinChecked = "matches L1_PIN.txt ($($pin.Substring(0,16))...)"
+    if ($ExpectedTranslatorSha256) {
+        if ($ExpectedTranslatorSha256 -notmatch '^[0-9A-Fa-f]{64}$') { throw "ExpectedTranslatorSha256 must be 64 hex, got '$ExpectedTranslatorSha256'" }
+        if ($translatorHash -ne $ExpectedTranslatorSha256.ToUpper()) {
+            throw "build_l2src: ExpectedTranslatorSha256 mismatch before work: got $translatorHash expected $($ExpectedTranslatorSha256.ToUpper())"
+        }
+    }
+} else {
+    if (-not $ExpectedTranslatorSha256) {
+        throw "build_l2src: -Translator names a non-default executable; -ExpectedTranslatorSha256 (64 hex) is required"
+    }
+    if ($ExpectedTranslatorSha256 -notmatch '^[0-9A-Fa-f]{64}$') { throw "ExpectedTranslatorSha256 must be 64 hex, got '$ExpectedTranslatorSha256'" }
+    if ($translatorHash -ne $ExpectedTranslatorSha256.ToUpper()) {
+        throw "build_l2src: ExpectedTranslatorSha256 mismatch before work: got $translatorHash expected $($ExpectedTranslatorSha256.ToUpper())"
+    }
+    $pinChecked = 'explicit translator ExpectedTranslatorSha256 verified'
 }
+Write-Output ("build_l2src: translator path=" + $Translator)
+Write-Output ("build_l2src: translator sha256=" + $translatorHash + " (" + $pinChecked + ")")
 $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
 if (-not $OutDir) { $OutDir = Join-Path $root "build\l2src\$stamp" }
 $headers = Join-Path $OutDir 'headers'
@@ -393,7 +419,7 @@ function Resolve-Link([string]$SelftestObject, [string[]]$AllObjects) {
     return $chosen
 }
 
-Write-Output "build_l2src: translator $Translator ($pinChecked)"
+# translator path/hash already printed after pin/ExpectedTranslatorSha256 check
 Write-Output "build_l2src: gcc $gcc"
 Write-Output "build_l2src: evidence $OutDir"
 

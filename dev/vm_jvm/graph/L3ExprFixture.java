@@ -1626,7 +1626,7 @@ public final class L3ExprFixture {
                 L3Role.UNTIL,
                 L3Node.ofInt(L3Role.INT_LITERAL, 1),
                 L3Node.of(L3Role.SEQUENCE, L3Node.of(L3Role.BREAK), L3Node.ofInt(L3Role.INT_LITERAL, 0)));
-        // After incr+inner, BREAK outer when n!=0 via... use BREAK on outer with label? 
+        // After incr+inner, BREAK outer when n!=0 via... use BREAK on outer with label?
         // Simpler: body incr; BREAK (nearest is FOR after inner exits).
         L3Node body = L3Node.of(
                 L3Role.SEQUENCE, incr, inner, L3Node.of(L3Role.BREAK), L3Node.ofInt(L3Role.INT_LITERAL, 0));

@@ -131,8 +131,8 @@ After ticket 22, prefer: `powershell -NoProfile -File tools/run_vm_patha_smoke.p
 ## Smoke runner (ticket 22)
 
 `tools/run_vm_patha_smoke.ps1` (Windows PowerShell 5.1): `-Target mir|wasm|riscv|all`.
-Uses only tools under ignored `build/vm/…`, writes under ignored `build/vm_porting/smoke_runner/`,
-no downloads or PATH mutation. Observed on OAK65536 (2026-09-21):
+Uses only tools under ignored `build/vm/…`, writes under ignored `build/vm_porting/<stamp>/`,
+missing selected tools are **FAIL** (not silent success); no downloads or PATH mutation. Observed on OAK65536 (2026-09-21):
 
 | Target | Status | Exit |
 |--------|--------|-----:|

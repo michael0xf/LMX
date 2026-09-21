@@ -26,10 +26,10 @@ if ($Fixture -eq 'l1trans' -and -not (Test-Path -LiteralPath (Join-Path $RepoRoo
 }
 Set-Location -LiteralPath $RepoRoot
 
-$OutRoot = Join-Path $RepoRoot 'build\vm_porting\smoke_runner'
-New-Item -ItemType Directory -Force -Path $OutRoot | Out-Null
 $Stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
-$Log = Join-Path $OutRoot ("run_{0}_{1}_{2}.txt" -f $Fixture, $Target, $Stamp)
+$OutRoot = Join-Path $RepoRoot ('build/vm_porting/' + $Stamp)
+New-Item -ItemType Directory -Force -Path $OutRoot | Out-Null
+$Log = Join-Path $OutRoot ("run_{0}_{1}.txt" -f $Fixture, $Target)
 
 function Write-Log([string]$Msg) {
     $Msg | Tee-Object -FilePath $Log -Append
@@ -69,12 +69,12 @@ Write-Log ("RepoRoot={0} Log={1}" -f $RepoRoot, $Log)
 
 function Run-Mir-PrintTree {
     $c2m = Join-Path $RepoRoot 'build\vm\mir-build\c2m'
-    if (-not (Test-Path -LiteralPath $c2m)) { Add-Result 'mir' 'SKIP' 0 'missing c2m'; return }
-    if (-not (Test-Wsl)) { Add-Result 'mir' 'SKIP' 0 'WSL required'; return }
+    if (-not (Test-Path -LiteralPath $c2m)) { Add-Result 'mir' 'FAIL' 2 'missing c2m'; return }
+    if (-not (Test-Wsl)) { Add-Result 'mir' 'FAIL' 2 'WSL required'; return }
     $nl = [char]10
     $body = @(
         '#!/bin/bash','set -e','cd /mnt/c/Nyasha_Planet/LMX',
-        'C2M=build/vm/mir-build/c2m','OUT=build/vm_porting/smoke_runner','mkdir -p "$OUT"',
+        'C2M=build/vm/mir-build/c2m',"OUT=build/vm_porting/$Stamp",'mkdir -p "$OUT"',
         '"$C2M" lm1/build/printTree.lm1.c -ei','echo PRINTTREE_EI=$?',
         '"$C2M" lm1/build/make.lm1.c -ei mkdir "$OUT/from_mir_make"','echo MAKE_EI=$?',
         '"$C2M" lm1/build/make.lm1.c -S -o "$OUT/make.mir"',
@@ -94,14 +94,14 @@ function Run-Mir-PrintTree {
 function Run-Wasm-PrintTree {
     $clang = Join-Path $RepoRoot 'build\vm\wasi-sdk-34.0-x86_64-linux\bin\clang'
     $wt = Join-Path $RepoRoot 'build\vm\wasmtime-v48.0.2-x86_64-linux\wasmtime'
-    if (-not ((Test-Path $clang) -and (Test-Path $wt))) { Add-Result 'wasm' 'SKIP' 0 'missing wasi/wasmtime'; return }
-    if (-not (Test-Wsl)) { Add-Result 'wasm' 'SKIP' 0 'WSL required'; return }
+    if (-not ((Test-Path $clang) -and (Test-Path $wt))) { Add-Result 'wasm' 'FAIL' 2 'missing wasi/wasmtime'; return }
+    if (-not (Test-Wsl)) { Add-Result 'wasm' 'FAIL' 2 'WSL required'; return }
     $nl = [char]10
     $body = @(
         '#!/bin/bash','set -e','cd /mnt/c/Nyasha_Planet/LMX',
         'CLANG=build/vm/wasi-sdk-34.0-x86_64-linux/bin/clang',
         'WT=build/vm/wasmtime-v48.0.2-x86_64-linux/wasmtime',
-        'OUT=build/vm_porting/smoke_runner','mkdir -p "$OUT"',
+        "OUT=build/vm_porting/$Stamp",'mkdir -p "$OUT"',
         '"$CLANG" --target=wasm32-wasip1 -std=c99 -Wall -I. -Ilm1 -Il1src -o "$OUT/printTree.wasm" lm1/build/printTree.lm1.c',
         'echo CC=$?','"$WT" "$OUT/printTree.wasm"','echo RUN=$?','wc -c "$OUT/printTree.wasm"'
     ) -join $nl
@@ -117,14 +117,14 @@ function Run-Wasm-PrintTree {
 function Run-Riscv-PrintTree {
     $gcc = Join-Path $RepoRoot 'build\vm\riscv\bin\riscv64-unknown-linux-gnu-gcc'
     $qemu = Join-Path $RepoRoot 'build\vm\qemu-user-static-root\usr\bin\qemu-riscv64-static'
-    if (-not ((Test-Path $gcc) -and (Test-Path $qemu))) { Add-Result 'riscv' 'SKIP' 0 'missing riscv/qemu'; return }
-    if (-not (Test-Wsl)) { Add-Result 'riscv' 'SKIP' 0 'WSL required'; return }
+    if (-not ((Test-Path $gcc) -and (Test-Path $qemu))) { Add-Result 'riscv' 'FAIL' 2 'missing riscv/qemu'; return }
+    if (-not (Test-Wsl)) { Add-Result 'riscv' 'FAIL' 2 'WSL required'; return }
     $nl = [char]10
     $body = @(
         '#!/bin/bash','set -e','cd /mnt/c/Nyasha_Planet/LMX',
         'GCC=build/vm/riscv/bin/riscv64-unknown-linux-gnu-gcc',
         'QEMU=build/vm/qemu-user-static-root/usr/bin/qemu-riscv64-static',
-        'OUT=build/vm_porting/smoke_runner','mkdir -p "$OUT"',
+        "OUT=build/vm_porting/$Stamp",'mkdir -p "$OUT"',
         'SYSROOT=$("$GCC" -print-sysroot)',
         '"$GCC" -std=c99 -Wall -O2 -I. -Ilm1 -Il1src -o "$OUT/printTree_rv.elf" lm1/build/printTree.lm1.c',
         'echo CC=$?','"$QEMU" -L "$SYSROOT" "$OUT/printTree_rv.elf"','echo RUN=$?','wc -c "$OUT/printTree_rv.elf"'
@@ -140,12 +140,12 @@ function Run-Riscv-PrintTree {
 
 function Run-Mir-Own {
     $c2m = Join-Path $RepoRoot 'build\vm\mir-build\c2m'
-    if (-not (Test-Path -LiteralPath $c2m)) { Add-Result 'mir' 'SKIP' 0 'missing c2m'; return }
-    if (-not (Test-Wsl)) { Add-Result 'mir' 'SKIP' 0 'WSL required'; return }
+    if (-not (Test-Path -LiteralPath $c2m)) { Add-Result 'mir' 'FAIL' 2 'missing c2m'; return }
+    if (-not (Test-Wsl)) { Add-Result 'mir' 'FAIL' 2 'WSL required'; return }
     $nl = [char]10
     $body = @(
         '#!/bin/bash','set -e','cd /mnt/c/Nyasha_Planet/LMX',
-        'C2M=build/vm/mir-build/c2m','OUT=build/vm_porting/smoke_runner','mkdir -p "$OUT"',
+        'C2M=build/vm/mir-build/c2m',"OUT=build/vm_porting/$Stamp",'mkdir -p "$OUT"',
         '"$C2M" -I. -Ilm1/build include_languages/vm/own_harness_main.c lm1/build/own.lm1.c -ei','echo OWN_EI=$?'
     ) -join $nl
     $r = Invoke-WslBash 'mir_own' $body
@@ -156,14 +156,14 @@ function Run-Mir-Own {
 function Run-Wasm-Own {
     $clang = Join-Path $RepoRoot 'build\vm\wasi-sdk-34.0-x86_64-linux\bin\clang'
     $wt = Join-Path $RepoRoot 'build\vm\wasmtime-v48.0.2-x86_64-linux\wasmtime'
-    if (-not ((Test-Path $clang) -and (Test-Path $wt))) { Add-Result 'wasm' 'SKIP' 0 'missing wasi/wasmtime'; return }
-    if (-not (Test-Wsl)) { Add-Result 'wasm' 'SKIP' 0 'WSL required'; return }
+    if (-not ((Test-Path $clang) -and (Test-Path $wt))) { Add-Result 'wasm' 'FAIL' 2 'missing wasi/wasmtime'; return }
+    if (-not (Test-Wsl)) { Add-Result 'wasm' 'FAIL' 2 'WSL required'; return }
     $nl = [char]10
     $body = @(
         '#!/bin/bash','set -e','cd /mnt/c/Nyasha_Planet/LMX',
         'CLANG=build/vm/wasi-sdk-34.0-x86_64-linux/bin/clang',
         'WT=build/vm/wasmtime-v48.0.2-x86_64-linux/wasmtime',
-        'OUT=build/vm_porting/smoke_runner','mkdir -p "$OUT"',
+        "OUT=build/vm_porting/$Stamp",'mkdir -p "$OUT"',
         '"$CLANG" --target=wasm32-wasip1 -std=c99 -Wall -O2 -I. -Ilm1/build -o "$OUT/own.wasm" include_languages/vm/own_harness_main.c lm1/build/own.lm1.c',
         'echo CC=$?','"$WT" "$OUT/own.wasm"','echo RUN=$?'
     ) -join $nl
@@ -175,14 +175,14 @@ function Run-Wasm-Own {
 function Run-Riscv-Own {
     $gcc = Join-Path $RepoRoot 'build\vm\riscv\bin\riscv64-unknown-linux-gnu-gcc'
     $qemu = Join-Path $RepoRoot 'build\vm\qemu-user-static-root\usr\bin\qemu-riscv64-static'
-    if (-not ((Test-Path $gcc) -and (Test-Path $qemu))) { Add-Result 'riscv' 'SKIP' 0 'missing riscv/qemu'; return }
-    if (-not (Test-Wsl)) { Add-Result 'riscv' 'SKIP' 0 'WSL required'; return }
+    if (-not ((Test-Path $gcc) -and (Test-Path $qemu))) { Add-Result 'riscv' 'FAIL' 2 'missing riscv/qemu'; return }
+    if (-not (Test-Wsl)) { Add-Result 'riscv' 'FAIL' 2 'WSL required'; return }
     $nl = [char]10
     $body = @(
         '#!/bin/bash','set -e','cd /mnt/c/Nyasha_Planet/LMX',
         'GCC=build/vm/riscv/bin/riscv64-unknown-linux-gnu-gcc',
         'QEMU=build/vm/qemu-user-static-root/usr/bin/qemu-riscv64-static',
-        'OUT=build/vm_porting/smoke_runner','mkdir -p "$OUT"',
+        "OUT=build/vm_porting/$Stamp",'mkdir -p "$OUT"',
         'SYSROOT=$("$GCC" -print-sysroot)',
         '"$GCC" -std=c99 -Wall -O2 -I. -Ilm1/build -o "$OUT/own_rv.elf" include_languages/vm/own_harness_main.c lm1/build/own.lm1.c',
         'echo CC=$?','"$QEMU" -L "$SYSROOT" "$OUT/own_rv.elf"','echo RUN=$?'
@@ -194,12 +194,12 @@ function Run-Riscv-Own {
 
 function Run-Mir-Parser {
     $c2m = Join-Path $RepoRoot 'build\vm\mir-build\c2m'
-    if (-not (Test-Path -LiteralPath $c2m)) { Add-Result 'mir' 'SKIP' 0 'missing c2m'; return }
-    if (-not (Test-Wsl)) { Add-Result 'mir' 'SKIP' 0 'WSL required'; return }
+    if (-not (Test-Path -LiteralPath $c2m)) { Add-Result 'mir' 'FAIL' 2 'missing c2m'; return }
+    if (-not (Test-Wsl)) { Add-Result 'mir' 'FAIL' 2 'WSL required'; return }
     $nl = [char]10
     $body = @(
         '#!/bin/bash','set -e','cd /mnt/c/Nyasha_Planet/LMX',
-        'C2M=build/vm/mir-build/c2m','OUT=build/vm_porting/smoke_runner','mkdir -p "$OUT"',
+        'C2M=build/vm/mir-build/c2m',"OUT=build/vm_porting/$Stamp",'mkdir -p "$OUT"',
         '"$C2M" -I. -Ilm1/build include_languages/vm/parser_harness_main.c lm1/build/parser.lm1.c -ei','echo PARSER_EI=$?'
     ) -join $nl
     $r = Invoke-WslBash 'mir_parser' $body
@@ -210,14 +210,14 @@ function Run-Mir-Parser {
 function Run-Wasm-Parser {
     $clang = Join-Path $RepoRoot 'build\vm\wasi-sdk-34.0-x86_64-linux\bin\clang'
     $wt = Join-Path $RepoRoot 'build\vm\wasmtime-v48.0.2-x86_64-linux\wasmtime'
-    if (-not ((Test-Path $clang) -and (Test-Path $wt))) { Add-Result 'wasm' 'SKIP' 0 'missing wasi/wasmtime'; return }
-    if (-not (Test-Wsl)) { Add-Result 'wasm' 'SKIP' 0 'WSL required'; return }
+    if (-not ((Test-Path $clang) -and (Test-Path $wt))) { Add-Result 'wasm' 'FAIL' 2 'missing wasi/wasmtime'; return }
+    if (-not (Test-Wsl)) { Add-Result 'wasm' 'FAIL' 2 'WSL required'; return }
     $nl = [char]10
     $body = @(
         '#!/bin/bash','set -e','cd /mnt/c/Nyasha_Planet/LMX',
         'CLANG=build/vm/wasi-sdk-34.0-x86_64-linux/bin/clang',
         'WT=build/vm/wasmtime-v48.0.2-x86_64-linux/wasmtime',
-        'OUT=build/vm_porting/smoke_runner','mkdir -p "$OUT"',
+        "OUT=build/vm_porting/$Stamp",'mkdir -p "$OUT"',
         '"$CLANG" --target=wasm32-wasip1 -std=c99 -Wall -Wno-unused-parameter -O2 -I. -Ilm1/build -o "$OUT/parser.wasm" include_languages/vm/parser_harness_main.c lm1/build/parser.lm1.c',
         'echo CC=$?','"$WT" "$OUT/parser.wasm"','echo RUN=$?'
     ) -join $nl
@@ -229,14 +229,14 @@ function Run-Wasm-Parser {
 function Run-Riscv-Parser {
     $gcc = Join-Path $RepoRoot 'build\vm\riscv\bin\riscv64-unknown-linux-gnu-gcc'
     $qemu = Join-Path $RepoRoot 'build\vm\qemu-user-static-root\usr\bin\qemu-riscv64-static'
-    if (-not ((Test-Path $gcc) -and (Test-Path $qemu))) { Add-Result 'riscv' 'SKIP' 0 'missing riscv/qemu'; return }
-    if (-not (Test-Wsl)) { Add-Result 'riscv' 'SKIP' 0 'WSL required'; return }
+    if (-not ((Test-Path $gcc) -and (Test-Path $qemu))) { Add-Result 'riscv' 'FAIL' 2 'missing riscv/qemu'; return }
+    if (-not (Test-Wsl)) { Add-Result 'riscv' 'FAIL' 2 'WSL required'; return }
     $nl = [char]10
     $body = @(
         '#!/bin/bash','set -e','cd /mnt/c/Nyasha_Planet/LMX',
         'GCC=build/vm/riscv/bin/riscv64-unknown-linux-gnu-gcc',
         'QEMU=build/vm/qemu-user-static-root/usr/bin/qemu-riscv64-static',
-        'OUT=build/vm_porting/smoke_runner','mkdir -p "$OUT"',
+        "OUT=build/vm_porting/$Stamp",'mkdir -p "$OUT"',
         'SYSROOT=$("$GCC" -print-sysroot)',
         '"$GCC" -std=c99 -Wall -Wno-unused-parameter -O2 -I. -Ilm1/build -o "$OUT/parser_rv.elf" include_languages/vm/parser_harness_main.c lm1/build/parser.lm1.c',
         'echo CC=$?','"$QEMU" -L "$SYSROOT" "$OUT/parser_rv.elf"','echo RUN=$?'
@@ -249,12 +249,12 @@ function Run-Riscv-Parser {
 
 function Run-Mir-L1trans {
     $c2m = Join-Path $RepoRoot 'build\vm\mir-build\c2m'
-    if (-not (Test-Path -LiteralPath $c2m)) { Add-Result 'mir' 'SKIP' 0 'missing c2m'; return }
-    if (-not (Test-Wsl)) { Add-Result 'mir' 'SKIP' 0 'WSL required'; return }
+    if (-not (Test-Path -LiteralPath $c2m)) { Add-Result 'mir' 'FAIL' 2 'missing c2m'; return }
+    if (-not (Test-Wsl)) { Add-Result 'mir' 'FAIL' 2 'WSL required'; return }
     $nl = [char]10
     $body = @(
         '#!/bin/bash','set -e','cd /mnt/c/Nyasha_Planet/LMX',
-        'C2M=build/vm/mir-build/c2m','OUT=build/vm_porting/smoke_runner','mkdir -p "$OUT"',
+        'C2M=build/vm/mir-build/c2m',"OUT=build/vm_porting/$Stamp",'mkdir -p "$OUT"',
         'SRC=dev/l2src_sandbox/tests/own_array_count_define.h.lm1',
         'set +e',
         '"$C2M" -I. -Ilm1/build lm1/build/l1trans.lm1.c -ei','echo USAGE_EI=$?',
@@ -274,14 +274,14 @@ function Run-Mir-L1trans {
 function Run-Wasm-L1trans {
     $clang = Join-Path $RepoRoot 'build\vm\wasi-sdk-34.0-x86_64-linux\bin\clang'
     $wt = Join-Path $RepoRoot 'build\vm\wasmtime-v48.0.2-x86_64-linux\wasmtime'
-    if (-not ((Test-Path $clang) -and (Test-Path $wt))) { Add-Result 'wasm' 'SKIP' 0 'missing wasi/wasmtime'; return }
-    if (-not (Test-Wsl)) { Add-Result 'wasm' 'SKIP' 0 'WSL required'; return }
+    if (-not ((Test-Path $clang) -and (Test-Path $wt))) { Add-Result 'wasm' 'FAIL' 2 'missing wasi/wasmtime'; return }
+    if (-not (Test-Wsl)) { Add-Result 'wasm' 'FAIL' 2 'WSL required'; return }
     $nl = [char]10
     $body = @(
         '#!/bin/bash','set -e','cd /mnt/c/Nyasha_Planet/LMX',
         'CLANG=build/vm/wasi-sdk-34.0-x86_64-linux/bin/clang',
         'WT=build/vm/wasmtime-v48.0.2-x86_64-linux/wasmtime',
-        'OUT=build/vm_porting/smoke_runner','mkdir -p "$OUT"',
+        "OUT=build/vm_porting/$Stamp",'mkdir -p "$OUT"',
         'SRC=dev/l2src_sandbox/tests/own_array_count_define.h.lm1',
         '"$CLANG" --target=wasm32-wasip1 -std=c99 -Wall -Wno-unused-variable -O2 -I. -Ilm1/build -o "$OUT/l1trans.wasm" lm1/build/l1trans.lm1.c',
         'echo CC=$?','set +e',
@@ -304,14 +304,14 @@ function Run-Wasm-L1trans {
 function Run-Riscv-L1trans {
     $gcc = Join-Path $RepoRoot 'build\vm\riscv\bin\riscv64-unknown-linux-gnu-gcc'
     $qemu = Join-Path $RepoRoot 'build\vm\qemu-user-static-root\usr\bin\qemu-riscv64-static'
-    if (-not ((Test-Path $gcc) -and (Test-Path $qemu))) { Add-Result 'riscv' 'SKIP' 0 'missing riscv/qemu'; return }
-    if (-not (Test-Wsl)) { Add-Result 'riscv' 'SKIP' 0 'WSL required'; return }
+    if (-not ((Test-Path $gcc) -and (Test-Path $qemu))) { Add-Result 'riscv' 'FAIL' 2 'missing riscv/qemu'; return }
+    if (-not (Test-Wsl)) { Add-Result 'riscv' 'FAIL' 2 'WSL required'; return }
     $nl = [char]10
     $body = @(
         '#!/bin/bash','set -e','cd /mnt/c/Nyasha_Planet/LMX',
         'GCC=build/vm/riscv/bin/riscv64-unknown-linux-gnu-gcc',
         'QEMU=build/vm/qemu-user-static-root/usr/bin/qemu-riscv64-static',
-        'OUT=build/vm_porting/smoke_runner','mkdir -p "$OUT"',
+        "OUT=build/vm_porting/$Stamp",'mkdir -p "$OUT"',
         'SRC=dev/l2src_sandbox/tests/own_array_count_define.h.lm1',
         'SYSROOT=$("$GCC" -print-sysroot)',
         '"$GCC" -std=c99 -Wall -Wno-unused-variable -O2 -I. -Ilm1/build -o "$OUT/l1trans_rv.elf" lm1/build/l1trans.lm1.c',

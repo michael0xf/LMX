@@ -2,7 +2,9 @@
 
 Status: documentation of **observed** Path A evidence from Grok Bot tickets
 `GROK-BOT-VM-PATHA-QUEUE-20260921-17` (subtasks 17–20) and earlier Path A smoke
-reports under `steps/vm-*-smoke.md`. This file does **not** invent success.
+reports under `steps/vm-*-smoke.md`. Owned/refreshed under
+`GROK-BOT-VM-PATHA-FOLLOWUP-20260921-21`. This file does **not** invent success.
+SHA-256 values below were re-measured on OAK65536 2026-09-21 and match the table.
 
 Repo root for all relative paths: `C:\Nyasha_Planet\LMX` (also
 `/mnt/c/Nyasha_Planet/LMX` under WSL).
@@ -34,6 +36,23 @@ print `usage: printTree <source>`).
 Secondary MIR/RISC-V execute fixture: **`lm1/build/make.lm1.c`** (MIR `-ei mkdir
 …` exit 0; RISC-V historically PASS in `steps/vm-riscv-smoke.md`). **Not** a
 WASI execute fixture (see limits).
+
+
+## Tickets 17–20 summary matrix (do not over-claim)
+
+Tracked inputs: `lm1/build/*.c` (Git). Ignored tools/evidence: `build/vm/**`,
+`build/vm_porting/**` (not committed). Path A does **not** consume
+`C:\Nyasha_Planet\L1` for these seeds (path-string scan + self-build C seeds).
+
+| Target | Shared execute `printTree` | `make` | `own` / `parser` as of 17–20 | Known blockers |
+|--------|----------------------------|--------|------------------------------|----------------|
+| MIR (`a8ab7c31…`, `build/vm/mir-build/{c2m,m2b,b2m}`) | **PASS** `-ei` usage | **PASS** `-ei mkdir` + m2b/b2m | **compile-only** (`-S` OK; `-ei` fails no `main`) | — |
+| WASM linear (wasi-sdk-34.0 + wasmtime-v48.0.2 under `build/vm/`) | **PASS** build+run usage | **FAIL** link `undefined symbol: system` | not an execute claim in 17–20 | `system()` on WASI |
+| RISC-V (cross gcc + `qemu-riscv64-static`) | **PASS** elf+qemu usage | historically PASS (see `steps/vm-riscv-smoke.md`) | not an execute claim in 17–20 | **Spike MISSING** (not required) |
+
+`printTree` is the shared executable fixture across all three. `make` is MIR/RISC-V
+only for execute claims. Later harness tickets (own/parser/l1trans) are separate
+sections below and are **not** part of the 17–20 execute claim set.
 
 ## Observed results by target (do not over-claim)
 
@@ -81,8 +100,9 @@ log; `steps/vm-riscv-smoke.md`.
 - No downloads or vendor trees committed; SDKs stay under ignored `build/vm/` /
   `build/vm_porting/`.
 - No new L1 printer / Path B / L3 work in these tickets.
-- `own.lm1.c` / `parser.lm1.c`: compile-to-MIR only until a **main**-bearing
-  harness exists (follow-up ticket territory; not invented here).
+- As of tickets **17–20**: `own.lm1.c` / `parser.lm1.c` are **compile-only** on
+  MIR (`-ei` needs `main`); do not claim execute. Executable harness coverage
+  appears only in later sections of this file (tickets 32/35), not in 17–20.
 - `make.lm1.c` on WASI: blocked on `system()` — recorded failure, not patched.
 
 ## Exact first commands (WSL, repo `/mnt/c/Nyasha_Planet/LMX`)

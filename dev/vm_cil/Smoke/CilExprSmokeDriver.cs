@@ -49,6 +49,19 @@ namespace Smoke
                 testCallWrongArityRejected();
                 testBadArgRejected();
                 testLegalCallCycleNotOwnershipCycle();
+
+                testLocalsSetGet();
+                testWhileInitialFalse();
+                testWhileCountdown();
+                testNestedBreakNearest();
+                testContinueRechecks();
+                testRedoSkipsProbe();
+                testRecursiveFreshLocals();
+                testNestedReturnFromWhile();
+                testLocalGetUnassignedRejected();
+                testBreakOutsideRejected();
+                testWhileValueContextRejected();
+                testWhileBadArityRejected();
             }
             finally
             {
@@ -297,6 +310,81 @@ namespace Smoke
             // Self-recursive graph must emit (CALL edge is non-ownership).
             int r = Eval(L3ExprFixture.RecursiveCountdown(), LmxOccurrence.Independent(2), "legal_cycle.dll");
             check("legal CALL cycle accepted (countdown 2 -> 2)", r == 2);
+        }
+
+        private static void testLocalsSetGet()
+        {
+            check("locals set/get arithmetic -> 7", Eval(L3ExprFixture.LocalsSetGetArithmetic(), LmxOccurrence.Independent(0), "loc.dll") == 7);
+        }
+
+        private static void testWhileInitialFalse()
+        {
+            check("WHILE initial-false -> 0", Eval(L3ExprFixture.WhileInitialFalse(), LmxOccurrence.Independent(0), "w0.dll") == 0);
+        }
+
+        private static void testWhileCountdown()
+        {
+            check("WHILE countdown -> 0", Eval(L3ExprFixture.WhileCountdown(), LmxOccurrence.Independent(0), "w3.dll") == 0);
+        }
+
+        private static void testNestedBreakNearest()
+        {
+            check("nested BREAK nearest -> 2", Eval(L3ExprFixture.NestedBreakNearest(), LmxOccurrence.Independent(0), "nbrk.dll") == 2);
+        }
+
+        private static void testContinueRechecks()
+        {
+            check("CONTINUE rechecks condition -> 3", Eval(L3ExprFixture.ContinueRechecksCondition(), LmxOccurrence.Independent(0), "cont.dll") == 3);
+        }
+
+        private static void testRedoSkipsProbe()
+        {
+            EvalCounter.Reset();
+            int r = Eval(L3ExprFixture.RedoSkipsConditionProbe(), LmxOccurrence.Independent(0), "redo.dll");
+            check("REDO skips condition -> n==2", r == 2);
+            check("REDO skips condition probe ticks 1", EvalCounter.Get() == 1);
+        }
+
+        private static void testRecursiveFreshLocals()
+        {
+            check("recursive fresh locals countdown 3 -> 3", Eval(L3ExprFixture.RecursiveFreshLocals(), LmxOccurrence.Independent(3), "rloc.dll") == 3);
+        }
+
+        private static void testNestedReturnFromWhile()
+        {
+            check("nested RETURN from WHILE -> 77", Eval(L3ExprFixture.NestedReturnFromWhile(), LmxOccurrence.Independent(0), "nrw.dll") == 77);
+        }
+
+        private static void testLocalGetUnassignedRejected()
+        {
+            bool threw = false;
+            try { L3CilEmitter.EmitCallableToPe(L3ExprFixture.LocalGetUnassigned(), Path.Combine(workDir, "unass.dll")); }
+            catch (ArgumentException e) { threw = e.Message != null && e.Message.IndexOf("unassigned") >= 0; }
+            check("LOCAL_GET unassigned rejected", threw);
+        }
+
+        private static void testBreakOutsideRejected()
+        {
+            bool threw = false;
+            try { L3CilEmitter.EmitCallableToPe(L3ExprFixture.BreakOutsideLoop(), Path.Combine(workDir, "brkout.dll")); }
+            catch (ArgumentException e) { threw = e.Message != null && e.Message.IndexOf("outside loop") >= 0; }
+            check("BREAK outside loop rejected", threw);
+        }
+
+        private static void testWhileValueContextRejected()
+        {
+            bool threw = false;
+            try { L3CilEmitter.EmitCallableToPe(L3ExprFixture.WhileInValueContext(), Path.Combine(workDir, "wval.dll")); }
+            catch (ArgumentException e) { threw = e.Message != null && e.Message.IndexOf("value context") >= 0; }
+            check("WHILE in value context rejected", threw);
+        }
+
+        private static void testWhileBadArityRejected()
+        {
+            bool threw = false;
+            try { L3CilEmitter.EmitCallableToPe(L3ExprFixture.WhileBadArity(), Path.Combine(workDir, "warity.dll")); }
+            catch (ArgumentException e) { threw = e.Message != null && e.Message.IndexOf("WHILE arity") >= 0; }
+            check("WHILE bad arity rejected", threw);
         }
     }
 }

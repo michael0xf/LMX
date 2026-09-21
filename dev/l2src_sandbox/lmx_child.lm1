@@ -140,11 +140,9 @@ return: c.LMX_CHILD_INVALID
 # telling the caller what happened.
 
 fn: lmx_child_service (@: LmxThread t) @: LmxService
-    @: LmxServiceEntry entry
-    if: t = 0 || t\entry = 0
+    if: t = 0 || t\service = 0
         return: 0
-    entry: (cast: (@: LmxServiceEntry) t\entry)
-return: entry\service
+return: (cast: (@: LmxService) t\service)
 fn: lmx_child_publish_prepared (@: LmxThread t; @: LmxArena arena) int
     @: LmxReservation node
     @: LmxReservation next

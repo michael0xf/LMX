@@ -241,13 +241,13 @@ fn: main () int
     #     (run 3), where the old empty-box rule wrote the mark onto a child that was INSIDE its turn
     #     and the next boundary attached and freed its arena under it.
     base: lmx_clock_ticks()
-    st_check(counts, lmx_stop_children(parent_t, base) = c.LMX_SETTLE_OK, "the stop request refused")
+    st_check(counts, lmx_stop_children(parent_t, base, 0U) = c.LMX_SETTLE_OK, "the stop request refused")
     st_check(counts, live_msg\running = 0, "the stop request did not reach the child")
     st_check(counts, live_msg\handoff_ready = 0, "the stop closed a child it had not waited for")
     st_check(counts, lmx_settle_ready(live_msg) = 0, "a child asked to close reads settlable at once")
     st_check(counts, lmx_settle_children(parent_t, @ parent_arena, @ service, @ manager, base) = c.LMX_SETTLE_OK, "the settle at the request refused")
     st_check(counts, lmx_thread_child_is(parent_t, live_t) != 0, "the asked child was settled before its window")
-    st_check(counts, lmx_stop_children(parent_t, base + 9U) = c.LMX_SETTLE_OK, "the same request one window later refused")
+    st_check(counts, lmx_stop_children(parent_t, base + 9U, 0U) = c.LMX_SETTLE_OK, "the same request one window later refused")
     st_check(counts, live_msg\handoff_ready != 0, "a child that reached no boundary within its window was not closed")
     st_check(counts, lmx_settle_ready(live_msg) != 0, "the closed child did not become settlable")
     st_check(counts, lmx_settle_children(parent_t, @ parent_arena, @ service, @ manager, base + 9U) = c.LMX_SETTLE_OK, "the settle after the window refused")

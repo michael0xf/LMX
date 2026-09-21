@@ -186,5 +186,115 @@ namespace Graph
         {
             return L3Node.Of(L3Role.CALLABLE, L3Node.Of(L3Role.RETURN, L3Node.OfInt(L3Role.ARG, 0)));
         }
+
+        // --- locals / WHILE (GROK-BOT-CIL-L3-LOCALS-WHILE-20260921-103) ---
+
+        public static L3Node LocalsSetGetArithmetic()
+        {
+            L3Node set0 = new L3Node(L3Role.LOCAL_SET, 0, L3Node.OfInt(L3Role.INT_LITERAL, 3));
+            L3Node set1 = new L3Node(L3Role.LOCAL_SET, 1, L3Node.OfInt(L3Role.INT_LITERAL, 4));
+            L3Node add = L3Node.Of(L3Role.ADD, L3Node.OfInt(L3Role.LOCAL_GET, 0), L3Node.OfInt(L3Role.LOCAL_GET, 1));
+            return L3Node.Of(L3Role.CALLABLE, L3Node.Of(L3Role.RETURN, L3Node.Of(L3Role.SEQUENCE, set0, set1, add)));
+        }
+
+        public static L3Node WhileInitialFalse()
+        {
+            L3Node init = new L3Node(L3Role.LOCAL_SET, 0, L3Node.OfInt(L3Role.INT_LITERAL, 0));
+            L3Node body = new L3Node(L3Role.LOCAL_SET, 0, L3Node.OfInt(L3Role.INT_LITERAL, 99));
+            L3Node w = L3Node.Of(L3Role.WHILE, L3Node.OfInt(L3Role.LOCAL_GET, 0), body);
+            return L3Node.Of(L3Role.CALLABLE, L3Node.Of(L3Role.RETURN, L3Node.Of(L3Role.SEQUENCE, init, w, L3Node.OfInt(L3Role.LOCAL_GET, 0))));
+        }
+
+        public static L3Node WhileCountdown()
+        {
+            L3Node init = new L3Node(L3Role.LOCAL_SET, 0, L3Node.OfInt(L3Role.INT_LITERAL, 3));
+            L3Node dec = L3Node.Of(L3Role.ADD, L3Node.OfInt(L3Role.LOCAL_GET, 0), L3Node.OfInt(L3Role.INT_LITERAL, -1));
+            L3Node body = new L3Node(L3Role.LOCAL_SET, 0, dec);
+            L3Node w = L3Node.Of(L3Role.WHILE, L3Node.OfInt(L3Role.LOCAL_GET, 0), body);
+            return L3Node.Of(L3Role.CALLABLE, L3Node.Of(L3Role.RETURN, L3Node.Of(L3Role.SEQUENCE, init, w, L3Node.OfInt(L3Role.LOCAL_GET, 0))));
+        }
+
+        public static L3Node NestedBreakNearest()
+        {
+            L3Node init = new L3Node(L3Role.LOCAL_SET, 0, L3Node.OfInt(L3Role.INT_LITERAL, 0));
+            L3Node incr = new L3Node(L3Role.LOCAL_SET, 0, L3Node.Of(L3Role.ADD, L3Node.OfInt(L3Role.LOCAL_GET, 0), L3Node.OfInt(L3Role.INT_LITERAL, 1)));
+            L3Node inner = L3Node.Of(L3Role.WHILE, L3Node.OfInt(L3Role.INT_LITERAL, 1), L3Node.Of(L3Role.BREAK));
+            L3Node ge2 = L3Node.Of(L3Role.ADD, L3Node.OfInt(L3Role.LOCAL_GET, 0), L3Node.OfInt(L3Role.INT_LITERAL, -2));
+            L3Node ifBreak = L3Node.Of(L3Role.IF, ge2, L3Node.OfInt(L3Role.INT_LITERAL, 0), L3Node.Of(L3Role.BREAK));
+            L3Node outerBody = L3Node.Of(L3Role.SEQUENCE, incr, inner, ifBreak);
+            L3Node outer = L3Node.Of(L3Role.WHILE, L3Node.OfInt(L3Role.INT_LITERAL, 1), outerBody);
+            return L3Node.Of(L3Role.CALLABLE, L3Node.Of(L3Role.RETURN, L3Node.Of(L3Role.SEQUENCE, init, outer, L3Node.OfInt(L3Role.LOCAL_GET, 0))));
+        }
+
+        public static L3Node ContinueRechecksCondition()
+        {
+            L3Node init = new L3Node(L3Role.LOCAL_SET, 0, L3Node.OfInt(L3Role.INT_LITERAL, 0));
+            L3Node incr = new L3Node(L3Role.LOCAL_SET, 0, L3Node.Of(L3Role.ADD, L3Node.OfInt(L3Role.LOCAL_GET, 0), L3Node.OfInt(L3Role.INT_LITERAL, 1)));
+            L3Node body = L3Node.Of(L3Role.SEQUENCE, incr, L3Node.Of(L3Role.CONTINUE));
+            L3Node eq3 = L3Node.Of(L3Role.ADD, L3Node.OfInt(L3Role.LOCAL_GET, 0), L3Node.OfInt(L3Role.INT_LITERAL, -3));
+            // WHILE continues while nonzero: IF(n-3,1,0) — nonzero when n!=3
+            L3Node cond = L3Node.Of(L3Role.IF, eq3, L3Node.OfInt(L3Role.INT_LITERAL, 1), L3Node.OfInt(L3Role.INT_LITERAL, 0));
+            L3Node w = L3Node.Of(L3Role.WHILE, cond, body);
+            return L3Node.Of(L3Role.CALLABLE, L3Node.Of(L3Role.RETURN, L3Node.Of(L3Role.SEQUENCE, init, w, L3Node.OfInt(L3Role.LOCAL_GET, 0))));
+        }
+
+        public static L3Node RedoSkipsConditionProbe()
+        {
+            L3Node init = new L3Node(L3Role.LOCAL_SET, 0, L3Node.OfInt(L3Role.INT_LITERAL, 0));
+            L3Node incr = new L3Node(L3Role.LOCAL_SET, 0, L3Node.Of(L3Role.ADD, L3Node.OfInt(L3Role.LOCAL_GET, 0), L3Node.OfInt(L3Role.INT_LITERAL, 1)));
+            L3Node eq1 = L3Node.Of(L3Role.ADD, L3Node.OfInt(L3Role.LOCAL_GET, 0), L3Node.OfInt(L3Role.INT_LITERAL, -1));
+            L3Node ifRedo = L3Node.Of(L3Role.IF, eq1, L3Node.OfInt(L3Role.INT_LITERAL, 0), L3Node.Of(L3Role.REDO));
+            L3Node ge2 = L3Node.Of(L3Role.ADD, L3Node.OfInt(L3Role.LOCAL_GET, 0), L3Node.OfInt(L3Role.INT_LITERAL, -2));
+            L3Node ifBreak = L3Node.Of(L3Role.IF, ge2, L3Node.OfInt(L3Role.INT_LITERAL, 0), L3Node.Of(L3Role.BREAK));
+            L3Node body = L3Node.Of(L3Role.SEQUENCE, incr, ifRedo, ifBreak);
+            L3Node cond = L3Node.Of(L3Role.SEQUENCE, L3Node.Of(L3Role.PROBE), L3Node.OfInt(L3Role.INT_LITERAL, 1));
+            L3Node w = L3Node.Of(L3Role.WHILE, cond, body);
+            return L3Node.Of(L3Role.CALLABLE, L3Node.Of(L3Role.RETURN, L3Node.Of(L3Role.SEQUENCE, init, w, L3Node.OfInt(L3Role.LOCAL_GET, 0))));
+        }
+
+        /** Recursive with local: f(n) uses local slot; fresh per activation. */
+        public static L3Node RecursiveFreshLocals()
+        {
+            L3Node self = L3Node.UnsealedCallable();
+            L3Node set = new L3Node(L3Role.LOCAL_SET, 0, L3Node.OfInt(L3Role.ARG, 1));
+            L3Node dec = L3Node.Of(L3Role.ADD, L3Node.OfInt(L3Role.LOCAL_GET, 0), L3Node.OfInt(L3Role.INT_LITERAL, -1));
+            L3Node rec = L3Node.Of(L3Role.CALL, self, L3Node.OfInt(L3Role.ARG, 0), dec);
+            L3Node onePlus = L3Node.Of(L3Role.ADD, L3Node.OfInt(L3Role.INT_LITERAL, 1), rec);
+            L3Node iff = L3Node.Of(L3Role.IF, L3Node.OfInt(L3Role.LOCAL_GET, 0), onePlus, L3Node.OfInt(L3Role.INT_LITERAL, 0));
+            self.Seal(L3Node.Of(L3Role.RETURN, L3Node.Of(L3Role.SEQUENCE, set, iff)));
+            L3Node field0 = new L3Node(L3Role.FIELD_FOLLOW, 0, L3Node.Of(L3Role.SUBJECT_REF));
+            L3Node call = L3Node.Of(L3Role.CALL, self, L3Node.Of(L3Role.SUBJECT_REF), field0);
+            return L3Node.Of(L3Role.CALLABLE, L3Node.Of(L3Role.RETURN, call));
+        }
+
+        public static L3Node NestedReturnFromWhile()
+        {
+            L3Node init = new L3Node(L3Role.LOCAL_SET, 0, L3Node.OfInt(L3Role.INT_LITERAL, 0));
+            L3Node body = L3Node.Of(L3Role.RETURN, L3Node.OfInt(L3Role.INT_LITERAL, 77));
+            L3Node w = L3Node.Of(L3Role.WHILE, L3Node.OfInt(L3Role.INT_LITERAL, 1), body);
+            return L3Node.Of(L3Role.CALLABLE, L3Node.Of(L3Role.RETURN, L3Node.Of(L3Role.SEQUENCE, init, w, L3Node.OfInt(L3Role.INT_LITERAL, 0))));
+        }
+
+        public static L3Node LocalGetUnassigned()
+        {
+            return L3Node.Of(L3Role.CALLABLE, L3Node.Of(L3Role.RETURN, L3Node.OfInt(L3Role.LOCAL_GET, 0)));
+        }
+
+        public static L3Node BreakOutsideLoop()
+        {
+            return L3Node.Of(L3Role.CALLABLE, L3Node.Of(L3Role.RETURN, L3Node.Of(L3Role.SEQUENCE, L3Node.Of(L3Role.BREAK), L3Node.OfInt(L3Role.INT_LITERAL, 0))));
+        }
+
+        public static L3Node WhileInValueContext()
+        {
+            L3Node w = L3Node.Of(L3Role.WHILE, L3Node.OfInt(L3Role.INT_LITERAL, 0), L3Node.OfInt(L3Role.INT_LITERAL, 0));
+            return L3Node.Of(L3Role.CALLABLE, L3Node.Of(L3Role.RETURN, w));
+        }
+
+        public static L3Node WhileBadArity()
+        {
+            L3Node w = L3Node.Of(L3Role.WHILE, L3Node.OfInt(L3Role.INT_LITERAL, 1));
+            return L3Node.Of(L3Role.CALLABLE, L3Node.Of(L3Role.RETURN, L3Node.Of(L3Role.SEQUENCE, w, L3Node.OfInt(L3Role.INT_LITERAL, 0))));
+        }
     }
 }

@@ -66,4 +66,8 @@ prototype:
     # this walk is the only boundary there is (the root is never settled), which is why the rule
     # sits here and in the stop act both.
     fn: lmx_settle_children (@: LmxThread t; @: LmxArena parent_arena; @: LmxService service; @: LmxManager manager; ulong: now) int
+    # The one-level cascade, shared by R0's close and by a Thread stopped from outside (both must
+    # drive their OWN direct children).  Service and manager are UNTYPED here on purpose: this
+    # header is predef'd by the thread unit, which cannot name their types without a cycle.
+    fn: lmx_settle_cascade_one_level (@: LmxThread t; @: LmxArena arena; @: void service; @: void manager; size_t: deadline) int
 end: prototype

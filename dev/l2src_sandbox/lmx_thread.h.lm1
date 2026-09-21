@@ -70,6 +70,18 @@ struct: LmxLink
     # of its own within its own band's limit is closed WITHOUT a turn.  Zero = never asked.  A
     # repeated request must not move it: the window ages against the FIRST one.
     ulong: stopped
+    # THE CLOSURE'S OWN DEADLINE, ONE PLATFORM WORD, ZERO MEANING "NO CLOSURE CONTEXT".  It is the
+    # SAME value at every level -- the upper close computes it once from the word clock plus the
+    # root's close limit, the first closure request stores it, and every descendant inherits it --
+    # so no level can restart the window and there is no second field for it to be coherent with,
+    # which is why a relaxed atomic word operation is sufficient here.
+    # THIS IS LmxLink's SECOND CROSS-THREAD CELL, and it is an AUTHOR-APPROVED EXCEPTION to the rule
+    # stated above `alive` ("the ONE sanctioned cross-thread cell"): the author's ruling of
+    # 2026-09-21 admits this one, with the reader using an atomic load and the writer an atomic
+    # first-write.  `stopped` and slot\limit keep their local-liveness meaning and are untouched.
+    # It is written by the parent's stop act and read by the parent's walks AND by the child's own
+    # lane, which is what makes the bound enforceable under both manager bindings.
+    size_t: close_deadline
 end: LmxLink
 
 struct: LmxThreadApi
@@ -150,10 +162,13 @@ struct: LmxThread
     # through graph slots.  The cell belongs to the PARENT and is written on the PARENT's lane
     # at publication (spec 19.29.6).
     @: void parent
-    # This record's own entry in its mail service (lmx_service): registration writes it.  The
-    # service keys by physical address of this LmxThread.  Untyped like every other reference
-    # here; zero for a record no service has registered.
-    @: void entry
+    # THE STABLE ROUTE BACK TO THIS RECORD'S SERVICE (lmx_service): registration stores it and
+    # unregister clears it, so a record can ask which registry owns it without going near the
+    # service's entries vector.  It must NOT be a pointer INTO that vector: the vector is compacted
+    # by memmove on a removal and moved by realloc on growth, so a stored row pointer is stale
+    # after either act -- measured 2026-09-21, single-threaded, no timing involved.  Untyped like
+    # every other reference here; zero for a record no service has registered.
+    @: void service
     # Live direct children: the head of the parent's OWN chain of LmxLink nodes (above), each node
     # allocated in THIS parent's arena.  The chain is the parent's, the nodes are the parent's, and
     # a child's record holds nothing of it but the pointer `link` below.
@@ -215,7 +230,7 @@ prototype:
     # a Message that was never linked.
     fn: lmx_thread_parent (@: LmxThread t) @: LmxThread
     # This record's own service entry, or null (lmx_service writes it at registration).
-    fn: lmx_thread_entry (@: LmxThread t) @: void
+    fn: lmx_thread_service (@: LmxThread t) @: void
     # Live direct children: add, remove, is-direct-child, iterate (first/next).
     # The address of this Thread's handshake word -- the cell the child stamps and the parent
     # answers (19.29.7.1).  It is reached through the parent-owned link, so this function is the
@@ -272,13 +287,22 @@ prototype:
     # attached its arena to the parent's and released the parent -- under a turn still in flight
     # (`b_count 7->0 a_count 9->0`).  Handoff-safe means "I have LEFT my last turn", and only the
     # child's own boundary, or a window that says it is not working, can establish that.
-    fn: lmx_stop_children (@: LmxThread t; ulong: now) int
+    fn: lmx_stop_children (@: LmxThread t; ulong: now; size_t: deadline) int
     # The two halves of that act, each reachable on its own: the request for one child, and the
     # close of one child whose ask has outlived its own band's window.  `lmx_settle_children` calls
     # the CLOSE for a child it cannot reap yet (and only the close: a settle must never ask a
-    # running child to stop).
-    fn: lmx_stop_request (@: LmxThread child; ulong: now) int
+    # running child to stop).  The REQUEST carries the closure's ONE deadline down into the child's
+    # node -- zero for a stop that is not a closure, so a closure beginning later still publishes.
+    fn: lmx_stop_request (@: LmxThread child; ulong: now; size_t: deadline) int
     fn: lmx_stop_close (@: LmxThread child; ulong: now) int
+    # The closure deadline as the node holds it: one relaxed atomic load of one self-contained word
+    # (see LmxLink), and the first-write publish that stores the upper close's value exactly once.
+    fn: lmx_link_deadline (@: LmxLink node) size_t
+    fn: lmx_link_deadline_publish (@: LmxLink node; size_t: deadline) int
+    # Whether this record's own lane has ended: the stronger boundary the close publishes from, and
+    # the one the STOPPED hook asks before it speaks for a record whose lane may still be unwinding.
+    # A record with no lane answers YES (the stepped manager's normal state).
+    fn: lmx_thread_lane_ended (@: LmxThread t) int
     fn: lmx_thread_mail_accept (@: LmxArena arena; @: LmxThread t; @: void target; int: lane) int
     fn: lmx_thread_mail_take (@: LmxThread t; int: lane) @: void
     fn: lmx_thread_mail_count (@: LmxThread t; int: lane) size_t

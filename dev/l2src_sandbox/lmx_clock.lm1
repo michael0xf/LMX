@@ -18,3 +18,25 @@ fn: lmx_clock_since (ULONGLONG: start) ULONGLONG
         return: 0U
     ---
 return: now - start
+
+# THE SAME CLOCK IN THE PLATFORM'S OWN WORD WIDTH, for the stored close deadline.  The cast is
+# DIRECT -- from c.GetTickCount64() itself -- and the comment in the header says why routing it
+# through lmx_clock_ticks() would be a silent, untestable defect on Windows x64.
+fn: lmx_clock_word () size_t
+return: (cast: (size_t) c.GetTickCount64())
+
+# HALF THE WORD RANGE, computed at the word's own width: 2^63 on a 64-bit build, 2^31 on a 32-bit
+# one.  Not a literal, because a literal would be wrong on one of the two.
+fn: lmx_clock_half () size_t
+    size_t: zero 0U
+return: (zero - 1U) / 2U + 1U
+
+fn: lmx_deadline_passed (size_t: deadline; size_t: now) int
+    if: now - deadline < lmx_clock_half()
+        return: 1
+return: 0
+
+fn: lmx_deadline_wait (size_t: deadline; size_t: now) size_t
+    if: lmx_deadline_passed(deadline, now) != 0
+        return: 0U
+return: deadline - now

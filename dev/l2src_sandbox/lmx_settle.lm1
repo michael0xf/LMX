@@ -2,10 +2,52 @@ predef: "lmx_settle.h.lm1"
 predef: "l2src/lmx_child.h.lm1"
 predef: "l2src/lmx_arena_refs.h.lm1"
 predef: "l2src/lmx_post.h.lm1"
+predef: "l1src/libc_abi.lm1"
+predef: "l2src/lmx_clock.h.lm1"
 
 # The readiness predicate: one reading of the two flags, from the settling side (19.29.8:
 # "Transfer or reclamation requires the handoff-safe boundary in 19.29.7.1, not merely a stop
 # request or elapsed timeout").
+# ONE LEVEL OF THE CASCADE, and exactly one: a parent requests the stop for its DIRECT children and
+# drives them to the boundary that request names, settling each direct-child record as it comes to
+# rest.  It runs with THAT THREAD'S OWN arena, service and manager, which is what keeps R0 from ever
+# walking a grandchild: every level performs this act for the level below it.
+#
+# WHY THIS IS A LOOP, AND WHY IT TERMINATES WITHOUT A COUNTER.  lmx_stop_children asks; it does not
+# wait, and nothing in this runtime blocks without wait/notify -- so a parent that must not return
+# early drives what it can (its own manager rounds the children bound to it), settles, and asks
+# again.  It ends when the direct-child chain is empty, and that is guaranteed by the EXISTING STOP
+# WINDOW, not by anything invented here: lmx_stop_request stamps the parent-owned `stopped` on the
+# child's node, and lmx_stop_close marks the child handoff_ready once `now - node.stopped >=
+# slot.limit` -- read from the child's own limit and independent of LmxSchedule.state.  A child that
+# runs ends at its own end-turn; a child that does not is closed by that window.  A slot with a zero
+# limit was refused by lmx_schedule_init, so it is malformed Thread state and is refused as such.
+# Service and manager are UNTYPED here because this header is predef'd by the thread unit, which
+# cannot name their types without a cycle; the caller casts.
+fn: lmx_settle_cascade_one_level (@: LmxThread t; @: LmxArena arena; @: void service; @: void manager; size_t: deadline) int
+    ulong: now 0U
+    if: t = 0
+        return: c.LMX_SETTLE_INVALID
+    ---
+    while: lmx_thread_child_first(t) != 0
+        now: lmx_clock_ticks()
+        # THE CLOSURE'S BOUND IS NOT CHECKED HERE, and its absence is deliberate: the cooperative
+        # check lives where every level already walks -- lmx_stop_close, reading the ONE deadline out
+        # of each child's node (lmx_link_deadline) -- so this helper carries no second copy of the
+        # window and no second abort site.  What it DOES carry is the deadline itself, handed to
+        # lmx_stop_children below so this level's children inherit the same value and no level can
+        # restart it.  The process-wide guarantee for a child that never returns is the watchdog
+        # armed by lmx_root_close from that same deadline (lmx_process_deadline).
+        if: manager != 0
+            lmx_manager_round((cast: (@: LmxManager) manager), 1U, now)
+        ---
+        if: lmx_settle_children(t, arena, (cast: (@: LmxService) service), (cast: (@: LmxManager) manager), now) != c.LMX_SETTLE_OK
+            return: c.LMX_SETTLE_INVALID
+        ---
+        lmx_stop_children(t, now, deadline)
+    ---
+return: c.LMX_SETTLE_OK
+
 fn: lmx_settle_ready (@: LmxMsg message) int
     if: message = 0
         return: 0
@@ -96,7 +138,12 @@ fn: lmx_settle_one (@: LmxThread t; @: LmxArena parent_arena; @: LmxService serv
                 # The reading is the boundary's own and is handed down unchanged (lmx_manager.h.lm1):
                 # the stop uses it to start the window, and to END it for a child that has not
                 # reached a boundary of its own (lmx_thread.h.lm1, lmx_stop_children).
-                lmx_stop_children(child, now)
+                # The CLOSURE'S pair is handed down too, and from the CHILD's own node -- the same
+                # cells its own levels will read, never a fresh start: a deferred level inherits the
+                # one window the whole tree has.
+                if: node != 0
+                    lmx_stop_children(child, now, lmx_link_deadline(node))
+                ---
                 return: c.LMX_SETTLE_DEFERRED
             ---
         ---
@@ -105,6 +152,12 @@ fn: lmx_settle_one (@: LmxThread t; @: LmxArena parent_arena; @: LmxService serv
     #     storage would be a route to something that no longer exists.
     if: service != 0
         lmx_service_unregister(service, child)
+    ---
+    # ROUTE FIRST, THEN THE MAILBOX, THEN THE STORAGE -- the same order the child performs on its
+    # own terminal path, performed HERE only for a child that did not do it itself: `gone` says it
+    # did, and a gone child's record is returned storage that must not be read.
+    if: gone = 0 && child_arena != 0
+        lmx_thread_mail_close(child_arena, child)
     ---
     # (2) it leaves the schedule: a settled Message has no lane, and a queue that kept its
     #     record would step freed cells on the next round.

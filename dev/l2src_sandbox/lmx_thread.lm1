@@ -3,6 +3,7 @@ predef: "l2src/lmx_call.lm1"
 predef: "l2src/lmx_turn.lm1"
 predef: "l2src/lmx_clock.lm1"
 predef: "l2src/lmx_manager.lm1"
+predef: "l2src/lmx_settle.lm1"
 
 # lmx_thread.lm1 - running an L3 Thread's turns, and the kernel side of lmx.h's poll hook.
 #
@@ -52,7 +53,7 @@ fn: lmx_thread_attach (@: LmxThread t; @: LmxMsg message; @: LmxPost mail; @: Lm
     # family: the up-link of the address walk starts empty (lmx_child's publication writes it).
     t\prepared: 0
     t\parent: 0
-    t\entry: 0
+    t\service: 0
     t\children: 0
     t\link: 0
     t\manager: 0
@@ -89,10 +90,12 @@ fn: lmx_thread_parent (@: LmxThread t) @: LmxThread
         return: 0
 return: (cast: (@: LmxThread) t\parent)
 
-fn: lmx_thread_entry (@: LmxThread t) @: void
+# The record's own service, read from the STABLE reference registration stores (never from a
+# position inside the service's compacted entries vector).
+fn: lmx_thread_service (@: LmxThread t) @: void
     if: t = 0
         return: 0
-return: t\entry
+return: t\service
 
 # Live direct children -- THE CHAIN LIVES IN THE PARENT'S ARENA (Mikhail, 19.09; spec 19.29.6:
 # "the parent owns the parent link at link, unlink and supervision handoff").  Each live direct child
@@ -273,9 +276,19 @@ fn: lmx_thread_mail_count (@: LmxThread t; int: lane) size_t
 return: lmx_post_count(t\mail, lane)
 
 fn: lmx_thread_mail_close (@: LmxArena arena; @: LmxThread t) int
+    @: LmxPost box
     if: t = 0 || t\mail = 0
         return: c.LMX_POST_INVALID
-return: lmx_post_close(arena, t\mail)
+    ---
+    box: t\mail
+    if: lmx_post_close(arena, box) != c.LMX_POST_OK
+        return: c.LMX_POST_INVALID
+    ---
+    # EXACTLY-ONCE, and it is the existing guard that enforces it: with the mailbox forgotten, a
+    # second close (and accept, take, count) refuses through `if: t\mail = 0` above, and a delivery
+    # aimed at this record refuses in lmx_service_post, which answers MISSING when t\mail = 0.
+    t\mail: 0
+return: c.LMX_POST_OK
 
 fn: lmx_thread_running (@: LmxThread t) int
     if: t = 0 || t\message = 0
@@ -450,6 +463,8 @@ return: c.LMX_THREAD_OK
 fn: lmx_thread_turn (@: LmxThread t; LmxCallEntry: entry; ulong: now) int
     int: code
     int: body c.LMX_TURN_BODY_OK
+    @: LmxLink node 0
+    size_t: ctx_deadline 0U
     if: t = 0 || t\message = 0
         return: c.LMX_THREAD_INVALID
     # Validate the selected path before entering: an unavailable interpreter is not permission
@@ -463,6 +478,55 @@ fn: lmx_thread_turn (@: LmxThread t; LmxCallEntry: entry; ulong: now) int
         return: c.LMX_THREAD_INVALID
     code: lmx_thread_enter(t)
     if: code != c.LMX_THREAD_OK
+        # A THREAD STOPPED FROM OUTSIDE MUST STILL CLOSE ITS OWN LEVEL.  Its boundary acts are
+        # unreachable here: enter refused before lmx_turn_end_status, which is the only route to
+        # lmx_stop_children.  And nobody above will do it for it -- lmx_manager_step takes a stopped
+        # record out of the queue and does not re-add it, and lmx_thread_finish refuses while the
+        # record still has children -- so its subtree would be orphaned in place.  So the one-level
+        # duty is performed HERE, with THIS thread's own manager and its own arena and service.
+        if: code = c.LMX_THREAD_STOPPED && t\message\running = 0
+            # NOTHING WAS ENTERED, SO NOTHING IS IN FLIGHT: this Thread runs its own one-level
+            # cascade NOW, and only when its own child chain is empty does it publish its
+            # handoff-safe boundary.  THE ORDER IS NOT COSMETIC: publishing first would let a
+            # concurrent parent observe the boundary and settle this Thread's arena while its
+            # grandchildren are still live.  Nothing was entered, so no window is waited out --
+            # the window stays for the case it was written for, a child that might be MID-TURN.
+            # THE BOUNDARY IS PUBLISHED ONLY ON A SUCCESSFUL CASCADE (item 1), AND ONLY WHEN THIS
+            # RECORD'S OWN LANE HAS ENDED.  Both halves were measured.  A refused cascade leaves a
+            # chain that is not provably empty, so a refusal stops the next act rather than being
+            # stepped over.  And a cascade that ran on the PARENT's thread (this hook is reached
+            # through lmx_manager_round -> lmx_manager_step, whichever manager is stepping) must not
+            # speak for a record whose own lane is still unwinding: publishing there let the parent
+            # attach the live child's arena -- the running-lane test's check for exactly that is
+            # `arena gone while lane alive`.  A record with no lane of its own answers the same
+            # question YES, which is the stepped manager's normal state, so the single-threaded
+            # close still reaches its boundary at once and never waits out a window it does not need.
+            # A MANAGER IS NOT REQUIRED FOR THIS DUTY, and demanding one was measured wrong
+            # (2026-09-21): a record whose own manager field was zero was stepped, stopped, and then
+            # published nothing at all, so its parent waited out that child's whole slot window --
+            # 100000 ms of real time in both focused tests -- and the close's overall bound aborted
+            # first.  The cascade asks its manager ONLY when it has children to drive (`if: manager
+            # != 0` around the round inside the helper); what the act needs is the thread's OWN
+            # arena, which its slot names.
+            # A nested cascade cannot see the top close's context from here (it arrives through
+            # lmx_manager_round -> lmx_manager_step -> this function, and none carries one), so it
+            # passes no bound of its own and the top's bound remains the only overall one.
+            # THE CLOSURE DEADLINE COMES FROM THIS RECORD'S OWN NODE -- the parent's cell, holding
+            # the ONE value the upper close computed, so this level hands down exactly what it was
+            # given under either manager binding and with no value crossing a thread boundary: the
+            # lane reads the same cell the stepped path reads, each through lmx_link_deadline.  A
+            # record whose parent published none (a stop that is not a closure) passes zero, and its
+            # subtree is then bounded by the children's own slot windows, as it was before.
+            node: lmx_thread_link(t)
+            ctx_deadline: lmx_link_deadline(node)
+            if: t\slot != 0
+                if: lmx_settle_cascade_one_level(t, t\slot\arena, t\service, t\manager, ctx_deadline) = c.LMX_SETTLE_OK
+                    if: lmx_thread_lane_ended(t) != 0
+                        t\message\handoff_ready: 1
+                    ---
+                ---
+            ---
+        ---
         return: code
     ---
     # THE INTERPRETER'S ANSWER IS KEPT.  It used to be dropped, so an interpreted body that
@@ -575,7 +639,7 @@ fn: lmx_poll_answer_children (@: LmxThread t; ulong: now) int
                     # TAKEN_IN_FLIGHT in tests\lmx_app_reroot_forbidden_selftest.lm1, run 3).  The
                     # request is the whole of this act; the close follows from the window, whoever
                     # next walks this parent.
-                    lmx_stop_request(child, reading)
+                    lmx_stop_request(child, reading, 0U)
                     lmx_stop_close(child, reading)
                 ---
             ---
@@ -601,7 +665,7 @@ return: c.LMX_THREAD_OK
 # ONE CHILD, ASKED TO CLOSE: `running=0`, and the moment of the FIRST ask goes into the PARENT'S
 # node, where the window below is counted from.  A repeated ask changes nothing -- a parent asking
 # at every boundary of its own must not keep postponing the close it asked for.
-fn: lmx_stop_request (@: LmxThread child; ulong: now) int
+fn: lmx_stop_request (@: LmxThread child; ulong: now; size_t: deadline) int
     @: LmxMsg message
     @: LmxLink node
     if: child = 0
@@ -615,7 +679,34 @@ fn: lmx_stop_request (@: LmxThread child; ulong: now) int
     if: node != 0 && node\stopped = 0U
         node\stopped: now
     ---
+    # THE CLOSURE'S ONE DEADLINE, PUBLISHED WITH THE SAME ASK AND INHERITED, NEVER RESTARTED.  Zero
+    # means no closure context -- a plain supervision ask leaves it zero on purpose, so a closure
+    # that begins later still publishes its own value once.  The publish is the simple atomic
+    # first-write (load, then store): the node belongs to this child's parent and a parent is one
+    # execution context at a time (the one-writer rule), so there is no second writer to lose a
+    # race with; the atomicity is what makes the CHILD'S OWN LANE a sound reader of the value.
+    lmx_link_deadline_publish(node, deadline)
 return: c.LMX_THREAD_OK
+
+# THE CLOSURE DEADLINE AS THE NODE HOLDS IT: one relaxed atomic load of ONE self-contained word.
+# A single value needs no ordering against a second field, and the deadline test itself is modular
+# (lmx_deadline_passed), so nothing here depends on store ordering.
+fn: lmx_link_deadline (@: LmxLink node) size_t
+    if: node = 0
+        return: 0U
+return: c.__atomic_load_n((cast: (@: size_t) (@ node\close_deadline)), c.__ATOMIC_RELAXED)
+
+# THE FIRST CLOSURE WINS: a nonzero value already stored is never overwritten, which is what keeps
+# every level reading the value the upper close computed.  Returns 1 when this call stored it.
+fn: lmx_link_deadline_publish (@: LmxLink node; size_t: deadline) int
+    if: node = 0 || deadline = 0U
+        return: 0
+    ---
+    if: lmx_link_deadline(node) != 0U
+        return: 0
+    ---
+    c.__atomic_store_n((cast: (@: size_t) (@ node\close_deadline)), deadline, c.__ATOMIC_RELAXED)
+return: 1
 
 # ONE CHILD, THE END OF THE WAIT: a child that was asked to close and has not reached a boundary of
 # its own within its own band's window is closed HERE -- without a turn, stopped AND handoff-safe,
@@ -646,14 +737,62 @@ fn: lmx_stop_close (@: LmxThread child; ulong: now) int
         return: c.LMX_THREAD_INVALID
     ---
     slot: (cast: (@: LmxSchedule) node\slot)
+    # THE CLOSURE'S DEADLINE, CHECKED WHEREVER A LEVEL WALKS ITS CHILDREN -- at the top and inside
+    # every nested cascade alike, because this function is what each pass of each level calls.  It
+    # is the SAME word at every level (the node carries it), so no level can restart it.  THE
+    # COMPARISON IS MODULAR, and it is the kernel's first stored-deadline test -- the header of
+    # lmx_clock.h.lm1 says why that is sound here and why every other timeout site still subtracts.
+    # This check is COOPERATIVE: it can only fire where a pass runs.  The process-wide guarantee is
+    # the watchdog armed by lmx_root_close from the SAME deadline (lmx_process_deadline), and that
+    # is the one that covers a child body which never returns.
+    if: lmx_deadline_passed(lmx_link_deadline(node), lmx_clock_word()) != 0
+        c.fputs("lmx: the overall close deadline expired with children still live at one level; aborting rather than returning a partially closed runtime\n", l1_stderr())
+        c.fflush(0)
+        c.abort()
+    ---
     if: slot != 0 && slot\limit != 0U
         if: now - node\stopped >= slot\limit
             message\handoff_ready: 1
         ---
     ---
+    # A LANE THAT HAS ENDED IS A BOUNDARY TOO, and it is the STRONGER one: the record's own thread
+    # is gone, so nothing of it is in flight anywhere -- which a stop request or an elapsed window
+    # alone does not establish.  This is a rule read at this function, and its load-bearing status
+    # is shown by mutation, not by an earlier run: with `lmx_thread_lane_ended` forced to answer YES
+    # the running-lane suite's race branch fires (build\mail_cascade_82\
+    # mutant_lane_rule_removed.lanes.stdout.txt: "STOP RACE ...", checks=26 failures=1) because a
+    # parent then publishes for a record whose own thread is still unwinding.
+    # THE CHAIN MUST BE EMPTY AS WELL: publishing here is publishing a handoff-safe boundary, and a
+    # child whose own children are still live has not reached one -- the same requirement the STOPPED
+    # hook enforces by running its one-level cascade before it speaks.  An empty chain IS that
+    # cascade's success, observably, and a window that has passed does not make a live subtree safe.
+    if: message\handoff_ready = 0 && lmx_thread_child_first(child) = 0 && lmx_thread_lane_ended(child) != 0
+        message\handoff_ready: 1
+    ---
 return: c.LMX_THREAD_OK
 
-fn: lmx_stop_children (@: LmxThread t; ulong: now) int
+# WHETHER THIS RECORD'S OWN LANE HAS ENDED -- the one question that separates "the boundary may be
+# published" from "the record's own thread is still unwinding".  A record with NO lane of its own
+# (the stepped manager's normal state, and every child that was never started) answers YES: there is
+# no other thread that could still be inside its storage.  A lane that HAS ended is observed the same
+# way the running manager observes it -- a zero-timeout reap -- so nothing new is invented here: the
+# handle already exists (LmxSchedule.lane) and the join already exists
+# (lmx_manager_running_lane_reap).  A handle that has ended but not yet been reaped answers YES:
+# the thread is gone either way, and the reap itself stays with the queue that owns the lane.
+fn: lmx_thread_lane_ended (@: LmxThread t) int
+    @: LmxSchedule slot
+    if: t = 0
+        return: 0
+    slot: t\slot
+    if: slot = 0
+        return: 1
+    if: slot\lane = 0
+        return: 1
+    if: c.WaitForSingleObject(slot\lane, 0U) = c.WAIT_OBJECT_0
+        return: 1
+return: 0
+
+fn: lmx_stop_children (@: LmxThread t; ulong: now; size_t: deadline) int
     @: LmxThread child
     @: LmxThread next
     if: t = 0
@@ -661,7 +800,7 @@ fn: lmx_stop_children (@: LmxThread t; ulong: now) int
     child: lmx_thread_child_first(t)
     while: child != 0
         next: lmx_thread_child_next(child)
-        lmx_stop_request(child, now)
+        lmx_stop_request(child, now, deadline)
         lmx_stop_close(child, now)
         child: next
     ---
@@ -709,6 +848,14 @@ fn: lmx_thread_finish (@: LmxThread t) int
     if: arena = 0
         return: c.LMX_THREAD_OK
     ---
+    # THE ORDER OF THE TERMINAL ACT IS THE WHOLE POINT: the ROUTE goes first, then the MAILBOX,
+    # then the STORAGE.  A route that outlives its record is a route to returned cells; a mailbox
+    # that outlives its arena is a heap ring nobody will free; and the arena may go only once
+    # nothing of the record can still be reached through either.
+    if: t\service != 0
+        lmx_service_unregister((cast: (@: LmxService) t\service), t)
+    ---
+    lmx_thread_mail_close(arena, t)
     node\gone: 1
     lmx_arena_release(arena)
 return: c.LMX_THREAD_OK

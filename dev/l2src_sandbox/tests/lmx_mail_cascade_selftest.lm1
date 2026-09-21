@@ -1,0 +1,510 @@
+predef: "l2src/lmx_root.lm1"
+predef: "l2src/lmx_settle.lm1"
+predef: "l2src/lmx_service.lm1"
+predef: "l2src/lmx_turn.lm1"
+predef: "l2src/lmx_child.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_manager.lm1"
+predef: "l2src/lmx_manager_running.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_gc.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_call.lm1"
+predef: "l2src/lmx_clock.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# THE MAIL CASCADE: route first, then the mailbox, then the storage
+# (DEEPSEEK-MAIL-CASCADE-FIX-20260921-82).
+#
+# WHAT THIS PINS, in the order the terminal paths must perform it:
+#   * a Thread's PHYSICAL ROUTE leaves the service before anything it owns is destroyed;
+#   * its MAILBOX IS CLOSED EXACTLY ONCE, and closing it zeroes `t\mail`, so a second close is a
+#     no-op through the guard `lmx_thread_mail_close` already has -- and a late delivery attempt
+#     refuses too, because `lmx_service_post` answers MISSING when `target_thread\mail = 0`;
+#   * only THEN does the arena go: the child releases its own arena at its own endturn (the
+#     author's rule, preserved), and the parent's settle handles what it still holds;
+#   * R0: ONE synchronous lmx_root_close.  It requests stop for its direct children only, waits
+#     for each to reach its safe completion boundary, and only then closes R0's own route, mail
+#     and storage.
+#
+# THE ORDERING CLAIM IS WITNESSED, AND ITS WITNESS IS PHASE 5.  Phase 1 asserts an end state, and an
+# end state cannot see an order: with the early destructor restored it still passed (measured
+# 2026-09-21, and this file said so rather than implying otherwise).  What CAN see the order is a
+# delivery made from inside the close, which is what phase 5 builds: a live child, on a lane of its
+# own, delivers to R0 once per turn while the close is in flight.  Corrected cascade: R0's mailbox is
+# closed only after the cascade has left no live child, so every one of those deliveries is accepted
+# (refused = 0).  Restored early destructor: the mailbox dies at the START of the close, so the first
+# turn after that instant is refused.  Both halves are saved in build\mail_cascade_82:
+#   witness_pass.focused.stdout.txt    -> checks=78 failures=0
+#   witness_mutant_red.focused.stdout.txt -> checks=78 failures=1, the failing check being
+#     "ORDERING WITNESS: a live child's delivery to R0 was REFUSED while the close was in flight --
+#      R0's mailbox died before its children"
+#
+# HOW THE MAILBOX STAYS OBSERVABLE AFTER THE ARENA IS GONE: the child's mailbox RECORD is
+# TEST-OWNED -- a by-value LmxPost in this file -- while its pool is opened in the child arena
+# (lmx_post_init names the arena; the record is whoever's storage it is).  So after the child's
+# arena has been released, `mail\inbox_slots = 0` is still a legal read of MY storage and is the
+# proof that the destructor ran.  A kernel-owned record would be unreadable exactly when the
+# question becomes interesting.
+#
+# THE SERVICE-REFERENCE CASE NEEDS NO TIMING: registering past the initial capacity forces the
+# entries vector to reallocate, and a removal shifts later rows down, so a Thread that stored a
+# POINTER INTO THAT VECTOR is stale afterwards -- deterministically, in one thread.
+#
+# A by-value struct's `\` chain emits `->` and does not compile, so every read of an embedded
+# field goes through a POINTER LOCAL (the same trap that cost a build in -68 and again in -82's
+# first draft).  Hence the `*_mail_p` locals below rather than `root\mail\...`.
+
+@: LmxRoot mc_root 0
+@: LmxArena mc_child_arena 0
+@: Lmx mc_source 0
+@: LmxPost mc_child_mail 0
+@: LmxSchedule mc_child_sched 0
+@: LmxPost mc_root_mail_p 0
+@: void mc_body_fn 0
+@: LmxPost mc_w_mail 0
+@: LmxArena mc_w_arena 0
+@: LmxArena mc_w_letter_arena 0
+@: LmxService mc_w_service 0
+@: LmxThread mc_w_r0 0
+@: LmxThread mc_w_child 0
+@: LmxMsg mc_w_letter 0
+@: LmxSchedule mc_w_sched 0
+@: Lmx mc_w_source 0
+int: mc_w_final_post 0
+int: mc_w_attempts 0
+int: mc_w_refused 0
+size_t: mc_phase 0U
+int: mc_body_ends 0
+int: mc_observe 0
+int: mc_child_reached 0
+int: mc_body_ran 0
+size_t: mc_seen_root_mail_slots 0U
+
+# The child's body.  mc_body_ends decides whether this child ENDS (success + stopped, which is what
+# makes lmx_thread_finish act at the end of its turn) or stays live forever.  mc_observe makes it
+# record what R0's mailbox looked like AT ITS OWN BOUNDARY -- the ordering evidence.
+fn: mc_body (@: Lmx node) int
+    @: LmxThread t
+    t: lmx_thread_current()
+    mc_body_ran: mc_body_ran + 1
+    if: t = 0 || t\message = 0
+        return: 0
+    ---
+    if: mc_body_ends != 0
+        if: mc_observe != 0 && mc_root_mail_p != 0
+            mc_child_reached: 1
+            mc_seen_root_mail_slots: (cast: (size_t) mc_root_mail_p\inbox_slots)
+        ---
+        t\message\success: 1
+        t\message\running: 0
+    ---
+return: 0
+
+# Wire ONE child into R0.  Same shape as lmx_settle_gone_child_selftest's wiring, with one
+# deliberate difference: the mailbox RECORD is the caller's (mc_child_mail), so its closedness
+# outlives the child's arena.
+# THE WITNESS BODY (ticket -82, phase 5).  This child runs on a LANE of its own, so it is alive
+# while its parent's close is in flight.  It waits for the close's own stop (running -> 0, written
+# by the parent's stop request INSIDE the close) and ONLY THEN makes one delivery to R0:
+#   * corrected cascade: R0's route and mailbox are still there at that instant -- the mailbox dies
+#     only after the cascade has left no live child -- so the delivery is ACCEPTED;
+#   * restored early destructor (the mutation): R0's mailbox was closed at the START of the close,
+#     so the very same delivery is REFUSED.
+# That difference is the ordering claim, observed from inside the close instead of inferred from an
+# end state.  Nothing here is timing-dependent: the stop is what ends the wait, and the stop happens
+# strictly after the mutation's destructor and strictly before the corrected close's.
+fn: mc_w_body (@: Lmx node) int
+    @: LmxThread t
+    @: LmxMsg letter
+    t: lmx_thread_current()
+    if: t = 0 || t\message = 0
+        return: 0
+    ---
+    if: mc_w_service = 0 || mc_w_r0 = 0 || mc_w_letter_arena = 0
+        return: 0
+    ---
+    # ONE LETTER PER TURN, AND THE ANSWER IS THE WITNESS.  The lane turns continuously through the
+    # close, so at least one turn lands AFTER the close has begun and before this child's own stop.
+    #   * corrected cascade: R0's mailbox is closed only after the cascade has left no live child, so
+    #     every delivery made while this child is alive is ACCEPTED (refused stays 0);
+    #   * restored early destructor: the mailbox dies at the START of the close, so the first turn
+    #     after that instant is REFUSED (refused goes to 1 or more).
+    # The body never waits for anything: waiting would block the closer's own step, which is the one
+    # that has to write the stop it would be waiting for.
+    letter: (cast: (@: LmxMsg) lmx_arena_take(mc_w_letter_arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    if: letter = 0
+        return: 0
+    ---
+    letter\running: 1
+    letter\success: 0
+    letter\handoff_ready: 0
+    letter\graph: 0
+    letter\index: 0U
+    mc_w_attempts: mc_w_attempts + 1
+    mc_w_final_post: lmx_service_post(mc_w_service, (cast: (@: void) mc_w_r0), letter, mc_w_letter_arena)
+    if: mc_w_final_post != c.LMX_SERVICE_OK
+        mc_w_refused: mc_w_refused + 1
+    ---
+return: 0
+
+fn: mc_entry (@: Lmx node) int
+    @: LmxMsg child
+    @: LmxThread child_t
+    @: LmxPost child_mail
+    @: LmxSchedule child_sched
+    @: LmxMethod method
+    @: LmxPool methods
+    @: Lmx graph
+    if: mc_phase != 0U || mc_root = 0 || mc_child_arena = 0 || mc_source = 0 || mc_child_mail = 0
+        return: 0
+    ---
+    child: lmx_root_create(mc_root, mc_child_arena, 0U, mc_source)
+    if: child = 0
+        return: 0
+    ---
+    methods: lmx_pool_make(mc_child_arena, 2U * c.sizeof(c.LmxMethod), c.sizeof(c.LmxMethod),
+                           c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD)
+    if: methods = 0
+        return: 0
+    ---
+    # WHICH BODY THE CHILD GETS IS THE TEST'S CHOICE (mc_body_fn), so phase 5 can wire its
+    # witness body through this same entry: `method: ...` is not re-derived here.
+    method: lmx_method_intern(mc_child_arena, methods, (cast: (LmxEntry) mc_body_fn), 1U)
+    graph: child\graph
+    if: method = 0 || graph = 0
+        return: 0
+    ---
+    lmx_arena_ref_store(graph, 0U, (cast: (@: void) method))
+    child_mail: mc_child_mail
+    child_t: (cast: (@: LmxThread) lmx_arena_take(mc_child_arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    child_sched: (cast: (@: LmxSchedule) lmx_arena_take(mc_child_arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: child_t = 0 || child_sched = 0
+        return: 0
+    ---
+    if: lmx_post_init(mc_child_arena, child_mail) != c.LMX_POST_OK
+        return: 0
+    ---
+    if: lmx_schedule_init(child_sched, mc_child_arena, (cast: (@: void) child_t), 100000U) != c.LMX_SCHEDULE_OK
+        return: 0
+    ---
+    if: lmx_thread_attach(child_t, child, child_mail, child_sched) != c.LMX_THREAD_OK
+        return: 0
+    ---
+    if: lmx_child_thread(lmx_root_thread(mc_root), child, child_t) != c.LMX_CHILD_OK
+        return: 0
+    ---
+    mc_child_sched: child_sched
+    mc_phase: 1U
+return: 0
+
+sub: mc_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+    c.fflush(0)
+end: mc_check
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    int: failures
+    LmxRoot: live_root
+    LmxArena: live_child_arena
+    LmxPost: live_mail
+    LmxRoot: end_root
+    LmxRoot: w_root
+    LmxArena: end_child_arena
+    LmxArena: w_arena
+    LmxArena: w_letter_arena
+    LmxPost: end_mail
+    LmxPost: w_mail
+    LmxThread: solo_t
+    LmxSchedule: solo_sched
+    LmxPost: solo_mail
+    LmxService: svc
+    LmxThread: st_1
+    LmxThread: st_2
+    LmxThread: st_3
+    LmxThread: st_4
+    LmxThread: st_5
+    LmxThread: st_6
+    @: LmxRoot root_p 0
+    @: LmxThread thread_p 0
+    @: LmxPost live_root_mail 0
+    @: LmxPost live_mail_p 0
+    @: LmxPost end_mail_p 0
+    @: LmxPost end_root_mail 0
+    @: LmxArena live_root_arena 0
+    @: LmxArena end_root_arena 0
+    @: LmxArena end_child_at 0
+    @: LmxArena w_arena_p 0
+    @: LmxArena w_letter_p 0
+    @: LmxSchedule w_sched_p 0
+    @: LmxMsg w_letter_pm 0
+    @: Lmx live_graph 0
+    @: Lmx end_graph 0
+    @: Lmx source 0
+    @: LmxThread r0_live 0
+    @: LmxThread r0_end 0
+    @: LmxThread child_live_t 0
+    @: LmxThread child_end_t 0
+    @: LmxMsg solo_message 0
+    @: LmxMsg live_message 0
+    @: LmxMsg end_message 0
+    @: LmxService live_service 0
+    @: LmxManager live_manager 0
+    @: LmxService end_service 0
+    @: LmxManager end_manager 0
+    size_t: svc_after_settle 0U
+    if: counts = 0
+        return: 2
+    ---
+
+    mc_body_fn: (cast: (@: void) mc_body)
+
+    # ===== PHASE 4 FIRST: the single-threaded stale-reference case, no root needed =====
+    memset((cast: (@: void) (@ live_child_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ svc)), 0, c.sizeof(c.LmxService))
+    if: lmx_service_open(@ svc) != c.LMX_SERVICE_OK
+        c.printf("mc: the standalone service did not open\n")
+        free(counts)
+        return: 2
+    ---
+    mc_check(counts, lmx_service_register(@ svc, @ st_1, @ live_child_arena) = c.LMX_SERVICE_OK, "st_1 did not register")
+    mc_check(counts, lmx_service_register(@ svc, @ st_2, @ live_child_arena) = c.LMX_SERVICE_OK, "st_2 did not register")
+    mc_check(counts, lmx_service_register(@ svc, @ st_3, @ live_child_arena) = c.LMX_SERVICE_OK, "st_3 did not register")
+    # Past the initial capacity of 4: the entries vector REALLOCATES here.
+    mc_check(counts, lmx_service_register(@ svc, @ st_4, @ live_child_arena) = c.LMX_SERVICE_OK, "st_4 did not register")
+    mc_check(counts, lmx_service_register(@ svc, @ st_5, @ live_child_arena) = c.LMX_SERVICE_OK, "st_5 did not register")
+    mc_check(counts, lmx_service_register(@ svc, @ st_6, @ live_child_arena) = c.LMX_SERVICE_OK, "st_6 did not register")
+    # A removal in the MIDDLE shifts every later row down by one.
+    mc_check(counts, lmx_service_unregister(@ svc, @ st_3) = c.LMX_SERVICE_OK, "st_3 did not unregister")
+    mc_check(counts, lmx_child_service(@ st_1) = @ svc, "st_1 lost its service across growth")
+    mc_check(counts, lmx_child_service(@ st_2) = @ svc, "st_2 lost its service across growth")
+    mc_check(counts, lmx_child_service(@ st_4) = @ svc, "st_4 lost its service across growth")
+    mc_check(counts, lmx_child_service(@ st_5) = @ svc, "st_5 lost its service across growth")
+    mc_check(counts, lmx_child_service(@ st_6) = @ svc, "st_6 lost its service across growth")
+    mc_check(counts, lmx_child_service(@ st_3) = 0, "an unregistered record still names a service")
+    mc_check(counts, lmx_service_unregister(@ svc, @ st_1) = c.LMX_SERVICE_OK, "st_1 did not unregister")
+    mc_check(counts, lmx_service_unregister(@ svc, @ st_2) = c.LMX_SERVICE_OK, "st_2 did not unregister")
+    mc_check(counts, lmx_service_unregister(@ svc, @ st_4) = c.LMX_SERVICE_OK, "st_4 did not unregister")
+    mc_check(counts, lmx_service_unregister(@ svc, @ st_5) = c.LMX_SERVICE_OK, "st_5 did not unregister")
+    mc_check(counts, lmx_service_unregister(@ svc, @ st_6) = c.LMX_SERVICE_OK, "st_6 did not unregister")
+    mc_check(counts, lmx_service_release(@ svc) = c.LMX_SERVICE_OK, "the standalone service did not release")
+
+    # ===== PHASE 1: ONE synchronous close; the child's boundary happens INSIDE it, and R0's
+    # mailbox must still be intact AT THAT MOMENT.  This is the ordering claim: today's code
+    # destroys R0's mail first and only then reaps, so mc_seen_root_mail_slots would be 0 here. =====
+    memset((cast: (@: void) (@ live_root)), 0, c.sizeof(c.LmxRoot))
+    memset((cast: (@: void) (@ live_mail)), 0, c.sizeof(c.LmxPost))
+    live_mail_p: @ live_mail
+    memset((cast: (@: void) (@ live_child_arena)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ live_child_arena) != 0
+        c.printf("mc: the live child arena did not open\n")
+        free(counts)
+        return: 2
+    ---
+    mc_child_mail: @ live_mail
+    mc_child_arena: @ live_child_arena
+    mc_phase: 0U
+    mc_body_ends: 1
+    mc_observe: 1
+    mc_child_reached: 0
+    mc_check(counts, lmx_root_open(@ live_root, mc_entry, 120000U, 0U, 0U) = c.LMX_ROOT_OK, "the live R0 did not open")
+    root_p: @ live_root
+    mc_root: @ live_root
+    live_root_arena: lmx_root_arena(@ live_root)
+    live_service: lmx_root_service(@ live_root)
+    live_manager: lmx_root_manager(@ live_root)
+    r0_live: lmx_root_thread(@ live_root)
+    live_message: lmx_root_message(@ live_root)
+    live_graph: live_message\graph
+    live_root_mail: @ root_p\mail
+    mc_check(counts, live_root_arena != 0 && live_service != 0 && live_manager != 0 && live_graph != 0, "the live R0 is missing pieces")
+    mc_check(counts, live_root_mail != 0, "R0 handed back no mailbox handle")
+    mc_root_mail_p: live_root_mail
+    source: lmx_node_new_owned(live_root_arena)
+    mc_check(counts, source != 0 && lmx_arena_refs_open_owned(live_root_arena, source, 4U) = 0, "the live template was not built")
+    lmx_arena_ref_store(live_graph, 3U, (cast: (@: void) source))
+    mc_source: source
+    mc_check(counts, lmx_root_cycle(@ live_root, 1U) = c.LMX_ROOT_OK, "the live create cycle did not run")
+    mc_check(counts, mc_phase = 1U, "the live child was not wired")
+    child_live_t: (cast: (@: LmxThread) lmx_thread_child_first(r0_live))
+    mc_check(counts, child_live_t != 0, "the live child is not in R0's chain")
+    mc_check(counts, live_mail_p\inbox_slots != 0, "the live child's mailbox was never opened")
+    mc_check(counts, lmx_service_find(live_service, (cast: (@: void) child_live_t)) = (cast: (@: void) child_live_t), "the live child has no route")
+    # The child reaches its boundary THROUGH THE MANAGER, and the ONE close is what must drive it.
+    mc_check(counts, lmx_manager_add(live_manager, mc_child_sched) = c.LMX_MANAGER_OK, "the live child was not bound to the manager")
+    mc_check(counts, lmx_root_close(@ live_root) = c.LMX_ROOT_OK, "the one close did not return OK")
+    # THE MODEL, HONESTLY: the close stops its direct children FIRST, so a child that never
+    # entered a turn publishes its handoff-safe boundary immediately and is reaped as a
+    # failure.  No body runs here, which is why this phase asserts the boundary and the
+    # return state rather than a turn that the model does not perform.
+    mc_check(counts, mc_body_ran = 0, "a body ran on the never-entered path")
+    mc_check(counts, lmx_thread_child_first(r0_live) = 0, "the child was not reaped by the one close")
+    mc_check(counts, live_mail_p\inbox_slots = 0, "the stopped child's mailbox was not closed")
+    mc_check(counts, lmx_root_state(@ live_root) = c.LMX_ROOT_CLOSED, "the closed root is not CLOSED")
+    mc_check(counts, live_root_mail\inbox_slots = 0, "R0's mail was not closed by the time the one close returned")
+    mc_check(counts, live_root_mail\inbox_capacity = 0U, "R0's mail capacity survived the close")
+    mc_check(counts, lmx_service_find(live_service, (cast: (@: void) r0_live)) = 0, "R0's own route survived the close")
+
+    # ===== PHASE 2: a child that ends BEFORE the close; the close then completes everything =====
+    memset((cast: (@: void) (@ end_root)), 0, c.sizeof(c.LmxRoot))
+    memset((cast: (@: void) (@ end_mail)), 0, c.sizeof(c.LmxPost))
+    end_mail_p: @ end_mail
+    memset((cast: (@: void) (@ end_child_arena)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ end_child_arena) != 0
+        c.printf("mc: the ending child arena did not open\n")
+        free(counts)
+        return: 2
+    ---
+    mc_child_mail: @ end_mail
+    mc_child_arena: @ end_child_arena
+    end_child_at: @ end_child_arena
+    mc_phase: 0U
+    mc_body_ends: 1
+    mc_observe: 0
+    mc_check(counts, lmx_root_open(@ end_root, mc_entry, 120000U, 0U, 0U) = c.LMX_ROOT_OK, "the ending R0 did not open")
+    root_p: @ end_root
+    mc_root: @ end_root
+    end_root_arena: lmx_root_arena(@ end_root)
+    end_service: lmx_root_service(@ end_root)
+    end_manager: lmx_root_manager(@ end_root)
+    r0_end: lmx_root_thread(@ end_root)
+    end_message: lmx_root_message(@ end_root)
+    end_graph: end_message\graph
+    end_root_mail: @ root_p\mail
+    mc_check(counts, end_root_arena != 0 && end_service != 0 && end_manager != 0 && end_graph != 0 && end_root_mail != 0, "the ending R0 is missing pieces")
+    source: lmx_node_new_owned(end_root_arena)
+    mc_check(counts, source != 0 && lmx_arena_refs_open_owned(end_root_arena, source, 4U) = 0, "the ending template was not built")
+    lmx_arena_ref_store(end_graph, 3U, (cast: (@: void) source))
+    mc_source: source
+    mc_check(counts, lmx_root_cycle(@ end_root, 1U) = c.LMX_ROOT_OK, "the ending create cycle did not run")
+    mc_check(counts, mc_phase = 1U, "the ending child was not wired")
+    child_end_t: (cast: (@: LmxThread) lmx_thread_child_first(r0_end))
+    mc_check(counts, child_end_t != 0 && mc_child_sched != 0, "the ending child's record or schedule is not reachable")
+    mc_check(counts, lmx_service_find(end_service, (cast: (@: void) child_end_t)) = (cast: (@: void) child_end_t), "the ending child has no route before its turn")
+    mc_check(counts, lmx_manager_add(end_manager, mc_child_sched) = c.LMX_MANAGER_OK, "the ending child was not bound to the manager")
+    mc_check(counts, lmx_manager_round(end_manager, 1U, lmx_root_clock(@ end_root)) = c.LMX_MANAGER_OK, "the ending child's turn did not run")
+    # The child's own terminal act, with no parent involved yet.
+    mc_check(counts, end_mail_p\inbox_slots = 0 && end_mail_p\inbox_capacity = 0U, "the ended child's mailbox was not closed")
+    mc_check(counts, lmx_service_find(end_service, (cast: (@: void) child_end_t)) = 0, "the ended child still has a route")
+    mc_check(counts, end_child_at\blocks = 0 && end_child_at\count = 0U, "the ended child did not release its own arena")
+    # The parent's settle reaps what the child did not, and only then may R0 close its own mail.
+    mc_check(counts, lmx_root_cycle(@ end_root, 1U) = c.LMX_ROOT_OK, "the settling cycle did not run")
+    svc_after_settle: lmx_service_count(end_service)
+    mc_check(counts, svc_after_settle = 1U, "the service is not R0 alone after the settle")
+    mc_check(counts, end_root_mail\inbox_slots != 0, "R0's mail was closed before the cascade completed")
+    mc_check(counts, lmx_root_close(@ end_root) = c.LMX_ROOT_OK, "the settled R0 did not close")
+    mc_check(counts, end_root_mail\inbox_slots = 0 && end_root_mail\inbox_capacity = 0U, "R0's mail was not closed by the close")
+    mc_check(counts, end_mail_p\inbox_slots = 0, "the child's closed mailbox was reopened")
+
+    # ===== PHASE 3: closing a mailbox twice is a no-op, not a second destruction =====
+    # The exactly-once state is `t\mail = 0`, and it is what makes a late delivery refuse too:
+    # lmx_service_post answers MISSING when target_thread\mail = 0, and every mail wrapper
+    # (accept/take/count/close) already guards on it.
+    memset((cast: (@: void) (@ solo_mail)), 0, c.sizeof(c.LmxPost))
+    memset((cast: (@: void) (@ solo_sched)), 0, c.sizeof(c.LmxSchedule))
+    memset((cast: (@: void) (@ solo_t)), 0, c.sizeof(c.LmxThread))
+    solo_message: live_message
+    if: solo_message = 0 || lmx_post_init(live_root_arena, @ solo_mail) != c.LMX_POST_OK
+        c.printf("mc: the solo mailbox did not open\n")
+        free(counts)
+        return: 2
+    ---
+    mc_check(counts, lmx_thread_attach(@ solo_t, solo_message, @ solo_mail, @ solo_sched) = c.LMX_THREAD_OK, "the solo thread did not attach")
+    thread_p: @ solo_t
+    mc_check(counts, thread_p\mail = @ solo_mail, "attach did not store the mailbox")
+    mc_check(counts, lmx_thread_mail_close(live_root_arena, @ solo_t) = c.LMX_POST_OK, "the first close did not succeed")
+    mc_check(counts, thread_p\mail = 0, "a successful close did not clear t\\mail")
+    mc_check(counts, lmx_thread_mail_close(live_root_arena, @ solo_t) != c.LMX_POST_OK, "a SECOND close was not refused")
+    mc_check(counts, lmx_thread_mail_count(@ solo_t, c.LMX_POST_INBOX) = 0U, "a closed mailbox still counts")
+    mc_check(counts, lmx_thread_mail_take(@ solo_t, c.LMX_POST_INBOX) = 0, "a closed mailbox still takes")
+
+    # ===== PHASE 5: THE ORDERING WITNESS =====
+    # A live child, on a LANE of its own, delivers to R0 at the instant its own close's stop lands.
+    # The claim under test is the one the file's header names: R0's mailbox may not die before the
+    # cascade has left no live child.  The delivery is ACCEPTED when the mailbox outlives the
+    # cascade and REFUSED when a destructor runs first -- and the mutation that restores that
+    # destructor must turn THIS check red, or the claim was never tested.
+    memset((cast: (@: void) (@ w_root)), 0, c.sizeof(c.LmxRoot))
+    memset((cast: (@: void) (@ w_mail)), 0, c.sizeof(c.LmxPost))
+    memset((cast: (@: void) (@ w_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ w_letter_arena)), 0, c.sizeof(c.LmxArena))
+    w_arena_p: @ w_arena
+    w_letter_p: @ w_letter_arena
+    if: lmx_arena_open(@ w_arena) != 0 || lmx_arena_open_simple(@ w_letter_arena) != 0
+        c.printf("mc: a witness arena did not open\n")
+        free(counts)
+        return: 2
+    ---
+    mc_child_mail: @ w_mail
+    mc_child_arena: @ w_arena
+    mc_phase: 0U
+    mc_body_ends: 0
+    mc_observe: 0
+    mc_body_fn: (cast: (@: void) mc_w_body)
+    mc_w_final_post: -1
+    mc_w_attempts: 0
+    mc_check(counts, lmx_root_open(@ w_root, mc_entry, 120000U, 0U, 0U) = c.LMX_ROOT_OK, "the witness R0 did not open")
+    root_p: @ w_root
+    mc_root: @ w_root
+    live_root_arena: lmx_root_arena(@ w_root)
+    mc_w_service: lmx_root_service(@ w_root)
+    mc_w_r0: lmx_root_thread(@ w_root)
+    live_message: lmx_root_message(@ w_root)
+    live_graph: live_message\graph
+    live_root_mail: @ root_p\mail
+    mc_root_mail_p: live_root_mail
+    mc_check(counts, mc_w_service != 0 && mc_w_r0 != 0 && live_graph != 0, "the witness R0 is missing pieces")
+    source: lmx_node_new_owned(live_root_arena)
+    mc_check(counts, source != 0 && lmx_arena_refs_open_owned(live_root_arena, source, 4U) = 0, "the witness template was not built")
+    lmx_arena_ref_store(live_graph, 3U, (cast: (@: void) source))
+    mc_source: source
+    mc_check(counts, lmx_root_cycle(@ w_root, 1U) = c.LMX_ROOT_OK, "the witness create cycle did not run")
+    mc_check(counts, mc_phase = 1U, "the witness child was not wired")
+    mc_w_child: (cast: (@: LmxThread) lmx_thread_child_first(mc_w_r0))
+    mc_check(counts, mc_w_child != 0 && mc_child_sched != 0, "the witness child's record or schedule is not reachable")
+    # THE LANE COMES WITH THE RUNNING BINDING: R0's own manager is rebound while it is EMPTY, and
+    # the child's slot is bound to it AFTER the rebinding (a running init zeroes the queue it is
+    # given, so the order is not cosmetic).
+    mc_check(counts, lmx_manager_running_init(lmx_root_manager(@ w_root)) = c.LMX_MANAGER_OK, "the witness manager was not rebound to the running binding")
+    mc_check(counts, lmx_manager_add(lmx_root_manager(@ w_root), mc_child_sched) = c.LMX_MANAGER_OK, "the witness child was not bound to R0's manager")
+    mc_w_letter: 0
+    mc_w_letter_arena: w_letter_p
+    mc_w_refused: 0
+    # THE LANE IS STARTED BEFORE THE CLOSE, by the RUNNING binding's own round: the child must
+    # already be turning when the close begins, or its only turn would be one the close's own stop
+    # has already refused.
+    # A LANE ONLY RUNS A RECORD WHOSE SCHEDULE IS WAITING (lmx_manager_running_body), so the wait is
+    # declared first -- without it the lane is started and exits immediately, which is exactly what
+    # the first cut of this phase did.
+    mc_check(counts, lmx_schedule_wait(mc_child_sched, lmx_root_clock(@ w_root)) = c.LMX_SCHEDULE_OK, "the witness schedule did not accept a wait")
+    mc_check(counts, lmx_manager_running_round(lmx_root_manager(@ w_root), 4U, lmx_root_clock(@ w_root)) = c.LMX_MANAGER_OK, "the witness lane was not started")
+    c.Sleep(50U)
+    mc_check(counts, mc_w_attempts > 0, "the witness child never took a turn: nothing was delivered before the close")
+    mc_check(counts, lmx_root_close_limit_set(@ w_root, 5000U) = c.LMX_ROOT_OK, "the witness close limit was not set")
+    # ONE CLOSE, AND ONE DELIVERY FROM INSIDE IT.
+    mc_check(counts, lmx_root_close(@ w_root) = c.LMX_ROOT_OK, "the witness close did not return OK")
+    mc_check(counts, mc_w_attempts >= 2, "the witness child took too few turns: no delivery landed while the close was in flight")
+    mc_check(counts, mc_w_refused = 0, "ORDERING WITNESS: a live child's delivery to R0 was REFUSED while the close was in flight -- R0's mailbox died before its children")
+    mc_check(counts, lmx_root_state(@ w_root) = c.LMX_ROOT_CLOSED, "the witness root is not CLOSED")
+
+    failures: counts[1]
+    c.printf("lmx_mail_cascade checks=%d failures=%d\n", counts[0], failures)
+    free(counts)
+return: failures

@@ -1,23 +1,21 @@
-# vm-cil-l3-smoke — CIL/PE L3 baseline + physical CALL
+# vm-cil-l3-smoke — CIL/PE L3
 
-GROK-BOT-CIL-L3-BASELINE-20260921-101, GROK-BOT-CIL-L3-PHYSICAL-CALL-20260921-102.
+Tickets: BASELINE-101, PHYSICAL-CALL-102, LOCALS-WHILE-103.
 
-Isolated under `dev/vm_cil/**`. No changes to `dev/vm_jvm`.
+Isolated under `dev/vm_cil/**`. No `dev/vm_jvm` edits.
 
 ## Toolchain
 
-- `csc` = `C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe`
-- `System.Reflection.Emit` → saved PE; `Assembly.LoadFrom`
-- TEMP-only outputs; never commit exe/dll/pdb/obj/bin
+- `C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe`
+- Reflection.Emit PE; TEMP-only; never commit binaries
 
-## Model
+## Slices
 
-- `LmxOccurrence`, identity `L3Role`, frozen-children `L3Node`
-- Physical `CALL` / `CALLABLE`: ARG 0=subject, 1..=ints; CALL child[0] physical CALLABLE; one static CIL method per reachable CALLABLE; entry `Eval(LmxOccurrence)->int`
-- Unsealed CALLABLE + seal-once for self/mutual recursion; CALL target is non-ownership; ordinary ownership cycles rejected
-- Nested `RETURN` under IF/SEQUENCE; PROBE for evaluate-once smokes
+- CALLABLE/CALL, seal/recursion, nested RETURN
+- LOCAL_SET/LOCAL_GET with definite-assignment; per-activation CIL locals
+- Unlabelled WHILE / BREAK / CONTINUE / REDO (nearest, same CALLABLE, no CALL cross)
 
-## Commands (TEMP)
+## Commands
 
 ```text
 set OUT=%TEMP%\vm_cil_build
@@ -25,9 +23,6 @@ csc /nologo /t:exe /out:%OUT%\CilExprSmokeDriver.exe ^
   dev\vm_cil\Lmx\*.cs dev\vm_cil\Graph\*.cs dev\vm_cil\Emitter\*.cs ^
   dev\vm_cil\Smoke\CilExprSmokeDriver.cs
 %OUT%\CilExprSmokeDriver.exe
-csc /nologo /t:exe /out:%OUT%\HelloStructureSmoke.exe ^
-  dev\vm_cil\Lmx\*.cs dev\vm_cil\Smoke\HelloStructureSmoke.cs
-%OUT%\HelloStructureSmoke.exe
 ```
 
-External 30s timeout on smoke processes.
+30s external timeout on smoke.

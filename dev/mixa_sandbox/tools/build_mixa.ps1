@@ -84,6 +84,12 @@ $nm = (Get-Command nm -ErrorAction Stop).Source
 $winrtSdk = 'C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\winrt'
 $flags = @('-std=c99', '-Wall', '-Wextra', '-Wpedantic',
            '-I', $migRoot, '-I', $l1Root, '-I', (Join-Path $lm1Root 'lm1\build'), '-I', $headers,
+           # THE VENDORED HOST-INGRESS SEAM (49D).  Its own MANIFEST says how it is meant to be
+           # reached: "-I mixa_manager/vendor/lmx_msg_host_ingress_v0 so #include
+           # \"l2src/lmx_message.h\" resolves here".  That file is a HAND-WRITTEN C header carrying
+           # LmxMsgRuntime/LmxMsgEnv, and it is NOT the kernel's generated lmx_message.lm1.h: the
+           # two answer to different names on purpose, so both include roots can stand side by side.
+           '-I', (Join-Path $migRoot 'mixa_manager\vendor\lmx_msg_host_ingress_v0'),
            '-Werror=incompatible-pointer-types', '-Werror=discarded-qualifiers',
            '-Werror=implicit-function-declaration', '-Werror=implicit-int')
 # WinRT headers for mixa_share_win32 (must be -idirafter, not -I — see mixa_share.txt)
@@ -218,14 +224,14 @@ if (-not (Test-Path -LiteralPath (Join-Path $migRoot 'l2src'))) {
 # silently: the row stays in the verdict, so the record keeps showing them and the count stays
 # honest (Mikhail's rule: knowledge must not live only in chat).
 #
-# The set is ONE, and it shrank to one by being re-tested rather than by being forgotten.  Three
-# entries were removed on 20.09 after their probes were made self-contained (727cc0f, 761145e):
-# tests_mixa_app_selftest, tests_mixa_audio_native_selftest and tests_mixa_app_panel_selftest no
-# longer depend on a frozen-lingvamyxa runner's fixture.  A SKIP that outlives its reason hides a
-# real result -- which is how this set got mis-called "seven" from memory once already.
-$skipTargets = @{
-    'unit:tests_mixa_ingress_host_harness'      = 'the host-ingress API (vendor/lmx_msg_host_ingress_v0) was never migrated to LMX: the types it needs (LmxMsgRuntime, LmxMsgEnv, lmx_message_host.h) exist in the frozen project and NOWHERE in this tree -- a migration gap, not a port defect and not a translator gap'
-}
+# THE SET IS EMPTY NOW, and it is empty because the tree changed rather than because the rows were
+# forgotten.  Its last entry -- tests_mixa_ingress_host_harness -- read "the host-ingress API was
+# never migrated to LMX: the types it needs exist in the frozen project and NOWHERE in this tree".
+# That was true when written and stopped being true at 49D, when the pinned seam was copied in and
+# verified against its own MANIFEST (sha256 of lmx_message.h and lmx_message.lm1 both match).  A
+# SKIP that outlives its reason hides a real result, so the harness is now an ordinary target and
+# section 2d) supplies the objects it needs.
+$skipTargets = @{}
 
 # -RunOnly <stamp>: run the probes of an ALREADY BUILT evidence directory, translating and
 # compiling nothing.  Rationale from experience: a run can be killed by the system during the
@@ -364,6 +370,55 @@ foreach ($fp in @(Get-ChildItem -LiteralPath $sourceDir -Filter '*_fixture*.lm1'
 # knows the staged location.  argv[1] must be passed too -- argv[2] alone would be read as base.
 $probeArgv = @{
     'selftest:tests_mixa_process_selftest' = @('build/mixa/claude/process/tmp', (Join-Path $migRoot 'mixa_process_fixture.exe'))
+}
+
+# 2d) THE VENDORED HOST-INGRESS SEAM (49D/50D).  mixa_event_source and the ingress harness are
+# written against the PINNED host-ingress v0 seam, not against the kernel's Message record: the
+# vendored lmx_message.h defines LmxMsgRuntime/LmxMsgEnv AND the constants they use (LMX_MSG_OK
+# :14, LMX_MSG_KIND_ITEM :27), none of which the kernel's lmx_message.h.lm1 has.  The two also
+# define `LmxMsg` with DIFFERENT LAYOUTS, so they must never meet in one translation unit -- that
+# is why the consumer's header no longer predefs the kernel's.
+#
+# WHY THE WORKING DIRECTORY IS THE VENDOR ROOT, and it is not a style choice: BOTH translators
+# resolve `predef:`/`include:` THEMSELVES, from the process working directory; gcc's -I does not
+# enter into it.  The vendored lmx_message.lm1 opens with
+#   include: "l2src/lmx_message.h" "l2src/lmx_message_host.h"
+# so those names resolve only when the translator STANDS in the vendor root.  Running it from the
+# port root would find nothing -- or, worse, the wrong thing, which is the same mistake that cost
+# the kernel gate 28 probes.
+#
+# JUDGED BY THE OUTPUT FILE, NEVER BY THE EXIT CODE: both translators print a diagnostic and
+# return 0, so an exit-code test would record a REFUSED seam as a silent success with no object,
+# and the failure would surface much later as undefined lmx_msg_* at link.
+#
+# LINK SCOPING IS NOT DONE HERE.  Both seam objects join the SAME pool the units join, and the
+# existing Resolve-Link (:351, :419) already picks an object only when a program's undefined
+# symbols name it -- so a probe that never touches the seam does not get it linked in.
+$vendorRoot = Join-Path $migRoot 'mixa_manager\vendor\lmx_msg_host_ingress_v0'
+if (-not (Test-Path -LiteralPath (Join-Path $vendorRoot 'l2src\lmx_message.lm1'))) {
+    Add-Row 'FAIL' 'vendor:seam' "the pinned host-ingress seam is MISSING at $vendorRoot -- mixa_event_source and the ingress harness cannot compile without it (types and constants live there, not in the kernel)"
+} else {
+    $seamC = Join-Path $objDir 'vendor_lmx_message.c'
+    Push-Location $vendorRoot
+    try {
+        $null = Invoke-Captured 'vendor:seam' $Translator @('l2src/lmx_message.lm1', $seamC) 'vendor:seam'
+    } finally { Pop-Location }
+    if (-not (Test-Path -LiteralPath $seamC)) {
+        Add-Row 'FAIL' 'vendor:seam' "translation produced NO output file (log $logDir; the translator reports a refusal by printing, not by an exit code)"
+    } else {
+        Add-Row 'OK' 'vendor:seam' ''
+        $seamObj = Join-Path $objDir 'vendor_lmx_message.o'
+        if (Compile-C 'vendor:seam' $seamC $seamObj) { $objects += $seamObj; Add-Row 'OK' 'vendor:seam' '' }
+    }
+    # The host side is hand-written C that ships with the seam; it includes "l2src/lmx_message_host.h",
+    # which resolves through the vendor root already on the include path.
+    $hostC = Join-Path $vendorRoot 'l2src\lmx_message_host.c'
+    if (Test-Path -LiteralPath $hostC) {
+        $hostObj = Join-Path $objDir 'vendor_lmx_message_host.o'
+        if (Compile-C 'vendor:host' $hostC $hostObj) { $objects += $hostObj; Add-Row 'OK' 'vendor:host' '' }
+    } else {
+        Add-Row 'FAIL' 'vendor:host' "lmx_message_host.c is missing from $vendorRoot (the MANIFEST lists it)"
+    }
 }
 
 # 3) conscious hand-written C kept on purpose

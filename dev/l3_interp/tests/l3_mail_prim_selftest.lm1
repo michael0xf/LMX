@@ -26,7 +26,7 @@ predef: "l2src/lmx_walk.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
-# L3 mail primitives via l3_thread_dispatch. Records named by address.
+# Mail primitives through l3_thread_dispatch. t2 lives in its own arena bound to the same store.
 
 @: LmxArena gb 0
 @: Lmx groles 0
@@ -185,6 +185,16 @@ fn: mk_impostor () @: Lmx
     lit(p, 2U, c.LMX_POST_INBOX)
 return: m
 
+fn: mk_non_int_lane () @: Lmx
+    @: Lmx m mk_m(2U)
+    @: Lmx p 0
+    @: Lmx rec l3_thread_mail_count_prim(l3_bound_t)
+    @: Lmx dummy lmx_node_new_owned(gb)
+    p: fr(m, 1U, c.LMX_WALK_OP_PRIM, 3U)
+    ref(p, 1U, rec)
+    ref(p, 2U, dummy)
+return: m
+
 fn: run_graph (@: LmxThread t; @: Lmx m) int
     @: LmxMsg msg t\message
     int: st
@@ -201,9 +211,12 @@ return: st
 fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxArena: arena
+    LmxArena: t2_arena
     LmxArena: store
     @: LmxArena a 0
+    @: LmxArena a2 0
     @: Lmx dummy 0
+    @: Lmx dummy2 0
     @: LmxThread t 0
     @: LmxThread t2 0
     @: Lmx m 0
@@ -212,85 +225,49 @@ fn: main () int
     @: Lmx count_again 0
     @: Lmx take_again 0
     @: Lmx letter 0
-    @: Lmx fake 0
-    @: Lmx p 0
     @: void probe 0
     int: probe_before 0
     int: st 0
     if: counts = 0
         return: 2
-    fputs("l3_mail_prim: start\n", l1_stdout())
-    c.fflush(l1_stdout())
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ t2_arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ store)), 0, c.sizeof(c.LmxArena))
-    fputs("l3_mail_prim: memset\n", l1_stdout())
-    c.fflush(l1_stdout())
-    if: lmx_arena_open(@ arena) != 0
+    if: lmx_arena_open(@ arena) != 0 || lmx_arena_open(@ t2_arena) != 0
         fputs("l3_mail_prim: arena\n", l1_stdout())
         free(counts)
         return: 2
     ---
-    fputs("l3_mail_prim: arena ok\n", l1_stdout())
-    c.fflush(l1_stdout())
-    if: lmx_perm_open(@ store) != 0 || lmx_perm_bind(@ arena, @ store) != 0
+    if: lmx_perm_open(@ store) != 0 || lmx_perm_bind(@ arena, @ store) != 0 || lmx_perm_bind(@ t2_arena, @ store) != 0
         fputs("l3_mail_prim: store\n", l1_stdout())
         free(counts)
         return: 2
     ---
-    fputs("l3_mail_prim: store ok\n", l1_stdout())
-    c.fflush(l1_stdout())
     a: @ arena
+    a2: @ t2_arena
     gb: a
     dummy: mk_dummy(a)
-    fputs("l3_mail_prim: dummy\n", l1_stdout())
-    c.fflush(l1_stdout())
-    if: dummy = 0 || mk_thread(a, dummy, @ t) = 0
+    dummy2: mk_dummy(a2)
+    if: dummy = 0 || dummy2 = 0 || mk_thread(a, dummy, @ t) = 0 || mk_thread(a2, dummy2, @ t2) = 0
         fputs("l3_mail_prim: thread\n", l1_stdout())
         free(counts)
         return: 2
     ---
-    fputs("l3_mail_prim: thread ok\n", l1_stdout())
-    c.fflush(l1_stdout())
-    fputs("l3_mail_prim: request\n", l1_stdout())
-    c.fflush(l1_stdout())
     fail(counts, lmx_thread_request_mode(t, c.LMX_THREAD_MODE_INTERPRETED) = c.LMX_THREAD_OK, "request interpreted")
-    fputs("l3_mail_prim: requested\n", l1_stdout())
-    c.fflush(l1_stdout())
-    fputs("l3_mail_prim: native turn\n", l1_stdout())
-    c.fflush(l1_stdout())
     fail(counts, lmx_thread_turn(t, native_noop, 1U) = c.LMX_THREAD_OK, "commit mode on native turn")
-    fputs("l3_mail_prim: native done\n", l1_stdout())
-    c.fflush(l1_stdout())
     fail(counts, native_hits = 1, "native ran once")
-    fputs("l3_mail_prim: bind\n", l1_stdout())
-    c.fflush(l1_stdout())
     fail(counts, l3_thread_bind(t) = c.LMX_THREAD_OK, "bind with mail primitives")
-    fputs("l3_mail_prim: bound\n", l1_stdout())
-    c.fflush(l1_stdout())
     groles: l3_thread_roles(t)
-    fputs("l3_mail_prim: roles got\n", l1_stdout())
-    c.fflush(l1_stdout())
     count_rec: l3_thread_mail_count_prim(t)
     take_rec: l3_thread_mail_take_prim(t)
-    c.printf("l3_mail_prim: r=%p c=%p k=%p\n", groles, count_rec, take_rec)
-    c.fflush(l1_stdout())
-    fputs("l3_mail_prim: checks\n", l1_stdout())
-    c.fflush(l1_stdout())
     fail(counts, groles != 0 && count_rec != 0 && take_rec != 0 && count_rec != take_rec, "two distinct store records")
-    fputs("l3_mail_prim: distinct ok\n", l1_stdout())
-    c.fflush(l1_stdout())
     fail(counts, lmx_range_home(a, (cast: (@: void) groles)) = @ store && lmx_range_pool(a, (cast: (@: void) groles)) = 0, "roles live in the store")
-    fail(counts, lmx_domain_kind(a, (cast: (@: void) count_rec)) = c.LMX_DOMAIN_KIND_PRIMITIVE, "count record is a primitive")
-    fail(counts, lmx_domain_kind(a, (cast: (@: void) take_rec)) = c.LMX_DOMAIN_KIND_PRIMITIVE, "take record is a primitive")
+    fail(counts, lmx_range_home(a, (cast: (@: void) count_rec)) = @ store && lmx_range_pool(a, (cast: (@: void) count_rec)) = 0, "count record lives in the store")
+    fail(counts, lmx_range_home(a, (cast: (@: void) take_rec)) = @ store && lmx_range_pool(a, (cast: (@: void) take_rec)) = 0, "take record lives in the store")
     fail(counts, l3_thread_bind(t) = c.LMX_THREAD_OK, "repeated bind of the same Thread")
     count_again: l3_thread_mail_count_prim(t)
     take_again: l3_thread_mail_take_prim(t)
     fail(counts, count_again = count_rec && take_again = take_rec, "repeated bind reuses record identities")
-    if: mk_thread(a, dummy, @ t2) = 0
-        fputs("l3_mail_prim: t2\n", l1_stdout())
-        free(counts)
-        return: 2
-    ---
     fail(counts, l3_thread_bind(t2) = c.LMX_THREAD_INVALID, "second Thread of the same store is refused")
     fail(counts, l3_thread_mail_count_prim(t2) = 0 && l3_thread_mail_count_prim(t) = count_rec, "the refusal assigned nothing")
 
@@ -311,22 +288,38 @@ fn: main () int
     fail(counts, run_graph(t, m) = c.LMX_THREAD_OK, "count after delivery")
     fail(counts, field(m, 1U) = 1, "count is 1 after delivery")
 
-    m: mk_take()
-    fail(counts, broken = 0 && m != 0, "take graph")
-    st: run_graph(t, m)
-    fail(counts, st = c.LMX_THREAD_OK, "take turn")
-    fail(counts, lmx_thread_mail_count(t, c.LMX_POST_INBOX) = 0U, "inbox empty after take")
-    fail(counts, native_hits = 1, "take did not call native")
-
     fail(counts, lmx_thread_request_mode(t, c.LMX_THREAD_MODE_NATIVE) = c.LMX_THREAD_OK, "request native pending")
+    m: mk_bad_arity()
+    probe: mk_int(a, 1)
+    probe_before: lmx_range_classify(a, probe)
+    fail(counts, run_graph(t, m) = c.LMX_THREAD_INVALID, "wrong arity is a failed turn")
+    fail(counts, probe != 0 && probe_before = c.LMX_KIND_PRIMITIVE && lmx_range_classify(a, probe) = c.LMX_KIND_NONE, "wrong arity: the boundary still ran")
+    fail(counts, lmx_thread_mode(t) = c.LMX_THREAD_MODE_INTERPRETED, "failed turn cancelled the native request")
+    fail(counts, native_hits = 1, "wrong arity did not call native")
+    m: mk_count()
+    fail(counts, run_graph(t, m) = c.LMX_THREAD_OK, "later interpreted turn still runs")
+    fail(counts, field(m, 1U) = 1, "count still 1 after the failed turn")
+
+    m: mk_non_int_lane()
+    probe: mk_int(a, 1)
+    probe_before: lmx_range_classify(a, probe)
+    fail(counts, run_graph(t, m) = c.LMX_THREAD_INVALID, "non-int lane is a failed turn")
+    fail(counts, probe != 0 && probe_before = c.LMX_KIND_PRIMITIVE && lmx_range_classify(a, probe) = c.LMX_KIND_NONE, "non-int lane: the boundary still ran")
+    fail(counts, native_hits = 1, "non-int lane did not call native")
+
     m: mk_impostor()
     probe: mk_int(a, 1)
     probe_before: lmx_range_classify(a, probe)
     st: run_graph(t, m)
-    c.printf("impostor st=%d\n", st)
-    fail(counts, broken = 0 && (st = c.LMX_THREAD_INVALID || st = c.LMX_THREAD_STOPPED), "impostor is a failed or stopped turn, not native")
+    fail(counts, broken = 0 && st = c.LMX_THREAD_INVALID, "impostor record is a failed turn")
+    fail(counts, probe != 0 && probe_before = c.LMX_KIND_PRIMITIVE && lmx_range_classify(a, probe) = c.LMX_KIND_NONE, "impostor: the boundary still ran")
     fail(counts, native_hits = 1, "impostor did not call native")
-    fail(counts, lmx_thread_mode(t) = c.LMX_THREAD_MODE_INTERPRETED, "mode stays interpreted")
+
+    m: mk_take()
+    fail(counts, broken = 0 && m != 0, "take graph")
+    fail(counts, run_graph(t, m) = c.LMX_THREAD_OK, "take turn")
+    fail(counts, lmx_thread_mail_count(t, c.LMX_POST_INBOX) = 0U, "inbox empty after take")
+    fail(counts, native_hits = 1, "take did not call native")
 
     if: counts[1] != 0
         c.printf("%d failed of %d\n", counts[1], counts[0])

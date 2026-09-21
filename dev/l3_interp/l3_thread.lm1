@@ -63,6 +63,8 @@ fn: l3_prim_lane (@: void owner; @@: void refs; size_t: nargs) int
         return: -1
     if: lmx_range_classify(arena, refs[0]) != c.LMX_KIND_PRIMITIVE
         return: -1
+    if: lmx_range_type_of(arena, refs[0]) != c.LMX_TYPE_INT
+        return: -1
     lane: lmx_int_value_known(refs[0])
     if: lane != c.LMX_POST_INBOX && lane != c.LMX_POST_OUTBOX && lane != c.LMX_POST_STAGED
         return: -1

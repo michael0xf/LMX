@@ -2,7 +2,11 @@
 
 If the prompt is busy or a turn is unfinished, the message is queued (FIFO) and
 delivered when the console is idle and the input line is empty. Remaining
-queued items are drained in the same lock. Do not start a watcher.
+queued items are drained in the same lock.
+
+Console inject races with this session's own typing (Concurrent user input).
+It is not the only inbound path. Grok polls lmx_uds via grok_uds_pull.py on a
+5-minute timer and must not run this client against itself.
 """
 import argparse
 import ctypes

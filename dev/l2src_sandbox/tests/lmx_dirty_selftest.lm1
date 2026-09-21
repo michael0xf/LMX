@@ -124,6 +124,12 @@ fn: main () int
     dirty_check(counts, lmx_dirty_pending(0) = 0, "an empty chain has something pending")
 
     # An entry that cannot publish is reported and KEEPS its flag: the next checkpoint knows.
+    # The record is by value and nothing ever bound it, so it is ZEROED here: "unbound" must mean
+    # no cell, no value, no stride and no successor -- not whatever the stack held.  Without this
+    # line the checkpoint below copied a garbage stride from a garbage value to a garbage cell
+    # and then followed a garbage `next`; the verdict followed the length of the executable's
+    # path (the same recorded binary: exit 0 from its build directory, SIGSEGV from another).
+    memset((cast: (@: void) (@ unbound)), 0, c.sizeof(c.LmxDirty))
     dirty_check(counts, lmx_dirty_mark(@ unbound) = c.LMX_DIRTY_OK, "an unbound entry could not be marked")
     dirty_check(counts, lmx_dirty_checkpoint(@ unbound) = c.LMX_DIRTY_INVALID, "an unbound entry published anyway")
     dirty_check(counts, lmx_dirty_pending(@ unbound) = 1, "a failed store cleared the flag")

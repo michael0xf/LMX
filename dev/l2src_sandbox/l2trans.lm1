@@ -187,6 +187,7 @@ int: l2_foreign_cap 0
 @: int l2_foreign_depth 0
 @: int l2_foreign_const 0
 const: @: LmP0Node l2_os_node 0
+const: @: LmP0Structure l2_cur_unit 0
 int: l2_need_string 0
 int: l2_need_stdlib 0
 
@@ -258,6 +259,11 @@ c.array: [256]: char l2_addr_path
 
 prototype:
     fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path)) int
+    fn: l2_type_nodes_same (const: @(LmP0Node a); const: @(LmP0Node b)) int
+    fn: l2_fn_defined (const: @(LmP0Node fn_node)) int
+    fn: l2_params_types_same (const: @(LmP0Node a); const: @(LmP0Node b); const: @(char path); @: int out_same) int
+    fn: l2_unit_defined_fn (const: @(LmP0Node self); const: @(LmP0Text name)) @: LmP0Node
+    fn: l2_bind_same_unit_forward (const: @(LmP0Node fn_node); const: @(LmP0Text name); int: is_sub; const: @(LmP0Node params); const: @(LmP0Node ret_node); const: @(char path); @: int out_bound) int
     fn: l2_collect_os_methods (const: @(LmP0Node item); const: @(char path)) int
     fn: l2_parse_unit (const: @(LmP0Node main_node); const: @(char path)) int
     fn: l2_parse_library (const: @(char path)) int
@@ -2510,6 +2516,7 @@ fn: l2_translate_unit (const: @(LmP0Structure unit); const: @(char path); @@: Lm
     l2_need_stdlib: 0
     l2_intern_n: 0U
     l2_src: path
+    l2_cur_unit: 0
     l2_main_node: 0
     l2_entry_free()
     l2_entry_full: 0
@@ -2520,6 +2527,7 @@ fn: l2_translate_unit (const: @(LmP0Structure unit); const: @(char path); @@: Lm
     l2_meth_free()
     if: unit = 0
         return: l2_error(path, 0, "missing main")
+    l2_cur_unit: unit
     if: unit\trailer != 0
         return: l2_error(path, 0, "unsupported trailer")
     # Directives establish the C/predef type vocabulary before unit fields are
@@ -9733,6 +9741,183 @@ fn: l2_typed_formal (const: @(LmP0Node node); const: @(char path); @@: LmP0Text 
     \out_name: g\value\as\atom
 return: 0
 
+# Type nodes of a complete declaration, compared on the translator Structure
+# (kind, frame head, active fields). Not a source-line heuristic.
+fn: l2_type_nodes_same (const: @(LmP0Node a); const: @(LmP0Node b)) int
+    @: LmP0Field fa
+    @: LmP0Field fb
+    if: a = 0 && b = 0
+        return: 1
+    if: a = 0 || b = 0
+        return: 0
+    if: a\kind != b\kind
+        return: 0
+    if: a\kind = c.LM_P0_NODE_ATOM
+        if: a\as = 0 || b\as = 0
+            return: 0
+        return: l2_text_same(a\as\atom, b\as\atom)
+    if: a\kind = c.LM_P0_NODE_FRAME
+        if: a\as = 0 || b\as = 0 || a\as\frame = 0 || b\as\frame = 0
+            return: 0
+        if: l2_text_same(a\as\frame\head, b\as\frame\head) = 0
+            return: 0
+        if: a\as\frame\body = 0 && b\as\frame\body = 0
+            return: 1
+        if: a\as\frame\body = 0 || b\as\frame\body = 0
+            return: 0
+        if: l2_count_active(a\as\frame\body) != l2_count_active(b\as\frame\body)
+            return: 0
+        fa: l2_next_active(a\as\frame\body\first_field)
+        fb: l2_next_active(b\as\frame\body\first_field)
+        while: fa != 0 && fb != 0
+            if: l2_type_nodes_same(fa\value, fb\value) = 0
+                return: 0
+            fa: l2_next_active(fa\next)
+            fb: l2_next_active(fb\next)
+        ---
+        return: 1
+    if: a\kind = c.LM_P0_NODE_STRUCTURE
+        if: a\as = 0 || b\as = 0 || a\as\structure = 0 || b\as\structure = 0
+            return: 0
+        if: l2_count_active(a\as\structure) != l2_count_active(b\as\structure)
+            return: 0
+        fa: l2_next_active(a\as\structure\first_field)
+        fb: l2_next_active(b\as\structure\first_field)
+        while: fa != 0 && fb != 0
+            if: l2_type_nodes_same(fa\value, fb\value) = 0
+                return: 0
+            fa: l2_next_active(fa\next)
+            fb: l2_next_active(fb\next)
+        ---
+        return: 1
+return: 0
+
+# A definition has a return trailer (one-line column-0 return) or a Structure
+# body field. A complete declaration with neither is a forward or an import.
+fn: l2_fn_defined (const: @(LmP0Node fn_node)) int
+    @: LmP0Field field
+    int: is_sub 0
+    if: fn_node = 0 || fn_node\as = 0 || fn_node\as\frame = 0
+        return: 0
+    if: l2_frame_head(fn_node, "sub")
+        is_sub: 1
+    if: l2_frame_head(fn_node, "fn") = 0 && is_sub = 0
+        return: 0
+    if: l2_ret_tr(fn_node\as\frame) != 0
+        return: 1
+    if: fn_node\as\frame\body = 0
+        return: 0
+    field: l2_next_active(fn_node\as\frame\body\first_field)
+    if: field = 0
+        return: 0
+    field: l2_next_active(field\next)
+    if: field = 0
+        return: 0
+    if: is_sub = 0
+        field: l2_next_active(field\next)
+        if: field = 0
+            return: 0
+        ---
+    field: l2_next_active(field\next)
+    if: field = 0 || field\value = 0
+        return: 0
+    if: field\value\kind != c.LM_P0_NODE_STRUCTURE || field\value\as = 0
+        return: 0
+return: 1
+
+fn: l2_params_types_same (const: @(LmP0Node a); const: @(LmP0Node b); const: @(char path); @: int out_same) int
+    @: LmP0Field fa
+    @: LmP0Field fb
+    @: LmP0Text na 0
+    @: LmP0Text nb 0
+    int: ta 0
+    int: tb 0
+    if: out_same = 0
+        return: 1
+    \out_same: 0
+    if: a = 0 || b = 0 || a\kind != c.LM_P0_NODE_STRUCTURE || b\kind != c.LM_P0_NODE_STRUCTURE || a\as = 0 || b\as = 0
+        return: 0
+    if: l2_count_active(a\as\structure) != l2_count_active(b\as\structure)
+        return: 0
+    fa: l2_next_active(a\as\structure\first_field)
+    fb: l2_next_active(b\as\structure\first_field)
+    while: fa != 0 && fb != 0
+        na: 0
+        nb: 0
+        ta: 0
+        tb: 0
+        if: l2_typed_formal(fa\value, path, @ na, @ ta) != 0
+            return: 1
+        if: l2_typed_formal(fb\value, path, @ nb, @ tb) != 0
+            return: 1
+        if: ta != tb
+            return: 0
+        fa: l2_next_active(fa\next)
+        fb: l2_next_active(fb\next)
+    ---
+    \out_same: 1
+return: 0
+
+fn: l2_unit_defined_fn (const: @(LmP0Node self); const: @(LmP0Text name)) @: LmP0Node
+    @: LmP0Field field
+    @: LmP0Node item
+    @: LmP0Text nm
+    if: l2_cur_unit = 0 || name = 0
+        return: 0
+    field: l2_next_active(l2_cur_unit\first_field)
+    while: field != 0
+        item: field\value
+        if: item != self && (l2_frame_head(item, "fn") != 0 || l2_frame_head(item, "sub") != 0)
+            nm: l2_os_fn_name(item)
+            if: nm != 0 && l2_text_same(nm, name) != 0 && l2_fn_defined(item) != 0
+                return: item
+            ---
+        ---
+        field: l2_next_active(field\next)
+    ---
+return: 0
+
+fn: l2_bind_same_unit_forward (const: @(LmP0Node fn_node); const: @(LmP0Text name); int: is_sub; const: @(LmP0Node params); const: @(LmP0Node ret_node); const: @(char path); @: int out_bound) int
+    @: LmP0Node other
+    @: LmP0Field field
+    @: LmP0Node oparams 0
+    @: LmP0Node oret 0
+    int: osub 0
+    int: same 0
+    if: out_bound = 0
+        return: 1
+    \out_bound: 0
+    other: l2_unit_defined_fn(fn_node, name)
+    if: other = 0
+        return: 0
+    if: l2_frame_head(other, "sub")
+        osub: 1
+    if: osub != is_sub
+        return: l2_error(path, fn_node, "incompatible entry signature")
+    if: other\as = 0 || other\as\frame = 0 || other\as\frame\body = 0
+        return: l2_error(path, fn_node, "incompatible entry signature")
+    field: l2_next_active(other\as\frame\body\first_field)
+    if: field = 0
+        return: l2_error(path, fn_node, "incompatible entry signature")
+    field: l2_next_active(field\next)
+    if: field = 0
+        return: l2_error(path, fn_node, "incompatible entry signature")
+    oparams: field\value
+    if: is_sub = 0
+        field: l2_next_active(field\next)
+        if: field = 0
+            return: l2_error(path, fn_node, "incompatible entry signature")
+        oret: field\value
+        ---
+    if: l2_params_types_same(params, oparams, path, @ same) != 0
+        return: 1
+    if: same = 0
+        return: l2_error(path, fn_node, "incompatible entry signature")
+    if: is_sub = 0 && l2_type_nodes_same(ret_node, oret) = 0
+        return: l2_error(path, fn_node, "incompatible entry signature")
+    \out_bound: 1
+return: 0
+
 fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path)) int
     @: LmP0Field field
     const: @: LmP0Frame fr
@@ -9749,8 +9934,10 @@ fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path)) int
     int: is_sub 0
     int: sn 0
     int: return_depth 0
+    int: bound 0
     const: @: LmP0Node rty
     const: @: LmP0Node rbase
+    const: @: LmP0Node ret_node
     if: fn_node = 0 || fn_node\as = 0 || fn_node\as\frame = 0
         return: l2_error(path, fn_node, "unsupported body")
     if: l2_m_n >= c.INT_MAX
@@ -9766,9 +9953,9 @@ fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path)) int
     k: 0
     if: fr\body != 0
         k: l2_count_active(fr\body)
-    if: is_sub = 0 && k != 4 && (k != 3 || l2_ret_tr(fr) = 0)
+    if: is_sub = 0 && k != 4 && k != 3
         return: l2_error(path, fn_node, "incompatible entry signature")
-    if: is_sub != 0 && k != 3 && (k != 2 || l2_ret_tr(fr) = 0)
+    if: is_sub != 0 && k != 3 && k != 2
         return: l2_error(path, fn_node, "incompatible entry signature")
     if: fr\body\trailer != 0
         return: l2_error(path, fn_node, "unsupported trailer")
@@ -9936,12 +10123,22 @@ fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path)) int
         ---
     if: is_sub = 0 && field\value\kind != c.LM_P0_NODE_ATOM && return_depth = 0
         return: l2_error(path, fn_node, "incompatible entry signature")
+    ret_node: 0
     if: is_sub = 0
+        ret_node: field\value
         field: l2_next_active(field\next)
     body: 0
     if: field != 0
         body: field\value
     if: body = 0 && l2_ret_tr(fr) = 0
+        bound: 0
+        if: l2_bind_same_unit_forward(fn_node, nm, is_sub, params, ret_node, path, @ bound) != 0
+            l2_free_method(l2_m_n)
+            return: 1
+        if: bound != 0
+            l2_free_method(l2_m_n)
+            return: 0
+        l2_free_method(l2_m_n)
         return: l2_error(path, fn_node, "unsupported body")
     if: body != 0 && (body\kind != c.LM_P0_NODE_STRUCTURE || body\as = 0)
         return: l2_error(path, fn_node, "unsupported body")

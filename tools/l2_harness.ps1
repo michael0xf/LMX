@@ -572,7 +572,21 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_lib_pair_a.lm2'; Expect = 'library-links'; Exit = 0; Needle = '';
         With = @('unit_lib_pair_b.lm2');
         Exports = @('lib_pair_a_value', 'lib_pair_b_value');
-        Absent = @(); Debt = @() }
+        Absent = @(); Debt = @() },
+    # SAME-UNIT FORWARD vs ONE-LINE RETURN TRAILER (GROK-L2-SAME-UNIT-FORWARD-DECL-20260921-141).
+    # A complete bodiless unit-level fn is a forward when a same-unit definition exists; a one-line
+    # fn whose column-0 return: is the frame trailer is a bodied definition and must not enter
+    # pending body=0. Source-line heuristics are not used: l2_fn_defined reads the translator
+    # Structure (trailer or body field). The forward is skipped, so one_line is l2_m0; Debt is its
+    # trailer return. A pending empty body would lack that return and fail one_line(40)!=41.
+    [pscustomobject]@{ Name = 'unit_forward_oneline.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @();
+        Debt = @('return: l2_p0_0 + 1') },
+    [pscustomobject]@{ Name = 'unit_forward_mismatch.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'incompatible entry signature'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_forward_import_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unsupported body'; Absent = @(); Debt = @() }
 )
 
 foreach ($fx in $fixtures) {

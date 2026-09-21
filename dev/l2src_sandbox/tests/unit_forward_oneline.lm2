@@ -1,0 +1,12 @@
+# Same-unit forward adjacent to a one-line definition whose column-0 return
+# is the body (l2_ret_tr). The one-line function is a definition: it must
+# keep a graph-callable body and must not be pending body=0.
+fn: later (int: x) int
+fn: one_line (int: x) int
+return: x + 1
+fn: later (int: x) int
+    return: x + 2
+end: later
+fn: main () int
+    return: one_line(40) != 41 || later(40) != 42
+end: main

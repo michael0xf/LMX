@@ -253,6 +253,7 @@ int: l2_alloc_kind 0
 @@: size_t l2_it_hnl 0
 @@: int l2_it_hty 0
 c.array: [256]: char l2_tok
+c.array: [256]: char l2_addr_path
 @: char l2_ccall_into 0
 
 prototype:
@@ -406,6 +407,8 @@ prototype:
     fn: l2_mrs_slot_named (int: res; const: @(char pd); size_t: off; size_t: len; @: int out_kind; @: int out_ent) int
     fn: l2_path_root (const: @(char pd); size_t: pn; @: int out_ni; @: int out_res) int
     fn: l2_path_in_eternal (const: @(char pd); size_t: pn) int
+    fn: l2_addr_names_eternal (@: LmP0Field name; @: LmP0Field fld) int
+    fn: l2_addr_flat_eternal (@: LmP0Field at) int
     fn: l2_path_kind (const: @(char pd); size_t: pn; @: int out_mi) int
     fn: l2_emit_path (const: @(char pd); size_t: pn; int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind) int
     fn: l2_ebr_root (int: k) int
@@ -10233,6 +10236,8 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
             skip: 1
         # An address prefix in flat-field position. What it addresses is checked
         # by the fields that follow it, like any other name or field read.
+        if: f\value\kind = c.LM_P0_NODE_ATOM && l2_text_eq(f\value\as\atom, "@") && l2_addr_flat_eternal(f) != 0
+            return: l2_error(path, f\value, "the address of an eternal branch field cannot be taken")
         if: f\value\kind = c.LM_P0_NODE_ATOM && l2_text_eq(f\value\as\atom, "@")
             skip: 1
             have_value: 0
@@ -10846,6 +10851,8 @@ fn: l2_check_addr (const: @(LmP0Node node); int: mi; const: @(char path)) int
         h: l2_next_active(g\next)
         if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || g = 0 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || l2_is_slash(g\value\as\atom) = 0 || h = 0 || h\value = 0 || h\value\kind != c.LM_P0_NODE_ATOM || l2_ident(h\value\as\atom) = 0
             return: l2_error(path, node, "incompatible entry signature")
+        if: l2_addr_names_eternal(f, h) != 0
+            return: l2_error(path, node, "the address of an eternal branch field cannot be taken")
         return: l2_check_primary(f\value, mi, path)
     if: l2_count_active(node\as\frame\body) != 1
         return: l2_error(path, node, "incompatible entry signature")
@@ -12450,6 +12457,42 @@ fn: l2_index_tail (@: LmP0Field f; @@: LmP0Field out_idx; @@: LmP0Field out_afte
     \out_idx: p2
     \out_after: l2_next_active(p3\next)
 return: 0
+
+# THE TEMPORARY RULE (FABLE-L2-R0-WRITE-GUARD-DESIGN-20260921-111).  An address taken with `@` is a WRITABLE
+# address, and nothing downstream can refuse a write through it: a raw pointer write bypasses every cell
+# helper.  So until a read-only address exists as a type, the address of a field of an
+# `independent: const: immutable` branch is refused where it is TAKEN, by name, by the same test that
+# refuses a path write to it (l2_path_in_eternal) -- no type is asked.  It used to pass the translator and
+# die at the C compiler for want of a lowering, and a missing declaration is never protection.
+fn: l2_addr_names_eternal (@: LmP0Field name; @: LmP0Field fld) int
+    size_t: a
+    size_t: b
+    if: name = 0 || fld = 0 || name\value = 0 || fld\value = 0 || name\value\kind != c.LM_P0_NODE_ATOM || fld\value\kind != c.LM_P0_NODE_ATOM
+        return: 0
+    if: name\value\as = 0 || fld\value\as = 0 || name\value\as\atom = 0 || fld\value\as\atom = 0
+        return: 0
+    a: name\value\as\atom\length
+    b: fld\value\as\atom\length
+    if: a = 0U || b = 0U || a + b + 1U >= 250U
+        return: 0
+    memcpy((cast: (@: void) l2_addr_path), (cast: (@: void) name\value\as\atom\data), a)
+    l2_addr_path[a]: 92
+    memcpy((cast: (@: void) (l2_addr_path + a + 1U)), (cast: (@: void) fld\value\as\atom\data), b)
+return: l2_path_in_eternal(l2_addr_path, a + b + 1U)
+
+# The flat spelling: `@`, a name, `\`, a field, as four fields of an argument list.
+fn: l2_addr_flat_eternal (@: LmP0Field at) int
+    @: LmP0Field name
+    @: LmP0Field sep
+    if: at = 0
+        return: 0
+    name: l2_next_active(at\next)
+    if: name = 0
+        return: 0
+    sep: l2_next_active(name\next)
+    if: sep = 0 || sep\value = 0 || sep\value\kind != c.LM_P0_NODE_ATOM || l2_is_slash(sep\value\as\atom) = 0
+        return: 0
+return: l2_addr_names_eternal(name, l2_next_active(sep\next))
 
 fn: l2_addr_tail (@: LmP0Field f; int: mi; @@: LmP0Field out_name; @@: LmP0Field out_after) int
     @: LmP0Field p1

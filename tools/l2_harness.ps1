@@ -455,6 +455,23 @@ $fixtures = @(
         BindOrder = $true;
         Absent = @();
         Debt = @('lmx_pointer_store_known(l2_q0_from[0], (cast: (@: void) l2_p', 'int: l2_q0_sticky 0') },
+    # THE ADDRESS OF AN ETERNAL FIELD IS REFUSED WHERE IT IS TAKEN (FABLE-L2-R0-WRITE-GUARD-DESIGN-20260921-111, M0).
+    # `@` yields a WRITABLE address and a raw write through it bypasses every cell helper, so until a
+    # read-only address exists as a type the translator refuses it by name, with the test that already
+    # refuses a path write.  Two rows because the two spellings are recognised in two different places
+    # of the translator, and the first version of the rule covered only one.  The pre-rule translator
+    # ACCEPTS both (and the program then dies at gcc for want of a lowering -- never a protection).
+    [pscustomobject]@{ Name = 'unit_eternal_addr_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'the address of an eternal branch field cannot be taken'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_eternal_addr_flat_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'the address of an eternal branch field cannot be taken'; Absent = @(); Debt = @() },
+    # THE CONTROL AND A RECORDED GAP.  The same shape on a MUTABLE named Structure is NOT refused by the
+    # rule; what it hits is a missing lowering: `@ A\e` goes into the generated L1 as raw text.  That is
+    # the debt pinned here.  When the lowering is written this row turns red ON PURPOSE: the same
+    # lowering would make `@: E\e` compile, and the rule above must already be in.
+    [pscustomobject]@{ Name = 'unit_named_addr_gap.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+        Absent = @();
+        Debt = @('@ A\e)') },
     # THE SAME RULE FOR A HIDDEN/DYNAMIC INPUT (FABLE-L2-ARG-ADDRESS-PROOF-20260921-84).  A free name
     # read before the body's own same-name binding line arrives in a hidden formal, and that line
     # binds it exactly as it binds a declared formal.  The matrix runs for int and for size_t.

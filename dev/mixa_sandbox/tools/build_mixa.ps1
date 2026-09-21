@@ -13,7 +13,16 @@ param(
     # compiling nothing.  Both exist because a run can be killed BY THE SYSTEM (low memory,
     # measured 20.09 05:33) and phases must be repeatable separately.
     [switch]$BuildOnly,
-    [string]$RunOnly
+    [string]$RunOnly,
+    # -ManagerLinkOnly -ReuseStamp <exact dir>: the FOCUSED link path for the manager executable
+    # (DEEPSEEK-MANAGER-EXECUTABLE-20260920-01, approved scope items 3-4).  It links
+    # obj/mixa_app_main.o against an EXISTING stamp's object pool, read-only, into a private output,
+    # and launches nothing.  There is NO DEFAULT STAMP on purpose: the newest directory on this
+    # machine at the time of writing was 20260920_212506, the empty husk a memory-killed run left
+    # behind, and defaulting to it would have failed in a way that looked like a defect in the
+    # manager target rather than in the choice of evidence.
+    [switch]$ManagerLinkOnly,
+    [string]$ReuseStamp
 )
 $ErrorActionPreference = 'Stop'
 $migRoot = Split-Path -Parent $PSScriptRoot
@@ -113,10 +122,25 @@ function Invoke-Captured([string]$Label, [string]$Exe, [string[]]$ArgList, [stri
     $log = Join-Path $logDir ((Get-SafeName $LogName) + '.log')
     $eap = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
-    $text = & $Exe @ArgList 2>&1 | Out-String
+    # MEMORY: THE CHILD'S OUTPUT GOES STRAIGHT TO THE LOG FILE AND NEVER THROUGH A STRING.
+    # The previous form was `$text = & $Exe @ArgList 2>&1 | Out-String` followed by
+    # `Set-Content -Value (... + $text)`.  That built the whole of every command's output as one
+    # .NET string and then built a SECOND copy to prepend the invoke line -- and a full gate makes
+    # on the order of a thousand invocations (every translate, every compile, every link, and every
+    # nm call inside Resolve-Link), so this was the single largest allocation source in the run.
+    # On 20.09 that was the difference between a gate that finishes and one the host kills for
+    # memory: the 367-target run died before its first row, and the same gate had passed at 3.82 GB
+    # free but not at 3.29 GB.  `*>>` appends every stream to the file as lines arrive, so nothing
+    # accumulates and peak memory no longer scales with how chatty a compiler decides to be.
+    #
+    # ARGUMENT QUOTING IS DELIBERATELY UNCHANGED: `& $Exe @ArgList` passes argv as an ARRAY, which
+    # is the only form that survives a path with a space in it -- and this build passes exactly such
+    # a path (the WinRT include dir, "-idirafter C:\Program Files (x86)\...").  Start-Process
+    # -ArgumentList would have joined the array back into one unquoted string and broken it.
+    Set-Content -LiteralPath $log -Value ("invoke: `"$Exe`" " + ($ArgList -join ' '))
+    & $Exe @ArgList *>> $log
     $code = $LASTEXITCODE
     $ErrorActionPreference = $eap
-    Set-Content -LiteralPath $log -Value ("invoke: `"$Exe`" " + ($ArgList -join ' ') + "`r`n" + $text)
     return $code
 }
 function Convert-Source([string]$Label, [string]$RelSource, [string]$Target) {
@@ -137,6 +161,14 @@ function Compile-C([string]$Label, [string]$Source, [string]$Object) {
     }
     return $true
 }
+# MEMOISED WITHIN ONE RUN, AND ONLY WITHIN ONE RUN (approved scope, item 2).  Resolve-Link asks the
+# same object for its symbols in EVERY round -- up to 64 rounds over a couple of hundred objects --
+# and each ask was a fresh `nm` process whose entire output was captured into a string.  An object
+# cannot change while the gate runs, so the answer cannot change either; the table is script-scope
+# and dies with the process, never persisted, so no later run can inherit a stale answer.  This is
+# the bigger of the two memory fixes: the process spawns and their string captures are gone, not
+# merely buffered better.
+$script:symCache = @{}
 function Get-Symbols([string]$File, [switch]$Undefined) {
     # An object that is not there has no symbols -- and must not TAKE THE WHOLE GATE DOWN.
     # Measured 20260919: a unit whose compile was reported (wrongly) as OK left no .o, `nm` wrote
@@ -144,6 +176,8 @@ function Get-Symbols([string]$File, [switch]$Undefined) {
     # and the script died before printing any verdict at all.
     if (-not (Test-Path -LiteralPath $File)) { return @() }
     $opt = if ($Undefined) { '-u' } else { '--defined-only' }
+    $key = $File + '|' + $opt
+    if ($script:symCache.ContainsKey($key)) { return $script:symCache[$key] }
     $eap = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
     $out = & $nm $opt $File 2>&1 | Out-String
@@ -153,6 +187,7 @@ function Get-Symbols([string]$File, [switch]$Undefined) {
         $parts = @($line.Trim() -split '\s+' | Where-Object { $_ })
         if ($parts.Count -ge 2 -and $parts[-1] -match '^[A-Za-z_][A-Za-z_0-9]*$') { $syms += $parts[-1] }
     }
+    $script:symCache[$key] = $syms
     return $syms
 }
 function Resolve-Link([string]$SelftestObject, [string[]]$AllObjects) {
@@ -259,6 +294,55 @@ if ($RunOnly) {
         exit 1
     }
     Write-Output ("build_mixa GREEN (run-only, probes only): {0} probes, no failures; evidence {1}" -f $rows.Count, $OutDir)
+    exit 0
+}
+
+# -ManagerLinkOnly: THE FOCUSED LINK PATH (approved scope items 3-4), and it lives HERE, after the
+# function definitions, because Resolve-Link and Get-Symbols are plain functions of this script --
+# PowerShell must have seen them before anything calls them.  That is also WHY it is a mode inside
+# this file rather than a helper outside it: an outside caller would have to run the whole gate to
+# reach them, and the alternative -- a second copy of the resolver in another script -- is the
+# duplication this tree has already paid for twice.
+#
+# It reuses an existing stamp's object pool READ-ONLY, links to a PRIVATE output under %TEMP%, and
+# launches nothing.  It prints the selected objects, because the point of the exercise is not only
+# that the manager links but that the SECOND main (mixa_app_main_msg.o) was not swept in: both
+# objects sit in the same pool, and a resolver that took everything would have produced a
+# duplicate-main error rather than a manager.
+if ($ManagerLinkOnly) {
+    if (-not $ReuseStamp) {
+        Write-Output 'build_mixa: -ManagerLinkOnly requires -ReuseStamp <exact directory>. There is no default: the newest stamp may be the empty husk of a killed run.'
+        exit 2
+    }
+    if (-not (Test-Path -LiteralPath $ReuseStamp)) { Write-Output "build_mixa: -ReuseStamp does not exist: $ReuseStamp"; exit 2 }
+    $reuseFull = (Resolve-Path -LiteralPath $ReuseStamp).Path
+    $buildRoot = (Resolve-Path -LiteralPath (Join-Path $migRoot 'build')).Path
+    if (-not $reuseFull.StartsWith($buildRoot, [StringComparison]::OrdinalIgnoreCase)) {
+        Write-Output "build_mixa: -ReuseStamp must live under $buildRoot; got $reuseFull"; exit 2
+    }
+    $poolObjDir = Join-Path $reuseFull 'obj'
+    $poolMain = Join-Path $poolObjDir 'mixa_app_main.o'
+    if (-not (Test-Path -LiteralPath $poolMain)) { Write-Output "build_mixa: the reused pool has no mixa_app_main.o: $poolMain"; exit 3 }
+    $poolObjects = @(Get-ChildItem -LiteralPath $poolObjDir -Filter '*.o' -File | Sort-Object Name | ForEach-Object { $_.FullName })
+    $sel = @(Resolve-Link $poolMain $poolObjects)
+    Write-Output ('build_mixa: ManagerLinkOnly; HEAD ' + ((git rev-parse HEAD) -join '').Substring(0,8) + '; pin ' + $pinChecked)
+    Write-Output ('build_mixa: reused pool ' + $reuseFull + ' (' + $poolObjects.Count + ' objects); selected ' + $sel.Count)
+    foreach ($o in $sel) { Write-Output ('  selected ' + (Split-Path -Leaf $o)) }
+    if ($sel -contains (Join-Path $poolObjDir 'mixa_app_main_msg.o')) {
+        Write-Output 'build_mixa: REFUSED -- the second main (mixa_app_main_msg.o) was selected. The manager executable must not link it, and this is a defect of the resolver, not of the target.'
+        exit 4
+    }
+    $outExe = Join-Path $env:TEMP ('mixa_app_main.linkonly.' + $PID + '.exe')
+    $linkArgs = @($poolMain) + $sel + @('-o', $outExe, '-lkernel32', '-luser32', '-lgdi32', '-lwinmm', '-lole32', '-luuid', '-lshell32')
+    $code = Invoke-Captured 'exe:mixa_app_main' $gcc $linkArgs 'exe_mixa_app_main_linkonly'
+    if ($code -ne 0 -or -not (Test-Path -LiteralPath $outExe)) {
+        Write-Output ('build_mixa: ManagerLinkOnly LINK FAILED, gcc exit ' + $code + '; log ' + $logDir)
+        exit 5
+    }
+    $outItem = Get-Item -LiteralPath $outExe
+    Write-Output ('build_mixa: linked ' + $outExe + ' (' + $outItem.Length + ' bytes, sha256 ' + (Get-FileHash -LiteralPath $outExe -Algorithm SHA256).Hash.Substring(0,16) + '...)')
+    Write-Output 'build_mixa: NOT launched -- interactive Win32 (argv[1] selects a root; a gate that ran it would wait on input or paint a window)'
+    Write-Output ('build_mixa: the stamp directory this run created (' + $OutDir + ') holds THIS LINK''S LOG ONLY and is not a measurement; the measurement above is the reused pool ' + $reuseFull)
     exit 0
 }
 
@@ -418,6 +502,42 @@ if (-not (Test-Path -LiteralPath (Join-Path $vendorRoot 'l2src\lmx_message.lm1')
         if (Compile-C 'vendor:host' $hostC $hostObj) { $objects += $hostObj; Add-Row 'OK' 'vendor:host' '' }
     } else {
         Add-Row 'FAIL' 'vendor:host' "lmx_message_host.c is missing from $vendorRoot (the MANIFEST lists it)"
+    }
+}
+
+# 2e) THE MANAGER EXECUTABLE (DEEPSEEK-MANAGER-EXECUTABLE-20260920-01).  Until now the gate
+# produced 366 rows and NOT ONE of them was the manager: `grep -c mixa_app_main` over this file
+# returned 0, so run_manager_smoke.ps1 exited 3 asking for an executable nothing built.  This
+# section is that target, and it is ADDING one rather than repairing one.
+#
+# WHY ONLY A LINK STEP: `mixa_app_main.lm1` is an ordinary unit, so the unit pass above has
+# already translated and compiled it to obj\mixa_app_main.o and put it in $objects.  Nothing new
+# has to be translated for the manager itself, and the closure its `predef` names
+# (mixa_app_controller.h.lm1 -> the controller unit) is in the same pool.  Judged by the OUTPUT
+# FILE, exactly as the fixture section is.
+#
+# THE ENTRY IS CHOSEN HERE, DELIBERATELY: the port carries TWO files with `fn: main` --
+# mixa_app_main.lm1:36 and mixa_app_main_msg.lm1:512 (the stepped driver).  The manager is the
+# FIRST; the second is not linked into it.  Whoever later wants the stepped driver builds a
+# target for IT, rather than discovering a duplicate-main at link time and "fixing" it by
+# dropping one of the two.
+#
+# BUILD-ONLY, AND THAT IS A REQUIREMENT RATHER THAN A LIMITATION: this is an interactive Win32
+# program that opens a window (argv[1] selects a root), so a gate that ran it unattended would
+# either hang for input or paint a window on whatever machine the gate runs on.  The row says so
+# in its detail.  A headless run, if one is wanted, is a separate act with its own seam.
+$mainObj = Join-Path $objDir 'mixa_app_main.o'
+if (-not (Test-Path -LiteralPath $mainObj)) {
+    Add-Row 'FAIL' 'exe:mixa_app_main' "object never built: $mainObj (see the unit: rows above)"
+} else {
+    $mainExe = Join-Path $binDir 'mixa_app_main.exe'
+    $link = $flags + @('-o', $mainExe, $mainObj) + (Resolve-Link $mainObj $objects)
+    $link += @('-lkernel32', '-luser32', '-lgdi32', '-lwinmm', '-lole32', '-luuid', '-lshell32')
+    $code = Invoke-Captured 'exe:mixa_app_main' $gcc $link 'exe:mixa_app_main'
+    if ($code -ne 0 -or -not (Test-Path -LiteralPath $mainExe)) {
+        Add-Row 'FAIL' 'exe:mixa_app_main' "link exit $code; log $logDir\$(Get-SafeName 'exe:mixa_app_main').log"
+    } else {
+        Add-Row 'OK' 'exe:mixa_app_main' 'linked, build-only: NOT launched (interactive Win32)'
     }
 }
 

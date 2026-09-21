@@ -11363,7 +11363,12 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
         if: c.fprintf(l2_out, ", %s", l2_act_at(hides, ai)) < 0
             return: l2_prep_drop(acts, hides)
         ai: ai + 1
-    if: l2_m_throws[idx] != 0 && fputs(", node", l2_out) < 0
+    # A method caller forwards its own l2_msg -- the closure makes every caller of
+    # a throwing callable throwing, so the formal is in scope. The entry has no
+    # such formal: its single `node` is the graph it was dispatched with.
+    if: l2_m_throws[idx] != 0 && mi >= 0 && fputs(", l2_msg", l2_out) < 0
+        return: l2_prep_drop(acts, hides)
+    if: l2_m_throws[idx] != 0 && mi < 0 && fputs(", node", l2_out) < 0
         return: l2_prep_drop(acts, hides)
     if: l2_m_throws[idx] != 0 && l2_m_ret[idx] != 8 && c.fprintf(l2_out, ", @ l2_t%d", t) < 0
         return: l2_prep_drop(acts, hides)
@@ -11762,8 +11767,10 @@ fn: l2_emit_sig (int: mi) int
             return: 1
         j: j + 1
     # `merge:` contributes the executing Message to the existing dynamic-input
-    # group. Call-graph closure marks every method that must forward it.
-    if: l2_m_throws != 0 && l2_m_throws[mi] != 0 && fputs("; @: Lmx node", l2_out) < 0
+    # group. Call-graph closure marks every method that must forward it. Its
+    # formal is l2_msg: `node` is already the reserved first formal, and a second
+    # formal of that spelling is a C redefinition the C compiler alone reports.
+    if: l2_m_throws != 0 && l2_m_throws[mi] != 0 && fputs("; @: Lmx l2_msg", l2_out) < 0
         return: 1
     # Declared-throw ABI: the outputs follow every input, the normal result
     # first and the throw payload last, and the control status is the return.

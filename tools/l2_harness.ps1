@@ -286,9 +286,6 @@ $fixtures = @(
                  'if: l2_retained\len != 2') },
     # The other fixtures that happen to declare eternal branches: array fields whose record and
     # backing are built in the store, and merge sites naming a branch.  Count and ownership only.
-    # (unit_merge_in_method.lm2 has one too, but its generated C never compiled -- a method
-    # parameter is emitted twice, `l2_m0(Lmx * node, Lmx * node, ...` -- before this row kind
-    # existed and independently of retention, so it is not listed as if it ran.)
     [pscustomobject]@{ Name = 'unit_array_empty.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('1');
         Absent = @('not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
@@ -300,7 +297,53 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_merge_site.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('3');
         Absent = @('not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
-        Debt = @('lmx_root_open(@ l2_program_root, l2_program_entry, 5000U, 3U, 0U)') }
+        Debt = @('lmx_root_open(@ l2_program_root, l2_program_entry, 5000U, 3U, 0U)') },
+    # THE DECLARED-THROW ABI (FABLE-L2TRANS-THROW-FORMAL-20260920-05).  Every method that merges,
+    # and every caller of one, carries the executing Message as a hidden formal.  It was spelled
+    # `node`, the spelling of the reserved first formal, so EVERY such method came out as
+    # `l2_m0(Lmx * node, Lmx * node, ...`.  Neither translator says a word about that -- l2trans and
+    # l1trans both exit 0 silently -- and only gcc refuses it, so these three fixtures (all three
+    # that have such a signature, out of 280) had never been compiled, let alone run.  The formal
+    # is l2_msg now.  Absent is the duplicate in both shapes it took (adjacent, and after a
+    # declared formal); Debt is the signature, a METHOD caller forwarding l2_msg, and the ENTRY
+    # still forwarding its own single `node`.  The compile is the regression: the L1 generated
+    # before the change fails these rows on the text, and its C fails gcc on the duplicate alone.
+    #
+    # WHAT THE RUN DOES AND DOES NOT PROVE.  It proves the generated C compiles unchanged, links
+    # against the kernel closure, takes its turn through merge-in-method without dying and closes
+    # its root once.  It does NOT prove the source program's own result: lmx_thread_dispatch_native
+    # drops the entry's return, so `return: 81`, the throw status 70 and the merge shape codes
+    # 71..80 are all mute and the process exits 0 regardless.  Two of the three declare no eternal
+    # branch; the driver is given 0 and checks that the array exists and is empty.
+    # `l2_out_throw[0]: node` is pinned as it IS, not as it should be: what the failure payload
+    # ought to be is an open question of the model, and this row must change with that answer.
+    [pscustomobject]@{ Name = 'unit_merge_in_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('1', 'size', '0', '0', '7');
+        Absent = @('Lmx node; @: Lmx node', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
+        Debt = @('fn: l2_m0 (@: Lmx node; @: Lmx l2_msg; @: int l2_out_result; @@: Lmx l2_out_throw) int',
+                 'fn: l2_m1 (@: Lmx node) int',
+                 'fn: l2_m2 (@: Lmx node; @: Lmx l2_msg; @: int l2_out_result; @@: Lmx l2_out_throw) int',
+                 'fn: l2_m3 (@: Lmx node; @: Lmx l2_msg; @@: Lmx l2_out_throw) int',
+                 'l2_m3(lmx_arena_ref_struct(node\node, 3U), l2_msg, @ l2_te0)',
+                 'l2_m0(lmx_arena_ref_struct(node\node, 0U), l2_msg, @ l2_t1, @ l2_te1)',
+                 'l2_m2(lmx_arena_ref_struct(unit, 2U), node, @ l2_t0, @ l2_te0)',
+                 'l2_out_throw[0]: node',
+                 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U, 1U, 0U)') },
+    [pscustomobject]@{ Name = 'unit_throwing_callable.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @('Lmx node; @: Lmx node');
+        Debt = @('fn: l2_m0 (@: Lmx node; @: Lmx l2_msg; @: int l2_out_result; @@: Lmx l2_out_throw) int',
+                 'l2_m0(l2_pst, node, @ l2_t0, @ l2_te0)',
+                 'l2_out_throw[0]: node',
+                 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U, 0U, 0U)') },
+    [pscustomobject]@{ Name = 'unit_recursion.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @('Lmx node; @: Lmx node', 'l2_p2_0; @: Lmx node');
+        Debt = @('fn: l2_m2 (@: Lmx node; size_t: l2_p2_0; @: Lmx l2_msg; @: size_t l2_out_result; @@: Lmx l2_out_throw) int',
+                 'l2_q7, l2_msg, @ l2_t0, @ l2_te0)',
+                 '2U, node, @ l2_t2, @ l2_te2)',
+                 'l2_out_throw[0]: node',
+                 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U, 0U, 0U)') }
 )
 
 foreach ($fx in $fixtures) {
@@ -358,7 +401,10 @@ foreach ($fx in $fixtures) {
         $ran = Invoke-Step ('fixture.' + $stem + '.run') $exe $fx.Args $bin
         $said = ((Log-Text ('fixture.' + $stem + '.run')) -split "`r?`n" | Where-Object { $_ -match '^l2_eternal_driver: \d+ checks' } | Select-Object -Last 1)
         if ($ran -ne $fx.Exit -or -not $said) { Add-Row 'FAIL' ('fixture:' + $stem) ('ran under the driver, exit ' + $ran + '; see the log'); continue }
-        Add-Row 'OK' ('fixture:' + $stem) (($said -replace '^l2_eternal_driver: ', '') + ', retained in R0, survives a collection (' + $fx.Debt.Count + ' required, ' + $fx.Absent.Count + ' forbidden in the text)'); continue
+        # A row that declares 0 roots proved no retention and no collection, and must not say so.
+        $what = ', retained in R0, survives a collection ('
+        if ($fx.Args[0] -eq '0') { $what = ', no eternal branch: compiled unchanged, linked to the kernel closure, ran to its one close (' }
+        Add-Row 'OK' ('fixture:' + $stem) (($said -replace '^l2_eternal_driver: ', '') + $what + $fx.Debt.Count + ' required, ' + $fx.Absent.Count + ' forbidden in the text)'); continue
     }
 
     $exe = Join-Path $bin ($stem + '.exe')

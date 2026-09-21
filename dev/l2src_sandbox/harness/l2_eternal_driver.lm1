@@ -58,6 +58,13 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 #     same A S B       field S of root A is root B itself, the same address
 #     slot A S B T     field S of root A is the very Structure that is field T of root B,
 #                      and that Structure's lexical parent is root B
+#
+# ZERO ROOTS is a legal expectation (FABLE-L2TRANS-THROW-FORMAL-20260920-05): a generated
+# program that declares no eternal branch still needs the kernel closure to link and run, and
+# this driver is the only thing in the harness that carries it.  With 0 the array must exist
+# and hold nothing; the collection and further-turn phases, which compare roots, do not run.
+# The number is the ROW's claim about the fixture, so a program that does declare branches
+# cannot pass by being handed 0: its row says its count.
 
 int: gargc 0
 @@: char gargv 0
@@ -140,6 +147,10 @@ fn: inspect (@: LmxRoot root) int
     n: arg(1)
     store: lmx_perm_store_of(arena)
     check(arena != 0 && store != 0 && lmx_perm_is_store(store) != 0 && lmx_perm_is_store(arena) = 0, "R0's arena is bound to a live permanent store")
+    if: n = 0
+        check(retained != 0 && retained\len = 0, "no eternal branch was declared: the array exists and holds nothing")
+        return: 0
+    ---
     check(n > 0 && retained != 0 && retained\len = n, "the array's capacity is the translation-known number of roots, and is not zero")
     if: retained = 0 || message = 0 || store = 0 || retained\len != n
         return: 0

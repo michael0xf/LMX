@@ -136,17 +136,42 @@ Numeric conversion preserves the destination-range contract: `u16(255) → u8` i
 <a id="analytical-tree"></a>
 ### Аналитическая часть
 
-`implements(A B Consumer)` проверяет кандидата A относительно используемых Consumer путей образца B. Consumer — известное дерево принимающего выражения. Требуются используемые именованные пути, включая вложенные, и условия потребления их листьев. Неиспользуемые поля B не становятся требованиями. Без принимающего выражения контекст проверки не определён; двухаргументная форма не задаёт эту модель.
+<a id="three-argument-implements"></a>
+#### `implements(aVar, bVar, Consumer)`
 
-Использование определяется видимыми обращениями в дереве, в том числе в альтернативных ветвях, а не трассой одного запуска. Проверка не подменяется сравнением одинаковых физических позиций. Перестановка различно названных полей при сохранении путей не меняет результат. Для повторных имён действует [выбор вхождения](#fields).
+`aVar` — предлагаемый кандидат, `bVar` — образец требуемой роли, а `Consumer` — конкретное принимающее выражение, для которого проверяется подстановка. Предикат направлен: он отвечает, можно ли предоставить `aVar` вместо `bVar` именно этому Consumer. Это не номинальная принадлежность типу, не равенство целых структур и не обещание пригодности для другого или любого будущего потребителя. Без Consumer область требований не определена, поэтому двухаргументная форма не задаёт эту модель.
 
-Направление существенно: пригодность A вместо B для одного Consumer не означает обратной пригодности или пригодности для другого Consumer. Пустое множество используемых путей означает отсутствие структурных требований этой части анализа; обязательность юнит-тестов сохраняется. Наличие имени `validate` не создаёт специального неявного обработчика.
+Аналитическая часть строит множество `uses(Consumer, bVar)` из видимых в известном дереве Consumer обращений к `bVar`: `bVar`, `bVar\foo`, `bVar\foo\bar` и так далее. В него входят обращения во всех видимых альтернативных ветвях, а не только путь одного возможного запуска. Для аналитического результата должны одновременно выполняться условия:
 
-«Тонкое» потребление останавливается на листе: передача или хранение слова не доказывает единицы измерения, диапазон или корректность внешнего ресурса. «Толстое» потребление проходит по явным путям описания или поведения. Анализ не расширяет тела всех вызываемых функций, не исполняет вычисляемые имена и не выполняет полный анализ псевдонимов и потока данных кучи. Неизвестное покрытие остаётся неизвестным; оно не называется успешной проверкой неизвестных свойств.
+```text
+implements(aVar, bVar, Consumer) ⇔
+    ∀ p ∈ uses(Consumer, bVar):
+        present(aVar, p)
+        ∧ (primitive_leaf(p) ⇒ leaf_consumption_admitted(aVar.p, Consumer, p))
+        ∧ (invoked_callable(p) ⇒
+            sig(aVar.p) = sig(bVar.p) = ExpectedSig(Consumer, p)
+          )
+
+admitted(aVar, bVar, Consumer) ⇔
+    implements(aVar, bVar, Consumer)
+    ∧ unit_tests(Consumer) ≠ ∅
+    ∧ ∀ t ∈ unit_tests(Consumer):
+        run_graph_test(t, aVar, bVar, Consumer) = PASS
+```
+
+Полная сигнатура вызываемого листа включает объявленные и динамические входы, их канонические имена, порядок и способы передачи, результат, выбрасываемые значения и целевой ABI. Адреса реализаций могут различаться; полные сигнатуры — нет. Если вызываемое значение только переносится как непрозрачное значение и здесь не вызывается, этот перенос не требует знания его будущих вызовов. Для примитивного листа простое чтение, передача, хранение или возврат являются тонким потреблением; следование по явным полям описания продолжает толстый путь и делает эти поля требованиями.
+
+Неиспользуемые поля и методы `bVar`, значения за неиспользуемыми именами, порядок различно названных полей, невыбранные повторные вхождения, неиспользуемое вложенное содержимое, владение, изменяемость, эффекты и раскладка целевого языка не сравниваются. Пустое `uses(Consumer, bVar)` означает лишь отсутствие структурных требований аналитической части. Неизвестный вычисляемый путь не считается ни доказанным, ни заведомо тонким: он отдельно отмечается как непокрытый анализом.
+
+Сам аналитический предикат не исполняет `aVar`, `bVar`, Consumer, вызываемые методы или преобразователи и не выбирает лучший кандидат среди прошедших. Положительный результат является только первым обязательным этапом. Окончательный допуск `aVar` требует вслед за ним успешного исполнения **всех** юнит-тестов, заданных этим Consumer, интерпретатором уже построенного графа; отсутствие набора тестов не считается успешной runtime-валидацией. В исполнении участвуют физические ссылки на кандидата и проверяющее выражение; исходный текст и runtime-имена не являются входом проверки. Эти тесты не заменяются совпадением путей или сигнатур, отдельным прежним `RuntimeImplements`, именем `validate` либо сохранённым свидетельством; отрицательный аналитический результат также нельзя исправить запуском тестов.
+
+Проверка не подменяется сравнением одинаковых физических позиций. Перестановка различно названных полей при сохранении путей не меняет результат. Для повторных имён действует [выбор вхождения](#fields).
+
+Сбор `uses` не расширяет тела всех вызываемых функций, не исполняет вычисляемые имена и не выполняет полный анализ псевдонимов и потока данных кучи.
 
 Диагностика должна различать действительно тонкое использование и невозможность установить используемые пути. Она может показать, какая первая одноимённая ветвь выбрана после композиции, какие описательные поля не используются и какие требования остались неустановленными. Диагностика не вводит глобальный «строгий режим» и не меняет правила выбора поля.
 
-Если принимающее выражение вызывает путь, контракт этого вызова включает объявленные и динамические входы, результат и выбрасываемые значения. Передача вызываемого значения без вызова не требует знания всех его будущих применений. На реально исполняемом вызове должны выполняться требования выбранного выражения; равная сигнатура не доказывает одинакового поведения.
+На реально исполняемом вызове должны быть предоставлены все требуемые входы выбранного выражения. Равная сигнатура делает вызов допустимым, но не доказывает одинакового поведения реализаций.
 
 <a id="graph-tests"></a>
 ### Исполнение тестов
@@ -164,17 +189,42 @@ The single candidate-admission mechanism consists of analytical tree-based `impl
 <a id="analytical-tree"></a>
 ### Analytical stage
 
-`implements(A B Consumer)` checks candidate A against the paths of reference value B used by Consumer. Consumer is the known receiving-expression tree. Used named paths, including nested paths, and their leaf-consumption requirements must be satisfied. Unused fields of B do not become requirements. Without a receiving expression, the checking context is undefined; a two-argument form does not specify this model.
+<a id="three-argument-implements"></a>
+#### `implements(aVar, bVar, Consumer)`
 
-Use is determined by visible accesses in the tree, including alternative branches, not the trace of one execution. Checking is not replaced by matching physical field positions. Reordering differently named fields while preserving paths does not change the result. Repeated names follow [occurrence selection](#fields).
+`aVar` is the proposed candidate, `bVar` is the exemplar of the required role, and `Consumer` is the concrete receiving expression for which substitution is checked. The predicate is directional: it answers whether `aVar` may be supplied in place of `bVar` to this particular Consumer. It is not nominal type membership, equality of whole Structures, or a promise of suitability for another or every future consumer. Without Consumer the requirement scope is undefined, so a two-argument form does not specify this model.
 
-Direction matters: suitability of A in place of B for one Consumer implies neither reverse suitability nor suitability for another Consumer. An empty used-path set means this part of analysis has no structural requirements; unit tests remain mandatory. A field named `validate` does not create a special implicit hook.
+The analytical stage builds `uses(Consumer, bVar)` from the accesses to `bVar` visible in the known Consumer tree: `bVar`, `bVar\foo`, `bVar\foo\bar`, and so on. It includes accesses in every visible alternative branch, not only the path of one possible execution. The analytical result requires all of the following:
 
-Thin consumption stops at a leaf: passing or storing a word does not prove units, ranges or foreign-resource validity. Thick consumption follows explicit descriptive or behavioral paths. Analysis does not expand all callees, execute computed names or perform whole-heap alias and dataflow analysis. Unknown coverage remains unknown; it is not reported as successful verification of unknown properties.
+```text
+implements(aVar, bVar, Consumer) ⇔
+    ∀ p ∈ uses(Consumer, bVar):
+        present(aVar, p)
+        ∧ (primitive_leaf(p) ⇒ leaf_consumption_admitted(aVar.p, Consumer, p))
+        ∧ (invoked_callable(p) ⇒
+            sig(aVar.p) = sig(bVar.p) = ExpectedSig(Consumer, p)
+          )
+
+admitted(aVar, bVar, Consumer) ⇔
+    implements(aVar, bVar, Consumer)
+    ∧ unit_tests(Consumer) ≠ ∅
+    ∧ ∀ t ∈ unit_tests(Consumer):
+        run_graph_test(t, aVar, bVar, Consumer) = PASS
+```
+
+The complete callable-leaf signature includes declared and dynamic inputs, their canonical names, order and passing modes, result, thrown values, and target ABI. Implementation addresses may differ; complete signatures may not. If a callable value is merely transported as opaque data and is not invoked here, that transport does not require knowledge of its future calls. At a primitive leaf, plain reading, passing, storing, or returning is thin consumption; following explicit description fields continues a thick path and makes those fields requirements.
+
+Unused fields and methods of `bVar`, values behind unused names, the order of differently named fields, unselected repeated occurrences, unused nested contents, ownership, mutability, effects, and target-language layout are not compared. Empty `uses(Consumer, bVar)` means only that the analytical stage has no structural requirements. An unknown computed path is neither certified nor classified as known-thin; it is reported separately as outside analytical coverage.
+
+The analytical predicate itself executes none of `aVar`, `bVar`, Consumer, callable methods, or converters, and it does not rank the candidates that pass. A positive result is only the first mandatory stage. Final admission of `aVar` additionally requires the graph interpreter to execute successfully **all** unit tests defined by this Consumer against the already constructed graph; absence of a test set is not successful runtime validation. Execution receives physical references to the candidate and checking expression; source text and runtime names are not validation inputs. Path or signature agreement, the former separate `RuntimeImplements`, a field named `validate`, or stored evidence cannot replace those tests; a negative analytical result cannot be repaired by running them either.
+
+Checking is not replaced by matching physical field positions. Reordering differently named fields while preserving paths does not change the result. Repeated names follow [occurrence selection](#fields).
+
+Collection of `uses` does not expand every callee, execute computed names, or perform whole-heap alias and dataflow analysis.
 
 Diagnostics should distinguish genuinely thin consumption from inability to establish used paths. They may show which first same-name branch composition selects, which descriptive fields are unused and which requirements remain unresolved. Diagnostics do not introduce a global strict mode or change field-selection rules.
 
-When a receiving expression invokes a path, that call's contract includes declared and dynamic inputs, results and thrown values. Transporting a callable without invoking it does not require knowledge of every future use. An executed call must satisfy the selected expression's requirements; equal signatures do not prove equal behavior.
+An executed call must receive every input required by the selected expression. Equal signatures make the call admissible but do not prove equal implementation behavior.
 
 <a id="graph-tests"></a>
 ### Test execution

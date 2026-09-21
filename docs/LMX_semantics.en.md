@@ -136,17 +136,42 @@ The single candidate-admission mechanism consists of analytical tree-based `impl
 <a id="analytical-tree"></a>
 ### Analytical stage
 
-`implements(A B Consumer)` checks candidate A against the paths of reference value B used by Consumer. Consumer is the known receiving-expression tree. Used named paths, including nested paths, and their leaf-consumption requirements must be satisfied. Unused fields of B do not become requirements. Without a receiving expression, the checking context is undefined; a two-argument form does not specify this model.
+<a id="three-argument-implements"></a>
+#### `implements(aVar, bVar, Consumer)`
 
-Use is determined by visible accesses in the tree, including alternative branches, not the trace of one execution. Checking is not replaced by matching physical field positions. Reordering differently named fields while preserving paths does not change the result. Repeated names follow [occurrence selection](#fields).
+`aVar` is the proposed candidate, `bVar` is the exemplar of the required role, and `Consumer` is the concrete receiving expression for which substitution is checked. The predicate is directional: it answers whether `aVar` may be supplied in place of `bVar` to this particular Consumer. It is not nominal type membership, equality of whole Structures, or a promise of suitability for another or every future consumer. Without Consumer the requirement scope is undefined, so a two-argument form does not specify this model.
 
-Direction matters: suitability of A in place of B for one Consumer implies neither reverse suitability nor suitability for another Consumer. An empty used-path set means this part of analysis has no structural requirements; unit tests remain mandatory. A field named `validate` does not create a special implicit hook.
+The analytical stage builds `uses(Consumer, bVar)` from the accesses to `bVar` visible in the known Consumer tree: `bVar`, `bVar\foo`, `bVar\foo\bar`, and so on. It includes accesses in every visible alternative branch, not only the path of one possible execution. The analytical result requires all of the following:
 
-Thin consumption stops at a leaf: passing or storing a word does not prove units, ranges or foreign-resource validity. Thick consumption follows explicit descriptive or behavioral paths. Analysis does not expand all callees, execute computed names or perform whole-heap alias and dataflow analysis. Unknown coverage remains unknown; it is not reported as successful verification of unknown properties.
+```text
+implements(aVar, bVar, Consumer) ⇔
+    ∀ p ∈ uses(Consumer, bVar):
+        present(aVar, p)
+        ∧ (primitive_leaf(p) ⇒ leaf_consumption_admitted(aVar.p, Consumer, p))
+        ∧ (invoked_callable(p) ⇒
+            sig(aVar.p) = sig(bVar.p) = ExpectedSig(Consumer, p)
+          )
+
+admitted(aVar, bVar, Consumer) ⇔
+    implements(aVar, bVar, Consumer)
+    ∧ unit_tests(Consumer) ≠ ∅
+    ∧ ∀ t ∈ unit_tests(Consumer):
+        run_graph_test(t, aVar, bVar, Consumer) = PASS
+```
+
+The complete callable-leaf signature includes declared and dynamic inputs, their canonical names, order and passing modes, result, thrown values, and target ABI. Implementation addresses may differ; complete signatures may not. If a callable value is merely transported as opaque data and is not invoked here, that transport does not require knowledge of its future calls. At a primitive leaf, plain reading, passing, storing, or returning is thin consumption; following explicit description fields continues a thick path and makes those fields requirements.
+
+Unused fields and methods of `bVar`, values behind unused names, the order of differently named fields, unselected repeated occurrences, unused nested contents, ownership, mutability, effects, and target-language layout are not compared. Empty `uses(Consumer, bVar)` means only that the analytical stage has no structural requirements. An unknown computed path is neither certified nor classified as known-thin; it is reported separately as outside analytical coverage.
+
+The analytical predicate itself executes none of `aVar`, `bVar`, Consumer, callable methods, or converters, and it does not rank the candidates that pass. A positive result is only the first mandatory stage. Final admission of `aVar` additionally requires the graph interpreter to execute successfully **all** unit tests defined by this Consumer against the already constructed graph; absence of a test set is not successful runtime validation. Execution receives physical references to the candidate and checking expression; source text and runtime names are not validation inputs. Path or signature agreement, the former separate `RuntimeImplements`, a field named `validate`, or stored evidence cannot replace those tests; a negative analytical result cannot be repaired by running them either.
+
+Checking is not replaced by matching physical field positions. Reordering differently named fields while preserving paths does not change the result. Repeated names follow [occurrence selection](#fields).
+
+Collection of `uses` does not expand every callee, execute computed names, or perform whole-heap alias and dataflow analysis.
 
 Diagnostics should distinguish genuinely thin consumption from inability to establish used paths. They may show which first same-name branch composition selects, which descriptive fields are unused and which requirements remain unresolved. Diagnostics do not introduce a global strict mode or change field-selection rules.
 
-When a receiving expression invokes a path, that call's contract includes declared and dynamic inputs, results and thrown values. Transporting a callable without invoking it does not require knowledge of every future use. An executed call must satisfy the selected expression's requirements; equal signatures do not prove equal behavior.
+An executed call must receive every input required by the selected expression. Equal signatures make the call admissible but do not prove equal implementation behavior.
 
 <a id="graph-tests"></a>
 ### Test execution

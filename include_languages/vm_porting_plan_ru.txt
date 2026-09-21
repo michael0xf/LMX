@@ -7,22 +7,21 @@ they are not permission to restore old layouts, pointer-only merge, unchanged
 copied node links, or a new arbitrary capacity limit. Non-copying adoption and
 shared METHOD/eternal terminals retain addresses under their separate contracts.
 
-Путь A, проще всего -- загнал generated-C и собрал стандартным инструментом:
-    1    MIR            L1        MIR.md + C API           L1/L2 №2 #как первый опыт
-    2    WASM linear    L1        W3C core + binary        L1/L2 №1 #в каждом браузере
-    3    RISC-V ISA     L1        unprivileged spec        L1/L2 №5
-Приоритет реализации L3 VM -- один общий стек L3/UI и четыре целевых слоя.
-Второй столбец сохраняет номер подробного раздела; пересортирована только эта шапка:
-Популярней всего, JVM в каждом устройстве = реальная польза и первый эталонный компилятор:
-    4    раздел 4    JVM classfile  L3    JVMS                 L3 №1
-Ближайшее продолжение решений JVM по managed-стеку и метаданным:
-    5    раздел 7    .NET CIL       L3    ECMA-335 III         L3 №3
-Много браузеров, связан с 2, но имеет отдельную GC-модель объектов и компилятор:
-    6    раздел 5    WASM GC        L3    W3C GC (Wasm 3.0)    L3 №2
-Последним: source-smoke дешёв, но настоящий bytecode/UI наиболее своеобразен:
-    7    раздел 6    Lua 5.4        L3    lopcodes / manual    L3 №5
-У Lua велик охват игровых движков, но регистровая VM, tagged-таблицы,
-upvalue, привязанные к версии chunks и отсутствие стандартного UI ставят её последней.
+Текущий общий продуктовый приоритет (второй столбец -- существующий подробный раздел):
+    1    раздел 1    MIR            L1    MIR.md + C API        L1/L2 №2
+    2    раздел 4    JVM classfile  L3    JVMS                  L3 №1
+    3    раздел 7    .NET CIL       L3    ECMA-335 III          L3 №3
+    4    раздел 5    WASM GC        L3    W3C GC (Wasm 3.0)     L3 №2
+    5    раздел 6    Lua 5.4        L3    lopcodes / manual     L3 №5
+    6    раздел 2    WASM linear    L1    W3C core + binary     L1/L2 №1
+    7    раздел 3    RISC-V ISA     L1    unprivileged spec     L1/L2 №5
+
+MIR остаётся первым: дёшевы и запуск C99, и native-host seam менеджера. Следом
+идут четыре L3 VM, использующие один стек L3/UI/Message: JVM задаёт первый
+компилятор, CIL повторно использует его managed-решения, затем идёт WASM GC,
+а Lua -- последняя среди L3-целей из-за наиболее своеобразного настоящего
+bytecode/UI backend. Компиляция C99 и CLI-запуск WASM linear и RISC-V дёшевы,
+но отдельные полные интеграции UI/process/PTY ставят их после общего маршрута L3.
 
 Вычеркиваем:
 Больше похож на мультиплатформенный язык чем на платформу для языков,
@@ -48,9 +47,11 @@ upvalue, привязанные к версии chunks и отсутствие �
 English text: vm_porting_plan_en.txt
 
 Это файл *порядка внедрения*, не рейтинг популярности и не порядок
-технической годности из заметок L1/L2/L3. Пункты 1-3 -- путь A:
-generated C99 в готовую утилиту, без нового принтера. Пункты 4-7 --
-принтер bytecode L3. BEAM и LLVM остаются в списке как отказы.
+технической годности из заметок L1/L2/L3. Шапка выше задаёт текущий
+общий продуктовый приоритет. Подробные разделы сохраняют историческую
+нумерацию: разделы 1-3 -- путь A (generated C99 в готовую утилиту,
+без нового принтера), разделы 4-7 -- принтеры bytecode L3. BEAM и LLVM
+остаются в списке как отказы.
 
 Generated-C из Translator-L1 -- ANSI C99 (L1_spec.txt, `-std=c99`),
 не C11.

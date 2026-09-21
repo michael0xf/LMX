@@ -208,3 +208,35 @@ powershell -NoProfile -File tools/run_vm_patha_smoke.ps1 -Fixture parser -Target
 ```
 
 All three OVERALL=OK. This is **parse-API smoke**, not a claim of full compiler/self-build support.
+
+## L1trans execute fixture (ticket GROK-BOT-VM-PATHA-L1TRANS-20260921-48)
+
+Tracked seed `lm1/build/l1trans.lm1.c` already has **`main`** (CLI
+`usage: l1trans.exe [--unit-root DIR] <source.lm1> <output>`). Include path
+`-I. -Ilm1/build` resolves tracked `lm1/build/l1src/p0.lm1.h`. No extra harness.
+No seed regeneration; amalgamated seed already embeds parser/own/p0.
+
+Bounded Path A probe (ignored `build/vm_porting/l1trans_48/` and smoke_runner):
+
+1. **Usage:** run with no args → stderr usage line, exit 1.
+2. **Tiny real translation:** tracked
+   `dev/l2src_sandbox/tests/own_array_count_define.h.lm1` → output containing
+   `#define L2_TEST_OWN_COUNT 8` (exit 0).
+
+### Observed (OAK65536, 2026-09-21)
+
+| Path | Usage | Tiny translate | Notes |
+|------|------:|---------------:|-------|
+| Host C99 (Mingw gcc oracle) | exit 1, usage | exit 0, 290 B guarded header | native, no WSL |
+| MIR `c2m … -ei` | exit 1, usage | exit 0, 290 B | args after `-ei` (no `--`) |
+| WASM wasi-sdk + wasmtime `--dir=.` | exit 1, usage | exit 0, output has `L2_TEST_OWN_COUNT 8` | Smoke copies the tiny source under `build/vm_porting/smoke_runner/l1trans_unit/` then translates without `--unit-root` (WASI refuses some relative/`--unit-root .` layouts) |
+| RISC-V cross + qemu | exit 1, usage | exit 0, 290 B | |
+
+Smoke: `-Fixture printTree|own|parser|l1trans` (default **printTree**).
+
+```
+powershell -NoProfile -File tools/run_vm_patha_smoke.ps1 -Fixture l1trans -Target all
+```
+
+This is **translator CLI smoke** (usage + one tiny header translate), not a claim of
+full self-build / pin / L2 gate support.

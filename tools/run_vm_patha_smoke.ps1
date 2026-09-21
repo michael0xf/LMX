@@ -1,8 +1,8 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 param(
     [ValidateSet('mir', 'wasm', 'riscv', 'all')]
     [string]$Target = 'all',
-    [ValidateSet('printTree', 'own', 'parser')]
+    [ValidateSet('printTree', 'own', 'parser', 'l1trans')]
     [string]$Fixture = 'printTree'
 )
 
@@ -18,6 +18,10 @@ if ($Fixture -eq 'own' -and -not (Test-Path -LiteralPath (Join-Path $RepoRoot 'i
 }
 if ($Fixture -eq 'parser' -and -not (Test-Path -LiteralPath (Join-Path $RepoRoot 'include_languages\vm\parser_harness_main.c'))) {
     Write-Error 'Missing include_languages/vm/parser_harness_main.c'
+    exit 2
+}
+if ($Fixture -eq 'l1trans' -and -not (Test-Path -LiteralPath (Join-Path $RepoRoot 'lm1\build\l1trans.lm1.c'))) {
+    Write-Error 'Missing lm1/build/l1trans.lm1.c'
     exit 2
 }
 Set-Location -LiteralPath $RepoRoot
@@ -242,19 +246,105 @@ function Run-Riscv-Parser {
     else { $code = $r.Exit; if ($code -eq 0) { $code = 1 }; Add-Result 'riscv' 'FAIL' $code 'see log' }
 }
 
+
+function Run-Mir-L1trans {
+    $c2m = Join-Path $RepoRoot 'build\vm\mir-build\c2m'
+    if (-not (Test-Path -LiteralPath $c2m)) { Add-Result 'mir' 'SKIP' 0 'missing c2m'; return }
+    if (-not (Test-Wsl)) { Add-Result 'mir' 'SKIP' 0 'WSL required'; return }
+    $nl = [char]10
+    $body = @(
+        '#!/bin/bash','set -e','cd /mnt/c/Nyasha_Planet/LMX',
+        'C2M=build/vm/mir-build/c2m','OUT=build/vm_porting/smoke_runner','mkdir -p "$OUT"',
+        'SRC=dev/l2src_sandbox/tests/own_array_count_define.h.lm1',
+        'set +e',
+        '"$C2M" -I. -Ilm1/build lm1/build/l1trans.lm1.c -ei','echo USAGE_EI=$?',
+        'rm -f "$OUT/l1trans_mir_tiny.out.c"',
+        '"$C2M" -I. -Ilm1/build lm1/build/l1trans.lm1.c -ei "$SRC" "$OUT/l1trans_mir_tiny.out.c"','echo TRANS_EI=$?',
+        'grep -q "L2_TEST_OWN_COUNT 8" "$OUT/l1trans_mir_tiny.out.c" && echo TRANS_OK=1 || echo TRANS_OK=0'
+    ) -join $nl
+    $r = Invoke-WslBash 'mir_l1trans' $body
+    if ($r.Exit -eq 0 -and $r.Output -match 'usage: l1trans' -and $r.Output -match 'TRANS_EI=0' -and $r.Output -match 'TRANS_OK=1') {
+        Add-Result 'mir' 'OK' 0 'l1trans -ei usage + tiny translate'
+    } else {
+        $code = $r.Exit; if ($code -eq 0) { $code = 1 }
+        Add-Result 'mir' 'FAIL' $code 'see log'
+    }
+}
+
+function Run-Wasm-L1trans {
+    $clang = Join-Path $RepoRoot 'build\vm\wasi-sdk-34.0-x86_64-linux\bin\clang'
+    $wt = Join-Path $RepoRoot 'build\vm\wasmtime-v48.0.2-x86_64-linux\wasmtime'
+    if (-not ((Test-Path $clang) -and (Test-Path $wt))) { Add-Result 'wasm' 'SKIP' 0 'missing wasi/wasmtime'; return }
+    if (-not (Test-Wsl)) { Add-Result 'wasm' 'SKIP' 0 'WSL required'; return }
+    $nl = [char]10
+    $body = @(
+        '#!/bin/bash','set -e','cd /mnt/c/Nyasha_Planet/LMX',
+        'CLANG=build/vm/wasi-sdk-34.0-x86_64-linux/bin/clang',
+        'WT=build/vm/wasmtime-v48.0.2-x86_64-linux/wasmtime',
+        'OUT=build/vm_porting/smoke_runner','mkdir -p "$OUT"',
+        'SRC=dev/l2src_sandbox/tests/own_array_count_define.h.lm1',
+        '"$CLANG" --target=wasm32-wasip1 -std=c99 -Wall -Wno-unused-variable -O2 -I. -Ilm1/build -o "$OUT/l1trans.wasm" lm1/build/l1trans.lm1.c',
+        'echo CC=$?','set +e',
+        '"$WT" --dir=. "$OUT/l1trans.wasm"','echo USAGE=$?',
+        'mkdir -p "$OUT/l1trans_unit"',
+        'cp -f "$SRC" "$OUT/l1trans_unit/tiny.lm1"',
+        'rm -f "$OUT/l1trans_wasm_tiny.out.c"',
+        '"$WT" --dir=. "$OUT/l1trans.wasm" "$OUT/l1trans_unit/tiny.lm1" "$OUT/l1trans_wasm_tiny.out.c"','echo TRANS=$?',
+        'grep -q "L2_TEST_OWN_COUNT 8" "$OUT/l1trans_wasm_tiny.out.c" && echo TRANS_OK=1 || echo TRANS_OK=0'
+    ) -join $nl
+    $r = Invoke-WslBash 'wasm_l1trans' $body
+    if ($r.Exit -eq 0 -and $r.Output -match 'usage: l1trans' -and $r.Output -match 'TRANS=0' -and $r.Output -match 'TRANS_OK=1') {
+        Add-Result 'wasm' 'OK' 0 'l1trans.wasm usage + tiny translate'
+    } else {
+        $code = $r.Exit; if ($code -eq 0) { $code = 1 }
+        Add-Result 'wasm' 'FAIL' $code 'see log'
+    }
+}
+
+function Run-Riscv-L1trans {
+    $gcc = Join-Path $RepoRoot 'build\vm\riscv\bin\riscv64-unknown-linux-gnu-gcc'
+    $qemu = Join-Path $RepoRoot 'build\vm\qemu-user-static-root\usr\bin\qemu-riscv64-static'
+    if (-not ((Test-Path $gcc) -and (Test-Path $qemu))) { Add-Result 'riscv' 'SKIP' 0 'missing riscv/qemu'; return }
+    if (-not (Test-Wsl)) { Add-Result 'riscv' 'SKIP' 0 'WSL required'; return }
+    $nl = [char]10
+    $body = @(
+        '#!/bin/bash','set -e','cd /mnt/c/Nyasha_Planet/LMX',
+        'GCC=build/vm/riscv/bin/riscv64-unknown-linux-gnu-gcc',
+        'QEMU=build/vm/qemu-user-static-root/usr/bin/qemu-riscv64-static',
+        'OUT=build/vm_porting/smoke_runner','mkdir -p "$OUT"',
+        'SRC=dev/l2src_sandbox/tests/own_array_count_define.h.lm1',
+        'SYSROOT=$("$GCC" -print-sysroot)',
+        '"$GCC" -std=c99 -Wall -Wno-unused-variable -O2 -I. -Ilm1/build -o "$OUT/l1trans_rv.elf" lm1/build/l1trans.lm1.c',
+        'echo CC=$?','set +e',
+        '"$QEMU" -L "$SYSROOT" "$OUT/l1trans_rv.elf"','echo USAGE=$?',
+        'rm -f "$OUT/l1trans_riscv_tiny.out.c"',
+        '"$QEMU" -L "$SYSROOT" "$OUT/l1trans_rv.elf" "$SRC" "$OUT/l1trans_riscv_tiny.out.c"','echo TRANS=$?',
+        'grep -q "L2_TEST_OWN_COUNT 8" "$OUT/l1trans_riscv_tiny.out.c" && echo TRANS_OK=1 || echo TRANS_OK=0'
+    ) -join $nl
+    $r = Invoke-WslBash 'riscv_l1trans' $body
+    if ($r.Exit -eq 0 -and $r.Output -match 'usage: l1trans' -and $r.Output -match 'TRANS=0' -and $r.Output -match 'TRANS_OK=1') {
+        Add-Result 'riscv' 'OK' 0 'l1trans_rv.elf + qemu usage + tiny translate'
+    } else {
+        $code = $r.Exit; if ($code -eq 0) { $code = 1 }
+        Add-Result 'riscv' 'FAIL' $code 'see log'
+    }
+}
 function Run-Mir {
     if ($Fixture -eq 'own') { Run-Mir-Own }
     elseif ($Fixture -eq 'parser') { Run-Mir-Parser }
+    elseif ($Fixture -eq 'l1trans') { Run-Mir-L1trans }
     else { Run-Mir-PrintTree }
 }
 function Run-Wasm {
     if ($Fixture -eq 'own') { Run-Wasm-Own }
     elseif ($Fixture -eq 'parser') { Run-Wasm-Parser }
+    elseif ($Fixture -eq 'l1trans') { Run-Wasm-L1trans }
     else { Run-Wasm-PrintTree }
 }
 function Run-Riscv {
     if ($Fixture -eq 'own') { Run-Riscv-Own }
     elseif ($Fixture -eq 'parser') { Run-Riscv-Parser }
+    elseif ($Fixture -eq 'l1trans') { Run-Riscv-L1trans }
     else { Run-Riscv-PrintTree }
 }
 

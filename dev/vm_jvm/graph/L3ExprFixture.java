@@ -1,7 +1,7 @@
 package graph;
 
 /**
- * Expression/call/IF/ARG fixtures. Callee links are physical {@link L3Node} references.
+ * Expression/call/IF/ARG/recursion fixtures. Callee links are physical {@link L3Node} references.
  */
 public final class L3ExprFixture {
     private L3ExprFixture() {}
@@ -604,6 +604,168 @@ public final class L3ExprFixture {
     /** CALLABLE body is SEQUENCE (not RETURN) — RETURN outside callable wrapper. */
     public static L3Node returnOutsideCallableBody() {
         return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.SEQUENCE, L3Node.ofInt(L3Role.INT_LITERAL, 1)));
+    }
+
+
+    // ---- Recursive / mutual CALL (Path B slice RECURSIVE-CALL / 88) ----
+
+    /**
+     * Self-recursive countdown: {@code f(n) = n==0 ? 0 : 1+f(n-1)} → returns n.
+     * Built with {@link L3Node#unsealedCallable()} + seal for physical self-CALL.
+     */
+    public static L3Node recursiveCountdown() {
+        L3Node self = L3Node.unsealedCallable();
+        L3Node n = L3Node.ofInt(L3Role.ARG, 1);
+        L3Node dec = L3Node.of(L3Role.ADD, n, L3Node.ofInt(L3Role.INT_LITERAL, -1));
+        L3Node rec = L3Node.of(
+                L3Role.CALL, self, L3Node.ofInt(L3Role.ARG, 0), dec);
+        L3Node onePlus = L3Node.of(L3Role.ADD, L3Node.ofInt(L3Role.INT_LITERAL, 1), rec);
+        L3Node iff = L3Node.of(
+                L3Role.IF, L3Node.ofInt(L3Role.ARG, 1), onePlus, L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        self.seal(L3Node.of(L3Role.RETURN, iff));
+        // Entry arity-1 wrapper: CALL(self, subject, subject[0]) — field0 is the count
+        L3Node subject = L3Node.of(L3Role.SUBJECT_REF);
+        L3Node field0 = new L3Node(L3Role.FIELD_FOLLOW, 0, subject);
+        L3Node call = L3Node.of(L3Role.CALL, self, L3Node.of(L3Role.SUBJECT_REF), field0);
+        return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, call));
+    }
+
+    /**
+     * Self-recursive base returns literal depth seed via nested RETURN:
+     * {@code f(n) = n==0 ? RETURN(7) : f(n-1)} → 7. Nested RETURN at base.
+     */
+    public static L3Node recursiveNestedReturnAtBase() {
+        L3Node self = L3Node.unsealedCallable();
+        L3Node n = L3Node.ofInt(L3Role.ARG, 1);
+        L3Node dec = L3Node.of(L3Role.ADD, n, L3Node.ofInt(L3Role.INT_LITERAL, -1));
+        L3Node rec = L3Node.of(
+                L3Role.CALL, self, L3Node.ofInt(L3Role.ARG, 0), dec);
+        L3Node base = L3Node.of(L3Role.RETURN, L3Node.ofInt(L3Role.INT_LITERAL, 7));
+        // SEQUENCE so nested RETURN is not the sole root wrapper expression alone —
+        // IF then-arm is recursive CALL; else-arm is nested RETURN(7)
+        L3Node iff = L3Node.of(L3Role.IF, L3Node.ofInt(L3Role.ARG, 1), rec, base);
+        self.seal(L3Node.of(L3Role.RETURN, iff));
+        L3Node field0 = new L3Node(L3Role.FIELD_FOLLOW, 0, L3Node.of(L3Role.SUBJECT_REF));
+        L3Node call = L3Node.of(L3Role.CALL, self, L3Node.of(L3Role.SUBJECT_REF), field0);
+        return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, call));
+    }
+
+    /**
+     * Mutual even/odd: even(n)= n==0?1:odd(n-1); odd(n)= n==0?0:even(n-1).
+     * Entry calls even(subject[0]).
+     */
+    public static L3Node mutualEvenOdd() {
+        L3Node even = L3Node.unsealedCallable();
+        L3Node odd = L3Node.unsealedCallable();
+        L3Node evenDec = L3Node.of(
+                L3Role.ADD, L3Node.ofInt(L3Role.ARG, 1), L3Node.ofInt(L3Role.INT_LITERAL, -1));
+        L3Node oddDec = L3Node.of(
+                L3Role.ADD, L3Node.ofInt(L3Role.ARG, 1), L3Node.ofInt(L3Role.INT_LITERAL, -1));
+        L3Node callOdd = L3Node.of(
+                L3Role.CALL, odd, L3Node.ofInt(L3Role.ARG, 0), evenDec);
+        L3Node callEven = L3Node.of(
+                L3Role.CALL, even, L3Node.ofInt(L3Role.ARG, 0), oddDec);
+        L3Node evenBody = L3Node.of(
+                L3Role.IF,
+                L3Node.ofInt(L3Role.ARG, 1),
+                callOdd,
+                L3Node.ofInt(L3Role.INT_LITERAL, 1));
+        L3Node oddBody = L3Node.of(
+                L3Role.IF,
+                L3Node.ofInt(L3Role.ARG, 1),
+                callEven,
+                L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        even.seal(L3Node.of(L3Role.RETURN, evenBody));
+        odd.seal(L3Node.of(L3Role.RETURN, oddBody));
+        L3Node field0 = new L3Node(L3Role.FIELD_FOLLOW, 0, L3Node.of(L3Role.SUBJECT_REF));
+        L3Node call = L3Node.of(L3Role.CALL, even, L3Node.of(L3Role.SUBJECT_REF), field0);
+        return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, call));
+    }
+
+    /**
+     * Recursive fresh-local isolation:
+     * {@code f(n) = SEQUENCE(LOCAL_SET(0, ARG(1)), n==0 ? LOCAL_GET(0) : f(n-1))}
+     * Each activation writes its own n into slot 0; deepest returns 0; caller slots untouched.
+     * Entry: SEQUENCE(LOCAL_SET(0, 99), CALL(f, subject, 3), LOCAL_GET(0)) → 99.
+     */
+    public static L3Node recursiveFreshLocalIsolation() {
+        L3Node self = L3Node.unsealedCallable();
+        L3Node setN = new L3Node(L3Role.LOCAL_SET, 0, L3Node.ofInt(L3Role.ARG, 1));
+        L3Node dec = L3Node.of(
+                L3Role.ADD, L3Node.ofInt(L3Role.ARG, 1), L3Node.ofInt(L3Role.INT_LITERAL, -1));
+        L3Node rec = L3Node.of(
+                L3Role.CALL, self, L3Node.ofInt(L3Role.ARG, 0), dec);
+        L3Node base = L3Node.ofInt(L3Role.LOCAL_GET, 0);
+        L3Node iff = L3Node.of(L3Role.IF, L3Node.ofInt(L3Role.ARG, 1), rec, base);
+        L3Node body = L3Node.of(L3Role.SEQUENCE, setN, iff);
+        self.seal(L3Node.of(L3Role.RETURN, body));
+        L3Node callerSet = new L3Node(L3Role.LOCAL_SET, 0, L3Node.ofInt(L3Role.INT_LITERAL, 99));
+        L3Node call = L3Node.of(
+                L3Role.CALL,
+                self,
+                L3Node.of(L3Role.SUBJECT_REF),
+                L3Node.ofInt(L3Role.INT_LITERAL, 3));
+        L3Node get = L3Node.ofInt(L3Role.LOCAL_GET, 0);
+        return L3Node.of(
+                L3Role.CALLABLE,
+                L3Node.of(L3Role.RETURN, L3Node.of(L3Role.SEQUENCE, callerSet, call, get)));
+    }
+
+    /**
+     * Self-recursive entry with an unreachable sealed orphan CALLABLE (not linked).
+     */
+    public static CallGraphWithOrphan recursiveWithUnreachableOrphan() {
+        L3Node entry = recursiveCountdown();
+        L3Node orphan = L3Node.unsealedCallable();
+        orphan.seal(L3Node.of(L3Role.RETURN, L3Node.ofInt(L3Role.INT_LITERAL, 1)));
+        return new CallGraphWithOrphan(entry, orphan);
+    }
+
+    /** Entry is unsealed CALLABLE — must reject before emit. */
+    public static L3Node unsealedEntryCallable() {
+        return L3Node.unsealedCallable();
+    }
+
+    /** Sealed entry CALLs an unsealed callee. */
+    public static L3Node callUnsealedCallee() {
+        L3Node unsealed = L3Node.unsealedCallable();
+        L3Node call = L3Node.of(L3Role.CALL, unsealed, L3Node.of(L3Role.SUBJECT_REF));
+        return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, call));
+    }
+
+    /** Self-recursive CALL with arity mismatch (self arity 2, call passes only subject). */
+    public static L3Node recursiveArityMismatch() {
+        L3Node self = L3Node.unsealedCallable();
+        L3Node body = L3Node.of(
+                L3Role.IF,
+                L3Node.ofInt(L3Role.ARG, 1),
+                L3Node.of(L3Role.CALL, self, L3Node.ofInt(L3Role.ARG, 0)),
+                L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        self.seal(L3Node.of(L3Role.RETURN, body));
+        L3Node call = L3Node.of(
+                L3Role.CALL,
+                self,
+                L3Node.of(L3Role.SUBJECT_REF),
+                L3Node.ofInt(L3Role.INT_LITERAL, 1));
+        return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, call));
+    }
+
+    /**
+     * Malformed structural cycle: CALLABLE sealed with RETURN whose value child is the
+     * CALLABLE itself (owned-tree cycle, not a CALL reference edge). Walk terminates via
+     * IdentityHashMap, but validation rejects non-int / wrong role as value.
+     */
+    public static L3Node malformedOwnedCallableCycle() {
+        L3Node self = L3Node.unsealedCallable();
+        self.seal(L3Node.of(L3Role.RETURN, self));
+        return self;
+    }
+
+    /** Double-seal helper for negative smoke (returns the shell after first seal). */
+    public static L3Node sealedShellForDoubleSeal() {
+        L3Node self = L3Node.unsealedCallable();
+        self.seal(L3Node.of(L3Role.RETURN, L3Node.ofInt(L3Role.INT_LITERAL, 0)));
+        return self;
     }
 
     public static final class CallGraphWithOrphan {

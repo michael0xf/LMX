@@ -19,9 +19,9 @@ public final class L3Role {
     public static final L3Role RETURN = new L3Role();
     /**
      * Call another callable. Child[0] is a physical {@link L3Node} reference to a
-     * {@link #CALLABLE}. Remaining children are positional argument expressions:
-     * args[0] is the subject (occurrence-producing), args[1..] are ints.
-     * Recursion deferred.
+     * {@link #CALLABLE} (object identity; may be self or mutual). Remaining children
+     * are positional argument expressions: args[0] is the subject (occurrence-producing),
+     * args[1..] are ints. Fresh args/locals per activation; subject identity preserved.
      */
     public static final L3Role CALL = new L3Role();
     /**
@@ -57,7 +57,7 @@ public final class L3Role {
     /**
      * Pre-test loop: children are condition, body. Condition is an int (zero=false).
      * Statement only — valid solely as a non-final SEQUENCE child; no int result.
-     * Ordinary JVM back-edge; no fuel cap. UNTIL/FOR/recursion deferred.
+     * Ordinary JVM back-edge; no fuel cap. UNTIL/FOR deferred.
      */
     public static final L3Role WHILE = new L3Role();
     /**

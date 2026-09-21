@@ -66,6 +66,13 @@ public final class ExprSmokeDriver {
         testBreakInCalleeDoesNotCrossCall();
         testReturnRejected();
 
+        testRecursiveCountdown();
+        testMutualEvenOdd();
+        testRecursiveFreshLocalIsolation();
+        testRecursiveNestedReturnAtBase();
+        testRecursiveUnreachableNotEmitted();
+        testRecursiveRejected();
+
         if (fails != 0) {
             System.out.println("FAIL ExprSmokeDriver checks=" + checks + " failures=" + fails);
             System.exit(1);
@@ -503,6 +510,123 @@ public final class ExprSmokeDriver {
         try { L3ClassfilePrinter.emitCallable(L3ExprFixture.returnOutsideCallableBody()); }
         catch (IllegalArgumentException e) { outside = true; }
         check("RETURN outside callable body rejected", outside);
+    }
+
+
+    private static void testRecursiveCountdown() throws Exception {
+        Class<?> cls = loadPrinted(L3ExprFixture.recursiveCountdown());
+        Method eval = cls.getMethod("eval", LmxOccurrence.class);
+        Object r0 = eval.invoke(null, LmxOccurrence.independent(Integer.valueOf(0)));
+        check("recursive countdown base 0 -> 0", Integer.valueOf(0).equals(r0));
+        Object r5 = eval.invoke(null, LmxOccurrence.independent(Integer.valueOf(5)));
+        check("recursive countdown 5 -> 5", Integer.valueOf(5).equals(r5));
+        Integer cell = Integer.valueOf(4);
+        LmxOccurrence subject = LmxOccurrence.independent(cell);
+        Object r4 = eval.invoke(null, subject);
+        check("recursive countdown 4 -> 4", Integer.valueOf(4).equals(r4));
+        check("recursive countdown subject identity", subject.child(0) == cell);
+        check("recursive countdown emits c0 c1", hasMethods(cls, "c0", "c1", "eval"));
+    }
+
+    private static void testMutualEvenOdd() throws Exception {
+        Class<?> cls = loadPrinted(L3ExprFixture.mutualEvenOdd());
+        Method eval = cls.getMethod("eval", LmxOccurrence.class);
+        Object e0 = eval.invoke(null, LmxOccurrence.independent(Integer.valueOf(0)));
+        check("mutual even(0) -> 1", Integer.valueOf(1).equals(e0));
+        Object e4 = eval.invoke(null, LmxOccurrence.independent(Integer.valueOf(4)));
+        check("mutual even(4) -> 1", Integer.valueOf(1).equals(e4));
+        Object e5 = eval.invoke(null, LmxOccurrence.independent(Integer.valueOf(5)));
+        check("mutual even(5) -> 0", Integer.valueOf(0).equals(e5));
+        check("mutual even/odd emits c0 c1 c2", hasMethods(cls, "c0", "c1", "c2", "eval"));
+    }
+
+    private static void testRecursiveFreshLocalIsolation() throws Exception {
+        Class<?> cls = loadPrinted(L3ExprFixture.recursiveFreshLocalIsolation());
+        Method eval = cls.getMethod("eval", LmxOccurrence.class);
+        Object r = eval.invoke(null, LmxOccurrence.independent(Integer.valueOf(0)));
+        check("recursive fresh locals leave caller slot 99", Integer.valueOf(99).equals(r));
+    }
+
+    private static void testRecursiveNestedReturnAtBase() throws Exception {
+        Class<?> cls = loadPrinted(L3ExprFixture.recursiveNestedReturnAtBase());
+        Method eval = cls.getMethod("eval", LmxOccurrence.class);
+        Object r = eval.invoke(null, LmxOccurrence.independent(Integer.valueOf(3)));
+        check("recursive nested RETURN at base -> 7", Integer.valueOf(7).equals(r));
+        Object r0 = eval.invoke(null, LmxOccurrence.independent(Integer.valueOf(0)));
+        check("recursive nested RETURN base-zero -> 7", Integer.valueOf(7).equals(r0));
+    }
+
+    private static void testRecursiveUnreachableNotEmitted() throws Exception {
+        L3ExprFixture.CallGraphWithOrphan g = L3ExprFixture.recursiveWithUnreachableOrphan();
+        List<String> planned = L3ClassfilePrinter.plannedMethodNames(g.entry);
+        // entry + self-recursive callee = c0,c1 (+eval)
+        check("recursive planned size 3 (no orphan)", planned.size() == 3);
+        Class<?> cls = loadPrinted(g.entry);
+        Set<String> names = new HashSet<String>();
+        for (Method m : cls.getDeclaredMethods()) {
+            names.add(m.getName());
+        }
+        check(
+                "recursive runtime methods c0 c1 eval only",
+                names.equals(new HashSet<String>(Arrays.asList("c0", "c1", "eval"))));
+        check("recursive orphan sealed but unreachable", g.orphan.isSealed() && g.orphan != g.entry);
+    }
+
+    private static void testRecursiveRejected() {
+        boolean unsealedEntry = false;
+        try {
+            L3ClassfilePrinter.emitCallable(L3ExprFixture.unsealedEntryCallable());
+        } catch (IllegalStateException e) {
+            unsealedEntry = true;
+        } catch (IllegalArgumentException e) {
+            unsealedEntry = true;
+        }
+        check("unsealed entry CALLABLE rejected", unsealedEntry);
+
+        boolean unsealedCallee = false;
+        try {
+            L3ClassfilePrinter.emitCallable(L3ExprFixture.callUnsealedCallee());
+        } catch (IllegalStateException e) {
+            unsealedCallee = true;
+        } catch (IllegalArgumentException e) {
+            unsealedCallee = true;
+        }
+        check("unsealed CALL callee rejected", unsealedCallee);
+
+        boolean arity = false;
+        try {
+            L3ClassfilePrinter.emitCallable(L3ExprFixture.recursiveArityMismatch());
+        } catch (IllegalArgumentException e) {
+            arity = true;
+        }
+        check("recursive CALL arity mismatch rejected", arity);
+
+        boolean owned = false;
+        try {
+            L3ClassfilePrinter.emitCallable(L3ExprFixture.malformedOwnedCallableCycle());
+        } catch (IllegalArgumentException e) {
+            owned = true;
+        } catch (IllegalStateException e) {
+            owned = true;
+        }
+        check("malformed owned CALLABLE cycle rejected", owned);
+
+        boolean nonCallable = false;
+        try {
+            L3ClassfilePrinter.emitCallable(L3ExprFixture.callBadCallee());
+        } catch (IllegalArgumentException e) {
+            nonCallable = true;
+        }
+        check("recursive suite non-callable target rejected", nonCallable);
+
+        boolean doubleSeal = false;
+        try {
+            L3Node shell = L3ExprFixture.sealedShellForDoubleSeal();
+            shell.seal(L3Node.of(graph.L3Role.RETURN, L3Node.ofInt(graph.L3Role.INT_LITERAL, 1)));
+        } catch (IllegalStateException e) {
+            doubleSeal = true;
+        }
+        check("double-seal rejected", doubleSeal);
     }
 
     private static boolean hasMethods(Class<?> cls, String... want) {

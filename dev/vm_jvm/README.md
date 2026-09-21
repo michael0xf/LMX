@@ -41,7 +41,7 @@ Expect: see `steps/vm-jvm-l3-smoke.md` for current check counts.
 - No language-level name/text lookup for callees or method ids.
 - Unsupported arity / non-CALLABLE callee / unsupported roles reject **before** class bytes.
 - Unreachable CALLABLE (orphan not linked from entry) is **not** emitted.
-- Recursion: deferred (self-CALL rejected with clear error).
+- Recursion: self/mutual CALL via physical CALLABLE identity (seal-once shells).
 
 Fixture: entry `return CALL(leaf, subject) + 5` where leaf is `return subject[0]`.
 
@@ -52,7 +52,7 @@ Fixture: entry `return CALL(leaf, subject) + 5` where leaf is `return subject[0]
 - Nested physical `CALL` allowed in either branch; reachability walk visits IF children.
 - Malformed arity and non-int conditions (`SUBJECT_REF` alone, `UNSUPPORTED`) rejected before class bytes.
 - Untaken branch is not evaluated (smoke: CHECKCAST-failing field follow in untaken arm).
-- WHILE deferred. Recursion still deferred.
+- WHILE deferred (later landed). Recursion: see RECURSIVE-CALL below.
 
 ## ARG / CALL args (Path B slice 57B)
 
@@ -60,23 +60,23 @@ Fixture: entry `return CALL(leaf, subject) + 5` where leaf is `return subject[0]
 - Callable arity = `max(1, max ARG index + 1)` from that callable's body only (CALL callees excluded from the scan).
 - JVM descriptor fixed per callable: `(LmxOccurrence;I*)I`. CALL sites must pass exactly that many args; args evaluated once left-to-right.
 - `L3Role.PROBE` (smoke): `ArgEvalCounter.tick()` for exactly-once evaluation order.
-- No varargs, no WHILE, no recursion. IF and reachable-only emission preserved.
+- No varargs. IF and reachable-only emission preserved. Recursion: see below.
 ## Locals / SEQUENCE (Path B slice 58B)
 
 - SEQUENCE: evaluate children left-to-right; yield the last int.
 - LOCAL_SET / LOCAL_GET: compile-time slot index; JVM local = arity + slot (after subject/args). Per CALL activation; no TLS/shared array/name table.
 - Slot count from LOCAL_SET indices only. Definite assignment rejects uninitialized LOCAL_GET. Negative / out-of-range / malformed arity rejected before class bytes.
-- WHILE, recursion, and reference locals still deferred. Int-only boundary kept.
+- Reference locals still deferred. Int-only boundary kept. Recursion: see below.
 ## WHILE (Path B slice 59B)
 
 - Pre-test WHILE: children condition, body. Int condition (zero=false); ordinary JVM back-edge; no fuel cap.
 - Statement only: valid solely as a **non-final** SEQUENCE child (no invented int result). Rejected in value/final-expression context before class bytes.
-- UNTIL / FOR / recursion still deferred. BREAK/CONTINUE: see below.
+- UNTIL / FOR still deferred. BREAK/CONTINUE: see below. Recursion: see below.
 ## BREAK / CONTINUE (Path B slice 60B)
 
 - Statement-only BREAK / CONTINUE for the **nearest** active WHILE via an explicit compile-time loop-label stack (no named labels).
 - BREAK → loop exit; CONTINUE → condition recheck. Rejected outside a loop or in value/final-expression context before class bytes.
-- Stmt-position IF may carry BREAK/CONTINUE in a branch. REDO/RETRY/cleanup/finally/UNTIL/FOR/recursion deferred.
+- Stmt-position IF may carry BREAK/CONTINUE in a branch. REDO/RETRY/cleanup/finally/UNTIL/FOR deferred.
 
 ## Nested RETURN (Path B slice NESTED-RETURN / 87)
 
@@ -87,3 +87,13 @@ Fixture: entry `return CALL(leaf, subject) + 5` where leaf is `return subject[0]
 - CALLABLE body remains a single root RETURN wrapper; nested RETURNs appear inside its expression tree.
 - Malformed arity / non-int value / CALLABLE body without RETURN rejected before class bytes.
 - No graph/callable copy; physical `L3Role` identity only; no hidden global return slot.
+
+## Recursive / mutual CALL (Path B slice RECURSIVE-CALL / 88)
+
+- Self and mutually recursive `CALL` through **physical** `L3Node` CALLABLE identity only (no numeric/runtime names).
+- Seal-once construction: `L3Node.unsealedCallable()` + `seal(RETURN body)` exactly once; double-seal / use-unsealed → rejected before emission.
+- Printer walk: IdentityHashMap of CALLABLEs; if already mapped, return immediately (reference edge ≠ owned-tree) so cycles terminate.
+- Self-CALL emits the same `INVOKESTATIC` to the mapped method index as any other CALL; fresh args/locals per JVM activation; subject identity preserved.
+- Nested RETURN (slice 87) still exits the nearest activation only; CALLABLE still requires a single root RETURN wrapper.
+- Unreachable CALLABLE not emitted. Malformed owned CALLABLE-as-value cycle / arity mismatch / non-CALLABLE target rejected before class loading.
+- No arbitrary depth cap (JVM stack); no hidden global current-callable state.

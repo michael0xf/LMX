@@ -17,8 +17,10 @@ import org.objectweb.asm.Opcodes;
  * Emits one JVM method per reachable {@link L3Role#CALLABLE}.
  * Method names {@code c0}..{@code cN}; descriptors from arity; activation-local
  * int slots after subject/args. Pre-test WHILE; BREAK/CONTINUE via loop-label stack;
- * nested RETURN exits the current CALLABLE (IRETURN). Recursion deferred.
+ * nested RETURN exits the current CALLABLE (IRETURN). Self/mutual recursive CALL
+ * via physical CALLABLE identity (INVOKESTATIC to mapped method).
  */
+
 public final class L3ClassfilePrinter implements Opcodes {
     public static final String GEN_INTERNAL = "lmx/gen/PrintedL3Expr";
     public static final String EVAL = "eval";
@@ -46,6 +48,7 @@ public final class L3ClassfilePrinter implements Opcodes {
         if (entry == null || entry.role != L3Role.CALLABLE) {
             throw new IllegalArgumentException("expected CALLABLE root");
         }
+        requireSealed(entry);
         LOOP_DEPTH.set(Integer.valueOf(0));
         LOOP_STACK.get().clear();
         List<L3Node> order = new ArrayList<L3Node>();
@@ -127,6 +130,10 @@ public final class L3ClassfilePrinter implements Opcodes {
         if (n == null) {
             return;
         }
+        // CALLABLE is a reference identity, not an owned subtree for arity of *this* body.
+        if (n.role == L3Role.CALLABLE) {
+            return;
+        }
         if (n.role == L3Role.ARG) {
             if (n.intPayload > maxIdx[0]) {
                 maxIdx[0] = n.intPayload;
@@ -146,6 +153,9 @@ public final class L3ClassfilePrinter implements Opcodes {
 
     private static void scanSlots(L3Node n, int[] maxIdx) {
         if (n == null) {
+            return;
+        }
+        if (n.role == L3Role.CALLABLE) {
             return;
         }
         if (n.role == L3Role.LOCAL_SET) {
@@ -177,17 +187,25 @@ public final class L3ClassfilePrinter implements Opcodes {
             return;
         }
         if (n.role == L3Role.CALLABLE) {
-            if (!map.containsKey(n)) {
-                map.put(n, Integer.valueOf(order.size()));
-                order.add(n);
+            // Reference edge to an already-mapped CALLABLE is not an owned-tree edge:
+            // do not walk children again (terminates self/mutual cycles).
+            if (map.containsKey(n)) {
+                return;
             }
+            requireSealed(n);
+            map.put(n, Integer.valueOf(order.size()));
+            order.add(n);
+            for (L3Node c : n.children) {
+                walk(c, order, map);
+            }
+            return;
         }
         if (n.role == L3Role.CALL) {
             if (n.children.length < 1) {
                 throw new IllegalArgumentException("CALL needs callee child");
             }
             L3Node callee = n.children[0];
-            if (callee.role != L3Role.CALLABLE) {
+            if (callee == null || callee.role != L3Role.CALLABLE) {
                 throw new IllegalArgumentException("CALL callee must be CALLABLE node");
             }
             walk(callee, order, map);
@@ -201,12 +219,25 @@ public final class L3ClassfilePrinter implements Opcodes {
         }
     }
 
+    private static void requireSealed(L3Node callable) {
+        if (callable == null || callable.role != L3Role.CALLABLE) {
+            throw new IllegalArgumentException("expected CALLABLE");
+        }
+        if (!callable.isSealed()) {
+            throw new IllegalStateException("unsealed CALLABLE");
+        }
+        if (callable.children.length != 1 || callable.children[0] == null) {
+            throw new IllegalStateException("unsealed/unresolved CALLABLE body");
+        }
+    }
+
     private static void validateAll(
             List<L3Node> order,
             Map<L3Node, Integer> map,
             Map<L3Node, Integer> arity,
             Map<L3Node, Integer> slots) {
         for (L3Node c : order) {
+            requireSealed(c);
             if (c.children.length != 1 || c.children[0].role != L3Role.RETURN) {
                 throw new IllegalArgumentException("CALLABLE body must be a single RETURN");
             }
@@ -335,12 +366,10 @@ public final class L3ClassfilePrinter implements Opcodes {
                 throw new IllegalArgumentException("CALL arity: need callee + subject arg");
             }
             L3Node callee = expr.children[0];
-            if (callee.role != L3Role.CALLABLE) {
+            if (callee == null || callee.role != L3Role.CALLABLE) {
                 throw new IllegalArgumentException("CALL callee must be CALLABLE");
             }
-            if (callee == currentCallable) {
-                throw new IllegalArgumentException("recursion deferred");
-            }
+            requireSealed(callee);
             if (!map.containsKey(callee)) {
                 throw new IllegalArgumentException("CALL callee not reachable/mapped");
             }
@@ -384,6 +413,10 @@ public final class L3ClassfilePrinter implements Opcodes {
                     (BitSet) afterCond.clone());
             thenA.and(elseA);
             return thenA;
+        }
+        if (r == L3Role.CALLABLE) {
+            throw new IllegalArgumentException(
+                    "malformed structural cycle: CALLABLE is not an int expression");
         }
         if (r == L3Role.SUBJECT_REF) {
             throw new IllegalArgumentException(
@@ -724,6 +757,10 @@ public final class L3ClassfilePrinter implements Opcodes {
     }
 
     public static List<String> plannedMethodNames(L3Node entry) {
+        if (entry == null || entry.role != L3Role.CALLABLE) {
+            throw new IllegalArgumentException("expected CALLABLE root");
+        }
+        requireSealed(entry);
         LOOP_DEPTH.set(Integer.valueOf(0));
         LOOP_STACK.get().clear();
         List<L3Node> order = new ArrayList<L3Node>();

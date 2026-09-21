@@ -134,3 +134,21 @@ javac -cp "dev/vm_jvm/out;build/vm_jvm/asm-9.7.1.jar" -d dev/vm_jvm/out printer/
 java -cp "dev/vm_jvm/out;build/vm_jvm/asm-9.7.1.jar" printer.ExprSmokeDriver
 java -cp "dev/vm_jvm/out" smoke.HelloStructureSmoke
 ```
+
+## GROK-BOT-JVM-L3-RECURSIVE-CALL-20260921-88 (2026-09-21)
+
+Path-B self/mutual recursive CALL through physical CALLABLE identity (seal-once shells).
+
+- `L3Node.unsealedCallable()` + `seal(RETURN)` once; walk terminates on already-mapped CALLABLE; self-CALL emits INVOKESTATIC to mapped index.
+- Positive: countdown, mutual even/odd, recursive fresh-local isolation, nested RETURN at base, unreachable not emitted.
+- Negative: unsealed entry/callee, arity mismatch on recursive edge, malformed owned CALLABLE cycle, non-callable target, double-seal.
+- `ExprSmokeDriver` PASS checks=93 failures=0; `HelloStructureSmoke` PASS checks=25 failures=0.
+- Commit: named paths under `dev/vm_jvm/**` + this file only (no `.class`/`.jar`).
+
+Verify:
+```
+javac -d dev/vm_jvm/out lmx/*.java graph/*.java smoke/*.java
+javac -cp "dev/vm_jvm/out;build/vm_jvm/asm-9.7.1.jar" -d dev/vm_jvm/out printer/*.java
+java -cp "dev/vm_jvm/out;build/vm_jvm/asm-9.7.1.jar" printer.ExprSmokeDriver
+java -cp "dev/vm_jvm/out" smoke.HelloStructureSmoke
+```

@@ -27,11 +27,27 @@ predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
 # Mail primitives through l3_thread_dispatch. t2 lives in its own arena bound to the same store.
+#
+# WHAT TAKE HANDS BACK IS LOOKED AT (FABLE-L3-MAIL-PROOF-20260921-63).  A take at statement level
+# throws its result away, and a take that handed out nothing, or a fresh record instead of the
+# letter, used to pass every check here.  The walk of this slice has no reference assignment (own
+# and put are int), so the result is given to a test-local primitive, `sink_letter`, as the
+# operand of a second PRIM node: it receives the very reference take produced and remembers the
+# ADDRESS.  The test compares that address with the letter it delivered -- never a value read
+# through it, which a faithful copy would reproduce, and never a ring slot, whose address does
+# not survive the growth of the ring.
+#
+# The second test-local record carries the REAL mail-count fn with a FOREIGN owner (t2): it is
+# what reaches the owner guard of l3_prim_lane, which no record made by l3_thread_bind can.
 
 @: LmxArena gb 0
 @: Lmx groles 0
 int: broken 0
 int: native_hits 0
+@: Lmx sink_rec 0
+@: Lmx foreign_rec 0
+@: void sunk_last 0
+int: sunk_n 0
 
 sub: fail (@: int counts; int: ok; const: @(char label))
     counts[0]: counts[0] + 1
@@ -200,6 +216,54 @@ fn: mk_non_int_lane () @: Lmx
     ---
 return: m
 
+# A physical LmxPrimitiveEntry of the TEST: one operand, the reference a nested node produced.
+# It keeps the address and hands the same reference on.  An absent reference is 0 and is not a
+# failure: an empty inbox is business, not an error.
+fn: sink_letter (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    \out: 0
+    if: owner = 0 || nargs != 1U || refs = 0 || dest = 0
+        return: c.LMX_PRIMITIVE_FAIL
+    sunk_last: refs[0]
+    sunk_n: sunk_n + 1
+    \out: refs[0]
+return: c.LMX_PRIMITIVE_OK
+
+# [prim, sink, [prim, take, lane]]: the take is an OPERAND, so its result is consumed.
+fn: mk_take_show () @: Lmx
+    @: Lmx m mk_m(2U)
+    @: Lmx p 0
+    @: Lmx q 0
+    @: Lmx rec l3_thread_mail_take_prim(l3_bound_t)
+    p: fr(m, 1U, c.LMX_WALK_OP_PRIM, 3U)
+    ref(p, 1U, sink_rec)
+    q: fr(p, 2U, c.LMX_WALK_OP_PRIM, 3U)
+    ref(q, 1U, rec)
+    lit(q, 2U, c.LMX_POST_INBOX)
+return: m
+
+# mk_count over a GIVEN record: own n <- prim(rec, INBOX), own starts at -1.  The lane cell is
+# taken from `lane_arena`, and for the foreign-owner negative that has to be the FOREIGN Thread's
+# arena.  Measured: with the lane cell in the caller's arena the turn is refused even with the
+# owner guard REMOVED, because l3_prim_lane next classifies the operand through the OWNER's arena
+# and finds nothing there -- so that arrangement never reaches the guard.  With the cell in the
+# owner's arena the classification succeeds, and the guard alone stands between t's turn and a
+# read of t2's mailbox (guard removed: the turn is OK and publishes 1).
+fn: mk_count_of (@: Lmx rec; @: LmxArena lane_arena) @: Lmx
+    @: Lmx m mk_m(3U)
+    @: Lmx n 0
+    @: Lmx p 0
+    @: Lmx q 0
+    icell(m, 1U, -1)
+    n: fr(m, 2U, c.LMX_WALK_OP_SET, 3U)
+    own(n, 1U, m, 1U)
+    p: fr(n, 2U, c.LMX_WALK_OP_PRIM, 3U)
+    ref(p, 1U, rec)
+    q: fr(p, 2U, c.LMX_WALK_OP_LIT, 2U)
+    if: q = 0 || lmx_walk_store_int(lane_arena, q, 1U, c.LMX_POST_INBOX) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+return: m
+
 fn: run_graph (@: LmxThread t; @: Lmx m) int
     @: LmxMsg msg t\message
     int: st
@@ -230,6 +294,10 @@ fn: main () int
     @: Lmx count_again 0
     @: Lmx take_again 0
     @: Lmx letter 0
+    @: Lmx letter2 0
+    @: Lmx letter3 0
+    @: Lmx foreign_letter 0
+    @: Lmx test_reg 0
     @: void probe 0
     int: probe_before 0
     int: st 0
@@ -282,28 +350,44 @@ fn: main () int
     fail(counts, field(m, 1U) = 0, "empty inbox count is business zero")
     fail(counts, native_hits = 1, "count did not call native")
 
+    # THREE distinct arena-backed letters.  The ring opens at LMX_POST_INBOX_MIN_CAPACITY, so the
+    # third admission makes it grow; what must survive the growth is the LETTER's address, and
+    # that is all this test ever holds -- no ring slot is read or remembered here.
     letter: (cast: (@: Lmx) lmx_arena_take(a, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
-    if: letter = 0
+    letter2: (cast: (@: Lmx) lmx_arena_take(a, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    letter3: (cast: (@: Lmx) lmx_arena_take(a, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    if: letter = 0 || letter2 = 0 || letter3 = 0
         fputs("l3_mail_prim: letter\n", l1_stdout())
         free(counts)
         return: 2
     ---
-    fail(counts, lmx_thread_mail_accept(a, t, (cast: (@: void) letter), c.LMX_POST_INBOX) = c.LMX_POST_OK, "deliver one letter")
+    fail(counts, letter != letter2 && letter2 != letter3 && letter != letter3, "three distinct letters")
+    fail(counts, 3U > c.LMX_POST_INBOX_MIN_CAPACITY, "three letters exceed the capacity the ring opens with, so it must grow")
+    fail(counts, lmx_thread_mail_accept(a, t, (cast: (@: void) letter), c.LMX_POST_INBOX) = c.LMX_POST_OK, "deliver the first letter")
+    fail(counts, lmx_thread_mail_accept(a, t, (cast: (@: void) letter2), c.LMX_POST_INBOX) = c.LMX_POST_OK, "deliver the second letter")
+    fail(counts, lmx_thread_mail_accept(a, t, (cast: (@: void) letter3), c.LMX_POST_INBOX) = c.LMX_POST_OK, "deliver the third letter: the ring grows")
+    fail(counts, lmx_thread_mail_count(t, c.LMX_POST_INBOX) = 3U, "three letters wait in the inbox")
     m: mk_count()
     fail(counts, run_graph(t, m) = c.LMX_THREAD_OK, "count after delivery")
-    fail(counts, field(m, 1U) = 1, "count is 1 after delivery")
+    fail(counts, field(m, 1U) = 3, "count is 3 after delivery")
 
     fail(counts, lmx_thread_request_mode(t, c.LMX_THREAD_MODE_NATIVE) = c.LMX_THREAD_OK, "request native pending")
+    # The instrument first: the request IS pending, or "cancelled" below would say nothing.
+    fail(counts, lmx_thread_mode(t) = c.LMX_THREAD_MODE_INTERPRETED && lmx_thread_requested_mode(t) = c.LMX_THREAD_MODE_NATIVE, "before the failed turn: current interpreted, native REQUESTED")
     m: mk_bad_arity()
     probe: mk_int(a, 1)
     probe_before: lmx_range_classify(a, probe)
     fail(counts, run_graph(t, m) = c.LMX_THREAD_INVALID, "wrong arity is a failed turn")
     fail(counts, probe != 0 && probe_before = c.LMX_KIND_PRIMITIVE && lmx_range_classify(a, probe) = c.LMX_KIND_NONE, "wrong arity: the boundary still ran")
-    fail(counts, lmx_thread_mode(t) = c.LMX_THREAD_MODE_INTERPRETED, "failed turn cancelled the native request")
+    # Two facts, two checks.  The CURRENT mode does not move while a request is merely pending, so
+    # it cannot show a cancellation; the REQUESTED mode can, and it is what a later good boundary
+    # would otherwise commit.
+    fail(counts, lmx_thread_mode(t) = c.LMX_THREAD_MODE_INTERPRETED, "failed turn left the current mode interpreted")
+    fail(counts, lmx_thread_requested_mode(t) = c.LMX_THREAD_MODE_INTERPRETED, "failed turn cancelled the pending native request")
     fail(counts, native_hits = 1, "wrong arity did not call native")
     m: mk_count()
     fail(counts, run_graph(t, m) = c.LMX_THREAD_OK, "later interpreted turn still runs")
-    fail(counts, field(m, 1U) = 1, "count still 1 after the failed turn")
+    fail(counts, field(m, 1U) = 3, "count still 3 after the failed turn")
 
     m: mk_non_int_lane()
     probe: mk_int(a, 1)
@@ -320,11 +404,50 @@ fn: main () int
     fail(counts, probe != 0 && probe_before = c.LMX_KIND_PRIMITIVE && lmx_range_classify(a, probe) = c.LMX_KIND_NONE, "impostor: the boundary still ran")
     fail(counts, native_hits = 1, "impostor did not call native")
 
-    m: mk_take()
-    fail(counts, broken = 0 && m != 0, "take graph")
-    fail(counts, run_graph(t, m) = c.LMX_THREAD_OK, "take turn")
-    fail(counts, lmx_thread_mail_count(t, c.LMX_POST_INBOX) = 0U, "inbox empty after take")
+    # The test's own registry: the sink, and the real count fn under a FOREIGN owner.  Both
+    # records live in the store like every primitive record; neither owner does (prepare
+    # refuses a store-resident owner), and t2 is a Thread of another arena of this store.
+    fail(counts, lmx_primitive_registry_open(@ store, 2U, @ test_reg) = c.LMX_PRIMITIVE_REG_OK, "test registry")
+    fail(counts, lmx_primitive_register(@ store, test_reg, 0U, sink_letter, 0, (cast: (@: Lmx) t), @ sink_rec) = c.LMX_PRIMITIVE_REG_OK && sink_rec != 0, "sink record")
+    fail(counts, lmx_primitive_register(@ store, test_reg, 1U, l3_prim_mail_count, 0, (cast: (@: Lmx) t2), @ foreign_rec) = c.LMX_PRIMITIVE_REG_OK && foreign_rec != 0, "foreign-owner record")
+
+    # THE OWNER GUARD (l3_prim_lane).  t2 holds one letter, t holds three.  A record whose owner
+    # is not the bound Thread must not be served at all: without the guard this turn succeeds
+    # and publishes 1 -- a FOREIGN Thread's mailbox read from t's turn.
+    foreign_letter: (cast: (@: Lmx) lmx_arena_take(a2, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    fail(counts, foreign_letter != 0 && lmx_thread_mail_accept(a2, t2, (cast: (@: void) foreign_letter), c.LMX_POST_INBOX) = c.LMX_POST_OK, "one letter in the foreign Thread's inbox")
+    m: mk_count_of(foreign_rec, a2)
+    probe: mk_int(a, 1)
+    probe_before: lmx_range_classify(a, probe)
+    fail(counts, broken = 0 && m != 0 && run_graph(t, m) = c.LMX_THREAD_INVALID, "foreign-owner record is a failed turn")
+    fail(counts, probe != 0 && probe_before = c.LMX_KIND_PRIMITIVE && lmx_range_classify(a, probe) = c.LMX_KIND_NONE, "foreign owner: the boundary still ran")
+    fail(counts, field(m, 1U) = -1, "foreign owner: nothing was published, the own cell is still -1")
+    fail(counts, lmx_thread_mail_count(t2, c.LMX_POST_INBOX) = 1U && lmx_thread_mail_count(t, c.LMX_POST_INBOX) = 3U, "foreign owner: neither mailbox was touched")
+    fail(counts, native_hits = 1, "foreign owner did not call native")
+
+    # TAKE, OBSERVED.  Three turns, FIFO, and each time the address the sink received IS the
+    # letter that was delivered -- not zero, not a copy, not a fresh record.
+    m: mk_take_show()
+    fail(counts, broken = 0 && m != 0 && sunk_n = 0 && sunk_last = 0, "take graph; the sink has seen nothing yet")
+    fail(counts, run_graph(t, m) = c.LMX_THREAD_OK, "first take turn")
+    fail(counts, sunk_n = 1 && sunk_last = (cast: (@: void) letter), "first take handed out THE first letter, by address")
+    fail(counts, lmx_thread_mail_count(t, c.LMX_POST_INBOX) = 2U, "two letters left")
+    m: mk_take_show()
+    fail(counts, run_graph(t, m) = c.LMX_THREAD_OK, "second take turn")
+    fail(counts, sunk_n = 2 && sunk_last = (cast: (@: void) letter2), "second take handed out THE second letter: FIFO across the growth")
+    m: mk_take_show()
+    fail(counts, run_graph(t, m) = c.LMX_THREAD_OK, "third take turn")
+    fail(counts, sunk_n = 3 && sunk_last = (cast: (@: void) letter3), "third take handed out THE third letter")
+    fail(counts, lmx_thread_mail_count(t, c.LMX_POST_INBOX) = 0U, "inbox empty after three takes")
     fail(counts, native_hits = 1, "take did not call native")
+    # An empty inbox is business, not failure: the turn is OK and the reference is absent.
+    m: mk_take_show()
+    fail(counts, run_graph(t, m) = c.LMX_THREAD_OK, "take on an empty inbox is a good turn")
+    fail(counts, sunk_n = 4 && sunk_last = 0, "take on an empty inbox hands out no letter")
+    # The statement-level take keeps working: its result is dropped, which is legal.
+    m: mk_take()
+    fail(counts, broken = 0 && m != 0 && run_graph(t, m) = c.LMX_THREAD_OK, "statement-level take turn")
+    fail(counts, lmx_thread_mail_count(t2, c.LMX_POST_INBOX) = 1U, "the foreign inbox was never taken from")
 
     if: counts[1] != 0
         c.printf("%d failed of %d\n", counts[1], counts[0])

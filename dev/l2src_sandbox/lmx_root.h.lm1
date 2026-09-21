@@ -97,11 +97,6 @@ define: LMX_ROOT_OPEN 1
 # arena": a successful one is reclaimed at the next maintenance point instead, and a zero policy is
 # refused, because a policy that can never be reached is not a policy.
 define: LMX_ROOT_ORPHAN_RETENTION 60000U
-# THE OVERALL CLOSE DEADLINE, and it is deliberately NOT any child's slot limit and not the liveness
-# limit: it bounds the WHOLE synchronous cascade from the top (author, 2026-09-21).  The value is this
-# runtime's house policy value, the same 60000 as the retention default beside it -- deliberately
-# equal, not coincidentally.
-define: LMX_ROOT_CLOSE_LIMIT 60000U
 
 define: LMX_ROOT_OK 0
 define: LMX_ROOT_INVALID 1
@@ -147,9 +142,6 @@ struct: LmxRoot
     # handoff-safe arena before the maintenance reclaims it.  Zero is refused by the setter; this
     # field starts at the default.
     ulong: retention
-    # The upper frame's OWN overall close bound -- not a child's slot limit and not the liveness
-    # limit (author, 2026-09-21): it bounds the whole synchronous cascade from the top.
-    ulong: close_limit
     # R0's two const:immutable retention arrays (model 20): the eternal branches, and the known
     # method descriptors.  Their size is known at translation time, so it is given to open and
     # never grows; the runtime's builder fills them BEFORE the first cycle, which is what makes
@@ -234,7 +226,6 @@ prototype:
     fn: lmx_root_orphan_adopt (@: LmxRoot root; @: LmxMsg orphan; @: LmxArena orphan_arena; @: LmxThread thread; ulong: now) int
     # The retention policy value, settable per runtime (19.29.8).  Zero is refused.
     fn: lmx_root_retention_set (@: LmxRoot root; ulong: limit) int
-    fn: lmx_root_close_limit_set (@: LmxRoot root; ulong: limit) int
     # THE MAINTENANCE POINT: one pass over the retained orphans, and the only reclaim site there
     # is.  A still-running orphan with an empty inbox is closed here without a turn; one with
     # pending input waits for its closing turn; a settled successful one is reclaimed AT ONCE --

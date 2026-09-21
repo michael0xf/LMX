@@ -136,7 +136,7 @@ fn: lmx_service_register (@: LmxService service; @: LmxThread target; @: LmxAren
     entry\service: service
     service\count: service\count + 1U
     # The record knows its own entry from here on.
-    target\service: (cast: (@: void) service)
+    target\entry: (cast: (@: void) entry)
 return: c.LMX_SERVICE_OK
 
 fn: lmx_service_find (@: LmxService service; @: void address) @: void
@@ -220,7 +220,7 @@ fn: lmx_service_unregister (@: LmxService service; @: LmxThread target) int
     if: lmx_service_compare(entry\address, key) != 0
         return: c.LMX_SERVICE_MISSING
     ---
-    target\service: 0
+    target\entry: 0
 return: lmx_service_close_gap(service, point)
 
 fn: lmx_service_release (@: LmxService service) int

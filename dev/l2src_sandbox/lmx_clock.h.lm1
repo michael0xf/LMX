@@ -23,29 +23,6 @@ prototype:
     fn: lmx_clock_now () ULONGLONG
     # The same reading as the 32-bit count a scheduler record keeps.
     fn: lmx_clock_ticks () ulong
-    # THE PLATFORM WORD'S READING OF THE SAME CLOCK, and the width a stored close deadline lives in.
-    # IT MUST CAST GetTickCount64 DIRECTLY.  Routing it through lmx_clock_ticks() is a silent defect
-    # on this platform: `ulong` emits as C `unsigned long`, which is 32 BITS on Windows x64 while
-    # size_t is 64, so the truncation would be zero-extended into the wider word -- and a modular
-    # deadline test running at the wider width over values that really wrap at 2^32 would answer
-    # "not yet reached" for the ~49.7 days after the wrap.  No short test can reach that wrap, so
-    # the cast is the whole defence (lmx_uds, 2026-09-21).
-    fn: lmx_clock_word () size_t
-    # HALF THE WORD RANGE: the width a modular deadline comparison is sound below, and therefore the
-    # largest close limit the setter accepts (lmx_root_close_limit_set refuses at or above it).
-    fn: lmx_clock_half () size_t
-    # HAS THE DEADLINE PASSED -- wrap-safe modular arithmetic, and the ONLY way a stored deadline is
-    # read.  `now - deadline` is modular: a small difference means now is at or past the deadline, a
-    # difference at or above half the range means it is still ahead.  This is the FIRST
-    # STORED-DEADLINE COMPARISON IN THIS KERNEL -- the seven existing timeout sites are all elapsed
-    # subtraction (lmx_orphan 224/235, lmx_root 267, lmx_schedule 50, lmx_thread 545/650,
-    # lmx_turn 111) -- and it is sound where those had to subtract because the value is a platform
-    # word AND a limit may never reach half its range, so one window cannot span a wrap.
-    fn: lmx_deadline_passed (size_t: deadline; size_t: now) int
-    # HOW LONG UNTIL THE DEADLINE, and ZERO when it has already passed: an expired deadline must arm
-    # a ZERO wait, never underflow into a word-sized eternity.  Same guard shape as lmx_clock_since,
-    # which saturates at zero rather than wrapping.
-    fn: lmx_deadline_wait (size_t: deadline; size_t: now) size_t
     # How long since a reading.  A reading from the future saturates at zero instead of
     # wrapping into a huge wait.
     fn: lmx_clock_since (ULONGLONG: start) ULONGLONG

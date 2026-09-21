@@ -156,9 +156,6 @@ fn: lmx_orphan_free (@: LmxOrphanLedger ledger; @: Lmx graph; @: LmxService serv
         lmx_arena_ref_store(graph, entry\slot, 0)
     ---
     # (3) its own arena goes WHOLE: nobody adopted it, so nothing else holds any of it.
-    if: entry\thread != 0 && entry\arena != 0
-        lmx_thread_mail_close(entry\arena, (cast: (@: LmxThread) entry\thread))
-    ---
     if: entry\arena != 0
         lmx_arena_release(entry\arena)
     ---

@@ -138,10 +138,8 @@ fn: lmx_turn_end_status (@: LmxThread t; ulong: now; int: body_status) int
     if: t\message\running = 0
         # The reading is this boundary's own (`reading` above) and is handed to the act unchanged:
         # it starts the close request's window and may end it, per child, with the close itself
-        # (lmx_thread.h.lm1, lmx_stop_children).  The CLOSURE DEADLINE is NOT published from here: a
-        # stop at a turn boundary is a supervision ask, not a closure, and leaving the word zero is
-        # what lets a closure that begins later publish the one deadline the whole tree will share.
-        lmx_stop_children(t, reading, 0U)
+        # (lmx_thread.h.lm1, lmx_stop_children).
+        lmx_stop_children(t, reading)
     ---
     # The boundary's second and third acts (19.29.4.1): the turn's temporary roots are gone --
     # a target taken from a queue and a reservation are both resolved above, one way or the

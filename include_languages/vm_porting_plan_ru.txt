@@ -7,18 +7,22 @@ they are not permission to restore old layouts, pointer-only merge, unchanged
 copied node links, or a new arbitrary capacity limit. Non-copying adoption and
 shared METHOD/eternal terminals retain addresses under their separate contracts.
 
-Проще всего -- загнал generated-C и собрал стандартным инструментом:
+Путь A, проще всего -- загнал generated-C и собрал стандартным инструментом:
     1    MIR            L1        MIR.md + C API           L1/L2 №2 #как первый опыт
     2    WASM linear    L1        W3C core + binary        L1/L2 №1 #в каждом браузере
     3    RISC-V ISA     L1        unprivileged spec        L1/L2 №5
-Популярней всего, JVM в каждом устройстве = реальная польза, но надо написать компилятор:
-    4    JVM classfile  L3        JVMS                     L3 №1
-Много браузеров, связан с 2 но тоже надо писать компилятор:
-    5    WASM GC        L3        W3C GC (Wasm 3.0)        L3 №2
-Игровая индустрия громадная:
-    6    .NET CIL       L3        ECMA-335 III             L3 №3
-    7    Lua 5.4        L3        lopcodes / manual        L3 №5
-Много VM, но там где уже заведомо есть EXE и JVM, Lua по охвату больше Unity.
+Приоритет реализации L3 VM -- один общий стек L3/UI и четыре целевых слоя.
+Второй столбец сохраняет номер подробного раздела; пересортирована только эта шапка:
+Популярней всего, JVM в каждом устройстве = реальная польза и первый эталонный компилятор:
+    4    раздел 4    JVM classfile  L3    JVMS                 L3 №1
+Ближайшее продолжение решений JVM по managed-стеку и метаданным:
+    5    раздел 7    .NET CIL       L3    ECMA-335 III         L3 №3
+Много браузеров, связан с 2, но имеет отдельную GC-модель объектов и компилятор:
+    6    раздел 5    WASM GC        L3    W3C GC (Wasm 3.0)    L3 №2
+Последним: source-smoke дешёв, но настоящий bytecode/UI наиболее своеобразен:
+    7    раздел 6    Lua 5.4        L3    lopcodes / manual    L3 №5
+У Lua велик охват игровых движков, но регистровая VM, tagged-таблицы,
+upvalue, привязанные к версии chunks и отсутствие стандартного UI ставят её последней.
 
 Вычеркиваем:
 Больше похож на мультиплатформенный язык чем на платформу для языков,

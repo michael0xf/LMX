@@ -214,7 +214,7 @@ State the constraint explicitly and include it in tests. Presence of `x\width` d
 <a id="admission-case-5"></a>
 ### 5. Making a change visible to other reference holders
 
-To make a change visible to other holders, write through an explicit path: `p\x: value` or `a[i]: value` changes the selected referent. Bare `x: value` changes the current activation's working value: an own field remains `dirty` until a checkpoint, while an ordinary formal, result or dynamic copy remains local. The input-to-own-field binding exception and its activation point are defined under [working state](#dynamic). Neither write implicitly appends a same-name occurrence.
+To make a change visible to other holders, write through an explicit path: `p\x: value` or `a[i]: value` changes the selected referent. Bare `x: value` changes the current activation's working value: an ordinary own field remains `dirty` until a successful checkpoint, while an ordinary formal, result or dynamic copy remains local. The narrow exception for taking an input's address before same-name own binding, and its activation point, are defined under [working state](#dynamic). Neither write implicitly appends a same-name occurrence.
 
 <a id="admission-case-6"></a>
 ### 6. Independence from another holder's mutation
@@ -349,7 +349,17 @@ Lexical lookup uses real Structure links, stops at a zero parent and selects the
 
 An own field's working value is loaded for the activation. Assigning that name changes the working value and marks it dirty. Assigning a formal or dynamic input changes only its local copy, without automatic copy-back to the caller. An explicit reference write changes the selected object directly and is observable through other references to it.
 
-Same-name binding is the exception: an executed own-field declaration or assignment-as-declaration can bind an input to the current body's field. From that line the same working value becomes that field's own cache; no previous graph value is loaded over the input. Earlier input changes are not published. A preallocated slot neither activates the binding before its statement executes nor changes the field count. Publication targets the body's own field, never the caller's argument source.
+Same-name binding is the exception: an executed own-field declaration or assignment-as-declaration can bind an explicit formal or dynamic input to the current body's field. From that line the same activation-local value becomes that field's own cache; no previous graph value is loaded over the input. Earlier input changes are not published. A preallocated slot neither activates the binding before its statement executes nor changes the field count. Publication targets the body's own field, never the caller's argument source.
+
+One narrow address rule applies to such a binding. If `@x` was evaluated **before** the first executed `x: ...` statement that creates the binding, then from execution of that statement the bound own field's dirty mark is sticky until the current activation ends. Every subsequent checkpoint publishes the current local `x`, but successful publication does not clear this mark. The rule is independent of `x`'s type: it applies to every type for which the assignment-as-declaration itself is valid.
+
+| Order in the current activation | Result |
+| --- | --- |
+| `@x`, then the first binding `x: ...` executes | From binding onward, `dirty` is sticky until activation end |
+| `@x`, but no binding `x: ...` executes | `x` remains an ordinary local input; there is no graph dirty state |
+| A binding `x: ...` executes first, then `@x` is evaluated | Address-taking does not make the already-bound mark sticky; an ordinary `dirty` mark is cleared by a checkpoint |
+
+This rule does not apply to ordinary locals, ordinary graph-backed own fields, explicit paths such as `node\x`, or array elements. The input address remains the ordinary address of its local cell and never changes the caller's source binding. Retaining that address past activation end is invalid independently of dirty state.
 
 Every body that a receiving expression executes statement by statement is a graph Structure hosting its directly declared fields. Bodies of `if`, `else`, loops and other receivers form a containment hierarchy, not a flat method-field list. An untaken branch performs no assignments. An ordinary nested block creates neither another method activation nor a dynamic-input boundary. Conditions, call arguments and `return` arguments are not executable bodies merely by being arguments: their receiving expression determines the role, not a Structure in the last syntactic position.
 
@@ -362,9 +372,9 @@ end: remember
 
 Here input `x` becomes the body's own field when `x: 7` executes. This changes `remember` state, not the caller's variable. Only own fields actually used by a bare name or to forward a dynamic input are cached; an explicit path alone creates no own cache. Lack of caching does not remove an existing field from the graph.
 
-Before control passes to another callable expression, only own working fields written since their latest successful publication are published. Their dirty marks are then cleared. A clean cached field must not be written back: a nested call may already have changed it through an explicit reference. After return, the caller activation does not reload its working values from the graph.
+Before control passes to another callable expression, only own working fields with an active `dirty` mark are published. Ordinary marks are cleared after publication; the sticky pre-binding-address mark defined above remains until activation end. A cached field without such a mark must not be written back: a nested call may already have changed it through an explicit reference. After return, the caller activation does not reload its working values from the graph.
 
-Dirty state follows an executed write, not value comparison or the presence of a possible assignment in source. Publication follows forward field order; a successful write clears the corresponding dirty mark. Failure to resolve an already bound slot or store into it uses diagnostic `assert`; the intended outbound call is not executed afterward. There is no general transaction rolling back earlier writes. Publication is also required before a foreign boundary capable of calling back into LMX or exposing graph state.
+Ordinary dirty state follows an executed write, not value comparison or the presence of a possible assignment in source. The sole address exception is the sequence described above: `@x` before an executed same-name binding. Publication follows forward field order; a successful write clears the corresponding ordinary mark and does not clear the sticky one. Failure to resolve an already bound slot or store into it uses diagnostic `assert`; the intended outbound call is not executed afterward. There is no general transaction rolling back earlier writes. Publication is also required before a foreign boundary capable of calling back into LMX or exposing graph state.
 
 Consequently, after a nested modification of `node\x`, the caller's bare working `x` can retain its earlier value while an explicit path observes the new value. A later assignment to bare own `x` deliberately creates a new write and publishes it at the next boundary. No automatic reload is part of the semantics, not permission to lose dirty changes.
 
@@ -373,7 +383,7 @@ Consequently, after a nested modification of `node\x`, the caller's bare working
 
 The activation stack is the sole implicit call history. Native execution uses the ordinary C call stack; the interpreter uses an equivalent control stack. Direct, mutual and callback recursion creates a distinct activation with its own formal and dynamic values, working locals, result and `dirty` marks. No per-call Lmx call/body Structure, hidden activation node, closure environment or global active-argument record is created.
 
-The selected callable Structure holds the method's currently published working state, but it is not a call journal. Recursive calls through one occurrence may publish into the same Structure. Another callable occurrence referring to the same immutable method record publishes into its own copied Structure. A suspended outer activation is not reloaded and retains its working values; it can publish a value later only after another actual modification. The result is determined by the serial order of dirty-only publications, not by implicit restoration of an activation snapshot.
+The selected callable Structure holds the method's currently published working state, but it is not a call journal. Recursive calls through one occurrence may publish into the same Structure. Another callable occurrence referring to the same immutable method record publishes into its own copied Structure. A suspended outer activation is not reloaded and retains its working values; an ordinary own field is published later only after another actual modification, while a bound input with a sticky mark is published at every later checkpoint of its activation. The result is determined by the serial order of dirty-only publications, not by implicit restoration of an activation snapshot.
 
 The following recursive trace introduces no new syntax. Method M has callable Structure S (`M = S`) with own field `x`; both calls select the same S, while `n` is a private declared argument in each activation.
 
@@ -389,7 +399,7 @@ The following recursive trace introduces no new syntax. Method M has callable St
 
 On the resumed outer frame, bare `x` reads 2 and explicit `node\x` reads 9. If the outer frame then executes `x: x + 1`, its working value becomes 3 and is marked `dirty`; the next boundary publishes 3 into S. This is a new outer-activation write, not restoration of its previous snapshot. If `x` were only a dynamically supplied value, its assignment would remain local and none of these own-field stores would occur.
 
-The callable Structure's field therefore combines the persistence of an instance field with the working locality of a stack variable: a used own field is loaded into a typed working value, and only a changed value is written back at a call or exit boundary. The graph stores published state; the stack stores activation history. There is no implicit caller-frame capture, so frames need not be heapified or connected by a hidden closure chain to avoid the upward-funarg problem.
+The callable Structure's field therefore combines the persistence of an instance field with the working locality of a stack variable: an ordinary used own field is loaded into a typed working value and written back only after a change; the narrowly defined bound input with a sticky mark is published until its activation ends. The graph stores published state; the stack stores activation history. There is no implicit caller-frame capture, so frames need not be heapified or connected by a hidden closure chain to avoid the upward-funarg problem.
 
 The following call example shows the order among cache, explicit graph read and actual arguments; it is a trace using the established `for:` form, not a new grammar rule. The fixture's graph cell for `j` starts at 0; that is an example condition, not a general initialization rule for `int`. Here `print` is a high-level profile callable, not a `c.*` operation.
 

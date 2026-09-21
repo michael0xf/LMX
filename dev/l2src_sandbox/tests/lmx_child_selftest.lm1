@@ -109,12 +109,23 @@ fn: main () int
     turn_letter\handoff_ready: 0
     turn_letter\graph: 0
     turn_letter\index: 1U
+    # DETERMINISTIC COVERAGE of the accepted attach-before-init contract, not a fix for a
+    # demonstrated current crash of this file and not memset-before-attach.  The unpoisoned caller
+    # already passes across recorded image paths; a by-value LmxSchedule still arrives holding
+    # stack leftovers, and poisoning with 0xAA makes an omit-init mutant path-independent instead
+    # of depending on what the stack happened to hold.  Attaching WHILE POISONED keeps the contract
+    # exercised: lmx_thread_attach accepts a merely allocated record and must not read slot\arena
+    # (lmx_thread.h.lm1:183-185; lmx_thread.lm1:40-71 stores the pointer only).
+    memset((cast: (@: void) (@ slot_pad)), 170, c.sizeof(c.LmxSchedule))
     turn_owner: (cast: (@: LmxThread) malloc(c.sizeof(c.LmxThread)))
     if: turn_owner = 0 || lmx_thread_attach(turn_owner, turn_letter, @ mail, @ slot_pad) != c.LMX_THREAD_OK
         fputs("lmx: the turn's object did not attach\n", l1_stdout())
         free(counts)
         return: 2
     ---
+    # ... and only NOW is it initialized, after a successful attach and before any boundary can read
+    # it.  The existing lmx_schedule_init below is kept unchanged.  Poison-then-attach-then-init is
+    # the accepted -68 shape (6dced74); a memset-before-attach zeroing would drop attach coverage.
     # The record carries its own band from creation, and the end-turn boundary collects THAT band.
     # This turn's world is built in the source arena and the test keeps its values in C locals, so
     # the turn is given NO band (zero): its boundary then publishes and drops but collects nothing

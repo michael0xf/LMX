@@ -179,3 +179,7 @@ Illegal structural/ownership cycles among non-CALLABLE expression nodes are reje
 ## Unlabelled REDO (GROK-BOT-JVM-L3-WHILE-REDO-20260921-93)
 
 `L3Role.REDO` repeats the nearest active WHILE body without rechecking the condition (semantics §12). Loop-label frame is `{cond, break, body}`; CONTINUE→cond, BREAK→exit, REDO→body. Statement-only; cannot cross CALL. RETRY/labels deferred.
+
+## Physical loop labels (GROK-BOT-JVM-L3-PHYSICAL-LOOP-LABELS-20260921-94)
+
+`L3Role.LOOP_LABEL` is a sealed leaf referenced by object identity from labelled `WHILE` (arity 3: cond, body, label) and labelled `BREAK`/`CONTINUE`/`REDO` (one child). Unlabelled forms stay nearest-WHILE. Labels cannot cross CALL; duplicate active bindings and invisible/non-label targets are rejected. Descriptor references are not ownership edges.

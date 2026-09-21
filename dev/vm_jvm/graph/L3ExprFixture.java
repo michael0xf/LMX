@@ -988,6 +988,154 @@ public final class L3ExprFixture {
                 L3Node.of(L3Role.RETURN, L3Node.of(L3Role.SEQUENCE, w, L3Node.ofInt(L3Role.INT_LITERAL, 0))));
     }
 
+
+    public static L3Node loopLabel() {
+        return L3Node.of(L3Role.LOOP_LABEL);
+    }
+
+    /**
+     * Two nested labelled WIHILEs; inner body BREAK to outer label.
+     * Outer increments once per outer entry; after labelled break, outer n==1.
+     * Mis-resolve to nearest would leave outer spinning or wrong count — bounded by BREAK.
+     */
+    public static L3Node labelledBreakToOuter() {
+        L3Node outerLab = loopLabel();
+        L3Node innerLab = loopLabel();
+        L3Node outerIncr = new L3Node(
+                L3Role.LOCAL_SET,
+                0,
+                L3Node.of(
+                        L3Role.ADD,
+                        L3Node.ofInt(L3Role.LOCAL_GET, 0),
+                        L3Node.ofInt(L3Role.INT_LITERAL, 1)));
+        L3Node innerBody = L3Node.of(
+                L3Role.SEQUENCE,
+                L3Node.of(L3Role.BREAK, outerLab),
+                L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        L3Node inner = L3Node.of(
+                L3Role.WHILE, L3Node.ofInt(L3Role.INT_LITERAL, 1), innerBody, innerLab);
+        L3Node outerBody = L3Node.of(
+                L3Role.SEQUENCE, outerIncr, inner, L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        L3Node outer = L3Node.of(
+                L3Role.WHILE, L3Node.ofInt(L3Role.INT_LITERAL, 1), outerBody, outerLab);
+        L3Node init = new L3Node(L3Role.LOCAL_SET, 0, L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        return L3Node.of(
+                L3Role.CALLABLE,
+                L3Node.of(
+                        L3Role.RETURN,
+                        L3Node.of(L3Role.SEQUENCE, init, outer, L3Node.ofInt(L3Role.LOCAL_GET, 0))));
+    }
+
+    /** Labelled CONTINUE to outer: inner REDO-style? Use CONTINUE to outer cond after setting flag. */
+    public static L3Node labelledContinueOuterOnce() {
+        L3Node outerLab = loopLabel();
+        L3Node innerLab = loopLabel();
+        // outer: n++; if n>=2 BREAK; inner WHILE(1){ CONTINUE outerLab }; unreachable
+        L3Node outerIncr = new L3Node(
+                L3Role.LOCAL_SET,
+                0,
+                L3Node.of(
+                        L3Role.ADD,
+                        L3Node.ofInt(L3Role.LOCAL_GET, 0),
+                        L3Node.ofInt(L3Role.INT_LITERAL, 1)));
+        L3Node ge2 = L3Node.of(
+                L3Role.ADD, L3Node.ofInt(L3Role.LOCAL_GET, 0), L3Node.ofInt(L3Role.INT_LITERAL, -2));
+        L3Node ifBreak = L3Node.of(
+                L3Role.IF, ge2, L3Node.ofInt(L3Role.INT_LITERAL, 0), L3Node.of(L3Role.BREAK));
+        L3Node innerBody = L3Node.of(
+                L3Role.SEQUENCE,
+                L3Node.of(L3Role.CONTINUE, outerLab),
+                L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        L3Node inner = L3Node.of(
+                L3Role.WHILE, L3Node.ofInt(L3Role.INT_LITERAL, 1), innerBody, innerLab);
+        L3Node outerBody = L3Node.of(
+                L3Role.SEQUENCE, outerIncr, ifBreak, inner, L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        // Outer cond always 1 — CONTINUE outer rechecks cond (still 1) then body again until BREAK at n==2
+        L3Node outer = L3Node.of(
+                L3Role.WHILE, L3Node.ofInt(L3Role.INT_LITERAL, 1), outerBody, outerLab);
+        L3Node init = new L3Node(L3Role.LOCAL_SET, 0, L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        return L3Node.of(
+                L3Role.CALLABLE,
+                L3Node.of(
+                        L3Role.RETURN,
+                        L3Node.of(L3Role.SEQUENCE, init, outer, L3Node.ofInt(L3Role.LOCAL_GET, 0))));
+    }
+
+    /** Labelled REDO on a WHILE: same cond-probe proof as unlabelled, with label on WHILE+REDO. */
+    public static L3Node labelledRedoSkipsConditionProbe() {
+        L3Node lab = loopLabel();
+        L3Node nGet = L3Node.ofInt(L3Role.LOCAL_GET, 0);
+        L3Node incr = new L3Node(
+                L3Role.LOCAL_SET,
+                0,
+                L3Node.of(L3Role.ADD, nGet, L3Node.ofInt(L3Role.INT_LITERAL, 1)));
+        L3Node eq1 = L3Node.of(
+                L3Role.ADD, L3Node.ofInt(L3Role.LOCAL_GET, 0), L3Node.ofInt(L3Role.INT_LITERAL, -1));
+        L3Node ifRedo = L3Node.of(
+                L3Role.IF,
+                eq1,
+                L3Node.ofInt(L3Role.INT_LITERAL, 0),
+                L3Node.of(L3Role.REDO, lab));
+        L3Node ge2 = L3Node.of(
+                L3Role.ADD, L3Node.ofInt(L3Role.LOCAL_GET, 0), L3Node.ofInt(L3Role.INT_LITERAL, -2));
+        L3Node ifBreak = L3Node.of(
+                L3Role.IF, ge2, L3Node.ofInt(L3Role.INT_LITERAL, 0), L3Node.of(L3Role.BREAK, lab));
+        L3Node body = L3Node.of(L3Role.SEQUENCE, incr, ifRedo, ifBreak, L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        L3Node cond = L3Node.of(
+                L3Role.SEQUENCE, L3Node.of(L3Role.PROBE), L3Node.ofInt(L3Role.INT_LITERAL, 1));
+        L3Node w = L3Node.of(L3Role.WHILE, cond, body, lab);
+        L3Node init = new L3Node(L3Role.LOCAL_SET, 0, L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        return L3Node.of(
+                L3Role.CALLABLE,
+                L3Node.of(
+                        L3Role.RETURN,
+                        L3Node.of(L3Role.SEQUENCE, init, w, L3Node.ofInt(L3Role.LOCAL_GET, 0))));
+    }
+
+    /** Same-shaped distinct labels: transfer uses different LOOP_LABEL than WHILE → invisible. */
+    public static L3Node labelledTransferWrongIdentity() {
+        L3Node whileLab = loopLabel();
+        L3Node otherLab = loopLabel();
+        L3Node body = L3Node.of(
+                L3Role.SEQUENCE,
+                L3Node.of(L3Role.BREAK, otherLab),
+                L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        L3Node w = L3Node.of(
+                L3Role.WHILE, L3Node.ofInt(L3Role.INT_LITERAL, 1), body, whileLab);
+        return L3Node.of(
+                L3Role.CALLABLE,
+                L3Node.of(L3Role.RETURN, L3Node.of(L3Role.SEQUENCE, w, L3Node.ofInt(L3Role.INT_LITERAL, 0))));
+    }
+
+    /** Duplicate active binding: outer and inner share the same physical label node. */
+    public static L3Node labelledDuplicateActiveBinding() {
+        L3Node lab = loopLabel();
+        L3Node inner = L3Node.of(
+                L3Role.WHILE,
+                L3Node.ofInt(L3Role.INT_LITERAL, 0),
+                L3Node.ofInt(L3Role.INT_LITERAL, 0),
+                lab);
+        L3Node outer = L3Node.of(
+                L3Role.WHILE,
+                L3Node.ofInt(L3Role.INT_LITERAL, 1),
+                L3Node.of(L3Role.SEQUENCE, inner, L3Node.of(L3Role.BREAK)),
+                lab);
+        return L3Node.of(
+                L3Role.CALLABLE,
+                L3Node.of(L3Role.RETURN, L3Node.of(L3Role.SEQUENCE, outer, L3Node.ofInt(L3Role.INT_LITERAL, 0))));
+    }
+
+    public static L3Node labelledBreakNonLabelTarget() {
+        L3Node body = L3Node.of(
+                L3Role.SEQUENCE,
+                L3Node.of(L3Role.BREAK, L3Node.ofInt(L3Role.INT_LITERAL, 1)),
+                L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        L3Node w = L3Node.of(L3Role.WHILE, L3Node.ofInt(L3Role.INT_LITERAL, 1), body);
+        return L3Node.of(
+                L3Role.CALLABLE,
+                L3Node.of(L3Role.RETURN, L3Node.of(L3Role.SEQUENCE, w, L3Node.ofInt(L3Role.INT_LITERAL, 0))));
+    }
+
     public static final class CallGraphWithOrphan {
         public final L3Node entry;
         public final L3Node orphan;

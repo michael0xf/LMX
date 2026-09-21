@@ -44,6 +44,22 @@ public final class L3ClassfilePrinter implements Opcodes {
                     return new ArrayDeque<Label[]>();
                 }
             };
+    /** Compile-time active physical loop labels in the current CALLABLE (identity). */
+    private static final ThreadLocal<IdentityHashMap<L3Node, Boolean>> ACTIVE_LOOP_LABELS =
+            new ThreadLocal<IdentityHashMap<L3Node, Boolean>>() {
+                @Override
+                protected IdentityHashMap<L3Node, Boolean> initialValue() {
+                    return new IdentityHashMap<L3Node, Boolean>();
+                }
+            };
+    /** Emit-time map from physical LOOP_LABEL node to its WHILE frame. */
+    private static final ThreadLocal<IdentityHashMap<L3Node, Label[]>> LABEL_FRAMES =
+            new ThreadLocal<IdentityHashMap<L3Node, Label[]>>() {
+                @Override
+                protected IdentityHashMap<L3Node, Label[]> initialValue() {
+                    return new IdentityHashMap<L3Node, Label[]>();
+                }
+            };
 
     private L3ClassfilePrinter() {}
 
@@ -54,6 +70,8 @@ public final class L3ClassfilePrinter implements Opcodes {
         requireSealed(entry);
         LOOP_DEPTH.set(Integer.valueOf(0));
         LOOP_STACK.get().clear();
+        ACTIVE_LOOP_LABELS.get().clear();
+        LABEL_FRAMES.get().clear();
         List<L3Node> order = new ArrayList<L3Node>();
         Map<L3Node, Integer> map = new IdentityHashMap<L3Node, Integer>();
         collectCallables(entry, order, map);
@@ -145,6 +163,9 @@ public final class L3ClassfilePrinter implements Opcodes {
         if (r == L3Role.REDO) {
             return "REDO";
         }
+        if (r == L3Role.LOOP_LABEL) {
+            return "LOOP_LABEL";
+        }
         if (r == L3Role.CALL) {
             return "CALL";
         }
@@ -158,6 +179,46 @@ public final class L3ClassfilePrinter implements Opcodes {
             return "LOCAL_GET";
         }
         return "EXPR";
+    }
+
+
+    private static boolean isLoopTransfer(L3Role r) {
+        return r == L3Role.BREAK || r == L3Role.CONTINUE || r == L3Role.REDO;
+    }
+
+    private static void requireLoopLabelNode(L3Node n) {
+        if (n == null || n.role != L3Role.LOOP_LABEL) {
+            throw new IllegalArgumentException("loop label target must be LOOP_LABEL node");
+        }
+        if (n.childCount() != 0) {
+            throw new IllegalArgumentException("LOOP_LABEL arity");
+        }
+    }
+
+    private static L3Node transferLabelOrNull(L3Node expr) {
+        if (expr.childCount() == 0) {
+            return null;
+        }
+        if (expr.childCount() != 1) {
+            throw new IllegalArgumentException(
+                    expr.role == L3Role.BREAK
+                            ? "BREAK arity"
+                            : (expr.role == L3Role.CONTINUE ? "CONTINUE arity" : "REDO arity"));
+        }
+        requireLoopLabelNode(expr.child(0));
+        return expr.child(0);
+    }
+
+    private static L3Node whileLabelOrNull(L3Node whileNode) {
+        int n = whileNode.childCount();
+        if (n == 2) {
+            return null;
+        }
+        if (n != 3) {
+            throw new IllegalArgumentException("WHILE arity: need condition, body[, label]");
+        }
+        requireLoopLabelNode(whileNode.child(2));
+        return whileNode.child(2);
     }
 
     private static void ownershipGrayEnter(L3Node n, Map<L3Node, Boolean> gray) {
@@ -489,6 +550,9 @@ public final class L3ClassfilePrinter implements Opcodes {
         if (r == L3Role.REDO) {
             throw new IllegalArgumentException("REDO not allowed in value context");
         }
+        if (r == L3Role.LOOP_LABEL) {
+            throw new IllegalArgumentException("LOOP_LABEL not allowed in value context");
+        }
         if (r == L3Role.FIELD_FOLLOW) {
             if (expr.childCount() != 1) {
                 throw new IllegalArgumentException("FIELD_FOLLOW arity");
@@ -591,32 +655,35 @@ public final class L3ClassfilePrinter implements Opcodes {
                     expr, map, arity, slots, currentCallable, currentArity, slotCount, assigned);
         }
         if (r == L3Role.BREAK || r == L3Role.CONTINUE || r == L3Role.REDO) {
-            if (LOOP_DEPTH.get().intValue() < 1) {
-                throw new IllegalArgumentException(
-                        r == L3Role.BREAK
-                                ? "BREAK outside loop"
-                                : (r == L3Role.CONTINUE
-                                        ? "CONTINUE outside loop"
-                                        : "REDO outside loop"));
-            }
-            if (expr.childCount() != 0) {
-                throw new IllegalArgumentException(
-                        r == L3Role.BREAK
-                                ? "BREAK arity"
-                                : (r == L3Role.CONTINUE ? "CONTINUE arity" : "REDO arity"));
-            }
             if (expr.intPayload != 0) {
                 throw new IllegalArgumentException(
                         r == L3Role.REDO ? "REDO payload" : "loop transfer payload");
             }
+            L3Node lab = transferLabelOrNull(expr);
+            if (lab == null) {
+                if (LOOP_DEPTH.get().intValue() < 1) {
+                    throw new IllegalArgumentException(
+                            r == L3Role.BREAK
+                                    ? "BREAK outside loop"
+                                    : (r == L3Role.CONTINUE
+                                            ? "CONTINUE outside loop"
+                                            : "REDO outside loop"));
+                }
+            } else if (!ACTIVE_LOOP_LABELS.get().containsKey(lab)) {
+                throw new IllegalArgumentException("loop label not visible in this CALLABLE");
+            }
             return assigned;
         }
         if (r == L3Role.WHILE) {
-            if (expr.childCount() != 2) {
-                throw new IllegalArgumentException("WHILE arity: need condition, body");
-            }
+            L3Node lab = whileLabelOrNull(expr);
             BitSet afterCond = validateIntExpr(
                     expr.child(0), map, arity, slots, currentCallable, currentArity, slotCount, assigned);
+            if (lab != null) {
+                if (ACTIVE_LOOP_LABELS.get().containsKey(lab)) {
+                    throw new IllegalArgumentException("duplicate active loop label binding");
+                }
+                ACTIVE_LOOP_LABELS.get().put(lab, Boolean.TRUE);
+            }
             LOOP_DEPTH.set(Integer.valueOf(LOOP_DEPTH.get().intValue() + 1));
             try {
                 validateStmt(
@@ -630,6 +697,9 @@ public final class L3ClassfilePrinter implements Opcodes {
                         (BitSet) afterCond.clone());
             } finally {
                 LOOP_DEPTH.set(Integer.valueOf(LOOP_DEPTH.get().intValue() - 1));
+                if (lab != null) {
+                    ACTIVE_LOOP_LABELS.get().remove(lab);
+                }
             }
             return assigned;
         }
@@ -777,6 +847,8 @@ public final class L3ClassfilePrinter implements Opcodes {
             throw new IllegalArgumentException("CONTINUE not allowed in value context");
         } else if (r == L3Role.REDO) {
             throw new IllegalArgumentException("REDO not allowed in value context");
+        } else if (r == L3Role.LOOP_LABEL) {
+            throw new IllegalArgumentException("LOOP_LABEL not allowed in value context");
         } else if (r == L3Role.FIELD_FOLLOW) {
             emitOccurrence(mv, expr.child(0));
             mv.visitLdcInsn(Integer.valueOf(expr.intPayload));
@@ -829,19 +901,19 @@ public final class L3ClassfilePrinter implements Opcodes {
             emitNestedReturn(mv, expr, map, arity, currentArity);
             return;
         }
-        if (r == L3Role.BREAK) {
-            Label[] frame = LOOP_STACK.get().peekFirst();
-            mv.visitJumpInsn(GOTO, frame[1]);
-            return;
-        }
-        if (r == L3Role.CONTINUE) {
-            Label[] frame = LOOP_STACK.get().peekFirst();
-            mv.visitJumpInsn(GOTO, frame[0]);
-            return;
-        }
-        if (r == L3Role.REDO) {
-            Label[] frame = LOOP_STACK.get().peekFirst();
-            mv.visitJumpInsn(GOTO, frame[2]);
+        if (r == L3Role.BREAK || r == L3Role.CONTINUE || r == L3Role.REDO) {
+            Label[] frame;
+            if (expr.childCount() == 0) {
+                frame = LOOP_STACK.get().peekFirst();
+            } else {
+                L3Node lab = expr.child(0);
+                frame = LABEL_FRAMES.get().get(lab);
+                if (frame == null) {
+                    throw new IllegalArgumentException("loop label not visible in this CALLABLE");
+                }
+            }
+            int idx = r == L3Role.CONTINUE ? 0 : (r == L3Role.BREAK ? 1 : 2);
+            mv.visitJumpInsn(GOTO, frame[idx]);
             return;
         }
         if (r == L3Role.WHILE) {
@@ -895,7 +967,12 @@ public final class L3ClassfilePrinter implements Opcodes {
         Label cond = new Label();
         Label done = new Label();
         Label body = new Label();
-        LOOP_STACK.get().addFirst(new Label[] {cond, done, body});
+        Label[] frame = new Label[] {cond, done, body};
+        L3Node lab = expr.childCount() == 3 ? expr.child(2) : null;
+        LOOP_STACK.get().addFirst(frame);
+        if (lab != null) {
+            LABEL_FRAMES.get().put(lab, frame);
+        }
         try {
             mv.visitLabel(cond);
             emitIntExpr(mv, expr.child(0), map, arity, currentArity);
@@ -905,6 +982,9 @@ public final class L3ClassfilePrinter implements Opcodes {
             mv.visitJumpInsn(GOTO, cond);
             mv.visitLabel(done);
         } finally {
+            if (lab != null) {
+                LABEL_FRAMES.get().remove(lab);
+            }
             LOOP_STACK.get().removeFirst();
         }
     }
@@ -926,6 +1006,8 @@ public final class L3ClassfilePrinter implements Opcodes {
         requireSealed(entry);
         LOOP_DEPTH.set(Integer.valueOf(0));
         LOOP_STACK.get().clear();
+        ACTIVE_LOOP_LABELS.get().clear();
+        LABEL_FRAMES.get().clear();
         List<L3Node> order = new ArrayList<L3Node>();
         Map<L3Node, Integer> map = new IdentityHashMap<L3Node, Integer>();
         collectCallables(entry, order, map);

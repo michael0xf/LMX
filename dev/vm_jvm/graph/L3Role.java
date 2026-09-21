@@ -62,7 +62,7 @@ public final class L3Role {
     public static final L3Role WHILE = new L3Role();
     /**
      * Exit the nearest active WHILE (statement-only). Compile-time loop-label stack;
-     * no named labels. RETRY/cleanup/labels deferred.
+     * unlabelled or physical LOOP_LABEL. RETRY/cleanup deferred.
      */
     public static final L3Role BREAK = new L3Role();
     /**
@@ -71,9 +71,14 @@ public final class L3Role {
     public static final L3Role CONTINUE = new L3Role();
     /**
      * Repeat the nearest WHILE body without rechecking the condition (statement-only).
-     * Unlabelled; cannot cross a CALL boundary. RETRY deferred.
+     * Unlabelled or physically labelled; cannot cross a CALL boundary. RETRY deferred.
      */
     public static final L3Role REDO = new L3Role();
+    /**
+     * Physical loop label record. Sealed leaf; object identity only (no text/numeric id).
+     * Referenced by labelled WHILE and labelled BREAK/CONTINUE/REDO.
+     */
+    public static final L3Role LOOP_LABEL = new L3Role();
     public static final L3Role UNSUPPORTED = new L3Role();
 
     private L3Role() {}

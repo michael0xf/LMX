@@ -81,6 +81,8 @@ public final class ExprSmokeDriver {
 
         testRedo();
 
+        testPhysicalLoopLabels();
+
         if (fails != 0) {
             System.out.println("FAIL ExprSmokeDriver checks=" + checks + " failures=" + fails);
             System.exit(1);
@@ -640,6 +642,56 @@ public final class ExprSmokeDriver {
 
 
 
+
+    private static void testPhysicalLoopLabels() throws Exception {
+        Class<?> c1 = loadPrinted(L3ExprFixture.labelledBreakToOuter());
+        Object n = c1.getMethod("eval", lmx.LmxOccurrence.class)
+                .invoke(null, lmx.LmxOccurrence.independent(Integer.valueOf(0)));
+        check("labelled BREAK to outer -> n==1", Integer.valueOf(1).equals(n));
+
+        Class<?> c2 = loadPrinted(L3ExprFixture.labelledContinueOuterOnce());
+        Object n2 = c2.getMethod("eval", lmx.LmxOccurrence.class)
+                .invoke(null, lmx.LmxOccurrence.independent(Integer.valueOf(0)));
+        check("labelled CONTINUE outer -> n==2", Integer.valueOf(2).equals(n2));
+
+        ArgEvalCounter.reset();
+        Class<?> c3 = loadPrinted(L3ExprFixture.labelledRedoSkipsConditionProbe());
+        Object n3 = c3.getMethod("eval", lmx.LmxOccurrence.class)
+                .invoke(null, lmx.LmxOccurrence.independent(Integer.valueOf(0)));
+        check("labelled REDO skips cond -> n==2", Integer.valueOf(2).equals(n3));
+        check("labelled REDO cond PROBE once", ArgEvalCounter.get() == 1);
+
+        // unlabelled still works (nearest)
+        Class<?> c4 = loadPrinted(L3ExprFixture.breakAfterThree());
+        Object n4 = c4.getMethod("eval", lmx.LmxOccurrence.class)
+                .invoke(null, lmx.LmxOccurrence.independent(Integer.valueOf(0)));
+        check("unlabelled BREAK still nearest -> 3", Integer.valueOf(3).equals(n4));
+
+        boolean threw = false;
+        try {
+            L3ClassfilePrinter.emitCallable(L3ExprFixture.labelledTransferWrongIdentity());
+        } catch (IllegalArgumentException e) {
+            threw = e.getMessage() != null && e.getMessage().contains("not visible");
+        }
+        check("distinct label identity rejected", threw);
+
+        threw = false;
+        try {
+            L3ClassfilePrinter.emitCallable(L3ExprFixture.labelledDuplicateActiveBinding());
+        } catch (IllegalArgumentException e) {
+            threw = e.getMessage() != null && e.getMessage().contains("duplicate active");
+        }
+        check("duplicate active label binding rejected", threw);
+
+        threw = false;
+        try {
+            L3ClassfilePrinter.emitCallable(L3ExprFixture.labelledBreakNonLabelTarget());
+        } catch (IllegalArgumentException e) {
+            threw = e.getMessage() != null && e.getMessage().contains("LOOP_LABEL");
+        }
+        check("non-label BREAK target rejected", threw);
+    }
+
     private static void testRedo() throws Exception {
         ArgEvalCounter.reset();
         Class<?> cls = loadPrinted(L3ExprFixture.redoSkipsConditionProbe());
@@ -691,7 +743,8 @@ public final class ExprSmokeDriver {
         try {
             L3ClassfilePrinter.emitCallable(L3ExprFixture.redoWithChild());
         } catch (IllegalArgumentException e) {
-            threw = e.getMessage() != null && e.getMessage().contains("REDO arity");
+            String m = e.getMessage();
+            threw = m != null && (m.contains("REDO arity") || m.contains("LOOP_LABEL"));
         }
         check("REDO with child rejected", threw);
     }

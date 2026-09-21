@@ -62,13 +62,18 @@ public final class L3Role {
     public static final L3Role WHILE = new L3Role();
     /**
      * Exit the nearest active WHILE (statement-only). Compile-time loop-label stack;
-     * no named labels. REDO/RETRY/cleanup deferred.
+     * no named labels. RETRY/cleanup/labels deferred.
      */
     public static final L3Role BREAK = new L3Role();
     /**
      * Jump to the nearest WHILE condition recheck (statement-only).
      */
     public static final L3Role CONTINUE = new L3Role();
+    /**
+     * Repeat the nearest WHILE body without rechecking the condition (statement-only).
+     * Unlabelled; cannot cross a CALL boundary. RETRY deferred.
+     */
+    public static final L3Role REDO = new L3Role();
     public static final L3Role UNSUPPORTED = new L3Role();
 
     private L3Role() {}

@@ -79,6 +79,8 @@ public final class ExprSmokeDriver {
 
         testOwnershipCycleGuard();
 
+        testRedo();
+
         if (fails != 0) {
             System.out.println("FAIL ExprSmokeDriver checks=" + checks + " failures=" + fails);
             System.exit(1);
@@ -636,6 +638,63 @@ public final class ExprSmokeDriver {
     }
 
 
+
+
+    private static void testRedo() throws Exception {
+        ArgEvalCounter.reset();
+        Class<?> cls = loadPrinted(L3ExprFixture.redoSkipsConditionProbe());
+        Object r = cls.getMethod("eval", lmx.LmxOccurrence.class)
+                .invoke(null, lmx.LmxOccurrence.independent(Integer.valueOf(0)));
+        check("REDO skips cond probe -> n==2", Integer.valueOf(2).equals(r));
+        check("REDO cond PROBE ticks once", ArgEvalCounter.get() == 1);
+
+        Class<?> cls2 = loadPrinted(L3ExprFixture.redoThenBodyTailContinues());
+        Object flag = cls2.getMethod("eval", lmx.LmxOccurrence.class)
+                .invoke(null, lmx.LmxOccurrence.independent(Integer.valueOf(0)));
+        check("REDO then body tail sets flag==1", Integer.valueOf(1).equals(flag));
+
+        Class<?> cls3 = loadPrinted(L3ExprFixture.redoNestedNearestOnly());
+        Object outer = cls3.getMethod("eval", lmx.LmxOccurrence.class)
+                .invoke(null, lmx.LmxOccurrence.independent(Integer.valueOf(0)));
+        check("REDO nested nearest -> outer==2", Integer.valueOf(2).equals(outer));
+
+        Class<?> cls4 = loadPrinted(L3ExprFixture.redoInCalleeCallerContinues());
+        Object cn = cls4.getMethod("eval", lmx.LmxOccurrence.class)
+                .invoke(null, lmx.LmxOccurrence.independent(Integer.valueOf(0)));
+        check("REDO in callee isolates caller -> 2", Integer.valueOf(2).equals(cn));
+
+        boolean threw = false;
+        try {
+            L3ClassfilePrinter.emitCallable(L3ExprFixture.redoOutsideLoop());
+        } catch (IllegalArgumentException e) {
+            threw = e.getMessage() != null && e.getMessage().contains("REDO outside loop");
+        }
+        check("REDO outside loop rejected", threw);
+
+        threw = false;
+        try {
+            L3ClassfilePrinter.emitCallable(L3ExprFixture.redoInValueContext());
+        } catch (IllegalArgumentException e) {
+            threw = e.getMessage() != null && e.getMessage().contains("value context");
+        }
+        check("REDO in value context rejected", threw);
+
+        threw = false;
+        try {
+            L3ClassfilePrinter.emitCallable(L3ExprFixture.redoInFinalSequence());
+        } catch (IllegalArgumentException e) {
+            threw = true;
+        }
+        check("REDO final SEQUENCE / malformed rejected", threw);
+
+        threw = false;
+        try {
+            L3ClassfilePrinter.emitCallable(L3ExprFixture.redoWithChild());
+        } catch (IllegalArgumentException e) {
+            threw = e.getMessage() != null && e.getMessage().contains("REDO arity");
+        }
+        check("REDO with child rejected", threw);
+    }
 
     private static void testOwnershipCycleGuard() throws Exception {
         boolean seqCycle = false;

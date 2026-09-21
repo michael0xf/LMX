@@ -176,3 +176,6 @@ java -cp "dev/vm_jvm/out" smoke.HelloStructureSmoke
 
 Illegal structural/ownership cycles among non-CALLABLE expression nodes are rejected with an identity gray/black DFS before bytecode emission (IllegalArgumentException naming the role category). Shared acyclic DAG data remains legal. CALLABLE reference edges (self/mutual recursion) stay non-ownership and terminate without cycle failure. No recursion-depth cap, graph copy, or global/TLS ownership state.
 
+## Unlabelled REDO (GROK-BOT-JVM-L3-WHILE-REDO-20260921-93)
+
+`L3Role.REDO` repeats the nearest active WHILE body without rechecking the condition (semantics §12). Loop-label frame is `{cond, break, body}`; CONTINUE→cond, BREAK→exit, REDO→body. Statement-only; cannot cross CALL. RETRY/labels deferred.

@@ -16,7 +16,7 @@ import org.objectweb.asm.Opcodes;
 /**
  * Emits one JVM method per reachable {@link L3Role#CALLABLE}.
  * Method names {@code c0}..{@code cN}; descriptors from arity; activation-local
- * int slots after subject/args. Pre-test WHILE; BREAK/CONTINUE via loop-label stack;
+ * int slots after subject/args. Pre-test WHILE; BREAK/CONTINUE/REDO via loop-label stack;
  * nested RETURN exits the current CALLABLE (IRETURN). Self/mutual recursive CALL
  * via physical CALLABLE identity (INVOKESTATIC to mapped method).
  * Ownership cycles among non-CALLABLE expression nodes are rejected with gray/black
@@ -36,7 +36,7 @@ public final class L3ClassfilePrinter implements Opcodes {
                     return Integer.valueOf(0);
                 }
             };
-    /** Emit-time label stack: each frame is {continueLabel, breakLabel}. */
+    /** Emit-time label stack: each frame is {condLabel, breakLabel, bodyLabel}. */
     private static final ThreadLocal<ArrayDeque<Label[]>> LOOP_STACK =
             new ThreadLocal<ArrayDeque<Label[]>>() {
                 @Override
@@ -141,6 +141,9 @@ public final class L3ClassfilePrinter implements Opcodes {
         }
         if (r == L3Role.WHILE) {
             return "WHILE";
+        }
+        if (r == L3Role.REDO) {
+            return "REDO";
         }
         if (r == L3Role.CALL) {
             return "CALL";
@@ -483,6 +486,9 @@ public final class L3ClassfilePrinter implements Opcodes {
         if (r == L3Role.CONTINUE) {
             throw new IllegalArgumentException("CONTINUE not allowed in value context");
         }
+        if (r == L3Role.REDO) {
+            throw new IllegalArgumentException("REDO not allowed in value context");
+        }
         if (r == L3Role.FIELD_FOLLOW) {
             if (expr.childCount() != 1) {
                 throw new IllegalArgumentException("FIELD_FOLLOW arity");
@@ -567,7 +573,7 @@ public final class L3ClassfilePrinter implements Opcodes {
     }
 
     /**
-     * Statement position: WHILE / BREAK / CONTINUE / RETURN / stmt-SEQUENCE / stmt-IF,
+     * Statement position: WHILE / BREAK / CONTINUE / REDO / RETURN / stmt-SEQUENCE / stmt-IF,
      * or a discarded int expression.
      */
     private static BitSet validateStmt(
@@ -584,15 +590,24 @@ public final class L3ClassfilePrinter implements Opcodes {
             return validateNestedReturn(
                     expr, map, arity, slots, currentCallable, currentArity, slotCount, assigned);
         }
-        if (r == L3Role.BREAK || r == L3Role.CONTINUE) {
+        if (r == L3Role.BREAK || r == L3Role.CONTINUE || r == L3Role.REDO) {
             if (LOOP_DEPTH.get().intValue() < 1) {
-                throw new IllegalArgumentException(r == L3Role.BREAK
-                        ? "BREAK outside loop"
-                        : "CONTINUE outside loop");
+                throw new IllegalArgumentException(
+                        r == L3Role.BREAK
+                                ? "BREAK outside loop"
+                                : (r == L3Role.CONTINUE
+                                        ? "CONTINUE outside loop"
+                                        : "REDO outside loop"));
             }
             if (expr.childCount() != 0) {
                 throw new IllegalArgumentException(
-                        r == L3Role.BREAK ? "BREAK arity" : "CONTINUE arity");
+                        r == L3Role.BREAK
+                                ? "BREAK arity"
+                                : (r == L3Role.CONTINUE ? "CONTINUE arity" : "REDO arity"));
+            }
+            if (expr.intPayload != 0) {
+                throw new IllegalArgumentException(
+                        r == L3Role.REDO ? "REDO payload" : "loop transfer payload");
             }
             return assigned;
         }
@@ -760,6 +775,8 @@ public final class L3ClassfilePrinter implements Opcodes {
             throw new IllegalArgumentException("BREAK not allowed in value context");
         } else if (r == L3Role.CONTINUE) {
             throw new IllegalArgumentException("CONTINUE not allowed in value context");
+        } else if (r == L3Role.REDO) {
+            throw new IllegalArgumentException("REDO not allowed in value context");
         } else if (r == L3Role.FIELD_FOLLOW) {
             emitOccurrence(mv, expr.child(0));
             mv.visitLdcInsn(Integer.valueOf(expr.intPayload));
@@ -822,6 +839,11 @@ public final class L3ClassfilePrinter implements Opcodes {
             mv.visitJumpInsn(GOTO, frame[0]);
             return;
         }
+        if (r == L3Role.REDO) {
+            Label[] frame = LOOP_STACK.get().peekFirst();
+            mv.visitJumpInsn(GOTO, frame[2]);
+            return;
+        }
         if (r == L3Role.WHILE) {
             emitWhile(mv, expr, map, arity, currentArity);
             return;
@@ -869,15 +891,18 @@ public final class L3ClassfilePrinter implements Opcodes {
             Map<L3Node, Integer> map,
             Map<L3Node, Integer> arity,
             int currentArity) {
-        Label head = new Label();
+        // frame[0]=cond (CONTINUE), frame[1]=exit (BREAK), frame[2]=body entry (REDO)
+        Label cond = new Label();
         Label done = new Label();
-        LOOP_STACK.get().addFirst(new Label[] {head, done});
+        Label body = new Label();
+        LOOP_STACK.get().addFirst(new Label[] {cond, done, body});
         try {
-            mv.visitLabel(head);
+            mv.visitLabel(cond);
             emitIntExpr(mv, expr.child(0), map, arity, currentArity);
             mv.visitJumpInsn(IFEQ, done);
+            mv.visitLabel(body);
             emitStmt(mv, expr.child(1), map, arity, currentArity);
-            mv.visitJumpInsn(GOTO, head);
+            mv.visitJumpInsn(GOTO, cond);
             mv.visitLabel(done);
         } finally {
             LOOP_STACK.get().removeFirst();

@@ -11,17 +11,18 @@ Current overall product priority (the second column is the existing detailed sec
     1    section 1    MIR            L1    MIR.md + C API        L1/L2 #2
     2    section 4    JVM classfile  L3    JVMS                  L3 #1
     3    section 7    .NET CIL       L3    ECMA-335 III          L3 #3
-    4    section 5    WASM GC        L3    W3C GC (Wasm 3.0)     L3 #2
-    5    section 6    Lua 5.4        L3    lopcodes / manual     L3 #5
-    6    section 2    WASM linear    L1    W3C core + binary     L1/L2 #1
-    7    section 3    RISC-V ISA     L1    unprivileged spec     L1/L2 #5
+    4    section 2    WASM linear    L1    W3C core + binary     L1/L2 #1
+    5    section 5    WASM GC        L3    W3C GC (Wasm 3.0)     L3 #2
+    6    section 3    RISC-V ISA     L1    unprivileged spec     L1/L2 #5
+    7    section 6    Lua 5.4        L3    lopcodes / manual     L3 #5
 
 MIR remains first because both its C99 bring-up and native-host manager seam are cheap.
-The four L3 VMs follow because they reuse one L3/UI/Message stack: JVM establishes the
-first compiler, CIL reuses its managed lessons, WASM GC follows, and Lua is last among
-the L3 targets because its real bytecode/UI backend is the most idiosyncratic.  WASM
-linear and RISC-V still have cheap C99 compilation and CLI execution, but their separate
-full-product UI/process/PTY integrations put them after the shared L3 route.
+JVM establishes the first managed L3 compiler and CIL reuses its lessons.  WASM linear
+then provides the already-proven C99 route and the host experience required before WASM
+GC.  RISC-V stays late because its full-product UI/process environment is separate from
+its cheap CLI bring-up.  Lua is last overall: source emission is a cheap smoke, but the
+real version-locked register-bytecode backend, tagged table model and native UI host are
+the most idiosyncratic combined target.
 
 Struck:
 More a multi-platform language than a platform for languages;

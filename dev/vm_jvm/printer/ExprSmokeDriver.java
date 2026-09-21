@@ -58,6 +58,14 @@ public final class ExprSmokeDriver {
         testCodeAfterBreakLoop();
         testBreakContinueRejected();
 
+        testReturnSkipsSequenceTail();
+        testReturnInSelectedIfArm();
+        testReturnFromWhileBody();
+        testReturnInCalleeCallerContinues();
+        testReturnExprProbeOnce();
+        testBreakInCalleeDoesNotCrossCall();
+        testReturnRejected();
+
         if (fails != 0) {
             System.out.println("FAIL ExprSmokeDriver checks=" + checks + " failures=" + fails);
             System.exit(1);
@@ -424,6 +432,79 @@ public final class ExprSmokeDriver {
         catch (IllegalArgumentException e) { mal = true; }
         check("BREAK malformed arity rejected", mal);
     }
+
+    private static void testReturnSkipsSequenceTail() throws Exception {
+        ArgEvalCounter.reset();
+        Class<?> cls = loadPrinted(L3ExprFixture.returnSkipsSequenceTail());
+        Method eval = cls.getMethod("eval", LmxOccurrence.class);
+        Object r = eval.invoke(null, LmxOccurrence.independent(Integer.valueOf(0)));
+        check("RETURN skips SEQUENCE tail -> 42", Integer.valueOf(42).equals(r));
+        check("RETURN skips SEQUENCE tail probe==0", ArgEvalCounter.get() == 0);
+    }
+
+    private static void testReturnInSelectedIfArm() throws Exception {
+        ArgEvalCounter.reset();
+        Class<?> cls = loadPrinted(L3ExprFixture.returnInSelectedIfArm());
+        Method eval = cls.getMethod("eval", LmxOccurrence.class);
+        Object r = eval.invoke(null, LmxOccurrence.independent(Integer.valueOf(0)));
+        check("RETURN in selected IF arm -> 10", Integer.valueOf(10).equals(r));
+        check("RETURN IF untaken PROBE not run", ArgEvalCounter.get() == 0);
+    }
+
+    private static void testReturnFromWhileBody() throws Exception {
+        Class<?> cls = loadPrinted(L3ExprFixture.returnFromWhileBody());
+        Method eval = cls.getMethod("eval", LmxOccurrence.class);
+        Object r = eval.invoke(null, LmxOccurrence.independent(Integer.valueOf(0)));
+        check("RETURN from WHILE body exits callable -> 99", Integer.valueOf(99).equals(r));
+    }
+
+    private static void testReturnInCalleeCallerContinues() throws Exception {
+        ArgEvalCounter.reset();
+        Class<?> cls = loadPrinted(L3ExprFixture.returnInCalleeCallerContinues());
+        Method eval = cls.getMethod("eval", LmxOccurrence.class);
+        Object r = eval.invoke(null, LmxOccurrence.independent(Integer.valueOf(0)));
+        check("RETURN in callee; caller continues -> 100", Integer.valueOf(100).equals(r));
+        check("callee RETURN skips its PROBE", ArgEvalCounter.get() == 0);
+    }
+
+    private static void testReturnExprProbeOnce() throws Exception {
+        ArgEvalCounter.reset();
+        Class<?> cls = loadPrinted(L3ExprFixture.returnExprProbeOnce());
+        Method eval = cls.getMethod("eval", LmxOccurrence.class);
+        Object r = eval.invoke(null, LmxOccurrence.independent(Integer.valueOf(0)));
+        check("RETURN expr PROBE once yields 1", Integer.valueOf(1).equals(r));
+        check("RETURN expr PROBE ticks exactly once", ArgEvalCounter.get() == 1);
+    }
+
+    private static void testBreakInCalleeDoesNotCrossCall() throws Exception {
+        Class<?> cls = loadPrinted(L3ExprFixture.breakInCalleeDoesNotCrossCall());
+        Method eval = cls.getMethod("eval", LmxOccurrence.class);
+        Object r = eval.invoke(null, LmxOccurrence.independent(Integer.valueOf(0)));
+        check("BREAK in callee does not cross CALL -> 2", Integer.valueOf(2).equals(r));
+    }
+
+    private static void testReturnRejected() {
+        boolean empty = false;
+        try { L3ClassfilePrinter.emitCallable(L3ExprFixture.returnEmptyArity()); }
+        catch (IllegalArgumentException e) { empty = true; }
+        check("RETURN empty arity rejected", empty);
+
+        boolean two = false;
+        try { L3ClassfilePrinter.emitCallable(L3ExprFixture.returnTwoValues()); }
+        catch (IllegalArgumentException e) { two = true; }
+        check("RETURN two values rejected", two);
+
+        boolean nonInt = false;
+        try { L3ClassfilePrinter.emitCallable(L3ExprFixture.returnNonIntValue()); }
+        catch (IllegalArgumentException e) { nonInt = true; }
+        check("RETURN non-int value rejected", nonInt);
+
+        boolean outside = false;
+        try { L3ClassfilePrinter.emitCallable(L3ExprFixture.returnOutsideCallableBody()); }
+        catch (IllegalArgumentException e) { outside = true; }
+        check("RETURN outside callable body rejected", outside);
+    }
+
     private static boolean hasMethods(Class<?> cls, String... want) {
         Set<String> names = new HashSet<String>();
         for (Method m : cls.getDeclaredMethods()) {

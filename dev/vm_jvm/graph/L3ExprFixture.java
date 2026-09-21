@@ -484,6 +484,128 @@ public final class L3ExprFixture {
                 L3Role.CALLABLE,
                 L3Node.of(L3Role.RETURN, L3Node.of(L3Role.SEQUENCE, w, L3Node.ofInt(L3Role.INT_LITERAL, 0))));
     }
+
+    // ---- Nested RETURN (Path B slice NESTED-RETURN) ----
+
+    /**
+     * Nested RETURN in SEQUENCE skips tail: return 42; then PROBE / 0 never run.
+     */
+    public static L3Node returnSkipsSequenceTail() {
+        L3Node early = L3Node.of(L3Role.RETURN, L3Node.ofInt(L3Role.INT_LITERAL, 42));
+        L3Node seq = L3Node.of(
+                L3Role.SEQUENCE, early, L3Node.of(L3Role.PROBE), L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, seq));
+    }
+
+    /** Selected IF then-arm RETURN(10); else PROBE not evaluated. */
+    public static L3Node returnInSelectedIfArm() {
+        L3Node iff = L3Node.of(
+                L3Role.IF,
+                L3Node.ofInt(L3Role.INT_LITERAL, 1),
+                L3Node.of(L3Role.RETURN, L3Node.ofInt(L3Role.INT_LITERAL, 10)),
+                L3Node.of(L3Role.PROBE));
+        return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, iff));
+    }
+
+    /**
+     * WHILE body RETURN exits callable (not merely the loop).
+     * SEQUENCE(set 1, WHILE(get, RETURN(99)), get) → 99; final get never runs.
+     */
+    public static L3Node returnFromWhileBody() {
+        L3Node init = new L3Node(L3Role.LOCAL_SET, 0, L3Node.ofInt(L3Role.INT_LITERAL, 1));
+        L3Node body = L3Node.of(L3Role.RETURN, L3Node.ofInt(L3Role.INT_LITERAL, 99));
+        L3Node w = L3Node.of(L3Role.WHILE, L3Node.ofInt(L3Role.LOCAL_GET, 0), body);
+        L3Node get = L3Node.ofInt(L3Role.LOCAL_GET, 0);
+        return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, L3Node.of(L3Role.SEQUENCE, init, w, get)));
+    }
+
+    /**
+     * Callee early-RETURN(7); caller SEQUENCE continues after CALL → 100.
+     * Callee: RETURN(SEQUENCE(RETURN(7), PROBE)) — probe in callee must not tick.
+     */
+    public static L3Node returnInCalleeCallerContinues() {
+        L3Node early = L3Node.of(L3Role.RETURN, L3Node.ofInt(L3Role.INT_LITERAL, 7));
+        L3Node calleeBody = L3Node.of(L3Role.SEQUENCE, early, L3Node.of(L3Role.PROBE));
+        L3Node callee = L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, calleeBody));
+        L3Node call = L3Node.of(L3Role.CALL, callee, L3Node.of(L3Role.SUBJECT_REF));
+        L3Node after = new L3Node(L3Role.LOCAL_SET, 0, L3Node.ofInt(L3Role.INT_LITERAL, 100));
+        L3Node get = L3Node.ofInt(L3Role.LOCAL_GET, 0);
+        L3Node seq = L3Node.of(L3Role.SEQUENCE, call, after, get);
+        return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, seq));
+    }
+
+    /**
+     * RETURN expression is PROBE exactly once; trailing PROBE skipped.
+     * Result == 1, ArgEvalCounter == 1.
+     */
+    public static L3Node returnExprProbeOnce() {
+        L3Node early = L3Node.of(L3Role.RETURN, L3Node.of(L3Role.PROBE));
+        L3Node seq = L3Node.of(L3Role.SEQUENCE, early, L3Node.of(L3Role.PROBE));
+        return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, seq));
+    }
+
+    /**
+     * BREAK in callee loop does not cross CALL: caller WHILE continues.
+     * Caller: set n=0; while(1){ CALL(callee); n++; if n==2 BREAK else 0 }; get n → 2
+     * Callee: while(1) BREAK.
+     */
+    public static L3Node breakInCalleeDoesNotCrossCall() {
+        L3Node callee = L3Node.of(
+                L3Role.CALLABLE,
+                L3Node.of(
+                        L3Role.RETURN,
+                        L3Node.of(
+                                L3Role.SEQUENCE,
+                                L3Node.of(
+                                        L3Role.WHILE,
+                                        L3Node.ofInt(L3Role.INT_LITERAL, 1),
+                                        L3Node.of(L3Role.BREAK)),
+                                L3Node.ofInt(L3Role.INT_LITERAL, 0))));
+        L3Node call = L3Node.of(L3Role.CALL, callee, L3Node.of(L3Role.SUBJECT_REF));
+        L3Node init = new L3Node(L3Role.LOCAL_SET, 0, L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        L3Node incr = new L3Node(
+                L3Role.LOCAL_SET,
+                0,
+                L3Node.of(L3Role.ADD, L3Node.ofInt(L3Role.LOCAL_GET, 0), L3Node.ofInt(L3Role.INT_LITERAL, 1)));
+        L3Node condEq2 = L3Node.of(
+                L3Role.ADD, L3Node.ofInt(L3Role.LOCAL_GET, 0), L3Node.ofInt(L3Role.INT_LITERAL, -2));
+        L3Node br = L3Node.of(
+                L3Role.IF, condEq2, L3Node.ofInt(L3Role.INT_LITERAL, 0), L3Node.of(L3Role.BREAK));
+        L3Node body = L3Node.of(L3Role.SEQUENCE, call, incr, br);
+        L3Node w = L3Node.of(L3Role.WHILE, L3Node.ofInt(L3Role.INT_LITERAL, 1), body);
+        L3Node get = L3Node.ofInt(L3Role.LOCAL_GET, 0);
+        return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, L3Node.of(L3Role.SEQUENCE, init, w, get)));
+    }
+
+    /** RETURN with zero children. */
+    public static L3Node returnEmptyArity() {
+        return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN));
+    }
+
+    /** Nested RETURN with two value children. */
+    public static L3Node returnTwoValues() {
+        L3Node bad = L3Node.of(
+                L3Role.RETURN,
+                L3Node.ofInt(L3Role.INT_LITERAL, 1),
+                L3Node.ofInt(L3Role.INT_LITERAL, 2));
+        return L3Node.of(
+                L3Role.CALLABLE,
+                L3Node.of(L3Role.RETURN, L3Node.of(L3Role.SEQUENCE, bad, L3Node.ofInt(L3Role.INT_LITERAL, 0))));
+    }
+
+    /** RETURN value is SUBJECT_REF (not an int). */
+    public static L3Node returnNonIntValue() {
+        L3Node bad = L3Node.of(L3Role.RETURN, L3Node.of(L3Role.SUBJECT_REF));
+        return L3Node.of(
+                L3Role.CALLABLE,
+                L3Node.of(L3Role.RETURN, L3Node.of(L3Role.SEQUENCE, bad, L3Node.ofInt(L3Role.INT_LITERAL, 0))));
+    }
+
+    /** CALLABLE body is SEQUENCE (not RETURN) — RETURN outside callable wrapper. */
+    public static L3Node returnOutsideCallableBody() {
+        return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.SEQUENCE, L3Node.ofInt(L3Role.INT_LITERAL, 1)));
+    }
+
     public static final class CallGraphWithOrphan {
         public final L3Node entry;
         public final L3Node orphan;

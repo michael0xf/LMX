@@ -116,3 +116,21 @@ javac -cp "dev/vm_jvm/out;build/vm_jvm/asm-9.7.1.jar" -d dev/vm_jvm/out printer/
 java -cp "dev/vm_jvm/out;build/vm_jvm/asm-9.7.1.jar" printer.ExprSmokeDriver
 java -cp "dev/vm_jvm/out" smoke.HelloStructureSmoke
 ```
+
+## GROK-BOT-JVM-L3-NESTED-RETURN-20260921-87 (2026-09-21)
+
+Path-B RETURN as control transfer from nested SEQUENCE, selected IF branch, and WHILE body to the nearest CALLABLE activation.
+
+- Nested `RETURN` → JVM `IRETURN` of the current callable method; expression once; tail after taken return skipped.
+- RETURN in callee exits only that callee; caller continues. RETURN in WHILE exits the callable (not merely the loop).
+- BREAK/CONTINUE remain nearest-WHILE; BREAK in callee does not cross CALL.
+- `ExprSmokeDriver` PASS checks=72 failures=0; `HelloStructureSmoke` PASS checks=25 failures=0.
+- Commit: named paths under `dev/vm_jvm/**` + this file only (no `.class`/`.jar`).
+
+Verify:
+```
+javac -d dev/vm_jvm/out lmx/*.java graph/*.java smoke/*.java
+javac -cp "dev/vm_jvm/out;build/vm_jvm/asm-9.7.1.jar" -d dev/vm_jvm/out printer/*.java
+java -cp "dev/vm_jvm/out;build/vm_jvm/asm-9.7.1.jar" printer.ExprSmokeDriver
+java -cp "dev/vm_jvm/out" smoke.HelloStructureSmoke
+```

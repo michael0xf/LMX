@@ -9,6 +9,13 @@ public final class L3Role {
     public static final L3Role INT_LITERAL = new L3Role();
     public static final L3Role FIELD_FOLLOW = new L3Role();
     public static final L3Role ADD = new L3Role();
+    /**
+     * Return from the nearest current {@link #CALLABLE} activation.
+     * Child[0] is the int result expression (evaluated exactly once).
+     * May appear nested under SEQUENCE / IF / WHILE; exits the callable
+     * (not merely a loop). Statement or value position; not a root wrapper-only form.
+     * BREAK/CONTINUE remain nearest-WHILE and never cross a CALL boundary.
+     */
     public static final L3Role RETURN = new L3Role();
     /**
      * Call another callable. Child[0] is a physical {@link L3Node} reference to a

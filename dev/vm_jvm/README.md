@@ -32,7 +32,7 @@ java -cp "dev/vm_jvm/out;build/vm_jvm/asm-9.7.1.jar" printer.ExprSmokeDriver
 java -cp "dev/vm_jvm/out" smoke.HelloStructureSmoke
 ```
 
-Expect: `PASS ExprSmokeDriver checks=7 failures=0` and `PASS HelloStructureSmoke checks=25 failures=0`.
+Expect: see `steps/vm-jvm-l3-smoke.md` for current check counts.
 
 ## CALL (Path B slice 55B)
 
@@ -77,3 +77,13 @@ Fixture: entry `return CALL(leaf, subject) + 5` where leaf is `return subject[0]
 - Statement-only BREAK / CONTINUE for the **nearest** active WHILE via an explicit compile-time loop-label stack (no named labels).
 - BREAK → loop exit; CONTINUE → condition recheck. Rejected outside a loop or in value/final-expression context before class bytes.
 - Stmt-position IF may carry BREAK/CONTINUE in a branch. REDO/RETRY/cleanup/finally/UNTIL/FOR/recursion deferred.
+
+## Nested RETURN (Path B slice NESTED-RETURN / 87)
+
+- Nested `L3Role.RETURN` under SEQUENCE / IF / WHILE exits the **nearest current CALLABLE** via JVM `IRETURN` (not merely the loop).
+- Return expression evaluated exactly once; statements/probes after a taken RETURN do not run.
+- RETURN inside a callee exits only that callee; caller continues and receives the value.
+- BREAK/CONTINUE remain nearest-WHILE only and cannot cross a CALL boundary (callee BREAK does not affect caller loops).
+- CALLABLE body remains a single root RETURN wrapper; nested RETURNs appear inside its expression tree.
+- Malformed arity / non-int value / CALLABLE body without RETURN rejected before class bytes.
+- No graph/callable copy; physical `L3Role` identity only; no hidden global return slot.

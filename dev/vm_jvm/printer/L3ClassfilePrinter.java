@@ -16,7 +16,8 @@ import org.objectweb.asm.Opcodes;
 /**
  * Emits one JVM method per reachable {@link L3Role#CALLABLE}.
  * Method names {@code c0}..{@code cN}; descriptors from arity; activation-local
- * int slots after subject/args. Pre-test WHILE; BREAK/CONTINUE via loop-label stack. Recursion deferred.
+ * int slots after subject/args. Pre-test WHILE; BREAK/CONTINUE via loop-label stack;
+ * nested RETURN exits the current CALLABLE (IRETURN). Recursion deferred.
  */
 public final class L3ClassfilePrinter implements Opcodes {
     public static final String GEN_INTERNAL = "lmx/gen/PrintedL3Expr";
@@ -209,8 +210,12 @@ public final class L3ClassfilePrinter implements Opcodes {
             if (c.children.length != 1 || c.children[0].role != L3Role.RETURN) {
                 throw new IllegalArgumentException("CALLABLE body must be a single RETURN");
             }
+            L3Node ret = c.children[0];
+            if (ret.children.length != 1) {
+                throw new IllegalArgumentException("RETURN arity: need exactly one value");
+            }
             validateIntExpr(
-                    c.children[0].children[0],
+                    ret.children[0],
                     map,
                     arity,
                     slots,
@@ -295,6 +300,10 @@ public final class L3ClassfilePrinter implements Opcodes {
                     currentArity,
                     slotCount,
                     a);
+        }
+        if (r == L3Role.RETURN) {
+            return validateNestedReturn(
+                    expr, map, arity, slots, currentCallable, currentArity, slotCount, assigned);
         }
         if (r == L3Role.WHILE) {
             throw new IllegalArgumentException("WHILE not allowed in value context");
@@ -387,7 +396,7 @@ public final class L3ClassfilePrinter implements Opcodes {
     }
 
     /**
-     * Statement position: WHILE / BREAK / CONTINUE / stmt-SEQUENCE / stmt-IF,
+     * Statement position: WHILE / BREAK / CONTINUE / RETURN / stmt-SEQUENCE / stmt-IF,
      * or a discarded int expression.
      */
     private static BitSet validateStmt(
@@ -400,6 +409,10 @@ public final class L3ClassfilePrinter implements Opcodes {
             int slotCount,
             BitSet assigned) {
         L3Role r = expr.role;
+        if (r == L3Role.RETURN) {
+            return validateNestedReturn(
+                    expr, map, arity, slots, currentCallable, currentArity, slotCount, assigned);
+        }
         if (r == L3Role.BREAK || r == L3Role.CONTINUE) {
             if (LOOP_DEPTH.get().intValue() < 1) {
                 throw new IllegalArgumentException(r == L3Role.BREAK
@@ -476,6 +489,35 @@ public final class L3ClassfilePrinter implements Opcodes {
                 expr, map, arity, slots, currentCallable, currentArity, slotCount, assigned);
     }
 
+
+    /**
+     * Nested RETURN: validate value once; mark all slots assigned (path exits callable).
+     * The CALLABLE root wrapper is validated separately; this covers nested uses only.
+     */
+    private static BitSet validateNestedReturn(
+            L3Node expr,
+            Map<L3Node, Integer> map,
+            Map<L3Node, Integer> arity,
+            Map<L3Node, Integer> slots,
+            L3Node currentCallable,
+            int currentArity,
+            int slotCount,
+            BitSet assigned) {
+        if (currentCallable == null) {
+            throw new IllegalArgumentException("RETURN outside callable");
+        }
+        if (expr.children.length != 1) {
+            throw new IllegalArgumentException("RETURN arity: need exactly one value");
+        }
+        BitSet after = validateIntExpr(
+                expr.children[0], map, arity, slots, currentCallable, currentArity, slotCount, assigned);
+        BitSet exited = (BitSet) after.clone();
+        for (int i = 0; i < slotCount; i++) {
+            exited.set(i);
+        }
+        return exited;
+    }
+
     private static void validateOccurrence(L3Node n, int currentArity) {
         if (n.role == L3Role.SUBJECT_REF) {
             return;
@@ -539,6 +581,8 @@ public final class L3ClassfilePrinter implements Opcodes {
                 emitStmt(mv, expr.children[i], map, arity, currentArity);
             }
             emitIntExpr(mv, expr.children[expr.children.length - 1], map, arity, currentArity);
+        } else if (r == L3Role.RETURN) {
+            emitNestedReturn(mv, expr, map, arity, currentArity);
         } else if (r == L3Role.WHILE) {
             throw new IllegalArgumentException("WHILE not allowed in value context");
         } else if (r == L3Role.BREAK) {
@@ -593,6 +637,10 @@ public final class L3ClassfilePrinter implements Opcodes {
             Map<L3Node, Integer> arity,
             int currentArity) {
         L3Role r = expr.role;
+        if (r == L3Role.RETURN) {
+            emitNestedReturn(mv, expr, map, arity, currentArity);
+            return;
+        }
         if (r == L3Role.BREAK) {
             Label[] frame = LOOP_STACK.get().peekFirst();
             mv.visitJumpInsn(GOTO, frame[1]);
@@ -627,6 +675,21 @@ public final class L3ClassfilePrinter implements Opcodes {
         }
         emitIntExpr(mv, expr, map, arity, currentArity);
         mv.visitInsn(POP);
+    }
+
+
+    /** Evaluate RETURN value once and IRETURN from the current CALLABLE method. */
+    private static void emitNestedReturn(
+            MethodVisitor mv,
+            L3Node expr,
+            Map<L3Node, Integer> map,
+            Map<L3Node, Integer> arity,
+            int currentArity) {
+        if (expr.children.length != 1) {
+            throw new IllegalArgumentException("RETURN arity: need exactly one value");
+        }
+        emitIntExpr(mv, expr.children[0], map, arity, currentArity);
+        mv.visitInsn(IRETURN);
     }
 
     private static void emitWhile(

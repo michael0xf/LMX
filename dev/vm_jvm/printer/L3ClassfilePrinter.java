@@ -19,7 +19,10 @@ import org.objectweb.asm.Opcodes;
  * int slots after subject/args. Pre-test WHILE; BREAK/CONTINUE via loop-label stack;
  * nested RETURN exits the current CALLABLE (IRETURN). Self/mutual recursive CALL
  * via physical CALLABLE identity (INVOKESTATIC to mapped method).
+ * Ownership cycles among non-CALLABLE expression nodes are rejected with gray/black
+ * identity DFS before emission; CALLABLE reference edges remain non-ownership.
  */
+
 
 public final class L3ClassfilePrinter implements Opcodes {
     public static final String GEN_INTERNAL = "lmx/gen/PrintedL3Expr";
@@ -126,101 +129,190 @@ public final class L3ClassfilePrinter implements Opcodes {
         return maxIdx[0] + 1;
     }
 
+    private static String ownershipRoleCategory(L3Role r) {
+        if (r == L3Role.SEQUENCE) {
+            return "SEQUENCE";
+        }
+        if (r == L3Role.ADD) {
+            return "ADD";
+        }
+        if (r == L3Role.IF) {
+            return "IF";
+        }
+        if (r == L3Role.WHILE) {
+            return "WHILE";
+        }
+        if (r == L3Role.CALL) {
+            return "CALL";
+        }
+        if (r == L3Role.RETURN) {
+            return "RETURN";
+        }
+        if (r == L3Role.LOCAL_SET) {
+            return "LOCAL_SET";
+        }
+        if (r == L3Role.LOCAL_GET) {
+            return "LOCAL_GET";
+        }
+        return "EXPR";
+    }
+
+    private static void ownershipGrayEnter(L3Node n, Map<L3Node, Boolean> gray) {
+        if (gray.containsKey(n)) {
+            throw new IllegalArgumentException(
+                    "ownership cycle: gray back-edge at " + ownershipRoleCategory(n.role));
+        }
+        gray.put(n, Boolean.TRUE);
+    }
+
     private static void scanArity(L3Node n, int[] maxIdx) {
+        scanArity(
+                n,
+                maxIdx,
+                new IdentityHashMap<L3Node, Boolean>(),
+                new IdentityHashMap<L3Node, Boolean>());
+    }
+
+    private static void scanArity(
+            L3Node n, int[] maxIdx, Map<L3Node, Boolean> gray, Map<L3Node, Boolean> black) {
         if (n == null) {
             return;
         }
-        // CALLABLE is a reference identity, not an owned subtree for arity of *this* body.
         if (n.role == L3Role.CALLABLE) {
             return;
         }
-        if (n.role == L3Role.ARG) {
-            if (n.intPayload > maxIdx[0]) {
-                maxIdx[0] = n.intPayload;
-            }
+        if (black.containsKey(n)) {
             return;
         }
-        if (n.role == L3Role.CALL) {
-            for (int i = 1; i < n.childCount(); i++) {
-                scanArity(n.child(i), maxIdx);
+        ownershipGrayEnter(n, gray);
+        try {
+            if (n.role == L3Role.ARG) {
+                if (n.intPayload > maxIdx[0]) {
+                    maxIdx[0] = n.intPayload;
+                }
+                return;
             }
-            return;
-        }
-        for (int _i_c = 0; _i_c < n.childCount(); _i_c++) {
-            L3Node c = n.child(_i_c);
-            scanArity(c, maxIdx);
+            if (n.role == L3Role.CALL) {
+                for (int i = 1; i < n.childCount(); i++) {
+                    scanArity(n.child(i), maxIdx, gray, black);
+                }
+                return;
+            }
+            for (int _i_c = 0; _i_c < n.childCount(); _i_c++) {
+                scanArity(n.child(_i_c), maxIdx, gray, black);
+            }
+        } finally {
+            gray.remove(n);
+            black.put(n, Boolean.TRUE);
         }
     }
 
     private static void scanSlots(L3Node n, int[] maxIdx) {
+        scanSlots(
+                n,
+                maxIdx,
+                new IdentityHashMap<L3Node, Boolean>(),
+                new IdentityHashMap<L3Node, Boolean>());
+    }
+
+    private static void scanSlots(
+            L3Node n, int[] maxIdx, Map<L3Node, Boolean> gray, Map<L3Node, Boolean> black) {
         if (n == null) {
             return;
         }
         if (n.role == L3Role.CALLABLE) {
             return;
         }
-        if (n.role == L3Role.LOCAL_SET) {
-            if (n.intPayload > maxIdx[0]) {
-                maxIdx[0] = n.intPayload;
+        if (black.containsKey(n)) {
+            return;
+        }
+        ownershipGrayEnter(n, gray);
+        try {
+            if (n.role == L3Role.LOCAL_SET) {
+                if (n.intPayload > maxIdx[0]) {
+                    maxIdx[0] = n.intPayload;
+                }
+                for (int _i_c = 0; _i_c < n.childCount(); _i_c++) {
+                    scanSlots(n.child(_i_c), maxIdx, gray, black);
+                }
+                return;
+            }
+            if (n.role == L3Role.CALL) {
+                for (int i = 1; i < n.childCount(); i++) {
+                    scanSlots(n.child(i), maxIdx, gray, black);
+                }
+                return;
             }
             for (int _i_c = 0; _i_c < n.childCount(); _i_c++) {
-                L3Node c = n.child(_i_c);
-                scanSlots(c, maxIdx);
+                scanSlots(n.child(_i_c), maxIdx, gray, black);
             }
-            return;
-        }
-        if (n.role == L3Role.CALL) {
-            for (int i = 1; i < n.childCount(); i++) {
-                scanSlots(n.child(i), maxIdx);
-            }
-            return;
-        }
-        for (int _i_c = 0; _i_c < n.childCount(); _i_c++) {
-            L3Node c = n.child(_i_c);
-            scanSlots(c, maxIdx);
+        } finally {
+            gray.remove(n);
+            black.put(n, Boolean.TRUE);
         }
     }
 
     private static void collectCallables(L3Node entry, List<L3Node> order, Map<L3Node, Integer> map) {
-        walk(entry, order, map);
+        walk(
+                entry,
+                order,
+                map,
+                new IdentityHashMap<L3Node, Boolean>(),
+                new IdentityHashMap<L3Node, Boolean>());
     }
 
-    private static void walk(L3Node n, List<L3Node> order, Map<L3Node, Integer> map) {
+    private static void walk(
+            L3Node n,
+            List<L3Node> order,
+            Map<L3Node, Integer> map,
+            Map<L3Node, Boolean> gray,
+            Map<L3Node, Boolean> black) {
         if (n == null) {
             return;
         }
         if (n.role == L3Role.CALLABLE) {
-            // Reference edge to an already-mapped CALLABLE is not an owned-tree edge:
-            // do not walk children again (terminates self/mutual cycles).
             if (map.containsKey(n)) {
                 return;
             }
             requireSealed(n);
             map.put(n, Integer.valueOf(order.size()));
             order.add(n);
+            ownershipGrayEnter(n, gray);
+            try {
+                for (int _i_c = 0; _i_c < n.childCount(); _i_c++) {
+                    walk(n.child(_i_c), order, map, gray, black);
+                }
+            } finally {
+                gray.remove(n);
+                black.put(n, Boolean.TRUE);
+            }
+            return;
+        }
+        if (black.containsKey(n)) {
+            return;
+        }
+        ownershipGrayEnter(n, gray);
+        try {
+            if (n.role == L3Role.CALL) {
+                if (n.childCount() < 1) {
+                    throw new IllegalArgumentException("CALL needs callee child");
+                }
+                L3Node callee = n.child(0);
+                if (callee == null || callee.role != L3Role.CALLABLE) {
+                    throw new IllegalArgumentException("CALL callee must be CALLABLE node");
+                }
+                walk(callee, order, map, gray, black);
+                for (int i = 1; i < n.childCount(); i++) {
+                    walk(n.child(i), order, map, gray, black);
+                }
+                return;
+            }
             for (int _i_c = 0; _i_c < n.childCount(); _i_c++) {
-                L3Node c = n.child(_i_c);
-                walk(c, order, map);
+                walk(n.child(_i_c), order, map, gray, black);
             }
-            return;
-        }
-        if (n.role == L3Role.CALL) {
-            if (n.childCount() < 1) {
-                throw new IllegalArgumentException("CALL needs callee child");
-            }
-            L3Node callee = n.child(0);
-            if (callee == null || callee.role != L3Role.CALLABLE) {
-                throw new IllegalArgumentException("CALL callee must be CALLABLE node");
-            }
-            walk(callee, order, map);
-            for (int i = 1; i < n.childCount(); i++) {
-                walk(n.child(i), order, map);
-            }
-            return;
-        }
-        for (int _i_c = 0; _i_c < n.childCount(); _i_c++) {
-            L3Node c = n.child(_i_c);
-            walk(c, order, map);
+        } finally {
+            gray.remove(n);
+            black.put(n, Boolean.TRUE);
         }
     }
 
@@ -271,6 +363,47 @@ public final class L3ClassfilePrinter implements Opcodes {
             int currentArity,
             int slotCount,
             BitSet assigned) {
+        return validateIntExpr(
+                expr,
+                map,
+                arity,
+                slots,
+                currentCallable,
+                currentArity,
+                slotCount,
+                assigned,
+                new IdentityHashMap<L3Node, Boolean>());
+    }
+
+    private static BitSet validateIntExpr(
+            L3Node expr,
+            Map<L3Node, Integer> map,
+            Map<L3Node, Integer> arity,
+            Map<L3Node, Integer> slots,
+            L3Node currentCallable,
+            int currentArity,
+            int slotCount,
+            BitSet assigned,
+            Map<L3Node, Boolean> gray) {
+        ownershipGrayEnter(expr, gray);
+        try {
+            return validateIntExprBody(
+                    expr, map, arity, slots, currentCallable, currentArity, slotCount, assigned, gray);
+        } finally {
+            gray.remove(expr);
+        }
+    }
+
+    private static BitSet validateIntExprBody(
+            L3Node expr,
+            Map<L3Node, Integer> map,
+            Map<L3Node, Integer> arity,
+            Map<L3Node, Integer> slots,
+            L3Node currentCallable,
+            int currentArity,
+            int slotCount,
+            BitSet assigned,
+            Map<L3Node, Boolean> gray) {
         L3Role r = expr.role;
         if (r == L3Role.INT_LITERAL || r == L3Role.PROBE) {
             return assigned;
@@ -313,7 +446,7 @@ public final class L3ClassfilePrinter implements Opcodes {
                 throw new IllegalArgumentException("LOCAL_SET arity: need RHS");
             }
             BitSet afterRhs = validateIntExpr(
-                    expr.child(0), map, arity, slots, currentCallable, currentArity, slotCount, assigned);
+                    expr.child(0), map, arity, slots, currentCallable, currentArity, slotCount, assigned, gray);
             BitSet next = (BitSet) afterRhs.clone();
             next.set(idx);
             return next;
@@ -335,7 +468,7 @@ public final class L3ClassfilePrinter implements Opcodes {
                     currentCallable,
                     currentArity,
                     slotCount,
-                    a);
+                    a, gray);
         }
         if (r == L3Role.RETURN) {
             return validateNestedReturn(
@@ -362,9 +495,9 @@ public final class L3ClassfilePrinter implements Opcodes {
                 throw new IllegalArgumentException("ADD arity");
             }
             BitSet a = validateIntExpr(
-                    expr.child(0), map, arity, slots, currentCallable, currentArity, slotCount, assigned);
+                    expr.child(0), map, arity, slots, currentCallable, currentArity, slotCount, assigned, gray);
             return validateIntExpr(
-                    expr.child(1), map, arity, slots, currentCallable, currentArity, slotCount, a);
+                    expr.child(1), map, arity, slots, currentCallable, currentArity, slotCount, a, gray);
         }
         if (r == L3Role.CALL) {
             if (expr.childCount() < 2) {
@@ -388,7 +521,7 @@ public final class L3ClassfilePrinter implements Opcodes {
             BitSet a = assigned;
             for (int i = 2; i < expr.childCount(); i++) {
                 a = validateIntExpr(
-                        expr.child(i), map, arity, slots, currentCallable, currentArity, slotCount, a);
+                        expr.child(i), map, arity, slots, currentCallable, currentArity, slotCount, a, gray);
             }
             return a;
         }
@@ -397,7 +530,7 @@ public final class L3ClassfilePrinter implements Opcodes {
                 throw new IllegalArgumentException("IF arity: need condition, then, else");
             }
             BitSet afterCond = validateIntExpr(
-                    expr.child(0), map, arity, slots, currentCallable, currentArity, slotCount, assigned);
+                    expr.child(0), map, arity, slots, currentCallable, currentArity, slotCount, assigned, gray);
             BitSet thenA = validateIntExpr(
                     expr.child(1),
                     map,
@@ -406,7 +539,7 @@ public final class L3ClassfilePrinter implements Opcodes {
                     currentCallable,
                     currentArity,
                     slotCount,
-                    (BitSet) afterCond.clone());
+                    (BitSet) afterCond.clone(), gray);
             BitSet elseA = validateIntExpr(
                     expr.child(2),
                     map,
@@ -415,7 +548,7 @@ public final class L3ClassfilePrinter implements Opcodes {
                     currentCallable,
                     currentArity,
                     slotCount,
-                    (BitSet) afterCond.clone());
+                    (BitSet) afterCond.clone(), gray);
             thenA.and(elseA);
             return thenA;
         }

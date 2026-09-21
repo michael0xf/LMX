@@ -77,6 +77,8 @@ public final class ExprSmokeDriver {
 
         testSealFreezeChildren();
 
+        testOwnershipCycleGuard();
+
         if (fails != 0) {
             System.out.println("FAIL ExprSmokeDriver checks=" + checks + " failures=" + fails);
             System.exit(1);
@@ -633,6 +635,43 @@ public final class ExprSmokeDriver {
         check("double-seal rejected", doubleSeal);
     }
 
+
+
+    private static void testOwnershipCycleGuard() throws Exception {
+        boolean seqCycle = false;
+        boolean so = false;
+        try {
+            L3ClassfilePrinter.emitCallable(L3ExprFixture.sequenceSelfOwnershipCycle());
+        } catch (StackOverflowError e) {
+            so = true;
+        } catch (IllegalArgumentException e) {
+            seqCycle = e.getMessage() != null && e.getMessage().contains("ownership cycle");
+            check("SEQUENCE self-cycle message names SEQUENCE", e.getMessage().contains("SEQUENCE"));
+        }
+        check("SEQUENCE self-cycle rejected (no SO)", seqCycle && !so);
+
+        boolean addCycle = false;
+        so = false;
+        try {
+            L3ClassfilePrinter.emitCallable(L3ExprFixture.addIfOwnershipCycle());
+        } catch (StackOverflowError e) {
+            so = true;
+        } catch (IllegalArgumentException e) {
+            addCycle = e.getMessage() != null && e.getMessage().contains("ownership cycle");
+        }
+        check("ADD/IF structural cycle rejected (no SO)", addCycle && !so);
+
+        Class<?> cls = loadPrinted(L3ExprFixture.sharedAcyclicLiteralAdd());
+        Object r = cls.getMethod("eval", lmx.LmxOccurrence.class)
+                .invoke(null, lmx.LmxOccurrence.independent(Integer.valueOf(0)));
+        check("shared acyclic ADD(x,x) -> 42", Integer.valueOf(42).equals(r));
+
+        // legal recursion still emits/runs (baseline preserved by full suite; spot-check countdown)
+        Class<?> cd = loadPrinted(L3ExprFixture.recursiveCountdown());
+        Object c0 = cd.getMethod("eval", lmx.LmxOccurrence.class)
+                .invoke(null, lmx.LmxOccurrence.independent(Integer.valueOf(0)));
+        check("ownership guard preserves recursive countdown 0", Integer.valueOf(0).equals(c0));
+    }
 
     private static void testSealFreezeChildren() throws Exception {
         // Constructor varargs alias cannot mutate node after construction.

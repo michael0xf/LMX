@@ -105,3 +105,8 @@ Fixture: entry `return CALL(leaf, subject) + 5` where leaf is `return subject[0]
 - Constructor varargs and successful `seal` replace children with a defensive copy so caller aliases cannot mutate count/content after construction/seal.
 - Failed `seal` (null / non-RETURN) leaves the shell **unsealed** with no partial child stuck; a later valid seal may still succeed once. Double-seal rejected.
 - Physical CALL target identity and legal self/mutual recursion unchanged. No ownership-cycle guard in this slice.
+
+## Ownership-cycle guard (GROK-BOT-JVM-L3-OWNERSHIP-CYCLE-GUARD-20260921-91)
+
+Illegal structural/ownership cycles among non-CALLABLE expression nodes are rejected with an identity gray/black DFS before bytecode emission (IllegalArgumentException naming the role category). Shared acyclic DAG data remains legal. CALLABLE reference edges (self/mutual recursion) stay non-ownership and terminate without cycle failure. No recursion-depth cap, graph copy, or global/TLS ownership state.
+

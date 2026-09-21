@@ -171,3 +171,8 @@ javac -cp "dev/vm_jvm/out;build/vm_jvm/asm-9.7.1.jar" -d dev/vm_jvm/out printer/
 java -cp "dev/vm_jvm/out;build/vm_jvm/asm-9.7.1.jar" printer.ExprSmokeDriver
 java -cp "dev/vm_jvm/out" smoke.HelloStructureSmoke
 ```
+
+## Ownership-cycle guard (GROK-BOT-JVM-L3-OWNERSHIP-CYCLE-GUARD-20260921-91)
+
+Illegal structural/ownership cycles among non-CALLABLE expression nodes are rejected with an identity gray/black DFS before bytecode emission (IllegalArgumentException naming the role category). Shared acyclic DAG data remains legal. CALLABLE reference edges (self/mutual recursion) stay non-ownership and terminate without cycle failure. No recursion-depth cap, graph copy, or global/TLS ownership state.
+

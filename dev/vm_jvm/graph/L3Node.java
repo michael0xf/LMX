@@ -80,6 +80,30 @@ public final class L3Node {
      * Null/malformed body → {@link IllegalArgumentException}; node stays unsealed
      * (no partial children written) so a later valid seal may still succeed once.
      */
+
+    /**
+     * Test-only: adopt {@code children} without cloning so ownership-cycle fixtures can
+     * install a gray back-edge. Production graphs must use {@link #of} / {@link #seal}.
+     * The returned node is sealed; the array remains the private backing store.
+     */
+    public static L3Node adoptChildrenForTest(L3Role role, L3Node[] children) {
+        if (role == null || children == null) {
+            throw new IllegalArgumentException("adoptChildrenForTest");
+        }
+        return new L3Node(role, 0, children, true);
+    }
+
+    /** Adopt or clone children; sealed at birth. */
+    private L3Node(L3Role role, int intPayload, L3Node[] children, boolean adopt) {
+        if (role == null) {
+            throw new IllegalArgumentException("role");
+        }
+        this.role = role;
+        this.intPayload = intPayload;
+        this.children = adopt ? children : children.clone();
+        this.sealed = true;
+    }
+
     public void seal(L3Node returnBody) {
         if (role != L3Role.CALLABLE) {
             throw new IllegalStateException("seal only on CALLABLE");

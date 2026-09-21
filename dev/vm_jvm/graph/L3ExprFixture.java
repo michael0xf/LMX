@@ -781,6 +781,35 @@ public final class L3ExprFixture {
         return L3Node.ofInt(L3Role.INT_LITERAL, 1);
     }
 
+
+    /** SEQUENCE whose only child is itself — illegal ownership cycle (test-only adopt). */
+    public static L3Node sequenceSelfOwnershipCycle() {
+        L3Node[] slot = new L3Node[1];
+        L3Node seq = L3Node.adoptChildrenForTest(L3Role.SEQUENCE, slot);
+        slot[0] = seq;
+        return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, seq));
+    }
+
+    /** ADD(a, b) / ADD(b, a) multi-node structural ownership cycle. */
+    public static L3Node addIfOwnershipCycle() {
+        L3Node[] aSlot = new L3Node[2];
+        L3Node[] bSlot = new L3Node[3];
+        L3Node add = L3Node.adoptChildrenForTest(L3Role.ADD, aSlot);
+        L3Node iff = L3Node.adoptChildrenForTest(L3Role.IF, bSlot);
+        aSlot[0] = iff;
+        aSlot[1] = L3Node.ofInt(L3Role.INT_LITERAL, 1);
+        bSlot[0] = L3Node.ofInt(L3Role.INT_LITERAL, 1);
+        bSlot[1] = add;
+        bSlot[2] = L3Node.ofInt(L3Role.INT_LITERAL, 0);
+        return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, add));
+    }
+
+    /** Shared acyclic subexpression: ADD(x, x) with same physical INT_LITERAL node. */
+    public static L3Node sharedAcyclicLiteralAdd() {
+        L3Node x = L3Node.ofInt(L3Role.INT_LITERAL, 21);
+        return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, L3Node.of(L3Role.ADD, x, x)));
+    }
+
     public static final class CallGraphWithOrphan {
         public final L3Node entry;
         public final L3Node orphan;

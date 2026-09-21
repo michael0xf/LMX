@@ -168,7 +168,10 @@ fn: lmx_plan_validate_shape (@: LmxArena arena; @: Lmx plan_roles; @: Lmx occurr
     role_home: lmx_plan_home(arena, root_role)
     if: home = 0 || role_home = 0 || lmx_plan_home(arena, entry_role) != role_home
         return: c.LMX_PLAN_INVALID
-    if: role_home != home && role_home\permanent = 0U
+    # lmx_plan_home answers with the arena or with its bound store and nothing else, so a
+    # role home that is not the plan's is refused exactly when it is the arena itself: the
+    # plan then lives in the store and its roles would die sooner.  No flag is read for it.
+    if: role_home != home && role_home = arena
         return: c.LMX_PLAN_INVALID
     count: (cast: (size_t) plan\len) - 1U
     while: i < count

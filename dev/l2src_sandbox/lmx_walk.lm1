@@ -170,12 +170,18 @@ return: 0
 
 # ---- entry: load the own fields this body uses (21.5) ----------------------------------
 
-# Whether `p` lives in the permanent store this Message's arena is bound to.  Asked only
-# while a body is prepared, never by an activation.
+# Whether `p` lives in the permanent store this Message's arena is bound to: the qualified
+# type `independent: const: immutable` IS that membership (lmx_perm.h.lm1), so the question
+# is "which range table answers for p", asked of the one function that knows how a store is
+# bound -- lmx_plan_home -- and never of a flag here.  Asked only while a body is prepared,
+# never by an activation.
 fn: lmx_walk_eternal (@: LmxWalkFrame f; @: void p) int
-    if: p = 0 || f\arena\perm = 0 || f\arena\perm\permanent = 0U
+    @: LmxArena home 0
+    if: p = 0
         return: 0
-return: (cast: (int) (lmx_walk_kind_in(f, f\arena\perm, p) != c.LMX_KIND_NONE))
+    f\context\classified: f\context\classified + 1U
+    home: lmx_plan_home(f\arena, p)
+return: (cast: (int) (home != 0 && home != f\arena))
 
 fn: lmx_walk_scan_node (@: LmxWalkFrame f; @: void node) int
     @: LmxWalkOwn o 0

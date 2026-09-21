@@ -1,0 +1,191 @@
+predef: "l2src/lmx_plan.lm1"
+predef: "l2src/lmx_perm.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# lmx_range_kinds_selftest.lm1 -- the qualifier `independent: const: immutable` as a TYPE
+# RECOGNISED BY ADDRESS, for EVERY kind of value (FABLE-ADDR-RANGE-KINDS-20260920-01).
+#
+# The author's rules, archived verbatim in LMX_blog/2026-09-20.md ("Значение independent",
+# "Квалификаторы как тип, определяемый по диапазону адресов"): independent means node = 0;
+# these receivers define a type; every type is recognised by the membership of an address
+# in a range, not by a flag on the value and not by special code per kind.
+#
+# What the two existing tests measure, and what they leave open.  tests/lmx_perm_selftest.lm1
+# measures the boundary on ONE Structure and ONE cell; tests/lmx_walk_perm_selftest.lm1 adds
+# the role, plan-role and callable records as the walk meets them.  Neither asks the
+# question of the mechanism itself: does EVERY kind the ordinary constructors can build
+# answer the same way?  A kind that answered differently would be exactly the special case
+# the rule forbids -- and a new kind added later with its own path would not be noticed.
+#
+# So this test is a TABLE.  Each row is one constructor, run twice: once in the permanent
+# store and once in a Message arena bound to it.  For every row:
+#   * the store-built value has the SAME kind, type and stride from both Messages of the
+#     runtime as from the store itself;
+#   * the Message-built value has that very kind and type too -- the qualifier is never a
+#     second kind code: what differs is WHICH range table answered, and nothing else;
+#   * another runtime answers nothing, with no stride and no pool;
+#   * the pool question stays local: the store owns its value, no Message does; the store
+#     never answers for a Message's value and neither does the sibling Message;
+#   * the home (lmx_plan_home) is the store for the one and the Message for the other;
+#   * a store-resident value of ANY kind is a copy terminal from its own runtime, and from
+#     no other.
+# And, once for the whole table: independent means node = 0 and the ranges do not care
+# (a root and a nested Structure of the store are the same kind); a CLOSED store is not a
+# store -- every address it held answers nothing through every one of those questions.
+#
+# No constant, flag or name was added for any of this: the test uses the common acts only.
+
+@: LmxArena sa 0
+@: LmxArena am 0
+@: LmxArena ac 0
+@: LmxArena bm 0
+@@: void held 0
+int: nheld 0
+int: checks 0
+int: failures 0
+
+sub: check (int: ok; const: @(char what); const: @(char label))
+    checks: checks + 1
+    if: ok = 0
+        failures: failures + 1
+        c.printf("FAIL [%s] %s\n", what, label)
+    ---
+end: check
+
+# One row: `ps` built in the store, `pm` built by the same constructor in the Message.
+sub: row (const: @(char what); @: void ps; @: void pm)
+    int: kind
+    check(ps != 0 && pm != 0, what, "the constructor built the value in the store and in the Message")
+    if: ps != 0 && pm != 0
+        kind: lmx_range_classify(sa, ps)
+        check(kind != c.LMX_KIND_NONE, what, "the store classifies its own value")
+        check(lmx_range_classify(am, ps) = kind && lmx_range_classify(ac, ps) = kind, what, "the same kind from BOTH Messages of the runtime")
+        check(lmx_range_type_of(am, ps) = lmx_range_type_of(sa, ps) && lmx_range_type_of(ac, ps) = lmx_range_type_of(sa, ps), what, "the same type from both Messages as from the store")
+        check(lmx_range_stride(sa, ps) != 0U && lmx_range_stride(am, ps) = lmx_range_stride(sa, ps) && lmx_range_stride(ac, ps) = lmx_range_stride(sa, ps), what, "the same stride, and it is not zero")
+        check(lmx_range_classify(bm, ps) = c.LMX_KIND_NONE && lmx_range_stride(bm, ps) = 0U && lmx_range_pool(bm, ps) = 0, what, "another runtime answers NOTHING about it")
+        check(lmx_range_pool(sa, ps) != 0 && lmx_range_pool(am, ps) = 0 && lmx_range_pool(ac, ps) = 0, what, "the pool question stays local: the store owns it, no Message does")
+        check(lmx_range_classify(am, pm) = kind && lmx_range_type_of(am, pm) = lmx_range_type_of(sa, ps), what, "the Message-built value has the SAME kind and type: the qualifier is not a second kind code")
+        check(lmx_range_pool(am, pm) != 0 && lmx_range_classify(sa, pm) = c.LMX_KIND_NONE && lmx_range_classify(ac, pm) = c.LMX_KIND_NONE, what, "the store never answers for a Message's value, nor does the sibling Message")
+        check(lmx_plan_home(am, ps) = sa && lmx_plan_home(ac, ps) = sa && lmx_plan_home(sa, ps) = sa && lmx_plan_home(am, pm) = am, what, "which table answered: the store for the one, the Message for the other")
+        check(lmx_plan_home(bm, ps) = 0 && lmx_plan_home(ac, pm) = 0, what, "and no table at all from where it is not resolvable")
+        check(lmx_copy_is_terminal(am, ps) = 1 && lmx_copy_is_terminal(ac, ps) = 1 && lmx_copy_is_terminal(bm, ps) = 0, what, "a store-resident value is a copy terminal from its own runtime, and from no other")
+        if: held != 0 && nheld < 32
+            held[nheld]: ps
+            nheld: nheld + 1
+        ---
+    ---
+end: row
+
+# The slot array of a Structure is a range of its own (CHILDREN): the address of slot 0.
+fn: slots (@: LmxArena arena; size_t: count) @: void
+    @: Lmx s lmx_node_new_owned(arena)
+    if: s = 0 || lmx_arena_refs_open_owned(arena, s, count) != 0
+        return: 0
+return: (cast: (@: void) lmx_arena_ref_cell(s, 0U))
+
+fn: backing (@: LmxArrayDesc desc) @: void
+    if: desc = 0
+        return: 0
+return: desc\data
+
+fn: main () int
+    LmxArena: store_a
+    LmxArena: a_main
+    LmxArena: a_child
+    LmxArena: store_b
+    LmxArena: b_main
+    @: Lmx roles_s 0
+    @: Lmx roles_m 0
+    @: Lmx root 0
+    @: Lmx nested 0
+    @: char chars_s 0
+    @: char chars_m 0
+    int: i 0
+    int: silent 0
+
+    memset((cast: (@: void) (@ store_a)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ a_main)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ a_child)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ store_b)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ b_main)), 0, c.sizeof(c.LmxArena))
+    sa: @ store_a
+    am: @ a_main
+    ac: @ a_child
+    bm: @ b_main
+    held: (cast: (@@: void) calloc(32U, c.sizeof(@: void)))
+    if: held = 0 || lmx_perm_open(sa) != 0 || lmx_perm_open(@ store_b) != 0 || lmx_arena_open(am) != 0 || lmx_arena_open(ac) != 0 || lmx_arena_open(bm) != 0
+        fputs("lmx_range_kinds: arenas\n", l1_stdout())
+        return: 2
+    if: lmx_perm_bind(am, sa) != 0 || lmx_perm_bind(ac, sa) != 0 || lmx_perm_bind(bm, @ store_b) != 0
+        fputs("lmx_range_kinds: bind\n", l1_stdout())
+        return: 2
+    ---
+
+    # ---- the table: one row per constructor ---------------------------------------------
+    row("Structure", (cast: (@: void) lmx_node_new_owned(sa)), (cast: (@: void) lmx_node_new_owned(am)))
+    row("reference slots of a Structure", slots(sa, 3U), slots(am, 3U))
+    row("int cell", lmx_int_new_owned(sa), lmx_int_new_owned(am))
+    row("size_t cell", lmx_size_new_owned(sa), lmx_size_new_owned(am))
+    row("unsigned cell", lmx_unsigned_new_owned(sa), lmx_unsigned_new_owned(am))
+    row("METHOD record", (cast: (@: void) lmx_method_new_owned(sa)), (cast: (@: void) lmx_method_new_owned(am)))
+    row("LmxCallable record", (cast: (@: void) lmx_callable_new_owned(sa)), (cast: (@: void) lmx_callable_new_owned(am)))
+    row("op record", (cast: (@: void) lmx_op_new_owned(sa, 1)), (cast: (@: void) lmx_op_new_owned(am, 1)))
+    roles_s: lmx_plan_roles_open(sa)
+    roles_m: lmx_plan_roles_open(am)
+    if: roles_s != 0 && roles_m != 0
+        row("plan role record", lmx_arena_ref_value(roles_s, 0U), lmx_arena_ref_value(roles_m, 0U))
+    ---
+    check(roles_s != 0 && roles_m != 0, "plan role record", "the role tables were built")
+    row("array record", (cast: (@: void) lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, 4U, sa)), (cast: (@: void) lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, 4U, am)))
+    row("array backing", backing(lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, 4U, sa)), backing(lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, 4U, am)))
+    row("reference array record", (cast: (@: void) lmx_array_ref_new_positive_owned(c.LMX_TYPE_ARRAY_OF_LMX, 2U, sa)), (cast: (@: void) lmx_array_ref_new_positive_owned(c.LMX_TYPE_ARRAY_OF_LMX, 2U, am)))
+    row("reference array backing", backing(lmx_array_ref_new_positive_owned(c.LMX_TYPE_ARRAY_OF_LMX, 2U, sa)), backing(lmx_array_ref_new_positive_owned(c.LMX_TYPE_ARRAY_OF_LMX, 2U, am)))
+    chars_s: lmx_chars_new_owned(sa)
+    chars_m: lmx_chars_new_owned(am)
+    if: chars_s != 0 && chars_m != 0
+        row("char cell", lmx_char_cell_known(chars_s, 101), lmx_char_cell_known(chars_m, 101))
+    ---
+    check(chars_s != 0 && chars_m != 0, "char cell", "the char tables were built")
+
+    # ---- independent means node = 0, and the ranges do not care ----------------------------
+    root: lmx_node_new_owned(sa)
+    nested: 0
+    if: root != 0
+        nested: lmx_struct_new_owned(root, sa)
+    ---
+    check(root != 0 && nested != 0 && root\node = 0 && nested\node = root, "independent", "a root of the store has node = 0; a member nested in it has its root as node")
+    if: root != 0 && nested != 0
+        check(lmx_range_classify(am, (cast: (@: void) root)) = lmx_range_classify(am, (cast: (@: void) nested)) && lmx_plan_home(am, (cast: (@: void) nested)) = sa, "independent", "root and member are the same kind of the same store: node = 0 is a fact of the Structure, not of its range")
+    ---
+
+    # ---- a CLOSED store is not a store --------------------------------------------------------
+    check(nheld >= 14, "closed store", "the table handed over an address of every kind")
+    check(lmx_perm_store_of(am) = sa && lmx_perm_close(sa) = 0, "closed store", "the store closed, once")
+    check(lmx_perm_store_of(am) = 0 && lmx_perm_store_of(ac) = 0 && lmx_perm_is_store(sa) = 0, "closed store", "its binders stop following it: the link answers for itself")
+    while: i < nheld
+        if: lmx_range_classify(am, held[i]) != c.LMX_KIND_NONE || lmx_range_stride(am, held[i]) != 0U || lmx_plan_home(am, held[i]) != 0 || lmx_copy_is_terminal(am, held[i]) != 0
+            silent: silent + 1
+        i: i + 1
+    ---
+    check(silent = 0, "closed store", "every address it held answers NOTHING: no kind, no stride, no home, not a copy terminal")
+
+    check(lmx_arena_release(ac) = 0 && lmx_arena_release(am) = 0 && lmx_arena_release(bm) = 0 && lmx_perm_close(@ store_b) = 0, "teardown", "the Messages released, the other store closed")
+    free((cast: (@: void) held))
+    if: failures != 0
+        c.printf("lmx_range_kinds: %d failed of %d\n", failures, checks)
+        return: 1
+    ---
+    c.printf("lmx_range_kinds: %d checks, %d kinds\n", checks, nheld)
+return: 0

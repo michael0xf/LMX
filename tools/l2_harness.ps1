@@ -259,6 +259,10 @@ if ($driver) { Add-Row 'OK' 'build:eternal_driver' ($made.ToString() + ' kernel 
 #                           what must be there), and then the program RUNS under the driver,
 #                           which is given Args: the number of roots and facts about them (the
 #                           driver's header lists the words).  Exit 0 or the row is red.
+#   library-links        -- a unit with NO main, which l2trans takes in library mode, together
+#                           with the units named in With.  Each is translated and compiled, its
+#                           external definitions are read with nm, and the objects are joined in
+#                           ONE relocatable link.  LINK AND SYMBOLS ONLY: nothing is run.
 #
 # WHY THESE ROWS READ THE GENERATED L1 AS WELL AS RUN IT.  A program whose eternal branch sits
 # in the ordinary Message arena compiles and exits 0 exactly like one whose branch is in the
@@ -543,7 +547,32 @@ $fixtures = @(
         Absent = @('(cast: (uchar)');
         Debt = @('lmx_char_rebind_known(l2_q1_from[0], ((cast: (int) l2_q1) & 255))',
                  'lmx_char_rebind_known(l2_xp[0], ((cast: (int) hi) & 255))',
-                 'lmx_char_rebind_known(l2_xp[0], ((cast: (int) l2_p1_0) & 255))') }
+                 'lmx_char_rebind_known(l2_xp[0], ((cast: (int) l2_p1_0) & 255))') },
+    # TWO LIBRARY UNITS IN ONE LINK (FABLE-L2-LIBRARY-P2-UNIQUE-STATE-20260921-137).  A library unit keeps
+    # two module cells of its own -- its arena and its opened mark -- and both were emitted under ONE
+    # unhashed name for every unit, so two units could not share a link: measured, exit 1 with
+    # `multiple definition of l2_program_arena` and `... l2_library_opened`, exactly those two.  The
+    # translator now renames both per unit, and the renames stand BEFORE the arena's definition: the
+    # list of five hashed names is emitted AFTER it, and a define that follows a definition renames the
+    # later uses and not the definition (measured: the unit then does not compile).  Folding the two
+    # names into that list would look tidier and would break the arena again.
+    #
+    # The symbol rule is what keeps this fixed: an external definition of a library object must be
+    # either `l2_u<16 hex>_...` or a name the unit EXPORTS.  The next module cell born without a hash
+    # is then caught here by construction, not by somebody remembering a list -- the opened mark was
+    # missed by two independent readings of the translator and found only by linking.  A link made
+    # green with --allow-multiple-definition would leave ONE opened mark for both units (the second
+    # unit believes it is open because the first one opened); the symbol rule is red on that too.
+    #
+    # WHAT THIS ROW DOES NOT SAY, and must not be read as saying: that a library unit WORKS.  It
+    # asserts LINK and SYMBOLS only.  The exported wrappers cannot reach their bodies until the
+    # library open exists (the generated l2_library_open cannot succeed today), so nothing is run
+    # here, and a row that expected 41 would be red for that reason and not for this one.  The
+    # constants are non-zero for the day they ARE run: a wrapper that cannot open returns 0.
+    [pscustomobject]@{ Name = 'unit_lib_pair_a.lm2'; Expect = 'library-links'; Exit = 0; Needle = '';
+        With = @('unit_lib_pair_b.lm2');
+        Exports = @('lib_pair_a_value', 'lib_pair_b_value');
+        Absent = @(); Debt = @() }
 )
 
 foreach ($fx in $fixtures) {
@@ -581,6 +610,77 @@ foreach ($fx in $fixtures) {
         Add-Row 'OK' ('fixture:' + $stem) ('eternal in the store, mutable unmoved (' + $fx.Debt.Count + ' required, ' + $fx.Absent.Count + ' forbidden)'); continue
     }
     if (-not $made2) { Add-Row 'FAIL' ('fixture:' + $stem) 'l1trans produced no C from the generated L1; see the log'; continue }
+
+    if ($fx.Expect -eq 'library-links') {
+        $nm = Join-Path (Split-Path -Parent $gcc) 'nm.exe'
+        if (-not (Test-Path -LiteralPath $nm)) { Add-Row 'FAIL' ('fixture:' + $stem) 'nm.exe is not beside gcc, so the symbols cannot be read'; continue }
+        $units = @($stem)
+        $why = ''
+        foreach ($other in $fx.With) {
+            $ostem = [System.IO.Path]::GetFileNameWithoutExtension($other)
+            $osource = Join-Path $sandbox ('tests\' + $other)
+            $oLm1 = Join-Path $gen ($ostem + '.lm1')
+            $oC = Join-Path $gen ($ostem + '.c')
+            if (-not (Test-Path -LiteralPath $osource)) { $why = 'the partner fixture is missing: ' + $other; break }
+            if (-not (Step-Made ('fixture.' + $ostem + '.l2trans') $l2trans @($osource, $oLm1) $src $oLm1)) { $why = 'l2trans produced no L1 for the partner ' + $other; break }
+            if (-not (Step-Made ('fixture.' + $ostem + '.l1trans') $Translator @($oLm1, $oC) $src $oC)) { $why = 'l1trans produced no C for the partner ' + $other; break }
+            $units += $ostem
+        }
+        $objects = @()
+        $cells = @()
+        $seen = @{}
+        $bad = @()
+        foreach ($u in $units) {
+            if ($why -ne '') { break }
+            # A unit that was NOT taken in library mode has no per-unit cells at all, and the row would
+            # then be green about nothing.
+            if ((Get-Content -LiteralPath (Join-Path $gen ($u + '.lm1')) -Raw) -cnotmatch 'define: l2_library_open l2_u[0-9A-F]{16}_open') { $why = $u + ' was not translated in library mode, so the row would measure nothing'; break }
+            $uO = Join-Path $gen ($u + '.o')
+            if (Test-Path -LiteralPath $uO) { Remove-Item -LiteralPath $uO -Force }
+            $code = Invoke-Step ('fixture.' + $u + '.compile') $gcc ($kflags + @('-c', (Join-Path $gen ($u + '.c')), '-o', $uO)) $root
+            if ($code -ne 0 -or -not (Test-Path -LiteralPath $uO)) { $why = "gcc exit $code on the generated C of " + $u; break }
+            $objects += $uO
+            Invoke-Step ('fixture.' + $u + '.nm') $nm @('-g', '--defined-only', $uO) $root | Out-Null
+            $arena = 0
+            $opened = 0
+            foreach ($line in ((Log-Text ('fixture.' + $u + '.nm')) -split "`r?`n")) {
+                if ($line -cnotmatch '^[0-9A-Fa-f]+ ([A-Za-z]) (\S+)$') { continue }
+                $kind = $Matches[1]
+                $name = $Matches[2]
+                # Every offence is COLLECTED and the link is still attempted: a red row then names the whole
+                # set at once, and says separately what the symbols say and what the linker says.
+                if ($kind -ceq 'C') { $bad += ($u + ': ' + $name + ' is a COMMON symbol, two units would share that one cell'); continue }
+                if ($seen.ContainsKey($name)) { $bad += ($name + ' is defined by both ' + $seen[$name] + ' and ' + $u) }
+                else { $seen[$name] = $u }
+                if ($name -cmatch '^l2_u[0-9A-F]{16}_') {
+                    if ($name -cmatch '_arena$') { $arena++; $cells += $name }
+                    if ($name -cmatch '_opened$') { $opened++; $cells += $name }
+                    continue
+                }
+                if ($fx.Exports -ccontains $name) { continue }
+                $bad += ($u + ': ' + $name + ' is neither unit-hashed nor exported')
+            }
+            if ($arena -ne 1 -or $opened -ne 1) { $bad += ($u + ': ' + $arena + ' hashed arena cells and ' + $opened + ' hashed opened marks, one of each is its own state') }
+        }
+        if ($why -eq '') {
+            foreach ($e in $fx.Exports) { if (-not $seen.ContainsKey($e)) { $bad += ('the exported name ' + $e + ' is defined by no unit of the row') } }
+        }
+        if ($why -eq '') {
+            $pair = Join-Path $gen ($stem + '.pair.o')
+            if (Test-Path -LiteralPath $pair) { Remove-Item -LiteralPath $pair -Force }
+            $code = Invoke-Step ('fixture.' + $stem + '.link') $gcc (@('-r', '-nostdlib', '-o', $pair) + $objects) $root
+            if ($code -ne 0 -or -not (Test-Path -LiteralPath $pair)) {
+                $dup = @([regex]::Matches(((Log-Text ('fixture.' + $stem + '.link')) -replace "`r?`n", ''), 'multiple definition of .([A-Za-z_0-9]+)') | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique)
+                $why = "the units do not link together, exit $code, multiple definition of: " + ($dup -join ', ')
+            }
+            if ($bad.Count -ne 0) {
+                $said = 'SYMBOLS: ' + ($bad -join '; ')
+                if ($why -ne '') { $why = $said + ' -- LINK: ' + $why } else { $why = $said + ' -- LINK: exit 0, which is no comfort: a cell that is shared links' }
+            }
+        }
+        if ($why -ne '') { Add-Row 'FAIL' ('fixture:' + $stem) $why; continue }
+        Add-Row 'OK' ('fixture:' + $stem) ($units.Count.ToString() + ' library units in one relocatable link, own cells ' + ($cells -join ' ') + ', no unhashed external name; LINK and SYMBOLS only, nothing was run'); continue
+    }
 
     if ($fx.Expect -eq 'eternal-runs') {
         $l1 = (Get-Content -LiteralPath $genLm1 -Raw)

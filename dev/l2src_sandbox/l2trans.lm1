@@ -14328,6 +14328,12 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: l2_write_defines(l2_out) != 0
         fclose(l2_out)
         return: 1
+    # The two module cells of a LIBRARY unit are per-unit state, so their names are unit-hashed like the five below them.
+    # These two renames stand BEFORE the definition of the arena: a define after a definition renames the later uses and
+    # not the definition.  Two library units in one link collided on exactly these two names (link exit 1).
+    if: l2_library_mode != 0 && c.fprintf(l2_out, "define: l2_program_arena l2_u%08X%08X_arena\ndefine: l2_library_opened l2_u%08X%08X_opened\n", l2_module_hash_a, l2_module_hash_b, l2_module_hash_a, l2_module_hash_b) < 0
+        fclose(l2_out)
+        return: 1
     if: fputs("@: LmxArena l2_program_arena 0\n", l2_out) < 0
         fclose(l2_out)
         return: 1

@@ -75,14 +75,28 @@ function Safe([string]$Name) { return ($Name -replace '[^A-Za-z0-9_.-]', '_') }
 
 # Run a command, capture everything, return the exit code; the transcript is the evidence.
 function Invoke-Step([string]$Label, [string]$Exe, [string[]]$ArgList, [string]$WorkDir) {
+    # THE OUTPUT IS NEVER HELD IN MEMORY -- the same fix as tools/build_l2src.ps1's Invoke-Captured,
+    # and the same reason: `| Out-String` built each command's whole output as one string and then a
+    # second copy to prepend the header. This harness inherited the shape because it was modelled on
+    # that gate, so the defect travelled by copying.
+    #
+    # The header cannot carry the exit code any more, because the child appends to the file while it
+    # runs and the code is only known afterwards -- so the exit line is APPENDED at the end instead.
+    # Step-Made and the callers read the return value, not the log, so nothing depends on where it sits.
     $log = Join-Path $logs ((Safe $Label) + '.log')
+    $head = 'command: "' + $Exe + '" ' + ($ArgList -join ' ') + [Environment]::NewLine + 'cwd: ' + $WorkDir
+    Set-Content -LiteralPath $log -Value $head -Encoding utf8
     $here = (Get-Location).Path
     Set-Location $WorkDir
-    $text = & $Exe @ArgList 2>&1 | Out-String
+    # argv stays an ARRAY: paths here contain spaces, and Start-Process -ArgumentList would rejoin them.
+    # `*>>` IS WRONG HERE AND WAS MEASURED WRONG: PS 5.1 appends through it in UTF-16LE
+    # while the header above is UTF-8, so the log became a mixed-encoding file and every
+    # diagnostic in it read as mojibake.  Out-File -Append streams the pipeline one record
+    # at a time -- it does NOT accumulate like Out-String -- and honours -Encoding.
+    & $Exe @ArgList 2>&1 | Out-File -LiteralPath $log -Append -Encoding utf8
     $code = $LASTEXITCODE
     Set-Location $here
-    $head = 'command: "' + $Exe + '" ' + ($ArgList -join ' ') + [Environment]::NewLine + 'cwd: ' + $WorkDir + [Environment]::NewLine + 'exit: ' + $code + [Environment]::NewLine
-    Set-Content -LiteralPath $log -Value ($head + $text) -Encoding utf8
+    Add-Content -LiteralPath $log -Value ('exit: ' + $code) -Encoding utf8
     return $code
 }
 # A translator step is judged by its OUTPUT, never by its exit code (see the header).

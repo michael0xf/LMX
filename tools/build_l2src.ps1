@@ -163,13 +163,31 @@ function Invoke-Captured([string]$Label, [string]$Exe, [string[]]$ArgList, [stri
     # passes them through, but then a path with a space would break. The native
     # call needs EAP Continue: under Stop, PS 5.1 turns a native stderr line into a
     # terminating error.
+    #
+    # THE OUTPUT IS NEVER HELD IN MEMORY.  It used to be `& $Exe @ArgList | Out-String`, which
+    # builds the whole of a command's output as one .NET string and then a SECOND copy to prepend
+    # the header -- and a full gate makes on the order of a thousand invocations.  Peak memory
+    # therefore scaled with how chatty the run happened to be, which is why the same gate passed
+    # at 3.8 GB free and was killed by the host at 3.3 GB (three kills on 20.09, one of them a
+    # full L2 gate).  The header is written first and the child appends to the file itself, so
+    # nothing accumulates in the PowerShell heap.  Found by deepseek in the sibling build_mixa.
     $log = Join-Path $logDir ((Get-SafeName $LogName) + '.log')
+    Set-Content -LiteralPath $log -Value ("invoke: `"$Exe`" " + ($ArgList -join ' ')) -Encoding utf8
     $eap = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
-    $text = & $Exe @ArgList 2>&1 | Out-String
+    # `& $Exe @ArgList` passes argv as an ARRAY and must stay that way: every path here can
+    # contain a space (the toolchain root, the staged stamp directory), and Start-Process
+    # -ArgumentList would rejoin the array into one unquoted string and break exactly those.
+    # `*>>` appends every stream as the lines arrive; $LASTEXITCODE is read immediately after,
+    # before anything else can overwrite it.  EAP stays Continue across the call for the reason
+    # above: under Stop, PS 5.1 turns a native stderr line into a terminating error.
+    # `*>>` IS WRONG HERE AND WAS MEASURED WRONG: PS 5.1 appends through it in UTF-16LE
+    # while the header above is UTF-8, so the log became a mixed-encoding file and every
+    # diagnostic in it read as mojibake.  Out-File -Append streams the pipeline one record
+    # at a time -- it does NOT accumulate like Out-String -- and honours -Encoding.
+    & $Exe @ArgList 2>&1 | Out-File -LiteralPath $log -Append -Encoding utf8
     $code = $LASTEXITCODE
     $ErrorActionPreference = $eap
-    Set-Content -LiteralPath $log -Value ("invoke: `"$Exe`" " + ($ArgList -join ' ') + "`r`n" + $text)
     return $code
 }
 # A selftest is a program, and a program may HANG.  The gate must not hang with it: the run is
@@ -240,6 +258,8 @@ function Compile-C([string]$Label, [string]$Source, [string]$Object) {
     return $true
 }
 
+# Per-run symbol memo for Get-Symbols; see the note inside it. Script scope, never persisted.
+$script:SymbolCache = @{}
 function Get-Symbols([string]$File, [switch]$Undefined) {
     # A failed compile leaves no .o; Resolve-Link must not crash on it.  Return empty
     # so the link step proceeds and fails as its own FAIL row (measured 20260919:
@@ -247,12 +267,23 @@ function Get-Symbols([string]$File, [switch]$Undefined) {
     # and takes down the whole gate).
     if (-not (Test-Path -LiteralPath $File)) { return @() }
     $opt = if ($Undefined) { '-u' } else { '--defined-only' }
-    $out = & $nm $opt $File 2>&1 | Out-String
+    # ONE nm PER (OBJECT, MODE) PER RUN.  Resolve-Link asks the same question of the same objects
+    # in every round -- up to 32 rounds over the whole pool, once per program -- and each ask was
+    # a process spawn plus a full Out-String copy of its output.  An object cannot change while
+    # the gate runs (it is produced by an earlier phase and never rewritten), so the answer cannot
+    # go stale inside one run.  The table is script-scoped and dies with the process: nothing is
+    # cached across runs, where an object COULD differ.  Keyed by the resolved path, so two
+    # spellings of the same file share one entry.
+    $key = (Resolve-Path -LiteralPath $File).ProviderPath + '|' + $opt
+    if ($script:SymbolCache.ContainsKey($key)) { return $script:SymbolCache[$key] }
     $syms = @()
-    foreach ($line in ($out -split "`r?`n")) {
-        $parts = @($line.Trim() -split '\s+' | Where-Object { $_ })
+    # Read nm's output line by line instead of building it as one string first: a big object's
+    # symbol table is large, and this runs once per object per mode.
+    foreach ($line in @(& $nm $opt $File 2>&1)) {
+        $parts = @(([string]$line).Trim() -split '\s+' | Where-Object { $_ })
         if ($parts.Count -ge 2 -and $parts[-1] -match '^[A-Za-z_][A-Za-z_0-9]*$') { $syms += $parts[-1] }
     }
+    $script:SymbolCache[$key] = $syms
     return $syms
 }
 function Resolve-Link([string]$SelftestObject, [string[]]$AllObjects) {

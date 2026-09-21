@@ -1,0 +1,122 @@
+# FABLE-L2-ARG-ADDRESS-DIRTY-20260921-67.  The author's sticky rule, and its negatives.
+#
+#   sticky  <=>  x is a parameter, `@: x` was EVALUATED before x's first EXECUTED binding line,
+#               and that line then executes and binds x to the body's own field.
+#   A binding line is an executed own declaration or an executed assignment-declaration of the
+#   same name (docs/L2_spec); whichever runs first decides.  From it to the end of the activation
+#   every checkpoint publishes the current local value and none of them clears the state.
+#
+# Every method names its field differently (na .. ne): an explicit WRITE `node\x: v` resolves x
+# in the FIRST method that has a field of that name, not in the current one -- a separate
+# translator defect, found while writing this fixture and reported with it.
+#
+# Each line printed is "<case> <local> <graph field>".
+#
+# HOW STICKINESS IS SEEN WITH LEGAL L2 ONLY.  `node\x: v` writes the graph cell and not the
+# activation's value.  A later checkpoint of a STICKY field publishes the local over it; a
+# checkpoint of an ordinary field, whose dirty an earlier checkpoint cleared, leaves it alone.
+# That is also what tells sticky from "raise dirty again after the call returns": the A2 and A4
+# checkpoints follow no address-taking call at all.
+fn: poke5 (@: int p) int
+    \p: 5
+    return: 0
+end: poke5
+fn: poke9 (@: int p) int
+    \p: 9
+    return: 0
+end: poke9
+fn: nop () int
+    return: 0
+end: nop
+
+# A. `@: na` BEFORE the first binding line, then the binding: sticky to the end.
+#    One checkpoint before the address-taking call (nop) and five after the binding.
+fn: before_bind (int: na) int
+    nop()
+    poke5(@: na)
+    int: na
+    na: na + 1
+    nop()
+    c.printf: "A1 %d %d\n" na node\na
+    node\na: 100
+    nop()
+    c.printf: "A2 %d %d\n" na node\na
+    poke9(@: na)
+    c.printf: "A3 %d %d\n" na node\na
+    node\na: 200
+    nop()
+    nop()
+    c.printf: "A4 %d %d\n" na node\na
+    return: 0
+end: before_bind
+
+# B. NEVER BOUND: the only binding line sits under a false condition and never executes, so the
+#    parameter stayed a plain local -- the callee's write is seen, nothing is published, and the
+#    checkpoints that follow have nothing to do.  Only the LOCAL can be printed: a field made by
+#    assignment alone cannot be read through `node\x` by legal L2 today (a separate limit, reported
+#    with this fixture), and a declared field would be bound by its declaration.  What this case
+#    pins is that such an activation RUNS: a translator that made every address-taken parameter
+#    sticky publishes here into a cell that was never loaded, and the program dies at `nop()`.
+fn: never_bound (int: nb; int: go) int
+    poke5(@: nb)
+    if: go != 0
+        nb: nb + 1
+    nop()
+    nop()
+    c.printf: "B %d\n" nb
+    return: 0
+end: never_bound
+
+# C. The binding FIRST, `@: nc` after it: ordinary dirty.  The checkpoint before the call
+#    publishes and clears; the write through the address is no assignment and is not published.
+fn: after_bind (int: nc) int
+    int: nc
+    nc: nc + 1
+    nop()
+    c.printf: "C1 %d %d\n" nc node\nc
+    poke9(@: nc)
+    c.printf: "C2 %d %d\n" nc node\nc
+    node\nc: 100
+    nop()
+    c.printf: "C3 %d %d\n" nc node\nc
+    return: 0
+end: after_bind
+
+# D. One method, both orders: the condition decides at RUN time whether the address comes before
+#    the binding.  A translator that decides stickiness from the text alone fails one of the two.
+fn: either (int: nd; int: early) int
+    if: early != 0
+        poke5(@: nd)
+    int: nd
+    nd: nd + 1
+    if: early = 0
+        poke5(@: nd)
+    nop()
+    node\nd: 100
+    nop()
+    c.printf: "D%d %d %d\n" early nd node\nd
+    return: 0
+end: either
+
+# E. The DECLARATION is a binding line too: declared first, address after, assignment last --
+#    the address came after the first executed binding line, so this is ordinary, not sticky.
+fn: decl_binds (int: ne) int
+    int: ne
+    poke5(@: ne)
+    ne: ne + 1
+    nop()
+    node\ne: 100
+    nop()
+    c.printf: "E %d %d\n" ne node\ne
+    return: 0
+end: decl_binds
+
+fn: main () int
+    before_bind(3)
+    never_bound(3, 0)
+    after_bind(3)
+    either(3, 1)
+    either(3, 0)
+    decl_binds(3)
+    return: 0
+end: main

@@ -315,6 +315,17 @@ prototype:
     fn: l2_collect_asgn_binds (const: @(char path)) int
     fn: l2_dyn_find (int: mi; const: @(LmP0Text t)) int
     fn: l2_bind_own (int: mi; int: oi; const: @(char path); const: @(LmP0Node at)) int
+    fn: l2_own_ty_of_param (int: ft) int
+    fn: l2_own_store_helper (int: ty) @: char
+    fn: l2_own_store_rebinds (int: ty) int
+    fn: l2_own_store_value (int: ty; const: @(char local); @: char dest) int
+    fn: l2_param_name (int: mi; int: k) @: LmP0Text
+    fn: l2_addr_scan (const: @(LmP0Node node); const: @(LmP0Text name)) int
+    fn: l2_param_addr_taken (int: mi; int: k) int
+    fn: l2_own_of_param (int: mi; int: k) int
+    fn: l2_own_ctr (int: oi) const: @: char
+    fn: l2_emit_addr_mark (int: mi; int: k; const: @(char ind)) int
+    fn: l2_emit_bind_mark (int: mi; int: oi; const: @(char ind)) int
     fn: l2_dyn_analyze (const: @(char path)) int
     fn: l2_dyn_local (const: @(char path)) int
     fn: l2_dyn_close (const: @(char path)) int
@@ -5269,6 +5280,140 @@ fn: l2_is_asgn (const: @(LmP0Node stmt)) int
         return: 0
 return: 1
 
+# THE OWN STORAGE CODE OF A FORMAL'S TYPE (FABLE-L2-ARG-ADDRESS-DIRTY-20260921-67).  Argument-as-own
+# binding is one mechanism for every argument type that can be assigned; the TYPE decides only
+# which graph cell holds the published value.  Formal codes and own storage codes are different
+# number spaces (unsigned is 34 as a formal and 3 as an own field; a pointer formal r is the own
+# field 1000 + r, the same code a declared pointer own has), so every comparison between the two
+# goes through this one function instead of comparing the raw numbers.  -1 is "the graph has no
+# cell for this type today", never "this type is not eligible": pointers of every depth and
+# pointee go to the one generic pointer cell.
+fn: l2_own_ty_of_param (int: ft) int
+    if: ft = 34
+        return: 3
+    if: l2_pointer_depth(ft) > 0
+        return: 1000 + ft
+    if: ft = 0 || ft = 1 || ft = 2 || ft = 36
+        return: ft
+return: -1
+
+# The name of parameter k of method mi: a declared formal, or a hidden/dynamic input after them.
+fn: l2_param_name (int: mi; int: k) @: LmP0Text
+    if: mi < 0 || k < 0
+        return: 0
+    if: k < l2_m_arity[mi]
+        return: l2_fn(mi, k)
+    if: k - l2_m_arity[mi] < l2_m_dyn[mi]
+        return: l2_dn(mi, k - l2_m_arity[mi])
+return: 0
+
+# Is `@: name` written anywhere under this node?  An address actual is a frame whose head is the
+# address operator and whose one field is the atom; a pointer DECLARATION has the same head and
+# two fields, and is not one.
+fn: l2_addr_scan (const: @(LmP0Node node); const: @(LmP0Text name)) int
+    @: LmP0Field f 0
+    if: node = 0 || name = 0 || node\as = 0
+        return: 0
+    if: node\kind = c.LM_P0_NODE_FRAME
+        if: node\as\frame = 0 || node\as\frame\body = 0
+            return: 0
+        f: l2_next_active(node\as\frame\body\first_field)
+        if: l2_address_depth(node\as\frame\head) > 0 && l2_count_active(node\as\frame\body) = 1 && f != 0 && f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM && l2_text_same(f\value\as\atom, name)
+            return: 1
+        while: f != 0
+            if: l2_addr_scan(f\value, name) != 0
+                return: 1
+            f: l2_next_active(f\next)
+        ---
+        return: 0
+    ---
+    if: node\kind = c.LM_P0_NODE_STRUCTURE
+        if: node\as\structure = 0
+            return: 0
+        f: l2_next_active(node\as\structure\first_field)
+        while: f != 0
+            if: l2_addr_scan(f\value, name) != 0
+                return: 1
+            f: l2_next_active(f\next)
+        ---
+    ---
+return: 0
+
+# Does the body of method mi take the address of its parameter k anywhere?  Only then does the
+# activation carry the three flags of the sticky rule, so a method that never writes `@: x`
+# is generated exactly as before.  Memoised for the method being emitted; no allocation.
+int: l2_addr_memo_mi -1
+c.array: []: int l2_addr_memo 64
+
+fn: l2_param_addr_taken (int: mi; int: k) int
+    int: i 0
+    int: got
+    if: mi < 0 || k < 0 || l2_m_body[mi] = 0
+        return: 0
+    if: l2_addr_memo_mi != mi
+        while: i < 64
+            l2_addr_memo[i]: -1
+            i: i + 1
+        ---
+        l2_addr_memo_mi: mi
+    ---
+    if: k < 64 && l2_addr_memo[k] >= 0
+        return: l2_addr_memo[k]
+    got: l2_addr_scan(l2_m_body[mi], l2_param_name(mi, k))
+    if: k < 64
+        l2_addr_memo[k]: got
+return: got
+
+# The own field of method mi that parameter k is bound to by the same name, or -1.
+fn: l2_own_of_param (int: mi; int: k) int
+    int: i 0
+    if: mi < 0 || k < 0
+        return: -1
+    while: i < l2_own_n
+        if: l2_own_mi[i] = mi && l2_m_uses[l2_own_off(mi, i)] != 0 && l2_m_alias[l2_own_off(mi, i)] = k
+            return: i
+        i: i + 1
+return: -1
+
+# THE STICKY RULE, the author's, in one place.  For a parameter x -- a declared formal or a
+# hidden/dynamic input -- that is same-name bound to the body's own field:
+#     @x evaluated BEFORE x's first executed binding, and then that binding executes
+#     => from the binding to the end of the activation the field is dirty STICKILY: every
+#        checkpoint publishes the current local value and none of them clears the state.
+# Nothing else is sticky: no binding executed -> no graph dirty state at all; @x first evaluated
+# AFTER the binding -> ordinary dirty, cleared by a checkpoint as always.  The local's address
+# is the ordinary address, the caller's source is never written, and what happened to x before
+# the binding is not published.  Three flags of the activation carry it, and only a method that
+# writes `@: x` somewhere has them (l2_param_addr_taken):
+#     l2_q<i>_early   @x was evaluated while x was unbound
+#     l2_q<i>_bound   a binding of x has executed
+#     l2_q<i>_sticky  the first binding found `early` set
+# `sticky` is decided once, at the FIRST binding, which is why a later @x cannot raise it.
+fn: l2_emit_addr_mark (int: mi; int: k; const: @(char ind)) int
+    int: oi l2_own_of_param(mi, k)
+    if: oi < 0 || ind = 0 || l2_param_addr_taken(mi, k) = 0
+        return: 0
+    if: c.fprintf(l2_out, "%sif: l2_q%d_bound = 0\n%s    l2_q%d_early: 1\n", ind, oi, ind, oi) < 0
+        return: 1
+return: 0
+
+fn: l2_emit_bind_mark (int: mi; int: oi; const: @(char ind)) int
+    if: mi < 0 || oi < 0 || ind = 0 || l2_m_alias[l2_own_off(mi, oi)] < 0
+        return: 0
+    if: l2_param_addr_taken(mi, l2_m_alias[l2_own_off(mi, oi)]) = 0
+        return: 0
+    # A sticky field is published by the very next checkpoint, so its cell must be loaded HERE:
+    # a declaration line of an int or a pointer loads nothing by itself, and a checkpoint between
+    # it and the first assignment would otherwise publish through a cell that was never fetched
+    # (measured: the program died there).  The load is the one every assignment already emits.
+    if: l2_own_fid[oi] >= 0 && c.fprintf(l2_out, "%sif: l2_q%d_from = 0\n%s    l2_q%d_from: lmx_arena_ref_cell(l2_h%d, %uU)\n%sif: l2_q%d_from = 0\n%s    %s\n", ind, oi, ind, oi, l2_own_fid[oi], (cast: (unsigned) l2_own_fchild[oi]), ind, oi, ind, l2_fail_return(mi)) < 0
+        return: 1
+    if: l2_own_fid[oi] < 0 && c.fprintf(l2_out, "%sif: l2_q%d_from = 0\n%s    l2_q%d_from: lmx_arena_ref_cell(%s, %uU)\n%sif: l2_q%d_from = 0\n%s    %s\n", ind, oi, ind, oi, l2_own_ctr(oi), (cast: (unsigned) l2_own_uchild[oi]), ind, oi, ind, l2_fail_return(mi)) < 0
+        return: 1
+    if: c.fprintf(l2_out, "%sif: l2_q%d_bound = 0 && l2_q%d_early != 0\n%s    l2_q%d_sticky: 1\n%sl2_q%d_bound: 1\n", ind, oi, oi, ind, oi, ind, oi) < 0
+        return: 1
+return: 0
+
 fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char path)) int
     int: pis 0
     @: LmP0Field field
@@ -5281,6 +5426,7 @@ fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char p
     int: k
     int: j
     int: ty
+    int: oty
     int: used
     if: body = 0 || mi < 0
         return: 0
@@ -5359,19 +5505,26 @@ fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char p
             pis: l2_param_is(mi, fa)
             j: -1
             used: 0
-            if: pis != 0 && (ty = 0 || ty = 1 || ty = 2 || ty = 36)
-                j: l2_own_add(mi, fa, ty, path, stmt, 0)
-            if: pis != 0 && (ty = 0 || ty = 1 || ty = 2 || ty = 36) && j < 0
+            # No list of eligible types: an assignment to a parameter binds it to the body's own
+            # field whatever its type, and the type only names the cell (l2_own_ty_of_param).
+            # oty < 0 is the one exception and it is a fact about the graph, not about this rule:
+            # there is no cell that could hold the value, so the parameter stays a plain local.
+            oty: -1
+            if: pis != 0
+                oty: l2_own_ty_of_param(ty)
+            if: oty >= 0
+                j: l2_own_add(mi, fa, oty, path, stmt, 0)
+            if: oty >= 0 && j < 0
                 return: 1
-            if: pis != 0 && (ty = 0 || ty = 1 || ty = 2 || ty = 36) && l2_own_off(mi, j) = (cast: (size_t) -1)
+            if: oty >= 0 && l2_own_off(mi, j) = (cast: (size_t) -1)
                 return: l2_error(path, stmt, "size overflow")
-            if: pis != 0 && (ty = 0 || ty = 1 || ty = 2 || ty = 36)
+            if: oty >= 0
                 used: l2_m_uses[l2_own_off(mi, j)]
-            if: pis != 0 && (ty = 0 || ty = 1 || ty = 2 || ty = 36)
+            if: oty >= 0
                 l2_m_uses[l2_own_off(mi, j)]: 1
-            if: pis != 0 && (ty = 0 || ty = 1 || ty = 2 || ty = 36) && used = 0
+            if: oty >= 0 && used = 0
                 l2_m_own[mi]: l2_m_own[mi] + 1
-            if: pis != 0 && (ty = 0 || ty = 1 || ty = 2 || ty = 36) && l2_bind_own(mi, j, path, stmt) != 0
+            if: oty >= 0 && l2_bind_own(mi, j, path, stmt) != 0
                 return: 1
             field: l2_next_active(field\next)
         if: l2_frame_head(stmt, "if") = 0 && l2_frame_head(stmt, "while") = 0 && l2_frame_head(stmt, "for") = 0 && l2_is_asgn(stmt) = 0
@@ -5392,7 +5545,9 @@ fn: l2_bind_own (int: mi; int: oi; const: @(char path); const: @(LmP0Node at)) i
         return: 0
     while: fi < l2_m_arity[mi]
         if: l2_text_same(l2_fn(mi, fi), l2_own_name[oi])
-            if: l2_ft(mi, fi) != l2_own_ty[oi]
+            # Formal codes and own storage codes are different number spaces: compare the CELL
+            # the formal's type publishes to, never the raw numbers (unsigned is 34 and 3).
+            if: l2_own_ty_of_param(l2_ft(mi, fi)) != l2_own_ty[oi]
                 return: l2_error(path, at, "incompatible entry signature")
             l2_m_alias[l2_own_off(mi, oi)]: fi
         fi: fi + 1
@@ -10674,6 +10829,10 @@ fn: l2_prep_addr (const: @(LmP0Node node); int: mi; const: @(char ind); @: char 
     if: mi >= 0
         idx: l2_param_find(mi, t)
     if: idx >= 0
+        # The address is the ordinary address of the activation-local parameter, always.  What
+        # is noted here is only WHEN it was evaluated, for the sticky rule (l2_emit_addr_mark).
+        if: l2_emit_addr_mark(mi, idx, ind) != 0
+            return: 1
         if: c.sprintf(dest, "@ l2_p%d_%d", mi, idx) < 0
             return: 1
         return: 0
@@ -12024,9 +12183,54 @@ fn: l2_emit_poll (int: mi; const: @(char ind)) int
         return: 1
 return: 0
 
+# THE TYPE DESCRIPTOR OF PUBLICATION.  What a checkpoint does with an own field depends on its type in
+# exactly three ways, and they are answered here and nowhere else: which kernel operation puts a
+# value into the field's cell, whether that operation REBINDS the cell (char) or stores into it,
+# and how the activation-local value is spelled as that operation's argument.  0 from the first
+# means the graph has no cell for the type -- an error of the program, not a type to skip.
+fn: l2_own_store_helper (int: ty) @: char
+    if: ty = 0
+        return: "lmx_int_store_known"
+    if: ty = 1
+        return: "lmx_char_rebind_known"
+    if: ty = 2
+        return: "lmx_size_store_known"
+    if: ty = 3
+        return: "lmx_unsigned_store_known"
+    if: ty = 36
+        return: "lmx_ulong_store_known"
+    if: l2_own_is_pointer(ty) != 0
+        return: "lmx_pointer_store_known"
+return: 0
+
+fn: l2_own_store_rebinds (int: ty) int
+    if: ty = 1
+        return: 1
+return: 0
+
+fn: l2_own_store_value (int: ty; const: @(char local); @: char dest) int
+    if: local = 0 || dest = 0 || c.strlen(local) > 60U
+        return: 1
+    if: ty = 1
+        if: c.sprintf(dest, "(cast: (int) (cast: (uchar) %s))", local) < 0
+            return: 1
+        return: 0
+    ---
+    if: l2_own_is_pointer(ty) != 0
+        if: c.sprintf(dest, "(cast: (@: void) %s)", local) < 0
+            return: 1
+        return: 0
+    ---
+    if: c.sprintf(dest, "%s", local) < 0
+        return: 1
+return: 0
+
 fn: l2_emit_checkpoint (int: mi; const: @(char ind)) int
     int: i 0
     int: fi
+    int: sticky
+    c.array: [64]: char local
+    c.array: [160]: char val
     if: mi < 0 || ind = 0
         return: 0
     while: i < l2_own_n
@@ -12034,7 +12238,14 @@ fn: l2_emit_checkpoint (int: mi; const: @(char ind)) int
             i: i + 1
             continue
         fi: l2_m_alias[l2_own_off(mi, i)]
-        if: l2_m_uses[l2_own_off(mi, i)] != 0 && c.fprintf(l2_out, "%sif: l2_q%d_dirty != 0\n", ind, i) < 0
+        # A sticky field is published by EVERY checkpoint, dirty or not, and the clearing below
+        # touches only the ordinary dirty flag: that is the whole of the rule at this site.
+        sticky: 0
+        if: fi >= 0 && l2_m_uses[l2_own_off(mi, i)] != 0
+            sticky: l2_param_addr_taken(mi, fi)
+        if: l2_m_uses[l2_own_off(mi, i)] != 0 && sticky = 0 && c.fprintf(l2_out, "%sif: l2_q%d_dirty != 0\n", ind, i) < 0
+            return: 1
+        if: l2_m_uses[l2_own_off(mi, i)] != 0 && sticky != 0 && c.fprintf(l2_out, "%sif: l2_q%d_dirty != 0 || l2_q%d_sticky != 0\n", ind, i, i) < 0
             return: 1
         # SPEC 21.6 / ABI 14.23, confirmed 2026-09-12: a failure to publish an
         # already-bound dirty own field is checkpoint failure and takes the
@@ -12060,31 +12271,26 @@ fn: l2_emit_checkpoint (int: mi; const: @(char ind)) int
         # most one level without one).
         if: l2_m_uses[l2_own_off(mi, i)] != 0 && c.fprintf(l2_out, "%s    ---\n", ind) < 0
             return: 1
-        if: l2_m_uses[l2_own_off(mi, i)] != 0 && l2_own_ty[i] = 1 && fi < 0 && c.fprintf(l2_out, "%s    if: lmx_char_rebind_known(l2_q%d_from[0], (cast: (int) (cast: (uchar) l2_q%d))) = 0\n%s        c.fprintf(c.stderr, \"lmx: checkpoint store failed for own field %d\\n\")\n%s        if: lmx_msg_poll_abort() != 0\n%s            c.abort()\n%s    ---\n%s    l2_q%d_from[0]: lmx_char_rebind_known(l2_q%d_from[0], (cast: (int) (cast: (uchar) l2_q%d)))\n", ind, i, i, ind, i, ind, ind, ind, ind, i, i, i) < 0
+        # ONE publication for every own type (FABLE-L2-ARG-ADDRESS-DIRTY-20260921-67).  The type decides
+        # only the cell operation and the spelling of the value, and both come from one descriptor
+        # (l2_own_store_helper, l2_own_store_value): there is no list of types here, and a type
+        # with no cell is an error where the descriptor says so, not a silently skipped branch.
+        # `val` is the activation-local value: the parameter for an argument-bound field, the own
+        # working value otherwise.  char REBINDS its cell and assigns the result; every other
+        # type stores into the cell it has.
+        if: l2_m_uses[l2_own_off(mi, i)] != 0 && fi < 0 && c.sprintf(local, "l2_q%d", i) < 0
             return: 1
-        if: l2_m_uses[l2_own_off(mi, i)] != 0 && l2_own_ty[i] = 1 && fi >= 0 && c.fprintf(l2_out, "%s    if: lmx_char_rebind_known(l2_q%d_from[0], (cast: (int) (cast: (uchar) l2_p%d_%d))) = 0\n%s        c.fprintf(c.stderr, \"lmx: checkpoint store failed for own field %d\\n\")\n%s        if: lmx_msg_poll_abort() != 0\n%s            c.abort()\n%s    ---\n%s    l2_q%d_from[0]: lmx_char_rebind_known(l2_q%d_from[0], (cast: (int) (cast: (uchar) l2_p%d_%d)))\n", ind, i, mi, fi, ind, i, ind, ind, ind, ind, i, i, mi, fi) < 0
+        if: l2_m_uses[l2_own_off(mi, i)] != 0 && fi >= 0 && c.sprintf(local, "l2_p%d_%d", mi, fi) < 0
             return: 1
-        if: l2_m_uses[l2_own_off(mi, i)] != 0 && l2_own_ty[i] = 2 && fi < 0 && c.fprintf(l2_out, "%s    if: lmx_size_store_known(l2_q%d_from[0], l2_q%d) != 0\n%s        c.fprintf(c.stderr, \"lmx: checkpoint store failed for own field %d\\n\")\n%s        if: lmx_msg_poll_abort() != 0\n%s            c.abort()\n", ind, i, i, ind, i, ind, ind) < 0
+        if: l2_m_uses[l2_own_off(mi, i)] != 0 && l2_own_store_helper(l2_own_ty[i]) = 0
+            return: l2_error(l2_src, l2_own_decl[i], "own field type has no graph cell to publish to")
+        if: l2_m_uses[l2_own_off(mi, i)] != 0 && l2_own_store_value(l2_own_ty[i], local, val) != 0
             return: 1
-        if: l2_m_uses[l2_own_off(mi, i)] != 0 && l2_own_ty[i] = 2 && fi >= 0 && c.fprintf(l2_out, "%s    if: lmx_size_store_known(l2_q%d_from[0], l2_p%d_%d) != 0\n%s        c.fprintf(c.stderr, \"lmx: checkpoint store failed for own field %d\\n\")\n%s        if: lmx_msg_poll_abort() != 0\n%s            c.abort()\n", ind, i, mi, fi, ind, i, ind, ind) < 0
+        if: l2_m_uses[l2_own_off(mi, i)] != 0 && l2_own_store_rebinds(l2_own_ty[i]) != 0 && c.fprintf(l2_out, "%s    if: %s(l2_q%d_from[0], %s) = 0\n%s        c.fprintf(c.stderr, \"lmx: checkpoint store failed for own field %d\\n\")\n%s        if: lmx_msg_poll_abort() != 0\n%s            c.abort()\n%s    ---\n%s    l2_q%d_from[0]: %s(l2_q%d_from[0], %s)\n", ind, l2_own_store_helper(l2_own_ty[i]), i, val, ind, i, ind, ind, ind, ind, i, l2_own_store_helper(l2_own_ty[i]), i, val) < 0
             return: 1
-        if: l2_m_uses[l2_own_off(mi, i)] != 0 && l2_own_ty[i] = 0 && fi < 0 && c.fprintf(l2_out, "%s    if: lmx_int_store_known(l2_q%d_from[0], l2_q%d) != 0\n%s        c.fprintf(c.stderr, \"lmx: checkpoint store failed for own field %d\\n\")\n%s        if: lmx_msg_poll_abort() != 0\n%s            c.abort()\n", ind, i, i, ind, i, ind, ind) < 0
+        if: l2_m_uses[l2_own_off(mi, i)] != 0 && l2_own_store_rebinds(l2_own_ty[i]) = 0 && c.fprintf(l2_out, "%s    if: %s(l2_q%d_from[0], %s) != 0\n%s        c.fprintf(c.stderr, \"lmx: checkpoint store failed for own field %d\\n\")\n%s        if: lmx_msg_poll_abort() != 0\n%s            c.abort()\n", ind, l2_own_store_helper(l2_own_ty[i]), i, val, ind, i, ind, ind) < 0
             return: 1
-        if: l2_m_uses[l2_own_off(mi, i)] != 0 && l2_own_ty[i] = 0 && fi >= 0 && c.fprintf(l2_out, "%s    if: lmx_int_store_known(l2_q%d_from[0], l2_p%d_%d) != 0\n%s        c.fprintf(c.stderr, \"lmx: checkpoint store failed for own field %d\\n\")\n%s        if: lmx_msg_poll_abort() != 0\n%s            c.abort()\n", ind, i, mi, fi, ind, i, ind, ind) < 0
-            return: 1
-        if: l2_m_uses[l2_own_off(mi, i)] != 0 && l2_own_ty[i] = 3 && fi < 0 && c.fprintf(l2_out, "%s    if: lmx_unsigned_store_known(l2_q%d_from[0], l2_q%d) != 0\n%s        c.fprintf(c.stderr, \"lmx: checkpoint store failed for own field %d\\n\")\n%s        if: lmx_msg_poll_abort() != 0\n%s            c.abort()\n", ind, i, i, ind, i, ind, ind) < 0
-            return: 1
-        if: l2_m_uses[l2_own_off(mi, i)] != 0 && l2_own_ty[i] = 36 && fi < 0 && c.fprintf(l2_out, "%s    if: lmx_ulong_store_known(l2_q%d_from[0], l2_q%d) != 0\n%s        c.fprintf(c.stderr, \"lmx: checkpoint store failed for own field %d\\n\")\n%s        if: lmx_msg_poll_abort() != 0\n%s            c.abort()\n", ind, i, i, ind, i, ind, ind) < 0
-            return: 1
-        if: l2_m_uses[l2_own_off(mi, i)] != 0 && l2_own_ty[i] = 3 && fi >= 0 && c.fprintf(l2_out, "%s    if: lmx_unsigned_store_known(l2_q%d_from[0], l2_p%d_%d) != 0\n%s        c.fprintf(c.stderr, \"lmx: checkpoint store failed for own field %d\\n\")\n%s        if: lmx_msg_poll_abort() != 0\n%s            c.abort()\n", ind, i, mi, fi, ind, i, ind, ind) < 0
-            return: 1
-        if: l2_m_uses[l2_own_off(mi, i)] != 0 && l2_own_ty[i] = 36 && fi >= 0 && c.fprintf(l2_out, "%s    if: lmx_ulong_store_known(l2_q%d_from[0], l2_p%d_%d) != 0\n%s        c.fprintf(c.stderr, \"lmx: checkpoint store failed for own field %d\\n\")\n%s        if: lmx_msg_poll_abort() != 0\n%s            c.abort()\n", ind, i, mi, fi, ind, i, ind, ind) < 0
-            return: 1
-        if: l2_m_uses[l2_own_off(mi, i)] != 0 && l2_own_is_pointer(l2_own_ty[i]) != 0 && fi < 0 && c.fprintf(l2_out, "%s    if: lmx_pointer_store_known(l2_q%d_from[0], (cast: (@: void) l2_q%d)) != 0\n%s        c.fprintf(c.stderr, \"lmx: checkpoint store failed for own field %d\\n\")\n%s        if: lmx_msg_poll_abort() != 0\n%s            c.abort()\n", ind, i, i, ind, i, ind, ind) < 0
-            return: 1
-        if: l2_m_uses[l2_own_off(mi, i)] != 0 && l2_own_is_pointer(l2_own_ty[i]) != 0 && fi >= 0 && c.fprintf(l2_out, "%s    if: lmx_pointer_store_known(l2_q%d_from[0], (cast: (@: void) l2_p%d_%d)) != 0\n%s        c.fprintf(c.stderr, \"lmx: checkpoint store failed for own field %d\\n\")\n%s        if: lmx_msg_poll_abort() != 0\n%s            c.abort()\n", ind, i, mi, fi, ind, i, ind, ind) < 0
-            return: 1
-        if: l2_m_uses[l2_own_off(mi, i)] != 0 && l2_own_ty[i] != 1 && c.fprintf(l2_out, "%s    ---\n", ind) < 0
+        if: l2_m_uses[l2_own_off(mi, i)] != 0 && l2_own_store_rebinds(l2_own_ty[i]) = 0 && c.fprintf(l2_out, "%s    ---\n", ind) < 0
             return: 1
         if: l2_m_uses[l2_own_off(mi, i)] != 0 && c.fprintf(l2_out, "%s    l2_q%d_dirty: 0\n", ind, i) < 0
             return: 1
@@ -13686,6 +13892,11 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
             oi: l2_own_find(mi, l2_own_decl_name(stmt))
         if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && mi >= 0
             l2_own_live[oi]: 1
+        # The own-declaration line of a same-name parameter IS a binding line: docs/L2_spec "an
+        # executed declaration or assignment-declaration binds the same local variable to the
+        # body's field".  Whichever of the two executes FIRST decides whether the field is sticky.
+        if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && mi >= 0 && l2_m_uses[l2_own_off(mi, oi)] != 0 && l2_emit_bind_mark(mi, oi, ind) != 0
+            return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && mi >= 0 && l2_m_alias[l2_own_off(mi, oi)] >= 0 && l2_own_fid[oi] >= 0 && (l2_own_ty[oi] = 1 || l2_own_ty[oi] = 2 || l2_own_ty[oi] = 3 || l2_own_ty[oi] = 36) && c.fprintf(l2_out, "%sl2_q%d_from: lmx_arena_ref_cell(l2_h%d, %uU)\n%sif: l2_q%d_from = 0\n%s    %s\n", ind, oi, l2_own_fid[oi], (cast: (unsigned) l2_own_fchild[oi]), ind, oi, ind, l2_fail_return(mi)) < 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && mi >= 0 && l2_m_alias[l2_own_off(mi, oi)] >= 0 && l2_own_fid[oi] < 0 && (l2_own_ty[oi] = 1 || l2_own_ty[oi] = 2 || l2_own_ty[oi] = 3 || l2_own_ty[oi] = 36) && c.fprintf(l2_out, "%sl2_q%d_from: lmx_arena_ref_cell(%s, %uU)\n%sif: l2_q%d_from = 0\n%s    %s\n", ind, oi, l2_own_ctr(oi), (cast: (unsigned) l2_own_uchild[oi]), ind, oi, ind, l2_fail_return(mi)) < 0
@@ -13777,6 +13988,10 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && fi < 0 && c.fprintf(l2_out, "%sl2_q%d_dirty: 1\n", ind, oi) < 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && fi >= 0 && c.fprintf(l2_out, "%sl2_q%d_dirty: 1\n", ind, oi) < 0
+            return: 1
+        # An executed assignment to a bound parameter IS a binding of it: the first one decides
+        # whether the field is sticky (l2_emit_bind_mark).
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && fi >= 0 && l2_emit_bind_mark(mi, oi, ind) != 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0
             field: l2_next_active(field\next)
@@ -14200,6 +14415,11 @@ fn: l2_emit_unit (const: @(char out_path)) int
                     return: 1
             ---
             if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] >= 0 && c.fprintf(l2_out, "    @@: void l2_q%d_from 0\n    int: l2_q%d_dirty 0\n", k, k) < 0
+                fclose(l2_out)
+                return: 1
+            # The three flags of the sticky rule, only where the body writes `@: x` for this
+            # parameter; every other method is generated exactly as it was.
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] >= 0 && l2_param_addr_taken(i, l2_m_alias[l2_own_off(i, k)]) != 0 && c.fprintf(l2_out, "    int: l2_q%d_early 0\n    int: l2_q%d_bound 0\n    int: l2_q%d_sticky 0\n", k, k, k) < 0
                 fclose(l2_out)
                 return: 1
             k: k + 1

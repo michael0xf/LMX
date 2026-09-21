@@ -1,0 +1,25 @@
+# FABLE-L2-ARG-ADDRESS-DIRTY-20260921-67.  A POINTER argument binds like any other: `pp: ...` on a
+# pointer parameter makes it the body's own field, published to the one generic pointer cell.
+# Before this ticket the collector dropped it silently -- it stayed a plain local.
+fn: setnull (@@: int q) int
+    \q: 0
+    return: 0
+end: setnull
+fn: nop () int
+    return: 0
+end: nop
+fn: ptr (@: int pp) int
+    setnull(@: pp)
+    pp: pp
+    nop()
+    nop()
+    if: pp = 0
+        c.printf: "P local is null\n"
+    return: 0
+end: ptr
+fn: main () int
+    int: v
+    v: 7
+    ptr(@: v)
+    return: 0
+end: main

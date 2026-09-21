@@ -343,7 +343,50 @@ $fixtures = @(
                  'l2_q7, l2_msg, @ l2_t0, @ l2_te0)',
                  '2U, node, @ l2_t2, @ l2_te2)',
                  'l2_out_throw[0]: node',
-                 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U, 0U, 0U)') }
+                 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U, 0U, 0U)') },
+    # THE STICKY DIRTY OF AN ADDRESS-TAKEN ARGUMENT (FABLE-L2-ARG-ADDRESS-DIRTY-20260921-67), the
+    # author's rule: sticky <=> x is a parameter, `@: x` was EVALUATED before x's first EXECUTED
+    # assignment, and that assignment then binds x to the body's own field; from there to the end
+    # of the activation every checkpoint publishes the local and none clears the state.
+    #
+    # These rows have `Says`: the lines the PROGRAM must print, whole and in order.  That is the
+    # only verdict a generated program can give today -- lmx_thread_dispatch_native drops the
+    # entry's return, so an exit code proves nothing -- and each line is "<case> <local> <graph>".
+    # The matrix is mutually discriminating, measured on translator mutants:
+    #   A  before-bind, then bind   sticky: A2/A4 are checkpoints that follow NO address-taking call,
+    #                               so "raise dirty again after the call returns" fails them too;
+    #   B  never bound              kills "every address-taken parameter is sticky" -- BY A CRASH, not
+    #                               by a check: that program publishes into a cell that was never
+    #                               loaded and dies at the next checkpoint (exit 139).  Only the
+    #                               local can be printed here: a field made by assignment alone
+    #                               cannot be read through node\x by legal L2 today;
+    #   C  bind, then address       kills "sticky if the address was taken at SOME point" (C2, C3);
+    #   D  one method, both orders  decided at RUN time, so a verdict from the text alone fails one;
+    #   E  declared, then address   the DECLARATION is a binding line too (docs/L2_spec), so an
+    #                               address taken after it is ordinary -- the same mutant fails E.
+    # Before the change the translator printed A2 6 100, A3 9 100, A4 9 200 and D1 6 100.
+    [pscustomobject]@{ Name = 'unit_arg_addr_sticky.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Says = @('A1 6 6', 'A2 6 6', 'A3 9 9', 'A4 9 9', 'B 5', 'C1 4 4', 'C2 9 4', 'C3 9 100', 'D1 6 6', 'D0 5 100', 'E 6 100');
+        Absent = @();
+        Debt = @('int: l2_q0_early 0', 'int: l2_q0_bound 0', 'int: l2_q0_sticky 0',
+                 'if: l2_q0_bound = 0',
+                 'if: l2_q0_bound = 0 && l2_q0_early != 0',
+                 'if: l2_q0_dirty != 0 || l2_q0_sticky != 0') },
+    # TYPE IS AN INDEPENDENT AXIS.  unsigned was REFUSED in the declared form (a formal's type code
+    # was compared with an own field's storage code: 34 against 3) and silently left a plain local
+    # in the assignment form; a pointer was never bound at all.  Both now go through the same
+    # mechanism, and the type only names the cell.
+    [pscustomobject]@{ Name = 'unit_arg_addr_types.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Says = @('U 51 51', 'Z local 71', 'Z graph 71', 'L local 81', 'L graph 81');
+        Absent = @();
+        Debt = @('lmx_unsigned_store_known(l2_q0_from[0], l2_p', 'if: l2_q0_dirty != 0 || l2_q0_sticky != 0') },
+    [pscustomobject]@{ Name = 'unit_arg_addr_pointer.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Says = @('P local is null');
+        Absent = @();
+        Debt = @('lmx_pointer_store_known(l2_q0_from[0], (cast: (@: void) l2_p', 'int: l2_q0_sticky 0') }
 )
 
 foreach ($fx in $fixtures) {
@@ -401,9 +444,22 @@ foreach ($fx in $fixtures) {
         $ran = Invoke-Step ('fixture.' + $stem + '.run') $exe $fx.Args $bin
         $said = ((Log-Text ('fixture.' + $stem + '.run')) -split "`r?`n" | Where-Object { $_ -match '^l2_eternal_driver: \d+ checks' } | Select-Object -Last 1)
         if ($ran -ne $fx.Exit -or -not $said) { Add-Row 'FAIL' ('fixture:' + $stem) ('ran under the driver, exit ' + $ran + '; see the log'); continue }
+        # `Says`: what the PROGRAM printed, as whole lines and in order.  Lines of the log that are
+        # not the program's (the command header, the driver's own, the exit line) are not counted,
+        # and the program must have printed EXACTLY these lines -- one more or one fewer is a miss.
+        if ($fx.PSObject.Properties['Says'] -and $fx.Says) {
+            $printed = @((Log-Text ('fixture.' + $stem + '.run')) -split "`r?`n" | Where-Object { $_ -ne '' -and $_ -notmatch '^(command: |cwd: |exit: |l2_eternal_driver: )' -and $_ -notmatch '^﻿?command: ' })
+            $miss = ''
+            if ($printed.Count -ne $fx.Says.Count) { $miss = 'printed ' + $printed.Count + ' lines, expected ' + $fx.Says.Count }
+            for ($k = 0; $miss -eq '' -and $k -lt $fx.Says.Count; $k++) {
+                if ($printed[$k] -cne $fx.Says[$k]) { $miss = 'line ' + ($k + 1) + ' is "' + $printed[$k] + '", expected "' + $fx.Says[$k] + '"' }
+            }
+            if ($miss -ne '') { Add-Row 'FAIL' ('fixture:' + $stem) ('the program said something else: ' + $miss); continue }
+        }
         # A row that declares 0 roots proved no retention and no collection, and must not say so.
         $what = ', retained in R0, survives a collection ('
         if ($fx.Args[0] -eq '0') { $what = ', no eternal branch: compiled unchanged, linked to the kernel closure, ran to its one close (' }
+        if ($fx.PSObject.Properties['Says'] -and $fx.Says) { $what = ', said its ' + $fx.Says.Count + ' lines exactly (' }
         Add-Row 'OK' ('fixture:' + $stem) (($said -replace '^l2_eternal_driver: ', '') + $what + $fx.Debt.Count + ' required, ' + $fx.Absent.Count + ' forbidden in the text)'); continue
     }
 

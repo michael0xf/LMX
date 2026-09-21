@@ -1,0 +1,73 @@
+# FABLE-L2-ARG-ADDRESS-DIRTY-20260921-67.  TYPE IS AN INDEPENDENT AXIS: every assignable argument
+# type binds to the body's own field and follows the same sticky rule; the type only names the
+# cell.  unsigned and pointer were the two that could be emitted and published but never BOUND:
+# the collector kept a list (int, char, size_t, ulong), and the declared form compared a formal's
+# type code with an own field's storage code although the two are different number spaces
+# (unsigned is 34 and 3), so `unsigned: u` over a same-name parameter was refused outright.
+#
+# char is NOT here, and not because of this rule: the checkpoint of any char own field casts
+# through `uchar`, a name l1trans accepts and emits verbatim and that no generated program
+# defines, so such a program has never compiled.  Found here, reported, separate defect.
+#
+# In every case the address is taken BEFORE the declaration line, which is the first binding
+# line, so the field is sticky and the explicit graph write of 100 is published over.
+#
+# Each line is "<case> <local> <graph field>".  A size_t or ulong is printed alone, as the LAST
+# argument of its own printf, so that a 64-bit value read by %d cannot shift a later argument.
+fn: pokeu (@: unsigned p) int
+    \p: 50U
+    return: 0
+end: pokeu
+fn: pokez (@: size_t p) int
+    \p: 70U
+    return: 0
+end: pokez
+fn: pokel (@: ulong p) int
+    \p: 80U
+    return: 0
+end: pokel
+fn: nop () int
+    return: 0
+end: nop
+
+fn: uns (unsigned: u) int
+    pokeu(@: u)
+    unsigned: u
+    u: u + 1U
+    nop()
+    node\u: 100U
+    nop()
+    c.printf: "U %u %u\n" u node\u
+    return: 0
+end: uns
+
+fn: siz (size_t: z) int
+    pokez(@: z)
+    size_t: z
+    z: z + 1U
+    nop()
+    node\z: 100U
+    nop()
+    c.printf: "Z local %d\n" z
+    c.printf: "Z graph %d\n" node\z
+    return: 0
+end: siz
+
+fn: lng (ulong: w) int
+    pokel(@: w)
+    ulong: w
+    w: w + 1U
+    nop()
+    node\w: 100U
+    nop()
+    c.printf: "L local %d\n" w
+    c.printf: "L graph %d\n" node\w
+    return: 0
+end: lng
+
+fn: main () int
+    uns(3U)
+    siz(3U)
+    lng(3U)
+    return: 0
+end: main

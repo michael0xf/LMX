@@ -1,6 +1,7 @@
 predef: "l2src/lmx_post.h.lm1"
 predef: "l2src/lmx_pool.h.lm1"
 predef: "l2src/lmx_implements.h.lm1"
+include: "<stdlib.h>"
 
 # lmx_post.lm1 - the mail.
 #
@@ -88,6 +89,92 @@ fn: lmx_post_monitor_leave (@: LmxPost box) int
     c.__atomic_store_n((cast: (@: int) (@ box\inbox_monitor_held)), 0, c.__ATOMIC_RELEASE)
 return: c.LMX_POST_OK
 
+# Grow the private inbox backing while its monitor is held.  No backing address escapes the
+# mailbox, so moving it is permitted: unread addresses are copied in logical FIFO order and the
+# new ring is normalised to head 0 / tail count.  Capacity follows 2, 3, 4, 6, 9...; allocation
+# refusal is reported as FULL and leaves the old ring untouched.
+fn: lmx_post_inbox_grow (@: LmxPost box) int
+    @: size_t old_slots
+    @: size_t grown
+    size_t: old_capacity
+    size_t: step
+    size_t: new_capacity
+    size_t: i 0U
+    if: box = 0
+        return: c.LMX_POST_INVALID
+    old_capacity: box\inbox_capacity
+    old_slots: (cast: (@: size_t) box\inbox_slots)
+    if: box\inbox_count != 0U && (old_slots = 0 || old_capacity = 0U)
+        return: c.LMX_POST_INVALID
+    if: old_capacity < c.LMX_POST_INBOX_MIN_CAPACITY
+        new_capacity: c.LMX_POST_INBOX_MIN_CAPACITY
+    else:
+        step: old_capacity / 2U
+        if: step = 0U
+            step: 1U
+        ---
+        if: old_capacity > (cast: (size_t) -1) - step
+            return: c.LMX_POST_FULL
+        new_capacity: old_capacity + step
+    ---
+    if: new_capacity > (cast: (size_t) -1) / c.sizeof(c.size_t)
+        return: c.LMX_POST_FULL
+    grown: (cast: (@: size_t) calloc(new_capacity, c.sizeof(c.size_t)))
+    if: grown = 0
+        return: c.LMX_POST_FULL
+    while: i < box\inbox_count
+        grown[i]: old_slots[((cast: (size_t) box\inbox_head) + i) % old_capacity]
+        i: i + 1U
+    ---
+    free((cast: (@: void) old_slots))
+    box\inbox_slots: (cast: (@: void) grown)
+    box\inbox_capacity: new_capacity
+    box\inbox_head: 0U
+    box\inbox_tail: (cast: (ulong) box\inbox_count)
+return: c.LMX_POST_OK
+
+# Give the collector a stable copy of the unread addresses without exposing the backing array or
+# moving this module's monitor into the collector.  Allocation failure leaves the mailbox intact;
+# the caller owns a non-null returned snapshot and releases it with free.
+fn: lmx_post_snapshot_inbox (@: LmxPost box; @@: size_t out; @: size_t count) int
+    @: size_t slots
+    @: size_t copy
+    size_t: n
+    size_t: i 0U
+    if: box = 0 || out = 0 || count = 0
+        return: c.LMX_POST_INVALID
+    \out: 0
+    \count: 0U
+    if: lmx_post_monitor_enter(box) != c.LMX_POST_OK
+        return: c.LMX_POST_INVALID
+    ---
+    if: box\inbox_count != 0U && (box\inbox_slots = 0 || box\inbox_capacity = 0U)
+        lmx_post_monitor_leave(box)
+        return: c.LMX_POST_INVALID
+    ---
+    n: box\inbox_count
+    slots: (cast: (@: size_t) box\inbox_slots)
+    copy: 0
+    if: n != 0U
+        if: n > (cast: (size_t) -1) / c.sizeof(c.size_t)
+            lmx_post_monitor_leave(box)
+            return: c.LMX_POST_FULL
+        ---
+        copy: (cast: (@: size_t) malloc(n * c.sizeof(c.size_t)))
+        if: copy = 0
+            lmx_post_monitor_leave(box)
+            return: c.LMX_POST_FULL
+        ---
+    ---
+    while: i < n
+        copy[i]: slots[((cast: (size_t) box\inbox_head) + i) % box\inbox_capacity]
+        i: i + 1U
+    ---
+    lmx_post_monitor_leave(box)
+    \out: copy
+    \count: n
+return: c.LMX_POST_OK
+
 fn: lmx_post_admits (@: LmxArena arena; @: void target) int
     int: kind
     if: target = 0
@@ -117,10 +204,10 @@ return: link
 fn: lmx_post_init (@: LmxArena arena; @: LmxPost box) int
     if: arena = 0 || box = 0
         return: c.LMX_POST_INVALID
-    # THE INBOX RING: one block of slots, taken by the OWNER here, in its own thread.  Taking it
-    # now is half of why the ring exists -- after this, admitting a letter allocates nothing, so a
-    # sender never touches an arena the owner may be collecting at the same moment.
-    box\inbox_slots: lmx_arena_take(arena, c.LMX_POST_INBOX_SLOTS * c.sizeof(c.size_t), c.LMX_DOMAIN_KIND_POST_RING, c.LMX_DOMAIN_POST_RING)
+    # THE INBOX RING: private movable metadata, deliberately outside the graph arena.  It starts
+    # at two slots and later grows under the mailbox monitor without touching the receiver's arena.
+    box\inbox_slots: calloc(c.LMX_POST_INBOX_MIN_CAPACITY, c.sizeof(c.size_t))
+    box\inbox_capacity: c.LMX_POST_INBOX_MIN_CAPACITY
     box\inbox_head: 0U
     box\inbox_tail: 0U
     box\inbox_count: 0U
@@ -135,6 +222,7 @@ fn: lmx_post_init (@: LmxArena arena; @: LmxPost box) int
     box\outbox_count: 0U
     box\staged_count: 0U
     if: box\inbox_slots = 0
+        box\inbox_capacity: 0U
         return: c.LMX_POST_INVALID
     ---
     # The pool refuses to open over one that already holds a chunk, and a mailbox may
@@ -150,6 +238,9 @@ fn: lmx_post_init (@: LmxArena arena; @: LmxPost box) int
     box\nodes.kind: 0
     box\nodes.type: 0
     if: lmx_pool_open(arena, @ box\nodes, c.sizeof(c.LmxPostLink), c.LMX_POST_NODE_CHUNK, c.LMX_DOMAIN_KIND_POST_LINK, c.LMX_DOMAIN_POST_LINK) != 0
+        free(box\inbox_slots)
+        box\inbox_slots: 0
+        box\inbox_capacity: 0U
         return: c.LMX_POST_INVALID
     box\api.accept: lmx_post_accept
     box\api.take: lmx_post_take
@@ -174,8 +265,8 @@ return: @ box\api
 fn: lmx_post_accept (@: LmxArena arena; @: LmxPost box; @: void target; int: lane) int
     @: LmxPostLink link
     ulong: tail_read
-    ulong: head_read
     @: size_t slots
+    int: rc
     if: box = 0 || (lane != c.LMX_POST_INBOX && lane != c.LMX_POST_OUTBOX)
         return: c.LMX_POST_INVALID
     if: lmx_post_admits(arena, target) != c.LMX_POST_OK
@@ -189,15 +280,21 @@ fn: lmx_post_accept (@: LmxArena arena; @: LmxPost box; @: void target; int: lan
         if: lmx_post_monitor_enter(box) != c.LMX_POST_OK
             return: c.LMX_POST_INVALID
         ---
+        if: box\inbox_count >= box\inbox_capacity
+            rc: lmx_post_inbox_grow(box)
+            if: rc != c.LMX_POST_OK
+                lmx_post_monitor_leave(box)
+                return: rc
+            ---
+        ---
         tail_read: box\inbox_tail
-        head_read: box\inbox_head
-        if: (tail_read - head_read) >= c.LMX_POST_INBOX_SLOTS
+        if: box\inbox_capacity = 0U
             lmx_post_monitor_leave(box)
-            return: c.LMX_POST_FULL
+            return: c.LMX_POST_INVALID
         ---
         slots: (cast: (@: size_t) box\inbox_slots)
-        slots[tail_read % c.LMX_POST_INBOX_SLOTS]: (cast: (size_t) target)
-        box\inbox_tail: tail_read + 1U
+        slots[(cast: (size_t) tail_read) % box\inbox_capacity]: (cast: (size_t) target)
+        box\inbox_tail: (tail_read + 1U) % (cast: (ulong) box\inbox_capacity)
         box\inbox_count: box\inbox_count + 1U
         lmx_post_monitor_leave(box)
         return: c.LMX_POST_OK
@@ -229,7 +326,6 @@ fn: lmx_post_take (@: LmxPost box; int: lane) @: void
     @: LmxPostLink link
     @: void target
     ulong: head_read
-    ulong: tail_read
     @: size_t slots
     if: box = 0 || (lane != c.LMX_POST_INBOX && lane != c.LMX_POST_OUTBOX)
         return: 0
@@ -242,14 +338,14 @@ fn: lmx_post_take (@: LmxPost box; int: lane) @: void
             return: 0
         ---
         head_read: box\inbox_head
-        tail_read: box\inbox_tail
-        if: head_read = tail_read
+        if: box\inbox_count = 0U
             lmx_post_monitor_leave(box)
             return: 0
         ---
         slots: (cast: (@: size_t) box\inbox_slots)
-        target: (cast: (@: void) slots[head_read % c.LMX_POST_INBOX_SLOTS])
-        box\inbox_head: head_read + 1U
+        target: (cast: (@: void) slots[(cast: (size_t) head_read) % box\inbox_capacity])
+        slots[(cast: (size_t) head_read) % box\inbox_capacity]: 0U
+        box\inbox_head: (head_read + 1U) % (cast: (ulong) box\inbox_capacity)
         box\inbox_count: box\inbox_count - 1U
         lmx_post_monitor_leave(box)
         return: target
@@ -338,7 +434,9 @@ fn: lmx_post_close (@: LmxArena arena; @: LmxPost box) int
     if: box = 0
         return: c.LMX_POST_INVALID
     lmx_pool_release(arena, @ box\nodes)
+    free(box\inbox_slots)
     box\inbox_slots: 0
+    box\inbox_capacity: 0U
     box\inbox_head: 0U
     box\inbox_tail: 0U
     box\inbox_monitor_owner: 0U

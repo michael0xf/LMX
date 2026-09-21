@@ -61,12 +61,9 @@ define: LMX_DOMAIN_POST 27
 # One live-direct-child link of a parent's chain (lmx_thread.h.lm1, LmxLink).  The node is a cell
 # of the PARENT's arena -- that is the point of it -- so it needs a domain of its own there.
 define: LMX_DOMAIN_LINK 28
-# THE MAILBOX'S INBOX RING (lmx_post.h.lm1): one block per mailbox, holding the addresses of the
-# letters admitted and not yet taken.  It is a domain of its own because the arena seats cells of
-# one (kind, type) in ONE array by stride -- a ring cell is LMX_POST_INBOX_SLOTS pointers and an
-# int cell is eight bytes, and asking for both under one pair is refused by the arena
-# ("array\stride != stride"), which is exactly what happened when this block first asked to be
-# taken as a plain primitive (measured 20.09: `lmx_gc: the mailbox did not initialize`).
+# Reserved domain number of the former arena-backed fixed inbox ring.  The current mailbox uses
+# a private movable dynamic array whose backing address never enters the graph or the range
+# classifier.  The number remains reserved so later domain values do not change ABI.
 define: LMX_DOMAIN_POST_RING 29
 
 # The same domains as KINDS -- what lmx_range_classify answers -- appended after

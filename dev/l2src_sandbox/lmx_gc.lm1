@@ -136,8 +136,12 @@ return: status
 fn: lmx_gc_mark (@: LmxArena arena; @: LmxThread t) unsigned
     @: LmxMsg message
     @: LmxLink node
+    @: size_t inbox_values
+    size_t: inbox_count
+    size_t: inbox_index
     unsigned: gen
     int: status
+    int: inbox_status
     if: arena = 0 || t = 0
         return: 0U
     gen: lmx_arena_generation_next(arena)
@@ -162,13 +166,22 @@ fn: lmx_gc_mark (@: LmxArena arena; @: LmxThread t) unsigned
         # own domain), so a letter waiting for its receiver stays.  The OUTBOX and STAGED lanes
         # are the lanes that still hold nodes.
         status: lmx_gc_note(status, lmx_gc_mark_pool(arena, @ t\mail\nodes, gen))
-        # THE INBOX RING IS STORAGE OF THIS ARENA TOO (20.09): slots hold the addresses of the
-        # letters admitted and not yet taken.  Marking the block walks its words as candidate
-        # addresses -- over-retention is the only error that rule can make and it is the safe
-        # direction -- so a letter waiting in a live mailbox survives a collection.  Without this
-        # the collection freed the mailbox's own storage (measured: `lmx_gc: the collection freed
-        # the mail of a live mailbox`).
-        status: lmx_gc_note(status, lmx_gc_mark_value(arena, t\mail\inbox_slots, gen, 0))
+        # The dynamic inbox backing is outside the arena and may move, so it is not an arena value.
+        # lmx_post supplies a monitor-consistent snapshot; the collector never sees its backing or
+        # acquires its monitor directly.
+        inbox_values: 0
+        inbox_count: 0U
+        inbox_status: lmx_post_snapshot_inbox(t\mail, @ inbox_values, @ inbox_count)
+        if: inbox_status != c.LMX_POST_OK
+            status: lmx_gc_note(status, c.LMX_GC_INVALID)
+        else:
+            inbox_index: 0U
+            while: inbox_index < inbox_count
+                status: lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) inbox_values[inbox_index]), gen, 0))
+                inbox_index: inbox_index + 1U
+            ---
+            free((cast: (@: void) inbox_values))
+        ---
     ---
     # The parent's own chain of live direct children (lmx_thread.h.lm1, LmxLink).  Its nodes are
     # cells of THIS arena, and nothing else reaches them: a live child is found only through its

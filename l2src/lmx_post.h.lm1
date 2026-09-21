@@ -21,11 +21,10 @@ define: LMX_POST_STAGED 2
 # Queue nodes come from the mailbox's own typed pool, one chunk at a time.
 define: LMX_POST_NODE_CHUNK 32
 
-# THE INBOX IS A RING OF THIS MANY SLOTS, allocated once when the mailbox opens.  It is a
-# policy value with a default, like the node chunk above: a mailbox holds what it was opened
-# with, and a full one REFUSES (LMX_POST_FULL) instead of growing -- see the ring's own
-# comment in the struct.
-define: LMX_POST_INBOX_SLOTS 256
+# The inbox starts with the smallest useful ring.  When it fills, lmx_post grows the private
+# backing by approximately 3/2 while holding the mailbox monitor.  This is an implementation
+# starting point, not a public capacity limit.
+define: LMX_POST_INBOX_MIN_CAPACITY 2
 
 # The mailbox's own API, as one table.  A caller holds the interface, not a pile of
 # function names, and the thread composes this into its own mail API rather than
@@ -116,12 +115,15 @@ struct: LmxPost
     #
     # A ring has neither allocation/free-list problem, and the mailbox monitor makes its
     # reservation/publication one operation for EVERY producer.  This deliberately favours the
-    # simple Java-style synchronized rule over a separate lock-free MPSC protocol: enter/leave
-    # are reentrant for the same OS thread, but there is no wait/notify state.
+    # simple Java-style synchronized rule: enter/leave are reentrant for the same OS thread,
+    # but there is no wait/notify state.  A lock-free MPSC ring belongs to a separate future
+    # mail implementation, not to this collection.
     #
-    # The slots are the caller's ARENA cells, taken in one block when the mailbox opens -- by the
-    # OWNER, in its own thread, so nothing is allocated across lanes afterwards.
+    # The slots are private mailbox metadata, not graph values and not an address-classified LMX
+    # type.  They form an ordinary movable dynamic array: growth happens only while holding the
+    # monitor, copies unread addresses in FIFO order, and never exposes either backing address.
     @: void inbox_slots
+    size_t: inbox_capacity
     # The counters and slots are ordinary mailbox state protected by inbox_monitor.  Tail is
     # advanced by every sender, head only by the owner, and count is what lmx_post_count reports.
     ulong: inbox_head

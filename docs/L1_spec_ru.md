@@ -56,7 +56,7 @@ Translator-L1 (`l1src/l1trans.lm1`) — синтаксически направ�
 <a id="mailbox"></a>
 ## 10. Почта на L1
 
-Правило — [L2 §9](L2_spec_ru.md#mailbox). `struct: LmxPost`, кольцо inbox, его единственный реентерабельный monitor без wait/notify и списки outbox/staged — `lmx_post.h.lm1`; все enter/leave и операции коллекции сосредоточены в `lmx_post.lm1`. Допуск цели — `lmx_post_admits` через домен адреса. Доставка между объектами — `lmx_deliver`.
+Правило — [L2 §9](L2_spec_ru.md#mailbox). `struct: LmxPost`, динамически растущее приблизительно в `3/2` раза кольцо inbox с начальной ёмкостью 2, его единственный реентерабельный monitor без wait/notify и списки outbox/staged — `lmx_post.h.lm1`; все enter/leave, рост и операции коллекции сосредоточены в `lmx_post.lm1`. Внутренний backing кольца не является значением графа и может перемещаться только под монитором. `init` и `close` требуют отсутствия одновременных операций с ящиком. Допуск цели — `lmx_post_admits` через домен адреса. Доставка между объектами — `lmx_deliver`.
 
 <a id="own"></a>
 ## 11. Own на L1

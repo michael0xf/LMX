@@ -7,9 +7,9 @@ predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_manager_running.h.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>" "<windows.h>"
 
-# Two concurrent producers, one owner/consumer, one mailbox.  This is the case the former
-# load/store tail ring did not implement: both producers could reserve the same slot.  The test
-# also checks that the mailbox monitor is reentrant for its owning OS thread.
+# Two concurrent producers, one owner/consumer, one mailbox.  Producers fill the inbox before
+# the consumer starts, forcing several monitored 3/2 growth steps.  The deterministic prefix
+# separately forces growth while the old ring is wrapped and verifies FIFO preservation.
 define: LMX_POST_MPSC_N 10000
 
 @: LmxArena pm_arena 0
@@ -26,14 +26,10 @@ fn: pm_produce (@: void target) DWORD
     ---
     while: n < c.LMX_POST_MPSC_N
         rc: lmx_post_accept(pm_arena, pm_box, target, c.LMX_POST_INBOX)
-        if: rc = c.LMX_POST_OK
-            n: n + 1U
-        else:
-            if: rc != c.LMX_POST_FULL
-                return: 1U
-            ---
-            c.Sleep(0U)
+        if: rc != c.LMX_POST_OK
+            return: 1U
         ---
+        n: n + 1U
     ---
 return: 0U
 
@@ -53,8 +49,6 @@ fn: main () int
     size_t: na 0U
     size_t: nb 0U
     size_t: total 0U
-    int: done_a 0
-    int: done_b 0
     int: failures 0
 
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
@@ -71,6 +65,10 @@ fn: main () int
     pm_a: (cast: (@: void) letters)
     pm_b: (cast: (@: void) (letters + 1))
 
+    if: pm_box\inbox_capacity != c.LMX_POST_INBOX_MIN_CAPACITY || pm_box\inbox_count != 0U
+        failures: failures + 1
+    ---
+
     # Java-style reentry: the first leave reduces depth but keeps the monitor held.
     if: lmx_post_monitor_enter(@ box) != c.LMX_POST_OK || lmx_post_monitor_enter(@ box) != c.LMX_POST_OK
         failures: failures + 1
@@ -85,13 +83,54 @@ fn: main () int
         failures: failures + 1
     ---
 
+    # Fill 2, grow to 3, consume one, wrap, then grow the wrapped full ring to 4.
+    if: lmx_post_accept(@ arena, @ box, pm_a, c.LMX_POST_INBOX) != c.LMX_POST_OK || lmx_post_accept(@ arena, @ box, pm_b, c.LMX_POST_INBOX) != c.LMX_POST_OK
+        failures: failures + 1
+    ---
+    if: pm_box\inbox_capacity != 2U || pm_box\inbox_count != 2U
+        failures: failures + 1
+    ---
+    if: lmx_post_accept(@ arena, @ box, pm_a, c.LMX_POST_INBOX) != c.LMX_POST_OK || pm_box\inbox_capacity != 3U
+        failures: failures + 1
+    ---
+    if: lmx_post_take(@ box, c.LMX_POST_INBOX) != pm_a
+        failures: failures + 1
+    ---
+    if: lmx_post_accept(@ arena, @ box, pm_b, c.LMX_POST_INBOX) != c.LMX_POST_OK || lmx_post_accept(@ arena, @ box, pm_a, c.LMX_POST_INBOX) != c.LMX_POST_OK
+        failures: failures + 1
+    ---
+    if: pm_box\inbox_capacity != 4U || pm_box\inbox_count != 4U
+        failures: failures + 1
+    ---
+    if: lmx_post_take(@ box, c.LMX_POST_INBOX) != pm_b
+        failures: failures + 1
+    ---
+    if: lmx_post_take(@ box, c.LMX_POST_INBOX) != pm_a
+        failures: failures + 1
+    ---
+    if: lmx_post_take(@ box, c.LMX_POST_INBOX) != pm_b
+        failures: failures + 1
+    ---
+    if: lmx_post_take(@ box, c.LMX_POST_INBOX) != pm_a || lmx_post_count(@ box, c.LMX_POST_INBOX) != 0U
+        failures: failures + 1
+    ---
+
     ha: (cast: (@: void) c.CreateThread(0, 0U, (cast: (LPTHREAD_START_ROUTINE) pm_produce_a), 0, 0U, 0))
     hb: (cast: (@: void) c.CreateThread(0, 0U, (cast: (LPTHREAD_START_ROUTINE) pm_produce_b), 0, 0U, 0))
     if: ha = 0 || hb = 0
         return: 2
     c.__atomic_store_n(@ pm_start, 1, c.__ATOMIC_RELEASE)
 
-    while: done_a = 0 || done_b = 0 || lmx_post_count(@ box, c.LMX_POST_INBOX) != 0U
+    # Do not consume until both producers finish: the ring must grow to hold all 20,000 entries.
+    c.WaitForSingleObject(ha, c.INFINITE)
+    c.WaitForSingleObject(hb, c.INFINITE)
+    if: lmx_post_count(@ box, c.LMX_POST_INBOX) != 2U * c.LMX_POST_MPSC_N || pm_box\inbox_capacity < 2U * c.LMX_POST_MPSC_N
+        failures: failures + 1
+    ---
+    c.CloseHandle(ha)
+    c.CloseHandle(hb)
+
+    while: lmx_post_count(@ box, c.LMX_POST_INBOX) != 0U
         got: lmx_post_take(@ box, c.LMX_POST_INBOX)
         if: got = pm_a
             na: na + 1U
@@ -101,24 +140,10 @@ fn: main () int
                 nb: nb + 1U
                 total: total + 1U
             else:
-                if: got = 0
-                    c.Sleep(0U)
-                else:
-                    failures: failures + 1
-                ---
+                failures: failures + 1
             ---
         ---
-        if: c.WaitForSingleObject(ha, 0U) = c.WAIT_OBJECT_0
-            done_a: 1
-        ---
-        if: c.WaitForSingleObject(hb, 0U) = c.WAIT_OBJECT_0
-            done_b: 1
-        ---
     ---
-    c.WaitForSingleObject(ha, c.INFINITE)
-    c.WaitForSingleObject(hb, c.INFINITE)
-    c.CloseHandle(ha)
-    c.CloseHandle(hb)
 
     if: na != c.LMX_POST_MPSC_N || nb != c.LMX_POST_MPSC_N || total != 2U * c.LMX_POST_MPSC_N
         failures: failures + 1
@@ -126,7 +151,7 @@ fn: main () int
     if: lmx_post_count(@ box, c.LMX_POST_INBOX) != 0U || pm_box\inbox_head != pm_box\inbox_tail
         failures: failures + 1
     ---
-    c.printf("lmx_post_mpsc a=%u b=%u total=%u checks=5 failures=%d\n", (cast: (unsigned) na), (cast: (unsigned) nb), (cast: (unsigned) total), failures)
+    c.printf("lmx_post_mpsc a=%u b=%u total=%u capacity=%u checks=17 failures=%d\n", (cast: (unsigned) na), (cast: (unsigned) nb), (cast: (unsigned) total), (cast: (unsigned) pm_box\inbox_capacity), failures)
     lmx_post_close(@ arena, @ box)
     lmx_arena_release(@ arena)
 return: failures

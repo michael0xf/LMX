@@ -107,9 +107,30 @@ fn: main () int
         free(counts)
         return: 2
     ---
+    # THE RECORD IS POISONED BEFORE IT IS ATTACHED, deliberately and completely.  A schedule in a
+    # by-value local arrives holding whatever was on the stack, and on Windows the command line and
+    # the environment sit near the stack base, so that garbage is a function of the executable's
+    # ABSOLUTE PATH LENGTH -- measured 2026-09-21: once this executable's path crossed 83 characters
+    # the boundary read UTF-16 slices of its own path out of slot\arena, handed them to
+    # lmx_gc_collect, and took 0xC0000005.  Poisoning with 0xAA makes the case deterministic and
+    # path-independent instead of depending on what the stack happened to hold, and attaching WHILE
+    # POISONED keeps the attach contract exercised: lmx_thread_attach accepts a merely allocated
+    # record and must not read slot\arena (lmx_thread.h.lm1:169-170).
+    memset((cast: (@: void) (@ slot)), 170, c.sizeof(c.LmxSchedule))
     t: (cast: (@: LmxThread) lmx_arena_take(@ arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
     if: t = 0 || lmx_thread_attach(t, letter, mail, @ slot) != c.LMX_THREAD_OK
         fputs("lmx_turn: the object did not attach\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+
+    # ... and only NOW is it initialized, after a successful attach and before any boundary can read
+    # it.  The band is ZERO: this test's values live in explicit arenas rather than in one the record
+    # was created in, so the boundary legitimately collects nothing (lmx_schedule.h.lm1) and
+    # lmx_turn_end takes its `arena == 0` branch.  The owner is the thread itself, and 8U is the
+    # small nonbinding limit lmx_child_selftest uses for the same act.
+    if: lmx_schedule_init(@ slot, 0, (cast: (@: void) t), 8U) != c.LMX_SCHEDULE_OK
+        fputs("lmx_turn: the schedule did not initialize\n", l1_stdout())
         free(counts)
         return: 2
     ---

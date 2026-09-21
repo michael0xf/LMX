@@ -174,3 +174,37 @@ powershell -NoProfile -File tools/run_vm_patha_smoke.ps1 -Fixture own -Target al
 ```
 
 **Still not an execute fixture:** `parser.lm1.c` (no main; no harness in this ticket).
+
+## Parser harness (ticket GROK-BOT-VM-PATHA-PARSER-HARNESS-20260921-35)
+
+Tracked seed `lm1/build/parser.lm1.c` has **no `main`**. Executable coverage is a small
+tracked C99 harness that **links the seed unchanged**:
+
+- Harness: `include_languages/vm/parser_harness_main.c`
+- Includes: `-I. -Ilm1/build` → tracked `lm1/build/l1src/p0.lm1.h`
+- Public ABI only: `lm_p0_parse_string`, `lm_p0_document_root`, `lm_p0_dump_alloc`,
+  `lm_p0_document_diagnostic`, `lm_p0_document_destroy`, `lm_p0_free`
+- Inputs from **tracked** fixtures (not a new grammar):
+  - minimal valid `"value\n"` — `tests/parser/imported/01-old-worked/.../trans_parser_managed_abi.lm2`
+  - nested short-form — `.../p0_tree_contract/C_nested_short_ok.lmx`
+  - invalid unclosed `===` block — `.../p0_tree_contract/invalid_eq_unclosed.lmx` (meta REJECT code=20)
+- Stable line: `VM_PARSER_OK checks=16` (exit 0)
+
+### Observed (OAK65536, 2026-09-21) — all exit 0, same line
+
+| Path | Exit | Output |
+|------|-----:|--------|
+| Host C99 oracle | **0** | `VM_PARSER_OK checks=16` |
+| MIR `c2m … -ei` | **0** | `VM_PARSER_OK checks=16` |
+| WASM wasi-sdk + wasmtime | **0** | `VM_PARSER_OK checks=16` |
+| RISC-V cross + qemu | **0** | `VM_PARSER_OK checks=16` |
+
+Smoke: `-Fixture printTree|own|parser` (default **printTree**). After this ticket:
+
+```
+powershell -NoProfile -File tools/run_vm_patha_smoke.ps1 -Target all
+powershell -NoProfile -File tools/run_vm_patha_smoke.ps1 -Fixture own -Target all
+powershell -NoProfile -File tools/run_vm_patha_smoke.ps1 -Fixture parser -Target all
+```
+
+All three OVERALL=OK. This is **parse-API smoke**, not a claim of full compiler/self-build support.

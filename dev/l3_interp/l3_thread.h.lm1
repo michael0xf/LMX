@@ -1,5 +1,11 @@
-predef: "l3_interp/l3_recv.h.lm1"
 predef: "l2src/lmx_thread.h.lm1"
+
+# NOT predef'd here: l3_interp/l3_recv.h.lm1 (FABLE-L3-TYPE-BUDGET-SHED-20260921-36).  Nothing in
+# this header or in l3_thread.lm1 names a symbol of it -- the Thread path is lmx_interp_apply ->
+# lmx_walk, not l3_exec -- and it cost four header type names (L3Frame, L3Result, L3Seen, and
+# LmxOwn through lmx_own.h.lm1) in a translation unit whose table of 64 was already full.  A
+# unit that needs the receiver's types predefs that header itself.  The budget is CHECKED:
+# tools/l3_type_budget.py.
 
 prototype:
     fn: l3_thread_dispatch (@: LmxThread t) int

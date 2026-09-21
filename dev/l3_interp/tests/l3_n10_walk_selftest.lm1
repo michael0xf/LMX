@@ -1,5 +1,4 @@
 predef: "l3_interp/l3_thread.lm1"
-predef: "l3_interp/l3_admit.lm1"
 predef: "l2src/lmx_thread.lm1"
 predef: "l2src/lmx_perm.lm1"
 predef: "l2src/lmx_call.lm1"
@@ -29,7 +28,10 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
 # N10 slice 1 fix. Admission-shaped tests on Thread -> lmx_interp_apply -> lmx_walk.
 # Shared lmx_walk_roles_open records by address. No L3_NODE identity.
-# INT-index l3_implements_paths is a provisional helper, not final implements semantics.
+# The l3_admit checks (the INT-index provisional helper among them) are in
+# l3_admit_selftest.lm1: l3_admit.lm1 was the one thing here that needed l3_recv.h.lm1, and
+# its four header type names put this unit over l1trans's table of 64
+# (FABLE-L3-TYPE-BUDGET-SHED-20260921-36; the budget is checked by tools/l3_type_budget.py).
 
 @: LmxArena gb 0
 @: Lmx groles 0
@@ -153,23 +155,6 @@ fn: mk_int (@: LmxArena a; int: n) @: void
     lmx_int_store_known(cell, n)
 return: cell
 
-fn: mk_path1 (@: LmxArena a; int: i0) @: Lmx
-    @: Lmx p
-    p: lmx_node_new_owned(a)
-    if: p = 0 || lmx_arena_refs_open_owned(a, p, 1U) != 0
-        return: 0
-    lmx_arena_ref_store(p, 0U, mk_int(a, i0))
-return: p
-
-fn: mk_recv (@: LmxArena a; @: Lmx paths; @: Lmx tests) @: Lmx
-    @: Lmx r
-    r: lmx_node_new_owned(a)
-    if: r = 0 || paths = 0 || tests = 0 || lmx_arena_refs_open_owned(a, r, 2U) != 0
-        return: 0
-    lmx_arena_ref_store(r, 0U, (cast: (@: void) paths))
-    lmx_arena_ref_store(r, 1U, (cast: (@: void) tests))
-return: r
-
 fn: mk_ret_test () @: Lmx
     @: Lmx m mk_m(2U)
     fr(m, 1U, c.LMX_WALK_OP_RET, 1U)
@@ -214,15 +199,17 @@ return: fake
 fn: run_graph (@: LmxThread t; @: Lmx m) int
     @: LmxMsg msg t\message
     int: st
+    # A refusal of THIS helper is -1, never 1: LMX_THREAD_INVALID is 1, and a check that
+    # expects a failed turn must not be satisfiable by the helper declining to run one.
     if: t = 0 || m = 0 || msg = 0
-        return: 1
+        return: -1
     msg\graph: m
     st: lmx_thread_turn(t, native_noop, 8U)
     # Nothing to refresh: the role records live in the bound permanent store, which the
     # end-turn collection neither collects nor visits, so they are the same records after it.
     groles: l3_thread_roles(t)
     if: groles = 0
-        return: 1
+        return: -1
     ---
 return: st
 
@@ -240,9 +227,8 @@ fn: main () int
     @: Lmx cand 0
     @: Lmx cand64 0
     @: Lmx live 0
-    @: Lmx paths 0
-    @: Lmx tests 0
-    @: Lmx recv 0
+    @: void probe 0
+    int: probe_before 0
     @: Lmx ret_frame 0
     @: Lmx ret_role 0
     @: Lmx set_role 0
@@ -312,21 +298,6 @@ fn: main () int
     ---
     lmx_arena_ref_store(cand, 0U, mk_int(gb, 32))
     lmx_arena_ref_store(cand64, 0U, mk_int(gb, 64))
-    paths: lmx_node_new_owned(gb)
-    if: paths = 0 || lmx_arena_refs_open_owned(gb, paths, 1U) != 0
-        free(counts)
-        return: 2
-    ---
-    lmx_arena_ref_store(paths, 0U, (cast: (@: void) mk_path1(gb, 0)))
-    fail(counts, l3_implements_paths(gb, cand, paths) = c.L3_OK, "provisional helper: analytic used path 0 present, not final implements")
-    paths: lmx_node_new_owned(gb)
-    if: paths = 0 || lmx_arena_refs_open_owned(gb, paths, 1U) != 0
-        free(counts)
-        return: 2
-    ---
-    lmx_arena_ref_store(paths, 0U, (cast: (@: void) mk_path1(gb, 5)))
-    fail(counts, l3_implements_paths(gb, cand, paths) = c.L3_ABSENT, "provisional helper: analytic missing path 5, not final implements")
-    fail(counts, l3_implements_paths(gb, cand, lmx_node_new_owned(gb)) = c.L3_OK, "provisional helper: empty used-path set, not final implements")
 
     m: mk_read_arg0()
     set_role: lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_SET))
@@ -364,8 +335,9 @@ fn: main () int
     fail(counts, lmx_thread_mode(t) = c.LMX_THREAD_MODE_INTERPRETED, "one mode for the turn")
 
     # THE SAME GRAPH, A SECOND REAL TURN.  The end-turn collection has run once.  With the role
-    # records in the collected arena this turn returned LMX_THREAD_OK and did nothing: the
-    # frame's role address was compared with freed cells, and dispatch status is dropped.
+    # records in the collected arena this turn did nothing: the frame's role address was compared
+    # with freed cells.  (It even returned LMX_THREAD_OK then -- the dispatch status was dropped
+    # until 4ab2877; the witness here was and is the own cell, not the turn's status.)
     fail(counts, groles = roles_at_bind && l3_thread_plan_roles(t) = plan_at_bind, "after a turn the tables are the same tables")
     fail(counts, lmx_range_classify(gb, (cast: (@: void) groles)) = c.LMX_KIND_STRUCT, "and the role table is still a Structure by the arena's ranges")
     fail(counts, lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_RET)) = ret_at_bind && lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_SET)) = set_at_bind, "RET and SET are the records they were at bind")
@@ -393,7 +365,17 @@ fn: main () int
     fail(counts, lmx_walk_prepare(@ context, gb, l3_thread_plan_roles(t), m) = c.LMX_WALK_UNSUPPORTED, "set-impostor prepare is UNSUPPORTED")
     fail(counts, lmx_interp_run(@ context, m) = c.LMX_INTERP_INVALID, "set-impostor interp is INVALID")
     fail(counts, field(m, 1U) = 0, "set-impostor did not run SET")
-    fail(counts, run_graph(t, m) = c.LMX_THREAD_OK, "set-impostor turn still ends (dispatch status is dropped)")
+    # Since 4ab2877 lmx_thread_turn KEEPS the body's status.  The refused impostor is a FAILED
+    # turn: the dispatch failure reaches the Thread boundary, the boundary still runs, and the
+    # turn reports the Thread ABI's existing failure.  (It used to be dropped, and this line
+    # used to expect LMX_THREAD_OK.)  LMX_THREAD_INVALID is also what a turn that never
+    # ENTERED returns, so the next check tells the two apart: only a turn whose boundary ran
+    # has collected the arena, and the probe cell -- live before, referenced by nothing -- is
+    # gone after it.  The role-identity witness is unchanged: the own cell below is still 0.
+    probe: mk_int(gb, 1)
+    probe_before: lmx_range_classify(gb, probe)
+    fail(counts, run_graph(t, m) = c.LMX_THREAD_INVALID, "set-impostor turn is a FAILED turn: the refusal reaches the Thread boundary")
+    fail(counts, probe != 0 && probe_before = c.LMX_KIND_PRIMITIVE && lmx_range_classify(gb, probe) = c.LMX_KIND_NONE, "set-impostor: the boundary still ran -- its collection swept a cell nothing references")
     fail(counts, field(m, 1U) = 0, "set-impostor own cell still 0 after the Thread turn")
     fail(counts, native_hits = 1, "set-impostor did not call native")
 
@@ -404,9 +386,6 @@ fn: main () int
     ---
     lmx_arena_ref_store(live, 0U, mk_int(gb, 32))
     fail(counts, lmx_domain_kind(gb, (cast: (@: void) live)) != c.LMX_KIND_NONE, "fresh candidate after turns is classified")
-    tests: lmx_node_new_owned(gb)
-    recv: mk_recv(gb, lmx_node_new_owned(gb), tests)
-    fail(counts, recv != 0 && l3_admit(gb, live, recv) = c.L3_UNSUPPORTED, "analytic OK without tests is not admission")
     fail(counts, lmx_perm_close(@ perm_store) = 0, "store closed once")
 
     if: counts[1] != 0

@@ -3,7 +3,11 @@
     python tools/run_l3_selftest.py
     python tools/run_l3_selftest.py --test tests/l3_02_selftest.lm1
 
-Default runs L3-01..04, 14 recipes, and thread_bind.
+Default runs L3-01..04, 14 recipes, thread_bind and admit, and then the header-type-name
+budget of the Thread units (tools/l3_type_budget.py).  The budget is part of the default run
+because its failure is the one this runner cannot otherwise see coming: a unit over l1trans's
+table of 64 type names does not fail a check, it stops translating, and the L2 gate
+(tools/build_l2src.ps1) does not build dev/l3_interp at all.
 """
 import argparse
 import hashlib
@@ -24,6 +28,7 @@ ALL_TESTS = (
     'tests/l3_04_selftest.lm1',
     'tests/l3_recipes_selftest.lm1',
     'tests/l3_thread_bind_selftest.lm1',
+    'tests/l3_admit_selftest.lm1',
 )
 
 
@@ -141,11 +146,23 @@ def main():
         code = run_one(translator, l1src, args.cc, test, output)
         if code:
             failed.append((test, code))
+    budget_failures = []
+    if not args.test:
+        # A suite over the cliff shows above as a translate failure in some unrelated header;
+        # this says which unit, by how much, and says it while there is still room.
+        import l3_type_budget
+        budget_failures = l3_type_budget.check(translator, l1src)
     if failed:
         for test, code in failed:
             print(f'FAIL {test} exit={code}')
         return failed[0][1]
-    print(f'all {len(tests)} suites ok')
+    if budget_failures:
+        print(f'FAIL type budget: {len(budget_failures)} unit(s); python tools/l3_type_budget.py')
+        return 1
+    if args.test:
+        print(f'all {len(tests)} suites ok')
+    else:
+        print(f'all {len(tests)} suites ok; type budget ok ({len(l3_type_budget.EXPECT)} units)')
     return 0
 
 

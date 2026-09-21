@@ -1,0 +1,151 @@
+predef: "l3_interp/l3_admit.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# l3_admit on the N10 candidate, WITHOUT a Thread in the closure
+# (FABLE-L3-TYPE-BUDGET-SHED-20260921-36).  The first four checks stood in
+# l3_n10_walk_selftest.lm1; they are here because l3_admit.lm1 was the only thing in that unit
+# that needed l3_recv.h.lm1, and its four header type names were what put N10 over l1trans's
+# table of 64.  They need no Thread, no walk and no turn, so nothing is lost by the move.
+#
+# INT-index l3_implements_paths is a provisional helper, not final implements semantics: a
+# path here is a Structure of int cells, and the author's rule is references first, numbers
+# only where a reference is impossible.  Green here pins today's helper, it does not ratify it.
+#
+# l3_run_tests executes through l3_exec (L3_NODE records), not through lmx_walk.  That is
+# l3_admit's current wiring and this suite states it rather than hiding it.
+#
+# THE POSITIVE CONTROL READS THE CANDIDATE.  A test that only returns admits anything, so
+# "admitted" would say nothing about the candidate: here the test is EXPECT_INT over the used
+# path, the candidate holding 32 is admitted, and the SAME receiver refuses the candidate
+# holding 64.  Without the second half the first proves only that l3_admit can say OK.
+
+sub: fail (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: fail
+
+fn: mk_int (@: LmxArena a; int: n) @: void
+    @: void cell
+    cell: lmx_int_new_owned(a)
+    if: cell = 0
+        return: 0
+    lmx_int_store_known(cell, n)
+return: cell
+
+fn: mk_path1 (@: LmxArena a; int: i0) @: Lmx
+    @: Lmx p
+    p: lmx_node_new_owned(a)
+    if: p = 0 || lmx_arena_refs_open_owned(a, p, 1U) != 0
+        return: 0
+    lmx_arena_ref_store(p, 0U, mk_int(a, i0))
+return: p
+
+# One Structure with one child: a used-path set of one path, or a test set of one test.
+fn: mk_set1 (@: LmxArena a; @: Lmx item) @: Lmx
+    @: Lmx s
+    s: lmx_node_new_owned(a)
+    if: s = 0 || item = 0 || lmx_arena_refs_open_owned(a, s, 1U) != 0
+        return: 0
+    lmx_arena_ref_store(s, 0U, (cast: (@: void) item))
+return: s
+
+fn: mk_recv (@: LmxArena a; @: Lmx paths; @: Lmx tests) @: Lmx
+    @: Lmx r
+    r: lmx_node_new_owned(a)
+    if: r = 0 || paths = 0 || tests = 0 || lmx_arena_refs_open_owned(a, r, 2U) != 0
+        return: 0
+    lmx_arena_ref_store(r, 0U, (cast: (@: void) paths))
+    lmx_arena_ref_store(r, 1U, (cast: (@: void) tests))
+return: r
+
+fn: mk_cand (@: LmxArena a; int: value) @: Lmx
+    @: Lmx cand
+    cand: lmx_node_new_owned(a)
+    if: cand = 0 || lmx_arena_refs_open_owned(a, cand, 1U) != 0
+        return: 0
+    lmx_arena_ref_store(cand, 0U, mk_int(a, value))
+return: cand
+
+# A receiver test that READS its subject: EXPECT_INT [op, path, want].
+fn: mk_expect_test (@: LmxArena a; @: Lmx path; int: want) @: Lmx
+    @: Lmx m
+    @: LmxCallable info
+    @: LmxMethod meth
+    @: Lmx stmt
+    @: LmxOp op
+    m: lmx_node_new_owned(a)
+    info: lmx_callable_new_owned(a)
+    meth: lmx_method_new_owned(a)
+    stmt: lmx_node_new_owned(a)
+    op: lmx_op_new_owned(a, c.L3_NODE_EXPECT_INT)
+    if: m = 0 || info = 0 || meth = 0 || stmt = 0 || op = 0 || path = 0
+        return: 0
+    if: lmx_arena_refs_open_owned(a, m, 2U) != 0 || lmx_arena_refs_open_owned(a, stmt, 3U) != 0
+        return: 0
+    info\method: meth
+    lmx_arena_ref_store(stmt, 0U, (cast: (@: void) op))
+    lmx_arena_ref_store(stmt, 1U, (cast: (@: void) path))
+    lmx_arena_ref_store(stmt, 2U, mk_int(a, want))
+    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
+    lmx_arena_ref_store(m, 1U, (cast: (@: void) stmt))
+return: m
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxArena: arena
+    @: LmxArena gb 0
+    @: Lmx cand 0
+    @: Lmx cand64 0
+    @: Lmx paths 0
+    @: Lmx tests 0
+    @: Lmx recv 0
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ arena) != 0
+        fputs("l3_admit: arena\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    gb: @ arena
+    cand: mk_cand(gb, 32)
+    cand64: mk_cand(gb, 64)
+    if: cand = 0 || cand64 = 0
+        free(counts)
+        return: 2
+    ---
+
+    paths: mk_set1(gb, mk_path1(gb, 0))
+    fail(counts, paths != 0 && l3_implements_paths(gb, cand, paths) = c.L3_OK, "provisional helper: analytic used path 0 present, not final implements")
+    paths: mk_set1(gb, mk_path1(gb, 5))
+    fail(counts, paths != 0 && l3_implements_paths(gb, cand, paths) = c.L3_ABSENT, "provisional helper: analytic missing path 5, not final implements")
+    fail(counts, l3_implements_paths(gb, cand, lmx_node_new_owned(gb)) = c.L3_OK, "provisional helper: empty used-path set, not final implements")
+
+    tests: lmx_node_new_owned(gb)
+    recv: mk_recv(gb, lmx_node_new_owned(gb), tests)
+    fail(counts, recv != 0 && l3_admit(gb, cand, recv) = c.L3_UNSUPPORTED, "analytic OK without tests is not admission")
+
+    paths: mk_set1(gb, mk_path1(gb, 0))
+    tests: mk_set1(gb, mk_expect_test(gb, mk_path1(gb, 0), 32))
+    recv: mk_recv(gb, paths, tests)
+    fail(counts, recv != 0 && l3_admit(gb, cand, recv) = c.L3_OK, "a valid tested candidate is admitted: used path 0 present and its test reads 32 there")
+    fail(counts, recv != 0 && l3_admit(gb, cand64, recv) = c.L3_ABSENT, "the same receiver refuses the candidate holding 64: the test read the candidate")
+
+    if: counts[1] != 0
+        c.printf("%d failed of %d\n", counts[1], counts[0])
+        free(counts)
+        return: 1
+    ---
+    c.printf("l3_admit: %d checks\n", counts[0])
+    free(counts)
+return: 0

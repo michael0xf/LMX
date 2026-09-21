@@ -240,15 +240,17 @@ return: m
 fn: run_graph (@: LmxThread t; @: Lmx m) int
     @: LmxMsg msg t\message
     int: st
+    # A refusal of THIS helper is -1, never 1: LMX_THREAD_INVALID is 1, and a check that
+    # expects a failed turn must not be satisfiable by the helper declining to run one.
     if: t = 0 || m = 0 || msg = 0
-        return: 1
+        return: -1
     msg\graph: m
     st: lmx_thread_turn(t, native_noop, 8U)
     # Nothing to refresh: the role records live in the bound permanent store, which the
     # end-turn collection neither collects nor visits, so they are the same records after it.
     groles: l3_thread_roles(t)
     if: groles = 0
-        return: 1
+        return: -1
     ---
 return: st
 
@@ -268,6 +270,8 @@ fn: main () int
     @: LmxOp fake 0
     @: Lmx frame 0
     @: Lmx roles_at_bind 0
+    @: void probe 0
+    int: probe_before 0
     @: void if_at_bind 0
     @: void while_at_bind 0
     if: counts = 0
@@ -359,7 +363,17 @@ fn: main () int
     fail(counts, lmx_walk_prepare(@ context, gb, l3_thread_plan_roles(t), m) = c.LMX_WALK_UNSUPPORTED, "if-impostor prepare is UNSUPPORTED")
     fail(counts, lmx_interp_run(@ context, m) = c.LMX_INTERP_INVALID, "if-impostor interp is INVALID")
     fail(counts, field(m, 1U) = 0, "if-impostor did not run the then-body")
-    fail(counts, run_graph(t, m) = c.LMX_THREAD_OK, "if-impostor turn still ends (dispatch status is dropped)")
+    # Since 4ab2877 lmx_thread_turn KEEPS the body's status.  The refused impostor is a FAILED
+    # turn: the dispatch failure reaches the Thread boundary, the boundary still runs, and the
+    # turn reports the Thread ABI's existing failure.  (It used to be dropped, and this line
+    # used to expect LMX_THREAD_OK.)  LMX_THREAD_INVALID is also what a turn that never
+    # ENTERED returns, so the next check tells the two apart: only a turn whose boundary ran
+    # has collected the arena, and the probe cell -- live before, referenced by nothing -- is
+    # gone after it.  The role-identity witness is unchanged: the own cell below is still 0.
+    probe: lmx_int_new_owned(gb)
+    probe_before: lmx_range_classify(gb, probe)
+    fail(counts, run_graph(t, m) = c.LMX_THREAD_INVALID, "if-impostor turn is a FAILED turn: the refusal reaches the Thread boundary")
+    fail(counts, probe != 0 && probe_before = c.LMX_KIND_PRIMITIVE && lmx_range_classify(gb, probe) = c.LMX_KIND_NONE, "if-impostor: the boundary still ran -- its collection swept a cell nothing references")
     fail(counts, field(m, 1U) = 0, "if-impostor own cell still 0 after the Thread turn")
     fail(counts, native_hits = 1, "if-impostor did not call native")
 
@@ -374,7 +388,17 @@ fn: main () int
     fail(counts, lmx_walk_prepare(@ context, gb, l3_thread_plan_roles(t), m) = c.LMX_WALK_UNSUPPORTED, "while-impostor prepare is UNSUPPORTED")
     fail(counts, lmx_interp_run(@ context, m) = c.LMX_INTERP_INVALID, "while-impostor interp is INVALID")
     fail(counts, field(m, 1U) = 0, "while-impostor did not run the loop body")
-    fail(counts, run_graph(t, m) = c.LMX_THREAD_OK, "while-impostor turn still ends (dispatch status is dropped)")
+    # Since 4ab2877 lmx_thread_turn KEEPS the body's status.  The refused impostor is a FAILED
+    # turn: the dispatch failure reaches the Thread boundary, the boundary still runs, and the
+    # turn reports the Thread ABI's existing failure.  (It used to be dropped, and this line
+    # used to expect LMX_THREAD_OK.)  LMX_THREAD_INVALID is also what a turn that never
+    # ENTERED returns, so the next check tells the two apart: only a turn whose boundary ran
+    # has collected the arena, and the probe cell -- live before, referenced by nothing -- is
+    # gone after it.  The role-identity witness is unchanged: the own cell below is still 0.
+    probe: lmx_int_new_owned(gb)
+    probe_before: lmx_range_classify(gb, probe)
+    fail(counts, run_graph(t, m) = c.LMX_THREAD_INVALID, "while-impostor turn is a FAILED turn: the refusal reaches the Thread boundary")
+    fail(counts, probe != 0 && probe_before = c.LMX_KIND_PRIMITIVE && lmx_range_classify(gb, probe) = c.LMX_KIND_NONE, "while-impostor: the boundary still ran -- its collection swept a cell nothing references")
     fail(counts, field(m, 1U) = 0, "while-impostor own cell still 0 after the Thread turn")
     fail(counts, native_hits = 1, "while-impostor did not call native")
 

@@ -19,8 +19,9 @@ include: "<string.h>"
 # a record's ADDRESS as its role -- so the address has to outlive the turn.  It did not:
 # lmx_turn_end collects the arena from message.graph, nothing in a graph references the
 # TABLES, and a unit global is not a root, so every turn swept them and the next turn
-# compared addresses with freed cells (measured: a second turn of the same graph returned
-# LMX_THREAD_OK and did nothing).  The store is never collected and never visited
+# compared addresses with freed cells (measured then: a second turn of the same graph returned
+# LMX_THREAD_OK and did nothing -- lmx_thread_turn dropped the dispatch status at the time; since
+# 4ab2877 it keeps it and such a turn is reported as failed).  The store is never collected and never visited
 # (lmx_perm.h.lm1), and membership in its ranges is the type `independent: const: immutable`.
 # Because nothing there is ever collected, the tables are opened ONCE per store: whoever zeroes
 # these globals to force a re-open leaks a whole role set and mints new identities.

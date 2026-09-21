@@ -1,0 +1,313 @@
+predef: "l3_interp/l3_thread.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_perm.lm1"
+predef: "l2src/lmx_call.lm1"
+predef: "l2src/lmx_turn.lm1"
+predef: "l2src/lmx_child.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_manager.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_gc.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_clock.lm1"
+predef: "l2src/lmx_plan.lm1"
+predef: "l2src/lmx_scratch.lm1"
+predef: "l2src/lmx_walk.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# N9 on the runtime path: l3_thread_dispatch -> lmx_interp_apply -> lmx_walk.
+# Frame nodes refer to shared lmx_walk_roles_open records by address.
+# No L3_NODE / private LmxOp. Evidence is the own cell after the turn.
+
+@: LmxArena gb 0
+@: Lmx groles 0
+int: broken 0
+int: native_hits 0
+
+sub: fail (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: fail
+
+fn: native_noop (@: Lmx node) int
+    native_hits: native_hits + 1
+return: 0
+
+fn: fr (@: Lmx parent; size_t: slot; int: op; size_t: children) @: Lmx
+    @: Lmx n lmx_walk_frame(gb, groles, parent, op, children)
+    if: n = 0 || lmx_arena_ref_store(parent, slot, (cast: (@: void) n)) != 0
+        broken: broken + 1
+        return: 0
+    ---
+return: n
+
+fn: pl (@: Lmx parent; size_t: slot; size_t: children) @: Lmx
+    @: Lmx n lmx_walk_plain(gb, parent, children)
+    if: n = 0 || lmx_arena_ref_store(parent, slot, (cast: (@: void) n)) != 0
+        broken: broken + 1
+        return: 0
+    ---
+return: n
+
+sub: ref (@: Lmx code; size_t: slot; @: Lmx target)
+    if: code = 0 || target = 0 || lmx_arena_ref_store(code, slot, (cast: (@: void) target)) != 0
+        broken: broken + 1
+    ---
+end: ref
+
+sub: sz (@: Lmx code; size_t: slot; size_t: value)
+    if: code = 0 || lmx_walk_store_size(gb, code, slot, value) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+end: sz
+
+fn: own (@: Lmx parent; size_t: slot; @: Lmx holder; size_t: index) @: Lmx
+    @: Lmx n fr(parent, slot, c.LMX_WALK_OP_OWN, 3U)
+    ref(n, 1U, holder)
+    sz(n, 2U, index)
+return: n
+
+fn: lit (@: Lmx parent; size_t: slot; int: value) @: Lmx
+    @: Lmx n fr(parent, slot, c.LMX_WALK_OP_LIT, 2U)
+    if: n != 0 && lmx_walk_store_int(gb, n, 1U, value) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+return: n
+
+sub: icell (@: Lmx holder; size_t: slot; int: value)
+    if: holder = 0 || lmx_walk_store_int(gb, holder, slot, value) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+end: icell
+
+fn: field (@: Lmx m; size_t: slot) int
+    @: void cell lmx_arena_ref_value(m, slot)
+    if: cell = 0
+        return: -999
+return: lmx_int_value_known(cell)
+
+fn: mk_m (size_t: children) @: Lmx
+    @: Lmx unit lmx_node_new_owned(gb)
+    @: Lmx m 0
+    @: LmxCallable info 0
+    if: unit = 0 || lmx_arena_refs_open_owned(gb, unit, 1U) != 0
+        broken: broken + 1
+        return: 0
+    ---
+    m: lmx_walk_plain(gb, unit, children)
+    info: lmx_callable_new_owned(gb)
+    if: m = 0 || info = 0 || lmx_arena_ref_store(unit, 0U, (cast: (@: void) m)) != 0
+        broken: broken + 1
+        return: 0
+    ---
+    if: lmx_arena_ref_store(m, 0U, (cast: (@: void) info)) != 0
+        broken: broken + 1
+        return: 0
+    ---
+return: m
+
+fn: mk_dummy (@: LmxArena a) @: Lmx
+    @: Lmx m lmx_node_new_owned(a)
+    @: LmxCallable info lmx_callable_new_owned(a)
+    if: m = 0 || info = 0 || lmx_arena_refs_open_owned(a, m, 1U) != 0
+        return: 0
+    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
+return: m
+
+fn: mk_thread (@: LmxArena arena; @: Lmx graph; @@: LmxThread out_t) int
+    @: LmxMsg message
+    @: LmxThread t
+    @: LmxPost mail
+    @: LmxSchedule sched
+    \out_t: 0
+    message: (cast: (@: LmxMsg) lmx_arena_take(arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    t: (cast: (@: LmxThread) lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    mail: (cast: (@: LmxPost) lmx_arena_take(arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    sched: (cast: (@: LmxSchedule) lmx_arena_take(arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: message = 0 || t = 0 || mail = 0 || sched = 0
+        return: 0
+    message\running: 1
+    message\success: 0
+    message\handoff_ready: 0
+    message\graph: graph
+    message\index: 1U
+    if: lmx_post_init(arena, mail) != c.LMX_POST_OK || lmx_thread_attach(t, message, mail, sched) != c.LMX_THREAD_OK
+        return: 0
+    if: lmx_schedule_init(sched, arena, (cast: (@: void) t), 1000U) != c.LMX_SCHEDULE_OK
+        return: 0
+    \out_t: t
+return: 1
+
+# own n 0; if 1 then n: 7
+fn: mk_if_true () @: Lmx
+    @: Lmx m mk_m(3U)
+    @: Lmx n 0
+    @: Lmx body 0
+    icell(m, 1U, 0)
+    n: fr(m, 2U, c.LMX_WALK_OP_IF, 3U)
+    lit(n, 1U, 1)
+    body: pl(n, 2U, 1U)
+    n: fr(body, 0U, c.LMX_WALK_OP_SET, 3U)
+    own(n, 1U, m, 1U)
+    lit(n, 2U, 7)
+return: m
+
+# own n 0; if 0 then n: 7 else n: 3
+fn: mk_if_false () @: Lmx
+    @: Lmx m mk_m(3U)
+    @: Lmx n 0
+    @: Lmx thenb 0
+    @: Lmx elseb 0
+    icell(m, 1U, 0)
+    n: fr(m, 2U, c.LMX_WALK_OP_IF, 4U)
+    lit(n, 1U, 0)
+    thenb: pl(n, 2U, 1U)
+    elseb: pl(n, 3U, 1U)
+    n: fr(thenb, 0U, c.LMX_WALK_OP_SET, 3U)
+    own(n, 1U, m, 1U)
+    lit(n, 2U, 7)
+    n: fr(elseb, 0U, c.LMX_WALK_OP_SET, 3U)
+    own(n, 1U, m, 1U)
+    lit(n, 2U, 3)
+return: m
+
+# own n 0; while n < 3 { n: n + 1 }
+fn: mk_while () @: Lmx
+    @: Lmx m mk_m(3U)
+    @: Lmx n 0
+    @: Lmx body 0
+    @: Lmx e 0
+    icell(m, 1U, 0)
+    n: fr(m, 2U, c.LMX_WALK_OP_WHILE, 3U)
+    e: fr(n, 1U, c.LMX_WALK_OP_LT, 3U)
+    own(e, 1U, m, 1U)
+    lit(e, 2U, 3)
+    body: pl(n, 2U, 1U)
+    n: fr(body, 0U, c.LMX_WALK_OP_SET, 3U)
+    own(n, 1U, m, 1U)
+    e: fr(n, 2U, c.LMX_WALK_OP_ADD, 3U)
+    own(e, 1U, m, 1U)
+    lit(e, 2U, 1)
+return: m
+
+# own n 0; if 1 { n: 11; return }; n: 99
+fn: mk_ret_in_if () @: Lmx
+    @: Lmx m mk_m(4U)
+    @: Lmx n 0
+    @: Lmx body 0
+    icell(m, 1U, 0)
+    n: fr(m, 2U, c.LMX_WALK_OP_IF, 3U)
+    lit(n, 1U, 1)
+    body: pl(n, 2U, 2U)
+    n: fr(body, 0U, c.LMX_WALK_OP_SET, 3U)
+    own(n, 1U, m, 1U)
+    lit(n, 2U, 11)
+    fr(body, 1U, c.LMX_WALK_OP_RET, 1U)
+    n: fr(m, 3U, c.LMX_WALK_OP_SET, 3U)
+    own(n, 1U, m, 1U)
+    lit(n, 2U, 99)
+return: m
+
+fn: run_graph (@: LmxThread t; @: Lmx m) int
+    @: LmxMsg msg t\message
+    int: st
+    if: t = 0 || m = 0 || msg = 0
+        return: 1
+    msg\graph: m
+    st: lmx_thread_turn(t, native_noop, 8U)
+    # End-turn GC can collect the roles table (it is not a Message graph root).
+    # Refresh the shared records before the next program is built.
+    l3_bound_roles: 0
+    l3_bound_plan: 0
+    if: l3_thread_bind(t) != c.LMX_THREAD_OK
+        return: 1
+    ---
+    groles: l3_thread_roles(t)
+    if: groles = 0
+        return: 1
+    ---
+return: st
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxArena: arena
+    @: Lmx dummy 0
+    @: LmxThread t 0
+    @: Lmx m 0
+    @: Lmx if_role 0
+    @: Lmx while_role 0
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ arena) != 0
+        fputs("l3_n9_walk: arena\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    gb: @ arena
+    dummy: mk_dummy(gb)
+    if: dummy = 0 || mk_thread(gb, dummy, @ t) = 0
+        free(counts)
+        return: 2
+    ---
+    fail(counts, lmx_thread_request_mode(t, c.LMX_THREAD_MODE_INTERPRETED) = c.LMX_THREAD_OK, "request interpreted")
+    fail(counts, lmx_thread_turn(t, native_noop, 1U) = c.LMX_THREAD_OK, "commit mode on native turn")
+    fail(counts, native_hits = 1, "native ran once")
+    fail(counts, l3_thread_bind(t) = c.LMX_THREAD_OK, "bind walk dispatch")
+    groles: l3_thread_roles(t)
+    fail(counts, groles != 0 && l3_thread_plan_roles(t) != 0, "shared walk/plan roles")
+    if_role: lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_IF))
+    while_role: lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_WHILE))
+    fail(counts, if_role != 0 && while_role != 0 && if_role != while_role, "IF and WHILE are distinct role records")
+
+    m: mk_if_true()
+    if_role: lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_IF))
+    fail(counts, broken = 0 && m != 0, "if-true construction")
+    fail(counts, lmx_arena_ref_value(m, 2U) != 0 && lmx_arena_ref_value(lmx_arena_ref_struct(m, 2U), 0U) = if_role, "if-true child[0] is the shared IF record")
+    fail(counts, run_graph(t, m) = c.LMX_THREAD_OK, "if-true turn")
+    fail(counts, field(m, 1U) = 7, "if true assigned 7")
+    fail(counts, native_hits = 1, "if-true did not call native")
+
+    m: mk_if_false()
+    fail(counts, broken = 0 && m != 0, "if-false construction")
+    fail(counts, run_graph(t, m) = c.LMX_THREAD_OK, "if-false turn")
+    fail(counts, field(m, 1U) = 3, "if false took else and assigned 3")
+    fail(counts, native_hits = 1, "if-false did not call native")
+
+    m: mk_while()
+    while_role: lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_WHILE))
+    fail(counts, broken = 0 && m != 0, "while construction")
+    fail(counts, lmx_arena_ref_value(lmx_arena_ref_struct(m, 2U), 0U) = while_role, "while child[0] is the shared WHILE record")
+    fail(counts, run_graph(t, m) = c.LMX_THREAD_OK, "while turn")
+    fail(counts, field(m, 1U) = 3, "while n < 3 terminated at 3")
+    fail(counts, native_hits = 1, "while did not call native")
+
+    m: mk_ret_in_if()
+    fail(counts, broken = 0 && m != 0, "ret-in-if construction")
+    fail(counts, run_graph(t, m) = c.LMX_THREAD_OK, "ret-in-if turn")
+    fail(counts, field(m, 1U) = 11, "return inside if skipped the later assignment")
+    fail(counts, native_hits = 1, "ret-in-if did not call native")
+    fail(counts, lmx_thread_mode(t) = c.LMX_THREAD_MODE_INTERPRETED, "one mode for every turn")
+
+    if: counts[1] != 0
+        c.printf("%d failed of %d\n", counts[1], counts[0])
+        free(counts)
+        return: 1
+    ---
+    c.printf("l3_n9_walk: %d checks\n", counts[0])
+    free(counts)
+return: 0

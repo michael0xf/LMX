@@ -122,23 +122,31 @@ function Invoke-Captured([string]$Label, [string]$Exe, [string[]]$ArgList, [stri
     $log = Join-Path $logDir ((Get-SafeName $LogName) + '.log')
     $eap = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
-    # MEMORY: THE CHILD'S OUTPUT GOES STRAIGHT TO THE LOG FILE AND NEVER THROUGH A STRING.
-    # The previous form was `$text = & $Exe @ArgList 2>&1 | Out-String` followed by
-    # `Set-Content -Value (... + $text)`.  That built the whole of every command's output as one
-    # .NET string and then built a SECOND copy to prepend the invoke line -- and a full gate makes
-    # on the order of a thousand invocations (every translate, every compile, every link, and every
-    # nm call inside Resolve-Link), so this was the single largest allocation source in the run.
-    # On 20.09 that was the difference between a gate that finishes and one the host kills for
-    # memory: the 367-target run died before its first row, and the same gate had passed at 3.82 GB
-    # free but not at 3.29 GB.  `*>>` appends every stream to the file as lines arrive, so nothing
-    # accumulates and peak memory no longer scales with how chatty a compiler decides to be.
+    # ENCODING IS CHOSEN HERE, NOT INHERITED (measured 20.09).  The header is written as UTF-8 and
+    # the child's streams are appended by Out-File with the same explicit encoding, so the log has
+    # ONE encoding from its first byte to its last.
+    #
+    # WHY NOT `*>>`, which was the first shape and is not broken in THIS file: `*>>` uses the
+    # redirection path, whose encoding for native-command output is whatever the host decided, and
+    # it produced mixed UTF-16LE-below-a-UTF-8-BOM logs in the sibling scripts (build_l2src.ps1,
+    # l2_harness.ps1 -- lmx_uds measured that failure and fixed it there).  It did NOT reproduce
+    # here, and the whole difference is one token: this header used to be written with no -Encoding
+    # at all, i.e. ANSI with no BOM, and the UTF-16 append follows the BOM rather than the operator.
+    # That is exactly why the implicit form is not good enough: the logs came out readable only by
+    # accident of which codepage the header happened to use, and this project puts Cyrillic in
+    # comments and messages -- a diagnostic carrying non-ASCII would be mangled by it.
+    #
+    # MEMORY IS UNCHANGED BY THIS: Out-File streams each record to the file as it arrives, so the
+    # accumulation that this function was fixed for (Out-String building the whole output, then a
+    # second copy for the header) is still gone.  LASTEXITCODE is read immediately, before anything
+    # else can overwrite it.
     #
     # ARGUMENT QUOTING IS DELIBERATELY UNCHANGED: `& $Exe @ArgList` passes argv as an ARRAY, which
     # is the only form that survives a path with a space in it -- and this build passes exactly such
     # a path (the WinRT include dir, "-idirafter C:\Program Files (x86)\...").  Start-Process
     # -ArgumentList would have joined the array back into one unquoted string and broken it.
-    Set-Content -LiteralPath $log -Value ("invoke: `"$Exe`" " + ($ArgList -join ' '))
-    & $Exe @ArgList *>> $log
+    Set-Content -LiteralPath $log -Value ("invoke: `"$Exe`" " + ($ArgList -join ' ')) -Encoding utf8
+    & $Exe @ArgList 2>&1 | Out-File -LiteralPath $log -Append -Encoding utf8
     $code = $LASTEXITCODE
     $ErrorActionPreference = $eap
     return $code

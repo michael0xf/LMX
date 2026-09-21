@@ -6,4 +6,6 @@
 
 [Грамматика](docs/LMX_grammar.ru.md) · [Grammar](docs/LMX_grammar.en.md)
 
+[Заметки о реализации](docs/implementation-notes.ru.md) · [Implementation notes](docs/implementation-notes.en.md)
+
 [Памятка всем моделям / Guide for all models](READ.ME)

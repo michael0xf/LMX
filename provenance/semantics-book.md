@@ -6,7 +6,7 @@ L3 сохраняет изменение графа, структурные вы
 
 Расширение файла выбирает внешний профиль: `.lm1` — прямое понижение L1, `.lm2` — L2, `.lm3` — L3. `.lm4` и `.lm5` не задают действующих профилей. В обычном скриптовом профиле L3 исполняется корневое тело файла; наличие функции `main` не обязательно. Профиль сервиса может выбрать явную функцию, `start`, обработчик или отправку сообщения. Точка входа получает управление после подготовки окружения и графа исполнения.
 
-Модель допускает интерпретацию построенного графа L3 и трансляцию с сохранением той же семантики. Интерпретатор исполняет только L3: не исходный текст, не L1/L2 и не операции `c.*`. Реализация самого интерпретатора не расширяет язык интерпретируемой программы. Целевые поддерживаемые исходники разделяются на L2 и L3; имеющиеся `.lm1` постепенно переписываются на L2. L1 остаётся промежуточной стадией трансляции, а не исходным носителем исполняемого графа; состояние перехода отделяется от этой цели в [спецификации L2](L2_spec_ru.md#scope). Парсер, интерпретатор графа и транслятор имеют разные задачи. Грамматические формы, границы тел, литералы, комментарии и нормализация определены в [спецификации грамматики](LMX_grammar.ru.md).
+Модель допускает интерпретацию построенного графа L3 и трансляцию с сохранением той же семантики. Интерпретатор исполняет только L3: не исходный текст, не L1/L2 и не операции `c.*`. Реализация самого интерпретатора не расширяет язык интерпретируемой программы. L2 задаёт машинные механизмы, L3 — высокоуровневые программы, а L1 служит промежуточной стадией понижения к C99. Парсер, интерпретатор графа и транслятор имеют разные задачи. Грамматические формы, границы тел, литералы, комментарии и нормализация определены в [спецификации грамматики](LMX_grammar.ru.md).
 
 <a id="l3-receiver"></a>
 ### Принимающее выражение L3
@@ -29,7 +29,7 @@ L3 retains graph mutation, structural calls, tables, messages and local actors. 
 
 A file extension selects its outer profile: `.lm1` selects direct L1 lowering, `.lm2` L2, and `.lm3` L3. `.lm4` and `.lm5` do not select current profiles. The ordinary L3 script profile executes the file's root body; a `main` function is not required. A service profile may select an explicit function, `start`, a handler or a message send. The entry point receives control after its environment and runtime graph are prepared.
 
-The model supports interpretation of the constructed L3 graph and translation preserving the same semantics. The interpreter executes L3 only: not source text, L1/L2 or `c.*` operations. The interpreter's implementation does not expand the language of the interpreted program. The target maintained sources are divided into L2 and L3; existing `.lm1` units are gradually rewritten in L2. L1 remains an intermediate translation stage, not the source carrier of the executable graph; the migration's current state is distinguished from this target in the [L2 specification](L2_spec_en.md#scope). The parser, graph interpreter and translator serve different purposes. Grammatical forms, body boundaries, literals, comments and normalization are defined in the [grammar specification](LMX_grammar.en.md).
+The model supports interpretation of the constructed L3 graph and translation preserving the same semantics. The interpreter executes L3 only: not source text, L1/L2 or `c.*` operations. The interpreter's implementation does not expand the language of the interpreted program. L2 defines machine mechanisms, L3 defines high-level programs, and L1 is an intermediate lowering stage toward C99. The parser, graph interpreter and translator serve different purposes. Grammatical forms, body boundaries, literals, comments and normalization are defined in the [grammar specification](LMX_grammar.en.md).
 
 <a id="l3-receiver"></a>
 ### L3 receiving expression
@@ -163,7 +163,7 @@ admitted(aVar, bVar, Consumer) ⇔
 
 Неиспользуемые поля и методы `bVar`, значения за неиспользуемыми именами, порядок различно названных полей, невыбранные повторные вхождения, неиспользуемое вложенное содержимое, владение, изменяемость, эффекты и раскладка целевого языка не сравниваются. Пустое `uses(Consumer, bVar)` означает лишь отсутствие структурных требований аналитической части. Неизвестный вычисляемый путь не считается ни доказанным, ни заведомо тонким: он отдельно отмечается как непокрытый анализом.
 
-Сам аналитический предикат не исполняет `aVar`, `bVar`, Consumer, вызываемые методы или преобразователи и не выбирает лучший кандидат среди прошедших. Положительный результат является только первым обязательным этапом. Окончательный допуск `aVar` требует вслед за ним успешного исполнения **всех** юнит-тестов, заданных этим Consumer, интерпретатором уже построенного графа; отсутствие набора тестов не считается успешной runtime-валидацией. В исполнении участвуют физические ссылки на кандидата и проверяющее выражение; исходный текст и runtime-имена не являются входом проверки. Эти тесты не заменяются совпадением путей или сигнатур, отдельным прежним `RuntimeImplements`, именем `validate` либо сохранённым свидетельством; отрицательный аналитический результат также нельзя исправить запуском тестов.
+Сам аналитический предикат не исполняет `aVar`, `bVar`, Consumer, вызываемые методы или преобразователи и не выбирает лучший кандидат среди прошедших. Положительный результат является только первым обязательным этапом. Окончательный допуск `aVar` требует вслед за ним успешного исполнения **всех** юнит-тестов, заданных этим Consumer, интерпретатором уже построенного графа; отсутствие набора тестов не считается успешной runtime-валидацией. В исполнении участвуют физические ссылки на кандидата и проверяющее выражение; исходный текст и runtime-имена не являются входом проверки. Отрицательный аналитический результат означает отсутствие допуска.
 
 Проверка не подменяется сравнением одинаковых физических позиций. Перестановка различно названных полей при сохранении путей не меняет результат. Для повторных имён действует [выбор вхождения](#fields).
 
@@ -180,9 +180,9 @@ admitted(aVar, bVar, Consumer) ⇔
 
 Кандидат и проверяющее выражение имеют физическую идентичность. Успешная проверка не замораживает их состояние. Изменяемость, внешние эффекты и изменение использованных описаний должны учитываться условиями применения результата проверки. Способ повторного использования результатов, изоляция тестового исполнения и представление набора тестов требуют явного контракта; автоматическое разрешение этих вопросов из совпадения адресов не следует.
 
-Обычные значения могут хранить результаты и свидетельства выполнения тестов, если это явно делает программа. Такие данные не создают второй предикат допуска и не подтверждают новые или изменившиеся условия автоматически. Отдельный прежний `RuntimeImplements` по доступному графу не входит в новую модель валидации.
+Обычные значения могут хранить результаты выполнения тестов, если это явно делает программа. Область применимости такого результата задаётся явным контрактом на идентичность кандидата, Consumer, набора тестов и проверенного состояния.
 
-Статически установленное нарушение сообщается при анализе. В прежней модели отказ runtime-проверки типа выражался `throw: Type` с данными кандидата, требуемой роли и Consumer. Точное оформление неуспеха нового набора юнит-тестов остаётся согласуемой частью интерфейса; общий порядок обработки объявленного `throw` описан в [исключениях](#exceptions). Ни проверка, ни освобождение памяти не означают отката уже опубликованных сообщений или внешних эффектов.
+Статически установленное нарушение сообщается при анализе. Неуспех любого обязательного юнит-теста делает `admitted(aVar, bVar, Consumer)` ложным; объявленные отказы обрабатываются по правилам [исключений](#exceptions). Ни проверка, ни освобождение памяти не означают отката уже опубликованных сообщений или внешних эффектов.
 [EN]
 The single candidate-admission mechanism consists of analytical tree-based `implements` for the receiving expression and execution of that expression's unit tests by the graph interpreter. Arena address classification supports value representation; it is not alternative validation. A matching signature, an attached explicit description or a positive analytical answer does not replace execution of the required tests.
 
@@ -216,7 +216,7 @@ The complete callable-leaf signature includes declared and dynamic inputs, their
 
 Unused fields and methods of `bVar`, values behind unused names, the order of differently named fields, unselected repeated occurrences, unused nested contents, ownership, mutability, effects, and target-language layout are not compared. Empty `uses(Consumer, bVar)` means only that the analytical stage has no structural requirements. An unknown computed path is neither certified nor classified as known-thin; it is reported separately as outside analytical coverage.
 
-The analytical predicate itself executes none of `aVar`, `bVar`, Consumer, callable methods, or converters, and it does not rank the candidates that pass. A positive result is only the first mandatory stage. Final admission of `aVar` additionally requires the graph interpreter to execute successfully **all** unit tests defined by this Consumer against the already constructed graph; absence of a test set is not successful runtime validation. Execution receives physical references to the candidate and checking expression; source text and runtime names are not validation inputs. Path or signature agreement, the former separate `RuntimeImplements`, a field named `validate`, or stored evidence cannot replace those tests; a negative analytical result cannot be repaired by running them either.
+The analytical predicate itself executes none of `aVar`, `bVar`, Consumer, callable methods, or converters, and it does not rank the candidates that pass. A positive result is only the first mandatory stage. Final admission of `aVar` additionally requires the graph interpreter to execute successfully **all** unit tests defined by this Consumer against the already constructed graph; absence of a test set is not successful runtime validation. Execution receives physical references to the candidate and checking expression; source text and runtime names are not validation inputs. A negative analytical result means that admission fails.
 
 Checking is not replaced by matching physical field positions. Reordering differently named fields while preserving paths does not change the result. Repeated names follow [occurrence selection](#fields).
 
@@ -233,14 +233,14 @@ The interpreter receives an already constructed graph of executable Structures a
 
 The candidate and checking expression have physical identities. Successful checking does not freeze their state. Mutation, external effects and changes to consulted descriptions must be accounted for by the conditions under which a result applies. Result reuse, isolation of test execution and representation of the test set require explicit contracts; matching addresses alone do not resolve them.
 
-Ordinary values may store test results and evidence when the program explicitly does so. Such data do not create a second admission predicate or automatically certify new or changed conditions. The former separate available-graph `RuntimeImplements` is not part of the new validation model.
+Ordinary values may store test results when the program explicitly does so. Applicability of such a result is defined by an explicit contract covering identity of the candidate, Consumer, test set, and checked state.
 
-A statically established violation is reported during analysis. In the earlier model, runtime type-check rejection used `throw: Type` carrying the candidate, required role and Consumer. The exact failure interface of the new unit-test set remains to be settled; handling of declared `throw` is described in [exceptions](#exceptions). Neither validation nor memory reclamation rolls back already published messages or external effects.
+A statically established violation is reported during analysis. Failure of any mandatory unit test makes `admitted(aVar, bVar, Consumer)` false; declared failures follow the [exception rules](#exceptions). Neither validation nor memory reclamation rolls back already published messages or external effects.
 @@ admission-recipes | Как получить требуемую гарантию: четырнадцать практических случаев | Obtaining a required guarantee: fourteen practical cases | 2.5.4; 2.5.3; author 2026-09-20
 [RU]
 Большинство вопросов о гарантиях сводится к практическому выбору: где именно провести различие, чтобы требуемое свойство действительно проверялось. Гарантия возникает не из глобального «строгого режима», а из части структуры, которую обязан пройти Consumer, и из тестов, которые задаёт принимающее выражение. Подобно тому как в C `typedef` лишь называет псевдоним, а оборачивающая `struct` создаёт отдельную проверяемую границу, в LMX существенны выраженный путь и контракт его потребления.
 
-Следующие четырнадцать случаев являются рецептами: что следует выразить, чего такая запись не доказывает и где находится основное правило. Они применяют [единый механизм допуска](#admission): аналитическая часть проверяет используемые пути, затем интерпретатор графа обязательно исполняет юнит-тесты принимающего выражения. Примеры задают требуемое поведение, а не подтверждённую полноту нынешнего транслятора.
+Следующие четырнадцать случаев являются рецептами: что следует выразить, чего такая запись не доказывает и где находится основное правило. Они применяют [единый механизм допуска](#admission): аналитическая часть проверяет используемые пути, затем интерпретатор графа обязательно исполняет юнит-тесты принимающего выражения.
 
 ### 1. Одно принимающее выражение для разных форм данных
 
@@ -248,7 +248,7 @@ A statically established violation is reported during analysis. In the earlier m
 
 ### 2. Понимание того, что проверяется в данном месте
 
-Consumer определяет область аналитической проверки; неизвестное покрытие отличается от заведомо тонкого потребления. После анализа интерпретатор графа исполняет юнит-тесты того же принимающего выражения. Каждый реальный вызов дополнительно должен получить все требуемые сигнатурой входы. Эти этапы не поглощают друг друга: у них разные входы и область покрытия. Успех не замораживает кандидата или Consumer и не подтверждает будущие способы использования после их изменения. Прежнее разделение на исходный `implements`, отдельный `RuntimeImplements` и допуск вызова не образует три альтернативных механизма в новой модели: отдельный доступный-граф обход удалён, а единый допуск и проверка фактических входов вызова сохраняют свои разные обязанности.
+Consumer определяет область аналитической проверки; неизвестное покрытие отличается от заведомо тонкого потребления. После анализа интерпретатор графа исполняет юнит-тесты того же принимающего выражения. Каждый реальный вызов дополнительно должен получить все требуемые сигнатурой входы. Эти этапы не поглощают друг друга: у них разные входы и область покрытия. Успех не замораживает кандидата или Consumer и не подтверждает будущие способы использования после их изменения.
 
 ### 3. Различение смыслов одинаково представимых значений
 
@@ -300,7 +300,7 @@ Consumer определяет область аналитической пров
 [EN]
 Most questions about guarantees reduce to a practical choice: where must a distinction be placed so that the required property is actually checked? A guarantee does not arise from a global strict mode; it arises from the part of a Structure that Consumer must traverse and from the tests defined by the receiving expression. Just as a C `typedef` merely names an alias while a wrapping `struct` creates a separately enforced boundary, LMX relies on the expressed path and its consumption contract.
 
-The following fourteen cases are recipes: what to express, what that expression does not establish, and where the governing rule lives. They apply the [single admission mechanism](#admission): its analytical stage checks used paths, then the graph interpreter must execute the receiving expression's unit tests. The examples specify required behavior, not verified completeness of the current translator.
+The following fourteen cases are recipes: what to express, what that expression does not establish, and where the governing rule lives. They apply the [single admission mechanism](#admission): its analytical stage checks used paths, then the graph interpreter must execute the receiving expression's unit tests.
 
 ### 1. One receiving expression for multiple data shapes
 
@@ -308,7 +308,7 @@ Write the receiving expression against the paths it actually needs. Any Structur
 
 ### 2. Knowing what a particular site checks
 
-Consumer determines analytical coverage; unknown coverage is distinguished from known thin consumption. Analysis is followed by the graph interpreter executing that same receiving expression's unit tests. Every actual call must additionally receive all inputs required by its signature. These stages do not subsume one another: they have different inputs and coverage. Success neither freezes candidate or Consumer nor certifies future uses after either changes. The former split among source `implements`, a separate `RuntimeImplements`, and call admission does not define three alternative mechanisms in the new model: the separate available-graph walk is retired, while unified admission and actual-call input checking retain their distinct obligations.
+Consumer determines analytical coverage; unknown coverage is distinguished from known thin consumption. Analysis is followed by the graph interpreter executing that same receiving expression's unit tests. Every actual call must additionally receive all inputs required by its signature. These stages do not subsume one another: they have different inputs and coverage. Success neither freezes candidate or Consumer nor certifies future uses after either changes.
 
 ### 3. Distinguishing meanings with the same representation
 
@@ -444,13 +444,13 @@ For example, a method inside independent Structure S can use S's field through i
 
 Вызываемое вхождение имеет собственную структурную идентичность и связь с лексическим родителем. Несколько вхождений могут ссылаться на один неизменяемый метод. Копирование графа не создаёт новую реализацию метода и не меняет его сигнатуру; состояние принадлежит конкретным структурным вхождениям и активациям. Вложенное определение не захватывает кадр вызывающего выражения в скрытое окружение.
 
-Вход в метод не копирует его вызываемое вхождение, тело или другую часть графа. Нативное и интерпретируемое исполнение используют одну модель локальности: каждая активация получает обычный кадр формальных, динамических и локальных значений, результата и рабочих копий используемых собственных полей. Эти own-значения загружаются и помечаются `dirty` по одним правилам независимо от способа исполнения. Логически кадр имеет время жизни обычного стекового вызова; реализация может разместить его служебное хранилище в переиспользуемой памяти, если это не создаёт копию метода или скрытое состояние графа и не делает вход существенно дороже нативного вызова. Такое хранилище выражается стандартным механизмом L2, пригодным для последующего переноса кода, а не частным механизмом интерпретатора. Рекурсивный вызов создаёт новый кадр над тем же методом; память графа копируется только явно выраженной операцией, не самим вызовом.
+Вход в метод не копирует его вызываемое вхождение, тело или другую часть графа. Нативное и интерпретируемое исполнение используют одну модель локальности: каждая активация получает обычный кадр формальных, динамических и локальных значений, результата и рабочих копий используемых собственных полей. Эти own-значения загружаются и помечаются `dirty` по одним правилам независимо от способа исполнения. Логически кадр имеет время жизни обычного стекового вызова; реализация может разместить его служебное хранилище в переиспользуемой памяти, если это не создаёт копию метода или скрытое состояние графа и не делает вход существенно дороже нативного вызова. Рекурсивный вызов создаёт новый кадр над тем же методом; память графа копируется только явно выраженной операцией, не самим вызовом.
 
 Выбор вызова начинается с явной ссылки, структурного пути либо текстового пути с явно переданным корнем. Выбор реализации и подача её аргументов — разные действия. Обнаруженный кандидат проходит [допуск](#admission); затем вызов должен получить все входы сигнатуры. Наличие подходящего поля с методом ещё не обеспечивает его динамические входы. Передача метода как данных не равна его вызову.
 
 Позиционные фактические аргументы предшествуют именованным. После первого именованного аргумента последующие также именованные. Неизвестное имя, повторное присваивание одного аргумента, недостающий обязательный аргумент или нарушение порядка — ошибка. Тело именованного аргумента передаётся как структурное значение, если именно такой режим задаёт принимающее выражение; оно не становится произвольной последовательностью немедленных вызовов.
 
-Синтаксические границы имени функции, списка аргументов, описания результата и тела определены в [грамматике](LMX_grammar.ru.md). Пустой список аргументов является присутствующим пустым значением. Описания и подписи не создают неявный вызов. Формы объявления без тела и связывания части аргументов пока не устанавливают общего механизма автоматического каррирования или создания замыканий.
+Синтаксические границы имени функции, списка аргументов, описания результата и тела определены в [грамматике](LMX_grammar.ru.md). Пустой список аргументов является присутствующим пустым значением. Описания и подписи не создают неявный вызов. Формы объявления без тела и связывания части аргументов сами по себе не создают автоматическое каррирование или замыкание.
 
 Именованные результаты `fm` — поля уже существующей структуры результата. `return` завершает их обновление и передаёт эту структуру; сам переход управления не выделяет и не копирует её. Несколько значений в хвосте `return` заполняют предусмотренные сигнатурой поля той же структуры. Точные поверхностные формы распаковки требуют отдельного правила профиля.
 
@@ -470,13 +470,13 @@ An executable body is a structural expression. `fn` defines an expression with o
 
 A callable occurrence has its own structural identity and lexical-parent link. Multiple occurrences can reference one immutable method. Graph copying neither creates another method implementation nor changes its signature; state belongs to particular structural occurrences and activations. A nested definition does not capture a caller frame in a hidden environment.
 
-Entering a method does not copy its callable occurrence, body or any other part of the graph. Native and interpreted execution use the same locality model: each activation receives an ordinary frame for formal, dynamic and local values, the result, and working copies of used own fields. Those own values are loaded and marked `dirty` under the same rules regardless of execution mode. Logically, the frame has the lifetime of an ordinary stack call; an implementation may place its auxiliary storage in reusable memory provided that this neither creates a method copy nor hidden graph state and does not make entry substantially more expensive than a native call. Such storage is expressed through a standard L2 mechanism suitable for later code migration, not an interpreter-private facility. A recursive call creates another frame over the same method; graph memory is copied only by an explicitly expressed operation, not by invocation itself.
+Entering a method does not copy its callable occurrence, body or any other part of the graph. Native and interpreted execution use the same locality model: each activation receives an ordinary frame for formal, dynamic and local values, the result, and working copies of used own fields. Those own values are loaded and marked `dirty` under the same rules regardless of execution mode. Logically, the frame has the lifetime of an ordinary stack call; an implementation may place its auxiliary storage in reusable memory provided that this neither creates a method copy nor hidden graph state and does not make entry substantially more expensive than a native call. A recursive call creates another frame over the same method; graph memory is copied only by an explicitly expressed operation, not by invocation itself.
 
 Callable selection starts from an explicit reference, structural path or textual path with an explicitly supplied root. Selecting an implementation and providing its arguments are distinct actions. The selected candidate undergoes [admission](#admission); the call must then receive every signature input. A suitable method field does not by itself supply its dynamic inputs. Transporting a method as data is not invoking it.
 
 Positional actual arguments precede named ones. After the first named argument, subsequent arguments must also be named. An unknown name, duplicate assignment to one argument, missing required argument or ordering violation is an error. A named argument's body is supplied as a structural value when that is the receiving expression's specified mode; it does not become an arbitrary sequence of immediate calls.
 
-The syntactic boundaries of the function name, argument list, result description and body are defined in the [grammar](LMX_grammar.en.md). An empty argument list is a present empty value. Descriptions and signatures do not create implicit calls. Bodyless declarations and partial-argument binding forms do not yet establish general automatic currying or closure construction.
+The syntactic boundaries of the function name, argument list, result description and body are defined in the [grammar](LMX_grammar.en.md). An empty argument list is a present empty value. Descriptions and signatures do not create implicit calls. Bodyless declarations and partial-argument binding forms do not by themselves create automatic currying or a closure.
 
 Named `fm` results are fields of an already existing result Structure. `return` completes their updates and forwards that Structure; the control transfer itself neither allocates nor copies it. Multiple values in the `return` tail populate signature-defined fields of the same Structure. Exact surface unpacking forms require a separate profile rule.
 
@@ -563,7 +563,7 @@ end: test
 
 После цикла рабочее `acc` равно 9. `end: for` не является контрольной точкой, как и само явное чтение пути. Перед вызовом объявленные фактические аргументы вычисляются в типизированные временные значения: `acc` даёт 9 из кэша, а `for\j` читает прежнее опубликованное значение графа 0. Затем публикация записывает 9 в граф, но вызов получает уже выбранные временные значения и печатает `9 0`. Последующее явное чтение `for\j` в другом операторе видит 9. Публикация не меняет задним числом уже вычисленные фактические аргументы; запись `for\j: 42` в той же активации меняет ячейку графа, не кэш.
 
-Одна логическая последовательная полоса исполнения каждого Message делает эту модель безопасной без блокировок и барьеров памяти внутри такта. Приостановленные локальные значения вызывающего выражения не участвуют в гонке; другие Message работают со своими аренами. Интерпретатор может реализовать ту же семантику малым управляющим стеком возвратов и объявленных аргументов вместе с разреженным набором изменённых рабочих значений. Ему не нужно копировать полное состояние метода при каждом входе; опубликованное состояние остаётся в графе, а история активаций — на стеке. Требования к стандартному L2-хранилищу такого кадра заданы в [интерфейсе вызываемых выражений](#callables).
+Одна логическая последовательная полоса исполнения каждого Message делает эту модель безопасной без блокировок и барьеров памяти внутри такта. Приостановленные локальные значения вызывающего выражения не участвуют в гонке; другие Message работают со своими аренами. Интерпретатор может реализовать ту же семантику малым управляющим стеком возвратов и объявленных аргументов вместе с разреженным набором изменённых рабочих значений. Ему не нужно копировать полное состояние метода при каждом входе; опубликованное состояние остаётся в графе, а история активаций — на стеке.
 
 Тело, переданное принимающему выражению как структура, и аргументы исполняемого вызова также не становятся общим скрытым окружением.
 
@@ -638,7 +638,7 @@ end: test
 
 After the loop, working `acc` is 9. `end: for` is not a checkpoint, and neither is an explicit path read by itself. Before the call, declared actual arguments are evaluated into typed temporaries: `acc` contributes 9 from the cache, while `for\j` reads the previously published graph value 0. Publication then writes 9 into the graph, but the call receives the already selected temporaries and prints `9 0`. A later explicit `for\j` read in another statement sees 9. Publication cannot retroactively change actual arguments already evaluated; a same-activation `for\j: 42` writes the graph cell, not the cache.
 
-One logical serial execution lane per Message makes this model safe without locks or memory barriers inside a turn. A suspended caller's working values cannot be raced; other Messages operate on their own arenas. The interpreter may implement the same semantics with a small control stack of return states and declared arguments plus a sparse set of modified working values. It need not copy a method's complete state at each entry: published state remains in the graph and activation history on the stack. Requirements for the frame's standard L2 storage are defined under [callable interfaces](#callables).
+One logical serial execution lane per Message makes this model safe without locks or memory barriers inside a turn. A suspended caller's working values cannot be raced; other Messages operate on their own arenas. The interpreter may implement the same semantics with a small control stack of return states and declared arguments plus a sparse set of modified working values. It need not copy a method's complete state at each entry: published state remains in the graph and activation history on the stack.
 
 A body supplied to a receiving expression as a Structure and an executable call's arguments likewise do not become one hidden environment.
 
@@ -652,7 +652,7 @@ Publication is required at call, return, `throw`, diagnostic termination and `yi
 
 `match` выбирает подходящую ветвь по выраженным шаблонам. Ветви могут задаваться парами «шаблон — тело» или явными структурами согласно профилю; `default` является определённым профилем шаблоном, а не универсальным эффектом произвольного имени. Объединение шаблонов и требование исчерпывающего покрытия задаются контрактом. Автоматического проваливания в следующую ветвь нет, если оно явно не определено.
 
-`while` проверяет условие перед каждой итерацией и может ни разу не выполнить тело. Закрывающий `until` задаёт проверку после тела: тело выполняется хотя бы один раз, затем повторяется, пока условие ложно. Основной `for` содержит инициализацию, условие, шаг и тело; инициализация выполняется один раз, затем проверка, тело и шаг. Единая семантика всех сокращений диапазонов пока не установлена.
+`while` проверяет условие перед каждой итерацией и может ни разу не выполнить тело. Закрывающий `until` задаёт проверку после тела: тело выполняется хотя бы один раз, затем повторяется, пока условие ложно. Основной `for` содержит инициализацию, условие, шаг и тело; инициализация выполняется один раз, затем проверка, тело и шаг. Сокращения диапазонов требуют отдельного явно выбранного профиля и не изменяют эту основную форму.
 
 `each` потребляет элементы контейнера либо явно выбранного итератора. Итератор выдаёт элемент посредством `yield`, а завершение обозначает объявленным `throw: Stop`; `None` может быть обычным элементом и не заменяет сигнал конца. Другие исключения распространяются по своим объявлениям. Ссылка `words` на источник и вызов `words()` различаются: второй явно вызывает выражение без аргументов.
 
@@ -670,7 +670,7 @@ Control receivers determine how their structural bodies are consumed. Membership
 
 `match` selects a suitable branch using expressed patterns. Branches can be pattern/body pairs or explicit Structures according to the profile; `default` is a profile-defined pattern, not a universal effect of an arbitrary name. Pattern union and exhaustive-coverage requirements belong to the contract. There is no automatic fallthrough unless explicitly defined.
 
-`while` checks its condition before each iteration and can execute its body zero times. Closing `until` establishes a postcondition: the body executes at least once and repeats while the condition is false. Core `for` contains initialization, condition, step and body; initialization runs once, followed by condition, body and step. Unified semantics for all range shorthands are not yet established.
+`while` checks its condition before each iteration and can execute its body zero times. Closing `until` establishes a postcondition: the body executes at least once and repeats while the condition is false. Core `for` contains initialization, condition, step and body; initialization runs once, followed by condition, body and step. Range shorthands require a separately selected profile and do not alter this core form.
 
 `each` consumes a container's elements or an explicitly selected iterator. The iterator produces an element through `yield` and indicates completion by declared `throw: Stop`; `None` can be an ordinary element and does not replace end-of-stream. Other exceptions propagate under their declarations. A source reference `words` differs from `words()`: the latter explicitly invokes the expression with no arguments.
 
@@ -710,8 +710,6 @@ An exit within an already running cleanup does not re-enter that cleanup. Remain
 
 Два одноимённых обработчика в одном блоке запрещены; отдельные вложенные блоки могут иметь каждый свой. Доставка выбирает обработчик по блоку вызова, не одноимённый обработчик соседнего блока. Повторный `throw` того же имени внутри обработчика не входит в этот обработчик заново: это отказ во внешнем вызывающем контексте. Необработанное имя распространяется только через соответствующие объявления `throws`.
 
-Исторический контракт отказа проверки совместимости использует `Type` и нагрузку `(varA, varB, Consumer)`. В новой модели он относится к [единому допуску](#admission); отдельный путь `RuntimeImplements` не вводится. Детальный интерфейс результатов и отказов юнит-тестов требует согласования, а не произвольного отождествления с любым старым валидатором.
-
 `assert` проверяет диагностический инвариант. Ложное условие порождает `AssertionViolation`, а не восстанавливаемый `throw`; его нельзя поймать обычным `catch`, и оно не входит в `throws`. В акторном профиле после публикации и очисток диагностика передаётся корню исполняющегося Message, Message прекращает исполнение и больше не получает тактов. Это не обязательное завершение рабочего потока ОС; остановка и уничтожение объекта различаются.
 
 Ожидаемые ошибки входных данных обрабатываются явным условием и объявленным отказом, а не диагностической аварией. `log` и `error` записывают наблюдения через выбранный профиль. Само `error` не означает `throw`, `assert`, возврат или остановку. Нелитеральный аргумент разрешается как обычное значение; неизвестное имя не превращается автоматически в строку журнала.
@@ -723,8 +721,6 @@ An exit within an already running cleanup does not re-enter that cleanup. Remain
 `catch` is a landing pad in the caller's block, not an ordinary nested `sub`. Its body is skipped on the initial straight-line pass. When the corresponding failure arrives, its body runs and execution continues with the statements after that `catch`. Consequently, a handler before a call re-enters the following region; a handler after the call continues past itself. The region ends at the next `catch` in the same block or the block's end.
 
 Two same-named handlers in one block are prohibited; separate nested blocks can each have one. Delivery selects the handler by the calling block, not a same-named handler in a sibling block. Throwing the same name inside a handler does not re-enter it: this is a failure in the enclosing calling context. An unhandled name propagates only through matching `throws` declarations.
-
-The historical compatibility-failure contract uses `Type` with payload `(varA, varB, Consumer)`. In the new model it belongs to [unified admission](#admission); no separate `RuntimeImplements` path is introduced. The detailed unit-test result/failure interface requires agreement rather than arbitrary identification with an old validator.
 
 `assert` checks a diagnostic invariant. A false condition produces `AssertionViolation`, not a recoverable `throw`; ordinary `catch` cannot handle it and it is not part of `throws`. In the actor profile, publication and cleanup precede delivery to the executing Message's diagnostic root; that Message stops executing and receives no further turns. This need not terminate the OS worker; stopping execution and destroying the object are distinct.
 
@@ -738,7 +734,7 @@ Expected input errors use an explicit condition and declared failure rather than
 
 `yield` передаёт произведённое значение и приостанавливает активацию. Перед приостановкой публикуются изменённые собственные поля. Явные аргументы, динамические входы, рабочие значения и их последующее состояние сохраняются для возобновления; они не превращаются в поля тела или публичное скрытое окружение. Возобновление не перечитывает их из структуры метода.
 
-Входы производителя фиксируются при начале его активации. Следующий вызывающий `next` не заменяет их своим динамическим окружением. Если `next` реализован отдельным выражением-обёрткой, его входы относятся к его активации, пока явная операция не изменит сохранённое состояние производителя. Представление продолжения и результата итератора ещё не закреплено; сохранение описанной семантики обязательно для любого представления.
+Входы производителя фиксируются при начале его активации. Следующий вызывающий `next` не заменяет их своим динамическим окружением. Если `next` реализован отдельным выражением-обёрткой, его входы относятся к его активации, пока явная операция не изменит сохранённое состояние производителя. Представление продолжения и результата итератора не наблюдаемо, если сохраняется описанная семантика.
 [EN]
 `retryable` defines a restartable region. Unlabelled `retry` repeats the nearest active such region; `retry: label` repeats the named one. Abandoned-attempt cleanups run before restarting. The transfer does not roll back external effects, graph mutations, already published fields or Messages. Transactional rollback requires an explicitly represented data protocol.
 
@@ -746,7 +742,7 @@ Expected input errors use an explicit condition and declared failure rather than
 
 `yield` transfers a produced value and suspends the activation. Dirty own fields are published before suspension. Explicit arguments, dynamic inputs, working values and their subsequent state are retained for resumption; they do not become body fields or a public hidden environment. Resumption does not reload them from the method Structure.
 
-Producer inputs are fixed when its activation begins. A later `next` caller does not replace them with its own dynamic context. If `next` is a separate wrapper expression, its inputs belong to its activation unless an explicit operation changes the producer's saved state. The continuation and iterator-result representation remains unsettled; every representation must preserve these semantics.
+Producer inputs are fixed when its activation begins. A later `next` caller does not replace them with its own dynamic context. If `next` is a separate wrapper expression, its inputs belong to its activation unless an explicit operation changes the producer's saved state. The continuation and iterator-result representation is not observable when it preserves these semantics.
 
 @@ arrays | Массивы, форма и совместное хранилище | Arrays, shape and shared backing | 6.1–6.5.5; 12–13; 19.29.3
 [RU]
@@ -758,7 +754,7 @@ Producer inputs are fixed when its activation begins. A later `next` caller does
 
 Полный индекс массива ранга N содержит N целочисленных координат. В L3 доступ проверяет дескриптор массива и границы индекса; нарушение границ выражается отказом `Bounds`, а не значением `None`. Частичный индекс может дать представление (*view*), например первая строка `matrix[0]`; полный `matrix[0, 2]` выбирает элемент. Конкретная запись координат задаётся [грамматикой](LMX_grammar.ru.md), а не машинной индексацией C. Эти проверки принадлежат только L3: [доступ L2](L2_spec_ru.md#lowlevel-address), включая получение адреса элемента графового массива, работает без них. Проверки операции не являются отдельным механизмом допуска кандидата вместо [анализа и юнит-тестов](#admission).
 
-View может разделять хранилище в пределах одного Message; копия имеет отдельное хранилище. `slice`, совместимый `reshape`, `transpose`, `permute`, `broadcast` и частичная индексация могут создавать view; `copy`/`clone`, материализация и обычный результат поэлементной арифметики создают копию, если не задан существующий выходной буфер. Конкретные представление view, удержание backing и правила изменяемого совместного доступа ещё не закреплены. Возврат ссылки не должен скрыто копировать данные для исправления времени жизни.
+View может разделять хранилище в пределах одного Message; копия имеет отдельное хранилище. `slice`, совместимый `reshape`, `transpose`, `permute`, `broadcast` и частичная индексация могут создавать view; `copy`/`clone`, материализация и обычный результат поэлементной арифметики создают копию, если не задан существующий выходной буфер. Представление view является внутренним, но обязано удерживать backing на всё время жизни view и явно определять изменяемый совместный доступ. Возврат ссылки не должен скрыто копировать данные для исправления времени жизни.
 
 `reshape` сохраняет значения и общее число элементов; изменение числа требует явного контракта заполнения/усечения/копирования. Совместимое хранилище позволяет view, иначе необходима явно определённая материализация. `transpose` переставляет последние две оси при ранге не меньше двух либо следует выбранному матричному профилю. `permute(array, axes)` задаёт перестановку осей. Логические stride-данные операции не требуют дополнительных полей у каждого универсального дескриптора.
 [EN]
@@ -770,7 +766,7 @@ An owning Array has one contiguous rectangular block of elements. Nested dimensi
 
 A full rank-N index contains N integer coordinates. L3 access checks the Array descriptor and index bounds; an out-of-bounds access produces a `Bounds` failure, not `None`. A partial index may produce a view, such as first row `matrix[0]`; full `matrix[0, 2]` selects an element. Coordinate spelling belongs to the [grammar](LMX_grammar.en.md), not C machine indexing. These checks belong only to L3: [L2 access](L2_spec_en.md#lowlevel-address), including obtaining a graph-backed element's address, works without them. Operation checks do not constitute a separate candidate-admission mechanism in place of [analysis and unit tests](#admission).
 
-A view can share backing within one Message; a copy has separate backing. `slice`, compatible `reshape`, `transpose`, `permute`, `broadcast` and partial indexing may create views; `copy`/`clone`, materialization and ordinary elementwise arithmetic results create copies unless an existing output buffer is selected. Concrete view representation, backing retention and mutable sharing rules remain unsettled. Returning a reference must not hide copying to repair lifetime.
+A view can share backing within one Message; a copy has separate backing. `slice`, compatible `reshape`, `transpose`, `permute`, `broadcast` and partial indexing may create views; `copy`/`clone`, materialization and ordinary elementwise arithmetic results create copies unless an existing output buffer is selected. View representation is internal, but it must retain the backing for the view's whole lifetime and explicitly define mutable sharing. Returning a reference must not hide copying to repair lifetime.
 
 `reshape` preserves values and total element count; changing the count requires an explicit fill/truncate/copy contract. Compatible storage permits a view; otherwise explicitly defined materialization is necessary. `transpose` exchanges the last two axes for rank at least two or follows the selected matrix profile. `permute(array, axes)` specifies an axis permutation. An operation's logical stride data need not add fields to every universal descriptor.
 
@@ -778,7 +774,7 @@ A view can share backing within one Message; a copy has separate backing. `slice
 [RU]
 Арифметика и сравнения массивов по умолчанию поэлементные. Операция над элементом определяется его числовым доменом и явно выбранным контекстом. `*` означает поэлементное умножение, не матричное. `matmul`, `dot`, `contract` и `outer` — отдельные выраженные операции; профильный символ матричного умножения не должен делать обычное `*` двусмысленным.
 
-Broadcasting сопоставляет размерности справа. Пара допустима, если размеры равны, один равен 1 или одна сторона отсутствует и считается 1; результат по старому правилу берёт максимум. Примеры: `[3]` и скаляр дают `[3]`; `[2,3]` с `[3]` рассматривается как `[2,3]` с `[1,3]`; `[2,3]` с `[2,1]` дают `[2,3]`. Повторно читаемый скаляр не размножается в отдельный массив. Внутренний нулевой stride может выражать повторное чтение одного элемента. Случай нулевой размерности требует уточнения: буквальное правило максимума не определяет безопасное чтение из пустого входа.
+Broadcasting сопоставляет положительные размерности справа. Пара допустима, если размеры равны, один равен 1 или одна сторона отсутствует и считается 1; результат берёт максимум. Примеры: `[3]` и скаляр дают `[3]`; `[2,3]` с `[3]` рассматривается как `[2,3]` с `[1,3]`; `[2,3]` с `[2,1]` дают `[2,3]`. Повторно читаемый скаляр не размножается в отдельный массив. Внутренний нулевой stride может выражать повторное чтение одного элемента. Нулевые размерности этим правилом не определены.
 
 `reduce` сворачивает элементы ассоциативной либо явно упорядоченной операцией. Без оси по умолчанию получается примитив; профиль может явно запросить массив ранга 0. С осью сворачивается только она. Контракт задаёт нейтральное значение, когда оно нужно, операцию элемента, тип результата и порядок. Для воспроизводимых вещественных/десятичных вычислений порядок не должен зависеть от случайного выбора backend.
 
@@ -786,11 +782,11 @@ Broadcasting сопоставляет размерности справа. Па�
 
 `filter` отбирает элементы по логическому предикату и обычно материализует новый массив: выбранные позиции не обязаны образовывать регулярный view. `concat` соединяет по выбранной оси; остальные размерности должны совпадать. Его результат обычно новый массив с прямоугольным backing. Копирование, материализация и все результаты сохраняют границы владельца Message.
 
-Минимальный исходный числовой профиль охватывает ранги 1/2, непрерывное хранилище, проверяемый индекс, форму, копирование, поэлементные `+ - * /`, broadcasting скаляра, операции равной формы и полную свёртку. Это минимальная реализационная цель, не отмена остальных контрактов. Точная поддержка текущего фронтенда проверяется в [L2](L2_spec_ru.md#lowlevel-array).
+Определённый здесь минимальный числовой профиль охватывает ранги 1/2, непрерывное хранилище, проверяемый индекс, форму, копирование, поэлементные `+ - * /`, broadcasting скаляра, операции равной формы и полную свёртку. Другие числовые профили могут добавлять операции отдельными контрактами.
 [EN]
 Array arithmetic and comparisons are elementwise by default. Element operations follow their numeric domain and explicitly selected context. `*` means elementwise multiplication, not matrix multiplication. `matmul`, `dot`, `contract` and `outer` are separate explicit operations; a profile-specific matrix symbol must not make ordinary `*` ambiguous.
 
-Broadcasting aligns dimensions from the right. A pair is admitted if equal, if one equals 1, or if one side is absent and treated as 1; the former rule chooses the maximum for the result. Examples: `[3]` and a scalar give `[3]`; `[2,3]` with `[3]` is treated as `[2,3]` with `[1,3]`; `[2,3]` with `[2,1]` gives `[2,3]`. A repeatedly read scalar is not expanded into another Array. Internal zero stride can represent repeated reads of one element. Zero extents require clarification: literal maximum does not define safe reads from an empty input.
+Broadcasting aligns positive extents from the right. A pair is admitted if equal, if one equals 1, or if one side is absent and treated as 1; the result uses the maximum. Examples: `[3]` and a scalar give `[3]`; `[2,3]` with `[3]` is treated as `[2,3]` with `[1,3]`; `[2,3]` with `[2,1]` gives `[2,3]`. A repeatedly read scalar is not expanded into another Array. Internal zero stride can represent repeated reads of one element. Zero extents are not defined by this rule.
 
 `reduce` collapses elements with an associative or explicitly ordered operation. With no axis it returns a primitive by default; a profile may explicitly request a rank-zero Array. With an axis, only that axis is collapsed. The contract defines an identity where needed, element operation, result type and ordering. Reproducible real/decimal computations must not depend on an incidental backend choice of order.
 
@@ -798,7 +794,7 @@ Broadcasting aligns dimensions from the right. A pair is admitted if equal, if o
 
 `filter` selects elements by a Boolean predicate and normally materializes a new Array: selected positions need not form a regular view. `concat` joins along the selected axis; other dimensions must match. Its result is normally a new Array with rectangular backing. Copies, materialization and all results retain Message ownership boundaries.
 
-The original minimal numeric profile covers ranks 1/2, contiguous storage, checked indexing, shape, copying, elementwise `+ - * /`, scalar broadcasting, equal-shape operations and whole-array reduction. This is a minimal implementation target, not withdrawal of other contracts. Actual frontend coverage is checked in [L2](L2_spec_en.md#lowlevel-array).
+The minimal numeric profile defined here covers ranks 1/2, contiguous storage, checked indexing, shape, copying, elementwise `+ - * /`, scalar broadcasting, equal-shape operations and whole-array reduction. Other numeric profiles may add operations through separate contracts.
 
 @@ mathematics | Числовые операции, чистота и контексты | Numeric operations, purity and contexts | 6.6–6.6.13
 [RU]
@@ -1100,7 +1096,7 @@ Current-turn outgoing letters are staged separately from the published queue. A 
 
 Неуспешное остановленное состояние может быть передано родителю без копии и удержано как граф истории отказа; успешная история по умолчанию освобождается. Передача требует остановленного, безопасного для передачи состояния и отсутствия нативных пользователей. Необходимо сохранять различие запроса остановки, фактического выхода, безопасной передачи и освобождения; конкретные флаги и их размещение относятся к [ядру L2](L2_spec_ru.md#message).
 
-Оставшийся без родителя участник закрывается по политике сирот: успешное завершение освобождает его, неуспешная история может сохраняться до явно заданного срока. Прежняя реализация содержит подробности промежуточного host/root-перехода; они не устанавливают второй глобальный реестр или отдельного бессрочного владельца вне Message. Детальные состояния и нынешние ограничения переноса фиксируются в [описании потока](L2_spec_ru.md#thread), не подменяют изоляцию L3.
+Оставшийся без родителя участник закрывается по политике сирот: успешное завершение освобождает его, неуспешная история может сохраняться до явно заданного срока. Эта политика не создаёт второй глобальный реестр или отдельного бессрочного владельца вне Message.
 [EN]
 `success` means actual completion of assigned work, not an empty mailbox or delivery of one letter. Once set, the Message's main algorithm receives no next turn; finishing local child maintenance depends on implementation. `running = 0` during execution may be a stop request: physical storage-handoff safety is established by a separate protocol, not inferred from one flag.
 
@@ -1110,15 +1106,15 @@ A running child can survive parent closure only through explicit supervision han
 
 Stopped failed state may be transferred to the parent without copying and retained as failure-history graph; successful history is reclaimed by default. Transfer requires a stopped, handoff-safe source with no native users. Stop request, actual exit, safe transfer and release must remain distinct; concrete flags and placement belong to the [L2 kernel](L2_spec_en.md#message).
 
-A participant that loses its parent closes under an orphan policy: successful completion releases it, while failure history may remain until an explicit deadline. The old implementation includes intermediate host/root-transition details; these establish neither a second global registry nor an indefinite owner outside Messages. Detailed states and current migration limits belong in the [thread description](L2_spec_en.md#thread), without replacing L3 isolation.
+A participant that loses its parent closes under an orphan policy: successful completion releases it, while failure history may remain until an explicit deadline. This policy creates neither a second global registry nor an indefinite owner outside Messages.
 
 @@ pipeline | Допуск и исполнение входящего сообщения | Incoming-message admission and execution | 19.19; 19.22; 19.28.R2.4; 19.31
 [RU]
 Входящие данные проходят явный декодер и становятся графом Message. Затем выбираются адресат, маршрут и принимающее выражение через заданные ссылки или поиск от заданного корня. Ни текст сообщения, ни ссылка на таблицу не устанавливают скрытое окружение и не дают автоматического доверия.
 
-Допуск кандидата имеет только [единый механизм](#admission): аналитический обход используемого дерева, затем юнит-тесты принимающего выражения, исполняемые интерпретатором графа. Декодирование текста строит входной граф до этого этапа; интерпретатор тестов не интерпретирует исходный текст вместо графа. Прежние отдельные валидаторы, `RuntimeImplements` и свидетельства не являются альтернативными путями допуска.
+Допуск кандидата следует [единому механизму](#admission): аналитический обход используемого дерева, затем юнит-тесты принимающего выражения, исполняемые интерпретатором графа. Декодирование текста строит входной граф до этого этапа; интерпретатор тестов не интерпретирует исходный текст вместо графа.
 
-Маршрут, полномочия, срок жизни и допустимые эффекты представлены явными данными контракта. Проверки свойств кандидата включаются в тесты принимающего выражения; криптографические операции могут предоставить проверяемые факты. Свидетельство хранит ссылку на конкретные данные, политику и установленные на входе факты, но не становится обходом обязательной проверки. Правила повторного использования результатов ещё не установлены.
+Маршрут, полномочия, срок жизни и допустимые эффекты представлены явными данными контракта. Проверки свойств кандидата включаются в тесты принимающего выражения; криптографические операции могут предоставить проверяемые факты. Свидетельство хранит ссылку на конкретные данные, политику и установленные на входе факты. Повторное использование результата допустимо только по явному контракту применимости из [валидации кандидата](#graph-tests).
 
 После допуска выбирается явная ссылка на реализацию/провайдер и строится план исполнения с аргументами, результатами и необходимыми политиками. Формирование плана не исполняет выбранную прикладную операцию, хотя этап допуска уже исполнял её тесты. Исполнитель следует зафиксированной ссылке. Результат или объявленный отказ становится входом следующего явного потребителя.
 
@@ -1126,9 +1122,9 @@ A participant that loses its parent closes under an orphan policy: successful co
 [EN]
 Incoming data pass through an explicit decoder to become a Message graph. The destination, route and receiving expression are then selected through supplied references or lookup from a supplied root. Neither Message text nor a Table reference installs a hidden environment or grants automatic trust.
 
-Candidate admission uses only the [unified mechanism](#admission): analytical traversal of the used tree, followed by receiving-expression unit tests executed by the graph interpreter. Text decoding constructs the input graph before this stage; the test interpreter does not interpret source text instead of the graph. Former independent validators, `RuntimeImplements` and evidence are not alternative admission routes.
+Candidate admission follows the [unified mechanism](#admission): analytical traversal of the used tree, followed by receiving-expression unit tests executed by the graph interpreter. Text decoding constructs the input graph before this stage; the test interpreter does not interpret source text instead of the graph.
 
-Routes, authority, lifetime and permitted effects are explicit contract data. Candidate-property checks belong to receiving-expression tests; cryptographic operations may supply verifiable facts. Evidence references exact data, policy and authenticated ingress facts, but does not bypass mandatory checking. Result-reuse rules remain unsettled.
+Routes, authority, lifetime and permitted effects are explicit contract data. Candidate-property checks belong to receiving-expression tests; cryptographic operations may supply verifiable facts. Evidence references exact data, policy and authenticated ingress facts. A result may be reused only under the explicit applicability contract in [candidate validation](#graph-tests).
 
 After admission, an explicit implementation/provider reference is selected and an execution plan is built with arguments, results and required policies. Planning does not execute the chosen application operation, although admission already executed its tests. The executor follows the retained reference. A result or declared failure becomes input to the next explicit consumer.
 
@@ -1152,7 +1148,7 @@ text
 
 Закрытие red здесь не закрывает green. Более поздняя метка не уничтожает прежнюю: простой renderer может показывать последнее активное значение, а семантический потребитель — исследовать всю упорядоченную цепочку и пересечения. Поэтому базовая модель не является плоской таблицей «ключ — единственное значение». Незакрытая запись остаётся учтённой до границы документа/профиля и может стать интервалом, состоянием или диагностикой согласно контракту.
 
-Три роли Mix различаются: слой исходных меток, дерево размещения документа и исполнение взаимодействующих Message. Интервал, ячейка размещения и Message не соответствуют друг другу один к одному. Изменение документа, уведомления и курсоры должны соблюдать владельцев и FIFO, а не наследовать блокировки и callbacks прежней Java-реализации как норму L3.
+Три роли Mix различаются: слой исходных меток, дерево размещения документа и исполнение взаимодействующих Message. Интервал, ячейка размещения и Message не соответствуют друг другу один к одному. Изменение документа, уведомления и курсоры соблюдают владельцев и FIFO; блокировки и callbacks не возникают неявно из принадлежности к Mix.
 [EN]
 Mix is a parallel mark/interval overlay on document positions, not a second parse tree or XML-like nesting. One source traversal builds ordinary Structures and anchors Mix marks. Structural nodes, fields, Array rows and source intervals can participate in overlapping active sets even without explicit braces.
 
@@ -1170,7 +1166,7 @@ text
 
 Closing red here does not close green. A later mark does not destroy an earlier one: a simple renderer may display the latest active value, while a semantic consumer can inspect the whole ordered chain and intersections. The base model is therefore not a flat key-to-single-value table. An unclosed entry remains tracked to the document/profile boundary and may become an interval, state or diagnostic under the contract.
 
-Mix has three distinct roles: source-mark overlay, document placement tree and cooperating-Message execution. An interval, placement cell and Message do not correspond one-to-one. Document updates, notifications and cursors must follow ownership and FIFO rather than inherit the former Java implementation's locks and callbacks as L3 rules.
+Mix has three distinct roles: source-mark overlay, document placement tree and cooperating-Message execution. An interval, placement cell and Message do not correspond one-to-one. Document updates, notifications and cursors follow ownership and FIFO; locks and callbacks do not arise implicitly from Mix membership.
 
 @@ worldwide | WorldWideMix: адреса, ячейки и навигация | WorldWideMix: addresses, cells and navigation | 19.28.10.1–19.28.10.10; 19.28.10.13–15
 [RU]
@@ -1244,7 +1240,7 @@ HTTP/REST LMX — транспортный профиль, не ядро исп�
 
 {{l1:11469-11483}}
 
-Декларативное правило маршрутизации ниже является данными профиля, не обещанием реализации такого вложенного `send` оператором L2. Отдельное принимающее выражение должно интерпретировать условие и создать доставляемое сообщение.
+Декларативное правило маршрутизации ниже является данными профиля. Оно исполняется отдельным принимающим выражением, которое интерпретирует условие и создаёт доставляемое сообщение; сама запись правила не выполняет вложенный `send`.
 
 {{l1:11263-11270}}
 [EN]
@@ -1262,7 +1258,7 @@ The source external-body example supplies a segment reference, range and reading
 
 {{l1:11469-11483}}
 
-The declarative routing rule below is profile data, not a promise that the L2 statement implements this nested `send` form. A separate receiving expression must interpret the condition and construct the delivered Message.
+The declarative routing rule below is profile data. A separate receiving expression executes it by interpreting the condition and constructing the delivered Message; the rule record itself does not execute a nested `send`.
 
 {{l1:11263-11270}}
 
@@ -1276,7 +1272,7 @@ The declarative routing rule below is profile data, not a promise that the L2 st
 
 После установленного подтверждения первичного credential политика может выдать делегированный ticket для модуля/сервиса с операциями и сроком действия. Изменение или сброс исходного verifier инвалидирует зависимые tickets согласно выраженной политике. OAuth и вход ОС — подключаемые модули; они не заменяют автоматически выбранный verifier и не получают власть из номера уровня L2/L3.
 
-AuthEvidence может явно содержать пользователя, область verifier, ticket, разрешённые действия и факт кворума. Это данные с зависимостями и временем действия. Принимающее выражение проверяет необходимые свойства в своих юнит-тестах по [единому механизму](#admission); самостоятельный старый слой валидаторов не сохраняется. Совпадение пароля или корректная подпись не создают неявных ролей, привязок имён или бессрочного допуска.
+AuthEvidence может явно содержать пользователя, область verifier, ticket, разрешённые действия и факт кворума. Это данные с зависимостями и временем действия. Принимающее выражение проверяет необходимые свойства в своих юнит-тестах по [единому механизму](#admission). Совпадение пароля или корректная подпись не создают неявных ролей, привязок имён или бессрочного допуска.
 [EN]
 Credentials, verifiers, authority and evidence are explicit values in Message flow, not a global role hierarchy. A protected verifier checks a primary credential without retaining its original secret. A cryptographic result is a fact for policy, not automatic authority for every action.
 
@@ -1286,11 +1282,11 @@ The initial username and empty password permitted by an earlier installation pro
 
 After primary-credential confirmation, policy may issue a delegated module/service ticket with permitted operations and expiry. Changing/resetting the primary verifier invalidates dependent tickets under explicit policy. OAuth and OS login are pluggable modules; they neither automatically replace the chosen verifier nor gain authority from language level L2/L3.
 
-AuthEvidence may explicitly contain user, verifier realm, ticket, permitted actions and quorum satisfaction. It is data with dependencies and lifetime. The receiving expression checks required properties in its unit tests under [unified admission](#admission); the former independent validator layer is not retained. A password match or valid signature creates no implicit roles, name bindings or indefinite admission.
+AuthEvidence may explicitly contain user, verifier realm, ticket, permitted actions and quorum satisfaction. It is data with dependencies and lifetime. The receiving expression checks required properties in its unit tests under [unified admission](#admission). A password match or valid signature creates no implicit roles, name bindings or indefinite admission.
 
 @@ crypto-values | Криптографические значения и провайдеры | Cryptographic values and providers | 19.32.10–19.32.12; 19.32.14–19.32.17
 [RU]
-L3 выражает криптографическое намерение, связи ключей, политику и состояние протокола. Провайдер реализует примитивы, защищённое хранение и платформенный интерфейс. Приведённые названия обозначают контракты, не окончательные parser-keywords или обязательную иерархию типов. Провайдер выбирается явно по профилю, ссылке, capability, конфигурации или сервису.
+L3 выражает криптографическое намерение, связи ключей, политику и состояние протокола. Провайдер реализует примитивы, защищённое хранение и платформенный интерфейс. Приведённые названия обозначают семантические роли контрактов; конкретный профиль связывает их с receiver и структурой типов. Провайдер выбирается явно по профилю, ссылке, capability, конфигурации или сервису.
 
 AlgorithmId содержит семейство, алгоритм, версию/профиль и существенные параметры. Параметры, влияющие на совместимость байтов протокола, явно заданы либо фиксированы именованным профилем. Подмена алгоритма и скрытый downgrade запрещены. Отсутствующий статически обязательный провайдер вызывает ошибку сборки/связывания; неподдержанный динамический выбор — явный отказ операции.
 
@@ -1298,13 +1294,13 @@ PublicKey — обычные несекретные данные с алгори
 
 KeyRef — непрозрачное полномочие на секретный ключ с контрактом владельца-провайдера, операций, срока жизни и экспорта. Это не сырой L2-адрес и не обязательный массив секретных байтов. KeyPair объединяет PublicKey и private KeyRef. Генерация не публикует приватный материал в граф автоматически; неэкспортируемый ключ — допустимая реализация.
 
-Verifier явно обозначает алгоритм, формат/версию, salt и параметры проверки: стоимость памяти, времени/итераций и параллелизма, а также результат или каноническое кодирование. KeyPolicy может задавать использование, сроки, ротацию, отзыв, версии, связь с объектом, экспорт и получателей; универсальная обязательная структура политики не установлена.
+Verifier явно обозначает алгоритм, формат/версию, salt и параметры проверки: стоимость памяти, времени/итераций и параллелизма, а также результат или каноническое кодирование. KeyPolicy может задавать использование, сроки, ротацию, отзыв, версии, связь с объектом, экспорт и получателей; точную структуру политики определяет выбранный профиль.
 
 Передача KeyRef, возврат, сохранение в поле, композиция и смена провайдера не экспортируют секрет. Контракт определяет локальное использование разными Message, retain/transfer и допустимость сериализации. Переносимый исходный вариант — локальность провайдеру/runtime и отсутствие wire-сериализации. Передача секрета на другую машину требует явного разрешённого export/import или защищённого конверта.
 
 Защищённая память — набор отдельных возможностей: контролируемое секретное хранилище, очистка, page locking, guard pages, неэкспортируемость, аппаратная защита. Одна не подразумевает остальные. Нельзя обещать удаление копий, которыми провайдер не владеет, в UI, VM или host. Синхронный вызов, сервисное сообщение и асинхронный адаптер могут реализовать один контракт, не вводя нового общего планировщика или готового `await` языка.
 [EN]
-L3 expresses cryptographic intent, key relationships, policy and protocol state. A provider implements primitives, secure storage and platform interfaces. The names below denote contracts, not final parser keywords or a mandatory type hierarchy. Providers are explicitly selected by profile, reference, capability, configuration or service.
+L3 expresses cryptographic intent, key relationships, policy and protocol state. A provider implements primitives, secure storage and platform interfaces. The names below denote semantic contract roles; a concrete profile binds them to receivers and a type structure. Providers are explicitly selected by profile, reference, capability, configuration or service.
 
 AlgorithmId contains family, algorithm, version/profile and relevant parameters. Parameters affecting interoperable protocol bytes are explicit or fixed by a named profile. Algorithm substitution and silent downgrade are prohibited. Missing statically required providers fail build/link; unsupported dynamic selection fails explicitly at the operation.
 
@@ -1312,7 +1308,7 @@ PublicKey is ordinary non-secret data with algorithm, format and key bytes, opti
 
 KeyRef is an opaque secret-key capability with a contract covering owning provider, operations, lifetime and export. It is neither a raw L2 address nor necessarily an Array of secret bytes. KeyPair combines PublicKey and private KeyRef. Generation does not automatically publish private material into the graph; non-extractable keys are valid implementations.
 
-A Verifier explicitly identifies algorithm, format/version, salt and verification parameters: memory cost, time/iteration cost, parallelism and result or canonical encoding. KeyPolicy may define uses, expiry, rotation, revocation, versions, object association, export and recipients; no universal mandatory policy Structure is fixed.
+A Verifier explicitly identifies algorithm, format/version, salt and verification parameters: memory cost, time/iteration cost, parallelism and result or canonical encoding. KeyPolicy may define uses, expiry, rotation, revocation, versions, object association, export and recipients; the selected profile defines its exact Structure.
 
 Passing KeyRef, returning it, storing it in a field, composition and provider changes do not export the secret. Its contract defines local multi-Message use, retain/transfer and serializability. The portable default is provider/runtime locality without wire serialization. Sending a secret to another machine requires explicit permitted export/import or a protected envelope.
 
@@ -1350,7 +1346,7 @@ AEAD аутентифицирует associatedData, но не шифрует и�
 
 Проверки провайдера должны включать межреализационные векторы и отрицательные случаи: неверные signature/tag, неподдержанный профиль, неэкспортируемый либо освобождённый ключ, недоступный провайдер. Сравниваются семантические байты и результаты, не объектная раскладка backend. Функциональные тесты не доказывают timing, стирание, неэкспортируемость или качество энтропии; заявленные гарантии требуют отдельного подтверждения.
 
-Открыты окончательные имена receiver, нормализованные структуры AlgorithmId/Verifier/Policy, обязательный начальный набор профилей, точные поддеревья ошибок и регистрация провайдеров. Streaming, secret streams, HSM/TPM, KEM/PQC, удалённые ключевые сервисы и формат защищённого конверта — отдельные будущие профили, не уже доступная семантика реализации.
+Streaming, secret streams, HSM/TPM, KEM/PQC, удалённые ключевые сервисы и формат защищённого конверта не входят в определённый здесь профиль.
 [EN]
 The following signatures specify semantic inputs/results, not physical ABI. Byte results remain ordinary values; provider-private key representation stays hidden. These operations do not create another argument-admission mechanism.
 
@@ -1382,4 +1378,4 @@ An interoperability profile fixes algorithm, parameters, key/result encodings an
 
 Provider tests must include cross-implementation vectors and negative cases: invalid signature/tag, unsupported profile, non-extractable or released key and unavailable provider. Compare semantic bytes/results, not backend object layout. Functional tests do not establish timing, erasure, non-extractability or entropy quality; claimed guarantees need separate evidence.
 
-Final receiver names, normalized AlgorithmId/Verifier/Policy Structures, mandatory initial profiles, exact error subtrees and provider registration remain open. Streaming, secret streams, HSM/TPM, KEM/PQC, remote key services and protected-envelope formats are separate future profiles, not already available implementation semantics.
+Streaming, secret streams, HSM/TPM, KEM/PQC, remote key services and protected-envelope formats are outside the profile defined here.

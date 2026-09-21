@@ -27,7 +27,6 @@
 - [25. Surface-form EBNF](#ebnf)
 - [26. Structural-result EBNF](#normal-form)
 - [27. Original literal-boundary examples](#fixtures)
-- [28. Extraction boundaries and source inconsistencies](#source-limits)
 
 <a id="scope"></a>
 
@@ -1767,7 +1766,7 @@ Source: §15 of the previous specification, corrected by the author's direct cla
 
 An empty vertical body is an empty Structure, synonymous with `()`. It is already an argument even when it contains no fields. In particular, the author's `receiver:` followed by a `---` line is valid and supplies an empty Structure. The parser must preserve its presence; the number of fields inside that argument must not be confused with the receiver's argument count.
 
-The “colon receiver without arguments” error concerns an absent argument, not a present empty Structure argument. Validation runs after assembling and preserving an explicitly formed vertical body. The old “zero fields after assembly means error” rule needs correction wherever assembly loses an empty vertical body. Historical rejection expectations in that case are not the LMX norm.
+The “colon receiver without arguments” error concerns an absent argument, not a present empty Structure argument. Validation runs after assembling and preserving an explicitly formed vertical body. Zero fields inside the preserved Structure does not mean that the argument is absent.
 
 `f()`, `()`, and an admitted bare nullary `f` remain distinct permitted forms. An empty inline tail followed by a nonempty vertical body is also valid. Bare `end` remains separately forbidden.
 
@@ -2591,15 +2590,3 @@ In order: `python_string_in_paren.lmx` checks brackets and comment-looking text 
         beta"
     end: doc
 ````
-
-<a id="source-limits"></a>
-
-## 28. Extraction boundaries and source inconsistencies
-
-Extraction is not a claim that an old or new translator already implements every rule. The source itself calls the grammar sketch incomplete regarding full update, indexing, type, and relation meanings. All located spelling rules for these forms are separated here; missing semantics are not invented.
-
-The author’s 2026-09-19 clarification corrects the previous rejection of empty vertical bodies: they are empty Structure arguments, not absent arguments. Old empty-body examples are retained; lack of internal fields alone does not make them errors. Also, §4.3 gives a flat normal form for mixed inline/vertical continuation, whereas §§4.2.1 and 15.0 require retaining the down/up Structure boundary. This inconsistency between source descriptions is recorded explicitly; it is not resolved by inventing a new rule.
-
-Detailed diagnostics for malformed Mix marks inside strings and the specific `{#...}` form are not separately defined in the two compared specifications. The documented rules are common P0 brace parsing, shielded outer-literal boundaries, isolated internal marks, and unchanged string values.
-
-References to Message, methods, ABI, and memory in old grammatical chapters have not become new semantics. Complete catalogs of receivers, numerical libraries, network protocols, and runtime services remain outside the general grammar: their names use the ordinary forms already described.

@@ -3,11 +3,11 @@
     python tools/run_l3_selftest.py
     python tools/run_l3_selftest.py --test tests/l3_02_selftest.lm1
 
-Default runs L3-01..04, 14 recipes, thread_bind and admit, and then the header-type-name
-budget of the Thread units (tools/l3_type_budget.py).  The budget is part of the default run
-because its failure is the one this runner cannot otherwise see coming: a unit over l1trans's
-table of 64 type names does not fail a check, it stops translating, and the L2 gate
-(tools/build_l2src.ps1) does not build dev/l3_interp at all.
+Default runs L3-01..04, 14 recipes, thread_bind, admit, N9 and N10, and then the
+header-type-name budget of the Thread units (tools/l3_type_budget.py).  The budget is part of
+the default run because its failure is the one this runner cannot otherwise see coming: a unit
+over l1trans's table of 64 type names does not fail a check, it stops translating, and the L2
+gate (tools/build_l2src.ps1) does not build dev/l3_interp at all.
 """
 import argparse
 import hashlib
@@ -29,6 +29,8 @@ ALL_TESTS = (
     'tests/l3_recipes_selftest.lm1',
     'tests/l3_thread_bind_selftest.lm1',
     'tests/l3_admit_selftest.lm1',
+    'tests/l3_n9_walk_selftest.lm1',
+    'tests/l3_n10_walk_selftest.lm1',
 )
 
 

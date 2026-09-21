@@ -43,6 +43,7 @@ fn: lmx_root_open (@: LmxRoot root; LmxCallEntry: entry; ulong: limit; size_t: e
     @: LmxMsg message
     @: LmxThread thread
     @: LmxSchedule slot
+    @: LmxService service
     if: root = 0 || limit = 0U
         return: c.LMX_ROOT_INVALID
     # The handle is cleared field by field before anything is opened on it: opening an arena
@@ -58,6 +59,18 @@ fn: lmx_root_open (@: LmxRoot root; LmxCallEntry: entry; ulong: limit; size_t: e
     arena\count: 0U
     arena\capacity: 0U
     arena\generation: 0U
+    # THE SERVICE IS THE ONE HANDLE THAT REFUSES INSTEAD OF CLEARING ITSELF, so its three fields
+    # are cleared here, by the owner.  lmx_service_open allocates nothing and refuses a handle that
+    # did not arrive zeroed; that refusal is a real detector for a standalone service that is
+    # already open, so it stays exactly as it is, and the owner's half of the contract is this
+    # clear.  Left to the stack, these three words hold whatever was there -- and on Windows the
+    # command line and the environment sit near the stack base, so what they held was UTF-16 slices
+    # of the EXECUTABLE'S OWN PATH (measured 2026-09-21), which is why R0's open depended on the
+    # executable's absolute path length until this clear was added.
+    service: @ root\service
+    service\entries: 0
+    service\count: 0U
+    service\capacity: 0U
     root\message: 0
     root\thread: 0
     root\slot: 0

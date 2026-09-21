@@ -1,0 +1,105 @@
+predef: "l2src/lmx_root.lm1"
+predef: "l2src/lmx_settle.lm1"
+predef: "l2src/lmx_service.lm1"
+predef: "l2src/lmx_turn.lm1"
+predef: "l2src/lmx_child.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_manager.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_gc.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_call.lm1"
+predef: "l2src/lmx_clock.lm1"
+predef: "l2src/lmx_perm.lm1"
+predef: "l2src/lmx_orphan.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# THE OWNER'S CONTRACT FOR THE HANDLES LmxRoot CARRIES BY VALUE
+# (DEEPSEEK-SERVICE-ROOT-INIT-FIX-20260921-66).
+#
+# WHY THIS FILE EXISTS.  `LmxRoot root` is a by-value local, so every handle embedded in it arrives
+# holding whatever the stack held -- and on Windows the command line and the environment sit near
+# the stack base, so that garbage is a function of the executable's ABSOLUTE PATH LENGTH.  That is
+# not a theory: the lanes selftest refused at long paths and the refusing words were UTF-16 slices
+# of the executable's own path, read out of `root\service`.
+#
+# EVERY HANDLE BUT ONE IS EITHER CLEARED BY ITS OWNER OR BY ITS OWN INIT.  lmx_root_open clears the
+# arena's six fields, message, thread, slot, eternal, methods, entry, world, now, limit and state;
+# lmx_perm_open, lmx_manager_init and lmx_orphan_init clear their own fields; the mailbox and the
+# schedule do the same when they are initialized.  `root\service` was the exception: lmx_service_open
+# ALLOCATES NOTHING and REFUSES a handle that did not arrive zeroed, so a by-value root handed it
+# whatever the stack held.  The refusal is not a defect -- it is a real detector for a standalone
+# service that is already open -- so the fix belongs to the OWNER: lmx_root_open zeroes the three
+# fields itself, and the guard stays.
+#
+# THE POISON IS THE COMPLETE HANDLE, deliberately: this file tests the owner's contract, not one
+# line.  Both directions are asserted so that neither half can pass by accident:
+#   * a COMPLETELY poisoned LmxRoot opens, and its service answers for the thread it registered;
+#   * a COMPLETELY poisoned STANDALONE LmxService is STILL REFUSED -- the guard is intact.
+# The pattern is 170 (0xAA), which no zeroing path can satisfy, and the poisoned bytes are read
+# afterwards by the very guard under test, so the stores cannot be dead code.
+
+fn: rp_entry (@: Lmx node) int
+return: 0
+
+sub: rp_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+    c.fflush(0)
+end: rp_check
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxRoot: root
+    LmxService: standalone
+    @: LmxService service 0
+    @: LmxThread thread 0
+    @: void first 0
+    int: opened 0
+    int: failures
+    if: counts = 0
+        return: 2
+    ---
+    # EVERY BYTE of both handles, before anything opens on them.
+    memset((cast: (@: void) (@ root)), 170, c.sizeof(c.LmxRoot))
+    memset((cast: (@: void) (@ standalone)), 170, c.sizeof(c.LmxService))
+
+    opened: lmx_root_open(@ root, rp_entry, 100000U, 0U, 0U)
+    rp_check(counts, opened = c.LMX_ROOT_OK, "a completely poisoned LmxRoot did not open")
+
+    # The service path is read only when the open succeeded: with the defect present the open
+    # refuses, and walking a poisoned service afterwards would fault rather than report.
+    if: opened = c.LMX_ROOT_OK
+        service: lmx_root_service(@ root)
+        thread: lmx_root_thread(@ root)
+        rp_check(counts, service != 0 && thread != 0, "the opened root handed back no service or thread")
+        rp_check(counts, lmx_service_count(service) = 1U, "the root did not register itself with its service")
+        first: lmx_service_at(service, 0U)
+        rp_check(counts, first = (cast: (@: void) thread), "the service's first entry is not the root's own thread")
+        rp_check(counts, lmx_service_find(service, (cast: (@: void) thread)) != 0, "the service cannot find the thread it registered")
+        rp_check(counts, lmx_root_close(@ root) = c.LMX_ROOT_OK, "the opened root did not close")
+    ---
+
+    # THE GUARD STAYS: a standalone service that did not arrive zeroed is refused, and this holds
+    # whatever the owner does -- it is the half of the contract the fix must NOT satisfy.
+    rp_check(counts, lmx_service_open(@ standalone) != c.LMX_SERVICE_OK, "a non-zeroed standalone service was accepted")
+
+    failures: counts[1]
+    c.printf("lmx_root_poison checks=%d failures=%d\n", counts[0], failures)
+    free(counts)
+return: failures

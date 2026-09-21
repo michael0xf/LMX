@@ -23,7 +23,10 @@ param(
     # behind, and defaulting to it would have failed in a way that looked like a defect in the
     # manager target rather than in the choice of evidence.
     [switch]$ManagerLinkOnly,
-    [string]$ReuseStamp
+    [string]$ReuseStamp,
+    # -ValidateInputsOnly: run ONLY the local-input guard, print resolved paths.
+    # No translation, compilation, or linking.
+    [switch]$ValidateInputsOnly
 )
 $ErrorActionPreference = 'Stop'
 $migRoot = Split-Path -Parent $PSScriptRoot
@@ -66,6 +69,14 @@ if (-not $ManagerLinkOnly) {
     if (-not $kernelEvidenceHere) {
         throw "build_mixa: missing local input -- kernel evidence not found at $l1Root\build\l2src or $l1Root\dev\l2src_sandbox\build\l2src. All inputs must be local; no external fallback."
     }
+}
+
+if ($ValidateInputsOnly) {
+    Write-Output "build_mixa: VALIDATE-ONLY PASS -- local inputs verified"
+    Write-Output "localRoot: $l1Root"
+    Write-Output "kernelRoot: $kernelRoot"
+    Write-Output "lm1Root: $lm1Root"
+    exit 0
 }
 
 Set-Location $migRoot

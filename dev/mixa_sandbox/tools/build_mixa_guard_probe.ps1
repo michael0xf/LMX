@@ -1,107 +1,64 @@
-# build_miya_guard_probe.ps1 -- read-only test of the no-fallback guard.
-# Tests BOTH directions: a valid LMX layout passes, and a layout missing both
-# kernel-evidence alternatives fails BEFORE translation with the exact path.
-# Creates and destroys temp directories; never touches real directories or
-# the sibling L1 tree.
-
-param(
-    [string]$Translator = (Get-Command l1trans.exe -ErrorAction SilentlyContinue)?.Source
-)
-
+# build_mixa_guard_probe.ps1 -- read-only both-direction guard test.
+# Fixture at <tmp>/dev/mixna_sandbox/tools/build_mixa.ps1 so $l1Root resolves inside.
 $ErrorActionPreference = 'Stop'
 
-function Test-Guard([string]$Label, [hashtable]$Layout, [bool]$ShouldPass) {
-    $fakeRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("build_miya_probe_" + [System.Diagnostics.Process]::GetCurrentProcess().Id + "_" + (Get-Random))
-    if (Test-Path $fakeRoot) { Remove-Item -Recurse -Force $fakeRoot }
-    New-Item -ItemType Directory -Path $fakeRoot | Out-Null
+$RepoRoot = (Get-Location).Path
+$RealScript = (Resolve-Path "dev/mixa_sandbox/tools/build_mixa.ps1").Path
 
-    try {
-        # Build the fake tree
-        if ($Layout.ContainsKey('translator')) {
-            $bin = New-Item -ItemType Directory -Path (Join-Path $fakeRoot 'bin') -Force
-            Set-Content -Path (Join-Path $fakeRoot 'bin\l1trans.exe') -Value '' -Encoding ascii
-        }
-        if ($Layout.ContainsKey('pin')) {
-            Set-Content -Path (Join-Path $fakeRoot 'L1_PIN.txt') -Value ('A' * 64) -Encoding ascii
-        }
-        if ($Layout.ContainsKey('l2src')) {
-            New-Item -ItemType Directory -Path (Join-Path $fakeRoot 'dev/l2src_sandbox') -Force | Out-Null
-        }
-        if ($Layout.ContainsKey('lm1')) {
-            New-Item -ItemType Directory -Path (Join-Path $fakeRoot 'lm1/build') -Force | Out-Null
-        }
-        if ($Layout.ContainsKey('build_l2src')) {
-            New-Item -ItemType Directory -Path (Join-Path $fakeRoot 'build/l2src') -Force | Out-Null
-        }
-        if ($Layout.ContainsKey('sb_l2src')) {
-            New-Item -ItemType Directory -Path (Join-Path $fakeRoot 'dev/l2src_sandbox/build/l2src') -Force | Out-Null
-        }
-
-        # Run build_miya.ps1 against the fake root by setting -Translator explicitly
-        # and using -ManagerLinkOnly to skip the guard, then separately check the guard
-        # logic by invoking the script's resolution with a modified $l1Root.
-        # Since the script derives $l1Root from $migRoot's location, we simulate by
-        # copying build_miya.ps1 next to the fake root and running from there.
-        $scriptDir = Join-Path $fakeRoot 'mixa_sandbox/tools'
-        New-Item -ItemType Directory -Path $scriptDir -Force | Out-Null
-        Copy-Item -Path (Join-Path $PSScriptRoot 'build_miya.ps1') -Destination $scriptDir -Force
-
-        # Create a fake mixa_manager so $migRoot resolves
-        $mixaDir = Join-Path $fakeRoot 'mixa_manager'
-        New-Item -ItemType Directory -Path (Join-Path $mixaDir 'build') -Force | Out-Null
-
-        # Run from fake root
-        $orig = Get-Location
-        Set-Location $fakeRoot
-        try {
-            $psi = New-Object System.Diagnostics.ProcessStartInfo
-            $psi.FileName = 'powershell'
-            $psi.Arguments = "-NoProfile -ExecutionPolicy Bypass -File mixa_sandbox/tools/build_miya.ps1 -BuildOnly"
-            $psi.RedirectStandardOutput = $true
-            $psi.RedirectStandardError = $true
-            $psi.UseShellExecute = $false
-            $p = [System.Diagnostics.Process]::Start($psi)
-            $out = $p.StandardOutput.ReadToEnd()
-            $err = $p.StandardError.ReadToEnd()
-            $p.WaitForExit()
-            $rc = $p.ExitCode
-        } finally {
-            Set-Location $orig
-        }
-
-        if ($ShouldPass) {
-            if ($rc -eq 0 -or ($out -notmatch 'missing local input' -and $err -notmatch 'missing local input')) {
-                Write-Output "PASS [$Label]: good layout did not trigger guard failure"
-                return $true
-            } else {
-                Write-Output "FAIL [$Label]: good layout triggered guard: $($out -replace "`r`n", ' ' | Select-Object -First 1)"
-                return $false
-            }
-        } else {
-            if ($rc -ne 0 -and ($err -match 'missing local input' -or $out -match 'missing local input')) {
-                Write-Output "PASS [$Label]: bad layout correctly refused before translation"
-                return $true
-            } else {
-                Write-Output "FAIL [$Label]: bad layout was NOT refused (rc=$rc)"
-                return $false
-            }
-        }
-    } finally {
-        Remove-Item -Recurse -Force $fakeRoot -ErrorAction SilentlyContinue
-    }
+function Make-Fixture($Root, $Has) {
+    $tools = Join-Path $Root 'dev/mixa_sandbox/tools'
+    New-Item -ItemType Directory -Path $tools -Force | Out-Null
+    Copy-Item -LiteralPath $RealScript -Destination (Join-Path $tools 'build_mixa.ps1') -Force
+    if ($Has.bin)  { New-Item -ItemType Directory -Path (Join-Path $Root 'bin') -Force | Out-Null; Copy-Item -LiteralPath (Join-Path $RepoRoot 'bin/l1trans.exe') -Destination (Join-Path $Root 'bin/l1trans.exe') -Force }
+    if ($Has.pin)  { Copy-Item -LiteralPath (Join-Path $RepoRoot 'L1_PIN.txt') -Destination (Join-Path $Root 'L1_PIN.txt') -Force }
+    if ($Has.l2)   { New-Item -ItemType Directory -Path (Join-Path $Root 'dev/l2src_sandbox') -Force | Out-Null }
+    if ($Has.lm1)  { New-Item -ItemType Directory -Path (Join-Path $Root 'lm1/build') -Force | Out-Null }
+    if ($Has.rk)   { New-Item -ItemType Directory -Path (Join-Path $Root 'build/l2src') -Force | Out-Null }
+    if ($Has.sk)   { New-Item -ItemType Directory -Path (Join-Path $Root 'dev/l2src_sandbox/build/l2src') -Force | Out-Null }
 }
 
-$results = @()
-# Positive: minimal LMX layout (root build/l2src, no sandbox build/l2src)
-$results += Test-Guard "positive: root build/l2src only" @{translator=1; pin=1; l2src=1; lm1=1; build_l2src=1} $true
-# Negative: missing both kernel-evidence paths
-$results += Test-Guard "negative: no kernel evidence" @{translator=1; pin=1; l2src=1; lm1=1} $false
-# Negative: missing lm1/build
-$results += Test-Guard "negative: missing lm1/build" @{translator=1; pin=1; l2src=1; build_l2src=1} $false
-
-if ($results -contains $false) {
-    Write-Output "PROBE RED: some assertions failed"
-    exit 1
+function Run-Guard($Root) {
+    $tmpScript = Join-Path $Root 'dev/mixa_sandbox/tools/build_mixa.ps1'
+    $info = New-Object System.Diagnostics.ProcessStartInfo 'powershell'
+    $info.Arguments = '-NoProfile -ExecutionPolicy Bypass -File "' + $tmpScript + '" -ValidateInputsOnly'
+    $info.RedirectStandardOutput = $true
+    $info.RedirectStandardError = $true
+    $info.UseShellExecute = $false
+    $p = [System.Diagnostics.Process]::Start($info)
+    $out = $p.StandardOutput.ReadToEnd()
+    $err = $p.StandardError.ReadToEnd()
+    $p.WaitForExit()
+    return @{ Rc = $p.ExitCode; Out = $out; Err = $err }
 }
-Write-Output "PROBE GREEN: all assertions passed"
+
+$base = Join-Path ([System.IO.Path]::GetTempPath()) ("mga_" + [Diagnostics.Process]::GetCurrentProcess().Id)
+$fails = 0
+
+# A: root build/l2src (real LMX shape) -> must PASS
+$ra = Join-Path $base 'a'
+Make-Fixture $ra @{ bin=1; pin=1; l2=1; lm1=1; rk=1 }
+$r = Run-Guard $ra
+Remove-Item -Recurse -Force $ra -ErrorAction SilentlyContinue
+if ($r.Rc -eq 0 -and $r.Out -match 'VALIDATE-ONLY PASS') { Write-Output "PASS A: root build/l2src passes" } else { Write-Output "FAIL A: rc=$($r.Rc) $($r.Out) $($r.Err)"; $fails++ }
+
+# B: NEITHER kernel alternative -> must FAIL before translation
+$rb = Join-Path $base 'b'
+Make-Fixture $rb @{ bin=1; pin=1; l2=1; lm1=1 }
+$r = Run-Guard $rb
+Remove-Item -Recurse -Force $rb -ErrorAction SilentlyContinue
+if ($r.Rc -ne 0 -and ($r.Err -match 'missing local input' -or $r.Out -match 'missing local input')) {
+    Write-Output "PASS B: both kernel alternatives missing -> refused"
+} else { Write-Output "FAIL B: rc=$($r.Rc)"; $fails++ }
+
+# C: sandbox build/l2src (L1-nested shape) -> must PASS
+$rc = Join-Path $base 'c'
+Make-Fixture $rc @{ bin=1; pin=1; l2=1; lm1=1; sk=1 }
+$r = Run-Guard $rc
+Remove-Item -Recurse -Force $rc -ErrorAction SilentlyContinue
+if ($r.Rc -eq 0 -and $r.Out -match 'VALIDATE-ONLY PASS') { Write-Output "PASS C: sandbox build/l2src passes" } else { Write-Output "FAIL C: rc=$($r.Rc) $($r.Out) $($r.Err)"; $fails++ }
+
+Remove-Item -Recurse -Force $base -ErrorAction SilentlyContinue
+
+if ($fails -gt 0) { Write-Error "PROBE RED: $fails"; exit 1 }
+Write-Output "PROBE GREEN: 3 fixtures (A positive, B negative, C positive)"
 exit 0

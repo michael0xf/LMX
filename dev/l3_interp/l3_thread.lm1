@@ -5,14 +5,28 @@ predef: "l2src/lmx_plan.lm1"
 predef: "l2src/lmx_scratch.lm1"
 predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_perm.h.lm1"
 include: "<string.h>"
 
 # Thread interpreted path: lmx_interp_apply -> lmx_walk_run.
 # Dispatch receives only the Thread. Per-turn L2 scratch/context are automatic.
 # args[0] = subject = message.graph (same pointer). out = 0.
 # l3_exec / l3_plan are not on this path.
+#
+# WHERE THE ROLE RECORDS LIVE (FABLE-L3-THREAD-ROLES-IN-STORE-20260921-21).  In the PERMANENT
+# STORE the thread's arena is bound to, never in the arena itself.  They are what
+# lmx_walk.h.lm1 says a runtime "knows at translation and never changes", and a frame carries
+# a record's ADDRESS as its role -- so the address has to outlive the turn.  It did not:
+# lmx_turn_end collects the arena from message.graph, nothing in a graph references the
+# TABLES, and a unit global is not a root, so every turn swept them and the next turn
+# compared addresses with freed cells (measured: a second turn of the same graph returned
+# LMX_THREAD_OK and did nothing).  The store is never collected and never visited
+# (lmx_perm.h.lm1), and membership in its ranges is the type `independent: const: immutable`.
+# Because nothing there is ever collected, the tables are opened ONCE per store: whoever zeroes
+# these globals to force a re-open leaks a whole role set and mints new identities.
 
 @: LmxThread l3_bound_t 0
+@: LmxArena l3_bound_store 0
 @: Lmx l3_bound_roles 0
 @: Lmx l3_bound_plan 0
 
@@ -71,6 +85,7 @@ return: st
 
 fn: l3_thread_bind (@: LmxThread t) int
     @: LmxArena arena
+    @: LmxArena store
     if: t = 0
         return: c.LMX_THREAD_INVALID
     arena: 0
@@ -79,12 +94,22 @@ fn: l3_thread_bind (@: LmxThread t) int
     ---
     if: arena = 0
         return: c.LMX_THREAD_INVALID
+    # Both refusals come BEFORE anything is assigned, so a refused bind leaves the thread that
+    # is bound, and its records, exactly as they were.  An arena with no store has nowhere for
+    # the records to outlive a turn; another runtime's store holds other records, and handing
+    # out this one's would make every address comparison there a comparison across runtimes.
+    store: lmx_perm_store_of(arena)
+    if: store = 0
+        return: c.LMX_THREAD_INVALID
+    if: l3_bound_store != 0 && l3_bound_store != store
+        return: c.LMX_THREAD_INVALID
     l3_bound_t: t
+    l3_bound_store: store
     if: l3_bound_roles = 0
-        l3_bound_roles: lmx_walk_roles_open(arena)
+        l3_bound_roles: lmx_walk_roles_open(store)
     ---
     if: l3_bound_plan = 0
-        l3_bound_plan: lmx_plan_roles_open(arena)
+        l3_bound_plan: lmx_plan_roles_open(store)
     ---
     if: l3_bound_roles = 0 || l3_bound_plan = 0
         return: c.LMX_THREAD_INVALID

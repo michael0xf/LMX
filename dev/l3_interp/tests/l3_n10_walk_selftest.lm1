@@ -218,11 +218,8 @@ fn: run_graph (@: LmxThread t; @: Lmx m) int
         return: 1
     msg\graph: m
     st: lmx_thread_turn(t, native_noop, 8U)
-    l3_bound_roles: 0
-    l3_bound_plan: 0
-    if: l3_thread_bind(t) != c.LMX_THREAD_OK
-        return: 1
-    ---
+    # Nothing to refresh: the role records live in the bound permanent store, which the
+    # end-turn collection neither collects nor visits, so they are the same records after it.
     groles: l3_thread_roles(t)
     if: groles = 0
         return: 1
@@ -233,6 +230,7 @@ fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxArena: arena
     LmxArena: context_arena
+    LmxArena: perm_store
     LmxPool: context_cells
     LmxScratch: store
     LmxWalkContext: context
@@ -250,6 +248,10 @@ fn: main () int
     @: Lmx set_role 0
     @: Lmx arg_role 0
     @: Lmx of_role 0
+    @: Lmx roles_at_bind 0
+    @: Lmx plan_at_bind 0
+    @: void ret_at_bind 0
+    @: void set_at_bind 0
     @: LmxOp fake 0
     @: Lmx frame 0
     @: void subject 0
@@ -258,6 +260,7 @@ fn: main () int
         return: 2
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ context_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ perm_store)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ context_cells)), 0, c.sizeof(c.LmxPool))
     memset((cast: (@: void) (@ store)), 0, c.sizeof(c.LmxScratch))
     memset((cast: (@: void) (@ context)), 0, c.sizeof(c.LmxWalkContext))
@@ -272,6 +275,13 @@ fn: main () int
         return: 2
     ---
     gb: @ arena
+    # The Message arena is bound to a permanent store, as every arena of a root is: that is
+    # where l3_thread_bind keeps the role records.
+    if: lmx_perm_open(@ perm_store) != 0 || lmx_perm_bind(gb, @ perm_store) != 0
+        fputs("l3_n10_walk: store\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
     dummy: mk_dummy(gb)
     if: dummy = 0 || mk_thread(gb, dummy, @ t) = 0
         free(counts)
@@ -283,6 +293,16 @@ fn: main () int
     fail(counts, l3_thread_bind(t) = c.LMX_THREAD_OK, "bind walk dispatch")
     groles: l3_thread_roles(t)
     fail(counts, groles != 0 && l3_thread_plan_roles(t) != 0, "shared walk/plan roles")
+    # The identity a frame carries is an ADDRESS, so it has to outlive the turn.  Its home is
+    # the store -- asked of the address ranges, no flag read -- and not the arena the
+    # end-turn collection sweeps.
+    roles_at_bind: groles
+    plan_at_bind: l3_thread_plan_roles(t)
+    ret_at_bind: lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_RET))
+    set_at_bind: lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_SET))
+    fail(counts, lmx_range_home(gb, (cast: (@: void) groles)) = @ perm_store && lmx_range_pool(gb, (cast: (@: void) groles)) = 0, "the role table's home is the store, not the arena's pool")
+    fail(counts, lmx_range_home(gb, (cast: (@: void) plan_at_bind)) = @ perm_store && lmx_range_pool(gb, (cast: (@: void) plan_at_bind)) = 0, "the plan-role table's home is the store, not the arena's pool")
+    fail(counts, ret_at_bind != 0 && set_at_bind != 0 && lmx_range_home(gb, set_at_bind) = @ perm_store && lmx_range_pool(gb, set_at_bind) = 0, "the SET record's home is the store too")
 
     cand: lmx_node_new_owned(gb)
     cand64: lmx_node_new_owned(gb)
@@ -343,6 +363,21 @@ fn: main () int
     fail(counts, native_hits = 1, "set-own did not call native")
     fail(counts, lmx_thread_mode(t) = c.LMX_THREAD_MODE_INTERPRETED, "one mode for the turn")
 
+    # THE SAME GRAPH, A SECOND REAL TURN.  The end-turn collection has run once.  With the role
+    # records in the collected arena this turn returned LMX_THREAD_OK and did nothing: the
+    # frame's role address was compared with freed cells, and dispatch status is dropped.
+    fail(counts, groles = roles_at_bind && l3_thread_plan_roles(t) = plan_at_bind, "after a turn the tables are the same tables")
+    fail(counts, lmx_range_classify(gb, (cast: (@: void) groles)) = c.LMX_KIND_STRUCT, "and the role table is still a Structure by the arena's ranges")
+    fail(counts, lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_RET)) = ret_at_bind && lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_SET)) = set_at_bind, "RET and SET are the records they were at bind")
+    fail(counts, lmx_arena_ref_value(lmx_arena_ref_struct(m, 2U), 0U) = set_at_bind, "the graph's SET frame still carries that record")
+    icell(m, 1U, 0)
+    fail(counts, broken = 0 && field(m, 1U) = 0, "own cell reset to 0 before the second turn")
+    fail(counts, run_graph(t, m) = c.LMX_THREAD_OK, "second turn of the same graph")
+    fail(counts, field(m, 1U) = 7, "the second turn published 7 again")
+    fail(counts, native_hits = 1, "two interpreted turns, native_hits still 1")
+    fail(counts, groles = roles_at_bind && lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_RET)) = ret_at_bind && lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_SET)) = set_at_bind, "two turns later: same table, same RET, same SET")
+    fail(counts, l3_thread_bind(t) = c.LMX_THREAD_OK && l3_thread_roles(t) = roles_at_bind && l3_thread_plan_roles(t) = plan_at_bind, "a repeated bind hands out the same tables")
+
     context.arena: gb
     context.scratch: @ store
     context.roles: groles
@@ -372,6 +407,7 @@ fn: main () int
     tests: lmx_node_new_owned(gb)
     recv: mk_recv(gb, lmx_node_new_owned(gb), tests)
     fail(counts, recv != 0 && l3_admit(gb, live, recv) = c.L3_UNSUPPORTED, "analytic OK without tests is not admission")
+    fail(counts, lmx_perm_close(@ perm_store) = 0, "store closed once")
 
     if: counts[1] != 0
         c.printf("%d failed of %d\n", counts[1], counts[0])

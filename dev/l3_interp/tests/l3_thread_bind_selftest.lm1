@@ -101,16 +101,36 @@ return: 1
 fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxArena: arena
+    LmxArena: store
+    LmxArena: unbound_arena
+    LmxArena: other_arena
+    LmxArena: other_store
     @: LmxArena a 0
     @: Lmx dummy 0
     @: Lmx graph 0
     @: LmxThread t 0
+    @: LmxThread unbound_t 0
+    @: LmxThread other_t 0
     @: LmxMsg msg 0
+    @: Lmx roles 0
+    @: Lmx plan_roles 0
+    @: void ret_record 0
     if: counts = 0
         return: 2
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
-    if: lmx_arena_open(@ arena) != 0
+    memset((cast: (@: void) (@ store)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ unbound_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ other_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ other_store)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ arena) != 0 || lmx_arena_open(@ unbound_arena) != 0 || lmx_arena_open(@ other_arena) != 0
         fputs("l3_thread_bind: arena\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    # The Message arena is bound to a permanent store, as every arena of a root is; a second
+    # arena has none and a third is bound to ANOTHER runtime's store.
+    if: lmx_perm_open(@ store) != 0 || lmx_perm_open(@ other_store) != 0 || lmx_perm_bind(@ arena, @ store) != 0 || lmx_perm_bind(@ other_arena, @ other_store) != 0
+        fputs("l3_thread_bind: store\n", l1_stdout())
         free(counts)
         return: 2
     ---
@@ -120,13 +140,36 @@ fn: main () int
         free(counts)
         return: 2
     ---
+    if: mk_thread(@ unbound_arena, mk_dummy(@ unbound_arena), @ unbound_t) = 0 || mk_thread(@ other_arena, mk_dummy(@ other_arena), @ other_t) = 0
+        free(counts)
+        return: 2
+    ---
     fail(counts, lmx_thread_request_mode(t, c.LMX_THREAD_MODE_INTERPRETED) = c.LMX_THREAD_OK, "request interpreted")
     fail(counts, lmx_thread_turn(t, native_noop, 1U) = c.LMX_THREAD_OK, "first turn is still native until endturn")
     fail(counts, native_hits = 1, "native handler ran once to commit the request")
     fail(counts, lmx_thread_mode(t) = c.LMX_THREAD_MODE_INTERPRETED, "endturn committed interpreted")
     fail(counts, lmx_thread_turn(t, 0, 2U) = c.LMX_THREAD_INVALID, "interpreted without bind is not native fallback")
+    # An arena with no store is refused BEFORE anything is assigned: nothing is bound yet, and
+    # nothing is after it.
+    fail(counts, l3_thread_bind(unbound_t) = c.LMX_THREAD_INVALID, "bind on an arena with no permanent store is refused")
+    fail(counts, l3_thread_roles(unbound_t) = 0 && l3_thread_plan_roles(unbound_t) = 0, "the refused bind assigned nothing")
     fail(counts, l3_thread_bind(t) = c.LMX_THREAD_OK, "bind walk dispatch")
-    fail(counts, l3_thread_roles(t) != 0 && l3_thread_plan_roles(t) != 0, "standard walk roles on the graph arena")
+    roles: l3_thread_roles(t)
+    plan_roles: l3_thread_plan_roles(t)
+    fail(counts, roles != 0 && plan_roles != 0, "standard walk roles, in the bound store")
+    # The roles' home is the store, by ADDRESS RANGE: no flag is read for it.
+    fail(counts, lmx_range_home(a, (cast: (@: void) roles)) = @ store && lmx_range_pool(a, (cast: (@: void) roles)) = 0, "the role table's home is the store, not the arena's pool")
+    fail(counts, lmx_range_home(a, (cast: (@: void) plan_roles)) = @ store && lmx_range_pool(a, (cast: (@: void) plan_roles)) = 0, "the plan-role table's home is the store, not the arena's pool")
+    ret_record: lmx_arena_ref_value(roles, (cast: (size_t) c.LMX_WALK_OP_RET))
+    fail(counts, ret_record != 0 && lmx_range_home(a, ret_record) = @ store && lmx_range_pool(a, ret_record) = 0, "a role RECORD's home is the store too")
+    # Another runtime's store holds other records.  Refused, and the thread that IS bound keeps
+    # its binding and its records: the refusal comes before any assignment.
+    fail(counts, l3_thread_bind(other_t) = c.LMX_THREAD_INVALID, "bind on an arena of a different store is refused")
+    fail(counts, l3_thread_roles(other_t) = 0 && l3_thread_roles(t) = roles && l3_thread_plan_roles(t) = plan_roles, "the refused bind left the bound thread and its tables alone")
+    fail(counts, l3_thread_bind(unbound_t) = c.LMX_THREAD_INVALID && l3_thread_roles(t) = roles, "a storeless bind after a good one is still refused and unbinds nothing")
+    # The store is never collected, so the tables are opened ONCE per store.
+    fail(counts, l3_thread_bind(t) = c.LMX_THREAD_OK && l3_thread_roles(t) = roles && l3_thread_plan_roles(t) = plan_roles, "a repeated bind hands out the same tables")
+    fail(counts, lmx_arena_ref_value(l3_thread_roles(t), (cast: (size_t) c.LMX_WALK_OP_RET)) = ret_record, "and the same RET record")
     graph: mk_walk_void(a, l3_thread_roles(t))
     msg: t\message
     fail(counts, graph != 0 && msg != 0, "walk body")
@@ -137,6 +180,11 @@ fn: main () int
     fail(counts, lmx_thread_mode(t) = c.LMX_THREAD_MODE_INTERPRETED, "one mode for the turn")
     fail(counts, lmx_thread_turn(t, native_noop, 4U) = c.LMX_THREAD_OK, "second interpreted turn")
     fail(counts, native_hits = 1, "still no native fallback")
+    # Two turn boundaries have collected the arena.  The tables are not the arena's to collect.
+    fail(counts, l3_thread_roles(t) = roles && l3_thread_plan_roles(t) = plan_roles, "two turns later the tables are the same tables")
+    fail(counts, lmx_range_classify(a, (cast: (@: void) roles)) = c.LMX_KIND_STRUCT && lmx_range_classify(a, (cast: (@: void) plan_roles)) = c.LMX_KIND_STRUCT, "and still Structures by the arena's ranges")
+    fail(counts, lmx_arena_ref_value(roles, (cast: (size_t) c.LMX_WALK_OP_RET)) = ret_record && lmx_range_classify(a, ret_record) = c.LMX_DOMAIN_KIND_OP, "and RET is the same live OP record")
+    fail(counts, lmx_perm_close(@ store) = 0 && lmx_perm_close(@ other_store) = 0, "both stores closed once")
 
     if: counts[1] != 0
         c.printf("%d failed of %d\n", counts[1], counts[0])

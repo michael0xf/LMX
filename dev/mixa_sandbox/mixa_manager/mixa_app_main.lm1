@@ -1,7 +1,13 @@
 predef: "mixa_manager/mixa_app_controller.h.lm1"
-include: "<stdio.h>" "<stdlib.h>" "<windows.h>"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>" "<windows.h>"
 
 fn: mixa_backend_default_table () const: @(MixaBackendVTable)
+fn: mixa_backend_headless_table () const: @(MixaBackendVTable)
+
+# How many steps --headless-smoke takes when no bound is given on the command line.
+# Small on purpose: the smoke proves the lifecycle runs and closes, not that the app
+# does any particular work, and a smoke that takes a long time is one nobody runs.
+define: MIXA_APP_HEADLESS_STEPS 64
 
 # Minimal native entrypoint (ticket 20260912-133300; thinned to a real
 # resource-owning shell by ticket 20260913-010249). ALL of the actual
@@ -33,36 +39,107 @@ fn: mixa_backend_default_table () const: @(MixaBackendVTable)
 # behavior (Sleep(1) only on a truly quiet tick) is unchanged from what
 # main() used to do inline.
 
+# --headless-smoke (DEEPSEEK-MANAGER-HEADLESS-20260920-01, design by deepseek,
+# implemented here after a clean handoff).  THE PRODUCT RUNS ITS OWN LIFECYCLE: this
+# is not a second entry point and not a test driving the controller in the product's
+# place.  It is the same main, the same mixa_app_controller_open/step/close below,
+# and the only difference is WHICH BACKEND TABLE it takes -- the window comes from
+# the table, never from main, so selecting the headless table is the whole of what
+# "headless" means here.  mixa_backend_headless_table already ships in the product
+# (mixa_backend_headless.lm1); nothing is stubbed and no proxy stands in for it.
+#
+# THE STEP BOUND IS NOT DECORATION.  mixa_app_controller_running stays true until
+# something stops it, so an unbounded smoke would hang exactly where the interactive
+# build would -- which is the failure this path exists to avoid.  The bound is
+# therefore strict and positive, and a malformed one is refused rather than defaulted.
+#
+# The exit code IS the evidence: zero only when the backend was obtained, the
+# controller opened, every step ran without reporting an error, and the close was
+# reached.  One machine-readable summary line is printed for the runner to parse.
+
 fn: main (int: argc; @: @(char) argv) int
     const: @(char root_utf8)
     const: @(MixaBackendVTable vt)
     @: MixaAppController c
     int: had_error
     int: rc
-    if: argc >= 2
-        root_utf8: argv[1]
-    else:
-        root_utf8: "."
+    int: headless
+    int: bound
+    int: steps
+    int: running_at_end
+    headless: 0
+    bound: 0
+    steps: 0
+    running_at_end: 0
+    if: argc >= 2 && c.strcmp(argv[1], "--headless-smoke") = 0
+        headless: 1
     ---
-    vt: mixa_backend_default_table()
+    if: headless != 0
+        if: argc >= 3
+            root_utf8: argv[2]
+        else:
+            root_utf8: "."
+        ---
+        if: argc >= 4
+            bound: c.atoi(argv[3])
+        else:
+            bound: MIXA_APP_HEADLESS_STEPS
+        ---
+        # A bound that is absent, zero, negative or not a number at all is a REFUSAL,
+        # not a reason to fall back to the default: a smoke that silently ran a
+        # different number of steps than asked would report success for the wrong run.
+        if: bound <= 0
+            c.printf("MIXA_HEADLESS_SMOKE status=FAIL reason=bad-bound steps=0 bound=0\n")
+            return: 2
+        ---
+        vt: mixa_backend_headless_table()
+    else:
+        if: argc >= 2
+            root_utf8: argv[1]
+        else:
+            root_utf8: "."
+        ---
+        vt: mixa_backend_default_table()
+    ---
     if: vt = 0
+        if: headless != 0
+            c.printf("MIXA_HEADLESS_SMOKE status=FAIL reason=no-backend steps=0 bound=%d\n", bound)
+            return: 1
+        ---
         c.printf("mixa_app_main: no backend table available\n")
         return: 1
     ---
     c: 0
     rc: mixa_app_controller_open(@ c, vt, root_utf8)
     if: rc != MIXA_APP_CONTROLLER_OK
+        if: headless != 0
+            c.printf("MIXA_HEADLESS_SMOKE status=FAIL reason=open rc=%d steps=0 bound=%d\n", rc, bound)
+            return: 1
+        ---
         c.printf("mixa_app_main: controller open failed (%d)\n", rc)
         return: 1
     ---
     had_error: 0
-    while: mixa_app_controller_running(c) != 0 && had_error = 0
+    # The bound applies ONLY to the headless smoke; the interactive build keeps the
+    # loop it always had, so nothing about the real product's behaviour moves.
+    while: mixa_app_controller_running(c) != 0 && had_error = 0 && (headless = 0 || steps < bound)
         mixa_app_controller_step(c, @ had_error)
+        steps: steps + 1
         if: had_error != 0
             c.printf("mixa_app_main: controller reported an error -- terminating cleanly\n")
         ---
     ---
+    # Asked BEFORE the close, because the controller is not there to answer afterwards.
+    running_at_end: mixa_app_controller_running(c)
     mixa_app_controller_close(c)
+    if: headless != 0
+        if: had_error != 0
+            c.printf("MIXA_HEADLESS_SMOKE status=FAIL reason=step steps=%d bound=%d running_at_end=%d\n", steps, bound, running_at_end)
+            return: 1
+        ---
+        c.printf("MIXA_HEADLESS_SMOKE status=OK steps=%d bound=%d running_at_end=%d\n", steps, bound, running_at_end)
+        return: 0
+    ---
     if: had_error != 0
         return: 1
     ---

@@ -317,10 +317,21 @@ fn: lmx_thread_mode_end (@: LmxThread t; int: outcome) int
         return: c.LMX_THREAD_INVALID
     if: t\requested_mode = t\current_mode
         return: c.LMX_THREAD_OK
-    # Failure-turn commit semantics is intentionally still open.  Preserve both values and make
-    # the unresolved case visible to the caller; do not smuggle in either commit or rollback.
+    # AUTHOR'S RULE, 2026-09-21, verbatim: "Отменить запрос -- мой рекомендуемый вариант."  A
+    # failed turn carrying a REAL requested-mode change neither commits it nor leaves it pending:
+    # the request is CANCELLED, and the cancellation is made explicit by resetting requested_mode
+    # to current_mode.  current_mode is unchanged, so the NEXT turn runs in the mode it ran in
+    # before, and a later switch requires a NEW explicit request_mode -- nothing is deferred.
+    #
+    # This replaces the previous reading, which returned LMX_THREAD_INVALID here to make an
+    # "unresolved" case visible.  It is resolved now, so a failed turn with a pending request is
+    # an ordinary cancelled turn and reports OK.  One consequence is deliberate and must not be
+    # read as a bug: a caller that wants to know the mode change did not happen reads
+    # requested_mode (it equals current_mode again), not this return value.
     if: outcome = c.LMX_TURN_FAILED
-        return: c.LMX_THREAD_INVALID
+        t\requested_mode: t\current_mode
+        return: c.LMX_THREAD_OK
+    ---
     t\current_mode: t\requested_mode
 return: c.LMX_THREAD_OK
 
@@ -417,6 +428,13 @@ fn: lmx_thread_dispatch_native (@: LmxThread t; LmxCallEntry: entry) int
     graph: t\message\graph
     if: graph != 0
         if: entry != 0
+            # THE HANDLER'S ANSWER IS ITS OWN BUSINESS AND IS NOT REINTERPRETED (model 31, stated
+            # in the turn's own comment above and in lmx_thread.h.lm1).  A native handler that
+            # returns a status is reporting its own business; the turn that ran it is failed by
+            # the MESSAGE'S FLAGS, which is this kernel's existing contract for a native turn and
+            # is not redefined here.  Only the INTERPRETER's status is carried (lmx_thread_turn):
+            # that is the boundary whose failure has to reach the turn -- a primitive failure
+            # inside an interpreted activation -- and it has no other meaning to lose.
             entry(graph)
         else:
             if: t\slot != 0
@@ -431,10 +449,14 @@ return: c.LMX_THREAD_OK
 
 fn: lmx_thread_turn (@: LmxThread t; LmxCallEntry: entry; ulong: now) int
     int: code
+    int: body c.LMX_TURN_BODY_OK
     if: t = 0 || t\message = 0
         return: c.LMX_THREAD_INVALID
     # Validate the selected path before entering: an unavailable interpreter is not permission
-    # to execute native code, and a refused turn must not advance the cursor.
+    # to execute native code, and a refused turn must not advance the cursor.  NEITHER PATH IS
+    # EVER A FALLBACK FOR THE OTHER: the mode is selected before the body runs, a refusal here is
+    # a refusal and not a switch, and a body that FAILS does not make this turn native either --
+    # it makes it a failed turn in the mode it ran (below).
     if: t\current_mode != c.LMX_THREAD_MODE_NATIVE && t\current_mode != c.LMX_THREAD_MODE_INTERPRETED
         return: c.LMX_THREAD_INVALID
     if: t\current_mode = c.LMX_THREAD_MODE_INTERPRETED && t\interpreter_dispatch = 0
@@ -443,13 +465,37 @@ fn: lmx_thread_turn (@: LmxThread t; LmxCallEntry: entry; ulong: now) int
     if: code != c.LMX_THREAD_OK
         return: code
     ---
+    # THE INTERPRETER'S ANSWER IS KEPT.  It used to be dropped, so an interpreted body that
+    # failed -- a primitive failure inside it included -- reached the boundary as an ordinary
+    # continuing turn.  The NATIVE branch still discards its handler's status on purpose (model
+    # 31: a handler reports its own business, and dispatch_native carries the reason), so the two
+    # paths are NOT made symmetric: redefining a native handler's return would change a contract
+    # this ticket does not own.  What is carried goes into the boundary below, where it decides
+    # the staging and the reservations, and into this act's own report at the end.
     if: t\current_mode = c.LMX_THREAD_MODE_NATIVE
-        lmx_thread_dispatch_native(t, entry)
+        body: lmx_thread_dispatch_native(t, entry)
     else:
-        t\interpreter_dispatch(t)
+        body: t\interpreter_dispatch(t)
     ---
     lmx_thread_leave(t)
-    if: lmx_turn_end(t, now) != c.LMX_TURN_OK
+    # THE BOUNDARY RUNS EVEN FOR A FAILED BODY, and it runs WITH the body's status: a failed turn
+    # discards what it staged, drops what it reserved, and carries out its cleanup -- the mode
+    # rule of lmx_thread_mode_end included -- before this act reports anything.  A failure that
+    # skipped the boundary would leave the letters and the children of a dead turn in flight.
+    if: lmx_turn_end_status(t, now, body) != c.LMX_TURN_OK
+        return: c.LMX_THREAD_INVALID
+    ---
+    if: body != c.LMX_TURN_BODY_OK
+        # The body failed, and the boundary has run.  What it wrote STANDS: there is no rollback
+        # engine and this return value does not promise one -- the turn's graph and own writes
+        # are exactly where the body left them, while its staging and its reservations are gone.
+        #
+        # The report is the Thread ABI's EXISTING failure status.  The finer distinction lives
+        # where it is meaningful and stays there: the walk reports a primitive failure as
+        # LMX_WALK_PRIMITIVE, and the body's status carries it to this line.  The Thread ABI has
+        # no status for "a body ran and failed", and this act does not invent one -- adding a
+        # value to a public enum is a new contract, not a repair.  (Documented ABI compromise,
+        # DEEPSEEK-L2-PRIMITIVE-KERNEL-IMPLEMENT-20260921-27.)
         return: c.LMX_THREAD_INVALID
     ---
 return: c.LMX_THREAD_OK

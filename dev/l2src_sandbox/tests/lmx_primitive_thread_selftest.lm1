@@ -1,0 +1,217 @@
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_turn.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_child.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_call.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# A FAILED INTERPRETED TURN, whole (DEEPSEEK-L2-PRIMITIVE-KERNEL-IMPLEMENT-20260921-27).
+#
+# The defect this file exists for is one line long and was latent from the start:
+# `t\interpreter_dispatch(t)` was a BARE STATEMENT (lmx_thread.lm1:449 before this ticket), so an
+# interpreted body that failed -- a primitive failure inside it included -- reached the boundary
+# as an ordinary continuing turn: nothing was discarded, and a mode request it carried was
+# committed as if the turn had succeeded.  What this file pins, in the order the ticket lists:
+#
+#   * THE INTERPRETER'S STATUS REACHES THE BOUNDARY and a nonzero one FAILS the turn, which
+#     reports the Thread ABI's existing failure status (LMX_THREAD_INVALID).  The finer reading
+#     stays where it is meaningful: the walk reports a primitive failure as LMX_WALK_PRIMITIVE.
+#   * THE BOUNDARY RUNS ANYWAY, with that status: the turn's staged letters are DISCARDED and the
+#     children it reserved are DROPPED -- while what the body WROTE into the graph stands.  There
+#     is no rollback engine and nothing here may promise one.
+#   * THE MODE REQUEST IS CANCELLED (author's rule, 2026-09-21): current_mode unchanged,
+#     requested_mode reset to it at endturn, nothing left pending -- and a later switch therefore
+#     needs a NEW explicit request.
+#   * NO NATIVE FALLBACK, ever: a failed interpreted turn does not run the native entry, and an
+#     unavailable interpreter is refused rather than deferred to native.
+#   * THE NEXT INTERPRETED TURN STILL RUNS, and its success publishes and commits.
+#   * NOT REDEFINED HERE: a NATIVE handler's return value stays its own business (model 31).  The
+#     control at the top runs a native handler that returns 9 on a RUNNING Message and the turn
+#     must still succeed -- the flag-failed/body-OK boundary is this kernel's existing contract
+#     and this ticket does not turn it into an API error.
+
+@: LmxArena pt_arena 0
+@: LmxPost pt_mail 0
+@: Lmx pt_parent 0
+@: Lmx pt_source 0
+@: LmxArena pt_child_arena 0
+@: void pt_target 0
+@: void pt_cell 0
+size_t: pt_dispatch_calls 0U
+size_t: pt_reserves 0U
+size_t: pt_native_calls 0U
+int: pt_body_status 0
+
+# The interpreter the test installs.  It stages a letter, reserves a child, writes into the graph,
+# and reports pt_body_status: 0 = the body succeeded, anything else = it failed.
+fn: pt_dispatch (@: LmxThread t) int
+    @: LmxMsg child 0
+    pt_dispatch_calls: pt_dispatch_calls + 1U
+    if: pt_arena != 0 && pt_mail != 0 && pt_target != 0
+        lmx_post_accept(pt_arena, pt_mail, pt_target, c.LMX_POST_OUTBOX)
+    ---
+    if: t != 0 && pt_arena != 0 && pt_child_arena != 0 && pt_parent != 0 && pt_source != 0
+        child: lmx_child_reserve(t, pt_arena, pt_child_arena, pt_parent, 0U, pt_source)
+        if: child != 0
+            pt_reserves: pt_reserves + 1U
+        ---
+    ---
+    if: pt_cell != 0
+        lmx_int_store_known(pt_cell, 42)
+    ---
+return: pt_body_status
+
+# A handler from OUTSIDE (R0's shape).  It reports its own business -- 9 -- and must never be
+# called by an interpreted turn.
+fn: pt_native (@: Lmx node) int
+    pt_native_calls: pt_native_calls + 1U
+return: 9
+
+sub: pt_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: pt_check
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxArena: arena
+    LmxArena: child_arena
+    LmxSchedule: slot
+    @: LmxThread t 0
+    @: LmxMsg letter 0
+    @: LmxPost mail 0
+    @: LmxMsg target 0
+    @: Lmx parent 0
+    @: Lmx source 0
+    @: void cell 0
+    unsigned: turn_before 0U
+    size_t: native_before 0U
+    int: failures
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ child_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ slot)), 0, c.sizeof(c.LmxSchedule))
+    if: lmx_arena_open(@ arena) != 0 || lmx_arena_open(@ child_arena) != 0
+        fputs("lmx_primitive_thread: an arena did not open\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    letter: (cast: (@: LmxMsg) lmx_arena_take(@ arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    target: (cast: (@: LmxMsg) lmx_arena_take(@ arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    parent: lmx_node_new_owned(@ arena)
+    source: lmx_node_new_owned(@ arena)
+    mail: (cast: (@: LmxPost) malloc(c.sizeof(c.LmxPost)))
+    t: (cast: (@: LmxThread) lmx_arena_take(@ arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    if: letter = 0 || target = 0 || parent = 0 || source = 0 || mail = 0 || t = 0
+        fputs("lmx_primitive_thread: the world was not built\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    if: lmx_arena_refs_open_owned(@ arena, parent, 1U) != 0 || lmx_arena_refs_open_owned(@ arena, source, 1U) != 0
+        fputs("lmx_primitive_thread: the structures did not open their slots\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    if: lmx_post_init(@ arena, mail) != c.LMX_POST_OK
+        fputs("lmx_primitive_thread: the mailbox did not initialize\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    letter\running: 1
+    letter\success: 0
+    letter\handoff_ready: 0
+    letter\graph: source
+    letter\index: 1U
+    target\index: 2U
+    if: lmx_thread_attach(t, letter, mail, @ slot) != c.LMX_THREAD_OK
+        fputs("lmx_primitive_thread: the object did not attach\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    cell: lmx_int_new_owned(@ arena)
+    if: cell = 0
+        free(counts)
+        return: 2
+    ---
+    lmx_int_store_known(cell, 0)
+    pt_arena: @ arena
+    pt_mail: mail
+    pt_parent: parent
+    pt_source: source
+    pt_child_arena: @ child_arena
+    pt_target: (cast: (@: void) target)
+    pt_cell: cell
+    pt_check(counts, lmx_thread_interpreter_set(t, pt_dispatch) = c.LMX_THREAD_OK, "the interpreter boundary was not installed")
+
+    # --- 0. THE CONTROL: a native handler that returns a NONZERO status on a RUNNING Message ---
+    # The turn must still SUCCEED.  A native handler reports its own business (model 31); if this
+    # control ever goes red, the flag/body boundary has been redefined and that is the defect.
+    pt_check(counts, lmx_thread_request_mode(t, c.LMX_THREAD_MODE_INTERPRETED) = c.LMX_THREAD_OK, "the mode request was refused")
+    pt_check(counts, lmx_thread_turn(t, pt_native, 10U) = c.LMX_THREAD_OK, "a nonzero native handler status failed a running turn: the native contract was redefined")
+    pt_check(counts, pt_native_calls = 1U, "the native turn did not run its handler")
+    pt_check(counts, lmx_thread_mode(t) = c.LMX_THREAD_MODE_INTERPRETED && lmx_thread_requested_mode(t) = c.LMX_THREAD_MODE_INTERPRETED, "a successful turn did not commit the mode it carried")
+
+    # --- 1. A FAILED INTERPRETED TURN: the status reaches the boundary, the boundary runs ------
+    pt_body_status: 1
+    pt_dispatch_calls: 0U
+    native_before: pt_native_calls
+    turn_before: t\turn
+    pt_check(counts, lmx_thread_request_mode(t, c.LMX_THREAD_MODE_NATIVE) = c.LMX_THREAD_OK, "the failing turn's mode request was refused")
+    pt_check(counts, lmx_thread_turn(t, pt_native, 20U) = c.LMX_THREAD_INVALID, "a failed interpreted turn did not report the Thread failure status")
+    pt_check(counts, pt_dispatch_calls = 1U, "the interpreter did not run")
+    pt_check(counts, pt_native_calls = native_before, "a failed interpreted turn FELL BACK to the native entry")
+    # The mode request is cancelled, not committed and not pending.
+    pt_check(counts, lmx_thread_mode(t) = c.LMX_THREAD_MODE_INTERPRETED, "a failed turn committed the requested mode change")
+    pt_check(counts, lmx_thread_requested_mode(t) = c.LMX_THREAD_MODE_INTERPRETED, "the cancelled request was left pending")
+    # The turn itself is left clean: the cursor advanced once, the state is idle, no current.
+    pt_check(counts, t\turn = turn_before + 1U && t\state = c.LMX_THREAD_IDLE, "the failed turn left its cursor or state behind")
+    pt_check(counts, lmx_thread_current() = 0, "the failed turn left a current object behind")
+    # The BOUNDARY ran with the failure: what the turn staged and reserved is gone.
+    pt_check(counts, pt_reserves = 1U, "the body did not reserve a child, so the drop below cannot be read")
+    pt_check(counts, lmx_post_count(mail, c.LMX_POST_STAGED) = 0U && lmx_post_count(mail, c.LMX_POST_OUTBOX) = 0U, "the failed interpreted turn published what it staged")
+    pt_check(counts, lmx_arena_ref_value(parent, 0U) = 0, "the failed interpreted turn published the child it reserved")
+    # ...AND WHAT THE BODY WROTE STANDS.  There is no rollback engine; this is the line that says
+    # so out loud, so no later reader can believe a failure undid the turn's writes.
+    pt_check(counts, lmx_int_value_known(cell) = 42, "the failed turn's graph write was taken back: nothing promises that")
+
+    # --- 2. THE NEXT INTERPRETED TURN RUNS, publishes and commits -----------------------------
+    pt_body_status: 0
+    pt_check(counts, lmx_thread_request_mode(t, c.LMX_THREAD_MODE_NATIVE) = c.LMX_THREAD_OK, "the second request was refused")
+    pt_check(counts, lmx_thread_turn(t, pt_native, 30U) = c.LMX_THREAD_OK, "the interpreted turn AFTER a failure did not run")
+    pt_check(counts, pt_dispatch_calls = 2U && pt_native_calls = native_before, "the turn after a failure did not run the interpreter")
+    pt_check(counts, lmx_thread_mode(t) = c.LMX_THREAD_MODE_NATIVE && lmx_thread_requested_mode(t) = c.LMX_THREAD_MODE_NATIVE, "a successful turn did not commit the request it carried")
+    pt_check(counts, lmx_post_count(mail, c.LMX_POST_OUTBOX) = 1U && lmx_post_count(mail, c.LMX_POST_STAGED) = 0U, "a successful interpreted turn did not publish what it staged")
+
+    # --- 3. A CANCELLED REQUEST IS NOT DEFERRED: a later switch needs a NEW explicit request ---
+    pt_check(counts, lmx_thread_request_mode(t, c.LMX_THREAD_MODE_INTERPRETED) = c.LMX_THREAD_OK, "the new request was refused")
+    pt_check(counts, lmx_thread_turn(t, pt_native, 40U) = c.LMX_THREAD_OK && lmx_thread_mode(t) = c.LMX_THREAD_MODE_INTERPRETED, "a NEW explicit request after a cancellation was not honoured")
+
+    # --- 4. AN UNAVAILABLE INTERPRETER IS REFUSED, NEVER DEFERRED TO NATIVE --------------------
+    native_before: pt_native_calls
+    turn_before: t\turn
+    pt_check(counts, lmx_thread_interpreter_set(t, 0) = c.LMX_THREAD_OK, "the interpreter boundary could not be cleared")
+    pt_check(counts, lmx_thread_turn(t, pt_native, 50U) = c.LMX_THREAD_INVALID, "an unavailable interpreter ran a turn")
+    pt_check(counts, pt_native_calls = native_before && t\turn = turn_before, "an unavailable interpreter fell back to native or advanced the cursor")
+
+    failures: counts[1]
+    c.printf("lmx_primitive_thread checks=%d failures=%d\n", counts[0], failures)
+    free(counts)
+    free((cast: (@: void) mail))
+return: 0

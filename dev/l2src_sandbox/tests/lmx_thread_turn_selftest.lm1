@@ -295,12 +295,16 @@ fn: main () int
     tt_taken: lmx_post_take(mail, c.LMX_POST_OUTBOX)
     tt_check(counts, tt_taken = (cast: (@: void) message), "the published target was not in the outbox")
     tt_check(counts, lmx_post_accept(arena_at, mail, (cast: (@: void) message), c.LMX_POST_OUTBOX) = c.LMX_POST_OK, "the second staged target was not accepted")
-    tt_check(counts, lmx_thread_turn(t, tt_stop_host, 30U) = c.LMX_THREAD_INVALID, "a failed turn silently chose mode commit or rollback")
+    # AUTHOR'S RULE (2026-09-21): a failed turn carrying a REAL requested-mode change neither
+    # commits it nor leaves it pending -- the request is CANCELLED and made explicit, so the
+    # boundary reports OK and the mode pair below stays readable.  Before the rule this line
+    # expected LMX_THREAD_INVALID, which was the boundary saying the case was unresolved.
+    tt_check(counts, lmx_thread_turn(t, tt_stop_host, 30U) = c.LMX_THREAD_OK, "a failed turn with a pending request did not cancel it cleanly")
     tt_check(counts, tt_host_calls = 2U, "the stopping handler did not run")
     tt_check(counts, message\running = 0, "the stop written inside the turn did not stand")
     tt_check(counts, message\handoff_ready = 1, "leaving the last turn did not mark the object handoff-safe")
     tt_check(counts, lmx_post_count(mail, c.LMX_POST_STAGED) = 0U && lmx_post_count(mail, c.LMX_POST_OUTBOX) = 0U, "a failed turn published what it staged")
-    tt_check(counts, lmx_thread_mode(t) = c.LMX_THREAD_MODE_NATIVE && lmx_thread_requested_mode(t) = c.LMX_THREAD_MODE_INTERPRETED, "the unresolved failed-turn request was hidden")
+    tt_check(counts, lmx_thread_mode(t) = c.LMX_THREAD_MODE_NATIVE && lmx_thread_requested_mode(t) = c.LMX_THREAD_MODE_NATIVE, "the cancelled failed-turn request was left pending")
 
     # --- a stopped object: no turn at all, and no body ---------------------------------------
     tt_check(counts, lmx_thread_turn(t, 0, 30U) = c.LMX_THREAD_STOPPED, "a stopped object ran a turn")

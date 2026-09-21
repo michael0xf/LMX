@@ -176,6 +176,14 @@ define: LMX_WALK_CHECKPOINT 4
 # A body node this slice does not read, or a body whose descriptor has no activation
 # plan (lmx_walk_prepare was not run for it).  Nothing of the activation has run.
 define: LMX_WALK_UNSUPPORTED 5
+# THE PRIMITIVE REPORTED A FAILURE: the nonzero ABI status of its own fn (lmx_primitive.h.lm1).
+# A status of its own ON PURPOSE, and each of the four collisions is refused deliberately: it is
+# not business zero (a primitive may return the VALUE 0 with status OK -- that is success, and
+# the value rides in `out`/`dest`, never in the status), not LMX_WALK_INVALID (the graph is well
+# formed and the record was admitted), not LMX_WALK_UNSUPPORTED (this slice DOES read the node)
+# and not LMX_WALK_NO_GRAPH.  It travels up unchanged to whoever mapped the activation; the
+# Thread reports it through the Thread ABI's own existing failure status (lmx_thread.lm1).
+define: LMX_WALK_PRIMITIVE 6
 
 # What lmx_walk_op answers for a frame node whose code is not one of those below.
 define: LMX_WALK_OP_UNKNOWN -1
@@ -198,7 +206,13 @@ define: LMX_WALK_OP_EQ 12
 define: LMX_WALK_OP_IF 13
 define: LMX_WALK_OP_WHILE 14
 define: LMX_WALK_OP_OF 15
-define: LMX_WALK_OP_COUNT 16
+# [prim, record, arg ...] -- THE PRIMITIVE INSERT (lmx_primitive.h.lm1).  `record` is a PHYSICAL
+# reference to an LmxPrimitive, admitted because the arena classifies it as
+# LMX_DOMAIN_KIND_PRIMITIVE -- never because a number in the node says so.  The remaining
+# children are its operands, evaluated exactly like a call's arguments.  Appended after the
+# slice's roles; the role's identity is still the address of its record, not this number.
+define: LMX_WALK_OP_PRIM 16
+define: LMX_WALK_OP_COUNT 17
 
 # What a direct caller gets back.  `ref` is the value, 0 when there is none; `present` says
 # so explicitly.  `number` is the destination cell this record lends the activation: when

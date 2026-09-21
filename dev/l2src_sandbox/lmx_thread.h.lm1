@@ -181,9 +181,14 @@ prototype:
     fn: lmx_thread_mode (@: LmxThread t) int
     fn: lmx_thread_requested_mode (@: LmxThread t) int
     fn: lmx_thread_interpreter_set (@: LmxThread t; LmxThreadDispatch: dispatch) int
-    # End-boundary hook.  A failed turn carrying a real mode change is deliberately refused:
-    # the author has not yet selected commit-versus-rollback semantics, so current/requested stay
-    # distinct and observable instead of silently choosing either policy.
+    # End-boundary hook.  A failed turn carrying a REAL mode change is handled by the AUTHOR'S
+    # RULE (2026-09-21, "Отменить запрос -- мой рекомендуемый вариант"): the request is CANCELLED
+    # -- current_mode is left unchanged and requested_mode is reset to it at this boundary, so
+    # nothing is committed and nothing is left pending.  A later switch therefore requires a NEW
+    # explicit request_mode; it is never deferred.  This replaces the earlier shape, which
+    # returned LMX_THREAD_INVALID to make the then-unresolved case visible: a cancelled request
+    # reports OK, and a caller that wants to know the change did not happen reads requested_mode
+    # (it equals current_mode again), not this return value.
     fn: lmx_thread_mode_end (@: LmxThread t; int: outcome) int
     # ONE TURN, whole: the boundary, the body, the boundary.  In explicit NATIVE mode, `entry` is
     # a handler GIVEN FROM OUTSIDE -- the host's for R0 (25 (ii): "the entry program is R0's

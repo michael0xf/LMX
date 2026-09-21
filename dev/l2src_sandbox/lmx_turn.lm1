@@ -26,7 +26,18 @@ return: v
 # arithmetic is ALSO emitted as a local of the same name, which then conflicts with the
 # parameter.  manager_step is fine because it only PASSES the formal as a call argument.
 # Copy once through a call, then age against that local reading.
+# NOTE ON THE HEADER ABOVE: its line "the Message's own two flags and needs no third meaning" is
+# SUPERSEDED by this function and the one below it.  The third meaning is the body's own status,
+# carried in by lmx_turn_end_status; a body that reported a nonzero status fails the turn even
+# when the flags read success, and the two acts below then treat it exactly as a stopped turn.
+#
+# The flags-only form: the outcome is the Message's own two flags.  Every caller that is not the
+# Thread itself -- the boundary's own tests, and anything closing a turn it did not execute --
+# keeps this shape.
 fn: lmx_turn_end (@: LmxThread t; ulong: now) int
+return: lmx_turn_end_status(t, now, c.LMX_TURN_BODY_OK)
+
+fn: lmx_turn_end_status (@: LmxThread t; ulong: now; int: body_status) int
     int: outcome
     @: LmxArena arena
     size_t: mark
@@ -45,6 +56,11 @@ fn: lmx_turn_end (@: LmxThread t; ulong: now) int
         return: c.LMX_TURN_INVALID
     ---
     outcome: lmx_turn_outcome(t)
+    # The body's own report, and it is a FAILURE reading only: a nonzero status fails the turn
+    # even when the flags read success.  It never turns a failure into a success.
+    if: outcome = c.LMX_TURN_SUCCESS && body_status != c.LMX_TURN_BODY_OK
+        outcome: c.LMX_TURN_FAILED
+    ---
     if: outcome = c.LMX_TURN_FAILED
         # The failed staged outbox and the turn's reservations: neither was ever visible.
         lmx_post_discard(t\mail)

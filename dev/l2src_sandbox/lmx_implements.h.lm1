@@ -80,6 +80,13 @@ define: LMX_DOMAIN_SCRATCH 32
 # its role by pointing at the shared record of that role; the record's content means
 # nothing and is never read.  Pointer-sized, because the arena refuses a zero stride.
 define: LMX_DOMAIN_ROLE 33
+# A primitive record (lmx_primitive.h.lm1): the physical {fn, physical signature, owner} of one
+# admitted primitive -- the insert an interpreted activation needs where only a native entry could
+# reach a service (the mailbox's count/take today).  Its content IS read (the fn is called), which
+# is exactly why it is NOT seated in LMX_DOMAIN_ROLE above: that domain's documented meaning is
+# "content means nothing and is never read", and seating a read record there would be the
+# overload every domain in this file is split to avoid.  Appended, like every domain before it.
+define: LMX_DOMAIN_PRIMITIVE 34
 
 # The same domains as KINDS -- what lmx_range_classify answers -- appended after
 # LmxKind 0..6.
@@ -96,6 +103,7 @@ define: LMX_DOMAIN_KIND_CALLABLE 16
 define: LMX_DOMAIN_KIND_OP 17
 define: LMX_DOMAIN_KIND_SCRATCH 18
 define: LMX_DOMAIN_KIND_ROLE 19
+define: LMX_DOMAIN_KIND_PRIMITIVE 20
 
 prototype:
     # Register one whole domain of the arena's index: count cells of `stride`.

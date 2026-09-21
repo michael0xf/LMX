@@ -53,10 +53,15 @@ Rule: [L2 §7](L2_spec_en.md#message). `type: LmxFlag uint_fast8_t`; `struct: Lm
 
 Rule: [L2 §8](L2_spec_en.md#thread). `struct: LmxThread` / `LmxLink`: `lmx_thread.h.lm1`; bodies: `lmx_thread.lm1`. A turn is `lmx_thread_turn`. The object's scheduler is `lmx_manager` / `lmx_schedule`, opened by `lmx_thread_scheduler_open`. The child chain is cells of the parent's arena. One turn selects exactly one body path, native or interpreted. A separate operation explicitly requests the next turn's mode and `endturn` commits that request; the presence of an entry or body does not select a mode. Both paths use the same activation-frame own-load/dirty model and do not copy the method on entry. Auxiliary storage may be reusable, but per-activation allocation and release must not make entry substantially more expensive than a native call.
 
+<a id="root-close"></a>
+### 9.1. R0 upper frame in L1
+
+Rule: [L2 §8.1](L2_spec_en.md#root-close). The frame above R0 starts the ordinary direct-child cascade and does not check a parent, because it has none. Its separate overall close timeout is stored and tested independently of R0's liveness deadline and the descendants' `LmxSchedule.limit` values. The normal path returns only after the entire subtree has completed; expiry of the upper deadline lowers to unconditional OS-process termination, not a repeatable `close` call or successful return of a partially closed runtime.
+
 <a id="mailbox"></a>
 ## 10. Mailbox in L1
 
-Rule: [L2 §9](L2_spec_en.md#mailbox). `struct: LmxPost`, its inbox ring growing by approximately `3/2` from initial capacity 2, its sole reentrant monitor without wait/notify, and the outbox/staged lists are declared in `lmx_post.h.lm1`; all enter/leave, growth, and collection operations are confined to `lmx_post.lm1`. The private ring backing is not a graph value and may move only under the monitor. `init` and `close` require no concurrent mailbox operation. Target admission is `lmx_post_admits` via the address domain. Delivery between objects is `lmx_deliver`.
+Rule: [L2 §9](L2_spec_en.md#mailbox). `struct: LmxPost`, its inbox ring growing by approximately `3/2` from initial capacity 2, its sole reentrant monitor without wait/notify, and the outbox/staged lists are declared in `lmx_post.h.lm1`; all enter/leave, growth, and collection operations are confined to `lmx_post.lm1`. The private ring backing is not a graph value and may move only under the monitor. The monitor does not wrap atomic operations on `LmxMsg.running/success/handoff_ready` or `LmxLink.alive`; they remain a separate Message/handshake mechanism. `init` and `close` require no concurrent mailbox operation. Target admission is `lmx_post_admits` via the address domain. Delivery between objects is `lmx_deliver`.
 
 <a id="own"></a>
 ## 11. Own in L1

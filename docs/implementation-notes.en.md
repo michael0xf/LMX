@@ -33,6 +33,8 @@ This document is not a language specification. It contains state of concrete tra
 - `l2_array_local` accepted a narrow `c.array` form: one `[]` head and atoms `char`, name, and numeric extent. This is not the complete `c.array` contract; graph branches `l2_own_*array*`/`l2_emit_array_*` do not automatically extend it.
 - C-ABI support in the inspected frontend lived in `l2_cast_type`, `l2_prep_sizeof_name`, `l2_c_door`, and foreign-type checks. Fixtures `unit_cast_ptr_int`, `unit_sizeof_arg`, and `unit_sizeof_own_local` are snapshot evidence but do not replace a fresh run.
 - No `synchronized` handler was found in the two inspected translators. Implementing that receiver and later replacing mail's internal enter/leave with the structural form remain separate work; the current mailbox monitor fixes the required semantics without adding translator syntax.
+- Inspection of current `lmx_post.lm1` shows that `lmx_post_monitor_enter/leave` are called only for the `inbox` ring: admission, take, count, and the consistent snapshot of unread addresses. The `outbox`/`staged` branches, `LmxMsg.running/success/handoff_ready` flags, `LmxLink.alive` handshake, address service, graph, arena, scheduler, and turn state are outside this monitor. This matches the [normative mailbox boundary](L2_spec_en.md#mailbox); extending the lock beyond it would be a separate defect.
+- The currently published `lmx_root_close` does not yet implement the [clarified upper cascade](L2_spec_en.md#root-close): it has no separate overall subtree-close deadline or fatal OS-process path. A correction is being investigated in an isolated scratch tree and is not shared-tree state until its checks are green.
 
 <a id="l3-status"></a>
 ## 4. L3 interpreter and candidate admission

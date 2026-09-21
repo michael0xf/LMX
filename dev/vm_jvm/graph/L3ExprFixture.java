@@ -15,7 +15,7 @@ public final class L3ExprFixture {
 
     /**
      * Entry: {@code return CALL(leaf, subject) + 5}.
-     * {@code call.children[0] == leaf} by object identity.
+     * {@code call.child(0) == leaf} by object identity.
      */
     public static L3Node callerAddCallPlus5() {
         L3Node leaf = leafReturnField0();
@@ -766,6 +766,19 @@ public final class L3ExprFixture {
         L3Node self = L3Node.unsealedCallable();
         self.seal(L3Node.of(L3Role.RETURN, L3Node.ofInt(L3Role.INT_LITERAL, 0)));
         return self;
+    }
+
+
+    // ---- Seal-freeze children (Path B slice SEAL-FREEZE-CHILDREN / 90) ----
+
+    /** Literal RETURN body used by seal-freeze smoke (value 42). */
+    public static L3Node sealFreezeReturn42() {
+        return L3Node.of(L3Role.RETURN, L3Node.ofInt(L3Role.INT_LITERAL, 42));
+    }
+
+    /** Non-RETURN node used as malformed seal body. */
+    public static L3Node sealFreezeNonReturnBody() {
+        return L3Node.ofInt(L3Role.INT_LITERAL, 1);
     }
 
     public static final class CallGraphWithOrphan {

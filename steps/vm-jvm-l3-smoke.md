@@ -152,3 +152,22 @@ javac -cp "dev/vm_jvm/out;build/vm_jvm/asm-9.7.1.jar" -d dev/vm_jvm/out printer/
 java -cp "dev/vm_jvm/out;build/vm_jvm/asm-9.7.1.jar" printer.ExprSmokeDriver
 java -cp "dev/vm_jvm/out" smoke.HelloStructureSmoke
 ```
+
+## GROK-BOT-JVM-L3-SEAL-FREEZE-CHILDREN-20260921-90 (2026-09-21)
+
+Path-B sealed L3Node children freeze: no public writable children[] after seal.
+
+- Private children; `childCount()` / `child(int)` accessors; constructor/seal defensive copy; failed seal leaves unsealed (retry OK once).
+- Printer migrated off public `.children` to `child(i)` / `childCount()`.
+- Positive: alias mutation does not affect node; retry after null seal; recursive countdown still green.
+- Negative: null/malformed seal body; double-seal; public children field absent (reflection).
+- `ExprSmokeDriver` PASS checks=117 failures=0; `HelloStructureSmoke` PASS checks=25 failures=0.
+- Commit: named paths under `dev/vm_jvm/**` + this file only (no `.class`/`.jar`). Ownership-cycle guard deferred (-91).
+
+Verify:
+```
+javac -d dev/vm_jvm/out lmx/*.java graph/*.java smoke/*.java
+javac -cp "dev/vm_jvm/out;build/vm_jvm/asm-9.7.1.jar" -d dev/vm_jvm/out printer/*.java
+java -cp "dev/vm_jvm/out;build/vm_jvm/asm-9.7.1.jar" printer.ExprSmokeDriver
+java -cp "dev/vm_jvm/out" smoke.HelloStructureSmoke
+```

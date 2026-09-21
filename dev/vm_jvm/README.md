@@ -91,9 +91,17 @@ Fixture: entry `return CALL(leaf, subject) + 5` where leaf is `return subject[0]
 ## Recursive / mutual CALL (Path B slice RECURSIVE-CALL / 88)
 
 - Self and mutually recursive `CALL` through **physical** `L3Node` CALLABLE identity only (no numeric/runtime names).
-- Seal-once construction: `L3Node.unsealedCallable()` + `seal(RETURN body)` exactly once; double-seal / use-unsealed → rejected before emission.
+- Seal-once construction: `L3Node.unsealedCallable()` + `seal(RETURN body)` exactly once; double-seal / use-unsealed → rejected before emission. After seal, child array is frozen (see SEAL-FREEZE-CHILDREN).
 - Printer walk: IdentityHashMap of CALLABLEs; if already mapped, return immediately (reference edge ≠ owned-tree) so cycles terminate.
 - Self-CALL emits the same `INVOKESTATIC` to the mapped method index as any other CALL; fresh args/locals per JVM activation; subject identity preserved.
 - Nested RETURN (slice 87) still exits the nearest activation only; CALLABLE still requires a single root RETURN wrapper.
 - Unreachable CALLABLE not emitted. Malformed owned CALLABLE-as-value cycle / arity mismatch / non-CALLABLE target rejected before class loading.
 - No arbitrary depth cap (JVM stack); no hidden global current-callable state.
+
+## Seal-freeze children (Path B slice SEAL-FREEZE-CHILDREN / 90)
+
+- Sealed `L3Node` has **no public writable children array**; children are private.
+- Accessors: `childCount()` + `child(int)` return physical `L3Node` refs (printer hot path).
+- Constructor varargs and successful `seal` replace children with a defensive copy so caller aliases cannot mutate count/content after construction/seal.
+- Failed `seal` (null / non-RETURN) leaves the shell **unsealed** with no partial child stuck; a later valid seal may still succeed once. Double-seal rejected.
+- Physical CALL target identity and legal self/mutual recursion unchanged. No ownership-cycle guard in this slice.

@@ -4,7 +4,9 @@ import graph.ArgEvalCounter;
 import graph.L3ExprFixture;
 import graph.L3Node;
 import lmx.LmxOccurrence;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -72,6 +74,8 @@ public final class ExprSmokeDriver {
         testRecursiveNestedReturnAtBase();
         testRecursiveUnreachableNotEmitted();
         testRecursiveRejected();
+
+        testSealFreezeChildren();
 
         if (fails != 0) {
             System.out.println("FAIL ExprSmokeDriver checks=" + checks + " failures=" + fails);
@@ -627,6 +631,86 @@ public final class ExprSmokeDriver {
             doubleSeal = true;
         }
         check("double-seal rejected", doubleSeal);
+    }
+
+
+    private static void testSealFreezeChildren() throws Exception {
+        // Constructor varargs alias cannot mutate node after construction.
+        L3Node a = L3Node.ofInt(graph.L3Role.INT_LITERAL, 1);
+        L3Node b = L3Node.ofInt(graph.L3Role.INT_LITERAL, 2);
+        L3Node[] ctorAlias = new L3Node[] { a, b };
+        L3Node seq = new L3Node(graph.L3Role.SEQUENCE, 0, ctorAlias);
+        check("ctor childCount 2", seq.childCount() == 2);
+        check("ctor child0 physical", seq.child(0) == a);
+        check("ctor child1 physical", seq.child(1) == b);
+        L3Node c = L3Node.ofInt(graph.L3Role.INT_LITERAL, 3);
+        ctorAlias[0] = c;
+        ctorAlias[1] = null;
+        check("ctor alias mutate does not affect node child0", seq.child(0) == a);
+        check("ctor alias mutate does not affect node child1", seq.child(1) == b);
+        check("ctor alias mutate leaves childCount", seq.childCount() == 2);
+
+        // children field is private (no public writable array surface).
+        boolean publicChildren = false;
+        for (Field f : L3Node.class.getFields()) {
+            if ("children".equals(f.getName())) {
+                publicChildren = true;
+            }
+        }
+        check("no public children field", !publicChildren);
+        Field priv = L3Node.class.getDeclaredField("children");
+        check("children field is private", Modifier.isPrivate(priv.getModifiers()));
+
+        // Null seal rejected; node stays unsealed with no stuck child; retry succeeds once.
+        L3Node shell = L3Node.unsealedCallable();
+        check("unsealed shell starts unsealed", !shell.isSealed());
+        check("unsealed shell childCount 0", shell.childCount() == 0);
+        boolean nullSeal = false;
+        try {
+            shell.seal(null);
+        } catch (IllegalArgumentException e) {
+            nullSeal = true;
+        }
+        check("null seal rejected", nullSeal);
+        check("after failed null seal still unsealed", !shell.isSealed());
+        check("after failed null seal childCount still 0", shell.childCount() == 0);
+
+        boolean badBody = false;
+        try {
+            shell.seal(L3ExprFixture.sealFreezeNonReturnBody());
+        } catch (IllegalArgumentException e) {
+            badBody = true;
+        }
+        check("non-RETURN seal body rejected", badBody);
+        check("after failed malformed seal still unsealed", !shell.isSealed());
+        check("after failed malformed seal childCount still 0", shell.childCount() == 0);
+
+        L3Node body = L3ExprFixture.sealFreezeReturn42();
+        shell.seal(body);
+        check("retry seal after failed null succeeds", shell.isSealed());
+        check("sealed childCount 1", shell.childCount() == 1);
+        check("sealed child0 physical body", shell.child(0) == body);
+
+        // Seal input is a single node (no caller array alias); double-seal still rejected.
+        boolean doubleSeal = false;
+        try {
+            shell.seal(L3Node.of(graph.L3Role.RETURN, L3Node.ofInt(graph.L3Role.INT_LITERAL, 99)));
+        } catch (IllegalStateException e) {
+            doubleSeal = true;
+        }
+        check("seal-freeze double-seal rejected", doubleSeal);
+        check("after double-seal attempt body unchanged", shell.child(0) == body);
+        check("after double-seal attempt still sealed", shell.isSealed());
+
+        // Physical self-recursion still works through frozen sealed children.
+        Class<?> cls = loadPrinted(L3ExprFixture.recursiveCountdown());
+        Method eval = cls.getMethod("eval", LmxOccurrence.class);
+        Object r = eval.invoke(null, LmxOccurrence.independent(Integer.valueOf(3)));
+        check("seal-freeze recursive countdown 3 -> 3", Integer.valueOf(3).equals(r));
+        L3Node entry = L3ExprFixture.recursiveCountdown();
+        // entry is CALLABLE sealed with RETURN; body IF has CALL to same physical self via child path
+        L3Node ret = entry.child(0);
+        check("recursive entry sealed RETURN", entry.isSealed() && ret.role == graph.L3Role.RETURN);
     }
 
     private static boolean hasMethods(Class<?> cls, String... want) {

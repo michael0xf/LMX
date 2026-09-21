@@ -109,7 +109,7 @@ public final class L3ClassfilePrinter implements Opcodes {
 
     static int computeArity(L3Node callable) {
         int[] maxIdx = new int[] {-1};
-        scanArity(callable.children[0], maxIdx);
+        scanArity(callable.child(0), maxIdx);
         if (maxIdx[0] < 0) {
             return 1;
         }
@@ -119,7 +119,7 @@ public final class L3ClassfilePrinter implements Opcodes {
     /** Slot count from LOCAL_SET indices only (max index + 1). */
     static int computeSlotCount(L3Node callable) {
         int[] maxIdx = new int[] {-1};
-        scanSlots(callable.children[0], maxIdx);
+        scanSlots(callable.child(0), maxIdx);
         if (maxIdx[0] < 0) {
             return 0;
         }
@@ -141,12 +141,13 @@ public final class L3ClassfilePrinter implements Opcodes {
             return;
         }
         if (n.role == L3Role.CALL) {
-            for (int i = 1; i < n.children.length; i++) {
-                scanArity(n.children[i], maxIdx);
+            for (int i = 1; i < n.childCount(); i++) {
+                scanArity(n.child(i), maxIdx);
             }
             return;
         }
-        for (L3Node c : n.children) {
+        for (int _i_c = 0; _i_c < n.childCount(); _i_c++) {
+            L3Node c = n.child(_i_c);
             scanArity(c, maxIdx);
         }
     }
@@ -162,18 +163,20 @@ public final class L3ClassfilePrinter implements Opcodes {
             if (n.intPayload > maxIdx[0]) {
                 maxIdx[0] = n.intPayload;
             }
-            for (L3Node c : n.children) {
+            for (int _i_c = 0; _i_c < n.childCount(); _i_c++) {
+                L3Node c = n.child(_i_c);
                 scanSlots(c, maxIdx);
             }
             return;
         }
         if (n.role == L3Role.CALL) {
-            for (int i = 1; i < n.children.length; i++) {
-                scanSlots(n.children[i], maxIdx);
+            for (int i = 1; i < n.childCount(); i++) {
+                scanSlots(n.child(i), maxIdx);
             }
             return;
         }
-        for (L3Node c : n.children) {
+        for (int _i_c = 0; _i_c < n.childCount(); _i_c++) {
+            L3Node c = n.child(_i_c);
             scanSlots(c, maxIdx);
         }
     }
@@ -195,26 +198,28 @@ public final class L3ClassfilePrinter implements Opcodes {
             requireSealed(n);
             map.put(n, Integer.valueOf(order.size()));
             order.add(n);
-            for (L3Node c : n.children) {
+            for (int _i_c = 0; _i_c < n.childCount(); _i_c++) {
+                L3Node c = n.child(_i_c);
                 walk(c, order, map);
             }
             return;
         }
         if (n.role == L3Role.CALL) {
-            if (n.children.length < 1) {
+            if (n.childCount() < 1) {
                 throw new IllegalArgumentException("CALL needs callee child");
             }
-            L3Node callee = n.children[0];
+            L3Node callee = n.child(0);
             if (callee == null || callee.role != L3Role.CALLABLE) {
                 throw new IllegalArgumentException("CALL callee must be CALLABLE node");
             }
             walk(callee, order, map);
-            for (int i = 1; i < n.children.length; i++) {
-                walk(n.children[i], order, map);
+            for (int i = 1; i < n.childCount(); i++) {
+                walk(n.child(i), order, map);
             }
             return;
         }
-        for (L3Node c : n.children) {
+        for (int _i_c = 0; _i_c < n.childCount(); _i_c++) {
+            L3Node c = n.child(_i_c);
             walk(c, order, map);
         }
     }
@@ -226,7 +231,7 @@ public final class L3ClassfilePrinter implements Opcodes {
         if (!callable.isSealed()) {
             throw new IllegalStateException("unsealed CALLABLE");
         }
-        if (callable.children.length != 1 || callable.children[0] == null) {
+        if (callable.childCount() != 1 || callable.child(0) == null) {
             throw new IllegalStateException("unsealed/unresolved CALLABLE body");
         }
     }
@@ -238,15 +243,15 @@ public final class L3ClassfilePrinter implements Opcodes {
             Map<L3Node, Integer> slots) {
         for (L3Node c : order) {
             requireSealed(c);
-            if (c.children.length != 1 || c.children[0].role != L3Role.RETURN) {
+            if (c.childCount() != 1 || c.child(0).role != L3Role.RETURN) {
                 throw new IllegalArgumentException("CALLABLE body must be a single RETURN");
             }
-            L3Node ret = c.children[0];
-            if (ret.children.length != 1) {
+            L3Node ret = c.child(0);
+            if (ret.childCount() != 1) {
                 throw new IllegalArgumentException("RETURN arity: need exactly one value");
             }
             validateIntExpr(
-                    ret.children[0],
+                    ret.child(0),
                     map,
                     arity,
                     slots,
@@ -291,7 +296,7 @@ public final class L3ClassfilePrinter implements Opcodes {
             if (!assigned.get(idx)) {
                 throw new IllegalArgumentException("LOCAL_GET uninitialized");
             }
-            if (expr.children.length != 0) {
+            if (expr.childCount() != 0) {
                 throw new IllegalArgumentException("LOCAL_GET arity");
             }
             return assigned;
@@ -304,26 +309,26 @@ public final class L3ClassfilePrinter implements Opcodes {
             if (idx >= slotCount) {
                 throw new IllegalArgumentException("LOCAL_SET out of range");
             }
-            if (expr.children.length != 1) {
+            if (expr.childCount() != 1) {
                 throw new IllegalArgumentException("LOCAL_SET arity: need RHS");
             }
             BitSet afterRhs = validateIntExpr(
-                    expr.children[0], map, arity, slots, currentCallable, currentArity, slotCount, assigned);
+                    expr.child(0), map, arity, slots, currentCallable, currentArity, slotCount, assigned);
             BitSet next = (BitSet) afterRhs.clone();
             next.set(idx);
             return next;
         }
         if (r == L3Role.SEQUENCE) {
-            if (expr.children.length < 1) {
+            if (expr.childCount() < 1) {
                 throw new IllegalArgumentException("SEQUENCE arity: need >= 1 child");
             }
             BitSet a = assigned;
-            for (int i = 0; i < expr.children.length - 1; i++) {
+            for (int i = 0; i < expr.childCount() - 1; i++) {
                 a = validateStmt(
-                        expr.children[i], map, arity, slots, currentCallable, currentArity, slotCount, a);
+                        expr.child(i), map, arity, slots, currentCallable, currentArity, slotCount, a);
             }
             return validateIntExpr(
-                    expr.children[expr.children.length - 1],
+                    expr.child(expr.childCount() - 1),
                     map,
                     arity,
                     slots,
@@ -346,26 +351,26 @@ public final class L3ClassfilePrinter implements Opcodes {
             throw new IllegalArgumentException("CONTINUE not allowed in value context");
         }
         if (r == L3Role.FIELD_FOLLOW) {
-            if (expr.children.length != 1) {
+            if (expr.childCount() != 1) {
                 throw new IllegalArgumentException("FIELD_FOLLOW arity");
             }
-            validateOccurrence(expr.children[0], currentArity);
+            validateOccurrence(expr.child(0), currentArity);
             return assigned;
         }
         if (r == L3Role.ADD) {
-            if (expr.children.length != 2) {
+            if (expr.childCount() != 2) {
                 throw new IllegalArgumentException("ADD arity");
             }
             BitSet a = validateIntExpr(
-                    expr.children[0], map, arity, slots, currentCallable, currentArity, slotCount, assigned);
+                    expr.child(0), map, arity, slots, currentCallable, currentArity, slotCount, assigned);
             return validateIntExpr(
-                    expr.children[1], map, arity, slots, currentCallable, currentArity, slotCount, a);
+                    expr.child(1), map, arity, slots, currentCallable, currentArity, slotCount, a);
         }
         if (r == L3Role.CALL) {
-            if (expr.children.length < 2) {
+            if (expr.childCount() < 2) {
                 throw new IllegalArgumentException("CALL arity: need callee + subject arg");
             }
-            L3Node callee = expr.children[0];
+            L3Node callee = expr.child(0);
             if (callee == null || callee.role != L3Role.CALLABLE) {
                 throw new IllegalArgumentException("CALL callee must be CALLABLE");
             }
@@ -374,27 +379,27 @@ public final class L3ClassfilePrinter implements Opcodes {
                 throw new IllegalArgumentException("CALL callee not reachable/mapped");
             }
             int need = arity.get(callee).intValue();
-            int got = expr.children.length - 1;
+            int got = expr.childCount() - 1;
             if (got != need) {
                 throw new IllegalArgumentException(
                         "CALL arg count mismatch: need " + need + " got " + got);
             }
-            validateOccurrence(expr.children[1], currentArity);
+            validateOccurrence(expr.child(1), currentArity);
             BitSet a = assigned;
-            for (int i = 2; i < expr.children.length; i++) {
+            for (int i = 2; i < expr.childCount(); i++) {
                 a = validateIntExpr(
-                        expr.children[i], map, arity, slots, currentCallable, currentArity, slotCount, a);
+                        expr.child(i), map, arity, slots, currentCallable, currentArity, slotCount, a);
             }
             return a;
         }
         if (r == L3Role.IF) {
-            if (expr.children.length != 3) {
+            if (expr.childCount() != 3) {
                 throw new IllegalArgumentException("IF arity: need condition, then, else");
             }
             BitSet afterCond = validateIntExpr(
-                    expr.children[0], map, arity, slots, currentCallable, currentArity, slotCount, assigned);
+                    expr.child(0), map, arity, slots, currentCallable, currentArity, slotCount, assigned);
             BitSet thenA = validateIntExpr(
-                    expr.children[1],
+                    expr.child(1),
                     map,
                     arity,
                     slots,
@@ -403,7 +408,7 @@ public final class L3ClassfilePrinter implements Opcodes {
                     slotCount,
                     (BitSet) afterCond.clone());
             BitSet elseA = validateIntExpr(
-                    expr.children[2],
+                    expr.child(2),
                     map,
                     arity,
                     slots,
@@ -452,22 +457,22 @@ public final class L3ClassfilePrinter implements Opcodes {
                         ? "BREAK outside loop"
                         : "CONTINUE outside loop");
             }
-            if (expr.children.length != 0) {
+            if (expr.childCount() != 0) {
                 throw new IllegalArgumentException(
                         r == L3Role.BREAK ? "BREAK arity" : "CONTINUE arity");
             }
             return assigned;
         }
         if (r == L3Role.WHILE) {
-            if (expr.children.length != 2) {
+            if (expr.childCount() != 2) {
                 throw new IllegalArgumentException("WHILE arity: need condition, body");
             }
             BitSet afterCond = validateIntExpr(
-                    expr.children[0], map, arity, slots, currentCallable, currentArity, slotCount, assigned);
+                    expr.child(0), map, arity, slots, currentCallable, currentArity, slotCount, assigned);
             LOOP_DEPTH.set(Integer.valueOf(LOOP_DEPTH.get().intValue() + 1));
             try {
                 validateStmt(
-                        expr.children[1],
+                        expr.child(1),
                         map,
                         arity,
                         slots,
@@ -481,24 +486,24 @@ public final class L3ClassfilePrinter implements Opcodes {
             return assigned;
         }
         if (r == L3Role.SEQUENCE) {
-            if (expr.children.length < 1) {
+            if (expr.childCount() < 1) {
                 throw new IllegalArgumentException("SEQUENCE arity: need >= 1 child");
             }
             BitSet a = assigned;
-            for (int i = 0; i < expr.children.length; i++) {
+            for (int i = 0; i < expr.childCount(); i++) {
                 a = validateStmt(
-                        expr.children[i], map, arity, slots, currentCallable, currentArity, slotCount, a);
+                        expr.child(i), map, arity, slots, currentCallable, currentArity, slotCount, a);
             }
             return a;
         }
         if (r == L3Role.IF) {
-            if (expr.children.length != 3) {
+            if (expr.childCount() != 3) {
                 throw new IllegalArgumentException("IF arity: need condition, then, else");
             }
             BitSet afterCond = validateIntExpr(
-                    expr.children[0], map, arity, slots, currentCallable, currentArity, slotCount, assigned);
+                    expr.child(0), map, arity, slots, currentCallable, currentArity, slotCount, assigned);
             BitSet thenA = validateStmt(
-                    expr.children[1],
+                    expr.child(1),
                     map,
                     arity,
                     slots,
@@ -507,7 +512,7 @@ public final class L3ClassfilePrinter implements Opcodes {
                     slotCount,
                     (BitSet) afterCond.clone());
             BitSet elseA = validateStmt(
-                    expr.children[2],
+                    expr.child(2),
                     map,
                     arity,
                     slots,
@@ -539,11 +544,11 @@ public final class L3ClassfilePrinter implements Opcodes {
         if (currentCallable == null) {
             throw new IllegalArgumentException("RETURN outside callable");
         }
-        if (expr.children.length != 1) {
+        if (expr.childCount() != 1) {
             throw new IllegalArgumentException("RETURN arity: need exactly one value");
         }
         BitSet after = validateIntExpr(
-                expr.children[0], map, arity, slots, currentCallable, currentArity, slotCount, assigned);
+                expr.child(0), map, arity, slots, currentCallable, currentArity, slotCount, assigned);
         BitSet exited = (BitSet) after.clone();
         for (int i = 0; i < slotCount; i++) {
             exited.set(i);
@@ -579,8 +584,8 @@ public final class L3ClassfilePrinter implements Opcodes {
         String desc = descriptor(ar);
         MethodVisitor mv = cw.visitMethod(ACC_PUBLIC | ACC_STATIC, name, desc, null, null);
         mv.visitCode();
-        L3Node ret = callable.children[0];
-        emitIntExpr(mv, ret.children[0], map, arity, ar);
+        L3Node ret = callable.child(0);
+        emitIntExpr(mv, ret.child(0), map, arity, ar);
         mv.visitInsn(IRETURN);
         mv.visitMaxs(0, 0);
         mv.visitEnd();
@@ -606,14 +611,14 @@ public final class L3ClassfilePrinter implements Opcodes {
         } else if (r == L3Role.LOCAL_GET) {
             mv.visitVarInsn(ILOAD, jvmLocal(currentArity, expr.intPayload));
         } else if (r == L3Role.LOCAL_SET) {
-            emitIntExpr(mv, expr.children[0], map, arity, currentArity);
+            emitIntExpr(mv, expr.child(0), map, arity, currentArity);
             mv.visitInsn(DUP);
             mv.visitVarInsn(ISTORE, jvmLocal(currentArity, expr.intPayload));
         } else if (r == L3Role.SEQUENCE) {
-            for (int i = 0; i < expr.children.length - 1; i++) {
-                emitStmt(mv, expr.children[i], map, arity, currentArity);
+            for (int i = 0; i < expr.childCount() - 1; i++) {
+                emitStmt(mv, expr.child(i), map, arity, currentArity);
             }
-            emitIntExpr(mv, expr.children[expr.children.length - 1], map, arity, currentArity);
+            emitIntExpr(mv, expr.child(expr.childCount() - 1), map, arity, currentArity);
         } else if (r == L3Role.RETURN) {
             emitNestedReturn(mv, expr, map, arity, currentArity);
         } else if (r == L3Role.WHILE) {
@@ -623,21 +628,21 @@ public final class L3ClassfilePrinter implements Opcodes {
         } else if (r == L3Role.CONTINUE) {
             throw new IllegalArgumentException("CONTINUE not allowed in value context");
         } else if (r == L3Role.FIELD_FOLLOW) {
-            emitOccurrence(mv, expr.children[0]);
+            emitOccurrence(mv, expr.child(0));
             mv.visitLdcInsn(Integer.valueOf(expr.intPayload));
             mv.visitMethodInsn(INVOKEVIRTUAL, "lmx/LmxOccurrence", "child", "(I)Ljava/lang/Object;", false);
             mv.visitTypeInsn(CHECKCAST, "java/lang/Integer");
             mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Integer", "intValue", "()I", false);
         } else if (r == L3Role.ADD) {
-            emitIntExpr(mv, expr.children[0], map, arity, currentArity);
-            emitIntExpr(mv, expr.children[1], map, arity, currentArity);
+            emitIntExpr(mv, expr.child(0), map, arity, currentArity);
+            emitIntExpr(mv, expr.child(1), map, arity, currentArity);
             mv.visitInsn(IADD);
         } else if (r == L3Role.CALL) {
-            emitOccurrence(mv, expr.children[1]);
-            for (int i = 2; i < expr.children.length; i++) {
-                emitIntExpr(mv, expr.children[i], map, arity, currentArity);
+            emitOccurrence(mv, expr.child(1));
+            for (int i = 2; i < expr.childCount(); i++) {
+                emitIntExpr(mv, expr.child(i), map, arity, currentArity);
             }
-            L3Node callee = expr.children[0];
+            L3Node callee = expr.child(0);
             int calleeIndex = map.get(callee).intValue();
             int calleeArity = arity.get(callee).intValue();
             mv.visitMethodInsn(
@@ -649,12 +654,12 @@ public final class L3ClassfilePrinter implements Opcodes {
         } else if (r == L3Role.IF) {
             Label elseL = new Label();
             Label endL = new Label();
-            emitIntExpr(mv, expr.children[0], map, arity, currentArity);
+            emitIntExpr(mv, expr.child(0), map, arity, currentArity);
             mv.visitJumpInsn(IFEQ, elseL);
-            emitIntExpr(mv, expr.children[1], map, arity, currentArity);
+            emitIntExpr(mv, expr.child(1), map, arity, currentArity);
             mv.visitJumpInsn(GOTO, endL);
             mv.visitLabel(elseL);
-            emitIntExpr(mv, expr.children[2], map, arity, currentArity);
+            emitIntExpr(mv, expr.child(2), map, arity, currentArity);
             mv.visitLabel(endL);
         } else if (r == L3Role.SUBJECT_REF) {
             throw new IllegalArgumentException("SUBJECT_REF is not an int expression");
@@ -689,20 +694,20 @@ public final class L3ClassfilePrinter implements Opcodes {
             return;
         }
         if (r == L3Role.SEQUENCE) {
-            for (int i = 0; i < expr.children.length; i++) {
-                emitStmt(mv, expr.children[i], map, arity, currentArity);
+            for (int i = 0; i < expr.childCount(); i++) {
+                emitStmt(mv, expr.child(i), map, arity, currentArity);
             }
             return;
         }
         if (r == L3Role.IF) {
             Label elseL = new Label();
             Label endL = new Label();
-            emitIntExpr(mv, expr.children[0], map, arity, currentArity);
+            emitIntExpr(mv, expr.child(0), map, arity, currentArity);
             mv.visitJumpInsn(IFEQ, elseL);
-            emitStmt(mv, expr.children[1], map, arity, currentArity);
+            emitStmt(mv, expr.child(1), map, arity, currentArity);
             mv.visitJumpInsn(GOTO, endL);
             mv.visitLabel(elseL);
-            emitStmt(mv, expr.children[2], map, arity, currentArity);
+            emitStmt(mv, expr.child(2), map, arity, currentArity);
             mv.visitLabel(endL);
             return;
         }
@@ -718,10 +723,10 @@ public final class L3ClassfilePrinter implements Opcodes {
             Map<L3Node, Integer> map,
             Map<L3Node, Integer> arity,
             int currentArity) {
-        if (expr.children.length != 1) {
+        if (expr.childCount() != 1) {
             throw new IllegalArgumentException("RETURN arity: need exactly one value");
         }
-        emitIntExpr(mv, expr.children[0], map, arity, currentArity);
+        emitIntExpr(mv, expr.child(0), map, arity, currentArity);
         mv.visitInsn(IRETURN);
     }
 
@@ -736,9 +741,9 @@ public final class L3ClassfilePrinter implements Opcodes {
         LOOP_STACK.get().addFirst(new Label[] {head, done});
         try {
             mv.visitLabel(head);
-            emitIntExpr(mv, expr.children[0], map, arity, currentArity);
+            emitIntExpr(mv, expr.child(0), map, arity, currentArity);
             mv.visitJumpInsn(IFEQ, done);
-            emitStmt(mv, expr.children[1], map, arity, currentArity);
+            emitStmt(mv, expr.child(1), map, arity, currentArity);
             mv.visitJumpInsn(GOTO, head);
             mv.visitLabel(done);
         } finally {

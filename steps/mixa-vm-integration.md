@@ -133,6 +133,7 @@ adapters without assuming full Linux.
 | Manager sources + seams in this repo | `dev/mixa_sandbox/mixa_manager/` (BACKEND/FILE/PROCESS + CONVERSION) | Tree **OBSERVED** present here |
 | Real product entry / run | [mixa-manager-run-audit.md](mixa-manager-run-audit.md) | `mixa_app_main` source exists; **product executable/run not proven**; gate evidence is selftests / controller e2e proxy |
 | JVM L3 smoke notes | [vm-jvm-l3-smoke.md](vm-jvm-l3-smoke.md) | Partial L3 smoke only — **not** a full JVM compiler or manager |
+| CIL L3 smoke notes | [vm-cil-l3-smoke.md](vm-cil-l3-smoke.md) | Baseline PE/Eval smoke (GROK-BOT-CIL-L3-BASELINE-20260921-101) — not a full CIL compiler or manager |
 | Path A queue vs four external L3 VMs | [vm-porting.md](vm-porting.md), §6 below | Path A = MIR → WASM-linear → RISC-V (**separate**). Four L3 targets = JVM classfile → .NET CIL → WASM GC → Lua 5.4. Native binary-graph L3 interpreter = **semantic oracle**, not a fifth target. **Java/JVM is the first L3 candidate** (not excluded). |
 
 ## 6. Complexity model (Path A manager ports vs four external L3 VMs)

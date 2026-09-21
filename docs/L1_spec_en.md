@@ -56,7 +56,7 @@ Rule: [L2 §8](L2_spec_en.md#thread). `struct: LmxThread` / `LmxLink`: `lmx_thre
 <a id="mailbox"></a>
 ## 10. Mailbox in L1
 
-Rule: [L2 §9](L2_spec_en.md#mailbox). `struct: LmxPost`, inbox ring and outbox/staged lists: `lmx_post.h.lm1`; bodies: `lmx_post.lm1`. Target admission is `lmx_post_admits` via the address domain. Delivery between objects is `lmx_deliver`.
+Rule: [L2 §9](L2_spec_en.md#mailbox). `struct: LmxPost`, its inbox ring, its sole reentrant monitor without wait/notify, and the outbox/staged lists are declared in `lmx_post.h.lm1`; all enter/leave and collection operations are confined to `lmx_post.lm1`. Target admission is `lmx_post_admits` via the address domain. Delivery between objects is `lmx_deliver`.
 
 <a id="own"></a>
 ## 11. Own in L1

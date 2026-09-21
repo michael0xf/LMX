@@ -46,6 +46,48 @@ predef: "l2src/lmx_implements.h.lm1"
 # lets a lane perform the end-turn boundary without holding an arena.  The mailbox
 # stores no arena of its own.
 
+# One TLS cell gives the monitor a stable identity for the current OS thread without putting
+# platform thread handles in the portable mailbox ABI.  Its VALUE is irrelevant; its ADDRESS is
+# different in every OS thread.  The monitor is deliberately small: Java-style reentrant
+# enter/leave, no wait set, no notify operation, and no synchronization outside this module.
+thread_local: int: lmx_post_monitor_thread_token 0
+
+fn: lmx_post_monitor_enter (@: LmxPost box) int
+    size_t: self
+    int: acquired 0
+    if: box = 0
+        return: c.LMX_POST_INVALID
+    self: (cast: (size_t) (@ lmx_post_monitor_thread_token))
+    if: c.__atomic_load_n((cast: (@: size_t) (@ box\inbox_monitor_owner)), c.__ATOMIC_RELAXED) = self
+        box\inbox_monitor_depth: box\inbox_monitor_depth + 1U
+        return: c.LMX_POST_OK
+    ---
+    while: acquired = 0
+        if: c.__atomic_load_n((cast: (@: int) (@ box\inbox_monitor_held)), c.__ATOMIC_RELAXED) = 0
+            if: c.__atomic_exchange_n((cast: (@: int) (@ box\inbox_monitor_held)), 1, c.__ATOMIC_ACQUIRE) = 0
+                acquired: 1
+            ---
+        ---
+    ---
+    c.__atomic_store_n((cast: (@: size_t) (@ box\inbox_monitor_owner)), self, c.__ATOMIC_RELAXED)
+    box\inbox_monitor_depth: 1U
+return: c.LMX_POST_OK
+
+fn: lmx_post_monitor_leave (@: LmxPost box) int
+    size_t: self
+    if: box = 0
+        return: c.LMX_POST_INVALID
+    self: (cast: (size_t) (@ lmx_post_monitor_thread_token))
+    if: c.__atomic_load_n((cast: (@: size_t) (@ box\inbox_monitor_owner)), c.__ATOMIC_RELAXED) != self || box\inbox_monitor_depth = 0U
+        return: c.LMX_POST_INVALID
+    box\inbox_monitor_depth: box\inbox_monitor_depth - 1U
+    if: box\inbox_monitor_depth != 0U
+        return: c.LMX_POST_OK
+    ---
+    c.__atomic_store_n((cast: (@: size_t) (@ box\inbox_monitor_owner)), 0U, c.__ATOMIC_RELAXED)
+    c.__atomic_store_n((cast: (@: int) (@ box\inbox_monitor_held)), 0, c.__ATOMIC_RELEASE)
+return: c.LMX_POST_OK
+
 fn: lmx_post_admits (@: LmxArena arena; @: void target) int
     int: kind
     if: target = 0
@@ -82,6 +124,9 @@ fn: lmx_post_init (@: LmxArena arena; @: LmxPost box) int
     box\inbox_head: 0U
     box\inbox_tail: 0U
     box\inbox_count: 0U
+    box\inbox_monitor_owner: 0U
+    box\inbox_monitor_depth: 0U
+    box\inbox_monitor_held: 0
     box\outbox: 0
     box\outbox_tail: 0
     box\staged: 0
@@ -135,22 +180,26 @@ fn: lmx_post_accept (@: LmxArena arena; @: LmxPost box; @: void target; int: lan
         return: c.LMX_POST_INVALID
     if: lmx_post_admits(arena, target) != c.LMX_POST_OK
         return: c.LMX_POST_REFUSED
-    # THE INBOX: one slot of the ring, published with a RELEASE store of the tail.  No node, no
-    # free list, no allocation -- several lanes may be here at once and none of them touches
-    # anything the owner owns except the two atomic counters.
+    # THE INBOX: the one cross-lane collection.  The mailbox's reentrant monitor makes the
+    # capacity check, slot reservation, publication and count update one operation.  No node,
+    # free list or allocation is touched, and the lock does not escape this module.
     if: lane = c.LMX_POST_INBOX
         if: box\inbox_slots = 0
             return: c.LMX_POST_INVALID
+        if: lmx_post_monitor_enter(box) != c.LMX_POST_OK
+            return: c.LMX_POST_INVALID
         ---
-        tail_read: (cast: (ulong) c.__atomic_load_n((cast: (@: ulong) (@ box\inbox_tail)), c.__ATOMIC_RELAXED))
-        head_read: (cast: (ulong) c.__atomic_load_n((cast: (@: ulong) (@ box\inbox_head)), c.__ATOMIC_ACQUIRE))
+        tail_read: box\inbox_tail
+        head_read: box\inbox_head
         if: (tail_read - head_read) >= c.LMX_POST_INBOX_SLOTS
+            lmx_post_monitor_leave(box)
             return: c.LMX_POST_FULL
         ---
         slots: (cast: (@: size_t) box\inbox_slots)
         slots[tail_read % c.LMX_POST_INBOX_SLOTS]: (cast: (size_t) target)
-        c.__atomic_store_n((cast: (@: ulong) (@ box\inbox_tail)), tail_read + 1U, c.__ATOMIC_RELEASE)
-        c.__atomic_fetch_add((cast: (@: size_t) (@ box\inbox_count)), 1U, c.__ATOMIC_RELAXED)
+        box\inbox_tail: tail_read + 1U
+        box\inbox_count: box\inbox_count + 1U
+        lmx_post_monitor_leave(box)
         return: c.LMX_POST_OK
     ---
     link: lmx_post_new_node(arena, box)
@@ -184,23 +233,25 @@ fn: lmx_post_take (@: LmxPost box; int: lane) @: void
     @: size_t slots
     if: box = 0 || (lane != c.LMX_POST_INBOX && lane != c.LMX_POST_OUTBOX)
         return: 0
-    # THE INBOX: the owner reads its head (relaxed), asks the tail for what has been PUBLISHED
-    # (acquire), and only then reads the slot -- the producer wrote that slot before it moved the
-    # tail, so an acquire read of the tail is what makes the slot's contents visible here.  The
-    # head moves with a release store, which is what lets a later sender reuse that slot.
+    # THE INBOX: the owner enters the same monitor as every producer.  Therefore a slot cannot be
+    # observed before its producer has written it, and no two producers can reserve one tail.
     if: lane = c.LMX_POST_INBOX
         if: box\inbox_slots = 0
             return: 0
+        if: lmx_post_monitor_enter(box) != c.LMX_POST_OK
+            return: 0
         ---
-        head_read: (cast: (ulong) c.__atomic_load_n((cast: (@: ulong) (@ box\inbox_head)), c.__ATOMIC_RELAXED))
-        tail_read: (cast: (ulong) c.__atomic_load_n((cast: (@: ulong) (@ box\inbox_tail)), c.__ATOMIC_ACQUIRE))
+        head_read: box\inbox_head
+        tail_read: box\inbox_tail
         if: head_read = tail_read
+            lmx_post_monitor_leave(box)
             return: 0
         ---
         slots: (cast: (@: size_t) box\inbox_slots)
         target: (cast: (@: void) slots[head_read % c.LMX_POST_INBOX_SLOTS])
-        c.__atomic_store_n((cast: (@: ulong) (@ box\inbox_head)), head_read + 1U, c.__ATOMIC_RELEASE)
-        c.__atomic_fetch_sub((cast: (@: size_t) (@ box\inbox_count)), 1U, c.__ATOMIC_RELAXED)
+        box\inbox_head: head_read + 1U
+        box\inbox_count: box\inbox_count - 1U
+        lmx_post_monitor_leave(box)
         return: target
     ---
     link: box\outbox
@@ -222,12 +273,15 @@ fn: lmx_post_take (@: LmxPost box; int: lane) @: void
 return: target
 
 fn: lmx_post_count (@: LmxPost box; int: lane) size_t
+    size_t: count
     if: box = 0
         return: 0U
     if: lane = c.LMX_POST_INBOX
-        # The count is an ATOMIC: a sender raises it, the owner lowers it, and a reader in a third
-        # lane may ask at any moment -- the relaxed load is the whole of what a count needs.
-        return: c.__atomic_load_n((cast: (@: size_t) (@ box\inbox_count)), c.__ATOMIC_RELAXED)
+        if: lmx_post_monitor_enter(box) != c.LMX_POST_OK
+            return: 0U
+        count: box\inbox_count
+        lmx_post_monitor_leave(box)
+        return: count
     if: lane = c.LMX_POST_OUTBOX
         return: box\outbox_count
     if: lane = c.LMX_POST_STAGED
@@ -287,6 +341,9 @@ fn: lmx_post_close (@: LmxArena arena; @: LmxPost box) int
     box\inbox_slots: 0
     box\inbox_head: 0U
     box\inbox_tail: 0U
+    box\inbox_monitor_owner: 0U
+    box\inbox_monitor_depth: 0U
+    box\inbox_monitor_held: 0
     box\outbox: 0
     box\outbox_tail: 0
     box\staged: 0

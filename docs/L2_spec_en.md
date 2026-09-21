@@ -73,9 +73,9 @@ Not every Message is an L3 Thread. A letter has no turn. Object `struct: LmxThre
 <a id="mailbox"></a>
 ## 9. Mailbox
 
-The only synchronized point in the core is mailbox **admission** (`lmx_post.h.lm1`). The module introduces no mutex or semaphore.
+The core's only synchronized collection is the mailbox `inbox` (`lmx_post.h.lm1`). One simplified Java-style monitor belongs to `LmxPost` itself and covers admission, take, and count on the incoming queue. The monitor permits same-OS-thread re-entry and provides enter/leave only: there is no wait set, `wait`, or `notify`. The lock does not escape into the address service, scheduler, graph, arena, or turn; `outbox` and `staged` remain owner-local.
 
-Three lanes: `inbox` (admitted, not yet taken), `outbox` (published by a successful end-turn), `staged` (current turn's preparation; others must not see it). Inbox is a **ring** of fixed capacity `LMX_POST_INBOX_SLOTS` (256): slots are taken by the owner in its own arena at open; a full box answers `LMX_POST_FULL` and does not grow. Counters `inbox_head` / `inbox_tail` are atomic release/acquire. Outgoing and staged are lists of `LmxPostLink` (target address + next) from the box's pool. `LmxPostLink` is not an envelope. FIFO is admission order. L1: [L1](L1_spec_en.md#mailbox).
+Three lanes: `inbox` (admitted, not yet taken), `outbox` (published by a successful end-turn), `staged` (current turn's preparation; others must not see it). Inbox is a **ring** of fixed capacity `LMX_POST_INBOX_SLOTS` (256): slots are taken by the owner in its own arena at open; a full box answers `LMX_POST_FULL` and does not grow. Under the mailbox monitor, the capacity check, slot reservation, publication, take, and count update form serialized critical sections, so two producers cannot receive the same `inbox_tail`. Outgoing and staged are lists of `LmxPostLink` (target address + next) from the box's pool. `LmxPostLink` is not an envelope. FIFO is admission order under the monitor. L1: [L1](L1_spec_en.md#mailbox).
 
 <a id="own"></a>
 ## 10. Own locals and dirty
@@ -226,4 +226,4 @@ synchronized: @object
 
 A nested body is a separate structural argument field. `synchronized: @lock (break)` states it explicitly; `synchronized: @lock break` leaves `break` in the inline sequence and does not allow the parser to silently reinterpret it as the body.
 
-The monitor profile defines entry/exit and, where required, same-thread re-entry. The region is released on normal completion and exiting `return`, `break`, `continue`; the general cleanup protocol governs other exits. A result is retained before release. Calls inside preserve ordinary argument-evaluation and dirty-publication ordering.
+The monitor profile defines entry/exit and, where required, same-thread re-entry. The minimal profile used by the postal collection (§9) is reentrant and has no `wait`/`notify`; it is mutual exclusion, not a condition queue. The region is released on normal completion and exiting `return`, `break`, `continue`; the general cleanup protocol governs other exits. A result is retained before release. Calls inside preserve ordinary argument-evaluation and dirty-publication ordering.

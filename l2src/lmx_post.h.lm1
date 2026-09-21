@@ -85,9 +85,10 @@ end: LmxPostLink
 # moves the whole staged queue to the tail of the outbox in one step, so the order across
 # turns is admission order and stays that way.
 #
-# This is the only synchronized collection the design allows (model 30): no lock, no
-# mutex and no semaphore is added here or anywhere else -- admission is the single
-# cross-lane point, and everything else is owner-local.
+# This is the only synchronized collection the design allows (model 30): one small,
+# reentrant monitor belongs to the mailbox and serializes only its cross-lane inbox.
+# There is no wait/notify protocol and no lock is spread into the service, scheduler,
+# graph, arena or turn modules.  Outbox and staged remain owner-local.
 #
 # Queue-node storage is the mailbox's own typed pool (lmx_pool.h.lm1).  The pool
 # adds chunks of LmxPostLink nodes and registers every chunk as one more range of
@@ -113,19 +114,23 @@ struct: LmxPost
     # (lmx_post_new_node(arena, box)), so a sender allocated inside an arena the owner was
     # collecting at the same time.
     #
-    # A ring has neither problem: the producer writes the SLOT before it publishes the tail with
-    # a release store, the consumer advances its head with a release store and only ever reuses a
-    # slot it has already passed, and no node is ever handed between lanes.  There is no lock
-    # here and none is wanted (model 30): the atomics are release/acquire on two counters.
+    # A ring has neither allocation/free-list problem, and the mailbox monitor makes its
+    # reservation/publication one operation for EVERY producer.  This deliberately favours the
+    # simple Java-style synchronized rule over a separate lock-free MPSC protocol: enter/leave
+    # are reentrant for the same OS thread, but there is no wait/notify state.
     #
     # The slots are the caller's ARENA cells, taken in one block when the mailbox opens -- by the
     # OWNER, in its own thread, so nothing is allocated across lanes afterwards.
     @: void inbox_slots
-    # ATOMIC counters: tail is advanced by every sender, head only by the owner, and the count is
-    # what lmx_post_count reports.  `ulong` rather than size_t because the platform's atomic
-    # builtins here are the ones the kernel already uses elsewhere (lmx_root's world cell).
+    # The counters and slots are ordinary mailbox state protected by inbox_monitor.  Tail is
+    # advanced by every sender, head only by the owner, and count is what lmx_post_count reports.
     ulong: inbox_head
     ulong: inbox_tail
+    # The monitor is implemented and used only by lmx_post.lm1.  `owner` is the address of that
+    # OS thread's TLS token, depth gives Java-style reentry, and held is the one atomic gate.
+    size_t: inbox_monitor_owner
+    size_t: inbox_monitor_depth
+    int: inbox_monitor_held
     @: LmxPostLink outbox
     @: LmxPostLink outbox_tail
     @: LmxPostLink staged

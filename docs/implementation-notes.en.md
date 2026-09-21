@@ -19,7 +19,7 @@ This document is not a language specification. It contains state of concrete tra
 - In the inspected snapshot, `lmx_implements` compared kind/type by address range and `lmx_runtime_implements` matched numeric field positions; both were called only from their own self-tests. The positional walk must be replaced by analytical named-used-path traversal plus mandatory execution of receiving-expression tests. Address classification remains common arena-index infrastructure and must not become a second validator.
 - Measured mixa-port parser gaps included `empty colon Frame`, `unsupported statement atom`, and node trailer handling. They are translator work.
 - The reserved old `C:` escape and proposed `c.struct`/`c.union` cannot be treated as supported without actual handlers. Implemented L1 `throw`/`catch`/`finally` lowering used a service code and up to eight `long` payload fields; that limitation must not become an L2/L3 rule.
-- No source-level `synchronized` receiver handler was found in the inspected `l1trans.lm1` and `l2trans.lm1`. The old `lm_synchronized_enter/leave` illustration is not evidence of emitted code. Mail atomics do not automatically implement the structural receiver.
+- No source-level `synchronized` receiver handler was found in the inspected `l1trans.lm1` and `l2trans.lm1`. The old `lm_synchronized_enter/leave` illustration is not evidence of emitted code. The reentrant monitor embedded in `lmx_post` provides mutual exclusion for the current mail collection, but does not by itself implement the language's structural receiver.
 
 <a id="l2-status"></a>
 ## 3. Translator-L2 and machine-surface state
@@ -31,7 +31,7 @@ This document is not a language specification. It contains state of concrete tra
 - Negative fixtures `address_array_element.lm2` and `address_array_element_sum.lm2` encoded rejection of element address-taking. After the author's 2026-09-20 clarification that is the wrong L2 expectation: `@array[i]` must obtain the actual element address without an index check. Rejections saying `own array index requires an in-bounds primitive literal` must leave the L2 path. `l2_emit_array_ptr` already extracted descriptor backing while `l2_emit_array_load` materialized a temporary; address lowering must use backing rather than the copy's address.
 - `l2_array_local` accepted a narrow `c.array` form: one `[]` head and atoms `char`, name, and numeric extent. This is not the complete `c.array` contract; graph branches `l2_own_*array*`/`l2_emit_array_*` do not automatically extend it.
 - C-ABI support in the inspected frontend lived in `l2_cast_type`, `l2_prep_sizeof_name`, `l2_c_door`, and foreign-type checks. Fixtures `unit_cast_ptr_int`, `unit_sizeof_arg`, and `unit_sizeof_own_local` are snapshot evidence but do not replace a fresh run.
-- No `synchronized` handler was found in the two inspected translators. Implementing this receiver remains separate work; mail atomics are not a substitute.
+- No `synchronized` handler was found in the two inspected translators. Implementing that receiver and later replacing mail's internal enter/leave with the structural form remain separate work; the current mailbox monitor fixes the required semantics without adding translator syntax.
 
 <a id="l3-status"></a>
 ## 4. L3 interpreter and candidate admission

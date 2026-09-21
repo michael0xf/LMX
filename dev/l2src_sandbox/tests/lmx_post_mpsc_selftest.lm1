@@ -1,0 +1,132 @@
+predef: "l2src/lmx_implements.lm1"
+predef: "l1src/libc_abi.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_manager_running.h.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>" "<windows.h>"
+
+# Two concurrent producers, one owner/consumer, one mailbox.  This is the case the former
+# load/store tail ring did not implement: both producers could reserve the same slot.  The test
+# also checks that the mailbox monitor is reentrant for its owning OS thread.
+define: LMX_POST_MPSC_N 10000
+
+@: LmxArena pm_arena 0
+@: LmxPost pm_box 0
+@: void pm_a 0
+@: void pm_b 0
+int: pm_start 0
+
+fn: pm_produce (@: void target) DWORD
+    size_t: n 0U
+    int: rc
+    while: c.__atomic_load_n(@ pm_start, c.__ATOMIC_ACQUIRE) = 0
+        c.Sleep(0U)
+    ---
+    while: n < c.LMX_POST_MPSC_N
+        rc: lmx_post_accept(pm_arena, pm_box, target, c.LMX_POST_INBOX)
+        if: rc = c.LMX_POST_OK
+            n: n + 1U
+        else:
+            if: rc != c.LMX_POST_FULL
+                return: 1U
+            ---
+            c.Sleep(0U)
+        ---
+    ---
+return: 0U
+
+fn: pm_produce_a (@: void unused) DWORD
+return: pm_produce(pm_a)
+
+fn: pm_produce_b (@: void unused) DWORD
+return: pm_produce(pm_b)
+
+fn: main () int
+    LmxArena: arena
+    LmxPost: box
+    @: LmxMsg letters
+    @: void got
+    @: void ha
+    @: void hb
+    size_t: na 0U
+    size_t: nb 0U
+    size_t: total 0U
+    int: done_a 0
+    int: done_b 0
+    int: failures 0
+
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ box)), 0, c.sizeof(c.LmxPost))
+    if: lmx_arena_open(@ arena) != 0
+        return: 2
+    letters: (cast: (@: LmxMsg) lmx_arena_take(@ arena, 2U * c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    if: letters = 0 || lmx_post_init(@ arena, @ box) != c.LMX_POST_OK
+        lmx_arena_release(@ arena)
+        return: 2
+    ---
+    pm_arena: @ arena
+    pm_box: @ box
+    pm_a: (cast: (@: void) letters)
+    pm_b: (cast: (@: void) (letters + 1))
+
+    # Java-style reentry: the first leave reduces depth but keeps the monitor held.
+    if: lmx_post_monitor_enter(@ box) != c.LMX_POST_OK || lmx_post_monitor_enter(@ box) != c.LMX_POST_OK
+        failures: failures + 1
+    ---
+    if: pm_box\inbox_monitor_depth != 2U || pm_box\inbox_monitor_held = 0
+        failures: failures + 1
+    ---
+    if: lmx_post_monitor_leave(@ box) != c.LMX_POST_OK || pm_box\inbox_monitor_depth != 1U || pm_box\inbox_monitor_held = 0
+        failures: failures + 1
+    ---
+    if: lmx_post_monitor_leave(@ box) != c.LMX_POST_OK || pm_box\inbox_monitor_depth != 0U || pm_box\inbox_monitor_held != 0
+        failures: failures + 1
+    ---
+
+    ha: (cast: (@: void) c.CreateThread(0, 0U, (cast: (LPTHREAD_START_ROUTINE) pm_produce_a), 0, 0U, 0))
+    hb: (cast: (@: void) c.CreateThread(0, 0U, (cast: (LPTHREAD_START_ROUTINE) pm_produce_b), 0, 0U, 0))
+    if: ha = 0 || hb = 0
+        return: 2
+    c.__atomic_store_n(@ pm_start, 1, c.__ATOMIC_RELEASE)
+
+    while: done_a = 0 || done_b = 0 || lmx_post_count(@ box, c.LMX_POST_INBOX) != 0U
+        got: lmx_post_take(@ box, c.LMX_POST_INBOX)
+        if: got = pm_a
+            na: na + 1U
+            total: total + 1U
+        else:
+            if: got = pm_b
+                nb: nb + 1U
+                total: total + 1U
+            else:
+                if: got = 0
+                    c.Sleep(0U)
+                else:
+                    failures: failures + 1
+                ---
+            ---
+        ---
+        if: c.WaitForSingleObject(ha, 0U) = c.WAIT_OBJECT_0
+            done_a: 1
+        ---
+        if: c.WaitForSingleObject(hb, 0U) = c.WAIT_OBJECT_0
+            done_b: 1
+        ---
+    ---
+    c.WaitForSingleObject(ha, c.INFINITE)
+    c.WaitForSingleObject(hb, c.INFINITE)
+    c.CloseHandle(ha)
+    c.CloseHandle(hb)
+
+    if: na != c.LMX_POST_MPSC_N || nb != c.LMX_POST_MPSC_N || total != 2U * c.LMX_POST_MPSC_N
+        failures: failures + 1
+    ---
+    if: lmx_post_count(@ box, c.LMX_POST_INBOX) != 0U || pm_box\inbox_head != pm_box\inbox_tail
+        failures: failures + 1
+    ---
+    c.printf("lmx_post_mpsc a=%u b=%u total=%u checks=5 failures=%d\n", (cast: (unsigned) na), (cast: (unsigned) nb), (cast: (unsigned) total), failures)
+    lmx_post_close(@ arena, @ box)
+    lmx_arena_release(@ arena)
+return: failures

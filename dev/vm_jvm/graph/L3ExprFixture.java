@@ -1136,6 +1136,172 @@ public final class L3ExprFixture {
                 L3Node.of(L3Role.RETURN, L3Node.of(L3Role.SEQUENCE, w, L3Node.ofInt(L3Role.INT_LITERAL, 0))));
     }
 
+
+    public static L3Node retryLabel() {
+        return L3Node.of(L3Role.RETRY_LABEL);
+    }
+
+    /**
+     * Locals persist across RETRY: RETRYABLE { n++; if n==1 RETRY; }; return n → 2.
+     * Probe in region ticks twice (not rolled back).
+     */
+    public static L3Node retryLocalsPersistAndProbeNotRolledBack() {
+        L3Node probe = L3Node.of(L3Role.PROBE);
+        L3Node incr = new L3Node(
+                L3Role.LOCAL_SET,
+                0,
+                L3Node.of(
+                        L3Role.ADD,
+                        L3Node.ofInt(L3Role.LOCAL_GET, 0),
+                        L3Node.ofInt(L3Role.INT_LITERAL, 1)));
+        L3Node eq1 = L3Node.of(
+                L3Role.ADD, L3Node.ofInt(L3Role.LOCAL_GET, 0), L3Node.ofInt(L3Role.INT_LITERAL, -1));
+        // n==1 → RETRY else 0
+        L3Node ifRetry = L3Node.of(
+                L3Role.IF, eq1, L3Node.ofInt(L3Role.INT_LITERAL, 0), L3Node.of(L3Role.RETRY));
+        L3Node body = L3Node.of(L3Role.SEQUENCE, probe, incr, ifRetry, L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        L3Node region = L3Node.of(L3Role.RETRYABLE, body);
+        L3Node init = new L3Node(L3Role.LOCAL_SET, 0, L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        return L3Node.of(
+                L3Role.CALLABLE,
+                L3Node.of(
+                        L3Role.RETURN,
+                        L3Node.of(L3Role.SEQUENCE, init, region, L3Node.ofInt(L3Role.LOCAL_GET, 0))));
+    }
+
+    /** Nested nearest: outer region; inner RETRYABLE RETRY once; outer n ends 1. */
+    public static L3Node retryNearestNested() {
+        L3Node innerIncr = new L3Node(
+                L3Role.LOCAL_SET,
+                1,
+                L3Node.of(
+                        L3Role.ADD,
+                        L3Node.ofInt(L3Role.LOCAL_GET, 1),
+                        L3Node.ofInt(L3Role.INT_LITERAL, 1)));
+        L3Node innerEq1 = L3Node.of(
+                L3Role.ADD, L3Node.ofInt(L3Role.LOCAL_GET, 1), L3Node.ofInt(L3Role.INT_LITERAL, -1));
+        L3Node innerIfRetry = L3Node.of(
+                L3Role.IF, innerEq1, L3Node.ofInt(L3Role.INT_LITERAL, 0), L3Node.of(L3Role.RETRY));
+        L3Node innerBody = L3Node.of(
+                L3Role.SEQUENCE, innerIncr, innerIfRetry, L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        L3Node inner = L3Node.of(L3Role.RETRYABLE, innerBody);
+        L3Node outerIncr = new L3Node(
+                L3Role.LOCAL_SET,
+                0,
+                L3Node.of(
+                        L3Role.ADD,
+                        L3Node.ofInt(L3Role.LOCAL_GET, 0),
+                        L3Node.ofInt(L3Role.INT_LITERAL, 1)));
+        L3Node resetInner = new L3Node(L3Role.LOCAL_SET, 1, L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        L3Node outerBody = L3Node.of(
+                L3Role.SEQUENCE, outerIncr, resetInner, inner, L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        L3Node outer = L3Node.of(L3Role.RETRYABLE, outerBody);
+        L3Node initO = new L3Node(L3Role.LOCAL_SET, 0, L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        L3Node initI = new L3Node(L3Role.LOCAL_SET, 1, L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        return L3Node.of(
+                L3Role.CALLABLE,
+                L3Node.of(
+                        L3Role.RETURN,
+                        L3Node.of(
+                                L3Role.SEQUENCE,
+                                initO,
+                                initI,
+                                outer,
+                                L3Node.ofInt(L3Role.LOCAL_GET, 0))));
+    }
+
+    /** Labelled RETRY to outer region from inner; outer n==2 after one outer restart. */
+    public static L3Node labelledRetryToOuter() {
+        L3Node outerLab = retryLabel();
+        L3Node innerLab = retryLabel();
+        L3Node outerIncr = new L3Node(
+                L3Role.LOCAL_SET,
+                0,
+                L3Node.of(
+                        L3Role.ADD,
+                        L3Node.ofInt(L3Role.LOCAL_GET, 0),
+                        L3Node.ofInt(L3Role.INT_LITERAL, 1)));
+        // On first outer entry n becomes 1; inner immediately RETRY outerLab → restart outer body
+        // Second entry n becomes 2; if n>=2 skip retry (fall through)
+        L3Node eq1 = L3Node.of(
+                L3Role.ADD, L3Node.ofInt(L3Role.LOCAL_GET, 0), L3Node.ofInt(L3Role.INT_LITERAL, -1));
+        L3Node ifRetryOuter = L3Node.of(
+                L3Role.IF,
+                eq1,
+                L3Node.ofInt(L3Role.INT_LITERAL, 0),
+                L3Node.of(L3Role.RETRY, outerLab));
+        L3Node innerBody = L3Node.of(
+                L3Role.SEQUENCE, ifRetryOuter, L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        L3Node inner = L3Node.of(L3Role.RETRYABLE, innerBody, innerLab);
+        L3Node outerBody = L3Node.of(
+                L3Role.SEQUENCE, outerIncr, inner, L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        L3Node outer = L3Node.of(L3Role.RETRYABLE, outerBody, outerLab);
+        L3Node init = new L3Node(L3Role.LOCAL_SET, 0, L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        return L3Node.of(
+                L3Role.CALLABLE,
+                L3Node.of(
+                        L3Role.RETURN,
+                        L3Node.of(L3Role.SEQUENCE, init, outer, L3Node.ofInt(L3Role.LOCAL_GET, 0))));
+    }
+
+    public static L3Node retryOutsideRegion() {
+        return L3Node.of(
+                L3Role.CALLABLE,
+                L3Node.of(
+                        L3Role.RETURN,
+                        L3Node.of(L3Role.SEQUENCE, L3Node.of(L3Role.RETRY), L3Node.ofInt(L3Role.INT_LITERAL, 0))));
+    }
+
+    public static L3Node retryWrongLabelIdentity() {
+        L3Node regionLab = retryLabel();
+        L3Node other = retryLabel();
+        L3Node body = L3Node.of(
+                L3Role.SEQUENCE, L3Node.of(L3Role.RETRY, other), L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        L3Node region = L3Node.of(L3Role.RETRYABLE, body, regionLab);
+        return L3Node.of(
+                L3Role.CALLABLE,
+                L3Node.of(L3Role.RETURN, L3Node.of(L3Role.SEQUENCE, region, L3Node.ofInt(L3Role.INT_LITERAL, 0))));
+    }
+
+    public static L3Node retryUsingLoopLabel() {
+        L3Node loopLab = L3Node.of(L3Role.LOOP_LABEL);
+        L3Node body = L3Node.of(
+                L3Role.SEQUENCE, L3Node.of(L3Role.RETRY, loopLab), L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        L3Node region = L3Node.of(L3Role.RETRYABLE, body);
+        return L3Node.of(
+                L3Role.CALLABLE,
+                L3Node.of(L3Role.RETURN, L3Node.of(L3Role.SEQUENCE, region, L3Node.ofInt(L3Role.INT_LITERAL, 0))));
+    }
+
+    public static L3Node loopUsingRetryLabel() {
+        L3Node rlab = retryLabel();
+        L3Node w = L3Node.of(
+                L3Role.WHILE,
+                L3Node.ofInt(L3Role.INT_LITERAL, 0),
+                L3Node.ofInt(L3Role.INT_LITERAL, 0),
+                rlab);
+        return L3Node.of(
+                L3Role.CALLABLE,
+                L3Node.of(L3Role.RETURN, L3Node.of(L3Role.SEQUENCE, w, L3Node.ofInt(L3Role.INT_LITERAL, 0))));
+    }
+
+    public static L3Node retryDuplicateActiveBinding() {
+        L3Node lab = retryLabel();
+        L3Node inner = L3Node.of(
+                L3Role.RETRYABLE, L3Node.ofInt(L3Role.INT_LITERAL, 0), lab);
+        L3Node outer = L3Node.of(
+                L3Role.RETRYABLE,
+                L3Node.of(L3Role.SEQUENCE, inner, L3Node.ofInt(L3Role.INT_LITERAL, 0)),
+                lab);
+        return L3Node.of(
+                L3Role.CALLABLE,
+                L3Node.of(L3Role.RETURN, L3Node.of(L3Role.SEQUENCE, outer, L3Node.ofInt(L3Role.INT_LITERAL, 0))));
+    }
+
+    public static L3Node retryInValueContext() {
+        return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, L3Node.of(L3Role.RETRY)));
+    }
+
     public static final class CallGraphWithOrphan {
         public final L3Node entry;
         public final L3Node orphan;

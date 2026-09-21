@@ -79,6 +79,22 @@ public final class L3Role {
      * Referenced by labelled WHILE and labelled BREAK/CONTINUE/REDO.
      */
     public static final L3Role LOOP_LABEL = new L3Role();
+    /**
+     * Physical retry-region label. Sealed leaf; distinct from {@link #LOOP_LABEL}.
+     * Referenced by labelled {@link #RETRYABLE} and labelled {@link #RETRY}.
+     */
+    public static final L3Role RETRY_LABEL = new L3Role();
+    /**
+     * Restartable statement region (semantics §15). Children: body[, RETRY_LABEL].
+     * Statement-only in this slice. FINALLY/cleanup deferred.
+     */
+    public static final L3Role RETRYABLE = new L3Role();
+    /**
+     * Jump to the beginning of an active {@link #RETRYABLE} body in the same CALLABLE.
+     * Unlabelled = nearest; one child = physical {@link #RETRY_LABEL}. No new activation;
+     * locals/args/probes are not rolled back. FINALLY deferred.
+     */
+    public static final L3Role RETRY = new L3Role();
     public static final L3Role UNSUPPORTED = new L3Role();
 
     private L3Role() {}

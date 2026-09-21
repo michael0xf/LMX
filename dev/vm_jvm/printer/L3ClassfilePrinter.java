@@ -60,6 +60,38 @@ public final class L3ClassfilePrinter implements Opcodes {
                     return new IdentityHashMap<L3Node, Label[]>();
                 }
             };
+    /** Compile-time nearest-RETRYABLE nesting for RETRY validation. */
+    private static final ThreadLocal<Integer> RETRY_DEPTH =
+            new ThreadLocal<Integer>() {
+                @Override
+                protected Integer initialValue() {
+                    return Integer.valueOf(0);
+                }
+            };
+    /** Compile-time active physical retry labels in the current CALLABLE (identity). */
+    private static final ThreadLocal<IdentityHashMap<L3Node, Boolean>> ACTIVE_RETRY_LABELS =
+            new ThreadLocal<IdentityHashMap<L3Node, Boolean>>() {
+                @Override
+                protected IdentityHashMap<L3Node, Boolean> initialValue() {
+                    return new IdentityHashMap<L3Node, Boolean>();
+                }
+            };
+    /** Emit-time stack of RETRYABLE body-entry labels (nearest = peekFirst). */
+    private static final ThreadLocal<ArrayDeque<Label>> RETRY_STACK =
+            new ThreadLocal<ArrayDeque<Label>>() {
+                @Override
+                protected ArrayDeque<Label> initialValue() {
+                    return new ArrayDeque<Label>();
+                }
+            };
+    /** Emit-time map from physical RETRY_LABEL node to its RETRYABLE body-entry label. */
+    private static final ThreadLocal<IdentityHashMap<L3Node, Label>> RETRY_LABEL_FRAMES =
+            new ThreadLocal<IdentityHashMap<L3Node, Label>>() {
+                @Override
+                protected IdentityHashMap<L3Node, Label> initialValue() {
+                    return new IdentityHashMap<L3Node, Label>();
+                }
+            };
 
     private L3ClassfilePrinter() {}
 
@@ -72,6 +104,10 @@ public final class L3ClassfilePrinter implements Opcodes {
         LOOP_STACK.get().clear();
         ACTIVE_LOOP_LABELS.get().clear();
         LABEL_FRAMES.get().clear();
+        RETRY_DEPTH.set(Integer.valueOf(0));
+        RETRY_STACK.get().clear();
+        ACTIVE_RETRY_LABELS.get().clear();
+        RETRY_LABEL_FRAMES.get().clear();
         List<L3Node> order = new ArrayList<L3Node>();
         Map<L3Node, Integer> map = new IdentityHashMap<L3Node, Integer>();
         collectCallables(entry, order, map);
@@ -166,6 +202,15 @@ public final class L3ClassfilePrinter implements Opcodes {
         if (r == L3Role.LOOP_LABEL) {
             return "LOOP_LABEL";
         }
+        if (r == L3Role.RETRY_LABEL) {
+            return "RETRY_LABEL";
+        }
+        if (r == L3Role.RETRYABLE) {
+            return "RETRYABLE";
+        }
+        if (r == L3Role.RETRY) {
+            return "RETRY";
+        }
         if (r == L3Role.CALL) {
             return "CALL";
         }
@@ -188,10 +233,25 @@ public final class L3ClassfilePrinter implements Opcodes {
 
     private static void requireLoopLabelNode(L3Node n) {
         if (n == null || n.role != L3Role.LOOP_LABEL) {
-            throw new IllegalArgumentException("loop label target must be LOOP_LABEL node");
+            throw new IllegalArgumentException(
+                    n != null && n.role == L3Role.RETRY_LABEL
+                            ? "loop label target must be LOOP_LABEL node (not RETRY_LABEL)"
+                            : "loop label target must be LOOP_LABEL node");
         }
         if (n.childCount() != 0) {
             throw new IllegalArgumentException("LOOP_LABEL arity");
+        }
+    }
+
+    private static void requireRetryLabelNode(L3Node n) {
+        if (n == null || n.role != L3Role.RETRY_LABEL) {
+            throw new IllegalArgumentException(
+                    n != null && n.role == L3Role.LOOP_LABEL
+                            ? "retry label target must be RETRY_LABEL node (not LOOP_LABEL)"
+                            : "retry label target must be RETRY_LABEL node");
+        }
+        if (n.childCount() != 0) {
+            throw new IllegalArgumentException("RETRY_LABEL arity");
         }
     }
 
@@ -219,6 +279,30 @@ public final class L3ClassfilePrinter implements Opcodes {
         }
         requireLoopLabelNode(whileNode.child(2));
         return whileNode.child(2);
+    }
+
+
+    private static L3Node retryTransferLabelOrNull(L3Node expr) {
+        if (expr.childCount() == 0) {
+            return null;
+        }
+        if (expr.childCount() != 1) {
+            throw new IllegalArgumentException("RETRY arity");
+        }
+        requireRetryLabelNode(expr.child(0));
+        return expr.child(0);
+    }
+
+    private static L3Node retryableLabelOrNull(L3Node retryable) {
+        int n = retryable.childCount();
+        if (n == 1) {
+            return null;
+        }
+        if (n != 2) {
+            throw new IllegalArgumentException("RETRYABLE arity: need body[, RETRY_LABEL]");
+        }
+        requireRetryLabelNode(retryable.child(1));
+        return retryable.child(1);
     }
 
     private static void ownershipGrayEnter(L3Node n, Map<L3Node, Boolean> gray) {
@@ -260,6 +344,16 @@ public final class L3ClassfilePrinter implements Opcodes {
                 for (int i = 1; i < n.childCount(); i++) {
                     scanArity(n.child(i), maxIdx, gray, black);
                 }
+                return;
+            }
+            if (n.role == L3Role.RETRYABLE) {
+                if (n.childCount() < 1) {
+                    throw new IllegalArgumentException("RETRYABLE arity: need body[, RETRY_LABEL]");
+                }
+                scanArity(n.child(0), maxIdx, gray, black);
+                return;
+            }
+            if (n.role == L3Role.RETRY) {
                 return;
             }
             for (int _i_c = 0; _i_c < n.childCount(); _i_c++) {
@@ -305,6 +399,16 @@ public final class L3ClassfilePrinter implements Opcodes {
                 for (int i = 1; i < n.childCount(); i++) {
                     scanSlots(n.child(i), maxIdx, gray, black);
                 }
+                return;
+            }
+            if (n.role == L3Role.RETRYABLE) {
+                if (n.childCount() < 1) {
+                    throw new IllegalArgumentException("RETRYABLE arity: need body[, RETRY_LABEL]");
+                }
+                scanSlots(n.child(0), maxIdx, gray, black);
+                return;
+            }
+            if (n.role == L3Role.RETRY) {
                 return;
             }
             for (int _i_c = 0; _i_c < n.childCount(); _i_c++) {
@@ -369,6 +473,16 @@ public final class L3ClassfilePrinter implements Opcodes {
                 for (int i = 1; i < n.childCount(); i++) {
                     walk(n.child(i), order, map, gray, black);
                 }
+                return;
+            }
+            if (n.role == L3Role.RETRYABLE) {
+                if (n.childCount() < 1) {
+                    throw new IllegalArgumentException("RETRYABLE arity: need body[, RETRY_LABEL]");
+                }
+                walk(n.child(0), order, map, gray, black);
+                return;
+            }
+            if (n.role == L3Role.RETRY) {
                 return;
             }
             for (int _i_c = 0; _i_c < n.childCount(); _i_c++) {
@@ -553,6 +667,15 @@ public final class L3ClassfilePrinter implements Opcodes {
         if (r == L3Role.LOOP_LABEL) {
             throw new IllegalArgumentException("LOOP_LABEL not allowed in value context");
         }
+        if (r == L3Role.RETRY_LABEL) {
+            throw new IllegalArgumentException("RETRY_LABEL not allowed in value context");
+        }
+        if (r == L3Role.RETRYABLE) {
+            throw new IllegalArgumentException("RETRYABLE not allowed in value context");
+        }
+        if (r == L3Role.RETRY) {
+            throw new IllegalArgumentException("RETRY not allowed in value context");
+        }
         if (r == L3Role.FIELD_FOLLOW) {
             if (expr.childCount() != 1) {
                 throw new IllegalArgumentException("FIELD_FOLLOW arity");
@@ -637,7 +760,7 @@ public final class L3ClassfilePrinter implements Opcodes {
     }
 
     /**
-     * Statement position: WHILE / BREAK / CONTINUE / REDO / RETURN / stmt-SEQUENCE / stmt-IF,
+     * Statement position: WHILE / BREAK / CONTINUE / REDO / RETRYABLE / RETRY / RETURN / stmt-SEQUENCE / stmt-IF,
      * or a discarded int expression.
      */
     private static BitSet validateStmt(
@@ -671,6 +794,50 @@ public final class L3ClassfilePrinter implements Opcodes {
                 }
             } else if (!ACTIVE_LOOP_LABELS.get().containsKey(lab)) {
                 throw new IllegalArgumentException("loop label not visible in this CALLABLE");
+            }
+            return assigned;
+        }
+        if (r == L3Role.RETRY) {
+            if (expr.intPayload != 0) {
+                throw new IllegalArgumentException("RETRY payload");
+            }
+            L3Node lab = retryTransferLabelOrNull(expr);
+            if (lab == null) {
+                if (RETRY_DEPTH.get().intValue() < 1) {
+                    throw new IllegalArgumentException("RETRY outside region");
+                }
+            } else if (!ACTIVE_RETRY_LABELS.get().containsKey(lab)) {
+                throw new IllegalArgumentException("retry label not visible in this CALLABLE");
+            }
+            return assigned;
+        }
+        if (r == L3Role.RETRYABLE) {
+            if (expr.intPayload != 0) {
+                throw new IllegalArgumentException("RETRYABLE payload");
+            }
+            L3Node lab = retryableLabelOrNull(expr);
+            if (lab != null) {
+                if (ACTIVE_RETRY_LABELS.get().containsKey(lab)) {
+                    throw new IllegalArgumentException("duplicate active retry label binding");
+                }
+                ACTIVE_RETRY_LABELS.get().put(lab, Boolean.TRUE);
+            }
+            RETRY_DEPTH.set(Integer.valueOf(RETRY_DEPTH.get().intValue() + 1));
+            try {
+                validateStmt(
+                        expr.child(0),
+                        map,
+                        arity,
+                        slots,
+                        currentCallable,
+                        currentArity,
+                        slotCount,
+                        assigned);
+            } finally {
+                RETRY_DEPTH.set(Integer.valueOf(RETRY_DEPTH.get().intValue() - 1));
+                if (lab != null) {
+                    ACTIVE_RETRY_LABELS.get().remove(lab);
+                }
             }
             return assigned;
         }
@@ -849,6 +1016,12 @@ public final class L3ClassfilePrinter implements Opcodes {
             throw new IllegalArgumentException("REDO not allowed in value context");
         } else if (r == L3Role.LOOP_LABEL) {
             throw new IllegalArgumentException("LOOP_LABEL not allowed in value context");
+        } else if (r == L3Role.RETRY_LABEL) {
+            throw new IllegalArgumentException("RETRY_LABEL not allowed in value context");
+        } else if (r == L3Role.RETRYABLE) {
+            throw new IllegalArgumentException("RETRYABLE not allowed in value context");
+        } else if (r == L3Role.RETRY) {
+            throw new IllegalArgumentException("RETRY not allowed in value context");
         } else if (r == L3Role.FIELD_FOLLOW) {
             emitOccurrence(mv, expr.child(0));
             mv.visitLdcInsn(Integer.valueOf(expr.intPayload));
@@ -914,6 +1087,27 @@ public final class L3ClassfilePrinter implements Opcodes {
             }
             int idx = r == L3Role.CONTINUE ? 0 : (r == L3Role.BREAK ? 1 : 2);
             mv.visitJumpInsn(GOTO, frame[idx]);
+            return;
+        }
+        if (r == L3Role.RETRY) {
+            Label target;
+            if (expr.childCount() == 0) {
+                target = RETRY_STACK.get().peekFirst();
+                if (target == null) {
+                    throw new IllegalArgumentException("RETRY outside region");
+                }
+            } else {
+                L3Node lab = expr.child(0);
+                target = RETRY_LABEL_FRAMES.get().get(lab);
+                if (target == null) {
+                    throw new IllegalArgumentException("retry label not visible in this CALLABLE");
+                }
+            }
+            mv.visitJumpInsn(GOTO, target);
+            return;
+        }
+        if (r == L3Role.RETRYABLE) {
+            emitRetryable(mv, expr, map, arity, currentArity);
             return;
         }
         if (r == L3Role.WHILE) {
@@ -989,6 +1183,30 @@ public final class L3ClassfilePrinter implements Opcodes {
         }
     }
 
+    private static void emitRetryable(
+            MethodVisitor mv,
+            L3Node expr,
+            Map<L3Node, Integer> map,
+            Map<L3Node, Integer> arity,
+            int currentArity) {
+        // RETRY jumps to body entry; no new activation / no local or probe rollback.
+        Label body = new Label();
+        L3Node lab = expr.childCount() == 2 ? expr.child(1) : null;
+        RETRY_STACK.get().addFirst(body);
+        if (lab != null) {
+            RETRY_LABEL_FRAMES.get().put(lab, body);
+        }
+        try {
+            mv.visitLabel(body);
+            emitStmt(mv, expr.child(0), map, arity, currentArity);
+        } finally {
+            if (lab != null) {
+                RETRY_LABEL_FRAMES.get().remove(lab);
+            }
+            RETRY_STACK.get().removeFirst();
+        }
+    }
+
     private static void emitOccurrence(MethodVisitor mv, L3Node expr) {
         if (expr.role == L3Role.SUBJECT_REF) {
             mv.visitVarInsn(ALOAD, 0);
@@ -1008,6 +1226,10 @@ public final class L3ClassfilePrinter implements Opcodes {
         LOOP_STACK.get().clear();
         ACTIVE_LOOP_LABELS.get().clear();
         LABEL_FRAMES.get().clear();
+        RETRY_DEPTH.set(Integer.valueOf(0));
+        RETRY_STACK.get().clear();
+        ACTIVE_RETRY_LABELS.get().clear();
+        RETRY_LABEL_FRAMES.get().clear();
         List<L3Node> order = new ArrayList<L3Node>();
         Map<L3Node, Integer> map = new IdentityHashMap<L3Node, Integer>();
         collectCallables(entry, order, map);

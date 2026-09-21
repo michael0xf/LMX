@@ -83,6 +83,8 @@ public final class ExprSmokeDriver {
 
         testPhysicalLoopLabels();
 
+        testRetryableLocal();
+
         if (fails != 0) {
             System.out.println("FAIL ExprSmokeDriver checks=" + checks + " failures=" + fails);
             System.exit(1);
@@ -642,6 +644,75 @@ public final class ExprSmokeDriver {
 
 
 
+
+
+    private static void testRetryableLocal() throws Exception {
+        ArgEvalCounter.reset();
+        Class<?> c1 = loadPrinted(L3ExprFixture.retryLocalsPersistAndProbeNotRolledBack());
+        Object n = c1.getMethod("eval", lmx.LmxOccurrence.class)
+                .invoke(null, lmx.LmxOccurrence.independent(Integer.valueOf(0)));
+        check("RETRY locals persist -> n==2", Integer.valueOf(2).equals(n));
+        check("RETRY does not roll back PROBE (ticks 2)", ArgEvalCounter.get() == 2);
+
+        Class<?> c2 = loadPrinted(L3ExprFixture.retryNearestNested());
+        Object o = c2.getMethod("eval", lmx.LmxOccurrence.class)
+                .invoke(null, lmx.LmxOccurrence.independent(Integer.valueOf(0)));
+        check("RETRY nearest nested -> outer==1", Integer.valueOf(1).equals(o));
+
+        Class<?> c3 = loadPrinted(L3ExprFixture.labelledRetryToOuter());
+        Object o3 = c3.getMethod("eval", lmx.LmxOccurrence.class)
+                .invoke(null, lmx.LmxOccurrence.independent(Integer.valueOf(0)));
+        check("labelled RETRY to outer -> n==2", Integer.valueOf(2).equals(o3));
+
+        boolean threw = false;
+        try {
+            L3ClassfilePrinter.emitCallable(L3ExprFixture.retryOutsideRegion());
+        } catch (IllegalArgumentException e) {
+            threw = e.getMessage() != null && e.getMessage().contains("outside region");
+        }
+        check("RETRY outside region rejected", threw);
+
+        threw = false;
+        try {
+            L3ClassfilePrinter.emitCallable(L3ExprFixture.retryWrongLabelIdentity());
+        } catch (IllegalArgumentException e) {
+            threw = e.getMessage() != null && e.getMessage().contains("not visible");
+        }
+        check("distinct RETRY_LABEL identity rejected", threw);
+
+        threw = false;
+        try {
+            L3ClassfilePrinter.emitCallable(L3ExprFixture.retryUsingLoopLabel());
+        } catch (IllegalArgumentException e) {
+            threw = e.getMessage() != null && e.getMessage().contains("LOOP_LABEL");
+        }
+        check("LOOP_LABEL as retry target rejected", threw);
+
+        threw = false;
+        try {
+            L3ClassfilePrinter.emitCallable(L3ExprFixture.loopUsingRetryLabel());
+        } catch (IllegalArgumentException e) {
+            threw = e.getMessage() != null && (
+                    e.getMessage().contains("LOOP_LABEL") || e.getMessage().contains("retry"));
+        }
+        check("RETRY_LABEL as loop target rejected", threw);
+
+        threw = false;
+        try {
+            L3ClassfilePrinter.emitCallable(L3ExprFixture.retryDuplicateActiveBinding());
+        } catch (IllegalArgumentException e) {
+            threw = e.getMessage() != null && e.getMessage().contains("duplicate active retry");
+        }
+        check("duplicate active retry binding rejected", threw);
+
+        threw = false;
+        try {
+            L3ClassfilePrinter.emitCallable(L3ExprFixture.retryInValueContext());
+        } catch (IllegalArgumentException e) {
+            threw = e.getMessage() != null && e.getMessage().contains("value context");
+        }
+        check("RETRY in value context rejected", threw);
+    }
 
     private static void testPhysicalLoopLabels() throws Exception {
         Class<?> c1 = loadPrinted(L3ExprFixture.labelledBreakToOuter());

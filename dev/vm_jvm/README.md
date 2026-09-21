@@ -112,8 +112,12 @@ Illegal structural/ownership cycles among non-CALLABLE expression nodes are reje
 
 ## Unlabelled REDO (GROK-BOT-JVM-L3-WHILE-REDO-20260921-93)
 
-`L3Role.REDO` repeats the nearest active WHILE body without rechecking the condition (semantics §12). Loop-label frame is `{cond, break, body}`; CONTINUE→cond, BREAK→exit, REDO→body. Statement-only; cannot cross CALL. RETRY/labels deferred.
+`L3Role.REDO` repeats the nearest active WHILE body without rechecking the condition (semantics §12). Loop-label frame is `{cond, break, body}`; CONTINUE→cond, BREAK→exit, REDO→body. Statement-only; cannot cross CALL. Physical LOOP_LABEL done; RETRYABLE/RETRY in separate slice; FINALLY deferred.
 
 ## Physical loop labels (GROK-BOT-JVM-L3-PHYSICAL-LOOP-LABELS-20260921-94)
 
 `L3Role.LOOP_LABEL` is a sealed leaf referenced by object identity from labelled `WHILE` (arity 3: cond, body, label) and labelled `BREAK`/`CONTINUE`/`REDO` (one child). Unlabelled forms stay nearest-WHILE. Labels cannot cross CALL; duplicate active bindings and invisible/non-label targets are rejected. Descriptor references are not ownership edges.
+
+## RETRYABLE / RETRY (GROK-BOT-JVM-L3-RETRYABLE-LOCAL-20260921-96)
+
+`RETRYABLE` is a statement region; `RETRY` restarts its body in the same CALLABLE without a new activation and without rolling back locals/args/probes. Optional physical `RETRY_LABEL` (distinct from `LOOP_LABEL`). Cross-type label use and CALL crossing are rejected. FINALLY/cleanup-on-abandoned-attempt remains deferred.

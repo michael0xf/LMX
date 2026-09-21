@@ -1,13 +1,16 @@
 # Mixa × VM portability integration (working note)
 
-Ticket: `GROK-BOT-MIXA-PORTABILITY-SYSTEMATIZE-20260921-54` (REVIEW1 amend).
+Tickets: `GROK-BOT-MIXA-PORTABILITY-SYSTEMATIZE-20260921-54` (REVIEW1),
+`GROK-BOT-L3-VM-COMPLEXITY-20260921-72` (L3 VM complexity model).
 Editor: Grok Bot (Path A / VM smoke evidence owner).
 Status labels: **PROPOSED** (plan only), **OBSERVED** (measured in-repo),
 **NOT PROVEN** (explicit non-claim), **REF-TO-VERIFY** (external citation to re-check).
 
 This file systematizes Mixa portability against Path A VM evidence and the
 **existing** manager seam contracts. It is not a claim that the product manager
-already runs on these backends.
+already runs on these backends. Section 6 is the bounded complexity model for
+the **four external L3 VMs** (JVM classfile, .NET CIL, WASM GC, Lua 5.4) versus
+Path A manager ports.
 
 ## 1. Scope
 
@@ -130,87 +133,191 @@ adapters without assuming full Linux.
 | Manager sources + seams in this repo | `dev/mixa_sandbox/mixa_manager/` (BACKEND/FILE/PROCESS + CONVERSION) | Tree **OBSERVED** present here |
 | Real product entry / run | [mixa-manager-run-audit.md](mixa-manager-run-audit.md) | `mixa_app_main` source exists; **product executable/run not proven**; gate evidence is selftests / controller e2e proxy |
 | JVM L3 smoke notes | [vm-jvm-l3-smoke.md](vm-jvm-l3-smoke.md) | Partial L3 smoke only — **not** a full JVM compiler or manager |
-| Path A queue vs L3 managed targets | [vm-porting.md](vm-porting.md) | Path A = MIR → WASM linear → RISC-V; JVM / WASM GC / Lua / CIL are **L3 printer / Path-B** queue after interface agreement — **Lua is never a deferred Path A item** |
+| Path A queue vs four external L3 VMs | [vm-porting.md](vm-porting.md), §6 below | Path A = MIR → WASM-linear → RISC-V (**separate**). Four L3 targets = JVM classfile → .NET CIL → WASM GC → Lua 5.4. Native binary-graph L3 interpreter = **semantic oracle**, not a fifth target. **Java/JVM is the first L3 candidate** (not excluded). |
 
-## 6. Two-axis complexity matrix
+## 6. Complexity model (Path A manager ports vs four external L3 VMs)
 
-Axes (user-requested):
+### 6.0 Hard separations
 
-- **A — Kernel / compiler cost:** get Mixa’s executable image onto the target
-  (Path A C seeds vs L3 printer/runtime).
-- **B — Full myxa_manager product integration cost:** drive existing
-  BACKEND/FILE/PROCESS seams, UI/overlay, 0.1.2 today, and eventually 0.1.1 on
-  that profile.
+| Track | What it is | What it is not |
+| --- | --- | --- |
+| **Path A** | MIR → WASM-**linear** → RISC-V user-mode; L1 → C99 → external tool | Not an L3 bytecode printer; not WASM GC |
+| **Four external L3 VMs** | JVM **classfile**, .NET **CIL**, **WASM GC**, **Lua 5.4** | Not Path A; not "any managed language" |
+| **Native binary-graph L3 interpreter** | Existing in-repo L3 semantic **oracle** / shared foundation for Message, walk, prims, identity | **Not** one of the four external VMs and not a fifth port target |
 
-Levels: **Low / Medium / High / Very High** (ranges allowed). Scores are
-**PROPOSED** judgments with uncertainty — not Path A smoke scores and not fake
-additive precision.
+**Java / JVM is the first L3 candidate.** Do not exclude it from the L3 queue or
+bury it behind "managed = always hardest."
 
-| Backend / profile | A kernel/compiler | B full manager product | Notes / uncertainty |
+**Identity / representation rules (all four L3 targets):** do **not** turn JVM
+classes, CIL objects, WASM GC structs, or Lua tables into LMX Structures.
+Preserve occurrence identity, fixed `len`, physical role refs, Message/turn
+semantics, and **no text dispatch**. Host values stay behind physical primitive
+tables and OS-service adapters that terminate on BACKEND/FILE/PROCESS.
+
+Status of every score below: **PROPOSED** ranges with uncertainty — not Path A
+smoke scores and not fake additive precision.
+
+### 6.1 Cost split: shared one-time vs per-target
+
+Manager/UI complexity dominates. Re-evaluate totals by splitting:
+
+**Shared one-time (paid once, reused by every L3 target and by the oracle):**
+
+- L3 frontend: binary-graph → walk/plan/roles against the existing interpreter
+- Runtime/identity: occurrence identity, fixed len, physical role refs
+- Message / turn / mail / mode semantics (oracle = native binary-graph L3)
+- myxa_manager **application/UI** code expressed on BACKEND/FILE/PROCESS
+  (headless oracle; 0.1.2 pipes today; 0.1.1 later) — not rewritten per VM
+- Acceptance criteria and Message ingress for foreign callbacks
+
+**Per-target slice (paid once per external VM):**
+
+- Bytecode **emitter** for that format
+- **Verifier / loader** for that format
+- **Physical primitive table** for that host
+- **OS-service adapter** into existing BACKEND/FILE/PROCESS (never a seam bypass)
+
+Path A profiles still need **per-profile** seam adapters and product validation;
+they do **not** buy the shared L3 frontend, but they also do **not** share one
+managed UI image the way four L3 emitters can share one UI+Message stack.
+
+### 6.2 Path A profiles (independent manager/UI ports) — axis reminder
+
+Axes (unchanged names, clarified meaning):
+
+- **A — Kernel / bring-up:** get an executable image onto the target (Path A C
+  seeds today).
+- **B — Full myxa_manager product:** seams + UI/overlay + 0.1.2 / later 0.1.1.
+
+| Backend / profile | A | B | Notes / uncertainty |
 | --- | --- | --- | --- |
-| `MIR_NATIVE` | **Low–Medium** | **Medium** | Path A MIR **OBSERVED** for C seeds; native C host can call existing Win32/headless seams. Windows MIR upstream caveat **REF-TO-VERIFY**. |
-| `WASM_NATIVE_HOST` (linear) | **Low–Medium** | **Medium–High** | Path A linear/WASI smoke **OBSERVED**; manager needs import↔seam bridge + memory validation; 0.1.1 still new. |
-| `WASM_BROWSER_BACKEND` | **Medium** | **Very High** | Split UI/helper, protocols, auth, non-blocking loop; hardest manager path among Path A–adjacent profiles. |
-| `RISCV64_LINUX` | **Low–Medium** | **High** | Core/user-mode cheap (**OBSERVED** ELF smoke); full manager needs guest Linux system + guest-arch children + seams on guest. |
-| `RISCV64_EMBEDDED_LINUX` | **Low–Medium** | **High–Very High** | Same process stack + board DRM/KMS risk after desktop Linux. |
-| `RISCV_EMBEDDED_HOST` | **Low–Medium** | **High–Very High** | Core embed may be cheap; manager risk is complete guest→host service surface without full Linux. |
-| **JVM** | **High–Very High** | **High–Very High** | L3 managed/Path-B printer+runtime + host bindings; only partial L3 smoke ([vm-jvm-l3-smoke.md](vm-jvm-l3-smoke.md)) — not a full compiler or manager. |
-| **WASM GC** | **High–Very High** | **High–Very High** | Different memory/ABI from Path A linear; L3 printer/runtime; B depends on native-hosted vs browser-hosted GC target. |
-| **Lua 5.4** | **High** | **Medium–High** | **L3 managed / Path-B printer target** (not Path A). Needs L3 printer/runtime + host-service bindings into existing seams. |
-| **.NET CIL** | **High–Very High** | **High–Very High** | L3 managed/Path-B; hosting/PInvoke/AOT variants; deferred with JVM/GC/Lua in [vm-porting.md](vm-porting.md). |
+| `MIR_NATIVE` | **Low–Medium** | **Medium** | Path A MIR **OBSERVED** for C seeds; native host can call existing seams. Windows MIR upstream **REF-TO-VERIFY**. |
+| `WASM_NATIVE_HOST` (linear) | **Low–Medium** | **Medium–High** | Path A linear/WASI **OBSERVED**; manager needs import↔seam bridge; 0.1.1 still new. |
+| `WASM_BROWSER_BACKEND` | **Medium** | **Very High** | Split UI/helper, protocols, auth; hardest Path A–adjacent manager path. |
+| `RISCV64_LINUX` | **Low–Medium** | **High** | User-mode ELF smoke **OBSERVED**; full manager needs guest Linux + guest-arch children. |
+| `RISCV64_EMBEDDED_LINUX` | **Low–Medium** | **High–Very High** | Same + board DRM/KMS after desktop Linux. |
+| `RISCV_EMBEDDED_HOST` | **Low–Medium** | **High–Very High** | Core embed may be cheap; risk is complete guest→host service surface. |
 
-### 6.1 Interpretation (explicit)
+**Combined Path A manager cost (rough):** if the product must be a **first-class
+UI on each** of MIR, WASM-linear host, and RISC-V Linux, pay roughly
+**three independent B integrations** (plus browser/embedded extras). Path A
+smoke only proves **A**, not any **B**.
 
-- **MIR native** is likely **easier overall** than JVM, .NET CIL, WASM GC, and Lua:
-  Path A evidence plus native C calling existing manager seams.
-- **WASM native (linear)** and **RISC-V Linux**: cheap **A**, but manager **B** is
-  Medium–High / High — roughly comparable to **Lua manager** work, and usually
-  below a fresh **JVM / CIL / WASM-GC** compiler+manager total.
-- **WASM browser helper**: manager **Very High** — harder than JVM/CIL/Lua
-  *manager-integration* alone, and comparable to or above **WASM GC** depending
-  on whether that GC target is native-hosted or browser-hosted.
-- **RISC-V embedded Linux / embedded host**: **High to Very High** manager risk,
-  comparable to managed targets, despite relatively cheap core (**A**).
+### 6.3 Four external L3 VMs — relative ranges
 
-Path A smoke does not move any **B** cell to “proven.”
+Recommended **implementation order to test** (not Path A order):
 
-## 7. Shared one-time vs per-profile work (existing seams)
+1. **JVM classfile** (first)
+2. **.NET CIL**
+3. **WASM GC**
+4. **Lua 5.4** (last for the *real* backend)
 
-**Shared one-time (write against seam contracts, reuse):**
+| L3 target | Shared stack reuse | Per-target emitter/loader/prims/OS | Combined relative | Uncertainty |
+| --- | --- | --- | --- | --- |
+| **JVM classfile** | High (UI/Message/oracle shared) | **Medium–High** | **Medium–High** overall once shared paid | Classfile + JNI/FFM host bindings well-trodden; only partial L3 smoke today ([vm-jvm-l3-smoke.md](vm-jvm-l3-smoke.md)) — not a full printer or manager. |
+| **.NET CIL** | High | **Medium–High** | **Medium–High** (often near JVM) | Hosting / PInvoke / AOT variants; similar object-model lessons to JVM if JVM went first. |
+| **WASM GC** | High for native-hosted; lower if browser-hosted UI | **High** | **High** | Distinct from Path A **linear**; GC proposal + loader/verifier; B jumps if UI is browser-split. |
+| **Lua 5.4** (real backend) | Shared UI helps little for value model | **High–Very High** | **High–Very High** | Register VM; tagged values / tables / upvalues; **version-locked chunks**; **no standard UI** — most idiosyncratic of the four. |
+
+**Lua smoke vs Lua backend (explicit):** emitting **Lua source** as a cheap
+readability/smoke printer is **Low** and useful. That is **not** the cost of a
+faithful **Lua 5.4 bytecode** backend plus manager/UI identity. Direct bytecode
++ manager/UI is why Lua belongs **last** among the four for the real backend.
+
+Do **not** score "Lua Medium because source print is easy."
+
+### 6.4 When the four L3 targets can be cheaper than Path A manager ports
+
+Compare **combined** cost of (shared L3+UI once + four per-target slices) with
+**independent** manager/UI ports on MIR + WASM-linear + RISC-V (and optionally
+browser).
+
+The four L3 targets are **defensibly cheaper** when **all** of the following
+hold:
+
+1. **Shared stack exists or is committed once:** L3 frontend + native oracle
+   semantics + myxa_manager UI on BACKEND/FILE/PROCESS are paid **once**, not
+   per VM.
+2. **Manager/UI dominates:** product effort is mostly overlay, files, process,
+   0.1.1 terminal — not tiny kernel bring-up (Path A **A** is already Low–Medium).
+3. **Path A would multiply B:** shipping the *same* product UI on MIR, WASM-linear
+   host, and RISC-V Linux means roughly **three** full seam/UI validations (more
+   with browser/embedded), whereas four L3 targets share one UI and differ mainly
+   in emitter/loader/prims/OS adapters.
+4. **Managed hosting is acceptable** for those product surfaces (JVM/.NET/Wasmtime-GC/Lua
+   host), i.e. the goal is not "native MIR/WASM/RISC-V executable is the only
+   ship vehicle."
+5. **Identity rules stay cheap:** no project to reify host objects as LMX
+   Structures; physical prims + Message/turn remain the bridge.
+
+They are **not** cheaper when Path A only needs **executor/smoke** (no product
+UI on those ISAs), when each L3 target would still fork a separate UI, or when
+the team must ship native ISA binaries as the primary product with full UI on
+each.
+
+### 6.5 Interpretation (short)
+
+- **Path A** stays the verified **executor** track (MIR → WASM-linear → RISC-V).
+  Its smoke does not move any manager **B** cell to proven.
+- **Four L3 VMs** are a **separate** product/portability track. **JVM first**,
+  then CIL, then WASM GC, then Lua bytecode backend last.
+- **Native L3 interpreter** anchors semantics for both tracks; it is not scored
+  as a competing fifth VM.
+- Older "managed = High–Very High on both axes, deferred equally" scoring under-
+  stated shared UI amortization and incorrectly treated JVM as exclude-able.
+
+## 7. Shared one-time vs per-profile / per-target work
+
+**Shared one-time (seams + L3 oracle + UI):**
 
 - Keep BACKEND / FILE / PROCESS ABIs stable; headless oracle remains the
   correctness baseline for new backends
 - Mode contracts: 0.1.2 pipes (exists) vs 0.1.1 PTY/ConPTY + terminal-state engine
   (new)
+- L3 binary-graph frontend + Message/turn/identity (native interpreter oracle)
 - Acceptance: overlay/UI; workspace file visible to child; 0.1.1 shell/editor;
   resize/Unicode/keys/mouse/exit; explicit fail for unsupported
 - Message ingress for foreign callbacks (PROCESS_SEAM §6); no Qt; platform state
-  outside Message core
+  outside Message core; **no** mapping of JVM/CIL/GC/Lua host objects into LMX
+  Structures
 
-**Per-profile:**
+**Per Path A profile:**
 
 - MIR: import resolver; interpreter vs JIT test split
-- Wasmtime: import table + memory validation
-- Browser helper: protocols + helper process stack implementing the same seams
+- Wasmtime linear: import table + memory validation
+- Browser helper: protocols + helper process stack
 - RISC-V Linux / embedded: guest packages or DRM behind BACKEND
 - Embedded RISC-V host: syscall/call handlers without claiming full Linux
-- JVM / CIL / Lua / WASM GC: L3 printer/runtime **plus** bindings that still
-  terminate on BACKEND/FILE/PROCESS — never a bypass of those seams
+
+**Per external L3 target:**
+
+- Emitter + verifier/loader + physical primitive table + OS-service adapter into
+  the **same** seams — JVM, CIL, WASM GC, Lua 5.4 each pay this slice; they do
+  not each rebuild the manager UI from scratch if §6.1 holds
 
 Win32 has many implementations/tests already; that inventory orients ports, it
 does **not** measure remaining effort by file count.
 
 ## 8. Sequencing recommendation
 
-1. Inventory against BACKEND/FILE/PROCESS; reuse headless+Win32.
-2. Keep Path A smokes as **executor** regression only.
-3. First manager-facing profiles: **`MIR_NATIVE`**, then **`WASM_NATIVE_HOST`**.
-4. Browser helper only after native host lessons; sandbox Linux later.
-5. **`RISCV64_LINUX`** before embedded DRM; keep **`RISCV_EMBEDDED_HOST`** aligned
-   with MIR/Wasmtime host adapters.
-6. JVM / WASM GC / Lua / CIL only after L3 + interface agreement
-   ([vm-porting.md](vm-porting.md)) — all are managed/Path-B, not Path A.
+**Path A (separate, executor/smoke):** keep MIR → WASM-linear → RISC-V as
+regression only; do not conflate with L3 printers.
 
+**Manager-facing Path A profiles (product UI on native hosts):** inventory
+seams; reuse headless+Win32; prefer `MIR_NATIVE` then `WASM_NATIVE_HOST` before
+browser/embedded RISC-V.
+
+**Four external L3 VMs (test order):**
+
+1. **JVM classfile** — first candidate to prove shared L3→bytecode + prims + seams
+2. **.NET CIL** — second; reuse JVM lessons on managed identity boundaries
+3. **WASM GC** — third; keep Path A linear evidence out of this cell
+4. **Lua 5.4 bytecode backend** — last; Lua **source** emission may smoke early,
+   but the real backend (register VM / tables / upvalues / version-locked chunks /
+   no standard UI) waits until JVM/CIL/GC have exercised the shared stack
+
+Interface agreement for L3 printers still applies ([vm-porting.md](vm-porting.md));
+this order replaces "defer all four equally / exclude JVM."
 ## 9. Citations (references to verify)
 
 SDL3/ttf wiki; libuv; libvterm; Linux PTY / Windows ConPTY notes; Wasmtime C API;
@@ -219,10 +326,11 @@ riscv64 packages; MIR upstream platform list; libriscv; CheerpX/WebVM licensing.
 
 ## 10. Ticket closure checklist
 
-- [x] Working file: `steps/mixa-vm-integration.md` (systematize + seam addendum + REVIEW1)
-- [x] Navigation sentence in `steps/vm-porting.md` → this file
+- [x] Working file: `steps/mixa-vm-integration.md` (54 + **72** complexity model)
+- [x] Consistency note in `steps/vm-porting.md` → four L3 VMs + this §6
 - [x] `python tools/check_docs.py` (run at commit time)
 - [x] `git diff --check` on the committed paths
 - [x] Commit/push **only** `steps/mixa-vm-integration.md` and `steps/vm-porting.md`
+- [x] Preserve Fable WIP / Grok locks / untracked (not staged)
 
 No downloads, no builds, no VM runner or source edits in this ticket.

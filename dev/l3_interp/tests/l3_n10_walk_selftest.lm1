@@ -27,9 +27,9 @@ predef: "l2src/lmx_walk.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
-# N10 slice 1. Admission-shaped tests on Thread -> lmx_interp_apply -> lmx_walk.
+# N10 slice 1 fix. Admission-shaped tests on Thread -> lmx_interp_apply -> lmx_walk.
 # Shared lmx_walk_roles_open records by address. No L3_NODE identity.
-# INT-index l3_implements_paths is the current analytic helper, not final implements.
+# INT-index l3_implements_paths is a provisional helper, not final implements semantics.
 
 @: LmxArena gb 0
 @: Lmx groles 0
@@ -184,6 +184,20 @@ fn: mk_set_own (int: value) @: Lmx
     lit(n, 2U, value)
 return: m
 
+# own n: args[0][0]  -- ARG then OF. Proves the graph reads the candidate.
+fn: mk_read_arg0 () @: Lmx
+    @: Lmx m mk_m(3U)
+    @: Lmx n 0
+    @: Lmx e 0
+    icell(m, 1U, 0)
+    n: fr(m, 2U, c.LMX_WALK_OP_SET, 3U)
+    own(n, 1U, m, 1U)
+    e: fr(n, 2U, c.LMX_WALK_OP_OF, 3U)
+    n: fr(e, 1U, c.LMX_WALK_OP_ARG, 2U)
+    sz(n, 1U, 0U)
+    sz(e, 2U, 0U)
+return: m
+
 fn: plant_fake (@: Lmx m; size_t: slot; int: code) @: LmxOp
     @: Lmx frame lmx_arena_ref_struct(m, slot)
     @: LmxOp fake lmx_op_new_owned(gb, code)
@@ -226,12 +240,16 @@ fn: main () int
     @: LmxThread t 0
     @: Lmx m 0
     @: Lmx cand 0
+    @: Lmx cand64 0
+    @: Lmx live 0
     @: Lmx paths 0
     @: Lmx tests 0
     @: Lmx recv 0
     @: Lmx ret_frame 0
     @: Lmx ret_role 0
     @: Lmx set_role 0
+    @: Lmx arg_role 0
+    @: Lmx of_role 0
     @: LmxOp fake 0
     @: Lmx frame 0
     @: void subject 0
@@ -267,33 +285,40 @@ fn: main () int
     fail(counts, groles != 0 && l3_thread_plan_roles(t) != 0, "shared walk/plan roles")
 
     cand: lmx_node_new_owned(gb)
-    if: cand = 0 || lmx_arena_refs_open_owned(gb, cand, 1U) != 0
+    cand64: lmx_node_new_owned(gb)
+    if: cand = 0 || cand64 = 0 || lmx_arena_refs_open_owned(gb, cand, 1U) != 0 || lmx_arena_refs_open_owned(gb, cand64, 1U) != 0
         free(counts)
         return: 2
     ---
     lmx_arena_ref_store(cand, 0U, mk_int(gb, 32))
+    lmx_arena_ref_store(cand64, 0U, mk_int(gb, 64))
     paths: lmx_node_new_owned(gb)
     if: paths = 0 || lmx_arena_refs_open_owned(gb, paths, 1U) != 0
         free(counts)
         return: 2
     ---
     lmx_arena_ref_store(paths, 0U, (cast: (@: void) mk_path1(gb, 0)))
-    fail(counts, l3_implements_paths(gb, cand, paths) = c.L3_OK, "analytic used path 0 present")
+    fail(counts, l3_implements_paths(gb, cand, paths) = c.L3_OK, "provisional helper: analytic used path 0 present, not final implements")
     paths: lmx_node_new_owned(gb)
     if: paths = 0 || lmx_arena_refs_open_owned(gb, paths, 1U) != 0
         free(counts)
         return: 2
     ---
     lmx_arena_ref_store(paths, 0U, (cast: (@: void) mk_path1(gb, 5)))
-    fail(counts, l3_implements_paths(gb, cand, paths) = c.L3_ABSENT, "analytic missing path 5")
-    fail(counts, l3_implements_paths(gb, cand, lmx_node_new_owned(gb)) = c.L3_OK, "analytic empty used-path set")
+    fail(counts, l3_implements_paths(gb, cand, paths) = c.L3_ABSENT, "provisional helper: analytic missing path 5, not final implements")
+    fail(counts, l3_implements_paths(gb, cand, lmx_node_new_owned(gb)) = c.L3_OK, "provisional helper: empty used-path set, not final implements")
 
-    m: mk_ret_test()
-    ret_role: lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_RET))
-    ret_frame: lmx_arena_ref_struct(m, 1U)
-    fail(counts, broken = 0 && m != 0 && ret_frame != 0 && ret_role != 0, "ret-test construction")
-    fail(counts, lmx_arena_ref_value(ret_frame, 0U) = ret_role, "ret child[0] is the shared RET record")
-
+    m: mk_read_arg0()
+    set_role: lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_SET))
+    arg_role: lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_ARG))
+    of_role: lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_OF))
+    fail(counts, broken = 0 && m != 0 && set_role != 0 && arg_role != 0 && of_role != 0, "read-arg0 construction")
+    frame: lmx_arena_ref_struct(m, 2U)
+    fail(counts, frame != 0 && lmx_arena_ref_value(frame, 0U) = set_role, "read-arg0 SET child[0] is the shared SET record")
+    frame: lmx_arena_ref_struct(frame, 2U)
+    fail(counts, frame != 0 && lmx_arena_ref_value(frame, 0U) = of_role, "OF child[0] is the shared OF record")
+    frame: lmx_arena_ref_struct(frame, 1U)
+    fail(counts, frame != 0 && lmx_arena_ref_value(frame, 0U) = arg_role, "ARG child[0] is the shared ARG record")
     context.arena: gb
     context.scratch: @ store
     context.roles: groles
@@ -301,7 +326,12 @@ fn: main () int
     context.classified: 0U
     subject: (cast: (@: void) cand)
     args: @ subject
-    fail(counts, lmx_interp_apply(@ context, m, args, 1U) = c.LMX_INTERP_OK, "interp_apply RET with candidate args[0]")
+    fail(counts, lmx_interp_apply(@ context, m, args, 1U) = c.LMX_INTERP_OK, "interp_apply reads args[0] via ARG/OF")
+    fail(counts, field(m, 1U) = 32, "published candidate field 0 is 32")
+    subject: (cast: (@: void) cand64)
+    args: @ subject
+    fail(counts, lmx_interp_apply(@ context, m, args, 1U) = c.LMX_INTERP_OK, "interp_apply with a different subject")
+    fail(counts, field(m, 1U) = 64, "published candidate field 0 is 64")
     fail(counts, native_hits = 1, "interp_apply did not call native")
 
     m: mk_set_own(7)
@@ -319,22 +349,29 @@ fn: main () int
     context.plan_roles: l3_thread_plan_roles(t)
     context.classified: 0U
     m: mk_set_own(7)
-    ret_role: lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_RET))
-    fake: plant_fake(m, 2U, c.L3_NODE_RETURN)
+    set_role: lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_SET))
+    fake: plant_fake(m, 2U, c.LMX_WALK_OP_SET)
     frame: lmx_arena_ref_struct(m, 2U)
-    fail(counts, broken = 0 && m != 0 && fake != 0 && frame != 0, "return-impostor construction")
-    fail(counts, (cast: (@: void) fake) != ret_role, "return-impostor address is not the shared RET record")
-    fail(counts, lmx_arena_ref_value(frame, 0U) = (cast: (@: void) fake), "return-impostor planted at child[0]")
-    fail(counts, lmx_walk_prepare(@ context, gb, l3_thread_plan_roles(t), m) = c.LMX_WALK_UNSUPPORTED, "return-impostor prepare is UNSUPPORTED")
-    fail(counts, lmx_interp_run(@ context, m) = c.LMX_INTERP_INVALID, "return-impostor interp is INVALID")
-    fail(counts, field(m, 1U) = 0, "return-impostor did not run SET")
-    fail(counts, run_graph(t, m) = c.LMX_THREAD_OK, "return-impostor turn still ends (dispatch status is dropped)")
-    fail(counts, field(m, 1U) = 0, "return-impostor own cell still 0 after the Thread turn")
-    fail(counts, native_hits = 1, "return-impostor did not call native")
+    fail(counts, broken = 0 && m != 0 && fake != 0 && frame != 0, "set-impostor construction")
+    fail(counts, (cast: (@: void) fake) != set_role, "set-impostor address is not the shared SET record")
+    fail(counts, lmx_arena_ref_value(frame, 0U) = (cast: (@: void) fake), "set-impostor planted at child[0]")
+    fail(counts, lmx_walk_prepare(@ context, gb, l3_thread_plan_roles(t), m) = c.LMX_WALK_UNSUPPORTED, "set-impostor prepare is UNSUPPORTED")
+    fail(counts, lmx_interp_run(@ context, m) = c.LMX_INTERP_INVALID, "set-impostor interp is INVALID")
+    fail(counts, field(m, 1U) = 0, "set-impostor did not run SET")
+    fail(counts, run_graph(t, m) = c.LMX_THREAD_OK, "set-impostor turn still ends (dispatch status is dropped)")
+    fail(counts, field(m, 1U) = 0, "set-impostor own cell still 0 after the Thread turn")
+    fail(counts, native_hits = 1, "set-impostor did not call native")
 
+    live: lmx_node_new_owned(gb)
+    if: live = 0 || lmx_arena_refs_open_owned(gb, live, 1U) != 0
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(live, 0U, mk_int(gb, 32))
+    fail(counts, lmx_domain_kind(gb, (cast: (@: void) live)) != c.LMX_KIND_NONE, "fresh candidate after turns is classified")
     tests: lmx_node_new_owned(gb)
     recv: mk_recv(gb, lmx_node_new_owned(gb), tests)
-    fail(counts, recv != 0 && l3_admit(gb, cand, recv) = c.L3_UNSUPPORTED, "analytic OK without tests is not admission")
+    fail(counts, recv != 0 && l3_admit(gb, live, recv) = c.L3_UNSUPPORTED, "analytic OK without tests is not admission")
 
     if: counts[1] != 0
         c.printf("%d failed of %d\n", counts[1], counts[0])

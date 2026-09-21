@@ -115,6 +115,20 @@ if ($VerifyEvidence) {
     if (-not (Test-Path -LiteralPath $manifest)) {
         throw ('verify: incomplete evidence -- no PROVENANCE_COMPLETE.txt in ' + $dir + ' (a transcript alone is not evidence)')
     }
+    # BYTE-LEVEL CONTRACT, asserted on the BYTES and before any parsing: UTF-8 without BOM,
+    # LF-only.  A BOM makes the first parsed key "﻿stamp"; a CRLF file leaves a trailing CR on
+    # nearly every VALUE.  Both are invisible to a reader that normalises them -- and Get-Content,
+    # which is exactly how this verifier reads, normalises BOTH.  That is why the check has to be
+    # on the bytes rather than on whatever the parse happened to yield: a verifier that shares its
+    # reader with the writer cannot see a difference the reader erases.
+    $raw = [System.IO.File]::ReadAllBytes($manifest)
+    if ($raw.Length -ge 3 -and $raw[0] -eq 0xEF -and $raw[1] -eq 0xBB -and $raw[2] -eq 0xBF) {
+        throw ('verify: manifest begins with a UTF-8 BOM (EF BB BF); the contract is UTF-8 without BOM: ' + $manifest)
+    }
+    $crAt = [System.Array]::IndexOf($raw, [byte]0x0D)
+    if ($crAt -ge 0) {
+        throw ('verify: manifest contains a CR byte at offset ' + $crAt + '; the contract is LF-only: ' + $manifest)
+    }
     $m = @{}
     foreach ($ln in (Get-Content -LiteralPath $manifest)) {
         if ($ln -match '^([A-Za-z0-9_]+)=(.*)$') { $m[$Matches[1]] = $Matches[2] }
@@ -208,6 +222,9 @@ foreach ($d in @($src, (Join-Path $src 'l2src'), (Join-Path $src 'l1src'), $gen,
 }
 if ($provenanceMode) {
     $script:provLog = Join-Path $OutDir 'provenance.log'
+    # This file keeps Set-Content -Encoding utf8 DELIBERATELY: it is the non-consumable transcript,
+    # the encoding contract applies to PROVENANCE_COMPLETE.txt alone, and normalising this one too
+    # would imply it is meant to be parsed.  Its first line says what it is for.
     Set-Content -LiteralPath $script:provLog -Value '# provenance transcript -- debuggable, NEVER consumable; read PROVENANCE_COMPLETE.txt instead' -Encoding utf8
     Prov-Line ('stamp=' + (Split-Path -Leaf $OutDir))
     Prov-Line ('git_head=' + ((git -C $root rev-parse HEAD) -join ''))
@@ -970,8 +987,16 @@ if ($red.Count -eq 0) {
         # ATOMIC: written to a sibling temp file and renamed over the target, so a reader sees
         # either nothing or a COMPLETE manifest, never a partial one.  This is the only file a
         # consumer may read; the transcript beside it is for debugging a run that died.
+        # ENCODING IS PART OF THE CONTRACT: UTF-8 WITHOUT a BOM, and LF-only.  Do NOT "simplify"
+        # this back to Set-Content -Encoding utf8 -- on Windows PowerShell 5.1 that writes a BOM,
+        # and -Encoding utf8NoBOM does not exist before PowerShell 6, so the natural cmdlet
+        # parameter produces a change that reviews clean and leaves EF BB BF in front of the first
+        # key.  Measured on the previous revision: a BOM broke one key while CRLF put a trailing CR
+        # on 30 of 31 lines, so a consumer splitting on LF read '...144120\r' for the stamp and a
+        # trailing CR on every hash.  -VerifyEvidence asserts both bytes, and
+        # tools\l2_provenance_probe.ps1 checks them independently.
         $tmp = Join-Path $OutDir ('PROVENANCE_COMPLETE.tmp.' + $PID)
-        Set-Content -LiteralPath $tmp -Value $script:provLines -Encoding utf8
+        [System.IO.File]::WriteAllText($tmp, (($script:provLines -join "`n") + "`n"), (New-Object System.Text.UTF8Encoding($false)))
         Move-Item -LiteralPath $tmp -Destination (Join-Path $OutDir 'PROVENANCE_COMPLETE.txt') -Force
         Write-Output ('l2_harness: provenance COMPLETE -- ' + (Join-Path $OutDir 'PROVENANCE_COMPLETE.txt'))
     }

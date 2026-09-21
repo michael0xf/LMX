@@ -10,6 +10,13 @@
 # that only checks the exit code passes for any failure at all, including one in the wrong branch.
 #
 # Nothing here writes to the repository tree.  Fixtures live under the temp directory.
+param(
+    # Optional.  When given, the byte-level contract is ALSO asserted against this real evidence
+    # directory's manifest.  It stays a PARAMETER rather than a default so the probe never selects
+    # an evidence directory by itself -- picking the newest is the hazard this whole ticket family
+    # exists to remove, and a probe is not exempt from it.
+    [string]$EvidenceDir
+)
 $ErrorActionPreference = 'Stop'
 
 $RepoRoot = (Get-Location).Path
@@ -99,7 +106,9 @@ function New-Evidence([string]$Dir, [string]$DevL2trans, [string]$StageL2trans, 
         ('source_dev_l2_libc_sha256=' + $devLibc),
         ('source_staged_l2_libc_sha256=' + $stageLibc)
     )
-    Set-Content -LiteralPath (Join-Path $Dir 'PROVENANCE_COMPLETE.txt') -Value $lines -Encoding utf8
+    # The fixture must be written to the CONTRACT bytes (UTF-8, no BOM, LF) or the byte-level gate
+    # would fail against the probe's own fixtures instead of against the thing under test.
+    [System.IO.File]::WriteAllText((Join-Path $Dir 'PROVENANCE_COMPLETE.txt'), (($lines -join "`n") + "`n"), (New-Object System.Text.UTF8Encoding($false)))
 }
 function Sha([string]$P) { return (Get-FileHash -LiteralPath $P -Algorithm SHA256).Hash.ToUpper() }
 
@@ -133,9 +142,13 @@ Check 'P5a transcript without a manifest is not evidence' `
 
 $d5b = Join-Path $base 'p5b_missingkey'
 New-Evidence $d5b (Sha (Join-Path $Sandbox 'l2trans.lm1')) (Sha (Join-Path $Sandbox 'l2trans.lm1')) $true
-(Get-Content -LiteralPath (Join-Path $d5b 'PROVENANCE_COMPLETE.txt')) |
-    Where-Object { $_ -notmatch '^l2trans_masked_sha256=' } |
-    Set-Content -LiteralPath (Join-Path $d5b 'PROVENANCE_COMPLETE.txt') -Encoding utf8
+# Rewrite WITHOUT the key but still in contract bytes.  The first version of this fixture filtered
+# the lines and wrote them back with Set-Content -Encoding utf8, which re-introduced a BOM -- so the
+# byte gate fired before the missing-key clause and the check silently tested the wrong thing.  A
+# negative fixture must DELIBERATELY violate the clause under test and not inherit some other
+# violation from the tool used to edit it.
+$kept = @(Get-Content -LiteralPath (Join-Path $d5b 'PROVENANCE_COMPLETE.txt') | Where-Object { $_ -notmatch '^l2trans_masked_sha256=' })
+[System.IO.File]::WriteAllText((Join-Path $d5b 'PROVENANCE_COMPLETE.txt'), (($kept -join "`n") + "`n"), (New-Object System.Text.UTF8Encoding($false)))
 $r = Run-Harness @('-VerifyEvidence', ('"' + $d5b + '"'))
 Check 'P5b manifest missing a required key refused' ($r.Rc -ne 0 -and $r.Blob -match 'manifest is missing key') ("rc=$($r.Rc) $($r.Blob)")
 
@@ -180,6 +193,61 @@ foreach ($case in @(
     $got = if ($gl.Count -ge 1) { ($gl[0] -replace '.*masked_sha256=', '').Trim() } else { '<none>' }
     Check ('P7 masked identity matches the independent implementation (' + $case.Stamp + ')') `
         ($r.Rc -eq 0 -and $got.StartsWith($case.Expect)) ("rc=$($r.Rc) got=$got expected=$($case.Expect)")
+}
+
+# ---- 8. the BYTE-LEVEL contract of the consumable manifest -----------------------------------
+# The manifest is the interface to code that does not exist yet, so its bytes are the contract.  A
+# BOM breaks the FIRST key; CRLF puts a trailing CR on nearly every VALUE.  Both are invisible to a
+# reader that normalises them, which is why these assert on bytes rather than on a parse.
+$d8 = Join-Path $base 'p8_bytes'
+New-Evidence $d8 (Sha (Join-Path $Sandbox 'l2trans.lm1')) (Sha (Join-Path $Sandbox 'l2trans.lm1')) $true
+$man8 = Join-Path $d8 'PROVENANCE_COMPLETE.txt'
+$clean = [System.IO.File]::ReadAllBytes($man8)
+$fixtureBom = ($clean.Length -ge 3 -and $clean[0] -eq 0xEF -and $clean[1] -eq 0xBB -and $clean[2] -eq 0xBF)
+$fixtureCr = ([System.Array]::IndexOf($clean, [byte]0x0D) -ge 0)
+Check 'P8a the probe writes a manifest with no BOM and no CR' (-not $fixtureBom -and -not $fixtureCr) `
+    'the fixture manifest itself violates the contract, so nothing below could be trusted'
+
+# [byte[]](0xEF,0xBB,0xBF).CopyTo(...) throws InvalidCastException here (the comma list is not
+# cast down element-wise), so the prefix is assigned by index and the body copied with
+# System.Array::Copy.
+$bom = New-Object byte[] ($clean.Length + 3)
+$bom[0] = 0xEF; $bom[1] = 0xBB; $bom[2] = 0xBF
+[System.Array]::Copy($clean, 0, $bom, 3, $clean.Length)
+[System.IO.File]::WriteAllBytes($man8, $bom)
+$r = Run-Harness @('-VerifyEvidence', ('"' + $d8 + '"'))
+Check 'P8b a BOM is refused' ($r.Rc -ne 0 -and $r.Blob -match 'begins with a UTF-8 BOM') ("rc=$($r.Rc) $($r.Blob)")
+
+[System.IO.File]::WriteAllBytes($man8, $clean)
+$crlf = [System.Text.Encoding]::UTF8.GetString($clean) -replace "`n", "`r`n"
+[System.IO.File]::WriteAllBytes($man8, [System.Text.Encoding]::UTF8.GetBytes($crlf))
+$r = Run-Harness @('-VerifyEvidence', ('"' + $d8 + '"'))
+Check 'P8c a CR byte is refused' ($r.Rc -ne 0 -and $r.Blob -match 'contains a CR byte') ("rc=$($r.Rc) $($r.Blob)")
+
+[System.IO.File]::WriteAllBytes($man8, $clean)
+$r = Run-Harness @('-VerifyEvidence', ('"' + $d8 + '"'))
+Check 'P8d restored contract bytes verify again (both directions)' ($r.Rc -eq 0 -and $r.Blob -match 'verify: PASS') ("rc=$($r.Rc) $($r.Blob)")
+
+if ($EvidenceDir) {
+    $real = Join-Path $EvidenceDir 'PROVENANCE_COMPLETE.txt'
+    if (-not (Test-Path -LiteralPath $real)) { Check 'P8e real manifest present' $false ('not found: ' + $real) }
+    else {
+        $b = [System.IO.File]::ReadAllBytes($real)
+        $txt = [System.Text.Encoding]::UTF8.GetString($b)
+        $lines = @($txt -split "`n")
+        $badKey = ''; $badVal = ''
+        foreach ($ln in $lines) {
+            if ($ln -eq '') { continue }
+            if ($ln -notmatch '^([A-Za-z0-9_]+)=(.*)$') { $badKey = $ln.Substring(0, [Math]::Min(40, $ln.Length)); continue }
+            if ($Matches[2].Contains("`r")) { $badVal = $Matches[1] }
+        }
+        Check 'P8e real manifest: no BOM' (-not ($b.Length -ge 3 -and $b[0] -eq 0xEF -and $b[1] -eq 0xBB -and $b[2] -eq 0xBF)) 'BOM present'
+        Check 'P8f real manifest: no CR byte anywhere' ([System.Array]::IndexOf($b, [byte]0x0D) -lt 0) 'CR present'
+        Check 'P8g real manifest: first key is exactly stamp' ($lines[0] -match '^stamp=') ("first line is " + $lines[0].Substring(0, [Math]::Min(30, $lines[0].Length)))
+        Check 'P8h real manifest: no parsed key or value contains CR' ($badKey -eq '' -and $badVal -eq '') ("badKey=" + $badKey + " badVal=" + $badVal)
+        $r = Run-Harness @('-VerifyEvidence', ('"' + $EvidenceDir + '"'))
+        Check 'P8i real manifest passes -VerifyEvidence' ($r.Rc -eq 0) ("rc=$($r.Rc) $($r.Blob)")
+    }
 }
 
 Remove-Item -Recurse -Force $base -ErrorAction SilentlyContinue

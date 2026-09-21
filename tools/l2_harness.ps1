@@ -37,10 +37,137 @@
 #
 #   powershell -NoProfile -ExecutionPolicy Bypass -File tools\l2_harness.ps1
 
-param([string]$OutDir, [string]$Translator)
+param(
+    [string]$OutDir, [string]$Translator,
+    # ---- provenance mode (DEEPSEEK-L2TRANSLATOR-EVIDENCE-BUILDER-20260921-146) ----------------
+    # -Provenance builds l2trans from a NAMED, hash-verified translator and leaves a consumable
+    # provenance manifest.  There is no default translator, no bin\ fallback and no newest-stamp
+    # selection in this mode: a chain that picks its own tool cannot testify about which tool it
+    # was.  What this proves is DERIVED-TOOLCHAIN PROVENANCE and nothing more -- l2trans is not
+    # self-hosting (it consumes .lm2 while its source is .lm1, so it never translates itself) and
+    # no fixed-point claim is made or implied.
+    [switch]$Provenance,
+    # Required with -Provenance: the raw SHA256 the named translator must have, checked BEFORE any
+    # staging or translation.
+    [string]$ExpectedTranslatorSha256,
+    # -ProvenanceCheckOnly runs the pre-work checks and stops before staging.  The negative probes
+    # use it so that a refusal costs a second instead of a 30-row suite.
+    [switch]$ProvenanceCheckOnly,
+    # -VerifyEvidence <dir> re-checks an EXISTING evidence directory: its completion manifest must
+    # be present, the artifact's identity must still be the recorded one, and the staged sources
+    # must still be copies of the live ones.  A directory without a complete manifest is not
+    # evidence, however green its transcript reads.
+    [string]$VerifyEvidence,
+    # -PeInfo <path> prints one file's raw and masked identity and refuses on anything that is not
+    # a well-formed PE.  The mask offsets are derived from THAT file's e_lfanew.
+    [string]$PeInfo
+)
 $ErrorActionPreference = 'Continue'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $sandbox = Join-Path $root 'dev\l2src_sandbox'
+
+# ---- PE identity ------------------------------------------------------------------------------
+# e_lfanew is read from 0x3C FOR EACH FILE and is NOT a format constant: TDS sits at e_lfanew+8
+# and the COFF CheckSum at e_lfanew+24+64.  Every one of the 46 binaries measured on 2026-09-21
+# (44 l2trans.exe + both l1trans.exe) reports e_lfanew = 128, so hardcoding 136 and 216 WOULD
+# WORK TODAY AND WOULD BE WRONG -- a refusal on an unusual header layout could not be explained.
+# The offsets actually used are printed by -PeInfo and recorded in the manifest.
+# Identity is the MASKED hash (stable across rebuilds of the same source); the RAW hash is for
+# transport only, since 44 harness builds produced 44 distinct raw hashes for 20 distinct codes.
+function Get-PeIdentity([string]$Path) {
+    if (-not (Test-Path -LiteralPath $Path)) { throw ('pe: file not found: ' + $Path) }
+    $b = [System.IO.File]::ReadAllBytes($Path)
+    if ($b.Length -lt 64) { throw ('pe: too short to be a PE image (' + $b.Length + ' bytes): ' + $Path) }
+    if ($b[0] -ne 0x4D -or $b[1] -ne 0x5A) { throw ('pe: no MZ signature: ' + $Path) }
+    $e = [System.BitConverter]::ToUInt32($b, 0x3C)
+    if ($e -lt 64 -or ($e + 92) -gt $b.Length) { throw ('pe: e_lfanew out of range (e_lfanew=' + $e + ', size=' + $b.Length + '): ' + $Path) }
+    if ($b[$e] -ne 0x50 -or $b[$e + 1] -ne 0x45) { throw ('pe: no PE signature at e_lfanew=' + $e + ': ' + $Path) }
+    $tds = [int]$e + 8
+    $cs = [int]$e + 24 + 64
+    $copy = [byte[]]$b.Clone()
+    for ($i = 0; $i -lt 4; $i++) { $copy[$tds + $i] = 0; $copy[$cs + $i] = 0 }
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    $masked = ([System.BitConverter]::ToString($sha.ComputeHash($copy)) -replace '-', '').ToUpper()
+    return [pscustomobject]@{
+        Path = (Resolve-Path -LiteralPath $Path).Path
+        Size = $b.Length
+        Raw = (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToUpper()
+        Masked = $masked
+        ELfanew = $e
+        TdsOff = $tds
+        CsOff = $cs
+    }
+}
+
+if ($PeInfo) {
+    $pi = Get-PeIdentity $PeInfo
+    Write-Output ('pe: path=' + $pi.Path)
+    Write-Output ('pe: size=' + $pi.Size)
+    Write-Output ('pe: raw_sha256=' + $pi.Raw)
+    Write-Output ('pe: masked_sha256=' + $pi.Masked)
+    Write-Output ('pe: e_lfanew=' + $pi.ELfanew + ' tds_off=' + $pi.TdsOff + ' checksum_off=' + $pi.CsOff)
+    exit 0
+}
+
+if ($VerifyEvidence) {
+    $dir = (Resolve-Path -LiteralPath $VerifyEvidence).Path
+    $manifest = Join-Path $dir 'PROVENANCE_COMPLETE.txt'
+    if (-not (Test-Path -LiteralPath $manifest)) {
+        throw ('verify: incomplete evidence -- no PROVENANCE_COMPLETE.txt in ' + $dir + ' (a transcript alone is not evidence)')
+    }
+    $m = @{}
+    foreach ($ln in (Get-Content -LiteralPath $manifest)) {
+        if ($ln -match '^([A-Za-z0-9_]+)=(.*)$') { $m[$Matches[1]] = $Matches[2] }
+    }
+    foreach ($k in @('l2trans_masked_sha256', 'l2trans_path', 'source_dev_l2trans_sha256', 'source_staged_l2trans_sha256', 'source_dev_l2_libc_sha256', 'source_staged_l2_libc_sha256')) {
+        if (-not $m.ContainsKey($k)) { throw ('verify: manifest is missing key ' + $k + ': ' + $manifest) }
+    }
+    $pi = Get-PeIdentity $m['l2trans_path']
+    if ($pi.Masked -ne $m['l2trans_masked_sha256']) {
+        throw ('verify: artifact identity differs from the manifest: ' + $pi.Masked + ' vs ' + $m['l2trans_masked_sha256'])
+    }
+    foreach ($pair in @(@('l2trans.lm1', 'source_dev_l2trans_sha256', 'source_staged_l2trans_sha256'),
+                        @('l2_libc.lm1', 'source_dev_l2_libc_sha256', 'source_staged_l2_libc_sha256'))) {
+        $live = Join-Path $sandbox $pair[0]
+        $stagedF = Join-Path (Join-Path $dir 'src\l2src') $pair[0]
+        if (-not (Test-Path -LiteralPath $stagedF)) { throw ('verify: staged source missing: ' + $stagedF) }
+        $sh = (Get-FileHash -LiteralPath $stagedF -Algorithm SHA256).Hash.ToUpper()
+        if ($sh -ne $m[$pair[2]]) { throw ('verify: staged bytes differ from what the run recorded for ' + $pair[0] + ': ' + $sh + ' vs ' + $m[$pair[2]]) }
+        $lh = (Get-FileHash -LiteralPath $live -Algorithm SHA256).Hash.ToUpper()
+        if ($lh -ne $m[$pair[1]]) { throw ('verify: LIVE source has changed since the run for ' + $pair[0] + ': ' + $lh + ' vs ' + $m[$pair[1]]) }
+    }
+    Write-Output ('verify: PASS -- ' + $dir + ' (artifact identity and both staged sources still agree with its manifest)')
+    exit 0
+}
+
+# ---- provenance mode: the exact tool, verified BEFORE any work ---------------------------------
+$provenanceMode = [bool]($Provenance -or $ProvenanceCheckOnly)
+$tHash = ''
+if ($provenanceMode) {
+    if (-not $Translator) { throw 'provenance: -Translator is required (no default, no bin\ fallback, no newest)' }
+    if (-not (Test-Path -LiteralPath $Translator)) { throw ('provenance: translator not found: ' + $Translator) }
+    if (-not $ExpectedTranslatorSha256) { throw 'provenance: -ExpectedTranslatorSha256 is required' }
+    if ($ExpectedTranslatorSha256 -notmatch '^[0-9A-Fa-f]{64}$') {
+        throw ("provenance: -ExpectedTranslatorSha256 must be 64 hex, got '" + $ExpectedTranslatorSha256 + "'")
+    }
+    $tHash = (Get-FileHash -LiteralPath $Translator -Algorithm SHA256).Hash.ToUpper()
+    if ($tHash -ne $ExpectedTranslatorSha256.ToUpper()) {
+        throw ('provenance: -ExpectedTranslatorSha256 mismatch BEFORE any work: got ' + $tHash + ' expected ' + $ExpectedTranslatorSha256.ToUpper())
+    }
+    if (-not $OutDir) { throw 'provenance: -OutDir is required (the fresh evidence directory)' }
+    if (Test-Path -LiteralPath $OutDir) {
+        if (@(Get-ChildItem -LiteralPath $OutDir -Force -ErrorAction SilentlyContinue).Count -gt 0) {
+            throw ('provenance: -OutDir exists and is not empty; an evidence directory is fresh: ' + $OutDir)
+        }
+    }
+    $Translator = (Resolve-Path -LiteralPath $Translator).Path
+    Write-Output ('l2_harness: PROVENANCE mode; translator ' + $Translator + ' sha256 ' + $tHash + ' (verified against ExpectedTranslatorSha256 before any work)')
+    if ($ProvenanceCheckOnly) {
+        Write-Output 'l2_harness: PROVENANCE-CHECK-ONLY PASS (translator verified, evidence dir fresh); stopping before staging'
+        exit 0
+    }
+}
+
 if (-not $OutDir) { $OutDir = Join-Path $root ('build\l2_harness\' + (Get-Date -Format 'yyyyMMdd_HHmmss')) }
 
 if (-not $Translator) { $Translator = Join-Path $root 'bin\l1trans.exe' }
@@ -57,12 +184,38 @@ if ($Translator -eq (Join-Path $root 'bin\l1trans.exe')) {
 }
 $gcc = (Get-Command gcc -ErrorAction Stop).Source
 
+# The append-as-you-go transcript (ticket -146).  It exists so a KILLED run still explains itself,
+# and it is deliberately NOT the consumable artifact: consumption reads PROVENANCE_COMPLETE.txt,
+# which is written atomically and only when every row passed.  One file serving both purposes would
+# leave a killed run with something a consumer might parse.
+# DEFINED HERE, ABOVE ITS FIRST USE ON PURPOSE: PowerShell resolves a function name at RUNTIME, so a
+# definition placed after the directory setup is not in scope yet and every call before it fails
+# with CommandNotFoundException -- measured, and the failure is SILENT if the call's output is not
+# checked: the manifest simply omitted the stamp, git head and l1trans identity lines and was still
+# written.  That is what the required-key gate below now refuses.
+$script:provLines = @()
+$script:provLog = $null
+function Prov-Line([string]$Text) {
+    $script:provLines += $Text
+    if ($script:provLog) { Add-Content -LiteralPath $script:provLog -Value $Text -Encoding utf8 }
+}
 $src = Join-Path $OutDir 'src'
 $gen = Join-Path $OutDir 'gen'
 $bin = Join-Path $OutDir 'bin'
 $logs = Join-Path $OutDir 'logs'
 foreach ($d in @($src, (Join-Path $src 'l2src'), (Join-Path $src 'l1src'), $gen, $bin, $logs)) {
     New-Item -ItemType Directory -Force -Path $d | Out-Null
+}
+if ($provenanceMode) {
+    $script:provLog = Join-Path $OutDir 'provenance.log'
+    Set-Content -LiteralPath $script:provLog -Value '# provenance transcript -- debuggable, NEVER consumable; read PROVENANCE_COMPLETE.txt instead' -Encoding utf8
+    Prov-Line ('stamp=' + (Split-Path -Leaf $OutDir))
+    Prov-Line ('git_head=' + ((git -C $root rev-parse HEAD) -join ''))
+    Prov-Line ('tracked_modified=' + @(git -C $root status --porcelain -uno).Count)
+    Prov-Line ('l1trans_path=' + $Translator)
+    Prov-Line ('l1trans_raw_sha256=' + $tHash)
+    Prov-Line ('l1trans_masked_sha256=' + (Get-PeIdentity $Translator).Masked)
+    Prov-Line ('l1trans_verified_by=ExpectedTranslatorSha256')
 }
 
 $rows = @()
@@ -184,6 +337,24 @@ foreach ($f in @(Get-ChildItem -LiteralPath (Join-Path $sandbox 'l1src') -File))
     Copy-Item -LiteralPath $f.FullName -Destination (Join-Path $src ('l1src\' + $f.Name)) -Force; $staged++
 }
 Write-Output ('l2_harness: staged ' + $staged + ' files into ' + $src)
+if ($provenanceMode) {
+    # The staged l2src\l2trans.lm1 and l2_libc.lm1 must be BYTE COPIES of the LIVE dev sandbox
+    # sources, never the frozen root l2src twin.  This matters because the translator is handed the
+    # RELATIVE literal 'l2src/l2trans.lm1' with cwd = $src, so which twin built the translator is
+    # decided by this copy alone, and nothing about the literal says so.
+    foreach ($s in @(@('l2trans.lm1', 'l2trans'), @('l2_libc.lm1', 'l2_libc'))) {
+        $live = Join-Path $sandbox $s[0]
+        $stagedFile = Join-Path (Join-Path $src 'l2src') $s[0]
+        if (-not (Test-Path -LiteralPath $live)) { throw ('provenance: live source missing: ' + $live) }
+        if (-not (Test-Path -LiteralPath $stagedFile)) { throw ('provenance: staged source missing: ' + $stagedFile) }
+        $lh = (Get-FileHash -LiteralPath $live -Algorithm SHA256).Hash.ToUpper()
+        $sh = (Get-FileHash -LiteralPath $stagedFile -Algorithm SHA256).Hash.ToUpper()
+        if ($lh -ne $sh) { throw ('provenance: staged ' + $s[0] + ' is not a copy of the live source: ' + $sh + ' vs ' + $lh) }
+        Prov-Line ('source_dev_' + $s[1] + '_sha256=' + $lh)
+        Prov-Line ('source_staged_' + $s[1] + '_sha256=' + $sh)
+    }
+    Prov-Line ('source_origin=dev/l2src_sandbox')
+}
 
 # ---- 2. build l2trans -----------------------------------------------------------------------
 $cflags = @('-std=c99', '-I', $root, '-I', (Join-Path $root 'lm1\build'), '-I', $sandbox)
@@ -209,9 +380,29 @@ if ($built) {
 if ($built) {
     Add-Row 'OK' 'build:l2trans' ('sha256 ' + (Get-FileHash -LiteralPath $l2trans -Algorithm SHA256).Hash.Substring(0, 16))
 } else {
+    if ($provenanceMode) { Prov-Line 'build_failed=1 (l2trans itself did not build; no completion manifest is written)' }
     Write-Output ''
     Write-Output ('l2_harness RED: l2trans itself did not build; evidence ' + $OutDir)
     exit 1
+}
+if ($provenanceMode -and $built) {
+    # Get-PeIdentity REFUSES on a malformed artifact here, so a corrupt l2trans.exe ends the run
+    # rather than being recorded with a blank identity.
+    $pi = Get-PeIdentity $l2trans
+    Prov-Line ('gen_l2trans_c_sha256=' + (Get-FileHash -LiteralPath $l2transC -Algorithm SHA256).Hash.ToUpper())
+    Prov-Line ('gen_l2_libc_c_sha256=' + (Get-FileHash -LiteralPath $l2libcC -Algorithm SHA256).Hash.ToUpper())
+    Prov-Line ('gcc_path=' + $gcc)
+    Prov-Line ('gcc_version=' + ((& $gcc --version | Select-Object -First 1) -join ''))
+    Prov-Line ('cmd_translate_l2trans=' + $Translator + ' l2src/l2trans.lm1 ' + $l2transC + ' (cwd ' + $src + ')')
+    Prov-Line ('cmd_translate_l2_libc=' + $Translator + ' l2src/l2_libc.lm1 ' + $l2libcC + ' (cwd ' + $src + ')')
+    Prov-Line ('cmd_compile_l2_libc=' + $gcc + ' ' + (($cflags + @('-c', $l2libcC, '-o', $l2libcO)) -join ' ') + ' (cwd ' + $root + ')')
+    Prov-Line ('cmd_link_l2trans=' + $gcc + ' ' + (($cflags + @('-o', $l2trans, $l2transC, $l2libcO)) -join ' ') + ' (cwd ' + $root + ')')
+    Prov-Line ('l2trans_path=' + $pi.Path)
+    Prov-Line ('l2trans_size=' + $pi.Size)
+    Prov-Line ('l2trans_raw_sha256=' + $pi.Raw)
+    Prov-Line ('l2trans_masked_sha256=' + $pi.Masked)
+    Prov-Line ('l2trans_e_lfanew=' + $pi.ELfanew)
+    Prov-Line ('mask_offsets=tds:' + $pi.TdsOff + ',checksum:' + $pi.CsOff)
 }
 
 # ---- 2b. the kernel's headers and the driver of generated programs ----------------------------
@@ -753,8 +944,40 @@ foreach ($fx in $fixtures) {
 foreach ($r in $rows) { Write-Output ($r.State.PadRight(5) + $r.Label.PadRight(34) + $r.Note) }
 Write-Output ''
 if ($red.Count -eq 0) {
+    if ($provenanceMode) {
+        # FAIL CLOSED ON AN INCOMPLETE MANIFEST: the marker may only be written when every fact it
+        # is meant to carry is actually present.  Without this gate a quietly failing line (a
+        # function out of scope, a swallowed error) yields a manifest that omits, say, the l1trans
+        # identity and still advertises itself as complete -- measured on the first version of this
+        # change, where three early lines failed with CommandNotFoundException and the manifest was
+        # written anyway.
+        $required = @('stamp', 'git_head', 'l1trans_path', 'l1trans_raw_sha256', 'l1trans_masked_sha256',
+                      'source_dev_l2trans_sha256', 'source_staged_l2trans_sha256',
+                      'source_dev_l2_libc_sha256', 'source_staged_l2_libc_sha256',
+                      'gen_l2trans_c_sha256', 'gen_l2_libc_c_sha256',
+                      'l2trans_path', 'l2trans_raw_sha256', 'l2trans_masked_sha256',
+                      'l2trans_e_lfanew', 'mask_offsets')
+        $have = @{}
+        foreach ($l in $script:provLines) { if ($l -match '^([A-Za-z0-9_]+)=') { $have[$Matches[1]] = 1 } }
+        $missing = @($required | Where-Object { -not $have.ContainsKey($_) })
+        if ($missing.Count -gt 0) {
+            throw ('provenance: refusing to write a completion manifest -- required evidence is missing: ' + ($missing -join ', '))
+        }
+        Prov-Line ('rows_ok=' + $rows.Count)
+        Prov-Line 'rows_failed=0'
+        Prov-Line 'exit=0'
+        Prov-Line 'claim=derived-toolchain provenance only; no self-hosting and no fixed-point claim'
+        # ATOMIC: written to a sibling temp file and renamed over the target, so a reader sees
+        # either nothing or a COMPLETE manifest, never a partial one.  This is the only file a
+        # consumer may read; the transcript beside it is for debugging a run that died.
+        $tmp = Join-Path $OutDir ('PROVENANCE_COMPLETE.tmp.' + $PID)
+        Set-Content -LiteralPath $tmp -Value $script:provLines -Encoding utf8
+        Move-Item -LiteralPath $tmp -Destination (Join-Path $OutDir 'PROVENANCE_COMPLETE.txt') -Force
+        Write-Output ('l2_harness: provenance COMPLETE -- ' + (Join-Path $OutDir 'PROVENANCE_COMPLETE.txt'))
+    }
     Write-Output ('l2_harness GREEN: ' + $rows.Count + ' targets, no failures; evidence ' + $OutDir)
     exit 0
 }
+if ($provenanceMode) { Prov-Line ('rows_failed=' + $red.Count + ' (no completion manifest is written)') }
 Write-Output ('l2_harness RED: ' + $red.Count + ' of ' + $rows.Count + ' targets failed; evidence ' + $OutDir)
 exit 1

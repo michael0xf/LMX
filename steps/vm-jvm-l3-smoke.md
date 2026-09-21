@@ -191,3 +191,7 @@ Illegal structural/ownership cycles among non-CALLABLE expression nodes are reje
 ## UNTIL (GROK-BOT-JVM-L3-UNTIL-20260921-98)
 
 Post-test UNTIL: children condition, body[, LOOP_LABEL] (same shape as WHILE). Body runs first, then condition; repeat while condition is zero (body at least once). BREAK/CONTINUE/REDO reuse the physical loop-label frame {cond, break, body} with CONTINUE → postcondition. Unlabelled transfers target the nearest active WHILE or UNTIL; labelled transfers stay in the same CALLABLE. FOR/FINALLY deferred.
+
+## FOR core (GROK-BOT-JVM-L3-FOR-CORE-20260921-99)
+
+Core FOR (no range shorthand): children init, condition, step, body[, LOOP_LABEL]. Init once; then condition; while nonzero execute body, then step, then condition. CONTINUE → step (then condition); REDO → body (skip step and condition). Unlabelled transfers target nearest WHILE|UNTIL|FOR; labelled via physical LOOP_LABEL in the same CALLABLE. EACH/ranges/FINALLY deferred.

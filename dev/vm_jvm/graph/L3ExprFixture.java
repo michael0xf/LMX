@@ -1489,6 +1489,224 @@ public final class L3ExprFixture {
                 L3Node.of(L3Role.RETURN, L3Node.of(L3Role.SEQUENCE, u, L3Node.ofInt(L3Role.INT_LITERAL, 0))));
     }
 
+
+    // --- FOR core (GROK-BOT-JVM-L3-FOR-CORE-20260921-99) ---
+
+    /** Init once: FOR(n=0, 0, step?, body?) — initial false; n stays 0; init ran. */
+    public static L3Node forInitOnceInitialFalse() {
+        L3Node init = new L3Node(L3Role.LOCAL_SET, 0, L3Node.ofInt(L3Role.INT_LITERAL, 7));
+        L3Node step = new L3Node(
+                L3Role.LOCAL_SET,
+                0,
+                L3Node.of(
+                        L3Role.ADD,
+                        L3Node.ofInt(L3Role.LOCAL_GET, 0),
+                        L3Node.ofInt(L3Role.INT_LITERAL, 1)));
+        L3Node body = new L3Node(
+                L3Role.LOCAL_SET, 0, L3Node.ofInt(L3Role.INT_LITERAL, 99));
+        L3Node f = L3Node.of(
+                L3Role.FOR, init, L3Node.ofInt(L3Role.INT_LITERAL, 0), step, body);
+        return L3Node.of(
+                L3Role.CALLABLE,
+                L3Node.of(
+                        L3Role.RETURN,
+                        L3Node.of(L3Role.SEQUENCE, f, L3Node.ofInt(L3Role.LOCAL_GET, 0))));
+    }
+
+    /**
+     * Ordinary ordering: n=0; FOR(; n-3 via IF exit; n++; empty body?);
+     * Better: init n=0; cond IF(n-3,0,1) wait nonzero exit — FOR continues while nonzero.
+     * WHILE-style: cond = LOCAL_GET n truthy while n>0 countdown.
+     * init n=3; cond n; step n=n-1; body (noop or probe). Result 0 after 3 iters.
+     */
+    public static L3Node forOrdinaryCountdown() {
+        L3Node init = new L3Node(L3Role.LOCAL_SET, 0, L3Node.ofInt(L3Role.INT_LITERAL, 3));
+        L3Node cond = L3Node.ofInt(L3Role.LOCAL_GET, 0);
+        L3Node step = new L3Node(
+                L3Role.LOCAL_SET,
+                0,
+                L3Node.of(
+                        L3Role.ADD,
+                        L3Node.ofInt(L3Role.LOCAL_GET, 0),
+                        L3Node.ofInt(L3Role.INT_LITERAL, -1)));
+        L3Node body = L3Node.ofInt(L3Role.INT_LITERAL, 0);
+        L3Node f = L3Node.of(L3Role.FOR, init, cond, step, body);
+        return L3Node.of(
+                L3Role.CALLABLE,
+                L3Node.of(
+                        L3Role.RETURN,
+                        L3Node.of(L3Role.SEQUENCE, f, L3Node.ofInt(L3Role.LOCAL_GET, 0))));
+    }
+
+    /**
+     * CONTINUE performs step: body CONTINUE only; step incr n; cond exit at n==3.
+     * init n=0; cond IF(n-3,0,1); step n++; body CONTINUE. → n==3
+     */
+    public static L3Node forContinuePerformsStep() {
+        L3Node init = new L3Node(L3Role.LOCAL_SET, 0, L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        L3Node eq3 = L3Node.of(
+                L3Role.ADD, L3Node.ofInt(L3Role.LOCAL_GET, 0), L3Node.ofInt(L3Role.INT_LITERAL, -3));
+        // FOR continues while cond nonzero. Want loop while n<3: cond nonzero when n!=3.
+        // IF(n-3, 1, 0): when n!=3 then=1; when n==3 else=0. Exit when 0.
+        L3Node cond = L3Node.of(
+                L3Role.IF, eq3, L3Node.ofInt(L3Role.INT_LITERAL, 1), L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        L3Node step = new L3Node(
+                L3Role.LOCAL_SET,
+                0,
+                L3Node.of(
+                        L3Role.ADD,
+                        L3Node.ofInt(L3Role.LOCAL_GET, 0),
+                        L3Node.ofInt(L3Role.INT_LITERAL, 1)));
+        L3Node body = L3Node.of(L3Role.CONTINUE);
+        L3Node f = L3Node.of(L3Role.FOR, init, cond, step, body);
+        return L3Node.of(
+                L3Role.CALLABLE,
+                L3Node.of(
+                        L3Role.RETURN,
+                        L3Node.of(L3Role.SEQUENCE, f, L3Node.ofInt(L3Role.LOCAL_GET, 0))));
+    }
+
+    /**
+     * REDO omits step and condition probe: init n=0; cond SEQUENCE(PROBE, always 1);
+     * step would incr secondary; body: incr n; if n==1 REDO; if n==2 BREAK.
+     * After REDO, n becomes 2 without extra probe; probes==1 (initial cond only before first body,
+     * then BREAK before falling to step). Actually: cond checked, body, REDO→body, incr→2, BREAK.
+     * Probes: 1. n==2. Step never runs.
+     */
+    public static L3Node forRedoOmitsStepAndCondition() {
+        L3Node init = new L3Node(L3Role.LOCAL_SET, 0, L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        L3Node cond = L3Node.of(
+                L3Role.SEQUENCE, L3Node.of(L3Role.PROBE), L3Node.ofInt(L3Role.INT_LITERAL, 1));
+        L3Node step = new L3Node(
+                L3Role.LOCAL_SET,
+                0,
+                L3Node.of(
+                        L3Role.ADD,
+                        L3Node.ofInt(L3Role.LOCAL_GET, 0),
+                        L3Node.ofInt(L3Role.INT_LITERAL, 100)));
+        L3Node incr = new L3Node(
+                L3Role.LOCAL_SET,
+                0,
+                L3Node.of(
+                        L3Role.ADD,
+                        L3Node.ofInt(L3Role.LOCAL_GET, 0),
+                        L3Node.ofInt(L3Role.INT_LITERAL, 1)));
+        L3Node eq1 = L3Node.of(
+                L3Role.ADD, L3Node.ofInt(L3Role.LOCAL_GET, 0), L3Node.ofInt(L3Role.INT_LITERAL, -1));
+        L3Node ifRedo = L3Node.of(
+                L3Role.IF, eq1, L3Node.ofInt(L3Role.INT_LITERAL, 0), L3Node.of(L3Role.REDO));
+        L3Node eq2 = L3Node.of(
+                L3Role.ADD, L3Node.ofInt(L3Role.LOCAL_GET, 0), L3Node.ofInt(L3Role.INT_LITERAL, -2));
+        L3Node ifBreak = L3Node.of(
+                L3Role.IF, eq2, L3Node.ofInt(L3Role.INT_LITERAL, 0), L3Node.of(L3Role.BREAK));
+        L3Node body = L3Node.of(L3Role.SEQUENCE, incr, ifRedo, ifBreak, L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        L3Node f = L3Node.of(L3Role.FOR, init, cond, step, body);
+        return L3Node.of(
+                L3Role.CALLABLE,
+                L3Node.of(
+                        L3Role.RETURN,
+                        L3Node.of(L3Role.SEQUENCE, f, L3Node.ofInt(L3Role.LOCAL_GET, 0))));
+    }
+
+    /**
+     * Nearest nesting WHILE/UNTIL/FOR: outer FOR; inner UNTIL with BREAK; outer n==1.
+     */
+    public static L3Node forNearestNestingWithUntil() {
+        L3Node init = new L3Node(L3Role.LOCAL_SET, 0, L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        L3Node cond = L3Node.ofInt(L3Role.INT_LITERAL, 1);
+        L3Node step = L3Node.ofInt(L3Role.INT_LITERAL, 0);
+        L3Node incr = new L3Node(
+                L3Role.LOCAL_SET,
+                0,
+                L3Node.of(
+                        L3Role.ADD,
+                        L3Node.ofInt(L3Role.LOCAL_GET, 0),
+                        L3Node.ofInt(L3Role.INT_LITERAL, 1)));
+        L3Node inner = L3Node.of(
+                L3Role.UNTIL,
+                L3Node.ofInt(L3Role.INT_LITERAL, 1),
+                L3Node.of(L3Role.SEQUENCE, L3Node.of(L3Role.BREAK), L3Node.ofInt(L3Role.INT_LITERAL, 0)));
+        // After incr+inner, BREAK outer when n!=0 via... use BREAK on outer with label? 
+        // Simpler: body incr; BREAK (nearest is FOR after inner exits).
+        L3Node body = L3Node.of(
+                L3Role.SEQUENCE, incr, inner, L3Node.of(L3Role.BREAK), L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        L3Node f = L3Node.of(L3Role.FOR, init, cond, step, body);
+        return L3Node.of(
+                L3Role.CALLABLE,
+                L3Node.of(
+                        L3Role.RETURN,
+                        L3Node.of(L3Role.SEQUENCE, f, L3Node.ofInt(L3Role.LOCAL_GET, 0))));
+    }
+
+    /** Labelled BREAK to outer FOR from inner WHILE; outer n==1. */
+    public static L3Node labelledBreakToOuterFor() {
+        L3Node outerLab = loopLabel();
+        L3Node innerLab = loopLabel();
+        L3Node init = new L3Node(L3Role.LOCAL_SET, 0, L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        L3Node outerIncr = new L3Node(
+                L3Role.LOCAL_SET,
+                0,
+                L3Node.of(
+                        L3Role.ADD,
+                        L3Node.ofInt(L3Role.LOCAL_GET, 0),
+                        L3Node.ofInt(L3Role.INT_LITERAL, 1)));
+        L3Node innerBody = L3Node.of(
+                L3Role.SEQUENCE,
+                L3Node.of(L3Role.BREAK, outerLab),
+                L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        L3Node inner = L3Node.of(
+                L3Role.WHILE, L3Node.ofInt(L3Role.INT_LITERAL, 1), innerBody, innerLab);
+        L3Node body = L3Node.of(
+                L3Role.SEQUENCE, outerIncr, inner, L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        L3Node f = L3Node.of(
+                L3Role.FOR,
+                init,
+                L3Node.ofInt(L3Role.INT_LITERAL, 1),
+                L3Node.ofInt(L3Role.INT_LITERAL, 0),
+                body,
+                outerLab);
+        return L3Node.of(
+                L3Role.CALLABLE,
+                L3Node.of(
+                        L3Role.RETURN,
+                        L3Node.of(L3Role.SEQUENCE, f, L3Node.ofInt(L3Role.LOCAL_GET, 0))));
+    }
+
+    public static L3Node forBadArity() {
+        L3Node f = L3Node.of(
+                L3Role.FOR,
+                L3Node.ofInt(L3Role.INT_LITERAL, 0),
+                L3Node.ofInt(L3Role.INT_LITERAL, 0),
+                L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        return L3Node.of(
+                L3Role.CALLABLE,
+                L3Node.of(L3Role.RETURN, L3Node.of(L3Role.SEQUENCE, f, L3Node.ofInt(L3Role.INT_LITERAL, 0))));
+    }
+
+    public static L3Node forInValueContextReturn() {
+        L3Node f = L3Node.of(
+                L3Role.FOR,
+                L3Node.ofInt(L3Role.INT_LITERAL, 0),
+                L3Node.ofInt(L3Role.INT_LITERAL, 0),
+                L3Node.ofInt(L3Role.INT_LITERAL, 0),
+                L3Node.ofInt(L3Role.INT_LITERAL, 0));
+        return L3Node.of(L3Role.CALLABLE, L3Node.of(L3Role.RETURN, f));
+    }
+
+    public static L3Node forWithRetryLabel() {
+        L3Node rlab = retryLabel();
+        L3Node f = L3Node.of(
+                L3Role.FOR,
+                L3Node.ofInt(L3Role.INT_LITERAL, 0),
+                L3Node.ofInt(L3Role.INT_LITERAL, 0),
+                L3Node.ofInt(L3Role.INT_LITERAL, 0),
+                L3Node.ofInt(L3Role.INT_LITERAL, 0),
+                rlab);
+        return L3Node.of(
+                L3Role.CALLABLE,
+                L3Node.of(L3Role.RETURN, L3Node.of(L3Role.SEQUENCE, f, L3Node.ofInt(L3Role.INT_LITERAL, 0))));
+    }
+
     public static final class CallGraphWithOrphan {
         public final L3Node entry;
         public final L3Node orphan;

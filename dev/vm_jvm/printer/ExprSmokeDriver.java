@@ -85,6 +85,7 @@ public final class ExprSmokeDriver {
 
         testRetryableLocal();
         testUntil();
+        testForCore();
 
         if (fails != 0) {
             System.out.println("FAIL ExprSmokeDriver checks=" + checks + " failures=" + fails);
@@ -647,6 +648,66 @@ public final class ExprSmokeDriver {
 
 
 
+
+
+    private static void testForCore() throws Exception {
+        Class<?> c1 = loadPrinted(L3ExprFixture.forInitOnceInitialFalse());
+        Object r1 = c1.getMethod("eval", lmx.LmxOccurrence.class)
+                .invoke(null, lmx.LmxOccurrence.independent(Integer.valueOf(0)));
+        check("FOR init once initial-false -> 7", Integer.valueOf(7).equals(r1));
+
+        Class<?> c2 = loadPrinted(L3ExprFixture.forOrdinaryCountdown());
+        Object r2 = c2.getMethod("eval", lmx.LmxOccurrence.class)
+                .invoke(null, lmx.LmxOccurrence.independent(Integer.valueOf(0)));
+        check("FOR ordinary countdown -> 0", Integer.valueOf(0).equals(r2));
+
+        Class<?> c3 = loadPrinted(L3ExprFixture.forContinuePerformsStep());
+        Object r3 = c3.getMethod("eval", lmx.LmxOccurrence.class)
+                .invoke(null, lmx.LmxOccurrence.independent(Integer.valueOf(0)));
+        check("FOR CONTINUE performs step -> 3", Integer.valueOf(3).equals(r3));
+
+        ArgEvalCounter.reset();
+        Class<?> c4 = loadPrinted(L3ExprFixture.forRedoOmitsStepAndCondition());
+        Object r4 = c4.getMethod("eval", lmx.LmxOccurrence.class)
+                .invoke(null, lmx.LmxOccurrence.independent(Integer.valueOf(0)));
+        check("FOR REDO omits step -> n==2", Integer.valueOf(2).equals(r4));
+        check("FOR REDO omits condition probe ticks 1", ArgEvalCounter.get() == 1);
+
+        Class<?> c5 = loadPrinted(L3ExprFixture.forNearestNestingWithUntil());
+        Object r5 = c5.getMethod("eval", lmx.LmxOccurrence.class)
+                .invoke(null, lmx.LmxOccurrence.independent(Integer.valueOf(0)));
+        check("FOR nearest nesting with UNTIL -> 1", Integer.valueOf(1).equals(r5));
+
+        Class<?> c6 = loadPrinted(L3ExprFixture.labelledBreakToOuterFor());
+        Object r6 = c6.getMethod("eval", lmx.LmxOccurrence.class)
+                .invoke(null, lmx.LmxOccurrence.independent(Integer.valueOf(0)));
+        check("labelled BREAK to outer FOR -> 1", Integer.valueOf(1).equals(r6));
+
+        boolean threw = false;
+        try {
+            L3ClassfilePrinter.emitCallable(L3ExprFixture.forBadArity());
+        } catch (IllegalArgumentException e) {
+            threw = e.getMessage() != null && e.getMessage().contains("FOR arity");
+        }
+        check("FOR bad arity rejected", threw);
+
+        threw = false;
+        try {
+            L3ClassfilePrinter.emitCallable(L3ExprFixture.forInValueContextReturn());
+        } catch (IllegalArgumentException e) {
+            threw = e.getMessage() != null && e.getMessage().contains("value context");
+        }
+        check("FOR in value context rejected", threw);
+
+        threw = false;
+        try {
+            L3ClassfilePrinter.emitCallable(L3ExprFixture.forWithRetryLabel());
+        } catch (IllegalArgumentException e) {
+            threw = e.getMessage() != null && (
+                    e.getMessage().contains("LOOP_LABEL") || e.getMessage().contains("RETRY_LABEL"));
+        }
+        check("RETRY_LABEL as FOR label rejected", threw);
+    }
 
     private static void testUntil() throws Exception {
         Class<?> c1 = loadPrinted(L3ExprFixture.untilInitialTrueRunsOnce());

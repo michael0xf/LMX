@@ -57,7 +57,7 @@ public final class L3Role {
     /**
      * Pre-test loop: children are condition, body[, LOOP_LABEL]. Condition is an int (zero=false).
      * Statement only — valid solely as a non-final SEQUENCE child; no int result.
-     * Ordinary JVM back-edge; no fuel cap. FOR deferred.
+     * Ordinary JVM back-edge; no fuel cap.
      */
     public static final L3Role WHILE = new L3Role();
     /**
@@ -67,23 +67,29 @@ public final class L3Role {
      */
     public static final L3Role UNTIL = new L3Role();
     /**
-     * Exit the nearest active WHILE or UNTIL (statement-only). Compile-time loop-label stack;
+     * Core FOR (semantics §12, no range shorthand): children init, condition, step, body[, LOOP_LABEL].
+     * Init once; then condition; while nonzero: body, step, condition. Statement only.
+     * CONTINUE → step (then condition); REDO → body (skip step and condition).
+     */
+    public static final L3Role FOR = new L3Role();
+    /**
+     * Exit the nearest active WHILE, UNTIL, or FOR (statement-only). Compile-time loop-label stack;
      * unlabelled or physical LOOP_LABEL.
      */
     public static final L3Role BREAK = new L3Role();
     /**
-     * Jump to the nearest active loop condition check (WHILE pretest / UNTIL postcondition).
+     * Jump to the nearest active loop transfer point (WHILE/UNTIL condition check, or FOR step).
      * Statement-only.
      */
     public static final L3Role CONTINUE = new L3Role();
     /**
-     * Repeat the nearest active WHILE/UNTIL body without checking the condition (statement-only).
+     * Repeat the nearest active WHILE/UNTIL/FOR body without step/condition as applicable (statement-only).
      * Unlabelled or physically labelled; cannot cross a CALL boundary.
      */
     public static final L3Role REDO = new L3Role();
     /**
      * Physical loop label record. Sealed leaf; object identity only (no text/numeric id).
-     * Referenced by labelled WHILE/UNTIL and labelled BREAK/CONTINUE/REDO.
+     * Referenced by labelled WHILE/UNTIL/FOR and labelled BREAK/CONTINUE/REDO.
      */
     public static final L3Role LOOP_LABEL = new L3Role();
     /**

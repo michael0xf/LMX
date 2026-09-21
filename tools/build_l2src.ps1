@@ -150,8 +150,30 @@ if ($Strict) { $flags += @('-Werror', '-O2') }
 $rows = @()
 $failed = @()
 function Add-Row([string]$State, [string]$Label, [string]$Note) {
-    $script:rows += ('{0,-4} {1,-34} {2}' -f $State, $Label, $Note)
-    Write-Output $script:rows[-1]
+    # THE DISPLAY LINE MUST NOT TRAVEL THE SUCCESS STREAM (DEEPSEEK-GATE-ROW-ACCOUNTING-20260921-30).
+    # This function is called from INSIDE the helpers the gate judges with: Convert-Source and
+    # Compile-C both call it before returning their boolean.  A Write-Output here therefore put the
+    # ROW INTO THEIR RETURN VALUE, and the caller's `if (-not (Compile-C ...))` captured
+    # @(row, $false) -- non-empty, hence TRUTHY.  Three measured consequences, all from the RED run
+    # of 20260921_001755: a target that failed to compile was NOT skipped (the link was attempted,
+    # so one target contributed two rows); the unit pass added an OK ROW FOR A TARGET THAT DID NOT
+    # BUILD (`unit:lmx_primitive` appeared in the OK rows and in the failure list of the same run);
+    # and the verdict counted 231 rows while the captured output held 229 lines.
+    #
+    # THE EMITTER: Write-Host, so the display leaves the success stream WITHOUT leaving the logs.
+    # The reason the display had to LEAVE THE SUCCESS STREAM is the paragraph above -- the row was
+    # becoming part of the helper's return value, and that alone made the guards truthy.  WHICH
+    # emitter is a separate question, and CAPTURE DOES NOT DECIDE IT: measured 20260921 with a real
+    # script emitting all three forms, a CHILD PROCESS (how this gate runs) captures Write-Output,
+    # Write-Host and Out-Host alike, while IN-process `& { ... } *>&1` captures Write-Output and
+    # Write-Host but not Out-Host.  Write-Host is chosen because it is captured in BOTH shapes, so
+    # nothing about the invocation has to be relied on -- not because Out-Host would lose rows here,
+    # which it would not.  tools\gate_row_accounting_probe.ps1 asserts the child-process half (rows
+    # still arrive in a captured log) and records the in-process half only as the observation that a
+    # naive in-process experiment misleads about capture.
+    $row = ('{0,-4} {1,-34} {2}' -f $State, $Label, $Note)
+    $script:rows += $row
+    Write-Host $row
     if ($State -eq 'FAIL') { $script:failed += $Label }
 }
 function Get-SafeName([string]$Name) {

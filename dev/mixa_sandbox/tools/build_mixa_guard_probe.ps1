@@ -252,6 +252,61 @@ if ($r.Rc -ne 0 -and $blob -match [regex]::Escape($rootPin) -and $blob -match 'p
 }
 
 
+# N/O: the scalar-path contract (DEEPSEEK-BUILD-MIXA-SCALAR-PATH-FIX-20260921-136).
+# N is the cheap detector that would have caught 136's RED at step 0: the guard's own "headers="
+# value must be ONE existing directory, not a progress line concatenated with a path.
+# O proves the contract is not decoration -- a fixture copy with ONE progress line put back on the
+# output stream must FAIL CLOSED, naming the arity clause, so a future leak carrying different
+# prose fails identically instead of being accepted as a path.
+$stampN = @(Get-ChildItem -LiteralPath (Join-Path $RepoRoot 'build\l2src') -Directory -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -match '^\d{8}_\d{6}$' -and (Test-Path (Join-Path $_.FullName 'headers\l2src')) } |
+    Sort-Object Name -Descending | Select-Object -First 1)
+if ($stampN.Count -lt 1) { Write-Output "FAIL N: no L2 stamp to point the guard at"; $fails++ }
+else {
+    $r = Run-RepoMixa @('-ExactChainGuardOnly', '-KernelEvidenceDir', ('"' + $stampN[0].FullName + '"'))
+    $lineN = @($r.Out -split "`r?`n" | Where-Object { $_ -match 'EXACT-CHAIN-GUARD PASS headers=' })
+    if ($lineN.Count -ne 1) {
+        Write-Output "FAIL N: expected exactly one PASS line, got $($lineN.Count): $($r.Out)"; $fails++
+    } else {
+        $hv = $lineN[0].Substring($lineN[0].IndexOf('headers=') + 8).Trim()
+        if ($r.Rc -eq 0 -and (Test-Path -LiteralPath $hv -PathType Container)) {
+            Write-Output ("PASS N: guard headers= is exactly one existing directory: " + $hv)
+        } else {
+            Write-Output "FAIL N: rc=$($r.Rc) headers=[$hv] out=$($r.Out)"; $fails++
+        }
+    }
+}
+
+$ofx = Join-Path $base 'scalar_mutant'
+Make-Fixture $ofx @{ bin=1; pin=1; l2=1; lm1=1 }
+$kedO = Join-Path $ofx 'build\l2src\ked'
+New-Item -ItemType Directory -Force -Path (Join-Path $kedO 'headers\l2src') | Out-Null
+Set-Content -LiteralPath (Join-Path $kedO 'headers\l2src\probe.lm1.h') -Value '// isolated' -Encoding ASCII
+$mutPath = Join-Path $ofx 'dev/mixa_sandbox/tools/build_mixa.ps1'
+$origText = [System.IO.File]::ReadAllText($mutPath)
+$mutText = $origText.Replace('Write-Host ("build_mixa: kernel evidence mode=EXPLICIT dir=', 'Write-Output ("build_mixa: kernel evidence mode=EXPLICIT dir=')
+if ($mutText -eq $origText) {
+    Write-Output "FAIL O: could not mutate the fixture (anchor missing) - the mutant test is not running"; $fails++
+} else {
+    [System.IO.File]::WriteAllText($mutPath, $mutText)
+    $infoO = New-Object System.Diagnostics.ProcessStartInfo 'powershell'
+    $infoO.Arguments = '-NoProfile -ExecutionPolicy Bypass -File "' + $mutPath + '" -ExactChainGuardOnly -KernelEvidenceDir "' + $kedO + '"'
+    $infoO.WorkingDirectory = $ofx
+    $infoO.RedirectStandardOutput = $true
+    $infoO.RedirectStandardError = $true
+    $infoO.UseShellExecute = $false
+    $pO = [System.Diagnostics.Process]::Start($infoO)
+    $outO = $pO.StandardOutput.ReadToEnd()
+    $errO = $pO.StandardError.ReadToEnd()
+    $pO.WaitForExit()
+    $blobO = $outO + "`n" + $errO
+    if ($pO.ExitCode -ne 0 -and $blobO -match 'must return exactly one path') {
+        Write-Output "PASS O: one leaked progress line FAILS CLOSED with the arity clause (mutant)"
+    } else {
+        Write-Output "FAIL O: rc=$($pO.ExitCode) out=$outO err=$errO"; $fails++
+    }
+}
+
 Remove-Item -Recurse -Force $base -ErrorAction SilentlyContinue
 
 if ($fails -gt 0) { Write-Error "PROBE RED: $fails"; exit 1 }

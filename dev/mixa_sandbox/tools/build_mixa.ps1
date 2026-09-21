@@ -160,8 +160,11 @@ function Resolve-KernelEvidenceHeaders {
             throw "build_mixa: KernelEvidenceDir missing headers\l2src: $exact (no auto fallback)"
         }
         $dig = Get-KernelHeaderDigest $exact
-        Write-Output ("build_mixa: kernel evidence mode=EXPLICIT dir=" + $KernelEvidenceDir)
-        Write-Output ("build_mixa: kernel headers count=" + $dig.Count + " digest=" + $dig.Digest)
+        # Write-Host, NOT Write-Output: a function's output stream IS its return value, so a
+        # progress line written with Write-Output joins the returned path and the caller gets an
+        # Object[] (DEEPSEEK-BUILD-MIXA-SCALAR-PATH-FIX-20260921-136).
+        Write-Host ("build_mixa: kernel evidence mode=EXPLICIT dir=" + $KernelEvidenceDir)
+        Write-Host ("build_mixa: kernel headers count=" + $dig.Count + " digest=" + $dig.Digest)
         return $exact
     }
     # AUTO: newest timestamp stamp (variable name intentionally not $l2srcSandbox=Join-Path $kernelRoot ...)
@@ -169,7 +172,7 @@ function Resolve-KernelEvidenceHeaders {
     if (-not (Test-Path -LiteralPath (Join-Path $evidenceSearchRoot 'build\l2src'))) {
         if (Test-Path -LiteralPath (Join-Path $kernelRoot 'build\l2src')) { $evidenceSearchRoot = $kernelRoot }
     }
-    Write-Output ("build_mixa: kernel evidence mode=AUTO searched under " + $evidenceSearchRoot + "\build\l2src")
+    Write-Host ("build_mixa: kernel evidence mode=AUTO searched under " + $evidenceSearchRoot + "\build\l2src")
     if (-not (Test-Path -LiteralPath $evidenceSearchRoot)) { return $null }
     $allBuilds = @(Get-ChildItem -LiteralPath (Join-Path $evidenceSearchRoot 'build\l2src') -Directory -ErrorAction SilentlyContinue |
         Where-Object { Test-Path (Join-Path $_.FullName 'headers\l2src') })
@@ -179,9 +182,32 @@ function Resolve-KernelEvidenceHeaders {
     $chosen = $l2srcBuilds[0]
     $exact = Join-Path $chosen.FullName 'headers\l2src'
     $dig = Get-KernelHeaderDigest $exact
-    Write-Output ("build_mixa: kernel evidence mode=AUTO stamp=" + $chosen.Name)
-    Write-Output ("build_mixa: kernel headers count=" + $dig.Count + " digest=" + $dig.Digest)
+    Write-Host ("build_mixa: kernel evidence mode=AUTO stamp=" + $chosen.Name)
+    Write-Host ("build_mixa: kernel headers count=" + $dig.Count + " digest=" + $dig.Digest)
     return $exact
+}
+
+function Get-ResolvedKernelHeaders {
+    # The scalar-path contract of Resolve-KernelEvidenceHeaders, enforced at EVERY call site
+    # (DEEPSEEK-BUILD-MIXA-SCALAR-PATH-FIX-20260921-136).  The resolver must deliver exactly one
+    # object -- the headers directory -- or $null.
+    # Why this exists: a progress line that reaches the output stream JOINS the return value, the
+    # caller's variable becomes an Object[], and its first element is then parsed as a
+    # provider-qualified path.  That is how ticket 136's RED presented itself -- "build_mixa:" read
+    # as a drive, so Get-ChildItem's FileSystem-only -File parameter was unavailable and the error
+    # named the PARAMETER instead of the leaked value.
+    # This asserts ARITY, not the shape of the string: a future leak carrying different prose is
+    # caught identically, where a check for the word "build_mixa:" would not be.  It never selects
+    # an element to make the symptom go away -- element 0 of a leak is exactly the wrong path.
+    $resolved = Resolve-KernelEvidenceHeaders
+    if ($null -eq $resolved) { return $null }
+    if ($resolved -is [array]) {
+        throw ("build_mixa: Resolve-KernelEvidenceHeaders returned " + @($resolved).Count + " objects; it must return exactly one path. A progress line is leaking into the function's output stream (ticket 136).")
+    }
+    if ($resolved -isnot [string]) {
+        throw ("build_mixa: Resolve-KernelEvidenceHeaders returned a " + $resolved.GetType().Name + " instead of a path string (ticket 136).")
+    }
+    return $resolved
 }
 
 if ($ValidateInputsOnly) {
@@ -193,7 +219,7 @@ if ($ValidateInputsOnly) {
 }
 
 if ($ExactChainGuardOnly) {
-    $hdr = Resolve-KernelEvidenceHeaders
+    $hdr = Get-ResolvedKernelHeaders
     if (-not $hdr) { throw "build_mixa: ExactChainGuardOnly: no kernel headers resolved" }
     Write-Output ("build_mixa: EXACT-CHAIN-GUARD PASS headers=" + $hdr)
     exit 0
@@ -492,7 +518,7 @@ foreach ($h in $hdrFiles) {
 # includes (l2src headers reference each other as l2src/...) and l2src_kernel/
 # for the mixa include: directives.  If no l2src build exists, skip silently —
 # units that need kernel types will FAIL at compile time with a clear message.
-$l2srcHeaders = Resolve-KernelEvidenceHeaders
+$l2srcHeaders = Get-ResolvedKernelHeaders
 if ($l2srcHeaders) {
     $kernelsDir = Join-Path $headers 'l2src_kernel'
     $srcDir = Join-Path $headers 'l2src'

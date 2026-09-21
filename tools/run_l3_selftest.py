@@ -31,6 +31,7 @@ ALL_TESTS = (
     'tests/l3_admit_selftest.lm1',
     'tests/l3_n9_walk_selftest.lm1',
     'tests/l3_n10_walk_selftest.lm1',
+    'tests/l3_mail_prim_selftest.lm1',
 )
 
 

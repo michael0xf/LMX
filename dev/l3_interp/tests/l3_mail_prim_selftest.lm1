@@ -1,0 +1,338 @@
+predef: "l3_interp/l3_thread.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_perm.lm1"
+predef: "l2src/lmx_call.lm1"
+predef: "l2src/lmx_turn.lm1"
+predef: "l2src/lmx_child.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_manager.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_gc.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_clock.lm1"
+predef: "l2src/lmx_plan.lm1"
+predef: "l2src/lmx_scratch.lm1"
+predef: "l2src/lmx_walk.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# L3 mail primitives via l3_thread_dispatch. Records named by address.
+
+@: LmxArena gb 0
+@: Lmx groles 0
+int: broken 0
+int: native_hits 0
+
+sub: fail (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: fail
+
+fn: native_noop (@: Lmx node) int
+    native_hits: native_hits + 1
+return: 0
+
+fn: fr (@: Lmx parent; size_t: slot; int: op; size_t: children) @: Lmx
+    @: Lmx n lmx_walk_frame(gb, groles, parent, op, children)
+    if: n = 0 || lmx_arena_ref_store(parent, slot, (cast: (@: void) n)) != 0
+        broken: broken + 1
+        return: 0
+    ---
+return: n
+
+sub: ref (@: Lmx code; size_t: slot; @: Lmx target)
+    if: code = 0 || target = 0 || lmx_arena_ref_store(code, slot, (cast: (@: void) target)) != 0
+        broken: broken + 1
+    ---
+end: ref
+
+fn: lit (@: Lmx parent; size_t: slot; int: value) @: Lmx
+    @: Lmx n fr(parent, slot, c.LMX_WALK_OP_LIT, 2U)
+    if: n != 0 && lmx_walk_store_int(gb, n, 1U, value) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+return: n
+
+fn: own (@: Lmx parent; size_t: slot; @: Lmx holder; size_t: index) @: Lmx
+    @: Lmx n fr(parent, slot, c.LMX_WALK_OP_OWN, 3U)
+    ref(n, 1U, holder)
+    if: n = 0 || lmx_walk_store_size(gb, n, 2U, index) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+return: n
+
+sub: icell (@: Lmx holder; size_t: slot; int: value)
+    if: holder = 0 || lmx_walk_store_int(gb, holder, slot, value) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+end: icell
+
+fn: field (@: Lmx m; size_t: slot) int
+    @: void cell lmx_arena_ref_value(m, slot)
+    if: cell = 0
+        return: -999
+return: lmx_int_value_known(cell)
+
+fn: mk_int (@: LmxArena a; int: v) @: void
+    @: Lmx n lmx_node_new_owned(a)
+    if: n = 0 || lmx_arena_refs_open_owned(a, n, 1U) != 0
+        return: 0
+    if: lmx_walk_store_int(a, n, 0U, v) != c.LMX_WALK_OK
+        return: 0
+return: lmx_arena_ref_value(n, 0U)
+
+fn: mk_m (size_t: children) @: Lmx
+    @: Lmx unit lmx_node_new_owned(gb)
+    @: Lmx m 0
+    @: LmxCallable info 0
+    if: unit = 0 || lmx_arena_refs_open_owned(gb, unit, 1U) != 0
+        broken: broken + 1
+        return: 0
+    ---
+    m: lmx_walk_plain(gb, unit, children)
+    info: lmx_callable_new_owned(gb)
+    if: m = 0 || info = 0 || lmx_arena_ref_store(unit, 0U, (cast: (@: void) m)) != 0
+        broken: broken + 1
+        return: 0
+    ---
+    if: lmx_arena_ref_store(m, 0U, (cast: (@: void) info)) != 0
+        broken: broken + 1
+        return: 0
+    ---
+return: m
+
+fn: mk_dummy (@: LmxArena a) @: Lmx
+    @: Lmx m lmx_node_new_owned(a)
+    @: LmxCallable info lmx_callable_new_owned(a)
+    if: m = 0 || info = 0 || lmx_arena_refs_open_owned(a, m, 1U) != 0
+        return: 0
+    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
+return: m
+
+fn: mk_thread (@: LmxArena arena; @: Lmx graph; @@: LmxThread out_t) int
+    @: LmxMsg message
+    @: LmxThread t
+    @: LmxPost mail
+    @: LmxSchedule sched
+    \out_t: 0
+    message: (cast: (@: LmxMsg) lmx_arena_take(arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    t: (cast: (@: LmxThread) lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    mail: (cast: (@: LmxPost) lmx_arena_take(arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    sched: (cast: (@: LmxSchedule) lmx_arena_take(arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: message = 0 || t = 0 || mail = 0 || sched = 0
+        return: 0
+    message\running: 1
+    message\success: 0
+    message\handoff_ready: 0
+    message\graph: graph
+    message\index: 1U
+    if: lmx_post_init(arena, mail) != c.LMX_POST_OK || lmx_thread_attach(t, message, mail, sched) != c.LMX_THREAD_OK
+        return: 0
+    if: lmx_schedule_init(sched, arena, (cast: (@: void) t), 1000U) != c.LMX_SCHEDULE_OK
+        return: 0
+    \out_t: t
+return: 1
+
+fn: mk_count () @: Lmx
+    @: Lmx m mk_m(3U)
+    @: Lmx n 0
+    @: Lmx p 0
+    @: Lmx rec l3_thread_mail_count_prim(l3_bound_t)
+    icell(m, 1U, -1)
+    n: fr(m, 2U, c.LMX_WALK_OP_SET, 3U)
+    own(n, 1U, m, 1U)
+    p: fr(n, 2U, c.LMX_WALK_OP_PRIM, 3U)
+    ref(p, 1U, rec)
+    lit(p, 2U, c.LMX_POST_INBOX)
+return: m
+
+fn: mk_take () @: Lmx
+    @: Lmx m mk_m(2U)
+    @: Lmx p 0
+    @: Lmx rec l3_thread_mail_take_prim(l3_bound_t)
+    p: fr(m, 1U, c.LMX_WALK_OP_PRIM, 3U)
+    ref(p, 1U, rec)
+    lit(p, 2U, c.LMX_POST_INBOX)
+return: m
+
+fn: mk_bad_arity () @: Lmx
+    @: Lmx m mk_m(2U)
+    @: Lmx p 0
+    @: Lmx rec l3_thread_mail_count_prim(l3_bound_t)
+    p: fr(m, 1U, c.LMX_WALK_OP_PRIM, 2U)
+    ref(p, 1U, rec)
+return: m
+
+fn: mk_impostor () @: Lmx
+    @: Lmx m mk_m(2U)
+    @: Lmx p 0
+    @: Lmx fake lmx_node_new_owned(gb)
+    p: fr(m, 1U, c.LMX_WALK_OP_PRIM, 3U)
+    ref(p, 1U, fake)
+    lit(p, 2U, c.LMX_POST_INBOX)
+return: m
+
+fn: run_graph (@: LmxThread t; @: Lmx m) int
+    @: LmxMsg msg t\message
+    int: st
+    if: t = 0 || m = 0 || msg = 0
+        return: -1
+    msg\graph: m
+    st: lmx_thread_turn(t, native_noop, 1U)
+    groles: l3_thread_roles(t)
+    if: groles = 0
+        return: -1
+    ---
+return: st
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxArena: arena
+    LmxArena: store
+    @: LmxArena a 0
+    @: Lmx dummy 0
+    @: LmxThread t 0
+    @: LmxThread t2 0
+    @: Lmx m 0
+    @: Lmx count_rec 0
+    @: Lmx take_rec 0
+    @: Lmx count_again 0
+    @: Lmx take_again 0
+    @: Lmx letter 0
+    @: Lmx fake 0
+    @: Lmx p 0
+    @: void probe 0
+    int: probe_before 0
+    int: st 0
+    if: counts = 0
+        return: 2
+    fputs("l3_mail_prim: start\n", l1_stdout())
+    c.fflush(l1_stdout())
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ store)), 0, c.sizeof(c.LmxArena))
+    fputs("l3_mail_prim: memset\n", l1_stdout())
+    c.fflush(l1_stdout())
+    if: lmx_arena_open(@ arena) != 0
+        fputs("l3_mail_prim: arena\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    fputs("l3_mail_prim: arena ok\n", l1_stdout())
+    c.fflush(l1_stdout())
+    if: lmx_perm_open(@ store) != 0 || lmx_perm_bind(@ arena, @ store) != 0
+        fputs("l3_mail_prim: store\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    fputs("l3_mail_prim: store ok\n", l1_stdout())
+    c.fflush(l1_stdout())
+    a: @ arena
+    gb: a
+    dummy: mk_dummy(a)
+    fputs("l3_mail_prim: dummy\n", l1_stdout())
+    c.fflush(l1_stdout())
+    if: dummy = 0 || mk_thread(a, dummy, @ t) = 0
+        fputs("l3_mail_prim: thread\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    fputs("l3_mail_prim: thread ok\n", l1_stdout())
+    c.fflush(l1_stdout())
+    fputs("l3_mail_prim: request\n", l1_stdout())
+    c.fflush(l1_stdout())
+    fail(counts, lmx_thread_request_mode(t, c.LMX_THREAD_MODE_INTERPRETED) = c.LMX_THREAD_OK, "request interpreted")
+    fputs("l3_mail_prim: requested\n", l1_stdout())
+    c.fflush(l1_stdout())
+    fputs("l3_mail_prim: native turn\n", l1_stdout())
+    c.fflush(l1_stdout())
+    fail(counts, lmx_thread_turn(t, native_noop, 1U) = c.LMX_THREAD_OK, "commit mode on native turn")
+    fputs("l3_mail_prim: native done\n", l1_stdout())
+    c.fflush(l1_stdout())
+    fail(counts, native_hits = 1, "native ran once")
+    fputs("l3_mail_prim: bind\n", l1_stdout())
+    c.fflush(l1_stdout())
+    fail(counts, l3_thread_bind(t) = c.LMX_THREAD_OK, "bind with mail primitives")
+    fputs("l3_mail_prim: bound\n", l1_stdout())
+    c.fflush(l1_stdout())
+    groles: l3_thread_roles(t)
+    fputs("l3_mail_prim: roles got\n", l1_stdout())
+    c.fflush(l1_stdout())
+    count_rec: l3_thread_mail_count_prim(t)
+    take_rec: l3_thread_mail_take_prim(t)
+    c.printf("l3_mail_prim: r=%p c=%p k=%p\n", groles, count_rec, take_rec)
+    c.fflush(l1_stdout())
+    fputs("l3_mail_prim: checks\n", l1_stdout())
+    c.fflush(l1_stdout())
+    fail(counts, groles != 0 && count_rec != 0 && take_rec != 0 && count_rec != take_rec, "two distinct store records")
+    fputs("l3_mail_prim: distinct ok\n", l1_stdout())
+    c.fflush(l1_stdout())
+    fail(counts, lmx_range_home(a, (cast: (@: void) groles)) = @ store && lmx_range_pool(a, (cast: (@: void) groles)) = 0, "roles live in the store")
+    fail(counts, lmx_domain_kind(a, (cast: (@: void) count_rec)) = c.LMX_DOMAIN_KIND_PRIMITIVE, "count record is a primitive")
+    fail(counts, lmx_domain_kind(a, (cast: (@: void) take_rec)) = c.LMX_DOMAIN_KIND_PRIMITIVE, "take record is a primitive")
+    fail(counts, l3_thread_bind(t) = c.LMX_THREAD_OK, "repeated bind of the same Thread")
+    count_again: l3_thread_mail_count_prim(t)
+    take_again: l3_thread_mail_take_prim(t)
+    fail(counts, count_again = count_rec && take_again = take_rec, "repeated bind reuses record identities")
+    if: mk_thread(a, dummy, @ t2) = 0
+        fputs("l3_mail_prim: t2\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    fail(counts, l3_thread_bind(t2) = c.LMX_THREAD_INVALID, "second Thread of the same store is refused")
+    fail(counts, l3_thread_mail_count_prim(t2) = 0 && l3_thread_mail_count_prim(t) = count_rec, "the refusal assigned nothing")
+
+    m: mk_count()
+    fail(counts, broken = 0 && m != 0, "count graph")
+    fail(counts, run_graph(t, m) = c.LMX_THREAD_OK, "empty inbox count turn")
+    fail(counts, field(m, 1U) = 0, "empty inbox count is business zero")
+    fail(counts, native_hits = 1, "count did not call native")
+
+    letter: (cast: (@: Lmx) lmx_arena_take(a, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    if: letter = 0
+        fputs("l3_mail_prim: letter\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    fail(counts, lmx_thread_mail_accept(a, t, (cast: (@: void) letter), c.LMX_POST_INBOX) = c.LMX_POST_OK, "deliver one letter")
+    m: mk_count()
+    fail(counts, run_graph(t, m) = c.LMX_THREAD_OK, "count after delivery")
+    fail(counts, field(m, 1U) = 1, "count is 1 after delivery")
+
+    m: mk_take()
+    fail(counts, broken = 0 && m != 0, "take graph")
+    st: run_graph(t, m)
+    fail(counts, st = c.LMX_THREAD_OK, "take turn")
+    fail(counts, lmx_thread_mail_count(t, c.LMX_POST_INBOX) = 0U, "inbox empty after take")
+    fail(counts, native_hits = 1, "take did not call native")
+
+    fail(counts, lmx_thread_request_mode(t, c.LMX_THREAD_MODE_NATIVE) = c.LMX_THREAD_OK, "request native pending")
+    m: mk_impostor()
+    probe: mk_int(a, 1)
+    probe_before: lmx_range_classify(a, probe)
+    st: run_graph(t, m)
+    c.printf("impostor st=%d\n", st)
+    fail(counts, broken = 0 && (st = c.LMX_THREAD_INVALID || st = c.LMX_THREAD_STOPPED), "impostor is a failed or stopped turn, not native")
+    fail(counts, native_hits = 1, "impostor did not call native")
+    fail(counts, lmx_thread_mode(t) = c.LMX_THREAD_MODE_INTERPRETED, "mode stays interpreted")
+
+    if: counts[1] != 0
+        c.printf("%d failed of %d\n", counts[1], counts[0])
+        free(counts)
+        return: 1
+    ---
+    c.printf("l3_mail_prim: %d checks\n", counts[0])
+    free(counts)
+return: 0

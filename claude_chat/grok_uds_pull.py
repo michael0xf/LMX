@@ -206,9 +206,13 @@ def main():
     sid, latest, tickets = scan(args.name, state['after'])
     fresh = []
     for ticket in tickets:
-        if ticket['id'] in seen:
+        # Transcript rows after the cursor are new, including follow-ups on a
+        # claimed ID. Queue redeliveries of a claimed ID are not.
+        if ticket.get('source') == 'api_queue' and ticket['id'] in seen:
             continue
-        if any(existing['id'] == ticket['id'] for existing in fresh):
+        if any(existing['id'] == ticket['id'] and existing.get('timestamp') == ticket.get('timestamp') for existing in fresh):
+            continue
+        if any(existing['id'] == ticket['id'] and existing.get('source') == 'lmx_uds' and ticket.get('source') == 'api_queue' for existing in fresh):
             continue
         fresh.append(ticket)
     fresh = collapse(fresh)

@@ -115,4 +115,10 @@ prototype:
     # through ("_Получив дескриптор типа код сразу делает приведение типа указателя и
     # пишет напрямую в ячейку_ _Это обязательно_"), or null when no array has it.
     fn: lmx_range_pool (@: LmxArena arena; @: void p) @: LmxPool
+    # WHICH table answers for the address: this arena, the LIVE permanent store it is bound
+    # to (lmx_perm.h.lm1), or 0 when neither holds it.  Membership in the store's ranges is
+    # the qualified type `independent: const: immutable`; nothing else marks it.  A closed
+    # store is not a store: its addresses answer 0.  lmx_range_pool above stays strictly
+    # local -- that is what keeps a collection out of the store.
+    fn: lmx_range_home (@: LmxArena arena; @: void p) @: LmxArena
 end: prototype

@@ -183,15 +183,22 @@ sub: lmx_copy_stack_dispose (@: LmxCopyStack s)
     s\n: 0U
 end: lmx_copy_stack_dispose
 
+# Is `p` a value of the permanent store this arena is bound to?  Some table answers for it
+# and it is not this arena's: lmx_range_home, the common resolver, asked in one place for
+# all four decisions below -- the terminal predicate, the lexical parent that must not
+# enter the copy map, the node fixup and the root that comes back as itself.  A closed
+# store is not a store; that rule is lmx_range's and arrives here with the answer.
+fn: lmx_copy_in_store (@: LmxArena src_arena; @: void p) int
+    @: LmxArena home lmx_range_home(src_arena, p)
+return: (cast: (int) (home != 0 && home != src_arena))
+
 # Values resident in the bound R0 store, METHOD and runtime descriptors are
 # copy terminals: shared by physical address.
 fn: lmx_copy_is_terminal (@: LmxArena src_arena; @: void p) int
     int: kind
     if: p = 0
         return: 0
-    # Exact store membership uses the common range mechanism.  The local pool
-    # question stays local by contract; the bound store is asked directly.
-    if: src_arena != 0 && src_arena\perm != 0 && lmx_range_pool(src_arena, p) = 0 && lmx_range_pool(src_arena\perm, p) != 0
+    if: lmx_copy_in_store(src_arena, p) != 0
         return: 1
     ---
     kind: lmx_range_classify(src_arena, p)
@@ -420,7 +427,7 @@ fn: lmx_copy_process (@: Lmx src; @: char dst_chars; @: LmxArena src_arena; @: L
         # A store-resident lexical parent keeps its physical identity.  It must
         # never enter the copy map, otherwise the later node fixup would see a
         # copied parent and could no longer preserve the permanent address.
-        if: src_arena\perm = 0 || lmx_range_pool(src_arena, (cast: (@: void) src\node)) != 0 || lmx_range_pool(src_arena\perm, (cast: (@: void) src\node)) = 0
+        if: lmx_copy_in_store(src_arena, (cast: (@: void) src\node)) = 0
             if: lmx_copy_ensure_struct(src\node, map, todo, dst_arena, status) != 0
                 return: 1
             ---
@@ -527,7 +534,7 @@ fn: lmx_graph_copy_many_owned (@@: Lmx sources; size_t: count; @: char dst_chars
                         if: lmx_range_classify(src_arena, (cast: (@: void) src\node)) != c.LMX_KIND_STRUCT
                             status: LMX_GRAPH_COPY_INVALID
                         else:
-                            if: src_arena\perm != 0 && lmx_range_pool(src_arena, (cast: (@: void) src\node)) = 0 && lmx_range_pool(src_arena\perm, (cast: (@: void) src\node)) != 0
+                            if: lmx_copy_in_store(src_arena, (cast: (@: void) src\node)) != 0
                                 dst\node: src\node
                             else:
                                 dst\node: (cast: (@: Lmx) lmx_copy_map_get(map, (cast: (@: void) src\node)))
@@ -550,7 +557,7 @@ fn: lmx_graph_copy_many_owned (@@: Lmx sources; size_t: count; @: char dst_chars
     if: status = LMX_GRAPH_COPY_OK
         r: 0U
         while: r < count
-            if: src_arena\perm != 0 && lmx_range_pool(src_arena, (cast: (@: void) sources[r])) = 0 && lmx_range_pool(src_arena\perm, (cast: (@: void) sources[r])) != 0
+            if: lmx_copy_in_store(src_arena, (cast: (@: void) sources[r])) != 0
                 outs[r]: sources[r]
             else:
                 outs[r]: (cast: (@: Lmx) lmx_copy_map_get(map, (cast: (@: void) sources[r])))

@@ -38,7 +38,8 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 #   * another runtime answers nothing, with no stride and no pool;
 #   * the pool question stays local: the store owns its value, no Message does; the store
 #     never answers for a Message's value and neither does the sibling Message;
-#   * the home (lmx_plan_home) is the store for the one and the Message for the other;
+#   * WHICH TABLE ANSWERED (lmx_range_home, the common resolver) is the live store for the
+#     one, from every bound Message, and the Message for the other; lmx_plan_home forwards it;
 #   * a store-resident value of ANY kind is a copy terminal from its own runtime, and from
 #     no other.
 # And, once for the whole table: independent means node = 0 and the ranges do not care
@@ -78,8 +79,9 @@ sub: row (const: @(char what); @: void ps; @: void pm)
         check(lmx_range_pool(sa, ps) != 0 && lmx_range_pool(am, ps) = 0 && lmx_range_pool(ac, ps) = 0, what, "the pool question stays local: the store owns it, no Message does")
         check(lmx_range_classify(am, pm) = kind && lmx_range_type_of(am, pm) = lmx_range_type_of(sa, ps), what, "the Message-built value has the SAME kind and type: the qualifier is not a second kind code")
         check(lmx_range_pool(am, pm) != 0 && lmx_range_classify(sa, pm) = c.LMX_KIND_NONE && lmx_range_classify(ac, pm) = c.LMX_KIND_NONE, what, "the store never answers for a Message's value, nor does the sibling Message")
-        check(lmx_plan_home(am, ps) = sa && lmx_plan_home(ac, ps) = sa && lmx_plan_home(sa, ps) = sa && lmx_plan_home(am, pm) = am, what, "which table answered: the store for the one, the Message for the other")
-        check(lmx_plan_home(bm, ps) = 0 && lmx_plan_home(ac, pm) = 0, what, "and no table at all from where it is not resolvable")
+        check(lmx_range_home(am, ps) = sa && lmx_range_home(ac, ps) = sa && lmx_range_home(sa, ps) = sa && lmx_range_home(am, pm) = am, what, "which table answered (lmx_range_home): the live store for the one from every bound Message, the Message for the other")
+        check(lmx_range_home(bm, ps) = 0 && lmx_range_home(ac, pm) = 0 && lmx_range_home(sa, pm) = 0, what, "and no table at all from where it is not resolvable: another runtime, the sibling Message, the store asked about a Message's value")
+        check(lmx_plan_home(am, ps) = lmx_range_home(am, ps) && lmx_plan_home(am, pm) = lmx_range_home(am, pm) && lmx_plan_home(bm, ps) = 0, what, "lmx_plan_home is that same answer, forwarded")
         check(lmx_copy_is_terminal(am, ps) = 1 && lmx_copy_is_terminal(ac, ps) = 1 && lmx_copy_is_terminal(bm, ps) = 0, what, "a store-resident value is a copy terminal from its own runtime, and from no other")
         if: held != 0 && nheld < 32
             held[nheld]: ps
@@ -167,15 +169,49 @@ fn: main () int
     ---
     check(root != 0 && nested != 0 && root\node = 0 && nested\node = root, "independent", "a root of the store has node = 0; a member nested in it has its root as node")
     if: root != 0 && nested != 0
-        check(lmx_range_classify(am, (cast: (@: void) root)) = lmx_range_classify(am, (cast: (@: void) nested)) && lmx_plan_home(am, (cast: (@: void) nested)) = sa, "independent", "root and member are the same kind of the same store: node = 0 is a fact of the Structure, not of its range")
+        check(lmx_range_classify(am, (cast: (@: void) root)) = lmx_range_classify(am, (cast: (@: void) nested)) && lmx_range_home(am, (cast: (@: void) nested)) = sa, "independent", "root and member are the same kind of the same store: node = 0 is a fact of the Structure, not of its range")
     ---
 
     # ---- a CLOSED store is not a store --------------------------------------------------------
     check(nheld >= 14, "closed store", "the table handed over an address of every kind")
+    check(lmx_range_home(am, 0) = 0 && lmx_range_home(0, held[0]) = 0, "null", "no address and no arena have no home")
+
+    # ---- THE RULE, NOT THE ACCIDENT ---------------------------------------------------------
+    # lmx_perm_close clears the role FIRST and releases the storage after.  Between the two
+    # the store's index is still whole, so a reader that follows the link without asking
+    # whether it is still a store finds every address.  After the release such a reader is
+    # right only by accident -- the release happens to null the index.  This is the state in
+    # between, reproduced: the role is withdrawn by hand and nothing is released.  Every
+    # question put through a BOUND arena must already answer nothing, the copy terminal
+    # included, while the store asked DIRECTLY still knows its own storage.
+    sa\permanent: 0U
+    i: 0
+    silent: 0
+    while: i < nheld
+        if: lmx_range_classify(am, held[i]) != c.LMX_KIND_NONE || lmx_range_type_of(am, held[i]) != lmx_range_type_of(bm, held[i]) || lmx_range_stride(am, held[i]) != 0U || lmx_range_home(am, held[i]) != 0 || lmx_plan_home(am, held[i]) != 0
+            silent: silent + 1
+        i: i + 1
+    ---
+    check(silent = 0, "role withdrawn", "kind, type, stride and home answer nothing through a bound arena although the store's index is whole")
+    i: 0
+    silent: 0
+    while: i < nheld
+        # A METHOD, a callable, an op and a role record are terminals BY KIND wherever they
+        # live; a value whose kind is no longer visible is not a terminal of any kind.
+        if: lmx_copy_is_terminal(am, held[i]) != 0
+            silent: silent + 1
+        i: i + 1
+    ---
+    check(silent = 0, "role withdrawn", "no address of it is a copy terminal any more: the copier follows the rule, not the link")
+    check(lmx_range_pool(sa, held[0]) != 0 && lmx_range_home(sa, held[0]) = sa, "role withdrawn", "the storage itself is untouched: asked directly, the arena still answers for it")
+    sa\permanent: 1U
+    check(lmx_range_home(am, held[0]) = sa && lmx_copy_is_terminal(am, held[0]) = 1, "role withdrawn", "and with the role back everything answers again")
+    i: 0
+    silent: 0
     check(lmx_perm_store_of(am) = sa && lmx_perm_close(sa) = 0, "closed store", "the store closed, once")
     check(lmx_perm_store_of(am) = 0 && lmx_perm_store_of(ac) = 0 && lmx_perm_is_store(sa) = 0, "closed store", "its binders stop following it: the link answers for itself")
     while: i < nheld
-        if: lmx_range_classify(am, held[i]) != c.LMX_KIND_NONE || lmx_range_stride(am, held[i]) != 0U || lmx_plan_home(am, held[i]) != 0 || lmx_copy_is_terminal(am, held[i]) != 0
+        if: lmx_range_classify(am, held[i]) != c.LMX_KIND_NONE || lmx_range_stride(am, held[i]) != 0U || lmx_range_home(am, held[i]) != 0 || lmx_range_home(sa, held[i]) != 0 || lmx_plan_home(am, held[i]) != 0 || lmx_copy_is_terminal(am, held[i]) != 0
             silent: silent + 1
         i: i + 1
     ---

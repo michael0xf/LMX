@@ -98,14 +98,7 @@ return: c.LMX_PLAN_OK
 fn: lmx_plan_home (@: LmxArena arena; @: void p) @: LmxArena
     if: arena = 0 || p = 0
         return: 0
-    if: arena\perm != 0 && arena\perm\permanent != 0U
-        if: lmx_range_classify(arena\perm, p) != c.LMX_KIND_NONE
-            return: arena\perm
-        ---
-    ---
-    if: lmx_range_classify(arena, p) != c.LMX_KIND_NONE
-        return: arena
-return: 0
+return: lmx_range_home(arena, p)
 
 fn: lmx_plan_entry_count (@: Lmx plan) size_t
     if: plan = 0 || plan\len < 1

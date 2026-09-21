@@ -42,8 +42,8 @@ predef: "l2src/lmx_implements.h.lm1"
 # One HOME.  The plan root, its entries and their index cells live where the LmxCallable
 # record they are published into lives, and that place outlives every occurrence sharing
 # the descriptor.  An address has one of two homes as seen from an arena: the arena's own
-# ranges, or the ranges of the permanent store it is bound to (lmx_perm.h.lm1) -- and the
-# store is asked first, so an address of the store is never mistaken for a local one.  A
+# ranges, or the ranges of the live permanent store it is bound to (lmx_perm.h.lm1) -- the
+# answer of lmx_range_home, the common resolver; the two tables never both say yes.  A
 # translation-known descriptor lives in the store while its occurrences live in Message
 # arenas; then the plan is built in the store and published through an arena BOUND to it,
 # which can classify both the occurrence and the descriptor.  lmx_plan_publish refuses a
@@ -92,8 +92,9 @@ prototype:
     # lmx_plan_validate_shape on M, and only then does the descriptor's header become the
     # plan.  A previous plan is left as it was.
     fn: lmx_plan_publish (@: LmxArena arena; @: Lmx plan_roles; @: Lmx occurrence; @: Lmx plan) int
-    # Where `p` lives as seen from `arena`: the permanent store the arena is bound to, the
-    # arena itself, or 0 when neither can classify it.  The store is asked first.
+    # Where `p` lives as seen from `arena`: the arena itself, the live permanent store it is
+    # bound to, or 0.  This IS lmx_range_home (lmx_arena.h.lm1), the common resolver, and only
+    # forwards to it; it stays because lmx_interp names it, and goes when that caller moves.
     fn: lmx_plan_home (@: LmxArena arena; @: void p) @: LmxArena
     # Activation time.  The address of the slot entry `index` (from zero) names on this
     # occurrence; 0 for a null plan or occurrence, an index past the last entry, or a

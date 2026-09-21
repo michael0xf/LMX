@@ -17,6 +17,7 @@ include: "<string.h>"
 # the same: one LmxPrimitive each, registered once per store, named by address
 # from LMX_WALK_OP_PRIM nodes. Owner is the bound Thread (Message arena), never
 # a store-resident cell. A second Thread of that store is refused before assignment.
+# Slot 2 is success: write bound Thread message.success = 1. Registry capacity is 3.
 
 @: LmxThread l3_bound_t 0
 @: LmxArena l3_bound_store 0
@@ -25,6 +26,7 @@ include: "<string.h>"
 @: Lmx l3_bound_prim_reg 0
 @: Lmx l3_bound_mail_count 0
 @: Lmx l3_bound_mail_take 0
+@: Lmx l3_bound_success 0
 
 fn: l3_thread_roles (@: LmxThread t) @: Lmx
     if: t = 0 || t != l3_bound_t
@@ -45,6 +47,11 @@ fn: l3_thread_mail_take_prim (@: LmxThread t) @: Lmx
     if: t = 0 || t != l3_bound_t
         return: 0
 return: l3_bound_mail_take
+
+fn: l3_thread_success_prim (@: LmxThread t) @: Lmx
+    if: t = 0 || t != l3_bound_t
+        return: 0
+return: l3_bound_success
 
 # Lane is one int cell. INBOX is 0, so a decode failure is -1.
 fn: l3_prim_lane (@: void owner; @@: void refs; size_t: nargs) int
@@ -102,6 +109,19 @@ fn: l3_prim_mail_take (@: void owner; @@: void refs; size_t: nargs; @: void dest
     t: (cast: (@: LmxThread) owner)
     letter: lmx_thread_mail_take(t, lane)
     \out: letter
+return: c.LMX_PRIMITIVE_OK
+
+# No operands. The act is t.message.success = 1. A zero VALUE is not this primitive:
+# success is the Message flag, not dest.
+fn: l3_prim_success (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    @: LmxThread t 0
+    \out: 0
+    if: nargs != 0U || owner = 0
+        return: c.LMX_PRIMITIVE_FAIL
+    t: (cast: (@: LmxThread) owner)
+    if: t != l3_bound_t || t\message = 0
+        return: c.LMX_PRIMITIVE_FAIL
+    t\message\success: 1
 return: c.LMX_PRIMITIVE_OK
 
 fn: l3_thread_dispatch (@: LmxThread t) int
@@ -174,7 +194,7 @@ fn: l3_thread_bind (@: LmxThread t) int
         l3_bound_plan: lmx_plan_roles_open(store)
     ---
     if: l3_bound_prim_reg = 0
-        if: lmx_primitive_registry_open(store, 2U, @ l3_bound_prim_reg) != c.LMX_PRIMITIVE_REG_OK
+        if: lmx_primitive_registry_open(store, 3U, @ l3_bound_prim_reg) != c.LMX_PRIMITIVE_REG_OK
             return: c.LMX_THREAD_INVALID
         ---
         if: lmx_primitive_register(store, l3_bound_prim_reg, 0U, l3_prim_mail_count, 0, (cast: (@: Lmx) t), @ l3_bound_mail_count) != c.LMX_PRIMITIVE_REG_OK
@@ -183,7 +203,10 @@ fn: l3_thread_bind (@: LmxThread t) int
         if: lmx_primitive_register(store, l3_bound_prim_reg, 1U, l3_prim_mail_take, 0, (cast: (@: Lmx) t), @ l3_bound_mail_take) != c.LMX_PRIMITIVE_REG_OK
             return: c.LMX_THREAD_INVALID
         ---
+        if: lmx_primitive_register(store, l3_bound_prim_reg, 2U, l3_prim_success, 0, (cast: (@: Lmx) t), @ l3_bound_success) != c.LMX_PRIMITIVE_REG_OK
+            return: c.LMX_THREAD_INVALID
+        ---
     ---
-    if: l3_bound_roles = 0 || l3_bound_plan = 0 || l3_bound_mail_count = 0 || l3_bound_mail_take = 0
+    if: l3_bound_roles = 0 || l3_bound_plan = 0 || l3_bound_mail_count = 0 || l3_bound_mail_take = 0 || l3_bound_success = 0
         return: c.LMX_THREAD_INVALID
 return: lmx_thread_interpreter_set(t, l3_thread_dispatch)

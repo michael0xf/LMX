@@ -146,6 +146,14 @@ struct: LmxPost
 end: LmxPost
 
 prototype:
+    # THE LIFECYCLE PRECONDITION (L2 §9, mailbox; mirrored in L1).  `init` and `close` require
+    # QUIESCENCE: no OS thread is in accept/take/count or starts one before the operation
+    # completes.  Publication begins only after a successful init -- until then nothing accepts
+    # and nothing publishes -- and the owner that opened the mailbox is the one that coordinates
+    # the quiet before closing it.  That coordination cannot be moved inside this module: a lock
+    # held inside close cannot make object lifetime safe against new entrants, because destroying
+    # a monitor cannot exclude anyone.  Outbox and staged stay owner-local throughout (the
+    # struct's note above); only the inbox is cross-lane, and the monitor protects that alone.
     fn: lmx_post_init (@: LmxArena arena; @: LmxPost box) int
     fn: lmx_post_api (@: LmxPost box) @: LmxPostApi
     fn: lmx_post_admits (@: LmxArena arena; @: void target) int

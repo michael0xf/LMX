@@ -379,9 +379,10 @@ fn: main () int
     lm_check(counts, got = LM_N, "B did not take all the letters")
     lm_check(counts, tid_a != 0U && tid_b != 0U, "a lane never recorded its OS thread id")
     lm_check(counts, tid_a != tid_b, "both lanes ran on the SAME OS thread -- this is emulation, not multithreading")
-    # Останавливаем полосы: без этого процесс остаётся жить после выхода из main (замерено:
-    # два экземпляра висели в списке процессов), а проба должна кончаться сама.
-    close_rc: lmx_manager_running_close(manager)
+    # Обычный родительский каскад запрашивает остановку прямых детей и ждёт
+    # их безопасной границы; manager после этого лишь присоединяет полосы.
+    close_rc: lmx_root_close(@ root)
+    lm_check(counts, close_rc = c.LMX_ROOT_OK, "R0 did not close through the parent cascade")
     failures: counts[1]
     c.printf("lmx_app_lanes_mail checks=%d failures=%d\n", counts[0], failures)
     c.fflush(0)

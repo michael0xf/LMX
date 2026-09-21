@@ -6,7 +6,7 @@ include: "<stdlib.h>"
 # Typed service arrays. Lingvamyxa_spec.txt 2, 6.5; ABI 14.8, 14.9.
 #
 # 2 lists them and 6.5 spells the Array one out: one per primitive C type, one of
-# {addr, sig} method records, and one of {len, data} Array descriptors per element type.
+# {addr, sig} method records, and one of {len, capacity, data} Array descriptors per element type.
 # A non-const variable lives in the big array of its type, so the array must grow.
 #
 # It grows by adding a CHUNK, never by reallocating: live L1/L2 arena entries never
@@ -399,15 +399,16 @@ fn: lmx_method_intern (@: LmxArena arena; @: LmxPool pool; LmxEntry: addr; unsig
     record\sig: sig
 return: record
 
-# An Array descriptor: exactly length and a pointer to element storage, no node, no name,
-# no tag (6.5).  Its len is element count and IS settled there, unlike the len in the Lmx
-# header.
+# An Array descriptor: logical length, backing capacity and a pointer to element storage,
+# no node, no name, no tag. Its len is element count, unlike the len in the Lmx header.
+# This compatibility constructor describes fixed storage, hence capacity = len.
 fn: lmx_array_desc_new (@: LmxArena arena; @: LmxPool pool; size_t: len; @: void data) @: LmxArrayDesc
     @: LmxArrayDesc desc
     desc: (cast: (@: LmxArrayDesc) lmx_pool_take(arena, pool))
     if: desc = 0
         return: 0
     desc\len: len
+    desc\capacity: len
     desc\data: data
 return: desc
 

@@ -1,10 +1,12 @@
 predef: "l2src/lmx_arena.h.lm1"
 
 # Owned ARRAY_OF_LMX/DESC/METHOD record using native pointer elements. An empty
-# Array is a typed descriptor with len 0/data 0 and no backing interval. Referent
+# Array is a typed descriptor with len 0/capacity 0/data 0 and no backing interval. Referent
 # allocation/root publication remain the caller's responsibility. Descriptor and
 # backing are TWO arrays of the arena, each with its own descriptor and entry in the
 # index; the arena allocates both and owns both, and no owner-local range list exists.
+# Fixed constructions set capacity = len; a growable Array may later replace the
+# backing while this descriptor address stays stable.
 prototype:
     fn: lmx_array_ref_new_owned (int: type; size_t: count; @: LmxArena arena) @: LmxArrayDesc
 end: prototype

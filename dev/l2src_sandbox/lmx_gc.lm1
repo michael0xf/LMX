@@ -74,7 +74,7 @@ fn: lmx_gc_cells (@: LmxArena arena; @: LmxPool pool; @: LmxChunk chunk; unsigne
             status: lmx_gc_note(status, lmx_gc_mark_value(arena, header\data, gen, depth + 1))
         else:
             if: pool\kind = c.LMX_KIND_ARRAY
-                # A descriptor is {len, data}: the backing is what holds the elements.
+                # A descriptor is {len, capacity, data}: data is the current backing.
                 desc: (cast: (@: LmxArrayDesc) cell)
                 status: lmx_gc_note(status, lmx_gc_mark_value(arena, desc\data, gen, depth + 1))
             else:

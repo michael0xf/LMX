@@ -197,9 +197,9 @@ fn: lmx_manager_running_round (@: LmxManager m; unsigned: ticks; ulong: now) int
     ---
 return: c.LMX_MANAGER_OK
 
-# Stop the schedule: every lane still running is JOINED, never killed -- a lane ends
-# by its own letter's success or stop, or by its record going overdue, and the join is
-# bounded by that record's own limit.  Then the records are released.
+# Join and release lanes after their owning parent cascade has requested stop and every
+# lane has reached its safe boundary.  This manager does not infer child ownership and
+# does not initiate the Message close cascade.
 fn: lmx_manager_running_close (@: LmxManager m) int
     @: LmxSchedule slot
     if: m = 0

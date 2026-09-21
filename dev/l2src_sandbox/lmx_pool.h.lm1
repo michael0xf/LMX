@@ -58,9 +58,9 @@ prototype:
     # headers could not give a thread a body at all.  Found 20260919 while reviewing the mixa
     # assembly: four threads with four arenas, four schedules and NO bodies anywhere.
     fn: lmx_method_intern (@: LmxArena arena; @: LmxPool pool; LmxEntry: addr; unsigned: sig) @: LmxMethod
-    # An Array descriptor: exactly a length and a pointer to element storage -- no node, no name,
-    # no tag (6.5).  Its `len` is an element count and IS settled there, unlike the `len` in the
-    # Lmx header.
+    # An Array descriptor: logical length, backing capacity and a pointer to element storage --
+    # no node, no name, no tag. Its `len` is an element count, unlike the `len` in the Lmx header;
+    # fixed constructions made through this compatibility helper use capacity = len.
     fn: lmx_array_desc_new (@: LmxArena arena; @: LmxPool pool; size_t: len; @: void data) @: LmxArrayDesc
     fn: lmx_pool_release (@: LmxArena arena; @: LmxPool pool) int
     # The first chunk of the array's chain: a walk that must see every cell the array handed

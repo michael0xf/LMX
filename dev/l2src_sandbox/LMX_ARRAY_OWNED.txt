@@ -21,13 +21,14 @@ or null. Null head slots, unsupported type, zero count and overflow return null
 without allocation. Zero is outside this helper's domain; that is neither a
 ban on source empty arrays nor a decision about their open representation.
 
-The descriptor has exactly len and data. It and the contiguous zero-initialized
+The descriptor has logical len, backing capacity and data. A fixed construction
+sets capacity equal to len. It and the contiguous zero-initialized
 mutable backing use separate non-moving allocations, each paired with an
 embedded range and a separate free-compatible block node. sizeof-based padding
 preserves the concrete descriptor/element alignment. The descriptor range has
 ARRAY kind, chosen ARRAY type and descriptor stride. Backing has PRIMITIVE kind,
 CHAR/INT element type and element stride. No per-element Lmx headers, ownership
-links, tags or added descriptor fields. Primitive char backing is MUTABLE array
+links or tags. Primitive char backing is MUTABLE array
 storage, not an immutable 256-byte intern table: it must never be passed to
 lmx_char_rebind_known merely because the element type is CHAR.
 

@@ -345,7 +345,13 @@ fn: lmx_copy_value (@: void v; @: char dst_chars; @: LmxArena src_arena; @: LmxA
         return: cell
     if: kind = c.LMX_KIND_ARRAY
         src_desc: (cast: (@: LmxArrayDesc) v)
-        if: src_desc\len != 0U && src_desc\data = 0
+        if: src_desc\len > src_desc\capacity
+            \status: LMX_GRAPH_COPY_UNSUPPORTED
+            return: 0
+        if: src_desc\capacity != 0U && src_desc\data = 0
+            \status: LMX_GRAPH_COPY_UNSUPPORTED
+            return: 0
+        if: src_desc\capacity = 0U && src_desc\data != 0
             \status: LMX_GRAPH_COPY_UNSUPPORTED
             return: 0
         if: src_desc\len != 0U

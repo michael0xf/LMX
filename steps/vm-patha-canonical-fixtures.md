@@ -120,3 +120,22 @@ no downloads or PATH mutation. Observed on OAK65536 (2026-09-21):
 | wasm | OK | 0 |
 | riscv | OK | 0 |
 | all | OK | 0 |
+
+## Reproducibility (ticket 23)
+
+Two consecutive `tools/run_vm_patha_smoke.ps1 -Target all` runs on OAK65536 at HEAD
+`d150f93`: both OVERALL=OK, stable RESULT lines matched, no tracked worktree dirt from
+the runner (artifacts only under ignored `build/vm_porting/smoke_runner/`).
+Evidence: `build/vm_porting/ticket23_repro_audit.txt`.
+
+## Next fixtures own / parser (ticket 24, read-only)
+
+Observed on OAK65536 (no harness invented):
+
+| Fixture | MIR `-S` | MIR `-ei` | WASM build | wasmtime | RISC-V link |
+|---------|----------|-----------|------------|----------|-------------|
+| `own.lm1.c` | OK (16645 B) | FAIL no main | OK | FAIL `undefined_weak:main` | FAIL undefined `main` |
+| `parser.lm1.c` | OK (416229 B) | FAIL no main | OK (warnings) | FAIL `undefined_weak:main` | FAIL undefined `main` |
+
+They remain compile-only seeds until a main harness exists. Evidence:
+`build/vm_porting/ticket24_next_fixture_audit.txt`.

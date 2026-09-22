@@ -889,6 +889,39 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_fnptr_noncallable_assign.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
         Absent = @();
         Debt = @('l2_q0: 7') },
+    # FABLE-GROKBOT-CALL-ARGS-20260922-92: paren-group call args via l2_call_args
+    [pscustomobject]@{ Name = 'unit_call_args_empty_paren.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @();
+        Debt = @('l2_t1: l2_m0(l2_c0\parent, l2_c0)') },
+    [pscustomobject]@{ Name = 'unit_call_args_empty_vertical.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @();
+        Debt = @('l2_t1: l2_m0(l2_c0\parent, l2_c0)') },
+    [pscustomobject]@{ Name = 'unit_call_args_paren_seq.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @();
+        Debt = @('l2_t1: l2_m0(l2_c0\parent, l2_c0, 1, 2)') },
+    [pscustomobject]@{ Name = 'unit_call_args_controls.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @();
+        Debt = @('l2_t5: l2_m1(l2_c4\parent, l2_c4, 1, 2)') },
+    [pscustomobject]@{ Name = 'unit_call_args_control_split.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @();
+        Debt = @('l2_t1: l2_m0(l2_c0\parent, l2_c0, (1), 2 != 3)') },
+    [pscustomobject]@{ Name = 'unit_call_args_refuse_nested.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'incompatible entry signature'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_call_args_refuse_named.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'incompatible entry signature'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_call_args_refuse_struct.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_fnptr_call_args_paren.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+        Absent = @('f((l2_p0_1))');
+        Debt = @('f(l2_p0_1)') },
+    [pscustomobject]@{ Name = 'unit_fnptr_call_args_forms.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+        Absent = @('f((l2_p0_1))');
+        Debt = @('f(l2_p0_1)') },
     # COMPACT-DECL-BATCHB-75: struct local form-independent; float refuse form-independent;
     # opposite controls for fnptr call and ordinary call.
     [pscustomobject]@{ Name = 'unit_struct_decl_colon.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';

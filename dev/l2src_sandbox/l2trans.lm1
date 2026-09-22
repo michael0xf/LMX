@@ -586,6 +586,8 @@ prototype:
     fn: l2_addr_tail (@: LmP0Field f; int: mi; @@: LmP0Field out_name; @@: LmP0Field out_after) int
     fn: l2_expr_span (@: LmP0Field field) int
     fn: l2_actual_count (@: LmP0Field field) int
+    fn: l2_call_args (const: @(LmP0Structure body)) @: LmP0Field
+    fn: l2_skip_span (@: LmP0Field a; int: span) @: LmP0Field
     fn: l2_typed_formal (const: @(LmP0Node node); const: @(char path); @@: LmP0Text out_name; @: int out_ty) int
     fn: l2_simple_puts_main (const: @(LmP0Node body_node)) int
     fn: l2_is_slash (const: @(LmP0Text t)) int
@@ -7446,6 +7448,24 @@ fn: l2_actual_count (@: LmP0Field field) int
         ---
 return: count
 
+fn: l2_call_args (const: @(LmP0Structure body)) @: LmP0Field
+    @: LmP0Field f
+    @: LmP0Field more
+    if: body = 0
+        return: 0
+    f: l2_next_active(body\first_field)
+    if: f = 0
+        return: body\first_field
+    more: l2_next_active(f\next)
+    if: more != 0
+        return: body\first_field
+    if: f\value = 0 || f\value\as = 0
+        return: body\first_field
+    # Sole active field is an anonymous headless Structure: args are its direct fields.
+    if: f\value\kind = c.LM_P0_NODE_STRUCTURE && f\value\as\structure != 0 && f\value\as\structure\trailer = 0
+        return: f\value\as\structure\first_field
+return: body\first_field
+
 fn: l2_slash_own (const: @(LmP0Text t)) int
     int: i 0
     size_t: n
@@ -11609,7 +11629,9 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
     if: idx < 0 && (l2_predef_has_function(call\head) != 0 || (mi >= 0 && l2_ml_find(call\head) >= 0 && l2_ml_ty[l2_ml_find(call\head)] = 40))
         if: call\trailer != 0 || call\body = 0 || call\body\trailer != 0
             return: l2_error(path, node, "unsupported trailer")
-        return: l2_check_fields(call\body\first_field, l2_count_active(call\body), mi, path, node)
+        if: l2_next_active(l2_call_args(call\body)) = 0
+            return: 0
+        return: l2_check_fields(l2_call_args(call\body), l2_actual_count(l2_call_args(call\body)), mi, path, node)
     raw: l2_raw_head(call\head, mi, @ raw_j, @ raw_fld)
     if: idx < 0 && raw = 0 && raw_fld = 5
         if: call\body = 0
@@ -11629,14 +11651,14 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
         return: l2_error(path, node, "unsupported trailer")
     if: call\body = 0 || call\body\trailer != 0
         return: l2_error(path, node, "unsupported trailer")
-    if: l2_actual_count(call\body\first_field) != l2_m_arity[idx]
+    if: l2_actual_count(l2_call_args(call\body)) != l2_m_arity[idx]
         return: l2_error(path, node, "incompatible entry signature")
     # Descriptor-only required method is legal as a formal contract; refuse bodiless only on direct calls.
     if: l2_m_body[idx] = 0 && fi < 0 && (l2_m_node[idx] = 0 || l2_m_node[idx]\as = 0 || l2_ret_tr(l2_m_node[idx]\as\frame) = 0)
         return: l2_error(path, node, "not callable")
     if: mi >= 0
         l2_m_edge[l2_edge_off(mi, idx)]: 1
-    a0: l2_next_active(call\body\first_field)
+    a0: l2_next_active(l2_call_args(call\body))
     actual_i: 0
     while: a0 != 0
         actual_span: l2_expr_span(a0)
@@ -13077,7 +13099,37 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
     raw_fld: -1
     if: idx < 0
         k: l2_raw_head(call\head, mi, @ raw_j, @ raw_fld)
-    if: idx < 0 && l2_text_eq(call\head, "c.sizeof") = 0 && (l2_c_door(call\head) != 0 || l2_predef_has_function(call\head) != 0 || (mi >= 0 && l2_ml_find(call\head) >= 0 && l2_ml_ty[l2_ml_find(call\head)] = 40) || (k = 0 && raw_fld = 5))
+    # Typed fnptr (ty40) expression emission: same call-args sequence as statement
+    # emit_fnptr_call. Do not route through l2_emit_ccall (c.* door stays untouched).
+    if: idx < 0 && mi >= 0 && l2_ml_find(call\head) >= 0 && l2_ml_ty[l2_ml_find(call\head)] = 40
+        s0[0]: 0
+        if: call\body != 0
+            a0: l2_next_active(l2_call_args(call\body))
+            t: 1
+            while: a0 != 0
+                actual_span: l2_expr_span(a0)
+                if: actual_span < 1
+                    return: 1
+                s1[0]: 0
+                if: l2_emit_fields(a0, actual_span, mi, ind, s1) != 0
+                    return: 1
+                if: t = 0 && l2_cat(s0, ", ") != 0
+                    return: 1
+                if: l2_cat(s0, s1) != 0
+                    return: 1
+                t: 0
+                a0: l2_skip_span(a0, actual_span)
+            ---
+        ---
+        if: l2_tok_text(call\head, s1, 256U) != 0
+            return: 1
+        if: strlen(s1) + strlen(s0) + 3U >= 256U
+            return: l2_error(l2_src, node, "expression too long")
+        if: c.sprintf(dest, "%s(%s)", s1, s0) < 0
+            return: 1
+        return: 0
+    ---
+    if: idx < 0 && l2_text_eq(call\head, "c.sizeof") = 0 && (l2_c_door(call\head) != 0 || l2_predef_has_function(call\head) != 0 || (k = 0 && raw_fld = 5))
         l2_ccall_into: dest
         if: l2_emit_ccall(node, mi, ind) != 0
             l2_ccall_into: 0
@@ -13328,7 +13380,7 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
         return: 1
     if: l2_call_sel = 2 && c.fprintf(l2_out, "%s@: Lmx l2_c%d l2_p%d_%d\n", ind, self_t, mi, l2_call_fi) < 0
         return: 1
-    a0: l2_next_active(call\body\first_field)
+    a0: l2_next_active(l2_call_args(call\body))
     t: 0
     nact: l2_m_arity[idx]
     nhid: l2_m_dyn[idx]
@@ -14689,7 +14741,7 @@ fn: l2_emit_fnptr_call (const: @(LmP0Node stmt); int: mi; const: @(char ind)) in
     fr: stmt\as\frame
     buf[0]: 0
     if: fr\body != 0
-        a: l2_next_active(fr\body\first_field)
+        a: l2_next_active(l2_call_args(fr\body))
         while: a != 0
             span: l2_expr_span(a)
             if: span < 1

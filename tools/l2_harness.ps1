@@ -280,64 +280,44 @@ function Log-Text([string]$Label) {
     if (Test-Path -LiteralPath $log) { return ((Get-Content -LiteralPath $log -Raw)) }
     return ''
 }
-# THE EMITTER-ORDER ASSERTION OF THE STICKY RULE (FABLE-L2-ARG-ADDRESS-PROOF-20260921-84), read off
-# the generated L1 and not off a run.  It exists because one wrong translator cannot be refuted
-# by any program's output: the one that raises sticky at the address site and changes nothing
-# else publishes through a cell nobody resolved -- in a never-bound activation no text resolves
-# it at all -- so its programs die instead of printing a wrong line, and a death is not a check.
-# What IS checkable, for every own field N that carries the early/bound/sticky flags:
-#   1. `l2_qN_sticky: 1` occurs ONLY as the body of `if: l2_qN_bound = 0 && l2_qN_early != 0`, and
-#      the very next line is `l2_qN_bound: 1` -- sticky is raised at a binding site and nowhere else;
-#   2. that guard is preceded, within the same binding site, by the resolution of the field's cell
-#      -- a sticky field is published by the next checkpoint, so the cell is resolved first;
-#   3. the cell is resolved ONLY at a binding site: every `l2_qN_from: ...` is followed by
-#      `l2_qN_bound: 1` before any call and before any address mark;
-#   4. the address site is exactly `if: l2_qN_bound = 0` / `l2_qN_early: 1`, and from there to the
-#      line that uses the address (`@ l2_p...`) nothing resolves the cell, raises sticky or binds.
-# A binding site sits where its source line sits (inside its `if`, after its early `return`), so
-# "only at a binding site" is "only when that line executes".  Returns '' or the first violation.
+# THE EMITTER-ORDER ASSERTION OF THE STICKY RULE, read off the generated L1 and not off a run.
+# Any executed @x sets sticky unconditionally; the selector (active) is the publication target.
+# Never-bound activations must not publish: sticky without active == this occurrence is a no-op.
+# What IS checkable, for every own field N that carries sticky/active:
+#   1. no early/bound flags remain;
+#   2. `l2_qN_sticky: 1` is an unguarded assignment at the address site, and from there to
+#      `@ l2_p...` nothing resolves the cell;
+#   3. `l2_qN_from:` is followed by `l2_qN_active:` (or another occurrence's active) before a call.
 function Test-BindOrder([string]$L1) {
     $lines = @($L1 -split "`r?`n" | ForEach-Object { $_.Trim() })
     $owns = @([regex]::Matches($L1, '(?m)^\s*int: l2_q(\d+)_sticky 0\s*$') | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique)
-    if ($owns.Count -eq 0) { return 'no own field carries the early/bound/sticky flags' }
+    if ($owns.Count -eq 0) { return 'no own field carries the sticky flag' }
     foreach ($n in $owns) {
         $q = 'l2_q' + $n
-        $guard = 'if: ' + $q + '_bound = 0 && ' + $q + '_early != 0'
-        $sticks = 0; $binds = 0; $addrs = 0
+        if ($L1 -match [regex]::Escape($q + '_early') -or ($L1 -match ($q + '_bound'))) { return ($q + ': early/bound flags must be gone') }
+        $sticks = 0
         for ($i = 0; $i -lt $lines.Count; $i++) {
             $ln = $lines[$i]
             if ($ln -ceq ($q + '_sticky: 1')) {
                 $sticks++
-                if ($i -lt 1 -or $lines[$i - 1] -cne $guard) { return ($q + ': sticky is raised outside a binding site (line ' + ($i + 1) + ')') }
-                if ($i + 1 -ge $lines.Count -or $lines[$i + 1] -cne ($q + '_bound: 1')) { return ($q + ': sticky is raised but the field is not bound right there (line ' + ($i + 1) + ')') }
-            }
-            if ($ln -ceq ($q + '_bound: 1')) {
-                $binds++
-                if ($i -lt 2 -or $lines[$i - 2] -cne $guard) { return ($q + ': a binding site does not decide sticky (line ' + ($i + 1) + ')') }
-                $resolved = $false
-                for ($k = $i - 3; $k -ge 0 -and $k -ge $i - 8; $k--) { if ($lines[$k].StartsWith($q + '_from: ')) { $resolved = $true } }
-                if (-not $resolved) { return ($q + ': a binding site does not resolve the cell before it can raise sticky (line ' + ($i + 1) + ')') }
+                if ($i -ge 1 -and ($lines[$i - 1] -match '_bound|_early')) { return ($q + ': sticky is still guarded by bound/early (line ' + ($i + 1) + ')') }
+                $used = $false
+                for ($k = $i + 1; $k -lt $lines.Count -and -not $used; $k++) {
+                    if ($lines[$k].StartsWith($q + '_from: ')) { return ($q + ': taking the address resolves the cell (line ' + ($k + 1) + ')') }
+                    if ($lines[$k] -match '@ l2_p\d+_\d+') { $used = $true }
+                }
+                if (-not $used) { return ($q + ': sticky with no use of the address after it (line ' + ($i + 1) + ')') }
             }
             if ($ln.StartsWith($q + '_from: ')) {
                 $closed = $false
-                for ($k = $i + 1; $k -lt $lines.Count -and $k -le $i + 16 -and -not $closed; $k++) {
-                    if ($lines[$k] -ceq ($q + '_bound: 1')) { $closed = $true; break }
-                    if ($lines[$k] -match 'l2_m\d+\(' -or $lines[$k] -ceq ($q + '_early: 1')) { break }
+                for ($k = $i + 1; $k -lt $lines.Count -and $k -le $i + 20; $k++) {
+                    if ($lines[$k] -match 'l2_q\d+_active:') { $closed = $true; break }
+                    if ($lines[$k] -match 'l2_m\d+\(' -or $lines[$k] -ceq ($q + '_sticky: 1')) { break }
                 }
                 if (-not $closed) { return ($q + ': the cell is resolved outside a binding site (line ' + ($i + 1) + ')') }
             }
-            if ($ln -ceq ($q + '_early: 1')) {
-                $addrs++
-                if ($i -lt 1 -or $lines[$i - 1] -cne ('if: ' + $q + '_bound = 0')) { return ($q + ': the address mark is not guarded by "not bound yet" (line ' + ($i + 1) + ')') }
-                $used = $false
-                for ($k = $i + 1; $k -lt $lines.Count -and -not $used; $k++) {
-                    if ($lines[$k].StartsWith($q + '_from: ') -or $lines[$k] -ceq ($q + '_sticky: 1') -or $lines[$k] -ceq ($q + '_bound: 1')) { return ($q + ': taking the address alone resolves the cell, raises sticky or binds (line ' + ($k + 1) + ')') }
-                    if ($lines[$k] -match '@ l2_p\d+_\d+') { $used = $true }
-                }
-                if (-not $used) { return ($q + ': an address mark with no use of the address after it (line ' + ($i + 1) + ')') }
-            }
         }
-        if ($addrs -eq 0 -or $binds -eq 0) { return ($q + ': carries the flags but has ' + $addrs + ' address sites and ' + $binds + ' binding sites') }
+        if ($sticks -eq 0) { return ($q + ': carries sticky but never raises it') }
     }
     return ''
 }
@@ -610,10 +590,10 @@ $fixtures = @(
                  'l2_m2(l2_c4\parent, l2_c4, 2U, node, @ l2_t5, @ l2_te5)',
                  'l2_out_throw[0]: node',
                  'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)') },
-    # THE STICKY DIRTY OF AN ADDRESS-TAKEN ARGUMENT (FABLE-L2-ARG-ADDRESS-DIRTY-20260921-67), the
-    # author's rule: sticky <=> x is a parameter, `@: x` was EVALUATED before x's first EXECUTED
-    # assignment, and that assignment then binds x to the body's own field; from there to the end
-    # of the activation every checkpoint publishes the local and none clears the state.
+    # THE STICKY DIRTY OF AN ADDRESS-TAKEN LOCAL (GROK-COLON-OCCURRENCE-20260922-02).  Any executed
+    # `@x` of an addressable activation-local makes sticky through activation end -- before, between
+    # or after occurrence bindings.  Address-taking invents no graph field; `p` always addresses the
+    # canonical cell and never retargets.  The 2026-09-21 before/after split is superseded.
     #
     # These rows have `Says`: the lines the PROGRAM must print, whole and in order.  That is the
     # only verdict a generated program can give today -- lmx_thread_dispatch_native drops the
@@ -621,29 +601,24 @@ $fixtures = @(
     # The matrix is mutually discriminating, measured on translator mutants:
     #   A  before-bind, then bind   sticky: A2/A4 are checkpoints that follow NO address-taking call,
     #                               so "raise dirty again after the call returns" fails them too;
-    #   B  never bound              the declaration is at METHOD level (so node\x reads the field) and
-    #                               an early return skips it.  B 5 100 is printed by the never-bound
-    #                               AND by the to-be-bound activation, before the binding line: the
-    #                               graph keeps the 100 written just above through two checkpoints.
-    #                               Kills "an address taken early binds at once" (order respected,
-    #                               no waiting for the binding line): that prints B 5 5 and NOTHING
-    #                               else differs -- this case is its only witness.  (-84; before it
-    #                               the case could print only the local, and the one mutant it
-    #                               killed, it killed by a crash.)
-    #   C  bind, then address       kills "sticky if the address was taken at SOME point" (C2, C3);
-    #   D  one method, both orders  decided at RUN time, so a verdict from the text alone fails one;
-    #   E  declared, then address   the DECLARATION is a binding line too (docs/L2_spec), so an
-    #                               address taken after it is ordinary -- the same mutant fails E.
-    # Before the change the translator printed A2 6 100, A3 9 100, A4 9 200 and D1 6 100.
+    #   B  never bound              sticky is set, but address-taking invented no field, so B 5 100
+    #                               keeps the graph poke through two checkpoints.  A translator that
+    #                               publishes through an unresolved cell dies (exit 139) here;
+    #                               load-at-bind is what keeps the to-be-bound activation alive.
+    #   C  bind, then address       NOW sticky (C3 9 9).  C2 9 4 is local-vs-graph before the next
+    #                               checkpoint; C2 9 9 would mean the address retargeted to the graph.
+    #   D  one method, both orders  decided at RUN time; D0 after-bind is sticky (D0 5 5).
+    #   E  declared, then address   the DECLARATION is a binding line too, and the later `@` is
+    #                               sticky (E 6 6).
+    # Before the 2026-09-21 sticky slice the translator printed A2 6 100, A3 9 100, A4 9 200 and D1 6 100.
     [pscustomobject]@{ Name = 'unit_arg_addr_sticky.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
-        Says = @('A1 6 6', 'A2 6 6', 'A3 9 9', 'A4 9 9', 'B 5 100', 'B 5 100', 'B+ 6 6', 'B 5 100', 'C1 4 4', 'C2 9 4', 'C3 9 100', 'D1 6 6', 'D0 5 100', 'E 6 100');
+        Says = @('A1 6 6', 'A2 6 6', 'A3 9 9', 'A4 9 9', 'B 5 100', 'B 5 100', 'B+ 6 6', 'B 5 100', 'C1 4 4', 'C2 9 9', 'C3 9 9', 'D1 6 6', 'D0 5 5', 'E 6 6');
         BindOrder = $true;
-        Absent = @();
-        Debt = @('int: l2_q0_early 0', 'int: l2_q0_bound 0', 'int: l2_q0_sticky 0',
-                 'if: l2_q0_bound = 0',
-                 'if: l2_q0_bound = 0 && l2_q0_early != 0',
-                 'if: l2_q0_dirty != 0 || l2_q0_sticky != 0') },
+        Absent = @('l2_q0_early', 'l2_q0_bound');
+        Debt = @('int: l2_q0_sticky 0', 'int: l2_q0_active 0 - 1',
+                 'l2_q0_sticky: 1',
+                 'if: l2_q0_dirty != 0 || (l2_q0_sticky != 0 && l2_q0_active = 0)') },
     # TYPE IS AN INDEPENDENT AXIS.  unsigned was REFUSED in the declared form (a formal's type code
     # was compared with an own field's storage code: 34 against 3) and silently left a plain local
     # in the assignment form; a pointer was never bound at all.  Both now go through the same
@@ -653,13 +628,13 @@ $fixtures = @(
         Says = @('U 51 51', 'Z local 71', 'Z graph 71', 'L local 81', 'L graph 81');
         BindOrder = $true;
         Absent = @();
-        Debt = @('lmx_unsigned_store_known(l2_q0_from[0], l2_p', 'if: l2_q0_dirty != 0 || l2_q0_sticky != 0') },
+        Debt = @('lmx_unsigned_store_known(l2_q0_from[0], l2_q', 'if: l2_q0_dirty != 0 || (l2_q0_sticky != 0 && l2_q0_active = 0)') },
     [pscustomobject]@{ Name = 'unit_arg_addr_pointer.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Says = @('P local is null');
         BindOrder = $true;
         Absent = @();
-        Debt = @('lmx_pointer_store_known(l2_q0_from[0], (cast: (@: void) l2_p', 'int: l2_q0_sticky 0') },
+        Debt = @('lmx_pointer_store_known(l2_q0_from[0], (cast: (@: void) l2_q', 'int: l2_q0_sticky 0') },
     # THE ADDRESS OF AN ETERNAL FIELD IS REFUSED WHERE IT IS TAKEN (FABLE-L2-R0-WRITE-GUARD-DESIGN-20260921-111, M0).
     # `@` yields a WRITABLE address and a raw write through it bypasses every cell helper, so until a
     # read-only address exists as a type the translator refuses it by name, with the test that already
@@ -688,8 +663,8 @@ $fixtures = @(
     # Debt is the hidden formal itself: `int:` for int_before, and the mixed pair of int_never.
     [pscustomobject]@{ Name = 'unit_arg_addr_dynamic.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
-        Says = @('IA1 6 6', 'IA2 6 6', 'IA3 9 9', 'IA4 9 9', 'IB 5 100', 'IB 5 100', 'IB+ 6 6', 'IB 5 100', 'IC1 4 4', 'IC2 9 4', 'IC3 9 100',
-                 'ZA1 6 6', 'ZA2 6 6', 'ZA3 9 9', 'ZA4 9 9', 'ZB 5 100', 'ZB 5 100', 'ZB+ 6 6', 'ZB 5 100', 'ZC1 4 4', 'ZC2 9 4', 'ZC3 9 100',
+        Says = @('IA1 6 6', 'IA2 6 6', 'IA3 9 9', 'IA4 9 9', 'IB 5 100', 'IB 5 100', 'IB+ 6 6', 'IB 5 100', 'IC1 4 4', 'IC2 9 9', 'IC3 9 9',
+                 'ZA1 6 6', 'ZA2 6 6', 'ZA3 9 9', 'ZA4 9 9', 'ZB 5 100', 'ZB 5 100', 'ZB+ 6 6', 'ZB 5 100', 'ZC1 4 4', 'ZC2 9 9', 'ZC3 9 9',
                  'CALLER 3 3 3 3 3 3');
         BindOrder = $true;
         Absent = @();
@@ -714,13 +689,15 @@ $fixtures = @(
                  'fn: l2_m8 (@: Lmx node; @: Lmx self; @: int l2_p8_0) int',
                  'lmx_pointer_store_known(l2_q') },
     # THE ORDINARY CASES ALONE.  Every address here is taken after the binding line, so every cell
-    # is resolved when it is taken, and the translator that raises sticky at the address site
-    # cannot die here: it prints OC2 9 9, OC3 9 9, OE 6 6, OD2 9 9, OD3 9 9 (measured).  Next to a
-    # before-bind or never-bound activation the same translator dies (exit 139) and the death
-    # hides these lines -- which is why they have a program of their own.
+    # is already resolved when it is taken.  After-bind `@` is now sticky: OC3 9 9, OE 6 6, OD3 9 9.
+    # OC2 9 4 remains local-vs-graph before the next checkpoint; OC2 9 9 would mean retargeting.
+    # CRASH WARNING, not an old expectation: a translator that raises sticky at the address site
+    # AND publishes through a cell nobody resolved dies (exit 139) on a before-bind or never-bound
+    # activation, and that death hid these lines -- which is why they have a program of their own.
+    # Load-at-bind and "address-taking invents no graph field" keep those cases alive.
     [pscustomobject]@{ Name = 'unit_arg_addr_ordinary.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
-        Says = @('OC1 4 4', 'OC2 9 4', 'OC3 9 100', 'OE 6 100', 'OD1 4 4', 'OD2 9 4', 'OD3 9 100');
+        Says = @('OC1 4 4', 'OC2 9 9', 'OC3 9 9', 'OE 6 6', 'OD1 4 4', 'OD2 9 9', 'OD3 9 9');
         BindOrder = $true;
         Absent = @();
         Debt = @('fn: l2_m6 (@: Lmx node; @: Lmx self; size_t: l2_p6_0) int') },
@@ -913,7 +890,13 @@ $fixtures = @(
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_message\graph: unit', 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)',
                  'l2_q0_from: lmx_arena_ref_cell(self, 1U)',
-                 'l2_q1_from: lmx_arena_ref_cell(self, 2U)') }
+                 'l2_q1_from: lmx_arena_ref_cell(self, 2U)') },
+    [pscustomobject]@{ Name = 'unit_occ_sticky_selector.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Says = @('BEFORE 1 1', 'BETWEEN 2', 'AFTER 9 9', 'NONE 7 100', 'NONE 7 100', 'NONE+ 1 1', 'LAST 9');
+        BindOrder = $true;
+        Absent = @('l2_q0_early', 'l2_q0_bound');
+        Debt = @('int: l2_q0_sticky 0', 'int: l2_q0_active 0 - 1', 'l2_q0_sticky: 1') }
 )
 
 foreach ($fx in $fixtures) {

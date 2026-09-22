@@ -1,0 +1,15 @@
+# GROKBOT-NESTED-BODY-WITNESSES-20260922-69 negative: own declared inside nested body
+# is NOT reachable as node\name (host-attached; node path is host-less only).
+int: shared
+
+fn: bad_node_inner () int
+    if: 1
+        int: inner 9
+        node\inner: 5
+    ---
+    return: 0
+end: bad_node_inner
+
+fn: main () int
+    return: bad_node_inner()
+end: main

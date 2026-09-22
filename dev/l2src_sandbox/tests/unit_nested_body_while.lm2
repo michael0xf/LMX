@@ -1,0 +1,23 @@
+# GROKBOT-NESTED-BODY-WITNESSES-20260922-69: while-arm nested body Structure hosts own.
+int: shared
+
+fn: write_while_nested () int
+    int: flag 1
+    while: flag != 0
+        int: hosted 3
+        node\shared: 31
+        flag: 0
+    ---
+    return: 0
+end: write_while_nested
+
+fn: main () int
+    int: ignored
+    shared: 3
+    ignored: write_while_nested()
+    if: ignored != 0
+        return: ignored
+    if: shared != 31
+        return: 74
+    return: 0
+end: main

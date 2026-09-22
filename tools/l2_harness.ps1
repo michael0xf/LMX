@@ -800,10 +800,40 @@ $fixtures = @(
         Debt = @('l2_message\graph: unit', 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)') },
     # T-B nested host-less node path (TB-AMEND-28). Debt pins generated lowering of node\shared;
     # private mutant of l2_path_own that treats node-path like for-path (host-attached) must fail.
+    # Nested-body witnesses (GROKBOT-NESTED-BODY-WITNESSES-20260922-69): else/while/C-for
+    # arms host ordinary child Structures; node\shared stays host-less. Absent forbids the
+    # obsolete unit-form branch helper. Debt pins per-arm host selection so dropping that
+    # layout/discovery arm fails the row.
     [pscustomobject]@{ Name = 'unit_node_path_nested_own.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
-        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'lmx_branch_struct_known(unit,');
         Debt = @('l2_message\graph: unit', 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)') },
+    [pscustomobject]@{ Name = 'unit_nested_body_else.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'lmx_branch_struct_known(unit,');
+        Debt = @('l2_h0: lmx_arena_ref_struct(self, 1U)',
+                 'l2_h1: lmx_arena_ref_struct(self, 2U)',
+                 'lmx_arena_ref_cell(l2_h1, 0U)',
+                 '# const: @(char l2_own2) "hosted"',
+                 'l2_message\graph: unit', 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)') },
+    [pscustomobject]@{ Name = 'unit_nested_body_while.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'lmx_branch_struct_known(unit,');
+        Debt = @('l2_h0: lmx_arena_ref_struct(self, 2U)',
+                 'lmx_arena_ref_cell(l2_h0, 0U)',
+                 'while: l2_t0',
+                 '# const: @(char l2_own2) "hosted"',
+                 'l2_message\graph: unit', 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)') },
+    [pscustomobject]@{ Name = 'unit_nested_body_for.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'lmx_branch_struct_known(unit,');
+        Debt = @('l2_h0: lmx_arena_ref_struct(self, 1U)',
+                 'lmx_arena_ref_cell(l2_h0, 1U)',
+                 'l2_q2: 4',
+                 '# const: @(char l2_own2) "hosted"',
+                 'l2_message\graph: unit', 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)') },
+    [pscustomobject]@{ Name = 'unit_nested_body_own_not_node.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unknown field path root'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_colon_formal_update.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');

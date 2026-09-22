@@ -1,0 +1,21 @@
+# GROKBOT-NESTED-BODY-WITNESSES-20260922-69: C-style for-arm nested body Structure hosts own.
+int: shared
+
+fn: write_for_nested () int
+    for: int(i, 0) (i < 1) i++
+        int: hosted 4
+        node\shared: 41
+    end: for
+    return: 0
+end: write_for_nested
+
+fn: main () int
+    int: ignored
+    shared: 3
+    ignored: write_for_nested()
+    if: ignored != 0
+        return: ignored
+    if: shared != 41
+        return: 75
+    return: 0
+end: main

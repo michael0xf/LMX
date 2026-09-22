@@ -195,12 +195,6 @@ int: l2_foreign_cap 0
 @: int l2_foreign_depth 0
 @: int l2_foreign_const 0
 # Colon declarations normalized to merge retain their source identity here.
-# The marker is semantic, not storage: result slots may already be laid out,
-# but only an executed declaration creates the logical binding.
-int: l2_colon_n 0
-int: l2_colon_cap 0
-@@: LmP0Node l2_colon_stmt 0
-@: int l2_colon_mi 0
 @: LmP0Text l2_colon_lmx_name 0
 const: @: LmP0Node l2_os_node 0
 const: @: LmP0Structure l2_cur_unit 0
@@ -341,17 +335,13 @@ prototype:
     fn: l2_colon_model (const: @(LmP0Text name)) int
     fn: l2_colon_graph_ty () int
     fn: l2_colon_is_graph_ty (int: ty) int
-    fn: l2_colon_mark (const: @(LmP0Node stmt); int: mi) int
-    fn: l2_colon_mark_find (const: @(LmP0Node stmt)) int
     fn: l2_colon_bound_before (const: @(LmP0Structure body); const: @(LmP0Node stop); int: mi; const: @(LmP0Text name)) int
     fn: l2_colon_value_bound (int: mi; const: @(LmP0Text name)) int
     fn: l2_colon_bound_ty (int: mi; const: @(LmP0Text name); @: int out_ty) int
     fn: l2_colon_simple_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
     fn: l2_colon_types_compatible (int: target_ty; int: value_ty) int
     fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
-    fn: l2_colon_rewrite_decl (const: @(LmP0Node stmt); const: @(LmP0Structure body); int: mi; const: @(char path)) int
-    fn: l2_colon_normalize_body (const: @(LmP0Structure body); int: mi; const: @(char path)) int
-    fn: l2_colon_normalize_all (const: @(char path)) int
+    fn: l2_colon_decl_shape (const: @(LmP0Node stmt); @@: LmP0Text out_model; @@: LmP0Text out_name) int
     fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char path)) int
     fn: l2_collect_asgn_binds (const: @(char path)) int
     fn: l2_dyn_find (int: mi; const: @(LmP0Text t)) int
@@ -2810,8 +2800,6 @@ fn: l2_translate_unit (const: @(LmP0Structure unit); const: @(char path); @@: Lm
         return: l2_error(path, main_node, "several main")
     if: extras != 0
         return: l2_error(path, main_node, "unsupported body")
-    if: l2_colon_normalize_all(path) != 0
-        return: 1
     if: mains = 0
         if: l2_m_n = 0
             return: l2_error(path, 0, "missing main")
@@ -5758,55 +5746,6 @@ fn: l2_colon_is_graph_ty (int: ty) int
         return: 0
 return: l2_text_eq(l2_foreign_name[fi], "Lmx")
 
-fn: l2_colon_mark_find (const: @(LmP0Node stmt)) int
-    int: i 0
-    while: i < l2_colon_n
-        if: l2_colon_stmt[i] = stmt
-            return: i
-        i: i + 1
-return: 0 - 1
-
-fn: l2_colon_mark (const: @(LmP0Node stmt); int: mi) int
-    int: cap
-    @@: LmP0Node ns 0
-    @: int nm 0
-    if: stmt = 0
-        return: 1
-    if: l2_colon_mark_find(stmt) >= 0
-        return: 0
-    if: l2_colon_n >= l2_colon_cap
-        cap: l2_colon_cap
-        if: cap < 1
-            cap: 4
-        while: cap <= l2_colon_n
-            if: cap > c.INT_MAX / 2
-                cap: l2_colon_n + 1
-            else:
-                cap: cap * 2
-            ---
-        ns: (cast: (@@: LmP0Node) malloc((cast: (size_t) cap) * c.sizeof(@: void)))
-        nm: (cast: (@: int) malloc((cast: (size_t) cap) * c.sizeof(c.int)))
-        if: ns = 0 || nm = 0
-            if: ns != 0
-                free((cast: (@: void) ns))
-            if: nm != 0
-                free((cast: (@: void) nm))
-            return: 1
-        if: l2_colon_n > 0
-            memcpy((cast: (@: void) ns), (cast: (@: void) l2_colon_stmt), (cast: (size_t) l2_colon_n) * c.sizeof(@: void))
-            memcpy((cast: (@: void) nm), (cast: (@: void) l2_colon_mi), (cast: (size_t) l2_colon_n) * c.sizeof(c.int))
-        if: l2_colon_stmt != 0
-            free((cast: (@: void) l2_colon_stmt))
-        if: l2_colon_mi != 0
-            free((cast: (@: void) l2_colon_mi))
-        l2_colon_stmt: ns
-        l2_colon_mi: nm
-        l2_colon_cap: cap
-    l2_colon_stmt[l2_colon_n]: (cast: (@: LmP0Node) stmt)
-    l2_colon_mi[l2_colon_n]: mi
-    l2_colon_n: l2_colon_n + 1
-return: 0
-
 # Layout collection sees every own slot before execution.  That is deliberately
 # not the same thing as a binding existing at this colon.  Only formals and
 # declarations already passed in this body make the tail an update value.
@@ -5973,92 +5912,31 @@ fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char p
         return: l2_error(path, stmt, "graph assignment admission requires receiving-expression tests")
 return: 0
 
-fn: l2_colon_rewrite_decl (const: @(LmP0Node stmt); const: @(LmP0Structure body); int: mi; const: @(char path)) int
+# Recognizes the `Model: fresh` declaration shape in place -- absent head,
+# a single-atom body, head resolves as a model/type per l2_colon_model --
+# without rewriting the AST. FABLE-SONNET-DECL-BINDING-20260922-105: this
+# replaces l2_colon_rewrite_decl; the declaration is registered as an own
+# field and its construction emitted inline at this exact statement instead
+# of being hoisted into a merge-shaped node built once at unit-entry time.
+fn: l2_colon_decl_shape (const: @(LmP0Node stmt); @@: LmP0Text out_model; @@: LmP0Text out_name) int
     @: LmP0Frame fr
     @: LmP0Field only
-    @: LmP0Node merge_node
-    @: LmP0Node operand
-    @: LmP0Field operand_field
-    @: LmP0Text merge_head
-    @: LmP0Text model
-    @: LmP0Text declared
+    if: out_model = 0 || out_name = 0
+        return: 1
+    \out_model: 0
+    \out_name: 0
     if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0
-        return: 0
+        return: 1
     fr: stmt\as\frame
     if: fr\head = 0 || fr\body = 0 || fr\trailer != 0 || fr\body\trailer != 0 || l2_count_active(fr\body) != 1
-        return: 0
+        return: 1
     only: l2_next_active(fr\body\first_field)
     if: only = 0 || only\value = 0 || only\value\kind != c.LM_P0_NODE_ATOM || only\value\as = 0 || only\value\as\atom = 0 || l2_ident(only\value\as\atom) = 0
-        return: 0
-    model: fr\head
-    declared: only\value\as\atom
-    if: l2_colon_model(model) = 0
-        return: 0
-    if: l2_colon_bound_before(body, stmt, mi, declared) != 0
-        return: 0
-    # The parsed document arena is sealed after parsing.  These few normalized
-    # nodes therefore belong to the translation pass itself; l2trans handles
-    # one source per process, just like its other pass-owned tables.
-    merge_node: (cast: (@: LmP0Node) calloc(1U, c.sizeof(merge_node[0])))
-    operand: (cast: (@: LmP0Node) calloc(1U, c.sizeof(operand[0])))
-    operand_field: (cast: (@: LmP0Field) calloc(1U, c.sizeof(operand_field[0])))
-    merge_head: (cast: (@: LmP0Text) calloc(1U, c.sizeof(merge_head[0])))
-    if: merge_node != 0
-        merge_node\as: (cast: (@: LmP0NodeAs) calloc(1U, c.sizeof(merge_node\as[0])))
-    if: merge_node != 0 && merge_node\as != 0
-        merge_node\as\frame: (cast: (@: LmP0Frame) calloc(1U, c.sizeof(merge_node\as\frame[0])))
-    if: merge_node != 0 && merge_node\as != 0 && merge_node\as\frame != 0
-        merge_node\as\frame\body: (cast: (@: LmP0Structure) calloc(1U, c.sizeof(merge_node\as\frame\body[0])))
-    if: operand != 0
-        operand\as: (cast: (@: LmP0NodeAs) calloc(1U, c.sizeof(operand\as[0])))
-    if: merge_node = 0 || merge_node\as = 0 || merge_node\as\frame = 0 || merge_node\as\frame\body = 0 || operand = 0 || operand\as = 0 || operand_field = 0 || merge_head = 0
-        return: l2_error(path, stmt, "out of memory")
-    merge_node\kind: c.LM_P0_NODE_FRAME
-    merge_head\data: "merge"
-    merge_head\length: 5U
-    merge_node\as\frame\head: merge_head
-    operand\kind: c.LM_P0_NODE_ATOM
-    operand\as\atom: model
-    operand_field\value: operand
-    merge_node\as\frame\body\first_field: operand_field
-    merge_node\as\frame\body\last_field: operand_field
-    merge_node\as\frame\body\field_count: 1U
-    fr\head: declared
-    only\value: merge_node
-    if: l2_colon_mark(stmt, mi) != 0
-        return: l2_error(path, stmt, "out of memory")
-return: 0
-
-fn: l2_colon_normalize_body (const: @(LmP0Structure body); int: mi; const: @(char path)) int
-    @: LmP0Field field
-    @: LmP0Field inner
-    @: LmP0Node stmt
-    if: body = 0
-        return: 0
-    field: l2_next_active(body\first_field)
-    while: field != 0
-        stmt: field\value
-        if: l2_colon_rewrite_decl(stmt, body, mi, path) != 0
-            return: 1
-        if: l2_merge_frame(stmt) = 0 && stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\body != 0
-            inner: l2_next_active(stmt\as\frame\body\first_field)
-            while: inner != 0
-                if: inner\value != 0 && inner\value\kind = c.LM_P0_NODE_STRUCTURE && inner\value\as != 0 && l2_colon_normalize_body(inner\value\as\structure, mi, path) != 0
-                    return: 1
-                inner: l2_next_active(inner\next)
-            ---
-        ---
-        field: l2_next_active(field\next)
-    ---
-return: 0
-
-fn: l2_colon_normalize_all (const: @(char path)) int
-    int: i 0
-    while: i < l2_m_n
-        if: l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && l2_colon_normalize_body(l2_m_body[i]\as\structure, i, path) != 0
-            return: 1
-        i: i + 1
-    ---
+        return: 1
+    if: l2_colon_model(fr\head) = 0
+        return: 1
+    \out_model: fr\head
+    \out_name: only\value\as\atom
 return: 0
 
 # THE OWN STORAGE CODE OF A FORMAL'S TYPE (FABLE-L2-ARG-ADDRESS-DIRTY-20260921-67).  Argument-as-own
@@ -6338,6 +6216,7 @@ fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char p
     @: LmP0Node stmt
     const: @: LmP0Frame fr
     @: LmP0Text fa
+    @: LmP0Text cmodel
     int: n
     int: k
     int: j
@@ -6354,11 +6233,17 @@ fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char p
         # dynamically visible, with the same-name lexical Structure only the
         # fallback/type anchor, so it needs an ordinary @: Lmx hidden input.
         if: l2_merge_frame(stmt) != 0
-            if: l2_colon_mark_find(stmt) >= 0 && mi >= 0
-                last: l2_next_active(l2_merge_frame(stmt)\as\frame\body\first_field)
-                if: last = 0 || last\value = 0 || last\value\kind != c.LM_P0_NODE_ATOM || l2_colon_graph_ty() = 0 || l2_dyn_add(mi, last\value\as\atom, l2_colon_graph_ty()) != 0
-                    return: l2_alloc_or(path, stmt, "unsupported body")
-                ---
+            field: l2_next_active(field\next)
+            continue
+        # Model: fresh -- the declared name is bound here, not referenced;
+        # same exclusion as l2_merge_frame above. The bare l2_own_add makes
+        # the row exist so a later statement reading the name through \\field
+        # resolves as an own field, not an undeclared dynamic input; counting
+        # and binding stay l2_check_body's job -- its later call on the same
+        # statement node finds this row and is a no-op past that point.
+        if: l2_colon_decl_shape(stmt, @ cmodel, @ fa) = 0
+            if: l2_own_add(mi, fa, l2_own_of_dt(l2_colon_graph_ty()), path, stmt, 0) < 0
+                return: 1
             field: l2_next_active(field\next)
             continue
         if: l2_frame_head(stmt, "if")
@@ -6834,11 +6719,17 @@ fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
         # See the assignment collector: a normalized colon constructor is the
         # one merge form whose operand remains a dynamic free graph name.
         if: l2_merge_frame(stmt) != 0
-            if: l2_colon_mark_find(stmt) >= 0 && mi >= 0
-                last: l2_next_active(l2_merge_frame(stmt)\as\frame\body\first_field)
-                if: last = 0 || last\value = 0 || last\value\kind != c.LM_P0_NODE_ATOM || l2_colon_graph_ty() = 0 || l2_dyn_add(mi, last\value\as\atom, l2_colon_graph_ty()) != 0
-                    return: 1
-                ---
+            field: l2_next_active(field\next)
+            continue
+        # Model: fresh -- the declared name is bound here, not referenced;
+        # the same exclusion l2_merge_frame gets above, for the same reason.
+        # A bare l2_own_add makes the row exist (l2_check_body's later call
+        # with the same statement node finds it and is a no-op past this),
+        # so a later statement in this body reading the name through \\field
+        # resolves it as an own field instead of an undeclared dynamic input.
+        if: l2_colon_decl_shape(stmt, @ slnm, @ fa) = 0
+            if: l2_own_add(mi, fa, l2_own_of_dt(l2_colon_graph_ty()), l2_src, stmt, 0) < 0
+                return: 1
             field: l2_next_active(field\next)
             continue
         # A pointer-local declaration is a TYPE and a name, neither of them a
@@ -12067,6 +11958,9 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
     int: lty 0
     @: LmP0Text lnm 0
     @: LmP0Text lsz 0
+    int: cj
+    @: LmP0Text cmodel
+    @: LmP0Text cname
     if: body = 0
         return: l2_error(path, 0, "unsupported body")
     field: l2_next_active(body\first_field)
@@ -12322,6 +12216,23 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
                 return: 1
             field: l2_next_active(field\next)
             continue
+        # Model: fresh (FABLE-SONNET-DECL-BINDING-20260922-105). An own field
+        # of the enclosing method occurrence, constructed by merge(Model,
+        # empty), registered at this exact lexical point like any other own
+        # declaration -- CORE.md 3.1/4, L2 spec 10. Unit-level (mi<0) is out
+        # of scope pending Opus's S2 (l2_own_add itself refuses mi<0).
+        if: l2_frame_head(stmt, "if") = 0 && mi >= 0 && l2_colon_decl_shape(stmt, @ cmodel, @ cname) = 0 && l2_colon_bound_before(body, stmt, mi, cname) = 0
+            cj: l2_own_add(mi, cname, l2_own_of_dt(l2_colon_graph_ty()), path, stmt, 0)
+            if: cj < 0
+                return: 1
+            if: l2_own_off(mi, cj) = (cast: (size_t) -1)
+                return: l2_error(path, stmt, "size overflow")
+            l2_m_uses[l2_own_off(mi, cj)]: 1
+            l2_m_own[mi]: l2_m_own[mi] + 1
+            if: l2_bind_own(mi, cj, path, stmt) != 0
+                return: 1
+            field: l2_next_active(field\next)
+            continue
         if: l2_frame_head(stmt, "if") = 0 && mi >= 0 && stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0 && l2_ml_find(stmt\as\frame\head) >= 0
             if: stmt\as\frame\body = 0 || l2_check_fields(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), mi, path, stmt) != 0
                 return: 1
@@ -12497,8 +12408,6 @@ fn: l2_parse_unit (const: @(LmP0Node main_node); const: @(char path)) int
     l2_main_body: 0
     if: body != 0
         l2_main_body: body\as\structure
-    if: l2_main_body != 0 && l2_colon_normalize_body(l2_main_body, -1, path) != 0
-        return: 1
     # Merge result names are reserved here, before any statement is checked: a
     # field path rooted at a bound result is otherwise an unknown head at the
     # moment the unsupported-body guard runs. The scan is idempotent, and the
@@ -15383,12 +15292,18 @@ fn: l2_body_throws (const: @(LmP0Structure body); int: mi) int
     @: LmP0Field field
     @: LmP0Field inner
     @: LmP0Node stmt
+    @: LmP0Text cmodel
+    @: LmP0Text cname
     if: body = 0
         return: 0
     field: l2_next_active(body\first_field)
     while: field != 0
         stmt: field\value
         if: l2_merge_frame(stmt) != 0
+            return: 1
+        # A colon declaration (Model: fresh) is the same construction as an
+        # explicit merge: statement, spelled differently -- it also throws.
+        if: mi >= 0 && l2_colon_decl_shape(stmt, @ cmodel, @ cname) = 0
             return: 1
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\body != 0
             inner: l2_next_active(stmt\as\frame\body\first_field)
@@ -15483,6 +15398,8 @@ fn: l2_merge_scan (const: @(LmP0Structure body)) int
     @: int widths 0
     @: size_t firsts 0
     @: size_t lasts 0
+    @: LmP0Text cmodel
+    @: LmP0Text cname
     int: n
     if: body = 0
         return: 0
@@ -15528,6 +15445,14 @@ fn: l2_merge_scan (const: @(LmP0Structure body)) int
                     return: 1
             ---
         ---
+        # A colon declaration is the same construction operation as an
+        # explicit merge: statement, one operand, spelled differently: the
+        # scanner recognizes both so both size the same shared scratch.
+        if: mf = 0 && l2_colon_decl_shape(stmt, @ cmodel, @ cname) = 0
+            if: 1 > l2_merge_max
+                l2_merge_max: 1
+            field: l2_next_active(field\next)
+            continue
         if: mf = 0 && stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\body != 0
             if: l2_merge_nested(stmt\as\frame\body) != 0
                 return: 1
@@ -15562,7 +15487,6 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
     @: LmP0Structure bd 0
     int: bw 0
     int: msf 0
-    int: cm 0 - 1
     size_t: l2_pn 0U
     size_t: l2_pv 0U
     int: l2_pkind 0
@@ -15573,6 +15497,9 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
     c.array: [256]: char l2_pbuf
     c.array: [256]: char l2_pnm
     c.array: [256]: char pdest
+    int: cni
+    @: LmP0Text cmodel
+    @: LmP0Text cname
     int: aj 0
     int: aj2 0
     int: am 0
@@ -15618,7 +15545,6 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
         # input carried by METHOD.sig. Failure writes the throw graph and returns
         # declared-throw status without publishing the ordinary result.
         if: l2_merge_frame(stmt) != 0
-            cm: l2_colon_mark_find(stmt)
             fr: l2_merge_frame(stmt)\as\frame
             n: l2_merge_arity(l2_merge_frame(stmt))
             if: n < 1
@@ -15732,16 +15658,11 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
                 ---
                 if: oi < 0 && sl < 0 && ni < 0
                     return: l2_error(l2_src, stmt, "unknown merge operand")
-                if: cm >= 0 && mi >= 0
-                    fi: l2_param_find(mi, last\value\as\atom)
-                    if: fi < 0 || c.fprintf(l2_out, "%sl2_mops[%dU]: l2_p%d_%d\n", ind, k, mi, fi) < 0
-                        return: l2_error(l2_src, stmt, "unresolved dynamic graph receiver")
-                ---
-                if: (cm < 0 || mi < 0) && oi >= 0 && c.fprintf(l2_out, "%sl2_mops[%dU]: lmx_arena_ref_struct(%s, %uU)\n", ind, k, l2_unit_ref, (cast: (unsigned) (l2_unit_base + l2_m_n + 1 + oi))) < 0
+                if: oi >= 0 && c.fprintf(l2_out, "%sl2_mops[%dU]: lmx_arena_ref_struct(%s, %uU)\n", ind, k, l2_unit_ref, (cast: (unsigned) (l2_unit_base + l2_m_n + 1 + oi))) < 0
                     return: 1
-                if: (cm < 0 || mi < 0) && oi < 0 && sl >= 0 && c.fprintf(l2_out, "%sl2_mops[%dU]: lmx_arena_ref_struct(%s, %uU)\n", ind, k, l2_unit_ref, (cast: (unsigned) (l2_mres_base + sl))) < 0
+                if: oi < 0 && sl >= 0 && c.fprintf(l2_out, "%sl2_mops[%dU]: lmx_arena_ref_struct(%s, %uU)\n", ind, k, l2_unit_ref, (cast: (unsigned) (l2_mres_base + sl))) < 0
                     return: 1
-                if: (cm < 0 || mi < 0) && oi < 0 && sl < 0 && c.fprintf(l2_out, "%sl2_mops[%dU]: lmx_arena_ref_struct(%s, %uU)\n", ind, k, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni)))) < 0
+                if: oi < 0 && sl < 0 && c.fprintf(l2_out, "%sl2_mops[%dU]: lmx_arena_ref_struct(%s, %uU)\n", ind, k, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni)))) < 0
                     return: 1
                 # Every full qualified operand contributes its exact physical receiver-
                 # expression profile to this call-local span. Duplicates are deliberately
@@ -16227,6 +16148,19 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
         if: n = 2
             return: 1
         if: n = 0
+            field: l2_next_active(field\next)
+            continue
+        # Model: fresh, emitted inline at its own lexical position every
+        # activation -- the own field l2_check_body already registered gets
+        # a fresh merge(Model, empty) each time execution reaches this
+        # statement, not one shared value hoisted to unit-construction time.
+        if: mi >= 0 && l2_colon_decl_shape(stmt, @ cmodel, @ cname) = 0
+            oi: l2_own_find(mi, cname)
+            cni: l2_ns_find(cmodel)
+            if: oi < 0 || cni < 0
+                return: l2_error(l2_src, stmt, "unresolved name")
+            if: c.fprintf(l2_out, "%sl2_mops[0U]: lmx_arena_ref_struct(node, %uU)\n%sl2_mbody: 0\n%sl2_mstatus: lmx_merge_owned(l2_mops, 1U, l2_mbody, node, 0, l2_program_arena, l2_program_arena, @ l2_mresult)\n%sif: l2_mstatus != 0 || l2_mresult = 0\n%s    l2_out_throw[0]: node\n%s    return: 1\n%sl2_xp: lmx_arena_ref_cell(%s, %uU)\n%sif: l2_xp = 0\n%s    l2_out_throw[0]: node\n%s    return: 1\n%sl2_xp[0]: (cast: (@: void) l2_mresult)\n", ind, (cast: (unsigned) (l2_ns_base + l2_ns_rank(cni))), ind, ind, ind, ind, ind, ind, l2_own_ctr(oi), (cast: (unsigned) l2_own_uchild[oi]), ind, ind, ind, ind) < 0
+                return: 1
             field: l2_next_active(field\next)
             continue
         if: stmt\as != 0 && stmt\as\frame != 0 && l2_c_stmt_door(stmt\as\frame\head) != 0

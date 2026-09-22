@@ -986,23 +986,24 @@ $fixtures = @(
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_message\graph: l2_entry_unit', 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)') },
-    [pscustomobject]@{ Name = 'unit_colon_model_decl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
-        Args = @('0');
-        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
-        Debt = @('lmx_merge_owned(l2_mops, 1U, l2_mbody, l2_entry_unit, 0, l2_program_arena, l2_program_arena, @ l2_mresult)',
-                 'l2_message\graph: l2_entry_unit',
-                 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)') },
+    [pscustomobject]@{ Name = 'unit_colon_model_decl.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_colon_method_lexical_model.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
-        Debt = @('l2_m0(l2_c0\parent, l2_c0, lmx_arena_ref_struct(l2_c0\parent, 4U), node, @ l2_t1, @ l2_te1)',
+        Debt = @('l2_m0(l2_c0\parent, l2_c0, node, @ l2_t1, @ l2_te1)',
                  'lmx_merge_owned(l2_mops, 1U, l2_mbody, node, 0, l2_program_arena, l2_program_arena, @ l2_mresult)',
                  'l2_message\graph: l2_entry_unit') },
     [pscustomobject]@{ Name = 'unit_colon_method_dynamic_precedence.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
-        Debt = @('l2_m0(l2_c0\parent, l2_c0, l2_p1_0, l2_msg, @ l2_t1, @ l2_te1)',
+        Debt = @('l2_m0(l2_c0\parent, l2_c0, l2_msg, @ l2_t1, @ l2_te1)',
                  'lmx_merge_owned(l2_mops, 1U, l2_mbody, node, 0, l2_program_arena, l2_program_arena, @ l2_mresult)',
+                 'l2_message\graph: l2_entry_unit') },
+    [pscustomobject]@{ Name = 'unit_colon_method_fresh_per_activation.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
+        Debt = @('lmx_merge_owned(l2_mops, 1U, l2_mbody, node, 0, l2_program_arena, l2_program_arena, @ l2_mresult)',
                  'l2_message\graph: l2_entry_unit') },
     [pscustomobject]@{ Name = 'unit_colon_undeclared_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },

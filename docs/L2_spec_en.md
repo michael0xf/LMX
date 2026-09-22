@@ -58,7 +58,7 @@ Closed record `struct: LmxMsg` contains exactly four fields:
 | field | meaning |
 | --- | --- |
 | `running` | permission to continue; 0 inside a turn is a stop request, not completion |
-| `success` | only actual completion of the assigned work |
+| `success` | set by user code as a sufficient condition for leaving the turn and closing the Thread; never reset to 0 by the system; set to 1 by the system only for a plain letter at its delivery |
 | `handoff_ready` | mark that storage may be transferred without a copy |
 | `graph` | C projection of the language root |
 

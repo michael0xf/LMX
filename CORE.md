@@ -287,7 +287,10 @@ The closed [`LmxMsg`](dev/l2src_sandbox/lmx_message.h.lm1) record is exactly
 `{running, success, handoff_ready, graph}`. The first three fields use
 `uint_fast8_t`; `graph` is the Message's graph root. `running` is permission
 to continue; zero read during a turn is a stop request, not proof that the
-work has finished. Only actual completion sets `success`. `handoff_ready`
+work has finished. `success` is set by user code as a sufficient condition
+for leaving the turn and closing the Thread; the system never resets it to 0,
+not even on failure, and sets it to 1 itself only for a plain letter at its
+delivery. `handoff_ready`
 marks a safe ownership-transfer boundary. The record has no mailbox, route,
 parent, child list, schedule, deadline, or arbitrary application payload
 field. A plain letter can be a standalone Message with no execution turn.

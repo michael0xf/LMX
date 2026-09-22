@@ -49,7 +49,9 @@ include: "l2src_kernel/lmx_call.lm1.h"
 
 # R0 API (lmx_root.h.lm1)
 prototype:
-    fn: lmx_root_open (@: LmxRoot root; LmxCallEntry: entry; ulong: limit; size_t: eternal; size_t: methods) int
+    # 2026-09-22 (4da4658 restored the dynamic Thread graph): the numeric root slot is gone.
+    # lmx_root.lm1:323-325 — "There is no parentless spawn and no numeric root slot."
+    fn: lmx_root_open (@: LmxRoot root; LmxCallEntry: entry; ulong: limit) int
     fn: lmx_root_cycle (@: LmxRoot root; unsigned: ticks) int
     fn: lmx_root_close (@: LmxRoot root) int
     fn: lmx_root_clock (@: LmxRoot root) ulong
@@ -57,7 +59,7 @@ prototype:
     fn: lmx_root_arena (@: LmxRoot root) @: LmxArena
     fn: lmx_root_thread (@: LmxRoot root) @: LmxThread
     fn: lmx_root_service (@: LmxRoot root) @: LmxService
-    fn: lmx_root_create (@: LmxRoot root; @: LmxArena child_arena; size_t: slot; @: Lmx source) @: LmxMsg
+    fn: lmx_root_create (@: LmxRoot root; @: LmxArena child_arena; @: Lmx source) @: LmxMsg
     fn: lmx_root_hung (@: LmxRoot root; ulong: now) int
     fn: lmx_root_supervise_world (@: LmxRoot root; @: void world) int
 end: prototype
@@ -69,7 +71,13 @@ end: prototype
 
 # Thread API (lmx_thread.h.lm1)
 prototype:
-    fn: lmx_thread_attach (@: LmxThread t; @: LmxMsg message; @: LmxPost mail; @: LmxSchedule slot) int
+    # SYNCED 2026-09-22 (4da4658): lmx_thread_attach no longer exists -- 0 occurrences in the
+    # kernel and 0 in the gate stamp's headers -- so the migration is not optional.  The
+    # replacement takes the owner arena and the child's OWN graph, which the Thread's Message
+    # prefix must already carry: lmx_thread_init (lmx_thread.h.lm1:164), plus the accessor
+    # lmx_thread_message (lmx_thread.h.lm1:200) for the by-value Message prefix.
+    fn: lmx_thread_init (@: LmxArena arena; @: LmxThread t; @: Lmx graph; @: LmxPost mail; @: LmxSchedule slot) int
+    fn: lmx_thread_message (@: LmxThread t) @: LmxMsg
     # SYNCED 2026-09-19 (assembly lead): the kernel gained the cycle's reading as the third
     # parameter -- "every operation that ages a wait is GIVEN the reading" (lmx_manager.h.lm1).
     # The app itself never calls this act (all four threads are STEPPED through the manager), so

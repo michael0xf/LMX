@@ -82,6 +82,7 @@ define: MIXA_MAIN_FAIL 1
 fn: mixa_app_ui_entry (@: Lmx node) int
     const: @(MixaBackendVTable vt)
     @: LmxThread t
+    @: LmxMsg t_msg
     int: had_error
     int: rc
 
@@ -121,10 +122,12 @@ fn: mixa_app_ui_entry (@: Lmx node) int
             c.printf("mixa_app_ui: controller closed (not running)\n")
         ---
         # Signal completion: success=1 + running=0 — the boundary (lmx_thread_leave)
-        # sees the work is over, sets handoff_ready, and clears running.
-        if: t != 0 && t\message != 0
-            t\message\success: 1
-            t\message\running: 0
+        # sees the work is over, sets handoff_ready, and clears running.  The Message is the
+        # Thread's own exact physical prefix, so it is reached through lmx_thread_message.
+        t_msg: lmx_thread_message(t)
+        if: t != 0 && t_msg != 0
+            t_msg\success: 1
+            t_msg\running: 0
         ---
         return: 0
     ---
@@ -140,8 +143,9 @@ fn: mixa_app_ui_entry (@: Lmx node) int
             ui_controller_closed: 1U
         ---
         # Signal failure completion: running=0 (success stays 0 → emergency stop).
-        if: t != 0 && t\message != 0
-            t\message\running: 0
+        t_msg: lmx_thread_message(t)
+        if: t != 0 && t_msg != 0
+            t_msg\running: 0
         ---
         return: 0
     ---
@@ -155,16 +159,18 @@ fn: mixa_app_ui_entry (@: Lmx node) int
 # workers in traces (11=file, 22=audio, 33=process).
 fn: mixa_app_file_entry (@: Lmx node) int
     @: LmxThread t
+    @: LmxMsg t_msg
     @: Lmx graph
     @: void turns_cell
     @: void body_cell
     @: void letter
     size_t: turns
     t: lmx_thread_current()
-    if: t = 0 || t\message = 0 || t\message\graph = 0
+    t_msg: lmx_thread_message(t)
+    if: t = 0 || t_msg = 0 || t_msg\graph = 0
         return: 0
     ---
-    graph: t\message\graph
+    graph: t_msg\graph
     turns_cell: (cast: (@: void) lmx_arena_ref_value(graph, 1U))
     body_cell: (cast: (@: void) lmx_arena_ref_value(graph, 2U))
     if: turns_cell = 0 || body_cell = 0
@@ -184,16 +190,18 @@ return: 0
 
 fn: mixa_app_audio_entry (@: Lmx node) int
     @: LmxThread t
+    @: LmxMsg t_msg
     @: Lmx graph
     @: void turns_cell
     @: void body_cell
     @: void letter
     size_t: turns
     t: lmx_thread_current()
-    if: t = 0 || t\message = 0 || t\message\graph = 0
+    t_msg: lmx_thread_message(t)
+    if: t = 0 || t_msg = 0 || t_msg\graph = 0
         return: 0
     ---
-    graph: t\message\graph
+    graph: t_msg\graph
     turns_cell: (cast: (@: void) lmx_arena_ref_value(graph, 1U))
     body_cell: (cast: (@: void) lmx_arena_ref_value(graph, 2U))
     if: turns_cell = 0 || body_cell = 0
@@ -213,16 +221,18 @@ return: 0
 
 fn: mixa_app_process_entry (@: Lmx node) int
     @: LmxThread t
+    @: LmxMsg t_msg
     @: Lmx graph
     @: void turns_cell
     @: void body_cell
     @: void letter
     size_t: turns
     t: lmx_thread_current()
-    if: t = 0 || t\message = 0 || t\message\graph = 0
+    t_msg: lmx_thread_message(t)
+    if: t = 0 || t_msg = 0 || t_msg\graph = 0
         return: 0
     ---
-    graph: t\message\graph
+    graph: t_msg\graph
     turns_cell: (cast: (@: void) lmx_arena_ref_value(graph, 1U))
     body_cell: (cast: (@: void) lmx_arena_ref_value(graph, 2U))
     if: turns_cell = 0 || body_cell = 0
@@ -315,16 +325,20 @@ fn: mixa_app_entry (@: Lmx node) int
 
     # --- UI Thread (stepped via R0 manager; PeekMessageA pump in body) ---
     lmx_arena_open(rt_ui_arena)
-    ui_t: (cast: (@: LmxThread) lmx_arena_take(rt_ui_arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
     ui_mail: (cast: (@: LmxPost) lmx_arena_take(rt_ui_arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
     ui_sched: (cast: (@: LmxSchedule) lmx_arena_take(rt_ui_arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
-    if: ui_t = 0 || ui_mail = 0 || ui_sched = 0
+    if: ui_mail = 0 || ui_sched = 0
         return: 0
     ---
-    ui_child: lmx_root_create(rt_root, rt_ui_arena, 0U, rt_source)
+    # A top-level Message is created THROUGH R0 and carries no numeric slot (lmx_root.lm1:323-325).
+    # Its Thread IS that Message: an L3 Thread's Message is its exact physical prefix, so no thread
+    # cell is allocated separately -- lmx_child_thread refuses any other address
+    # (lmx_child.lm1:131).  Serial order ui -> file -> audio -> proc is the publication order.
+    ui_child: lmx_root_create(rt_root, rt_ui_arena, rt_source)
     if: ui_child = 0
         return: 0
     ---
+    ui_t: (cast: (@: LmxThread) ui_child)
     ui_method_pool: lmx_pool_make(rt_ui_arena, 2U * c.sizeof(c.LmxMethod), c.sizeof(c.LmxMethod), c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD)
     if: ui_method_pool = 0
         return: 0
@@ -339,7 +353,7 @@ fn: mixa_app_entry (@: Lmx node) int
     if: lmx_post_init(rt_ui_arena, ui_mail) != c.LMX_POST_OK
         return: 0
     ---
-    if: lmx_thread_attach(ui_t, ui_child, ui_mail, ui_sched) != c.LMX_THREAD_OK
+    if: lmx_thread_init(rt_ui_arena, ui_t, ui_child\graph, ui_mail, ui_sched) != c.LMX_THREAD_OK
         return: 0
     ---
     if: lmx_schedule_init(ui_sched, rt_ui_arena, ui_t, 5000U) != c.LMX_SCHEDULE_OK
@@ -353,16 +367,16 @@ fn: mixa_app_entry (@: Lmx node) int
 
     # --- File Worker Thread (stepped via R0 manager) ---
     lmx_arena_open(rt_file_arena)
-    file_t: (cast: (@: LmxThread) lmx_arena_take(rt_file_arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
     file_mail: (cast: (@: LmxPost) lmx_arena_take(rt_file_arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
     file_sched: (cast: (@: LmxSchedule) lmx_arena_take(rt_file_arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
-    if: file_t = 0 || file_mail = 0 || file_sched = 0
+    if: file_mail = 0 || file_sched = 0
         return: 0
     ---
-    file_child: lmx_root_create(rt_root, rt_file_arena, 1U, rt_source)
+    file_child: lmx_root_create(rt_root, rt_file_arena, rt_source)
     if: file_child = 0
         return: 0
     ---
+    file_t: (cast: (@: LmxThread) file_child)
     file_method_pool: lmx_pool_make(rt_file_arena, 2U * c.sizeof(c.LmxMethod), c.sizeof(c.LmxMethod), c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD)
     if: file_method_pool = 0
         return: 0
@@ -388,7 +402,7 @@ fn: mixa_app_entry (@: Lmx node) int
     if: lmx_post_init(rt_file_arena, file_mail) != c.LMX_POST_OK
         return: 0
     ---
-    if: lmx_thread_attach(file_t, file_child, file_mail, file_sched) != c.LMX_THREAD_OK
+    if: lmx_thread_init(rt_file_arena, file_t, file_child\graph, file_mail, file_sched) != c.LMX_THREAD_OK
         return: 0
     ---
     if: lmx_schedule_init(file_sched, rt_file_arena, file_t, 5000U) != c.LMX_SCHEDULE_OK
@@ -402,16 +416,16 @@ fn: mixa_app_entry (@: Lmx node) int
 
     # --- Audio Worker Thread (stepped via R0 manager) ---
     lmx_arena_open(rt_audio_arena)
-    audio_t: (cast: (@: LmxThread) lmx_arena_take(rt_audio_arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
     audio_mail: (cast: (@: LmxPost) lmx_arena_take(rt_audio_arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
     audio_sched: (cast: (@: LmxSchedule) lmx_arena_take(rt_audio_arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
-    if: audio_t = 0 || audio_mail = 0 || audio_sched = 0
+    if: audio_mail = 0 || audio_sched = 0
         return: 0
     ---
-    audio_child: lmx_root_create(rt_root, rt_audio_arena, 2U, rt_source)
+    audio_child: lmx_root_create(rt_root, rt_audio_arena, rt_source)
     if: audio_child = 0
         return: 0
     ---
+    audio_t: (cast: (@: LmxThread) audio_child)
     audio_method_pool: lmx_pool_make(rt_audio_arena, 2U * c.sizeof(c.LmxMethod), c.sizeof(c.LmxMethod), c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD)
     if: audio_method_pool = 0
         return: 0
@@ -437,7 +451,7 @@ fn: mixa_app_entry (@: Lmx node) int
     if: lmx_post_init(rt_audio_arena, audio_mail) != c.LMX_POST_OK
         return: 0
     ---
-    if: lmx_thread_attach(audio_t, audio_child, audio_mail, audio_sched) != c.LMX_THREAD_OK
+    if: lmx_thread_init(rt_audio_arena, audio_t, audio_child\graph, audio_mail, audio_sched) != c.LMX_THREAD_OK
         return: 0
     ---
     if: lmx_schedule_init(audio_sched, rt_audio_arena, audio_t, 5000U) != c.LMX_SCHEDULE_OK
@@ -451,16 +465,16 @@ fn: mixa_app_entry (@: Lmx node) int
 
     # --- Process Worker Thread (stepped via R0 manager) ---
     lmx_arena_open(rt_proc_arena)
-    proc_t: (cast: (@: LmxThread) lmx_arena_take(rt_proc_arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
     proc_mail: (cast: (@: LmxPost) lmx_arena_take(rt_proc_arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
     proc_sched: (cast: (@: LmxSchedule) lmx_arena_take(rt_proc_arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
-    if: proc_t = 0 || proc_mail = 0 || proc_sched = 0
+    if: proc_mail = 0 || proc_sched = 0
         return: 0
     ---
-    proc_child: lmx_root_create(rt_root, rt_proc_arena, 3U, rt_source)
+    proc_child: lmx_root_create(rt_root, rt_proc_arena, rt_source)
     if: proc_child = 0
         return: 0
     ---
+    proc_t: (cast: (@: LmxThread) proc_child)
     proc_method_pool: lmx_pool_make(rt_proc_arena, 2U * c.sizeof(c.LmxMethod), c.sizeof(c.LmxMethod), c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD)
     if: proc_method_pool = 0
         return: 0
@@ -486,7 +500,7 @@ fn: mixa_app_entry (@: Lmx node) int
     if: lmx_post_init(rt_proc_arena, proc_mail) != c.LMX_POST_OK
         return: 0
     ---
-    if: lmx_thread_attach(proc_t, proc_child, proc_mail, proc_sched) != c.LMX_THREAD_OK
+    if: lmx_thread_init(rt_proc_arena, proc_t, proc_child\graph, proc_mail, proc_sched) != c.LMX_THREAD_OK
         return: 0
     ---
     if: lmx_schedule_init(proc_sched, rt_proc_arena, proc_t, 5000U) != c.LMX_SCHEDULE_OK
@@ -558,7 +572,7 @@ fn: main (int: argc; @: @(char) argv) int
     # lmx_root_keepalive each cycle (l1-98 stub, commit 6874f5f). Silence past the
     # window → root closes itself (LMX_ROOT_DONE). lmx_root_hung polls the window
     # from a side observer context (future watchdog); not called here.
-    if: lmx_root_open(@ root, mixa_app_entry, 10000U, 0U, 0U) != c.LMX_ROOT_OK
+    if: lmx_root_open(@ root, mixa_app_entry, 10000U) != c.LMX_ROOT_OK
         c.printf("mixa_app: root open failed\n")
         return: MIXA_MAIN_FAIL
     ---

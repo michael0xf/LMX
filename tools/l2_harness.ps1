@@ -480,6 +480,15 @@ if ($driver) { Add-Row 'OK' 'build:eternal_driver' ($made.ToString() + ' kernel 
 $fixtures = @(
     [pscustomobject]@{ Name = 'entry_return7.lm2'; Expect = 'runs'; Exit = 7; Needle = ''; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'entry_ret_tr_bad.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'unsupported body'; Absent = @(); Debt = @() },
+    # One return-literal rule for every callable: an int result literal must fit int in a lone
+    # main (literal and full body), in main beside a method (body and trailer), and in a method.
+    [pscustomobject]@{ Name = 'entry_overflow.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'return literal not representable as int'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_return_literal_body_overflow.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'return literal not representable as int'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_return_literal_entry_overflow.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'return literal not representable as int'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_return_literal_trailer_overflow.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'return literal not representable as int'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_return_literal_method_overflow.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'return literal not representable as int'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_return_literal_int_max.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Absent = @(); Debt = @('return: 2147483647') },
     [pscustomobject]@{ Name = 'unit_eternal_branch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('1', 'size', '0', '0', '7');
         Absent = @('lmx_owned_ranges', 'lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained',

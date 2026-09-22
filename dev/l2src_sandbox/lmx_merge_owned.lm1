@@ -34,7 +34,7 @@ fn: lmx_merge_add_width (@: size_t total; @: Lmx x) int
     \total: sum
 return: 0
 
-fn: lmx_merge_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx out) int
+fn: lmx_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx out) int
     @: LmxArenaBlock mark 0
     @@: Lmx roots 0
     @@: Lmx copies 0
@@ -73,9 +73,9 @@ fn: lmx_merge_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx contai
         if: lmx_merge_add_width(@ total, body) != 0
             return: LMX_MERGE_INVALID
     ---
-    # The result's node is the Structure the receiver executed through, so a
+    # The result's structural parent is the Structure the receiver executed through, so a
     # nonzero container must classify as a Structure of the source arena;
-    # anything else is refused rather than stored as a node.
+    # anything else is refused rather than stored as a parent.
     if: container != 0
         if: lmx_range_classify(src_arena, (cast: (@: void) container)) != c.LMX_KIND_STRUCT
             return: LMX_MERGE_INVALID
@@ -119,13 +119,22 @@ fn: lmx_merge_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx contai
         roots[nroots]: body
         nroots: nroots + 1U
     if: nroots != 0U
-        cst: lmx_graph_copy_many_owned(roots, nroots, dst_chars, src_arena, dst_arena, copies)
+        cst: lmx_graph_copy_many_profiles_owned(roots, nroots, dst_chars, src_arena, dst_arena, retain_profiles, retain_count, copies)
         if: cst = LMX_GRAPH_COPY_NOMEM
             status: LMX_MERGE_NOMEM
         if: cst = LMX_GRAPH_COPY_UNSUPPORTED
             status: LMX_MERGE_UNSUPPORTED
         if: cst != LMX_GRAPH_COPY_OK && cst != LMX_GRAPH_COPY_NOMEM && cst != LMX_GRAPH_COPY_UNSUPPORTED
             status: LMX_MERGE_INVALID
+    ---
+    # Declaration via merge(E, empty) retains the exact physical branch root itself.
+    # The copier has already validated the entire profile span and destination visibility;
+    # equality here is therefore the terminal decision, not a second classification rule.
+    if: status = LMX_MERGE_OK && count = 1U && body = 0 && copies[0] = operands[0]
+        \out: operands[0]
+        free((cast: (@: void) roots))
+        free((cast: (@: void) copies))
+        return: LMX_MERGE_OK
     ---
     # The result root, built in the destination arena like the copies, so that
     # the whole merge is admitted or nothing is.
@@ -190,7 +199,7 @@ fn: lmx_merge_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx contai
     if: status = LMX_MERGE_OK && at != total
         status: LMX_MERGE_INVALID
     if: status = LMX_MERGE_OK
-        result\node: container
+        result\parent: container
     if: status != LMX_MERGE_OK
         # Nothing stays: the arena drops every block added since the mark --
         # the copies, the result root and its slots -- and retires each one's
@@ -203,3 +212,11 @@ fn: lmx_merge_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx contai
     free((cast: (@: void) roots))
     free((cast: (@: void) copies))
 return: status
+
+fn: lmx_merge_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx out) int
+return: lmx_merge_profiles_owned(operands, count, body, container, dst_chars, src_arena, dst_arena, 0, 0U, out)
+
+fn: lmx_merge_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @: Lmx retain_profile; @@: Lmx out) int
+    if: retain_profile = 0
+        return: lmx_merge_profiles_owned(operands, count, body, container, dst_chars, src_arena, dst_arena, 0, 0U, out)
+return: lmx_merge_profiles_owned(operands, count, body, container, dst_chars, src_arena, dst_arena, @ retain_profile, 1U, out)

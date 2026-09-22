@@ -101,21 +101,16 @@ fn: sb_message (@: LmxArena arena; @: LmxPool pool; @@: LmxMsg out_message; @@: 
     method: lmx_method_intern(arena, pool, (cast: (LmxEntry) sb_body), 1U)
     graph: sb_struct(arena, 2U)
     own_field: lmx_int_new_owned(arena)
-    message: (cast: (@: LmxMsg) lmx_arena_take(arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
-    t: (cast: (@: LmxThread) lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    t: (cast: (@: LmxThread) lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
     mail: (cast: (@: LmxPost) lmx_arena_take(arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
     sched: (cast: (@: LmxSchedule) lmx_arena_take(arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
-    if: method = 0 || graph = 0 || own_field = 0 || message = 0 || t = 0 || mail = 0 || sched = 0
+    if: method = 0 || graph = 0 || own_field = 0 || t = 0 || mail = 0 || sched = 0
         return: 0
     ---
+    message: lmx_thread_message(t)
     lmx_arena_ref_store(graph, 0U, (cast: (@: void) method))
     lmx_arena_ref_store(graph, 1U, own_field)
-    message\running: 1
-    message\success: 0
-    message\handoff_ready: 0
-    message\graph: graph
-    message\index: 1U
-    if: lmx_post_init(arena, mail) != c.LMX_POST_OK || lmx_thread_attach(t, message, mail, sched) != c.LMX_THREAD_OK
+    if: lmx_post_init(arena, mail) != c.LMX_POST_OK || lmx_thread_init(arena, t, graph, mail, sched) != c.LMX_THREAD_OK
         return: 0
     ---
     if: lmx_schedule_init(sched, arena, (cast: (@: void) t), 1000U) != c.LMX_SCHEDULE_OK
@@ -125,6 +120,29 @@ fn: sb_message (@: LmxArena arena; @: LmxPool pool; @@: LmxMsg out_message; @@: 
     \out_thread: t
     \out_sched: sched
 return: 1
+
+# One ordinary parent whose graph-owned dynamic children Array is the manager's traversal source.
+fn: sb_parent (@: LmxArena arena) @: LmxThread
+    @: Lmx graph
+    @: LmxArrayDesc children
+    @: LmxThread thread
+    @: LmxPost mail
+    @: LmxSchedule sched
+    graph: lmx_node_new_owned(arena)
+    children: lmx_array_grow_ref_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, arena)
+    thread: (cast: (@: LmxThread) lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
+    mail: (cast: (@: LmxPost) lmx_arena_take(arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    sched: (cast: (@: LmxSchedule) lmx_arena_take(arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: graph = 0 || children = 0 || thread = 0 || mail = 0 || sched = 0
+        return: 0
+    ---
+    if: lmx_arena_refs_open_owned(arena, graph, 1U) != 0 || lmx_arena_ref_store(graph, 0U, (cast: (@: void) children)) != 0
+        return: 0
+    ---
+    if: lmx_post_init(arena, mail) != c.LMX_POST_OK || lmx_thread_init(arena, thread, graph, mail, sched) != c.LMX_THREAD_OK || lmx_schedule_init(sched, arena, (cast: (@: void) thread), 1000U) != c.LMX_SCHEDULE_OK || lmx_thread_children_bind(thread, children, arena) != c.LMX_THREAD_OK
+        return: 0
+    ---
+return: thread
 
 sub: sb_check (@: int counts; int: ok; const: @(char label))
     counts[0]: counts[0] + 1
@@ -138,6 +156,7 @@ fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxArena: arena_a
     LmxArena: arena_b
+    LmxArena: parent_arena
     LmxPool: pool_a
     LmxPool: pool_b
     LmxManager: mgr
@@ -149,15 +168,17 @@ fn: main () int
     @: LmxThread thread_b 0
     @: LmxSchedule sched_a 0
     @: LmxSchedule sched_b 0
+    @: LmxThread parent 0
     int: built
     int: failures
     if: counts = 0
         return: 2
     memset((cast: (@: void) (@ arena_a)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ arena_b)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ parent_arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ pool_a)), 0, c.sizeof(c.LmxPool))
     memset((cast: (@: void) (@ pool_b)), 0, c.sizeof(c.LmxPool))
-    if: lmx_arena_open(@ arena_a) != 0 || lmx_arena_open(@ arena_b) != 0
+    if: lmx_arena_open(@ arena_a) != 0 || lmx_arena_open(@ arena_b) != 0 || lmx_arena_open(@ parent_arena) != 0
         fputs("lmx_schedule_band: an arena did not open\n", l1_stdout())
         free(counts)
         return: 2
@@ -177,6 +198,11 @@ fn: main () int
     built: sb_message(@ arena_b, @ pool_b, @ message_b, @ thread_b, @ sched_b)
     sb_check(counts, built != 0, "the second Message was not built")
     if: message_a = 0 || message_b = 0
+        free(counts)
+        return: 2
+    ---
+    parent: sb_parent(@ parent_arena)
+    if: parent = 0 || lmx_thread_child_add(parent, thread_a, @ parent_arena) != c.LMX_THREAD_OK || lmx_thread_child_add(parent, thread_b, @ parent_arena) != c.LMX_THREAD_OK
         free(counts)
         return: 2
     ---

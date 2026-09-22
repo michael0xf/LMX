@@ -472,37 +472,18 @@ if ($driver) { Add-Row 'OK' 'build:eternal_driver' ($made.ToString() + ' kernel 
 #                           external definitions are read with nm, and the objects are joined in
 #                           ONE relocatable link.  LINK AND SYMBOLS ONLY: nothing is run.
 #
-# WHY THESE ROWS READ THE GENERATED L1 AS WELL AS RUN IT.  A program whose eternal branch sits
-# in the ordinary Message arena compiles and exits 0 exactly like one whose branch is in the
-# permanent store: the difference is WHICH ARENA OWNS THE ADDRESS.  The driver sees that from
-# outside; the text pins HOW it came about -- and both are written to be SPECIFIC.  The first
-# version of the text row asked only for "lmx_node_new_owned(l2_program_arena)" and passed while
-# the emission had already moved, because the PROGRAM UNIT is built with that same call and
-# always will be.  A needle that matches a line which is correct forever measures nothing.
+# WHY THESE ROWS READ THE GENERATED L1 AS WELL AS RUN IT. Qualified immutable roots are ordinary
+# values of the current Message arena. Their type and lifetime come from exact physical profile
+# ranges which are sealed after construction. The generated program unit becomes Message.graph;
+# its private tail holds the Thread's existing growable children Array, so this is the standard
+# graph shape rather than a Root-only slot. A translation-sized C array exports the exact root
+# references in lexical order solely for black-box observation by this harness.
 #
-# The text pins: the eternal root, its reference slots and its cells built in
-# lmx_perm_store_of(l2_program_arena); the program unit still built in l2_program_arena, which
-# is the same-shape mutable control and must NOT move; R0's eternal array sized with the COUNT
-# of roots in lmx_root_open (FABLE-L2-R0-RETENTION-20260920-01 -- the method capacity beside it
-# stays 0U, that contract is not this one); the array reached by one reference read from the
-# graph the entry is handed; and each root stored into its own entry by its physical address.
-# Forbidden: the old world's strings, the 49U debt line, and the unsized lmx_root_open.
-#
-# The run proves, on the GENERATED program and from outside it: the capacity is the count and
-# not zero; R0's graph holds the array's address; the array and every root are owned by the
-# store, are Structures by R0's ranges, are not owned by R0's arena, and have node = 0; the
-# declared values identify each entry as THAT branch, in lexical order; a reference field that
-# names a branch IS the retained root's address and a cross-reference IS the other branch's
-# member; a collection over R0's arena -- instrument first -- leaves the store byte for byte and
-# every entry the same physical root; and the invariants still hold after a further turn.
-#
-# WHAT THIS STILL DOES NOT PROVE, exactly: that the generated branch classifies from a SECOND
-# bound Message arena (dev/l2src_sandbox/tests/lmx_perm_selftest.lm1 and
-# tests/lmx_walk_perm_selftest.lm1 prove that for the store, not on a generated program: a
-# generated program has no second Message yet).  And one thing the driver PRINTS rather than
-# asserts, because it is a debt of the entry and not of retention: a further turn of R0 runs
-# the generated entry AGAIN, which builds the branches again in the store and republishes new
-# roots.  The generated main takes exactly one turn, so it is latent today.
+# The text pins the physical profiles, profiled allocations, sealing, exact root-ref export and
+# graph publication, while forbidding the removed permanent-store/fixed-root-slot protocol. The
+# run checks kind, type, owner arena, distinct profile identity, parentlessness, field values and
+# cross-references after the generated turn and again after an explicit owner-arena collection.
+# The exported pointers are valid only while that Root is open; root_close releases the arena.
 #
 # Sharing tools/build_l2src.ps1's Resolve-Link with this script is still the way to run a
 # generated program against the kernel's separate OBJECTS; the driver does not replace that, it
@@ -512,65 +493,77 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'entry_ret_tr_bad.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'unsupported body'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_eternal_branch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('1', 'size', '0', '0', '7');
-        Absent = @('lmx_owned_ranges',
+        Absent = @('lmx_owned_ranges', 'lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained',
                    'DEBT: eternal ranges/bootstrap-admit absent in new kernel',
                    'DEBT: eternal bootstrap-admit / eternal-ranges absent',
                    'DEBT: eternal array bootstrap-admit / eternal-ranges absent',
                    'l2_nsp[0]: lmx_node_new_owned(l2_program_arena)',
                    'not yet in R0''s retention array',
                    'l2_program_entry, 5000U, 0U, 0U)');
-        Debt = @('predef: "l2src/lmx_perm.h.lm1"',
-                 'l2_nsp[0]: lmx_node_new_owned(lmx_perm_store_of(l2_program_arena))',
-                 'lmx_arena_refs_open_owned(lmx_perm_store_of(l2_program_arena), l2_nsp[0], 1U)',
-                 'slot[0]: lmx_size_new_owned(lmx_perm_store_of(l2_program_arena))',
-                 'unit: lmx_node_new_owned(l2_program_arena)',
-                 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U, 1U, 0U)',
-                 'l2_retained: lmx_arena_ref_struct(node, c.LMX_ROOT_ETERNAL_SLOT)',
-                 'if: l2_retained\len != 1',
-                 'if: lmx_arena_ref_store(l2_retained, 0U, (cast: (@: void) l2_nsp[0])) != 0',
-                 'if: lmx_arena_ref_value(l2_retained, 0U) != (cast: (@: void) l2_nsp[0])') },
+        Debt = @('c.array: [1]: @: Lmx l2_program_qualified_roots',
+                 'l2_nsp[0]: lmx_node_new_profiled(l2_program_arena, l2_eprofile0)',
+                 'l2_program_qualified_roots[0U]: l2_nsp[0]',
+                 'slot[0]: lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.size_t), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_SIZE_T, l2_eprofile0)',
+                 'if: l2_profile_pool = 0 || lmx_pool_seal(l2_profile_pool) != 0',
+                 'l2_message\graph: unit',
+                 'if: lmx_root_open(@ l2_program_root, l2_program_entry, 5000U) != c.LMX_ROOT_OK') },
     [pscustomobject]@{ Name = 'unit_eternal_two.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('2', 'size', '0', '0', '7', 'size', '1', '0', '9');
-        Absent = @('not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
-        Debt = @('lmx_root_open(@ l2_program_root, l2_program_entry, 5000U, 2U, 0U)',
-                 'if: l2_retained\len != 2',
-                 'if: lmx_arena_ref_store(l2_retained, 0U, (cast: (@: void) l2_nsp[0])) != 0',
-                 'if: lmx_arena_ref_store(l2_retained, 1U, (cast: (@: void) l2_nsp[1])) != 0') },
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
+        Debt = @('c.array: [2]: @: Lmx l2_program_qualified_roots',
+                 'l2_program_qualified_roots[0U]: l2_nsp[0]',
+                 'l2_program_qualified_roots[1U]: l2_nsp[1]',
+                 'l2_eprofile1: lmx_node_new_profiled(l2_program_arena, unit)',
+                 'l2_message\graph: unit') },
     # Seventy roots: the capacity is the COUNT.  Sizing by a root's INDEX -- the trap the two
     # tables invite, l2_ns_eternal[k] beside l2_ebr_n -- would pass every smaller fixture's text.
     [pscustomobject]@{ Name = 'unit_eternal_many.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('70', 'size', '0', '0', '1', 'size', '35', '0', '36', 'size', '69', '0', '70');
-        Absent = @('not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
-        Debt = @('lmx_root_open(@ l2_program_root, l2_program_entry, 5000U, 70U, 0U)',
-                 'if: l2_retained\len != 70',
-                 'if: lmx_arena_ref_store(l2_retained, 69U, (cast: (@: void) l2_nsp[69])) != 0') },
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
+        Debt = @('c.array: [70]: @: Lmx l2_program_qualified_roots',
+                 'l2_program_qualified_roots[0U]: l2_nsp[0]',
+                 'l2_program_qualified_roots[69U]: l2_nsp[69]',
+                 'l2_eprofile69: lmx_node_new_profiled(l2_program_arena, unit)',
+                 'l2_message\graph: unit') },
     # A nested member, a reference to the branch itself, a reference to the OTHER branch, and a
     # mutable Holder beside them: two roots are retained, the nested member and Holder are not.
     [pscustomobject]@{ Name = 'unit_eternal_shape.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('2', 'size', '0', '0', '7', 'size', '0', '4', '13', 'same', '0', '3', '0', 'same', '1', '0', '0', 'size', '1', '1', '17');
-        Absent = @('not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
-        Debt = @('lmx_root_open(@ l2_program_root, l2_program_entry, 5000U, 2U, 0U)',
-                 'if: l2_retained\len != 2') },
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
+        Debt = @('c.array: [2]: @: Lmx l2_program_qualified_roots',
+                 'l2_nsp[1]: lmx_node_new_profiled(l2_program_arena, l2_eprofile0)',
+                 'l2_program_qualified_roots[1U]: l2_nsp[2]',
+                 'l2_message\graph: unit') },
     # A cross-reference INTO another branch: F\into is E's member `deep`, not a copy of it.
     [pscustomobject]@{ Name = 'unit_eternal_xref.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('2', 'slot', '1', '0', '0', '0', 'size', '0', '1', '7', 'size', '1', '1', '23');
-        Absent = @('not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
-        Debt = @('lmx_root_open(@ l2_program_root, l2_program_entry, 5000U, 2U, 0U)',
-                 'if: l2_retained\len != 2') },
-    # The other fixtures that happen to declare eternal branches: array fields whose record and
-    # backing are built in the store, and merge sites naming a branch.  Count and ownership only.
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
+        Debt = @('c.array: [2]: @: Lmx l2_program_qualified_roots',
+                 'l2_nsp[1]: lmx_node_new_profiled(l2_program_arena, l2_eprofile0)',
+                 'l2_program_qualified_roots[1U]: l2_nsp[2]',
+                 'l2_message\graph: unit') },
+    # Array records/backing and merge sites use the same exact profiled owner ranges.
     [pscustomobject]@{ Name = 'unit_array_empty.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('1');
-        Absent = @('not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
-        Debt = @('lmx_root_open(@ l2_program_root, l2_program_entry, 5000U, 1U, 0U)') },
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
+        Debt = @('c.array: [1]: @: Lmx l2_program_qualified_roots',
+                 'l2_profile_array: (cast: (@: LmxArrayDesc) lmx_arena_take_profiled',
+                 'l2_program_qualified_roots[0U]: l2_nsp[0]',
+                 'l2_message\graph: unit') },
     [pscustomobject]@{ Name = 'unit_array_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('1');
-        Absent = @('not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
-        Debt = @('lmx_root_open(@ l2_program_root, l2_program_entry, 5000U, 1U, 0U)') },
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
+        Debt = @('c.array: [1]: @: Lmx l2_program_qualified_roots',
+                 'l2_profile_array: (cast: (@: LmxArrayDesc) lmx_arena_take_profiled',
+                 'l2_program_qualified_roots[0U]: l2_nsp[0]',
+                 'l2_message\graph: unit') },
     [pscustomobject]@{ Name = 'unit_merge_site.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('3');
-        Absent = @('not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
-        Debt = @('lmx_root_open(@ l2_program_root, l2_program_entry, 5000U, 3U, 0U)') },
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
+        Debt = @('c.array: [3]: @: Lmx l2_program_qualified_roots',
+                 'l2_program_qualified_roots[2U]: l2_nsp[2]',
+                 'lmx_merge_profiles_owned',
+                 'l2_message\graph: unit') },
     # THE DECLARED-THROW ABI (FABLE-L2TRANS-THROW-FORMAL-20260920-05).  Every method that merges,
     # and every caller of one, carries the executing Message as a hidden formal.  It was spelled
     # `node`, the spelling of the reserved first formal, so EVERY such method came out as
@@ -593,30 +586,30 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_merge_in_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('1', 'size', '0', '0', '7');
         Absent = @('Lmx node; @: Lmx node', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
-        Debt = @('fn: l2_m0 (@: Lmx node; @: Lmx l2_msg; @: int l2_out_result; @@: Lmx l2_out_throw) int',
-                 'fn: l2_m1 (@: Lmx node) int',
-                 'fn: l2_m2 (@: Lmx node; @: Lmx l2_msg; @: int l2_out_result; @@: Lmx l2_out_throw) int',
-                 'fn: l2_m3 (@: Lmx node; @: Lmx l2_msg; @@: Lmx l2_out_throw) int',
-                 'l2_m3(lmx_arena_ref_struct(node\node, 3U), l2_msg, @ l2_te0)',
-                 'l2_m0(lmx_arena_ref_struct(node\node, 0U), l2_msg, @ l2_t1, @ l2_te1)',
-                 'l2_m2(lmx_arena_ref_struct(unit, 2U), node, @ l2_t0, @ l2_te0)',
+        Debt = @('fn: l2_m0 (@: Lmx node; @: Lmx self; @: Lmx l2_msg; @: int l2_out_result; @@: Lmx l2_out_throw) int',
+                 'fn: l2_m1 (@: Lmx node; @: Lmx self) int',
+                 'fn: l2_m2 (@: Lmx node; @: Lmx self; @: Lmx l2_msg; @: int l2_out_result; @@: Lmx l2_out_throw) int',
+                 'fn: l2_m3 (@: Lmx node; @: Lmx self; @: Lmx l2_msg; @@: Lmx l2_out_throw) int',
+                 'l2_m3(l2_c0\parent, l2_c0, l2_msg, @ l2_te1)',
+                 'l2_m0(l2_c2\parent, l2_c2, l2_msg, @ l2_t3, @ l2_te3)',
+                 'l2_m2(l2_c0\parent, l2_c0, node, @ l2_t1, @ l2_te1)',
                  'l2_out_throw[0]: node',
-                 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U, 1U, 0U)') },
+                 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)') },
     [pscustomobject]@{ Name = 'unit_throwing_callable.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('Lmx node; @: Lmx node');
-        Debt = @('fn: l2_m0 (@: Lmx node; @: Lmx l2_msg; @: int l2_out_result; @@: Lmx l2_out_throw) int',
-                 'l2_m0(l2_pst, node, @ l2_t0, @ l2_te0)',
+        Debt = @('fn: l2_m0 (@: Lmx node; @: Lmx self; @: Lmx l2_msg; @: int l2_out_result; @@: Lmx l2_out_throw) int',
+                 'l2_m0(l2_c0\parent, l2_c0, node, @ l2_t1, @ l2_te1)',
                  'l2_out_throw[0]: node',
-                 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U, 0U, 0U)') },
+                 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)') },
     [pscustomobject]@{ Name = 'unit_recursion.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('Lmx node; @: Lmx node', 'l2_p2_0; @: Lmx node');
-        Debt = @('fn: l2_m2 (@: Lmx node; size_t: l2_p2_0; @: Lmx l2_msg; @: size_t l2_out_result; @@: Lmx l2_out_throw) int',
-                 'l2_q7, l2_msg, @ l2_t0, @ l2_te0)',
-                 '2U, node, @ l2_t2, @ l2_te2)',
+        Debt = @('fn: l2_m2 (@: Lmx node; @: Lmx self; size_t: l2_p2_0; @: Lmx l2_msg; @: size_t l2_out_result; @@: Lmx l2_out_throw) int',
+                 'l2_m2(l2_c0\parent, l2_c0, l2_q7, l2_msg, @ l2_t1, @ l2_te1)',
+                 'l2_m2(l2_c4\parent, l2_c4, 2U, node, @ l2_t5, @ l2_te5)',
                  'l2_out_throw[0]: node',
-                 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U, 0U, 0U)') },
+                 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)') },
     # THE STICKY DIRTY OF AN ADDRESS-TAKEN ARGUMENT (FABLE-L2-ARG-ADDRESS-DIRTY-20260921-67), the
     # author's rule: sticky <=> x is a parameter, `@: x` was EVALUATED before x's first EXECUTED
     # assignment, and that assignment then binds x to the body's own field; from there to the end
@@ -699,9 +692,9 @@ $fixtures = @(
                  'CALLER 3 3 3 3 3 3');
         BindOrder = $true;
         Absent = @();
-        Debt = @('fn: l2_m5 (@: Lmx node; int: l2_p5_0) int',
-                 'fn: l2_m6 (@: Lmx node; int: l2_p6_0; int: l2_p6_1) int',
-                 'fn: l2_m9 (@: Lmx node; int: l2_p9_0; size_t: l2_p9_1) int') },
+        Debt = @('fn: l2_m5 (@: Lmx node; @: Lmx self; int: l2_p5_0) int',
+                 'fn: l2_m6 (@: Lmx node; @: Lmx self; int: l2_p6_0; int: l2_p6_1) int',
+                 'fn: l2_m9 (@: Lmx node; @: Lmx self; int: l2_p9_0; size_t: l2_p9_1) int') },
     # TYPE IS AN INDEPENDENT AXIS HERE TOO.  Which types could be a dynamic input was five separate
     # lists (char, size_t).  Before: W -- the translator NEVER FINISHED on a callee reading the
     # caller's int (the typing fixed point stored "not typed" over "not typed" forever; this row's
@@ -714,10 +707,10 @@ $fixtures = @(
         Says = @('W 3', 'U1 6 6', 'U2 6 6', 'L1 6 6', 'L2 6 6', 'F1 6 6', 'F2 6 6', 'DP local is null', 'DP caller keeps its pointer', 'FC 3', 'TC 3 3 3');
         BindOrder = $true;
         Absent = @();
-        Debt = @('fn: l2_m4 (@: Lmx node; int: l2_p4_0) int',
-                 'fn: l2_m5 (@: Lmx node; unsigned: l2_p5_0) int',
-                 'fn: l2_m6 (@: Lmx node; ulong: l2_p6_0) int',
-                 'fn: l2_m8 (@: Lmx node; @: int l2_p8_0) int',
+        Debt = @('fn: l2_m4 (@: Lmx node; @: Lmx self; int: l2_p4_0) int',
+                 'fn: l2_m5 (@: Lmx node; @: Lmx self; unsigned: l2_p5_0) int',
+                 'fn: l2_m6 (@: Lmx node; @: Lmx self; ulong: l2_p6_0) int',
+                 'fn: l2_m8 (@: Lmx node; @: Lmx self; @: int l2_p8_0) int',
                  'lmx_pointer_store_known(l2_q') },
     # THE ORDINARY CASES ALONE.  Every address here is taken after the binding line, so every cell
     # is resolved when it is taken, and the translator that raises sticky at the address site
@@ -729,7 +722,7 @@ $fixtures = @(
         Says = @('OC1 4 4', 'OC2 9 4', 'OC3 9 100', 'OE 6 100', 'OD1 4 4', 'OD2 9 4', 'OD3 9 100');
         BindOrder = $true;
         Absent = @();
-        Debt = @('fn: l2_m6 (@: Lmx node; size_t: l2_p6_0) int') },
+        Debt = @('fn: l2_m6 (@: Lmx node; @: Lmx self; size_t: l2_p6_0) int') },
     # THE ONE BOUNDARY.  A dynamic input whose SOURCE exists but has no value cell (the caller's
     # const LmP0Text formal) is refused at the caller, by name.  Before, the same program was an
     # "unresolved name" at the callee -- as if nobody had supplied it -- and that is what the
@@ -829,7 +822,7 @@ foreach ($fx in $fixtures) {
             if ($why -eq '' -and $l1 -notmatch [regex]::Escape($d)) { $why = 'the recorded debt "' + $d + '" is GONE -- update this fixture, the gap has closed' }
         }
         if ($why -ne '') { Add-Row 'FAIL' ('fixture:' + $stem) $why; continue }
-        Add-Row 'OK' ('fixture:' + $stem) ('eternal in the store, mutable unmoved (' + $fx.Debt.Count + ' required, ' + $fx.Absent.Count + ' forbidden)'); continue
+        Add-Row 'OK' ('fixture:' + $stem) ('expected translation debt remains isolated (' + $fx.Debt.Count + ' required, ' + $fx.Absent.Count + ' forbidden)'); continue
     }
     if (-not $made2) { Add-Row 'FAIL' ('fixture:' + $stem) 'l1trans produced no C from the generated L1; see the log'; continue }
 
@@ -943,7 +936,7 @@ foreach ($fx in $fixtures) {
             if ($miss -ne '') { Add-Row 'FAIL' ('fixture:' + $stem) ('the program said something else: ' + $miss); continue }
         }
         # A row that declares 0 roots proved no retention and no collection, and must not say so.
-        $what = ', retained in R0, survives a collection ('
+        $what = ', exact profiled roots in the current Message graph survive collection ('
         if ($fx.Args[0] -eq '0') { $what = ', no eternal branch: compiled unchanged, linked to the kernel closure, ran to its one close (' }
         if ($fx.PSObject.Properties['Says'] -and $fx.Says) { $what = ', said its ' + $fx.Says.Count + ' lines exactly (' }
         if ($fx.PSObject.Properties['BindOrder'] -and $fx.BindOrder) { $what = $what + 'binding order asserted in the text, ' }

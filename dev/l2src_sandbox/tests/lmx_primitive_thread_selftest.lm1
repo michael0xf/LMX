@@ -59,14 +59,25 @@ int: pt_body_status 0
 # and reports pt_body_status: 0 = the body succeeded, anything else = it failed.
 fn: pt_dispatch (@: LmxThread t) int
     @: LmxMsg child 0
+    @: LmxThread child_thread 0
+    @: LmxPost child_mail 0
+    @: LmxSchedule child_slot 0
     pt_dispatch_calls: pt_dispatch_calls + 1U
     if: pt_arena != 0 && pt_mail != 0 && pt_target != 0
         lmx_post_accept(pt_arena, pt_mail, pt_target, c.LMX_POST_OUTBOX)
     ---
     if: t != 0 && pt_arena != 0 && pt_child_arena != 0 && pt_parent != 0 && pt_source != 0
-        child: lmx_child_reserve(t, pt_arena, pt_child_arena, pt_parent, 0U, pt_source)
+        child: lmx_child_reserve(t, pt_arena, pt_child_arena, lmx_arena_ref_cell(pt_parent, 0U), pt_source)
         if: child != 0
             pt_reserves: pt_reserves + 1U
+            if: pt_body_status = 0
+                child_thread: (cast: (@: LmxThread) child)
+                child_mail: (cast: (@: LmxPost) lmx_arena_take(pt_child_arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+                child_slot: (cast: (@: LmxSchedule) lmx_arena_take(pt_child_arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+                if: child_thread = 0 || child_mail = 0 || child_slot = 0 || lmx_post_init(pt_child_arena, child_mail) != c.LMX_POST_OK || lmx_schedule_init(child_slot, pt_child_arena, (cast: (@: void) child_thread), 8U) != c.LMX_SCHEDULE_OK || lmx_thread_init(pt_child_arena, child_thread, child\graph, child_mail, child_slot) != c.LMX_THREAD_OK || lmx_child_thread(t, child, child_thread) != c.LMX_CHILD_OK
+                    return: 1
+                ---
+            ---
         ---
     ---
     if: pt_cell != 0
@@ -92,7 +103,7 @@ fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxArena: arena
     LmxArena: child_arena
-    LmxSchedule: slot
+    @: LmxSchedule slot 0
     @: LmxThread t 0
     @: LmxMsg letter 0
     @: LmxPost mail 0
@@ -107,46 +118,59 @@ fn: main () int
         return: 2
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ child_arena)), 0, c.sizeof(c.LmxArena))
-    memset((cast: (@: void) (@ slot)), 0, c.sizeof(c.LmxSchedule))
     if: lmx_arena_open(@ arena) != 0 || lmx_arena_open(@ child_arena) != 0
         fputs("lmx_primitive_thread: an arena did not open\n", l1_stdout())
         free(counts)
         return: 2
     ---
-    letter: (cast: (@: LmxMsg) lmx_arena_take(@ arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
     target: (cast: (@: LmxMsg) lmx_arena_take(@ arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
     parent: lmx_node_new_owned(@ arena)
     source: lmx_node_new_owned(@ arena)
-    mail: (cast: (@: LmxPost) malloc(c.sizeof(c.LmxPost)))
-    t: (cast: (@: LmxThread) lmx_arena_take(@ arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
-    if: letter = 0 || target = 0 || parent = 0 || source = 0 || mail = 0 || t = 0
+    mail: (cast: (@: LmxPost) lmx_arena_take(@ arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    t: (cast: (@: LmxThread) lmx_arena_take(@ arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
+    slot: (cast: (@: LmxSchedule) lmx_arena_take(@ arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: target = 0 || parent = 0 || source = 0 || mail = 0 || t = 0 || slot = 0
         fputs("lmx_primitive_thread: the world was not built\n", l1_stdout())
         free(counts)
         return: 2
     ---
-    if: lmx_arena_refs_open_owned(@ arena, parent, 1U) != 0 || lmx_arena_refs_open_owned(@ arena, source, 1U) != 0
+    if: lmx_arena_refs_open_owned(@ arena, parent, 1U) != 0 || lmx_arena_refs_open_owned(@ arena, source, 3U) != 0
         fputs("lmx_primitive_thread: the structures did not open their slots\n", l1_stdout())
         free(counts)
         return: 2
     ---
-    if: lmx_post_init(@ arena, mail) != c.LMX_POST_OK
-        fputs("lmx_primitive_thread: the mailbox did not initialize\n", l1_stdout())
-        free(counts)
-        return: 2
-    ---
-    letter\running: 1
-    letter\success: 0
-    letter\handoff_ready: 0
-    letter\graph: source
-    letter\index: 1U
-    target\index: 2U
-    if: lmx_thread_attach(t, letter, mail, @ slot) != c.LMX_THREAD_OK
-        fputs("lmx_primitive_thread: the object did not attach\n", l1_stdout())
+    if: lmx_thread_children_field_new(@ arena, source, 0U) = 0
+        fputs("lmx_primitive_thread: the executable graph has no ordinary children Array\n", l1_stdout())
         free(counts)
         return: 2
     ---
     cell: lmx_int_new_owned(@ arena)
     if: cell = 0
+        free(counts)
+        return: 2
+    ---
+    # Only graph-copyable state belongs in this child template. The standalone Message target is
+    # merely the opaque payload admitted to the mailbox and is never dereferenced by this test.
+    lmx_arena_ref_store(source, 1U, (cast: (@: void) parent))
+    lmx_arena_ref_store(source, 2U, cell)
+    if: lmx_post_init(@ arena, mail) != c.LMX_POST_OK
+        fputs("lmx_primitive_thread: the mailbox did not initialize\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    if: lmx_schedule_init(slot, @ arena, (cast: (@: void) t), 8U) != c.LMX_SCHEDULE_OK
+        fputs("lmx_primitive_thread: the schedule did not initialize\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    letter: lmx_thread_message(t)
+    if: lmx_thread_init(@ arena, t, source, mail, slot) != c.LMX_THREAD_OK
+        fputs("lmx_primitive_thread: the object did not attach\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    if: lmx_thread_children_bind_graph(t, @ arena) != c.LMX_THREAD_OK
+        fputs("lmx_primitive_thread: the object did not bind its graph-resident children Array\n", l1_stdout())
         free(counts)
         return: 2
     ---
@@ -158,6 +182,9 @@ fn: main () int
     pt_child_arena: @ child_arena
     pt_target: (cast: (@: void) target)
     pt_cell: cell
+    # Keep the opaque target as an explicit mailbox root across the control turn's GC. The
+    # dispatch also stages this same value, but a failed boundary discards staged mail before GC.
+    pt_check(counts, lmx_post_accept(@ arena, mail, pt_target, c.LMX_POST_INBOX) = c.LMX_POST_OK, "the opaque target could not be rooted in the inbox")
     pt_check(counts, lmx_thread_interpreter_set(t, pt_dispatch) = c.LMX_THREAD_OK, "the interpreter boundary was not installed")
 
     # --- 0. THE CONTROL: a native handler that returns a NONZERO status on a RUNNING Message ---
@@ -173,6 +200,9 @@ fn: main () int
     pt_dispatch_calls: 0U
     native_before: pt_native_calls
     turn_before: t\turn
+    # Parentless Threads have no liveness handshake. Plant a deliberately stale own stamp: it is
+    # inert without a parent and must not make the failed boundary stop this Message.
+    c.__atomic_store_n(lmx_thread_alive_cell(t), 1U, c.__ATOMIC_RELAXED)
     pt_check(counts, lmx_thread_request_mode(t, c.LMX_THREAD_MODE_NATIVE) = c.LMX_THREAD_OK, "the failing turn's mode request was refused")
     pt_check(counts, lmx_thread_turn(t, pt_native, 20U) = c.LMX_THREAD_INVALID, "a failed interpreted turn did not report the Thread failure status")
     pt_check(counts, pt_dispatch_calls = 1U, "the interpreter did not run")
@@ -180,6 +210,7 @@ fn: main () int
     # The mode request is cancelled, not committed and not pending.
     pt_check(counts, lmx_thread_mode(t) = c.LMX_THREAD_MODE_INTERPRETED, "a failed turn committed the requested mode change")
     pt_check(counts, lmx_thread_requested_mode(t) = c.LMX_THREAD_MODE_INTERPRETED, "the cancelled request was left pending")
+    pt_check(counts, letter\running = 1, "a stale own alive stamp stopped a parentless failed interpreted turn")
     # The turn itself is left clean: the cursor advanced once, the state is idle, no current.
     pt_check(counts, t\turn = turn_before + 1U && t\state = c.LMX_THREAD_IDLE, "the failed turn left its cursor or state behind")
     pt_check(counts, lmx_thread_current() = 0, "the failed turn left a current object behind")
@@ -193,6 +224,11 @@ fn: main () int
 
     # --- 2. THE NEXT INTERPRETED TURN RUNS, publishes and commits -----------------------------
     pt_body_status: 0
+    if: lmx_arena_open(@ child_arena) != 0
+        fputs("lmx_primitive_thread: the dropped child's arena did not reopen\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
     pt_check(counts, lmx_thread_request_mode(t, c.LMX_THREAD_MODE_NATIVE) = c.LMX_THREAD_OK, "the second request was refused")
     pt_check(counts, lmx_thread_turn(t, pt_native, 30U) = c.LMX_THREAD_OK, "the interpreted turn AFTER a failure did not run")
     pt_check(counts, pt_dispatch_calls = 2U && pt_native_calls = native_before, "the turn after a failure did not run the interpreter")

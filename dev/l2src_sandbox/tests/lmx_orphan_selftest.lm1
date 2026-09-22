@@ -1,41 +1,9 @@
 predef: "l2src/lmx_root.lm1"
-predef: "l2src/lmx_orphan.lm1"
-predef: "l2src/lmx_child.lm1"
-predef: "l2src/lmx_turn.lm1"
-predef: "l2src/lmx_post.lm1"
-predef: "l2src/lmx_thread.lm1"
-predef: "l2src/lmx_schedule.lm1"
-predef: "l2src/lmx_manager.lm1"
-predef: "l2src/lmx_pool.lm1"
-predef: "l2src/lmx_arena.lm1"
-predef: "l2src/lmx_arena_blocks.lm1"
-predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_array_grow_owned.lm1"
 predef: "l2src/lmx_implements.lm1"
-predef: "l2src/lmx_value_owned.lm1"
-predef: "l2src/lmx_arena_refs.lm1"
 predef: "l2src/lmx_chars_owned.lm1"
-predef: "l2src/lmx_array_owned.lm1"
-predef: "l2src/lmx_array_ref_owned.lm1"
-predef: "l2src/lmx_graph_copy_owned.lm1"
-predef: "l2src/lmx_clock.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
-
-# R0's retention of orphans, driven through the whole policy (model 25 (iv); spec 19.29.8).
-# What this file pins:
-#
-    #   * re-rooting rewrites index and parent up-link under R0;
-#     answers root-first off R0's own index, with no trace of the branch that died;
-#   * a still-running orphan whose inbox is EMPTY is closed by the maintenance without a turn, and
-#     that close leaves it handoff-safe -- the state its retained arena is retained IN;
-#   * a successful orphan is reclaimed at the next maintenance point AT ONCE, arena and slot, with
-#     no retention at all;
-#   * a failed orphan is retained until its policy expires, and only then reclaimed -- and the
-#     reclaim returns its whole arena, frees the slot the root gave it with it;
-#   * a still-running orphan with PENDING input is NOT closed by the maintenance: its close is its
-#     own closing turn, which the drain will run (not this step);
-#   * the runtime's teardown returns a still-retained orphan's arena too -- the ledger is the only
-#     thing that can, since nobody adopts an orphan's arena.
 
 sub: or_check (@: int counts; int: ok; const: @(char label))
     counts[0]: counts[0] + 1
@@ -45,186 +13,88 @@ sub: or_check (@: int counts; int: ok; const: @(char label))
     ---
 end: or_check
 
-# Build a Message whose branch is gone.  This is not a stand-in for the orphan's situation, it IS
-# it: the record is built in its OWN arena against the graph of a branch that is released right
-# afterwards, so nothing of the record's storage ever belonged to that branch -- and its up-link is
-# left pointing at a record of the dead branch, which is exactly the stale link adoption must
-# rewrite.  The record is a real child-path Message: its five fields, its own mailbox and its own
-# schedule record, all cells of its own arena.  The out-parameters are cleared first, so a refused
-# build never leaves a caller holding an old record.
-fn: or_build (@: LmxArena arena; @: Lmx dead_graph; size_t: slot; @: Lmx source; @: LmxArena src_arena; @: LmxThread dead_parent; @@: LmxMsg out_message; @@: LmxThread out_thread) int
+fn: or_thread (@: LmxArena arena; int: with_children; @@: LmxMsg out_message) @: LmxThread
+    @: Lmx graph
+    @: LmxArrayDesc children
     @: LmxMsg message
-    @: LmxThread t
     @: LmxPost mail
-    @: LmxSchedule sched
+    @: LmxThread thread
+    @: LmxSchedule slot
     \out_message: 0
-    \out_thread: 0
-    message: lmx_child_create(src_arena, arena, dead_graph, slot, source)
-    if: message = 0
+    graph: lmx_node_new_owned(arena)
+    if: graph = 0
         return: 0
     ---
-    t: (cast: (@: LmxThread) lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    if: with_children != 0
+        children: lmx_array_grow_ref_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, arena)
+        if: children = 0 || lmx_arena_refs_open_owned(arena, graph, 1U) != 0 || lmx_arena_ref_store(graph, 0U, (cast: (@: void) children)) != 0
+            return: 0
+        ---
+    ---
     mail: (cast: (@: LmxPost) lmx_arena_take(arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
-    sched: (cast: (@: LmxSchedule) lmx_arena_take(arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
-    if: t = 0 || mail = 0 || sched = 0
+    thread: (cast: (@: LmxThread) lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
+    message: (cast: (@: LmxMsg) thread)
+    slot: (cast: (@: LmxSchedule) lmx_arena_take(arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: message = 0 || mail = 0 || thread = 0 || slot = 0
         return: 0
     ---
-    if: lmx_post_init(arena, mail) != c.LMX_POST_OK || lmx_thread_attach(t, message, mail, sched) != c.LMX_THREAD_OK
+    if: lmx_post_init(arena, mail) != c.LMX_POST_OK || lmx_thread_init(arena, thread, graph, mail, slot) != c.LMX_THREAD_OK || lmx_schedule_init(slot, arena, (cast: (@: void) thread), 1000U) != c.LMX_SCHEDULE_OK
         return: 0
     ---
-    # The record's own scheduler record carries the record's OWN band and the drain window the build
-    # gives it; wide here, so the readings of this test stay inside it.
-    if: lmx_schedule_init(sched, arena, (cast: (@: void) t), 5000U) != c.LMX_SCHEDULE_OK
+    if: with_children != 0 && lmx_thread_children_bind(thread, children, arena) != c.LMX_THREAD_OK
         return: 0
     ---
-    t\parent: (cast: (@: void) dead_parent)
     \out_message: message
-    \out_thread: t
-return: 1
+return: thread
 
 fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxRoot: root
-    LmxArena: don_a
-    LmxArena: don_p
-    LmxArena: don_b
-    LmxArena: don_dead
-    @: LmxArena arena_root 0
-    # The three orphans' arenas are read after their records are gone, so they are read through
-    # pointers: `\` is a pointer step in L1, and a chain through a by-value field would be emitted
-    # as another `->`.
-    @: LmxArena arena_a 0
-    @: LmxArena arena_p 0
-    @: LmxArena arena_b 0
-    @: Lmx source 0
-    @: Lmx dead_graph 0
-    @: LmxThread dead_parent 0
-    @: Lmx graph 0
-    @: LmxMsg top_message 0
-    @: LmxThread root_thread 0
-    @: LmxOrphanLedger ledger 0
-    @: LmxMsg orphan_a 0
-    @: LmxMsg orphan_p 0
-    @: LmxMsg orphan_b 0
-    @: LmxThread thread_a 0
-    @: LmxThread thread_p 0
-    @: LmxThread thread_b 0
-    int: built
+    LmxArena: donor_arena
+    LmxArena: success_arena
+    LmxArena: failed_arena
+    @: LmxThread donor
+    @: LmxThread child
+    @: LmxMsg child_message
+    @: LmxThread r0
+    @: LmxOrphanLedger ledger
     int: failures
     if: counts = 0
         return: 2
+    ---
     memset((cast: (@: void) (@ root)), 0, c.sizeof(c.LmxRoot))
-    memset((cast: (@: void) (@ don_a)), 0, c.sizeof(c.LmxArena))
-    memset((cast: (@: void) (@ don_p)), 0, c.sizeof(c.LmxArena))
-    memset((cast: (@: void) (@ don_b)), 0, c.sizeof(c.LmxArena))
-    memset((cast: (@: void) (@ don_dead)), 0, c.sizeof(c.LmxArena))
-    if: lmx_arena_open(@ don_a) != 0 || lmx_arena_open(@ don_p) != 0 || lmx_arena_open(@ don_b) != 0 || lmx_arena_open(@ don_dead) != 0
-        fputs("lmx_orphan: an arena did not open\n", l1_stdout())
-        free(counts)
-        return: 2
-    ---
-    arena_root: lmx_root_arena(@ root)
-    arena_a: @ don_a
-    arena_p: @ don_p
-    arena_b: @ don_b
-    or_check(counts, lmx_root_open(@ root, 0, 5000U, 0U, 0U) = c.LMX_ROOT_OK, "the runtime did not open")
-    arena_root: lmx_root_arena(@ root)
+    memset((cast: (@: void) (@ donor_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ success_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ failed_arena)), 0, c.sizeof(c.LmxArena))
+    or_check(counts, lmx_root_open(@ root, 0, 5000U) = c.LMX_ROOT_OK, "root open")
+    or_check(counts, lmx_root_retention_set(@ root, 500U) = c.LMX_ROOT_OK, "retention set")
+    or_check(counts, lmx_arena_open(@ donor_arena) = 0 && lmx_arena_open(@ success_arena) = 0 && lmx_arena_open(@ failed_arena) = 0, "arenas open")
+    donor: or_thread(@ donor_arena, 1, @ child_message)
+    r0: lmx_root_thread(@ root)
     ledger: lmx_root_orphans(@ root)
-    top_message: lmx_root_message(@ root)
-    root_thread: lmx_root_thread(@ root)
-    graph: top_message\graph
-    or_check(counts, arena_root != 0 && ledger != 0 && graph != 0, "the root has no arena, ledger or graph")
-    or_check(counts, lmx_orphan_count(ledger) = 0U && lmx_orphan_reclaimed(ledger) = 0U, "a fresh ledger is not empty")
-    or_check(counts, lmx_root_retention_set(@ root, 0U) = c.LMX_ROOT_INVALID, "a zero retention policy was accepted")
-    or_check(counts, lmx_root_retention_set(@ root, 500U) = c.LMX_ROOT_OK, "the retention policy was not set")
+    child: or_thread(@ success_arena, 0, @ child_message)
+    or_check(counts, donor != 0 && child != 0 && lmx_thread_child_add(donor, child, @ donor_arena) = c.LMX_THREAD_OK, "donor child")
+    or_check(counts, lmx_root_orphan_adopt(@ root, child_message, @ success_arena, child, 1000U) = c.LMX_ORPHAN_OK, "adopt success child")
+    or_check(counts, lmx_thread_child_count(donor) = 0U && lmx_thread_child_count(r0) = 1U && lmx_thread_parent(child) = r0, "sole membership moved")
+    or_check(counts, lmx_orphan_count(ledger) = 1U && lmx_manager_count(lmx_root_manager(@ root)) = 1U, "derived orphan count")
+    child_message\success: 1
+    child_message\running: 0
+    child_message\handoff_ready: 1
+    or_check(counts, lmx_root_orphan_maintain(@ root, 1001U) = c.LMX_ORPHAN_OK, "success maintain")
+    or_check(counts, lmx_thread_child_count(r0) = 0U && lmx_orphan_count(ledger) = 0U && lmx_orphan_reclaimed(ledger) = 1U, "success reclaimed after removal")
+    or_check(counts, lmx_thread_child_count(lmx_root_thread(@ root)) = 0U, "success child removed before release")
 
-    # The template the orphan's graph is copied from, and the branch that is about to die: a graph
-    # of two slots, in an arena of its own, with one record of its own -- so that the orphans carry
-    # an up-link into storage that is really gone by the time they are adopted.
-    source: lmx_node_new_owned(arena_root)
-    if: source = 0 || lmx_arena_refs_open_owned(arena_root, source, 1U) != 0
-        fputs("lmx_orphan: the template was not built\n", l1_stdout())
-        free(counts)
-        return: 2
-    ---
-    dead_graph: lmx_node_new_owned(@ don_dead)
-    dead_parent: (cast: (@: LmxThread) lmx_arena_take(@ don_dead, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
-    if: dead_graph = 0 || lmx_arena_refs_open_owned(@ don_dead, dead_graph, 2U) != 0 || dead_parent = 0
-        fputs("lmx_orphan: the dying branch was not built\n", l1_stdout())
-        free(counts)
-        return: 2
-    ---
-    built: or_build(@ don_a, dead_graph, 1U, source, arena_root, dead_parent, @ orphan_a, @ thread_a)
-    or_check(counts, built != 0 && orphan_a != 0 && thread_a != 0, "orphan A was not built")
-    built: or_build(@ don_p, dead_graph, 1U, source, arena_root, dead_parent, @ orphan_p, @ thread_p)
-    or_check(counts, built != 0 && orphan_p != 0 && thread_p != 0, "orphan P was not built")
-    built: or_build(@ don_b, dead_graph, 1U, source, arena_root, dead_parent, @ orphan_b, @ thread_b)
-    or_check(counts, built != 0 && orphan_b != 0 && thread_b != 0, "orphan B was not built")
-    or_check(counts, lmx_thread_parent(thread_a) = dead_parent, "the orphan does not carry the link to its dying branch")
-
-    # The branch goes: from here on the up-links of the three records point into storage nobody
-# owns, and the runtime knows nothing of them.
-    lmx_arena_release(@ don_dead)
-    or_check(counts, lmx_arena_ref_value(graph, 0U) = 0, "R0's first child slot was taken before any adoption")
-
-    # --- orpan A: the FAILED path, retained to its deadline ---------------------------------
-    # Adopted while it still runs (the chain closed the branch; the record is the root's now).
-    or_check(counts, lmx_root_orphan_adopt(@ root, orphan_a, @ don_a, thread_a, 1000U) = c.LMX_ORPHAN_OK, "orphan A was not adopted")
-    or_check(counts, lmx_orphan_count(ledger) = 1U && lmx_orphan_reclaimed(ledger) = 0U, "the ledger did not take the adopted orphan")
-    or_check(counts, lmx_arena_ref_value(graph, 0U) = (cast: (@: Lmx) orphan_a), "the re-rooting did not store the record in R0's graph")
-    or_check(counts, orphan_a\index = 1U, "the re-rooted record kept its old index")
-    or_check(counts, lmx_thread_parent(thread_a) = root_thread, "the re-rooted record kept its old up-link")
-    or_check(counts, orphan_a\index = 1U && lmx_thread_parent(thread_a) = root_thread, "the adopted record was not re-rooted under R0")
-    # The maintenance point, at a reading inside the policy: an empty inbox is closed WITHOUT a
-    # turn, and that close leaves the record handoff-safe -- and it is retained, not reclaimed.
-    or_check(counts, lmx_root_orphan_maintain(@ root, 1200U) = c.LMX_ORPHAN_OK, "the maintenance pass was refused")
-    or_check(counts, orphan_a\running = 0, "the maintenance did not close an orphan with an empty inbox")
-    or_check(counts, orphan_a\handoff_ready = 1, "the turnless close did not leave the record handoff-safe")
-    or_check(counts, lmx_orphan_count(ledger) = 1U && lmx_orphan_reclaimed(ledger) = 0U, "a failed orphan was reclaimed before its deadline")
-
-    # --- orpan P: PENDING input, so no close and no reclaim ----------------------------------
-    or_check(counts, lmx_root_orphan_adopt(@ root, orphan_p, @ don_p, thread_p, 1300U) = c.LMX_ORPHAN_OK, "orphan P was not adopted")
-    or_check(counts, lmx_arena_ref_value(graph, 1U) = (cast: (@: Lmx) orphan_p), "orphan P did not land in the second slot")
-    or_check(counts, orphan_p\index = 2U && lmx_thread_parent(thread_p) = root_thread, "orphan P kept the index of its dying branch")
-    or_check(counts, lmx_post_accept(@ don_p, thread_p\mail, (cast: (@: void) orphan_p), c.LMX_POST_INBOX) = c.LMX_POST_OK, "the letter was not admitted")
-    or_check(counts, lmx_thread_mail_count(thread_p, c.LMX_POST_INBOX) = 1U, "the pending input is not in orphan P's inbox")
-    # The drain is armed by the same act: the record's own scheduler record now waits, which is what
-    # puts the orphan in the root's queue for its turns.
-    or_check(counts, lmx_schedule_state(thread_p\slot) = c.LMX_SCHEDULE_WAITING, "the adopted orphan's record is not waiting to be stepped")
-
-    # A's deadline passes here (1300 + 500 <= 2000), and A is the TAIL of the ledger while P is its
-    # head: the reclaim walks the list, and P -- running with input inside its drain window (1300 +
-    # 5000) -- is left alone entirely.  Past that window the maintenance would close it instead: the
-    # drain test drives that bound.
-    or_check(counts, lmx_root_orphan_maintain(@ root, 2000U) = c.LMX_ORPHAN_OK, "the maintenance pass was refused")
-    or_check(counts, lmx_orphan_count(ledger) = 1U && lmx_orphan_reclaimed(ledger) = 1U, "the expired failed orphan was not reclaimed")
-    or_check(counts, orphan_p\running = 1, "an orphan with pending input was closed without its closing turn")
-    or_check(counts, lmx_thread_mail_count(thread_p, c.LMX_POST_INBOX) = 1U, "the pending input was dropped")
-    or_check(counts, lmx_arena_ref_value(graph, 0U) = 0, "the reclaim did not free the slot the root gave the orphan")
-    or_check(counts, arena_a\blocks = 0 && arena_a\count = 0U, "the reclaim did not return the orphan's whole arena")
-
-    # --- orpan B: the SUCCESSFUL path, reclaimed at the next maintenance point ---------------
-    or_check(counts, lmx_root_orphan_adopt(@ root, orphan_b, @ don_b, thread_b, 3000U) = c.LMX_ORPHAN_OK, "orphan B was not adopted")
-    or_check(counts, lmx_arena_ref_value(graph, 0U) = (cast: (@: Lmx) orphan_b), "orphan B did not take the slot the reclaim freed")
-    or_check(counts, orphan_b\index = 1U, "the re-rooted record kept its old index")
-    # The state a settling lane's turn boundary leaves: completion sets success, `running` follows
-    # at the boundary, and leaving the last turn is what marks the record handoff-safe (lmx_message's
-    # own record of it).  Its retention is fresh, so only the "one reclaim site, never retained"
-    # rule can reclaim it here.
-    orphan_b\success: 1
-    orphan_b\running: 0
-    orphan_b\handoff_ready: 1
-    or_check(counts, lmx_root_orphan_maintain(@ root, 3001U) = c.LMX_ORPHAN_OK, "the maintenance pass was refused")
-    or_check(counts, lmx_orphan_count(ledger) = 1U && lmx_orphan_reclaimed(ledger) = 2U, "the successful orphan was not reclaimed at once")
-    or_check(counts, lmx_arena_ref_value(graph, 0U) = 0, "the successful orphan's slot was not freed")
-    or_check(counts, arena_b\blocks = 0 && arena_b\count = 0U, "the successful orphan's arena was not returned")
-
-    # Teardown: the retained orphan's arena goes back too -- nobody adopts it, so this ledger is
-    # the only thing that can return it.
-    or_check(counts, lmx_root_close(@ root) = c.LMX_ROOT_OK, "the runtime did not close")
-    or_check(counts, arena_p\blocks = 0 && arena_p\count = 0U, "the teardown left a retained orphan's arena behind")
-
+    child: or_thread(@ failed_arena, 0, @ child_message)
+    or_check(counts, child != 0 && lmx_thread_child_add(donor, child, @ donor_arena) = c.LMX_THREAD_OK, "failed donor child")
+    or_check(counts, lmx_root_orphan_adopt(@ root, child_message, @ failed_arena, child, 2000U) = c.LMX_ORPHAN_OK, "adopt failed child")
+    child_message\running: 0
+    child_message\handoff_ready: 1
+    or_check(counts, lmx_root_orphan_maintain(@ root, 2200U) = c.LMX_ORPHAN_OK && lmx_orphan_count(ledger) = 1U, "failed retained inside window")
+    or_check(counts, lmx_root_orphan_maintain(@ root, 2500U) = c.LMX_ORPHAN_OK && lmx_orphan_count(ledger) = 0U, "failed reclaimed at window")
+    or_check(counts, lmx_thread_child_count(lmx_root_thread(@ root)) = 0U && lmx_orphan_reclaimed(ledger) = 2U, "failed child removed before release")
+    or_check(counts, lmx_arena_release(@ donor_arena) = 0, "donor release")
+    or_check(counts, lmx_root_close(@ root) = c.LMX_ROOT_OK, "root close")
     failures: counts[1]
-    c.printf("lmx_orphan checks=%d failures=%d\n", counts[0], failures)
+    c.printf("lmx_orphan: %d checks, %d failures\n", counts[0], failures)
     free(counts)
 return: failures

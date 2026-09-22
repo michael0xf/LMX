@@ -59,29 +59,26 @@ end: LmxManagerApi
 # each record a lane.  Model 29 and Mikhail on 2026-09-15: "реализация L3 Thread
 # планировщика который не запускает потоков детей а бегает по ним сам".
 #
-# The queue holds scheduler records (lmx_schedule), and a record's owner is an
-# address whose domain is checked before a turn is run.  Nothing about the queue is
-# stored on a letter or on an object: the schedule is the scheduler's own data,
-# which is why a letter can stay five fields (LmxMsg is closed).
+# The manager owns no membership queue. It traverses the one ordinary Array<@LmxThread> in its
+# owner Thread's graph and keeps only a transient round-robin cursor. A schedule record remains the
+# timing state of one Thread; it is not a membership record.
 #
 # There is no lock here and none is wanted: a lane is serial, and the only
 # synchronized collection the design allows is the mailbox (model 30).
 struct: LmxManager
-    @: LmxSchedule head
-    @: LmxSchedule tail
-    size_t: count
+    @: LmxThread owner
+    size_t: cursor
     LmxManagerApi: api
 end: LmxManager
 
 prototype:
     fn: lmx_manager_init (@: LmxManager m) int
+    fn: lmx_manager_bind (@: LmxManager m; @: LmxThread owner) int
     fn: lmx_manager_api (@: LmxManager m) @: LmxManagerApi
     fn: lmx_manager_add (@: LmxManager m; @: LmxSchedule slot) int
-    # A record LEAVES the schedule: the object it belonged to is gone -- its storage released by the
-    # settle that reclaimed it -- and a queue that kept its record would step freed storage.  This is
-    # the one act that takes a record out of a queue it joined; a record that never joined is
-    # refused.  The lane, if the running binding gave it one, is not joined here: a lane ends by
-    # itself (lmx_manager_running.h.lm1).
+    # Compatibility validation before the serialized parent removes the physical Thread from its
+    # graph Array. The manager stores no separate membership. A lane ends by itself
+    # (lmx_manager_running.h.lm1).
     fn: lmx_manager_remove (@: LmxManager m; @: LmxSchedule slot) int
     fn: lmx_manager_take (@: LmxManager m) @: LmxSchedule
     fn: lmx_manager_count (@: LmxManager m) size_t

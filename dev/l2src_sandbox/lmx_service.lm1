@@ -4,7 +4,8 @@ predef: "l1src/libc_abi.lm1"
 include: "<stdlib.h>" "<string.h>" "<stdint.h>"
 
 # lmx_service.lm1 - the sorted registry by PHYSICAL address.  MEMBERSHIP is a bisection
-# (bounded comparisons); the key is the LmxThread pointer value.  No lmx_address.
+# (bounded comparisons); the key is the executable Message-prefix address. Because Message is the
+# first by-value Thread member, this is also the LmxThread pointer value. No lmx_address.
 
 fn: lmx_service_compare (@: void a; @: void b) int
     uintptr_t: aa
@@ -114,10 +115,26 @@ fn: lmx_service_register (@: LmxService service; @: LmxThread target; @: LmxAren
     if: service = 0 || target = 0 || target_arena = 0
         return: c.LMX_SERVICE_INVALID
     ---
+    # Refuse before dereferencing Thread-only fields. A Thread has the common Message kind at its
+    # prefix address and the exact Thread range type; a standalone Message has the same kind but a
+    # different exact type and cannot be registered as an executor.
+    if: lmx_range_classify(target_arena, (cast: (@: void) target)) != c.LMX_DOMAIN_KIND_MSG_RECORD || lmx_range_type_of(target_arena, (cast: (@: void) target)) != c.LMX_DOMAIN_THREAD || lmx_range_stride(target_arena, (cast: (@: void) target)) != c.sizeof(c.LmxThread) || lmx_range_home(target_arena, (cast: (@: void) target)) != target_arena
+        return: c.LMX_SERVICE_INVALID
+    ---
+    # A live Thread belongs to exactly one service. Refuse a second service before reserving or
+    # mutating either registry; a repeated registration in the same service preserves the existing
+    # DUPLICATE result and cannot overwrite the stable route.
+    if: target\service != 0
+        if: target\service = (cast: (@: void) service)
+            return: c.LMX_SERVICE_DUPLICATE
+        ---
+        return: c.LMX_SERVICE_INVALID
+    ---
     if: lmx_service_reserve(service, service\count + 1U) != c.LMX_SERVICE_OK
         return: c.LMX_SERVICE_FULL
     ---
-    # The key is the physical address of the LmxThread record itself.
+    # The key is the physical Message address; the first-member invariant makes it the Thread
+    # address too, without substituting one record type for the other.
     key: (cast: (@: void) target)
     point: lmx_service_point(service, key)
     if: point < service\count
@@ -190,17 +207,10 @@ fn: lmx_service_post (@: LmxService service; @: void address; @: LmxMsg letter; 
         ---
         return: c.LMX_SERVICE_MISSING
     ---
-    # Ordinary delivery (19.28.R2.5 / 6096): attach the letter's OWN arena onto the
-    # receiver's one logical arena FIRST (ownership transfer, no copy), then admit into
-    # the inbox.  Admit classifies the letter through the RECEIVER arena (lmx_post_admits),
-    # so the index must already hold the letter's intervals.  letter_arena may be 0 or
-    # the same as entry\arena (already one).
-    if: letter_arena != 0 && letter_arena != entry\arena
-        if: lmx_arena_attach(entry\arena, letter_arena) != 0
-            return: c.LMX_SERVICE_INVALID
-        ---
-    ---
-    if: lmx_post_accept(entry\arena, target_thread\mail, (cast: (@: void) letter), c.LMX_POST_INBOX) != c.LMX_POST_OK
+    # The mailbox owns the transaction and the only synchronization. The producer publishes the
+    # physical letter together with its still-owning arena; the receiver owner claims that arena
+    # on take. Thus delivery never mutates an arena concurrently with its receiver's GC.
+    if: lmx_post_accept_transfer(entry\arena, target_thread\mail, (cast: (@: void) letter), letter_arena) != c.LMX_POST_OK
         return: c.LMX_SERVICE_INVALID
     ---
 return: c.LMX_SERVICE_OK
@@ -220,12 +230,27 @@ fn: lmx_service_unregister (@: LmxService service; @: LmxThread target) int
     if: lmx_service_compare(entry\address, key) != 0
         return: c.LMX_SERVICE_MISSING
     ---
+    if: entry\target != key || entry\service != service
+        return: c.LMX_SERVICE_INVALID
+    ---
+    if: entry\arena = 0 || lmx_range_classify(entry\arena, entry\target) != c.LMX_DOMAIN_KIND_MSG_RECORD || lmx_range_type_of(entry\arena, entry\target) != c.LMX_DOMAIN_THREAD || lmx_range_stride(entry\arena, entry\target) != c.sizeof(c.LmxThread) || lmx_range_home(entry\arena, entry\target) != entry\arena
+        return: c.LMX_SERVICE_INVALID
+    ---
+    if: target\service != (cast: (@: void) service)
+        return: c.LMX_SERVICE_INVALID
+    ---
     target\service: 0
 return: lmx_service_close_gap(service, point)
 
 fn: lmx_service_release (@: LmxService service) int
     if: service = 0
         return: c.LMX_SERVICE_INVALID
+    # The registry does not own the target arenas and therefore must never walk/dereference them
+    # during destruction.  Every live target must be explicitly unregistered while its arena is
+    # known alive; release refuses to hide a stale route or turn that contract into a UAF.
+    if: service\count != 0U
+        return: c.LMX_SERVICE_INVALID
+    ---
     if: service\entries != 0
         free((cast: (@: void) service\entries))
     ---

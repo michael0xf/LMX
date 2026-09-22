@@ -7,12 +7,12 @@ define: LMX_SCHEDULE_IDLE 0
 define: LMX_SCHEDULE_WAITING 1
 define: LMX_SCHEDULE_OVERDUE 2
 
-# The scheduler's own record for one executable object: how long it may wait, how
-# long it has waited, and the link the scheduler threads it with.
+# The scheduler's own record for one executable object: how long it may wait and
+# how long it has waited. Membership belongs only to the parent's graph Array.
 #
 # This is one of the cells that used to be piled into the record.  It is the
-# scheduler's data and it lives in the scheduler's queue -- the letter stays the
-# five fields it is, the base Structure stays three, and neither is extended to
+# scheduler's data; the letter stays the
+# four fields it is, the base Structure stays three, and neither is extended to
 # carry it (LmxMsg and Lmx are closed; see the notes in those two headers).
 #
 # `owner` is an address, not a typed field: what it points at is answered by the
@@ -42,7 +42,6 @@ struct: LmxSchedule
     ulong: started
     ulong: limit
     int: state
-    @: LmxSchedule next
     # The OS thread running this lane, when the manager in use is the RUNNING one
     # (lmx_manager_running.lm1).  Zero means this lane has no thread of its own --
     # which is the normal state under the stepped manager.  The field is the

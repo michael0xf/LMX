@@ -65,28 +65,38 @@ sub: check (int: condition; const: @(char label))
 end: check
 
 fn: main () int
-    LmxPost: mailbox
+    @: LmxPost mailbox
     @: LmxPost box
     LmxManager: manager
     LmxManager: running
-    LmxSchedule: slot2
-    LmxPost: mail2
+    @: LmxSchedule slot2
+    @: LmxPost mail2
     @: LmxSchedule slotp
     @: LmxMsg letter2
     @: LmxThread thread2
     # A third object, entered by THIS thread while the lane runs another one: the two
     # cells are the whole subject of the per-thread check below.
-    LmxPost: mail3
-    LmxSchedule: slot3
+    @: LmxPost mail3
+    @: LmxSchedule slot3
     @: LmxMsg letter3
     @: LmxThread thread3
     @: LmxManagerApi step_api
     @: LmxManagerApi run_api
-    LmxSchedule: slot
+    @: LmxSchedule slot
     @: LmxMsg letter
+    @: LmxMsg thread_message
     @: LmxThread thread
+    @: LmxThread parent_thread
+    @: LmxPost parent_mail
+    @: LmxSchedule parent_slot
+    @: Lmx parent_graph
+    @: LmxArrayDesc parent_children
+    @: Lmx graph
+    @: Lmx graph2
+    @: Lmx graph3
     @: void taken
     LmxArena: arena
+    LmxArena: arena2
     # Each domain is an array of the arena like any other: its descriptor (a pool
     # record) and its chunk record live in this frame, because the storage is the
     # test's and nothing owns the records but the test itself.
@@ -96,9 +106,12 @@ fn: main () int
     LmxChunk: object_cells
     LmxPool: second_domain
     LmxChunk: second_cells
+    LmxPool: third_domain
+    LmxChunk: third_cells
 
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
-    if: lmx_arena_open(@ arena) != 0
+    memset((cast: (@: void) (@ arena2)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ arena) != 0 || lmx_arena_open(@ arena2) != 0
         fputs("lmx_domain: arena open failed\n", l1_stdout())
         return: 1
 
@@ -107,20 +120,22 @@ fn: main () int
     if: letter = 0 || thread = 0
         fputs("lmx_domain: storage allocation failed\n", l1_stdout())
         return: 1
+    memset((cast: (@: void) letter), 0, c.sizeof(c.LmxMsg))
+    memset((cast: (@: void) thread), 0, c.sizeof(c.LmxThread))
 
     if: lmx_domain_register(@ arena, @ mail_domain, @ mail_cells, (cast: (@: void) letter), 1U, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD) != 0
         fputs("lmx_domain: registering the letter domain failed\n", l1_stdout())
         return: 1
-    if: lmx_domain_register(@ arena, @ object_domain, @ object_cells, (cast: (@: void) thread), 1U, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD) != 0
+    if: lmx_domain_register(@ arena, @ object_domain, @ object_cells, (cast: (@: void) thread), 1U, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD) != 0
         fputs("lmx_domain: registering the object domain failed\n", l1_stdout())
         return: 1
 
     # 1 - the address answers, the storage says nothing
     check(lmx_domain_kind(@ arena, (cast: (@: void) letter)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "the letter's storage did not classify as the letter domain")
-    check(lmx_domain_kind(@ arena, (cast: (@: void) thread)) = c.LMX_DOMAIN_KIND_THREAD, "the object's storage did not classify as the object domain")
+    check(lmx_domain_kind(@ arena, (cast: (@: void) thread)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "the executable prefix lacks the common Message kind")
     check(lmx_domain_type(@ arena, (cast: (@: void) letter)) = c.LMX_DOMAIN_MSG_RECORD, "the letter domain's type is not the registered one")
     check(lmx_domain_type(@ arena, (cast: (@: void) thread)) = c.LMX_DOMAIN_THREAD, "the object domain's type is not the registered one")
-    check(lmx_domain_known(@ arena, (cast: (@: void) @ mailbox)) = c.LMX_IMPLEMENTS_NO, "an address of no registered range classified as known")
+    check(lmx_domain_known(@ arena, (cast: (@: void) (@ manager))) = c.LMX_IMPLEMENTS_NO, "an address of no registered range classified as known")
 
     # 2 - the compatibility primitive
     check(lmx_implements(@ arena, (cast: (@: void) letter), (cast: (@: void) letter), 0) = c.LMX_IMPLEMENTS_YES, "implements refused two addresses of one domain")
@@ -129,25 +144,28 @@ fn: main () int
     check(lmx_implements(@ arena, 0, 0, 0) = c.LMX_IMPLEMENTS_NO, "implements admitted two null operands")
 
     # 3 - the mailbox
-    check(lmx_post_init(@ arena, @ mailbox) = c.LMX_POST_OK, "the mailbox did not initialize")
+    mailbox: (cast: (@: LmxPost) lmx_arena_take(@ arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    slot: (cast: (@: LmxSchedule) lmx_arena_take(@ arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    graph: lmx_node_new_owned(@ arena)
+    check(mailbox != 0 && slot != 0 && graph != 0 && lmx_post_init(@ arena, mailbox) = c.LMX_POST_OK, "the mailbox did not initialize")
     check(lmx_post_admits(@ arena, (cast: (@: void) letter)) = c.LMX_POST_OK, "the mailbox does not admit a letter")
     check(lmx_post_admits(@ arena, (cast: (@: void) thread)) = c.LMX_POST_OK, "the mailbox does not admit an executable object")
-    check(lmx_post_admits(@ arena, (cast: (@: void) @ mailbox)) = c.LMX_POST_REFUSED, "the mailbox admitted an address of no known domain")
-    check(lmx_post_accept(@ arena, @ mailbox, (cast: (@: void) letter), c.LMX_POST_INBOX) = c.LMX_POST_OK, "the mailbox did not accept a letter")
-    check(lmx_post_count(@ mailbox, c.LMX_POST_INBOX) = 1U, "the inbox count did not follow the accepted letter")
-    taken: lmx_post_take(@ mailbox, c.LMX_POST_INBOX)
+    check(lmx_post_admits(@ arena, (cast: (@: void) (@ manager))) = c.LMX_POST_REFUSED, "the mailbox admitted an address of no known domain")
+    check(lmx_post_accept(@ arena, mailbox, (cast: (@: void) letter), c.LMX_POST_INBOX) = c.LMX_POST_OK, "the mailbox did not accept a letter")
+    check(lmx_post_count(mailbox, c.LMX_POST_INBOX) = 1U, "the inbox count did not follow the accepted letter")
+    taken: lmx_post_take(mailbox, c.LMX_POST_INBOX)
     check(taken = (cast: (@: void) letter), "the mailbox did not give back the letter it accepted")
-    check(lmx_post_count(@ mailbox, c.LMX_POST_INBOX) = 0U, "the inbox count did not fall back")
-    check(lmx_post_take(@ mailbox, c.LMX_POST_INBOX) = 0, "an empty lane still yielded something")
+    check(lmx_post_count(mailbox, c.LMX_POST_INBOX) = 0U, "the inbox count did not fall back")
+    check(lmx_post_take(mailbox, c.LMX_POST_INBOX) = 0, "an empty lane still yielded something")
 
     # The queue node is recycled, not lost: a second accept must take its node from
     # the free list, so the pool's handed-out count does not move.  Without this the
     # mailbox would grow its pool on every letter it ever received.
-    check(lmx_post_accept(@ arena, @ mailbox, (cast: (@: void) thread), c.LMX_POST_OUTBOX) = c.LMX_POST_OK, "the mailbox did not accept an executable object")
+    check(lmx_post_accept(@ arena, mailbox, (cast: (@: void) thread), c.LMX_POST_OUTBOX) = c.LMX_POST_OK, "the mailbox did not accept an executable object")
     # The mailbox is a by-value local here, and L1 only has `&x->field` -- so the
     # address of a BY-VALUE field is not expressible directly.  Taking the address
     # of the whole local into a pointer first is the spelling that works.
-    box: @ mailbox
+    box: mailbox
     check(lmx_pool_count(@ box\nodes) = 1U, "a recycled queue node did not come from the free list")
     # An outgoing target is STAGED, not outgoing (model 27; spec 19.29.4.1: "publish successful
     # FIFO outbox OR discard failed staged outbox").  Nothing takes it as outgoing, and it is
@@ -156,23 +174,13 @@ fn: main () int
     check(lmx_post_count(box, c.LMX_POST_STAGED) = 1U, "the staged lane does not hold the accepted target")
     check(lmx_post_publish(box) = c.LMX_POST_OK, "the mailbox did not publish its staged target")
     check(lmx_post_count(box, c.LMX_POST_STAGED) = 0U, "the staged lane survived its publication")
-    check(lmx_post_take(@ mailbox, c.LMX_POST_OUTBOX) = (cast: (@: void) thread), "the outbox did not give back what it accepted")
+    check(lmx_post_take(mailbox, c.LMX_POST_OUTBOX) = (cast: (@: void) thread), "the outbox did not give back what it accepted")
 
     # 4 - the executable object and its turn boundary
-    # THE RECORD IS POISONED BEFORE IT IS ATTACHED, deliberately and completely.  A schedule in a
-    # by-value local arrives holding whatever was on the stack, so attaching one proves nothing
-    # about the attach contract unless the record is KNOWN to be dirty.  0xAA makes the case
-    # deterministic and path-independent instead of depending on what the stack happened to hold,
-    # and attaching WHILE POISONED keeps the contract exercised: lmx_thread_attach accepts a merely
-    # allocated record and must not read slot\arena (lmx_thread.h.lm1).  The lmx_schedule_init
-    # below is unchanged and still runs AFTER the attach -- this is COVERAGE of an ordering that was
-    # already correct, not a fix for a demonstrated crash (6dced74, the -68 shape).  Measured: attach,
-    # enter and leave do not read the schedule on this path, so the poison discriminates nothing today.
-    memset((cast: (@: void) (@ slot)), 170, c.sizeof(c.LmxSchedule))
-    check(lmx_thread_attach(thread, letter, @ mailbox, @ slot) = c.LMX_THREAD_OK, "the object did not attach to its letter")
-    check(lmx_schedule_init(@ slot, @ arena, (cast: (@: void) thread), 4U) = c.LMX_SCHEDULE_OK, "the scheduler record did not initialize")
-    letter\running: 1
-    letter\success: 0
+    check(lmx_schedule_init(slot, @ arena, (cast: (@: void) thread), 4U) = c.LMX_SCHEDULE_OK && lmx_thread_init(@ arena, thread, graph, mailbox, slot) = c.LMX_THREAD_OK, "the executable Message did not initialize")
+    thread_message: lmx_thread_message(thread)
+    thread_message\running: 1
+    thread_message\success: 0
     check(lmx_thread_running(thread) = 1, "a running letter's object does not read as running")
 
     # 4a - the object hands out its APIs SEPARATELY: a thread API and a mail API,
@@ -186,38 +194,47 @@ fn: main () int
     check(tapi != 0 && mapi != 0, "the object did not hand out its APIs")
     check(tapi != (cast: (@: LmxThreadApi) mapi), "the two APIs are one table, not two")
     check(tapi\running(thread) = 1, "the thread API's running did not answer through the table")
-    check(lmx_post_api(@ mailbox) != 0, "the mailbox did not hand out its own API")
+    check(lmx_post_api(mailbox) != 0, "the mailbox did not hand out its own API")
     check(mapi\count(thread, c.LMX_POST_INBOX) = 0U, "the mail API's count did not answer through the table")
     check(mapi\accept(@ arena, thread, (cast: (@: void) letter), c.LMX_POST_INBOX) = c.LMX_POST_OK, "the mail API did not accept through the table")
     check(mapi\count(thread, c.LMX_POST_INBOX) = 1U, "the mail API's count did not follow its own accept")
     check(mapi\take(thread, c.LMX_POST_INBOX) = (cast: (@: void) letter), "the mail API did not give the letter back")
     check(mapi\close(@ arena, thread) = c.LMX_POST_OK, "the mail API did not close the mailbox through the table")
-    check(lmx_post_count(@ mailbox, c.LMX_POST_INBOX) = 0U, "a closed mailbox still reports mail")
+    check(lmx_post_count(mailbox, c.LMX_POST_INBOX) = 0U, "a closed mailbox still reports mail")
     check(lmx_thread_enter(thread) = c.LMX_THREAD_OK, "a running letter's object did not enter a turn")
     check(thread\turn = 1U, "the turn cursor did not advance")
     check(lmx_thread_current() = thread, "the current object is not the one that entered")
     check(lmx_msg_poll_escape() = 0, "a running letter reported an escape")
-    letter\running: 0
+    thread_message\running: 0
     check(lmx_msg_poll_escape() = 1, "a stop request did not report an escape")
-    letter\running: 1
-    letter\success: 1
+    thread_message\running: 1
+    thread_message\success: 1
     check(lmx_msg_poll_abort() = 1, "a completed letter did not report an abort")
-    letter\success: 0
+    thread_message\success: 0
     check(lmx_thread_leave(thread) = c.LMX_THREAD_OK, "the object did not leave the turn")
     check(lmx_msg_poll_escape() = 0 && lmx_msg_poll_abort() = 0, "a letter outside its turn still answered a poll")
 
     # 5 - the scheduler runs over the object itself
+    parent_thread: (cast: (@: LmxThread) lmx_arena_take(@ arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
+    parent_mail: (cast: (@: LmxPost) lmx_arena_take(@ arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    parent_slot: (cast: (@: LmxSchedule) lmx_arena_take(@ arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    parent_graph: lmx_node_new_owned(@ arena)
+    check(parent_thread != 0 && parent_mail != 0 && parent_slot != 0 && parent_graph != 0 && lmx_arena_refs_open_owned(@ arena, parent_graph, 1U) = 0, "the scheduler parent storage did not build")
+    parent_children: lmx_thread_children_field_new(@ arena, parent_graph, 0U)
+    check(parent_children != 0 && lmx_post_init(@ arena, parent_mail) = c.LMX_POST_OK && lmx_schedule_init(parent_slot, @ arena, (cast: (@: void) parent_thread), 500U) = c.LMX_SCHEDULE_OK && lmx_thread_init(@ arena, parent_thread, parent_graph, parent_mail, parent_slot) = c.LMX_THREAD_OK && lmx_thread_children_bind(parent_thread, parent_children, @ arena) = c.LMX_THREAD_OK, "the scheduler parent did not initialize")
+    check(lmx_thread_child_add(parent_thread, thread, @ arena) = c.LMX_THREAD_OK, "the executable object did not join its parent's graph Array")
     check(lmx_manager_init(@ manager) = c.LMX_MANAGER_OK, "the scheduler did not initialize")
-    check(lmx_manager_add(@ manager, @ slot) = c.LMX_MANAGER_OK, "the scheduler refused a record of an executable object")
+    check(lmx_manager_add(@ manager, slot) = c.LMX_MANAGER_OK, "the scheduler refused a record of an executable object")
     check(lmx_manager_count(@ manager) = 1U, "the schedule did not take the record")
     check(lmx_manager_step(@ manager, 0U) = c.LMX_MANAGER_OK, "a scheduling step did not run a turn")
     check(thread\turn = 2U, "the scheduling step did not advance the turn")
     check(lmx_thread_current() = 0, "the scheduler left a current object behind")
     check(lmx_manager_count(@ manager) = 1U, "a running letter's record left the schedule")
-    letter\running: 0
+    thread_message\running: 0
     check(lmx_manager_step(@ manager, 0U) = c.LMX_MANAGER_OK, "a stop request made the step fail instead of stopping")
     check(thread\state = c.LMX_THREAD_DONE, "a stopped letter's object is not done")
-    check(lmx_manager_count(@ manager) = 0U, "a stopped letter's record stayed in the schedule")
+    check(lmx_manager_count(@ manager) = 1U, "scheduler invented a second membership set for a stopped child")
+    check(lmx_thread_child_remove(parent_thread, thread) = c.LMX_THREAD_OK && lmx_manager_count(@ manager) = 0U, "parent could not remove its stopped child from the sole Array")
 
     # 5a - the SAME interface with a SECOND implementation behind it.  The running
     # manager gives its record a lane of its own -- a real OS thread -- and what
@@ -230,58 +247,49 @@ fn: main () int
     check(step_api != run_api, "both bindings handed out one table")
     check(step_api\step != run_api\step, "the two implementations share a step")
     check(step_api\round != run_api\round, "the two implementations share a round")
-    letter2: (cast: (@: LmxMsg) malloc(c.sizeof(c.LmxMsg)))
     thread2: (cast: (@: LmxThread) malloc(c.sizeof(c.LmxThread)))
-    if: letter2 = 0 || thread2 = 0
+    if: thread2 = 0
         fputs("lmx_domain: the second letter could not be allocated\n", l1_stdout())
         return: 1
-    if: lmx_domain_register(@ arena, @ second_domain, @ second_cells, (cast: (@: void) thread2), 1U, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD) != 0
+    memset((cast: (@: void) thread2), 0, c.sizeof(c.LmxThread))
+    if: lmx_domain_register(@ arena2, @ second_domain, @ second_cells, (cast: (@: void) thread2), 1U, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD) != 0
         fputs("lmx_domain: registering the second object domain failed\n", l1_stdout())
         return: 1
-    check(lmx_post_init(@ arena, @ mail2) = c.LMX_POST_OK, "the second mailbox did not initialize")
-    # THE RECORD IS POISONED BEFORE IT IS ATTACHED, deliberately and completely.  A schedule in a
-    # by-value local arrives holding whatever was on the stack, so attaching one proves nothing
-    # about the attach contract unless the record is KNOWN to be dirty.  0xAA makes the case
-    # deterministic and path-independent instead of depending on what the stack happened to hold,
-    # and attaching WHILE POISONED keeps the contract exercised: lmx_thread_attach accepts a merely
-    # allocated record and must not read slot\arena (lmx_thread.h.lm1).  The lmx_schedule_init
-    # below is unchanged and still runs AFTER the attach -- this is COVERAGE of an ordering that was
-    # already correct, not a fix for a demonstrated crash (6dced74, the -68 shape).  Measured: attach,
-    # enter and leave do not read the schedule on this path, so the poison discriminates nothing today.
-    memset((cast: (@: void) (@ slot2)), 170, c.sizeof(c.LmxSchedule))
-    check(lmx_thread_attach(thread2, letter2, @ mail2, @ slot2) = c.LMX_THREAD_OK, "the second object did not attach")
-    check(lmx_schedule_init(@ slot2, @ arena, (cast: (@: void) thread2), 500U) = c.LMX_SCHEDULE_OK, "the second scheduler record did not initialize")
-    check(lmx_schedule_wait(@ slot2, lmx_clock_ticks()) = c.LMX_SCHEDULE_OK, "the lane's wait did not start")
+    mail2: (cast: (@: LmxPost) lmx_arena_take(@ arena2, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    slot2: (cast: (@: LmxSchedule) lmx_arena_take(@ arena2, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    graph2: lmx_node_new_owned(@ arena2)
+    check(mail2 != 0 && slot2 != 0 && graph2 != 0 && lmx_post_init(@ arena2, mail2) = c.LMX_POST_OK, "the second mailbox did not initialize")
+    check(lmx_schedule_init(slot2, @ arena2, (cast: (@: void) thread2), 500U) = c.LMX_SCHEDULE_OK && lmx_thread_init(@ arena2, thread2, graph2, mail2, slot2) = c.LMX_THREAD_OK, "the second executable Message did not initialize")
+    letter2: lmx_thread_message(thread2)
+    check(lmx_thread_child_add(parent_thread, thread2, @ arena) = c.LMX_THREAD_OK, "the second object did not join its parent's graph Array")
+    check(lmx_schedule_wait(slot2, lmx_clock_ticks()) = c.LMX_SCHEDULE_OK, "the lane's wait did not start")
     letter2\running: 1
     letter2\success: 0
-    check(run_api\add(@ running, @ slot2) = c.LMX_MANAGER_OK, "the running manager refused the record")
+    check(run_api\add(@ running, slot2) = c.LMX_MANAGER_OK, "the running manager refused the record")
     check(run_api\round(@ running, 8U, 0U) = c.LMX_MANAGER_OK, "the running manager's round failed")
-    slotp: @ slot2
+    slotp: slot2
     check(slotp\lane != 0, "the running manager did not give the record a lane")
     # This thread enters a turn of its OWN before the lane starts working, so that its
     # own cell holds an object while the lane holds another.  The current object is PER
     # THREAD (Mikhail's TLS step) -- a unit-global cell would make the lane's turn
     # overwrite what this thread put there, and the cell is exactly what made more than
     # one running lane possible at all.
-    check(lmx_post_init(@ arena, @ mail3) = c.LMX_POST_OK, "the third mailbox did not initialize")
+    mail3: (cast: (@: LmxPost) lmx_arena_take(@ arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    slot3: (cast: (@: LmxSchedule) lmx_arena_take(@ arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    graph3: lmx_node_new_owned(@ arena)
+    check(mail3 != 0 && slot3 != 0 && graph3 != 0 && lmx_post_init(@ arena, mail3) = c.LMX_POST_OK, "the third mailbox did not initialize")
     thread3: (cast: (@: LmxThread) malloc(c.sizeof(c.LmxThread)))
-    letter3: (cast: (@: LmxMsg) malloc(c.sizeof(c.LmxMsg)))
-    if: thread3 = 0 || letter3 = 0
+    if: thread3 = 0
         fputs("lmx_domain: the third object could not be allocated\n", l1_stdout())
         return: 1
     ---
-    # POISONED BEFORE ATTACH, AND THEN DELIBERATELY LEFT UNINITIALIZED for the rest of this test --
-    # the only schedule here that is never initialized, and that is on purpose rather than by
-    # oversight.  MEASURED 2026-09-21: attach, lmx_thread_enter and lmx_thread_leave DO NOT READ the
-    # schedule record on this path (enter reads t\message, t\state, t\turn; leave reads t\state and
-    # t\message), so a poisoned, uninitialized slot3 passes 10 of 10 exactly as the unpoisoned file
-    # does.  There is NO demonstrated missing-init hazard here and none is claimed.
-    # WHAT THE SENTINEL IS FOR: if a future boundary begins reading this record without adding an
-    # explicit initialization at its new use site, 0xAA makes that read FAIL LOUDLY instead of
-    # silently masking the contract expansion.  Initializing it here would have removed that
-    # tripwire, which is why it is not initialized.
-    memset((cast: (@: void) (@ slot3)), 170, c.sizeof(c.LmxSchedule))
-    check(lmx_thread_attach(thread3, letter3, @ mail3, @ slot3) = c.LMX_THREAD_OK, "the third object did not attach")
+    memset((cast: (@: void) thread3), 0, c.sizeof(c.LmxThread))
+    if: lmx_domain_register(@ arena, @ third_domain, @ third_cells, (cast: (@: void) thread3), 1U, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD) != 0
+        fputs("lmx_domain: registering the third object domain failed\n", l1_stdout())
+        return: 1
+    ---
+    check(lmx_schedule_init(slot3, @ arena, (cast: (@: void) thread3), 500U) = c.LMX_SCHEDULE_OK && lmx_thread_init(@ arena, thread3, graph3, mail3, slot3) = c.LMX_THREAD_OK, "the third executable Message did not initialize")
+    letter3: lmx_thread_message(thread3)
     letter3\running: 1
     letter3\success: 0
     check(lmx_thread_enter(thread3) = c.LMX_THREAD_OK, "this thread did not enter its own turn")
@@ -294,25 +302,27 @@ fn: main () int
     check(lmx_thread_current() = thread3, "the lane's turn overwrote this thread's current object")
     check(lmx_thread_leave(thread3) = c.LMX_THREAD_OK, "this thread did not leave its own turn")
     check(lmx_thread_current() = 0, "leaving this thread's turn left its object behind")
-    check(lmx_post_close(@ arena, @ mail3) = c.LMX_POST_OK, "the third mailbox did not close")
+    check(lmx_post_close(@ arena, mail3) = c.LMX_POST_OK, "the third mailbox did not close")
     letter2\running: 0
     check(lmx_manager_running_close(@ running) = c.LMX_MANAGER_OK, "the running manager did not join its lanes")
     check(slotp\lane = 0, "the lane was not released")
-    check(run_api\count(@ running) = 0U, "a closed running schedule still holds records")
-    check(lmx_post_close(@ arena, @ mail2) = c.LMX_POST_OK, "the second mailbox did not close")
+    check(run_api\count(@ running) = 1U, "running manager invented a second membership set")
+    check(lmx_thread_child_remove(parent_thread, thread2) = c.LMX_THREAD_OK && run_api\count(@ running) = 0U, "parent could not remove the lane child from its sole Array")
+    check(lmx_post_close(@ arena2, mail2) = c.LMX_POST_OK, "the second mailbox did not close")
+    check(lmx_arena_release(@ arena2) = 0, "the second Thread arena did not release")
 
     # 6 - liveness: the wait ends by itself, and it ends on the CYCLE's clock -- the
     # readings below are handed in, so this is deterministic and needs no sleeping.  The
     # last pair is the clock's wrap: `now - started` is modulo 2^32, so a wait that began
     # just before the wrap still ends correctly after it.
-    check(lmx_schedule_wait(@ slot, 100U) = c.LMX_SCHEDULE_OK, "the record did not start waiting")
-    check(lmx_schedule_tick(@ slot, 101U) = c.LMX_SCHEDULE_WAITING, "the wait aged past its limit too early")
-    check(lmx_schedule_tick(@ slot, 102U) = c.LMX_SCHEDULE_WAITING, "the wait aged past its limit too early")
-    check(lmx_schedule_tick(@ slot, 103U) = c.LMX_SCHEDULE_WAITING, "the wait aged past its limit too early")
-    check(lmx_schedule_tick(@ slot, 104U) = c.LMX_SCHEDULE_OVERDUE, "the wait did not end on its own limit")
-    check(lmx_schedule_tick(@ slot, 105U) = c.LMX_SCHEDULE_OVERDUE, "an overdue wait aged further")
-    check(lmx_schedule_wait(@ slot, 4294967294U) = c.LMX_SCHEDULE_OK, "the record did not start waiting at the clock's wrap")
-    check(lmx_schedule_tick(@ slot, 2U) = c.LMX_SCHEDULE_OVERDUE, "a wait did not survive the clock's wrap")
+    check(lmx_schedule_wait(slot, 100U) = c.LMX_SCHEDULE_OK, "the record did not start waiting")
+    check(lmx_schedule_tick(slot, 101U) = c.LMX_SCHEDULE_WAITING, "the wait aged past its limit too early")
+    check(lmx_schedule_tick(slot, 102U) = c.LMX_SCHEDULE_WAITING, "the wait aged past its limit too early")
+    check(lmx_schedule_tick(slot, 103U) = c.LMX_SCHEDULE_WAITING, "the wait aged past its limit too early")
+    check(lmx_schedule_tick(slot, 104U) = c.LMX_SCHEDULE_OVERDUE, "the wait did not end on its own limit")
+    check(lmx_schedule_tick(slot, 105U) = c.LMX_SCHEDULE_OVERDUE, "an overdue wait aged further")
+    check(lmx_schedule_wait(slot, 4294967294U) = c.LMX_SCHEDULE_OK, "the record did not start waiting at the clock's wrap")
+    check(lmx_schedule_tick(slot, 2U) = c.LMX_SCHEDULE_OVERDUE, "a wait did not survive the clock's wrap")
     # The clock itself: one source, monotonic, and the only place the platform is asked.
     check(lmx_clock_now() != 0U, "the clock answered nothing")
     check(lmx_clock_ticks() <= lmx_clock_ticks(), "the 32-bit reading went backwards")
@@ -328,7 +338,8 @@ fn: main () int
 
     # Close what this test opened: the first mailbox's node pool is an array of the
     # arena, so it goes before the arena itself.
-    check(lmx_post_close(@ arena, @ mailbox) = c.LMX_POST_OK, "the first mailbox did not close")
+    check(lmx_post_close(@ arena, mailbox) = c.LMX_POST_OK, "the first mailbox did not close")
+    check(lmx_post_close(@ arena, parent_mail) = c.LMX_POST_OK, "the scheduler parent mailbox did not close")
     check(lmx_arena_release(@ arena) = 0, "the arena did not release")
 
     c.printf("lmx_domain checks=%d failures=%d\n", checks, failures)

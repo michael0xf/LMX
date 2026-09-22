@@ -71,6 +71,9 @@ return: 0
 # One interval of one array joins the index.  This IS the insertion into the table, and
 # only the arena's manager performs it (lmx_arena_span is the only caller).
 fn: lmx_range_add (@: LmxArena arena; @: LmxPool array; @: void lo; @: void hi) int
+return: lmx_range_add_view(arena, arena, array, lo, hi)
+
+fn: lmx_range_add_view (@: LmxArena arena; @: LmxArena owner; @: LmxPool array; @: void lo; @: void hi) int
     @: LmxRange entry
     @: LmxRange slot
     size_t: at
@@ -78,17 +81,20 @@ fn: lmx_range_add (@: LmxArena arena; @: LmxPool array; @: void lo; @: void hi) 
     size_t: low 0U
     size_t: high
     size_t: mid
-    if: arena = 0
+    if: arena = 0 || owner = 0
         return: 1
     if: array = 0
         return: 1
     if: array\stride = 0U
         return: 1
+    # A foreign row is a non-owning immutable view.  Keep this invariant at the primitive
+    # boundary as well as in lmx_range_import, so no direct caller can publish a mutable
+    # foreign pool into another arena's type index.
+    if: owner != arena && array\sealed = 0U
+        return: 1
     if: lo = 0
         return: 1
     if: hi <= lo
-        return: 1
-    if: lmx_range_reserve(arena, arena\count + 1U) != 0
         return: 1
     # The entry names ONE array and its interval; stride, kind and type are the array's
     # and stay there.  The table is kept SORTED by base address, because the lookups
@@ -107,6 +113,17 @@ fn: lmx_range_add (@: LmxArena arena; @: LmxPool array; @: void lo; @: void hi) 
         ---
     ---
     at: low
+    # Re-importing the exact same physical range is a no-op.  Same addresses with a
+    # different descriptor or owner would make physical classification ambiguous.
+    if: at > 0U
+        slot: arena\index + (at - 1U)
+        if: slot\lo = lo && slot\hi = hi
+            if: slot\array = array && slot\owner = owner
+                return: 0
+            ---
+            return: 1
+        ---
+    ---
     # An address falls in exactly ONE array of the arena (6.5), so two arrays may not
     # share a cell.  Touching intervals are fine (half-open); overlapping ones would make
     # both the lookup and the retirement ambiguous, and they are refused here rather than
@@ -124,6 +141,11 @@ fn: lmx_range_add (@: LmxArena arena; @: LmxPool array; @: void lo; @: void hi) 
             return: 1
         ---
     ---
+    # Reserve only after duplicate/overlap validation.  An idempotent import therefore
+    # cannot fail merely because growing an index that it does not need would fail.
+    if: arena\count = (cast: (size_t) -1) || lmx_range_reserve(arena, arena\count + 1U) != 0
+        return: 1
+    ---
     index: arena\count
     while: index > at
         entry: arena\index + index
@@ -131,12 +153,14 @@ fn: lmx_range_add (@: LmxArena arena; @: LmxPool array; @: void lo; @: void hi) 
         entry\lo: slot\lo
         entry\hi: slot\hi
         entry\array: slot\array
+        entry\owner: slot\owner
         index: index - 1U
     ---
     entry: arena\index + at
     entry\lo: lo
     entry\hi: hi
     entry\array: array
+    entry\owner: owner
     arena\count: arena\count + 1U
 return: 0
 
@@ -157,139 +181,29 @@ fn: lmx_range_drop (@: LmxArena arena; @: void lo; @: void hi) int
                 entry\lo: next\lo
                 entry\hi: next\hi
                 entry\array: next\array
+                entry\owner: next\owner
                 index: index + 1U
                 entry: next
             ---
             entry\lo: 0
             entry\hi: 0
             entry\array: 0
+            entry\owner: 0
             arena\count: arena\count - 1U
             return: 0
         index: index + 1U
     ---
 return: 1
 
-# The whole mechanism: no tag is read, only membership is tested.  One entry per
-# interval of one array of the arena: the address says WHICH array contains it, and that
-# array's descriptor says what is in it.  Both are answered by the address alone.
-# THE STORE WHOSE RANGES ALSO ANSWER FOR THIS ARENA, or 0.  The liveness rule, written ONCE
-# (FABLE-RANGE-HOME-COMMON-20260920-02): a closed store keeps its address in every arena
-# bound to it -- there is no unbind, by design -- so the role flag is what says the link is
-# still worth following.  Lifecycle, not classification: what an address IS is decided by
-# the range tables, never by this flag.  Internal to this unit and not in the header: the
-# public question is lmx_range_home below.  It lives here and not in lmx_perm.o for the
-# reason the fallbacks call themselves: this module sits at the bottom of nearly every
-# closure in the kernel and must not gain a link edge.
-fn: lmx_range_store (@: LmxArena arena) @: LmxArena
-    if: arena = 0 || arena\perm = 0 || arena\perm\permanent = 0U
-        return: 0
-return: arena\perm
+# The whole mechanism: no value tag and no out-of-band store is read.  One sorted index
+# contains both local ranges and explicitly imported non-owning views.  The address selects
+# the entry; the entry's array gives representation/profile and its owner gives lifetime.
 
-fn: lmx_range_classify (@: LmxArena arena; @: void p) int
-    @: LmxRange entry
-    size_t: low 0U
-    size_t: high
-    size_t: mid
-    # `arena\index = 0` IS NOT A REFUSAL HERE.  A freshly bound child or letter arena has allocated
-    # nothing yet, and "I own no ranges" is not a reason to withhold an answer when a store is
-    # bound -- it is the reason the fallback below exists.  Null arena and null address still return
-    # at once.  lmx_range_pool keeps the opposite reading on purpose: there, an empty index IS the
-    # answer, because the question is ownership.
-    if: arena = 0 || p = 0
-        return: c.LMX_KIND_NONE
-    high: arena\count
-    while: low < high
-        mid: low + (high - low) / 2U
-        entry: arena\index + mid
-        if: p < entry\lo
-            high: mid
-        else:
-            if: p < entry\hi
-                return: entry\array\kind
-            ---
-            low: mid + 1U
-        ---
-    ---
-    # LOCAL FIRST, THEN THE BOUND STORE (LMX-ETERNAL-R0-44D).  A branch qualified
-    # `independent: const: immutable` lives in the runtime's permanent store, NOT in this
-    # arena, and a pointer to it may occur in any Message -- so its KIND must be visible from
-    # here.  The store's own link is 0 (lmx_perm_open leaves it so), therefore this call
-    # bisects the store LOCALLY and stops one step later instead of recursing.
-    #
-    # It calls ITSELF rather than lmx_perm_classify on purpose: a call into lmx_perm.o would
-    # add a link edge to every program that links lmx_range.o, and this module sits at the
-    # bottom of nearly every closure in the kernel.  Same act, no new edge.
-    # AND THE STORE MUST STILL BE ONE: lmx_range_store above is where that is decided, once.
-    if: lmx_range_store(arena) != 0
-        return: lmx_range_classify(lmx_range_store(arena), p)
-    ---
-return: c.LMX_KIND_NONE
-
-# Which element type the array containing the address holds.  The same bisection, read
-# from the descriptor the entry names.
-fn: lmx_range_type_of (@: LmxArena arena; @: void p) int
-    @: LmxRange entry
-    size_t: low 0U
-    size_t: high
-    size_t: mid
-    # Same reading as in classify: an empty LOCAL index is not a refusal, it is a reason to ask the
-    # bound store (see the long note there).
-    if: arena = 0 || p = 0
-        return: c.LMX_TYPE_NONE
-    high: arena\count
-    while: low < high
-        mid: low + (high - low) / 2U
-        entry: arena\index + mid
-        if: p < entry\lo
-            high: mid
-        else:
-            if: p < entry\hi
-                return: entry\array\type
-            ---
-            low: mid + 1U
-        ---
-    ---
-    # Same split as in classify: the TYPE of a store-resident address is part of what is
-    # visible from a Message, while OWNERSHIP is not (see lmx_range_pool, which stays local).
-    if: lmx_range_store(arena) != 0
-        return: lmx_range_type_of(lmx_range_store(arena), p)
-    ---
-return: c.LMX_TYPE_NONE
-
-# How many bytes one entry of that array occupies.  Read from the same entry, never
-# guessed from the address arithmetic; 0 when the address lies in no array of the arena.
-fn: lmx_range_stride (@: LmxArena arena; @: void p) size_t
-    @: LmxRange entry
-    size_t: low 0U
-    size_t: high
-    size_t: mid
-    # Same reading again: an empty LOCAL index falls through to the bound store.
-    if: arena = 0 || p = 0
-        return: 0U
-    high: arena\count
-    while: low < high
-        mid: low + (high - low) / 2U
-        entry: arena\index + mid
-        if: p < entry\lo
-            high: mid
-        else:
-            if: p < entry\hi
-                return: entry\array\stride
-            ---
-            low: mid + 1U
-        ---
-    ---
-    if: lmx_range_store(arena) != 0
-        return: lmx_range_stride(lmx_range_store(arena), p)
-    ---
-return: 0U
-
-# The DESCRIPTOR of the array that contains this address: the array itself, with its
-# stride, kind and type.  This is what a classifier hands back to code that then casts
-# the pointer and writes straight into the cell, because a cell's address never changes
-# (verbatim: "_Получив дескриптор типа код сразу делает приведение типа указателя и
-# пишет напрямую в ячейку_ _Это обязательно_").  Null when no array of the arena has it.
-fn: lmx_range_pool (@: LmxArena arena; @: void p) @: LmxPool
+# The one bisection shared by both questions below. It answers only which REGISTERED
+# interval contains `p`; it does not yet say that `p` is a language-level cell. The
+# allocator needs the interval question for an empty-but-registered chunk, while every
+# public typing question needs the stricter live-cell question.
+fn: lmx_range_entry_at (@: LmxArena arena; @: void p) @: LmxRange
     @: LmxRange entry
     size_t: low 0U
     size_t: high
@@ -304,31 +218,214 @@ fn: lmx_range_pool (@: LmxArena arena; @: void p) @: LmxPool
             high: mid
         else:
             if: p < entry\hi
-                return: entry\array
+                return: entry
             ---
             low: mid + 1U
         ---
     ---
 return: 0
 
-# WHICH RANGE TABLE ANSWERS FOR AN ADDRESS: this arena, the live permanent store it is bound
-# to, or none (0).  The qualified type `independent: const: immutable` IS membership in the
-# store's ranges (lmx_perm.h.lm1), so this is the one place that question is asked, instead
-# of being spelled by hand wherever it is needed.  It names no kind, reads no flag of a
-# value and knows no qualifier: membership is the strictly local pool question, put to each
-# table in turn, and the two tables can never both say yes.
-#
-# classify / type_of / stride above do NOT call this: they have just missed locally, and
-# going through here would bisect a store address four times instead of two on the path the
-# walk takes at every entry.  What they share with it is lmx_range_store -- the liveness
-# rule -- and that is the one thing that was written by hand in more than one place.
+# A registered interval's descriptor, irrespective of how many cells of that chunk have
+# been handed out. This is allocator bookkeeping, not value classification: an empty
+# first chunk must still be reused by lmx_pool_take_n instead of being mistaken for an
+# unregistered chunk.  It answers only for local ownership: an imported view must never
+# make the allocator adopt a foreign chunk.
+fn: lmx_range_interval_pool (@: LmxArena arena; @: void p) @: LmxPool
+    @: LmxRange entry
+    entry: lmx_range_entry_at(arena, p)
+    if: entry = 0 || entry\owner != arena
+        return: 0
+return: entry\array
+
+# The exact live cell whose START address is `p`, or null. A range covers the whole
+# allocated chunk, including spare capacity, so interval membership alone is insufficient:
+# after bisection, use that interval's own base and the descriptor's stride, find the
+# corresponding chunk, require cell alignment and require the cell index to be below that
+# chunk's logical count. Matching by entry.lo (not by a cumulative count) is what keeps
+# this correct for one array spread over non-contiguous chunks.
+fn: lmx_range_cell_pool (@: LmxArena arena; @: void p) @: LmxPool
+    @: LmxRange entry
+    @: LmxPool array
+    @: LmxChunk chunk
+    size_t: offset
+    entry: lmx_range_entry_at(arena, p)
+    if: entry = 0 || entry\array = 0
+        return: 0
+    array: entry\array
+    if: array\stride = 0U
+        return: 0
+    ---
+    chunk: array\head
+    while: chunk != 0
+        if: chunk\base = entry\lo
+            if: chunk\count > chunk\capacity
+                return: 0
+            ---
+            offset: (cast: (size_t) p) - (cast: (size_t) entry\lo)
+            if: offset % array\stride != 0U
+                return: 0
+            if: offset / array\stride >= chunk\count
+                return: 0
+            ---
+            return: array
+        ---
+        chunk: chunk\next
+    ---
+return: 0
+
+fn: lmx_range_classify (@: LmxArena arena; @: void p) int
+    @: LmxPool array
+    if: arena = 0 || p = 0
+        return: c.LMX_KIND_NONE
+    array: lmx_range_cell_pool(arena, p)
+    if: array != 0
+        return: array\kind
+    ---
+return: c.LMX_KIND_NONE
+
+# Which element type the array containing the address holds.  The same bisection, read
+# from the descriptor the entry names.
+fn: lmx_range_type_of (@: LmxArena arena; @: void p) int
+    @: LmxPool array
+    if: arena = 0 || p = 0
+        return: c.LMX_TYPE_NONE
+    array: lmx_range_cell_pool(arena, p)
+    if: array != 0
+        return: array\type
+    ---
+return: c.LMX_TYPE_NONE
+
+# How many bytes one entry of that array occupies.  Read from the same entry, never
+# guessed from the address arithmetic; 0 when the address lies in no array of the arena.
+fn: lmx_range_stride (@: LmxArena arena; @: void p) size_t
+    @: LmxPool array
+    if: arena = 0 || p = 0
+        return: 0U
+    array: lmx_range_cell_pool(arena, p)
+    if: array != 0
+        return: array\stride
+    ---
+return: 0U
+
+# The DESCRIPTOR of the array that contains this address: the array itself, with its
+# stride, kind and type.  This is what a classifier hands back to code that then casts
+# the pointer and writes straight into the cell, because a cell's address never changes
+# (verbatim: "_Получив дескриптор типа код сразу делает приведение типа указателя и
+# пишет напрямую в ячейку_ _Это обязательно_").  Null when no array of the arena has it.
+fn: lmx_range_pool (@: LmxArena arena; @: void p) @: LmxPool
+    @: LmxRange entry
+    if: lmx_range_cell_pool(arena, p) = 0
+        return: 0
+    entry: lmx_range_entry_at(arena, p)
+    if: entry = 0 || entry\owner != arena
+        return: 0
+return: entry\array
+
+# True owner of a live cell selected by this index.  Imported ranges therefore answer their
+# foreign owner, while allocator/GC ownership continues to use lmx_range_pool and sees only
+# local ranges.
 fn: lmx_range_home (@: LmxArena arena; @: void p) @: LmxArena
-    @: LmxArena store 0
+    @: LmxRange entry
     if: arena = 0 || p = 0
         return: 0
-    if: lmx_range_pool(arena, p) != 0
-        return: arena
-    store: lmx_range_store(arena)
-    if: store != 0 && lmx_range_pool(store, p) != 0
-        return: store
+    if: lmx_range_cell_pool(arena, p) = 0
+        return: 0
+    entry: lmx_range_entry_at(arena, p)
+    if: entry = 0
+        return: 0
+return: (cast: (@: LmxArena) entry\owner)
+
+fn: lmx_range_profile (@: LmxArena arena; @: void p) @: Lmx
+    @: LmxPool array lmx_range_cell_pool(arena, p)
+    if: array = 0
+        return: 0
+return: array\profile
+
+# Import is deliberately a range-table operation, not an arena attachment.  Only sealed
+# arrays may cross owner boundaries; their blocks, descriptors and array-list membership
+# stay with the true owner.  Since source may itself contain imported views, copying each
+# entry's recorded owner makes the operation transitive.  Exact repeats are accepted by
+# lmx_range_add_view and do not consume another index row.
+fn: lmx_range_import_selected (@: LmxArena arena; @: LmxArena source; @: Lmx profile; int: all_profiles) int
+    @: LmxRange entry
+    @: LmxRange present
+    size_t: index 0U
+    size_t: scan 0U
+    size_t: needed 0U
+    int: exact 0
+    int: selected 0
+    if: arena = 0 || source = 0
+        return: 1
+    if: arena = source
+        return: 0
+    # Preflight the complete view before changing the borrower.  A caller must never see
+    # half of a type view merely because a later interval conflicts or index allocation
+    # fails.  Existing exact rows are retained and do not count toward the reservation.
+    while: index < source\count
+        entry: source\index + index
+        selected: 0
+        if: entry\array != 0 && entry\array\sealed != 0U
+            if: all_profiles != 0 || entry\array\profile = profile
+                selected: 1
+            ---
+        ---
+        if: selected != 0
+            exact: 0
+            scan: 0U
+            while: scan < arena\count
+                present: arena\index + scan
+                if: entry\lo < present\hi && entry\hi > present\lo
+                    if: entry\lo = present\lo && entry\hi = present\hi && entry\array = present\array && entry\owner = present\owner
+                        exact: 1
+                    else:
+                        return: 1
+                    ---
+                    break
+                ---
+                scan: scan + 1U
+            ---
+            if: exact = 0
+                if: needed = (cast: (size_t) -1)
+                    return: 1
+                needed: needed + 1U
+            ---
+        ---
+        index: index + 1U
+    ---
+    if: needed > (cast: (size_t) -1) - arena\count
+        return: 1
+    if: lmx_range_reserve(arena, arena\count + needed) != 0
+        return: 1
+    ---
+    # The source index is internally non-overlapping and the preflight validated every
+    # destination overlap.  With capacity reserved, this pass cannot expose a partial
+    # import on an expected error path.
+    index: 0U
+    while: index < source\count
+        entry: source\index + index
+        selected: 0
+        if: entry\array != 0 && entry\array\sealed != 0U
+            if: all_profiles != 0 || entry\array\profile = profile
+                selected: 1
+            ---
+        ---
+        if: selected != 0
+            if: lmx_range_add_view(arena, entry\owner, entry\array, entry\lo, entry\hi) != 0
+                return: 1
+            ---
+        ---
+        index: index + 1U
+    ---
 return: 0
+
+# Explicit whole-view import, used when a caller intentionally grants every sealed physical
+# domain visible in source (for example, a module-level import).
+fn: lmx_range_import (@: LmxArena arena; @: LmxArena source) int
+return: lmx_range_import_selected(arena, source, 0, 1)
+
+# Narrow import used by a profiled copy/merge: grant only arrays carrying the exact physical
+# profile that was named.  Other sealed profiles and ordinary sealed arrays remain invisible.
+fn: lmx_range_import_profile (@: LmxArena arena; @: LmxArena source; @: Lmx profile) int
+    if: profile = 0
+        return: 1
+return: lmx_range_import_selected(arena, source, profile, 0)

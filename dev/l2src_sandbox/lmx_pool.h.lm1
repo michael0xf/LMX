@@ -21,15 +21,23 @@ predef: "l2src/lmx_arena.h.lm1"
 prototype:
     fn: lmx_pool_add_chunk (@: LmxArena arena; @: LmxPool pool) int
     fn: lmx_pool_open (@: LmxArena arena; @: LmxPool pool; size_t: stride; size_t: chunk_capacity; int: kind; int: type) int
+    # A nonzero profile is an ordinary graph Structure already visible in arena's
+    # local/imported address index; arbitrary or activation-local pointers are refused.
+    fn: lmx_pool_open_profiled (@: LmxArena arena; @: LmxPool pool; size_t: stride; size_t: chunk_capacity; int: kind; int: type; @: Lmx profile) int
     # ONE array of the arena holding exactly `bytes` of storage for `bytes / stride`
     # cells, which the arena allocates and owns: the payload block joins the arena's
     # block list, the descriptor record joins it as the array's own, and the array's
     # interval joins the index.  This is how a constructor gets its cell -- the storage
     # of an array of the arena is the arena's, never the caller's.
     fn: lmx_pool_make (@: LmxArena arena; size_t: bytes; size_t: stride; int: kind; int: type) @: LmxPool
+    fn: lmx_pool_make_profiled (@: LmxArena arena; size_t: bytes; size_t: stride; int: kind; int: type; @: Lmx profile) @: LmxPool
     # The same descriptor over caller-provided records and caller-owned storage: nothing
     # is owned or freed, and the array joins the arena and the index all the same.
     fn: lmx_pool_over (@: LmxArena arena; @: LmxPool pool; @: LmxChunk chunk; @: void base; size_t: bytes; size_t: stride; int: kind; int: type) int
+    # Seal after construction.  Sealing is only lifecycle/GC policy: the optional profile
+    # was selected independently when the array was opened/made and is never inferred here.
+    fn: lmx_pool_seal (@: LmxPool pool) int
+    fn: lmx_pool_is_sealed (@: LmxPool pool) int
     fn: lmx_pool_take (@: LmxArena arena; @: LmxPool pool) @: void
     # `count` consecutive cells of one array, in one chunk.  The array grows when the
     # last chunk cannot seat them all, and growth ADDS a chunk (never reallocates), so an

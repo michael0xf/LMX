@@ -16,8 +16,8 @@ predef: "l2src/lmx_implements.h.lm1"
 # never handed to a native entry -- and it is not nested mode dispatch.
 #
 # WHAT IDENTITY IS.  Everything here is PHYSICAL; nothing is a number and nothing is text:
-#   * the RECORD is a cell of an arena -- the permanent store, for a translation-known
-#     primitive -- and holds {fn, signature, owner};
+#   * the RECORD is a cell of an arena -- an ordinary sealed physically profiled range for
+#     a translation-known primitive -- and holds {fn, signature, owner};
 #   * the SIGNATURE is itself a physical record: the typed input list, built once and shared,
 #     the way a role table is built (lmx_walk.lm1:29-44 is the working example).  It is NOT an
 #     LmxMethod: that record's `sig` is an unsigned DISPATCH contract, and a numeric signature
@@ -29,17 +29,16 @@ predef: "l2src/lmx_implements.h.lm1"
 #     (LMX_DOMAIN_KIND_PRIMITIVE) -- the domain question everything else in this kernel asks.
 #     No numeric primitive kind is stored, no runtime text, nothing on the node.
 #
-# STORE PLACEMENT, and the property it buys for free.  A record taken from the permanent store
-# (`lmx_perm_store_of(arena)`) is process-lifetime: it classifies from every Message bound to
-# that store (lmx_range.lm1:188-226 -- local first, then the bound store) and it is a copy
-# TERMINAL by that membership alone (lmx_graph_copy_owned.lm1:201-202), so a copied graph shares
-# the record by address exactly as it shares a CALLABLE or an OP record.  No copy rule is added
-# here for it, and none is needed.
+# PROFILED PLACEMENT.  A translation-known record occupies an ordinary sealed range carrying
+# the exact physical receiver-profile identity.  A Message imports that range as a non-owning
+# view, and a profiled graph copy retains the record only when the caller names the same physical
+# profile.  Sealing, foreign ownership, kind/type and `parent = 0` are not substitutes for that
+# identity.  There is no process-global store and no implicit arena binding.
 #
-# THE STORE-WRITE RULE, the condition that keeps this insert from becoming an escape hole.  The
-# store is immutable by invariant, and today the only way a body could write it is refused at
+# THE IMMUTABLE-PROFILE WRITE RULE, the condition that keeps this insert from becoming an escape
+# hole.  A qualified range is immutable by invariant, and today the only way a body could write it is refused at
 # PREPARE (lmx_walk.h.lm1:142-148, the PUT/SET refusals).  A primitive whose OWNER is
-# store-resident is a NEW way to write the store from inside an activation, so the same refusal
+# in that exact immutable profile is a NEW way to write it from inside an activation, so the same refusal
 # is extended to it -- and asked in the COUNTING PASS ONLY, never at activation, because
 # lmx_walk_eternal's own contract is "asked only while a body is prepared, never by an
 # activation"; moving that question to the hot path for efficiency would break the contract
@@ -76,15 +75,15 @@ struct: LmxPrimitive
 end: LmxPrimitive
 
 prototype:
-    # The registry of a runtime's primitives: a Structure whose child k is THE record of
-    # primitive k, made once in the store -- the same shape as the roles table, and for the same
+# The registry of a runtime's primitives: a Structure whose child k is THE record of
+    # primitive k, made in its ordinary owner arena -- the same shape as the roles table, and for the same
     # reason: a slot says where a record is, and a node names the record by address.  WHICH
     # primitives exist, and in which slot, is registration's act and not this unit's.
-    fn: lmx_primitive_registry_open (@: LmxArena store; size_t: count; @@: Lmx out_registry) int
-    # Admit one primitive: take a cell of the store's primitive domain, fill its three fields,
+    fn: lmx_primitive_registry_open (@: LmxArena arena; size_t: count; @@: Lmx out_registry) int
+    # Admit one primitive: take a cell of the arena's primitive domain, fill its three fields,
     # and put its ADDRESS into the registry's slot.  Filling a slot that already holds a record
     # is allowed and IS the whole of admission here; the record it replaced is left untouched.
-    fn: lmx_primitive_register (@: LmxArena store; @: Lmx registry; size_t: slot; LmxPrimitiveEntry: fn; @: Lmx signature; @: Lmx owner; @@: Lmx out_record) int
+    fn: lmx_primitive_register (@: LmxArena arena; @: Lmx registry; size_t: slot; LmxPrimitiveEntry: fn; @: Lmx signature; @: Lmx owner; @@: Lmx out_record) int
     # The record of slot k, or 0.  A lookup, never a check: what a record IS is answered by the
     # arena that holds it (LMX_DOMAIN_KIND_PRIMITIVE), never by this call.
     fn: lmx_primitive_record (@: Lmx registry; size_t: slot) @: Lmx

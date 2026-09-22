@@ -55,7 +55,7 @@ Author 2026-09-20: copy the freshest tree into L1 **root**, commit and push. Don
 
 Author, `LMX_blog/2026-09-19.md`: atomic handshake flags belong with **multithreaded access in the parent arena**, “without synchronization”, like immutable constant branches.
 
-Implementation in this snapshot: `running`, `success`, `handoff_ready` are `uint_fast8_t` fields of closed `LmxMsg` (`l2src/lmx_message.h.lm1`). Cross-lane handshake **cell** `alive` lives on parent-owned `LmxLink` in the **parent arena** (`lmx_thread.h.lm1`). Comments mention relaxed atomic load for `running`/`handoff_ready` where it matches a volatile load.
+Current `dev` implementation: `running`, `success`, and `handoff_ready` are fields of the closed `LmxMsg` prefix (`dev/l2src_sandbox/lmx_message.h.lm1`). The `alive` handshake and inherited `close_deadline` words live in the child's exact `LmxThread` record; its parent reaches them through the sole physical-reference Array in the graph. The stable `l2src` snapshot still carries the older layout and must not be mistaken for the accepted model.
 
 Fact vs intent are both recorded. Placement of the Message flags themselves is not rewritten to match the blog.
 

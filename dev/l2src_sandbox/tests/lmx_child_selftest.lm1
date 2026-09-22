@@ -23,6 +23,8 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 #   * the child has its OWN arena: its record and its graph classify there and NOWHERE
 #     else -- the parent's index does not answer for a child's addresses;
 #   * the child's graph is a COPY of the source, not the source itself;
+#   * the executable child is one Thread allocation whose first by-value Message has the same
+#     physical address and common Message kind, while the exact range type remains Thread;
 #   * a reservation is INVISIBLE: the parent's slot is untouched until the end-turn boundary
 #     publishes it, which is what "до успешной публикации turn'а родителя ребёнок недоступен"
 #     means mechanically (model 26) -- and reserving OFF a turn is refused;
@@ -43,33 +45,58 @@ fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxArena: src
     LmxArena: child
+    LmxArena: unjoined
     @: LmxArena src_at
     @: LmxArena child_at
+    @: LmxArena unjoined_at
     @: char table 0
     @: void int_cell 0
     @: Lmx parent 0
     @: Lmx source 0
+    @: Lmx owner_graph 0
     @: Lmx bad 0
+    @: Lmx wrong_child_graph 0
+    @: Lmx unjoined_result 0
+    @: Lmx thread_source 0
+    @: LmxArrayDesc thread_source_children 0
+    @: LmxArrayDesc owner_children 0
+    @: LmxMsg produced_message 0
+    @: LmxThread produced_thread 0
+    @: LmxPost produced_mail 0
+    @: LmxSchedule produced_slot 0
     @: Lmx bad_child 0
     @: void raw 0
     @: LmxMsg message 0
     @: LmxMsg second 0
     @: LmxMsg refused 0
-    @: LmxMsg turn_letter 0
-    LmxPost: mail
-    LmxSchedule: slot_pad
+    @: LmxMsg forged 0
+    @: LmxMsg unjoined_message 0
+    @: LmxPool forged_pool 0
+    @: char forged_base 0
+    @: size_t forged_neighbour 0
+    @: LmxReservation prepared_node 0
+    @: LmxPost mail 0
+    @: LmxSchedule slot_pad 0
     @: LmxThread turn_owner 0
     @: LmxThread thread 0
+    @: LmxThread second_thread 0
+    @: LmxPost message_mail 0
+    @: LmxSchedule message_slot 0
+    @: LmxPost second_mail 0
+    @: LmxSchedule second_slot 0
     size_t: held 0U
+    size_t: forged_neighbour_value 1432778632U
     int: failures
     int: raw_value 7
     if: counts = 0
         return: 2
     memset((cast: (@: void) (@ src)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ child)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ unjoined)), 0, c.sizeof(c.LmxArena))
     src_at: @ src
     child_at: @ child
-    if: lmx_arena_open(@ src) != 0 || lmx_arena_open(@ child) != 0
+    unjoined_at: @ unjoined
+    if: lmx_arena_open(@ src) != 0 || lmx_arena_open(@ child) != 0 || lmx_arena_open(@ unjoined) != 0
         fputs("lmx: arena open failed\n", l1_stdout())
         free(counts)
         return: 2
@@ -89,62 +116,99 @@ fn: main () int
         return: 2
     ---
     child_check(counts, lmx_arena_refs_open_owned(@ src, parent, 2U) = 0, "the parent opened its slots")
-    child_check(counts, lmx_arena_refs_open_owned(@ src, source, 2U) = 0, "the template opened its slots")
+    child_check(counts, lmx_arena_refs_open_owned(@ src, source, 3U) = 0, "the template opened its fields")
     child_check(counts, lmx_arena_refs_open_owned(@ src, bad, 1U) = 0, "the refusing template opened its slots")
     lmx_arena_ref_store(source, 0U, lmx_char_cell_known(table, 33))
     lmx_arena_ref_store(source, 1U, int_cell)
+    child_check(counts, lmx_thread_children_field_new(@ src, source, 2U) != 0, "the template has no ordinary children Array")
     raw: (cast: (@: void) (@ raw_value))
     lmx_arena_ref_store(bad, 0U, raw)
 
-    # The turn that reserves: a Message of its own (a plain letter: the turn's owner is an L3
-    # Thread, and a reservation belongs to the turn it is made in), its mailbox, and its object.
-    turn_letter: (cast: (@: LmxMsg) lmx_arena_take(@ src, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
-    if: turn_letter = 0 || lmx_post_init(@ src, @ mail) != c.LMX_POST_OK
+    # The standard producer contract carries the children collection as an ordinary typed graph
+    # field before the Message is copied. The child constructor copies that field; Thread then
+    # discovers the unique physical descriptor by address-range type, with no reserved position.
+    thread_source: lmx_node_new_owned(@ src)
+    thread_source_children: lmx_array_grow_ref_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, @ src)
+    child_check(counts, thread_source != 0 && thread_source_children != 0 && lmx_arena_refs_open_owned(@ src, thread_source, 1U) = 0 && lmx_arena_ref_store(thread_source, 0U, (cast: (@: void) thread_source_children)) = 0, "producer graph carries ordinary children Array")
+    owner_graph: lmx_node_new_owned(@ src)
+    owner_children: lmx_array_grow_ref_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, @ src)
+    child_check(counts, owner_graph != 0 && owner_children != 0 && lmx_arena_refs_open_owned(@ src, owner_graph, 4U) = 0 && lmx_arena_ref_store(owner_graph, 0U, (cast: (@: void) owner_children)) = 0 && lmx_arena_ref_store(owner_graph, 1U, (cast: (@: void) parent)) = 0 && lmx_arena_ref_store(owner_graph, 2U, (cast: (@: void) source)) = 0 && lmx_arena_ref_store(owner_graph, 3U, (cast: (@: void) bad)) = 0, "turn owner graph carries its children Array and test roots")
+    produced_message: lmx_child_create(@ src, @ child, 0, thread_source)
+    produced_mail: (cast: (@: LmxPost) lmx_arena_take(@ child, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    produced_thread: (cast: (@: LmxThread) produced_message)
+    produced_slot: (cast: (@: LmxSchedule) lmx_arena_take(@ child, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    child_check(counts, produced_message != 0 && produced_mail != 0 && produced_thread != 0 && produced_slot != 0, "ordinary produced Thread storage exists")
+    child_check(counts, lmx_post_init(@ child, produced_mail) = c.LMX_POST_OK && lmx_schedule_init(produced_slot, @ child, (cast: (@: void) produced_thread), 8U) = c.LMX_SCHEDULE_OK && lmx_thread_init(@ child, produced_thread, produced_message\graph, produced_mail, produced_slot) = c.LMX_THREAD_OK, "ordinary produced Thread initialized")
+    child_check(counts, (cast: (@: void) produced_thread) = (cast: (@: void) produced_message) && lmx_thread_message(produced_thread) = produced_message, "Thread and embedded Message have one physical address")
+    child_check(counts, lmx_range_classify(@ child, (cast: (@: void) produced_message)) = c.LMX_DOMAIN_KIND_MSG_RECORD && lmx_range_type_of(@ child, (cast: (@: void) produced_thread)) = c.LMX_DOMAIN_THREAD, "Thread prefix has common Message kind and exact Thread type")
+    child_check(counts, lmx_thread_children_bind_graph(produced_thread, @ child) = c.LMX_THREAD_OK && lmx_thread_children(produced_thread) = (cast: (@: LmxArrayDesc) lmx_arena_ref_value(produced_message\graph, 0U)), "ordinary produced Thread bound exact graph-resident children Array")
+    child_check(counts, lmx_child_create(@ src, @ child, lmx_arena_ref_cell(produced_message\graph, 0U), source) = 0, "a foreign physical result cell was accepted")
+
+    # The turn that reserves is one by-value-prefix Thread. Its graph is the ordinary source graph,
+    # which already carries the sole children Array as a physical field.
+    mail: (cast: (@: LmxPost) lmx_arena_take(@ src, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    slot_pad: (cast: (@: LmxSchedule) lmx_arena_take(@ src, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: mail = 0 || slot_pad = 0 || lmx_post_init(@ src, mail) != c.LMX_POST_OK
         fputs("lmx: the turn's world was not built\n", l1_stdout())
         free(counts)
         return: 2
     ---
-    turn_letter\running: 1
-    turn_letter\success: 0
-    turn_letter\handoff_ready: 0
-    turn_letter\graph: 0
-    turn_letter\index: 1U
-    # DETERMINISTIC COVERAGE of the accepted attach-before-init contract, not a fix for a
-    # demonstrated current crash of this file and not memset-before-attach.  The unpoisoned caller
-    # already passes across recorded image paths; a by-value LmxSchedule still arrives holding
-    # stack leftovers, and poisoning with 0xAA makes an omit-init mutant path-independent instead
-    # of depending on what the stack happened to hold.  Attaching WHILE POISONED keeps the contract
-    # exercised: lmx_thread_attach accepts a merely allocated record and must not read slot\arena
-    # (lmx_thread.h.lm1:183-185; lmx_thread.lm1:40-71 stores the pointer only).
-    memset((cast: (@: void) (@ slot_pad)), 170, c.sizeof(c.LmxSchedule))
-    turn_owner: (cast: (@: LmxThread) malloc(c.sizeof(c.LmxThread)))
-    if: turn_owner = 0 || lmx_thread_attach(turn_owner, turn_letter, @ mail, @ slot_pad) != c.LMX_THREAD_OK
-        fputs("lmx: the turn's object did not attach\n", l1_stdout())
+    # The schedule is deliberately poisoned before its explicit initialization. Thread
+    # construction receives the owner arena directly, so it never infers allocation identity from
+    # stale schedule bytes; the schedule is initialized below before the turn can read it.
+    memset((cast: (@: void) slot_pad), 170, c.sizeof(c.LmxSchedule))
+    turn_owner: (cast: (@: LmxThread) lmx_arena_take(@ src, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
+    if: turn_owner = 0
+        fputs("lmx: the turn's object was not allocated\n", l1_stdout())
         free(counts)
         return: 2
     ---
-    # ... and only NOW is it initialized, after a successful attach and before any boundary can read
-    # it.  The existing lmx_schedule_init below is kept unchanged.  Poison-then-attach-then-init is
-    # the accepted -68 shape (6dced74); a memset-before-attach zeroing would drop attach coverage.
-    # The record carries its own band from creation, and the end-turn boundary collects THAT band.
+    # The record carries its explicit band from construction, and the end-turn boundary collects
+    # that band.
     # This turn's world is built in the source arena and the test keeps its values in C locals, so
     # the turn is given NO band (zero): its boundary then publishes and drops but collects nothing
     # (lmx_turn_end), which is the honest state of a turn whose creator names no band.  A creator
     # that owns an arena names it, and the schedule-band test drives that case.
-    child_check(counts, lmx_schedule_init(@ slot_pad, 0, (cast: (@: void) turn_owner), 8U) = c.LMX_SCHEDULE_OK, "the turn's record did not initialize")
-    child_check(counts, lmx_child_reserve(turn_owner, @ src, @ child, parent, 0U, source) = 0, "a reservation off a turn was accepted")
+    child_check(counts, lmx_schedule_init(slot_pad, @ src, (cast: (@: void) turn_owner), 8U) = c.LMX_SCHEDULE_OK && lmx_thread_init(@ src, turn_owner, owner_graph, mail, slot_pad) = c.LMX_THREAD_OK, "the turn's record did not initialize")
+    child_check(counts, lmx_thread_children_bind_graph(turn_owner, @ src) = c.LMX_THREAD_OK, "the turn did not bind its graph-resident children Array")
+    child_check(counts, lmx_child_reserve(turn_owner, @ src, @ child, lmx_arena_ref_cell(parent, 0U), source) = 0, "a reservation off a turn was accepted")
     child_check(counts, lmx_thread_enter(turn_owner) = c.LMX_THREAD_OK, "the reserving turn did not open")
 
     # 1. A reservation is invisible; the boundary publishes it.
-    message: lmx_child_reserve(turn_owner, @ src, @ child, parent, 0U, source)
+    message: lmx_child_reserve(turn_owner, @ src, @ child, lmx_arena_ref_cell(parent, 0U), source)
     child_check(counts, message != 0, "the child was reserved")
     if: message = 0
         free(counts)
         return: 2
     child_check(counts, lmx_arena_ref_value(parent, 0U) = 0, "the parent's slot names an unpublished child")
     child_check(counts, message\running = 1 && message\success = 0 && message\handoff_ready = 0, "the child starts running, unfinished and not handoff-safe")
-    child_check(counts, message\index = 1U, "the first child's index at the parent is 1")
     child_check(counts, message\graph != 0 && message\graph != source, "the child's graph is a copy, not the source")
+    # A standalone Message can have the same numeric address as a forged LmxThread pointer. Put it
+    # temporarily in this real reservation to prove lmx_child_thread rejects by exact range type
+    # before reading any Thread-tail field, then restore the real child.
+    forged_pool: lmx_pool_make(@ child, 2U * c.sizeof(c.LmxThread), c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD)
+    if: forged_pool != 0
+        forged_base: (cast: (@: char) forged_pool\head\base)
+        forged: (cast: (@: LmxMsg) forged_base)
+        forged_neighbour: (cast: (@: size_t) (forged_base + c.sizeof(c.LmxThread)))
+        \forged_neighbour: forged_neighbour_value
+    ---
+    prepared_node: (cast: (@: LmxReservation) turn_owner\prepared)
+    child_check(counts, forged != 0 && prepared_node != 0, "forged Message fixture exists")
+    if: forged != 0 && prepared_node != 0
+        prepared_node\message: forged
+        child_check(counts, lmx_child_thread(turn_owner, forged, (cast: (@: LmxThread) forged)) = c.LMX_CHILD_INVALID && \forged_neighbour = forged_neighbour_value, "full-size standalone Message was accepted as child Thread or corrupted its neighbour")
+        prepared_node\message: message
+    ---
+    thread: (cast: (@: LmxThread) message)
+    wrong_child_graph: lmx_node_new_owned(@ child)
+    message_mail: (cast: (@: LmxPost) lmx_arena_take(@ child, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    message_slot: (cast: (@: LmxSchedule) lmx_arena_take(@ child, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    child_check(counts, wrong_child_graph != 0 && message_mail != 0 && message_slot != 0 && lmx_post_init(@ child, message_mail) = c.LMX_POST_OK, "the first child mechanisms exist")
+    child_check(counts, lmx_thread_init(@ child, thread, wrong_child_graph, message_mail, message_slot) = c.LMX_THREAD_INVALID && thread\mail = 0 && thread\slot = 0 && message\graph != wrong_child_graph, "child init rebound its copied graph")
+    child_check(counts, lmx_schedule_init(message_slot, @ src, (cast: (@: void) thread), 8U) = c.LMX_SCHEDULE_OK && lmx_thread_init(@ child, thread, message\graph, message_mail, message_slot) = c.LMX_THREAD_INVALID && thread\mail = 0 && thread\slot = 0, "child Thread accepted a schedule initialized for a foreign arena")
+    child_check(counts, lmx_schedule_init(message_slot, @ child, (cast: (@: void) thread), 8U) = c.LMX_SCHEDULE_OK && lmx_thread_init(@ child, thread, message\graph, message_mail, message_slot) = c.LMX_THREAD_OK, "the first child initialized after its schedule arena was corrected")
+    child_check(counts, lmx_child_thread(turn_owner, message, thread) = c.LMX_CHILD_OK, "the first child did not join with its correctly bound schedule")
     child_check(counts, lmx_thread_leave(turn_owner) = c.LMX_THREAD_OK, "the reserving turn did not close")
     child_check(counts, lmx_turn_end(turn_owner, lmx_clock_ticks()) = c.LMX_TURN_OK, "the boundary refused the reserving turn")
     child_check(counts, lmx_arena_ref_value(parent, 0U) = (cast: (@: void) message), "the boundary's store did not publish the child")
@@ -165,12 +229,15 @@ fn: main () int
 
     # 4. A second child: the same act, the next slot, the next index.
     child_check(counts, lmx_thread_enter(turn_owner) = c.LMX_THREAD_OK, "the second turn did not open")
-    second: lmx_child_reserve(turn_owner, @ src, @ child, parent, 1U, source)
+    second: lmx_child_reserve(turn_owner, @ src, @ child, lmx_arena_ref_cell(parent, 1U), source)
     child_check(counts, second != 0 && second != message, "the second child was reserved")
+    second_thread: (cast: (@: LmxThread) second)
+    second_mail: (cast: (@: LmxPost) lmx_arena_take(@ child, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    second_slot: (cast: (@: LmxSchedule) lmx_arena_take(@ child, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    child_check(counts, second_mail != 0 && second_slot != 0 && lmx_post_init(@ child, second_mail) = c.LMX_POST_OK && lmx_schedule_init(second_slot, @ child, (cast: (@: void) second_thread), 8U) = c.LMX_SCHEDULE_OK && lmx_thread_init(@ child, second_thread, second\graph, second_mail, second_slot) = c.LMX_THREAD_OK && lmx_child_thread(turn_owner, second, second_thread) = c.LMX_CHILD_OK, "the second child initialized its embedded Thread")
     child_check(counts, lmx_arena_ref_value(parent, 1U) = 0, "the second child is visible before its publication")
     child_check(counts, lmx_thread_leave(turn_owner) = c.LMX_THREAD_OK, "the second turn did not close")
     child_check(counts, lmx_turn_end(turn_owner, lmx_clock_ticks()) = c.LMX_TURN_OK, "the boundary refused the second turn")
-    child_check(counts, second\index = 2U, "the second child's index follows its slot")
     child_check(counts, lmx_arena_ref_value(parent, 1U) = (cast: (@: void) second), "the second slot names the second child")
 
     # 5. A refusal reserves nothing.  The template with a raw, unclassifiable child cannot be
@@ -179,7 +246,7 @@ fn: main () int
     #    prepared children stays empty.
     held: child_at\count
     child_check(counts, lmx_thread_enter(turn_owner) = c.LMX_THREAD_OK, "the refusing turn did not open")
-    refused: lmx_child_reserve(turn_owner, @ src, @ child, parent, 0U, bad)
+    refused: lmx_child_reserve(turn_owner, @ src, @ child, lmx_arena_ref_cell(parent, 0U), bad)
     child_check(counts, refused = 0, "a reservation over an unclassifiable child was accepted")
     child_check(counts, turn_owner\prepared = 0, "a refused reservation stayed in the turn's list")
     child_check(counts, lmx_arena_ref_value(parent, 0U) = (cast: (@: void) message), "the refused reservation left the slot alone")
@@ -187,16 +254,21 @@ fn: main () int
     child_check(counts, lmx_thread_leave(turn_owner) = c.LMX_THREAD_OK, "the refusing turn did not close")
     child_check(counts, lmx_turn_end(turn_owner, lmx_clock_ticks()) = c.LMX_TURN_OK, "the boundary refused the refusing turn")
 
-    # 6. Handoff: the arena of a finished child attaches to the parent's, so ONE index
+    # 6. A reserved Message that never joins its exact Thread is not a publishable category.
+    # Its private arena is released, the physical result cell is untouched, and the failed
+    # boundary empties the reservation list without adding membership.
+    unjoined_result: lmx_node_new_owned(@ src)
+    child_check(counts, unjoined_result != 0 && lmx_arena_refs_open_owned(@ src, unjoined_result, 1U) = 0, "unjoined result holder exists")
+    child_check(counts, lmx_thread_enter(turn_owner) = c.LMX_THREAD_OK, "the unjoined turn did not open")
+    unjoined_message: lmx_child_reserve(turn_owner, @ src, @ unjoined, lmx_arena_ref_cell(unjoined_result, 0U), source)
+    child_check(counts, unjoined_message != 0 && unjoined_at\count != 0U, "unjoined child was not reserved")
+    child_check(counts, lmx_thread_leave(turn_owner) = c.LMX_THREAD_OK, "the unjoined turn did not close")
+    child_check(counts, lmx_turn_end(turn_owner, lmx_clock_ticks()) = c.LMX_TURN_INVALID, "unjoined reservation did not fail its boundary")
+    child_check(counts, lmx_arena_ref_value(unjoined_result, 0U) = 0 && unjoined_at\count = 0U && unjoined_at\blocks = 0 && unjoined_at\arrays = 0 && turn_owner\prepared = 0 && lmx_thread_child_count(turn_owner) = 2U, "unjoined reservation published or leaked storage/membership")
+
+    # 7. Handoff: the arena of a finished child attaches to the parent's, so ONE index
     #    answers for both and nothing is copied.  The precondition is the child's own
     #    mark, written when it leaves its LAST turn -- an ordinary turn does not set it.
-    thread: (cast: (@: LmxThread) malloc(c.sizeof(c.LmxThread)))
-    if: thread = 0
-        fputs("lmx: the object could not be allocated\n", l1_stdout())
-        free(counts)
-        return: 2
-    ---
-    child_check(counts, lmx_thread_attach(thread, message, @ mail, @ slot_pad) = c.LMX_THREAD_OK, "the child's object attached")
     child_check(counts, lmx_thread_enter(thread) = c.LMX_THREAD_OK, "the child entered a turn")
     child_check(counts, lmx_thread_leave(thread) = c.LMX_THREAD_OK, "the child left its turn")
     child_check(counts, message\handoff_ready = 0, "an ordinary turn left the child handoff-safe")
@@ -211,9 +283,8 @@ fn: main () int
     child_check(counts, child_at\count = 0U && child_at\blocks = 0 && child_at\arrays = 0, "the child's arena is empty after the handoff")
 
     child_check(counts, lmx_arena_release(@ child) = 0 && child_at\count = 0U, "the child's arena released")
+    child_check(counts, lmx_arena_release(@ unjoined) = 0 && unjoined_at\count = 0U, "the unjoined arena released")
     child_check(counts, lmx_arena_release(@ src) = 0 && src_at\count = 0U, "the world's arena released")
-    free(thread)
-    free(turn_owner)
     failures: counts[1]
     c.printf("child checks=%d failures=%d\n", counts[0], failures)
     free(counts)

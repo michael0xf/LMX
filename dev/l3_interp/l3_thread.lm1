@@ -5,28 +5,164 @@ predef: "l2src/lmx_plan.lm1"
 predef: "l2src/lmx_scratch.lm1"
 predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_arena.lm1"
-predef: "l2src/lmx_perm.h.lm1"
 predef: "l2src/lmx_primitive.lm1"
-include: "<string.h>"
+include: "<string.h>" "<limits.h>"
 
 # Thread interpreted path: lmx_interp_apply -> lmx_walk_run.
 # Dispatch receives only the Thread. Per-turn L2 scratch/context are automatic.
 # args[0] = subject = message.graph (same pointer). out = 0.
 #
-# Role records live in the bound permanent store (bde9df8). Mail primitives are
-# the same: one LmxPrimitive each, registered once per store, named by address
-# from LMX_WALK_OP_PRIM nodes. Owner is the bound Thread (Message arena), never
-# a store-resident cell. A second Thread of that store is refused before assignment.
-# Slot 2 is success: write bound Thread message.success = 1. Registry capacity is 3.
+# Role records and mail primitives live in ordinary sealed typed ranges of the
+# bound Thread's own arena. Every such range carries the same exact physical
+# receiver-expression profile: an ordinary Lmx graph value allocated in that arena.
+# Another arena may explicitly import those sealed ranges as owner-preserving views;
+# no store, numeric identity, wrapper, merge or copy participates. Owner is the
+# bound Thread. A second bound Thread is refused before assignment. Slot 2 is
+# success: write bound Thread message.success = 1. Registry capacity is 3.
 
 @: LmxThread l3_bound_t 0
-@: LmxArena l3_bound_store 0
+@: LmxArena l3_bound_owner 0
+@: Lmx l3_bound_profile 0
 @: Lmx l3_bound_roles 0
 @: Lmx l3_bound_plan 0
 @: Lmx l3_bound_prim_reg 0
 @: Lmx l3_bound_mail_count 0
 @: Lmx l3_bound_mail_take 0
 @: Lmx l3_bound_success 0
+
+# The physical profile itself is an ordinary one-cell Structure range in the owner
+# arena. Its pool is distinct from the mutable graph's Structure pool and is sealed
+# immediately, so collection cannot retire the identity and later graph construction
+# remains possible.
+fn: l3_profile_open (@: LmxArena arena) @: Lmx
+    @: LmxPool pool 0
+    @: Lmx profile 0
+    if: arena = 0
+        return: 0
+    pool: lmx_pool_make(arena, c.sizeof(c.Lmx), c.sizeof(c.Lmx), c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT)
+    if: pool = 0 || pool\head = 0 || pool\head\base = 0
+        return: 0
+    profile: (cast: (@: Lmx) pool\head\base)
+    profile\parent: 0
+    profile\len: 0
+    profile\data: 0
+    # Bootstrap without a wrapper: before publication the one-cell pool can name the
+    # very graph value it contains. From this store onward even the profile identity's
+    # own range carries that exact physical identity, and the ordinary profile=0
+    # Structure allocator remains available for later mutable graph construction.
+    pool\profile: profile
+    if: lmx_pool_seal(pool) != 0
+        return: 0
+return: profile
+
+# A profiled Structure family may have the same representation/profile as the
+# self-profiled identity pool above.  It therefore opens its own exact one-cell array
+# directly instead of asking the arena's representation lookup, which would correctly
+# find the already sealed identity array first.
+fn: l3_profile_node_new (@: LmxArena arena; @: Lmx profile) @: Lmx
+    @: LmxPool pool 0
+    @: Lmx value 0
+    if: arena = 0 || profile = 0
+        return: 0
+    pool: lmx_pool_make_profiled(arena, c.sizeof(c.Lmx), c.sizeof(c.Lmx), c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT, profile)
+    if: pool = 0 || pool\head = 0 || pool\head\base = 0
+        return: 0
+    value: (cast: (@: Lmx) pool\head\base)
+    value\parent: 0
+    value\len: 0
+    value\data: 0
+return: value
+
+# Child slots are storage too. Keeping them in the exact profile avoids an
+# unprofiled back door through a profiled table.
+fn: l3_profile_refs_open (@: LmxArena arena; @: Lmx parent; size_t: children; @: Lmx profile) int
+    @: LmxPool refs 0
+    size_t: slot c.sizeof(@: void)
+    size_t: bytes 0U
+    if: arena = 0 || parent = 0 || profile = 0 || children = 0U
+        return: 1
+    if: parent\data != 0 || parent\len != 0 || children > (cast: (size_t) c.INT_MAX)
+        return: 1
+    if: children > ((cast: (size_t) -1) / slot)
+        return: 1
+    bytes: children * slot
+    refs: lmx_pool_make_profiled(arena, bytes, slot, c.LMX_KIND_CHILDREN, c.LMX_TYPE_REFS, profile)
+    if: refs = 0 || refs\head = 0 || refs\head\base = 0
+        return: 1
+    parent\data: refs\head\base
+    parent\len: (cast: (int) children)
+return: 0
+
+fn: l3_walk_roles_open_profiled (@: LmxArena arena; @: Lmx profile) @: Lmx
+    @: Lmx roles 0
+    @: LmxOp role 0
+    int: k 1
+    roles: l3_profile_node_new(arena, profile)
+    if: roles = 0 || l3_profile_refs_open(arena, roles, (cast: (size_t) c.LMX_WALK_OP_COUNT), profile) != 0
+        return: 0
+    while: k < c.LMX_WALK_OP_COUNT
+        role: (cast: (@: LmxOp) lmx_arena_take_profiled(arena, c.sizeof(c.LmxOp), c.LMX_DOMAIN_KIND_OP, c.LMX_DOMAIN_OP, profile))
+        if: role = 0
+            return: 0
+        role\code: k
+        if: lmx_arena_ref_store(roles, (cast: (size_t) k), (cast: (@: void) role)) != 0
+            return: 0
+        k: k + 1
+    ---
+return: roles
+
+fn: l3_plan_roles_open_profiled (@: LmxArena arena; @: Lmx profile) @: Lmx
+    @: Lmx roles 0
+    @@: void record 0
+    size_t: k 0U
+    roles: l3_profile_node_new(arena, profile)
+    if: roles = 0 || l3_profile_refs_open(arena, roles, (cast: (size_t) c.LMX_PLAN_ROLE_COUNT), profile) != 0
+        return: 0
+    while: k < (cast: (size_t) c.LMX_PLAN_ROLE_COUNT)
+        record: (cast: (@@: void) lmx_arena_take_profiled(arena, c.sizeof(@: void), c.LMX_DOMAIN_KIND_ROLE, c.LMX_DOMAIN_ROLE, profile))
+        if: record = 0
+            return: 0
+        \record: 0
+        if: lmx_arena_ref_store(roles, k, (cast: (@: void) record)) != 0
+            return: 0
+        k: k + 1U
+    ---
+return: roles
+
+fn: l3_primitive_registry_open_profiled (@: LmxArena arena; size_t: count; @: Lmx profile) @: Lmx
+    @: Lmx registry l3_profile_node_new(arena, profile)
+    if: registry = 0 || count = 0U || l3_profile_refs_open(arena, registry, count, profile) != 0
+        return: 0
+return: registry
+
+fn: l3_primitive_register_profiled (@: LmxArena arena; @: Lmx registry; size_t: slot; LmxPrimitiveEntry: fn; @: Lmx owner; @: Lmx profile) @: Lmx
+    @: LmxPrimitive record 0
+    if: arena = 0 || registry = 0 || fn = 0 || profile = 0 || slot >= (cast: (size_t) registry\len)
+        return: 0
+    record: (cast: (@: LmxPrimitive) lmx_arena_take_profiled(arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, profile))
+    if: record = 0
+        return: 0
+    record\fn: fn
+    record\signature: 0
+    record\owner: owner
+    if: lmx_arena_ref_store(registry, slot, (cast: (@: void) record)) != 0
+        return: 0
+return: (cast: (@: Lmx) record)
+
+# Construction is complete before sharing. Seal every local storage array carrying
+# this exact profile; representation kind/type are deliberately irrelevant here.
+fn: l3_profile_seal (@: LmxArena arena; @: Lmx profile) int
+    @: LmxPool pool 0
+    if: arena = 0 || profile = 0
+        return: 1
+    pool: arena\arrays
+    while: pool != 0
+        if: pool\profile = profile && lmx_pool_seal(pool) != 0
+            return: 1
+        ---
+        pool: pool\next
+    ---
+return: 0
 
 fn: l3_thread_roles (@: LmxThread t) @: Lmx
     if: t = 0 || t != l3_bound_t
@@ -115,16 +251,21 @@ return: c.LMX_PRIMITIVE_OK
 # success is the Message flag, not dest.
 fn: l3_prim_success (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
     @: LmxThread t 0
+    @: LmxMsg message 0
     \out: 0
     if: nargs != 0U || owner = 0
         return: c.LMX_PRIMITIVE_FAIL
     t: (cast: (@: LmxThread) owner)
-    if: t != l3_bound_t || t\message = 0
+    if: t != l3_bound_t
         return: c.LMX_PRIMITIVE_FAIL
-    t\message\success: 1
+    message: lmx_thread_message(t)
+    if: message = 0
+        return: c.LMX_PRIMITIVE_FAIL
+    message\success: 1
 return: c.LMX_PRIMITIVE_OK
 
 fn: l3_thread_dispatch (@: LmxThread t) int
+    @: LmxMsg message 0
     @: Lmx graph
     @: LmxArena arena
     @: void subject
@@ -134,9 +275,12 @@ fn: l3_thread_dispatch (@: LmxThread t) int
     LmxScratch: scratch
     LmxWalkContext: ctx
     int: st
-    if: t = 0 || t\message = 0 || t != l3_bound_t
+    if: t = 0 || t != l3_bound_t
         return: c.LMX_INTERP_INVALID
-    graph: t\message\graph
+    message: lmx_thread_message(t)
+    if: message = 0
+        return: c.LMX_INTERP_INVALID
+    graph: message\graph
     if: graph = 0 || l3_bound_roles = 0 || l3_bound_plan = 0
         return: c.LMX_INTERP_INVALID
     arena: 0
@@ -167,46 +311,63 @@ fn: l3_thread_dispatch (@: LmxThread t) int
     lmx_arena_release(@ sa)
 return: st
 
-fn: l3_thread_bind (@: LmxThread t) int
-    @: LmxArena arena
-    @: LmxArena store
-    if: t = 0
+fn: l3_thread_bind (@: LmxArena arena; @: LmxThread t) int
+    @: LmxArenaBlock mark 0
+    @: Lmx profile 0
+    @: Lmx roles 0
+    @: Lmx plan_roles 0
+    @: Lmx registry 0
+    @: Lmx mail_count 0
+    @: Lmx mail_take 0
+    @: Lmx success 0
+    if: arena = 0 || t = 0
         return: c.LMX_THREAD_INVALID
-    arena: 0
-    if: t\slot != 0
-        arena: t\slot\arena
+    # Thread and its embedded Message prefix have one address, but the reverse
+    # cast is not valid: a standalone Message has no Thread tail. Prove the
+    # complete exact range before the first `t\...` read.
+    if: lmx_range_classify(arena, (cast: (@: void) t)) != c.LMX_DOMAIN_KIND_MSG_RECORD || lmx_range_type_of(arena, (cast: (@: void) t)) != c.LMX_DOMAIN_THREAD || lmx_range_stride(arena, (cast: (@: void) t)) != c.sizeof(c.LmxThread) || lmx_range_home(arena, (cast: (@: void) t)) != arena
+        return: c.LMX_THREAD_INVALID
     ---
-    if: arena = 0
+    if: t\slot = 0 || t\slot\arena != arena
         return: c.LMX_THREAD_INVALID
-    store: lmx_perm_store_of(arena)
-    if: store = 0
+    if: l3_bound_t != 0
+        if: l3_bound_t = t && l3_bound_owner = arena && l3_bound_profile != 0 && l3_bound_roles != 0 && l3_bound_plan != 0 && l3_bound_mail_count != 0 && l3_bound_mail_take != 0 && l3_bound_success != 0
+            return: lmx_thread_interpreter_set(t, l3_thread_dispatch)
+        ---
         return: c.LMX_THREAD_INVALID
-    if: l3_bound_store != 0 && l3_bound_store != store
+    mark: lmx_arena_mark(arena)
+    profile: l3_profile_open(arena)
+    if: profile != 0
+        roles: l3_walk_roles_open_profiled(arena, profile)
+    ---
+    if: roles != 0
+        plan_roles: l3_plan_roles_open_profiled(arena, profile)
+    ---
+    if: plan_roles != 0
+        registry: l3_primitive_registry_open_profiled(arena, 3U, profile)
+    ---
+    if: registry != 0
+        mail_count: l3_primitive_register_profiled(arena, registry, 0U, l3_prim_mail_count, (cast: (@: Lmx) t), profile)
+    ---
+    if: mail_count != 0
+        mail_take: l3_primitive_register_profiled(arena, registry, 1U, l3_prim_mail_take, (cast: (@: Lmx) t), profile)
+    ---
+    if: mail_take != 0
+        success: l3_primitive_register_profiled(arena, registry, 2U, l3_prim_success, (cast: (@: Lmx) t), profile)
+    ---
+    if: profile = 0 || roles = 0 || plan_roles = 0 || registry = 0 || mail_count = 0 || mail_take = 0 || success = 0 || l3_profile_seal(arena, profile) != 0
+        lmx_arena_revert(arena, mark)
         return: c.LMX_THREAD_INVALID
-    if: l3_bound_t != 0 && l3_bound_t != t
-        return: c.LMX_THREAD_INVALID
+    ---
+    # Publish only the complete sealed family. Before these stores no dispatch or other
+    # arena can observe a partial role/primitive table.
     l3_bound_t: t
-    l3_bound_store: store
-    if: l3_bound_roles = 0
-        l3_bound_roles: lmx_walk_roles_open(store)
-    ---
-    if: l3_bound_plan = 0
-        l3_bound_plan: lmx_plan_roles_open(store)
-    ---
-    if: l3_bound_prim_reg = 0
-        if: lmx_primitive_registry_open(store, 3U, @ l3_bound_prim_reg) != c.LMX_PRIMITIVE_REG_OK
-            return: c.LMX_THREAD_INVALID
-        ---
-        if: lmx_primitive_register(store, l3_bound_prim_reg, 0U, l3_prim_mail_count, 0, (cast: (@: Lmx) t), @ l3_bound_mail_count) != c.LMX_PRIMITIVE_REG_OK
-            return: c.LMX_THREAD_INVALID
-        ---
-        if: lmx_primitive_register(store, l3_bound_prim_reg, 1U, l3_prim_mail_take, 0, (cast: (@: Lmx) t), @ l3_bound_mail_take) != c.LMX_PRIMITIVE_REG_OK
-            return: c.LMX_THREAD_INVALID
-        ---
-        if: lmx_primitive_register(store, l3_bound_prim_reg, 2U, l3_prim_success, 0, (cast: (@: Lmx) t), @ l3_bound_success) != c.LMX_PRIMITIVE_REG_OK
-            return: c.LMX_THREAD_INVALID
-        ---
-    ---
-    if: l3_bound_roles = 0 || l3_bound_plan = 0 || l3_bound_mail_count = 0 || l3_bound_mail_take = 0 || l3_bound_success = 0
-        return: c.LMX_THREAD_INVALID
+    l3_bound_owner: arena
+    l3_bound_profile: profile
+    l3_bound_roles: roles
+    l3_bound_plan: plan_roles
+    l3_bound_prim_reg: registry
+    l3_bound_mail_count: mail_count
+    l3_bound_mail_take: mail_take
+    l3_bound_success: success
 return: lmx_thread_interpreter_set(t, l3_thread_dispatch)

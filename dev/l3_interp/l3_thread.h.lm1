@@ -9,7 +9,9 @@ predef: "l2src/lmx_thread.h.lm1"
 
 prototype:
     fn: l3_thread_dispatch (@: LmxThread t) int
-    fn: l3_thread_bind (@: LmxThread t) int
+    # The arena proves that `t` is an exact Thread range, not merely a Message
+    # prefix cast upward. Bind validates it before reading any Thread tail.
+    fn: l3_thread_bind (@: LmxArena arena; @: LmxThread t) int
     fn: l3_thread_roles (@: LmxThread t) @: Lmx
     fn: l3_thread_plan_roles (@: LmxThread t) @: Lmx
     fn: l3_thread_mail_count_prim (@: LmxThread t) @: Lmx

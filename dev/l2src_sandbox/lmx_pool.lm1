@@ -33,6 +33,10 @@ fn: lmx_pool_add_chunk (@: LmxArena arena; @: LmxPool pool) int
     size_t: bytes
     if: arena = 0 || pool = 0
         return: 1
+    # A sealed array is complete.  The bit is lifecycle only; refusing growth here does not
+    # say which (if any) language profile the array belongs to.
+    if: pool\sealed != 0U
+        return: 1
     # Letter-scale: one chunk per array (no multi-chunk growth). First chunk still OK.
     if: arena\simple != 0U && pool\head != 0
         return: 1
@@ -121,8 +125,10 @@ fn: lmx_pool_add_chunk (@: LmxArena arena; @: LmxPool pool) int
     pool\tail: chunk
 return: 0
 
-fn: lmx_pool_open (@: LmxArena arena; @: LmxPool pool; size_t: stride; size_t: chunk_capacity; int: kind; int: type) int
+fn: lmx_pool_open_profiled (@: LmxArena arena; @: LmxPool pool; size_t: stride; size_t: chunk_capacity; int: kind; int: type; @: Lmx profile) int
     if: arena = 0 || pool = 0
+        return: 1
+    if: profile != 0 && lmx_range_classify(arena, (cast: (@: void) profile)) != c.LMX_KIND_STRUCT
         return: 1
     if: stride = 0U
         return: 1
@@ -134,6 +140,8 @@ fn: lmx_pool_open (@: LmxArena arena; @: LmxPool pool; size_t: stride; size_t: c
     pool\chunk_capacity: chunk_capacity
     pool\kind: kind
     pool\type: type
+    pool\profile: profile
+    pool\sealed: 0U
     pool\head: 0
     pool\tail: 0
     pool\next: 0
@@ -147,6 +155,9 @@ fn: lmx_pool_open (@: LmxArena arena; @: LmxPool pool; size_t: stride; size_t: c
         return: 1
     ---
 return: 0
+
+fn: lmx_pool_open (@: LmxArena arena; @: LmxPool pool; size_t: stride; size_t: chunk_capacity; int: kind; int: type) int
+return: lmx_pool_open_profiled(arena, pool, stride, chunk_capacity, kind, type, 0)
 
 # An int rather than a void: the header declares it, and a unit that uses a pool
 # without pulling this source needs the declaration to match the definition.
@@ -194,6 +205,8 @@ fn: lmx_pool_take_n (@: LmxArena arena; @: LmxPool pool; size_t: count) @: void
     size_t: old_capacity 0U
     if: pool = 0 || count = 0U
         return: 0
+    if: pool\sealed != 0U
+        return: 0
     chunk: pool\tail
     if: chunk = 0
         # An array with NO chunk is EMPTY, not unusable -- and it is a state a collection pass
@@ -221,7 +234,10 @@ fn: lmx_pool_take_n (@: LmxArena arena; @: LmxPool pool; size_t: count) @: void
     # nothing at all.  So such a chunk counts as full and the array grows instead: what
     # the arena hands out is always the arena's.  (Without an arena there is no list to
     # consult; that call registers nothing either way.)
-    if: room > 0U && arena != 0 && lmx_range_pool(arena, chunk\base) != pool
+    # This is an INTERVAL-OWNERSHIP question, deliberately not the public live-cell
+    # question: a fresh chunk has count=0 and therefore no live cell yet, but its whole
+    # storage interval is already registered and must be used rather than skipped.
+    if: room > 0U && arena != 0 && lmx_range_interval_pool(arena, chunk\base) != pool
         room: 0U
     ---
     if: room < count
@@ -262,7 +278,7 @@ return: first
 # This is how a constructor gets its cell: the storage of an array of the arena belongs to
 # the arena (Mikhail, 2026-09-17: "N массивов где лежат дескрипторы или примитивные
 # значения"), never to the caller.
-fn: lmx_pool_make (@: LmxArena arena; size_t: bytes; size_t: stride; int: kind; int: type) @: LmxPool
+fn: lmx_pool_make_profiled (@: LmxArena arena; size_t: bytes; size_t: stride; int: kind; int: type; @: Lmx profile) @: LmxPool
     @: LmxArenaBlock mark
     @: LmxArenaBlock record
     @: LmxArenaBlock payload_block
@@ -271,6 +287,11 @@ fn: lmx_pool_make (@: LmxArena arena; size_t: bytes; size_t: stride; int: kind; 
     @: void payload
     size_t: count
     if: arena = 0 || bytes = 0U || stride = 0U
+        return: 0
+    # A profile is the physical reference to an ordinary graph Structure already visible
+    # through this arena's local/imported index.  Rejecting an arbitrary pointer here keeps
+    # the profile's owner/lifetime explicit without inventing an identity wrapper.
+    if: profile != 0 && lmx_range_classify(arena, (cast: (@: void) profile)) != c.LMX_KIND_STRUCT
         return: 0
     if: bytes % stride != 0U
         return: 0
@@ -301,6 +322,8 @@ fn: lmx_pool_make (@: LmxArena arena; size_t: bytes; size_t: stride; int: kind; 
     pool\chunk_capacity: count
     pool\kind: kind
     pool\type: type
+    pool\profile: profile
+    pool\sealed: 0U
     pool\next: 0
     chunk\base: payload
     chunk\capacity: count
@@ -340,6 +363,9 @@ fn: lmx_pool_make (@: LmxArena arena; size_t: bytes; size_t: stride; int: kind; 
     ---
 return: pool
 
+fn: lmx_pool_make (@: LmxArena arena; size_t: bytes; size_t: stride; int: kind; int: type) @: LmxPool
+return: lmx_pool_make_profiled(arena, bytes, stride, kind, type, 0)
+
 # The same descriptor, over caller-provided records: for storage the caller keeps in its
 # own frame -- a by-value local opened as a domain, say -- where there is no arena block to
 # own it and nothing to free.  The two records are filled, the array joins the arena and
@@ -357,6 +383,8 @@ fn: lmx_pool_over (@: LmxArena arena; @: LmxPool pool; @: LmxChunk chunk; @: voi
     pool\chunk_capacity: count
     pool\kind: kind
     pool\type: type
+    pool\profile: 0
+    pool\sealed: 0U
     pool\next: 0
     chunk\base: base
     chunk\capacity: count
@@ -369,6 +397,19 @@ fn: lmx_pool_over (@: LmxArena arena; @: LmxPool pool; @: LmxChunk chunk; @: voi
         lmx_arena_array_drop(arena, pool)
         return: 1
     ---
+return: 0
+
+fn: lmx_pool_seal (@: LmxPool pool) int
+    if: pool = 0
+        return: 1
+    pool\sealed: 1U
+return: 0
+
+fn: lmx_pool_is_sealed (@: LmxPool pool) int
+    if: pool = 0
+        return: 0
+    if: pool\sealed != 0U
+        return: 1
 return: 0
 
 # Total entries handed out across every chunk.

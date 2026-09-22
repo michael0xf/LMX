@@ -154,7 +154,7 @@ fn: main () int
     check(lmx_scratch_open(s1, a1, @ pool1, 0U) = c.LMX_SCRATCH_INVALID, "a zero step is refused")
     check(lmx_scratch_open(s1, a1, @ pool1, 8U) = c.LMX_SCRATCH_OK, "open, step 8 cells")
     check(lmx_scratch_open(s1, a1, @ pool1, 8U) = c.LMX_SCRATCH_INVALID, "a second open is refused")
-    check(lmx_range_classify(a1, s1\at\base) = c.LMX_DOMAIN_KIND_SCRATCH, "the cells are the scratch domain of the context's arena")
+    check(lmx_range_interval_pool(a1, s1\at\base) = @ pool1, "the empty scratch chunk is a registered allocator interval")
     check(sane(s1) != 0 && chunks_of(s1) = 1U, "one chunk, cursor at its start")
 
     # ---- the cursor never overlaps the pool's high-water mark or a live slice ----
@@ -164,6 +164,7 @@ fn: main () int
     # from the pool, at the mark, and nothing may land on a or y.
     lmx_scratch_mark(s1, m0)
     check(lmx_scratch_take(s1, 3U * word, @ a) = c.LMX_SCRATCH_OK, "a: 3 cells")
+    check(lmx_range_classify(a1, a) = c.LMX_DOMAIN_KIND_SCRATCH, "the first live slice is the scratch domain of the context's arena")
     fill(a, 3U * word, 65)
     lmx_scratch_mark(s1, m1)
     check(lmx_scratch_take(s1, 4U * word, @ x) = c.LMX_SCRATCH_OK, "x: 4 cells")

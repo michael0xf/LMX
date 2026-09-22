@@ -22,6 +22,8 @@ fn: lmx_array_grow_ref_layout (@: LmxArrayDesc array; @: LmxArena arena; @: int 
         return: c.LMX_ARRAY_GROW_INVALID
     if: lmx_range_classify(arena, (cast: (@: void) array)) != c.LMX_KIND_ARRAY
         return: c.LMX_ARRAY_GROW_INVALID
+    if: lmx_range_home(arena, (cast: (@: void) array)) != arena
+        return: c.LMX_ARRAY_GROW_INVALID
     type: lmx_range_type_of(arena, (cast: (@: void) array))
     if: type = c.LMX_TYPE_ARRAY_OF_LMX
         \backing_kind: c.LMX_KIND_REF
@@ -50,6 +52,8 @@ fn: lmx_array_grow_ref_layout (@: LmxArrayDesc array; @: LmxArena arena; @: int 
         return: c.LMX_ARRAY_GROW_OK
     ---
     if: array\data = 0
+        return: c.LMX_ARRAY_GROW_INVALID
+    if: lmx_range_home(arena, array\data) != arena
         return: c.LMX_ARRAY_GROW_INVALID
     if: array\capacity > ((cast: (size_t) -1) / c.sizeof(@: void))
         return: c.LMX_ARRAY_GROW_INVALID

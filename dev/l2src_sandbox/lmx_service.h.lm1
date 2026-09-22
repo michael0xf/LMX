@@ -20,8 +20,9 @@ predef: "l2src/lmx_thread.h.lm1"
 # Ordering is the whole mechanism, and it is the arena's own trick again: the ENTRIES are ordered
 # and bisected, while the records they name never move.  So growth may reallocate the entry array
 # (the entries move, the targets do not), a lookup is a bisection and never a walk of the list.
-# The key of an entry is the physical address of the LmxThread record itself -- not a composed
-# hierarchical address (lmx_address is gone and stays gone).
+# The key of an entry is the physical address of the executable Message prefix. Because it is the
+# first by-value member this equals the containing LmxThread address, but Message remains the mail
+# identity and Thread remains the exact executor type. It is not a composed hierarchical address.
 #
 # An entry carries the target's own arena beside the target, because delivery is an admission into
 # the target's mailbox and the mailbox's queue nodes are cells of THAT arena.  The arena is the
@@ -40,7 +41,8 @@ define: LMX_SERVICE_MISSING 4
 # The key is the PHYSICAL address of the LmxThread record (the pointer value).  Entries own no
 # separate cell array -- nothing is allocated per address beyond the entry itself.
 struct: LmxServiceEntry
-    # The physical address of the live record (= the LmxThread*).  Ordering and bisection key.
+    # The physical address of the live executable Message prefix (= its containing LmxThread*).
+    # Ordering and bisection key.
     @: void address
     # The record itself: the target's L3 Thread (same pointer as `address` at registration).
     @: void target
@@ -71,8 +73,8 @@ prototype:
     # ITS mailbox.  An address no record has is refused by the service and is never
     # dereferenced (19.29.7).  letter_arena is the Message's OWN arena (spec 19.29.2): on
     # LMX_SERVICE_MISSING the service releases that arena (undelivered letter = release the
-    # letter's arena).  On success, letter_arena is attached to the receiver's arena first
-    # (19.28.R2.5), then the letter is admitted (admits needs the receiver index).
+    # letter's arena). On success the producer publishes {letter, letter_arena}; only the receiver
+    # owner attaches that arena immediately before taking/exposing the letter (19.28.R2.5).
     fn: lmx_service_post (@: LmxService service; @: void address; @: LmxMsg letter; @: LmxArena letter_arena) int
     # One record leaves: its physical address is free again and its entry is unlinked.
     fn: lmx_service_unregister (@: LmxService service; @: LmxThread target) int

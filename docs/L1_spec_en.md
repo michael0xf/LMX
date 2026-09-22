@@ -2,7 +2,7 @@
 
 This specification covers L1, its lowering to C99, and the spelling of L2 kernel mechanisms in L1/C. L3 semantics are in the [main specification](LMX_semantics.en.md), and L2 operations and kernel model are in the [L2 specification](L2_spec_en.md). Implementation state, inspected snapshots, and migration work are kept in the [implementation notes](implementation-notes.en.md).
 
-Each core mechanism is defined primarily in L2; this document defines how it is written in L1 and lowered to C99.
+Each core mechanism is defined primarily in L2; this document defines only a convenient intermediate spelling of its implementation and its lowering to C99. L1 does not repeat L2 graph semantics: graph identity, `own-load`, `dirty`, dynamic visibility, and contextual receiver roles have already been resolved before L1 is emitted.
 
 <a id="scope"></a>
 ## 1. Scope
@@ -21,7 +21,7 @@ The libc door is declarations in `l1src/libc_abi.lm1` and `c.name` calls. L1 hea
 <a id="lmx"></a>
 ## 3. `Lmx` in L1
 
-Field definition: [L2 §2](L2_spec_en.md#lmx). In L1 this is `struct: Lmx` in `l2src/lmx.h.lm1`; the C header is generated. Fields are L1 types `@: Lmx`, `int`, `@: void`. No tag on the record. A child slot is a `void *` array cell; the slot address is `lmx_arena_refs` / former `lmx_branch_slot`.
+Field definition: [L2 §2](L2_spec_en.md#lmx). In L1 this is `struct: Lmx` in `l2src/lmx.h.lm1`; the C header is generated. Fields are L1 types `@: Lmx`, `int`, `@: void`. No tag is stored on the record. A Structure field slot is a `void *` array cell; the dynamic Array of child-Message references is a separate Array in the graph and is not lowered to a fixed group of such slots.
 
 <a id="type-by-range"></a>
 ## 4. Type by range in L1
@@ -36,32 +36,32 @@ Rule: [L2 §4](L2_spec_en.md#pool). Chunk and pool structs are in `lmx.h.lm1`. O
 <a id="method-array"></a>
 ## 6. METHOD and Array in L1
 
-Rule: [L2 §5](L2_spec_en.md#method-array). `fnptr: LmxEntry () void`; `struct: LmxMethod` and `LmxArrayDesc` in `lmx.h.lm1`. Typed Array pools: `lmx_array_owned`, `lmx_array_ref_owned`, `lmx_chars_owned`, `lmx_value_owned`.
+Rule: [L2 §5](L2_spec_en.md#method-array). `fnptr: LmxEntry () void`; `struct: LmxMethod` and `LmxArrayDesc` in `lmx.h.lm1`. `LmxArrayDesc` lowers to three fields `{len, capacity, data}` in that order; a fixed/immutable Array sets `capacity = len`, while a growable reference Array starts at 2 and grows by approximately `3/2`. Replacing backing invalidates backing-slot addresses but not physical referent addresses. Typed Array pools: `lmx_array_owned`, `lmx_array_ref_owned`, `lmx_chars_owned`, `lmx_value_owned`.
 
 <a id="arena"></a>
 ## 7. Arena in L1
 
-Rule: [L2 §6](L2_spec_en.md#arena). `struct: LmxArena` and prototypes: `lmx_arena.h.lm1`; bodies: `lmx_arena.lm1`. Blocks: `lmx_arena_blocks.h.lm1` / `.lm1`. Structure slots: `lmx_arena_refs.h.lm1` / `.lm1`. Collector generation is field `generation`; simple mode is `simple`.
+Rule: [L2 §6](L2_spec_en.md#arena). `struct: LmxArena` and prototypes: `lmx_arena.h.lm1`; bodies: `lmx_arena.lm1`. Blocks: `lmx_arena_blocks.h.lm1` / `.lm1`. Structure slots: `lmx_arena_refs.h.lm1` / `.lm1`. Collector generation is field `generation`; simple mode is `simple`. Every L3 Thread uses the same typed-Array mechanism. At creation its arena receives only explicitly supplied data and references. Bootstrap may place permanent values of the initial module in its owner R0's arena through ordinary Array operations and pass their physical references to its children. A later DLL-like module creates its own sealed typed ranges in its owner's arena. During composition or qualified constructor lowering, a consumer receives the original physical reference to an `independent: const: immutable` value without copying it or changing its owner. Its unload operation and range lifetime are not yet defined. L1 lowering creates no hidden tables, automatic inheritance, separate semantic import operation, or special root-slot numbers.
 
 <a id="message"></a>
 ## 8. Message in L1
 
-Rule: [L2 §7](L2_spec_en.md#message). `type: LmxFlag uint_fast8_t`; `struct: LmxMsg` in `lmx_message.h.lm1`. Reading `running` / `handoff_ready` is an ordinary atomic load without RMW or an additional fence. Poll hooks are declared in `lmx.h.lm1` (`lmx_msg_poll_abort`, `lmx_msg_poll_escape`); bodies are on the kernel side.
+Rule: [L2 §7](L2_spec_en.md#message). `type: LmxFlag uint_fast8_t`; `struct: LmxMsg` in `lmx_message.h.lm1`. Local identity lowers to the record's physical address; Message has no `index` field. Reading `running` / `handoff_ready` is an ordinary atomic load without RMW or an additional fence. Poll hooks are declared in `lmx.h.lm1` (`lmx_msg_poll_abort`, `lmx_msg_poll_escape`); bodies are on the kernel side.
 
 <a id="thread"></a>
 ## 9. L3 Thread in L1
 
-Rule: [L2 §8](L2_spec_en.md#thread). `struct: LmxThread` / `LmxLink`: `lmx_thread.h.lm1`; bodies: `lmx_thread.lm1`. A turn is `lmx_thread_turn`. The object's scheduler is `lmx_manager` / `lmx_schedule`, opened by `lmx_thread_scheduler_open`. The child chain is cells of the parent's arena. One turn selects exactly one body path, native or interpreted. A separate operation explicitly requests the next turn's mode and `endturn` commits that request; the presence of an entry or body does not select a mode. Both paths use the same activation-frame own-load/dirty model and do not copy the method on entry. Auxiliary storage may be reusable, but per-activation allocation and release must not make entry substantially more expensive than a native call.
+Rule: [L2 §8](L2_spec_en.md#thread). An executable L3 Thread lowers as one record whose first field is the closed Message record by value: `struct: LmxThread; LmxMsg: message; ...`. Consequently `@thread` and `@thread\message` have the same physical address. This is a common C-layout prefix, not semantic inheritance: `LmxMsg` stays minimal, while mail, scheduling, execution mode, and the other Thread APIs remain in the Thread-only tail. A standalone plain Message is still an independent `LmxMsg` record and cannot later be upgraded in place to a Thread; an executable object is constructed as `LmxThread` from the beginning. Message operations may use the first-member address, but Thread operations require that the exact typed range classify the allocation as `LmxThread`. Sole direct-child membership lowers to a dynamic graph Array of physical references allocated in the parent's arena. The scheduler traverses that Array directly; no separate `LmxLink` chain or manager membership queue is emitted. A turn is `lmx_thread_turn` and selects exactly one body path, native or interpreted. A separate operation explicitly requests the next turn's mode and `endturn` commits that request; the presence of an entry or body does not select a mode. Both paths use the same activation-frame own-load/dirty model and do not copy the method on entry. Auxiliary storage may be reusable, but per-activation allocation and release must not make entry substantially more expensive than a native call.
 
 <a id="root-close"></a>
-### 9.1. R0 upper frame in L1
+### 9.1. R0 and the upper parent frame in L1
 
-Rule: [L2 §8.1](L2_spec_en.md#root-close). The frame above R0 starts the ordinary direct-child cascade and does not check a parent, because it has none. Its separate overall close timeout is stored and tested independently of R0's liveness deadline and the descendants' `LmxSchedule.limit` values. The normal path returns only after the entire subtree has completed; expiry of the upper deadline lowers to unconditional OS-process termination, not a repeatable `close` call or successful return of a partially closed runtime.
+Rule: [L2 §8.1](L2_spec_en.md#root-close). R0 is an ordinary L3 Thread with no additional functions; its WorldWideMix parent frame uses the same parent mechanism and likewise receives no root-only API. Only the upper frame lacks a parent of its own. The ordinary cascade follows the graph Arrays of direct children. The overall subtree timeout belongs to an external host watchdog and is tested independently of R0's liveness deadline and descendants' individual deadlines. The normal path returns only after the entire subtree has completed; expiry of the upper deadline lowers by the host to unconditional OS-process termination, not a repeatable `close` call or successful return of a partially closed runtime.
 
 <a id="mailbox"></a>
 ## 10. Mailbox in L1
 
-Rule: [L2 §9](L2_spec_en.md#mailbox). `struct: LmxPost`, its inbox ring growing by approximately `3/2` from initial capacity 2, its sole reentrant monitor without wait/notify, and the outbox/staged lists are declared in `lmx_post.h.lm1`; all enter/leave, growth, and collection operations are confined to `lmx_post.lm1`. The private ring backing is not a graph value and may move only under the monitor. The monitor does not wrap atomic operations on `LmxMsg.running/success/handoff_ready` or `LmxLink.alive`; they remain a separate Message/handshake mechanism. `init` and `close` require no concurrent mailbox operation. Target admission is `lmx_post_admits` via the address domain. Delivery between objects is `lmx_deliver`.
+Rule: [L2 §9](L2_spec_en.md#mailbox). Each L3 Thread owns its `struct: LmxPost` and mail API. A delivery/address service explicitly supplied by the parent only resolves a target and invokes destination-mailbox admission; it neither reads the mailbox, schedules the recipient, nor tracks membership. The inbox ring grows by approximately `3/2` from initial capacity 2; its sole reentrant monitor without wait/notify and the outbox/staged lists are declared in `lmx_post.h.lm1`. Each inbox entry is `[target, source_arena]`: publication does not mutate the receiver arena, and the receiver owner attaches the donor before exposing the target; refusal retains the pair. All enter/leave, growth, and collection operations are confined to `lmx_post.lm1`. The private ring backing is not a graph value and may move only under the monitor. The monitor does not wrap atomic operations on `LmxMsg.running/success/handoff_ready`; they remain a separate Message mechanism. `init` and `close` require no concurrent mailbox operation; close fails closed on a donor it cannot release. Settlement closes the mailbox before route/member removal and before arena release or attachment. Target admission is `lmx_post_admits` via the address domain. Delivery between objects is `lmx_deliver`.
 
 <a id="own"></a>
 ## 11. Own in L1
@@ -71,17 +71,17 @@ Rule: [L2 §10](L2_spec_en.md#own). `lmx_own_load` / `lmx_own_write` / `lmx_own_
 <a id="call"></a>
 ## 12. Call in L1
 
-Rule: [L2 §11](L2_spec_en.md#call). `fnptr: LmxCallEntry (@: Lmx node) int`; `lmx_call0`: `lmx_call.lm1`. Signature matching is the translator's duty, not this module's.
+Rule: [L2 §11](L2_spec_en.md#call). Transitional METHOD uses `fnptr: LmxCallEntry (@: Lmx node) int`; Callable uses `fnptr: LmxCallEntrySelf (@: Lmx node; @: Lmx self) int`, where `node` is the activation-fixed lexical space above the method and `self` is the hidden physical own-field base of the selected occurrence. Ordinary field `Lmx.parent` is not a language word. `lmx_call0`: `lmx_call.lm1`. Signature matching is the translator's duty, not this module's.
 
 <a id="child"></a>
 ## 13. Child in L1
 
-Rule: [L2 §12](L2_spec_en.md#child). `lmx_child_create` / `reserve` / `publish_prepared` / `drop_prepared` / `handoff`: `lmx_child.lm1`.
+Rule: [L2 §12](L2_spec_en.md#child). Creation and reservation prepare a child separately; successful publication appends its physical reference to the dynamic child Array in the parent's graph. The L1 interface accepts no child-slot number and introduces no fixed capacity.
 
 <a id="copy-merge"></a>
 ## 14. Copy and merge in L1
 
-Rule: [L2 §13](L2_spec_en.md#copy-merge). `lmx_graph_copy_owned.lm1`, `lmx_merge_owned.lm1` and paired `.h.lm1`.
+The rule is already defined in [L2 §13](L2_spec_en.md#copy-merge) and [L3 §8](LMX_semantics.en.md#construction). `lmx_graph_copy_owned.lm1`, `lmx_merge_owned.lm1`, and their paired `.h.lm1` files are the L1 implementation of the full `merge` traversal. L1 itself does not decide whether `left: right` is a declaration, assignment, or call, contain graph bindings, or model `own-load`/`dirty`. Before emitting L1, the L2 translator selects the contextual role, performs the required type, `const`, and `implements` checks, and then emits either an unambiguous call to the `merge` implementation or an ordinary C-like reference assignment. Intermediate spellings may vary provided the generated C preserves the selected L2/L3 semantics and the complete `merge` traversal.
 
 <a id="implements"></a>
 ## 15. `implements` in L1

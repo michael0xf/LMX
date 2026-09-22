@@ -4,16 +4,9 @@ predef: "l1src/libc_abi.lm1"
 
 # The body of lmx_process_deadline.h.lm1's contract: the watchdog's algorithm, and the only place in
 # the kernel that owns an OS wait of its own.  Every handle it creates is closed on both paths --
-# the setup-failure path closes what it already made before the abort, and the success path closes
-# both handles after joining.
-
-fn: lmx_process_deadline_fatal (const: @(char reason)) void
-    c.fputs("lmx: the close watchdog could not be armed: ", l1_stderr())
-    c.fputs(reason, l1_stderr())
-    c.fputs("; aborting rather than running an unbounded close\n", l1_stderr())
-    c.fflush(0)
-    c.abort()
-return: 0
+# the setup-failure path closes what it already made and reports refusal before the close cascade
+# starts; the success path closes both handles after joining.  Only an ARMED watchdog whose bound
+# actually expires aborts the process.
 
 fn: lmx_process_deadline_arm (@: LmxProcessDeadline d; size_t: deadline) int
     size_t: wait 0U
@@ -28,13 +21,15 @@ fn: lmx_process_deadline_arm (@: LmxProcessDeadline d; size_t: deadline) int
     # ALREADY EXPIRED IS A ZERO WAIT, never an underflow: the modular helper decides, not a
     # comparison of raw readings (lmx_deadline_wait documents that shape).
     wait: lmx_deadline_wait(deadline, lmx_clock_word())
-    max_wait: (cast: (size_t) c.INFINITE)
+    # INFINITE is a sentinel for "never", not the longest finite wait.  The watchdog must always
+    # retain a fatal expiry path, so clamp to the greatest finite Windows wait instead.
+    max_wait: (cast: (size_t) c.INFINITE) - 1U
     if: wait > max_wait
         wait: max_wait
     ---
     d\event: c.CreateEventW(0, 1, 0, 0)
     if: d\event = 0
-        lmx_process_deadline_fatal("no completion event")
+        return: 1
     ---
     # THE WAIT IS SET BEFORE THE THREAD EXISTS: the watchdog reads it as its own first act, so
     # writing it afterwards would be a race for a value that decides when the process dies.
@@ -44,7 +39,7 @@ fn: lmx_process_deadline_arm (@: LmxProcessDeadline d; size_t: deadline) int
         c.CloseHandle(d\event)
         d\event: 0
         d\wait_ms: 0U
-        lmx_process_deadline_fatal("no watchdog thread")
+        return: 1
     ---
     d\armed: 1
 return: 0

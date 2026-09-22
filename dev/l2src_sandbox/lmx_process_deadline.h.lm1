@@ -36,7 +36,8 @@ end: LmxProcessDeadline
 
 prototype:
     # Arm one watchdog for ONE operation with the ONE deadline that bounds it; zero is refused as "no
-    # bound at all".  Setup failure is FATAL and leaves no partially armed resource behind.
+    # bound at all".  Setup failure is reported to the caller and leaves no partially armed
+    # resource behind; only expiry of a successfully armed bound is fatal to the process.
     fn: lmx_process_deadline_arm (@: LmxProcessDeadline d; size_t: deadline) int
     # Disarm and join: signal the event, wait for the watchdog to leave its wait, close both handles.
     fn: lmx_process_deadline_disarm (@: LmxProcessDeadline d) int

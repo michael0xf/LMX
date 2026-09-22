@@ -14,8 +14,8 @@ predef: "l2src/lmx_arena.h.lm1"
 # of the "host" (L2_CORE_AND_MESSAGE_MODEL_20260912.md 25 (i)-(v), gaps item 6).
 #
 # (i)   A runtime without a root does not exist.  Creating the runtime creates R0: the
-#       Message at index 1, the only Message with no parent capability, and therefore the
-#       only one nothing can ask "whose child are you" of.  Embedded use is no exception:
+#       ordinary Message whose parent is the structural upper frame.  The frame is the one object
+#       with no parent; R0 itself uses the same parent/child contract as every Thread.  Embedded use is no exception:
 #       an embedding program sits outside LMX and reaches the runtime only through R0's
 #       mail admission.
 # (ii)  The process entry point (spec 1.7) runs INSIDE R0's turns: the Message of the
@@ -39,57 +39,26 @@ predef: "l2src/lmx_arena.h.lm1"
 #       "supervision is NOT handed over" refusal (LMX_ROOT_NO_WORLD) is gone with them, because a
 #       status no act returns is a rule without a door.
 #
-# The record is the runtime's own object, and each field is a mechanism a root has.  The
-# message record, the thread record and the scheduler record are CELLS OF R0's ARENA,
-# taken under their own registered domains, so an address of the runtime answers "what is
-# this" through R0's index and nothing else.  The mailbox and the top level's schedule are
-# this record's own fields: no domain question is ever asked of them, so they are given no
-# registry numbers -- a registry number is a new domain, never a convenience.
+# The record is the runtime's own handle, and each field is a mechanism a root has. R0 and its
+# structural parent are each ONE Thread cell in R0's arena; the closed Message is the first
+# by-value prefix of that same cell, not a second record. Their scheduler records are separate arena
+# cells under the schedule domain. The two mailbox values are handle-owned mechanism storage; no
+# address-range question is asked of those by-value fields.
 #
 # NOTHING is added to LmxMsg or Lmx.  Both are closed, and every cell here belongs to an
 # object of its own.
 #
-# Orphan retention (iv) is HERE: R0 keeps the ledger of the records whose branch was released
-# while they still ran, re-roots them under its own graph, assigns a failed one its deadline and
-# frees it (19.29.8).  The ledger's entries are R0's own bookkeeping -- the mailbox's queue-node
-# domain is the precedent for where such a record lives -- and nobody adopts an orphan's arena,
-# which is why the reclaim returns that arena whole.
-#
-# NOT here yet, and deliberately: the DRAIN -- the root's step running a re-rooted orphan's closing
-# turn.  The maintenance closes an orphan whose inbox is empty (which the spec allows without a
-# turn) but leaves one with pending input running, because that close is its own turn and the
-# root's schedule cannot hold it yet: a record's turn boundary collects the arena of ITS band
-# (lmx_turn_end reads t\slot\arena), while lmx_manager_add writes the round's arena into every
-# record it queues -- so stepping an orphan through R0's manager today would collect R0's arena at
-# the orphan's boundary and free the root's own storage.  That correction is the next step.
+# Orphan retention (iv) is a policy over ordinary children of R0. Re-rooting removes the physical
+# Thread reference from its old parent's children Array and appends it to R0's same dynamic Array.
+# Per-child retention clocks live on that Thread; the ledger holds no entries or membership list.
+# R0's manager traverses the Array directly and each Thread keeps its own arena in its schedule.
 
-# Where R0 is.  The child's index at its parent starts at 1 (model 26: "Дочерний путь
-# расширяет путь родителя локальным счётчиком; первое значение -- 1"), and R0 is that
-# first value at the level of the runtime.
-define: LMX_ROOT_INDEX 1
-
-# The top level's capacity: how many slots R0's own graph has for its children.  A policy
-# value with a default, like the mailbox's node chunk (lmx_post.h.lm1), not a mechanism.
-define: LMX_ROOT_CHILDREN 8
-
-# The two retention arrays of model 20, and where R0's graph keeps them.  The first Message owns
-# TWO separate const:immutable arrays -- the branches built with `independent: const: immutable`
-# ("Набор известен при трансляции ... в runtime он не растёт и не пополняется") and the known
-# method descriptors ("Дескрипторы живут до завершения процесса ОС; завершение исходного или
-# заимствующего дочернего Message не освобождает их").  They are the root's own storage, not a
-# global and not the arena of a borrowing child, and their addresses live in R0's graph -- which
-# is what makes them roots of R0's own collection with no special case in the collector: an
-# array is an ordinary value of R0's arena, and a borrowed branch is not R0's storage to free
-# (a child's collection asks its own arena about it and gets nothing).
-#
-# The slots are BEYOND the children's range, so a child slot can never name an array.
-define: LMX_ROOT_ETERNAL_SLOT 8
-define: LMX_ROOT_METHOD_SLOT 9
-# How many slots R0's graph has: the children's, then the two arrays'.
-define: LMX_ROOT_SLOTS 10
+# R0 has no fixed child capacity, reserved child positions, root index or magic graph slots.  Its
+# direct children are the same growable Array<@LmxThread> used by every other L3 Thread.
 
 define: LMX_ROOT_CLOSED 0
 define: LMX_ROOT_OPEN 1
+define: LMX_ROOT_CLOSING 2
 
 # The orphan-retention timeout's default (19.29.8: "a runtime policy value with a default, settable
 # per runtime like the liveness deadlines"), in the same unit as the root's own limit -- the
@@ -110,38 +79,38 @@ define: LMX_ROOT_INVALID 1
 # nothing left to drive; what follows is teardown, and that is the caller's act
 # (lmx_root_close).
 define: LMX_ROOT_DONE 2
+# Final storage release found corrupt/non-releasable ownership metadata.  Teardown has already
+# crossed irreversible stages, so the handle is retained for diagnosis and refuses every further
+# operation; it is neither OPEN nor falsely CLOSED.
+define: LMX_ROOT_POISONED 3
 
 struct: LmxRoot
-    # R0's own arena: the runtime's storage, and the index that answers for it.
+    # R0's own arena: the runtime's storage and the address-range table that classifies it.
     LmxArena: arena
-    # R0's PERMANENT STORE (LMX-ETERNAL-R0-44D): process-lifetime storage holding the two
-    # retention arrays and every branch qualified `independent: const: immutable`.  An arena of
-    # the same type for the same reason the field above is one, and EMBEDDED for the same reason:
-    # R0 owns it, so nothing can leak it and no registry has to find it.  What differs is the ROLE
-    # FLAG inside, not the type -- GC never visits it, and its one release is lmx_perm_close
-    # (lmx_perm.h.lm1).  It is NEVER a type test: which range table answered is the qualifier.
-    LmxArena: perm
-    # R0 itself: the Message at index 1, a cell of that arena.
-    @: LmxMsg message
-    # R0 as an L3 Thread -- it has a mailbox and a turn, which is what makes it one.  A
+    # The structural parent frame above R0. It is an ordinary Thread mechanism with its own graph
+    # and the same dynamic child Array; only this top frame has no parent.
+    @: LmxThread parent
+    @: LmxPost parent_mail
+    @: LmxSchedule parent_slot
+    @: LmxArrayDesc parent_children
+    # R0 is one L3 Thread allocation. Its ordinary Message identity is the by-value first-member
+    # prefix reached by lmx_thread_message(thread), never a second cached/rebindable pointer.
+    # It has a mailbox and a turn, which is what makes it one. A
     # cell of the arena: it is the address the scheduler's domain question is asked about.
     @: LmxThread thread
-    # R0's mailbox: the only door in from outside (25 (i)).  No domain question is asked
-    # of a mailbox, so it is this record's own field, not an arena cell.
-    LmxPost: mail
+    # R0's mailbox: the only door in from outside (25 (i)).  It is the same exact arena-owned POST
+    # mechanism record used by every other Thread; R0 has no by-value/unclassified exception.
+    @: LmxPost mail
     # R0's own scheduler record: how long the runtime itself may run.  A cell of the arena
     # under the SCHEDULE domain, like a child's record.
     @: LmxSchedule slot
-    # The top level: R0's children, stepped by R0's cycle.  The scheduler's own data.
-    LmxManager: manager
+    # R0's ordinary per-Thread scheduler, allocated in the same arena and cached by Thread.
+    @: LmxManager manager
     # R0's mail service (lmx_service): "Тот же самый R0" -- the runtime's root IS the service.
     # Entries are ordered by the physical address of a live record.
     LmxService: service
-    # The orphans (25 (iv), 19.29.8): records still running when the branch that held them was
-    # released, re-rooted under R0 for their drain.  R0 is the band that assigns a failed orphan
-    # its deadline and frees it, and nobody adopts an orphan's arena -- so R0 keeps the ledger of
-    # who they are, where they sit in its own graph and when their retention began.  The entries
-    # are the runtime's bookkeeping, not values of any arena (runtime bookkeeping).
+    # Orphan policy view: owner is R0's Thread and count is derived by traversing its one children
+    # Array. The handle stores no child collection of its own.
     LmxOrphanLedger: orphans
     # The orphan-retention policy value (19.29.8): how long a FAILED orphan may keep its
     # handoff-safe arena before the maintenance reclaims it.  Zero is refused by the setter; this
@@ -150,15 +119,14 @@ struct: LmxRoot
     # The upper frame's OWN overall close bound -- not a child's slot limit and not the liveness
     # limit (author, 2026-09-21): it bounds the whole synchronous cascade from the top.
     ulong: close_limit
-    # R0's two const:immutable retention arrays (model 20): the eternal branches, and the known
-    # method descriptors.  Their size is known at translation time, so it is given to open and
-    # never grows; the runtime's builder fills them BEFORE the first cycle, which is what makes
-    # them immutable in fact and not only in name.
-    @: Lmx eternal
-    @: Lmx methods
+    # Retry state for the synchronous close. The one deadline never restarts; each completed
+    # irreversible teardown act advances close_stage before a recoverable return is possible.
+    size_t: close_deadline
+    int: close_stage
     # The entry program (1.7), run inside R0's turns and nowhere else.  Its shape is the typed
-    # entry's (lmx_call.h.lm1): the node first, the status out -- spec 19.29.5, "The typed entry
-    # receives its own node".  Zero means R0 has no handler yet: its turns are then pure boundary
+    # entry's (lmx_call.h.lm1): the reserved node first, the status out. This is the synthetic
+    # root adapter, so it receives graph.parent; ordinary methods receive their selected callable
+    # occurrence M.parent through lmx_call0. Zero means R0 has no handler: its turns are pure boundary
     # work, which is a legitimate state.  R0's handler is NOT a callable occurrence (it has no
     # METHOD record), so the cycle calls it directly rather than through lmx_call.
     LmxCallEntry: entry
@@ -176,18 +144,18 @@ struct: LmxRoot
     # How long R0 itself may run, in the cycle's milliseconds.  Zero is refused: every wait
     # has a limit (model 33), the runtime's own included.
     ulong: limit
+    # OPEN, CLOSING, CLOSED, or POISONED when final storage ownership is malformed/refuses release.
     int: state
 end: LmxRoot
 
 prototype:
     # Create the runtime: R0, its arena, its mailbox and its schedule, with `entry` as its
-    # handler and `limit` as its own deadline.  `eternal` and `methods` are the sizes of the two
-    # const:immutable arrays of model 20 -- the set of `independent: const: immutable` branches
-    # and of known method descriptors that TRANSLATION knows; zero is a legitimate runtime with
-    # no such values.  A handle that already holds a root must be cleared by the caller -- or
+    # handler and `limit` as its own deadline. Qualified sealed Arrays are ordinary typed ranges
+    # allocated in this owner arena and reached through ordinary physical graph fields; Root has
+    # no size parameters, reserved descriptors or magic storage for them. A handle that already holds a root must be cleared by the caller -- or
     # simply be the storage this call clears itself, which is what it does with every field of
     # LmxRoot and of its arena before anything is opened on them.
-    fn: lmx_root_open (@: LmxRoot root; LmxCallEntry: entry; ulong: limit; size_t: eternal; size_t: methods) int
+    fn: lmx_root_open (@: LmxRoot root; LmxCallEntry: entry; ulong: limit) int
     # One turn of R0: enter its boundary, run the entry program, leave.  The entry runs
     # INSIDE the turn, so lm.current is R0's thread while it runs and 0 outside.
     fn: lmx_root_turn (@: LmxRoot root; ulong: now) int
@@ -197,8 +165,8 @@ prototype:
     # The cycle: read the clock ONCE, then R0's turn, R0's keep-alive, and a bounded pass
     # over the top level.  This is what "the host" became -- there is no other driver.
     fn: lmx_root_cycle (@: LmxRoot root; unsigned: ticks) int
-    # (iv): a Message created without a parent is created through R0, in slot `slot` of
-    # R0's own graph.  Null when the root is not open or the creation refused; a refusal
+    # (iv): a top-level Message is created through R0 and joins R0's sole dynamic children Array
+    # when its Thread is published. Null when the root is not open or creation is refused; refusal
     # publishes nothing (lmx_child_create).
     #
     # `source` MUST LIVE IN R0'S OWN ARENA.  There is no parameter for the source's arena
@@ -208,7 +176,10 @@ prototype:
     # the copy refuses a root it cannot type and this returns null -- it is not copied and
     # not diagnosed further.  The one exception is the exception everywhere: a store-resident
     # source is classifiable from a bound arena and is kept by address, not copied.
-    fn: lmx_root_create (@: LmxRoot root; @: LmxArena child_arena; size_t: slot; @: Lmx source) @: LmxMsg
+    fn: lmx_root_create (@: LmxRoot root; @: LmxArena child_arena; @: Lmx source) @: LmxMsg
+    # Canonical profiled form. `retain_profile` is the exact physical receiver expression for
+    # independent:const:immutable; zero explicitly requests an ordinary full copy.
+    fn: lmx_root_create_profiled (@: LmxRoot root; @: LmxArena child_arena; @: Lmx source; @: Lmx retain_profile) @: LmxMsg
     # (v): hand the world's place its stamp cell -- the LOCAL STUB PARENT, still standing in for
     # World Wide Mix (lmx_root.lm1).  `world` is the caller's `size_t` cell: the stub writes its
     # reading there while it lives, R0 watches it at every boundary and ends when that world has
@@ -216,15 +187,13 @@ prototype:
     # open, when the address is not one, and when the cell has never been written (a zero would
     # age as "silent since the beginning of time" and end the root at once).
     fn: lmx_root_supervise_world (@: LmxRoot root; @: void world) int
-    # (iv), 19.29.8: re-root an orphan under R0 -- a record whose branch was released while it
-    # still ran.  The first empty slot of R0's graph receives it, its index and up-link are
-    # rewritten; from then on it is a child
-    # of R0's ("a top-level Message with no parent, reachable like any root").  R0's retention
-    # policy is the deadline it is given, and `now` is the caller's reading of the clock -- the
-    # cycle's, when the cycle calls it.  `thread` is the record's object, or zero for a plain
-    # Message, which has no turn and no mailbox.
+    # (iv), 19.29.8: move an executable orphan's physical Thread reference from its old parent's
+    # dynamic children Array to R0's Array. Its ordinary parent up-link follows that move; there is
+    # no Message index, graph slot, scheduler queue or parallel orphan-membership chain. R0's
+    # retention policy supplies the per-child clock. A plain Message is refused because the sole
+    # membership Array is Array<@LmxThread>.
     # THE STUB PARENT'S TWO HALVES (Mikhail, 19.09 -- the WorldWideMix stub's place, see
-    # lmx_root.lm1).  The root has no parent here, so its own wait IS its liveness record: the
+    # lmx_root.lm1). R0 has the ordinary structural parent stub; its own wait is its liveness record:
     # stub RINGS with `lmx_root_keepalive` (the start of the wait is the last time the root was
     # seen) and POLLS with `lmx_root_hung` (has it been silent longer than its own window?).
     # A stub that rings every cycle turns the root's limit from a death timer into a hang
@@ -235,32 +204,25 @@ prototype:
     # The retention policy value, settable per runtime (19.29.8).  Zero is refused.
     fn: lmx_root_retention_set (@: LmxRoot root; ulong: limit) int
     fn: lmx_root_close_limit_set (@: LmxRoot root; ulong: limit) int
-    # THE MAINTENANCE POINT: one pass over the retained orphans, and the only reclaim site there
-    # is.  A still-running orphan with an empty inbox is closed here without a turn; one with
-    # pending input waits for its closing turn; a settled successful one is reclaimed AT ONCE --
-    # arena and slot -- and a settled failed one when its retention expires.  R0's cycle runs this
-    # at the end of every cycle, after the top level's step; a caller may also run it alone, which
-    # is what makes the policy drivable without a cycle.
+    # THE MAINTENANCE POINT: one pass over R0's same children Array. A successful handoff-safe
+    # orphan is removed then reclaimed at once; a failed one is removed then reclaimed after its
+    # retention window. Running records are only asked to stop and remain valid Array elements
+    # until they publish a safe boundary.
     fn: lmx_root_orphan_maintain (@: LmxRoot root; ulong: now) int
     fn: lmx_root_orphans (@: LmxRoot root) @: LmxOrphanLedger
     # Teardown: stop R0, close its mailbox, release its arena -- everything the runtime owns,
-    # attached children included.  Refused on a root that is not open.
+    # attached children included. A recoverable refusal leaves CLOSING and the same deadline;
+    # another call resumes after the last completed stage rather than half-closing an OPEN root.
     fn: lmx_root_close (@: LmxRoot root) int
     # The reads a caller outside needs; a by-value LmxRoot has no other way in (L1 follows a
     # field of a by-value record through a pointer, not through the value).
     fn: lmx_root_message (@: LmxRoot root) @: LmxMsg
     fn: lmx_root_thread (@: LmxRoot root) @: LmxThread
-    # R0's own arena: the index that answers for the runtime's addresses, and what a caller
+    # R0's own arena: the address-range table that answers for runtime addresses, and what a caller
     # building R0's initial graph (the settings and the input of 25 (ii)) takes its cells
     # from -- a graph is a value of the arena it belongs to.
     fn: lmx_root_arena (@: LmxRoot root) @: LmxArena
-    # R0's two retention arrays (model 20): what holds the eternal branches and the method
-    # descriptors.  A caller reads them to fill them before the first cycle; nothing writes them
-    # afterwards, and no collection frees them while R0 lives.
-    fn: lmx_root_eternal (@: LmxRoot root) @: Lmx
-    fn: lmx_root_methods (@: LmxRoot root) @: Lmx
-        # R0's own schedule: the queue its cycle steps -- the top level's children AND every record a
-    # re-rooted orphan brought with it, since the drain puts them in the same queue.
+    # R0's stepped scheduler traverses the same children Array; it owns no membership queue.
     fn: lmx_root_service (@: LmxRoot root) @: LmxService
     fn: lmx_root_manager (@: LmxRoot root) @: LmxManager
     fn: lmx_root_clock (@: LmxRoot root) ulong

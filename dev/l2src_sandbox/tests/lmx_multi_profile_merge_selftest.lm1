@@ -1,0 +1,184 @@
+predef: "l2src/lmx_merge_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<string.h>"
+
+# One copy/merge call may retain any call-bounded set of exact physical receiver
+# profiles.  The set is an ordinary caller array; duplicates are idempotent.  Every
+# retained range is sealed and imported explicitly, while ordinary graph state still
+# copies through the one operation map.
+
+int: checks 0
+int: failures 0
+
+sub: mcheck (int: ok; const: @(char label))
+    checks: checks + 1
+    if: ok = 0
+        failures: failures + 1
+        c.printf("FAIL: %s\n", label)
+    ---
+end: mcheck
+
+fn: main () int
+    LmxArena: profile_owner
+    LmxArena: src
+    LmxArena: dst
+    LmxArena: blind
+    Lmx: arbitrary_profile
+    c.array: [3]: @: Lmx profiles
+    c.array: [2]: @: Lmx operands
+    c.array: [2]: @: Lmx roots
+    c.array: [2]: @: Lmx copies
+    @: Lmx profile_a 0
+    @: Lmx profile_b 0
+    @: Lmx profile_bad 0
+    @: Lmx a 0
+    @: Lmx b 0
+    @: Lmx bad 0
+    @: Lmx ordinary 0
+    @: Lmx out 0
+    @: LmxPool pool 0
+    @: LmxArena blind_at
+    @: LmxArena dst_at
+    @: void refs 0
+    @: void value_a 0
+    @: void value_b 0
+    @: void value_bad 0
+    @: void value_ordinary 0
+    @@: void slots 0
+    size_t: before 0U
+    int: status 0
+
+    memset((cast: (@: void) (@ profile_owner)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ src)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ dst)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ blind)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ profile_owner) != 0 || lmx_arena_open(@ src) != 0 || lmx_arena_open(@ dst) != 0 || lmx_arena_open(@ blind) != 0
+        return: 2
+    ---
+    blind_at: @ blind
+    dst_at: @ dst
+
+    # Profiles are ordinary graph Structures.  The containing pool is sealed before
+    # another arena may use those physical references as profile identities.
+    profile_a: lmx_node_new_owned(@ profile_owner)
+    profile_b: lmx_node_new_owned(@ profile_owner)
+    profile_bad: lmx_node_new_owned(@ profile_owner)
+    pool: lmx_arena_find(@ profile_owner, c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT)
+    if: profile_a = 0 || profile_b = 0 || profile_bad = 0 || pool = 0 || lmx_pool_seal(pool) != 0
+        return: 2
+    if: lmx_range_import(@ src, @ profile_owner) != 0
+        return: 2
+    ---
+
+    # Two distinct sealed profiles, each with a Structure, its reference slots and its
+    # primitive leaf all carrying the same exact profile.
+    a: lmx_node_new_profiled(@ src, profile_a)
+    refs: lmx_arena_take_n_profiled(@ src, c.sizeof(@: void), c.LMX_KIND_CHILDREN, c.LMX_TYPE_REFS, profile_a, 1U)
+    value_a: lmx_arena_take_profiled(@ src, c.sizeof(c.size_t), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_SIZE_T, profile_a)
+    if: a = 0 || refs = 0 || value_a = 0
+        return: 2
+    a\data: refs
+    a\len: 1
+    slots: (cast: (@@: void) refs)
+    slots[0]: value_a
+    if: lmx_size_store_known(value_a, 11U) != 0
+        return: 2
+
+    b: lmx_node_new_profiled(@ src, profile_b)
+    refs: lmx_arena_take_n_profiled(@ src, c.sizeof(@: void), c.LMX_KIND_CHILDREN, c.LMX_TYPE_REFS, profile_b, 1U)
+    value_b: lmx_arena_take_profiled(@ src, c.sizeof(c.size_t), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_SIZE_T, profile_b)
+    if: b = 0 || refs = 0 || value_b = 0
+        return: 2
+    b\data: refs
+    b\len: 1
+    slots: (cast: (@@: void) refs)
+    slots[0]: value_b
+    if: lmx_size_store_known(value_b, 22U) != 0
+        return: 2
+
+    pool: lmx_arena_find_profiled(@ src, c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT, profile_a)
+    if: pool = 0 || lmx_pool_seal(pool) != 0
+        return: 2
+    pool: lmx_arena_find_profiled(@ src, c.LMX_KIND_CHILDREN, c.LMX_TYPE_REFS, profile_a)
+    if: pool = 0 || lmx_pool_seal(pool) != 0
+        return: 2
+    pool: lmx_arena_find_profiled(@ src, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_SIZE_T, profile_a)
+    if: pool = 0 || lmx_pool_seal(pool) != 0
+        return: 2
+    pool: lmx_arena_find_profiled(@ src, c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT, profile_b)
+    if: pool = 0 || lmx_pool_seal(pool) != 0
+        return: 2
+    pool: lmx_arena_find_profiled(@ src, c.LMX_KIND_CHILDREN, c.LMX_TYPE_REFS, profile_b)
+    if: pool = 0 || lmx_pool_seal(pool) != 0
+        return: 2
+    pool: lmx_arena_find_profiled(@ src, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_SIZE_T, profile_b)
+    if: pool = 0 || lmx_pool_seal(pool) != 0
+        return: 2
+
+    mcheck(lmx_range_import_profile(@ dst, @ src, profile_a) = 0 && lmx_range_import_profile(@ dst, @ src, profile_b) = 0, "destination imports both exact sealed profiles")
+    profiles[0]: profile_a
+    profiles[1]: profile_b
+    profiles[2]: profile_a
+    operands[0]: a
+    operands[1]: b
+    status: lmx_merge_profiles_owned(operands, 2U, 0, 0, 0, @ src, @ dst, profiles, 3U, @ out)
+    mcheck(status = c.LMX_MERGE_OK && out != 0 && out != a && out != b && out\len = 2, "two-profile merge succeeds with an ordinary result root")
+    slots: (cast: (@@: void) out\data)
+    mcheck(slots != 0 && slots[0] = value_a && slots[1] = value_b, "both exact profile leaves retain physical identity")
+    mcheck(lmx_range_home(@ dst, value_a) = (@ src) && lmx_range_home(@ dst, value_b) = (@ src), "retained ranges preserve their true owner")
+    mcheck(lmx_range_profile(@ dst, value_a) = profile_a && lmx_range_profile(@ dst, value_b) = profile_b, "retained addresses preserve distinct physical profiles")
+
+    # A late retained root that is not imported must roll back copies already allocated
+    # for an earlier ordinary root, and every output stays null.
+    ordinary: lmx_node_new_owned(@ src)
+    if: ordinary = 0 || lmx_arena_refs_open_owned(@ src, ordinary, 1U) != 0
+        return: 2
+    value_ordinary: lmx_size_new_owned(@ src)
+    if: value_ordinary = 0 || lmx_size_store_known(value_ordinary, 33U) != 0 || lmx_arena_ref_store(ordinary, 0U, value_ordinary) != 0
+        return: 2
+    roots[0]: ordinary
+    roots[1]: a
+    copies[0]: b
+    copies[1]: b
+    before: blind_at\count
+    status: lmx_graph_copy_many_profiles_owned(roots, 2U, 0, @ src, @ blind, profiles, 1U, copies)
+    mcheck(status = c.LMX_GRAPH_COPY_INVALID && copies[0] = 0 && copies[1] = 0, "missing exact import fails and clears the complete output span")
+    mcheck(blind_at\count = before, "failed multi-root copy rolls destination ranges back")
+
+    # A physical profile reference is insufficient when either the profile object or any
+    # range carrying it is unsealed.  An activation-local Lmx is not a profile at all.
+    bad: lmx_node_new_profiled(@ src, profile_bad)
+    refs: lmx_arena_take_n_profiled(@ src, c.sizeof(@: void), c.LMX_KIND_CHILDREN, c.LMX_TYPE_REFS, profile_bad, 1U)
+    value_bad: lmx_arena_take_profiled(@ src, c.sizeof(c.size_t), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_SIZE_T, profile_bad)
+    if: bad = 0 || refs = 0 || value_bad = 0
+        return: 2
+    bad\data: refs
+    bad\len: 1
+    slots: (cast: (@@: void) refs)
+    slots[0]: value_bad
+    profiles[0]: profile_bad
+    operands[0]: bad
+    out: a
+    before: dst_at\count
+    status: lmx_merge_profiles_owned(operands, 1U, 0, 0, 0, @ src, @ dst, profiles, 1U, @ out)
+    mcheck(status = c.LMX_MERGE_INVALID && out = 0 && dst_at\count = before, "unsealed profile ranges fail without destination change")
+
+    profiles[0]: @ arbitrary_profile
+    operands[0]: ordinary
+    out: a
+    before: dst_at\count
+    status: lmx_merge_profiles_owned(operands, 1U, 0, 0, 0, @ src, @ dst, profiles, 1U, @ out)
+    mcheck(status = c.LMX_MERGE_INVALID && out = 0 && dst_at\count = before, "activation-local arbitrary profile is refused transactionally")
+
+    mcheck(lmx_arena_release(@ blind) = 0 && lmx_arena_release(@ dst) = 0, "destination arenas release")
+    mcheck(lmx_arena_release(@ src) = 0 && lmx_arena_release(@ profile_owner) = 0, "owners release")
+    c.printf("lmx_multi_profile_merge: checks=%d failures=%d\n", checks, failures)
+return: failures != 0

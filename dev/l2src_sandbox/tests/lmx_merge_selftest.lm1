@@ -154,7 +154,7 @@ fn: main () int
     status: lmx_merge_owned(operands, 2U, 0, container, 0, @ arena, @ dst, @ result)
     merge_check(counts, status = LMX_MERGE_OK, "merge succeeded")
     merge_check(counts, result != 0 && result != a && result != b, "the result is a third independent structure")
-    merge_check(counts, result\node = container, "the result's node is the execution container")
+    merge_check(counts, result\parent = container, "the result's structural parent is the execution container")
     merge_check(counts, result\len = 3, "two operands, three slots")
     merge_check(counts, a\len = 2 && b\len = 1, "the operands were not written")
     merge_check(counts, dst_at\count != 0U, "the destination arena holds the copies")

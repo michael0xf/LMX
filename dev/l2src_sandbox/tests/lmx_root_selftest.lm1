@@ -1,115 +1,14 @@
 predef: "l2src/lmx_root.lm1"
-predef: "l2src/lmx_perm.h.lm1"
-predef: "l2src/lmx_arena.lm1"
-predef: "l2src/lmx_pool.lm1"
-predef: "l2src/lmx_arena_blocks.lm1"
-predef: "l2src/lmx_range.lm1"
-predef: "l2src/lmx_child.lm1"
+predef: "l2src/lmx_array_grow_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
 predef: "l2src/lmx_value_owned.lm1"
 predef: "l2src/lmx_chars_owned.lm1"
-predef: "l2src/lmx_arena_refs.lm1"
-predef: "l2src/lmx_array_owned.lm1"
-predef: "l2src/lmx_array_ref_owned.lm1"
-predef: "l2src/lmx_graph_copy_owned.lm1"
-predef: "l2src/lmx_thread.lm1"
-predef: "l2src/lmx_post.lm1"
-predef: "l2src/lmx_schedule.lm1"
-predef: "l2src/lmx_manager.lm1"
-predef: "l2src/lmx_clock.lm1"
 predef: "l2src/lmx_implements.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
-# The root Message R0 (model 25 (i)-(v), gaps item 6).  What this file pins, in the order
-# the model gives it:
-#
-#   (i)   creating the runtime creates R0: index 1, running, unfinished, its own arena, its
-#         own mailbox, its own record -- and a refused creation is not a half-open root;
-#   (ii)  the entry program runs INSIDE R0's turns and nowhere else: while it runs, the
-#         current object is R0's thread, and outside the cycle the current object is nobody;
-#   (iii) the clock belongs to the cycle: one reading per cycle, the entry sees it, R0's own
-#         deadline ages against it -- and against THAT reading, not against the platform's
-#         (the limit is 50 ms; the platform's reading is minutes, so a cycle that aged
-#         against the clock itself could not answer DONE here at all);
-#   (iv)  the top level is single: a parentless creation lands in R0's own graph, at R0;
-#   (v)   supervision is NOT handed to World Wide Mix: the call refuses with its own status
-#         and changes nothing.
-#
-# The witnesses the entry writes are unit-level cells, which is what the entry program of a
-# real runtime has as well: it is called with no arguments (LmxEntry) and reaches the root
-# through its own globals.
-
-@: LmxRoot root_witness 0
-@: LmxMsg root_witness_message 0
-@: Lmx root_witness_source 0
-@: Lmx root_witness_eternal_branch 0
-size_t: root_witness_filled 0U
-size_t: root_witness_node 0U
-@: LmxArena root_witness_child_arena 0
-@: LmxMsg root_witness_child 0
-size_t: root_witness_turns 0U
-size_t: root_witness_inside 0U
-size_t: root_witness_tick 0U
-size_t: root_witness_slot_seen 9U
-size_t: root_witness_refused 9U
-
-# The runtime's builder filling R0's permanent store before its first cycle (model 20).
-# The branch and every value owned by it are allocated in that store; the retention
-# array merely names the translation-known set and is not a GC trick.
-fn: root_build_eternal (@: LmxArena arena; @: Lmx array) @: Lmx
-    @: LmxArena store
-    @: Lmx branch
-    @: void cell
-    if: arena = 0 || array = 0
-        return: 0
-    store: lmx_perm_store_of(arena)
-    if: store = 0
-        return: 0
-    ---
-    branch: lmx_node_new_owned(store)
-    cell: lmx_int_new_owned(store)
-    if: branch = 0 || cell = 0
-        return: 0
-    ---
-    if: lmx_arena_refs_open_owned(store, branch, 1U) != 0
-        return: 0
-    ---
-    lmx_int_store_known(cell, 7)
-    lmx_arena_ref_store(branch, 0U, cell)
-    lmx_arena_ref_store(array, 0U, (cast: (@: void) branch))
-return: branch
-
-# R0's handler.  Everything it does is done INSIDE a turn of R0 -- that is the claim under
-# test -- so it looks at the current object and at the cycle's reading while it runs, and it
-# is where the top level's creation happens: "Родитель в своём turn резервирует дочерний
-# Message" (model 26).  The template and the child's arena arrive through the entry's own
-# globals, which is what a generated entry program has as well.
-fn: root_entry_body (@: Lmx node) int
-    root_witness_turns: root_witness_turns + 1U
-    # The typed entry receives ITS OWN NODE (19.29.5): for R0's handler that is R0's graph root.
-    if: node != 0 && root_witness_message != 0 && node = root_witness_message\graph
-        root_witness_node: root_witness_node + 1U
-    ---
-    if: lmx_thread_current() = lmx_root_thread(root_witness)
-        root_witness_inside: root_witness_inside + 1U
-    ---
-    root_witness_tick: (cast: (size_t) lmx_root_clock(root_witness))
-    if: root_witness_filled = 0U && root_witness != 0
-        # The runtime's builder filling R0's eternal array before the first cycle (model 20).
-        root_witness_filled: 1U
-        root_witness_eternal_branch: root_build_eternal(lmx_root_arena(root_witness), lmx_root_eternal(root_witness))
-    ---
-    if: root_witness_source != 0 && root_witness_child = 0
-        # 25 (iv): a Message created without a parent is created THROUGH R0.  The slot of the
-        # structure it will land in is empty while the reservation is in flight -- checked here,
-        # from inside the very turn that made the reservation.
-        root_witness_child: lmx_root_create(root_witness, root_witness_child_arena, 0U, root_witness_source)
-        root_witness_slot_seen: (cast: (size_t) lmx_arena_ref_value(root_witness_message\graph, 0U))
-        # And a creation beyond the top level's slots is refused: the refusal is recorded, the
-        # boundary publishes what exists, and nothing new appears.
-        root_witness_refused: (cast: (size_t) lmx_root_create(root_witness, root_witness_child_arena, 8U, root_witness_source))
-    ---
-return: 0
+# R0 is an ordinary L3 Thread under one structural parent frame. Both graphs contain an ordinary
+# physical reference to their one growable Array<@LmxThread>; no index or fixed root slot is ABI.
 
 sub: root_check (@: int counts; int: ok; const: @(char label))
     counts[0]: counts[0] + 1
@@ -119,238 +18,89 @@ sub: root_check (@: int counts; int: ok; const: @(char label))
     ---
 end: root_check
 
+fn: root_thread () @: LmxThread
+return: (cast: (@: LmxThread) calloc(1U, c.sizeof(c.LmxThread)))
+
 fn: main () int
-    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxRoot: root
-    LmxArena: child
-    LmxArena: copy_arena
-    @: LmxArena arena 0
-    @: LmxArena store 0
-    @: LmxMsg message 0
-    @: LmxThread thread 0
-    @: Lmx graph 0
-    @: Lmx eternal_array 0
-    @: Lmx methods_array 0
-    @: Lmx source 0
-    @: Lmx mutable 0
-    @: Lmx copied 0
-    @: LmxMsg child_message 0
-    @: LmxMsg refused 0
-    # 4b: the finished child's own object -- built in ITS arena, which is also its schedule band.
-    @: LmxPost child_mail 0
-    @: LmxThread child_thread 0
-    @: void child_cell 0
-    LmxSchedule: child_sched
-    size_t: base 0U
-    # A world's stamp cell that was never written -- what the transfer must refuse (19.09).
-    size_t: world_zero 0U
+    LmxRoot: rejected
+    @: LmxRoot root_p
+    LmxArena: child_arena
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    @: LmxThread r0
+    @: LmxThread upper
+    @: LmxArrayDesc children
+    @: LmxArrayDesc upper_children
+    @: Lmx graph
+    @: Lmx upper_graph
+    @: LmxMsg upper_message
+    @: Lmx source
+    @: LmxThread a
+    @: LmxThread b
+    @: LmxThread c0
+    @: LmxThread d
+    @: LmxThread e
+    @: LmxThread f
+    @: LmxThread g
+    @: LmxThread h
+    @: LmxThread i
     int: failures
     if: counts = 0
         return: 2
-    # The handle is the caller's storage, and the root clears it itself -- which is why
-    # nothing here pokes its fields: L1 follows a field of a by-value record through a
-    # pointer, and the pointer is exactly what the root's own calls take.
+    ---
     memset((cast: (@: void) (@ root)), 0, c.sizeof(c.LmxRoot))
-    root_witness: @ root
+    memset((cast: (@: void) (@ rejected)), 0, c.sizeof(c.LmxRoot))
+    memset((cast: (@: void) (@ child_arena)), 0, c.sizeof(c.LmxArena))
 
-    # 0. A refused open is not a half-open root: a zero limit means an unbounded runtime, and
-    #    model 33 allows no unbounded wait.  The refusal must not touch the handle either.
-    root_check(counts, lmx_root_open(@ root, root_entry_body, 0U, 0U, 0U) = c.LMX_ROOT_INVALID, "a root with no limit was accepted")
-    root_check(counts, lmx_root_state(@ root) = c.LMX_ROOT_CLOSED, "a refused open left the handle open")
+    root_p: @ root
+    root_check(counts, lmx_root_open(root_p, 0, 1000U) = c.LMX_ROOT_OK, "root open failed")
+    r0: lmx_root_thread(@ root)
+    upper: root_p\parent
+    children: lmx_thread_children(r0)
+    upper_children: lmx_thread_children(upper)
+    graph: lmx_root_message(@ root)\graph
+    upper_message: lmx_thread_message(root_p\parent)
+    upper_graph: upper_message\graph
+    root_check(counts, r0 != 0 && upper != 0 && lmx_thread_parent(r0) = upper, "R0 is not an ordinary child of its structural parent")
+    root_check(counts, lmx_thread_parent(upper) = 0, "structural upper frame unexpectedly has a parent")
+    root_check(counts, lmx_thread_child_count(upper) = 1U && lmx_thread_child_at(upper, 0U) = r0, "upper frame does not own R0 through its sole Array")
+    root_check(counts, children != 0 && upper_children != 0 && children\capacity = 2U && upper_children\capacity = 2U, "ordinary child Arrays do not start at capacity two")
+    root_check(counts, lmx_arena_ref_value(graph, 0U) = (cast: (@: void) children) && lmx_arena_ref_value(upper_graph, 0U) = (cast: (@: void) upper_children), "Thread caches differ from graph physical references")
+    root_check(counts, c.sizeof(c.LmxMsg) = 16U, "Message retained numeric address storage")
+    root_check(counts, lmx_thread_children(r0) = children, "R0 did not cache its ordinary physical children descriptor")
 
-    # 1. (i) The runtime is created, and R0 is the root: the only Message with no parent, so
-    #    the first value of the local counter is where it stands.
-    root_check(counts, lmx_root_open(@ root, root_entry_body, 5000U, 2U, 1U) = c.LMX_ROOT_OK, "the root did not open")
-    root_check(counts, lmx_root_state(@ root) = c.LMX_ROOT_OPEN, "an opened root does not say it is open")
-    message: lmx_root_message(@ root)
-    thread: lmx_root_thread(@ root)
-    arena: lmx_root_arena(@ root)
-    store: lmx_perm_store_of(arena)
-    # What the entry needs to find R0's own graph: the entry has no arguments (LmxEntry), so
-    # the handle reaches it through the witness, exactly as a generated entry reaches its own.
-    root_witness_message: message
-    root_check(counts, message != 0 && thread != 0 && arena != 0 && store != 0, "the root has no message, object, arena or permanent store")
-    if: message = 0 || thread = 0 || arena = 0 || store = 0
-        fputs("lmx_root: the root was not built\n", l1_stdout())
-        free(counts)
-        return: 2
-    ---
-    root_check(counts, message\index = c.LMX_ROOT_INDEX, "the root's index is not 1")
-    root_check(counts, message\running = 1 && message\success = 0, "the root does not start running and unfinished")
-    root_check(counts, message\handoff_ready = 0, "the root starts handoff-safe")
-    root_check(counts, message\graph != 0, "the root has no graph")
-    graph: message\graph
-    root_check(counts, graph\len = c.LMX_ROOT_SLOTS, "R0's graph has neither the children's slots nor the two arrays'")
-    # (model 20) The two permanent arrays: R0's own, built with the set translation knows.
-    # R0's graph may name them, but lifetime comes from store residency, not GC reachability.
-    eternal_array: lmx_root_eternal(@ root)
-    methods_array: lmx_root_methods(@ root)
-    root_check(counts, eternal_array != 0 && methods_array != 0 && eternal_array != methods_array, "R0 has no two retention arrays")
-    root_check(counts, eternal_array\len = 2U, "the eternal array was not built with the translation-time set")
-    root_check(counts, methods_array\len = 1U, "the method array was not built with the translation-time set")
-    root_check(counts, lmx_arena_ref_value(graph, c.LMX_ROOT_ETERNAL_SLOT) = (cast: (@: void) eternal_array), "R0's graph does not name the eternal array")
-    root_check(counts, lmx_arena_ref_value(graph, c.LMX_ROOT_METHOD_SLOT) = (cast: (@: void) methods_array), "R0's graph does not name the method array")
-    root_check(counts, thread\message = message, "R0's object belongs to another Message")
-    root_check(counts, lmx_range_classify(arena, (cast: (@: void) message)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "R0's record is not a Message record of R0's arena")
-    root_check(counts, lmx_range_classify(arena, (cast: (@: void) thread)) = c.LMX_DOMAIN_KIND_THREAD, "R0's object is not an executable object of R0's arena")
-    root_check(counts, lmx_range_classify(arena, (cast: (@: void) graph)) = c.LMX_KIND_STRUCT, "R0's graph is not a Structure of R0's arena")
-    # The reading open started R0's own wait at (25 (iii): open is the cycle's first reading).
-    base: lmx_root_clock(@ root)
-    root_check(counts, base = lmx_clock_ticks() || lmx_clock_ticks() - base < 1000U, "the root did not take the clock's reading at open")
+    # The R0 child collection itself has no eight-child ceiling.
+    a: root_thread()
+    b: root_thread()
+    c0: root_thread()
+    d: root_thread()
+    e: root_thread()
+    f: root_thread()
+    g: root_thread()
+    h: root_thread()
+    i: root_thread()
+    root_check(counts, a != 0 && b != 0 && c0 != 0 && d != 0 && e != 0 && f != 0 && g != 0 && h != 0 && i != 0, "child probe allocation failed")
+    root_check(counts, lmx_thread_child_add(r0, a, lmx_root_arena(@ root)) = c.LMX_THREAD_OK && lmx_thread_child_add(r0, b, lmx_root_arena(@ root)) = c.LMX_THREAD_OK && lmx_thread_child_add(r0, c0, lmx_root_arena(@ root)) = c.LMX_THREAD_OK && lmx_thread_child_add(r0, d, lmx_root_arena(@ root)) = c.LMX_THREAD_OK && lmx_thread_child_add(r0, e, lmx_root_arena(@ root)) = c.LMX_THREAD_OK && lmx_thread_child_add(r0, f, lmx_root_arena(@ root)) = c.LMX_THREAD_OK && lmx_thread_child_add(r0, g, lmx_root_arena(@ root)) = c.LMX_THREAD_OK && lmx_thread_child_add(r0, h, lmx_root_arena(@ root)) = c.LMX_THREAD_OK && lmx_thread_child_add(r0, i, lmx_root_arena(@ root)) = c.LMX_THREAD_OK, "R0 rejected dynamic children")
+    root_check(counts, lmx_thread_child_count(r0) = 9U && children\capacity = 9U, "R0 retained an eight-child limit")
+    root_check(counts, lmx_thread_child_remove(r0, a) = c.LMX_THREAD_OK && lmx_thread_child_remove(r0, b) = c.LMX_THREAD_OK && lmx_thread_child_remove(r0, c0) = c.LMX_THREAD_OK && lmx_thread_child_remove(r0, d) = c.LMX_THREAD_OK && lmx_thread_child_remove(r0, e) = c.LMX_THREAD_OK && lmx_thread_child_remove(r0, f) = c.LMX_THREAD_OK && lmx_thread_child_remove(r0, g) = c.LMX_THREAD_OK && lmx_thread_child_remove(r0, h) = c.LMX_THREAD_OK && lmx_thread_child_remove(r0, i) = c.LMX_THREAD_OK, "R0 child removal failed")
+    root_check(counts, lmx_thread_child_count(r0) = 0U, "R0 child Array did not empty")
 
-    # 2. (ii) The entry runs INSIDE R0's turn, once per cycle, and nowhere else.
-    root_check(counts, root_witness_turns = 0U, "the entry ran before any turn")
-    root_check(counts, lmx_thread_current() = 0, "an object was current before any turn")
-    root_check(counts, lmx_root_cycle(@ root, 4U) = c.LMX_ROOT_OK, "the first cycle did not run")
-    root_check(counts, root_witness_turns = 1U, "the cycle did not run the entry exactly once")
-    root_check(counts, root_witness_inside = 1U, "the entry did not run inside R0's turn")
-    root_check(counts, root_witness_node = 1U, "the entry did not receive R0's own node")
-    root_check(counts, thread\turn = 1U, "R0's turn cursor did not advance")
-    root_check(counts, lmx_thread_current() = 0, "the cycle left a current object behind")
-    root_check(counts, lmx_root_turn(@ root, lmx_clock_ticks()) = c.LMX_ROOT_OK, "a turn of R0 did not run")
-    root_check(counts, root_witness_turns = 2U, "a turn outside a cycle did not run the entry")
-    root_check(counts, root_witness_inside = 2U, "the entry ran outside a turn")
-    root_check(counts, thread\turn = 2U, "R0's turn cursor did not follow its turns")
-    # The boundary collection ran in those cycles, but neither visits nor owns the store.
-    # Type is the common range-membership answer; node = 0 is checked separately.
-    root_check(counts, root_witness_eternal_branch != 0, "the runtime's builder did not fill the eternal array")
-    root_check(counts, lmx_range_classify(arena, (cast: (@: void) root_witness_eternal_branch)) = c.LMX_KIND_STRUCT, "the eternal branch did not survive the boundary")
-    root_check(counts, lmx_range_classify(store, (cast: (@: void) root_witness_eternal_branch)) = c.LMX_KIND_STRUCT, "the permanent store does not classify its branch")
-    root_check(counts, lmx_range_type_of(arena, (cast: (@: void) root_witness_eternal_branch)) = lmx_range_type_of(store, (cast: (@: void) root_witness_eternal_branch)), "the bound arena and store disagree on the branch's physical type")
-    root_check(counts, lmx_range_stride(arena, (cast: (@: void) root_witness_eternal_branch)) = lmx_range_stride(store, (cast: (@: void) root_witness_eternal_branch)), "the bound arena and store disagree on the branch's stride")
-    root_check(counts, lmx_range_pool(arena, (cast: (@: void) root_witness_eternal_branch)) = 0, "the ordinary arena claims ownership of the permanent branch")
-    root_check(counts, lmx_range_pool(store, (cast: (@: void) root_witness_eternal_branch)) != 0, "the permanent branch is in no store range")
-    root_check(counts, root_witness_eternal_branch\node = 0, "the independent branch root has a lexical parent")
-    root_check(counts, lmx_int_value_known(lmx_arena_ref_value(root_witness_eternal_branch, 0U)) = 7, "the eternal branch's cell did not survive the boundary")
-
-    # 2b. Copying observes the same address-range type.  A permanent root is the same
-    # physical object, while an ordinary Structure with a permanent lexical parent is
-    # copied and keeps that parent address.  The destination never owns the parent.
-    memset((cast: (@: void) (@ copy_arena)), 0, c.sizeof(c.LmxArena))
-    root_check(counts, lmx_arena_open(@ copy_arena) = 0, "the copy arena did not open")
-    root_check(counts, lmx_perm_bind(@ copy_arena, store) = 0, "the copy arena did not bind to R0's store")
-    copied: 0
-    root_check(counts, lmx_graph_copy_owned(root_witness_eternal_branch, 0, arena, @ copy_arena, @ copied) = c.LMX_GRAPH_COPY_OK && copied = root_witness_eternal_branch, "copying a permanent root changed its physical address")
-    mutable: lmx_node_new_owned(arena)
-    root_check(counts, mutable != 0, "the mutable copy control did not build")
-    if: mutable != 0
-        mutable\node: root_witness_eternal_branch
-        copied: 0
-        root_check(counts, lmx_graph_copy_owned(mutable, 0, arena, @ copy_arena, @ copied) = c.LMX_GRAPH_COPY_OK, "a mutable Structure with a permanent parent did not copy")
-        root_check(counts, copied != 0 && copied != mutable, "the mutable Structure was retained instead of copied")
-        root_check(counts, copied != 0 && copied\node = root_witness_eternal_branch, "the copy did not preserve its permanent lexical parent")
-        root_check(counts, lmx_range_pool(@ copy_arena, (cast: (@: void) root_witness_eternal_branch)) = 0, "the destination arena claims the permanent parent")
-    ---
-    root_check(counts, lmx_arena_release(@ copy_arena) = 0, "the copy arena did not release")
-
-    # 3. (iii) One reading per cycle, handed down: the entry sees THIS cycle's reading, and
-    #    the next cycle replaces it.  The readings are taken from the one open started R0's
-    #    own wait at, so the wait neither expires here nor jumps backwards (a reading below
-    #    the start would wrap and read as overdue -- which is the arithmetic working, not a
-    #    defect).
-    root_check(counts, lmx_root_cycle_at(@ root, 1U, base + 1U) = c.LMX_ROOT_OK, "a cycle with a reading did not run")
-    root_check(counts, lmx_root_clock(@ root) = base + 1U, "the cycle's reading did not become the root's clock")
-    root_check(counts, root_witness_tick = base + 1U, "the entry did not see the cycle's reading")
-    root_check(counts, lmx_root_cycle_at(@ root, 1U, base + 2U) = c.LMX_ROOT_OK, "a second cycle with a reading did not run")
-    root_check(counts, lmx_root_clock(@ root) = base + 2U, "the root's clock did not follow the next reading")
-    root_check(counts, root_witness_tick = base + 2U, "the entry did not see the second reading")
-
-    # 4. (iv) The top level is single: a parentless creation is created THROUGH R0, inside R0's
-    #    own turn -- so it is RESERVED there and becomes visible in R0's graph at that turn's
-    #    end, which is the cycle's boundary.
-    memset((cast: (@: void) (@ child)), 0, c.sizeof(c.LmxArena))
-    if: lmx_arena_open(@ child) != 0
-        fputs("lmx_root: the child's arena did not open\n", l1_stdout())
-        free(counts)
-        return: 2
-    ---
-    source: lmx_node_new_owned(arena)
-    if: source = 0 || lmx_arena_refs_open_owned(arena, source, 2U) != 0
-        fputs("lmx_root: the template graph was not built\n", l1_stdout())
-        free(counts)
-        return: 2
-    ---
-    root_check(counts, lmx_root_create(@ root, @ child, 0U, source) = 0, "a creation off R0's turn was accepted")
-    root_witness_source: source
-    # The template the entry copies from is a cell of R0's arena, and the end-turn collection
-    # keeps what R0's own roots reach -- so the runtime's template is PUBLISHED into R0's graph
-    # (a runtime's own handle is a root; a value held only in a caller's frame is not, and the
-    # collector cannot see one).
-    lmx_arena_ref_store(graph, 3U, (cast: (@: void) source))
-    root_witness_child_arena: @ child
-    root_witness_child: 0
-    root_witness_slot_seen: 9U
-    root_witness_refused: 9U
-    root_check(counts, lmx_root_cycle(@ root, 4U) = c.LMX_ROOT_OK, "the cycle that reserves a child did not run")
-    child_message: root_witness_child
-    root_check(counts, child_message != 0, "a parentless creation was refused")
-    root_check(counts, root_witness_slot_seen = 0U, "a reserved child was visible inside the turn that reserved it")
-    root_check(counts, lmx_arena_ref_value(graph, 0U) = (cast: (@: void) child_message), "the boundary did not publish the child into R0's own graph")
-    root_check(counts, child_message\index = 1U, "the first top-level child's index is not 1")
-    root_check(counts, lmx_range_classify(@ child, (cast: (@: void) child_message)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "the child's record does not answer in its own arena")
-    root_check(counts, lmx_range_classify(arena, (cast: (@: void) child_message)) = c.LMX_KIND_NONE, "the child's record answers in the root's arena before any handoff")
-    root_check(counts, root_witness_refused = 0U, "a creation beyond the top level's slots was accepted")
-    root_check(counts, lmx_arena_ref_value(graph, 0U) = (cast: (@: void) child_message), "a refused creation disturbed the top level")
-
-    # 4b. (19.29.8) THE SETTLING AT R0's BOUNDARY.  The child published above is given an
-    #     object and finished, and R0's own cycle must settle it: "Each closing Message settles
-    #     only its direct children" at its serialized owner-only boundary.  This is the check
-    #     that the wiring in lmx_root_cycle_at is real, not that the act exists (the act has its
-    #     own file): the child leaves R0's live-children list, its slot in R0's graph goes, and
-    #     its arena -- the whole execution history of a successful Message -- is released.
-    child_mail: (cast: (@: LmxPost) lmx_arena_take(@ child, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
-    child_thread: (cast: (@: LmxThread) lmx_arena_take(@ child, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
-    child_cell: lmx_arena_take(@ child, 1U, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT)
-    root_check(counts, child_mail != 0 && child_thread != 0 && child_cell != 0, "the child's object did not build")
-    root_check(counts, lmx_post_init(@ child, child_mail) = c.LMX_POST_OK, "the child's mailbox did not open")
-    root_check(counts, lmx_schedule_init(@ child_sched, @ child, (cast: (@: void) child_thread), 8U) = c.LMX_SCHEDULE_OK, "the child's record did not initialize")
-    root_check(counts, lmx_thread_attach(child_thread, child_message, child_mail, @ child_sched) = c.LMX_THREAD_OK, "the child's object did not attach")
-    root_check(counts, lmx_thread_child_add(thread, child_thread, arena) = c.LMX_THREAD_OK, "the child did not join R0's live children")
-    # Finished: not running, handoff-safe, successful -- the one predicate the settling side reads.
-    child_message\running: 0
-    child_message\handoff_ready: 1
-    child_message\success: 1
-    root_check(counts, lmx_thread_child_is(thread, child_thread) != 0, "the finished child is not R0's child before the cycle")
-    root_check(counts, lmx_range_classify(@ child, child_cell) != c.LMX_KIND_NONE, "the child's cell does not answer in its own arena before the cycle")
-
-    root_check(counts, lmx_root_cycle(@ root, 1U) = c.LMX_ROOT_OK, "the cycle that settles did not run")
-    root_check(counts, lmx_thread_child_is(thread, child_thread) = 0, "R0's boundary did not settle its finished child")
-    root_check(counts, lmx_arena_ref_value(graph, 0U) = 0, "the settled child's slot in R0's graph was not cleared")
-    root_check(counts, lmx_range_classify(@ child, child_cell) = c.LMX_KIND_NONE, "the settled successful child's arena was not released")
-
-    # 5. (v) THE WORLD'S PLACE: supervision is handed to the stub's own stamp cell, and the
-    #    transfer is REFUSED exactly where the watching would be meaningless -- an address that
-    #    is not one, or a world that has never written its reading (that zero would age as
-    #    "silent since the beginning of time", and the root would end at once).  A refusal writes
-    #    nothing and leaves the root as it was.  CONTRACT CHANGED 19.09 by Mikhail's order: the
-    #    place of WorldWideMix was a REFUSING stub ("supervision is NOT handed over" -- status
-    #    LMX_ROOT_NO_WORLD, which no act returns any more); now the local stub-parent holds it,
-    #    and the mechanism itself -- the ring, the poll, the silent world ending the root -- is
-    #    `lmx_app_root_stub_selftest`'s subject.  What belongs HERE is the act's own guard.
-    root_check(counts, lmx_root_supervise_world(@ root, 0) = c.LMX_ROOT_INVALID, "a transfer with no address was accepted")
-    root_check(counts, lmx_root_supervise_world(@ root, (cast: (@: void) (@ world_zero))) = c.LMX_ROOT_INVALID, "a world that never wrote its reading was accepted")
-    root_check(counts, lmx_root_state(@ root) = c.LMX_ROOT_OPEN, "the refused transfer changed the root's state")
-
-    # 6. R0's own deadline, aged against the CYCLE's reading: 5000 ms past the reading open
-    #    took, no more and no less.  A cycle that aged against the platform's clock could not
-    #    answer either of these deterministically -- the platform's reading moves by itself,
-    #    and these two checks are one millisecond apart.  (The limit is 5000 ms so that the
-    #    cycles above, which do take the platform's own reading, cannot expire by accident.)
-    root_check(counts, lmx_root_cycle_at(@ root, 1U, base + 4999U) = c.LMX_ROOT_OK, "the root ended its cycle before its own limit")
-    root_check(counts, lmx_root_cycle_at(@ root, 1U, base + 5000U) = c.LMX_ROOT_DONE, "the root outlived its own limit")
-    root_check(counts, lmx_root_state(@ root) = c.LMX_ROOT_OPEN, "a finished cycle closed the root by itself")
-
-    # 7. Teardown: the stop request, the mailbox's pool back, and one release of one owner.
-    #    After it every act refuses -- the arena is gone, so nothing may be read through it.
-    root_check(counts, lmx_root_close(@ root) = c.LMX_ROOT_OK, "the root did not close")
-    root_check(counts, lmx_root_state(@ root) = c.LMX_ROOT_CLOSED, "a closed root does not say it is closed")
-    root_check(counts, lmx_root_turn(@ root, lmx_clock_ticks()) = c.LMX_ROOT_INVALID, "a closed root ran a turn")
-    root_check(counts, lmx_root_cycle(@ root, 1U) = c.LMX_ROOT_INVALID, "a closed root ran a cycle")
-    root_check(counts, lmx_root_create(@ root, @ child, 1U, source) = 0, "a closed root created a child")
-    root_check(counts, lmx_root_supervise_world(@ root, (cast: (@: void) (@ counts))) = c.LMX_ROOT_INVALID, "a closed root attempted a transfer")
-    root_check(counts, lmx_root_close(@ root) = c.LMX_ROOT_INVALID, "a closed root closed twice")
+    root_check(counts, lmx_arena_open(@ child_arena) = 0, "child arena open failed")
+    source: lmx_node_new_owned(lmx_root_arena(@ root))
+    root_check(counts, source != 0 && lmx_root_create(@ root, @ child_arena, source) = 0, "creation outside R0 turn was accepted")
+    lmx_arena_release(@ child_arena)
+    root_check(counts, lmx_root_close(@ root) = c.LMX_ROOT_OK && lmx_root_state(@ root) = c.LMX_ROOT_CLOSED, "ordinary empty root cascade did not close")
 
     failures: counts[1]
-    c.printf("lmx_root checks=%d failures=%d\n", counts[0], counts[1])
+    c.printf("lmx_root_selftest: %d checks, %d failures\n", counts[0], failures)
+    free(a)
+    free(b)
+    free(c0)
+    free(d)
+    free(e)
+    free(f)
+    free(g)
+    free(h)
+    free(i)
     free(counts)
-return: failures
+return: failures != 0

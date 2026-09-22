@@ -19,26 +19,31 @@ predef: "lmx_graph_copy_owned.h.lm1"
 # every ordinary operand root and the body root together. An object reachable
 # from two operands is therefore copied ONCE and both references point at that
 # one copy; cross-operand aliases and cycles keep their shape; every copied
-# Structure's node is rewritten to the copy of its lexical parent or to zero.
+# Structure's parent is rewritten to the copy of its structural parent or to zero.
 # METHOD descriptors stay terminals, shared by address, and every operand is an
 # ordinary Structure: which value is a METHOD is answered by src_arena's table
 # (LMX_KIND_METHOD), never by a list the caller passes in. An operand that does
 # not classify as a Structure is refused -- a METHOD record is not one and
 # cannot be merged.
 #
-# An eternal branch is a different mechanism (Mikhail, 2026-09-17): its void *
-# data point into the root Message's arena's immutable part, and the translator
-# substitutes its values and explicit types into the code as const. It therefore
-# reaches merge as an ordinary Structure and is copied like one; there is no
-# eternal-range list, and holding one grants nothing else.
+# Qualification is an address-domain property.  A caller may name any number of ordinary
+# graph receiver-expressions whose physical addresses denote full
+# independent+const+immutable profiles.  Only exact membership in an array carrying one of
+# those physical profiles retains an address; another profile with identical kind/type, an
+# unprofiled independent root, foreign ownership, and sealing all take the copy path.
+# A retained foreign address must already be visible through an explicit sealed-range import
+# in dst_arena. Only sealed ranges may be retained; merge never adopts their storage or
+# installs a hidden range view. The caller supplies the profiles as a call-bounded span of
+# physical Lmx references. Duplicates are idempotent; no global set, numeric qualifier or
+# textual identity participates.
 #
 # TWO arenas, because the act has two sides: `src_arena` is the arena the
 # operands, the body and the container live in and answers every classification
 # question; `dst_arena` is the arena the copies and the result are built in.
 #
 # `container` is the live Structure through which the merge receiver executed.
-# It becomes the RESULT's node and nothing else: it is not assigned as the node
-# of any copied child, whose node links come from the map. A nonzero container
+# It becomes the RESULT's parent and nothing else: it is not assigned as the parent
+# of any copied child, whose parent links come from the map. A nonzero container
 # must classify as a Structure of src_arena -- the arena's table answers that,
 # not an inventory -- and a foreign address is refused rather than stored.
 #
@@ -60,4 +65,9 @@ prototype:
     # fake rather than the guard.
     fn: lmx_merge_add_width (@: size_t total; @: Lmx x) int
     fn: lmx_merge_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx out) int
+    fn: lmx_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx out) int
+    # `retain_profile` is the exact physical profile representing the full
+    # independent+const+immutable receiver chain.  No other profile/lifecycle/owner
+    # property retains an address.
+    fn: lmx_merge_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @: Lmx retain_profile; @@: Lmx out) int
 end: prototype

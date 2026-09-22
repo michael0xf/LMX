@@ -26,7 +26,7 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 #
 #   * the body of a translated Message is the CALLABLE ITS OWN GRAPH names, and the call goes
 #     through the ordinary guard -- a graph that is not a callable is nothing to run, not an error;
-#   * the reserved node of that call is the graph ITSELF ("the typed entry receives its own node");
+#   * the reserved source node of that call is the lexical space above the method (`graph.parent`);
 #   * the body runs INSIDE the turn: the object that is current while it runs is the very thread
 #     whose turn it is, and the cursor is cleared afterwards;
 #   * the boundary is part of the same act: what the turn staged is published by it;
@@ -41,15 +41,17 @@ size_t: tt_host_calls 0U
 size_t: tt_mode_native_calls 0U
 size_t: tt_mode_interp_calls 0U
 @: Lmx tt_node 0
+@: Lmx tt_self 0
 @: LmxThread tt_current 0
 @: Lmx tt_mode_graph 0
 @: LmxThread tt_mode_target 0
 int: tt_mode_reentry 0
 
 # The body of a translated Message.  It records what it was handed and who was current while it ran.
-fn: tt_body (@: Lmx node) int
+fn: tt_body (@: Lmx node; @: Lmx self) int
     tt_calls: tt_calls + 1U
     tt_node: node
+    tt_self: self
     tt_current: lmx_thread_current()
 return: 7
 
@@ -71,8 +73,10 @@ return: 0
 # Test injection for the future L3 interpreter ABI.  Its signature has no native entry: selected
 # interpreted execution is one path, never a fallback chain.
 fn: tt_mode_interpreter (@: LmxThread t) int
+    @: LmxMsg message
     tt_mode_interp_calls: tt_mode_interp_calls + 1U
-    tt_mode_graph: t\message\graph
+    message: lmx_thread_message(t)
+    tt_mode_graph: message\graph
     tt_current: lmx_thread_current()
     lmx_thread_request_mode(t, c.LMX_THREAD_MODE_NATIVE)
 return: 0
@@ -116,19 +120,14 @@ fn: tt_message (@: LmxArena arena; @: Lmx graph; @@: LmxMsg out_message; @@: Lmx
     @: LmxSchedule sched
     \out_message: 0
     \out_thread: 0
-    message: (cast: (@: LmxMsg) lmx_arena_take(arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
-    t: (cast: (@: LmxThread) lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    t: (cast: (@: LmxThread) lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
     mail: (cast: (@: LmxPost) lmx_arena_take(arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
     sched: (cast: (@: LmxSchedule) lmx_arena_take(arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
-    if: message = 0 || t = 0 || mail = 0 || sched = 0
+    if: t = 0 || mail = 0 || sched = 0
         return: 0
     ---
-    message\running: 1
-    message\success: 0
-    message\handoff_ready: 0
-    message\graph: graph
-    message\index: 1U
-    if: lmx_post_init(arena, mail) != c.LMX_POST_OK || lmx_thread_attach(t, message, mail, sched) != c.LMX_THREAD_OK
+    message: lmx_thread_message(t)
+    if: lmx_post_init(arena, mail) != c.LMX_POST_OK || lmx_thread_init(arena, t, graph, mail, sched) != c.LMX_THREAD_OK
         return: 0
     ---
     if: lmx_schedule_init(sched, arena, (cast: (@: void) t), 1000U) != c.LMX_SCHEDULE_OK
@@ -140,10 +139,33 @@ fn: tt_message (@: LmxArena arena; @: Lmx graph; @@: LmxMsg out_message; @@: Lmx
     \out_sched: sched
 return: 1
 
+fn: tt_parent (@: LmxArena arena) @: LmxThread
+    @: Lmx graph
+    @: LmxArrayDesc children
+    @: LmxThread thread
+    @: LmxPost mail
+    @: LmxSchedule sched
+    graph: lmx_node_new_owned(arena)
+    children: lmx_array_grow_ref_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, arena)
+    thread: (cast: (@: LmxThread) lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
+    mail: (cast: (@: LmxPost) lmx_arena_take(arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    sched: (cast: (@: LmxSchedule) lmx_arena_take(arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: graph = 0 || children = 0 || thread = 0 || mail = 0 || sched = 0
+        return: 0
+    ---
+    if: lmx_arena_refs_open_owned(arena, graph, 1U) != 0 || lmx_arena_ref_store(graph, 0U, (cast: (@: void) children)) != 0
+        return: 0
+    ---
+    if: lmx_post_init(arena, mail) != c.LMX_POST_OK || lmx_thread_init(arena, thread, graph, mail, sched) != c.LMX_THREAD_OK || lmx_schedule_init(sched, arena, (cast: (@: void) thread), 1000U) != c.LMX_SCHEDULE_OK || lmx_thread_children_bind(thread, children, arena) != c.LMX_THREAD_OK
+        return: 0
+    ---
+return: thread
+
 fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxArena: arena
     LmxArena: bare_arena
+    LmxArena: parent_arena
     LmxPool: methods
     LmxManager: mgr
     @: LmxArena arena_at 0
@@ -159,10 +181,13 @@ fn: main () int
     @: LmxThread done_thread 0
     @: LmxPost done_mail 0
     @: LmxSchedule done_sched 0
+    @: LmxThread parent 0
     @: Lmx graph 0
+    @: Lmx graph_parent 0
     @: Lmx plain 0
     @: Lmx own_field 0
     @: LmxMethod method 0
+    @: LmxCallable callable_info 0
     @: void tt_taken 0
     unsigned: turn_before 0U
     int: built
@@ -171,8 +196,9 @@ fn: main () int
         return: 2
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ bare_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ parent_arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ methods)), 0, c.sizeof(c.LmxPool))
-    if: lmx_arena_open(@ arena) != 0 || lmx_arena_open(@ bare_arena) != 0
+    if: lmx_arena_open(@ arena) != 0 || lmx_arena_open(@ bare_arena) != 0 || lmx_arena_open(@ parent_arena) != 0
         fputs("lmx_thread_turn: an arena did not open\n", l1_stdout())
         free(counts)
         return: 2
@@ -184,28 +210,37 @@ fn: main () int
         return: 2
     ---
     method: lmx_method_intern(@ arena, @ methods, (cast: (LmxEntry) tt_body), 1U)
-    if: method = 0
+    callable_info: lmx_callable_new_owned(@ arena)
+    if: method = 0 || callable_info = 0
         free(counts)
         return: 2
     ---
+    callable_info\method: method
 
     # The Message's graph: an ordinary Structure that IS a callable occurrence -- the shared method
     # record in physical child[0], one own field after it.
     graph: tt_struct(@ arena, 2U)
+    graph_parent: tt_struct(@ arena, 1U)
     own_field: lmx_int_new_owned(@ arena)
     # In the OTHER arena on purpose: a graph is a value of the band its Message belongs to.
     plain: tt_struct(@ bare_arena, 1U)
-    if: graph = 0 || own_field = 0 || plain = 0
+    if: graph = 0 || graph_parent = 0 || own_field = 0 || plain = 0
         free(counts)
         return: 2
     ---
     lmx_int_store_known(own_field, 4242)
-    lmx_arena_ref_store(graph, 0U, (cast: (@: void) method))
+    graph\parent: graph_parent
+    lmx_arena_ref_store(graph, 0U, (cast: (@: void) callable_info))
     lmx_arena_ref_store(graph, 1U, own_field)
 
     built: tt_message(@ arena, graph, @ message, @ t, @ mail, @ sched)
     tt_check(counts, built != 0 && message != 0 && t != 0 && mail != 0 && sched != 0, "the Message was not built")
     if: built = 0
+        free(counts)
+        return: 2
+    ---
+    parent: tt_parent(@ parent_arena)
+    if: parent = 0 || lmx_thread_child_add(parent, t, @ parent_arena) != c.LMX_THREAD_OK
         free(counts)
         return: 2
     ---
@@ -219,7 +254,8 @@ fn: main () int
     tt_check(counts, lmx_post_count(mail, c.LMX_POST_STAGED) = 1U, "the accepted target was not staged")
     tt_check(counts, lmx_manager_step(@ mgr, 10U) = c.LMX_MANAGER_OK, "the step was refused")
     tt_check(counts, tt_calls = 1U, "the graph's body did not run in the turn")
-    tt_check(counts, tt_node = graph, "the body was not handed its own graph as the reserved node")
+    tt_check(counts, tt_node = graph_parent, "the body was not handed the graph's lexical parent as the reserved node")
+    tt_check(counts, tt_self = graph, "the body was not handed its selected graph occurrence as self")
     tt_check(counts, tt_current = t, "the body did not run inside the turn")
     tt_check(counts, lmx_thread_current() = 0, "the turn left a current object behind")
     tt_check(counts, lmx_post_count(mail, c.LMX_POST_OUTBOX) = 1U && lmx_post_count(mail, c.LMX_POST_STAGED) = 0U, "the boundary did not publish what the turn staged")
@@ -234,7 +270,7 @@ fn: main () int
     # --- the handler from outside wins: R0's shape, no METHOD record -------------------------
     tt_check(counts, lmx_thread_turn(t, tt_host, 30U) = c.LMX_THREAD_OK, "the turn with a host handler was refused")
     tt_check(counts, tt_host_calls = 1U && tt_calls = 2U, "the host handler did not replace the graph's body")
-    tt_check(counts, tt_node = graph && tt_current = t, "the host handler was handed something else")
+    tt_check(counts, tt_node = graph_parent && tt_current = t, "the host handler was not handed the graph's lexical parent")
 
     # --- a graph that names nothing: pure boundary work, not an error -------------------------
     # Its own world in its OWN arena: a turn's boundary collects the band of the record, and the

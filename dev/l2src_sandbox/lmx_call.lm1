@@ -3,10 +3,11 @@ predef: "l2src/lmx_arena_refs.h.lm1"
 predef: "l2src/lmx_implements.h.lm1"
 
 # lmx_call.lm1 - the call.  Every check here is the domain question, and the call itself is one
-# cast: the METHOD's `addr` is a typed entry, and the shape this unit names is the zero-argument
-# one.  A generated body for a callable WITH arguments is called by generated code, which knows
-# the signature it emitted; this unit is what a runtime calls when it holds a Structure and must
-# find out whether it can call it at all.
+# cast: the METHOD's `addr` is a typed entry, and the shape this unit names is the
+# zero-source-argument one.  The address range of child[0]'s VALUE chooses the descriptor-backed
+# `(node,self)` ABI or the transitional direct-METHOD `(node)` ABI.  A generated body WITH source
+# arguments is called by generated code, which knows the signature it emitted; this unit is what
+# a runtime calls when it holds a Structure and must find out whether it can call it at all.
 
 fn: lmx_call_ready (@: LmxArena arena; @: Lmx callable) int
     @: void target
@@ -22,8 +23,7 @@ fn: lmx_call_ready (@: LmxArena arena; @: Lmx callable) int
     target: lmx_arena_ref_value(callable, 0U)
     if: target = 0
         return: c.LMX_CALL_NOT_CALLABLE
-    # New: child[0] is LmxCallable. Old METHOD {addr,sig} still admitted so
-    # existing selftests keep working until they are retargeted.
+    # New: child[0] is LmxCallable. Old METHOD {addr,sig} is only the transitional ABI.
     if: lmx_domain_kind(arena, target) != c.LMX_DOMAIN_KIND_CALLABLE
         if: lmx_domain_kind(arena, target) != c.LMX_KIND_METHOD
             return: c.LMX_CALL_NOT_CALLABLE
@@ -49,7 +49,7 @@ return: (cast: (@: LmxMethod) target)
 fn: lmx_call_node (@: Lmx callable) @: Lmx
     if: callable = 0
         return: 0
-return: callable
+return: callable\parent
 
 fn: lmx_call_callable (@: LmxArena arena; @: Lmx node) @: LmxCallable
     @: void target
@@ -64,7 +64,8 @@ fn: lmx_call0 (@: LmxArena arena; @: Lmx callable) int
     @: void target
     @: LmxCallable info
     @: LmxMethod method
-    LmxCallEntry: entry
+    LmxCallEntry: legacy_entry
+    LmxCallEntrySelf: self_entry
     LmxEntry: addr
     if: lmx_call_ready(arena, callable) != c.LMX_CALL_OK
         return: c.LMX_CALL_NOT_CALLABLE
@@ -75,15 +76,20 @@ fn: lmx_call0 (@: LmxArena arena; @: Lmx callable) int
         if: info != 0 && info\method != 0
             addr: info\method\addr
         ---
-    ---
-    if: addr = 0
-        method: (cast: (@: LmxMethod) target)
-        if: method != 0
-            addr: method\addr
+        if: addr = 0
+            return: c.LMX_CALL_NOT_CALLABLE
         ---
+        self_entry: (cast: (LmxCallEntrySelf) addr)
+        return: self_entry(lmx_call_node(callable), callable)
+    ---
+    # A direct METHOD is the old compatibility shape.  New generated code stores an
+    # LmxCallable descriptor and therefore takes the branch above.
+    method: (cast: (@: LmxMethod) target)
+    if: method != 0
+        addr: method\addr
     ---
     if: addr = 0
         return: c.LMX_CALL_NOT_CALLABLE
     ---
-    entry: (cast: (LmxCallEntry) addr)
-return: entry(lmx_call_node(callable))
+    legacy_entry: (cast: (LmxCallEntry) addr)
+return: legacy_entry(lmx_call_node(callable))

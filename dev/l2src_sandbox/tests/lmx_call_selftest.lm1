@@ -15,10 +15,12 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 #
 #   * a callable is an ordinary Structure whose PHYSICAL CHILD[0] identifies the shared method
 #     record: nothing is stored to say so, and the check is the domain of the value in that slot;
-#   * the reserved node of a call is the selected M ITSELF -- not its lexical parent, and not the
-#     method record, which stores no node;
+#   * the reserved source node of a call is exactly M.parent, the lexical space immediately above
+#     the selected method occurrence M -- not M itself, not M.parent.parent and not the method
+#     record; a body entered while M runs has its own parent but does not rebind this activation's
+#     node, and an explicit node\field starts at M.parent;
 #   * the entry is reached THROUGH the method record and handed that node: the entry below sees
-#     the callable, and its status is what the call answers;
+#     the above-method space, and its status is what the call answers;
 #   * the occurrence's own fields (the slots after child[0]) are untouched by the call: the shared
 #     record carries {addr, sig} and nothing of this occurrence;
 #   * a value that is not a callable is refused, not called: a primitive, a Structure with an
@@ -27,11 +29,16 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
 size_t: call_taken 0U
 @: Lmx call_seen 0
+@: void call_seen_field 0
 
 # The typed entry of the occurrence: the reserved node first, the status out (19.29.5, 21.13.4).
 fn: call_entry (@: Lmx node) int
     call_taken: call_taken + 1U
     call_seen: node
+    call_seen_field: 0
+    if: node != 0 && node\len > 0
+        call_seen_field: lmx_arena_ref_value(node, 0U)
+    ---
 return: 7
 
 sub: call_check (@: int counts; int: ok; const: @(char label))
@@ -60,6 +67,8 @@ fn: main () int
     LmxPool: methods
     @: LmxArena arena_at 0
     @: Lmx callable 0
+    @: Lmx parent 0
+    @: Lmx outer 0
     @: Lmx empty 0
     @: Lmx plain 0
     @: Lmx zero_callable 0
@@ -96,25 +105,32 @@ fn: main () int
     # The occurrence M: an ordinary Structure, the shared method in physical child[0], its own
     # field after it.
     callable: call_struct(@ arena, 2U)
+    parent: call_struct(@ arena, 1U)
+    outer: call_struct(@ arena, 1U)
     own_field: lmx_int_new_owned(@ arena)
-    if: callable = 0 || own_field = 0
+    if: callable = 0 || parent = 0 || outer = 0 || own_field = 0
         free(counts)
         return: 2
     ---
     lmx_int_store_known(own_field, 4242)
+    parent\parent: outer
+    callable\parent: parent
+    lmx_arena_ref_store(parent, 0U, own_field)
     lmx_arena_ref_store(callable, 0U, (cast: (@: void) method))
     lmx_arena_ref_store(callable, 1U, own_field)
 
     call_check(counts, lmx_call_ready(arena_at, callable) = c.LMX_CALL_OK, "a callable occurrence was not recognized")
     call_check(counts, lmx_call_method(arena_at, callable) = method, "the call did not select the method in physical child[0]")
-    call_check(counts, lmx_call_node(callable) = callable, "the reserved node of a call is not the selected M itself")
+    call_check(counts, lmx_call_node(callable) = parent, "the reserved node of a call is not the selected M's above-method space")
+    call_check(counts, lmx_call_node(callable) != outer, "the call skipped M.parent and used its parent's parent")
     call_check(counts, method\sig = 1U, "the shared record lost its signature")
 
     # The call: the entry is reached through the record and handed the node.
     answer: lmx_call0(arena_at, callable)
     call_check(counts, answer = 7, "the call did not answer the entry's status")
     call_check(counts, call_taken = 1U, "the entry was not called exactly once")
-    call_check(counts, call_seen = callable, "the entry did not receive the selected M as its reserved node")
+    call_check(counts, call_seen = parent, "the entry did not receive the selected M's above-method space as its reserved node")
+    call_check(counts, call_seen_field = own_field, "node\\field did not start at the selected M's above-method space")
     call_check(counts, lmx_arena_ref_value(callable, 1U) = own_field, "the call disturbed the occurrence's own field")
     call_check(counts, lmx_int_value_known(own_field) = 4242, "the occurrence's own field lost its value")
 

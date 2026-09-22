@@ -190,6 +190,10 @@ fn: main () int
     @: LmxWalkFrame pf 0
     @: LmxWalkOwn po 0
     @: Lmx unit 0
+    @: Lmx immutable_profile 0
+    @: Lmx other_profile 0
+    @: Lmx immutable_local 0
+    @: Lmx other_local 0
     @: Lmx n 0
     @: Lmx b 0
     @: Lmx e 0
@@ -220,6 +224,7 @@ fn: main () int
     @: Lmx hop 0
     @: Lmx self 0
     @: Lmx poke 0
+    @: Lmx qualified_writer 0
     int: r 0
     int: v 0
     int: st 0
@@ -248,6 +253,7 @@ fn: main () int
     pc\scratch: ps
     pc\roles: groles
     pc\plan_roles: gplan_roles
+    pc\immutable_profile: 0
     pc\classified: 0U
     gctx: pc
     flat: (cast: (@: size_t) calloc(8U, c.sizeof(size_t)))
@@ -260,10 +266,31 @@ fn: main () int
     abox: lmx_int_new_owned(ga)
     unit: lmx_node_new_owned(ga)
     argv[0]: abox
-    if: groles = 0 || gplan_roles = 0 || flat = 0 || lens = 0 || paths = 0 || argv = 0 || gv = 0 || abox = 0 || unit = 0 || lmx_arena_refs_open_owned(ga, unit, 26U) != 0
+    if: groles = 0 || gplan_roles = 0 || flat = 0 || lens = 0 || paths = 0 || argv = 0 || gv = 0 || abox = 0 || unit = 0 || lmx_arena_refs_open_owned(ga, unit, 27U) != 0
         fputs("lmx_walk: unit\n", l1_stdout())
         return: 2
     ---
+
+    # Immutable is an exact physical receiver-expression profile, not foreign ownership,
+    # sealing or representation.  Prove the owner-local case explicitly: two STRUCT values
+    # with different physical profiles must receive different answers.
+    immutable_profile: lmx_node_new_owned(ga)
+    other_profile: lmx_node_new_owned(ga)
+    immutable_local: lmx_node_new_profiled(ga, immutable_profile)
+    other_local: lmx_node_new_profiled(ga, other_profile)
+    pf: @ frame
+    pf\context: pc
+    pf\arena: ga
+    pc\immutable_profile: immutable_profile
+    check(immutable_profile != 0 && other_profile != 0 && immutable_profile != other_profile && immutable_local != 0 && other_local != 0, "physical immutable-profile fixtures")
+    check(lmx_range_classify(ga, (cast: (@: void) immutable_local)) = c.LMX_KIND_STRUCT && lmx_range_classify(ga, (cast: (@: void) other_local)) = c.LMX_KIND_STRUCT, "profile does not alter STRUCT representation")
+    check(lmx_walk_immutable(pf, (cast: (@: void) immutable_local)) != 0, "owner-local exact immutable profile was writable")
+    check(lmx_walk_immutable(pf, (cast: (@: void) other_local)) = 0, "same representation with another profile became immutable")
+    if: lmx_arena_refs_open_owned(ga, immutable_local, 1U) != 0 || icell(immutable_local, 0U, 0) = 0
+        broken: broken + 1
+    ---
+    pc\immutable_profile: 0
+    pc\classified: 0U
 
     # Every occurrence first: a node refers to a callee and to a holder by address, so
     # the Structures have to exist before the bodies that point at them.
@@ -296,6 +323,12 @@ fn: main () int
     subject: pl(unit, 25U, 2U)
     icell(subject, 0U, 7)
     icell(subject, 1U, 35)
+    # A body that would write an owner-local value of the exact immutable profile.
+    qualified_writer: mk_m(unit, 26U, 2U)
+    n: fr(qualified_writer, 1U, c.LMX_WALK_OP_PUT, 4U)
+    ref(n, 1U, immutable_local)
+    sz(n, 2U, 0U)
+    lit(n, 3U, 1)
 
     # counter:   own n 0;  n: n + 1;  return: n
     cell: icell(counter, 1U, 0)
@@ -538,6 +571,9 @@ fn: main () int
     check(st = c.LMX_WALK_UNSUPPORTED && r = -5 && v = 0 && lmx_int_value_known(cell) = 0, "an unprepared body is UNSUPPORTED, nothing of it runs, no value is reported")
     check(lmx_walk_plan_check(gctx, counter) = c.LMX_WALK_UNSUPPORTED, "and there is no plan to check")
     check(lmx_walk_prepare(gctx, ga, gplan_roles, counter) = c.LMX_WALK_OK, "counter prepared")
+    pc\immutable_profile: immutable_profile
+    check(lmx_walk_prepare(gctx, ga, gplan_roles, qualified_writer) = c.LMX_WALK_INVALID && lmx_int_value_known(lmx_arena_ref_value(immutable_local, 0U)) = 0, "owner-local exact-profile write is refused during preparation")
+    pc\immutable_profile: 0
     info: (cast: (@: LmxCallable) lmx_arena_ref_value(counter, 0U))
     plan: info\header
     check(plan != 0 && lmx_plan_entry_count(plan) = 1U && lmx_plan_slot_known(counter, plan, 0U) = lmx_arena_ref_cell(counter, 1U), "its plan: one entry, the slot of n")

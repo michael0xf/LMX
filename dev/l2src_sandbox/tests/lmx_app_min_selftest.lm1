@@ -18,17 +18,20 @@ predef: "l2src/lmx_chars_owned.lm1"
 predef: "l2src/lmx_arena_refs.lm1"
 predef: "l2src/lmx_array_owned.lm1"
 predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_array_grow_owned.lm1"
 predef: "l2src/lmx_graph_copy_owned.lm1"
 predef: "l2src/lmx_call.lm1"
 predef: "l2src/lmx_clock.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
-# lmx_app_min_selftest.lm1 -- ticket 20260919-093000
-# ONE R0 lifetime: success child (slot 0) -> settle -> lmx_arena_open(@ child_arena) AGAIN
-# -> fail child (slot 1, stop_children) -> settle -> close.
-# Honest mixa check: long-lived R0 creates second child in a DIFFERENT slot after arena reopen
-# (exposes empty-chain pool grow that hid behind two-session / same-slot reuse).
+# lmx_app_min_selftest.lm1 -- GROK-APP-MIN-DYNAMIC-CHILD-20260921-02
+# ONE R0 lifetime: success child -> settle -> lmx_arena_open(@ child_arena) AGAIN
+# -> fail child (stop_children) -> settle -> close.
+# Honest mixa check: long-lived R0 creates a second child after the Array is empty
+# (exposes empty-Array grow that hid behind two-session / same-slot reuse).
+# Membership is R0's sole dynamic graph Array<@LmxThread>, with no parallel registry.
+# lmx_root_open is (root, entry, limit). lmx_root_create is (root, child_arena, source).
 # SUCCESS turn: manager_round (no settle in same round); settle via root_cycle after live asserts.
 # Body writes success=1 only; running=0 cleared by lmx_thread_leave (kernel).
 # pool_make; child_is not child_add; c.fflush(0) after every check.
@@ -43,17 +46,19 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 @: LmxMsg app_letter 0
 size_t: app_phase 0U
 size_t: app_letters_taken 0U
+int: app_letter_owned_after_take 0
 size_t: app_child_turns 0U
 size_t: app_mode 0U
 size_t: app_entry_diag 0U
-size_t: app_slot 0U
 
 fn: app_child_body (@: Lmx node) int
     @: LmxThread t
+    @: LmxMsg message
     @: void letter
     app_child_turns: app_child_turns + 1U
     t: lmx_thread_current()
-    if: t = 0 || t\message = 0
+    message: lmx_thread_message(t)
+    if: t = 0 || message = 0
         return: 0
     ---
     if: lmx_thread_mail_count(t, c.LMX_POST_INBOX) > 0U
@@ -61,8 +66,11 @@ fn: app_child_body (@: Lmx node) int
         if: letter != 0
             app_letters_taken: app_letters_taken + 1U
             app_letter: (cast: (@: LmxMsg) letter)
+            if: t\slot != 0 && lmx_range_classify(t\slot\arena, letter) = c.LMX_DOMAIN_KIND_MSG_RECORD
+                app_letter_owned_after_take: 1
+            ---
             if: app_mode = 1U
-                t\message\success: 1
+                message\success: 1
             ---
         ---
     ---
@@ -80,7 +88,13 @@ fn: app_root_entry (@: Lmx node) int
         app_entry_diag: 1U
         return: 0
     ---
-    child: lmx_root_create(app_root, app_child_arena, app_slot, app_source)
+    child: lmx_root_create(app_root, app_child_arena, app_source)
+    if: child = 0
+        app_entry_diag: 2U
+        return: 0
+    ---
+    child_t: (cast: (@: LmxThread) child)
+    child: lmx_thread_message(child_t)
     if: child = 0
         app_entry_diag: 2U
         return: 0
@@ -100,7 +114,6 @@ fn: app_root_entry (@: Lmx node) int
     ---
     lmx_arena_ref_store(graph, 0U, (cast: (@: void) method))
     child_mail: (cast: (@: LmxPost) lmx_arena_take(app_child_arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
-    child_t: (cast: (@: LmxThread) lmx_arena_take(app_child_arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
     child_sched: (cast: (@: LmxSchedule) lmx_arena_take(app_child_arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
     if: child_mail = 0 || child_t = 0 || child_sched = 0
         app_entry_diag: 5U
@@ -114,7 +127,7 @@ fn: app_root_entry (@: Lmx node) int
         app_entry_diag: 7U
         return: 0
     ---
-    if: lmx_thread_attach(child_t, child, child_mail, child_sched) != c.LMX_THREAD_OK
+    if: lmx_thread_init(app_child_arena, child_t, graph, child_mail, child_sched) != c.LMX_THREAD_OK
         app_entry_diag: 8U
         return: 0
     ---
@@ -133,6 +146,27 @@ fn: app_root_entry (@: Lmx node) int
     app_phase: 1U
     app_entry_diag: 10U
 return: 0
+
+# A C global is not a GC root. After the first child-boundary collect, the original
+# template is unclassified; same-R0 reopen must rebuild it in R0's arena.
+fn: app_make_source (@: LmxArena arena) @: Lmx
+    @: Lmx source
+    @: LmxArrayDesc source_children
+    if: arena = 0
+        return: 0
+    ---
+    source: lmx_node_new_owned(arena)
+    source_children: lmx_array_grow_ref_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, arena)
+    if: source = 0 || source_children = 0
+        return: 0
+    ---
+    if: lmx_arena_refs_open_owned(arena, source, 2U) != 0
+        return: 0
+    ---
+    if: lmx_arena_ref_store(source, 1U, (cast: (@: void) source_children)) != 0
+        return: 0
+    ---
+return: source
 
 sub: app_check (@: int counts; int: ok; const: @(char label))
     counts[0]: counts[0] + 1
@@ -166,10 +200,10 @@ fn: main () int
     @: LmxManager manager 0
     @: LmxMsg child_msg 0
     @: LmxThread child_t 0
-    @: LmxLink success_node 0
     @: LmxThread success_t 0
     size_t: success_turns_snap 0U
     ulong: stop_base 0U
+    int: cycle_code 0
     if: counts = 0
         return: 2
     ---
@@ -187,10 +221,10 @@ fn: main () int
     app_child_t: 0
     app_child_sched: 0
     app_letters_taken: 0U
+    app_letter_owned_after_take: 0
     app_child_turns: 0U
     app_entry_diag: 0U
-    app_slot: 0U
-    app_check(counts, lmx_root_open(@ root, app_root_entry, 120000U, 0U, 0U) = c.LMX_ROOT_OK, "R0 did not open")
+    app_check(counts, lmx_root_open(@ root, app_root_entry, 120000U) = c.LMX_ROOT_OK, "R0 did not open")
     message: lmx_root_message(@ root)
     r0: lmx_root_thread(@ root)
     root_arena: lmx_root_arena(@ root)
@@ -205,8 +239,8 @@ fn: main () int
         free(counts)
         return: failures
     ---
-    source: lmx_node_new_owned(root_arena)
-    app_check(counts, source != 0 && lmx_arena_refs_open_owned(root_arena, source, 2U) = 0, "template not built")
+    source: app_make_source(root_arena)
+    app_check(counts, source != 0, "template not built")
     if: source = 0
         failures: counts[1]
         c.printf("lmx_app_min checks=%d failures=%d entry_diag=%u (abort)\n", counts[0], failures, (cast: (unsigned) app_entry_diag))
@@ -214,18 +248,29 @@ fn: main () int
         free(counts)
         return: failures
     ---
-    lmx_arena_ref_store(graph, 3U, (cast: (@: void) source))
     app_source: source
     app_check(counts, lmx_arena_open(@ child_arena) = 0, "child arena did not open")
     app_child_arena: @ child_arena
 
-    # ========== SUCCESS CHILD (slot 0) ==========
-    app_check(counts, lmx_root_cycle(@ root, 4U) = c.LMX_ROOT_OK, "success-create cycle did not run")
+    # ========== SUCCESS CHILD ==========
+    cycle_code: lmx_root_cycle(@ root, 4U)
+    c.printf("app_min cycle1=%d phase=%u diag=%u child_t=%p count=%u is=%d\n", cycle_code, (cast: (unsigned) app_phase), (cast: (unsigned) app_entry_diag), (cast: (@: void) app_child_t), (cast: (unsigned) lmx_thread_child_count(r0)), lmx_thread_child_is(r0, app_child_t))
+    c.fflush(0)
+    app_check(counts, cycle_code = c.LMX_ROOT_OK, "success-create cycle did not run")
     app_check(counts, app_phase = 1U && app_child_msg != 0 && app_child_t != 0, "success child was not wired")
+    if: cycle_code != c.LMX_ROOT_OK || app_child_msg = 0 || app_child_t = 0 || lmx_thread_child_is(r0, app_child_t) = 0
+        failures: counts[1]
+        c.printf("lmx_app_min checks=%d failures=%d entry_diag=%u (abort after create; child not in Array)\n", counts[0], failures, (cast: (unsigned) app_entry_diag))
+        c.fflush(0)
+        free(counts)
+        return: failures
+    ---
     child_msg: app_child_msg
     child_t: app_child_t
     success_t: app_child_t
-    app_check(counts, lmx_arena_ref_value(graph, 0U) = (cast: (@: void) child_msg), "success child not published")
+    app_check(counts, lmx_thread_children(r0) != 0 && lmx_arena_ref_value(graph, 0U) = (cast: (@: void) lmx_thread_children(r0)), "R0 graph field 0 is not the children Array")
+    app_check(counts, lmx_thread_child_count(r0) = 1U, "success child not the sole Array member")
+    app_check(counts, lmx_thread_child_at(r0, 0U) = child_t && lmx_thread_child_first(r0) = child_t, "success child is not the physical Array element")
     app_check(counts, lmx_range_classify(@ child_arena, (cast: (@: void) child_msg)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "success child not in own arena")
     app_check(counts, lmx_thread_child_is(r0, child_t) != 0, "success child not live after publish")
     app_check(counts, lmx_thread_manager(child_t) != 0, "the child has no scheduler of its own")
@@ -242,39 +287,34 @@ fn: main () int
     letter\success: 0
     letter\handoff_ready: 0
     letter\graph: 0
-    letter\index: 0U
     app_check(counts, lmx_service_post(service, (cast: (@: void) child_t), letter, @ letter_arena) = c.LMX_SERVICE_OK, "success post refused")
-    app_check(counts, letter_at\count = 0U, "success letter arena not attached")
-    app_check(counts, lmx_range_classify(@ child_arena, (cast: (@: void) letter)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "success letter not in recipient index")
+    app_check(counts, letter_at\count != 0U && letter_at\blocks != 0, "producer lost success letter arena before owner take")
+    app_check(counts, lmx_range_classify(@ letter_arena, (cast: (@: void) letter)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "producer no longer owns queued success letter")
+    app_check(counts, lmx_range_classify(@ child_arena, (cast: (@: void) letter)) = c.LMX_KIND_NONE, "recipient classified success letter before owner take")
     app_check(counts, lmx_thread_mail_count(child_t, c.LMX_POST_INBOX) = 1U, "success inbox empty after post")
-    # Taken BEFORE the round: the round ends the child successfully, and the driver then returns
-    # the child's arena -- after that its own address is storage nobody may read.
-    success_node: lmx_thread_child_link(r0)
+    # Last turn publishes the safe boundary; the physical Thread stays in R0's Array until settle.
     app_check(counts, lmx_manager_round(manager, 4U, lmx_root_clock(@ root)) = c.LMX_MANAGER_OK, "success-turn manager round did not run")
     app_check(counts, app_child_turns >= 1U && app_letters_taken = 1U, "success child did not take letter")
     app_check(counts, app_letter = letter, "success taken letter mismatch")
-    # *** THE CHILD'S RECORD IS NO LONGER OURS TO READ ***  Its body set success, its end-turn
-    # cleared running and marked it handoff-safe, and then the driver let the record go -- a
-    # successful incarnation returns its own arena (lmx_thread.lm1, lmx_thread_finish).  From
-    # here the application reads the PARENT's node, which is a cell of R0's arena and lives on:
-    # `success` (the outcome the child left behind) and `gone` (the arena is back).  The node was
-    # taken before the round, because the child's own address is returned storage by now.
-    app_check(counts, success_node != 0, "the child had no node in R0's chain")
-    app_check(counts, success_node\success != 0, "the child did not leave a success in the parent's node")
-    app_check(counts, success_node\gone != 0, "the successful child did not return its own arena")
-    app_check(counts, success_node\index = 1U, "the node does not carry the child's index")
-    app_check(counts, lmx_thread_child_is(r0, child_t) != 0, "success child not live before settle")
+    app_check(counts, letter_at\count = 0U && letter_at\blocks = 0, "success letter arena did not empty on owner take")
+    app_check(counts, app_letter_owned_after_take != 0, "owner take did not attach success letter before exposure")
+    app_check(counts, child_msg\success != 0 && child_msg\handoff_ready != 0, "the child did not publish its safe success boundary")
+    app_check(counts, lmx_thread_child_is(r0, child_t) != 0 && lmx_thread_child_count(r0) = 1U, "success child left the Array before settle")
+    app_check(counts, child_at\blocks != 0 && child_at\count != 0U, "child self-released before parent removal")
     app_check(counts, lmx_root_cycle(@ root, 1U) = c.LMX_ROOT_OK, "success-settle cycle did not run")
     app_check(counts, lmx_thread_child_is(r0, success_t) = 0, "success child stayed live after settle")
-    app_check(counts, lmx_arena_ref_value(graph, 0U) = 0, "success slot not cleared")
+    app_check(counts, lmx_thread_child_count(r0) = 0U, "success child stayed in R0's Array after settle")
     app_check(counts, child_at\blocks = 0 && child_at\count = 0U, "success arena not released")
     app_check(counts, lmx_manager_count(manager) = 0U, "manager not empty after success")
     app_check(counts, lmx_service_count(service) = 1U, "service should hold only R0 after success")
     success_turns_snap: app_child_turns
+    source: app_make_source(root_arena)
+    app_check(counts, source != 0, "template not rebuilt after settle")
+    app_source: source
 
-    # ========== SAME-R0 REOPEN + FAIL CHILD (slot 1) ==========
-    # After success settle: arena released, slot 0 cleared. Reopen child_arena; create in slot 1
-    # (mixa path that exposed empty-chain pool grow — second reserve on same parent).
+    # ========== SAME-R0 REOPEN + FAIL CHILD ==========
+    # After success settle: arena released, Array empty. Reopen child_arena; second reserve
+    # (mixa path that exposed empty-Array grow — second child on the same parent).
     app_check(counts, lmx_arena_open(@ child_arena) = 0, "child arena reopen after success settle failed")
     app_child_arena: @ child_arena
     app_phase: 0U
@@ -283,10 +323,10 @@ fn: main () int
     app_child_sched: 0
     app_letter: 0
     app_letters_taken: 0U
+    app_letter_owned_after_take: 0
     app_child_turns: 0U
     app_mode: 0U
     app_entry_diag: 0U
-    app_slot: 1U
     app_check(counts, lmx_root_cycle(@ root, 4U) = c.LMX_ROOT_OK, "fail-create cycle did not run")
     app_check(counts, app_phase = 1U && app_child_msg != 0 && app_child_t != 0, "fail child was not wired after reopen")
     if: app_child_msg = 0 || app_child_t = 0
@@ -298,8 +338,8 @@ fn: main () int
     ---
     child_msg: app_child_msg
     child_t: app_child_t
-    app_check(counts, lmx_arena_ref_value(graph, 0U) = 0, "slot 0 should stay clear while fail uses slot 1")
-    app_check(counts, lmx_arena_ref_value(graph, 1U) = (cast: (@: void) child_msg), "fail child not published in slot 1")
+    app_check(counts, lmx_thread_child_count(r0) = 1U, "fail child not the sole Array member")
+    app_check(counts, lmx_thread_child_at(r0, 0U) = child_t && lmx_thread_child_first(r0) = child_t, "fail child is not the physical Array element")
     app_check(counts, lmx_range_classify(@ child_arena, (cast: (@: void) child_msg)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "fail child not in own arena")
     app_check(counts, lmx_thread_child_is(r0, child_t) != 0, "fail child not live after publish")
     app_check(counts, lmx_schedule_wait(app_child_sched, lmx_root_clock(@ root)) = c.LMX_SCHEDULE_OK, "fail schedule wait failed")
@@ -314,12 +354,15 @@ fn: main () int
     fail_letter\success: 0
     fail_letter\handoff_ready: 0
     fail_letter\graph: 0
-    fail_letter\index: 0U
     app_check(counts, lmx_service_post(service, (cast: (@: void) child_t), fail_letter, @ fail_letter_arena) = c.LMX_SERVICE_OK, "fail post refused")
-    app_check(counts, fail_letter_at\count = 0U, "fail letter arena not attached")
+    app_check(counts, fail_letter_at\count != 0U && fail_letter_at\blocks != 0, "producer lost fail letter arena before owner take")
+    app_check(counts, lmx_range_classify(@ fail_letter_arena, (cast: (@: void) fail_letter)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "producer no longer owns queued fail letter")
+    app_check(counts, lmx_range_classify(@ child_arena, (cast: (@: void) fail_letter)) = c.LMX_KIND_NONE, "recipient classified fail letter before owner take")
     app_check(counts, lmx_thread_mail_count(child_t, c.LMX_POST_INBOX) = 1U, "fail inbox empty after post")
     app_check(counts, lmx_root_cycle(@ root, 4U) = c.LMX_ROOT_OK, "fail-turn cycle did not run")
     app_check(counts, app_child_turns >= 1U && app_letters_taken = 1U, "fail child did not take letter")
+    app_check(counts, fail_letter_at\count = 0U && fail_letter_at\blocks = 0, "fail letter arena did not empty on owner take")
+    app_check(counts, app_letter_owned_after_take != 0, "owner take did not attach fail letter before exposure")
     app_check(counts, child_msg\running = 1 && child_msg\success = 0, "fail child completed itself")
     # THE STOP IS A REQUEST; THE WAIT ENDS BY THE WINDOW (19.09, lmx_thread.h.lm1).  This child is
     # a DIRECT child of R0, and a direct child reaches no deferral (the root is never settled), so
@@ -337,7 +380,7 @@ fn: main () int
     app_check(counts, lmx_root_cycle_at(@ root, 1U, stop_base + 100001U) = c.LMX_ROOT_OK, "fail-settle cycle did not run")
     app_check(counts, child_msg\handoff_ready != 0, "the child was not closed at its window")
     app_check(counts, lmx_thread_child_is(r0, child_t) = 0, "fail child stayed live")
-    app_check(counts, lmx_arena_ref_value(graph, 1U) = (cast: (@: void) child_msg), "failure root not retained in slot 1")
+    app_check(counts, lmx_thread_child_count(r0) = 0U, "fail child stayed in R0's Array")
     app_check(counts, lmx_range_classify(root_arena, fail_witness) != c.LMX_KIND_NONE, "failed blocks did not join parent")
     app_check(counts, lmx_range_classify(@ child_arena, fail_witness) = c.LMX_KIND_NONE, "fail arena not emptied")
     app_check(counts, lmx_manager_count(manager) = 0U, "manager not empty after fail")

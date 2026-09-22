@@ -11,11 +11,11 @@ predef: "l2src/lmx_arena.h.lm1"
 # and nothing else answers.  `dst_arena` is the arena the copies are built in:
 # every constructor takes it and it owns everything the operation allocates.
 #
-# Starting from `source`, walk its lexical chain to node = 0 and copy the whole
+# Starting from `source`, walk its structural chain to parent = 0 and copy the whole
 # reachable lexical tree: every Structure reached through node or through a
 # child slot, all of its slots, mutable primitive cells, char * cells, Array
 # records with their backing and reference-valued elements. `independent`
-# bounds the walk because its root already has node = 0. Methods are shared:
+# bounds the walk because its root already has parent = 0. Methods are shared:
 # a METHOD child keeps the very same {addr, sig} descriptor pointer. Interned
 # characters map to the destination table `dst_chars` when one is given (a
 # cross-Message copy); with dst_chars = 0 the source cells are kept (a copy
@@ -28,14 +28,17 @@ predef: "l2src/lmx_arena.h.lm1"
 # table -- an address classified LMX_KIND_METHOD -- and by nothing else: no list
 # of METHOD ranges is carried through the copy.
 #
-# A branch qualified `independent: const: immutable` resides in R0's permanent
-# store.  Its type identity is ordinary typed-address-range membership, not a
-# tag, enum or special classifier; `node = 0` is a separate structural property
-# of the branch root.  A Message arena bound to that store can observe its
-# kind/type/stride, while `lmx_range_pool(message_arena, p)` remains a strictly
-# local ownership question.  The copier therefore tests exact membership by
-# asking the local arena and the bound store directly.  Every store-resident
-# value is retained by physical address and never copied.
+# A branch qualified `independent: const: immutable` is retained only when its
+# address resolves to one of the exact physical profiles supplied by the caller.  The
+# profile belongs to the typed range's array descriptor; kind/type remain its
+# exact representation.  Sealing, foreign ownership and parent=0 are not
+# substitutes.  Imported sealed foreign ranges are visible in the same source
+# arena index, while local ownership queries remain local.  Before a retained reference
+# may enter the destination, its sealed owner range must also have been explicitly imported
+# into the destination; copy refuses rather than publishing an unclassifiable pointer.  The
+# profile set is a caller-provided span of ordinary physical graph references, bounded only
+# by this call. Duplicate references are idempotent; no global, numeric or textual profile
+# identity participates.
 #
 # A value the table does not classify at all (LMX_KIND_NONE) is neither
 # language-owned source state nor a terminal: the copy reports UNSUPPORTED
@@ -47,8 +50,8 @@ predef: "l2src/lmx_arena.h.lm1"
 # several operands): an object reachable from two roots is copied once and
 # both copies refer to it. A copy is registered before an object's edges are
 # followed, so shared targets and cycles keep their shape, and every copied
-# Structure's node is rewritten to the copy of its lexical parent, to an
-# eternal parent's own address, or to zero.
+# Structure's parent is rewritten to the copy of its immediate structural parent, to an
+# exact retained-profile parent's own address, or to zero.
 #
 # Atomicity is the arena's own act, exactly as it is for one Array: the
 # operation takes `mark: lmx_arena_mark(dst_arena)` before it builds anything
@@ -83,6 +86,10 @@ prototype:
     # sources[i]; on failure every outs[i] stays null and dst_arena is left as
     # it was at the mark.
     fn: lmx_graph_copy_many_owned (@@: Lmx sources; size_t: count; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx outs) int
+    fn: lmx_graph_copy_many_profiles_owned (@@: Lmx sources; size_t: count; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx outs) int
+    fn: lmx_graph_copy_many_profiled_owned (@@: Lmx sources; size_t: count; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @: Lmx retain_profile; @@: Lmx outs) int
     # One root: the same operation with count 1.
     fn: lmx_graph_copy_owned (@: Lmx source; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx out) int
+    fn: lmx_graph_copy_profiles_owned (@: Lmx source; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx out) int
+    fn: lmx_graph_copy_profiled_owned (@: Lmx source; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @: Lmx retain_profile; @@: Lmx out) int
 end: prototype

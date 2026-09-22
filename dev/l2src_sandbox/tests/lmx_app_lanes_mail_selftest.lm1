@@ -85,16 +85,18 @@ size_t: lm_t0 0U
 # A: кладёт письма в чужой ящик ИЗ СВОЕЙ ПОЛОСЫ, свой счёт ведёт в своём графе.
 fn: lm_a_body (@: Lmx node) int
     @: LmxThread t
+    @: LmxMsg message
     @: Lmx graph
     @: void posted_cell
     @: void tid_cell
     size_t: posted
     int: acc_rc 0
     t: lmx_thread_current()
-    if: t = 0 || t\message = 0 || t\message\graph = 0
+    message: lmx_thread_message(t)
+    if: message = 0 || message\graph = 0
         return: 0
     ---
-    graph: t\message\graph
+    graph: message\graph
     posted_cell: lmx_arena_ref_value(graph, 1U)
     tid_cell: lmx_arena_ref_value(graph, 2U)
     if: posted_cell = 0 || tid_cell = 0
@@ -129,6 +131,7 @@ return: 0
 # B: вынимает письма из СВОЕГО ящика ИЗ СВОЕЙ ПОЛОСЫ и считает их в своём графе.
 fn: lm_b_body (@: Lmx node) int
     @: LmxThread t
+    @: LmxMsg message
     @: Lmx graph
     @: void got_cell
     @: void tid_cell
@@ -137,10 +140,11 @@ fn: lm_b_body (@: Lmx node) int
     size_t: dbg_turns 0U
     size_t: seen 0U
     t: lmx_thread_current()
-    if: t = 0 || t\message = 0 || t\message\graph = 0
+    message: lmx_thread_message(t)
+    if: message = 0 || message\graph = 0
         return: 0
     ---
-    graph: t\message\graph
+    graph: message\graph
     got_cell: lmx_arena_ref_value(graph, 1U)
     tid_cell: lmx_arena_ref_value(graph, 2U)
     if: got_cell = 0 || tid_cell = 0
@@ -172,6 +176,7 @@ return: 0
 # Возвращает нить записи; схема та же, что у lmx_app_running_lane_selftest.
 fn: lm_make_child (@: LmxArena child_arena; @: Lmx source; LmxEntry: body; size_t: slot; size_t: which) int
     @: LmxMsg child
+    @: LmxMsg letter
     @: LmxThread child_t
     @: LmxPost child_mail
     @: LmxSchedule child_sched
@@ -180,7 +185,7 @@ fn: lm_make_child (@: LmxArena child_arena; @: Lmx source; LmxEntry: body; size_
     @: Lmx graph
     @: void cell1
     @: void cell2
-    child: lmx_root_create(lm_root, child_arena, slot, lm_source)
+    child: lmx_root_create(lm_root, child_arena, lm_source)
     if: child = 0
         return: 1
     ---
@@ -203,7 +208,7 @@ fn: lm_make_child (@: LmxArena child_arena; @: Lmx source; LmxEntry: body; size_
         return: 5
     ---
     child_mail: (cast: (@: LmxPost) lmx_arena_take(child_arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
-    child_t: (cast: (@: LmxThread) lmx_arena_take(child_arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    child_t: (cast: (@: LmxThread) child)
     child_sched: (cast: (@: LmxSchedule) lmx_arena_take(child_arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
     if: child_mail = 0 || child_t = 0 || child_sched = 0
         return: 6
@@ -215,7 +220,7 @@ fn: lm_make_child (@: LmxArena child_arena; @: Lmx source; LmxEntry: body; size_
     if: lmx_schedule_init(child_sched, child_arena, (cast: (@: void) child_t), 100000U) != c.LMX_SCHEDULE_OK
         return: 8
     ---
-    if: lmx_thread_attach(child_t, child, child_mail, child_sched) != c.LMX_THREAD_OK
+    if: lmx_thread_init(child_arena, child_t, child\graph, child_mail, child_sched) != c.LMX_THREAD_OK
         return: 9
     ---
     if: lmx_child_thread(lmx_root_thread(lm_root), child, child_t) != c.LMX_CHILD_OK
@@ -233,12 +238,17 @@ fn: lm_make_child (@: LmxArena child_arena; @: Lmx source; LmxEntry: body; size_
         lm_b_msg: child
         # ПИСЬМО живёт в арене получателя и является ЗАПИСЬЮ (Message): приём пропускает только
         # запись Message или Thread (`lmx_post_admits`), всё прочее отвергается -- замерено:
-        # и клетка-счётчик, и структурный узел получали LMX_POST_REFUSED=2.  Настоящее письмо
-        # делает ядро своим же актом -- lmx_root_create, как для ребёнка (слот 2 графа R0).
-        lm_letter: (cast: (@: void) lmx_root_create(lm_root, child_arena, 2U, lm_source))
-        if: lm_letter = 0
+        # и клетка-счётчик, и структурный узел получали LMX_POST_REFUSED=2. Письмо остаётся
+        # standalone LmxMsg; только исполняемый ребёнок имеет Thread-хвост.
+        letter: (cast: (@: LmxMsg) lmx_arena_take(child_arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+        if: letter = 0
             return: 11
         ---
+        letter\running: 1
+        letter\success: 0
+        letter\handoff_ready: 0
+        letter\graph: source
+        lm_letter: (cast: (@: void) letter)
         if: lmx_arena_ref_store(graph, 3U, lm_letter) != 0
             return: 12
         ---
@@ -301,15 +311,15 @@ fn: main () int
     ---
     c.printf("LANES N=%u\n", LM_N)
     lm_source: 0
-    if: lmx_root_open(@ root, lm_entry, 100000U, 0U, 0U) != c.LMX_ROOT_OK
+    if: lmx_root_open(@ root, lm_entry, 100000U) != c.LMX_ROOT_OK
         c.printf("FAIL R0 did not open\n")
         return: 2
     ---
     root_arena: lmx_root_arena(@ root)
     lm_root: @ root
-    # Шаблон дочернего графа: 4 слота, как открывает lmx_root_create.
+    # Шаблон дочернего графа плюс обычное поле Array<@LmxThread>.
     source: lmx_node_new_owned(root_arena)
-    if: source = 0 || lmx_arena_refs_open_owned(root_arena, source, 5U) != 0
+    if: source = 0 || lmx_arena_refs_open_owned(root_arena, source, 6U) != 0 || lmx_thread_children_field_new(root_arena, source, 5U) = 0
         c.printf("FAIL source template build failed\n")
         return: 2
     ---

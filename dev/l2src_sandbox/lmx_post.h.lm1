@@ -121,7 +121,9 @@ struct: LmxPost
     #
     # The slots are private mailbox metadata, not graph values and not an address-classified LMX
     # type.  They form an ordinary movable dynamic array: growth happens only while holding the
-    # monitor, copies unread addresses in FIFO order, and never exposes either backing address.
+    # monitor, copies unread target/source pairs in FIFO order, and never exposes the backing address.
+    # Private flat ring pairs `[target, source_arena]`. Producers publish both words under this
+    # mailbox's monitor and never mutate the receiver arena. A null source means same-arena.
     @: void inbox_slots
     size_t: inbox_capacity
     # The counters and slots are ordinary mailbox state protected by inbox_monitor.  Tail is
@@ -158,6 +160,12 @@ prototype:
     fn: lmx_post_api (@: LmxPost box) @: LmxPostApi
     fn: lmx_post_admits (@: LmxArena arena; @: void target) int
     fn: lmx_post_accept (@: LmxArena arena; @: LmxPost box; @: void target; int: lane) int
+    # Transactional cross-arena inbox publication. The producer only reserves/grows and publishes
+    # {target, source_arena} under the mailbox monitor; it never mutates the receiver arena.
+    fn: lmx_post_accept_transfer (@: LmxArena arena; @: LmxPost box; @: void target; @: LmxArena source_arena) int
+    # Receiver-owner take. Before exposing an imported inbox target, claim its source arena into
+    # the receiver arena. Refusal leaves the pair queued and owned by the source arena.
+    fn: lmx_post_take_owned (@: LmxArena arena; @: LmxPost box; int: lane) @: void
     fn: lmx_post_take (@: LmxPost box; int: lane) @: void
     fn: lmx_post_count (@: LmxPost box; int: lane) size_t
     # The end-turn boundary's first act (19.29.4.1), one call per outcome: publish moves

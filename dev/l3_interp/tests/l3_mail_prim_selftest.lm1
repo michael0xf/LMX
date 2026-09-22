@@ -1,6 +1,5 @@
 predef: "l3_interp/l3_thread.lm1"
 predef: "l2src/lmx_thread.lm1"
-predef: "l2src/lmx_perm.lm1"
 predef: "l2src/lmx_call.lm1"
 predef: "l2src/lmx_turn.lm1"
 predef: "l2src/lmx_child.lm1"
@@ -26,7 +25,8 @@ predef: "l2src/lmx_walk.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
-# Mail primitives through l3_thread_dispatch. t2 lives in its own arena bound to the same store.
+# Mail primitives through l3_thread_dispatch. t2 lives in its own arena and may import
+# the first Thread's sealed exact-profile ranges as non-owning views.
 # Slot 2 is success: IF mail_count(INBOX)>0 then take (observed by address) then success.
 #
 # WHAT TAKE HANDS BACK IS LOOKED AT (FABLE-L3-MAIL-PROOF-20260921-63).  A take at statement level
@@ -148,25 +148,18 @@ fn: mk_dummy (@: LmxArena a) @: Lmx
 return: m
 
 fn: mk_thread (@: LmxArena arena; @: Lmx graph; @@: LmxThread out_t) int
-    @: LmxMsg message
     @: LmxThread t
     @: LmxPost mail
     @: LmxSchedule sched
     \out_t: 0
-    message: (cast: (@: LmxMsg) lmx_arena_take(arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
-    t: (cast: (@: LmxThread) lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    t: (cast: (@: LmxThread) lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
     mail: (cast: (@: LmxPost) lmx_arena_take(arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
     sched: (cast: (@: LmxSchedule) lmx_arena_take(arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
-    if: message = 0 || t = 0 || mail = 0 || sched = 0
+    if: t = 0 || mail = 0 || sched = 0
         return: 0
-    message\running: 1
-    message\success: 0
-    message\handoff_ready: 0
-    message\graph: graph
-    message\index: 1U
-    if: lmx_post_init(arena, mail) != c.LMX_POST_OK || lmx_thread_attach(t, message, mail, sched) != c.LMX_THREAD_OK
+    if: lmx_post_init(arena, mail) != c.LMX_POST_OK || lmx_schedule_init(sched, arena, (cast: (@: void) t), 1000U) != c.LMX_SCHEDULE_OK
         return: 0
-    if: lmx_schedule_init(sched, arena, (cast: (@: void) t), 1000U) != c.LMX_SCHEDULE_OK
+    if: lmx_thread_init(arena, t, graph, mail, sched) != c.LMX_THREAD_OK
         return: 0
     \out_t: t
 return: 1
@@ -309,7 +302,7 @@ fn: mk_count_of (@: Lmx rec; @: LmxArena lane_arena) @: Lmx
 return: m
 
 fn: run_graph (@: LmxThread t; @: Lmx m) int
-    @: LmxMsg msg t\message
+    @: LmxMsg msg lmx_thread_message(t)
     int: st
     if: t = 0 || m = 0 || msg = 0
         return: -1
@@ -325,13 +318,13 @@ fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxArena: arena
     LmxArena: t2_arena
-    LmxArena: store
     @: LmxArena a 0
     @: LmxArena a2 0
     @: Lmx dummy 0
     @: Lmx dummy2 0
     @: LmxThread t 0
     @: LmxThread t2 0
+    @: LmxMsg message 0
     @: Lmx m 0
     @: Lmx count_rec 0
     @: Lmx take_rec 0
@@ -345,6 +338,8 @@ fn: main () int
     @: Lmx letter4 0
     @: Lmx foreign_letter 0
     @: Lmx test_reg 0
+    @: Lmx profile 0
+    @: Lmx test_profile 0
     @: void probe 0
     int: probe_before 0
     int: st 0
@@ -352,14 +347,8 @@ fn: main () int
         return: 2
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ t2_arena)), 0, c.sizeof(c.LmxArena))
-    memset((cast: (@: void) (@ store)), 0, c.sizeof(c.LmxArena))
     if: lmx_arena_open(@ arena) != 0 || lmx_arena_open(@ t2_arena) != 0
         fputs("l3_mail_prim: arena\n", l1_stdout())
-        free(counts)
-        return: 2
-    ---
-    if: lmx_perm_open(@ store) != 0 || lmx_perm_bind(@ arena, @ store) != 0 || lmx_perm_bind(@ t2_arena, @ store) != 0
-        fputs("l3_mail_prim: store\n", l1_stdout())
         free(counts)
         return: 2
     ---
@@ -373,25 +362,32 @@ fn: main () int
         free(counts)
         return: 2
     ---
+    message: lmx_thread_message(t)
+    if: message = 0
+        free(counts)
+        return: 2
+    ---
     fail(counts, lmx_thread_request_mode(t, c.LMX_THREAD_MODE_INTERPRETED) = c.LMX_THREAD_OK, "request interpreted")
     fail(counts, lmx_thread_turn(t, native_noop, 1U) = c.LMX_THREAD_OK, "commit mode on native turn")
     fail(counts, native_hits = 1, "native ran once")
-    fail(counts, l3_thread_bind(t) = c.LMX_THREAD_OK, "bind with mail primitives")
+    fail(counts, l3_thread_bind(a, t) = c.LMX_THREAD_OK, "bind with mail primitives")
     groles: l3_thread_roles(t)
     count_rec: l3_thread_mail_count_prim(t)
     take_rec: l3_thread_mail_take_prim(t)
     success_rec: l3_thread_success_prim(t)
-    fail(counts, groles != 0 && count_rec != 0 && take_rec != 0 && success_rec != 0 && count_rec != take_rec && count_rec != success_rec && take_rec != success_rec, "three distinct store records")
-    fail(counts, lmx_range_home(a, (cast: (@: void) groles)) = @ store && lmx_range_pool(a, (cast: (@: void) groles)) = 0, "roles live in the store")
-    fail(counts, lmx_range_home(a, (cast: (@: void) count_rec)) = @ store && lmx_range_pool(a, (cast: (@: void) count_rec)) = 0, "count record lives in the store")
-    fail(counts, lmx_range_home(a, (cast: (@: void) take_rec)) = @ store && lmx_range_pool(a, (cast: (@: void) take_rec)) = 0, "take record lives in the store")
-    fail(counts, lmx_range_home(a, (cast: (@: void) success_rec)) = @ store && lmx_range_pool(a, (cast: (@: void) success_rec)) = 0, "success record lives in the store")
-    fail(counts, l3_thread_bind(t) = c.LMX_THREAD_OK, "repeated bind of the same Thread")
+    profile: lmx_range_profile(a, (cast: (@: void) groles))
+    fail(counts, groles != 0 && count_rec != 0 && take_rec != 0 && success_rec != 0 && count_rec != take_rec && count_rec != success_rec && take_rec != success_rec, "three distinct physical primitive records")
+    fail(counts, profile != 0 && lmx_range_home(a, (cast: (@: void) groles)) = a && lmx_pool_is_sealed(lmx_range_pool(a, (cast: (@: void) groles))) != 0, "roles live in a sealed owner-arena profile")
+    fail(counts, lmx_range_home(a, (cast: (@: void) count_rec)) = a && lmx_range_profile(a, (cast: (@: void) count_rec)) = profile && lmx_pool_is_sealed(lmx_range_pool(a, (cast: (@: void) count_rec))) != 0, "count record has the exact sealed profile")
+    fail(counts, lmx_range_home(a, (cast: (@: void) take_rec)) = a && lmx_range_profile(a, (cast: (@: void) take_rec)) = profile, "take record has the same owner and profile")
+    fail(counts, lmx_range_home(a, (cast: (@: void) success_rec)) = a && lmx_range_profile(a, (cast: (@: void) success_rec)) = profile, "success record has the same owner and profile")
+    fail(counts, lmx_range_import_profile(a2, a, profile) = 0 && lmx_range_home(a2, (cast: (@: void) count_rec)) = a && lmx_range_pool(a2, (cast: (@: void) count_rec)) = 0, "second Thread arena imports an owner-preserving exact-profile view")
+    fail(counts, l3_thread_bind(a, t) = c.LMX_THREAD_OK, "repeated bind of the same Thread")
     count_again: l3_thread_mail_count_prim(t)
     take_again: l3_thread_mail_take_prim(t)
     success_again: l3_thread_success_prim(t)
     fail(counts, count_again = count_rec && take_again = take_rec && success_again = success_rec, "repeated bind reuses record identities")
-    fail(counts, l3_thread_bind(t2) = c.LMX_THREAD_INVALID, "second Thread of the same store is refused")
+    fail(counts, l3_thread_bind(a2, t2) = c.LMX_THREAD_INVALID, "second Thread is refused without changing the owner binding")
     fail(counts, l3_thread_mail_count_prim(t2) = 0 && l3_thread_mail_count_prim(t) = count_rec && l3_thread_success_prim(t2) = 0 && l3_thread_success_prim(t) = success_rec, "the refusal assigned nothing")
 
     m: mk_count()
@@ -454,12 +450,15 @@ fn: main () int
     fail(counts, probe != 0 && probe_before = c.LMX_KIND_PRIMITIVE && lmx_range_classify(a, probe) = c.LMX_KIND_NONE, "impostor: the boundary still ran")
     fail(counts, native_hits = 1, "impostor did not call native")
 
-    # The test's own registry: the sink, and the real count fn under a FOREIGN owner.  Both
-    # records live in the store like every primitive record; neither owner does (prepare
-    # refuses a store-resident owner), and t2 is a Thread of another arena of this store.
-    fail(counts, lmx_primitive_registry_open(@ store, 2U, @ test_reg) = c.LMX_PRIMITIVE_REG_OK, "test registry")
-    fail(counts, lmx_primitive_register(@ store, test_reg, 0U, sink_letter, 0, (cast: (@: Lmx) t), @ sink_rec) = c.LMX_PRIMITIVE_REG_OK && sink_rec != 0, "sink record")
-    fail(counts, lmx_primitive_register(@ store, test_reg, 1U, l3_prim_mail_count, 0, (cast: (@: Lmx) t2), @ foreign_rec) = c.LMX_PRIMITIVE_REG_OK && foreign_rec != 0, "foreign-owner record")
+    # The test's own primitive family uses another ordinary physical profile in the same
+    # owner arena.  It too is complete and sealed before its records enter a graph.
+    test_profile: l3_profile_open(a)
+    test_reg: l3_primitive_registry_open_profiled(a, 2U, test_profile)
+    sink_rec: l3_primitive_register_profiled(a, test_reg, 0U, sink_letter, (cast: (@: Lmx) t), test_profile)
+    foreign_rec: l3_primitive_register_profiled(a, test_reg, 1U, l3_prim_mail_count, (cast: (@: Lmx) t2), test_profile)
+    fail(counts, test_profile != 0 && test_reg != 0 && sink_rec != 0 && foreign_rec != 0 && l3_profile_seal(a, test_profile) = 0, "test primitive profile completed and sealed")
+    fail(counts, lmx_range_profile(a, (cast: (@: void) sink_rec)) = test_profile && lmx_pool_is_sealed(lmx_range_pool(a, (cast: (@: void) sink_rec))) != 0, "sink record is physically profiled")
+    fail(counts, lmx_range_profile(a, (cast: (@: void) foreign_rec)) = test_profile, "foreign-owner record shares that exact profile")
 
     # THE OWNER GUARD (l3_prim_lane).  t2 holds one letter, t holds three.  A record whose owner
     # is not the bound Thread must not be served at all: without the guard this turn succeeds
@@ -506,20 +505,20 @@ fn: main () int
     fail(counts, broken = 0 && st = c.LMX_THREAD_INVALID, "impostor success record is a failed turn")
     fail(counts, probe != 0 && probe_before = c.LMX_KIND_PRIMITIVE && lmx_range_classify(a, probe) = c.LMX_KIND_NONE, "impostor success: the boundary still ran")
     fail(counts, native_hits = 1, "impostor success did not call native")
-    fail(counts, t\message != 0 && t\message\success = 0, "impostor success left the flag at 0")
+    fail(counts, message\success = 0, "impostor success left the flag at 0")
 
     t\interpreter_dispatch: 0
     m: mk_count()
     fail(counts, broken = 0 && m != 0 && run_graph(t, m) = c.LMX_THREAD_INVALID, "null dispatch is INVALID, not a native fallback")
     fail(counts, native_hits = 1, "null dispatch did not call native")
-    fail(counts, t\message != 0 && t\message\success = 0, "null dispatch left success at 0")
-    fail(counts, l3_thread_bind(t) = c.LMX_THREAD_OK && t\interpreter_dispatch != 0, "bind restores dispatch")
+    fail(counts, message\success = 0, "null dispatch left success at 0")
+    fail(counts, l3_thread_bind(a, t) = c.LMX_THREAD_OK && t\interpreter_dispatch != 0, "bind restores dispatch")
     groles: l3_thread_roles(t)
 
     m: mk_worker()
     fail(counts, broken = 0 && m != 0 && sink_rec != 0 && success_rec != 0, "worker graph")
     fail(counts, run_graph(t, m) = c.LMX_THREAD_OK, "empty-inbox worker turn")
-    fail(counts, t\message != 0 && t\message\success = 0, "empty inbox stays success=0")
+    fail(counts, message\success = 0, "empty inbox stays success=0")
     fail(counts, sunk_n = 4 && sunk_last = 0, "empty worker did not take")
     fail(counts, native_hits = 1, "empty worker did not call native")
 
@@ -529,7 +528,7 @@ fn: main () int
     m: mk_worker()
     fail(counts, broken = 0 && m != 0 && run_graph(t, m) = c.LMX_THREAD_OK, "worker turn with mail")
     fail(counts, sunk_n = 5 && sunk_last = (cast: (@: void) letter4), "worker take handed out THE letter, by address")
-    fail(counts, t\message != 0 && t\message\success = 1, "worker set success")
+    fail(counts, message\success = 1, "worker set success")
     fail(counts, lmx_thread_mail_count(t, c.LMX_POST_INBOX) = 0U, "worker emptied the inbox")
     fail(counts, native_hits = 1, "worker did not call native")
     fail(counts, lmx_thread_mail_count(t2, c.LMX_POST_INBOX) = 1U, "the foreign inbox stayed untouched")

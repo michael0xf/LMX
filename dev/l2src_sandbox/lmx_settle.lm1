@@ -1,52 +1,27 @@
 predef: "lmx_settle.h.lm1"
 predef: "l2src/lmx_child.h.lm1"
-predef: "l2src/lmx_arena_refs.h.lm1"
 predef: "l2src/lmx_post.h.lm1"
 predef: "l1src/libc_abi.lm1"
 predef: "l2src/lmx_clock.h.lm1"
 
-# The readiness predicate: one reading of the two flags, from the settling side (19.29.8:
-# "Transfer or reclamation requires the handoff-safe boundary in 19.29.7.1, not merely a stop
-# request or elapsed timeout").
-# ONE LEVEL OF THE CASCADE, and exactly one: a parent requests the stop for its DIRECT children and
-# drives them to the boundary that request names, settling each direct-child record as it comes to
-# rest.  It runs with THAT THREAD'S OWN arena, service and manager, which is what keeps R0 from ever
-# walking a grandchild: every level performs this act for the level below it.
-#
-# WHY THIS IS A LOOP, AND WHY IT TERMINATES WITHOUT A COUNTER.  lmx_stop_children asks; it does not
-# wait, and nothing in this runtime blocks without wait/notify -- so a parent that must not return
-# early drives what it can (its own manager rounds the children bound to it), settles, and asks
-# again.  It ends when the direct-child chain is empty, and that is guaranteed by the EXISTING STOP
-# WINDOW, not by anything invented here: lmx_stop_request stamps the parent-owned `stopped` on the
-# child's node, and lmx_stop_close marks the child handoff_ready once `now - node.stopped >=
-# slot.limit` -- read from the child's own limit and independent of LmxSchedule.state.  A child that
-# runs ends at its own end-turn; a child that does not is closed by that window.  A slot with a zero
-# limit was refused by lmx_schedule_init, so it is malformed Thread state and is refused as such.
-# Service and manager are UNTYPED here because this header is predef'd by the thread unit, which
-# cannot name their types without a cycle; the caller casts.
+# Settling uses the one ordinary Array<@LmxThread> in the parent's graph. A completed child
+# remains physically valid until the serialized parent removes that exact reference. Only after
+# removal may the parent release a successful arena or attach a failed arena.
+
+fn: lmx_settle_ready (@: LmxMsg message) int
+    if: message = 0 || message\running != 0
+        return: 0
+    if: message\handoff_ready != 0
+        return: 1
+return: 0
+
 fn: lmx_settle_cascade_one_level (@: LmxThread t; @: LmxArena arena; @: void service; @: void manager; size_t: deadline) int
-    ulong: now 0U
-    @: LmxManagerApi api 0
-    if: t = 0
+    ulong: now
+    @: LmxManagerApi api
+    if: t = 0 || arena = 0
         return: c.LMX_SETTLE_INVALID
-    ---
-    while: lmx_thread_child_first(t) != 0
+    while: lmx_thread_child_count(t) != 0U
         now: lmx_clock_ticks()
-        # THE CLOSURE'S BOUND IS NOT CHECKED HERE, and its absence is deliberate: the cooperative
-        # check lives where every level already walks -- lmx_stop_close, reading the ONE deadline out
-        # of each child's node (lmx_link_deadline) -- so this helper carries no second copy of the
-        # window and no second abort site.  What it DOES carry is the deadline itself, handed to
-        # lmx_stop_children below so this level's children inherit the same value and no level can
-        # restart it.  The process-wide guarantee for a child that never returns is the watchdog
-        # armed by lmx_root_close from that same deadline (lmx_process_deadline).
-        # THE QUEUE IS DRIVEN THROUGH ITS OWN BINDING, NEVER BY CALLING THE STEPPED ROUND ON IT.
-        # A queue under the RUNNING manager owns each record's lane, and the lane is already running
-        # that record's turns on its own thread; stepping it from here as well puts TWO THREADS
-        # INSIDE ONE TURN -- measured as heap corruption (0xC0000374) in about one run in eight of
-        # the focused test's lane phase, because the closer could then finish a record whose own
-        # lane was still inside it.  The api table is the existing mechanism that names the binding
-        # (`m\api.round`, set by lmx_manager_init / lmx_manager_running_init), so the close asks the
-        # manager to advance its own records and never assumes which binding it holds.
         if: manager != 0
             api: lmx_manager_api((cast: (@: LmxManager) manager))
             if: api != 0 && api\round != 0
@@ -55,335 +30,187 @@ fn: lmx_settle_cascade_one_level (@: LmxThread t; @: LmxArena arena; @: void ser
         ---
         if: lmx_settle_children(t, arena, (cast: (@: LmxService) service), (cast: (@: LmxManager) manager), now) != c.LMX_SETTLE_OK
             return: c.LMX_SETTLE_INVALID
-        ---
         lmx_stop_children(t, now, deadline)
     ---
 return: c.LMX_SETTLE_OK
 
-# THE CLOSE'S OWN ONE LEVEL, and the act a level performs for its DIRECT children while the close
-# waits for them (author's ruling, 2026-09-21, via Codex).  Three things it is NOT: it never walks a
-# grandchild (each level claims its own children and the child's own close recurses), it never takes a
-# child's arena, and it never publishes `handoff_ready` (that flag is the HANDOFF of an arena, and a
-# child that has merely closed has not handed anything over).
-#
-# WHAT IT DOES, per direct child:
-#   * ASKS, always, first: the stop request is what starts the child's own window and what tells its
-#     own lane to leave (`lmx_stop_request`).
-#   * A QUIESCENT child -- no active lane, nothing in flight -- is CLAIMED: this level runs the
-#     CHILD'S OWN terminal close for it (the child's subtree first, then the child's own route and
-#     mailbox, exactly once), because a child that will never run again must still execute its own
-#     terminal close rather than be waited out by its window.  Claiming is what removes the
-#     100000-vs-60000 wait: the closer takes execution ownership of the child's close instead of
-#     waiting for a window that can never fire inside the closure's bound.
-#   * A child with a LIVE lane is left to that lane: it stays in the chain, this level gives the
-#     manager a round through the manager's OWN binding (the api table) and comes back to it.  The
-#     process-wide bound for a lane that never yields is the watchdog, never reclamation.
-#
-# THE CHILD'S TERMINAL CLOSE IS ROUTE THEN MAILBOX, and only those two: its record, its own arena
-# and its route stay where they are, because the model keeps a closed child's storage with its
-# owner (Mikhail, 19.09: "the arena goes with the process").  A closed child leaves the parent's
-# LIVE chain -- it can no longer be driven -- and stops being addressable in the mailbox sense
-# (`t\mail = 0` makes a delivery refuse), while its route remains for anything that addresses it.
-#
-# RETURNS LMX_SETTLE_CLOSED when at least one direct child had to be closed this way, so the caller
-# can tell "every child ended" (its own teardown may proceed) from "a child was closed in place"
-# (the parent's route, service and arena must stay, because a child still needs them).
 fn: lmx_settle_close_one_level (@: LmxThread t; @: LmxArena arena; @: void service; @: void manager; size_t: deadline) int
-    @: LmxMsg parent_message
-    @: LmxLink node
-    @: LmxLink next
     @: LmxThread child
+    @: LmxMsg child_message
     @: LmxSchedule child_slot
     @: LmxArena child_arena
-    @: LmxManagerApi api 0
-    int: any_closed
+    @: LmxManagerApi api
+    size_t: index
     int: live
     int: rec
     if: t = 0 || arena = 0
         return: c.LMX_SETTLE_INVALID
-    parent_message: lmx_thread_message(t)
-    if: parent_message = 0
-        return: c.LMX_SETTLE_INVALID
-    ---
-    any_closed: 0
-    # THE WAIT IS THIS LOOP, AND IT ENDS WHEN NO DIRECT CHILD IS LIVE.  A child with an ACTIVE lane is
-    # not this level's to drive -- its own lane finishes it -- so the level rounds the manager (through
-    # the manager's OWN binding, so a lane-managed queue starts and reaps lanes instead of being
-    # stepped by the closer) and looks again.  A child with no active lane is CLAIMED: this level runs
-    # the child's own close for it.  NOTHING HERE IS BOUNDED BY A COUNTER: the bound is the closure's
-    # one deadline, whose expiry is the watchdog's, never a reclamation.
     live: 1
     while: live != 0
         live: 0
-        node: lmx_thread_child_link(t)
-        while: node != 0
-            next: (cast: (@: LmxLink) node\next)
-            child: (cast: (@: LmxThread) node\thread)
-            child_slot: (cast: (@: LmxSchedule) node\slot)
+        index: 0U
+        while: index < lmx_thread_child_count(t)
+            child: lmx_thread_child_at(t, index)
+            if: child = 0
+                return: c.LMX_SETTLE_INVALID
+            child_slot: child\slot
             child_arena: 0
             if: child_slot != 0
                 child_arena: child_slot\arena
             ---
-            if: node\gone = 0 && child != 0 && child_arena != 0
-                # ASK FIRST, ALWAYS: the stop request starts this child's own window and tells its own
-                # lane to leave.
-                lmx_stop_request(child, lmx_clock_ticks(), deadline)
-                if: lmx_thread_lane_ended(child) != 0
-                    # THE CLAIM, and the child's own answer decides what happens next: LIVED means its
-                    # subtree still holds something live, so the child STAYS where it is and this level
-                    # waits -- unlinking it here would leave a live grandchild with no supervisor.
-                    rec: lmx_settle_close_one_level(child, child_arena, lmx_thread_service(child), lmx_thread_manager(child), deadline)
-                    if: rec = c.LMX_SETTLE_LIVED
-                        live: 1
-                    else:
-                        # CLOSED IN PLACE: nothing of the child's is taken -- not its record, not its
-                        # route, not its arena -- it leaves only the parent's LIVE chain.
-                        lmx_thread_child_remove(t, child)
-                        any_closed: 1
-                    ---
-                else:
-                    live: 1
-                ---
+            if: child_arena = 0
+                return: c.LMX_SETTLE_INVALID
+            if: lmx_stop_request(child, lmx_clock_ticks(), deadline) != c.LMX_THREAD_OK
+                return: c.LMX_SETTLE_INVALID
             ---
-            node: next
+            if: lmx_thread_lane_ended(child) != 0
+                rec: lmx_settle_close_one_level(child, child_arena, lmx_thread_service(child), lmx_thread_manager(child), deadline)
+                if: rec != c.LMX_SETTLE_OK
+                    return: c.LMX_SETTLE_INVALID
+                ---
+                child_message: lmx_thread_message(child)
+                if: child_message = 0
+                    return: c.LMX_SETTLE_INVALID
+                ---
+                child_message\handoff_ready: 1
+            else:
+                live: 1
+            ---
+            index: index + 1U
         ---
         if: manager != 0
             api: lmx_manager_api((cast: (@: LmxManager) manager))
             if: api != 0 && api\round != 0
-                api\round((cast: (@: LmxManager) manager), 1U, lmx_clock_ticks())
+                if: api\round((cast: (@: LmxManager) manager), 1U, lmx_clock_ticks()) != c.LMX_MANAGER_OK
+                    return: c.LMX_SETTLE_INVALID
+                ---
             ---
         ---
-    ---
-    if: any_closed != 0
-        return: c.LMX_SETTLE_CLOSED
+        if: lmx_settle_children(t, arena, (cast: (@: LmxService) service), (cast: (@: LmxManager) manager), lmx_clock_ticks()) != c.LMX_SETTLE_OK
+            return: c.LMX_SETTLE_INVALID
+        ---
+        if: lmx_thread_child_count(t) != 0U
+            live: 1
+        ---
     ---
 return: c.LMX_SETTLE_OK
 
-fn: lmx_settle_ready (@: LmxMsg message) int
-    if: message = 0
-        return: 0
-    if: message\running != 0
-        return: 0
-    if: message\handoff_ready != 0
-        return: 1
-return: 0
-
-# THE CHAIN, IN THE MODEL'S OWN TERMS (Mikhail, 19.09 -- rewritten after the cascade was measured
-# wrong twice):
-#
-#   * a Thread owns its arena, its scheduler and its thread, and works on that thread; nobody frees
-#     its storage from another thread while it is still on it;
-#   * a STOPPED child has not ended: the stop asks, and the child's own end-turn does the rest;
-#   * NOTHING IS FREED WHILE SOMETHING UNDER IT IS ALIVE.
-#
-# So settling a subtree is: DOWN FIRST (a recursive settle of the child's own children -- their
-# records and links answer in the arena above them), then the child itself if nothing live is left
-# under it -- reaped whole on success, attached to its parent on failure.  If something under it IS
-# still alive, the reap is postponed (LMX_SETTLE_DEFERRED) and the live ones get the stop request.
-#
-# Spec 9's "chain reaction" is what this recursion is; what it is NOT is a free-from-here: the
-# version that released a live child's arena outright was measured releasing an arena whose own
-# lane was still running (tests\lmx_app_running_lane_selftest.lm1) and was removed.
-#
-# `graph` is always the graph of the parent whose slots these are: a slot that outlived its record
-# would name freed storage.
-# `node` is the PARENT's own chain cell for this child, handed down by the walk that found it
-# (lmx_settle_children): the parent's arena owns the chain, so the node is the one place this act
-# may read a child's addresses from once the child's own arena is back.
-fn: lmx_settle_one (@: LmxThread t; @: LmxArena parent_arena; @: LmxService service; @: LmxManager manager; @: Lmx graph; @: LmxThread child; @: LmxMsg child_message; @: LmxLink node; ulong: now) int
-    @: LmxSchedule child_slot
+fn: lmx_settle_one (@: LmxThread parent; @: LmxArena parent_arena; @: LmxService service; @: LmxThread child; ulong: now) int
+    @: LmxMsg message
+    @: LmxSchedule slot
     @: LmxArena child_arena
-    size_t: slot
-    unsigned: index
+    @@: void result
     int: outcome
-    int: gone
-    if: t = 0 || child = 0 || child_message = 0
+    if: parent = 0 || parent_arena = 0 || child = 0
         return: c.LMX_SETTLE_INVALID
-    # The child's own schedule record, read from the PARENT's node and not from the child's
-    # record: the node carries the child's addresses (lmx_thread.h.lm1, LmxLink), so everything
-    # this act needs is in the arena that owns the chain.  That is the point of the link -- a
-    # child may be gone, hung or mid-cleanup and the parent still acts on it by reading its own
-    # storage only (Mikhail, 19.09: the parent owns the parent link at link, unlink and
-    # supervision handoff).  The pointer VALUE is what the service and the schedule are keyed
-    # by; dereferencing it is a different matter and belongs to whoever owns that record.
-    # `node` ARRIVES from the walk (19.09, evening): this act used to fetch it from the child
-    # (`lmx_thread_link(child)`), which for a gone child is a read of returned storage.
-    gone: 0
-    if: node != 0
-        gone: node\gone
+    message: lmx_thread_message(child)
+    slot: child\slot
+    if: message = 0 || slot = 0 || slot\arena = 0
+        return: c.LMX_SETTLE_INVALID
+    child_arena: slot\arena
+    if: child\mail = 0
+        return: c.LMX_SETTLE_INVALID
     ---
-    # `gone` is the end of the reading: a successful child returned its own arena at the end of
-    # its own turn (lmx_thread_finish), so from that moment NOTHING of its record may be touched
-    # -- not its schedule word, not its message.  Everything this act still needs is in the
-    # parent's node.
-    child_slot: 0
-    child_arena: 0
-    if: gone = 0
-        if: node != 0
-            child_slot: (cast: (@: LmxSchedule) node\slot)
-        ---
-        if: child_slot != 0
-            child_arena: child_slot\arena
+    if: lmx_thread_lane_ended(child) = 0
+        return: c.LMX_SETTLE_DEFERRED
+    ---
+    if: lmx_thread_child_count(child) != 0U
+        if: lmx_settle_children(child, child_arena, service, (cast: (@: LmxManager) lmx_thread_manager(child)), now) != c.LMX_SETTLE_OK
+            return: c.LMX_SETTLE_INVALID
+        if: lmx_thread_child_count(child) != 0U
+            lmx_stop_children(child, now, lmx_thread_close_deadline(child))
+            return: c.LMX_SETTLE_DEFERRED
         ---
     ---
-    # (0) DOWN FIRST: the child's own children, and this is a RECURSION, not a walk of one level --
-    #     a subtree is settled from its leaves up, because a level's links answer in the arena the
-    #     level above it is about to return.  A level that is itself closed and whose own children
-    #     have ended gets reaped (success) or attached (failure) here, exactly as the top level does;
-    #     a grandchild that fails attaches its arena to ITS parent's arena -- this child's -- and that
-    #     arena then goes whole, one line further down, which is the failure chain of point (4).
-    #     `now` is passed down unchanged: one reading, one boundary (lmx_manager.h.lm1).
-    if: gone = 0
-        if: lmx_thread_child_first(child) != 0
-            lmx_settle_children(child, child_arena, service, manager, now)
-        # ... and if something under it is STILL ALIVE, nothing of this child's is freed (Mikhail,
-        #     19.09): a running grandchild may be inside storage this act would return -- and a child
-        #     that was just stopped has not ended yet either, its own thread is still on its way out.
-        #     So the live ones get the stop request (the stop is the whole act) and the reap is
-        #     POSTPONED: the child keeps its place in the parent's list, in the service and in the
-        #     schedule, and a later boundary settles it again -- by then its children have ended and
-        #     their endings are done, and this act reaps it the ordinary way.
-        #     Measured on lmx_app_chain_settle_selftest: without it, R0's settle of A returned A's
-        #     arena while A's child B was still live and still answering there.
-            if: lmx_thread_child_first(child) != 0
-                # The reading is the boundary's own and is handed down unchanged (lmx_manager.h.lm1):
-                # the stop uses it to start the window, and to END it for a child that has not
-                # reached a boundary of its own (lmx_thread.h.lm1, lmx_stop_children).
-                # The CLOSURE'S pair is handed down too, and from the CHILD's own node -- the same
-                # cells its own levels will read, never a fresh start: a deferred level inherits the
-                # one window the whole tree has.
-                if: node != 0
-                    lmx_stop_children(child, now, lmx_link_deadline(node))
-                ---
-                return: c.LMX_SETTLE_DEFERRED
-            ---
-        ---
-    ---
-    # (1) the service forgets it first: an entry naming a Message that is about to lose its
-    #     storage would be a route to something that no longer exists.
-    if: service != 0
-        lmx_service_unregister(service, child)
-    ---
-    # ROUTE FIRST, THEN THE MAILBOX, THEN THE STORAGE -- the same order the child performs on its
-    # own terminal path, performed HERE only for a child that did not do it itself: `gone` says it
-    # did, and a gone child's record is returned storage that must not be read.
-    if: gone = 0 && child_arena != 0
-        lmx_thread_mail_close(child_arena, child)
-    ---
-    # (2) it leaves the schedule: a settled Message has no lane, and a queue that kept its
-    #     record would step freed cells on the next round.
-    #     NOT for a child whose arena is already gone: that record is returned storage, and a
-    #     removal walks it (lmx_manager_remove zeroes the link it unlinks).  Nothing is lost --
-    #     the driver TOOK the record out of the queue before it ran the ending turn and put it
-    #     back only while the object continues (`lmx_manager_step`: take, run, re-add if running),
-    #     so a record of a gone child is not in any queue to begin with.  And per the model the
-    #     scheduler is the object's OWN anyway (Mikhail, 19.09: "менеджер у каждого ребёнка
-    #     свой"), so a parent's settle has no business in a scheduler at all.
-    if: gone = 0 && manager != 0 && child_slot != 0
-        lmx_manager_remove(manager, child_slot)
-    ---
-    # (3) it leaves the parent's list of LIVE direct children -- and this happens BEFORE any
-    #     storage goes: the unlink walks the list and reads the child's own sibling link, so a
-    #     released child would be read as freed cells.  A settled child has no mailbox to be
-    #     addressed in, so it must leave the list delivery and supervision walk.
-    lmx_thread_child_remove(t, child)
-    # (4) the storage, and only now.  Both endings are reachable only from here, past (0): a child
-    #     with live children of its own was postponed above, so what stands here has none.
-    # The outcome is read from the PARENT's node when the child has one: a successful child frees
-    # its own arena at the end of its own turn, so by the time this act runs the child's record may
-    # already be gone and the node is the only place the answer survives (lmx_thread.h.lm1,
-    # LmxLink.success).  Without a node -- a record nobody linked -- the message is all there is.
-    outcome: 0
-    index: 0U
-    if: gone != 0
-        # The child ended successfully and its arena is already back: what is left is the
-        # parent's own slot, and the index for it comes from the node.
-        outcome: 1
-        index: (cast: (unsigned) node\index)
-    else:
-        # The child's record is still there (it did not return its arena), so IT is the truth.
-        # The node's copy is written by the child's own end-turn and is read only above, when the
-        # record is gone -- a copy must not outvote the original while the original exists
-        # (measured 20260919: a hand-wired child that never took a turn left the copy at 0 and the
-        # settle took the failure path for a successful child).
-        outcome: child_message\success
-        index: child_message\index
+    outcome: message\success
+    # Mail owns pending delivery arenas. Closing it is therefore the FIRST irreversible terminal
+    # act: it may refuse while releasing a malformed pending donor. Until it succeeds, the exact
+    # child remains a member of its parent's Array, its service route remains registered, and its
+    # own arena remains the sole owner of every range. That preserved state is the retry/diagnostic
+    # handle; unregistering, unlinking or attaching before this point would lose it.
+    if: lmx_thread_mail_close(child_arena, child) != c.LMX_POST_OK
+        return: c.LMX_SETTLE_INVALID
     ---
     if: outcome != 0
-        # SUCCESS: "reclaim the Message's own execution history by default".  Its slot in the
-        # parent's graph goes first -- the index the record answers with is its slot + 1 (the
-        # counter starts at 1) -- and then its arena WHOLE, since nothing else holds any of it.
-        if: index >= 1U
-            slot: (cast: (size_t) index) - 1U
-            if: graph != 0 && slot < (cast: (size_t) graph\len)
-                lmx_arena_ref_store(graph, slot, 0)
+        if: service != 0 && lmx_service_unregister(service, child) != c.LMX_SERVICE_OK
+            return: c.LMX_SETTLE_INVALID
+        ---
+        if: lmx_thread_child_remove(parent, child) != c.LMX_THREAD_OK
+            if: service != 0
+                if: lmx_service_register(service, child, child_arena) != c.LMX_SERVICE_OK
+                    return: c.LMX_SETTLE_INVALID
+                ---
             ---
+            return: c.LMX_SETTLE_INVALID
         ---
-        if: gone = 0 && child_arena != 0
-            lmx_arena_release(child_arena)
+        if: child\result != 0
+            result: child\result
+            \result: 0
         ---
+        lmx_arena_release(child_arena)
     else:
-        # FAILURE: "transfer its logical arena to its direct parent's available lifecycle
-        # endpoint without copying" -- the attach is lmx_child_handoff, and it refuses while
-        # the child is not handoff-safe, which the readiness predicate has just established.
-        # The slot KEEPS pointing at the child: "P retains the failure root", and the child's
-        # cells now answer in the parent's index because the arena joined it.
-        if: parent_arena != 0 && child_arena != 0
-            lmx_child_handoff(parent_arena, child_arena, child_message)
+        # Mail is already quiescent. Only now may reversible membership/service acts begin, and
+        # only after both have succeeded may the child's arena move into its parent.
+        if: service != 0 && lmx_service_unregister(service, child) != c.LMX_SERVICE_OK
+            return: c.LMX_SETTLE_INVALID
+        ---
+        if: lmx_thread_child_remove(parent, child) != c.LMX_THREAD_OK
+            if: service != 0
+                if: lmx_service_register(service, child, child_arena) != c.LMX_SERVICE_OK
+                    return: c.LMX_SETTLE_INVALID
+                ---
+            ---
+            return: c.LMX_SETTLE_INVALID
+        ---
+        if: lmx_child_handoff(parent_arena, child_arena, message) != c.LMX_CHILD_OK
+            if: lmx_thread_child_add(parent, child, parent_arena) != c.LMX_THREAD_OK
+                return: c.LMX_SETTLE_INVALID
+            ---
+            if: service != 0
+                if: lmx_service_register(service, child, child_arena) != c.LMX_SERVICE_OK
+                    return: c.LMX_SETTLE_INVALID
+                ---
+            ---
+            return: c.LMX_SETTLE_INVALID
         ---
     ---
 return: c.LMX_SETTLE_OK
 
 fn: lmx_settle_children (@: LmxThread t; @: LmxArena parent_arena; @: LmxService service; @: LmxManager manager; ulong: now) int
-    @: LmxMsg parent_message
-    @: Lmx graph
-    @: LmxLink node
-    @: LmxLink next
     @: LmxThread child
-    @: LmxMsg child_message
-    int: ready
+    @: LmxMsg message
+    size_t: index
+    int: code
     if: t = 0 || parent_arena = 0
         return: c.LMX_SETTLE_INVALID
-    parent_message: lmx_thread_message(t)
-    if: parent_message = 0
-        return: c.LMX_SETTLE_INVALID
-    graph: parent_message\graph
-    # Parent-liveness answer (20260919-113000): zero fresh stamps; emergency-close stale (self-closed orphans reclaim).
     lmx_poll_answer_children(t, now)
-    # THE WALK IS OVER THE PARENT'S OWN NODES (19.09, evening): the node carries everything this act
-    # decides by -- thread, message, gone, slot, index -- and it is a cell of the arena that OWNS
-    # the chain, so it stays valid after a child's own arena is back (lmx_thread_finish released it
-    # whole).  Reading `next` or the record from the CHILD is what left a gone child unsettled --
-    # and, through the poll above, dereferenced a zero handshake cell -- the moment its block
-    # answered something else (tests\lmx_settle_reads_node_selftest.lm1, gdb: SIGSEGV in
-    # lmx_poll_answer_children, called from here).
-    node: lmx_thread_child_link(t)
-    while: node != 0
-        # The next node is read BEFORE the child is unlinked: the walk must survive the removal it
-        # is about to perform -- and it is a cell of the PARENT's chain, never the child's.
-        next: (cast: (@: LmxLink) node\next)
-        child: (cast: (@: LmxThread) node\thread)
-        child_message: (cast: (@: LmxMsg) node\message)
-        ready: 0
-        # A child whose arena is already back (gone) answers from the PARENT's node alone: its own
-        # message must not be read, and it is already ended.  For everyone else the readiness
-        # predicate is the gate, after the wait below has had its say.
-        if: node\gone != 0
-            ready: 1
-        else:
-            # THE WAIT ENDS BEFORE THE GATE IS ASKED (19.09): a child that was asked to close and
-            # has not reached a boundary of its own within its own band's window is closed here,
-            # without a turn -- so the gate below sees it as ended and THIS boundary reaps it.  Only
-            # the close is called, never the request: this walk passes running children by, and
-            # stopping them is the cascade's business (lmx_thread.h.lm1).
-            lmx_stop_close(child, now)
-            if: child_message != 0
-                ready: lmx_settle_ready(child_message)
+    index: 0U
+    while: index < lmx_thread_child_count(t)
+        child: lmx_thread_child_at(t, index)
+        if: child = 0
+            return: c.LMX_SETTLE_INVALID
+        message: lmx_thread_message(child)
+        if: child\stopped != 0U
+            if: lmx_stop_close(child, now) != c.LMX_THREAD_OK
+                return: c.LMX_SETTLE_INVALID
             ---
         ---
-        if: ready != 0
-            lmx_settle_one(t, parent_arena, service, manager, graph, child, child_message, node, now)
+        # A retained orphan is still an ordinary member of this same Array, but its policy owns
+        # the moment of reclamation. Root teardown clears `orphaned` before the standard cascade.
+        if: child\orphaned != 0
+            index: index + 1U
+        else:
+            if: lmx_settle_ready(message) != 0
+                code: lmx_settle_one(t, parent_arena, service, child, now)
+                if: code != c.LMX_SETTLE_OK
+                    if: code != c.LMX_SETTLE_DEFERRED
+                        return: code
+                    ---
+                    index: index + 1U
+                ---
+            else:
+                index: index + 1U
+            ---
         ---
-        node: next
     ---
 return: c.LMX_SETTLE_OK

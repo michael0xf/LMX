@@ -1,6 +1,5 @@
 predef: "l3_interp/l3_thread.lm1"
 predef: "l2src/lmx_thread.lm1"
-predef: "l2src/lmx_perm.lm1"
 predef: "l2src/lmx_call.lm1"
 predef: "l2src/lmx_turn.lm1"
 predef: "l2src/lmx_child.lm1"
@@ -129,25 +128,18 @@ fn: mk_dummy (@: LmxArena a) @: Lmx
 return: m
 
 fn: mk_thread (@: LmxArena arena; @: Lmx graph; @@: LmxThread out_t) int
-    @: LmxMsg message
     @: LmxThread t
     @: LmxPost mail
     @: LmxSchedule sched
     \out_t: 0
-    message: (cast: (@: LmxMsg) lmx_arena_take(arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
-    t: (cast: (@: LmxThread) lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    t: (cast: (@: LmxThread) lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
     mail: (cast: (@: LmxPost) lmx_arena_take(arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
     sched: (cast: (@: LmxSchedule) lmx_arena_take(arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
-    if: message = 0 || t = 0 || mail = 0 || sched = 0
+    if: t = 0 || mail = 0 || sched = 0
         return: 0
-    message\running: 1
-    message\success: 0
-    message\handoff_ready: 0
-    message\graph: graph
-    message\index: 1U
-    if: lmx_post_init(arena, mail) != c.LMX_POST_OK || lmx_thread_attach(t, message, mail, sched) != c.LMX_THREAD_OK
+    if: lmx_post_init(arena, mail) != c.LMX_POST_OK || lmx_schedule_init(sched, arena, (cast: (@: void) t), 1000U) != c.LMX_SCHEDULE_OK
         return: 0
-    if: lmx_schedule_init(sched, arena, (cast: (@: void) t), 1000U) != c.LMX_SCHEDULE_OK
+    if: lmx_thread_init(arena, t, graph, mail, sched) != c.LMX_THREAD_OK
         return: 0
     \out_t: t
 return: 1
@@ -238,7 +230,7 @@ fn: mk_ret_in_if () @: Lmx
 return: m
 
 fn: run_graph (@: LmxThread t; @: Lmx m) int
-    @: LmxMsg msg t\message
+    @: LmxMsg msg lmx_thread_message(t)
     int: st
     # A refusal of THIS helper is -1, never 1: LMX_THREAD_INVALID is 1, and a check that
     # expects a failed turn must not be satisfiable by the helper declining to run one.
@@ -246,8 +238,8 @@ fn: run_graph (@: LmxThread t; @: Lmx m) int
         return: -1
     msg\graph: m
     st: lmx_thread_turn(t, native_noop, 8U)
-    # Nothing to refresh: the role records live in the bound permanent store, which the
-    # end-turn collection neither collects nor visits, so they are the same records after it.
+    # Nothing to refresh: the role records live in sealed exact-profile ranges of the
+    # owner arena, which end-turn collection does not sweep.
     groles: l3_thread_roles(t)
     if: groles = 0
         return: -1
@@ -258,7 +250,6 @@ fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxArena: arena
     LmxArena: context_arena
-    LmxArena: perm_store
     LmxPool: context_cells
     LmxScratch: store
     LmxWalkContext: context
@@ -278,7 +269,6 @@ fn: main () int
         return: 2
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ context_arena)), 0, c.sizeof(c.LmxArena))
-    memset((cast: (@: void) (@ perm_store)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ context_cells)), 0, c.sizeof(c.LmxPool))
     memset((cast: (@: void) (@ store)), 0, c.sizeof(c.LmxScratch))
     memset((cast: (@: void) (@ context)), 0, c.sizeof(c.LmxWalkContext))
@@ -293,13 +283,6 @@ fn: main () int
         return: 2
     ---
     gb: @ arena
-    # The Message arena is bound to a permanent store, as every arena of a root is: that is
-    # where l3_thread_bind keeps the role records.
-    if: lmx_perm_open(@ perm_store) != 0 || lmx_perm_bind(gb, @ perm_store) != 0
-        fputs("l3_n9_walk: store\n", l1_stdout())
-        free(counts)
-        return: 2
-    ---
     dummy: mk_dummy(gb)
     if: dummy = 0 || mk_thread(gb, dummy, @ t) = 0
         free(counts)
@@ -308,7 +291,7 @@ fn: main () int
     fail(counts, lmx_thread_request_mode(t, c.LMX_THREAD_MODE_INTERPRETED) = c.LMX_THREAD_OK, "request interpreted")
     fail(counts, lmx_thread_turn(t, native_noop, 1U) = c.LMX_THREAD_OK, "commit mode on native turn")
     fail(counts, native_hits = 1, "native ran once")
-    fail(counts, l3_thread_bind(t) = c.LMX_THREAD_OK, "bind walk dispatch")
+    fail(counts, l3_thread_bind(gb, t) = c.LMX_THREAD_OK, "bind walk dispatch")
     groles: l3_thread_roles(t)
     fail(counts, groles != 0 && l3_thread_plan_roles(t) != 0, "shared walk/plan roles")
     if_role: lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_IF))
@@ -317,7 +300,7 @@ fn: main () int
     roles_at_bind: groles
     if_at_bind: (cast: (@: void) if_role)
     while_at_bind: (cast: (@: void) while_role)
-    fail(counts, lmx_range_home(gb, (cast: (@: void) groles)) = @ perm_store && lmx_range_pool(gb, (cast: (@: void) groles)) = 0, "the role table's home is the store, not the arena's pool")
+    fail(counts, lmx_range_home(gb, (cast: (@: void) groles)) = gb && lmx_range_profile(gb, (cast: (@: void) groles)) != 0 && lmx_pool_is_sealed(lmx_range_pool(gb, (cast: (@: void) groles))) != 0, "the role table is a sealed exact-profile range of the owner arena")
 
     m: mk_if_true()
     if_role: lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_IF))
@@ -405,7 +388,6 @@ fn: main () int
     # Every run_graph above was a real turn with its end-turn collection.
     fail(counts, groles = roles_at_bind && lmx_range_classify(gb, (cast: (@: void) groles)) = c.LMX_KIND_STRUCT, "after all turns the role table is the same live Structure")
     fail(counts, lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_IF)) = if_at_bind && lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_WHILE)) = while_at_bind, "and IF and WHILE are the records they were at bind")
-    fail(counts, lmx_perm_close(@ perm_store) = 0, "store closed once")
 
     if: counts[1] != 0
         c.printf("%d failed of %d\n", counts[1], counts[0])

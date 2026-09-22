@@ -160,8 +160,8 @@ fn: main () int
 
     # ---- D: refusals of publish; the header stays what it was ----
     check(lmx_plan_publish(b, roles, m, plan) = c.LMX_PLAN_INVALID && info\header = plan, "an arena that does not hold the descriptor may not publish")
-    # The home of an address, with no permanent store bound: the arena that holds it, or
-    # none.  (With a store: tests/lmx_walk_perm_selftest.lm1.)
+    # The home of an address is the arena that owns its local range, or none.  Imported sealed
+    # views preserve their foreign owner; that case belongs to lmx_qualified_range_selftest.
     check(lmx_plan_home(a, (cast: (@: void) plan)) = a && lmx_plan_home(a, (cast: (@: void) info)) = a && lmx_plan_home(a, lmx_arena_ref_value(roles, 0U)) = a, "home: the plan, the descriptor and the roles live in this arena")
     check(lmx_plan_home(b, (cast: (@: void) plan)) = 0 && lmx_plan_home(a, 0) = 0 && lmx_plan_home(0, (cast: (@: void) plan)) = 0, "home: none from an arena that does not hold it, for null, from no arena")
     bare: lmx_node_new_owned(a)

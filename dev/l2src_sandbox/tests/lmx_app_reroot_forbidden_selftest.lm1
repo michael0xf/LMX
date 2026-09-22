@@ -96,11 +96,13 @@ size_t: rf_a_turns 0U
 size_t: rf_create_diag 0U
 size_t: rf_end_diag 0U
 size_t: rf_letters_a 0U
+size_t: rf_claimed_a 0U
 
 # A's body: turn 1 creates B in A's arena (B stays LIVE: no success, no ending), turn 2 declares
 # A's own work done while B is still live.  The ending boundary is what the probe wants to see.
 fn: rf_body_a (@: Lmx node) int
     @: LmxThread t
+    @: LmxMsg message
     @: Lmx graph_a
     @: Lmx source_b
     @: LmxMsg child_b
@@ -109,7 +111,8 @@ fn: rf_body_a (@: Lmx node) int
     @: LmxSchedule sched_b
     @: void letter
     t: lmx_thread_current()
-    if: t = 0 || t\message = 0 || t\message\graph = 0
+    message: lmx_thread_message(t)
+    if: message = 0 || message\graph = 0
         rf_create_diag: 1U
         return: 0
     ---
@@ -118,27 +121,30 @@ fn: rf_body_a (@: Lmx node) int
         return: 0
     ---
     rf_a_turns: rf_a_turns + 1U
-    graph_a: t\message\graph
+    graph_a: message\graph
     if: lmx_thread_mail_count(t, c.LMX_POST_INBOX) > 0U
         letter: lmx_thread_mail_take(t, c.LMX_POST_INBOX)
         if: letter != 0
+            if: lmx_range_classify(rf_arena_a, letter) = c.LMX_DOMAIN_KIND_MSG_RECORD
+                rf_claimed_a: rf_claimed_a + 1U
+            ---
             rf_letters_a: rf_letters_a + 1U
         ---
     ---
     if: rf_a_turns = 1U
         # A's source for B: 2 slots, opened, so graph_A can hold method at 0 and B at 1.
         source_b: lmx_node_new_owned(rf_arena_a)
-        if: source_b = 0 || lmx_arena_refs_open_owned(rf_arena_a, source_b, 2U) != 0
+        if: source_b = 0 || lmx_arena_refs_open_owned(rf_arena_a, source_b, 3U) != 0 || lmx_thread_children_field_new(rf_arena_a, source_b, 2U) = 0
             rf_create_diag: 3U
             return: 0
         ---
-        child_b: lmx_child_reserve(t, rf_arena_a, rf_arena_b, graph_a, 1U, source_b)
+        child_b: lmx_child_reserve(t, rf_arena_a, rf_arena_b, lmx_arena_ref_cell(graph_a, 1U), source_b)
         if: child_b = 0
             rf_create_diag: 4U
             return: 0
         ---
         mail_b: (cast: (@: LmxPost) lmx_arena_take(rf_arena_b, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
-        t_b: (cast: (@: LmxThread) lmx_arena_take(rf_arena_b, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+        t_b: (cast: (@: LmxThread) child_b)
         sched_b: (cast: (@: LmxSchedule) lmx_arena_take(rf_arena_b, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
         if: mail_b = 0 || t_b = 0 || sched_b = 0
             rf_create_diag: 5U
@@ -152,7 +158,7 @@ fn: rf_body_a (@: Lmx node) int
             rf_create_diag: 7U
             return: 0
         ---
-        if: lmx_thread_attach(t_b, child_b, mail_b, sched_b) != c.LMX_THREAD_OK
+        if: lmx_thread_init(rf_arena_b, t_b, child_b\graph, mail_b, sched_b) != c.LMX_THREAD_OK
             rf_create_diag: 8U
             return: 0
         ---
@@ -168,7 +174,7 @@ fn: rf_body_a (@: Lmx node) int
         return: 0
     ---
     # The ending turn: A's own work is done, and B, created in an earlier turn, is STILL LIVE.
-    t\message\success: 1
+    message\success: 1
     rf_end_diag: 20U
 return: 0
 
@@ -184,7 +190,7 @@ fn: rf_root_entry (@: Lmx node) int
         rf_entry_diag: 1U
         return: 0
     ---
-    child: lmx_root_create(rf_root, rf_arena_a, 0U, rf_source_a)
+    child: lmx_root_create(rf_root, rf_arena_a, rf_source_a)
     if: child = 0
         rf_entry_diag: 2U
         return: 0
@@ -204,7 +210,7 @@ fn: rf_root_entry (@: Lmx node) int
     ---
     lmx_arena_ref_store(graph, 0U, (cast: (@: void) method))
     child_mail: (cast: (@: LmxPost) lmx_arena_take(rf_arena_a, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
-    child_t: (cast: (@: LmxThread) lmx_arena_take(rf_arena_a, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    child_t: (cast: (@: LmxThread) child)
     child_sched: (cast: (@: LmxSchedule) lmx_arena_take(rf_arena_a, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
     if: child_mail = 0 || child_t = 0 || child_sched = 0
         rf_entry_diag: 5U
@@ -218,7 +224,7 @@ fn: rf_root_entry (@: Lmx node) int
         rf_entry_diag: 7U
         return: 0
     ---
-    if: lmx_thread_attach(child_t, child, child_mail, child_sched) != c.LMX_THREAD_OK
+    if: lmx_thread_init(rf_arena_a, child_t, child\graph, child_mail, child_sched) != c.LMX_THREAD_OK
         rf_entry_diag: 8U
         return: 0
     ---
@@ -316,7 +322,8 @@ fn: rf_scenario (int: live; int: pending; @: int counts) int
     rf_create_diag: 0U
     rf_end_diag: 0U
     rf_letters_a: 0U
-    rf_check(counts, lmx_root_open(@ root, rf_root_entry, 120000U, 0U, 0U) = c.LMX_ROOT_OK, "R0 did not open")
+    rf_claimed_a: 0U
+    rf_check(counts, lmx_root_open(@ root, rf_root_entry, 120000U) = c.LMX_ROOT_OK, "R0 did not open")
     message: lmx_root_message(@ root)
     r0: lmx_root_thread(@ root)
     root_arena: lmx_root_arena(@ root)
@@ -334,7 +341,7 @@ fn: rf_scenario (int: live; int: pending; @: int counts) int
     ---
     # A's template: 2 slots so graph_A can hold method at 0 and publish B at 1.
     source_a: lmx_node_new_owned(root_arena)
-    rf_check(counts, source_a != 0 && lmx_arena_refs_open_owned(root_arena, source_a, 2U) = 0, "template A not built")
+    rf_check(counts, source_a != 0 && lmx_arena_refs_open_owned(root_arena, source_a, 3U) = 0 && lmx_thread_children_field_new(root_arena, source_a, 2U) != 0, "template A not built")
     if: source_a = 0
         failures: counts[1]
         c.printf("rf_scenario live=%d checks=%d failures=%d entry_diag=%u (abort template)\n",
@@ -359,7 +366,7 @@ fn: rf_scenario (int: live; int: pending; @: int counts) int
     rf_arena_b: @ arena_b
 
     # R0 creates A: A is a live direct child from here on.
-    rf_check(counts, lmx_root_cycle(@ root, 4U) = c.LMX_ROOT_OK, "A-create cycle did not run")
+    rf_check(counts, lmx_root_turn(@ root, lmx_clock_ticks()) = c.LMX_ROOT_OK, "A-create turn did not run")
     rf_check(counts, rf_phase = 1U && rf_msg_a != 0 && rf_t_a != 0, "A was not wired")
     if: rf_msg_a = 0 || rf_t_a = 0
         failures: counts[1]
@@ -371,7 +378,7 @@ fn: rf_scenario (int: live; int: pending; @: int counts) int
     msg_a: rf_msg_a
     t_a: rf_t_a
     graph_a: msg_a\graph
-    rf_check(counts, lmx_arena_ref_value(graph, 0U) = (cast: (@: void) msg_a), "A not published")
+    rf_check(counts, lmx_thread_child_is(r0, t_a) != 0, "A not published in R0's children Array")
     rf_check(counts, lmx_range_classify(@ arena_a, (cast: (@: void) msg_a)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "A not in own arena")
     rf_check(counts, lmx_thread_child_is(r0, t_a) != 0, "A not live child of R0")
     rf_check(counts, graph_a != 0 && graph_a\len >= 2, "A graph has no slot for B")
@@ -387,11 +394,13 @@ fn: rf_scenario (int: live; int: pending; @: int counts) int
         letter\success: 0
         letter\handoff_ready: 0
         letter\graph: 0
-        letter\index: 0U
     ---
     rf_check(counts, lmx_service_post(service, (cast: (@: void) t_a), letter, la1) = c.LMX_SERVICE_OK, "post 1 to A refused")
+    rf_check(counts, la1\count > 0U && lmx_range_classify(la1, (cast: (@: void) letter)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "letter 1 left donor before take")
+    rf_check(counts, lmx_range_classify(a_at, (cast: (@: void) letter)) = c.LMX_KIND_NONE, "letter 1 attached to A before take")
     rf_check(counts, lmx_thread_mail_count(t_a, c.LMX_POST_INBOX) = 1U, "A inbox empty after post 1")
     rf_check(counts, lmx_manager_round(manager, 1U, lmx_clock_ticks()) = c.LMX_MANAGER_OK, "A creating round did not run")
+    rf_check(counts, la1\count = 0U && rf_claimed_a = 1U, "A take did not claim letter 1 before its GC boundary")
     rf_check(counts, rf_a_turns = 1U && rf_letters_a = 1U, "A did not take its creating turn")
     rf_check(counts, rf_create_diag = 10U && rf_msg_b != 0 && rf_t_b != 0, "A did not create B in its turn")
     if: rf_msg_b = 0 || rf_t_b = 0 || rf_create_diag != 10U
@@ -423,11 +432,11 @@ fn: rf_scenario (int: live; int: pending; @: int counts) int
             letter\success: 0
             letter\handoff_ready: 0
             letter\graph: 0
-            letter\index: 0U
         ---
         rf_check(counts, lmx_service_post(service, (cast: (@: void) t_b), letter, la2) = c.LMX_SERVICE_OK, "post to B refused")
         rf_check(counts, lmx_thread_mail_count(t_b, c.LMX_POST_INBOX) = 1U, "B inbox empty after post")
-        rf_check(counts, la2\count = 0U, "letter 2 arena not attached to B")
+        rf_check(counts, la2\count > 0U && lmx_range_classify(la2, (cast: (@: void) letter)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "pending letter 2 left donor before take")
+        rf_check(counts, lmx_range_classify(b_at, (cast: (@: void) letter)) = c.LMX_KIND_NONE, "pending letter 2 attached to B without take")
     ---
 
     # B's CLOSING turn in flight (the run that says so): entered while B is still live, so the
@@ -445,9 +454,10 @@ fn: rf_scenario (int: live; int: pending; @: int counts) int
         letter\success: 0
         letter\handoff_ready: 0
         letter\graph: 0
-        letter\index: 0U
     ---
     rf_check(counts, lmx_service_post(service, (cast: (@: void) t_a), letter, la3) = c.LMX_SERVICE_OK, "post 3 to A refused")
+    rf_check(counts, la3\count > 0U && lmx_range_classify(la3, (cast: (@: void) letter)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "letter 3 left donor before take")
+    rf_check(counts, lmx_range_classify(a_at, (cast: (@: void) letter)) = c.LMX_KIND_NONE, "letter 3 attached to A before take")
 
     a_count_pre_turn: a_at\count
     b_count_pre_turn: b_at\count
@@ -457,6 +467,7 @@ fn: rf_scenario (int: live; int: pending; @: int counts) int
 
     # A'S ENDING TURN, through the manager -- the driver's ordinary road.
     rf_check(counts, lmx_manager_round(manager, 1U, lmx_clock_ticks()) = c.LMX_MANAGER_OK, "A ending round did not run")
+    rf_check(counts, la3\count = 0U && rf_claimed_a = 2U, "A take did not claim letter 3 before its GC boundary")
     rf_check(counts, rf_end_diag = 20U, "A did not take its ending turn")
     rf_check(counts, msg_a\success = 1 && msg_a\running = 0, "A did not end by success")
     rf_check(counts, msg_a\handoff_ready != 0, "A did not mark itself handoff-safe")
@@ -500,7 +511,7 @@ fn: rf_scenario (int: live; int: pending; @: int counts) int
     # if its arena is still there (the lesson of HOW_TO_DEBUG_A_SELFTEST: the read order IS the
     # safety).  A is RETAINED whenever something under it has not ended.
     rf_check(counts, lmx_thread_child_is(r0, t_a) != 0, "A left R0's chain at the first boundary")
-    rf_check(counts, lmx_arena_ref_value(graph, 0U) = (cast: (@: void) msg_a), "A's slot in R0 no longer names A")
+    rf_check(counts, lmx_thread_child_is(r0, t_a) != 0, "R0 no longer owns A before settle")
     rf_check(counts, svc_after = 3U, "service is not R0+A+B after the first boundary")
     rf_check(counts, a_count_after = a_count_before && a_blocks_after != 0, "A's arena was touched at the first boundary")
     rf_check(counts, b_count_after = b_count_before && b_blocks_after != 0, "B's arena was touched at the first boundary")
@@ -548,7 +559,7 @@ fn: rf_scenario (int: live; int: pending; @: int counts) int
         rf_check(counts, second_code = c.LMX_SETTLE_OK, "second settle did not run")
         rf_check(counts, b_at\count = 0U && b_at\blocks = 0, "B's arena did not attach into A's at the second boundary")
         rf_check(counts, a_at\count = 0U && a_at\blocks = 0, "A's arena was not released whole at the second boundary")
-        rf_check(counts, lmx_arena_ref_value(graph, 0U) = 0, "A's slot in R0 still names a gone record")
+        rf_check(counts, lmx_thread_child_is(r0, t_a) = 0, "R0 children Array still names a gone A")
         svc_end: lmx_service_count(service)
         rf_check(counts, svc_end = 1U, "service is not R0 alone after the chain")
         rf_check(counts, lmx_service_find(service, (cast: (@: void) t_b)) = 0, "B still in service after the chain")
@@ -572,7 +583,7 @@ fn: rf_scenario (int: live; int: pending; @: int counts) int
             spins: spins + 1U
         ---
         rf_check(counts, lmx_thread_child_is(r0, t_a) != 0, "A left R0's chain with no closing turn taken")
-        rf_check(counts, lmx_arena_ref_value(graph, 0U) = (cast: (@: void) msg_a), "A's slot in R0 was cleared with no closing turn taken")
+        rf_check(counts, lmx_thread_child_is(r0, t_a) != 0, "A membership was cleared with no closing turn taken")
         rf_check(counts, msg_b\handoff_ready = 0, "B became handoff-safe with no closing turn")
         rf_check(counts, lmx_thread_mail_count(t_b, c.LMX_POST_INBOX) = mail_expect, "B's input was dropped with no closing turn")
         rf_check(counts, lmx_service_count(service) = 3U, "service changed with no closing turn")
@@ -598,7 +609,7 @@ fn: rf_scenario (int: live; int: pending; @: int counts) int
         rf_check(counts, timeout_code = c.LMX_SETTLE_OK, "the settle at the window did not run")
         rf_check(counts, b_at\count = 0U && b_at\blocks = 0, "the window boundary did not attach B's arena into A's")
         rf_check(counts, a_at\count = 0U && a_at\blocks = 0, "the window boundary did not reap A whole")
-        rf_check(counts, lmx_arena_ref_value(graph, 0U) = 0, "A's slot in R0 still names a gone record")
+        rf_check(counts, lmx_thread_child_is(r0, t_a) = 0, "R0 children Array still names a gone A")
         rf_check(counts, lmx_service_count(service) = 1U, "service is not R0 alone after the window")
         rf_check(counts, lmx_orphan_count(orphans) = 0U && lmx_orphan_reclaimed(orphans) = 0U, "the chain was rerouted instead of closed")
         c.printf("RF WINDOW_CLOSED live=%d pending=%d b_count %u->%u a_count %u->%u svc=%u orphan=%u\n",

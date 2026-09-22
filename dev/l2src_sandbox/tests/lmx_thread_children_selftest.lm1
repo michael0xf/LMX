@@ -17,9 +17,9 @@ predef: "l2src/lmx_graph_copy_owned.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
-# LmxThread live direct children (BRANCH_REMOVAL_PLAN step 1).  Pins the four acts:
-#   add, remove, is-direct-child, iterate (first/next).
-# Branch is untouched; this list is storage on Thread only.
+# The sole live-direct-child membership is one ordinary growable Array<@LmxThread> physically
+# referenced by the parent's graph and cached by the same Thread.  This test pins growth beyond the
+# rejected fixed eight-child model, physical identity, ordered traversal, and compacting removal.
 
 sub: tc_check (@: int counts; int: ok; const: @(char label))
     counts[0]: counts[0] + 1
@@ -36,13 +36,26 @@ return: t
 
 fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
-    # The chain lives in the PARENT's arena (lmx_thread.h.lm1, LmxLink): this probe builds the
-    # Thread records by hand, so it names the arena the links themselves are taken from.
     LmxArena: link_arena
+    @: Lmx graph 0
+    @: LmxArrayDesc children 0
+    @: LmxArrayDesc stray 0
+    @: LmxMsg parent_message 0
+    @: LmxPost parent_mail 0
+    @: LmxSchedule parent_slot 0
     @: LmxThread parent 0
     @: LmxThread a 0
     @: LmxThread b 0
     @: LmxThread c 0
+    @: LmxThread d 0
+    @: LmxThread e 0
+    @: LmxThread f 0
+    @: LmxThread g 0
+    @: LmxThread h 0
+    @: LmxThread i 0
+    @: LmxThread j 0
+    @: LmxThread k 0
+    @: LmxThread l 0
     @: LmxThread walk 0
     int: n
     int: failures
@@ -54,15 +67,42 @@ fn: main () int
         free(counts)
         return: 2
     ---
-    parent: tc_thread()
+    parent: (cast: (@: LmxThread) lmx_arena_take(@ link_arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
     a: tc_thread()
     b: tc_thread()
     c: tc_thread()
-    if: parent = 0 || a = 0 || b = 0 || c = 0
+    d: tc_thread()
+    e: tc_thread()
+    f: tc_thread()
+    g: tc_thread()
+    h: tc_thread()
+    i: tc_thread()
+    j: tc_thread()
+    k: tc_thread()
+    l: tc_thread()
+    graph: lmx_node_new_owned(@ link_arena)
+    children: lmx_array_grow_ref_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, @ link_arena)
+    stray: lmx_array_grow_ref_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, @ link_arena)
+    parent_message: lmx_thread_message(parent)
+    parent_mail: (cast: (@: LmxPost) lmx_arena_take(@ link_arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    parent_slot: (cast: (@: LmxSchedule) lmx_arena_take(@ link_arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: parent = 0 || a = 0 || b = 0 || c = 0 || d = 0 || e = 0 || f = 0 || g = 0 || h = 0 || i = 0 || j = 0 || k = 0 || l = 0 || graph = 0 || children = 0 || stray = 0 || parent_message = 0 || parent_mail = 0 || parent_slot = 0
         fputs("lmx_thread_children: calloc failed\n", l1_stdout())
         free(counts)
         return: 2
     ---
+    if: lmx_arena_refs_open_owned(@ link_arena, graph, 1U) != 0 || lmx_arena_ref_store(graph, 0U, (cast: (@: void) children)) != 0
+        return: 2
+    ---
+    if: lmx_post_init(@ link_arena, parent_mail) != c.LMX_POST_OK || lmx_thread_init(@ link_arena, parent, graph, parent_mail, parent_slot) != c.LMX_THREAD_OK || lmx_schedule_init(parent_slot, @ link_arena, (cast: (@: void) parent), 1000U) != c.LMX_SCHEDULE_OK
+        return: 2
+    ---
+    tc_check(counts, lmx_thread_children_bind(parent, stray, @ link_arena) = c.LMX_THREAD_INVALID, "off-graph Array bound as membership")
+    children\len: 1U
+    tc_check(counts, lmx_thread_children_bind(parent, children, @ link_arena) = c.LMX_THREAD_INVALID, "pre-populated membership Array bound")
+    children\len: 0U
+    tc_check(counts, lmx_thread_children_bind(parent, children, @ link_arena) = c.LMX_THREAD_OK, "children graph Array did not bind")
+    tc_check(counts, lmx_thread_children(parent) = children && lmx_arena_ref_value(graph, 0U) = (cast: (@: void) children), "Thread did not cache the graph's exact descriptor")
 
     # Empty: not a child, first is null, next of null is null.
     tc_check(counts, lmx_thread_child_is(parent, a) = 0, "empty list claimed a child")
@@ -74,11 +114,25 @@ fn: main () int
     tc_check(counts, lmx_thread_child_add(parent, 0, @ link_arena) = c.LMX_THREAD_INVALID, "add with null child was accepted")
     tc_check(counts, lmx_thread_child_add(parent, parent, @ link_arena) = c.LMX_THREAD_INVALID, "add of self was accepted")
     tc_check(counts, lmx_thread_child_remove(parent, a) = c.LMX_THREAD_INVALID, "remove from empty was accepted")
+    a\parent: (cast: (@: void) b)
+    tc_check(counts, lmx_thread_child_add(parent, a, @ link_arena) = c.LMX_THREAD_INVALID, "child already owned by another parent was accepted")
+    tc_check(counts, lmx_thread_child_remove(parent, a) = c.LMX_THREAD_INVALID, "wrong parent removed child")
+    a\parent: 0
 
-    # Add three (prepend order: last added is first).
+    # Append twelve children. Capacity grows 2,3,4,6,9,13; there is no eight-child ceiling.
     tc_check(counts, lmx_thread_child_add(parent, a, @ link_arena) = c.LMX_THREAD_OK, "add a failed")
     tc_check(counts, lmx_thread_child_add(parent, b, @ link_arena) = c.LMX_THREAD_OK, "add b failed")
     tc_check(counts, lmx_thread_child_add(parent, c, @ link_arena) = c.LMX_THREAD_OK, "add c failed")
+    tc_check(counts, lmx_thread_child_add(parent, d, @ link_arena) = c.LMX_THREAD_OK, "add d failed")
+    tc_check(counts, lmx_thread_child_add(parent, e, @ link_arena) = c.LMX_THREAD_OK, "add e failed")
+    tc_check(counts, lmx_thread_child_add(parent, f, @ link_arena) = c.LMX_THREAD_OK, "add f failed")
+    tc_check(counts, lmx_thread_child_add(parent, g, @ link_arena) = c.LMX_THREAD_OK, "add g failed")
+    tc_check(counts, lmx_thread_child_add(parent, h, @ link_arena) = c.LMX_THREAD_OK, "add h failed")
+    tc_check(counts, lmx_thread_child_add(parent, i, @ link_arena) = c.LMX_THREAD_OK, "add i failed")
+    tc_check(counts, lmx_thread_child_add(parent, j, @ link_arena) = c.LMX_THREAD_OK, "add j failed")
+    tc_check(counts, lmx_thread_child_add(parent, k, @ link_arena) = c.LMX_THREAD_OK, "add k failed")
+    tc_check(counts, lmx_thread_child_add(parent, l, @ link_arena) = c.LMX_THREAD_OK, "add l failed")
+    tc_check(counts, lmx_thread_child_count(parent) = 12U && children\capacity = 13U, "dynamic Array did not grow beyond eight to capacity thirteen")
     tc_check(counts, lmx_thread_child_add(parent, a, @ link_arena) = c.LMX_THREAD_INVALID, "duplicate add was accepted")
 
     # is-direct-child
@@ -87,15 +141,13 @@ fn: main () int
     tc_check(counts, lmx_thread_child_is(parent, c) != 0, "c was not a direct child")
     tc_check(counts, lmx_thread_child_is(a, b) = 0, "cross-parent is claimed a child")
 
-    # Iterate: prepend => order c, b, a
+    # Iterate in graph Array order: a, b, c, ...
     walk: lmx_thread_child_first(parent)
-    tc_check(counts, walk = c, "first was not c")
+    tc_check(counts, walk = a, "first was not a")
     walk: lmx_thread_child_next(walk)
     tc_check(counts, walk = b, "second was not b")
     walk: lmx_thread_child_next(walk)
-    tc_check(counts, walk = a, "third was not a")
-    walk: lmx_thread_child_next(walk)
-    tc_check(counts, walk = 0, "iterate did not end")
+    tc_check(counts, walk = c, "third was not c")
 
     # Count via iterate
     n: 0
@@ -104,31 +156,23 @@ fn: main () int
         n: n + 1
         walk: lmx_thread_child_next(walk)
     ---
-    tc_check(counts, n = 3, "iterate count was not 3")
+    tc_check(counts, n = 12, "iterate count was not 12")
 
-    # Remove middle (b): list becomes c, a
+    # Remove b: compaction keeps a followed by c.
     tc_check(counts, lmx_thread_child_remove(parent, b) = c.LMX_THREAD_OK, "remove b failed")
     tc_check(counts, lmx_thread_child_is(parent, b) = 0, "b still claimed after remove")
     tc_check(counts, lmx_thread_child_next(b) = 0, "removed b kept a sibling link")
     walk: lmx_thread_child_first(parent)
-    tc_check(counts, walk = c, "after remove-middle first was not c")
+    tc_check(counts, walk = a, "after remove-middle first was not a")
     walk: lmx_thread_child_next(walk)
-    tc_check(counts, walk = a, "after remove-middle second was not a")
-    walk: lmx_thread_child_next(walk)
-    tc_check(counts, walk = 0, "after remove-middle list did not end")
+    tc_check(counts, walk = c, "after remove-middle second was not c")
 
-    # Remove head (c): list becomes a
-    tc_check(counts, lmx_thread_child_remove(parent, c) = c.LMX_THREAD_OK, "remove head failed")
-    tc_check(counts, lmx_thread_child_first(parent) = a, "after remove-head first was not a")
-
-    # Remove last (a): empty
+    # Removing the first element leaves c at the head; removing the remaining children empties it.
     tc_check(counts, lmx_thread_child_remove(parent, a) = c.LMX_THREAD_OK, "remove last failed")
-    tc_check(counts, lmx_thread_child_first(parent) = 0, "list not empty after last remove")
+    tc_check(counts, lmx_thread_child_first(parent) = c, "after remove-head first was not c")
     tc_check(counts, lmx_thread_child_is(parent, a) = 0, "a still claimed after last remove")
-
-    # Re-add after remove works
-    tc_check(counts, lmx_thread_child_add(parent, a, @ link_arena) = c.LMX_THREAD_OK, "re-add after remove failed")
-    tc_check(counts, lmx_thread_child_is(parent, a) != 0, "re-added a was not a child")
+    tc_check(counts, lmx_thread_child_remove(parent, c) = c.LMX_THREAD_OK && lmx_thread_child_remove(parent, d) = c.LMX_THREAD_OK && lmx_thread_child_remove(parent, e) = c.LMX_THREAD_OK && lmx_thread_child_remove(parent, f) = c.LMX_THREAD_OK && lmx_thread_child_remove(parent, g) = c.LMX_THREAD_OK && lmx_thread_child_remove(parent, h) = c.LMX_THREAD_OK && lmx_thread_child_remove(parent, i) = c.LMX_THREAD_OK && lmx_thread_child_remove(parent, j) = c.LMX_THREAD_OK && lmx_thread_child_remove(parent, k) = c.LMX_THREAD_OK && lmx_thread_child_remove(parent, l) = c.LMX_THREAD_OK, "remove remaining children failed")
+    tc_check(counts, lmx_thread_child_count(parent) = 0U && lmx_thread_child_first(parent) = 0, "Array was not empty after removal")
 
     failures: counts[1]
     if: failures = 0
@@ -139,10 +183,18 @@ fn: main () int
     free(a)
     free(b)
     free(c)
-    free(parent)
+    free(d)
+    free(e)
+    free(f)
+    free(g)
+    free(h)
+    free(i)
+    free(j)
+    free(k)
+    free(l)
+    lmx_arena_release(@ link_arena)
     free(counts)
     if: failures != 0
         return: 1
     ---
 return: 0
-

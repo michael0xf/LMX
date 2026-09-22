@@ -34,7 +34,7 @@ LMX is also a grammar capable of representing both data in a complex, uniquely s
 - [17. Array operations](#array-operations)
 - [18. Numeric operations, purity and contexts](#mathematics)
 - [19. Composition and graph copying](#composition)
-- [20. Tables, queries, imports and providers](#registries)
+- [20. Tables, queries, linking and providers](#registries)
 - [21. Ownership, reachability and lifetime](#memory)
 - [22. Eternal branches and shared methods](#eternal)
 - [23. Message, actor and serial turn](#messages)
@@ -91,7 +91,7 @@ Text, images, decimal notation and machine words are substrate storage before re
 <a id="identity"></a>
 ## 3. Identity and lexical trees
 
-Live Structures and Array records retain their physical addresses. Storage grows by adding new regions; existing objects do not move. Equal contents do not imply object identity. Explicit copying creates new identities and preserves relationships under the [copying rules](#composition).
+Live Structures, Array records, and local Messages retain their physical addresses. A record's physical address is the Message's in-process identity; local identity is not supplemented by a parent index. Storage grows by adding new regions; existing objects do not move. Equal contents do not imply object identity. Explicit copying creates new identities and preserves relationships under the [copying rules](#composition). Hierarchical index chains belong only to [WorldWideMix](#worldwide).
 
 A lexical parent determines a Structure's position in its tree; a root has no parent. Storage ownership and lexical ancestry are independent. Attaching another Message's storage preserves existing lexical links, does not itself add a reference from the recipient's root and does not make the adopted root a lexical child of the recipient.
 
@@ -103,13 +103,21 @@ The [independent qualifier](#qualification) cuts the external lexical parent at 
 
 Names resolve source-level accesses; execution follows the resulting references and positions. A diagnostic mapping from address to short source name is not a variable-binding table, a type or an execution identifier. Construction, copying and calls do not require source-name registration. Anonymous and positional values need no synthetic names.
 
-A structural path `object\field\nested` selects graph fields in sequence. Each step's presence and validity are determined by the selected object. A computed path is not replaced by an invented statically known name. Direct access to an invoked body's own graph uses reserved `node`; `node` denotes the callable Structure itself, while its lexical parent is a different value.
+A structural path `object\field\nested` selects graph fields in sequence. Each step's presence and validity are determined by the selected object. A computed path is not replaced by an invented statically known name. Reserved `node` denotes the lexical space above the method and stays fixed throughout that method activation; `node\field` starts explicit traversal in that space. A bare `field` obtained by lexical fallback is supplied as a hidden argument of the current activation and is not identical to the explicit `node\field` path.
 
-`node` cannot be declared, shadowed, rebound or dynamically supplied as a same-named value, including by quoted identifier spelling. The caller selects the structural occurrence but cannot substitute a value from its own context for that occurrence's `node`. `node\field` selects the occurrence's direct field without an additional hop to its parent; further traversal must be explicit.
+`node` is a reserved language word. It cannot be declared, shadowed, rebound or dynamically supplied as a same-named value, including by quoted identifier spelling. In lowering it is literally the mandatory first `Lmx *node` parameter (`@: Lmx node` in L1): the physical reference to the lexical space above the selected method. No wrapper, closure or namespace object is inserted between source `node` and that address. In the working graph every callable occurrence, `if` body, loop and other nested Structure separately holds an ordinary `parent` link to its immediately enclosing Structure. For a callable occurrence that link supplies the above-method space passed as `node`; nested bodies may have an arbitrary internal `parent` chain, but that chain never rebinds the activation's `node` parameter. `parent` is neither a reserved language word nor a program-visible alias: it is an implementation field traversed by lexical and dynamic visibility. A bare `field` supplied as a hidden argument is local with respect to the caller and the above-method space. If the body contains a resolved assignment `field: value`, the translator prepares that body's own field, while execution binds the local cache to it and marks it `dirty`; the checkpoint publishes into this own field, never into the hidden argument's source. Mutating the above-method graph requires explicit `node\field: value`.
+
+| Name | Where it exists | Meaning |
+| --- | --- | --- |
+| `node` | reserved L3 word and first method ABI parameter | space above the method; fixed for the whole activation, including nested bodies |
+| `parent` | ordinary field of every working-graph `Lmx` Structure | immediately enclosing Structure; differs for a method, `if`, loop and other nested bodies |
+| `self` | hidden ABI context only | physical selected callable occurrence and its own-load/dirty base; not a language word |
 
 Repeated source names are retained. `name` is equivalent to `[0]name`, selecting the first occurrence; `[1]name` selects the second. A name's occurrence number differs from the physical field index among all fields. A later `merge` part does not automatically override an earlier one. Reordering distinct names does not change a named path; reordering same-name occurrences may change the selected value.
 
 A Structure's field count and positions are fixed at construction. Graph fields follow strictly lexical order; native-code emission order does not authorize rearranging the graph's fields. Updating an existing field replaces its stored reference; it does not append an occurrence. A different set of fields requires a new Structure. Array operations follow their own contracts and do not change this Structure rule.
+
+Execution separately retains the physical reference to the selected callable occurrence itself as the base for own-load/dirty. This is hidden ABI context, not a new source name `self` and not a replacement for reserved `node`.
 
 <a id="descriptions"></a>
 ## 5. Explicit value descriptions and conversions
@@ -214,7 +222,7 @@ State the constraint explicitly and include it in tests. Presence of `x\width` d
 <a id="admission-case-5"></a>
 ### 5. Making a change visible to other reference holders
 
-To make a change visible to other holders, write through an explicit path: `p\x: value` or `a[i]: value` changes the selected referent. Bare `x: value` changes the current activation's working value: an ordinary own field remains `dirty` until a successful checkpoint, while an ordinary formal, result or dynamic copy remains local. The narrow exception for taking an input's address before same-name own binding, and its activation point, are defined under [working state](#dynamic). Neither write implicitly appends a same-name occurrence.
+To make a change visible to other holders, write through an explicit path: `p\x: value` or `a[i]: value` changes the selected referent. A resolved bare `x: value` targeting an already typed explicit or hidden argument makes the translator prepare a same-name own field of the current body; when executed, the statement binds the local cache to that field, marks it `dirty`, and publishes specifically into the body's field at the next checkpoint. The write remains local with respect to its source: it changes neither the caller's argument nor the parent graph. The narrow exception for taking an input's address before same-name own binding, and its activation point, are defined under [working state](#dynamic). Execution does not append the field: translation has already fixed the graph layout.
 
 <a id="admission-case-6"></a>
 ### 6. Independence from another holder's mutation
@@ -264,9 +272,13 @@ A foreign handle requires a checked high-level wrapper and explicit resource and
 <a id="construction"></a>
 ## 8. Value construction
 
-A structural expression constructs a value when execution reaches it. Declaring a name, importing a unit or providing a description does not eagerly create every instance. Named and anonymous Structures share one mechanism: determine the lexical parent, create fields with stable identity, evaluate initializers in source order, establish links and publish the successfully initialized result. An `independent` root has `node = 0`; that is exactly what absence of an external lexical parent means.
+A structural expression constructs a value when execution reaches it. Declaring a name, importing a unit or providing a description does not eagerly create every instance. Named and anonymous branches are created by the sole full-`merge` mechanism: determine the lexical parent, traverse the complete used graph closure, create fields with stable identity, evaluate initializers in source order, rewrite references and `parent`, and publish the fully initialized result. An `independent` root has `parent = 0`; that is exactly what absence of an external lexical parent means.
 
-In declarations `u32: id`, `Text: crop`, `f64: harvest 0.0`, the constructor operation consumes the following identifier as a proposed name rather than evaluating its previous value. `PlantBed: bed` requires an available `PlantBed` construction operation: a same-named description does not become a constructor by itself. Redeclaration of an existing field is subject to the remaining receiving expressions' requirements; it creates neither a new type nor a hidden name table.
+The colon creates one generic “head consumes tail” form; context selects the head's role after bindings are resolved. In `head: tail`, the colon itself neither declares nor assigns nor evaluates `tail`. In particular, `u32: id`, `Text: crop`, and `f64: harvest 0.0` are declarations only when the following identifier has no active logical binding at that point: the resolved constructor operation then consumes it as a raw proposed name. A same-named preallocated physical location is not an active binding. When the tail value already exists, the tail is evaluated and the head's role is selected for that context; constructor interpretation has no unconditional priority.
+
+In variable/constructor context, the `left: right` branch is selected by the active binding of `right`, not by the identifier spellings. If `right` is absent, this is declaration context: `left` must resolve as a type/model operation, the tail is supplied as a raw proposed name, and the `right` branch is created by a real full `merge(left, empty)`. There is no other branch-creation mechanism. An unqualified `left` follows ordinary dynamic visibility: the caller's current local value, then its inherited dynamic input, and only then the callee's lexical fallback. The translator therefore knows the required contract but need not know the physical identity of the actual operand. Explicit `node\left` selects the lexical object itself and bypasses dynamic replacement. An empty second operand does not shorten the traversal to pointer copying: the common `merge` operation retains one source-to-copy map, traverses the complete used closure, rewrites references and `parent`, and applies its terminal rule. On encountering an explicitly selected `independent: const: immutable` value, it retains the original physical reference without copying or changing ownership. An outer `const:` fixes the resulting binding. Thus `env: field` with absent `field` and `field: env2` with absent `env2` are the same declaration situation under different names.
+
+If `right` already has an active binding, it is evaluated as the candidate value and `left` is the update target. Target `left` must already resolve to a mutable binding with a statically known type; an absent or untyped target, and a `const left`, are errors. Before any write, full `implements(right, left, Consumer)` is performed, including analytical checking and the receiving expression's mandatory unit tests; on failure neither the target nor its `dirty` state changes. Only success permits assigning the `right` reference to `left`: this is not `merge`, the branch is not copied, and ownership of the referent does not change. Assignment does not infer the target type from the right-hand side. Therefore `arg: 7` is valid for a previously typed explicit **or hidden** argument `arg`, but invalid in a body with no independently established typed `arg` binding. In addition, translation must resolve the right-hand side as a known value: a literal is intrinsically known, while a name must resolve to a typed binding in the available namespace. The translator must know the type and binding location even when a dynamic value's physical reference becomes known only at call time. Only when both conditions hold does this contextual colon role mean assignment: the translator prepares a same-name own field of the body, and execution binds the local cache to it and marks it `dirty`. If the assignment conditions do not hold, this own field does not appear: another already defined contextual colon role is selected or translation fails. This neither redeclares the variable nor mutates the caller's argument source.
 
 The colon builds a nested application form. In `const: char: []: s "hello" "world!"`, qualification, element selection and Array construction have their respective contracts. `char` selects a primitive element; `String` denotes a higher-level immutable text value, not another spelling of machine `char *`. `String: ()` constructs a Structure of references, whereas `String: []` constructs an Array of references under the respective constructors.
 
@@ -280,7 +292,7 @@ A field can retain a reference to an existing object. This neither copies it nor
 end: result
 ```
 
-Naming does not add a descriptor, class or special layout to the object. Construction differs from [composition](#composition): it creates the expressed graph, whereas `merge` copies its operands' graph. The evaluation/reuse policy of a top-level named construction still requires definition; eager materialization of every value during translation does not follow from it.
+Naming does not add a descriptor, class or special layout to the object. Branch construction is a particular use of [full `merge`](#composition), not a separate shortened constructor; the source form selects the operand, proposed name and publication site. The evaluation/reuse policy of a top-level named construction still requires definition; eager materialization of every value during translation does not follow from it.
 
 <a id="qualification"></a>
 ## 9. const, immutable and independent
@@ -291,17 +303,17 @@ Immutability applies to a primitive, a Structure and its selected tree, or an Ar
 
 Construction-time `immutable` qualifies the new value before publication. `RuntimeImmutable` qualifies an existing tree while retaining its identity. The second operation's name does not denote a second argument-admission mechanism: changing qualification is its operational contract. Its arguments undergo [unified admission](#admission), like those of every receiving expression.
 
-The whole selected tree is examined before qualification changes. A contained Structure is a tree branch only when its `node` points to the parent being examined. An outside reference is permitted only to an already immutable object; it is terminal, and its target is neither traversed nor requalified. The pre-change state is checked: processing an earlier field cannot justify an invalid outside reference in a later field. Malformed containment or a mutable outside target follows a declared `throw`, not `assert`.
+The whole selected tree is examined before qualification changes. A contained Structure is a tree branch only when its ordinary structural `parent` field points to the parent being examined. An outside reference is permitted only to an already immutable object; it is terminal, and its target is neither traversed nor requalified. The pre-change state is checked: processing an earlier field cannot justify an invalid outside reference in a later field. Malformed containment or a mutable outside target follows a declared `throw`, not `assert`.
 
-Primitives and methods are leaves, not lexical-tree branches. An Array reference likewise establishes no `node` branch: a tree operation does not implicitly freeze an outside Array's mutable backing. An immutable Array is constructed under its own contract. A cell's membership in a service pool does not permit traversal or qualification of the entire pool.
+Primitives and methods are leaves, not lexical-tree branches. An Array reference likewise establishes no `parent` branch: a tree operation does not implicitly freeze an outside Array's mutable backing. An immutable Array is constructed under its own contract. A cell's membership in a service pool does not permit traversal or qualification of the entire pool.
 
 Qualification is applied only after successful complete preflight. Failure leaves no partially frozen tree or published successful result; silently skipping a branch, copying it or retargeting links is prohibited. Requalifying an already suitable tree changes nothing. This rule does not roll back earlier initializers, argument evaluation or pre-call publication of working fields; it establishes no graph transaction.
 
 Protection applies to writes through every path and to publication of working fields. A known-invalid write is rejected before execution; a dynamically selected write is checked during execution. Calling a method is allowed but does not remove protection. Changing a local argument copy or rebinding a local reference does not modify the protected value. Constructing a new value, including through `merge`, does not thaw the source.
 
-Construction-time `independent` sets the root's `node = 0`; that is exactly the absence of an external lexical parent. Internal tree `node` links and own fields remain. The qualification neither retroactively clears existing objects' `node` links nor prohibits explicitly supplied references, current-caller dynamic arguments, Messages or selection of a callable by a compatible signature. It does not require purity or an interface closed over explicit arguments alone.
+Construction-time `independent` sets the root's `parent = 0`; that is exactly the absence of an external lexical parent. Internal tree `parent` links and own fields remain. The qualification neither retroactively clears existing objects' `parent` links nor prohibits explicitly supplied references, current-caller dynamic arguments, Messages or selection of a callable by a compatible signature. It does not require purity or an interface closed over explicit arguments alone.
 
-`const`, `immutable` and `independent` are receiving expressions; their composition establishes the result's qualified type. The physical representation of that type is determined by the common typed-address-range membership mechanism described in [L2](L2_spec_en.md#type-by-range), rather than by per-value flags or a special classifier for one particular qualifier chain. The range's own identity is the type domain; qualifier compositions do not each introduce a new enumeration code. A zero root `node` remains the structural consequence of `independent`, not a replacement for type classification.
+`const`, `immutable` and `independent` are receiving expressions; their composition establishes the result's qualified type. The physical representation of that type is determined by the common typed-address-range membership mechanism described in [L2](L2_spec_en.md#type-by-range), rather than by per-value flags or a special classifier for one particular qualifier chain. The range's own identity is the type domain; qualifier compositions do not each introduce a new enumeration code. A zero root `parent` remains the structural consequence of `independent`, not a replacement for type classification.
 
 For example, a method inside independent Structure S can use S's field through its internal lexical link. Required `x` can come from the current caller. If `x` exists only in S's former textual surroundings, implicit external access is unavailable. An explicitly passed large Array neither shrinks nor gets copied because of `independent`. The special lifetime of the three qualifications together is described under [eternal branches](#eternal).
 
@@ -311,7 +323,7 @@ For example, a method inside independent Structure S can use S's field through i
 
 An executable body is a structural expression. `fn` defines an expression with one logical result; `sub` performs execution without a returned value; `fm` has one result Structure whose fields provide a multiple-return surface. The signature defines explicit arguments, required dynamic and lexical inputs, each value's pass mode, the result and declared `throws` exits. Merely having a Structure, label or name does not execute its body.
 
-A callable occurrence has its own structural identity and lexical-parent link. Multiple occurrences can reference one immutable method. Graph copying neither creates another method implementation nor changes its signature; state belongs to particular structural occurrences and activations. A nested definition does not capture a caller frame in a hidden environment.
+A callable occurrence has its own structural identity and a `parent` link into its above-method lexical space. Multiple occurrences can reference one immutable method. Graph copying neither creates another method implementation nor changes its signature; state belongs to particular structural occurrences and activations. A nested definition does not capture a caller frame in a hidden environment.
 
 Entering a method does not copy its callable occurrence, body or any other part of the graph. Native and interpreted execution use the same locality model: each activation receives an ordinary frame for formal, dynamic and local values, the result, and working copies of used own fields. Those own values are loaded and marked `dirty` under the same rules regardless of execution mode. Logically, the frame has the lifetime of an ordinary stack call; an implementation may place its auxiliary storage in reusable memory provided that this neither creates a method copy nor hidden graph state and does not make entry substantially more expensive than a native call. A recursive call creates another frame over the same method; graph memory is copied only by an explicitly expressed operation, not by invocation itself.
 
@@ -347,9 +359,11 @@ A free name's sources have this priority: the caller's nearest current local bin
 
 Lexical lookup uses real Structure links, stops at a zero parent and selects the direct first same-named occurrence at the relevant step. `independent` cuts only the external lexical fallback. Explicit access through `node\x`, `reference\x` or `array[index]` addresses the graph rather than being replaced by the current call's dynamic `x`.
 
-An own field's working value is loaded for the activation. Assigning that name changes the working value and marks it dirty. Assigning a formal or dynamic input changes only its local copy, without automatic copy-back to the caller. An explicit reference write changes the selected object directly and is observable through other references to it.
+An own field's working value is loaded for the activation. Assigning that name changes the working value and marks it dirty. An explicit reference write changes the selected object directly and is observable through other references to it. An explicit or hidden argument that is not targeted by a bare assignment remains an ordinary local value with no copy-back to the caller.
 
-Same-name binding is the exception: an executed own-field declaration or assignment-as-declaration can bind an explicit formal or dynamic input to the current body's field. From that line the same activation-local value becomes that field's own cache; no previous graph value is loaded over the input. Earlier input changes are not published. A preallocated slot neither activates the binding before its statement executes nor changes the field count. Publication targets the body's own field, never the caller's argument source.
+The presence in a source body of a resolved bare assignment `x: value`, where `x` is an already typed mutable explicit or hidden argument, makes the translator prepare a same-name own field of that body. For the assignment role, `value` must also resolve as an existing typed value or intrinsically as a literal; otherwise this rule creates no own field, and translation selects another already defined contextual colon role or reports an error. When the statement executes, the local `x` cache binds to the prepared own field and becomes `dirty`; no previous graph value is loaded over the input. Before that statement executes the argument remains local, and an untaken branch does not activate the binding. Translation has already fixed the graph's fields, so execution changes no field count. Publication targets the body's own field, never the caller's argument source or the parent graph.
+
+Locality and storage duration are separate properties here. The own field lets the current callable occurrence retain the published value for later activations, but does not turn the write into a mutation of an outer binding: the caller's argument cell and the above-method space's field remain unchanged. Only an explicit `node\x` path write mutates that outer field.
 
 One narrow address rule applies to such a binding. If `@x` was evaluated **before** the first executed `x: ...` statement that creates the binding, then from execution of that statement the bound own field's dirty mark is sticky until the current activation ends. Every subsequent checkpoint publishes the current local `x`, but successful publication does not clear this mark. The rule is independent of `x`'s type: it applies to every type for which the assignment-as-declaration itself is valid.
 
@@ -397,7 +411,7 @@ The following recursive trace introduces no new syntax. Method M has callable St
 | Outer call resumes without reload | 2, clean | — | 9 |
 | Outer call returns without assigning `x` | frame ends | — | 9 |
 
-On the resumed outer frame, bare `x` reads 2 and explicit `node\x` reads 9. If the outer frame then executes `x: x + 1`, its working value becomes 3 and is marked `dirty`; the next boundary publishes 3 into S. This is a new outer-activation write, not restoration of its previous snapshot. If `x` were only a dynamically supplied value, its assignment would remain local and none of these own-field stores would occur.
+On the resumed outer frame, bare `x` reads 2 and explicit `node\x` reads 9. If the outer frame then executes `x: x + 1`, its working value becomes 3 and is marked `dirty`; the next boundary publishes 3 into S. This is a new outer-activation write, not restoration of its previous snapshot. A dynamically supplied `x` that is never the target of a resolved bare assignment remains only a local argument. If the body does contain such an `x: ...`, the hidden argument follows the same own-field preparation and binding rule as an explicit argument.
 
 The callable Structure's field therefore combines the persistence of an instance field with the working locality of a stack variable: an ordinary used own field is loaded into a typed working value and written back only after a change; the narrowly defined bound input with a sticky mark is published until its activation ends. The graph stores published state; the stack stores activation history. There is no implicit caller-frame capture, so frames need not be heapified or connected by a hidden closure chain to avoid the upward-funarg problem.
 
@@ -489,6 +503,8 @@ An ordinary Array is a typed value with stable reference identity. Constructor `
 
 An owning Array has one contiguous rectangular block of elements. Nested dimensions do not mean separately allocated rows. For shape `[d0, …, dN−1]`, element count is the product of dimensions, with the last index varying fastest. An Array of references to other Arrays is a different value, not a replacement for a rectangular multidimensional Array. Primitive elements acquire no lexical parents.
 
+The common physical Array descriptor contains `len`, `capacity`, and `data`: logical element count, cell count of the current backing, and its address. A fixed or immutable Array has `capacity = len`. A growable reference Array starts at capacity 2 and grows by approximately `3/2`. Growth or compaction may replace backing, so the address of an individual backing slot does not survive such an operation; physical addresses stored as referent values do not change because of it.
+
 `shape(array)` returns dimensions as a rank-one integer Array or shape Structure; `rank` returns their count; `length` for positive rank returns the first dimension; `size` returns total element count. The containing Structure's field count, Array length and service descriptor-pool size are distinct.
 
 A full rank-N index contains N integer coordinates. L3 access checks the Array descriptor and index bounds; an out-of-bounds access produces a `Bounds` failure, not `None`. A partial index may produce a view, such as first row `matrix[0]`; full `matrix[0, 2]` selects an element. Coordinate spelling belongs to the [grammar](LMX_grammar.en.md), not C machine indexing. These checks belong only to L3: [L2 access](L2_spec_en.md#lowlevel-address), including obtaining a graph-backed element's address, works without them. Operation checks do not constitute a separate candidate-admission mechanism in place of [analysis and unit tests](#admission).
@@ -530,20 +546,20 @@ Arrays use the same scalar operations and contexts. Vectorization, reduction and
 
 `merge` is an executable operation over live structural operands. It is neither a preprocessor include, C-type composition nor mutation of source values. Operands are evaluated once left-to-right; a fresh root is then built with direct fields in operand and appended-body order. A previous `merge` result can itself be an operand.
 
-The complete used graph is copied with required references and lexical chains to a zero parent. One source-to-copy map spans all operands: shared targets remain shared, cycles are preserved, and references and `node` links are explicitly rewritten. Operand roots and necessary lexical ancestors do not become extra visible result fields. The new root's lexical parent follows the `merge` expression's location.
+The complete used graph is copied with required references and lexical chains to a zero parent. One source-to-copy map spans all operands: shared targets remain shared, cycles are preserved, and references and `parent` links are explicitly rewritten. Operand roots and necessary lexical ancestors do not become extra visible result fields. The new root's lexical parent follows the `merge` expression's location.
 
-Shared methods and admitted [eternal branches](#eternal) are terminals under their respective contracts: they retain their addresses without copying code or branch contents. Other used mutable state receives distinct storage. The algorithm is not merely a direct-field pointer copy and does not leave references into another mutable arena.
+Shared method references are terminals under their contracts. When `merge` encounters an [eternal branch](#eternal) qualified `independent: const: immutable`, it MUST **not copy** it and MUST place the original physical value reference directly into the result. Physical identity is preserved and the source module remains the owner. Range-index visibility and bookkeeping occur inside merge/classification; they are neither a separate visible operation nor an alternative to `merge`. Other used mutable state receives distinct storage, and the algorithm leaves no references into another mutable arena.
 
 Repeated fields retain forward order: the first `read` remains `read`/`[0]read`, the next is `[1]read`. A later operand does not automatically override the first. Different selection requires choosing an occurrence explicitly or constructing the intended result. Successful composition publishes a fully initialized result, requires no short-name registration and leaves sources unchanged.
 
 Failure follows declared `throws merge(args)`, not an invented partial-result protocol. This does not promise rollback of operand-evaluation effects. Temporary-storage release follows the owning Message's rules. The exact low-level mechanism is in [L2](L2_spec_en.md#copy-merge).
 
-A type description, schema, import data or Table is ordinary data: applying `merge` does not select a special descriptor-composition algorithm. `table` materializes an explicitly selected table representation; `join` creates a new table graph without mutating operands. Row, key, conflict and priority policies belong to the table operation, not structural field lookup.
+A type description, schema, module data or Table is ordinary data: applying `merge` does not select a special descriptor-composition algorithm. `table` materializes an explicitly selected table representation; `join` creates a new table graph without mutating operands. Row, key, conflict and priority policies belong to the table operation, not structural field lookup.
 
-Ownership transfer of existing storage during Message delivery is a [different operation](#delivery), without copying or reparenting `node`. Admission-policy combination is likewise not `merge`: it selects and checks explicit data without default structural copying.
+Ownership transfer of existing storage during Message delivery is a [different operation](#delivery), without copying or changing the structural `parent`. Admission-policy combination is likewise not `merge`: it selects and checks explicit data without default structural copying.
 
 <a id="registries"></a>
-## 20. Tables, queries, imports and providers
+## 20. Tables, queries, linking and providers
 
 Registry, Table, RegistryView, schema and policy are roles of ordinary values, not additional categories or hidden namespaces. Each operation receives a registry root explicitly or reaches it through an expressed reference. Merely having a Table does not trigger lookup; a row keyed `class`, `type`, `provides` or `satisfies` does not change language meaning.
 
@@ -555,7 +571,7 @@ Procedural consumption invokes a selected expression; object/event consumption s
 
 A reactive update may produce events, which are Messages. An agent can propose a row or Message; every candidate undergoes [unified admission](#admission). An explicit policy ranks admitted candidates, and a separate operation publishes the selected result. Neither a successful test nor selection of the best candidate updates the Registry by itself.
 
-Import links explicitly selected operations and construction recipes. It neither scans arbitrary directories, constructs every instance nor copies a runtime namespace. Providers, codecs and lowering rules are selected through imports, references, configuration or supplied Tables. An execution plan retains the chosen reference; changing providers is explicit, not the result of hidden global lookup.
+Module linking only resolves explicitly selected operations and construction recipes to physical references. It neither scans arbitrary directories, constructs every instance nor copies a runtime namespace. Providers, codecs and lowering rules are selected by an explicit reference, configuration or supplied Table. An execution plan retains the chosen reference; changing providers is explicit, not the result of hidden global lookup. There is no separate semantic import operation: only `merge` performs graph composition.
 
 `toLmx`/`fromLmx`, when provided by a profile, specify codec operations with explicit policy. Portable persistence represents content and identities under the codec, not a memory image of native addresses, allocator state and foreign descriptors. The latter require separate external-resource policies.
 
@@ -596,7 +612,7 @@ An operator cell can directly hold an implementation key. For example, the follo
     end: `equals.data`
 ```
 
-### Relations, import and queries
+### Relations, linking and queries
 
 One relation can be represented as a matrix of type pairs or organized around one operand. These are different views of explicit data, not hidden overload registration. Sparse-cell notation belongs to the selected table profile.
 
@@ -618,7 +634,7 @@ One relation can be represented as a matrix of type pairs or organized around on
     equals    decimal_eq       decimal_real_eq  decimal_int_eq
 ```
 
-A table consumer may define import order and numeric priorities. Conflicting-row policy belongs to that consumer and does not override first-occurrence structural lookup. Registry construction and querying remain separate operations.
+A table consumer may define linked-source order and numeric priorities. Conflicting-row policy belongs to that consumer and does not override first-occurrence structural lookup. Registry construction and querying remain separate operations.
 
 ```text
     table:
@@ -760,7 +776,7 @@ A diagnostic result can also be an ordinary cell value. For a higher-arity relat
 
 Every Message, executing or not, owns one logical arena of mutable data. It can contain multiple disjoint regions; these are not additional source-level arenas. Calls, blocks, handlers, branches and retries do not create their own semantic arenas. L3 does not select an arena through an operation argument.
 
-Lexical nesting, storage ownership and reachability are distinct relationships. One arena may contain multiple lexical trees. Transferring block ownership preserves addresses and `node`; the new owner neither becomes the lexical parent automatically nor gains an implicit application reference to every adopted object.
+Lexical nesting, storage ownership and reachability are distinct relationships. One arena may contain multiple lexical trees. Transferring block ownership preserves addresses and `parent`; the new owner neither becomes the lexical parent automatically nor gains an implicit application reference to every adopted object.
 
 Liveness follows reachability, not block-list membership. Roots include the Message root, active structural arguments, retained own fields, results, formal/dynamic input references, continuations and explicitly retained application/service references. Tracing follows typed graph edges, necessary parents, Array-to-backing links and reference-valued elements. The auxiliary name index is not a root.
 
@@ -775,15 +791,17 @@ A foreign resource has a separate ownership, retention, release and transfer con
 <a id="eternal"></a>
 ## 22. Eternal branches and shared methods
 
-Combined qualification `independent: const: immutable` establishes an eternal branch: its root has `node = 0`, contents and protected bindings are immutable, and storage lasts until process termination. Any one qualification alone does not establish this sharing contract.
+Combined qualification `independent: const: immutable` establishes a sealed immutable independent branch: its root has `parent = 0`, and its contents and protected bindings are immutable. For the initial lexically known module, explicit retention by owner R0 gives process-long storage. The qualification itself neither selects a global owner nor defines unloading of a future module. Any one qualification alone does not establish this sharing contract.
 
-The process's first, root Message retains all such branches from all Messages in a fixed immutable reference Array. The branch set is translation-known; `merge` and Message creation do not append entries. Placement in the retention Array does not reparent a branch's lexical tree. Permitted runtime-value initialization occurs before publication without increasing the entry set.
+Process bootstrap may construct a translation-known immutable typed Array of physical references to such branches and explicitly supply it to the root Message. `merge` and Message creation neither append to nor inherit this Array automatically. Placement in the Array does not reparent a branch's lexical tree. Permitted runtime-value initialization occurs before publication without increasing the entry set.
 
-The published branches themselves reside in the Root Thread's (`R0`) permanent immutable storage, separate from ordinary collectable arenas. Arena garbage collectors do not mark, traverse, mutate or release that storage; a reference to an eternal branch in another Message is an external terminal for that Message's collector and does not transfer ownership. The permanent storage is released once when its owning root/process terminates.
+Bootstrap may place the published branches and their retaining sealed typed ranges in the Root Thread's (`R0`) arena through the same mechanism that creates typed Arrays in any L3 Thread arena. Process lifetime follows from explicit ownership and retention by R0, not from a hidden table, special storage class, or root-only capability. Collection does not release these explicitly retained initial ranges; a reference to a branch in another Message is an external terminal for that Message's collector and does not transfer ownership.
 
-Membership in the eternal-branch type is established by the same typed-address-range index used for all other physical types. A separate permanent-store role controls only storage lifetime and exclusion from collection; it neither replaces range classification nor becomes a flag on each branch.
+Membership in the eternal-branch type is established by the same typed-address-range index used for all other physical types. Its sealed range remains in the explicit owner's ordinary arena; explicit owner retention and exclusion of that range from collection determine its lifetime, not a separate permanent store. These rules neither replace range classification nor become a flag on each branch.
 
-A second separate fixed Array owned by the same Message contains known method records. A method stores no lexical parent; its concrete callable occurrence supplies its own Structure. Shared records remain live after a borrowing child Message terminates. This is root-Message-owned storage, not an ownerless global registry.
+Known method records may likewise be assembled explicitly into an immutable typed Array in the same arena and supplied through physical references. A supplementary index alongside the reference does not form record identity. A method stores no lexical parent; its concrete callable occurrence supplies its own Structure. Shared records remain live after a borrowing child Message terminates only while their explicit owner retains them. There is no hidden global or root method registry.
+
+R0 retains immutable independent branches of the initial module only because it owns that lexically fixed module, spawns the initial children, and can explicitly pass their translation-known physical references. A DLL-like module loaded later has its own sealed typed ranges under its own owner and in its own arena. When `merge` encounters its `independent: const: immutable` branch, the consumer receives the original physical reference in the result and the module remains the owner. This does not make R0 global storage. This specification does not yet define that module's unload operation or the lifetime of those ranges.
 
 `merge` and Message creation retain explicitly supplied references to admitted eternal branches and method records as terminals. Receiving one branch does not expose its retention Array, root settings or unrelated branches. Mutable state is still copied separately. Every reference within a published eternal branch must have sufficient lifetime; qualification does not make an arbitrary reference to reclaimable storage eternal.
 
@@ -792,7 +810,9 @@ For example, A and B constructed from A's template can have the same eternal E a
 <a id="messages"></a>
 ## 23. Message, actor and serial turn
 
-A Message is an isolated graph with its own ownership. A template or letter need not execute. An L3 Thread is a Message with turn execution and reception of other Messages; every L3 Thread is a Message, but not conversely. Receiving a letter does not automatically create a thread or actor. Launching a separate child requires an explicit operation.
+A Message is an isolated graph with its own ownership. A plain template or letter is non-executable and may exist as a standalone minimal `LmxMsg`. An executable object is instead constructed as an L3 Thread from the beginning. Its `LmxMsg message` is the first member by value, so the Thread and its Message prefix have the same physical address. This common prefix supplies Message identity and operations only; it does not turn every Message into a Thread or put mail, scheduling, turn mode, or other Thread mechanisms into `LmxMsg`. A standalone Message cannot later be upgraded in place to a Thread. Exact address-range classification still distinguishes standalone Message storage from Thread storage: the generic Message kind admits both, whereas access to the Thread-only tail requires the exact Thread type. Receiving a letter does not automatically create a thread or actor. Launching a separate child requires an explicit operation.
+
+Creating an `lmx_message` or `lmx_thread` places in its own arena only the data and physical references explicitly supplied by the creating operation. Parent state, bootstrap tables, method Arrays, eternal branches, and service references are neither copied nor inherited implicitly. An ordinary L3 Thread can retain and use everything available to R0 when those values are supplied explicitly.
 
 An executing Message has FIFO mail and at most one active turn at a time. A turn consumes at most one admitted input. Different Messages may execute concurrently. An empty mailbox does not finish a background task: its mechanism keeps checking mail according to its execution mode until a stopping condition.
 
@@ -800,7 +820,9 @@ During a turn, one L3 Message executes on exactly one OS thread; transfer to ano
 
 One arena has one writing lane. A Message's handler, local management, scheduler and service state are mutated on its own lane. A foreign sender neither appends itself to the owner's ready list nor modifies its application data. Mail admission and designated single-cell control protocols belong to the Message mechanism and grant no general access to foreign memory.
 
-A parent manages only its direct children, retaining their list and scheduling policy locally. Each child likewise manages its own children. There is no separate global language scheduler, shared mutable Message registry or global management lock. A router, if needed, is itself a Message with private state.
+A parent manages only its direct children. Sole membership of those children is a dynamic Array of physical references in the parent's graph, and the parent's scheduler traverses that exact Array. A family-record chain, manager membership queue, fixed group of slots, or any other parallel child registry is forbidden. Local traversal-order policy belongs to the parent but does not become a second membership source. Each child likewise manages its own children. There is no separate global language scheduler, shared mutable Message registry, or global management lock. A router, if needed, is itself a Message with private state.
+
+R0 is an ordinary L3 Thread in this tree and has no functions unavailable to another L3 Thread by default. Its parent frame represents the upper element of the future WorldWideMix and connects to R0 through the ordinary parent mechanism; this is Message supervision, not a lexical `node` link. Only the upper frame itself has no parent, but that grants it no additional functions. An external host watchdog, not the frame or R0, applies the overall subtree-close deadline and terminates the OS process if the ordinary cascade cannot reach a safe boundary. R0 has no special child Array, alternate scheduling scheme, or numeric identity.
 
 An L3 Thread is a logical serial lane, not a promise of a dedicated OS thread. Both a dedicated thread and parent/platform-driven turns are possible. L2 implementation defines the API and mapping policy; this does not permit two simultaneous turns of one owner. Parent-liveness polling and self-maintenance are needed even by a childless actor.
 
@@ -811,6 +833,8 @@ The process's initial graph belongs to the root Message. Initial settings and us
 ## 24. Delivery, ownership and mutation order
 
 The local intermediate organization level addresses participants by physical memory addresses within admitted Message-mechanism operations. Hierarchical index chains belong to [WorldWideMix](#worldwide), starting at the third organization scale, not to every local letter. Organization scale must not be confused with language profile L3. A native address is not serialized as a portable address on another machine.
+
+Each L3 Thread owns its mailbox and mail API. A delivery service explicitly supplied by the parent resolves an address and delivers a letter to the destination mailbox's admission operation; it neither observes nor reads mailbox contents. The delivery service does not execute the recipient, schedule its turns, or maintain a child-membership registry.
 
 Delivery of an existing non-executing Message can transfer its storage ownership to the receiver without moving data. Blocks and region classification join the receiver's single arena; the former owner no longer releases them. Lexical links remain unchanged; application attachment of the received root is explicit. Storage transfer is not copying and does not retain the sent object as a second independent owner.
 
@@ -829,7 +853,7 @@ Current-turn outgoing letters are staged separately from the published queue. A 
 
 `success` means actual completion of assigned work, not an empty mailbox or delivery of one letter. Once set, the Message's main algorithm receives no next turn; finishing local child maintenance depends on implementation. `running = 0` during execution may be a stop request: physical storage-handoff safety is established by a separate protocol, not inferred from one flag.
 
-A child checks parent liveness and begins its own orderly close after sustained lack of response. Forced closure from above is the second, emergency path. A parent services its direct children rather than arbitrarily managing grandchildren. Closing propagates through the family instead of retaining a released branch forever.
+A child checks parent liveness and begins its own orderly close after sustained lack of response. Forced closure from above is the second, emergency path. A parent services physical addressees from the sole graph Array of its direct children rather than arbitrarily managing grandchildren. Each child repeats the cascade for its own Array; closing propagates through the family instead of retaining a released branch forever.
 
 A running child can survive parent closure only through explicit supervision handoff to another live parent with suitable authority. It retains its arena, mail and turn; supervision and scheduling placement change. This is not storage adoption. Storage transfer ends the non-executing source's separate life; new children created from adopted content belong to the receiver.
 

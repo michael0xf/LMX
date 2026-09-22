@@ -1,0 +1,182 @@
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_gc.lm1"
+predef: "l2src/lmx_merge_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<string.h>"
+
+# Qualified physical-range regression.  Representation remains kind/type; an opaque
+# physical profile reference is an orthogonal address-domain identity.  Sealed foreign
+# ranges are imported as non-owning views and merge retains only the exact profile passed
+# by its caller.
+
+int: checks 0
+int: failures 0
+
+sub: qcheck (int: ok; const: @(char label))
+    checks: checks + 1
+    if: ok = 0
+        failures: failures + 1
+        c.printf("FAIL: %s\n", label)
+    ---
+end: qcheck
+
+fn: main () int
+    LmxArena: owner_a
+    LmxArena: owner_b
+    LmxArena: profile_owner
+    LmxArena: middle
+    LmxArena: borrower
+    LmxArena: scoped_borrower
+    LmxArena: atomic_borrower
+    LmxArena: blind_dst
+    LmxArena: dst
+    Lmx: fake_profile
+    @: LmxArena owner_a_at
+    @: LmxArena borrower_at
+    @: LmxArena atomic_at
+    @: LmxRange first_entry 0
+    @: LmxRange last_entry 0
+    @: LmxRange held_index 0
+    @: Lmx triple_at 0
+    @: Lmx const_immutable_at 0
+    @: LmxPool profile_pool 0
+    @: Lmx a_triple 0
+    @: Lmx b_triple 0
+    @: Lmx a_other 0
+    @: Lmx b_plain 0
+    @: Lmx out 0
+    @: Lmx one 0
+    @: LmxPool pool_a_triple 0
+    @: LmxPool pool_b_triple 0
+    @: LmxPool pool_a_other 0
+    @: LmxPool pool_b_plain 0
+    size_t: held 0U
+    unsigned: gen 0U
+    unsigned: old_mark 0U
+    int: status 0
+
+    memset((cast: (@: void) (@ owner_a)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ owner_b)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ profile_owner)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ middle)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ borrower)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ scoped_borrower)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ atomic_borrower)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ blind_dst)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ dst)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ owner_a) != 0 || lmx_arena_open(@ owner_b) != 0 || lmx_arena_open(@ profile_owner) != 0 || lmx_arena_open(@ middle) != 0 || lmx_arena_open(@ borrower) != 0 || lmx_arena_open(@ scoped_borrower) != 0 || lmx_arena_open(@ atomic_borrower) != 0 || lmx_arena_open(@ blind_dst) != 0 || lmx_arena_open(@ dst) != 0
+        return: 2
+    ---
+    owner_a_at: @ owner_a
+    borrower_at: @ borrower
+    atomic_at: @ atomic_borrower
+    # Profiles are ordinary owner-arena graph values.  Their physical addresses are used
+    # directly; there is no identity wrapper and no numeric qualifier code.
+    triple_at: lmx_node_new_owned(@ profile_owner)
+    const_immutable_at: lmx_node_new_owned(@ profile_owner)
+    profile_pool: lmx_arena_find(@ profile_owner, c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT)
+    if: triple_at = 0 || const_immutable_at = 0 || profile_pool = 0
+        return: 2
+    ---
+    qcheck(triple_at != const_immutable_at && lmx_range_home(@ profile_owner, (cast: (@: void) triple_at)) = (@ profile_owner), "profiles are distinct owner-arena graph values")
+    qcheck(lmx_pool_seal(profile_pool) = 0 && lmx_range_import(@ owner_a, @ profile_owner) = 0 && lmx_range_import(@ owner_b, @ profile_owner) = 0, "profile graph range is sealed and explicitly visible to both owners")
+    qcheck(lmx_node_new_profiled(@ owner_a, @ fake_profile) = 0, "activation-local pointer cannot become a physical profile identity")
+
+    # Same STRUCT representation, three distinct physical profiles/domains.
+    a_triple: lmx_node_new_profiled(@ owner_a, triple_at)
+    b_triple: lmx_node_new_profiled(@ owner_b, triple_at)
+    a_other: lmx_node_new_profiled(@ owner_a, const_immutable_at)
+    b_plain: lmx_node_new_owned(@ owner_b)
+    if: a_triple = 0 || b_triple = 0 || a_other = 0 || b_plain = 0
+        return: 2
+    ---
+    pool_a_triple: lmx_arena_find_profiled(@ owner_a, c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT, triple_at)
+    pool_b_triple: lmx_arena_find_profiled(@ owner_b, c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT, triple_at)
+    pool_a_other: lmx_arena_find_profiled(@ owner_a, c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT, const_immutable_at)
+    pool_b_plain: lmx_arena_find(@ owner_b, c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT)
+    qcheck(pool_a_triple != 0 && pool_b_triple != 0 && pool_a_other != 0 && pool_b_plain != 0, "four physical arrays exist")
+    qcheck(lmx_range_classify(@ owner_a, (cast: (@: void) a_triple)) = c.LMX_KIND_STRUCT && lmx_range_classify(@ owner_a, (cast: (@: void) a_other)) = c.LMX_KIND_STRUCT, "same representation remains STRUCT")
+    qcheck(lmx_range_type_of(@ owner_a, (cast: (@: void) a_triple)) = c.LMX_TYPE_STRUCT && lmx_range_type_of(@ owner_a, (cast: (@: void) a_other)) = c.LMX_TYPE_STRUCT, "same exact representation type remains STRUCT")
+    qcheck(lmx_range_profile(@ owner_a, (cast: (@: void) a_triple)) = triple_at && lmx_range_profile(@ owner_a, (cast: (@: void) a_other)) = const_immutable_at, "address ranges distinguish physical profiles")
+    first_entry: lmx_range_entry_at(owner_a_at, (cast: (@: void) a_triple))
+    qcheck(first_entry != 0 && lmx_range_add_view(atomic_at, owner_a_at, first_entry\array, first_entry\lo, first_entry\hi) != 0 && atomic_at\count = 0U, "direct mutable foreign view is refused")
+
+    qcheck(lmx_pool_seal(pool_a_triple) = 0 && lmx_pool_seal(pool_b_triple) = 0 && lmx_pool_seal(pool_a_other) = 0 && lmx_pool_seal(pool_b_plain) = 0, "owner arrays seal")
+    qcheck(lmx_pool_take(@ owner_a, pool_a_triple) = 0, "sealed array cannot hand out another cell")
+    old_mark: pool_a_triple\head\mark
+    gen: lmx_arena_generation_next(@ owner_a)
+    qcheck(gen != 0U && lmx_gc_mark_value(@ owner_a, (cast: (@: void) a_triple), gen, 0) = c.LMX_GC_OK, "GC accepts sealed owner value as exempt")
+    qcheck(pool_a_triple\head\mark = old_mark, "GC performs no mark write in sealed range")
+    qcheck(lmx_gc_sweep(@ owner_a, gen) = c.LMX_GC_OK && lmx_range_classify(@ owner_a, (cast: (@: void) a_triple)) = c.LMX_KIND_STRUCT, "GC sweep preserves sealed owner range")
+
+    # Transitive, idempotent import and two true owners in one borrower.
+    qcheck(lmx_range_import(@ middle, @ owner_a) = 0, "first owner imports into middle")
+    qcheck(lmx_range_import(@ borrower, @ middle) = 0, "import is transitive")
+    qcheck(lmx_range_import(@ borrower, @ owner_b) = 0, "second owner imports into borrower")
+    held: borrower_at\count
+    # White-box the capacity down to the exact live count while keeping the larger allocated
+    # block: an exact duplicate must return before reserve/realloc and preserve all metadata.
+    borrower_at\capacity: held
+    held_index: borrower_at\index
+    qcheck(lmx_range_import(@ borrower, @ owner_a) = 0 && borrower_at\count = held && borrower_at\capacity = held && borrower_at\index = held_index, "exact repeat import is idempotent and allocation-free")
+    qcheck(lmx_range_classify(@ borrower, (cast: (@: void) a_triple)) = c.LMX_KIND_STRUCT && lmx_range_classify(@ borrower, (cast: (@: void) b_triple)) = c.LMX_KIND_STRUCT, "borrower classifies both owners")
+    qcheck(lmx_range_home(@ borrower, (cast: (@: void) a_triple)) = (@ owner_a) && lmx_range_home(@ borrower, (cast: (@: void) b_triple)) = (@ owner_b), "import preserves each true owner")
+    qcheck(lmx_range_pool(@ borrower, (cast: (@: void) a_triple)) = 0 && lmx_range_interval_pool(@ borrower, (cast: (@: void) a_triple)) = 0, "borrower never adopts imported storage")
+    qcheck(lmx_range_profile(@ borrower, (cast: (@: void) a_triple)) = triple_at && lmx_range_profile(@ borrower, (cast: (@: void) b_plain)) = 0, "profile follows the imported range")
+    qcheck(lmx_range_import_profile(@ scoped_borrower, @ borrower, triple_at) = 0, "scoped import accepts the explicitly named physical profile")
+    qcheck(lmx_range_profile(@ scoped_borrower, (cast: (@: void) a_triple)) = triple_at && lmx_range_profile(@ scoped_borrower, (cast: (@: void) b_triple)) = triple_at, "scoped import is transitive across both true owners")
+    qcheck(lmx_range_classify(@ scoped_borrower, (cast: (@: void) a_other)) = c.LMX_KIND_NONE && lmx_range_classify(@ scoped_borrower, (cast: (@: void) b_plain)) = c.LMX_KIND_NONE, "scoped import does not grant unrelated sealed profiles")
+
+    # Import is all-or-nothing.  Arrange a conflict on the last source interval: without
+    # preflight, an earlier interval would already have been installed when it is found.
+    qcheck(owner_a_at\count >= 2U, "transactional-import source has two sealed intervals")
+    if: owner_a_at\count >= 2U
+        first_entry: owner_a_at\index
+        last_entry: owner_a_at\index + (owner_a_at\count - 1U)
+        qcheck(lmx_range_add_view(atomic_at, @ owner_b, pool_b_plain, last_entry\lo, last_entry\hi) = 0, "conflicting borrower row installed for preflight")
+        held: atomic_at\count
+        qcheck(lmx_range_import(atomic_at, owner_a_at) != 0 && atomic_at\count = held, "failed import leaves no earlier source row behind")
+        qcheck(lmx_range_classify(atomic_at, first_entry\lo) = c.LMX_KIND_NONE, "failed import exposes none of the insertable prefix")
+    ---
+
+    # Only the exact full triple profile retains physical identity.
+    one: a_triple
+    status: lmx_merge_profiled_owned(@ one, 1U, 0, 0, 0, @ borrower, @ blind_dst, triple_at, @ out)
+    qcheck(status = c.LMX_MERGE_INVALID && out = 0, "qualified retain refuses a destination without an explicit range import")
+    qcheck(lmx_range_import_profile(@ dst, @ borrower, triple_at) = 0, "merge destination imports only the physical profile it may retain")
+    one: a_triple
+    status: lmx_merge_profiled_owned(@ one, 1U, 0, 0, 0, @ borrower, @ dst, triple_at, @ out)
+    qcheck(status = c.LMX_MERGE_OK && out = a_triple, "exact triple merge retains physical address")
+    qcheck(lmx_range_home(@ dst, (cast: (@: void) out)) = (@ owner_a) && lmx_range_profile(@ dst, (cast: (@: void) out)) = triple_at, "retained address remains classified by its true owner and physical profile")
+
+    out: 0
+    one: a_other
+    status: lmx_merge_profiled_owned(@ one, 1U, 0, 0, 0, @ borrower, @ dst, triple_at, @ out)
+    qcheck(status = c.LMX_MERGE_OK && out != 0 && out != a_other, "different const-immutable profile is copied")
+
+    out: 0
+    one: b_plain
+    status: lmx_merge_profiled_owned(@ one, 1U, 0, 0, 0, @ borrower, @ dst, triple_at, @ out)
+    qcheck(status = c.LMX_MERGE_OK && out != 0 && out != b_plain, "sealed foreign ordinary independent is copied")
+    qcheck(b_plain\parent = 0 && out\parent = 0, "parent zero alone never retains")
+
+    qcheck(lmx_arena_release(@ dst) = 0, "destination releases")
+    qcheck(lmx_arena_release(@ blind_dst) = 0, "unimported destination releases")
+    qcheck(lmx_arena_release(@ atomic_borrower) = 0, "failed-import borrower releases")
+    qcheck(lmx_arena_release(@ scoped_borrower) = 0 && lmx_arena_release(@ borrower) = 0 && lmx_arena_release(@ middle) = 0, "borrower views release without owners")
+    qcheck(lmx_range_classify(@ owner_a, (cast: (@: void) a_triple)) = c.LMX_KIND_STRUCT && lmx_range_classify(@ owner_b, (cast: (@: void) b_triple)) = c.LMX_KIND_STRUCT, "releasing views leaves owners live")
+    qcheck(lmx_arena_release(@ owner_a) = 0 && lmx_arena_release(@ owner_b) = 0, "owners release normally")
+    qcheck(lmx_arena_release(@ profile_owner) = 0, "profile owner releases after all users")
+
+    c.printf("lmx_qualified_range: checks=%d failures=%d\n", checks, failures)
+return: failures != 0

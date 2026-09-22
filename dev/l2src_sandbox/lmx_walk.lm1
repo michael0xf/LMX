@@ -171,18 +171,16 @@ return: 0
 
 # ---- entry: load the own fields this body uses (21.5) ----------------------------------
 
-# Whether `p` lives in the permanent store this Message's arena is bound to: the qualified
-# type `independent: const: immutable` IS that membership (lmx_perm.h.lm1), so the question
-# is "which range table answers for p", asked of the one function that knows how a store is
-# bound -- lmx_plan_home -- and never of a flag here.  Asked only while a body is prepared,
-# never by an activation.
-fn: lmx_walk_eternal (@: LmxWalkFrame f; @: void p) int
-    @: LmxArena home 0
+# Exact physical receiver-profile test used only while a body is prepared.  Ownership and
+# sealing are deliberately irrelevant: an owner-local address in this profile is immutable,
+# while a foreign or sealed address of any other profile is not made immutable by accident.
+fn: lmx_walk_immutable (@: LmxWalkFrame f; @: void p) int
     if: p = 0
         return: 0
+    if: f\context\immutable_profile = 0
+        return: 0
     f\context\classified: f\context\classified + 1U
-    home: lmx_plan_home(f\arena, p)
-return: (cast: (int) (home != 0 && home != f\arena))
+return: (cast: (int) (lmx_range_profile(f\arena, p) = f\context\immutable_profile))
 
 fn: lmx_walk_scan_node (@: LmxWalkFrame f; @: void node) int
     @: LmxWalkOwn o 0
@@ -212,17 +210,17 @@ fn: lmx_walk_scan_node (@: LmxWalkFrame f; @: void node) int
         if: lmx_walk_slot(f, code, 1U) = 0
             return: c.LMX_WALK_INVALID
     ---
-    # A write into the permanent store is a write into something immutable: refused when
+    # A write into the exact immutable profile is refused when
     # the body is prepared, so such a body is never published and never runs.  Two roles
     # write: `put` into the holder it names, and `set` into the own field its first operand
-    # names -- which is a field of the store when the occurrence itself is eternal, and
+    # names -- which is a field in that profile when the occurrence itself is qualified, and
     # would be written by the next checkpoint.  Reading either is not refused.
-    if: f\counting != 0 && op = c.LMX_WALK_OP_PUT && lmx_walk_eternal(f, lmx_arena_ref_value(code, 1U)) != 0
+    if: f\counting != 0 && op = c.LMX_WALK_OP_PUT && lmx_walk_immutable(f, lmx_arena_ref_value(code, 1U)) != 0
         return: c.LMX_WALK_INVALID
     if: f\counting != 0 && op = c.LMX_WALK_OP_SET
         target: lmx_arena_ref_value(code, 1U)
         if: lmx_walk_op(f, target) = c.LMX_WALK_OP_OWN && lmx_walk_bare(f, target) = 0
-            if: lmx_walk_eternal(f, lmx_arena_ref_value((cast: (@: Lmx) target), 1U)) != 0
+            if: lmx_walk_immutable(f, lmx_arena_ref_value((cast: (@: Lmx) target), 1U)) != 0
                 return: c.LMX_WALK_INVALID
             ---
         ---
@@ -231,10 +229,10 @@ fn: lmx_walk_scan_node (@: LmxWalkFrame f; @: void node) int
     #   * the record must BE a primitive record -- asked of the arena, because the counting pass
     #     is the one that checks a hand-built graph, and a record of another kind is an impostor
     #     whatever its shape; a record with no fn is not a primitive either;
-    #   * its OWNER must not be in the permanent store.  That is the same refusal the PUT above
-    #     makes, extended to the one other way a body could write the store -- a primitive acts
-    #     through its owner, so a store-resident owner would be an escape hole in the store's
-    #     immutability.  It stays in the counting pass: lmx_walk_eternal's own contract is
+    #   * its OWNER must not have the exact immutable profile.  That is the same refusal the PUT
+    #     above makes, extended to the one other way a body could write immutable data -- a
+    #     primitive acts through its owner.  It stays in the counting pass: lmx_walk_immutable's
+    #     own contract is
     #     "asked only while a body is prepared, never by an activation", and this is a body
     #     being prepared.
     if: f\counting != 0 && op = c.LMX_WALK_OP_PRIM
@@ -246,7 +244,7 @@ fn: lmx_walk_scan_node (@: LmxWalkFrame f; @: void node) int
         if: prim\fn = 0
             return: c.LMX_WALK_INVALID
         ---
-        if: lmx_walk_eternal(f, prim\owner) != 0
+        if: lmx_walk_immutable(f, prim\owner) != 0
             return: c.LMX_WALK_INVALID
         ---
     ---
@@ -313,7 +311,7 @@ fn: lmx_walk_scan (@: LmxWalkFrame f; @: Lmx code; size_t: first) int
 return: status
 
 # Put the loaded records into the lexical order of the fields: walk the tree of `s` in
-# order -- a child belongs to that tree when `s` is its lexical parent, which is what
+# order -- a child belongs to that tree when `s` is its immediate structural parent, which is what
 # keeps the walk from following a reference back up or out of M -- and move each record
 # whose slot is met from `found` to `owns`.
 fn: lmx_walk_order (@: LmxWalkFrame f; @: Lmx s; size_t: depth) int
@@ -358,7 +356,7 @@ fn: lmx_walk_order (@: LmxWalkFrame f; @: Lmx s; size_t: depth) int
         child: lmx_arena_ref_value(s, i)
         if: child != 0 && lmx_walk_kind(f, child) = c.LMX_KIND_STRUCT
             inner: (cast: (@: Lmx) child)
-            if: inner\node = s
+            if: inner\parent = s
                 status: lmx_walk_order(f, inner, depth + 1U)
             ---
         ---
@@ -379,7 +377,7 @@ fn: lmx_walk_depth (@: LmxWalkFrame f; @: Lmx s) size_t
         child: lmx_arena_ref_value(s, i)
         if: child != 0 && lmx_walk_kind(f, child) = c.LMX_KIND_STRUCT
             inner: (cast: (@: Lmx) child)
-            if: inner\node = s
+            if: inner\parent = s
                 below: lmx_walk_depth(f, inner)
                 if: below > deepest
                     deepest: below
@@ -486,14 +484,15 @@ return: status
 
 # [prim, record, arg ...].  The record is the physical primitive (lmx_primitive.h.lm1), read as
 # the builder's proof: preparation's counting pass already established, by classification, that
-# it IS a primitive record and that its owner is not store-resident.  The operands are evaluated
+# it IS a primitive record and that its owner does not have the explicitly supplied immutable
+# profile.  The operands are evaluated
 # exactly like a call's arguments -- references kept in one scratch slice of this activation,
 # gone with the rewind below -- and the call itself is FLAT and SYNCHRONOUS: the record's own fn,
 # in this activation, with no re-entry into the walk and no mode dispatch.
 #
 # THE RESULT IS THE PRIMITIVE'S.  It writes the destination cell `dest` for an integer result, or
 # the reference carrier `out`, or neither (no value).  What a primitive hands back through `out`
-# must be 0, `dest`, or a reference into the graph or the store -- the same rule this unit applies
+# must be 0, `dest`, or a reference in the graph's local/imported index -- the same rule this unit applies
 # to itself: a reference into THIS activation's scratch slice dies with the rewind below.
 #
 # THE FAILURE IS ITS STATUS, NEVER ITS VALUE.  A status of LMX_PRIMITIVE_OK with the value 0 is
@@ -901,8 +900,8 @@ fn: lmx_walk_plan_status (int: status) int
 return: c.LMX_WALK_INVALID
 
 # PREPARATION, once per callable, before its descriptor is shared.  The plan is built in
-# `descriptor_arena` -- where the LmxCallable lives: the context's arena or the permanent
-# store it is bound to -- and published through the context's arena, which refuses a plan
+# `descriptor_arena` -- the true owner arena of the LmxCallable -- and published through
+# the context's local/imported range index, which refuses a plan
 # whose home is not the descriptor's.  A descriptor that already has a plan is left alone:
 # for an isomorphic copy the published plan is already right, and publishing again would
 # only strand the old one.
@@ -929,8 +928,8 @@ fn: lmx_walk_prepare (@: LmxWalkContext context; @: LmxArena descriptor_arena; @
         return: status
     if: info\header != 0
         return: c.LMX_WALK_OK
-    # The arena named for the plan must be the descriptor's home.  Asked BEFORE anything is
-    # built, so a refusal strands nothing -- least of all in a store that is never collected.
+    # The arena named for the plan must be the descriptor's true owner.  Asked BEFORE anything
+    # is built, so a refusal strands nothing.
     if: lmx_plan_home(context\arena, (cast: (@: void) info)) != descriptor_arena
         return: c.LMX_WALK_INVALID
     if: lmx_scratch_mark(context\scratch, pm) != c.LMX_SCRATCH_OK
@@ -939,8 +938,8 @@ fn: lmx_walk_prepare (@: LmxWalkContext context; @: LmxArena descriptor_arena; @
     if: status = c.LMX_WALK_OK
         status: lmx_walk_plan_status(lmx_plan_build_from_paths(descriptor_arena, plan_roles, f\paths, f\lens, f\nowns, @ plan))
     if: status = c.LMX_WALK_OK
-        # Built where the descriptor lives; published through the CONTEXT's arena, which
-        # classifies the occurrence itself and, through its bound store, a descriptor there.
+        # Built where the descriptor lives; published through the CONTEXT's local/imported
+        # address index, which classifies both occurrence and descriptor by physical range.
         status: lmx_walk_plan_status(lmx_plan_publish(context\arena, plan_roles, node, plan))
     if: lmx_scratch_rewind(context\scratch, pm) != c.LMX_SCRATCH_OK && status = c.LMX_WALK_OK
         status: c.LMX_WALK_INVALID
@@ -1000,7 +999,7 @@ fn: lmx_walk_activate (@: LmxWalkContext context; @: Lmx node; @@: void args; si
         return: c.LMX_WALK_INVALID
     f: @ frame
     pm: @ mark
-    # Everything this activation takes from the store is taken after this mark and is
+    # Everything this activation takes from the scratch arena is taken after this mark and is
     # gone with the rewind below, whichever way the activation ends.
     if: lmx_scratch_mark(context\scratch, pm) != c.LMX_SCRATCH_OK
         return: c.LMX_WALK_INVALID
@@ -1023,9 +1022,8 @@ fn: lmx_walk_activate (@: LmxWalkContext context; @: Lmx node; @@: void args; si
     ---
 return: status
 
-# The public boundary.  What comes in from outside is asked about, once: a reference the
-# context's arena cannot classify -- neither its own nor its bound permanent store's -- is
-# foreign, and nothing runs.
+# The public boundary.  What comes in from outside is asked about once: a reference the
+# context's local/imported address index cannot classify is foreign, and nothing runs.
 fn: lmx_walk_run (@: LmxWalkContext context; @: Lmx node; @@: void args; size_t: nargs; @: LmxWalkValue out) int
     @: void dest 0
     @: void value 0

@@ -58,9 +58,9 @@ define: LMX_DOMAIN_RESERVATION 26
 # A mailbox record that lives as a cell of the arena (a child's own mailbox does: its queue nodes
 # are storage of the child's arena).  Appended, like the domains before it.
 define: LMX_DOMAIN_POST 27
-# One live-direct-child link of a parent's chain (lmx_thread.h.lm1, LmxLink).  The node is a cell
-# of the PARENT's arena -- that is the point of it -- so it needs a domain of its own there.
-define: LMX_DOMAIN_LINK 28
+# Retired ABI value. Live-child membership is now the parent's typed graph Array and no record is
+# allocated in this domain. Keep the number unavailable so later domain values do not shift.
+define: LMX_DOMAIN_RESERVED_28 28
 # Reserved domain number of the former arena-backed fixed inbox ring.  The current mailbox uses
 # a private movable dynamic array whose backing address never enters the graph or the range
 # classifier.  The number remains reserved so later domain values do not change ABI.
@@ -88,13 +88,15 @@ define: LMX_DOMAIN_PRIMITIVE 34
 # The same domains as KINDS -- what lmx_range_classify answers -- appended after
 # LmxKind 0..6.
 define: LMX_DOMAIN_KIND_MSG_RECORD 7
-define: LMX_DOMAIN_KIND_THREAD 8
+# Numeric kind 8 remains reserved for ABI stability. Executable Threads use the common
+# LMX_DOMAIN_KIND_MSG_RECORD kind and are distinguished by exact LMX_DOMAIN_THREAD type.
+define: LMX_DOMAIN_KIND_RESERVED_8 8
 define: LMX_DOMAIN_KIND_POST_LINK 9
 define: LMX_DOMAIN_KIND_SCHEDULE 10
 define: LMX_DOMAIN_KIND_MANAGER 11
 define: LMX_DOMAIN_KIND_RESERVATION 12
 define: LMX_DOMAIN_KIND_POST 13
-define: LMX_DOMAIN_KIND_LINK 14
+define: LMX_DOMAIN_KIND_RESERVED_14 14
 define: LMX_DOMAIN_KIND_POST_RING 15
 define: LMX_DOMAIN_KIND_CALLABLE 16
 define: LMX_DOMAIN_KIND_OP 17

@@ -37,52 +37,11 @@ fnptr: LmxThreadMailTake (@: LmxThread t; int: lane) @: void
 fnptr: LmxThreadMailCount (@: LmxThread t; int: lane) size_t
 fnptr: LmxThreadMailClose (@: LmxArena arena; @: LmxThread t) int
 
-# The thread's own API: the turn boundary and the identity of the object running it.
-# The parent's OWN link to one live direct child -- spec 19.29.6, verbatim: "the parent owns the
-# parent link at link, unlink and supervision handoff".  It lives in the PARENT'S ARENA and not in
-# the child's, and that is the whole point (Mikhail, 19.09: "А ГДЕ ЕЩЁ МОГ БЫТЬ СПИСОК ДЕТЕЙ КРОМЕ
-# КАК В АРЕНЕ У РОДИТЕЛЯ"): the chain a parent walks must stay valid when a child is gone, hung, or
-# still being cleaned up.  Its `alive` cell is the ONE sanctioned cross-thread cell of this kernel --
-# the child's own thread writes its milliseconds there and the parent zeroes it as its answer
-# (19.29.7.1).  That is also why a parent that merely HANGS destroys nothing: its children go on
-# writing into its arena, so the arena is still in use (his words, 19.09).
-struct: LmxLink
-    @: void next
-    @: void thread
-    @: void message
-    @: void slot
-    size_t: alive
-    # The child's outcome, as its OWN end-turn left it (lmx_thread_leave writes it here): 1 when
-    # the work completed, 0 when the incarnation was stopped.  It lives in the parent's node for
-    # the same reason `alive` does -- the parent may have to act after the child's own arena is
-    # gone, and then the child's record is not there to be read.
-    int: success
-    # The child's index at its parent (its slot + 1, the counter starting at 1), copied at
-    # publication: the parent's graph slot to clear is found from THIS cell, not from the child.
-    size_t: index
-    # 1 once the child has ENDED and taken its own arena with it (lmx_thread_finish): from that
-    # moment the child's record must not be read by anyone -- the parent still has to unlink the
-    # chain and clear the graph slot, and both of those are the PARENT's own cells.
-    int: gone
-    # THE MOMENT OF THE FIRST CLOSE REQUEST, written by the parent's stop act (lmx_stop_children):
-    # a cell of the PARENT's node, like everything else here.  The wait that ends an un-ending
-    # child is counted from this number -- a child asked to close that has not reached a boundary
-    # of its own within its own band's limit is closed WITHOUT a turn.  Zero = never asked.  A
-    # repeated request must not move it: the window ages against the FIRST one.
-    ulong: stopped
-    # THE CLOSURE'S OWN DEADLINE, ONE PLATFORM WORD, ZERO MEANING "NO CLOSURE CONTEXT".  It is the
-    # SAME value at every level -- the upper close computes it once from the word clock plus the
-    # root's close limit, the first closure request stores it, and every descendant inherits it --
-    # so no level can restart the window and there is no second field for it to be coherent with,
-    # which is why a relaxed atomic word operation is sufficient here.
-    # THIS IS LmxLink's SECOND CROSS-THREAD CELL, and it is an AUTHOR-APPROVED EXCEPTION to the rule
-    # stated above `alive` ("the ONE sanctioned cross-thread cell"): the author's ruling of
-    # 2026-09-21 admits this one, with the reader using an atomic load and the writer an atomic
-    # first-write.  `stopped` and slot\limit keep their local-liveness meaning and are untouched.
-    # It is written by the parent's stop act and read by the parent's walks AND by the child's own
-    # lane, which is what makes the bound enforceable under both manager bindings.
-    size_t: close_deadline
-end: LmxLink
+# A child remains a live physical Thread until its serialized parent removes that exact address
+# from the parent's graph Array and then releases or attaches the child's arena.  Consequently no
+# parallel family-link record is needed: membership is one ordinary growable Array<@LmxThread>.
+# The liveness stamp and close request state live on the child Thread they describe.  They do not
+# form another collection and cannot answer membership independently of the Array.
 
 struct: LmxThreadApi
     LmxThreadEnter: enter
@@ -116,13 +75,10 @@ end: LmxThreadMailApi
 # ребёнка есть).  Почта и задел под turn есть только у L3 Thread ...  Планировщик
 # есть только у разновидностей L3 Thread".
 #
-# So an L3 Thread IS a Message -- not a second object beside one.  What it has and
-# a plain letter does not is a mailbox, a turn and a scheduler record; and since the
-# record is closed (five fields, see lmx_message.h.lm1) those three live HERE, in
-# the thread's own state, found by the message's address.  `message` names the
-# message this state belongs to -- for a thread-message, itself.  The pointer goes
-# this way round (state -> message) precisely because the opposite direction would
-# be a sixth field on the record.
+# So an L3 Thread has a Message as its exact physical prefix. `LmxMsg message` is the first
+# by-value member, hence `@thread == @thread\message`; a plain letter remains a standalone
+# LmxMsg. Mail, schedule, mode, routing and supervision remain Thread-only fields after that
+# closed four-field prefix and are never added to LmxMsg.
 #
 # It is an object and not a mechanism: "Полоса на экране не может не быть L3
 # Thread. Message без L3 Thread это просто письмо. Полоса же это полноценный
@@ -137,7 +93,7 @@ end: LmxThreadMailApi
 # the kernel owns the bodies; this unit is the kernel side of that, and a second
 # declaration would only be a second place to keep in step.
 struct: LmxThread
-    @: LmxMsg message
+    LmxMsg: message
     @: LmxPost mail
     @: LmxSchedule slot
     unsigned: turn
@@ -157,9 +113,10 @@ struct: LmxThread
     # here -- and the type would otherwise be a header cycle, since the child module names this
     # thread.  The list belongs to the turn's owner, which is this object.
     @: void prepared
-    # The parent Message's L3 Thread, or null at the root -- the UP-LINK used by the postman's
-    # physical-address step (lmx_deliver): a child knows its parent, a parent knows its children
-    # through graph slots.  The cell belongs to the PARENT and is written on the PARENT's lane
+    # The parent Message's L3 Thread -- for R0 this is the structural upper frame, not null.  It is
+    # the UP-LINK used by the postman's physical-address step (lmx_deliver): a child knows its
+    # parent and a parent knows its children through the one graph Array.  The cell belongs to the
+    # PARENT and is written on the PARENT's lane
     # at publication (spec 19.29.6).
     @: void parent
     # THE STABLE ROUTE BACK TO THIS RECORD'S SERVICE (lmx_service): registration stores it and
@@ -169,27 +126,42 @@ struct: LmxThread
     # after either act -- measured 2026-09-21, single-threaded, no timing involved.  Untyped like
     # every other reference here; zero for a record no service has registered.
     @: void service
-    # Live direct children: the head of the parent's OWN chain of LmxLink nodes (above), each node
-    # allocated in THIS parent's arena.  The chain is the parent's, the nodes are the parent's, and
-    # a child's record holds nothing of it but the pointer `link` below.
-    @: void children
-    # This child's own node in its PARENT's chain, or null at the root.  The child KEEPS the pointer
-    # (to stamp its handshake word and to read its own stop request); the PARENT owns the node.
-    @: void link
+    # The sole direct-child membership collection: the exact Array<@LmxThread> descriptor that is
+    # an ordinary typed field of this Thread's graph.  The constructor validates it by the arena's
+    # address-range table and caches only this same physical reference.  There is no link chain or
+    # scheduler queue containing another membership set.
+    @: LmxArrayDesc children
+    # Per-child supervision state.  These cells do not establish membership; only the parent's
+    # `children` Array does.  `alive` is stamped by the child's lane and answered by its parent.
+    # `close_deadline` is the one relaxed atomic platform word inherited by a close cascade.
+    size_t: alive
+    ulong: stopped
+    size_t: close_deadline
+    # Orphan retention is supervision state of this same child record, never a second
+    # membership list.  `orphaned` selects the R0 retention policy while the physical Thread
+    # remains an element of R0's one children Array.
+    int: orphaned
+    ulong: orphan_started
+    ulong: orphan_limit
+    # Optional ordinary application-graph field that published this child Message.  It is a
+    # physical cell address, never a numeric slot: success clears it, failure leaves the graph
+    # reference as the retained result.  It is not child-membership; the children Array is.
+    @@: void result
     # THIS object's OWN scheduler (Mikhail, 19.09: "У каждого Thread своя арена и свой
-    # планировщик!", "менеджер у каждого ребёнка свой"): the queue its OWN children are stepped
-    # from.  Untyped, like every other reference here -- the manager module names this one, so
+    # планировщик!", "менеджер у каждого ребёнка свой"): it traverses this Thread's one graph
+    # children Array. Untyped, like every other reference here -- the manager module names this one, so
     # the type in this header would be an import cycle (measured: l1trans refuses it).
-    # Opened by lmx_thread_scheduler_open, which takes the arena from its CALLER: a record may be
-    # attached with a schedule that is not initialized yet, so this act may not read slotrena
-    # (measured 20260919: that read is garbage and crashed the settle selftest).
+    # Opened by lmx_thread_scheduler_open, which takes the arena from its CALLER rather than
+    # inferring ownership from another mechanism record.
     @: void manager
     LmxThreadApi: api
     LmxThreadMailApi: mail_api
 end: LmxThread
 
 prototype:
-    fn: lmx_thread_attach (@: LmxThread t; @: LmxMsg message; @: LmxPost mail; @: LmxSchedule slot) int
+    # Canonical construction of an executable Message. The embedded prefix is initialized in
+    # place; no arbitrary external Message can be attached or rebound later.
+    fn: lmx_thread_init (@: LmxArena arena; @: LmxThread t; @: Lmx graph; @: LmxPost mail; @: LmxSchedule slot) int
     fn: lmx_thread_enter (@: LmxThread t) int
     fn: lmx_thread_leave (@: LmxThread t) int
     fn: lmx_thread_request_mode (@: LmxThread t; int: mode) int
@@ -209,9 +181,10 @@ prototype:
     # a handler GIVEN FROM OUTSIDE -- the host's for R0 (25 (ii): "the entry program is R0's
     # handler"), which is not a graph callable and has no METHOD record of its own; zero means the
     # native body is what its OWN GRAPH names.  INTERPRETED mode never receives `entry`.  A
-    # translated Message's body is a callable
-    # occurrence, because "all executable bodies are part of the graph" (model 8), and the typed
-    # entry receives ITS OWN NODE -- the graph -- as the reserved node of the call (19.29.5).  A
+    # translated Message's body is a callable occurrence, because "all executable bodies are part
+    # of the graph" (model 8); lmx_call0 passes the selected occurrence M's immediate M.parent as
+    # reserved `Lmx *node`. A non-null external `entry` is only the synthetic R0/host adapter and
+    # analogously receives graph.parent. Control bodies inside that invocation never rebind node. A
     # graph that names no callable is a legitimate state: the turn is then pure boundary work.
     # The body runs INSIDE the turn (lm.current is this object while it runs), its status is its own
     # report and never a stop (model 31), and the boundary follows on the turn's own outcome
@@ -223,35 +196,39 @@ prototype:
     fn: lmx_thread_set_current (@: LmxThread t) int
     fn: lmx_thread_api (@: LmxThread t) @: LmxThreadApi
     fn: lmx_thread_mail_api (@: LmxThread t) @: LmxThreadMailApi
-    # The Message this object IS: state -> message is the direction this kernel stores it (the
-    # opposite one would be a sixth field on the closed record), so an accessor is the way back.
+    # The embedded closed Message prefix. Its address is exactly the Thread address.
     fn: lmx_thread_message (@: LmxThread t) @: LmxMsg
-    # The parent Message's L3 Thread: the up-link the postman follows.  Null for the root and for
-    # a Message that was never linked.
+    # The parent Message's L3 Thread: the up-link the postman follows.  R0 points to its ordinary
+    # structural parent stub; only that stub and a Message not yet linked have null here.
     fn: lmx_thread_parent (@: LmxThread t) @: LmxThread
     # This record's own service entry, or null (lmx_service writes it at registration).
     fn: lmx_thread_service (@: LmxThread t) @: void
-    # Live direct children: add, remove, is-direct-child, iterate (first/next).
-    # The address of this Thread's handshake word -- the cell the child stamps and the parent
-    # answers (19.29.7.1).  It is reached through the parent-owned link, so this function is the
-    # one place that knows how; a caller only passes it to the atomics.
+    # Bind the one ordinary graph Array<@LmxThread> supplied by this Thread's constructor.  The
+    # descriptor and its backing must belong to `arena`; a second binding is refused.
+    fn: lmx_thread_children_bind (@: LmxThread t; @: LmxArrayDesc children; @: LmxArena arena) int
+    # Constructor helper: locate the unique exact typed Array<@LmxThread> among ordinary graph
+    # fields and bind that physical descriptor. No field position or runtime name is involved.
+    fn: lmx_thread_children_bind_graph (@: LmxThread t; @: LmxArena arena) int
+    # Construct one ordinary graph field holding the sole growable child-membership Array.
+    # `field` is chosen by the graph producer; it is not a runtime ABI slot.
+    fn: lmx_thread_children_field_new (@: LmxArena arena; @: Lmx graph; size_t: field) @: LmxArrayDesc
+    fn: lmx_thread_children (@: LmxThread t) @: LmxArrayDesc
+    fn: lmx_thread_child_count (@: LmxThread parent) size_t
+    fn: lmx_thread_child_at (@: LmxThread parent; size_t: index) @: LmxThread
+    # Live direct children: append, remove, membership, and ordered iteration over that Array.
+    # The address of this Thread's handshake word -- the child-owned cell the child stamps and
+    # its parent answers (19.29.7.1). Membership itself comes only from the graph Array.
     # This object's own scheduler, or null while none was opened.  Untyped: a caller casts.
     fn: lmx_thread_manager (@: LmxThread t) @: void
     # Open this object's own scheduler as a record of `arena` (the caller names it).  Refused
     # when it already has one.  Initialized as the STEPPED manager: a lane is a later choice.
     fn: lmx_thread_scheduler_open (@: LmxThread t; @: LmxArena arena) int
     fn: lmx_thread_alive_cell (@: LmxThread t) @: size_t
-    # The driver's closing act: a THREAD THAT ENDED SUCCESSFULLY returns its own arena
-    # (and tells its parent's node that the arena is gone).  See lmx_thread.lm1.
+    # The driver's terminal hook publishes no ownership change.  The serialized parent removes
+    # the exact physical child reference first, then releases or attaches the child's arena.
     fn: lmx_thread_finish (@: LmxThread t) int
-    # This Thread's own node in its PARENT's chain (LmxLink), or null at the root.  The node is a
-    # cell of the parent's arena and carries the parent's view of this child.
-    fn: lmx_thread_link (@: LmxThread t) @: LmxLink
-    # The head node of a parent's chain of live direct children, or null when it has none.
-    fn: lmx_thread_child_link (@: LmxThread parent) @: LmxLink
-    # The chain's nodes are cells of the PARENT's arena, and the arena is the context of the act --
-    # the caller names it ("a thread stores no arena of its own").  Zero falls back to the parent's
-    # own band (`parent\slot\arena`) when it has one.
+    # The Array backing is owned by the parent's arena, named explicitly by the caller.  Addition
+    # preserves insertion order; removal compacts the Array and changes no other ownership state.
     fn: lmx_thread_child_add (@: LmxThread parent; @: LmxThread child; @: LmxArena arena) int
     fn: lmx_thread_child_remove (@: LmxThread parent; @: LmxThread child) int
     fn: lmx_thread_child_is (@: LmxThread parent; @: LmxThread child) int
@@ -296,9 +273,9 @@ prototype:
     fn: lmx_stop_request (@: LmxThread child; ulong: now; size_t: deadline) int
     fn: lmx_stop_close (@: LmxThread child; ulong: now) int
     # The closure deadline as the node holds it: one relaxed atomic load of one self-contained word
-    # (see LmxLink), and the first-write publish that stores the upper close's value exactly once.
-    fn: lmx_link_deadline (@: LmxLink node) size_t
-    fn: lmx_link_deadline_publish (@: LmxLink node; size_t: deadline) int
+    # The one inherited close deadline carried by this child Thread itself.
+    fn: lmx_thread_close_deadline (@: LmxThread child) size_t
+    fn: lmx_thread_close_deadline_publish (@: LmxThread child; size_t: deadline) int
     # Whether this record's own lane has ended: the stronger boundary the close publishes from, and
     # the one the STOPPED hook asks before it speaks for a record whose lane may still be unwinding.
     # A record with no lane answers YES (the stepped manager's normal state).

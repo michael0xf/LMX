@@ -131,21 +131,12 @@ predef: "l2src/lmx_plan.h.lm1"
 # The set of roles beyond RETURN and CALL and the operands of each are a carrier draft
 # for probing the mechanism, not an L3 ISA (dev/graph_interp/BODY_NODES.md).
 #
-# THE PERMANENT STORE (lmx_perm.h.lm1; tests/lmx_walk_perm_selftest.lm1).  What a runtime
-# knows at translation and never changes lives in its store: the role records, a shared
-# LmxCallable and its plan, a subject handed in as an input, a whole eternal occurrence.
-# A Message's arena is bound to that store and its ranges answer for it, so nothing here
-# tells the two apart on the way IN: an address of the store is classified like any
-# other, a reference into it is handed on, returned and read through as it is, and an
-# eternal occurrence is entered at its one address from every Message of the runtime.
-# An address of ANOTHER runtime's store classifies as nothing and is refused at the
-# public boundary.  The way OUT is closed when a body is prepared, never at run time:
-# a `put` whose holder is of the store, and a `set` of an own field whose holder is of
-# the store (an eternal occurrence assigning its own field -- the next checkpoint would
-# publish into the store) make lmx_walk_prepare INVALID, so such a body gets no plan and
-# never runs.  Reading either is not refused.  The plan is built in the arena given as
-# the descriptor's and published through the context's arena; lmx_plan_publish refuses a
-# plan whose home is not the descriptor's (lmx_plan.h.lm1, "One HOME").
+# QUALIFIED IMMUTABILITY.  The full `independent: const: immutable` receiver profile is
+# itself an ordinary graph value.  LmxWalkContext carries its physical reference.  A
+# candidate is immutable exactly when its address range's array carries that same profile
+# reference; owner-local objects are protected and foreign ownership/sealing alone grant
+# nothing.  The way OUT is closed while a body is prepared: `put`, `set`, or a primitive
+# owner targeting that exact profile makes preparation INVALID.  Reading remains valid.
 #
 # CURRENT UNSUPPORTED LIMITS of this slice -- what this prototype does not do YET, stated
 # rather than hidden, and NOT the final semantics of L3: a value is an integer, a
@@ -218,7 +209,7 @@ define: LMX_WALK_OP_COUNT 17
 # so explicitly.  `number` is the destination cell this record lends the activation: when
 # the value is an integer the activation computed, `ref` points AT `number` -- that
 # identity, not a code, is how the caller knows.  Any other `ref` is a reference into the
-# graph (or into the permanent store), to be classified by whoever needs its kind.
+# graph (including an imported sealed range), to be classified by whoever needs its kind.
 struct: LmxWalkValue
     @: void ref
     int: number
@@ -247,6 +238,9 @@ struct: LmxWalkContext
     # The role records of the plan namespace (lmx_plan_roles_open): entry checks that a
     # header is a plan of THIS program by comparing one address with them.
     @: Lmx plan_roles
+    # Physical address of the ordinary receiver-expression graph value denoting the exact
+    # independent+const+immutable profile.  Zero means this program declares no such profile.
+    @: Lmx immutable_profile
     # How many times this unit has asked the arena's index what an address is.
     size_t: classified
 end: LmxWalkContext
@@ -284,7 +278,7 @@ end: LmxWalkFrame
 prototype:
     # One activation of the callable occurrence `node`, for a DIRECT caller.  `args` are
     # `nargs` references (0 for an absent input); each one that is present must be an
-    # address the context's arena can classify -- its own or its bound permanent store's --
+    # address the context's arena can classify through its local/imported range index --
     # otherwise LMX_WALK_INVALID and nothing runs.  `out` may be 0.  A turn run through a
     # Thread passes 0: what a turn has to say it says by a Message
     # (LMX_blog/2026-09-20.md, "Общение только через Message").
@@ -293,13 +287,12 @@ prototype:
     # itself and are not asked about; an integer result goes into `dest`.
     fn: lmx_walk_activate (@: LmxWalkContext context; @: Lmx node; @@: void args; size_t: nargs; @: void dest; @@: void result; @: int present) int
     # Once per callable, before the descriptor is shared: look at the body, build the plan
-    # in `descriptor_arena` -- the arena where the LmxCallable of M lives: the context's
-    # own, or the permanent store it is bound to -- and publish it through the context's
-    # arena.  Any other arena is INVALID, asked before anything is built.  OK without looking
+    # in `descriptor_arena` -- the true owner arena of the LmxCallable of M -- and publish it
+    # through the context's arena.  Any other arena is INVALID, asked before anything is built.  OK without looking
     # when the descriptor already has a plan.  A bare METHOD in child[0] is INVALID (no
     # header); a body with a node outside the slice is UNSUPPORTED; an `own` node naming
-    # somebody else's field, and a `put` or a `set` that would write into the permanent
-    # store, are INVALID -- in every such case nothing is published.  NO_GRAPH when M has
+    # somebody else's field, and a `put` or a `set` that would write into the exact immutable
+    # profile, are INVALID -- in every such case nothing is published.  NO_GRAPH when M has
     # no body node.
     fn: lmx_walk_prepare (@: LmxWalkContext context; @: LmxArena descriptor_arena; @: Lmx plan_roles; @: Lmx node) int
     # Preparation and tests only: does the published plan say what the body says -- the
@@ -307,14 +300,14 @@ prototype:
     fn: lmx_walk_plan_check (@: LmxWalkContext context; @: Lmx node) int
     # Entry, separate so that a test can look at what it loaded: two questions to the
     # arena, then the records of the plan's entries in the plan's order (21.5).  The
-    # CALLER has marked the store and rewinds it; enter itself releases nothing.
+    # CALLER has marked the scratch store and rewinds it; enter itself releases nothing.
     fn: lmx_walk_enter (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx node; @@: void args; size_t: nargs) int
 
     # The roles of a program: a plain Structure whose child k is THE record of role k.
     # Opened once per program graph; every frame node refers to these records.
     fn: lmx_walk_roles_open (@: LmxArena arena) @: Lmx
     # Construction of body nodes, for a translator and for tests.  A node is a fresh
-    # Structure of `arena` with `children` slots and lexical parent `parent`; a frame
+    # Structure of `arena` with `children` slots and immediate structural parent `parent`; a frame
     # node gets the shared record of role `code` in child[0].  The caller stores the node
     # into its parent's slot.
     fn: lmx_walk_frame (@: LmxArena arena; @: Lmx roles; @: Lmx parent; int: code; size_t: children) @: Lmx

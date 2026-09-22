@@ -50,20 +50,35 @@ fn: dl_message (@: LmxArena arena; unsigned: index; size_t: slots) @: LmxMsg
     message\success: 0
     message\handoff_ready: 0
     message\graph: graph
-    message\index: index
 return: message
 
-fn: dl_object (@: LmxArena arena; @: LmxMsg message; @: LmxSchedule sched) @: LmxThread
+fn: dl_object (@: LmxArena arena; @@: LmxMsg out_message) @: LmxThread
     @: LmxThread t
+    @: LmxMsg message
+    @: Lmx graph
+    @: LmxArrayDesc children
     @: LmxPost mail
-    t: (cast: (@: LmxThread) lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    @: LmxSchedule sched
+    \out_message: 0
+    t: (cast: (@: LmxThread) lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
+    message: (cast: (@: LmxMsg) t)
+    graph: lmx_node_new_owned(arena)
     mail: (cast: (@: LmxPost) lmx_arena_take(arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
-    if: t = 0 || mail = 0
+    sched: (cast: (@: LmxSchedule) lmx_arena_take(arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: t = 0 || graph = 0 || mail = 0 || sched = 0
         return: 0
     ---
-    if: lmx_post_init(arena, mail) != c.LMX_POST_OK || lmx_thread_attach(t, message, mail, sched) != c.LMX_THREAD_OK
+    if: lmx_arena_refs_open_owned(arena, graph, 1U) != 0
         return: 0
     ---
+    children: lmx_thread_children_field_new(arena, graph, 0U)
+    if: children = 0
+        return: 0
+    ---
+    if: lmx_post_init(arena, mail) != c.LMX_POST_OK || lmx_schedule_init(sched, arena, (cast: (@: void) t), 8U) != c.LMX_SCHEDULE_OK || lmx_thread_init(arena, t, graph, mail, sched) != c.LMX_THREAD_OK || lmx_thread_children_bind(t, children, arena) != c.LMX_THREAD_OK
+        return: 0
+    ---
+    \out_message: message
 return: t
 
 fn: dl_inbox_count (@: LmxThread t) size_t
@@ -77,13 +92,10 @@ fn: main () int
     LmxArena: a1_arena
     LmxArena: a2_arena
     LmxArena: b_arena
-    LmxSchedule: sched
     @: LmxMsg p 0
     @: LmxMsg a1_msg 0
     @: LmxMsg a2_msg 0
     @: LmxMsg b_msg 0
-    @: Lmx p_graph 0
-    @: Lmx a1_graph 0
     @: LmxThread pt 0
     @: LmxThread a1 0
     @: LmxThread a2 0
@@ -102,43 +114,23 @@ fn: main () int
         free(counts)
         return: 2
     ---
-    if: lmx_schedule_init(@ sched, 0, 0, 8U) != c.LMX_SCHEDULE_OK
-        free(counts)
-        return: 2
-    ---
     # Tree: P -> A1, A2; A1 -> B.
-    p: dl_message(@ root_arena, 1U, 3U)
-    if: p = 0
+    pt: dl_object(@ root_arena, @ p)
+    if: p = 0 || pt = 0
         free(counts)
         return: 2
     ---
-    p_graph: p\graph
-    pt: dl_object(@ root_arena, p, @ sched)
-    if: pt = 0
+    a1: dl_object(@ a1_arena, @ a1_msg)
+    a2: dl_object(@ a2_arena, @ a2_msg)
+    bt: dl_object(@ b_arena, @ b_msg)
+    if: a1 = 0 || a2 = 0 || bt = 0 || a1_msg = 0 || a2_msg = 0 || b_msg = 0
         free(counts)
         return: 2
     ---
-    a1_msg: dl_message(@ a1_arena, 1U, 2U)
-    a2_msg: dl_message(@ a2_arena, 2U, 1U)
-    b_msg: dl_message(@ b_arena, 1U, 1U)
-    if: a1_msg = 0 || a2_msg = 0 || b_msg = 0
+    if: lmx_thread_child_add(pt, a1, @ root_arena) != c.LMX_THREAD_OK || lmx_thread_child_add(pt, a2, @ root_arena) != c.LMX_THREAD_OK || lmx_thread_child_add(a1, bt, @ a1_arena) != c.LMX_THREAD_OK
         free(counts)
         return: 2
     ---
-    a1_graph: a1_msg\graph
-    lmx_arena_ref_store(p_graph, 0U, (cast: (@: void) a1_msg))
-    lmx_arena_ref_store(p_graph, 1U, (cast: (@: void) a2_msg))
-    lmx_arena_ref_store(a1_graph, 0U, (cast: (@: void) b_msg))
-    a1: dl_object(@ a1_arena, a1_msg, @ sched)
-    a2: dl_object(@ a2_arena, a2_msg, @ sched)
-    bt: dl_object(@ b_arena, b_msg, @ sched)
-    if: a1 = 0 || a2 = 0 || bt = 0
-        free(counts)
-        return: 2
-    ---
-    a1\parent: (cast: (@: void) pt)
-    a2\parent: (cast: (@: void) pt)
-    bt\parent: (cast: (@: void) a1)
 
     # Step by physical address.
     dl_check(counts, lmx_deliver_step(a1, a1) = c.LMX_DELIVER_HERE, "a record did not recognize itself")
@@ -200,8 +192,7 @@ fn: main () int
     # we need destination not under pt. Create orphan thread with no parent link into tree.
     @: LmxMsg foreign_msg 0
     @: LmxThread foreign 0
-    foreign_msg: dl_message(@ a2_arena, 99U, 1U)
-    foreign: dl_object(@ a2_arena, foreign_msg, @ sched)
+    foreign: dl_object(@ a2_arena, @ foreign_msg)
     if: foreign = 0 || foreign_msg = 0
         free(counts)
         return: 2

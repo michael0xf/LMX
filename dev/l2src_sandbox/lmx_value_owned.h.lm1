@@ -4,10 +4,12 @@ predef: "l2src/lmx_arena.h.lm1"
 # of one of the arena's arrays: the arena allocates it, owns it and classifies it, and
 # there is no owner-local range list anywhere.
 prototype:
-    # A lexical root Structure (node = 0) in the STRUCT domain, len 0, no children.
+    # A structural root Structure (parent = 0) in the STRUCT domain, len 0, no children.
     fn: lmx_node_new_owned (@: LmxArena arena) @: Lmx
-    # A nested Structure initialized with lexical parent `parent`. Graph-copy
-    # traversal may rewrite destination node links. The caller opens its child array and
+    # Same representation in a distinct physical receiver-profile domain.
+    fn: lmx_node_new_profiled (@: LmxArena arena; @: Lmx profile) @: Lmx
+    # A nested Structure initialized with immediate structural parent `parent`. Graph-copy
+    # traversal may rewrite destination parent links. The caller opens its child array and
     # stores its address into the parent's slot; nothing here mutates parent.
     fn: lmx_struct_new_owned (@: Lmx parent; @: LmxArena arena) @: Lmx
     fn: lmx_method_new_owned (@: LmxArena arena) @: LmxMethod

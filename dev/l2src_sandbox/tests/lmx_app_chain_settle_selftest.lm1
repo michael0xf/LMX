@@ -61,9 +61,11 @@ size_t: cs_entry_diag 0U
 size_t: cs_a_turns 0U
 size_t: cs_a_create_diag 0U
 size_t: cs_letters_taken 0U
+int: cs_letter_owned_after_take 0
 
 fn: cs_body_a (@: Lmx node) int
     @: LmxThread t
+    @: LmxMsg message
     @: Lmx graph_a
     @: Lmx source_b
     @: LmxMsg child_b
@@ -72,7 +74,8 @@ fn: cs_body_a (@: Lmx node) int
     @: LmxSchedule sched_b
     @: void letter
     t: lmx_thread_current()
-    if: t = 0 || t\message = 0 || t\message\graph = 0
+    message: lmx_thread_message(t)
+    if: message = 0 || message\graph = 0
         cs_a_create_diag: 1U
         return: 0
     ---
@@ -81,27 +84,30 @@ fn: cs_body_a (@: Lmx node) int
         return: 0
     ---
     cs_a_turns: cs_a_turns + 1U
-    graph_a: t\message\graph
+    graph_a: message\graph
     if: lmx_thread_mail_count(t, c.LMX_POST_INBOX) > 0U
         letter: lmx_thread_mail_take(t, c.LMX_POST_INBOX)
         if: letter != 0
             cs_letters_taken: cs_letters_taken + 1U
             cs_letter: (cast: (@: LmxMsg) letter)
+            if: t\slot != 0 && lmx_range_classify(t\slot\arena, letter) = c.LMX_DOMAIN_KIND_MSG_RECORD
+                cs_letter_owned_after_take: 1
+            ---
         ---
     ---
-    # Build B's source template in A's arena (2 slots: 0=method, 1 spare).
+    # Build B's source template in A's arena (method, spare, ordinary children Array).
     source_b: lmx_node_new_owned(cs_arena_a)
-    if: source_b = 0 || lmx_arena_refs_open_owned(cs_arena_a, source_b, 2U) != 0
+    if: source_b = 0 || lmx_arena_refs_open_owned(cs_arena_a, source_b, 3U) != 0 || lmx_thread_children_field_new(cs_arena_a, source_b, 2U) = 0
         cs_a_create_diag: 3U
         return: 0
     ---
-    child_b: lmx_child_reserve(t, cs_arena_a, cs_arena_b, graph_a, 1U, source_b)
+    child_b: lmx_child_reserve(t, cs_arena_a, cs_arena_b, lmx_arena_ref_cell(graph_a, 1U), source_b)
     if: child_b = 0
         cs_a_create_diag: 4U
         return: 0
     ---
     mail_b: (cast: (@: LmxPost) lmx_arena_take(cs_arena_b, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
-    t_b: (cast: (@: LmxThread) lmx_arena_take(cs_arena_b, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    t_b: (cast: (@: LmxThread) child_b)
     sched_b: (cast: (@: LmxSchedule) lmx_arena_take(cs_arena_b, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
     if: mail_b = 0 || t_b = 0 || sched_b = 0
         cs_a_create_diag: 5U
@@ -115,7 +121,7 @@ fn: cs_body_a (@: Lmx node) int
         cs_a_create_diag: 7U
         return: 0
     ---
-    if: lmx_thread_attach(t_b, child_b, mail_b, sched_b) != c.LMX_THREAD_OK
+    if: lmx_thread_init(cs_arena_b, t_b, child_b\graph, mail_b, sched_b) != c.LMX_THREAD_OK
         cs_a_create_diag: 8U
         return: 0
     ---
@@ -129,7 +135,7 @@ fn: cs_body_a (@: Lmx node) int
     cs_a_create_diag: 10U
     # SUCCESS path: A declares its own work done -- and B, created in this very turn, is STILL
     # LIVE.  What the settle does about that is what this file now measures (two boundaries).
-    t\message\success: 1
+    message\success: 1
 return: 0
 
 fn: cs_root_entry (@: Lmx node) int
@@ -144,7 +150,7 @@ fn: cs_root_entry (@: Lmx node) int
         cs_entry_diag: 1U
         return: 0
     ---
-    child: lmx_root_create(cs_root, cs_arena_a, 0U, cs_source_a)
+    child: lmx_root_create(cs_root, cs_arena_a, cs_source_a)
     if: child = 0
         cs_entry_diag: 2U
         return: 0
@@ -164,7 +170,7 @@ fn: cs_root_entry (@: Lmx node) int
     ---
     lmx_arena_ref_store(graph, 0U, (cast: (@: void) method))
     child_mail: (cast: (@: LmxPost) lmx_arena_take(cs_arena_a, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
-    child_t: (cast: (@: LmxThread) lmx_arena_take(cs_arena_a, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    child_t: (cast: (@: LmxThread) child)
     child_sched: (cast: (@: LmxSchedule) lmx_arena_take(cs_arena_a, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
     if: child_mail = 0 || child_t = 0 || child_sched = 0
         cs_entry_diag: 5U
@@ -178,7 +184,7 @@ fn: cs_root_entry (@: Lmx node) int
         cs_entry_diag: 7U
         return: 0
     ---
-    if: lmx_thread_attach(child_t, child, child_mail, child_sched) != c.LMX_THREAD_OK
+    if: lmx_thread_init(cs_arena_a, child_t, child\graph, child_mail, child_sched) != c.LMX_THREAD_OK
         cs_entry_diag: 8U
         return: 0
     ---
@@ -254,8 +260,9 @@ fn: main () int
     cs_a_turns: 0U
     cs_a_create_diag: 0U
     cs_letters_taken: 0U
+    cs_letter_owned_after_take: 0
     cs_entry_diag: 0U
-    cs_check(counts, lmx_root_open(@ root, cs_root_entry, 120000U, 0U, 0U) = c.LMX_ROOT_OK, "R0 did not open")
+    cs_check(counts, lmx_root_open(@ root, cs_root_entry, 120000U) = c.LMX_ROOT_OK, "R0 did not open")
     message: lmx_root_message(@ root)
     r0: lmx_root_thread(@ root)
     root_arena: lmx_root_arena(@ root)
@@ -271,9 +278,9 @@ fn: main () int
         free(counts)
         return: failures
     ---
-    # A's template: 2 slots so graph_A can hold method at 0 and publish B at 1.
+    # A's template: method at 0, B at 1, ordinary children Array at 2.
     source_a: lmx_node_new_owned(root_arena)
-    cs_check(counts, source_a != 0 && lmx_arena_refs_open_owned(root_arena, source_a, 2U) = 0, "template A not built")
+    cs_check(counts, source_a != 0 && lmx_arena_refs_open_owned(root_arena, source_a, 3U) = 0 && lmx_thread_children_field_new(root_arena, source_a, 2U) != 0, "template A not built")
     if: source_a = 0
         failures: counts[1]
         c.printf("lmx_app_chain_settle checks=%d failures=%d entry_diag=%u create_diag=%u (abort templates)\n",
@@ -288,7 +295,7 @@ fn: main () int
     cs_arena_a: @ arena_a
 
     # R0 creates A (live direct child).
-    cs_check(counts, lmx_root_cycle(@ root, 4U) = c.LMX_ROOT_OK, "A-create cycle did not run")
+    cs_check(counts, lmx_root_turn(@ root, lmx_clock_ticks()) = c.LMX_ROOT_OK, "A-create turn did not run")
     cs_check(counts, cs_phase = 1U && cs_msg_a != 0 && cs_t_a != 0, "A was not wired")
     if: cs_msg_a = 0 || cs_t_a = 0
         failures: counts[1]
@@ -301,7 +308,7 @@ fn: main () int
     msg_a: cs_msg_a
     t_a: cs_t_a
     graph_a: msg_a\graph
-    cs_check(counts, lmx_arena_ref_value(graph, 0U) = (cast: (@: void) msg_a), "A not published")
+    cs_check(counts, lmx_thread_child_is(r0, t_a) != 0, "A not published in R0's children Array")
     cs_check(counts, lmx_range_classify(@ arena_a, (cast: (@: void) msg_a)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "A not in own arena")
     cs_check(counts, lmx_thread_child_is(r0, t_a) != 0, "A not live child of R0")
     cs_check(counts, graph_a != 0 && graph_a\len >= 2, "A graph has no slot for B")
@@ -321,9 +328,10 @@ fn: main () int
     letter\success: 0
     letter\handoff_ready: 0
     letter\graph: 0
-    letter\index: 0U
     cs_check(counts, lmx_service_post(service, (cast: (@: void) t_a), letter, @ letter_arena) = c.LMX_SERVICE_OK, "post to A refused")
-    cs_check(counts, letter_at\count = 0U, "letter arena not attached")
+    cs_check(counts, letter_at\count != 0U && letter_at\blocks != 0, "producer lost letter arena before owner take")
+    cs_check(counts, lmx_range_classify(@ letter_arena, (cast: (@: void) letter)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "producer no longer owns queued letter")
+    cs_check(counts, lmx_range_classify(@ arena_a, (cast: (@: void) letter)) = c.LMX_KIND_NONE, "recipient classified letter before owner take")
     cs_check(counts, lmx_thread_mail_count(t_a, c.LMX_POST_INBOX) = 1U, "A inbox empty after post")
 
     # ONE reading for the rest of the file: A's ending boundary takes it (the moment of its close
@@ -332,6 +340,8 @@ fn: main () int
     base: lmx_clock_ticks()
     cs_check(counts, lmx_manager_round(manager, 1U, base) = c.LMX_MANAGER_OK, "A turn manager round did not run")
     cs_check(counts, cs_a_turns >= 1U && cs_letters_taken = 1U, "A did not take its letter")
+    cs_check(counts, letter_at\count = 0U && letter_at\blocks = 0, "letter arena did not empty on owner take")
+    cs_check(counts, cs_letter_owned_after_take != 0, "owner take did not attach letter to A before exposure")
     cs_check(counts, cs_a_create_diag = 10U && cs_msg_b != 0 && cs_t_b != 0, "A did not create B in its turn")
     if: cs_msg_b = 0 || cs_t_b = 0 || cs_a_create_diag != 10U
         failures: counts[1]
@@ -371,7 +381,7 @@ fn: main () int
     svc_before: lmx_service_count(service)
     mgr_before: lmx_manager_count(manager)
     cs_check(counts, svc_before = 3U, "service not R0+A+B before util")
-    cs_check(counts, mgr_before = 0U, "manager should be empty (A finished; B never bound)")
+    cs_check(counts, mgr_before = 1U, "manager must still traverse finished A until parent settle removes membership")
     cs_check(counts, lmx_thread_child_is(r0, t_a) != 0, "A not live under R0 before util")
 
     # ==========================================================================================
@@ -404,7 +414,7 @@ fn: main () int
     # AFTER: probe-owned only (no reads inside arena A or B cells).
     cs_check(counts, b_at\count = 0U && b_at\blocks = 0, "B's arena did not attach to A's")
     cs_check(counts, a_at\count = 0U && a_at\blocks = 0, "A arena not released (not SUCCESS path?)")
-    cs_check(counts, lmx_arena_ref_value(graph, 0U) = 0, "A slot not cleared (not SUCCESS path)")
+    cs_check(counts, lmx_thread_child_is(r0, t_a) = 0, "A membership not cleared (not SUCCESS path)")
     svc_after: lmx_service_count(service)
     mgr_after: lmx_manager_count(manager)
     cs_check(counts, svc_after = 1U, "service should hold only R0 after cascade")
@@ -426,4 +436,3 @@ fn: main () int
     c.fflush(0)
     free(counts)
 return: failures
-

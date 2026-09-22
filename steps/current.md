@@ -1,5 +1,11 @@
 # LMX documentation-first restart
 
+## Аварийная коррекция ядра от 2026-09-21
+
+Рабочий `dev/l2src_sandbox` приведён к принятой модели: `LmxMsg message` является первым by-value членом `LmxThread`, поэтому адреса Thread и его Message-префикса совпадают; отдельный `LmxMsg` не открывает хвост Thread. Единственный состав непосредственных детей — динамический графовый `Array<@LmxThread>` без фиксированных root-слотов, `LmxLink` и отдельной очереди членства менеджера. R0 остаётся обычным Thread под структурным Thread-родителем.
+
+Итоговая проверка текущего незакоммиченного среза: L2 `240/240`, evidence `build/l2src/20260922_002422`; L3 `10/10`, type budget `62/64` и `818/4096`; generated-program harness `30/30`, evidence `build/l2_harness_gate_20260922_0028`. Входящая почта публикует под единственным monitor пару физического адреса и donor-арены, а арену присоединяет только принимающий owner при `take`. Отказ закрытия сохраняет pending-пару; settle закрывает почту до unregister/remove/attach/release. Это подтверждает только `dev`; продвижение в стабильный `l2src` выполняется отдельной проверяемой партией.
+
 Актуальный совместный план Codex/Grok: [implementation-plan.md](implementation-plan.md). Поручение от 20.09 о полной замене `implements` и последующей валидации интерпретатором графа расширяет прежний этап documentation-first; последовательность и распределение работ указаны в плане.
 
 - Start from `docs/LMX_semantics.ru.md` / `docs/LMX_semantics.en.md` and the user's current instructions. Do not import old Message/arena/runtime designs as new requirements.

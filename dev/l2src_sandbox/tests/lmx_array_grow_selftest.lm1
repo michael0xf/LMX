@@ -15,9 +15,12 @@ end: grow_check
 
 fn: main () int
     LmxArena: arena
+    LmxArena: viewer
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     @: LmxArrayDesc array
     @: LmxArrayDesc fixed
+    @: LmxPool descriptor_pool
+    @: LmxPool backing_pool
     @: void p0
     @: void p1
     @: void p2
@@ -33,7 +36,8 @@ fn: main () int
     if: counts = 0
         return: 2
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
-    if: lmx_arena_open(@ arena) != 0
+    memset((cast: (@: void) (@ viewer)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ arena) != 0 || lmx_arena_open(@ viewer) != 0
         free(counts)
         return: 2
     p0: lmx_int_new_owned(@ arena)
@@ -65,6 +69,12 @@ fn: main () int
     grow_check(counts, lmx_array_grow_ref_reserve_owned(array, (cast: (size_t) -1), @ arena) = c.LMX_ARRAY_GROW_OVERFLOW && array\len = 4U && array\capacity = 6U && array\data = old_data, "overflow leaves the live descriptor unchanged")
     fixed: lmx_array_new_owned(type, 3U, @ arena)
     grow_check(counts, fixed != 0 && fixed\len = 3U && fixed\capacity = 3U, "fixed arrays use capacity equal to length")
+    # A foreign imported view may classify the Array, but it cannot mutate owner storage.
+    descriptor_pool: lmx_range_pool(@ arena, (cast: (@: void) array))
+    backing_pool: lmx_range_pool(@ arena, array\data)
+    grow_check(counts, descriptor_pool != 0 && backing_pool != 0 && lmx_pool_seal(descriptor_pool) = 0 && lmx_pool_seal(backing_pool) = 0 && lmx_range_import(@ viewer, @ arena) = 0, "sealed owner ranges imported as views")
+    grow_check(counts, lmx_range_classify(@ viewer, (cast: (@: void) array)) = c.LMX_KIND_ARRAY && lmx_array_grow_ref_append_owned(array, p0, @ viewer) = c.LMX_ARRAY_GROW_INVALID && array\len = 4U, "foreign classified Array refused mutation")
+    grow_check(counts, lmx_arena_release(@ viewer) = 0, "foreign view arena released without owning storage")
     old_data: array\data
     grow_check(counts, lmx_arena_release(@ arena) = 0, "arena release retires descriptor and every backing range")
     grow_check(counts, lmx_range_classify(@ arena, old_data) = c.LMX_KIND_NONE && lmx_range_classify(@ arena, (cast: (@: void) array)) = c.LMX_KIND_NONE, "retirement leaves no stale address-range entry")

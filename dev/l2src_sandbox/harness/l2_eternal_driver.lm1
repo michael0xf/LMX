@@ -1,70 +1,15 @@
 predef: "l2src/lmx_root.lm1"
-predef: "l2src/lmx_perm.lm1"
-predef: "l2src/lmx_gc.lm1"
-predef: "l2src/lmx_turn.lm1"
-predef: "l2src/lmx_message.h.lm1"
-predef: "l2src/lmx_arena.lm1"
-predef: "l2src/lmx_pool.lm1"
-predef: "l2src/lmx_arena_blocks.lm1"
-predef: "l2src/lmx_range.lm1"
-predef: "l2src/lmx_child.lm1"
-predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_implements.lm1"
 predef: "l2src/lmx_chars_owned.lm1"
-predef: "l2src/lmx_arena_refs.lm1"
-predef: "l2src/lmx_array_owned.lm1"
-predef: "l2src/lmx_array_ref_owned.lm1"
 predef: "l2src/lmx_graph_copy_owned.lm1"
 predef: "l2src/lmx_merge_owned.lm1"
-predef: "l2src/lmx_call.lm1"
-predef: "l2src/lmx_thread.lm1"
-predef: "l2src/lmx_post.lm1"
-predef: "l2src/lmx_schedule.lm1"
-predef: "l2src/lmx_manager.lm1"
-predef: "l2src/lmx_clock.lm1"
-predef: "l2src/lmx_implements.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
-# l2_eternal_driver.lm1 -- runs a GENERATED program and looks at R0's eternal retention
-# array while the root that program opened is still open (FABLE-L2-R0-RETENTION-20260920-01).
-#
-# Used by tools\l2_harness.ps1, row kind `eternal-runs`.  NOT a unit of the kernel and NOT
-# a selftest of the L2 gate: it lives outside the directories tools\build_l2src.ps1 scans,
-# because an object that carries a whole predef closure AND a main would be offered by that
-# script's symbol resolver to every other program.
-#
-# HOW A GENERATED PROGRAM IS RUN WITHOUT A LINK RESOLVER.  Generated C includes the kernel's
-# headers and expects the kernel's objects.  This unit predefs the kernel's BODIES, so its
-# one object IS that closure; the generated object is linked against it and nothing else but
-# l2_libc.  Nothing in the generated text is changed for this.  Its C is compiled with two
-# renames on the command line:
-#     -Dmain=l2_generated_main                  the driver's main calls the program's main;
-#     -Dlmx_root_close=l2_driver_root_close     the program's ONE call of lmx_root_close
-#                                               lands here first.
-# So everything measured below is the real thing: the root the generated main opened with
-# the capacity the translator printed, after the turn in which the generated entry built
-# the unit and published the roots, and before the close the generated main asked for.
-#
-# WHY NOT THE ENTRY'S OWN CHECKS.  The generated entry holds itself to the same facts
-# (capacity = count, store, read back, node = 0) and returns 1 when one fails -- but
-# lmx_thread_dispatch_native drops the entry's result, so a failed check there is silent
-# and the process still exits 0.  What is asserted here is looked at from outside.
-#
-# Arguments: the expected number of roots, then any number of facts about them, each a
-# word and its integers.  An index is a root's position in the array, which is the lexical
-# order of the `independent: const: immutable` declarations; a slot is a field's position
-# in its Structure, in lexical order.
-#     size A S V       field S of root A is a size_t cell of the store holding V
-#     same A S B       field S of root A is root B itself, the same address
-#     slot A S B T     field S of root A is the very Structure that is field T of root B,
-#                      and that Structure's lexical parent is root B
-#
-# ZERO ROOTS is a legal expectation (FABLE-L2TRANS-THROW-FORMAL-20260920-05): a generated
-# program that declares no eternal branch still needs the kernel closure to link and run, and
-# this driver is the only thing in the harness that carries it.  With 0 the array must exist
-# and hold nothing; the collection and further-turn phases, which compare roots, do not run.
-# The number is the ROW's claim about the fixture, so a program that does declare branches
-# cannot pass by being handed 0: its row says its count.
+# The producer publishes its completed program unit as the current Message graph and exports
+# count/root_at accessors over a translation-sized C array of exact qualified root references.
+# The array is observation state only. Lifetime and classification come from the ordinary graph
+# path plus the roots' exact sealed owner-arena profiles; no Root slot or private store exists.
 
 int: gargc 0
 @@: char gargv 0
@@ -73,9 +18,13 @@ int: checks 0
 int: failures 0
 const: @: char phase ""
 @@: void saved 0
+@@: void saved_profiles 0
 
 prototype:
     fn: l2_generated_main () int
+    fn: l2_program_graph () @: Lmx
+    fn: l2_program_qualified_count () size_t
+    fn: l2_program_qualified_at (size_t: index) @: Lmx
 end: prototype
 
 sub: check (int: ok; const: @(char label))
@@ -86,128 +35,117 @@ sub: check (int: ok; const: @(char label))
     ---
 end: check
 
-# Every byte the arena's blocks hold: a collection that VISITED an arena stamps a chunk's
-# mark, and the stamp is one of these bytes (the instrument of tests/lmx_perm_selftest.lm1).
-fn: bytes (@: LmxArena arena) unsigned
-    @: LmxArenaBlock node 0
-    @: char p 0
-    unsigned: sum 0U
-    size_t: i
-    if: arena = 0
-        return: 0U
-    node: arena\blocks
-    while: node != 0
-        if: node\base != 0 && node\n != 0U
-            p: (cast: (@: char) node\base)
-            i: 0U
-            while: i < node\n
-                sum: sum + (cast: (unsigned) p[i])
-                i: i + 1U
-            ---
-        ---
-        node: node\next
-    ---
-return: sum
-
-fn: handed (@: LmxArena a) size_t
-    @: LmxPool pool 0
-    size_t: n 0U
-    if: a = 0
-        return: 0U
-    pool: a\arrays
-    while: pool != 0
-        n: n + lmx_pool_count(pool)
-        pool: pool\next
-    ---
-return: n
-
-fn: arg (int: i) int
-    if: i >= gargc
+fn: arg (int: at) int
+    if: at < 0 || at >= gargc
         return: -1
-return: c.atoi(gargv[i])
+return: atoi(gargv[at])
 
-# What must hold of the array whenever it is looked at.
+fn: root_profile (@: LmxArena arena; @: Lmx root) @: Lmx
+    if: arena = 0 || root = 0
+        return: 0
+return: lmx_range_profile(arena, (cast: (@: void) root))
+
+fn: sealed_here (@: LmxArena arena; @: void value) int
+    @: LmxPool pool lmx_range_pool(arena, value)
+    if: pool = 0
+        return: 0
+return: lmx_pool_is_sealed(pool)
+
 fn: inspect (@: LmxRoot root) int
     @: LmxArena arena lmx_root_arena(root)
-    @: LmxArena store 0
-    @: Lmx retained lmx_root_eternal(root)
     @: LmxMsg message lmx_root_message(root)
-    @: Lmx e 0
+    @: LmxThread thread lmx_root_thread(root)
+    @: LmxArrayDesc children lmx_thread_children(thread)
+    @: Lmx value 0
     @: Lmx other 0
     @: Lmx member 0
+    @: Lmx profile 0
     @: void cell 0
-    int: n
+    size_t: produced l2_program_qualified_count()
+    int: expected arg(1)
     int: i 0
     int: j
     int: at 2
-    int: unset 0
-    int: parented 0
-    int: misplaced 0
-    int: twice 0
-    n: arg(1)
-    store: lmx_perm_store_of(arena)
-    check(arena != 0 && store != 0 && lmx_perm_is_store(store) != 0 && lmx_perm_is_store(arena) = 0, "R0's arena is bound to a live permanent store")
-    if: n = 0
-        check(retained != 0 && retained\len = 0, "no eternal branch was declared: the array exists and holds nothing")
+    int: missing 0
+    int: duplicate 0
+    int: shared_profile 0
+    int: children_seen 0
+    check(message != 0 && l2_program_graph() != 0 && message\graph = l2_program_graph(), "program unit is the current Message graph")
+    check(lmx_domain_kind(arena, (cast: (@: void) l2_program_graph())) = c.LMX_KIND_STRUCT && lmx_domain_type(arena, (cast: (@: void) l2_program_graph())) = c.LMX_TYPE_STRUCT, "program unit remains a live owner-arena Structure")
+    i: 0
+    while: message != 0 && message\graph != 0 && i < message\graph\len
+        if: lmx_arena_ref_value(message\graph, (cast: (size_t) i)) = (cast: (@: void) children)
+            children_seen: children_seen + 1
+        ---
+        i: i + 1
+    ---
+    check(children != 0 && children_seen = 1 && lmx_domain_kind(arena, (cast: (@: void) children)) = c.LMX_KIND_ARRAY && lmx_domain_type(arena, (cast: (@: void) children)) = c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, "program unit preserves the one exact growable children Array")
+    i: 0
+    check(expected >= 0 && produced = (cast: (size_t) expected), "producer count is the translation-known number of qualified roots")
+    if: expected < 0 || produced != (cast: (size_t) expected)
         return: 0
     ---
-    check(n > 0 && retained != 0 && retained\len = n, "the array's capacity is the translation-known number of roots, and is not zero")
-    if: retained = 0 || message = 0 || store = 0 || retained\len != n
-        return: 0
+    if: expected = 0
+        check(l2_program_qualified_at(0U) = 0, "zero-root accessor refuses every index")
+        return: 1
     ---
-    check(lmx_arena_ref_struct(message\graph, (cast: (size_t) c.LMX_ROOT_ETERNAL_SLOT)) = retained, "R0's graph holds the array's address at LMX_ROOT_ETERNAL_SLOT")
-    check(lmx_range_pool(store, (cast: (@: void) retained)) != 0 && lmx_range_pool(arena, (cast: (@: void) retained)) = 0, "the array itself lives in the store, not in R0's arena")
-    while: i < n
-        e: lmx_arena_ref_struct(retained, (cast: (size_t) i))
-        if: e = 0
-            unset: unset + 1
+    while: i < expected
+        value: l2_program_qualified_at((cast: (size_t) i))
+        if: value = 0
+            missing: missing + 1
         else:
-            if: e\node != 0
-                parented: parented + 1
-            if: lmx_range_classify(arena, (cast: (@: void) e)) != c.LMX_KIND_STRUCT || lmx_range_pool(arena, (cast: (@: void) e)) != 0 || lmx_range_pool(store, (cast: (@: void) e)) = 0
-                misplaced: misplaced + 1
+            profile: root_profile(arena, value)
+            check(value\parent = 0, "qualified root remains parentless")
+            check(lmx_domain_kind(arena, (cast: (@: void) value)) = c.LMX_KIND_STRUCT && lmx_domain_type(arena, (cast: (@: void) value)) = c.LMX_TYPE_STRUCT, "qualified root is an exact Structure range value")
+            check(profile != 0 && sealed_here(arena, (cast: (@: void) value)) != 0, "qualified root has a nonzero exact profile in a sealed owner range")
+            check(sealed_here(arena, (cast: (@: void) profile)) != 0 && lmx_domain_kind(arena, (cast: (@: void) profile)) = c.LMX_KIND_STRUCT, "receiver-expression profile is itself a sealed physical Structure")
             j: 0
             while: j < i
-                if: lmx_arena_ref_struct(retained, (cast: (size_t) j)) = e
-                    twice: twice + 1
+                if: l2_program_qualified_at((cast: (size_t) j)) = value
+                    duplicate: duplicate + 1
+                ---
+                if: root_profile(arena, l2_program_qualified_at((cast: (size_t) j))) = profile
+                    shared_profile: shared_profile + 1
+                ---
                 j: j + 1
             ---
         ---
         i: i + 1
     ---
-    check(unset = 0, "every entry of the array holds a root")
-    check(parented = 0, "every retained root has node = 0: retention did not reparent it")
-    check(misplaced = 0, "every retained root is a Structure by R0's ranges, owned by the store and not by R0's arena")
-    check(twice = 0, "no root is entered twice")
-    if: unset != 0
+    check(missing = 0, "every exported entry is an exact physical root reference")
+    check(duplicate = 0, "no physical root reference is duplicated")
+    check(shared_profile = 0, "distinct qualified roots have distinct exact physical profiles")
+    if: missing != 0
         return: 0
     ---
     while: at < gargc
         if: c.strcmp(gargv[at], "size") = 0 && at + 3 < gargc
-            e: lmx_arena_ref_struct(retained, (cast: (size_t) arg(at + 1)))
-            cell: lmx_arena_ref_value(e, (cast: (size_t) arg(at + 2)))
-            check(cell != 0 && lmx_range_classify(arena, cell) = c.LMX_KIND_PRIMITIVE && lmx_range_type_of(arena, cell) = c.LMX_TYPE_SIZE_T && lmx_range_pool(store, cell) != 0, "size: the field is a size_t cell of the store")
+            value: l2_program_qualified_at((cast: (size_t) arg(at + 1)))
+            profile: root_profile(arena, value)
+            cell: lmx_arena_ref_value(value, (cast: (size_t) arg(at + 2)))
+            check(cell != 0 && lmx_domain_kind(arena, cell) = c.LMX_KIND_PRIMITIVE && lmx_domain_type(arena, cell) = c.LMX_TYPE_SIZE_T, "size field has the declared primitive type")
+            check(cell != 0 && lmx_range_profile(arena, cell) = profile && sealed_here(arena, cell) != 0, "size field belongs to the same exact sealed profile")
             if: cell != 0
-                check(lmx_size_value_known(cell) = (cast: (size_t) arg(at + 3)), "size: and holds the declared value -- this entry is THAT branch")
+                check(lmx_size_value_known(cell) = (cast: (size_t) arg(at + 3)), "size field holds the declared value")
             ---
             at: at + 4
         else:
             if: c.strcmp(gargv[at], "same") = 0 && at + 3 < gargc
-                e: lmx_arena_ref_struct(retained, (cast: (size_t) arg(at + 1)))
-                other: lmx_arena_ref_struct(retained, (cast: (size_t) arg(at + 3)))
-                check(other != 0 && lmx_arena_ref_value(e, (cast: (size_t) arg(at + 2))) = (cast: (@: void) other), "same: a reference field IS the retained root, the same address and not a copy")
+                value: l2_program_qualified_at((cast: (size_t) arg(at + 1)))
+                other: l2_program_qualified_at((cast: (size_t) arg(at + 3)))
+                check(other != 0 && lmx_arena_ref_value(value, (cast: (size_t) arg(at + 2))) = (cast: (@: void) other), "same field retains the other root's exact physical reference")
                 at: at + 4
             else:
                 if: c.strcmp(gargv[at], "slot") = 0 && at + 4 < gargc
-                    e: lmx_arena_ref_struct(retained, (cast: (size_t) arg(at + 1)))
-                    other: lmx_arena_ref_struct(retained, (cast: (size_t) arg(at + 3)))
+                    value: l2_program_qualified_at((cast: (size_t) arg(at + 1)))
+                    other: l2_program_qualified_at((cast: (size_t) arg(at + 3)))
                     cell: lmx_arena_ref_value(other, (cast: (size_t) arg(at + 4)))
-                    check(cell != 0 && lmx_arena_ref_value(e, (cast: (size_t) arg(at + 2))) = cell, "slot: a cross-reference IS the other branch's member, the same address")
+                    check(cell != 0 && lmx_arena_ref_value(value, (cast: (size_t) arg(at + 2))) = cell, "slot field retains the other branch member's exact physical reference")
                     member: (cast: (@: Lmx) cell)
-                    check(member != 0 && lmx_range_classify(arena, cell) = c.LMX_KIND_STRUCT && lmx_range_pool(store, cell) != 0 && member\node = other, "slot: that member is a Structure of the store whose lexical parent is its own root")
+                    check(member != 0 && member\parent = other && lmx_range_profile(arena, cell) = root_profile(arena, other) && sealed_here(arena, cell) != 0, "slot member keeps its lexical parent and exact sealed profile")
                     at: at + 5
                 else:
-                    check(0, "an argument this driver does not read")
+                    check(0, "all driver fact arguments are recognized")
                     at: gargc
                 ---
             ---
@@ -215,72 +153,48 @@ fn: inspect (@: LmxRoot root) int
     ---
 return: 1
 
-fn: unmoved (@: Lmx retained; int: n) int
-    int: i 0
-    int: moved 0
-    while: i < n
-        if: lmx_arena_ref_value(retained, (cast: (size_t) i)) != saved[i]
-            moved: moved + 1
-        i: i + 1
-    ---
-return: (cast: (int) (moved = 0))
-
-# The generated main's ONE lmx_root_close arrives here: the turn is over and its boundary
-# has passed, the root is still open.
 fn: l2_driver_root_close (@: LmxRoot root) int
     @: LmxArena arena 0
-    @: LmxArena store 0
-    @: Lmx retained 0
-    unsigned: store_bytes
-    unsigned: own_before
-    size_t: store_handed
-    int: n
-    int: i 0
-    int: code
+    size_t: n
+    size_t: i 0U
     hooked: hooked + 1
-    n: arg(1)
-    phase: "after the turn"
-    check(root != 0 && lmx_root_state(root) = c.LMX_ROOT_OPEN, "the root the generated main opened is still open")
+    phase: "after generated turn"
+    check(root != 0 && lmx_root_state(root) = c.LMX_ROOT_OPEN, "generated root is open at close hook")
     if: root = 0
         return: 1
+    ---
     inspect(root)
     arena: lmx_root_arena(root)
-    store: lmx_perm_store_of(arena)
-    retained: lmx_root_eternal(root)
-    if: failures = 0 && n > 0
-        saved: (cast: (@@: void) calloc((cast: (size_t) n), c.sizeof(@: void)))
-    ---
-    if: saved != 0
-        while: i < n
-            saved[i]: lmx_arena_ref_value(retained, (cast: (size_t) i))
-            i: i + 1
+    n: l2_program_qualified_count()
+    if: n != 0U
+        saved: (cast: (@@: void) calloc(n, c.sizeof(@: void)))
+        saved_profiles: (cast: (@@: void) calloc(n, c.sizeof(@: void)))
+        check(saved != 0 && saved_profiles != 0, "comparison storage opened")
+        if: saved != 0 && saved_profiles != 0
+            while: i < n
+                saved[i]: (cast: (@: void) l2_program_qualified_at(i))
+                saved_profiles[i]: (cast: (@: void) root_profile(arena, l2_program_qualified_at(i)))
+                i: i + 1U
+            ---
         ---
-        # THE INSTRUMENT FIRST: the collected arena's own bytes must move, or an unmoved
-        # sum over the store would prove nothing.
-        phase: "after a collection"
-        store_bytes: bytes(store)
-        store_handed: handed(store)
-        own_before: bytes(arena)
-        check(store_bytes != 0U, "the store holds bytes to compare")
-        check(lmx_gc_collect(arena, lmx_root_thread(root)) = c.LMX_GC_OK, "a collection over R0's arena ran")
-        check(bytes(arena) != own_before, "the instrument sees it: the collected arena's own bytes changed")
-        check(bytes(store) = store_bytes && handed(store) = store_handed, "the store is byte for byte and cell for cell what it was")
-        check(unmoved(retained, n) != 0, "every entry is the same physical root as before the collection")
-        inspect(root)
-        # One more turn.  What is PRINTED here and not asserted is a debt of the generated
-        # entry, not of retention: today the turn is accepted and runs the entry AGAIN, which
-        # builds the branches again in the store and republishes new roots (the store's cell
-        # count grows, the entries move).  What is asserted is what must hold either way:
-        # the array is the same array, of the same capacity, and everything above is true of it.
-        phase: "after a further turn"
-        store_handed: handed(store)
-        code: lmx_root_turn(root, lmx_clock_ticks())
-        c.printf("l2_eternal_driver: further turn code %d, store cells %u -> %u, entries unmoved %d\n", code, (cast: (unsigned) store_handed), (cast: (unsigned) handed(store)), unmoved(retained, n))
-        check(code = c.LMX_ROOT_OK || code = c.LMX_ROOT_DONE, "a further turn of R0 is accepted or reports R0 done")
-        check(lmx_root_eternal(root) = retained, "the array is the same array")
-        inspect(root)
+    ---
+    phase: "after explicit collection"
+    check(lmx_gc_collect(arena, lmx_root_thread(root)) = c.LMX_GC_OK, "owner-arena collection completes")
+    check(l2_program_qualified_count() = n, "producer count is unchanged by collection")
+    i: 0U
+    while: saved != 0 && saved_profiles != 0 && i < n
+        check((cast: (@: void) l2_program_qualified_at(i)) = saved[i], "qualified root physical address is unchanged by collection")
+        check((cast: (@: void) root_profile(arena, l2_program_qualified_at(i))) = saved_profiles[i], "qualified root exact profile is unchanged by collection")
+        i: i + 1U
+    ---
+    inspect(root)
+    if: saved != 0
         free((cast: (@: void) saved))
         saved: 0
+    ---
+    if: saved_profiles != 0
+        free((cast: (@: void) saved_profiles))
+        saved_profiles: 0
     ---
 return: lmx_root_close(root)
 
@@ -292,10 +206,10 @@ fn: main (int: argc; @@: char argv) int
         fputs("l2_eternal_driver: expected number of roots missing\n", l1_stdout())
         return: 2
     ---
-    phase: "the generated program"
+    phase: "generated program"
     status: l2_generated_main()
-    check(status = 0, "the generated main returned 0")
-    check(hooked = 1, "it closed its root exactly once, through this driver")
+    check(status = 0, "generated main returned 0")
+    check(hooked = 1, "generated main closed exactly one root")
     if: failures != 0
         c.printf("l2_eternal_driver: %d failed of %d\n", failures, checks)
         return: 1

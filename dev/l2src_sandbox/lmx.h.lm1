@@ -26,9 +26,11 @@ end: prototype
 # SPEC 2 / ABI 3.1: the only universal Structure representation, settled by the user
 # on 2026-09-12.  Field order is normative.
 #
-#   node  the lexical parent; NULL at a lexical root.  Merge and new Message
+#   parent  the immediate structural parent; NULL at a structural root.  Merge and new Message
 #         creation copy the used graph with the same traversal, rewriting
-#         destination node links through the source-to-copy map.
+#         destination parent links through the source-to-copy map.  This field is
+#         not the reserved source word / call parameter `node`: that parameter is
+#         the lexical space above the method and stays fixed for its activation.
 #   len   exclusively the number of immediate children.  Not bytes, not
 #         characters, not an Array length (that is LmxArrayDesc.len).
 #   data  points to an ordered array of len child pointers of type void *:
@@ -41,10 +43,13 @@ end: prototype
 # directly at its cell (an interned char is &all_chars['!']); an Array child points
 # at its {len, capacity, data} record; a known function child points at its {addr, sig}
 # record.  Children are never inline Lmx records, and only a target classified as a
-# Structure has node/len/data.  A callable is an ordinary Structure M: physical
-# slot 0 points at the shared METHOD record and later slots hold that callable
-# occurrence's own fields.  M.node is its lexical parent.  The reserved node
-# argument of a call is the selected M itself (SPEC 21.2, 21.8).
+# Structure has parent/len/data.  A callable is an ordinary Structure M: physical slot 0 points at
+# the shared LmxCallable descriptor (which refers to METHOD), and later slots hold that callable
+# occurrence's own fields.  The old direct-METHOD value in slot 0 is transitional only.  M.parent
+# is its immediate structural parent.  At method entry the reserved `Lmx *node` argument is
+# M.parent: the lexical space above the method.  It stays fixed while nested bodies execute;
+# their own parent links do not rebind it. `node\field` starts at that above-method space, while
+# the separate hidden `self` is M and owns load/dirty state.
 #
 # The field count is fixed at construction (ABI 14.22).  Nested code may replace the
 # void * references in the slots; it never adds, moves or removes slots.  Nothing
@@ -58,7 +63,7 @@ end: prototype
 # falls into, never by a tag stored here.  A fourth field here is a DEFECT, not a
 # convenience.
 struct: Lmx
-    @: Lmx node
+    @: Lmx parent
     int: len
     @: void data
 end: Lmx
@@ -97,8 +102,8 @@ enum: LmxType
     # other"; "ЧЕМ МАССИВЫ ОТЛИЧАЮТСЯ ОТ ВСЕГО ОСТАЛЬНОГО? НИЧЕМ!!!", Mikhail,
     # 2026-09-17).  A slot ADDRESS classifies as this; the child stored in the slot
     # is classified on its own value.  The number 7 is unchanged; the name is not
-    # `BRANCH` any more, because the spec uses that word for a DIFFERENT mechanism
-    # (the eternal branch, 9.1.4) and this array is not it (step 6 of the removal).
+    # `BRANCH` any more, because the spec uses that word for graph branches and this
+    # representation type is only an array of physical references.
     LMX_TYPE_REFS 7
     # Distinct all_array_of_T identifiers.  Not one ARRAY_OF_REF category.  An array
     # is classified by its descriptor address; backing cells of the same pool reuse
@@ -155,7 +160,7 @@ enum: LmxKind
     LMX_KIND_CHILDREN 4
     # pointer-valued array element; type is T
     LMX_KIND_REF 5
-    # an Lmx header {node, len, data}
+    # an Lmx header {parent, len, data}
     LMX_KIND_STRUCT 6
 end: LmxKind
 
@@ -163,7 +168,7 @@ end: LmxKind
 # input list.  Stored in a pool, never in the Lmx header.  A child pointer to a known
 # function is the address of this record directly.  Methods and their immutable
 # descriptors are shared: graph copying preserves this pointer, while
-# Structure/node links are remapped.  The record stores no node.
+# Structure/parent links are remapped.  The record stores no structural parent.
 fnptr: LmxEntry () void
 
 struct: LmxMethod
@@ -171,7 +176,10 @@ struct: LmxMethod
     unsigned: sig
 end: LmxMethod
 
-# Callable descriptor in physical child[0] of an ordinary Structure M.
+# Callable descriptor in physical child[0] of an ordinary Structure M.  Its physical address
+# selects the native `(node,self,...)` call ABI: node is the lexical space above the method and
+# self=M.  A direct METHOD in
+# child[0] remains the temporary one-node compatibility ABI.
 # Holds a REFERENCE to the native METHOD record and the descriptor tree itself.
 # The body tree is M after slot 0, in order: every return: and the rest live
 # there (there can be many returns). Copies SHARE this descriptor. M stays
@@ -198,16 +206,23 @@ struct: LmxArrayDesc
     @: void data
 end: LmxArrayDesc
 
-# One entry of the arena's index: the half-open interval [lo, hi) of ONE array
-# of the arena, and the descriptor of that array.  The entry carries no stride,
-# kind or type of its own -- those belong to the array and are read through its
-# descriptor (Mikhail, 2026-09-17: "_таблицу адрес->дескриптор массива_").  The
-# arrays never move, so it is these ENTRIES that are ordered and bisected, never
+# One entry of an arena's address index: the half-open interval [lo, hi) of ONE
+# typed array, the descriptor of that array, and the arena that truly owns its
+# storage.  `owner` equals the indexing arena for a local interval.  An imported
+# sealed interval is a non-owning view in the same sorted index and keeps the
+# original owner; importing never adopts its blocks or array descriptor.
+#
+# The entry carries no stride, kind, type or qualifier code of its own -- exact
+# representation and the optional physical profile are read through `array`.
+# Arrays never move, so it is these ENTRIES that are ordered and bisected, never
 # the arrays.
 struct: LmxRange
     @: void lo
     @: void hi
     @: LmxPool array
+    # Opaque only because LmxArena is defined after this shared ABI record.  Every writer
+    # stores an actual LmxArena physical address and lmx_range_home casts at the boundary.
+    @: void owner
 end: LmxRange
 
 # A typed service array.  2 lists them and 6.5 spells the Array one out: one per
@@ -260,6 +275,16 @@ struct: LmxPool
     size_t: chunk_capacity
     int: kind
     int: type
+    # Optional PHYSICAL receiver-expression/profile identity.  This is the address of an
+    # ordinary graph Structure in its owner's arena, not a wrapper or numeric qualifier.
+    # kind/type continue to say exactly how cells are represented; two arrays may therefore
+    # have identical representation and different profiles.  Qualification is found only
+    # by address -> range -> array -> this physical graph reference.
+    @: Lmx profile
+    # Lifecycle/GC policy only.  A sealed array cannot grow or hand out more cells, and GC
+    # neither marks nor sweeps its chunks.  This bit NEVER means any language qualifier:
+    # sharing/copy decisions compare the explicit physical profile reference instead.
+    unsigned: sealed
     # The arena's list of its N arrays, linked through the descriptors themselves:
     # an array of the arena is exactly this record, so no second node describes it
     # (Mikhail, 2026-09-17: "N массивов в арене ... ЧТО ЕЩЁ НАДО?").

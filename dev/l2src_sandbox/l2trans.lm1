@@ -11492,12 +11492,34 @@ fn: l2_prep_addr (const: @(LmP0Node node); int: mi; const: @(char ind); @: char 
     int: oi
     int: fi
     int: temp
+    size_t: pn
+    int: pni
+    int: pres
+    int: pkind
     c.array: [256]: char nm
     if: node = 0 || dest = 0 || ind = 0 || node\as = 0 || node\as\frame = 0 || node\as\frame\body = 0
         return: 1
-    # The address of a field: render the field read the way every other field
-    # read is rendered, and take its address.
+    # @: Named\field on a mutable named Structure: the existing field-path
+    # walk leaves l2_pxp on the leaf cell; the address is a typed pointer to
+    # that cell. Eternal named fields are refused in l2_check_addr (M0).
     if: l2_count_active(node\as\frame\body) = 3
+        f: node\as\frame\body\first_field
+        nm[0]: 0
+        pn: l2_join_path(f, 3, nm, 255U)
+        pni: 0 - 1
+        pres: 0 - 1
+        if: pn != 0U && l2_path_root(nm, pn, @ pni, @ pres) = 0 && pni >= 0
+            pkind: 0
+            if: l2_emit_path(nm, pn, mi, ind, node, @ pkind) != 0
+                return: 1
+            if: pkind = 0 && c.sprintf(dest, "(cast: (@: size_t) l2_pxp[0])") < 0
+                return: 1
+            if: pkind = 1 && c.sprintf(dest, "(cast: (@: char) l2_pxp[0])") < 0
+                return: 1
+            if: pkind != 0 && pkind != 1
+                return: 1
+            return: 0
+        ---
         nm[0]: 0
         if: l2_emit_fields(l2_next_active(node\as\frame\body\first_field), 3, mi, "", nm) != 0
             return: 1

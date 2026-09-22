@@ -670,13 +670,14 @@ $fixtures = @(
         Needle = 'the address of an eternal branch field cannot be taken'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_eternal_addr_flat_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'the address of an eternal branch field cannot be taken'; Absent = @(); Debt = @() },
-    # THE CONTROL AND A RECORDED GAP.  The same shape on a MUTABLE named Structure is NOT refused by the
-    # rule; what it hits is a missing lowering: `@ A\e` goes into the generated L1 as raw text.  That is
-    # the debt pinned here.  When the lowering is written this row turns red ON PURPOSE: the same
-    # lowering would make `@: E\e` compile, and the rule above must already be in.
-    [pscustomobject]@{ Name = 'unit_named_addr_gap.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
-        Absent = @();
-        Debt = @('@ A\e)') },
+    # THE CONTROL, NOW LOWERED.  `@: Named\field` on a mutable named Structure walks the existing
+    # field-path helper to the leaf cell and yields a typed address of that cell.  The M0 rows
+    # above still refuse the eternal spelling; this row must keep running.  The former residue
+    # `@ A\e)` is Absent; the typed cell pointer is the positive lowering.
+    [pscustomobject]@{ Name = 'unit_named_addr_gap.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @('@ A\e)');
+        Debt = @('(cast: (@: size_t) l2_pxp[0])') },
     # THE SAME RULE FOR A HIDDEN/DYNAMIC INPUT (FABLE-L2-ARG-ADDRESS-PROOF-20260921-84).  A free name
     # read before the body's own same-name binding line arrives in a hidden formal, and that line
     # binds it exactly as it binds a declared formal.  The matrix runs for int and for size_t.

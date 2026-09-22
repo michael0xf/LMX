@@ -1,0 +1,81 @@
+# Adapted from lingvamyxa_prev/tests/trans_implements_methods.lm2.
+# Named Structures are the current descriptor representation; fields need a
+# literal. Compile-time implements(A, B, C) is first-level field names, empty
+# consumer overlap true (ThinConsumer).
+
+User:
+    size_t: equals 0U
+    size_t: extra 0U
+end: User
+
+Plain:
+    size_t: toString 0U
+end: Plain
+
+Equatable:
+    size_t: equals 0U
+end: Equatable
+
+Serializable:
+    size_t: serialize 0U
+end: Serializable
+
+MultiCandidate:
+    size_t: first 0U
+    size_t: second 0U
+    size_t: extra 0U
+end: MultiCandidate
+
+CompleteRequirement:
+    size_t: first 0U
+    size_t: second 0U
+end: CompleteRequirement
+
+IncompleteRequirement:
+    size_t: first 0U
+    size_t: missing 0U
+end: IncompleteRequirement
+
+QuotedCandidate:
+    size_t: quotedField 0U
+end: QuotedCandidate
+
+QuotedRequirement:
+    size_t: quotedField 0U
+end: QuotedRequirement
+
+SelfDescribing:
+    size_t: inspect 0U
+end: SelfDescribing
+
+ThinConsumer:
+    size_t: extra 0U
+end: ThinConsumer
+
+fn: m () int
+    size_t: q
+    q: 1U
+    return: 0
+end: m
+
+fn: main () int
+    if: implements(User, Equatable, Equatable) != 1
+        return: 1
+    if: implements(Plain, Equatable, Equatable) != 0
+        return: 2
+    if: implements(User, Serializable, Serializable) != 0
+        return: 3
+    if: implements(MultiCandidate, CompleteRequirement, CompleteRequirement) != 1
+        return: 4
+    if: implements(MultiCandidate, IncompleteRequirement, IncompleteRequirement) != 0
+        return: 5
+    if: implements(QuotedCandidate, QuotedRequirement, QuotedRequirement) != 1
+        return: 6
+    if: implements(SelfDescribing, SelfDescribing, SelfDescribing) != 1
+        return: 7
+    if: implements(Plain, Equatable, ThinConsumer) != 1
+        return: 8
+    if: implements(User, Equatable, ThinConsumer) != 1
+        return: 9
+    return: 0
+end: main

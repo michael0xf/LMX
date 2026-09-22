@@ -1,0 +1,37 @@
+# Adapted from lingvamyxa_prev/tests/trans_implements_namespace_import.lm2.
+# Current l2trans has no import: of descriptor files; imported and local
+# descriptors live in one unit. Cross-shape implements stays false.
+
+ImportedCandidate:
+    size_t: importedField 0U
+    size_t: extra 0U
+end: ImportedCandidate
+
+ImportedRequirement:
+    size_t: importedField 0U
+end: ImportedRequirement
+
+LocalCandidate:
+    size_t: localField 0U
+    size_t: extra 0U
+end: LocalCandidate
+
+LocalRequirement:
+    size_t: localField 0U
+end: LocalRequirement
+
+fn: m () int
+    size_t: q
+    q: 1U
+    return: 0
+end: m
+
+fn: main () int
+    if: implements(ImportedCandidate, ImportedRequirement, ImportedRequirement) != 1
+        return: 1
+    if: implements(LocalCandidate, LocalRequirement, LocalRequirement) != 1
+        return: 2
+    if: implements(LocalCandidate, ImportedRequirement, ImportedRequirement) != 0
+        return: 3
+    return: 0
+end: main

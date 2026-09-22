@@ -1,0 +1,12 @@
+# Adapted from lingvamyxa_prev/tests/trans_invalid_implements_unknown_required.lm2.
+# Consumer is KnownCandidate so the miss lands on the required name.
+
+KnownCandidate:
+    size_t: knownField 0U
+end: KnownCandidate
+
+fn: main () int
+    if: implements(KnownCandidate, MissingProtocol, KnownCandidate) != 0
+        return: 1
+    return: 0
+end: main

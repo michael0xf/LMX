@@ -106,6 +106,13 @@ int: l2_ns_has_char 0
 # emitted predef under the SAME condition: without it the constructor is
 # called with no prototype and its pointer is truncated to int.
 int: l2_ns_has_array 0
+# Named-structure type of a formal (k>=0) or return (k=-1).  The emitted ABI
+# is the ordinary graph pointer; this table is only the implements descriptor.
+int: l2_nsty_n 0
+int: l2_nsty_cap 0
+@: int l2_nsty_mi 0
+@: int l2_nsty_k 0
+@: int l2_nsty_ni 0
 @: int l2_m_throws 0
 @: size_t l2_mres_first 0
 @: size_t l2_mres_last 0
@@ -402,6 +409,32 @@ prototype:
     fn: l2_array_count_is (const: @(LmP0Text t)) int
     fn: l2_literal_value (const: @(LmP0Text t)) size_t
     fn: l2_ns_find (const: @(LmP0Text t)) int
+    fn: l2_ident_payload (const: @(LmP0Text atom); @: LmP0Text out) int
+    fn: l2_payload_eq (const: @(LmP0Text atom); const: @(char s)) int
+    fn: l2_ns_find_payload (const: @(LmP0Text t)) int
+    fn: l2_ns_has_field (int: ni; const: @(char name)) int
+    fn: l2_descriptor_implements (int: cand; int: req; int: cons; @: int out_result) int
+    fn: l2_prim_kind (const: @(LmP0Text name); @: int out_cell; @: int out_forbid) int
+    fn: l2_primitive_leaf_implements (const: @(LmP0Text cand); const: @(LmP0Text req); @: int out_result) int
+    fn: l2_implements (const: @(LmP0Text cand); const: @(LmP0Text req); const: @(LmP0Text cons); @: int out_result) int
+    fn: l2_implements_arg_atom (const: @(LmP0Node node); @: LmP0Text out) int
+    fn: l2_check_implements (const: @(LmP0Node node); const: @(char path)) int
+    fn: l2_prep_implements (const: @(LmP0Node node); @: char dest) int
+    fn: l2_nsty_set (int: mi; int: k; int: ni) int
+    fn: l2_nsty_get (int: mi; int: k) int
+    fn: l2_nsty_of_name (int: mi; const: @(LmP0Text name)) int
+    fn: l2_uses_is_slash (const: @(LmP0Text text)) int
+    fn: l2_uses_is_control (const: @(LmP0Text head)) int
+    fn: l2_uses_slash_off (const: @(char data); size_t: length) size_t
+    sub: l2_uses_path_add (@: char paths; @: size_t count; const: @(char path); size_t: length)
+    fn: l2_uses_name_eq (const: @(LmP0Text name); const: @(LmP0Text varb)) int
+    fn: l2_uses_scan_follow (const: @(LmP0Text varb); @: char paths; @: size_t count; @: LmP0Field start) @: LmP0Field
+    fn: l2_uses_walk_frame (const: @(LmP0Text varb); @: char paths; @: size_t count; const: @(LmP0Frame frame)) int
+    fn: l2_uses_walk_structure (const: @(LmP0Text varb); @: char paths; @: size_t count; const: @(LmP0Structure body)) int
+    fn: l2_uses_walk_node (const: @(LmP0Text varb); @: char paths; @: size_t count; const: @(LmP0Node node)) int
+    fn: l2_admit_implements (int: cand; int: req; const: @(LmP0Text cand_name); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
+    fn: l2_admit_consumer_uses (const: @(LmP0Text cand_name); int: req; const: @(LmP0Text varb); const: @(LmP0Frame consumer); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
+    fn: l2_fn_frame (int: mi) @: LmP0Frame
     fn: l2_ebr_find (const: @(LmP0Text t)) int
     fn: l2_ns_rank (int: ni) int
     fn: l2_ns_in_eternal (int: ni) int
@@ -2641,11 +2674,13 @@ fn: l2_parse_library (const: @(char path)) int
     while: i < l2_m_n
         if: l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && l2_ml_rebuild(l2_m_body[i]\as\structure, path) != 0
             return: 1
+        l2_cur_mi: i
         if: l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && l2_check_body(l2_m_body[i]\as\structure, i, path, 0) != 0
             return: 1
         if: l2_m_node[i] != 0 && l2_m_node[i]\as != 0 && l2_check_ret_tr(i, path, l2_ret_tr(l2_m_node[i]\as\frame), l2_m_node[i]) != 0
             return: 1
         i: i + 1
+    l2_cur_mi: 0 - 1
     if: l2_throws_close() != 0
         return: 1
     if: l2_dyn_close(path) != 0
@@ -5301,7 +5336,7 @@ fn: l2_is_asgn (const: @(LmP0Node stmt)) int
     h: stmt\as\frame\head
     if: h = 0 || l2_ident(h) = 0
         return: 0
-    if: l2_frame_head(stmt, "if") || l2_frame_head(stmt, "else") || l2_frame_head(stmt, "while") || l2_frame_head(stmt, "for") || l2_frame_head(stmt, "return") || l2_frame_head(stmt, "fn") || l2_frame_head(stmt, "sub") || l2_frame_head(stmt, "end") || l2_frame_head(stmt, "char") || l2_frame_head(stmt, "int") || l2_frame_head(stmt, "size_t") || l2_frame_head(stmt, "unsigned") || l2_frame_head(stmt, "ulong") || l2_frame_head(stmt, "@")
+    if: l2_frame_head(stmt, "if") || l2_frame_head(stmt, "else") || l2_frame_head(stmt, "while") || l2_frame_head(stmt, "for") || l2_frame_head(stmt, "return") || l2_frame_head(stmt, "fn") || l2_frame_head(stmt, "sub") || l2_frame_head(stmt, "end") || l2_frame_head(stmt, "char") || l2_frame_head(stmt, "int") || l2_frame_head(stmt, "size_t") || l2_frame_head(stmt, "unsigned") || l2_frame_head(stmt, "ulong") || l2_frame_head(stmt, "@") || l2_frame_head(stmt, "implements")
         return: 0
     if: l2_find_method(h) >= 0 || l2_is_known(h)
         return: 0
@@ -5562,6 +5597,8 @@ fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char p
     # is not that operation, and no graph-interpreter admission entry exists in
     # the current kernel ABI, so this case stays explicit fail-closed.
     if: l2_colon_is_graph_ty(target_ty) != 0 && l2_colon_is_graph_ty(value_ty) != 0
+        if: only\value\kind = c.LM_P0_NODE_ATOM && l2_nsty_of_name(mi, stmt\as\frame\head) >= 0 && l2_nsty_of_name(mi, only\value\as\atom) >= 0
+            return: l2_admit_consumer_uses(only\value\as\atom, l2_nsty_of_name(mi, stmt\as\frame\head), stmt\as\frame\head, l2_fn_frame(mi), path, stmt, "assignment")
         return: l2_error(path, stmt, "graph assignment admission requires receiving-expression tests")
 return: 0
 
@@ -8948,6 +8985,584 @@ fn: l2_ns_find (const: @(LmP0Text t)) int
     ---
 return: 0 - 1
 
+# Backtick-quoted identifier payload (parser_text lm_p0_identifier_payload).
+fn: l2_ident_payload (const: @(LmP0Text atom); @: LmP0Text out) int
+    if: atom = 0 || out = 0 || atom\data = 0
+        return: 0
+    out\data: atom\data
+    out\length: atom\length
+    if: atom\length >= 2U && atom\data[0] = 96 && atom\data[atom\length - 1U] = 96
+        out\data: atom\data + 1U
+        out\length: atom\length - 2U
+    ---
+return: 1
+
+fn: l2_payload_eq (const: @(LmP0Text atom); const: @(char s)) int
+    @: char data
+    size_t: n
+    size_t: sl
+    if: atom = 0 || atom\data = 0 || s = 0
+        return: 0
+    data: atom\data
+    n: atom\length
+    if: n >= 2U && data[0] = 96 && data[n - 1U] = 96
+        data: data + 1U
+        n: n - 2U
+    sl: strlen(s)
+    if: n != sl
+        return: 0
+return: memcmp(data, s, n) = 0
+
+fn: l2_ns_find_payload (const: @(LmP0Text t)) int
+    @: char data
+    size_t: n
+    int: i 0
+    if: t = 0 || t\data = 0
+        return: 0 - 1
+    data: t\data
+    n: t\length
+    if: n >= 2U && data[0] = 96 && data[n - 1U] = 96
+        data: data + 1U
+        n: n - 2U
+    while: i < l2_ns_n
+        if: l2_ns_name[i] != 0 && l2_ns_name[i]\data != 0 && l2_ns_name[i]\length = n && memcmp(l2_ns_name[i]\data, data, n) = 0
+            return: i
+        i: i + 1
+    ---
+return: 0 - 1
+
+fn: l2_ns_has_field (int: ni; const: @(char name)) int
+    int: k 0
+    size_t: n
+    if: ni < 0 || name = 0
+        return: 0
+    n: strlen(name)
+    if: n = 0U
+        return: 0
+    while: k < l2_nsf_n
+        if: l2_nsf_owner[k] = ni && l2_nsf_fname[k] != 0 && l2_nsf_fname[k]\data != 0 && l2_nsf_fname[k]\length = n && memcmp(l2_nsf_fname[k]\data, name, n) = 0
+            return: 1
+        k: k + 1
+    ---
+return: 0
+
+# First-level field names, prior lm_trans_descriptor_implements: every consumer
+# field that is also on required must be present on candidate. Empty required
+# or empty consumer is true.
+fn: l2_descriptor_implements (int: cand; int: req; int: cons; @: int out_result) int
+    int: k 0
+    int: req_n 0
+    int: cons_n 0
+    @: char fname
+    c.array: [128]: char buf
+    if: out_result != 0
+        \out_result: 0
+    if: cand < 0 || req < 0 || cons < 0 || out_result = 0
+        return: 1
+    while: k < l2_nsf_n
+        if: l2_nsf_owner[k] = req
+            req_n: req_n + 1
+        if: l2_nsf_owner[k] = cons
+            cons_n: cons_n + 1
+        k: k + 1
+    if: req_n = 0 || cons_n = 0
+        \out_result: 1
+        return: 0
+    k: 0
+    while: k < l2_nsf_n
+        if: l2_nsf_owner[k] = cons && l2_nsf_fname[k] != 0 && l2_nsf_fname[k]\data != 0 && l2_nsf_fname[k]\length > 0U && l2_nsf_fname[k]\length < 128U
+            memcpy(buf, l2_nsf_fname[k]\data, l2_nsf_fname[k]\length)
+            buf[l2_nsf_fname[k]\length]: 0
+            fname: buf
+            if: l2_ns_has_field(req, fname) != 0
+                if: l2_ns_has_field(cand, fname) = 0
+                    \out_result: 0
+                    return: 0
+                ---
+            ---
+        ---
+        k: k + 1
+    ---
+    \out_result: 1
+return: 0
+
+# Hosted primitive.description rows from lingvamyxa_prev/lm2/primitive.lm2.
+# cell=0 and convert=forbidden are void/None; every other listed name has a cell
+# and a non-forbidden convert (keyed).
+fn: l2_prim_kind (const: @(LmP0Text name); @: int out_cell; @: int out_forbid) int
+    if: out_cell != 0
+        \out_cell: 0
+    if: out_forbid != 0
+        \out_forbid: 0
+    if: name = 0
+        return: 0
+    if: l2_payload_eq(name, "void") != 0 || l2_payload_eq(name, "None") != 0
+        \out_cell: 0
+        \out_forbid: 1
+        return: 1
+    if: l2_payload_eq(name, "int") != 0 || l2_payload_eq(name, "u32") != 0 || l2_payload_eq(name, "long") != 0 || l2_payload_eq(name, "double") != 0 || l2_payload_eq(name, "Boolean") != 0 || l2_payload_eq(name, "FILE") != 0 || l2_payload_eq(name, "char") != 0 || l2_payload_eq(name, "short") != 0 || l2_payload_eq(name, "float") != 0 || l2_payload_eq(name, "unsigned") != 0 || l2_payload_eq(name, "size_t") != 0 || l2_payload_eq(name, "u8") != 0 || l2_payload_eq(name, "u16") != 0 || l2_payload_eq(name, "u64") != 0 || l2_payload_eq(name, "i8") != 0 || l2_payload_eq(name, "i16") != 0 || l2_payload_eq(name, "i32") != 0 || l2_payload_eq(name, "i64") != 0 || l2_payload_eq(name, "bool") != 0 || l2_payload_eq(name, "uint") != 0 || l2_payload_eq(name, "ulong") != 0
+        \out_cell: 1
+        \out_forbid: 0
+        return: 1
+return: 0
+
+# Prior lm_trans_primitive_leaf_implements: 0 = decided, 1 = malformed, 2 = not
+# a primitive pair (fall through to structural descriptors).
+fn: l2_primitive_leaf_implements (const: @(LmP0Text cand); const: @(LmP0Text req); @: int out_result) int
+    int: c_cell 0
+    int: r_cell 0
+    int: c_forb 0
+    int: r_forb 0
+    int: c_ok
+    int: r_ok
+    @: char cd
+    @: char rd
+    size_t: cn
+    size_t: rn
+    if: out_result != 0
+        \out_result: 0
+    if: cand = 0 || req = 0 || cand\data = 0 || req\data = 0 || out_result = 0
+        return: 1
+    cd: cand\data
+    cn: cand\length
+    rd: req\data
+    rn: req\length
+    if: cn >= 2U && cd[0] = 96 && cd[cn - 1U] = 96
+        cd: cd + 1U
+        cn: cn - 2U
+    if: rn >= 2U && rd[0] = 96 && rd[rn - 1U] = 96
+        rd: rd + 1U
+        rn: rn - 2U
+    if: l2_payload_eq(cand, "void") != 0 || l2_payload_eq(req, "void") != 0 || l2_payload_eq(cand, "None") != 0 || l2_payload_eq(req, "None") != 0
+        \out_result: 0
+        return: 0
+    c_ok: l2_prim_kind(cand, @ c_cell, @ c_forb)
+    r_ok: l2_prim_kind(req, @ r_cell, @ r_forb)
+    if: c_ok != 0 && cn = rn && memcmp(cd, rd, cn) = 0
+        \out_result: 1
+        return: 0
+    if: c_ok = 0 || r_ok = 0
+        return: 2
+    if: c_cell = 0 || r_cell = 0
+        \out_result: 0
+        return: 0
+    if: c_forb != 0 || r_forb != 0
+        \out_result: 0
+        return: 0
+    \out_result: 1
+return: 0
+
+fn: l2_implements (const: @(LmP0Text cand); const: @(LmP0Text req); const: @(LmP0Text cons); @: int out_result) int
+    int: cni
+    int: rni
+    int: sni
+    int: status
+    int: dummy_cell 0
+    int: dummy_forb 0
+    int: k 0
+    int: req_n 0
+    if: out_result != 0
+        \out_result: 0
+    if: cand = 0 || req = 0 || cons = 0 || out_result = 0
+        return: 1
+    sni: l2_ns_find_payload(cons)
+    if: sni < 0
+        return: 2
+    status: l2_primitive_leaf_implements(cand, req, out_result)
+    if: status = 1
+        return: 1
+    if: status = 0
+        return: 0
+    cni: l2_ns_find_payload(cand)
+    rni: l2_ns_find_payload(req)
+    if: cni < 0 && l2_prim_kind(cand, @ dummy_cell, @ dummy_forb) != 0 && rni >= 0
+        while: k < l2_nsf_n
+            if: l2_nsf_owner[k] = rni
+                req_n: req_n + 1
+            k: k + 1
+        if: req_n = 0
+            \out_result: 1
+            return: 0
+        \out_result: 0
+        return: 0
+    if: rni < 0 && l2_prim_kind(req, @ dummy_cell, @ dummy_forb) != 0 && cni >= 0
+        \out_result: 0
+        return: 0
+    if: cni < 0
+        return: 3
+    if: rni < 0
+        return: 4
+return: l2_descriptor_implements(cni, rni, sni, out_result)
+
+fn: l2_implements_arg_atom (const: @(LmP0Node node); @: LmP0Text out) int
+    if: node = 0 || out = 0 || node\kind != c.LM_P0_NODE_ATOM || node\as = 0 || node\as\atom = 0
+        return: 0
+    out\data: node\as\atom\data
+    out\length: node\as\atom\length
+return: 1
+
+fn: l2_check_implements (const: @(LmP0Node node); const: @(char path)) int
+    const: @: LmP0Frame call
+    @: LmP0Field a0
+    @: LmP0Field a1
+    @: LmP0Field a2
+    @: LmP0Field a3
+    @: LmP0Text cand 0
+    @: LmP0Text req 0
+    @: LmP0Text cons 0
+    int: result 0
+    int: status
+    if: node = 0 || node\as = 0 || node\as\frame = 0
+        return: l2_error(path, node, "implements expects candidate, required, consumer")
+    call: node\as\frame
+    if: call\body = 0 || call\trailer != 0 || call\body\trailer != 0 || l2_count_active(call\body) != 3
+        return: l2_error(path, node, "implements expects candidate, required, consumer")
+    a0: l2_next_active(call\body\first_field)
+    a1: l2_next_active(a0\next)
+    a2: l2_next_active(a1\next)
+    a3: l2_next_active(a2\next)
+    cand: (cast: (@: LmP0Text) l2_xmalloc(c.sizeof(c.LmP0Text)))
+    req: (cast: (@: LmP0Text) l2_xmalloc(c.sizeof(c.LmP0Text)))
+    cons: (cast: (@: LmP0Text) l2_xmalloc(c.sizeof(c.LmP0Text)))
+    if: cand = 0 || req = 0 || cons = 0
+        if: cand != 0
+            l2_xfree((cast: (@: void) cand))
+        if: req != 0
+            l2_xfree((cast: (@: void) req))
+        if: cons != 0
+            l2_xfree((cast: (@: void) cons))
+        return: l2_error(path, node, "out of memory")
+    status: 1
+    if: a3 != 0 || l2_implements_arg_atom(a0\value, cand) = 0 || l2_implements_arg_atom(a1\value, req) = 0 || l2_implements_arg_atom(a2\value, cons) = 0
+        l2_xfree((cast: (@: void) cand))
+        l2_xfree((cast: (@: void) req))
+        l2_xfree((cast: (@: void) cons))
+        return: l2_error(path, node, "implements expects descriptor names")
+    status: l2_implements(cand, req, cons, @ result)
+    l2_xfree((cast: (@: void) cand))
+    l2_xfree((cast: (@: void) req))
+    l2_xfree((cast: (@: void) cons))
+    if: status = 2
+        return: l2_error(path, a2\value, "unknown consumer descriptor")
+    if: status = 3
+        return: l2_error(path, a0\value, "unknown candidate descriptor")
+    if: status = 4
+        return: l2_error(path, a1\value, "unknown required descriptor")
+    if: status != 0
+        return: l2_error(path, node, "malformed implements descriptor")
+return: 0
+
+fn: l2_prep_implements (const: @(LmP0Node node); @: char dest) int
+    const: @: LmP0Frame call
+    @: LmP0Field a0
+    @: LmP0Field a1
+    @: LmP0Field a2
+    @: LmP0Text cand 0
+    @: LmP0Text req 0
+    @: LmP0Text cons 0
+    int: result 0
+    int: status
+    if: dest = 0 || node = 0 || node\as = 0 || node\as\frame = 0 || node\as\frame\body = 0
+        return: 1
+    call: node\as\frame
+    a0: l2_next_active(call\body\first_field)
+    a1: l2_next_active(a0\next)
+    a2: l2_next_active(a1\next)
+    cand: (cast: (@: LmP0Text) l2_xmalloc(c.sizeof(c.LmP0Text)))
+    req: (cast: (@: LmP0Text) l2_xmalloc(c.sizeof(c.LmP0Text)))
+    cons: (cast: (@: LmP0Text) l2_xmalloc(c.sizeof(c.LmP0Text)))
+    if: cand = 0 || req = 0 || cons = 0
+        if: cand != 0
+            l2_xfree((cast: (@: void) cand))
+        if: req != 0
+            l2_xfree((cast: (@: void) req))
+        if: cons != 0
+            l2_xfree((cast: (@: void) cons))
+        return: 1
+    if: l2_implements_arg_atom(a0\value, cand) = 0 || l2_implements_arg_atom(a1\value, req) = 0 || l2_implements_arg_atom(a2\value, cons) = 0
+        l2_xfree((cast: (@: void) cand))
+        l2_xfree((cast: (@: void) req))
+        l2_xfree((cast: (@: void) cons))
+        return: 1
+    status: l2_implements(cand, req, cons, @ result)
+    l2_xfree((cast: (@: void) cand))
+    l2_xfree((cast: (@: void) req))
+    l2_xfree((cast: (@: void) cons))
+    if: status != 0
+        return: 1
+    if: result != 0
+        dest[0]: 49
+        dest[1]: 0
+    else:
+        dest[0]: 48
+        dest[1]: 0
+    ---
+return: 0
+
+fn: l2_nsty_set (int: mi; int: k; int: ni) int
+    int: cap
+    @: int nmi 0
+    @: int nk 0
+    @: int nni 0
+    if: ni < 0
+        return: 0
+    if: l2_nsty_n >= l2_nsty_cap
+        cap: l2_nsty_cap
+        if: cap < 1
+            cap: 8
+        while: cap <= l2_nsty_n
+            if: cap > c.INT_MAX / 2
+                cap: l2_nsty_n + 1
+            else:
+                cap: cap * 2
+            ---
+        nmi: (cast: (@: int) malloc((cast: (size_t) cap) * c.sizeof(c.int)))
+        nk: (cast: (@: int) malloc((cast: (size_t) cap) * c.sizeof(c.int)))
+        nni: (cast: (@: int) malloc((cast: (size_t) cap) * c.sizeof(c.int)))
+        if: nmi = 0 || nk = 0 || nni = 0
+            if: nmi != 0
+                free((cast: (@: void) nmi))
+            if: nk != 0
+                free((cast: (@: void) nk))
+            if: nni != 0
+                free((cast: (@: void) nni))
+            return: 1
+        if: l2_nsty_n > 0
+            memcpy((cast: (@: void) nmi), (cast: (@: void) l2_nsty_mi), (cast: (size_t) l2_nsty_n) * c.sizeof(c.int))
+            memcpy((cast: (@: void) nk), (cast: (@: void) l2_nsty_k), (cast: (size_t) l2_nsty_n) * c.sizeof(c.int))
+            memcpy((cast: (@: void) nni), (cast: (@: void) l2_nsty_ni), (cast: (size_t) l2_nsty_n) * c.sizeof(c.int))
+        if: l2_nsty_mi != 0
+            free((cast: (@: void) l2_nsty_mi))
+        if: l2_nsty_k != 0
+            free((cast: (@: void) l2_nsty_k))
+        if: l2_nsty_ni != 0
+            free((cast: (@: void) l2_nsty_ni))
+        l2_nsty_mi: nmi
+        l2_nsty_k: nk
+        l2_nsty_ni: nni
+        l2_nsty_cap: cap
+    l2_nsty_mi[l2_nsty_n]: mi
+    l2_nsty_k[l2_nsty_n]: k
+    l2_nsty_ni[l2_nsty_n]: ni
+    l2_nsty_n: l2_nsty_n + 1
+return: 0
+
+fn: l2_nsty_get (int: mi; int: k) int
+    int: i 0
+    while: i < l2_nsty_n
+        if: l2_nsty_mi[i] = mi && l2_nsty_k[i] = k
+            return: l2_nsty_ni[i]
+        i: i + 1
+    ---
+return: 0 - 1
+
+fn: l2_nsty_of_name (int: mi; const: @(LmP0Text name)) int
+    int: fi
+    int: ni
+    if: name = 0
+        return: 0 - 1
+    if: mi >= 0
+        fi: l2_formal_find(mi, name)
+        if: fi >= 0
+            ni: l2_nsty_get(mi, fi)
+            if: ni >= 0
+                return: ni
+            ---
+        ---
+    ---
+return: l2_ns_find_payload(name)
+
+fn: l2_fn_frame (int: mi) @: LmP0Frame
+    if: mi >= 0 && l2_m_node != 0 && l2_m_node[mi] != 0 && l2_m_node[mi]\as != 0
+        return: l2_m_node[mi]\as\frame
+    if: mi < 0 && l2_main_node != 0 && l2_main_node\as != 0
+        return: l2_main_node\as\frame
+return: 0
+
+fn: l2_uses_is_slash (const: @(LmP0Text text)) int
+return: text != 0 && text\length = 1U && text\data != 0 && text\data[0] = 92
+
+fn: l2_uses_is_control (const: @(LmP0Text head)) int
+    if: head = 0
+        return: 0
+    if: l2_text_eq(head, "if") != 0 || l2_text_eq(head, "else") != 0 || l2_text_eq(head, "while") != 0 || l2_text_eq(head, "for") != 0 || l2_text_eq(head, "return") != 0 || l2_text_eq(head, "throw") != 0 || l2_text_eq(head, "catch") != 0 || l2_text_eq(head, "assert") != 0 || l2_text_eq(head, "fn") != 0 || l2_text_eq(head, "sub") != 0 || l2_text_eq(head, "external") != 0 || l2_text_eq(head, "table") != 0 || l2_text_eq(head, "finally") != 0 || l2_text_eq(head, "L2") != 0 || l2_text_eq(head, "implements") != 0 || l2_text_eq(head, "merge") != 0
+        return: 1
+return: 0
+
+fn: l2_uses_slash_off (const: @(char data); size_t: length) size_t
+    size_t: i 0U
+    while: i < length
+        if: data[i] = 92
+            return: i
+        i: i + 1U
+return: length
+
+sub: l2_uses_path_add (@: char paths; @: size_t count; const: @(char path); size_t: length)
+    @: char slot
+    size_t: i 0U
+    size_t: n
+    if: paths = 0 || count = 0 || path = 0 || length = 0U || length >= 128U
+        return
+    while: i < \count
+        slot: paths + (i * 128U)
+        n: strlen(slot)
+        if: n = length && memcmp(slot, path, n) = 0
+            return
+        i: i + 1U
+    if: \count >= 64U
+        return
+    slot: paths + (\count * 128U)
+    memcpy(slot, path, length)
+    slot[length]: 0
+    \count: \count + 1U
+end: l2_uses_path_add
+
+fn: l2_uses_name_eq (const: @(LmP0Text name); const: @(LmP0Text varb)) int
+    @: char ad
+    @: char bd
+    size_t: an
+    size_t: bn
+    if: name = 0 || varb = 0 || name\data = 0 || varb\data = 0
+        return: 0
+    ad: name\data
+    an: name\length
+    bd: varb\data
+    bn: varb\length
+    if: an >= 2U && ad[0] = 96 && ad[an - 1U] = 96
+        ad: ad + 1U
+        an: an - 2U
+    if: bn >= 2U && bd[0] = 96 && bd[bn - 1U] = 96
+        bd: bd + 1U
+        bn: bn - 2U
+    if: an != bn
+        return: 0
+return: memcmp(ad, bd, an) = 0
+
+fn: l2_uses_scan_follow (const: @(LmP0Text varb); @: char paths; @: size_t count; @: LmP0Field start) @: LmP0Field
+    @: LmP0Field field
+    @: LmP0Text name
+    c.array: [128]: char path
+    size_t: used 0U
+    int: tracked
+    if: start = 0 || start\value = 0 || start\value\kind != c.LM_P0_NODE_ATOM
+        return: start
+    name: start\value\as\atom
+    tracked: l2_uses_name_eq(name, varb)
+    field: start\next
+    if: field = 0 || field\value = 0 || field\value\kind != c.LM_P0_NODE_ATOM || l2_uses_is_slash(field\value\as\atom) = 0
+        return: start
+    while: field != 0 && field\value != 0 && field\value\kind = c.LM_P0_NODE_ATOM && l2_uses_is_slash(field\value\as\atom) != 0
+        field: field\next
+        if: field = 0 || field\value = 0 || field\value\kind != c.LM_P0_NODE_ATOM || field\value\as\atom = 0
+            return: start
+        name: field\value\as\atom
+        if: tracked != 0 && name\length > 0U
+            if: used != 0U && used + 1U < 128U
+                path[used]: 92
+                used: used + 1U
+            if: used + name\length < 128U
+                memcpy(path + used, name\data, name\length)
+                used: used + name\length
+            ---
+        ---
+        field: field\next
+    if: tracked != 0 && used > 0U
+        l2_uses_path_add(paths, count, path, used)
+return: field
+
+fn: l2_uses_walk_frame (const: @(LmP0Text varb); @: char paths; @: size_t count; const: @(LmP0Frame frame)) int
+    @: LmP0Text head 0
+    size_t: slash
+    size_t: rest
+    if: varb = 0 || frame = 0
+        return: 0
+    if: frame\head != 0 && frame\head\data != 0 && frame\head\length > 0U
+        slash: l2_uses_slash_off(frame\head\data, frame\head\length)
+        if: slash < frame\head\length
+            if: slash > 0U
+                head: (cast: (@: LmP0Text) l2_xmalloc(c.sizeof(c.LmP0Text)))
+                if: head != 0
+                    head\data: frame\head\data
+                    head\length: slash
+                    if: l2_uses_name_eq(head, varb) != 0 && slash + 1U < frame\head\length
+                        rest: frame\head\length - slash - 1U
+                        l2_uses_path_add(paths, count, frame\head\data + slash + 1U, rest)
+                    ---
+                    l2_xfree((cast: (@: void) head))
+                ---
+            ---
+            return: l2_uses_walk_structure(varb, paths, count, frame\body)
+        ---
+    ---
+return: l2_uses_walk_structure(varb, paths, count, frame\body)
+
+fn: l2_uses_walk_structure (const: @(LmP0Text varb); @: char paths; @: size_t count; const: @(LmP0Structure body)) int
+    @: LmP0Field field
+    @: LmP0Field next
+    if: varb = 0 || body = 0
+        return: 0
+    field: body\first_field
+    while: field != 0
+        next: l2_uses_scan_follow(varb, paths, count, field)
+        if: next != field
+            field: next
+        else:
+            if: l2_uses_walk_node(varb, paths, count, field\value) != 0
+                return: 1
+            field: field\next
+        ---
+return: 0
+
+fn: l2_uses_walk_node (const: @(LmP0Text varb); @: char paths; @: size_t count; const: @(LmP0Node node)) int
+    if: varb = 0 || node = 0
+        return: 0
+    if: node\kind = c.LM_P0_NODE_STRUCTURE && node\as != 0
+        return: l2_uses_walk_structure(varb, paths, count, node\as\structure)
+    if: node\kind = c.LM_P0_NODE_FRAME && node\as != 0
+        return: l2_uses_walk_frame(varb, paths, count, node\as\frame)
+return: 0
+
+fn: l2_admit_implements (int: cand; int: req; const: @(LmP0Text cand_name); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
+    int: compatible 0
+    if: cand < 0 || req < 0
+        return: 0
+    if: cand = req
+        return: 0
+    if: l2_descriptor_implements(cand, req, req, @ compatible) != 0
+        return: l2_error(path, at, "malformed implements descriptor")
+    if: compatible = 0
+        if: context != 0 && strcmp(context, "function argument") = 0
+            return: l2_error(path, at, "implements is false in function argument")
+        if: context != 0 && strcmp(context, "assignment") = 0
+            return: l2_error(path, at, "implements is false in assignment")
+        if: context != 0 && strcmp(context, "return value") = 0
+            return: l2_error(path, at, "implements is false in return value")
+        return: l2_error(path, at, "implements is false")
+return: 0
+
+fn: l2_admit_consumer_uses (const: @(LmP0Text cand_name); int: req; const: @(LmP0Text varb); const: @(LmP0Frame consumer); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
+    int: cand
+    @: char paths
+    size_t: path_count 0U
+    if: cand_name = 0 || req < 0
+        return: 0
+    cand: l2_ns_find_payload(cand_name)
+    if: cand < 0
+        return: 0
+    if: consumer = 0
+        return: l2_admit_implements(cand, req, cand_name, path, at, context)
+    paths: (cast: (@: char) l2_xmalloc(64U * 128U))
+    if: paths = 0
+        return: l2_error(path, at, "out of memory")
+    memset((cast: (@: void) paths), 0, 64U * 128U)
+    if: l2_uses_walk_frame(varb, paths, @ path_count, consumer) != 0
+        l2_xfree((cast: (@: void) paths))
+        return: 1
+    l2_xfree((cast: (@: void) paths))
+    if: path_count = 0U
+        return: 0
+return: l2_admit_implements(cand, req, cand_name, path, at, context)
+
 # An otherwise unrecognized unit-level frame with a matching end is an ordinary
 # named Structure. Reserved heads are matched before this is ever reached, so a
 # malformed reserved construct stays an error rather than becoming a
@@ -9562,6 +10177,14 @@ fn: l2_path_root (const: @(char pd); size_t: pn; @: int out_ni; @: int out_res) 
             \out_res: i
         i: i + 1
     ---
+    if: \out_ni < 0 && \out_res < 0 && l2_cur_mi >= 0
+        i: 0
+        while: i < l2_m_arity[l2_cur_mi]
+            if: l2_fn(l2_cur_mi, i) != 0 && l2_name_is_seg(l2_fn(l2_cur_mi, i), pd, off, len) != 0 && l2_nsty_get(l2_cur_mi, i) >= 0
+                \out_ni: l2_nsty_get(l2_cur_mi, i)
+            i: i + 1
+        ---
+    ---
     if: \out_ni < 0 && \out_res < 0
         return: 1
 return: 0
@@ -9904,6 +10527,17 @@ fn: l2_typed_formal (const: @(LmP0Node node); const: @(char path); @@: LmP0Text 
     int: depth
     if: out_ty = 0 || out_name = 0
         return: l2_error(path, node, "incompatible entry signature")
+    if: node != 0 && node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && node\as\frame != 0 && node\as\frame\head != 0 && l2_ns_find(node\as\frame\head) >= 0
+        if: node\as\frame\trailer != 0 || node\as\frame\body = 0 || node\as\frame\body\trailer != 0 || l2_count_active(node\as\frame\body) != 1
+            return: l2_error(path, node, "incompatible entry signature")
+        f: l2_next_active(node\as\frame\body\first_field)
+        if: f = 0 || f\value = 0 || f\value\as = 0 || f\value\kind != c.LM_P0_NODE_ATOM || l2_ident(f\value\as\atom) = 0
+            return: l2_error(path, node, "incompatible entry signature")
+        \out_name: f\value\as\atom
+        \out_ty: l2_colon_graph_ty()
+        if: \out_ty < 100
+            return: l2_error(path, node, "out of memory")
+        return: 0
     if: l2_frame_head(node, "int")
         \out_ty: 0
         return: l2_int_formal(node, path, out_name)
@@ -10382,6 +11016,12 @@ fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path)) int
         if: l2_fn_set(l2_m_n, j, fa) != 0 || l2_ft_set(l2_m_n, j, ty) != 0
             l2_free_method(l2_m_n)
             return: l2_error(path, fn_node, "out of memory")
+        if: p\value != 0 && p\value\kind = c.LM_P0_NODE_FRAME && p\value\as != 0 && p\value\as\frame != 0 && l2_ns_find(p\value\as\frame\head) >= 0
+            if: l2_nsty_set(l2_m_n, j, l2_ns_find(p\value\as\frame\head)) != 0
+                l2_free_method(l2_m_n)
+                return: l2_error(path, fn_node, "out of memory")
+            ---
+        ---
         p: l2_next_active(p\next)
         j: j + 1
     l2_m_arity[l2_m_n]: ar
@@ -10486,9 +11126,16 @@ fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path)) int
                 return: l2_error(path, fn_node, "out of memory")
         ---
     ---
+    if: is_sub = 0 && field\value\kind = c.LM_P0_NODE_ATOM && l2_ns_find(field\value\as\atom) >= 0
+        l2_m_ret[l2_m_n]: l2_colon_graph_ty()
+        if: l2_m_ret[l2_m_n] < 100
+            return: l2_error(path, fn_node, "out of memory")
+        if: l2_nsty_set(l2_m_n, 0 - 1, l2_ns_find(field\value\as\atom)) != 0
+            return: l2_error(path, fn_node, "out of memory")
+        ---
     # Any other return type name is a by-value foreign type (Stage B), spelled
     # as written, `T` or `c.T`.
-    if: is_sub = 0 && field\value\kind = c.LM_P0_NODE_ATOM && l2_text_eq(field\value\as\atom, "int") = 0 && l2_text_eq(field\value\as\atom, "size_t") = 0 && l2_text_eq(field\value\as\atom, "unsigned") = 0 && l2_text_eq(field\value\as\atom, "ulong") = 0 && l2_text_eq(field\value\as\atom, "void") = 0 && l2_text_eq(field\value\as\atom, "LmP0TrailerRole") = 0 && l2_text_eq(field\value\as\atom, "LmxMsgAddr") = 0
+    if: is_sub = 0 && field\value\kind = c.LM_P0_NODE_ATOM && l2_ns_find(field\value\as\atom) < 0 && l2_text_eq(field\value\as\atom, "int") = 0 && l2_text_eq(field\value\as\atom, "size_t") = 0 && l2_text_eq(field\value\as\atom, "unsigned") = 0 && l2_text_eq(field\value\as\atom, "ulong") = 0 && l2_text_eq(field\value\as\atom, "void") = 0 && l2_text_eq(field\value\as\atom, "LmP0TrailerRole") = 0 && l2_text_eq(field\value\as\atom, "LmxMsgAddr") = 0
         l2_m_ret[l2_m_n]: l2_foreign_byvalue(field\value\as\atom)
         if: l2_m_ret[l2_m_n] < 100
             return: l2_error(path, fn_node, "incompatible entry signature")
@@ -10614,6 +11261,8 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
             ---
         if: mi >= 0 && l2_slot_find(mi, node\as\atom) >= 0
             return: 0
+        if: l2_ns_find(node\as\atom) >= 0
+            return: 0
         return: l2_error(path, node, "unresolved name")
     if: node\kind = c.LM_P0_NODE_FRAME && l2_frame_head(node, "@")
         return: l2_check_addr(node, mi, path)
@@ -10639,6 +11288,8 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
             return: l2_check_fields(a1, l2_count_active(call\body) - 1, mi, path, node)
         return: l2_check_primary(a1\value, mi, path)
     ---
+    if: l2_text_eq(call\head, "implements")
+        return: l2_check_implements(node, path)
     idx: l2_head_method(call\head)
     if: idx < 0 && l2_text_eq(call\head, "length")
         if: l2_array_length_own(node, mi) < 0
@@ -10704,15 +11355,22 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
     if: mi >= 0
         l2_m_edge[l2_edge_off(mi, idx)]: 1
     a0: l2_next_active(call\body\first_field)
+    actual_i: 0
     while: a0 != 0
         actual_span: l2_expr_span(a0)
         if: actual_span < 1 || l2_check_fields(a0, actual_span, mi, path, node) != 0
             return: 1
-        actual_i: 0
-        while: actual_i < actual_span && a0 != 0
-            a0: l2_next_active(a0\next)
-            actual_i: actual_i + 1
+        if: actual_span = 1 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_ATOM && l2_nsty_get(idx, actual_i) >= 0 && l2_m_node[idx] != 0 && l2_m_node[idx]\as != 0
+            if: l2_admit_consumer_uses(a0\value\as\atom, l2_nsty_get(idx, actual_i), l2_fn(idx, actual_i), l2_m_node[idx]\as\frame, path, node, "function argument") != 0
+                return: 1
+            ---
         ---
+        pmi: 0
+        while: pmi < actual_span && a0 != 0
+            a0: l2_next_active(a0\next)
+            pmi: pmi + 1
+        actual_i: actual_i + 1
+    ---
 return: 0
 
 fn: l2_check_expr (const: @(LmP0Node node); int: mi; const: @(char path)) int
@@ -11165,6 +11823,11 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && l2_head_is_call(fr\head, fr\body, fr\flags) = 0 && l2_check_fields(fr\body\first_field, l2_count_active(fr\body), mi, path, stmt) != 0
             return: 1
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_count_active(fr\body) = 1 && l2_next_active(fr\body\first_field) != 0 && l2_next_active(fr\body\first_field)\value != 0 && l2_next_active(fr\body\first_field)\value\kind = c.LM_P0_NODE_ATOM && l2_nsty_get(mi, 0 - 1) >= 0
+            if: l2_admit_consumer_uses(l2_next_active(fr\body\first_field)\value\as\atom, l2_nsty_get(mi, 0 - 1), l2_next_active(fr\body\first_field)\value\as\atom, l2_fn_frame(mi), path, stmt, "return value") != 0
+                return: 1
+            ---
+        ---
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_count_active(fr\body) != 0 && l2_head_is_call(fr\head, fr\body, fr\flags) = 0 && l2_check_fields(fr\body\first_field, l2_count_active(fr\body), mi, path, stmt) != 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0
@@ -11255,11 +11918,13 @@ fn: l2_parse_unit (const: @(LmP0Node main_node); const: @(char path)) int
     while: i < l2_m_n
         if: l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && l2_ml_rebuild(l2_m_body[i]\as\structure, path) != 0
             return: 1
+        l2_cur_mi: i
         if: l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && l2_check_body(l2_m_body[i]\as\structure, i, path, 0) != 0
             return: 1
         if: l2_m_node[i] != 0 && l2_m_node[i]\as != 0 && l2_check_ret_tr(i, path, l2_ret_tr(l2_m_node[i]\as\frame), l2_m_node[i]) != 0
             return: 1
         i: i + 1
+    l2_cur_mi: 0 - 1
     if: body != 0 && body\as != 0 && l2_check_body(body\as\structure, -1, path, 0) != 0
         return: 1
     if: l2_check_ret_tr(-1, path, l2_ret_tr(fr), main_node) != 0
@@ -11834,6 +12499,18 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
                     return: 1
                 return: l2_tok_temp(t, dest)
             ---
+        idx: l2_ns_find(node\as\atom)
+        if: idx >= 0
+            if: mi < 0
+                if: c.sprintf(dest, "l2_nsp[%d]", idx) < 0
+                    return: 1
+                return: 0
+            if: l2_unit_ref = 0
+                return: 1
+            if: c.sprintf(dest, "lmx_arena_ref_struct(%s, %uU)", l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(idx)))) < 0
+                return: 1
+            return: 0
+        ---
         return: l2_tok_text(node\as\atom, dest, 256U)
     if: node\kind = c.LM_P0_NODE_FRAME && l2_frame_head(node, "@")
         return: l2_prep_addr(node, mi, ind, dest)
@@ -11873,6 +12550,8 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
             return: 1
         return: 0
     ---
+    if: l2_text_eq(call\head, "implements")
+        return: l2_prep_implements(node, dest)
     idx: l2_find_method(call\head)
     l2_call_sel: 0
     if: idx < 0 && call\head != 0 && call\head\data != 0 && call\head\length < 256U && l2_seg_count(call\head\data, call\head\length) > 1 && l2_path_kind(call\head\data, call\head\length, @ l2_call_mi) = 4

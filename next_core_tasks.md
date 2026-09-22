@@ -8,7 +8,7 @@
 
 - [x] **СЕЙЧАС: удалить защитный close-пакет, добавленный коммитом `4da4658`, затем поставить эту галочку и продолжить очередь ниже.** Не откатывать коммит целиком и не затрагивать его остальные полезные изменения. Хирургически удалить из ядра: `LmxRoot.close_stage`, сохранённый в `LmxRoot` `close_deadline`, состояния `LMX_ROOT_CLOSING` / `LMX_ROOT_POISONED`, контракт повторного входа и продолжения частично выполненного close, `lmx_root_arena_blocks_valid`, защитно-диагностический контракт `lmx_root_release_final` и добавленную в `lmx_root_poison_selftest.lm1` проверку искусственно закольцованной арены. Вернуть один линейный синхронный алгоритм над корректными по построению объектами: локальный deadline → освобождение orphan-политики → settle детей → закрытие почты R0 → снятие маршрута → удаление R0 у родительской заглушки → закрытие её почты → освобождение service и arena → очистка handle-полей → `CLOSED`. Не добавлять взамен preflight/validator, recovery/poison state, retry/stage, shim или новые проверки внутренних инвариантов. Сохранить исходную часть `lmx_root_poison_selftest.lm1`, проверяющую инициализацию владельцем памяти, предварительно заполненной `0xAA`: она тестирует конструктор, а не защиту от повреждения живого ядра. Готовность: focused root tests, полный `build_l2src`, L3 runner, generated harness, `check_docs` и `git diff --check` зелёные; только после этого поставить `[x]` и брать следующий пункт.
 - [x] Аварийную коррекцию базовых массивов сохранить отдельным зелёным checkpoint `7419470`.
-- [ ] До нового colon/occurrence/callable writer закрыть два оставшихся comment-only файла Array и отдельный документационный checkpoint; tracked tree должен иметь однозначное ownership.
+- [x] До нового colon/occurrence/callable writer закрыть два оставшихся comment-only файла Array и отдельный документационный checkpoint; tracked tree должен иметь однозначное ownership.
 - [ ] Не запускать двух writer/build одновременно; учитывать `LOCKED` и `OWNED_BY`.
 - [ ] Каждый этап заканчивать свежими целевыми тестами, `python tools/check_docs.py`, `git diff --check`, точным коммитом и проверкой расхождения с upstream.
 - [ ] Любое обнаруженное логическое противоречие немедленно выносить на обсуждение с минимальным примером и точными местами кода; не выбирать правило по удобству реализации.
@@ -57,10 +57,10 @@ o-defensive-kernel](next_core_tasks_dictionary.md#no-defensive-kernel) — kerne
 - [x] Вернуть L3 type budget к доказанному `62/64`, `818/4096` архитектурно, без подгонки ожидаемого числа.
 - [x] Получить зелёные gates checkpoint `7419470`: L2 harness `60/60` без FAIL (`build/l2_harness/20260922_073250`), все 11 L3 suites exit 0, type budget `62/64`, `check_docs`, `git diff --check`.
 - [x] Сохранить и отправить точный checkpoint `7419470`; проверить `HEAD == upstream`.
-- [ ] Закрыть два правильных, но не вошедших в `7419470`, comment-only изменения отдельным точным commit/push, не смешивая документацию Codex:
+- [x] Закрыть два правильных, но не вошедших в `7419470`, comment-only изменения отдельным точным commit/push, не смешивая документацию Codex:
   - `dev/l2src_sandbox/LMX_ARRAY_OWNED.txt`: заменить старое описание `{len, capacity, data}`/`capacity = len` на базовый `{len,data}` с backing ровно `len` ячеек и отдельно назвать динамический List;
   - `dev/l2src_sandbox/lmx_pool.lm1`: исправить комментарий о пуле дескрипторов Array с `{len, capacity, data}` на `{len,data}`.
-- [ ] После этого повторить `git diff --check`, `python tools/check_docs.py`, подтвердить `HEAD == upstream` и отсутствие чужих tracked-изменений перед следующим writer.
+- [x] После этого повторить `git diff --check`, `python tools/check_docs.py`, подтвердить `HEAD == upstream` и отсутствие чужих tracked-изменений перед следующим writer.
 - [x] Не считать ошибочное предложение из FINAL о «pre-existing check_docs desync» известным дефектом: независимые свежие прогоны `check_docs` зелёные.
 
 ### Остатки аудита checkpoint, которые нельзя потерять

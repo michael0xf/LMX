@@ -1,11 +1,10 @@
-# FABLE-L2-R0-WRITE-GUARD-DESIGN-20260921-111, step M0.  THE CONTROL, AND A RECORDED GAP.
+# FABLE-L2-R0-WRITE-GUARD-DESIGN-20260921-111, step M0.  THE CONTROL, WITH A READBACK WITNESS.
 #
 # The same shape on an ORDINARY, MUTABLE named Structure is NOT refused: the rule is about the
-# permanent store, not about named Structures.  What happens instead is a gap of its own, recorded
-# here as debt: the translator has no lowering for a named Structure's path inside `@` and writes
-# `@ A\e` into the generated L1 as raw text, which the C compiler then rejects ('A' undeclared).
-# THE DAY THAT LOWERING IS WRITTEN this row goes red -- on purpose: whoever writes it must look at
-# the rule above first, because the same lowering would hand out a writable address into R0.
+# permanent store, not about named Structures.  Commit 4a8bc62 lowers `@: Named\field` to a typed
+# cell address; this row must keep running, and the two M0 eternal-address fixtures must keep
+# refusing.  A zero exit after `pokez(@: A\e)` does not prove the write landed.  Read A\e itself
+# after that write and fail nonzero unless it is exactly 9.
 A:
     size_t: e 7U
 end: A
@@ -15,6 +14,10 @@ fn: pokez (@: size_t p) int
     return: 0
 end: pokez
 fn: main () int
+    size_t: got
     pokez(@: A\e)
+    got: A\e
+    if: got != 9U
+        return: 91
     return: 0
 end: main

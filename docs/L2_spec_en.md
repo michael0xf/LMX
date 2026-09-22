@@ -169,6 +169,8 @@ ppp: @pp
 
 `@:` is not an ordinary Array constructor. Low-level string `@: char "hello"` is an address primitive pointing to a C string; it does not automatically acquire a length descriptor. Ordinary Structure `User` and opaque primitive `FILE` do not become the same value kind because their C representations use pointers. An address primitive need not be a source integer: its target type is defined by the machine profile.
 
+The already-reference-valued nature of a nonprimitive value is essential. `Model: fresh` constructs a new Structure, but binding `fresh` contains the physical reference to its descriptor/occurrence; Structure assignment, argument passing, and return copy that reference rather than passing the Structure by value. Thus `@: Model slot` means the address of a machine slot that stores a `Model` reference, not “a reference to a Structure instead of constructing it.” In a C99 projection ordinary `fresh` is already conceptually `Lmx *`, while `@fresh` is `Lmx **`. A new Structure uses full construction; ordinary assignment to an already typed target rebinds its Structure reference after admission; `@` adds one machine address level and substitutes for neither operation.
+
 ### 18.2. What @x addresses
 
 The operation's common meaning is to obtain the selected data's address, not a temporary copy's. An L2 field's data reside in a typed arena array; different placement does not introduce a second meaning of address-of. The addressable target must separately be identified: field payload, parameter or pointer-holding slot.

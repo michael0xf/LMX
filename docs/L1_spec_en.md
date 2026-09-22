@@ -16,6 +16,8 @@ The profile input is a file whose final extension is `.lm1`. Direct C member low
 
 L1 prefix `@` is C address-of of that binding (`p: @ value` → `&value`). Longer `@` runs in declarators are C pointer stars, not repeated address-of. Backslash: a leading `\` is a raw pointer load; `value\field` is field-follow, C `->`.
 
+Projection of a nonprimitive Lingvamyxa value into L1 is never a C aggregate passed by value: Structure and Array values are stored, passed, and returned by copying the physical reference to their descriptor/occurrence. Source `Model: fresh` therefore does not lower to `struct Model fresh`; it constructs a graph value and its working L1 binding is reference-shaped, conceptually `Lmx *fresh`. Taking `@fresh` addresses the slot that already stores this reference and therefore conceptually produces `Lmx **`. Internal machine-ABI records of the kernel, explicitly declared through L1 `struct:` and sometimes embedded by value, are not projections of nonprimitive language values and do not weaken this prohibition.
+
 The libc door is declarations in `l1src/libc_abi.lm1` and `c.name` calls. L1 header units declare; an executable body in a header is refused.
 
 <a id="lmx"></a>

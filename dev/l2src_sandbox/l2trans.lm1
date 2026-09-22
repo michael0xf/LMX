@@ -319,6 +319,10 @@ prototype:
     fn: l2_check_ret_tr (int: mi; const: @(char path); const: @(LmP0Structure body); const: @(LmP0Node at)) int
     fn: l2_text_same (const: @(LmP0Text a); const: @(LmP0Text b)) int
     fn: l2_own_find (int: mi; const: @(LmP0Text t)) int
+    fn: l2_own_find_decl (int: mi; const: @(LmP0Text t); const: @(LmP0Node at)) int
+    fn: l2_own_find_occ (int: mi; const: @(LmP0Text t); int: occ) int
+    fn: l2_own_find_last (int: mi; const: @(LmP0Text t)) int
+    fn: l2_occ_head (const: @(LmP0Text t); @: int out_occ; @@: LmP0Text out_name) int
     fn: l2_own_first (const: @(LmP0Text t)) int
     fn: l2_own_shared (const: @(LmP0Text t)) int
     fn: l2_own_add (int: mi; const: @(LmP0Text t); int: ty; const: @(char path); const: @(LmP0Node at); int: shared) int
@@ -3279,6 +3283,94 @@ fn: l2_own_find (int: mi; const: @(LmP0Text t)) int
         i: i + 1
 return: -1
 
+# The own row collected from this exact source statement, or -1.
+fn: l2_own_find_decl (int: mi; const: @(LmP0Text t); const: @(LmP0Node at)) int
+    int: i 0
+    if: t = 0 || at = 0
+        return: -1
+    while: i < l2_own_n
+        if: l2_own_decl[i] = at && l2_text_same(l2_own_name[i], t)
+            if: mi >= 0 && l2_own_mi[i] = mi
+                return: i
+            if: mi < 0 && l2_own_mi[i] < 0
+                return: i
+            ---
+        ---
+        i: i + 1
+return: -1
+
+# Lexical occurrence N of a same-name own field in this method, or -1.
+fn: l2_own_find_occ (int: mi; const: @(LmP0Text t); int: occ) int
+    int: i 0
+    int: n 0
+    if: t = 0 || occ < 0
+        return: -1
+    while: i < l2_own_n
+        if: l2_text_same(l2_own_name[i], t)
+            if: mi >= 0 && l2_own_mi[i] = mi && (l2_own_host[i] = 0 || l2_scope_has(l2_own_host[i]))
+                if: n = occ
+                    return: i
+                n: n + 1
+            ---
+            if: mi < 0 && l2_own_mi[i] < 0 && l2_own_host[i] = 0
+                if: n = occ
+                    return: i
+                n: n + 1
+            ---
+        ---
+        i: i + 1
+return: -1
+
+# Latest source-visible same-name own field (last collected), or -1.
+fn: l2_own_find_last (int: mi; const: @(LmP0Text t)) int
+    int: i 0
+    int: hit -1
+    if: t = 0
+        return: -1
+    while: i < l2_own_n
+        if: l2_text_same(l2_own_name[i], t)
+            if: mi >= 0 && l2_own_mi[i] = mi && (l2_own_host[i] = 0 || l2_scope_has(l2_own_host[i]))
+                hit: i
+            if: mi < 0 && l2_own_mi[i] < 0 && l2_own_host[i] = 0
+                hit: i
+            ---
+        ---
+        i: i + 1
+return: hit
+
+# Head `\[N]name` — occurrence ordinal, not C `name[i]`. 0 = parsed, 1 = not this form, 2 = bad index.
+fn: l2_occ_head (const: @(LmP0Text t); @: int out_occ; @@: LmP0Text out_name) int
+    size_t: i 0U
+    size_t: n
+    unsigned: ch
+    int: occ 0
+    if: t = 0 || t\data = 0 || out_occ = 0 || out_name = 0
+        return: 1
+    n: t\length
+    if: n < 5U || t\data[0] != 92 || t\data[1] != 91
+        return: 1
+    i: 2U
+    if: i >= n || t\data[i] < 48 || t\data[i] > 57
+        return: 2
+    while: i < n && t\data[i] >= 48 && t\data[i] <= 57
+        ch: (cast: (unsigned) t\data[i]) - 48U
+        if: occ > (c.INT_MAX / 10) - (cast: (int) ch)
+            return: 2
+        occ: occ * 10 + (cast: (int) ch)
+        i: i + 1U
+    if: i >= n || t\data[i] != 93
+        return: 2
+    i: i + 1U
+    if: i >= n
+        return: 2
+    \out_name: (cast: (@: LmP0Text) l2_xmalloc(c.sizeof(c.LmP0Text)))
+    if: \out_name = 0
+        return: 2
+    \out_name\data: t\data + i
+    \out_name\length: n - i
+    \out_occ: occ
+return: 0
+
 fn: l2_own_find_host (int: mi; const: @(LmP0Text t); const: @(LmP0Node host)) int
     int: i 0
     if: mi < 0 || t = 0
@@ -3325,7 +3417,21 @@ fn: l2_own_add (int: mi; const: @(LmP0Text t); int: ty; const: @(char path); con
     if: shared != 0
         i: l2_own_shared(t)
     if: shared = 0
+        i: l2_own_find_decl(mi, t, at)
+    if: i < 0 && shared = 0
         i: l2_own_find_host(mi, t, l2_scope_host())
+        if: i >= 0 && l2_own_decl[i] != at
+            if: l2_own_ty[i] != ty
+                if: l2_error(path, at, "incompatible entry signature") != 0
+                    return: -1
+                return: -1
+            # A later assignment of the same name is a new occurrence only when
+            # the existing row is itself an assignment, not a declaration/bind.
+            if: l2_is_asgn(l2_own_decl[i]) != 0 && l2_is_asgn(at) != 0
+                i: -1
+            ---
+        ---
+    ---
     if: i >= 0 && l2_own_ty[i] != ty
         if: l2_error(path, at, "incompatible entry signature") != 0
             return: -1
@@ -6006,7 +6112,9 @@ fn: l2_bind_own (int: mi; int: oi; const: @(char path); const: @(LmP0Node at)) i
             # the formal's type publishes to, never the raw numbers (unsigned is 34 and 3).
             if: l2_own_ty_of_param(l2_ft(mi, fi)) != l2_own_ty[oi]
                 return: l2_error(path, at, "incompatible entry signature")
-            l2_m_alias[l2_own_off(mi, oi)]: fi
+            if: l2_own_find_occ(mi, l2_own_name[oi], 0) = oi
+                l2_m_alias[l2_own_off(mi, oi)]: fi
+            ---
         fi: fi + 1
     fi: 0
     while: fi < l2_m_dyn[mi]
@@ -6477,7 +6585,10 @@ fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
         if: l2_frame_head(stmt, "if") = 0 && l2_frame_head(stmt, "while") = 0 && l2_frame_head(stmt, "for") = 0 && l2_is_asgn(stmt)
             if: stmt\as\frame\body != 0 && l2_scan_fields(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), mi, seen) != 0
                 return: 1
-            oi: l2_own_find(mi, stmt\as\frame\head)
+            oi: l2_own_find_decl(mi, stmt\as\frame\head, stmt)
+            if: oi < 0
+                oi: l2_own_find(mi, stmt\as\frame\head)
+            ---
             if: oi >= 0 && l2_own_mi[oi] < 0
                 if: l2_own_off(mi, oi) = (cast: (size_t) -1)
                     return: 1
@@ -11190,10 +11301,26 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
     int: raw_j
     int: raw_fld
     size_t: array_index
+    int: occ 0
+    int: k 0
+    @: LmP0Text onm 0
     c.array: [256]: char cast_ty
     if: node = 0
         return: l2_error(path, node, "unsupported body")
     if: node\kind = c.LM_P0_NODE_ATOM
+        k: l2_occ_head(node\as\atom, @ occ, @ onm)
+        if: k = 2
+            return: l2_error(path, node, "unsupported index")
+        if: k = 0
+            idx: l2_own_find_occ(mi, onm, occ)
+            if: onm != 0
+                l2_xfree((cast: (@: void) onm))
+            if: idx < 0
+                return: l2_error(path, node, "unresolved name")
+            if: mi >= 0 && l2_m_uses[l2_own_off(mi, idx)] = 0
+                return: l2_error(path, node, "unresolved name")
+            return: 0
+        ---
         raw: l2_prefix_deref(node\as\atom, mi, cast_ty)
         if: raw = 0
             return: 0
@@ -12441,6 +12568,8 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
     int: idx
     int: n
     int: k
+    int: occ 0
+    @: LmP0Text onm 0
     int: actual_span
     int: actual_i
     int: raw_j
@@ -12462,6 +12591,24 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
         k: l2_prep_sizeof_name(node, mi, ind, dest)
         if: k != 2
             return: k
+        k: l2_occ_head(node\as\atom, @ occ, @ onm)
+        if: k = 2
+            return: 1
+        if: k = 0
+            idx: l2_own_find_occ(mi, onm, occ)
+            if: onm != 0
+                l2_xfree((cast: (@: void) onm))
+            if: idx < 0
+                return: 1
+            if: mi >= 0 && l2_m_uses[l2_own_off(mi, idx)] != 0
+                if: l2_m_alias[l2_own_off(mi, idx)] >= 0 && c.sprintf(dest, "l2_p%d_%d", mi, l2_m_alias[l2_own_off(mi, idx)]) < 0
+                    return: 1
+                if: l2_m_alias[l2_own_off(mi, idx)] < 0 && c.sprintf(dest, "l2_q%d", idx) < 0
+                    return: 1
+                return: 0
+            ---
+            return: 1
+        ---
         k: l2_prefix_deref(node\as\atom, mi, dest)
         if: k = 0
             return: 0
@@ -12475,7 +12622,9 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
                 return: l2_tok_formal(mi, idx, dest)
             ---
         if: mi >= 0
-            idx: l2_own_find(mi, node\as\atom)
+            idx: l2_own_find_last(mi, node\as\atom)
+            if: idx < 0
+                idx: l2_own_find(mi, node\as\atom)
             if: idx >= 0 && l2_own_is_array(l2_own_ty[idx]) != 0
                 return: l2_emit_array_ptr(idx, ind, dest)
             if: idx >= 0 && l2_m_uses[l2_own_off(mi, idx)] != 0
@@ -13047,6 +13196,8 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
     @: LmP0Field f
     @: LmP0Field p1
     @: LmP0Field p2
+    @: LmP0Field p3
+    @: LmP0Field p4
     @: LmP0Node at 0
     int: i
     int: ao
@@ -13111,6 +13262,33 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
             f: l2_next_active(f\next)
             continue
         if: f\value\kind = c.LM_P0_NODE_ATOM && l2_is_slash(f\value\as\atom)
+            p1: l2_next_active(f\next)
+            p2: 0
+            p3: 0
+            p4: 0
+            if: p1 != 0
+                p2: l2_next_active(p1\next)
+            if: p2 != 0
+                p3: l2_next_active(p2\next)
+            if: p3 != 0
+                p4: l2_next_active(p3\next)
+            if: have_value = 0 && p1 != 0 && p2 != 0 && p3 != 0 && p4 != 0 && p1\value != 0 && p2\value != 0 && p3\value != 0 && p4\value != 0 && p1\value\kind = c.LM_P0_NODE_ATOM && p2\value\kind = c.LM_P0_NODE_ATOM && p3\value\kind = c.LM_P0_NODE_ATOM && p4\value\kind = c.LM_P0_NODE_ATOM && l2_text_eq(p1\value\as\atom, "[") != 0 && l2_num(p2\value\as\atom) != 0 && l2_text_eq(p3\value\as\atom, "]") != 0 && l2_ident(p4\value\as\atom) != 0
+                po: l2_own_find_occ(mi, p4\value\as\atom, (cast: (int) l2_literal_value(p2\value\as\atom)))
+                if: po < 0 || l2_m_uses[l2_own_off(mi, po)] = 0
+                    return: 1
+                if: l2_m_alias[l2_own_off(mi, po)] >= 0 && c.sprintf(piece, "l2_p%d_%d", mi, l2_m_alias[l2_own_off(mi, po)]) < 0
+                    return: 1
+                if: l2_m_alias[l2_own_off(mi, po)] < 0 && c.sprintf(piece, "l2_q%d", po) < 0
+                    return: 1
+                if: l2_cat(buf, piece) != 0
+                    return: l2_error(l2_src, at, "expression too long")
+                ao: 0
+                after: 0
+                have_value: 1
+                i: i + 5
+                f: l2_next_active(p4\next)
+                continue
+            ---
             if: l2_cat(buf, "\\") != 0
                 return: l2_error(l2_src, at, "expression too long")
             ao: 0
@@ -15399,7 +15577,10 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && (mi < 0 || l2_m_ret[mi] != 8)
             field: l2_next_active(field\next)
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0
-            oi: l2_own_find(mi, fr\head)
+            oi: l2_own_find_decl(mi, fr\head, stmt)
+            if: oi < 0
+                oi: l2_own_find_last(mi, fr\head)
+            ---
         # The synthetic program entry has no activation cache.  Its direct
         # access to a unit field reads/writes the root graph slot immediately.
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && mi < 0

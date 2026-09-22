@@ -51,9 +51,12 @@ struct: LmxMsg
     # designated cross-lane writer: the parent stopping a child, or the lane that
     # takes the turn.
     LmxFlag: running
-    # Set only by the actual completion of the whole assigned work.  A heartbeat,
-    # an empty inbox, the absence of a physical thread or the end of a single turn
-    # must not set it (model 31).
+    # Set by the user's code: `success = 1` is a sufficient condition for stopping the
+    # Thread at its end turn.  The system never resets it to 0, not even when a body
+    # fails.  The system sets it to 1 in one place only: for a plain letter, at the
+    # receiver owner's take after the attach (lmx_post_take_inbox).  A heartbeat, an
+    # empty inbox, the absence of a physical thread or the end of a single turn does not
+    # set it (model 31).  A new record starts at 0 (its constructor's initial state).
     LmxFlag: success
     # The handoff-safe mark: this Message's storage may be transferred without a
     # copy.  Read together with the absence of native users (model 32).

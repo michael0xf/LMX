@@ -1,6 +1,7 @@
 predef: "l2src/lmx_post.h.lm1"
 predef: "l2src/lmx_pool.h.lm1"
 predef: "l2src/lmx_implements.h.lm1"
+predef: "l2src/lmx_message.h.lm1"
 include: "<stdlib.h>"
 
 # lmx_post.lm1 - the mail.
@@ -371,6 +372,7 @@ return: c.LMX_POST_OK
 # lmx_post_discard).
 fn: lmx_post_take_inbox (@: LmxArena arena; @: LmxPost box) @: void
     @: void target
+    @: LmxMsg letter 0
     ulong: head_read
     @: size_t slots
     size_t: item
@@ -402,6 +404,15 @@ fn: lmx_post_take_inbox (@: LmxArena arena; @: LmxPost box) @: void
     box\inbox_head: (head_read + 1U) % (cast: (ulong) box\inbox_capacity)
     box\inbox_count: box\inbox_count - 1U
     lmx_post_monitor_leave(box)
+    # A PLAIN LETTER IS DELIVERED HERE, and delivery is its completion: the system sets its
+    # `success` to 1 at the receiver owner's take, after the attach, when the receiver owns it
+    # (author, LMX_blog 2026-09-22).  Only an exact plain-letter range: an executable Thread
+    # passed through the mailbox keeps its flag, which only its own program sets.  A take with no
+    # receiver arena is not an owner's take and cannot classify the letter, so it writes nothing.
+    if: arena != 0 && target != 0 && lmx_domain_kind(arena, target) = c.LMX_DOMAIN_KIND_MSG_RECORD && lmx_domain_type(arena, target) = c.LMX_DOMAIN_MSG_RECORD
+        letter: (cast: (@: LmxMsg) target)
+        letter\success: 1
+    ---
 return: target
 
 fn: lmx_post_take_owned (@: LmxArena arena; @: LmxPost box; int: lane) @: void

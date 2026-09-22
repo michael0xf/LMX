@@ -1,0 +1,175 @@
+predef: "l2src/lmx_turn.lm1"
+predef: "l2src/lmx_child.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# WHO WRITES `success` (author, LMX_blog 2026-09-22; FABLE-OPUS-SUCCESS-RULE-20260922-109).
+#   (a) The system never resets it: a failed turn discards what it staged and leaves the flag
+#       exactly as the program left it -- 1 stays 1, 0 stays 0.
+#   (b) The program sets it: a body's `success = 1` is visible after the turn, and it is a
+#       sufficient condition for stopping -- the Thread takes no further turn.
+#   (c) The system sets it in one place: a plain letter, at the receiver owner's take after the
+#       attach.  Not at admission, not for a Thread record passed through the mailbox, and not by
+#       a take that names no receiver arena.
+
+sub: sr_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: sr_check
+
+fn: sr_letter (@: LmxArena arena) @: LmxMsg
+    @: LmxMsg message
+    @: Lmx graph
+    message: (cast: (@: LmxMsg) lmx_arena_take(arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    graph: lmx_node_new_owned(arena)
+    if: message = 0 || graph = 0 || lmx_arena_refs_open_owned(arena, graph, 1U) != 0
+        return: 0
+    ---
+    message\running: 1
+    message\success: 0
+    message\handoff_ready: 0
+    message\graph: graph
+return: message
+
+fn: sr_thread (@: LmxArena arena) @: LmxThread
+    @: LmxThread t
+    @: Lmx graph
+    @: LmxArrayDesc children
+    @: LmxPost mail
+    @: LmxSchedule sched
+    t: (cast: (@: LmxThread) lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
+    graph: lmx_node_new_owned(arena)
+    mail: (cast: (@: LmxPost) lmx_arena_take(arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    sched: (cast: (@: LmxSchedule) lmx_arena_take(arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: t = 0 || graph = 0 || mail = 0 || sched = 0 || lmx_arena_refs_open_owned(arena, graph, 1U) != 0
+        return: 0
+    ---
+    children: lmx_thread_children_field_new(arena, graph, 0U)
+    if: children = 0
+        return: 0
+    ---
+    if: lmx_post_init(arena, mail) != c.LMX_POST_OK || lmx_schedule_init(sched, arena, (cast: (@: void) t), 8U) != c.LMX_SCHEDULE_OK || lmx_thread_init(arena, t, graph, mail, sched) != c.LMX_THREAD_OK || lmx_thread_children_bind(t, children, arena) != c.LMX_THREAD_OK
+        return: 0
+    ---
+return: t
+
+int: handler_hits 0
+
+# A native body that "fails": its answer is its own business (model 31) and it touches no flag.
+fn: sr_body_fails (@: Lmx node) int
+    handler_hits: handler_hits + 1
+return: 1
+
+# A native body that completes: the program's own decision.
+fn: sr_body_completes (@: Lmx node) int
+    @: LmxMsg message
+    handler_hits: handler_hits + 1
+    message: lmx_thread_message(lmx_thread_current())
+    if: message = 0
+        return: 1
+    message\success: 1
+return: 0
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxArena: arena
+    LmxArena: done_arena
+    LmxArena: failing_arena
+    LmxArena: passed_arena
+    LmxArena: letter_arena
+    @: LmxThread t 0
+    @: LmxThread done_t 0
+    @: LmxThread passed_t 0
+    @: LmxThread failing_t 0
+    @: LmxMsg message 0
+    @: LmxMsg letter 0
+    @: LmxMsg local 0
+    @: LmxMsg raw 0
+    @: LmxMsg staged 0
+    @: void taken 0
+    int: failures
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ done_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ failing_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ passed_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ letter_arena)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ arena) != 0 || lmx_arena_open(@ done_arena) != 0 || lmx_arena_open(@ failing_arena) != 0 || lmx_arena_open(@ passed_arena) != 0 || lmx_arena_open(@ letter_arena) != 0
+        free(counts)
+        return: 2
+    ---
+    # Every Thread has an arena of its own: a boundary collects its Thread's arena, and nothing
+    # this test holds may be collected under it.
+    t: sr_thread(@ arena)
+    done_t: sr_thread(@ done_arena)
+    passed_t: sr_thread(@ passed_arena)
+    failing_t: sr_thread(@ failing_arena)
+    staged: sr_letter(@ failing_arena)
+    sr_check(counts, t != 0 && done_t != 0 && passed_t != 0 && failing_t != 0 && staged != 0, "fixtures are built")
+
+    # (a) A native body that fails leaves the flag alone: 0 stays 0.
+    message: lmx_thread_message(t)
+    sr_check(counts, lmx_thread_turn(t, sr_body_fails, 1U) = c.LMX_THREAD_OK && handler_hits = 1, "a failing native body ran its turn")
+    sr_check(counts, message\success = 0 && message\running = 1, "a failing native body leaves success at 0 and the Thread running")
+    # (a) A FAILED boundary with success already 1: the staged letter is discarded (the turn
+    # failed), and success stays 1 -- the system never resets it.
+    message: lmx_thread_message(failing_t)
+    sr_check(counts, lmx_post_accept(@ failing_arena, failing_t\mail, (cast: (@: void) staged), c.LMX_POST_OUTBOX) = c.LMX_POST_OK && lmx_post_count(failing_t\mail, c.LMX_POST_STAGED) = 1U, "a letter is staged")
+    message\success: 1
+    sr_check(counts, lmx_turn_end_status(failing_t, 2U, 1) = c.LMX_TURN_OK, "the boundary of a failed body runs")
+    sr_check(counts, lmx_post_count(failing_t\mail, c.LMX_POST_STAGED) = 0U && lmx_post_count(failing_t\mail, c.LMX_POST_OUTBOX) = 0U, "the failed turn discarded what it staged")
+    sr_check(counts, message\success = 1, "a failed turn leaves success = 1 as the program set it")
+
+    # (b) The program sets success; it is visible and it stops the Thread.
+    message: lmx_thread_message(done_t)
+    sr_check(counts, lmx_thread_turn(done_t, sr_body_completes, 3U) = c.LMX_THREAD_OK && message\success = 1, "a body's success = 1 is visible after its turn")
+    sr_check(counts, lmx_thread_turn(done_t, sr_body_completes, 4U) = c.LMX_THREAD_STOPPED && handler_hits = 2, "a Thread with success = 1 takes no further turn")
+
+    # (c) The letters are made after the turns above, so no boundary has collected them.
+    letter: sr_letter(@ letter_arena)
+    local: sr_letter(@ arena)
+    raw: sr_letter(@ arena)
+    sr_check(counts, letter != 0 && local != 0 && raw != 0, "letters are built")
+    # (c) A plain letter from another arena: admission does not set it; the owner's take does.
+    sr_check(counts, lmx_post_accept_transfer(@ arena, t\mail, (cast: (@: void) letter), @ letter_arena) = c.LMX_POST_OK, "a foreign plain letter is admitted")
+    sr_check(counts, letter\success = 0, "admission does not set a letter's success")
+    taken: lmx_thread_mail_take(t, c.LMX_POST_INBOX)
+    sr_check(counts, taken = (cast: (@: void) letter) && letter\success = 1, "the owner's take of a plain letter sets its success")
+    # (c) A plain letter of the receiver's own arena: the same rule.
+    sr_check(counts, lmx_thread_mail_accept(@ arena, t, (cast: (@: void) local), c.LMX_POST_INBOX) = c.LMX_POST_OK, "a local plain letter is admitted")
+    taken: lmx_thread_mail_take(t, c.LMX_POST_INBOX)
+    sr_check(counts, taken = (cast: (@: void) local) && local\success = 1, "the owner's take of a local plain letter sets its success")
+    # (c) A Thread record through the same mailbox keeps its flag.
+    sr_check(counts, lmx_post_accept_transfer(@ arena, t\mail, (cast: (@: void) passed_t), @ passed_arena) = c.LMX_POST_OK, "a Thread record is admitted")
+    taken: lmx_thread_mail_take(t, c.LMX_POST_INBOX)
+    message: lmx_thread_message(passed_t)
+    sr_check(counts, taken = (cast: (@: void) passed_t) && message\success = 0, "a Thread record taken from the mailbox keeps success = 0")
+    # (c) A take that names no receiver arena is not an owner's take: it writes nothing.
+    sr_check(counts, lmx_thread_mail_accept(@ arena, t, (cast: (@: void) raw), c.LMX_POST_INBOX) = c.LMX_POST_OK, "another local letter is admitted")
+    taken: lmx_post_take(t\mail, c.LMX_POST_INBOX)
+    sr_check(counts, taken = (cast: (@: void) raw) && raw\success = 0, "a take without a receiver arena does not set success")
+
+    failures: counts[1]
+    c.printf("lmx_success_rule_selftest checks=%d failures=%d\n", counts[0], failures)
+    free(counts)
+    if: failures != 0
+        return: 1
+return: 0

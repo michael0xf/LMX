@@ -333,6 +333,15 @@ foreach ($f in @(Get-ChildItem -LiteralPath $sandbox -File -Filter '*.lm1')) {
 foreach ($f in @(Get-ChildItem -LiteralPath (Join-Path $sandbox 'l1src') -File)) {
     Copy-Item -LiteralPath $f.FullName -Destination (Join-Path $src ('l1src\' + $f.Name)) -Force; $staged++
 }
+# tests/*.h.lm1 headers (e.g. fnptr_local_forms) for fixture predef under cwd=$src
+$testsHdr = Join-Path $sandbox 'tests'
+if (Test-Path -LiteralPath $testsHdr) {
+    $destTests = Join-Path $src 'l2src\tests'
+    New-Item -ItemType Directory -Force -Path $destTests | Out-Null
+    foreach ($f in @(Get-ChildItem -LiteralPath $testsHdr -File -Filter '*.h.lm1')) {
+        Copy-Item -LiteralPath $f.FullName -Destination (Join-Path $destTests $f.Name) -Force; $staged++
+    }
+}
 Write-Output ('l2_harness: staged ' + $staged + ' files into ' + $src)
 if ($provenanceMode) {
     # The staged l2src\l2trans.lm1 and l2_libc.lm1 must be BYTE COPIES of the LIVE dev sandbox
@@ -847,7 +856,8 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_callable_formal_sig_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'incompatible entry signature'; Absent = @(); Debt = @() },
     # COMPACT-RAWFIELD-BATCHA-72: raw_fld=5 call without form-COMPACT. Debt pins emitted
-    # raw-field ccall; Absent forbids form gate leftovers. translates-with-debt catches
+    # raw-field ccall. Absent is unused (empty proves nothing; no genuine form-gate
+    # leftover string appears in generated L1). translates-with-debt catches
     # checker/emitter divergence (refuse vs missing Debt).
     [pscustomobject]@{ Name = 'unit_rawfield_compact.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
         Absent = @();
@@ -855,6 +865,11 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_rawfield_colon.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
         Absent = @();
         Debt = @('l2_p0_0\zz(1)') },
+    # Opposite control: ty40 colon assign must stay assignment (COMPACT still required
+    # for fnptr call). Absent is the mis-call shape if ty40 COMPACT were dropped.
+    [pscustomobject]@{ Name = 'unit_fnptr_colon_assign.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+        Absent = @('f(l2_p0_0\alloc)');
+        Debt = @('f: l2_p0_0\alloc') },
     [pscustomobject]@{ Name = 'unit_colon_hidden_update.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');

@@ -1139,6 +1139,15 @@ int lm_p0_trailer_role_accepts_target(LmP0TrailerRole role, const LmP0Node * tar
 {
     const char * role_payload;
     const char * target_head;
+    if (target == 0) {
+    return 0;
+    }
+    if (((target -> kind == LM_P0_NODE_FRAME) && (target -> as -> frame -> trailer != 0))) {
+    return 0;
+    }
+    if (((target -> kind == LM_P0_NODE_STRUCTURE) && (target -> as -> structure -> trailer != 0))) {
+    return 0;
+    }
     role_payload = lm_p0_trailer_role_payload(role);
     target_head = 0;
     if (role_payload != 0) {

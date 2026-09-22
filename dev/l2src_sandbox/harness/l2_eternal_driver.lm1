@@ -21,9 +21,13 @@ int: failures 0
 const: @: char phase ""
 @@: void saved 0
 @@: void saved_profiles 0
+int: entry_opened 0
+int: entry_calls 0
+int: entry_rc 0
 
 prototype:
     fn: l2_generated_main () int
+    fn: l2_program_entry (@: Lmx node) int
     fn: l2_program_graph () @: Lmx
     fn: l2_program_qualified_count () size_t
     fn: l2_program_qualified_at (size_t: index) @: Lmx
@@ -200,6 +204,25 @@ fn: l2_driver_root_close (@: LmxRoot root) int
     ---
 return: lmx_root_close(root)
 
+# THE ENTRY'S OWN RESULT.  lmx_thread_dispatch_native calls the generated entry adapter and
+# discards its int, so the generated C main's exit status says only that the root turn ran.  The
+# generated C is compiled with -Dlmx_root_open=l2_driver_root_open (tools/l2_harness.ps1), so R0 is
+# opened with this tap in place of the adapter.  The tap calls the adapter once, exactly as the
+# kernel would, keeps its int, and hands the same int back to the kernel: the driver observes, it
+# does not change what the kernel does with the result.
+fn: l2_driver_entry_tap (@: Lmx node) int
+    int: rc
+    rc: l2_program_entry(node)
+    entry_calls: entry_calls + 1
+    entry_rc: rc
+return: rc
+
+fn: l2_driver_root_open (@: LmxRoot root; LmxCallEntry: entry; ulong: limit) int
+    if: entry = l2_program_entry
+        entry_opened: entry_opened + 1
+    ---
+return: lmx_root_open(root, l2_driver_entry_tap, limit)
+
 fn: main (int: argc; @@: char argv) int
     int: status
     gargc: argc
@@ -212,6 +235,13 @@ fn: main (int: argc; @@: char argv) int
     status: l2_generated_main()
     check(status = 0, "generated main returned 0")
     check(hooked = 1, "generated main closed exactly one root")
+    phase: "generated entry"
+    check(entry_opened = 1, "generated main opened its root with the generated entry adapter")
+    check(entry_calls = 1, "generated entry ran exactly once")
+    check(entry_rc = 0, "generated entry returned 0")
+    if: entry_rc != 0
+        c.printf("l2_eternal_driver: entry returned %d\n", entry_rc)
+    ---
     if: failures != 0
         c.printf("l2_eternal_driver: %d failed of %d\n", failures, checks)
         return: 1

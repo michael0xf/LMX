@@ -1177,14 +1177,21 @@ foreach ($fx in $fixtures) {
         if (-not $driver) { Add-Row 'FAIL' ('fixture:' + $stem) 'the driver did not build, so the program cannot be run'; continue }
         $genO = Join-Path $gen ($stem + '.o')
         $exe = Join-Path $bin ($stem + '.exe')
-        # The generated C is compiled AS IT IS; the two renames are what hands its root to the driver.
-        $code = Invoke-Step ('fixture.' + $stem + '.compile') $gcc ($kflags + @('-Dmain=l2_generated_main', '-Dlmx_root_close=l2_driver_root_close', '-c', $genC, '-o', $genO)) $root
+        # The generated C is compiled AS IT IS; the three renames are what hands its root to the driver.
+        # The root-open rename lets the driver observe the entry adapter's own int, which the kernel's
+        # native dispatch discards: without it a failing entry body still exits 0 (l2_eternal_driver.lm1).
+        $code = Invoke-Step ('fixture.' + $stem + '.compile') $gcc ($kflags + @('-Dmain=l2_generated_main', '-Dlmx_root_close=l2_driver_root_close', '-Dlmx_root_open=l2_driver_root_open', '-c', $genC, '-o', $genO)) $root
         if ($code -ne 0 -or -not (Test-Path -LiteralPath $genO)) { Add-Row 'FAIL' ('fixture:' + $stem) "gcc exit $code on the generated C"; continue }
         $code = Invoke-Step ('fixture.' + $stem + '.link') $gcc @('-o', $exe, $driverO, $genO, $l2libcO) $root
         if ($code -ne 0 -or -not (Test-Path -LiteralPath $exe)) { Add-Row 'FAIL' ('fixture:' + $stem) "link exit $code"; continue }
         $ran = Invoke-Step ('fixture.' + $stem + '.run') $exe $fx.Args $bin
         $said = ((Log-Text ('fixture.' + $stem + '.run')) -split "`r?`n" | Where-Object { $_ -match '^l2_eternal_driver: \d+ checks' } | Select-Object -Last 1)
-        if ($ran -ne $fx.Exit -or -not $said) { Add-Row 'FAIL' ('fixture:' + $stem) ('ran under the driver, exit ' + $ran + '; see the log'); continue }
+        # A run that completed but whose entry returned nonzero is a RESULT failure, named as such.
+        $entrySaid = ((Log-Text ('fixture.' + $stem + '.run')) -split "`r?`n" | Where-Object { $_ -match '^l2_eternal_driver: entry returned ' } | Select-Object -Last 1)
+        if ($ran -ne $fx.Exit -or -not $said) {
+            if ($entrySaid) { Add-Row 'FAIL' ('fixture:' + $stem) ('RESULT: ' + ($entrySaid -replace '^l2_eternal_driver: ', '') + '; ran under the driver, exit ' + $ran + '; see the log'); continue }
+            Add-Row 'FAIL' ('fixture:' + $stem) ('ran under the driver, exit ' + $ran + '; see the log'); continue
+        }
         # `Says`: what the PROGRAM printed, as whole lines and in order.  Lines of the log that are
         # not the program's (the command header, the driver's own, the exit line) are not counted,
         # and the program must have printed EXACTLY these lines -- one more or one fewer is a miss.

@@ -4489,6 +4489,7 @@ int lm_p0_stream_resolve_pending_delimiter(LmP0Document * document, LmP0Stack * 
 {
     const LmP0StreamEvent * event;
     size_t top_level;
+    size_t closing_level;
     LmP0Structure * parent;
     if (((pending -> active == 0) || (pending -> event == 0))) {
     return 1;
@@ -4496,6 +4497,42 @@ int lm_p0_stream_resolve_pending_delimiter(LmP0Document * document, LmP0Stack * 
     event = pending -> event;
     if ((lm_p0_stack_ensure(document, stack, (event -> level + 1U)) == 0)) {
     return 0;
+    }
+    closing_level = (event -> level + 1U);
+    while (closing_level < stack -> capacity) {
+    LmP0Node * owner;
+    LmP0Structure * body;
+    int empty_colon = 0;
+    owner = stack -> owners[closing_level];
+    body = stack -> parents[closing_level];
+    if (owner != 0 && body != 0 && body -> field_count == 0U) {
+    if (lm_p0_stack_level_is_trailer_body(stack, closing_level)) {
+    LmP0Trailer ** trailer_slot;
+    trailer_slot = lm_p0_node_trailer_slot(owner);
+    empty_colon = lm_p0_colon_trailer_empty(trailer_slot[0]);
+    }
+    else {
+    if (owner -> kind == LM_P0_NODE_FRAME && body == owner -> as -> frame -> body) {
+    empty_colon = lm_p0_colon_frame_empty(owner->as->frame);
+    }
+    }
+    if (empty_colon) {
+    LmP0Node * argument;
+    argument = lm_p0_new_node(document, LM_P0_NODE_STRUCTURE);
+    if (argument == 0) {
+    return 0;
+    }
+    argument->span->line = event -> line;
+    argument->span->column = event -> column;
+    argument->span->offset = event -> offset;
+    argument->span->length = 0U;
+    if (lm_p0_append_field(document, body, argument) == 0) {
+    lm_p0_free_node(argument);
+    return 0;
+    }
+    }
+    }
+    closing_level = closing_level + 1U;
     }
     top_level = lm_p0_stack_collapse_soft_to_event(stack, event->level);
     if (((event -> level == top_level) && (stack -> hard[top_level] == 0U))) {

@@ -29,8 +29,8 @@ fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     @: LmxThread r0
     @: LmxThread upper
-    @: LmxListDesc children
-    @: LmxListDesc upper_children
+    @: LmxArrayDesc children
+    @: LmxArrayDesc upper_children
     @: Lmx graph
     @: Lmx upper_graph
     @: LmxMsg upper_message
@@ -64,7 +64,7 @@ fn: main () int
     root_check(counts, r0 != 0 && upper != 0 && lmx_thread_parent(r0) = upper, "R0 is not an ordinary child of its structural parent")
     root_check(counts, lmx_thread_parent(upper) = 0, "structural upper frame unexpectedly has a parent")
     root_check(counts, lmx_thread_child_count(upper) = 1U && lmx_thread_child_at(upper, 0U) = r0, "upper frame does not own R0 through its sole Array")
-    root_check(counts, children != 0 && upper_children != 0 && children\cap = 2U && upper_children\cap = 2U, "ordinary child Arrays do not start at capacity two")
+    root_check(counts, children != 0 && upper_children != 0 && lmx_list_cap(children) = 2U && lmx_list_cap(upper_children) = 2U, "ordinary child lists start at cap two")
     root_check(counts, lmx_arena_ref_value(graph, 0U) = (cast: (@: void) children) && lmx_arena_ref_value(upper_graph, 0U) = (cast: (@: void) upper_children), "Thread caches differ from graph physical references")
     root_check(counts, c.sizeof(c.LmxMsg) = 16U, "Message retained numeric address storage")
     root_check(counts, lmx_thread_children(r0) = children, "R0 did not cache its ordinary physical children descriptor")
@@ -81,7 +81,7 @@ fn: main () int
     i: root_thread()
     root_check(counts, a != 0 && b != 0 && c0 != 0 && d != 0 && e != 0 && f != 0 && g != 0 && h != 0 && i != 0, "child probe allocation failed")
     root_check(counts, lmx_thread_child_add(r0, a, lmx_root_arena(@ root)) = c.LMX_THREAD_OK && lmx_thread_child_add(r0, b, lmx_root_arena(@ root)) = c.LMX_THREAD_OK && lmx_thread_child_add(r0, c0, lmx_root_arena(@ root)) = c.LMX_THREAD_OK && lmx_thread_child_add(r0, d, lmx_root_arena(@ root)) = c.LMX_THREAD_OK && lmx_thread_child_add(r0, e, lmx_root_arena(@ root)) = c.LMX_THREAD_OK && lmx_thread_child_add(r0, f, lmx_root_arena(@ root)) = c.LMX_THREAD_OK && lmx_thread_child_add(r0, g, lmx_root_arena(@ root)) = c.LMX_THREAD_OK && lmx_thread_child_add(r0, h, lmx_root_arena(@ root)) = c.LMX_THREAD_OK && lmx_thread_child_add(r0, i, lmx_root_arena(@ root)) = c.LMX_THREAD_OK, "R0 rejected dynamic children")
-    root_check(counts, lmx_thread_child_count(r0) = 9U && children\cap = 9U, "R0 retained an eight-child limit")
+    root_check(counts, lmx_thread_child_count(r0) = 9U && lmx_list_cap(children) = 9U, "R0 retained an eight-child limit")
     root_check(counts, lmx_thread_child_remove(r0, a) = c.LMX_THREAD_OK && lmx_thread_child_remove(r0, b) = c.LMX_THREAD_OK && lmx_thread_child_remove(r0, c0) = c.LMX_THREAD_OK && lmx_thread_child_remove(r0, d) = c.LMX_THREAD_OK && lmx_thread_child_remove(r0, e) = c.LMX_THREAD_OK && lmx_thread_child_remove(r0, f) = c.LMX_THREAD_OK && lmx_thread_child_remove(r0, g) = c.LMX_THREAD_OK && lmx_thread_child_remove(r0, h) = c.LMX_THREAD_OK && lmx_thread_child_remove(r0, i) = c.LMX_THREAD_OK, "R0 child removal failed")
     root_check(counts, lmx_thread_child_count(r0) = 0U, "R0 child Array did not empty")
 

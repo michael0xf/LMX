@@ -160,32 +160,34 @@ return: t\service
 # exists.  A caller that constructs a Thread supplies this graph field explicitly and the arena's
 # address-range table proves both descriptor type and backing type.
 
-fn: lmx_thread_children_bind (@: LmxThread t; @: LmxListDesc children; @: LmxArena arena) int
+fn: lmx_thread_children_bind (@: LmxThread t; @: void children; @: LmxArena arena) int
     @: LmxMsg message
+    @: LmxArrayDesc list
     int: type
     int: found
     int: index
     if: t = 0 || children = 0 || arena = 0 || t\children != 0
         return: c.LMX_THREAD_INVALID
+    list: (cast: (@: LmxArrayDesc) children)
     type: c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD
-    if: lmx_range_classify(arena, (cast: (@: void) children)) != c.LMX_KIND_LIST
+    if: lmx_range_classify(arena, children) != c.LMX_KIND_LIST
         return: c.LMX_THREAD_INVALID
-    if: lmx_range_type_of(arena, (cast: (@: void) children)) != type
+    if: lmx_range_type_of(arena, children) != type
         return: c.LMX_THREAD_INVALID
-    if: lmx_range_home(arena, (cast: (@: void) children)) != arena
+    if: lmx_range_home(arena, children) != arena
         return: c.LMX_THREAD_INVALID
-    if: children\len != 0U
+    if: list\len != 0U
         return: c.LMX_THREAD_INVALID
-    if: children\len > children\cap
+    if: list\len > lmx_list_cap((cast: (@: void) list))
         return: c.LMX_THREAD_INVALID
-    if: children\cap != 0U
-        if: children\data = 0
+    if: lmx_list_cap((cast: (@: void) list)) != 0U
+        if: list\data = 0
             return: c.LMX_THREAD_INVALID
-        if: lmx_range_classify(arena, children\data) != c.LMX_KIND_PRIMITIVE
+        if: lmx_range_classify(arena, list\data) != c.LMX_KIND_PRIMITIVE
             return: c.LMX_THREAD_INVALID
-        if: lmx_range_type_of(arena, children\data) != c.LMX_TYPE_POINTER_BASE + c.LMX_DOMAIN_THREAD
+        if: lmx_range_type_of(arena, list\data) != c.LMX_TYPE_POINTER_BASE + c.LMX_DOMAIN_THREAD
             return: c.LMX_THREAD_INVALID
-        if: lmx_range_home(arena, children\data) != arena
+        if: lmx_range_home(arena, list\data) != arena
             return: c.LMX_THREAD_INVALID
         ---
     ---
@@ -197,7 +199,7 @@ fn: lmx_thread_children_bind (@: LmxThread t; @: LmxListDesc children; @: LmxAre
     found: 0
     index: 0
     while: index < message\graph\len
-        if: lmx_arena_ref_value(message\graph, (cast: (size_t) index)) = (cast: (@: void) children)
+        if: lmx_arena_ref_value(message\graph, (cast: (size_t) index)) = children
             found: 1
         ---
         index: index + 1
@@ -211,7 +213,7 @@ return: c.LMX_THREAD_OK
 fn: lmx_thread_children_bind_graph (@: LmxThread t; @: LmxArena arena) int
     @: LmxMsg message
     @: Lmx graph
-    @: LmxListDesc found 0
+    @: LmxArrayDesc found 0
     @: void value
     int: index
     int: type c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD
@@ -229,30 +231,30 @@ fn: lmx_thread_children_bind_graph (@: LmxThread t; @: LmxArena arena) int
             if: found != 0
                 return: c.LMX_THREAD_INVALID
             ---
-            found: (cast: (@: LmxListDesc) value)
+            found: (cast: (@: LmxArrayDesc) value)
         ---
         index: index + 1
     ---
     if: found = 0
         return: c.LMX_THREAD_INVALID
     ---
-return: lmx_thread_children_bind(t, found, arena)
+return: lmx_thread_children_bind(t, (cast: (@: void) found), arena)
 
-fn: lmx_thread_children_field_new (@: LmxArena arena; @: Lmx graph; size_t: field) @: LmxListDesc
-    @: LmxListDesc children
+fn: lmx_thread_children_field_new (@: LmxArena arena; @: Lmx graph; size_t: field) @: void
+    @: LmxArrayDesc children
     if: arena = 0 || graph = 0 || field >= graph\len
         return: 0
     ---
-    children: lmx_list_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, arena)
+    children: (cast: (@: LmxArrayDesc) lmx_list_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, arena))
     if: children = 0
         return: 0
     ---
     if: lmx_arena_ref_store(graph, field, (cast: (@: void) children)) != 0
         return: 0
     ---
-return: children
+return: (cast: (@: void) children)
 
-fn: lmx_thread_children (@: LmxThread t) @: LmxListDesc
+fn: lmx_thread_children (@: LmxThread t) @: void
     if: t = 0
         return: 0
 return: t\children
@@ -260,7 +262,7 @@ return: t\children
 fn: lmx_thread_child_count (@: LmxThread parent) size_t
     if: parent = 0 || parent\children = 0
         return: 0U
-return: parent\children\len
+return: lmx_list_len(parent\children)
 
 fn: lmx_thread_child_at (@: LmxThread parent; size_t: index) @: LmxThread
     if: parent = 0 || parent\children = 0
@@ -337,9 +339,9 @@ fn: lmx_thread_child_add (@: LmxThread parent; @: LmxThread child; @: LmxArena i
     ---
     if: parent\children = 0
         return: c.LMX_THREAD_INVALID
-    if: lmx_range_home(arena, (cast: (@: void) parent\children)) != arena
+    if: lmx_range_home(arena, parent\children) != arena
         return: c.LMX_THREAD_INVALID
-    if: parent\children\cap != 0U && lmx_range_home(arena, parent\children\data) != arena
+    if: lmx_list_cap(parent\children) != 0U && lmx_range_home(arena, lmx_list_data(parent\children)) != arena
         return: c.LMX_THREAD_INVALID
     ---
     ---
@@ -357,7 +359,7 @@ fn: lmx_thread_child_remove (@: LmxThread parent; @: LmxThread child) int
     if: parent\children = 0
         return: c.LMX_THREAD_INVALID
     index: 0U
-    while: index < parent\children\len
+    while: index < lmx_list_len(parent\children)
         if: lmx_thread_child_at(parent, index) = child
             if: parent\slot = 0 || parent\slot\arena = 0
                 return: c.LMX_THREAD_INVALID

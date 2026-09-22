@@ -1,4 +1,4 @@
-predef: "lmx_graph_copy_owned.h.lm1" "lmx_arena_refs.h.lm1" "lmx_value_owned.h.lm1" "lmx_chars_owned.h.lm1" "lmx_array_owned.h.lm1" "lmx_array_ref_owned.h.lm1" "l2src/lmx_list_owned.lm1" "lmx_pool.h.lm1" "lmx_range.lm1" "lmx_implements.h.lm1"
+predef: "lmx_graph_copy_owned.h.lm1" "lmx_arena_refs.h.lm1" "lmx_value_owned.h.lm1" "lmx_chars_owned.h.lm1" "l2src/lmx_array_owned.lm1" "l2src/lmx_array_ref_owned.lm1" "l2src/lmx_list_owned.lm1" "lmx_pool.h.lm1" "lmx_range.lm1" "lmx_implements.h.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdlib.h>" "<string.h>" "<stdint.h>"
 
@@ -307,8 +307,8 @@ fn: lmx_copy_value (@: void v; @: char dst_chars; @: LmxArena src_arena; @: LmxA
     @: void cell 0
     @: LmxArrayDesc src_desc
     @: LmxArrayDesc dst_desc 0
-    @: LmxListDesc src_list
-    @: LmxListDesc dst_list 0
+    @: LmxArrayDesc src_list
+    @: LmxArrayDesc dst_list 0
     @@: void src_refs
     @@: void dst_refs
     size_t: i 0U
@@ -418,7 +418,7 @@ fn: lmx_copy_value (@: void v; @: char dst_chars; @: LmxArena src_arena; @: LmxA
             return: 0
         return: cell
     if: kind = c.LMX_KIND_LIST
-        src_list: (cast: (@: LmxListDesc) v)
+        src_list: (cast: (@: LmxArrayDesc) v)
         dst_list: lmx_list_new_owned(vtype, dst_arena)
         if: dst_list = 0
             \status: LMX_GRAPH_COPY_NOMEM

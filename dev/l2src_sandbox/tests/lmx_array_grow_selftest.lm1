@@ -18,7 +18,7 @@ fn: main () int
     LmxArena: arena
     LmxArena: viewer
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
-    @: LmxListDesc array
+    @: LmxArrayDesc array
     @: LmxArrayDesc fixed
     @: LmxPool descriptor_pool
     @: LmxPool backing_pool
@@ -47,23 +47,23 @@ fn: main () int
     p3: lmx_int_new_owned(@ arena)
     p4: lmx_int_new_owned(@ arena)
     array: lmx_list_new_owned(type, @ arena)
-    grow_check(counts, array != 0 && array\len = 0U && array\cap = 2U && array\data != 0, "empty list starts at cap two")
+    grow_check(counts, array != 0 && array\len = 0U && lmx_list_cap(array) = 2U && array\data != 0, "empty list starts at cap two")
     grow_check(counts, lmx_range_classify(@ arena, (cast: (@: void) array)) = c.LMX_KIND_LIST && lmx_range_type_of(@ arena, (cast: (@: void) array)) = type, "list descriptor is typed by its arena range")
     grow_check(counts, lmx_range_classify(@ arena, array\data) = c.LMX_KIND_PRIMITIVE && lmx_range_type_of(@ arena, array\data) = element_type && lmx_range_stride(@ arena, array\data) = c.sizeof(@: void), "backing cells are typed by their arena range")
     grow_check(counts, lmx_list_append_owned(array, p0, @ arena) = c.LMX_LIST_OK && lmx_list_append_owned(array, p1, @ arena) = c.LMX_LIST_OK, "two values fit without growth")
     old_data: array\data
     old_cells: (cast: (@@: void) old_data)
     grow_check(counts, old_cells[0] = p0 && old_cells[1] = p1, "physical referent values are stored unchanged")
-    grow_check(counts, lmx_list_append_owned(array, p2, @ arena) = c.LMX_LIST_OK && array\len = 3U && array\cap = 3U && array\data != old_data, "third append grows two to three")
+    grow_check(counts, lmx_list_append_owned(array, p2, @ arena) = c.LMX_LIST_OK && array\len = 3U && lmx_list_cap(array) = 3U && array\data != old_data, "third append grows two to three")
     cells: (cast: (@@: void) array\data)
     grow_check(counts, cells[0] = p0 && cells[1] = p1 && cells[2] = p2, "growth preserves all physical referent values")
     grow_check(counts, old_cells[0] = 0 && old_cells[1] = 0 && lmx_range_type_of(@ arena, old_data) = element_type, "old typed backing is cleared, not illegally range-dropped")
     old_data: array\data
-    grow_check(counts, lmx_list_append_owned(array, p3, @ arena) = c.LMX_LIST_OK && array\cap = 4U && array\data != old_data, "fourth append grows three to four")
+    grow_check(counts, lmx_list_append_owned(array, p3, @ arena) = c.LMX_LIST_OK && lmx_list_cap(array) = 4U && array\data != old_data, "fourth append grows three to four")
     old_data: array\data
-    grow_check(counts, lmx_list_append_owned(array, p4, @ arena) = c.LMX_LIST_OK && array\len = 5U && array\cap = 6U && array\data != old_data, "fifth append grows four to six")
+    grow_check(counts, lmx_list_append_owned(array, p4, @ arena) = c.LMX_LIST_OK && array\len = 5U && lmx_list_cap(array) = 6U && array\data != old_data, "fifth append grows four to six")
     grow_check(counts, lmx_list_value(array, 0U) = p0 && lmx_list_value(array, 4U) = p4, "iteration reads physical values from logical zero through len")
-    grow_check(counts, lmx_list_remove_owned(array, 1U, @ removed, @ arena) = c.LMX_LIST_OK && removed = p1 && array\len = 4U && array\cap = 6U, "remove returns the physical value and keeps cap")
+    grow_check(counts, lmx_list_remove_owned(array, 1U, @ removed, @ arena) = c.LMX_LIST_OK && removed = p1 && array\len = 4U && lmx_list_cap(array) = 6U, "remove returns the physical value and keeps cap")
     cells: (cast: (@@: void) array\data)
     grow_check(counts, cells[0] = p0 && cells[1] = p2 && cells[2] = p3 && cells[3] = p4 && cells[4] = 0, "remove compacts logical values and clears the stale tail")
     fixed: lmx_array_new_owned(type, 3U, @ arena)

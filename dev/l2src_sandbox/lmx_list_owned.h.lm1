@@ -10,17 +10,12 @@ define: LMX_LIST_OVERFLOW 3
 define: LMX_LIST_BOUNDS 4
 define: LMX_LIST_MIN_CAP 2
 
-struct: LmxListDesc
-    size_t: len
-    size_t: cap
-    @: void data
-    int: etype
-    int: backing_kind
-end: LmxListDesc
-
 prototype:
-    fn: lmx_list_new_owned (int: type; @: LmxArena arena) @: LmxListDesc
-    fn: lmx_list_append_owned (@: LmxListDesc list; @: void value; @: LmxArena arena) int
-    fn: lmx_list_remove_owned (@: LmxListDesc list; size_t: index; @@: void removed; @: LmxArena arena) int
-    fn: lmx_list_value (@: LmxListDesc list; size_t: index) @: void
+    fn: lmx_list_new_owned (int: type; @: LmxArena arena) @: void
+    fn: lmx_list_append_owned (@: void list; @: void value; @: LmxArena arena) int
+    fn: lmx_list_remove_owned (@: void list; size_t: index; @@: void removed; @: LmxArena arena) int
+    fn: lmx_list_value (@: void list; size_t: index) @: void
+    fn: lmx_list_len (@: void list) size_t
+    fn: lmx_list_cap (@: void list) size_t
+    fn: lmx_list_data (@: void list) @: void
 end: prototype

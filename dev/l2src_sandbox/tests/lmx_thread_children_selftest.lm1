@@ -38,8 +38,8 @@ fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxArena: link_arena
     @: Lmx graph 0
-    @: LmxListDesc children 0
-    @: LmxListDesc stray 0
+    @: LmxArrayDesc children 0
+    @: LmxArrayDesc stray 0
     @: LmxMsg parent_message 0
     @: LmxPost parent_mail 0
     @: LmxSchedule parent_slot 0
@@ -132,7 +132,7 @@ fn: main () int
     tc_check(counts, lmx_thread_child_add(parent, j, @ link_arena) = c.LMX_THREAD_OK, "add j failed")
     tc_check(counts, lmx_thread_child_add(parent, k, @ link_arena) = c.LMX_THREAD_OK, "add k failed")
     tc_check(counts, lmx_thread_child_add(parent, l, @ link_arena) = c.LMX_THREAD_OK, "add l failed")
-    tc_check(counts, lmx_thread_child_count(parent) = 12U && children\cap = 13U, "dynamic Array did not grow beyond eight to capacity thirteen")
+    tc_check(counts, lmx_thread_child_count(parent) = 12U && lmx_list_cap(children) = 13U, "dynamic Array did not grow beyond eight to capacity thirteen")
     tc_check(counts, lmx_thread_child_add(parent, a, @ link_arena) = c.LMX_THREAD_INVALID, "duplicate add was accepted")
 
     # is-direct-child

@@ -3,7 +3,6 @@ predef: "l2src/lmx_message.h.lm1"
 predef: "l2src/lmx_post.h.lm1"
 predef: "l2src/lmx_schedule.h.lm1"
 predef: "l2src/lmx_arena.h.lm1"
-predef: "l2src/lmx_list_owned.h.lm1"
 # LmxCallEntry: one turn takes the handler the caller already holds (lmx_call.h.lm1).
 predef: "l2src/lmx_call.h.lm1"
 
@@ -128,29 +127,30 @@ struct: LmxThread
     # every other reference here; zero for a record no service has registered.
     @: void service
     # The sole direct-child membership collection: the L1 list descriptor that is
-    # an ordinary typed field of this Thread's graph.  The constructor validates it by the arena's
+    # an ordinary typed field of this Thread's graph.  Untyped here so L3 thread TUs
+    # do not import LmxArrayDesc.  The constructor validates it by the arena's
     # address-range table and caches only this same physical reference.  There is no link chain or
     # scheduler queue containing another membership set.
-    @: LmxListDesc children
+    @: void children
     # Per-child supervision state.  These cells do not establish membership; only the parent's
-    # `children` Array does.  `alive` is stamped by the child's lane and answered by its parent.
+    # children list does.  `alive` is stamped by the child's lane and answered by its parent.
     # `close_deadline` is the one relaxed atomic platform word inherited by a close cascade.
     size_t: alive
     ulong: stopped
     size_t: close_deadline
     # Orphan retention is supervision state of this same child record, never a second
     # membership list.  `orphaned` selects the R0 retention policy while the physical Thread
-    # remains an element of R0's one children Array.
+    # remains an element of R0's one children list.
     int: orphaned
     ulong: orphan_started
     ulong: orphan_limit
     # Optional ordinary application-graph field that published this child Message.  It is a
     # physical cell address, never a numeric slot: success clears it, failure leaves the graph
-    # reference as the retained result.  It is not child-membership; the children Array is.
+    # reference as the retained result.  It is not child-membership; the children list is.
     @@: void result
     # THIS object's OWN scheduler (Mikhail, 19.09: "У каждого Thread своя арена и свой
     # планировщик!", "менеджер у каждого ребёнка свой"): it traverses this Thread's one graph
-    # children Array. Untyped, like every other reference here -- the manager module names this one, so
+    # children list. Untyped, like every other reference here -- the manager module names this one, so
     # the type in this header would be an import cycle (measured: l1trans refuses it).
     # Opened by lmx_thread_scheduler_open, which takes the arena from its CALLER rather than
     # inferring ownership from another mechanism record.
@@ -204,21 +204,21 @@ prototype:
     fn: lmx_thread_parent (@: LmxThread t) @: LmxThread
     # This record's own service entry, or null (lmx_service writes it at registration).
     fn: lmx_thread_service (@: LmxThread t) @: void
-    # Bind the one ordinary graph Array<@LmxThread> supplied by this Thread's constructor.  The
+    # Bind the one ordinary graph children list supplied by this Thread's constructor.  The
     # descriptor and its backing must belong to `arena`; a second binding is refused.
-    fn: lmx_thread_children_bind (@: LmxThread t; @: LmxListDesc children; @: LmxArena arena) int
-    # Constructor helper: locate the unique exact typed Array<@LmxThread> among ordinary graph
+    fn: lmx_thread_children_bind (@: LmxThread t; @: void children; @: LmxArena arena) int
+    # Constructor helper: locate the unique exact typed children list among ordinary graph
     # fields and bind that physical descriptor. No field position or runtime name is involved.
     fn: lmx_thread_children_bind_graph (@: LmxThread t; @: LmxArena arena) int
-    # Construct one ordinary graph field holding the sole growable child-membership Array.
+    # Construct one ordinary graph field holding the sole child-membership list.
     # `field` is chosen by the graph producer; it is not a runtime ABI slot.
-    fn: lmx_thread_children_field_new (@: LmxArena arena; @: Lmx graph; size_t: field) @: LmxListDesc
-    fn: lmx_thread_children (@: LmxThread t) @: LmxListDesc
+    fn: lmx_thread_children_field_new (@: LmxArena arena; @: Lmx graph; size_t: field) @: void
+    fn: lmx_thread_children (@: LmxThread t) @: void
     fn: lmx_thread_child_count (@: LmxThread parent) size_t
     fn: lmx_thread_child_at (@: LmxThread parent; size_t: index) @: LmxThread
-    # Live direct children: append, remove, membership, and ordered iteration over that Array.
+    # Live direct children: append, remove, membership, and ordered iteration over that list.
     # The address of this Thread's handshake word -- the child-owned cell the child stamps and
-    # its parent answers (19.29.7.1). Membership itself comes only from the graph Array.
+    # its parent answers (19.29.7.1). Membership itself comes only from the graph list.
     # This object's own scheduler, or null while none was opened.  Untyped: a caller casts.
     fn: lmx_thread_manager (@: LmxThread t) @: void
     # Open this object's own scheduler as a record of `arena` (the caller names it).  Refused

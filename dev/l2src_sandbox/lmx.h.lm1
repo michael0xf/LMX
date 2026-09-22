@@ -162,7 +162,7 @@ enum: LmxKind
     LMX_KIND_REF 5
     # an Lmx header {parent, len, data}
     LMX_KIND_STRUCT 6
-    # independent L1 dynamic container (LmxListDesc); not an Array
+    # independent L1 dynamic container (LmxArrayDesc); not an Array
     LMX_KIND_LIST 7
 end: LmxKind
 
@@ -199,7 +199,7 @@ struct: LmxOp
 end: LmxOp
 
 # An Array descriptor has no Lmx node. `len` is the logical element count.
-# The backing is exactly `len` cells. Dynamic membership is LmxListDesc, not Array.
+# The backing is exactly `len` cells. Dynamic membership is an L1 list (KIND_LIST), not Array.
 struct: LmxArrayDesc
     size_t: len
     @: void data
@@ -225,7 +225,7 @@ struct: LmxRange
 end: LmxRange
 
 # A typed service array.  2 lists them and 6.5 spells the Array one out: one per
-# primitive C type, one of {addr, sig} method records, one of {len, capacity, data} Array
+# primitive C type, one of {addr, sig} method records, one of {len, data} Array
 # descriptors per element type, and one of Lmx headers.
 #
 # This record IS the array's descriptor: the arena's index entry for an address

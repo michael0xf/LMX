@@ -66,8 +66,8 @@ fn: lmx_root_open (@: LmxRoot root; LmxCallEntry: entry; ulong: limit) int
     @: LmxArena arena
     @: Lmx parent_graph
     @: Lmx graph
-    @: LmxListDesc parent_children
-    @: LmxListDesc children
+    @: LmxArrayDesc parent_children
+    @: LmxArrayDesc children
     @: LmxThread parent
     @: LmxThread thread
     @: LmxSchedule parent_slot
@@ -154,7 +154,7 @@ fn: lmx_root_open (@: LmxRoot root; LmxCallEntry: entry; ulong: limit) int
     # structural stub graph. Keep the reserved source ABI `node` non-null and fixed at entry;
     # nested control bodies never rebind it.
     graph\parent: parent_graph
-    root\parent_children: parent_children
+    root\parent_children: (cast: (@: void) parent_children)
     # Qualified sealed ranges are ordinary owner-arena values reached from ordinary graph fields.
 
     # R0 and its structural parent are each one allocation. Their first by-value LmxMsg prefix
@@ -192,7 +192,7 @@ fn: lmx_root_open (@: LmxRoot root; LmxCallEntry: entry; ulong: limit) int
     if: lmx_thread_init(@ root\arena, root\parent, parent_graph, root\parent_mail, root\parent_slot) != c.LMX_THREAD_OK || lmx_thread_init(@ root\arena, root\thread, graph, root\mail, root\slot) != c.LMX_THREAD_OK
         return: lmx_root_open_unwind(root, parent_mail_open, mail_open, service_opened, service_registered)
     ---
-    if: lmx_thread_children_bind(root\parent, parent_children, @ root\arena) != c.LMX_THREAD_OK || lmx_thread_children_bind(root\thread, children, @ root\arena) != c.LMX_THREAD_OK
+    if: lmx_thread_children_bind(root\parent, (cast: (@: void) parent_children), @ root\arena) != c.LMX_THREAD_OK || lmx_thread_children_bind(root\thread, (cast: (@: void) children), @ root\arena) != c.LMX_THREAD_OK
         return: lmx_root_open_unwind(root, parent_mail_open, mail_open, service_opened, service_registered)
     ---
     manager: (cast: (@: LmxManager) lmx_arena_take(@ root\arena, c.sizeof(c.LmxManager), c.LMX_DOMAIN_KIND_MANAGER, c.LMX_DOMAIN_MANAGER))

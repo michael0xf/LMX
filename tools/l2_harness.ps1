@@ -846,6 +846,15 @@ $fixtures = @(
         Needle = 'not callable'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_callable_formal_sig_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'incompatible entry signature'; Absent = @(); Debt = @() },
+    # COMPACT-RAWFIELD-BATCHA-72: raw_fld=5 call without form-COMPACT. Debt pins emitted
+    # raw-field ccall; Absent forbids form gate leftovers. translates-with-debt catches
+    # checker/emitter divergence (refuse vs missing Debt).
+    [pscustomobject]@{ Name = 'unit_rawfield_compact.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+        Absent = @();
+        Debt = @('l2_p0_0\zz(1)') },
+    [pscustomobject]@{ Name = 'unit_rawfield_colon.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+        Absent = @();
+        Debt = @('l2_p0_0\zz(1)') },
     [pscustomobject]@{ Name = 'unit_colon_hidden_update.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');

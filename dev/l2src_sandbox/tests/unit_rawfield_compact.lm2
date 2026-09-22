@@ -1,0 +1,13 @@
+# GROKBOT-COMPACT-RAWFIELD-BATCHA-20260922-72
+# Compact raw-field call on a foreign-by-value formal. Foo is spelled as written
+# (no header allowlist). After Batch A, COMPACT is not required — only raw_fld=5.
+# Formal-only body: no Foo local (L1 has no Foo layout). Debt pin l2_p0_0\zz(1)
+# catches checker/emitter divergence (mut: checker raw_fld!=5 -> unknown field
+# path root; emitter-only raw_fld!=5 -> no L1 product).
+fn: m (Foo: p) int
+    return: p\zz(1)
+end: m
+
+fn: main () int
+    return: 0
+end: main

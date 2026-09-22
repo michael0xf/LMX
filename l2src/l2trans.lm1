@@ -8776,12 +8776,9 @@ fn: l2_head_is_call (const: @(LmP0Text t); const: @(LmP0Structure body); unsigne
     int: k 0
     if: t = 0
         return: 0
-    # Parentheses are preserved in the P0 frame flags.  They decide the
-    # otherwise ambiguous machine-field case exactly: p\fn(...) is a call,
-    # while p\field: value is an update.  Colon calls remain decidable from a
-    # known L2 METHOD descriptor below.
-    if: (flags & c.LM_P0_FRAME_COMPACT) != 0U
-        return: 1
+    # Known L2 METHOD names are calls independent of surface form (find_method below).
+    # COMPACT no longer short-circuits that decision. Parentheses still matter for
+    # otherwise ambiguous machine-field cases via path_kind further below.
     if: l2_find_method(t) >= 0
         return: 1
     if: t\data = 0 || t\length >= 256U

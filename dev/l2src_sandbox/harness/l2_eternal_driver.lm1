@@ -77,6 +77,10 @@ fn: inspect (@: LmxRoot root) int
     int: shared_profile 0
     int: children_seen 0
     check(message != 0 && l2_program_graph() != 0 && message\graph = l2_program_graph(), "program unit is the current Message graph")
+    # The parent frame above R0 is Message supervision, not a lexical `node` link (LMX_semantics
+    # §23), so the published program unit is a lexical root.  A parent here lets graph copy climb
+    # out of this Message into the supervising Message's graph.
+    check(l2_program_graph() != 0 && l2_program_graph()\parent = 0, "program unit is a lexical root: its parent Message is supervision, not a lexical node")
     check(lmx_domain_kind(arena, (cast: (@: void) l2_program_graph())) = c.LMX_KIND_STRUCT && lmx_domain_type(arena, (cast: (@: void) l2_program_graph())) = c.LMX_TYPE_STRUCT, "program unit remains a live owner-arena Structure")
     i: 0
     while: message != 0 && message\graph != 0 && i < message\graph\len

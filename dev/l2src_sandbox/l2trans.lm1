@@ -4834,7 +4834,35 @@ fn: l2_foreign_byvalue (const: @(LmP0Text t)) int
         view\length: t\length - 2U
         return: l2_foreign_intern(view, 0, 0)
     ---
-return: l2_foreign_intern(t, 0, 0)
+    # Bare foreign by-value names are refused (type-position rule, ticket 106 PART2).
+return: 0 - 1
+
+# Resolve a type-position atom at address depth for formals/returns/own fields.
+# Order matches l2_ptr_local_ty: Structure/model -> Lmx projection; c.* raw door;
+# else unknown (caller emits "unknown type"). Returns 0 and sets out_ty, or 2.
+fn: l2_resolve_type_atom (const: @(LmP0Text atom); int: depth; int: is_const; @: int out_ty) int
+    if: out_ty = 0 || atom = 0
+        return: 2
+    \out_ty: 0
+    if: depth < 1
+        return: 2
+    # Lmx is the Structure/model projection type (CORE.md 3.1); it is not a foreign C name.
+    if: l2_text_eq(atom, "Lmx")
+        \out_ty: l2_foreign_intern(l2_lmx_text(), depth, is_const)
+        if: \out_ty >= 100
+            return: 0
+        return: 2
+    if: l2_ns_find(atom) >= 0
+        \out_ty: l2_foreign_intern(l2_lmx_text(), depth + 1, is_const)
+        if: \out_ty >= 100
+            return: 0
+        return: 2
+    if: l2_c_door(atom) != 0
+        \out_ty: l2_foreign_intern(l2_text_skip(atom, 2U), depth, is_const)
+        if: \out_ty >= 100
+            return: 0
+        return: 2
+return: 2
 
 fn: l2_emit_foreign_named (@: FILE out; int: ty; const: @(char prefix); const: @(LmP0Text name)) int
     int: i ty - 100
@@ -8016,7 +8044,11 @@ fn: l2_own_array_pointer_ty (const: @(LmP0Node stmt)) int
         return: 24
     if: depth = 2 && l2_text_eq(f\value\as\atom, "ulong")
         return: 39
-return: l2_foreign_intern(f\value\as\atom, depth, 0)
+    if: l2_ns_find(f\value\as\atom) >= 0
+        return: l2_foreign_intern(l2_lmx_text(), depth + 1, 0)
+    if: l2_c_door(f\value\as\atom) != 0
+        return: l2_foreign_intern(l2_text_skip(f\value\as\atom, 2U), depth, 0)
+return: 0
 
 fn: l2_own_decl_name (const: @(LmP0Node stmt)) @: LmP0Text
     @: LmP0Field f l2_next_active(stmt\as\frame\body\first_field)
@@ -11040,9 +11072,8 @@ fn: l2_typed_formal (const: @(LmP0Node node); const: @(char path); @@: LmP0Text 
         g: l2_next_active(f\next)
         if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || g = 0 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || l2_ident(g\value\as\atom) = 0
             return: l2_error(path, node, "incompatible entry signature")
-        \out_ty: l2_foreign_intern(f\value\as\atom, depth, 0)
-        if: \out_ty < 100
-            return: l2_error(path, node, "out of memory")
+        if: l2_resolve_type_atom(f\value\as\atom, depth, 0, out_ty) != 0
+            return: l2_error(path, f\value, "unknown type")
         \out_name: g\value\as\atom
         return: 0
     if: l2_frame_head(node, "@@")
@@ -11094,9 +11125,8 @@ fn: l2_typed_formal (const: @(LmP0Node node); const: @(char path); @@: LmP0Text 
             \out_ty: 20
             \out_name: g\value\as\atom
             return: 0
-        \out_ty: l2_foreign_intern(f\value\as\atom, 2, 0)
-        if: \out_ty < 100
-            return: l2_error(path, node, "out of memory")
+        if: l2_resolve_type_atom(f\value\as\atom, 2, 0, out_ty) != 0
+            return: l2_error(path, f\value, "unknown type")
         \out_name: g\value\as\atom
         return: 0
     if: l2_frame_head(node, "@")
@@ -11141,10 +11171,20 @@ fn: l2_typed_formal (const: @(LmP0Node node); const: @(char path); @@: LmP0Text 
             \out_ty: 16
             \out_name: g\value\as\atom
             return: 0
-        if: l2_text_eq(f\value\as\atom, "LmP0Text") = 0 && l2_text_eq(f\value\as\atom, "L2ImmutQuery") = 0
+        if: l2_text_eq(f\value\as\atom, "FILE")
+            \out_ty: 23
+            \out_name: g\value\as\atom
+            return: 0
+        if: l2_text_eq(f\value\as\atom, "LmP0Document")
+            l2_need_p0: 1
             \out_ty: l2_foreign_intern(f\value\as\atom, 1, 0)
             if: \out_ty < 100
                 return: l2_error(path, node, "out of memory")
+            \out_name: g\value\as\atom
+            return: 0
+        if: l2_text_eq(f\value\as\atom, "LmP0Text") = 0 && l2_text_eq(f\value\as\atom, "L2ImmutQuery") = 0
+            if: l2_resolve_type_atom(f\value\as\atom, 1, 0, out_ty) != 0
+                return: l2_error(path, f\value, "unknown type")
             \out_name: g\value\as\atom
             return: 0
         if: l2_text_eq(f\value\as\atom, "LmP0Text")
@@ -11170,10 +11210,10 @@ fn: l2_typed_formal (const: @(LmP0Node node); const: @(char path); @@: LmP0Text 
             l2_last_cf_req: req_mi
             return: 0
         ---
-        # A by-value formal of a foreign type, `T: name` or `c.T: name` (Stage B).
+        # A by-value formal of a foreign type, `c.T: name` (Stage B). Bare T is unknown type.
         \out_ty: l2_foreign_byvalue(node\as\frame\head)
         if: \out_ty < 100
-            return: l2_error(path, node, "incompatible entry signature")
+            return: l2_error(path, node, "unknown type")
         \out_name: f\value\as\atom
         return: 0
     if: l2_frame_head(node, "const") = 0
@@ -11195,15 +11235,13 @@ fn: l2_typed_formal (const: @(LmP0Node node); const: @(char path); @@: LmP0Text 
     if: depth != 1
         if: g = 0 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || l2_ident(g\value\as\atom) = 0
             return: l2_error(path, node, "incompatible entry signature")
-        \out_ty: l2_foreign_intern(f\value\as\atom, depth, 1)
-        if: \out_ty < 100
-            return: l2_error(path, node, "out of memory")
+        if: l2_resolve_type_atom(f\value\as\atom, depth, 1, out_ty) != 0
+            return: l2_error(path, f\value, "unknown type")
         \out_name: g\value\as\atom
         return: 0
     if: l2_text_eq(f\value\as\atom, "char") = 0 && l2_text_eq(f\value\as\atom, "LmP0Text") = 0 && l2_text_eq(f\value\as\atom, "L2ImmutQuery") = 0 && l2_text_eq(f\value\as\atom, "LmP0IndentStack") = 0 && l2_text_eq(f\value\as\atom, "LmxMsgRuntime") = 0 && l2_text_eq(f\value\as\atom, "LmxMsg") = 0 && l2_text_eq(f\value\as\atom, "LmxMsgCopy") = 0
-        \out_ty: l2_foreign_intern(f\value\as\atom, 1, 1)
-        if: \out_ty < 100
-            return: l2_error(path, node, "out of memory")
+        if: l2_resolve_type_atom(f\value\as\atom, 1, 1, out_ty) != 0
+            return: l2_error(path, f\value, "unknown type")
         \out_name: g\value\as\atom
         return: 0
     if: g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || l2_ident(g\value\as\atom) = 0
@@ -11564,10 +11602,16 @@ fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path)) int
         if: l2_text_eq(rbase\as\atom, "char")
             l2_m_ret[l2_m_n]: 35
         else:
-            # Any other pointee is a const foreign pointer, spelled as written.
-            l2_m_ret[l2_m_n]: l2_foreign_intern(rbase\as\atom, 1, 1)
-            if: l2_m_ret[l2_m_n] < 100
-                return: l2_error(path, fn_node, "incompatible entry signature")
+            if: l2_text_eq(rbase\as\atom, "LmP0Text")
+                l2_m_ret[l2_m_n]: 5
+                l2_need_p0: 1
+            ---
+            if: l2_text_eq(rbase\as\atom, "LmP0Text") = 0
+                int: rty_code_c 0
+                if: l2_resolve_type_atom(rbase\as\atom, 1, 1, @ rty_code_c) != 0
+                    return: l2_error(path, rbase, "unknown type")
+                l2_m_ret[l2_m_n]: rty_code_c
+            ---
             ---
         return_depth: 0 - 1
         ---
@@ -11577,9 +11621,10 @@ fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path)) int
         rty: l2_next_active(field\value\as\frame\body\first_field)\value
         if: rty = 0 || rty\kind != c.LM_P0_NODE_ATOM
             return: l2_error(path, fn_node, "incompatible entry signature")
-        l2_m_ret[l2_m_n]: l2_foreign_intern(rty\as\atom, return_depth, 0)
-        if: l2_m_ret[l2_m_n] < 100
-            return: l2_error(path, fn_node, "out of memory")
+        int: rty_code_d 0
+        if: l2_resolve_type_atom(rty\as\atom, return_depth, 0, @ rty_code_d) != 0
+            return: l2_error(path, rty, "unknown type")
+        l2_m_ret[l2_m_n]: rty_code_d
         ---
     if: is_sub = 0 && l2_frame_head(field\value, "@")
         if: field\value\as\frame\body = 0 || l2_count_active(field\value\as\frame\body) != 1
@@ -11598,9 +11643,10 @@ fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path)) int
             l2_m_ret[l2_m_n]: 13
             l2_need_p0: 1
         if: l2_text_eq(rty\as\atom, "char") = 0 && l2_text_eq(rty\as\atom, "void") = 0 && l2_text_eq(rty\as\atom, "LmP0Text") = 0 && l2_text_eq(rty\as\atom, "LmP0IndentStack") = 0
-            l2_m_ret[l2_m_n]: l2_foreign_intern(rty\as\atom, 1, 0)
-            if: l2_m_ret[l2_m_n] < 100
-                return: l2_error(path, fn_node, "out of memory")
+            int: rty_code 0
+            if: l2_resolve_type_atom(rty\as\atom, 1, 0, @ rty_code) != 0
+                return: l2_error(path, rty, "unknown type")
+            l2_m_ret[l2_m_n]: rty_code
         ---
     if: is_sub = 0 && l2_frame_head(field\value, "@@")
         if: field\value\as\frame\body = 0 || l2_count_active(field\value\as\frame\body) != 1
@@ -11611,9 +11657,10 @@ fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path)) int
         if: l2_text_eq(rty\as\atom, "char")
             l2_m_ret[l2_m_n]: 32
         else:
-            l2_m_ret[l2_m_n]: l2_foreign_intern(rty\as\atom, 2, 0)
-            if: l2_m_ret[l2_m_n] < 100
-                return: l2_error(path, fn_node, "out of memory")
+            int: rty_code2 0
+            if: l2_resolve_type_atom(rty\as\atom, 2, 0, @ rty_code2) != 0
+                return: l2_error(path, rty, "unknown type")
+            l2_m_ret[l2_m_n]: rty_code2
         ---
     ---
     if: is_sub = 0 && field\value\kind = c.LM_P0_NODE_ATOM && l2_ns_find(field\value\as\atom) >= 0
@@ -11623,12 +11670,11 @@ fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path)) int
         if: l2_nsty_set(l2_m_n, 0 - 1, l2_ns_find(field\value\as\atom)) != 0
             return: l2_error(path, fn_node, "out of memory")
         ---
-    # Any other return type name is a by-value foreign type (Stage B), spelled
-    # as written, `T` or `c.T`.
+    # By-value foreign return: `c.T` only. Bare foreign names are unknown type.
     if: is_sub = 0 && field\value\kind = c.LM_P0_NODE_ATOM && l2_ns_find(field\value\as\atom) < 0 && l2_text_eq(field\value\as\atom, "int") = 0 && l2_text_eq(field\value\as\atom, "size_t") = 0 && l2_text_eq(field\value\as\atom, "unsigned") = 0 && l2_text_eq(field\value\as\atom, "ulong") = 0 && l2_text_eq(field\value\as\atom, "void") = 0 && l2_text_eq(field\value\as\atom, "LmP0TrailerRole") = 0 && l2_text_eq(field\value\as\atom, "LmxMsgAddr") = 0
         l2_m_ret[l2_m_n]: l2_foreign_byvalue(field\value\as\atom)
         if: l2_m_ret[l2_m_n] < 100
-            return: l2_error(path, fn_node, "incompatible entry signature")
+            return: l2_error(path, field\value, "unknown type")
         ---
     if: is_sub = 0 && field\value\kind != c.LM_P0_NODE_ATOM && return_depth = 0
         return: l2_error(path, fn_node, "incompatible entry signature")

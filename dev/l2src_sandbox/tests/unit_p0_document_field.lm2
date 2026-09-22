@@ -5,14 +5,14 @@ include: "l1src/p0.lm1.h" "<stdlib.h>"
 # code 13, which bypassed the foreign field path, so every `doc\field` was
 # "unknown foreign field" while LmP0Frame fields worked. It is now a foreign
 # pointer type like LmP0Frame (Stage B).
-fn: doc_len (@: LmP0Document doc) size_t
+fn: doc_len (@: c.LmP0Document doc) size_t
     if: doc = 0
         return: 0U
     return: doc\source_length
 end: doc_len
 
 fn: doc_field () int
-    @: LmP0Document d
+    @: c.LmP0Document d
     d: (cast: (@: LmP0Document) c.calloc(1U, c.sizeof(c.LmP0Document)))
     if: d = 0
         return: 1

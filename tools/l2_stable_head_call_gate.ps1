@@ -132,8 +132,17 @@ function Invoke-Fx {
 
 Invoke-Fx 'unit_head_call_method_compact' 'translates-with-debt' -Debt @('l2_m0')
 Invoke-Fx 'unit_head_call_method_colon' 'translates-with-debt' -Debt @('l2_m0')
-Invoke-Fx 'unit_head_call_unresolved_compact' 'l2trans-refuses' -Needle 'unsupported body'
 Invoke-Fx 'unit_head_call_c_arg_compact' 'translates-with-debt' -Debt @('c.bogus')
+# Raw-door (l2_c_door): empty statement + expression; two arbitrary c.* shapes
+Invoke-Fx 'unit_head_call_c_empty_abort' 'translates-with-debt' -Debt @('c.abort')
+Invoke-Fx 'unit_head_call_c_empty_rand' 'translates-with-debt' -Debt @('c.rand')
+Invoke-Fx 'unit_head_call_c_expr_rand' 'translates-with-debt' -Debt @('c.rand')
+Invoke-Fx 'unit_head_call_c_expr_strlen' 'translates-with-debt' -Debt @('c.strlen')
+# Previously ungated regression pin
+Invoke-Fx 'unit_c_empty_call' 'translates-with-debt' -Debt @('c.rand','c.abort')
+# Negatives: raw door must not widen past c.*
+Invoke-Fx 'unit_head_call_unresolved_compact' 'l2trans-refuses' -Needle 'unsupported body'
+Invoke-Fx 'unit_head_call_nondoor_dotted' 'l2trans-refuses' -Needle 'unsupported body'
 
 # Persist identity
 @(

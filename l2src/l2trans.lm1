@@ -8783,6 +8783,11 @@ fn: l2_head_is_call (const: @(LmP0Text t); const: @(LmP0Structure body); unsigne
         return: 1
     if: t\data = 0 || t\length >= 256U
         return: 0
+    # General raw-C tokens (c.*) are calls via the existing token door, before
+    # the single-segment early return. l2_c_door already excludes c.sizeof /
+    # c.puts / c.array (their own lowering). Not COMPACT; not a name whitelist.
+    if: l2_c_door(t) != 0
+        return: 1
     if: l2_seg_count(t\data, t\length) < 2
         return: 0
     if: l2_path_kind(t\data, t\length, @ k) = 4

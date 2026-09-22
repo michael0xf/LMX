@@ -444,7 +444,6 @@ if ($driver) { Add-Row 'OK' 'build:eternal_driver' ($made.ToString() + ' kernel 
 # ---- 3. the fixtures ------------------------------------------------------------------------
 # `Expect` says how far this fixture is supposed to get, and each value is a claim about the
 # translator, not about this script:
-#   runs                 -- the whole chain, and the program's exit code is Exit.
 #   l2trans-refuses      -- l2trans must REFUSE it; Needle must appear in what it printed.
 #   translates-with-debt -- the whole translator chain succeeds, AND the generated L1 is then
 #                           read: every string in Absent must be GONE from it and every string
@@ -456,10 +455,19 @@ if ($driver) { Add-Row 'OK' 'build:eternal_driver' ($made.ToString() + ' kernel 
 #                           what must be there), and then the program RUNS under the driver,
 #                           which is given Args: the number of roots and facts about them (the
 #                           driver's header lists the words).  Exit 0 or the row is red.
-#   library-links        -- a unit with NO main, which l2trans takes in library mode, together
+#   library-links        -- a unit translated in the LIBRARY PROFILE (`l2trans --library`), together
 #                           with the units named in With.  Each is translated and compiled, its
 #                           external definitions are read with nm, and the objects are joined in
-#                           ONE relocatable link.  LINK AND SYMBOLS ONLY: nothing is run.
+#                           ONE relocatable link.  LINK AND SYMBOLS ONLY: nothing is run.  The
+#                           profile is SELECTED here, never inferred from what the unit lacks: L2
+#                           has no `main` (S2), so a unit of methods alone is also a program.
+#
+# THE ENTRY (S2).  An L2 program is its unit body from the first line.  The translator states in the
+# generated L1 how many top-level statements the entry executes, as one line `# entry statements: N`.
+# An `eternal-runs` row whose unit has none is red unless the row says EmptyEntry = $true:
+# a program that executes nothing proves nothing, and before S2 a unit without `main` was silently a
+# library.  `Entry` is the int the entry returns (the program's value, E1; default 0); the driver
+# checks the exit value and the adapter's own result against it.
 #
 # WHY THESE ROWS READ THE GENERATED L1 AS WELL AS RUN IT. Qualified immutable roots are ordinary
 # values of the current Message arena. Their type and lifetime come from exact physical profile
@@ -478,13 +486,46 @@ if ($driver) { Add-Row 'OK' 'build:eternal_driver' ($made.ToString() + ' kernel 
 # generated program against the kernel's separate OBJECTS; the driver does not replace that, it
 # makes the question answerable before it exists.
 $fixtures = @(
-    [pscustomobject]@{ Name = 'entry_return7.lm2'; Expect = 'runs'; Exit = 7; Needle = ''; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'entry_puts_hello.lm2'; Expect = 'runs'; Exit = 0; Needle = ''; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'entry_puts_seq.lm2'; Expect = 'runs'; Exit = 0; Needle = ''; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'entry_puts_empty.lm2'; Expect = 'runs'; Exit = 0; Needle = ''; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'entry_puts_nl.lm2'; Expect = 'runs'; Exit = 0; Needle = ''; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'entry_puts_esc.lm2'; Expect = 'runs'; Exit = 0; Needle = ''; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'entry_ret_tr_bad.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'unsupported body'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_return7.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    # S2: there is no standalone L1-only program any more -- every program is its unit, E runs in
+    # R0 -- so the c.puts entries run on the kernel route, and say what they print.  The empty
+    # line of entry_puts_empty is not countable by Says (blank lines are not the program's).
+    [pscustomobject]@{ Name = 'entry_puts_hello.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Says = @('Hello'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_puts_seq.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Says = @('one', 'two'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_puts_empty.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_puts_nl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Says = @('x', 'y'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_puts_esc.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Says = @('a"b\c'); Absent = @(); Debt = @() },
+    # THE UNIT IS THE ENTRY (FABLE-OPUS-S2-UNIT-IS-ENTRY-20260923-112).  Every non-callable is
+    # visible only after its declaration, methods both ways.  unit_s2_vis_dynamic: a method ABOVE a
+    # unit field cannot see it, so the name is its dynamic input, handed over by its caller (wrap's
+    # own n = 7); a translator that lets the method see the unit field below it reads 3 and the
+    # program returns 1 (the visibility mutant, measured).  The three refusals are the same rule
+    # for a Structure named by a unit statement, a Structure named by a method signature, and a
+    # qualified branch named by a method body.  An empty entry is an empty program (EmptyEntry).
+    # A stray trailer after a closed frame is an item since the P0 change of -114 and is refused
+    # by name.
+    [pscustomobject]@{ Name = 'unit_s2_vis_dynamic.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Absent = @();
+        Debt = @('fn: l2_m0 (@: Lmx node; @: Lmx self; int: l2_p0_0) int', 'l2_t1: l2_m0(l2_c0\parent, l2_c0, l2_q0)') },
+    [pscustomobject]@{ Name = 'unit_s2_vis_structure_below_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s2_vis_signature_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unknown type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s2_vis_branch_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unresolved name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s2_empty_program.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); EmptyEntry = $true;
+        Absent = @(); Debt = @('# entry statements: 0') },
+    [pscustomobject]@{ Name = 'unit_s2_stray_end_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'stray trailer: the frame above is already closed'; Absent = @(); Debt = @() },
+    # The unit's fields are E's own fields: a second typed declaration of one name in one scope is
+    # refused, at unit level as in a method body (before S2 only the unit said so).  And E is the
+    # root of every activation: a callee's dynamic input that E does not bind stops at E and is
+    # resolved at the call by the callee's lexical fallback, as it was from `main`.
+    [pscustomobject]@{ Name = 'unit_root_field_duplicate.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'duplicate declaration'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_asgn_fallback.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_ret_tr_bad.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
     # One return-literal rule for every callable: an int result literal must fit int in a lone
     # main (literal and full body), in main beside a method (body and trailer), and in a method.
     [pscustomobject]@{ Name = 'entry_overflow.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'literal not representable as int'; Absent = @(); Debt = @() },
@@ -609,14 +650,14 @@ $fixtures = @(
                  'fn: l2_m3 (@: Lmx node; @: Lmx self; @: Lmx l2_msg; @@: Lmx l2_out_throw) int',
                  'l2_m3(l2_c0\parent, l2_c0, l2_msg, @ l2_te1)',
                  'l2_m0(l2_c2\parent, l2_c2, l2_msg, @ l2_t3, @ l2_te3)',
-                 'l2_m2(l2_c0\parent, l2_c0, node, @ l2_t1, @ l2_te1)',
+                 'l2_m2(l2_c0\parent, l2_c0, l2_msg, @ l2_t1, @ l2_te1)',
                  'l2_out_throw[0]: node',
                  'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)') },
     [pscustomobject]@{ Name = 'unit_throwing_callable.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('Lmx node; @: Lmx node');
         Debt = @('fn: l2_m0 (@: Lmx node; @: Lmx self; @: Lmx l2_msg; @: int l2_out_result; @@: Lmx l2_out_throw) int',
-                 'l2_m0(l2_c0\parent, l2_c0, node, @ l2_t1, @ l2_te1)',
+                 'l2_m0(l2_c0\parent, l2_c0, l2_msg, @ l2_t1, @ l2_te1)',
                  'l2_out_throw[0]: node',
                  'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)') },
     [pscustomobject]@{ Name = 'unit_recursion.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
@@ -624,7 +665,7 @@ $fixtures = @(
         Absent = @('Lmx node; @: Lmx node', 'l2_p2_0; @: Lmx node');
         Debt = @('fn: l2_m2 (@: Lmx node; @: Lmx self; size_t: l2_p2_0; @: Lmx l2_msg; @: size_t l2_out_result; @@: Lmx l2_out_throw) int',
                  'l2_m2(l2_c0\parent, l2_c0, l2_q7, l2_msg, @ l2_t1, @ l2_te1)',
-                 'l2_m2(l2_c4\parent, l2_c4, 2U, node, @ l2_t5, @ l2_te5)',
+                 'l2_m2(l2_c4\parent, l2_c4, 2U, l2_msg, @ l2_t5, @ l2_te5)',
                  'l2_out_throw[0]: node',
                  'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)') },
     # THE STICKY DIRTY OF AN ADDRESS-TAKEN LOCAL (GROK-COLON-OCCURRENCE-20260922-02).  Any executed
@@ -671,7 +712,7 @@ $fixtures = @(
         Says = @('P local is null');
         BindOrder = $true;
         Absent = @();
-        Debt = @('lmx_pointer_store_known(l2_q0_from[0], (cast: (@: void) l2_q', 'int: l2_q0_sticky 0') },
+        Debt = @('lmx_pointer_store_known(l2_q1_from[0], (cast: (@: void) l2_q', 'int: l2_q1_sticky 0') },
     # THE ADDRESS OF AN ETERNAL FIELD IS REFUSED WHERE IT IS TAKEN (FABLE-L2-R0-WRITE-GUARD-DESIGN-20260921-111, M0).
     # `@` yields a WRITABLE address and a raw write through it bypasses every cell helper, so until a
     # read-only address exists as a type the translator refuses it by name, with the test that already
@@ -754,6 +795,9 @@ $fixtures = @(
     # ((cast: (int) x) & 255).  Lines are "<case> <byte written> <byte read back>":
     #   M  the program entry writes a unit char field     K  the checkpoint of a char own field
     #   P  an explicit write through a node path
+    # S2: the entry is method E and the unit field is E's own field, so M is published by the SAME
+    # checkpoint descriptor as K; the two pins below are that one emitter at E's row (l2_q1, mark)
+    # and at holder's row (l2_q0, kept).
     # The second line of each pair carries a byte above 127 in a CHAR (a literal is already an
     # int): a plain conversion to int hands the rebind a negative value, which it refuses.
     # Measured, one mutant per emitter: K2 200 255; the entry stops after M1; P2 202 255.
@@ -761,8 +805,8 @@ $fixtures = @(
         Args = @('0');
         Says = @('M1 67 67', 'M2 202 202', 'K1 65 65', 'K2 200 200', 'P1 66 66', 'P2 202 202');
         Absent = @('(cast: (uchar)');
-        Debt = @('lmx_char_rebind_known(l2_q1_from[0], ((cast: (int) l2_q1) & 255))',
-                 'lmx_char_rebind_known(l2_xp[0], ((cast: (int) hi) & 255))',
+        Debt = @('lmx_char_rebind_known(l2_q0_from[0], ((cast: (int) l2_q0) & 255))',
+                 'lmx_char_rebind_known(l2_q1_from[0], ((cast: (int) l2_q1) & 255))',
                  'lmx_char_rebind_known(l2_xp[0], ((cast: (int) l2_p1_0) & 255))') },
     # TWO LIBRARY UNITS IN ONE LINK (FABLE-L2-LIBRARY-P2-UNIQUE-STATE-20260921-137).  A library unit keeps
     # two module cells of its own -- its arena and its opened mark -- and both were emitted under ONE
@@ -818,7 +862,7 @@ $fixtures = @(
         Debt = @('l2_t1: l2_m0(l2_c0\parent, l2_c0, 7)',
                  'l2_t3: l2_m0(l2_c2\parent, l2_c2, 7)',
                  'l2_t5: l2_m0(l2_c4\parent, l2_c4, 7)',
-                 'x: 2') },
+                 'l2_q2: 2') },
     # One logical negative fixture, three TUs: l2trans reports only the first
     # diagnostic. Needle is the converged class for every representable form.
     [pscustomobject]@{ Name = 'unit_universal_absent_paren.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -851,7 +895,7 @@ $fixtures = @(
         Debt = @('l2_h0: lmx_arena_ref_struct(self, 1U)',
                  'l2_h1: lmx_arena_ref_struct(self, 2U)',
                  'lmx_arena_ref_cell(l2_h1, 0U)',
-                 '# const: @(char l2_own2) "hosted"',
+                 '# const: @(char l2_own1) "hosted"',
                  'l2_message\graph: l2_entry_unit', 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)') },
     [pscustomobject]@{ Name = 'unit_nested_body_while.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
@@ -859,15 +903,15 @@ $fixtures = @(
         Debt = @('l2_h0: lmx_arena_ref_struct(self, 2U)',
                  'lmx_arena_ref_cell(l2_h0, 0U)',
                  'while: l2_t0',
-                 '# const: @(char l2_own2) "hosted"',
+                 '# const: @(char l2_own1) "hosted"',
                  'l2_message\graph: l2_entry_unit', 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)') },
     [pscustomobject]@{ Name = 'unit_nested_body_for.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'lmx_branch_struct_known(unit,');
         Debt = @('l2_h0: lmx_arena_ref_struct(self, 1U)',
                  'lmx_arena_ref_cell(l2_h0, 1U)',
-                 'l2_q2: 4',
-                 '# const: @(char l2_own2) "hosted"',
+                 'l2_q1: 4',
+                 '# const: @(char l2_own1) "hosted"',
                  'l2_message\graph: l2_entry_unit', 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)') },
     [pscustomobject]@{ Name = 'unit_nested_body_own_not_node.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown field path root'; Absent = @(); Debt = @() },
@@ -986,12 +1030,16 @@ $fixtures = @(
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_message\graph: l2_entry_unit', 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)') },
-    [pscustomobject]@{ Name = 'unit_colon_model_decl.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
+    # S2: the unit's `Model: fresh` is an own field of the entry E, registered by the same
+    # recognizer every method uses (l2_own_add(E, ...)), so the unit declares it again.
+    [pscustomobject]@{ Name = 'unit_colon_model_decl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
+        Debt = @() },
     [pscustomobject]@{ Name = 'unit_colon_method_lexical_model.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
-        Debt = @('l2_m0(l2_c0\parent, l2_c0, node, @ l2_t1, @ l2_te1)',
+        Debt = @('l2_m0(l2_c0\parent, l2_c0, l2_msg, @ l2_t1, @ l2_te1)',
                  'lmx_merge_owned(l2_mops, 1U, l2_mbody, node, 0, l2_program_arena, l2_program_arena, @ l2_mresult)',
                  'l2_message\graph: l2_entry_unit') },
     [pscustomobject]@{ Name = 'unit_colon_method_dynamic_precedence.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
@@ -1055,7 +1103,7 @@ $fixtures = @(
         Debt = @('c.array: [2]: @: Lmx l2_program_qualified_roots',
                  'l2_program_qualified_roots[0U]: l2_nsp[0]',
                  'l2_program_qualified_roots[1U]: l2_nsp[1]',
-                 'lmx_merge_profiles_owned(l2_mops, 2U, l2_mbody, l2_entry_unit, 0, l2_program_arena, l2_program_arena, l2_mprofiles, 2U, @ l2_mresult)',
+                 'lmx_merge_profiles_owned(l2_mops, 2U, l2_mbody, self, 0, l2_program_arena, l2_program_arena, l2_mprofiles, 2U, @ l2_mresult)',
                  'l2_message\graph: l2_entry_unit') },
     [pscustomobject]@{ Name = 'unit_eternal_profile_partial_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'independent branch requires const'; Absent = @(); Debt = @() },
@@ -1121,7 +1169,9 @@ foreach ($fx in $fixtures) {
     if (-not (Test-Path -LiteralPath $source)) { Add-Row 'FAIL' ('fixture:' + $stem) 'fixture file is missing'; continue }
     $genLm1 = Join-Path $gen ($stem + '.lm1')
     $label = 'fixture.' + $stem + '.l2trans'
-    $made = Step-Made $label $l2trans @($source, $genLm1) $src $genLm1
+    $profileArgs = @()
+    if ($fx.Expect -eq 'library-links') { $profileArgs = @('--library') }
+    $made = Step-Made $label $l2trans ($profileArgs + @($source, $genLm1)) $src $genLm1
 
     if ($fx.Expect -eq 'l2trans-refuses') {
         if ($made) { Add-Row 'FAIL' ('fixture:' + $stem) 'l2trans ACCEPTED a fixture that must be refused'; continue }
@@ -1131,6 +1181,12 @@ foreach ($fx in $fixtures) {
         Add-Row 'OK' ('fixture:' + $stem) ('refused as expected: ' + $fx.Needle); continue
     }
     if (-not $made) { Add-Row 'FAIL' ('fixture:' + $stem) 'l2trans produced no L1; see the log'; continue }
+    if ($fx.Expect -eq 'eternal-runs') {
+        $entryLine = [regex]::Match((Get-Content -LiteralPath $genLm1 -Raw), '(?m)^# entry statements: (\d+)\s*$')
+        if (-not $entryLine.Success) { Add-Row 'FAIL' ('fixture:' + $stem) 'the generated L1 does not state `# entry statements: N`'; continue }
+        $emptyOk = $fx.PSObject.Properties['EmptyEntry'] -and $fx.EmptyEntry
+        if ([int]$entryLine.Groups[1].Value -eq 0 -and -not $emptyOk) { Add-Row 'FAIL' ('fixture:' + $stem) 'an executable row whose entry executes no statement (set EmptyEntry to mean it)'; continue }
+    }
 
     $genC = Join-Path $gen ($stem + '.c')
     $label2 = 'fixture.' + $stem + '.l1trans'
@@ -1162,7 +1218,7 @@ foreach ($fx in $fixtures) {
             $oLm1 = Join-Path $gen ($ostem + '.lm1')
             $oC = Join-Path $gen ($ostem + '.c')
             if (-not (Test-Path -LiteralPath $osource)) { $why = 'the partner fixture is missing: ' + $other; break }
-            if (-not (Step-Made ('fixture.' + $ostem + '.l2trans') $l2trans @($osource, $oLm1) $src $oLm1)) { $why = 'l2trans produced no L1 for the partner ' + $other; break }
+            if (-not (Step-Made ('fixture.' + $ostem + '.l2trans') $l2trans @('--library', $osource, $oLm1) $src $oLm1)) { $why = 'l2trans produced no L1 for the partner ' + $other; break }
             if (-not (Step-Made ('fixture.' + $ostem + '.l1trans') $Translator @($oLm1, $oC) $src $oC)) { $why = 'l1trans produced no C for the partner ' + $other; break }
             $units += $ostem
         }
@@ -1247,7 +1303,10 @@ foreach ($fx in $fixtures) {
         if ($code -ne 0 -or -not (Test-Path -LiteralPath $genO)) { Add-Row 'FAIL' ('fixture:' + $stem) "gcc exit $code on the generated C"; continue }
         $code = Invoke-Step ('fixture.' + $stem + '.link') $gcc @('-o', $exe, $driverO, $genO, $l2libcO) $root
         if ($code -ne 0 -or -not (Test-Path -LiteralPath $exe)) { Add-Row 'FAIL' ('fixture:' + $stem) "link exit $code"; continue }
-        $ran = Invoke-Step ('fixture.' + $stem + '.run') $exe $fx.Args $bin
+        # The expected entry value travels as the driver fact `entry N` (default 0, the fixtures' pass).
+        $runArgs = @($fx.Args)
+        if ($fx.PSObject.Properties['Entry']) { $runArgs = $runArgs + @('entry', [string]$fx.Entry) }
+        $ran = Invoke-Step ('fixture.' + $stem + '.run') $exe $runArgs $bin
         $said = ((Log-Text ('fixture.' + $stem + '.run')) -split "`r?`n" | Where-Object { $_ -match '^l2_eternal_driver: \d+ checks' } | Select-Object -Last 1)
         # A run that completed but whose entry returned nonzero is a RESULT failure, named as such.
         $entrySaid = ((Log-Text ('fixture.' + $stem + '.run')) -split "`r?`n" | Where-Object { $_ -match '^l2_eternal_driver: entry returned ' } | Select-Object -Last 1)
@@ -1275,12 +1334,7 @@ foreach ($fx in $fixtures) {
         Add-Row 'OK' ('fixture:' + $stem) (($said -replace '^l2_eternal_driver: ', '') + $what + $fx.Debt.Count + ' required, ' + $fx.Absent.Count + ' forbidden in the text)'); continue
     }
 
-    $exe = Join-Path $bin ($stem + '.exe')
-    $code = Invoke-Step ('fixture.' + $stem + '.compile') $gcc ($cflags + @('-o', $exe, $genC)) $root
-    if ($code -ne 0 -or -not (Test-Path -LiteralPath $exe)) { Add-Row 'FAIL' ('fixture:' + $stem) "gcc exit $code"; continue }
-    $ran = Invoke-Step ('fixture.' + $stem + '.run') $exe @() $bin
-    if ($ran -ne $fx.Exit) { Add-Row 'FAIL' ('fixture:' + $stem) ('ran, exit ' + $ran + ', expected ' + $fx.Exit); continue }
-    Add-Row 'OK' ('fixture:' + $stem) ('end to end, exit ' + $ran)
+    Add-Row 'FAIL' ('fixture:' + $stem) ('no such Expect kind: ' + $fx.Expect)
 }
 
 foreach ($r in $rows) { Write-Output ($r.State.PadRight(5) + $r.Label.PadRight(34) + $r.Note) }

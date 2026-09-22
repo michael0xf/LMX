@@ -4,838 +4,840 @@ Generated from `dev/l2src_sandbox/l2trans.lm1` at blob `ee8e2de3` (main `38c95f2
 
 Sites: 528.
 
+**Ticked by the S2 commit (FABLE-OPUS-S2-UNIT-IS-ENTRY-20260923-112), function-scoped against the S2 translator.** Every site carries its disposition: 275 removed (82 with their function), 101 rewritten to the method form (the entry-sentinel operand dropped, or the entry-only operand removed), 24 always-true `mi >= 0` guards removed with their blocks kept, 55 adapter lines kept (the R0 adapter builds the unit, E's callable occurrence), 49 helper index guards kept (no caller passes the entry sentinel any more), 12 `l2_cur_mi` uses kept (the method being read or emitted; E is one), 11 library-profile sites kept (the profile is selected by `--library`, never inferred), 1 `0 - 1` that is the nsty return slot, not the entry. The dead-code removal was proved byte-identical: the generated L1 and the diagnostics of all 397 `tests/*.lm2`, in both profiles (794 translations), are the same before and after every deletion step. Pins: 61 of the 68 still hold unchanged on the S2 translator (rows green, measured) and 7 were regenerated from measured output (listed per row); seven pins outside this list (five rows) were regenerated too (`unit_char_own_publish` K pin -> `l2_q0`; `unit_arg_addr_pointer` store and sticky -> `l2_q1`; `unit_nested_body_else`, `_while` -> `l2_own1`; `unit_nested_body_for` -> `l2_q1`, `l2_own1`), because the methods' own rows are now collected before the entry's.
+
 ## D1. Entry discovery and the `main` reservation (39)
 
 - `l2_unit_from_root`
-  - [ ] :2667 `return: l2_error(path, root, "missing main")`
-  - [ ] :2673 `return: l2_error(path, item, "missing main")`
+  - [x] :2667 `return: l2_error(path, root, "missing main")` -- removed
+  - [x] :2673 `return: l2_error(path, item, "missing main")` -- removed
 - `l2_translate_unit`
-  - [ ] :2685 `int: mains 0`
-  - [ ] :2687 `int: is_main 0`
-  - [ ] :2688 `@: LmP0Node main_node 0`
-  - [ ] :2729 `return: l2_error(path, 0, "missing main")`
-  - [ ] :2761 `is_main: 0`
-  - [ ] :2765 `is_main: 1`
-  - [ ] :2766 `mains: mains + 1`
-  - [ ] :2767 `main_node: item`
-  - [ ] :2768 `if: is_main = 0 && (l2_frame_head(item, "fn") != 0 || l2_frame_head(item, "sub") != 0) && l2_collect_method(item, path) != 0`
-  - [ ] :2781 `if: is_main = 0 && l2_unit_decl_ty(item) = 0 && l2_frame_head(item, "fn") = 0 && l2_frame_head(item, "sub") = 0 && l2_frame_head(item, "predef") = 0 &`
-  - [ ] :2787 `if: is_main = 0 && l2_unit_decl_ty(item) = 0 && (l2_frame_head(item, "const") != 0 || l2_frame_head(item, "immutable") != 0 || l2_frame_head(item, "me`
-  - [ ] :2791 `if: l2_ns_resolve_refs(path, main_node) != 0`
-  - [ ] :2796 `return: l2_error(path, main_node, "out of memory")`
-  - [ ] :2799 `if: mains > 1`
-  - [ ] :2800 `return: l2_error(path, main_node, "several main")`
-  - [ ] :2802 `return: l2_error(path, main_node, "unsupported body")`
-  - [ ] :2803 `if: mains = 0`
-  - [ ] :2805 `return: l2_error(path, 0, "missing main")`
-  - [ ] :2809 `return: l2_parse_unit(main_node, path)`
-  - [ ] :2810 `return: l2_take_main_lit(main_node, path, out_lit, out_body)`
+  - [x] :2685 `int: mains 0` -- removed
+  - [x] :2687 `int: is_main 0` -- removed
+  - [x] :2688 `@: LmP0Node main_node 0` -- removed
+  - [x] :2729 `return: l2_error(path, 0, "missing main")` -- removed
+  - [x] :2761 `is_main: 0` -- removed
+  - [x] :2765 `is_main: 1` -- removed
+  - [x] :2766 `mains: mains + 1` -- removed
+  - [x] :2767 `main_node: item` -- removed
+  - [x] :2768 `if: is_main = 0 && (l2_frame_head(item, "fn") != 0 || l2_frame_head(item, "sub") != 0) && l2_collect_method(item, path) != 0` -- removed
+  - [x] :2781 `if: is_main = 0 && l2_unit_decl_ty(item) = 0 && l2_frame_head(item, "fn") = 0 && l2_frame_head(item, "sub") = 0 && l2_frame_head(item, "predef") = 0 &` -- removed
+  - [x] :2787 `if: is_main = 0 && l2_unit_decl_ty(item) = 0 && (l2_frame_head(item, "const") != 0 || l2_frame_head(item, "immutable") != 0 || l2_frame_head(item, "me` -- removed
+  - [x] :2791 `if: l2_ns_resolve_refs(path, main_node) != 0` -- removed
+  - [x] :2796 `return: l2_error(path, main_node, "out of memory")` -- removed
+  - [x] :2799 `if: mains > 1` -- removed
+  - [x] :2800 `return: l2_error(path, main_node, "several main")` -- removed
+  - [x] :2802 `return: l2_error(path, main_node, "unsupported body")` -- removed
+  - [x] :2803 `if: mains = 0` -- removed
+  - [x] :2805 `return: l2_error(path, 0, "missing main")` -- removed
+  - [x] :2809 `return: l2_parse_unit(main_node, path)` -- removed
+  - [x] :2810 `return: l2_take_main_lit(main_node, path, out_lit, out_body)` -- removed
 - `l2_ident`
-  - [ ] :3036 `if: l2_text_eq(t, "main") || l2_text_eq(t, "fn") || l2_text_eq(t, "int") || l2_text_eq(t, "return") || l2_text_eq(t, "if") || l2_text_eq(t, "else") ||`
+  - [x] :3036 `if: l2_text_eq(t, "main") || l2_text_eq(t, "fn") || l2_text_eq(t, "int") || l2_text_eq(t, "return") || l2_text_eq(t, "if") || l2_text_eq(t, "else") ||` -- removed
 - `l2_parse_unit`
-  - [ ] :12375 `if: main_node = 0 || main_node\as = 0 || main_node\as\frame = 0`
-  - [ ] :12376 `return: l2_error(path, main_node, "unsupported body")`
-  - [ ] :12377 `fr: main_node\as\frame`
-  - [ ] :12378 `l2_main_node: main_node`
-  - [ ] :12380 `return: l2_error(path, main_node, "unsupported trailer")`
-  - [ ] :12382 `return: l2_error(path, main_node, "incompatible entry signature")`
-  - [ ] :12384 `return: l2_error(path, main_node, "incompatible entry signature")`
-  - [ ] :12386 `return: l2_error(path, main_node, "unsupported trailer")`
-  - [ ] :12389 `return: l2_error(path, main_node, "incompatible entry signature")`
-  - [ ] :12391 `return: l2_error(path, main_node, "end target does not match close target")`
-  - [ ] :12397 `return: l2_error(path, main_node, "incompatible entry signature")`
-  - [ ] :12403 `return: l2_error(path, main_node, "unsupported body")`
-  - [ ] :12405 `return: l2_error(path, main_node, "unsupported body")`
-  - [ ] :12407 `return: l2_error(path, main_node, "unsupported trailer")`
-  - [ ] :12427 `return: l2_error(path, main_node, "out of memory")`
-  - [ ] :12447 `if: l2_check_ret_tr(-1, path, l2_ret_tr(fr), main_node) != 0`
+  - [x] :12375 `if: main_node = 0 || main_node\as = 0 || main_node\as\frame = 0` -- removed
+  - [x] :12376 `return: l2_error(path, main_node, "unsupported body")` -- removed
+  - [x] :12377 `fr: main_node\as\frame` -- removed
+  - [x] :12378 `l2_main_node: main_node` -- removed
+  - [x] :12380 `return: l2_error(path, main_node, "unsupported trailer")` -- removed
+  - [x] :12382 `return: l2_error(path, main_node, "incompatible entry signature")` -- removed
+  - [x] :12384 `return: l2_error(path, main_node, "incompatible entry signature")` -- removed
+  - [x] :12386 `return: l2_error(path, main_node, "unsupported trailer")` -- removed
+  - [x] :12389 `return: l2_error(path, main_node, "incompatible entry signature")` -- removed
+  - [x] :12391 `return: l2_error(path, main_node, "end target does not match close target")` -- removed
+  - [x] :12397 `return: l2_error(path, main_node, "incompatible entry signature")` -- removed
+  - [x] :12403 `return: l2_error(path, main_node, "unsupported body")` -- removed
+  - [x] :12405 `return: l2_error(path, main_node, "unsupported body")` -- removed
+  - [x] :12407 `return: l2_error(path, main_node, "unsupported trailer")` -- removed
+  - [x] :12427 `return: l2_error(path, main_node, "out of memory")` -- removed
+  - [x] :12447 `if: l2_check_ret_tr(-1, path, l2_ret_tr(fr), main_node) != 0` -- removed
 
 ## D2. Entry-literal path, L1-only emitter, entry signature and entry formals (151)
 
 - `(file head)`
-  - [ ] :7 `int: l2_leaf_mode 0`
-  - [ ] :160 `int: l2_entry_n 0`
-  - [ ] :161 `int: l2_entry_cap 0`
-  - [ ] :162 `int: l2_entry_full 0`
-  - [ ] :163 `@@: LmP0Text l2_entry_nm 0`
-  - [ ] :164 `@: int l2_entry_ty 0`
+  - [x] :7 `int: l2_leaf_mode 0` -- removed
+  - [x] :160 `int: l2_entry_n 0` -- removed
+  - [x] :161 `int: l2_entry_cap 0` -- removed
+  - [x] :162 `int: l2_entry_full 0` -- removed
+  - [x] :163 `@@: LmP0Text l2_entry_nm 0` -- removed
+  - [x] :164 `@: int l2_entry_ty 0` -- removed
 - `l2_release`
-  - [ ] :882 `l2_entry_free()`
+  - [x] :882 `l2_entry_free()` -- removed
 - `l2_take_body`
-  - [ ] :2563 `return: l2_take_return_stmt(stmt, path, out_lit)`
+  - [x] :2563 `return: l2_take_return_stmt(stmt, path, out_lit)` -- removed with the function
 - `l2_take_main_lit`
-  - [ ] :2601 `l2_entry_free()`
-  - [ ] :2602 `l2_entry_full: 0`
-  - [ ] :2603 `if: l2_empty_struct(params) = 0 && l2_parse_entry_formals(params, path) != 0`
-  - [ ] :2624 `if: l2_ret_tr(fn_frame) != 0 && l2_take_return_fields(l2_ret_tr(fn_frame), path, fn_node, out_lit) != 0`
-  - [ ] :2643 `l2_entry_full: 1`
-  - [ ] :2649 `if: l2_ret_tr(fn_frame) = 0 && l2_take_body(body, path, out_lit) != 0`
+  - [x] :2601 `l2_entry_free()` -- removed with the function
+  - [x] :2602 `l2_entry_full: 0` -- removed with the function
+  - [x] :2603 `if: l2_empty_struct(params) = 0 && l2_parse_entry_formals(params, path) != 0` -- removed with the function
+  - [x] :2624 `if: l2_ret_tr(fn_frame) != 0 && l2_take_return_fields(l2_ret_tr(fn_frame), path, fn_node, out_lit) != 0` -- removed with the function
+  - [x] :2643 `l2_entry_full: 1` -- removed with the function
+  - [x] :2649 `if: l2_ret_tr(fn_frame) = 0 && l2_take_body(body, path, out_lit) != 0` -- removed with the function
 - `l2_translate_unit`
-  - [ ] :2694 `l2_leaf_mode: 0`
-  - [ ] :2721 `l2_entry_free()`
-  - [ ] :2722 `l2_entry_full: 0`
+  - [x] :2694 `l2_leaf_mode: 0` -- removed
+  - [x] :2721 `l2_entry_free()` -- removed
+  - [x] :2722 `l2_entry_full: 0` -- removed
 - `l2_parse_library`
-  - [ ] :2862 `l2_leaf_mode: 1`
+  - [x] :2862 `l2_leaf_mode: 1` -- removed
 - `l2_emit_l1`
-  - [ ] :2905 `if: l2_entry_full = 0 && (lit = 0 || lit\data = 0 || lit\length = 0U)`
-  - [ ] :2925 `if: l2_entry_full != 0 && c.fprintf(out, "predef: \"%slmx.h.lm1\" \"%slmx_root.h.lm1\"\n", l2_rt_root, l2_rt_root) < 0`
-  - [ ] :2928 `if: l2_inc_n = 0 && (c_n != 0 || l2_entry_full != 0) && fputs("include: \"<stdio.h>\"\n", out) < 0`
-  - [ ] :2937 `if: l2_write_entry_sig(out) != 0`
-  - [ ] :2940 `if: l2_entry_full != 0`
+  - [x] :2905 `if: l2_entry_full = 0 && (lit = 0 || lit\data = 0 || lit\length = 0U)` -- removed with the function
+  - [x] :2925 `if: l2_entry_full != 0 && c.fprintf(out, "predef: \"%slmx.h.lm1\" \"%slmx_root.h.lm1\"\n", l2_rt_root, l2_rt_root) < 0` -- removed with the function
+  - [x] :2928 `if: l2_inc_n = 0 && (c_n != 0 || l2_entry_full != 0) && fputs("include: \"<stdio.h>\"\n", out) < 0` -- removed with the function
+  - [x] :2937 `if: l2_write_entry_sig(out) != 0` -- removed with the function
+  - [x] :2940 `if: l2_entry_full != 0` -- removed with the function
 - `l2_translate`
-  - [ ] :3009 `if: l2_leaf_mode != 0`
-  - [ ] :3012 `status: l2_emit_l1(out_path, body, lit)`
+  - [x] :3009 `if: l2_leaf_mode != 0` -- removed
+  - [x] :3012 `status: l2_emit_l1(out_path, body, lit)` -- removed
 - `l2_entry_free`
-  - [ ] :3643 `if: l2_entry_nm != 0`
-  - [ ] :3644 `l2_xfree((cast: (@: void) l2_entry_nm))`
-  - [ ] :3645 `if: l2_entry_ty != 0`
-  - [ ] :3646 `l2_xfree((cast: (@: void) l2_entry_ty))`
-  - [ ] :3648 `l2_entry_nm: 0`
-  - [ ] :3649 `l2_entry_ty: 0`
-  - [ ] :3650 `l2_entry_n: 0`
-  - [ ] :3651 `l2_entry_cap: 0`
+  - [x] :3643 `if: l2_entry_nm != 0` -- removed with the function
+  - [x] :3644 `l2_xfree((cast: (@: void) l2_entry_nm))` -- removed with the function
+  - [x] :3645 `if: l2_entry_ty != 0` -- removed with the function
+  - [x] :3646 `l2_xfree((cast: (@: void) l2_entry_ty))` -- removed with the function
+  - [x] :3648 `l2_entry_nm: 0` -- removed with the function
+  - [x] :3649 `l2_entry_ty: 0` -- removed with the function
+  - [x] :3650 `l2_entry_n: 0` -- removed with the function
+  - [x] :3651 `l2_entry_cap: 0` -- removed with the function
 - `l2_loc_add`
-  - [ ] :3933 `if: l2_loc_find(t) >= 0 || l2_entry_find(t) >= 0`
+  - [x] :3933 `if: l2_loc_find(t) >= 0 || l2_entry_find(t) >= 0` -- removed with the function
 - `l2_entry_reserve`
-  - [ ] :5465 `if: need <= l2_entry_cap`
-  - [ ] :5486 `l2_entry_free()`
-  - [ ] :5490 `if: l2_entry_nm != 0 && l2_entry_n > 0`
-  - [ ] :5491 `memcpy((cast: (@: void) nn), (cast: (@: void) l2_entry_nm), (cast: (size_t) l2_entry_n) * psz)`
-  - [ ] :5493 `if: l2_entry_ty != 0 && l2_entry_n > 0`
-  - [ ] :5494 `memcpy((cast: (@: void) nt), (cast: (@: void) l2_entry_ty), (cast: (size_t) l2_entry_n) * c.sizeof(c.int))`
-  - [ ] :5496 `if: l2_entry_nm != 0`
-  - [ ] :5497 `l2_xfree((cast: (@: void) l2_entry_nm))`
-  - [ ] :5499 `if: l2_entry_ty != 0`
-  - [ ] :5500 `l2_xfree((cast: (@: void) l2_entry_ty))`
-  - [ ] :5502 `l2_entry_nm: nn`
-  - [ ] :5503 `l2_entry_ty: nt`
-  - [ ] :5504 `l2_entry_cap: need`
+  - [x] :5465 `if: need <= l2_entry_cap` -- removed with the function
+  - [x] :5486 `l2_entry_free()` -- removed with the function
+  - [x] :5490 `if: l2_entry_nm != 0 && l2_entry_n > 0` -- removed with the function
+  - [x] :5491 `memcpy((cast: (@: void) nn), (cast: (@: void) l2_entry_nm), (cast: (size_t) l2_entry_n) * psz)` -- removed with the function
+  - [x] :5493 `if: l2_entry_ty != 0 && l2_entry_n > 0` -- removed with the function
+  - [x] :5494 `memcpy((cast: (@: void) nt), (cast: (@: void) l2_entry_ty), (cast: (size_t) l2_entry_n) * c.sizeof(c.int))` -- removed with the function
+  - [x] :5496 `if: l2_entry_nm != 0` -- removed with the function
+  - [x] :5497 `l2_xfree((cast: (@: void) l2_entry_nm))` -- removed with the function
+  - [x] :5499 `if: l2_entry_ty != 0` -- removed with the function
+  - [x] :5500 `l2_xfree((cast: (@: void) l2_entry_ty))` -- removed with the function
+  - [x] :5502 `l2_entry_nm: nn` -- removed with the function
+  - [x] :5503 `l2_entry_ty: nt` -- removed with the function
+  - [x] :5504 `l2_entry_cap: need` -- removed with the function
 - `l2_entry_find`
-  - [ ] :5509 `if: t = 0 || l2_entry_nm = 0`
-  - [ ] :5511 `while: i < l2_entry_n`
-  - [ ] :5512 `if: l2_text_same(l2_entry_nm[i], t)`
+  - [x] :5509 `if: t = 0 || l2_entry_nm = 0` -- removed with the function
+  - [x] :5511 `while: i < l2_entry_n` -- removed with the function
+  - [x] :5512 `if: l2_text_same(l2_entry_nm[i], t)` -- removed with the function
 - `l2_parse_entry_formals`
-  - [ ] :5525 `l2_entry_free()`
-  - [ ] :5533 `if: l2_entry_reserve(ar) != 0`
-  - [ ] :5543 `l2_entry_free()`
-  - [ ] :5546 `l2_entry_free()`
-  - [ ] :5550 `if: l2_text_same(fa, l2_entry_nm[k])`
-  - [ ] :5551 `l2_entry_free()`
-  - [ ] :5555 `l2_entry_nm[j]: fa`
-  - [ ] :5556 `l2_entry_ty[j]: ty`
-  - [ ] :5559 `l2_entry_n: ar`
-  - [ ] :5560 `if: ar != 2 || l2_entry_ty[0] != 0 || l2_entry_ty[1] != 17`
-  - [ ] :5561 `l2_entry_free()`
+  - [x] :5525 `l2_entry_free()` -- removed with the function
+  - [x] :5533 `if: l2_entry_reserve(ar) != 0` -- removed with the function
+  - [x] :5543 `l2_entry_free()` -- removed with the function
+  - [x] :5546 `l2_entry_free()` -- removed with the function
+  - [x] :5550 `if: l2_text_same(fa, l2_entry_nm[k])` -- removed with the function
+  - [x] :5551 `l2_entry_free()` -- removed with the function
+  - [x] :5555 `l2_entry_nm[j]: fa` -- removed with the function
+  - [x] :5556 `l2_entry_ty[j]: ty` -- removed with the function
+  - [x] :5559 `l2_entry_n: ar` -- removed with the function
+  - [x] :5560 `if: ar != 2 || l2_entry_ty[0] != 0 || l2_entry_ty[1] != 17` -- removed with the function
+  - [x] :5561 `l2_entry_free()` -- removed with the function
 - `l2_write_entry_sig`
-  - [ ] :5573 `while: j < l2_entry_n`
-  - [ ] :5576 `ty: l2_entry_ty[j]`
-  - [ ] :5619 `if: l2_write_text(out, l2_entry_nm[j]) != 0`
+  - [x] :5573 `while: j < l2_entry_n` -- removed with the function
+  - [x] :5576 `ty: l2_entry_ty[j]` -- removed with the function
+  - [x] :5619 `if: l2_write_text(out, l2_entry_nm[j]) != 0` -- removed with the function
 - `l2_colon_bound_before`
-  - [ ] :5759 `if: mi < 0 && l2_entry_find(name) >= 0`
+  - [x] :5759 `if: mi < 0 && l2_entry_find(name) >= 0` -- removed
 - `l2_colon_value_bound`
-  - [ ] :5782 `if: mi < 0 && (l2_entry_find(name) >= 0 || l2_own_find(mi, name) >= 0 || l2_loc_find(name) >= 0)`
+  - [x] :5782 `if: mi < 0 && (l2_entry_find(name) >= 0 || l2_own_find(mi, name) >= 0 || l2_loc_find(name) >= 0)` -- removed
 - `l2_colon_bound_ty`
-  - [ ] :5820 `i: l2_entry_find(name)`
-  - [ ] :5822 `\out_ty: l2_entry_ty[i]`
+  - [x] :5820 `i: l2_entry_find(name)` -- removed
+  - [x] :5822 `\out_ty: l2_entry_ty[i]` -- removed
 - `l2_check_primary`
-  - [ ] :11657 `if: l2_entry_find(node\as\atom) >= 0`
+  - [x] :11657 `if: l2_entry_find(node\as\atom) >= 0` -- removed
 - `l2_parse_unit`
-  - [ ] :12393 `if: l2_empty_struct(field\value) = 0 && l2_parse_entry_formals(field\value, path) != 0`
-  - [ ] :12465 `l2_leaf_mode: 1`
+  - [x] :12393 `if: l2_empty_struct(field\value) = 0 && l2_parse_entry_formals(field\value, path) != 0` -- removed
+  - [x] :12465 `l2_leaf_mode: 1` -- removed
 - `l2_hidden_from`
-  - [ ] :12568 `li: l2_entry_find(nm)`
-  - [ ] :12569 `if: mi < 0 && li >= 0 && l2_colon_is_graph_ty(l2_entry_ty[li]) != 0`
+  - [x] :12568 `li: l2_entry_find(nm)` -- removed
+  - [x] :12569 `if: mi < 0 && li >= 0 && l2_colon_is_graph_ty(l2_entry_ty[li]) != 0` -- removed
 - `l2_check_addr`
-  - [ ] :12654 `if: l2_loc_find(t) >= 0 || l2_entry_find(t) >= 0`
+  - [x] :12654 `if: l2_loc_find(t) >= 0 || l2_entry_find(t) >= 0` -- removed
 - `l2_prep_addr`
-  - [ ] :12718 `if: l2_loc_find(t) >= 0 || l2_entry_find(t) >= 0`
+  - [x] :12718 `if: l2_loc_find(t) >= 0 || l2_entry_find(t) >= 0` -- removed
 - `l2_prep`
-  - [ ] :13183 `if: c.fprintf(l2_out, "%sl2_xp: lmx_arena_ref_cell(l2_entry_unit, %uU)\n%sif: l2_xp = 0\n%s    return: 0\n", ind, (cast: (unsigned) l2_own_uchild[idx]`
+  - [x] :13183 `if: c.fprintf(l2_out, "%sl2_xp: lmx_arena_ref_cell(l2_entry_unit, %uU)\n%sif: l2_xp = 0\n%s    return: 0\n", ind, (cast: (unsigned) l2_own_uchild[idx]` -- removed
 - `l2_addr_tail`
-  - [ ] :14634 `if: mi >= 0 && l2_ml_find(p1\value\as\atom) < 0 && l2_loc_find(p1\value\as\atom) < 0 && l2_entry_find(p1\value\as\atom) < 0`
-  - [ ] :14636 `if: mi < 0 && l2_loc_find(p1\value\as\atom) < 0 && l2_entry_find(p1\value\as\atom) < 0`
+  - [x] :14634 `if: mi >= 0 && l2_ml_find(p1\value\as\atom) < 0 && l2_loc_find(p1\value\as\atom) < 0 && l2_entry_find(p1\value\as\atom) < 0` -- removed
+  - [x] :14636 `if: mi < 0 && l2_loc_find(p1\value\as\atom) < 0 && l2_entry_find(p1\value\as\atom) < 0` -- removed
 - `l2_ccall_box_int`
-  - [ ] :14656 `ei: l2_entry_find(node\as\atom)`
-  - [ ] :14657 `if: ei >= 0 && l2_entry_ty != 0`
-  - [ ] :14658 `ty: l2_entry_ty[ei]`
+  - [x] :14656 `ei: l2_entry_find(node\as\atom)` -- removed
+  - [x] :14657 `if: ei >= 0 && l2_entry_ty != 0` -- removed
+  - [x] :14658 `ty: l2_entry_ty[ei]` -- removed
 - `l2_emit_body`
-  - [ ] :16255 `if: c.fprintf(l2_out, "%sl2_xp: lmx_arena_ref_cell(l2_entry_unit, %uU)\n%sif: l2_xp = 0\n%s    return: 0\n", ind, (cast: (unsigned) l2_own_uchild[oi])`
+  - [x] :16255 `if: c.fprintf(l2_out, "%sl2_xp: lmx_arena_ref_cell(l2_entry_unit, %uU)\n%sif: l2_xp = 0\n%s    return: 0\n", ind, (cast: (unsigned) l2_own_uchild[oi])` -- removed
 - `l2_emit_unit`
-  - [ ] :16840 `if: l2_entry_n != 0 && fputs("\n        # DEBT: argc/argv not on LmxCallEntry; formals not threaded\n", l2_out) < 0`
-  - [ ] :16843 `if: fputs(") int\n        @: Lmx l2_entry_unit 0\n        @: Lmx l2_entry_leaf 0\n        @@: void l2_entry_slot 0\n        @: LmxMethod l2_entry_rec `
-  - [ ] :16879 `if: c.fprintf(l2_out, "        l2_entry_unit: lmx_node_new_owned(l2_program_arena)\n        if: l2_entry_unit = 0\n            return: 1\n        if: `
-  - [ ] :16891 `if: c.fprintf(l2_out, "        l2_eprofile%u: lmx_node_new_profiled(l2_program_arena, l2_entry_unit)\n        if: l2_eprofile%u = 0\n            retur`
-  - [ ] :16899 `if: l2_ebr_n != 0 && fputs("        l2_profile_pool: lmx_arena_find_profiled(l2_program_arena, c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT, l2_entry_unit)\n `
-  - [ ] :16908 `if: c.fprintf(l2_out, "        l2_entry_leaf: lmx_struct_new_owned(l2_entry_unit, l2_program_arena)\n        if: l2_entry_leaf = 0\n            return`
-  - [ ] :16915 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] < 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_entry_unit, %uU)`
-  - [ ] :16918 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] >= 0 && c.fprintf(l2_out, "        l2_entry_leaf: lmx_arena_ref_struct(l2_entry_unit, %`
-  - [ ] :16921 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_ty[k] = 1 && fputs("        l2_entry_slot[0]: lmx_char_cell_known(process_chars, 0)\n", l2_ou`
-  - [ ] :16924 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_ty[k] = 2 && fputs("        l2_entry_slot[0]: lmx_size_new_owned(l2_program_arena)\n        i`
-  - [ ] :16927 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_ty[k] = 0 && fputs("        l2_entry_slot[0]: lmx_int_new_owned(l2_program_arena)\n        if`
-  - [ ] :16930 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_ty[k] = 3 && fputs("        l2_entry_slot[0]: lmx_unsigned_new_owned(l2_program_arena)\n     `
-  - [ ] :16933 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_ty[k] = 36 && fputs("        l2_entry_slot[0]: lmx_ulong_new_owned(l2_program_arena)\n       `
-  - [ ] :16936 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_is_pointer(l2_own_ty[k]) != 0 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_pointer_new`
-  - [ ] :16939 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] < 0 && l2_own_ty[k] = 1 && l2_unit_own_init(k) != 0U && c.fprintf(l2_out, "        l2_e`
-  - [ ] :16942 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] < 0 && l2_own_ty[k] = 2 && c.fprintf(l2_out, "        if: lmx_size_store_known(l2_entry`
-  - [ ] :16945 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] < 0 && l2_own_ty[k] = 0 && c.fprintf(l2_out, "        if: lmx_int_store_known(l2_entry_`
-  - [ ] :16948 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] < 0 && l2_own_ty[k] = 3 && c.fprintf(l2_out, "        if: lmx_unsigned_store_known(l2_e`
-  - [ ] :16951 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] < 0 && l2_own_ty[k] = 36 && c.fprintf(l2_out, "        if: lmx_ulong_store_known(l2_ent`
-  - [ ] :16955 `if: l2_own_ty[k] = 4 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, %zuU, l2_program_arena)\n", l2_liter`
-  - [ ] :16958 `if: l2_own_ty[k] = 5 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, %zuU, l2_program_arena)\n", l2_lite`
-  - [ ] :16961 `if: l2_own_ty[k] = 7 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_SIZE_T, %zuU, l2_program_arena)\n", l2_li`
-  - [ ] :16964 `if: l2_own_ty[k] = 37 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_ULONG, %zuU, l2_program_arena)\n", l2_li`
-  - [ ] :16967 `if: l2_own_ty[k] = 8 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR, %zuU, l2_program_arena)\n"`
-  - [ ] :16970 `if: l2_own_ty[k] >= 2000 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + %d, %zuU, l2_program_a`
-  - [ ] :16973 `if: fputs("        if: l2_entry_slot[0] = 0\n            return: 1\n", l2_out) < 0`
-  - [ ] :16984 `if: l2_for_parent[k] >= 0 && c.fprintf(l2_out, "        l2_entry_leaf: l2_b%d\n", l2_for_parent[k]) < 0`
-  - [ ] :16987 `if: l2_for_parent[k] < 0 && l2_for_owner(k) < 0 && fputs("        l2_entry_leaf: l2_entry_unit\n", l2_out) < 0`
-  - [ ] :16990 `if: l2_for_parent[k] < 0 && l2_for_owner(k) >= 0 && c.fprintf(l2_out, "        l2_entry_leaf: lmx_arena_ref_struct(l2_entry_unit, %uU)\n        if: l2`
-  - [ ] :16993 `if: c.fprintf(l2_out, "        l2_fkid: lmx_struct_new_owned(l2_entry_leaf, l2_program_arena)\n        if: l2_fkid = 0\n            return: 1\n       `
-  - [ ] :16999 `if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_entry_leaf, %uU, (cast: (@: void) l2_fkid)) != 0\n            return: 1\n        l2_entry_le`
-  - [ ] :17004 `if: l2_own_fid[oi] = k && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_entry_leaf, %uU)\n        if: l2_entry_slot = 0\n           `
-  - [ ] :17007 `if: l2_own_fid[oi] = k && l2_own_ty[oi] = 1 && fputs("        l2_entry_slot[0]: lmx_char_cell_known(process_chars, 0)\n", l2_out) < 0`
-  - [ ] :17010 `if: l2_own_fid[oi] = k && l2_own_ty[oi] = 2 && fputs("        l2_entry_slot[0]: lmx_size_new_owned(l2_program_arena)\n        if: l2_entry_slot[0] = 0`
-  - [ ] :17013 `if: l2_own_fid[oi] = k && l2_own_ty[oi] = 0 && fputs("        l2_entry_slot[0]: lmx_int_new_owned(l2_program_arena)\n        if: l2_entry_slot[0] = 0\`
-  - [ ] :17016 `if: l2_own_fid[oi] = k && l2_own_ty[oi] = 3 && fputs("        l2_entry_slot[0]: lmx_unsigned_new_owned(l2_program_arena)\n        if: l2_entry_slot[0]`
-  - [ ] :17019 `if: l2_own_fid[oi] = k && l2_own_ty[oi] = 36 && fputs("        l2_entry_slot[0]: lmx_ulong_new_owned(l2_program_arena)\n        if: l2_entry_slot[0] =`
-  - [ ] :17022 `if: l2_own_fid[oi] = k && l2_own_is_pointer(l2_own_ty[oi]) != 0 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_pointer_new_owned(c.LMX_TYPE_POINT`
-  - [ ] :17026 `if: l2_own_ty[oi] = 4 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, %zuU, l2_program_arena)\n", l2_lite`
-  - [ ] :17029 `if: l2_own_ty[oi] = 5 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, %zuU, l2_program_arena)\n", l2_lit`
-  - [ ] :17032 `if: l2_own_ty[oi] = 7 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_SIZE_T, %zuU, l2_program_arena)\n", l2_l`
-  - [ ] :17035 `if: l2_own_ty[oi] = 37 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_ULONG, %zuU, l2_program_arena)\n", l2_l`
-  - [ ] :17038 `if: l2_own_ty[oi] = 8 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR, %zuU, l2_program_arena)\n`
-  - [ ] :17041 `if: l2_own_ty[oi] >= 2000 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + %d, %zuU, l2_program_`
-  - [ ] :17044 `if: fputs("        if: l2_entry_slot[0] = 0\n            return: 1\n", l2_out) < 0`
-  - [ ] :17061 `if: c.fprintf(l2_out, "        l2_entry_leaf: lmx_arena_ref_struct(l2_entry_unit, %uU)\n        if: l2_entry_leaf = 0\n            return: 1\n", (cast`
-  - [ ] :17065 `if: c.fprintf(l2_out, "        l2_entry_rec: lmx_method_new_owned(l2_program_arena)\n        if: l2_entry_rec = 0\n            return: 1\n        l2_e`
-  - [ ] :17070 `if: (l2_m_body[i] != 0 || (l2_m_node[i] != 0 && l2_m_node[i]\as != 0 && l2_ret_tr(l2_m_node[i]\as\frame) != 0)) && fputs("        l2_entry_rec: lmx_me`
-  - [ ] :17076 `if: (l2_m_body[i] != 0 || (l2_m_node[i] != 0 && l2_m_node[i]\as != 0 && l2_ret_tr(l2_m_node[i]\as\frame) != 0)) && c.fprintf(l2_out, ")\n        l2_en`
-  - [ ] :17093 `if: l2_ns_parent[k] < 0 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        l2_nsp[%d]: lmx_struct_new_owned(l2_entry_unit, l2_program_arena)\n     `
-  - [ ] :17123 `if: l2_ns_parent[k] < 0 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_entry_unit, %uU, (cast: (@: void) l2_nsp[%d])`
-  - [ ] :17128 `if: l2_ns_parent[k] < 0 && l2_ns_eternal[k] >= 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_entry_unit, %uU, (cast: (@: void) l2_nsp[%d]`
-  - [ ] :17137 `if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 0 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %u`
-  - [ ] :17140 `if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 0 && l2_ns_eternal[k] >= 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %`
-  - [ ] :17143 `if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 1 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %u`
-  - [ ] :17146 `if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 1 && l2_ns_eternal[k] >= 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %`
-  - [ ] :17152 `if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 5 && l2_nsf_ref[fx] = 0 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_r`
-  - [ ] :17155 `if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 5 && l2_nsf_ref[fx] = 1 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_r`
-  - [ ] :17159 `if: l2_nsf_ref[fx] = 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            re`
-  - [ ] :17165 `if: l2_nsf_ref[fx] = 1 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            re`
-  - [ ] :17171 `if: fputs("        l2_entry_slot[0]: (cast: (@: void) l2_profile_array)\n", l2_out) < 0`
-  - [ ] :17196 `if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 3 && l2_ns_parent[l2_nsf_ref[fx]] < 0 && l2_ns_eternal[l2_nsf_ref[fx]] < 0 && c.fprintf(l2_out, "       `
-  - [ ] :17209 `if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 4 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_nsp[%d], %uU, (cast: (@: void) lmx_arena_ref_`
-  - [ ] :17241 `if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_entry_unit, %uU, (cast: (@: void) l2_methods)) != 0\n            return: 1\n        if: l2_m`
-  - [ ] :17247 `if: c.fprintf(l2_out, "        l2_current: lmx_thread_current()\n        l2_message: lmx_thread_message(l2_current)\n        l2_children: lmx_thread_c`
-  - [ ] :17253 `if: fputs("        # Closed-unit devirtualization: translator-bound child indices, no graph mutations after construction. l2_entry_rec.addr is METHOD-`
-  - [ ] :17257 `l2_call_node: "l2_entry_unit"`
-  - [ ] :17258 `l2_unit_ref: "l2_entry_unit"`
-  - [ ] :17291 `if: l2_entry_n != 0 && fputs("int: argc; @@: char argv", l2_out) < 0`
+  - [x] :16840 `if: l2_entry_n != 0 && fputs("\n        # DEBT: argc/argv not on LmxCallEntry; formals not threaded\n", l2_out) < 0` -- removed
+  - [x] :16843 `if: fputs(") int\n        @: Lmx l2_entry_unit 0\n        @: Lmx l2_entry_leaf 0\n        @@: void l2_entry_slot 0\n        @: LmxMethod l2_entry_rec ` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :16879 `if: c.fprintf(l2_out, "        l2_entry_unit: lmx_node_new_owned(l2_program_arena)\n        if: l2_entry_unit = 0\n            return: 1\n        if: ` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :16891 `if: c.fprintf(l2_out, "        l2_eprofile%u: lmx_node_new_profiled(l2_program_arena, l2_entry_unit)\n        if: l2_eprofile%u = 0\n            retur` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :16899 `if: l2_ebr_n != 0 && fputs("        l2_profile_pool: lmx_arena_find_profiled(l2_program_arena, c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT, l2_entry_unit)\n ` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :16908 `if: c.fprintf(l2_out, "        l2_entry_leaf: lmx_struct_new_owned(l2_entry_unit, l2_program_arena)\n        if: l2_entry_leaf = 0\n            return` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :16915 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] < 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_entry_unit, %uU)` -- removed
+  - [x] :16918 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] >= 0 && c.fprintf(l2_out, "        l2_entry_leaf: lmx_arena_ref_struct(l2_entry_unit, %` -- removed
+  - [x] :16921 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_ty[k] = 1 && fputs("        l2_entry_slot[0]: lmx_char_cell_known(process_chars, 0)\n", l2_ou` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :16924 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_ty[k] = 2 && fputs("        l2_entry_slot[0]: lmx_size_new_owned(l2_program_arena)\n        i` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :16927 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_ty[k] = 0 && fputs("        l2_entry_slot[0]: lmx_int_new_owned(l2_program_arena)\n        if` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :16930 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_ty[k] = 3 && fputs("        l2_entry_slot[0]: lmx_unsigned_new_owned(l2_program_arena)\n     ` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :16933 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_ty[k] = 36 && fputs("        l2_entry_slot[0]: lmx_ulong_new_owned(l2_program_arena)\n       ` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :16936 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_is_pointer(l2_own_ty[k]) != 0 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_pointer_new` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :16939 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] < 0 && l2_own_ty[k] = 1 && l2_unit_own_init(k) != 0U && c.fprintf(l2_out, "        l2_e` -- removed
+  - [x] :16942 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] < 0 && l2_own_ty[k] = 2 && c.fprintf(l2_out, "        if: lmx_size_store_known(l2_entry` -- removed
+  - [x] :16945 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] < 0 && l2_own_ty[k] = 0 && c.fprintf(l2_out, "        if: lmx_int_store_known(l2_entry_` -- removed
+  - [x] :16948 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] < 0 && l2_own_ty[k] = 3 && c.fprintf(l2_out, "        if: lmx_unsigned_store_known(l2_e` -- removed
+  - [x] :16951 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] < 0 && l2_own_ty[k] = 36 && c.fprintf(l2_out, "        if: lmx_ulong_store_known(l2_ent` -- removed
+  - [x] :16955 `if: l2_own_ty[k] = 4 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, %zuU, l2_program_arena)\n", l2_liter` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :16958 `if: l2_own_ty[k] = 5 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, %zuU, l2_program_arena)\n", l2_lite` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :16961 `if: l2_own_ty[k] = 7 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_SIZE_T, %zuU, l2_program_arena)\n", l2_li` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :16964 `if: l2_own_ty[k] = 37 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_ULONG, %zuU, l2_program_arena)\n", l2_li` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :16967 `if: l2_own_ty[k] = 8 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR, %zuU, l2_program_arena)\n"` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :16970 `if: l2_own_ty[k] >= 2000 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + %d, %zuU, l2_program_a` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :16973 `if: fputs("        if: l2_entry_slot[0] = 0\n            return: 1\n", l2_out) < 0` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :16984 `if: l2_for_parent[k] >= 0 && c.fprintf(l2_out, "        l2_entry_leaf: l2_b%d\n", l2_for_parent[k]) < 0` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :16987 `if: l2_for_parent[k] < 0 && l2_for_owner(k) < 0 && fputs("        l2_entry_leaf: l2_entry_unit\n", l2_out) < 0` -- removed
+  - [x] :16990 `if: l2_for_parent[k] < 0 && l2_for_owner(k) >= 0 && c.fprintf(l2_out, "        l2_entry_leaf: lmx_arena_ref_struct(l2_entry_unit, %uU)\n        if: l2` -- removed
+  - [x] :16993 `if: c.fprintf(l2_out, "        l2_fkid: lmx_struct_new_owned(l2_entry_leaf, l2_program_arena)\n        if: l2_fkid = 0\n            return: 1\n       ` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :16999 `if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_entry_leaf, %uU, (cast: (@: void) l2_fkid)) != 0\n            return: 1\n        l2_entry_le` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :17004 `if: l2_own_fid[oi] = k && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_entry_leaf, %uU)\n        if: l2_entry_slot = 0\n           ` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :17007 `if: l2_own_fid[oi] = k && l2_own_ty[oi] = 1 && fputs("        l2_entry_slot[0]: lmx_char_cell_known(process_chars, 0)\n", l2_out) < 0` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :17010 `if: l2_own_fid[oi] = k && l2_own_ty[oi] = 2 && fputs("        l2_entry_slot[0]: lmx_size_new_owned(l2_program_arena)\n        if: l2_entry_slot[0] = 0` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :17013 `if: l2_own_fid[oi] = k && l2_own_ty[oi] = 0 && fputs("        l2_entry_slot[0]: lmx_int_new_owned(l2_program_arena)\n        if: l2_entry_slot[0] = 0\` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :17016 `if: l2_own_fid[oi] = k && l2_own_ty[oi] = 3 && fputs("        l2_entry_slot[0]: lmx_unsigned_new_owned(l2_program_arena)\n        if: l2_entry_slot[0]` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :17019 `if: l2_own_fid[oi] = k && l2_own_ty[oi] = 36 && fputs("        l2_entry_slot[0]: lmx_ulong_new_owned(l2_program_arena)\n        if: l2_entry_slot[0] =` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :17022 `if: l2_own_fid[oi] = k && l2_own_is_pointer(l2_own_ty[oi]) != 0 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_pointer_new_owned(c.LMX_TYPE_POINT` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :17026 `if: l2_own_ty[oi] = 4 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, %zuU, l2_program_arena)\n", l2_lite` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :17029 `if: l2_own_ty[oi] = 5 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, %zuU, l2_program_arena)\n", l2_lit` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :17032 `if: l2_own_ty[oi] = 7 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_SIZE_T, %zuU, l2_program_arena)\n", l2_l` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :17035 `if: l2_own_ty[oi] = 37 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_ULONG, %zuU, l2_program_arena)\n", l2_l` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :17038 `if: l2_own_ty[oi] = 8 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR, %zuU, l2_program_arena)\n` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :17041 `if: l2_own_ty[oi] >= 2000 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + %d, %zuU, l2_program_` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :17044 `if: fputs("        if: l2_entry_slot[0] = 0\n            return: 1\n", l2_out) < 0` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :17061 `if: c.fprintf(l2_out, "        l2_entry_leaf: lmx_arena_ref_struct(l2_entry_unit, %uU)\n        if: l2_entry_leaf = 0\n            return: 1\n", (cast` -- removed
+  - [x] :17065 `if: c.fprintf(l2_out, "        l2_entry_rec: lmx_method_new_owned(l2_program_arena)\n        if: l2_entry_rec = 0\n            return: 1\n        l2_e` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :17070 `if: (l2_m_body[i] != 0 || (l2_m_node[i] != 0 && l2_m_node[i]\as != 0 && l2_ret_tr(l2_m_node[i]\as\frame) != 0)) && fputs("        l2_entry_rec: lmx_me` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :17076 `if: (l2_m_body[i] != 0 || (l2_m_node[i] != 0 && l2_m_node[i]\as != 0 && l2_ret_tr(l2_m_node[i]\as\frame) != 0)) && c.fprintf(l2_out, ")\n        l2_en` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :17093 `if: l2_ns_parent[k] < 0 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        l2_nsp[%d]: lmx_struct_new_owned(l2_entry_unit, l2_program_arena)\n     ` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :17123 `if: l2_ns_parent[k] < 0 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_entry_unit, %uU, (cast: (@: void) l2_nsp[%d])` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :17128 `if: l2_ns_parent[k] < 0 && l2_ns_eternal[k] >= 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_entry_unit, %uU, (cast: (@: void) l2_nsp[%d]` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :17137 `if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 0 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %u` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :17140 `if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 0 && l2_ns_eternal[k] >= 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :17143 `if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 1 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %u` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :17146 `if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 1 && l2_ns_eternal[k] >= 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :17152 `if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 5 && l2_nsf_ref[fx] = 0 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_r` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :17155 `if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 5 && l2_nsf_ref[fx] = 1 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_r` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :17159 `if: l2_nsf_ref[fx] = 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            re` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :17165 `if: l2_nsf_ref[fx] = 1 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            re` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :17171 `if: fputs("        l2_entry_slot[0]: (cast: (@: void) l2_profile_array)\n", l2_out) < 0` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :17196 `if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 3 && l2_ns_parent[l2_nsf_ref[fx]] < 0 && l2_ns_eternal[l2_nsf_ref[fx]] < 0 && c.fprintf(l2_out, "       ` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :17209 `if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 4 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_nsp[%d], %uU, (cast: (@: void) lmx_arena_ref_` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :17241 `if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_entry_unit, %uU, (cast: (@: void) l2_methods)) != 0\n            return: 1\n        if: l2_m` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :17247 `if: c.fprintf(l2_out, "        l2_current: lmx_thread_current()\n        l2_message: lmx_thread_message(l2_current)\n        l2_children: lmx_thread_c` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :17253 `if: fputs("        # Closed-unit devirtualization: translator-bound child indices, no graph mutations after construction. l2_entry_rec.addr is METHOD-` -- kept: the R0 adapter builds the unit, which is E's callable occurrence
+  - [x] :17257 `l2_call_node: "l2_entry_unit"` -- removed
+  - [x] :17258 `l2_unit_ref: "l2_entry_unit"` -- removed
+  - [x] :17291 `if: l2_entry_n != 0 && fputs("int: argc; @@: char argv", l2_out) < 0` -- removed
 
 ## D3. `l2_main_body` / `l2_main_node` readers (17)
 
 - `(file head)`
-  - [ ] :158 `@: LmP0Structure l2_main_body 0`
-  - [ ] :159 `const: @: LmP0Node l2_main_node 0`
+  - [x] :158 `@: LmP0Structure l2_main_body 0` -- removed
+  - [x] :159 `const: @: LmP0Node l2_main_node 0` -- removed
 - `l2_take_main_lit`
-  - [ ] :2639 `l2_main_node: fn_node`
-  - [ ] :2640 `l2_main_body: body\as\structure`
+  - [x] :2639 `l2_main_node: fn_node` -- removed with the function
+  - [x] :2640 `l2_main_body: body\as\structure` -- removed with the function
 - `l2_translate_unit`
-  - [ ] :2720 `l2_main_node: 0`
+  - [x] :2720 `l2_main_node: 0` -- removed
 - `l2_parse_library`
-  - [ ] :2814 `l2_main_node: 0`
-  - [ ] :2815 `l2_main_body: 0`
+  - [x] :2814 `l2_main_node: 0` -- removed
+  - [x] :2815 `l2_main_body: 0` -- removed
 - `l2_fn_frame`
-  - [ ] :9759 `if: mi < 0 && l2_main_node != 0 && l2_main_node\as != 0`
-  - [ ] :9760 `return: l2_main_node\as\frame`
+  - [x] :9759 `if: mi < 0 && l2_main_node != 0 && l2_main_node\as != 0` -- removed
+  - [x] :9760 `return: l2_main_node\as\frame` -- removed
 - `l2_parse_unit`
-  - [ ] :12408 `l2_main_body: 0`
-  - [ ] :12410 `l2_main_body: body\as\structure`
-  - [ ] :12415 `if: l2_main_body != 0 && l2_merge_scan(l2_main_body) != 0`
+  - [x] :12408 `l2_main_body: 0` -- removed
+  - [x] :12410 `l2_main_body: body\as\structure` -- removed
+  - [x] :12415 `if: l2_main_body != 0 && l2_merge_scan(l2_main_body) != 0` -- removed
 - `l2_emit_unit`
-  - [ ] :16399 `if: out_path = 0 || l2_m_n = 0 || (l2_library_mode = 0 && l2_main_body = 0 && (l2_main_node = 0 || l2_main_node\as = 0 || l2_ret_tr(l2_main_node\as\fr`
-  - [ ] :16417 `if: l2_main_body != 0 && l2_merge_scan(l2_main_body) != 0`
-  - [ ] :16419 `if: l2_main_body != 0 && l2_collect_body_hosts(l2_main_body, -1) != 0`
-  - [ ] :17270 `if: l2_emit_body(l2_main_body, -1, "        ") != 0`
-  - [ ] :17276 `if: l2_main_node != 0 && l2_main_node\as != 0 && l2_emit_ret_tr(-1, "        ", l2_ret_tr(l2_main_node\as\frame)) != 0`
+  - [x] :16399 `if: out_path = 0 || l2_m_n = 0 || (l2_library_mode = 0 && l2_main_body = 0 && (l2_main_node = 0 || l2_main_node\as = 0 || l2_ret_tr(l2_main_node\as\fr` -- removed
+  - [x] :16417 `if: l2_main_body != 0 && l2_merge_scan(l2_main_body) != 0` -- removed
+  - [x] :16419 `if: l2_main_body != 0 && l2_collect_body_hosts(l2_main_body, -1) != 0` -- removed
+  - [x] :17270 `if: l2_emit_body(l2_main_body, -1, "        ") != 0` -- removed
+  - [x] :17276 `if: l2_main_node != 0 && l2_main_node\as != 0 && l2_emit_ret_tr(-1, "        ", l2_ret_tr(l2_main_node\as\frame)) != 0` -- removed
 
 ## D4. Body-context `mi` sentinel (mi < 0 / mi >= 0 / l2_cur_mi) (215)
 
 - `(file head)`
-  - [ ] :145 `int: l2_cur_mi 0 - 1`
+  - [x] :145 `int: l2_cur_mi 0 - 1` -- kept: the method being read or emitted (E is one); -1 only outside any body
 - `l2_own_off`
-  - [ ] :911 `if: mi < 0 || oi < 0 || l2_own_cap <= 0 || l2_m_cap <= 0 || mi >= l2_m_cap || oi >= l2_own_cap`
+  - [x] :911 `if: mi < 0 || oi < 0 || l2_own_cap <= 0 || l2_m_cap <= 0 || mi >= l2_m_cap || oi >= l2_own_cap` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_slot_off`
-  - [ ] :1170 `if: mi < 0 || si < 0 || si >= l2_slot_cap || l2_m_cap <= 0 || mi >= l2_m_cap`
+  - [x] :1170 `if: mi < 0 || si < 0 || si >= l2_slot_cap || l2_m_cap <= 0 || mi >= l2_m_cap` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_free_method`
-  - [ ] :1704 `if: mi < 0 || l2_m_cap <= 0 || mi >= l2_m_cap`
+  - [x] :1704 `if: mi < 0 || l2_m_cap <= 0 || mi >= l2_m_cap` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_formals_alloc`
-  - [ ] :1728 `if: mi < 0 || ar < 0`
+  - [x] :1728 `if: mi < 0 || ar < 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_hidden_reserve`
-  - [ ] :1766 `if: mi < 0 || need < 0`
+  - [x] :1766 `if: mi < 0 || need < 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_fn`
-  - [ ] :1823 `if: mi < 0 || k < 0 || l2_m_fn[mi] = 0`
+  - [x] :1823 `if: mi < 0 || k < 0 || l2_m_fn[mi] = 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_ft`
-  - [ ] :1830 `if: mi < 0 || k < 0 || l2_m_ft[mi] = 0`
+  - [x] :1830 `if: mi < 0 || k < 0 || l2_m_ft[mi] = 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_dn`
-  - [ ] :1837 `if: mi < 0 || k < 0 || l2_m_dn[mi] = 0`
+  - [x] :1837 `if: mi < 0 || k < 0 || l2_m_dn[mi] = 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_dt`
-  - [ ] :1844 `if: mi < 0 || k < 0 || l2_m_dt[mi] = 0`
+  - [x] :1844 `if: mi < 0 || k < 0 || l2_m_dt[mi] = 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_fn_set`
-  - [ ] :1851 `if: mi < 0 || k < 0 || l2_m_fn[mi] = 0`
+  - [x] :1851 `if: mi < 0 || k < 0 || l2_m_fn[mi] = 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_ft_set`
-  - [ ] :1859 `if: mi < 0 || k < 0 || l2_m_ft[mi] = 0`
+  - [x] :1859 `if: mi < 0 || k < 0 || l2_m_ft[mi] = 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_dn_set`
-  - [ ] :1867 `if: mi < 0 || k < 0 || l2_m_dn[mi] = 0`
+  - [x] :1867 `if: mi < 0 || k < 0 || l2_m_dn[mi] = 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_dt_set`
-  - [ ] :1875 `if: mi < 0 || k < 0 || l2_m_dt[mi] = 0`
+  - [x] :1875 `if: mi < 0 || k < 0 || l2_m_dt[mi] = 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_check_return_literal`
-  - [ ] :2172 `if: mi >= 0`
-  - [ ] :2175 `if: mi < 0`
+  - [x] :2172 `if: mi >= 0` -- removed: the always-true guard, its block kept
+  - [x] :2175 `if: mi < 0` -- removed
 - `l2_check_ret_tr`
-  - [ ] :2239 `if: mi >= 0 && l2_m_ret[mi] = 8 && n != 0`
-  - [ ] :2241 `if: (mi < 0 || l2_m_ret[mi] != 8) && n = 0`
+  - [x] :2239 `if: mi >= 0 && l2_m_ret[mi] = 8 && n != 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :2241 `if: (mi < 0 || l2_m_ret[mi] != 8) && n = 0` -- removed
 - `l2_emit_ret_tr`
-  - [ ] :2254 `if: mi >= 0 && l2_m_ret[mi] = 8`
+  - [x] :2254 `if: mi >= 0 && l2_m_ret[mi] = 8` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
 - `l2_parse_library`
-  - [ ] :2835 `l2_cur_mi: i`
-  - [ ] :2841 `l2_cur_mi: 0 - 1`
+  - [x] :2835 `l2_cur_mi: i` -- kept: the method being read or emitted (E is one); -1 only outside any body
+  - [x] :2841 `l2_cur_mi: 0 - 1` -- kept: the method being read or emitted (E is one); -1 only outside any body
 - `l2_intern_eq_mi`
-  - [ ] :3271 `if: s >= l2_intern_n || mi < 0`
+  - [x] :3271 `if: s >= l2_intern_n || mi < 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_intern_mi`
-  - [ ] :3423 `if: mi < 0`
+  - [x] :3423 `if: mi < 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_own_find`
-  - [ ] :3439 `if: mi >= 0`
+  - [x] :3439 `if: mi >= 0` -- removed: the always-true guard, its block kept
 - `l2_own_find_decl`
-  - [ ] :3465 `if: mi >= 0 && l2_own_mi[i] = mi`
+  - [x] :3465 `if: mi >= 0 && l2_own_mi[i] = mi` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
 - `l2_own_find_occ`
-  - [ ] :3482 `if: mi >= 0 && l2_own_mi[i] = mi && (l2_own_host[i] = 0 || l2_scope_has(l2_own_host[i]))`
+  - [x] :3482 `if: mi >= 0 && l2_own_mi[i] = mi && (l2_own_host[i] = 0 || l2_scope_has(l2_own_host[i]))` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
 - `l2_own_find_last`
-  - [ ] :3504 `if: mi >= 0 && l2_own_mi[i] = mi && (l2_own_host[i] = 0 || l2_scope_has(l2_own_host[i]))`
+  - [x] :3504 `if: mi >= 0 && l2_own_mi[i] = mi && (l2_own_host[i] = 0 || l2_scope_has(l2_own_host[i]))` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
 - `l2_own_find_host`
-  - [ ] :3548 `if: mi < 0 || t = 0`
+  - [x] :3548 `if: mi < 0 || t = 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_own_any`
-  - [ ] :3558 `if: mi < 0 || t = 0`
+  - [x] :3558 `if: mi < 0 || t = 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_own_add`
-  - [ ] :3584 `if: mi < 0 || t = 0 || l2_ident(t) = 0`
+  - [x] :3584 `if: mi < 0 || t = 0 || l2_ident(t) = 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_ret_uns`
-  - [ ] :5184 `if: mi < 0 || l2_m_ret = 0`
+  - [x] :5184 `if: mi < 0 || l2_m_ret = 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_fail_return`
-  - [ ] :5191 `if: mi >= 0 && l2_m_ret[mi] = 8 && (l2_m_throws = 0 || l2_m_throws[mi] = 0)`
+  - [x] :5191 `if: mi >= 0 && l2_m_ret[mi] = 8 && (l2_m_throws = 0 || l2_m_throws[mi] = 0)` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
 - `l2_method_is_os`
-  - [ ] :5371 `if: mi < 0 || mi >= l2_m_n || l2_os_node = 0 || l2_os_node\as = 0 || l2_os_node\as\frame = 0 || l2_os_node\as\frame\body = 0`
+  - [x] :5371 `if: mi < 0 || mi >= l2_m_n || l2_os_node = 0 || l2_os_node\as = 0 || l2_os_node\as\frame = 0 || l2_os_node\as\frame\body = 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_emit_os_fn`
-  - [ ] :5396 `if: mi < 0 || l2_method_is_os(mi) = 0`
+  - [x] :5396 `if: mi < 0 || l2_method_is_os(mi) = 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_formal_find`
-  - [ ] :5630 `if: mi < 0 || t = 0`
+  - [x] :5630 `if: mi < 0 || t = 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_dyn_find`
-  - [ ] :5640 `if: mi < 0 || t = 0`
+  - [x] :5640 `if: mi < 0 || t = 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_param_is`
-  - [ ] :5660 `if: mi < 0 || t = 0`
+  - [x] :5660 `if: mi < 0 || t = 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_param_ty`
-  - [ ] :5671 `if: mi < 0 || t = 0`
+  - [x] :5671 `if: mi < 0 || t = 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_colon_bound_before`
-  - [ ] :5757 `if: mi >= 0 && l2_param_find(mi, name) >= 0`
+  - [x] :5757 `if: mi >= 0 && l2_param_find(mi, name) >= 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
 - `l2_colon_value_bound`
-  - [ ] :5780 `if: mi >= 0 && (l2_param_find(mi, name) >= 0 || l2_own_find(mi, name) >= 0 || l2_slot_find(mi, name) >= 0 || l2_ml_find(name) >= 0)`
+  - [x] :5780 `if: mi >= 0 && (l2_param_find(mi, name) >= 0 || l2_own_find(mi, name) >= 0 || l2_slot_find(mi, name) >= 0 || l2_ml_find(name) >= 0)` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
 - `l2_colon_bound_ty`
-  - [ ] :5795 `if: mi >= 0`
+  - [x] :5795 `if: mi >= 0` -- removed: the always-true guard, its block kept
 - `l2_param_name`
-  - [ ] :6000 `if: mi < 0 || k < 0`
+  - [x] :6000 `if: mi < 0 || k < 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_param_addr_taken`
-  - [ ] :6049 `if: mi < 0 || k < 0 || l2_m_body[mi] = 0`
+  - [x] :6049 `if: mi < 0 || k < 0 || l2_m_body[mi] = 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_own_of_param`
-  - [ ] :6068 `if: mi < 0 || k < 0`
+  - [x] :6068 `if: mi < 0 || k < 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_own_canon`
-  - [ ] :6079 `if: mi < 0 || oi < 0 || oi >= l2_own_n`
+  - [x] :6079 `if: mi < 0 || oi < 0 || oi >= l2_own_n` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_own_param_of`
-  - [ ] :6091 `if: mi < 0 || oi < 0`
+  - [x] :6091 `if: mi < 0 || oi < 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_emit_own_from`
-  - [ ] :6121 `if: mi < 0 || oi < 0 || ind = 0`
+  - [x] :6121 `if: mi < 0 || oi < 0 || ind = 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_emit_finalize_old`
-  - [ ] :6140 `if: mi < 0 || oi < 0 || ind = 0 || canon = 0 || l2_own_addr_taken(mi, oi) = 0`
+  - [x] :6140 `if: mi < 0 || oi < 0 || ind = 0 || canon = 0 || l2_own_addr_taken(mi, oi) = 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_emit_occ_write`
-  - [ ] :6164 `if: mi < 0 || oi < 0 || ind = 0 || rhs = 0`
+  - [x] :6164 `if: mi < 0 || oi < 0 || ind = 0 || rhs = 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_emit_bind_mark`
-  - [ ] :6200 `if: mi < 0 || oi < 0 || ind = 0 || l2_own_addr_taken(mi, oi) = 0`
+  - [x] :6200 `if: mi < 0 || oi < 0 || ind = 0 || l2_own_addr_taken(mi, oi) = 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_collect_asgn_body`
-  - [ ] :6226 `if: body = 0 || mi < 0`
+  - [x] :6226 `if: body = 0 || mi < 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_bind_own`
-  - [ ] :6353 `if: mi < 0 || oi < 0`
+  - [x] :6353 `if: mi < 0 || oi < 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_collect_decls`
-  - [ ] :6482 `if: l2_frame_head(stmt, "[]") && (l2_own_array_count(stmt) = 0 || mi < 0 || depth != l2_scope_n)`
-  - [ ] :6484 `if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && mi < 0`
+  - [x] :6482 `if: l2_frame_head(stmt, "[]") && (l2_own_array_count(stmt) = 0 || mi < 0 || depth != l2_scope_n)` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :6484 `if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && mi < 0` -- removed
 - `l2_dyn_add`
-  - [ ] :6554 `if: mi < 0 || t = 0`
+  - [x] :6554 `if: mi < 0 || t = 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_scan_ident`
-  - [ ] :6587 `if: mi < 0 || t = 0 || l2_ident(t) = 0`
+  - [x] :6587 `if: mi < 0 || t = 0 || l2_ident(t) = 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_raw_path`
-  - [ ] :7025 `if: pd = 0 || mi < 0 || out_j = 0 || out_fld = 0`
-  - [ ] :7059 `if: mi < 0`
+  - [x] :7025 `if: pd = 0 || mi < 0 || out_j = 0 || out_fld = 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
+  - [x] :7059 `if: mi < 0` -- removed
 - `l2_prefix_deref`
-  - [ ] :7142 `if: mi >= 0`
-  - [ ] :7210 `if: mi < 0`
+  - [x] :7142 `if: mi >= 0` -- removed: the always-true guard, its block kept
+  - [x] :7210 `if: mi < 0` -- removed
 - `l2_index_head`
-  - [ ] :7269 `if: mi < 0`
-  - [ ] :7276 `if: mi >= 0`
-  - [ ] :7309 `if: mi < 0`
+  - [x] :7269 `if: mi < 0` -- removed
+  - [x] :7276 `if: mi >= 0` -- removed: the always-true guard, its block kept
+  - [x] :7309 `if: mi < 0` -- removed
 - `l2_index_token`
-  - [ ] :7390 `if: mi >= 0`
-  - [ ] :7428 `while: mi >= 0 && j < l2_own_n`
-  - [ ] :7453 `while: mi >= 0 && matched = 0 && j < l2_m_arity[mi]`
-  - [ ] :7463 `while: mi >= 0 && matched = 0 && j < l2_m_sn[mi]`
+  - [x] :7390 `if: mi >= 0` -- removed: the always-true guard, its block kept
+  - [x] :7428 `while: mi >= 0 && j < l2_own_n` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :7453 `while: mi >= 0 && matched = 0 && j < l2_m_arity[mi]` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :7463 `while: mi >= 0 && matched = 0 && j < l2_m_sn[mi]` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
 - `l2_slash_for_prefix`
-  - [ ] :7629 `if: mi < 0 || t = 0 || t\data = 0 || stop < 5U || stop > t\length`
+  - [x] :7629 `if: mi < 0 || t = 0 || t\data = 0 || stop < 5U || stop > t\length` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_slash_node_prefix`
-  - [ ] :7649 `if: mi < 0 || t = 0 || t\data = 0 || stop < 6U || stop > t\length`
+  - [x] :7649 `if: mi < 0 || t = 0 || t\data = 0 || stop < 6U || stop > t\length` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_own_index_head`
-  - [ ] :7691 `if: mi < 0 || t = 0 || t\data = 0 || out_own = 0 || out_index = 0`
+  - [x] :7691 `if: mi < 0 || t = 0 || t\data = 0 || out_own = 0 || out_index = 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_own_index_tail`
-  - [ ] :7729 `if: mi < 0 || f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || out_own = 0 || out_index = 0 || out_after = 0 || out_count = 0`
+  - [x] :7729 `if: mi < 0 || f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || out_own = 0 || out_index = 0 || out_after = 0 || out_count = 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_array_length_own`
-  - [ ] :7775 `if: mi < 0 || l2_frame_head(node, "length") = 0`
+  - [x] :7775 `if: mi < 0 || l2_frame_head(node, "length") = 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_own_ctr`
-  - [ ] :8799 `if: l2_own_mi[oi] = l2_cur_mi`
+  - [x] :8799 `if: l2_own_mi[oi] = l2_cur_mi` -- kept: the method being read or emitted (E is one); -1 only outside any body
 - `l2_layout_owns`
-  - [ ] :8883 `if: l2_for_parent[oi] < 0 && l2_for_owner(oi) < 0`
+  - [x] :8883 `if: l2_for_parent[oi] < 0 && l2_for_owner(oi) < 0` -- removed
 - `l2_path_own`
-  - [ ] :8943 `if: mi < 0 || left = 0 || right = 0`
+  - [x] :8943 `if: mi < 0 || left = 0 || right = 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_slot_find`
-  - [ ] :8993 `if: mi < 0 || t = 0`
+  - [x] :8993 `if: mi < 0 || t = 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_nsty_of_name`
-  - [ ] :9745 `if: mi >= 0`
+  - [x] :9745 `if: mi >= 0` -- removed: the always-true guard, its block kept
 - `l2_fn_frame`
-  - [ ] :9757 `if: mi >= 0 && l2_m_node != 0 && l2_m_node[mi] != 0 && l2_m_node[mi]\as != 0`
+  - [x] :9757 `if: mi >= 0 && l2_m_node != 0 && l2_m_node[mi] != 0 && l2_m_node[mi]\as != 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
 - `l2_head_is_call`
-  - [ ] :10376 `if: mi >= 0`
+  - [x] :10376 `if: mi >= 0` -- removed: the always-true guard, its block kept
 - `l2_emit_path_bail`
-  - [ ] :10417 `if: mi < 0 && c.fprintf(l2_out, "%sreturn: 76\n", deep) < 0`
-  - [ ] :10419 `if: mi < 0`
+  - [x] :10417 `if: mi < 0 && c.fprintf(l2_out, "%sreturn: 76\n", deep) < 0` -- removed
+  - [x] :10419 `if: mi < 0` -- removed
 - `l2_path_root`
-  - [ ] :10565 `if: \out_ni < 0 && \out_res < 0 && l2_cur_mi >= 0`
-  - [ ] :10567 `while: i < l2_m_arity[l2_cur_mi]`
-  - [ ] :10568 `if: l2_fn(l2_cur_mi, i) != 0 && l2_name_is_seg(l2_fn(l2_cur_mi, i), pd, off, len) != 0 && l2_nsty_get(l2_cur_mi, i) >= 0`
-  - [ ] :10569 `\out_ni: l2_nsty_get(l2_cur_mi, i)`
+  - [x] :10565 `if: \out_ni < 0 && \out_res < 0 && l2_cur_mi >= 0` -- kept: the method being read or emitted (E is one); -1 only outside any body
+  - [x] :10567 `while: i < l2_m_arity[l2_cur_mi]` -- kept: the method being read or emitted (E is one); -1 only outside any body
+  - [x] :10568 `if: l2_fn(l2_cur_mi, i) != 0 && l2_name_is_seg(l2_fn(l2_cur_mi, i), pd, off, len) != 0 && l2_nsty_get(l2_cur_mi, i) >= 0` -- kept: the method being read or emitted (E is one); -1 only outside any body
+  - [x] :10569 `\out_ni: l2_nsty_get(l2_cur_mi, i)` -- kept: the method being read or emitted (E is one); -1 only outside any body
 - `l2_check_primary`
-  - [ ] :11615 `if: mi >= 0 && l2_m_uses[l2_own_off(mi, idx)] = 0`
-  - [ ] :11650 `if: mi >= 0 && l2_param_find(mi, node\as\atom) >= 0`
-  - [ ] :11663 `if: mi >= 0 && l2_ml_find(node\as\atom) >= 0`
-  - [ ] :11667 `if: mi >= 0`
-  - [ ] :11679 `if: mi < 0`
-  - [ ] :11684 `if: mi >= 0 && l2_slot_find(mi, node\as\atom) >= 0`
-  - [ ] :11717 `if: idx < 0 && mi >= 0`
-  - [ ] :11739 `if: mi >= 0 && l2_ml_find(a0\value\as\atom) >= 0 && l2_ml_ty[l2_ml_find(a0\value\as\atom)] = 22`
-  - [ ] :11759 `if: idx < 0 && (l2_predef_has_function(call\head) != 0 || (mi >= 0 && l2_ml_find(call\head) >= 0 && l2_ml_ty[l2_ml_find(call\head)] = 40))`
-  - [ ] :11789 `if: mi >= 0`
+  - [x] :11615 `if: mi >= 0 && l2_m_uses[l2_own_off(mi, idx)] = 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :11650 `if: mi >= 0 && l2_param_find(mi, node\as\atom) >= 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :11663 `if: mi >= 0 && l2_ml_find(node\as\atom) >= 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :11667 `if: mi >= 0` -- removed: the always-true guard, its block kept
+  - [x] :11679 `if: mi < 0` -- removed
+  - [x] :11684 `if: mi >= 0 && l2_slot_find(mi, node\as\atom) >= 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :11717 `if: idx < 0 && mi >= 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :11739 `if: mi >= 0 && l2_ml_find(a0\value\as\atom) >= 0 && l2_ml_ty[l2_ml_find(a0\value\as\atom)] = 22` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :11759 `if: idx < 0 && (l2_predef_has_function(call\head) != 0 || (mi >= 0 && l2_ml_find(call\head) >= 0 && l2_ml_ty[l2_ml_find(call\head)] = 40))` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :11789 `if: mi >= 0` -- removed: the always-true guard, its block kept
 - `l2_check_body`
-  - [ ] :11973 `if: l2_merge_frame(stmt) != 0 && mi < 0`
-  - [ ] :11976 `if: l2_merge_frame(stmt) != 0 && mi >= 0`
-  - [ ] :11979 `if: l2_frame_head(stmt, "[]") && (l2_own_array_count(stmt) = 0 || mi < 0 || depth != l2_scope_n)`
-  - [ ] :11991 `if: stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM && l2_text_eq(stmt\as\atom, "return") && (mi < 0 || l2_m_ret[mi] != 8)`
-  - [ ] :11996 `if: mi >= 0 && stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0`
-  - [ ] :12124 `if: l2_frame_head(stmt, "immutable") && mi < 0`
-  - [ ] :12146 `if: mi >= 0 && (l2_ml_find(lnm) < 0 || l2_ml_ty[l2_ml_find(lnm)] != 22)`
-  - [ ] :12150 `if: l2_frame_head(stmt, "if") = 0 && mi < 0 && stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0`
-  - [ ] :12168 `if: l2_frame_head(stmt, "if") = 0 && mi >= 0 && stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0 && l2_ml_array_head(stmt\as`
-  - [ ] :12176 `if: l2_frame_head(stmt, "if") = 0 && mi < 0 && l2_const_local_ty(stmt, @ lnm, @ lty) = 0`
-  - [ ] :12181 `if: l2_frame_head(stmt, "if") = 0 && mi >= 0 && l2_const_local_ty(stmt, @ lnm, @ lty) = 0 && l2_ml_find(lnm) >= 0`
-  - [ ] :12186 `if: l2_frame_head(stmt, "if") = 0 && mi >= 0 && stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0 && l2_ml_find(stmt\as\frame`
-  - [ ] :12191 `if: l2_frame_head(stmt, "if") = 0 && mi >= 0 && l2_fnptr_local(stmt, @ lnm) = 0 && l2_ml_find(lnm) >= 0`
-  - [ ] :12194 `if: l2_frame_head(stmt, "if") = 0 && mi >= 0 && l2_struct_local(stmt, @ lnm) = 0 && l2_ml_find(lnm) >= 0`
-  - [ ] :12199 `if: l2_frame_head(stmt, "if") = 0 && mi >= 0 && l2_ptr_local_ty(stmt, @ lnm, @ lty) = 0 && l2_ml_find(lnm) >= 0`
-  - [ ] :12202 `if: l2_frame_head(stmt, "if") = 0 && mi < 0 && l2_ptr_local_ty(stmt, @ lnm, @ lty) = 0`
-  - [ ] :12207 `if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && mi < 0`
-  - [ ] :12224 `if: l2_frame_head(stmt, "if") = 0 && mi >= 0 && l2_colon_decl_shape(stmt, @ cmodel, @ cname) = 0 && l2_colon_bound_before(body, stmt, mi, cname) = 0`
-  - [ ] :12236 `if: l2_frame_head(stmt, "if") = 0 && mi >= 0 && stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0 && l2_ml_find(stmt\as\frame`
-  - [ ] :12294 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && raw = 0 && mi >= 0 && rj < l2_m_arity[mi] && (l2_ft(mi, rj) = 4 || l2_ft(mi, rj) = 6`
-  - [ ] :12296 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && raw = 0 && mi >= 0 && rj < l2_m_arity[mi] && l2_ft(mi, rj) != 5 && l2_ft(mi, rj) != `
-  - [ ] :12298 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && raw = 0 && mi >= 0 && rj >= l2_m_arity[mi] && rj < l2_m_arity[mi] + l2_m_sn[mi] && l`
-  - [ ] :12312 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && mi >= 0 && l2_m_ret[mi] = 8 && l2_count_active(fr\b`
-  - [ ] :12314 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && (mi < 0 || l2_m_ret[mi] != 8) && l2_count_active(fr`
-  - [ ] :12323 `if: l2_admit_consumer_uses(l2_next_active(fr\body\first_field)\value\as\atom, l2_nsty_get(mi, 0 - 1), l2_next_active(fr\body\first_field)\value\as\ato`
-  - [ ] :12332 `if: cidx < 0 && mi >= 0`
-  - [ ] :12343 `if: mi >= 0`
+  - [x] :11973 `if: l2_merge_frame(stmt) != 0 && mi < 0` -- removed
+  - [x] :11976 `if: l2_merge_frame(stmt) != 0 && mi >= 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :11979 `if: l2_frame_head(stmt, "[]") && (l2_own_array_count(stmt) = 0 || mi < 0 || depth != l2_scope_n)` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :11991 `if: stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM && l2_text_eq(stmt\as\atom, "return") && (mi < 0 || l2_m_ret[mi] != 8)` -- rewritten: the entry-only operand removed, the method form kept (see the S2 translator)
+  - [x] :11996 `if: mi >= 0 && stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :12124 `if: l2_frame_head(stmt, "immutable") && mi < 0` -- removed
+  - [x] :12146 `if: mi >= 0 && (l2_ml_find(lnm) < 0 || l2_ml_ty[l2_ml_find(lnm)] != 22)` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :12150 `if: l2_frame_head(stmt, "if") = 0 && mi < 0 && stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0` -- removed
+  - [x] :12168 `if: l2_frame_head(stmt, "if") = 0 && mi >= 0 && stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0 && l2_ml_array_head(stmt\as` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :12176 `if: l2_frame_head(stmt, "if") = 0 && mi < 0 && l2_const_local_ty(stmt, @ lnm, @ lty) = 0` -- removed
+  - [x] :12181 `if: l2_frame_head(stmt, "if") = 0 && mi >= 0 && l2_const_local_ty(stmt, @ lnm, @ lty) = 0 && l2_ml_find(lnm) >= 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :12186 `if: l2_frame_head(stmt, "if") = 0 && mi >= 0 && stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0 && l2_ml_find(stmt\as\frame` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :12191 `if: l2_frame_head(stmt, "if") = 0 && mi >= 0 && l2_fnptr_local(stmt, @ lnm) = 0 && l2_ml_find(lnm) >= 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :12194 `if: l2_frame_head(stmt, "if") = 0 && mi >= 0 && l2_struct_local(stmt, @ lnm) = 0 && l2_ml_find(lnm) >= 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :12199 `if: l2_frame_head(stmt, "if") = 0 && mi >= 0 && l2_ptr_local_ty(stmt, @ lnm, @ lty) = 0 && l2_ml_find(lnm) >= 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :12202 `if: l2_frame_head(stmt, "if") = 0 && mi < 0 && l2_ptr_local_ty(stmt, @ lnm, @ lty) = 0` -- removed
+  - [x] :12207 `if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && mi < 0` -- removed
+  - [x] :12224 `if: l2_frame_head(stmt, "if") = 0 && mi >= 0 && l2_colon_decl_shape(stmt, @ cmodel, @ cname) = 0 && l2_colon_bound_before(body, stmt, mi, cname) = 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :12236 `if: l2_frame_head(stmt, "if") = 0 && mi >= 0 && stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0 && l2_ml_find(stmt\as\frame` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :12294 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && raw = 0 && mi >= 0 && rj < l2_m_arity[mi] && (l2_ft(mi, rj) = 4 || l2_ft(mi, rj) = 6` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :12296 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && raw = 0 && mi >= 0 && rj < l2_m_arity[mi] && l2_ft(mi, rj) != 5 && l2_ft(mi, rj) != ` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :12298 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && raw = 0 && mi >= 0 && rj >= l2_m_arity[mi] && rj < l2_m_arity[mi] + l2_m_sn[mi] && l` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :12312 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && mi >= 0 && l2_m_ret[mi] = 8 && l2_count_active(fr\b` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :12314 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && (mi < 0 || l2_m_ret[mi] != 8) && l2_count_active(fr` -- rewritten: the entry-only operand removed, the method form kept (see the S2 translator)
+  - [x] :12323 `if: l2_admit_consumer_uses(l2_next_active(fr\body\first_field)\value\as\atom, l2_nsty_get(mi, 0 - 1), l2_next_active(fr\body\first_field)\value\as\ato` -- kept: `0 - 1` there is the return slot of the nsty table, not the entry
+  - [x] :12332 `if: cidx < 0 && mi >= 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :12343 `if: mi >= 0` -- removed: the always-true guard, its block kept
 - `l2_parse_unit`
-  - [ ] :12438 `l2_cur_mi: i`
-  - [ ] :12444 `l2_cur_mi: 0 - 1`
+  - [x] :12438 `l2_cur_mi: i` -- kept: the method being read or emitted (E is one); -1 only outside any body
+  - [x] :12444 `l2_cur_mi: 0 - 1` -- kept: the method being read or emitted (E is one); -1 only outside any body
 - `l2_hidden_from`
-  - [ ] :12547 `if: mi >= 0`
-  - [ ] :12552 `if: mi >= 0`
-  - [ ] :12555 `if: mi >= 0 && oi >= 0 && l2_m_uses[l2_own_off(mi, oi)] != 0`
-  - [ ] :12559 `if: mi >= 0 && oi >= 0 && l2_m_uses[l2_own_off(mi, oi)] != 0 && c.sprintf(dest, "l2_q%d", oi) < 0`
-  - [ ] :12561 `if: mi >= 0 && oi >= 0 && l2_m_uses[l2_own_off(mi, oi)] != 0`
-  - [ ] :12567 `if: mi < 0`
-  - [ ] :12572 `if: mi < 0`
-  - [ ] :12593 `if: mi >= 0 && l2_m_ret[mi] = 8 && (l2_m_throws = 0 || l2_m_throws[mi] = 0) && c.fprintf(l2_out, "%sreturn\n", deep) < 0`
-  - [ ] :12595 `if: mi >= 0 && l2_m_ret[mi] = 8 && l2_m_throws != 0 && l2_m_throws[mi] != 0 && c.fprintf(l2_out, "%sreturn: 0\n", deep) < 0`
-  - [ ] :12597 `if: mi >= 0 && l2_ret_uns(mi) != 0 && (l2_m_throws = 0 || l2_m_throws[mi] = 0) && c.fprintf(l2_out, "%sreturn: 0U\n", deep) < 0`
-  - [ ] :12599 `if: mi >= 0 && l2_ret_uns(mi) != 0 && l2_m_throws != 0 && l2_m_throws[mi] != 0 && c.fprintf(l2_out, "%sl2_out_result[0]: 0U\n%sreturn: 0\n", deep, dee`
-  - [ ] :12601 `if: (mi < 0 || (l2_ret_uns(mi) = 0 && l2_m_ret[mi] != 8 && (l2_m_throws = 0 || l2_m_throws[mi] = 0))) && c.fprintf(l2_out, "%sreturn: 0\n", deep) < 0`
-  - [ ] :12603 `if: mi >= 0 && l2_ret_uns(mi) = 0 && l2_m_ret[mi] != 8 && l2_m_throws != 0 && l2_m_throws[mi] != 0 && c.fprintf(l2_out, "%sl2_out_result[0]: 0\n%sretu`
+  - [x] :12547 `if: mi >= 0` -- removed: the always-true guard, its block kept
+  - [x] :12552 `if: mi >= 0` -- removed: the always-true guard, its block kept
+  - [x] :12555 `if: mi >= 0 && oi >= 0 && l2_m_uses[l2_own_off(mi, oi)] != 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :12559 `if: mi >= 0 && oi >= 0 && l2_m_uses[l2_own_off(mi, oi)] != 0 && c.sprintf(dest, "l2_q%d", oi) < 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :12561 `if: mi >= 0 && oi >= 0 && l2_m_uses[l2_own_off(mi, oi)] != 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :12567 `if: mi < 0` -- removed
+  - [x] :12572 `if: mi < 0` -- removed
+  - [x] :12593 `if: mi >= 0 && l2_m_ret[mi] = 8 && (l2_m_throws = 0 || l2_m_throws[mi] = 0) && c.fprintf(l2_out, "%sreturn\n", deep) < 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :12595 `if: mi >= 0 && l2_m_ret[mi] = 8 && l2_m_throws != 0 && l2_m_throws[mi] != 0 && c.fprintf(l2_out, "%sreturn: 0\n", deep) < 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :12597 `if: mi >= 0 && l2_ret_uns(mi) != 0 && (l2_m_throws = 0 || l2_m_throws[mi] = 0) && c.fprintf(l2_out, "%sreturn: 0U\n", deep) < 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :12599 `if: mi >= 0 && l2_ret_uns(mi) != 0 && l2_m_throws != 0 && l2_m_throws[mi] != 0 && c.fprintf(l2_out, "%sl2_out_result[0]: 0U\n%sreturn: 0\n", deep, dee` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :12601 `if: (mi < 0 || (l2_ret_uns(mi) = 0 && l2_m_ret[mi] != 8 && (l2_m_throws = 0 || l2_m_throws[mi] = 0))) && c.fprintf(l2_out, "%sreturn: 0\n", deep) < 0` -- removed
+  - [x] :12603 `if: mi >= 0 && l2_ret_uns(mi) = 0 && l2_m_ret[mi] != 8 && l2_m_throws != 0 && l2_m_throws[mi] != 0 && c.fprintf(l2_out, "%sl2_out_result[0]: 0\n%sretu` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
 - `l2_check_addr`
-  - [ ] :12657 `if: mi >= 0 && l2_ml_find(t) >= 0 && l2_ml_ty[l2_ml_find(t)] = 41`
-  - [ ] :12659 `if: mi >= 0`
-  - [ ] :12664 `if: mi >= 0`
+  - [x] :12657 `if: mi >= 0 && l2_ml_find(t) >= 0 && l2_ml_ty[l2_ml_find(t)] = 41` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :12659 `if: mi >= 0` -- removed: the always-true guard, its block kept
+  - [x] :12664 `if: mi >= 0` -- removed: the always-true guard, its block kept
 - `l2_prep_addr`
-  - [ ] :12725 `if: mi >= 0 && l2_ml_find(t) >= 0 && l2_ml_ty[l2_ml_find(t)] = 41`
-  - [ ] :12731 `if: mi >= 0`
-  - [ ] :12742 `if: mi >= 0`
+  - [x] :12725 `if: mi >= 0 && l2_ml_find(t) >= 0 && l2_ml_ty[l2_ml_find(t)] = 41` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :12731 `if: mi >= 0` -- removed: the always-true guard, its block kept
+  - [x] :12742 `if: mi >= 0` -- removed: the always-true guard, its block kept
 - `l2_sizeof_name_bytes`
-  - [ ] :12891 `if: mi >= 0`
+  - [x] :12891 `if: mi >= 0` -- removed: the always-true guard, its block kept
 - `l2_cf_set`
-  - [ ] :12961 `if: omi < 0 || fk < 0`
+  - [x] :12961 `if: omi < 0 || fk < 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_cf_get`
-  - [ ] :13021 `if: omi < 0 || fk < 0`
+  - [x] :13021 `if: omi < 0 || fk < 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_emit_nullary_call`
-  - [ ] :13052 `if: mi < 0 || call_fi < 0`
-  - [ ] :13056 `if: mi >= 0 && idx >= 0`
-  - [ ] :13075 `if: mi >= 0`
+  - [x] :13052 `if: mi < 0 || call_fi < 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :13056 `if: mi >= 0 && idx >= 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :13075 `if: mi >= 0` -- removed: the always-true guard, its block kept
 - `l2_prep`
-  - [ ] :13143 `if: mi >= 0 && l2_m_uses[l2_own_off(mi, idx)] != 0`
-  - [ ] :13157 `if: mi >= 0`
-  - [ ] :13162 `if: mi >= 0`
-  - [ ] :13173 `if: mi >= 0`
-  - [ ] :13178 `if: mi < 0`
-  - [ ] :13191 `if: mi < 0`
-  - [ ] :13262 `if: idx < 0 && mi >= 0`
-  - [ ] :13282 `if: idx < 0 && mi >= 0 && l2_ml_find(call\head) >= 0 && l2_ml_ty[l2_ml_find(call\head)] = 40`
-  - [ ] :13679 `if: l2_m_throws[idx] != 0 && mi >= 0 && fputs(", l2_msg", l2_out) < 0`
-  - [ ] :13681 `if: l2_m_throws[idx] != 0 && mi < 0 && fputs(", node", l2_out) < 0`
-  - [ ] :13695 `if: l2_m_throws[idx] != 0 && mi >= 0 && c.fprintf(l2_out, "%sif: l2_ts%d != 0\n%s    l2_out_throw[0]: l2_te%d\n%s    return: l2_ts%d\n", ind, t, ind, `
-  - [ ] :13697 `if: l2_m_throws[idx] != 0 && mi < 0 && c.fprintf(l2_out, "%sif: l2_ts%d != 0\n%s    return: 70\n", ind, t, ind) < 0`
+  - [x] :13143 `if: mi >= 0 && l2_m_uses[l2_own_off(mi, idx)] != 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :13157 `if: mi >= 0` -- removed: the always-true guard, its block kept
+  - [x] :13162 `if: mi >= 0` -- removed: the always-true guard, its block kept
+  - [x] :13173 `if: mi >= 0` -- removed: the always-true guard, its block kept
+  - [x] :13178 `if: mi < 0` -- removed
+  - [x] :13191 `if: mi < 0` -- removed
+  - [x] :13262 `if: idx < 0 && mi >= 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :13282 `if: idx < 0 && mi >= 0 && l2_ml_find(call\head) >= 0 && l2_ml_ty[l2_ml_find(call\head)] = 40` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :13679 `if: l2_m_throws[idx] != 0 && mi >= 0 && fputs(", l2_msg", l2_out) < 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :13681 `if: l2_m_throws[idx] != 0 && mi < 0 && fputs(", node", l2_out) < 0` -- removed
+  - [x] :13695 `if: l2_m_throws[idx] != 0 && mi >= 0 && c.fprintf(l2_out, "%sif: l2_ts%d != 0\n%s    l2_out_throw[0]: l2_te%d\n%s    return: l2_ts%d\n", ind, t, ind, ` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :13697 `if: l2_m_throws[idx] != 0 && mi < 0 && c.fprintf(l2_out, "%sif: l2_ts%d != 0\n%s    return: 70\n", ind, t, ind) < 0` -- removed
 - `l2_emit_poll`
-  - [ ] :14375 `if: mi >= 0 && l2_m_ret[mi] = 8 && (l2_m_throws = 0 || l2_m_throws[mi] = 0) && c.fprintf(l2_out, "%sif: lmx_msg_poll_escape() != 0\n%s    return\n", i`
-  - [ ] :14377 `if: mi >= 0 && l2_m_ret[mi] = 8 && l2_m_throws != 0 && l2_m_throws[mi] != 0 && c.fprintf(l2_out, "%sif: lmx_msg_poll_escape() != 0\n%s    return: 0\n"`
-  - [ ] :14379 `if: (mi < 0 || l2_m_ret[mi] != 8) && c.fprintf(l2_out, "%sif: lmx_msg_poll_escape() != 0\n%s    return: 0\n", ind, ind) < 0`
+  - [x] :14375 `if: mi >= 0 && l2_m_ret[mi] = 8 && (l2_m_throws = 0 || l2_m_throws[mi] = 0) && c.fprintf(l2_out, "%sif: lmx_msg_poll_escape() != 0\n%s    return\n", i` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :14377 `if: mi >= 0 && l2_m_ret[mi] = 8 && l2_m_throws != 0 && l2_m_throws[mi] != 0 && c.fprintf(l2_out, "%sif: lmx_msg_poll_escape() != 0\n%s    return: 0\n"` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :14379 `if: (mi < 0 || l2_m_ret[mi] != 8) && c.fprintf(l2_out, "%sif: lmx_msg_poll_escape() != 0\n%s    return: 0\n", ind, ind) < 0` -- removed
 - `l2_emit_checkpoint`
-  - [ ] :14438 `if: mi < 0 || ind = 0`
+  - [x] :14438 `if: mi < 0 || ind = 0` -- kept: an index guard of a helper; no caller passes the entry sentinel any more
 - `l2_emit_path_load`
-  - [ ] :14528 `if: mi >= 0 && l2_m_ret[mi] = 8 && (l2_m_throws = 0 || l2_m_throws[mi] = 0) && c.fprintf(l2_out, "%sreturn\n", deep) < 0`
-  - [ ] :14530 `if: mi >= 0 && l2_m_ret[mi] = 8 && l2_m_throws != 0 && l2_m_throws[mi] != 0 && c.fprintf(l2_out, "%sreturn: 0\n", deep) < 0`
-  - [ ] :14532 `if: mi >= 0 && l2_ret_uns(mi) != 0 && (l2_m_throws = 0 || l2_m_throws[mi] = 0) && c.fprintf(l2_out, "%sreturn: 0U\n", deep) < 0`
-  - [ ] :14534 `if: mi >= 0 && l2_ret_uns(mi) != 0 && l2_m_throws != 0 && l2_m_throws[mi] != 0 && c.fprintf(l2_out, "%sl2_out_result[0]: 0U\n%sreturn: 0\n", deep, dee`
-  - [ ] :14536 `if: (mi < 0 || (l2_ret_uns(mi) = 0 && l2_m_ret[mi] != 8 && (l2_m_throws = 0 || l2_m_throws[mi] = 0))) && c.fprintf(l2_out, "%sreturn: 0\n", deep) < 0`
-  - [ ] :14538 `if: mi >= 0 && l2_ret_uns(mi) = 0 && l2_m_ret[mi] != 8 && l2_m_throws != 0 && l2_m_throws[mi] != 0 && c.fprintf(l2_out, "%sl2_out_result[0]: 0\n%sretu`
+  - [x] :14528 `if: mi >= 0 && l2_m_ret[mi] = 8 && (l2_m_throws = 0 || l2_m_throws[mi] = 0) && c.fprintf(l2_out, "%sreturn\n", deep) < 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :14530 `if: mi >= 0 && l2_m_ret[mi] = 8 && l2_m_throws != 0 && l2_m_throws[mi] != 0 && c.fprintf(l2_out, "%sreturn: 0\n", deep) < 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :14532 `if: mi >= 0 && l2_ret_uns(mi) != 0 && (l2_m_throws = 0 || l2_m_throws[mi] = 0) && c.fprintf(l2_out, "%sreturn: 0U\n", deep) < 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :14534 `if: mi >= 0 && l2_ret_uns(mi) != 0 && l2_m_throws != 0 && l2_m_throws[mi] != 0 && c.fprintf(l2_out, "%sl2_out_result[0]: 0U\n%sreturn: 0\n", deep, dee` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :14536 `if: (mi < 0 || (l2_ret_uns(mi) = 0 && l2_m_ret[mi] != 8 && (l2_m_throws = 0 || l2_m_throws[mi] = 0))) && c.fprintf(l2_out, "%sreturn: 0\n", deep) < 0` -- removed
+  - [x] :14538 `if: mi >= 0 && l2_ret_uns(mi) = 0 && l2_m_ret[mi] != 8 && l2_m_throws != 0 && l2_m_throws[mi] != 0 && c.fprintf(l2_out, "%sl2_out_result[0]: 0\n%sretu` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
 - `l2_ccall_box_int`
-  - [ ] :14668 `if: mi >= 0`
+  - [x] :14668 `if: mi >= 0` -- removed: the always-true guard, its block kept
 - `l2_emit_ccall`
-  - [ ] :14729 `if: mi >= 0 && l2_raw_head(stmt\as\frame\head, mi, @ hj, @ hf) = 0 && hf = 5 && hj < l2_m_arity[mi]`
-  - [ ] :14743 `if: mi >= 0 && hj >= l2_m_arity[mi] && hf = 5 && hj < l2_m_arity[mi] + l2_m_sn[mi]`
-  - [ ] :14757 `if: mi < 0 || hj < 0 || hf != 5 || hj >= l2_m_arity[mi] + l2_m_sn[mi]`
+  - [x] :14729 `if: mi >= 0 && l2_raw_head(stmt\as\frame\head, mi, @ hj, @ hf) = 0 && hf = 5 && hj < l2_m_arity[mi]` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :14743 `if: mi >= 0 && hj >= l2_m_arity[mi] && hf = 5 && hj < l2_m_arity[mi] + l2_m_sn[mi]` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :14757 `if: mi < 0 || hj < 0 || hf != 5 || hj >= l2_m_arity[mi] + l2_m_sn[mi]` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
 - `l2_emit_loc_stmt`
-  - [ ] :14959 `if: mi >= 0 && l2_array_local(stmt, @ lnm, @ lsz) != 0 && (l2_ptr_local_ty(stmt, @ lnm, @ lty) != 0 || l2_ml_find(lnm) < 0) && (l2_const_local_ty(stmt`
-  - [ ] :14962 `if: mi >= 0 && (l2_ml_find(lnm) < 0 || l2_ml_ty[l2_ml_find(lnm)] != 22)`
-  - [ ] :14996 `if: mi >= 0 && l2_ml_array_head(stmt\as\frame\head) >= 0`
-  - [ ] :15051 `if: mi >= 0 && stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0 && l2_ml_find(stmt\as\frame\head) >= 0 && l2_ml_ty[l2_ml_fin`
-  - [ ] :15178 `if: mi >= 0 && l2_ml_find(fr\head) < 0`
+  - [x] :14959 `if: mi >= 0 && l2_array_local(stmt, @ lnm, @ lsz) != 0 && (l2_ptr_local_ty(stmt, @ lnm, @ lty) != 0 || l2_ml_find(lnm) < 0) && (l2_const_local_ty(stmt` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :14962 `if: mi >= 0 && (l2_ml_find(lnm) < 0 || l2_ml_ty[l2_ml_find(lnm)] != 22)` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :14996 `if: mi >= 0 && l2_ml_array_head(stmt\as\frame\head) >= 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :15051 `if: mi >= 0 && stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0 && l2_ml_find(stmt\as\frame\head) >= 0 && l2_ml_ty[l2_ml_fin` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :15178 `if: mi >= 0 && l2_ml_find(fr\head) < 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
 - `l2_body_throws`
-  - [ ] :15306 `if: mi >= 0 && l2_colon_decl_shape(stmt, @ cmodel, @ cname) = 0`
+  - [x] :15306 `if: mi >= 0 && l2_colon_decl_shape(stmt, @ cmodel, @ cname) = 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
 - `l2_emit_body`
-  - [ ] :15695 `if: mi < 0 && c.fprintf(l2_out, "%sif: l2_mstatus != 0 || l2_mresult = 0\n%s    return: 70\n", ind, ind) < 0`
-  - [ ] :15697 `if: mi >= 0 && c.fprintf(l2_out, "%sif: l2_mstatus != 0 || l2_mresult = 0\n%s    l2_out_throw[0]: node\n%s    return: 1\n", ind, ind, ind) < 0`
-  - [ ] :15864 `if: mi < 0`
-  - [ ] :15866 `if: mi >= 0`
-  - [ ] :16087 `if: stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM && l2_text_eq(stmt\as\atom, "return") && mi >= 0 && l2_m_ret[mi] = 8`
-  - [ ] :16134 `if: ix = 0 && mi >= 0 && rj < l2_m_arity[mi] && fr\head\length > l2_fn(mi, rj)\length + 1U && fr\head\data[l2_fn(mi, rj)\length] = 92 && c.fprintf(l2_`
-  - [ ] :16136 `if: ix = 0 && mi >= 0 && rj < l2_m_arity[mi] && (fr\head\length <= l2_fn(mi, rj)\length || fr\head\data[l2_fn(mi, rj)\length] != 92) && c.fprintf(l2_o`
-  - [ ] :16138 `if: ix = 0 && mi >= 0 && rj >= l2_m_arity[mi] && rj < l2_m_arity[mi] + l2_m_sn[mi] && c.fprintf(l2_out, "%sl2_s%d_%d[%s]: %s\n", ind, mi, rj - l2_m_ar`
-  - [ ] :16140 `if: ix = 0 && (mi < 0 || rj >= l2_m_arity[mi] + l2_m_sn[mi]) && c.fprintf(l2_out, "%s%.*s[%s]: %s\n", ind, (cast: (int) l2_pn), fr\head\data, index_to`
-  - [ ] :16157 `if: mi >= 0 && l2_colon_decl_shape(stmt, @ cmodel, @ cname) = 0`
-  - [ ] :16173 `if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && mi >= 0`
-  - [ ] :16178 `if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && mi >= 0 && l2_m_uses[l2_own_off(mi, oi)] != 0 && l2_emit_bind_mark(mi, oi`
-  - [ ] :16180 `if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && mi >= 0 && l2_m_alias[l2_own_off(mi, oi)] >= 0 && l2_own_fid[oi] >= 0 && `
-  - [ ] :16182 `if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && mi >= 0 && l2_m_alias[l2_own_off(mi, oi)] >= 0 && l2_own_fid[oi] < 0 && (`
-  - [ ] :16200 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && mi >= 0 && l2_m_ret[mi] = 8 && l2_emit_poll(mi, ind`
-  - [ ] :16202 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && mi >= 0 && l2_m_ret[mi] = 8 && l2_emit_checkpoint(m`
-  - [ ] :16204 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && mi >= 0 && l2_m_ret[mi] = 8 && (l2_m_throws = 0 || `
-  - [ ] :16206 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && mi >= 0 && l2_m_ret[mi] = 8 && l2_m_throws != 0 && `
-  - [ ] :16208 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && mi >= 0 && l2_m_ret[mi] = 8`
-  - [ ] :16210 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && (mi < 0 || l2_m_ret[mi] != 8) && l2_count_active(fr`
-  - [ ] :16215 `if: oi < 0 && mi >= 0`
-  - [ ] :16231 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && (mi < 0 || l2_m_ret[mi] != 8) && (l2_count_active(f`
-  - [ ] :16233 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && (mi < 0 || l2_m_ret[mi] != 8) && l2_emit_poll(mi, i`
-  - [ ] :16235 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && (mi < 0 || l2_m_ret[mi] != 8) && l2_emit_checkpoint`
-  - [ ] :16237 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && (mi < 0 || l2_m_ret[mi] != 8) && (mi < 0 || l2_m_th`
-  - [ ] :16241 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && mi >= 0 && l2_m_ret[mi] != 8 && l2_m_throws != 0 &&`
-  - [ ] :16243 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && (mi < 0 || l2_m_ret[mi] != 8)`
-  - [ ] :16252 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && mi < 0`
-  - [ ] :16272 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && mi >= 0 && oi >= 0 && l2_m_uses[l2_own_off(mi, `
-  - [ ] :16278 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && mi >= 0`
-  - [ ] :16375 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && sl >= 0 && l2_own_fid[sl] >= 0 && mi >= 0 && l2`
+  - [x] :15695 `if: mi < 0 && c.fprintf(l2_out, "%sif: l2_mstatus != 0 || l2_mresult = 0\n%s    return: 70\n", ind, ind) < 0` -- removed
+  - [x] :15697 `if: mi >= 0 && c.fprintf(l2_out, "%sif: l2_mstatus != 0 || l2_mresult = 0\n%s    l2_out_throw[0]: node\n%s    return: 1\n", ind, ind, ind) < 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :15864 `if: mi < 0` -- removed
+  - [x] :15866 `if: mi >= 0` -- removed: the always-true guard, its block kept
+  - [x] :16087 `if: stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM && l2_text_eq(stmt\as\atom, "return") && mi >= 0 && l2_m_ret[mi] = 8` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :16134 `if: ix = 0 && mi >= 0 && rj < l2_m_arity[mi] && fr\head\length > l2_fn(mi, rj)\length + 1U && fr\head\data[l2_fn(mi, rj)\length] = 92 && c.fprintf(l2_` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :16136 `if: ix = 0 && mi >= 0 && rj < l2_m_arity[mi] && (fr\head\length <= l2_fn(mi, rj)\length || fr\head\data[l2_fn(mi, rj)\length] != 92) && c.fprintf(l2_o` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :16138 `if: ix = 0 && mi >= 0 && rj >= l2_m_arity[mi] && rj < l2_m_arity[mi] + l2_m_sn[mi] && c.fprintf(l2_out, "%sl2_s%d_%d[%s]: %s\n", ind, mi, rj - l2_m_ar` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :16140 `if: ix = 0 && (mi < 0 || rj >= l2_m_arity[mi] + l2_m_sn[mi]) && c.fprintf(l2_out, "%s%.*s[%s]: %s\n", ind, (cast: (int) l2_pn), fr\head\data, index_to` -- removed
+  - [x] :16157 `if: mi >= 0 && l2_colon_decl_shape(stmt, @ cmodel, @ cname) = 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :16173 `if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && mi >= 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :16178 `if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && mi >= 0 && l2_m_uses[l2_own_off(mi, oi)] != 0 && l2_emit_bind_mark(mi, oi` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :16180 `if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && mi >= 0 && l2_m_alias[l2_own_off(mi, oi)] >= 0 && l2_own_fid[oi] >= 0 && ` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :16182 `if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && mi >= 0 && l2_m_alias[l2_own_off(mi, oi)] >= 0 && l2_own_fid[oi] < 0 && (` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :16200 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && mi >= 0 && l2_m_ret[mi] = 8 && l2_emit_poll(mi, ind` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :16202 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && mi >= 0 && l2_m_ret[mi] = 8 && l2_emit_checkpoint(m` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :16204 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && mi >= 0 && l2_m_ret[mi] = 8 && (l2_m_throws = 0 || ` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :16206 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && mi >= 0 && l2_m_ret[mi] = 8 && l2_m_throws != 0 && ` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :16208 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && mi >= 0 && l2_m_ret[mi] = 8` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :16210 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && (mi < 0 || l2_m_ret[mi] != 8) && l2_count_active(fr` -- rewritten: the entry-only operand removed, the method form kept (see the S2 translator)
+  - [x] :16215 `if: oi < 0 && mi >= 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :16231 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && (mi < 0 || l2_m_ret[mi] != 8) && (l2_count_active(f` -- rewritten: the entry-only operand removed, the method form kept (see the S2 translator)
+  - [x] :16233 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && (mi < 0 || l2_m_ret[mi] != 8) && l2_emit_poll(mi, i` -- rewritten: the entry-only operand removed, the method form kept (see the S2 translator)
+  - [x] :16235 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && (mi < 0 || l2_m_ret[mi] != 8) && l2_emit_checkpoint` -- rewritten: the entry-only operand removed, the method form kept (see the S2 translator)
+  - [x] :16237 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && (mi < 0 || l2_m_ret[mi] != 8) && (mi < 0 || l2_m_th` -- rewritten: the entry-only operand removed, the method form kept (see the S2 translator)
+  - [x] :16241 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && mi >= 0 && l2_m_ret[mi] != 8 && l2_m_throws != 0 &&` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :16243 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && (mi < 0 || l2_m_ret[mi] != 8)` -- rewritten: the entry-only operand removed, the method form kept (see the S2 translator)
+  - [x] :16252 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && mi < 0` -- rewritten: the entry-only operand removed, the method form kept (see the S2 translator)
+  - [x] :16272 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && mi >= 0 && oi >= 0 && l2_m_uses[l2_own_off(mi, ` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :16278 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && mi >= 0` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
+  - [x] :16375 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && sl >= 0 && l2_own_fid[sl] >= 0 && mi >= 0 && l2` -- rewritten: the entry-sentinel operand dropped (always true / always false with mi >= 0)
 - `l2_emit_unit`
-  - [ ] :16662 `l2_cur_mi: i`
-  - [ ] :17259 `l2_cur_mi: 0 - 1`
-  - [ ] :17262 `if: l2_for_owner(k) < 0 && c.fprintf(l2_out, "        @: Lmx l2_h%d 0\n        l2_h%d: l2_b%d\n        if: l2_h%d = 0\n            return: 1\n", k, k,`
+  - [x] :16662 `l2_cur_mi: i` -- kept: the method being read or emitted (E is one); -1 only outside any body
+  - [x] :17259 `l2_cur_mi: 0 - 1` -- kept: the method being read or emitted (E is one); -1 only outside any body
+  - [x] :17262 `if: l2_for_owner(k) < 0 && c.fprintf(l2_out, "        @: Lmx l2_h%d 0\n        l2_h%d: l2_b%d\n        if: l2_h%d = 0\n            return: 1\n", k, k,` -- removed
 
 ## D5. Unit/entry locals table `l2_loc_*` (72)
 
 - `(file head)`
-  - [ ] :181 `int: l2_loc_n 0`
-  - [ ] :182 `int: l2_loc_cap 0`
-  - [ ] :187 `@@: LmP0Text l2_loc_nm 0`
-  - [ ] :188 `@: int l2_loc_ty 0`
+  - [x] :181 `int: l2_loc_n 0` -- removed
+  - [x] :182 `int: l2_loc_cap 0` -- removed
+  - [x] :187 `@@: LmP0Text l2_loc_nm 0` -- removed
+  - [x] :188 `@: int l2_loc_ty 0` -- removed
 - `l2_release`
-  - [ ] :887 `l2_loc_free()`
+  - [x] :887 `l2_loc_free()` -- removed
 - `l2_translate_unit`
-  - [ ] :2713 `l2_loc_free()`
+  - [x] :2713 `l2_loc_free()` -- removed
 - `l2_loc_free`
-  - [ ] :3793 `if: l2_loc_nm != 0`
-  - [ ] :3794 `l2_xfree((cast: (@: void) l2_loc_nm))`
-  - [ ] :3796 `if: l2_loc_ty != 0`
-  - [ ] :3797 `l2_xfree((cast: (@: void) l2_loc_ty))`
-  - [ ] :3799 `l2_loc_nm: 0`
-  - [ ] :3800 `l2_loc_ty: 0`
-  - [ ] :3801 `l2_loc_n: 0`
-  - [ ] :3802 `l2_loc_cap: 0`
+  - [x] :3793 `if: l2_loc_nm != 0` -- removed with the function
+  - [x] :3794 `l2_xfree((cast: (@: void) l2_loc_nm))` -- removed with the function
+  - [x] :3796 `if: l2_loc_ty != 0` -- removed with the function
+  - [x] :3797 `l2_xfree((cast: (@: void) l2_loc_ty))` -- removed with the function
+  - [x] :3799 `l2_loc_nm: 0` -- removed with the function
+  - [x] :3800 `l2_loc_ty: 0` -- removed with the function
+  - [x] :3801 `l2_loc_n: 0` -- removed with the function
+  - [x] :3802 `l2_loc_cap: 0` -- removed with the function
 - `l2_loc_find`
-  - [ ] :3807 `if: t = 0 || l2_loc_nm = 0`
-  - [ ] :3809 `while: i < l2_loc_n`
-  - [ ] :3810 `if: l2_text_same(l2_loc_nm[i], t)`
+  - [x] :3807 `if: t = 0 || l2_loc_nm = 0` -- removed with the function
+  - [x] :3809 `while: i < l2_loc_n` -- removed with the function
+  - [x] :3810 `if: l2_text_same(l2_loc_nm[i], t)` -- removed with the function
 - `l2_loc_add`
-  - [ ] :3935 `cap: l2_loc_cap`
-  - [ ] :3936 `if: l2_loc_n >= cap`
-  - [ ] :3960 `if: l2_loc_nm != 0 && l2_loc_n > 0`
-  - [ ] :3961 `memcpy((cast: (@: void) nn), (cast: (@: void) l2_loc_nm), (cast: (size_t) l2_loc_n) * psz)`
-  - [ ] :3963 `if: l2_loc_ty != 0 && l2_loc_n > 0`
-  - [ ] :3964 `memcpy((cast: (@: void) nt), (cast: (@: void) l2_loc_ty), (cast: (size_t) l2_loc_n) * c.sizeof(c.int))`
-  - [ ] :3966 `if: l2_loc_nm != 0`
-  - [ ] :3967 `l2_xfree((cast: (@: void) l2_loc_nm))`
-  - [ ] :3969 `if: l2_loc_ty != 0`
-  - [ ] :3970 `l2_xfree((cast: (@: void) l2_loc_ty))`
-  - [ ] :3972 `l2_loc_nm: nn`
-  - [ ] :3973 `l2_loc_ty: nt`
-  - [ ] :3974 `l2_loc_cap: cap`
-  - [ ] :3976 `l2_loc_nm[l2_loc_n]: (cast: (@: LmP0Text) t)`
-  - [ ] :3977 `l2_loc_ty[l2_loc_n]: ty`
-  - [ ] :3978 `l2_loc_n: l2_loc_n + 1`
+  - [x] :3935 `cap: l2_loc_cap` -- removed with the function
+  - [x] :3936 `if: l2_loc_n >= cap` -- removed with the function
+  - [x] :3960 `if: l2_loc_nm != 0 && l2_loc_n > 0` -- removed with the function
+  - [x] :3961 `memcpy((cast: (@: void) nn), (cast: (@: void) l2_loc_nm), (cast: (size_t) l2_loc_n) * psz)` -- removed with the function
+  - [x] :3963 `if: l2_loc_ty != 0 && l2_loc_n > 0` -- removed with the function
+  - [x] :3964 `memcpy((cast: (@: void) nt), (cast: (@: void) l2_loc_ty), (cast: (size_t) l2_loc_n) * c.sizeof(c.int))` -- removed with the function
+  - [x] :3966 `if: l2_loc_nm != 0` -- removed with the function
+  - [x] :3967 `l2_xfree((cast: (@: void) l2_loc_nm))` -- removed with the function
+  - [x] :3969 `if: l2_loc_ty != 0` -- removed with the function
+  - [x] :3970 `l2_xfree((cast: (@: void) l2_loc_ty))` -- removed with the function
+  - [x] :3972 `l2_loc_nm: nn` -- removed with the function
+  - [x] :3973 `l2_loc_ty: nt` -- removed with the function
+  - [x] :3974 `l2_loc_cap: cap` -- removed with the function
+  - [x] :3976 `l2_loc_nm[l2_loc_n]: (cast: (@: LmP0Text) t)` -- removed with the function
+  - [x] :3977 `l2_loc_ty[l2_loc_n]: ty` -- removed with the function
+  - [x] :3978 `l2_loc_n: l2_loc_n + 1` -- removed with the function
 - `l2_colon_bound_ty`
-  - [ ] :5828 `i: l2_loc_find(name)`
-  - [ ] :5830 `\out_ty: l2_loc_ty[i]`
+  - [x] :5828 `i: l2_loc_find(name)` -- removed
+  - [x] :5830 `\out_ty: l2_loc_ty[i]` -- removed
 - `l2_prefix_deref`
-  - [ ] :7212 `while: j < l2_loc_n && found = 0`
-  - [ ] :7213 `if: l2_loc_nm[j] != 0 && l2_loc_nm[j]\length = base_end - lead && memcmp(l2_loc_nm[j]\data, t\data + lead, base_end - lead) = 0`
-  - [ ] :7214 `ty: l2_loc_ty[j]`
+  - [x] :7212 `while: j < l2_loc_n && found = 0` -- removed
+  - [x] :7213 `if: l2_loc_nm[j] != 0 && l2_loc_nm[j]\length = base_end - lead && memcmp(l2_loc_nm[j]\data, t\data + lead, base_end - lead) = 0` -- removed
+  - [x] :7214 `ty: l2_loc_ty[j]` -- removed
 - `l2_index_head`
-  - [ ] :7271 `while: k < l2_loc_n`
-  - [ ] :7272 `if: l2_loc_nm[k] != 0 && l2_loc_nm[k]\length = n - lb - 2U && memcmp(l2_loc_nm[k]\data, t\data + lb + 1U, n - lb - 2U) = 0 && (l2_loc_ty[k] = 0 || l2_`
-  - [ ] :7311 `while: j < l2_loc_n`
-  - [ ] :7312 `if: l2_loc_nm[j] != 0 && l2_loc_nm[j]\length = lb && memcmp(l2_loc_nm[j]\data, t\data, lb) = 0`
-  - [ ] :7313 `if: l2_loc_ty[j] != 9 && l2_loc_ty[j] != 11 && l2_loc_ty[j] != 12 && l2_loc_ty[j] != 17 && l2_loc_ty[j] != 18 && l2_loc_ty[j] != 19 && l2_loc_ty[j] !=`
+  - [x] :7271 `while: k < l2_loc_n` -- removed
+  - [x] :7272 `if: l2_loc_nm[k] != 0 && l2_loc_nm[k]\length = n - lb - 2U && memcmp(l2_loc_nm[k]\data, t\data + lb + 1U, n - lb - 2U) = 0 && (l2_loc_ty[k] = 0 || l2_` -- removed
+  - [x] :7311 `while: j < l2_loc_n` -- removed
+  - [x] :7312 `if: l2_loc_nm[j] != 0 && l2_loc_nm[j]\length = lb && memcmp(l2_loc_nm[j]\data, t\data, lb) = 0` -- removed
+  - [x] :7313 `if: l2_loc_ty[j] != 9 && l2_loc_ty[j] != 11 && l2_loc_ty[j] != 12 && l2_loc_ty[j] != 17 && l2_loc_ty[j] != 18 && l2_loc_ty[j] != 19 && l2_loc_ty[j] !=` -- removed
 - `l2_check_primary`
-  - [ ] :11659 `if: l2_loc_find(node\as\atom) >= 0`
-  - [ ] :11741 `if: mi < 0 && l2_loc_find(a0\value\as\atom) >= 0 && l2_loc_ty[l2_loc_find(a0\value\as\atom)] = 22`
+  - [x] :11659 `if: l2_loc_find(node\as\atom) >= 0` -- removed
+  - [x] :11741 `if: mi < 0 && l2_loc_find(a0\value\as\atom) >= 0 && l2_loc_ty[l2_loc_find(a0\value\as\atom)] = 22` -- removed
 - `l2_check_body`
-  - [ ] :12138 `if: l2_loc_add(lnm, 3, path, nxt\value) != 0`
-  - [ ] :12144 `if: mi < 0 && l2_loc_add(lnm, 22, path, stmt) != 0`
-  - [ ] :12153 `while: k < l2_loc_n && l2_loc_nm != 0 && l2_loc_ty != 0`
-  - [ ] :12154 `lnm: l2_loc_nm[k]`
-  - [ ] :12155 `if: l2_loc_ty[k] = 22 && lnm != 0 && stmt\as\frame\head\length > lnm\length && stmt\as\frame\head\data[lnm\length] = 91 && memcmp(lnm\data, stmt\as\fr`
-  - [ ] :12177 `if: l2_loc_add(lnm, lty, path, stmt) != 0`
-  - [ ] :12203 `if: l2_loc_add(lnm, lty, path, stmt) != 0`
-  - [ ] :12215 `if: l2_loc_add(lnm, l2_own_store_ty(l2_own_decl_ty(stmt)), path, stmt) != 0`
-  - [ ] :12241 `if: l2_frame_head(stmt, "if") = 0 && mi < 0 && stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0 && l2_loc_find(stmt\as\frame`
-  - [ ] :12246 `if: last != 0 && last\value != 0 && last\value\kind = c.LM_P0_NODE_ATOM && l2_check_literal_kind(last\value\as\atom, l2_lit_kind_from_own(l2_loc_ty[l2`
-  - [ ] :12284 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_is_asgn(stmt) != 0 && stmt\as\frame\head != 0 && l2_ident(stmt\as\frame\head) != `
-  - [ ] :12288 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_is_asgn(stmt) != 0 && mi < 0 && stmt\as\frame\head != 0 && l2_loc_find(stmt\as\fr`
-  - [ ] :12290 `if: last != 0 && last\value != 0 && last\value\kind = c.LM_P0_NODE_ATOM && l2_check_literal_kind(last\value\as\atom, l2_lit_kind_from_own(l2_loc_ty[l2`
+  - [x] :12138 `if: l2_loc_add(lnm, 3, path, nxt\value) != 0` -- removed
+  - [x] :12144 `if: mi < 0 && l2_loc_add(lnm, 22, path, stmt) != 0` -- removed
+  - [x] :12153 `while: k < l2_loc_n && l2_loc_nm != 0 && l2_loc_ty != 0` -- removed
+  - [x] :12154 `lnm: l2_loc_nm[k]` -- removed
+  - [x] :12155 `if: l2_loc_ty[k] = 22 && lnm != 0 && stmt\as\frame\head\length > lnm\length && stmt\as\frame\head\data[lnm\length] = 91 && memcmp(lnm\data, stmt\as\fr` -- removed
+  - [x] :12177 `if: l2_loc_add(lnm, lty, path, stmt) != 0` -- removed
+  - [x] :12203 `if: l2_loc_add(lnm, lty, path, stmt) != 0` -- removed
+  - [x] :12215 `if: l2_loc_add(lnm, l2_own_store_ty(l2_own_decl_ty(stmt)), path, stmt) != 0` -- removed
+  - [x] :12241 `if: l2_frame_head(stmt, "if") = 0 && mi < 0 && stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0 && l2_loc_find(stmt\as\frame` -- removed
+  - [x] :12246 `if: last != 0 && last\value != 0 && last\value\kind = c.LM_P0_NODE_ATOM && l2_check_literal_kind(last\value\as\atom, l2_lit_kind_from_own(l2_loc_ty[l2` -- removed
+  - [x] :12284 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_is_asgn(stmt) != 0 && stmt\as\frame\head != 0 && l2_ident(stmt\as\frame\head) != ` -- rewritten (the entry/locals operand removed; the line keeps its method form)
+  - [x] :12288 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_is_asgn(stmt) != 0 && mi < 0 && stmt\as\frame\head != 0 && l2_loc_find(stmt\as\fr` -- rewritten: the entry-only operand removed, the method form kept (see the S2 translator)
+  - [x] :12290 `if: last != 0 && last\value != 0 && last\value\kind = c.LM_P0_NODE_ATOM && l2_check_literal_kind(last\value\as\atom, l2_lit_kind_from_own(l2_loc_ty[l2` -- removed
 - `l2_hidden_from`
-  - [ ] :12573 `li: l2_loc_find(nm)`
-  - [ ] :12574 `if: mi < 0 && li >= 0 && l2_colon_is_graph_ty(l2_loc_ty[li]) != 0`
+  - [x] :12573 `li: l2_loc_find(nm)` -- removed
+  - [x] :12574 `if: mi < 0 && li >= 0 && l2_colon_is_graph_ty(l2_loc_ty[li]) != 0` -- removed
 - `l2_prep`
-  - [ ] :13343 `if: (mi >= 0 && l2_ml_find(a0\value\as\atom) >= 0 && l2_ml_ty[l2_ml_find(a0\value\as\atom)] = 22) || (mi < 0 && l2_loc_find(a0\value\as\atom) >= 0 && `
+  - [x] :13343 `if: (mi >= 0 && l2_ml_find(a0\value\as\atom) >= 0 && l2_ml_ty[l2_ml_find(a0\value\as\atom)] = 22) || (mi < 0 && l2_loc_find(a0\value\as\atom) >= 0 && ` -- removed
 - `l2_ccall_box_int`
-  - [ ] :14662 `ei: l2_loc_find(node\as\atom)`
-  - [ ] :14663 `if: ei >= 0 && l2_loc_ty != 0`
-  - [ ] :14664 `ty: l2_loc_ty[ei]`
+  - [x] :14662 `ei: l2_loc_find(node\as\atom)` -- removed
+  - [x] :14663 `if: ei >= 0 && l2_loc_ty != 0` -- removed
+  - [x] :14664 `ty: l2_loc_ty[ei]` -- removed
 - `l2_emit_ccall`
-  - [ ] :14795 `if: po < 0 && f\value\kind = c.LM_P0_NODE_ATOM && l2_loc_find(f\value\as\atom) >= 0 && p1 != 0 && p1\value != 0 && p1\value\kind = c.LM_P0_NODE_ATOM &`
+  - [x] :14795 `if: po < 0 && f\value\kind = c.LM_P0_NODE_ATOM && l2_loc_find(f\value\as\atom) >= 0 && p1 != 0 && p1\value != 0 && p1\value\kind = c.LM_P0_NODE_ATOM &` -- removed
 - `l2_emit_loc_stmt`
-  - [ ] :14977 `while: mi < 0 && ei < l2_loc_n && l2_loc_nm != 0 && l2_loc_ty != 0`
-  - [ ] :14978 `lnm: l2_loc_nm[ei]`
-  - [ ] :14983 `if: l2_loc_ty[ei] = 22 && lnm != 0 && stmt\as\frame\head\length > nl && stmt\as\frame\head\data[nl] = 91 && memcmp(lnm\data, stmt\as\frame\head\data, `
-  - [ ] :15176 `if: mi < 0 && l2_loc_find(fr\head) < 0`
+  - [x] :14977 `while: mi < 0 && ei < l2_loc_n && l2_loc_nm != 0 && l2_loc_ty != 0` -- removed
+  - [x] :14978 `lnm: l2_loc_nm[ei]` -- removed
+  - [x] :14983 `if: l2_loc_ty[ei] = 22 && lnm != 0 && stmt\as\frame\head\length > nl && stmt\as\frame\head\data[nl] = 91 && memcmp(lnm\data, stmt\as\frame\head\data, ` -- removed
+  - [x] :15176 `if: mi < 0 && l2_loc_find(fr\head) < 0` -- removed
 - `l2_emit_body`
-  - [ ] :15865 `l2_pdst: l2_loc_find(stmt\as\frame\head)`
-  - [ ] :15870 `if: l2_pdst >= 0 && l2_pkind = 0 && l2_loc_ty[l2_pdst] != 2`
-  - [ ] :15872 `if: l2_pdst >= 0 && l2_pkind = 1 && l2_loc_ty[l2_pdst] != 1`
+  - [x] :15865 `l2_pdst: l2_loc_find(stmt\as\frame\head)` -- removed
+  - [x] :15870 `if: l2_pdst >= 0 && l2_pkind = 0 && l2_loc_ty[l2_pdst] != 2` -- removed
+  - [x] :15872 `if: l2_pdst >= 0 && l2_pkind = 1 && l2_loc_ty[l2_pdst] != 1` -- removed
 
 ## D6. Unit own pre-pass and shared (mi < 0) own rows (21)
 
 - `l2_translate_unit`
-  - [ ] :2753 `if: l2_unit_decl_ty(item) != 0 && l2_take_unit_own(item, path) != 0`
+  - [x] :2753 `if: l2_unit_decl_ty(item) != 0 && l2_take_unit_own(item, path) != 0` -- removed
 - `l2_own_find`
-  - [ ] :3453 `if: l2_own_mi[i] < 0 && l2_own_host[i] = 0 && l2_text_same(l2_own_name[i], t)`
+  - [x] :3453 `if: l2_own_mi[i] < 0 && l2_own_host[i] = 0 && l2_text_same(l2_own_name[i], t)` -- removed
 - `l2_own_find_decl`
-  - [ ] :3467 `if: mi < 0 && l2_own_mi[i] < 0`
+  - [x] :3467 `if: mi < 0 && l2_own_mi[i] < 0` -- removed
 - `l2_own_find_occ`
-  - [ ] :3487 `if: mi < 0 && l2_own_mi[i] < 0 && l2_own_host[i] = 0`
+  - [x] :3487 `if: mi < 0 && l2_own_mi[i] < 0 && l2_own_host[i] = 0` -- removed
 - `l2_own_find_last`
-  - [ ] :3506 `if: mi < 0 && l2_own_mi[i] < 0 && l2_own_host[i] = 0`
+  - [x] :3506 `if: mi < 0 && l2_own_mi[i] < 0 && l2_own_host[i] = 0` -- removed
 - `l2_own_shared`
-  - [ ] :3577 `if: l2_own_mi[i] < 0 && l2_own_host[i] = 0 && l2_text_same(l2_own_name[i], t)`
+  - [x] :3577 `if: l2_own_mi[i] < 0 && l2_own_host[i] = 0 && l2_text_same(l2_own_name[i], t)` -- removed with the function
 - `l2_own_add`
-  - [ ] :3590 `i: l2_own_shared(t)`
+  - [x] :3590 `i: l2_own_shared(t)` -- removed
 - `l2_scan_ident`
-  - [ ] :6613 `if: oi >= 0 && l2_own_mi[oi] < 0`
+  - [x] :6613 `if: oi >= 0 && l2_own_mi[oi] < 0` -- removed
 - `l2_scan_node`
-  - [ ] :6651 `if: oi >= 0 && l2_own_mi[oi] < 0`
+  - [x] :6651 `if: oi >= 0 && l2_own_mi[oi] < 0` -- removed
 - `l2_scan_body`
-  - [ ] :6851 `if: oi >= 0 && l2_own_mi[oi] < 0`
+  - [x] :6851 `if: oi >= 0 && l2_own_mi[oi] < 0` -- removed
 - `l2_own_index_head`
-  - [ ] :7714 `if: (l2_own_mi[oi] = mi || l2_own_mi[oi] < 0) && (l2_own_host[oi] = 0 || l2_scope_has(l2_own_host[oi])) && l2_own_is_array(l2_own_ty[oi]) != 0 && l2_o`
+  - [x] :7714 `if: (l2_own_mi[oi] = mi || l2_own_mi[oi] < 0) && (l2_own_host[oi] = 0 || l2_scope_has(l2_own_host[oi])) && l2_own_is_array(l2_own_ty[oi]) != 0 && l2_o` -- removed
 - `l2_take_unit_own`
-  - [ ] :8276 `if: l2_own_shared(name) >= 0`
+  - [x] :8276 `if: l2_own_shared(name) >= 0` -- removed with the function
 - `l2_own_ctr`
-  - [ ] :8797 `if: oi < 0 || oi >= l2_own_n || l2_own_mi[oi] < 0`
+  - [x] :8797 `if: oi < 0 || oi >= l2_own_n || l2_own_mi[oi] < 0` -- removed
 - `l2_layout_owns`
-  - [ ] :8856 `if: l2_own_host[oi] = 0 && l2_own_mi[oi] < 0`
-  - [ ] :8861 `if: l2_own_host[oi] = 0 && l2_own_mi[oi] >= 0`
+  - [x] :8856 `if: l2_own_host[oi] = 0 && l2_own_mi[oi] < 0` -- removed
+  - [x] :8861 `if: l2_own_host[oi] = 0 && l2_own_mi[oi] >= 0` -- removed
 - `l2_take_named`
-  - [ ] :10810 `if: l2_own_shared(item\as\frame\head) >= 0`
+  - [x] :10810 `if: l2_own_shared(item\as\frame\head) >= 0` -- removed
 - `l2_take_eternal`
-  - [ ] :10849 `if: l2_own_shared(f\value\as\atom) >= 0`
+  - [x] :10849 `if: l2_own_shared(f\value\as\atom) >= 0` -- removed
 - `l2_collect_method`
-  - [ ] :11370 `if: l2_own_shared(nm) >= 0`
+  - [x] :11370 `if: l2_own_shared(nm) >= 0` -- removed
 - `l2_check_primary`
-  - [ ] :11681 `if: idx >= 0 && l2_own_mi[idx] < 0 && l2_own_is_array(l2_own_ty[idx]) = 0`
+  - [x] :11681 `if: idx >= 0 && l2_own_mi[idx] < 0 && l2_own_is_array(l2_own_ty[idx]) = 0` -- removed
 - `l2_sizeof_name_bytes`
-  - [ ] :12909 `if: l2_own_mi[k] < 0 && l2_own_host[k] = 0 && l2_text_is_bytes(l2_own_name[k], d + b, n)`
+  - [x] :12909 `if: l2_own_mi[k] < 0 && l2_own_host[k] = 0 && l2_text_is_bytes(l2_own_name[k], d + b, n)` -- removed
 - `l2_prep`
-  - [ ] :13180 `if: idx >= 0 && l2_own_mi[idx] < 0 && l2_own_is_array(l2_own_ty[idx]) = 0`
+  - [x] :13180 `if: idx >= 0 && l2_own_mi[idx] < 0 && l2_own_is_array(l2_own_ty[idx]) = 0` -- removed
 
 ## D7. parse_unit / parse_library split and inferred library mode (13)
 
 - `(file head)`
-  - [ ] :8 `int: l2_library_mode 0`
+  - [x] :8 `int: l2_library_mode 0` -- kept: the library profile, selected by `--library` instead of inferred
 - `l2_write_sym`
-  - [ ] :1917 `if: l2_library_mode != 0 && c.fprintf(out, "l2_u%08X%08X_m%d", l2_module_hash_a, l2_module_hash_b, i) < 0`
-  - [ ] :1919 `if: l2_library_mode = 0 && c.fprintf(out, "l2_m%d", i) < 0`
+  - [x] :1917 `if: l2_library_mode != 0 && c.fprintf(out, "l2_u%08X%08X_m%d", l2_module_hash_a, l2_module_hash_b, i) < 0` -- kept: the library profile, selected by `--library` instead of inferred
+  - [x] :1919 `if: l2_library_mode = 0 && c.fprintf(out, "l2_m%d", i) < 0` -- kept: the library profile, selected by `--library` instead of inferred
 - `l2_tok_sym`
-  - [ ] :1926 `if: l2_library_mode != 0 && c.sprintf(dest, "l2_u%08X%08X_m%d", l2_module_hash_a, l2_module_hash_b, i) < 0`
-  - [ ] :1928 `if: l2_library_mode = 0 && c.sprintf(dest, "l2_m%d", i) < 0`
+  - [x] :1926 `if: l2_library_mode != 0 && c.sprintf(dest, "l2_u%08X%08X_m%d", l2_module_hash_a, l2_module_hash_b, i) < 0` -- kept: the library profile, selected by `--library` instead of inferred
+  - [x] :1928 `if: l2_library_mode = 0 && c.sprintf(dest, "l2_m%d", i) < 0` -- kept: the library profile, selected by `--library` instead of inferred
 - `l2_translate_unit`
-  - [ ] :2695 `l2_library_mode: 0`
-  - [ ] :2806 `l2_library_mode: 1`
-  - [ ] :2807 `return: l2_parse_library(path)`
+  - [x] :2695 `l2_library_mode: 0` -- removed
+  - [x] :2806 `l2_library_mode: 1` -- removed
+  - [x] :2807 `return: l2_parse_library(path)` -- kept: the library profile, selected by `--library` instead of inferred
 - `l2_emit_unit`
-  - [ ] :16511 `if: l2_library_mode != 0 && c.fprintf(l2_out, "define: l2_program_arena l2_u%08X%08X_arena\ndefine: l2_program_unit l2_u%08X%08X_program_unit\ndefine:`
-  - [ ] :16532 `if: l2_library_mode != 0 && c.fprintf(l2_out, "define: l2_program_entry l2_u%08X%08X_entry\ndefine: l2_library_open l2_u%08X%08X_open\ndefine: l2_libr`
-  - [ ] :16595 `if: l2_library_mode = 0 && (l2_m_value_used = 0 || l2_m_value_used[i] = 0)`
-  - [ ] :17273 `if: l2_library_mode != 0 && fputs("        return: 0\n", l2_out) < 0`
-  - [ ] :17282 `if: l2_library_mode != 0`
+  - [x] :16511 `if: l2_library_mode != 0 && c.fprintf(l2_out, "define: l2_program_arena l2_u%08X%08X_arena\ndefine: l2_program_unit l2_u%08X%08X_program_unit\ndefine:` -- kept: the library profile, selected by `--library` instead of inferred
+  - [x] :16532 `if: l2_library_mode != 0 && c.fprintf(l2_out, "define: l2_program_entry l2_u%08X%08X_entry\ndefine: l2_library_open l2_u%08X%08X_open\ndefine: l2_libr` -- kept: the library profile, selected by `--library` instead of inferred
+  - [x] :16595 `if: l2_library_mode = 0 && (l2_m_value_used = 0 || l2_m_value_used[i] = 0)` -- kept: the library profile, selected by `--library` instead of inferred
+  - [x] :17273 `if: l2_library_mode != 0 && fputs("        return: 0\n", l2_out) < 0` -- kept: the library profile, selected by `--library` instead of inferred
+  - [x] :17282 `if: l2_library_mode != 0` -- kept: the library profile, selected by `--library` instead of inferred
 
 ## Harness pins that depend on the entry layout (68 pins in 44 rows)
 
 Measured on a full `tools/l2_harness.ps1` run of `38c95f2` (127 OK, no red row). Reasons: `inlined-main` = the pin lies inside the main body inlined into `l2_program_entry`; `fixed-unit-index` = the pin spells a unit child index, and S2 shifts every unit child by one (child[0] becomes the entry descriptor); `method/occurrence numbering` = the pin spells `l2_m<i>` or `l2_c<i>`; `entry adapter text` = the pin spells the adapter or its root open. S2 regenerates each pin from the S2 translator's measured output; none is predicted here.
 
 - `unit_array_empty` (eternal-runs)
-  - [ ] Absent `l2_program_entry, 5000U, 0U, 0U)` -- entry adapter text
+  - [x] Absent `l2_program_entry, 5000U, 0U, 0U)` -- entry adapter text; kept: still true on the S2 translator (row green, measured)
 - `unit_array_field` (eternal-runs)
-  - [ ] Absent `l2_program_entry, 5000U, 0U, 0U)` -- entry adapter text
+  - [x] Absent `l2_program_entry, 5000U, 0U, 0U)` -- entry adapter text; kept: still true on the S2 translator (row green, measured)
 - `unit_call_args_control_split` (eternal-runs)
-  - [ ] Debt `l2_t1: l2_m0(l2_c0\parent, l2_c0, (1), 2)` -- inlined-main, method/occurrence numbering
+  - [x] Debt `l2_t1: l2_m0(l2_c0\parent, l2_c0, (1), 2)` -- inlined-main, method/occurrence numbering; kept: still true on the S2 translator (row green, measured)
 - `unit_call_args_controls` (eternal-runs)
-  - [ ] Debt `l2_t3: l2_m1(l2_c2\parent, l2_c2, 1, 2)` -- inlined-main, method/occurrence numbering
-  - [ ] Debt `l2_t5: l2_m1(l2_c4\parent, l2_c4, 1, 2)` -- inlined-main, method/occurrence numbering
+  - [x] Debt `l2_t3: l2_m1(l2_c2\parent, l2_c2, 1, 2)` -- inlined-main, method/occurrence numbering; kept: still true on the S2 translator (row green, measured)
+  - [x] Debt `l2_t5: l2_m1(l2_c4\parent, l2_c4, 1, 2)` -- inlined-main, method/occurrence numbering; kept: still true on the S2 translator (row green, measured)
 - `unit_call_args_empty_paren` (eternal-runs)
-  - [ ] Debt `l2_t1: l2_m0(l2_c0\parent, l2_c0)` -- inlined-main, method/occurrence numbering
+  - [x] Debt `l2_t1: l2_m0(l2_c0\parent, l2_c0)` -- inlined-main, method/occurrence numbering; kept: still true on the S2 translator (row green, measured)
 - `unit_call_args_empty_vertical` (eternal-runs)
-  - [ ] Debt `l2_t1: l2_m0(l2_c0\parent, l2_c0)` -- inlined-main, method/occurrence numbering
+  - [x] Debt `l2_t1: l2_m0(l2_c0\parent, l2_c0)` -- inlined-main, method/occurrence numbering; kept: still true on the S2 translator (row green, measured)
 - `unit_call_args_paren_seq` (eternal-runs)
-  - [ ] Debt `l2_t1: l2_m0(l2_c0\parent, l2_c0, 1, 2)` -- inlined-main, method/occurrence numbering
+  - [x] Debt `l2_t1: l2_m0(l2_c0\parent, l2_c0, 1, 2)` -- inlined-main, method/occurrence numbering; kept: still true on the S2 translator (row green, measured)
 - `unit_callable_formal_descriptor` (eternal-runs)
-  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+  - [x] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text; kept: still true on the S2 translator (row green, measured)
 - `unit_char_own_publish` (eternal-runs)
-  - [ ] Debt `lmx_char_rebind_known(l2_xp[0], ((cast: (int) hi) & 255))` -- inlined-main
+  - [x] Debt `lmx_char_rebind_known(l2_xp[0], ((cast: (int) hi) & 255))` -- inlined-main; regenerated: `lmx_char_rebind_known(l2_q1_from[0], ((cast: (int) l2_q1) & 255))` -- E's own field `mark` published by the checkpoint descriptor
 - `unit_colon_callable_receiver` (eternal-runs)
-  - [ ] Debt `l2_m0(l2_c0\parent, l2_c0, 7)` -- inlined-main, method/occurrence numbering
-  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+  - [x] Debt `l2_m0(l2_c0\parent, l2_c0, 7)` -- inlined-main, method/occurrence numbering; kept: still true on the S2 translator (row green, measured)
+  - [x] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text; kept: still true on the S2 translator (row green, measured)
 - `unit_colon_existing_value_update` (eternal-runs)
-  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+  - [x] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text; kept: still true on the S2 translator (row green, measured)
 - `unit_colon_explicit_parent_update` (eternal-runs)
-  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+  - [x] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text; kept: still true on the S2 translator (row green, measured)
 - `unit_colon_formal_update` (eternal-runs)
-  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+  - [x] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text; kept: still true on the S2 translator (row green, measured)
 - `unit_colon_hidden_update` (eternal-runs)
-  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+  - [x] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text; kept: still true on the S2 translator (row green, measured)
 - `unit_colon_method_dynamic_precedence` (eternal-runs)
-  - [ ] Debt `l2_m0(l2_c0\parent, l2_c0, l2_msg, @ l2_t1, @ l2_te1)` -- method/occurrence numbering
+  - [x] Debt `l2_m0(l2_c0\parent, l2_c0, l2_msg, @ l2_t1, @ l2_te1)` -- method/occurrence numbering; kept: still true on the S2 translator (row green, measured)
 - `unit_colon_method_lexical_model` (eternal-runs)
-  - [ ] Debt `l2_m0(l2_c0\parent, l2_c0, node, @ l2_t1, @ l2_te1)` -- inlined-main, method/occurrence numbering
+  - [x] Debt `l2_m0(l2_c0\parent, l2_c0, node, @ l2_t1, @ l2_te1)` -- inlined-main, method/occurrence numbering; regenerated: `l2_m0(l2_c0\parent, l2_c0, l2_msg, @ l2_t1, @ l2_te1)` -- the entry E forwards its own l2_msg, as every method caller does
 - `unit_eternal_branch` (eternal-runs)
-  - [ ] Absent `l2_program_entry, 5000U, 0U, 0U)` -- entry adapter text
-  - [ ] Debt `if: lmx_root_open(@ l2_program_root, l2_program_entry, 5000U) != c.LMX_ROOT_OK` -- entry adapter text
+  - [x] Absent `l2_program_entry, 5000U, 0U, 0U)` -- entry adapter text; kept: still true on the S2 translator (row green, measured)
+  - [x] Debt `if: lmx_root_open(@ l2_program_root, l2_program_entry, 5000U) != c.LMX_ROOT_OK` -- entry adapter text; kept: still true on the S2 translator (row green, measured)
 - `unit_eternal_many` (eternal-runs)
-  - [ ] Absent `l2_program_entry, 5000U, 0U, 0U)` -- entry adapter text
+  - [x] Absent `l2_program_entry, 5000U, 0U, 0U)` -- entry adapter text; kept: still true on the S2 translator (row green, measured)
 - `unit_eternal_multi_profile_merge_refused` (eternal-runs)
-  - [ ] Absent `l2_program_entry, 5000U, 0U, 0U)` -- entry adapter text
-  - [ ] Debt `lmx_merge_profiles_owned(l2_mops, 2U, l2_mbody, l2_entry_unit, 0, l2_program_arena, l2_program_arena, l2_mprofiles, 2U, @ l2_mresult)` -- inlined-main
+  - [x] Absent `l2_program_entry, 5000U, 0U, 0U)` -- entry adapter text; kept: still true on the S2 translator (row green, measured)
+  - [x] Debt `lmx_merge_profiles_owned(l2_mops, 2U, l2_mbody, l2_entry_unit, 0, l2_program_arena, l2_program_arena, l2_mprofiles, 2U, @ l2_mresult)` -- inlined-main; regenerated: `lmx_merge_profiles_owned(l2_mops, 2U, l2_mbody, self, 0, l2_program_arena, l2_program_arena, l2_mprofiles, 2U, @ l2_mresult)` -- in E the unit is `self`
 - `unit_eternal_physical_profiles` (eternal-runs)
-  - [ ] Absent `l2_program_entry, 5000U, 0U, 0U)` -- entry adapter text
+  - [x] Absent `l2_program_entry, 5000U, 0U, 0U)` -- entry adapter text; kept: still true on the S2 translator (row green, measured)
 - `unit_eternal_shape` (eternal-runs)
-  - [ ] Absent `l2_program_entry, 5000U, 0U, 0U)` -- entry adapter text
+  - [x] Absent `l2_program_entry, 5000U, 0U, 0U)` -- entry adapter text; kept: still true on the S2 translator (row green, measured)
 - `unit_eternal_two` (eternal-runs)
-  - [ ] Absent `l2_program_entry, 5000U, 0U, 0U)` -- entry adapter text
+  - [x] Absent `l2_program_entry, 5000U, 0U, 0U)` -- entry adapter text; kept: still true on the S2 translator (row green, measured)
 - `unit_eternal_xref` (eternal-runs)
-  - [ ] Absent `l2_program_entry, 5000U, 0U, 0U)` -- entry adapter text
+  - [x] Absent `l2_program_entry, 5000U, 0U, 0U)` -- entry adapter text; kept: still true on the S2 translator (row green, measured)
 - `unit_implements_admission` (eternal-runs)
-  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+  - [x] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text; kept: still true on the S2 translator (row green, measured)
 - `unit_implements_argument` (eternal-runs)
-  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+  - [x] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text; kept: still true on the S2 translator (row green, measured)
 - `unit_implements_assignment` (eternal-runs)
-  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+  - [x] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text; kept: still true on the S2 translator (row green, measured)
 - `unit_implements_methods` (eternal-runs)
-  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+  - [x] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text; kept: still true on the S2 translator (row green, measured)
 - `unit_implements_namespace` (eternal-runs)
-  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+  - [x] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text; kept: still true on the S2 translator (row green, measured)
 - `unit_implements_primitives` (eternal-runs)
-  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+  - [x] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text; kept: still true on the S2 translator (row green, measured)
 - `unit_implements_return` (eternal-runs)
-  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+  - [x] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text; kept: still true on the S2 translator (row green, measured)
 - `unit_lit_range_bounds_ok` (eternal-runs)
-  - [ ] Debt `2147483647` -- inlined-main
+  - [x] Debt `2147483647` -- inlined-main; kept: still true on the S2 translator (row green, measured)
 - `unit_merge_in_method` (eternal-runs)
-  - [ ] Absent `l2_program_entry, 5000U, 0U, 0U)` -- entry adapter text
-  - [ ] Debt `l2_m0(l2_c2\parent, l2_c2, l2_msg, @ l2_t3, @ l2_te3)` -- method/occurrence numbering
-  - [ ] Debt `l2_m2(l2_c0\parent, l2_c0, node, @ l2_t1, @ l2_te1)` -- inlined-main, method/occurrence numbering
-  - [ ] Debt `l2_m3(l2_c0\parent, l2_c0, l2_msg, @ l2_te1)` -- method/occurrence numbering
-  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+  - [x] Absent `l2_program_entry, 5000U, 0U, 0U)` -- entry adapter text; kept: still true on the S2 translator (row green, measured)
+  - [x] Debt `l2_m0(l2_c2\parent, l2_c2, l2_msg, @ l2_t3, @ l2_te3)` -- method/occurrence numbering; kept: still true on the S2 translator (row green, measured)
+  - [x] Debt `l2_m2(l2_c0\parent, l2_c0, node, @ l2_t1, @ l2_te1)` -- inlined-main, method/occurrence numbering; regenerated: `l2_m2(l2_c0\parent, l2_c0, l2_msg, @ l2_t1, @ l2_te1)` -- the entry E forwards its own l2_msg, as every method caller does
+  - [x] Debt `l2_m3(l2_c0\parent, l2_c0, l2_msg, @ l2_te1)` -- method/occurrence numbering; kept: still true on the S2 translator (row green, measured)
+  - [x] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text; kept: still true on the S2 translator (row green, measured)
 - `unit_merge_site` (eternal-runs)
-  - [ ] Absent `l2_program_entry, 5000U, 0U, 0U)` -- entry adapter text
-  - [ ] Debt `lmx_merge_profiles_owned` -- inlined-main
+  - [x] Absent `l2_program_entry, 5000U, 0U, 0U)` -- entry adapter text; kept: still true on the S2 translator (row green, measured)
+  - [x] Debt `lmx_merge_profiles_owned` -- inlined-main; kept: still true on the S2 translator (row green, measured)
 - `unit_named_addr_gap` (eternal-runs)
-  - [ ] Debt `(cast: (@: size_t) l2_pxp[0])` -- inlined-main
+  - [x] Debt `(cast: (@: size_t) l2_pxp[0])` -- inlined-main; kept: still true on the S2 translator (row green, measured)
 - `unit_nested_body_else` (eternal-runs)
-  - [ ] Debt `l2_h0: lmx_arena_ref_struct(self, 1U)` -- fixed-unit-index
-  - [ ] Debt `l2_h1: lmx_arena_ref_struct(self, 2U)` -- fixed-unit-index
-  - [ ] Debt `lmx_arena_ref_cell(l2_h1, 0U)` -- fixed-unit-index
-  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+  - [x] Debt `l2_h0: lmx_arena_ref_struct(self, 1U)` -- fixed-unit-index; kept: still true on the S2 translator (row green, measured)
+  - [x] Debt `l2_h1: lmx_arena_ref_struct(self, 2U)` -- fixed-unit-index; kept: still true on the S2 translator (row green, measured)
+  - [x] Debt `lmx_arena_ref_cell(l2_h1, 0U)` -- fixed-unit-index; kept: still true on the S2 translator (row green, measured)
+  - [x] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text; kept: still true on the S2 translator (row green, measured)
 - `unit_nested_body_for` (eternal-runs)
-  - [ ] Debt `l2_h0: lmx_arena_ref_struct(self, 1U)` -- fixed-unit-index
-  - [ ] Debt `lmx_arena_ref_cell(l2_h0, 1U)` -- fixed-unit-index
-  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+  - [x] Debt `l2_h0: lmx_arena_ref_struct(self, 1U)` -- fixed-unit-index; kept: still true on the S2 translator (row green, measured)
+  - [x] Debt `lmx_arena_ref_cell(l2_h0, 1U)` -- fixed-unit-index; kept: still true on the S2 translator (row green, measured)
+  - [x] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text; kept: still true on the S2 translator (row green, measured)
 - `unit_nested_body_while` (eternal-runs)
-  - [ ] Debt `l2_h0: lmx_arena_ref_struct(self, 2U)` -- fixed-unit-index
-  - [ ] Debt `lmx_arena_ref_cell(l2_h0, 0U)` -- fixed-unit-index
-  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+  - [x] Debt `l2_h0: lmx_arena_ref_struct(self, 2U)` -- fixed-unit-index; kept: still true on the S2 translator (row green, measured)
+  - [x] Debt `lmx_arena_ref_cell(l2_h0, 0U)` -- fixed-unit-index; kept: still true on the S2 translator (row green, measured)
+  - [x] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text; kept: still true on the S2 translator (row green, measured)
 - `unit_node_path_nested_own` (eternal-runs)
-  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+  - [x] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text; kept: still true on the S2 translator (row green, measured)
 - `unit_occ_arg_slots` (eternal-runs)
-  - [ ] Debt `l2_q0_from: lmx_arena_ref_cell(self, 1U)` -- fixed-unit-index
-  - [ ] Debt `l2_q1_from: lmx_arena_ref_cell(self, 2U)` -- fixed-unit-index
-  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+  - [x] Debt `l2_q0_from: lmx_arena_ref_cell(self, 1U)` -- fixed-unit-index; kept: still true on the S2 translator (row green, measured)
+  - [x] Debt `l2_q1_from: lmx_arena_ref_cell(self, 2U)` -- fixed-unit-index; kept: still true on the S2 translator (row green, measured)
+  - [x] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text; kept: still true on the S2 translator (row green, measured)
 - `unit_puts_main_beside_method` (eternal-runs)
-  - [ ] Debt `c.puts("beside-method")` -- inlined-main
+  - [x] Debt `c.puts("beside-method")` -- inlined-main; kept: still true on the S2 translator (row green, measured)
 - `unit_recursion` (eternal-runs)
-  - [ ] Debt `l2_m2(l2_c0\parent, l2_c0, l2_q7, l2_msg, @ l2_t1, @ l2_te1)` -- method/occurrence numbering
-  - [ ] Debt `l2_m2(l2_c4\parent, l2_c4, 2U, node, @ l2_t5, @ l2_te5)` -- inlined-main, method/occurrence numbering
-  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+  - [x] Debt `l2_m2(l2_c0\parent, l2_c0, l2_q7, l2_msg, @ l2_t1, @ l2_te1)` -- method/occurrence numbering; kept: still true on the S2 translator (row green, measured)
+  - [x] Debt `l2_m2(l2_c4\parent, l2_c4, 2U, node, @ l2_t5, @ l2_te5)` -- inlined-main, method/occurrence numbering; regenerated: `l2_m2(l2_c4\parent, l2_c4, 2U, l2_msg, @ l2_t5, @ l2_te5)` -- the entry E forwards its own l2_msg, as every method caller does
+  - [x] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text; kept: still true on the S2 translator (row green, measured)
 - `unit_struct_decl_opp_call` (translates-with-debt)
-  - [ ] Debt `l2_t1: l2_m0(l2_c0\parent, l2_c0, 1)` -- method/occurrence numbering
+  - [x] Debt `l2_t1: l2_m0(l2_c0\parent, l2_c0, 1)` -- method/occurrence numbering; kept: still true on the S2 translator (row green, measured)
 - `unit_throwing_callable` (eternal-runs)
-  - [ ] Debt `l2_m0(l2_c0\parent, l2_c0, node, @ l2_t1, @ l2_te1)` -- inlined-main, method/occurrence numbering
-  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+  - [x] Debt `l2_m0(l2_c0\parent, l2_c0, node, @ l2_t1, @ l2_te1)` -- inlined-main, method/occurrence numbering; regenerated: `l2_m0(l2_c0\parent, l2_c0, l2_msg, @ l2_t1, @ l2_te1)` -- the entry E forwards its own l2_msg, as every method caller does
+  - [x] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text; kept: still true on the S2 translator (row green, measured)
 - `unit_universal_head_resolution` (eternal-runs)
-  - [ ] Debt `l2_t1: l2_m0(l2_c0\parent, l2_c0, 7)` -- inlined-main, method/occurrence numbering
-  - [ ] Debt `l2_t3: l2_m0(l2_c2\parent, l2_c2, 7)` -- inlined-main, method/occurrence numbering
-  - [ ] Debt `l2_t5: l2_m0(l2_c4\parent, l2_c4, 7)` -- inlined-main, method/occurrence numbering
-  - [ ] Debt `x: 2` -- inlined-main
+  - [x] Debt `l2_t1: l2_m0(l2_c0\parent, l2_c0, 7)` -- inlined-main, method/occurrence numbering; kept: still true on the S2 translator (row green, measured)
+  - [x] Debt `l2_t3: l2_m0(l2_c2\parent, l2_c2, 7)` -- inlined-main, method/occurrence numbering; kept: still true on the S2 translator (row green, measured)
+  - [x] Debt `l2_t5: l2_m0(l2_c4\parent, l2_c4, 7)` -- inlined-main, method/occurrence numbering; kept: still true on the S2 translator (row green, measured)
+  - [x] Debt `x: 2` -- inlined-main; regenerated: `l2_q2: 2` -- x is E's own field 2, assigned through its cache

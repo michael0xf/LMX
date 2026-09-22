@@ -156,8 +156,13 @@ fn: inspect (@: LmxRoot root) int
                     check(member != 0 && member\parent = other && lmx_range_profile(arena, cell) = root_profile(arena, other) && sealed_here(arena, cell) != 0, "slot member keeps its lexical parent and exact sealed profile")
                     at: at + 5
                 else:
-                    check(0, "all driver fact arguments are recognized")
-                    at: gargc
+                    # `entry N` is read by main (the expected entry value), not a root fact.
+                    if: c.strcmp(gargv[at], "entry") = 0 && at + 1 < gargc
+                        at: at + 2
+                    else:
+                        check(0, "all driver fact arguments are recognized")
+                        at: gargc
+                    ---
                 ---
             ---
         ---
@@ -231,23 +236,33 @@ return: lmx_root_open(root, l2_driver_entry_tap, limit)
 
 fn: main (int: argc; @@: char argv) int
     int: status
+    int: expected 0
+    int: at 2
     gargc: argc
     gargv: argv
     if: argc < 2
         fputs("l2_eternal_driver: expected number of roots missing\n", l1_stdout())
         return: 2
     ---
+    # E1: the process exit value is the int the entry returns.  `entry N` names it (default 0, the
+    # fixtures' own pass value); the generated C main returns it and the adapter returns it too.
+    while: at + 1 < argc
+        if: c.strcmp(argv[at], "entry") = 0
+            expected: arg(at + 1)
+        ---
+        at: at + 1
+    ---
     phase: "generated program"
     status: l2_generated_main()
-    check(status = 0, "generated main returned 0")
+    check(status = expected, "generated main returned the entry's value")
     check(hooked = 1, "generated main closed exactly one root")
     phase: "generated entry"
     check(entry_opened = 1, "generated main opened its root with the generated entry adapter")
     check(entry_calls = 1, "generated entry ran exactly once")
     # R0's graph is independent (parent = 0), so the adapter's reserved `node` is 0.
     check(entry_node = 0, "the entry adapter's node is 0: the graph hanging in R0 is independent")
-    check(entry_rc = 0, "generated entry returned 0")
-    if: entry_rc != 0
+    check(entry_rc = expected, "generated entry returned the expected value")
+    if: entry_rc != expected
         c.printf("l2_eternal_driver: entry returned %d\n", entry_rc)
     ---
     if: failures != 0

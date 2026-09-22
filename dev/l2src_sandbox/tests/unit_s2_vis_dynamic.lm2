@@ -1,0 +1,23 @@
+# S2 BACKWARD VISIBILITY (author, LMX_blog 2026-09-22): every non-callable is visible only after its
+# declaration; methods see each other both ways.  `probe` stands ABOVE the unit field `n`, so `n`
+# is not a name probe can see: it is probe's dynamic input, handed over by the caller that calls it
+# -- here `wrap`, whose own `n` is 7.  Were the unit field visible to probe (a method reading a
+# unit name declared below it), probe would read 3 and the program would return 1.
+# `wrap` also calls probe, declared ABOVE it, and the entry calls `wrap` and `later`, one of them
+# declared BELOW the call: methods are visible both ways.
+fn: probe () int
+return: n
+
+fn: wrap () int
+    int: n 7
+return: probe()
+
+int: n 3
+if: wrap() != 7
+    return: 1
+if: later() != 5
+    return: 2
+return: 0
+
+fn: later () int
+return: n + 2

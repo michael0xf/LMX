@@ -11,8 +11,12 @@ D3).  This tool performs the mechanical part of that migration on `.lm2` sources
 
 * The header line `fn: main () int` is removed; the body lines that follow it (everything more
   indented than the header) are dedented by exactly the body's own indentation step; a closing
-  `end: main` at the header's indentation is removed.  A column-header `return:` trailer after
-  the header (`fn: main () int` / `return: 0`) is already a unit-level statement and is kept.
+  `end: main` (or `end: fn`) at the header's indentation is removed.  A column-header `return:`
+  trailer after the header (`fn: main () int` / `return: 0`) is already a unit-level statement
+  and is kept.
+* A unit whose first rewritten statement is a column-0 `return:` directly after an OPEN method
+  (a `fn:`/`sub:` header with no `end:` and no return trailer) is REFUSED: that `return:` would
+  be the method's return trailer, not the program's statement.
 * Comment-only lines inside the body are dedented when they are indented like the body and are
   otherwise left alone; blank lines are kept.
 * A unit whose `main` has formals is REFUSED and left untouched: arguments arrive as a letter
@@ -42,7 +46,8 @@ import sys
 
 HEADER = re.compile(r'^(?P<ind>[ \t]*)fn: main \((?P<formals>[^)]*)\)\s*(?P<ret>\S+)\s*$')
 ANY_MAIN = re.compile(r'^[ \t]*(?:fn|sub): main\b')
-END_MAIN = re.compile(r'^[ \t]*end: main\s*$')
+# `end: fn` closes a fn frame as well as `end: main` does (l2_fn_close takes the name or the head).
+END_MAIN = re.compile(r'^[ \t]*end: (?:main|fn)\s*$')
 
 
 def indent_of(line):
@@ -108,6 +113,17 @@ def rewrite(lines):
         j += 1
     if j < len(lines) and END_MAIN.match(lines[j]) and indent_of(lines[j]) == head:
         j += 1
+    # A column-0 `return:` directly after an OPEN method (a `fn:`/`sub:` header with no `end:` and
+    # no return trailer yet) is that method's return trailer, not a unit statement: moving main's
+    # first statement there would change what the program means, so the unit is left to a person.
+    first = next((k for k in range(h, len(out)) if out[k].strip() and not out[k].lstrip().startswith('#')), None)
+    if first is not None and indent_of(out[first]) == head and out[first].lstrip().startswith('return:'):
+        k = h - 1
+        while k >= 0 and (not lines[k].strip() or lines[k].lstrip().startswith('#') or indent_of(lines[k]) > head):
+            k -= 1
+        if k >= 0 and re.match(r'[ \t]*(?:fn|sub): ', lines[k]) and indent_of(lines[k]) == head:
+            return lines, 'refused', ('the first statement is a `return:` that would become the return trailer '
+                                      'of the open method at line %d' % (k + 1))
     out.extend(lines[j:])
     return out, 'rewritten', ''
 

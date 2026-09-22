@@ -1,0 +1,842 @@
+# S2 review checklist: sites of the `main` / entry split
+
+Generated from `dev/l2src_sandbox/l2trans.lm1` at blob `9c178bbe` (main `2f06b77`) for the S2 commit review (FABLE-OPUS-S2-PREP-20260922-108). Line numbers are those of that blob; the function name is the stable anchor. A site is ticked when S2 removes it or turns it into ordinary method code for the entry METHOD row E. The grouping is by the deletion each site belongs to (S2 design §6). This is an inventory for review, not a plan.
+
+Sites: 528.
+
+## D1. Entry discovery and the `main` reservation (39)
+
+- `l2_unit_from_root`
+  - [ ] :2516 `return: l2_error(path, root, "missing main")`
+  - [ ] :2522 `return: l2_error(path, item, "missing main")`
+- `l2_translate_unit`
+  - [ ] :2534 `int: mains 0`
+  - [ ] :2536 `int: is_main 0`
+  - [ ] :2537 `@: LmP0Node main_node 0`
+  - [ ] :2578 `return: l2_error(path, 0, "missing main")`
+  - [ ] :2610 `is_main: 0`
+  - [ ] :2614 `is_main: 1`
+  - [ ] :2615 `mains: mains + 1`
+  - [ ] :2616 `main_node: item`
+  - [ ] :2617 `if: is_main = 0 && (l2_frame_head(item, "fn") != 0 || l2_frame_head(item, "sub") != 0) && l2_collect_method(item, path) != 0`
+  - [ ] :2630 `if: is_main = 0 && l2_unit_decl_ty(item) = 0 && l2_frame_head(item, "fn") = 0 && l2_frame_head(item, "sub") = 0 && l2_frame_head(item, "predef") = 0 &`
+  - [ ] :2636 `if: is_main = 0 && l2_unit_decl_ty(item) = 0 && (l2_frame_head(item, "const") != 0 || l2_frame_head(item, "immutable") != 0 || l2_frame_head(item, "me`
+  - [ ] :2640 `if: l2_ns_resolve_refs(path, main_node) != 0`
+  - [ ] :2645 `return: l2_error(path, main_node, "out of memory")`
+  - [ ] :2648 `if: mains > 1`
+  - [ ] :2649 `return: l2_error(path, main_node, "several main")`
+  - [ ] :2651 `return: l2_error(path, main_node, "unsupported body")`
+  - [ ] :2654 `if: mains = 0`
+  - [ ] :2656 `return: l2_error(path, 0, "missing main")`
+  - [ ] :2660 `return: l2_parse_unit(main_node, path)`
+  - [ ] :2661 `return: l2_take_main_lit(main_node, path, out_lit, out_body)`
+- `l2_ident`
+  - [ ] :2887 `if: l2_text_eq(t, "main") || l2_text_eq(t, "fn") || l2_text_eq(t, "int") || l2_text_eq(t, "return") || l2_text_eq(t, "if") || l2_text_eq(t, "else") ||`
+- `l2_parse_unit`
+  - [ ] :12248 `if: main_node = 0 || main_node\as = 0 || main_node\as\frame = 0`
+  - [ ] :12249 `return: l2_error(path, main_node, "unsupported body")`
+  - [ ] :12250 `fr: main_node\as\frame`
+  - [ ] :12251 `l2_main_node: main_node`
+  - [ ] :12253 `return: l2_error(path, main_node, "unsupported trailer")`
+  - [ ] :12255 `return: l2_error(path, main_node, "incompatible entry signature")`
+  - [ ] :12257 `return: l2_error(path, main_node, "incompatible entry signature")`
+  - [ ] :12259 `return: l2_error(path, main_node, "unsupported trailer")`
+  - [ ] :12262 `return: l2_error(path, main_node, "incompatible entry signature")`
+  - [ ] :12264 `return: l2_error(path, main_node, "end target does not match close target")`
+  - [ ] :12270 `return: l2_error(path, main_node, "incompatible entry signature")`
+  - [ ] :12276 `return: l2_error(path, main_node, "unsupported body")`
+  - [ ] :12278 `return: l2_error(path, main_node, "unsupported body")`
+  - [ ] :12280 `return: l2_error(path, main_node, "unsupported trailer")`
+  - [ ] :12302 `return: l2_error(path, main_node, "out of memory")`
+  - [ ] :12322 `if: l2_check_ret_tr(-1, path, l2_ret_tr(fr), main_node) != 0`
+
+## D2. Entry-literal path, L1-only emitter, entry signature and entry formals (151)
+
+- `(file head)`
+  - [ ] :7 `int: l2_leaf_mode 0`
+  - [ ] :160 `int: l2_entry_n 0`
+  - [ ] :161 `int: l2_entry_cap 0`
+  - [ ] :162 `int: l2_entry_full 0`
+  - [ ] :163 `@@: LmP0Text l2_entry_nm 0`
+  - [ ] :164 `@: int l2_entry_ty 0`
+- `l2_release`
+  - [ ] :892 `l2_entry_free()`
+- `l2_take_body`
+  - [ ] :2412 `return: l2_take_return_stmt(stmt, path, out_lit)`
+- `l2_take_main_lit`
+  - [ ] :2450 `l2_entry_free()`
+  - [ ] :2451 `l2_entry_full: 0`
+  - [ ] :2452 `if: l2_empty_struct(params) = 0 && l2_parse_entry_formals(params, path) != 0`
+  - [ ] :2473 `if: l2_ret_tr(fn_frame) != 0 && l2_take_return_fields(l2_ret_tr(fn_frame), path, fn_node, out_lit) != 0`
+  - [ ] :2492 `l2_entry_full: 1`
+  - [ ] :2498 `if: l2_ret_tr(fn_frame) = 0 && l2_take_body(body, path, out_lit) != 0`
+- `l2_translate_unit`
+  - [ ] :2543 `l2_leaf_mode: 0`
+  - [ ] :2570 `l2_entry_free()`
+  - [ ] :2571 `l2_entry_full: 0`
+- `l2_parse_library`
+  - [ ] :2713 `l2_leaf_mode: 1`
+- `l2_emit_l1`
+  - [ ] :2756 `if: l2_entry_full = 0 && (lit = 0 || lit\data = 0 || lit\length = 0U)`
+  - [ ] :2776 `if: l2_entry_full != 0 && c.fprintf(out, "predef: \"%slmx.h.lm1\" \"%slmx_root.h.lm1\"\n", l2_rt_root, l2_rt_root) < 0`
+  - [ ] :2779 `if: l2_inc_n = 0 && (c_n != 0 || l2_entry_full != 0) && fputs("include: \"<stdio.h>\"\n", out) < 0`
+  - [ ] :2788 `if: l2_write_entry_sig(out) != 0`
+  - [ ] :2791 `if: l2_entry_full != 0`
+- `l2_translate`
+  - [ ] :2860 `if: l2_leaf_mode != 0`
+  - [ ] :2863 `status: l2_emit_l1(out_path, body, lit)`
+- `l2_entry_free`
+  - [ ] :3494 `if: l2_entry_nm != 0`
+  - [ ] :3495 `l2_xfree((cast: (@: void) l2_entry_nm))`
+  - [ ] :3496 `if: l2_entry_ty != 0`
+  - [ ] :3497 `l2_xfree((cast: (@: void) l2_entry_ty))`
+  - [ ] :3499 `l2_entry_nm: 0`
+  - [ ] :3500 `l2_entry_ty: 0`
+  - [ ] :3501 `l2_entry_n: 0`
+  - [ ] :3502 `l2_entry_cap: 0`
+- `l2_loc_add`
+  - [ ] :3784 `if: l2_loc_find(t) >= 0 || l2_entry_find(t) >= 0`
+- `l2_entry_reserve`
+  - [ ] :5291 `if: need <= l2_entry_cap`
+  - [ ] :5312 `l2_entry_free()`
+  - [ ] :5316 `if: l2_entry_nm != 0 && l2_entry_n > 0`
+  - [ ] :5317 `memcpy((cast: (@: void) nn), (cast: (@: void) l2_entry_nm), (cast: (size_t) l2_entry_n) * psz)`
+  - [ ] :5319 `if: l2_entry_ty != 0 && l2_entry_n > 0`
+  - [ ] :5320 `memcpy((cast: (@: void) nt), (cast: (@: void) l2_entry_ty), (cast: (size_t) l2_entry_n) * c.sizeof(c.int))`
+  - [ ] :5322 `if: l2_entry_nm != 0`
+  - [ ] :5323 `l2_xfree((cast: (@: void) l2_entry_nm))`
+  - [ ] :5325 `if: l2_entry_ty != 0`
+  - [ ] :5326 `l2_xfree((cast: (@: void) l2_entry_ty))`
+  - [ ] :5328 `l2_entry_nm: nn`
+  - [ ] :5329 `l2_entry_ty: nt`
+  - [ ] :5330 `l2_entry_cap: need`
+- `l2_entry_find`
+  - [ ] :5335 `if: t = 0 || l2_entry_nm = 0`
+  - [ ] :5337 `while: i < l2_entry_n`
+  - [ ] :5338 `if: l2_text_same(l2_entry_nm[i], t)`
+- `l2_parse_entry_formals`
+  - [ ] :5351 `l2_entry_free()`
+  - [ ] :5359 `if: l2_entry_reserve(ar) != 0`
+  - [ ] :5369 `l2_entry_free()`
+  - [ ] :5372 `l2_entry_free()`
+  - [ ] :5376 `if: l2_text_same(fa, l2_entry_nm[k])`
+  - [ ] :5377 `l2_entry_free()`
+  - [ ] :5381 `l2_entry_nm[j]: fa`
+  - [ ] :5382 `l2_entry_ty[j]: ty`
+  - [ ] :5385 `l2_entry_n: ar`
+  - [ ] :5386 `if: ar != 2 || l2_entry_ty[0] != 0 || l2_entry_ty[1] != 17`
+  - [ ] :5387 `l2_entry_free()`
+- `l2_write_entry_sig`
+  - [ ] :5399 `while: j < l2_entry_n`
+  - [ ] :5402 `ty: l2_entry_ty[j]`
+  - [ ] :5445 `if: l2_write_text(out, l2_entry_nm[j]) != 0`
+- `l2_colon_bound_before`
+  - [ ] :5634 `if: mi < 0 && l2_entry_find(name) >= 0`
+- `l2_colon_value_bound`
+  - [ ] :5657 `if: mi < 0 && (l2_entry_find(name) >= 0 || l2_own_find(mi, name) >= 0 || l2_loc_find(name) >= 0)`
+- `l2_colon_bound_ty`
+  - [ ] :5695 `i: l2_entry_find(name)`
+  - [ ] :5697 `\out_ty: l2_entry_ty[i]`
+- `l2_check_primary`
+  - [ ] :11576 `if: l2_entry_find(node\as\atom) >= 0`
+- `l2_parse_unit`
+  - [ ] :12266 `if: l2_empty_struct(field\value) = 0 && l2_parse_entry_formals(field\value, path) != 0`
+  - [ ] :12340 `l2_leaf_mode: 1`
+- `l2_hidden_from`
+  - [ ] :12443 `li: l2_entry_find(nm)`
+  - [ ] :12444 `if: mi < 0 && li >= 0 && l2_colon_is_graph_ty(l2_entry_ty[li]) != 0`
+- `l2_check_addr`
+  - [ ] :12529 `if: l2_loc_find(t) >= 0 || l2_entry_find(t) >= 0`
+- `l2_prep_addr`
+  - [ ] :12593 `if: l2_loc_find(t) >= 0 || l2_entry_find(t) >= 0`
+- `l2_prep`
+  - [ ] :13058 `if: c.fprintf(l2_out, "%sl2_xp: lmx_arena_ref_cell(l2_entry_unit, %uU)\n%sif: l2_xp = 0\n%s    return: 0\n", ind, (cast: (unsigned) l2_own_uchild[idx]`
+- `l2_addr_tail`
+  - [ ] :14509 `if: mi >= 0 && l2_ml_find(p1\value\as\atom) < 0 && l2_loc_find(p1\value\as\atom) < 0 && l2_entry_find(p1\value\as\atom) < 0`
+  - [ ] :14511 `if: mi < 0 && l2_loc_find(p1\value\as\atom) < 0 && l2_entry_find(p1\value\as\atom) < 0`
+- `l2_ccall_box_int`
+  - [ ] :14531 `ei: l2_entry_find(node\as\atom)`
+  - [ ] :14532 `if: ei >= 0 && l2_entry_ty != 0`
+  - [ ] :14533 `ty: l2_entry_ty[ei]`
+- `l2_emit_body`
+  - [ ] :16107 `if: c.fprintf(l2_out, "%sl2_xp: lmx_arena_ref_cell(l2_entry_unit, %uU)\n%sif: l2_xp = 0\n%s    return: 0\n", ind, (cast: (unsigned) l2_own_uchild[oi])`
+- `l2_emit_unit`
+  - [ ] :16692 `if: l2_entry_n != 0 && fputs("\n        # DEBT: argc/argv not on LmxCallEntry; formals not threaded\n", l2_out) < 0`
+  - [ ] :16695 `if: fputs(") int\n        @: Lmx l2_entry_unit 0\n        @: Lmx l2_entry_leaf 0\n        @@: void l2_entry_slot 0\n        @: LmxMethod l2_entry_rec `
+  - [ ] :16731 `if: c.fprintf(l2_out, "        l2_entry_unit: lmx_node_new_owned(l2_program_arena)\n        if: l2_entry_unit = 0\n            return: 1\n        if: `
+  - [ ] :16743 `if: c.fprintf(l2_out, "        l2_eprofile%u: lmx_node_new_profiled(l2_program_arena, l2_entry_unit)\n        if: l2_eprofile%u = 0\n            retur`
+  - [ ] :16751 `if: l2_ebr_n != 0 && fputs("        l2_profile_pool: lmx_arena_find_profiled(l2_program_arena, c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT, l2_entry_unit)\n `
+  - [ ] :16760 `if: c.fprintf(l2_out, "        l2_entry_leaf: lmx_struct_new_owned(l2_entry_unit, l2_program_arena)\n        if: l2_entry_leaf = 0\n            return`
+  - [ ] :16767 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] < 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_entry_unit, %uU)`
+  - [ ] :16770 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] >= 0 && c.fprintf(l2_out, "        l2_entry_leaf: lmx_arena_ref_struct(l2_entry_unit, %`
+  - [ ] :16773 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_ty[k] = 1 && fputs("        l2_entry_slot[0]: lmx_char_cell_known(process_chars, 0)\n", l2_ou`
+  - [ ] :16776 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_ty[k] = 2 && fputs("        l2_entry_slot[0]: lmx_size_new_owned(l2_program_arena)\n        i`
+  - [ ] :16779 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_ty[k] = 0 && fputs("        l2_entry_slot[0]: lmx_int_new_owned(l2_program_arena)\n        if`
+  - [ ] :16782 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_ty[k] = 3 && fputs("        l2_entry_slot[0]: lmx_unsigned_new_owned(l2_program_arena)\n     `
+  - [ ] :16785 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_ty[k] = 36 && fputs("        l2_entry_slot[0]: lmx_ulong_new_owned(l2_program_arena)\n       `
+  - [ ] :16788 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_is_pointer(l2_own_ty[k]) != 0 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_pointer_new`
+  - [ ] :16791 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] < 0 && l2_own_ty[k] = 1 && l2_unit_own_init(k) != 0U && c.fprintf(l2_out, "        l2_e`
+  - [ ] :16794 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] < 0 && l2_own_ty[k] = 2 && c.fprintf(l2_out, "        if: lmx_size_store_known(l2_entry`
+  - [ ] :16797 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] < 0 && l2_own_ty[k] = 0 && c.fprintf(l2_out, "        if: lmx_int_store_known(l2_entry_`
+  - [ ] :16800 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] < 0 && l2_own_ty[k] = 3 && c.fprintf(l2_out, "        if: lmx_unsigned_store_known(l2_e`
+  - [ ] :16803 `if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] < 0 && l2_own_ty[k] = 36 && c.fprintf(l2_out, "        if: lmx_ulong_store_known(l2_ent`
+  - [ ] :16807 `if: l2_own_ty[k] = 4 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, %zuU, l2_program_arena)\n", l2_liter`
+  - [ ] :16810 `if: l2_own_ty[k] = 5 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, %zuU, l2_program_arena)\n", l2_lite`
+  - [ ] :16813 `if: l2_own_ty[k] = 7 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_SIZE_T, %zuU, l2_program_arena)\n", l2_li`
+  - [ ] :16816 `if: l2_own_ty[k] = 37 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_ULONG, %zuU, l2_program_arena)\n", l2_li`
+  - [ ] :16819 `if: l2_own_ty[k] = 8 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR, %zuU, l2_program_arena)\n"`
+  - [ ] :16822 `if: l2_own_ty[k] >= 2000 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + %d, %zuU, l2_program_a`
+  - [ ] :16825 `if: fputs("        if: l2_entry_slot[0] = 0\n            return: 1\n", l2_out) < 0`
+  - [ ] :16836 `if: l2_for_parent[k] >= 0 && c.fprintf(l2_out, "        l2_entry_leaf: l2_b%d\n", l2_for_parent[k]) < 0`
+  - [ ] :16839 `if: l2_for_parent[k] < 0 && l2_for_owner(k) < 0 && fputs("        l2_entry_leaf: l2_entry_unit\n", l2_out) < 0`
+  - [ ] :16842 `if: l2_for_parent[k] < 0 && l2_for_owner(k) >= 0 && c.fprintf(l2_out, "        l2_entry_leaf: lmx_arena_ref_struct(l2_entry_unit, %uU)\n        if: l2`
+  - [ ] :16845 `if: c.fprintf(l2_out, "        l2_fkid: lmx_struct_new_owned(l2_entry_leaf, l2_program_arena)\n        if: l2_fkid = 0\n            return: 1\n       `
+  - [ ] :16851 `if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_entry_leaf, %uU, (cast: (@: void) l2_fkid)) != 0\n            return: 1\n        l2_entry_le`
+  - [ ] :16856 `if: l2_own_fid[oi] = k && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_entry_leaf, %uU)\n        if: l2_entry_slot = 0\n           `
+  - [ ] :16859 `if: l2_own_fid[oi] = k && l2_own_ty[oi] = 1 && fputs("        l2_entry_slot[0]: lmx_char_cell_known(process_chars, 0)\n", l2_out) < 0`
+  - [ ] :16862 `if: l2_own_fid[oi] = k && l2_own_ty[oi] = 2 && fputs("        l2_entry_slot[0]: lmx_size_new_owned(l2_program_arena)\n        if: l2_entry_slot[0] = 0`
+  - [ ] :16865 `if: l2_own_fid[oi] = k && l2_own_ty[oi] = 0 && fputs("        l2_entry_slot[0]: lmx_int_new_owned(l2_program_arena)\n        if: l2_entry_slot[0] = 0\`
+  - [ ] :16868 `if: l2_own_fid[oi] = k && l2_own_ty[oi] = 3 && fputs("        l2_entry_slot[0]: lmx_unsigned_new_owned(l2_program_arena)\n        if: l2_entry_slot[0]`
+  - [ ] :16871 `if: l2_own_fid[oi] = k && l2_own_ty[oi] = 36 && fputs("        l2_entry_slot[0]: lmx_ulong_new_owned(l2_program_arena)\n        if: l2_entry_slot[0] =`
+  - [ ] :16874 `if: l2_own_fid[oi] = k && l2_own_is_pointer(l2_own_ty[oi]) != 0 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_pointer_new_owned(c.LMX_TYPE_POINT`
+  - [ ] :16878 `if: l2_own_ty[oi] = 4 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, %zuU, l2_program_arena)\n", l2_lite`
+  - [ ] :16881 `if: l2_own_ty[oi] = 5 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, %zuU, l2_program_arena)\n", l2_lit`
+  - [ ] :16884 `if: l2_own_ty[oi] = 7 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_SIZE_T, %zuU, l2_program_arena)\n", l2_l`
+  - [ ] :16887 `if: l2_own_ty[oi] = 37 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_ULONG, %zuU, l2_program_arena)\n", l2_l`
+  - [ ] :16890 `if: l2_own_ty[oi] = 8 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR, %zuU, l2_program_arena)\n`
+  - [ ] :16893 `if: l2_own_ty[oi] >= 2000 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + %d, %zuU, l2_program_`
+  - [ ] :16896 `if: fputs("        if: l2_entry_slot[0] = 0\n            return: 1\n", l2_out) < 0`
+  - [ ] :16913 `if: c.fprintf(l2_out, "        l2_entry_leaf: lmx_arena_ref_struct(l2_entry_unit, %uU)\n        if: l2_entry_leaf = 0\n            return: 1\n", (cast`
+  - [ ] :16917 `if: c.fprintf(l2_out, "        l2_entry_rec: lmx_method_new_owned(l2_program_arena)\n        if: l2_entry_rec = 0\n            return: 1\n        l2_e`
+  - [ ] :16922 `if: (l2_m_body[i] != 0 || (l2_m_node[i] != 0 && l2_m_node[i]\as != 0 && l2_ret_tr(l2_m_node[i]\as\frame) != 0)) && fputs("        l2_entry_rec: lmx_me`
+  - [ ] :16928 `if: (l2_m_body[i] != 0 || (l2_m_node[i] != 0 && l2_m_node[i]\as != 0 && l2_ret_tr(l2_m_node[i]\as\frame) != 0)) && c.fprintf(l2_out, ")\n        l2_en`
+  - [ ] :16945 `if: l2_ns_parent[k] < 0 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        l2_nsp[%d]: lmx_struct_new_owned(l2_entry_unit, l2_program_arena)\n     `
+  - [ ] :16975 `if: l2_ns_parent[k] < 0 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_entry_unit, %uU, (cast: (@: void) l2_nsp[%d])`
+  - [ ] :16980 `if: l2_ns_parent[k] < 0 && l2_ns_eternal[k] >= 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_entry_unit, %uU, (cast: (@: void) l2_nsp[%d]`
+  - [ ] :16989 `if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 0 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %u`
+  - [ ] :16992 `if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 0 && l2_ns_eternal[k] >= 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %`
+  - [ ] :16995 `if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 1 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %u`
+  - [ ] :16998 `if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 1 && l2_ns_eternal[k] >= 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %`
+  - [ ] :17004 `if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 5 && l2_nsf_ref[fx] = 0 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_r`
+  - [ ] :17007 `if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 5 && l2_nsf_ref[fx] = 1 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_r`
+  - [ ] :17011 `if: l2_nsf_ref[fx] = 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            re`
+  - [ ] :17017 `if: l2_nsf_ref[fx] = 1 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            re`
+  - [ ] :17023 `if: fputs("        l2_entry_slot[0]: (cast: (@: void) l2_profile_array)\n", l2_out) < 0`
+  - [ ] :17048 `if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 3 && l2_ns_parent[l2_nsf_ref[fx]] < 0 && l2_ns_eternal[l2_nsf_ref[fx]] < 0 && c.fprintf(l2_out, "       `
+  - [ ] :17061 `if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 4 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_nsp[%d], %uU, (cast: (@: void) lmx_arena_ref_`
+  - [ ] :17093 `if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_entry_unit, %uU, (cast: (@: void) l2_methods)) != 0\n            return: 1\n        if: l2_m`
+  - [ ] :17099 `if: c.fprintf(l2_out, "        l2_current: lmx_thread_current()\n        l2_message: lmx_thread_message(l2_current)\n        l2_children: lmx_thread_c`
+  - [ ] :17105 `if: fputs("        # Closed-unit devirtualization: translator-bound child indices, no graph mutations after construction. l2_entry_rec.addr is METHOD-`
+  - [ ] :17109 `l2_call_node: "l2_entry_unit"`
+  - [ ] :17110 `l2_unit_ref: "l2_entry_unit"`
+  - [ ] :17143 `if: l2_entry_n != 0 && fputs("int: argc; @@: char argv", l2_out) < 0`
+
+## D3. `l2_main_body` / `l2_main_node` readers (18)
+
+- `(file head)`
+  - [ ] :158 `@: LmP0Structure l2_main_body 0`
+  - [ ] :159 `const: @: LmP0Node l2_main_node 0`
+- `l2_take_main_lit`
+  - [ ] :2488 `l2_main_node: fn_node`
+  - [ ] :2489 `l2_main_body: body\as\structure`
+- `l2_translate_unit`
+  - [ ] :2569 `l2_main_node: 0`
+- `l2_parse_library`
+  - [ ] :2665 `l2_main_node: 0`
+  - [ ] :2666 `l2_main_body: 0`
+- `l2_fn_frame`
+  - [ ] :9677 `if: mi < 0 && l2_main_node != 0 && l2_main_node\as != 0`
+  - [ ] :9678 `return: l2_main_node\as\frame`
+- `l2_parse_unit`
+  - [ ] :12281 `l2_main_body: 0`
+  - [ ] :12283 `l2_main_body: body\as\structure`
+  - [ ] :12284 `if: l2_main_body != 0 && l2_colon_normalize_body(l2_main_body, -1, path) != 0`
+  - [ ] :12290 `if: l2_main_body != 0 && l2_merge_scan(l2_main_body) != 0`
+- `l2_emit_unit`
+  - [ ] :16251 `if: out_path = 0 || l2_m_n = 0 || (l2_library_mode = 0 && l2_main_body = 0 && (l2_main_node = 0 || l2_main_node\as = 0 || l2_ret_tr(l2_main_node\as\fr`
+  - [ ] :16269 `if: l2_main_body != 0 && l2_merge_scan(l2_main_body) != 0`
+  - [ ] :16271 `if: l2_main_body != 0 && l2_collect_body_hosts(l2_main_body, -1) != 0`
+  - [ ] :17122 `if: l2_emit_body(l2_main_body, -1, "        ") != 0`
+  - [ ] :17128 `if: l2_main_node != 0 && l2_main_node\as != 0 && l2_emit_ret_tr(-1, "        ", l2_ret_tr(l2_main_node\as\frame)) != 0`
+
+## D4. Body-context `mi` sentinel (mi < 0 / mi >= 0 / l2_cur_mi) (217)
+
+- `(file head)`
+  - [ ] :145 `int: l2_cur_mi 0 - 1`
+- `l2_own_off`
+  - [ ] :921 `if: mi < 0 || oi < 0 || l2_own_cap <= 0 || l2_m_cap <= 0 || mi >= l2_m_cap || oi >= l2_own_cap`
+- `l2_slot_off`
+  - [ ] :1180 `if: mi < 0 || si < 0 || si >= l2_slot_cap || l2_m_cap <= 0 || mi >= l2_m_cap`
+- `l2_free_method`
+  - [ ] :1714 `if: mi < 0 || l2_m_cap <= 0 || mi >= l2_m_cap`
+- `l2_formals_alloc`
+  - [ ] :1738 `if: mi < 0 || ar < 0`
+- `l2_hidden_reserve`
+  - [ ] :1776 `if: mi < 0 || need < 0`
+- `l2_fn`
+  - [ ] :1833 `if: mi < 0 || k < 0 || l2_m_fn[mi] = 0`
+- `l2_ft`
+  - [ ] :1840 `if: mi < 0 || k < 0 || l2_m_ft[mi] = 0`
+- `l2_dn`
+  - [ ] :1847 `if: mi < 0 || k < 0 || l2_m_dn[mi] = 0`
+- `l2_dt`
+  - [ ] :1854 `if: mi < 0 || k < 0 || l2_m_dt[mi] = 0`
+- `l2_fn_set`
+  - [ ] :1861 `if: mi < 0 || k < 0 || l2_m_fn[mi] = 0`
+- `l2_ft_set`
+  - [ ] :1869 `if: mi < 0 || k < 0 || l2_m_ft[mi] = 0`
+- `l2_dn_set`
+  - [ ] :1877 `if: mi < 0 || k < 0 || l2_m_dn[mi] = 0`
+- `l2_dt_set`
+  - [ ] :1885 `if: mi < 0 || k < 0 || l2_m_dt[mi] = 0`
+- `l2_check_return_literal`
+  - [ ] :2025 `if: mi >= 0 && l2_m_ret[mi] != 0`
+- `l2_check_ret_tr`
+  - [ ] :2088 `if: mi >= 0 && l2_m_ret[mi] = 8 && n != 0`
+  - [ ] :2090 `if: (mi < 0 || l2_m_ret[mi] != 8) && n = 0`
+- `l2_emit_ret_tr`
+  - [ ] :2103 `if: mi >= 0 && l2_m_ret[mi] = 8`
+- `l2_parse_library`
+  - [ ] :2686 `l2_cur_mi: i`
+  - [ ] :2692 `l2_cur_mi: 0 - 1`
+- `l2_intern_eq_mi`
+  - [ ] :3122 `if: s >= l2_intern_n || mi < 0`
+- `l2_intern_mi`
+  - [ ] :3274 `if: mi < 0`
+- `l2_own_find`
+  - [ ] :3290 `if: mi >= 0`
+- `l2_own_find_decl`
+  - [ ] :3316 `if: mi >= 0 && l2_own_mi[i] = mi`
+- `l2_own_find_occ`
+  - [ ] :3333 `if: mi >= 0 && l2_own_mi[i] = mi && (l2_own_host[i] = 0 || l2_scope_has(l2_own_host[i]))`
+- `l2_own_find_last`
+  - [ ] :3355 `if: mi >= 0 && l2_own_mi[i] = mi && (l2_own_host[i] = 0 || l2_scope_has(l2_own_host[i]))`
+- `l2_own_find_host`
+  - [ ] :3399 `if: mi < 0 || t = 0`
+- `l2_own_any`
+  - [ ] :3409 `if: mi < 0 || t = 0`
+- `l2_own_add`
+  - [ ] :3435 `if: mi < 0 || t = 0 || l2_ident(t) = 0`
+- `l2_ret_uns`
+  - [ ] :5010 `if: mi < 0 || l2_m_ret = 0`
+- `l2_fail_return`
+  - [ ] :5017 `if: mi >= 0 && l2_m_ret[mi] = 8 && (l2_m_throws = 0 || l2_m_throws[mi] = 0)`
+- `l2_method_is_os`
+  - [ ] :5197 `if: mi < 0 || mi >= l2_m_n || l2_os_node = 0 || l2_os_node\as = 0 || l2_os_node\as\frame = 0 || l2_os_node\as\frame\body = 0`
+- `l2_emit_os_fn`
+  - [ ] :5222 `if: mi < 0 || l2_method_is_os(mi) = 0`
+- `l2_formal_find`
+  - [ ] :5456 `if: mi < 0 || t = 0`
+- `l2_dyn_find`
+  - [ ] :5466 `if: mi < 0 || t = 0`
+- `l2_param_is`
+  - [ ] :5486 `if: mi < 0 || t = 0`
+- `l2_param_ty`
+  - [ ] :5497 `if: mi < 0 || t = 0`
+- `l2_colon_bound_before`
+  - [ ] :5632 `if: mi >= 0 && l2_param_find(mi, name) >= 0`
+- `l2_colon_value_bound`
+  - [ ] :5655 `if: mi >= 0 && (l2_param_find(mi, name) >= 0 || l2_own_find(mi, name) >= 0 || l2_slot_find(mi, name) >= 0 || l2_ml_find(name) >= 0)`
+- `l2_colon_bound_ty`
+  - [ ] :5670 `if: mi >= 0`
+- `l2_param_name`
+  - [ ] :5934 `if: mi < 0 || k < 0`
+- `l2_param_addr_taken`
+  - [ ] :5983 `if: mi < 0 || k < 0 || l2_m_body[mi] = 0`
+- `l2_own_of_param`
+  - [ ] :6002 `if: mi < 0 || k < 0`
+- `l2_own_canon`
+  - [ ] :6013 `if: mi < 0 || oi < 0 || oi >= l2_own_n`
+- `l2_own_param_of`
+  - [ ] :6025 `if: mi < 0 || oi < 0`
+- `l2_emit_own_from`
+  - [ ] :6055 `if: mi < 0 || oi < 0 || ind = 0`
+- `l2_emit_finalize_old`
+  - [ ] :6074 `if: mi < 0 || oi < 0 || ind = 0 || canon = 0 || l2_own_addr_taken(mi, oi) = 0`
+- `l2_emit_occ_write`
+  - [ ] :6098 `if: mi < 0 || oi < 0 || ind = 0 || rhs = 0`
+- `l2_emit_bind_mark`
+  - [ ] :6134 `if: mi < 0 || oi < 0 || ind = 0 || l2_own_addr_taken(mi, oi) = 0`
+- `l2_collect_asgn_body`
+  - [ ] :6159 `if: body = 0 || mi < 0`
+  - [ ] :6169 `if: l2_colon_mark_find(stmt) >= 0 && mi >= 0`
+- `l2_bind_own`
+  - [ ] :6280 `if: mi < 0 || oi < 0`
+- `l2_collect_decls`
+  - [ ] :6409 `if: l2_frame_head(stmt, "[]") && (l2_own_array_count(stmt) = 0 || mi < 0 || depth != l2_scope_n)`
+  - [ ] :6411 `if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && mi < 0`
+- `l2_dyn_add`
+  - [ ] :6474 `if: mi < 0 || t = 0`
+- `l2_scan_ident`
+  - [ ] :6507 `if: mi < 0 || t = 0 || l2_ident(t) = 0`
+- `l2_scan_body`
+  - [ ] :6642 `if: l2_colon_mark_find(stmt) >= 0 && mi >= 0`
+- `l2_raw_path`
+  - [ ] :6939 `if: pd = 0 || mi < 0 || out_j = 0 || out_fld = 0`
+  - [ ] :6973 `if: mi < 0`
+- `l2_prefix_deref`
+  - [ ] :7056 `if: mi >= 0`
+  - [ ] :7124 `if: mi < 0`
+- `l2_index_head`
+  - [ ] :7183 `if: mi < 0`
+  - [ ] :7190 `if: mi >= 0`
+  - [ ] :7223 `if: mi < 0`
+- `l2_index_token`
+  - [ ] :7304 `if: mi >= 0`
+  - [ ] :7342 `while: mi >= 0 && j < l2_own_n`
+  - [ ] :7367 `while: mi >= 0 && matched = 0 && j < l2_m_arity[mi]`
+  - [ ] :7377 `while: mi >= 0 && matched = 0 && j < l2_m_sn[mi]`
+- `l2_slash_for_prefix`
+  - [ ] :7543 `if: mi < 0 || t = 0 || t\data = 0 || stop < 5U || stop > t\length`
+- `l2_slash_node_prefix`
+  - [ ] :7563 `if: mi < 0 || t = 0 || t\data = 0 || stop < 6U || stop > t\length`
+- `l2_own_index_head`
+  - [ ] :7605 `if: mi < 0 || t = 0 || t\data = 0 || out_own = 0 || out_index = 0`
+- `l2_own_index_tail`
+  - [ ] :7643 `if: mi < 0 || f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || out_own = 0 || out_index = 0 || out_after = 0 || out_count = 0`
+- `l2_array_length_own`
+  - [ ] :7689 `if: mi < 0 || l2_frame_head(node, "length") = 0`
+- `l2_own_ctr`
+  - [ ] :8717 `if: l2_own_mi[oi] = l2_cur_mi`
+- `l2_layout_owns`
+  - [ ] :8801 `if: l2_for_parent[oi] < 0 && l2_for_owner(oi) < 0`
+- `l2_path_own`
+  - [ ] :8861 `if: mi < 0 || left = 0 || right = 0`
+- `l2_slot_find`
+  - [ ] :8911 `if: mi < 0 || t = 0`
+- `l2_nsty_of_name`
+  - [ ] :9663 `if: mi >= 0`
+- `l2_fn_frame`
+  - [ ] :9675 `if: mi >= 0 && l2_m_node != 0 && l2_m_node[mi] != 0 && l2_m_node[mi]\as != 0`
+- `l2_head_is_call`
+  - [ ] :10294 `if: mi >= 0`
+- `l2_emit_path_bail`
+  - [ ] :10335 `if: mi < 0 && c.fprintf(l2_out, "%sreturn: 76\n", deep) < 0`
+  - [ ] :10337 `if: mi < 0`
+- `l2_path_root`
+  - [ ] :10483 `if: \out_ni < 0 && \out_res < 0 && l2_cur_mi >= 0`
+  - [ ] :10485 `while: i < l2_m_arity[l2_cur_mi]`
+  - [ ] :10486 `if: l2_fn(l2_cur_mi, i) != 0 && l2_name_is_seg(l2_fn(l2_cur_mi, i), pd, off, len) != 0 && l2_nsty_get(l2_cur_mi, i) >= 0`
+  - [ ] :10487 `\out_ni: l2_nsty_get(l2_cur_mi, i)`
+- `l2_check_primary`
+  - [ ] :11534 `if: mi >= 0 && l2_m_uses[l2_own_off(mi, idx)] = 0`
+  - [ ] :11569 `if: mi >= 0 && l2_param_find(mi, node\as\atom) >= 0`
+  - [ ] :11582 `if: mi >= 0 && l2_ml_find(node\as\atom) >= 0`
+  - [ ] :11586 `if: mi >= 0`
+  - [ ] :11598 `if: mi < 0`
+  - [ ] :11603 `if: mi >= 0 && l2_slot_find(mi, node\as\atom) >= 0`
+  - [ ] :11636 `if: idx < 0 && mi >= 0`
+  - [ ] :11658 `if: mi >= 0 && l2_ml_find(a0\value\as\atom) >= 0 && l2_ml_ty[l2_ml_find(a0\value\as\atom)] = 22`
+  - [ ] :11678 `if: idx < 0 && (l2_predef_has_function(call\head) != 0 || (mi >= 0 && l2_ml_find(call\head) >= 0 && l2_ml_ty[l2_ml_find(call\head)] = 40))`
+  - [ ] :11708 `if: mi >= 0`
+- `l2_check_body`
+  - [ ] :11887 `if: l2_merge_frame(stmt) != 0 && mi < 0`
+  - [ ] :11890 `if: l2_merge_frame(stmt) != 0 && mi >= 0`
+  - [ ] :11893 `if: l2_frame_head(stmt, "[]") && (l2_own_array_count(stmt) = 0 || mi < 0 || depth != l2_scope_n)`
+  - [ ] :11905 `if: stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM && l2_text_eq(stmt\as\atom, "return") && (mi < 0 || l2_m_ret[mi] != 8)`
+  - [ ] :11910 `if: mi >= 0 && stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0`
+  - [ ] :12038 `if: l2_frame_head(stmt, "immutable") && mi < 0`
+  - [ ] :12060 `if: mi >= 0 && (l2_ml_find(lnm) < 0 || l2_ml_ty[l2_ml_find(lnm)] != 22)`
+  - [ ] :12064 `if: l2_frame_head(stmt, "if") = 0 && mi < 0 && stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0`
+  - [ ] :12082 `if: l2_frame_head(stmt, "if") = 0 && mi >= 0 && stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0 && l2_ml_array_head(stmt\as`
+  - [ ] :12090 `if: l2_frame_head(stmt, "if") = 0 && mi < 0 && l2_const_local_ty(stmt, @ lnm, @ lty) = 0`
+  - [ ] :12095 `if: l2_frame_head(stmt, "if") = 0 && mi >= 0 && l2_const_local_ty(stmt, @ lnm, @ lty) = 0 && l2_ml_find(lnm) >= 0`
+  - [ ] :12100 `if: l2_frame_head(stmt, "if") = 0 && mi >= 0 && stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0 && l2_ml_find(stmt\as\frame`
+  - [ ] :12105 `if: l2_frame_head(stmt, "if") = 0 && mi >= 0 && l2_fnptr_local(stmt, @ lnm) = 0 && l2_ml_find(lnm) >= 0`
+  - [ ] :12108 `if: l2_frame_head(stmt, "if") = 0 && mi >= 0 && l2_struct_local(stmt, @ lnm) = 0 && l2_ml_find(lnm) >= 0`
+  - [ ] :12113 `if: l2_frame_head(stmt, "if") = 0 && mi >= 0 && l2_ptr_local_ty(stmt, @ lnm, @ lty) = 0 && l2_ml_find(lnm) >= 0`
+  - [ ] :12116 `if: l2_frame_head(stmt, "if") = 0 && mi < 0 && l2_ptr_local_ty(stmt, @ lnm, @ lty) = 0`
+  - [ ] :12121 `if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && mi < 0`
+  - [ ] :12127 `if: l2_frame_head(stmt, "if") = 0 && mi >= 0 && stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0 && l2_ml_find(stmt\as\frame`
+  - [ ] :12167 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && raw = 0 && mi >= 0 && rj < l2_m_arity[mi] && (l2_ft(mi, rj) = 4 || l2_ft(mi, rj) = 6`
+  - [ ] :12169 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && raw = 0 && mi >= 0 && rj < l2_m_arity[mi] && l2_ft(mi, rj) != 5 && l2_ft(mi, rj) != `
+  - [ ] :12171 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && raw = 0 && mi >= 0 && rj >= l2_m_arity[mi] && rj < l2_m_arity[mi] + l2_m_sn[mi] && l`
+  - [ ] :12185 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && mi >= 0 && l2_m_ret[mi] = 8 && l2_count_active(fr\b`
+  - [ ] :12187 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && (mi < 0 || l2_m_ret[mi] != 8) && l2_count_active(fr`
+  - [ ] :12196 `if: l2_admit_consumer_uses(l2_next_active(fr\body\first_field)\value\as\atom, l2_nsty_get(mi, 0 - 1), l2_next_active(fr\body\first_field)\value\as\ato`
+  - [ ] :12205 `if: cidx < 0 && mi >= 0`
+  - [ ] :12216 `if: mi >= 0`
+- `l2_parse_unit`
+  - [ ] :12313 `l2_cur_mi: i`
+  - [ ] :12319 `l2_cur_mi: 0 - 1`
+- `l2_hidden_from`
+  - [ ] :12422 `if: mi >= 0`
+  - [ ] :12427 `if: mi >= 0`
+  - [ ] :12430 `if: mi >= 0 && oi >= 0 && l2_m_uses[l2_own_off(mi, oi)] != 0`
+  - [ ] :12434 `if: mi >= 0 && oi >= 0 && l2_m_uses[l2_own_off(mi, oi)] != 0 && c.sprintf(dest, "l2_q%d", oi) < 0`
+  - [ ] :12436 `if: mi >= 0 && oi >= 0 && l2_m_uses[l2_own_off(mi, oi)] != 0`
+  - [ ] :12442 `if: mi < 0`
+  - [ ] :12447 `if: mi < 0`
+  - [ ] :12468 `if: mi >= 0 && l2_m_ret[mi] = 8 && (l2_m_throws = 0 || l2_m_throws[mi] = 0) && c.fprintf(l2_out, "%sreturn\n", deep) < 0`
+  - [ ] :12470 `if: mi >= 0 && l2_m_ret[mi] = 8 && l2_m_throws != 0 && l2_m_throws[mi] != 0 && c.fprintf(l2_out, "%sreturn: 0\n", deep) < 0`
+  - [ ] :12472 `if: mi >= 0 && l2_ret_uns(mi) != 0 && (l2_m_throws = 0 || l2_m_throws[mi] = 0) && c.fprintf(l2_out, "%sreturn: 0U\n", deep) < 0`
+  - [ ] :12474 `if: mi >= 0 && l2_ret_uns(mi) != 0 && l2_m_throws != 0 && l2_m_throws[mi] != 0 && c.fprintf(l2_out, "%sl2_out_result[0]: 0U\n%sreturn: 0\n", deep, dee`
+  - [ ] :12476 `if: (mi < 0 || (l2_ret_uns(mi) = 0 && l2_m_ret[mi] != 8 && (l2_m_throws = 0 || l2_m_throws[mi] = 0))) && c.fprintf(l2_out, "%sreturn: 0\n", deep) < 0`
+  - [ ] :12478 `if: mi >= 0 && l2_ret_uns(mi) = 0 && l2_m_ret[mi] != 8 && l2_m_throws != 0 && l2_m_throws[mi] != 0 && c.fprintf(l2_out, "%sl2_out_result[0]: 0\n%sretu`
+- `l2_check_addr`
+  - [ ] :12532 `if: mi >= 0 && l2_ml_find(t) >= 0 && l2_ml_ty[l2_ml_find(t)] = 41`
+  - [ ] :12534 `if: mi >= 0`
+  - [ ] :12539 `if: mi >= 0`
+- `l2_prep_addr`
+  - [ ] :12600 `if: mi >= 0 && l2_ml_find(t) >= 0 && l2_ml_ty[l2_ml_find(t)] = 41`
+  - [ ] :12606 `if: mi >= 0`
+  - [ ] :12617 `if: mi >= 0`
+- `l2_sizeof_name_bytes`
+  - [ ] :12766 `if: mi >= 0`
+- `l2_cf_set`
+  - [ ] :12836 `if: omi < 0 || fk < 0`
+- `l2_cf_get`
+  - [ ] :12896 `if: omi < 0 || fk < 0`
+- `l2_emit_nullary_call`
+  - [ ] :12927 `if: mi < 0 || call_fi < 0`
+  - [ ] :12931 `if: mi >= 0 && idx >= 0`
+  - [ ] :12950 `if: mi >= 0`
+- `l2_prep`
+  - [ ] :13018 `if: mi >= 0 && l2_m_uses[l2_own_off(mi, idx)] != 0`
+  - [ ] :13032 `if: mi >= 0`
+  - [ ] :13037 `if: mi >= 0`
+  - [ ] :13048 `if: mi >= 0`
+  - [ ] :13053 `if: mi < 0`
+  - [ ] :13066 `if: mi < 0`
+  - [ ] :13137 `if: idx < 0 && mi >= 0`
+  - [ ] :13157 `if: idx < 0 && mi >= 0 && l2_ml_find(call\head) >= 0 && l2_ml_ty[l2_ml_find(call\head)] = 40`
+  - [ ] :13554 `if: l2_m_throws[idx] != 0 && mi >= 0 && fputs(", l2_msg", l2_out) < 0`
+  - [ ] :13556 `if: l2_m_throws[idx] != 0 && mi < 0 && fputs(", node", l2_out) < 0`
+  - [ ] :13570 `if: l2_m_throws[idx] != 0 && mi >= 0 && c.fprintf(l2_out, "%sif: l2_ts%d != 0\n%s    l2_out_throw[0]: l2_te%d\n%s    return: l2_ts%d\n", ind, t, ind, `
+  - [ ] :13572 `if: l2_m_throws[idx] != 0 && mi < 0 && c.fprintf(l2_out, "%sif: l2_ts%d != 0\n%s    return: 70\n", ind, t, ind) < 0`
+- `l2_emit_poll`
+  - [ ] :14250 `if: mi >= 0 && l2_m_ret[mi] = 8 && (l2_m_throws = 0 || l2_m_throws[mi] = 0) && c.fprintf(l2_out, "%sif: lmx_msg_poll_escape() != 0\n%s    return\n", i`
+  - [ ] :14252 `if: mi >= 0 && l2_m_ret[mi] = 8 && l2_m_throws != 0 && l2_m_throws[mi] != 0 && c.fprintf(l2_out, "%sif: lmx_msg_poll_escape() != 0\n%s    return: 0\n"`
+  - [ ] :14254 `if: (mi < 0 || l2_m_ret[mi] != 8) && c.fprintf(l2_out, "%sif: lmx_msg_poll_escape() != 0\n%s    return: 0\n", ind, ind) < 0`
+- `l2_emit_checkpoint`
+  - [ ] :14313 `if: mi < 0 || ind = 0`
+- `l2_emit_path_load`
+  - [ ] :14403 `if: mi >= 0 && l2_m_ret[mi] = 8 && (l2_m_throws = 0 || l2_m_throws[mi] = 0) && c.fprintf(l2_out, "%sreturn\n", deep) < 0`
+  - [ ] :14405 `if: mi >= 0 && l2_m_ret[mi] = 8 && l2_m_throws != 0 && l2_m_throws[mi] != 0 && c.fprintf(l2_out, "%sreturn: 0\n", deep) < 0`
+  - [ ] :14407 `if: mi >= 0 && l2_ret_uns(mi) != 0 && (l2_m_throws = 0 || l2_m_throws[mi] = 0) && c.fprintf(l2_out, "%sreturn: 0U\n", deep) < 0`
+  - [ ] :14409 `if: mi >= 0 && l2_ret_uns(mi) != 0 && l2_m_throws != 0 && l2_m_throws[mi] != 0 && c.fprintf(l2_out, "%sl2_out_result[0]: 0U\n%sreturn: 0\n", deep, dee`
+  - [ ] :14411 `if: (mi < 0 || (l2_ret_uns(mi) = 0 && l2_m_ret[mi] != 8 && (l2_m_throws = 0 || l2_m_throws[mi] = 0))) && c.fprintf(l2_out, "%sreturn: 0\n", deep) < 0`
+  - [ ] :14413 `if: mi >= 0 && l2_ret_uns(mi) = 0 && l2_m_ret[mi] != 8 && l2_m_throws != 0 && l2_m_throws[mi] != 0 && c.fprintf(l2_out, "%sl2_out_result[0]: 0\n%sretu`
+- `l2_ccall_box_int`
+  - [ ] :14543 `if: mi >= 0`
+- `l2_emit_ccall`
+  - [ ] :14604 `if: mi >= 0 && l2_raw_head(stmt\as\frame\head, mi, @ hj, @ hf) = 0 && hf = 5 && hj < l2_m_arity[mi]`
+  - [ ] :14618 `if: mi >= 0 && hj >= l2_m_arity[mi] && hf = 5 && hj < l2_m_arity[mi] + l2_m_sn[mi]`
+  - [ ] :14632 `if: mi < 0 || hj < 0 || hf != 5 || hj >= l2_m_arity[mi] + l2_m_sn[mi]`
+- `l2_emit_loc_stmt`
+  - [ ] :14834 `if: mi >= 0 && l2_array_local(stmt, @ lnm, @ lsz) != 0 && (l2_ptr_local_ty(stmt, @ lnm, @ lty) != 0 || l2_ml_find(lnm) < 0) && (l2_const_local_ty(stmt`
+  - [ ] :14837 `if: mi >= 0 && (l2_ml_find(lnm) < 0 || l2_ml_ty[l2_ml_find(lnm)] != 22)`
+  - [ ] :14871 `if: mi >= 0 && l2_ml_array_head(stmt\as\frame\head) >= 0`
+  - [ ] :14926 `if: mi >= 0 && stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0 && l2_ml_find(stmt\as\frame\head) >= 0 && l2_ml_ty[l2_ml_fin`
+  - [ ] :15055 `if: mi >= 0 && l2_ml_find(fr\head) < 0`
+- `l2_emit_body`
+  - [ ] :15521 `if: cm >= 0 && mi >= 0`
+  - [ ] :15526 `if: (cm < 0 || mi < 0) && oi >= 0 && c.fprintf(l2_out, "%sl2_mops[%dU]: lmx_arena_ref_struct(%s, %uU)\n", ind, k, l2_unit_ref, (cast: (unsigned) (l2_u`
+  - [ ] :15528 `if: (cm < 0 || mi < 0) && oi < 0 && sl >= 0 && c.fprintf(l2_out, "%sl2_mops[%dU]: lmx_arena_ref_struct(%s, %uU)\n", ind, k, l2_unit_ref, (cast: (unsig`
+  - [ ] :15530 `if: (cm < 0 || mi < 0) && oi < 0 && sl < 0 && c.fprintf(l2_out, "%sl2_mops[%dU]: lmx_arena_ref_struct(%s, %uU)\n", ind, k, l2_unit_ref, (cast: (unsign`
+  - [ ] :15560 `if: mi < 0 && c.fprintf(l2_out, "%sif: l2_mstatus != 0 || l2_mresult = 0\n%s    return: 70\n", ind, ind) < 0`
+  - [ ] :15562 `if: mi >= 0 && c.fprintf(l2_out, "%sif: l2_mstatus != 0 || l2_mresult = 0\n%s    l2_out_throw[0]: node\n%s    return: 1\n", ind, ind, ind) < 0`
+  - [ ] :15729 `if: mi < 0`
+  - [ ] :15731 `if: mi >= 0`
+  - [ ] :15952 `if: stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM && l2_text_eq(stmt\as\atom, "return") && mi >= 0 && l2_m_ret[mi] = 8`
+  - [ ] :15999 `if: ix = 0 && mi >= 0 && rj < l2_m_arity[mi] && fr\head\length > l2_fn(mi, rj)\length + 1U && fr\head\data[l2_fn(mi, rj)\length] = 92 && c.fprintf(l2_`
+  - [ ] :16001 `if: ix = 0 && mi >= 0 && rj < l2_m_arity[mi] && (fr\head\length <= l2_fn(mi, rj)\length || fr\head\data[l2_fn(mi, rj)\length] != 92) && c.fprintf(l2_o`
+  - [ ] :16003 `if: ix = 0 && mi >= 0 && rj >= l2_m_arity[mi] && rj < l2_m_arity[mi] + l2_m_sn[mi] && c.fprintf(l2_out, "%sl2_s%d_%d[%s]: %s\n", ind, mi, rj - l2_m_ar`
+  - [ ] :16005 `if: ix = 0 && (mi < 0 || rj >= l2_m_arity[mi] + l2_m_sn[mi]) && c.fprintf(l2_out, "%s%.*s[%s]: %s\n", ind, (cast: (int) l2_pn), fr\head\data, index_to`
+  - [ ] :16025 `if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && mi >= 0`
+  - [ ] :16030 `if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && mi >= 0 && l2_m_uses[l2_own_off(mi, oi)] != 0 && l2_emit_bind_mark(mi, oi`
+  - [ ] :16032 `if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && mi >= 0 && l2_m_alias[l2_own_off(mi, oi)] >= 0 && l2_own_fid[oi] >= 0 && `
+  - [ ] :16034 `if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && mi >= 0 && l2_m_alias[l2_own_off(mi, oi)] >= 0 && l2_own_fid[oi] < 0 && (`
+  - [ ] :16052 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && mi >= 0 && l2_m_ret[mi] = 8 && l2_emit_poll(mi, ind`
+  - [ ] :16054 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && mi >= 0 && l2_m_ret[mi] = 8 && l2_emit_checkpoint(m`
+  - [ ] :16056 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && mi >= 0 && l2_m_ret[mi] = 8 && (l2_m_throws = 0 || `
+  - [ ] :16058 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && mi >= 0 && l2_m_ret[mi] = 8 && l2_m_throws != 0 && `
+  - [ ] :16060 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && mi >= 0 && l2_m_ret[mi] = 8`
+  - [ ] :16062 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && (mi < 0 || l2_m_ret[mi] != 8) && l2_count_active(fr`
+  - [ ] :16067 `if: oi < 0 && mi >= 0`
+  - [ ] :16083 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && (mi < 0 || l2_m_ret[mi] != 8) && (l2_count_active(f`
+  - [ ] :16085 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && (mi < 0 || l2_m_ret[mi] != 8) && l2_emit_poll(mi, i`
+  - [ ] :16087 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && (mi < 0 || l2_m_ret[mi] != 8) && l2_emit_checkpoint`
+  - [ ] :16089 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && (mi < 0 || l2_m_ret[mi] != 8) && (mi < 0 || l2_m_th`
+  - [ ] :16093 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && mi >= 0 && l2_m_ret[mi] != 8 && l2_m_throws != 0 &&`
+  - [ ] :16095 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && (mi < 0 || l2_m_ret[mi] != 8)`
+  - [ ] :16104 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && mi < 0`
+  - [ ] :16124 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && mi >= 0 && oi >= 0 && l2_m_uses[l2_own_off(mi, `
+  - [ ] :16130 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && mi >= 0`
+  - [ ] :16227 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && sl >= 0 && l2_own_fid[sl] >= 0 && mi >= 0 && l2`
+- `l2_emit_unit`
+  - [ ] :16514 `l2_cur_mi: i`
+  - [ ] :17111 `l2_cur_mi: 0 - 1`
+  - [ ] :17114 `if: l2_for_owner(k) < 0 && c.fprintf(l2_out, "        @: Lmx l2_h%d 0\n        l2_h%d: l2_b%d\n        if: l2_h%d = 0\n            return: 1\n", k, k,`
+
+## D5. Unit/entry locals table `l2_loc_*` (69)
+
+- `(file head)`
+  - [ ] :181 `int: l2_loc_n 0`
+  - [ ] :182 `int: l2_loc_cap 0`
+  - [ ] :187 `@@: LmP0Text l2_loc_nm 0`
+  - [ ] :188 `@: int l2_loc_ty 0`
+- `l2_release`
+  - [ ] :897 `l2_loc_free()`
+- `l2_translate_unit`
+  - [ ] :2562 `l2_loc_free()`
+- `l2_loc_free`
+  - [ ] :3644 `if: l2_loc_nm != 0`
+  - [ ] :3645 `l2_xfree((cast: (@: void) l2_loc_nm))`
+  - [ ] :3647 `if: l2_loc_ty != 0`
+  - [ ] :3648 `l2_xfree((cast: (@: void) l2_loc_ty))`
+  - [ ] :3650 `l2_loc_nm: 0`
+  - [ ] :3651 `l2_loc_ty: 0`
+  - [ ] :3652 `l2_loc_n: 0`
+  - [ ] :3653 `l2_loc_cap: 0`
+- `l2_loc_find`
+  - [ ] :3658 `if: t = 0 || l2_loc_nm = 0`
+  - [ ] :3660 `while: i < l2_loc_n`
+  - [ ] :3661 `if: l2_text_same(l2_loc_nm[i], t)`
+- `l2_loc_add`
+  - [ ] :3786 `cap: l2_loc_cap`
+  - [ ] :3787 `if: l2_loc_n >= cap`
+  - [ ] :3811 `if: l2_loc_nm != 0 && l2_loc_n > 0`
+  - [ ] :3812 `memcpy((cast: (@: void) nn), (cast: (@: void) l2_loc_nm), (cast: (size_t) l2_loc_n) * psz)`
+  - [ ] :3814 `if: l2_loc_ty != 0 && l2_loc_n > 0`
+  - [ ] :3815 `memcpy((cast: (@: void) nt), (cast: (@: void) l2_loc_ty), (cast: (size_t) l2_loc_n) * c.sizeof(c.int))`
+  - [ ] :3817 `if: l2_loc_nm != 0`
+  - [ ] :3818 `l2_xfree((cast: (@: void) l2_loc_nm))`
+  - [ ] :3820 `if: l2_loc_ty != 0`
+  - [ ] :3821 `l2_xfree((cast: (@: void) l2_loc_ty))`
+  - [ ] :3823 `l2_loc_nm: nn`
+  - [ ] :3824 `l2_loc_ty: nt`
+  - [ ] :3825 `l2_loc_cap: cap`
+  - [ ] :3827 `l2_loc_nm[l2_loc_n]: (cast: (@: LmP0Text) t)`
+  - [ ] :3828 `l2_loc_ty[l2_loc_n]: ty`
+  - [ ] :3829 `l2_loc_n: l2_loc_n + 1`
+- `l2_colon_bound_ty`
+  - [ ] :5703 `i: l2_loc_find(name)`
+  - [ ] :5705 `\out_ty: l2_loc_ty[i]`
+- `l2_prefix_deref`
+  - [ ] :7126 `while: j < l2_loc_n && found = 0`
+  - [ ] :7127 `if: l2_loc_nm[j] != 0 && l2_loc_nm[j]\length = base_end - lead && memcmp(l2_loc_nm[j]\data, t\data + lead, base_end - lead) = 0`
+  - [ ] :7128 `ty: l2_loc_ty[j]`
+- `l2_index_head`
+  - [ ] :7185 `while: k < l2_loc_n`
+  - [ ] :7186 `if: l2_loc_nm[k] != 0 && l2_loc_nm[k]\length = n - lb - 2U && memcmp(l2_loc_nm[k]\data, t\data + lb + 1U, n - lb - 2U) = 0 && (l2_loc_ty[k] = 0 || l2_`
+  - [ ] :7225 `while: j < l2_loc_n`
+  - [ ] :7226 `if: l2_loc_nm[j] != 0 && l2_loc_nm[j]\length = lb && memcmp(l2_loc_nm[j]\data, t\data, lb) = 0`
+  - [ ] :7227 `if: l2_loc_ty[j] != 9 && l2_loc_ty[j] != 11 && l2_loc_ty[j] != 12 && l2_loc_ty[j] != 17 && l2_loc_ty[j] != 18 && l2_loc_ty[j] != 19 && l2_loc_ty[j] !=`
+- `l2_check_primary`
+  - [ ] :11578 `if: l2_loc_find(node\as\atom) >= 0`
+  - [ ] :11660 `if: mi < 0 && l2_loc_find(a0\value\as\atom) >= 0 && l2_loc_ty[l2_loc_find(a0\value\as\atom)] = 22`
+- `l2_check_body`
+  - [ ] :12052 `if: l2_loc_add(lnm, 3, path, nxt\value) != 0`
+  - [ ] :12058 `if: mi < 0 && l2_loc_add(lnm, 22, path, stmt) != 0`
+  - [ ] :12067 `while: k < l2_loc_n && l2_loc_nm != 0 && l2_loc_ty != 0`
+  - [ ] :12068 `lnm: l2_loc_nm[k]`
+  - [ ] :12069 `if: l2_loc_ty[k] = 22 && lnm != 0 && stmt\as\frame\head\length > lnm\length && stmt\as\frame\head\data[lnm\length] = 91 && memcmp(lnm\data, stmt\as\fr`
+  - [ ] :12091 `if: l2_loc_add(lnm, lty, path, stmt) != 0`
+  - [ ] :12117 `if: l2_loc_add(lnm, lty, path, stmt) != 0`
+  - [ ] :12123 `if: l2_loc_add(lnm, l2_own_store_ty(l2_own_decl_ty(stmt)), path, stmt) != 0`
+  - [ ] :12132 `if: l2_frame_head(stmt, "if") = 0 && mi < 0 && stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0 && l2_loc_find(stmt\as\frame`
+  - [ ] :12163 `if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_is_asgn(stmt) != 0 && stmt\as\frame\head != 0 && l2_ident(stmt\as\frame\head) != `
+- `l2_hidden_from`
+  - [ ] :12448 `li: l2_loc_find(nm)`
+  - [ ] :12449 `if: mi < 0 && li >= 0 && l2_colon_is_graph_ty(l2_loc_ty[li]) != 0`
+- `l2_prep`
+  - [ ] :13218 `if: (mi >= 0 && l2_ml_find(a0\value\as\atom) >= 0 && l2_ml_ty[l2_ml_find(a0\value\as\atom)] = 22) || (mi < 0 && l2_loc_find(a0\value\as\atom) >= 0 && `
+- `l2_ccall_box_int`
+  - [ ] :14537 `ei: l2_loc_find(node\as\atom)`
+  - [ ] :14538 `if: ei >= 0 && l2_loc_ty != 0`
+  - [ ] :14539 `ty: l2_loc_ty[ei]`
+- `l2_emit_ccall`
+  - [ ] :14670 `if: po < 0 && f\value\kind = c.LM_P0_NODE_ATOM && l2_loc_find(f\value\as\atom) >= 0 && p1 != 0 && p1\value != 0 && p1\value\kind = c.LM_P0_NODE_ATOM &`
+- `l2_emit_loc_stmt`
+  - [ ] :14852 `while: mi < 0 && ei < l2_loc_n && l2_loc_nm != 0 && l2_loc_ty != 0`
+  - [ ] :14853 `lnm: l2_loc_nm[ei]`
+  - [ ] :14858 `if: l2_loc_ty[ei] = 22 && lnm != 0 && stmt\as\frame\head\length > nl && stmt\as\frame\head\data[nl] = 91 && memcmp(lnm\data, stmt\as\frame\head\data, `
+  - [ ] :15053 `if: mi < 0 && l2_loc_find(fr\head) < 0`
+- `l2_emit_body`
+  - [ ] :15730 `l2_pdst: l2_loc_find(stmt\as\frame\head)`
+  - [ ] :15735 `if: l2_pdst >= 0 && l2_pkind = 0 && l2_loc_ty[l2_pdst] != 2`
+  - [ ] :15737 `if: l2_pdst >= 0 && l2_pkind = 1 && l2_loc_ty[l2_pdst] != 1`
+
+## D6. Unit own pre-pass and shared (mi < 0) own rows (21)
+
+- `l2_translate_unit`
+  - [ ] :2602 `if: l2_unit_decl_ty(item) != 0 && l2_take_unit_own(item, path) != 0`
+- `l2_own_find`
+  - [ ] :3304 `if: l2_own_mi[i] < 0 && l2_own_host[i] = 0 && l2_text_same(l2_own_name[i], t)`
+- `l2_own_find_decl`
+  - [ ] :3318 `if: mi < 0 && l2_own_mi[i] < 0`
+- `l2_own_find_occ`
+  - [ ] :3338 `if: mi < 0 && l2_own_mi[i] < 0 && l2_own_host[i] = 0`
+- `l2_own_find_last`
+  - [ ] :3357 `if: mi < 0 && l2_own_mi[i] < 0 && l2_own_host[i] = 0`
+- `l2_own_shared`
+  - [ ] :3428 `if: l2_own_mi[i] < 0 && l2_own_host[i] = 0 && l2_text_same(l2_own_name[i], t)`
+- `l2_own_add`
+  - [ ] :3441 `i: l2_own_shared(t)`
+- `l2_scan_ident`
+  - [ ] :6533 `if: oi >= 0 && l2_own_mi[oi] < 0`
+- `l2_scan_node`
+  - [ ] :6571 `if: oi >= 0 && l2_own_mi[oi] < 0`
+- `l2_scan_body`
+  - [ ] :6765 `if: oi >= 0 && l2_own_mi[oi] < 0`
+- `l2_own_index_head`
+  - [ ] :7628 `if: (l2_own_mi[oi] = mi || l2_own_mi[oi] < 0) && (l2_own_host[oi] = 0 || l2_scope_has(l2_own_host[oi])) && l2_own_is_array(l2_own_ty[oi]) != 0 && l2_o`
+- `l2_take_unit_own`
+  - [ ] :8192 `if: l2_own_shared(name) >= 0`
+- `l2_own_ctr`
+  - [ ] :8715 `if: oi < 0 || oi >= l2_own_n || l2_own_mi[oi] < 0`
+- `l2_layout_owns`
+  - [ ] :8774 `if: l2_own_host[oi] = 0 && l2_own_mi[oi] < 0`
+  - [ ] :8779 `if: l2_own_host[oi] = 0 && l2_own_mi[oi] >= 0`
+- `l2_take_named`
+  - [ ] :10728 `if: l2_own_shared(item\as\frame\head) >= 0`
+- `l2_take_eternal`
+  - [ ] :10767 `if: l2_own_shared(f\value\as\atom) >= 0`
+- `l2_collect_method`
+  - [ ] :11297 `if: l2_own_shared(nm) >= 0`
+- `l2_check_primary`
+  - [ ] :11600 `if: idx >= 0 && l2_own_mi[idx] < 0 && l2_own_is_array(l2_own_ty[idx]) = 0`
+- `l2_sizeof_name_bytes`
+  - [ ] :12784 `if: l2_own_mi[k] < 0 && l2_own_host[k] = 0 && l2_text_is_bytes(l2_own_name[k], d + b, n)`
+- `l2_prep`
+  - [ ] :13055 `if: idx >= 0 && l2_own_mi[idx] < 0 && l2_own_is_array(l2_own_ty[idx]) = 0`
+
+## D7. parse_unit / parse_library split and inferred library mode (13)
+
+- `(file head)`
+  - [ ] :8 `int: l2_library_mode 0`
+- `l2_write_sym`
+  - [ ] :1927 `if: l2_library_mode != 0 && c.fprintf(out, "l2_u%08X%08X_m%d", l2_module_hash_a, l2_module_hash_b, i) < 0`
+  - [ ] :1929 `if: l2_library_mode = 0 && c.fprintf(out, "l2_m%d", i) < 0`
+- `l2_tok_sym`
+  - [ ] :1936 `if: l2_library_mode != 0 && c.sprintf(dest, "l2_u%08X%08X_m%d", l2_module_hash_a, l2_module_hash_b, i) < 0`
+  - [ ] :1938 `if: l2_library_mode = 0 && c.sprintf(dest, "l2_m%d", i) < 0`
+- `l2_translate_unit`
+  - [ ] :2544 `l2_library_mode: 0`
+  - [ ] :2657 `l2_library_mode: 1`
+  - [ ] :2658 `return: l2_parse_library(path)`
+- `l2_emit_unit`
+  - [ ] :16363 `if: l2_library_mode != 0 && c.fprintf(l2_out, "define: l2_program_arena l2_u%08X%08X_arena\ndefine: l2_program_unit l2_u%08X%08X_program_unit\ndefine:`
+  - [ ] :16384 `if: l2_library_mode != 0 && c.fprintf(l2_out, "define: l2_program_entry l2_u%08X%08X_entry\ndefine: l2_library_open l2_u%08X%08X_open\ndefine: l2_libr`
+  - [ ] :16447 `if: l2_library_mode = 0 && (l2_m_value_used = 0 || l2_m_value_used[i] = 0)`
+  - [ ] :17125 `if: l2_library_mode != 0 && fputs("        return: 0\n", l2_out) < 0`
+  - [ ] :17134 `if: l2_library_mode != 0`
+
+## Harness pins that depend on the entry layout (69 pins in 44 rows)
+
+Measured on a full `tools/l2_harness.ps1` run of `2f06b77` (114 OK; the only red row is the untracked `unit_occ_sticky_selector`). Reasons: `inlined-main` = the pin lies inside the main body inlined into `l2_program_entry`; `fixed-unit-index` = the pin spells a unit child index, and S2 shifts every unit child by one (child[0] becomes the entry descriptor); `method/occurrence numbering` = the pin spells `l2_m<i>` or `l2_c<i>`; `entry adapter text` = the pin spells the adapter or its root open. S2 regenerates each pin from the S2 translator's measured output; none is predicted here.
+
+- `unit_array_empty` (eternal-runs)
+  - [ ] Absent `l2_program_entry, 5000U, 0U, 0U)` -- entry adapter text
+- `unit_array_field` (eternal-runs)
+  - [ ] Absent `l2_program_entry, 5000U, 0U, 0U)` -- entry adapter text
+- `unit_call_args_control_split` (eternal-runs)
+  - [ ] Debt `l2_t1: l2_m0(l2_c0\parent, l2_c0, (1), 2)` -- inlined-main, method/occurrence numbering
+- `unit_call_args_controls` (eternal-runs)
+  - [ ] Debt `l2_t3: l2_m1(l2_c2\parent, l2_c2, 1, 2)` -- inlined-main, method/occurrence numbering
+  - [ ] Debt `l2_t5: l2_m1(l2_c4\parent, l2_c4, 1, 2)` -- inlined-main, method/occurrence numbering
+- `unit_call_args_empty_paren` (eternal-runs)
+  - [ ] Debt `l2_t1: l2_m0(l2_c0\parent, l2_c0)` -- inlined-main, method/occurrence numbering
+- `unit_call_args_empty_vertical` (eternal-runs)
+  - [ ] Debt `l2_t1: l2_m0(l2_c0\parent, l2_c0)` -- inlined-main, method/occurrence numbering
+- `unit_call_args_paren_seq` (eternal-runs)
+  - [ ] Debt `l2_t1: l2_m0(l2_c0\parent, l2_c0, 1, 2)` -- inlined-main, method/occurrence numbering
+- `unit_callable_formal_descriptor` (eternal-runs)
+  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+- `unit_char_own_publish` (eternal-runs)
+  - [ ] Debt `lmx_char_rebind_known(l2_xp[0], ((cast: (int) hi) & 255))` -- inlined-main
+- `unit_colon_callable_receiver` (eternal-runs)
+  - [ ] Debt `l2_m0(l2_c0\parent, l2_c0, 7)` -- inlined-main, method/occurrence numbering
+  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+- `unit_colon_existing_value_update` (eternal-runs)
+  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+- `unit_colon_explicit_parent_update` (eternal-runs)
+  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+- `unit_colon_formal_update` (eternal-runs)
+  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+- `unit_colon_hidden_update` (eternal-runs)
+  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+- `unit_colon_method_dynamic_precedence` (eternal-runs)
+  - [ ] Debt `l2_m0(l2_c0\parent, l2_c0, l2_p1_0, l2_msg, @ l2_t1, @ l2_te1)` -- method/occurrence numbering
+- `unit_colon_method_lexical_model` (eternal-runs)
+  - [ ] Debt `l2_m0(l2_c0\parent, l2_c0, lmx_arena_ref_struct(l2_c0\parent, 4U), node, @ l2_t1, @ l2_te1)` -- inlined-main, fixed-unit-index, method/occurrence numbering
+- `unit_colon_model_decl` (eternal-runs)
+  - [ ] Debt `lmx_merge_owned(l2_mops, 1U, l2_mbody, l2_entry_unit, 0, l2_program_arena, l2_program_arena, @ l2_mresult)` -- inlined-main
+  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+- `unit_eternal_branch` (eternal-runs)
+  - [ ] Absent `l2_program_entry, 5000U, 0U, 0U)` -- entry adapter text
+  - [ ] Debt `if: lmx_root_open(@ l2_program_root, l2_program_entry, 5000U) != c.LMX_ROOT_OK` -- entry adapter text
+- `unit_eternal_many` (eternal-runs)
+  - [ ] Absent `l2_program_entry, 5000U, 0U, 0U)` -- entry adapter text
+- `unit_eternal_multi_profile_merge_refused` (eternal-runs)
+  - [ ] Absent `l2_program_entry, 5000U, 0U, 0U)` -- entry adapter text
+  - [ ] Debt `lmx_merge_profiles_owned(l2_mops, 2U, l2_mbody, l2_entry_unit, 0, l2_program_arena, l2_program_arena, l2_mprofiles, 2U, @ l2_mresult)` -- inlined-main
+- `unit_eternal_physical_profiles` (eternal-runs)
+  - [ ] Absent `l2_program_entry, 5000U, 0U, 0U)` -- entry adapter text
+- `unit_eternal_shape` (eternal-runs)
+  - [ ] Absent `l2_program_entry, 5000U, 0U, 0U)` -- entry adapter text
+- `unit_eternal_two` (eternal-runs)
+  - [ ] Absent `l2_program_entry, 5000U, 0U, 0U)` -- entry adapter text
+- `unit_eternal_xref` (eternal-runs)
+  - [ ] Absent `l2_program_entry, 5000U, 0U, 0U)` -- entry adapter text
+- `unit_implements_admission` (eternal-runs)
+  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+- `unit_implements_argument` (eternal-runs)
+  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+- `unit_implements_assignment` (eternal-runs)
+  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+- `unit_implements_methods` (eternal-runs)
+  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+- `unit_implements_namespace` (eternal-runs)
+  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+- `unit_implements_primitives` (eternal-runs)
+  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+- `unit_implements_return` (eternal-runs)
+  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+- `unit_merge_in_method` (eternal-runs)
+  - [ ] Absent `l2_program_entry, 5000U, 0U, 0U)` -- entry adapter text
+  - [ ] Debt `l2_m0(l2_c2\parent, l2_c2, l2_msg, @ l2_t3, @ l2_te3)` -- method/occurrence numbering
+  - [ ] Debt `l2_m2(l2_c0\parent, l2_c0, node, @ l2_t1, @ l2_te1)` -- inlined-main, method/occurrence numbering
+  - [ ] Debt `l2_m3(l2_c0\parent, l2_c0, l2_msg, @ l2_te1)` -- method/occurrence numbering
+  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+- `unit_merge_site` (eternal-runs)
+  - [ ] Absent `l2_program_entry, 5000U, 0U, 0U)` -- entry adapter text
+  - [ ] Debt `lmx_merge_profiles_owned` -- inlined-main
+- `unit_named_addr_gap` (eternal-runs)
+  - [ ] Debt `(cast: (@: size_t) l2_pxp[0])` -- inlined-main
+- `unit_nested_body_else` (eternal-runs)
+  - [ ] Debt `l2_h0: lmx_arena_ref_struct(self, 1U)` -- fixed-unit-index
+  - [ ] Debt `l2_h1: lmx_arena_ref_struct(self, 2U)` -- fixed-unit-index
+  - [ ] Debt `lmx_arena_ref_cell(l2_h1, 0U)` -- fixed-unit-index
+  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+- `unit_nested_body_for` (eternal-runs)
+  - [ ] Debt `l2_h0: lmx_arena_ref_struct(self, 1U)` -- fixed-unit-index
+  - [ ] Debt `lmx_arena_ref_cell(l2_h0, 1U)` -- fixed-unit-index
+  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+- `unit_nested_body_while` (eternal-runs)
+  - [ ] Debt `l2_h0: lmx_arena_ref_struct(self, 2U)` -- fixed-unit-index
+  - [ ] Debt `lmx_arena_ref_cell(l2_h0, 0U)` -- fixed-unit-index
+  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+- `unit_node_path_nested_own` (eternal-runs)
+  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+- `unit_occ_arg_slots` (eternal-runs)
+  - [ ] Debt `l2_q0_from: lmx_arena_ref_cell(self, 1U)` -- fixed-unit-index
+  - [ ] Debt `l2_q1_from: lmx_arena_ref_cell(self, 2U)` -- fixed-unit-index
+  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+- `unit_puts_main_beside_method` (eternal-runs)
+  - [ ] Debt `c.puts("beside-method")` -- inlined-main
+- `unit_recursion` (eternal-runs)
+  - [ ] Debt `l2_m2(l2_c0\parent, l2_c0, l2_q7, l2_msg, @ l2_t1, @ l2_te1)` -- method/occurrence numbering
+  - [ ] Debt `l2_m2(l2_c4\parent, l2_c4, 2U, node, @ l2_t5, @ l2_te5)` -- inlined-main, method/occurrence numbering
+  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+- `unit_struct_decl_opp_call` (translates-with-debt)
+  - [ ] Debt `l2_t1: l2_m0(l2_c0\parent, l2_c0, 1)` -- method/occurrence numbering
+- `unit_throwing_callable` (eternal-runs)
+  - [ ] Debt `l2_m0(l2_c0\parent, l2_c0, node, @ l2_t1, @ l2_te1)` -- inlined-main, method/occurrence numbering
+  - [ ] Debt `lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)` -- entry adapter text
+- `unit_universal_head_resolution` (eternal-runs)
+  - [ ] Debt `l2_t1: l2_m0(l2_c0\parent, l2_c0, 7)` -- inlined-main, method/occurrence numbering
+  - [ ] Debt `l2_t3: l2_m0(l2_c2\parent, l2_c2, 7)` -- inlined-main, method/occurrence numbering
+  - [ ] Debt `l2_t5: l2_m0(l2_c4\parent, l2_c4, 7)` -- inlined-main, method/occurrence numbering
+  - [ ] Debt `x: 2` -- inlined-main

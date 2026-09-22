@@ -45,6 +45,13 @@ const: @: char l2_call_node 0
 # Set while one call is being written: 1 when a field path selected the exact
 # callable occurrence held in l2_pst.
 int: l2_call_sel 0
+int: l2_call_fi 0
+int: l2_last_cf_req 0 - 1
+int: l2_cf_n 0
+int: l2_cf_cap 0
+@: int l2_cf_omi 0
+@: int l2_cf_fk 0
+@: int l2_cf_req 0
 int: l2_call_mi 0
 int: l2_call_k 0
 # How to spell the program unit Structure in the code being emitted right now.
@@ -434,6 +441,9 @@ prototype:
     fn: l2_nsty_set (int: mi; int: k; int: ni) int
     fn: l2_nsty_get (int: mi; int: k) int
     fn: l2_nsty_of_name (int: mi; const: @(LmP0Text name)) int
+    fn: l2_cf_set (int: omi; int: fk; int: req) int
+    fn: l2_cf_get (int: omi; int: fk) int
+    fn: l2_method_sig_compatible (int: cand; int: req) int
     fn: l2_uses_is_slash (const: @(LmP0Text text)) int
     fn: l2_uses_is_control (const: @(LmP0Text head)) int
     fn: l2_uses_slash_off (const: @(char data); size_t: length) size_t
@@ -459,7 +469,7 @@ prototype:
     fn: l2_mrs_take_entry (int: res; int: ni) int
     fn: l2_mrs_take_result (int: res; int: src) int
     fn: l2_first_own_child (int: mi) int
-    fn: l2_head_is_call (const: @(LmP0Text t); const: @(LmP0Structure body); unsigned: flags) int
+    fn: l2_head_is_call (const: @(LmP0Text t); const: @(LmP0Structure body); unsigned: flags; int: mi) int
     fn: l2_head_method (const: @(LmP0Text t)) int
     fn: l2_emit_path_bail (int: mi; const: @(char ind)) int
     fn: l2_join_path (@: LmP0Field field; int: cnt; @: char buf; size_t: cap) size_t
@@ -5493,6 +5503,14 @@ return: l2_dt_of_own(l2_own_ty_of_param(ft))
 
 fn: l2_colon_is_graph_ty (int: ty) int
     int: fi
+    int: oty
+    # Declared graph formals store dt_of_own(1000+foreign); recover foreign @: Lmx.
+    if: ty > 1
+        oty: l2_own_of_dt(ty)
+        if: oty >= 1000 && oty < 2000
+            ty: l2_ft_of_own(oty)
+        ---
+    ---
     if: ty < 100
         return: 0
     fi: ty - 100
@@ -10200,10 +10218,21 @@ return: 0 - 1
 # that ends at a callable field is a call; an empty argument list cannot
 # be an update. Everything else with a path head is an update, and a
 # wrong one is reported against the field it names.
-fn: l2_head_is_call (const: @(LmP0Text t); const: @(LmP0Structure body); unsigned: flags) int
+fn: l2_head_is_call (const: @(LmP0Text t); const: @(LmP0Structure body); unsigned: flags; int: mi) int
     int: k 0
+    int: fi
+    int: req
     if: t = 0
         return: 0
+    if: mi >= 0
+        fi: l2_formal_find(mi, t)
+        if: fi >= 0
+            req: l2_cf_get(mi, fi)
+            if: req >= 0
+                return: 1
+            ---
+        ---
+    ---
     if: l2_find_method(t) >= 0
         return: 1
     if: t\data = 0 || t\length >= 256U
@@ -10732,6 +10761,8 @@ fn: l2_typed_formal (const: @(LmP0Node node); const: @(char path); @@: LmP0Text 
     @: LmP0Field g
     const: @: LmP0Node inner
     int: depth
+    int: req_mi
+    l2_last_cf_req: 0 - 1
     if: out_ty = 0 || out_name = 0
         return: l2_error(path, node, "incompatible entry signature")
     if: node != 0 && node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && node\as\frame != 0 && node\as\frame\head != 0 && l2_ns_find(node\as\frame\head) >= 0
@@ -10889,12 +10920,22 @@ fn: l2_typed_formal (const: @(LmP0Node node); const: @(char path); @@: LmP0Text 
             \out_ty: 7
         \out_name: g\value\as\atom
         return: 0
-    # A by-value formal of a foreign type, `T: name` or `c.T: name` (Stage B):
-    # the type is spelled as written and the C compiler checks it.
+    # Callable formal `Method: name`: resolve method head before foreign-by-value.
+    # Graph type is @: Lmx; required method identity is retained in l2_last_cf_req.
     if: l2_frame_head(node, "const") = 0 && depth = 0 && node != 0 && node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && node\as\frame != 0 && node\as\frame\head != 0 && node\as\frame\trailer = 0 && node\as\frame\body != 0 && node\as\frame\body\trailer = 0 && l2_count_active(node\as\frame\body) = 1
         f: l2_next_active(node\as\frame\body\first_field)
         if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || l2_ident(f\value\as\atom) = 0
             return: l2_error(path, node, "incompatible entry signature")
+        req_mi: l2_find_method(node\as\frame\head)
+        if: req_mi >= 0
+            \out_ty: l2_colon_graph_ty()
+            if: \out_ty < 100
+                return: l2_error(path, node, "out of memory")
+            \out_name: f\value\as\atom
+            l2_last_cf_req: req_mi
+            return: 0
+        ---
+        # A by-value formal of a foreign type, `T: name` or `c.T: name` (Stage B).
         \out_ty: l2_foreign_byvalue(node\as\frame\head)
         if: \out_ty < 100
             return: l2_error(path, node, "incompatible entry signature")
@@ -11223,6 +11264,13 @@ fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path)) int
         if: l2_fn_set(l2_m_n, j, fa) != 0 || l2_ft_set(l2_m_n, j, ty) != 0
             l2_free_method(l2_m_n)
             return: l2_error(path, fn_node, "out of memory")
+        if: l2_last_cf_req >= 0
+            if: l2_cf_set(l2_m_n, j, l2_last_cf_req) != 0
+                l2_free_method(l2_m_n)
+                return: l2_error(path, fn_node, "out of memory")
+            ---
+            l2_last_cf_req: 0 - 1
+        ---
         if: p\value != 0 && p\value\kind = c.LM_P0_NODE_FRAME && p\value\as != 0 && p\value\as\frame != 0 && l2_ns_find(p\value\as\frame\head) >= 0
             if: l2_nsty_set(l2_m_n, j, l2_ns_find(p\value\as\frame\head)) != 0
                 l2_free_method(l2_m_n)
@@ -11364,8 +11412,8 @@ fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path)) int
         if: bound != 0
             l2_free_method(l2_m_n)
             return: 0
-        l2_free_method(l2_m_n)
-        return: l2_error(path, fn_node, "unsupported body")
+        # Descriptor-only contract: keep the METHOD row with null body (addr=0).
+    ---
     if: body != 0 && (body\kind != c.LM_P0_NODE_STRUCTURE || body\as = 0)
         return: l2_error(path, fn_node, "unsupported body")
     if: body != 0 && body\as\structure\trailer != 0
@@ -11390,6 +11438,9 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
     @: LmP0Field a0
     @: LmP0Field a1
     int: idx
+    int: fi
+    int: req_mi
+    int: cand_mi
     int: actual_span
     int: actual_i
     int: array_status
@@ -11514,6 +11565,13 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
     if: l2_text_eq(call\head, "implements")
         return: l2_check_implements(node, path)
     idx: l2_head_method(call\head)
+    fi: 0 - 1
+    if: idx < 0 && mi >= 0
+        fi: l2_formal_find(mi, call\head)
+        if: fi >= 0
+            idx: l2_cf_get(mi, fi)
+        ---
+    ---
     if: idx < 0 && l2_text_eq(call\head, "length")
         if: l2_array_length_own(node, mi) < 0
             return: l2_error(path, node, "length requires one known primitive own array")
@@ -11575,6 +11633,9 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
         return: l2_error(path, node, "unsupported trailer")
     if: l2_actual_count(call\body\first_field) != l2_m_arity[idx]
         return: l2_error(path, node, "incompatible entry signature")
+    # Descriptor-only required method is legal as a formal contract; refuse bodiless only on direct calls.
+    if: l2_m_body[idx] = 0 && fi < 0 && (l2_m_node[idx] = 0 || l2_m_node[idx]\as = 0 || l2_ret_tr(l2_m_node[idx]\as\frame) = 0)
+        return: l2_error(path, node, "not callable")
     if: mi >= 0
         l2_m_edge[l2_edge_off(mi, idx)]: 1
     a0: l2_next_active(call\body\first_field)
@@ -11586,6 +11647,17 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
         if: actual_span = 1 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_ATOM && l2_nsty_get(idx, actual_i) >= 0 && l2_m_node[idx] != 0 && l2_m_node[idx]\as != 0
             if: l2_admit_consumer_uses(a0\value\as\atom, l2_nsty_get(idx, actual_i), l2_fn(idx, actual_i), l2_m_node[idx]\as\frame, path, node, "function argument") != 0
                 return: 1
+            ---
+        ---
+        if: actual_span = 1 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_ATOM
+            req_mi: l2_cf_get(idx, actual_i)
+            if: req_mi >= 0
+                cand_mi: l2_find_method(a0\value\as\atom)
+                if: cand_mi < 0
+                    return: l2_error(path, node, "incompatible entry signature")
+                if: l2_method_sig_compatible(cand_mi, req_mi) = 0
+                    return: l2_error(path, node, "incompatible entry signature")
+                ---
             ---
         ---
         pmi: 0
@@ -11717,11 +11789,14 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
     size_t: array_index
     @: LmP0Field field
     @: LmP0Field nxt
+    @: LmP0Field a0
     @: LmP0Node stmt
     const: @: LmP0Frame fr
     @: LmP0Field last
     int: n
     int: k
+    int: cidx
+    int: cfi
     int: rj 0
     int: rf 0
     int: raw 1
@@ -12042,16 +12117,37 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             return: l2_error(path, stmt, "unsupported body")
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_count_active(fr\body) = 1 && l2_next_active(fr\body\first_field)\value != 0 && l2_next_active(fr\body\first_field)\value\kind = c.LM_P0_NODE_FRAME && l2_find_method(l2_next_active(fr\body\first_field)\value\as\frame\head) >= 0 && l2_m_ret[l2_find_method(l2_next_active(fr\body\first_field)\value\as\frame\head)] = 8
             return: l2_error(path, stmt, "incompatible entry signature")
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_head_is_call(fr\head, fr\body, fr\flags) != 0 && l2_check_primary(stmt, mi, path) != 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) != 0 && l2_check_primary(stmt, mi, path) != 0
             return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && l2_head_is_call(fr\head, fr\body, fr\flags) = 0 && l2_check_fields(fr\body\first_field, l2_count_active(fr\body), mi, path, stmt) != 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && l2_check_fields(fr\body\first_field, l2_count_active(fr\body), mi, path, stmt) != 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_count_active(fr\body) = 1 && l2_next_active(fr\body\first_field) != 0 && l2_next_active(fr\body\first_field)\value != 0 && l2_next_active(fr\body\first_field)\value\kind = c.LM_P0_NODE_ATOM && l2_nsty_get(mi, 0 - 1) >= 0
             if: l2_admit_consumer_uses(l2_next_active(fr\body\first_field)\value\as\atom, l2_nsty_get(mi, 0 - 1), l2_next_active(fr\body\first_field)\value\as\atom, l2_fn_frame(mi), path, stmt, "return value") != 0
                 return: 1
             ---
         ---
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_count_active(fr\body) != 0 && l2_head_is_call(fr\head, fr\body, fr\flags) = 0 && l2_check_fields(fr\body\first_field, l2_count_active(fr\body), mi, path, stmt) != 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_count_active(fr\body) = 1 && l2_next_active(fr\body\first_field) != 0 && l2_next_active(fr\body\first_field)\value != 0 && l2_next_active(fr\body\first_field)\value\kind = c.LM_P0_NODE_ATOM
+            a0: l2_next_active(fr\body\first_field)
+            cidx: l2_find_method(a0\value\as\atom)
+            if: cidx < 0 && mi >= 0
+                cfi: l2_formal_find(mi, a0\value\as\atom)
+                if: cfi >= 0
+                    cidx: l2_cf_get(mi, cfi)
+                ---
+            ---
+            if: cidx >= 0
+                if: l2_m_body[cidx] = 0 && cfi < 0 && (l2_m_node[cidx] = 0 || l2_m_node[cidx]\as = 0 || l2_ret_tr(l2_m_node[cidx]\as\frame) = 0)
+                    return: l2_error(path, stmt, "not callable")
+                if: l2_m_arity[cidx] != 0
+                    return: l2_error(path, stmt, "incompatible entry signature")
+                if: mi >= 0
+                    l2_m_edge[l2_edge_off(mi, cidx)]: 1
+                ---
+                field: l2_next_active(field\next)
+                continue
+            ---
+        ---
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_count_active(fr\body) != 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && l2_check_fields(fr\body\first_field, l2_count_active(fr\body), mi, path, stmt) != 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0
             field: l2_next_active(field\next)
@@ -12655,6 +12751,156 @@ fn: l2_prep_sizeof_name (const: @(LmP0Node node); int: mi; const: @(char ind); @
         e: e - 1U
 return: l2_sizeof_name_bytes(node, d, b, e, mi, ind, dest)
 
+# Nullary invoke of METHOD idx (unit occurrence or formal occurrence self).
+# call_sel 0 = unit method; 2 = callable formal at call_fi. Writes result token to dest.
+# Structural METHOD signature equality for callable-formal admission.
+fn: l2_cf_set (int: omi; int: fk; int: req) int
+    int: i 0
+    int: cap
+    @: int nomi 0
+    @: int nfk 0
+    @: int nreq 0
+    if: omi < 0 || fk < 0
+        return: 1
+    while: i < l2_cf_n
+        if: l2_cf_omi[i] = omi && l2_cf_fk[i] = fk
+            l2_cf_req[i]: req
+            return: 0
+        i: i + 1
+    ---
+    if: l2_cf_n >= l2_cf_cap
+        cap: l2_cf_cap
+        if: cap < 1
+            cap: 8
+        ---
+        while: cap <= l2_cf_n
+            if: cap > ((cast: (size_t) -1) / 2U)
+                return: 1
+            cap: cap * 2
+        ---
+        nomi: (cast: (@: int) l2_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
+        nfk: (cast: (@: int) l2_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
+        nreq: (cast: (@: int) l2_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
+        if: nomi = 0 || nfk = 0 || nreq = 0
+            if: nomi != 0
+                free((cast: (@: void) nomi))
+            ---
+            if: nfk != 0
+                free((cast: (@: void) nfk))
+            ---
+            if: nreq != 0
+                free((cast: (@: void) nreq))
+            ---
+            return: 1
+        ---
+        if: l2_cf_n > 0
+            memcpy((cast: (@: void) nomi), (cast: (@: void) l2_cf_omi), (cast: (size_t) l2_cf_n) * c.sizeof(c.int))
+            memcpy((cast: (@: void) nfk), (cast: (@: void) l2_cf_fk), (cast: (size_t) l2_cf_n) * c.sizeof(c.int))
+            memcpy((cast: (@: void) nreq), (cast: (@: void) l2_cf_req), (cast: (size_t) l2_cf_n) * c.sizeof(c.int))
+        ---
+        if: l2_cf_omi != 0
+            free((cast: (@: void) l2_cf_omi))
+        ---
+        if: l2_cf_fk != 0
+            free((cast: (@: void) l2_cf_fk))
+        ---
+        if: l2_cf_req != 0
+            free((cast: (@: void) l2_cf_req))
+        ---
+        l2_cf_omi: nomi
+        l2_cf_fk: nfk
+        l2_cf_req: nreq
+        l2_cf_cap: cap
+    ---
+    l2_cf_omi[l2_cf_n]: omi
+    l2_cf_fk[l2_cf_n]: fk
+    l2_cf_req[l2_cf_n]: req
+    l2_cf_n: l2_cf_n + 1
+return: 0
+
+fn: l2_cf_get (int: omi; int: fk) int
+    int: i 0
+    if: omi < 0 || fk < 0
+        return: 0 - 1
+    while: i < l2_cf_n
+        if: l2_cf_omi[i] = omi && l2_cf_fk[i] = fk
+            return: l2_cf_req[i]
+        i: i + 1
+    ---
+return: 0 - 1
+
+fn: l2_method_sig_compatible (int: cand; int: req) int
+    int: j 0
+    if: cand < 0 || req < 0
+        return: 0
+    if: cand = req
+        return: 1
+    if: l2_m_arity[cand] != l2_m_arity[req]
+        return: 0
+    if: l2_m_ret[cand] != l2_m_ret[req]
+        return: 0
+    while: j < l2_m_arity[cand]
+        if: l2_ft(cand, j) != l2_ft(req, j)
+            return: 0
+        j: j + 1
+return: 1
+
+fn: l2_emit_nullary_call (int: idx; int: call_sel; int: call_fi; int: mi; const: @(char ind); @: char dest) int
+    int: self_t
+    int: t
+    if: dest = 0
+        return: 1
+    if: call_sel = 2
+        if: mi < 0 || call_fi < 0
+            return: 1
+        if: idx >= 0 && l2_m_arity[idx] != 0
+            return: l2_error(l2_src, 0, "incompatible entry signature")
+        if: mi >= 0 && idx >= 0
+            l2_m_edge[l2_edge_off(mi, idx)]: 1
+        ---
+        if: l2_emit_checkpoint(mi, ind) != 0
+            return: 1
+        t: l2_tn
+        l2_tn: l2_tn + 1
+        if: c.fprintf(l2_out, "%sint: l2_t%d\n%sl2_t%d: lmx_call0(l2_program_arena, l2_p%d_%d)\n", ind, t, ind, t, mi, call_fi) < 0
+            return: 1
+        if: l2_emit_checkpoint(mi, ind) != 0
+            return: 1
+        return: l2_tok_temp(t, dest)
+    ---
+    if: idx < 0
+        return: 1
+    if: l2_m_arity[idx] != 0
+        return: l2_error(l2_src, 0, "incompatible entry signature")
+    if: l2_m_body[idx] = 0 && (l2_m_node[idx] = 0 || l2_m_node[idx]\as = 0 || l2_ret_tr(l2_m_node[idx]\as\frame) = 0)
+        return: l2_error(l2_src, 0, "not callable")
+    if: mi >= 0
+        l2_m_edge[l2_edge_off(mi, idx)]: 1
+    ---
+    self_t: l2_tn
+    l2_tn: l2_tn + 1
+    if: call_sel = 0 && c.fprintf(l2_out, "%s@: Lmx l2_c%d lmx_arena_ref_struct(%s, %uU)\n", ind, self_t, l2_unit_ref, (cast: (unsigned) (l2_unit_base + idx))) < 0
+        return: 1
+    if: call_sel != 0
+        return: 1
+    if: l2_emit_checkpoint(mi, ind) != 0
+        return: 1
+    t: l2_tn
+    l2_tn: l2_tn + 1
+    if: l2_m_ret[idx] = 2 && c.fprintf(l2_out, "%ssize_t: l2_t%d\n", ind, t) < 0
+        return: 1
+    if: l2_ret_uns(idx) = 0 && l2_m_ret[idx] != 2 && l2_m_ret[idx] != 8 && l2_m_ret[idx] < 100 && c.fprintf(l2_out, "%sint: l2_t%d\n", ind, t) < 0
+        return: 1
+    if: l2_m_ret[idx] != 8 && c.fprintf(l2_out, "%sl2_t%d: ", ind, t) < 0
+        return: 1
+    if: l2_write_sym(l2_out, idx) != 0
+        return: 1
+    if: c.fprintf(l2_out, "(l2_c%d\\parent, l2_c%d)\n", self_t, self_t) < 0
+        return: 1
+    if: l2_emit_checkpoint(mi, ind) != 0
+        return: 1
+return: l2_tok_temp(t, dest)
+
 fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest) int
     const: @: LmP0Frame call
     @: LmP0Field a0
@@ -12754,6 +13000,15 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
                 return: 1
             return: 0
         ---
+        # Method name as a value is the unit METHOD occurrence (@: Lmx), not the C ABI wrapper.
+        idx: l2_find_method(node\as\atom)
+        if: idx >= 0
+            if: l2_unit_ref = 0
+                return: 1
+            if: c.sprintf(dest, "lmx_arena_ref_struct(%s, %uU)", l2_unit_ref, (cast: (unsigned) (l2_unit_base + idx))) < 0
+                return: 1
+            return: 0
+        ---
         return: l2_tok_text(node\as\atom, dest, 256U)
     if: node\kind = c.LM_P0_NODE_FRAME && l2_frame_head(node, "@")
         return: l2_prep_addr(node, mi, ind, dest)
@@ -12806,6 +13061,18 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
             return: 1
         idx: l2_call_mi
         l2_call_sel: 1
+    if: idx < 0 && mi >= 0
+        l2_call_fi: l2_formal_find(mi, call\head)
+        if: l2_call_fi >= 0
+            idx: l2_cf_get(mi, l2_call_fi)
+            if: idx >= 0
+                l2_call_sel: 2
+            ---
+            if: idx < 0
+                idx: 0 - 1
+            ---
+        ---
+    ---
     if: idx < 0 && l2_text_eq(call\head, "length")
         return: l2_emit_array_length(l2_array_length_own(node, mi), ind, dest)
     raw_j: -1
@@ -13059,7 +13326,9 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
     l2_tn: l2_tn + 1
     if: l2_call_sel = 0 && c.fprintf(l2_out, "%s@: Lmx l2_c%d lmx_arena_ref_struct(%s, %uU)\n", ind, self_t, l2_unit_ref, (cast: (unsigned) (l2_unit_base + idx))) < 0
         return: 1
-    if: l2_call_sel != 0 && c.fprintf(l2_out, "%s@: Lmx l2_c%d l2_pst\n", ind, self_t) < 0
+    if: l2_call_sel = 1 && c.fprintf(l2_out, "%s@: Lmx l2_c%d l2_pst\n", ind, self_t) < 0
+        return: 1
+    if: l2_call_sel = 2 && c.fprintf(l2_out, "%s@: Lmx l2_c%d l2_p%d_%d\n", ind, self_t, mi, l2_call_fi) < 0
         return: 1
     a0: l2_next_active(call\body\first_field)
     t: 0
@@ -13145,6 +13414,21 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
         return: l2_prep_drop(acts, hides)
     if: l2_m_throws[idx] != 0 && c.fprintf(l2_out, "%sl2_ts%d: ", ind, t) < 0
         return: l2_prep_drop(acts, hides)
+    if: l2_call_sel = 2
+        if: nact != 0 || nhid != 0
+            l2_prep_drop(acts, hides)
+            return: l2_error(l2_src, node, "incompatible entry signature")
+        if: c.fprintf(l2_out, "lmx_call0(l2_program_arena, l2_c%d)\n", self_t) < 0
+            return: l2_prep_drop(acts, hides)
+        l2_prep_drop(acts, hides)
+        if: l2_emit_checkpoint(mi, ind) != 0
+            return: 1
+        return: l2_tok_temp(t, dest)
+    ---
+    if: l2_m_body[idx] = 0 && (l2_m_node[idx] = 0 || l2_m_node[idx]\as = 0 || l2_ret_tr(l2_m_node[idx]\as\frame) = 0)
+        l2_prep_drop(acts, hides)
+        return: l2_error(l2_src, node, "not callable")
+    ---
     if: l2_write_sym(l2_out, idx) != 0
         return: l2_prep_drop(acts, hides)
     # The native ABI keeps the two physical roles distinct: the fixed lexical
@@ -13515,6 +13799,7 @@ return: 0
 # One formal of a generated signature: its FORMAL type code, the method, and its position among
 # the method's parameters (declared formals first, hidden/dynamic inputs after them).
 fn: l2_emit_formal (int: ft; int: mi; int: idx) int
+    int: oty
     if: ft = 0 && c.fprintf(l2_out, "; int: l2_p%d_%d", mi, idx) < 0
         return: 1
     if: ft = 1 && c.fprintf(l2_out, "; char: l2_p%d_%d", mi, idx) < 0
@@ -13579,6 +13864,13 @@ fn: l2_emit_formal (int: ft; int: mi; int: idx) int
         return: 1
     if: ft = 20 && c.fprintf(l2_out, "; @@: size_t l2_p%d_%d", mi, idx) < 0
         return: 1
+    # Graph / foreign pointer formals may be stored as dt_of_own(1000+foreign).
+    if: ft > 1
+        oty: l2_own_of_dt(ft)
+        if: oty >= 1000 && oty < 2000
+            ft: l2_ft_of_own(oty)
+        ---
+    ---
     if: ft >= 100 && l2_emit_foreign_formal(l2_out, ft, mi, idx) != 0
         return: 1
 return: 0
@@ -15297,7 +15589,7 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
         # serves the entry and a method body with no second category.
         # ---------------------------------------------------------------
         l2_pn: 0U
-        if: stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && l2_is_path_head(stmt\as\frame\head) != 0 && l2_head_is_call(stmt\as\frame\head, stmt\as\frame\body, stmt\as\frame\flags) = 0 && l2_slash_own(stmt\as\frame\head) < 0 && l2_slash_for(mi, stmt\as\frame\head) < 0
+        if: stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && l2_is_path_head(stmt\as\frame\head) != 0 && l2_head_is_call(stmt\as\frame\head, stmt\as\frame\body, stmt\as\frame\flags, mi) = 0 && l2_slash_own(stmt\as\frame\head) < 0 && l2_slash_for(mi, stmt\as\frame\head) < 0
             if: l2_path_in_eternal(stmt\as\frame\head\data, stmt\as\frame\head\length) != 0
                 return: l2_error(l2_src, stmt, "an eternal branch field cannot be updated")
             if: l2_emit_path(stmt\as\frame\head\data, stmt\as\frame\head\length, mi, ind, stmt, @ l2_pkind) != 0
@@ -15661,7 +15953,28 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && mi >= 0 && l2_m_ret[mi] = 8
             field: l2_next_active(field\next)
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && (mi < 0 || l2_m_ret[mi] != 8) && l2_eval_fields(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok) != 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && (mi < 0 || l2_m_ret[mi] != 8) && l2_count_active(fr\body) = 1 && l2_next_active(fr\body\first_field) != 0 && l2_next_active(fr\body\first_field)\value != 0 && l2_next_active(fr\body\first_field)\value\kind = c.LM_P0_NODE_ATOM
+            oi: l2_find_method(l2_next_active(fr\body\first_field)\value\as\atom)
+            si: 0
+            # Reuse fi as formal index for call_sel=2; -1 means unit method.
+            fi: 0 - 1
+            if: oi < 0 && mi >= 0
+                fi: l2_formal_find(mi, l2_next_active(fr\body\first_field)\value\as\atom)
+                if: fi >= 0
+                    oi: l2_cf_get(mi, fi)
+                    si: 2
+                ---
+            ---
+            if: oi >= 0
+                if: l2_emit_nullary_call(oi, si, fi, mi, ind, l2_tok) != 0
+                    return: 1
+                ---
+            ---
+            if: oi < 0 && l2_eval_fields(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok) != 0
+                return: 1
+            ---
+        ---
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && (mi < 0 || l2_m_ret[mi] != 8) && (l2_count_active(fr\body) != 1 || l2_next_active(fr\body\first_field) = 0 || l2_next_active(fr\body\first_field)\value = 0 || l2_next_active(fr\body\first_field)\value\kind != c.LM_P0_NODE_ATOM) && l2_eval_fields(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok) != 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && (mi < 0 || l2_m_ret[mi] != 8) && l2_emit_poll(mi, ind) != 0
             return: 1
@@ -15738,44 +16051,44 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && fi >= 0
             field: l2_next_active(field\next)
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && fi < 0 && l2_head_is_call(fr\head, fr\body, fr\flags) != 0 && l2_prep(stmt, mi, ind, l2_tok) != 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && fi < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) != 0 && l2_prep(stmt, mi, ind, l2_tok) != 0
             return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags) != 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) != 0
             field: l2_next_active(field\next)
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags) = 0 && l2_is_known(fr\head) != 0 && l2_prep(stmt, mi, ind, l2_tok) != 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && l2_is_known(fr\head) != 0 && l2_prep(stmt, mi, ind, l2_tok) != 0
             return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags) = 0 && l2_is_known(fr\head) != 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && l2_is_known(fr\head) != 0
             field: l2_next_active(field\next)
         raw: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags) = 0 && l2_is_known(fr\head) = 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && l2_is_known(fr\head) = 0
             raw: l2_raw_head(fr\head, mi, @ rj, @ rf)
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags) = 0 && l2_is_known(fr\head) = 0 && raw = 0 && l2_eval_fields(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok) != 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && l2_is_known(fr\head) = 0 && raw = 0 && l2_eval_fields(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok) != 0
             return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags) = 0 && raw = 0 && rf = 0 && rj < l2_m_arity[mi] && c.fprintf(l2_out, "%sl2_p%d_%d\\data: %s\n", ind, mi, rj, l2_tok) < 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && raw = 0 && rf = 0 && rj < l2_m_arity[mi] && c.fprintf(l2_out, "%sl2_p%d_%d\\data: %s\n", ind, mi, rj, l2_tok) < 0
             return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags) = 0 && raw = 0 && rf = 0 && rj >= l2_m_arity[mi] && c.fprintf(l2_out, "%sl2_s%d_%d\\data: %s\n", ind, mi, rj - l2_m_arity[mi], l2_tok) < 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && raw = 0 && rf = 0 && rj >= l2_m_arity[mi] && c.fprintf(l2_out, "%sl2_s%d_%d\\data: %s\n", ind, mi, rj - l2_m_arity[mi], l2_tok) < 0
             return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags) = 0 && raw = 0 && rf = 1 && rj < l2_m_arity[mi] && c.fprintf(l2_out, "%sl2_p%d_%d\\length: %s\n", ind, mi, rj, l2_tok) < 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && raw = 0 && rf = 1 && rj < l2_m_arity[mi] && c.fprintf(l2_out, "%sl2_p%d_%d\\length: %s\n", ind, mi, rj, l2_tok) < 0
             return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags) = 0 && raw = 0 && rf = 1 && rj >= l2_m_arity[mi] && c.fprintf(l2_out, "%sl2_s%d_%d\\length: %s\n", ind, mi, rj - l2_m_arity[mi], l2_tok) < 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && raw = 0 && rf = 1 && rj >= l2_m_arity[mi] && c.fprintf(l2_out, "%sl2_s%d_%d\\length: %s\n", ind, mi, rj - l2_m_arity[mi], l2_tok) < 0
             return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags) = 0 && raw = 0 && rf = 2 && rj < l2_m_arity[mi] && c.fprintf(l2_out, "%sl2_p%d_%d\\columns: %s\n", ind, mi, rj, l2_tok) < 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && raw = 0 && rf = 2 && rj < l2_m_arity[mi] && c.fprintf(l2_out, "%sl2_p%d_%d\\columns: %s\n", ind, mi, rj, l2_tok) < 0
             return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags) = 0 && raw = 0 && rf = 3 && rj < l2_m_arity[mi] && c.fprintf(l2_out, "%sl2_p%d_%d\\count: %s\n", ind, mi, rj, l2_tok) < 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && raw = 0 && rf = 3 && rj < l2_m_arity[mi] && c.fprintf(l2_out, "%sl2_p%d_%d\\count: %s\n", ind, mi, rj, l2_tok) < 0
             return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags) = 0 && raw = 0 && rf = 4 && rj < l2_m_arity[mi] && c.fprintf(l2_out, "%sl2_p%d_%d\\capacity: %s\n", ind, mi, rj, l2_tok) < 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && raw = 0 && rf = 4 && rj < l2_m_arity[mi] && c.fprintf(l2_out, "%sl2_p%d_%d\\capacity: %s\n", ind, mi, rj, l2_tok) < 0
             return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags) = 0 && raw = 0 && rf = 5 && rj < l2_m_arity[mi] && c.fprintf(l2_out, "%sl2_p%d_%d\\%.*s: %s\n", ind, mi, rj, (cast: (int) (fr\head\length - l2_fn(mi, rj)\length - 1U)), fr\head\data + l2_fn(mi, rj)\length + 1U, l2_tok) < 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && raw = 0 && rf = 5 && rj < l2_m_arity[mi] && c.fprintf(l2_out, "%sl2_p%d_%d\\%.*s: %s\n", ind, mi, rj, (cast: (int) (fr\head\length - l2_fn(mi, rj)\length - 1U)), fr\head\data + l2_fn(mi, rj)\length + 1U, l2_tok) < 0
             return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags) = 0 && raw = 0 && rf = 5 && rj >= l2_m_arity[mi] + l2_m_sn[mi] && c.fprintf(l2_out, "%s%.*s: %s\n", ind, (cast: (int) fr\head\length), fr\head\data, l2_tok) < 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && raw = 0 && rf = 5 && rj >= l2_m_arity[mi] + l2_m_sn[mi] && c.fprintf(l2_out, "%s%.*s: %s\n", ind, (cast: (int) fr\head\length), fr\head\data, l2_tok) < 0
             return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags) = 0 && raw = 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && raw = 0
             field: l2_next_active(field\next)
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && fi < 0 && l2_head_is_call(fr\head, fr\body, fr\flags) = 0 && l2_is_known(fr\head) = 0 && raw != 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && fi < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && l2_is_known(fr\head) = 0 && raw != 0
             sl: l2_slash_own(fr\head)
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && fi < 0 && l2_head_is_call(fr\head, fr\body, fr\flags) = 0 && l2_is_known(fr\head) = 0 && raw != 0 && sl < 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && fi < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && l2_is_known(fr\head) = 0 && raw != 0 && sl < 0
             sl: l2_slash_for(mi, fr\head)
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && fi < 0 && l2_head_is_call(fr\head, fr\body, fr\flags) = 0 && l2_is_known(fr\head) = 0 && raw != 0 && sl < 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && fi < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && l2_is_known(fr\head) = 0 && raw != 0 && sl < 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && sl >= 0 && l2_eval_fields(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok) != 0
             return: 1
@@ -16223,9 +16536,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
         if: l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && l2_emit_body(l2_m_body[i]\as\structure, i, "    ") != 0
             fclose(l2_out)
             return: 1
-        if: l2_m_body[i] = 0 && l2_emit_body(0, i, "    ") != 0
-            fclose(l2_out)
-            return: 1
+        # Descriptor-only rows emit no native body (catalog addr stays 0).
         if: l2_m_node[i] != 0 && l2_m_node[i]\as != 0 && l2_emit_ret_tr(i, "    ", l2_ret_tr(l2_m_node[i]\as\frame)) != 0
             fclose(l2_out)
             return: 1
@@ -16496,13 +16807,19 @@ fn: l2_emit_unit (const: @(char out_path)) int
         if: c.fprintf(l2_out, "        leaf: lmx_arena_ref_struct(unit, %uU)\n        if: leaf = 0\n            return: 1\n", (cast: (unsigned) (l2_unit_base + i))) < 0
             fclose(l2_out)
             return: 1
-        if: fputs("        rec: lmx_method_new_owned(l2_program_arena)\n        if: rec = 0\n            return: 1\n        rec\\addr: (cast: (LmxEntry) ", l2_out) < 0
+        if: l2_m_body[i] = 0 && (l2_m_node[i] = 0 || l2_m_node[i]\as = 0 || l2_ret_tr(l2_m_node[i]\as\frame) = 0)
+            if: c.fprintf(l2_out, "        rec: lmx_method_new_owned(l2_program_arena)\n        if: rec = 0\n            return: 1\n        rec\\addr: (cast: (LmxEntry) 0)\n        rec\\sig: %uU\n        callable: lmx_callable_new_owned(l2_program_arena)\n        if: callable = 0\n            return: 1\n        callable\\method: rec\n        callable\\header: 0\n        if: lmx_arena_ref_store(leaf, 0U, (cast: (@: void) callable)) != 0\n            return: 1\n        l2_method_refs[%uU]: rec\n        if: rec\\sig != %uU\n            return: 1\n", l2_m_sig[i], (cast: (unsigned) i), l2_m_sig[i]) < 0
+                fclose(l2_out)
+                return: 1
+            ---
+        ---
+        if: (l2_m_body[i] != 0 || (l2_m_node[i] != 0 && l2_m_node[i]\as != 0 && l2_ret_tr(l2_m_node[i]\as\frame) != 0)) && fputs("        rec: lmx_method_new_owned(l2_program_arena)\n        if: rec = 0\n            return: 1\n        rec\\addr: (cast: (LmxEntry) ", l2_out) < 0
             fclose(l2_out)
             return: 1
-        if: l2_write_sym(l2_out, i) != 0
+        if: (l2_m_body[i] != 0 || (l2_m_node[i] != 0 && l2_m_node[i]\as != 0 && l2_ret_tr(l2_m_node[i]\as\frame) != 0)) && l2_write_sym(l2_out, i) != 0
             fclose(l2_out)
             return: 1
-        if: c.fprintf(l2_out, ")\n        rec\\sig: %uU\n        callable: lmx_callable_new_owned(l2_program_arena)\n        if: callable = 0\n            return: 1\n        callable\\method: rec\n        callable\\header: 0\n        if: lmx_arena_ref_store(leaf, 0U, (cast: (@: void) callable)) != 0\n            return: 1\n        # DEBT: method-admit / method-ranges acts absent in new kernel\n        l2_method_refs[%uU]: rec\n        if: rec\\sig != %uU\n            return: 1\n", l2_m_sig[i], (cast: (unsigned) i), l2_m_sig[i]) < 0
+        if: (l2_m_body[i] != 0 || (l2_m_node[i] != 0 && l2_m_node[i]\as != 0 && l2_ret_tr(l2_m_node[i]\as\frame) != 0)) && c.fprintf(l2_out, ")\n        rec\\sig: %uU\n        callable: lmx_callable_new_owned(l2_program_arena)\n        if: callable = 0\n            return: 1\n        callable\\method: rec\n        callable\\header: 0\n        if: lmx_arena_ref_store(leaf, 0U, (cast: (@: void) callable)) != 0\n            return: 1\n        # DEBT: method-admit / method-ranges acts absent in new kernel\n        l2_method_refs[%uU]: rec\n        if: rec\\sig != %uU\n            return: 1\n", l2_m_sig[i], (cast: (unsigned) i), l2_m_sig[i]) < 0
             fclose(l2_out)
             return: 1
         i: i + 1

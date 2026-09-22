@@ -765,7 +765,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_forward_mismatch.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'incompatible entry signature'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_forward_import_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unsupported body'; Absent = @(); Debt = @() },
+        Needle = 'not callable'; Absent = @(); Debt = @() },
     # GROK-PREGATE-20260922-01. Needles and Debt are measured on the live translator
     # (HEAD 4da4658 / gate l2trans). Colon updates with no qualified roots run under
     # the driver with 0 roots; graph/const/type refusals stay l2trans-refuses.
@@ -808,6 +808,14 @@ $fixtures = @(
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_message\graph: unit', 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)') },
+    [pscustomobject]@{ Name = 'unit_callable_formal_descriptor.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
+        Debt = @('l2_message\graph: unit', 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)') },
+    [pscustomobject]@{ Name = 'unit_callable_descriptor_direct_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'not callable'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_callable_formal_sig_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'incompatible entry signature'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_colon_hidden_update.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');

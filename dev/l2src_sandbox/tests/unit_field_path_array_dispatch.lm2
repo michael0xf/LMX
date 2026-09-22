@@ -1,0 +1,34 @@
+Model:
+    size_t: value 1U
+end: Model
+
+# FABLE-SONNET-UNIT-LEVEL-ROOTS-20260923-117: l2_own_index_tail and
+# l2_array_length_own (length()) generalized past the two literal roots
+# "for"/"node" -- fresh (an ordinary own field, not "for" or "node") gates
+# buf\[i] and length(...) exactly as node\/for\ already did, reusing the
+# same l2_own_find-by-name lookup for the array itself. Read position only:
+# fresh\buf[0]: 7 as an ASSIGNMENT TARGET does not reach l2_own_index_head
+# at all -- it is routed into l2_check_primary's call-head-as-path check
+# instead ("unknown field path segment"), because -113's l2_path_root now
+# recognizes fresh as a valid path root and l2_is_path_head claims the
+# whole statement before the array-specific dispatch gets a turn. node\
+# buf[0]: 7 does NOT hit this (node is never itself an own field, so
+# l2_path_root never matches it and the statement reaches the array path
+# untouched) -- the interaction is specific to a root that is a genuine
+# own field, not a pre-existing gap in the write side generally. Not
+# attempted here, reported instead.
+fn: build () int
+    Model: fresh
+    []: int buf 3
+    buf[0]: 7
+    buf[1]: 8
+    int: got
+    got: fresh\buf[0]
+    if: got != 7
+        return: 95
+    if: length(fresh\buf) != 3
+        return: 96
+    return: 0
+end: build
+
+return: build()

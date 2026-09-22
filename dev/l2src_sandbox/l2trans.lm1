@@ -10194,23 +10194,16 @@ fn: l2_first_own_child (int: mi) int
     ---
 return: 0 - 1
 
-# Is this statement a CALL rather than an update? The parse tree of
-#     A\x: 5U      and     A\x(5U)
-# is identical, so the spelling alone cannot decide. Two things can:
-#   - the path ends at a CALLABLE field, which an update could never target;
-#   - the argument list is EMPTY, which an update could never be.
-# Everything else with a path head is an update, and a wrong one is reported
-# against the field it names.
+# Is this statement a CALL rather than an update? Block, short/colon and
+# parenthesized forms must select the same operation. COMPACT/COLON flags
+# do not choose here. An existing METHOD is a call in every form; a path
+# that ends at a callable field is a call; an empty argument list cannot
+# be an update. Everything else with a path head is an update, and a
+# wrong one is reported against the field it names.
 fn: l2_head_is_call (const: @(LmP0Text t); const: @(LmP0Structure body); unsigned: flags) int
     int: k 0
     if: t = 0
         return: 0
-    # Parentheses are preserved in the P0 frame flags.  They decide the
-    # otherwise ambiguous machine-field case exactly: p\fn(...) is a call,
-    # while p\field: value is an update.  Colon calls remain decidable from a
-    # known L2 METHOD descriptor below.
-    if: (flags & c.LM_P0_FRAME_COMPACT) != 0U
-        return: 1
     if: l2_find_method(t) >= 0
         return: 1
     if: t\data = 0 || t\length >= 256U

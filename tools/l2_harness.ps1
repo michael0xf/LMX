@@ -771,8 +771,25 @@ $fixtures = @(
     # the driver with 0 roots; graph/const/type refusals stay l2trans-refuses.
     [pscustomobject]@{ Name = 'unit_colon_callable_receiver.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
-        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
-        Debt = @('l2_message\graph: unit', 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)') },
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'merge');
+        Debt = @('l2_m0(l2_c0\parent, l2_c0, 7)', 'l2_message\graph: unit', 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)') },
+    # GROK-UNIVERSAL-RESOLUTION-PARTA-20260922-03. Three call forms must share one
+    # physical METHOD op; an existing int is assigned. Debt/Absent distinguish that.
+    [pscustomobject]@{ Name = 'unit_universal_head_resolution.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'merge');
+        Debt = @('l2_t1: l2_m0(l2_c0\parent, l2_c0, 7)',
+                 'l2_t3: l2_m0(l2_c2\parent, l2_c2, 7)',
+                 'l2_t5: l2_m0(l2_c4\parent, l2_c4, 7)',
+                 'x: 2') },
+    # One logical negative fixture, three TUs: l2trans reports only the first
+    # diagnostic. Needle is the converged class for every representable form.
+    [pscustomobject]@{ Name = 'unit_universal_absent_paren.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_universal_absent_colon.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_universal_absent_vertical.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_colon_existing_value_update.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');

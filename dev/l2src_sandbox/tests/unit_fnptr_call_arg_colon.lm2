@@ -1,11 +1,15 @@
 predef: "l2src/tests/fnptr_local_forms.h.lm1"
 
-# BATCHC-76 opposite for Batch B: decl+init (not post-decl colon assign) + compact call
+# BATCHC-76: nested arg-position ty40 call, colon
+fn: wrap (@: void p) @: void
+    return: p
+end: wrap
+
 fn: probe (const: @(L2TestAllocVTable av); size_t: n) @: void
     L2TestAllocFn: f av\alloc
     if: f = 0
         return: 0
-    return: f(n)
+    return: wrap(f: n)
 end: probe
 
 fn: main () int

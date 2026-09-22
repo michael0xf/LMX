@@ -154,8 +154,8 @@ Acceptance:
 ### Известные места, где форма сейчас меняет смысл
 
 - [x] В `l2_head_is_call` раннее решение по `COMPACT` удалено коммитом `f858cea`: `l2_find_method` выполняется до path-kind fallback, а тело больше не читает `LM_P0_FRAME_COMPACT`. Сохранять это как regression-инвариант и не переоткрывать без нового evidence.
-- [ ] Аудировать `COMPACT`-ветки function-pointer, raw-field и C/predef call checking/emission по тому же принципу: удалить только form-based precedence, не удаляя правильную проверку разрешённой callable-головы.
-- [ ] Удалить `COMPACT`-исключения из распознавания локальных объявлений и неподдержанных численных типов.
+- [x] Аудировать `COMPACT`-ветки function-pointer, raw-field и C/predef call checking/emission по тому же принципу: удалить только form-based precedence, не удаляя правильную проверку разрешённой callable-головы. (GROKBOT-COMPACT-RAWFIELD-BATCHA-72 + COMPACT-FNPTR-BATCHC-76: `rg LM_P0_FRAME_COMPACT` на `dev/l2src_sandbox/l2trans.lm1` = 0 semantic reads; ty40 call = resolved KIND/type 40 in all forms; raw_fld=5 и c.sizeof carve-outs сохранены.)
+- [x] Удалить `COMPACT`-исключения из распознавания локальных объявлений и неподдержанных численных типов. (GROKBOT-COMPACT-DECL-BATCHB-75: `l2_struct_local` + `l2_unimpl_numeric`.)
 - [ ] Удалить `COLON` как признак assignment/unknown-type routing в `l1trans.lm1`, если правило равноценности подтверждено и для L1.
 - [ ] Добавить parity-проверки stable `l2src`, `dev/l2src_sandbox` и self-build mirrors.
 

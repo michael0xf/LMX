@@ -865,11 +865,30 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_rawfield_colon.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
         Absent = @();
         Debt = @('l2_p0_0\zz(1)') },
-    # Opposite control: ty40 colon assign must stay assignment (COMPACT still required
-    # for fnptr call). Absent is the mis-call shape if ty40 COMPACT were dropped.
-    [pscustomobject]@{ Name = 'unit_fnptr_colon_assign.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+    # COMPACT-FNPTR-BATCHC-76: ty40 callable-first in all forms; decl+init via type head.
+    [pscustomobject]@{ Name = 'unit_fnptr_decl_init.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
         Absent = @('f(l2_p0_0\alloc)');
-        Debt = @('f: l2_p0_0\alloc') },
+        Debt = @('L2TestAllocFn: f l2_p0_0\alloc') },
+    [pscustomobject]@{ Name = 'unit_fnptr_call_compact.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+        Absent = @('f: l2_p0_1');
+        Debt = @('L2TestAllocFn: f l2_p0_0\alloc', 'f(l2_p0_1)') },
+    [pscustomobject]@{ Name = 'unit_fnptr_call_colon.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+        Absent = @('f: l2_p0_1');
+        Debt = @('L2TestAllocFn: f l2_p0_0\alloc', 'f(l2_p0_1)') },
+    [pscustomobject]@{ Name = 'unit_fnptr_call_vertical.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+        Absent = @('f: l2_p0_1');
+        Debt = @('L2TestAllocFn: f l2_p0_0\alloc', 'f(l2_p0_1)') },
+    [pscustomobject]@{ Name = 'unit_fnptr_call_arg_compact.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+        Absent = @();
+        Debt = @('L2TestAllocFn: f l2_p1_0\alloc', 'f(l2_p1_1)') },
+    [pscustomobject]@{ Name = 'unit_fnptr_call_arg_colon.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+        Absent = @();
+        Debt = @('L2TestAllocFn: f l2_p1_0\alloc', 'f(l2_p1_1)') },
+    [pscustomobject]@{ Name = 'unit_fnptr_call_sig_refuse.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unsupported body'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_fnptr_noncallable_assign.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+        Absent = @();
+        Debt = @('l2_q0: 7') },
     # COMPACT-DECL-BATCHB-75: struct local form-independent; float refuse form-independent;
     # opposite controls for fnptr call and ordinary call.
     [pscustomobject]@{ Name = 'unit_struct_decl_colon.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
@@ -883,7 +902,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_float_refuse_compact.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'by-value float local not yet implemented'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_struct_decl_opp_fnptr_call.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
-        Absent = @('BatchBPoint:'); Debt = @('f: l2_p0_0\alloc', 'return: f(l2_p0_1)') },
+        Absent = @('BatchBPoint:', 'f: l2_p0_0\alloc'); Debt = @('L2TestAllocFn: f l2_p0_0\alloc', 'return: f(l2_p0_1)') },
     [pscustomobject]@{ Name = 'unit_struct_decl_opp_call.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
         Absent = @(); Debt = @('l2_t1: l2_m0(l2_c0\parent, l2_c0, 1)') }
     [pscustomobject]@{ Name = 'unit_colon_hidden_update.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';

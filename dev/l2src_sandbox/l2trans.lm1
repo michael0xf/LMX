@@ -11606,7 +11606,7 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
         if: call\body = 0
             return: l2_error(path, node, "incompatible entry signature")
         return: l2_check_fields(call\body\first_field, l2_count_active(call\body), mi, path, node)
-    if: idx < 0 && (l2_predef_has_function(call\head) != 0 || (mi >= 0 && l2_ml_find(call\head) >= 0 && l2_ml_ty[l2_ml_find(call\head)] = 40 && (call\flags & c.LM_P0_FRAME_COMPACT) != 0U))
+    if: idx < 0 && (l2_predef_has_function(call\head) != 0 || (mi >= 0 && l2_ml_find(call\head) >= 0 && l2_ml_ty[l2_ml_find(call\head)] = 40))
         if: call\trailer != 0 || call\body = 0 || call\body\trailer != 0
             return: l2_error(path, node, "unsupported trailer")
         return: l2_check_fields(call\body\first_field, l2_count_active(call\body), mi, path, node)
@@ -12024,9 +12024,9 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
         if: l2_frame_head(stmt, "if") = 0 && mi >= 0 && l2_const_local_ty(stmt, @ lnm, @ lty) = 0 && l2_ml_find(lnm) >= 0
             field: l2_next_active(field\next)
             continue
-        # A fnptr local is called only in compact form: `f(n)`. `f: value` is an
-        # assignment (the P0 flags tell them apart, as in l2_head_is_call).
-        if: l2_frame_head(stmt, "if") = 0 && mi >= 0 && stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0 && l2_ml_find(stmt\as\frame\head) >= 0 && l2_ml_ty[l2_ml_find(stmt\as\frame\head)] = 40 && (stmt\as\frame\flags & c.LM_P0_FRAME_COMPACT) != 0U
+        # A resolved fnptr local (type 40) is a call in any surface form:
+        # parenthesized, colon, or vertical. Type-headed decl+init is l2_fnptr_local; later "f: value" is a call.
+        if: l2_frame_head(stmt, "if") = 0 && mi >= 0 && stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0 && l2_ml_find(stmt\as\frame\head) >= 0 && l2_ml_ty[l2_ml_find(stmt\as\frame\head)] = 40
             if: stmt\as\frame\body != 0 && l2_check_fields(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), mi, path, stmt) != 0
                 return: 1
             field: l2_next_active(field\next)
@@ -13077,7 +13077,7 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
     raw_fld: -1
     if: idx < 0
         k: l2_raw_head(call\head, mi, @ raw_j, @ raw_fld)
-    if: idx < 0 && l2_text_eq(call\head, "c.sizeof") = 0 && (l2_c_door(call\head) != 0 || l2_predef_has_function(call\head) != 0 || (mi >= 0 && l2_ml_find(call\head) >= 0 && l2_ml_ty[l2_ml_find(call\head)] = 40 && (call\flags & c.LM_P0_FRAME_COMPACT) != 0U) || (k = 0 && raw_fld = 5))
+    if: idx < 0 && l2_text_eq(call\head, "c.sizeof") = 0 && (l2_c_door(call\head) != 0 || l2_predef_has_function(call\head) != 0 || (mi >= 0 && l2_ml_find(call\head) >= 0 && l2_ml_ty[l2_ml_find(call\head)] = 40) || (k = 0 && raw_fld = 5))
         l2_ccall_into: dest
         if: l2_emit_ccall(node, mi, ind) != 0
             l2_ccall_into: 0
@@ -14818,7 +14818,7 @@ fn: l2_emit_loc_stmt (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
         return: 0
     # A call through a function-pointer local, before the assignment path: the
     # head names what is CALLED, not what is assigned to.
-    if: mi >= 0 && stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0 && l2_ml_find(stmt\as\frame\head) >= 0 && l2_ml_ty[l2_ml_find(stmt\as\frame\head)] = 40 && (stmt\as\frame\flags & c.LM_P0_FRAME_COMPACT) != 0U
+    if: mi >= 0 && stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0 && l2_ml_find(stmt\as\frame\head) >= 0 && l2_ml_ty[l2_ml_find(stmt\as\frame\head)] = 40
         if: l2_emit_fnptr_call(stmt, mi, ind) != 0
             return: 2
         return: 0

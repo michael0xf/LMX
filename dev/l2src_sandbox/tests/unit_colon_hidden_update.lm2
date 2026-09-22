@@ -1,0 +1,20 @@
+fn: bump_hidden () int
+    hidden: hidden + 1
+    return: hidden
+end: bump_hidden
+
+fn: outer () int
+    int: hidden
+    int: got
+    hidden: 4
+    got: bump_hidden()
+    if: got != 5
+        return: 83
+    if: hidden != 4
+        return: 84
+    return: 0
+end: outer
+
+fn: main () int
+    return: outer()
+end: main

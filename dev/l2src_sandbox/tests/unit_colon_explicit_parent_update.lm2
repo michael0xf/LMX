@@ -1,0 +1,19 @@
+int: shared
+
+fn: write_parent () int
+    if: 1
+        if: 1
+            node\shared: 9
+        ---
+    ---
+    return: 0
+end: write_parent
+
+fn: main () int
+    int: ignored
+    shared: 4
+    ignored: write_parent()
+    if: shared != 9
+        return: 87
+    return: 0
+end: main

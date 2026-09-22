@@ -60,7 +60,12 @@ param(
     [string]$VerifyEvidence,
     # -PeInfo <path> prints one file's raw and masked identity and refuses on anything that is not
     # a well-formed PE.  The mask offsets are derived from THAT file's e_lfanew.
-    [string]$PeInfo
+    [string]$PeInfo,
+    # -Only is a comma-separated list of wildcard patterns matched against fixture Name.
+    # Staging, l2trans and the driver still run; unmatched fixture rows are skipped.
+    # Focused pregate (GROK-PREGATE-20260922-01):
+    #   powershell -NoProfile -ExecutionPolicy Bypass -File tools\l2_harness.ps1 -Only 'unit_colon_*,unit_eternal_*'
+    [string]$Only
 )
 $ErrorActionPreference = 'Continue'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
@@ -787,8 +792,96 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_forward_mismatch.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'incompatible entry signature'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_forward_import_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unsupported body'; Absent = @(); Debt = @() }
+        Needle = 'unsupported body'; Absent = @(); Debt = @() },
+    # GROK-PREGATE-20260922-01. Needles and Debt are measured on the live translator
+    # (HEAD 4da4658 / gate l2trans). Colon updates with no qualified roots run under
+    # the driver with 0 roots; graph/const/type refusals stay l2trans-refuses.
+    [pscustomobject]@{ Name = 'unit_colon_callable_receiver.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
+        Debt = @('l2_message\graph: unit', 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)') },
+    [pscustomobject]@{ Name = 'unit_colon_existing_value_update.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
+        Debt = @('l2_message\graph: unit', 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)') },
+    [pscustomobject]@{ Name = 'unit_colon_explicit_parent_update.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
+        Debt = @('l2_message\graph: unit', 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)') },
+    [pscustomobject]@{ Name = 'unit_colon_formal_update.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
+        Debt = @('l2_message\graph: unit', 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)') },
+    [pscustomobject]@{ Name = 'unit_colon_hidden_update.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
+        Debt = @('l2_message\graph: unit', 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)') },
+    [pscustomobject]@{ Name = 'unit_colon_model_decl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
+        Debt = @('lmx_merge_owned(l2_mops, 1U, l2_mbody, unit, 0, l2_program_arena, l2_program_arena, @ l2_mresult)',
+                 'l2_message\graph: unit',
+                 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)') },
+    [pscustomobject]@{ Name = 'unit_colon_method_lexical_model.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
+        Debt = @('l2_m0(l2_c0\parent, l2_c0, lmx_arena_ref_struct(l2_c0\parent, 4U), node, @ l2_t1, @ l2_te1)',
+                 'lmx_merge_owned(l2_mops, 1U, l2_mbody, node, 0, l2_program_arena, l2_program_arena, @ l2_mresult)',
+                 'l2_message\graph: unit') },
+    [pscustomobject]@{ Name = 'unit_colon_method_dynamic_precedence.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
+        Debt = @('l2_m0(l2_c0\parent, l2_c0, l2_p1_0, l2_msg, @ l2_t1, @ l2_te1)',
+                 'lmx_merge_owned(l2_mops, 1U, l2_mbody, node, 0, l2_program_arena, l2_program_arena, @ l2_mresult)',
+                 'l2_message\graph: unit') },
+    [pscustomobject]@{ Name = 'unit_colon_undeclared_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_colon_unknown_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'assignment value has unknown type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_colon_incompatible_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_colon_graph_const_target_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'const write'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_colon_graph_unknown_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'assignment value has unknown type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_colon_graph_update_admission_blocked.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'graph assignment admission requires receiving-expression tests'; Absent = @(); Debt = @() },
+    # Two identical full qualifier occurrences get distinct physical profile identities.
+    # Plain in the same file stays mutable/unprofiled and is not a qualified root.
+    [pscustomobject]@{ Name = 'unit_eternal_physical_profiles.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('2', 'size', '0', '0', '7', 'size', '1', '0', '7');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
+        Debt = @('c.array: [2]: @: Lmx l2_program_qualified_roots',
+                 'l2_program_qualified_roots[0U]: l2_nsp[0]',
+                 'l2_program_qualified_roots[1U]: l2_nsp[1]',
+                 'l2_eprofile1: lmx_node_new_profiled(l2_program_arena, unit)',
+                 'if: l2_eprofile0 = l2_eprofile1',
+                 'l2_message\graph: unit') },
+    # Filename says refused: the merge result is an ordinary Structure (not a third
+    # qualified root). The translator emits merge_profiles_owned and both operands
+    # remain exported roots. This is not an l2trans refusal.
+    [pscustomobject]@{ Name = 'unit_eternal_multi_profile_merge_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('2', 'size', '0', '0', '1', 'size', '1', '0', '1');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
+        Debt = @('c.array: [2]: @: Lmx l2_program_qualified_roots',
+                 'l2_program_qualified_roots[0U]: l2_nsp[0]',
+                 'l2_program_qualified_roots[1U]: l2_nsp[1]',
+                 'lmx_merge_profiles_owned(l2_mops, 2U, l2_mbody, unit, 0, l2_program_arena, l2_program_arena, l2_mprofiles, 2U, @ l2_mresult)',
+                 'l2_message\graph: unit') },
+    [pscustomobject]@{ Name = 'unit_eternal_profile_partial_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'independent branch requires const'; Absent = @(); Debt = @() }
 )
+
+if ($Only) {
+    $patterns = @($Only -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' })
+    $fixtures = @($fixtures | Where-Object {
+        $name = $_.Name
+        foreach ($p in $patterns) { if ($name -like $p) { return $true } }
+        return $false
+    })
+    if ($fixtures.Count -eq 0) { throw ('l2_harness: -Only matched no fixtures: ' + $Only) }
+    Write-Output ('l2_harness: -Only ' + $Only + ' -> ' + $fixtures.Count + ' fixtures')
+}
 
 foreach ($fx in $fixtures) {
     $stem = [System.IO.Path]::GetFileNameWithoutExtension($fx.Name)

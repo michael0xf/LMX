@@ -589,7 +589,6 @@ prototype:
     fn: l2_call_args (const: @(LmP0Structure body)) @: LmP0Field
     fn: l2_skip_span (@: LmP0Field a; int: span) @: LmP0Field
     fn: l2_typed_formal (const: @(LmP0Node node); const: @(char path); @@: LmP0Text out_name; @: int out_ty) int
-    fn: l2_simple_puts_main (const: @(LmP0Node body_node)) int
     fn: l2_is_slash (const: @(LmP0Text t)) int
     fn: l2_is_binop (const: @(LmP0Text t)) int
     fn: l2_raw_path (const: @(char pd); size_t: pn; int: mi; @: int out_j; @: int out_fld) int
@@ -2348,31 +2347,6 @@ fn: l2_write_text (@: FILE out; const: @(LmP0Text t)) int
         return: 1
 return: 0
 
-fn: l2_check_puts (const: @(LmP0Node stmt); const: @(char path)) int
-    const: @: LmP0Frame fr
-    @: LmP0Field arg
-    int: n
-    if: l2_frame_head(stmt, "c.puts") = 0
-        return: l2_error(path, stmt, "unsupported body")
-    fr: stmt\as\frame
-    if: fr\trailer != 0
-        return: l2_error(path, stmt, "unsupported body")
-    if: fr\body = 0
-        return: l2_error(path, stmt, "unsupported argument")
-    if: fr\body\trailer != 0
-        return: l2_error(path, stmt, "unsupported trailer")
-    n: l2_count_active(fr\body)
-    if: n = 0
-        return: l2_error(path, stmt, "unsupported argument")
-    if: n != 1
-        return: l2_error(path, stmt, "extra argument")
-    arg: l2_next_active(fr\body\first_field)
-    if: arg\value = 0 || arg\value\kind != c.LM_P0_NODE_ATOM
-        return: l2_error(path, stmt, "unsupported argument")
-    if: l2_quoted(arg\value\as\atom) = 0
-        return: l2_error(path, stmt, "unsupported argument")
-return: 0
-
 fn: l2_take_return_stmt (const: @(LmP0Node stmt); const: @(char path); @@: LmP0Text out_lit) int
     const: @: LmP0Frame ret
     @: LmP0Field arg
@@ -2417,43 +2391,6 @@ fn: l2_take_return_fields (const: @(LmP0Structure body); const: @(char path); co
     \out_lit: arg\value\as\atom
 return: 0
 
-fn: l2_simple_puts_main (const: @(LmP0Node body_node)) int
-    @: LmP0Field field
-    @: LmP0Field nxt
-    const: @: LmP0Node stmt
-    if: body_node = 0 || body_node\kind != c.LM_P0_NODE_STRUCTURE || body_node\as = 0
-        return: 0
-    field: l2_next_active(body_node\as\structure\first_field)
-    if: field = 0
-        return: 0
-    while: field != 0
-        stmt: field\value
-        nxt: l2_next_active(field\next)
-        if: nxt = 0
-            if: l2_frame_head(stmt, "return") = 0
-                return: 0
-            ---
-            return: 1
-        if: l2_frame_head(stmt, "c.puts") = 0
-            return: 0
-        field: nxt
-return: 0
-
-fn: l2_take_puts_body (const: @(LmP0Node body_node); const: @(char path)) int
-    @: LmP0Field field
-    if: body_node = 0
-        return: 0
-    if: body_node\kind != c.LM_P0_NODE_STRUCTURE || body_node\as = 0
-        return: l2_error(path, body_node, "unsupported body")
-    if: body_node\as\structure\trailer != 0
-        return: l2_error(path, body_node, "unsupported trailer")
-    field: l2_next_active(body_node\as\structure\first_field)
-    while: field != 0
-        if: l2_check_puts(field\value, path) != 0
-            return: 1
-        field: l2_next_active(field\next)
-return: 0
-
 fn: l2_take_body (const: @(LmP0Node body_node); const: @(char path); @@: LmP0Text out_lit) int
     @: LmP0Field field
     @: LmP0Field nxt
@@ -2473,13 +2410,16 @@ fn: l2_take_body (const: @(LmP0Node body_node); const: @(char path); @@: LmP0Tex
             return: l2_take_return_stmt(stmt, path, out_lit)
         if: l2_frame_head(stmt, "return")
             return: l2_error(path, stmt, "unsupported body")
-        if: l2_check_puts(stmt, path) != 0
-            return: 1
+        # Raw c.* statement door (replaces name-specific c.puts allowlist).
+        if: stmt = 0 || stmt\as = 0 || stmt\as\frame = 0 || l2_c_stmt_door(stmt\as\frame\head) = 0
+            return: l2_error(path, stmt, "unsupported body")
         field: nxt
 return: l2_error(path, body_node, "unsupported body")
 
 fn: l2_take_main_lit (const: @(LmP0Node fn_node); const: @(char path); @@: LmP0Text out_lit; @@: LmP0Structure out_body) int
     @: LmP0Field field
+    @: LmP0Field scan
+    int: only_c 0
     const: @: LmP0Frame fn_frame
     const: @: LmP0Node name
     const: @: LmP0Node params
@@ -2517,18 +2457,42 @@ fn: l2_take_main_lit (const: @(LmP0Node fn_node); const: @(char path); @@: LmP0T
     body: 0
     if: field != 0
         body: field\value
-    if: l2_ret_tr(fn_frame) != 0 && l2_take_puts_body(body, path) != 0
-        return: 1
+    # Trailer return + body stmts: was take_puts_body (c.puts only). Now any raw
+    # c.* statement door stmt is admitted; other middles stay unsupported.
+    if: l2_ret_tr(fn_frame) != 0 && body != 0 && body\kind = c.LM_P0_NODE_STRUCTURE && body\as != 0
+        field: l2_next_active(body\as\structure\first_field)
+        while: field != 0
+            if: field\value = 0 || field\value\as = 0 || field\value\as\frame = 0 || l2_c_stmt_door(field\value\as\frame\head) = 0
+                return: l2_error(path, field\value, "unsupported body")
+            field: l2_next_active(field\next)
+        ---
+        \out_body: body\as\structure
+    ---
     if: l2_ret_tr(fn_frame) != 0 && l2_take_return_fields(l2_ret_tr(fn_frame), path, fn_node, out_lit) != 0
         return: 1
-    if: l2_ret_tr(fn_frame) = 0 && body != 0 && body\kind = c.LM_P0_NODE_STRUCTURE && body\as != 0 && l2_simple_puts_main(body) = 0
-        l2_main_node: fn_node
-        l2_main_body: body\as\structure
-        if: l2_check_body(body\as\structure, -1, path, 0) != 0
-            return: 1
-        l2_entry_full: 1
-        \out_body: body\as\structure
-        return: 0
+    # Non-c middle stmts in main go through check_body + entry_full. Pure c.*
+    # middles (and lit-only) stay on the simple emit path via take_body.
+    if: l2_ret_tr(fn_frame) = 0 && body != 0 && body\kind = c.LM_P0_NODE_STRUCTURE && body\as != 0
+        field: l2_next_active(body\as\structure\first_field)
+        if: field != 0 && l2_next_active(field\next) != 0
+            only_c: 1
+            scan: field
+            while: scan != 0 && l2_next_active(scan\next) != 0
+                if: scan\value = 0 || scan\value\as = 0 || scan\value\as\frame = 0 || l2_c_stmt_door(scan\value\as\frame\head) = 0
+                    only_c: 0
+                scan: l2_next_active(scan\next)
+            ---
+            if: only_c = 0
+                l2_main_node: fn_node
+                l2_main_body: body\as\structure
+                if: l2_check_body(body\as\structure, -1, path, 0) != 0
+                    return: 1
+                l2_entry_full: 1
+                \out_body: body\as\structure
+                return: 0
+            ---
+        ---
+    ---
     if: l2_ret_tr(fn_frame) = 0 && l2_take_body(body, path, out_lit) != 0
         return: 1
     if: body != 0 && (body\kind != c.LM_P0_NODE_STRUCTURE || body\as = 0)
@@ -2747,18 +2711,36 @@ fn: l2_parse_library (const: @(char path)) int
     l2_leaf_mode: 1
 return: 0
 
-fn: l2_emit_puts_line (@: FILE out; const: @(LmP0Node stmt)) int
+fn: l2_emit_c_stmt_line (@: FILE out; const: @(LmP0Node stmt)) int
     @: LmP0Field arg
     @: LmP0Text t
-    arg: l2_next_active(stmt\as\frame\body\first_field)
-    if: fputs("        c.puts: ", out) < 0
+    const: @: LmP0Frame fr
+    int: first 1
+    if: stmt = 0 || stmt\as = 0 || stmt\as\frame = 0
         return: 1
-    t: arg\value\as\atom
-    if: l2_triple_q(t) != 0 && l2_write_triple_as_l1(out, t) != 0
+    fr: stmt\as\frame
+    if: fputs("        ", out) < 0 || l2_write_text(out, fr\head) != 0 || fputs("(", out) < 0
         return: 1
-    if: l2_triple_q(t) = 0 && l2_write_text(out, t) != 0
-        return: 1
-    if: fputs("\n", out) < 0
+    arg: 0
+    if: fr\body != 0
+        arg: l2_next_active(fr\body\first_field)
+    while: arg != 0
+        if: first = 0 && fputs(", ", out) < 0
+            return: 1
+        first: 0
+        if: arg\value = 0 || arg\value\as = 0
+            return: 1
+        if: arg\value\kind = c.LM_P0_NODE_ATOM
+            t: arg\value\as\atom
+            if: l2_triple_q(t) != 0 && l2_write_triple_as_l1(out, t) != 0
+                return: 1
+            if: l2_triple_q(t) = 0 && l2_write_text(out, t) != 0
+                return: 1
+        ---
+        if: arg\value\kind != c.LM_P0_NODE_ATOM
+            return: 1
+        arg: l2_next_active(arg\next)
+    if: fputs(")\n", out) < 0
         return: 1
 return: 0
 
@@ -2766,7 +2748,7 @@ fn: l2_emit_l1 (const: @(char out_path); const: @(LmP0Structure body); const: @(
     @: FILE out
     @: LmP0Field field
     @: LmP0Field nxt
-    int: puts_n 0
+    int: c_n 0
     if: out_path = 0
         return: 1
     if: l2_entry_full = 0 && (lit = 0 || lit\data = 0 || lit\length = 0U)
@@ -2777,7 +2759,7 @@ fn: l2_emit_l1 (const: @(char out_path); const: @(LmP0Structure body); const: @(
     while: field != 0
         nxt: l2_next_active(field\next)
         if: nxt != 0 || l2_frame_head(field\value, "return") = 0
-            puts_n: puts_n + 1
+            c_n: c_n + 1
         field: nxt
     out: c.fopen(out_path, "wb")
     if: out = 0
@@ -2792,7 +2774,7 @@ fn: l2_emit_l1 (const: @(char out_path); const: @(LmP0Structure body); const: @(
     if: l2_entry_full != 0 && c.fprintf(out, "predef: \"%slmx.h.lm1\" \"%slmx_root.h.lm1\"\n", l2_rt_root, l2_rt_root) < 0
         fclose(out)
         return: 1
-    if: l2_inc_n = 0 && (puts_n != 0 || l2_entry_full != 0) && fputs("include: \"<stdio.h>\"\n", out) < 0
+    if: l2_inc_n = 0 && (c_n != 0 || l2_entry_full != 0) && fputs("include: \"<stdio.h>\"\n", out) < 0
         fclose(out)
         return: 1
     if: l2_need_string != 0 && fputs("include: \"<string.h>\"\n", out) < 0
@@ -2821,7 +2803,7 @@ fn: l2_emit_l1 (const: @(char out_path); const: @(LmP0Structure body); const: @(
         field: l2_next_active(body\first_field)
     while: field != 0
         nxt: l2_next_active(field\next)
-        if: (nxt != 0 || l2_frame_head(field\value, "return") = 0) && l2_emit_puts_line(out, field\value) != 0
+        if: (nxt != 0 || l2_frame_head(field\value, "return") = 0) && l2_emit_c_stmt_line(out, field\value) != 0
             fclose(out)
             return: 1
         field: nxt
@@ -8942,9 +8924,8 @@ fn: l2_is_known (const: @(LmP0Text t)) int
         l2_need_p0: 1
         l2_need_diag: 1
     ---
-    # c.puts and c.array are statement forms with their own handling; they are
-    # not generic calls and stay out of the call path.
-    if: l2_text_eq(t, "c.puts") || l2_text_eq(t, "c.array")
+    # c.array is a declarator, not a generic call. c.puts uses the raw c.* door.
+    if: l2_text_eq(t, "c.array")
         return: 0
     if: t\length > 2U && t\data[0] = 99 && t\data[1] = 46
         return: 1
@@ -8969,12 +8950,12 @@ fn: l2_c_door (const: @(LmP0Text t)) int
         return: 0
 return: 1
 
-# A c.name statement the generic C call lowers. c.sizeof, c.puts and c.array
-# are forms with their own lowering.
+# A c.name statement the generic C call lowers. c.sizeof and c.array
+# still have their own lowering; c.puts uses the raw c.* door.
 fn: l2_c_stmt_door (const: @(LmP0Text t)) int
     if: t = 0 || t\data = 0 || t\length <= 2U || t\data[0] != 99 || t\data[1] != 46
         return: 0
-    if: l2_text_eq(t, "c.sizeof") || l2_text_eq(t, "c.puts") || l2_text_eq(t, "c.array")
+    if: l2_text_eq(t, "c.sizeof") || l2_text_eq(t, "c.array")
         return: 0
 return: 1
 

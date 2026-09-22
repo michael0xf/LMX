@@ -479,6 +479,11 @@ if ($driver) { Add-Row 'OK' 'build:eternal_driver' ($made.ToString() + ' kernel 
 # makes the question answerable before it exists.
 $fixtures = @(
     [pscustomobject]@{ Name = 'entry_return7.lm2'; Expect = 'runs'; Exit = 7; Needle = ''; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_puts_hello.lm2'; Expect = 'runs'; Exit = 0; Needle = ''; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_puts_seq.lm2'; Expect = 'runs'; Exit = 0; Needle = ''; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_puts_empty.lm2'; Expect = 'runs'; Exit = 0; Needle = ''; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_puts_nl.lm2'; Expect = 'runs'; Exit = 0; Needle = ''; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_puts_esc.lm2'; Expect = 'runs'; Exit = 0; Needle = ''; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'entry_ret_tr_bad.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'unsupported body'; Absent = @(); Debt = @() },
     # One return-literal rule for every callable: an int result literal must fit int in a lone
     # main (literal and full body), in main beside a method (body and trailer), and in a method.
@@ -939,6 +944,14 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_fnptr_call_args_nullary_value.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
         Absent = @('f(())', 'unsupported body');
         Debt = @('f()') },
+    [pscustomobject]@{ Name = 'unit_puts_method_body.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @();
+        Debt = @('c.puts("from-method")') },
+    [pscustomobject]@{ Name = 'unit_puts_main_beside_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @();
+        Debt = @('c.puts("beside-method")') },
     # COMPACT-DECL-BATCHB-75: struct local form-independent; float refuse form-independent;
     # opposite controls for fnptr call and ordinary call.
     [pscustomobject]@{ Name = 'unit_struct_decl_colon.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';

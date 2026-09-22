@@ -285,10 +285,10 @@ Acceptance:
 
 ### `c.puts` (removable closed cluster)
 
-- [ ] Спецификация L2 **не** задаёт name-specific семантику `c.puts`. Ordinary `c.*` call path уже токенизирует quoted arguments.
-- [ ] Удалить closed special checker/emitter cluster (`l2_simple_puts_main`, исключения в `l2_c_stmt_door`, специальные `frame_head`/`leaf` ветки); `c.puts` → ordinary foreign-call / `c.name` statement routing.
+- [x] Спецификация L2 **не** задаёт name-specific семантику `c.puts`. Ordinary `c.*` call path уже токенизирует quoted arguments.
+- [x] Удалить closed special checker/emitter cluster (`l2_simple_puts_main`, исключения в `l2_c_stmt_door`, специальные `frame_head`/`leaf` ветки); `c.puts` → ordinary foreign-call / `c.name` statement routing. (99 PART2: deleted puts helpers; door no longer excludes c.puts.)
 - [ ] Проверить derivation stdio include и ordinary `c.name` statement routing после удаления specials.
-- [ ] 20 puts fixtures сейчас ungated — добавить real witness, обновить diagnostics намеренно, ввести gate coverage.
+- [x] 20 puts fixtures сейчас ungated — добавить real witness, обновить diagnostics намеренно, ввести gate coverage. (Gated hello/seq/empty/nl/esc + method_body + main_beside_method; arity refusals deferred to C.)
 - [ ] L2-библиотека puts — обычный L2-код **без** `c.`; C puts — внешний C через ту же общую дверь `c.*`.
 
 ### L2 `c.array` (declarator, not a call)
@@ -303,8 +303,8 @@ Acceptance:
 **Норма (overrides -13 entity-kind / sizeof HOLD framing):** `c.*` — сырой дверной проход в C. L2 **не** ведёт registry foreign entities, **не** сканирует headers для словаря имён C, **не** классифицирует `c.sizeof` / `c.puts` как declared/builtin entity kinds.
 
 - [ ] Сделать raw-C door **syntax-transparent**: `c.sizeof(...)` понижается в C `sizeof(...)` через общий raw-C door; unevaluated семантика sizeof даёт **C compiler**, не L2 semantic resolution.
-- [ ] `c.puts(...)` проходит тем же raw-C door **без** name-specific L2 checker/emitter.
-- [ ] Удалить header scanners / entity dictionaries / name whitelists / special `c.*` semantic classification. Сначала **inventory** точных obsolete scanners/dictionaries (известные кандидаты в `dev/l2src_sandbox/l2trans.lm1`: `l2_c_header_walk`, `l2_c_header_chain_has`, `l2_c_header_chain_has_typedef`, `l2_predef_has_function`, `l2_predef_has_type`, `l2_predef_has_fnptr`, `l2_foreign_intern`, `l2_c_stmt_door` exclusions, `l2_simple_puts_main` — полный список уточнить inventory).
+- [x] `c.puts(...)` проходит тем же raw-C door **без** name-specific L2 checker/emitter.
+- [ ] Удалить header scanners / entity dictionaries / name whitelists / special `c.*` semantic classification. Сначала **inventory** точных obsolete scanners/dictionaries (известные кандидаты в `dev/l2src_sandbox/l2trans.lm1`: `l2_c_header_walk`, `l2_c_header_chain_has`, `l2_c_header_chain_has_typedef`, `l2_predef_has_function`, `l2_predef_has_type`, `l2_predef_has_fnptr`, `l2_foreign_intern`, `l2_c_stmt_door` exclusions, `l2_simple_puts_main` — полный список уточнить inventory). (99 PART2: deleted puts helpers; door no longer excludes c.puts.)
 - [ ] **Ownership/dependency:** DeepSeek ранее был tasked автором удалить эти scanners/dictionaries — **не дублировать и не отклоняться**; зафиксировать ownership/dependency и координировать. Grok Bot не invents параллельный removal path.
 - [ ] Preserve только mapping rules, реально нужные чтобы emit valid C; неизвестные механики — label for audit, **не** invent registry.
 

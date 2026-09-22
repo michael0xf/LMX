@@ -225,6 +225,16 @@ fn: main () int
     @: Lmx self 0
     @: Lmx poke 0
     @: Lmx qualified_writer 0
+    # Stage C (GROKBOT-CALLABLE-INTERP-STAGEC): nullary RET invoke + descriptor-only.
+    @: Lmx test 0
+    @: Lmx test2 0
+    @: Lmx test3 0
+    @: Lmx test4 0
+    @: Lmx host 0
+    @: Lmx empty_bag 0
+    @: Lmx wrap_bag 0
+    @: Lmx tramp 0
+    @: Lmx tramp2 0
     int: r 0
     int: v 0
     int: st 0
@@ -266,7 +276,7 @@ fn: main () int
     abox: lmx_int_new_owned(ga)
     unit: lmx_node_new_owned(ga)
     argv[0]: abox
-    if: groles = 0 || gplan_roles = 0 || flat = 0 || lens = 0 || paths = 0 || argv = 0 || gv = 0 || abox = 0 || unit = 0 || lmx_arena_refs_open_owned(ga, unit, 27U) != 0
+    if: groles = 0 || gplan_roles = 0 || flat = 0 || lens = 0 || paths = 0 || argv = 0 || gv = 0 || abox = 0 || unit = 0 || lmx_arena_refs_open_owned(ga, unit, 40U) != 0
         fputs("lmx_walk: unit\n", l1_stdout())
         return: 2
     ---
@@ -319,6 +329,12 @@ fn: main () int
     hop: mk_m(unit, 22U, 2U)
     self: mk_m(unit, 23U, 2U)
     poke: mk_m(unit, 24U, 4U)
+    # Stage C fixtures (slots 27..)
+    test: mk_m(unit, 27U, 2U)
+    test2: mk_m(unit, 28U, 2U)
+    test3: mk_m(unit, 29U, 1U)
+    test4: mk_m(unit, 30U, 2U)
+    host: mk_m(unit, 31U, 2U)
     # A subject: plain data, not a callable.  [ 7, 35 ]
     subject: pl(unit, 25U, 2U)
     icell(subject, 0U, 7)
@@ -558,6 +574,24 @@ fn: main () int
     n: fr(poke, 3U, c.LMX_WALK_OP_RET, 2U)
     argn(n, 1U, 0U)
 
+    # ---- Stage C: callable occurrence fixtures ------------------------------------
+    # test: return: 1
+    n: fr(test, 1U, c.LMX_WALK_OP_RET, 2U)
+    lit(n, 1U, 1)
+    # test2(f): return: f   -- RET of ARG nullary-activates when f is callable
+    n: fr(test2, 1U, c.LMX_WALK_OP_RET, 2U)
+    argn(n, 1U, 0U)
+    # test3: descriptor-only (CALLABLE child0, no body steps, header unset)
+    # test4(f): same as test2; formal is the test3 shape (descriptor-compatible pass of test)
+    n: fr(test4, 1U, c.LMX_WALK_OP_RET, 2U)
+    argn(n, 1U, 0U)
+    # host: return: 7  -- nullary callee for optional bag-arg CALL forms
+    n: fr(host, 1U, c.LMX_WALK_OP_RET, 2U)
+    lit(n, 1U, 7)
+    # empty anonymous Structure under unit (arg container); parent==caller set at use site
+    empty_bag: pl(unit, 32U, 0U)
+    wrap_bag: pl(unit, 33U, 1U)
+
     check(broken = 0, "construction")
     if: broken != 0
         c.printf("lmx_walk: %d construction steps failed\n", broken)
@@ -690,7 +724,7 @@ fn: main () int
 
     # No body node: nothing to walk, nothing is invented, nothing native is called.
     st: go(bare, 0, 0U, @ r, @ v)
-    check(st = c.LMX_WALK_NO_GRAPH, "a callable without body nodes is NO_GRAPH")
+    check(st = c.LMX_WALK_NOT_CALLABLE, "a callable without body nodes is NOT_CALLABLE (ready, nothing to walk)")
     st: go(unit, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_INVALID, "a Structure that is not a callable is refused")
 
@@ -867,6 +901,51 @@ fn: main () int
         st: go(copy, 0, 0U, @ r, @ v)
         check(st = c.LMX_WALK_OK && r = 4, "and runs again")
     ---
+
+    # ---- Stage C acceptance (GROKBOT-CALLABLE-INTERP-STAGEC-20260922-65) ----------
+    check(lmx_walk_prepare(gctx, ga, gplan_roles, test) = c.LMX_WALK_OK, "test prepared")
+    check(lmx_walk_prepare(gctx, ga, gplan_roles, test2) = c.LMX_WALK_OK, "test2 prepared")
+    check(lmx_walk_prepare(gctx, ga, gplan_roles, test4) = c.LMX_WALK_OK, "test4 prepared")
+    check(lmx_walk_prepare(gctx, ga, gplan_roles, host) = c.LMX_WALK_OK, "host prepared")
+    # test3 stays unprepared / header unset
+    info: (cast: (@: LmxCallable) lmx_arena_ref_value(test3, 0U))
+    check(info != 0 && info\header = 0, "test3 descriptor-only, header unset")
+    st: go(test, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && r = 1 && v = 1, "test: body return lit 1 => 1")
+    argv[0]: (cast: (@: void) test)
+    st: go(test2, argv, 1U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && r = 1 && v = 1, "test2: RET of ARG nullary-invokes test => 1")
+    st: go(test3, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_NOT_CALLABLE, "test3: descriptor-only CALL => NOT_CALLABLE")
+    # test4 formal constrained to test3 shape; pass test (compatible occurrence)
+    argv[0]: (cast: (@: void) test)
+    st: go(test4, argv, 1U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && r = 1 && v = 1, "test4: formal~test3, pass test => 1")
+    # optional: return: host(empty_bag) — sole empty Structure unwraps to zero args
+    tramp: mk_m(unit, 35U, 2U)
+    n: fr(tramp, 1U, c.LMX_WALK_OP_RET, 2U)
+    e: fr(n, 1U, c.LMX_WALK_OP_CALL, 3U)
+    ref(e, 1U, host)
+    if: empty_bag != 0
+        empty_bag\parent: e
+        check(lmx_arena_ref_store(e, 2U, (cast: (@: void) empty_bag)) = 0, "empty_bag under tramp CALL")
+    ---
+    check(lmx_walk_prepare(gctx, ga, gplan_roles, tramp) = c.LMX_WALK_OK, "tramp(empty bag) prepared")
+    st: go(tramp, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && r = 7 && v = 1, "CALL host with sole empty Structure => zero args, still 7")
+    # optional: return: test2(wrap_bag) — sole Structure wrapping one arg = direct arg
+    tramp2: mk_m(unit, 36U, 2U)
+    n: fr(tramp2, 1U, c.LMX_WALK_OP_RET, 2U)
+    e: fr(n, 1U, c.LMX_WALK_OP_CALL, 3U)
+    ref(e, 1U, test2)
+    if: wrap_bag != 0
+        wrap_bag\parent: e
+        check(lmx_arena_ref_store(e, 2U, (cast: (@: void) wrap_bag)) = 0, "wrap_bag under tramp2 CALL")
+        check(lmx_arena_ref_store(wrap_bag, 0U, (cast: (@: void) test)) = 0, "wrap_bag field0 = test")
+    ---
+    check(lmx_walk_prepare(gctx, ga, gplan_roles, tramp2) = c.LMX_WALK_OK, "tramp2(wrap test) prepared")
+    st: go(tramp2, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && r = 1 && v = 1, "CALL with sole Structure wrapping one arg => same as direct arg")
 
     free((cast: (@: void) argv))
     free((cast: (@: void) gv))

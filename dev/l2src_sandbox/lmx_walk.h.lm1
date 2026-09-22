@@ -175,6 +175,10 @@ define: LMX_WALK_UNSUPPORTED 5
 # and not LMX_WALK_NO_GRAPH.  It travels up unchanged to whoever mapped the activation; the
 # Thread reports it through the Thread ABI's own existing failure status (lmx_thread.lm1).
 define: LMX_WALK_PRIMITIVE 6
+# Native METHOD.addr=0 NOT_CALLABLE maps here: lmx_call_ready OK but nothing to walk
+# (no plan and no body steps). Distinct from NO_GRAPH (no callable descriptor / bare METHOD)
+# and from UNSUPPORTED (body steps exist but no plan). Never METHOD.addr for graph-walk.
+define: LMX_WALK_NOT_CALLABLE 7
 
 # What lmx_walk_op answers for a frame node whose code is not one of those below.
 define: LMX_WALK_OP_UNKNOWN -1

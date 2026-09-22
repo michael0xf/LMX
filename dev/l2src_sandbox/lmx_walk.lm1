@@ -1,4 +1,5 @@
 predef: "l2src/lmx_walk.h.lm1"
+predef: "l2src/lmx_call.lm1"
 predef: "l2src/lmx_implements.h.lm1"
 predef: "l2src/lmx_range.lm1"
 predef: "l2src/lmx_arena_refs.lm1"
@@ -185,12 +186,16 @@ return: (cast: (int) (lmx_range_profile(f\arena, p) = f\context\immutable_profil
 fn: lmx_walk_scan_node (@: LmxWalkFrame f; @: void node) int
     @: LmxWalkOwn o 0
     @: Lmx code 0
+    @: Lmx bag 0
     @: void target 0
+    @: void child 0
     @: LmxPrimitive prim 0
     @@: void from 0
     int: op
     int: status c.LMX_WALK_OK
     size_t: i
+    size_t: live 0U
+    size_t: j 0U
     # The counting pass is the one that checks a hand-built graph: there an operand is
     # asked of the arena like any field.  The load pass comes after it and trusts it.
     if: f\counting != 0
@@ -280,9 +285,38 @@ fn: lmx_walk_scan_node (@: LmxWalkFrame f; @: void node) int
         return: status
     # The operands that are nodes: put [put, holder, slot, value] from 3, call
     # [call, M, arg ...] from 2, everything else from 1.
+    # CALL-consumer bag form (same gate as lmx_walk_call): one live plain Structure
+    # after the callee => scan THAT structure's fields as args (OP_NONE data skipped).
     i: 1U
     if: op = c.LMX_WALK_OP_CALL
         i: 2U
+        live: 0U
+        bag: 0
+        while: i < (cast: (size_t) code\len)
+            child: lmx_arena_ref_value(code, i)
+            if: child != 0
+                live: live + 1U
+                bag: (cast: (@: Lmx) child)
+            ---
+            i: i + 1U
+        ---
+        if: live = 1U && bag != 0
+            if: lmx_walk_op(f, (cast: (@: void) bag)) = c.LMX_WALK_OP_NONE && lmx_walk_kind(f, (cast: (@: void) bag)) = c.LMX_KIND_STRUCT
+                if: bag\parent = code || bag\parent = 0
+                    j: 0U
+                    while: status = c.LMX_WALK_OK && j < (cast: (size_t) bag\len)
+                        child: lmx_arena_ref_value(bag, j)
+                        if: child != 0 && lmx_walk_op(f, child) != c.LMX_WALK_OP_NONE
+                            status: lmx_walk_scan_node(f, child)
+                        ---
+                        j: j + 1U
+                    ---
+                    return: status
+                ---
+            ---
+        ---
+        i: 2U
+    ---
     # prim [prim, record, arg ...]: the record at 1 is the primitive itself, by reference, and
     # is not a body node to scan; its arguments from 2 are.
     if: op = c.LMX_WALK_OP_PRIM
@@ -440,13 +474,18 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
     LmxScratchMark: mark
     @: LmxScratchMark pm 0
     @: Lmx callee 0
+    @: Lmx bag 0
+    @: Lmx child 0
     @: void room 0
     @@: void refs 0
     @@: void cells 0
     size_t: n
     size_t: i 0U
+    size_t: live 0U
+    size_t: arg0 2U
     int: present 0
     int: status c.LMX_WALK_OK
+    int: unwrap 0
     \out: 0
     if: code\len < 2
         return: c.LMX_WALK_INVALID
@@ -455,7 +494,36 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
     callee: lmx_arena_ref_struct(code, 1U)
     if: callee = 0
         return: c.LMX_WALK_INVALID
-    n: (cast: (size_t) code\len) - 2U
+    # CALL-consumer role only (FABLE-P0-FORM-AUDIT-56): after the callee, if the
+    # remaining body is exactly one live child and that child is a plain Structure
+    # (op NONE, kind STRUCT; prefer parent==code), unwrap and evaluate THAT
+    # structure's fields as args (empty => zero args). Otherwise keep direct
+    # children-as-args. Never tree-wide; declaration `mystruct: ()` is not a CALL.
+    i: 2U
+    while: i < (cast: (size_t) code\len)
+        child: lmx_arena_ref_struct(code, i)
+        if: child != 0
+            live: live + 1U
+            bag: child
+        ---
+        i: i + 1U
+    ---
+    if: live = 1U && bag != 0
+        if: lmx_walk_op(f, (cast: (@: void) bag)) = c.LMX_WALK_OP_NONE && lmx_walk_kind(f, (cast: (@: void) bag)) = c.LMX_KIND_STRUCT
+            if: bag\parent = code || bag\parent = 0
+                unwrap: 1
+            ---
+        ---
+    ---
+    if: unwrap != 0
+        n: (cast: (size_t) bag\len)
+        arg0: 0U
+    ---
+    if: unwrap = 0
+        n: (cast: (size_t) code\len) - 2U
+        bag: code
+        arg0: 2U
+    ---
     pm: @ mark
     if: lmx_scratch_mark(f\context\scratch, pm) != c.LMX_SCRATCH_OK
         return: c.LMX_WALK_INVALID
@@ -465,10 +533,18 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
         refs: (cast: (@@: void) room)
         cells: refs + n
     ---
+    i: 0U
     while: status = c.LMX_WALK_OK && i < n
         refs[i]: 0
         cells[i]: 0
-        status: lmx_walk_eval(f, lmx_arena_ref_value(code, i + 2U), (cast: (@: void) (cells + i)), refs + i)
+        child: (cast: (@: Lmx) lmx_arena_ref_value(bag, i + arg0))
+        # Unwrapped bag field that is plain data (no frame role): pass by reference.
+        # Frame-node fields still go through eval (LIT/ARG/OWN/...).
+        if: unwrap != 0 && child != 0 && lmx_walk_op(f, (cast: (@: void) child)) = c.LMX_WALK_OP_NONE
+            refs[i]: (cast: (@: void) child)
+        else:
+            status: lmx_walk_eval(f, (cast: (@: void) child), (cast: (@: void) (cells + i)), refs + i)
+        ---
         i: i + 1U
     ---
     # 21.6: dirty values are published before every outbound call, and nothing is
@@ -477,30 +553,17 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
         status: lmx_walk_checkpoint(f)
     if: status = c.LMX_WALK_OK
         status: lmx_walk_activate(f\context, callee, refs, n, dest, out, @ present)
+    # Descriptor-only callee: call_ready but no walkable plan/body. Prefer
+    # NOT_CALLABLE over a bare NO_GRAPH when that distinction holds. Never
+    # METHOD.addr / lmx_call0 for walk execution.
+    if: (status = c.LMX_WALK_NO_GRAPH || status = c.LMX_WALK_NOT_CALLABLE) && lmx_call_ready(f\arena, callee) = c.LMX_CALL_OK
+        status: c.LMX_WALK_NOT_CALLABLE
+    ---
     if: lmx_scratch_rewind(f\context\scratch, pm) != c.LMX_SCRATCH_OK && status = c.LMX_WALK_OK
         status: c.LMX_WALK_INVALID
     ---
 return: status
 
-# [prim, record, arg ...].  The record is the physical primitive (lmx_primitive.h.lm1), read as
-# the builder's proof: preparation's counting pass already established, by classification, that
-# it IS a primitive record and that its owner does not have the explicitly supplied immutable
-# profile.  The operands are evaluated
-# exactly like a call's arguments -- references kept in one scratch slice of this activation,
-# gone with the rewind below -- and the call itself is FLAT and SYNCHRONOUS: the record's own fn,
-# in this activation, with no re-entry into the walk and no mode dispatch.
-#
-# THE RESULT IS THE PRIMITIVE'S.  It writes the destination cell `dest` for an integer result, or
-# the reference carrier `out`, or neither (no value).  What a primitive hands back through `out`
-# must be 0, `dest`, or a reference in the graph's local/imported index -- the same rule this unit applies
-# to itself: a reference into THIS activation's scratch slice dies with the rewind below.
-#
-# THE FAILURE IS ITS STATUS, NEVER ITS VALUE.  A status of LMX_PRIMITIVE_OK with the value 0 is
-# success (business zero is not absence and not failure); a nonzero status leaves as
-# LMX_WALK_PRIMITIVE -- a status of its own, so nothing upstream reads a primitive failure as
-# business zero, as INVALID, as UNSUPPORTED or as NO_GRAPH.  The rewind runs either way: a
-# failed primitive leaves no frame, no slice and no re-entry behind, and what it already did to
-# the graph or to its owner it did -- there is no rollback engine and none is pretended here.
 fn: lmx_walk_prim (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) int
     LmxScratchMark: mark
     @: LmxScratchMark pm 0
@@ -557,6 +620,7 @@ return: status
 # graph, or 0 for no value.
 fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) int
     @: LmxWalkOwn o 0
+    int: present 0
     @: Lmx code 0
     @@: void slot 0
     @: void value 0
@@ -701,15 +765,36 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
         return: status
     if: op = c.LMX_WALK_OP_RET
         # One exit order: evaluate the argument -> dirty-only checkpoint -> return.  The
-        # argument is computed straight into the CALLER's destination.
+        # argument is computed straight into the CALLER's destination.  If that value is a
+        # callable occurrence (lmx_call_ready OK), nullary-activate it into f\dest instead
+        # of returning the raw reference. Nested if/else/while/for stay ordinary child
+        # Structures — not nested callables.
         if: code\len > 1
             status: lmx_walk_eval(f, lmx_arena_ref_value(code, 1U), f\dest, @ value)
             if: status != c.LMX_WALK_OK
                 return: status
             value: lmx_walk_leaving(f, lmx_walk_node(f, lmx_arena_ref_value(code, 1U)), value)
+            if: value != 0 && lmx_call_ready(f\arena, (cast: (@: Lmx) value)) = c.LMX_CALL_OK
+                status: lmx_walk_checkpoint(f)
+                if: status != c.LMX_WALK_OK
+                    return: status
+                status: lmx_walk_activate(f\context, (cast: (@: Lmx) value), 0, 0U, f\dest, @ value, @ present)
+                if: status = c.LMX_WALK_NO_GRAPH || status = c.LMX_WALK_NOT_CALLABLE
+                    return: c.LMX_WALK_NOT_CALLABLE
+                if: status != c.LMX_WALK_OK
+                    return: status
+                f\result: value
+                if: present != 0
+                    f\valued: 1
+                ---
+                f\returned: 1
+                \out: value
+                return: c.LMX_WALK_OK
+            ---
             f\result: value
             if: value != 0
                 f\valued: 1
+            ---
         ---
         status: lmx_walk_checkpoint(f)
         if: status != c.LMX_WALK_OK
@@ -855,8 +940,12 @@ fn: lmx_walk_enter (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx node; @
     if: info != 0
         plan: info\header
     if: plan = 0
-        # Cold.  No body node: nothing to walk.  A body with no plan: unprepared.
+        # Cold.  No body steps: callable descriptor present => native addr=0
+        # NOT_CALLABLE (ready, nothing to walk); else NO_GRAPH.  Steps without a
+        # plan: unprepared.
         if: lmx_walk_steps(f, node) = 0
+            if: info != 0
+                return: c.LMX_WALK_NOT_CALLABLE
             return: c.LMX_WALK_NO_GRAPH
         return: c.LMX_WALK_UNSUPPORTED
     # One comparison of addresses, not a question to the arena: the header is a plan of

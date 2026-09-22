@@ -58,7 +58,6 @@ predef: "l2src/lmx_arena.h.lm1"
 
 define: LMX_ROOT_CLOSED 0
 define: LMX_ROOT_OPEN 1
-define: LMX_ROOT_CLOSING 2
 
 # The orphan-retention timeout's default (19.29.8: "a runtime policy value with a default, settable
 # per runtime like the liveness deadlines"), in the same unit as the root's own limit -- the
@@ -79,10 +78,6 @@ define: LMX_ROOT_INVALID 1
 # nothing left to drive; what follows is teardown, and that is the caller's act
 # (lmx_root_close).
 define: LMX_ROOT_DONE 2
-# Final storage release found corrupt/non-releasable ownership metadata.  Teardown has already
-# crossed irreversible stages, so the handle is retained for diagnosis and refuses every further
-# operation; it is neither OPEN nor falsely CLOSED.
-define: LMX_ROOT_POISONED 3
 
 struct: LmxRoot
     # R0's own arena: the runtime's storage and the address-range table that classifies it.
@@ -119,10 +114,6 @@ struct: LmxRoot
     # The upper frame's OWN overall close bound -- not a child's slot limit and not the liveness
     # limit (author, 2026-09-21): it bounds the whole synchronous cascade from the top.
     ulong: close_limit
-    # Retry state for the synchronous close. The one deadline never restarts; each completed
-    # irreversible teardown act advances close_stage before a recoverable return is possible.
-    size_t: close_deadline
-    int: close_stage
     # The entry program (1.7), run inside R0's turns and nowhere else.  Its shape is the typed
     # entry's (lmx_call.h.lm1): the reserved node first, the status out. This is the synthetic
     # root adapter, so it receives graph.parent; ordinary methods receive their selected callable
@@ -144,7 +135,7 @@ struct: LmxRoot
     # How long R0 itself may run, in the cycle's milliseconds.  Zero is refused: every wait
     # has a limit (model 33), the runtime's own included.
     ulong: limit
-    # OPEN, CLOSING, CLOSED, or POISONED when final storage ownership is malformed/refuses release.
+    # OPEN or CLOSED.
     int: state
 end: LmxRoot
 
@@ -211,8 +202,7 @@ prototype:
     fn: lmx_root_orphan_maintain (@: LmxRoot root; ulong: now) int
     fn: lmx_root_orphans (@: LmxRoot root) @: LmxOrphanLedger
     # Teardown: stop R0, close its mailbox, release its arena -- everything the runtime owns,
-    # attached children included. A recoverable refusal leaves CLOSING and the same deadline;
-    # another call resumes after the last completed stage rather than half-closing an OPEN root.
+    # attached children included. Synchronous linear close from OPEN; local deadline only.
     fn: lmx_root_close (@: LmxRoot root) int
     # The reads a caller outside needs; a by-value LmxRoot has no other way in (L1 follows a
     # field of a by-value record through a pointer, not through the value).

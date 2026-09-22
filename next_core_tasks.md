@@ -6,6 +6,7 @@
 
 ## 0. Порядок и границы работы
 
+- [x] **СЕЙЧАС: удалить защитный close-пакет, добавленный коммитом `4da4658`, затем поставить эту галочку и продолжить очередь ниже.** Не откатывать коммит целиком и не затрагивать его остальные полезные изменения. Хирургически удалить из ядра: `LmxRoot.close_stage`, сохранённый в `LmxRoot` `close_deadline`, состояния `LMX_ROOT_CLOSING` / `LMX_ROOT_POISONED`, контракт повторного входа и продолжения частично выполненного close, `lmx_root_arena_blocks_valid`, защитно-диагностический контракт `lmx_root_release_final` и добавленную в `lmx_root_poison_selftest.lm1` проверку искусственно закольцованной арены. Вернуть один линейный синхронный алгоритм над корректными по построению объектами: локальный deadline → освобождение orphan-политики → settle детей → закрытие почты R0 → снятие маршрута → удаление R0 у родительской заглушки → закрытие её почты → освобождение service и arena → очистка handle-полей → `CLOSED`. Не добавлять взамен preflight/validator, recovery/poison state, retry/stage, shim или новые проверки внутренних инвариантов. Сохранить исходную часть `lmx_root_poison_selftest.lm1`, проверяющую инициализацию владельцем памяти, предварительно заполненной `0xAA`: она тестирует конструктор, а не защиту от повреждения живого ядра. Готовность: focused root tests, полный `build_l2src`, L3 runner, generated harness, `check_docs` и `git diff --check` зелёные; только после этого поставить `[x]` и брать следующий пункт.
 - [x] Аварийную коррекцию базовых массивов сохранить отдельным зелёным checkpoint `7419470`.
 - [ ] До нового colon/occurrence/callable writer закрыть два оставшихся comment-only файла Array и отдельный документационный checkpoint; tracked tree должен иметь однозначное ownership.
 - [ ] Не запускать двух writer/build одновременно; учитывать `LOCKED` и `OWNED_BY`.
@@ -31,6 +32,9 @@ Explicit anti-patterns and replacements:
 4. **Similar future demand:** add a separate type/receiver/library/adapter at the correct layer; do not mutate the lower abstraction.
 
 Dictionary stable-ids: [`architectural-placement`](next_core_tasks_dictionary.md#architectural-placement), [`clean-kernel-acceptance`](next_core_tasks_dictionary.md#clean-kernel-acceptance). Existing violations are **cleanup debt** blocking the clean-kernel checkpoint before self-build.
+
+Dictionary: [
+o-defensive-kernel](next_core_tasks_dictionary.md#no-defensive-kernel) — kernel invariants by construction/tests; no defensive close state machines in base kernel types.
 
 **`sizeof:`:** **ввести** L2 language receiver-operator (AUTHOR-SIZEOF-DESIGN-20260922-20); status absent/planned until implemented; not an already-required obligation; not a callable; no global-contract HOLD/OPEN.
 

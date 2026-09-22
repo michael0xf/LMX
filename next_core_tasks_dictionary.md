@@ -45,7 +45,7 @@ Provenance: `next_core_tasks.md` section 3 / universal binding priority (`GROK-B
   3. **Base Message:** Stay minimal kernel graph/scheduling/message machinery. Win32 UI and application state belong in adapters/application structures referenced through ordinary composition — never embedded into Message.
   4. **Future similar demand:** Add a separate type/receiver/library/adapter at the correct layer; do not mutate the lower abstraction.
 - **not-confused-with:** Local "quick fix" branches; feature flags inside base kernel types; name allowlists as semantics.
-- **links:** [next_core_tasks doctrine](next_core_tasks.md#architectural-doctrine); [clean-kernel-acceptance](#clean-kernel-acceptance); GATE in next_core_tasks.md; blog 2026-09-22.
+- **links:** [next_core_tasks doctrine](next_core_tasks.md#architectural-doctrine); [clean-kernel-acceptance](#clean-kernel-acceptance); [no-defensive-kernel](#no-defensive-kernel); GATE in next_core_tasks.md; blog 2026-09-22.
 - **sources:** AUTHOR-ARCH-DOCTRINE-20260922-17; standing AUTHOR-C-RAW-DOOR-20260922-14; AUTHOR-SIZEOF-OPERATOR-20260922-19.
 - **impl files/functions:** Cross-cutting; inventory violations under GATE scanner ownership where applicable.
 - **witnesses:** Clean-kernel checkpoint (future); residual violation inventory is debt until closed.
@@ -76,6 +76,19 @@ Provenance: `next_core_tasks.md` section 3 / universal binding priority (`GROK-B
 - **forbidden:** Declaring clean-kernel / self-build-ready while anti-pattern debt remains; treating named language receivers as automatic debt; inventing `c.sizeof` specials.
 
 ---
+
+<a id="no-defensive-kernel"></a>
+## `no-defensive-kernel`
+
+- **level:** architecture / kernel construction
+- **Norm:** `accepted` — AUTHOR doctrine for base kernel types (ticket REMOVE-4DA4658-DEFENSIVE-CLOSE-20260922-53).
+- **definition:** Kernel invariants are guaranteed **by construction and by tests**, not by defensive state machines inside base kernel types. A base type does not grow CLOSING/POISONED (or equivalent) resume/diagnostic states, stored close stages, repeated internal-invariant validation, partial-recovery wrappers, or policy that papers over a broken invariant. Arena-per-thread plus mutual timeouts are the intended protection. Semantically required admission, ownership, and protocol operations remain part of the universal algorithm; this forbids only *defensive* machinery layered on top of a failed construction.
+- **implementation:** Removal of the 4da4658 defensive close package from `LmxRoot` (no `LMX_ROOT_CLOSING` / `LMX_ROOT_POISONED`, no `close_stage` / stored `close_deadline`, no `lmx_root_arena_blocks_valid` / `lmx_root_release_final` poison path). Close is ordinary linear sync with a **local** deadline and process watchdog only.
+- **verification:** Residual scan for forbidden symbols; focused + full `build_l2src`, L3, harness, `check_docs.py`, bounded `git diff --check`.
+- **links:** [architectural-placement](#architectural-placement); [clean-kernel-acceptance](#clean-kernel-acceptance).
+- **forbidden:** Defensive state machines, partial-resume close, poison-and-keep-handle policy in base kernel types; inventing recovery where construction/tests should have refused earlier.
+- **positive:** Broken ownership/protocol fails at the admitting/operating step; teardown stays linear; diagnosis lives in tests and tools, not in extra kernel states.
+
 
 <a id="c-raw-door"></a>
 ## `c-raw-door`

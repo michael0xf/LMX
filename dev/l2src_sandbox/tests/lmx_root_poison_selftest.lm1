@@ -65,11 +65,7 @@ end: rp_check
 fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxRoot: root
-    LmxRoot: broken
-    @: LmxRoot broken_at @ broken
-    @: LmxArena broken_arena @ broken_at\arena
     LmxService: standalone
-    @: LmxArenaBlock cycle 0
     @: LmxService service 0
     @: LmxThread thread 0
     @: LmxOrphanLedger ledger 0
@@ -111,29 +107,6 @@ fn: main () int
     # THE GUARD STAYS: a standalone service that did not arrive zeroed is refused, and this holds
     # whatever the owner does -- it is the half of the contract the fix must NOT satisfy.
     rp_check(counts, lmx_service_open(@ standalone) != c.LMX_SERVICE_OK, "a non-zeroed standalone service was accepted")
-
-    # Final arena release refusal is terminal but must never masquerade as CLOSED or erase the
-    # diagnostic handles. A cyclic ownership list is rejected by the root's preflight before the
-    # arena release mutates anything.
-    memset((cast: (@: void) (@ broken)), 0, c.sizeof(c.LmxRoot))
-    rp_check(counts, lmx_arena_open(broken_arena) = 0, "the release-failure arena did not open")
-    cycle: (cast: (@: LmxArenaBlock) calloc(1U, c.sizeof(c.LmxArenaBlock)))
-    if: cycle != 0
-        cycle\next: cycle
-        broken_arena\blocks: cycle
-        broken_at\thread: (cast: (@: LmxThread) 0x11)
-        broken_at\state: c.LMX_ROOT_CLOSING
-        broken_at\close_stage: 5
-        rp_check(counts, lmx_root_release_final(broken_at) = c.LMX_ROOT_INVALID, "corrupt final arena release was accepted")
-        rp_check(counts, lmx_root_state(broken_at) = c.LMX_ROOT_POISONED, "failed final release did not poison the root")
-        rp_check(counts, broken_at\thread = (cast: (@: LmxThread) 0x11) && broken_arena\blocks = cycle, "failed final release erased diagnostic ownership")
-        rp_check(counts, lmx_root_close(broken_at) = c.LMX_ROOT_INVALID, "a poisoned root attempted close again")
-        cycle\next: 0
-        broken_arena\blocks: 0
-        free((cast: (@: void) cycle))
-    else:
-        rp_check(counts, 0, "the cycle witness could not allocate")
-    ---
 
     failures: counts[1]
     c.printf("lmx_root_poison checks=%d failures=%d\n", counts[0], failures)

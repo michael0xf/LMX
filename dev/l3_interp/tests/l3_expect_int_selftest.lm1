@@ -30,6 +30,19 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 # No R9.5 (args[0], not f\self).  No R8.2 (traversal, not own-field write).
 # Positive: subject has 42, want=42 -> 1 -> IF takes then -> SET m[1]=42
 # Negative: subject has 7, want=42 -> 0 -> IF skips -> m[1] stays 0
+#
+# THE WALKER'S OUTCOMES, ASSERTED AS THEY ARE (lmx_walk.lm1, the EXPECT_INT op).  The op splits
+# malformations in two: some are SILENT ZEROS (the frame answers 0 and the walk goes on, so the
+# IF skips and the own field stays 0) and some are HARD ERRORS (LMX_WALK_INVALID, surfaced by
+# lmx_interp_apply as LMX_INTERP_INVALID).  This file names one case of each kind that the two
+# cases above cannot observe:
+#   non-INT leaf   -- the final leaf is a PRIMITIVE whose type is not INT, or is a STRUCT:
+#                     silent 0, the interp result is OK.
+#   malformed path -- child[1] is not a STRUCT, an index is out of range or negative, or the
+#                     subject's cell at the path was never stored: LMX_WALK_INVALID.
+# The non-INT leaf deliberately holds the same raw bytes as `want` (a size_t 42 against an int
+# 42): only the TYPE guard separates a mismatch from a match there, so a walker that stops
+# checking the type is caught by this case, not only by the positive one.
 
 @: LmxArena gb 0
 @: Lmx groles 0
@@ -115,14 +128,17 @@ fn: mk_thread (@: LmxArena arena; @: Lmx graph; @@: LmxThread out_t) int
     \out_t: t
 return: 1
 
-# Build: IF[expect_int(path[1], want), then: SET m[1]=42]
-# subject's field 1 is checked against want_value; if match, SET writes 42.
-fn: mk_expect_int_graph (int: want_value) @: Lmx
+# Build: IF[expect_int(path, want), then: SET m[1]=42]
+# subject's field at `path_index` is checked against want_value; if match, SET writes 42.
+# `path_kind` 0 = the ordinary path Structure [path_index]; 1 = a MALFORMED path: child[1] is
+# an int cell, not a Structure.
+fn: mk_graph (int: want_value; int: path_index; int: path_kind) @: Lmx
     @: Lmx m
     @: LmxCallable info
     @: Lmx ifn
     @: Lmx ei
     @: Lmx path
+    @: void bad_path
     @: Lmx want
     @: Lmx then_body
     @: Lmx setn
@@ -148,12 +164,20 @@ fn: mk_expect_int_graph (int: want_value) @: Lmx
     if: ei = 0
         return: 0
 
-    path: lmx_node_new_owned(gb)
-    if: path = 0 || lmx_arena_refs_open_owned(gb, path, 1U) != 0
-        return: 0
+    if: path_kind = 0
+        path: lmx_node_new_owned(gb)
+        if: path = 0 || lmx_arena_refs_open_owned(gb, path, 1U) != 0
+            return: 0
+        ---
+        icell(path, 0U, path_index)  # path[0] = index into the subject
+        lmx_arena_ref_store(ei, 1U, (cast: (@: void) path))
+    else:
+        bad_path: mk_int(gb, path_index)
+        if: bad_path = 0
+            return: 0
+        ---
+        lmx_arena_ref_store(ei, 1U, bad_path)
     ---
-    icell(path, 0U, 1)  # path[0] = index 1 (into subject field 1)
-    lmx_arena_ref_store(ei, 1U, (cast: (@: void) path))
 
     want: mk_int(gb, want_value)
     if: want = 0
@@ -179,6 +203,17 @@ fn: mk_expect_int_graph (int: want_value) @: Lmx
     lit(setn, 2U, 42)
 return: m
 
+fn: mk_expect_int_graph (int: want_value) @: Lmx
+return: mk_graph(want_value, 1, 0)
+
+# A subject with two fields; field 1 is left UNSTORED (null) by this constructor.
+fn: mk_subject () @: Lmx
+    @: Lmx subject lmx_node_new_owned(gb)
+    if: subject = 0 || lmx_arena_refs_open_owned(gb, subject, 2U) != 0
+        return: 0
+    ---
+return: subject
+
 fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxArena: arena
@@ -191,6 +226,8 @@ fn: main () int
     @: LmxThread t 0
     @: Lmx m 0
     @: Lmx subject 0
+    @: Lmx inner 0
+    @: void size_cell 0
     @: void subject_void 0
     @@: void args
     int: st
@@ -267,6 +304,85 @@ fn: main () int
     args: @ subject_void
     fail(counts, lmx_interp_apply(@ context, m, args, 1U) = c.LMX_INTERP_OK, "expect-int mismatch interp_apply")
     fail(counts, field(m, 1U) = 0, "expect-int mismatch: own field stays 0")
+
+    # --- Non-INT leaf, PRIMITIVE of another type: a size_t 42 at the path, want = 42.
+    #     Same raw bytes as the int 42; the type guard alone answers 0 -> IF skips.
+    broken: 0
+    subject: mk_subject()
+    size_cell: lmx_size_new_owned(gb)
+    fail(counts, subject != 0 && size_cell != 0 && lmx_size_store_known(size_cell, 42U) = 0 && lmx_arena_ref_store(subject, 1U, size_cell) = 0, "non-INT leaf: size_t subject built")
+    fail(counts, lmx_domain_kind(gb, size_cell) = c.LMX_KIND_PRIMITIVE && lmx_domain_type(gb, size_cell) = c.LMX_TYPE_SIZE_T, "non-INT leaf: the cell is a PRIMITIVE of type SIZE_T")
+    m: mk_expect_int_graph(42)
+    fail(counts, broken = 0 && m != 0, "non-INT leaf graph built")
+    subject_void: (cast: (@: void) subject)
+    args: @ subject_void
+    fail(counts, lmx_interp_apply(@ context, m, args, 1U) = c.LMX_INTERP_OK, "non-INT leaf (size_t): silent 0, interp_apply OK")
+    fail(counts, field(m, 1U) = 0, "non-INT leaf (size_t): own field stays 0")
+
+    # --- Non-INT leaf, a STRUCT at the end of the path: the walk descends into it, the path
+    #     is exhausted, the final leaf is not PRIMITIVE -> silent 0.
+    broken: 0
+    subject: mk_subject()
+    inner: lmx_node_new_owned(gb)
+    fail(counts, subject != 0 && inner != 0 && lmx_arena_refs_open_owned(gb, inner, 1U) = 0 && lmx_arena_ref_store(subject, 1U, (cast: (@: void) inner)) = 0, "non-INT leaf: STRUCT subject built")
+    m: mk_expect_int_graph(42)
+    fail(counts, broken = 0 && m != 0, "non-INT leaf (STRUCT) graph built")
+    subject_void: (cast: (@: void) subject)
+    args: @ subject_void
+    fail(counts, lmx_interp_apply(@ context, m, args, 1U) = c.LMX_INTERP_OK, "non-INT leaf (STRUCT): silent 0, interp_apply OK")
+    fail(counts, field(m, 1U) = 0, "non-INT leaf (STRUCT): own field stays 0")
+
+    # --- Malformed path: child[1] is an int cell, not a STRUCT -> LMX_WALK_INVALID.
+    #     Asserted by the interp RESULT (lmx_interp_map: WALK_INVALID -> INTERP_INVALID), and
+    #     attributed to the run: prepare is asked first and its answer is named too.
+    broken: 0
+    subject: mk_subject()
+    icell(subject, 1U, 42)
+    m: mk_graph(42, 1, 1)
+    fail(counts, broken = 0 && m != 0 && subject != 0, "malformed path graph built")
+    st: lmx_walk_prepare(@ context, gb, l3_thread_plan_roles(t), m)
+    fail(counts, st = c.LMX_WALK_OK, "malformed path: prepare accepts the graph (the path is data to the scan)")
+    subject_void: (cast: (@: void) subject)
+    args: @ subject_void
+    fail(counts, lmx_interp_apply(@ context, m, args, 1U) = c.LMX_INTERP_INVALID, "malformed path (non-STRUCT): interp_apply answers LMX_INTERP_INVALID")
+    fail(counts, field(m, 1U) = 0, "malformed path (non-STRUCT): own field untouched")
+
+    # --- Out-of-range index: path[0] = 5 on a subject of len 2 -> LMX_WALK_INVALID.
+    broken: 0
+    subject: mk_subject()
+    icell(subject, 1U, 42)
+    m: mk_graph(42, 5, 0)
+    fail(counts, broken = 0 && m != 0 && subject != 0, "out-of-range path graph built")
+    subject_void: (cast: (@: void) subject)
+    args: @ subject_void
+    fail(counts, lmx_interp_apply(@ context, m, args, 1U) = c.LMX_INTERP_INVALID, "out-of-range index: interp_apply answers LMX_INTERP_INVALID")
+    fail(counts, field(m, 1U) = 0, "out-of-range index: own field untouched")
+
+    # --- Negative index: path[0] = -1 -> LMX_WALK_INVALID.
+    broken: 0
+    subject: mk_subject()
+    icell(subject, 1U, 42)
+    m: mk_graph(42, -1, 0)
+    fail(counts, broken = 0 && m != 0 && subject != 0, "negative index graph built")
+    subject_void: (cast: (@: void) subject)
+    args: @ subject_void
+    fail(counts, lmx_interp_apply(@ context, m, args, 1U) = c.LMX_INTERP_INVALID, "negative index: interp_apply answers LMX_INTERP_INVALID")
+    fail(counts, field(m, 1U) = 0, "negative index: own field untouched")
+
+    # --- Unavailable value: the subject's cell at the path was never stored (null) -> the
+    #     walker's LMX_WALK_INVALID.  This is the only "value unavailable" state the public
+    #     constructors can make: an int cell always holds an int (lmx_int_new_owned zeroes it,
+    #     lmx_int_value_known reads it, and a null cell reads as 0), so "unknown int" has no
+    #     representation of its own -- only absence, and absence is a hard error here.
+    broken: 0
+    subject: mk_subject()
+    fail(counts, subject != 0 && lmx_arena_ref_value(subject, 1U) = 0, "unset leaf: subject field 1 is null")
+    m: mk_expect_int_graph(42)
+    fail(counts, broken = 0 && m != 0, "unset leaf graph built")
+    subject_void: (cast: (@: void) subject)
+    args: @ subject_void
+    fail(counts, lmx_interp_apply(@ context, m, args, 1U) = c.LMX_INTERP_INVALID, "unset leaf (null cell): interp_apply answers LMX_INTERP_INVALID")
+    fail(counts, field(m, 1U) = 0, "unset leaf (null cell): own field untouched")
 
     if: counts[1] != 0
         c.printf("expect_int checks=%d failures=%d\n", counts[0], counts[1])

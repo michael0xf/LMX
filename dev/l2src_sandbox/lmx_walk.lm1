@@ -265,7 +265,7 @@ fn: lmx_walk_scan_node (@: LmxWalkFrame f; @: void node) int
         o\dirty: 0
         f\nfound: f\nfound + 1U
         return: c.LMX_WALK_OK
-    if: op = c.LMX_WALK_OP_LIT || op = c.LMX_WALK_OP_ARG || op = c.LMX_WALK_OP_AT
+    if: op = c.LMX_WALK_OP_LIT || op = c.LMX_WALK_OP_ARG || op = c.LMX_WALK_OP_AT || op = c.LMX_WALK_OP_EXPECT_INT
         return: c.LMX_WALK_OK
     # of [of, value, slot]: one node, then a slot number.
     if: op = c.LMX_WALK_OP_OF
@@ -561,6 +561,7 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
     @@: void slot 0
     @: void value 0
     @: void other 0
+    @: void expect_leaf 0
     size_t: index 0U
     int: op
     int: a 0
@@ -720,6 +721,48 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
         return: lmx_walk_prim(f, code, dest, out)
     if: op = c.LMX_WALK_OP_CALL
         return: lmx_walk_call(f, code, dest, out)
+    if: op = c.LMX_WALK_OP_EXPECT_INT
+        # [expect_int, path, want]: check subject's int at path equals want.
+        # Subject is args[0]; path is child[1] (Structure of int indices); want is child[2].
+        # No R9.5 dep (uses args[0], not f\self).  No R8.2 dep (path traversal only,
+        # no own-field write).  Result in dest: 1 = match, 0 = mismatch.
+        if: f\args = 0 || f\nargs < 1U || f\args[0] = 0 || code\len < 3
+            lmx_int_store_known(dest, 0)
+            \out: dest
+            return: c.LMX_WALK_OK
+        slot: lmx_arena_ref_cell(code, 1U)
+        other: lmx_arena_ref_value(code, 2U)
+        if: slot = 0 || slot[0] = 0 || other = 0
+            lmx_int_store_known(dest, 0)
+            \out: dest
+            return: c.LMX_WALK_OK
+        if: lmx_domain_kind(f\arena, slot[0]) != c.LMX_KIND_STRUCT
+            return: c.LMX_WALK_INVALID
+        value: f\args[0]
+        index: 0U
+        while: index < (cast: (size_t) (cast: (@: Lmx) slot[0])\len)
+            a: lmx_int_value_known(lmx_arena_ref_value((cast: (@: Lmx) slot[0]), index))
+            if: a < 0 || (cast: (size_t) a) >= (cast: (size_t) (cast: (@: Lmx) value)\len)
+                return: c.LMX_WALK_INVALID
+            expect_leaf: lmx_arena_ref_value(value, (cast: (size_t) a))
+            if: expect_leaf = 0
+                return: c.LMX_WALK_INVALID
+            if: lmx_domain_kind(f\arena, expect_leaf) = c.LMX_KIND_STRUCT
+                value: (cast: (@: Lmx) expect_leaf)
+            ---
+            index: index + 1U
+        ---
+        if: expect_leaf = 0 || lmx_domain_kind(f\arena, expect_leaf) != c.LMX_KIND_PRIMITIVE || lmx_domain_type(f\arena, expect_leaf) != c.LMX_TYPE_INT
+            lmx_int_store_known(dest, 0)
+            \out: dest
+            return: c.LMX_WALK_OK
+        ---
+        if: lmx_int_value_known((cast: (@: LmxPrimitive) expect_leaf)) = lmx_int_value_known(other)
+            lmx_int_store_known(dest, 1)
+        else:
+            lmx_int_store_known(dest, 0)
+        \out: dest
+        return: c.LMX_WALK_OK
     ---
 return: c.LMX_WALK_INVALID
 

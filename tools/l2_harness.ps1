@@ -60,12 +60,7 @@ param(
     [string]$VerifyEvidence,
     # -PeInfo <path> prints one file's raw and masked identity and refuses on anything that is not
     # a well-formed PE.  The mask offsets are derived from THAT file's e_lfanew.
-    [string]$PeInfo,
-    # -Only is a comma-separated list of wildcard patterns matched against fixture Name.
-    # Staging, l2trans and the driver still run; unmatched fixture rows are skipped.
-    # Focused pregate (GROK-PREGATE-20260922-01):
-    #   powershell -NoProfile -ExecutionPolicy Bypass -File tools\l2_harness.ps1 -Only 'unit_colon_*,unit_eternal_*'
-    [string]$Only
+    [string]$PeInfo
 )
 $ErrorActionPreference = 'Continue'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
@@ -871,17 +866,6 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_eternal_profile_partial_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'independent branch requires const'; Absent = @(); Debt = @() }
 )
-
-if ($Only) {
-    $patterns = @($Only -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' })
-    $fixtures = @($fixtures | Where-Object {
-        $name = $_.Name
-        foreach ($p in $patterns) { if ($name -like $p) { return $true } }
-        return $false
-    })
-    if ($fixtures.Count -eq 0) { throw ('l2_harness: -Only matched no fixtures: ' + $Only) }
-    Write-Output ('l2_harness: -Only ' + $Only + ' -> ' + $fixtures.Count + ' fixtures')
-}
 
 foreach ($fx in $fixtures) {
     $stem = [System.IO.Path]::GetFileNameWithoutExtension($fx.Name)

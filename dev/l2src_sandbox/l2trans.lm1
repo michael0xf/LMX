@@ -12069,7 +12069,7 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
         # A resolved fnptr local (type 40) is a call in any surface form:
         # parenthesized, colon, or vertical. Type-headed decl+init is l2_fnptr_local; later "f: value" is a call.
         if: l2_frame_head(stmt, "if") = 0 && mi >= 0 && stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0 && l2_ml_find(stmt\as\frame\head) >= 0 && l2_ml_ty[l2_ml_find(stmt\as\frame\head)] = 40
-            if: stmt\as\frame\body != 0 && l2_check_fields(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), mi, path, stmt) != 0
+            if: stmt\as\frame\body != 0 && l2_next_active(l2_call_args(stmt\as\frame\body)) != 0 && l2_check_fields(l2_call_args(stmt\as\frame\body), l2_actual_count(l2_call_args(stmt\as\frame\body)), mi, path, stmt) != 0
                 return: 1
             field: l2_next_active(field\next)
             continue
@@ -12099,7 +12099,7 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             field: l2_next_active(field\next)
             continue
         if: l2_frame_head(stmt, "if") = 0 && mi < 0 && stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0 && l2_loc_find(stmt\as\frame\head) >= 0
-            if: stmt\as\frame\body = 0 || l2_check_fields(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), mi, path, stmt) != 0
+            if: stmt\as\frame\body != 0 && l2_next_active(l2_call_args(stmt\as\frame\body)) != 0 && l2_check_fields(l2_call_args(stmt\as\frame\body), l2_actual_count(l2_call_args(stmt\as\frame\body)), mi, path, stmt) != 0
                 return: 1
             field: l2_next_active(field\next)
             continue

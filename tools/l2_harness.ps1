@@ -893,8 +893,10 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_fnptr_call_arg_colon.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
         Absent = @();
         Debt = @('L2TestAllocFn: f l2_p1_0\alloc', 'f(l2_p1_1)') },
-    [pscustomobject]@{ Name = 'unit_fnptr_call_sig_refuse.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unsupported body'; Absent = @(); Debt = @() },
+    # After CALL-ARGS-CLOSE: empty ty40 args are zero-args (call_args); arity admission still open.
+    # Former 'unsupported body' refuse was the empty-Structure stand-in; now translates as f().
+    [pscustomobject]@{ Name = 'unit_fnptr_call_sig_refuse.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+        Absent = @('unsupported body'); Debt = @('f()') },
     [pscustomobject]@{ Name = 'unit_fnptr_noncallable_assign.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
         Absent = @();
         Debt = @('l2_q0: 7') },
@@ -914,11 +916,11 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_call_args_controls.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @();
-        Debt = @('l2_t5: l2_m1(l2_c4\parent, l2_c4, 1, 2)') },
+        Debt = @('l2_t3: l2_m1(l2_c2\parent, l2_c2, 1, 2)', 'l2_t5: l2_m1(l2_c4\parent, l2_c4, 1, 2)') },
     [pscustomobject]@{ Name = 'unit_call_args_control_split.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @();
-        Debt = @('l2_t1: l2_m0(l2_c0\parent, l2_c0, (1), 2 != 3)') },
+        Debt = @('l2_t1: l2_m0(l2_c0\parent, l2_c0, (1), 2)') },
     [pscustomobject]@{ Name = 'unit_call_args_refuse_nested.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'incompatible entry signature'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_call_args_refuse_named.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -931,6 +933,12 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_fnptr_call_args_forms.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
         Absent = @('f((l2_p0_1))');
         Debt = @('f(l2_p0_1)') },
+    [pscustomobject]@{ Name = 'unit_fnptr_call_args_nullary_stmt.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+        Absent = @('f(())', 'unsupported body');
+        Debt = @('f()') },
+    [pscustomobject]@{ Name = 'unit_fnptr_call_args_nullary_value.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+        Absent = @('f(())', 'unsupported body');
+        Debt = @('f()') },
     # COMPACT-DECL-BATCHB-75: struct local form-independent; float refuse form-independent;
     # opposite controls for fnptr call and ordinary call.
     [pscustomobject]@{ Name = 'unit_struct_decl_colon.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';

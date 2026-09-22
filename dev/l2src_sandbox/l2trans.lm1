@@ -2013,6 +2013,162 @@ fn: l2_int_fits (const: @(LmP0Text text)) int
         i: i + 1U
 return: 1
 
+# ONE LITERAL-RANGE RULE. Kind 0=int 1=char 2=size_t 3=unsigned 4=ulong; kind<0 skips.
+fn: l2_lit_kind_from_ft (int: ft) int
+    if: ft = 0
+        return: 0
+    if: ft = 1
+        return: 1
+    if: ft = 2
+        return: 2
+    if: ft = 34
+        return: 3
+    if: ft = 36
+        return: 4
+return: 0 - 1
+
+fn: l2_lit_kind_from_own (int: oty) int
+    # Own/loc storage uses 0 for int (same hole as dynamic inputs).
+    if: oty = 0 || oty = 3
+        return: 0
+    if: oty = 1
+        return: 1
+    if: oty = 2
+        return: 2
+    if: oty = 6
+        return: 3
+    if: oty = 36
+        return: 4
+return: 0 - 1
+
+fn: l2_lit_kind_from_ret (int: mret) int
+    if: mret = 0
+        return: 0
+    if: mret = 2
+        return: 2
+    if: mret = 33
+        return: 3
+    if: mret = 36
+        return: 4
+return: 0 - 1
+
+fn: l2_u32_fits (const: @(LmP0Text text)) int
+    size_t: i 0U
+    size_t: stop
+    unsigned: acc 0U
+    unsigned: d 0U
+    unsigned: q
+    unsigned: r
+    if: text = 0 || text\data = 0 || text\length = 0U
+        return: 0
+    stop: text\length
+    if: text\data[stop - 1U] = 85 || text\data[stop - 1U] = 117
+        stop: stop - 1U
+    if: stop = 0U
+        return: 0
+    if: stop > 1U && text\data[0] = 48
+        return: 0
+    q: (cast: (unsigned) -1) / 10U
+    r: (cast: (unsigned) -1) % 10U
+    while: i < stop
+        if: text\data[i] < 48 || text\data[i] > 57
+            return: 0
+        d: (cast: (unsigned) (text\data[i] - 48))
+        if: acc > q
+            return: 0
+        if: acc = q && d > r
+            return: 0
+        acc: acc * 10U + d
+        i: i + 1U
+return: 1
+
+fn: l2_char_digit_fits (const: @(LmP0Text text)) int
+    size_t: i 0U
+    unsigned: acc 0U
+    unsigned: d 0U
+    if: text = 0 || l2_digits(text) = 0
+        return: 0
+    while: i < text\length
+        d: (cast: (unsigned) (text\data[i] - 48))
+        if: acc > 25U || (acc = 25U && d > 5U)
+            return: 0
+        acc: acc * 10U + d
+        i: i + 1U
+return: 1
+
+fn: l2_size_t_fits_text (const: @(LmP0Text text)) int
+    size_t: i 0U
+    size_t: stop
+    size_t: acc 0U
+    size_t: d 0U
+    size_t: q
+    size_t: r
+    if: text = 0 || text\data = 0 || text\length = 0U
+        return: 0
+    stop: text\length
+    if: text\data[stop - 1U] = 85 || text\data[stop - 1U] = 117
+        stop: stop - 1U
+    if: stop = 0U
+        return: 0
+    if: stop > 1U && text\data[0] = 48
+        return: 0
+    q: ((cast: (size_t) -1) / 10U)
+    r: ((cast: (size_t) -1) % 10U)
+    while: i < stop
+        if: text\data[i] < 48 || text\data[i] > 57
+            return: 0
+        d: (cast: (size_t) (text\data[i] - 48))
+        if: acc > q
+            return: 0
+        if: acc = q && d > r
+            return: 0
+        acc: acc * 10U + d
+        i: i + 1U
+return: 1
+
+fn: l2_literal_fits_kind (const: @(LmP0Text text); int: kind) int
+    if: kind < 0 || text = 0
+        return: 1
+    if: kind = 0
+        return: l2_int_fits(text)
+    if: kind = 1
+        return: l2_char_digit_fits(text)
+    if: kind = 2
+        return: l2_size_t_fits_text(text)
+    if: kind = 3
+        return: l2_u32_fits(text)
+    if: kind = 4
+        return: l2_u32_fits(text)
+return: 1
+
+fn: l2_check_literal_kind (const: @(LmP0Text text); int: kind; const: @(char path); const: @(LmP0Node at)) int
+    if: kind < 0 || text = 0
+        return: 0
+    if: kind = 0 || kind = 1
+        if: l2_digits(text) = 0
+            return: 0
+        ---
+    ---
+    if: kind = 2 || kind = 3 || kind = 4
+        if: text\data = 0 || text\length = 0U || text\data[0] < 48 || text\data[0] > 57
+            return: 0
+        ---
+    ---
+    if: l2_literal_fits_kind(text, kind) != 0
+        return: 0
+    if: kind = 0
+        return: l2_error(path, at, "literal not representable as int")
+    if: kind = 1
+        return: l2_error(path, at, "literal not representable as char")
+    if: kind = 2
+        return: l2_error(path, at, "literal not representable as size_t")
+    if: kind = 3
+        return: l2_error(path, at, "literal not representable as unsigned")
+    if: kind = 4
+        return: l2_error(path, at, "literal not representable as ulong")
+return: l2_error(path, at, "literal not representable as type")
+
+
 # ONE RETURN-LITERAL RULE FOR EVERY CALLABLE.  A decimal literal returned from a callable whose
 # result is int must be representable as int.  The entry's literal path checks the same predicate
 # (l2_take_return_stmt, l2_take_return_fields); without this rule `return: 2147483648` was refused
@@ -2020,16 +2176,21 @@ return: 1
 # result the entry signature already fixes as int.
 fn: l2_check_return_literal (int: mi; const: @(LmP0Structure body); const: @(char path); const: @(LmP0Node at)) int
     @: LmP0Field arg
+    int: kind 0
     if: body = 0 || l2_count_active(body) != 1
         return: 0
-    if: mi >= 0 && l2_m_ret[mi] != 0
+    if: mi >= 0
+        kind: l2_lit_kind_from_ret(l2_m_ret[mi])
+    ---
+    if: mi < 0
+        kind: 0
+    ---
+    if: kind < 0
         return: 0
     arg: l2_next_active(body\first_field)
     if: arg = 0 || arg\value = 0 || arg\value\kind != c.LM_P0_NODE_ATOM
         return: 0
-    if: l2_digits(arg\value\as\atom) != 0 && l2_int_fits(arg\value\as\atom) = 0
-        return: l2_error(path, at, "return literal not representable as int")
-return: 0
+return: l2_check_literal_kind(arg\value\as\atom, kind, path, at)
 
 fn: l2_end_named (const: @(LmP0Frame frame); const: @(char name)) int
     @: LmP0Field field
@@ -2369,8 +2530,8 @@ fn: l2_take_return_stmt (const: @(LmP0Node stmt); const: @(char path); @@: LmP0T
         return: l2_error(path, stmt, "unsupported body")
     if: l2_digits(arg\value\as\atom) = 0
         return: l2_error(path, stmt, "unsupported body")
-    if: l2_int_fits(arg\value\as\atom) = 0
-        return: l2_error(path, stmt, "return literal not representable as int")
+    if: l2_check_literal_kind(arg\value\as\atom, 0, path, stmt) != 0
+        return: 1
     \out_lit: arg\value\as\atom
 return: 0
 
@@ -2388,8 +2549,8 @@ fn: l2_take_return_fields (const: @(LmP0Structure body); const: @(char path); co
         return: l2_error(path, at, "unsupported body")
     if: l2_digits(arg\value\as\atom) = 0
         return: l2_error(path, at, "unsupported body")
-    if: l2_int_fits(arg\value\as\atom) = 0
-        return: l2_error(path, at, "return literal not representable as int")
+    if: l2_check_literal_kind(arg\value\as\atom, 0, path, at) != 0
+        return: 1
     \out_lit: arg\value\as\atom
 return: 0
 
@@ -5775,6 +5936,8 @@ fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char p
         return: l2_error(path, stmt, "assignment value has unknown type")
     if: l2_colon_types_compatible(target_ty, value_ty) = 0
         return: l2_error(path, stmt, "assignment value has incompatible type")
+    if: only\value != 0 && only\value\kind = c.LM_P0_NODE_ATOM && l2_check_literal_kind(only\value\as\atom, l2_lit_kind_from_ft(target_ty), path, stmt) != 0
+        return: 1
     # Reference rebinding requires execution of the receiving expression's
     # language-level unit tests.  The legacy positional RuntimeImplements walk
     # is not that operation, and no graph-interpreter admission entry exists in
@@ -6433,6 +6596,13 @@ fn: l2_collect_decls (const: @(LmP0Structure body); int: mi; const: @(char path)
             l2_m_own[mi]: l2_m_own[mi] + 1
             if: l2_bind_own(mi, j, path, stmt) != 0
                 return: 1
+            if: l2_count_active(stmt\as\frame\body) = 2
+                last: l2_next_active(stmt\as\frame\body\first_field)
+                last: l2_next_active(last\next)
+                if: last != 0 && last\value != 0 && last\value\kind = c.LM_P0_NODE_ATOM && l2_check_literal_kind(last\value\as\atom, l2_lit_kind_from_own(ty), path, stmt) != 0
+                    return: 1
+                ---
+            ---
             field: l2_next_active(field\next)
         if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) = 0 && l2_slot_decl_ty(stmt) != 0 && depth = 0
             ty: l2_slot_decl_ty(stmt)
@@ -8229,14 +8399,12 @@ fn: l2_take_unit_own (const: @(LmP0Node stmt); const: @(char path)) int
                     return: l2_error(path, stmt, "char field initializer must be a quoted byte")
                 ---
             else:
-                if: dty = 3 && l2_int_fits(init\value\as\atom) = 0
-                    return: l2_error(path, stmt, "int field initializer is out of range")
                 if: dty = 2 && l2_array_count_is(init\value\as\atom) = 0
                     return: l2_error(path, stmt, "numeric field initializer must be a literal")
-                if: dty = 6 && (l2_array_count_is(init\value\as\atom) = 0 || l2_literal_value(init\value\as\atom) > (cast: (size_t) (cast: (unsigned) -1)))
-                    return: l2_error(path, stmt, "unsigned field initializer is out of range")
                 if: dty = 36 && l2_array_count_is(init\value\as\atom) = 0
                     return: l2_error(path, stmt, "ulong field initializer must be a literal")
+                if: l2_check_literal_kind(init\value\as\atom, l2_lit_kind_from_own(dty), path, stmt) != 0
+                    return: 1
                 ---
             ---
         ---
@@ -11719,6 +11887,8 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
             ---
         ---
         if: actual_span = 1 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_ATOM
+            if: l2_check_literal_kind(a0\value\as\atom, l2_lit_kind_from_ft(l2_ft(idx, actual_i)), path, node) != 0
+                return: 1
             req_mi: l2_cf_get(idx, actual_i)
             if: req_mi >= 0
                 cand_mi: l2_find_method(a0\value\as\atom)
@@ -12120,6 +12290,12 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             continue
         if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && mi < 0
             lnm: l2_next_active(stmt\as\frame\body\first_field)\value\as\atom
+            if: l2_count_active(stmt\as\frame\body) = 2
+                last: l2_next_active(l2_next_active(stmt\as\frame\body\first_field)\next)
+                if: last != 0 && last\value != 0 && last\value\kind = c.LM_P0_NODE_ATOM && l2_check_literal_kind(last\value\as\atom, l2_lit_kind_from_own(l2_own_decl_ty(stmt)), path, stmt) != 0
+                    return: 1
+                ---
+            ---
             if: l2_loc_add(lnm, l2_own_store_ty(l2_own_decl_ty(stmt)), path, stmt) != 0
                 return: 1
             field: l2_next_active(field\next)
@@ -12132,14 +12308,26 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
         if: l2_frame_head(stmt, "if") = 0 && mi < 0 && stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0 && l2_loc_find(stmt\as\frame\head) >= 0
             if: stmt\as\frame\body != 0 && l2_next_active(l2_call_args(stmt\as\frame\body)) != 0 && l2_check_fields(l2_call_args(stmt\as\frame\body), l2_actual_count(l2_call_args(stmt\as\frame\body)), mi, path, stmt) != 0
                 return: 1
+            if: stmt\as\frame\body != 0 && l2_count_active(stmt\as\frame\body) = 1
+                last: l2_next_active(stmt\as\frame\body\first_field)
+                if: last != 0 && last\value != 0 && last\value\kind = c.LM_P0_NODE_ATOM && l2_check_literal_kind(last\value\as\atom, l2_lit_kind_from_own(l2_loc_ty[l2_loc_find(stmt\as\frame\head)]), path, stmt) != 0
+                    return: 1
+                ---
+            ---
             field: l2_next_active(field\next)
             continue
         if: l2_frame_head(stmt, "if") = 0 && l2_unimpl_numeric(stmt) != 0
             return: l2_error(path, stmt, l2_unimpl_numeric(stmt))
         if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && depth > 0 && l2_scope_n = 0
             return: l2_error(path, stmt, "unsupported own declaration")
-        if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && l2_count_active(stmt\as\frame\body) = 2 && l2_check_expr(l2_next_active(l2_next_active(stmt\as\frame\body\first_field)\next)\value, mi, path) != 0
-            return: 1
+        if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && l2_count_active(stmt\as\frame\body) = 2
+            last: l2_next_active(l2_next_active(stmt\as\frame\body\first_field)\next)
+            if: last = 0 || last\value = 0 || l2_check_expr(last\value, mi, path) != 0
+                return: 1
+            if: last\value\kind = c.LM_P0_NODE_ATOM && l2_check_literal_kind(last\value\as\atom, l2_lit_kind_from_own(l2_own_decl_ty(stmt)), path, stmt) != 0
+                return: 1
+            ---
+        ---
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt)
             field: l2_next_active(field\next)
         raw: 1
@@ -12164,6 +12352,12 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             return: l2_error(path, stmt, "assignment target must be a declared typed mutable value")
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_colon_check_assignment(stmt, mi, path) != 0
             return: 1
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_is_asgn(stmt) != 0 && mi < 0 && stmt\as\frame\head != 0 && l2_loc_find(stmt\as\frame\head) >= 0 && l2_count_active(stmt\as\frame\body) = 1
+            last: l2_next_active(stmt\as\frame\body\first_field)
+            if: last != 0 && last\value != 0 && last\value\kind = c.LM_P0_NODE_ATOM && l2_check_literal_kind(last\value\as\atom, l2_lit_kind_from_own(l2_loc_ty[l2_loc_find(stmt\as\frame\head)]), path, stmt) != 0
+                return: 1
+            ---
+        ---
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && raw = 0 && mi >= 0 && rj < l2_m_arity[mi] && (l2_ft(mi, rj) = 4 || l2_ft(mi, rj) = 6 || l2_ft(mi, rj) = 15)
             return: l2_error(path, stmt, "const write")
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && raw = 0 && mi >= 0 && rj < l2_m_arity[mi] && l2_ft(mi, rj) != 5 && l2_ft(mi, rj) != 7 && l2_ft(mi, rj) != 14 && l2_ft(mi, rj) < 100

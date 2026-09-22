@@ -1,0 +1,100 @@
+predef: "l2src/lmx.h.lm1"
+predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_pool.h.lm1"
+predef: "l2src/lmx_implements.h.lm1"
+
+# lmx_scratch.h - a temporary-frame store: last-in first-out storage of an execution
+# context, for whatever a running piece of code needs only until it returns.
+#
+# GENERAL, not the interpreter's: nothing here knows what is stored.  It exists because
+# L2 had no such thing -- "an array is the owner's storage, not a general allocator:
+# cells are added on demand and never individually returned ... a caller that must reuse
+# cells keeps its own free list over them" (lmx_pool.h.lm1) -- and because the obvious C
+# answers (an automatic variable-length array, thread-local storage, a private allocator
+# of one unit) do not survive a rewrite of their user in L2.
+#
+# What it is made of.  ONE array of the arena (LmxPool) of pointer-sized cells, domain
+# LMX_DOMAIN_SCRATCH / kind LMX_DOMAIN_KIND_SCRATCH (lmx_implements.h.lm1), in an arena
+# that belongs to the execution context and is NEVER attached to a Message: the store is
+# outside the semantic state of every graph, so no copier, no collection pass and no
+# classification of a graph ever meets it.  That arena is an ORDINARY one
+# (lmx_arena_open), not a letter-scale one: lmx_arena_open_simple refuses every chunk
+# after the first (lmx_pool_add_chunk, `arena\simple`), which would be a hidden cap.
+# The pool hands cells out once (lmx_pool_take_n: growth adds a chunk, an address handed
+# out never moves, nothing is returned); the store keeps a CURSOR over the pool's own
+# chunk chain, and a rewind makes the same cells available again.  Hence:
+#   * after warm-up a take is a bump of the cursor: no malloc, no free, no new block;
+#   * a slice taken by a caller stays where it is while its callees take and rewind, and
+#     while the store grows -- pointers into it may be held;
+#   * there is no cap: a request the chunks cannot seat makes the pool add one, and a
+#     request larger than a chunk gets a chunk of its own size (lmx_pool_take_n).  The
+#     pool then KEEPS that size as its growth step, so the step given to
+#     lmx_scratch_open is where growth starts, not what it stays at;
+#   * the pool's `count` of a chunk is the high-water mark of that chunk and the cursor
+#     never runs ahead of it, which is what keeps the pool from handing out cells that
+#     are live.
+#
+# Discipline.  Storage is released only by rewinding to a MARK, and marks nest: the mark
+# rewound must be the most recent one still outstanding of THIS store.  A mark of another
+# store, a mark already rewound and a mark taken before one that is still outstanding are
+# all refused, and a refusal changes nothing.  The mark is a small record in the caller's
+# own frame; the store keeps no list of them.
+#
+# Ownership.  The caller provides the three records (LmxScratch, its LmxPool, the
+# LmxArena) and keeps them for the life of the execution context; lmx_scratch_close
+# gives the cells back to the arena and the owner then releases the arena
+# (lmx_arena_release).  One store serves one thread of execution at a time; two contexts
+# use two stores and never see each other.
+#
+# Cost.  take: O(1) on the warm path; O(chunks) only while skipping chunks too small for
+# a request; one chunk added on the cold path, at most once per new high-water mark.
+# mark, rewind: O(1).  Contents of a slice are whatever the last user left: the taker
+# initialises what it reads.
+
+define: LMX_SCRATCH_OK 0
+# Null or unopened store, zero size, a size whose rounding overflows, a second open.
+define: LMX_SCRATCH_INVALID 1
+# The pool could not grow.  The store is unchanged and stays usable: a failed growth
+# leaves the array's growth step as it was (lmx_pool_take_n), so a later, smaller
+# request grows normally.
+define: LMX_SCRATCH_NOMEM 2
+# The mark is not the most recent outstanding mark of this store.  Nothing changed.
+define: LMX_SCRATCH_BAD_MARK 3
+# Close with marks still outstanding.  Nothing changed.
+define: LMX_SCRATCH_BUSY 4
+
+struct: LmxScratch
+    @: LmxArena arena
+    @: LmxPool cells
+    # The cursor: the chunk it is in and how many cells of that chunk are in use.
+    @: LmxChunk at
+    size_t: used
+    # The most recent outstanding mark (0: none) and the last serial given out.
+    size_t: top
+    size_t: serial
+    # The ordinary growth step, in cells, as given to lmx_scratch_open.
+    size_t: step
+end: LmxScratch
+
+# Where the cursor stood, which store that was, and which mark was outstanding before
+# this one.  An automatic object of whoever takes it.
+struct: LmxScratchMark
+    @: LmxScratch owner
+    @: LmxChunk at
+    size_t: used
+    size_t: serial
+    size_t: below
+end: LmxScratchMark
+
+prototype:
+    # Open `s` over the caller's `cells` record in the caller's `arena`.  `chunk_cells` is
+    # the ordinary growth step in cells, not a limit.  `s` and `cells` must be zeroed.
+    fn: lmx_scratch_open (@: LmxScratch s; @: LmxArena arena; @: LmxPool cells; size_t: chunk_cells) int
+    # `bytes` of storage aligned to a pointer-sized cell, through `out`; valid until a
+    # rewind to a mark taken before it.  On any failure `out` gets 0 and nothing changed.
+    fn: lmx_scratch_take (@: LmxScratch s; size_t: bytes; @@: void out) int
+    fn: lmx_scratch_mark (@: LmxScratch s; @: LmxScratchMark m) int
+    fn: lmx_scratch_rewind (@: LmxScratch s; @: LmxScratchMark m) int
+    # Give the cells back to the arena.  Refused while a mark is outstanding.
+    fn: lmx_scratch_close (@: LmxScratch s) int
+end: prototype

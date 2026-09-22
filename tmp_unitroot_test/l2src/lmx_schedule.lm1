@@ -1,0 +1,58 @@
+predef: "l2src/lmx_schedule.h.lm1"
+
+# lmx_schedule.lm1 - one scheduler record's arithmetic.
+#
+# Liveness is not a cell of any record the letter owns: it is here.  A wait starts at the
+# reading the CYCLE hands down and ends on its own limit, so a reader never has to decide
+# whether "no deadline" is a special value of a real deadline (the shape that has cost
+# this project three defects already).
+#
+# The clock is the cycle's (lmx_clock): this unit asks no platform for the time, it is
+# GIVEN the time, which is what keeps the source of time and the arithmetic of a wait in
+# different hands.
+
+fn: lmx_schedule_init (@: LmxSchedule slot; @: LmxArena arena; @: void owner; ulong: limit) int
+    if: slot = 0 || limit = 0U
+        return: c.LMX_SCHEDULE_INVALID
+    slot\owner: owner
+    # The band is written HERE and nowhere else: the record's turn boundary collects the arena its
+    # own object is stored in, and that is the arena its creator took its cells from.  A creator that
+    # names none (zero) says its turn's boundary collects nothing -- that is the state lmx_turn_end
+    # documents, and it is legitimate for a world whose values are held outside any arena.
+    slot\arena: arena
+    slot\started: 0U
+    slot\limit: limit
+    slot\state: c.LMX_SCHEDULE_IDLE
+    slot\next: 0
+    # `lane` is cleared like every other cell: a record commonly lives in a by-value
+    # local, and without this the garbage on the stack reads as "this record already
+    # has a lane", so the running manager would never give it one.
+    slot\lane: 0
+return: c.LMX_SCHEDULE_OK
+
+# The wait starts at the reading the caller -- the cycle -- supplies.
+fn: lmx_schedule_wait (@: LmxSchedule slot; ulong: now) int
+    if: slot = 0
+        return: c.LMX_SCHEDULE_INVALID
+    slot\started: now
+    slot\state: c.LMX_SCHEDULE_WAITING
+return: c.LMX_SCHEDULE_OK
+
+# One look at the clock.  Only a waiting record ages; an idle or already overdue record is
+# left exactly as it is, so a scheduler may look at the whole queue every round without
+# keeping bookkeeping of its own.  The wait ends when the reading says the limit has
+# passed: bounded in REAL time, never in loop iterations.
+fn: lmx_schedule_tick (@: LmxSchedule slot; ulong: now) int
+    if: slot = 0 || slot\limit = 0U
+        return: c.LMX_SCHEDULE_INVALID
+    if: slot\state != c.LMX_SCHEDULE_WAITING
+        return: slot\state
+    if: now - slot\started >= slot\limit
+        slot\state: c.LMX_SCHEDULE_OVERDUE
+    ---
+return: slot\state
+
+fn: lmx_schedule_state (@: LmxSchedule slot) int
+    if: slot = 0
+        return: c.LMX_SCHEDULE_INVALID
+return: slot\state

@@ -1,0 +1,91 @@
+﻿predef: "l2src/lmx_deliver.h.lm1"
+predef: "l2src/lmx_arena_refs.h.lm1"
+predef: "l2src/lmx_implements.h.lm1"
+
+# lmx_deliver.lm1 - physical-address step and hop.  No hierarchical walk, no service.
+
+fn: lmx_deliver_child_on_path (@: LmxThread postman; @: LmxThread destination) @: LmxThread
+    @: LmxThread child
+    @: LmxThread walk
+    @: LmxMsg postman_message
+    @: LmxMsg child_message
+    @: Lmx graph
+    size_t: i
+    size_t: n
+    if: postman = 0 || destination = 0 || destination = postman
+        return: 0
+    child: destination
+    walk: lmx_thread_parent(destination)
+    while: walk != 0 && walk != postman
+        child: walk
+        walk: lmx_thread_parent(walk)
+    ---
+    if: walk != postman || child = 0
+        return: 0
+    ---
+    # Publication is the graph slot: a parent link alone is not enough.
+    postman_message: lmx_thread_message(postman)
+    child_message: lmx_thread_message(child)
+    if: postman_message = 0 || child_message = 0
+        return: 0
+    ---
+    graph: postman_message\graph
+    if: graph = 0
+        return: 0
+    ---
+    n: (cast: (size_t) graph\len)
+    i: 0U
+    while: i < n
+        if: lmx_arena_ref_value(graph, i) = (cast: (@: void) child_message)
+            return: child
+        ---
+        i: i + 1U
+    ---
+return: 0
+
+fn: lmx_deliver_step (@: LmxThread postman; @: LmxThread destination) int
+    if: postman = 0 || destination = 0
+        return: c.LMX_DELIVER_INVALID
+    ---
+    if: destination = postman
+        return: c.LMX_DELIVER_HERE
+    ---
+    if: lmx_deliver_child_on_path(postman, destination) != 0
+        return: c.LMX_DELIVER_DOWN
+    ---
+return: c.LMX_DELIVER_UP
+
+fn: lmx_deliver_hop (@: LmxArena arena; @: LmxThread postman; @: LmxMsg letter; @: LmxThread destination) int
+    @: LmxThread next
+    int: decision
+    if: arena = 0 || postman = 0 || letter = 0 || destination = 0
+        return: c.LMX_DELIVER_INVALID
+    decision: lmx_deliver_step(postman, destination)
+    if: decision = c.LMX_DELIVER_INVALID
+        return: c.LMX_DELIVER_INVALID
+    ---
+    if: decision = c.LMX_DELIVER_HERE
+        if: lmx_thread_mail_accept(arena, postman, (cast: (@: void) letter), c.LMX_POST_INBOX) != c.LMX_POST_OK
+            return: c.LMX_DELIVER_REFUSED
+        ---
+        return: c.LMX_DELIVER_OK
+    ---
+    if: decision = c.LMX_DELIVER_DOWN
+        next: lmx_deliver_child_on_path(postman, destination)
+        if: next = 0
+            return: c.LMX_DELIVER_REFUSED
+        ---
+        if: lmx_thread_mail_accept(arena, next, (cast: (@: void) letter), c.LMX_POST_INBOX) != c.LMX_POST_OK
+            return: c.LMX_DELIVER_REFUSED
+        ---
+        return: c.LMX_DELIVER_OK
+    ---
+    # UP
+    next: lmx_thread_parent(postman)
+    if: next = 0
+        return: c.LMX_DELIVER_REFUSED
+    ---
+    if: lmx_thread_mail_accept(arena, next, (cast: (@: void) letter), c.LMX_POST_INBOX) != c.LMX_POST_OK
+        return: c.LMX_DELIVER_REFUSED
+    ---
+return: c.LMX_DELIVER_OK

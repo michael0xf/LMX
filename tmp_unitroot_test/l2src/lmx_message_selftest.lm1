@@ -1,0 +1,81 @@
+predef: "l2src/lmx_message.h.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<string.h>"
+
+# lmx_message_selftest.lm1 - the kernel record's shape and the state a Message
+# starts in.  The record is written in L1 (lmx_message.h.lm1) and this is the check
+# of what the translator emitted for it.
+#
+# Checks: the five fields and their order; that there is no sixth (the size is the
+# five plus this ABI's padding); and that a freshly assigned Message reads
+# running=1, success=0 with the rest clear (spec 19.29.7.1).
+#
+# The C form asserted the shape with _Static_assert/offsetof, which are C macros and
+# have no L1 spelling (c. cannot reach a macro: it pastes a call, not a preprocessor
+# name).  The same five shape checks are computed here at run time instead -- field
+# offsets by pointer arithmetic, the record size by sizeof -- and counted like the
+# state checks below, keeping their messages.  Nothing is dropped: a shape that moved
+# still fails, at run time instead of at compile time.
+
+int: failures 0
+int: checks 0
+
+sub: check (int: condition; const: @(char label))
+    checks: checks + 1
+    if: condition = 0
+        failures: failures + 1
+        c.printf("FAIL %s\n", label)
+end: check
+
+fn: main () int
+    # The record itself is a by-value local, as in the C form; it is read and written
+    # through the pointer alias below, which is the only spelling of an aggregate's
+    # fields L1 has (field follow is always ->).
+    LmxMsg: store
+    @: LmxMsg m
+    int: ok
+    m: @ store
+
+    # Offset order is checked rather than exact offsets: the exact numbers are this
+    # ABI's business, the order and the count are the record's.
+    check((cast: (size_t) @ m\running) < (cast: (size_t) @ m\success), "running before success")
+    check((cast: (size_t) @ m\success) < (cast: (size_t) @ m\handoff_ready), "success before handoff_ready")
+    check((cast: (size_t) @ m\handoff_ready) < (cast: (size_t) @ m\graph), "handoff_ready before graph")
+    check((cast: (size_t) @ m\graph) < (cast: (size_t) @ m\index), "graph before index")
+    # The shape check: on x86-64 mingw with uint_fast8_t = 1 byte the five fields are
+    # 1+1+4(int)+8(pointer)+4(unsigned) at offsets 0, 1, 4, 8, 16, padded to 24.  A
+    # sixth field moves this number and fails the check.
+    check(c.sizeof(c.LmxMsg) = 24U, "the record is five fields and this ABI's padding")
+
+    memset(@ store, 0, c.sizeof(c.LmxMsg))
+    check(m\running = 0 && m\success = 0 && m\handoff_ready = 0 && m\graph = 0 && m\index = 0, "a zeroed record is not all zero")
+
+    # The state a Message is in when its work has just been assigned.
+    m\running: 1
+    m\success: 0
+    m\index: 1
+    ok: m\running = 1 && m\success = 0 && m\handoff_ready = 0 && m\graph = 0 && m\index = 1
+    check(ok, "assigned state is not running=1, success=0, rest clear")
+
+    # A stop request is running=0 with success untouched -- not a completion.
+    m\running: 0
+    check(m\running = 0 && m\success = 0, "a stop request changed success")
+
+    # completion sets success; running follows only at the turn boundary.
+    m\success: 1
+    m\running: 0
+    check(m\success = 1 && m\running = 0, "completion did not read success=1, running=0")
+
+    # graph carries the language root; handoff_ready is the transfer mark.
+    m\graph: (cast: (@: Lmx) m)
+    m\handoff_ready: 1
+    check(m\graph = (cast: (@: Lmx) m) && m\handoff_ready = 1, "graph and handoff_ready do not hold what was stored")
+
+    # Index at the parent: the address walk reads it, nothing accumulates here.
+    m\index: 7
+    check(m\index = 7, "index does not hold the value stored")
+
+    c.printf("lmx_message checks=%d failures=%d\n", checks, failures)
+    if: failures != 0
+        return: 1
+    return: 0

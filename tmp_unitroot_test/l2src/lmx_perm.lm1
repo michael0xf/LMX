@@ -1,0 +1,100 @@
+predef: "l2src/lmx_perm.h.lm1"
+
+# lmx_perm.lm1 -- the permanent store's lifecycle (LMX-ETERNAL-R0-44D).
+#
+# Small on purpose: the store IS an arena, so allocation, growth, the address->descriptor
+# index and address stability are lmx_arena's acts, not new ones.  What lives here is only
+# what differs -- the role flag, the non-owning bind, and the one-place release.
+
+# Open a cleared arena as the runtime's store.  The role flag is set AFTER lmx_arena_open,
+# which clears both new fields: an arena that is opened again can never inherit a stale role
+# or a stale link.
+#
+# THE CLEARING IS HERE, not at the call site.  LmxRoot carries the store BY VALUE, so it arrives
+# holding whatever was on the stack, and lmx_arena_open refuses a non-empty arena by design
+# ("a by-value arena must be cleared before it is opened").  Zeroing the nine fields where the
+# role is defined keeps that list in one place instead of nine lines in the middle of
+# lmx_root_open's already long open path.
+fn: lmx_perm_open (@: LmxArena store) int
+    if: store = 0
+        return: 1
+    store\blocks: 0
+    store\arrays: 0
+    store\index: 0
+    store\count: 0U
+    store\capacity: 0U
+    store\generation: 0U
+    store\simple: 0U
+    store\permanent: 0U
+    store\perm: 0
+    if: lmx_arena_open(store) != 0
+        return: 1
+    ---
+    store\permanent: 1U
+    # The store does NOT link to itself.  That is deliberate and load-bearing: it is what
+    # makes every store-consulting path terminate, because a fallback that lands here finds
+    # `perm = 0` and stops one step later instead of recursing.
+    store\perm: 0
+return: 0
+
+# Release the store, exactly once.  The role flag is cleared FIRST so that lmx_arena_release
+# -- which refuses a store -- carries the act out, and the storage goes through this call and
+# no other.
+fn: lmx_perm_close (@: LmxArena store) int
+    int: status 0
+    if: store = 0
+        return: 1
+    if: store\permanent = 0U
+        return: 1
+    ---
+    store\permanent: 0U
+    status: lmx_arena_release(store)
+    store\perm: 0
+return: status
+
+# Bind an arena to its runtime's store.  Three answers, and the middle one is the whole point
+# of the function: 0 -> store binds, same -> same is a no-op, ANY OTHER combination is
+# refused.  A refusable bind is what keeps two runtimes in one process from answering for each
+# other's storage, and it is why the link may be non-owning without being unsafe.
+fn: lmx_perm_bind (@: LmxArena arena; @: LmxArena store) int
+    if: arena = 0 || store = 0
+        return: 1
+    if: store\permanent = 0U
+        return: 1
+    if: arena = store || arena\permanent != 0U
+        return: 1
+    ---
+    if: arena\perm = 0
+        arena\perm: store
+        return: 0
+    ---
+    if: arena\perm = store
+        return: 0
+return: 1
+
+fn: lmx_perm_store_of (@: LmxArena arena) @: LmxArena
+    if: arena = 0 || arena\perm = 0
+        return: 0
+    # A CLOSED STORE IS NOT A STORE.  lmx_perm_close clears the role and releases the storage,
+    # but NOTHING clears \perm in the arenas bound to it, and there is no unbind -- the store
+    # deliberately does not know its binders, so no walk at close is possible.  The link is
+    # therefore made to answer for itself: a still-live child that outlives the store stops
+    # following a dead one here, rather than at every call site.
+    #
+    # This is NOT the forbidden test.  It does not ask `permanent` what a VALUE is -- that
+    # question is the range table's and stays there.  It asks whether the store still EXISTS,
+    # which is exactly the lifecycle meaning the flag was narrowed to.
+    if: arena\perm\permanent = 0U
+        return: 0
+return: arena\perm
+
+# NO lmx_perm_classify.  The qualified type of a branch is decided by the address falling in this
+# store's ranges, and that question is asked with the common machinery (lmx_range_classify and
+# friends); the header says why a wrapper is not merely redundant but harmful here.
+
+fn: lmx_perm_is_store (@: LmxArena arena) int
+    if: arena = 0
+        return: 0
+    if: arena\permanent != 0U
+        return: 1
+return: 0

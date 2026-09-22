@@ -1,0 +1,101 @@
+predef: "lmx_size.lm1"
+predef: "lmx_pool.lm1"
+predef: "lmx_arena.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<string.h>"
+
+# Own size_t cells are unique mutable primitives, not interned shared values
+# and not narrowed to int. The size_t array is one of the test arena's arrays,
+# and there is no init to call any more: the first take MAKES that array with
+# exactly the room it asks for and every later take is another cell of the very
+# same array (lmx_arena_take_n) -- a value has no array of its own.
+
+# How many arrays of this kind and type the arena holds. Two takes of one kind
+# and type must be two cells of ONE array, so this stays 1 however many cells are
+# taken: a take that made an array per value would show up here as a count that
+# grows with the number of values.
+fn: size_arrays_of (@: LmxArena arena; int: kind; int: type) size_t
+    @: LmxPool pool
+    size_t: total 0U
+    if: arena = 0
+        return: 0U
+    pool: arena\arrays
+    while: pool != 0
+        if: pool\kind = kind && pool\type = type
+            total: total + 1U
+        ---
+        pool: pool\next
+    ---
+return: total
+
+fn: main () int
+    @: void a
+    @: void b
+    int: failures 0
+    LmxArena: arena
+    @: LmxArena arena_at
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ arena) != 0
+        fputs("lmx: arena open failed\n", l1_stdout())
+        return: 1
+    arena_at: @ arena
+    if: lmx_size_take(0) != 0
+        fputs("lmx: a take without an arena produced a cell\n", l1_stdout())
+        failures: failures + 1
+    a: lmx_size_take(@ arena)
+    b: lmx_size_take(@ arena)
+    if: a = 0 || b = 0
+        fputs("lmx: size cell missing\n", l1_stdout())
+        return: 1
+    if: a = b
+        fputs("lmx: two size_t takes shared one cell\n", l1_stdout())
+        failures: failures + 1
+    # The cells are intervals of ONE array: the first take made the array of size_t
+    # primitives, the second added a chunk to it.  Both cells name the same
+    # descriptor -- an array of its own per value is exactly what this refuses.
+    if: lmx_range_pool(@ arena, a) = 0 || lmx_range_pool(@ arena, a) != lmx_range_pool(@ arena, b)
+        fputs("lmx: two takes did not land in one array\n", l1_stdout())
+        failures: failures + 1
+    if: size_arrays_of(@ arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_SIZE_T) != 1U
+        fputs("lmx: the arena holds more than one array of size_t primitives\n", l1_stdout())
+        failures: failures + 1
+    # Two entries, one array: an array that grew by a chunk has several intervals in
+    # the index and one descriptor, so the arena's entries outnumber its arrays here.
+    # A take that made a new array instead of growing this one would leave the two
+    # counts equal -- that is the reading this check refuses.
+    if: arena_at\count != 2U || arena_at\count <= size_arrays_of(@ arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_SIZE_T)
+        fputs("lmx: the arena's entries do not outnumber its arrays\n", l1_stdout())
+        failures: failures + 1
+    if: lmx_range_type_of(@ arena, a) != c.LMX_TYPE_SIZE_T
+        fputs("lmx: size cell not TYPE_SIZE_T\n", l1_stdout())
+        failures: failures + 1
+    if: lmx_range_classify(@ arena, a) != c.LMX_KIND_PRIMITIVE
+        fputs("lmx: size cell not primitive\n", l1_stdout())
+        failures: failures + 1
+    if: lmx_size_value(a) != 0U
+        fputs("lmx: new size cell not zero\n", l1_stdout())
+        failures: failures + 1
+    if: lmx_size_store(a, 7U) != 0
+        fputs("lmx: size store failed\n", l1_stdout())
+        failures: failures + 1
+    if: lmx_size_value(a) != 7U
+        fputs("lmx: size store did not read back\n", l1_stdout())
+        failures: failures + 1
+    if: lmx_size_value(b) != 0U
+        fputs("lmx: store mutated a sibling cell\n", l1_stdout())
+        failures: failures + 1
+    if: lmx_size_store(a, 2147483648U) != 0
+        fputs("lmx: size store of 2^31 failed\n", l1_stdout())
+        failures: failures + 1
+    if: lmx_size_value(a) != 2147483648U
+        fputs("lmx: size_t narrowed to int\n", l1_stdout())
+        failures: failures + 1
+    if: lmx_size_store(0, 1U) = 0
+        fputs("lmx: null size store succeeded\n", l1_stdout())
+        failures: failures + 1
+    lmx_arena_release(@ arena)
+    if: failures != 0
+        c.printf("lmx size selftest FAILED checks=%d\n", failures)
+        return: 1
+    fputs("lmx size selftest ok\n", l1_stdout())
+return: 0

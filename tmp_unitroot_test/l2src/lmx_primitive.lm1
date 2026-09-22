@@ -1,0 +1,42 @@
+predef: "l2src/lmx_primitive.h.lm1"
+# The units whose declarations this one calls through: the registry builds a Structure
+# (lmx_value_owned) and stores references into it (lmx_arena_refs), exactly as lmx_walk's own
+# role table does.
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+
+# lmx_primitive.lm1 - the registry's mechanism: open it, admit a primitive into it, look one up.
+# No policy lives here: which primitives a runtime admits is registration's act, and the WALK
+# never asks this unit anything -- it reads the record the node names, by address.
+
+fn: lmx_primitive_registry_open (@: LmxArena store; size_t: count; @@: Lmx out_registry) int
+    @: Lmx registry 0
+    \out_registry: 0
+    if: store = 0 || count = 0U
+        return: c.LMX_PRIMITIVE_REG_REFUSED
+    registry: lmx_node_new_owned(store)
+    if: registry = 0 || lmx_arena_refs_open_owned(store, registry, count) != 0
+        return: c.LMX_PRIMITIVE_REG_REFUSED
+    \out_registry: registry
+return: c.LMX_PRIMITIVE_REG_OK
+
+fn: lmx_primitive_register (@: LmxArena store; @: Lmx registry; size_t: slot; LmxPrimitiveEntry: fn; @: Lmx signature; @: Lmx owner; @@: Lmx out_record) int
+    @: LmxPrimitive record 0
+    \out_record: 0
+    if: store = 0 || registry = 0 || fn = 0 || slot >= (cast: (size_t) registry\len)
+        return: c.LMX_PRIMITIVE_REG_REFUSED
+    record: (cast: (@: LmxPrimitive) lmx_arena_take(store, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))
+    if: record = 0
+        return: c.LMX_PRIMITIVE_REG_REFUSED
+    record\fn: fn
+    record\signature: signature
+    record\owner: owner
+    if: lmx_arena_ref_store(registry, slot, (cast: (@: void) record)) != 0
+        return: c.LMX_PRIMITIVE_REG_REFUSED
+    \out_record: (cast: (@: Lmx) record)
+return: c.LMX_PRIMITIVE_REG_OK
+
+fn: lmx_primitive_record (@: Lmx registry; size_t: slot) @: Lmx
+    if: registry = 0 || slot >= (cast: (size_t) registry\len)
+        return: 0
+return: (cast: (@: Lmx) lmx_arena_ref_value(registry, slot))

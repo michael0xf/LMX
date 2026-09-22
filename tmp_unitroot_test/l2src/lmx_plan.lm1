@@ -1,0 +1,242 @@
+predef: "l2src/lmx_plan.h.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+
+# lmx_plan.lm1 - the generic activation plan.  The contract is in lmx_plan.h.lm1; the ABI
+# is steps/l3-activation-plan.md.  The two accesses that document names child_struct_known
+# and address_of_slot are lmx_arena_ref_struct and lmx_arena_ref_cell: neither asks the
+# arena anything (lmx_arena_refs.h.lm1).
+
+fn: lmx_plan_roles_open (@: LmxArena arena) @: Lmx
+    @: LmxArenaBlock mark 0
+    @: Lmx roles 0
+    @@: void record 0
+    size_t: k 0U
+    if: arena = 0
+        return: 0
+    mark: lmx_arena_mark(arena)
+    roles: lmx_node_new_owned(arena)
+    if: roles = 0 || lmx_arena_refs_open_owned(arena, roles, (cast: (size_t) c.LMX_PLAN_ROLE_COUNT)) != 0
+        lmx_arena_revert(arena, mark)
+        return: 0
+    while: k < (cast: (size_t) c.LMX_PLAN_ROLE_COUNT)
+        record: (cast: (@@: void) lmx_arena_take(arena, c.sizeof(@: void), c.LMX_DOMAIN_KIND_ROLE, c.LMX_DOMAIN_ROLE))
+        if: record = 0 || lmx_arena_ref_store(roles, k, (cast: (@: void) record)) != 0
+            lmx_arena_revert(arena, mark)
+            return: 0
+        # The content means nothing; the address is the role.
+        \record: 0
+        k: k + 1U
+    ---
+return: roles
+
+fn: lmx_plan_build_from_paths (@: LmxArena arena; @: Lmx plan_roles; @@: size_t paths; @: size_t lens; size_t: count; @@: Lmx out_plan) int
+    @: LmxArenaBlock mark 0
+    @: Lmx plan 0
+    @: Lmx entry 0
+    @: void root_role 0
+    @: void entry_role 0
+    @: void cell 0
+    @: size_t path 0
+    size_t: i 0U
+    size_t: j
+    int: status c.LMX_PLAN_OK
+    if: out_plan = 0
+        return: c.LMX_PLAN_INVALID
+    \out_plan: 0
+    if: arena = 0 || plan_roles = 0 || plan_roles\len < c.LMX_PLAN_ROLE_COUNT
+        return: c.LMX_PLAN_INVALID
+    if: count != 0U && (paths = 0 || lens = 0)
+        return: c.LMX_PLAN_INVALID
+    if: count = (cast: (size_t) -1)
+        return: c.LMX_PLAN_INVALID
+    root_role: lmx_arena_ref_value(plan_roles, (cast: (size_t) c.LMX_PLAN_ROLE_ROOT))
+    entry_role: lmx_arena_ref_value(plan_roles, (cast: (size_t) c.LMX_PLAN_ROLE_ENTRY))
+    if: root_role = 0 || entry_role = 0
+        return: c.LMX_PLAN_INVALID
+    while: i < count
+        if: paths[i] = 0 || lens[i] = 0U || lens[i] = (cast: (size_t) -1)
+            return: c.LMX_PLAN_INVALID
+        i: i + 1U
+    ---
+    # All or nothing, the way merge and graph copy build: a mark first, a revert on refusal.
+    mark: lmx_arena_mark(arena)
+    plan: lmx_node_new_owned(arena)
+    if: plan = 0 || lmx_arena_refs_open_owned(arena, plan, count + 1U) != 0
+        status: c.LMX_PLAN_NOMEM
+    if: status = c.LMX_PLAN_OK && lmx_arena_ref_store(plan, 0U, root_role) != 0
+        status: c.LMX_PLAN_INVALID
+    i: 0U
+    while: status = c.LMX_PLAN_OK && i < count
+        path: paths[i]
+        entry: lmx_struct_new_owned(plan, arena)
+        if: entry = 0 || lmx_arena_refs_open_owned(arena, entry, lens[i] + 1U) != 0
+            status: c.LMX_PLAN_NOMEM
+        if: status = c.LMX_PLAN_OK && lmx_arena_ref_store(entry, 0U, entry_role) != 0
+            status: c.LMX_PLAN_INVALID
+        j: 0U
+        while: status = c.LMX_PLAN_OK && j < lens[i]
+            cell: lmx_size_new_owned(arena)
+            if: cell = 0
+                status: c.LMX_PLAN_NOMEM
+            if: status = c.LMX_PLAN_OK && (lmx_size_store_known(cell, path[j]) != 0 || lmx_arena_ref_store(entry, j + 1U, cell) != 0)
+                status: c.LMX_PLAN_INVALID
+            j: j + 1U
+        ---
+        if: status = c.LMX_PLAN_OK && lmx_arena_ref_store(plan, i + 1U, (cast: (@: void) entry)) != 0
+            status: c.LMX_PLAN_INVALID
+        i: i + 1U
+    ---
+    if: status != c.LMX_PLAN_OK
+        lmx_arena_revert(arena, mark)
+        return: status
+    \out_plan: plan
+return: c.LMX_PLAN_OK
+
+fn: lmx_plan_home (@: LmxArena arena; @: void p) @: LmxArena
+    if: arena = 0 || p = 0
+        return: 0
+return: lmx_range_home(arena, p)
+
+fn: lmx_plan_entry_count (@: Lmx plan) size_t
+    if: plan = 0 || plan\len < 1
+        return: 0U
+return: (cast: (size_t) plan\len) - 1U
+
+# Activation time: nothing here may ask the arena anything, allocate or validate.
+fn: lmx_plan_slot_known (@: Lmx occurrence; @: Lmx plan; size_t: index) @@: void
+    @: Lmx entry 0
+    @: Lmx at occurrence
+    size_t: steps
+    size_t: j 1U
+    if: occurrence = 0 || index >= lmx_plan_entry_count(plan)
+        return: 0
+    entry: lmx_arena_ref_struct(plan, index + 1U)
+    if: entry = 0 || entry\len < 2
+        return: 0
+    steps: (cast: (size_t) entry\len) - 1U
+    while: j < steps
+        at: lmx_arena_ref_struct(at, lmx_size_value_known(lmx_arena_ref_value(entry, j)))
+        j: j + 1U
+    ---
+return: lmx_arena_ref_cell(at, lmx_size_value_known(lmx_arena_ref_value(entry, steps)))
+
+fn: lmx_plan_validate_shape (@: LmxArena arena; @: Lmx plan_roles; @: Lmx occurrence; @: Lmx plan) int
+    @: void root_role 0
+    @: void entry_role 0
+    @: void step 0
+    @: void cell 0
+    @: Lmx entry 0
+    @: Lmx at 0
+    @: LmxArena home 0
+    @: LmxArena role_home 0
+    size_t: count
+    size_t: steps
+    size_t: slot
+    size_t: i 0U
+    size_t: j
+    size_t: k
+    if: arena = 0 || plan_roles = 0 || occurrence = 0 || plan = 0
+        return: c.LMX_PLAN_INVALID
+    # The role records: two distinct records of the role domain, held by this arena.
+    if: lmx_range_classify(arena, (cast: (@: void) plan_roles)) != c.LMX_KIND_STRUCT || plan_roles\len < c.LMX_PLAN_ROLE_COUNT
+        return: c.LMX_PLAN_INVALID
+    root_role: lmx_arena_ref_value(plan_roles, (cast: (size_t) c.LMX_PLAN_ROLE_ROOT))
+    entry_role: lmx_arena_ref_value(plan_roles, (cast: (size_t) c.LMX_PLAN_ROLE_ENTRY))
+    if: root_role = 0 || entry_role = 0 || root_role = entry_role
+        return: c.LMX_PLAN_INVALID
+    if: lmx_range_classify(arena, root_role) != c.LMX_DOMAIN_KIND_ROLE || lmx_range_classify(arena, entry_role) != c.LMX_DOMAIN_KIND_ROLE
+        return: c.LMX_PLAN_INVALID
+    # The occurrence and the plan root, both of this arena.
+    if: lmx_range_classify(arena, (cast: (@: void) occurrence)) != c.LMX_KIND_STRUCT
+        return: c.LMX_PLAN_INVALID
+    if: lmx_range_classify(arena, (cast: (@: void) plan)) != c.LMX_KIND_STRUCT || plan\len < 1
+        return: c.LMX_PLAN_INVALID
+    if: lmx_arena_ref_value(plan, 0U) != root_role
+        return: c.LMX_PLAN_INVALID
+    # One home for the whole plan; the roles of that home or of the store, which outlives it.
+    home: lmx_plan_home(arena, (cast: (@: void) plan))
+    role_home: lmx_plan_home(arena, root_role)
+    if: home = 0 || role_home = 0 || lmx_plan_home(arena, entry_role) != role_home
+        return: c.LMX_PLAN_INVALID
+    # lmx_plan_home answers with the arena or with its bound store and nothing else, so a
+    # role home that is not the plan's is refused exactly when it is the arena itself: the
+    # plan then lives in the store and its roles would die sooner.  No flag is read for it.
+    if: role_home != home && role_home = arena
+        return: c.LMX_PLAN_INVALID
+    count: (cast: (size_t) plan\len) - 1U
+    while: i < count
+        step: lmx_arena_ref_value(plan, i + 1U)
+        if: step = 0 || lmx_range_classify(arena, step) != c.LMX_KIND_STRUCT
+            return: c.LMX_PLAN_INVALID
+        if: lmx_plan_home(arena, step) != home
+            return: c.LMX_PLAN_INVALID
+        entry: (cast: (@: Lmx) step)
+        # The role by its address: another record carrying whatever number is not it.
+        if: entry\len < 2 || lmx_arena_ref_value(entry, 0U) != entry_role
+            return: c.LMX_PLAN_INVALID
+        steps: (cast: (size_t) entry\len) - 1U
+        at: occurrence
+        j: 1U
+        while: j <= steps
+            cell: lmx_arena_ref_value(entry, j)
+            if: cell = 0 || lmx_range_classify(arena, cell) != c.LMX_KIND_PRIMITIVE || lmx_range_type_of(arena, cell) != c.LMX_TYPE_SIZE_T
+                return: c.LMX_PLAN_INVALID
+            if: lmx_plan_home(arena, cell) != home
+                return: c.LMX_PLAN_INVALID
+            slot: lmx_size_value_known(cell)
+            if: j < steps
+                # Every step but the last lands on a Structure of this arena.
+                step: lmx_arena_ref_value(at, slot)
+                if: step = 0 || lmx_range_classify(arena, step) != c.LMX_KIND_STRUCT
+                    return: c.LMX_PLAN_INVALID
+                at: (cast: (@: Lmx) step)
+            else:
+                # The last names an existing slot, and never child[0] of the occurrence:
+                # that one holds the descriptor.
+                if: at = occurrence && slot = 0U
+                    return: c.LMX_PLAN_INVALID
+                if: lmx_arena_ref_cell(at, slot) = 0
+                    return: c.LMX_PLAN_INVALID
+            ---
+            j: j + 1U
+        ---
+        i: i + 1U
+    ---
+    # No two entries name the same slot.
+    i: 0U
+    while: i < count
+        k: 0U
+        while: k < i
+            if: lmx_plan_slot_known(occurrence, plan, i) = lmx_plan_slot_known(occurrence, plan, k)
+                return: c.LMX_PLAN_INVALID
+            k: k + 1U
+        ---
+        i: i + 1U
+    ---
+return: c.LMX_PLAN_OK
+
+fn: lmx_plan_publish (@: LmxArena arena; @: Lmx plan_roles; @: Lmx occurrence; @: Lmx plan) int
+    @: void target 0
+    @: LmxCallable info 0
+    int: status
+    if: arena = 0 || plan_roles = 0 || occurrence = 0 || plan = 0
+        return: c.LMX_PLAN_INVALID
+    if: lmx_range_classify(arena, (cast: (@: void) occurrence)) != c.LMX_KIND_STRUCT
+        return: c.LMX_PLAN_INVALID
+    # The descriptor is reached THROUGH the occurrence.  A bare METHOD has no header; a
+    # descriptor this arena cannot classify is not ours to write; and the plan must live
+    # where the descriptor lives -- a plan of a shorter-lived home would dangle from it.
+    target: lmx_arena_ref_value(occurrence, 0U)
+    if: target = 0 || lmx_range_classify(arena, target) != c.LMX_DOMAIN_KIND_CALLABLE
+        return: c.LMX_PLAN_INVALID
+    if: lmx_plan_home(arena, target) = 0 || lmx_plan_home(arena, target) != lmx_plan_home(arena, (cast: (@: void) plan))
+        return: c.LMX_PLAN_INVALID
+    status: lmx_plan_validate_shape(arena, plan_roles, occurrence, plan)
+    if: status != c.LMX_PLAN_OK
+        return: status
+    info: (cast: (@: LmxCallable) target)
+    info\header: plan
+return: c.LMX_PLAN_OK

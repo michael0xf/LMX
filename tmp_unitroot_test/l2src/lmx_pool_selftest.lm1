@@ -1,0 +1,284 @@
+predef: "lmx_pool.lm1"
+predef: "lmx_arena.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# Checks the 2 service-entry table end to end: an entry handed out by a typed
+# array of the arena classifies as that array's kind, from its address alone,
+# and an Lmx cell holding the entry classifies identically. Nothing is stored on
+# the cell to say what it holds.
+
+[]: char chars_pool 4 65 66 67 68
+[]: int backing 3 7 8 9
+
+# A stand-in generated C entry. This unit stores its address in a method record
+# and never calls it; invocation is 21.8 and a later unit. The body is not empty
+# because an empty sub: body lowers to a prototype with no definition.
+int: sample_calls 0
+
+sub: sample_entry ()
+    sample_calls: sample_calls + 1
+end: sample_entry
+
+fn: main () int
+    @: LmxPool methods
+    @: LmxPool arrays
+    @: LmxPool chars_of
+    @: LmxArrayDesc char_desc
+    @: LmxMethod record
+    @: LmxMethod second
+    @: LmxMethod third
+    @: LmxArrayDesc desc
+    @: void slot
+    @: LmxPool grow_pool
+    int: failures
+    size_t: cycle
+    LmxArena: arena
+    # The arena is a by-value local, so every call takes its address (`@ arena`).
+    # A FIELD read needs a pointer of its own: L1's `\` emits `->`, and the address
+    # of a by-value field is not expressible -- taking the address of the whole
+    # local first is the spelling that works.
+    @: LmxArena arena_at
+    # The static character table is an array of the arena too: its descriptor and
+    # chunk live in this frame, because the storage is the test's own.
+    LmxPool: plain_chars
+    LmxChunk: plain_chunk
+    failures: 0
+
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    arena_at: @ arena
+    if: lmx_arena_open(@ arena) != 0
+        fputs("lmx: arena open failed\n", l1_stdout())
+        return: 1
+    if: lmx_pool_over(@ arena, @ plain_chars, @ plain_chunk, (cast: (@: void) chars_pool), 4U, c.sizeof(chars_pool[0]), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR) != 0
+        fputs("lmx: primitive pool registration failed\n", l1_stdout())
+        return: 1
+
+    methods: (cast: (@: LmxPool) calloc(1U, c.sizeof(c.LmxPool)))
+    arrays: (cast: (@: LmxPool) calloc(1U, c.sizeof(c.LmxPool)))
+    chars_of: (cast: (@: LmxPool) calloc(1U, c.sizeof(c.LmxPool)))
+    if: methods = 0 || arrays = 0 || chars_of = 0
+        fputs("lmx: pool header allocation failed\n", l1_stdout())
+        return: 1
+    if: lmx_pool_open(@ arena, methods, c.sizeof(c.LmxMethod), 2U, c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD) != 0
+        fputs("lmx: method pool open failed\n", l1_stdout())
+        return: 1
+    if: lmx_pool_open(@ arena, arrays, c.sizeof(c.LmxArrayDesc), 2U, c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_INT) != 0
+        fputs("lmx: array pool open failed\n", l1_stdout())
+        return: 1
+
+    # 2 says N TYPED service arrays, and 6.5 spells out one per Array element
+    # type. A second descriptor pool, same shape, different element type.
+    if: lmx_pool_open(@ arena, chars_of, c.sizeof(c.LmxArrayDesc), 2U, c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_CHAR) != 0
+        fputs("lmx: second array pool open failed\n", l1_stdout())
+        return: 1
+
+    record: lmx_method_intern(@ arena, methods, sample_entry, 1U)
+    desc: lmx_array_desc_new(@ arena, arrays, 3U, (cast: (@: void) backing))
+    if: record = 0 || desc = 0
+        fputs("lmx: entry handout failed\n", l1_stdout())
+        return: 1
+
+    # The whole claim of this unit: kind comes from the address, not the entry.
+    if: lmx_range_classify(@ arena, cast: (@: void) record) != c.LMX_KIND_METHOD
+        fputs("lmx: method record not classified as method\n", l1_stdout())
+        failures: failures + 1
+    if: lmx_range_classify(@ arena, cast: (@: void) desc) != c.LMX_KIND_ARRAY
+        fputs("lmx: array descriptor not classified as array\n", l1_stdout())
+        failures: failures + 1
+    if: lmx_range_classify(@ arena, cast: (@: void) (chars_pool + 1)) != c.LMX_KIND_PRIMITIVE
+        fputs("lmx: adding pools disturbed primitive classification\n", l1_stdout())
+        failures: failures + 1
+
+    # The point of N being per type. Both descriptors are array descriptors and
+    # read the same kind, yet the address alone tells which typed pool each came
+    # from, with nothing stored in either to say so.
+    char_desc: lmx_array_desc_new(@ arena, chars_of, 2U, (cast: (@: void) chars_pool))
+    if: char_desc = 0
+        fputs("lmx: char-array descriptor handout failed\n", l1_stdout())
+        return: 1
+    if: lmx_range_classify(@ arena, cast: (@: void) char_desc) != c.LMX_KIND_ARRAY
+        fputs("lmx: char-array descriptor is not an array\n", l1_stdout())
+        failures: failures + 1
+    if: lmx_range_type_of(@ arena, cast: (@: void) desc) != c.LMX_TYPE_ARRAY_OF_INT
+        fputs("lmx: int-array descriptor has the wrong type\n", l1_stdout())
+        failures: failures + 1
+    if: lmx_range_type_of(@ arena, cast: (@: void) char_desc) != c.LMX_TYPE_ARRAY_OF_CHAR
+        fputs("lmx: char-array descriptor has the wrong type\n", l1_stdout())
+        failures: failures + 1
+    if: lmx_range_type_of(@ arena, cast: (@: void) record) != c.LMX_TYPE_METHOD
+        fputs("lmx: method record has the wrong type\n", l1_stdout())
+        failures: failures + 1
+    if: lmx_range_type_of(@ arena, cast: (@: void) (chars_pool + 1)) != c.LMX_TYPE_CHAR
+        fputs("lmx: primitive cell has the wrong type\n", l1_stdout())
+        failures: failures + 1
+    if: lmx_range_type_of(@ arena, cast: (@: void) 0) != c.LMX_TYPE_NONE
+        fputs("lmx: null has a type\n", l1_stdout())
+        failures: failures + 1
+
+    # A second entry from the same pool classifies the same and does not alias
+    # the first. Both facts follow from the range, not from any stored tag.
+    second: lmx_method_intern(@ arena, methods, sample_entry, 2U)
+    if: second = 0
+        fputs("lmx: second method record refused too early\n", l1_stdout())
+        failures: failures + 1
+    if: second = record
+        fputs("lmx: pool handed out the same entry twice\n", l1_stdout())
+        failures: failures + 1
+    if: lmx_range_classify(@ arena, cast: (@: void) second) != c.LMX_KIND_METHOD
+        fputs("lmx: second method record not classified as method\n", l1_stdout())
+        failures: failures + 1
+
+    # A non-const variable lives in the big array of its type, so the array
+    # grows rather than refusing. It grows by adding a chunk, never by
+    # reallocating, so every address handed out before the growth is still
+    # valid and still classifies.
+    third: lmx_method_intern(@ arena, methods, sample_entry, 3U)
+    if: third = 0
+        fputs("lmx: exhausted pool refused to grow\n", l1_stdout())
+        failures: failures + 1
+    if: lmx_range_classify(@ arena, cast: (@: void) third) != c.LMX_KIND_METHOD
+        fputs("lmx: entry from a new chunk is not classified\n", l1_stdout())
+        failures: failures + 1
+    if: lmx_range_type_of(@ arena, cast: (@: void) third) != c.LMX_TYPE_METHOD
+        fputs("lmx: entry from a new chunk lost its type\n", l1_stdout())
+        failures: failures + 1
+    if: lmx_range_type_of(@ arena, cast: (@: void) record) != c.LMX_TYPE_METHOD
+        fputs("lmx: growth invalidated an earlier entry\n", l1_stdout())
+        failures: failures + 1
+    if: record\sig != 1U || second\sig != 2U || third\sig != 3U
+        fputs("lmx: growth disturbed the contents of earlier entries\n", l1_stdout())
+        failures: failures + 1
+    if: lmx_pool_count(methods) != 3U
+        fputs("lmx: pool count wrong after growth\n", l1_stdout())
+        failures: failures + 1
+
+    # 6.5 settles the descriptor's own len as element count, unlike the len in
+    # the Lmx header, which this code still refuses to read.
+    if: desc\len != 3U
+        fputs("lmx: descriptor length not preserved\n", l1_stdout())
+        failures: failures + 1
+    if: desc\data != (cast: (@: void) backing)
+        fputs("lmx: descriptor storage pointer not preserved\n", l1_stdout())
+        failures: failures + 1
+
+    # A child slot may hold the reference; the slot is not the entry, and
+    # rebinding it changes only which entry that one field addresses.
+    slot: (cast: (@: void) desc)
+    if: lmx_range_classify(@ arena, slot) != c.LMX_KIND_ARRAY
+        fputs("lmx: a slot holding a descriptor is not classified as array\n", l1_stdout())
+        failures: failures + 1
+    slot: (cast: (@: void) record)
+    if: lmx_range_classify(@ arena, slot) != c.LMX_KIND_METHOD
+        fputs("lmx: the same slot holding a method record was not reclassified\n", l1_stdout())
+        failures: failures + 1
+    if: lmx_range_classify(@ arena, (cast: (@: void) desc)) != c.LMX_KIND_ARRAY
+        fputs("lmx: rebinding the slot disturbed the descriptor entry\n", l1_stdout())
+        failures: failures + 1
+
+    lmx_pool_release(@ arena, methods)
+    # Two method chunks removed, while both descriptor pools and static chars
+    # remain registered. Never inspect or dereference a freed entry pointer.
+    if: arena_at\count != 3U
+        fputs("lmx: released method chunks remain registered\n", l1_stdout())
+        failures: failures + 1
+    if: lmx_range_type_of(@ arena, cast: (@: void) desc) != c.LMX_TYPE_ARRAY_OF_INT
+        fputs("lmx: unregister disturbed live int descriptors\n", l1_stdout())
+        failures: failures + 1
+    if: lmx_range_type_of(@ arena, cast: (@: void) char_desc) != c.LMX_TYPE_ARRAY_OF_CHAR
+        fputs("lmx: unregister disturbed live char descriptors\n", l1_stdout())
+        failures: failures + 1
+    lmx_pool_release(@ arena, arrays)
+    lmx_pool_release(@ arena, chars_of)
+    free(chars_of)
+    if: arena_at\count != 1U
+        fputs("lmx: only static character range should remain\n", l1_stdout())
+        failures: failures + 1
+    lmx_pool_release(@ arena, methods)
+    if: arena_at\count != 1U
+        fputs("lmx: repeated release changed registry\n", l1_stdout())
+        failures: failures + 1
+
+    # Repeated sequential allocations must not consume permanent range slots.
+    cycle: 0U
+    while: cycle < 32U
+        if: lmx_pool_open(@ arena, methods, c.sizeof(c.LmxMethod), 1U, c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD) != 0
+            c.printf("lmx: registry exhausted after released pools cycle=%zu\n", cycle)
+            failures: failures + 1
+            break
+        record: lmx_method_intern(@ arena, methods, sample_entry, 9U)
+        if: record = 0 || lmx_range_type_of(@ arena, cast: (@: void) record) != c.LMX_TYPE_METHOD
+            fputs("lmx: reopened pool misclassified\n", l1_stdout())
+            failures: failures + 1
+        lmx_pool_release(@ arena, methods)
+        cycle: cycle + 1U
+    ---
+    if: arena_at\count != 1U
+        fputs("lmx: reopen cycles leaked registered ranges\n", l1_stdout())
+        failures: failures + 1
+    if: lmx_range_drop(@ arena, (cast: (@: void) chars_pool), (cast: (@: void) (chars_pool + 3))) = 0
+        fputs("lmx: partial range unregister should fail\n", l1_stdout())
+        failures: failures + 1
+    if: lmx_range_type_of(@ arena, cast: (@: void) (chars_pool + 1)) != c.LMX_TYPE_CHAR
+        fputs("lmx: failed unregister disturbed static range\n", l1_stdout())
+        failures: failures + 1
+    if: lmx_range_drop(@ arena, (cast: (@: void) chars_pool), (cast: (@: void) (chars_pool + 4))) != 0
+        fputs("lmx: exact range unregister failed\n", l1_stdout())
+        failures: failures + 1
+    if: lmx_range_type_of(@ arena, cast: (@: void) chars_pool) != c.LMX_TYPE_NONE || arena_at\count != 0U
+        fputs("lmx: removed live storage still classified\n", l1_stdout())
+        failures: failures + 1
+    if: lmx_range_drop(@ arena, (cast: (@: void) chars_pool), (cast: (@: void) (chars_pool + 4))) = 0
+        fputs("lmx: duplicate unregister should fail\n", l1_stdout())
+        failures: failures + 1
+    # THE POOL'S GROWTH STEP, PINNED IN BOTH DIRECTIONS.
+    # (1) a SUCCESSFUL oversized take raises the step AND KEEPS IT RAISED.  This assertion makes
+    #     the code's semantics NORMATIVE (lmx_pool.h used to say only "that one chunk"); if the
+    #     semantics are ever deliberately reversed, THIS ASSERTION MOVES TOGETHER WITH THE CODE --
+    #     read on its own afterwards it would look like evidence AGAINST such a change.
+    # (2) a FAILED growth must not poison the array: the step is restored, so a later small request
+    #     still works.  Before the fix it was not restored, one impossible attempt left the
+    #     impossible size in the record, and every later request retried it (fable had to write the
+    #     old step back from lmx_scratch to survive that).
+    grow_pool: (cast: (@: LmxPool) calloc(1U, c.sizeof(c.LmxPool)))
+    if: grow_pool = 0 || lmx_pool_open(@ arena, grow_pool, 4U, 4U, c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_INT) != 0
+        fputs("lmx: grow case could not open a pool\n", l1_stdout())
+        failures: failures + 1
+    ---
+    if: grow_pool != 0 && lmx_pool_take_n(@ arena, grow_pool, 8U) = 0
+        fputs("lmx: an oversized take that should succeed failed\n", l1_stdout())
+        failures: failures + 1
+    ---
+    if: grow_pool != 0 && grow_pool\chunk_capacity != 8U
+        fputs("lmx: a successful oversized take did not raise the pool growth step\n", l1_stdout())
+        failures: failures + 1
+    ---
+    if: grow_pool != 0 && lmx_pool_take_n(@ arena, grow_pool, 1U) = 0
+        fputs("lmx: after a successful growth the array could not serve one cell\n", l1_stdout())
+        failures: failures + 1
+    ---
+    if: grow_pool != 0 && lmx_pool_take_n(@ arena, grow_pool, (cast: (size_t) 100000000000)) != 0
+        fputs("lmx: an impossible growth unexpectedly succeeded\n", l1_stdout())
+        failures: failures + 1
+    ---
+    if: grow_pool != 0 && grow_pool\chunk_capacity != 8U
+        fputs("lmx: a FAILED growth disturbed the pool step -- it must be restored\n", l1_stdout())
+        failures: failures + 1
+    ---
+    if: grow_pool != 0 && lmx_pool_take_n(@ arena, grow_pool, 1U) = 0
+        fputs("lmx: a failed growth poisoned the array -- a later small take returned 0\n", l1_stdout())
+        failures: failures + 1
+    ---
+    if: grow_pool != 0
+        free(grow_pool)
+    ---
+
+    free(methods)
+    free(arrays)
+    lmx_arena_release(@ arena)
+
+    if: failures != 0
+        c.printf("lmx pool selftest FAILED checks=%d\n", failures)
+        return: 1
+    fputs("lmx pool selftest ok\n", l1_stdout())
+    return: 0

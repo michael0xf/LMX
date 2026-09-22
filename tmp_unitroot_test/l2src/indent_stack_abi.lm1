@@ -1,0 +1,72 @@
+# C ABI adapters: frozen parser symbols -> L2 l2_m{i} on the indent unit.
+# parse_bytes in a stripped candidate parser calls these, not L1 bodies.
+predef: "l2src/lmx.h.lm1"
+predef: "l2src/lmx_arena_refs.h.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "l1src/p0.h"
+include: "<stdio.h>"
+
+extern: @: Lmx l2_indent_unit
+
+prototype:
+    fn: l2_indent_boot () int
+    fn: l2_m0 (@: Lmx node; @: LmP0IndentStack stack) void
+    fn: l2_m1 (@: Lmx node; @: size_t p; size_t: v) int
+    fn: l2_m2 (@: Lmx node; @: size_t p) size_t
+    fn: l2_m3 (@: Lmx node; @: LmP0Document document; @: LmP0IndentStack stack; size_t: column; size_t: line; size_t: source_column) int
+    fn: l2_m4 (@: Lmx node; @: LmP0Document document; @: LmP0IndentStack stack) int
+    fn: l2_m5 (@: Lmx node) @: LmP0IndentStack
+    fn: l2_m6 (@: Lmx node; @: LmP0Document document) @: LmP0IndentStack
+    fn: l2_m7 (@: Lmx node; @: LmP0IndentStack stack) void
+    fn: l2_m8 (@: Lmx node; @: LmP0Document document; @: LmP0IndentStack target; const: @(LmP0IndentStack source); size_t: line; size_t: column) int
+    fn: l2_m9 (@: Lmx node; @: LmP0Document document; const: @(LmP0IndentStack source); size_t: line; size_t: column) @: LmP0IndentStack
+    fn: l2_m10 (@: Lmx node; @: LmP0Document document; @: LmP0IndentStack stack; size_t: column; size_t: line; size_t: source_column; @: size_t out_level) int
+end: prototype
+
+int: l2_indent_level_calls 0
+
+fn: l2_indent_ensure () void
+    if: l2_indent_unit = 0
+        if: c.l2_indent_boot() != 0 || l2_indent_unit = 0
+            fputs("l2_indent_boot failed\n", l1_stderr())
+---
+
+fn: lm_p0_indent_stack_free (@: LmP0IndentStack stack) void
+    l2_indent_ensure()
+    c.l2_m0(c.lmx_arena_ref_struct(l2_indent_unit, 0U), stack)
+
+fn: lm_p0_indent_stack_free_any (@: void object) void
+    lm_p0_indent_stack_free((cast: (@(LmP0IndentStack)) object))
+
+fn: lm_p0_indent_stack_push (@: LmP0Document document; @: LmP0IndentStack stack; size_t: column; size_t: line; size_t: source_column) int
+    l2_indent_ensure()
+    return: c.l2_m3(c.lmx_arena_ref_struct(l2_indent_unit, 3U), document, stack, column, line, source_column)
+
+fn: lm_p0_indent_stack_init (@: LmP0Document document; @: LmP0IndentStack stack) int
+    l2_indent_ensure()
+    return: c.l2_m4(c.lmx_arena_ref_struct(l2_indent_unit, 4U), document, stack)
+
+fn: lm_p0_indent_stack_new_empty () @: LmP0IndentStack
+    l2_indent_ensure()
+    return: c.l2_m5(c.lmx_arena_ref_struct(l2_indent_unit, 5U))
+
+fn: lm_p0_indent_stack_new (@: LmP0Document document) @: LmP0IndentStack
+    l2_indent_ensure()
+    return: c.l2_m6(c.lmx_arena_ref_struct(l2_indent_unit, 6U), document)
+
+fn: lm_p0_indent_stack_delete (@: LmP0IndentStack stack) void
+    l2_indent_ensure()
+    c.l2_m7(c.lmx_arena_ref_struct(l2_indent_unit, 7U), stack)
+
+fn: lm_p0_indent_stack_copy (@: LmP0Document document; @: LmP0IndentStack target; const: @(LmP0IndentStack source); size_t: line; size_t: column) int
+    l2_indent_ensure()
+    return: c.l2_m8(c.lmx_arena_ref_struct(l2_indent_unit, 8U), document, target, source, line, column)
+
+fn: lm_p0_indent_stack_clone (@: LmP0Document document; const: @(LmP0IndentStack source); size_t: line; size_t: column) @: LmP0IndentStack
+    l2_indent_ensure()
+    return: c.l2_m9(c.lmx_arena_ref_struct(l2_indent_unit, 9U), document, source, line, column)
+
+fn: lm_p0_indent_level_from_column (@: LmP0Document document; @: LmP0IndentStack stack; size_t: column; size_t: line; size_t: source_column; @: size_t out_level) int
+    l2_indent_ensure()
+    l2_indent_level_calls: l2_indent_level_calls + 1
+    return: c.l2_m10(c.lmx_arena_ref_struct(l2_indent_unit, 10U), document, stack, column, line, source_column, out_level)

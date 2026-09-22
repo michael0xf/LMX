@@ -1,0 +1,734 @@
+predef: "l2src/lmx_thread.h.lm1"
+predef: "l2src/lmx_call.lm1"
+predef: "l2src/lmx_turn.lm1"
+predef: "l2src/lmx_clock.lm1"
+predef: "l2src/lmx_manager.lm1"
+
+# lmx_thread.lm1 - running an L3 Thread's turns, and the kernel side of lmx.h's poll hook.
+#
+# An L3 Thread is a Message (model 25); what makes it one is that it has a turn and
+# a mailbox, and those live in this state rather than in the closed record.  The
+# boundary the spec names (19.29.7.1, model 31) is here: `running` is read at the
+# turn boundary, and a zero read there is a stop request -- never the message's own
+# completion.  `success` is the only completion mark, and a heartbeat, an empty
+# inbox or the end of a single turn must not set it.
+#
+# Polling is a Thread act: a plain letter has no turn, so a message that is not
+# being executed has no current state and the hooks answer 0.  lmx.h declares the
+# two hooks and leaves their bodies to the kernel because an executable body in a
+# header unit is refused; these are those bodies, and the fast path is what
+# 19.29.7.1 asks for -- an ordinary flag load and test, no fence, no read-modify-
+# write, no helper call in the path.
+#
+# The current object is PER THREAD, not per runtime: a turn belongs to the thread that
+# runs it, so two lanes running two Threads at the same time must not see each other's
+# current.  That is what `thread_local:` (C11 _Thread_local) is for, and L1 has had the
+# spelling since Mikhail's TLS step landed (l1trans f42eabc: the qualifier is admitted on
+# unit-level globals and the definition stays in the .lm1 unit).  What the kernel still
+# does NOT promise is that a lane exists: a runtime may step its objects on one OS thread,
+# and then the cell is one cell for that thread -- which is the same thing, one level down.
+thread_local: @: LmxThread lmx_thread_current_slot 0
+
+fn: lmx_thread_current () @: LmxThread
+return: lmx_thread_current_slot
+
+fn: lmx_thread_set_current (@: LmxThread t) int
+    lmx_thread_current_slot: t
+return: c.LMX_THREAD_OK
+
+fn: lmx_thread_attach (@: LmxThread t; @: LmxMsg message; @: LmxPost mail; @: LmxSchedule slot) int
+    if: t = 0 || message = 0 || mail = 0 || slot = 0
+        return: c.LMX_THREAD_INVALID
+    t\message: message
+    t\mail: mail
+    t\slot: slot
+    t\turn: 0U
+    t\state: c.LMX_THREAD_IDLE
+    # Bootstrap compatibility is an explicit state, not an inference from entry or graph shape.
+    t\current_mode: c.LMX_THREAD_MODE_NATIVE
+    t\requested_mode: c.LMX_THREAD_MODE_NATIVE
+    t\interpreter_dispatch: 0
+    # No turn has run yet, so nothing was reserved, and nothing has linked this object into a
+    # family: the up-link of the address walk starts empty (lmx_child's publication writes it).
+    t\prepared: 0
+    t\parent: 0
+    t\entry: 0
+    t\children: 0
+    t\link: 0
+    t\manager: 0
+    # The object's interfaces are composed in at attach, each table separate: the
+    # thread's own, and its mail.  A caller gets one or the other, never a merge.
+    t\api.enter: lmx_thread_enter
+    t\api.leave: lmx_thread_leave
+    t\api.running: lmx_thread_running
+    t\api.current: lmx_thread_current
+    t\api.request_mode: lmx_thread_request_mode
+    t\mail_api.accept: lmx_thread_mail_accept
+    t\mail_api.take: lmx_thread_mail_take
+    t\mail_api.count: lmx_thread_mail_count
+    t\mail_api.close: lmx_thread_mail_close
+return: c.LMX_THREAD_OK
+
+fn: lmx_thread_api (@: LmxThread t) @: LmxThreadApi
+    if: t = 0
+        return: 0
+return: @ t\api
+
+fn: lmx_thread_mail_api (@: LmxThread t) @: LmxThreadMailApi
+    if: t = 0
+        return: 0
+return: @ t\mail_api
+
+fn: lmx_thread_message (@: LmxThread t) @: LmxMsg
+    if: t = 0
+        return: 0
+return: t\message
+
+fn: lmx_thread_parent (@: LmxThread t) @: LmxThread
+    if: t = 0
+        return: 0
+return: (cast: (@: LmxThread) t\parent)
+
+fn: lmx_thread_entry (@: LmxThread t) @: void
+    if: t = 0
+        return: 0
+return: t\entry
+
+# Live direct children -- THE CHAIN LIVES IN THE PARENT'S ARENA (Mikhail, 19.09; spec 19.29.6:
+# "the parent owns the parent link at link, unlink and supervision handoff").  Each live direct child
+# has one `LmxLink` node, allocated in the PARENT's arena; the parent's head is `parent\children`,
+# the child's `link` points back at its own node.  Nothing of this chain is stored in the child's
+# record: a child may be gone, hung or mid-cleanup and the parent's chain stays whole.
+#
+# The node also carries the handshake word and the child's own addresses (thread, message, slot), so
+# a parent can act on a child -- stop it, unlink it, settle it -- by reading its OWN arena only.
+
+fn: lmx_thread_link (@: LmxThread t) @: LmxLink
+    if: t = 0
+        return: 0
+return: (cast: (@: LmxLink) t\link)
+
+# The address of this Thread's handshake word (19.29.7.1): the parent-owned cell the child's own
+# thread stamps with milliseconds and the parent zeroes as its answer.  Reached through the link, so
+# this is the one place that knows how; callers only pass the result to the atomics.
+fn: lmx_thread_manager (@: LmxThread t) @: void
+    if: t = 0
+        return: 0
+return: t\manager
+
+# THE OBJECT'S OWN SCHEDULER.  The arena is NAMED BY THE CALLER -- the kernel's own rule ("the
+# arena is the context of the act, so the caller supplies it"), and here it is also the only
+# correct source: a record may be attached with a schedule that is not initialized yet, so
+# reading slot\arena inside attach is reading garbage (measured 20260919, and it crashed the
+# settle selftest).  Refused while one is already open: a second scheduler for one object would
+# be a second answer to "which queue steps my children".
+fn: lmx_thread_scheduler_open (@: LmxThread t; @: LmxArena arena) int
+    @: LmxManager m
+    if: t = 0 || arena = 0
+        return: c.LMX_THREAD_INVALID
+    if: t\manager != 0
+        return: c.LMX_THREAD_INVALID
+    ---
+    m: (cast: (@: LmxManager) lmx_arena_take(arena, c.sizeof(c.LmxManager), c.LMX_DOMAIN_KIND_MANAGER, c.LMX_DOMAIN_MANAGER))
+    if: m = 0
+        return: c.LMX_THREAD_INVALID
+    ---
+    if: lmx_manager_init(m) != c.LMX_MANAGER_OK
+        return: c.LMX_THREAD_INVALID
+    ---
+    t\manager: (cast: (@: void) m)
+return: c.LMX_THREAD_OK
+
+fn: lmx_thread_alive_cell (@: LmxThread t) @: size_t
+    @: LmxLink link
+    link: lmx_thread_link(t)
+    if: link = 0
+        return: 0
+return: @ link\alive
+
+fn: lmx_thread_child_link (@: LmxThread parent) @: LmxLink
+    if: parent = 0
+        return: 0
+return: (cast: (@: LmxLink) parent\children)
+
+fn: lmx_thread_child_is (@: LmxThread parent; @: LmxThread child) int
+    @: LmxLink walk
+    if: parent = 0 || child = 0
+        return: 0
+    ---
+    walk: lmx_thread_child_link(parent)
+    while: walk != 0
+        if: (cast: (@: LmxThread) walk\thread) = child
+            return: 1
+        ---
+        walk: (cast: (@: LmxLink) walk\next)
+    ---
+return: 0
+
+# The node is taken from the PARENT's arena -- the arena of this parent's own band, because a Thread
+# stores no arena of its own ("the arena is the context of the act").  A parent that never joined a
+# schedule has no band to take it from, and then there is no chain to keep.
+fn: lmx_thread_child_add (@: LmxThread parent; @: LmxThread child; @: LmxArena into) int
+    @: LmxArena arena
+    @: LmxLink node
+    if: parent = 0 || child = 0 || parent = child
+        return: c.LMX_THREAD_INVALID
+    ---
+    if: lmx_thread_child_is(parent, child) != 0
+        return: c.LMX_THREAD_INVALID
+    ---
+    arena: into
+    if: arena = 0 && parent\slot != 0
+        arena: parent\slot\arena
+    ---
+    if: arena = 0
+        return: c.LMX_THREAD_INVALID
+    ---
+    node: (cast: (@: LmxLink) lmx_arena_take(arena, c.sizeof(c.LmxLink), c.LMX_DOMAIN_KIND_LINK, c.LMX_DOMAIN_LINK))
+    if: node = 0
+        return: c.LMX_THREAD_INVALID
+    ---
+    node\next: parent\children
+    node\thread: (cast: (@: void) child)
+    node\message: (cast: (@: void) child\message)
+    node\slot: (cast: (@: void) child\slot)
+    node\alive: 0U
+    node\success: 0
+    node\index: 0U
+    # No close has been requested yet: the window the stop ages against starts at its first call.
+    node\stopped: 0U
+    if: child\message != 0
+        node\index: (cast: (size_t) child\message\index)
+    ---
+    parent\children: (cast: (@: void) node)
+    child\link: (cast: (@: void) node)
+return: c.LMX_THREAD_OK
+
+fn: lmx_thread_child_remove (@: LmxThread parent; @: LmxThread child) int
+    @: LmxLink walk
+    @: LmxLink prev
+    if: parent = 0 || child = 0
+        return: c.LMX_THREAD_INVALID
+    ---
+    walk: lmx_thread_child_link(parent)
+    prev: 0
+    while: walk != 0
+        if: (cast: (@: LmxThread) walk\thread) = child
+            if: prev = 0
+                parent\children: walk\next
+            else:
+                prev\next: walk\next
+            ---
+            # The child keeps its pointer; the parent's node is unlinked and the child stops
+            # pointing at it, so a later stamp is a no-op rather than a write into a dead chain.
+            # NOT for a child whose arena is already GONE (`node\gone`, lmx_thread_finish): that
+            # record IS returned storage, and this write was MEASURED landing in it -- the marker
+            # this act writes was intact in the child's record before the settle and 0 after it
+            # (tests\lmx_settle_gone_child_selftest.lm1, `marker_after_settle`; found by reading,
+            # then measured, 19.09).  What the parent still owns is its own node, and the node is
+            # the only cell of the chain this act may touch for such a child.
+            if: walk\gone = 0
+                child\link: 0
+            ---
+            return: c.LMX_THREAD_OK
+        ---
+        prev: walk
+        walk: (cast: (@: LmxLink) walk\next)
+    ---
+return: c.LMX_THREAD_INVALID
+
+fn: lmx_thread_child_first (@: LmxThread parent) @: LmxThread
+    @: LmxLink head
+    head: lmx_thread_child_link(parent)
+    if: head = 0
+        return: 0
+return: (cast: (@: LmxThread) head\thread)
+
+fn: lmx_thread_child_next (@: LmxThread child) @: LmxThread
+    @: LmxLink node
+    node: lmx_thread_link(child)
+    if: node = 0
+        return: 0
+    node: (cast: (@: LmxLink) node\next)
+    if: node = 0
+        return: 0
+return: (cast: (@: LmxThread) node\thread)
+
+# The mail API's methods.  Each one delegates: today to the mailbox module, later to
+# the mail service -- the caller's interface stays what it is.  The arena the delegate
+# needs is the caller's to name: this state holds the mailbox, not the arena.
+fn: lmx_thread_mail_accept (@: LmxArena arena; @: LmxThread t; @: void target; int: lane) int
+    if: t = 0 || t\mail = 0
+        return: c.LMX_POST_INVALID
+return: lmx_post_accept(arena, t\mail, target, lane)
+
+fn: lmx_thread_mail_take (@: LmxThread t; int: lane) @: void
+    if: t = 0 || t\mail = 0
+        return: 0
+return: lmx_post_take(t\mail, lane)
+
+fn: lmx_thread_mail_count (@: LmxThread t; int: lane) size_t
+    if: t = 0 || t\mail = 0
+        return: 0U
+return: lmx_post_count(t\mail, lane)
+
+fn: lmx_thread_mail_close (@: LmxArena arena; @: LmxThread t) int
+    if: t = 0 || t\mail = 0
+        return: c.LMX_POST_INVALID
+return: lmx_post_close(arena, t\mail)
+
+fn: lmx_thread_running (@: LmxThread t) int
+    if: t = 0 || t\message = 0
+        return: 0
+return: t\message\running
+
+fn: lmx_thread_request_mode (@: LmxThread t; int: mode) int
+    if: t = 0 || t\state = c.LMX_THREAD_DONE
+        return: c.LMX_THREAD_INVALID
+    if: mode != c.LMX_THREAD_MODE_NATIVE && mode != c.LMX_THREAD_MODE_INTERPRETED
+        return: c.LMX_THREAD_INVALID
+    t\requested_mode: mode
+return: c.LMX_THREAD_OK
+
+fn: lmx_thread_mode (@: LmxThread t) int
+    if: t = 0
+        return: 0
+return: t\current_mode
+
+fn: lmx_thread_requested_mode (@: LmxThread t) int
+    if: t = 0
+        return: 0
+return: t\requested_mode
+
+fn: lmx_thread_interpreter_set (@: LmxThread t; LmxThreadDispatch: dispatch) int
+    if: t = 0 || t\state = c.LMX_THREAD_TURN || t\state = c.LMX_THREAD_DONE
+        return: c.LMX_THREAD_INVALID
+    t\interpreter_dispatch: dispatch
+return: c.LMX_THREAD_OK
+
+fn: lmx_thread_mode_end (@: LmxThread t; int: outcome) int
+    if: t = 0
+        return: c.LMX_THREAD_INVALID
+    if: outcome != c.LMX_TURN_SUCCESS && outcome != c.LMX_TURN_FAILED
+        return: c.LMX_THREAD_INVALID
+    if: t\current_mode != c.LMX_THREAD_MODE_NATIVE && t\current_mode != c.LMX_THREAD_MODE_INTERPRETED
+        return: c.LMX_THREAD_INVALID
+    if: t\requested_mode != c.LMX_THREAD_MODE_NATIVE && t\requested_mode != c.LMX_THREAD_MODE_INTERPRETED
+        return: c.LMX_THREAD_INVALID
+    if: t\requested_mode = t\current_mode
+        return: c.LMX_THREAD_OK
+    # AUTHOR'S RULE, 2026-09-21, verbatim: "Отменить запрос -- мой рекомендуемый вариант."  A
+    # failed turn carrying a REAL requested-mode change neither commits it nor leaves it pending:
+    # the request is CANCELLED, and the cancellation is made explicit by resetting requested_mode
+    # to current_mode.  current_mode is unchanged, so the NEXT turn runs in the mode it ran in
+    # before, and a later switch requires a NEW explicit request_mode -- nothing is deferred.
+    #
+    # This replaces the previous reading, which returned LMX_THREAD_INVALID here to make an
+    # "unresolved" case visible.  It is resolved now, so a failed turn with a pending request is
+    # an ordinary cancelled turn and reports OK.  One consequence is deliberate and must not be
+    # read as a bug: a caller that wants to know the mode change did not happen reads
+    # requested_mode (it equals current_mode again), not this return value.
+    if: outcome = c.LMX_TURN_FAILED
+        t\requested_mode: t\current_mode
+        return: c.LMX_THREAD_OK
+    ---
+    t\current_mode: t\requested_mode
+return: c.LMX_THREAD_OK
+
+# Entering a turn.  Refused when the object is already done (a close never
+# resurrects it) and refused when the boundary says stop: not running, or already
+# successful.  Otherwise the turn cursor advances and this object becomes the
+# current one.
+fn: lmx_thread_enter (@: LmxThread t) int
+    if: t = 0 || t\message = 0
+        return: c.LMX_THREAD_INVALID
+    if: t\state = c.LMX_THREAD_DONE
+        return: c.LMX_THREAD_STOPPED
+    if: t\state = c.LMX_THREAD_TURN
+        return: c.LMX_THREAD_INVALID
+    if: t\message\running = 0 || t\message\success != 0
+        t\state: c.LMX_THREAD_DONE
+        return: c.LMX_THREAD_STOPPED
+    t\turn: t\turn + 1U
+    t\state: c.LMX_THREAD_TURN
+    lmx_thread_current_slot: t
+return: c.LMX_THREAD_OK
+
+fn: lmx_thread_leave (@: LmxThread t) int
+    @: LmxLink node
+    if: t = 0
+        return: c.LMX_THREAD_INVALID
+    if: t\state = c.LMX_THREAD_TURN
+        t\state: c.LMX_THREAD_IDLE
+    lmx_thread_current_slot: 0
+    # The Message marks ITSELF handoff-safe when it has left its last turn and nothing
+    # native uses its arena (model 32 / spec 19.29.7.1): the work is over -- stopped or
+    # successful -- so the arena may be attached (19.29.7).  An ordinary turn leaves the
+    # mark alone: the work continues and the arena is not free yet.
+    if: t\message != 0 && (t\message\running = 0 || t\message\success != 0)
+        t\message\handoff_ready: 1
+        # ... and running is cleared HERE, at the boundary that ENDS the incarnation -- the
+        # flag's own contract (lmx_message.h.lm1: "1 while the work is assigned; cleared at the
+        # turn boundary that ends the incarnation.  One designated cross-lane writer: the parent
+        # stopping a child, or the lane that takes the turn").  This is that lane.
+        #
+        # Read the guard as ONE statement: this object will not take another turn -- either the
+        # work is over (success), or it was already ended from outside (running = 0).  That is
+        # exactly when 0 may be written here, in Mikhail's words: "когда уже вышли из последнего
+        # цикла и больше не делаем turn то обнулили running; до этого подобное обнуление --
+        # признак аварии и делает его по спеке пока только родитель".
+        #
+        # The two ways an incarnation ends, and the ORDER that tells them apart (Mikhail,
+        # 2026-09-19: "тело выходит нормальным способом в нормальном режиме, выход из тела по
+        # running=0 это авария"):
+        #   normal -- the body leaves its loop by SUCCESS, returns, and the exit clears 0 here;
+        #             a finished Message therefore reads success && !running.
+        #   emergency -- 0 arrived FIRST (the parent's stop request, or the child's own close
+        #             when the parent goes silent), the body was driven out of its loop by
+        #             lmx_msg_poll_escape, and success stayed 0; this store is a no-op then.
+        # An ORDINARY turn (success = 0, running = 1) is left alone: another turn is coming, and
+        # permission to continue is exactly what must not be touched between turns.  The
+        # emergency zero, by contrast, is the PARENT's act and leaves success = 0 behind it --
+        # what the settling side then holds is a snapshot of arenas that never completed
+        # (19.29.8's failure path: adopt without copying, retain the failure root).  Same store,
+        # opposite meaning, told apart by success and by who wrote it.  Before this store nothing cleared
+        # running on the normal path at all, so the settling side -- whose gate is running = 0 --
+        # never reclaimed a child that had finished successfully, and the leak appeared exactly
+        # when the parent was healthy enough to answer the handshake (the child, having left its
+        # last turn, never stamped again and so was never emergency-closed either).
+        t\message\running: 0
+        # ... and the outcome goes into the PARENT's node, because that is where the parent will
+        # read it: a successful child frees its own arena at the end of its own turn (Mikhail,
+        # 19.09), so by the time the parent settles it there is no record of the child's left to
+        # ask.  This is the sanctioned cross-thread cell of the kernel -- the child writes,
+        # the parent reads.
+        node: lmx_thread_link(t)
+        if: node != 0
+            if: t\message\success != 0
+                node\success: 1
+            ---
+        ---
+    ---
+return: c.LMX_THREAD_OK
+
+# ONE TURN, whole.  See the header for what the acts are; what is worth spelling out here is the
+# ORDER, because the order is what makes the body a body:
+#
+#   enter (the cursor advances, lm.current becomes this object)
+#     -> the body: the caller's own handler, or the callable THIS GRAPH names
+#     -> leave (lm.current clears; the handoff mark, if the work is over)
+#     -> the boundary (19.29.4.1: outcome, outbox, children, collection)
+#
+# The body's answer is not a stop and is not stored: what ends an object's work is the Message's
+# flags, and a handler that reports a status is reporting its own business (model 31).  A turn the
+# boundary refuses is not a turn, so nothing of it is written.
+fn: lmx_thread_dispatch_native (@: LmxThread t; LmxCallEntry: entry) int
+    @: Lmx graph
+    @: LmxArena arena
+    graph: t\message\graph
+    if: graph != 0
+        if: entry != 0
+            # THE HANDLER'S ANSWER IS ITS OWN BUSINESS AND IS NOT REINTERPRETED (model 31, stated
+            # in the turn's own comment above and in lmx_thread.h.lm1).  A native handler that
+            # returns a status is reporting its own business; the turn that ran it is failed by
+            # the MESSAGE'S FLAGS, which is this kernel's existing contract for a native turn and
+            # is not redefined here.  Only the INTERPRETER's status is carried (lmx_thread_turn):
+            # that is the boundary whose failure has to reach the turn -- a primitive failure
+            # inside an interpreted activation -- and it has no other meaning to lose.
+            entry(graph)
+        else:
+            if: t\slot != 0
+                arena: t\slot\arena
+                if: arena != 0
+                    lmx_call0(arena, graph)
+                ---
+            ---
+        ---
+    ---
+return: c.LMX_THREAD_OK
+
+fn: lmx_thread_turn (@: LmxThread t; LmxCallEntry: entry; ulong: now) int
+    int: code
+    int: body c.LMX_TURN_BODY_OK
+    if: t = 0 || t\message = 0
+        return: c.LMX_THREAD_INVALID
+    # Validate the selected path before entering: an unavailable interpreter is not permission
+    # to execute native code, and a refused turn must not advance the cursor.  NEITHER PATH IS
+    # EVER A FALLBACK FOR THE OTHER: the mode is selected before the body runs, a refusal here is
+    # a refusal and not a switch, and a body that FAILS does not make this turn native either --
+    # it makes it a failed turn in the mode it ran (below).
+    if: t\current_mode != c.LMX_THREAD_MODE_NATIVE && t\current_mode != c.LMX_THREAD_MODE_INTERPRETED
+        return: c.LMX_THREAD_INVALID
+    if: t\current_mode = c.LMX_THREAD_MODE_INTERPRETED && t\interpreter_dispatch = 0
+        return: c.LMX_THREAD_INVALID
+    code: lmx_thread_enter(t)
+    if: code != c.LMX_THREAD_OK
+        return: code
+    ---
+    # THE INTERPRETER'S ANSWER IS KEPT.  It used to be dropped, so an interpreted body that
+    # failed -- a primitive failure inside it included -- reached the boundary as an ordinary
+    # continuing turn.  The NATIVE branch still discards its handler's status on purpose (model
+    # 31: a handler reports its own business, and dispatch_native carries the reason), so the two
+    # paths are NOT made symmetric: redefining a native handler's return would change a contract
+    # this ticket does not own.  What is carried goes into the boundary below, where it decides
+    # the staging and the reservations, and into this act's own report at the end.
+    if: t\current_mode = c.LMX_THREAD_MODE_NATIVE
+        body: lmx_thread_dispatch_native(t, entry)
+    else:
+        body: t\interpreter_dispatch(t)
+    ---
+    lmx_thread_leave(t)
+    # THE BOUNDARY RUNS EVEN FOR A FAILED BODY, and it runs WITH the body's status: a failed turn
+    # discards what it staged, drops what it reserved, and carries out its cleanup -- the mode
+    # rule of lmx_thread_mode_end included -- before this act reports anything.  A failure that
+    # skipped the boundary would leave the letters and the children of a dead turn in flight.
+    if: lmx_turn_end_status(t, now, body) != c.LMX_TURN_OK
+        return: c.LMX_THREAD_INVALID
+    ---
+    if: body != c.LMX_TURN_BODY_OK
+        # The body failed, and the boundary has run.  What it wrote STANDS: there is no rollback
+        # engine and this return value does not promise one -- the turn's graph and own writes
+        # are exactly where the body left them, while its staging and its reservations are gone.
+        #
+        # The report is the Thread ABI's EXISTING failure status.  The finer distinction lives
+        # where it is meaningful and stays there: the walk reports a primitive failure as
+        # LMX_WALK_PRIMITIVE, and the body's status carries it to this line.  The Thread ABI has
+        # no status for "a body ran and failed", and this act does not invent one -- adding a
+        # value to a public enum is a new contract, not a repair.  (Documented ABI compromise,
+        # DEEPSEEK-L2-PRIMITIVE-KERNEL-IMPLEMENT-20260921-27.)
+        return: c.LMX_THREAD_INVALID
+    ---
+return: c.LMX_THREAD_OK
+
+# The loop escape: the object's letter is no longer running, so the loop the
+# generated code is inside must be left now.
+
+# Parent half of 19.29.7.1 (ticket 20260919-113000): walk live direct children.
+# Read stamp BEFORE zeroing. Fresh (now-stamp < limit, mod 2^32) -> store 0 = ANSWER.
+# Stale stamp -> the child is ASKED TO CLOSE: `running=0` + the moment of the first ask in the
+# parent's node, and the mark only when that ask has outlived the child's OWN window (19.09 --
+# `lmx_stop_request` + `lmx_stop_close`; the box is NOT the test, and the mark is not this act's
+# to write: see the long note in the stale branch).
+# Zero is NOT a kill signal (already answered / not yet polled). RELAXED; no fences.
+fn: lmx_thread_cycle_reading (ulong: v) ulong
+return: v
+
+fn: lmx_poll_answer_children (@: LmxThread t; ulong: now) int
+    @: LmxLink node
+    @: LmxLink next
+    @: LmxThread child
+    @: LmxSchedule slot
+    size_t: mark
+    ulong: reading
+    int: overdue
+    reading: lmx_thread_cycle_reading(now)
+    if: t = 0
+        return: c.LMX_THREAD_INVALID
+    # THE WALK IS OVER THE PARENT'S OWN NODES (19.09, evening -- the same change the settle's walk
+    # takes): the node is a cell of the arena that owns the chain, so it stays valid after a
+    # child's own arena is back.  A child whose node says GONE has no liveness to answer -- it
+    # ended -- and this act must not read its record at all: doing so was measured dereferencing a
+    # zero handshake cell (tests\lmx_settle_reads_node_selftest.lm1, gdb: SIGSEGV in
+    # lmx_poll_answer_children, called from lmx_settle_children).
+    node: lmx_thread_child_link(t)
+    while: node != 0
+        next: (cast: (@: LmxLink) node\next)
+        if: node\gone = 0
+            child: (cast: (@: LmxThread) node\thread)
+            mark: c.__atomic_load_n(lmx_thread_alive_cell(child), c.__ATOMIC_RELAXED)
+            # Zero: already answered or child has not stamped yet — leave alone.
+            if: mark != 0U
+                overdue: 0
+                slot: (cast: (@: LmxSchedule) node\slot)
+                # The reading arrives from the cycle (the caller's), never from the platform here.
+                if: slot != 0 && slot\limit != 0U
+                    if: reading - (cast: (ulong) mark) >= slot\limit
+                        overdue: 1
+                    ---
+                ---
+                ---
+                if: overdue = 0
+                    c.__atomic_store_n(lmx_thread_alive_cell(child), 0U, c.__ATOMIC_RELAXED)
+                else:
+                    # THE SILENT CHILD IS ASKED TO CLOSE -- and this act is a REQUESTER, like the
+                # cascade, the settle's deferral and the root's close: `lmx_stop_request` writes
+                # `running=0` and the MOMENT of the first ask into the PARENT's node, and
+                # `lmx_stop_close` closes the child when that ask has outlived the child's OWN
+                # window (lmx_thread.h.lm1 carries the model).
+                #
+                # WHY THE INBOX IS NOT THE TEST HERE EITHER (19.09).  This branch used to close a
+                # child whose inbox was EMPTY at once and leave one with pending input stopped and
+                # unmarked -- and that second kind was measured UNRECOVERABLE when its parent is
+                # alive and not closing: `tests\lmx_app_poll_stale_selftest.lm1`, run 1, with a
+                # letter waiting --
+                #     PW POLL  mail=1 stopped=0 b_running=0 b_handoff=0 b_mail=1 svc=3
+                #     PW CHAIN mail=1 b_count 8->8 svc 3->3 orphans=0
+                # -- the child had no turn coming (the entrance refuses on the very `running` this
+                # act writes), no moment was recorded for its wait, and the parent was retained for
+                # good.  The same child with an empty box was closed and reaped, so the BOX was
+                # deciding a lifecycle, which it never could.
+                #
+                    # AND THE MARK IS NOT THIS ACT'S TO WRITE.  A stale stamp says "no boundary for
+                    # a whole window" -- the same quantity the window counts, so the ask is already
+                    # due when it is made; but writing the mark here would be the same lie the stop
+                    # told before 70ba526 (a child may be INSIDE its turn: measured as
+                    # TAKEN_IN_FLIGHT in tests\lmx_app_reroot_forbidden_selftest.lm1, run 3).  The
+                    # request is the whole of this act; the close follows from the window, whoever
+                    # next walks this parent.
+                    lmx_stop_request(child, reading)
+                    lmx_stop_close(child, reading)
+                ---
+            ---
+        ---
+        node: next
+    ---
+return: c.LMX_THREAD_OK
+
+# Spec 32: "its stop requests their close".  This act lives with the THREAD, next to the poll of
+# the same handshake, because it is the supervision of one's own children -- the settle (which is
+# what comes AFTER a child has ended) is a separate act in lmx_settle.lm1.
+#
+# The act has TWO halves and the difference between them is the whole of it (lmx_thread.h.lm1
+# carries the model): the REQUEST is `running=0` written at the first call and never moving, and
+# the CLOSE is the handoff mark, written only when the child's own window has passed -- for a child
+# that reaches no boundary of its own.  A child on its own context closes itself in the meantime,
+# and its own leave writes the mark; the parent's stop never writes it early.
+#
+# Both halves are the parent's own cells where they can be: the request's moment goes into the
+# parent's NODE (`stopped`), so this act reads nothing of a child that may be mid-turn except its
+# two message flags -- which are the cells model 31 assigns to the one cross-lane writer this act
+# is.
+# ONE CHILD, ASKED TO CLOSE: `running=0`, and the moment of the FIRST ask goes into the PARENT'S
+# node, where the window below is counted from.  A repeated ask changes nothing -- a parent asking
+# at every boundary of its own must not keep postponing the close it asked for.
+fn: lmx_stop_request (@: LmxThread child; ulong: now) int
+    @: LmxMsg message
+    @: LmxLink node
+    if: child = 0
+        return: c.LMX_THREAD_INVALID
+    message: lmx_thread_message(child)
+    if: message = 0
+        return: c.LMX_THREAD_INVALID
+    ---
+    message\running: 0
+    node: lmx_thread_link(child)
+    if: node != 0 && node\stopped = 0U
+        node\stopped: now
+    ---
+return: c.LMX_THREAD_OK
+
+# ONE CHILD, THE END OF THE WAIT: a child that was asked to close and has not reached a boundary of
+# its own within its own band's window is closed HERE -- without a turn, stopped AND handoff-safe,
+# mail or no mail.  This is the maintenance rule of 19.29.8 ("nothing may be retained forever")
+# applied to a stopped child of a closing parent, and it is what makes the mark honest: it is never
+# written while a turn can still be in flight, because the window is the same number the handshake
+# already trusts for "not reaching a boundary within your window is not working" (lmx_turn_end's
+# stamp, lmx_orphan_maintain's retention).
+#
+# It is called from TWO places and both need it: the parent's stop act (which asks first and closes
+# here when the ask is overdue) and the settle's own walk over the children it cannot reap yet (a
+# child of the ROOT reaches no deferral -- the root is never settled -- so the walk is the only
+# boundary that can end its wait).  The walk calls THIS one only: asking a RUNNING child to stop is
+# the cascade's business, never a settle's -- a settle would otherwise stop every live child it
+# passed by.
+fn: lmx_stop_close (@: LmxThread child; ulong: now) int
+    @: LmxMsg message
+    @: LmxLink node
+    @: LmxSchedule slot
+    if: child = 0
+        return: c.LMX_THREAD_INVALID
+    node: lmx_thread_link(child)
+    if: node = 0 || node\stopped = 0U
+        return: c.LMX_THREAD_INVALID
+    ---
+    message: lmx_thread_message(child)
+    if: message = 0
+        return: c.LMX_THREAD_INVALID
+    ---
+    slot: (cast: (@: LmxSchedule) node\slot)
+    if: slot != 0 && slot\limit != 0U
+        if: now - node\stopped >= slot\limit
+            message\handoff_ready: 1
+        ---
+    ---
+return: c.LMX_THREAD_OK
+
+fn: lmx_stop_children (@: LmxThread t; ulong: now) int
+    @: LmxThread child
+    @: LmxThread next
+    if: t = 0
+        return: c.LMX_THREAD_INVALID
+    child: lmx_thread_child_first(t)
+    while: child != 0
+        next: lmx_thread_child_next(child)
+        lmx_stop_request(child, now)
+        lmx_stop_close(child, now)
+        child: next
+    ---
+return: c.LMX_THREAD_OK
+
+############################################################################################
+# A THREAD ENDS, AND TAKES ITS ARENA WITH IT.
+#
+# Mikhail, 19.09, verbatim: "а другие арены должны себя освобождать сами в endturn по success".  The
+# DRIVER calls this -- the lane that ran the turns, or the round that stepped the record -- and it
+# calls it once the record is no longer needed by the queue it came from, because the arena holds
+# that very record.
+#
+#   * the parent's node is told the arena is GONE, so the parent's settle never reads this record
+#     again: what it still has to do (unlink the chain, clear the graph slot in its own graph) is
+#     done on the PARENT's cells (Mikhail, 19.09: the parent owns the parent link);
+#   * the arena goes back WHOLE.
+#
+# It refuses, and that is the model and not caution:
+#   * without a node the thread has no parent, and a root's arena is user code's business
+#     ("в минимальном варианте -- закрытие приложения");
+#   * while the thread still has LIVE children, because their chain nodes as children live in THIS
+#     arena -- a parent does not carry its children's bookkeeping away with it;
+#   * on anything but success: a failed incarnation's arena must MERGE UPWARD (lmx_settle_one's
+#     failure path), and merging is the parent's act on the parent's thread, not this one's.
+fn: lmx_thread_finish (@: LmxThread t) int
+    @: LmxLink node
+    @: LmxArena arena
+    if: t = 0 || t\message = 0
+        return: c.LMX_THREAD_INVALID
+    if: t\message\success = 0 || t\message\running != 0
+        return: c.LMX_THREAD_OK
+    ---
+    node: lmx_thread_link(t)
+    if: node = 0
+        return: c.LMX_THREAD_OK
+    ---
+    if: lmx_thread_child_first(t) != 0
+        return: c.LMX_THREAD_OK
+    ---
+    if: t\slot = 0
+        return: c.LMX_THREAD_OK
+    ---
+    arena: t\slot\arena
+    if: arena = 0
+        return: c.LMX_THREAD_OK
+    ---
+    node\gone: 1
+    lmx_arena_release(arena)
+return: c.LMX_THREAD_OK
+
+fn: lmx_msg_poll_escape () int
+    @: LmxThread t
+    t: lmx_thread_current_slot
+    if: t = 0 || t\message = 0
+        return: 0
+    if: t\message\running = 0
+        return: 1
+return: 0
+
+# The work abort: the letter reports completion, so the remaining work is
+# abandoned rather than continued.
+fn: lmx_msg_poll_abort () int
+    @: LmxThread t
+    t: lmx_thread_current_slot
+    if: t = 0 || t\message = 0
+        return: 0
+    if: t\message\success != 0
+        return: 1
+return: 0

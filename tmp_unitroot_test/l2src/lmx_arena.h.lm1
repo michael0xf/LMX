@@ -1,0 +1,124 @@
+﻿predef: "l2src/lmx.h.lm1"
+predef: "lmx_arena_blocks.h.lm1"
+
+# The arena of a Message (Lingvamyxa_spec.txt 2, 6.5).  Mikhail, 2026-09-17, verbatim:
+# "У нас есть арена (там менеджер) она предоставляет N массивов и таблицу
+# адрес->дескриптор содержимого для типизации void *, также может присоединять другую
+# арену. ЧТО ЕЩЁ НАДО?"
+#
+# So one object holds three things and the manager of the arena is the only writer of
+# each:  what the arena OWNS (its block list), its N arrays (the typed service arrays,
+# each of which IS its descriptor), and the index that answers, for an address, the
+# descriptor of the array containing it.
+#
+# The arrays never move, so the index's ENTRIES are what is ordered and bisected, never
+# the arrays.  An entry carries no type: stride, kind and type belong to the array the
+# entry names.  Nothing outside this module writes the index, and nothing at all gates
+# writing into the cells themselves -- code that holds a reference and has determined
+# its type once writes straight into the cell, because a cell's address never changes.
+struct: LmxArena
+    @: LmxArenaBlock blocks
+    @: LmxPool arrays
+    @: LmxRange index
+    size_t: count
+    size_t: capacity
+    # The mark generation of the last collection pass (lmx_gc).  The pass bumps it and stamps
+    # every chunk it walks, so "is this reachable" is one comparison per chunk and nothing has
+    # to be cleared between passes.  It is the arena's own bookkeeping, like the index: no
+    # caller reads it, and only the collection pass writes it.
+    unsigned: generation
+    # 1 = letter-scale arena (Mikhail 19.09 simplified): same index + array
+    # descriptors + address stability; no GC pass; no multi-chunk growth per array.
+    # Cleared by release / left 0 after attach empties the donor.
+    unsigned: simple
+    # 1 = THIS arena is the runtime's PERMANENT STORE: the storage of branches qualified
+    # `independent: const: immutable` (LMX-ETERNAL-R0-44D, lmx_perm.h.lm1).  Its chunks are
+    # process-lifetime: no collection pass marks or sweeps them (lmx_gc_collect short-circuits
+    # on this flag exactly as it does on `simple`), a stray lmx_arena_release refuses it, and
+    # it is never a donor in lmx_arena_attach.  The one release is lmx_perm_close.
+    unsigned: permanent
+    # The store THIS arena answers for, or 0.  NON-OWNING: it is never freed through, and it
+    # is the SAME pointer an arena's classify fallback consults (lmx_range.lm1).  Binding is
+    # lmx_perm_bind's act and refusable, which is what keeps two runtimes isolated.  The store
+    # itself leaves this 0, so a fallback that lands on a store stops there instead of
+    # recursing.
+    @: LmxArena perm
+end: LmxArena
+
+prototype:
+    # Zero the arena.  A by-value arena must be cleared before it is opened; opening a
+    # non-empty one is refused, exactly as a pool refuses to be opened twice.
+    fn: lmx_arena_open (@: LmxArena arena) int
+    # Letter-scale open (POLL 19.29.7.1 / Mikhail 19.09): same LmxArena, primed
+    # small index capacity; GC and multi-chunk growth are refused. Index,
+    # array descriptors and address stability are unchanged.
+    fn: lmx_arena_open_simple (@: LmxArena arena) int
+    # The arena's array of this kind and type, or null when it has none yet.
+    fn: lmx_arena_find (@: LmxArena arena; int: kind; int: type) @: LmxPool
+    # A cell (or `count` consecutive cells) of the arena's array of this kind and type:
+    # the array is found among the arena's N arrays, or MADE when the arena has none of
+    # that kind and type yet.  A mutable value is therefore an element of THAT array --
+    # never an array of its own.
+    fn: lmx_arena_take (@: LmxArena arena; size_t: stride; int: kind; int: type) @: void
+    fn: lmx_arena_take_n (@: LmxArena arena; size_t: stride; int: kind; int: type; size_t: count) @: void
+    # An array joins: the descriptor is linked into the arena's arrays and the block
+    # carrying the descriptor (when there is one) joins the arena's block list.  The
+    # interval is registered by lmx_arena_span, which the same caller does next.
+    fn: lmx_arena_array (@: LmxArena arena; @: LmxPool array; @: LmxArenaBlock record) int
+    # An array leaves the arena's list (it is no longer one of its N arrays).  Its
+    # intervals are retired by lmx_range_drop, one per chunk.
+    fn: lmx_arena_array_drop (@: LmxArena arena; @: LmxPool array) int
+    # One interval [base, base + bytes) of one array joins the arena's index.  This IS
+    # the insertion into the table, and only the arena's manager performs it.
+    fn: lmx_arena_span (@: LmxArena arena; @: LmxPool array; @: void base; size_t: bytes) int
+    # Detach one block: its interval leaves the index first, then the block leaves the
+    # list.  Ownership and typing never disagree -- and the block that CARRIES a
+    # descriptor goes with the array it describes: the array leaves the arena's list of
+    # its N arrays as that block leaves the block list, so the arena never keeps a
+    # descriptor whose record it gave up.  Every other block drops as a miss on that
+    # walk (the walk only compares addresses and dereferences nothing).
+    fn: lmx_arena_drop (@: LmxArena arena; @: LmxArenaBlock node) int
+    # A restore point: the arena's block list as it stands now (the list is a stack, so
+    # the mark is simply its head).  A construction that must be all-or-nothing takes a
+    # mark first and reverts to it on failure.
+    fn: lmx_arena_mark (@: LmxArena arena) @: LmxArenaBlock
+    # Another arena attaches to this one: its intervals join this index, its arrays join
+    # this arena's N arrays and its blocks join this arena's list, so one arena owns both.
+    # Nothing moves, so every address and every live pointer still answers -- which is the
+    # whole point of attaching rather than copying (Mikhail, 2026-09-17: "также может
+    # присоединять другую арену"; "увеличиваем просто число массивов и не паримся, чтобы
+    # ареса не переезжали").  The attached arena is left empty.
+    fn: lmx_arena_attach (@: LmxArena arena; @: LmxArena other) int
+    # Drop every block added since the mark, retiring each one's interval.  Blocks the
+    # arena already held before the mark are untouched, and nothing that survived the
+    # mark is disturbed: this is how merge and graph copy keep "the whole, or nothing".
+    # The arrays the marked construction added go with those blocks (lmx_arena_drop), so
+    # a revert leaves the list of the N arrays exactly as the mark found it.
+    fn: lmx_arena_revert (@: LmxArena arena; @: LmxArenaBlock mark) int
+    # Release everything the arena owns, retiring every entry it holds.
+    fn: lmx_arena_release (@: LmxArena arena) int
+    # The next mark generation for a collection pass.  Never zero: a freshly cleared chunk
+    # holds zero, and the first pass must not read that as its own stamp.
+    fn: lmx_arena_generation_next (@: LmxArena arena) unsigned
+
+    # The index itself: the arena's index of its arrays, one entry per interval.  An
+    # entry names an array and its interval; the entries are bisected, never walked,
+    # and only the arena's manager inserts or retires one.
+    fn: lmx_range_reserve (@: LmxArena arena; size_t: need) int
+    fn: lmx_range_add (@: LmxArena arena; @: LmxPool array; @: void lo; @: void hi) int
+    fn: lmx_range_drop (@: LmxArena arena; @: void lo; @: void hi) int
+    # What the table answers: how to read an address, and which array it came from.
+    fn: lmx_range_classify (@: LmxArena arena; @: void p) int
+    fn: lmx_range_type_of (@: LmxArena arena; @: void p) int
+    fn: lmx_range_stride (@: LmxArena arena; @: void p) size_t
+    # The descriptor of the array containing the address: what code casts and writes
+    # through ("_Получив дескриптор типа код сразу делает приведение типа указателя и
+    # пишет напрямую в ячейку_ _Это обязательно_"), or null when no array has it.
+    fn: lmx_range_pool (@: LmxArena arena; @: void p) @: LmxPool
+    # WHICH table answers for the address: this arena, the LIVE permanent store it is bound
+    # to (lmx_perm.h.lm1), or 0 when neither holds it.  Membership in the store's ranges is
+    # the qualified type `independent: const: immutable`; nothing else marks it.  A closed
+    # store is not a store: its addresses answer 0.  lmx_range_pool above stays strictly
+    # local -- that is what keeps a collection out of the store.
+    fn: lmx_range_home (@: LmxArena arena; @: void p) @: LmxArena
+end: prototype

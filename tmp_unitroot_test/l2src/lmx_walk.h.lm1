@@ -1,0 +1,333 @@
+predef: "l2src/lmx.h.lm1"
+predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_scratch.h.lm1"
+predef: "l2src/lmx_plan.h.lm1"
+
+# lmx_walk.h - the walk of a callable's body tree: one activation of the graph interpreter.
+#
+# PROTOTYPE, int slice, dev/l2src_sandbox only.  lmx_interp_run stays the entry that
+# recognises a callable; this unit is what gives a body VALUES: own state, declared
+# inputs, results, checkpoints.  It is written to be called from lmx_interp, not to
+# replace it.
+#
+# What is fixed by the author and by the native path, and only carried out here:
+#   * the body is M itself after child[0], in order; every `return:` is a node of that
+#     tree and there may be many (lmx.h.lm1, LmxCallable; dev/graph_interp/README.md);
+#   * the graph is binary and carries no names; the address->name table is never read
+#     (LMX_blog/2026-09-20.md, "Бинарный граф без имён");
+#   * entering an interpreted method never copies M, its body or the graph; an
+#     activation keeps the same choice of what is local, the same own load and the same
+#     dirty behaviour as native code (LMX_blog/2026-09-20.md, "Тело метода общее,
+#     активация на стеке" and the entry on stack activation).  A recursive call is a
+#     recursive C call of lmx_walk_run on the same published M.  What an activation needs
+#     beyond its C frame -- the records of its own fields, the values of a callee's
+#     declared inputs -- is taken from the execution context's temporary-frame store
+#     (lmx_scratch.h.lm1) between a mark and a rewind: this unit allocates nothing and
+#     owns nothing, and after warm-up an entry allocates nothing at all.  The only thing
+#     an activation writes into the graph is the publication of a dirty own value (and
+#     whatever the program itself writes through an explicit field);
+#   * what carries identity in the executable graph (LMX_blog/2026-09-20.md, "Приоритет
+#     ссылок в исполняемом графе"): as many PHYSICAL REFERENCES as possible, a numeric
+#     code only where a physical reference is impossible, text nowhere.  So a node refers
+#     to its role, to the Structure that holds a field and to the callee M by address;
+#     the copier remaps those references with the rest of M's tree, so a copied M runs
+#     unchanged on its own state.  Numbers remain only where there is nothing to point
+#     at: the slot of a field inside its Structure (slot storage is not a graph value,
+#     lmx_graph_copy_owned.lm1) and the ordinal of a declared input, which lives on the
+#     stack of the activation and not in the graph;
+#   * own fields the body uses are loaded at entry into activation-local working values,
+#     dirty is set only by an executed assignment, dirty values are published before
+#     every outbound call and every exit, clean ones are never republished, nothing is
+#     reloaded after a call (Lingvamyxa_spec.txt 21.5, 21.6; lmx_own.lm1);
+#   * one exit order for every `return:`: evaluate the argument -> dirty-only checkpoint
+#     in the lexical order of the fields -> return (l2trans.lm1 l2_emit_ret_tr, `return`
+#     in l2_emit_body; LMX_blog/2026-09-20.md, "Поля Lmx лексические").
+#
+# The shape of a body node is Grok's (lmx.h.lm1, LmxOp): a FRAME node is an ordinary
+# Structure whose child[0] refers to its ROLE and whose remaining children are its
+# operands, in order.  The role is a physical reference: ONE shared record per role
+# (lmx_walk_roles_open), and a node is recognised by COMPARING the address in its
+# child[0] with the program's role records -- no classification of the role, no number,
+# no text.  A Structure whose child[0] is some OTHER op record is a step of a role this
+# program does not have: it is refused, never skipped.  A bare role record as a child,
+# for the role `ret`, is a void return.
+#
+# PREPARATION AND ENTRY (steps/l3-activation-plan.md).  Which own fields a body uses, and
+# in what lexical order, is a static property of the callable; native code gets it from
+# the translator once.  Here lmx_walk_prepare gets it once: it looks at the whole body the
+# way entry used to on every activation -- refuses what is unsupported or malformed
+# anywhere in M, finds the distinct own fields the body names, orders them lexically,
+# writes down each one's position from M -- and publishes that as the immutable
+# activation plan in LmxCallable.header (lmx_plan.h.lm1).  It is this unit's job and not
+# the generic plan unit's because only the owner of the body roles knows where a role
+# keeps its operands.
+#
+# ENTRY then does not look at the body at all.  It asks the arena exactly TWICE -- is M a
+# Structure, is its child[0] an LmxCallable -- compares one address (the plan's root role
+# against the context's plan roles), and loads one record per entry of the plan through
+# lmx_plan_slot_known, which asks nothing.  A body without a plan is LMX_WALK_UNSUPPORTED;
+# it is never analysed at entry and never handed to a native entry.  The plan is trusted
+# for as long as the occurrence keeps that descriptor in child[0]: the executable shape of
+# an occurrence is immutable under its descriptor, and an act that changes the shape of
+# one occurrence first gives that occurrence a fresh LmxCallable with no plan.
+#
+# What is still asked of the arena during execution, and why.  The fields of a body are,
+# in lexical order, own cells and frame nodes mixed, so telling a Structure from a cell
+# there costs one question per field each time the body runs; a bare role record is
+# recognised before that, by its address.  The OPERANDS of a frame node sit at positions
+# the role fixes and are put there by whoever builds the graph, so they are read as nodes
+# without asking -- the precondition the *_known accessors state -- and a callee named by
+# a call is an operand too: its own entry is what asks.  Every question of this unit goes
+# through lmx_walk_kind and is counted in LmxWalkContext.classified, so a test can state
+# the cost of an entry exactly rather than estimate it.
+#
+# Do not unify two things that look alike.  Inside a body, a node names the Structure
+# that holds a field BY ADDRESS, and that is right because the copier remaps the address
+# with the copy.  The activation plan, shared by every occurrence of one callable, must
+# name the same fields by RELATIVE position and never by address.  A BODY (of `if`, of `while`) is a plain Structure whose children are, in
+# order, own cells and frame nodes -- the same shape as M after child[0].
+#
+# VALUES.  A value of an activation is always a PHYSICAL REFERENCE (`@: void`): to a
+# Structure, to a cell of the graph, or to a destination cell its consumer handed down.
+# There is no code that says what a value is.  An integer the activation COMPUTED is
+# written into the destination cell passed from above and the value is the address of
+# that cell, so "is this a computed integer" is answered by physical identity with the
+# destination; what a reference into the graph is, is answered by the arena's index, and
+# asked only where the kind really has to be established -- an input crossing the public
+# boundary, the holder that `of` reads a field from.  No value is absence of a reference,
+# reported as such (LmxWalkValue.present).  Consequences, all of them the point:
+#   * a Structure handed in as an input (a subject, a candidate) is never copied and is
+#     handed on, returned or read through by its own address;
+#   * a literal, a field read by `at` or `of`, and a passed-through input are the graph's
+#     own cells, by reference -- reading a value copies nothing;
+#   * integers are computed destination-passing: the consumer of a node owns the cell,
+#     an automatic C int or a cell of the scratch slice of a call, so a temporary never
+#     outlives the rewind of the frame that made it.  A reference into the scratch store
+#     that would LEAVE an activation through `ret` is copied -- four bytes, by value --
+#     into the destination of the caller; a reference into the graph leaves as it is;
+#   * the inputs of a callee are an array of references in the caller's scratch slice.
+# Own fields keep their int working values (LmxWalkOwn): a read copies the working value
+# into the destination, because the field may be assigned again before the value is used.
+#
+#   ret   [ret, value?]               a return; no value for a void callable
+#   call  [call, M, arg ...]          M is the callee occurrence itself, by reference
+#   lit   [lit, cell]                 the int cell that holds the value, by reference
+#   own   [own, holder, slot]         an own field of the running M: `holder` is M or a
+#                                     body lexically inside M, by reference; `slot` is a
+#                                     size_t cell.  Loaded at entry, cached, dirty-tracked
+#   arg   [arg, k]                    k-th declared input of this activation (size_t cell):
+#                                     the reference the caller passed, as it is
+#   of    [of, value, slot]           a field of a REFERENCE VALUE: `value` is a node whose
+#                                     value must be a Structure (asked of the arena);
+#                                     the result is what that slot holds, by reference
+#   at    [at, holder, slot]          explicit graph field read: every execution, never
+#                                     cached (21.5); `holder` is any Structure, by reference
+#   put   [put, holder, slot, value]  explicit graph field write, never cached
+#   set   [set, own-node, value]      executed assignment of an own field: sets dirty
+#   add sub lt eq  [op, a, b]
+#   if    [if, cond, then, else?]     then / else are bodies
+#   while [while, cond, body]
+#
+# The set of roles beyond RETURN and CALL and the operands of each are a carrier draft
+# for probing the mechanism, not an L3 ISA (dev/graph_interp/BODY_NODES.md).
+#
+# THE PERMANENT STORE (lmx_perm.h.lm1; tests/lmx_walk_perm_selftest.lm1).  What a runtime
+# knows at translation and never changes lives in its store: the role records, a shared
+# LmxCallable and its plan, a subject handed in as an input, a whole eternal occurrence.
+# A Message's arena is bound to that store and its ranges answer for it, so nothing here
+# tells the two apart on the way IN: an address of the store is classified like any
+# other, a reference into it is handed on, returned and read through as it is, and an
+# eternal occurrence is entered at its one address from every Message of the runtime.
+# An address of ANOTHER runtime's store classifies as nothing and is refused at the
+# public boundary.  The way OUT is closed when a body is prepared, never at run time:
+# a `put` whose holder is of the store, and a `set` of an own field whose holder is of
+# the store (an eternal occurrence assigning its own field -- the next checkpoint would
+# publish into the store) make lmx_walk_prepare INVALID, so such a body gets no plan and
+# never runs.  Reading either is not refused.  The plan is built in the arena given as
+# the descriptor's and published through the context's arena; lmx_plan_publish refuses a
+# plan whose home is not the descriptor's (lmx_plan.h.lm1, "One HOME").
+#
+# CURRENT UNSUPPORTED LIMITS of this slice -- what this prototype does not do YET, stated
+# rather than hidden, and NOT the final semantics of L3: a value is an integer, a
+# reference or nothing; arithmetic is int only; own fields are int only -- there is no
+# own REFERENCE field, and no char/size_t/pointer own field; whether a reference an
+# integer node reads IS an int cell is the producer's proof, not checked here; a return
+# carries 0 or 1 value; no throw, no poll (lmx_msg_poll_escape), no arrays, no dynamic
+# inputs of 21.3.  Lifting one of them is a new role or a new plan entry role, never a
+# runtime text or a type code carried by a value.
+#
+# What is outside the slice is REPORTED, never skipped and never handed to native code
+# (docs/LMX_semantics.ru.md, #l3-receiver: a restricted profile reports an unsupported
+# construct explicitly; an implementation address does not make an operation
+# admissible).  A frame node whose LmxOp code this unit does not read makes the whole
+# activation LMX_WALK_UNSUPPORTED at ENTRY, before any step runs and wherever in M the
+# node sits, a branch never taken included.  There is no fallback to METHOD.addr: a
+# callable with no body node is LMX_WALK_NO_GRAPH and that is all.
+
+define: LMX_WALK_OK 0
+# Malformed body tree, not a callable, a field reference that selects nothing, an own
+# field that is not lexically inside M, a missing input.
+define: LMX_WALK_INVALID 1
+# A callable with no body node: nothing to walk.
+define: LMX_WALK_NO_GRAPH 2
+define: LMX_WALK_NOMEM 3
+# A dirty own value could not be published (21.6: checkpoint failure, never silent).
+define: LMX_WALK_CHECKPOINT 4
+# A body node this slice does not read, or a body whose descriptor has no activation
+# plan (lmx_walk_prepare was not run for it).  Nothing of the activation has run.
+define: LMX_WALK_UNSUPPORTED 5
+# THE PRIMITIVE REPORTED A FAILURE: the nonzero ABI status of its own fn (lmx_primitive.h.lm1).
+# A status of its own ON PURPOSE, and each of the four collisions is refused deliberately: it is
+# not business zero (a primitive may return the VALUE 0 with status OK -- that is success, and
+# the value rides in `out`/`dest`, never in the status), not LMX_WALK_INVALID (the graph is well
+# formed and the record was admitted), not LMX_WALK_UNSUPPORTED (this slice DOES read the node)
+# and not LMX_WALK_NO_GRAPH.  It travels up unchanged to whoever mapped the activation; the
+# Thread reports it through the Thread ABI's own existing failure status (lmx_thread.lm1).
+define: LMX_WALK_PRIMITIVE 6
+
+# What lmx_walk_op answers for a frame node whose code is not one of those below.
+define: LMX_WALK_OP_UNKNOWN -1
+# The discriminators of this slice's roles: the index of a role's record in the roles
+# Structure and the `code` of that record.  They are not the identity of a node -- the
+# address of the record is -- and they are not an L3 instruction set.
+define: LMX_WALK_OP_NONE 0
+define: LMX_WALK_OP_RET 1
+define: LMX_WALK_OP_CALL 2
+define: LMX_WALK_OP_LIT 3
+define: LMX_WALK_OP_OWN 4
+define: LMX_WALK_OP_ARG 5
+define: LMX_WALK_OP_AT 6
+define: LMX_WALK_OP_PUT 7
+define: LMX_WALK_OP_SET 8
+define: LMX_WALK_OP_ADD 9
+define: LMX_WALK_OP_SUB 10
+define: LMX_WALK_OP_LT 11
+define: LMX_WALK_OP_EQ 12
+define: LMX_WALK_OP_IF 13
+define: LMX_WALK_OP_WHILE 14
+define: LMX_WALK_OP_OF 15
+# [prim, record, arg ...] -- THE PRIMITIVE INSERT (lmx_primitive.h.lm1).  `record` is a PHYSICAL
+# reference to an LmxPrimitive, admitted because the arena classifies it as
+# LMX_DOMAIN_KIND_PRIMITIVE -- never because a number in the node says so.  The remaining
+# children are its operands, evaluated exactly like a call's arguments.  Appended after the
+# slice's roles; the role's identity is still the address of its record, not this number.
+define: LMX_WALK_OP_PRIM 16
+define: LMX_WALK_OP_COUNT 17
+
+# What a direct caller gets back.  `ref` is the value, 0 when there is none; `present` says
+# so explicitly.  `number` is the destination cell this record lends the activation: when
+# the value is an integer the activation computed, `ref` points AT `number` -- that
+# identity, not a code, is how the caller knows.  Any other `ref` is a reference into the
+# graph (or into the permanent store), to be classified by whoever needs its kind.
+struct: LmxWalkValue
+    @: void ref
+    int: number
+    int: present
+end: LmxWalkValue
+
+# One own field of the running M as this activation sees it: the slot it was loaded from
+# (the publication target), the working value, and the dirty state of 21.6.  The records
+# of an activation are kept in the lexical order of the fields (LMX_blog/2026-09-20.md,
+# "Поля Lmx лексические"), found by walking M's own tree in order at entry; that is the
+# order of every checkpoint -- not the order in which the body happens to mention them.
+struct: LmxWalkOwn
+    @@: void from
+    int: value
+    int: dirty
+end: LmxWalkOwn
+
+# What graph mode needs from its surroundings, for one Message on one thread: the
+# Message's arena (to tell a Structure from a cell among the fields of a body), the
+# execution context's temporary-frame store, and the program's role records.  Whoever
+# runs the turn builds it; this unit only reads it.
+struct: LmxWalkContext
+    @: LmxArena arena
+    @: LmxScratch scratch
+    @: Lmx roles
+    # The role records of the plan namespace (lmx_plan_roles_open): entry checks that a
+    # header is a plan of THIS program by comparing one address with them.
+    @: Lmx plan_roles
+    # How many times this unit has asked the arena's index what an address is.
+    size_t: classified
+end: LmxWalkContext
+
+# One activation.  An automatic object of lmx_walk_run; nothing of it is in the graph.
+# `found` and `owns` are slices of the context's store, taken after this activation's
+# mark and gone with its rewind.
+struct: LmxWalkFrame
+    @: LmxWalkContext context
+    @: LmxArena arena
+    @: Lmx roles
+    @: Lmx node
+    # The declared inputs: references, in the caller's storage.
+    @@: void args
+    size_t: nargs
+    # The destination cell of the caller, for an integer this activation returns.
+    @: void dest
+    @: LmxWalkOwn owns
+    @: LmxWalkOwn found
+    size_t: nowns
+    size_t: nfound
+    size_t: cap
+    # Preparation only: the indexes from M down to the slot being visited, how deep the
+    # tree of M goes, and the position written down for each own field.  All in the store.
+    @: size_t path
+    size_t: depth
+    @@: size_t paths
+    @: size_t lens
+    int: counting
+    int: returned
+    int: valued
+    @: void result
+end: LmxWalkFrame
+
+prototype:
+    # One activation of the callable occurrence `node`, for a DIRECT caller.  `args` are
+    # `nargs` references (0 for an absent input); each one that is present must be an
+    # address the context's arena can classify -- its own or its bound permanent store's --
+    # otherwise LMX_WALK_INVALID and nothing runs.  `out` may be 0.  A turn run through a
+    # Thread passes 0: what a turn has to say it says by a Message
+    # (LMX_blog/2026-09-20.md, "Общение только через Message").
+    fn: lmx_walk_run (@: LmxWalkContext context; @: Lmx node; @@: void args; size_t: nargs; @: LmxWalkValue out) int
+    # The same activation for a caller INSIDE this unit: the inputs are values it produced
+    # itself and are not asked about; an integer result goes into `dest`.
+    fn: lmx_walk_activate (@: LmxWalkContext context; @: Lmx node; @@: void args; size_t: nargs; @: void dest; @@: void result; @: int present) int
+    # Once per callable, before the descriptor is shared: look at the body, build the plan
+    # in `descriptor_arena` -- the arena where the LmxCallable of M lives: the context's
+    # own, or the permanent store it is bound to -- and publish it through the context's
+    # arena.  Any other arena is INVALID, asked before anything is built.  OK without looking
+    # when the descriptor already has a plan.  A bare METHOD in child[0] is INVALID (no
+    # header); a body with a node outside the slice is UNSUPPORTED; an `own` node naming
+    # somebody else's field, and a `put` or a `set` that would write into the permanent
+    # store, are INVALID -- in every such case nothing is published.  NO_GRAPH when M has
+    # no body node.
+    fn: lmx_walk_prepare (@: LmxWalkContext context; @: LmxArena descriptor_arena; @: Lmx plan_roles; @: Lmx node) int
+    # Preparation and tests only: does the published plan say what the body says -- the
+    # same fields, no more, in the lexical order?  The generic plan unit cannot know.
+    fn: lmx_walk_plan_check (@: LmxWalkContext context; @: Lmx node) int
+    # Entry, separate so that a test can look at what it loaded: two questions to the
+    # arena, then the records of the plan's entries in the plan's order (21.5).  The
+    # CALLER has marked the store and rewinds it; enter itself releases nothing.
+    fn: lmx_walk_enter (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx node; @@: void args; size_t: nargs) int
+
+    # The roles of a program: a plain Structure whose child k is THE record of role k.
+    # Opened once per program graph; every frame node refers to these records.
+    fn: lmx_walk_roles_open (@: LmxArena arena) @: Lmx
+    # Construction of body nodes, for a translator and for tests.  A node is a fresh
+    # Structure of `arena` with `children` slots and lexical parent `parent`; a frame
+    # node gets the shared record of role `code` in child[0].  The caller stores the node
+    # into its parent's slot.
+    fn: lmx_walk_frame (@: LmxArena arena; @: Lmx roles; @: Lmx parent; int: code; size_t: children) @: Lmx
+    fn: lmx_walk_plain (@: LmxArena arena; @: Lmx parent; size_t: children) @: Lmx
+    fn: lmx_walk_store_size (@: LmxArena arena; @: Lmx code; size_t: slot; size_t: value) int
+    fn: lmx_walk_store_int (@: LmxArena arena; @: Lmx code; size_t: slot; int: value) int
+
+    # Internal steps, named here because they are mutually recursive.
+    fn: lmx_walk_kind (@: LmxWalkFrame f; @: void p) int
+    fn: lmx_walk_kind_in (@: LmxWalkFrame f; @: LmxArena arena; @: void p) int
+    fn: lmx_walk_op (@: LmxWalkFrame f; @: void code) int
+    fn: lmx_walk_scan (@: LmxWalkFrame f; @: Lmx code; size_t: first) int
+    fn: lmx_walk_eval (@: LmxWalkFrame f; @: void code; @: void dest; @@: void out) int
+    fn: lmx_walk_body (@: LmxWalkFrame f; @: Lmx body; size_t: first) int
+    fn: lmx_walk_checkpoint (@: LmxWalkFrame f) int
+end: prototype

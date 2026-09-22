@@ -1,0 +1,60 @@
+include: "<stddef.h>"
+predef: "l2src/lmx_arena.h.lm1"
+
+# lmx_dirty.h.lm1 - the dirty cache of a body's used own fields, and the checkpoint that
+# publishes them (spec 7.4, 21.6, 21.13; the gaps note's item 11).
+#
+# The spec, verbatim: "Used own field | Local loaded from its exact backing Lmx occurrence |
+# Dirty writes only" and "Before calls and exits, publish only own locals actually written since
+# their last successful checkpoint; clear dirty after a successful store.  Never reload the
+# caller after a call."
+#
+# So a body's own fields have TWO homes while it runs: the Lmx occurrence (the graph) and a C
+# working local loaded from it.  A write to the local marks it DIRTY; the checkpoint is what
+# carries the local's value into the occurrence -- and only for the entries that are dirty, which
+# is what makes a checkpoint cheap and what makes "publish only what you wrote" true.
+#
+# This record is the seam between the two homes: it holds the EXACT backing occurrence, a pointer
+# to the generated body's working local, and the flag.  The working local itself is the body's --
+# the kernel never owns a C frame -- so what is bound here is an address, not a copy.
+#
+# The store is deliberately typeless: the cell carries no tag (spec 2, 6.5), and its stride comes
+# from the arena's index, which answers for every address the arena handed out.  So the
+# checkpoint copies exactly the stride the cell's array declares, and a `char` field and an `int`
+# field are published by the same act.
+#
+# "Never reload the caller after a call" is the other half of the same rule, and it is the
+# generated body's to keep: a callee may publish to the same Structure (recursion has its own C
+# frames), and the caller's working values stay what the caller wrote -- its own next checkpoint
+# is what settles the difference.
+define: LMX_DIRTY_OK 0
+define: LMX_DIRTY_INVALID 1
+
+struct: LmxDirty
+    # The exact backing occurrence: a cell of the arena the body runs in.
+    @: void cell
+    # The generated body's working local for that occurrence, of the cell's own stride.
+    @: void value
+    # The cell's stride, read from the arena's index when the entry was bound: reading it once is
+    # the whole of "the address answers what it is".
+    size_t: stride
+    # Written since the last successful checkpoint?
+    int: dirty
+    @: LmxDirty next
+end: LmxDirty
+
+prototype:
+    # Bind one entry to its backing cell and the body's working local.  Refused when the address is
+    # not a cell of this arena -- there would be nothing to publish into.
+    fn: lmx_dirty_bind (@: LmxArena arena; @: LmxDirty entry; @: void cell; @: void value) int
+    # One entry follows another in the body's own chain.
+    fn: lmx_dirty_link (@: LmxDirty head; @: LmxDirty next) int
+    # A write to the working local: this is what the next checkpoint must carry.
+    fn: lmx_dirty_mark (@: LmxDirty entry) int
+    # The checkpoint: carry every DIRTY entry's working value into its occurrence, and clear each
+    # flag as its store succeeds.  A chain with nothing dirty publishes nothing.
+    fn: lmx_dirty_checkpoint (@: LmxDirty head) int
+    # Is anything still waiting to be published?  The diagnostic of 21.13's checkpoint-store
+    # assert: a body that must have taken a checkpoint asks before it exits.
+    fn: lmx_dirty_pending (@: LmxDirty head) int
+end: prototype

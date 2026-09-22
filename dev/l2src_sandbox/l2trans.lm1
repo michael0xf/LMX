@@ -363,6 +363,13 @@ prototype:
     fn: l2_addr_scan (const: @(LmP0Node node); const: @(LmP0Text name)) int
     fn: l2_param_addr_taken (int: mi; int: k) int
     fn: l2_own_of_param (int: mi; int: k) int
+    fn: l2_own_canon (int: mi; int: oi) int
+    fn: l2_own_param_of (int: mi; int: oi) int
+    fn: l2_own_addr_taken (int: mi; int: oi) int
+    fn: l2_canon_spell (int: mi; int: oi; @: char dest) int
+    fn: l2_emit_own_from (int: mi; int: oi; const: @(char ind)) int
+    fn: l2_emit_finalize_old (int: mi; int: oi; const: @(char ind); const: @(char canon)) int
+    fn: l2_emit_occ_write (int: mi; int: oi; const: @(char ind); const: @(char rhs)) int
     fn: l2_own_ctr (int: oi) const: @: char
     fn: l2_emit_addr_mark (int: mi; int: k; const: @(char ind)) int
     fn: l2_emit_bind_mark (int: mi; int: oi; const: @(char ind)) int
@@ -5930,42 +5937,138 @@ fn: l2_own_of_param (int: mi; int: k) int
         i: i + 1
 return: -1
 
-# THE STICKY RULE, the author's, in one place.  For a parameter x -- a declared formal or a
-# hidden/dynamic input -- that is same-name bound to the body's own field:
-#     @x evaluated BEFORE x's first executed binding, and then that binding executes
-#     => from the binding to the end of the activation the field is dirty STICKILY: every
-#        checkpoint publishes the current local value and none of them clears the state.
-# Nothing else is sticky: no binding executed -> no graph dirty state at all; @x first evaluated
-# AFTER the binding -> ordinary dirty, cleared by a checkpoint as always.  The local's address
-# is the ordinary address, the caller's source is never written, and what happened to x before
-# the binding is not published.  Three flags of the activation carry it, and only a method that
-# writes `@: x` somewhere has them (l2_param_addr_taken):
-#     l2_q<i>_early   @x was evaluated while x was unbound
-#     l2_q<i>_bound   a binding of x has executed
-#     l2_q<i>_sticky  the first binding found `early` set
-# `sticky` is decided once, at the FIRST binding, which is why a later @x cannot raise it.
-fn: l2_emit_addr_mark (int: mi; int: k; const: @(char ind)) int
-    int: oi l2_own_of_param(mi, k)
-    if: oi < 0 || ind = 0 || l2_param_addr_taken(mi, k) = 0
+# First used same-name own of this method (canonical row), or oi itself.
+fn: l2_own_canon (int: mi; int: oi) int
+    int: i 0
+    if: mi < 0 || oi < 0 || oi >= l2_own_n
+        return: -1
+    while: i < l2_own_n
+        if: l2_own_mi[i] = mi && l2_text_same(l2_own_name[i], l2_own_name[oi]) && l2_m_uses[l2_own_off(mi, i)] != 0
+            return: i
+        i: i + 1
+return: oi
+
+# Parameter index this own's logical name is bound to, even for a later occurrence, or -1.
+fn: l2_own_param_of (int: mi; int: oi) int
+    int: cn
+    int: a
+    if: mi < 0 || oi < 0
+        return: -1
+    a: l2_m_alias[l2_own_off(mi, oi)]
+    if: a >= 0
+        return: a
+    cn: l2_own_canon(mi, oi)
+    if: cn >= 0 && cn != oi
+        return: l2_m_alias[l2_own_off(mi, cn)]
+return: -1
+
+fn: l2_own_addr_taken (int: mi; int: oi) int
+    int: pk l2_own_param_of(mi, oi)
+    if: pk < 0
         return: 0
-    if: c.fprintf(l2_out, "%sif: l2_q%d_bound = 0\n%s    l2_q%d_early: 1\n", ind, oi, ind, oi) < 0
+return: l2_param_addr_taken(mi, pk)
+
+fn: l2_canon_spell (int: mi; int: oi; @: char dest) int
+    int: pk l2_own_param_of(mi, oi)
+    int: cn l2_own_canon(mi, oi)
+    if: dest = 0 || oi < 0
+        return: 1
+    if: pk >= 0 && c.sprintf(dest, "l2_p%d_%d", mi, pk) < 0
+        return: 1
+    if: pk < 0 && cn >= 0 && c.sprintf(dest, "l2_q%d", cn) < 0
+        return: 1
+    if: pk < 0 && cn < 0 && c.sprintf(dest, "l2_q%d", oi) < 0
         return: 1
 return: 0
 
-fn: l2_emit_bind_mark (int: mi; int: oi; const: @(char ind)) int
-    if: mi < 0 || oi < 0 || ind = 0 || l2_m_alias[l2_own_off(mi, oi)] < 0
+fn: l2_emit_own_from (int: mi; int: oi; const: @(char ind)) int
+    if: mi < 0 || oi < 0 || ind = 0
         return: 0
-    if: l2_param_addr_taken(mi, l2_m_alias[l2_own_off(mi, oi)]) = 0
-        return: 0
-    # A sticky field is published by the very next checkpoint, so its cell must be loaded HERE:
-    # a declaration line of an int or a pointer loads nothing by itself, and a checkpoint between
-    # it and the first assignment would otherwise publish through a cell that was never fetched
-    # (measured: the program died there).  The load is the one every assignment already emits.
     if: l2_own_fid[oi] >= 0 && c.fprintf(l2_out, "%sif: l2_q%d_from = 0\n%s    l2_q%d_from: lmx_arena_ref_cell(l2_h%d, %uU)\n%sif: l2_q%d_from = 0\n%s    %s\n", ind, oi, ind, oi, l2_own_fid[oi], (cast: (unsigned) l2_own_fchild[oi]), ind, oi, ind, l2_fail_return(mi)) < 0
         return: 1
     if: l2_own_fid[oi] < 0 && c.fprintf(l2_out, "%sif: l2_q%d_from = 0\n%s    l2_q%d_from: lmx_arena_ref_cell(%s, %uU)\n%sif: l2_q%d_from = 0\n%s    %s\n", ind, oi, ind, oi, l2_own_ctr(oi), (cast: (unsigned) l2_own_uchild[oi]), ind, oi, ind, l2_fail_return(mi)) < 0
         return: 1
-    if: c.fprintf(l2_out, "%sif: l2_q%d_bound = 0 && l2_q%d_early != 0\n%s    l2_q%d_sticky: 1\n%sl2_q%d_bound: 1\n", ind, oi, oi, ind, oi, ind, oi) < 0
+return: 0
+
+# THE STICKY RULE, the author's, in one place.  One canonical working cell per logical name
+# (the parameter for a bound argument).  The selector is the publication target, never storage.
+# ANY executed @x sets one sticky flag for that local, before or after the first binding.
+# Until an occurrence has executed, active is -1 and nothing is published.  From the first
+# executed occurrence, every checkpoint refreshes that active pending snapshot from canonical
+# and publishes it; sticky survives.  A later assignment while sticky finalizes the old
+# target's pending from canonical before canonical is overwritten.
+fn: l2_emit_finalize_old (int: mi; int: oi; const: @(char ind); const: @(char canon)) int
+    int: cn
+    int: j 0
+    int: n 0
+    if: mi < 0 || oi < 0 || ind = 0 || canon = 0 || l2_own_addr_taken(mi, oi) = 0
+        return: 0
+    cn: l2_own_canon(mi, oi)
+    if: cn < 0
+        return: 0
+    while: j < l2_own_n
+        if: l2_own_mi[j] = mi && l2_text_same(l2_own_name[j], l2_own_name[oi]) && l2_m_uses[l2_own_off(mi, j)] != 0 && j != oi
+            n: n + 1
+        j: j + 1
+    if: n = 0
+        return: 0
+    if: c.fprintf(l2_out, "%sif: l2_q%d_sticky != 0 && l2_q%d_active >= 0 && l2_q%d_active != %d\n", ind, cn, cn, cn, oi) < 0
+        return: 1
+    j: 0
+    while: j < l2_own_n
+        if: l2_own_mi[j] = mi && l2_text_same(l2_own_name[j], l2_own_name[oi]) && l2_m_uses[l2_own_off(mi, j)] != 0 && j != oi && c.fprintf(l2_out, "%s    if: l2_q%d_active = %d\n%s        l2_q%d: %s\n%s        l2_q%d_dirty: 1\n%s    ---\n", ind, cn, j, ind, j, canon, ind, j, ind) < 0
+            return: 1
+        j: j + 1
+return: 0
+
+fn: l2_emit_occ_write (int: mi; int: oi; const: @(char ind); const: @(char rhs)) int
+    int: cn
+    int: pk
+    c.array: [64]: char canon
+    if: mi < 0 || oi < 0 || ind = 0 || rhs = 0
+        return: 1
+    cn: l2_own_canon(mi, oi)
+    pk: l2_own_param_of(mi, oi)
+    if: l2_canon_spell(mi, oi, canon) != 0
+        return: 1
+    if: l2_emit_own_from(mi, oi, ind) != 0
+        return: 1
+    if: l2_emit_finalize_old(mi, oi, ind, canon) != 0
+        return: 1
+    if: c.fprintf(l2_out, "%s%s: %s\n", ind, canon, rhs) < 0
+        return: 1
+    if: pk >= 0 && c.fprintf(l2_out, "%sl2_q%d: %s\n", ind, oi, canon) < 0
+        return: 1
+    if: pk < 0 && cn >= 0 && oi != cn && c.fprintf(l2_out, "%sl2_q%d: %s\n", ind, oi, canon) < 0
+        return: 1
+    if: c.fprintf(l2_out, "%sl2_q%d_dirty: 1\n", ind, oi) < 0
+        return: 1
+    if: l2_own_addr_taken(mi, oi) != 0 && cn >= 0 && c.fprintf(l2_out, "%sl2_q%d_active: %d\n", ind, cn, oi) < 0
+        return: 1
+return: 0
+
+fn: l2_emit_addr_mark (int: mi; int: k; const: @(char ind)) int
+    int: oi l2_own_of_param(mi, k)
+    int: cn
+    if: oi < 0 || ind = 0 || l2_param_addr_taken(mi, k) = 0
+        return: 0
+    cn: l2_own_canon(mi, oi)
+    if: cn < 0
+        cn: oi
+    if: c.fprintf(l2_out, "%sl2_q%d_sticky: 1\n", ind, cn) < 0
+        return: 1
+return: 0
+
+fn: l2_emit_bind_mark (int: mi; int: oi; const: @(char ind)) int
+    int: cn
+    if: mi < 0 || oi < 0 || ind = 0 || l2_own_addr_taken(mi, oi) = 0
+        return: 0
+    if: l2_emit_own_from(mi, oi, ind) != 0
+        return: 1
+    cn: l2_own_canon(mi, oi)
+    if: cn < 0
+        cn: oi
+    if: c.fprintf(l2_out, "%sl2_q%d_active: %d\n", ind, cn, oi) < 0
         return: 1
 return: 0
 
@@ -12341,8 +12444,8 @@ fn: l2_prep_addr (const: @(LmP0Node node); int: mi; const: @(char ind); @: char 
     if: mi >= 0
         idx: l2_param_find(mi, t)
     if: idx >= 0
-        # The address is the ordinary address of the activation-local parameter, always.  What
-        # is noted here is only WHEN it was evaluated, for the sticky rule (l2_emit_addr_mark).
+        # The address is the ordinary address of the canonical working cell, always.  Any
+        # executed @x sets sticky for that logical local (l2_emit_addr_mark).
         if: l2_emit_addr_mark(mi, idx, ind) != 0
             return: 1
         if: c.sprintf(dest, "@ l2_p%d_%d", mi, idx) < 0
@@ -12601,9 +12704,7 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
             if: idx < 0
                 return: 1
             if: mi >= 0 && l2_m_uses[l2_own_off(mi, idx)] != 0
-                if: l2_m_alias[l2_own_off(mi, idx)] >= 0 && c.sprintf(dest, "l2_p%d_%d", mi, l2_m_alias[l2_own_off(mi, idx)]) < 0
-                    return: 1
-                if: l2_m_alias[l2_own_off(mi, idx)] < 0 && c.sprintf(dest, "l2_q%d", idx) < 0
+                if: c.sprintf(dest, "l2_q%d", idx) < 0
                     return: 1
                 return: 0
             ---
@@ -13276,9 +13377,7 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
                 po: l2_own_find_occ(mi, p4\value\as\atom, (cast: (int) l2_literal_value(p2\value\as\atom)))
                 if: po < 0 || l2_m_uses[l2_own_off(mi, po)] = 0
                     return: 1
-                if: l2_m_alias[l2_own_off(mi, po)] >= 0 && c.sprintf(piece, "l2_p%d_%d", mi, l2_m_alias[l2_own_off(mi, po)]) < 0
-                    return: 1
-                if: l2_m_alias[l2_own_off(mi, po)] < 0 && c.sprintf(piece, "l2_q%d", po) < 0
+                if: c.sprintf(piece, "l2_q%d", po) < 0
                     return: 1
                 if: l2_cat(buf, piece) != 0
                     return: l2_error(l2_src, at, "expression too long")
@@ -13818,6 +13917,8 @@ return: 0
 fn: l2_emit_checkpoint (int: mi; const: @(char ind)) int
     int: i 0
     int: fi
+    int: pk
+    int: cn
     int: sticky
     c.array: [64]: char local
     c.array: [160]: char val
@@ -13828,14 +13929,20 @@ fn: l2_emit_checkpoint (int: mi; const: @(char ind)) int
             i: i + 1
             continue
         fi: l2_m_alias[l2_own_off(mi, i)]
-        # A sticky field is published by EVERY checkpoint, dirty or not, and the clearing below
-        # touches only the ordinary dirty flag: that is the whole of the rule at this site.
+        pk: l2_own_param_of(mi, i)
+        cn: l2_own_canon(mi, i)
+        # Sticky publishes the CURRENT active occurrence only.  active = -1 means no
+        # occurrence has executed, so nothing is published even if @x already set sticky.
         sticky: 0
-        if: fi >= 0 && l2_m_uses[l2_own_off(mi, i)] != 0
-            sticky: l2_param_addr_taken(mi, fi)
+        if: pk >= 0 && l2_m_uses[l2_own_off(mi, i)] != 0
+            sticky: l2_param_addr_taken(mi, pk)
         if: l2_m_uses[l2_own_off(mi, i)] != 0 && sticky = 0 && c.fprintf(l2_out, "%sif: l2_q%d_dirty != 0\n", ind, i) < 0
             return: 1
-        if: l2_m_uses[l2_own_off(mi, i)] != 0 && sticky != 0 && c.fprintf(l2_out, "%sif: l2_q%d_dirty != 0 || l2_q%d_sticky != 0\n", ind, i, i) < 0
+        if: l2_m_uses[l2_own_off(mi, i)] != 0 && sticky != 0 && cn >= 0 && c.fprintf(l2_out, "%sif: l2_q%d_dirty != 0 || (l2_q%d_sticky != 0 && l2_q%d_active = %d)\n", ind, i, cn, cn, i) < 0
+            return: 1
+        if: l2_m_uses[l2_own_off(mi, i)] != 0 && sticky != 0 && cn >= 0 && l2_canon_spell(mi, i, local) != 0
+            return: 1
+        if: l2_m_uses[l2_own_off(mi, i)] != 0 && sticky != 0 && cn >= 0 && c.fprintf(l2_out, "%s    if: l2_q%d_sticky != 0 && l2_q%d_active = %d\n%s        l2_q%d: %s\n", ind, cn, cn, i, ind, i, local) < 0
             return: 1
         # SPEC 21.6 / ABI 14.23, confirmed 2026-09-12: a failure to publish an
         # already-bound dirty own field is checkpoint failure and takes the
@@ -13856,9 +13963,6 @@ fn: l2_emit_checkpoint (int: mi; const: @(char ind)) int
         # checkpoint keep their new values; no rollback is claimed or required.
         if: l2_m_uses[l2_own_off(mi, i)] != 0 && c.fprintf(l2_out, "%s    if: l2_q%d_from = 0\n%s        c.fprintf(c.stderr, \"lmx: checkpoint lost own field %d\\n\")\n%s        if: lmx_msg_poll_abort() != 0\n%s            c.abort()\n", ind, i, ind, i, ind, ind) < 0
             return: 1
-        # Each diagnostic block above ends two source levels deeper than the
-        # next statement, so it needs an explicit tail cutter (L1 closes at
-        # most one level without one).
         if: l2_m_uses[l2_own_off(mi, i)] != 0 && c.fprintf(l2_out, "%s    ---\n", ind) < 0
             return: 1
         # ONE publication for every own type (FABLE-L2-ARG-ADDRESS-DIRTY-20260921-67).  The type decides
@@ -13868,9 +13972,11 @@ fn: l2_emit_checkpoint (int: mi; const: @(char ind)) int
         # `val` is the activation-local value: the parameter for an argument-bound field, the own
         # working value otherwise.  char REBINDS its cell and assigns the result; every other
         # type stores into the cell it has.
-        if: l2_m_uses[l2_own_off(mi, i)] != 0 && fi < 0 && c.sprintf(local, "l2_q%d", i) < 0
+        if: l2_m_uses[l2_own_off(mi, i)] != 0 && sticky != 0 && c.sprintf(local, "l2_q%d", i) < 0
             return: 1
-        if: l2_m_uses[l2_own_off(mi, i)] != 0 && fi >= 0 && c.sprintf(local, "l2_p%d_%d", mi, fi) < 0
+        if: l2_m_uses[l2_own_off(mi, i)] != 0 && sticky = 0 && fi < 0 && c.sprintf(local, "l2_q%d", i) < 0
+            return: 1
+        if: l2_m_uses[l2_own_off(mi, i)] != 0 && sticky = 0 && fi >= 0 && c.sprintf(local, "l2_p%d_%d", mi, fi) < 0
             return: 1
         if: l2_m_uses[l2_own_off(mi, i)] != 0 && l2_own_store_helper(l2_own_ty[i]) = 0
             return: l2_error(l2_src, l2_own_decl[i], "own field type has no graph cell to publish to")
@@ -15529,7 +15635,7 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
             l2_own_live[oi]: 1
         # The own-declaration line of a same-name parameter IS a binding line: docs/L2_spec "an
         # executed declaration or assignment-declaration binds the same local variable to the
-        # body's field".  Whichever of the two executes FIRST decides whether the field is sticky.
+        # body's field".  It selects this occurrence as the publication target; sticky is raised at @.
         if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && mi >= 0 && l2_m_uses[l2_own_off(mi, oi)] != 0 && l2_emit_bind_mark(mi, oi, ind) != 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && mi >= 0 && l2_m_alias[l2_own_off(mi, oi)] >= 0 && l2_own_fid[oi] >= 0 && (l2_own_ty[oi] = 1 || l2_own_ty[oi] = 2 || l2_own_ty[oi] = 3 || l2_own_ty[oi] = 36) && c.fprintf(l2_out, "%sl2_q%d_from: lmx_arena_ref_cell(l2_h%d, %uU)\n%sif: l2_q%d_from = 0\n%s    %s\n", ind, oi, l2_own_fid[oi], (cast: (unsigned) l2_own_fchild[oi]), ind, oi, ind, l2_fail_return(mi)) < 0
@@ -15538,7 +15644,7 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && l2_count_active(stmt\as\frame\body) = 2 && l2_eval_fields(l2_next_active(l2_next_active(stmt\as\frame\body\first_field)\next), 1, mi, ind, l2_tok) != 0
             return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && l2_count_active(stmt\as\frame\body) = 2 && c.fprintf(l2_out, "%sl2_q%d: %s\n%sl2_q%d_dirty: 1\n", ind, oi, l2_tok, ind, oi) < 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && l2_count_active(stmt\as\frame\body) = 2 && l2_emit_occ_write(mi, oi, ind, l2_tok) != 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt)
             field: l2_next_active(field\next)
@@ -15619,17 +15725,11 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && fi >= 0
             l2_own_live[oi]: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && fi < 0 && c.fprintf(l2_out, "%sl2_q%d: %s\n", ind, oi, l2_tok) < 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && l2_emit_occ_write(mi, oi, ind, l2_tok) != 0
             return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && fi >= 0 && c.fprintf(l2_out, "%sl2_p%d_%d: %s\n", ind, mi, fi, l2_tok) < 0
-            return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && fi < 0 && c.fprintf(l2_out, "%sl2_q%d_dirty: 1\n", ind, oi) < 0
-            return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && fi >= 0 && c.fprintf(l2_out, "%sl2_q%d_dirty: 1\n", ind, oi) < 0
-            return: 1
-        # An executed assignment to a bound parameter IS a binding of it: the first one decides
-        # whether the field is sticky (l2_emit_bind_mark).
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && fi >= 0 && l2_emit_bind_mark(mi, oi, ind) != 0
+        # An executed assignment is a binding: it selects this occurrence as the publication
+        # target. Sticky itself is raised at @, not here.
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && l2_emit_bind_mark(mi, oi, ind) != 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0
             field: l2_next_active(field\next)
@@ -16050,32 +16150,49 @@ fn: l2_emit_unit (const: @(char out_path)) int
             if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && c.fprintf(l2_out, "    l2_q%d_from: lmx_arena_ref_cell(%s, %uU)\n    if: l2_q%d_from = 0\n        %s\n", k, l2_own_ctr(k), (cast: (unsigned) l2_own_uchild[k]), k, l2_fail_return(i)) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_ty[k] = 1 && c.fprintf(l2_out, "    l2_q%d: (cast: (char) lmx_char_value_known(l2_q%d_from[0]))\n", k, k) < 0
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_param_of(i, k) < 0 && l2_own_ty[k] = 1 && c.fprintf(l2_out, "    l2_q%d: (cast: (char) lmx_char_value_known(l2_q%d_from[0]))\n", k, k) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_ty[k] = 2 && c.fprintf(l2_out, "    l2_q%d: lmx_size_value_known(l2_q%d_from[0])\n", k, k) < 0
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_param_of(i, k) < 0 && l2_own_ty[k] = 2 && c.fprintf(l2_out, "    l2_q%d: lmx_size_value_known(l2_q%d_from[0])\n", k, k) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_ty[k] = 0 && c.fprintf(l2_out, "    l2_q%d: lmx_int_value_known(l2_q%d_from[0])\n", k, k) < 0
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_param_of(i, k) < 0 && l2_own_ty[k] = 0 && c.fprintf(l2_out, "    l2_q%d: lmx_int_value_known(l2_q%d_from[0])\n", k, k) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_ty[k] = 3 && c.fprintf(l2_out, "    l2_q%d: lmx_unsigned_value_known(l2_q%d_from[0])\n", k, k) < 0
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_param_of(i, k) < 0 && l2_own_ty[k] = 3 && c.fprintf(l2_out, "    l2_q%d: lmx_unsigned_value_known(l2_q%d_from[0])\n", k, k) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_ty[k] = 36 && c.fprintf(l2_out, "    l2_q%d: lmx_ulong_value_known(l2_q%d_from[0])\n", k, k) < 0
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_param_of(i, k) < 0 && l2_own_ty[k] = 36 && c.fprintf(l2_out, "    l2_q%d: lmx_ulong_value_known(l2_q%d_from[0])\n", k, k) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_is_pointer(l2_own_ty[k]) != 0
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_param_of(i, k) < 0 && l2_own_is_pointer(l2_own_ty[k]) != 0
                 if: c.fprintf(l2_out, "    l2_q%d: (cast: (", k) < 0 || l2_emit_own_pointer_type(l2_out, l2_own_ty[k]) != 0 || c.fprintf(l2_out, ") lmx_pointer_value_known(l2_q%d_from[0]))\n", k) < 0
                     fclose(l2_out)
                     return: 1
             ---
-            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] >= 0 && c.fprintf(l2_out, "    @@: void l2_q%d_from 0\n    int: l2_q%d_dirty 0\n", k, k) < 0
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] >= 0 && l2_own_ty[k] = 1 && c.fprintf(l2_out, "    char: l2_q%d\n    @@: void l2_q%d_from 0\n    int: l2_q%d_dirty 0\n", k, k, k) < 0
                 fclose(l2_out)
                 return: 1
-            # The three flags of the sticky rule, only where the body writes `@: x` for this
-            # parameter; every other method is generated exactly as it was.
-            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] >= 0 && l2_param_addr_taken(i, l2_m_alias[l2_own_off(i, k)]) != 0 && c.fprintf(l2_out, "    int: l2_q%d_early 0\n    int: l2_q%d_bound 0\n    int: l2_q%d_sticky 0\n", k, k, k) < 0
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] >= 0 && l2_own_ty[k] = 2 && c.fprintf(l2_out, "    size_t: l2_q%d\n    @@: void l2_q%d_from 0\n    int: l2_q%d_dirty 0\n", k, k, k) < 0
+                fclose(l2_out)
+                return: 1
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] >= 0 && l2_own_ty[k] = 0 && c.fprintf(l2_out, "    int: l2_q%d\n    @@: void l2_q%d_from 0\n    int: l2_q%d_dirty 0\n", k, k, k) < 0
+                fclose(l2_out)
+                return: 1
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] >= 0 && l2_own_ty[k] = 3 && c.fprintf(l2_out, "    unsigned: l2_q%d\n    @@: void l2_q%d_from 0\n    int: l2_q%d_dirty 0\n", k, k, k) < 0
+                fclose(l2_out)
+                return: 1
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] >= 0 && l2_own_ty[k] = 36 && c.fprintf(l2_out, "    ulong: l2_q%d\n    @@: void l2_q%d_from 0\n    int: l2_q%d_dirty 0\n", k, k, k) < 0
+                fclose(l2_out)
+                return: 1
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] >= 0 && l2_own_is_pointer(l2_own_ty[k]) != 0
+                if: l2_emit_own_pointer_temp_decl(l2_out, l2_own_ty[k], "    ", k) != 0 || c.fprintf(l2_out, "    @@: void l2_q%d_from 0\n    int: l2_q%d_dirty 0\n", k, k) < 0
+                    fclose(l2_out)
+                    return: 1
+            ---
+            # Sticky + publication selector, only where the body writes `@: x` for this
+            # logical local; every other method is generated without these flags.
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_own_addr_taken(i, k) != 0 && l2_own_canon(i, k) = k && c.fprintf(l2_out, "    int: l2_q%d_sticky 0\n    int: l2_q%d_active 0 - 1\n", k, k) < 0
                 fclose(l2_out)
                 return: 1
             k: k + 1

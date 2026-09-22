@@ -1,7 +1,7 @@
 # FABLE-L2-ARG-ADDRESS-DIRTY-20260921-67.  The author's sticky rule, and its negatives.
 #
-#   sticky  <=>  x is a parameter, `@: x` was EVALUATED before x's first EXECUTED binding line,
-#               and that line then executes and binds x to the body's own field.
+#   sticky  <=>  x is a parameter and `@: x` was EVALUATED in this activation, before or after
+#               the first executed binding. The selector is the publication target, not storage.
 #   A binding line is an executed own declaration or an executed assignment-declaration of the
 #   same name (docs/L2_spec); whichever runs first decides.  From it to the end of the activation
 #   every checkpoint publishes the current local value and none of them clears the state.
@@ -75,8 +75,8 @@ fn: never_bound (int: nb; int: go) int
     return: 0
 end: never_bound
 
-# C. The binding FIRST, `@: nc` after it: ordinary dirty.  The checkpoint before the call
-#    publishes and clears; the write through the address is no assignment and is not published.
+# C. The binding FIRST, `@: nc` after it: now sticky too.  C2 is before the next checkpoint
+#    so the graph still holds the published binding; C3 republishes the pointer write.
 fn: after_bind (int: nc) int
     int: nc
     nc: nc + 1
@@ -107,7 +107,7 @@ fn: either (int: nd; int: early) int
 end: either
 
 # E. The DECLARATION is a binding line too: declared first, address after, assignment last --
-#    the address came after the first executed binding line, so this is ordinary, not sticky.
+#    @ after binding is still sticky.
 fn: decl_binds (int: ne) int
     int: ne
     poke5(@: ne)

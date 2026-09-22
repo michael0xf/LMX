@@ -8,9 +8,11 @@ predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_primitive.lm1"
 include: "<string.h>" "<limits.h>"
 
-# Thread interpreted path: lmx_interp_apply -> lmx_walk_run.
+# Thread interpreted path: lmx_interp_apply_value -> lmx_walk_run.
 # Dispatch receives only the Thread. Per-turn L2 scratch/context are automatic.
-# args[0] = subject = message.graph (same pointer). out = 0.
+# args[0] = subject = message.graph (same pointer).  The entry callable's returned int is the
+# program's VALUE (the host's exit value), kept for the host in l3_bound_result and read with
+# l3_thread_result; it never becomes the turn's status, which stays the walk's status.
 #
 # Role records and mail primitives live in ordinary sealed typed ranges of the
 # bound Thread's own arena. Every such range carries the same exact physical
@@ -29,6 +31,9 @@ include: "<string.h>" "<limits.h>"
 @: Lmx l3_bound_mail_count 0
 @: Lmx l3_bound_mail_take 0
 @: Lmx l3_bound_success 0
+# The int the bound Thread's last interpreted entry returned, and whether it returned one.
+int: l3_bound_result 0
+int: l3_bound_result_present 0
 
 # The physical profile itself is an ordinary one-cell Structure range in the owner
 # arena. Its pool is distinct from the mutable graph's Structure pool and is sealed
@@ -189,6 +194,12 @@ fn: l3_thread_success_prim (@: LmxThread t) @: Lmx
         return: 0
 return: l3_bound_success
 
+fn: l3_thread_result (@: LmxThread t; @: int out) int
+    if: t = 0 || t != l3_bound_t || out = 0 || l3_bound_result_present = 0
+        return: 0
+    \out: l3_bound_result
+return: 1
+
 # Lane is one int cell. INBOX is 0, so a decode failure is -1.
 fn: l3_prim_lane (@: void owner; @@: void refs; size_t: nargs) int
     @: LmxThread t 0
@@ -274,9 +285,13 @@ fn: l3_thread_dispatch (@: LmxThread t) int
     LmxPool: cells
     LmxScratch: scratch
     LmxWalkContext: ctx
+    LmxWalkValue: result
+    @: void value 0
     int: st
     if: t = 0 || t != l3_bound_t
         return: c.LMX_INTERP_INVALID
+    l3_bound_result: 0
+    l3_bound_result_present: 0
     message: lmx_thread_message(t)
     if: message = 0
         return: c.LMX_INTERP_INVALID
@@ -306,7 +321,23 @@ fn: l3_thread_dispatch (@: LmxThread t) int
     ctx.classified: 0U
     subject: (cast: (@: void) graph)
     args: @ subject
-    st: lmx_interp_apply(@ ctx, graph, args, 1U)
+    memset((cast: (@: void) (@ result)), 0, c.sizeof(c.LmxWalkValue))
+    st: lmx_interp_apply_value(@ ctx, graph, args, 1U, @ result)
+    # An int the activation computed comes back AT result.number; an int field of the graph
+    # comes back as a reference that the arena classifies as an int cell.  Any other value is
+    # not an int result.  Read before the per-turn scratch is closed.
+    value: result.ref
+    if: st = c.LMX_INTERP_OK && result.present != 0 && value != 0
+        if: value = (cast: (@: void) (@ result.number))
+            l3_bound_result: result.number
+            l3_bound_result_present: 1
+        else:
+            if: lmx_range_classify(arena, value) = c.LMX_KIND_PRIMITIVE && lmx_range_type_of(arena, value) = c.LMX_TYPE_INT
+                l3_bound_result: lmx_int_value_known(value)
+                l3_bound_result_present: 1
+            ---
+        ---
+    ---
     lmx_scratch_close(@ scratch)
     lmx_arena_release(@ sa)
 return: st

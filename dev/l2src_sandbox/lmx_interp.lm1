@@ -27,9 +27,19 @@ fn: lmx_interp_map (int: st) int
 return: c.LMX_INTERP_INVALID
 
 fn: lmx_interp_apply (@: LmxWalkContext context; @: Lmx node; @@: void args; size_t: nargs) int
+return: lmx_interp_apply_value(context, node, args, nargs, 0)
+
+# The callable's returned value goes to `out` as lmx_walk_run reports it; a refusal before the
+# walk leaves `out` empty, which is the same answer lmx_walk_run gives when it refuses.
+fn: lmx_interp_apply_value (@: LmxWalkContext context; @: Lmx node; @@: void args; size_t: nargs; @: LmxWalkValue out) int
     int: st
     @: LmxCallable info 0
     @: LmxArena home 0
+    if: out != 0
+        out\ref: 0
+        out\number: 0
+        out\present: 0
+    ---
     if: context = 0 || node = 0 || context\arena = 0
         return: c.LMX_INTERP_INVALID
     if: lmx_interp_callable(context\arena, node) != c.LMX_CALL_OK
@@ -45,7 +55,7 @@ fn: lmx_interp_apply (@: LmxWalkContext context; @: Lmx node; @@: void args; siz
     st: lmx_walk_prepare(context, home, context\plan_roles, node)
     if: st != c.LMX_WALK_OK
         return: lmx_interp_map(st)
-return: lmx_interp_map(lmx_walk_run(context, node, args, nargs, 0))
+return: lmx_interp_map(lmx_walk_run(context, node, args, nargs, out))
 
 fn: lmx_interp_run (@: LmxWalkContext context; @: Lmx node) int
 return: lmx_interp_apply(context, node, 0, 0U)

@@ -21,4 +21,8 @@ prototype:
     fn: lmx_interp_method (@: LmxArena arena; @: Lmx node) @: LmxMethod
     fn: lmx_interp_run (@: LmxWalkContext context; @: Lmx node) int
     fn: lmx_interp_apply (@: LmxWalkContext context; @: Lmx node; @@: void args; size_t: nargs) int
+    # The same activation, and the callable's returned value is handed back in `out` exactly as
+    # lmx_walk_run hands it back (LmxWalkValue: `ref`, `present`, `number`).  The status keeps
+    # its meaning; the value is the program's own result, never a status.
+    fn: lmx_interp_apply_value (@: LmxWalkContext context; @: Lmx node; @@: void args; size_t: nargs; @: LmxWalkValue out) int
 end: prototype

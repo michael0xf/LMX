@@ -73,6 +73,22 @@ fn: mk_walk_void (@: LmxArena a; @: Lmx roles) @: Lmx
         return: 0
 return: m
 
+# An entry whose body is `return: <value>` (RET over LIT), as mk_walk_void builds `return`.
+fn: mk_walk_int (@: LmxArena a; @: Lmx roles; int: value) @: Lmx
+    @: Lmx m
+    @: Lmx ret
+    @: Lmx lit
+    m: mk_walk_void(a, roles)
+    if: m = 0
+        return: 0
+    ret: lmx_walk_frame(a, roles, m, c.LMX_WALK_OP_RET, 2U)
+    if: ret = 0 || lmx_arena_ref_store(m, 1U, (cast: (@: void) ret)) != 0
+        return: 0
+    lit: lmx_walk_frame(a, roles, ret, c.LMX_WALK_OP_LIT, 2U)
+    if: lit = 0 || lmx_arena_ref_store(ret, 1U, (cast: (@: void) lit)) != 0 || lmx_walk_store_int(a, lit, 1U, value) != c.LMX_WALK_OK
+        return: 0
+return: m
+
 fn: mk_thread (@: LmxArena arena; @: Lmx graph; @@: LmxThread out_t) int
     @: LmxThread t
     @: LmxPost mail
@@ -111,6 +127,7 @@ fn: main () int
     @: LmxPool roles_pool 0
     @: LmxPool refs_pool 0
     @: void ret_record 0
+    int: result 0
     if: counts = 0
         return: 2
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
@@ -186,6 +203,21 @@ fn: main () int
     fail(counts, l3_thread_roles(t) = roles && l3_thread_plan_roles(t) = plan_roles, "two turns later the tables are the same tables")
     fail(counts, lmx_range_classify(a, (cast: (@: void) roles)) = c.LMX_KIND_STRUCT && lmx_range_classify(a, (cast: (@: void) plan_roles)) = c.LMX_KIND_STRUCT, "and still Structures by the arena's ranges")
     fail(counts, lmx_arena_ref_value(roles, (cast: (size_t) c.LMX_WALK_OP_RET)) = ret_record && lmx_range_classify(a, ret_record) = c.LMX_DOMAIN_KIND_OP, "and RET is the same live OP record")
+    # E1: the int the interpreted entry returns is the host's exit value, and it is a VALUE --
+    # a nonzero one does not fail the turn.  The void entry above returned none.
+    result: 99
+    fail(counts, l3_thread_result(t, @ result) = 0 && result = 99, "a void entry leaves no exit value")
+    graph: mk_walk_int(a, l3_thread_roles(t), 7)
+    fail(counts, graph != 0, "entry returning 7")
+    msg\graph: graph
+    fail(counts, lmx_thread_turn(t, native_noop, 5U) = c.LMX_THREAD_OK, "an entry returning 7 is an ordinary successful turn")
+    fail(counts, l3_thread_result(t, @ result) = 1 && result = 7, "the entry's 7 is observed as the host's exit value")
+    graph: mk_walk_int(a, l3_thread_roles(t), 0)
+    fail(counts, graph != 0, "entry returning 0")
+    msg\graph: graph
+    fail(counts, lmx_thread_turn(t, native_noop, 6U) = c.LMX_THREAD_OK, "an entry returning 0 is an ordinary successful turn")
+    fail(counts, l3_thread_result(t, @ result) = 1 && result = 0, "the entry's 0 is observed as 0")
+    fail(counts, l3_thread_result(other_t, @ result) = 0, "an unbound Thread has no exit value")
 
     if: counts[1] != 0
         c.printf("%d failed of %d\n", counts[1], counts[0])

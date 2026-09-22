@@ -25,6 +25,24 @@ sub: check (int: ok; const: @(char label))
     ---
 end: check
 
+# A callable occurrence under `unit` at `slot` whose body is `return: <value>` (RET over LIT).
+fn: mk_int_entry (@: LmxArena ga; @: Lmx roles; @: Lmx unit; size_t: slot; int: value) @: Lmx
+    @: Lmx m
+    @: LmxCallable info
+    @: Lmx ret
+    @: Lmx lit
+    m: lmx_walk_plain(ga, unit, 2U)
+    info: lmx_callable_new_owned(ga)
+    if: m = 0 || info = 0 || lmx_arena_ref_store(unit, slot, (cast: (@: void) m)) != 0 || lmx_arena_ref_store(m, 0U, (cast: (@: void) info)) != 0
+        return: 0
+    ret: lmx_walk_frame(ga, roles, m, c.LMX_WALK_OP_RET, 2U)
+    if: ret = 0 || lmx_arena_ref_store(m, 1U, (cast: (@: void) ret)) != 0
+        return: 0
+    lit: lmx_walk_frame(ga, roles, ret, c.LMX_WALK_OP_LIT, 2U)
+    if: lit = 0 || lmx_arena_ref_store(ret, 1U, (cast: (@: void) lit)) != 0 || lmx_walk_store_int(ga, lit, 1U, value) != c.LMX_WALK_OK
+        return: 0
+return: m
+
 fn: main () int
     LmxArena: arena
     LmxArena: context_arena
@@ -39,6 +57,12 @@ fn: main () int
     @: LmxCallable info 0
     @: Lmx ret 0
     @: Lmx header 0
+    @: Lmx m7 0
+    @: Lmx m0 0
+    LmxWalkValue: value
+    @: void got 0
+    int: present 0
+    int: status 0
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ context_arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ context_cells)), 0, c.sizeof(c.LmxPool))
@@ -60,7 +84,7 @@ fn: main () int
     context.roles: roles
     context.plan_roles: plan_roles
     unit: lmx_node_new_owned(ga)
-    if: roles = 0 || plan_roles = 0 || unit = 0 || lmx_arena_refs_open_owned(ga, unit, 1U) != 0
+    if: roles = 0 || plan_roles = 0 || unit = 0 || lmx_arena_refs_open_owned(ga, unit, 3U) != 0
         fputs("lmx_interp_walk: unit\n", l1_stdout())
         return: 2
     ---
@@ -82,6 +106,27 @@ fn: main () int
     check(header != 0, "prepare published the plan")
     check(lmx_plan_home(ga, (cast: (@: void) info)) = ga, "Message-local descriptor lives in the graph arena")
     check(lmx_plan_home(ga, (cast: (@: void) header)) = ga, "Message-local plan lives with the descriptor")
+    # The entry's own result reaches the host through lmx_interp_apply_value: `return: 7` is
+    # observed as 7 and `return: 0` as 0; the void return above carries no value.
+    m7: mk_int_entry(ga, roles, unit, 1U, 7)
+    m0: mk_int_entry(ga, roles, unit, 2U, 0)
+    check(m7 != 0 && m0 != 0, "two int entries are built")
+    memset((cast: (@: void) (@ value)), 0, c.sizeof(c.LmxWalkValue))
+    status: lmx_interp_apply_value(@ context, m7, 0, 0U, @ value)
+    got: value.ref
+    present: value.present
+    check(status = c.LMX_INTERP_OK && present != 0 && got != 0 && lmx_int_value_known(got) = 7, "an entry returning 7 is observed as 7")
+    status: lmx_interp_apply_value(@ context, m0, 0, 0U, @ value)
+    got: value.ref
+    present: value.present
+    check(status = c.LMX_INTERP_OK && present != 0 && got != 0 && lmx_int_value_known(got) = 0, "an entry returning 0 is observed as 0")
+    status: lmx_interp_apply_value(@ context, m, 0, 0U, @ value)
+    present: value.present
+    check(status = c.LMX_INTERP_OK && present = 0, "a void return carries no value")
+    status: lmx_interp_apply_value(0, m7, 0, 0U, @ value)
+    got: value.ref
+    present: value.present
+    check(status = c.LMX_INTERP_INVALID && present = 0 && got = 0, "a refusal leaves the value empty")
     if: failures != 0
         c.printf("%d failed of %d\n", failures, checks)
         return: 1

@@ -4860,6 +4860,9 @@ fn: l2_resolve_type_atom (const: @(LmP0Text atom); int: depth; int: is_const; @:
     if: l2_c_door(atom) != 0
         \out_ty: l2_foreign_intern(l2_text_skip(atom, 2U), depth, is_const)
         if: \out_ty >= 100
+            if: l2_text_eq(l2_text_skip(atom, 2U), "LmP0Document")
+                l2_need_p0: 1
+            ---
             return: 0
         return: 2
 return: 2
@@ -5102,14 +5105,8 @@ fn: l2_ptr_local_ty (const: @(LmP0Node stmt); @@: LmP0Text out_name; @: int out_
     if: depth = 1 && l2_text_eq(f\value\as\atom, "int")
         \out_ty: 11
         return: 0
-    # LmP0Document is a foreign pointer type (Stage B); it still needs p0.
-    if: depth = 1 && l2_text_eq(f\value\as\atom, "LmP0Document")
-        l2_need_p0: 1
     if: depth = 1 && l2_text_eq(f\value\as\atom, "void")
         \out_ty: 16
-        return: 0
-    if: depth = 1 && l2_text_eq(f\value\as\atom, "FILE")
-        \out_ty: 23
         return: 0
     if: depth = 1 && l2_text_eq(f\value\as\atom, "unsigned")
         \out_ty: 25
@@ -7217,7 +7214,7 @@ fn: l2_pointer_depth (int: ty) int
     int: fi
     if: ty >= 1000 && ty < 2000
         ty: ty - 1000
-    if: ty = 3 || ty = 9 || ty = 11 || ty = 12 || ty = 13 || ty = 16 || ty = 21 || ty = 23 || ty = 25 || ty = 26 || ty = 27 || ty = 29 || ty = 31 || ty = 38
+    if: ty = 3 || ty = 9 || ty = 11 || ty = 12 || ty = 13 || ty = 16 || ty = 21 || ty = 25 || ty = 26 || ty = 27 || ty = 29 || ty = 31 || ty = 38
         return: 1
     if: ty = 17 || ty = 18 || ty = 19 || ty = 20 || ty = 24 || ty = 39
         return: 2
@@ -8197,9 +8194,6 @@ fn: l2_emit_raw_pointer_type (@: FILE out; int: raw; int: extra_depth) int
     if: raw = 16
         base: "void"
         depth: 1
-    if: raw = 23
-        base: "FILE"
-        depth: 1
     if: raw = 25
         base: "unsigned"
         depth: 1
@@ -8301,9 +8295,6 @@ fn: l2_emit_own_pointer_temp_decl (@: FILE out; int: ty; const: @(char ind); int
         depth: 1
     if: raw = 16
         base: "void"
-        depth: 1
-    if: raw = 23
-        base: "FILE"
         depth: 1
     if: raw = 25
         base: "unsigned"
@@ -11158,10 +11149,6 @@ fn: l2_typed_formal (const: @(LmP0Node node); const: @(char path); @@: LmP0Text 
             \out_ty: 12
             \out_name: g\value\as\atom
             return: 0
-        # LmP0Document is a foreign pointer type like LmP0Frame (Stage B):
-        # its fields resolve on the foreign field path. It still needs p0.
-        if: l2_text_eq(f\value\as\atom, "LmP0Document")
-            l2_need_p0: 1
         if: l2_text_eq(f\value\as\atom, "LmP0IndentStack")
             l2_need_p0: 1
             \out_ty: 14
@@ -11169,17 +11156,6 @@ fn: l2_typed_formal (const: @(LmP0Node node); const: @(char path); @@: LmP0Text 
             return: 0
         if: l2_text_eq(f\value\as\atom, "void")
             \out_ty: 16
-            \out_name: g\value\as\atom
-            return: 0
-        if: l2_text_eq(f\value\as\atom, "FILE")
-            \out_ty: 23
-            \out_name: g\value\as\atom
-            return: 0
-        if: l2_text_eq(f\value\as\atom, "LmP0Document")
-            l2_need_p0: 1
-            \out_ty: l2_foreign_intern(f\value\as\atom, 1, 0)
-            if: \out_ty < 100
-                return: l2_error(path, node, "out of memory")
             \out_name: g\value\as\atom
             return: 0
         if: l2_text_eq(f\value\as\atom, "LmP0Text") = 0 && l2_text_eq(f\value\as\atom, "L2ImmutQuery") = 0
@@ -15229,8 +15205,6 @@ fn: l2_emit_loc_stmt (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
             return: 2
         if: lty = 16 && c.fprintf(l2_out, "%s@: void ", ind) < 0
             return: 2
-        if: lty = 23 && c.fprintf(l2_out, "%s@: FILE ", ind) < 0
-            return: 1
         if: lty = 25 && c.fprintf(l2_out, "%s@: unsigned ", ind) < 0
             return: 1
         if: lty = 38 && c.fprintf(l2_out, "%s@: ulong ", ind) < 0

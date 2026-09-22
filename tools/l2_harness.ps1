@@ -506,6 +506,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_lit_range_bounds_ok.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0'); Absent = @(); Debt = @('2147483647', '4294967295U') },
     [pscustomobject]@{ Name = 'unit_formal_unknown_type_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'unknown type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_file_bare_type_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'unknown type'; Absent = @(); Debt = @() },
 
     [pscustomobject]@{ Name = 'unit_eternal_branch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('1', 'size', '0', '0', '7');

@@ -901,6 +901,8 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_invalid_implements_unknown_candidate.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown candidate descriptor'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_invalid_implements_unknown_required.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unknown consumer descriptor'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_invalid_implements_unknown_required_distinct.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown required descriptor'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_invalid_implements_unknown_consumer.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown consumer descriptor'; Absent = @(); Debt = @() },

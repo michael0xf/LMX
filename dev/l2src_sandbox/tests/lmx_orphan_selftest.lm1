@@ -1,5 +1,5 @@
 predef: "l2src/lmx_root.lm1"
-predef: "l2src/lmx_array_grow_owned.lm1"
+predef: "l2src/lmx_list_owned.lm1"
 predef: "l2src/lmx_implements.lm1"
 predef: "l2src/lmx_chars_owned.lm1"
 predef: "l1src/libc_abi.lm1"
@@ -15,7 +15,7 @@ end: or_check
 
 fn: or_thread (@: LmxArena arena; int: with_children; @@: LmxMsg out_message) @: LmxThread
     @: Lmx graph
-    @: LmxArrayDesc children
+    @: LmxListDesc children
     @: LmxMsg message
     @: LmxPost mail
     @: LmxThread thread
@@ -26,7 +26,7 @@ fn: or_thread (@: LmxArena arena; int: with_children; @@: LmxMsg out_message) @:
         return: 0
     ---
     if: with_children != 0
-        children: lmx_array_grow_ref_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, arena)
+        children: lmx_list_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, arena)
         if: children = 0 || lmx_arena_refs_open_owned(arena, graph, 1U) != 0 || lmx_arena_ref_store(graph, 0U, (cast: (@: void) children)) != 0
             return: 0
         ---

@@ -58,8 +58,8 @@ fn: main () int
     @: Lmx wrong_child_graph 0
     @: Lmx unjoined_result 0
     @: Lmx thread_source 0
-    @: LmxArrayDesc thread_source_children 0
-    @: LmxArrayDesc owner_children 0
+    @: LmxListDesc thread_source_children 0
+    @: LmxListDesc owner_children 0
     @: LmxMsg produced_message 0
     @: LmxThread produced_thread 0
     @: LmxPost produced_mail 0
@@ -128,10 +128,10 @@ fn: main () int
     # field before the Message is copied. The child constructor copies that field; Thread then
     # discovers the unique physical descriptor by address-range type, with no reserved position.
     thread_source: lmx_node_new_owned(@ src)
-    thread_source_children: lmx_array_grow_ref_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, @ src)
+    thread_source_children: lmx_list_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, @ src)
     child_check(counts, thread_source != 0 && thread_source_children != 0 && lmx_arena_refs_open_owned(@ src, thread_source, 1U) = 0 && lmx_arena_ref_store(thread_source, 0U, (cast: (@: void) thread_source_children)) = 0, "producer graph carries ordinary children Array")
     owner_graph: lmx_node_new_owned(@ src)
-    owner_children: lmx_array_grow_ref_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, @ src)
+    owner_children: lmx_list_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, @ src)
     child_check(counts, owner_graph != 0 && owner_children != 0 && lmx_arena_refs_open_owned(@ src, owner_graph, 4U) = 0 && lmx_arena_ref_store(owner_graph, 0U, (cast: (@: void) owner_children)) = 0 && lmx_arena_ref_store(owner_graph, 1U, (cast: (@: void) parent)) = 0 && lmx_arena_ref_store(owner_graph, 2U, (cast: (@: void) source)) = 0 && lmx_arena_ref_store(owner_graph, 3U, (cast: (@: void) bad)) = 0, "turn owner graph carries its children Array and test roots")
     produced_message: lmx_child_create(@ src, @ child, 0, thread_source)
     produced_mail: (cast: (@: LmxPost) lmx_arena_take(@ child, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
@@ -141,7 +141,7 @@ fn: main () int
     child_check(counts, lmx_post_init(@ child, produced_mail) = c.LMX_POST_OK && lmx_schedule_init(produced_slot, @ child, (cast: (@: void) produced_thread), 8U) = c.LMX_SCHEDULE_OK && lmx_thread_init(@ child, produced_thread, produced_message\graph, produced_mail, produced_slot) = c.LMX_THREAD_OK, "ordinary produced Thread initialized")
     child_check(counts, (cast: (@: void) produced_thread) = (cast: (@: void) produced_message) && lmx_thread_message(produced_thread) = produced_message, "Thread and embedded Message have one physical address")
     child_check(counts, lmx_range_classify(@ child, (cast: (@: void) produced_message)) = c.LMX_DOMAIN_KIND_MSG_RECORD && lmx_range_type_of(@ child, (cast: (@: void) produced_thread)) = c.LMX_DOMAIN_THREAD, "Thread prefix has common Message kind and exact Thread type")
-    child_check(counts, lmx_thread_children_bind_graph(produced_thread, @ child) = c.LMX_THREAD_OK && lmx_thread_children(produced_thread) = (cast: (@: LmxArrayDesc) lmx_arena_ref_value(produced_message\graph, 0U)), "ordinary produced Thread bound exact graph-resident children Array")
+    child_check(counts, lmx_thread_children_bind_graph(produced_thread, @ child) = c.LMX_THREAD_OK && lmx_thread_children(produced_thread) = (cast: (@: LmxListDesc) lmx_arena_ref_value(produced_message\graph, 0U)), "ordinary produced Thread bound exact graph-resident children Array")
     child_check(counts, lmx_child_create(@ src, @ child, lmx_arena_ref_cell(produced_message\graph, 0U), source) = 0, "a foreign physical result cell was accepted")
 
     # The turn that reserves is one by-value-prefix Thread. Its graph is the ordinary source graph,

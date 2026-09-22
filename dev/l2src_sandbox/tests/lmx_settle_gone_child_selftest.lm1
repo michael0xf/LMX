@@ -30,7 +30,7 @@ end: sg_check
 
 fn: sg_thread (@: LmxArena arena; int: parent; @@: LmxMsg out_message) @: LmxThread
     @: Lmx graph lmx_node_new_owned(arena)
-    @: LmxArrayDesc children 0
+    @: LmxListDesc children 0
     @: LmxMsg message
     @: LmxPost mail
     @: LmxThread thread
@@ -40,7 +40,7 @@ fn: sg_thread (@: LmxArena arena; int: parent; @@: LmxMsg out_message) @: LmxThr
         return: 0
     ---
     if: parent != 0
-        children: lmx_array_grow_ref_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, arena)
+        children: lmx_list_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, arena)
         if: children = 0 || lmx_arena_refs_open_owned(arena, graph, 1U) != 0 || lmx_arena_ref_store(graph, 0U, (cast: (@: void) children)) != 0
             return: 0
         ---

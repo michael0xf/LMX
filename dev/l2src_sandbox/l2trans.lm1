@@ -9212,7 +9212,7 @@ fn: l2_ident_payload (const: @(LmP0Text atom); @: LmP0Text out) int
 return: 1
 
 fn: l2_payload_eq (const: @(LmP0Text atom); const: @(char s)) int
-    @: char data
+    const: @(char data)
     size_t: n
     size_t: sl
     if: atom = 0 || atom\data = 0 || s = 0
@@ -9228,7 +9228,7 @@ fn: l2_payload_eq (const: @(LmP0Text atom); const: @(char s)) int
 return: memcmp(data, s, n) = 0
 
 fn: l2_ns_find_payload (const: @(LmP0Text t)) int
-    @: char data
+    const: @(char data)
     size_t: n
     int: i 0
     if: t = 0 || t\data = 0
@@ -9329,8 +9329,8 @@ fn: l2_primitive_leaf_implements (const: @(LmP0Text cand); const: @(LmP0Text req
     int: r_forb 0
     int: c_ok
     int: r_ok
-    @: char cd
-    @: char rd
+    const: @(char cd)
+    const: @(char rd)
     size_t: cn
     size_t: rn
     if: out_result != 0
@@ -9632,8 +9632,8 @@ sub: l2_uses_path_add (@: char paths; @: size_t count; const: @(char path); size
 end: l2_uses_path_add
 
 fn: l2_uses_name_eq (const: @(LmP0Text name); const: @(LmP0Text varb)) int
-    @: char ad
-    @: char bd
+    const: @(char ad)
+    const: @(char bd)
     size_t: an
     size_t: bn
     if: name = 0 || varb = 0 || name\data = 0 || varb\data = 0
@@ -16592,13 +16592,13 @@ fn: l2_emit_unit (const: @(char out_path)) int
                 fclose(l2_out)
                 return: 1
             if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 5 && l2_ns_eternal[k] >= 0
-                if: l2_nsf_ref[fx] = 0 && c.fprintf(l2_out, "        slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: slot = 0\n            return: 1\n        l2_profile_array: (cast: (@: LmxArrayDesc) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxArrayDesc), c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_INT, l2_eprofile%u))\n        if: l2_profile_array = 0\n            return: 1\n        l2_profile_array\\len: %zuU\n        l2_profile_array\\capacity: %zuU\n        l2_profile_array\\data: 0\n", k, (cast: (unsigned) oi), (cast: (unsigned) l2_ns_eternal[k]), l2_nsf_val[fx], l2_nsf_val[fx]) < 0
+                if: l2_nsf_ref[fx] = 0 && c.fprintf(l2_out, "        slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: slot = 0\n            return: 1\n        l2_profile_array: (cast: (@: LmxArrayDesc) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxArrayDesc), c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_INT, l2_eprofile%u))\n        if: l2_profile_array = 0\n            return: 1\n        l2_profile_array\\len: %zuU\n        l2_profile_array\\data: 0\n", k, (cast: (unsigned) oi), (cast: (unsigned) l2_ns_eternal[k]), l2_nsf_val[fx]) < 0
                     fclose(l2_out)
                     return: 1
                 if: l2_nsf_ref[fx] = 0 && l2_nsf_val[fx] != 0U && c.fprintf(l2_out, "        l2_profile_array\\data: lmx_arena_take_n_profiled(l2_program_arena, c.sizeof(c.int), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT, l2_eprofile%u, %zuU)\n        if: l2_profile_array\\data = 0\n            return: 1\n", (cast: (unsigned) l2_ns_eternal[k]), l2_nsf_val[fx]) < 0
                     fclose(l2_out)
                     return: 1
-                if: l2_nsf_ref[fx] = 1 && c.fprintf(l2_out, "        slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: slot = 0\n            return: 1\n        l2_profile_array: (cast: (@: LmxArrayDesc) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxArrayDesc), c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_CHAR, l2_eprofile%u))\n        if: l2_profile_array = 0\n            return: 1\n        l2_profile_array\\len: %zuU\n        l2_profile_array\\capacity: %zuU\n        l2_profile_array\\data: 0\n", k, (cast: (unsigned) oi), (cast: (unsigned) l2_ns_eternal[k]), l2_nsf_val[fx], l2_nsf_val[fx]) < 0
+                if: l2_nsf_ref[fx] = 1 && c.fprintf(l2_out, "        slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: slot = 0\n            return: 1\n        l2_profile_array: (cast: (@: LmxArrayDesc) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxArrayDesc), c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_CHAR, l2_eprofile%u))\n        if: l2_profile_array = 0\n            return: 1\n        l2_profile_array\\len: %zuU\n        l2_profile_array\\data: 0\n", k, (cast: (unsigned) oi), (cast: (unsigned) l2_ns_eternal[k]), l2_nsf_val[fx]) < 0
                     fclose(l2_out)
                     return: 1
                 if: l2_nsf_ref[fx] = 1 && l2_nsf_val[fx] != 0U && c.fprintf(l2_out, "        l2_profile_array\\data: lmx_arena_take_n_profiled(l2_program_arena, c.sizeof(c.char), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR, l2_eprofile%u, %zuU)\n        if: l2_profile_array\\data = 0\n            return: 1\n", (cast: (unsigned) l2_ns_eternal[k]), l2_nsf_val[fx]) < 0

@@ -440,16 +440,14 @@ fn: lmx_method_intern (@: LmxArena arena; @: LmxPool pool; LmxEntry: addr; unsig
     record\sig: sig
 return: record
 
-# An Array descriptor: logical length, backing capacity and a pointer to element storage,
+# An Array descriptor: logical length and a pointer to element storage,
 # no node, no name, no tag. Its len is element count, unlike the len in the Lmx header.
-# This compatibility constructor describes fixed storage, hence capacity = len.
 fn: lmx_array_desc_new (@: LmxArena arena; @: LmxPool pool; size_t: len; @: void data) @: LmxArrayDesc
     @: LmxArrayDesc desc
     desc: (cast: (@: LmxArrayDesc) lmx_pool_take(arena, pool))
     if: desc = 0
         return: 0
     desc\len: len
-    desc\capacity: len
     desc\data: data
 return: desc
 

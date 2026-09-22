@@ -57,7 +57,7 @@ fn: main () int
     LmxArena: arena_a
     LmxArena: arena_b
     @: Lmx graph
-    @: LmxArrayDesc children
+    @: LmxListDesc children
     @: LmxMsg parent_message
     @: LmxPost parent_mail
     @: LmxThread parent
@@ -71,7 +71,7 @@ fn: main () int
     memset((cast: (@: void) (@ arena_b)), 0, c.sizeof(c.LmxArena))
     rn_check(counts, lmx_arena_open(@ parent_arena) = 0 && lmx_arena_open(@ arena_a) = 0 && lmx_arena_open(@ arena_b) = 0, "arenas")
     graph: lmx_node_new_owned(@ parent_arena)
-    children: lmx_array_grow_ref_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, @ parent_arena)
+    children: lmx_list_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, @ parent_arena)
     parent_mail: (cast: (@: LmxPost) lmx_arena_take(@ parent_arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
     parent: (cast: (@: LmxThread) lmx_arena_take(@ parent_arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
     parent_slot: (cast: (@: LmxSchedule) lmx_arena_take(@ parent_arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))

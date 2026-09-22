@@ -41,7 +41,7 @@ end: prototype
 # A child VALUE is the address of that child in the typed array/range of its type
 # T: a Structure child points at another Lmx header; a primitive child points
 # directly at its cell (an interned char is &all_chars['!']); an Array child points
-# at its {len, capacity, data} record; a known function child points at its {addr, sig}
+# at its {len, data} record; a known function child points at its {addr, sig}
 # record.  Children are never inline Lmx records, and only a target classified as a
 # Structure has parent/len/data.  A callable is an ordinary Structure M: physical slot 0 points at
 # the shared LmxCallable descriptor (which refers to METHOD), and later slots hold that callable
@@ -154,7 +154,7 @@ enum: LmxKind
     LMX_KIND_PRIMITIVE 1
     # all_methods_array {addr, sig} record
     LMX_KIND_METHOD 2
-    # typed Array pool entry {len, capacity, data}
+    # typed Array pool entry {len, data}
     LMX_KIND_ARRAY 3
     # a Structure's void * child-pointer array: a storage location, not a value
     LMX_KIND_CHILDREN 4
@@ -162,6 +162,8 @@ enum: LmxKind
     LMX_KIND_REF 5
     # an Lmx header {parent, len, data}
     LMX_KIND_STRUCT 6
+    # independent L1 dynamic container (LmxListDesc); not an Array
+    LMX_KIND_LIST 7
 end: LmxKind
 
 # 2: an immutable method record.  addr is the generated C entry; sig fixes the typed
@@ -196,13 +198,10 @@ struct: LmxOp
     int: code
 end: LmxOp
 
-# An Array descriptor has no Lmx node. `len` is the logical element count;
-# `capacity` is the number of cells in `data`. Immutable/fixed Arrays have
-# capacity = len. A growable Array may have capacity > len, but spare cells are
-# storage only and are not language elements.
+# An Array descriptor has no Lmx node. `len` is the logical element count.
+# The backing is exactly `len` cells. Dynamic membership is LmxListDesc, not Array.
 struct: LmxArrayDesc
     size_t: len
-    size_t: capacity
     @: void data
 end: LmxArrayDesc
 

@@ -1,0 +1,140 @@
+predef: "lmx_list_owned.h.lm1"
+predef: "l2src/lmx_pool.h.lm1"
+
+# Owner-exclusive arena container of physical references. Direct addresses of backing
+# cells remain valid only until a successful append replaces the backing. Remove keeps
+# the backing but invalidates later cell addresses because it compacts them.
+
+fn: lmx_list_grow (@: LmxListDesc list; size_t: need; @: LmxArena arena) int
+    size_t: cap
+    size_t: delta
+    size_t: index
+    size_t: old_cap
+    @@: void old_cells
+    @@: void new_cells
+    if: list = 0 || arena = 0
+        return: c.LMX_LIST_INVALID
+    if: lmx_range_home(arena, (cast: (@: void) list)) != arena
+        return: c.LMX_LIST_INVALID
+    if: lmx_range_classify(arena, (cast: (@: void) list)) != c.LMX_KIND_LIST
+        return: c.LMX_LIST_INVALID
+    if: list\len > list\cap
+        return: c.LMX_LIST_INVALID
+    if: need <= list\cap
+        return: c.LMX_LIST_OK
+    old_cap: list\cap
+    cap: old_cap
+    if: cap < c.LMX_LIST_MIN_CAP
+        cap: c.LMX_LIST_MIN_CAP
+    ---
+    while: cap < need
+        delta: cap / 2U
+        if: delta = 0U
+            delta: 1U
+        ---
+        if: cap > ((cast: (size_t) -1) - delta)
+            return: c.LMX_LIST_OVERFLOW
+        cap: cap + delta
+    ---
+    if: cap > ((cast: (size_t) -1) / c.sizeof(@: void))
+        return: c.LMX_LIST_OVERFLOW
+    new_cells: (cast: (@@: void) lmx_arena_take_n(arena, c.sizeof(@: void), list\backing_kind, list\etype, cap))
+    if: new_cells = 0
+        return: c.LMX_LIST_NOMEM
+    old_cells: (cast: (@@: void) list\data)
+    index: 0U
+    while: index < list\len
+        new_cells[index]: old_cells[index]
+        index: index + 1U
+    ---
+    list\data: (cast: (@: void) new_cells)
+    list\cap: cap
+    if: old_cells != 0
+        index: 0U
+        while: index < old_cap
+            old_cells[index]: 0
+            index: index + 1U
+        ---
+    ---
+return: c.LMX_LIST_OK
+
+fn: lmx_list_new_owned (int: type; @: LmxArena arena) @: LmxListDesc
+    @: LmxListDesc list
+    int: backing_kind
+    int: etype
+    if: arena = 0
+        return: 0
+    if: type = c.LMX_TYPE_ARRAY_OF_LMX
+        backing_kind: c.LMX_KIND_REF
+        etype: c.LMX_TYPE_LMX
+    else:
+        if: type = c.LMX_TYPE_ARRAY_OF_DESC
+            backing_kind: c.LMX_KIND_REF
+            etype: c.LMX_TYPE_DESC
+        else:
+            if: type = c.LMX_TYPE_ARRAY_OF_METHOD
+                backing_kind: c.LMX_KIND_REF
+                etype: c.LMX_TYPE_METHOD
+            else:
+                if: type < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+                    return: 0
+                backing_kind: c.LMX_KIND_PRIMITIVE
+                etype: c.LMX_TYPE_POINTER_BASE + (type - c.LMX_TYPE_ARRAY_OF_POINTER_BASE)
+            ---
+        ---
+    ---
+    list: (cast: (@: LmxListDesc) lmx_arena_take(arena, c.sizeof(c.LmxListDesc), c.LMX_KIND_LIST, type))
+    if: list = 0
+        return: 0
+    list\len: 0U
+    list\cap: 0U
+    list\data: 0
+    list\etype: etype
+    list\backing_kind: backing_kind
+    if: lmx_list_grow(list, c.LMX_LIST_MIN_CAP, arena) != c.LMX_LIST_OK
+        return: 0
+    ---
+return: list
+
+fn: lmx_list_append_owned (@: LmxListDesc list; @: void value; @: LmxArena arena) int
+    @@: void cells
+    int: status
+    if: list = 0 || list\len = (cast: (size_t) -1)
+        return: c.LMX_LIST_OVERFLOW
+    status: lmx_list_grow(list, list\len + 1U, arena)
+    if: status != c.LMX_LIST_OK
+        return: status
+    cells: (cast: (@@: void) list\data)
+    cells[list\len]: value
+    list\len: list\len + 1U
+return: c.LMX_LIST_OK
+
+fn: lmx_list_remove_owned (@: LmxListDesc list; size_t: index; @@: void removed; @: LmxArena arena) int
+    @@: void cells
+    size_t: at
+    if: list = 0 || arena = 0
+        return: c.LMX_LIST_INVALID
+    if: lmx_range_home(arena, (cast: (@: void) list)) != arena
+        return: c.LMX_LIST_INVALID
+    if: lmx_range_classify(arena, (cast: (@: void) list)) != c.LMX_KIND_LIST
+        return: c.LMX_LIST_INVALID
+    if: index >= list\len || list\data = 0
+        return: c.LMX_LIST_BOUNDS
+    cells: (cast: (@@: void) list\data)
+    if: removed != 0
+        \removed: cells[index]
+    at: index
+    while: at + 1U < list\len
+        cells[at]: cells[at + 1U]
+        at: at + 1U
+    ---
+    cells[list\len - 1U]: 0
+    list\len: list\len - 1U
+return: c.LMX_LIST_OK
+
+fn: lmx_list_value (@: LmxListDesc list; size_t: index) @: void
+    @@: void cells
+    if: list = 0 || index >= list\len || list\data = 0
+        return: 0
+    cells: (cast: (@@: void) list\data)
+return: cells[index]

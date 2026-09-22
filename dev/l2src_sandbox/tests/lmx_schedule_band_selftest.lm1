@@ -124,12 +124,12 @@ return: 1
 # One ordinary parent whose graph-owned dynamic children Array is the manager's traversal source.
 fn: sb_parent (@: LmxArena arena) @: LmxThread
     @: Lmx graph
-    @: LmxArrayDesc children
+    @: LmxListDesc children
     @: LmxThread thread
     @: LmxPost mail
     @: LmxSchedule sched
     graph: lmx_node_new_owned(arena)
-    children: lmx_array_grow_ref_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, arena)
+    children: lmx_list_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, arena)
     thread: (cast: (@: LmxThread) lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
     mail: (cast: (@: LmxPost) lmx_arena_take(arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
     sched: (cast: (@: LmxSchedule) lmx_arena_take(arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))

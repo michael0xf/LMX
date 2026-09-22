@@ -1,4 +1,4 @@
-predef: "lmx_graph_copy_owned.h.lm1" "lmx_arena_refs.h.lm1" "lmx_value_owned.h.lm1" "lmx_chars_owned.h.lm1" "lmx_array_owned.h.lm1" "lmx_array_ref_owned.h.lm1" "lmx_pool.h.lm1" "lmx_range.lm1" "lmx_implements.h.lm1"
+predef: "lmx_graph_copy_owned.h.lm1" "lmx_arena_refs.h.lm1" "lmx_value_owned.h.lm1" "lmx_chars_owned.h.lm1" "lmx_array_owned.h.lm1" "lmx_array_ref_owned.h.lm1" "l2src/lmx_list_owned.lm1" "lmx_pool.h.lm1" "lmx_range.lm1" "lmx_implements.h.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdlib.h>" "<string.h>" "<stdint.h>"
 
@@ -307,6 +307,8 @@ fn: lmx_copy_value (@: void v; @: char dst_chars; @: LmxArena src_arena; @: LmxA
     @: void cell 0
     @: LmxArrayDesc src_desc
     @: LmxArrayDesc dst_desc 0
+    @: LmxListDesc src_list
+    @: LmxListDesc dst_list 0
     @@: void src_refs
     @@: void dst_refs
     size_t: i 0U
@@ -415,15 +417,32 @@ fn: lmx_copy_value (@: void v; @: char dst_chars; @: LmxArena src_arena; @: LmxA
             \status: LMX_GRAPH_COPY_NOMEM
             return: 0
         return: cell
+    if: kind = c.LMX_KIND_LIST
+        src_list: (cast: (@: LmxListDesc) v)
+        dst_list: lmx_list_new_owned(vtype, dst_arena)
+        if: dst_list = 0
+            \status: LMX_GRAPH_COPY_NOMEM
+            return: 0
+        if: lmx_copy_map_put(map, v, (cast: (@: void) dst_list)) != 0
+            \status: LMX_GRAPH_COPY_NOMEM
+            return: 0
+        i: 0U
+        while: i < src_list\len
+            if: lmx_list_append_owned(dst_list, lmx_copy_value(lmx_list_value(src_list, i), dst_chars, src_arena, dst_arena, retain_profiles, retain_count, map, todo, status), dst_arena) != c.LMX_LIST_OK
+                if: \status = LMX_GRAPH_COPY_OK
+                    \status: LMX_GRAPH_COPY_NOMEM
+                return: 0
+            if: \status != LMX_GRAPH_COPY_OK
+                return: 0
+            i: i + 1U
+        ---
+        return: (cast: (@: void) dst_list)
     if: kind = c.LMX_KIND_ARRAY
         src_desc: (cast: (@: LmxArrayDesc) v)
-        if: src_desc\len > src_desc\capacity
+        if: src_desc\len != 0U && src_desc\data = 0
             \status: LMX_GRAPH_COPY_UNSUPPORTED
             return: 0
-        if: src_desc\capacity != 0U && src_desc\data = 0
-            \status: LMX_GRAPH_COPY_UNSUPPORTED
-            return: 0
-        if: src_desc\capacity = 0U && src_desc\data != 0
+        if: src_desc\len = 0U && src_desc\data != 0
             \status: LMX_GRAPH_COPY_UNSUPPORTED
             return: 0
         if: src_desc\len != 0U

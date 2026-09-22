@@ -1,5 +1,5 @@
 predef: "l2src/lmx_root.lm1"
-predef: "l2src/lmx_array_grow_owned.lm1"
+predef: "l2src/lmx_list_owned.lm1"
 predef: "l2src/lmx_implements.lm1"
 predef: "l2src/lmx_chars_owned.lm1"
 predef: "l1src/libc_abi.lm1"
@@ -33,7 +33,7 @@ fn: main () int
     LmxArena: child_arena
     @: Lmx donor_graph
     @: Lmx child_graph
-    @: LmxArrayDesc donor_children
+    @: LmxListDesc donor_children
     @: LmxMsg donor_message
     @: LmxMsg child_message
     @: LmxPost donor_mail
@@ -54,7 +54,7 @@ fn: main () int
     dr_check(counts, lmx_root_open(@ root, 0, 5000U) = c.LMX_ROOT_OK, "root open")
     dr_check(counts, lmx_arena_open(@ donor_arena) = 0 && lmx_arena_open(@ child_arena) = 0, "arenas open")
     donor_graph: lmx_node_new_owned(@ donor_arena)
-    donor_children: lmx_array_grow_ref_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, @ donor_arena)
+    donor_children: lmx_list_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, @ donor_arena)
     child_graph: lmx_node_new_owned(@ child_arena)
     methods: lmx_pool_make(@ child_arena, 2U * c.sizeof(c.LmxMethod), c.sizeof(c.LmxMethod), c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD)
     method: lmx_method_intern(@ child_arena, methods, (cast: (LmxEntry) dr_body), 1U)

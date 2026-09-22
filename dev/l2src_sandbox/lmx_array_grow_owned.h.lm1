@@ -1,26 +1,3 @@
 predef: "l2src/lmx_arena.h.lm1"
 
-# A standard growable Array of physical references. The descriptor is stable and
-# arena-owned; only its typed backing can be replaced. `len` is the logical count
-# and `capacity` is the backing cell count.
-define: LMX_ARRAY_GROW_OK 0
-define: LMX_ARRAY_GROW_INVALID 1
-define: LMX_ARRAY_GROW_NOMEM 2
-define: LMX_ARRAY_GROW_OVERFLOW 3
-define: LMX_ARRAY_GROW_BOUNDS 4
-define: LMX_ARRAY_GROW_MIN_CAPACITY 2
-
-prototype:
-    # `type` is ARRAY_OF_LMX/DESC/METHOD or ARRAY_OF_POINTER_BASE + closed-unit T.
-    fn: lmx_array_grow_ref_new_owned (int: type; @: LmxArena arena) @: LmxArrayDesc
-    # Ensure room for `need` logical elements without changing len.
-    fn: lmx_array_grow_ref_reserve_owned (@: LmxArrayDesc array; size_t: need; @: LmxArena arena) int
-    # Append one physical reference value. The referent address is copied exactly.
-    fn: lmx_array_grow_ref_append_owned (@: LmxArrayDesc array; @: void value; @: LmxArena arena) int
-    # Remove one logical element, compacting later values. If `removed` is non-null,
-    # it receives the exact physical referent value that left the Array.
-    fn: lmx_array_grow_ref_remove_owned (@: LmxArrayDesc array; size_t: index; @@: void removed; @: LmxArena arena) int
-    # Read one physical value for scheduler/collector iteration; null also answers
-    # an invalid index, so mutation code should use remove's explicit status.
-    fn: lmx_array_grow_ref_value (@: LmxArrayDesc array; size_t: index) @: void
-end: prototype
+# Retired Array-growth API. See lmx_list_owned.h.lm1.

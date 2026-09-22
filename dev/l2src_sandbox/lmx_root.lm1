@@ -2,7 +2,7 @@ predef: "l2src/lmx_root.h.lm1"
 predef: "l2src/lmx_process_deadline.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_arena_refs.lm1"
-predef: "l2src/lmx_array_grow_owned.lm1"
+predef: "l2src/lmx_list_owned.lm1"
 predef: "l2src/lmx_child.lm1"
 predef: "l2src/lmx_clock.lm1"
 predef: "l2src/lmx_implements.h.lm1"
@@ -66,8 +66,8 @@ fn: lmx_root_open (@: LmxRoot root; LmxCallEntry: entry; ulong: limit) int
     @: LmxArena arena
     @: Lmx parent_graph
     @: Lmx graph
-    @: LmxArrayDesc parent_children
-    @: LmxArrayDesc children
+    @: LmxListDesc parent_children
+    @: LmxListDesc children
     @: LmxThread parent
     @: LmxThread thread
     @: LmxSchedule parent_slot
@@ -140,8 +140,8 @@ fn: lmx_root_open (@: LmxRoot root; LmxCallEntry: entry; ulong: limit) int
         lmx_arena_release(@ root\arena)
         return: c.LMX_ROOT_INVALID
     ---
-    parent_children: lmx_array_grow_ref_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, @ root\arena)
-    children: lmx_array_grow_ref_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, @ root\arena)
+    parent_children: lmx_list_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, @ root\arena)
+    children: lmx_list_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, @ root\arena)
     if: parent_children = 0 || children = 0
         lmx_arena_release(@ root\arena)
         return: c.LMX_ROOT_INVALID

@@ -3,6 +3,7 @@ predef: "l2src/lmx_message.h.lm1"
 predef: "l2src/lmx_post.h.lm1"
 predef: "l2src/lmx_schedule.h.lm1"
 predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_list_owned.h.lm1"
 # LmxCallEntry: one turn takes the handler the caller already holds (lmx_call.h.lm1).
 predef: "l2src/lmx_call.h.lm1"
 
@@ -126,11 +127,11 @@ struct: LmxThread
     # after either act -- measured 2026-09-21, single-threaded, no timing involved.  Untyped like
     # every other reference here; zero for a record no service has registered.
     @: void service
-    # The sole direct-child membership collection: the exact Array<@LmxThread> descriptor that is
+    # The sole direct-child membership collection: the L1 list descriptor that is
     # an ordinary typed field of this Thread's graph.  The constructor validates it by the arena's
     # address-range table and caches only this same physical reference.  There is no link chain or
     # scheduler queue containing another membership set.
-    @: LmxArrayDesc children
+    @: LmxListDesc children
     # Per-child supervision state.  These cells do not establish membership; only the parent's
     # `children` Array does.  `alive` is stamped by the child's lane and answered by its parent.
     # `close_deadline` is the one relaxed atomic platform word inherited by a close cascade.
@@ -205,14 +206,14 @@ prototype:
     fn: lmx_thread_service (@: LmxThread t) @: void
     # Bind the one ordinary graph Array<@LmxThread> supplied by this Thread's constructor.  The
     # descriptor and its backing must belong to `arena`; a second binding is refused.
-    fn: lmx_thread_children_bind (@: LmxThread t; @: LmxArrayDesc children; @: LmxArena arena) int
+    fn: lmx_thread_children_bind (@: LmxThread t; @: LmxListDesc children; @: LmxArena arena) int
     # Constructor helper: locate the unique exact typed Array<@LmxThread> among ordinary graph
     # fields and bind that physical descriptor. No field position or runtime name is involved.
     fn: lmx_thread_children_bind_graph (@: LmxThread t; @: LmxArena arena) int
     # Construct one ordinary graph field holding the sole growable child-membership Array.
     # `field` is chosen by the graph producer; it is not a runtime ABI slot.
-    fn: lmx_thread_children_field_new (@: LmxArena arena; @: Lmx graph; size_t: field) @: LmxArrayDesc
-    fn: lmx_thread_children (@: LmxThread t) @: LmxArrayDesc
+    fn: lmx_thread_children_field_new (@: LmxArena arena; @: Lmx graph; size_t: field) @: LmxListDesc
+    fn: lmx_thread_children (@: LmxThread t) @: LmxListDesc
     fn: lmx_thread_child_count (@: LmxThread parent) size_t
     fn: lmx_thread_child_at (@: LmxThread parent; size_t: index) @: LmxThread
     # Live direct children: append, remove, membership, and ordered iteration over that Array.

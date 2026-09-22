@@ -1,0 +1,135 @@
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_message.h.lm1"
+predef: "l1src/libc_abi.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# THE TAKE-REFUSAL CONTRACT OF THE INBOX (lmx_post.lm1, lmx_post_take_inbox): a foreign letter is
+# queued as the inseparable pair [target, source_arena]; the receiver OWNER attaches the donor arena
+# at take, and when that attach REFUSES the exact pair stays at the head, unchanged, for a later
+# retry or for close.  The source slot is cleared only after a successful attach.
+#
+# The refusal here is PROVEN, not incidental: the donor's block list is made cyclic, which the attach
+# preflight (lmx_arena_blocks_can_move) rejects before adding one range, so nothing is transferred.
+# The same cycle is then undone and the same pair is consumed exactly once.  A second, same-arena
+# letter sits behind the pair the whole time and proves FIFO order and no loss.
+
+int: tr_checks 0
+int: tr_failures 0
+
+sub: tr_check (int: ok; const: @(char label))
+    tr_checks: tr_checks + 1
+    if: ok = 0
+        tr_failures: tr_failures + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: tr_check
+
+fn: main () int
+    LmxArena: receiver
+    LmxArena: donor
+    LmxPost: box
+    @: LmxArena r
+    @: LmxArena d
+    @: LmxPost b
+    @: LmxMsg foreign
+    @: LmxMsg local
+    @: LmxArenaBlock donor_tail 0
+    @: LmxArenaBlock donor_head
+    @: size_t slots
+    size_t: head_before
+    size_t: item
+    size_t: r_count_before
+    @: LmxPool r_arrays_before
+    @: LmxArenaBlock r_blocks_before
+    size_t: d_count_before
+    @: LmxPool d_arrays_before
+    @: LmxRange d_index_before
+    @: void got
+
+    memset((cast: (@: void) (@ receiver)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ donor)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ box)), 0, c.sizeof(c.LmxPost))
+    r: @ receiver
+    d: @ donor
+    b: @ box
+    if: lmx_arena_open(r) != 0 || lmx_arena_open(d) != 0
+        c.printf("SETUP FAILED: arenas\n")
+        return: 2
+    ---
+    foreign: (cast: (@: LmxMsg) lmx_arena_take(d, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    local: (cast: (@: LmxMsg) lmx_arena_take(r, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    if: foreign = 0 || local = 0 || lmx_post_init(r, b) != c.LMX_POST_OK
+        c.printf("SETUP FAILED: letters or mailbox\n")
+        return: 2
+    ---
+    tr_check(lmx_range_home(d, (cast: (@: void) foreign)) = d && lmx_range_classify(r, (cast: (@: void) foreign)) = c.LMX_KIND_NONE, "the foreign letter starts as the donor's, unknown to the receiver")
+
+    # 1. one exact pair [foreign, donor], then a same-arena letter behind it
+    tr_check(lmx_post_accept_transfer(r, b, (cast: (@: void) foreign), d) = c.LMX_POST_OK, "the foreign pair was not accepted")
+    tr_check(lmx_post_accept_transfer(r, b, (cast: (@: void) local), r) = c.LMX_POST_OK, "the same-arena letter was not accepted")
+    tr_check(lmx_post_count(b, c.LMX_POST_INBOX) = 2U, "the inbox does not hold exactly the two letters")
+    slots: (cast: (@: size_t) b\inbox_slots)
+    head_before: (cast: (size_t) b\inbox_head)
+    item: 2U * (head_before % b\inbox_capacity)
+    tr_check(slots != 0 && slots[item] = (cast: (size_t) foreign) && slots[item + 1U] = (cast: (size_t) d), "the head pair is not [foreign, donor]")
+    tr_check(lmx_range_home(d, (cast: (@: void) foreign)) = d, "the producer moved the donor's ownership")
+
+    # 2. a PROVEN refusal reason: the donor's block list is made cyclic, and the attach preflight
+    #    rejects exactly that before it adds one range to the receiver
+    donor_head: d\blocks
+    tr_check(donor_head != 0 && lmx_arena_blocks_tail(donor_head, @ donor_tail) = c.LMX_ARENA_BLOCKS_OK && donor_tail != 0, "the donor has no block list to malform")
+    if: donor_head = 0 || donor_tail = 0
+        c.printf("SETUP FAILED: donor blocks\n")
+        return: 2
+    ---
+    tr_check(lmx_arena_blocks_can_move(@ r\blocks, @ d\blocks) = c.LMX_ARENA_BLOCKS_OK, "a well-formed donor was refused before the fault was injected")
+    donor_tail\next: donor_head
+    tr_check(lmx_arena_blocks_can_move(@ r\blocks, @ d\blocks) = c.LMX_ARENA_BLOCKS_INVALID, "the cyclic donor is not the refusal reason")
+    r_count_before: r\count
+    r_arrays_before: r\arrays
+    r_blocks_before: r\blocks
+    d_count_before: d\count
+    d_arrays_before: d\arrays
+    d_index_before: d\index
+
+    # 3. the owner's take is refused; the pair, the order and both identities are unchanged
+    got: lmx_post_take_owned(r, b, c.LMX_POST_INBOX)
+    tr_check(got = 0, "a refused attach exposed the foreign letter")
+    tr_check(lmx_post_count(b, c.LMX_POST_INBOX) = 2U, "the refused take changed the inbox count")
+    tr_check((cast: (size_t) b\inbox_head) = head_before, "the refused take advanced the head")
+    tr_check(slots[item] = (cast: (size_t) foreign), "the refused take changed the head target")
+    tr_check(slots[item + 1U] = (cast: (size_t) d), "the refused take cleared or changed the source slot")
+    tr_check(r\count = r_count_before && r\arrays = r_arrays_before && r\blocks = r_blocks_before, "the refused attach left something in the receiver")
+    tr_check(d\count = d_count_before && d\arrays = d_arrays_before && d\index = d_index_before && d\blocks = donor_head, "the refused attach took something from the donor")
+    tr_check(lmx_range_home(d, (cast: (@: void) foreign)) = d && lmx_range_classify(r, (cast: (@: void) foreign)) = c.LMX_KIND_NONE, "ownership of the foreign letter moved on a refused take")
+    # the incidental path, documented beside the real one: a raw take names no owner arena
+    tr_check(lmx_post_take(b, c.LMX_POST_INBOX) = 0 && lmx_post_count(b, c.LMX_POST_INBOX) = 2U && slots[item + 1U] = (cast: (size_t) d), "a raw take exposed or dropped the foreign pair")
+    # the letter behind the pair is not reachable while the head is refused: FIFO holds
+    tr_check(lmx_post_count(b, c.LMX_POST_INBOX) = 2U, "the same-arena letter was consumed past the refused head")
+
+    # 4. remove the refusal condition and retry
+    donor_tail\next: 0
+    tr_check(lmx_arena_blocks_can_move(@ r\blocks, @ d\blocks) = c.LMX_ARENA_BLOCKS_OK, "the repaired donor is still refused")
+    got: lmx_post_take_owned(r, b, c.LMX_POST_INBOX)
+    tr_check(got = (cast: (@: void) foreign), "the retry did not return the same foreign letter")
+
+    # 5. exactly once, cleared only after success, no duplicate, no loss
+    tr_check(lmx_post_count(b, c.LMX_POST_INBOX) = 1U, "the successful take did not consume exactly one pair")
+    tr_check(slots[item] = 0U && slots[item + 1U] = 0U, "the consumed pair's slots were not cleared after success")
+    tr_check(lmx_range_home(r, (cast: (@: void) foreign)) = r && lmx_range_classify(r, (cast: (@: void) foreign)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "the receiver does not own the foreign letter after the successful take")
+    tr_check(d\count = 0U && d\arrays = 0 && d\blocks = 0 && d\index = 0, "the donor still holds something after the successful attach")
+    got: lmx_post_take_owned(r, b, c.LMX_POST_INBOX)
+    tr_check(got = (cast: (@: void) local), "the same-arena letter behind the pair was lost or reordered")
+    tr_check(lmx_post_take_owned(r, b, c.LMX_POST_INBOX) = 0 && lmx_post_count(b, c.LMX_POST_INBOX) = 0U, "a consumed pair was delivered twice")
+
+    tr_check(lmx_post_close(r, b) = c.LMX_POST_OK, "mailbox close")
+    tr_check(lmx_arena_release(r) = 0, "receiver release")
+    tr_check(lmx_arena_release(d) = 0, "empty donor release")
+    c.printf("lmx_post_take_refusal checks=%d failures=%d\n", tr_checks, tr_failures)
+return: tr_failures != 0

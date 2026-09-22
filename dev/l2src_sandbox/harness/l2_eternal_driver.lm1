@@ -24,6 +24,7 @@ const: @: char phase ""
 int: entry_opened 0
 int: entry_calls 0
 int: entry_rc 0
+@: Lmx entry_node 0
 
 prototype:
     fn: l2_generated_main () int
@@ -219,6 +220,7 @@ fn: l2_driver_entry_tap (@: Lmx node) int
     rc: l2_program_entry(node)
     entry_calls: entry_calls + 1
     entry_rc: rc
+    entry_node: node
 return: rc
 
 fn: l2_driver_root_open (@: LmxRoot root; LmxCallEntry: entry; ulong: limit) int
@@ -242,6 +244,8 @@ fn: main (int: argc; @@: char argv) int
     phase: "generated entry"
     check(entry_opened = 1, "generated main opened its root with the generated entry adapter")
     check(entry_calls = 1, "generated entry ran exactly once")
+    # R0's graph is independent (parent = 0), so the adapter's reserved `node` is 0.
+    check(entry_node = 0, "the entry adapter's node is 0: the graph hanging in R0 is independent")
     check(entry_rc = 0, "generated entry returned 0")
     if: entry_rc != 0
         c.printf("l2_eternal_driver: entry returned %d\n", entry_rc)

@@ -116,7 +116,8 @@ struct: LmxRoot
     ulong: close_limit
     # The entry program (1.7), run inside R0's turns and nowhere else.  Its shape is the typed
     # entry's (lmx_call.h.lm1): the reserved node first, the status out. This is the synthetic
-    # root adapter, so it receives graph.parent; ordinary methods receive their selected callable
+    # root adapter, so it receives graph.parent -- 0, since R0's graph is independent (parent = 0;
+    # the stub above R0 is supervision, not a lexical space); ordinary methods receive their selected callable
     # occurrence M.parent through lmx_call0. Zero means R0 has no handler: its turns are pure boundary
     # work, which is a legitimate state.  R0's handler is NOT a callable occurrence (it has no
     # METHOD record), so the cycle calls it directly rather than through lmx_call.

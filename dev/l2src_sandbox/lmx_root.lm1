@@ -148,10 +148,10 @@ fn: lmx_root_open (@: LmxRoot root; LmxCallEntry: entry; ulong: limit) int
         lmx_arena_release(@ root\arena)
         return: c.LMX_ROOT_INVALID
     ---
-    # The synthetic root entry is a callable occurrence whose exact above-method space is the
-    # structural stub graph. Keep the reserved source ABI `node` non-null and fixed at entry;
-    # nested control bodies never rebind it.
-    graph\parent: parent_graph
+    # The graph hanging in a Thread is independent: its parent is 0 (author, LMX_blog 2026-09-22 --
+    # independence IS parent = 0, and a copy never climbs out of a Thread's graph).  The stub above
+    # R0 is Message supervision, not a lexical space, so the entry's reserved `node` is 0.
+    graph\parent: 0
     root\parent_children: (cast: (@: void) parent_children)
     # Qualified sealed ranges are ordinary owner-arena values reached from ordinary graph fields.
 

@@ -28,7 +28,8 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 #   * the lane's turn runs the BODY the object's own graph names, not only the boundary: the entry
 #     below counts its own calls, and the count is the evidence;
 #   * the body runs INSIDE the lane's own turn: the object the body sees as current is the very
-#     thread whose turn it is, while reserved `node` is the callable occurrence's parent;
+#     thread whose turn it is, while reserved `node` is the callable occurrence's parent -- 0,
+#     because the graph hanging in a Thread is independent (parent = 0);
 #   * the lane's turn is whole: its boundary collects the record's own band (the arena's generation
 #     moves), and this thread's current object is never touched by the lane (it is a per-thread cell).
 #
@@ -115,9 +116,10 @@ fn: main () int
         free(counts)
         return: 2
     ---
-    # The selected callable occurrence is `graph`; its reserved source `node` is exactly the
-    # lexical Structure above it, never the Thread graph substituted for that parent.
-    graph\parent: parent_graph
+    # The selected callable occurrence is `graph`, and it hangs in the Thread: it is independent
+    # (parent = 0, author 2026-09-22), so its reserved source `node` is 0 -- nothing lexical lies
+    # above a Thread's graph, and the parent Thread is supervision, not a lexical space.
+    graph\parent: 0
     lmx_arena_ref_store(graph, 0U, (cast: (@: void) method))
     lmx_arena_ref_store(graph, 1U, own_field)
     # The record's own band, and a window wide enough that the lane's own ticks never end the wait.
@@ -143,7 +145,7 @@ fn: main () int
     c.Sleep(60U)
     rb_check(counts, rb_calls >= 1U, "the lane ran no body")
     rb_check(counts, rb_current = t, "the lane's body did not run inside its own turn")
-    rb_check(counts, rb_node = parent_graph, "the lane's body was not handed the callable's parent")
+    rb_check(counts, rb_node = 0, "the lane's body was not handed node 0 for an independent Thread graph")
     rb_check(counts, lmx_thread_current() = 0, "the lane wrote this thread's current object")
     rb_check(counts, arena_at\generation > gen, "the lane's turn did not collect the record's own band")
 

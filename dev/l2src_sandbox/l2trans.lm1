@@ -17310,7 +17310,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: c.fprintf(l2_out, "        if: %uU != %uU\n            return: 1\n", l2_intern_again, l2_sigv) < 0
         fclose(l2_out)
         return: 1
-    if: c.fprintf(l2_out, "        l2_current: lmx_thread_current()\n        l2_message: lmx_thread_message(l2_current)\n        l2_children: lmx_thread_children(l2_current)\n        if: node = 0 || l2_current = 0 || l2_message = 0 || l2_children = 0\n            return: 1\n        l2_entry_unit\\parent: 0\n        if: lmx_arena_ref_store(l2_entry_unit, %uU, (cast: (@: void) l2_children)) != 0\n            return: 1\n        l2_message\\graph: l2_entry_unit\n        l2_program_unit: l2_entry_unit\n        if: l2_message\\graph != l2_entry_unit || l2_program_unit != l2_entry_unit\n            return: 1\n", l2_children_field) < 0
+    if: c.fprintf(l2_out, "        l2_current: lmx_thread_current()\n        l2_message: lmx_thread_message(l2_current)\n        l2_children: lmx_thread_children(l2_current)\n        if: l2_current = 0 || l2_message = 0 || l2_children = 0\n            return: 1\n        l2_entry_unit\\parent: 0\n        if: lmx_arena_ref_store(l2_entry_unit, %uU, (cast: (@: void) l2_children)) != 0\n            return: 1\n        l2_message\\graph: l2_entry_unit\n        l2_program_unit: l2_entry_unit\n        if: l2_message\\graph != l2_entry_unit || l2_program_unit != l2_entry_unit\n            return: 1\n", l2_children_field) < 0
         fclose(l2_out)
         return: 1
     if: l2_m_arity[0] != 0 && c.fprintf(l2_out, "        if: %zuU = 0U\n            return: 1\n", l2_m_f0[0]\length) < 0

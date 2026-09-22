@@ -589,7 +589,8 @@ fn: lmx_thread_dispatch_native (@: LmxThread t; LmxCallEntry: entry) int
             # that is the boundary whose failure has to reach the turn -- a primitive failure
             # inside an interpreted activation -- and it has no other meaning to lose.
             # A non-null `entry` is only the synthetic R0/host adapter. Its graph stands in the
-            # callable-occurrence position, so its reserved ABI `node` is graph.parent. Ordinary
+            # callable-occurrence position, so its reserved ABI `node` is graph.parent -- which is
+            # 0, because the graph hanging in a Thread is independent (parent = 0).  Ordinary
             # graph callables take the branch below and lmx_call0 passes M.parent. Neither path
             # rebinds node while executing control bodies nested inside the current method.
             entry(graph\parent)

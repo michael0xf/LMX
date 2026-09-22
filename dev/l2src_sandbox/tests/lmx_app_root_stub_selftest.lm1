@@ -110,7 +110,9 @@ fn: main () int
              (cast: (unsigned) elapsed), c.LMX_ROOT_OK, code)
     c.fflush(0)
     rs_check(counts, code = c.LMX_ROOT_OK, "a cycle inside the window refused")
-    rs_check(counts, root_message != 0 && rs_node = root_message\graph && rs_node != 0, "R0 entry did not receive the exact structural stub graph as node")
+    # The stub is R0's supervising parent Message, not a lexical space: R0's graph is independent
+    # (parent = 0, author 2026-09-22), so R0's entry receives node 0, never the stub's graph.
+    rs_check(counts, root_message != 0 && rs_node = 0 && lmx_root_message(@ root) != 0 && lmx_root_message(@ root)\graph\parent = 0, "R0 entry did not receive node 0 for its independent graph")
     rs_check(counts, lmx_root_hung(@ root, now) = 0, "a fresh root reads hung")
     now: start + 101U
     elapsed: now - start

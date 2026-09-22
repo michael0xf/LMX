@@ -185,7 +185,8 @@ prototype:
     # translated Message's body is a callable occurrence, because "all executable bodies are part
     # of the graph" (model 8); lmx_call0 passes the selected occurrence M's immediate M.parent as
     # reserved `Lmx *node`. A non-null external `entry` is only the synthetic R0/host adapter and
-    # analogously receives graph.parent. Control bodies inside that invocation never rebind node. A
+    # analogously receives graph.parent, which is 0: the graph hanging in a Thread is independent
+    # (parent = 0), so nothing lexical lies above it. Control bodies inside that invocation never rebind node. A
     # graph that names no callable is a legitimate state: the turn is then pure boundary work.
     # The body runs INSIDE the turn (lm.current is this object while it runs), its status is its own
     # report and never a stop (model 31), and the boundary follows on the turn's own outcome

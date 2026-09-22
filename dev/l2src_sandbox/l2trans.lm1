@@ -4791,7 +4791,7 @@ return: 0
 # A by-value local of a C struct the predef'd header declares: TYPE: name. It is
 # ordinary C storage in the activation (spec 20.2.2), never an own field, and its
 # address is taken with @ name. Only the bare declaration: a struct has no
-# scalar initialiser here, and a compact frame is a call, not a declaration.
+# scalar initialiser here. Classification uses structural shape and resolved type/name, not form.
 fn: l2_struct_local (const: @(LmP0Node stmt); @@: LmP0Text out_name) int
     @: LmP0Field f
     if: out_name = 0
@@ -4799,7 +4799,7 @@ fn: l2_struct_local (const: @(LmP0Node stmt); @@: LmP0Text out_name) int
     \out_name: 0
     if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\head = 0 || stmt\as\frame\body = 0
         return: 1
-    if: (stmt\as\frame\flags & c.LM_P0_FRAME_COMPACT) != 0U || l2_count_active(stmt\as\frame\body) != 1
+    if: l2_count_active(stmt\as\frame\body) != 1
         return: 1
     f: l2_next_active(stmt\as\frame\body\first_field)
     if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || l2_ident(f\value\as\atom) = 0
@@ -7789,8 +7789,6 @@ fn: l2_own_decl_name (const: @(LmP0Node stmt)) @: LmP0Text
 # emitted as activation C storage (e2 ruling 2026-09-14, model §21).
 fn: l2_unimpl_numeric (const: @(LmP0Node stmt)) const: @: char
     if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\body = 0
-        return: 0
-    if: (stmt\as\frame\flags & c.LM_P0_FRAME_COMPACT) != 0U
         return: 0
     if: l2_count_active(stmt\as\frame\body) != 1 && l2_count_active(stmt\as\frame\body) != 2
         return: 0

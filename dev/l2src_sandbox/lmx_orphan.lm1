@@ -87,21 +87,35 @@ fn: lmx_orphan_adopt (@: LmxOrphanLedger ledger; @: LmxMsg orphan; @: LmxArena o
 return: c.LMX_ORPHAN_OK
 
 fn: lmx_orphan_reclaim (@: LmxOrphanLedger ledger; @: LmxService service; @: LmxThread child) int
+    # TERMINAL reclaim containing mailbox close: ordinary per-record mailbox-first AND settle
+    # fail-closed (AUTHOR-K1-G1-DECISION-20260922-27 / AUTHOR-G1-R0-STANDARD-20260922-33 /
+    # G1-REFUSAL-STANDARD-20260922-35 / G1-ORPHAN-UNREGISTER-GUARD-20260922-39). Mail close is first; if it refuses, return
+    # LMX_ORPHAN_INVALID before unregister, child_remove, or arena_release so membership/route/
+    # arena remain the retry/diagnostic handle. Refusal is treated reachable (same malformed
+    # inbox class as settle); do not silently bless an ignored close result.
     @: LmxArena arena
     if: ledger = 0 || ledger\owner = 0 || child = 0 || child\orphaned = 0 || child\slot = 0
         return: c.LMX_ORPHAN_INVALID
     arena: child\slot\arena
     if: arena = 0
         return: c.LMX_ORPHAN_INVALID
-    if: service != 0 && lmx_thread_service(child) != 0
-        lmx_service_unregister(service, child)
+    if: lmx_thread_mail_close(arena, child) != c.LMX_POST_OK
+        return: c.LMX_ORPHAN_INVALID
+    ---
+    if: service != 0
+        # Universal terminal sequence (G1-ORPHAN-UNREGISTER-GUARD-20260922-39): always unregister
+        # when a service is supplied, fail-closed like R0 — non-OK (including MISSING after a prior
+        # unregister) returns LMX_ORPHAN_INVALID before child_remove/arena_release. Do not skip on
+        # a cleared thread_service word; that would silently bless an ignored unregister result.
+        if: lmx_service_unregister(service, child) != c.LMX_SERVICE_OK
+            return: c.LMX_ORPHAN_INVALID
+        ---
     ---
     if: lmx_thread_child_remove(ledger\owner, child) != c.LMX_THREAD_OK
         return: c.LMX_ORPHAN_INVALID
     child\orphaned: 0
     child\orphan_started: 0U
     child\orphan_limit: 0U
-    lmx_thread_mail_close(arena, child)
     lmx_arena_release(arena)
     ledger\reclaimed: ledger\reclaimed + 1U
 return: c.LMX_ORPHAN_OK

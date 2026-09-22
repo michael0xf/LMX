@@ -61,10 +61,11 @@ Dictionary stable-ids: [`architectural-placement`](next_core_tasks_dictionary.md
 
 ### Остатки аудита checkpoint, которые нельзя потерять
 
-- [ ] G4: добавить свидетельствующий тест отказа `attach` при `take`; пара `[target, source_arena]` обязана остаться в очереди. Это gate перед запуском менеджера и продвижением в stable `l2src`.
-- [ ] G2: дочитать emitter около ссылок на method descriptors и исключить числовой surrogate там, где должна передаваться физическая ссылка. Это gate доверия L1 -> L2.
-- [ ] T-B: реально запустить translator fixture для node во вложенном теле и сохранить evidence. Это gate доверия L2 -> L3.
-- [ ] G1: решить, должен ли порядок закрытия R0 быть буквально тем же, что settle обычного ребёнка; текущая ступенчатая идемпотентность не превращает различие в принятую норму.
+- [x] G4: свидетельствующий тест отказа `attach` при `take` (пара `[target, source_arena]` остаётся в очереди). REVERIFY 2026-09-22 stage1: `5a8c444` ancestor of `055454e0`; green `lmx_post_take_refusal_selftest` checks=30 failures=0; private mutants of `lmx_post_take_inbox` fail 8 / 11 / 12 checks (clear source before attach / drop pair on refusal / ignore attach result); evidence `build/stage1_l2src_20260922_114359` (rebaseline RED only on migrated `lmx_list_grow_selftest` (was `lmx_list_grow_selftest`) — see gate note). No reimplement.
+- [x] G2: whole-occurrence conclusion (G2-WHOLE-OCCURRENCE-CONCLUSION-20260922-40; supersedes G2-GENERIC-RANGE-CORRECTION-20260922-36 gap framing; VOID impl GROKBOT-G2-VOID-20260922-32; freeze G2-NO-PREMATURE-BIND-ACT-20260922-38). DeepSeek trace DEEPSEEK-G2-DYNAMIC-OCCURRENCE-TRACE-20260922-37: dynamic route / merge / explicit argument pass or copy the whole callable `@: Lmx` Structure occurrence and preserve child[0]; direct callable-field assignment forbidden; no binding act missing (`lmx_call_bind` withdrawn). METHOD and shared `LmxCallable` remain immutable after construction; method array is catalog/retention root. METHOD already classifies via generic arena typed-range — do not invent method-admit / method-ranges / selection-rebinding acts. Construction-time generated `callable\method: rec` vs checked plan publication is measured asymmetry only — not a non-const overload gap. Existing DEBT comment at `l2_emit_unit` ~16505 left unchanged until final author/Stage-1 decision. No G2 code change.
+- [x] T-B: fixture `unit_node_path_nested_own.lm2` + harness row. Green focused harness `build/stage1_harness_tb_20260922_124333` (3 targets). Generated lowering writes `lmx_arena_ref_cell(node, 0U)` (host-less node path, not self/host). `unit_node_formal` untouched. Private `l2_path_own` for-path-equivalent mutant still greens (identical gen) — emission witness is the control proof for this Stage-1 bound.
+- [x] List grow witness migrated (OPENROUTER-RETIRED-ARRAY-GROW-20260922-31 / RELEASE-RESUME-47): lmx_array_grow_selftest renamed to lmx_list_grow_selftest; element reads via lmx_list_data(); capacity-prefix invariant asserted. Green in uild/stage1_release_20260922_123932 (list checks=20 failures=0). Private noprefix mutant (raw descriptor\data indexing) fails checks=20 failures=2. List implementation / base Array untouched.
+- [x] G1: AUTHOR-G1-R0-STANDARD-20260922-33 / G1-REFUSAL-STANDARD-20260922-35 / G1-ORPHAN-UNREGISTER-GUARD-20260922-39 — R0 closure absolutely standard; ordinary per-record mailbox-first (S2 own mail close, S3 unregister); S4→S5 parent-stub handshake preserved; no dual-mailbox-first invention; exact RU quote archived in LMX_blog/2026-09-22.md. Also AUTHOR-K1-G1-DECISION-20260922-27 UNIFY for settle/orphan_reclaim terminals with mailbox close.
 - [ ] Не переоткрывать G3 без нового evidence: merge sealed-ветви уже проверен как сохранение физической ссылки.
 - [ ] Повторно сверить код с техническим журналом о единственном источнике состава детей: не допустить второго root-slot, отдельной manager membership queue или другой параллельной модели.
 
@@ -80,6 +81,60 @@ Dictionary stable-ids: [`architectural-placement`](next_core_tasks_dictionary.md
 - [ ] Единственный анонимный Structure-контейнер всего списка аргументов прозрачен; receiver потребляет его внутренние поля.
 - [ ] Пустая Structure/unit при этом остаётся настоящим значением. Чтобы передать её как один аргумент, нужна непрозрачная позиция, например именованное поле.
 - [ ] Голый `f` в исполняемой позиции — одноатомное выражение (не P0-исключение и не sugar): после успешного разрешения `f` как callable вызывается с нулём потреблённых аргументов по универсальному callable-first. P0 может сохранить атом; транслятор не различает его по синтаксическим флагам форм. Голый data-атом вычисляется нормально и не вызывается.
+- [ ] **IMPLEMENT (post-Stage1; AUTHOR-CALLABLE-DESCRIPTOR-IMPLEMENT-20260922-43; supersedes witness-only AUTHOR-CALLABLE-FORMAL-WITNESS-20260922-42 for plan wording). Status: REQUIRED IMPLEMENTATION — ABSENT/PARTIAL (documentation alone does not count as done).** First bounded callable-formal writer ticket after current Stage1 gates/checkpoint green+release. Do **not** implement before that release. **Descriptor-only `test3` resolved** under CALLABLE-DESCRIPTOR-ONLY-ANCHORS-20260922-46 / DEEPSEEK-DESCRIPTOR-ONLY-TEST3-20260922-44 (see route below). No remaining -44 placeholder.
+
+Exact source cases:
+
+```text
+fn: test () int
+    return: 1
+
+fn: test2 (test: f) int
+    return: f
+
+# descriptor-only contract:
+fn: test3 () int
+
+fn: test4 (test3: f) int
+    return: f
+```
+
+Acceptance:
+1. `test: f` / `test3: f` are callable formals; runtime value is a whole callable Lmx occurrence; bare `f` in return invokes nullarily and yields `int`.
+2. A bodiless `fn: test3 () int` is **always** a valid descriptor-only callable contract (author intent) — not conditionally retained only if a later use scan finds it. Do **not** add a use-dependent exception or prescan. A stray bodiless fn is a descriptor declaration, not “unsupported body”. Compatibility via existing METHOD/CALLABLE address-range + matching signature (structural sig equality); do not block on a final high-level type system.
+3. E2E: `test2(test) == 1` and `test4(test) == 1`; direct invocation of descriptor-only `test3` must fail with language/runtime NOT_CALLABLE (addr=0) — never invent a body and never fall through to an undefined-symbol linker failure.
+4. Cover parser/P0, native L2 lowering, and interpreter. Callable-formal discrimination = resolved binding KIND. Forbidden: METHOD/catalog mutation, new descriptor registry, `lmx_call_bind`, direct callable-field assignment, duplicate type mechanism. Use whole-occurrence passing, typed address ranges, signature comparison (aligns G2-WHOLE-OCCURRENCE-CONCLUSION-20260922-40).
+5. Cross-ref §3 Вызов / Expression statement. Author quote archived `LMX_blog/2026-09-22.md`.
+
+**Measured current defect (DEEPSEEK-CALLABLE-FORMAL-MIN-20260922-41 evidence addendum):**
+- P0 accepts `test: f` because the formal head is opaque.
+- `l2_typed_formal` ~10730 must resolve method-head formals before foreign fallback; foreign-by-value fallthrough ~10892–10902 currently silently mis-types as by-value C type `test` (wrong diagnostic later). Method-head formal must use existing `l2_colon_graph_ty` while retaining required method/signature metadata.
+- Formals can already carry the required whole occurrence via existing graph type: `l2_colon_graph_ty()` interns `Lmx` pointer depth 1 (same existing type-code route; no new type code).
+- `l2_head_is_call` ~10203 sees unit methods and callable paths but cannot classify formal `f`; current formal remains VALUE.
+- Call emission ~13055–13062 has lexical/selected occurrence self paths but no callable-formal self path.
+
+**Minimal route after Stage1 (bounded; no new type mechanism):**
+(a) `l2_typed_formal`: when formal type head resolves by `l2_find_method`, record graph type via `l2_colon_graph_ty` and retain required method/signature identity in translator metadata; do not fall through foreign-by-value.
+(b) Make call-vs-value resolution context-aware by method `mi`, so a formal recorded as callable KIND resolves as CALLABLE. Do **not** infer callable merely from all `Lmx`-typed formals — ordinary Structure values remain VALUE. Method/signature constraint metadata is necessary; no name special case.
+(c) Call emission: third self source = formal's `@: Lmx` C parameter; capture it before actual evaluation like existing occurrence paths.
+(d) Signature/admission against required `test` descriptor before call; reuse existing `l2_descriptor_implements` / `l2_check_implements` / `l2_prep_implements` and generic typed address-range + sig (exact hookup left to the implementation ticket writer).
+(e) `return: f` needs no special return rule once `f` is callable KIND — ordinary expression evaluation invokes it nullarily.
+(f) Tests: old branch must no longer emit by-value C type `test`; positive `test2(test)==1`; incompatible-signature negative; cover parser/native/interpreter.
+
+**Exact measured anchors (DEEPSEEK-CALLABLE-FORMAL-MIN-20260922-41 HAS returned — no FILL/unavailable/wait-41 placeholders):** `dev/l2src_sandbox/l2trans.lm1`
+- `l2_typed_formal` ~10730 (method-head resolve before foreign fallback) and foreign-by-value fallthrough ~10892–10902 → use `l2_colon_graph_ty` + retain method/signature metadata.
+- `l2_head_is_call` ~10203 → context-aware (`mi`); method-constrained formal = CALLABLE KIND; do not classify every `Lmx` formal callable.
+- call emission ~13055–13062 → add callable-formal C parameter as third captured self source.
+- `l2_emit_formal` ~13520–13584 / `l2_emit_sig` ~13586 → existing graph type already emits `@: Lmx`; no new type code.
+- admission: existing `l2_descriptor_implements` / `l2_check_implements` / `l2_prep_implements` + generic typed address range + sig.
+- `return: f`: no return special case once KIND is callable.
+**Descriptor-only `test3` measured route (DEEPSEEK-DESCRIPTOR-ONLY-TEST3-20260922-44 / CALLABLE-DESCRIPTOR-ONLY-ANCHORS-20260922-46 — pending placeholder REMOVED):**
+1. `l2_collect_method` ~11359–11368 currently frees an unbound bodiless row and errors `unsupported body`. Preserve/fill the row with `l2_m_body=0` instead. Existing body passes already guard null.
+2. Signature is already structural: `l2_m_sig[i]=l2_intern_mi(i)` via `l2_intern_store_mi`; structurally identical `test()` and `test3()` share sig. Use sig equality for the bounded contract.
+3. Record the method/signature anchor per callable formal with a translator metadata table parallel to `l2_nsty_*` (exact precedent near ~9516); do **not** create a new runtime registry or foreign type. Graph physical type remains existing `@: Lmx`.
+4. Emission for declaration-only row: catalog METHOD with `rec\sig` and `rec\addr: 0`; emit no body/native symbol. Existing runtime `lmx_call.lm1` ~73–80 returns `LMX_CALL_NOT_CALLABLE` when selected descriptor has `addr=0`.
+5. Native direct-call lowering must diagnose invocation of a resolved bodiless method **before** emitting an undefined C symbol; keep value/contract use legal. This is call-site validation, not `l2_head_is_call` classification and not a linker fallback.
+6. Tests: descriptor row exists/classifies by address range; `test`/`test3` sig equal; `test4(test)==1`; incompatible signature rejected; direct `test3` invocation → language/runtime NOT_CALLABLE (never invented body / undefined-symbol linker failure); cover parser/native/interpreter.
 
 ### Исправления P0
 
@@ -140,6 +195,7 @@ Dictionary stable-ids: [`architectural-placement`](next_core_tasks_dictionary.md
 - [ ] Универсальный приоритет по resolved binding (не name/syntax exception и не fallback): callable ⇒ call; существующий non-callable ⇒ assignment; отсутствующее имя ⇒ declaration только когда тип явно задан конструкцией, иначе ошибка. Отдельно исправляется unsupported terminal Structure assignment-path.
 - [ ] Голый callable в statement position — частный случай expression statement / discard (см. ниже), не отдельная sugar-ветка.
 - [ ] Не поддерживать прямое присваивание callable-полю. Его замена допускается только общими механизмами: `merge` структур с `implements`, динамической перегрузкой одноимённым callable вызывающего либо явной передачей callable в дескрипторе аргументов вызывающего.
+- [ ] Formal of callable signature (`test: f` / `test3: f`) receives a whole callable `@: Lmx` occurrence (AUTHOR-CALLABLE-DESCRIPTOR-IMPLEMENT-20260922-43 / G2 whole-occurrence; routes -41 a–f + descriptor-only -44/46). Passing/using that formal stays on the general occurrence path — not a new bind/registry act. Bodiless `test3` is always a valid descriptor (`l2_m_body=0`, `addr=0`); see §2 IMPLEMENT (REQUIRED; ABSENT until after Stage1 release).
 - [ ] Проверять полную сигнатуру, dynamic inputs, admission и checkpoints одинаково для native lowering и интерпретатора.
 
 ### Expression statement и discard
@@ -149,6 +205,7 @@ Dictionary stable-ids: [`architectural-placement`](next_core_tasks_dictionary.md
 - [ ] Receiverless последовательность в body — общий expression statement: тот же expression-span checker/evaluator, что и для выражений с назначением результата.
 - [ ] **Binding KIND** решает call vs value: method / callable graph field — invoke; typed fnptr value — evaluate/discard **без** вызова. Discard **не** выполняет admission.
 - [ ] Голый callable `f` — не исключение и не sugar: одноатомное выражение; в expression-statement consumer callable-first вызывает с нулём потреблённых аргументов (когда KIND = callable method/field). Typed fnptr atom в value/discard — значение, не auto-call.
+- [ ] **IMPLEMENT cross-ref (post-Stage1; AUTHOR-CALLABLE-DESCRIPTOR-IMPLEMENT-20260922-43):** same cases as §2 — `test2`/`test4` formals + bare `return: f` (once KIND=CALLABLE, no special return rule); E2E `test2(test)==1`, `test4(test)==1`; direct `test3` → NOT_CALLABLE without inventing a body. Status REQUIRED ABSENT until after Stage1 release. See §2 measured defects + routes (-41 and -44/46).
 - [ ] Голые data вычисляются нормально; неизвестный atom — диагностика `unresolved name` (не AV, не silent skip).
 - [ ] Body walker обязан группировать через `l2_expr_span` и **продвигать итератор на span**, а не на одно field/statement.
 - [ ] Каждый expression statement вычисляется; его результат отбрасывается.

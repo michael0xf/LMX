@@ -1,0 +1,27 @@
+# STAGE1 T-B (GROKBOT-STAGE1-TB-AMEND-20260922-28 / GROKBOT-STAGE1-EMERGENCY-GATES-20260922-26):
+# reserved `node` path inside a NESTED body must resolve through host-less own fields
+# (l2_path_own requires l2_own_host[i] = 0 for node-path). for-path uses host-attached fields.
+# unit_node_formal.lm2 is intentionally untouched (next-stage negative fixture per K1).
+
+int: shared
+
+fn: write_nested_node_path () int
+    # Nested frames may introduce hosted names; node\shared must still hit the host-less own.
+    if: 1
+        if: 1
+            node\shared: 11
+        ---
+    ---
+    return: 0
+end: write_nested_node_path
+
+fn: main () int
+    int: ignored
+    shared: 3
+    ignored: write_nested_node_path()
+    if: ignored != 0
+        return: ignored
+    if: shared != 11
+        return: 72
+    return: 0
+end: main

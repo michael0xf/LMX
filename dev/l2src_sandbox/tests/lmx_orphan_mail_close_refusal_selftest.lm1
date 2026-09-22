@@ -1,0 +1,143 @@
+predef: "l2src/lmx_orphan.lm1"
+predef: "l2src/lmx_root.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_service.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_list_owned.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# G1-REFUSAL-STANDARD-20260922-35: lmx_orphan_reclaim must fail-closed on mail-close refusal
+# exactly as settle ? LMX_ORPHAN_INVALID before unregister / child_remove / arena_release.
+
+sub: orr_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: orr_check
+
+fn: orr_thread (@: LmxArena arena; int: with_children; @@: LmxMsg out_message) @: LmxThread
+    @: Lmx graph
+    @: LmxArrayDesc children
+    @: LmxMsg message
+    @: LmxPost mail
+    @: LmxThread thread
+    @: LmxSchedule slot
+    \out_message: 0
+    graph: lmx_node_new_owned(arena)
+    if: graph = 0
+        return: 0
+    ---
+    if: with_children != 0
+        children: lmx_list_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, arena)
+        if: children = 0 || lmx_arena_refs_open_owned(arena, graph, 1U) != 0 || lmx_arena_ref_store(graph, 0U, (cast: (@: void) children)) != 0
+            return: 0
+        ---
+    ---
+    mail: (cast: (@: LmxPost) lmx_arena_take(arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    thread: (cast: (@: LmxThread) lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
+    message: (cast: (@: LmxMsg) thread)
+    slot: (cast: (@: LmxSchedule) lmx_arena_take(arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: message = 0 || mail = 0 || thread = 0 || slot = 0
+        return: 0
+    ---
+    if: lmx_post_init(arena, mail) != c.LMX_POST_OK || lmx_thread_init(arena, thread, graph, mail, slot) != c.LMX_THREAD_OK || lmx_schedule_init(slot, arena, (cast: (@: void) thread), 1000U) != c.LMX_SCHEDULE_OK
+        return: 0
+    ---
+    if: with_children != 0 && lmx_thread_children_bind(thread, children, arena) != c.LMX_THREAD_OK
+        return: 0
+    ---
+    \out_message: message
+return: thread
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxRoot: root
+    LmxArena: donor_arena
+    LmxArena: child_arena
+    LmxArena: guard_arena
+    @: LmxThread donor
+    @: LmxThread child
+    @: LmxMsg child_message
+    @: LmxThread r0
+    @: LmxOrphanLedger ledger
+    @: LmxService service
+    @: LmxPost child_mail
+    @: void child_cell
+    size_t: saved_capacity
+    int: failures
+    if: counts = 0
+        return: 2
+    ---
+    memset((cast: (@: void) (@ root)), 0, c.sizeof(c.LmxRoot))
+    memset((cast: (@: void) (@ donor_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ child_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ guard_arena)), 0, c.sizeof(c.LmxArena))
+    orr_check(counts, lmx_root_open(@ root, 0, 5000U) = c.LMX_ROOT_OK, "root open")
+    orr_check(counts, lmx_arena_open(@ donor_arena) = 0 && lmx_arena_open(@ child_arena) = 0 && lmx_arena_open(@ guard_arena) = 0, "arenas open")
+    donor: orr_thread(@ donor_arena, 1, @ child_message)
+    child: orr_thread(@ child_arena, 0, @ child_message)
+    r0: lmx_root_thread(@ root)
+    ledger: lmx_root_orphans(@ root)
+    service: lmx_root_service(@ root)
+    orr_check(counts, donor != 0 && child != 0 && r0 != 0 && ledger != 0 && service != 0, "records built")
+    orr_check(counts, lmx_thread_child_add(donor, child, @ donor_arena) = c.LMX_THREAD_OK, "donor child")
+    orr_check(counts, lmx_root_orphan_adopt(@ root, child_message, @ child_arena, child, 1000U) = c.LMX_ORPHAN_OK, "adopt")
+    orr_check(counts, child\orphaned != 0 && lmx_thread_parent(child) = r0, "orphaned under R0")
+    child_cell: lmx_arena_take(@ child_arena, c.sizeof(int), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT)
+    orr_check(counts, child_cell != 0, "child arena cell")
+    child_mail: child\mail
+    orr_check(counts, child_mail != 0, "child mailbox")
+    orr_check(counts, lmx_service_find(service, (cast: (@: void) child)) = (cast: (@: void) child), "route present before refuse")
+
+    saved_capacity: child_mail\inbox_capacity
+    child_mail\inbox_count: 1U
+    child_mail\inbox_capacity: 0U
+    orr_check(counts, lmx_orphan_reclaim(ledger, service, child) = c.LMX_ORPHAN_INVALID, "reclaim reports mail-close refusal")
+    orr_check(counts, child\orphaned != 0, "orphaned flag cleared on refused reclaim")
+    orr_check(counts, lmx_thread_child_is(r0, child) != 0, "R0 membership lost on refused reclaim")
+    orr_check(counts, child\mail = child_mail, "mailbox handle cleared on refused reclaim")
+    orr_check(counts, lmx_range_home(@ child_arena, child_cell) = @ child_arena, "child arena released on refused reclaim")
+    orr_check(counts, lmx_service_find(service, (cast: (@: void) child)) = (cast: (@: void) child), "route lost on refused reclaim")
+    orr_check(counts, lmx_orphan_reclaimed(ledger) = 0U, "reclaimed counter advanced on refuse")
+
+    child_mail\inbox_count: 0U
+    child_mail\inbox_capacity: saved_capacity
+    orr_check(counts, lmx_orphan_reclaim(ledger, service, child) = c.LMX_ORPHAN_OK, "reclaim after restore")
+    orr_check(counts, lmx_thread_child_is(r0, child) = 0, "membership removed after success")
+    orr_check(counts, lmx_orphan_reclaimed(ledger) = 1U, "reclaimed counter after success")
+
+    # G1-ORPHAN-UNREGISTER-GUARD-20260922-39: pre-unregister so reclaim's unregister is non-OK;
+    # must INVALID before child_remove/arena_release (membership/ownership preserved).
+    child: orr_thread(@ guard_arena, 0, @ child_message)
+    orr_check(counts, child != 0 && lmx_thread_child_add(donor, child, @ donor_arena) = c.LMX_THREAD_OK, "guard donor child")
+    orr_check(counts, lmx_root_orphan_adopt(@ root, child_message, @ guard_arena, child, 2000U) = c.LMX_ORPHAN_OK, "guard adopt")
+    child_cell: lmx_arena_take(@ guard_arena, c.sizeof(int), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT)
+    orr_check(counts, child\orphaned != 0 && child_cell != 0, "guard orphaned")
+    orr_check(counts, lmx_service_unregister(service, child) = c.LMX_SERVICE_OK, "pre-unregister for guard")
+    orr_check(counts, lmx_orphan_reclaim(ledger, service, child) = c.LMX_ORPHAN_INVALID, "reclaim reports unregister refusal")
+    orr_check(counts, child\orphaned != 0, "orphaned cleared on unregister refuse")
+    orr_check(counts, lmx_thread_child_is(r0, child) != 0, "membership lost on unregister refuse")
+    orr_check(counts, lmx_range_home(@ guard_arena, child_cell) = @ guard_arena, "arena released on unregister refuse")
+    orr_check(counts, lmx_orphan_reclaimed(ledger) = 1U, "reclaimed counter advanced on unregister refuse")
+    # Manual cleanup after fail-closed unregister guard (mail already closed by reclaim attempt).
+    orr_check(counts, lmx_thread_child_remove(r0, child) = c.LMX_THREAD_OK, "manual remove after unregister guard")
+    child\orphaned: 0
+    orr_check(counts, lmx_arena_release(@ guard_arena) = 0, "guard arena release")
+
+    orr_check(counts, lmx_arena_release(@ donor_arena) = 0, "donor release")
+    orr_check(counts, lmx_root_close(@ root) = c.LMX_ROOT_OK, "root close")
+    failures: counts[1]
+    c.printf("lmx_orphan_mail_close_refusal checks=%d failures=%d\n", counts[0], failures)
+    free(counts)
+return: failures

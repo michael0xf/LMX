@@ -25,20 +25,23 @@ predef: "l2src/lmx_clock.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
-# THE MAIL CASCADE: route first, then the mailbox, then the storage
-# (DEEPSEEK-MAIL-CASCADE-FIX-20260921-82).
+# THE MAIL CASCADE: mailbox close FIRST (preserve pending delivery arenas), then unregister
+# route/service, then remove child membership, then release/storage/handoff.
+# (AUTHOR-K1-G1-DECISION-20260922-27 UNIFY; supersedes route-first commentary of
+# DEEPSEEK-MAIL-CASCADE-FIX-20260921-82).
 #
-# WHAT THIS PINS, in the order the terminal paths must perform it:
-#   * a Thread's PHYSICAL ROUTE leaves the service before anything it owns is destroyed;
-#   * its MAILBOX IS CLOSED EXACTLY ONCE, and closing it zeroes `t\mail`, so a second close is a
-#     no-op through the guard `lmx_thread_mail_close` already has -- and a late delivery attempt
-#     refuses too, because `lmx_service_post` answers MISSING when `target_thread\mail = 0`;
-#   * only THEN does the arena go: the child releases its own arena at its own endturn (the
-#     author's rule, preserved), and the parent's settle handles what it still holds;
-#   * R0: ONE synchronous lmx_root_close.  It requests stop for its direct children only, waits
-#     for each to reach its safe completion boundary, and only then closes R0's own route, mail
-#     and storage.
-#
+# WHAT THIS PINS for terminal sequences that contain mailbox close:
+#   * MAILBOX CLOSE is the first irreversible terminal act (settle rationale): it may refuse
+#     while releasing a malformed pending donor; until it succeeds the route may remain as a
+#     retry/diagnostic handle — do not silently preserve a route-first rationale;
+#   * mailbox close is EXACTLY ONCE: closing zeroes `t\mail`, so a second close is a no-op
+#     through `lmx_thread_mail_close`, and late delivery refuses via MISSING when mail is 0;
+#   * only THEN may unregister / membership / arena release proceed;
+#   * R0: ONE synchronous lmx_root_close. Direct children settle first; R0 own mailbox closes at S2
+#     (mailbox-first), unregister at S3; S4 child_remove then S5 parent-stub mailbox (AUTHOR-G1-R0-STANDARD-20260922-33);
+#   * acceptance: all terminal sequences containing mailbox close follow the ruled per-scope
+#     order; no new terminal order. Out of scope by kind: orphan_adopt, child_publish_prepared,
+#     child_drop_prepared, root_open_unwind, function-table entries.
 # THE ORDERING CLAIM IS WITNESSED, AND ITS WITNESS IS PHASE 5.  Phase 1 asserts an end state, and an
 # end state cannot see an order: with the early destructor restored it still passed (measured
 # 2026-09-21, and this file said so rather than implying otherwise).  What CAN see the order is a

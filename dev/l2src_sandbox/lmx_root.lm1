@@ -618,25 +618,29 @@ fn: lmx_root_close (@: LmxRoot root) int
         ---
         root\close_stage: 1
     ---
-    # ROUTE, THEN MAILBOX, THEN STORAGE -- for R0 exactly as for every other record.  The route has
-    # to go first: until it does, a child that has just been reaped could still be addressed, and a
-    # mailbox must never outlive the route that points at it.
+    # Ordinary per-record mailbox-first terminal order (AUTHOR-G1-R0-STANDARD-20260922-33 /
+    # AUTHOR-K1-G1-DECISION-20260922-27): same as settle for R0 itself — not an exceptional protocol.
+    # S2 closes R0's own mailbox first (pending delivery arenas; route may remain as retry/diagnostic
+    # handle until this succeeds). S3 then unregisters the route. Do not invent a global "close both
+    # mailboxes first" phase; the parent-stub mailbox is S5 after S4 membership remove.
+    # Timeout/system dialog is liveness/UI policy, not a reorder of terminal cleanup.
     if: root\close_stage < 2
-        if: lmx_service_unregister(@ root\service, root\thread) != c.LMX_SERVICE_OK
+        if: lmx_thread_mail_close(@ root\arena, root\thread) != c.LMX_POST_OK
             lmx_process_deadline_disarm(@ deadline_guard)
             return: c.LMX_ROOT_INVALID
         ---
         root\close_stage: 2
     ---
     if: root\close_stage < 3
-        if: lmx_thread_mail_close(@ root\arena, root\thread) != c.LMX_POST_OK
+        if: lmx_service_unregister(@ root\service, root\thread) != c.LMX_SERVICE_OK
             lmx_process_deadline_disarm(@ deadline_guard)
             return: c.LMX_ROOT_INVALID
         ---
         root\close_stage: 3
     ---
-    # The structural parent stub owns R0 exactly as any parent owns a direct child. Remove R0's
-    # physical address before the common arena disappears, then close the stub's ordinary mailbox.
+    # S4→S5 preserved: structural parent stub owns R0 as any parent owns a direct child. Remove R0's
+    # physical address (S4), then close the stub's ordinary mailbox as the stub's own standard
+    # closure (S5) — not a dual-mailbox-first invention.
     if: root\close_stage < 4
         if: lmx_thread_child_remove(root\parent, root\thread) != c.LMX_THREAD_OK
             lmx_process_deadline_disarm(@ deadline_guard)

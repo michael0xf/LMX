@@ -46,6 +46,8 @@ This document does not invent rules for unspecified profiles. EBNF is a projecti
 
 Sources: §§0, 3.2–3.4, 4.0, 4.8–4.9, 5, 15.
 
+A grammar rule is universal within its domain: a name, type, nesting level, or translator convenience creates no separate syntax branch. A proposed exception or contradiction between rules requires explicit discussion and must not be hidden by special-case parsing.
+
 P0 builds ordered Structures, named Frames, atoms, and Mix nodes with source spans. A Frame has a head and one argument Structure. Field order is preserved; an anonymous Structure is also a field. A physical line is not an abstract-tree container.
 
 The colon separates a head from its argument Structure. It does not by itself mean assignment, a key–value pair, or a type annotation. `fn:`, `if:`, `int:`, `[]:`, and user heads use the same form. A consuming profile determines the head's meaning and field roles after parsing. Nesting alone does not make a Structure executable.
@@ -1313,7 +1315,7 @@ A fence of 3–80 dashes after the leading zone has the same role. Only horizont
 
 An anonymous Structure continues until another marker at K, an ordinary item at K − 1, an admitted named/terminal close, or EOF. Replacing a named close with a fence depends on profile admission and lack of ambiguity. Matrix rows and nested arrays use the same rules, without separate table syntax.
 
-Author clarification, 2026-09-19: an explicitly formed empty vertical body also materializes as a Structure argument; absence of deeper items does not permit discarding it. See [empty bodies](#empty-colon).
+An explicitly formed empty vertical body preserves an empty argument container; absence of deeper items does not permit discarding the Frame itself. The sole anonymous container is transparent during consumption, so zero inner fields supply zero receiver arguments. See [empty bodies](#empty-colon).
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 3496–3504.
 
@@ -1762,22 +1764,22 @@ end: world    # closes world #1
 
 ## 18. Missing arguments and an empty vertical body
 
-Source: §15 of the previous specification, corrected by the author's direct clarification on 2026-09-19.
+Source: §§4.0.1, 4.1 and 15 of the previous specification; the author's direct clarification on 2026-09-22 restored argument-container transparency.
 
-An empty vertical body is an empty Structure, synonymous with `()`. It is already an argument even when it contains no fields. In particular, the author's `receiver:` followed by a `---` line is valid and supplies an empty Structure. The parser must preserve its presence; the number of fields inside that argument must not be confused with the receiver's argument count.
+Every Frame stores an argument-container Structure. When the sole field occupying the whole container position is itself an anonymous Structure, it is transparent: the receiver consumes its inner fields as the argument sequence. Therefore `f()`, `f: ()`, and `f:` with an explicitly empty vertical body closed by `---` provide the same empty sequence — zero arguments. The Frame and its empty container must still be preserved; P0 does not reject them merely because their field count is zero. The receiver/profile decides whether the nullary operation is admitted.
 
-The “colon receiver without arguments” error concerns an absent argument, not a present empty Structure argument. Validation runs after assembling and preserving an explicitly formed vertical body. Zero fields inside the preserved Structure does not mean that the argument is absent.
+An empty Structure nevertheless exists as a value and differs from `void`, numeric zero, and an absent field. Supplying it as one argument requires a nontransparent position, such as a named field; the sole anonymous wrapper around the entire argument list is always transparent.
 
-`f()`, `()`, and an admitted bare nullary `f` remain distinct permitted forms. An empty inline tail followed by a nonempty vertical body is also valid. Bare `end` remains separately forbidden.
+An admitted bare `f` in executable position likewise denotes nullary consumption when the consumer resolves it as callable. P0 may retain it as an atom; the following semantic layer determines the call. An empty inline tail followed by a nonempty vertical body is also valid. Bare `end` remains separately forbidden.
 
-**Valid: an empty Structure argument** — author / автор, 2026-09-19.
+**Valid: an empty container, zero arguments** — author / автор, 2026-09-19.
 
 ````text
 receiver:
 ---
 ````
 
-**Valid: the same empty Structure argument** — author / автор, 2026-09-19.
+**Valid: the same empty container, zero arguments** — author / автор, 2026-09-19.
 
 ````text
 receiver: ()
@@ -2220,9 +2222,9 @@ EOF completes the root after all forms admitting EOF closure. Unclosed bounded f
 
 Source: §15.0. The formal notation and its original annotations are retained verbatim below. This is the same immutable source excerpt in both language versions; all constraints are explained in the preceding sections. `name`, `atom_or_value`, `symbolic_head`, and level events are read with the lexical rules, not as permission for arbitrary characters. English annotations within the notation are not language tokens.
 
-This EBNF does not replace the automaton: in particular, an optional inline colon tail still requires a present argument, which may be an empty vertical body, and `newline/source-level composition` denotes the specified transitions, not an arbitrary whitespace separator.
+This EBNF does not replace the automaton: an empty colon tail may preserve an empty Frame/container, and `newline/source-level composition` denotes the specified transitions, not an arbitrary whitespace separator.
 
-The 2026-09-19 correction takes precedence over the old annotation inside the verbatim EBNF: an empty vertical body is present as a `()` argument, not absent receiver fields. Read the historical formal notation below with this explicit amendment.
+Sole-anonymous-container transparency takes precedence over a literal reading of the old annotations: `f()`, `f: ()`, and an explicitly empty vertical form supply zero arguments to the receiver. Read the historical formal notation below with this explicit amendment.
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 8760–8946.
 

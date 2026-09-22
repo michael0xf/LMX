@@ -6,27 +6,22 @@ Outer:
     Inner: b
 end: Outer
 
-# FABLE-SONNET-FIELD-PATHS-20260923-113 Part A: a\b\c chains two hops off a
-# colon-declared own field. l2_path_root resolves the own-field root once,
-# then the existing l2_ns_slot_named segment walk (unchanged) re-enters for
-# the second hop -- the generated l2_pst re-walk below is that proof.
-#
-# translates-with-debt, not eternal-runs: merge(Outer, empty) does not
-# recursively construct a nested Structure-typed field (Inner: b) -- b
-# stays null until something explicitly constructs it, which nothing here
-# does. That is a separate, pre-existing gap in construction, not in path
-# resolution: l2trans correctly emits a null check at the b hop and the
-# program would exit through it cleanly, but exercising that here would
-# mean asserting on an intentionally-unconstructed value rather than
-# proving the two-hop walk landed on 99U. The generated-code check below is
-# the honest proof available today: two real hops, not one, reusing the
-# unchanged segment loop -- not a claim that this program runs to 99U.
-fn: build () int
+# FABLE-GROKBOT-NESTED-FIELD-CONSTRUCT-20260923-116: a\b\c chains two hops
+# off a colon-declared own field whose Structure-typed field was materialized
+# as a real typed occurrence at model construction. merge(Outer, empty) deep-
+# copies b; writing 99U round-trips.
+fn: build () size_t
     Outer: a
     a\b\c: 99U
-    return: 0
+    size_t: got
+    got: a\b\c
+    return: got
 end: build
 
 fn: main () int
-    return: build()
+    size_t: got
+    got: build()
+    if: got != 99U
+        return: 90
+    return: 0
 end: main

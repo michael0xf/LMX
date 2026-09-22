@@ -203,7 +203,7 @@ Writing through an address neither removes `const`/`immutable`, admits a danglin
 <a id="lowlevel-array"></a>
 ## 19. Raw C storage
 
-The `c.*` prefix is the raw door into C. L2 does not define a separate language entity `c.array`: rectangular machine storage and raw index, when needed, are expressed through that door and L1 C99 lowering.
+The `c.*` prefix is the raw door into C, and classification is by token: every token spelled `c.*` is a raw C name, while every non-`c.*` argument inside the construct remains an ordinary L2 expression. No concrete C name has meaning to L2. L2 does not define a separate language entity `c.array`: rectangular machine storage and raw index, when needed, are expressed through that door and L1 C99 lowering.
 
 Ordinary L2 Array remains a descriptor reference `{len, data}` with graph backing; its length is `len` / length operations, not a machine C size. Mapping raw C storage to an ordinary Array requires an explicit operation over backing address, shape and lifetime.
 

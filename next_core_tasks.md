@@ -25,7 +25,7 @@ Specifications must not contain conversations or plans. Current plan lives **onl
 
 Explicit anti-patterns and replacements:
 
-1. **`c.*` is a raw door into C.** The translator must not separately recognize `c.sizeof` / `c.puts` / other names, parse `*.h`, or construct an "allowed C" dictionary. Invalid raw C is diagnosed by the C toolchain. Lmx needs use ordinary language receivers/libraries, not `c.*` special semantics.
+1. **`c.*` is a raw door into C, classified per TOKEN.** Every token spelled `c.*` is a raw C name; every non-`c.*` argument inside the construct stays an ordinary L2 expression under general L2 lowering. So `c.printf("%d", x)` has a raw head and an ordinary L2 argument, and `c.sizeof(c.LmxArena)` passes both tokens raw for C to interpret. Classification is never by concrete name. The translator must not separately recognize `c.sizeof` / `c.puts` / other names, parse `*.h`, or construct an "allowed C" dictionary. Invalid raw C is diagnosed by the C toolchain. Lmx needs use ordinary language receivers/libraries, not `c.*` special semantics.
 2. **Base Array** keeps its minimal invariant (`{len, data}`). Dynamic growth belongs to a separate List/ArrayList implementation. Never add capacity or policy fields to Array for one consumer.
 3. **Base Message** stays minimal kernel graph/scheduling/message machinery. Win32 UI and application state belong in adapters/application structures referenced through ordinary composition — never embedded into Message.
 4. **Similar future demand:** add a separate type/receiver/library/adapter at the correct layer; do not mutate the lower abstraction.

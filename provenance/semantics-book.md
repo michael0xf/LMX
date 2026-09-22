@@ -280,7 +280,7 @@ Consumer определяет область аналитической пров
 
 ### 5. Изменение, видимое другим держателям ссылки
 
-Чтобы изменение увидели другие держатели значения, запись выполняется через явный путь: `p\x: value` или `a[i]: value` меняет выбранный референт. Разрешённое голое `x: value`, направленное в заранее типизированный явный либо скрытый аргумент, ещё при трансляции подготавливает одноимённое own-поле текущего тела; при исполнении строка связывает с ним локальный кэш, ставит `dirty` и на следующей контрольной точке публикует именно в это поле тела. Такая запись остаётся локальной по отношению к источнику: она не меняет аргумент вызывающего выражения и родительский граф. Правило липкого взятия адреса activation-local переменной, включая `@` до, между и после привязок вхождений, определено в [рабочем состоянии](#dynamic). Поле не добавляется во время исполнения: состав графа уже зафиксирован транслятором.
+Чтобы изменение увидели другие держатели значения, запись выполняется через явный путь: `p\x: value` или `a[i]: value` меняет выбранный референт. Разрешённое голое `x: value`, направленное в заранее типизированный явный либо скрытый аргумент, ещё при трансляции подготавливает одноимённое own-поле текущего тела; при исполнении строка связывает с ним локальный кэш, ставит `dirty` и на следующей контрольной точке публикует именно в это поле тела. Такая запись остаётся локальной по отношению к источнику: она не меняет аргумент вызывающего выражения и родительский граф. L3-ссылка объявляется отдельным принимающим выражением `@: Type var` и не является взятием адреса локальной переменной; полное правило находится в [рабочем состоянии](#dynamic). Поле не добавляется во время исполнения: состав графа уже зафиксирован транслятором.
 
 ### 6. Независимость от изменения другим держателем
 
@@ -340,7 +340,7 @@ State the constraint explicitly and include it in tests. Presence of `x\width` d
 
 ### 5. Making a change visible to other reference holders
 
-To make a change visible to other holders, write through an explicit path: `p\x: value` or `a[i]: value` changes the selected referent. A resolved bare `x: value` targeting an already typed explicit or hidden argument makes the translator prepare a same-name own field of the current body; when executed, the statement binds the local cache to that field, marks it `dirty`, and publishes specifically into the body's field at the next checkpoint. The write remains local with respect to its source: it changes neither the caller's argument nor the parent graph. The sticky address-taking rule for an activation-local variable, including `@` before, between, or after occurrence bindings, is defined under [working state](#dynamic). Execution does not append the field: translation has already fixed the graph layout.
+To make a change visible to other holders, write through an explicit path: `p\x: value` or `a[i]: value` changes the selected referent. A resolved bare `x: value` targeting an already typed explicit or hidden argument makes the translator prepare a same-name own field of the current body; when executed, the statement binds the local cache to that field, marks it `dirty`, and publishes specifically into the body's field at the next checkpoint. The write remains local with respect to its source: it changes neither the caller's argument nor the parent graph. An L3 reference is declared by the distinct receiver `@: Type var`, not by taking the address of a local variable; the complete rule is under [working state](#dynamic). Execution does not append the field: translation has already fixed the graph layout.
 
 ### 6. Independence from another holder's mutation
 
@@ -540,22 +540,20 @@ A returned reference preserves its exact target identity. Constructing a result,
 
 Локальность и длительность хранения здесь являются разными свойствами. Own-поле позволяет текущему вызываемому вхождению сохранить опубликованное значение для последующих активаций, но не превращает запись в изменение внешней привязки: ячейка аргумента вызывающего выражения и поле над-методного пространства остаются неизменными. Это внешнее поле меняется только явной записью через путь `node\x`.
 
-Вычисление `@x` для любой адресуемой activation-local переменной безусловно делает этот логический локал липким до конца текущей активации — до первой привязки вхождения, между вхождениями, после текущей привязки или если вхождение так и не исполняется. Для логического имени существует одна стабильная каноническая физическая локальная ячейка; `@x` возвращает её настоящий адрес и никогда не перенацеливается. Одно взятие адреса не создаёт поле графа: пока вхождение не исполнено, цели публикации нет. Когда активная цель есть, каждая наблюдаемая контрольная точка консервативно снимает каноническую ячейку в текущее вхождение и публикует её; успешная публикация никогда не очищает липкую отметку. Перед тем как позднее присваивание перезапишет каноническую ячейку и сдвинет селектор, старое активное вхождение финализируется снимком из канонической ячейки; затем сохраняется новое значение и выбирается новое вхождение. `p` всегда адресует каноническую ячейку. Запись остаётся локальной по отношению к источнику: она не меняет аргумент вызывающего выражения и родительский граф. Сохранение такого адреса после завершения активации недопустимо независимо от `dirty`.
+В L3 `@` существует только как голова отдельного принимающего выражения объявления ссылки. Форма `@: Type var` объявляет типизированную ссылочную привязку `var`; `Type` и `var` являются двумя отдельными полями хвоста, а `Type` должен быть разрешён. Это объявление не создаёт новый экземпляр `Type`, не берёт адрес привязки и не открывает машинную ячейку. Значение предоставляет аргумент либо последующее обычное присваивание `var: value` с обязательным admission до первого чтения; использование ещё не связанной ссылки является ошибкой.
 
 ```text
-arg: 1
-@: p: @arg
-arg: 2
+@: Type var
 ```
 
-| Порядок в текущей активации | Результат |
+| Форма | Смысл в L3 |
 | --- | --- |
-| `@x` до первого связывающего `x: ...` | `@x` сразу делает отметку липкой. Физическое поле вхождения может уже существовать в переведённом графе, но активной цели публикации/привязки нет, пока это вхождение не исполнится; тогда оно становится активной целью |
-| `@x` между привязками вхождений | Пример автора: первое `arg: 1` выбирает вхождение 0; `@arg` делает отметку липкой, `p` держит каноническую ячейку; перед `arg: 2` старое вхождение финализируется из канонической ячейки, затем сохраняется 2 и выбирается вхождение 1 |
-| Сначала исполняется связывающее `x: ...`, затем вычисляется `@x` | Взятие адреса делает отметку липкой; обычный `dirty` контрольная точка очистила бы, а липкая сохраняется до конца активации |
-| `@x`, но связывающее `x: ...` не исполняется | Липкая отметка ставится; `x` остаётся канонической локальной ячейкой, графового `dirty` нет, потому что взятие адреса не создало поля |
+| `@: Type var` | Объявление ссылки `var` на значение разрешённого `Type` |
+| `@: Type: var` | Другая структура `@(Type(var))`; не объявление ссылки и не синоним предыдущей формы |
+| `@x`, включая `return: @x` и передачу `@x` аргументом | Недопустимая в L3 префиксная address-of форма |
+| `@@:`, `@@@:` и последующие головы | Машинная глубина адреса L2, недопустимая в L3 |
 
-Это правило применяется к любой адресуемой activation-local переменной и не зависит от типа `x`, если само присваивание-объявление допустимо. Оно не распространяется на явные графовые пути вроде `node\x`, элементы массива и взятие адреса классифицированных данных поля графа. Каноническая локальная ячейка, активная цель публикации и следование полю графа `test\arg` / `[0]arg` — три разных места: `p` никогда не становится слотом графа, а смена селектора сама по себе граф не пишет.
+Ссылочная привязка переносит уже существующую ссылочную идентичность: её обычная передача и `return: var` передают `var`, а не адрес локальной переменной. Присваивание перепривязывает её только после общего `implements`/admission. Для нового значения используется обычное типизированное построение, например `Type: fresh`, а не `@`. L3 не содержит префиксного address-of, сырой загрузки, арифметики адресов, машинного `cast` либо доступа к backing; одноимённый `@`-receiver не переиспользует реализацию машинного семейства L2.
 
 Каждое тело, которое принимающее выражение исполняет по операторам, — структура графа и владелец непосредственно объявленных в нём полей. Тела `if` и `else`, циклов и других принимающих выражений образуют вложенную иерархию, не плоский список полей метода. Невыполненная ветвь не производит присваиваний. Обычный вложенный блок не создаёт новую активацию метода или границу динамических входов. Условие, аргумент вызова и аргумент `return` сами по себе не являются исполняемыми телами: их роль задаёт принимающее выражение, а не наличие вложенной структуры в последней синтаксической позиции.
 
@@ -568,9 +566,9 @@ end: remember
 
 Здесь входной `x` становится собственным полем тела при исполнении `x: 7`. Меняется состояние `remember`, а не переменная вызывающего выражения. Кэшируются только собственные поля, реально используемые голым именем либо для передачи динамического входа дальше; явный путь сам по себе не создаёт own-кэш. Существующее поле не исчезает из графа из-за отсутствия кэширования.
 
-Перед передачей управления другому вызываемому выражению публикуются только собственные рабочие поля с активной отметкой `dirty`. После публикации обычные отметки очищаются; липкая отметка взятия адреса, определённая выше, сохраняется до конца активации. Неизменённое кэшированное поле без такой отметки не записывается обратно: вложенный вызов мог уже изменить его через явную ссылку. После возврата вызывающая активация не перечитывает свои рабочие значения из графа.
+Перед передачей управления другому вызываемому выражению публикуются только собственные рабочие поля с активной отметкой `dirty`. После публикации отметки очищаются. Неизменённое кэшированное поле без такой отметки не записывается обратно: вложенный вызов мог уже изменить его через явную ссылку. После возврата вызывающая активация не перечитывает свои рабочие значения из графа.
 
-Обычный `dirty` определяется выполненной записью, не сравнением значений и не наличием возможного присваивания в исходном тексте. Адресное исключение — определённая выше липкая отметка: любое вычисленное `@x` адресуемой activation-local переменной. Публикация следует прямому порядку полей; успешная запись очищает обычную отметку соответствующего поля и не очищает липкую. Невозможность разрешить уже связанный слот или записать его — диагностический `assert`; предназначенный внешний вызов после этого не выполняется. Общей транзакции с откатом предыдущих записей нет. Публикация нужна также перед внешней границей, способной вызвать LMX обратно или раскрыть состояние графа.
+`dirty` определяется выполненной записью, не сравнением значений и не наличием возможного присваивания в исходном тексте. Публикация следует прямому порядку полей; успешная запись очищает отметку соответствующего поля. Невозможность разрешить уже связанный слот или записать его — диагностический `assert`; предназначенный внешний вызов после этого не выполняется. Общей транзакции с откатом предыдущих записей нет. Публикация нужна также перед внешней границей, способной вызвать LMX обратно или раскрыть состояние графа.
 
 Следовательно, после вложенного изменения `node\x` рабочее голое `x` вызывающего выражения может сохранять прежнее значение, тогда как явный путь видит новое. Позднейшее присваивание голому собственному `x` намеренно создаёт новую запись и опубликует её на следующей границе. Отсутствие автоматического перечитывания — часть семантики, а не разрешение терять отмеченные изменения.
 
@@ -579,7 +577,7 @@ end: remember
 
 Стек активаций является единственной неявной историей вызовов. Нативное исполнение использует обычный стек вызовов C; интерпретатор — эквивалентный управляющий стек. Прямая, взаимная и callback-рекурсия создаёт отдельную активацию с собственными формальными и динамическими значениями, рабочими локальными значениями, результатом и отметками `dirty`. Для каждого вызова не создаются отдельная Lmx-структура вызова или тела, скрытый узел активации, окружение замыкания либо глобальная запись активных аргументов.
 
-Выбранная вызываемая структура хранит текущее опубликованное рабочее состояние метода, но не журнал вызовов. Рекурсивные вызовы через одно вхождение могут публиковать в одну структуру. Другое вызываемое вхождение, указывающее на ту же неизменяемую запись метода, публикует в собственную скопированную структуру. Приостановленная внешняя активация не перечитывается и сохраняет свои рабочие значения; позже обычное own-поле публикуется только после нового реального изменения, а связанный вход с липкой отметкой — на каждой последующей контрольной точке своей активации. Итог определяет последовательный порядок публикаций только `dirty`-полей, а не неявное восстановление снимка активации.
+Выбранная вызываемая структура хранит текущее опубликованное рабочее состояние метода, но не журнал вызовов. Рекурсивные вызовы через одно вхождение могут публиковать в одну структуру. Другое вызываемое вхождение, указывающее на ту же неизменяемую запись метода, публикует в собственную скопированную структуру. Приостановленная внешняя активация не перечитывается и сохраняет свои рабочие значения; позже own-поле публикуется только после нового реального изменения. Итог определяет последовательный порядок публикаций только `dirty`-полей, а не неявное восстановление снимка активации.
 
 Трасса рекурсивного примера ниже не вводит новый синтаксис. Метод M имеет вызываемую структуру S (`M = S`) с собственным полем `x`; оба вызова выбирают ту же S, а `n` является частным объявленным аргументом каждой активации.
 
@@ -595,7 +593,7 @@ end: remember
 
 После возобновления внешнего кадра голое `x` читает 2, а явное `node\x` — 9. Если внешний кадр затем выполняет `x: x + 1`, его рабочее значение становится 3 и получает `dirty`; следующая граница публикует 3 в S. Это новая запись внешней активации, не восстановление её прежнего снимка. Динамически переданный `x`, который ни разу не является целью разрешённого голого присваивания, остаётся только локальным аргументом. Если же в теле есть такое `x: ...`, скрытый аргумент подчиняется тому же правилу подготовки и привязки own-поля, что и явный.
 
-Тем самым поле вызываемой структуры сочетает свойства постоянного поля экземпляра с рабочей локальностью стековой переменной: обычное использованное own-поле загружается в типизированное рабочее значение и записывается обратно только после изменения; связанный вход с липкой отметкой публикуется до конца своей активации. Граф хранит опубликованное состояние; стек хранит историю активаций. Неявного захвата кадра вызывающего выражения нет, поэтому кадры не приходится размещать в куче или связывать скрытой цепочкой замыканий для решения upward-funarg-проблемы.
+Тем самым поле вызываемой структуры сочетает свойства постоянного поля экземпляра с рабочей локальностью стековой переменной: использованное own-поле загружается в типизированное рабочее значение и записывается обратно только после изменения. Граф хранит опубликованное состояние; стек хранит историю активаций. Неявного захвата кадра вызывающего выражения нет, поэтому кадры не приходится размещать в куче или связывать скрытой цепочкой замыканий для решения upward-funarg-проблемы.
 
 Следующий пример вызова показывает порядок между кэшем, явным чтением графа и фактическими аргументами; это трасса установленной формы `for:`, не новое правило грамматики. Ячейка графа `j` в фикстуре начинается с 0 — это условие примера, не общее правило инициализации `int`. `print` здесь — высокоуровневое вызываемое выражение профиля, не операция `c.*`.
 
@@ -634,22 +632,20 @@ The presence in a source body of a resolved bare assignment `x: value`, where `x
 
 Locality and storage duration are separate properties here. The own field lets the current callable occurrence retain the published value for later activations, but does not turn the write into a mutation of an outer binding: the caller's argument cell and the above-method space's field remain unchanged. Only an explicit `node\x` path write mutates that outer field.
 
-Evaluating `@x` for any addressable activation-local variable unconditionally makes that logical local sticky through the end of the current activation — before the first occurrence binding, between occurrence bindings, after the current binding, or when no occurrence ever executes. One stable canonical physical local cell exists for the logical name; `@x` returns its real address and never retargets. Address-taking alone invents no graph field: until an occurrence executes there is no publication destination. Once an active target exists, every observable checkpoint conservatively snapshots canonical into the current occurrence and publishes it; successful publication never clears sticky. Before a later assignment overwrites canonical and moves the selector, finalize the old active occurrence snapshot from canonical; then store the new value and select the new occurrence. `p` always addresses canonical. The write remains local with respect to its source: it changes neither the caller's argument nor the parent graph. Retaining that address past activation end is invalid independently of dirty state.
+In L3, `@` exists only as the head of a distinct reference-declaration receiver. The form `@: Type var` declares the typed reference binding `var`; `Type` and `var` are two separate tail fields, and `Type` must resolve. This declaration neither constructs a new `Type` instance, takes the address of the binding, nor exposes a machine cell. An argument or a later ordinary assignment `var: value`, with mandatory admission, must supply the value before its first read; using an as-yet unbound reference is an error.
 
 ```text
-arg: 1
-@: p: @arg
-arg: 2
+@: Type var
 ```
 
-| Order in the current activation | Result |
+| Form | L3 meaning |
 | --- | --- |
-| `@x` before the first binding `x: ...` | `@x` makes sticky immediately. The physical occurrence field may already exist in the translated graph, but there is no active publication target/binding until that occurrence executes; that occurrence then becomes the active target |
-| `@x` between occurrence bindings | The author's example: the first `arg: 1` selects occurrence 0; `@arg` makes sticky and `p` holds canonical; before `arg: 2` the old occurrence is finalized from canonical, then 2 is stored and occurrence 1 is selected |
-| A binding `x: ...` executes first, then `@x` | Address-taking makes sticky; an ordinary `dirty` mark would have been cleared by a checkpoint, but sticky survives through activation end |
-| `@x`, but no binding `x: ...` executes | Sticky is set; `x` remains the canonical local cell and there is no graph dirty state, because address-taking invented no field |
+| `@: Type var` | Declare reference `var` to a value of resolved `Type` |
+| `@: Type: var` | Different structure `@(Type(var))`; not a reference declaration and not a synonym of the preceding form |
+| `@x`, including `return: @x` and passing `@x` as an argument | Prefix address-of form, invalid in L3 |
+| `@@:`, `@@@:`, and subsequent heads | L2 machine-address depth, invalid in L3 |
 
-This rule applies to every addressable activation-local variable and is independent of `x`'s type, provided the assignment-as-declaration itself is valid. It does not apply to explicit graph paths such as `node\x`, to array elements, or to taking the address of a graph field's classified payload. The canonical local cell, the active publication target, and graph field-follow `test\arg` / `[0]arg` are three distinct locations: `p` never becomes the graph slot, and selector switch does not write the graph by itself.
+A reference binding carries an already existing reference identity: ordinary passing and `return: var` pass `var`, not the address of a local variable. Assignment rebinds it only after common `implements`/admission. A new value uses ordinary typed construction, such as `Type: fresh`, not `@`. L3 has no prefix address-of, raw load, address arithmetic, machine `cast`, or backing access; its same-spelled `@` receiver does not reuse the L2 machine-family implementation.
 
 Every body that a receiving expression executes statement by statement is a graph Structure hosting its directly declared fields. Bodies of `if`, `else`, loops and other receivers form a containment hierarchy, not a flat method-field list. An untaken branch performs no assignments. An ordinary nested block creates neither another method activation nor a dynamic-input boundary. Conditions, call arguments and `return` arguments are not executable bodies merely by being arguments: their receiving expression determines the role, not a Structure in the last syntactic position.
 
@@ -662,9 +658,9 @@ end: remember
 
 Here input `x` becomes the body's own field when `x: 7` executes. This changes `remember` state, not the caller's variable. Only own fields actually used by a bare name or to forward a dynamic input are cached; an explicit path alone creates no own cache. Lack of caching does not remove an existing field from the graph.
 
-Before control passes to another callable expression, only own working fields with an active `dirty` mark are published. Ordinary marks are cleared after publication; the sticky mark from address-taking, defined above, remains until activation end. A cached field without such a mark must not be written back: a nested call may already have changed it through an explicit reference. After return, the caller activation does not reload its working values from the graph.
+Before control passes to another callable expression, only own working fields with an active `dirty` mark are published. Marks are cleared after publication. A cached field without such a mark must not be written back: a nested call may already have changed it through an explicit reference. After return, the caller activation does not reload its working values from the graph.
 
-Ordinary dirty state follows an executed write, not value comparison or the presence of a possible assignment in source. The address exception is the sticky mark defined above: any evaluated `@x` of an addressable activation-local variable. Publication follows forward field order; a successful write clears the corresponding ordinary mark and does not clear the sticky one. Failure to resolve an already bound slot or store into it uses diagnostic `assert`; the intended outbound call is not executed afterward. There is no general transaction rolling back earlier writes. Publication is also required before a foreign boundary capable of calling back into LMX or exposing graph state.
+Dirty state follows an executed write, not value comparison or the presence of a possible assignment in source. Publication follows forward field order; a successful write clears the corresponding mark. Failure to resolve an already bound slot or store into it uses diagnostic `assert`; the intended outbound call is not executed afterward. There is no general transaction rolling back earlier writes. Publication is also required before a foreign boundary capable of calling back into LMX or exposing graph state.
 
 Consequently, after a nested modification of `node\x`, the caller's bare working `x` can retain its earlier value while an explicit path observes the new value. A later assignment to bare own `x` deliberately creates a new write and publishes it at the next boundary. No automatic reload is part of the semantics, not permission to lose dirty changes.
 
@@ -673,7 +669,7 @@ Consequently, after a nested modification of `node\x`, the caller's bare working
 
 The activation stack is the sole implicit call history. Native execution uses the ordinary C call stack; the interpreter uses an equivalent control stack. Direct, mutual and callback recursion creates a distinct activation with its own formal and dynamic values, working locals, result and `dirty` marks. No per-call Lmx call/body Structure, hidden activation node, closure environment or global active-argument record is created.
 
-The selected callable Structure holds the method's currently published working state, but it is not a call journal. Recursive calls through one occurrence may publish into the same Structure. Another callable occurrence referring to the same immutable method record publishes into its own copied Structure. A suspended outer activation is not reloaded and retains its working values; an ordinary own field is published later only after another actual modification, while a bound input with a sticky mark is published at every later checkpoint of its activation. The result is determined by the serial order of dirty-only publications, not by implicit restoration of an activation snapshot.
+The selected callable Structure holds the method's currently published working state, but it is not a call journal. Recursive calls through one occurrence may publish into the same Structure. Another callable occurrence referring to the same immutable method record publishes into its own copied Structure. A suspended outer activation is not reloaded and retains its working values; an own field is published later only after another actual modification. The result is determined by the serial order of dirty-only publications, not by implicit restoration of an activation snapshot.
 
 The following recursive trace introduces no new syntax. Method M has callable Structure S (`M = S`) with own field `x`; both calls select the same S, while `n` is a private declared argument in each activation.
 
@@ -689,7 +685,7 @@ The following recursive trace introduces no new syntax. Method M has callable St
 
 On the resumed outer frame, bare `x` reads 2 and explicit `node\x` reads 9. If the outer frame then executes `x: x + 1`, its working value becomes 3 and is marked `dirty`; the next boundary publishes 3 into S. This is a new outer-activation write, not restoration of its previous snapshot. A dynamically supplied `x` that is never the target of a resolved bare assignment remains only a local argument. If the body does contain such an `x: ...`, the hidden argument follows the same own-field preparation and binding rule as an explicit argument.
 
-The callable Structure's field therefore combines the persistence of an instance field with the working locality of a stack variable: an ordinary used own field is loaded into a typed working value and written back only after a change; a bound input with a sticky mark is published until its activation ends. The graph stores published state; the stack stores activation history. There is no implicit caller-frame capture, so frames need not be heapified or connected by a hidden closure chain to avoid the upward-funarg problem.
+The callable Structure's field therefore combines the persistence of an instance field with the working locality of a stack variable: a used own field is loaded into a typed working value and written back only after a change. The graph stores published state; the stack stores activation history. There is no implicit caller-frame capture, so frames need not be heapified or connected by a hidden closure chain to avoid the upward-funarg problem.
 
 The following call example shows the order among cache, explicit graph read and actual arguments; it is a trace using the established `for:` form, not a new grammar rule. The fixture's graph cell for `j` starts at 0; that is an example condition, not a general initialization rule for `int`. Here `print` is a high-level profile callable, not a `c.*` operation.
 

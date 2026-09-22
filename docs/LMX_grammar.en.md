@@ -2041,9 +2041,11 @@ In this profile, `=` is comparison, not assignment syntax or a named field. Upda
 
 Sources: §§11.2–11.3, 12–13, 20.1–20.3. This section records spelling and form distinctions, not value internals.
 
-`@ⁿ:` is the reserved address-depth head family: `@:`, `@@:`, `@@@:`, and so on; there is no arbitrary limit on n. Base type and name are separate tail fields. `@x` is the prefix address form; further levels use slot declarations and addresses of those slots, not an invented interpretation of repeated `@` in expressions. In the old profile, address forms belong to L2, not L3.
+In L3, the `@:` head has the sole reference-declaration form `@: Type var`: `Type` and `var` are two separate tail fields. The spelling `@: Type: var` builds the different structure `@(Type(var))`, is not a synonym, and is not flattened by translation. The prefix expression `@x`, heads `@@:`, `@@@:`, and machine-address operations are invalid in L3.
 
-The two backslash positions are distinct: `\address` is prefix load, while `value\field` is field follow. `value\[occurrence]field` specifies the matching-name ordinal, whereas `value\field[index]` indexes the selected value. These are different bracket positions. In the previous profile, an omitted ordinal means `[0]`.
+In L2, `@ⁿ:` remains the reserved machine-address-depth head family: `@:`, `@@:`, `@@@:`, and so on; there is no arbitrary limit on n. Base type and name are separate tail fields. `@x` is the L2 prefix address-of form; further levels use slot declarations and addresses of those slots, not an invented interpretation of repeated `@` in expressions. The shared `@` head spelling does not make L3 reuse the L2 machine receiver.
+
+The two backslash positions are distinct: `\address` is L2 prefix load, while `value\field` is field follow. `value\[occurrence]field` specifies the matching-name ordinal, whereas `value\field[index]` indexes the selected value. These are different bracket positions. In the previous profile, an omitted ordinal means `[0]`.
 
 `target[index]` differs from heads `[]:`, `[][]:`, and `[n][m]:`. Expression parentheses and bounded index arguments use the same structural mechanism. Ordinary LMX paths do not acquire C `.` or `->` spelling; the explicit `c.` door is separate. Concrete address, type, and operation mappings belong to the semantic profile.
 

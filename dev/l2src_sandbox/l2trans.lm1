@@ -550,6 +550,8 @@ prototype:
     fn: l2_take_include (const: @(LmP0Node item); const: @(char path)) int
     fn: l2_fnptr_local (const: @(LmP0Node stmt); @@: LmP0Text out_name) int
     fn: l2_struct_local (const: @(LmP0Node stmt); @@: LmP0Text out_name) int
+    fn: l2_lmx_text () @: LmP0Text
+    fn: l2_text_skip (const: @(LmP0Text t); size_t: n) @: LmP0Text
     fn: l2_ptr_local_ty (const: @(LmP0Node stmt); @@: LmP0Text out_name; @: int out_ty) int
     fn: l2_const_local_ty (const: @(LmP0Node stmt); @@: LmP0Text out_name; @: int out_ty) int
     fn: l2_diag_field (const: @(LmP0Text t)) int
@@ -3609,6 +3611,8 @@ fn: l2_ml_collect (const: @(LmP0Structure body); const: @(char path)) int
                 return: 1
             ---
         else:
+            if: l2_slot_decl_ty(stmt) = 0 && l2_ptr_local_ty(stmt, @ nm, @ ty) = 2
+                return: l2_error(path, l2_next_active(stmt\as\frame\body\first_field)\value, "unknown type")
             if: l2_slot_decl_ty(stmt) = 0 && l2_ptr_local_ty(stmt, @ nm, @ ty) = 0 && l2_ml_find(nm) < 0 && l2_ml_add(nm, ty, path, stmt) != 0
                 return: 1
             if: l2_const_local_ty(stmt, @ nm, @ ty) = 0 && l2_ml_find(nm) < 0 && l2_ml_add(nm, ty, path, stmt) != 0
@@ -4813,6 +4817,36 @@ fn: l2_struct_local (const: @(LmP0Node stmt); @@: LmP0Text out_name) int
     \out_name: f\value\as\atom
 return: 0
 
+@: LmP0Text l2_lmx_name_cache 0
+
+# The one physical projection every nonprimitive Structure/model already
+# uses (CORE.md 3.1, L2 spec 18.1): Lmx at one more address depth than the
+# binding itself. Cached so repeated address-slot declarations over
+# different Structure names still share one interned (name,depth) entry.
+fn: l2_lmx_text () @: LmP0Text
+    if: l2_lmx_name_cache != 0
+        return: l2_lmx_name_cache
+    l2_lmx_name_cache: (cast: (@: LmP0Text) l2_xmalloc(c.sizeof(LmP0Text)))
+    if: l2_lmx_name_cache = 0
+        return: 0
+    l2_lmx_name_cache\data: "Lmx"
+    l2_lmx_name_cache\length: 3U
+return: l2_lmx_name_cache
+
+# The raw c.* door strips its own "c." marker before the spelling reaches
+# the foreign-pointer interner: "c." is L2's own namespace prefix, never
+# part of the C identifier the compiler must find.
+fn: l2_text_skip (const: @(LmP0Text t); size_t: n) @: LmP0Text
+    @: LmP0Text r
+    if: t = 0 || t\length < n
+        return: 0
+    r: (cast: (@: LmP0Text) l2_xmalloc(c.sizeof(LmP0Text)))
+    if: r = 0
+        return: 0
+    r\data: t\data + n
+    r\length: t\length - n
+return: r
+
 fn: l2_ptr_local_ty (const: @(LmP0Node stmt); @@: LmP0Text out_name; @: int out_ty) int
     @: LmP0Field f
     @: LmP0Field g
@@ -4858,10 +4892,17 @@ fn: l2_ptr_local_ty (const: @(LmP0Node stmt); @@: LmP0Text out_name; @: int out_
         if: l2_text_eq(f\value\as\atom, "ulong")
             \out_ty: 39
             return: 0
-        \out_ty: l2_foreign_intern(f\value\as\atom, 2, 0)
-        if: \out_ty >= 100
-            return: 0
-        return: 1
+        if: l2_ns_find(f\value\as\atom) >= 0
+            \out_ty: l2_foreign_intern(l2_lmx_text(), 3, 0)
+            if: \out_ty >= 100
+                return: 0
+            return: 2
+        if: l2_c_door(f\value\as\atom) != 0
+            \out_ty: l2_foreign_intern(l2_text_skip(f\value\as\atom, 2U), 2, 0)
+            if: \out_ty >= 100
+                return: 0
+            return: 2
+        return: 2
     ---
     if: depth = 1 && l2_text_eq(f\value\as\atom, "char")
         \out_ty: 12
@@ -4887,10 +4928,17 @@ fn: l2_ptr_local_ty (const: @(LmP0Node stmt); @@: LmP0Text out_name; @: int out_
     if: depth = 1 && l2_text_eq(f\value\as\atom, "ulong")
         \out_ty: 38
         return: 0
-    \out_ty: l2_foreign_intern(f\value\as\atom, depth, 0)
-    if: \out_ty >= 100
-        return: 0
-return: 1
+    if: l2_ns_find(f\value\as\atom) >= 0
+        \out_ty: l2_foreign_intern(l2_lmx_text(), depth + 1, 0)
+        if: \out_ty >= 100
+            return: 0
+        return: 2
+    if: l2_c_door(f\value\as\atom) != 0
+        \out_ty: l2_foreign_intern(l2_text_skip(f\value\as\atom, 2U), depth, 0)
+        if: \out_ty >= 100
+            return: 0
+        return: 2
+return: 2
 
 fn: l2_diag_field (const: @(LmP0Text t)) int
     if: t = 0
@@ -12060,6 +12108,8 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
         if: l2_frame_head(stmt, "if") = 0 && mi >= 0 && l2_struct_local(stmt, @ lnm) = 0 && l2_ml_find(lnm) >= 0
             field: l2_next_active(field\next)
             continue
+        if: l2_frame_head(stmt, "if") = 0 && l2_ptr_local_ty(stmt, @ lnm, @ lty) = 2
+            return: l2_error(path, l2_next_active(stmt\as\frame\body\first_field)\value, "unknown type")
         if: l2_frame_head(stmt, "if") = 0 && mi >= 0 && l2_ptr_local_ty(stmt, @ lnm, @ lty) = 0 && l2_ml_find(lnm) >= 0
             field: l2_next_active(field\next)
             continue
@@ -13005,7 +13055,7 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
             if: idx >= 0 && l2_own_mi[idx] < 0 && l2_own_is_array(l2_own_ty[idx]) = 0
                 t: l2_tn
                 l2_tn: l2_tn + 1
-                if: c.fprintf(l2_out, "%sl2_xp: lmx_arena_ref_cell(unit, %uU)\n%sif: l2_xp = 0\n%s    return: 0\n", ind, (cast: (unsigned) l2_own_uchild[idx]), ind, ind) < 0
+                if: c.fprintf(l2_out, "%sl2_xp: lmx_arena_ref_cell(l2_entry_unit, %uU)\n%sif: l2_xp = 0\n%s    return: 0\n", ind, (cast: (unsigned) l2_own_uchild[idx]), ind, ind) < 0
                     return: 1
                 if: l2_emit_cell_load(l2_own_ty[idx], ind, t, node) != 0
                     return: 1
@@ -14911,6 +14961,9 @@ fn: l2_emit_loc_stmt (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
         if: fputs("\n", l2_out) < 0
             return: 2
         return: 0
+    if: l2_ptr_local_ty(stmt, @ lnm, @ lty) = 2
+        l2_error(0, l2_next_active(stmt\as\frame\body\first_field)\value, "unknown type")
+        return: 2
     if: l2_ptr_local_ty(stmt, @ lnm, @ lty) = 0
         if: lty >= 100
             if: l2_emit_foreign_named(l2_out, lty, ind, lnm) != 0
@@ -16051,7 +16104,7 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && mi < 0
             if: l2_eval_fields(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok) != 0
                 return: 1
-            if: c.fprintf(l2_out, "%sl2_xp: lmx_arena_ref_cell(unit, %uU)\n%sif: l2_xp = 0\n%s    return: 0\n", ind, (cast: (unsigned) l2_own_uchild[oi]), ind, ind) < 0
+            if: c.fprintf(l2_out, "%sl2_xp: lmx_arena_ref_cell(l2_entry_unit, %uU)\n%sif: l2_xp = 0\n%s    return: 0\n", ind, (cast: (unsigned) l2_own_uchild[oi]), ind, ind) < 0
                 return: 1
             if: l2_own_ty[oi] = 0 && c.fprintf(l2_out, "%sif: lmx_int_store_known(l2_xp[0], %s) != 0\n%s    return: 0\n", ind, l2_tok, ind) < 0
                 return: 1
@@ -16639,7 +16692,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: l2_entry_n != 0 && fputs("\n        # DEBT: argc/argv not on LmxCallEntry; formals not threaded\n", l2_out) < 0
         fclose(l2_out)
         return: 1
-    if: fputs(") int\n        @: Lmx unit 0\n        @: Lmx leaf 0\n        @@: void slot 0\n        @: LmxMethod rec 0\n        @: LmxCallable callable 0\n        @: LmxArrayDesc l2_methods 0\n        @@: LmxMethod l2_method_refs 0\n        @: Lmx l2_ebr 0\n        @: Lmx l2_fkid 0\n        @: Lmx l2_pst 0\n        @@: void l2_pxp 0\n        @: LmxThread l2_current 0\n        @: LmxMsg l2_message 0\n        @: LmxArrayDesc l2_children 0\n", l2_out) < 0
+    if: fputs(") int\n        @: Lmx l2_entry_unit 0\n        @: Lmx l2_entry_leaf 0\n        @@: void l2_entry_slot 0\n        @: LmxMethod l2_entry_rec 0\n        @: LmxCallable l2_entry_callable 0\n        @: LmxArrayDesc l2_methods 0\n        @@: LmxMethod l2_method_refs 0\n        @: Lmx l2_ebr 0\n        @: Lmx l2_fkid 0\n        @: Lmx l2_pst 0\n        @@: void l2_pxp 0\n        @: LmxThread l2_current 0\n        @: LmxMsg l2_message 0\n        @: LmxArrayDesc l2_children 0\n", l2_out) < 0
         fclose(l2_out)
         return: 1
     if: l2_ebr_n != 0 && fputs("        @: LmxPool l2_profile_pool 0\n        @: void l2_profile_refs 0\n        @: LmxArrayDesc l2_profile_array 0\n        @: char l2_profile_char 0\n", l2_out) < 0
@@ -16675,7 +16728,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: (l2_has_own_ty(1) != 0 || l2_ns_has_char != 0) && fputs("        @: char process_chars lmx_chars_new_owned(l2_program_arena)\n        if: process_chars = 0\n            return: 1\n", l2_out) < 0
         fclose(l2_out)
         return: 1
-    if: c.fprintf(l2_out, "        unit: lmx_node_new_owned(l2_program_arena)\n        if: unit = 0\n            return: 1\n        if: lmx_arena_refs_open_owned(l2_program_arena, unit, %uU) != 0\n            return: 1\n", kids) < 0
+    if: c.fprintf(l2_out, "        l2_entry_unit: lmx_node_new_owned(l2_program_arena)\n        if: l2_entry_unit = 0\n            return: 1\n        if: lmx_arena_refs_open_owned(l2_program_arena, l2_entry_unit, %uU) != 0\n            return: 1\n", kids) < 0
         fclose(l2_out)
         return: 1
     if: fputs("        # DEBT: message set-graph act removed; graph is arena-owned via l2_program_arena.\n", l2_out) < 0
@@ -16687,7 +16740,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     # after the complete set is built, so these identity addresses stay stable.
     k: 0
     while: k < l2_ebr_n
-        if: c.fprintf(l2_out, "        l2_eprofile%u: lmx_node_new_profiled(l2_program_arena, unit)\n        if: l2_eprofile%u = 0\n            return: 1\n        if: lmx_range_profile(l2_program_arena, (cast: (@: void) l2_eprofile%u)) != unit\n            return: 1\n", (cast: (unsigned) k), (cast: (unsigned) k), (cast: (unsigned) k)) < 0
+        if: c.fprintf(l2_out, "        l2_eprofile%u: lmx_node_new_profiled(l2_program_arena, l2_entry_unit)\n        if: l2_eprofile%u = 0\n            return: 1\n        if: lmx_range_profile(l2_program_arena, (cast: (@: void) l2_eprofile%u)) != l2_entry_unit\n            return: 1\n", (cast: (unsigned) k), (cast: (unsigned) k), (cast: (unsigned) k)) < 0
             fclose(l2_out)
             return: 1
         if: k > 0 && c.fprintf(l2_out, "        if: l2_eprofile%u = l2_eprofile%u\n            return: 1\n", (cast: (unsigned) (k - 1)), (cast: (unsigned) k)) < 0
@@ -16695,7 +16748,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
             return: 1
         k: k + 1
     ---
-    if: l2_ebr_n != 0 && fputs("        l2_profile_pool: lmx_arena_find_profiled(l2_program_arena, c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT, unit)\n        if: l2_profile_pool = 0 || lmx_pool_seal(l2_profile_pool) != 0\n            return: 1\n", l2_out) < 0
+    if: l2_ebr_n != 0 && fputs("        l2_profile_pool: lmx_arena_find_profiled(l2_program_arena, c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT, l2_entry_unit)\n        if: l2_profile_pool = 0 || lmx_pool_seal(l2_profile_pool) != 0\n            return: 1\n", l2_out) < 0
         fclose(l2_out)
         return: 1
     # One ordinary Structure per callable occurrence, created before any own
@@ -16704,72 +16757,72 @@ fn: l2_emit_unit (const: @(char out_path)) int
     # shared METHOD, filled below; the remaining children are own fields.
     i: 0
     while: i < l2_m_n
-        if: c.fprintf(l2_out, "        leaf: lmx_struct_new_owned(unit, l2_program_arena)\n        if: leaf = 0\n            return: 1\n        if: lmx_arena_refs_open_owned(l2_program_arena, leaf, %uU) != 0\n            return: 1\n        if: lmx_arena_ref_store(unit, %uU, (cast: (@: void) leaf)) != 0\n            return: 1\n", (cast: (unsigned) l2_m_kids(i)), (cast: (unsigned) (l2_unit_base + i))) < 0
+        if: c.fprintf(l2_out, "        l2_entry_leaf: lmx_struct_new_owned(l2_entry_unit, l2_program_arena)\n        if: l2_entry_leaf = 0\n            return: 1\n        if: lmx_arena_refs_open_owned(l2_program_arena, l2_entry_leaf, %uU) != 0\n            return: 1\n        if: lmx_arena_ref_store(l2_entry_unit, %uU, (cast: (@: void) l2_entry_leaf)) != 0\n            return: 1\n", (cast: (unsigned) l2_m_kids(i)), (cast: (unsigned) (l2_unit_base + i))) < 0
             fclose(l2_out)
             return: 1
         i: i + 1
     ---
     k: 0
     while: k < l2_own_n
-        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] < 0 && c.fprintf(l2_out, "        slot: lmx_arena_ref_cell(unit, %uU)\n        if: slot = 0\n            return: 1\n", (cast: (unsigned) l2_own_uchild[k])) < 0
+        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] < 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_entry_unit, %uU)\n        if: l2_entry_slot = 0\n            return: 1\n", (cast: (unsigned) l2_own_uchild[k])) < 0
             fclose(l2_out)
             return: 1
-        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] >= 0 && c.fprintf(l2_out, "        leaf: lmx_arena_ref_struct(unit, %uU)\n        if: leaf = 0\n            return: 1\n        slot: lmx_arena_ref_cell(leaf, %uU)\n        if: slot = 0\n            return: 1\n", (cast: (unsigned) (l2_unit_base + l2_own_mi[k])), (cast: (unsigned) l2_own_uchild[k])) < 0
+        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] >= 0 && c.fprintf(l2_out, "        l2_entry_leaf: lmx_arena_ref_struct(l2_entry_unit, %uU)\n        if: l2_entry_leaf = 0\n            return: 1\n        l2_entry_slot: lmx_arena_ref_cell(l2_entry_leaf, %uU)\n        if: l2_entry_slot = 0\n            return: 1\n", (cast: (unsigned) (l2_unit_base + l2_own_mi[k])), (cast: (unsigned) l2_own_uchild[k])) < 0
             fclose(l2_out)
             return: 1
-        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_ty[k] = 1 && fputs("        slot[0]: lmx_char_cell_known(process_chars, 0)\n", l2_out) < 0
+        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_ty[k] = 1 && fputs("        l2_entry_slot[0]: lmx_char_cell_known(process_chars, 0)\n", l2_out) < 0
             fclose(l2_out)
             return: 1
-        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_ty[k] = 2 && fputs("        slot[0]: lmx_size_new_owned(l2_program_arena)\n        if: slot[0] = 0\n            return: 1\n", l2_out) < 0
+        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_ty[k] = 2 && fputs("        l2_entry_slot[0]: lmx_size_new_owned(l2_program_arena)\n        if: l2_entry_slot[0] = 0\n            return: 1\n", l2_out) < 0
             fclose(l2_out)
             return: 1
-        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_ty[k] = 0 && fputs("        slot[0]: lmx_int_new_owned(l2_program_arena)\n        if: slot[0] = 0\n            return: 1\n", l2_out) < 0
+        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_ty[k] = 0 && fputs("        l2_entry_slot[0]: lmx_int_new_owned(l2_program_arena)\n        if: l2_entry_slot[0] = 0\n            return: 1\n", l2_out) < 0
             fclose(l2_out)
             return: 1
-        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_ty[k] = 3 && fputs("        slot[0]: lmx_unsigned_new_owned(l2_program_arena)\n        if: slot[0] = 0\n            return: 1\n", l2_out) < 0
+        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_ty[k] = 3 && fputs("        l2_entry_slot[0]: lmx_unsigned_new_owned(l2_program_arena)\n        if: l2_entry_slot[0] = 0\n            return: 1\n", l2_out) < 0
             fclose(l2_out)
             return: 1
-        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_ty[k] = 36 && fputs("        slot[0]: lmx_ulong_new_owned(l2_program_arena)\n        if: slot[0] = 0\n            return: 1\n", l2_out) < 0
+        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_ty[k] = 36 && fputs("        l2_entry_slot[0]: lmx_ulong_new_owned(l2_program_arena)\n        if: l2_entry_slot[0] = 0\n            return: 1\n", l2_out) < 0
             fclose(l2_out)
             return: 1
-        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_is_pointer(l2_own_ty[k]) != 0 && c.fprintf(l2_out, "        slot[0]: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + %d, l2_program_arena)\n        if: slot[0] = 0\n            return: 1\n", l2_own_ty[k] - 1000) < 0
+        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_is_pointer(l2_own_ty[k]) != 0 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + %d, l2_program_arena)\n        if: l2_entry_slot[0] = 0\n            return: 1\n", l2_own_ty[k] - 1000) < 0
             fclose(l2_out)
             return: 1
-        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] < 0 && l2_own_ty[k] = 1 && l2_unit_own_init(k) != 0U && c.fprintf(l2_out, "        slot[0]: lmx_char_rebind_known(slot[0], %u)\n        if: slot[0] = 0\n            return: 1\n", (cast: (unsigned) l2_unit_own_init(k))) < 0
+        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] < 0 && l2_own_ty[k] = 1 && l2_unit_own_init(k) != 0U && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_char_rebind_known(l2_entry_slot[0], %u)\n        if: l2_entry_slot[0] = 0\n            return: 1\n", (cast: (unsigned) l2_unit_own_init(k))) < 0
             fclose(l2_out)
             return: 1
-        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] < 0 && l2_own_ty[k] = 2 && c.fprintf(l2_out, "        if: lmx_size_store_known(slot[0], %zuU) != 0\n            return: 1\n", l2_unit_own_init(k)) < 0
+        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] < 0 && l2_own_ty[k] = 2 && c.fprintf(l2_out, "        if: lmx_size_store_known(l2_entry_slot[0], %zuU) != 0\n            return: 1\n", l2_unit_own_init(k)) < 0
             fclose(l2_out)
             return: 1
-        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] < 0 && l2_own_ty[k] = 0 && c.fprintf(l2_out, "        if: lmx_int_store_known(slot[0], %zu) != 0\n            return: 1\n", l2_unit_own_init(k)) < 0
+        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] < 0 && l2_own_ty[k] = 0 && c.fprintf(l2_out, "        if: lmx_int_store_known(l2_entry_slot[0], %zu) != 0\n            return: 1\n", l2_unit_own_init(k)) < 0
             fclose(l2_out)
             return: 1
-        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] < 0 && l2_own_ty[k] = 3 && c.fprintf(l2_out, "        if: lmx_unsigned_store_known(slot[0], %zuU) != 0\n            return: 1\n", l2_unit_own_init(k)) < 0
+        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] < 0 && l2_own_ty[k] = 3 && c.fprintf(l2_out, "        if: lmx_unsigned_store_known(l2_entry_slot[0], %zuU) != 0\n            return: 1\n", l2_unit_own_init(k)) < 0
             fclose(l2_out)
             return: 1
-        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] < 0 && l2_own_ty[k] = 36 && c.fprintf(l2_out, "        if: lmx_ulong_store_known(slot[0], %zuU) != 0\n            return: 1\n", l2_unit_own_init(k)) < 0
+        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] < 0 && l2_own_ty[k] = 36 && c.fprintf(l2_out, "        if: lmx_ulong_store_known(l2_entry_slot[0], %zuU) != 0\n            return: 1\n", l2_unit_own_init(k)) < 0
             fclose(l2_out)
             return: 1
         if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_is_array(l2_own_ty[k]) != 0
-            if: l2_own_ty[k] = 4 && c.fprintf(l2_out, "        slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, %zuU, l2_program_arena)\n", l2_literal_value(l2_own_count[k])) < 0
+            if: l2_own_ty[k] = 4 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, %zuU, l2_program_arena)\n", l2_literal_value(l2_own_count[k])) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_own_ty[k] = 5 && c.fprintf(l2_out, "        slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, %zuU, l2_program_arena)\n", l2_literal_value(l2_own_count[k])) < 0
+            if: l2_own_ty[k] = 5 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, %zuU, l2_program_arena)\n", l2_literal_value(l2_own_count[k])) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_own_ty[k] = 7 && c.fprintf(l2_out, "        slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_SIZE_T, %zuU, l2_program_arena)\n", l2_literal_value(l2_own_count[k])) < 0
+            if: l2_own_ty[k] = 7 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_SIZE_T, %zuU, l2_program_arena)\n", l2_literal_value(l2_own_count[k])) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_own_ty[k] = 37 && c.fprintf(l2_out, "        slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_ULONG, %zuU, l2_program_arena)\n", l2_literal_value(l2_own_count[k])) < 0
+            if: l2_own_ty[k] = 37 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_ULONG, %zuU, l2_program_arena)\n", l2_literal_value(l2_own_count[k])) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_own_ty[k] = 8 && c.fprintf(l2_out, "        slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR, %zuU, l2_program_arena)\n", l2_literal_value(l2_own_count[k])) < 0
+            if: l2_own_ty[k] = 8 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR, %zuU, l2_program_arena)\n", l2_literal_value(l2_own_count[k])) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_own_ty[k] >= 2000 && c.fprintf(l2_out, "        slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + %d, %zuU, l2_program_arena)\n", l2_own_ty[k] - 2000, l2_literal_value(l2_own_count[k])) < 0
+            if: l2_own_ty[k] >= 2000 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + %d, %zuU, l2_program_arena)\n", l2_own_ty[k] - 2000, l2_literal_value(l2_own_count[k])) < 0
                 fclose(l2_out)
                 return: 1
-            if: fputs("        if: slot[0] = 0\n            return: 1\n", l2_out) < 0
+            if: fputs("        if: l2_entry_slot[0] = 0\n            return: 1\n", l2_out) < 0
                 fclose(l2_out)
                 return: 1
         ---
@@ -16780,67 +16833,67 @@ fn: l2_emit_unit (const: @(char out_path)) int
         # Every executable control body is a graph Structure, including an
         # empty body. Top-level bodies use their callable/unit parent; nested
         # bodies use the already-created containing body (preorder invariant).
-        if: l2_for_parent[k] >= 0 && c.fprintf(l2_out, "        leaf: l2_b%d\n", l2_for_parent[k]) < 0
+        if: l2_for_parent[k] >= 0 && c.fprintf(l2_out, "        l2_entry_leaf: l2_b%d\n", l2_for_parent[k]) < 0
             fclose(l2_out)
             return: 1
-        if: l2_for_parent[k] < 0 && l2_for_owner(k) < 0 && fputs("        leaf: unit\n", l2_out) < 0
+        if: l2_for_parent[k] < 0 && l2_for_owner(k) < 0 && fputs("        l2_entry_leaf: l2_entry_unit\n", l2_out) < 0
             fclose(l2_out)
             return: 1
-        if: l2_for_parent[k] < 0 && l2_for_owner(k) >= 0 && c.fprintf(l2_out, "        leaf: lmx_arena_ref_struct(unit, %uU)\n        if: leaf = 0\n            return: 1\n", (cast: (unsigned) (l2_unit_base + l2_for_owner(k)))) < 0
+        if: l2_for_parent[k] < 0 && l2_for_owner(k) >= 0 && c.fprintf(l2_out, "        l2_entry_leaf: lmx_arena_ref_struct(l2_entry_unit, %uU)\n        if: l2_entry_leaf = 0\n            return: 1\n", (cast: (unsigned) (l2_unit_base + l2_for_owner(k)))) < 0
             fclose(l2_out)
             return: 1
-        if: c.fprintf(l2_out, "        l2_fkid: lmx_struct_new_owned(leaf, l2_program_arena)\n        if: l2_fkid = 0\n            return: 1\n        l2_b%d: l2_fkid\n", k) < 0
+        if: c.fprintf(l2_out, "        l2_fkid: lmx_struct_new_owned(l2_entry_leaf, l2_program_arena)\n        if: l2_fkid = 0\n            return: 1\n        l2_b%d: l2_fkid\n", k) < 0
             fclose(l2_out)
             return: 1
         if: l2_for_nkid[k] > 0 && c.fprintf(l2_out, "        if: lmx_arena_refs_open_owned(l2_program_arena, l2_fkid, %uU) != 0\n            return: 1\n", (cast: (unsigned) l2_for_nkid[k])) < 0
             fclose(l2_out)
             return: 1
-        if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(leaf, %uU, (cast: (@: void) l2_fkid)) != 0\n            return: 1\n        leaf: l2_fkid\n", (cast: (unsigned) l2_for_uchild[k])) < 0
+        if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_entry_leaf, %uU, (cast: (@: void) l2_fkid)) != 0\n            return: 1\n        l2_entry_leaf: l2_fkid\n", (cast: (unsigned) l2_for_uchild[k])) < 0
             fclose(l2_out)
             return: 1
         oi: 0
         while: oi < l2_own_n
-            if: l2_own_fid[oi] = k && c.fprintf(l2_out, "        slot: lmx_arena_ref_cell(leaf, %uU)\n        if: slot = 0\n            return: 1\n", (cast: (unsigned) l2_own_fchild[oi])) < 0
+            if: l2_own_fid[oi] = k && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_entry_leaf, %uU)\n        if: l2_entry_slot = 0\n            return: 1\n", (cast: (unsigned) l2_own_fchild[oi])) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_own_fid[oi] = k && l2_own_ty[oi] = 1 && fputs("        slot[0]: lmx_char_cell_known(process_chars, 0)\n", l2_out) < 0
+            if: l2_own_fid[oi] = k && l2_own_ty[oi] = 1 && fputs("        l2_entry_slot[0]: lmx_char_cell_known(process_chars, 0)\n", l2_out) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_own_fid[oi] = k && l2_own_ty[oi] = 2 && fputs("        slot[0]: lmx_size_new_owned(l2_program_arena)\n        if: slot[0] = 0\n            return: 1\n", l2_out) < 0
+            if: l2_own_fid[oi] = k && l2_own_ty[oi] = 2 && fputs("        l2_entry_slot[0]: lmx_size_new_owned(l2_program_arena)\n        if: l2_entry_slot[0] = 0\n            return: 1\n", l2_out) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_own_fid[oi] = k && l2_own_ty[oi] = 0 && fputs("        slot[0]: lmx_int_new_owned(l2_program_arena)\n        if: slot[0] = 0\n            return: 1\n", l2_out) < 0
+            if: l2_own_fid[oi] = k && l2_own_ty[oi] = 0 && fputs("        l2_entry_slot[0]: lmx_int_new_owned(l2_program_arena)\n        if: l2_entry_slot[0] = 0\n            return: 1\n", l2_out) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_own_fid[oi] = k && l2_own_ty[oi] = 3 && fputs("        slot[0]: lmx_unsigned_new_owned(l2_program_arena)\n        if: slot[0] = 0\n            return: 1\n", l2_out) < 0
+            if: l2_own_fid[oi] = k && l2_own_ty[oi] = 3 && fputs("        l2_entry_slot[0]: lmx_unsigned_new_owned(l2_program_arena)\n        if: l2_entry_slot[0] = 0\n            return: 1\n", l2_out) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_own_fid[oi] = k && l2_own_ty[oi] = 36 && fputs("        slot[0]: lmx_ulong_new_owned(l2_program_arena)\n        if: slot[0] = 0\n            return: 1\n", l2_out) < 0
+            if: l2_own_fid[oi] = k && l2_own_ty[oi] = 36 && fputs("        l2_entry_slot[0]: lmx_ulong_new_owned(l2_program_arena)\n        if: l2_entry_slot[0] = 0\n            return: 1\n", l2_out) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_own_fid[oi] = k && l2_own_is_pointer(l2_own_ty[oi]) != 0 && c.fprintf(l2_out, "        slot[0]: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + %d, l2_program_arena)\n        if: slot[0] = 0\n            return: 1\n", l2_own_ty[oi] - 1000) < 0
+            if: l2_own_fid[oi] = k && l2_own_is_pointer(l2_own_ty[oi]) != 0 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + %d, l2_program_arena)\n        if: l2_entry_slot[0] = 0\n            return: 1\n", l2_own_ty[oi] - 1000) < 0
                 fclose(l2_out)
                 return: 1
             if: l2_own_fid[oi] = k && l2_own_is_array(l2_own_ty[oi]) != 0
-                if: l2_own_ty[oi] = 4 && c.fprintf(l2_out, "        slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, %zuU, l2_program_arena)\n", l2_literal_value(l2_own_count[oi])) < 0
+                if: l2_own_ty[oi] = 4 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, %zuU, l2_program_arena)\n", l2_literal_value(l2_own_count[oi])) < 0
                     fclose(l2_out)
                     return: 1
-                if: l2_own_ty[oi] = 5 && c.fprintf(l2_out, "        slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, %zuU, l2_program_arena)\n", l2_literal_value(l2_own_count[oi])) < 0
+                if: l2_own_ty[oi] = 5 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, %zuU, l2_program_arena)\n", l2_literal_value(l2_own_count[oi])) < 0
                     fclose(l2_out)
                     return: 1
-                if: l2_own_ty[oi] = 7 && c.fprintf(l2_out, "        slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_SIZE_T, %zuU, l2_program_arena)\n", l2_literal_value(l2_own_count[oi])) < 0
+                if: l2_own_ty[oi] = 7 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_SIZE_T, %zuU, l2_program_arena)\n", l2_literal_value(l2_own_count[oi])) < 0
                     fclose(l2_out)
                     return: 1
-                if: l2_own_ty[oi] = 37 && c.fprintf(l2_out, "        slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_ULONG, %zuU, l2_program_arena)\n", l2_literal_value(l2_own_count[oi])) < 0
+                if: l2_own_ty[oi] = 37 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_ULONG, %zuU, l2_program_arena)\n", l2_literal_value(l2_own_count[oi])) < 0
                     fclose(l2_out)
                     return: 1
-                if: l2_own_ty[oi] = 8 && c.fprintf(l2_out, "        slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR, %zuU, l2_program_arena)\n", l2_literal_value(l2_own_count[oi])) < 0
+                if: l2_own_ty[oi] = 8 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR, %zuU, l2_program_arena)\n", l2_literal_value(l2_own_count[oi])) < 0
                     fclose(l2_out)
                     return: 1
-                if: l2_own_ty[oi] >= 2000 && c.fprintf(l2_out, "        slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + %d, %zuU, l2_program_arena)\n", l2_own_ty[oi] - 2000, l2_literal_value(l2_own_count[oi])) < 0
+                if: l2_own_ty[oi] >= 2000 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + %d, %zuU, l2_program_arena)\n", l2_own_ty[oi] - 2000, l2_literal_value(l2_own_count[oi])) < 0
                     fclose(l2_out)
                     return: 1
-                if: fputs("        if: slot[0] = 0\n            return: 1\n", l2_out) < 0
+                if: fputs("        if: l2_entry_slot[0] = 0\n            return: 1\n", l2_out) < 0
                     fclose(l2_out)
                     return: 1
             ---
@@ -16857,22 +16910,22 @@ fn: l2_emit_unit (const: @(char out_path)) int
         if: i = 0 && c.fprintf(l2_out, "        l2_methods: lmx_array_ref_new_positive_owned(c.LMX_TYPE_ARRAY_OF_METHOD, %uU, l2_program_arena)\n        if: l2_methods = 0\n            return: 1\n        l2_method_refs: (cast: (@@: LmxMethod) l2_methods\\data)\n", (cast: (unsigned) l2_m_n)) < 0
             fclose(l2_out)
             return: 1
-        if: c.fprintf(l2_out, "        leaf: lmx_arena_ref_struct(unit, %uU)\n        if: leaf = 0\n            return: 1\n", (cast: (unsigned) (l2_unit_base + i))) < 0
+        if: c.fprintf(l2_out, "        l2_entry_leaf: lmx_arena_ref_struct(l2_entry_unit, %uU)\n        if: l2_entry_leaf = 0\n            return: 1\n", (cast: (unsigned) (l2_unit_base + i))) < 0
             fclose(l2_out)
             return: 1
         if: l2_m_body[i] = 0 && (l2_m_node[i] = 0 || l2_m_node[i]\as = 0 || l2_ret_tr(l2_m_node[i]\as\frame) = 0)
-            if: c.fprintf(l2_out, "        rec: lmx_method_new_owned(l2_program_arena)\n        if: rec = 0\n            return: 1\n        rec\\addr: (cast: (LmxEntry) 0)\n        rec\\sig: %uU\n        callable: lmx_callable_new_owned(l2_program_arena)\n        if: callable = 0\n            return: 1\n        callable\\method: rec\n        callable\\header: 0\n        if: lmx_arena_ref_store(leaf, 0U, (cast: (@: void) callable)) != 0\n            return: 1\n        l2_method_refs[%uU]: rec\n        if: rec\\sig != %uU\n            return: 1\n", l2_m_sig[i], (cast: (unsigned) i), l2_m_sig[i]) < 0
+            if: c.fprintf(l2_out, "        l2_entry_rec: lmx_method_new_owned(l2_program_arena)\n        if: l2_entry_rec = 0\n            return: 1\n        l2_entry_rec\\addr: (cast: (LmxEntry) 0)\n        l2_entry_rec\\sig: %uU\n        l2_entry_callable: lmx_callable_new_owned(l2_program_arena)\n        if: l2_entry_callable = 0\n            return: 1\n        l2_entry_callable\\method: l2_entry_rec\n        l2_entry_callable\\header: 0\n        if: lmx_arena_ref_store(l2_entry_leaf, 0U, (cast: (@: void) l2_entry_callable)) != 0\n            return: 1\n        l2_method_refs[%uU]: l2_entry_rec\n        if: l2_entry_rec\\sig != %uU\n            return: 1\n", l2_m_sig[i], (cast: (unsigned) i), l2_m_sig[i]) < 0
                 fclose(l2_out)
                 return: 1
             ---
         ---
-        if: (l2_m_body[i] != 0 || (l2_m_node[i] != 0 && l2_m_node[i]\as != 0 && l2_ret_tr(l2_m_node[i]\as\frame) != 0)) && fputs("        rec: lmx_method_new_owned(l2_program_arena)\n        if: rec = 0\n            return: 1\n        rec\\addr: (cast: (LmxEntry) ", l2_out) < 0
+        if: (l2_m_body[i] != 0 || (l2_m_node[i] != 0 && l2_m_node[i]\as != 0 && l2_ret_tr(l2_m_node[i]\as\frame) != 0)) && fputs("        l2_entry_rec: lmx_method_new_owned(l2_program_arena)\n        if: l2_entry_rec = 0\n            return: 1\n        l2_entry_rec\\addr: (cast: (LmxEntry) ", l2_out) < 0
             fclose(l2_out)
             return: 1
         if: (l2_m_body[i] != 0 || (l2_m_node[i] != 0 && l2_m_node[i]\as != 0 && l2_ret_tr(l2_m_node[i]\as\frame) != 0)) && l2_write_sym(l2_out, i) != 0
             fclose(l2_out)
             return: 1
-        if: (l2_m_body[i] != 0 || (l2_m_node[i] != 0 && l2_m_node[i]\as != 0 && l2_ret_tr(l2_m_node[i]\as\frame) != 0)) && c.fprintf(l2_out, ")\n        rec\\sig: %uU\n        callable: lmx_callable_new_owned(l2_program_arena)\n        if: callable = 0\n            return: 1\n        callable\\method: rec\n        callable\\header: 0\n        if: lmx_arena_ref_store(leaf, 0U, (cast: (@: void) callable)) != 0\n            return: 1\n        # DEBT: method-admit / method-ranges acts absent in new kernel\n        l2_method_refs[%uU]: rec\n        if: rec\\sig != %uU\n            return: 1\n", l2_m_sig[i], (cast: (unsigned) i), l2_m_sig[i]) < 0
+        if: (l2_m_body[i] != 0 || (l2_m_node[i] != 0 && l2_m_node[i]\as != 0 && l2_ret_tr(l2_m_node[i]\as\frame) != 0)) && c.fprintf(l2_out, ")\n        l2_entry_rec\\sig: %uU\n        l2_entry_callable: lmx_callable_new_owned(l2_program_arena)\n        if: l2_entry_callable = 0\n            return: 1\n        l2_entry_callable\\method: l2_entry_rec\n        l2_entry_callable\\header: 0\n        if: lmx_arena_ref_store(l2_entry_leaf, 0U, (cast: (@: void) l2_entry_callable)) != 0\n            return: 1\n        # DEBT: method-admit / method-ranges acts absent in new kernel\n        l2_method_refs[%uU]: l2_entry_rec\n        if: l2_entry_rec\\sig != %uU\n            return: 1\n", l2_m_sig[i], (cast: (unsigned) i), l2_m_sig[i]) < 0
             fclose(l2_out)
             return: 1
         i: i + 1
@@ -16889,7 +16942,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     # collector already guarantees.
     k: 0
     while: k < l2_ns_n
-        if: l2_ns_parent[k] < 0 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        l2_nsp[%d]: lmx_struct_new_owned(unit, l2_program_arena)\n        if: l2_nsp[%d] != 0 && lmx_range_profile(l2_program_arena, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", k, k, k) < 0
+        if: l2_ns_parent[k] < 0 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        l2_nsp[%d]: lmx_struct_new_owned(l2_entry_unit, l2_program_arena)\n        if: l2_nsp[%d] != 0 && lmx_range_profile(l2_program_arena, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", k, k, k) < 0
             fclose(l2_out)
             return: 1
         # A qualified root has NO structural parent: that is what independent
@@ -16919,12 +16972,12 @@ fn: l2_emit_unit (const: @(char out_path)) int
         # Every owned typed range reachable inside a qualified branch is
         # admitted through the Message classifier. No per-node flag, no
         # name, no registry: the admitted RANGE is the metadata.
-        if: l2_ns_parent[k] < 0 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(unit, %uU, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", (cast: (unsigned) (l2_ns_base + l2_ns_rank(k))), k) < 0
+        if: l2_ns_parent[k] < 0 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_entry_unit, %uU, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", (cast: (unsigned) (l2_ns_base + l2_ns_rank(k))), k) < 0
             fclose(l2_out)
             return: 1
         # One ordinary physical reference publishes the qualified root; the root
         # remains independent and its exact profile is recoverable from its address.
-        if: l2_ns_parent[k] < 0 && l2_ns_eternal[k] >= 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(unit, %uU, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n        if: l2_nsp[%d]\\parent != 0\n            return: 1\n        l2_ebr%u: l2_nsp[%d]\n", (cast: (unsigned) (l2_unit_base + l2_m_n + 1 + l2_ns_eternal[k])), k, k, (cast: (unsigned) l2_ns_eternal[k]), k) < 0
+        if: l2_ns_parent[k] < 0 && l2_ns_eternal[k] >= 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_entry_unit, %uU, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n        if: l2_nsp[%d]\\parent != 0\n            return: 1\n        l2_ebr%u: l2_nsp[%d]\n", (cast: (unsigned) (l2_unit_base + l2_m_n + 1 + l2_ns_eternal[k])), k, k, (cast: (unsigned) l2_ns_eternal[k]), k) < 0
             fclose(l2_out)
             return: 1
         if: l2_ns_parent[k] >= 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_nsp[%d], %uU, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n        if: l2_nsp[%d]\\parent != l2_nsp[%d]\n            return: 1\n", l2_ns_parent[k], (cast: (unsigned) l2_ns_field_in_parent(k)), k, k, l2_ns_parent[k]) < 0
@@ -16933,41 +16986,41 @@ fn: l2_emit_unit (const: @(char out_path)) int
         oi: 0
         fx: 0
         while: fx < l2_nsf_n
-            if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 0 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: slot = 0\n            return: 1\n        slot[0]: lmx_size_new_owned(l2_program_arena)\n        if: slot[0] = 0\n            return: 1\n        if: lmx_size_store_known(slot[0], %zuU) != 0\n            return: 1\n", k, (cast: (unsigned) oi), l2_nsf_val[fx]) < 0
+            if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 0 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: lmx_size_new_owned(l2_program_arena)\n        if: l2_entry_slot[0] = 0\n            return: 1\n        if: lmx_size_store_known(l2_entry_slot[0], %zuU) != 0\n            return: 1\n", k, (cast: (unsigned) oi), l2_nsf_val[fx]) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 0 && l2_ns_eternal[k] >= 0 && c.fprintf(l2_out, "        slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: slot = 0\n            return: 1\n        slot[0]: lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.size_t), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_SIZE_T, l2_eprofile%u)\n        if: slot[0] = 0\n            return: 1\n        if: lmx_size_store_known(slot[0], %zuU) != 0\n            return: 1\n", k, (cast: (unsigned) oi), (cast: (unsigned) l2_ns_eternal[k]), l2_nsf_val[fx]) < 0
+            if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 0 && l2_ns_eternal[k] >= 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.size_t), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_SIZE_T, l2_eprofile%u)\n        if: l2_entry_slot[0] = 0\n            return: 1\n        if: lmx_size_store_known(l2_entry_slot[0], %zuU) != 0\n            return: 1\n", k, (cast: (unsigned) oi), (cast: (unsigned) l2_ns_eternal[k]), l2_nsf_val[fx]) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 1 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: slot = 0\n            return: 1\n        slot[0]: lmx_char_cell_known(process_chars, %d)\n        if: slot[0] = 0\n            return: 1\n", k, (cast: (unsigned) oi), (cast: (int) l2_nsf_val[fx])) < 0
+            if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 1 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: lmx_char_cell_known(process_chars, %d)\n        if: l2_entry_slot[0] = 0\n            return: 1\n", k, (cast: (unsigned) oi), (cast: (int) l2_nsf_val[fx])) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 1 && l2_ns_eternal[k] >= 0 && c.fprintf(l2_out, "        slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: slot = 0\n            return: 1\n        slot[0]: lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.char), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR, l2_eprofile%u)\n        if: slot[0] = 0\n            return: 1\n        l2_profile_char: (cast: (@: char) slot[0])\n        l2_profile_char[0]: (cast: (char) %d)\n", k, (cast: (unsigned) oi), (cast: (unsigned) l2_ns_eternal[k]), (cast: (int) l2_nsf_val[fx])) < 0
+            if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 1 && l2_ns_eternal[k] >= 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.char), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR, l2_eprofile%u)\n        if: l2_entry_slot[0] = 0\n            return: 1\n        l2_profile_char: (cast: (@: char) l2_entry_slot[0])\n        l2_profile_char[0]: (cast: (char) %d)\n", k, (cast: (unsigned) oi), (cast: (unsigned) l2_ns_eternal[k]), (cast: (int) l2_nsf_val[fx])) < 0
                 fclose(l2_out)
                 return: 1
             # An ARRAY field: one record plus its backing, both owned by the
             # Message. The copier already classifies them by address, so
             # nothing here is special to arrays beyond building them.
-            if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 5 && l2_nsf_ref[fx] = 0 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: slot = 0\n            return: 1\n        slot[0]: (cast: (@: void) lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, %zuU, l2_program_arena))\n        if: slot[0] = 0\n            return: 1\n", k, (cast: (unsigned) oi), l2_nsf_val[fx]) < 0
+            if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 5 && l2_nsf_ref[fx] = 0 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: (cast: (@: void) lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, %zuU, l2_program_arena))\n        if: l2_entry_slot[0] = 0\n            return: 1\n", k, (cast: (unsigned) oi), l2_nsf_val[fx]) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 5 && l2_nsf_ref[fx] = 1 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: slot = 0\n            return: 1\n        slot[0]: (cast: (@: void) lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, %zuU, l2_program_arena))\n        if: slot[0] = 0\n            return: 1\n", k, (cast: (unsigned) oi), l2_nsf_val[fx]) < 0
+            if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 5 && l2_nsf_ref[fx] = 1 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: (cast: (@: void) lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, %zuU, l2_program_arena))\n        if: l2_entry_slot[0] = 0\n            return: 1\n", k, (cast: (unsigned) oi), l2_nsf_val[fx]) < 0
                 fclose(l2_out)
                 return: 1
             if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 5 && l2_ns_eternal[k] >= 0
-                if: l2_nsf_ref[fx] = 0 && c.fprintf(l2_out, "        slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: slot = 0\n            return: 1\n        l2_profile_array: (cast: (@: LmxArrayDesc) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxArrayDesc), c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_INT, l2_eprofile%u))\n        if: l2_profile_array = 0\n            return: 1\n        l2_profile_array\\len: %zuU\n        l2_profile_array\\data: 0\n", k, (cast: (unsigned) oi), (cast: (unsigned) l2_ns_eternal[k]), l2_nsf_val[fx]) < 0
+                if: l2_nsf_ref[fx] = 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_profile_array: (cast: (@: LmxArrayDesc) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxArrayDesc), c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_INT, l2_eprofile%u))\n        if: l2_profile_array = 0\n            return: 1\n        l2_profile_array\\len: %zuU\n        l2_profile_array\\data: 0\n", k, (cast: (unsigned) oi), (cast: (unsigned) l2_ns_eternal[k]), l2_nsf_val[fx]) < 0
                     fclose(l2_out)
                     return: 1
                 if: l2_nsf_ref[fx] = 0 && l2_nsf_val[fx] != 0U && c.fprintf(l2_out, "        l2_profile_array\\data: lmx_arena_take_n_profiled(l2_program_arena, c.sizeof(c.int), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT, l2_eprofile%u, %zuU)\n        if: l2_profile_array\\data = 0\n            return: 1\n", (cast: (unsigned) l2_ns_eternal[k]), l2_nsf_val[fx]) < 0
                     fclose(l2_out)
                     return: 1
-                if: l2_nsf_ref[fx] = 1 && c.fprintf(l2_out, "        slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: slot = 0\n            return: 1\n        l2_profile_array: (cast: (@: LmxArrayDesc) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxArrayDesc), c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_CHAR, l2_eprofile%u))\n        if: l2_profile_array = 0\n            return: 1\n        l2_profile_array\\len: %zuU\n        l2_profile_array\\data: 0\n", k, (cast: (unsigned) oi), (cast: (unsigned) l2_ns_eternal[k]), l2_nsf_val[fx]) < 0
+                if: l2_nsf_ref[fx] = 1 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_profile_array: (cast: (@: LmxArrayDesc) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxArrayDesc), c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_CHAR, l2_eprofile%u))\n        if: l2_profile_array = 0\n            return: 1\n        l2_profile_array\\len: %zuU\n        l2_profile_array\\data: 0\n", k, (cast: (unsigned) oi), (cast: (unsigned) l2_ns_eternal[k]), l2_nsf_val[fx]) < 0
                     fclose(l2_out)
                     return: 1
                 if: l2_nsf_ref[fx] = 1 && l2_nsf_val[fx] != 0U && c.fprintf(l2_out, "        l2_profile_array\\data: lmx_arena_take_n_profiled(l2_program_arena, c.sizeof(c.char), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR, l2_eprofile%u, %zuU)\n        if: l2_profile_array\\data = 0\n            return: 1\n", (cast: (unsigned) l2_ns_eternal[k]), l2_nsf_val[fx]) < 0
                     fclose(l2_out)
                     return: 1
-                if: fputs("        slot[0]: (cast: (@: void) l2_profile_array)\n", l2_out) < 0
+                if: fputs("        l2_entry_slot[0]: (cast: (@: void) l2_profile_array)\n", l2_out) < 0
                     fclose(l2_out)
                     return: 1
                 ---
@@ -16992,7 +17045,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
             if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 3 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_nsp[%d], %uU, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", k, (cast: (unsigned) oi), l2_nsf_ref[fx]) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 3 && l2_ns_parent[l2_nsf_ref[fx]] < 0 && l2_ns_eternal[l2_nsf_ref[fx]] < 0 && c.fprintf(l2_out, "        if: l2_nsp[%d]\\parent != unit\n            return: 1\n", l2_nsf_ref[fx]) < 0
+            if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 3 && l2_ns_parent[l2_nsf_ref[fx]] < 0 && l2_ns_eternal[l2_nsf_ref[fx]] < 0 && c.fprintf(l2_out, "        if: l2_nsp[%d]\\parent != l2_entry_unit\n            return: 1\n", l2_nsf_ref[fx]) < 0
                 fclose(l2_out)
                 return: 1
             if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 3 && l2_ns_parent[l2_nsf_ref[fx]] < 0 && l2_ns_eternal[l2_nsf_ref[fx]] >= 0 && c.fprintf(l2_out, "        if: l2_nsp[%d]\\parent != 0\n            return: 1\n", l2_nsf_ref[fx]) < 0
@@ -17005,7 +17058,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
             # at l2_unit_base + mi. Storing it does not reparent it either, so
             # its node is checked the same way. merge then deep-copies it like
             # any other Structure, sharing only the descriptor at slot 0.
-            if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 4 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_nsp[%d], %uU, (cast: (@: void) lmx_arena_ref_struct(unit, %uU))) != 0\n            return: 1\n        if: lmx_arena_ref_struct(unit, %uU)\\parent != unit\n            return: 1\n", k, (cast: (unsigned) oi), (cast: (unsigned) (l2_unit_base + l2_nsf_ref[fx])), (cast: (unsigned) (l2_unit_base + l2_nsf_ref[fx]))) < 0
+            if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 4 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_nsp[%d], %uU, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, %uU))) != 0\n            return: 1\n        if: lmx_arena_ref_struct(l2_entry_unit, %uU)\\parent != l2_entry_unit\n            return: 1\n", k, (cast: (unsigned) oi), (cast: (unsigned) (l2_unit_base + l2_nsf_ref[fx])), (cast: (unsigned) (l2_unit_base + l2_nsf_ref[fx]))) < 0
                 fclose(l2_out)
                 return: 1
             if: l2_nsf_owner[fx] = k
@@ -17037,24 +17090,24 @@ fn: l2_emit_unit (const: @(char out_path)) int
     ---
     # Publish the finished descriptor array into the program unit graph. The
     # set is complete here and nothing appends to it afterwards.
-    if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(unit, %uU, (cast: (@: void) l2_methods)) != 0\n            return: 1\n        if: l2_methods\\len != %uU\n            return: 1\n", (cast: (unsigned) (l2_unit_base + l2_m_n)), (cast: (unsigned) l2_m_n)) < 0
+    if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_entry_unit, %uU, (cast: (@: void) l2_methods)) != 0\n            return: 1\n        if: l2_methods\\len != %uU\n            return: 1\n", (cast: (unsigned) (l2_unit_base + l2_m_n)), (cast: (unsigned) l2_m_n)) < 0
         fclose(l2_out)
         return: 1
     if: c.fprintf(l2_out, "        if: %uU != %uU\n            return: 1\n", l2_intern_again, l2_sigv) < 0
         fclose(l2_out)
         return: 1
-    if: c.fprintf(l2_out, "        l2_current: lmx_thread_current()\n        l2_message: lmx_thread_message(l2_current)\n        l2_children: lmx_thread_children(l2_current)\n        if: node = 0 || l2_current = 0 || l2_message = 0 || l2_children = 0\n            return: 1\n        unit\\parent: node\n        if: lmx_arena_ref_store(unit, %uU, (cast: (@: void) l2_children)) != 0\n            return: 1\n        l2_message\\graph: unit\n        l2_program_unit: unit\n        if: l2_message\\graph != unit || l2_program_unit != unit\n            return: 1\n", l2_children_field) < 0
+    if: c.fprintf(l2_out, "        l2_current: lmx_thread_current()\n        l2_message: lmx_thread_message(l2_current)\n        l2_children: lmx_thread_children(l2_current)\n        if: node = 0 || l2_current = 0 || l2_message = 0 || l2_children = 0\n            return: 1\n        l2_entry_unit\\parent: 0\n        if: lmx_arena_ref_store(l2_entry_unit, %uU, (cast: (@: void) l2_children)) != 0\n            return: 1\n        l2_message\\graph: l2_entry_unit\n        l2_program_unit: l2_entry_unit\n        if: l2_message\\graph != l2_entry_unit || l2_program_unit != l2_entry_unit\n            return: 1\n", l2_children_field) < 0
         fclose(l2_out)
         return: 1
     if: l2_m_arity[0] != 0 && c.fprintf(l2_out, "        if: %zuU = 0U\n            return: 1\n", l2_m_f0[0]\length) < 0
         fclose(l2_out)
         return: 1
-    if: fputs("        # Closed-unit devirtualization: translator-bound child indices, no graph mutations after construction. rec.addr is METHOD-domain storage, not the call. Runtime does not memcmp formals. Evaluation order of actuals is materialized into temps before each call boundary. Hidden through-args, when present, follow declared formals in intern name order.\n", l2_out) < 0
+    if: fputs("        # Closed-unit devirtualization: translator-bound child indices, no graph mutations after construction. l2_entry_rec.addr is METHOD-domain storage, not the call. Runtime does not memcmp formals. Evaluation order of actuals is materialized into temps before each call boundary. Hidden through-args, when present, follow declared formals in intern name order.\n", l2_out) < 0
         fclose(l2_out)
         return: 1
     l2_tn: 0
-    l2_call_node: "unit"
-    l2_unit_ref: "unit"
+    l2_call_node: "l2_entry_unit"
+    l2_unit_ref: "l2_entry_unit"
     l2_cur_mi: 0 - 1
     k: 0
     while: k < l2_for_n

@@ -1,0 +1,28 @@
+# FABLE-SONNET-ADDRESS-TICKETS-20260922-97 Ticket B positive control.
+#
+# The synthesized program-entry adapter used to declare its own internal
+# scratch locals as bare `unit`/`leaf`/`slot`/`rec`/`callable` (no prefix),
+# unlike every other internal temp in the same function (l2_methods,
+# l2_mstatus, l2_c0, ...). A user body-local in main sharing one of those
+# exact names collided with the compiler's own C declaration, producing two
+# conflicting declarations for one identifier. This unit declares a Model
+# so the entry adapter is synthesized, then uses all four names as ordinary
+# user locals; each must keep its own declared type and value.
+Model:
+    size_t: tag 0U
+end: Model
+
+fn: nop () int
+    return: 0
+end: nop
+
+fn: main () int
+    Model: fresh
+    int: unit 1
+    int: leaf 2
+    int: rec 3
+    int: callable 4
+    int: slot 5
+    c.printf: "%d %d %d %d %d\n" unit leaf rec callable slot
+    return: 0
+end: main

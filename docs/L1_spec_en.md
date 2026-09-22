@@ -146,7 +146,7 @@ Retaining an automatic array's address after return does not extend its lifetime
 
 `l1_emit_cast` lowers `cast: (T) expression` to an explicit C cast, including admitted pointer types and multiword C types such as `unsigned long`. This is not checked high-level numeric conversion: range, alignment and validity of subsequent access follow C and the called API's contract.
 
-The `c.` prefix explicitly accesses a C symbol: `c.malloc`, `c.memcpy`, `c.sizeof` and so on. In compact C forms, the translator removes `c.` and processes permitted paths; it is not a general L1 text interpreter within parentheses. A nested colon receiver such as `c.sizeof((cast: (unsigned) 0))` has a dedicated diagnostic; a colon inside a string/character literal or matched C ternary expression must not be mistaken for a receiver.
+The `c.` prefix is the raw door into C: explicit access to a C symbol (`c.malloc`, `c.memcpy`, `c.sizeof`, and so on). The door does not maintain a declaration registry of C names as language norm. In compact C forms, the translator removes `c.` and lowers to C99; it is not a general L1 text interpreter within parentheses. A nested colon receiver such as `c.sizeof((cast: (unsigned) 0))` has a dedicated diagnostic; a colon inside a string/character literal or matched C ternary expression must not be mistaken for a receiver.
 
 `foreign: Name` declares an externally defined type: the translator registers the name, while an included C header must provide its definition. `extern: @: Lmx object` emits a declaration of another unit's object. Header-unit `type: Alias …`, `struct:`, `enum:`, `fnptr:` describe actual C ABI, not ordinary L3 Structures. `fnptr` is a C function-pointer type; it does not replace METHOD and L2's call contract.
 

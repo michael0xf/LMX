@@ -12,6 +12,29 @@
 - [ ] Каждый этап заканчивать свежими целевыми тестами, `python tools/check_docs.py`, `git diff --check`, точным коммитом и проверкой расхождения с upstream.
 - [ ] Любое обнаруженное логическое противоречие немедленно выносить на обсуждение с минимальным примером и точными местами кода; не выбирать правило по удобству реализации.
 
+
+<a id="doc-boundary"></a>
+## 0a. Document boundary (AUTHOR-DOC-BOUNDARY-20260922-21)
+
+Specifications must not contain conversations or plans. Current plan lives **only** in `next_core_tasks.md` and `next_core_tasks_dictionary.md`. Conversation/decision chronology belongs in historical documents such as `LMX_blog`, not normative specs. Normative specs may state tersely that `c.*` is the raw C door — with no ticket provenance, cleanup plan, or planned `sizeof:` feature text.
+
+<a id="architectural-doctrine"></a>
+## 0. Architectural doctrine (AUTHOR-ARCH-DOCTRINE-20260922-17)
+
+**Mandatory for the current docset and all later implementation.** Every decision must be architectural, not a local patch. When a required contract is missing, **STOP and ask the author directly** — never fill the gap with a name-special parser branch, allowlist, header scanner, hidden registry, shim, fallback, or an extra field in a base kernel type.
+
+Explicit anti-patterns and replacements:
+
+1. **`c.*` is a raw door into C.** The translator must not separately recognize `c.sizeof` / `c.puts` / other names, parse `*.h`, or construct an "allowed C" dictionary. Invalid raw C is diagnosed by the C toolchain. Lmx needs use ordinary language receivers/libraries, not `c.*` special semantics.
+2. **Base Array** keeps its minimal invariant (`{len, data}`). Dynamic growth belongs to a separate List/ArrayList implementation. Never add capacity or policy fields to Array for one consumer.
+3. **Base Message** stays minimal kernel graph/scheduling/message machinery. Win32 UI and application state belong in adapters/application structures referenced through ordinary composition — never embedded into Message.
+4. **Similar future demand:** add a separate type/receiver/library/adapter at the correct layer; do not mutate the lower abstraction.
+
+Dictionary stable-ids: [`architectural-placement`](next_core_tasks_dictionary.md#architectural-placement), [`clean-kernel-acceptance`](next_core_tasks_dictionary.md#clean-kernel-acceptance). Existing violations are **cleanup debt** blocking the clean-kernel checkpoint before self-build.
+
+**`sizeof:`:** **ввести** L2 language receiver-operator (AUTHOR-SIZEOF-DESIGN-20260922-20); status absent/planned until implemented; not an already-required obligation; not a callable; no global-contract HOLD/OPEN.
+
+
 ## 1. Аварийная коррекция базовых Array и Lmx
 
 ### Неподвижный контракт
@@ -114,22 +137,27 @@
 
 - [ ] Если разрешённая голова является callable-полем, всегда выбирать вызов с высшим приоритетом — независимо от `COMPACT`, colon или блочной формы.
 - [ ] Если сигнатура или admission такого вызова не принимают аргументы, выдавать ошибку вызова без fallback к assignment/declaration.
-- [x] Сохранить `l2_is_asgn`-исключение для известного метода/имени и auto-invoke пути с terminal callable: после решения автора это правильные следствия call-first, а не дефекты. Отдельно исправляется unsupported terminal Structure assignment-path.
+- [ ] Универсальный приоритет по resolved binding (не name/syntax exception и не fallback): callable ⇒ call; существующий non-callable ⇒ assignment; отсутствующее имя ⇒ declaration только когда тип явно задан конструкцией, иначе ошибка. Отдельно исправляется unsupported terminal Structure assignment-path.
 - [ ] Голый callable в statement position — частный случай expression statement / discard (см. ниже), не отдельная sugar-ветка.
 - [ ] Не поддерживать прямое присваивание callable-полю. Его замена допускается только общими механизмами: `merge` структур с `implements`, динамической перегрузкой одноимённым callable вызывающего либо явной передачей callable в дескрипторе аргументов вызывающего.
 - [ ] Проверять полную сигнатуру, dynamic inputs, admission и checkpoints одинаково для native lowering и интерпретатора.
 
-### Expression statement и discard (до реализации)
+### Expression statement и discard
 
-Авторски утверждено (`LMX-DISCARD-PLAN-20260922-01`). Не начинать write-реализацию в `dev/l2src_sandbox` по этому пункту до отдельного ticket.
+Авторски утверждено (`LMX-DISCARD-PLAN-20260922-01`). Write-реализация входит в sole-writer ticket `GROK-BOT-C-DOOR-UNIFY-20260922-11` (вместе с унификацией двери `c.*`). Evidence addendum (held RO reviews released into this plan before code):
 
 - [ ] Receiverless последовательность в body — общий expression statement: тот же expression-span checker/evaluator, что и для выражений с назначением результата.
-- [ ] Голый callable `f` — не исключение и не sugar: одноатомное выражение, разрешаемое универсальным callable-first приоритетом и вызываемое с нулём потреблённых аргументов.
-- [ ] Голые data вычисляются нормально; неизвестное имя — ошибка.
+- [ ] **Binding KIND** решает call vs value: method / callable graph field — invoke; typed fnptr value — evaluate/discard **без** вызова. Discard **не** выполняет admission.
+- [ ] Голый callable `f` — не исключение и не sugar: одноатомное выражение; в expression-statement consumer callable-first вызывает с нулём потреблённых аргументов (когда KIND = callable method/field). Typed fnptr atom в value/discard — значение, не auto-call.
+- [ ] Голые data вычисляются нормально; неизвестный atom — диагностика `unresolved name` (не AV, не silent skip).
+- [ ] Body walker обязан группировать через `l2_expr_span` и **продвигать итератор на span**, а не на одно field/statement.
 - [ ] Каждый expression statement вычисляется; его результат отбрасывается.
 - [ ] Нативный L2 discard destination — уже существующий правильно типизированный generated `l2_tN`, неиспользуемый после полного выражения. Не добавлять arena container, namespace binding, selector, publication, addressability, fixed ring или ветвление по синтаксической форме.
-- [ ] Требовать общий `l2_eval_discard` / body dispatch и тесты: `2+2`, bare data, bare nullary callable, side effects, nested call, unknown name, отсутствие access violation.
-- [ ] Отдельную P0-прозрачность sole anonymous argument-container / пустого Frame сохранять по `steps/current.md` и §2 выше; не смешивать её с discard expression-statement и не переносить решение о допустимости Frame на translator/receiver по исходной форме.
+- [ ] `l2_new_temp` — **int-only** и **не** универсальный typed allocator. Для discard использовать ту же типизацию temp, что уже делает method-call lowering (`size_t` / `ulong` / pointer / …). Void `ret=8` **никогда** не возвращает и не именует незадекларированный `l2_tN`. Обязательные counterexamples: `size_t`, `ulong`, pointer.
+- [ ] Один общий `l2_eval_discard` / body dispatch **заменяет обе** существующие ad-hoc ветки (старые якоря ~15741 call-frame и ~15745 `l2_is_known` external/adapter Frame). Не оставлять параллельные discard/call paths.
+- [ ] Удалить body-emptiness call heuristic и COMPACT-gated fnptr call contradictions (call vs value только по resolved binding KIND).
+- [ ] Тесты: `2+2`, bare data, bare nullary callable + side effect, nested call, unknown name → `unresolved name`, typed fnptr discard без call, void без undeclared temp, `size_t`/`ulong`/pointer discard temps, отсутствие access violation.
+- [ ] **P0 TRANSPARENCY HOLD:** отдельную P0-прозрачность sole anonymous argument-container / пустого Frame сохранять по `steps/current.md` и §2 выше; не смешивать её с discard expression-statement и не переносить решение о допустимости Frame на translator/receiver по исходной форме.
 
 ### Решённый дискриминатор
 
@@ -164,9 +192,9 @@
 - [ ] Для одной нормализованной операции проверить absent binding, existing binding и path target.
 - [ ] Для каждого контекста проверить primitive, Structure-reference, Array/reference и callable в позиции головы/явного аргумента.
 - [ ] Сравнивать не только exit code, но и выбранную physical operation, результат, graph identity, `dirty`, admission trace и диагностику.
-- [ ] На границе P0 проверить одинаковый нормальный нульарный результат для `f()`, `f: ()` и явно закрытого `f:`/`---`; отдельно закрепить синтаксический отказ P0 для одиночного незавершённого `f:`. Голый callable `f` проверить как отдельное разрешённое исключение нульарного вызова, а не как четвёртую синтаксическую форму Frame; соседний голый data-атом не должен исполняться.
+- [ ] На границе P0 проверить одинаковый нормальный нульарный результат для `f()`, `f: ()` и явно закрытого `f:`/`---`; отдельно закрепить синтаксический отказ P0 для одиночного незавершённого `f:`. Голый callable `f` проверить как expression statement / discard (callable-first, zero consumed args), а не как четвёртую синтаксическую форму Frame и не как отдельное исключение нульарного вызова; соседний голый data-атом вычисляется и отбрасывается, но не автовызывается.
 - [ ] Проверить передачу empty Structure/unit как одного именованного значения отдельно от пустого списка аргументов.
-- [ ] Проверить, что bare data atom не исполняется, а bare callable в executable statement position исполняется.
+- [ ] Проверить, что bare data expression **вычисляется** и его результат **отбрасывается** (discard), но **не вызывается**; bare callable в executable statement position вызывается (expression-statement / callable-first). Согласовано с п. выше про голый data-атом.
 - [ ] Проверить terminal Structure-reference rebinding; отдельно проверить отсутствие прямого callable-field assignment и три разрешённых общих пути замены callable.
 - [ ] Проверить наблюдаемое выполнение `implements` на каждом известном присваивании, включая identity и empty-uses случаи после решения автора.
 - [ ] Проверить повторные occurrences, `[N]field`, canonical address, selector switch и sticky publication.
@@ -187,6 +215,74 @@
 - [x] Отделить обязательность семантического вызова admission от его результата: `candidate == required` и пустое `uses` могут дать успех, но fast path не имеет права миновать саму точку `implements`.
 - [ ] По коду прежней реализации установить, какие стадии реально выполняются внутри identity/empty случая: аналитический walk, receiver runtime tests или оба. Не добавлять новое наблюдаемое действие по догадке; это исследование реализации, а не открытое разрешение обходить admission.
 - [ ] Не считать совпавшие физические адреса, дескрипторы или кеш доказательством admission.
+
+## 7a. Унификация двери `c.*` (`c.puts` / `c.array`)
+
+Авторское решение (`GROK-BOT-C-DOOR-UNIFY-20260922-11`) + evidence (`GROK-BOT-C-DOOR-EVIDENCE-20260922-13`) + **AUTHOR CORRECTION** (`AUTHOR-C-RAW-DOOR-20260922-14`). + **AUTHOR-SIZEOF-RECEIVER-20260922-15** / **AUTHOR-SIZEOF-DOCSET-20260922-16** (`sizeof:` ordinary receiver). + **AUTHOR-ARCH-DOCTRINE-20260922-17** + **AUTHOR-SIZEOF-UNHOLD-20260922-18** + **AUTHOR-SIZEOF-OPERATOR-20260922-19** / **AUTHOR-SIZEOF-DESIGN-20260922-20** (`sizeof:` planned receiver-operator — ввести). Норма: `c.*` — **raw door into C**. Нет declared foreign-entity registry, нет header scanning, нет generated dictionary of C entities, нет classification `c.sizeof` как declared/builtin entity kind. Bounded cleanup: raw-C door transparency + remove `c.puts` specials + remove L2 `c.array` special declarator + expression-statement/discard. L1 `c.array` остаётся отдельно owned measurement boundary (не L2-семантика).
+
+### `c.puts` (removable closed cluster)
+
+- [ ] Спецификация L2 **не** задаёт name-specific семантику `c.puts`. Ordinary `c.*` call path уже токенизирует quoted arguments.
+- [ ] Удалить closed special checker/emitter cluster (`l2_simple_puts_main`, исключения в `l2_c_stmt_door`, специальные `frame_head`/`leaf` ветки); `c.puts` → ordinary foreign-call / `c.name` statement routing.
+- [ ] Проверить derivation stdio include и ordinary `c.name` statement routing после удаления specials.
+- [ ] 20 puts fixtures сейчас ungated — добавить real witness, обновить diagnostics намеренно, ввести gate coverage.
+- [ ] L2-библиотека puts — обычный L2-код **без** `c.`; C puts — внешний C через ту же общую дверь `c.*`.
+
+### L2 `c.array` (declarator, not a call)
+
+- [ ] Спецификация L2 **не** определяет семантику `c.array`. Это declarator, не call. Special L2 semantics сейчас: ~3 name tests + одно user-facing lowering.
+- [ ] Удалить `c.array` из L2 docs и L2 translator/input corpus; мигрировать уже общими механизмами L2 либо внешней библиотекой через `c.*`. Не изобретать replacement syntax / hard-coded helper.
+- [ ] `parser_dump_port.lm2` → owned allocation: явная length **32** (`c.sizeof(pointer)` дал бы 8), allocation failure handling, free, и документированное отклонение от oracle.
+- [ ] 4 `c.array` fixtures ungated; вместе с puts — **24** affected fixtures, сейчас **zero** gate coverage — закрыть в этой партии.
+
+### Raw-C door (`c.*`) — AUTHOR-C-RAW-DOOR-20260922-14
+
+**Норма (overrides -13 entity-kind / sizeof HOLD framing):** `c.*` — сырой дверной проход в C. L2 **не** ведёт registry foreign entities, **не** сканирует headers для словаря имён C, **не** классифицирует `c.sizeof` / `c.puts` как declared/builtin entity kinds.
+
+- [ ] Сделать raw-C door **syntax-transparent**: `c.sizeof(...)` понижается в C `sizeof(...)` через общий raw-C door; unevaluated семантика sizeof даёт **C compiler**, не L2 semantic resolution.
+- [ ] `c.puts(...)` проходит тем же raw-C door **без** name-specific L2 checker/emitter.
+- [ ] Удалить header scanners / entity dictionaries / name whitelists / special `c.*` semantic classification. Сначала **inventory** точных obsolete scanners/dictionaries (известные кандидаты в `dev/l2src_sandbox/l2trans.lm1`: `l2_c_header_walk`, `l2_c_header_chain_has`, `l2_c_header_chain_has_typedef`, `l2_predef_has_function`, `l2_predef_has_type`, `l2_predef_has_fnptr`, `l2_foreign_intern`, `l2_c_stmt_door` exclusions, `l2_simple_puts_main` — полный список уточнить inventory).
+- [ ] **Ownership/dependency:** DeepSeek ранее был tasked автором удалить эти scanners/dictionaries — **не дублировать и не отклоняться**; зафиксировать ownership/dependency и координировать. Grok Bot не invents параллельный removal path.
+- [ ] Preserve только mapping rules, реально нужные чтобы emit valid C; неизвестные механики — label for audit, **не** invent registry.
+
+
+### `sizeof:` — ввести language receiver-operator (AUTHOR-SIZEOF-DESIGN-20260922-20)
+
+Clarifies / overrides overstatements in -19. Unhold from -18 stands (no global-contract HOLD/OPEN).
+
+- [ ] Текущей работе нужен size operation. Вместо отдельного L2 parsing/checking/emission для сырого `c.sizeof` — **выбрать и ввести** обычный language receiver-operator `sizeof:` (новая architectural design/implementation задача; coherentнее, чем special-case `c.sizeof`).
+- [ ] До реализации: статус **absent/planned**, не нарушенная заранее обязанность языка и не HOLD в ожидании другого author contract.
+- [ ] После введения: `sizeof:` участвует в существующей receiver-operator architecture (как класс `fn:`); **не** model как function/callable.
+- [ ] `c.sizeof(...)` остаётся валиден **только** как raw C text через uniform дверь `c.*`, где raw C намеренно используется; **zero** `c.sizeof`-specific L2 parser/checker/emitter semantics.
+- [ ] Не обобщать это решение на суждения о `length` / `capacity` / etc. в рамках этого тикета.
+- [ ] Инвентаризовать Lmx-side `c.sizeof` → мигрировать на `sizeof:` после введения operator.
+- [ ] Отличить `sizeof:` от Array `length` (и от L3 `size`/`shape`/`rank`) — без переразметки length/capacity в этом тикете.
+- [ ] Реализацию оставить **later bounded ticket** после docs baton/ownership order; one-writer + clean-kernel barriers остаются.
+- [ ] Evidence (inventory before/with implementation): exact affected symbols (`l2_prep_sizeof_name` / former `c.sizeof` specials), fixtures/tests, harness gates.
+- [ ] Acceptance (после введения): `rg` — zero `c.sizeof`-specific semantic branches; receiver-operator dispatch + surface-form equivalence + native+interpreter.
+
+### L1 `c.array` (separate, unproven — do not merge)
+
+- [ ] **HOLD / separately owned foreign-backend debt:** L1 `[]` и L1 `c.array` имеют разные emitters; `l2trans` ещё эмитит `c.array` в generated L1 (~5 sites). Перед любым scheduling removal — read-only byte-output equivalence measurement + inventory golden/self-build consequences. **Не** смешивать с bounded L2 cleanup.
+
+## GATE. Чистое ядро перед самосборкой L2 (blocking)
+
+**Блокирующий GATE** (`GROK-BOT-C-DOOR-UNIFY-20260922-11`). Самосборка / миграция уровней (§8) **не начинается**, пока ядро не чисто и не зафиксирован один точный pushed checkpoint.
+
+Чистое ядро (`clean kernel`) означает одновременно:
+
+- [ ] Нет нарушений [`architectural-placement`](next_core_tasks_dictionary.md#architectural-placement): нет name-special/`allowlist`/header-scanner/hidden-registry/shim/fallback «дырок»; нет лишних полей в базовых Array/Message ради одного потребителя (cleanup debt до закрытия).
+- [ ] `sizeof:` — **planned** language receiver-operator (ввести later); until then absent; zero `c.sizeof`-specific L2 semantic branches; do not treat as already-required language obligation.
+- [ ] Нет L2 special semantics и name-specific веток для `c.puts` / `c.array`; **zero** stale header scanners / C-name dictionaries / name whitelists / special `c.*` semantic classification (raw-C door only).
+- [ ] Нет дублирующих старых discard/call путей рядом с новым общим механизмом (`l2_eval_discard` и единый body dispatch).
+- [ ] Нет мёртвых helpers, unreachable compatibility shims, устаревших exclusions/comments и противоречивых docs/tests.
+- [ ] Нет скрытого fallback, сохраняющего удалённое поведение.
+- [ ] Tracked tree и ownership чисты (маркеры сняты после checkpoint; нет чужого WIP на owned paths).
+- [ ] Полный supported L2 runtime/generated harness, релевантный L3 runner, `python tools/check_docs.py` и `git diff --check` зелёные на **одном** точном pushed commit.
+- [ ] Source inventory: удалённые helpers имеют **ноль** ссылок; выполнен поиск остаточных special-case `c.puts` / `c.array` (translator, docs, fixtures, corpus).
+- [ ] Если L1 `c.array` ещё нельзя убрать — это явный отдельно owned blocker / foreign-backend debt, **не** L2-семантика; до author-approved границы **не** заявлять kernel-clean / self-build-ready.
+
+Порядок: сделать raw-C door syntax-transparent + bounded cleanup (`c.puts` specials + L2 `c.array` + expression-statement/discard; §3 / §7a), inventory/remove obsolete scanners/dictionaries (coordinate DeepSeek ownership), закрыть этот GATE (**включая zero stale c.* machinery**) **до** любого шага §8. L1 `c.array` — отдельно owned measurement boundary и не смешивается с L2 cleanup.
 
 ## 8. Перенос уровней и самосборка
 

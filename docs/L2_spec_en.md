@@ -145,8 +145,8 @@ An ordinary Structure remains an `Lmx` graph, an Array a descriptor reference wi
 | Family | Purpose | L2 contract | L1 lowering |
 | --- | --- | --- | --- |
 | `@ⁿ:`, `@`, prefix `\` | Address slot, address and load | [Addresses](#lowlevel-address) | [Lowering](L1_spec_en.md#lowlevel-address) |
-| `c.array`, raw index | Rectangular machine storage | [Arrays](#lowlevel-array) | [Emitter](L1_spec_en.md#lowlevel-array) |
-| `cast`, `c.sizeof`, `c.name` | C cast, size, foreign call | [ABI](#lowlevel-abi) | [C99](L1_spec_en.md#lowlevel-abi) |
+| raw index / C storage | Machine access through the `c.*` door | [Arrays](#lowlevel-array) | [Emitter](L1_spec_en.md#lowlevel-array) |
+| `cast`, `c.*` | C cast; raw C (including C `sizeof` / `c.name`) | [ABI](#lowlevel-abi) | [C99](L1_spec_en.md#lowlevel-abi) |
 | Arithmetic and update | Machine-profile operations | [Expressions](#lowlevel-expression) | [C expressions](L1_spec_en.md#lowlevel-expression) |
 | `synchronized` | Synchronization region | [Synchronization](#lowlevel-sync) | [L1 profile](L1_spec_en.md#lowlevel-sync) |
 
@@ -201,30 +201,20 @@ An argument has a distinct same-name own-binding rule: a resolved bare assignmen
 Writing through an address neither removes `const`/`immutable`, admits a dangling address nor establishes automatic ownership. Receiving-expression admission uses the [unified mechanism](#implements); physical classification uses the [arena index](#type-by-range).
 
 <a id="lowlevel-array"></a>
-## 19. Raw c.array storage
+## 19. Raw C storage
 
-### 19.1. Input and result
+The `c.*` prefix is the raw door into C. L2 does not define a separate language entity `c.array`: rectangular machine storage and raw index, when needed, are expressed through that door and L1 C99 lowering.
 
-`c.array` consumes exactly one declaration whose head contains one or more bracket groups, optionally inside a single `const`. Unrelated children and extra declarations are outside the minimal contract. Examples: `c.array: [3]: int: values 2 4 6`, `c.array: []: char buffer 256`.
+Ordinary L2 Array remains a descriptor reference `{len, data}` with graph backing; its length is `len` / length operations, not a machine C size. Mapping raw C storage to an ordinary Array requires an explicit operation over backing address, shape and lifetime.
 
-A nonempty group `[rows]` contains its extent. Empty `[]` consumes one extent after the type and name, in dimension order; remaining fields are initializers. A missing extent is an error, not a request to infer it from an initializer. A compound extent belongs inside a nonempty group. The contract admits mixed groups.
-
-The result is a C-storage designator, not an Array value or graph node. It creates no arena, owner, `len`, shape/stride metadata or bounds checks. Conversion to an ordinary Array requires an explicit operation specifying backing address, shape and lifetime.
-
-### 19.2. Indexing, rank and lifetime
-
-Each `[i]` suffix consumes one dimension: two-dimensional C storage uses `a[i][j]`. Partial indexing denotes the remaining subarray; full indexing denotes an element lvalue. This is not a view. Decay of a rank-one remainder follows the C profile; a higher-rank remainder is not flattened into an arbitrary `T **`.
-
-The address of an entire array or subarray is a pointer-to-array, not an ordinary increment of element-pointer depth. The minimal contract defined here provides no such declarator and requires an unsupported form to be rejected rather than mistyped. A fully selected element may be addressed. `const` qualifies the base element; for pointer arrays it does not automatically make pointer slots const.
-
-Block storage has C automatic lifetime; a runtime extent follows C99 VLA rules and admits no initializer. In the hosted profile, top-level storage has internal linkage, constant extents and static initialization. Without an initializer, automatic elements are indeterminate and static elements are zero. Initialization zero-fills omitted elements and diagnoses excess or incompatible ones. The conservative multidimensional profile requires explicit nested groups rather than flat brace elision; a top-level address initializer requires its target declaration to have been emitted.
-
-Retaining a local array's address does not extend its lifetime. Escape beyond raw storage lifetime requires an explicit adapter/contract; it must not silently become a live Array. Raw indices are not automatically checked. Statically detectable danger and invalid static initializers belong to machine-profile diagnostics.
+Index expressions and the absence of L2 bounds checks for machine access remain in [§18](#lowlevel-address) and [§21](#lowlevel-expression).
 
 <a id="lowlevel-abi"></a>
 ## 20. Foreign types, conversions and calls
 
-`cast: (T) value` is a machine cast, not an [L3 numeric converter](LMX_semantics.en.md#descriptions) or proof of range/lifetime safety. `c.sizeof` requests a machine type/object size, not a Structure field count or Array length. An opaque type can be stored and passed without exposing its fields; raw access requires a known ABI.
+`cast: (T) value` is a machine cast, not an [L3 numeric converter](LMX_semantics.en.md#descriptions) or proof of range/lifetime safety. Machine type/object size, when needed as raw C, is expressed through the `c.*` door (for example `c.sizeof(...)`) and means C `sizeof`, not a Structure field count and not Array length. An opaque type can be stored and passed without exposing its fields; raw access requires a known ABI.
+
+The `c.` prefix is the raw door into C: explicit access to a C symbol. The door does not maintain a declaration registry of C names as language norm and does not declare a foreign-entity-kind behind the door.
 
 `c.name` selects a foreign C symbol. An ordinary L2 function requires no `c.`. Parameters, result, ownership and resource release belong to the adapter contract. Permitting a C call does not wrap its result in a graph or make a pointer a portable Message. In the descriptive contract, `external` wraps one `fn`/`sub` and requests a foreign entry; the adapter preserves the source method contract.
 

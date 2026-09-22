@@ -1,0 +1,30 @@
+Model:
+    size_t: value 1U
+end: Model
+
+# FABLE-SONNET-FIELD-PATHS-20260923-113 Part A: an ordinary namespace-typed
+# formal is a Structure reference too -- write and read through Model\value
+# with no own-field indirection needed, the formal's own C parameter is the
+# reference. Model: fresh lives outside main deliberately: a colon
+# declaration inside main, in a unit that also has a namespace-typed formal
+# elsewhere, hits a pre-existing, unrelated "assignment target must be a
+# declared typed mutable value" refusal this ticket does not touch.
+fn: bump (@(Lmx Model)) size_t
+    Model\value: 99U
+    size_t: got
+    got: Model\value
+    return: got
+end: bump
+
+fn: make () size_t
+    Model: fresh
+    return: bump(fresh)
+end: make
+
+fn: main () int
+    size_t: got
+    got: make()
+    if: got != 99U
+        return: 91
+    return: 0
+end: main

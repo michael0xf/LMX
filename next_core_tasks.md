@@ -161,6 +161,8 @@ Acceptance:
 
 ## 3. Разрешение объявления, присваивания и вызова
 
+- [ ] **Порядок объявлений уровня единицы (автор, Q8 = U2, 2026-09-23):** объявление — оператор точки входа на своём месте; ячейка own-поля E существует с конструирования и равна нулю, пока оператор не выполнился; метод, объявленный ниже переменной, законно читает её, а вызов этого метода выше объявления читает нуль (`int: r f()` / `int: x 5` / `fn: f` читает `x` → выход 0). Литерал и выражение в инициализаторе не различаются по форме. Реализовано в S2 (`f6f213a`); добавить минимальную программу как строку harness.
+
 ### Общая последовательность
 
 - [ ] Сначала построить одинаковую Structure/Frame независимо от формы записи.
@@ -234,6 +236,7 @@ Acceptance:
 - [ ] Реализовать `test\[0]arg`, `test\[1]arg` и последующие индексы; неуточнённый путь выбирает `[0]` согласно последнему решению автора.
 - [ ] Использовать один общий алгоритм `occurrence -> physical slot/path` для native lowering и интерпретатора.
 - [ ] Не добавлять второй индекс, runtime-таблицу имён, отдельный журнал или дублированный обход.
+- [ ] **Путь от корня (автор, Q9 2026-09-23, `LMX_blog/2026-09-23.md`):** `node\x` — поле `x` лексического родителя callable occurrence (`M.parent`, то есть `[0]x` этого родителя); собственное own-поле occurrence — просто `x`; `for\x` — поле объемлющего `for`-фрейма как Structure. Чтение «`node`/`for` — префикс написания для своих own-полей» (N1) снято: `node` и `for` — обычные корни того же диспетчера путей (-113), не зарезервированные спеллинговые корни. Пример без такого поля у родителя (`x` объявлен внутри `Model`, а не у единицы) — ошибка «unresolved name». Фикстуры `unit_node_path*`, `unit_node_array_paths`, `unit_forj_*` переписать под это чтение; fallback `l2_slash_own`/`l2_slash_for`/`l2_path_own` и спеллинговые ветки массивных helper'ов удалить.
 - [ ] Исправить own-таблицы/планы, которые сейчас склеивают occurrences по имени.
 
 ## 5. Canonical local cell, selector и sticky dirty
@@ -288,6 +291,10 @@ Acceptance:
 - [x] Спецификация L2 **не** задаёт name-specific семантику `c.puts`. Ordinary `c.*` call path уже токенизирует quoted arguments.
 - [x] Удалить closed special checker/emitter cluster (`l2_simple_puts_main`, исключения в `l2_c_stmt_door`, специальные `frame_head`/`leaf` ветки); `c.puts` → ordinary foreign-call / `c.name` statement routing. (99 PART2: deleted puts helpers; door no longer excludes c.puts.)
 - [ ] Проверить derivation stdio include и ordinary `c.name` statement routing после удаления specials.
+
+### Поля C-структур (автор, Q7 = P1, 2026-09-23)
+
+- [ ] Путь `\field` на значении, чей тип спелен `c.*`, — сырой C-доступ к члену: эмитится дословно, проверяет C-компилятор; транслятор не знает C-структур. Удалить фиксированные коды типов по имени (`LmP0Text` ty=5, `LmP0IndentStack` 14, `LmP0TrailerRole` 10, `LmP0Diagnostic` 21, `LmP0Document`/`need_p0`, per-name include-флаги в `l2_is_known`; группа B инвентаря `FABLE-GROKBOT-TYPE-NAME-SPECIALS-20260922-111`), мигрировать порт парсера `parser_*_port.lm2` и фикстуры на `c.LmP0*` с сырыми путями; `lm_own_*`/`lm_p0_*`-адаптеры видимы только через `predef`-объявления, не по зашитому списку.
 - [x] 20 puts fixtures сейчас ungated — добавить real witness, обновить diagnostics намеренно, ввести gate coverage. (Gated hello/seq/empty/nl/esc + method_body + main_beside_method; arity refusals deferred to C.)
 - [ ] L2-библиотека puts — обычный L2-код **без** `c.`; C puts — внешний C через ту же общую дверь `c.*`.
 
@@ -348,6 +355,9 @@ Clarifies / overrides overstatements in -19. Unhold from -18 stands (no global-c
 Порядок: сделать raw-C door syntax-transparent + bounded cleanup (`c.puts` specials + L2 `c.array` + expression-statement/discard; §3 / §7a), inventory/remove obsolete scanners/dictionaries (coordinate DeepSeek ownership), закрыть этот GATE (**включая zero stale c.* machinery**) **до** любого шага §8. L1 `c.array` — отдельно owned measurement boundary и не смешивается с L2 cleanup.
 
 ## 8. Перенос уровней и самосборка
+
+- [ ] **API почты для аргументов (автор, Q10, 2026-09-23):** никакого нового синтаксиса — только общий ресивер почты `nextMessage:` (семантика: следующее принятое письмо текущего Thread, пока не 0; общий механизм `lmx_thread`, не R0-специфичный). Аргументы процесса кладутся **внутрь письма**: поле `mainArgs` — массив строк ровно как пришли из C (`argc`/`argv`); C `main` строит письмо и посылает его обычной почтой в inbox R0; программа читает `m\mainArgs[i]` и `length` обычными путями. Невзятое письмо освобождается при close (свидетель).
+- [ ] **Граф ребёнка (автор, Q6 = R1, 2026-09-23):** источник графа ребёнка — единица (`.lm3`-файл), по определению independent (`parent = 0`); ядро не проверяет и не чинит; не-independent source — ошибка программы. Selftest: граф R0 и графы детей после open/create имеют `parent = 0`.
 
 - [ ] После стабилизации семантики закончить миграцию поддерживаемого L1-кода в L2; цель — именно перенос реализации, а не добавление неиспользуемых операторов ради покрытия спеки.
 - [ ] Перенести динамический контейнер с L1 на L2 как отдельную реализацию, не меняя базовый Array.

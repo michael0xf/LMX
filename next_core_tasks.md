@@ -36,7 +36,7 @@ Dictionary stable-ids: [`architectural-placement`](next_core_tasks_dictionary.md
 Dictionary: [
 o-defensive-kernel](next_core_tasks_dictionary.md#no-defensive-kernel) — kernel invariants by construction/tests; no defensive close state machines in base kernel types.
 
-**`sizeof:`:** **ввести** L2 language receiver-operator (AUTHOR-SIZEOF-DESIGN-20260922-20); status absent/planned until implemented; not an already-required obligation; not a callable; no global-contract HOLD/OPEN.
+**`sizeof:`:** **ввести** L2 language receiver-operator (AUTHOR-SIZEOF-DESIGN-20260922-20); status absent/planned until implemented; not an already-required obligation; not a callable; no global-contract HOLD/OPEN. **Семантика (автор, Q16, 2026-09-23):** размер хранилища значения/типа в БАЙТАХ (для own-массива — все элементы), операнд — L2-значение или тип, разрешаемый транслятором; `length` — число элементов; `c.sizeof(...)` — сырой C через дверь `c.*`.
 
 
 ## 1. Аварийная коррекция базовых Array и Lmx

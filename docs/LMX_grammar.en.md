@@ -1595,7 +1595,7 @@ Sources: §§4.6, 7.5, 8.1–8.4, 15.
 
 `end: matrix` closes `[]: matrix`; not `end: [] matrix`. `end: fn` may be an alternative to `end: square` for the corresponding open function. Closure may cross several open implicit levels where position and profile admit it, but not unmatched bounded brackets. A named Frame does not require explicit `end:`: an ordinary admitted level cut also closes it. Bare `end` and `end <target>` are forbidden.
 
-`return`, `return: value`, and `until: condition` are terminal-form candidates only in admitting contexts. Terminal `return` at an executable Frame's opening level appends a return to its body and closes the Frame. The same receiver at body level or deeper is an internal return, not definition closure. `until:` may close a postcondition-loop body. Their spelling alone does not make these words universal tail cutters.
+`return`, `return: value`, and `until: condition` are terminal-form candidates only in admitting contexts. Terminal `return` at the opening level of a named executable Structure, including an ordinary Structure without `fn`/`sub`, appends a return to its body and closes its Frame. The same receiver at body level or deeper is an internal return, not definition closure. `until:` may close a postcondition-loop body. Their spelling alone does not make these words universal tail cutters.
 
 When identical targets occur at different levels, the closing line’s level participates: a parent-level close selects the parent target and cuts its open tail; an inner-level close selects the inner target. Ambiguous, invisible, or positionally invalid targets are rejected. `end:` in an ordinary body position is not executable and is rejected by close validation unless a profile explicitly defines another non-runtime meaning.
 
@@ -1776,7 +1776,7 @@ A Frame's argument list is itself a Structure. If a sole anonymous Structure fie
 
 Parentheses are not a call marker. P0 does not label `f()` as a call or decide whether `f` exists: the same normalized Frame from `f()` and `f: ()` is passed to general head resolution. Calling, assignment, and declaration are defined by [semantics](LMX_semantics.en.md#construction), not by this spelling.
 
-P0 rejects bare `f:` without arguments, a vertical body, or an explicit `---`. Bare `f` is an ordinary admitted atomic expression; resolved as callable, it has the same nullary effect, although P0 may retain it as an atom. The translator does not distinguish Frame forms by COLON/COMPACT or source spelling. An empty inline tail followed by a nonempty vertical body is valid. Bare `end` remains forbidden.
+P0 rejects bare `f:` without arguments, a vertical body, or an explicit `---`. Bare `f` is an ordinary admitted atomic expression; P0 may retain it as an atom and does not decide whether the resolved named Structure executes. [Semantics](LMX_semantics.en.md#execution), not source spelling, makes that choice. The translator does not distinguish Frame forms by COLON/COMPACT or source spelling. An empty inline tail followed by a nonempty vertical body is valid. Bare `end` remains forbidden.
 
 **Valid: the same empty P0 Frame; parentheses do not select a call** — author / автор, 2026-09-23.
 

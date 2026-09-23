@@ -69,6 +69,30 @@ fn: sealed_here (@: LmxArena arena; @: void value) int
         return: 0
 return: lmx_pool_is_sealed(pool)
 
+# The primitive type a numeric root fact names -- `size`, `int`, `unsigned`, `ulong` -- or 0.
+fn: numeric_type (const: @(char word)) int
+    if: c.strcmp(word, "size") = 0
+        return: c.LMX_TYPE_SIZE_T
+    if: c.strcmp(word, "int") = 0
+        return: c.LMX_TYPE_INT
+    if: c.strcmp(word, "unsigned") = 0
+        return: c.LMX_TYPE_UNSIGNED
+    if: c.strcmp(word, "ulong") = 0
+        return: c.LMX_TYPE_ULONG
+return: 0
+
+# Whether a numeric cell of type `ty` holds `want` (the facts are small non-negative literals).
+fn: numeric_holds (@: void cell; int: ty; int: want) int
+    if: ty = c.LMX_TYPE_SIZE_T && lmx_size_value_known(cell) = (cast: (size_t) want)
+        return: 1
+    if: ty = c.LMX_TYPE_INT && lmx_int_value_known(cell) = want
+        return: 1
+    if: ty = c.LMX_TYPE_UNSIGNED && lmx_unsigned_value_known(cell) = (cast: (unsigned) want)
+        return: 1
+    if: ty = c.LMX_TYPE_ULONG && lmx_ulong_value_known(cell) = (cast: (ulong) want)
+        return: 1
+return: 0
+
 fn: inspect (@: LmxRoot root) int
     @: LmxArena arena lmx_root_arena(root)
     @: LmxMsg message lmx_root_message(root)
@@ -141,14 +165,16 @@ fn: inspect (@: LmxRoot root) int
         return: 0
     ---
     while: at < gargc
-        if: c.strcmp(gargv[at], "size") = 0 && at + 3 < gargc
+        # `size|int|unsigned|ulong R F V`: field F of root R is a cell of that primitive type in
+        # R's exact sealed profile, holding V.
+        if: numeric_type(gargv[at]) != 0 && at + 3 < gargc
             value: l2_program_qualified_at((cast: (size_t) arg(at + 1)))
             profile: root_profile(arena, value)
             cell: lmx_arena_ref_value(value, (cast: (size_t) arg(at + 2)))
-            check(cell != 0 && lmx_domain_kind(arena, cell) = c.LMX_KIND_PRIMITIVE && lmx_domain_type(arena, cell) = c.LMX_TYPE_SIZE_T, "size field has the declared primitive type")
-            check(cell != 0 && lmx_range_profile(arena, cell) = profile && sealed_here(arena, cell) != 0, "size field belongs to the same exact sealed profile")
+            check(cell != 0 && lmx_domain_kind(arena, cell) = c.LMX_KIND_PRIMITIVE && lmx_domain_type(arena, cell) = numeric_type(gargv[at]), "numeric field has the declared primitive type")
+            check(cell != 0 && lmx_range_profile(arena, cell) = profile && sealed_here(arena, cell) != 0, "numeric field belongs to the same exact sealed profile")
             if: cell != 0
-                check(lmx_size_value_known(cell) = (cast: (size_t) arg(at + 3)), "size field holds the declared value")
+                check(numeric_holds(cell, numeric_type(gargv[at]), arg(at + 3)), "numeric field holds the declared value")
             ---
             at: at + 4
         else:

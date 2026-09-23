@@ -1,0 +1,53 @@
+Counts:
+    size_t: s 3U
+    int: i 4
+    unsigned: u 5U
+    ulong: l 6U
+end: Counts
+
+# FABLE-OPUS-DISCARD-20260924-147 (D-15 reopened): every numeric field of a
+# named Structure -- size_t, int, unsigned, ulong -- has its own cell holding
+# its literal, in the Structure and in a merge copy, and a write to the copy
+# leaves the original alone.  Success is 7.
+size_t: vs
+int: vi
+unsigned: vu
+ulong: vl
+vs: Counts\s
+vi: Counts\i
+vu: Counts\u
+vl: Counts\l
+if: vs != 3U
+    return: 81
+if: vi != 4
+    return: 82
+if: vu != 5U
+    return: 83
+if: vl != 6U
+    return: 84
+
+c: merge: Counts
+c\s: 30U
+c\i: 40
+c\u: 50U
+c\l: 60U
+vs: c\s
+vi: c\i
+vu: c\u
+vl: c\l
+if: vs != 30U
+    return: 85
+if: vi != 40
+    return: 86
+if: vu != 50U
+    return: 87
+if: vl != 60U
+    return: 88
+
+vs: Counts\s
+vi: Counts\i
+vu: Counts\u
+vl: Counts\l
+if: vs != 3U || vi != 4 || vu != 5U || vl != 6U
+    return: 89
+return: 7

@@ -9,6 +9,9 @@ end: Model
 # field-kind table as size_t (l2_take_ns_body, kind 7) -- an own
 # declaration, a nested path, a formal parameter and a merge copy all
 # read/write it through the ordinary machinery, no special branch.
+# FABLE-OPUS-DISCARD-20260924-147: until the graph builder gave kind 7 its
+# cell, the first write below met an empty slot and a silent bail returned
+# 0 from E, which passed; success is now 7 and the literals are checked.
 fn: bump (@(Lmx Model)) int
     Model\value: 99
     int: got
@@ -37,15 +40,19 @@ copy: merge: Model
 copy\value: 7
 int: ev
 int: cv
+int: ed
 ev: Model\value
 cv: copy\value
+ed: Model\inner\deep
 if: ev != 1
     return: 83
 if: cv != 7
     return: 84
+if: ed != 2
+    return: 85
 
 int: fv
 fv: make()
 if: fv != 99
     return: 90
-return: 0
+return: 7

@@ -1436,10 +1436,25 @@ $fixtures = @(
     # Structure goes through the same field-kind table as size_t (kind 7) --
     # own declaration, a nested path, a formal parameter and a merge copy
     # all read/write it through the ordinary machinery.
-    [pscustomobject]@{ Name = 'unit_struct_int_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+    # FABLE-OPUS-DISCARD-20260924-147: until the builder gave kind 7 its cell this row was vacuous
+    # (the first write met an empty slot and a silent bail returned 0 from E); success is now 7.
+    [pscustomobject]@{ Name = 'unit_struct_int_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
-        Debt = @() },
+        Debt = @('lmx_int_store_known(l2_entry_slot[0], 1)', 'lmx_int_store_known(l2_entry_slot[0], 2)') },
+    # Every numeric field of a named Structure -- size_t, int, unsigned, ulong -- has its own cell
+    # holding its literal, in the Structure and in a merge copy (FABLE-OPUS-DISCARD-20260924-147).
+    [pscustomobject]@{ Name = 'unit_struct_num_fields.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
+        Args = @('0');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
+        Debt = @('lmx_int_store_known(l2_entry_slot[0], 4)', 'lmx_unsigned_store_known(l2_entry_slot[0], 5U)',
+                 'lmx_ulong_store_known(l2_entry_slot[0], 6U)', 'lmx_size_store_known(l2_entry_slot[0], 3U)') },
+    # The same four kinds on an eternal branch: cells of their own primitive type in the branch's
+    # exact sealed profile, holding their literals (the driver's numeric root facts).
+    [pscustomobject]@{ Name = 'unit_eternal_num_fields.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
+        Args = @('1', 'int', '0', '0', '4', 'unsigned', '0', '1', '5', 'ulong', '0', '2', '6', 'size', '0', '3', '3');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
+        Debt = @('c.LMX_TYPE_UNSIGNED, l2_eprofile0)', 'c.LMX_TYPE_ULONG, l2_eprofile0)') },
     # FABLE-SONNET-DECL-PREPASS-20260923-137 part 3 (Opus's finding 2): a
     # predef'd C function's result reads as numeric -- safe into a numeric
     # target (entry_parse_min.lm2's own assignment form), still refused

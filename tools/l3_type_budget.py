@@ -2,8 +2,8 @@
 
     python tools/l3_type_budget.py
 
-WHY.  l1trans keeps the type names of one translated unit's whole predef closure in a table of 64
-entries and 4096 bytes (l1src/l1trans.lm1, l1_hdr_type_add) and refuses the 65th with
+WHY.  l1trans keeps the type names of one translated unit's whole predef closure in a table of 128
+entries and 8192 bytes (l1src/l1trans.lm1, l1_hdr_type_add) and refuses the 129th with
 `too many header type names` -- reported at whatever header happens to be read last, which is
 never the one that caused it.  The L3 Thread units were at 64 of 64 when one L2 kernel header
 gained two types (4ab2877): every Thread suite stopped translating, and tools/build_l2src.ps1
@@ -12,7 +12,7 @@ fail HERE, with the number and the name of the budget, before the cliff.
 
 WHAT IT MEASURES, and it does not trust a count of the source for it.  For each budgeted suite a
 probe unit predefs exactly the suite's predef list and then a pad header of K dummy `fnptr:`
-types; the largest K that still translates gives   names = 64 - K   -- the translator's own
+types; the largest K that still translates gives   names = 128 - K   -- the translator's own
 answer.  A source model (depth-first predef closure, each unit once, struct / enum / fnptr /
 foreign / type of header units) is run beside it for the BYTES, which the pad method cannot reach
 while the count binds, and the two counts must agree or the model -- and its byte figure -- is
@@ -21,7 +21,7 @@ beside the predef'ing file comes out four names short; that mistake has been mad
 
 IT FAILS when a suite's count differs from EXPECT in either direction, when the translator already
 refuses the suite, when model and translator disagree, or when the bytes come within one maximal
-name of 4096.  EXPECT is changed only together with the reason the closure changed.
+name of 8192.  EXPECT is changed only together with the reason the closure changed.
 
 Everything is staged in a temporary directory; no file of the repository is written.
 """
@@ -38,15 +38,14 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 SANDBOX = ROOT / 'dev' / 'l2src_sandbox'
 L3 = ROOT / 'dev' / 'l3_interp'
 
-CAP_NAMES = 64
-CAP_BYTES = 4096
+CAP_NAMES = 128
+CAP_BYTES = 8192
 MAX_NAME = 64          # l1_hdr_type_add's buffer: one more maximal name must still fit
 
-# suite -> header type names of its translation unit.  Thread units: 62 since
-# FABLE-L3-TYPE-BUDGET-SHED-20260921-36 (66 before it, 64 before 4ab2877).  Only the units near
-# the cliff are pinned: l3_admit_selftest measures 25 and the l3_0x suites less, and an exact pin
-# that far from 64 would fail on changes that threaten nothing.  A unit that comes within a
-# handful of 64 belongs here.
+# suite -> header type names of its translation unit.  Cliff is 128 names / 8192 bytes
+# (raised from 64/4096 in FABLE-134 so typed Post/Thread mail fnptrs need not be erased).
+# Thread units: 62 since FABLE-L3-TYPE-BUDGET-SHED-20260921-36 (pre-DynamicArray tip).
+# Only units near the cliff are pinned. The pad method still MEASURES names = 128 - K.
 EXPECT = {
     'tests/l3_thread_bind_selftest.lm1': 62,
     'tests/l3_n9_walk_selftest.lm1': 62,

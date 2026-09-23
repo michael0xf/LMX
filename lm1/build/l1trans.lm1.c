@@ -6500,9 +6500,9 @@ int l1_path_is_absolute(const char * path)
     int l1_cur_th[8];
     int l1_cur_thn = 0;
     int l1_allow_throws = 0;
-    char l1_hdr_types[4096];
+    char l1_hdr_types[8192];
     int l1_hdr_typen = 0;
-    char l1_hdr_kinds[64];
+    char l1_hdr_kinds[128];
     const char * l1_unit_root = 0;
     int l1_unit_root_set = 0;
     char l1_hdr_emitted[2048];
@@ -13299,7 +13299,7 @@ int l1_hdr_type_add(const LmP0Text * text, const char * path, const LmP0Node * n
     i = i + 1;
     }
     n = strlen(buf);
-    if (used + n + 1U >= 4096U || l1_hdr_typen >= 64) {
+    if (used + n + 1U >= 8192U || l1_hdr_typen >= 128) {
     return l1_error(path, node, "too many header type names");
     }
     memcpy(l1_hdr_types + used, buf, n + 1U);

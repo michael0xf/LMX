@@ -66,9 +66,9 @@ int: l1_throw_ok 0
 c.array: []: int l1_cur_th 8
 int: l1_cur_thn 0
 int: l1_allow_throws 0
-c.array: []: char l1_hdr_types 4096
+c.array: []: char l1_hdr_types 8192
 int: l1_hdr_typen 0
-c.array: []: char l1_hdr_kinds 64
+c.array: []: char l1_hdr_kinds 128
 const: @: char l1_unit_root 0
 int: l1_unit_root_set 0
 c.array: []: char l1_hdr_emitted 2048
@@ -5538,7 +5538,9 @@ fn: l1_hdr_type_add (const: @(LmP0Text text); const: @(char path); const: @(LmP0
         used: used + c.strlen(l1_hdr_types + used) + 1U
         i: i + 1
     n: c.strlen(buf)
-    if: used + n + 1U >= 4096U || l1_hdr_typen >= 64
+    # Header-type table: 128 names / 8192 bytes (raised from 64/4096 for FABLE-134;
+    # typed Post/Thread mail fnptrs must not be erased to fit the old cliff).
+    if: used + n + 1U >= 8192U || l1_hdr_typen >= 128
         return: l1_error(path, node, "too many header type names")
     c.memcpy(l1_hdr_types + used, buf, n + 1U)
     l1_hdr_kinds[l1_hdr_typen]: kind

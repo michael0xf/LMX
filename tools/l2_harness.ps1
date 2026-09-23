@@ -1616,7 +1616,46 @@ $fixtures = @(
         Says = @('BETWEEN 2', 'LAST 9');
         BindOrder = $true;
         Absent = @('l2_q0_early', 'l2_q0_bound');
-        Debt = @('int: l2_q0_sticky 0', 'int: l2_q0_active 0 - 1', 'l2_q0_sticky: 1') }
+        Debt = @('int: l2_q0_sticky 0', 'int: l2_q0_active 0 - 1', 'l2_q0_sticky: 1') },
+    # FABLE-GROKBOT-MATRIX-20260924-143 -- B2 semantic matrix (fixtures only).
+    # Grid: {absent, existing non-callable, existing callable, path} x
+    # {primitive, Structure ref, Array/ref, callable} over one head-consumes-tail
+    # op; three spellings where positive; physical op / identity / diagnostics.
+    [pscustomobject]@{ Name = 'unit_matrix_absent_struct_decl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_matrix_absent_prim_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_matrix_absent_arrayish_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_matrix_noncall_prim_asgn.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_matrix_noncall_empty_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unsupported body'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_matrix_noncall_struct_rebind_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'graph assignment admission requires receiving-expression tests'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_matrix_callable_prim.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_matrix_callable_struct_identity.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_matrix_callable_array_elem.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_matrix_callable_callable_arg.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_matrix_path_prim.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_matrix_path_struct_rebind_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a field path must end at a primitive field'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_matrix_path_array_elem.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Absent = @(); Debt = @() },
+    # (e) empty Structure as ONE named value vs empty arg list. Named form is
+    # measured refuse today (D-21); arglist is nullary CALL.
+    [pscustomobject]@{ Name = 'unit_matrix_empty_named_value.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unknown method'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_matrix_empty_arglist.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Absent = @(); Debt = @() },
+    # Parity native for D-04 (walker FIXED -140): extra Structure arg to nullary.
+    [pscustomobject]@{ Name = 'unit_matrix_parity_extra_struct_native.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'incompatible entry signature'; Absent = @('assignment target must be a declared typed mutable value'); Debt = @() }
 )
 
 foreach ($fx in $fixtures) {

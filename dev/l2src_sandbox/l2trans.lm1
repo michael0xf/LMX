@@ -6073,6 +6073,7 @@ fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char p
     int: ty
     int: oty
     int: used
+    int: cj
     if: body = 0 || mi < 0
         return: 0
     field: l2_next_active(body\first_field)
@@ -6113,8 +6114,24 @@ fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char p
         # resolves as an own field, not an undeclared dynamic input; counting
         # and binding stay l2_check_body's job -- its later call on the same
         # statement node finds this row and is a no-op past that point.
+        # nsty (FABLE-SONNET-DECL-PREPASS-20260923-137): a field-path SEGMENT
+        # walk through this name (l2_field_path_check/l2_path_kind) also needs
+        # its Structure type, l2_own_nsty_get(oi) -- previously only recorded
+        # when l2_check_body's OWN pass reached this exact declaration, and
+        # l2_parse_unit always checks E last (S2), so a method checked before
+        # E saw ni<0 and refused "unresolved name" on a compound-expression
+        # read of a unit-level Structure field, though the identical path
+        # already resolved fine as a bare write or a bare-RHS read (both need
+        # only l2_path_root, l2_own_lookup_audit-131 part 3). This scan
+        # already runs before any statement is checked (l2_collect_asgn_binds,
+        # called early below, mirrors l2_merge_scan's existing precedent for
+        # merge result names) -- recording the type here closes the gap with
+        # no second mechanism.
         if: l2_colon_decl_shape(stmt, @ cmodel, @ fa) = 0
-            if: l2_own_add(mi, fa, l2_own_of_dt(l2_colon_graph_ty()), path, stmt) < 0
+            cj: l2_own_add(mi, fa, l2_own_of_dt(l2_colon_graph_ty()), path, stmt)
+            if: cj < 0
+                return: 1
+            if: l2_own_nsty_set(cj, l2_ns_find(cmodel)) != 0
                 return: 1
             field: l2_next_active(field\next)
             continue
@@ -13670,6 +13687,16 @@ fn: l2_parse_unit (const: @(char path)) int
             return: 1
         i: i + 1
     l2_vis_on: 0
+    # `Model: fresh` own-field rows and their nsty are also reserved here, same
+    # reason and same precedent as the merge scan above (FABLE-SONNET-DECL-
+    # PREPASS-20260923-137): l2_check_body always checks E last (S2), so a
+    # unit-level Structure field's type must already be recorded before any
+    # OTHER method's field-path segment walk can see it. l2_collect_asgn_binds
+    # already does this scan (idempotent, l2_own_add's own rule); this call is
+    # new, its later one (after checking, for the formal-assignment case it
+    # also handles) is unchanged.
+    if: l2_collect_asgn_binds(path) != 0
+        return: 1
     i: 0
     if: l2_dyn_local(path) != 0
         return: 1

@@ -490,6 +490,63 @@ An exit within an already running cleanup does not re-enter that cleanup. Remain
 
 Two same-named handlers in one block are prohibited; separate nested blocks can each have one. Delivery selects the handler by the calling block, not a same-named handler in a sibling block. Throwing the same name inside a handler does not re-enter it: this is a failure in the enclosing calling context. An unhandled name propagates only through matching `throws` declarations.
 
+Language operators whose `throws` list the programmer does not see written out (for example `merge`, including the one inside a `Model: fresh` declaration) also throw a named failure, but catching it is optional: a `catch: merge` handler -- before the call, after it, or in a separate nested block -- handles it in the ordinary way and nothing flies anywhere; an uncaught implicit failure flies to the root of the executing Message and the Thread stops (`running = 0`). The only placement constraint is the one declared names have: two same-named `catch` handlers cannot compete at one level.
+
+Worked example from the older specification (`tests/t2.lmx`): handlers before the call in separate anonymous blocks, and a handler after the blocks.
+
+```text
+fn: checkedGreeting (HelloConfig(cfg)) (Text)
+    throws:
+        GreetingRetry
+        GreetingSkip
+
+    if: cfg\greeting\len = 0
+        throw: GreetingRetry(cfg)
+
+    if: cfg\greeting\len < 0
+        throw: GreetingSkip(cfg\greeting)
+
+    return: cfg\greeting
+
+
+sub: helloMain
+    HelloConfig: cfg
+        greeting: "Hello World"
+        maxI: 3
+        maxJ: 3
+    ---
+
+    HelloConfig: emptyCfg
+        greeting: ""
+        maxI: 1
+        maxJ: 1
+    ---
+
+    ---
+        catch: GreetingRetry ()
+            cfg\greeting\len++
+            System\out\println: checkedGreeting(cfg)
+    ---
+        catch: GreetingRetry ()
+            emptyCfg\greeting\len++
+            System\out\println: checkedGreeting(emptyCfg)
+
+    catch: GreetingSkip (Text: badText)
+        System\out\println: ("handled EmptyGreeting: " + badText)
+
+
+`checkedGreeting` may leave by `return: cfg\greeting` or by `throw`. The empty
+`GreetingRetry ()` catch parameters mean this landing pad takes no payload
+fields; it mutates the outer `cfg` or `emptyCfg`. `GreetingSkip` binds
+`cfg\greeting` from `throw: GreetingSkip(cfg\greeting)` to `badText`.
+
+Each anonymous `---` block owns one `GreetingRetry` catch and one call. The
+two `GreetingRetry` names are therefore not duplicates. `GreetingSkip` sits
+in `helloMain` after those blocks, so a skip continues at the statements
+after that `catch`.
+
+```
+
 `assert` checks a diagnostic invariant. A false condition produces `AssertionViolation`, not a recoverable `throw`; ordinary `catch` cannot handle it and it is not part of `throws`. In the actor profile, publication and cleanup precede delivery to the executing Message's diagnostic root; that Message stops executing and receives no further turns. This need not terminate the OS worker; stopping execution and destroying the object are distinct.
 
 Expected input errors use an explicit condition and declared failure rather than a diagnostic abort. `log` and `error` record observations through the selected profile. `error` alone does not imply `throw`, `assert`, return or termination. A non-literal argument resolves as an ordinary value; an unknown name does not automatically become a log string.
@@ -561,7 +618,7 @@ Shared method references are terminals under their contracts. When `merge` encou
 
 Repeated fields retain forward order: the first `read` remains `read`/`[0]read`, the next is `[1]read`. A later operand does not automatically override the first. Different selection requires choosing an occurrence explicitly or constructing the intended result. Successful composition publishes a fully initialized result, requires no short-name registration and leaves sources unchanged.
 
-Failure is a throw named `merge` (as for every operator whose `throws` list the programmer does not see written out): catching it is optional; an uncaught one flies to the root and the Thread stops (`running = 0`); a handling point `catch: merge` -- later in the same body at the same level, with no wrapper -- handles it in the ordinary way and nothing flies anywhere. There is no separate partial-result protocol. This does not promise rollback of operand-evaluation effects. Temporary-storage release follows the owning Message's rules. The exact low-level mechanism is in [L2](L2_spec_en.md#copy-merge).
+Failure is a throw named `merge` (as for every operator whose `throws` list the programmer does not see written out): catching it is optional; an uncaught one flies to the root and the Thread stops (`running = 0`); a handling point `catch: merge` -- before the call, after it, or in a separate nested block, under the rules of [declared failures](#exceptions) -- handles it in the ordinary way and nothing flies anywhere. There is no separate partial-result protocol. This does not promise rollback of operand-evaluation effects. Temporary-storage release follows the owning Message's rules. The exact low-level mechanism is in [L2](L2_spec_en.md#copy-merge).
 
 A type description, schema, module data or Table is ordinary data: applying `merge` does not select a special descriptor-composition algorithm. `table` materializes an explicitly selected table representation; `join` creates a new table graph without mutating operands. Row, key, conflict and priority policies belong to the table operation, not structural field lookup.
 

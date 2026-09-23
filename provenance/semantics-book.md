@@ -776,6 +776,12 @@ An exit within an already running cleanup does not re-enter that cleanup. Remain
 
 Два одноимённых обработчика в одном блоке запрещены; отдельные вложенные блоки могут иметь каждый свой. Доставка выбирает обработчик по блоку вызова, не одноимённый обработчик соседнего блока. Повторный `throw` того же имени внутри обработчика не входит в этот обработчик заново: это отказ во внешнем вызывающем контексте. Необработанное имя распространяется только через соответствующие объявления `throws`.
 
+Операторы языка, у которых программист не видит явного перечисления `throws` (например, `merge`, в том числе внутри объявления `Model: fresh`), тоже бросают именованный отказ, но отлавливать его не обязательно: обработчик `catch: merge` — до вызова, после него или в отдельном вложенном блоке — обрабатывает его стандартно, и никуда он не улетает; неотловленный неявный отказ улетает в корень исполняющегося Message, и поток останавливается (`running = 0`). Единственное ограничение размещения — то же, что и для объявленных имён: два одноимённых `catch` не могут спорить на одном уровне.
+
+Рабочий пример из старой спецификации (`tests/t2.lmx`): обработчики до вызова в отдельных анонимных блоках и обработчик после блоков.
+
+{{older:10132-10181}}
+
 `assert` проверяет диагностический инвариант. Ложное условие порождает `AssertionViolation`, а не восстанавливаемый `throw`; его нельзя поймать обычным `catch`, и оно не входит в `throws`. В акторном профиле после публикации и очисток диагностика передаётся корню исполняющегося Message, Message прекращает исполнение и больше не получает тактов. Это не обязательное завершение рабочего потока ОС; остановка и уничтожение объекта различаются.
 
 Ожидаемые ошибки входных данных обрабатываются явным условием и объявленным отказом, а не диагностической аварией. `log` и `error` записывают наблюдения через выбранный профиль. Само `error` не означает `throw`, `assert`, возврат или остановку. Нелитеральный аргумент разрешается как обычное значение; неизвестное имя не превращается автоматически в строку журнала.
@@ -787,6 +793,12 @@ An exit within an already running cleanup does not re-enter that cleanup. Remain
 `catch` is a landing pad in the caller's block, not an ordinary nested `sub`. Its body is skipped on the initial straight-line pass. When the corresponding failure arrives, its body runs and execution continues with the statements after that `catch`. Consequently, a handler before a call re-enters the following region; a handler after the call continues past itself. The region ends at the next `catch` in the same block or the block's end.
 
 Two same-named handlers in one block are prohibited; separate nested blocks can each have one. Delivery selects the handler by the calling block, not a same-named handler in a sibling block. Throwing the same name inside a handler does not re-enter it: this is a failure in the enclosing calling context. An unhandled name propagates only through matching `throws` declarations.
+
+Language operators whose `throws` list the programmer does not see written out (for example `merge`, including the one inside a `Model: fresh` declaration) also throw a named failure, but catching it is optional: a `catch: merge` handler -- before the call, after it, or in a separate nested block -- handles it in the ordinary way and nothing flies anywhere; an uncaught implicit failure flies to the root of the executing Message and the Thread stops (`running = 0`). The only placement constraint is the one declared names have: two same-named `catch` handlers cannot compete at one level.
+
+Worked example from the older specification (`tests/t2.lmx`): handlers before the call in separate anonymous blocks, and a handler after the blocks.
+
+{{older:10132-10181}}
 
 `assert` checks a diagnostic invariant. A false condition produces `AssertionViolation`, not a recoverable `throw`; ordinary `catch` cannot handle it and it is not part of `throws`. In the actor profile, publication and cleanup precede delivery to the executing Message's diagnostic root; that Message stops executing and receives no further turns. This need not terminate the OS worker; stopping execution and destroying the object are distinct.
 
@@ -898,7 +910,7 @@ Arrays use the same scalar operations and contexts. Vectorization, reduction and
 
 Одноимённые поля сохраняют прямой порядок: первая `read` остаётся `read`/`[0]read`, следующая — `[1]read`. Более поздний операнд не переопределяет первый автоматически. Для другого выбора нужно явно выбрать вхождение или построить нужный результат. Успешная композиция публикует полностью инициализированный результат, не требует регистрации коротких имён и не меняет источники.
 
-Неуспех — throw с именем `merge` (как у любого оператора, в котором программист не видит явного перечисления `throws`): отлавливать его не обязательно; неотловленный улетает в корень, и поток останавливается (`running = 0`); найденная точка обработки `catch: merge` — дальше в том же теле на том же уровне, без обёртки — обрабатывает его стандартно, и никуда он не улетает. Отдельного протокола частичного результата нет. Это не обещание отката побочных эффектов вычисления операндов. Правила освобождения временного хранилища принадлежат владельцу Message. Точный низкоуровневый механизм — [L2](L2_spec_ru.md#copy-merge).
+Неуспех — throw с именем `merge` (как у любого оператора, в котором программист не видит явного перечисления `throws`): отлавливать его не обязательно; неотловленный улетает в корень, и поток останавливается (`running = 0`); найденная точка обработки `catch: merge` — до вызова, после него или в отдельном вложенном блоке, по правилам [объявленных отказов](#exceptions) — обрабатывает его стандартно, и никуда он не улетает. Отдельного протокола частичного результата нет. Это не обещание отката побочных эффектов вычисления операндов. Правила освобождения временного хранилища принадлежат владельцу Message. Точный низкоуровневый механизм — [L2](L2_spec_ru.md#copy-merge).
 
 Описание типа, схема, данные модуля или таблица являются обычными данными: применение к ним `merge` не выбирает особый алгоритм композиции дескрипторов. `table` материализует явно выбранное табличное представление; `join` создаёт новый табличный граф, не меняя операнды. Политики строк, ключей, конфликтов и приоритета задаёт табличная операция, не структурное правило поиска поля.
 
@@ -912,7 +924,7 @@ Shared method references are terminals under their contracts. When `merge` encou
 
 Repeated fields retain forward order: the first `read` remains `read`/`[0]read`, the next is `[1]read`. A later operand does not automatically override the first. Different selection requires choosing an occurrence explicitly or constructing the intended result. Successful composition publishes a fully initialized result, requires no short-name registration and leaves sources unchanged.
 
-Failure is a throw named `merge` (as for every operator whose `throws` list the programmer does not see written out): catching it is optional; an uncaught one flies to the root and the Thread stops (`running = 0`); a handling point `catch: merge` -- later in the same body at the same level, with no wrapper -- handles it in the ordinary way and nothing flies anywhere. There is no separate partial-result protocol. This does not promise rollback of operand-evaluation effects. Temporary-storage release follows the owning Message's rules. The exact low-level mechanism is in [L2](L2_spec_en.md#copy-merge).
+Failure is a throw named `merge` (as for every operator whose `throws` list the programmer does not see written out): catching it is optional; an uncaught one flies to the root and the Thread stops (`running = 0`); a handling point `catch: merge` -- before the call, after it, or in a separate nested block, under the rules of [declared failures](#exceptions) -- handles it in the ordinary way and nothing flies anywhere. There is no separate partial-result protocol. This does not promise rollback of operand-evaluation effects. Temporary-storage release follows the owning Message's rules. The exact low-level mechanism is in [L2](L2_spec_en.md#copy-merge).
 
 A type description, schema, module data or Table is ordinary data: applying `merge` does not select a special descriptor-composition algorithm. `table` materializes an explicitly selected table representation; `join` creates a new table graph without mutating operands. Row, key, conflict and priority policies belong to the table operation, not structural field lookup.
 

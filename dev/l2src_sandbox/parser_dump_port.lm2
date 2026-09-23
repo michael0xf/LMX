@@ -47,18 +47,20 @@ fn: p0_dump_reserve (@: LmP0Dump dump; size_t: extra) int
     return: 1
 end: p0_dump_reserve
 
+# Digit buffer is an ordinary L2 own char array of length 32 (not c.array).
+# Deviation from L1 oracle spelling; same capacity and index arithmetic.
 sub: p0_dump_append_size (@: LmP0Dump dump; size_t: value)
-    c.array: []: char buffer 32
+    []: char buffer 32
     size_t: index
     if: value = 0U
         p0_dump_append_cstr(dump, "0")
         return
-    index: c.sizeof(buffer)
+    index: sizeof: buffer
     while: value > 0U
         index: index - 1U
         buffer[index]: 48 + value % 10U
         value: value / 10U
-    p0_dump_append(dump, buffer + index, c.sizeof(buffer) - index)
+    p0_dump_append(dump, buffer + index, (sizeof: buffer) - index)
 end: p0_dump_append_size
 
 sub: p0_dump_append_field_count_line (@: LmP0Dump dump; size_t: field_count)

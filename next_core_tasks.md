@@ -36,7 +36,7 @@ Dictionary stable-ids: [`architectural-placement`](next_core_tasks_dictionary.md
 Dictionary: [
 o-defensive-kernel](next_core_tasks_dictionary.md#no-defensive-kernel) — kernel invariants by construction/tests; no defensive close state machines in base kernel types.
 
-**`sizeof:`:** **ввести** L2 language receiver-operator (AUTHOR-SIZEOF-DESIGN-20260922-20); status absent/planned until implemented; not an already-required obligation; not a callable; no global-contract HOLD/OPEN. **Семантика (автор, Q16, 2026-09-23):** размер хранилища значения/типа в БАЙТАХ (для own-массива — все элементы), операнд — L2-значение или тип, разрешаемый транслятором; `length` — число элементов; `c.sizeof(...)` — сырой C через дверь `c.*`.
+**`sizeof:`:** **введён** L2 language receiver-operator (AUTHOR-SIZEOF-DESIGN-20260922-20 / FABLE-GROKBOT-INCLUDE-AND-SIZEOF-20260923-123 part2); not a callable; no global-contract HOLD/OPEN. **Семантика (автор, Q16, 2026-09-23):** размер хранилища значения/типа в БАЙТАХ (для own-массива — все элементы), операнд — L2-значение или тип, разрешаемый транслятором; `length` — число элементов; `c.sizeof(...)` — сырой C через дверь `c.*`.
 
 
 ## 1. Аварийная коррекция базовых Array и Lmx
@@ -320,7 +320,7 @@ Acceptance:
 
 **Норма (overrides -13 entity-kind / sizeof HOLD framing):** `c.*` — сырой дверной проход в C. L2 **не** ведёт registry foreign entities, **не** сканирует headers для словаря имён C, **не** классифицирует `c.sizeof` / `c.puts` как declared/builtin entity kinds.
 
-- [ ] Сделать raw-C door **syntax-transparent**: `c.sizeof(...)` понижается в C `sizeof(...)` через общий raw-C door; unevaluated семантика sizeof даёт **C compiler**, не L2 semantic resolution.
+- [x] Сделать raw-C door **syntax-transparent**: `c.sizeof(...)` понижается в C `sizeof(...)` через общий raw-C door; unevaluated семантика sizeof даёт **C compiler**, не L2 semantic resolution. (123 part2: deleted c.sizeof special + LmP0 name arms; `unit_sizeof_c_door_arena`.)
 - [x] `c.puts(...)` проходит тем же raw-C door **без** name-specific L2 checker/emitter.
 - [ ] Удалить header scanners / entity dictionaries / name whitelists / special `c.*` semantic classification. Сначала **inventory** точных obsolete scanners/dictionaries (известные кандидаты в `dev/l2src_sandbox/l2trans.lm1`: `l2_c_header_walk`, `l2_c_header_chain_has`, `l2_c_header_chain_has_typedef`, `l2_predef_has_function`, `l2_predef_has_type`, `l2_predef_has_fnptr`, `l2_foreign_intern`, `l2_c_stmt_door` exclusions, `l2_simple_puts_main` — полный список уточнить inventory). (99 PART2: deleted puts helpers; door no longer excludes c.puts.)
 - [ ] **Ownership/dependency:** DeepSeek ранее был tasked автором удалить эти scanners/dictionaries — **не дублировать и не отклоняться**; зафиксировать ownership/dependency и координировать. Grok Bot не invents параллельный removal path.
@@ -331,16 +331,16 @@ Acceptance:
 
 Clarifies / overrides overstatements in -19. Unhold from -18 stands (no global-contract HOLD/OPEN).
 
-- [ ] Текущей работе нужен size operation. Вместо отдельного L2 parsing/checking/emission для сырого `c.sizeof` — **выбрать и ввести** обычный language receiver-operator `sizeof:` (новая architectural design/implementation задача; coherentнее, чем special-case `c.sizeof`).
-- [ ] До реализации: статус **absent/planned**, не нарушенная заранее обязанность языка и не HOLD в ожидании другого author contract.
-- [ ] После введения: `sizeof:` участвует в существующей receiver-operator architecture (как класс `fn:`); **не** model как function/callable.
-- [ ] `c.sizeof(...)` остаётся валиден **только** как raw C text через uniform дверь `c.*`, где raw C намеренно используется; **zero** `c.sizeof`-specific L2 parser/checker/emitter semantics.
-- [ ] Не обобщать это решение на суждения о `length` / `capacity` / etc. в рамках этого тикета.
-- [ ] Инвентаризовать Lmx-side `c.sizeof` → мигрировать на `sizeof:` после введения operator.
-- [ ] Отличить `sizeof:` от Array `length` (и от L3 `size`/`shape`/`rank`) — без переразметки length/capacity в этом тикете.
-- [ ] Реализацию оставить **later bounded ticket** после docs baton/ownership order; one-writer + clean-kernel barriers остаются.
-- [ ] Evidence (inventory before/with implementation): exact affected symbols (`l2_prep_sizeof_name` / former `c.sizeof` specials), fixtures/tests, harness gates.
-- [ ] Acceptance (после введения): `rg` — zero `c.sizeof`-specific semantic branches; receiver-operator dispatch + surface-form equivalence + native+interpreter.
+- [x] Текущей работе нужен size operation. Вместо отдельного L2 parsing/checking/emission для сырого `c.sizeof` — **выбрать и ввести** обычный language receiver-operator `sizeof:` (123 part2: `l2_emit_sizeof` / `l2_check_sizeof` / `l2_sizeof_name_bytes`).
+- [x] До реализации: статус **absent/planned**, не нарушенная заранее обязанность языка и не HOLD в ожидании другого author contract. (superseded: implemented in 123 part2.)
+- [x] После введения: `sizeof:` участвует в существующей receiver-operator architecture (как класс `fn:`); **не** model как function/callable.
+- [x] `c.sizeof(...)` остаётся валиден **только** как raw C text через uniform дверь `c.*`, где raw C намеренно используется; **zero** `c.sizeof`-specific L2 parser/checker/emitter semantics. (special emit/check/prep deleted; door uneval soft-check only.)
+- [x] Не обобщать это решение на суждения о `length` / `capacity` / etc. в рамках этого тикета. (author Q16: sizeof:=bytes, length=count.)
+- [x] Инвентаризовать Lmx-side `c.sizeof` → мигрировать на `sizeof:` после введения operator. (tests + port migrated; `l2trans.lm1` kept `c.sizeof(@:)/c.sizeof(c.)` — built by l1trans.)
+- [x] Отличить `sizeof:` от Array `length` (и от L3 `size`/`shape`/`rank`) — без переразметки length/capacity в этом тикете. (`unit_sizeof_array_bytes`: bytes=16, length=4.)
+- [x] Реализацию оставить **later bounded ticket** после docs baton/ownership order; one-writer + clean-kernel barriers остаются. (done in 123 part2.)
+- [x] Evidence (inventory before/with implementation): exact affected symbols (`l2_prep_sizeof_name` / former `c.sizeof` specials), fixtures/tests, harness gates. (deleted prep_sizeof_name + specials; fixtures gated; mutants measured.)
+- [x] Acceptance (после введения): `rg` — zero `c.sizeof`-specific semantic branches; receiver-operator dispatch + surface-form equivalence + native+interpreter. (harness 171 GREEN; build_l2src 250; L3 11 suites.)
 
 ### L1 `c.array` (separate, unproven — do not merge)
 
@@ -353,7 +353,7 @@ Clarifies / overrides overstatements in -19. Unhold from -18 stands (no global-c
 Чистое ядро (`clean kernel`) означает одновременно:
 
 - [ ] Нет нарушений [`architectural-placement`](next_core_tasks_dictionary.md#architectural-placement): нет name-special/`allowlist`/header-scanner/hidden-registry/shim/fallback «дырок»; нет лишних полей в базовых Array/Message ради одного потребителя (cleanup debt до закрытия).
-- [ ] `sizeof:` — **planned** language receiver-operator (ввести later); until then absent; zero `c.sizeof`-specific L2 semantic branches; do not treat as already-required language obligation.
+- [x] `sizeof:` — **implemented** language receiver-operator (123 part2); zero `c.sizeof`-specific L2 emit/check specials; raw `c.sizeof` through door.
 - [ ] Нет L2 special semantics и name-specific веток для `c.puts` / `c.array`; **zero** stale header scanners / C-name dictionaries / name whitelists / special `c.*` semantic classification (raw-C door only).
 - [ ] Нет дублирующих старых discard/call путей рядом с новым общим механизмом (`l2_eval_discard` и единый body dispatch).
 - [ ] Нет мёртвых helpers, unreachable compatibility shims, устаревших exclusions/comments и противоречивых docs/tests.

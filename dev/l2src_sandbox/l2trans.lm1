@@ -616,6 +616,9 @@ prototype:
     fn: l2_emit_array_load (int: oi; size_t: index; const: @(char ind); @: char dest) int
     fn: l2_array_length_own (const: @(LmP0Node node); int: mi) int
     fn: l2_emit_array_length (int: oi; const: @(char ind); @: char dest) int
+    fn: l2_sizeof_name_bytes (const: @(LmP0Node node); const: @(char d); size_t: b; size_t: e; int: mi; const: @(char ind); @: char dest) int
+    fn: l2_emit_sizeof (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest) int
+    fn: l2_check_sizeof (const: @(LmP0Node node); int: mi; const: @(char path)) int
     fn: l2_fn (int: mi; int: k) @: LmP0Text
     fn: l2_ft (int: mi; int: k) int
     fn: l2_dn (int: mi; int: k) @: LmP0Text
@@ -1110,7 +1113,7 @@ fn: l2_own_reserve (int: need) int
         l2_alloc_err: 2
         return: 1
     nmeta: rows * cap
-    psz: c.sizeof(l2_ptr_probe)
+    psz: c.sizeof(@: char)
     if: l2_mul_ok(cap, psz) = 0
         l2_alloc_err: 2
         return: 1
@@ -1302,7 +1305,7 @@ fn: l2_slot_reserve (int: need) int
         l2_alloc_err: 2
         return: 1
     count: rows * cap
-    psz: c.sizeof(l2_ptr_probe)
+    psz: c.sizeof(@: char)
     if: l2_mul_ok(count, psz) = 0 || l2_mul_ok(count, c.sizeof(c.int)) = 0
         l2_alloc_err: 2
         return: 1
@@ -1472,7 +1475,7 @@ fn: l2_meth_reserve (int: need) int
         return: 1
     if: cap > (cast: (size_t) c.INT_MAX)
         cap: need_u
-    psz: c.sizeof(l2_ptr_probe)
+    psz: c.sizeof(@: char)
     if: l2_mul_ok(cap, psz) = 0
         l2_alloc_err: 2
         return: 1
@@ -1820,7 +1823,7 @@ fn: l2_formals_alloc (int: mi; int: ar) int
     size_t: psz
     if: mi < 0 || ar < 0
         return: 1
-    psz: c.sizeof(l2_ptr_probe)
+    psz: c.sizeof(@: char)
     if: l2_mul_ok((cast: (size_t) ar), psz) = 0
         l2_alloc_err: 2
         return: 1
@@ -1875,7 +1878,7 @@ fn: l2_hidden_reserve (int: mi; int: need) int
     if: cap > (cast: (size_t) c.INT_MAX)
         cap: need_u
         ---
-    psz: c.sizeof(l2_ptr_probe)
+    psz: c.sizeof(@: char)
     if: l2_mul_ok((cast: (size_t) cap), psz) = 0
         l2_alloc_err: 2
         return: 1
@@ -2993,7 +2996,7 @@ fn: l2_intern_reserve (unsigned: need) int
         cap: cap * 2U
     if: cap > (cast: (size_t) (cast: (unsigned) -1))
         cap: need_u
-    psz: c.sizeof(l2_ptr_probe)
+    psz: c.sizeof(@: char)
     if: l2_mul_ok(cap, psz) = 0 || l2_mul_ok(cap, c.sizeof(c.int)) = 0
         l2_alloc_err: 2
         return: 1
@@ -3126,7 +3129,7 @@ fn: l2_intern_store (int: ar; const: @(char n0); size_t: l0; int: t0; const: @(c
         return: 0U
     if: l2_intern_reserve(l2_intern_n + 1U) != 0
         return: 0U
-    psz: c.sizeof(l2_ptr_probe)
+    psz: c.sizeof(@: char)
     if: l2_mul_ok((cast: (size_t) ar), psz) = 0 || l2_mul_ok((cast: (size_t) ar), c.sizeof(c.size_t)) = 0 || l2_mul_ok((cast: (size_t) ar), c.sizeof(c.int)) = 0
         l2_alloc_err: 2
         return: 0U
@@ -3241,7 +3244,7 @@ fn: l2_intern_store_mi (int: mi) unsigned
         return: 0U
     ar: l2_m_arity[mi]
     dyn: l2_m_dyn[mi]
-    psz: c.sizeof(l2_ptr_probe)
+    psz: c.sizeof(@: char)
     s: l2_intern_n
     l2_it_n[s]: 0
     l2_it_nl[s]: 0
@@ -3686,7 +3689,7 @@ fn: l2_pd_push (const: @(LmP0Text t); const: @(char path); const: @(LmP0Node at)
         if: cap > (c.INT_MAX / 2)
             return: l2_error(path, at, "size overflow")
         cap: cap * 2
-        psz: c.sizeof(l2_ptr_probe)
+        psz: c.sizeof(@: char)
         if: l2_mul_ok((cast: (size_t) cap), psz) = 0
             return: l2_error(path, at, "size overflow")
         nb: (cast: (size_t) cap) * psz
@@ -3722,7 +3725,7 @@ fn: l2_def_push (const: @(LmP0Node item); const: @(char path)) int
         if: cap > (c.INT_MAX / 2)
             return: l2_error(path, item, "size overflow")
         cap: cap * 2
-        psz: c.sizeof(l2_ptr_probe)
+        psz: c.sizeof(@: char)
         if: l2_mul_ok((cast: (size_t) cap), psz) = 0
             return: l2_error(path, item, "size overflow")
         nb: (cast: (size_t) cap) * psz
@@ -3758,7 +3761,7 @@ fn: l2_inc_push (const: @(LmP0Text t); const: @(char path); const: @(LmP0Node at
         if: cap > (c.INT_MAX / 2)
             return: l2_error(path, at, "size overflow")
         cap: cap * 2
-        psz: c.sizeof(l2_ptr_probe)
+        psz: c.sizeof(@: char)
         if: l2_mul_ok((cast: (size_t) cap), psz) = 0
             return: l2_error(path, at, "size overflow")
         nb: (cast: (size_t) cap) * psz
@@ -4133,7 +4136,7 @@ fn: l2_hdr_seen_add (const: @(char path)) int
         if: cap > (c.INT_MAX / 2)
             return: 1
         cap: cap * 2
-        psz: c.sizeof(l2_ptr_probe)
+        psz: c.sizeof(@: char)
         if: l2_mul_ok((cast: (size_t) cap), psz) = 0
             return: 1
         nb: (cast: (size_t) cap) * psz
@@ -4317,7 +4320,7 @@ fn: l2_cnt_keep (const: @(LmP0Text src)) @: LmP0Text
         if: cap > (c.INT_MAX / 2)
             return: 0
         cap: cap * 2
-        psz: c.sizeof(l2_ptr_probe)
+        psz: c.sizeof(@: char)
         if: l2_mul_ok((cast: (size_t) cap), psz) = 0
             return: 0
         nb: (cast: (size_t) cap) * psz
@@ -4570,10 +4573,10 @@ fn: l2_foreign_intern (const: @(LmP0Text name); int: depth; int: is_const) int
                 cap: cap * 2
             ---
         ---
-        if: l2_mul_ok((cast: (size_t) cap), c.sizeof(l2_ptr_probe)) = 0 || l2_mul_ok((cast: (size_t) cap), c.sizeof(c.int)) = 0
+        if: l2_mul_ok((cast: (size_t) cap), c.sizeof(@: char)) = 0 || l2_mul_ok((cast: (size_t) cap), c.sizeof(c.int)) = 0
             l2_alloc_err: 2
             return: 0 - 1
-        nb: (cast: (size_t) cap) * c.sizeof(l2_ptr_probe)
+        nb: (cast: (size_t) cap) * c.sizeof(@: char)
         nn: (cast: (@@: LmP0Text) l2_xmalloc(nb))
         nd: (cast: (@: int) l2_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
         nc: (cast: (@: int) l2_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
@@ -4586,7 +4589,7 @@ fn: l2_foreign_intern (const: @(LmP0Text name); int: depth; int: is_const) int
                 l2_xfree((cast: (@: void) nc))
             return: 0 - 1
         if: l2_foreign_n > 0
-            memcpy((cast: (@: void) nn), (cast: (@: void) l2_foreign_name), (cast: (size_t) l2_foreign_n) * c.sizeof(l2_ptr_probe))
+            memcpy((cast: (@: void) nn), (cast: (@: void) l2_foreign_name), (cast: (size_t) l2_foreign_n) * c.sizeof(@: char))
             memcpy((cast: (@: void) nd), (cast: (@: void) l2_foreign_depth), (cast: (size_t) l2_foreign_n) * c.sizeof(c.int))
             memcpy((cast: (@: void) nc), (cast: (@: void) l2_foreign_const), (cast: (size_t) l2_foreign_n) * c.sizeof(c.int))
         ---
@@ -4806,7 +4809,7 @@ return: 0
 fn: l2_lmx_text () @: LmP0Text
     if: l2_lmx_name_cache != 0
         return: l2_lmx_name_cache
-    l2_lmx_name_cache: (cast: (@: LmP0Text) l2_xmalloc(c.sizeof(LmP0Text)))
+    l2_lmx_name_cache: (cast: (@: LmP0Text) l2_xmalloc(c.sizeof(c.LmP0Text)))
     if: l2_lmx_name_cache = 0
         return: 0
     l2_lmx_name_cache\data: "Lmx"
@@ -4820,7 +4823,7 @@ fn: l2_text_skip (const: @(LmP0Text t); size_t: n) @: LmP0Text
     @: LmP0Text r
     if: t = 0 || t\length < n
         return: 0
-    r: (cast: (@: LmP0Text) l2_xmalloc(c.sizeof(LmP0Text)))
+    r: (cast: (@: LmP0Text) l2_xmalloc(c.sizeof(c.LmP0Text)))
     if: r = 0
         return: 0
     r\data: t\data + n
@@ -5458,6 +5461,16 @@ fn: l2_colon_simple_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
         return: l2_colon_bound_ty(mi, atom, out_ty)
     if: value\kind != c.LM_P0_NODE_FRAME || value\as\frame = 0 || value\as\frame\head = 0
         return: 1
+    # sizeof: / length are operators whose result is size_t (storage bytes / element count).
+    if: l2_text_eq(value\as\frame\head, "sizeof") || l2_text_eq(value\as\frame\head, "length")
+        \out_ty: 2
+        return: 0
+    ---
+    # Raw c.sizeof(...) through the c.* door is also size_t.
+    if: l2_text_eq(value\as\frame\head, "c.sizeof")
+        \out_ty: 2
+        return: 0
+    ---
     # A call by name or through a callable field path (`Holder\viaPath(4U)`).
     m: l2_head_method(value\as\frame\head)
     if: m < 0
@@ -5508,6 +5521,14 @@ fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char p
     only: l2_next_active(stmt\as\frame\body\first_field)
     if: only = 0 || l2_colon_simple_ty(only\value, mi, @ value_ty) != 0
         return: l2_error(path, stmt, "assignment value has unknown type")
+    if: only\value != 0 && only\value\kind = c.LM_P0_NODE_FRAME && only\value\as != 0 && only\value\as\frame != 0 && l2_text_eq(only\value\as\frame\head, "sizeof")
+        if: l2_check_sizeof(only\value, mi, path) != 0
+            return: 1
+    ---
+    if: only\value != 0 && only\value\kind = c.LM_P0_NODE_FRAME && only\value\as != 0 && only\value\as\frame != 0 && l2_text_eq(only\value\as\frame\head, "length")
+        if: l2_array_length_own(only\value, mi) < 0
+            return: l2_error(path, only\value, "length requires one known primitive own array")
+    ---
     if: l2_colon_types_compatible(target_ty, value_ty) = 0
         return: l2_error(path, stmt, "assignment value has incompatible type")
     if: only\value != 0 && only\value\kind = c.LM_P0_NODE_ATOM && l2_check_literal_kind(only\value\as\atom, l2_lit_kind_from_ft(target_ty), path, stmt) != 0
@@ -6273,7 +6294,7 @@ fn: l2_scan_ident (int: mi; const: @(LmP0Text t); @: int seen) int
         return: 0
     if: l2_is_known(t)
         return: 0
-    if: l2_text_eq(t, "return") || l2_text_eq(t, "if") || l2_text_eq(t, "else") || l2_text_eq(t, "while") || l2_text_eq(t, "for") || l2_text_eq(t, "continue") || l2_text_eq(t, "break") || l2_text_eq(t, "fn") || l2_text_eq(t, "sub") || l2_text_eq(t, "end") || l2_text_eq(t, "node") || l2_text_eq(t, "int") || l2_text_eq(t, "char") || l2_text_eq(t, "size_t") || l2_text_eq(t, "unsigned") || l2_text_eq(t, "ulong") || l2_text_eq(t, "data") || l2_text_eq(t, "length") || l2_text_eq(t, "columns") || l2_text_eq(t, "count") || l2_text_eq(t, "capacity") || l2_text_eq(t, "slots") || l2_text_eq(t, "alloc_next") || l2_text_eq(t, "addr") || l2_text_eq(t, "next")
+    if: l2_text_eq(t, "return") || l2_text_eq(t, "if") || l2_text_eq(t, "else") || l2_text_eq(t, "while") || l2_text_eq(t, "for") || l2_text_eq(t, "continue") || l2_text_eq(t, "break") || l2_text_eq(t, "fn") || l2_text_eq(t, "sub") || l2_text_eq(t, "end") || l2_text_eq(t, "node") || l2_text_eq(t, "int") || l2_text_eq(t, "char") || l2_text_eq(t, "size_t") || l2_text_eq(t, "unsigned") || l2_text_eq(t, "ulong") || l2_text_eq(t, "data") || l2_text_eq(t, "length") || l2_text_eq(t, "sizeof") || l2_text_eq(t, "cast") || l2_text_eq(t, "columns") || l2_text_eq(t, "count") || l2_text_eq(t, "capacity") || l2_text_eq(t, "slots") || l2_text_eq(t, "alloc_next") || l2_text_eq(t, "addr") || l2_text_eq(t, "next")
         return: 0
     if: t\length >= 2U && t\data[0] = 99 && t\data[1] = 46
         return: 0
@@ -6328,6 +6349,12 @@ fn: l2_scan_node (const: @(LmP0Node node); int: mi; @: int seen) int
     # c.sizeof names a C type; nothing inside it is a lexical reference.
     if: node\kind = c.LM_P0_NODE_FRAME && l2_frame_head(node, "c.sizeof")
         return: 0
+    # sizeof: is an operator; scan its one operand for lexical refs, not the head.
+    if: node\kind = c.LM_P0_NODE_FRAME && l2_frame_head(node, "sizeof")
+        if: node\as = 0 || node\as\frame = 0 || node\as\frame\body = 0
+            return: 0
+        return: l2_scan_fields(node\as\frame\body\first_field, l2_count_active(node\as\frame\body), mi, seen)
+    ---
     # implements(candidate, required, consumer) is decided at translation from
     # declarations; its head and operands are not lexical references either.
     if: node\kind = c.LM_P0_NODE_FRAME && l2_frame_head(node, "implements")
@@ -8007,7 +8034,7 @@ fn: l2_indent_reserve (int: need) int
     if: cap > (cast: (size_t) c.INT_MAX)
         l2_alloc_err: 2
         return: 1
-    psz: c.sizeof(l2_ptr_probe)
+    psz: c.sizeof(@: char)
     if: l2_mul_ok(cap, psz) = 0
         l2_alloc_err: 2
         return: 1
@@ -8110,7 +8137,7 @@ fn: l2_scope_reserve (int: need) int
             l2_alloc_err: 2
             return: 1
         cap: cap * 2U
-    psz: c.sizeof(l2_ptr_probe)
+    psz: c.sizeof(@: char)
     if: l2_mul_ok(cap, psz) = 0
         l2_alloc_err: 2
         return: 1
@@ -8209,7 +8236,7 @@ fn: l2_for_reserve (int: need) int
             l2_alloc_err: 2
             return: 1
         cap: cap * 2U
-    psz: c.sizeof(l2_ptr_probe)
+    psz: c.sizeof(@: char)
     if: l2_mul_ok(cap, psz) = 0
         l2_alloc_err: 2
         return: 1
@@ -8556,9 +8583,7 @@ fn: l2_is_known (const: @(LmP0Text t)) int
     # Includes for runtime headers come from the source unit's own predef:/include:
     # (plus the profile prelude). Name-driven need_stdlib/need_string/need_p0 are gone.
     # Emitter-set need_query/need_own remain where the translator emits its own helpers.
-    # c.array is a declarator, not a generic call. c.puts uses the raw c.* door.
-    if: l2_text_eq(t, "c.array")
-        return: 0
+    # c.* is the raw door; c.array declarators are matched by l2_array_local, not here.
     if: t\length > 2U && t\data[0] = 99 && t\data[1] = 46
         return: 1
     # The translator's own adapter families are LMX functions implemented in L1
@@ -8581,12 +8606,9 @@ fn: l2_c_door (const: @(LmP0Text t)) int
         return: 0
 return: 1
 
-# A c.name statement the generic C call lowers. c.sizeof and c.array
-# still have their own lowering; c.puts uses the raw c.* door.
+# A c.name statement the generic C call lowers. c.* is a uniform raw door.
 fn: l2_c_stmt_door (const: @(LmP0Text t)) int
     if: t = 0 || t\data = 0 || t\length <= 2U || t\data[0] != 99 || t\data[1] != 46
-        return: 0
-    if: l2_text_eq(t, "c.sizeof") || l2_text_eq(t, "c.array")
         return: 0
 return: 1
 
@@ -8799,7 +8821,7 @@ fn: l2_ebr_reserve (int: need) int
             l2_alloc_err: 2
             return: 1
         cap: cap * 2U
-    psz: c.sizeof(l2_ptr_probe)
+    psz: c.sizeof(@: char)
     if: l2_mul_ok(cap, psz) = 0 || l2_mul_ok(cap, c.sizeof(c.size_t)) = 0
         l2_alloc_err: 2
         return: 1
@@ -11321,6 +11343,9 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
             return: l2_check_fields(a1, l2_count_active(call\body) - 1, mi, path, node)
         return: l2_check_primary(a1\value, mi, path)
     ---
+    if: l2_text_eq(call\head, "sizeof")
+        return: l2_check_sizeof(node, mi, path)
+    ---
     if: l2_text_eq(call\head, "implements")
         return: l2_check_implements(node, path)
     idx: l2_head_method(call\head)
@@ -11331,26 +11356,17 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
             idx: l2_cf_get(mi, fi)
         ---
     ---
+    if: idx < 0 && l2_text_eq(call\head, "sizeof")
+        return: l2_check_sizeof(node, mi, path)
     if: idx < 0 && l2_text_eq(call\head, "length")
         if: l2_array_length_own(node, mi) < 0
             return: l2_error(path, node, "length requires one known primitive own array")
         return: 0
+    # Raw c.sizeof(...) is unevaluated C: operands are type/expression text for the
+    # C compiler. Do not resolve them as L2 values (door transparency).
     if: idx < 0 && l2_text_eq(call\head, "c.sizeof")
         if: call\body = 0 || l2_next_active(call\body\first_field) = 0
             return: l2_error(path, node, "incompatible entry signature")
-        a0: l2_next_active(call\body\first_field)
-        # Several fields (name, \, field, [index]) are an L2 expression: its
-        # names are variables with generated C spellings, never foreign C.
-        if: l2_count_active(call\body) > 1
-            return: l2_check_fields(call\body\first_field, l2_count_active(call\body), mi, path, node)
-        if: a0\value != 0 && a0\value\kind = c.LM_P0_NODE_FRAME && a0\value\as != 0 && a0\value\as\frame != 0 && l2_address_depth(a0\value\as\frame\head) != 0 && a0\value\as\frame\body != 0 && l2_count_active(a0\value\as\frame\body) = 1
-            return: 0
-        if: a0\value = 0 || a0\value\kind != c.LM_P0_NODE_ATOM
-            return: l2_error(path, node, "unknown foreign type")
-        if: l2_ml_find(a0\value\as\atom) >= 0 && l2_ml_ty[l2_ml_find(a0\value\as\atom)] = 22
-            return: 0
-        # A single operand is a type spelled as written (Stage B), or a
-        # formal or own field that emission lowers; C checks the spelling.
         return: 0
     if: idx < 0 && l2_is_known(call\head)
         if: l2_text_eq(call\head, "lm_own_new_zero") || l2_text_eq(call\head, "lm_own_copy_bytes") || l2_text_eq(call\head, "lm_own_delete") || l2_text_eq(call\head, "lm_own_resize")
@@ -12376,13 +12392,8 @@ fn: l2_text_is_bytes (const: @(LmP0Text a); const: @(char d); size_t: n) int
         return: 0
 return: memcmp(a\data, d, n) = 0
 
-# The operand bytes d[b..e) of c.sizeof. When they are a single name that is a
-# formal or an own scalar field, the name is an L2 variable whose C spelling is
-# generated, so the operand is lowered to a C object of the same type: the
-# formal itself, or a zero temporary of the own field's declared type. sizeof
-# does not evaluate its operand, so there is no graph load. Own fields are
-# resolved in the order l2_own_find uses. Any other operand is foreign C and
-# stays as written. Returns 2 when the operand is not such a name.
+# sizeof: operand name bytes. Formals and scalar/array/pointer owns.
+# Returns 2 when the name is not lowered here; caller may accept a type or refuse.
 fn: l2_sizeof_name_bytes (const: @(LmP0Node node); const: @(char d); size_t: b; size_t: e; int: mi; const: @(char ind); @: char dest) int
     size_t: n 0U
     size_t: i 0U
@@ -12422,8 +12433,49 @@ fn: l2_sizeof_name_bytes (const: @(LmP0Node node); const: @(char d); size_t: b; 
         k: k + 1
     if: oi < 0
         return: 2
+    if: l2_own_is_array(l2_own_ty[oi]) != 0
+        if: l2_own_count[oi] = 0
+            return: l2_error(l2_src, node, "sizeof: requires a known own array length")
+        if: l2_own_ty[oi] = 4
+            if: c.sprintf(dest, "(%.*s * c.sizeof(c.int))", (cast: (int) l2_own_count[oi]\length), l2_own_count[oi]\data) < 0
+                return: 1
+            return: 0
+        ---
+        if: l2_own_ty[oi] = 5
+            if: c.sprintf(dest, "(%.*s * c.sizeof(c.char))", (cast: (int) l2_own_count[oi]\length), l2_own_count[oi]\data) < 0
+                return: 1
+            return: 0
+        ---
+        if: l2_own_ty[oi] = 7
+            if: c.sprintf(dest, "(%.*s * c.sizeof(c.size_t))", (cast: (int) l2_own_count[oi]\length), l2_own_count[oi]\data) < 0
+                return: 1
+            return: 0
+        ---
+        if: l2_own_ty[oi] = 8
+            if: c.sprintf(dest, "(%.*s * c.sizeof(c.unsigned))", (cast: (int) l2_own_count[oi]\length), l2_own_count[oi]\data) < 0
+                return: 1
+            return: 0
+        ---
+        if: l2_own_ty[oi] = 37
+            if: c.sprintf(dest, "(%.*s * c.sizeof(c.ulong))", (cast: (int) l2_own_count[oi]\length), l2_own_count[oi]\data) < 0
+                return: 1
+            return: 0
+        ---
+        return: l2_error(l2_src, node, "sizeof: of this own array type not yet implemented")
+    ---
+    if: l2_own_is_pointer(l2_own_ty[oi]) != 0
+        if: l2_m_uses[l2_own_off(mi, oi)] != 0
+            if: c.sprintf(dest, "c.sizeof(l2_q%d)", oi) < 0
+                return: 1
+            return: 0
+        ---
+        # Unused pointer own has no generated C local; emit pointer-cell storage size.
+        if: c.sprintf(dest, "c.sizeof(@: void)") < 0
+            return: 1
+        return: 0
+    ---
     if: l2_own_ty[oi] != 0 && l2_own_ty[oi] != 1 && l2_own_ty[oi] != 2 && l2_own_ty[oi] != 3 && l2_own_ty[oi] != 36
-        return: l2_error(l2_src, node, "c.sizeof of this own field type not yet implemented")
+        return: l2_error(l2_src, node, "sizeof: of this own field type not yet implemented")
     t: l2_tn
     l2_tn: l2_tn + 1
     if: l2_own_ty[oi] = 0 && c.fprintf(l2_out, "%sint: l2_t%d 0\n", ind, t) < 0
@@ -12440,25 +12492,107 @@ fn: l2_sizeof_name_bytes (const: @(LmP0Node node); const: @(char d); size_t: b; 
         return: 1
 return: 0
 
-# c.sizeof(...) usually reaches the translator as one C surface atom, which was
-# copied as written; its operand is lowered by l2_sizeof_name_bytes. Returns 2
-# when the atom is not c.sizeof of such a name.
-fn: l2_prep_sizeof_name (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest) int
-    const: @(char d) 0
-    size_t: b 9U
-    size_t: e 0U
-    if: node = 0 || dest = 0 || node\kind != c.LM_P0_NODE_ATOM || node\as = 0 || node\as\atom = 0 || node\as\atom\data = 0
-        return: 2
-    d: node\as\atom\data
-    e: node\as\atom\length
-    if: e < 11U || memcmp(d, "c.sizeof(", 9U) != 0 || d[e - 1U] != 41
-        return: 2
-    e: e - 1U
-    while: b < e && d[b] = 32
-        b: b + 1U
-    while: e > b && d[e - 1U] = 32
-        e: e - 1U
-return: l2_sizeof_name_bytes(node, d, b, e, mi, ind, dest)
+# sizeof: receiver-operator (class length/cast): storage size in bytes.
+# Not a callable. c.sizeof(...) stays raw C through the c.* door.
+fn: l2_emit_sizeof (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest) int
+    @: LmP0Frame call
+    @: LmP0Field a0
+    int: k
+    int: ml
+    int: si
+    c.array: [256]: char s0
+    if: node = 0 || dest = 0 || node\kind != c.LM_P0_NODE_FRAME || node\as = 0 || node\as\frame = 0
+        return: 1
+    call: node\as\frame
+    if: l2_text_eq(call\head, "sizeof") = 0
+        return: 1
+    if: call\body = 0 || call\trailer != 0 || call\body\trailer != 0 || l2_count_active(call\body) != 1
+        return: l2_error(l2_src, node, "sizeof: requires one operand")
+    a0: l2_next_active(call\body\first_field)
+    if: a0 = 0 || a0\value = 0
+        return: 1
+    if: a0\value\kind = c.LM_P0_NODE_FRAME && a0\value\as != 0 && a0\value\as\frame != 0 && l2_address_depth(a0\value\as\frame\head) != 0
+        s0[0]: 0
+        if: l2_emit_fields(a0, 1, mi, ind, s0) != 0
+            return: 1
+        if: strlen(s0) + 11U >= 256U
+            return: l2_error(l2_src, node, "expression too long")
+        if: c.sprintf(dest, "c.sizeof(%s)", s0) < 0
+            return: 1
+        return: 0
+    ---
+    if: a0\value\kind != c.LM_P0_NODE_ATOM || a0\value\as = 0 || a0\value\as\atom = 0
+        return: l2_error(l2_src, node, "sizeof: unsupported operand")
+    if: l2_text_eq(a0\value\as\atom, "int") || l2_text_eq(a0\value\as\atom, "char") || l2_text_eq(a0\value\as\atom, "size_t") || l2_text_eq(a0\value\as\atom, "unsigned") || l2_text_eq(a0\value\as\atom, "void") || l2_text_eq(a0\value\as\atom, "ulong")
+        if: c.sprintf(dest, "c.sizeof(%.*s)", (cast: (int) a0\value\as\atom\length), a0\value\as\atom\data) < 0
+            return: 1
+        return: 0
+    ---
+    if: a0\value\as\atom\length > 2U && a0\value\as\atom\data[0] = 99 && a0\value\as\atom\data[1] = 46
+        if: c.sprintf(dest, "c.sizeof(%.*s)", (cast: (int) a0\value\as\atom\length), a0\value\as\atom\data) < 0
+            return: 1
+        return: 0
+    ---
+    k: l2_sizeof_name_bytes(node, a0\value\as\atom\data, 0U, a0\value\as\atom\length, mi, ind, dest)
+    if: k != 2
+        return: k
+    ml: l2_ml_find(a0\value\as\atom)
+    if: ml >= 0
+        if: c.sprintf(dest, "c.sizeof(%.*s)", (cast: (int) a0\value\as\atom\length), a0\value\as\atom\data) < 0
+            return: 1
+        return: 0
+    ---
+    si: l2_slot_find(mi, a0\value\as\atom)
+    if: si >= 0
+        if: c.sprintf(dest, "c.sizeof(l2_s%d_%d)", mi, si) < 0
+            return: 1
+        return: 0
+    ---
+    if: l2_ns_find(a0\value\as\atom) >= 0 || l2_find_method(a0\value\as\atom) >= 0
+        if: c.sprintf(dest, "c.sizeof(@: void)") < 0
+            return: 1
+        return: 0
+    ---
+return: l2_error(l2_src, node, "unresolved name")
+
+fn: l2_check_sizeof (const: @(LmP0Node node); int: mi; const: @(char path)) int
+    @: LmP0Frame call
+    @: LmP0Field a0
+    int: oi
+    int: ml
+    if: node = 0 || node\kind != c.LM_P0_NODE_FRAME || node\as = 0 || node\as\frame = 0
+        return: 1
+    call: node\as\frame
+    if: l2_text_eq(call\head, "sizeof") = 0
+        return: 1
+    if: call\body = 0 || call\trailer != 0 || call\body\trailer != 0 || l2_count_active(call\body) != 1
+        return: l2_error(path, node, "sizeof: requires one operand")
+    a0: l2_next_active(call\body\first_field)
+    if: a0 = 0 || a0\value = 0
+        return: l2_error(path, node, "sizeof: requires one operand")
+    if: a0\value\kind = c.LM_P0_NODE_FRAME && a0\value\as != 0 && a0\value\as\frame != 0 && l2_address_depth(a0\value\as\frame\head) != 0
+        return: 0
+    if: a0\value\kind != c.LM_P0_NODE_ATOM || a0\value\as = 0 || a0\value\as\atom = 0
+        return: l2_error(path, node, "sizeof: unsupported operand")
+    if: l2_text_eq(a0\value\as\atom, "int") || l2_text_eq(a0\value\as\atom, "char") || l2_text_eq(a0\value\as\atom, "size_t") || l2_text_eq(a0\value\as\atom, "unsigned") || l2_text_eq(a0\value\as\atom, "void") || l2_text_eq(a0\value\as\atom, "ulong")
+        return: 0
+    if: a0\value\as\atom\length > 2U && a0\value\as\atom\data[0] = 99 && a0\value\as\atom\data[1] = 46
+        return: 0
+    oi: l2_own_find(mi, a0\value\as\atom)
+    if: oi < 0
+        oi: l2_own_find_last(mi, a0\value\as\atom)
+    if: oi >= 0
+        return: 0
+    if: l2_formal_find(mi, a0\value\as\atom) >= 0
+        return: 0
+    ml: l2_ml_find(a0\value\as\atom)
+    if: ml >= 0
+        return: 0
+    if: l2_ns_find(a0\value\as\atom) >= 0 || l2_find_method(a0\value\as\atom) >= 0
+        return: 0
+    if: l2_slot_find(mi, a0\value\as\atom) >= 0
+        return: 0
+return: l2_error(path, node, "unresolved name")
 
 # Nullary invoke of METHOD idx (unit occurrence or formal occurrence self).
 # call_sel 0 = unit method; 2 = callable formal at call_fi. Writes result token to dest.
@@ -12637,9 +12771,6 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
     if: node = 0 || dest = 0
         return: 1
     if: node\kind = c.LM_P0_NODE_ATOM
-        k: l2_prep_sizeof_name(node, mi, ind, dest)
-        if: k != 2
-            return: k
         k: l2_occ_head(node\as\atom, @ occ, @ onm)
         if: k = 2
             return: 1
@@ -12737,6 +12868,9 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
             return: 1
         return: 0
     ---
+    if: l2_text_eq(call\head, "sizeof")
+        return: l2_emit_sizeof(node, mi, ind, dest)
+    ---
     if: l2_text_eq(call\head, "implements")
         return: l2_prep_implements(node, dest)
     idx: l2_find_method(call\head)
@@ -12798,69 +12932,13 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
             return: 1
         return: 0
     ---
-    if: idx < 0 && l2_text_eq(call\head, "c.sizeof") = 0 && (l2_c_door(call\head) != 0 || l2_predef_has_function(call\head) != 0 || (k = 0 && raw_fld = 5))
+    if: idx < 0 && (l2_c_door(call\head) != 0 || l2_predef_has_function(call\head) != 0 || (k = 0 && raw_fld = 5))
         l2_ccall_into: dest
         if: l2_emit_ccall(node, mi, ind) != 0
             l2_ccall_into: 0
             return: 1
         return: 0
     ---
-    if: idx < 0 && l2_text_eq(call\head, "c.sizeof")
-        if: call\body = 0
-            return: 1
-        a0: l2_next_active(call\body\first_field)
-        if: l2_count_active(call\body) > 1
-            s1[0]: 0
-            if: l2_emit_fields(call\body\first_field, l2_count_active(call\body), mi, ind, s1) != 0
-                return: 1
-            if: strlen(s1) + 11U >= 256U
-                return: l2_error(l2_src, node, "expression too long")
-            if: c.sprintf(dest, "c.sizeof(%s)", s1) < 0
-                return: 1
-            return: 0
-        ---
-        if: a0 != 0 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_FRAME && a0\value\as != 0 && a0\value\as\frame != 0 && l2_address_depth(a0\value\as\frame\head) != 0 && a0\value\as\frame\body != 0 && l2_count_active(a0\value\as\frame\body) = 1
-            a1: l2_next_active(a0\value\as\frame\body\first_field)
-            if: a1 = 0 || a1\value = 0 || a1\value\kind != c.LM_P0_NODE_ATOM
-                return: 1
-            if: 9U + a0\value\as\frame\head\length + a1\value\as\atom\length >= 256U
-                return: 1
-            if: c.sprintf(dest, "c.sizeof(%.*s: %.*s)", (cast: (int) a0\value\as\frame\head\length), a0\value\as\frame\head\data, (cast: (int) a1\value\as\atom\length), a1\value\as\atom\data) < 0
-                return: 1
-            return: 0
-        ---
-        if: a0 = 0 || a0\value = 0 || a0\value\kind != c.LM_P0_NODE_ATOM
-            return: 1
-        if: l2_ml_find(a0\value\as\atom) >= 0 && l2_ml_ty[l2_ml_find(a0\value\as\atom)] = 22
-            if: l2_tok_text(a0\value\as\atom, s0, 256U) != 0 || c.sprintf(dest, "c.sizeof(%s)", s0) < 0
-                return: 1
-            return: 0
-        if: l2_text_eq(a0\value\as\atom, "c.LmP0Text")
-            if: c.sprintf(dest, "c.sizeof(c.LmP0Text)") < 0
-                return: 1
-            return: 0
-        if: l2_text_eq(a0\value\as\atom, "c.LmP0IndentStack")
-            if: c.sprintf(dest, "c.sizeof(c.LmP0IndentStack)") < 0
-                return: 1
-            return: 0
-        if: l2_text_eq(a0\value\as\atom, "size_t") || l2_text_eq(a0\value\as\atom, "c.size_t")
-            if: c.sprintf(dest, "c.sizeof(c.size_t)") < 0
-                return: 1
-            return: 0
-        if: l2_text_eq(a0\value\as\atom, "char") || l2_text_eq(a0\value\as\atom, "c.char") || l2_text_eq(a0\value\as\atom, "int") || l2_text_eq(a0\value\as\atom, "c.int") || l2_text_eq(a0\value\as\atom, "unsigned") || l2_text_eq(a0\value\as\atom, "c.unsigned") || l2_text_eq(a0\value\as\atom, "void") || l2_text_eq(a0\value\as\atom, "c.void")
-            if: c.sprintf(dest, "c.sizeof(%.*s)", (cast: (int) a0\value\as\atom\length), a0\value\as\atom\data) < 0
-                return: 1
-            return: 0
-        # A formal or own field is lowered like the surface atom; any other
-        # operand (c.T, a foreign type or name) is foreign C as written.
-        k: l2_sizeof_name_bytes(node, a0\value\as\atom\data, 0U, a0\value\as\atom\length, mi, ind, dest)
-        if: k != 2
-            return: k
-        if: 11U + a0\value\as\atom\length >= 256U
-            return: l2_error(l2_src, node, "expression too long")
-        if: c.sprintf(dest, "c.sizeof(%.*s)", (cast: (int) a0\value\as\atom\length), a0\value\as\atom\data) < 0
-            return: 1
-        return: 0
     if: idx < 0 && l2_text_eq(call\head, "lm_own_new_zero")
         l2_need_own: 1
         if: call\body = 0

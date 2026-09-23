@@ -1,4 +1,4 @@
-# c.sizeof(<L2 variable>) is the size of the variable's type, a translation-time
+# sizeof: <L2 variable> is the size of the variable's type, a translation-time
 # constant. The parser returns c.sizeof(...) as one C surface atom, which was
 # copied as written, so C saw the source name (`sizeof(zero)`), not the
 # generated one (l2_qN, l2_pM_K). Reported by e2 from lmx_value_owned and
@@ -9,13 +9,13 @@ fn: sizeof_own (ulong: w) int
     int: zero 0
     ulong: probe
     size_t: n
-    n: c.sizeof(zero)
+    n: sizeof: zero
     if: n != c.sizeof(c.int)
         return: 1
-    if: c.sizeof(probe) < c.sizeof(c.unsigned)
+    if: (sizeof: probe) < c.sizeof(c.unsigned)
         return: 2
-    n: c.sizeof(probe)
-    if: n != c.sizeof(w)
+    n: sizeof: probe
+    if: n != (sizeof: w)
         return: 3
     if: zero != 0 || w != 5U
         return: 4

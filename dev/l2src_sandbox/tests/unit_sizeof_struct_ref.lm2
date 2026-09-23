@@ -1,0 +1,19 @@
+# sizeof: of a pointer/Structure-reference cell is the pointer cell size.
+fn: probe () int
+    @: char p
+    @: char q
+    size_t: n
+    size_t: m
+    n: sizeof: p
+    m: sizeof: q
+    if: n != m
+        return: 1
+    if: n < 4U
+        return: 2
+    if: n > 16U
+        return: 3
+    return: 0
+end: probe
+
+return: probe()
+

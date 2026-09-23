@@ -1142,6 +1142,23 @@ $fixtures = @(
         Debt = @('l2_message\graph: l2_entry_unit', '"l1src/p0.lm1.h" "<stdlib.h>"') },
     [pscustomobject]@{ Name = 'unit_p0_without_include.lm2'; Expect = 'toolchain-refuses'; Exit = 0; Needle = '';
         Absent = @('l2_text_hash.lm1'); Debt = @() },
+    # FABLE-GROKBOT-INCLUDE-AND-SIZEOF-20260923-123 part2: sizeof: bytes + raw c.sizeof/c.array.
+    # Mutant: restore c.sizeof special -> migrated unit generated C changes.
+    # Mutant: drop sizeof: receiver -> its fixtures refuse.
+    [pscustomobject]@{ Name = 'unit_sizeof_array_bytes.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT'); Debt = @('l2_message\graph: l2_entry_unit') },
+    [pscustomobject]@{ Name = 'unit_sizeof_type_int.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT'); Debt = @('l2_message\graph: l2_entry_unit') },
+    [pscustomobject]@{ Name = 'unit_sizeof_struct_ref.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT'); Debt = @('l2_message\graph: l2_entry_unit') },
+    [pscustomobject]@{ Name = 'unit_sizeof_unknown_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unresolved name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_sizeof_c_door_arena.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT'); Debt = @('l2_message\graph: l2_entry_unit', 'c.sizeof(c.size_t)') },
+    [pscustomobject]@{ Name = 'unit_sizeof_own_local.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT'); Debt = @('l2_message\graph: l2_entry_unit') },
+    [pscustomobject]@{ Name = 'unit_native_activation.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'c.array'); Debt = @('l2_message\graph: l2_entry_unit') },
     [pscustomobject]@{ Name = 'unit_array_write_root_out_of_range.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'own array index requires an in-bounds primitive literal'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_array_write_general_root_no_field.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

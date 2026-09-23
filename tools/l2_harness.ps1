@@ -1254,7 +1254,17 @@ $fixtures = @(
         Needle = 'unknown type'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_dyn_hidden_from_cross_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
-        Says = @('beta sees shared=111');
+        Says = @('beta sees shared=0', 'beta sees shared=222');
+        Absent = @();
+        Debt = @() },
+    [pscustomobject]@{ Name = 'unit_dyn_hidden_from_undeclared_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unbound dynamic input'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_own_find_last_sizeof.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @();
+        Debt = @() },
+    [pscustomobject]@{ Name = 'unit_own_find_last_call_arg.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
         Absent = @();
         Debt = @() },
     [pscustomobject]@{ Name = 'unit_raw_root_c_control_compound.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';

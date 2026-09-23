@@ -1,28 +1,30 @@
-# FABLE-SONNET-OWN-LOOKUP-AUDIT-20260923-131 Part 1 probe (measured, NOT
-# fixed here -- a "disagrees" row for Part 2). l2_hidden_from's own
-# comment says its fallback ("no caller binding: use the declaration in
-# the selected callee's lexical node") should resolve a callee's unbound
-# dynamic input to THAT callee's own declaration. The fallback actually
-# calls l2_own_seg_scan... no -- l2_own_first(nm), which takes no mi/
-# callee parameter at all: it scans l2_own_n GLOBALLY for the first
-# top-level row (any method) with a matching name. gamma calls beta with
-# no binding for `shared` anywhere in the caller chain (entry -> gamma);
-# beta reads `shared` as a dynamic input, unbound, before its own binding
-# line -- exactly the case the fallback comment describes. alpha, an
-# UNRELATED method declared earlier in this file with its own field also
-# named `shared` (=111), is what the fallback actually finds and reads,
-# because it is simply the first `shared` in source order -- not beta's.
+# FABLE-SONNET-OWN-LOOKUP-AUDIT-20260923-131 Part 2, positive. l2_hidden_from's
+# fallback ("no caller binding: use the declaration in the selected callee's
+# lexical node") used to call l2_own_first(nm), which takes no callee
+# parameter at all and scans l2_own_n globally for the first top-level own
+# row matching nm in SOURCE order -- an unrelated, earlier-declared method's
+# same-named field could win over the actual callee's own declaration.
+# Fixed: l2_own_find(callee, nm), the same lookup callee's own body uses,
+# reading through the ordinary own-cell emission (l2_own_ctr/l2_own_uchild)
+# unchanged -- no new mechanism.
 #
-# MEASURED on the current tree: prints "beta sees shared=111" (alpha's
-# value). This is the same class of cross-method name collision the old
-# self-referential `node\x` mechanism had (FABLE-SONNET-NODE-ROOT-
-# 20260923-121's sticky fixtures' own history) -- l2_own_first ignores mi
-# entirely, so ANY earlier-declared method's same-named top-level own
-# field wins over the actual callee's. Not asserting a "correct" value
-# here: what an unbound dynamic input's fallback should read (beta's own
-# not-yet-run declaration? 0? a refusal?) is Part 2's question, an author
-# ruling may be needed. This fixture pins today's measured (wrong) value
-# so Part 2's fix is mutation-checkable against a known baseline.
+# Ruling (fable, the author's own norm: a local IS its canonical cell with a
+# dirty load; a declaration's literal is an operator at its place, not a
+# construction-time seed of the cell): the fallback reads the callee's own
+# CANONICAL CELL, whatever was last published there -- not a re-extracted
+# source literal. A callee that has never run has never checkpointed, so
+# its cell reads 0, same as any other own field before its first publish.
+#
+# alpha (declared first) owns `shared`=111 -- proves the cross-method
+# collision is gone (neither activation of beta ever reads 111). entry
+# calls beta TWICE with no binding for `shared` anywhere: the first call
+# starts beta's first activation, whose own `int: shared 222` declaration
+# runs and checkpoints at return, publishing 222 to beta's own cell; the
+# second call's fallback (computed BEFORE that activation starts) now
+# reads that published 222. First activation sees 0 (never-run cell,
+# proving no cross-contamination AND no stale seed-literal shortcut);
+# second sees 222 (beta's own cell, now published) -- the discriminating
+# pair no single call could prove alone.
 fn: alpha () int
     int: shared 111
     return: 0
@@ -30,16 +32,11 @@ end: alpha
 
 fn: beta () int
     c.printf: "beta sees shared=%d\n" shared
-    int: shared
-    shared: 222
+    int: shared 222
     return: 0
 end: beta
 
-fn: gamma () int
-    beta()
-    return: 0
-end: gamma
-
 alpha()
-gamma()
+beta()
+beta()
 return: 0

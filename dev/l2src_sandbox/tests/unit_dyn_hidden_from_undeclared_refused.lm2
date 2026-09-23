@@ -1,0 +1,27 @@
+# FABLE-SONNET-OWN-LOOKUP-AUDIT-20260923-131 Part 2, negative. `beta` reads
+# `shared` as a dynamic input with its own eventual binding line (so it is
+# a legitimate dynamic input, not merely an unresolved name -- that earlier,
+# separate check fires first for a name with no binding anywhere at all,
+# measured directly: a callee that never binds the name anywhere in its own
+# body is refused "unresolved name" at the READ site, before l2_hidden_from
+# ever runs. This is the existing definition of a dynamic input, not a gap
+# this ticket found or touches). `gamma` calls beta with no
+# binding for `shared` either, so `shared` becomes gamma's OWN (pass-
+# through) dynamic input too -- and gamma never binds it anywhere in
+# itself. l2_hidden_from's fallback, computing what gamma forwards to beta
+# at the entry->gamma call site, resolves the name in gamma's own table
+# (l2_own_find scoped to gamma) and finds nothing: a located refusal
+# naming gamma, never a silent 0 and never some other method's field.
+fn: beta () int
+    c.printf: "beta sees shared=%d\n" shared
+    int: shared 222
+    return: 0
+end: beta
+
+fn: gamma () int
+    beta()
+    return: 0
+end: gamma
+
+gamma()
+return: 0

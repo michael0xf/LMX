@@ -324,7 +324,7 @@ prototype:
     fn: l2_cat (@: char dest; const: @(char src)) int
     fn: l2_tok_temp (int: k; @: char dest) int
     fn: l2_tok_formal (int: mi; int: fi; @: char dest) int
-    fn: l2_hidden_from (int: mi; int: callee; int: k; int: callee_self; const: @(char ind); @: char dest) int
+    fn: l2_hidden_from (int: mi; int: callee; int: k; int: callee_self; const: @(char ind); @: char dest; const: @(LmP0Node at)) int
     fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: char dest) int
     fn: l2_eval_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: char dest) int
     fn: l2_eval_and (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: char dest) int
@@ -358,7 +358,6 @@ prototype:
     fn: l2_own_find_occ (int: mi; const: @(LmP0Text t); int: occ) int
     fn: l2_own_find_last (int: mi; const: @(LmP0Text t)) int
     fn: l2_occ_head (const: @(LmP0Text t); @: int out_occ; @@: LmP0Text out_name) int
-    fn: l2_own_first (const: @(LmP0Text t)) int
     fn: l2_own_add (int: mi; const: @(LmP0Text t); int: ty; const: @(char path); const: @(LmP0Node at)) int
     fn: l2_formal_find (int: mi; const: @(LmP0Text t)) int
     fn: l2_param_find (int: mi; const: @(LmP0Text t)) int
@@ -399,6 +398,7 @@ prototype:
     fn: l2_own_param_of (int: mi; int: oi) int
     fn: l2_own_addr_taken (int: mi; int: oi) int
     fn: l2_canon_spell (int: mi; int: oi; @: char dest) int
+    fn: l2_own_from_expr (int: oi; @: char dest) int
     fn: l2_emit_own_from (int: mi; int: oi; const: @(char ind)) int
     fn: l2_emit_finalize_old (int: mi; int: oi; const: @(char ind); const: @(char canon)) int
     fn: l2_emit_occ_write (int: mi; int: oi; const: @(char ind); const: @(char rhs)) int
@@ -3501,14 +3501,6 @@ fn: l2_own_any (int: mi; const: @(LmP0Text t)) int
         i: i + 1
 return: -1
 
-fn: l2_own_first (const: @(LmP0Text t)) int
-    int: i 0
-    while: i < l2_own_n
-        if: l2_own_host[i] = 0 && l2_text_same(l2_own_name[i], t)
-            return: i
-        i: i + 1
-return: -1
-
 fn: l2_own_add (int: mi; const: @(LmP0Text t); int: ty; const: @(char path); const: @(LmP0Node at)) int
     int: i
     if: mi < 0 || t = 0 || l2_ident(t) = 0
@@ -5841,12 +5833,30 @@ fn: l2_canon_spell (int: mi; int: oi; @: char dest) int
         return: 1
 return: 0
 
+# The one formula for "the C expression that reaches own field oi's cell":
+# fid>=0 is a hosted field (reached through another namespace slot's own
+# child), else the field's own occurrence via l2_own_ctr. Every emitter
+# that needs this address -- the dirty-load cache (l2_emit_own_from
+# below), an array leaf, a single-hop path read -- writes it into dest
+# rather than each hand-inlining the same two branches
+# (FABLE-SONNET-OWN-LOOKUP-AUDIT-20260923-131 (a): they had drifted --
+# one copy missing l2_emit_own_from's own cache guard).
+fn: l2_own_from_expr (int: oi; @: char dest) int
+    if: oi < 0 || dest = 0
+        return: 1
+    if: l2_own_fid[oi] >= 0 && c.sprintf(dest, "lmx_arena_ref_cell(l2_h%d, %uU)", l2_own_fid[oi], (cast: (unsigned) l2_own_fchild[oi])) < 0
+        return: 1
+    if: l2_own_fid[oi] < 0 && c.sprintf(dest, "lmx_arena_ref_cell(%s, %uU)", l2_own_ctr(oi), (cast: (unsigned) l2_own_uchild[oi])) < 0
+        return: 1
+return: 0
+
 fn: l2_emit_own_from (int: mi; int: oi; const: @(char ind)) int
+    c.array: [128]: char l2_eof_expr
     if: mi < 0 || oi < 0 || ind = 0
         return: 0
-    if: l2_own_fid[oi] >= 0 && c.fprintf(l2_out, "%sif: l2_q%d_from = 0\n%s    l2_q%d_from: lmx_arena_ref_cell(l2_h%d, %uU)\n%sif: l2_q%d_from = 0\n%s    %s\n", ind, oi, ind, oi, l2_own_fid[oi], (cast: (unsigned) l2_own_fchild[oi]), ind, oi, ind, l2_fail_return(mi)) < 0
+    if: l2_own_from_expr(oi, l2_eof_expr) != 0
         return: 1
-    if: l2_own_fid[oi] < 0 && c.fprintf(l2_out, "%sif: l2_q%d_from = 0\n%s    l2_q%d_from: lmx_arena_ref_cell(%s, %uU)\n%sif: l2_q%d_from = 0\n%s    %s\n", ind, oi, ind, oi, l2_own_ctr(oi), (cast: (unsigned) l2_own_uchild[oi]), ind, oi, ind, l2_fail_return(mi)) < 0
+    if: c.fprintf(l2_out, "%sif: l2_q%d_from = 0\n%s    l2_q%d_from: %s\n%sif: l2_q%d_from = 0\n%s    %s\n", ind, oi, ind, oi, l2_eof_expr, ind, oi, ind, l2_fail_return(mi)) < 0
         return: 1
 return: 0
 
@@ -12636,7 +12646,7 @@ fn: l2_emit_cell_load (int: oty; const: @(char ind); int: t; const: @(LmP0Node a
     ---
 return: 0
 
-fn: l2_hidden_from (int: mi; int: callee; int: k; int: callee_self; const: @(char ind); @: char dest) int
+fn: l2_hidden_from (int: mi; int: callee; int: k; int: callee_self; const: @(char ind); @: char dest; const: @(LmP0Node at)) int
     @: LmP0Text nm
     int: ty
     int: pi
@@ -12646,6 +12656,7 @@ fn: l2_hidden_from (int: mi; int: callee; int: k; int: callee_self; const: @(cha
     int: child
     int: ni
     @: char deep 0
+    c.array: [256]: char l2_hf_msg
     if: dest = 0 || callee < 0 || k < 0 || k >= l2_m_dyn[callee]
         return: 1
     nm: l2_dn(callee, k)
@@ -12669,13 +12680,23 @@ fn: l2_hidden_from (int: mi; int: callee; int: k; int: callee_self; const: @(cha
     # No caller binding: use the declaration in the selected callee's lexical
     # node.  This is deliberately after declared and inherited caller inputs,
     # and uses the captured occurrence rather than the translator-global unit.
+    # Names resolve lexically and backward, never cross-method (author norm,
+    # FABLE-SONNET-OWN-LOOKUP-AUDIT-20260923-131 ruling): the lookup is
+    # l2_own_find scoped to callee specifically, the same one callee's own
+    # body would use for this name -- not a name-only scan over every
+    # method's own table (l2_own_first, deleted, was exactly that: the
+    # first same-named field in source order, any method, callee or not).
     ni: l2_ns_find(nm)
     if: ty = l2_colon_graph_ty() && ni >= 0 && l2_ns_parent[ni] < 0 && callee_self >= 0
         if: c.sprintf(dest, "lmx_arena_ref_struct(l2_c%d\\parent, %uU)", callee_self, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni)))) < 0
             return: 1
         return: 0
-    child: l2_own_first(nm)
-    if: child < 0 || l2_own_uchild[child] < 0 || l2_call_node = 0
+    child: l2_own_find(callee, nm)
+    if: child < 0
+        if: c.snprintf(l2_hf_msg, 256U, "unbound dynamic input %.*s", (cast: (int) nm\length), nm\data) < 0
+            return: 1
+        return: l2_error(l2_src, at, l2_hf_msg)
+    if: l2_own_uchild[child] < 0 || l2_call_node = 0
         return: 1
     if: l2_bump_ind(ind, @ deep) != 0
         return: 1
@@ -13729,7 +13750,7 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
         memset((cast: (@: void) hides), 0, (cast: (size_t) nhid) * 256U)
         ai: 0
         while: ai < nhid
-            if: l2_hidden_from(mi, idx, ai, self_t, ind, l2_act_at(hides, ai)) != 0
+            if: l2_hidden_from(mi, idx, ai, self_t, ind, l2_act_at(hides, ai), node) != 0
                 return: l2_prep_drop(acts, hides)
             ai: ai + 1
         ---
@@ -13826,6 +13847,7 @@ fn: l2_emit_array_ptr (int: oi; const: @(char ind); @: char dest) int
     int: t
     const: @(char element) "int"
     @: LmP0Field type_field
+    c.array: [128]: char l2_eap_expr
     if: oi < 0 || l2_own_is_array(l2_own_ty[oi]) = 0 || (l2_own_fid[oi] < 0 && l2_own_uchild[oi] < 0) || dest = 0
         c.fprintf(l1_stderr(), "l2trans detail: array pointer unavailable oi=%d\n", oi)
         return: 1
@@ -13855,9 +13877,9 @@ fn: l2_emit_array_ptr (int: oi; const: @(char ind); @: char dest) int
         if: fputs(ind, l2_out) < 0 || l2_emit_own_pointer_array_data_type(l2_out, l2_own_ty[oi]) != 0 || c.fprintf(l2_out, " l2_a%d_data\n", t) < 0
             return: 1
     ---
-    if: l2_own_fid[oi] >= 0 && c.fprintf(l2_out, "%sl2_a%d_leaf: lmx_arena_ref_cell(l2_h%d, %uU)\n", ind, t, l2_own_fid[oi], (cast: (unsigned) l2_own_fchild[oi])) < 0
+    if: l2_own_from_expr(oi, l2_eap_expr) != 0
         return: 1
-    if: l2_own_fid[oi] < 0 && c.fprintf(l2_out, "%sl2_a%d_leaf: lmx_arena_ref_cell(%s, %uU)\n", ind, t, l2_own_ctr(oi), (cast: (unsigned) l2_own_uchild[oi])) < 0
+    if: c.fprintf(l2_out, "%sl2_a%d_leaf: %s\n", ind, t, l2_eap_expr) < 0
         return: 1
     if: c.fprintf(l2_out, "%sl2_a%d_desc: (cast: (@: LmxArrayDesc) l2_a%d_leaf[0])\n", ind, t, t) < 0
         return: 1
@@ -13877,15 +13899,16 @@ return: 0
 
 fn: l2_emit_array_length (int: oi; const: @(char ind); @: char dest) int
     int: t
+    c.array: [128]: char l2_eal_expr
     if: oi < 0 || l2_own_is_array(l2_own_ty[oi]) = 0 || (l2_own_fid[oi] < 0 && l2_own_uchild[oi] < 0) || dest = 0
         return: 1
     t: l2_tn
     l2_tn: l2_tn + 1
     if: c.fprintf(l2_out, "%s@@: void l2_a%d_leaf\n%s@: LmxArrayDesc l2_a%d_desc\n%ssize_t: l2_t%d\n", ind, t, ind, t, ind, t) < 0
         return: 1
-    if: l2_own_fid[oi] >= 0 && c.fprintf(l2_out, "%sl2_a%d_leaf: lmx_arena_ref_cell(l2_h%d, %uU)\n", ind, t, l2_own_fid[oi], (cast: (unsigned) l2_own_fchild[oi])) < 0
+    if: l2_own_from_expr(oi, l2_eal_expr) != 0
         return: 1
-    if: l2_own_fid[oi] < 0 && c.fprintf(l2_out, "%sl2_a%d_leaf: lmx_arena_ref_cell(%s, %uU)\n", ind, t, l2_own_ctr(oi), (cast: (unsigned) l2_own_uchild[oi])) < 0
+    if: c.fprintf(l2_out, "%sl2_a%d_leaf: %s\n", ind, t, l2_eal_expr) < 0
         return: 1
     if: c.fprintf(l2_out, "%sl2_a%d_desc: (cast: (@: LmxArrayDesc) l2_a%d_leaf[0])\n%sl2_t%d: l2_a%d_desc\\len\n", ind, t, t, ind, t, t) < 0
         return: 1
@@ -14652,16 +14675,17 @@ fn: l2_emit_path_load (int: mi; int: oi; const: @(char ind); @: char dest) int
     int: t
     int: fid
     @: char deep 0
+    c.array: [128]: char l2_epl_expr
     if: dest = 0 || oi < 0 || ind = 0
         return: 1
     if: l2_bump_ind(ind, @ deep) != 0
         return: 1
     fid: l2_own_fid[oi]
-    if: fid >= 0 && c.fprintf(l2_out, "%sl2_xp: lmx_arena_ref_cell(l2_h%d, %uU)\n", ind, fid, (cast: (unsigned) l2_own_fchild[oi])) < 0
-        return: 1
     if: fid < 0 && l2_own_uchild[oi] < 0
         return: 1
-    if: fid < 0 && c.fprintf(l2_out, "%sl2_xp: lmx_arena_ref_cell(%s, %uU)\n", ind, l2_own_ctr(oi), (cast: (unsigned) l2_own_uchild[oi])) < 0
+    if: l2_own_from_expr(oi, l2_epl_expr) != 0
+        return: 1
+    if: c.fprintf(l2_out, "%sl2_xp: %s\n", ind, l2_epl_expr) < 0
         return: 1
     if: c.fprintf(l2_out, "%sif: l2_xp = 0\n", ind) < 0
         return: 1
@@ -16338,9 +16362,15 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
         # body's field".  It selects this occurrence as the publication target; sticky is raised at @.
         if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && l2_m_uses[l2_own_off(mi, oi)] != 0 && l2_emit_bind_mark(mi, oi, ind) != 0
             return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && l2_m_alias[l2_own_off(mi, oi)] >= 0 && l2_own_fid[oi] >= 0 && (l2_own_ty[oi] = 1 || l2_own_ty[oi] = 2 || l2_own_ty[oi] = 3 || l2_own_ty[oi] = 36) && c.fprintf(l2_out, "%sl2_q%d_from: lmx_arena_ref_cell(l2_h%d, %uU)\n%sif: l2_q%d_from = 0\n%s    %s\n", ind, oi, l2_own_fid[oi], (cast: (unsigned) l2_own_fchild[oi]), ind, oi, ind, l2_fail_return(mi)) < 0
-            return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && l2_m_alias[l2_own_off(mi, oi)] >= 0 && l2_own_fid[oi] < 0 && (l2_own_ty[oi] = 1 || l2_own_ty[oi] = 2 || l2_own_ty[oi] = 3 || l2_own_ty[oi] = 36) && c.fprintf(l2_out, "%sl2_q%d_from: lmx_arena_ref_cell(%s, %uU)\n%sif: l2_q%d_from = 0\n%s    %s\n", ind, oi, l2_own_ctr(oi), (cast: (unsigned) l2_own_uchild[oi]), ind, oi, ind, l2_fail_return(mi)) < 0
+        # FABLE-SONNET-OWN-LOOKUP-AUDIT-20260923-131 (a): was two hand-inlined
+        # copies of l2_emit_own_from's own formula, missing its cache guard
+        # (if: l2_q_from = 0) -- unconditionally recomputed/reassigned
+        # l2_q{oi}_from every time this declaration line's branch fired,
+        # instead of reusing an already-resolved reference. Same physical
+        # cell either way (the formula is identical), so no behavior change
+        # for any existing fixture -- generated C differs only in gaining
+        # the guard around the two lines this branch already emitted.
+        if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && l2_m_alias[l2_own_off(mi, oi)] >= 0 && (l2_own_ty[oi] = 1 || l2_own_ty[oi] = 2 || l2_own_ty[oi] = 3 || l2_own_ty[oi] = 36) && l2_emit_own_from(mi, oi, ind) != 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && l2_count_active(stmt\as\frame\body) = 2 && l2_eval_fields(l2_next_active(l2_next_active(stmt\as\frame\body\first_field)\next), 1, mi, ind, l2_tok) != 0
             return: 1
@@ -16430,9 +16460,13 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
             return: 1
         if: rbadmit != 0 && c.fprintf(l2_out, "%sif: lmx_pointer_store_known(l2_q%d_from[0], (cast: (@: void) %s)) != 0\n%s    c.fprintf(c.stderr, \"lmx: rebinding store failed for own field %d\\n\")\n%s    if: lmx_msg_poll_abort() != 0\n%s        c.abort()\n%s---\n", ind, oi, l2_tok, ind, oi, ind, ind, ind) < 0
             return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && fi >= 0 && l2_own_fid[oi] >= 0 && c.fprintf(l2_out, "%sif: l2_q%d_from = 0\n%s    l2_q%d_from: lmx_arena_ref_cell(l2_h%d, %uU)\n%sif: l2_q%d_from = 0\n%s    %s\n", ind, oi, ind, oi, l2_own_fid[oi], (cast: (unsigned) l2_own_fchild[oi]), ind, oi, ind, l2_fail_return(mi)) < 0
-            return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && fi >= 0 && l2_own_fid[oi] < 0 && c.fprintf(l2_out, "%sif: l2_q%d_from = 0\n%s    l2_q%d_from: lmx_arena_ref_cell(%s, %uU)\n%sif: l2_q%d_from = 0\n%s    %s\n", ind, oi, ind, oi, l2_own_ctr(oi), (cast: (unsigned) l2_own_uchild[oi]), ind, oi, ind, l2_fail_return(mi)) < 0
+        # FABLE-SONNET-OWN-LOOKUP-AUDIT-20260923-131 (a): was a byte-identical
+        # hand-inlined copy of l2_emit_own_from's own two branches (guard
+        # included) -- consolidated onto the helper, already called a few
+        # lines above for the rbadmit rebinding-store branch in this same
+        # function. No generated-C change: the emitted text is the same
+        # format string with the same arguments either way.
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && fi >= 0 && l2_emit_own_from(mi, oi, ind) != 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && fi >= 0
             l2_own_live[oi]: 1

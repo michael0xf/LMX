@@ -36,7 +36,7 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
 size_t: sb_calls 0U
 
-fn: sb_body (@: Lmx node) int
+fn: sb_body (@: Lmx node; @: Lmx self) int
     sb_calls: sb_calls + 1U
 return: 1
 
@@ -95,6 +95,7 @@ fn: sb_message (@: LmxArena arena; @: LmxPool pool; @@: LmxMsg out_message; @@: 
     @: LmxPost mail
     @: LmxSchedule sched
     @: LmxMethod method
+    @: LmxCallable info
     \out_message: 0
     \out_thread: 0
     \out_sched: 0
@@ -108,7 +109,12 @@ fn: sb_message (@: LmxArena arena; @: LmxPool pool; @@: LmxMsg out_message; @@: 
         return: 0
     ---
     message: lmx_thread_message(t)
-    lmx_arena_ref_store(graph, 0U, (cast: (@: void) method))
+    info: lmx_callable_new_owned(arena)
+    if: info = 0
+        return: 0
+    ---
+    info\method: method
+    lmx_arena_ref_store(graph, 0U, (cast: (@: void) info))
     lmx_arena_ref_store(graph, 1U, own_field)
     if: lmx_post_init(arena, mail) != c.LMX_POST_OK || lmx_thread_init(arena, t, graph, mail, sched) != c.LMX_THREAD_OK
         return: 0

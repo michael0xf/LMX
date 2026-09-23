@@ -18,7 +18,7 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 #   * every used path must be PRESENT on both operands, its leaf ADMITTED (one domain kind and one
 #     type on all three), and a callable on a used path must carry the SAME signature on all three;
 #   * a callable is an ordinary Structure, so this falls out of the walk: its physical child[0] is
-#     the METHOD, and that is where the signatures are compared;
+#     an LmxCallable descriptor; the walk unwraps .method and compares signatures there;
 #   * anything the walk cannot inspect is UNKNOWN -- never YES: "Unavailable information is not
 #     invented and is not certified by success" (2.5.1).  A known mismatch is NO.
 
@@ -43,25 +43,28 @@ fn: ri_struct (@: LmxArena arena; size_t: slots) @: Lmx
 return: structure
 
 # The entry `lmx_method_intern` needs: it refuses a zero addr, and this file never calls it.
-fn: ri_entry (@: Lmx node) int
+fn: ri_entry (@: Lmx node; @: Lmx self) int
     if: node = 0
         return: 0
     ---
 return: 0
 
-# A callable occurrence with `sig`: an ordinary Structure whose physical child[0] is a METHOD.
+# A callable occurrence with `sig`: child[0] is an LmxCallable descriptor naming the METHOD.
 fn: ri_callable (@: LmxArena arena; @: LmxPool methods; unsigned: sig) @: Lmx
     @: LmxMethod method
+    @: LmxCallable info
     @: Lmx callable
     method: lmx_method_intern(arena, methods, (cast: (LmxEntry) ri_entry), sig)
     if: method = 0
         return: 0
     ---
+    info: lmx_callable_new_owned(arena)
     callable: ri_struct(arena, 1U)
-    if: callable = 0
+    if: info = 0 || callable = 0
         return: 0
     ---
-    lmx_arena_ref_store(callable, 0U, (cast: (@: void) method))
+    info\method: method
+    lmx_arena_ref_store(callable, 0U, (cast: (@: void) info))
 return: callable
 
 fn: main () int
@@ -199,7 +202,7 @@ fn: main () int
 
     # A callable on a used path: the Consumer's own value at that path IS the callable it invokes,
     # and another callable is an ordinary Structure -- so the walk descends into it and compares
-    # the signatures where it arrives: at the physical child[0] of each occurrence.
+    # the signatures where it arrives: at the descriptor.method of each occurrence's child[0].
     consumer_call: ri_struct(@ arena, 1U)
     provider_a: ri_struct(@ arena, 1U)
     provider_b: ri_struct(@ arena, 1U)

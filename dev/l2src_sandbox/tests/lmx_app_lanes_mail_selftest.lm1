@@ -83,7 +83,7 @@ size_t: lm_turns_b 0U
 size_t: lm_t0 0U
 
 # A: кладёт письма в чужой ящик ИЗ СВОЕЙ ПОЛОСЫ, свой счёт ведёт в своём графе.
-fn: lm_a_body (@: Lmx node) int
+fn: lm_a_body (@: Lmx node; @: Lmx self) int
     @: LmxThread t
     @: LmxMsg message
     @: Lmx graph
@@ -129,7 +129,7 @@ fn: lm_a_body (@: Lmx node) int
 return: 0
 
 # B: вынимает письма из СВОЕГО ящика ИЗ СВОЕЙ ПОЛОСЫ и считает их в своём графе.
-fn: lm_b_body (@: Lmx node) int
+fn: lm_b_body (@: Lmx node; @: Lmx self) int
     @: LmxThread t
     @: LmxMsg message
     @: Lmx graph
@@ -181,6 +181,7 @@ fn: lm_make_child (@: LmxArena child_arena; @: Lmx source; LmxEntry: body; size_
     @: LmxPost child_mail
     @: LmxSchedule child_sched
     @: LmxMethod method
+    @: LmxCallable info
     @: LmxPool methods
     @: Lmx graph
     @: void cell1
@@ -198,7 +199,12 @@ fn: lm_make_child (@: LmxArena child_arena; @: Lmx source; LmxEntry: body; size_
     if: method = 0
         return: 3
     ---
-    lmx_arena_ref_store(graph, 0U, (cast: (@: void) method))
+    info: lmx_callable_new_owned(child_arena)
+    if: info = 0
+        return: 3
+    ---
+    info\method: method
+    lmx_arena_ref_store(graph, 0U, (cast: (@: void) info))
     cell1: lmx_size_new_owned(child_arena)
     cell2: lmx_size_new_owned(child_arena)
     if: cell1 = 0 || cell2 = 0

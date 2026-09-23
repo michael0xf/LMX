@@ -2,13 +2,14 @@ predef: "l2src/lmx_root.lm1"
 predef: "l2src/lmx_list_owned.lm1"
 predef: "l2src/lmx_implements.lm1"
 predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_value_owned.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
 size_t: dr_calls 0U
 @: LmxThread dr_seen 0
 
-fn: dr_body (@: Lmx node) int
+fn: dr_body (@: Lmx node; @: Lmx self) int
     @: LmxMsg message
     dr_calls: dr_calls + 1U
     dr_seen: lmx_thread_current()
@@ -44,6 +45,7 @@ fn: main () int
     @: LmxSchedule child_slot
     @: LmxPool methods
     @: LmxMethod method
+    @: LmxCallable info
     int: failures
     if: counts = 0
         return: 2
@@ -60,7 +62,12 @@ fn: main () int
     method: lmx_method_intern(@ child_arena, methods, (cast: (LmxEntry) dr_body), 1U)
     dr_check(counts, donor_graph != 0 && donor_children != 0 && child_graph != 0 && method != 0, "graph values")
     dr_check(counts, lmx_arena_refs_open_owned(@ donor_arena, donor_graph, 1U) = 0 && lmx_arena_ref_store(donor_graph, 0U, (cast: (@: void) donor_children)) = 0, "donor graph")
-    dr_check(counts, lmx_arena_refs_open_owned(@ child_arena, child_graph, 1U) = 0 && lmx_arena_ref_store(child_graph, 0U, (cast: (@: void) method)) = 0, "child callable")
+    info: lmx_callable_new_owned(@ child_arena)
+    dr_check(counts, info != 0, "callable descriptor")
+    if: info != 0
+        info\method: method
+    ---
+    dr_check(counts, lmx_arena_refs_open_owned(@ child_arena, child_graph, 1U) = 0 && lmx_arena_ref_store(child_graph, 0U, (cast: (@: void) info)) = 0, "child callable")
     donor_mail: (cast: (@: LmxPost) lmx_arena_take(@ donor_arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
     donor: (cast: (@: LmxThread) lmx_arena_take(@ donor_arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
     donor_message: (cast: (@: LmxMsg) donor)

@@ -63,7 +63,7 @@ size_t: cs_a_create_diag 0U
 size_t: cs_letters_taken 0U
 int: cs_letter_owned_after_take 0
 
-fn: cs_body_a (@: Lmx node) int
+fn: cs_body_a (@: Lmx node; @: Lmx self) int
     @: LmxThread t
     @: LmxMsg message
     @: Lmx graph_a
@@ -144,6 +144,7 @@ fn: cs_root_entry (@: Lmx node) int
     @: LmxPost child_mail
     @: LmxSchedule child_sched
     @: LmxMethod method
+    @: LmxCallable info
     @: LmxPool methods
     @: Lmx graph
     if: cs_phase != 0U || cs_root = 0 || cs_arena_a = 0 || cs_source_a = 0
@@ -168,7 +169,12 @@ fn: cs_root_entry (@: Lmx node) int
         cs_entry_diag: 4U
         return: 0
     ---
-    lmx_arena_ref_store(graph, 0U, (cast: (@: void) method))
+    info: lmx_callable_new_owned(cs_arena_a)
+    if: info = 0
+        return: 0
+    ---
+    info\method: method
+    lmx_arena_ref_store(graph, 0U, (cast: (@: void) info))
     child_mail: (cast: (@: LmxPost) lmx_arena_take(cs_arena_a, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
     child_t: (cast: (@: LmxThread) child)
     child_sched: (cast: (@: LmxSchedule) lmx_arena_take(cs_arena_a, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))

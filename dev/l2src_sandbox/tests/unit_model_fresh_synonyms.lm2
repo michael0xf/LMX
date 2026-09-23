@@ -1,0 +1,30 @@
+# FABLE-SONNET-CALLABLE-PRIORITY-20260923-130 (closes plan :188/:200).
+# `Model: fresh` and `Model(fresh)` are synonyms: after resolving the head,
+# a non-callable model/type with an absent name declares a Structure of
+# that type via the general merge-with-empty-Structure rule -- the colon
+# and paren surface forms are not two different mechanisms, only two
+# spellings of the same declaration. Both read back the type's declared
+# seed unchanged.
+Model:
+    size_t: value 1U
+end: Model
+
+fn: use_short () size_t
+    Model: fresh
+    return: fresh\value
+end: use_short
+
+fn: use_paren () size_t
+    Model(fresh2)
+    return: fresh2\value
+end: use_paren
+
+size_t: r1
+size_t: r2
+r1: use_short()
+if: r1 != 1U
+    return: 90
+r2: use_paren()
+if: r2 != 1U
+    return: 91
+return: 0

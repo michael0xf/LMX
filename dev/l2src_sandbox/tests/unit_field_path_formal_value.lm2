@@ -1,0 +1,23 @@
+# Opus's D1, folded into FABLE-SONNET-NODE-ROOT-20260923-121: a typed-
+# formal path root must read the ARGUMENT's value, not the unit's static
+# declaration child for the formal's type. Before the fix, get(a) read
+# the Model declaration site (value 1) instead of a's own value (5).
+# Routed through a declared local rather than fable's own "return:
+# x\value" spelling directly: that shape hits a separate, pre-existing
+# "a field path value needs a declared destination" refusal in
+# l2_emit_body's value-position join-path dispatch, for ANY root
+# (reproduced with a plain own-field root too, unaffected by this fix) --
+# a different gap than D1, not folded in here (matches fable's own D2
+# precedent: report, do not fold in).
+Model:
+    size_t: value 1U
+end: Model
+
+fn: get (Model: x) size_t
+    size_t: got
+    got: x\value
+    return: got
+
+Model: a
+a\value: 5U
+return: get(a)

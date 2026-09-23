@@ -957,6 +957,14 @@ $fixtures = @(
         Debt = @('l2_message\graph: l2_entry_unit') },
     [pscustomobject]@{ Name = 'unit_node_root_in_entry_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown field path root'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_occ_root_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
+        Debt = @('l2_message\graph: l2_entry_unit') },
+    [pscustomobject]@{ Name = 'unit_field_path_formal_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 5; Needle = '';
+        Args = @('0');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
+        Debt = @('l2_message\graph: l2_entry_unit') },
     [pscustomobject]@{ Name = 'unit_colon_formal_update.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');

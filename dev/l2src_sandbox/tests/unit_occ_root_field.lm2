@@ -1,0 +1,32 @@
+# FABLE-SONNET-NODE-ROOT-20260923-121 (author on the -67/-84 blocker):
+# a resolved method name as a path root denotes its occurrence Structure
+# -- M\x is the published own cell of method M's field x, observed from
+# outside its activation (here, from E, after the call). bump's own
+# field val is read back through bump\val after bump() runs, then
+# written through bump\val: 9 and observed again -- same cell, not a
+# copy, and independent of bump's own local activation state. Every
+# read is routed through a declared local rather than embedded in a
+# compound expression: `M\x` inside an if-condition currently reaches
+# Grok's -120 c-member-access dispatch instead of this one (it resolves
+# the same occurrence address, then emits a literal C ".val" member
+# access on it rather than the typed load this path needs) -- a real
+# interaction between the two tickets' dispatchers, reported, not fixed
+# here (out of -121's scope: assignment-position and simple value-
+# position reads are what this ticket's fixtures need).
+fn: bump () int
+    size_t: val 3U
+    return: 0
+
+int: r
+size_t: got
+r: bump()
+if: r != 0
+    return: r
+got: bump\val
+if: got != 3U
+    return: 95
+bump\val: 9U
+got: bump\val
+if: got != 9U
+    return: 96
+return: 0

@@ -161,5 +161,59 @@
     "exit": 0,
     "authority": "GROKBOT-P0-SOLE-CONTAINER-20260923-127 PART1b: f: (x) unwraps sole anonymous Structure.",
     "stdout_exact": "structure fields=1\n  frame head=\"f\" body=structure fields=1\n    atom \"x\"\n"
+  },
+  {
+    "path": "tests/parser/current/sub_closed_by_bare_return.lmx",
+    "exit": 0,
+    "authority": "FABLE-OPUS-RECEIVER-CONTRACT-20260924-139 commit 3 (author 2026-09-24, Q19.1/Q19.3 A1): a bare return closes a sub (a callable without a result).",
+    "stdout_exact": "structure fields=1\n  frame head=\"sub\" body=structure fields=3\n    atom \"s\"\n    structure fields=0\n    structure fields=1\n      frame head=\"y\" body=structure fields=1\n        atom \"3\"\n    Tail cutter trailer spelling=\"return\" fields=0\n"
+  },
+  {
+    "path": "tests/parser/current/fm_closed_by_bare_return.lmx",
+    "exit": 0,
+    "authority": "FABLE-OPUS-RECEIVER-CONTRACT-20260924-139 commit 3 (author 2026-09-24, Q19.1/Q19.3 A1): a bare return closes an fm.",
+    "stdout_exact": "structure fields=1\n  frame head=\"fm\" body=structure fields=4\n    atom \"g\"\n    structure fields=0\n    atom \"P\"\n    structure fields=1\n      frame head=\"size_t\" body=structure fields=2\n        atom \"a\"\n        atom \"1U\"\n    Tail cutter trailer spelling=\"return\" fields=0\n"
+  },
+  {
+    "path": "tests/parser/current/named_structure_closed_by_bare_return.lmx",
+    "exit": 0,
+    "authority": "FABLE-OPUS-RECEIVER-CONTRACT-20260924-139 commit 3 (author 2026-09-24, Q19.1/Q19.3 A1): a bare return closes a named Structure Frame; the next column-0 return: 5 is an item (S is closed).",
+    "stdout_exact": "structure fields=2\n  frame head=\"S\" body=structure fields=1\n    frame head=\"size_t\" body=structure fields=2\n      atom \"v\"\n      atom \"4U\"\n    Tail cutter trailer spelling=\"return\" fields=0\n  frame head=\"return\" body=structure fields=1\n    atom \"5\"\n"
+  },
+  {
+    "path": "tests/parser/current/named_structure_then_value_return.lmx",
+    "exit": 0,
+    "authority": "FABLE-OPUS-RECEIVER-CONTRACT-20260924-139 commit 3 (author 2026-09-24, Q19.1/Q19.3 A1): return: value closes an fn only; after a named Structure it stays an item.",
+    "stdout_exact": "structure fields=2\n  frame head=\"S\" body=structure fields=1\n    frame head=\"size_t\" body=structure fields=2\n      atom \"v\"\n      atom \"4U\"\n  frame head=\"return\" body=structure fields=1\n    atom \"9\"\n"
+  },
+  {
+    "path": "tests/parser/current/sub_then_value_return.lmx",
+    "exit": 0,
+    "authority": "FABLE-OPUS-RECEIVER-CONTRACT-20260924-139 commit 3 (author 2026-09-24, Q19.1/Q19.3 A1): return: value closes an fn only; after a sub it stays an item.",
+    "stdout_exact": "structure fields=2\n  frame head=\"sub\" body=structure fields=3\n    atom \"s\"\n    structure fields=0\n    structure fields=1\n      frame head=\"y\" body=structure fields=1\n        atom \"3\"\n  frame head=\"return\" body=structure fields=1\n    atom \"7\"\n"
+  },
+  {
+    "path": "tests/parser/current/else_then_bare_return.lmx",
+    "exit": 0,
+    "authority": "FABLE-OPUS-RECEIVER-CONTRACT-20260924-139 commit 3 (author 2026-09-24, Q19.1/Q19.3 A1): a control head (A1 table) is never closed by return: the bare return after else: is a statement of the sub body.",
+    "stdout_exact": "structure fields=1\n  frame head=\"sub\" body=structure fields=3\n    atom \"s\"\n    structure fields=1\n      frame head=\"int\" body=structure fields=1\n        atom \"a\"\n    structure fields=3\n      frame head=\"if\" body=structure fields=4\n        atom \"a\"\n        atom \"=\"\n        atom \"0\"\n        structure fields=1\n          frame head=\"y\" body=structure fields=1\n            atom \"1\"\n      frame head=\"else\" body=structure fields=1\n        frame head=\"y\" body=structure fields=1\n          atom \"2\"\n      atom \"return\"\n"
+  },
+  {
+    "path": "tests/parser/current/throws_then_bare_return.lmx",
+    "exit": 0,
+    "authority": "FABLE-OPUS-RECEIVER-CONTRACT-20260924-139 commit 3 (author 2026-09-24, Q19.1/Q19.3 A1): throws: is in the A1 table: the bare return after it is a statement of the sub body.",
+    "stdout_exact": "structure fields=1\n  frame head=\"sub\" body=structure fields=3\n    atom \"s\"\n    structure fields=0\n    structure fields=2\n      frame head=\"throws\" body=structure fields=1\n        atom \"Oops\"\n      atom \"return\"\n"
+  },
+  {
+    "path": "tests/parser/current/if_then_bare_return.lmx",
+    "exit": 0,
+    "authority": "FABLE-OPUS-RECEIVER-CONTRACT-20260924-139 commit 3 (author 2026-09-24, Q19.1/Q19.3 A1): an if: Frame is never closed by return: the bare return is an item.",
+    "stdout_exact": "structure fields=2\n  frame head=\"if\" body=structure fields=2\n    atom \"c\"\n    structure fields=1\n      frame head=\"y\" body=structure fields=1\n        atom \"1\"\n  atom \"return\"\n"
+  },
+  {
+    "path": "tests/parser/current/vertical_call_then_value_return.lmx",
+    "exit": 0,
+    "authority": "FABLE-OPUS-RECEIVER-CONTRACT-20260924-139 commit 3 (author 2026-09-24, Q19.1/Q19.3 A1): a vertical call before return: value needs no close: the value return closes an fn only.",
+    "stdout_exact": "structure fields=2\n  frame head=\"ping\" body=structure fields=1\n    atom \"7\"\n  frame head=\"return\" body=structure fields=1\n    atom \"0\"\n"
   }
 ]

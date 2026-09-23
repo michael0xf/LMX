@@ -516,6 +516,7 @@ fn: p0_stream_apply_item_event (@: c.LmP0Document document; @: LmP0Stack stack; 
     @: LmP0Node nd
     int: trailer_target_available
     int: trailer_target_accepted
+    int: trailer_bare 0
     if: (p0_stack_ensure(document, stack, (event\level + 1U)) = 0)
         return: 0
     if: ((event\kind = c.LM_P0_STREAM_EVENT_ITEM) && (lm_p0_validate_dash_fence_line(document, event\text, event\text_length, event\line, event\column) = 0))
@@ -524,15 +525,17 @@ fn: p0_stream_apply_item_event (@: c.LmP0Document document; @: LmP0Stack stack; 
         trailer_role: lm_p0_trailer_role(event\text, event\text_length)
     else:
         trailer_role: c.LM_P0_TRAILER_ROLE_NONE
+    if: (trailer_role = c.LM_P0_TRAILER_ROLE_RETURN)
+        trailer_bare: lm_p0_trailer_text_is_bare(event\text, event\text_length)
     top_level: p0_stack_top_level(stack)
     trailer_target_available: ((lm_p0_trailer_role_is_tail_cutter(trailer_role) && ((event\level + 1U) <= top_level)) && (stack\owners[(event\level + 1U)] != 0))
-    trailer_target_accepted: (trailer_target_available && lm_p0_trailer_role_accepts_target(trailer_role, stack\owners[(event\level + 1U)]))
+    trailer_target_accepted: (trailer_target_available && lm_p0_trailer_role_accepts_target(trailer_role, stack\owners[(event\level + 1U)], trailer_bare))
     if: ((lm_p0_trailer_role_is_tail_cutter(trailer_role) = 0) || (trailer_target_accepted = 0))
         top_level: p0_stack_collapse_soft_to_event(stack, event\level)
         if: ((event\level = top_level) && (stack\hard[top_level] = 0U))
             stack\hard[top_level]: 1U
         trailer_target_available: ((lm_p0_trailer_role_is_tail_cutter(trailer_role) && ((event\level + 1U) <= top_level)) && (stack\owners[(event\level + 1U)] != 0))
-        trailer_target_accepted: (trailer_target_available && lm_p0_trailer_role_accepts_target(trailer_role, stack\owners[(event\level + 1U)]))
+        trailer_target_accepted: (trailer_target_available && lm_p0_trailer_role_accepts_target(trailer_role, stack\owners[(event\level + 1U)], trailer_bare))
     if: ((lm_p0_trailer_role_is_tail_cutter(trailer_role) && ((event\level + 1U) < top_level)) && (trailer_target_accepted = 0))
         lm_p0_set_diagnostic(document, 13, event\line, event\column, "tail-cutter target is not valid for this receiver")
         return: 0

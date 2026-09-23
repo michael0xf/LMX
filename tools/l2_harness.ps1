@@ -909,6 +909,10 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_empty_assign_named.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 74;
         Absent = @(); Debt = @() },
+    # A BARE `return` CLOSES A SUB (P0, FABLE-OPUS-RECEIVER-CONTRACT-20260924-139 commit 3; author
+    # 2026-09-24 Q19.1/Q19.3): the trailer ends the body of s, and each call runs it.
+    [pscustomobject]@{ Name = 'unit_sub_return_trailer.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 6;
+        Absent = @(); Debt = @() },
     # THE STICKY DIRTY OF AN ADDRESS-TAKEN LOCAL (GROK-COLON-OCCURRENCE-20260922-02).  Any executed
     # `@x` of an addressable activation-local makes sticky through activation end -- before, between
     # or after occurrence bindings.  Address-taking invents no graph field; `p` always addresses the

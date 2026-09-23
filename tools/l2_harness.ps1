@@ -1341,6 +1341,14 @@ $fixtures = @(
         Debt = @() },
     [pscustomobject]@{ Name = 'unit_struct_return_assign_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'graph assignment admission requires receiving-expression tests'; Absent = @(); Debt = @() },
+    # FABLE-SONNET-DEFECTS-20260924-141 D-15: an int: field in a named
+    # Structure goes through the same field-kind table as size_t (kind 7) --
+    # own declaration, a nested path, a formal parameter and a merge copy
+    # all read/write it through the ordinary machinery.
+    [pscustomobject]@{ Name = 'unit_struct_int_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
+        Debt = @() },
     # FABLE-SONNET-DECL-PREPASS-20260923-137 part 3 (Opus's finding 2): a
     # predef'd C function's result reads as numeric -- safe into a numeric
     # target (entry_parse_min.lm2's own assignment form), still refused

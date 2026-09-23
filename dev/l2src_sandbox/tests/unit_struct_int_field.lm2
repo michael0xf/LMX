@@ -1,0 +1,51 @@
+Model:
+    int: value 1
+    (): inner
+        int: deep 2
+    end: inner
+end: Model
+
+# FABLE-SONNET-DEFECTS-20260924-141 D-15: int fields go through the same
+# field-kind table as size_t (l2_take_ns_body, kind 7) -- an own
+# declaration, a nested path, a formal parameter and a merge copy all
+# read/write it through the ordinary machinery, no special branch.
+fn: bump (@(Lmx Model)) int
+    Model\value: 99
+    int: got
+    got: Model\value
+    return: got
+end: bump
+
+fn: make () int
+    Model: fresh
+    return: bump(fresh)
+end: make
+
+Model: fresh
+int: ov
+int: od
+fresh\value: 42
+fresh\inner\deep: 55
+ov: fresh\value
+od: fresh\inner\deep
+if: ov != 42
+    return: 81
+if: od != 55
+    return: 82
+
+copy: merge: Model
+copy\value: 7
+int: ev
+int: cv
+ev: Model\value
+cv: copy\value
+if: ev != 1
+    return: 83
+if: cv != 7
+    return: 84
+
+int: fv
+fv: make()
+if: fv != 99
+    return: 90
+return: 0

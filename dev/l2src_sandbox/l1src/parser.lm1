@@ -195,6 +195,10 @@ prototype:
     fn: lm_p0_validate_nonempty_colon_frames_in_trailer (@: LmP0Document document; const: @(LmP0Trailer trailer)) int
     fn: lm_p0_validate_nonempty_colon_frames_in_node (@: LmP0Document document; const: @(LmP0Node node)) int
     fn: lm_p0_validate_nonempty_colon_frames_in_structure (@: LmP0Document document; const: @(LmP0Structure structure)) int
+    fn: lm_p0_normalize_sole_anonymous_container (@: LmP0Structure body) int
+    fn: lm_p0_normalize_sole_anonymous_in_trailer (@: LmP0Trailer trailer) int
+    fn: lm_p0_normalize_sole_anonymous_in_node (@: LmP0Node node) int
+    fn: lm_p0_normalize_sole_anonymous_in_structure (@: LmP0Structure structure) int
     fn: lm_p0_parse_bytes (const: @(char source); size_t: source_length; @@: LmP0Document out_document) int
     fn: lm_p0_parse_string (const: @(char source); @@: LmP0Document out_document) int
     fn: lm_p0_parse_file (const: @(char path); @@: LmP0Document out_document) int
@@ -1699,16 +1703,19 @@ fn: lm_p0_record_mix_mark (@: LmP0Document document; @: LmP0Structure structure;
                     if: lm_p0_validate_nonempty_colon_frames_in_node(payload_document, payload_document\root) = 0
                         lm_p0_copy_payload_diagnostic(document, payload_document, payload_offset)
                     else:
-                        if: lm_own_tree_cut(payload_document\tree_arena) != 0
-                            lm_p0_set_diagnostic(document, 1, span_line, span_column, "out of memory while promoting MIX lazy text edges")
+                        if: lm_p0_normalize_sole_anonymous_in_node(payload_document\root) = 0
+                            lm_p0_copy_payload_diagnostic(document, payload_document, payload_offset)
                         else:
-                            if: lm_own_arena_absorb(document\tree_arena, payload_document\tree_arena) != 0
-                                lm_p0_set_diagnostic(document, 1, span_line, span_column, "out of memory while moving MIX tree into parser arena")
+                            if: lm_own_tree_cut(payload_document\tree_arena) != 0
+                                lm_p0_set_diagnostic(document, 1, span_line, span_column, "out of memory while promoting MIX lazy text edges")
                             else:
-                                node\as\structure: payload_document\root\as\structure
-                                payload_document\root\as\structure: 0
-                                lm_p0_adjust_structure_spans_to_document(document, node\as\structure, payload_offset)
-                                status: 1
+                                if: lm_own_arena_absorb(document\tree_arena, payload_document\tree_arena) != 0
+                                    lm_p0_set_diagnostic(document, 1, span_line, span_column, "out of memory while moving MIX tree into parser arena")
+                                else:
+                                    node\as\structure: payload_document\root\as\structure
+                                    payload_document\root\as\structure: 0
+                                    lm_p0_adjust_structure_spans_to_document(document, node\as\structure, payload_offset)
+                                    status: 1
         ---
 
         lm_p0_document_destroy_owners(payload_document)
@@ -3465,9 +3472,9 @@ fn: lm_p0_stream_resolve_pending_delimiter (@: LmP0Document document; @: LmP0Sta
     event: pending\event
     if: (lm_p0_stack_ensure(document, stack, (event\level + 1U)) = 0)
         return: 0
-    # A delimiter explicitly closes a vertical body. Preserve an empty
-    # argument BEFORE truncating its source-level owner; do not relax the
-    # later check for a colon with no argument (EOF, semicolon, etc.).
+    # A delimiter (---) explicitly closes a vertical colon body. Remember that
+    # syntactic close on the frame/trailer; do NOT materialize a fake empty
+    # Structure argument. SEPARATOR_CLOSED (;/)) stays a different flag.
     closing_level: (event\level + 1U)
     while: closing_level < stack\capacity
         @: LmP0Node owner
@@ -3480,22 +3487,15 @@ fn: lm_p0_stream_resolve_pending_delimiter (@: LmP0Document document; @: LmP0Sta
                 @@: LmP0Trailer trailer_slot
                 trailer_slot: lm_p0_node_trailer_slot(owner)
                 empty_colon: lm_p0_colon_trailer_empty(trailer_slot[0])
+                if: empty_colon
+                    trailer_slot[0]\flags: trailer_slot[0]\flags | c.LM_P0_TRAILER_DELIMITER_CLOSED
+                ---
             else:
                 if: owner\kind = c.LM_P0_NODE_FRAME && body = owner\as\frame\body
                     empty_colon: lm_p0_colon_frame_empty(owner\as\frame)
-                ---
-            if: empty_colon
-                @: LmP0Node argument
-                argument: lm_p0_new_node(document, c.LM_P0_NODE_STRUCTURE)
-                if: argument = 0
-                    return: 0
-                argument\span\line: event\line
-                argument\span\column: event\column
-                argument\span\offset: event\offset
-                argument\span\length: 0U
-                if: lm_p0_append_field(document, body, argument) = 0
-                    lm_p0_free_node(argument)
-                    return: 0
+                    if: empty_colon
+                        owner\as\frame\flags: owner\as\frame\flags | c.LM_P0_FRAME_DELIMITER_CLOSED
+                    ---
                 ---
             ---
         closing_level: closing_level + 1U
@@ -4495,6 +4495,73 @@ fn: lm_p0_wrap_fields_from_line (@: LmP0Document document; @: LmP0Structure stru
     return: 1
 end: lm_p0_wrap_fields_from_line
 
+fn: lm_p0_normalize_sole_anonymous_container (@: LmP0Structure body) int
+    @: LmP0Field only
+    @: LmP0Node container
+    @: LmP0Structure inner
+    if: body = 0
+        return: 1
+    if: body\field_count != 1U
+        return: 1
+    only: body\first_field
+    if: only = 0 || only\value = 0
+        return: 1
+    container: only\value
+    if: container\kind != c.LM_P0_NODE_STRUCTURE
+        return: 1
+    if: container\as = 0 || container\as\structure = 0
+        return: 1
+    inner: container\as\structure
+    # Opaque / trailer-bearing Structure stays a value field (one-level sole bag).
+    if: inner\trailer != 0
+        return: 1
+    body\first_field: inner\first_field
+    body\last_field: inner\last_field
+    body\field_count: inner\field_count
+    inner\first_field: 0
+    inner\last_field: 0
+    inner\field_count: 0U
+    only\value: 0
+    only\next: 0
+    return: 1
+end: lm_p0_normalize_sole_anonymous_container
+
+fn: lm_p0_normalize_sole_anonymous_in_trailer (@: LmP0Trailer trailer) int
+    if: trailer = 0
+        return: 1
+    if: lm_p0_normalize_sole_anonymous_in_structure(trailer\body) = 0
+        return: 0
+    return: lm_p0_normalize_sole_anonymous_container(trailer\body)
+end: lm_p0_normalize_sole_anonymous_in_trailer
+
+fn: lm_p0_normalize_sole_anonymous_in_node (@: LmP0Node node) int
+    if: node = 0
+        return: 1
+    if: node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && node\as\frame != 0
+        if: lm_p0_normalize_sole_anonymous_in_structure(node\as\frame\body) = 0
+            return: 0
+        if: lm_p0_normalize_sole_anonymous_container(node\as\frame\body) = 0
+            return: 0
+        return: lm_p0_normalize_sole_anonymous_in_trailer(node\as\frame\trailer)
+    if: node\kind = c.LM_P0_NODE_STRUCTURE && node\as != 0
+        if: lm_p0_normalize_sole_anonymous_in_structure(node\as\structure) = 0
+            return: 0
+        return: lm_p0_normalize_sole_anonymous_in_trailer(node\as\structure\trailer)
+    return: 1
+end: lm_p0_normalize_sole_anonymous_in_node
+
+fn: lm_p0_normalize_sole_anonymous_in_structure (@: LmP0Structure structure) int
+    const: @: LmP0Field field
+    if: structure = 0
+        return: 1
+    field: structure\first_field
+    while: (field != 0)
+        if: (lm_p0_normalize_sole_anonymous_in_node(field\value) = 0)
+            return: 0
+        field: field\next
+    return: 1
+end: lm_p0_normalize_sole_anonymous_in_structure
+
 fn: lm_p0_colon_frame_empty (const: @(LmP0Frame frame)) int
     if: frame = 0
         return: 0
@@ -4520,7 +4587,7 @@ return: 1
 fn: lm_p0_validate_nonempty_colon_frames_in_trailer (@: LmP0Document document; const: @(LmP0Trailer trailer)) int
     if: (trailer = 0)
         return: 1
-    if: lm_p0_colon_trailer_empty(trailer) != 0
+    if: lm_p0_colon_trailer_empty(trailer) != 0 && ((trailer\flags & c.LM_P0_TRAILER_DELIMITER_CLOSED) = 0U)
         lm_p0_set_diagnostic(document, 32, 1U, 1U, "empty colon Frame is not allowed")
         return: 0
     return: lm_p0_validate_nonempty_colon_frames_in_structure(document, trailer\body)
@@ -4534,13 +4601,13 @@ fn: lm_p0_validate_nonempty_colon_frames_in_node (@: LmP0Document document; cons
     if: node\span != 0
         line: node\span\line
         column: node\span\column
-    if: node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && lm_p0_colon_frame_empty(node\as\frame) != 0
+    if: node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && lm_p0_colon_frame_empty(node\as\frame) != 0 && ((node\as\frame\flags & c.LM_P0_FRAME_DELIMITER_CLOSED) = 0U)
         lm_p0_set_diagnostic(document, 32, line, column, "empty colon Frame is not allowed")
         return: 0
-    if: node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && lm_p0_colon_trailer_empty(node\as\frame\trailer) != 0
+    if: node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && lm_p0_colon_trailer_empty(node\as\frame\trailer) != 0 && ((node\as\frame\trailer\flags & c.LM_P0_TRAILER_DELIMITER_CLOSED) = 0U)
         lm_p0_set_diagnostic(document, 32, line, column, "empty colon Frame is not allowed")
         return: 0
-    if: node\kind = c.LM_P0_NODE_STRUCTURE && node\as != 0 && lm_p0_colon_trailer_empty(node\as\structure\trailer) != 0
+    if: node\kind = c.LM_P0_NODE_STRUCTURE && node\as != 0 && lm_p0_colon_trailer_empty(node\as\structure\trailer) != 0 && ((node\as\structure\trailer\flags & c.LM_P0_TRAILER_DELIMITER_CLOSED) = 0U)
         lm_p0_set_diagnostic(document, 32, line, column, "empty colon Frame is not allowed")
         return: 0
     if: (node\kind = c.LM_P0_NODE_FRAME)
@@ -4591,7 +4658,9 @@ external:
             return: 1
         if: lm_p0_parse_stream(document)
             if: lm_p0_postprocess_node(document, document\root)
-                lm_p0_validate_nonempty_colon_frames_in_node(document, document\root)
+                if: lm_p0_validate_nonempty_colon_frames_in_node(document, document\root)
+                    lm_p0_normalize_sole_anonymous_in_node(document\root)
+                ---
             ---
         if: (document\diagnostic\code = 0)
             if: (lm_own_tree_cut(document\tree_arena) != 0)

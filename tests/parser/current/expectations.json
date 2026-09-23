@@ -2,44 +2,44 @@
   {
     "path": "tests/parser/current/empty_vertical_body.lmx",
     "exit": 0,
-    "authority": "Author clarification 2026-09-19: the empty vertical body is a present empty Structure argument, synonymous with ().",
-    "stdout_exact": "structure fields=1\n  frame head=\"receiver\" body=structure fields=1\n    structure fields=0\n"
+    "authority": "GROKBOT-P0-SOLE-CONTAINER-20260923-127: every head; empty vertical == empty body.",
+    "stdout_exact": "structure fields=1\n  frame head=\"receiver\" body=structure fields=0\n"
   },
   {
     "path": "tests/parser/current/empty_parenthesized_argument.lmx",
     "exit": 0,
-    "authority": "Author clarification 2026-09-19: explicit empty Structure argument.",
-    "stdout_exact": "structure fields=1\n  frame head=\"receiver\" body=structure fields=1\n    structure fields=0\n"
+    "authority": "GROKBOT-P0-SOLE-CONTAINER-20260923-127: receiver: () sole container unwrap.",
+    "stdout_exact": "structure fields=1\n  frame head=\"receiver\" body=structure fields=0\n"
   },
   {
     "path": "tests/parser/current/empty_vertical_then_parenthesized.lmx",
     "exit": 0,
-    "stdout_exact": "structure fields=2\n  frame head=\"receiver\" body=structure fields=1\n    structure fields=0\n  frame head=\"receiver\" body=structure fields=1\n    structure fields=0\n"
+    "stdout_exact": "structure fields=2\n  frame head=\"receiver\" body=structure fields=0\n  frame head=\"receiver\" body=structure fields=0\n"
   },
   {
     "path": "tests/parser/current/empty_vertical_comment.lmx",
     "exit": 0,
-    "stdout_exact": "structure fields=1\n  frame head=\"receiver\" body=structure fields=1\n    structure fields=0\n"
+    "stdout_exact": "structure fields=1\n  frame head=\"receiver\" body=structure fields=0\n"
   },
   {
     "path": "tests/parser/current/empty_vertical_nested.lmx",
     "exit": 0,
-    "stdout_exact": "structure fields=1\n  frame head=\"outer\" body=structure fields=1\n    frame head=\"receiver\" body=structure fields=1\n      structure fields=0\n"
+    "stdout_exact": "structure fields=1\n  frame head=\"outer\" body=structure fields=1\n    frame head=\"receiver\" body=structure fields=0\n"
   },
   {
     "path": "tests/parser/current/empty_parenthesized_nested.lmx",
     "exit": 0,
-    "stdout_exact": "structure fields=1\n  frame head=\"outer\" body=structure fields=1\n    frame head=\"receiver\" body=structure fields=1\n      structure fields=0\n"
+    "stdout_exact": "structure fields=1\n  frame head=\"outer\" body=structure fields=1\n    frame head=\"receiver\" body=structure fields=0\n"
   },
   {
     "path": "tests/parser/current/empty_vertical_trailer.lmx",
     "exit": 0,
-    "stdout_exact": "structure fields=1\n  frame head=\"fn\" body=structure fields=3\n    atom \"f\"\n    structure fields=0\n    atom \"int\"\n    Tail cutter trailer spelling=\"return\" fields=1\n      structure fields=0\n"
+    "stdout_exact": "structure fields=1\n  frame head=\"fn\" body=structure fields=3\n    atom \"f\"\n    structure fields=0\n    atom \"int\"\n    Tail cutter trailer spelling=\"return\" fields=0\n"
   },
   {
     "path": "tests/parser/current/empty_parenthesized_trailer.lmx",
     "exit": 0,
-    "stdout_exact": "structure fields=1\n  frame head=\"fn\" body=structure fields=3\n    atom \"f\"\n    structure fields=0\n    atom \"int\"\n    Tail cutter trailer spelling=\"return\" fields=1\n      structure fields=0\n"
+    "stdout_exact": "structure fields=1\n  frame head=\"fn\" body=structure fields=3\n    atom \"f\"\n    structure fields=0\n    atom \"int\"\n    Tail cutter trailer spelling=\"return\" fields=0\n"
   },
   {
     "path": "tests/parser/current/missing_colon_argument.lmx",
@@ -69,32 +69,32 @@
   {
     "path": "tests/parser/current/empty_compact_f.lmx",
     "exit": 0,
-    "authority": "GROKBOT-P0-EMPTY-FORMS-20260922-74: f() is zero-field Frame/body (not an anonymous empty Structure argument).",
+    "authority": "GROKBOT-P0-SOLE-CONTAINER-20260923-127: f()/f:()/vertical are one empty Frame body.",
     "stdout_exact": "structure fields=1\n  frame head=\"f\" body=structure fields=0\n"
   },
   {
     "path": "tests/parser/current/empty_paren_f.lmx",
     "exit": 0,
-    "authority": "GROKBOT-P0-EMPTY-FORMS-20260922-74: f: () keeps one anonymous empty Structure argument.",
-    "stdout_exact": "structure fields=1\n  frame head=\"f\" body=structure fields=1\n    structure fields=0\n"
+    "authority": "GROKBOT-P0-SOLE-CONTAINER-20260923-127: f: () normalizes sole empty Structure away.",
+    "stdout_exact": "structure fields=1\n  frame head=\"f\" body=structure fields=0\n"
   },
   {
     "path": "tests/parser/current/empty_vertical_f.lmx",
     "exit": 0,
-    "authority": "GROKBOT-P0-EMPTY-FORMS-20260922-74: explicitly closed vertical f: + --- materializes the same anonymous empty Structure as f: ().",
-    "stdout_exact": "structure fields=1\n  frame head=\"f\" body=structure fields=1\n    structure fields=0\n"
+    "authority": "GROKBOT-P0-SOLE-CONTAINER-20260923-127: vertical f: + --- marks delimiter-closed; body fields=0.",
+    "stdout_exact": "structure fields=1\n  frame head=\"f\" body=structure fields=0\n"
   },
   {
     "path": "tests/parser/current/missing_colon_f.lmx",
     "exit": 1,
-    "authority": "GROKBOT-P0-EMPTY-FORMS-20260922-74: unfinished lone f: remains rejected by lm_p0_validate_nonempty_colon_frames* (error 32).",
+    "authority": "GROKBOT-P0-SOLE-CONTAINER-20260923-127: bare f: still REJECT 32 (not delimiter-closed).",
     "diagnostic": "32@1:1"
   },
   {
     "path": "tests/parser/current/empty_paren_mystruct.lmx",
     "exit": 0,
-    "authority": "GROKBOT-P0-EMPTY-FORMS-20260922-74: mystruct: () retains empty Structure as type-giving declaration value (same P0 tree as f: (); CALL-consumer unwrap is Stage C only, not tree-wide).",
-    "stdout_exact": "structure fields=1\n  frame head=\"mystruct\" body=structure fields=1\n    structure fields=0\n"
+    "authority": "GROKBOT-P0-SOLE-CONTAINER-20260923-127: mystruct: () same empty body as mystruct() (P0 parity only).",
+    "stdout_exact": "structure fields=1\n  frame head=\"mystruct\" body=structure fields=0\n"
   },
   {
     "path": "tests/parser/current/closed_fn_then_column0_return.lmx",
@@ -107,5 +107,47 @@
     "exit": 0,
     "authority": "FABLE-GROKBOT-P0-CLOSED-FRAME-TRAILER-20260923-114: open fn keeps return as trailer.",
     "stdout_exact": "structure fields=1\n  frame head=\"fn\" body=structure fields=3\n    atom \"m\"\n    structure fields=0\n    atom \"int\"\n    Tail cutter trailer spelling=\"return\" fields=1\n      atom \"1\"\n"
+  },
+  {
+    "path": "tests/parser/current/empty_compact_mystruct.lmx",
+    "exit": 0,
+    "authority": "GROKBOT-P0-SOLE-CONTAINER-20260923-127: mystruct() empty body; P0 parity with mystruct: ().",
+    "stdout_exact": "structure fields=1\n  frame head=\"mystruct\" body=structure fields=0\n"
+  },
+  {
+    "path": "tests/parser/current/nonempty_paren_f.lmx",
+    "exit": 0,
+    "authority": "GROKBOT-P0-SOLE-CONTAINER-20260923-127: f(a b) direct fields after P0.",
+    "stdout_exact": "structure fields=1\n  frame head=\"f\" body=structure fields=2\n    atom \"a\"\n    atom \"b\"\n"
+  },
+  {
+    "path": "tests/parser/current/nonempty_colon_paren_f.lmx",
+    "exit": 0,
+    "authority": "GROKBOT-P0-SOLE-CONTAINER-20260923-127: f: (a b) sole container unwrap == f(a b).",
+    "stdout_exact": "structure fields=1\n  frame head=\"f\" body=structure fields=2\n    atom \"a\"\n    atom \"b\"\n"
+  },
+  {
+    "path": "tests/parser/current/nonempty_vertical_f.lmx",
+    "exit": 0,
+    "authority": "GROKBOT-P0-SOLE-CONTAINER-20260923-127: vertical f: a b --- == f(a b).",
+    "stdout_exact": "structure fields=1\n  frame head=\"f\" body=structure fields=2\n    atom \"a\"\n    atom \"b\"\n"
+  },
+  {
+    "path": "tests/parser/current/nextMessage_paren.lmx",
+    "exit": 0,
+    "authority": "GROKBOT-P0-SOLE-CONTAINER-20260923-127: ADDENDUM: nextMessage(m) P0 tree.",
+    "stdout_exact": "structure fields=1\n  frame head=\"nextMessage\" body=structure fields=1\n    atom \"m\"\n"
+  },
+  {
+    "path": "tests/parser/current/nextMessage_colon_paren.lmx",
+    "exit": 0,
+    "authority": "GROKBOT-P0-SOLE-CONTAINER-20260923-127: ADDENDUM: nextMessage: (m) identical after normalize.",
+    "stdout_exact": "structure fields=1\n  frame head=\"nextMessage\" body=structure fields=1\n    atom \"m\"\n"
+  },
+  {
+    "path": "tests/parser/current/nextMessage_vertical.lmx",
+    "exit": 0,
+    "authority": "GROKBOT-P0-SOLE-CONTAINER-20260923-127: ADDENDUM: vertical nextMessage identical.",
+    "stdout_exact": "structure fields=1\n  frame head=\"nextMessage\" body=structure fields=1\n    atom \"m\"\n"
   }
 ]

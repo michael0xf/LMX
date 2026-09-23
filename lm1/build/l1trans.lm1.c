@@ -631,6 +631,10 @@ int lm_p0_colon_trailer_empty(const LmP0Trailer * trailer);
 int lm_p0_validate_nonempty_colon_frames_in_trailer(LmP0Document * document, const LmP0Trailer * trailer);
 int lm_p0_validate_nonempty_colon_frames_in_node(LmP0Document * document, const LmP0Node * node);
 int lm_p0_validate_nonempty_colon_frames_in_structure(LmP0Document * document, const LmP0Structure * structure);
+int lm_p0_normalize_sole_anonymous_container(LmP0Structure * body);
+int lm_p0_normalize_sole_anonymous_in_trailer(LmP0Trailer * trailer);
+int lm_p0_normalize_sole_anonymous_in_node(LmP0Node * node);
+int lm_p0_normalize_sole_anonymous_in_structure(LmP0Structure * structure);
 int lm_p0_parse_bytes(const char * source, size_t source_length, LmP0Document ** out_document);
 int lm_p0_parse_string(const char * source, LmP0Document ** out_document);
 int lm_p0_parse_file(const char * path, LmP0Document ** out_document);
@@ -1410,7 +1414,7 @@ void lm_p0_dump_append_field_count_line(LmP0Dump * dump, size_t field_count)
 }
 LmP0Text * lm_p0_text_ref_new_empty(void)
 {
-    return (((LmP0Text *)lm_own_new_zero(sizeof(LmP0Text))));
+    return ((LmP0Text *)lm_own_new_zero(sizeof(LmP0Text)));
 }
 void lm_p0_text_ref_delete(LmP0Text * text)
 {
@@ -1436,7 +1440,7 @@ int lm_p0_document_register_lazy_text(LmP0Document * document, const char * sour
 LmP0Text * lm_p0_new_text(LmP0Document * document, const char * source, size_t length, size_t line, size_t column)
 {
     LmP0Text * text;
-    text = (((LmP0Text *)lm_own_arena_new_zero(document->tree_arena, sizeof(text[0]))));
+    text = ((LmP0Text *)lm_own_arena_new_zero(document->tree_arena, sizeof(text[0])));
     if ((text == 0)) {
     lm_p0_set_diagnostic(document, 1, line, column, "out of memory while allocating parser text");
     return 0;
@@ -1461,7 +1465,7 @@ LmP0Text * lm_p0_new_text(LmP0Document * document, const char * source, size_t l
 LmP0Structure * lm_p0_new_structure(LmP0Document * document, size_t line, size_t column)
 {
     LmP0Structure * structure;
-    structure = (((LmP0Structure *)lm_own_arena_new_zero(document->tree_arena, sizeof(structure[0]))));
+    structure = ((LmP0Structure *)lm_own_arena_new_zero(document->tree_arena, sizeof(structure[0])));
     if ((structure == 0)) {
     lm_p0_set_diagnostic(document, 1, line, column, "out of memory while allocating parser structure");
     return 0;
@@ -1471,7 +1475,7 @@ LmP0Structure * lm_p0_new_structure(LmP0Document * document, size_t line, size_t
 LmP0Frame * lm_p0_new_frame(LmP0Document * document, size_t line, size_t column)
 {
     LmP0Frame * frame;
-    frame = (((LmP0Frame *)lm_own_arena_new_zero(document->tree_arena, sizeof(frame[0]))));
+    frame = ((LmP0Frame *)lm_own_arena_new_zero(document->tree_arena, sizeof(frame[0])));
     if ((frame == 0)) {
     lm_p0_set_diagnostic(document, 1, line, column, "out of memory while allocating parser frame");
     return 0;
@@ -1489,7 +1493,7 @@ LmP0Frame * lm_p0_new_frame(LmP0Document * document, size_t line, size_t column)
 LmP0Trailer * lm_p0_new_trailer(LmP0Document * document, const char * spelling, size_t spelling_length, size_t line, size_t column)
 {
     LmP0Trailer * trailer;
-    trailer = (((LmP0Trailer *)lm_own_arena_new_zero(document->tree_arena, sizeof(trailer[0]))));
+    trailer = ((LmP0Trailer *)lm_own_arena_new_zero(document->tree_arena, sizeof(trailer[0])));
     if ((trailer == 0)) {
     lm_p0_set_diagnostic(document, 1, line, column, "out of memory while allocating parser trailer");
     return 0;
@@ -1573,7 +1577,7 @@ void lm_p0_trim_trailing_line_comment(const char ** text, size_t * length)
     }
     if ((text[0][i] == '#')) {
     size_t end_index;
-    end_index = (i + 1U);
+    end_index = i + 1U;
     while (((end_index < length[0]) && (lm_p0_is_line_break(text[0][end_index]) == 0))) {
     end_index = end_index + 1U;
     }
@@ -1591,14 +1595,14 @@ int lm_p0_indent_level_from_column(LmP0Document * document, LmP0IndentStack * st
     size_t top;
     top = stack -> columns[(stack -> count - 1U)];
     if ((column == top)) {
-    out_level[0] = (stack -> count - 1U);
+    out_level[0] = stack -> count - 1U;
     return 1;
     }
     if ((column > top)) {
     if ((lm_p0_indent_stack_push(document, stack, column, line, source_column) == 0)) {
     return 0;
     }
-    out_level[0] = (stack -> count - 1U);
+    out_level[0] = stack -> count - 1U;
     return 1;
     }
     while (((stack -> count > 0U) && (stack -> columns[(stack -> count - 1U)] > column))) {
@@ -1608,7 +1612,7 @@ int lm_p0_indent_level_from_column(LmP0Document * document, LmP0IndentStack * st
     lm_p0_set_diagnostic(document, 17, line, source_column, "unindent does not match any outer indentation level");
     return 0;
     }
-    out_level[0] = (stack -> count - 1U);
+    out_level[0] = stack -> count - 1U;
     return 1;
 }
 size_t lm_p0_skip_fence_block_unchecked(const char * text, size_t length, size_t start, char fence_char)
@@ -1654,7 +1658,7 @@ size_t lm_p0_skip_fence_block_unchecked(const char * text, size_t length, size_t
     else {
     lm_p0_tmp_7 = 0U;
     }
-    return (current_end + lm_p0_tmp_7);
+    return current_end + lm_p0_tmp_7;
     }
     if (((fence_char == '*') && lm_p0_match_raw_comment_fence_line(text, scan_start, current_end, fence_count))) {
     size_t lm_p0_tmp_8;
@@ -1664,12 +1668,12 @@ size_t lm_p0_skip_fence_block_unchecked(const char * text, size_t length, size_t
     else {
     lm_p0_tmp_8 = 0U;
     }
-    return (current_end + lm_p0_tmp_8);
+    return current_end + lm_p0_tmp_8;
     }
     if ((current_end == length)) {
     break;
     }
-    scan_start = (current_end + lm_p0_line_break_width_at(text, length, current_end));
+    scan_start = current_end + lm_p0_line_break_width_at(text, length, current_end);
     }
     return length;
 }
@@ -1768,13 +1772,13 @@ size_t lm_p0_find_layout_line_end(const char * source, size_t length, size_t sta
     break;
     }
     line_break_width = lm_p0_line_break_width_at(source, length, i);
-    next_line_start = (i + line_break_width);
+    next_line_start = i + line_break_width;
     lm_p0_scan_layout_prefix(source, length, next_line_start, &next_content_offset, &next_line_indent, &next_line_dot_level);
     next_line_starts_with_matching_close = 0;
     if (((depth <= LM_P0_LAYOUT_DELIMITER_STACK_LIMIT) && (next_content_offset < length))) {
     char top_delimiter;
     top_delimiter = delimiter_stack[(depth - 1U)];
-    next_line_starts_with_matching_close = (((top_delimiter == '(') && (source[next_content_offset] == ')')) || ((top_delimiter == '[') && (source[next_content_offset] == ']')));
+    next_line_starts_with_matching_close = ((top_delimiter == '(') && (source[next_content_offset] == ')')) || ((top_delimiter == '[') && (source[next_content_offset] == ']'));
     }
     if ((depth <= LM_P0_LAYOUT_DELIMITER_STACK_LIMIT)) {
     base_indent = delimiter_indent_stack[(depth - 1U)];
@@ -2058,7 +2062,7 @@ int lm_p0_scan_raw_comment_block(LmP0Document * document, const char * source, s
     if ((scan_start < length)) {
     scan_start = scan_start + lm_p0_line_break_width_at(source, length, scan_start);
     }
-    scan_line = (line + 1U);
+    scan_line = line + 1U;
     while ((scan_start <= length)) {
     size_t current_end;
     size_t break_width;
@@ -2070,7 +2074,7 @@ int lm_p0_scan_raw_comment_block(LmP0Document * document, const char * source, s
     else {
     break_width = 0U;
     }
-    next_offset[0] = (current_end + break_width);
+    next_offset[0] = current_end + break_width;
     size_t lm_p0_tmp_12;
     if ((break_width > 0U)) {
     lm_p0_tmp_12 = 1U;
@@ -2078,13 +2082,13 @@ int lm_p0_scan_raw_comment_block(LmP0Document * document, const char * source, s
     else {
     lm_p0_tmp_12 = 0U;
     }
-    next_line[0] = (scan_line + lm_p0_tmp_12);
+    next_line[0] = scan_line + lm_p0_tmp_12;
     return 1;
     }
     if ((current_end == length)) {
     break;
     }
-    scan_start = (current_end + lm_p0_line_break_width_at(source, length, current_end));
+    scan_start = current_end + lm_p0_line_break_width_at(source, length, current_end);
     scan_line = scan_line + 1U;
     }
     lm_p0_set_diagnostic(document, 24, line, 1U, "unterminated raw comment block");
@@ -2123,7 +2127,7 @@ int lm_p0_scan_block_string_event(LmP0Document * document, const char * source, 
     }
     content_start = scan_start;
     content_end = content_start;
-    scan_line = (line + 1U);
+    scan_line = line + 1U;
     while ((scan_start <= length)) {
     size_t current_end;
     size_t break_width;
@@ -2137,12 +2141,12 @@ int lm_p0_scan_block_string_event(LmP0Document * document, const char * source, 
     }
     memset(event, 0, sizeof(event[0]));
     event->kind = LM_P0_STREAM_EVENT_BLOCK_STRING;
-    event->text = (source + content_start);
-    event->text_length = (content_end - content_start);
+    event->text = source + content_start;
+    event->text_length = content_end - content_start;
     event->line = line;
     event->column = 1U;
     event->offset = line_start;
-    next_offset[0] = (current_end + break_width);
+    next_offset[0] = current_end + break_width;
     size_t lm_p0_tmp_13;
     if ((break_width > 0U)) {
     lm_p0_tmp_13 = 1U;
@@ -2150,14 +2154,14 @@ int lm_p0_scan_block_string_event(LmP0Document * document, const char * source, 
     else {
     lm_p0_tmp_13 = 0U;
     }
-    next_line[0] = (scan_line + lm_p0_tmp_13);
+    next_line[0] = scan_line + lm_p0_tmp_13;
     return 1;
     }
     if ((current_end == length)) {
     break;
     }
     content_end = current_end;
-    scan_start = (current_end + lm_p0_line_break_width_at(source, length, current_end));
+    scan_start = current_end + lm_p0_line_break_width_at(source, length, current_end);
     scan_line = scan_line + 1U;
     }
     lm_p0_set_diagnostic(document, 20, line, 1U, "unterminated block string literal");
@@ -2166,17 +2170,17 @@ int lm_p0_scan_block_string_event(LmP0Document * document, const char * source, 
 LmP0Node * lm_p0_new_node(LmP0Document * document, LmP0NodeKind kind)
 {
     LmP0Node * node;
-    node = (((LmP0Node *)lm_own_arena_new_zero(document->tree_arena, sizeof(node[0]))));
+    node = ((LmP0Node *)lm_own_arena_new_zero(document->tree_arena, sizeof(node[0])));
     if ((node == 0)) {
     lm_p0_set_diagnostic(document, 1, 0U, 0U, "out of memory while allocating parser node");
     return 0;
     }
-    node->span = (((LmP0Span *)lm_own_arena_new_zero(document->tree_arena, sizeof(node->span[0]))));
+    node->span = ((LmP0Span *)lm_own_arena_new_zero(document->tree_arena, sizeof(node->span[0])));
     if ((node -> span == 0)) {
     lm_p0_set_diagnostic(document, 1, 0U, 0U, "out of memory while allocating parser node span");
     return 0;
     }
-    node->as = (((LmP0NodeAs *)lm_own_arena_new_zero(document->tree_arena, sizeof(node->as[0]))));
+    node->as = ((LmP0NodeAs *)lm_own_arena_new_zero(document->tree_arena, sizeof(node->as[0])));
     if ((node -> as == 0)) {
     lm_p0_set_diagnostic(document, 1, 0U, 0U, "out of memory while allocating parser node payload");
     return 0;
@@ -2209,7 +2213,7 @@ LmP0Node * lm_p0_new_node(LmP0Document * document, LmP0NodeKind kind)
 int lm_p0_append_field(LmP0Document * document, LmP0Structure * structure, LmP0Node * node)
 {
     LmP0Field * field;
-    field = (((LmP0Field *)lm_own_arena_new_zero(document->tree_arena, sizeof(field[0]))));
+    field = ((LmP0Field *)lm_own_arena_new_zero(document->tree_arena, sizeof(field[0])));
     if ((field == 0)) {
     size_t lm_p0_tmp_14;
     if ((node != 0)) {
@@ -2247,11 +2251,11 @@ int lm_p0_pointer_source_offset(const LmP0Document * document, const char * poin
     return 0;
     }
     begin = document -> source;
-    end_index = (document -> source + document -> source_length);
+    end_index = document -> source + document -> source_length;
     if (((pointer < begin) || (pointer > end_index))) {
     return 0;
     }
-    out_offset[0] = (((size_t)(pointer - begin)));
+    out_offset[0] = ((size_t)(pointer - begin));
     return 1;
 }
 size_t lm_p0_offset_from_line_column(const char * text, size_t length, size_t line, size_t column)
@@ -2371,7 +2375,7 @@ int lm_p0_record_mix_mark(LmP0Document * document, LmP0Structure * structure, co
     lm_p0_set_diagnostic(document, 1, span_line, span_column, "out of memory while creating MIX payload owners");
     }
     else {
-    payload_document->source = (((char *)(text + start + 1U)));
+    payload_document->source = ((char *)(text + start + 1U));
     payload_document->source_length = payload_length;
     if (lm_p0_parse_stream(payload_document) == 0) {
     lm_p0_copy_payload_diagnostic(document, payload_document, payload_offset);
@@ -2382,6 +2386,10 @@ int lm_p0_record_mix_mark(LmP0Document * document, LmP0Structure * structure, co
     }
     else {
     if (lm_p0_validate_nonempty_colon_frames_in_node(payload_document, payload_document->root) == 0) {
+    lm_p0_copy_payload_diagnostic(document, payload_document, payload_offset);
+    }
+    else {
+    if (lm_p0_normalize_sole_anonymous_in_node(payload_document->root) == 0) {
     lm_p0_copy_payload_diagnostic(document, payload_document, payload_offset);
     }
     else {
@@ -2403,6 +2411,7 @@ int lm_p0_record_mix_mark(LmP0Document * document, LmP0Structure * structure, co
     }
     }
     }
+    }
     lm_p0_document_destroy_owners(payload_document);
     lm_own_delete(payload_document, 0);
     if (status == 0) {
@@ -2414,20 +2423,20 @@ int lm_p0_record_mix_mark(LmP0Document * document, LmP0Structure * structure, co
 int lm_p0_is_bare_identifier_start(char c)
 {
     uchar value;
-    value = (((uchar)c));
-    return (isalpha(value) || (c == '_'));
+    value = ((uchar)c);
+    return isalpha(value) || (c == '_');
 }
 int lm_p0_is_bare_identifier_rest(char c)
 {
     uchar value;
-    value = (((uchar)c));
-    return (isalnum(value) || (c == '_'));
+    value = ((uchar)c);
+    return isalnum(value) || (c == '_');
 }
 int lm_p0_is_hex_digit(char c)
 {
     uchar value;
-    value = (((uchar)c));
-    return (isxdigit(value) != 0);
+    value = ((uchar)c);
+    return isxdigit(value) != 0;
 }
 int lm_p0_scan_number_token(const char * text, size_t end_index, size_t start, size_t * out_end)
 {
@@ -2480,7 +2489,7 @@ int lm_p0_scan_number_token(const char * text, size_t end_index, size_t start, s
     out_end[0] = i;
     }
     else {
-    out_end[0] = (start + 1U);
+    out_end[0] = start + 1U;
     }
     return 1;
     }
@@ -2530,7 +2539,7 @@ size_t lm_p0_scan_c_quoted_token(const char * text, size_t end_index, size_t quo
     return quote_index;
     }
     quote = text[quote_index];
-    i = (quote_index + 1U);
+    i = quote_index + 1U;
     while ((i < end_index)) {
     if (((text[i] == '\\') && ((i + 1U) < end_index))) {
     size_t line_break_width;
@@ -2544,18 +2553,18 @@ size_t lm_p0_scan_c_quoted_token(const char * text, size_t end_index, size_t quo
     continue;
     }
     if ((text[i] == quote)) {
-    return (i + 1U);
+    return i + 1U;
     }
     if (lm_p0_is_line_break(text[i])) {
-    return (quote_index + 1U);
+    return quote_index + 1U;
     }
     i = i + 1U;
     }
-    return (quote_index + 1U);
+    return quote_index + 1U;
 }
 int lm_p0_starts_c_prefixed_quote(const char * text, size_t end_index, size_t start)
 {
-    return ((((start + 1U) < end_index) && (text[start] == 'L')) && ((text[(start + 1U)] == '\'') || (text[(start + 1U)] == '"')));
+    return (((start + 1U) < end_index) && (text[start] == 'L')) && ((text[(start + 1U)] == '\'') || (text[(start + 1U)] == '"'));
 }
 size_t lm_p0_scan_c_char_token(const char * text, size_t end_index, size_t start)
 {
@@ -2574,15 +2583,15 @@ size_t lm_p0_scan_c_prefixed_quote_token(const char * text, size_t end_index, si
     if ((quoted_end > (start + 2U))) {
     return quoted_end;
     }
-    return (start + 1U);
+    return start + 1U;
 }
 int lm_p0_starts_c_surface_atom(const char * text, size_t end_index, size_t start)
 {
-    return ((((start + 1U) < end_index) && (text[start] == 'c')) && (text[(start + 1U)] == '.'));
+    return (((start + 1U) < end_index) && (text[start] == 'c')) && (text[(start + 1U)] == '.');
 }
 int lm_p0_is_c_surface_top_boundary(char value)
 {
-    return ((((((lm_p0_is_field_space(value) || lm_p0_is_field_separator(value)) || (value == '(')) || (value == ')')) || (value == ':')) || (value == '#')) || (value == '{'));
+    return (((((lm_p0_is_field_space(value) || lm_p0_is_field_separator(value)) || (value == '(')) || (value == ')')) || (value == ':')) || (value == '#')) || (value == '{');
 }
 size_t lm_p0_scan_c_sizeof_surface_atom(const char * text, size_t end_index, size_t start)
 {
@@ -2593,7 +2602,7 @@ size_t lm_p0_scan_c_sizeof_surface_atom(const char * text, size_t end_index, siz
     if (((((start + 8U) >= end_index) || (memcmp((text + start), "c.sizeof", 8U) != 0)) || (text[(start + 8U)] != '('))) {
     return start;
     }
-    i = (start + 9U);
+    i = start + 9U;
     depth = 1U;
     while ((i < end_index)) {
     if (lm_p0_is_line_break(text[i])) {
@@ -2633,7 +2642,7 @@ size_t lm_p0_scan_c_sizeof_surface_atom(const char * text, size_t end_index, siz
     }
     close_index = i;
     raw_safe = 1;
-    i = (start + 9U);
+    i = start + 9U;
     while ((i < close_index)) {
     if ((((text[i] == '\\') || (text[i] == '@')) || ((((i + 1U) < close_index) && (text[i] == 'c')) && (text[(i + 1U)] == '.')))) {
     raw_safe = 0;
@@ -2642,7 +2651,7 @@ size_t lm_p0_scan_c_sizeof_surface_atom(const char * text, size_t end_index, siz
     i = i + 1U;
     }
     if (raw_safe) {
-    return (close_index + 1U);
+    return close_index + 1U;
     }
     return start;
 }
@@ -2658,7 +2667,7 @@ size_t lm_p0_scan_c_surface_atom(const char * text, size_t end_index, size_t sta
     if ((sizeof_end > start)) {
     return sizeof_end;
     }
-    i = (start + 2U);
+    i = start + 2U;
     bracket_depth = 0U;
     while ((i < end_index)) {
     if (lm_p0_is_line_break(text[i])) {
@@ -2715,10 +2724,10 @@ size_t lm_p0_scan_builtin_compact_atom_piece(const char * text, size_t end_index
     first = text[start];
     second = text[(start + 1U)];
     if ((((((((((first == '!') && (second == '=')) || ((first == '<') && (second == '='))) || ((first == '>') && (second == '='))) || ((first == '&') && (second == '&'))) || ((first == '|') && (second == '|'))) || ((first == '+') && (second == '+'))) || ((first == '-') && (second == '-'))) || ((first == '[') && (second == ']')))) {
-    return (start + 2U);
+    return start + 2U;
     }
     }
-    return (start + 1U);
+    return start + 1U;
 }
 size_t lm_p0_scan_compact_atom_piece(const char * text, size_t end_index, size_t start, int allow_signed_number)
 {
@@ -2733,7 +2742,7 @@ size_t lm_p0_scan_compact_atom_piece(const char * text, size_t end_index, size_t
     return lm_p0_scan_c_surface_atom(text, end_index, start);
     }
     if (lm_p0_is_bare_identifier_start(text[start])) {
-    i = (start + 1U);
+    i = start + 1U;
     while (((i < end_index) && lm_p0_is_bare_identifier_rest(text[i]))) {
     i = i + 1U;
     }
@@ -2761,7 +2770,7 @@ size_t lm_p0_scan_compact_atom_piece(const char * text, size_t end_index, size_t
     second = text[(start + 1U)];
     if (((first == '@') && (second == '@'))) {
     size_t at_end;
-    at_end = (start + 2U);
+    at_end = start + 2U;
     while (((at_end < end_index) && (text[at_end] == '@'))) {
     at_end = at_end + 1U;
     }
@@ -2777,12 +2786,12 @@ int lm_p0_append_atom_slice(LmP0Document * document, LmP0Structure * structure, 
     if ((node == 0)) {
     return 0;
     }
-    node->as->atom->data = (text + start);
-    node->as->atom->length = (end_index - start);
+    node->as->atom->data = text + start;
+    node->as->atom->length = end_index - start;
     node->span->line = line;
     lm_p0_position_in_slice(text, length, start, line, column, &node->span->line, &node->span->column);
-    node->span->offset = (offset + start);
-    node->span->length = (end_index - start);
+    node->span->offset = offset + start;
+    node->span->length = end_index - start;
     if ((lm_p0_document_register_lazy_text(document, node->as->atom->data, node->as->atom->length, &node->as->atom->data, node->span->line, node->span->column) == 0)) {
     return 0;
     }
@@ -2800,7 +2809,7 @@ int lm_p0_append_positional_skip(LmP0Document * document, LmP0Structure * struct
     node->as->atom->length = 0U;
     node->span->line = line;
     lm_p0_position_in_slice(text, length, index, line, column, &node->span->line, &node->span->column);
-    node->span->offset = (offset + index);
+    node->span->offset = offset + index;
     node->span->length = 0U;
     return lm_p0_append_field(document, structure, node);
 }
@@ -2832,13 +2841,13 @@ int lm_p0_append_compact_atom_pieces(LmP0Document * document, LmP0Structure * st
     if ((lm_p0_append_atom_slice(document, structure, text, length, line, column, offset, close_index, (close_index + 1U)) == 0)) {
     return 0;
     }
-    i = (close_index + 1U);
+    i = close_index + 1U;
     allow_signed_number = 0;
     continue;
     }
     piece_end = lm_p0_scan_compact_atom_piece(text, end_index, i, allow_signed_number);
     if ((piece_end <= i)) {
-    piece_end = (i + 1U);
+    piece_end = i + 1U;
     }
     if ((lm_p0_append_atom_slice(document, structure, text, length, line, column, offset, i, piece_end) == 0)) {
     return 0;
@@ -2869,7 +2878,7 @@ int lm_p0_relaxed_level_from_column(LmP0Document * document, LmP0IndentStack * s
     parent_level = 0U;
     }
     else {
-    parent_level = (base_level - 1U);
+    parent_level = base_level - 1U;
     }
     if ((stack -> count == 0U)) {
     if ((lm_p0_indent_stack_push(document, stack, column, line, source_column) == 0)) {
@@ -2882,7 +2891,7 @@ int lm_p0_relaxed_level_from_column(LmP0Document * document, LmP0IndentStack * s
     if ((lm_p0_indent_stack_push(document, stack, column, line, source_column) == 0)) {
     return 0;
     }
-    out_level[0] = ((base_level + stack -> count) - 1U);
+    out_level[0] = (base_level + stack -> count) - 1U;
     return 1;
     }
     if ((column < stack -> columns[0])) {
@@ -2899,7 +2908,7 @@ int lm_p0_relaxed_level_from_column(LmP0Document * document, LmP0IndentStack * s
     i = 0U;
     while ((i < stack -> count)) {
     if ((stack -> columns[i] == column)) {
-    out_level[0] = (base_level + i);
+    out_level[0] = base_level + i;
     return 1;
     }
     i = i + 1U;
@@ -3013,7 +3022,7 @@ int lm_p0_scan_quoted(LmP0Document * document, const char * text, size_t length,
     if (lm_p0_starts_python_string(text, length, index[0])) {
     return lm_p0_scan_python_string(document, text, length, index, line, base_column);
     }
-    i = (index[0] + 1U);
+    i = index[0] + 1U;
     while ((i < length)) {
     if ((quote == '"')) {
     if ((text[i] == '\\')) {
@@ -3056,7 +3065,7 @@ int lm_p0_scan_quoted(LmP0Document * document, const char * text, size_t length,
     continue;
     }
     if ((text[i] == quote)) {
-    index[0] = (i + 1U);
+    index[0] = i + 1U;
     return 1;
     }
     i = i + 1U;
@@ -3314,7 +3323,7 @@ int lm_p0_field_start_looks_explicit_frame(LmP0Document * document, const char *
     if ((lm_p0_find_matching_paren(document, text, length, i, line, column, &close_index) == 0)) {
     return 0;
     }
-    return (((close_index + 1U) < length) && (text[(close_index + 1U)] == ':'));
+    return ((close_index + 1U) < length) && (text[(close_index + 1U)] == ':');
     }
     if (lm_p0_starts_c_surface_atom(text, length, i)) {
     i = lm_p0_scan_c_surface_atom(text, length, i);
@@ -3348,7 +3357,7 @@ int lm_p0_field_start_looks_explicit_frame(LmP0Document * document, const char *
     if ((lm_p0_find_matching_bracket(document, text, length, i, line, column, &bracket_close_index) == 0)) {
     return 0;
     }
-    i = (bracket_close_index + 1U);
+    i = bracket_close_index + 1U;
     continue;
     }
     if ((text[i] == ']')) {
@@ -3361,12 +3370,12 @@ int lm_p0_field_start_looks_explicit_frame(LmP0Document * document, const char *
     }
     }
     }
-    return (((head_end > index) && (i < length)) && ((text[i] == ':') || (text[i] == '(')));
+    return ((head_end > index) && (i < length)) && ((text[i] == ':') || (text[i] == '('));
 }
 void lm_p0_field_parse_loop_frame_delete_any(void * object)
 {
     LmP0FieldParseLoopFrame * frame;
-    frame = (((LmP0FieldParseLoopFrame *)object));
+    frame = ((LmP0FieldParseLoopFrame *)object);
     if ((frame == 0)) {
     return;
     }
@@ -3378,7 +3387,7 @@ void lm_p0_field_parse_loop_frame_delete_any(void * object)
 LmOwnPtrStack * lm_p0_field_parse_loop_stack_new(LmP0Document * document, size_t line, size_t column)
 {
     LmOwnPtrStack * stack;
-    stack = (((LmOwnPtrStack *)lm_own_new_zero(sizeof(stack[0]))));
+    stack = ((LmOwnPtrStack *)lm_own_new_zero(sizeof(stack[0])));
     if ((stack == 0)) {
     lm_p0_set_diagnostic(document, 1, line, column, "out of memory while creating parser field stack");
     return 0;
@@ -3397,7 +3406,7 @@ void lm_p0_field_parse_loop_stack_delete(LmOwnPtrStack * stack)
 int lm_p0_field_parse_loop_push(LmP0Document * document, LmOwnPtrStack * stack, LmP0IndentStack * indent_stack, int indent_stack_owned, LmP0Structure * structure, const char * text, size_t length, size_t line, size_t column, size_t offset, unsigned flags, size_t short_source_level, size_t layout_base_level, size_t i, size_t current_source_level, int allow_empty_fields, int expect_field, int headless_group_after_separator, LmP0FieldParseLoopContinuation continuation, LmP0Node * node, size_t start, size_t close_index)
 {
     LmP0FieldParseLoopFrame * frame;
-    frame = (((LmP0FieldParseLoopFrame *)lm_own_new_zero(sizeof(frame[0]))));
+    frame = ((LmP0FieldParseLoopFrame *)lm_own_new_zero(sizeof(frame[0])));
     if ((frame == 0)) {
     lm_p0_set_diagnostic(document, 1, line, column, "out of memory while growing parser field stack");
     return 0;
@@ -3479,7 +3488,7 @@ int lm_p0_parse_fields_until_with_layout(LmP0Document * document, LmP0IndentStac
     }
     i = index[0];
     current_source_level = initial_source_level;
-    allow_empty_fields = ((flags & LM_P0_FIELD_PARSE_ALLOW_EMPTY_FIELDS) != 0U);
+    allow_empty_fields = (flags & LM_P0_FIELD_PARSE_ALLOW_EMPTY_FIELDS) != 0U;
     expect_field = allow_empty_fields;
     headless_group_after_separator = 0;
     indent_stack_owned = 0;
@@ -3508,9 +3517,9 @@ int lm_p0_parse_fields_until_with_layout(LmP0Document * document, LmP0IndentStac
     return lm_p0_field_parse_fail(&parse_stack, &indent_stack, &indent_stack_owned);
     }
     structure = group_node -> as -> structure;
-    flags = ((LM_P0_FIELD_PARSE_STOP_ON_SEMICOLON | LM_P0_FIELD_PARSE_STOP_ON_SOURCE_LEVEL) | LM_P0_FIELD_PARSE_ALLOW_EMPTY_FIELDS);
+    flags = (LM_P0_FIELD_PARSE_STOP_ON_SEMICOLON | LM_P0_FIELD_PARSE_STOP_ON_SOURCE_LEVEL) | LM_P0_FIELD_PARSE_ALLOW_EMPTY_FIELDS;
     short_source_level = current_source_level;
-    current_source_level = (current_source_level + 1U);
+    current_source_level = current_source_level + 1U;
     allow_empty_fields = 1;
     expect_field = 1;
     headless_group_after_separator = 0;
@@ -3552,8 +3561,8 @@ int lm_p0_parse_fields_until_with_layout(LmP0Document * document, LmP0IndentStac
     node->as->atom->length = block_event -> text_length;
     node->span->line = field_line;
     node->span->column = field_column;
-    node->span->offset = (offset + i);
-    node->span->length = (next_offset - i);
+    node->span->offset = offset + i;
+    node->span->length = next_offset - i;
     if ((lm_p0_document_register_lazy_text(document, node->as->atom->data, node->as->atom->length, &node->as->atom->data, node->span->line, node->span->column) == 0)) {
     lm_p0_stream_event_delete(block_event);
     return lm_p0_field_parse_fail(&parse_stack, &indent_stack, &indent_stack_owned);
@@ -3610,26 +3619,26 @@ int lm_p0_parse_fields_until_with_layout(LmP0Document * document, LmP0IndentStac
     if ((node == 0)) {
     return lm_p0_field_parse_fail(&parse_stack, &indent_stack, &indent_stack_owned);
     }
-    node->as->frame->head->data = (text + start);
-    node->as->frame->head->length = ((close_index - start) + 1U);
+    node->as->frame->head->data = text + start;
+    node->as->frame->head->length = (close_index - start) + 1U;
     node->as->frame->flags = LM_P0_FRAME_COLON;
-    i = (close_index + 2U);
+    i = close_index + 2U;
     while (((i < length) && lm_p0_is_horizontal_space(text[i]))) {
     i = i + 1U;
     }
     body_index = i;
-    has_inline_body = (((((i < length) && (lm_p0_is_line_break(text[i]) == 0)) && (lm_p0_is_field_separator(text[i]) == 0)) && (text[i] != ')')) && (text[i] != '#'));
+    has_inline_body = ((((i < length) && (lm_p0_is_line_break(text[i]) == 0)) && (lm_p0_is_field_separator(text[i]) == 0)) && (text[i] != ')')) && (text[i] != '#');
     if (has_inline_body) {
     node->as->frame->flags = node -> as -> frame -> flags | LM_P0_FRAME_INLINE_BODY;
     }
-    body_flags = ((LM_P0_FIELD_PARSE_STOP_ON_SEMICOLON | LM_P0_FIELD_PARSE_STOP_ON_SOURCE_LEVEL) | LM_P0_FIELD_PARSE_ALLOW_EMPTY_FIELDS);
+    body_flags = (LM_P0_FIELD_PARSE_STOP_ON_SEMICOLON | LM_P0_FIELD_PARSE_STOP_ON_SOURCE_LEVEL) | LM_P0_FIELD_PARSE_ALLOW_EMPTY_FIELDS;
     if ((lm_p0_field_parse_loop_push(document, parse_stack, indent_stack, indent_stack_owned, structure, text, length, line, column, offset, flags, short_source_level, layout_base_level, i, current_source_level, allow_empty_fields, expect_field, headless_group_after_separator, LM_P0_FIELD_PARSE_LOOP_COLON_FRAME_BODY, node, start, close_index) == 0)) {
     return lm_p0_field_parse_fail(&parse_stack, &indent_stack, &indent_stack_owned);
     }
     structure = node -> as -> frame -> body;
     flags = body_flags;
     short_source_level = current_source_level;
-    current_source_level = (current_source_level + 1U);
+    current_source_level = current_source_level + 1U;
     i = body_index;
     allow_empty_fields = 1;
     expect_field = 1;
@@ -3653,14 +3662,14 @@ int lm_p0_parse_fields_until_with_layout(LmP0Document * document, LmP0IndentStac
     return lm_p0_field_parse_fail(&parse_stack, &indent_stack, &indent_stack_owned);
     }
     structure = node -> as -> structure;
-    text = ((text + i) + 1U);
-    length = ((close_index - i) - 1U);
-    column = ((column + i) + 1U);
-    offset = ((offset + i) + 1U);
-    flags = (LM_P0_FIELD_PARSE_REQUIRE_BOUNDED_SOURCE_LEVEL | LM_P0_FIELD_PARSE_ALLOW_EMPTY_FIELDS);
-    short_source_level = (current_source_level + 1U);
-    layout_base_level = (current_source_level + 1U);
-    current_source_level = (current_source_level + 1U);
+    text = (text + i) + 1U;
+    length = (close_index - i) - 1U;
+    column = (column + i) + 1U;
+    offset = (offset + i) + 1U;
+    flags = LM_P0_FIELD_PARSE_REQUIRE_BOUNDED_SOURCE_LEVEL | LM_P0_FIELD_PARSE_ALLOW_EMPTY_FIELDS;
+    short_source_level = current_source_level + 1U;
+    layout_base_level = current_source_level + 1U;
+    current_source_level = current_source_level + 1U;
     i = 0U;
     allow_empty_fields = 1;
     expect_field = 1;
@@ -3690,14 +3699,14 @@ int lm_p0_parse_fields_until_with_layout(LmP0Document * document, LmP0IndentStac
     return lm_p0_field_parse_fail(&parse_stack, &indent_stack, &indent_stack_owned);
     }
     structure = node -> as -> structure;
-    text = ((text + i) + 1U);
-    length = ((close_index - i) - 1U);
-    column = ((column + i) + 1U);
-    offset = ((offset + i) + 1U);
-    flags = (LM_P0_FIELD_PARSE_REQUIRE_BOUNDED_SOURCE_LEVEL | LM_P0_FIELD_PARSE_ALLOW_EMPTY_FIELDS);
-    short_source_level = (current_source_level + 1U);
-    layout_base_level = (current_source_level + 1U);
-    current_source_level = (current_source_level + 1U);
+    text = (text + i) + 1U;
+    length = (close_index - i) - 1U;
+    column = (column + i) + 1U;
+    offset = (offset + i) + 1U;
+    flags = LM_P0_FIELD_PARSE_REQUIRE_BOUNDED_SOURCE_LEVEL | LM_P0_FIELD_PARSE_ALLOW_EMPTY_FIELDS;
+    short_source_level = current_source_level + 1U;
+    layout_base_level = current_source_level + 1U;
+    current_source_level = current_source_level + 1U;
     i = 0U;
     allow_empty_fields = 1;
     expect_field = 1;
@@ -3745,7 +3754,7 @@ int lm_p0_parse_fields_until_with_layout(LmP0Document * document, LmP0IndentStac
     if ((lm_p0_find_matching_bracket(document, text, length, i, line, column, &bracket_close_index) == 0)) {
     return lm_p0_field_parse_fail(&parse_stack, &indent_stack, &indent_stack_owned);
     }
-    i = (bracket_close_index + 1U);
+    i = bracket_close_index + 1U;
     continue;
     }
     if ((text[i] == ']')) {
@@ -3773,26 +3782,26 @@ int lm_p0_parse_fields_until_with_layout(LmP0Document * document, LmP0IndentStac
     if ((node == 0)) {
     return lm_p0_field_parse_fail(&parse_stack, &indent_stack, &indent_stack_owned);
     }
-    node->as->frame->head->data = (text + start);
-    node->as->frame->head->length = (head_end - start);
+    node->as->frame->head->data = text + start;
+    node->as->frame->head->length = head_end - start;
     node->as->frame->flags = LM_P0_FRAME_COLON;
     i = i + 1U;
     while (((i < length) && lm_p0_is_horizontal_space(text[i]))) {
     i = i + 1U;
     }
     body_index = i;
-    has_inline_body = (((((i < length) && (lm_p0_is_line_break(text[i]) == 0)) && (lm_p0_is_field_separator(text[i]) == 0)) && (text[i] != ')')) && (text[i] != '#'));
+    has_inline_body = ((((i < length) && (lm_p0_is_line_break(text[i]) == 0)) && (lm_p0_is_field_separator(text[i]) == 0)) && (text[i] != ')')) && (text[i] != '#');
     if (has_inline_body) {
     node->as->frame->flags = node -> as -> frame -> flags | LM_P0_FRAME_INLINE_BODY;
     }
-    body_flags = ((LM_P0_FIELD_PARSE_STOP_ON_SEMICOLON | LM_P0_FIELD_PARSE_STOP_ON_SOURCE_LEVEL) | LM_P0_FIELD_PARSE_ALLOW_EMPTY_FIELDS);
+    body_flags = (LM_P0_FIELD_PARSE_STOP_ON_SEMICOLON | LM_P0_FIELD_PARSE_STOP_ON_SOURCE_LEVEL) | LM_P0_FIELD_PARSE_ALLOW_EMPTY_FIELDS;
     if ((lm_p0_field_parse_loop_push(document, parse_stack, indent_stack, indent_stack_owned, structure, text, length, line, column, offset, flags, short_source_level, layout_base_level, i, current_source_level, allow_empty_fields, expect_field, headless_group_after_separator, LM_P0_FIELD_PARSE_LOOP_COLON_FRAME_BODY, node, start, 0U) == 0)) {
     return lm_p0_field_parse_fail(&parse_stack, &indent_stack, &indent_stack_owned);
     }
     structure = node -> as -> frame -> body;
     flags = body_flags;
     short_source_level = current_source_level;
-    current_source_level = (current_source_level + 1U);
+    current_source_level = current_source_level + 1U;
     i = body_index;
     allow_empty_fields = 1;
     expect_field = 1;
@@ -3807,8 +3816,8 @@ int lm_p0_parse_fields_until_with_layout(LmP0Document * document, LmP0IndentStac
     if ((node == 0)) {
     return lm_p0_field_parse_fail(&parse_stack, &indent_stack, &indent_stack_owned);
     }
-    node->as->frame->head->data = (text + start);
-    node->as->frame->head->length = (head_end - start);
+    node->as->frame->head->data = text + start;
+    node->as->frame->head->length = head_end - start;
     node->as->frame->flags = LM_P0_FRAME_COMPACT;
     if ((lm_p0_find_matching_paren(document, text, length, i, line, column, &close_index) == 0)) {
     return lm_p0_field_parse_fail(&parse_stack, &indent_stack, &indent_stack_owned);
@@ -3823,14 +3832,14 @@ int lm_p0_parse_fields_until_with_layout(LmP0Document * document, LmP0IndentStac
     return lm_p0_field_parse_fail(&parse_stack, &indent_stack, &indent_stack_owned);
     }
     structure = node -> as -> frame -> body;
-    text = ((text + i) + 1U);
-    length = ((close_index - i) - 1U);
-    column = ((column + i) + 1U);
-    offset = ((offset + i) + 1U);
-    flags = (LM_P0_FIELD_PARSE_REQUIRE_BOUNDED_SOURCE_LEVEL | LM_P0_FIELD_PARSE_ALLOW_EMPTY_FIELDS);
-    short_source_level = (current_source_level + 1U);
-    layout_base_level = (current_source_level + 1U);
-    current_source_level = (current_source_level + 1U);
+    text = (text + i) + 1U;
+    length = (close_index - i) - 1U;
+    column = (column + i) + 1U;
+    offset = (offset + i) + 1U;
+    flags = LM_P0_FIELD_PARSE_REQUIRE_BOUNDED_SOURCE_LEVEL | LM_P0_FIELD_PARSE_ALLOW_EMPTY_FIELDS;
+    short_source_level = current_source_level + 1U;
+    layout_base_level = current_source_level + 1U;
+    current_source_level = current_source_level + 1U;
     i = 0U;
     allow_empty_fields = 1;
     expect_field = 1;
@@ -3863,12 +3872,12 @@ int lm_p0_parse_fields_until_with_layout(LmP0Document * document, LmP0IndentStac
     if ((node == 0)) {
     return lm_p0_field_parse_fail(&parse_stack, &indent_stack, &indent_stack_owned);
     }
-    node->as->atom->data = (text + start);
-    node->as->atom->length = (head_end - start);
+    node->as->atom->data = text + start;
+    node->as->atom->length = head_end - start;
     node->span->line = line;
     lm_p0_position_in_slice(text, length, start, line, column, &node->span->line, &node->span->column);
-    node->span->offset = (offset + start);
-    node->span->length = (head_end - start);
+    node->span->offset = offset + start;
+    node->span->length = head_end - start;
     if ((lm_p0_document_register_lazy_text(document, node->as->atom->data, node->as->atom->length, &node->as->atom->data, node->span->line, node->span->column) == 0)) {
     return lm_p0_field_parse_fail(&parse_stack, &indent_stack, &indent_stack_owned);
     }
@@ -3890,7 +3899,7 @@ int lm_p0_parse_fields_until_with_layout(LmP0Document * document, LmP0IndentStac
     indent_stack = 0;
     indent_stack_owned = 0;
     }
-    frame = (((LmP0FieldParseLoopFrame *)lm_own_ptr_stack_pop(parse_stack)));
+    frame = ((LmP0FieldParseLoopFrame *)lm_own_ptr_stack_pop(parse_stack));
     if ((frame == 0)) {
     index[0] = child_index;
     lm_p0_field_parse_loop_stack_delete(parse_stack);
@@ -3923,15 +3932,15 @@ int lm_p0_parse_fields_until_with_layout(LmP0Document * document, LmP0IndentStac
     else {
     node->span->line = line;
     lm_p0_position_in_slice(text, length, start, line, column, &node->span->line, &node->span->column);
-    node->span->offset = (offset + start);
-    node->span->length = (child_index - start);
+    node->span->offset = offset + start;
+    node->span->length = child_index - start;
     if ((lm_p0_append_field(document, structure, node) == 0)) {
     lm_p0_free_node(node);
     lm_own_delete(frame, 0);
     return lm_p0_field_parse_fail(&parse_stack, &indent_stack, &indent_stack_owned);
     }
     expect_field = 0;
-    headless_group_after_separator = ((((flags & LM_P0_FIELD_PARSE_ALLOW_HEADLESS_AFTER_SEPARATOR) != 0U) && (child_index > 0U)) && lm_p0_is_short_form_separator(text[(child_index - 1U)]));
+    headless_group_after_separator = (((flags & LM_P0_FIELD_PARSE_ALLOW_HEADLESS_AFTER_SEPARATOR) != 0U) && (child_index > 0U)) && lm_p0_is_short_form_separator(text[(child_index - 1U)]);
     i = child_index;
     }
     lm_own_delete(frame, 0);
@@ -3944,8 +3953,8 @@ int lm_p0_parse_fields_until_with_layout(LmP0Document * document, LmP0IndentStac
     }
     node->span->line = line;
     lm_p0_position_in_slice(text, length, start, line, column, &node->span->line, &node->span->column);
-    node->span->offset = (offset + start);
-    node->span->length = (child_index - start);
+    node->span->offset = offset + start;
+    node->span->length = child_index - start;
     if ((lm_p0_document_register_lazy_text(document, node->as->frame->head->data, node->as->frame->head->length, &node->as->frame->head->data, node->span->line, node->span->column) == 0)) {
     lm_own_delete(frame, 0);
     return lm_p0_field_parse_fail(&parse_stack, &indent_stack, &indent_stack_owned);
@@ -3962,9 +3971,9 @@ int lm_p0_parse_fields_until_with_layout(LmP0Document * document, LmP0IndentStac
     if ((frame -> continuation == LM_P0_FIELD_PARSE_LOOP_BOUNDED_STRUCTURE)) {
     node->span->line = line;
     lm_p0_position_in_slice(text, length, start, line, column, &node->span->line, &node->span->column);
-    node->span->offset = (offset + start);
-    node->span->length = ((close_index - start) + 1U);
-    i = (close_index + 1U);
+    node->span->offset = offset + start;
+    node->span->length = (close_index - start) + 1U;
+    i = close_index + 1U;
     if ((lm_p0_parse_append_node_and_update(document, structure, node, flags, allow_empty_fields, &expect_field, &headless_group_after_separator) == 0)) {
     lm_own_delete(frame, 0);
     return lm_p0_field_parse_fail(&parse_stack, &indent_stack, &indent_stack_owned);
@@ -3976,13 +3985,13 @@ int lm_p0_parse_fields_until_with_layout(LmP0Document * document, LmP0IndentStac
     if ((frame -> continuation == LM_P0_FIELD_PARSE_LOOP_COMPACT_FRAME_BODY)) {
     node->span->line = line;
     lm_p0_position_in_slice(text, length, start, line, column, &node->span->line, &node->span->column);
-    node->span->offset = (offset + start);
-    node->span->length = ((close_index - start) + 1U);
+    node->span->offset = offset + start;
+    node->span->length = (close_index - start) + 1U;
     if ((lm_p0_document_register_lazy_text(document, node->as->frame->head->data, node->as->frame->head->length, &node->as->frame->head->data, node->span->line, node->span->column) == 0)) {
     lm_own_delete(frame, 0);
     return lm_p0_field_parse_fail(&parse_stack, &indent_stack, &indent_stack_owned);
     }
-    i = (close_index + 1U);
+    i = close_index + 1U;
     if ((lm_p0_parse_append_node_and_update(document, structure, node, flags, allow_empty_fields, &expect_field, &headless_group_after_separator) == 0)) {
     lm_own_delete(frame, 0);
     return lm_p0_field_parse_fail(&parse_stack, &indent_stack, &indent_stack_owned);
@@ -4037,18 +4046,18 @@ int lm_p0_stack_ensure(LmP0Document * document, LmP0Stack * stack, size_t level)
     while ((new_capacity <= level)) {
     new_capacity = new_capacity * 2U;
     }
-    parents = (((LmP0Structure **)lm_own_resize(stack->parents, (new_capacity * sizeof(parents[0])))));
+    parents = ((LmP0Structure **)lm_own_resize(stack->parents, (new_capacity * sizeof(parents[0]))));
     if ((parents == 0)) {
     lm_p0_set_diagnostic(document, 1, 0U, 0U, "out of memory while growing parser stack");
     return 0;
     }
-    owners = (((LmP0Node **)lm_own_resize(stack->owners, (new_capacity * sizeof(owners[0])))));
+    owners = ((LmP0Node **)lm_own_resize(stack->owners, (new_capacity * sizeof(owners[0]))));
     if ((owners == 0)) {
     lm_p0_set_diagnostic(document, 1, 0U, 0U, "out of memory while growing parser stack");
     stack->parents = parents;
     return 0;
     }
-    hard = (((uchar *)lm_own_resize(stack->hard, (new_capacity * sizeof(hard[0])))));
+    hard = ((uchar *)lm_own_resize(stack->hard, (new_capacity * sizeof(hard[0]))));
     if ((hard == 0)) {
     lm_p0_set_diagnostic(document, 1, 0U, 0U, "out of memory while growing parser stack");
     stack->parents = parents;
@@ -4074,7 +4083,7 @@ void lm_p0_stack_truncate_deeper(LmP0Stack * stack, size_t level)
     if ((stack -> capacity <= (level + 1U))) {
     return;
     }
-    i = (level + 1U);
+    i = level + 1U;
     while ((i < stack -> capacity)) {
     stack->parents[i] = 0;
     stack->owners[i] = 0;
@@ -4134,11 +4143,11 @@ void lm_p0_stack_free(LmP0Stack * stack)
 }
 void lm_p0_stack_free_any(void * object)
 {
-    lm_p0_stack_free((((LmP0Stack *)object)));
+    lm_p0_stack_free(((LmP0Stack *)object));
 }
 LmP0Stack * lm_p0_stack_new(void)
 {
-    return (((LmP0Stack *)lm_own_new_zero((1U * sizeof(LmP0Stack)))));
+    return ((LmP0Stack *)lm_own_new_zero(1U * sizeof(LmP0Stack)));
 }
 void lm_p0_stack_delete(LmP0Stack * stack)
 {
@@ -4146,11 +4155,11 @@ void lm_p0_stack_delete(LmP0Stack * stack)
 }
 LmP0PendingDelimiter * lm_p0_pending_delimiter_new(void)
 {
-    return (((LmP0PendingDelimiter *)lm_own_new_zero((1U * sizeof(LmP0PendingDelimiter)))));
+    return ((LmP0PendingDelimiter *)lm_own_new_zero(1U * sizeof(LmP0PendingDelimiter)));
 }
 LmP0StreamEvent * lm_p0_stream_event_new(void)
 {
-    return (((LmP0StreamEvent *)lm_own_new_zero((1U * sizeof(LmP0StreamEvent)))));
+    return ((LmP0StreamEvent *)lm_own_new_zero(1U * sizeof(LmP0StreamEvent)));
 }
 LmP0StreamEvent * lm_p0_stream_event_new_copy(const LmP0StreamEvent * event)
 {
@@ -4158,7 +4167,7 @@ LmP0StreamEvent * lm_p0_stream_event_new_copy(const LmP0StreamEvent * event)
     if ((event == 0)) {
     return 0;
     }
-    copy = (((LmP0StreamEvent *)lm_own_new_zero((1U * sizeof(copy[0])))));
+    copy = ((LmP0StreamEvent *)lm_own_new_zero(1U * sizeof(copy[0])));
     if ((copy != 0)) {
     copy[0] = event[0];
     }
@@ -4213,7 +4222,7 @@ void lm_p0_pending_delimiter_delete(LmP0PendingDelimiter * pending)
 }
 LmP0PendingMix * lm_p0_pending_mix_new(void)
 {
-    return (((LmP0PendingMix *)lm_own_new_zero((1U * sizeof(LmP0PendingMix)))));
+    return ((LmP0PendingMix *)lm_own_new_zero(1U * sizeof(LmP0PendingMix)));
 }
 void lm_p0_pending_mix_free(LmP0PendingMix * pending)
 {
@@ -4226,7 +4235,7 @@ void lm_p0_pending_mix_free(LmP0PendingMix * pending)
 }
 void lm_p0_pending_mix_free_any(void * object)
 {
-    lm_p0_pending_mix_free((((LmP0PendingMix *)object)));
+    lm_p0_pending_mix_free(((LmP0PendingMix *)object));
 }
 void lm_p0_pending_mix_delete(LmP0PendingMix * pending)
 {
@@ -4244,9 +4253,9 @@ int lm_p0_pending_mix_push(LmP0Document * document, LmP0PendingMix * pending, co
     new_capacity = 4U;
     }
     else {
-    new_capacity = (pending -> capacity * 2U);
+    new_capacity = pending -> capacity * 2U;
     }
-    events = (((LmP0StreamEvent *)lm_own_resize(pending->events, (new_capacity * sizeof(events[0])))));
+    events = ((LmP0StreamEvent *)lm_own_resize(pending->events, (new_capacity * sizeof(events[0]))));
     if ((events == 0)) {
     lm_p0_set_diagnostic(document, 1, event->line, event->column, "out of memory while storing pending MIX marks");
     return 0;
@@ -4261,7 +4270,7 @@ int lm_p0_pending_mix_push(LmP0Document * document, LmP0PendingMix * pending, co
 LmP0DisabledState * lm_p0_disabled_state_new(size_t base_level)
 {
     LmP0DisabledState * state;
-    state = (((LmP0DisabledState *)lm_own_new_zero((1U * sizeof(state[0])))));
+    state = ((LmP0DisabledState *)lm_own_new_zero(1U * sizeof(state[0])));
     if ((state != 0)) {
     state->base_level = base_level;
     state->top_level = base_level;
@@ -4277,7 +4286,7 @@ void lm_p0_disabled_state_delete(LmP0DisabledState * state)
 int lm_p0_node_keeps_source_child_level(LmP0Node * node)
 {
     if ((node -> kind == LM_P0_NODE_FRAME)) {
-    return (((node -> as -> frame -> flags & LM_P0_FRAME_COLON) != 0U) && ((node -> as -> frame -> flags & LM_P0_FRAME_SEPARATOR_CLOSED) == 0U));
+    return ((node -> as -> frame -> flags & LM_P0_FRAME_COLON) != 0U) && ((node -> as -> frame -> flags & LM_P0_FRAME_SEPARATOR_CLOSED) == 0U);
     }
     return 0;
 }
@@ -4318,7 +4327,7 @@ int lm_p0_stack_install_node_lineage(LmP0Document * document, LmP0Stack * stack,
     return 1;
     }
     owner = node;
-    level = (base_level + 1U);
+    level = base_level + 1U;
     while (lm_p0_node_keeps_source_child_level(owner)) {
     LmP0Structure * body;
     LmP0Node * next_owner;
@@ -4438,7 +4447,7 @@ int lm_p0_parse_trailer_item(LmP0Document * document, LmP0Node * target, const c
     while (((spelling_length > 0U) && lm_p0_is_horizontal_space(text[(spelling_length - 1U)]))) {
     spelling_length = spelling_length - 1U;
     }
-    body_start = (colon_index + 1U);
+    body_start = colon_index + 1U;
     while (((body_start < length) && lm_p0_is_horizontal_space(text[body_start]))) {
     body_start = body_start + 1U;
     }
@@ -4507,7 +4516,7 @@ int lm_p0_stream_resolve_pending_delimiter(LmP0Document * document, LmP0Stack * 
     if ((lm_p0_stack_ensure(document, stack, (event -> level + 1U)) == 0)) {
     return 0;
     }
-    closing_level = (event -> level + 1U);
+    closing_level = event -> level + 1U;
     while (closing_level < stack -> capacity) {
     LmP0Node * owner;
     LmP0Structure * body;
@@ -4519,25 +4528,16 @@ int lm_p0_stream_resolve_pending_delimiter(LmP0Document * document, LmP0Stack * 
     LmP0Trailer ** trailer_slot;
     trailer_slot = lm_p0_node_trailer_slot(owner);
     empty_colon = lm_p0_colon_trailer_empty(trailer_slot[0]);
+    if (empty_colon) {
+    trailer_slot[0]->flags = trailer_slot[0] -> flags | LM_P0_TRAILER_DELIMITER_CLOSED;
+    }
     }
     else {
     if (owner -> kind == LM_P0_NODE_FRAME && body == owner -> as -> frame -> body) {
     empty_colon = lm_p0_colon_frame_empty(owner->as->frame);
-    }
-    }
     if (empty_colon) {
-    LmP0Node * argument;
-    argument = lm_p0_new_node(document, LM_P0_NODE_STRUCTURE);
-    if (argument == 0) {
-    return 0;
+    owner->as->frame->flags = owner -> as -> frame -> flags | LM_P0_FRAME_DELIMITER_CLOSED;
     }
-    argument->span->line = event -> line;
-    argument->span->column = event -> column;
-    argument->span->offset = event -> offset;
-    argument->span->length = 0U;
-    if (lm_p0_append_field(document, body, argument) == 0) {
-    lm_p0_free_node(argument);
-    return 0;
     }
     }
     }
@@ -4605,15 +4605,15 @@ int lm_p0_stream_apply_item_event(LmP0Document * document, LmP0Stack * stack, co
     trailer_role = LM_P0_TRAILER_ROLE_NONE;
     }
     top_level = lm_p0_stack_top_level(stack);
-    trailer_target_available = ((lm_p0_trailer_role_is_tail_cutter(trailer_role) && ((event -> level + 1U) <= top_level)) && (stack -> owners[(event -> level + 1U)] != 0));
-    trailer_target_accepted = (trailer_target_available && lm_p0_trailer_role_accepts_target(trailer_role, stack->owners[(event -> level + 1U)]));
+    trailer_target_available = (lm_p0_trailer_role_is_tail_cutter(trailer_role) && ((event -> level + 1U) <= top_level)) && (stack -> owners[(event -> level + 1U)] != 0);
+    trailer_target_accepted = trailer_target_available && lm_p0_trailer_role_accepts_target(trailer_role, stack->owners[(event -> level + 1U)]);
     if (((lm_p0_trailer_role_is_tail_cutter(trailer_role) == 0) || (trailer_target_accepted == 0))) {
     top_level = lm_p0_stack_collapse_soft_to_event(stack, event->level);
     if (((event -> level == top_level) && (stack -> hard[top_level] == 0U))) {
     stack->hard[top_level] = 1U;
     }
-    trailer_target_available = ((lm_p0_trailer_role_is_tail_cutter(trailer_role) && ((event -> level + 1U) <= top_level)) && (stack -> owners[(event -> level + 1U)] != 0));
-    trailer_target_accepted = (trailer_target_available && lm_p0_trailer_role_accepts_target(trailer_role, stack->owners[(event -> level + 1U)]));
+    trailer_target_available = (lm_p0_trailer_role_is_tail_cutter(trailer_role) && ((event -> level + 1U) <= top_level)) && (stack -> owners[(event -> level + 1U)] != 0);
+    trailer_target_accepted = trailer_target_available && lm_p0_trailer_role_accepts_target(trailer_role, stack->owners[(event -> level + 1U)]);
     }
     if (((lm_p0_trailer_role_is_tail_cutter(trailer_role) && ((event -> level + 1U) < top_level)) && (trailer_target_accepted == 0))) {
     lm_p0_set_diagnostic(document, 13, event->line, event->column, "tail-cutter target is not valid for this receiver");
@@ -4623,7 +4623,7 @@ int lm_p0_stream_apply_item_event(LmP0Document * document, LmP0Stack * stack, co
     LmP0Structure * trailer_body;
     LmP0Node * target;
     size_t target_level;
-    target_level = (event -> level + 1U);
+    target_level = event -> level + 1U;
     target = stack -> owners[target_level];
     lm_p0_stack_truncate_deeper(stack, target_level);
     if ((lm_p0_parse_trailer_item(document, target, event->text, event->text_length, event->line, event->column, event->offset, LM_P0_TRAILER_TAIL_CUTTER, &trailer_body) == 0)) {
@@ -4832,7 +4832,7 @@ size_t lm_p0_stream_block_string_level(const LmP0Stack * stack, const LmP0Pendin
 {
     size_t level;
     if ((pending -> active && (pending -> event != 0))) {
-    return (pending -> event -> level + 1U);
+    return pending -> event -> level + 1U;
     }
     level = lm_p0_stack_top_level(stack);
     while ((level > 0U)) {
@@ -4892,7 +4892,7 @@ int lm_p0_validate_disabled_item_text(LmP0Document * document, const char * text
     if ((lm_p0_find_matching_paren(document, text, length, i, line, column, &close_index) == 0)) {
     return 0;
     }
-    i = (close_index + 1U);
+    i = close_index + 1U;
     continue;
     }
     if ((text[i] == ')')) {
@@ -4933,7 +4933,7 @@ int lm_p0_disabled_scan_next_event(LmP0Document * document, LmP0IndentStack * in
     return 0;
     }
     if (lm_p0_scan_block_string_event(document, source, length, line_start, line[0], event, offset, line)) {
-    event->level = (((size_t)-1));
+    event->level = ((size_t)-1);
     has_event[0] = 1;
     return 1;
     }
@@ -4941,7 +4941,7 @@ int lm_p0_disabled_scan_next_event(LmP0Document * document, LmP0IndentStack * in
     return 0;
     }
     line_end = lm_p0_find_layout_line_end(source, length, line_start);
-    raw_length = (line_end - line_start);
+    raw_length = line_end - line_start;
     if (((raw_length > 0U) && (source[((line_start + raw_length) - 1U)] == '\r'))) {
     raw_length = raw_length - 1U;
     }
@@ -4969,16 +4969,16 @@ int lm_p0_disabled_scan_next_event(LmP0Document * document, LmP0IndentStack * in
     size_t indent_column;
     size_t mark_skip;
     lm_p0_scan_indent_column(source, p, (line_start + raw_length), &p, &indent_column);
-    text = (source + p);
-    text_length = ((line_start + raw_length) - p);
+    text = source + p;
+    text_length = (line_start + raw_length) - p;
     lm_p0_trim_right(&text, &text_length);
     mark_skip = 0U;
     if ((lm_p0_skip_leading_brace_marks(document, text, text_length, line[0], ((((size_t)(text - (source + line_start)))) + 1U), &mark_skip) == 0)) {
     return 0;
     }
     p = p + mark_skip;
-    text = (source + p);
-    text_length = ((line_start + raw_length) - p);
+    text = source + p;
+    text_length = (line_start + raw_length) - p;
     lm_p0_trim_right(&text, &text_length);
     if (((text_length == 0U) || (text[0] == '#'))) {
     lm_p0_advance_layout_line(source, length, line_start, line_end, offset, line);
@@ -4988,8 +4988,8 @@ int lm_p0_disabled_scan_next_event(LmP0Document * document, LmP0IndentStack * in
     return 0;
     }
     }
-    text = (source + p);
-    text_length = ((line_start + raw_length) - p);
+    text = source + p;
+    text_length = (line_start + raw_length) - p;
     lm_p0_trim_right(&text, &text_length);
     size_t mark_skip;
     mark_skip = 0U;
@@ -4997,8 +4997,8 @@ int lm_p0_disabled_scan_next_event(LmP0Document * document, LmP0IndentStack * in
     return 0;
     }
     p = p + mark_skip;
-    text = (source + p);
-    text_length = ((line_start + raw_length) - p);
+    text = source + p;
+    text_length = (line_start + raw_length) - p;
     lm_p0_trim_right(&text, &text_length);
     if (((text_length == 0U) || (text[0] == '#'))) {
     if ((dotted_level && (level > 0U))) {
@@ -5014,8 +5014,8 @@ int lm_p0_disabled_scan_next_event(LmP0Document * document, LmP0IndentStack * in
     event->text = text;
     event->text_length = text_length;
     event->line = line[0];
-    event->column = ((((size_t)(text - (source + line_start)))) + 1U);
-    event->offset = (((size_t)(text - source)));
+    event->column = (((size_t)(text - (source + line_start)))) + 1U;
+    event->offset = ((size_t)(text - source));
     if (((text_length == 0U) && (level > 0U))) {
     event->kind = LM_P0_STREAM_EVENT_DELIM;
     }
@@ -5042,7 +5042,7 @@ int lm_p0_disabled_state_accept_event(LmP0Document * document, LmP0DisabledState
     done_before_event[0] = 0;
     if ((event -> level == (((size_t)-1)))) {
     if (state -> pending_item) {
-    event->level = (state -> pending_level + 1U);
+    event->level = state -> pending_level + 1U;
     }
     else {
     event->level = state -> top_level;
@@ -5179,7 +5179,7 @@ int lm_p0_validate_disabled_block(LmP0Document * document, const LmP0IndentStack
     lm_p0_indent_stack_delete(local_indent);
     out_offset[0] = offset;
     out_line[0] = line;
-    return (status && (document -> diagnostic -> code == 0));
+    return status && (document -> diagnostic -> code == 0);
 }
 int lm_p0_parse_stream(LmP0Document * document)
 {
@@ -5276,7 +5276,7 @@ int lm_p0_parse_stream(LmP0Document * document)
     break;
     }
     line_end = lm_p0_find_layout_line_end(source, length, offset);
-    raw_length = (line_end - line_start);
+    raw_length = line_end - line_start;
     if (((raw_length > 0U) && (source[((line_start + raw_length) - 1U)] == '\r'))) {
     raw_length = raw_length - 1U;
     }
@@ -5306,10 +5306,10 @@ int lm_p0_parse_stream(LmP0Document * document)
     if (standalone_mix) {
     memset(event, 0, sizeof(event[0]));
     event->kind = LM_P0_STREAM_EVENT_MIX;
-    event->text = (source + p);
-    event->text_length = ((line_start + raw_length) - p);
+    event->text = source + p;
+    event->text_length = (line_start + raw_length) - p;
     event->line = line;
-    event->column = ((((size_t)(p - line_start))) + 1U);
+    event->column = (((size_t)(p - line_start))) + 1U;
     event->offset = p;
     if ((lm_p0_pending_mix_push(document, pending_mix, event) == 0)) {
     status = 0;
@@ -5334,8 +5334,8 @@ int lm_p0_parse_stream(LmP0Document * document)
     }
     if ((prefix_end > prefix_start)) {
     has_leading_mix_prefix = 1;
-    mix_prefix_start = (p + prefix_start);
-    mix_prefix_end = (p + prefix_end);
+    mix_prefix_start = p + prefix_start;
+    mix_prefix_end = p + prefix_end;
     p = p + prefix_anchor;
     }
     if (((p < (line_start + raw_length)) && (source[p] == '.'))) {
@@ -5356,8 +5356,8 @@ int lm_p0_parse_stream(LmP0Document * document)
     else {
     lm_p0_scan_indent_column(source, p, (line_start + raw_length), &p, &indent_column);
     }
-    text = (source + p);
-    text_length = ((line_start + raw_length) - p);
+    text = source + p;
+    text_length = (line_start + raw_length) - p;
     lm_p0_trim_right(&text, &text_length);
     if (((text_length == 0U) || (text[0] == '#'))) {
     if ((line_end == length)) {
@@ -5371,8 +5371,8 @@ int lm_p0_parse_stream(LmP0Document * document)
     break;
     }
     }
-    text = (source + p);
-    text_length = ((line_start + raw_length) - p);
+    text = source + p;
+    text_length = (line_start + raw_length) - p;
     lm_p0_trim_right(&text, &text_length);
     node_flags = 0U;
     if (((text_length == 0U) && (level == 0U))) {
@@ -5403,7 +5403,7 @@ int lm_p0_parse_stream(LmP0Document * document)
     size_t disabled_next_line;
     size_t skip;
     node_flags = node_flags | LM_P0_NODE_INACTIVE;
-    marker_column = ((((size_t)(text - (source + line_start)))) + 1U);
+    marker_column = (((size_t)(text - (source + line_start)))) + 1U;
     skip = 1U;
     while (((skip < text_length) && lm_p0_is_horizontal_space(text[skip]))) {
     skip = skip + 1U;
@@ -5416,7 +5416,7 @@ int lm_p0_parse_stream(LmP0Document * document)
     status = 0;
     break;
     }
-    header_column = ((((size_t)(text - (source + line_start)))) + 1U);
+    header_column = (((size_t)(text - (source + line_start)))) + 1U;
     next_offset = line_start;
     next_line = line;
     lm_p0_advance_layout_line(source, length, line_start, line_end, &next_offset, &next_line);
@@ -5432,7 +5432,7 @@ int lm_p0_parse_stream(LmP0Document * document)
     event->text_length = text_length;
     event->line = line;
     event->column = header_column;
-    event->offset = (((size_t)(text - source)));
+    event->offset = ((size_t)(text - source));
     if ((lm_p0_stream_apply_event(document, stack, pending, event) == 0)) {
     status = 0;
     break;
@@ -5447,8 +5447,8 @@ int lm_p0_parse_stream(LmP0Document * document)
     event->text = text;
     event->text_length = text_length;
     event->line = line;
-    event->column = ((((size_t)(text - (source + line_start)))) + 1U);
-    event->offset = (((size_t)(text - source)));
+    event->column = (((size_t)(text - (source + line_start)))) + 1U;
+    event->offset = ((size_t)(text - source));
     if (((text_length == 0U) && (level > 0U))) {
     event->kind = LM_P0_STREAM_EVENT_DELIM;
     }
@@ -5481,10 +5481,10 @@ int lm_p0_parse_stream(LmP0Document * document)
     }
     mix_event->kind = LM_P0_STREAM_EVENT_MIX;
     mix_event->level = level;
-    mix_event->text = (source + mix_prefix_start);
-    mix_event->text_length = (mix_prefix_end - mix_prefix_start);
+    mix_event->text = source + mix_prefix_start;
+    mix_event->text_length = mix_prefix_end - mix_prefix_start;
     mix_event->line = line;
-    mix_event->column = ((((size_t)(mix_prefix_start - line_start))) + 1U);
+    mix_event->column = (((size_t)(mix_prefix_start - line_start))) + 1U;
     mix_event->offset = mix_prefix_start;
     if ((lm_p0_stream_apply_event(document, stack, pending, mix_event) == 0)) {
     lm_p0_stream_event_delete(mix_event);
@@ -5515,7 +5515,7 @@ int lm_p0_parse_stream(LmP0Document * document)
     lm_p0_stack_delete(stack);
     lm_p0_pending_delimiter_delete(pending);
     lm_p0_pending_mix_delete(pending_mix);
-    return (status && (document -> diagnostic -> code == 0));
+    return status && (document -> diagnostic -> code == 0);
 }
 void lm_p0_structure_recount(LmP0Structure * structure)
 {
@@ -5532,7 +5532,7 @@ void lm_p0_structure_recount(LmP0Structure * structure)
 LmP0PostprocessFrame * lm_p0_postprocess_frame_new(int phase)
 {
     LmP0PostprocessFrame * frame;
-    frame = (((LmP0PostprocessFrame *)lm_own_new_zero(sizeof(frame[0]))));
+    frame = ((LmP0PostprocessFrame *)lm_own_new_zero(sizeof(frame[0])));
     if ((frame != 0)) {
     frame->phase = phase;
     }
@@ -5602,7 +5602,7 @@ int lm_p0_postprocess_push_frame_wrap(LmOwnPtrStack * stack, LmP0Node * node)
 LmOwnPtrStack * lm_p0_postprocess_stack_new(void)
 {
     LmOwnPtrStack * stack;
-    stack = (((LmOwnPtrStack *)lm_own_new_zero(sizeof(stack[0]))));
+    stack = ((LmOwnPtrStack *)lm_own_new_zero(sizeof(stack[0])));
     if ((stack != 0)) {
     lm_own_ptr_stack_init(stack, lm_own_delete_plain);
     }
@@ -5624,7 +5624,7 @@ int lm_p0_postprocess_run(LmP0Document * document, LmOwnPtrStack * stack)
     int status;
     status = 1;
     while ((((status != 0) && (stack != 0)) && (stack -> count != 0U))) {
-    frame = (((LmP0PostprocessFrame *)lm_own_ptr_stack_top(stack)));
+    frame = ((LmP0PostprocessFrame *)lm_own_ptr_stack_top(stack));
     if ((frame == 0)) {
     status = 0;
     break;
@@ -5636,11 +5636,11 @@ int lm_p0_postprocess_run(LmP0Document * document, LmOwnPtrStack * stack)
     continue;
     }
     if ((node -> kind == LM_P0_NODE_FRAME)) {
-    status = (((lm_p0_postprocess_push_trailer(stack, node->as->frame->trailer) == 0) && (lm_p0_postprocess_push_frame_wrap(stack, node) == 0)) && (lm_p0_postprocess_push_structure(stack, node->as->frame->body) == 0));
+    status = ((lm_p0_postprocess_push_trailer(stack, node->as->frame->trailer) == 0) && (lm_p0_postprocess_push_frame_wrap(stack, node) == 0)) && (lm_p0_postprocess_push_structure(stack, node->as->frame->body) == 0);
     }
     else {
     if ((node -> kind == LM_P0_NODE_STRUCTURE)) {
-    status = ((lm_p0_postprocess_push_trailer(stack, node->as->structure->trailer) == 0) && (lm_p0_postprocess_push_structure(stack, node->as->structure) == 0));
+    status = (lm_p0_postprocess_push_trailer(stack, node->as->structure->trailer) == 0) && (lm_p0_postprocess_push_structure(stack, node->as->structure) == 0);
     }
     }
     continue;
@@ -5656,7 +5656,7 @@ int lm_p0_postprocess_run(LmP0Document * document, LmOwnPtrStack * stack)
     }
     node = frame -> field -> value;
     frame->field = frame -> field -> next;
-    status = (lm_p0_postprocess_push_node(stack, node) == 0);
+    status = lm_p0_postprocess_push_node(stack, node) == 0;
     continue;
     }
     if ((frame -> phase == LM_P0_POSTPROCESS_TRAILER)) {
@@ -5666,7 +5666,7 @@ int lm_p0_postprocess_run(LmP0Document * document, LmOwnPtrStack * stack)
     }
     structure = frame -> trailer -> body;
     lm_own_delete(lm_own_ptr_stack_pop(stack), 0);
-    status = (lm_p0_postprocess_push_structure(stack, structure) == 0);
+    status = lm_p0_postprocess_push_structure(stack, structure) == 0;
     continue;
     }
     if ((frame -> phase == LM_P0_POSTPROCESS_FRAME_WRAP)) {
@@ -5692,7 +5692,7 @@ int lm_p0_postprocess_node(LmP0Document * document, LmP0Node * node)
     if ((stack == 0)) {
     return 0;
     }
-    status = ((lm_p0_postprocess_push_node(stack, node) == 0) && lm_p0_postprocess_run(document, stack));
+    status = (lm_p0_postprocess_push_node(stack, node) == 0) && lm_p0_postprocess_run(document, stack);
     lm_p0_postprocess_stack_delete(&stack);
     return status;
 }
@@ -5745,6 +5745,89 @@ int lm_p0_wrap_fields_from_line(LmP0Document * document, LmP0Structure * structu
     lm_p0_structure_recount(structure);
     return 1;
 }
+int lm_p0_normalize_sole_anonymous_container(LmP0Structure * body)
+{
+    LmP0Field * only;
+    LmP0Node * container;
+    LmP0Structure * inner;
+    if (body == 0) {
+    return 1;
+    }
+    if (body -> field_count != 1U) {
+    return 1;
+    }
+    only = body -> first_field;
+    if (only == 0 || only -> value == 0) {
+    return 1;
+    }
+    container = only -> value;
+    if (container -> kind != LM_P0_NODE_STRUCTURE) {
+    return 1;
+    }
+    if (container -> as == 0 || container -> as -> structure == 0) {
+    return 1;
+    }
+    inner = container -> as -> structure;
+    if (inner -> trailer != 0) {
+    return 1;
+    }
+    body->first_field = inner -> first_field;
+    body->last_field = inner -> last_field;
+    body->field_count = inner -> field_count;
+    inner->first_field = 0;
+    inner->last_field = 0;
+    inner->field_count = 0U;
+    only->value = 0;
+    only->next = 0;
+    return 1;
+}
+int lm_p0_normalize_sole_anonymous_in_trailer(LmP0Trailer * trailer)
+{
+    if (trailer == 0) {
+    return 1;
+    }
+    if (lm_p0_normalize_sole_anonymous_in_structure(trailer->body) == 0) {
+    return 0;
+    }
+    return lm_p0_normalize_sole_anonymous_container(trailer->body);
+}
+int lm_p0_normalize_sole_anonymous_in_node(LmP0Node * node)
+{
+    if (node == 0) {
+    return 1;
+    }
+    if (node -> kind == LM_P0_NODE_FRAME && node -> as != 0 && node -> as -> frame != 0) {
+    if (lm_p0_normalize_sole_anonymous_in_structure(node->as->frame->body) == 0) {
+    return 0;
+    }
+    if (lm_p0_normalize_sole_anonymous_container(node->as->frame->body) == 0) {
+    return 0;
+    }
+    return lm_p0_normalize_sole_anonymous_in_trailer(node->as->frame->trailer);
+    }
+    if (node -> kind == LM_P0_NODE_STRUCTURE && node -> as != 0) {
+    if (lm_p0_normalize_sole_anonymous_in_structure(node->as->structure) == 0) {
+    return 0;
+    }
+    return lm_p0_normalize_sole_anonymous_in_trailer(node->as->structure->trailer);
+    }
+    return 1;
+}
+int lm_p0_normalize_sole_anonymous_in_structure(LmP0Structure * structure)
+{
+    const LmP0Field * field;
+    if (structure == 0) {
+    return 1;
+    }
+    field = structure -> first_field;
+    while ((field != 0)) {
+    if ((lm_p0_normalize_sole_anonymous_in_node(field->value) == 0)) {
+    return 0;
+    }
+    field = field -> next;
+    }
+    return 1;
+}
 int lm_p0_colon_frame_empty(const LmP0Frame * frame)
 {
     if (frame == 0) {
@@ -5782,7 +5865,7 @@ int lm_p0_validate_nonempty_colon_frames_in_trailer(LmP0Document * document, con
     if ((trailer == 0)) {
     return 1;
     }
-    if (lm_p0_colon_trailer_empty(trailer) != 0) {
+    if (lm_p0_colon_trailer_empty(trailer) != 0 && ((trailer -> flags & LM_P0_TRAILER_DELIMITER_CLOSED) == 0U)) {
     lm_p0_set_diagnostic(document, 32, 1U, 1U, "empty colon Frame is not allowed");
     return 0;
     }
@@ -5799,15 +5882,15 @@ int lm_p0_validate_nonempty_colon_frames_in_node(LmP0Document * document, const 
     line = node -> span -> line;
     column = node -> span -> column;
     }
-    if (node -> kind == LM_P0_NODE_FRAME && node -> as != 0 && lm_p0_colon_frame_empty(node->as->frame) != 0) {
+    if (node -> kind == LM_P0_NODE_FRAME && node -> as != 0 && lm_p0_colon_frame_empty(node->as->frame) != 0 && ((node -> as -> frame -> flags & LM_P0_FRAME_DELIMITER_CLOSED) == 0U)) {
     lm_p0_set_diagnostic(document, 32, line, column, "empty colon Frame is not allowed");
     return 0;
     }
-    if (node -> kind == LM_P0_NODE_FRAME && node -> as != 0 && lm_p0_colon_trailer_empty(node->as->frame->trailer) != 0) {
+    if (node -> kind == LM_P0_NODE_FRAME && node -> as != 0 && lm_p0_colon_trailer_empty(node->as->frame->trailer) != 0 && ((node -> as -> frame -> trailer -> flags & LM_P0_TRAILER_DELIMITER_CLOSED) == 0U)) {
     lm_p0_set_diagnostic(document, 32, line, column, "empty colon Frame is not allowed");
     return 0;
     }
-    if (node -> kind == LM_P0_NODE_STRUCTURE && node -> as != 0 && lm_p0_colon_trailer_empty(node->as->structure->trailer) != 0) {
+    if (node -> kind == LM_P0_NODE_STRUCTURE && node -> as != 0 && lm_p0_colon_trailer_empty(node->as->structure->trailer) != 0 && ((node -> as -> structure -> trailer -> flags & LM_P0_TRAILER_DELIMITER_CLOSED) == 0U)) {
     lm_p0_set_diagnostic(document, 32, line, column, "empty colon Frame is not allowed");
     return 0;
     }
@@ -5844,7 +5927,7 @@ int lm_p0_parse_bytes(const char * source, size_t source_length, LmP0Document **
     return 1;
     }
     out_document[0] = 0;
-    document = (((LmP0Document *)lm_own_new_zero(sizeof(document[0]))));
+    document = ((LmP0Document *)lm_own_new_zero(sizeof(document[0])));
     if ((document == 0)) {
     return 1;
     }
@@ -5870,7 +5953,9 @@ int lm_p0_parse_bytes(const char * source, size_t source_length, LmP0Document **
     }
     if (lm_p0_parse_stream(document)) {
     if (lm_p0_postprocess_node(document, document->root)) {
-    lm_p0_validate_nonempty_colon_frames_in_node(document, document->root);
+    if (lm_p0_validate_nonempty_colon_frames_in_node(document, document->root)) {
+    lm_p0_normalize_sole_anonymous_in_node(document->root);
+    }
     }
     }
     if ((document -> diagnostic -> code == 0)) {
@@ -5922,7 +6007,7 @@ int lm_p0_parse_file(const char * path, LmP0Document ** out_document)
     fclose(file);
     return 1;
     }
-    buffer = (((char *)lm_own_new_zero(((((size_t)size)) + 1U))));
+    buffer = ((char *)lm_own_new_zero((((size_t)size)) + 1U));
     if ((buffer == 0)) {
     fclose(file);
     return 1;
@@ -5958,10 +6043,10 @@ int lm_p0_path_has_extension(const char * path, const char * extension)
     left = path[((path_length - extension_length) + i)];
     right = extension[i];
     if (((left >= 'A') && (left <= 'Z'))) {
-    left = (((char)((left - 'A') + 'a')));
+    left = ((char)((left - 'A') + 'a'));
     }
     if (((right >= 'A') && (right <= 'Z'))) {
-    right = (((char)((right - 'A') + 'a')));
+    right = ((char)((right - 'A') + 'a'));
     }
     if ((left != right)) {
     return 0;
@@ -6025,7 +6110,7 @@ int lm_p0_dump_reserve(LmP0Dump * dump, size_t extra)
     while ((new_capacity < ((dump -> length + extra) + 1U))) {
     new_capacity = new_capacity * 2U;
     }
-    data = (((char *)lm_own_resize(dump->data, new_capacity)));
+    data = ((char *)lm_own_resize(dump->data, new_capacity));
     if ((data == 0)) {
     dump->failed = 1;
     return 0;
@@ -6067,7 +6152,7 @@ void lm_p0_dump_text(LmP0Dump * dump, const LmP0Text * text)
 LmP0DumpFrame * lm_p0_dump_frame_new(int phase, size_t indent)
 {
     LmP0DumpFrame * frame;
-    frame = (((LmP0DumpFrame *)lm_own_new_zero(sizeof(frame[0]))));
+    frame = ((LmP0DumpFrame *)lm_own_new_zero(sizeof(frame[0])));
     if ((frame != 0)) {
     frame->phase = phase;
     frame->indent = indent;
@@ -6126,7 +6211,7 @@ int lm_p0_dump_push_trailer(LmOwnPtrStack * stack, const LmP0Trailer * trailer, 
 LmOwnPtrStack * lm_p0_dump_stack_new(void)
 {
     LmOwnPtrStack * stack;
-    stack = (((LmOwnPtrStack *)lm_own_new_zero(sizeof(stack[0]))));
+    stack = ((LmOwnPtrStack *)lm_own_new_zero(sizeof(stack[0])));
     if ((stack != 0)) {
     lm_own_ptr_stack_init(stack, lm_own_delete_plain);
     }
@@ -6149,7 +6234,7 @@ void lm_p0_dump_run(LmP0Dump * dump, LmOwnPtrStack * stack)
     const char * structure_name;
     size_t indent;
     while (((((dump != 0) && (dump -> failed == 0)) && (stack != 0)) && (stack -> count != 0U))) {
-    frame = (((LmP0DumpFrame *)lm_own_ptr_stack_top(stack)));
+    frame = ((LmP0DumpFrame *)lm_own_ptr_stack_top(stack));
     if ((frame == 0)) {
     dump->failed = 1;
     return;
@@ -6282,7 +6367,7 @@ void lm_p0_dump_node(LmP0Dump * dump, const LmP0Node * node, size_t indent)
 }
 LmP0Dump * lm_p0_dump_new(void)
 {
-    return (((LmP0Dump *)lm_own_new_zero((1U * sizeof(LmP0Dump)))));
+    return ((LmP0Dump *)lm_own_new_zero(1U * sizeof(LmP0Dump)));
 }
 char * lm_p0_dump_take_data(LmP0Dump * dump)
 {
@@ -6682,7 +6767,7 @@ int l1_head_is_unknown_type(const LmP0Text * head)
     if (l1_text_starts(head, "c.") && head -> length > 2U) {
     start = 2U;
     }
-    ch = (((unsigned)head -> data[start]));
+    ch = ((unsigned)head -> data[start]);
     if (ch < 65U || ch > 90U) {
     return 0;
     }
@@ -6916,22 +7001,22 @@ int l1_fn_grow(void)
     }
     cap = l1_fn_cap * 2;
     }
-    names = (((char *)realloc((((void *)l1_fn_names)), (((size_t)cap)) * 64U)));
+    names = ((char *)realloc((((void *)l1_fn_names)), (((size_t)cap)) * 64U));
     if (names == 0) {
     return 1;
     }
     l1_fn_names = names;
-    th = (((int *)realloc((((void *)l1_fn_th)), (((size_t)cap)) * 8U * intsz)));
+    th = ((int *)realloc((((void *)l1_fn_th)), (((size_t)cap)) * 8U * intsz));
     if (th == 0) {
     return 1;
     }
     l1_fn_th = th;
-    thn = (((int *)realloc((((void *)l1_fn_thn)), (((size_t)cap)) * intsz)));
+    thn = ((int *)realloc((((void *)l1_fn_thn)), (((size_t)cap)) * intsz));
     if (thn == 0) {
     return 1;
     }
     l1_fn_thn = thn;
-    ar = (((int *)realloc((((void *)l1_fn_ar)), (((size_t)cap)) * intsz)));
+    ar = ((int *)realloc((((void *)l1_fn_ar)), (((size_t)cap)) * intsz));
     if (ar == 0) {
     return 1;
     }
@@ -7567,7 +7652,7 @@ int l1_c_atom_nested_receiver(const LmP0Text * text, size_t start)
     in_chr = 0;
     esc = 0;
     while (i < text -> length) {
-    ch = (((unsigned)(((uchar)text -> data[i]))));
+    ch = ((unsigned)(((uchar)text -> data[i])));
     if (esc != 0) {
     esc = 0;
     i = i + 1U;
@@ -7688,7 +7773,7 @@ int l1_emit_c99_string(FILE * out, const char * data, size_t n)
     return 1;
     }
     while (i < n) {
-    b = (((unsigned)(((uchar)data[i]))));
+    b = ((unsigned)(((uchar)data[i])));
     if (b == 34U) {
     if (l1_write_cstr(out, "\\\"") != 0) {
     return 1;
@@ -7726,9 +7811,9 @@ int l1_emit_c99_string(FILE * out, const char * data, size_t n)
     }
     if (b < 32U || b > 126U) {
     oct[0] = 92;
-    oct[1] = (((char)(48 + (b / 64U))));
-    oct[2] = (((char)(48 + ((b / 8U) % 8U))));
-    oct[3] = (((char)(48 + (b % 8U))));
+    oct[1] = ((char)(48 + (b / 64U)));
+    oct[2] = ((char)(48 + ((b / 8U) % 8U)));
+    oct[3] = ((char)(48 + (b % 8U)));
     oct[4] = 0;
     if (l1_write_cstr(out, oct) != 0) {
     return 1;
@@ -7757,7 +7842,7 @@ int l1_python_triple_quote(const LmP0Text * text)
     if (text -> data[text -> length - 3U] != text -> data[0] || text -> data[text -> length - 2U] != text -> data[0] || text -> data[text -> length - 1U] != text -> data[0]) {
     return 0;
     }
-    return (((int)text -> data[0]));
+    return ((int)text -> data[0]);
 }
 int l1_emit_triple_body(FILE * out, const char * data, size_t n, int q)
 {
@@ -7775,11 +7860,11 @@ int l1_emit_triple_body(FILE * out, const char * data, size_t n, int q)
     if (data == 0) {
     return 1;
     }
-    buf = (((char *)malloc(n + 1U)));
+    buf = ((char *)malloc(n + 1U));
     if (buf == 0) {
     return 1;
     }
-    qc = (((unsigned)q));
+    qc = ((unsigned)q);
     while (i < n) {
     if ((((unsigned)(((uchar)data[i])))) == qc) {
     run = 0U;
@@ -7792,7 +7877,7 @@ int l1_emit_triple_body(FILE * out, const char * data, size_t n, int q)
     }
     k = 0U;
     while (k < emitn) {
-    buf[o] = (((char)q));
+    buf[o] = ((char)q);
     o = o + 1U;
     k = k + 1U;
     }
@@ -7805,7 +7890,7 @@ int l1_emit_triple_body(FILE * out, const char * data, size_t n, int q)
     }
     buf[o] = 0;
     err = l1_emit_c99_string(out, buf, o);
-    free((((void *)buf)));
+    free(((void *)buf));
     return err;
 }
 int l1_source_is_eq_fence(const char * src, size_t n, size_t off)
@@ -7840,7 +7925,7 @@ int l1_source_is_eq_fence(const char * src, size_t n, size_t off)
 void l1_src_release(void)
 {
     if (l1_src != 0) {
-    free((((void *)l1_src)));
+    free(((void *)l1_src));
     }
     l1_src = 0;
     l1_srcn = 0;
@@ -7865,8 +7950,8 @@ int l1_src_load(const char * path)
     return 1;
     }
     rewind(f);
-    nn = (((size_t)n));
-    buf = (((char *)malloc(nn + 1U)));
+    nn = ((size_t)n);
+    buf = ((char *)malloc(nn + 1U));
     if (buf == 0) {
     fclose(f);
     return 1;
@@ -7993,7 +8078,7 @@ int l1_assign_index_close(const LmP0Text * text, size_t open, size_t * out_close
     }
     i = open;
     while (i < text -> length) {
-    ch = (((unsigned)(((uchar)text -> data[i]))));
+    ch = ((unsigned)(((uchar)text -> data[i])));
     if (quote != 0) {
     if (escape != 0) {
     escape = 0;
@@ -8012,7 +8097,7 @@ int l1_assign_index_close(const LmP0Text * text, size_t open, size_t * out_close
     continue;
     }
     if (ch == 34U || ch == 39U) {
-    quote = (((int)ch));
+    quote = ((int)ch);
     i = i + 1U;
     continue;
     }
@@ -11594,7 +11679,7 @@ size_t l1_path_capacity(size_t a, size_t b)
 void l1_path_text_delete(LmP0Text * text)
 {
     if (text != 0) {
-    free((((void *)text -> data)));
+    free(((void *)text -> data));
     free(text);
     }
 }
@@ -11612,7 +11697,7 @@ LmP0Text * l1_import_path_text(const LmP0Text * atom, const char * source_path)
     if (capacity == 0U) {
     return 0;
     }
-    decoded = (((char *)malloc(capacity)));
+    decoded = ((char *)malloc(capacity));
     if (decoded == 0) {
     return 0;
     }
@@ -11629,7 +11714,7 @@ LmP0Text * l1_import_path_text(const LmP0Text * atom, const char * source_path)
     free(decoded);
     return 0;
     }
-    resolved = (((char *)malloc(capacity)));
+    resolved = ((char *)malloc(capacity));
     if (resolved == 0) {
     free(decoded);
     return 0;
@@ -11642,7 +11727,7 @@ LmP0Text * l1_import_path_text(const LmP0Text * atom, const char * source_path)
     free(decoded);
     decoded = resolved;
     }
-    result = (((LmP0Text *)malloc(sizeof(LmP0Text))));
+    result = ((LmP0Text *)malloc(sizeof(LmP0Text)));
     if (result == 0) {
     free(decoded);
     return 0;
@@ -11657,7 +11742,7 @@ char * l1_getcwd_owned(void)
     char * grown;
     size_t capacity = 64U;
     while (1) {
-    grown = (((char *)realloc((((void *)buffer)), capacity)));
+    grown = ((char *)realloc((((void *)buffer)), capacity));
     if (grown == 0) {
     free(buffer);
     return 0;
@@ -12594,7 +12679,7 @@ int l1_imp_push(int active, const char * path)
     if (n < 0 || n == INT_MAX || length == (((size_t)-1))) {
     return 1;
     }
-    copy = (((char *)malloc(length + 1U)));
+    copy = ((char *)malloc(length + 1U));
     if (copy == 0) {
     return 1;
     }
@@ -12618,7 +12703,7 @@ int l1_imp_push(int active, const char * path)
     if (next > maximum) {
     next = maximum;
     }
-    grown = (((LmP0Text *)realloc((((void *)tab)), next * sizeof(LmP0Text))));
+    grown = ((LmP0Text *)realloc((((void *)tab)), next * sizeof(LmP0Text)));
     if (grown == 0) {
     free(copy);
     return 1;
@@ -12647,7 +12732,7 @@ void l1_imp_pop(void)
     if (l1_imp_actn > 0) {
     l1_imp_actn = l1_imp_actn - 1;
     entry = l1_imp_act + l1_imp_actn;
-    free((((void *)entry -> data)));
+    free(((void *)entry -> data));
     }
 }
 void l1_imp_reset(void)
@@ -12659,7 +12744,7 @@ void l1_imp_reset(void)
     while (l1_imp_donen > 0) {
     l1_imp_donen = l1_imp_donen - 1;
     entry = l1_imp_done + l1_imp_donen;
-    free((((void *)entry -> data)));
+    free(((void *)entry -> data));
     }
     free(l1_imp_act);
     free(l1_imp_done);
@@ -12889,7 +12974,7 @@ int l1_emit_imported(FILE * out, const char * in_path, int depth)
     free(hdr_name);
     return l1_error(in_path, 0, "cannot allocate header path");
     }
-    hdr_name = (((char *)malloc(hdr_cap)));
+    hdr_name = ((char *)malloc(hdr_cap));
     if (hdr_name == 0) {
     lm_p0_document_destroy(document);
     l1_imp_pop();
@@ -13412,7 +13497,7 @@ int l1_unit_id_from_source(char * dst, size_t cap, const char * in_path, const c
     free(norm);
     return l1_error(path, node, "cannot allocate unit root path");
     }
-    abs_root = (((char *)malloc(root_cap)));
+    abs_root = ((char *)malloc(root_cap));
     if (abs_root == 0) {
     free(cwd);
     free(abs_in);
@@ -13435,7 +13520,7 @@ int l1_unit_id_from_source(char * dst, size_t cap, const char * in_path, const c
     free(norm);
     return l1_error(path, node, "cannot allocate source path");
     }
-    abs_in = (((char *)malloc(in_cap)));
+    abs_in = ((char *)malloc(in_cap));
     if (abs_in == 0) {
     free(cwd);
     free(abs_in);
@@ -13453,7 +13538,7 @@ int l1_unit_id_from_source(char * dst, size_t cap, const char * in_path, const c
     }
     }
     else {
-    norm = (((char *)malloc(in_cap)));
+    norm = ((char *)malloc(in_cap));
     if (norm == 0) {
     free(cwd);
     free(abs_in);
@@ -13516,7 +13601,7 @@ int l1_write_guard_escape(FILE * out, const char * unit_id)
     return 1;
     }
     while (unit_id[i] != 0) {
-    b = ((((unsigned)unit_id[i])) & 255U);
+    b = (((unsigned)unit_id[i])) & 255U;
     if ((b >= 48U && b <= 57U) || (b >= 65U && b <= 90U) || (b >= 97U && b <= 122U)) {
     if (l1_write_span(out, unit_id + i, 1U) != 0) {
     return 1;
@@ -14479,7 +14564,7 @@ int l1_hdr_emit_predef_includes(FILE * out, const LmP0Frame * frame, const char 
     return l1_error(path, node, "path size overflow");
     }
     free(hdr_name);
-    hdr_name = (((char *)malloc(capacity)));
+    hdr_name = ((char *)malloc(capacity));
     if (hdr_name == 0) {
     l1_path_text_delete(resolved);
     free(hdr_name);
@@ -14756,7 +14841,7 @@ int l1_translate_header(const char * in_path, const char * out_path)
     free(unit_id);
     return l1_error(in_path, 0, "cannot allocate unit identifier");
     }
-    unit_id = (((char *)malloc(unit_cap)));
+    unit_id = ((char *)malloc(unit_cap));
     if (unit_id == 0) {
     lm_p0_document_destroy(document);
     free(tmp);
@@ -14782,7 +14867,7 @@ int l1_translate_header(const char * in_path, const char * out_path)
     free(unit_id);
     return l1_error(in_path, 0, "cannot allocate output path");
     }
-    tmp = (((char *)malloc(tmp_cap)));
+    tmp = ((char *)malloc(tmp_cap));
     if (tmp == 0) {
     lm_p0_document_destroy(document);
     free(tmp);
@@ -14891,7 +14976,7 @@ int l1_translate_unit(const char * in_path, const char * out_path)
     free(tmp);
     return l1_error(in_path, 0, "cannot allocate output path");
     }
-    tmp = (((char *)malloc(tmp_cap)));
+    tmp = ((char *)malloc(tmp_cap));
     if (tmp == 0) {
     lm_p0_document_destroy(document);
     free(tmp);

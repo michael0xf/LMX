@@ -26,6 +26,15 @@ def main():
         env.pop(key,None)
     args.output.mkdir(parents=True,exist_ok=True)
     report={'profile':args.profile,'parser':str(exe),'parser_sha256':hashlib.sha256(exe.read_bytes()).hexdigest(),'cases':[]}
+    divergences={}
+    if args.profile=='previous-l1':
+        div_path=ROOT/'tests/parser/previous-l1/divergences.json'
+        if div_path.exists():
+            for entry in json.loads(div_path.read_text(encoding='utf-8')):
+                name=entry['name'].replace('\\','/')
+                if name in divergences:
+                    raise ValueError(f'Duplicate divergence map entry: {name}')
+                divergences[name]=entry
     if args.profile=='current':
         inputs=json.loads((ROOT/'tests/parser/current/expectations.json').read_text(encoding='utf-8'))
     else:
@@ -51,10 +60,27 @@ def main():
                 expectation['stdout_file']=str(lookup('03-l1',base+'.stdout').relative_to(ROOT))
             else:
                 expectation['diagnostic']=lookup('03-l1',base+'.p0').read_text(encoding='utf-8-sig').strip()
+            if args.profile=='previous-l1' and path in divergences:
+                if 'stdout_file' not in expectation:
+                    raise ValueError(f'Divergence map name not a stdout case in manifest: {path}')
+                entry=divergences[path]
+                imported=ROOT/expectation['stdout_file']
+                diverged=ROOT/entry['stdout_file']
+                if diverged.read_bytes()==imported.read_bytes():
+                    raise ValueError(f'Stale divergence golden byte-equal to imported: {path}')
+                expectation['stdout_file']=str(Path(entry['stdout_file']))
+                expectation['diverged']=True
             inputs.append(expectation)
+        if args.profile=='previous-l1':
+            manifest_names={e['name'].replace('\\','/') for e in inputs}
+            for name in divergences:
+                if name not in manifest_names:
+                    raise ValueError(f'Divergence map name not in manifest: {name}')
     for i,expect in enumerate(inputs):
         source=ROOT/expect['path']
         case={'name':expect.get('name',expect['path']),'expected_exit':expect['exit']}
+        if expect.get('diverged'):
+            case['diverged']=True
         try:
             run=subprocess.run([str(exe),str(source)],cwd=ROOT,env=env,capture_output=True,timeout=15)
             case['exit']=run.returncode
@@ -79,8 +105,15 @@ def main():
         report['cases'].append(case)
     report['passed']=sum(c['passed'] for c in report['cases'])
     report['failed']=len(report['cases'])-report['passed']
+    report['diverged']=sum(1 for c in report['cases'] if c.get('passed') and c.get('diverged'))
     (args.output/'report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n',encoding='utf-8',newline='\n')
-    print(f'{args.profile}: {report["passed"]} passed, {report["failed"]} failed')
+    if args.profile=='previous-l1':
+        print(f'{args.profile}: {report["passed"]} passed ({report["diverged"]} diverged as recorded), {report["failed"]} failed')
+        for case in report['cases']:
+            if case.get('passed') and case.get('diverged'):
+                print('DIVERGED', case['name'])
+    else:
+        print(f'{args.profile}: {report["passed"]} passed, {report["failed"]} failed')
     for case in report['cases']:
         if not case['passed']:print('FAIL',case['name'],case.get('exit'),case.get('diagnostic',''))
     raise SystemExit(1 if report['failed'] else 0)

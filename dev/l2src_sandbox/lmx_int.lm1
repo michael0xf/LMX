@@ -18,35 +18,7 @@ predef: "l2src/lmx_arena.h.lm1"
 # but the arena: the array answers for itself, and a request from any module of
 # this arena lands in the SAME array -- the cells are intervals of one array, not
 # arrays of their own.
-fn: lmx_int_take (@: LmxArena arena) @: void
-    @: void cell
-    int: z 0
-    @: int p
-    if: arena = 0
-        return: 0
-    cell: lmx_arena_take(arena, c.sizeof(z), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT)
-    if: cell = 0
-        return: 0
-    p: (cast: (@: int) cell)
-    \p: 0
-return: cell
 
-# The type is known statically here -- the caller holds an int cell it took from
-# the arena's array -- so the arena's table is NOT consulted: it answers only about
-# an untyped void * (Mikhail, 2026-09-17, verbatim: "_Получив дескриптор типа код
-# сразу делает приведение типа указателя и пишет напрямую в ячейку_ _Это
-# обязательно_").  The re-check through the table that stood here is removed.
-fn: lmx_int_value (@: void cell) int
-    @: int p
-    if: cell = 0
-        return: 0
-    p: (cast: (@: int) cell)
-return: \p
-
-fn: lmx_int_store (@: void cell; int: v) int
-    @: int p
-    if: cell = 0
-        return: 1
-    p: (cast: (@: int) cell)
-    \p: v
-return: 0
+# All mutable-int cell APIs now live in lmx_value_owned.lm1
+# (lmx_int_new_owned / lmx_int_value_known / lmx_int_store_known).
+# The prior lmx_int_take/value/store shims had zero callers and were removed.

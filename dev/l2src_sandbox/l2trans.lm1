@@ -335,6 +335,9 @@ prototype:
     fn: l2_bare_structure (const: @(LmP0Text t); int: mi) int
     fn: l2_check_bare (@: LmP0Field field; int: mi; const: @(char path)) int
     fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @(LmP0Structure body); int: mi; const: @(char ind); @: char dest) int
+    fn: l2_check_value_call (const: @(LmP0Node node); int: idx; int: fi; int: mi; const: @(char path)) int
+    fn: l2_tok_method_occ (int: idx; @: char dest) int
+    fn: l2_empty_struct_assign_shape (const: @(LmP0Node stmt); int: mi) int
     fn: l2_prep_addr (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest) int
     fn: l2_check_addr (const: @(LmP0Node node); int: mi; const: @(char path)) int
     fn: l2_cat (@: char dest; const: @(char src)) int
@@ -5739,6 +5742,32 @@ return: 0
 # safety net (the (c) fix, a few lines up) fired instead, since nothing
 # had called l2_error. An existing row is only a genuine conflict when
 # some OTHER statement declared it.
+# `f()` -- one P0 tree with `f: ()` and the closed empty vertical: a Frame with an empty
+# Structure-body -- when f already binds an ordinary Structure (the book §12; FABLE-OPUS-RECEIVER-
+# CONTRACT-20260924-139): 1 an own field of graph type, of a declared Structure type or of none;
+# 2 a declared named Structure, a unit child.  0 otherwise: absent (the -132 declaration below),
+# a callable head (a call, -130; l2_is_asgn), or a binding that holds no Structure.
+fn: l2_empty_struct_assign_shape (const: @(LmP0Node stmt); int: mi) int
+    @: LmP0Frame fr
+    int: oi
+    int: ni
+    if: l2_is_asgn(stmt) = 0
+        return: 0
+    fr: stmt\as\frame
+    if: fr\body = 0 || fr\trailer != 0 || fr\body\trailer != 0 || l2_count_active(fr\body) != 0
+        return: 0
+    if: l2_param_find(mi, fr\head) >= 0 || l2_slot_find(mi, fr\head) >= 0 || l2_ml_find(fr\head) >= 0
+        return: 0
+    oi: l2_own_find(mi, fr\head)
+    if: oi >= 0 && l2_own_decl[oi] != stmt
+        return: l2_colon_is_graph_ty(l2_ft_of_own(l2_own_ty[oi]))
+    if: oi >= 0
+        return: 0
+    ni: l2_ns_find(fr\head)
+    if: ni >= 0 && l2_ns_parent[ni] < 0 && l2_ns_eternal[ni] < 0
+        return: 2
+return: 0
+
 fn: l2_empty_struct_decl_shape (const: @(LmP0Node stmt); int: mi) int
     @: LmP0Frame fr
     int: existing
@@ -8841,8 +8870,13 @@ return: 0
 
 fn: l2_node_has_call (const: @(LmP0Node node)) int
     @: LmP0Field f
+    int: fi 0
     if: node = 0
         return: 0
+    # A callable named as a value is called (l2_prep): a unit method, or a callable formal of the
+    # method being lowered -- so `&&`/`||` guard it like any call.
+    if: node\kind = c.LM_P0_NODE_ATOM && node\as != 0 && node\as\atom != 0 && l2_atom_callee(node\as\atom, l2_cur_mi, @ fi) >= 0
+        return: 1
     if: node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && node\as\frame != 0 && (l2_find_method(node\as\frame\head) >= 0 || l2_is_known(node\as\frame\head))
         return: 1
     if: node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && node\as\frame != 0 && node\as\frame\body != 0
@@ -13027,13 +13061,18 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
             return: 0
         if: l2_ident(node\as\atom) = 0
             return: l2_error(path, node, "unsupported body")
-        if: l2_param_find(mi, node\as\atom) >= 0
+        # A callable named where a value is consumed gives its result (plan §3 native gate (в);
+        # FABLE-OPUS-RECEIVER-CONTRACT-20260924-139): it runs with no arguments, the check of
+        # `m()` (l2_check_value_call).  So for a callable formal of this method and for a unit
+        # method.  A callable formal of the CALLEE takes the occurrence itself instead; that
+        # actual never reaches here (l2_check_call).
+        idx: l2_param_find(mi, node\as\atom)
+        if: idx >= 0 && idx < l2_m_arity[mi] && l2_cf_get(mi, idx) >= 0
+            return: l2_check_value_call(node, l2_cf_get(mi, idx), idx, mi, path)
+        if: idx >= 0
             return: 0
-        # As a value, a source method name denotes its generated public C ABI
-        # wrapper. Calls still resolve to the callable Structure separately.
         if: l2_find_method(node\as\atom) >= 0
-            l2_m_value_used[l2_find_method(node\as\atom)]: 1
-            return: 0
+            return: l2_check_value_call(node, l2_find_method(node\as\atom), 0 - 1, mi, path)
         # and a local this method body declares, which lives in its own
         # activation.
         if: l2_ml_find(node\as\atom) >= 0
@@ -13169,7 +13208,18 @@ fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Stru
     actual_i: 0
     while: a0 != 0
         actual_span: l2_expr_span(a0)
-        if: actual_span < 1 || l2_check_fields(a0, actual_span, mi, path, node) != 0
+        # A callable formal takes the occurrence of the callable its actual names -- a reference,
+        # checked against the formal's contract -- not a call (plan §3 native gate (г)).
+        req_mi: l2_cf_get(idx, actual_i)
+        if: req_mi >= 0
+            if: actual_span != 1 || a0\value = 0 || a0\value\kind != c.LM_P0_NODE_ATOM
+                return: l2_error(path, node, "incompatible entry signature")
+            cand_mi: l2_find_method(a0\value\as\atom)
+            if: cand_mi < 0 || l2_method_sig_compatible(cand_mi, req_mi) = 0
+                return: l2_error(path, node, "incompatible entry signature")
+            l2_m_value_used[cand_mi]: 1
+        ---
+        if: req_mi < 0 && (actual_span < 1 || l2_check_fields(a0, actual_span, mi, path, node) != 0)
             return: 1
         if: actual_span = 1 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_ATOM && l2_nsty_get(idx, actual_i) >= 0 && l2_m_node[idx] != 0 && l2_m_node[idx]\as != 0
             if: l2_admit_consumer_uses(a0\value\as\atom, l2_nsty_get(idx, actual_i), l2_fn(idx, actual_i), l2_m_node[idx]\as\frame, path, node, "function argument") != 0
@@ -13182,14 +13232,6 @@ fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Stru
         if: actual_span = 1 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_ATOM
             if: l2_check_literal_kind(a0\value\as\atom, l2_lit_kind_from_ft(l2_ft(idx, actual_i)), path, node) != 0
                 return: 1
-            req_mi: l2_cf_get(idx, actual_i)
-            if: req_mi >= 0
-                cand_mi: l2_find_method(a0\value\as\atom)
-                if: cand_mi < 0
-                    return: l2_error(path, node, "incompatible entry signature")
-                if: l2_method_sig_compatible(cand_mi, req_mi) = 0
-                    return: l2_error(path, node, "incompatible entry signature")
-                ---
             ---
         ---
         k: 0
@@ -13199,6 +13241,14 @@ fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Stru
         actual_i: actual_i + 1
     ---
 return: 0
+
+# A CALLABLE IN VALUE POSITION (l2_check_primary): its result is the value, so it is called with
+# no arguments (l2_check_call), and a callable without a result -- a sub, or a callable formal
+# whose contract is one -- has no value to give (plan §3 native gate (б)).
+fn: l2_check_value_call (const: @(LmP0Node node); int: idx; int: fi; int: mi; const: @(char path)) int
+    if: l2_m_ret[idx] = 8
+        return: l2_error(path, node, "a callable without a result has no value")
+return: l2_check_call(node, idx, fi, 0, mi, path)
 
 fn: l2_check_expr (const: @(LmP0Node node); int: mi; const: @(char path)) int
 return: l2_check_primary(node, mi, path)
@@ -13403,14 +13453,11 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
     size_t: array_index
     @: LmP0Field field
     @: LmP0Field nxt
-    @: LmP0Field a0
     @: LmP0Node stmt
     const: @: LmP0Frame fr
     @: LmP0Field last
     int: n
     int: k
-    int: cidx
-    int: cfi
     int: rj 0
     int: rf 0
     int: raw 1
@@ -13750,6 +13797,15 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
                 return: 1
             field: l2_next_active(field\next)
             continue
+        # The same Frame when f already binds an ordinary Structure (l2_empty_struct_assign_shape;
+        # the book §12): ordinary assignment of the empty Structure, with admission to f's declared
+        # Structure type when it has one -- the S3 path, whose refusal is the implicit throw
+        # implements.
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_empty_struct_assign_shape(stmt, mi) != 0
+            if: (l2_empty_struct_assign_shape(stmt, mi) = 2 || l2_graph_nsty(mi, stmt\as\frame\head) >= 0) && l2_admit_site(mi) != 0
+                return: l2_error(path, stmt, "internal: admission outside a method")
+            field: l2_next_active(field\next)
+            continue
         # A bare colon frame whose head is not a call is an update only when
         # that head already has a typed mutable binding.  In particular,
         # `arg: 7` must not silently invent arg; the graph-construction role was
@@ -13793,27 +13849,6 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
         ---
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_check_return_literal(mi, fr\body, path, stmt) != 0
             return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_count_active(fr\body) = 1 && l2_next_active(fr\body\first_field) != 0 && l2_next_active(fr\body\first_field)\value != 0 && l2_next_active(fr\body\first_field)\value\kind = c.LM_P0_NODE_ATOM
-            a0: l2_next_active(fr\body\first_field)
-            cidx: l2_find_method(a0\value\as\atom)
-            if: cidx < 0
-                cfi: l2_formal_find(mi, a0\value\as\atom)
-                if: cfi >= 0
-                    cidx: l2_cf_get(mi, cfi)
-                ---
-            ---
-            if: cidx >= 0
-                if: l2_m_body[cidx] = 0 && cfi < 0 && (l2_m_node[cidx] = 0 || l2_m_node[cidx]\as = 0 || l2_ret_tr(l2_m_node[cidx]\as\frame) = 0)
-                    return: l2_error(path, stmt, "not callable")
-                if: l2_m_arity[cidx] != 0
-                    return: l2_error(path, stmt, "incompatible entry signature")
-                l2_m_edge[l2_edge_off(mi, cidx)]: 1
-                if: l2_check_throws_handled(mi, cidx, path, stmt) != 0
-                    return: 1
-                field: l2_next_active(field\next)
-                continue
-            ---
-        ---
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_count_active(fr\body) != 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && l2_check_fields(fr\body\first_field, l2_count_active(fr\body), mi, path, stmt) != 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0
@@ -14590,71 +14625,6 @@ fn: l2_method_sig_compatible (int: cand; int: req) int
         j: j + 1
 return: 1
 
-fn: l2_emit_nullary_call (int: idx; int: call_sel; int: call_fi; int: mi; const: @(char ind); @: char dest) int
-    int: self_t
-    int: t
-    if: dest = 0
-        return: 1
-    if: call_sel = 2
-        if: call_fi < 0
-            return: 1
-        if: idx >= 0 && l2_m_arity[idx] != 0
-            return: l2_error(l2_src, 0, "incompatible entry signature")
-        if: idx >= 0
-            l2_m_edge[l2_edge_off(mi, idx)]: 1
-        ---
-        if: l2_emit_checkpoint(mi, ind) != 0
-            return: 1
-        t: l2_tn
-        l2_tn: l2_tn + 1
-        if: c.fprintf(l2_out, "%sint: l2_t%d\n%sl2_t%d: lmx_call0(l2_program_arena, l2_p%d_%d)\n", ind, t, ind, t, mi, call_fi) < 0
-            return: 1
-        if: l2_emit_checkpoint(mi, ind) != 0
-            return: 1
-        return: l2_tok_temp(t, dest)
-    ---
-    if: idx < 0
-        return: 1
-    if: l2_m_arity[idx] != 0
-        return: l2_error(l2_src, 0, "incompatible entry signature")
-    if: l2_m_body[idx] = 0 && (l2_m_node[idx] = 0 || l2_m_node[idx]\as = 0 || l2_ret_tr(l2_m_node[idx]\as\frame) = 0)
-        return: l2_error(l2_src, 0, "not callable")
-    l2_m_edge[l2_edge_off(mi, idx)]: 1
-    self_t: l2_tn
-    l2_tn: l2_tn + 1
-    if: call_sel = 0 && c.fprintf(l2_out, "%s@: Lmx l2_c%d lmx_arena_ref_struct(%s, %uU)\n", ind, self_t, l2_unit_ref, (cast: (unsigned) (l2_unit_base + idx))) < 0
-        return: 1
-    if: call_sel != 0
-        return: 1
-    if: l2_emit_checkpoint(mi, ind) != 0
-        return: 1
-    t: l2_tn
-    l2_tn: l2_tn + 1
-    if: l2_m_ret[idx] = 2 && c.fprintf(l2_out, "%ssize_t: l2_t%d\n", ind, t) < 0
-        return: 1
-    if: l2_ret_uns(idx) = 0 && l2_m_ret[idx] != 2 && l2_m_ret[idx] != 8 && l2_m_ret[idx] < 100 && c.fprintf(l2_out, "%sint: l2_t%d\n", ind, t) < 0
-        return: 1
-    # A callee on the throw channel is called as l2_prep calls it: the status is the return, the
-    # value comes through its out-parameter, and a throw passes on.  (It was called with node and
-    # self alone, and the caller read the uninitialized status as the value.)
-    if: l2_m_throws[idx] != 0 && c.fprintf(l2_out, "%sint: l2_ts%d 0\n%s@: Lmx l2_te%d 0\n%sl2_ts%d: ", ind, t, ind, t, ind, t) < 0
-        return: 1
-    if: l2_m_throws[idx] = 0 && l2_m_ret[idx] != 8 && c.fprintf(l2_out, "%sl2_t%d: ", ind, t) < 0
-        return: 1
-    if: l2_write_sym(l2_out, idx) != 0
-        return: 1
-    if: l2_m_throws[idx] = 0 && c.fprintf(l2_out, "(l2_c%d\\parent, l2_c%d)\n", self_t, self_t) < 0
-        return: 1
-    if: l2_m_throws[idx] != 0 && l2_m_ret[idx] != 8 && c.fprintf(l2_out, "(l2_c%d\\parent, l2_c%d, l2_msg, @ l2_t%d, @ l2_te%d)\n", self_t, self_t, t, t) < 0
-        return: 1
-    if: l2_m_throws[idx] != 0 && l2_m_ret[idx] = 8 && c.fprintf(l2_out, "(l2_c%d\\parent, l2_c%d, l2_msg, @ l2_te%d)\n", self_t, self_t, t) < 0
-        return: 1
-    if: l2_emit_checkpoint(mi, ind) != 0
-        return: 1
-    if: l2_m_throws[idx] != 0 && l2_emit_propagate(mi, idx, t, ind) != 0
-        return: 1
-return: l2_tok_temp(t, dest)
-
 fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest) int
     c.array: [256]: char lpd
     size_t: lpn 0U
@@ -14706,7 +14676,11 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
             return: 1
         if: l2_own_index_head(node\as\atom, mi, @ idx, @ array_index) = 0
             return: l2_emit_array_load(idx, array_index, ind, dest)
+        # A callable formal of this method named as a value is its callable's result
+        # (l2_check_primary): called with no arguments through lmx_call0.
         idx: l2_param_find(mi, node\as\atom)
+        if: idx >= 0 && idx < l2_m_arity[mi] && l2_cf_get(mi, idx) >= 0
+            return: l2_emit_call(node, l2_cf_get(mi, idx), 2, idx, 0, mi, ind, dest)
         if: idx >= 0
             return: l2_tok_formal(mi, idx, dest)
         ---
@@ -14732,14 +14706,11 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
                 return: 1
             return: 0
         ---
-        # Method name as a value is the unit METHOD occurrence (@: Lmx), not the C ABI wrapper.
+        # A method named as a value is its result: it runs with no arguments on the call path of
+        # `m()` (l2_check_primary refused one without a result).
         idx: l2_find_method(node\as\atom)
         if: idx >= 0
-            if: l2_unit_ref = 0
-                return: 1
-            if: c.sprintf(dest, "lmx_arena_ref_struct(%s, %uU)", l2_unit_ref, (cast: (unsigned) (l2_unit_base + idx))) < 0
-                return: 1
-            return: 0
+            return: l2_emit_call(node, idx, 0, 0 - 1, 0, mi, ind, dest)
         ---
         return: l2_tok_text(node\as\atom, dest, 256U)
     if: node\kind = c.LM_P0_NODE_FRAME && l2_frame_head(node, "@")
@@ -15080,7 +15051,10 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
         if: t >= nact
             return: l2_prep_drop(acts, hides)
         actual_span: l2_expr_span(a0)
-        if: actual_span < 1 || l2_emit_fields(a0, actual_span, mi, ind, l2_act_at(acts, t)) != 0
+        # A callable formal takes the occurrence its actual names (l2_check_call), not a call.
+        if: l2_cf_get(idx, t) >= 0 && (actual_span != 1 || a0\value = 0 || a0\value\kind != c.LM_P0_NODE_ATOM || l2_tok_method_occ(l2_find_method(a0\value\as\atom), l2_act_at(acts, t)) != 0)
+            return: l2_prep_drop(acts, hides)
+        if: l2_cf_get(idx, t) < 0 && (actual_span < 1 || l2_emit_fields(a0, actual_span, mi, ind, l2_act_at(acts, t)) != 0)
             return: l2_prep_drop(acts, hides)
         if: actual_span = 1 && l2_nsty_get(idx, t) >= 0 && l2_untyped_graph(mi, a0\value) != 0 && l2_emit_admit(mi, l2_nsty_get(idx, t), l2_act_at(acts, t), ind) != 0
             return: l2_prep_drop(acts, hides)
@@ -15207,6 +15181,14 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
     if: l2_m_throws[idx] != 0 && l2_emit_propagate(mi, idx, t, ind) != 0
         return: 1
 return: l2_tok_temp(t, dest)
+
+# The unit's own occurrence of method idx (@: Lmx): what a callable formal receives.
+fn: l2_tok_method_occ (int: idx; @: char dest) int
+    if: idx < 0 || l2_unit_ref = 0
+        return: 1
+    if: c.sprintf(dest, "lmx_arena_ref_struct(%s, %uU)", l2_unit_ref, (cast: (unsigned) (l2_unit_base + idx))) < 0
+        return: 1
+return: 0
 
 # Follow the admitted unit-child/descriptor/backing contract, without allocation,
 # scalar dirty caches, intern lookup, or descriptor rebinding.
@@ -17004,6 +16986,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
     @: LmP0Text cmodel
     @: LmP0Text cname
     c.array: [64]: char l2_esd_tok
+    int: easn 0
     int: aj 0
     int: aj2 0
     int: am 0
@@ -17851,6 +17834,47 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                 return: 1
             field: l2_next_active(field\next)
             continue
+        # `f()` when f already binds an ordinary Structure (l2_empty_struct_assign_shape): a fresh
+        # empty Structure, admitted to f's declared Structure type when it has one -- the S3
+        # admission, whose refusal is the implicit throw implements -- then bound as any graph
+        # assignment is (the S3 rebinding path below): the cell now, the working local, the binding
+        # mark.  A declared named Structure takes it as its unit child, as a merge result does.
+        easn: l2_empty_struct_assign_shape(stmt, mi)
+        if: easn != 0
+            if: c.fprintf(l2_out, "%s@: Lmx l2_t%d\n%sl2_t%d: lmx_node_new_owned(l2_program_arena)\n%sif: l2_t%d = 0\n", ind, l2_tn, ind, l2_tn, ind, l2_tn) < 0
+                return: 1
+            if: l2_emit_invariant(ind, "a fresh empty Structure did not allocate") != 0
+                return: 1
+            if: c.sprintf(l2_esd_tok, "l2_t%d", l2_tn) < 0
+                return: 1
+            l2_tn: l2_tn + 1
+            if: easn = 2
+                ni: l2_ns_find(stmt\as\frame\head)
+                if: l2_emit_admit(mi, ni, l2_esd_tok, ind) != 0
+                    return: 1
+                if: c.fprintf(l2_out, "%sif: lmx_arena_ref_store(%s, %uU, (cast: (@: void) %s)) != 0\n", ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni))), l2_esd_tok) < 0
+                    return: 1
+                if: l2_emit_invariant(ind, "a named Structure did not take its assigned value") != 0
+                    return: 1
+                field: l2_next_active(field\next)
+                continue
+            ---
+            # One lookup: l2_own_find and l2_own_find_last miss on the same names (D-10).
+            oi: l2_own_find_last(mi, stmt\as\frame\head)
+            if: oi < 0
+                return: l2_error(l2_src, stmt, "unresolved name")
+            if: l2_graph_nsty(mi, stmt\as\frame\head) >= 0 && l2_emit_admit(mi, l2_graph_nsty(mi, stmt\as\frame\head), l2_esd_tok, ind) != 0
+                return: 1
+            if: l2_emit_own_from(mi, oi, ind) != 0
+                return: 1
+            if: c.fprintf(l2_out, "%sif: lmx_pointer_store_known(l2_q%d_from[0], (cast: (@: void) %s)) != 0\n%s    c.fprintf(c.stderr, \"lmx: rebinding store failed for own field %d\\n\")\n%s    if: lmx_msg_poll_abort() != 0\n%s        c.abort()\n%s---\n", ind, oi, l2_esd_tok, ind, oi, ind, ind, ind) < 0
+                return: 1
+            if: l2_emit_occ_write(mi, oi, ind, l2_esd_tok) != 0
+                return: 1
+            if: l2_emit_bind_mark(mi, oi, ind) != 0
+                return: 1
+            field: l2_next_active(field\next)
+            continue
         if: stmt\as != 0 && stmt\as\frame != 0 && l2_c_stmt_door(stmt\as\frame\head) != 0
             if: l2_emit_ccall(stmt, mi, ind) != 0
                 return: 1
@@ -17901,28 +17925,9 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] = 8
             field: l2_next_active(field\next)
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_count_active(fr\body) = 1 && l2_next_active(fr\body\first_field) != 0 && l2_next_active(fr\body\first_field)\value != 0 && l2_next_active(fr\body\first_field)\value\kind = c.LM_P0_NODE_ATOM
-            oi: l2_find_method(l2_next_active(fr\body\first_field)\value\as\atom)
-            si: 0
-            # Reuse fi as formal index for call_sel=2; -1 means unit method.
-            fi: 0 - 1
-            if: oi < 0
-                fi: l2_formal_find(mi, l2_next_active(fr\body\first_field)\value\as\atom)
-                if: fi >= 0
-                    oi: l2_cf_get(mi, fi)
-                    si: 2
-                ---
-            ---
-            if: oi >= 0
-                if: l2_emit_nullary_call(oi, si, fi, mi, ind, l2_tok) != 0
-                    return: 1
-                ---
-            ---
-            if: oi < 0 && l2_eval_fields(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok) != 0
-                return: 1
-            ---
-        ---
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && (l2_count_active(fr\body) != 1 || l2_next_active(fr\body\first_field) = 0 || l2_next_active(fr\body\first_field)\value = 0 || l2_next_active(fr\body\first_field)\value\kind != c.LM_P0_NODE_ATOM) && l2_eval_fields(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok) != 0
+        # `return: v` evaluates v as every value is evaluated -- a callable named there is called
+        # (l2_prep), in a body and in a trailer (l2_emit_ret_tr) alike.
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_eval_fields(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok) != 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_emit_poll(mi, ind) != 0
             return: 1

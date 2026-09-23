@@ -886,6 +886,29 @@ $fixtures = @(
         Needle = 'unresolved name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bare_expr_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'an expression statement is not supported yet'; Absent = @(); Debt = @() },
+    # THE RECEIVER CONTRACT (plan §3 native gate (б)-(е); FABLE-OPUS-RECEIVER-CONTRACT-20260924-139).
+    # A callable named where a value is consumed gives its result: it runs with no arguments on the
+    # call path of `m()` -- a method or a callable formal, in a declaration, assignment, operand,
+    # condition (guarded by && like any call), argument, and `return: m` in a body or a trailer.  A
+    # callable without a result has no value and is refused.  A callable formal of the callee takes
+    # the occurrence itself.  `f()` on an existing ordinary Structure assigns the empty Structure,
+    # with admission to its declared type (the book §12; refused admission is implements).
+    [pscustomobject]@{ Name = 'unit_value_call_result.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7811;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_value_call_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 2;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_value_call_sub_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a callable without a result has no value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_return_trailer_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 14;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_return_sub_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a callable without a result has no value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_empty_assign_untyped.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_empty_assign_admit.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 421;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_empty_assign_named.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 74;
+        Absent = @(); Debt = @() },
     # THE STICKY DIRTY OF AN ADDRESS-TAKEN LOCAL (GROK-COLON-OCCURRENCE-20260922-02).  Any executed
     # `@x` of an addressable activation-local makes sticky through activation end -- before, between
     # or after occurrence bindings.  Address-taking invents no graph field; `p` always addresses the

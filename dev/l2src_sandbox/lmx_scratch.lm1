@@ -1,4 +1,4 @@
-predef: "l2src/lmx_scratch.h.lm1"
+﻿predef: "l2src/lmx_scratch.h.lm1"
 predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_arena.lm1"
 
@@ -45,25 +45,25 @@ fn: lmx_scratch_take (@: LmxScratch s; size_t: bytes; @@: void out) int
     from: s\used
     while: seeking != 0 && chunk != 0
         # Warm: cells this chunk has already handed out once and nobody is using now.
-        if: from <= chunk\count && cells <= chunk\count - from
+        if: from <= lmx_chunk_cells(chunk, s\cells\stride) && cells <= lmx_chunk_cells(chunk, s\cells\stride) - from
             s\at: chunk
             s\used: from + cells
-            \out: (cast: (@: void) ((cast: (@: char) chunk\base) + from * word))
+            \out: (cast: (@: void) ((cast: (@: char) (cast: (@: void) lmx_chunk_data(chunk))) + from * word))
             return: c.LMX_SCRATCH_OK
         # The tail has the room but has not handed all of it out yet.  The cursor sits at
         # or below the chunk's high-water mark, so what is missing is taken FROM THE POOL:
         # it seats those cells right at the mark, and the mark moves with them.  Bumping
         # the cursor past the mark without telling the pool would let a later take_n hand
         # out cells that are live.
-        if: chunk\next = 0 && from <= chunk\count && from <= chunk\capacity && cells <= chunk\capacity - from
-            expected: (cast: (@: void) ((cast: (@: char) chunk\base) + chunk\count * word))
-            got: lmx_pool_take_n(s\arena, s\cells, (from + cells) - chunk\count)
+        if: chunk\next = 0 && from <= lmx_chunk_cells(chunk, s\cells\stride) && from <= lmx_chunk_room(chunk, s\cells\stride) && cells <= lmx_chunk_room(chunk, s\cells\stride) - from
+            expected: (cast: (@: void) ((cast: (@: char) (cast: (@: void) lmx_chunk_data(chunk))) + lmx_chunk_cells(chunk, s\cells\stride) * word))
+            got: lmx_pool_take_n(s\arena, s\cells, (from + cells) - lmx_chunk_cells(chunk, s\cells\stride))
             if: got = 0
                 return: c.LMX_SCRATCH_NOMEM
             if: got = expected
                 s\at: chunk
                 s\used: from + cells
-                \out: (cast: (@: void) ((cast: (@: char) chunk\base) + from * word))
+                \out: (cast: (@: void) ((cast: (@: char) (cast: (@: void) lmx_chunk_data(chunk))) + from * word))
                 return: c.LMX_SCRATCH_OK
             # The pool seated them elsewhere (it no longer counts that chunk as its own):
             # they stay taken as a small gap, and the request goes to the cold path.
@@ -80,7 +80,7 @@ fn: lmx_scratch_take (@: LmxScratch s; size_t: bytes; @@: void out) int
     if: got = 0
         return: c.LMX_SCRATCH_NOMEM
     s\at: s\cells\tail
-    s\used: s\at\count
+    s\used: lmx_chunk_cells(s\at, s\cells\stride)
     \out: got
 return: c.LMX_SCRATCH_OK
 

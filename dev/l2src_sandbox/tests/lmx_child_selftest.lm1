@@ -188,7 +188,7 @@ fn: main () int
     # before reading any Thread-tail field, then restore the real child.
     forged_pool: lmx_pool_make(@ child, 2U * c.sizeof(c.LmxThread), c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD)
     if: forged_pool != 0
-        forged_base: (cast: (@: char) forged_pool\head\base)
+        forged_base: (cast: (@: char) (cast: (@: void) lmx_chunk_data(forged_pool\head)))
         forged: (cast: (@: LmxMsg) forged_base)
         forged_neighbour: (cast: (@: size_t) (forged_base + c.sizeof(c.LmxThread)))
         \forged_neighbour: forged_neighbour_value
@@ -244,13 +244,13 @@ fn: main () int
     #    copied, so the third child must not exist -- and neither must a trace of it: the slot
     #    stays as it was, the child's arena keeps exactly its entries, and the turn's list of
     #    prepared children stays empty.
-    held: child_at\count
+    held: lmx_arena_index_len(child_at)
     child_check(counts, lmx_thread_enter(turn_owner) = c.LMX_THREAD_OK, "the refusing turn did not open")
     refused: lmx_child_reserve(turn_owner, @ src, @ child, lmx_arena_ref_cell(parent, 0U), bad)
     child_check(counts, refused = 0, "a reservation over an unclassifiable child was accepted")
     child_check(counts, turn_owner\prepared = 0, "a refused reservation stayed in the turn's list")
     child_check(counts, lmx_arena_ref_value(parent, 0U) = (cast: (@: void) message), "the refused reservation left the slot alone")
-    child_check(counts, child_at\count = held, "the refused reservation left the child's arena as it was")
+    child_check(counts, lmx_arena_index_len(child_at) = held, "the refused reservation left the child's arena as it was")
     child_check(counts, lmx_thread_leave(turn_owner) = c.LMX_THREAD_OK, "the refusing turn did not close")
     child_check(counts, lmx_turn_end(turn_owner, lmx_clock_ticks()) = c.LMX_TURN_OK, "the boundary refused the refusing turn")
 
@@ -261,10 +261,10 @@ fn: main () int
     child_check(counts, unjoined_result != 0 && lmx_arena_refs_open_owned(@ src, unjoined_result, 1U) = 0, "unjoined result holder exists")
     child_check(counts, lmx_thread_enter(turn_owner) = c.LMX_THREAD_OK, "the unjoined turn did not open")
     unjoined_message: lmx_child_reserve(turn_owner, @ src, @ unjoined, lmx_arena_ref_cell(unjoined_result, 0U), source)
-    child_check(counts, unjoined_message != 0 && unjoined_at\count != 0U, "unjoined child was not reserved")
+    child_check(counts, unjoined_message != 0 && lmx_arena_index_len(unjoined_at) != 0U, "unjoined child was not reserved")
     child_check(counts, lmx_thread_leave(turn_owner) = c.LMX_THREAD_OK, "the unjoined turn did not close")
     child_check(counts, lmx_turn_end(turn_owner, lmx_clock_ticks()) = c.LMX_TURN_INVALID, "unjoined reservation did not fail its boundary")
-    child_check(counts, lmx_arena_ref_value(unjoined_result, 0U) = 0 && unjoined_at\count = 0U && unjoined_at\blocks = 0 && unjoined_at\arrays = 0 && turn_owner\prepared = 0 && lmx_thread_child_count(turn_owner) = 2U, "unjoined reservation published or leaked storage/membership")
+    child_check(counts, lmx_arena_ref_value(unjoined_result, 0U) = 0 && lmx_arena_index_len(unjoined_at) = 0U && unjoined_at\blocks = 0 && unjoined_at\arrays = 0 && turn_owner\prepared = 0 && lmx_thread_child_count(turn_owner) = 2U, "unjoined reservation published or leaked storage/membership")
 
     # 7. Handoff: the arena of a finished child attaches to the parent's, so ONE index
     #    answers for both and nothing is copied.  The precondition is the child's own
@@ -280,11 +280,11 @@ fn: main () int
     child_check(counts, lmx_child_handoff(@ src, @ child, message) = 0, "the handoff refused a handoff-safe child")
     child_check(counts, lmx_range_classify(@ src, (cast: (@: void) message)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "the child's record answers in the parent's arena after the handoff")
     child_check(counts, lmx_range_classify(@ src, (cast: (@: void) message\graph)) = c.LMX_KIND_STRUCT, "the child's graph answers in the parent's arena after the handoff")
-    child_check(counts, child_at\count = 0U && child_at\blocks = 0 && child_at\arrays = 0, "the child's arena is empty after the handoff")
+    child_check(counts, lmx_arena_index_len(child_at) = 0U && child_at\blocks = 0 && child_at\arrays = 0, "the child's arena is empty after the handoff")
 
-    child_check(counts, lmx_arena_release(@ child) = 0 && child_at\count = 0U, "the child's arena released")
-    child_check(counts, lmx_arena_release(@ unjoined) = 0 && unjoined_at\count = 0U, "the unjoined arena released")
-    child_check(counts, lmx_arena_release(@ src) = 0 && src_at\count = 0U, "the world's arena released")
+    child_check(counts, lmx_arena_release(@ child) = 0 && lmx_arena_index_len(child_at) = 0U, "the child's arena released")
+    child_check(counts, lmx_arena_release(@ unjoined) = 0 && lmx_arena_index_len(unjoined_at) = 0U, "the unjoined arena released")
+    child_check(counts, lmx_arena_release(@ src) = 0 && lmx_arena_index_len(src_at) = 0U, "the world's arena released")
     failures: counts[1]
     c.printf("child checks=%d failures=%d\n", counts[0], failures)
     free(counts)

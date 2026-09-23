@@ -213,8 +213,8 @@ fn: main () int
     cc_check(counts, lmx_thread_child_is(r0, child_t_2) != 0, "the second child was not published in R0's children Array")
     cc_check(counts, lmx_thread_child_is(r0, child_t_2) != 0, "the second child is not a live direct child of R0")
     cc_check(counts, lmx_service_count(service) = 3U, "the service does not hold R0 and both live children")
-    child_blocks_before: child_at\count
-    second_blocks_before: child_at_2\count
+    child_blocks_before: lmx_arena_index_len(child_at)
+    second_blocks_before: lmx_arena_index_len(child_at_2)
     cc_check(counts, child_at\blocks != 0 && child_blocks_before > 0U, "the child's arena holds nothing before the close")
     cc_check(counts, child_at_2\blocks != 0 && second_blocks_before > 0U, "the second child's arena holds nothing before the close")
 
@@ -225,15 +225,15 @@ fn: main () int
     cc_check(counts, lmx_root_close(@ root) = c.LMX_ROOT_OK, "R0 did not close")
     cc_check(counts, lmx_root_state(@ root) = c.LMX_ROOT_CLOSED, "closed root does not say closed")
 
-    child_blocks_after: child_at\count
-    second_blocks_after: child_at_2\count
+    child_blocks_after: lmx_arena_index_len(child_at)
+    second_blocks_after: lmx_arena_index_len(child_at_2)
 
     # The standard close is synchronous: each direct child recursively closes its own level,
     # publishes the safe boundary, and is removed before its arena is released. After return only
     # probe-owned arena headers and the by-value Root handle may be read.
     cc_check(counts, child_blocks_after = 0U, "first child arena survived synchronous close")
     cc_check(counts, second_blocks_after = 0U, "second child arena survived synchronous close")
-    cc_check(counts, root_at\blocks = 0 && root_at\count = 0U, "R0 arena survived completed close")
+    cc_check(counts, root_at\blocks = 0 && lmx_arena_index_len(root_at) = 0U, "R0 arena survived completed close")
     cc_check(counts, lmx_service_count(service) = 0U, "service survived completed close")
 
     failures: counts[1]

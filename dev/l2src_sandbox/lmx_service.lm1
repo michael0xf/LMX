@@ -7,6 +7,54 @@ include: "<stdlib.h>" "<string.h>" "<stdint.h>"
 # (bounded comparisons); the key is the executable Message-prefix address. Because Message is the
 # first by-value Thread member, this is also the LmxThread pointer value. No lmx_address.
 
+
+
+fn: lmx_service_entries_data (@: LmxService service) @: LmxServiceEntry
+    @: LmxServiceEntryDynamicArray da
+    if: service = 0
+        return: 0
+    da: @ service\entries
+return: da\data
+
+fn: lmx_service_entries_len (@: LmxService service) size_t
+    @: LmxServiceEntryDynamicArray da
+    if: service = 0
+        return: 0U
+    da: @ service\entries
+return: da\len
+
+fn: lmx_service_entries_cap (@: LmxService service) size_t
+    @: LmxServiceEntryDynamicArray da
+    if: service = 0
+        return: 0U
+    da: @ service\entries
+return: da\capacity
+
+fn: lmx_service_entries_set_data (@: LmxService service; @: LmxServiceEntry data) void
+    @: LmxServiceEntryDynamicArray da
+    if: service = 0
+        return
+    da: @ service\entries
+    da\data: data
+return
+
+fn: lmx_service_entries_set_len (@: LmxService service; size_t: len) void
+    @: LmxServiceEntryDynamicArray da
+    if: service = 0
+        return
+    da: @ service\entries
+    da\len: len
+return
+
+fn: lmx_service_entries_set_cap (@: LmxService service; size_t: capacity) void
+    @: LmxServiceEntryDynamicArray da
+    if: service = 0
+        return
+    da: @ service\entries
+    da\capacity: capacity
+return
+
+
 fn: lmx_service_compare (@: void a; @: void b) int
     uintptr_t: aa
     uintptr_t: bb
@@ -25,10 +73,10 @@ fn: lmx_service_reserve (@: LmxService service; size_t: need) int
     @: LmxServiceEntry moved
     if: service = 0
         return: c.LMX_SERVICE_INVALID
-    if: need <= service\capacity
+    if: need <= lmx_service_entries_cap(service)
         return: c.LMX_SERVICE_OK
     ---
-    capacity: service\capacity
+    capacity: lmx_service_entries_cap(service)
     if: capacity = 0U
         capacity: 4U
     ---
@@ -36,18 +84,18 @@ fn: lmx_service_reserve (@: LmxService service; size_t: need) int
         capacity: capacity * 2U
     ---
     # The ENTRIES move, the records never do: that is the whole reason a service may grow at all.
-    moved: (cast: (@: LmxServiceEntry) realloc((cast: (@: void) service\entries), capacity * c.sizeof(c.LmxServiceEntry)))
+    moved: (cast: (@: LmxServiceEntry) realloc((cast: (@: void) lmx_service_entries_data(service)), capacity * c.sizeof(c.LmxServiceEntry)))
     if: moved = 0
         return: c.LMX_SERVICE_FULL
     ---
-    service\entries: moved
-    service\capacity: capacity
+    lmx_service_entries_set_data(service, moved)
+    lmx_service_entries_set_cap(service, capacity)
 return: c.LMX_SERVICE_OK
 
 fn: lmx_service_open (@: LmxService service) int
     if: service = 0
         return: c.LMX_SERVICE_INVALID
-    if: service\entries != 0 || service\count != 0U || service\capacity != 0U
+    if: lmx_service_entries_data(service) != 0 || lmx_service_entries_len(service) != 0U || lmx_service_entries_cap(service) != 0U
         return: c.LMX_SERVICE_INVALID
     ---
 return: c.LMX_SERVICE_OK
@@ -55,14 +103,14 @@ return: c.LMX_SERVICE_OK
 fn: lmx_service_count (@: LmxService service) size_t
     if: service = 0
         return: 0U
-return: service\count
+return: lmx_service_entries_len(service)
 
 fn: lmx_service_at (@: LmxService service; size_t: index) @: void
     @: LmxServiceEntry entry
-    if: service = 0 || index >= service\count
+    if: service = 0 || index >= lmx_service_entries_len(service)
         return: 0
     ---
-    entry: service\entries + index
+    entry: lmx_service_entries_data(service) + index
 return: entry\target
 
 # Where this physical address belongs in the order: the first entry that does not sort before it.
@@ -73,10 +121,10 @@ fn: lmx_service_point (@: LmxService service; @: void address) size_t
     size_t: middle
     int: order
     low: 0U
-    high: service\count
+    high: lmx_service_entries_len(service)
     while: low < high
         middle: (low + high) / 2U
-        entry: service\entries + middle
+        entry: lmx_service_entries_data(service) + middle
         order: lmx_service_compare(entry\address, address)
         if: order < 0
             low: middle + 1U
@@ -88,24 +136,24 @@ return: low
 
 fn: lmx_service_open_room (@: LmxService service; size_t: at) int
     @: LmxServiceEntry entry
-    if: at > service\count
+    if: at > lmx_service_entries_len(service)
         return: c.LMX_SERVICE_INVALID
-    if: service\count = at
+    if: lmx_service_entries_len(service) = at
         return: c.LMX_SERVICE_OK
     ---
-    entry: service\entries + at
-    memmove((cast: (@: void) (entry + 1U)), (cast: (@: void) entry), (service\count - at) * c.sizeof(c.LmxServiceEntry))
+    entry: lmx_service_entries_data(service) + at
+    memmove((cast: (@: void) (entry + 1U)), (cast: (@: void) entry), (lmx_service_entries_len(service) - at) * c.sizeof(c.LmxServiceEntry))
 return: c.LMX_SERVICE_OK
 
 fn: lmx_service_close_gap (@: LmxService service; size_t: at) int
     @: LmxServiceEntry entry
-    if: at >= service\count
+    if: at >= lmx_service_entries_len(service)
         return: c.LMX_SERVICE_INVALID
-    entry: service\entries + at
-    if: at + 1U < service\count
-        memmove((cast: (@: void) entry), (cast: (@: void) (entry + 1U)), (service\count - at - 1U) * c.sizeof(c.LmxServiceEntry))
+    entry: lmx_service_entries_data(service) + at
+    if: at + 1U < lmx_service_entries_len(service)
+        memmove((cast: (@: void) entry), (cast: (@: void) (entry + 1U)), (lmx_service_entries_len(service) - at - 1U) * c.sizeof(c.LmxServiceEntry))
     ---
-    service\count: service\count - 1U
+    lmx_service_entries_set_len(service, lmx_service_entries_len(service) - 1U)
 return: c.LMX_SERVICE_OK
 
 fn: lmx_service_register (@: LmxService service; @: LmxThread target; @: LmxArena target_arena) int
@@ -130,15 +178,15 @@ fn: lmx_service_register (@: LmxService service; @: LmxThread target; @: LmxAren
         ---
         return: c.LMX_SERVICE_INVALID
     ---
-    if: lmx_service_reserve(service, service\count + 1U) != c.LMX_SERVICE_OK
+    if: lmx_service_reserve(service, lmx_service_entries_len(service) + 1U) != c.LMX_SERVICE_OK
         return: c.LMX_SERVICE_FULL
     ---
     # The key is the physical Message address; the first-member invariant makes it the Thread
     # address too, without substituting one record type for the other.
     key: (cast: (@: void) target)
     point: lmx_service_point(service, key)
-    if: point < service\count
-        entry: service\entries + point
+    if: point < lmx_service_entries_len(service)
+        entry: lmx_service_entries_data(service) + point
         if: lmx_service_compare(entry\address, key) = 0
             return: c.LMX_SERVICE_DUPLICATE
         ---
@@ -146,12 +194,12 @@ fn: lmx_service_register (@: LmxService service; @: LmxThread target; @: LmxAren
     if: lmx_service_open_room(service, point) != c.LMX_SERVICE_OK
         return: c.LMX_SERVICE_INVALID
     ---
-    entry: service\entries + point
+    entry: lmx_service_entries_data(service) + point
     entry\address: key
     entry\target: key
     entry\arena: target_arena
     entry\service: service
-    service\count: service\count + 1U
+    lmx_service_entries_set_len(service, lmx_service_entries_len(service) + 1U)
     # The record knows its own entry from here on.
     target\service: (cast: (@: void) service)
 return: c.LMX_SERVICE_OK
@@ -162,10 +210,10 @@ fn: lmx_service_find (@: LmxService service; @: void address) @: void
     if: service = 0 || address = 0
         return: 0
     point: lmx_service_point(service, address)
-    if: point >= service\count
+    if: point >= lmx_service_entries_len(service)
         return: 0
     ---
-    entry: service\entries + point
+    entry: lmx_service_entries_data(service) + point
     if: lmx_service_compare(entry\address, address) != 0
         return: 0
     ---
@@ -182,13 +230,13 @@ fn: lmx_service_post (@: LmxService service; @: void address; @: LmxMsg letter; 
     if: service = 0 || address = 0 || letter = 0
         return: c.LMX_SERVICE_INVALID
     point: lmx_service_point(service, address)
-    if: point >= service\count
+    if: point >= lmx_service_entries_len(service)
         if: letter_arena != 0
             lmx_arena_release(letter_arena)
         ---
         return: c.LMX_SERVICE_MISSING
     ---
-    entry: service\entries + point
+    entry: lmx_service_entries_data(service) + point
     if: lmx_service_compare(entry\address, address) != 0
         if: letter_arena != 0
             lmx_arena_release(letter_arena)
@@ -223,10 +271,10 @@ fn: lmx_service_unregister (@: LmxService service; @: LmxThread target) int
         return: c.LMX_SERVICE_INVALID
     key: (cast: (@: void) target)
     point: lmx_service_point(service, key)
-    if: point >= service\count
+    if: point >= lmx_service_entries_len(service)
         return: c.LMX_SERVICE_MISSING
     ---
-    entry: service\entries + point
+    entry: lmx_service_entries_data(service) + point
     if: lmx_service_compare(entry\address, key) != 0
         return: c.LMX_SERVICE_MISSING
     ---
@@ -248,13 +296,13 @@ fn: lmx_service_release (@: LmxService service) int
     # The registry does not own the target arenas and therefore must never walk/dereference them
     # during destruction.  Every live target must be explicitly unregistered while its arena is
     # known alive; release refuses to hide a stale route or turn that contract into a UAF.
-    if: service\count != 0U
+    if: lmx_service_entries_len(service) != 0U
         return: c.LMX_SERVICE_INVALID
     ---
-    if: service\entries != 0
-        free((cast: (@: void) service\entries))
+    if: lmx_service_entries_data(service) != 0
+        free((cast: (@: void) lmx_service_entries_data(service)))
     ---
-    service\entries: 0
-    service\count: 0U
-    service\capacity: 0U
+    lmx_service_entries_set_data(service, 0)
+    lmx_service_entries_set_len(service, 0U)
+    lmx_service_entries_set_cap(service, 0U)
 return: c.LMX_SERVICE_OK

@@ -1,4 +1,4 @@
-﻿include: "<stddef.h>"
+include: "<stddef.h>"
 predef: "l2src/lmx.h.lm1"
 predef: "l2src/lmx_arena.h.lm1"
 predef: "l2src/lmx_message.h.lm1"
@@ -53,11 +53,20 @@ struct: LmxServiceEntry
     @: LmxService service
 end: LmxServiceEntry
 
-# The service, as data.  The entries are one ordered array: `count` of them, in `capacity` room.
-struct: LmxService
-    @: LmxServiceEntry entries
-    size_t: count
+# Fixed array of service registry entries (declare once; element type LmxServiceEntry).
+
+
+# The service, as data.  Entries are one ordered DynamicArray (Q18).
+
+
+struct: LmxServiceEntryDynamicArray
+    size_t: len
+    @: LmxServiceEntry data
     size_t: capacity
+end: LmxServiceEntryDynamicArray
+
+struct: LmxService
+    LmxServiceEntryDynamicArray: entries
 end: LmxService
 prototype:
     # Zero the service.  A by-value service must be cleared before it is opened; opening a
@@ -83,4 +92,10 @@ prototype:
     fn: lmx_service_count (@: LmxService service) size_t
     # The i-th record in PHYSICAL-ADDRESS order: what the ordering itself is checked by.
     fn: lmx_service_at (@: LmxService service; size_t: index) @: void
+    fn: lmx_service_entries_data (@: LmxService service) @: LmxServiceEntry
+    fn: lmx_service_entries_len (@: LmxService service) size_t
+    fn: lmx_service_entries_cap (@: LmxService service) size_t
+    fn: lmx_service_entries_set_data (@: LmxService service; @: LmxServiceEntry data) void
+    fn: lmx_service_entries_set_len (@: LmxService service; size_t: len) void
+    fn: lmx_service_entries_set_cap (@: LmxService service; size_t: capacity) void
 end: prototype

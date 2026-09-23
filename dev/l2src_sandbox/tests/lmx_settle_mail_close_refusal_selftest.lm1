@@ -120,9 +120,9 @@ fn: main () int
     # A legal, deterministic close refusal: a nonempty inbox with zero capacity is malformed, and
     # lmx_post_close refuses before consuming or freeing anything. Preserve the real capacity so the
     # fixture can restore and clean up after proving the transactional boundary.
-    success_capacity: success_mail\inbox_capacity
+    success_capacity: lmx_post_inbox_cap(success_mail)
     success_mail\inbox_count: 1U
-    success_mail\inbox_capacity: 0U
+    lmx_post_inbox_set_cap(success_mail, 0U)
     sr_check(counts, lmx_settle_one(parent, @ parent_arena, @ service, success, 1U) = c.LMX_SETTLE_INVALID, "successful child settle did not report mail-close refusal")
     sr_check(counts, lmx_thread_child_is(parent, success) != 0, "successful child membership was lost before refused mail close")
     sr_check(counts, lmx_service_find(@ service, (cast: (@: void) success)) = (cast: (@: void) success), "successful child route was lost before refused mail close")
@@ -131,9 +131,9 @@ fn: main () int
     sr_check(counts, lmx_range_classify(@ parent_arena, success_cell) = c.LMX_KIND_NONE, "successful child arena was attached on refused close")
     sr_check(counts, lmx_arena_ref_value(parent_graph, 0U) = (cast: (@: void) success), "successful child result was cleared on refused close")
 
-    failure_capacity: failure_mail\inbox_capacity
+    failure_capacity: lmx_post_inbox_cap(failure_mail)
     failure_mail\inbox_count: 1U
-    failure_mail\inbox_capacity: 0U
+    lmx_post_inbox_set_cap(failure_mail, 0U)
     sr_check(counts, lmx_settle_one(parent, @ parent_arena, @ service, failure, 1U) = c.LMX_SETTLE_INVALID, "failed child settle did not report mail-close refusal")
     sr_check(counts, lmx_thread_child_is(parent, failure) != 0, "failed child membership was lost before refused mail close")
     sr_check(counts, lmx_service_find(@ service, (cast: (@: void) failure)) = (cast: (@: void) failure), "failed child route was lost before refused mail close")
@@ -146,9 +146,9 @@ fn: main () int
 
     # Restore only the deliberate malformed words, then release through the ordinary owner order.
     success_mail\inbox_count: 0U
-    success_mail\inbox_capacity: success_capacity
+    lmx_post_inbox_set_cap(success_mail, success_capacity)
     failure_mail\inbox_count: 0U
-    failure_mail\inbox_capacity: failure_capacity
+    lmx_post_inbox_set_cap(failure_mail, failure_capacity)
     lmx_service_unregister(@ service, success)
     lmx_service_unregister(@ service, failure)
     lmx_thread_child_remove(parent, success)

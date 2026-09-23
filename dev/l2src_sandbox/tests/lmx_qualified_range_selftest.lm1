@@ -109,7 +109,7 @@ fn: main () int
     qcheck(lmx_range_type_of(@ owner_a, (cast: (@: void) a_triple)) = c.LMX_TYPE_STRUCT && lmx_range_type_of(@ owner_a, (cast: (@: void) a_other)) = c.LMX_TYPE_STRUCT, "same exact representation type remains STRUCT")
     qcheck(lmx_range_profile(@ owner_a, (cast: (@: void) a_triple)) = triple_at && lmx_range_profile(@ owner_a, (cast: (@: void) a_other)) = const_immutable_at, "address ranges distinguish physical profiles")
     first_entry: lmx_range_entry_at(owner_a_at, (cast: (@: void) a_triple))
-    qcheck(first_entry != 0 && lmx_range_add_view(atomic_at, owner_a_at, first_entry\array, first_entry\lo, first_entry\hi) != 0 && atomic_at\count = 0U, "direct mutable foreign view is refused")
+    qcheck(first_entry != 0 && lmx_range_add_view(atomic_at, owner_a_at, first_entry\array, first_entry\lo, first_entry\hi) != 0 && lmx_arena_index_len(atomic_at) = 0U, "direct mutable foreign view is refused")
 
     qcheck(lmx_pool_seal(pool_a_triple) = 0 && lmx_pool_seal(pool_b_triple) = 0 && lmx_pool_seal(pool_a_other) = 0 && lmx_pool_seal(pool_b_plain) = 0, "owner arrays seal")
     qcheck(lmx_pool_take(@ owner_a, pool_a_triple) = 0, "sealed array cannot hand out another cell")
@@ -123,12 +123,12 @@ fn: main () int
     qcheck(lmx_range_import(@ middle, @ owner_a) = 0, "first owner imports into middle")
     qcheck(lmx_range_import(@ borrower, @ middle) = 0, "import is transitive")
     qcheck(lmx_range_import(@ borrower, @ owner_b) = 0, "second owner imports into borrower")
-    held: borrower_at\count
+    held: lmx_arena_index_len(borrower_at)
     # White-box the capacity down to the exact live count while keeping the larger allocated
     # block: an exact duplicate must return before reserve/realloc and preserve all metadata.
-    borrower_at\capacity: held
-    held_index: borrower_at\index
-    qcheck(lmx_range_import(@ borrower, @ owner_a) = 0 && borrower_at\count = held && borrower_at\capacity = held && borrower_at\index = held_index, "exact repeat import is idempotent and allocation-free")
+    lmx_arena_index_set_cap(borrower_at, held)
+    held_index: lmx_arena_index_data(borrower_at)
+    qcheck(lmx_range_import(@ borrower, @ owner_a) = 0 && lmx_arena_index_len(borrower_at) = held && lmx_arena_index_cap(borrower_at) = held && lmx_arena_index_data(borrower_at) = held_index, "exact repeat import is idempotent and allocation-free")
     qcheck(lmx_range_classify(@ borrower, (cast: (@: void) a_triple)) = c.LMX_KIND_STRUCT && lmx_range_classify(@ borrower, (cast: (@: void) b_triple)) = c.LMX_KIND_STRUCT, "borrower classifies both owners")
     qcheck(lmx_range_home(@ borrower, (cast: (@: void) a_triple)) = (@ owner_a) && lmx_range_home(@ borrower, (cast: (@: void) b_triple)) = (@ owner_b), "import preserves each true owner")
     qcheck(lmx_range_pool(@ borrower, (cast: (@: void) a_triple)) = 0 && lmx_range_interval_pool(@ borrower, (cast: (@: void) a_triple)) = 0, "borrower never adopts imported storage")
@@ -139,13 +139,13 @@ fn: main () int
 
     # Import is all-or-nothing.  Arrange a conflict on the last source interval: without
     # preflight, an earlier interval would already have been installed when it is found.
-    qcheck(owner_a_at\count >= 2U, "transactional-import source has two sealed intervals")
-    if: owner_a_at\count >= 2U
-        first_entry: owner_a_at\index
-        last_entry: owner_a_at\index + (owner_a_at\count - 1U)
+    qcheck(lmx_arena_index_len(owner_a_at) >= 2U, "transactional-import source has two sealed intervals")
+    if: lmx_arena_index_len(owner_a_at) >= 2U
+        first_entry: lmx_arena_index_data(owner_a_at)
+        last_entry: lmx_arena_index_data(owner_a_at) + (lmx_arena_index_len(owner_a_at) - 1U)
         qcheck(lmx_range_add_view(atomic_at, @ owner_b, pool_b_plain, last_entry\lo, last_entry\hi) = 0, "conflicting borrower row installed for preflight")
-        held: atomic_at\count
-        qcheck(lmx_range_import(atomic_at, owner_a_at) != 0 && atomic_at\count = held, "failed import leaves no earlier source row behind")
+        held: lmx_arena_index_len(atomic_at)
+        qcheck(lmx_range_import(atomic_at, owner_a_at) != 0 && lmx_arena_index_len(atomic_at) = held, "failed import leaves no earlier source row behind")
         qcheck(lmx_range_classify(atomic_at, first_entry\lo) = c.LMX_KIND_NONE, "failed import exposes none of the insertable prefix")
     ---
 

@@ -68,7 +68,7 @@ fn: main () int
     pm_a: (cast: (@: void) letters)
     pm_b: (cast: (@: void) (letters + 1))
 
-    if: pm_box\inbox_capacity != c.LMX_POST_INBOX_MIN_CAPACITY || pm_box\inbox_count != 0U
+    if: lmx_post_inbox_cap(@ box) != c.LMX_POST_INBOX_MIN_CAPACITY || pm_box\inbox_count != 0U
         failures: failures + 1
     ---
 
@@ -90,10 +90,10 @@ fn: main () int
     if: lmx_post_accept(@ arena, @ box, pm_a, c.LMX_POST_INBOX) != c.LMX_POST_OK || lmx_post_accept(@ arena, @ box, pm_b, c.LMX_POST_INBOX) != c.LMX_POST_OK
         failures: failures + 1
     ---
-    if: pm_box\inbox_capacity != 2U || pm_box\inbox_count != 2U
+    if: lmx_post_inbox_cap(@ box) != 2U || pm_box\inbox_count != 2U
         failures: failures + 1
     ---
-    if: lmx_post_accept(@ arena, @ box, pm_a, c.LMX_POST_INBOX) != c.LMX_POST_OK || pm_box\inbox_capacity != 3U
+    if: lmx_post_accept(@ arena, @ box, pm_a, c.LMX_POST_INBOX) != c.LMX_POST_OK || lmx_post_inbox_cap(@ box) != 3U
         failures: failures + 1
     ---
     if: lmx_post_take(@ box, c.LMX_POST_INBOX) != pm_a
@@ -102,7 +102,7 @@ fn: main () int
     if: lmx_post_accept(@ arena, @ box, pm_b, c.LMX_POST_INBOX) != c.LMX_POST_OK || lmx_post_accept(@ arena, @ box, pm_a, c.LMX_POST_INBOX) != c.LMX_POST_OK
         failures: failures + 1
     ---
-    if: pm_box\inbox_capacity != 4U || pm_box\inbox_count != 4U
+    if: lmx_post_inbox_cap(@ box) != 4U || pm_box\inbox_count != 4U
         failures: failures + 1
     ---
     if: lmx_post_take(@ box, c.LMX_POST_INBOX) != pm_b
@@ -148,7 +148,7 @@ fn: main () int
     # Do not consume until both producers finish: the ring must grow to hold all 20,000 entries.
     c.WaitForSingleObject(ha, c.INFINITE)
     c.WaitForSingleObject(hb, c.INFINITE)
-    if: lmx_post_count(@ box, c.LMX_POST_INBOX) != 2U * c.LMX_POST_MPSC_N || pm_box\inbox_capacity < 2U * c.LMX_POST_MPSC_N
+    if: lmx_post_count(@ box, c.LMX_POST_INBOX) != 2U * c.LMX_POST_MPSC_N || lmx_post_inbox_cap(@ box) < 2U * c.LMX_POST_MPSC_N
         failures: failures + 1
     ---
     c.CloseHandle(ha)
@@ -175,7 +175,7 @@ fn: main () int
     if: lmx_post_count(@ box, c.LMX_POST_INBOX) != 0U || pm_box\inbox_head != pm_box\inbox_tail
         failures: failures + 1
     ---
-    c.printf("lmx_post_mpsc a=%u b=%u total=%u capacity=%u checks=17 failures=%d\n", (cast: (unsigned) na), (cast: (unsigned) nb), (cast: (unsigned) total), (cast: (unsigned) pm_box\inbox_capacity), failures)
+    c.printf("lmx_post_mpsc a=%u b=%u total=%u capacity=%u checks=17 failures=%d\n", (cast: (unsigned) na), (cast: (unsigned) nb), (cast: (unsigned) total), (cast: (unsigned) lmx_post_inbox_cap(@ box)), failures)
     lmx_post_close(@ arena, @ box)
     lmx_arena_release(@ arena)
 return: failures

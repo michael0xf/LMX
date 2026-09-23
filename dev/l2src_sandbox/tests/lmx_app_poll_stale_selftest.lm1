@@ -390,8 +390,8 @@ fn: pw_scenario (int: with_mail; @: int counts) int
     pw_check(counts, msg_b\running = 0 && msg_b\handoff_ready != 0, "the silent child was not closed at its window")
     pw_check(counts, lmx_settle_ready(msg_b) != 0, "the closed child did not become settlable")
     pw_check(counts, lmx_thread_mail_count(t_b, c.LMX_POST_INBOX) = (cast: (size_t) with_mail), "the letter was read by someone at the window")
-    b_count_before: b_at\count
-    a_count_before: a_at\count
+    b_count_before: lmx_arena_index_len(b_at)
+    a_count_before: lmx_arena_index_len(a_at)
     pw_check(counts, b_count_before > 0U && b_at\blocks != 0, "B arena empty at the window")
     pw_check(counts, lmx_orphan_count(orphans) = 0U, "something was adopted at the window")
     c.printf("PW POLL mail=%d stamp=%u stopped=%u b_running=%d b_handoff=%d b_mail=%u svc=%u\n",
@@ -407,8 +407,8 @@ fn: pw_scenario (int: with_mail; @: int counts) int
     pw_check(counts, pw_a_turns = 4U && msg_a\success = 1 && msg_a\running = 0, "A did not end by success")
     pw_check(counts, msg_a\handoff_ready != 0, "A did not mark itself handoff-safe")
     pw_check(counts, lmx_settle_children(r0, root_arena, service, manager, base + 2003U) = c.LMX_SETTLE_OK, "the chain settle did not run")
-    pw_check(counts, b_at\count = 0U && b_at\blocks = 0, "B's arena did not attach into A's")
-    pw_check(counts, a_at\count = 0U && a_at\blocks = 0, "A's arena was not released whole")
+    pw_check(counts, lmx_arena_index_len(b_at) = 0U && b_at\blocks = 0, "B's arena did not attach into A's")
+    pw_check(counts, lmx_arena_index_len(a_at) = 0U && a_at\blocks = 0, "A's arena was not released whole")
     pw_check(counts, lmx_thread_child_is(r0, t_a) = 0, "R0 children Array still names a gone A")
     svc_end: lmx_service_count(service)
     pw_check(counts, svc_end = 1U, "service is not R0 alone after the chain")
@@ -416,7 +416,7 @@ fn: pw_scenario (int: with_mail; @: int counts) int
     pw_check(counts, lmx_orphan_count(orphans) = 0U && lmx_orphan_reclaimed(orphans) = 0U, "the chain was rerouted instead of closed")
     c.printf("PW CHAIN mail=%d a_turns=%u b_count %u->%u svc_end=%u orphans=%u\n",
              with_mail, (cast: (unsigned) pw_a_turns),
-             (cast: (unsigned) b_count_before), (cast: (unsigned) b_at\count),
+             (cast: (unsigned) b_count_before), (cast: (unsigned) lmx_arena_index_len(b_at)),
              (cast: (unsigned) svc_end),
              (cast: (unsigned) lmx_orphan_count(orphans)))
     c.fflush(0)

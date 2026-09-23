@@ -87,11 +87,11 @@ fn: main () int
     if: graph = 0 || graph2 = 0 || foreign_graph = 0 || thread = 0 || candidate = 0 || letter = 0 || mail = 0 || candidate_mail = 0 || foreign_mail = 0 || slot = 0 || candidate_slot = 0 || wrong_owner_slot = 0 || foreign_slot = 0 || forged_pool = 0 || wrong_stride_pool = 0
         return: 2
     ---
-    forged_base: (cast: (@: char) forged_pool\head\base)
+    forged_base: (cast: (@: char) (cast: (@: void) lmx_chunk_data(forged_pool\head)))
     forged: (cast: (@: LmxMsg) forged_base)
     neighbour: (cast: (@: size_t) (forged_base + c.sizeof(c.LmxThread)))
     \neighbour: neighbour_value
-    wrong_stride_thread: (cast: (@: LmxThread) wrong_stride_pool\head\base)
+    wrong_stride_thread: (cast: (@: LmxThread) (cast: (@: void) lmx_chunk_data(wrong_stride_pool\head)))
     prefix_check(lmx_post_init(@ arena, mail) = c.LMX_POST_OK, "mail init")
     prefix_check(lmx_schedule_init(slot, @ arena, (cast: (@: void) thread), 8U) = c.LMX_SCHEDULE_OK, "schedule init")
     prefix_check(lmx_thread_init(@ arena, thread, graph, mail, slot) = c.LMX_THREAD_OK, "Thread init")

@@ -65,8 +65,8 @@ fn: lmx_gc_cells (@: LmxArena arena; @: LmxPool pool; @: LmxChunk chunk; unsigne
         return: c.LMX_GC_OK
     ---
     index: 0U
-    while: index < chunk\count
-        cell: (cast: (@: char) chunk\base) + (index * pool\stride)
+    while: index < lmx_chunk_cells(chunk, pool\stride)
+        cell: (cast: (@: char) lmx_chunk_data(chunk)) + (index * pool\stride)
         if: pool\kind = c.LMX_KIND_STRUCT
             # A header is {parent, len, data}: `len` is a count and is never read as an address.
             header: (cast: (@: Lmx) cell)
@@ -225,7 +225,7 @@ fn: lmx_gc_block_live (@: LmxArena arena; @: LmxArenaBlock node; unsigned: gen) 
         ---
         chunk: pool\head
         while: chunk != 0
-            if: chunk\base = node\base || (cast: (@: void) chunk) = node\base
+            if: (cast: (@: void) lmx_chunk_data(chunk)) = node\base || (cast: (@: void) chunk) = node\base
                 if: lmx_pool_is_sealed(pool) != 0 || chunk\mark = gen
                     return: 1
                 ---
@@ -248,7 +248,7 @@ fn: lmx_gc_block_unlink (@: LmxArena arena; @: LmxArenaBlock node; unsigned: gen
             chunk: pool\head
             while: chunk != 0
                 if: chunk\mark != gen
-                    if: chunk\base = node\base || (cast: (@: void) chunk) = node\base
+                    if: (cast: (@: void) lmx_chunk_data(chunk)) = node\base || (cast: (@: void) chunk) = node\base
                         return: lmx_pool_chunk_drop(pool, chunk)
                     ---
                 ---

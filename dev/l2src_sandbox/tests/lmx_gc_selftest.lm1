@@ -208,7 +208,7 @@ fn: main () int
     ---
     incoming_record: (cast: (@: void) child)
     incoming_graph: (cast: (@: void) child\graph)
-    gc_check(counts, incoming_at\count = 0U, "the incoming arena kept entries after the handoff")
+    gc_check(counts, lmx_arena_index_len(incoming_at) = 0U, "the incoming arena kept entries after the handoff")
     gc_check(counts, lmx_range_classify(@ arena, incoming_record) = c.LMX_DOMAIN_KIND_MSG_RECORD, "the transferred record does not answer in B's arena")
 
     # A letter waiting in B's own mailbox: those queue nodes are storage of B's arena, and a
@@ -236,12 +236,12 @@ fn: main () int
 
     # THE ACCEPTANCE CASE, part two: at B's boundary the unrooted graph goes -- exactly once,
     # with its range and index entries removed -- and everything B still reaches stays.
-    entries: arena_at\count
+    entries: lmx_arena_index_len(arena_at)
     blocks: gc_blocks(arena_at)
     gc_check(counts, lmx_gc_collect(@ arena, thread) = c.LMX_GC_OK, "the collection did not run")
     gc_check(counts, lmx_range_classify(@ arena, incoming_record) = c.LMX_KIND_NONE, "the unrooted transferred record survived the boundary")
     gc_check(counts, lmx_range_classify(@ arena, incoming_graph) = c.LMX_KIND_NONE, "the unrooted transferred graph survived the boundary")
-    gc_check(counts, arena_at\count < entries, "the collection retired no entry")
+    gc_check(counts, lmx_arena_index_len(arena_at) < entries, "the collection retired no entry")
     gc_check(counts, lmx_range_classify(@ arena, (cast: (@: void) message)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "the collection freed B's own record")
     gc_check(counts, lmx_range_classify(@ arena, (cast: (@: void) thread)) = c.LMX_DOMAIN_KIND_MSG_RECORD && lmx_range_type_of(@ arena, (cast: (@: void) thread)) = c.LMX_DOMAIN_THREAD, "the collection freed B's own object")
     gc_check(counts, message\graph = graph, "the collection moved B's graph root")
@@ -260,10 +260,10 @@ fn: main () int
 
     # A further boundary must not free it twice: the second pass reaches everything the first
     # one did and finds nothing more to release, so neither the index nor the block list moves.
-    entries: arena_at\count
+    entries: lmx_arena_index_len(arena_at)
     blocks: gc_blocks(arena_at)
     gc_check(counts, lmx_gc_collect(@ arena, thread) = c.LMX_GC_OK, "the second collection did not run")
-    gc_check(counts, arena_at\count = entries, "the second collection moved entries")
+    gc_check(counts, lmx_arena_index_len(arena_at) = entries, "the second collection moved entries")
     gc_check(counts, gc_blocks(arena_at) = blocks, "the second collection freed a block")
     gc_check(counts, gc_disposed = 1U, "the second collection disposed the block a second time")
     gc_check(counts, lmx_range_classify(@ arena, incoming_record) = c.LMX_KIND_NONE, "the second collection resurrected the freed record")
@@ -294,10 +294,10 @@ fn: main () int
     ---
     first_root: deep
     lmx_arena_ref_store(graph, 2U, (cast: (@: void) first_root))
-    entries: arena_at\count
+    entries: lmx_arena_index_len(arena_at)
     blocks: gc_blocks(arena_at)
     gc_check(counts, lmx_gc_collect(@ arena, thread) = c.LMX_GC_PARTIAL, "a chain deeper than the tracer's bound was not refused")
-    gc_check(counts, arena_at\count = entries, "an incomplete mark retired an index entry")
+    gc_check(counts, lmx_arena_index_len(arena_at) = entries, "an incomplete mark retired an index entry")
     gc_check(counts, gc_blocks(arena_at) = blocks, "an incomplete mark freed a block")
     gc_check(counts, lmx_range_classify(@ arena, (cast: (@: void) first_root)) = c.LMX_KIND_STRUCT, "the chain's head did not survive the refused pass")
     gc_check(counts, lmx_range_classify(@ arena, retained_record) = c.LMX_DOMAIN_KIND_MSG_RECORD, "the refused pass disturbed a live root")
@@ -315,7 +315,7 @@ fn: main () int
     if: lmx_arena_release(@ arena) != 0
         answer: 1
     ---
-    gc_check(counts, answer = 0 && arena_at\count = 0U, "the arenas did not release")
+    gc_check(counts, answer = 0 && lmx_arena_index_len(arena_at) = 0U, "the arenas did not release")
     failures: counts[1]
     c.printf("lmx_gc checks=%d failures=%d\n", counts[0], failures)
     free(counts)

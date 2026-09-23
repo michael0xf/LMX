@@ -294,7 +294,7 @@ fn: main () int
     t3_check(counts, lmx_thread_child_first(t3_t_a) = t3_t_b, "B is not in A's own chain before the close")
     t3_check(counts, lmx_service_find(service, (cast: (@: void) t3_t_a)) = (cast: (@: void) t3_t_a), "A has no route before the close")
     t3_check(counts, lmx_service_find(service, (cast: (@: void) t3_t_b)) = (cast: (@: void) t3_t_b), "B has no route before the close")
-    t3_check(counts, mail_a_p\inbox_slots != 0 && mail_b_p\inbox_slots != 0, "a mailbox was never opened before the close")
+    t3_check(counts, lmx_post_inbox_data(mail_a_p) != 0 && lmx_post_inbox_data(mail_b_p) != 0, "a mailbox was never opened before the close")
 
     # THE BOUND IS ARMED COARSELY AND SHORT -- 400 ms through the SAME setter a production close
     # uses for its 60 s default -- so the disarming below is observable in seconds rather than
@@ -308,9 +308,9 @@ fn: main () int
     # Thread pointers after it returns: their arenas have been released by their direct parents.
     t3_check(counts, lmx_root_state(@ root) = c.LMX_ROOT_CLOSED, "the closed root is not CLOSED")
     t3_check(counts, t3_diag = 0U, "a wiring step in this file reported a diagnostic")
-    t3_check(counts, t3_arena_b\blocks = 0 && t3_arena_b\count = 0U, "B's arena survived its parent's synchronous close")
-    t3_check(counts, t3_arena_a\blocks = 0 && t3_arena_a\count = 0U, "A's arena survived R0's synchronous close")
-    t3_check(counts, root_arena\blocks = 0 && root_arena\count = 0U, "R0's arena survived completed close")
+    t3_check(counts, t3_arena_b\blocks = 0 && lmx_arena_index_len(t3_arena_b) = 0U, "B's arena survived its parent's synchronous close")
+    t3_check(counts, t3_arena_a\blocks = 0 && lmx_arena_index_len(t3_arena_a) = 0U, "A's arena survived R0's synchronous close")
+    t3_check(counts, root_arena\blocks = 0 && lmx_arena_index_len(root_arena) = 0U, "R0's arena survived completed close")
     t3_check(counts, lmx_service_count(service) = 0U, "routes survived completed recursive close")
 
     # NO LATE WATCHDOG FIRE, AND IT IS ASSERTED BY NAME.  The close returned, so its process

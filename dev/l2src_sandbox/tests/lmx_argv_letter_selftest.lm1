@@ -139,12 +139,12 @@ fn: main () int
     al_check(counts, letter != 0 && al_holds(@ untaken_arena, letter\graph, 3, words) != 0, "A: the letter carries an Array of char Arrays, NUL kept")
     al_check(counts, letter != 0 && lmx_service_post(lmx_root_service(@ root), (cast: (@: void) lmx_root_thread(@ root)), letter, @ untaken_arena) = c.LMX_SERVICE_OK, "A: posted to R0")
     al_check(counts, lmx_thread_mail_count(lmx_root_thread(@ root), c.LMX_POST_INBOX) = 1U, "A: R0's inbox holds the letter")
-    al_check(counts, untaken_at\count != 0U && untaken_at\blocks != 0, "A: the producer owns the letter's arena before any take")
+    al_check(counts, lmx_arena_index_len(untaken_at) != 0U && untaken_at\blocks != 0, "A: the producer owns the letter's arena before any take")
     al_check(counts, lmx_root_turn(@ root, 1U) = c.LMX_ROOT_OK && al_calls = 1, "A: R0 ran one turn that took nothing")
     al_check(counts, lmx_thread_mail_count(lmx_root_thread(@ root), c.LMX_POST_INBOX) = 1U, "A: the letter is still untaken after the turn")
     al_check(counts, lmx_range_classify(lmx_root_arena(@ root), (cast: (@: void) letter)) = c.LMX_KIND_NONE, "A: R0 never owned the untaken letter")
     al_check(counts, lmx_root_close(@ root) = c.LMX_ROOT_OK, "A: root close")
-    al_check(counts, untaken_at\count = 0U && untaken_at\blocks = 0, "A: close released the untaken letter's arena")
+    al_check(counts, lmx_arena_index_len(untaken_at) = 0U && untaken_at\blocks = 0, "A: close released the untaken letter's arena")
 
     # B. The letter taken as nextMessage takes it.
     al_take: 1
@@ -155,7 +155,7 @@ fn: main () int
     al_check(counts, letter != 0 && lmx_service_post(lmx_root_service(@ taker), (cast: (@: void) lmx_root_thread(@ taker)), letter, @ taken_arena) = c.LMX_SERVICE_OK, "B: posted to R0")
     al_check(counts, lmx_root_turn(@ taker, 1U) = c.LMX_ROOT_OK && al_calls = 1, "B: R0 ran one turn")
     al_check(counts, al_letter = letter && al_owned = 1, "B: the turn took this letter, owned by R0 before it was exposed")
-    al_check(counts, taken_at\count = 0U && taken_at\blocks = 0, "B: the donor arena emptied into R0's at the take")
+    al_check(counts, lmx_arena_index_len(taken_at) = 0U && taken_at\blocks = 0, "B: the donor arena emptied into R0's at the take")
     al_check(counts, al_success != 0, "B: a plain letter is marked success at its delivery")
     al_check(counts, al_shape = 1, "B: R0 reads the Array of char Arrays C passed")
     al_check(counts, lmx_thread_mail_count(lmx_root_thread(@ taker), c.LMX_POST_INBOX) = 0U, "B: the inbox is empty after the take")

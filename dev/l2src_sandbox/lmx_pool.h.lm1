@@ -83,4 +83,13 @@ prototype:
     # arena's list, and dropping those (with their interval) is the arena's act, which the
     # caller does next.  A pool that kept a freed chunk would hand out storage nobody owns.
     fn: lmx_pool_chunk_drop (@: LmxPool pool; @: LmxChunk chunk) int
+    # Sole cell-arithmetic helper pair for chunk byte storage (FABLE-134 disposition).
+    # cells = len/stride; room = capacity/stride. All cell counts go through these;
+    # multiply on the way in via lmx_chunk_set_used / lmx_chunk_set_room.
+    fn: lmx_chunk_cells (@: LmxChunk chunk; size_t: stride) size_t
+    fn: lmx_chunk_room (@: LmxChunk chunk; size_t: stride) size_t
+    fn: lmx_chunk_set_used (@: LmxChunk chunk; size_t: stride; size_t: cells) void
+    fn: lmx_chunk_set_room (@: LmxChunk chunk; size_t: stride; size_t: cells) void
+    # Byte base of the chunk payload (unsigned char *).
+    fn: lmx_chunk_data (@: LmxChunk chunk) @: void
 end: prototype

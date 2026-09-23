@@ -288,7 +288,7 @@ fn: main () int
     letter\handoff_ready: 0
     letter\graph: 0
     app_check(counts, lmx_service_post(service, (cast: (@: void) child_t), letter, @ letter_arena) = c.LMX_SERVICE_OK, "success post refused")
-    app_check(counts, letter_at\count != 0U && letter_at\blocks != 0, "producer lost success letter arena before owner take")
+    app_check(counts, lmx_arena_index_len(letter_at) != 0U && letter_at\blocks != 0, "producer lost success letter arena before owner take")
     app_check(counts, lmx_range_classify(@ letter_arena, (cast: (@: void) letter)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "producer no longer owns queued success letter")
     app_check(counts, lmx_range_classify(@ child_arena, (cast: (@: void) letter)) = c.LMX_KIND_NONE, "recipient classified success letter before owner take")
     app_check(counts, lmx_thread_mail_count(child_t, c.LMX_POST_INBOX) = 1U, "success inbox empty after post")
@@ -296,15 +296,15 @@ fn: main () int
     app_check(counts, lmx_manager_round(manager, 4U, lmx_root_clock(@ root)) = c.LMX_MANAGER_OK, "success-turn manager round did not run")
     app_check(counts, app_child_turns >= 1U && app_letters_taken = 1U, "success child did not take letter")
     app_check(counts, app_letter = letter, "success taken letter mismatch")
-    app_check(counts, letter_at\count = 0U && letter_at\blocks = 0, "success letter arena did not empty on owner take")
+    app_check(counts, lmx_arena_index_len(letter_at) = 0U && letter_at\blocks = 0, "success letter arena did not empty on owner take")
     app_check(counts, app_letter_owned_after_take != 0, "owner take did not attach success letter before exposure")
     app_check(counts, child_msg\success != 0 && child_msg\handoff_ready != 0, "the child did not publish its safe success boundary")
     app_check(counts, lmx_thread_child_is(r0, child_t) != 0 && lmx_thread_child_count(r0) = 1U, "success child left the Array before settle")
-    app_check(counts, child_at\blocks != 0 && child_at\count != 0U, "child self-released before parent removal")
+    app_check(counts, child_at\blocks != 0 && lmx_arena_index_len(child_at) != 0U, "child self-released before parent removal")
     app_check(counts, lmx_root_cycle(@ root, 1U) = c.LMX_ROOT_OK, "success-settle cycle did not run")
     app_check(counts, lmx_thread_child_is(r0, success_t) = 0, "success child stayed live after settle")
     app_check(counts, lmx_thread_child_count(r0) = 0U, "success child stayed in R0's Array after settle")
-    app_check(counts, child_at\blocks = 0 && child_at\count = 0U, "success arena not released")
+    app_check(counts, child_at\blocks = 0 && lmx_arena_index_len(child_at) = 0U, "success arena not released")
     app_check(counts, lmx_manager_count(manager) = 0U, "manager not empty after success")
     app_check(counts, lmx_service_count(service) = 1U, "service should hold only R0 after success")
     success_turns_snap: app_child_turns
@@ -355,13 +355,13 @@ fn: main () int
     fail_letter\handoff_ready: 0
     fail_letter\graph: 0
     app_check(counts, lmx_service_post(service, (cast: (@: void) child_t), fail_letter, @ fail_letter_arena) = c.LMX_SERVICE_OK, "fail post refused")
-    app_check(counts, fail_letter_at\count != 0U && fail_letter_at\blocks != 0, "producer lost fail letter arena before owner take")
+    app_check(counts, lmx_arena_index_len(fail_letter_at) != 0U && fail_letter_at\blocks != 0, "producer lost fail letter arena before owner take")
     app_check(counts, lmx_range_classify(@ fail_letter_arena, (cast: (@: void) fail_letter)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "producer no longer owns queued fail letter")
     app_check(counts, lmx_range_classify(@ child_arena, (cast: (@: void) fail_letter)) = c.LMX_KIND_NONE, "recipient classified fail letter before owner take")
     app_check(counts, lmx_thread_mail_count(child_t, c.LMX_POST_INBOX) = 1U, "fail inbox empty after post")
     app_check(counts, lmx_root_cycle(@ root, 4U) = c.LMX_ROOT_OK, "fail-turn cycle did not run")
     app_check(counts, app_child_turns >= 1U && app_letters_taken = 1U, "fail child did not take letter")
-    app_check(counts, fail_letter_at\count = 0U && fail_letter_at\blocks = 0, "fail letter arena did not empty on owner take")
+    app_check(counts, lmx_arena_index_len(fail_letter_at) = 0U && fail_letter_at\blocks = 0, "fail letter arena did not empty on owner take")
     app_check(counts, app_letter_owned_after_take != 0, "owner take did not attach fail letter before exposure")
     app_check(counts, child_msg\running = 1 && child_msg\success = 0, "fail child completed itself")
     # THE STOP IS A REQUEST; THE WAIT ENDS BY THE WINDOW (19.09, lmx_thread.h.lm1).  This child is

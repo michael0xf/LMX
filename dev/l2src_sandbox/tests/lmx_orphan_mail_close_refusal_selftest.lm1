@@ -100,9 +100,9 @@ fn: main () int
     orr_check(counts, child_mail != 0, "child mailbox")
     orr_check(counts, lmx_service_find(service, (cast: (@: void) child)) = (cast: (@: void) child), "route present before refuse")
 
-    saved_capacity: child_mail\inbox_capacity
+    saved_capacity: lmx_post_inbox_cap(child_mail)
     child_mail\inbox_count: 1U
-    child_mail\inbox_capacity: 0U
+    lmx_post_inbox_set_cap(child_mail, 0U)
     orr_check(counts, lmx_orphan_reclaim(ledger, service, child) = c.LMX_ORPHAN_INVALID, "reclaim reports mail-close refusal")
     orr_check(counts, child\orphaned != 0, "orphaned flag cleared on refused reclaim")
     orr_check(counts, lmx_thread_child_is(r0, child) != 0, "R0 membership lost on refused reclaim")
@@ -112,7 +112,7 @@ fn: main () int
     orr_check(counts, lmx_orphan_reclaimed(ledger) = 0U, "reclaimed counter advanced on refuse")
 
     child_mail\inbox_count: 0U
-    child_mail\inbox_capacity: saved_capacity
+    lmx_post_inbox_set_cap(child_mail, saved_capacity)
     orr_check(counts, lmx_orphan_reclaim(ledger, service, child) = c.LMX_ORPHAN_OK, "reclaim after restore")
     orr_check(counts, lmx_thread_child_is(r0, child) = 0, "membership removed after success")
     orr_check(counts, lmx_orphan_reclaimed(ledger) = 1U, "reclaimed counter after success")

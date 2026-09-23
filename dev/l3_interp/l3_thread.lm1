@@ -45,9 +45,9 @@ fn: l3_profile_open (@: LmxArena arena) @: Lmx
     if: arena = 0
         return: 0
     pool: lmx_pool_make(arena, c.sizeof(c.Lmx), c.sizeof(c.Lmx), c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT)
-    if: pool = 0 || pool\head = 0 || pool\head\base = 0
+    if: pool = 0 || pool\head = 0 || lmx_chunk_data(pool\head) = 0
         return: 0
-    profile: (cast: (@: Lmx) pool\head\base)
+    profile: (cast: (@: Lmx) lmx_chunk_data(pool\head))
     profile\parent: 0
     profile\len: 0
     profile\data: 0
@@ -70,9 +70,9 @@ fn: l3_profile_node_new (@: LmxArena arena; @: Lmx profile) @: Lmx
     if: arena = 0 || profile = 0
         return: 0
     pool: lmx_pool_make_profiled(arena, c.sizeof(c.Lmx), c.sizeof(c.Lmx), c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT, profile)
-    if: pool = 0 || pool\head = 0 || pool\head\base = 0
+    if: pool = 0 || pool\head = 0 || lmx_chunk_data(pool\head) = 0
         return: 0
-    value: (cast: (@: Lmx) pool\head\base)
+    value: (cast: (@: Lmx) lmx_chunk_data(pool\head))
     value\parent: 0
     value\len: 0
     value\data: 0
@@ -92,9 +92,9 @@ fn: l3_profile_refs_open (@: LmxArena arena; @: Lmx parent; size_t: children; @:
         return: 1
     bytes: children * slot
     refs: lmx_pool_make_profiled(arena, bytes, slot, c.LMX_KIND_CHILDREN, c.LMX_TYPE_REFS, profile)
-    if: refs = 0 || refs\head = 0 || refs\head\base = 0
+    if: refs = 0 || refs\head = 0 || lmx_chunk_data(refs\head) = 0
         return: 1
-    parent\data: refs\head\base
+    parent\data: lmx_chunk_data(refs\head)
     parent\len: (cast: (int) children)
 return: 0
 

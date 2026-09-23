@@ -266,7 +266,7 @@ fn: main () int
     # Snapshot what the probe owns / remembers BEFORE close (after close the child arena
     # and the schedule record are the cascade's to free).
     lane_handle: child_sched\lane
-    child_blocks_before: child_at\count
+    child_blocks_before: lmx_arena_index_len(child_at)
     rl_check(counts, child_at\blocks != 0 && child_blocks_before > 0U, "child arena empty before close")
     c.printf("PRE_CLOSE turns=%u turns_mid=%u lane=%p child_blocks=%u running=%d\n",
              (cast: (unsigned) turns_before), (cast: (unsigned) turns_mid),
@@ -282,7 +282,7 @@ fn: main () int
     c.Sleep(100U)
 
     # After close: read ONLY probe-owned state (stack arena header; remembered HANDLE).
-    child_blocks_after: child_at\count
+    child_blocks_after: lmx_arena_index_len(child_at)
     arena_released: child_blocks_after = 0U
     lane_wait_code: (cast: (unsigned) c.WaitForSingleObject(lane_handle, 0U))
     # The running manager may reap and close the handle after observing the ended lane. In that

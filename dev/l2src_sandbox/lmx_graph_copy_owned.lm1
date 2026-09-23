@@ -4,6 +4,131 @@ include: "<stdlib.h>" "<string.h>" "<stdint.h>"
 
 # ---- operation-local map: source address -> destination address -------------
 
+
+
+
+
+
+
+
+
+
+
+
+fn: lmx_copy_map_keys_data (@: LmxCopyMap m) @@: void
+    @: LmxArrayDynamicArray da
+    @: LmxArrayDesc base
+    if: m = 0
+        return: 0
+    da: @ m\keys
+    base: (cast: (@: LmxArrayDesc) da)
+return: (cast: (@@: void) base\data)
+
+fn: lmx_copy_map_vals_data (@: LmxCopyMap m) @@: void
+    @: LmxArrayDynamicArray da
+    @: LmxArrayDesc base
+    if: m = 0
+        return: 0
+    da: @ m\vals
+    base: (cast: (@: LmxArrayDesc) da)
+return: (cast: (@@: void) base\data)
+
+fn: lmx_copy_map_keys_cap (@: LmxCopyMap m) size_t
+    @: LmxArrayDynamicArray da
+    if: m = 0
+        return: 0U
+    da: @ m\keys
+return: da\capacity
+
+fn: lmx_copy_map_set_keys_data (@: LmxCopyMap m; @@: void data) void
+    @: LmxArrayDynamicArray da
+    @: LmxArrayDesc base
+    if: m = 0
+        return
+    da: @ m\keys
+    base: (cast: (@: LmxArrayDesc) da)
+    base\data: (cast: (@: void) data)
+return
+
+fn: lmx_copy_map_set_vals_data (@: LmxCopyMap m; @@: void data) void
+    @: LmxArrayDynamicArray da
+    @: LmxArrayDesc base
+    if: m = 0
+        return
+    da: @ m\vals
+    base: (cast: (@: LmxArrayDesc) da)
+    base\data: (cast: (@: void) data)
+return
+
+fn: lmx_copy_map_set_keys_cap (@: LmxCopyMap m; size_t: capacity) void
+    @: LmxArrayDynamicArray da
+    @: LmxArrayDesc base
+    if: m = 0
+        return
+    da: @ m\keys
+    da\capacity: capacity
+    base: (cast: (@: LmxArrayDesc) da)
+    base\len: capacity
+    da: @ m\vals
+    da\capacity: capacity
+    base: (cast: (@: LmxArrayDesc) da)
+    base\len: capacity
+return
+
+fn: lmx_copy_stack_items_data (@: LmxCopyStack s) @@: Lmx
+    @: LmxArrayDynamicArray da
+    @: LmxArrayDesc base
+    if: s = 0
+        return: 0
+    da: @ s\items
+    base: (cast: (@: LmxArrayDesc) da)
+return: (cast: (@@: Lmx) base\data)
+
+fn: lmx_copy_stack_items_len (@: LmxCopyStack s) size_t
+    @: LmxArrayDynamicArray da
+    @: LmxArrayDesc base
+    if: s = 0
+        return: 0U
+    da: @ s\items
+    base: (cast: (@: LmxArrayDesc) da)
+return: base\len
+
+fn: lmx_copy_stack_items_cap (@: LmxCopyStack s) size_t
+    @: LmxArrayDynamicArray da
+    if: s = 0
+        return: 0U
+    da: @ s\items
+return: da\capacity
+
+fn: lmx_copy_stack_set_items_data (@: LmxCopyStack s; @@: Lmx data) void
+    @: LmxArrayDynamicArray da
+    @: LmxArrayDesc base
+    if: s = 0
+        return
+    da: @ s\items
+    base: (cast: (@: LmxArrayDesc) da)
+    base\data: (cast: (@: void) data)
+return
+
+fn: lmx_copy_stack_set_items_len (@: LmxCopyStack s; size_t: len) void
+    @: LmxArrayDynamicArray da
+    @: LmxArrayDesc base
+    if: s = 0
+        return
+    da: @ s\items
+    base: (cast: (@: LmxArrayDesc) da)
+    base\len: len
+return
+
+fn: lmx_copy_stack_set_items_cap (@: LmxCopyStack s; size_t: capacity) void
+    @: LmxArrayDynamicArray da
+    if: s = 0
+        return
+    da: @ s\items
+    da\capacity: capacity
+return
+
+
 fn: lmx_copy_hash (@: void p; size_t: cap) size_t
     size_t: h (cast: (size_t) (cast: (uintptr_t) p))
     h: (h >> 4) * 2654435761U
@@ -15,37 +140,37 @@ fn: lmx_copy_map_init (@: LmxCopyMap m) int
     size_t: i 0U
     if: m = 0
         return: 1
-    m\cap: 64U
-    m\n: 0U
-    keys: (cast: (@@: void) malloc(m\cap * c.sizeof(@: void)))
+    lmx_copy_map_set_keys_cap(m, 64U)
+        m\n: 0U
+    keys: (cast: (@@: void) malloc(lmx_copy_map_keys_cap(m) * c.sizeof(@: void)))
     if: keys = 0
         return: 1
-    vals: (cast: (@@: void) malloc(m\cap * c.sizeof(@: void)))
+    vals: (cast: (@@: void) malloc(lmx_copy_map_keys_cap(m) * c.sizeof(@: void)))
     if: vals = 0
         free(keys)
         return: 1
-    while: i < m\cap
+    while: i < lmx_copy_map_keys_cap(m)
         keys[i]: 0
         vals[i]: 0
         i: i + 1U
     ---
-    m\keys: keys
-    m\vals: vals
+    lmx_copy_map_set_keys_data(m, keys)
+    lmx_copy_map_set_vals_data(m, vals)
     return: 0
 
 sub: lmx_copy_map_dispose (@: LmxCopyMap m)
     if: m = 0
         return
     ---
-    if: m\keys != 0
-        free(m\keys)
+    if: lmx_copy_map_keys_data(m) != 0
+        free(lmx_copy_map_keys_data(m))
     ---
-    if: m\vals != 0
-        free(m\vals)
+    if: lmx_copy_map_vals_data(m) != 0
+        free(lmx_copy_map_vals_data(m))
     ---
-    m\keys: 0
-    m\vals: 0
-    m\cap: 0U
+    lmx_copy_map_set_keys_data(m, 0)
+    lmx_copy_map_set_vals_data(m, 0)
+    lmx_copy_map_set_keys_cap(m, 0U)
     m\n: 0U
 end: lmx_copy_map_dispose
 
@@ -53,22 +178,22 @@ fn: lmx_copy_map_get (@: LmxCopyMap m; @: void key) @: void
     @@: void keys
     @@: void vals
     size_t: i
-    if: m = 0 || key = 0 || m\keys = 0
+    if: m = 0 || key = 0 || lmx_copy_map_keys_data(m) = 0
         return: 0
-    keys: m\keys
-    vals: m\vals
-    i: lmx_copy_hash(key, m\cap)
+    keys: lmx_copy_map_keys_data(m)
+    vals: lmx_copy_map_vals_data(m)
+    i: lmx_copy_hash(key, lmx_copy_map_keys_cap(m))
     while: keys[i] != 0
         if: keys[i] = key
             return: vals[i]
-        i: (i + 1U) & (m\cap - 1U)
+        i: (i + 1U) & (lmx_copy_map_keys_cap(m) - 1U)
     ---
     return: 0
 
 fn: lmx_copy_map_grow (@: LmxCopyMap m) int
-    @@: void old_keys m\keys
-    @@: void old_vals m\vals
-    size_t: old_cap m\cap
+    @@: void old_keys lmx_copy_map_keys_data(m)
+    @@: void old_vals lmx_copy_map_vals_data(m)
+    size_t: old_cap lmx_copy_map_keys_cap(m)
     size_t: cap old_cap * 2U
     size_t: i 0U
     size_t: j
@@ -100,9 +225,11 @@ fn: lmx_copy_map_grow (@: LmxCopyMap m) int
         ---
         i: i + 1U
     ---
-    m\keys: keys
-    m\vals: vals
-    m\cap: cap
+    lmx_copy_map_set_keys_data(m, keys)
+    lmx_copy_map_set_vals_data(m, vals)
+    lmx_copy_map_set_keys_cap(m, cap)
+    lmx_copy_map_set_keys_cap(m, cap)
+    lmx_copy_map_set_keys_cap(m, cap)
     free(old_keys)
     free(old_vals)
     return: 0
@@ -113,18 +240,18 @@ fn: lmx_copy_map_put (@: LmxCopyMap m; @: void key; @: void value) int
     size_t: i
     if: m = 0 || key = 0 || value = 0
         return: 1
-    if: (m\n + 1U) * 2U > m\cap
+    if: (m\n + 1U) * 2U > lmx_copy_map_keys_cap(m)
         if: lmx_copy_map_grow(m) != 0
             return: 1
     ---
-    keys: m\keys
-    vals: m\vals
-    i: lmx_copy_hash(key, m\cap)
+    keys: lmx_copy_map_keys_data(m)
+    vals: lmx_copy_map_vals_data(m)
+    i: lmx_copy_hash(key, lmx_copy_map_keys_cap(m))
     while: keys[i] != 0
         if: keys[i] = key
             vals[i]: value
             return: 0
-        i: (i + 1U) & (m\cap - 1U)
+        i: (i + 1U) & (lmx_copy_map_keys_cap(m) - 1U)
     ---
     keys[i]: key
     vals[i]: value
@@ -139,48 +266,48 @@ fn: lmx_copy_stack_push (@: LmxCopyStack s; @: Lmx x) int
     size_t: cap
     if: s = 0 || x = 0
         return: 1
-    if: s\n >= s\cap
+    if: lmx_copy_stack_items_len(s) >= lmx_copy_stack_items_cap(s)
         cap: 16U
-        if: s\cap != 0U
-            cap: s\cap * 2U
+        if: lmx_copy_stack_items_cap(s) != 0U
+            cap: lmx_copy_stack_items_cap(s) * 2U
         ---
-        if: cap <= s\cap
+        if: cap <= lmx_copy_stack_items_cap(s)
             return: 1
         grown: (cast: (@@: Lmx) malloc(cap * c.sizeof(@: void)))
         if: grown = 0
             return: 1
-        if: s\n != 0U
-            memcpy((cast: (@: void) grown), (cast: (@: void) s\items), s\n * c.sizeof(@: void))
+        if: lmx_copy_stack_items_len(s) != 0U
+            memcpy((cast: (@: void) grown), (cast: (@: void) lmx_copy_stack_items_data(s)), lmx_copy_stack_items_len(s) * c.sizeof(@: void))
         ---
-        if: s\items != 0
-            free(s\items)
+        if: lmx_copy_stack_items_data(s) != 0
+            free(lmx_copy_stack_items_data(s))
         ---
-        s\items: grown
-        s\cap: cap
+        lmx_copy_stack_set_items_data(s, grown)
+        lmx_copy_stack_set_items_cap(s, cap)
     ---
-    items: s\items
-    items[s\n]: x
-    s\n: s\n + 1U
+    items: lmx_copy_stack_items_data(s)
+    items[lmx_copy_stack_items_len(s)]: x
+    lmx_copy_stack_set_items_len(s, lmx_copy_stack_items_len(s) + 1U)
     return: 0
 
 fn: lmx_copy_stack_pop (@: LmxCopyStack s) @: Lmx
     @@: Lmx items
-    if: s = 0 || s\n = 0U
+    if: s = 0 || lmx_copy_stack_items_len(s) = 0U
         return: 0
-    items: s\items
-    s\n: s\n - 1U
-    return: items[s\n]
+    items: lmx_copy_stack_items_data(s)
+    lmx_copy_stack_set_items_len(s, lmx_copy_stack_items_len(s) - 1U)
+    return: items[lmx_copy_stack_items_len(s)]
 
 sub: lmx_copy_stack_dispose (@: LmxCopyStack s)
     if: s = 0
         return
     ---
-    if: s\items != 0
-        free(s\items)
+    if: lmx_copy_stack_items_data(s) != 0
+        free(lmx_copy_stack_items_data(s))
     ---
-    s\items: 0
-    s\cap: 0U
-    s\n: 0U
+    lmx_copy_stack_set_items_data(s, 0)
+    lmx_copy_stack_set_items_cap(s, 0U)
+    lmx_copy_stack_set_items_len(s, 0U)
 end: lmx_copy_stack_dispose
 
 # The caller names profiles by their physical graph references.  Validate the complete
@@ -211,8 +338,8 @@ fn: lmx_copy_profiles_valid (@: LmxArena src_arena; @@: Lmx retain_profiles; siz
             return: 0
         found: 0
         j: 0U
-        while: j < src_arena\count
-            entry: src_arena\index + j
+        while: j < lmx_arena_index_len(src_arena)
+            entry: lmx_arena_index_data(src_arena) + j
             if: entry\array != 0 && entry\array\profile = profile
                 found: 1
                 if: lmx_pool_is_sealed(entry\array) = 0
@@ -595,13 +722,8 @@ fn: lmx_graph_copy_many_profiles_owned (@@: Lmx sources; size_t: count; @: char 
     # From here the destination is all-or-nothing: the mark is the arena's own
     # head, and every refusal below reverts to it.
     mark: lmx_arena_mark(dst_arena)
-    todo\items: 0
-    todo\cap: 0U
-    todo\n: 0U
-    map\keys: 0
-    map\vals: 0
-    map\cap: 0U
-    map\n: 0U
+    memset((cast: (@: void) todo), 0, c.sizeof(c.LmxCopyStack))
+    memset((cast: (@: void) map), 0, c.sizeof(c.LmxCopyMap))
     if: lmx_copy_map_init(map) != 0
         lmx_arena_revert(dst_arena, mark)
         return: LMX_GRAPH_COPY_NOMEM
@@ -623,16 +745,16 @@ fn: lmx_graph_copy_many_profiles_owned (@@: Lmx sources; size_t: count; @: char 
         r: r + 1U
     ---
     # Copy edges until no Structure remains queued. Processing may queue more.
-    while: status = LMX_GRAPH_COPY_OK && todo\n != 0U
+    while: status = LMX_GRAPH_COPY_OK && lmx_copy_stack_items_len(todo) != 0U
         src: lmx_copy_stack_pop(todo)
         lmx_copy_process(src, dst_chars, src_arena, dst_arena, retain_profiles, retain_count, map, todo, @ status)
     ---
 # Parent fixup: every copied Structure points at the copy of its structural
     # parent, at an exact retained-profile parent's own address, or at zero.
     if: status = LMX_GRAPH_COPY_OK
-        keys: map\keys
-        vals: map\vals
-        while: i < map\cap
+        keys: lmx_copy_map_keys_data(map)
+        vals: lmx_copy_map_vals_data(map)
+        while: i < lmx_copy_map_keys_cap(map)
             key: keys[i]
             if: key != 0
                 if: lmx_range_classify(src_arena, key) = c.LMX_KIND_STRUCT

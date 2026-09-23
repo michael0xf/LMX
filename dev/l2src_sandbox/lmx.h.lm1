@@ -1,5 +1,6 @@
 include: "<stddef.h>" "<stdint.h>"
 
+
 # lmx.h - the one Lmx header and the registered address ranges.
 #
 # Lingvamyxa_spec.txt 2, 6.5, 12.1, 19.20; struct_refactoring_version_2.txt
@@ -208,6 +209,18 @@ struct: LmxArrayDesc
     @: void data
 end: LmxArrayDesc
 
+# Fixed void*-element array descriptor (sole void fixed form). Capacity never lives here.
+# Dynamic void* arrays compose LmxArrayDynamicArray over this type.
+
+# Dynamic array of void* cells: List public shape; copier map keys/vals.
+# offsetof(array) == 0 so a DynamicArray* may be read as LmxArrayDesc* for len/data.
+struct: LmxArrayDynamicArray
+    LmxArrayDesc: array
+    size_t: capacity
+end: LmxArrayDynamicArray
+
+
+
 # One entry of an arena's address index: the half-open interval [lo, hi) of ONE
 # typed array, the descriptor of that array, and the arena that truly owns its
 # storage.  `owner` equals the indexing arena for a local interval.  An imported
@@ -218,6 +231,15 @@ end: LmxArrayDesc
 # representation and the optional physical profile are read through `array`.
 # Arrays never move, so it is these ENTRIES that are ordered and bisected, never
 # the arrays.
+
+# Flat DynamicArray of bytes (len + data + capacity).
+# Layout: len, data, capacity — same as compositional {array; capacity} with offsetof 0.
+struct: LmxByteDynamicArray
+    size_t: len
+    @: void data
+    size_t: capacity
+end: LmxByteDynamicArray
+
 struct: LmxRange
     @: void lo
     @: void hi
@@ -226,6 +248,8 @@ struct: LmxRange
     # stores an actual LmxArena physical address and lmx_range_home casts at the boundary.
     @: void owner
 end: LmxRange
+
+
 
 # A typed service array.  2 lists them and 6.5 spells the Array one out: one per
 # primitive C type, one of {addr, sig} method records, one of {len, data} Array
@@ -257,10 +281,21 @@ end: LmxRange
 # lmx_pool_over, storage the caller keeps in its own frame.  lmx_pool_release therefore
 # retires only the interval of each chunk and the array itself; the arena's block list is
 # what frees the storage, at lmx_arena_release.
-struct: LmxChunk
-    @: void base
+# Chunk payload is stride-generic RAW storage (coordinator -134): element type is known
+# only at run time via the pool's stride/kind/type. Static element type is therefore byte.
+# cells.len / cells.capacity are BYTES; cell counts go through lmx_chunk_cells / lmx_chunk_room
+# (the sole cell-arithmetic helper pair). Not a void cast, not a wrapper/union, not per-T families.
+# Fixed array of arena index entries.
+# Flat DynamicArray of LmxRange (len + data + capacity).
+# Dynamic arena index (replaces the index/count/capacity triple).
+struct: LmxRangeDynamicArray
+    size_t: len
+    @: LmxRange data
     size_t: capacity
-    size_t: count
+end: LmxRangeDynamicArray
+
+struct: LmxChunk
+    LmxByteDynamicArray: cells
     @: LmxChunk next
     # The collection pass that last WALKED this chunk (lmx_gc): a chunk whose stamp is the
     # arena's current generation was reached from a root, so it stays.  A stamp and not a

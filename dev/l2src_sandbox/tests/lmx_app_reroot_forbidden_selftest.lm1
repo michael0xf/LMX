@@ -396,11 +396,11 @@ fn: rf_scenario (int: live; int: pending; @: int counts) int
         letter\graph: 0
     ---
     rf_check(counts, lmx_service_post(service, (cast: (@: void) t_a), letter, la1) = c.LMX_SERVICE_OK, "post 1 to A refused")
-    rf_check(counts, la1\count > 0U && lmx_range_classify(la1, (cast: (@: void) letter)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "letter 1 left donor before take")
+    rf_check(counts, lmx_arena_index_len(la1) > 0U && lmx_range_classify(la1, (cast: (@: void) letter)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "letter 1 left donor before take")
     rf_check(counts, lmx_range_classify(a_at, (cast: (@: void) letter)) = c.LMX_KIND_NONE, "letter 1 attached to A before take")
     rf_check(counts, lmx_thread_mail_count(t_a, c.LMX_POST_INBOX) = 1U, "A inbox empty after post 1")
     rf_check(counts, lmx_manager_round(manager, 1U, lmx_clock_ticks()) = c.LMX_MANAGER_OK, "A creating round did not run")
-    rf_check(counts, la1\count = 0U && rf_claimed_a = 1U, "A take did not claim letter 1 before its GC boundary")
+    rf_check(counts, lmx_arena_index_len(la1) = 0U && rf_claimed_a = 1U, "A take did not claim letter 1 before its GC boundary")
     rf_check(counts, rf_a_turns = 1U && rf_letters_a = 1U, "A did not take its creating turn")
     rf_check(counts, rf_create_diag = 10U && rf_msg_b != 0 && rf_t_b != 0, "A did not create B in its turn")
     if: rf_msg_b = 0 || rf_t_b = 0 || rf_create_diag != 10U
@@ -435,7 +435,7 @@ fn: rf_scenario (int: live; int: pending; @: int counts) int
         ---
         rf_check(counts, lmx_service_post(service, (cast: (@: void) t_b), letter, la2) = c.LMX_SERVICE_OK, "post to B refused")
         rf_check(counts, lmx_thread_mail_count(t_b, c.LMX_POST_INBOX) = 1U, "B inbox empty after post")
-        rf_check(counts, la2\count > 0U && lmx_range_classify(la2, (cast: (@: void) letter)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "pending letter 2 left donor before take")
+        rf_check(counts, lmx_arena_index_len(la2) > 0U && lmx_range_classify(la2, (cast: (@: void) letter)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "pending letter 2 left donor before take")
         rf_check(counts, lmx_range_classify(b_at, (cast: (@: void) letter)) = c.LMX_KIND_NONE, "pending letter 2 attached to B without take")
     ---
 
@@ -456,18 +456,18 @@ fn: rf_scenario (int: live; int: pending; @: int counts) int
         letter\graph: 0
     ---
     rf_check(counts, lmx_service_post(service, (cast: (@: void) t_a), letter, la3) = c.LMX_SERVICE_OK, "post 3 to A refused")
-    rf_check(counts, la3\count > 0U && lmx_range_classify(la3, (cast: (@: void) letter)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "letter 3 left donor before take")
+    rf_check(counts, lmx_arena_index_len(la3) > 0U && lmx_range_classify(la3, (cast: (@: void) letter)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "letter 3 left donor before take")
     rf_check(counts, lmx_range_classify(a_at, (cast: (@: void) letter)) = c.LMX_KIND_NONE, "letter 3 attached to A before take")
 
-    a_count_pre_turn: a_at\count
-    b_count_pre_turn: b_at\count
+    a_count_pre_turn: lmx_arena_index_len(a_at)
+    b_count_pre_turn: lmx_arena_index_len(b_at)
     rf_check(counts, a_count_pre_turn > 0U && a_at\blocks != 0, "A arena empty before A's ending turn")
     rf_check(counts, b_count_pre_turn > 0U && b_at\blocks != 0, "B arena empty before A's ending turn")
     rf_check(counts, lmx_service_count(service) = 3U, "service not R0+A+B before A's ending turn")
 
     # A'S ENDING TURN, through the manager -- the driver's ordinary road.
     rf_check(counts, lmx_manager_round(manager, 1U, lmx_clock_ticks()) = c.LMX_MANAGER_OK, "A ending round did not run")
-    rf_check(counts, la3\count = 0U && rf_claimed_a = 2U, "A take did not claim letter 3 before its GC boundary")
+    rf_check(counts, lmx_arena_index_len(la3) = 0U && rf_claimed_a = 2U, "A take did not claim letter 3 before its GC boundary")
     rf_check(counts, rf_end_diag = 20U, "A did not take its ending turn")
     rf_check(counts, msg_a\success = 1 && msg_a\running = 0, "A did not end by success")
     rf_check(counts, msg_a\handoff_ready != 0, "A did not mark itself handoff-safe")
@@ -492,16 +492,16 @@ fn: rf_scenario (int: live; int: pending; @: int counts) int
     # band (lmx_turn_end's GC), and that collection is the model's, not the settle's -- what must
     # stand unchanged is what the settle finds at its own entry.
     # ==========================================================================================
-    a_count_before: a_at\count
-    b_count_before: b_at\count
+    a_count_before: lmx_arena_index_len(a_at)
+    b_count_before: lmx_arena_index_len(b_at)
     svc_before: lmx_service_count(service)
     rf_check(counts, a_count_before > 0U && a_at\blocks != 0, "A arena empty at the first boundary")
     rf_check(counts, b_count_before > 0U && b_at\blocks != 0, "B arena empty at the first boundary")
     rf_check(counts, svc_before = 3U, "service not R0+A+B at the first boundary")
     first_code: lmx_settle_children(r0, root_arena, service, manager, lmx_clock_ticks())
     rf_check(counts, first_code = c.LMX_SETTLE_OK, "first settle did not run")
-    a_count_after: a_at\count
-    b_count_after: b_at\count
+    a_count_after: lmx_arena_index_len(a_at)
+    b_count_after: lmx_arena_index_len(b_at)
     a_blocks_after: a_at\blocks
     b_blocks_after: b_at\blocks
     svc_after: lmx_service_count(service)
@@ -557,8 +557,8 @@ fn: rf_scenario (int: live; int: pending; @: int counts) int
         # THE SECOND BOUNDARY: now nothing under A is alive, so the chain goes down-first.
         second_code: lmx_settle_children(r0, root_arena, service, manager, lmx_clock_ticks())
         rf_check(counts, second_code = c.LMX_SETTLE_OK, "second settle did not run")
-        rf_check(counts, b_at\count = 0U && b_at\blocks = 0, "B's arena did not attach into A's at the second boundary")
-        rf_check(counts, a_at\count = 0U && a_at\blocks = 0, "A's arena was not released whole at the second boundary")
+        rf_check(counts, lmx_arena_index_len(b_at) = 0U && b_at\blocks = 0, "B's arena did not attach into A's at the second boundary")
+        rf_check(counts, lmx_arena_index_len(a_at) = 0U && a_at\blocks = 0, "A's arena was not released whole at the second boundary")
         rf_check(counts, lmx_thread_child_is(r0, t_a) = 0, "R0 children Array still names a gone A")
         svc_end: lmx_service_count(service)
         rf_check(counts, svc_end = 1U, "service is not R0 alone after the chain")
@@ -568,7 +568,7 @@ fn: rf_scenario (int: live; int: pending; @: int counts) int
         rf_check(counts, lmx_orphan_count(orphans) = 0U && lmx_orphan_reclaimed(orphans) = 0U, "the chain was rerouted instead of settled")
         c.printf("RF LIVE_CHILD live=%d pending=%d a_turns=%u letters=%u b_count %u->%u svc %u->%u svc_end=%u orphan=%u\n",
                  live, pending, (cast: (unsigned) rf_a_turns), (cast: (unsigned) rf_letters_a),
-                 (cast: (unsigned) b_count_before), (cast: (unsigned) b_at\count),
+                 (cast: (unsigned) b_count_before), (cast: (unsigned) lmx_arena_index_len(b_at)),
                  (cast: (unsigned) svc_before), (cast: (unsigned) svc_after),
                  (cast: (unsigned) svc_end), (cast: (unsigned) lmx_orphan_count(orphans)))
     else:
@@ -593,7 +593,7 @@ fn: rf_scenario (int: live; int: pending; @: int counts) int
                  (cast: (unsigned) lmx_thread_mail_count(t_b, c.LMX_POST_INBOX)),
                  (cast: (unsigned) lmx_service_count(service)),
                  lmx_thread_child_is(r0, t_a),
-                 (cast: (unsigned) b_at\count))
+                 (cast: (unsigned) lmx_arena_index_len(b_at)))
         c.fflush(0)
         # THE WAIT ENDS BY THE WINDOW (19.09): the child reached no boundary of its own, so the
         # maintenance rule of 19.29.8 closes it -- WITHOUT a turn, and without reading the letter
@@ -607,22 +607,22 @@ fn: rf_scenario (int: live; int: pending; @: int counts) int
         # ledger -- all of them answer by value).
         timeout_code: lmx_settle_children(r0, root_arena, service, manager, lmx_clock_ticks() + 100001U)
         rf_check(counts, timeout_code = c.LMX_SETTLE_OK, "the settle at the window did not run")
-        rf_check(counts, b_at\count = 0U && b_at\blocks = 0, "the window boundary did not attach B's arena into A's")
-        rf_check(counts, a_at\count = 0U && a_at\blocks = 0, "the window boundary did not reap A whole")
+        rf_check(counts, lmx_arena_index_len(b_at) = 0U && b_at\blocks = 0, "the window boundary did not attach B's arena into A's")
+        rf_check(counts, lmx_arena_index_len(a_at) = 0U && a_at\blocks = 0, "the window boundary did not reap A whole")
         rf_check(counts, lmx_thread_child_is(r0, t_a) = 0, "R0 children Array still names a gone A")
         rf_check(counts, lmx_service_count(service) = 1U, "service is not R0 alone after the window")
         rf_check(counts, lmx_orphan_count(orphans) = 0U && lmx_orphan_reclaimed(orphans) = 0U, "the chain was rerouted instead of closed")
         c.printf("RF WINDOW_CLOSED live=%d pending=%d b_count %u->%u a_count %u->%u svc=%u orphan=%u\n",
                  live, pending,
-                 (cast: (unsigned) b_count_before), (cast: (unsigned) b_at\count),
-                 (cast: (unsigned) a_count_before), (cast: (unsigned) a_at\count),
+                 (cast: (unsigned) b_count_before), (cast: (unsigned) lmx_arena_index_len(b_at)),
+                 (cast: (unsigned) a_count_before), (cast: (unsigned) lmx_arena_index_len(a_at)),
                  (cast: (unsigned) lmx_service_count(service)),
                  (cast: (unsigned) lmx_orphan_count(orphans)))
         c.fflush(0)
         rf_check(counts, lmx_service_count(service) = 1U, "service is not R0 alone after the closing boundary")
         rf_check(counts, lmx_orphan_count(orphans) = 0U, "the chain was rerouted instead of settled (2)")
         c.printf("RF NO_CLOSING_TURN_DONE pending=%d b_count=%u a_count=%u svc=%u orphan=%u\n",
-                 pending, (cast: (unsigned) b_at\count), (cast: (unsigned) a_at\count),
+                 pending, (cast: (unsigned) lmx_arena_index_len(b_at)), (cast: (unsigned) lmx_arena_index_len(a_at)),
                  (cast: (unsigned) lmx_service_count(service)),
                  (cast: (unsigned) lmx_orphan_count(orphans)))
     ---

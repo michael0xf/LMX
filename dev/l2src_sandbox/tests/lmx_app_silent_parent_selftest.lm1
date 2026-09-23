@@ -276,7 +276,7 @@ fn: main () int
     turns_after_refuse: lmx_size_value_known(lmx_arena_ref_value(child_graph, 1U))
     sp_check(counts, turns_after_refuse = 2U, "body ran again after self-close")
 
-    child_count_before: child_at\count
+    child_count_before: lmx_arena_index_len(child_at)
     handoff_after_t2: (cast: (size_t) child_msg\handoff_ready)
     entry_diag_wire: sp_entry_diag
     svc_before: lmx_service_count(service)
@@ -290,7 +290,7 @@ fn: main () int
     sp_check(counts, lmx_thread_child_is(r0, child_t) = 0, "child stayed live after util")
     # FAILURE settle retains the failure root in the slot (see min_selftest fail path).
     sp_check(counts, lmx_range_classify(root_arena, (cast: (@: void) child_msg)) != c.LMX_KIND_NONE, "failure root was not retained by the parent arena")
-    sp_check(counts, child_at\count = 0U, "child arena not emptied by handoff")
+    sp_check(counts, lmx_arena_index_len(child_at) = 0U, "child arena not emptied by handoff")
     svc_after: lmx_service_count(service)
     mgr_after: lmx_manager_count(manager)
     sp_check(counts, svc_after = 1U, "service should hold only R0 after util")

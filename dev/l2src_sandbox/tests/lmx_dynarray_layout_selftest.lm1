@@ -1,0 +1,63 @@
+predef: "l2src/lmx.h.lm1"
+predef: "l2src/lmx_post.h.lm1"
+predef: "l2src/lmx_service.h.lm1"
+predef: "l2src/lmx_graph_copy_owned.h.lm1"
+include: "<stdio.h>"
+
+# FABLE-134 layout gate.
+# Compositional: LmxArrayDynamicArray (offsetof array==0; sizeof base+size_t).
+# Flat (L3 type-budget): Byte/Range/PostSlot/ServiceEntry DynamicArrays are
+# {len, data, capacity} with sizeof == 2*size_t + pointer.
+# Chunk.cells is by-value ByteDynamicArray at offset 0.
+
+fn: fail (@: int failures; @: char msg) void
+    \failures: \failures + 1
+    c.printf("FAIL %s\n", msg)
+return
+
+fn: main () int
+    int: failures 0
+    LmxArrayDynamicArray: a
+    LmxByteDynamicArray: b
+    LmxRangeDynamicArray: r
+    LmxServiceEntryDynamicArray: s
+    LmxPostInboxSlotDynamicArray: i
+    LmxChunk: ch
+    @: LmxArrayDynamicArray pa
+    @: LmxChunk pch
+    @: LmxArrayDesc a_base
+    @: LmxByteDynamicArray ch_cells
+    size_t: flat_sz
+    pa: @ a
+    pch: @ ch
+    a_base: (cast: (@: LmxArrayDesc) pa)
+    ch_cells: (cast: (@: LmxByteDynamicArray) pch)
+    flat_sz: 2U * c.sizeof(c.size_t) + c.sizeof(@: void)
+    if: (cast: (size_t) a_base) != (cast: (size_t) pa)
+        fail(@ failures, "LmxArrayDynamicArray offsetof(array)")
+    ---
+    if: c.sizeof(c.LmxArrayDesc) != c.sizeof(c.size_t) + c.sizeof(@: void)
+        fail(@ failures, "LmxArrayDesc has no capacity (base is len+data only)")
+    ---
+    if: c.sizeof(c.LmxArrayDynamicArray) != c.sizeof(c.LmxArrayDesc) + c.sizeof(c.size_t)
+        fail(@ failures, "LmxArrayDynamicArray sizeof")
+    ---
+    if: c.sizeof(c.LmxByteDynamicArray) != flat_sz
+        fail(@ failures, "LmxByteDynamicArray flat sizeof")
+    ---
+    if: c.sizeof(c.LmxRangeDynamicArray) != flat_sz
+        fail(@ failures, "LmxRangeDynamicArray flat sizeof")
+    ---
+    if: c.sizeof(c.LmxServiceEntryDynamicArray) != flat_sz
+        fail(@ failures, "LmxServiceEntryDynamicArray flat sizeof")
+    ---
+    if: c.sizeof(c.LmxPostInboxSlotDynamicArray) != 2U * c.sizeof(c.size_t) + c.sizeof(@: void)
+        fail(@ failures, "LmxPostInboxSlotDynamicArray flat sizeof")
+    ---
+    if: (cast: (size_t) ch_cells) != (cast: (size_t) pch)
+        fail(@ failures, "LmxChunk cells at offset 0")
+    ---
+    c.printf("dynarray layout failures=%d\n", failures)
+    if: failures != 0
+        return: 1
+return: 0

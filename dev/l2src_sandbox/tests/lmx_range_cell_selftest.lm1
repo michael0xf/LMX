@@ -67,15 +67,15 @@ fn: main () int
     ---
 
     first_chunk: pool\head
-    check(first_chunk != 0 && first_chunk = pool\tail && first_chunk\count = 0U, "open creates one empty chunk")
-    check(arena_at\count = 1U, "empty chunk has one registered interval")
-    check(lmx_range_interval_pool(arena_at, first_chunk\base) = pool, "allocator finds an empty registered interval")
-    check_absent(arena_at, first_chunk\base, "empty chunk base is not a live cell")
+    check(first_chunk != 0 && first_chunk = pool\tail && lmx_chunk_cells(first_chunk, pool\stride) = 0U, "open creates one empty chunk")
+    check(lmx_arena_index_len(arena_at) = 1U, "empty chunk has one registered interval")
+    check(lmx_range_interval_pool(arena_at, (cast: (@: void) lmx_chunk_data(first_chunk))) = pool, "allocator finds an empty registered interval")
+    check_absent(arena_at, (cast: (@: void) lmx_chunk_data(first_chunk)), "empty chunk base is not a live cell")
 
     first: (cast: (@: LmxThread) lmx_pool_take(arena_at, pool))
     check(first != 0, "first take succeeds")
     check(pool\head = first_chunk && pool\tail = first_chunk && first_chunk\next = 0, "first take reuses the empty registered chunk")
-    check(arena_at\count = 1U, "first take does not allocate another interval")
+    check(lmx_arena_index_len(arena_at) = 1U, "first take does not allocate another interval")
     check_thread(arena_at, pool, (cast: (@: void) first), "first live Thread cell is accepted")
 
     # `state` is inside the Thread record, not a second Thread cell.  This is the
@@ -85,7 +85,7 @@ fn: main () int
     check(interior != (cast: (@: void) first), "chosen Thread field is interior")
     check_absent(arena_at, interior, "Thread field address is not a Thread cell")
 
-    first_spare: (cast: (@: void) ((cast: (@: char) first_chunk\base) + pool\stride))
+    first_spare: (cast: (@: void) ((cast: (@: char) (cast: (@: void) lmx_chunk_data(first_chunk))) + pool\stride))
     check(lmx_range_interval_pool(arena_at, first_spare) = pool, "allocator sees aligned spare capacity")
     check_absent(arena_at, first_spare, "aligned spare capacity is not a live cell")
 
@@ -97,11 +97,11 @@ fn: main () int
     second_chunk: pool\tail
     check(third != 0 && second_chunk != 0 && second_chunk != first_chunk, "third take adds a second chunk")
     check(first_chunk\next = second_chunk && second_chunk\next = 0, "chunks form one array chain")
-    check(arena_at\count = 2U, "both chunk intervals are indexed independently")
+    check(lmx_arena_index_len(arena_at) = 2U, "both chunk intervals are indexed independently")
     check_thread(arena_at, pool, (cast: (@: void) first), "first chunk remains accepted after growth")
     check_thread(arena_at, pool, (cast: (@: void) third), "second chunk live cell is accepted")
 
-    second_spare: (cast: (@: void) ((cast: (@: char) second_chunk\base) + pool\stride))
+    second_spare: (cast: (@: void) ((cast: (@: char) (cast: (@: void) lmx_chunk_data(second_chunk))) + pool\stride))
     check(lmx_range_interval_pool(arena_at, second_spare) = pool, "allocator sees spare capacity in the second interval")
     check_absent(arena_at, second_spare, "second interval spare is not confused with cumulative array count")
     fourth: (cast: (@: LmxThread) lmx_pool_take(arena_at, pool))
@@ -109,7 +109,7 @@ fn: main () int
     check_thread(arena_at, pool, (cast: (@: void) fourth), "activated second chunk spare is accepted")
 
     check(lmx_pool_release(arena_at, pool) = 0, "pool release succeeds")
-    check(arena_at\count = 0U, "pool release retires both intervals")
+    check(lmx_arena_index_len(arena_at) = 0U, "pool release retires both intervals")
     check_absent(arena_at, (cast: (@: void) first), "retired first interval answers nothing")
     check_absent(arena_at, (cast: (@: void) third), "retired second interval answers nothing")
     check(lmx_arena_release(arena_at) = 0, "arena release succeeds")

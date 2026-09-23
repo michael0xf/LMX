@@ -42,7 +42,7 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 #
 # Graph A (source refs = 2): 0 method | 1 slot for B
 # B source built in A's arena during A's turn (2 slots); B never runs a turn.
-# After A util: only a_at\count, b_at\count, service/manager counts, R0 graph slot —
+# After A util: only lmx_arena_index_len(a_at), lmx_arena_index_len(b_at), service/manager counts, R0 graph slot —
 # never read cells inside arena A or arena B (B's record lived in A's arena).
 
 @: LmxRoot cs_root 0
@@ -329,7 +329,7 @@ fn: main () int
     letter\handoff_ready: 0
     letter\graph: 0
     cs_check(counts, lmx_service_post(service, (cast: (@: void) t_a), letter, @ letter_arena) = c.LMX_SERVICE_OK, "post to A refused")
-    cs_check(counts, letter_at\count != 0U && letter_at\blocks != 0, "producer lost letter arena before owner take")
+    cs_check(counts, lmx_arena_index_len(letter_at) != 0U && letter_at\blocks != 0, "producer lost letter arena before owner take")
     cs_check(counts, lmx_range_classify(@ letter_arena, (cast: (@: void) letter)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "producer no longer owns queued letter")
     cs_check(counts, lmx_range_classify(@ arena_a, (cast: (@: void) letter)) = c.LMX_KIND_NONE, "recipient classified letter before owner take")
     cs_check(counts, lmx_thread_mail_count(t_a, c.LMX_POST_INBOX) = 1U, "A inbox empty after post")
@@ -340,7 +340,7 @@ fn: main () int
     base: lmx_clock_ticks()
     cs_check(counts, lmx_manager_round(manager, 1U, base) = c.LMX_MANAGER_OK, "A turn manager round did not run")
     cs_check(counts, cs_a_turns >= 1U && cs_letters_taken = 1U, "A did not take its letter")
-    cs_check(counts, letter_at\count = 0U && letter_at\blocks = 0, "letter arena did not empty on owner take")
+    cs_check(counts, lmx_arena_index_len(letter_at) = 0U && letter_at\blocks = 0, "letter arena did not empty on owner take")
     cs_check(counts, cs_letter_owned_after_take != 0, "owner take did not attach letter to A before exposure")
     cs_check(counts, cs_a_create_diag = 10U && cs_msg_b != 0 && cs_t_b != 0, "A did not create B in its turn")
     if: cs_msg_b = 0 || cs_t_b = 0 || cs_a_create_diag != 10U
@@ -374,8 +374,8 @@ fn: main () int
     cs_check(counts, lmx_settle_ready(msg_b) = 0, "a child asked to close reads settle-ready at once")
     cs_check(counts, lmx_thread_child_is(t_a, t_b) != 0, "B not live child of A before util")
     cs_check(counts, lmx_service_find(service, (cast: (@: void) t_b)) = (cast: (@: void) t_b), "B not in service before util")
-    b_count_before: b_at\count
-    a_count_before: a_at\count
+    b_count_before: lmx_arena_index_len(b_at)
+    a_count_before: lmx_arena_index_len(a_at)
     cs_check(counts, b_count_before > 0U, "B arena empty before util")
     cs_check(counts, a_count_before > 0U, "A arena empty before util")
     svc_before: lmx_service_count(service)
@@ -399,7 +399,7 @@ fn: main () int
     cs_check(counts, lmx_settle_children(r0, root_arena, service, manager, base) = c.LMX_SETTLE_OK, "the settle at the request did not run")
     cs_check(counts, lmx_thread_child_is(r0, t_a) != 0, "A was settled before its child's wait was over")
     cs_check(counts, lmx_thread_child_is(t_a, t_b) != 0, "B left A's chain before its window")
-    cs_check(counts, b_at\count = b_count_before && b_at\blocks != 0, "B's arena was touched before its window")
+    cs_check(counts, lmx_arena_index_len(b_at) = b_count_before && b_at\blocks != 0, "B's arena was touched before its window")
     cs_check(counts, lmx_service_count(service) = 3U, "the service changed before B's window")
     cs_check(counts, lmx_orphan_count(lmx_root_orphans(@ root)) = 0U, "something was adopted before B's window")
 
@@ -412,8 +412,8 @@ fn: main () int
     cs_check(counts, lmx_settle_children(r0, root_arena, service, manager, base + 100001U) = c.LMX_SETTLE_OK, "the settle at the window did not run")
 
     # AFTER: probe-owned only (no reads inside arena A or B cells).
-    cs_check(counts, b_at\count = 0U && b_at\blocks = 0, "B's arena did not attach to A's")
-    cs_check(counts, a_at\count = 0U && a_at\blocks = 0, "A arena not released (not SUCCESS path?)")
+    cs_check(counts, lmx_arena_index_len(b_at) = 0U && b_at\blocks = 0, "B's arena did not attach to A's")
+    cs_check(counts, lmx_arena_index_len(a_at) = 0U && a_at\blocks = 0, "A arena not released (not SUCCESS path?)")
     cs_check(counts, lmx_thread_child_is(r0, t_a) = 0, "A membership not cleared (not SUCCESS path)")
     svc_after: lmx_service_count(service)
     mgr_after: lmx_manager_count(manager)
@@ -429,7 +429,7 @@ fn: main () int
     c.printf("lmx_app_chain_settle checks=%d failures=%d a_turns=%u create_diag=%u b_count %u->%u svc %u->%u mgr %u->%u entry_diag=%u\n",
              counts[0], failures,
              (cast: (unsigned) cs_a_turns), (cast: (unsigned) cs_a_create_diag),
-             (cast: (unsigned) b_count_before), (cast: (unsigned) b_at\count),
+             (cast: (unsigned) b_count_before), (cast: (unsigned) lmx_arena_index_len(b_at)),
              (cast: (unsigned) svc_before), (cast: (unsigned) svc_after),
              (cast: (unsigned) mgr_before), (cast: (unsigned) mgr_after),
              (cast: (unsigned) cs_entry_diag))

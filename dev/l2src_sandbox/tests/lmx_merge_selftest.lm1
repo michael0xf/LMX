@@ -69,7 +69,7 @@ fn: merge_arrays_live (@: LmxArena arena) int
         return: 0
     pool: arena\arrays
     while: pool != 0
-        if: pool\head = 0 || lmx_range_pool(arena, pool\head\base) != pool
+        if: pool\head = 0 || lmx_range_pool(arena, (cast: (@: void) lmx_chunk_data(pool\head))) != pool
             return: 0
         ---
         pool: pool\next
@@ -157,7 +157,7 @@ fn: main () int
     merge_check(counts, result\parent = container, "the result's structural parent is the execution container")
     merge_check(counts, result\len = 3, "two operands, three slots")
     merge_check(counts, a\len = 2 && b\len = 1, "the operands were not written")
-    merge_check(counts, dst_at\count != 0U, "the destination arena holds the copies")
+    merge_check(counts, lmx_arena_index_len(dst_at) != 0U, "the destination arena holds the copies")
     # The positive side of the same walk, so a walker that could only fail would
     # show up here rather than hide in the refusal below: after a merge that
     # succeeded, every array the destination holds is a live array.
@@ -191,13 +191,13 @@ fn: main () int
     # 4. An operand that is not a Structure is refused. The refusal is decided before
     # the destination's mark is taken, so the destination is not even touched -- and
     # that is what the entry count and the array count say.
-    held: dst_at\count
+    held: lmx_arena_index_len(dst_at)
     held_arrays: merge_arrays(@ dst)
     operands[0]: (cast: (@: Lmx) int_cell)
     refused: 0
     status: lmx_merge_owned(operands, 1U, 0, container, 0, @ arena, @ dst, @ refused)
     merge_check(counts, status = LMX_MERGE_INVALID && refused = 0, "a non-Structure operand is refused")
-    merge_check(counts, dst_at\count = held, "a refusal before the mark left the destination untouched")
+    merge_check(counts, lmx_arena_index_len(dst_at) = held, "a refusal before the mark left the destination untouched")
     merge_check(counts, merge_arrays(@ dst) = held_arrays && merge_arrays_live(@ dst) = 1, "a refusal before the mark left the destination with the arrays it had")
     operands[0]: a
 
@@ -221,7 +221,7 @@ fn: main () int
     status: lmx_merge_owned(operands, 1U, 0, container, 0, @ arena, @ dst, @ refused)
     merge_check(counts, status = LMX_MERGE_UNSUPPORTED && refused = 0, "an unclassified child refuses the merge")
     merge_check(counts, bad\len = 1, "the refused source is untouched")
-    merge_check(counts, dst_at\count = held, "a refused merge left the destination arena as it was")
+    merge_check(counts, lmx_arena_index_len(dst_at) = held, "a refused merge left the destination arena as it was")
     merge_check(counts, merge_arrays(@ dst) = held_arrays, "a refused merge left the destination with the arrays it had")
     merge_check(counts, merge_arrays_live(@ dst) = 1, "a refused merge left no array of the destination hanging")
     # The same refusal a second time: the destination is reusable after a rollback --
@@ -230,12 +230,12 @@ fn: main () int
     refused: 0
     status: lmx_merge_owned(operands, 1U, 0, container, 0, @ arena, @ dst, @ refused)
     merge_check(counts, status = LMX_MERGE_UNSUPPORTED && refused = 0, "the same refusal a second time is refused the same way")
-    merge_check(counts, dst_at\count = held && merge_arrays(@ dst) = held_arrays && merge_arrays_live(@ dst) = 1, "the destination is exactly as it was after a second refusal")
+    merge_check(counts, lmx_arena_index_len(dst_at) = held && merge_arrays(@ dst) = held_arrays && merge_arrays_live(@ dst) = 1, "the destination is exactly as it was after a second refusal")
 
-    merge_check(counts, arena_at\count > 0U && dst_at\count > 0U, "entries exist while the arenas do")
+    merge_check(counts, lmx_arena_index_len(arena_at) > 0U && lmx_arena_index_len(dst_at) > 0U, "entries exist while the arenas do")
     merge_check(counts, lmx_arena_release(@ dst) = 0, "destination arena released")
     merge_check(counts, lmx_arena_release(@ arena) = 0, "source arena released")
-    merge_check(counts, arena_at\count = 0U && dst_at\count = 0U, "releasing an arena retires every entry it held")
+    merge_check(counts, lmx_arena_index_len(arena_at) = 0U && lmx_arena_index_len(dst_at) = 0U, "releasing an arena retires every entry it held")
     failures: counts[1]
     c.printf("merge checks=%d failures=%d\n", counts[0], failures)
     free((cast: (@: void) operands))

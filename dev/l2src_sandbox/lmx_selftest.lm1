@@ -56,7 +56,7 @@ fn: main () int
     if: lmx_pool_over(@ arena, @ spare_of, @ spare_chunk, (cast: (@: void) chars_pool), 2U, 1U, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR) = 0
         fputs("lmx: overlapping range was accepted\n", l1_stdout())
         failures: failures + 1
-    if: arena_at\count != 2U
+    if: lmx_arena_index_len(arena_at) != 2U
         fputs("lmx: a refused registration still added an entry\n", l1_stdout())
         failures: failures + 1
 

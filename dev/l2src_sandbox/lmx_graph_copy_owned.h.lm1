@@ -68,17 +68,19 @@ define: LMX_GRAPH_COPY_UNSUPPORTED 3
 
 # Operation-local bookkeeping: open-addressing pointer map and a work list.
 # Their buffers may move on growth; the addresses stored IN them never move.
+# Open-addressing pointer map: two void* DynamicArrays (table size = capacity;
+# occupancy tracked in n). Keys/vals always allocated to capacity slots.
+
+
+
 struct: LmxCopyMap
-    @@: void keys
-    @@: void vals
-    size_t: cap
+    LmxArrayDynamicArray: keys
+    LmxArrayDynamicArray: vals
     size_t: n
 end: LmxCopyMap
 
 struct: LmxCopyStack
-    @@: Lmx items
-    size_t: cap
-    size_t: n
+    LmxArrayDynamicArray: items
 end: LmxCopyStack
 
 prototype:

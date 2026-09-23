@@ -104,7 +104,7 @@ fn: mc_body (@: Lmx node) int
     if: mc_body_ends != 0
         if: mc_observe != 0 && mc_root_mail_p != 0
             mc_child_reached: 1
-            mc_seen_root_mail_slots: (cast: (size_t) mc_root_mail_p\inbox_slots)
+            mc_seen_root_mail_slots: (cast: (size_t) lmx_post_inbox_data(mc_root_mail_p))
         ---
         message\success: 1
         message\running: 0
@@ -380,7 +380,7 @@ fn: main () int
     mc_check(counts, mc_phase = 1U, "the live child was not wired")
     child_live_t: (cast: (@: LmxThread) lmx_thread_child_first(r0_live))
     mc_check(counts, child_live_t != 0, "the live child is not in R0's chain")
-    mc_check(counts, live_mail_p\inbox_slots != 0, "the live child's mailbox was never opened")
+    mc_check(counts, lmx_post_inbox_data(live_mail_p) != 0, "the live child's mailbox was never opened")
     mc_check(counts, lmx_service_find(live_service, (cast: (@: void) child_live_t)) = (cast: (@: void) child_live_t), "the live child has no route")
     # The manager owns no admission queue: successful end-turn publication made this exact Thread
     # the sole element of R0's graph-resident children Array.
@@ -395,10 +395,10 @@ fn: main () int
     # closes route/mail and releases storage. The mailbox is owned by the released child arena, so
     # its address is classified through the surviving arena header and is never dereferenced here.
     mc_check(counts, lmx_range_home(child_at_p, (cast: (@: void) live_mail_p)) = 0, "the quiescent child's mailbox storage survived synchronous close")
-    mc_check(counts, child_at_p\blocks = 0 && child_at_p\count = 0U, "the quiescent child's arena survived synchronous close")
+    mc_check(counts, child_at_p\blocks = 0 && lmx_arena_index_len(child_at_p) = 0U, "the quiescent child's arena survived synchronous close")
     mc_check(counts, lmx_range_home(live_root_arena, (cast: (@: void) live_root_mail)) = 0, "R0's mailbox storage survived completed close")
     mc_check(counts, lmx_service_count(live_service) = 0U, "service routes survived completed close")
-    mc_check(counts, live_root_arena\blocks = 0 && live_root_arena\count = 0U, "R0's arena survived completed close")
+    mc_check(counts, live_root_arena\blocks = 0 && lmx_arena_index_len(live_root_arena) = 0U, "R0's arena survived completed close")
     mc_check(counts, lmx_root_state(@ live_root) = c.LMX_ROOT_CLOSED, "the closed root is not CLOSED")
 
     # ===== PHASE 2: a child that ends BEFORE the close; the close then completes everything =====
@@ -446,7 +446,7 @@ fn: main () int
     mc_check(counts, lmx_manager_round(end_manager, 1U, lmx_root_clock(@ end_root)) = c.LMX_MANAGER_OK, "the ending child's turn did not run")
     # The child publishes its terminal boundary but cannot release storage while its physical
     # Thread reference remains in the parent's Array. The serialized parent owns removal/release.
-    mc_check(counts, end_mail_p\inbox_slots != 0, "the child closed its mailbox before parent removal")
+    mc_check(counts, lmx_post_inbox_data(end_mail_p) != 0, "the child closed its mailbox before parent removal")
     mc_check(counts, lmx_service_find(end_service, (cast: (@: void) child_end_t)) = (cast: (@: void) child_end_t), "the child removed its route before parent removal")
     mc_check(counts, end_child_at\blocks != 0, "the child released its arena before parent removal")
     # The parent's settle removes the physical reference, then closes route/mail/storage.
@@ -454,8 +454,8 @@ fn: main () int
     svc_after_settle: lmx_service_count(end_service)
     mc_check(counts, svc_after_settle = 1U, "the service is not R0 alone after the settle")
     mc_check(counts, lmx_range_home(end_child_at, (cast: (@: void) end_mail_p)) = 0, "the settled child's mailbox storage was not released")
-    mc_check(counts, end_child_at\blocks = 0 && end_child_at\count = 0U, "the settled child's arena was not released")
-    mc_check(counts, end_root_mail\inbox_slots != 0, "R0's mail was closed before the cascade completed")
+    mc_check(counts, end_child_at\blocks = 0 && lmx_arena_index_len(end_child_at) = 0U, "the settled child's arena was not released")
+    mc_check(counts, lmx_post_inbox_data(end_root_mail) != 0, "R0's mail was closed before the cascade completed")
     mc_check(counts, lmx_root_close(@ end_root) = c.LMX_ROOT_OK, "the settled R0 did not close")
     mc_check(counts, lmx_range_home(end_root_arena, (cast: (@: void) end_root_mail)) = 0, "R0's mailbox storage was not released by the close")
     mc_check(counts, lmx_range_home(end_child_at, (cast: (@: void) end_mail_p)) = 0, "the child's released mailbox storage was reopened")

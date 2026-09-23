@@ -54,7 +54,7 @@ return: 0
 fn: sane (@: LmxScratch s) int
     if: s = 0 || s\at = 0
         return: 0
-    if: s\used > s\at\count || s\at\count > s\at\capacity
+    if: s\used > lmx_chunk_cells(s\at, s\cells\stride) || lmx_chunk_cells(s\at, s\cells\stride) > lmx_chunk_room(s\at, s\cells\stride)
         return: 0
 return: 1
 
@@ -154,7 +154,7 @@ fn: main () int
     check(lmx_scratch_open(s1, a1, @ pool1, 0U) = c.LMX_SCRATCH_INVALID, "a zero step is refused")
     check(lmx_scratch_open(s1, a1, @ pool1, 8U) = c.LMX_SCRATCH_OK, "open, step 8 cells")
     check(lmx_scratch_open(s1, a1, @ pool1, 8U) = c.LMX_SCRATCH_INVALID, "a second open is refused")
-    check(lmx_range_interval_pool(a1, s1\at\base) = @ pool1, "the empty scratch chunk is a registered allocator interval")
+    check(lmx_range_interval_pool(a1, lmx_chunk_data(s1\at)) = @ pool1, "the empty scratch chunk is a registered allocator interval")
     check(sane(s1) != 0 && chunks_of(s1) = 1U, "one chunk, cursor at its start")
 
     # ---- the cursor never overlaps the pool's high-water mark or a live slice ----
@@ -168,15 +168,15 @@ fn: main () int
     fill(a, 3U * word, 65)
     lmx_scratch_mark(s1, m1)
     check(lmx_scratch_take(s1, 4U * word, @ x) = c.LMX_SCRATCH_OK, "x: 4 cells")
-    check(s1\at\count = 7U && sane(s1) != 0, "the pool's mark stands at 7")
+    check(lmx_chunk_cells(s1\at, s1\cells\stride) = 7U && sane(s1) != 0, "the pool's mark stands at 7")
     check(lmx_scratch_rewind(s1, m1) = c.LMX_SCRATCH_OK && s1\used = 3U, "rewind to m1: cursor back to 3")
     lmx_scratch_mark(s1, m1)
     check(lmx_scratch_take(s1, 2U * word, @ y) = c.LMX_SCRATCH_OK && y = x, "y re-uses x's cells")
     fill(y, 2U * word, 89)
-    check(s1\at\count = 7U, "re-use did not move the pool's mark")
+    check(lmx_chunk_cells(s1\at, s1\cells\stride) = 7U, "re-use did not move the pool's mark")
     check(lmx_scratch_take(s1, 3U * word, @ z) = c.LMX_SCRATCH_OK, "z: 3 cells, one of them new")
     fill(z, 3U * word, 90)
-    check(s1\at\count = 8U && s1\used = 8U && sane(s1) != 0, "the pool's mark moved WITH the cursor, to 8")
+    check(lmx_chunk_cells(s1\at, s1\cells\stride) = 8U && s1\used = 8U && sane(s1) != 0, "the pool's mark moved WITH the cursor, to 8")
     check(apart(z, 3U * word, a, 3U * word) != 0 && apart(z, 3U * word, y, 2U * word) != 0, "z meets neither a nor y")
     check(holds(a, 3U * word, 65) != 0 && holds(y, 2U * word, 89) != 0, "a and y are intact after z")
     # w does not fit the first chunk any more: the pool grows, and the old chunk stays put.

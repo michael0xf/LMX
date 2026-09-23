@@ -144,14 +144,14 @@ fn: main () int
     check(lmx_plan_slot_known(m, plan, 4U) = 0 && lmx_plan_slot_known(m, 0, 0U) = 0 && lmx_plan_slot_known(0, plan, 0U) = 0, "past the end, no plan, no occurrence: 0")
     # Nothing is asked of the arena while resolving: with the arena's index hidden every
     # classification answers NONE, and the resolver still returns the same slots.
-    saved_index: a\index
-    saved_count: a\count
-    a\count: 0U
+    saved_index: lmx_arena_index_data(a)
+    saved_count: lmx_arena_index_len(a)
+    lmx_arena_index_set_len(a, 0U)
     check(lmx_range_classify(a, (cast: (@: void) m)) = c.LMX_KIND_NONE, "the index is hidden: M itself classifies as nothing")
     check(lmx_plan_slot_known(m, plan, 1U) = s1 && lmx_plan_slot_known(m, plan, 3U) = s3 && lmx_plan_entry_count(plan) = 4U, "resolving asks the arena nothing")
     check(lmx_plan_validate_shape(a, roles, m, plan) = c.LMX_PLAN_INVALID, "whereas validation DOES ask, and refuses")
-    a\index: saved_index
-    a\count: saved_count
+    lmx_arena_index_set_data(a, saved_index)
+    lmx_arena_index_set_len(a, saved_count)
     check(lmx_plan_validate_shape(a, roles, m, plan) = c.LMX_PLAN_OK, "index restored")
 
     # ---- publish ----

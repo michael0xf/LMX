@@ -73,13 +73,13 @@ fn: main () int
     slot_base: node\data
     pool_before: lmx_range_pool(@ give, slot_base)
     attach_check(counts, pool_before != 0, "the child array answers before the attach")
-    attach_check(counts, keep_at\count > 0U && give_at\count > 0U, "each arena holds entries of its own")
+    attach_check(counts, lmx_arena_index_len(keep_at) > 0U && lmx_arena_index_len(give_at) > 0U, "each arena holds entries of its own")
 
     # The act.
     attach_check(counts, lmx_arena_attach(@ keep, @ give) = 0, "the arena attached")
     attach_check(counts, give_at\blocks = 0 && give_at\arrays = 0, "the attached arena holds no storage and no arrays")
-    attach_check(counts, give_at\index = 0 && give_at\count = 0U && give_at\capacity = 0U, "the attached arena holds no index and no entries")
-    attach_check(counts, keep_at\count > 0U, "the destination kept the entries")
+    attach_check(counts, lmx_arena_index_data(give_at) = 0 && lmx_arena_index_len(give_at) = 0U && lmx_arena_index_cap(give_at) = 0U, "the attached arena holds no index and no entries")
+    attach_check(counts, lmx_arena_index_len(keep_at) > 0U, "the destination kept the entries")
 
     # Nothing moved: every address answers through the destination, with the very same
     # kind, type and descriptor.
@@ -102,7 +102,7 @@ fn: main () int
 
     # One owner: releasing the destination releases what both arenas held.
     attach_check(counts, lmx_arena_release(@ keep) = 0, "the destination released everything")
-    attach_check(counts, keep_at\blocks = 0 && keep_at\arrays = 0 && keep_at\index = 0 && keep_at\count = 0U, "the destination is empty after release")
+    attach_check(counts, keep_at\blocks = 0 && keep_at\arrays = 0 && lmx_arena_index_data(keep_at) = 0 && lmx_arena_index_len(keep_at) = 0U, "the destination is empty after release")
 
     failures: counts[1]
     c.printf("arena attach checks=%d failures=%d\n", counts[0], failures)

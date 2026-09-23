@@ -148,10 +148,10 @@ fn: main () int
     roots[1]: a
     copies[0]: b
     copies[1]: b
-    before: blind_at\count
+    before: lmx_arena_index_len(blind_at)
     status: lmx_graph_copy_many_profiles_owned(roots, 2U, 0, @ src, @ blind, profiles, 1U, copies)
     mcheck(status = c.LMX_GRAPH_COPY_INVALID && copies[0] = 0 && copies[1] = 0, "missing exact import fails and clears the complete output span")
-    mcheck(blind_at\count = before, "failed multi-root copy rolls destination ranges back")
+    mcheck(lmx_arena_index_len(blind_at) = before, "failed multi-root copy rolls destination ranges back")
 
     # A physical profile reference is insufficient when either the profile object or any
     # range carrying it is unsealed.  An activation-local Lmx is not a profile at all.
@@ -167,16 +167,16 @@ fn: main () int
     profiles[0]: profile_bad
     operands[0]: bad
     out: a
-    before: dst_at\count
+    before: lmx_arena_index_len(dst_at)
     status: lmx_merge_profiles_owned(operands, 1U, 0, 0, 0, @ src, @ dst, profiles, 1U, @ out)
-    mcheck(status = c.LMX_MERGE_INVALID && out = 0 && dst_at\count = before, "unsealed profile ranges fail without destination change")
+    mcheck(status = c.LMX_MERGE_INVALID && out = 0 && lmx_arena_index_len(dst_at) = before, "unsealed profile ranges fail without destination change")
 
     profiles[0]: @ arbitrary_profile
     operands[0]: ordinary
     out: a
-    before: dst_at\count
+    before: lmx_arena_index_len(dst_at)
     status: lmx_merge_profiles_owned(operands, 1U, 0, 0, 0, @ src, @ dst, profiles, 1U, @ out)
-    mcheck(status = c.LMX_MERGE_INVALID && out = 0 && dst_at\count = before, "activation-local arbitrary profile is refused transactionally")
+    mcheck(status = c.LMX_MERGE_INVALID && out = 0 && lmx_arena_index_len(dst_at) = before, "activation-local arbitrary profile is refused transactionally")
 
     mcheck(lmx_arena_release(@ blind) = 0 && lmx_arena_release(@ dst) = 0, "destination arenas release")
     mcheck(lmx_arena_release(@ src) = 0 && lmx_arena_release(@ profile_owner) = 0, "owners release")

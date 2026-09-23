@@ -144,8 +144,8 @@ fn: digest (@: LmxArena a) size_t
     while: pool != 0
         chunk: lmx_pool_chunk_head(pool)
         while: chunk != 0
-            bytes: (cast: (@: char) chunk\base)
-            n: chunk\count * pool\stride
+            bytes: (cast: (@: char) (cast: (@: void) lmx_chunk_data(chunk)))
+            n: lmx_chunk_cells(chunk, pool\stride) * pool\stride
             i: 0U
             while: i < n
                 sum: (sum * 31U) + (cast: (size_t) ((cast: (int) bytes[i]) & 255))

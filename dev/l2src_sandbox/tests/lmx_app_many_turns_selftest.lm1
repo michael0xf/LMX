@@ -263,7 +263,7 @@ fn: main () int
         letter\handoff_ready: 0
         letter\graph: 0
         mt_check(counts, lmx_service_post(service, (cast: (@: void) child_t), letter, @ letter_arena) = c.LMX_SERVICE_OK, "post refused")
-        mt_check(counts, letter_at\count != 0U && letter_at\blocks != 0, "producer lost letter arena before owner take")
+        mt_check(counts, lmx_arena_index_len(letter_at) != 0U && letter_at\blocks != 0, "producer lost letter arena before owner take")
         mt_check(counts, lmx_range_classify(@ letter_arena, (cast: (@: void) letter)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "producer no longer owns queued letter")
         mt_check(counts, lmx_range_classify(@ child_arena, (cast: (@: void) letter)) = c.LMX_KIND_NONE, "recipient classified letter before owner take")
         mt_check(counts, lmx_thread_mail_count(child_t, c.LMX_POST_INBOX) = 1U, "inbox empty after post")
@@ -273,7 +273,7 @@ fn: main () int
         mt_check(counts, turns_from_graph = i + 1U, "turns from graph wrong after round")
         mt_check(counts, accepted_from_graph = i + 1U, "accepted from graph wrong after round")
         mt_check(counts, lmx_thread_mail_count(child_t, c.LMX_POST_INBOX) = 0U, "inbox not emptied after take")
-        mt_check(counts, letter_at\count = 0U && letter_at\blocks = 0, "letter arena did not empty on owner take")
+        mt_check(counts, lmx_arena_index_len(letter_at) = 0U && letter_at\blocks = 0, "letter arena did not empty on owner take")
         mt_check(counts, lmx_range_classify(@ child_arena, (cast: (@: void) letter)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "owner take did not attach letter to child")
         mt_check(counts, child_msg\success = 0 && child_msg\running = 1, "child finished early")
         i: i + 1U
@@ -303,19 +303,19 @@ fn: main () int
     letter\handoff_ready: 0
     letter\graph: 0
     mt_check(counts, lmx_service_post(service, (cast: (@: void) child_t), letter, @ letter_arena) = c.LMX_SERVICE_OK, "last post refused")
-    mt_check(counts, letter_at\count != 0U && letter_at\blocks != 0, "producer lost last letter arena before owner take")
+    mt_check(counts, lmx_arena_index_len(letter_at) != 0U && letter_at\blocks != 0, "producer lost last letter arena before owner take")
     mt_check(counts, lmx_range_classify(@ letter_arena, (cast: (@: void) letter)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "producer no longer owns queued last letter")
     mt_check(counts, lmx_range_classify(@ child_arena, (cast: (@: void) letter)) = c.LMX_KIND_NONE, "recipient classified last letter before owner take")
     mt_check(counts, lmx_manager_round(manager, 1U, lmx_root_clock(@ root)) = c.LMX_MANAGER_OK, "last round did not run")
-    mt_check(counts, letter_at\count = 0U && letter_at\blocks = 0, "last letter arena did not empty on owner take")
+    mt_check(counts, lmx_arena_index_len(letter_at) = 0U && letter_at\blocks = 0, "last letter arena did not empty on owner take")
     mt_check(counts, lmx_range_classify(@ child_arena, (cast: (@: void) letter)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "owner take did not attach last letter to child")
     mt_check(counts, child_msg\success != 0 && child_msg\handoff_ready != 0, "the child did not publish its safe success boundary")
     mt_check(counts, lmx_thread_child_is(r0, child_t) != 0, "child not live before settle")
-    mt_check(counts, child_at\blocks != 0 && child_at\count != 0U, "child self-released before parent removal")
+    mt_check(counts, child_at\blocks != 0 && lmx_arena_index_len(child_at) != 0U, "child self-released before parent removal")
     mt_check(counts, lmx_root_cycle(@ root, 1U) = c.LMX_ROOT_OK, "settle cycle did not run")
     mt_check(counts, lmx_thread_child_is(r0, child_t) = 0, "child stayed live after settle")
     mt_check(counts, lmx_thread_child_is(r0, child_t) = 0, "membership not cleared")
-    mt_check(counts, child_at\blocks = 0 && child_at\count = 0U, "arena not released")
+    mt_check(counts, child_at\blocks = 0 && lmx_arena_index_len(child_at) = 0U, "arena not released")
     mt_check(counts, lmx_manager_count(manager) = 0U, "manager not empty after settle")
     mt_check(counts, lmx_service_count(service) = 1U, "service should hold only R0 after settle")
     mt_check(counts, lmx_root_close(@ root) = c.LMX_ROOT_OK, "R0 did not close")

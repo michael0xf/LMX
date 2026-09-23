@@ -6,10 +6,9 @@ predef: "l2src/lmx_arena.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
-# Migrated List grow witness (OPENROUTER-RETIRED-ARRAY-GROW-20260922-31 /
-# GROKBOT-STAGE1-RELEASE-RESUME-20260922-47). Backing layout is size_t cap then
-# pointer cells; element reads MUST go through lmx_list_data() (prefix skip).
-# Do not index descriptor\data as cells — that reads the capacity word as a value.
+# List grow witness (FABLE-134). Public descriptor is LmxArrayDynamicArray; capacity is on
+# that record (offsetof(array)==0 so LmxArrayDesc* reads of len/data still work). Backing is
+# plain void* cells — no size_t capacity prefix.
 
 sub: grow_check (@: int counts; int: ok; const: @(char label))
     counts[0]: counts[0] + 1
@@ -35,7 +34,6 @@ fn: main () int
     @: void removed 0
     @: void old_raw
     @: void cells
-    @: size_t cap_word
     @@: void old_cells
     @@: void cellv
     int: type c.LMX_TYPE_ARRAY_OF_POINTER_BASE + 77
@@ -58,10 +56,8 @@ fn: main () int
     grow_check(counts, lmx_range_classify(@ arena, list) = c.LMX_KIND_LIST && lmx_range_type_of(@ arena, list) = type, "list descriptor is typed by its arena range")
     cells: lmx_list_data(list)
     grow_check(counts, cells != 0 && lmx_range_classify(@ arena, (cast: (@: LmxArrayDesc) list)\data) = c.LMX_KIND_PRIMITIVE && lmx_range_type_of(@ arena, cells) = element_type && lmx_range_stride(@ arena, cells) = c.sizeof(@: void), "backing cells are typed by their arena range")
-    # Capacity-prefix invariant: raw data[0] is cap; lmx_list_data skips sizeof(size_t).
-    cap_word: (cast: (@: size_t) (cast: (@: LmxArrayDesc) list)\data)
-    grow_check(counts, cap_word != 0 && cap_word[0] = lmx_list_cap(list) && cells = (cast: (@: void) (cast: (@: char) cap_word + c.sizeof(c.size_t))), "capacity-prefix: raw[0]=cap and lmx_list_data skips prefix")
-    grow_check(counts, lmx_list_append_owned(list, p0, @ arena) = c.LMX_LIST_OK && lmx_list_append_owned(list, p1, @ arena) = c.LMX_LIST_OK, "two values fit without growth")
+    # DynamicArray layout: capacity on the descriptor; data pointer IS the cell vector.
+    grow_check(counts, (cast: (@: LmxArrayDynamicArray) list)\capacity = lmx_list_cap(list) && cells = (cast: (@: LmxArrayDesc) list)\data, "DynamicArray: capacity on descriptor; data pointer is the cell vector")    grow_check(counts, lmx_list_append_owned(list, p0, @ arena) = c.LMX_LIST_OK && lmx_list_append_owned(list, p1, @ arena) = c.LMX_LIST_OK, "two values fit without growth")
     old_raw: (cast: (@: LmxArrayDesc) list)\data
     old_cells: (cast: (@@: void) lmx_list_data(list))
     grow_check(counts, old_cells[0] = p0 && old_cells[1] = p1, "physical referent values are stored unchanged")

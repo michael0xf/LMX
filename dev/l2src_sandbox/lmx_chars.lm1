@@ -1,4 +1,5 @@
 predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_pool.h.lm1"
 
 # The interned character array. Lingvamyxa_spec.txt 2, 21.4; ABI 14.7.
 #
@@ -32,6 +33,8 @@ predef: "l2src/lmx_arena.h.lm1"
 # arena has none of that kind and type (the usual case) and the request is refused
 # when it already has one -- the table is laid out ONCE, and cells of an array this
 # init did not lay out are not this table.
+
+
 fn: lmx_chars_init (@: LmxArena arena) int
     @: char cells
     size_t: index
@@ -67,10 +70,10 @@ fn: lmx_char_cell (@: LmxArena arena; int: value) @: void
     if: value > 255
         return: 0
     array: lmx_arena_find(arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR)
-    if: array = 0 || array\head = 0 || array\head\capacity < 256U
+    if: array = 0 || array\head = 0 || lmx_chunk_room(array\head, array\stride) < 256U
         return: 0
     ---
-    cells: (cast: (@: char) array\head\base)
+    cells: (cast: (@: char) lmx_chunk_data(array\head))
 return: (cast: (@: void) (cells + value))
 
 # Reads the character back through its address.  The type is known statically --

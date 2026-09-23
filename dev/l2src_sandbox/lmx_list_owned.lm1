@@ -1,31 +1,35 @@
 predef: "lmx_list_owned.h.lm1"
 predef: "l2src/lmx_pool.h.lm1"
 
-# Backing layout: size_t cap, then cap pointer cells. The public descriptor is an
-# arena record of kind LIST; it is not LmxArrayDesc and introduces no header type name.
+# Public descriptor is LmxArrayDynamicArray (Q18). Capacity lives on the DynamicArray,
+# never on LmxArrayDesc and never as a hidden backing prefix. Backing is plain void* cells.
 
 fn: lmx_list_len (@: void list) size_t
-    @: LmxArrayDesc d
+    @: LmxArrayDynamicArray d
+    @: LmxArrayDesc base
     if: list = 0
         return: 0U
-    d: (cast: (@: LmxArrayDesc) list)
-return: d\len
+    d: (cast: (@: LmxArrayDynamicArray) list)
+    base: (cast: (@: LmxArrayDesc) d)
+return: base\len
 
 fn: lmx_list_cap (@: void list) size_t
-    @: size_t p
+    @: LmxArrayDynamicArray d
+    @: LmxArrayDesc base
     if: list = 0
         return: 0U
-    p: (cast: (@: size_t) (cast: (@: LmxArrayDesc) list)\data)
-    if: p = 0
-        return: 0U
-return: p[0]
+    d: (cast: (@: LmxArrayDynamicArray) list)
+    base: (cast: (@: LmxArrayDesc) d)
+return: d\capacity
 
 fn: lmx_list_data (@: void list) @: void
-    @: char raw
-    if: list = 0 || (cast: (@: LmxArrayDesc) list)\data = 0
+    @: LmxArrayDynamicArray d
+    @: LmxArrayDesc base
+    if: list = 0
         return: 0
-    raw: (cast: (@: char) (cast: (@: LmxArrayDesc) list)\data)
-return: (cast: (@: void) (raw + c.sizeof(c.size_t)))
+    d: (cast: (@: LmxArrayDynamicArray) list)
+    base: (cast: (@: LmxArrayDesc) d)
+return: base\data
 
 fn: lmx_list_etype (@: void list; @: LmxArena arena) int
     @: void cells
@@ -35,13 +39,12 @@ fn: lmx_list_etype (@: void list; @: LmxArena arena) int
 return: lmx_range_type_of(arena, cells)
 
 fn: lmx_list_grow (@: void list; size_t: need; @: LmxArena arena) int
-    @: LmxArrayDesc d
+    @: LmxArrayDynamicArray d
+    @: LmxArrayDesc base
     size_t: cap
     size_t: delta
     size_t: index
     size_t: old_cap
-    @: size_t old_raw
-    @: size_t new_raw
     @@: void old_cells
     @@: void new_cells
     int: etype
@@ -50,13 +53,14 @@ fn: lmx_list_grow (@: void list; size_t: need; @: LmxArena arena) int
     @: void cells
     if: list = 0 || arena = 0
         return: c.LMX_LIST_INVALID
-    d: (cast: (@: LmxArrayDesc) list)
+    d: (cast: (@: LmxArrayDynamicArray) list)
+    base: (cast: (@: LmxArrayDesc) d)
     if: lmx_range_home(arena, list) != arena
         return: c.LMX_LIST_INVALID
     if: lmx_range_classify(arena, list) != c.LMX_KIND_LIST
         return: c.LMX_LIST_INVALID
-    old_cap: lmx_list_cap(list)
-    if: d\len > old_cap
+    old_cap: d\capacity
+    if: base\len > old_cap
         return: c.LMX_LIST_INVALID
     if: need <= old_cap
         return: c.LMX_LIST_OK
@@ -73,11 +77,9 @@ fn: lmx_list_grow (@: void list; size_t: need; @: LmxArena arena) int
             return: c.LMX_LIST_OVERFLOW
         cap: cap + delta
     ---
-    if: cap > ((cast: (size_t) -1) - 1U)
+    if: cap > ((cast: (size_t) -1) / c.sizeof(@: void))
         return: c.LMX_LIST_OVERFLOW
-    if: (cap + 1U) > ((cast: (size_t) -1) / c.sizeof(@: void))
-        return: c.LMX_LIST_OVERFLOW
-    cells: lmx_list_data(list)
+    cells: base\data
     vtype: lmx_range_type_of(arena, list)
     backing_kind: c.LMX_KIND_PRIMITIVE
     etype: c.LMX_TYPE_POINTER_BASE
@@ -104,31 +106,29 @@ fn: lmx_list_grow (@: void list; size_t: need; @: LmxArena arena) int
         backing_kind: lmx_range_classify(arena, cells)
         etype: lmx_range_type_of(arena, cells)
     ---
-    new_raw: (cast: (@: size_t) lmx_arena_take_n(arena, c.sizeof(@: void), backing_kind, etype, cap + 1U))
-    if: new_raw = 0
+    new_cells: (cast: (@@: void) lmx_arena_take_n(arena, c.sizeof(@: void), backing_kind, etype, cap))
+    if: new_cells = 0
         return: c.LMX_LIST_NOMEM
-    new_raw[0]: cap
-    new_cells: (cast: (@@: void) (cast: (@: char) new_raw + c.sizeof(c.size_t)))
     old_cells: (cast: (@@: void) cells)
     index: 0U
-    while: index < d\len
+    while: index < base\len
         new_cells[index]: old_cells[index]
         index: index + 1U
     ---
-    d\data: (cast: (@: void) new_raw)
+    base\data: (cast: (@: void) new_cells)
+    d\capacity: cap
     if: old_cells != 0
-        old_raw: (cast: (@: size_t) (cast: (@: char) old_cells - c.sizeof(c.size_t)))
         index: 0U
         while: index < old_cap
             old_cells[index]: 0
             index: index + 1U
         ---
-        old_raw[0]: 0U
     ---
 return: c.LMX_LIST_OK
 
 fn: lmx_list_new_owned (int: type; @: LmxArena arena) @: void
-    @: LmxArrayDesc list
+    @: LmxArrayDynamicArray list
+    @: LmxArrayDesc base
     int: backing_kind
     int: etype
     if: arena = 0
@@ -152,61 +152,69 @@ fn: lmx_list_new_owned (int: type; @: LmxArena arena) @: void
             ---
         ---
     ---
-    list: (cast: (@: LmxArrayDesc) lmx_arena_take(arena, c.sizeof(c.LmxArrayDesc), c.LMX_KIND_LIST, type))
+    list: (cast: (@: LmxArrayDynamicArray) lmx_arena_take(arena, c.sizeof(c.LmxArrayDynamicArray), c.LMX_KIND_LIST, type))
     if: list = 0
         return: 0
-    list\len: 0U
-    list\data: 0
+    base: (cast: (@: LmxArrayDesc) list)
+    base\len: 0U
+    base\data: 0
+    list\capacity: 0U
     if: lmx_list_grow((cast: (@: void) list), c.LMX_LIST_MIN_CAP, arena) != c.LMX_LIST_OK
         return: 0
     ---
 return: (cast: (@: void) list)
 
 fn: lmx_list_append_owned (@: void list; @: void value; @: LmxArena arena) int
-    @: LmxArrayDesc d
+    @: LmxArrayDynamicArray d
+    @: LmxArrayDesc base
     @@: void cells
     int: status
-    d: (cast: (@: LmxArrayDesc) list)
-    if: d = 0 || d\len = (cast: (size_t) -1)
+    d: (cast: (@: LmxArrayDynamicArray) list)
+    base: (cast: (@: LmxArrayDesc) d)
+    if: d = 0 || base\len = (cast: (size_t) -1)
         return: c.LMX_LIST_OVERFLOW
-    status: lmx_list_grow(list, d\len + 1U, arena)
+    status: lmx_list_grow(list, base\len + 1U, arena)
     if: status != c.LMX_LIST_OK
         return: status
     cells: (cast: (@@: void) lmx_list_data(list))
-    cells[d\len]: value
-    d\len: d\len + 1U
+    cells[base\len]: value
+    base\len: base\len + 1U
 return: c.LMX_LIST_OK
 
 fn: lmx_list_remove_owned (@: void list; size_t: index; @@: void removed; @: LmxArena arena) int
-    @: LmxArrayDesc d
+    @: LmxArrayDynamicArray d
+    @: LmxArrayDesc base
     @@: void cells
     size_t: at
-    d: (cast: (@: LmxArrayDesc) list)
+    d: (cast: (@: LmxArrayDynamicArray) list)
+    base: (cast: (@: LmxArrayDesc) d)
     if: d = 0 || arena = 0
         return: c.LMX_LIST_INVALID
     if: lmx_range_home(arena, list) != arena
         return: c.LMX_LIST_INVALID
     if: lmx_range_classify(arena, list) != c.LMX_KIND_LIST
         return: c.LMX_LIST_INVALID
-    if: index >= d\len || d\data = 0
+    if: index >= base\len || base\data = 0
         return: c.LMX_LIST_BOUNDS
     cells: (cast: (@@: void) lmx_list_data(list))
     if: removed != 0
         \removed: cells[index]
     at: index
-    while: at + 1U < d\len
+    while: at + 1U < base\len
         cells[at]: cells[at + 1U]
         at: at + 1U
     ---
-    cells[d\len - 1U]: 0
-    d\len: d\len - 1U
+    cells[base\len - 1U]: 0
+    base\len: base\len - 1U
 return: c.LMX_LIST_OK
 
 fn: lmx_list_value (@: void list; size_t: index) @: void
-    @: LmxArrayDesc d
+    @: LmxArrayDynamicArray d
+    @: LmxArrayDesc base
     @@: void cells
-    d: (cast: (@: LmxArrayDesc) list)
-    if: d = 0 || index >= d\len
+    d: (cast: (@: LmxArrayDynamicArray) list)
+    base: (cast: (@: LmxArrayDesc) d)
+    if: d = 0 || index >= base\len
         return: 0
     cells: (cast: (@@: void) lmx_list_data(list))
     if: cells = 0

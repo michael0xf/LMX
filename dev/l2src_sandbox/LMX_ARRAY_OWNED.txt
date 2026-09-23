@@ -14,10 +14,8 @@ Type list for the six kernel capacity sites (after FABLE-134 code):
 - LmxServiceEntryArray + LmxServiceEntryDynamicArray — service registry
 - LmxPostInboxSlot (+ Array/DynamicArray) — inbox ring pair record + head/tail
 - LmxPtrArray {len; Lmx *data} + LmxPtrDynamicArray — copier stack
-- Pool chunk: element type is the pool's real cell type (int/char/LmxArrayDesc/…).
-  One shared LmxChunk today cannot embed one concrete typed DynamicArray for every
-  pool kind without a void cast (forbidden) or a wrapper/union (forbidden) or
-  splitting into per-T chunk records — measured; see inventory addendum.
+- LmxByteArray + LmxByteDynamicArray — pool chunk payload (stride-generic RAW bytes; len/capacity in BYTES; cell arithmetic only via lmx_chunk_cells/lmx_chunk_room)
+- LmxChunk { LmxByteDynamicArray cells; next; mark }
 
 Base Array and mailbox must not be described as carrying capacity on a base
 {len,data} descriptor. Capacity exists only on *DynamicArray fields.

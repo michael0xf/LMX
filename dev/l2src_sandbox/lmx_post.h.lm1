@@ -101,6 +101,22 @@ end: LmxPostLink
 # storage lives there rather than on a foreign heap (model 22, 25).  Hence
 # lmx_post_init needs the arena open already: opening the pool registers the first
 # chunk, and every node the pool hands out is a cell of one of the arena's arrays.
+
+# Inbox slot pair + DynamicArray types for the post inbox ring.
+
+struct: LmxPostInboxSlot
+    @: void target
+    @: LmxArena source_arena
+end: LmxPostInboxSlot
+
+
+# Flat DynamicArray of LmxPostInboxSlot (len + data + capacity).
+struct: LmxPostInboxSlotDynamicArray
+    size_t: len
+    @: LmxPostInboxSlot data
+    size_t: capacity
+end: LmxPostInboxSlotDynamicArray
+
 struct: LmxPost
     # THE INBOX IS THE ONE CROSS-LANE STRUCTURE AND IT IS A RING, NOT A LINKED LIST (20.09).
     #
@@ -124,8 +140,9 @@ struct: LmxPost
     # monitor, copies unread target/source pairs in FIFO order, and never exposes the backing address.
     # Private flat ring pairs `[target, source_arena]`. Producers publish both words under this
     # mailbox's monitor and never mutate the receiver arena. A null source means same-arena.
-    @: void inbox_slots
-    size_t: inbox_capacity
+    # Private ring of pair records as one DynamicArray + head/tail (Q18).
+    # capacity = ring slots; array.len unused as occupancy (inbox_count + head/tail).
+    LmxPostInboxSlotDynamicArray: inbox
     # The counters and slots are ordinary mailbox state protected by inbox_monitor.  Tail is
     # advanced by every sender, head only by the owner, and count is what lmx_post_count reports.
     ulong: inbox_head
@@ -176,4 +193,10 @@ prototype:
     fn: lmx_post_publish (@: LmxPost box) int
     fn: lmx_post_discard (@: LmxPost box) int
     fn: lmx_post_close (@: LmxArena arena; @: LmxPost box) int
+    fn: lmx_post_inbox_data (@: LmxPost box) @: LmxPostInboxSlot
+    fn: lmx_post_inbox_len (@: LmxPost box) size_t
+    fn: lmx_post_inbox_cap (@: LmxPost box) size_t
+    fn: lmx_post_inbox_set_data (@: LmxPost box; @: LmxPostInboxSlot data) void
+    fn: lmx_post_inbox_set_len (@: LmxPost box; size_t: len) void
+    fn: lmx_post_inbox_set_cap (@: LmxPost box; size_t: capacity) void
 end: prototype

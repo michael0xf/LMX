@@ -91,9 +91,9 @@ fn: lmx_root_open (@: LmxRoot root; LmxCallEntry: entry; ulong: limit) int
     arena: @ root\arena
     arena\blocks: 0
     arena\arrays: 0
-    arena\index: 0
-    arena\count: 0U
-    arena\capacity: 0U
+    lmx_arena_index_set_data(arena, 0)
+    lmx_arena_index_set_len(arena, 0U)
+    lmx_arena_index_set_cap(arena, 0U)
     arena\generation: 0U
     # THE SERVICE IS THE ONE HANDLE THAT REFUSES INSTEAD OF CLEARING ITSELF, so its three fields
     # are cleared here, by the owner.  lmx_service_open allocates nothing and refuses a handle that
@@ -104,9 +104,9 @@ fn: lmx_root_open (@: LmxRoot root; LmxCallEntry: entry; ulong: limit) int
     # of the EXECUTABLE'S OWN PATH (measured 2026-09-21), which is why R0's open depended on the
     # executable's absolute path length until this clear was added.
     service: @ root\service
-    service\entries: 0
-    service\count: 0U
-    service\capacity: 0U
+    lmx_service_entries_set_data(service, 0)
+    lmx_service_entries_set_len(service, 0U)
+    lmx_service_entries_set_cap(service, 0U)
     root\thread: 0
     root\slot: 0
     root\parent: 0

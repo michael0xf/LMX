@@ -120,12 +120,12 @@ fn: sv_order_ok (@: LmxService service) int
     size_t: i
     @: void prev
     @: void cur
-    if: service = 0 || service\count = 0U
+    if: service = 0 || lmx_service_entries_len(service) = 0U
         return: 1
     ---
     prev: lmx_service_at(service, 0U)
     i: 1U
-    while: i < service\count
+    while: i < lmx_service_entries_len(service)
         cur: lmx_service_at(service, i)
         if: (cast: (uintptr_t) prev) >= (cast: (uintptr_t) cur)
             return: 0
@@ -277,7 +277,7 @@ fn: main () int
         sv_check(counts, 0, "delivery donor has no ownership blocks")
     ---
     sv_check(counts, lmx_thread_mail_take(a1, c.LMX_POST_INBOX) = (cast: (@: void) letter), "inbox did not hold the delivered letter")
-    sv_check(counts, letter_arena_p\blocks = 0 && letter_arena_p\index = 0 && letter_arena_p\count = 0U, "receiver take did not claim/empty letter arena")
+    sv_check(counts, letter_arena_p\blocks = 0 && lmx_arena_index_data(letter_arena_p) = 0 && lmx_arena_index_len(letter_arena_p) = 0U, "receiver take did not claim/empty letter arena")
     sv_check(counts, lmx_range_classify(@ a1_arena, (cast: (@: void) letter)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "claimed letter does not classify in receiver arena")
 
     # Capacity allocation fails BEFORE ownership transfer. Fill the two-slot ring, make precisely
@@ -315,7 +315,7 @@ fn: main () int
     ---
     unknown: (cast: (@: void) 0x1)
     sv_check(counts, lmx_service_post(@ service, unknown, letter, @ letter_arena) = c.LMX_SERVICE_MISSING, "missing post did not refuse")
-    sv_check(counts, letter_arena_p\blocks = 0 && letter_arena_p\index = 0, "missing post did not release the letter arena")
+    sv_check(counts, letter_arena_p\blocks = 0 && lmx_arena_index_data(letter_arena_p) = 0, "missing post did not release the letter arena")
 
     # Release never dereferences possibly-dead targets. A live nonempty registry must first be
     # drained through exact-address unregister operations.

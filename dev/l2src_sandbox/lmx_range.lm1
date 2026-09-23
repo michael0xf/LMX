@@ -1,4 +1,5 @@
 predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_pool.h.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdlib.h>" "<stddef.h>"
 
@@ -27,21 +28,23 @@ include: "<stdlib.h>" "<stddef.h>"
 # The table GROWS instead of refusing: as many ranges (types) as needed may be created
 # (verbatim: "вы можете этих диапазонов (типов) заводить сколько вам угодно"), so a full
 # table is not an error and no fixed cap exists.  Nothing holds a pointer into the table
-# across calls -- every access is `arena\index + index` -- so the entries may move; the
+# across calls -- every access is `lmx_arena_index_data(arena) + index` -- so the entries may move; the
 # ARRAYS they name never do.
+
+
 fn: lmx_range_reserve (@: LmxArena arena; size_t: need) int
     LmxRange: probe
     size_t: capacity
     @: LmxRange grown
     if: arena = 0
         return: 1
-    if: need <= arena\capacity
+    if: need <= lmx_arena_index_cap(arena)
         return: 0
     # Letter-scale: index stays, but does not grow without bound (Mikhail 19.09).
     if: arena\simple != 0U && need > 32U
         return: 1
     ---
-    capacity: arena\capacity
+    capacity: lmx_arena_index_cap(arena)
     if: capacity = 0U
         capacity: 16U
     ---
@@ -60,12 +63,12 @@ fn: lmx_range_reserve (@: LmxArena arena; size_t: need) int
     ---
     if: capacity > ((cast: (size_t) -1) / c.sizeof(probe))
         return: 1
-    grown: (cast: (@: LmxRange) realloc((cast: (@: void) arena\index), capacity * c.sizeof(probe)))
+    grown: (cast: (@: LmxRange) realloc((cast: (@: void) lmx_arena_index_data(arena)), capacity * c.sizeof(probe)))
     if: grown = 0
         return: 1
     ---
-    arena\index: grown
-    arena\capacity: capacity
+    lmx_arena_index_set_data(arena, grown)
+    lmx_arena_index_set_cap(arena, capacity)
 return: 0
 
 # One interval of one array joins the index.  This IS the insertion into the table, and
@@ -102,10 +105,10 @@ fn: lmx_range_add_view (@: LmxArena arena; @: LmxArena owner; @: LmxPool array; 
     # перебором а нормальным бинарным"), and the position for a new interval is found
     # the same way.  A registration walks the tail up one place; lmx_range_drop keeps the
     # order by shifting the tail down, so both operations preserve it.
-    high: arena\count
+    high: lmx_arena_index_len(arena)
     while: low < high
         mid: low + (high - low) / 2U
-        slot: arena\index + mid
+        slot: lmx_arena_index_data(arena) + mid
         if: lo < slot\lo
             high: mid
         else:
@@ -116,7 +119,7 @@ fn: lmx_range_add_view (@: LmxArena arena; @: LmxArena owner; @: LmxPool array; 
     # Re-importing the exact same physical range is a no-op.  Same addresses with a
     # different descriptor or owner would make physical classification ambiguous.
     if: at > 0U
-        slot: arena\index + (at - 1U)
+        slot: lmx_arena_index_data(arena) + (at - 1U)
         if: slot\lo = lo && slot\hi = hi
             if: slot\array = array && slot\owner = owner
                 return: 0
@@ -130,38 +133,38 @@ fn: lmx_range_add_view (@: LmxArena arena; @: LmxArena owner; @: LmxPool array; 
     # registered twice.  The neighbours are exactly the two entries the bisection landed
     # between.
     if: at > 0U
-        slot: arena\index + (at - 1U)
+        slot: lmx_arena_index_data(arena) + (at - 1U)
         if: lo < slot\hi
             return: 1
         ---
     ---
-    if: at < arena\count
-        slot: arena\index + at
+    if: at < lmx_arena_index_len(arena)
+        slot: lmx_arena_index_data(arena) + at
         if: hi > slot\lo
             return: 1
         ---
     ---
     # Reserve only after duplicate/overlap validation.  An idempotent import therefore
     # cannot fail merely because growing an index that it does not need would fail.
-    if: arena\count = (cast: (size_t) -1) || lmx_range_reserve(arena, arena\count + 1U) != 0
+    if: lmx_arena_index_len(arena) = (cast: (size_t) -1) || lmx_range_reserve(arena, lmx_arena_index_len(arena) + 1U) != 0
         return: 1
     ---
-    index: arena\count
+    index: lmx_arena_index_len(arena)
     while: index > at
-        entry: arena\index + index
-        slot: arena\index + (index - 1U)
+        entry: lmx_arena_index_data(arena) + index
+        slot: lmx_arena_index_data(arena) + (index - 1U)
         entry\lo: slot\lo
         entry\hi: slot\hi
         entry\array: slot\array
         entry\owner: slot\owner
         index: index - 1U
     ---
-    entry: arena\index + at
+    entry: lmx_arena_index_data(arena) + at
     entry\lo: lo
     entry\hi: hi
     entry\array: array
     entry\owner: owner
-    arena\count: arena\count + 1U
+    lmx_arena_index_set_len(arena, lmx_arena_index_len(arena) + 1U)
 return: 0
 
 # One interval leaves the index.  The caller is the arena's manager, retiring an entry
@@ -170,13 +173,13 @@ fn: lmx_range_drop (@: LmxArena arena; @: void lo; @: void hi) int
     @: LmxRange entry
     @: LmxRange next
     size_t: index
-    if: arena = 0 || lo = 0 || hi = 0 || arena\index = 0
+    if: arena = 0 || lo = 0 || hi = 0 || lmx_arena_index_data(arena) = 0
         return: 1
     index: 0U
-    while: index < arena\count
-        entry: arena\index + index
+    while: index < lmx_arena_index_len(arena)
+        entry: lmx_arena_index_data(arena) + index
         if: entry\lo = lo && entry\hi = hi
-            while: index + 1U < arena\count
+            while: index + 1U < lmx_arena_index_len(arena)
                 next: entry + 1
                 entry\lo: next\lo
                 entry\hi: next\hi
@@ -189,7 +192,7 @@ fn: lmx_range_drop (@: LmxArena arena; @: void lo; @: void hi) int
             entry\hi: 0
             entry\array: 0
             entry\owner: 0
-            arena\count: arena\count - 1U
+            lmx_arena_index_set_len(arena, lmx_arena_index_len(arena) - 1U)
             return: 0
         index: index + 1U
     ---
@@ -208,12 +211,12 @@ fn: lmx_range_entry_at (@: LmxArena arena; @: void p) @: LmxRange
     size_t: low 0U
     size_t: high
     size_t: mid
-    if: arena = 0 || p = 0 || arena\index = 0
+    if: arena = 0 || p = 0 || lmx_arena_index_data(arena) = 0
         return: 0
-    high: arena\count
+    high: lmx_arena_index_len(arena)
     while: low < high
         mid: low + (high - low) / 2U
-        entry: arena\index + mid
+        entry: lmx_arena_index_data(arena) + mid
         if: p < entry\lo
             high: mid
         else:
@@ -257,14 +260,14 @@ fn: lmx_range_cell_pool (@: LmxArena arena; @: void p) @: LmxPool
     ---
     chunk: array\head
     while: chunk != 0
-        if: chunk\base = entry\lo
-            if: chunk\count > chunk\capacity
+        if: (cast: (@: void) lmx_chunk_data(chunk)) = entry\lo
+            if: lmx_chunk_cells(chunk, array\stride) > lmx_chunk_room(chunk, array\stride)
                 return: 0
             ---
             offset: (cast: (size_t) p) - (cast: (size_t) entry\lo)
             if: offset % array\stride != 0U
                 return: 0
-            if: offset / array\stride >= chunk\count
+            if: offset / array\stride >= lmx_chunk_cells(chunk, array\stride)
                 return: 0
             ---
             return: array
@@ -361,8 +364,8 @@ fn: lmx_range_import_selected (@: LmxArena arena; @: LmxArena source; @: Lmx pro
     # Preflight the complete view before changing the borrower.  A caller must never see
     # half of a type view merely because a later interval conflicts or index allocation
     # fails.  Existing exact rows are retained and do not count toward the reservation.
-    while: index < source\count
-        entry: source\index + index
+    while: index < lmx_arena_index_len(source)
+        entry: lmx_arena_index_data(source) + index
         selected: 0
         if: entry\array != 0 && entry\array\sealed != 0U
             if: all_profiles != 0 || entry\array\profile = profile
@@ -372,8 +375,8 @@ fn: lmx_range_import_selected (@: LmxArena arena; @: LmxArena source; @: Lmx pro
         if: selected != 0
             exact: 0
             scan: 0U
-            while: scan < arena\count
-                present: arena\index + scan
+            while: scan < lmx_arena_index_len(arena)
+                present: lmx_arena_index_data(arena) + scan
                 if: entry\lo < present\hi && entry\hi > present\lo
                     if: entry\lo = present\lo && entry\hi = present\hi && entry\array = present\array && entry\owner = present\owner
                         exact: 1
@@ -392,17 +395,17 @@ fn: lmx_range_import_selected (@: LmxArena arena; @: LmxArena source; @: Lmx pro
         ---
         index: index + 1U
     ---
-    if: needed > (cast: (size_t) -1) - arena\count
+    if: needed > (cast: (size_t) -1) - lmx_arena_index_len(arena)
         return: 1
-    if: lmx_range_reserve(arena, arena\count + needed) != 0
+    if: lmx_range_reserve(arena, lmx_arena_index_len(arena) + needed) != 0
         return: 1
     ---
     # The source index is internally non-overlapping and the preflight validated every
     # destination overlap.  With capacity reserved, this pass cannot expose a partial
     # import on an expected error path.
     index: 0U
-    while: index < source\count
-        entry: source\index + index
+    while: index < lmx_arena_index_len(source)
+        entry: lmx_arena_index_data(source) + index
         selected: 0
         if: entry\array != 0 && entry\array\sealed != 0U
             if: all_profiles != 0 || entry\array\profile = profile

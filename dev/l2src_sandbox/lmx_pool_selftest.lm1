@@ -179,7 +179,7 @@ fn: main () int
     lmx_pool_release(@ arena, methods)
     # Two method chunks removed, while both descriptor pools and static chars
     # remain registered. Never inspect or dereference a freed entry pointer.
-    if: arena_at\count != 3U
+    if: lmx_arena_index_len(arena_at) != 3U
         fputs("lmx: released method chunks remain registered\n", l1_stdout())
         failures: failures + 1
     if: lmx_range_type_of(@ arena, cast: (@: void) desc) != c.LMX_TYPE_ARRAY_OF_INT
@@ -191,11 +191,11 @@ fn: main () int
     lmx_pool_release(@ arena, arrays)
     lmx_pool_release(@ arena, chars_of)
     free(chars_of)
-    if: arena_at\count != 1U
+    if: lmx_arena_index_len(arena_at) != 1U
         fputs("lmx: only static character range should remain\n", l1_stdout())
         failures: failures + 1
     lmx_pool_release(@ arena, methods)
-    if: arena_at\count != 1U
+    if: lmx_arena_index_len(arena_at) != 1U
         fputs("lmx: repeated release changed registry\n", l1_stdout())
         failures: failures + 1
 
@@ -213,7 +213,7 @@ fn: main () int
         lmx_pool_release(@ arena, methods)
         cycle: cycle + 1U
     ---
-    if: arena_at\count != 1U
+    if: lmx_arena_index_len(arena_at) != 1U
         fputs("lmx: reopen cycles leaked registered ranges\n", l1_stdout())
         failures: failures + 1
     if: lmx_range_drop(@ arena, (cast: (@: void) chars_pool), (cast: (@: void) (chars_pool + 3))) = 0
@@ -225,7 +225,7 @@ fn: main () int
     if: lmx_range_drop(@ arena, (cast: (@: void) chars_pool), (cast: (@: void) (chars_pool + 4))) != 0
         fputs("lmx: exact range unregister failed\n", l1_stdout())
         failures: failures + 1
-    if: lmx_range_type_of(@ arena, cast: (@: void) chars_pool) != c.LMX_TYPE_NONE || arena_at\count != 0U
+    if: lmx_range_type_of(@ arena, cast: (@: void) chars_pool) != c.LMX_TYPE_NONE || lmx_arena_index_len(arena_at) != 0U
         fputs("lmx: removed live storage still classified\n", l1_stdout())
         failures: failures + 1
     if: lmx_range_drop(@ arena, (cast: (@: void) chars_pool), (cast: (@: void) (chars_pool + 4))) = 0

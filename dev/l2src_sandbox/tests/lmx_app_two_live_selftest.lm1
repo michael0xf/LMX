@@ -364,7 +364,7 @@ fn: main () int
     letter_a\handoff_ready: 0
     letter_a\graph: 0
     tl_check(counts, lmx_service_post(service, (cast: (@: void) t_a), letter_a, @ letter_arena_a) = c.LMX_SERVICE_OK, "post to A refused")
-    tl_check(counts, letter_a_at\count > 0U && lmx_range_classify(letter_a_at, (cast: (@: void) letter_a)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "letter_a left donor before take")
+    tl_check(counts, lmx_arena_index_len(letter_a_at) > 0U && lmx_range_classify(letter_a_at, (cast: (@: void) letter_a)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "letter_a left donor before take")
     tl_check(counts, lmx_range_classify(@ arena_a, (cast: (@: void) letter_a)) = c.LMX_KIND_NONE, "letter_a attached to A before take")
     tl_check(counts, lmx_range_classify(@ arena_b, (cast: (@: void) letter_a)) = c.LMX_KIND_NONE, "letter_a wrongly in B arena")
     tl_check(counts, lmx_thread_mail_count(t_a, c.LMX_POST_INBOX) = 1U, "A inbox empty after post")
@@ -378,7 +378,7 @@ fn: main () int
     letter_b1\handoff_ready: 0
     letter_b1\graph: 0
     tl_check(counts, lmx_service_post(service, (cast: (@: void) t_b), letter_b1, @ letter_arena_b) = c.LMX_SERVICE_OK, "post to B refused")
-    tl_check(counts, letter_b_at\count > 0U && lmx_range_classify(letter_b_at, (cast: (@: void) letter_b1)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "letter_b1 left donor before take")
+    tl_check(counts, lmx_arena_index_len(letter_b_at) > 0U && lmx_range_classify(letter_b_at, (cast: (@: void) letter_b1)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "letter_b1 left donor before take")
     tl_check(counts, lmx_range_classify(@ arena_b, (cast: (@: void) letter_b1)) = c.LMX_KIND_NONE, "letter_b1 attached to B before take")
     tl_check(counts, lmx_range_classify(@ arena_a, (cast: (@: void) letter_b1)) = c.LMX_KIND_NONE, "letter_b1 wrongly in A arena")
     tl_check(counts, lmx_thread_mail_count(t_b, c.LMX_POST_INBOX) = 1U, "B inbox empty after post")
@@ -386,8 +386,8 @@ fn: main () int
 
     # One turn each: A finishes; B turn1 keeps alive.
     tl_check(counts, lmx_manager_round(manager, 1U, lmx_root_clock(@ root)) = c.LMX_MANAGER_OK, "round A did not run")
-    tl_check(counts, letter_a_at\count = 0U && lmx_range_classify(@ arena_a, (cast: (@: void) letter_a)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "A take did not claim letter_a")
-    tl_check(counts, letter_b_at\count > 0U && lmx_range_classify(letter_b_at, (cast: (@: void) letter_b1)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "A take disturbed B's pending donor")
+    tl_check(counts, lmx_arena_index_len(letter_a_at) = 0U && lmx_range_classify(@ arena_a, (cast: (@: void) letter_a)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "A take did not claim letter_a")
+    tl_check(counts, lmx_arena_index_len(letter_b_at) > 0U && lmx_range_classify(letter_b_at, (cast: (@: void) letter_b1)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "A take disturbed B's pending donor")
     turns_a: lmx_size_value_known(lmx_arena_ref_value(graph_a, 1U))
     body_a: lmx_size_value_known(lmx_arena_ref_value(graph_a, 2U))
     tl_check(counts, turns_a = 1U, "A turns != 1 after its round")
@@ -401,7 +401,7 @@ fn: main () int
     tl_check(counts, msg_b\success = 0 && msg_b\running = 1, "B finished early before its turn")
 
     tl_check(counts, lmx_manager_round(manager, 1U, lmx_root_clock(@ root)) = c.LMX_MANAGER_OK, "round B1 did not run")
-    tl_check(counts, letter_b_at\count = 0U && lmx_range_classify(@ arena_b, (cast: (@: void) letter_b1)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "B take did not claim letter_b1")
+    tl_check(counts, lmx_arena_index_len(letter_b_at) = 0U && lmx_range_classify(@ arena_b, (cast: (@: void) letter_b1)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "B take did not claim letter_b1")
     turns_b: lmx_size_value_known(lmx_arena_ref_value(graph_b, 1U))
     body_b: lmx_size_value_known(lmx_arena_ref_value(graph_b, 2U))
     tl_check(counts, turns_b = 1U, "B turns != 1 after turn1")
@@ -421,18 +421,18 @@ fn: main () int
     letter_a2\handoff_ready: 0
     letter_a2\graph: 0
     tl_check(counts, lmx_service_post(service, (cast: (@: void) t_a), letter_a2, @ letter_arena_a) = c.LMX_SERVICE_OK, "post a2 refused")
-    tl_check(counts, letter_a_at\count > 0U && lmx_range_classify(letter_a_at, (cast: (@: void) letter_a2)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "letter_a2 left donor before take")
+    tl_check(counts, lmx_arena_index_len(letter_a_at) > 0U && lmx_range_classify(letter_a_at, (cast: (@: void) letter_a2)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "letter_a2 left donor before take")
     tl_check(counts, lmx_manager_round(manager, 1U, lmx_root_clock(@ root)) = c.LMX_MANAGER_OK, "round A2 did not run")
-    tl_check(counts, letter_a_at\count = 0U && lmx_range_classify(@ arena_a, (cast: (@: void) letter_a2)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "A take did not claim letter_a2")
+    tl_check(counts, lmx_arena_index_len(letter_a_at) = 0U && lmx_range_classify(@ arena_a, (cast: (@: void) letter_a2)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "A take did not claim letter_a2")
     tl_check(counts, msg_a\success != 0 && msg_a\handoff_ready != 0, "A did not publish a safe success boundary")
-    tl_check(counts, arena_a_at\blocks != 0 && arena_a_at\count != 0U, "A self-released before parent removal")
+    tl_check(counts, arena_a_at\blocks != 0 && lmx_arena_index_len(arena_a_at) != 0U, "A self-released before parent removal")
     tl_check(counts, lmx_thread_child_is(r0, t_b) != 0, "B not live before A util")
 
     # Utilize A via settle_children (same boundary act as root_cycle, no manager_round) so live B gets no empty turn.
     tl_check(counts, lmx_settle_children(r0, root_arena, service, manager, lmx_clock_ticks()) = c.LMX_SETTLE_OK, "A settle_children did not run")
     tl_check(counts, lmx_thread_child_is(r0, t_a) = 0, "A stayed live after util")
     tl_check(counts, lmx_thread_child_is(r0, t_a) = 0, "A membership not cleared")
-    tl_check(counts, arena_a_at\blocks = 0 && arena_a_at\count = 0U, "A arena not released")
+    tl_check(counts, arena_a_at\blocks = 0 && lmx_arena_index_len(arena_a_at) = 0U, "A arena not released")
     svc_after_a: lmx_service_count(service)
     tl_check(counts, svc_after_a = 2U, "service not R0+1 after A util")
     mgr_after_a: lmx_manager_count(manager)
@@ -456,10 +456,10 @@ fn: main () int
     letter_b2\handoff_ready: 0
     letter_b2\graph: 0
     tl_check(counts, lmx_service_post(service, (cast: (@: void) t_b), letter_b2, @ letter_arena_b) = c.LMX_SERVICE_OK, "post b2 refused")
-    tl_check(counts, letter_b_at\count > 0U && lmx_range_classify(letter_b_at, (cast: (@: void) letter_b2)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "letter_b2 left donor before take")
+    tl_check(counts, lmx_arena_index_len(letter_b_at) > 0U && lmx_range_classify(letter_b_at, (cast: (@: void) letter_b2)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "letter_b2 left donor before take")
     tl_check(counts, lmx_thread_mail_count(t_b, c.LMX_POST_INBOX) = 1U, "B inbox empty before turn2")
     tl_check(counts, lmx_manager_round(manager, 1U, lmx_root_clock(@ root)) = c.LMX_MANAGER_OK, "round B2 did not run")
-    tl_check(counts, letter_b_at\count = 0U && lmx_range_classify(@ arena_b, (cast: (@: void) letter_b2)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "B take did not claim letter_b2")
+    tl_check(counts, lmx_arena_index_len(letter_b_at) = 0U && lmx_range_classify(@ arena_b, (cast: (@: void) letter_b2)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "B take did not claim letter_b2")
     turns_b: lmx_size_value_known(lmx_arena_ref_value(graph_b, 1U))
     body_b: lmx_size_value_known(lmx_arena_ref_value(graph_b, 2U))
     tl_check(counts, turns_b = 2U, "B turns != 2 after turn2")
@@ -476,17 +476,17 @@ fn: main () int
     letter_b3\handoff_ready: 0
     letter_b3\graph: 0
     tl_check(counts, lmx_service_post(service, (cast: (@: void) t_b), letter_b3, @ letter_arena_b) = c.LMX_SERVICE_OK, "post b3 refused")
-    tl_check(counts, letter_b_at\count > 0U && lmx_range_classify(letter_b_at, (cast: (@: void) letter_b3)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "letter_b3 left donor before take")
+    tl_check(counts, lmx_arena_index_len(letter_b_at) > 0U && lmx_range_classify(letter_b_at, (cast: (@: void) letter_b3)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "letter_b3 left donor before take")
     tl_check(counts, lmx_manager_round(manager, 1U, lmx_root_clock(@ root)) = c.LMX_MANAGER_OK, "round B3 did not run")
-    tl_check(counts, letter_b_at\count = 0U && lmx_range_classify(@ arena_b, (cast: (@: void) letter_b3)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "B take did not claim letter_b3")
+    tl_check(counts, lmx_arena_index_len(letter_b_at) = 0U && lmx_range_classify(@ arena_b, (cast: (@: void) letter_b3)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "B take did not claim letter_b3")
     tl_check(counts, msg_b\success != 0 && msg_b\handoff_ready != 0, "B did not publish a safe success boundary")
-    tl_check(counts, arena_b_at\blocks != 0 && arena_b_at\count != 0U, "B self-released before parent removal")
+    tl_check(counts, arena_b_at\blocks != 0 && lmx_arena_index_len(arena_b_at) != 0U, "B self-released before parent removal")
     tl_check(counts, lmx_manager_count(manager) = 1U, "finished B disappeared before parent settle")
 
     tl_check(counts, lmx_settle_children(r0, root_arena, service, manager, lmx_clock_ticks()) = c.LMX_SETTLE_OK, "B settle_children did not run")
     tl_check(counts, lmx_thread_child_is(r0, t_b) = 0, "B stayed live after util")
     tl_check(counts, lmx_thread_child_is(r0, t_b) = 0, "B membership not cleared")
-    tl_check(counts, arena_b_at\blocks = 0 && arena_b_at\count = 0U, "B arena not released")
+    tl_check(counts, arena_b_at\blocks = 0 && lmx_arena_index_len(arena_b_at) = 0U, "B arena not released")
     tl_check(counts, lmx_manager_count(manager) = 0U, "manager not empty after B util")
     tl_check(counts, lmx_service_count(service) = 1U, "service should hold only R0 after B util")
     tl_check(counts, lmx_root_close(@ root) = c.LMX_ROOT_OK, "R0 did not close")

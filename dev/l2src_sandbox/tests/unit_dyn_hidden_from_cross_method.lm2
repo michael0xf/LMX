@@ -1,0 +1,45 @@
+# FABLE-SONNET-OWN-LOOKUP-AUDIT-20260923-131 Part 1 probe (measured, NOT
+# fixed here -- a "disagrees" row for Part 2). l2_hidden_from's own
+# comment says its fallback ("no caller binding: use the declaration in
+# the selected callee's lexical node") should resolve a callee's unbound
+# dynamic input to THAT callee's own declaration. The fallback actually
+# calls l2_own_seg_scan... no -- l2_own_first(nm), which takes no mi/
+# callee parameter at all: it scans l2_own_n GLOBALLY for the first
+# top-level row (any method) with a matching name. gamma calls beta with
+# no binding for `shared` anywhere in the caller chain (entry -> gamma);
+# beta reads `shared` as a dynamic input, unbound, before its own binding
+# line -- exactly the case the fallback comment describes. alpha, an
+# UNRELATED method declared earlier in this file with its own field also
+# named `shared` (=111), is what the fallback actually finds and reads,
+# because it is simply the first `shared` in source order -- not beta's.
+#
+# MEASURED on the current tree: prints "beta sees shared=111" (alpha's
+# value). This is the same class of cross-method name collision the old
+# self-referential `node\x` mechanism had (FABLE-SONNET-NODE-ROOT-
+# 20260923-121's sticky fixtures' own history) -- l2_own_first ignores mi
+# entirely, so ANY earlier-declared method's same-named top-level own
+# field wins over the actual callee's. Not asserting a "correct" value
+# here: what an unbound dynamic input's fallback should read (beta's own
+# not-yet-run declaration? 0? a refusal?) is Part 2's question, an author
+# ruling may be needed. This fixture pins today's measured (wrong) value
+# so Part 2's fix is mutation-checkable against a known baseline.
+fn: alpha () int
+    int: shared 111
+    return: 0
+end: alpha
+
+fn: beta () int
+    c.printf: "beta sees shared=%d\n" shared
+    int: shared
+    shared: 222
+    return: 0
+end: beta
+
+fn: gamma () int
+    beta()
+    return: 0
+end: gamma
+
+alpha()
+gamma()
+return: 0

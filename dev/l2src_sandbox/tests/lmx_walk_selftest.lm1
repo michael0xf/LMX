@@ -231,8 +231,7 @@ fn: main () int
     @: Lmx test3 0
     @: Lmx test4 0
     @: Lmx host 0
-    @: Lmx empty_bag 0
-    @: Lmx wrap_bag 0
+    @: Lmx pair 0
     @: Lmx tramp 0
     @: Lmx tramp2 0
     int: r 0
@@ -588,9 +587,11 @@ fn: main () int
     # host: return: 7  -- nullary callee for optional bag-arg CALL forms
     n: fr(host, 1U, c.LMX_WALK_OP_RET, 2U)
     lit(n, 1U, 7)
-    # empty anonymous Structure under unit (arg container); parent==caller set at use site
-    empty_bag: pl(unit, 32U, 0U)
-    wrap_bag: pl(unit, 33U, 1U)
+    # a plain Structure (1 2) under unit, handed to a call as one argument; parent==caller
+    # set at the use site
+    pair: pl(unit, 33U, 2U)
+    icell(pair, 0U, 1)
+    icell(pair, 1U, 2)
 
     check(broken = 0, "construction")
     if: broken != 0
@@ -921,31 +922,32 @@ fn: main () int
     argv[0]: (cast: (@: void) test)
     st: go(test4, argv, 1U, @ r, @ v)
     check(st = c.LMX_WALK_OK && r = 1 && v = 1, "test4: formal~test3, pass test => 1")
-    # optional: return: host(empty_bag) — sole empty Structure unwraps to zero args
+    # A call with no argument children is the empty argument list: P0 gives `host()`,
+    # `host: ()` and the closed vertical form one tree with no fields (-127), so the walker
+    # meets no container to unwrap (-133).
     tramp: mk_m(unit, 35U, 2U)
     n: fr(tramp, 1U, c.LMX_WALK_OP_RET, 2U)
-    e: fr(n, 1U, c.LMX_WALK_OP_CALL, 3U)
+    e: fr(n, 1U, c.LMX_WALK_OP_CALL, 2U)
     ref(e, 1U, host)
-    if: empty_bag != 0
-        empty_bag\parent: e
-        check(lmx_arena_ref_store(e, 2U, (cast: (@: void) empty_bag)) = 0, "empty_bag under tramp CALL")
-    ---
-    check(lmx_walk_prepare(gctx, ga, gplan_roles, tramp) = c.LMX_WALK_OK, "tramp(empty bag) prepared")
+    check(lmx_walk_prepare(gctx, ga, gplan_roles, tramp) = c.LMX_WALK_OK, "tramp: host() prepared")
     st: go(tramp, 0, 0U, @ r, @ v)
-    check(st = c.LMX_WALK_OK && r = 7 && v = 1, "CALL host with sole empty Structure => zero args, still 7")
-    # optional: return: test2(wrap_bag) — sole Structure wrapping one arg = direct arg
+    check(st = c.LMX_WALK_OK && r = 7 && v = 1, "CALL host with no argument children => 7")
+    # A plain Structure child of a call is ONE Structure argument (-133): test2(pair), pair =
+    # (1 2) -- the graph of `test2(((1 2)))` after P0's one-level normalization -- reaches the
+    # formal as that very Structure, as it does natively.  The CALL-only unwrap would have
+    # made it two int arguments and returned the first.
     tramp2: mk_m(unit, 36U, 2U)
     n: fr(tramp2, 1U, c.LMX_WALK_OP_RET, 2U)
     e: fr(n, 1U, c.LMX_WALK_OP_CALL, 3U)
     ref(e, 1U, test2)
-    if: wrap_bag != 0
-        wrap_bag\parent: e
-        check(lmx_arena_ref_store(e, 2U, (cast: (@: void) wrap_bag)) = 0, "wrap_bag under tramp2 CALL")
-        check(lmx_arena_ref_store(wrap_bag, 0U, (cast: (@: void) test)) = 0, "wrap_bag field0 = test")
+    if: pair != 0
+        pair\parent: e
+        check(lmx_arena_ref_store(e, 2U, (cast: (@: void) pair)) = 0, "pair under tramp2 CALL")
     ---
-    check(lmx_walk_prepare(gctx, ga, gplan_roles, tramp2) = c.LMX_WALK_OK, "tramp2(wrap test) prepared")
-    st: go(tramp2, 0, 0U, @ r, @ v)
-    check(st = c.LMX_WALK_OK && r = 1 && v = 1, "CALL with sole Structure wrapping one arg => same as direct arg")
+    check(lmx_walk_prepare(gctx, ga, gplan_roles, tramp2) = c.LMX_WALK_OK, "tramp2(pair) prepared")
+    st: lmx_walk_run(gctx, tramp2, 0, 0U, gv)
+    check(st = c.LMX_WALK_OK && gv\present != 0 && gv\ref = (cast: (@: void) pair), "a sole Structure argument reaches the formal unchanged")
+    check(pair != 0 && pair\len = 2 && lmx_int_value_known(lmx_arena_ref_value(pair, 0U)) = 1 && lmx_int_value_known(lmx_arena_ref_value(pair, 1U)) = 2, "the Structure argument keeps its two fields")
 
     free((cast: (@: void) argv))
     free((cast: (@: void) gv))

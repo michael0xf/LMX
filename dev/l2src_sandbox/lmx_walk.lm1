@@ -186,7 +186,6 @@ return: (cast: (int) (lmx_range_profile(f\arena, p) = f\context\immutable_profil
 fn: lmx_walk_scan_node (@: LmxWalkFrame f; @: void node) int
     @: LmxWalkOwn o 0
     @: Lmx code 0
-    @: Lmx bag 0
     @: void target 0
     @: void child 0
     @: LmxPrimitive prim 0
@@ -194,8 +193,6 @@ fn: lmx_walk_scan_node (@: LmxWalkFrame f; @: void node) int
     int: op
     int: status c.LMX_WALK_OK
     size_t: i
-    size_t: live 0U
-    size_t: j 0U
     # The counting pass is the one that checks a hand-built graph: there an operand is
     # asked of the arena like any field.  The load pass comes after it and trusts it.
     if: f\counting != 0
@@ -285,37 +282,21 @@ fn: lmx_walk_scan_node (@: LmxWalkFrame f; @: void node) int
         return: status
     # The operands that are nodes: put [put, holder, slot, value] from 3, call
     # [call, M, arg ...] from 2, everything else from 1.
-    # CALL-consumer bag form (same gate as lmx_walk_call): one live plain Structure
-    # after the callee => scan THAT structure's fields as args (OP_NONE data skipped).
+    # A call's children from 2 are its arguments, one each (-133): P0 normalizes the
+    # sole anonymous argument container (-127, bc22881/e446835) and the translator no
+    # longer unwraps one (6ca54c9), so a plain Structure among them is a Structure
+    # argument -- data passed by reference, not a node to scan.
     i: 1U
     if: op = c.LMX_WALK_OP_CALL
         i: 2U
-        live: 0U
-        bag: 0
-        while: i < (cast: (size_t) code\len)
+        while: status = c.LMX_WALK_OK && i < (cast: (size_t) code\len)
             child: lmx_arena_ref_value(code, i)
-            if: child != 0
-                live: live + 1U
-                bag: (cast: (@: Lmx) child)
+            if: child = 0 || lmx_walk_op(f, child) != c.LMX_WALK_OP_NONE
+                status: lmx_walk_scan_node(f, child)
             ---
             i: i + 1U
         ---
-        if: live = 1U && bag != 0
-            if: lmx_walk_op(f, (cast: (@: void) bag)) = c.LMX_WALK_OP_NONE && lmx_walk_kind(f, (cast: (@: void) bag)) = c.LMX_KIND_STRUCT
-                if: bag\parent = code || bag\parent = 0
-                    j: 0U
-                    while: status = c.LMX_WALK_OK && j < (cast: (size_t) bag\len)
-                        child: lmx_arena_ref_value(bag, j)
-                        if: child != 0 && lmx_walk_op(f, child) != c.LMX_WALK_OP_NONE
-                            status: lmx_walk_scan_node(f, child)
-                        ---
-                        j: j + 1U
-                    ---
-                    return: status
-                ---
-            ---
-        ---
-        i: 2U
+        return: status
     ---
     # prim [prim, record, arg ...]: the record at 1 is the primitive itself, by reference, and
     # is not a body node to scan; its arguments from 2 are.
@@ -474,18 +455,14 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
     LmxScratchMark: mark
     @: LmxScratchMark pm 0
     @: Lmx callee 0
-    @: Lmx bag 0
     @: Lmx child 0
     @: void room 0
     @@: void refs 0
     @@: void cells 0
     size_t: n
     size_t: i 0U
-    size_t: live 0U
-    size_t: arg0 2U
     int: present 0
     int: status c.LMX_WALK_OK
-    int: unwrap 0
     \out: 0
     if: code\len < 2
         return: c.LMX_WALK_INVALID
@@ -494,36 +471,10 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
     callee: lmx_arena_ref_struct(code, 1U)
     if: callee = 0
         return: c.LMX_WALK_INVALID
-    # CALL-consumer role only (FABLE-P0-FORM-AUDIT-56): after the callee, if the
-    # remaining body is exactly one live child and that child is a plain Structure
-    # (op NONE, kind STRUCT; prefer parent==code), unwrap and evaluate THAT
-    # structure's fields as args (empty => zero args). Otherwise keep direct
-    # children-as-args. Never tree-wide; declaration `mystruct: ()` is not a CALL.
-    i: 2U
-    while: i < (cast: (size_t) code\len)
-        child: lmx_arena_ref_struct(code, i)
-        if: child != 0
-            live: live + 1U
-            bag: child
-        ---
-        i: i + 1U
-    ---
-    if: live = 1U && bag != 0
-        if: lmx_walk_op(f, (cast: (@: void) bag)) = c.LMX_WALK_OP_NONE && lmx_walk_kind(f, (cast: (@: void) bag)) = c.LMX_KIND_STRUCT
-            if: bag\parent = code || bag\parent = 0
-                unwrap: 1
-            ---
-        ---
-    ---
-    if: unwrap != 0
-        n: (cast: (size_t) bag\len)
-        arg0: 0U
-    ---
-    if: unwrap = 0
-        n: (cast: (size_t) code\len) - 2U
-        bag: code
-        arg0: 2U
-    ---
+    # The arguments are the children from 2, one each, whatever they hold (-133): the
+    # sole anonymous argument container is P0's to normalize, one level, for every
+    # head (-127), and a Structure among the children is a Structure argument.
+    n: (cast: (size_t) code\len) - 2U
     pm: @ mark
     if: lmx_scratch_mark(f\context\scratch, pm) != c.LMX_SCRATCH_OK
         return: c.LMX_WALK_INVALID
@@ -537,10 +488,10 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
     while: status = c.LMX_WALK_OK && i < n
         refs[i]: 0
         cells[i]: 0
-        child: (cast: (@: Lmx) lmx_arena_ref_value(bag, i + arg0))
-        # Unwrapped bag field that is plain data (no frame role): pass by reference.
-        # Frame-node fields still go through eval (LIT/ARG/OWN/...).
-        if: unwrap != 0 && child != 0 && lmx_walk_op(f, (cast: (@: void) child)) = c.LMX_WALK_OP_NONE
+        child: (cast: (@: Lmx) lmx_arena_ref_value(code, i + 2U))
+        # An argument that is plain data (no frame role) -- a Structure, a cell -- is
+        # passed by reference; a frame node is evaluated (LIT/ARG/OWN/...).
+        if: child != 0 && lmx_walk_op(f, (cast: (@: void) child)) = c.LMX_WALK_OP_NONE
             refs[i]: (cast: (@: void) child)
         else:
             status: lmx_walk_eval(f, (cast: (@: void) child), (cast: (@: void) (cells + i)), refs + i)

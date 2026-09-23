@@ -15,7 +15,7 @@
 | D-07 | 2026-09-23, Opus -133 | Ловушка драйвера покрывает `lmx_merge_owned`, но не `lmx_merge_profiles_owned` (qualified-операнды) — отказ merge профилей не свидетельствуется | Opus/Grok | OPEN |
 | D-08 | 2026-09-23, Opus -135 | `l2_uses_is_control` — мёртвый код (нет вызовов) | Opus | OPEN (удалить в ближайшем коммите -139) |
 | D-09 | 2026-09-23, Opus -135/-136 | Callable на throw-канале через `lmx_call0` (callable-формал) вызывается с plain ABI; библиотечные обёртки вызывают throw-канальные методы с plain ABI (library-метод с `throws:`/merge не компилируется) | Opus | OPEN (S1.5) |
-| D-10 | 2026-09-23, Sonnet -131 | Двойная попытка `l2_own_find_last`/`l2_own_find` в `l2_check_sizeof` и `l2_prep` избыточна после -129 (второй поиск не находит ничего, чего не нашёл первый) | Sonnet | OPEN (чистка) |
+| D-10 | 2026-09-23, Sonnet -131 | Двойная попытка `l2_own_find_last`/`l2_own_find` в `l2_check_sizeof` и `l2_prep` избыточна после -129 (второй поиск не находит ничего, чего не нашёл первый) | Sonnet | FIXED (F-17) |
 | D-11 | 2026-09-24, Opus -138 | Устаревшая tracked-копия `tmp_unitroot_test/` (169 файлов: старый `parser.lm1` 431fa51e, `LmxArrayDesc` в 17 файлах) — не собирается, не гейтится, расходится с деревом | Grok | OPEN → -140 (удалить, если ни один инструмент не ссылается) |
 | D-12 | 2026-09-23, Opus S3 | `dev/l2src_sandbox/printTree.lm2` и `l2src/printTree.lm2` — документный пример на старом `fn: main (int: argc; @@: char argv)`; ничем не собирается; L2-спека §18.2 ссылается | Codex | OPEN |
 | D-13 | 2026-09-23, Opus S3 | `address_array_element_sum.lm2` — тот же устаревший own-array случай `@ buf[i]`, что удалённая `address_array_element.lm2` | Sonnet | OPEN (own-array follow-up §4/§5) |
@@ -46,3 +46,4 @@
 | F-14 | Mix-узел `{...}` разворачивался нормализацией единственного контейнера | `e446835` (-127 PART1b) |
 | F-15 | Таблица имён типов заголовков l1trans 64/4096 на пределе → 128/8192, перепин | `9bacfd0` (-134) |
 | F-16 | D-15: именованная Structure не принимала поля `int:`/`unsigned:`/`ulong:` (цепочка `l2_take_ns_body` без этих звеньев → «a Structure reference field needs a name») | -141 D-15 (Sonnet `3b669cb`, на main следующим SHA) |
+| F-17 | D-10: избыточная вторая попытка own-поиска в `l2_check_sizeof`/`l2_prep` (обе функции различаются лишь выбором first/last при нескольких совпадениях; unit-fallback идентичен) — удалена; 514 сгенерированных .c байт-идентичны | -141 D-10 (Sonnet `14cb573`) |

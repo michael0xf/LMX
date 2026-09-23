@@ -1,0 +1,53 @@
+# FABLE-SONNET-NODE-ROOT-20260923-121 fixup: a local `Model: a` (the -105
+# inline-merge declaration) passed as an argument is the SAME instance in
+# caller and callee, not a stale copy -- the defect fable found reviewing
+# 88bbb2a: the merge wrote the fresh instance straight into the graph cell,
+# bypassing the activation's own dirty-load local, so the very next
+# checkpoint-before-call republished the OLD (unassigned, 0) value over it.
+# read_only(a) must see the fresh seed (1U); writer(a) must write through to
+# a's own graph cell, observed back in the CALLER after the call returns.
+#
+# Second witness -- Opus's D2 (-100/-105), same root cause: `Model: fresh`
+# declared, then a bare `fresh\value` read AND `fresh` passed to a formal,
+# both in the SAME activation with no intervening call before the first
+# read. Both must see the merged instance, not the prologue's stale copy.
+Model:
+    size_t: value 1U
+end: Model
+
+fn: read_only (Model: x) size_t
+    return: x\value
+
+fn: writer (Model: x) size_t
+    x\value: 99U
+    return: 0
+
+fn: probe () int
+    Model: a
+    size_t: got
+    got: read_only(a)
+    if: got != 1U
+        return: 90
+    writer(a)
+    got: a\value
+    if: got != 99U
+        return: 91
+    return: 0
+
+fn: fresh_read () int
+    Model: fresh
+    size_t: g1
+    g1: fresh\value
+    if: g1 != 1U
+        return: 92
+    size_t: g2
+    g2: read_only(fresh)
+    if: g2 != 1U
+        return: 93
+    return: 0
+
+int: r
+r: probe()
+if: r != 0
+    return: r
+return: fresh_read()

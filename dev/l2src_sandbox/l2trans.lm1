@@ -15805,12 +15805,29 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
         # statement, not one shared value hoisted to unit-construction time.
         # Model and the merge's lexical parent are the unit, spelled like
         # every other merge (`node` in a method, `self` in the entry E).
+        # TWO writes, both immediate (FABLE-SONNET-NODE-ROOT-20260923-121
+        # fixup, closing Opus's D2 -100/-105, root cause found by fable
+        # reviewing 88bbb2a): the graph cell (unchanged from before -- ANY
+        # path root/write on the same name, immediately after this
+        # statement and before any checkpoint, resolves through the graph
+        # cell directly, never through l2_qN) AND l2_qN itself via
+        # l2_emit_occ_write, the same helper every other assignment to a
+        # pointer own field uses (a bare read/an argument evaluation of the
+        # plain name reads l2_qN, not the graph cell). A deferred-only fix
+        # (l2_qN alone, letting the next checkpoint publish the cell) was
+        # tried and measured wrong: the very next field-path operation on
+        # this name, same activation, no intervening call, still read the
+        # PRE-merge graph cell. l2_qN_dirty ends up set here too, so the
+        # eventual checkpoint re-stores the identical value -- redundant,
+        # not wrong.
         if: l2_colon_decl_shape(stmt, @ cmodel, @ cname) = 0
             oi: l2_own_find(mi, cname)
             cni: l2_ns_find(cmodel)
             if: oi < 0 || cni < 0
                 return: l2_error(l2_src, stmt, "unresolved name")
             if: c.fprintf(l2_out, "%sl2_mops[0U]: lmx_arena_ref_struct(%s, %uU)\n%sl2_mbody: 0\n%sl2_mstatus: lmx_merge_owned(l2_mops, 1U, l2_mbody, %s, 0, l2_program_arena, l2_program_arena, @ l2_mresult)\n%sif: l2_mstatus != 0 || l2_mresult = 0\n%s    l2_out_throw[0]: node\n%s    return: 1\n%sl2_xp: lmx_arena_ref_cell(%s, %uU)\n%sif: l2_xp = 0\n%s    l2_out_throw[0]: node\n%s    return: 1\n%sif: lmx_pointer_store_known(l2_xp[0], (cast: (@: void) l2_mresult)) != 0\n%s    l2_out_throw[0]: node\n%s    return: 1\n", ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(cni))), ind, ind, l2_unit_ref, ind, ind, ind, ind, l2_own_ctr(oi), (cast: (unsigned) l2_own_uchild[oi]), ind, ind, ind, ind, ind, ind) < 0
+                return: 1
+            if: l2_emit_occ_write(mi, oi, ind, "(cast: (@: void) l2_mresult)") != 0
                 return: 1
             field: l2_next_active(field\next)
             continue

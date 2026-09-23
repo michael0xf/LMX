@@ -1186,6 +1186,31 @@ $fixtures = @(
         Debt = @('l2_message\graph: l2_entry_unit') },
     [pscustomobject]@{ Name = 'unit_node_root_in_entry_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown field path root'; Absent = @(); Debt = @() },
+    # FABLE-SONNET-OCC-ROOT-20260924-146 commit 2 / D-25: orphan for-frame
+    # fixtures, measured against the current -121 for-root rule. Three
+    # still translate, compile and run (a for-frame's hosted field read
+    # from ITS OWN lexical body); registered with the actual observed
+    # output. Six siblings assumed a for-frame's hosted field stays
+    # readable AFTER `end: for`, from the enclosing scope -- measured
+    # false today (`for` does not resolve outside a for-frame's own
+    # lexical scope, "unresolved name"), and unit_node_array_paths.lm2
+    # assumed an Array-typed field through a node/for root, which
+    # l2_own_array_root_span's own comment already says is not built --
+    # all seven deleted, same reasoning as D-13.
+    [pscustomobject]@{ Name = 'unit_forj_parent.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Says = @('9');
+        Absent = @();
+        Debt = @() },
+    [pscustomobject]@{ Name = 'unit_forj_sib.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @();
+        Debt = @() },
+    [pscustomobject]@{ Name = 'unit_forj_stale.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Says = @('9', '9 42');
+        Absent = @();
+        Debt = @() },
     [pscustomobject]@{ Name = 'unit_occ_root_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
@@ -1483,6 +1508,23 @@ $fixtures = @(
         Args = @('0');
         Absent = @();
         Debt = @() },
+    # FABLE-SONNET-OCC-ROOT-20260924-146 commit 2 / D-25: three orphan @:
+    # depth/formal fixtures, measured -- each translated but never called
+    # its own witness function, so a broken address write would have
+    # passed silently either way. Completed with a real call and assertion
+    # rather than rewritten from scratch (the shapes were already correct).
+    [pscustomobject]@{ Name = 'unit_addr_arg.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @();
+        Debt = @() },
+    [pscustomobject]@{ Name = 'unit_addr_depth.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @();
+        Debt = @() },
+    [pscustomobject]@{ Name = 'unit_addr_take.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @();
+        Debt = @() },
     [pscustomobject]@{ Name = 'unit_addr_entry_name_collision.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Says = @('1 2 3 4 5');
@@ -1516,6 +1558,15 @@ $fixtures = @(
         Absent = @();
         Debt = @() },
     [pscustomobject]@{ Name = 'unit_own_find_last_call_arg.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @();
+        Debt = @() },
+    # FABLE-SONNET-OCC-ROOT-20260924-146 commit 2 / D-25: orphan, measured
+    # and completed -- the original never called m(), and even called, its
+    # result did not depend on what the callee actually observed, so a
+    # broken dynamic-input read of a dirty caller own-field would have
+    # passed silently either way.
+    [pscustomobject]@{ Name = 'unit_own_dirty_rhs.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @();
         Debt = @() },

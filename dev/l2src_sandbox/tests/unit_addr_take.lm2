@@ -1,11 +1,36 @@
+# FABLE-SONNET-OCC-ROOT-20260924-146 commit 2 / D-25: orphan, measured and
+# completed -- the original never called go(), so this was untested either
+# way. @: n (address of a plain own-declared local, not a formal) into a
+# pointer parameter, write-back through it -- read two ways to prove the
+# write itself landed, not just that go() returns some number.
+#
+# set_one reads \p right after writing it (through the SAME taken address)
+# and reports that: proves the write reaches real storage. go's own
+# `return: n` afterward is the ordinary BARE working-copy read, and per L2
+# spec 18.2's own worked example ("p: @x, \p: 9 leaves bare working x at
+# 5") that stays 0 -- a write through a taken address reaches the GRAPH
+# cell directly; the working-copy cache is not refreshed by it, unlike a
+# PARAMETER's own-binding rule (18.3), where the working cell IS the
+# canonical one. `n` is a plain local, not a parameter -- contrast the
+# sibling unit_addr_arg.lm2, identical shape but with n as a formal, which
+# reads 1U back through the bare parameter precisely because that
+# canonical-cell rule applies there and does not apply here.
 fn: set_one (@: size_t p) int
     \p: 1U
+    if: \p != 1U
+        return: 82
     return: 0
 end: set_one
 fn: go () int
     size_t: n
     n: 0U
-    set_one(@: n)
+    if: set_one(@: n) != 0
+        return: 82
     return: n
 end: go
+
+int: got
+got: go()
+if: got != 0
+    return: 81
 return: 0

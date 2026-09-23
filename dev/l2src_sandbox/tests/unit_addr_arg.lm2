@@ -1,3 +1,7 @@
+# FABLE-SONNET-OCC-ROOT-20260924-146 commit 2 / D-25: orphan, measured and
+# completed -- the original never called go(), so a broken address write
+# through an own-declared formal would have passed silently. @: n (address
+# of an own-declared local formal) into a pointer parameter, write-back read.
 fn: set_one (@: size_t p) int
     \p: 1U
     return: 0
@@ -7,4 +11,9 @@ fn: go (size_t: n) int
     set_one(@: n)
     return: n
 end: go
+
+size_t: got
+got: go(0U)
+if: got != 1U
+    return: 81
 return: 0

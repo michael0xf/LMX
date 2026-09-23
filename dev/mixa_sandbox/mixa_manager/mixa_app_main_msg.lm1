@@ -79,7 +79,7 @@ define: MIXA_MAIN_FAIL 1
 # callable is found from the thread's own graph (lmx_call0). The body's return
 # value is not a stop (model 31); completion is signaled by setting the Message's
 # flags: success=1 + running=0 so the turn boundary settles the thread.
-fn: mixa_app_ui_entry (@: Lmx node) int
+fn: mixa_app_ui_entry (@: Lmx node; @: Lmx self) int
     const: @(MixaBackendVTable vt)
     @: LmxThread t
     @: LmxMsg t_msg
@@ -157,7 +157,7 @@ fn: mixa_app_ui_entry (@: Lmx node) int
 # graph[3], and returns without setting success (runs indefinitely until root
 # closes — l1-98 cascade release handles cleanup).  body_id distinguishes
 # workers in traces (11=file, 22=audio, 33=process).
-fn: mixa_app_file_entry (@: Lmx node) int
+fn: mixa_app_file_entry (@: Lmx node; @: Lmx self) int
     @: LmxThread t
     @: LmxMsg t_msg
     @: Lmx graph
@@ -188,7 +188,7 @@ fn: mixa_app_file_entry (@: Lmx node) int
 return: 0
 
 
-fn: mixa_app_audio_entry (@: Lmx node) int
+fn: mixa_app_audio_entry (@: Lmx node; @: Lmx self) int
     @: LmxThread t
     @: LmxMsg t_msg
     @: Lmx graph
@@ -219,7 +219,7 @@ fn: mixa_app_audio_entry (@: Lmx node) int
 return: 0
 
 
-fn: mixa_app_process_entry (@: Lmx node) int
+fn: mixa_app_process_entry (@: Lmx node; @: Lmx self) int
     @: LmxThread t
     @: LmxMsg t_msg
     @: Lmx graph
@@ -292,6 +292,10 @@ fn: mixa_app_entry (@: Lmx node) int
     @: LmxMsg ui_child
     @: LmxPool ui_method_pool
     @: LmxMethod ui_method
+    @: LmxCallable ui_info
+    @: LmxCallable file_info
+    @: LmxCallable audio_info
+    @: LmxCallable proc_info
     @: LmxThread file_t
     @: LmxPost file_mail
     @: LmxSchedule file_sched
@@ -347,7 +351,12 @@ fn: mixa_app_entry (@: Lmx node) int
     if: ui_method = 0
         return: 0
     ---
-    if: lmx_arena_ref_store(ui_child\graph, 0U, (cast: (@: void) ui_method)) != 0
+    ui_info: lmx_callable_new_owned(rt_ui_arena)
+    if: ui_info = 0
+        return: 0
+    ---
+    ui_info\method: ui_method
+    if: lmx_arena_ref_store(ui_child\graph, 0U, (cast: (@: void) ui_info)) != 0
         return: 0
     ---
     if: lmx_post_init(rt_ui_arena, ui_mail) != c.LMX_POST_OK
@@ -390,7 +399,12 @@ fn: mixa_app_entry (@: Lmx node) int
     if: file_turns_cell = 0 || file_body_cell = 0
         return: 0
     ---
-    if: lmx_arena_ref_store(file_child\graph, 0U, (cast: (@: void) file_method)) != 0
+    file_info: lmx_callable_new_owned(rt_file_arena)
+    if: file_info = 0
+        return: 0
+    ---
+    file_info\method: file_method
+    if: lmx_arena_ref_store(file_child\graph, 0U, (cast: (@: void) file_info)) != 0
         return: 0
     ---
     if: lmx_arena_ref_store(file_child\graph, 1U, file_turns_cell) != 0
@@ -439,7 +453,12 @@ fn: mixa_app_entry (@: Lmx node) int
     if: audio_turns_cell = 0 || audio_body_cell = 0
         return: 0
     ---
-    if: lmx_arena_ref_store(audio_child\graph, 0U, (cast: (@: void) audio_method)) != 0
+    audio_info: lmx_callable_new_owned(rt_audio_arena)
+    if: audio_info = 0
+        return: 0
+    ---
+    audio_info\method: audio_method
+    if: lmx_arena_ref_store(audio_child\graph, 0U, (cast: (@: void) audio_info)) != 0
         return: 0
     ---
     if: lmx_arena_ref_store(audio_child\graph, 1U, audio_turns_cell) != 0
@@ -488,7 +507,12 @@ fn: mixa_app_entry (@: Lmx node) int
     if: proc_turns_cell = 0 || proc_body_cell = 0
         return: 0
     ---
-    if: lmx_arena_ref_store(proc_child\graph, 0U, (cast: (@: void) proc_method)) != 0
+    proc_info: lmx_callable_new_owned(rt_proc_arena)
+    if: proc_info = 0
+        return: 0
+    ---
+    proc_info\method: proc_method
+    if: lmx_arena_ref_store(proc_child\graph, 0U, (cast: (@: void) proc_info)) != 0
         return: 0
     ---
     if: lmx_arena_ref_store(proc_child\graph, 1U, proc_turns_cell) != 0

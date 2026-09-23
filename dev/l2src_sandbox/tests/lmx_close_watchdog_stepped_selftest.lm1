@@ -71,7 +71,7 @@ size_t: t5_b_spins 0U
 
 # B: A BODY THAT NEVER RETURNS.  It yields the CPU (Sleep) so the rest of the process keeps running
 # -- the point is not a busy machine, it is a stack that cannot come back.
-fn: t5_body_b (@: Lmx node) int
+fn: t5_body_b (@: Lmx node; @: Lmx self) int
     t5_b_spins: t5_b_spins + 1U
     while: t5_run = 1
         c.Sleep(1U)
@@ -80,7 +80,7 @@ return: 0
 
 # A: build B under itself, give B's slot to A's OWN queue, and stay live.  A's body returns, which is
 # what makes the difference visible: it is B's BODY, not A's, that never comes back.
-fn: t5_body_a (@: Lmx node) int
+fn: t5_body_a (@: Lmx node; @: Lmx self) int
     @: LmxThread t
     @: LmxMsg message
     @: Lmx graph_a
@@ -90,6 +90,7 @@ fn: t5_body_a (@: Lmx node) int
     @: LmxPost mail_b
     @: LmxSchedule sched_b
     @: LmxMethod method
+    @: LmxCallable info_b
     @: LmxPool methods
     t: lmx_thread_current()
     message: lmx_thread_message(t)
@@ -126,7 +127,12 @@ fn: t5_body_a (@: Lmx node) int
         t5_diag: 6U
         return: 0
     ---
-    lmx_arena_ref_store(child_b\graph, 0U, (cast: (@: void) method))
+    info_b: lmx_callable_new_owned(t5_arena_b)
+    if: info_b = 0
+        return: 0
+    ---
+    info_b\method: method
+    lmx_arena_ref_store(child_b\graph, 0U, (cast: (@: void) info_b))
     mail_b: t5_mail_b
     t_b: (cast: (@: LmxThread) child_b)
     sched_b: (cast: (@: LmxSchedule) lmx_arena_take(t5_arena_b, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
@@ -161,6 +167,7 @@ fn: t5_root_entry (@: Lmx node) int
     @: LmxPost child_mail
     @: LmxSchedule child_sched
     @: LmxMethod method
+    @: LmxCallable info_a
     @: LmxPool methods
     @: Lmx graph
     if: t5_phase != 0U
@@ -187,7 +194,12 @@ fn: t5_root_entry (@: Lmx node) int
         t5_diag: 16U
         return: 0
     ---
-    lmx_arena_ref_store(graph, 0U, (cast: (@: void) method))
+    info_a: lmx_callable_new_owned(t5_arena_a)
+    if: info_a = 0
+        return: 0
+    ---
+    info_a\method: method
+    lmx_arena_ref_store(graph, 0U, (cast: (@: void) info_a))
     child_mail: t5_mail_a
     child_t: (cast: (@: LmxThread) child)
     child_sched: (cast: (@: LmxSchedule) lmx_arena_take(t5_arena_a, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))

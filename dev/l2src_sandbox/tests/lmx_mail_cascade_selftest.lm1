@@ -92,7 +92,7 @@ size_t: mc_seen_root_mail_slots 0U
 # The child's body.  mc_body_ends decides whether this child ENDS (success + stopped, which is what
 # makes lmx_thread_finish act at the end of its turn) or stays live forever.  mc_observe makes it
 # record what R0's mailbox looked like AT ITS OWN BOUNDARY -- the ordering evidence.
-fn: mc_body (@: Lmx node) int
+fn: mc_body (@: Lmx node; @: Lmx self) int
     @: LmxThread t
     @: LmxMsg message
     t: lmx_thread_current()
@@ -126,7 +126,7 @@ return: 0
 # end state.  Nothing here is timing-dependent: the main lane waits for `entered`, the stop ends this
 # wait, and the stop happens strictly after the mutation's destructor and strictly before the
 # corrected close's.
-fn: mc_w_body (@: Lmx node) int
+fn: mc_w_body (@: Lmx node; @: Lmx self) int
     @: LmxThread t
     @: LmxMsg message
     @: LmxMsg letter
@@ -167,6 +167,7 @@ fn: mc_entry (@: Lmx node) int
     @: LmxPost child_mail
     @: LmxSchedule child_sched
     @: LmxMethod method
+    @: LmxCallable info
     @: LmxPool methods
     @: Lmx graph
     if: mc_phase != 0U || mc_root = 0 || mc_child_arena = 0 || mc_source = 0 || mc_child_mail = 0
@@ -188,7 +189,12 @@ fn: mc_entry (@: Lmx node) int
     if: method = 0 || graph = 0
         return: 0
     ---
-    lmx_arena_ref_store(graph, 0U, (cast: (@: void) method))
+    info: lmx_callable_new_owned(mc_child_arena)
+    if: info = 0
+        return: 0
+    ---
+    info\method: method
+    lmx_arena_ref_store(graph, 0U, (cast: (@: void) info))
     child_mail: mc_child_mail
     child_t: (cast: (@: LmxThread) child)
     child_sched: (cast: (@: LmxSchedule) lmx_arena_take(mc_child_arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))

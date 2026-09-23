@@ -51,7 +51,7 @@ size_t: app_child_turns 0U
 size_t: app_mode 0U
 size_t: app_entry_diag 0U
 
-fn: app_child_body (@: Lmx node) int
+fn: app_child_body (@: Lmx node; @: Lmx self) int
     @: LmxThread t
     @: LmxMsg message
     @: void letter
@@ -82,6 +82,7 @@ fn: app_root_entry (@: Lmx node) int
     @: LmxPost child_mail
     @: LmxSchedule child_sched
     @: LmxMethod method
+    @: LmxCallable info
     @: LmxPool methods
     @: Lmx graph
     if: app_phase != 0U || app_root = 0 || app_child_arena = 0 || app_source = 0
@@ -112,7 +113,13 @@ fn: app_root_entry (@: Lmx node) int
         app_entry_diag: 4U
         return: 0
     ---
-    lmx_arena_ref_store(graph, 0U, (cast: (@: void) method))
+    info: lmx_callable_new_owned(app_child_arena)
+    if: info = 0
+        app_entry_diag: 4U
+        return: 0
+    ---
+    info\method: method
+    lmx_arena_ref_store(graph, 0U, (cast: (@: void) info))
     child_mail: (cast: (@: LmxPost) lmx_arena_take(app_child_arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
     child_sched: (cast: (@: LmxSchedule) lmx_arena_take(app_child_arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
     if: child_mail = 0 || child_t = 0 || child_sched = 0

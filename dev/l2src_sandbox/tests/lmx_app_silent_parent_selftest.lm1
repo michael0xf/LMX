@@ -45,7 +45,7 @@ size_t: sp_entry_diag 0U
 ulong: sp_limit 100U
 ulong: sp_reading 1000U
 
-fn: sp_child_body (@: Lmx node) int
+fn: sp_child_body (@: Lmx node; @: Lmx self) int
     @: LmxThread t
     @: LmxMsg message
     @: Lmx graph
@@ -71,6 +71,7 @@ fn: sp_root_entry (@: Lmx node) int
     @: LmxPost child_mail
     @: LmxSchedule child_sched
     @: LmxMethod method
+    @: LmxCallable info
     @: LmxPool methods
     @: Lmx graph
     @: void turns_cell
@@ -96,7 +97,12 @@ fn: sp_root_entry (@: Lmx node) int
         sp_entry_diag: 4U
         return: 0
     ---
-    lmx_arena_ref_store(graph, 0U, (cast: (@: void) method))
+    info: lmx_callable_new_owned(sp_child_arena)
+    if: info = 0
+        return: 0
+    ---
+    info\method: method
+    lmx_arena_ref_store(graph, 0U, (cast: (@: void) info))
     turns_cell: lmx_size_new_owned(sp_child_arena)
     if: turns_cell = 0
         sp_entry_diag: 5U

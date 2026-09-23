@@ -40,7 +40,7 @@ size_t: rb_calls 0U
 @: Lmx rb_node 0
 @: LmxThread rb_current 0
 
-fn: rb_body (@: Lmx node) int
+fn: rb_body (@: Lmx node; @: Lmx self) int
     rb_calls: rb_calls + 1U
     rb_node: node
     rb_current: lmx_thread_current()
@@ -74,6 +74,7 @@ fn: main () int
     @: Lmx graph 0
     @: Lmx own_field 0
     @: LmxMethod method 0
+    @: LmxCallable info
     @: LmxMsg message 0
     @: LmxThread t 0
     @: LmxPost mail 0
@@ -120,7 +121,13 @@ fn: main () int
     # (parent = 0, author 2026-09-22), so its reserved source `node` is 0 -- nothing lexical lies
     # above a Thread's graph, and the parent Thread is supervision, not a lexical space.
     graph\parent: 0
-    lmx_arena_ref_store(graph, 0U, (cast: (@: void) method))
+    info: lmx_callable_new_owned(arena_at)
+    if: info = 0
+        free(counts)
+        return: 2
+    ---
+    info\method: method
+    lmx_arena_ref_store(graph, 0U, (cast: (@: void) info))
     lmx_arena_ref_store(graph, 1U, own_field)
     # The record's own band, and a window wide enough that the lane's own ticks never end the wait.
     rb_check(counts, lmx_schedule_init(sched, arena_at, (cast: (@: void) t), 100000U) = c.LMX_SCHEDULE_OK, "the record did not initialize")

@@ -76,7 +76,7 @@ int: pw_with_mail 0
 # A's body: turn 1 creates B in A's arena (with B's own window: 1000U), later turns only take
 # letters, and the LAST turn (pw_a_turns >= 4U) declares A's own work done -- so the poll of turns
 # 2 and 3 is what the probe measures, and the cascade is out of the way until A ends.
-fn: pw_body_a (@: Lmx node) int
+fn: pw_body_a (@: Lmx node; @: Lmx self) int
     @: LmxThread t
     @: LmxMsg message
     @: Lmx graph_a
@@ -153,6 +153,7 @@ fn: pw_root_entry (@: Lmx node) int
     @: LmxPost child_mail
     @: LmxSchedule child_sched
     @: LmxMethod method
+    @: LmxCallable info
     @: LmxPool methods
     @: Lmx graph
     if: pw_phase != 0U || pw_root = 0 || pw_arena_a = 0 || pw_source_a = 0
@@ -177,7 +178,12 @@ fn: pw_root_entry (@: Lmx node) int
         pw_entry_diag: 4U
         return: 0
     ---
-    lmx_arena_ref_store(graph, 0U, (cast: (@: void) method))
+    info: lmx_callable_new_owned(pw_arena_a)
+    if: info = 0
+        return: 0
+    ---
+    info\method: method
+    lmx_arena_ref_store(graph, 0U, (cast: (@: void) info))
     child_mail: (cast: (@: LmxPost) lmx_arena_take(pw_arena_a, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
     child_t: (cast: (@: LmxThread) child)
     child_sched: (cast: (@: LmxSchedule) lmx_arena_take(pw_arena_a, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))

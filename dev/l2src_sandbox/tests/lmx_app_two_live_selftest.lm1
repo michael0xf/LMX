@@ -44,7 +44,7 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 size_t: tl_phase 0U
 size_t: tl_entry_diag 0U
 
-fn: tl_body_a (@: Lmx node) int
+fn: tl_body_a (@: Lmx node; @: Lmx self) int
     @: LmxThread t
     @: LmxMsg message
     @: Lmx graph
@@ -87,7 +87,7 @@ fn: tl_body_a (@: Lmx node) int
     ---
 return: 0
 
-fn: tl_body_b (@: Lmx node) int
+fn: tl_body_b (@: Lmx node; @: Lmx self) int
     @: LmxThread t
     @: LmxMsg message
     @: Lmx graph
@@ -145,6 +145,7 @@ fn: tl_wire_child (@: LmxRoot root; @: LmxArena arena; size_t: slot; @: Lmx sour
     @: LmxPost child_mail
     @: LmxSchedule child_sched
     @: LmxMethod method
+    @: LmxCallable info
     @: LmxPool methods
     @: Lmx graph
     @: void turns_cell
@@ -164,7 +165,12 @@ fn: tl_wire_child (@: LmxRoot root; @: LmxArena arena; size_t: slot; @: Lmx sour
     if: method = 0 || graph = 0
         return: 4
     ---
-    lmx_arena_ref_store(graph, 0U, (cast: (@: void) method))
+    info: lmx_callable_new_owned(arena)
+    if: info = 0
+        return: 4
+    ---
+    info\method: method
+    lmx_arena_ref_store(graph, 0U, (cast: (@: void) info))
     turns_cell: lmx_size_new_owned(arena)
     body_cell: lmx_size_new_owned(arena)
     if: turns_cell = 0 || body_cell = 0

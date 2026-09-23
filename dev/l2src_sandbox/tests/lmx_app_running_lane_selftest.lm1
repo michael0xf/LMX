@@ -48,7 +48,7 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 size_t: rl_phase 0U
 size_t: rl_entry_diag 0U
 
-fn: rl_child_body (@: Lmx node) int
+fn: rl_child_body (@: Lmx node; @: Lmx self) int
     @: LmxThread t
     @: LmxMsg message
     @: Lmx graph
@@ -75,6 +75,7 @@ fn: rl_root_entry (@: Lmx node) int
     @: LmxPost child_mail
     @: LmxSchedule child_sched
     @: LmxMethod method
+    @: LmxCallable info
     @: LmxPool methods
     @: Lmx graph
     @: void turns_cell
@@ -100,7 +101,12 @@ fn: rl_root_entry (@: Lmx node) int
         rl_entry_diag: 4U
         return: 0
     ---
-    lmx_arena_ref_store(graph, 0U, (cast: (@: void) method))
+    info: lmx_callable_new_owned(rl_child_arena)
+    if: info = 0
+        return: 0
+    ---
+    info\method: method
+    lmx_arena_ref_store(graph, 0U, (cast: (@: void) info))
     turns_cell: lmx_size_new_owned(rl_child_arena)
     if: turns_cell = 0
         rl_entry_diag: 5U

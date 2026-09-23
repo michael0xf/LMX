@@ -41,7 +41,7 @@ size_t: mt_phase 0U
 size_t: mt_entry_diag 0U
 size_t: mt_n 5U
 
-fn: mt_child_body (@: Lmx node) int
+fn: mt_child_body (@: Lmx node; @: Lmx self) int
     @: LmxThread t
     @: LmxMsg message
     @: Lmx graph
@@ -84,6 +84,7 @@ fn: mt_root_entry (@: Lmx node) int
     @: LmxPost child_mail
     @: LmxSchedule child_sched
     @: LmxMethod method
+    @: LmxCallable info
     @: LmxPool methods
     @: Lmx graph
     @: void turns_cell
@@ -110,7 +111,12 @@ fn: mt_root_entry (@: Lmx node) int
         mt_entry_diag: 4U
         return: 0
     ---
-    lmx_arena_ref_store(graph, 0U, (cast: (@: void) method))
+    info: lmx_callable_new_owned(mt_child_arena)
+    if: info = 0
+        return: 0
+    ---
+    info\method: method
+    lmx_arena_ref_store(graph, 0U, (cast: (@: void) info))
     turns_cell: lmx_size_new_owned(mt_child_arena)
     accepted_cell: lmx_size_new_owned(mt_child_arena)
     if: turns_cell = 0 || accepted_cell = 0

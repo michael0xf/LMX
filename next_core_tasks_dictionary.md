@@ -184,8 +184,8 @@ Provenance: `next_core_tasks.md` section 3 / universal binding priority (`GROK-B
 - **links:** requires=see related articles; produces=see definition; consumes=see definition; selects=see definition
 - **authoritative sources:** next_core_tasks.md; AUTHOR tickets 20260922; LMX_blog 2026-09-22 where applicable
 - **implementation (files/functions):** the flag reads the invariant forbids are **measured, 11 sites**: `dev/l2src_sandbox/l2trans.lm1` has **7** `LM_P0_FRAME_COMPACT` reads (`:4792`, `:7775`, `:11553`, `:11558`, `:11956`, `:12815`, `:14531`) and **0** `LM_P0_FRAME_COLON`; `l1src/l1trans.lm1` has **4** `LM_P0_FRAME_COLON` reads (`:3664`, `:3666`, `:4929`, `:5457`). **`l2_head_is_call` (`l2trans.lm1:10203`) is NOT among them** — it returns 1 as soon as `l2_find_method(t) >= 0` (`:10207-10208`), *before* the COMPACT/path-kind test at `:10213`, so the form-before-resolution defect is fixed and any citation of it is stale. Flag definitions: `l1src/p0.h.lm1:9` `LM_P0_FRAME_COLON 1U`, `:10` `LM_P0_FRAME_COMPACT 2U`, `:12` `LM_P0_FRAME_SEPARATOR_CLOSED 8U`.
-  **MEASURED STATE — the equivalence is partial, and the odd form is `f()`, not the colon one.** In `tests/parser/current/expectations.json` case 0 (`empty_vertical_body.lmx`, `receiver:` + `---`) and case 1 (`empty_parenthesized_argument.lmx`, `receiver: ()`) produce **identical** `stdout_exact` (`body=structure fields=1` → `structure fields=0`), and case 2 puts both spellings in one file with the same shape — so **the two Frame forms already agree**. Case 11 (`compact_no_arguments.lmx`, `receiver()`) is the **only** one at zero (`body=structure fields=0`). Read as mechanics: today P0 normalization holds for the two Frame forms and fails for COMPACT.
-- **witnesses:** **these goldens ARE gated** — `tools/run_parser.py --profile current` reads `tests/parser/current/expectations.json` and compares the child's **exit code AND `stdout_exact` byte-for-byte** (CRLF-normalised, `:77-79`), plus optional `stdout_file` (`:64-65`), `diagnostic` (`:66-69`) and `stdout_contains` (`:70-71`). 13 cases: accepts 0–7, 11, 12 and rejects 8–10 (`missing_colon_argument{,_semicolon,_bounded}`). **This is the opposite of the `*.lm2` fixture situation** — a shape change here fails a gate; a `*.lm2` behaviour change does not (see [`c-raw-door`](#c-raw-door)).
+  **MEASURED STATE, NOT NORM (superseded by author 2026-09-23).** In `tests/parser/current/expectations.json` case 0 (`empty_vertical_body.lmx`, `receiver:` + `---`) and case 1 (`empty_parenthesized_argument.lmx`, `receiver: ()`) produce **identical** `stdout_exact` (`body=structure fields=1` → `structure fields=0`), while case 11 (`compact_no_arguments.lmx`, `receiver()`) has `body=structure fields=0`. Required normal form: all three have the latter P0 body shape; the same sole-container rule applies when nonempty. See `next_parser_fix.md`.
+- **witnesses:** **these goldens ARE gated** — `tools/run_parser.py --profile current` reads `tests/parser/current/expectations.json` and compares the child's **exit code AND `stdout_exact` byte-for-byte** (CRLF-normalised), plus optional `stdout_file`, `diagnostic` and `stdout_contains`. The current file has 20 cases; the closed-empty accept and dangling-colon reject cases are among them. A shape change here fails this gate until accepted goldens are updated. A `*.lm2` behavior change has a different harness route (see [`c-raw-door`](#c-raw-door)).
 - **open gap to next_core_tasks.md:** see open checklist in next_core_tasks.md
 - **positive behavior:** per definition
 - **forbidden / contrast:** FORBIDDEN: silent specials contradicting universal rules; inventing registries
@@ -219,9 +219,9 @@ Provenance: `next_core_tasks.md` section 3 / universal binding priority (`GROK-B
 - **Norm:** accepted
 - **Implementation:** partial
 - **Verification:** none
-- **definition:** Sole anonymous Structure of entire arg list is transparent.
-- **invariants:** Empty Structure remains a real value
-- **not-confused-with:** empty-argument-sequence; empty-structure-value; P0 HOLD
+- **definition:** P0 normalizes a sole anonymous Structure occupying the entire argument list into that list's fields exactly once, for any head and both empty/nonempty cases.
+- **invariants:** Empty Structure remains a real value in a nontransparent position; incomplete `f:` remains invalid.
+- **not-confused-with:** empty-argument-sequence; empty-structure-value; consumer-only unwrapping in current code
 - **links:** requires=see related articles; produces=see definition; consumes=see definition; selects=see definition
 - **authoritative sources:** next_core_tasks.md; AUTHOR tickets 20260922; LMX_blog 2026-09-22 where applicable
 - **implementation (files/functions):** UNKNOWN exact symbol set unless noted in c-raw-door / nearby articles — label for audit
@@ -874,7 +874,7 @@ Provenance: `next_core_tasks.md` section 3 / universal binding priority (`GROK-B
 - **Norm:** accepted (design fixed at f559f9dd; implementation open — see next_core_tasks.md, subsection `### Expression statement и discard`)
 - **Implementation:** partial
 - **Verification:** none — the six-case probe set from the `### Expression statement и discard` subsection is not gated yet
-- **definition:** A receiverless body statement evaluates its span and discards the result to a typed `l2_tN` slot. `2+2` and bare data are control cases (already work); a bare nullary callable must invoke (side-effect observable); a nested call follows the same path; an unknown name must error; no access violation. P0 transparency of a sole anonymous argument-container is a SEPARATE hold (next_core_tasks.md, subsection `### Expression statement и discard`) and is NOT asserted as a tree shape here.
+- **definition:** A receiverless body statement evaluates its span and discards the result to a typed `l2_tN` slot. `2+2` and bare data are control cases (already work); a bare nullary callable must invoke (side-effect observable); a nested call follows the same path; an unknown name must error; no access violation. Bare-atom execution remains separate from the P0 Frame tree-shape invariant in `next_parser_fix.md`.
 - **invariants:**
   - Single shared `l2_eval_discard` / body-dispatch, not per-form branches
   - `l2_new_temp` (:9038–:9044) must become `l2_new_temp_ty(oty)` — today it emits `"%sint: l2_t%d\n"` unconditionally (no type parameter)
@@ -928,7 +928,7 @@ Provenance: `next_core_tasks.md` section 3 / universal binding priority (`GROK-B
   - `tb_discard_bare_callable`: side effect is the evidence of invocation, not any form-specific marker — bare callable resolves by the ordinary callable-first rule, invocation is proven by its observable effect, not by a form marker
   - `tb_discard_unknown_name`: l2trans-refuses with Needle, NOT runs — a refused fixture must not be gated as `runs`/`eternal-runs`, which are green on an exit code and would invert the refusal
   - `tb_discard_no_av`: must run under the eternal driver OR as a plain `runs` with Args @() — the point is no memory fault; `library-links` row's Exit=0 is NOT a model (cannot distinguish "ran clean" from "could not open library")
-  - P0 transparency of nullary container is NOT asserted as tree shape (Open HOLDS at frame / anonymous-container-transparency)
+  - P0 transparency of the sole whole-sequence container **is** a required tree-shape invariant; current CALL-only unwrapping is an implementation gap (see `next_parser_fix.md`).
 
 - **not-confused-with:** fnptr-value-discard (mechanism); anonymous-container-transparency (P0 form); c-puts-passthrough (foreign door)
 - **links:** requires=[fnptr-value-discard](#fnptr-value-discard); [head-resolution](#head-resolution); [call-first](#call-first); [surface-form-equivalence](#surface-form-equivalence); produces=harness rows; consumes=body dispatch

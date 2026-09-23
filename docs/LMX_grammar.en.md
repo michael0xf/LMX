@@ -859,9 +859,9 @@ Repeated separators `a,,c`, `a;;c`, `a,;c`, `a;,c` denote a positional skip wher
 
 Sources: §§4.0.1, 4.2.1, 4.6.1.
 
-An argument list is itself a Structure. A sole anonymous container of the entire positional sequence is transparent to consumption: the receiver reads its fields as arguments. An anonymous Structure among other fields remains one field. A named argument can explicitly retain a Structure as one value.
+An argument list is itself a Structure. P0 normalizes a sole anonymous container of the entire positional sequence into the list's own fields, independently of the head and emptiness. An anonymous Structure among other fields remains one field. A named argument can explicitly retain a Structure as one value.
 
-A declaration profile may consume neighboring headless Structures as repetitions of the preceding template. A pointer template includes depth and base type; an array template includes the head shape and type prefix. The next segment may replace the type with its own valid storage type. This is a consumption rule, not name lookup or hidden grouping at P0; neighboring expressions do not disappear.
+A declaration profile may consume neighboring headless Structures as repetitions of the preceding template. A pointer template includes depth and base type; an array template includes the head shape and type prefix. The next segment may replace the type with its own valid storage type. This is a P0 normalization rule, not name lookup or profile-specific grouping; neighboring expressions do not disappear.
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 2709–2714.
 
@@ -1315,7 +1315,7 @@ A fence of 3–80 dashes after the leading zone has the same role. Only horizont
 
 An anonymous Structure continues until another marker at K, an ordinary item at K − 1, an admitted named/terminal close, or EOF. Replacing a named close with a fence depends on profile admission and lack of ambiguity. Matrix rows and nested arrays use the same rules, without separate table syntax.
 
-An explicitly formed empty vertical body preserves an empty argument container; absence of deeper items does not permit discarding the Frame itself. The sole anonymous container is transparent during consumption, so zero inner fields supply zero receiver arguments. See [empty bodies](#empty-colon).
+An explicitly formed empty vertical body preserves a Frame with an empty Structure-body. P0 normalizes it exactly like `f()` and `f: ()`: there is no extra anonymous empty field. Bare `f:` without arguments or explicit closure remains invalid. See [empty bodies](#empty-colon).
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 3496–3504.
 
@@ -1764,13 +1764,11 @@ end: world    # closes world #1
 
 ## 18. Missing arguments and an empty vertical body
 
-Source: §§4.0.1, 4.1 and 15 of the previous specification; the author's direct clarification on 2026-09-22 restored argument-container transparency.
+Source: §§4.0.1, 4.1 and 15 of the previous specification; the author's direct correction of 2026-09-23.
 
-Every Frame stores an argument-container Structure. When the sole field occupying the whole container position is itself an anonymous Structure, it is transparent: the receiver consumes its inner fields as the argument sequence. Therefore `f()`, `f: ()`, and `f:` with an explicitly empty vertical body closed by `---` provide the same empty sequence — zero arguments. The Frame and its empty container must still be preserved; P0 does not reject them merely because their field count is zero. The receiver/profile decides whether the nullary operation is admitted.
+A Frame's argument list is itself a Structure. If a sole anonymous Structure field occupies the whole positional sequence, P0 replaces it with its fields exactly once, independently of the head and emptiness. Thus `f()`, `f: ()`, and `f:` with an explicitly empty vertical body closed by `---` yield the same Frame with an empty Structure-body; `f(a b)` and `f: (a b)` likewise yield one list. An anonymous Structure among other fields or a named field remains a distinct field. A separate empty Structure value requires such a nontransparent position.
 
-An empty Structure nevertheless exists as a value and differs from `void`, numeric zero, and an absent field. Supplying it as one argument requires a nontransparent position, such as a named field; the sole anonymous wrapper around the entire argument list is always transparent.
-
-An admitted bare `f` in executable position likewise denotes nullary consumption when the consumer resolves it as callable. P0 may retain it as an atom; the following semantic layer determines the call. An empty inline tail followed by a nonempty vertical body is also valid. Bare `end` remains separately forbidden.
+P0 rejects bare `f:` without arguments, a vertical body, or an explicit `---`. Bare `f` is an ordinary admitted atomic expression; resolved as callable, it has the same nullary effect, although P0 may retain it as an atom. The translator does not distinguish Frame forms by COLON/COMPACT or source spelling. An empty inline tail followed by a nonempty vertical body is valid. Bare `end` remains forbidden.
 
 **Valid: an empty container, zero arguments** — author / автор, 2026-09-19.
 
@@ -2224,9 +2222,9 @@ EOF completes the root after all forms admitting EOF closure. Unclosed bounded f
 
 Source: §15.0. The formal notation and its original annotations are retained verbatim below. This is the same immutable source excerpt in both language versions; all constraints are explained in the preceding sections. `name`, `atom_or_value`, `symbolic_head`, and level events are read with the lexical rules, not as permission for arbitrary characters. English annotations within the notation are not language tokens.
 
-This EBNF does not replace the automaton: an empty colon tail may preserve an empty Frame/container, and `newline/source-level composition` denotes the specified transitions, not an arbitrary whitespace separator.
+This EBNF does not replace the automaton: bare `f:` without an argument and explicit closure is invalid; `newline/source-level composition` denotes the stated transitions, not arbitrary whitespace separation.
 
-Sole-anonymous-container transparency takes precedence over a literal reading of the old annotations: `f()`, `f: ()`, and an explicitly empty vertical form supply zero arguments to the receiver. Read the historical formal notation below with this explicit amendment.
+Under the general §4.0.1 rule, P0 normalizes the sole anonymous Structure occupying the whole list before consumption: `f()`, `f: ()`, and an explicitly empty vertical form yield the same Frame with an empty Structure-body. The rule also applies to a nonempty container. Read the historical notation below with this clarification.
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 8760–8946.
 

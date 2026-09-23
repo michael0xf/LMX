@@ -244,19 +244,21 @@ If `fresh` already exists, an applicable assignment rule is evaluated instead.
 Nonprimitive Structure values are physically passed and returned by reference
 to their descriptors, but new construction remains real allocation/copy.
 
-The parser's parenthesized, short-colon, and vertical forms must supply
-equivalent argument structures to semantic consumers. `f()`, `f: ()`, and an
-explicit empty vertical `f:` followed by `---` are nullary calls when `f` is
-callable; a dangling `f:` alone is rejected by the parser. A bare `f` is an
-expression statement: a callable expression is invoked and a data expression
-is evaluated and discarded. The result can use a typed dead temporary; no
-special bare-name call rule is needed. The parser may preserve different
-shapes in its tree, but the **translator cannot use a form flag as a semantic
-discriminator**. A sole anonymous plain Structure argument container is
-transparent to the call consumer, one level, after the head is resolved.
-Native call count/check/emission currently do not all implement this rule:
-`f: ()` and `add: (1 2)` can still be refused despite equivalent forms
-working. Structural declaration `mystruct: ()` is a separate remaining gap.
+The parser's parenthesized, short-colon, and vertical forms must already
+produce the same normalized Frame/body, before semantic consumption. `f()`,
+`f: ()`, and an explicitly closed empty vertical `f:` followed by `---` have
+an empty body; a dangling `f:` alone is rejected. This is the general
+single-anonymous-argument-container rule of old §4.0.1, including nonempty
+`f(a b)` / `f: (a b)`: the one wrapper occupying the whole positional
+sequence is transparent once, while a Structure among other fields or in a
+named position remains a field. A bare `f` is an expression statement: a
+callable expression is invoked nullarily and a data expression is evaluated
+and discarded. The result can use a typed dead temporary; no special
+bare-name call rule is needed. Source-form flags are not semantic inputs.
+The current P0 goldens and native/interpreter CALL-only unwrapping conflict
+with this rule; see `next_parser_fix.md`. Structural declaration such as
+`mystruct: ()` must use the same normalized body as `mystruct()` and the
+general declaration rule, not recover a discarded wrapper.
 
 `implements` is the receiving/admission operation for known assignments and
 other accepted value transfers, including cases where the target address or
@@ -465,8 +467,8 @@ an implementation's current behavior, an accepted rule, and a planned fix.
 
 | Boundary | Current evidence / consequence | Owner of the next decision |
 | --- | --- | --- |
-| Native CALL argument container | Interpreter unwraps the sole anonymous container after callee resolution; native count/check/emission can reject equivalent `f: ()` and `add: (1 2)` forms. | One role-bound native CALL accessor, with interpreter parity tests. |
-| Structural declaration | `mystruct: ()` may fail native lowering although the universal absent-target/Structure rule requires declaration. | Declaration/merge resolution, separate from CALL flattening. |
+| P0 argument-container normal form | P0 goldens distinguish `f()` from `f: ()`; native/interpreter add CALL-only unwrapping, leaving other roles inconsistent. | Normalize the sole whole-sequence anonymous Structure once in P0 (empty and nonempty), then remove redundant consumer unwrapping; see `next_parser_fix.md`. |
+| Structural declaration | `mystruct: ()` may fail native lowering although the universal absent-target/Structure rule requires declaration. | Resolve declaration from the same normalized P0 Structure-body as `mystruct()`; no declaration-only wrapper restoration. |
 | Repeated fields and sticky addresses | Current own-slot paths do not fully preserve `[N]field`, selector publication, and universal sticky `@local`. | One occurrence-to-physical-path algorithm shared by native and interpreter. |
 | Admission | Coarse address compatibility and some fast paths are not the complete Consumer/uses plus runtime-test model or full directed conversion table. | Urgent kernel fixes first; then bounded port from the prior implementation. |
 | Raw C door | Name-specific `c.puts`/`c.array`/`c.sizeof` handling and header-derived C-name machinery remain cleanup debt. | One raw `c.*` door; separately introduce ordinary `sizeof:` if needed. |

@@ -19,7 +19,7 @@ Substantive L1 changes:
 
 These provisions were not imported into the [new semantics](LMX_semantics.en.md). At initial extraction it contained only the opening supplied by the author and the transition to grammar.
 
-The author's 2026-09-22 clarification restored the previous specification's §4.0.1 rule: an empty vertical body preserves a Frame and an empty anonymous container equivalent to the `()` container, but that container is transparent and supplies zero receiver arguments. A distinct empty Structure remains a value only in a nontransparent position. `receiver:` followed by a `---` line is valid. This clarification **was not a difference between the two old files**; the normative result is incorporated into the [new grammar](LMX_grammar.en.md#empty-colon), while current tests expecting one argument must be corrected.
+The author's 2026-09-23 correction to old §4.0.1: the sole anonymous container occupying the whole list is normalized already in P0, including nonempty bodies; `f()`, `f: ()`, and explicitly closed `f:` + `---` must yield the same empty Frame-body. A distinct empty Structure remains a value in a nontransparent position. This clarification **was not a difference between the two old files**; the normative result is incorporated into the [new grammar](LMX_grammar.en.md#empty-colon). Current parser goldens with different trees record the old implementation and need correction.
 
 Source SHA-256:
 

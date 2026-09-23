@@ -1,5 +1,7 @@
 # Dev P0 parser
 
+> Superseded semantic target (author correction 2026-09-23): the implementation and measurements below describe the earlier P0 tree, not the accepted normal form. `f()`, `f: ()`, and explicitly closed `f:` + `---` must yield one empty Frame-body in P0. The sole anonymous whole-list Structure is normalized in P0 also when nonempty. Bare `f:` remains invalid. See `next_parser_fix.md`.
+
 `parser.lm1` is a development copy of the stable `l1src/parser.lm1`, whose initial SHA-256 was `431fa51e26502c38f25bdc043ae1478e35ab236a40df65171170a3e7990eea65`. Stable sources and Grok's `dev/l2src_sandbox` are not modified by this change.
 
 ## Empty vertical argument

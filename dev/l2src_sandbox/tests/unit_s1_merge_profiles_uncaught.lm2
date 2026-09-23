@@ -1,0 +1,29 @@
+# D-07: a merge of qualified (eternal) operands goes through lmx_merge_profiles_owned, not
+# lmx_merge_owned.  The driver fails that first merge (`mergefail 1`); nothing catches it, so
+# the implicit name `merge` (status 1) reaches the root.  Without the profiles tap the row
+# cannot fail the merge (mutant: drop -Dlmx_merge_profiles_owned → GREEN program, RED row).
+independent:
+    const:
+        immutable:
+            (): FrozenA
+                size_t: value 1U
+            end: FrozenA
+        end: immutable
+    end: const
+end: independent
+
+independent:
+    const:
+        immutable:
+            (): FrozenB
+                size_t: value 1U
+            end: FrozenB
+        end: immutable
+    end: const
+end: independent
+
+fn: m () int
+    R: merge: FrozenA FrozenB
+return: 5
+
+return: m()

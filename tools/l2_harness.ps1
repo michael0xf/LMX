@@ -461,6 +461,9 @@ if ($driver) { Add-Row 'OK' 'build:eternal_driver' ($made.ToString() + ' kernel 
 #                           ONE relocatable link.  LINK AND SYMBOLS ONLY: nothing is run.  The
 #                           profile is SELECTED here, never inferred from what the unit lacks: L2
 #                           has no `main` (S2), so a unit of methods alone is also a program.
+#   toolchain-refuses    -- l2trans MUST accept and emit L1; Absent strings must be GONE from that
+#                           L1 (no silent patch); then l1trans or gcc MUST refuse.  Used when the
+#                           unit omits a required include/predef and the C toolchain is the judge.
 #
 # THE ENTRY (S2).  An L2 program is its unit body from the first line.  The translator states in the
 # generated L1 how many top-level statements the entry executes, as one line `# entry statements: N`.
@@ -1105,6 +1108,15 @@ $fixtures = @(
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_pst:', 'l2_pxp: lmx_arena_ref_cell(l2_pst,', 'l2_message\graph: l2_entry_unit') },
+    # FABLE-GROKBOT-INCLUDE-AND-SIZEOF-20260923-123 part1: source-driven predef/include.
+    # WITH include -> runs. WITHOUT -> L1 must not silently gain p0.lm1.h; l1trans/gcc refuse.
+    # Mutant: restore LmP0-prefix l2_need_p0 in l2_foreign_intern -> without-include links (RED).
+    [pscustomobject]@{ Name = 'unit_p0_with_include.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_text_hash.lm1');
+        Debt = @('l2_message\graph: l2_entry_unit', '"l1src/p0.lm1.h" "<stdlib.h>"') },
+    [pscustomobject]@{ Name = 'unit_p0_without_include.lm2'; Expect = 'toolchain-refuses'; Exit = 0; Needle = '';
+        Absent = @('l2_text_hash.lm1'); Debt = @() },
     [pscustomobject]@{ Name = 'unit_array_write_root_out_of_range.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'own array index requires an in-bounds primitive literal'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_array_write_general_root_no_field.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -1226,6 +1238,24 @@ foreach ($fx in $fixtures) {
         if (-not $entryLine.Success) { Add-Row 'FAIL' ('fixture:' + $stem) 'the generated L1 does not state `# entry statements: N`'; continue }
         $emptyOk = $fx.PSObject.Properties['EmptyEntry'] -and $fx.EmptyEntry
         if ([int]$entryLine.Groups[1].Value -eq 0 -and -not $emptyOk) { Add-Row 'FAIL' ('fixture:' + $stem) 'an executable row whose entry executes no statement (set EmptyEntry to mean it)'; continue }
+    }
+
+    if ($fx.Expect -eq 'toolchain-refuses') {
+        $l1 = (Get-Content -LiteralPath $genLm1 -Raw)
+        $why = ''
+        foreach ($a in $fx.Absent) {
+            if ($why -eq '' -and $l1 -match [regex]::Escape($a)) { $why = 'the generated L1 still silently names "' + $a + '"' }
+        }
+        if ($why -ne '') { Add-Row 'FAIL' ('fixture:' + $stem) $why; continue }
+        $genC = Join-Path $gen ($stem + '.c')
+        $label2 = 'fixture.' + $stem + '.l1trans'
+        $made2 = Step-Made $label2 $Translator @($genLm1, $genC) $src $genC
+        if (-not $made2) { Add-Row 'OK' ('fixture:' + $stem) 'l2trans accepted without silent include; l1trans refused as expected'; continue }
+        $obj = Join-Path $gen ($stem + '.o')
+        if (Test-Path -LiteralPath $obj) { Remove-Item -LiteralPath $obj -Force }
+        $code = Invoke-Step ('fixture.' + $stem + '.compile') $gcc ($kflags + @('-c', $genC, '-o', $obj)) $root
+        if ($code -eq 0 -and (Test-Path -LiteralPath $obj)) { Add-Row 'FAIL' ('fixture:' + $stem) 'gcc ACCEPTED a unit that must be refused without its include/predef'; continue }
+        Add-Row 'OK' ('fixture:' + $stem) ('l2trans accepted without silent include; gcc refused as expected (exit ' + $code + ')'); continue
     }
 
     $genC = Join-Path $gen ($stem + '.c')

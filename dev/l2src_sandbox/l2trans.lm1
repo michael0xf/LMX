@@ -4552,8 +4552,6 @@ fn: l2_foreign_intern (const: @(LmP0Text name); int: depth; int: is_const) int
     # header is read to admit it, and the C compiler checks the spelling.
     while: i < l2_foreign_n
         if: l2_foreign_depth[i] = depth && l2_foreign_const[i] = is_const && l2_text_same(l2_foreign_name[i], name)
-            if: name\length >= 4U && name\data[0] = 76 && name\data[1] = 109 && name\data[2] = 80 && name\data[3] = 48
-                l2_need_p0: 1
             return: 100 + i
         i: i + 1
     if: l2_foreign_n = c.INT_MAX - 100
@@ -4606,9 +4604,8 @@ fn: l2_foreign_intern (const: @(LmP0Text name); int: depth; int: is_const) int
     l2_foreign_const[l2_foreign_n]: is_const
     i: l2_foreign_n
     l2_foreign_n: l2_foreign_n + 1
-    # Use-driven predef: a used c.* / foreign head whose C name is LmP0* pulls p0.lm1.h.
-    if: name\length >= 4U && name\data[0] = 76 && name\data[1] = 109 && name\data[2] = 80 && name\data[3] = 48
-        l2_need_p0: 1
+    # Source-driven predef/include: the unit declares what runtime headers it needs.
+    # Name/prefix triggers (LmP0*, c.lm_p0_set_diagnostic, per-name stdlib/string) are gone.
 return: 100 + i
 
 # A by-value foreign type `T` or `c.T` (Stage B), interned with depth 0. It is
@@ -8487,19 +8484,9 @@ return: 1
 fn: l2_is_known (const: @(LmP0Text t)) int
     if: t = 0 || t\data = 0
         return: 0
-    # Emission needs, fail-open: a name that implies a support include or
-    # adapter sets its flag whether or not it is admitted. An unknown name gets
-    # no include and no diagnostic.
-    if: l2_text_eq(t, "c.malloc") || l2_text_eq(t, "c.calloc") || l2_text_eq(t, "c.realloc") || l2_text_eq(t, "c.free") || l2_text_eq(t, "c.getenv") || l2_text_eq(t, "c.system")
-        l2_need_stdlib: 1
-    ---
-    if: l2_text_eq(t, "c.strcmp") || l2_text_eq(t, "c.strlen") || l2_text_eq(t, "c.memcpy")
-        l2_need_string: 1
-    ---
-    if: l2_text_eq(t, "c.lm_p0_set_diagnostic")
-        l2_need_p0: 1
-        l2_need_diag: 1
-    ---
+    # Includes for runtime headers come from the source unit's own predef:/include:
+    # (plus the profile prelude). Name-driven need_stdlib/need_string/need_p0 are gone.
+    # Emitter-set need_query/need_own remain where the translator emits its own helpers.
     # c.array is a declarator, not a generic call. c.puts uses the raw c.* door.
     if: l2_text_eq(t, "c.array")
         return: 0
@@ -11299,9 +11286,6 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
     if: idx < 0 && l2_is_known(call\head)
         if: l2_text_eq(call\head, "lm_own_new_zero") || l2_text_eq(call\head, "lm_own_copy_bytes") || l2_text_eq(call\head, "lm_own_delete") || l2_text_eq(call\head, "lm_own_resize")
             l2_need_own: 1
-        if: l2_text_eq(call\head, "c.lm_p0_set_diagnostic")
-            l2_need_p0: 1
-            l2_need_diag: 1
         # A foreign C call may take no arguments: c.rand(), c.abort(). The
         # parser gives it an empty body, and l2_check_fields refuses 0 fields.
         if: l2_c_stmt_door(call\head) != 0 && (call\body = 0 || l2_count_active(call\body) = 0)
@@ -12862,8 +12846,6 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
             return: 1
         return: l2_tok_temp(t, dest)
     if: idx < 0 && l2_text_eq(call\head, "c.lm_p0_set_diagnostic")
-        l2_need_p0: 1
-        l2_need_diag: 1
         if: call\body = 0
             return: 1
         a0: l2_next_active(call\body\first_field)

@@ -1,8 +1,12 @@
-L2:
-    fn: main (int: count; @@: char values) int
-        if: count != 2
-            return: 1
-        c.fputs: values[1] c.stdout
-        return: 0
-    end: main
-end: L2
+# An argument read by index: m\mainArgs[1] is argv[1]'s own char Array, NUL
+# included, so `@ m\mainArgs[1][0]` is its C string in graph storage.
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+
+MainLetter: m
+nextMessage: m
+if: length(m\mainArgs) != 2
+    return: 1
+c.puts: @ m\mainArgs[1][0]
+return: 0

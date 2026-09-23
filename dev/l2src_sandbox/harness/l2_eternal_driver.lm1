@@ -35,6 +35,7 @@ prototype:
     fn: l2_generated_main (int: argc; @@: char argv) int
     fn: l2_program_entry (@: Lmx node) int
     fn: l2_program_graph () @: Lmx
+    fn: l2_program_completed () int
     fn: l2_program_qualified_count () size_t
     fn: l2_program_qualified_at (size_t: index) @: Lmx
 end: prototype
@@ -161,8 +162,8 @@ fn: inspect (@: LmxRoot root) int
                     check(member != 0 && member\parent = other && lmx_range_profile(arena, cell) = root_profile(arena, other) && sealed_here(arena, cell) != 0, "slot member keeps its lexical parent and exact sealed profile")
                     at: at + 5
                 else:
-                    # `entry N` and `letters N` are read by main, not root facts.
-                    if: (c.strcmp(gargv[at], "entry") = 0 || c.strcmp(gargv[at], "letters") = 0) && at + 1 < gargc
+                    # `entry N`, `letters N` and `fails N` are read by main, not root facts.
+                    if: (c.strcmp(gargv[at], "entry") = 0 || c.strcmp(gargv[at], "letters") = 0 || c.strcmp(gargv[at], "fails") = 0) && at + 1 < gargc
                         at: at + 2
                     else:
                         check(0, "all driver fact arguments are recognized")
@@ -248,6 +249,7 @@ fn: main (int: argc; @@: char argv) int
     int: status
     int: expected 0
     int: letters 1
+    int: fails 0
     int: at 2
     int: dash 0
     int: k 0
@@ -281,6 +283,8 @@ fn: main (int: argc; @@: char argv) int
     # E1: the process exit value is the int the entry returns.  `entry N` names it (default 0, the
     # fixtures' own pass value); the generated C main returns it and the adapter returns it too.
     # `letters N`: the letters R0 still holds at close (default 1: the argv letter, untaken).
+    # `fails 1`: the entry does not complete -- an uncaught implicit failure (a refused admission,
+    # a failing merge) reaches the adapter -- so the program has no value and exits 1.
     while: at + 1 < gargc
         if: c.strcmp(argv[at], "entry") = 0
             expected: arg(at + 1)
@@ -288,11 +292,20 @@ fn: main (int: argc; @@: char argv) int
         if: c.strcmp(argv[at], "letters") = 0
             letters: arg(at + 1)
         ---
+        if: c.strcmp(argv[at], "fails") = 0
+            fails: arg(at + 1)
+        ---
         at: at + 1
     ---
     phase: "generated program"
     status: l2_generated_main(pargc, pargv)
-    check(status = expected, "generated main returned the entry's value")
+    if: fails = 0
+        check(status = expected, "generated main returned the entry's value")
+        check(l2_program_completed() = 1, "the entry completed")
+    else:
+        check(status = 1, "a failed entry leaves the program without a value: exit 1")
+        check(l2_program_completed() = 0, "the entry did not complete: an uncaught failure")
+    ---
     check(hooked = 1, "generated main closed exactly one root")
     phase: "argv letter"
     check(letters_at_close = letters, "R0 holds the expected number of untaken letters at close")
@@ -305,8 +318,12 @@ fn: main (int: argc; @@: char argv) int
     check(entry_calls = 1, "generated entry ran exactly once")
     # R0's graph is independent (parent = 0), so the adapter's reserved `node` is 0.
     check(entry_node = 0, "the entry adapter's node is 0: the graph hanging in R0 is independent")
-    check(entry_rc = expected, "generated entry returned the expected value")
-    if: entry_rc != expected
+    if: fails = 0
+        check(entry_rc = expected, "generated entry returned the expected value")
+    else:
+        check(entry_rc != 0, "the entry reported its failure to the host")
+    ---
+    if: fails = 0 && entry_rc != expected
         c.printf("l2_eternal_driver: entry returned %d\n", entry_rc)
     ---
     if: failures != 0

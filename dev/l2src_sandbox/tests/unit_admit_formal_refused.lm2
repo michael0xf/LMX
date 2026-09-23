@@ -1,0 +1,14 @@
+# The same admission refuses the letter for a Model formal: the call fails
+# before it is made, and the entry has no value.  (Completing would return 5
+# or 6, never the "no value" exit.)
+Model:
+    size_t: value 1U
+end: Model
+
+fn: get (Model: x) size_t
+return: x\value
+
+nextMessage: m
+if: get(m) != 0U
+    return: 5
+return: 6

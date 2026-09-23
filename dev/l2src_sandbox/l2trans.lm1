@@ -147,6 +147,8 @@ int: l2_ns_has_array 0
 # neither could otherwise still emit a node/for path with nowhere to hold
 # the walk.
 int: l2_uses_node_for_root 0
+# Some site admits an untyped graph to a declared Structure type at run time.
+int: l2_need_admit 0
 # Named-structure type of a formal (k>=0) or return (k=-1).  The emitted ABI
 # is the ordinary graph pointer; this table is only the implements descriptor.
 int: l2_nsty_n 0
@@ -504,12 +506,26 @@ prototype:
     fn: l2_addr_flat_eternal (@: LmP0Field at) int
     fn: l2_path_kind (const: @(char pd); size_t: pn; @: int out_mi) int
     fn: l2_emit_path (const: @(char pd); size_t: pn; int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind) int
+    fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind; int: arr_ok) int
+    fn: l2_dec_literal (const: @(LmP0Text t); @: size_t out_v) int
+    fn: l2_path_arr_leaf (const: @(char pd); size_t: pn; @: int out_kind; @: int out_elem; @: size_t out_count) int
+    fn: l2_arr_operand (@: LmP0Field f; int: allow0; @: char pd; @: size_t out_pn; @: int out_count; @@: LmP0Field out_after; @: int out_kind; @: int out_elem; @: int out_depth; @: size_t out_i0; @: size_t out_i1) int
+    fn: l2_emit_arr_operand (int: mi; const: @(char pd); size_t: pn; int: kind; int: elem; int: depth; size_t: i0; size_t: i1; int: want_len; const: @(char ind); const: @(LmP0Node at); @: char dest) int
+    fn: l2_arr_len_shape (const: @(LmP0Node node); @: char pd; @: size_t out_pn; @: int out_kind; @: int out_elem; @: int out_depth; @: size_t out_i0) int
+    fn: l2_index_chain (@: LmP0Field f; @@: LmP0Field out_after) int
     fn: l2_field_path_check (int: mi; const: @(LmP0Text left); const: @(LmP0Text right); @: int out_kind) int
     fn: l2_field_path_read (int: mi; const: @(LmP0Text left); const: @(LmP0Text right); const: @(char ind); const: @(LmP0Node at); @: char dest) int
     fn: l2_own_array_root (int: mi; const: @(LmP0Text left); const: @(LmP0Text right)) int
     fn: l2_own_array_root_span (int: mi; const: @(LmP0Text t); size_t: stop) int
     fn: l2_ebr_root (int: k) int
     fn: l2_ns_field_len (int: ni; int: j) size_t
+    fn: l2_ns_arrarr_field (const: @(LmP0Node fld); @: int out_ty; @@: LmP0Text out_name) int
+    fn: l2_graph_nsty (int: mi; const: @(LmP0Text name)) int
+    fn: l2_untyped_graph (int: mi; const: @(LmP0Node value)) int
+    fn: l2_type_inst (int: ni; @: char dest) int
+    fn: l2_admit_site (int: mi) int
+    fn: l2_emit_admit (int: mi; int: ni; const: @(char value); const: @(char ind)) int
+    fn: l2_admit_refusal_status () int
     fn: l2_ns_field_elem (int: ni; int: j) int
     fn: l2_ns_field_mi (int: ni; int: j) int
     fn: l2_ns_field_kind (int: ni; int: j) int
@@ -5523,6 +5539,12 @@ return: 0
 # have translation-time types, so refuse an incompatible pair here rather than
 # emitting invalid C and pretending that the assignment was typed.
 fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
+    c.array: [256]: char lpd
+    size_t: lpn 0U
+    int: lkind 0
+    int: lelem 0
+    int: ldepth 0
+    size_t: li0 0U
     @: LmP0Field only
     int: target_ty
     int: value_ty
@@ -5542,7 +5564,7 @@ fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char p
             return: 1
     ---
     if: only\value != 0 && only\value\kind = c.LM_P0_NODE_FRAME && only\value\as != 0 && only\value\as\frame != 0 && l2_text_eq(only\value\as\frame\head, "length")
-        if: l2_array_length_own(only\value, mi) < 0
+        if: l2_array_length_own(only\value, mi) < 0 && l2_arr_len_shape(only\value, lpd, @ lpn, @ lkind, @ lelem, @ ldepth, @ li0) != 0
             return: l2_error(path, only\value, "length requires one known primitive own array")
     ---
     if: l2_colon_types_compatible(target_ty, value_ty) = 0
@@ -5554,6 +5576,9 @@ fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char p
     # is not that operation, and no graph-interpreter admission entry exists in
     # the current kernel ABI, so this case stays explicit fail-closed.
     if: l2_colon_is_graph_ty(target_ty) != 0 && l2_colon_is_graph_ty(value_ty) != 0
+        # An untyped graph into a Structure-typed own field: admitted at run time.
+        if: l2_formal_find(mi, stmt\as\frame\head) < 0 && l2_graph_nsty(mi, stmt\as\frame\head) >= 0 && l2_untyped_graph(mi, only\value) != 0
+            return: l2_admit_site(mi)
         if: only\value\kind = c.LM_P0_NODE_ATOM && l2_nsty_of_name(mi, stmt\as\frame\head) >= 0 && l2_nsty_of_name(mi, only\value\as\atom) >= 0
             return: l2_admit_consumer_uses(only\value\as\atom, l2_nsty_of_name(mi, stmt\as\frame\head), stmt\as\frame\head, l2_fn_frame(mi), path, stmt, "assignment")
         return: l2_error(path, stmt, "graph assignment admission requires receiving-expression tests")
@@ -7263,6 +7288,7 @@ fn: l2_expr_span (@: LmP0Field field) int
     if: l2_index_tail(field, @ index, @ after) = 0
         span: 4
         f: after
+        span: span + l2_index_chain(f, @ f)
     else:
         f: l2_next_active(field\next)
         slash: f
@@ -7275,6 +7301,7 @@ fn: l2_expr_span (@: LmP0Field field) int
             if: l2_index_tail(member, @ index, @ after) = 0
                 span: 6
                 f: after
+                span: span + l2_index_chain(f, @ f)
             ---
         ---
     # Postfix field-follow may continue for any number of segments. Each
@@ -7286,6 +7313,8 @@ fn: l2_expr_span (@: LmP0Field field) int
         span: span + 2
         f: l2_next_active(member\next)
     ---
+    # ... and after the last segment of a path, its index groups (root\a\b[i][j]).
+    span: span + l2_index_chain(f, @ f)
     while: f != 0 && f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM && l2_is_binop(f\value\as\atom)
         f: l2_next_active(f\next)
         if: f = 0 || f\value = 0
@@ -7295,6 +7324,7 @@ fn: l2_expr_span (@: LmP0Field field) int
         if: l2_index_tail(f, @ index, @ after) = 0
             operand: 4
             f: after
+            operand: operand + l2_index_chain(f, @ f)
         else:
             f: l2_next_active(f\next)
             slash: f
@@ -7307,6 +7337,7 @@ fn: l2_expr_span (@: LmP0Field field) int
                 if: l2_index_tail(member, @ index, @ after) = 0
                     operand: 6
                     f: after
+                    operand: operand + l2_index_chain(f, @ f)
                 ---
             ---
         span: span + operand
@@ -9489,6 +9520,112 @@ fn: l2_char_literal (const: @(LmP0Text t)) int
         return: 0 - 1
 return: (cast: (int) (cast: (unsigned char) t\data[1]))
 
+# ADMISSION OF AN UNTYPED GRAPH (fable's B2 for S3, the author's Q12): a graph
+# with no declared Structure type -- the letter nextMessage takes, an `@: Lmx`
+# value -- bound to a declared Structure type, by `nextMessage:` into a typed
+# own field, by rebinding a typed own field, or as the argument of a typed
+# formal, is admitted at that binding by the kernel's runtime implements walk.
+# The translator's part is the static one: the target's type is a declared
+# Structure.  The coarse walk is the interim admission until the
+# receiving-expression port (next_core_tasks.md 7).
+
+# The declared Structure type of a graph-valued name -- a formal's, else an own
+# field's -- or -1 when it has none.
+fn: l2_graph_nsty (int: mi; const: @(LmP0Text name)) int
+    int: i
+    if: mi < 0 || name = 0
+        return: 0 - 1
+    i: l2_formal_find(mi, name)
+    if: i >= 0
+        return: l2_nsty_get(mi, i)
+    i: l2_own_find(mi, name)
+    if: i >= 0
+        return: l2_own_nsty_get(i)
+return: 0 - 1
+
+# Is this value one name of an untyped graph: graph-valued, no declared type?
+fn: l2_untyped_graph (int: mi; const: @(LmP0Node value)) int
+    int: ty 0
+    if: value = 0 || value\kind != c.LM_P0_NODE_ATOM || value\as = 0 || value\as\atom = 0 || l2_ident(value\as\atom) = 0
+        return: 0
+    if: l2_colon_bound_ty(mi, value\as\atom, @ ty) != 0 || l2_colon_is_graph_ty(ty) = 0
+        return: 0
+    if: l2_graph_nsty(mi, value\as\atom) >= 0
+        return: 0
+return: 1
+
+# The runtime shape of a declared Structure type: the declaration's own
+# materialised unit child, the operand `Type: x` merges too.
+fn: l2_type_inst (int: ni; @: char dest) int
+    if: ni < 0 || ni >= l2_ns_n || dest = 0 || l2_ns_parent[ni] >= 0
+        return: 1
+    if: l2_ns_eternal[ni] < 0 && c.sprintf(dest, "lmx_arena_ref_struct(%s, %uU)", l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni)))) < 0
+        return: 1
+    if: l2_ns_eternal[ni] >= 0 && c.sprintf(dest, "lmx_arena_ref_struct(%s, %uU)", l2_unit_ref, (cast: (unsigned) (l2_unit_base + l2_occ_n() + 1 + l2_ns_eternal[ni]))) < 0
+        return: 1
+return: 0
+
+# A site that can refuse admission makes its method fail the way a failing
+# merge does, so the method takes the status ABI (closed over callers later).
+fn: l2_admit_site (int: mi) int
+    if: mi < 0 || l2_m_throws = 0
+        return: 1
+    l2_m_throws[mi]: 1
+    l2_need_admit: 1
+return: 0
+
+# The status a refused admission returns on the implicit throw channel.  Its NAME is
+# the author's Q17 (q17.md): until S1.1 renumbers the channel (declared 1..d, then the
+# implicit names in one global order), this is the one place that spells it.
+fn: l2_admit_refusal_status () int
+return: 1
+
+# varA = the candidate, varB = the declared type's shape, consumer = that same
+# shape: every declared field counts as used -- stricter than a uses tree, never
+# looser.  0 is no graph and is not admitted.  NO or UNKNOWN is the implicit
+# throw a failing merge takes: no silent binding.
+fn: l2_emit_admit (int: mi; int: ni; const: @(char value); const: @(char ind)) int
+    c.array: [128]: char inst
+    if: mi < 0 || l2_m_throws = 0 || l2_m_throws[mi] = 0
+        return: l2_error(l2_src, 0, "internal: an admission site was not checked")
+    if: l2_type_inst(ni, inst) != 0
+        return: l2_error(l2_src, 0, "internal: admission to a type with no shape")
+    if: c.fprintf(l2_out, "%sif: %s != 0 && lmx_runtime_implements(l2_program_arena, (cast: (@: Lmx) %s), %s, %s) != c.LMX_IMPLEMENTS_YES\n%s    l2_out_throw[0]: node\n%s    return: %d\n", ind, value, value, inst, inst, ind, ind, l2_admit_refusal_status()) < 0
+        return: 1
+return: 0
+
+# `T: []: []: x` (author, Q15, 2026-09-23): `[]:` applied twice makes two levels
+# of independent one-dimensional Arrays -- the outer one holds references to
+# the descriptors of the inner T Arrays, each with its own length.  It is not
+# `T: [][]: x`, the one rectangular Array.  T is int or char, as for `[]:`.
+# 0 = the shape (T in out_ty: 0 int, 1 char), 1 = not it.
+fn: l2_ns_arrarr_field (const: @(LmP0Node fld); @: int out_ty; @@: LmP0Text out_name) int
+    @: LmP0Field g
+    @: LmP0Node outer
+    @: LmP0Node inner
+    if: fld = 0 || fld\kind != c.LM_P0_NODE_FRAME || fld\as = 0 || fld\as\frame = 0 || fld\as\frame\body = 0 || out_ty = 0 || out_name = 0
+        return: 1
+    if: l2_frame_head(fld, "int")
+        \out_ty: 0
+    else:
+        if: l2_frame_head(fld, "char") = 0
+            return: 1
+        \out_ty: 1
+    ---
+    if: fld\as\frame\trailer != 0 || l2_count_active(fld\as\frame\body) != 1
+        return: 1
+    outer: l2_next_active(fld\as\frame\body\first_field)\value
+    if: outer = 0 || outer\kind != c.LM_P0_NODE_FRAME || l2_frame_head(outer, "[]") = 0 || outer\as\frame\trailer != 0 || outer\as\frame\body = 0 || l2_count_active(outer\as\frame\body) != 1
+        return: 1
+    inner: l2_next_active(outer\as\frame\body\first_field)\value
+    if: inner = 0 || inner\kind != c.LM_P0_NODE_FRAME || l2_frame_head(inner, "[]") = 0 || inner\as\frame\trailer != 0 || inner\as\frame\body = 0 || l2_count_active(inner\as\frame\body) != 1
+        return: 1
+    g: l2_next_active(inner\as\frame\body\first_field)
+    if: g = 0 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || l2_ident(g\value\as\atom) = 0
+        return: 1
+    \out_name: (cast: (@: LmP0Text) g\value\as\atom)
+return: 0
+
 # One Structure body: registers the entry FIRST so its index precedes every
 # nested entry, then reads the fields in source order. Fields are size_t and
 # char literals, inline nested Structures built in place with this entry as
@@ -9519,6 +9656,16 @@ fn: l2_take_ns_body (const: @(LmP0Text name); int: parent; const: @(LmP0Structur
         if: fld = 0 || fld\kind != c.LM_P0_NODE_FRAME || fld\as = 0 || fld\as\frame = 0 || fld\as\frame\body = 0
             return: l2_error(path, at, "unsupported named Structure field")
         g: l2_next_active(fld\as\frame\body\first_field)
+        # Kind 6: an Array of references to T Arrays.  The spelling has no count,
+        # so construction makes the outer Array empty; its slot holds the outer
+        # descriptor's reference, as a kind-5 slot does.
+        if: l2_ns_arrarr_field(fld, @ aty, @ fname) = 0
+            if: l2_nsf_push(6, 0U, aty, me) < 0
+                return: l2_error(path, at, "out of memory")
+            l2_nsf_fname[l2_nsf_n - 1]: fname
+            count: count + 1
+            f: l2_next_active(f\next)
+            continue
         if: l2_frame_head(fld, "[]")
             # []: <int|char> <name> <count>, the same spelling an own array
             # uses. The record and its backing are two owned ranges; both
@@ -10286,6 +10433,13 @@ return: kind
 # Emit the walk that leaves l2_pxp addressing the LEAF SLOT of the path, and
 # report the leaf kind: 0 size_t, 1 char.
 fn: l2_emit_path (const: @(char pd); size_t: pn; int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind) int
+return: l2_emit_path_to(pd, pn, mi, ind, at, out_kind, 0)
+
+# The same walk; arr_ok admits a leaf that is an Array field (kind 5 or 6), whose cell
+# holds the Array descriptor reference -- only the indexed route (l2_emit_arr_operand)
+# asks for it, and it indexes that descriptor itself.  Every other caller keeps the
+# primitive-leaf rule, so a write or a plain read never lands on a descriptor cell.
+fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind; int: arr_ok) int
     size_t: off 0U
     size_t: len 0U
     int: ni 0 - 1
@@ -10400,7 +10554,7 @@ fn: l2_emit_path (const: @(char pd); size_t: pn; int: mi; const: @(char ind); co
             ni: ent
             res: 0 - 1
         ---
-        if: i + 1 = segs && kind != 0 && kind != 1 && kind != 4 && kind != 7 && kind != 8 && kind != 9
+        if: i + 1 = segs && kind != 0 && kind != 1 && kind != 4 && kind != 7 && kind != 8 && kind != 9 && (arr_ok = 0 || (kind != 5 && kind != 6))
             return: l2_error(l2_src, at, "a field path must end at a primitive field")
         if: i + 1 = segs && kind = 4 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(l2_pst, %uU)\n%sif: l2_pst = 0\n", ind, (cast: (unsigned) slot), ind) < 0
             return: 1
@@ -10488,6 +10642,276 @@ fn: l2_field_path_read (int: mi; const: @(LmP0Text left); const: @(LmP0Text righ
     if: c.sprintf(dest, "l2_t%d", t) < 0
         return: 1
 return: 0
+
+# INDEXED FIELD PATHS (S3, FABLE-OPUS-S3-MAIL-ARGS-20260923-122 part 2b; author Q10/Q15):
+# `root\seg...[k]` and `root\seg...[k][j]`, where the path ends at an Array field of a
+# declared Structure type -- kind 5, a fixed Array of int/char (`[]: T x N`), one index
+# within its declared count; kind 6, `T: []: []: x`, an Array of references to T Arrays,
+# one index (an inner Array: only inside length()) or two (an element).  The root is a
+# typed one -- an own field or formal of a declared Structure type, or a unit-level
+# declaration -- the ones whose segments are that type's fields; node/for/method roots
+# and raw C paths stay with their own machinery.  Indices are decimal literals: L2 checks
+# no bounds at run time (L2 spec 18.3), so a program guards with length().
+
+# A decimal literal index (digits only).  0 = one, its value in out_v.
+fn: l2_dec_literal (const: @(LmP0Text t); @: size_t out_v) int
+    size_t: v 0U
+    size_t: i 0U
+    size_t: digit
+    if: t = 0 || t\data = 0 || t\length = 0U || out_v = 0
+        return: 1
+    while: i < t\length
+        if: t\data[i] < 48 || t\data[i] > 57
+            return: 1
+        digit: (cast: (size_t) (t\data[i] - 48))
+        if: v > (((cast: (size_t) -1) - digit) / 10U)
+            return: 1
+        v: v * 10U + digit
+        i: i + 1U
+    ---
+    \out_v: v
+return: 0
+
+# The leaf of a typed field path that is an Array field: its kind (5/6), element (0 int,
+# 1 char) and, for kind 5, the declared count.  1 = the root is not a typed one, or the
+# path does not end at an Array field.
+fn: l2_path_arr_leaf (const: @(char pd); size_t: pn; @: int out_kind; @: int out_elem; @: size_t out_count) int
+    size_t: off 0U
+    size_t: len 0U
+    int: ni 0 - 1
+    int: res 0 - 1
+    int: oi 0 - 1
+    int: root 0 - 1
+    int: fi 0 - 1
+    int: segs
+    int: i 1
+    int: slot
+    int: kind 0 - 1
+    int: ent 0 - 1
+    \out_kind: 0 - 1
+    \out_elem: 0 - 1
+    \out_count: 0U
+    if: l2_path_root(pd, pn, @ ni, @ res, @ oi, @ root, @ fi) != 0
+        return: 1
+    if: oi >= 0
+        ni: l2_own_nsty_get(oi)
+    if: ni < 0 || res >= 0 || root != 0 - 1
+        return: 1
+    segs: l2_seg_count(pd, pn)
+    while: i < segs
+        if: l2_seg_at(pd, pn, i, @ off, @ len) != 0 || len = 0U
+            return: 1
+        slot: l2_ns_slot_named(ni, pd, off, len, @ kind, @ ent)
+        if: slot < 0
+            return: 1
+        if: i + 1 < segs && kind != 2 && kind != 3
+            return: 1
+        if: i + 1 = segs && kind != 5 && kind != 6
+            return: 1
+        if: i + 1 = segs
+            \out_kind: kind
+            \out_elem: ent
+            \out_count: l2_ns_field_len(ni, slot)
+        if: i + 1 < segs
+            ni: ent
+        i: i + 1
+    ---
+return: 0
+
+# One indexed field-path operand starting at f.  0 = one: the path text (pd, out_pn), its
+# token count and the field after it, the leaf's kind and element, the number of indices
+# (allow0 admits none, for length()) and the literal indices.  1 = the tokens are not
+# this route's (not a typed root, or no index).  2 = they are, but unsupported: the path
+# does not end at an Array field, an index is not a decimal literal, a kind-5 index is
+# outside its declared count, or there are more indices than the field has levels.
+# 3 = the root is a graph with no declared Structure type.
+fn: l2_arr_operand (@: LmP0Field f; int: allow0; @: char pd; @: size_t out_pn; @: int out_count; @@: LmP0Field out_after; @: int out_kind; @: int out_elem; @: int out_depth; @: size_t out_i0; @: size_t out_i1) int
+    @: LmP0Field g
+    @: LmP0Field nm
+    @: LmP0Field idx
+    @: LmP0Field cb
+    size_t: pn 0U
+    size_t: iv 0U
+    size_t: i0 0U
+    size_t: i1 0U
+    size_t: count 0U
+    int: n 1
+    int: depth 0
+    int: kind 0 - 1
+    int: elem 0 - 1
+    int: ni 0 - 1
+    int: res 0 - 1
+    int: oi 0 - 1
+    int: root 0 - 1
+    int: fi 0 - 1
+    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0 || f\value\as\atom = 0 || l2_ident(f\value\as\atom) = 0 || pd = 0
+        return: 1
+    if: f\value\as\atom\length > 200U
+        return: 1
+    memcpy((cast: (@: void) pd), (cast: (@: void) f\value\as\atom\data), f\value\as\atom\length)
+    pn: f\value\as\atom\length
+    g: l2_next_active(f\next)
+    while: g != 0 && g\value != 0 && g\value\kind = c.LM_P0_NODE_ATOM && g\value\as != 0 && l2_is_slash(g\value\as\atom)
+        nm: l2_next_active(g\next)
+        if: nm = 0 || nm\value = 0 || nm\value\kind != c.LM_P0_NODE_ATOM || nm\value\as = 0 || l2_ident(nm\value\as\atom) = 0
+            return: 1
+        if: pn + 1U + nm\value\as\atom\length > 250U
+            return: 1
+        pd[pn]: 92
+        memcpy((cast: (@: void) (pd + pn + 1U)), (cast: (@: void) nm\value\as\atom\data), nm\value\as\atom\length)
+        pn: pn + 1U + nm\value\as\atom\length
+        n: n + 2
+        g: l2_next_active(nm\next)
+    ---
+    if: n < 3
+        return: 1
+    if: allow0 = 0 && (g = 0 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || g\value\as = 0 || l2_text_eq(g\value\as\atom, "[") = 0)
+        return: 1
+    if: l2_path_root(pd, pn, @ ni, @ res, @ oi, @ root, @ fi) != 0
+        return: 1
+    if: oi >= 0
+        ni: l2_own_nsty_get(oi)
+    # An own field holding a graph with no declared type (the letter nextMessage gives an
+    # untyped m): the path has no fields to walk.  A c.* raw root is not a graph and is left
+    # to the raw-path machinery.
+    if: oi >= 0 && ni < 0 && l2_colon_is_graph_ty(l2_dt_of_own(l2_own_ty[oi])) != 0
+        return: 3
+    if: ni < 0 || res >= 0 || root != 0 - 1
+        return: 1
+    # A typed root: from here the tokens are this route's, and a failure is its to report.
+    if: l2_path_arr_leaf(pd, pn, @ kind, @ elem, @ count) != 0
+        return: 2
+    while: g != 0 && g\value != 0 && g\value\kind = c.LM_P0_NODE_ATOM && g\value\as != 0 && l2_text_eq(g\value\as\atom, "[")
+        idx: l2_next_active(g\next)
+        if: idx = 0 || idx\value = 0 || idx\value\kind != c.LM_P0_NODE_ATOM || idx\value\as = 0 || l2_dec_literal(idx\value\as\atom, @ iv) != 0
+            return: 2
+        cb: l2_next_active(idx\next)
+        if: cb = 0 || cb\value = 0 || cb\value\kind != c.LM_P0_NODE_ATOM || cb\value\as = 0 || l2_text_eq(cb\value\as\atom, "]") = 0
+            return: 2
+        depth: depth + 1
+        if: depth = 1
+            i0: iv
+        if: depth = 2
+            i1: iv
+        n: n + 3
+        g: l2_next_active(cb\next)
+    ---
+    if: (kind = 5 && depth > 1) || (kind = 6 && depth > 2)
+        return: 2
+    if: kind = 5 && depth = 1 && i0 >= count
+        return: 2
+    \out_pn: pn
+    \out_count: n
+    \out_after: g
+    \out_kind: kind
+    \out_elem: elem
+    \out_depth: depth
+    \out_i0: i0
+    \out_i1: i1
+return: 0
+
+# Emit an indexed operand: walk to the Array field's cell, take its descriptor and index
+# it.  An element leaves dest an lvalue in the Array's own backing -- `l2_cpN[k]` -- so
+# `@` before it addresses the element in graph storage (L2 spec 18.2), never a copy.  With
+# want_len, dest is a size_t temporary holding the addressed Array's length.  A null
+# descriptor takes the path's ordinary bail.
+fn: l2_emit_arr_operand (int: mi; const: @(char pd); size_t: pn; int: kind; int: elem; int: depth; size_t: i0; size_t: i1; int: want_len; const: @(char ind); const: @(LmP0Node at); @: char dest) int
+    int: t
+    int: k 0
+    const: @(char ety) "int"
+    if: dest = 0
+        return: 1
+    if: elem = 1
+        ety: "char"
+    if: l2_emit_path_to(pd, pn, mi, ind, at, @ k, 1) != 0
+        return: 1
+    if: k != kind
+        return: l2_error(l2_src, at, "internal: the indexed path changed its leaf")
+    t: l2_tn
+    l2_tn: l2_tn + 1
+    if: c.fprintf(l2_out, "%s@: LmxArrayDesc l2_ao%d (cast: (@: LmxArrayDesc) l2_pxp[0])\n%sif: l2_ao%d = 0\n", ind, t, ind, t) < 0
+        return: 1
+    if: l2_emit_path_bail(mi, ind) != 0
+        return: 1
+    if: want_len != 0 && depth = 0
+        if: c.fprintf(l2_out, "%ssize_t: l2_t%d\n%sl2_t%d: l2_ao%d\\len\n", ind, t, ind, t, t) < 0
+            return: 1
+        return: l2_tok_temp(t, dest)
+    ---
+    if: kind = 5
+        if: c.fprintf(l2_out, "%s@: %s l2_cp%d (cast: (@: %s) l2_ao%d\\data)\n", ind, ety, t, ety, t) < 0
+            return: 1
+        if: c.sprintf(dest, "l2_cp%d[%zuU]", t, i0) < 0
+            return: 1
+        return: 0
+    ---
+    if: c.fprintf(l2_out, "%s@@: void l2_as%d (cast: (@@: void) l2_ao%d\\data)\n%s@: LmxArrayDesc l2_ai%d (cast: (@: LmxArrayDesc) l2_as%d[%zuU])\n%sif: l2_ai%d = 0\n", ind, t, t, ind, t, t, i0, ind, t) < 0
+        return: 1
+    if: l2_emit_path_bail(mi, ind) != 0
+        return: 1
+    if: want_len != 0
+        if: c.fprintf(l2_out, "%ssize_t: l2_t%d\n%sl2_t%d: l2_ai%d\\len\n", ind, t, ind, t, t) < 0
+            return: 1
+        return: l2_tok_temp(t, dest)
+    ---
+    if: c.fprintf(l2_out, "%s@: %s l2_cp%d (cast: (@: %s) l2_ai%d\\data)\n", ind, ety, t, ety, t) < 0
+        return: 1
+    if: c.sprintf(dest, "l2_cp%d[%zuU]", t, i1) < 0
+        return: 1
+return: 0
+
+# length() of an indexed-route Array: `length(P)` (kind 5 or 6) or `length(P[k])` (the
+# inner Array of kind 6).  0 = this route's and well formed; 1 = not this route's; 2 = its,
+# but not an Array (an element, or a wrong shape).
+fn: l2_arr_len_shape (const: @(LmP0Node node); @: char pd; @: size_t out_pn; @: int out_kind; @: int out_elem; @: int out_depth; @: size_t out_i0) int
+    @: LmP0Field first
+    @: LmP0Field after
+    int: n
+    int: cnt 0
+    int: kind 0 - 1
+    int: elem 0 - 1
+    int: depth 0
+    size_t: pn 0U
+    size_t: i0 0U
+    size_t: i1 0U
+    int: st
+    if: node = 0 || l2_frame_head(node, "length") = 0 || node\as\frame\trailer != 0 || node\as\frame\body = 0 || node\as\frame\body\trailer != 0
+        return: 1
+    first: l2_next_active(node\as\frame\body\first_field)
+    n: l2_count_active(node\as\frame\body)
+    st: l2_arr_operand(first, 1, pd, @ pn, @ cnt, @ after, @ kind, @ elem, @ depth, @ i0, @ i1)
+    if: st != 0
+        return: st
+    if: cnt != n || after != 0
+        return: 2
+    if: depth != 0 && (kind != 6 || depth != 1)
+        return: 2
+    \out_pn: pn
+    \out_kind: kind
+    \out_elem: elem
+    \out_depth: depth
+    \out_i0: i0
+return: 0
+
+# The number of tokens of consecutive `[ x ]` groups starting at f (0 if none), and the
+# field after them: `a[i][j]` is one operand, not an operand and a stray `[j]`.
+fn: l2_index_chain (@: LmP0Field f; @@: LmP0Field out_after) int
+    @: LmP0Field idx
+    @: LmP0Field cb
+    int: n 0
+    \out_after: f
+    while: f != 0 && f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && l2_text_eq(f\value\as\atom, "[")
+        idx: l2_next_active(f\next)
+        if: idx = 0
+            return: n
+        cb: l2_next_active(idx\next)
+        if: cb = 0 || cb\value = 0 || cb\value\kind != c.LM_P0_NODE_ATOM || cb\value\as = 0 || l2_text_eq(cb\value\as\atom, "]") = 0
+            return: n
+        n: n + 3
+        f: l2_next_active(cb\next)
+        \out_after: f
+    ---
+return: n
 
 # The former l2_slash_own/l2_slash_for shape (root \ name[...]) refuses
 # unconditionally now, node/for included (FABLE-SONNET-NODE-ROOT-20260923-
@@ -11326,6 +11750,12 @@ fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path)) int
 return: 0
 
 fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
+    c.array: [256]: char lpd
+    size_t: lpn 0U
+    int: lkind 0
+    int: lelem 0
+    int: ldepth 0
+    size_t: li0 0U
     const: @: LmP0Frame call
     int: pni 0
     int: pres 0
@@ -11466,7 +11896,7 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
     if: idx < 0 && l2_text_eq(call\head, "sizeof")
         return: l2_check_sizeof(node, mi, path)
     if: idx < 0 && l2_text_eq(call\head, "length")
-        if: l2_array_length_own(node, mi) < 0
+        if: l2_array_length_own(node, mi) < 0 && l2_arr_len_shape(node, lpd, @ lpn, @ lkind, @ lelem, @ ldepth, @ li0) != 0
             return: l2_error(path, node, "length requires one known primitive own array")
         return: 0
     # Raw c.sizeof(...) is unevaluated C: operands are type/expression text for the
@@ -11526,6 +11956,9 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
             if: l2_admit_consumer_uses(a0\value\as\atom, l2_nsty_get(idx, actual_i), l2_fn(idx, actual_i), l2_m_node[idx]\as\frame, path, node, "function argument") != 0
                 return: 1
             ---
+            if: l2_untyped_graph(mi, a0\value) != 0 && l2_admit_site(mi) != 0
+                return: l2_error(path, node, "internal: admission outside a method")
+            ---
         ---
         if: actual_span = 1 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_ATOM
             if: l2_check_literal_kind(a0\value\as\atom, l2_lit_kind_from_ft(l2_ft(idx, actual_i)), path, node) != 0
@@ -11575,6 +12008,16 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
     int: array_status
     size_t: array_index
     int: array_count
+    c.array: [256]: char apd
+    size_t: apn 0U
+    int: acnt 0
+    int: akind 0
+    int: aelem 0
+    int: adepth 0
+    int: ast 1
+    size_t: ai0 0U
+    size_t: ai1 0U
+    @: LmP0Field aafter 0
     if: n <= 0
         return: l2_error(path, at, "unsupported body")
     cpn: l2_join_path(field, n, cpbuf, 255U)
@@ -11593,6 +12036,19 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
     while: i < n
         if: f = 0 || f\value = 0
             return: l2_error(path, at, "unsupported body")
+        # An indexed field path (S3 part 2b): an element of a declared Array field.
+        ast: l2_arr_operand(f, 0, apd, @ apn, @ acnt, @ aafter, @ akind, @ aelem, @ adepth, @ ai0, @ ai1)
+        if: ast = 2
+            return: l2_error(path, f\value, "an indexed field path needs decimal literal indices, within a fixed Array's count, into a declared Array field")
+        if: ast = 3
+            return: l2_error(path, f\value, "an indexed field path needs a root of a declared Structure type")
+        if: ast = 0 && ((akind = 5 && adepth != 1) || (akind = 6 && adepth != 2))
+            return: l2_error(path, f\value, "an inner Array is a value only inside length()")
+        if: ast = 0
+            have_value: 1
+            i: i + acnt
+            f: aafter
+            continue
         array_status: l2_own_index_tail(f, mi, @ po, @ array_index, @ p2, @ array_count)
         if: array_status = 2
             return: l2_error(path, f\value, "own array index requires an in-bounds primitive literal")
@@ -11896,10 +12352,8 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             continue
         # nextMessage: m (Q10). The first nextMessage that names m declares it
         # (an own field of graph type, bound here); a later one rebinds it.  A
-        # letter's graph has no static Structure type, so binding it to a formal
-        # or to a Structure-typed binding is a graph rebinding that needs
-        # admission, and that stays fail-closed as for `a: b`
-        # (l2_colon_check_assignment).
+        # letter's graph has no static Structure type: into a typed own field it
+        # is admitted at run time (l2_emit_admit); a formal is not its target.
         if: l2_next_msg_shape(stmt, @ cname) = 2
             return: l2_error(path, stmt, "nextMessage binds one name")
         if: l2_next_msg_shape(stmt, @ cname) = 0
@@ -11911,8 +12365,8 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             cj: l2_own_add(mi, cname, l2_own_of_dt(l2_colon_graph_ty()), path, stmt)
             if: cj < 0
                 return: 1
-            if: l2_own_nsty_get(cj) >= 0
-                return: l2_error(path, stmt, "graph assignment admission requires receiving-expression tests")
+            if: l2_own_nsty_get(cj) >= 0 && l2_admit_site(mi) != 0
+                return: l2_error(path, stmt, "internal: admission outside a method")
             if: l2_own_off(mi, cj) = (cast: (size_t) -1)
                 return: l2_error(path, stmt, "size overflow")
             if: l2_own_decl[cj] = stmt
@@ -12842,6 +13296,12 @@ fn: l2_emit_nullary_call (int: idx; int: call_sel; int: call_fi; int: mi; const:
 return: l2_tok_temp(t, dest)
 
 fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest) int
+    c.array: [256]: char lpd
+    size_t: lpn 0U
+    int: lkind 0
+    int: lelem 0
+    int: ldepth 0
+    size_t: li0 0U
     const: @: LmP0Frame call
     @: LmP0Field a0
     @: LmP0Field a1
@@ -12995,6 +13455,8 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
             ---
         ---
     ---
+    if: idx < 0 && l2_text_eq(call\head, "length") && l2_array_length_own(node, mi) < 0 && l2_arr_len_shape(node, lpd, @ lpn, @ lkind, @ lelem, @ ldepth, @ li0) = 0
+        return: l2_emit_arr_operand(mi, lpd, lpn, lkind, lelem, ldepth, li0, 0U, 1, ind, node, dest)
     if: idx < 0 && l2_text_eq(call\head, "length")
         return: l2_emit_array_length(l2_array_length_own(node, mi), ind, dest)
     raw_j: -1
@@ -13245,6 +13707,8 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
         actual_span: l2_expr_span(a0)
         if: actual_span < 1 || l2_emit_fields(a0, actual_span, mi, ind, l2_act_at(acts, t)) != 0
             return: l2_prep_drop(acts, hides)
+        if: actual_span = 1 && l2_nsty_get(idx, t) >= 0 && l2_untyped_graph(mi, a0\value) != 0 && l2_emit_admit(mi, l2_nsty_get(idx, t), l2_act_at(acts, t), ind) != 0
+            return: l2_prep_drop(acts, hides)
         t: t + 1
         actual_i: 0
         while: actual_i < actual_span && a0 != 0
@@ -13472,6 +13936,16 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
     int: have_value 0
     size_t: array_index
     int: array_count
+    c.array: [256]: char apd
+    size_t: apn 0U
+    int: acnt 0
+    int: akind 0
+    int: aelem 0
+    int: adepth 0
+    int: ast 1
+    size_t: ai0 0U
+    size_t: ai1 0U
+    @: LmP0Field aafter 0
     c.array: [256]: char buf
     c.array: [256]: char piece
     if: dest = 0
@@ -13484,6 +13958,16 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
     ao: 0
     while: i < n && f != 0 && f\value != 0
         at: f\value
+        ast: l2_arr_operand(f, 0, apd, @ apn, @ acnt, @ aafter, @ akind, @ aelem, @ adepth, @ ai0, @ ai1)
+        if: ast = 0
+            if: l2_emit_arr_operand(mi, apd, apn, akind, aelem, adepth, ai0, ai1, 0, ind, at, piece) != 0 || l2_cat(buf, piece) != 0
+                return: 1
+            ao: 0
+            after: 0
+            have_value: 1
+            i: i + acnt
+            f: aafter
+            continue
         if: l2_own_index_tail(f, mi, @ po, @ array_index, @ p2, @ array_count) = 0
             if: l2_emit_array_load(po, array_index, ind, piece) != 0 || l2_cat(buf, piece) != 0
                 return: 1
@@ -15052,6 +15536,7 @@ fn: l2_merge_scan (const: @(LmP0Structure body)) int
 return: 0
 
 fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
+    int: rbadmit 0
     int: array_own
     size_t: array_index
     c.array: [256]: char array_ptr
@@ -15371,6 +15856,8 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
                     if: l2_ns_field_kind(ni, aj) = 5 && l2_ns_field_len(ni, aj) > 0U && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), %dU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] = l2_myp[0]\n%s    return: 91\n%sif: (cast: (@: LmxArrayDesc) l2_mxp[0])\\len != %zuU\n%s    return: 91\n%sif: (cast: (@: LmxArrayDesc) l2_mxp[0])\\data = (cast: (@: LmxArrayDesc) l2_myp[0])\\data\n%s    return: 91\n", ind, bat + aj, ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni))), aj, ind, ind, ind, l2_ns_field_len(ni, aj), ind, ind, ind) < 0
                         return: 1
                     if: l2_ns_field_kind(ni, aj) = 5 && l2_ns_field_len(ni, aj) = 0U && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), %dU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] = l2_myp[0]\n%s    return: 91\n%sif: (cast: (@: LmxArrayDesc) l2_mxp[0])\\len != 0U || (cast: (@: LmxArrayDesc) l2_mxp[0])\\data != 0 || (cast: (@: LmxArrayDesc) l2_myp[0])\\data != 0\n%s    return: 91\n", ind, bat + aj, ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni))), aj, ind, ind, ind, ind) < 0
+                        return: 1
+                    if: l2_ns_field_kind(ni, aj) = 6 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), %dU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] = l2_myp[0]\n%s    return: 91\n%sif: (cast: (@: LmxArrayDesc) l2_mxp[0])\\len != 0U || (cast: (@: LmxArrayDesc) l2_mxp[0])\\data != 0\n%s    return: 91\n", ind, bat + aj, ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni))), aj, ind, ind, ind, ind) < 0
                         return: 1
                     if: l2_ns_field_kind(ni, aj) = 3 && l2_ns_eternal[l2_ns_field_ref(ni, aj)] >= 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sif: l2_mxp = 0 || l2_mxp[0] != (cast: (@: void) lmx_arena_ref_struct(%s, %uU))\n%s    return: 80\n", ind, bat + aj, ind, l2_unit_ref, (cast: (unsigned) (l2_unit_base + l2_occ_n() + 1 + l2_ns_eternal[l2_ns_field_ref(ni, aj)])), ind) < 0
                         return: 1
@@ -15783,12 +16270,23 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
             continue
         # nextMessage: m -- take the next admitted letter of the current Thread
         # (the owner attaches its arena before exposing it) and assign m its
-        # graph, or 0 when the inbox is empty: an ordinary own-field write.
+        # graph, or 0 when the inbox is empty.  Like `Model: fresh` (-121 fixup,
+        # 520b8fe), the binding writes both, both at once: the field's graph cell
+        # (a field path through m reads that cell before any checkpoint) and the
+        # working local via l2_emit_occ_write (a bare m reads that).  A cell that
+        # cannot be stored is an invariant failure on the checkpoint's own
+        # diagnostic route, never a throw (X1, -128).
         if: l2_next_msg_shape(stmt, @ cname) = 0
             oi: l2_own_find(mi, cname)
             if: oi < 0
                 return: l2_error(l2_src, stmt, "unresolved name")
             if: c.fprintf(l2_out, "%sl2_nmsg: (cast: (@: LmxMsg) lmx_thread_mail_take(lmx_thread_current(), c.LMX_POST_INBOX))\n%sl2_ngraph: 0\n%sif: l2_nmsg != 0\n%s    l2_ngraph: l2_nmsg\\graph\n", ind, ind, ind, ind) < 0
+                return: 1
+            if: l2_own_nsty_get(oi) >= 0 && l2_emit_admit(mi, l2_own_nsty_get(oi), "l2_ngraph", ind) != 0
+                return: 1
+            if: l2_emit_own_from(mi, oi, ind) != 0
+                return: 1
+            if: c.fprintf(l2_out, "%sif: lmx_pointer_store_known(l2_q%d_from[0], (cast: (@: void) l2_ngraph)) != 0\n%s    c.fprintf(c.stderr, \"lmx: nextMessage store failed for own field %d\\n\")\n%s    if: lmx_msg_poll_abort() != 0\n%s        c.abort()\n%s---\n", ind, oi, ind, oi, ind, ind, ind) < 0
                 return: 1
             if: l2_emit_occ_write(mi, oi, ind, "l2_ngraph") != 0
                 return: 1
@@ -15919,6 +16417,18 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0
             fi: l2_m_alias[l2_own_off(mi, oi)]
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && l2_eval_fields(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok) != 0
+            return: 1
+        # An untyped graph into a Structure-typed own field (S3): admitted at run time, then
+        # bound like nextMessage and `Model: fresh` -- the graph cell now (a path through the
+        # field reads that cell before any checkpoint) and the working local below.
+        rbadmit: 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && l2_count_active(fr\body) = 1 && l2_formal_find(mi, fr\head) < 0 && l2_graph_nsty(mi, fr\head) >= 0 && l2_untyped_graph(mi, l2_next_active(fr\body\first_field)\value) != 0
+            rbadmit: 1
+        if: rbadmit != 0 && l2_emit_admit(mi, l2_graph_nsty(mi, fr\head), l2_tok, ind) != 0
+            return: 1
+        if: rbadmit != 0 && l2_emit_own_from(mi, oi, ind) != 0
+            return: 1
+        if: rbadmit != 0 && c.fprintf(l2_out, "%sif: lmx_pointer_store_known(l2_q%d_from[0], (cast: (@: void) %s)) != 0\n%s    c.fprintf(c.stderr, \"lmx: rebinding store failed for own field %d\\n\")\n%s    if: lmx_msg_poll_abort() != 0\n%s        c.abort()\n%s---\n", ind, oi, l2_tok, ind, oi, ind, ind, ind) < 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && fi >= 0 && l2_own_fid[oi] >= 0 && c.fprintf(l2_out, "%sif: l2_q%d_from = 0\n%s    l2_q%d_from: lmx_arena_ref_cell(l2_h%d, %uU)\n%sif: l2_q%d_from = 0\n%s    %s\n", ind, oi, ind, oi, l2_own_fid[oi], (cast: (unsigned) l2_own_fchild[oi]), ind, oi, ind, l2_fail_return(mi)) < 0
             return: 1
@@ -16098,7 +16608,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
         fclose(l2_out)
         return: 1
     # The executable profile's C main builds the argv letter: a Message record (S3).
-    if: l2_library_mode = 0 && c.fprintf(l2_out, "predef: \"%slmx_implements.h.lm1\"\n", l2_rt_root) < 0
+    if: (l2_library_mode = 0 || l2_need_admit != 0) && c.fprintf(l2_out, "predef: \"%slmx_implements.h.lm1\"\n", l2_rt_root) < 0
         fclose(l2_out)
         return: 1
     if: l2_merge_max != 0 && c.fprintf(l2_out, "predef: \"%slmx_merge_owned.h.lm1\"\n", l2_rt_root) < 0
@@ -16154,6 +16664,11 @@ fn: l2_emit_unit (const: @(char out_path)) int
         fclose(l2_out)
         return: 1
     if: fputs("\nfn: l2_program_graph () @: Lmx\nreturn: l2_program_unit\n", l2_out) < 0
+        fclose(l2_out)
+        return: 1
+    # Whether the entry completed (E1): an observation for the host, like the two
+    # accessors below; a failed entry leaves the program without a value.
+    if: l2_library_mode = 0 && l2_e >= 0 && fputs("\nfn: l2_program_completed () int\nreturn: l2_program_done\n", l2_out) < 0
         fclose(l2_out)
         return: 1
     if: l2_ebr_n != 0 && c.fprintf(l2_out, "c.array: [%d]: @: Lmx l2_program_qualified_roots\n", l2_ebr_n) < 0
@@ -16801,6 +17316,14 @@ fn: l2_emit_unit (const: @(char out_path)) int
                 fclose(l2_out)
                 return: 1
             if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 5 && l2_nsf_ref[fx] = 1 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: (cast: (@: void) lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, %zuU, l2_program_arena))\n        if: l2_entry_slot[0] = 0\n            return: 1\n", k, (cast: (unsigned) oi), l2_nsf_val[fx]) < 0
+                fclose(l2_out)
+                return: 1
+            # Kind 6: the outer Array of an Array of T Arrays, empty -- its own
+            # descriptor in the arena's ARRAY_OF_DESC pool, len 0, no backing.
+            if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 6 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: (cast: (@: void) lmx_array_ref_new_owned(c.LMX_TYPE_ARRAY_OF_DESC, 0U, l2_program_arena))\n        if: l2_entry_slot[0] = 0\n            return: 1\n", k, (cast: (unsigned) oi)) < 0
+                fclose(l2_out)
+                return: 1
+            if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 6 && l2_ns_eternal[k] >= 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_profile_array: (cast: (@: LmxArrayDesc) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxArrayDesc), c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_DESC, l2_eprofile%u))\n        if: l2_profile_array = 0\n            return: 1\n        l2_profile_array\\len: 0U\n        l2_profile_array\\data: 0\n        l2_entry_slot[0]: (cast: (@: void) l2_profile_array)\n", k, (cast: (unsigned) oi), (cast: (unsigned) l2_ns_eternal[k])) < 0
                 fclose(l2_out)
                 return: 1
             if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 5 && l2_ns_eternal[k] >= 0

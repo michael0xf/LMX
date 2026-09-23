@@ -538,10 +538,60 @@ $fixtures = @(
         Absent = @('lmx_thread_mail_take'); Debt = @() },
     [pscustomobject]@{ Name = 'unit_next_message_one_name.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'nextMessage binds one name'; Absent = @(); Debt = @() },
-    # A letter's graph has no static Structure type: into a typed binding it is an unadmitted
-    # graph rebinding, fail-closed as `a: b` is.
-    [pscustomobject]@{ Name = 'unit_next_message_typed_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'graph assignment admission requires receiving-expression tests'; Absent = @(); Debt = @() },
+    # ADMISSION (fable's B2, author Q12): an untyped graph -- the letter nextMessage takes -- bound
+    # to a declared Structure type (nextMessage into a typed own field, rebinding it, a typed
+    # formal's argument) is admitted at run time by the kernel's implements walk against the
+    # declared type's shape; a refusal is the implicit failure a failing merge takes (`Fails`: the
+    # entry has no value, exit 1).  MainLetter is an ordinary declared Structure (author Q15).
+    [pscustomobject]@{ Name = 'unit_admit_letter_typed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0; Argv = @('a', 'b');
+        Absent = @(); Debt = @('lmx_runtime_implements(l2_program_arena, (cast: (@: Lmx) l2_ngraph)') },
+    [pscustomobject]@{ Name = 'unit_admit_letter_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_admit_letter_not_model.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0; Fails = 1;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_admit_formal_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0; Fails = 1;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_admit_rebind_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0; Fails = 1;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_admit_letter_extra_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0; Fails = 1;
+        Absent = @(); Debt = @() },
+    # KNOWN COARSENESS (next_core_tasks.md 7): the walk does not look inside the outer Array, so an
+    # `int: []: []:` field admits the char letter.  This row flips to Fails with the port.
+    [pscustomobject]@{ Name = 'unit_admit_letter_coarse.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0;
+        Absent = @(); Debt = @() },
+    # `T: []: []: x` (author Q15): the outer Array is constructed empty and merge copies it as a new one.
+    [pscustomobject]@{ Name = 'unit_arrarr_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Absent = @(); Debt = @('lmx_array_ref_new_owned(c.LMX_TYPE_ARRAY_OF_DESC, 0U, l2_program_arena)') },
+    # INDEXED FIELD PATHS (S3 part 2b): root\seg...[k] / [k][j] into an Array field of a declared
+    # type through a typed root; `@` before an element addresses it in graph storage; length() on
+    # both levels.  The former formal-`main` fixtures now read argv from the letter (mainArgs);
+    # `{source}` in Argv is this fixture's own path.
+    [pscustomobject]@{ Name = 'unit_arr_path_read.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_admit_rebind_read.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0; Argv = @('ok'); Entry = 2;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_argc_if.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0; Argv = @('word'); Says = @('word');
+        Absent = @(); Debt = @('c.puts(@ l2_cp') },
+    [pscustomobject]@{ Name = 'entry_strcmp.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0; Argv = @('ok');
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_charpp_return.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_entry_args.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0; Entry = 2;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_parse_min.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0; Argv = @('{source}');
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_arr_path_untyped_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'an indexed field path needs a root of a declared Structure type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_arr_path_variable_index_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'an indexed field path needs decimal literal indices'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_arr_path_inner_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'an inner Array is a value only inside length()'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_arr_path_bounds_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'an indexed field path needs decimal literal indices'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_arr_path_three_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'an indexed field path needs decimal literal indices'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'entry_argc.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0; Argv = @('one', 'two');
         Absent = @(); Debt = @() },
     # The former main-signature refusals test ordinary method formals now (L2 has no main, S2).
@@ -1501,7 +1551,10 @@ foreach ($fx in $fixtures) {
         # at close (default 1: the argv letter, untaken; close must release it); `Argv` is the
         # program's own arguments, given to it after `--` (its argv[0] is the driver's).
         if ($fx.PSObject.Properties['Letters']) { $runArgs = $runArgs + @('letters', [string]$fx.Letters) }
-        if ($fx.PSObject.Properties['Argv']) { $runArgs = $runArgs + @('--') + @($fx.Argv) }
+        # `Fails`: the entry does not complete (an uncaught implicit failure), so the program has no
+        # value and exits 1; the driver checks exactly that instead of an entry value.
+        if ($fx.PSObject.Properties['Fails']) { $runArgs = $runArgs + @('fails', [string]$fx.Fails) }
+        if ($fx.PSObject.Properties['Argv']) { $runArgs = $runArgs + @('--') + @($fx.Argv | ForEach-Object { $_.Replace('{source}', $source) }) }
         $ran = Invoke-Step ('fixture.' + $stem + '.run') $exe $runArgs $bin
         $said = ((Log-Text ('fixture.' + $stem + '.run')) -split "`r?`n" | Where-Object { $_ -match '^l2_eternal_driver: \d+ checks' } | Select-Object -Last 1)
         # A run that completed but whose entry returned nonzero is a RESULT failure, named as such.

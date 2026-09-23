@@ -56,10 +56,6 @@ l1src/buildCore.lm1|lm1/build/buildCore.lm1.c'
 # drift: -I . and the pass's own lm1/build are the include roots.
 FLAGS='-std=c99 -Wall -Wextra -Wpedantic -Werror=incompatible-pointer-types -Werror=discarded-qualifiers -Werror=implicit-function-declaration -Werror=implicit-int'
 
-# The registry variables would make the translator take a different path; the .ps1 clears them,
-# and a twin that did not would measure a different program.
-unset LM_TRANS_REGISTRY LM_TRANS_REGISTRY_VIEW LM_P0_REGISTRY LM_P0_COMPARE_REGISTRY 2>/dev/null || :
-
 mkdir -p "$LOG_DIR" "$OUT_DIR/b0" "$OUT_DIR/b1" "$OUT_DIR/b2" \
          "$OUT_DIR/pass1/lm1/build/l1src" "$OUT_DIR/pass2/lm1/build/l1src" "$OUT_DIR/pass3/lm1/build/l1src" || exit 1
 printf '%s\n' "$MAP" > "$LOG_DIR/map.txt"

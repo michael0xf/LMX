@@ -22,8 +22,6 @@ def main():
         if len(matches)!=1:raise ValueError(f'Expected one source for {stage}:{path}, found {len(matches)}')
         return ROOT/matches[0]['path']
     env=os.environ.copy()
-    for key in ('LM_TRANS_REGISTRY','LM_TRANS_REGISTRY_VIEW','LM_P0_REGISTRY','LM_P0_COMPARE_REGISTRY'):
-        env.pop(key,None)
     args.output.mkdir(parents=True,exist_ok=True)
     report={'profile':args.profile,'parser':str(exe),'parser_sha256':hashlib.sha256(exe.read_bytes()).hexdigest(),'cases':[]}
     divergences={}

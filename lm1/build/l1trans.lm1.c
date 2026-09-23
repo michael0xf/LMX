@@ -446,12 +446,6 @@ int lm_p0_document_owners_belong_to_actor(const LmP0Document * document);
 void lm_p0_document_destroy_owners(LmP0Document * document);
 void lm_p0_document_freeze_tree(LmP0Document * document);
 size_t lm_p0_scan_registry_compact_atom_piece(const char * text, size_t end_index, size_t start);
-int lm_p0_registry_load_default(void);
-int lm_p0_registry_table_has_rows(const char * table);
-int lm_p0_registry_table_has_rows_loaded_or_loading(const char * table);
-const char * lm_p0_registry_lookup_cstr(const char * key, const char * table);
-int lm_p0_registry_compare_enabled(void);
-const char * lm_p0_registry_lookup_key_by_unsigned_payload(const char * table, unsigned value);
 LmP0TrailerRole lm_p0_trailer_role(const char * text, size_t length);
 const char * lm_p0_node_kind_class_name(LmP0NodeKind kind);
 void lm_p0_indent_stack_free(LmP0IndentStack * stack);
@@ -474,8 +468,6 @@ int lm_p0_line_rest_is_horizontal_space(const char * source, size_t start, size_
 size_t lm_p0_find_physical_line_end(const char * source, size_t length, size_t start);
 int lm_p0_text_has_prefix_name(const char * text, size_t length, const char * name, int allow_bare);
 LmP0TrailerRole lm_p0_legacy_trailer_role(const char * text, size_t length);
-LmP0TrailerRole lm_p0_trailer_role_from_payload(const char * payload);
-const char * lm_p0_trailer_role_payload(LmP0TrailerRole role);
 int lm_p0_trailer_role_is_tail_cutter(LmP0TrailerRole role);
 int lm_p0_node_head_is(const LmP0Node * node, const char * name);
 int lm_p0_trailer_role_accepts_target(LmP0TrailerRole role, const LmP0Node * target, int bare);
@@ -776,30 +768,6 @@ size_t lm_p0_scan_registry_compact_atom_piece(const char * text, size_t end_inde
     }
     return start + 1U;
 }
-int lm_p0_registry_load_default(void)
-{
-    return 0;
-}
-int lm_p0_registry_table_has_rows(const char * table)
-{
-    return 0;
-}
-int lm_p0_registry_table_has_rows_loaded_or_loading(const char * table)
-{
-    return 0;
-}
-const char * lm_p0_registry_lookup_cstr(const char * key, const char * table)
-{
-    return 0;
-}
-int lm_p0_registry_compare_enabled(void)
-{
-    return 0;
-}
-const char * lm_p0_registry_lookup_key_by_unsigned_payload(const char * table, unsigned value)
-{
-    return 0;
-}
 LmP0TrailerRole lm_p0_trailer_role(const char * text, size_t length)
 {
     if (lm_p0_dash_fence_status_after_comment_trim(text, length, 0) == LM_P0_DASH_FENCE_VALID) {
@@ -1092,41 +1060,6 @@ LmP0TrailerRole lm_p0_legacy_trailer_role(const char * text, size_t length)
     return LM_P0_TRAILER_ROLE_UNTIL;
     }
     return LM_P0_TRAILER_ROLE_NONE;
-}
-LmP0TrailerRole lm_p0_trailer_role_from_payload(const char * payload)
-{
-    if (payload == 0) {
-    return LM_P0_TRAILER_ROLE_NONE;
-    }
-    if (strcmp(payload, "LM_P0_TRAILER_ROLE_END") == 0 || strcmp(payload, "trailer.end") == 0) {
-    return LM_P0_TRAILER_ROLE_END;
-    }
-    if (strcmp(payload, "LM_P0_TRAILER_ROLE_RETURN") == 0 || strcmp(payload, "trailer.return") == 0) {
-    return LM_P0_TRAILER_ROLE_RETURN;
-    }
-    if (strcmp(payload, "LM_P0_TRAILER_ROLE_UNTIL") == 0 || strcmp(payload, "trailer.until") == 0) {
-    return LM_P0_TRAILER_ROLE_UNTIL;
-    }
-    if (strcmp(payload, "LM_P0_TRAILER_ROLE_DASH_CUTTER") == 0 || strcmp(payload, "trailer.dash-cutter") == 0) {
-    return LM_P0_TRAILER_ROLE_DASH_CUTTER;
-    }
-    return LM_P0_TRAILER_ROLE_NONE;
-}
-const char * lm_p0_trailer_role_payload(LmP0TrailerRole role)
-{
-    if (role == LM_P0_TRAILER_ROLE_END) {
-    return "trailer.end";
-    }
-    if (role == LM_P0_TRAILER_ROLE_RETURN) {
-    return "trailer.return";
-    }
-    if (role == LM_P0_TRAILER_ROLE_UNTIL) {
-    return "trailer.until";
-    }
-    if (role == LM_P0_TRAILER_ROLE_DASH_CUTTER) {
-    return "trailer.dash-cutter";
-    }
-    return 0;
 }
 int lm_p0_trailer_role_is_tail_cutter(LmP0TrailerRole role)
 {
@@ -5963,11 +5896,6 @@ int lm_p0_parse_bytes(const char * source, size_t source_length, LmP0Document **
     if ((source == 0)) {
     source = "";
     source_length = 0U;
-    }
-    if ((lm_p0_registry_load_default() != 0)) {
-    lm_p0_document_destroy_owners(document);
-    lm_own_delete(document, 0);
-    return 1;
     }
     document->source_length = source_length;
     document->source = lm_own_arena_copy_bytes(document->source_owner, source, document->source_length);

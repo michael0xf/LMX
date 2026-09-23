@@ -11,10 +11,8 @@ prototype:
     fn: l2_trailer_boot () int
     fn: l2_trailer_m1 (@: Lmx node; const: @(char text); size_t: length; const: @(char name); int: allow_bare) int
     fn: l2_trailer_m2 (@: Lmx node; const: @(char text); size_t: length) LmP0TrailerRole
-    fn: l2_trailer_m3 (@: Lmx node; const: @(char payload)) LmP0TrailerRole
-    fn: l2_trailer_m4 (@: Lmx node; LmP0TrailerRole: role) @: char
-    fn: l2_trailer_m5 (@: Lmx node; LmP0TrailerRole: role) int
-    fn: l2_trailer_m6 (@: Lmx node; const: @(char text); size_t: length) LmP0TrailerRole
+    fn: l2_trailer_m3 (@: Lmx node; LmP0TrailerRole: role) int
+    fn: l2_trailer_m4 (@: Lmx node; const: @(char text); size_t: length) LmP0TrailerRole
 end: prototype
 
 int: l2_trailer_role_calls 0
@@ -33,14 +31,8 @@ fn: lm_p0_text_has_prefix_name (const: @(char text); size_t: length; const: @(ch
 fn: lm_p0_legacy_trailer_role (const: @(char text); size_t: length) LmP0TrailerRole
     return: c.l2_trailer_m2(l2_trailer_own(2U), text, length)
 
-fn: lm_p0_trailer_role_from_payload (const: @(char payload)) LmP0TrailerRole
-    return: c.l2_trailer_m3(l2_trailer_own(3U), payload)
-
-fn: lm_p0_trailer_role_payload (LmP0TrailerRole: role) const: @(char)
-    return: c.l2_trailer_m4(l2_trailer_own(4U), role)
-
 fn: lm_p0_trailer_role_is_tail_cutter (LmP0TrailerRole: role) int
-    return: c.l2_trailer_m5(l2_trailer_own(5U), role)
+    return: c.l2_trailer_m3(l2_trailer_own(3U), role)
 
 fn: lm_p0_trailer_role (const: @(char text); size_t: length) LmP0TrailerRole
-    return: c.l2_trailer_m6(l2_trailer_own(6U), text, length)
+    return: c.l2_trailer_m4(l2_trailer_own(4U), text, length)

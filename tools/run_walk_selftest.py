@@ -74,8 +74,6 @@ def main():
         take(source, unit_root / 'l1src' / source.name)
 
     env = os.environ.copy()
-    for key in ('LM_TRANS_REGISTRY', 'LM_TRANS_REGISTRY_VIEW', 'LM_P0_REGISTRY', 'LM_P0_COMPARE_REGISTRY'):
-        env.pop(key, None)
 
     def run(command, label, check=True):
         result = subprocess.run([str(x) for x in command], cwd=unit_root, env=env,

@@ -10,12 +10,6 @@ prototype:
     sub: lm_p0_document_destroy_owners (@: LmP0Document document)
     sub: lm_p0_document_freeze_tree (@: LmP0Document document)
     fn: lm_p0_scan_registry_compact_atom_piece (const: @(char text); size_t: end_index; size_t: start) size_t
-    fn: lm_p0_registry_load_default () int
-    fn: lm_p0_registry_table_has_rows (const: @(char table)) int
-    fn: lm_p0_registry_table_has_rows_loaded_or_loading (const: @(char table)) int
-    fn: lm_p0_registry_lookup_cstr (const: @(char key); const: @(char table)) const: @: char
-    fn: lm_p0_registry_compare_enabled () int
-    fn: lm_p0_registry_lookup_key_by_unsigned_payload (const: @(char table); unsigned: value) const: @: char
     fn: lm_p0_trailer_role (const: @(char text); size_t: length) LmP0TrailerRole
     fn: lm_p0_node_kind_class_name (LmP0NodeKind: kind) const: @: char
     sub: lm_p0_indent_stack_free (@: LmP0IndentStack stack)
@@ -38,8 +32,6 @@ prototype:
     fn: lm_p0_find_physical_line_end (const: @(char source); size_t: length; size_t: start) size_t
     fn: lm_p0_text_has_prefix_name (const: @(char text); size_t: length; const: @(char name); int: allow_bare) int
     fn: lm_p0_legacy_trailer_role (const: @(char text); size_t: length) LmP0TrailerRole
-    fn: lm_p0_trailer_role_from_payload (const: @(char payload)) LmP0TrailerRole
-    fn: lm_p0_trailer_role_payload (LmP0TrailerRole: role) const: @: char
     fn: lm_p0_trailer_role_is_tail_cutter (LmP0TrailerRole: role) int
     fn: lm_p0_node_head_is (const: @(LmP0Node node); const: @(char name)) int
     fn: lm_p0_trailer_role_accepts_target (LmP0TrailerRole: role; const: @(LmP0Node target); int: bare) int
@@ -322,24 +314,6 @@ fn: lm_p0_scan_registry_compact_atom_piece (const: @(char text); size_t: end_ind
         return: start + best
 return: start + 1U
 
-fn: lm_p0_registry_load_default () int
-return: 0
-
-fn: lm_p0_registry_table_has_rows (const: @(char table)) int
-return: 0
-
-fn: lm_p0_registry_table_has_rows_loaded_or_loading (const: @(char table)) int
-return: 0
-
-fn: lm_p0_registry_lookup_cstr (const: @(char key); const: @(char table)) const: @: char
-return: 0
-
-fn: lm_p0_registry_compare_enabled () int
-return: 0
-
-fn: lm_p0_registry_lookup_key_by_unsigned_payload (const: @(char table); unsigned: value) const: @: char
-return: 0
-
 fn: lm_p0_trailer_role (const: @(char text); size_t: length) LmP0TrailerRole
     if: lm_p0_dash_fence_status_after_comment_trim(text, length, 0) = c.LM_P0_DASH_FENCE_VALID
         return: c.LM_P0_TRAILER_ROLE_DASH_CUTTER
@@ -601,30 +575,6 @@ fn: lm_p0_legacy_trailer_role (const: @(char text); size_t: length) LmP0TrailerR
         return: c.LM_P0_TRAILER_ROLE_UNTIL
 return: c.LM_P0_TRAILER_ROLE_NONE
 
-fn: lm_p0_trailer_role_from_payload (const: @(char payload)) LmP0TrailerRole
-    if: payload = 0
-        return: c.LM_P0_TRAILER_ROLE_NONE
-    if: strcmp(payload, "LM_P0_TRAILER_ROLE_END") = 0 || strcmp(payload, "trailer.end") = 0
-        return: c.LM_P0_TRAILER_ROLE_END
-    if: strcmp(payload, "LM_P0_TRAILER_ROLE_RETURN") = 0 || strcmp(payload, "trailer.return") = 0
-        return: c.LM_P0_TRAILER_ROLE_RETURN
-    if: strcmp(payload, "LM_P0_TRAILER_ROLE_UNTIL") = 0 || strcmp(payload, "trailer.until") = 0
-        return: c.LM_P0_TRAILER_ROLE_UNTIL
-    if: strcmp(payload, "LM_P0_TRAILER_ROLE_DASH_CUTTER") = 0 || strcmp(payload, "trailer.dash-cutter") = 0
-        return: c.LM_P0_TRAILER_ROLE_DASH_CUTTER
-return: c.LM_P0_TRAILER_ROLE_NONE
-
-fn: lm_p0_trailer_role_payload (LmP0TrailerRole: role) const: @: char
-    if: role = c.LM_P0_TRAILER_ROLE_END
-        return: "trailer.end"
-    if: role = c.LM_P0_TRAILER_ROLE_RETURN
-        return: "trailer.return"
-    if: role = c.LM_P0_TRAILER_ROLE_UNTIL
-        return: "trailer.until"
-    if: role = c.LM_P0_TRAILER_ROLE_DASH_CUTTER
-        return: "trailer.dash-cutter"
-return: 0
-
 fn: lm_p0_trailer_role_is_tail_cutter (LmP0TrailerRole: role) int
 return: role != c.LM_P0_TRAILER_ROLE_NONE
 
@@ -669,7 +619,7 @@ fn: lm_p0_trailer_role_accepts_target (LmP0TrailerRole: role; const: @(LmP0Node 
     # `return` closes a callable Frame (author 2026-09-24, Q19.1/Q19.3): `return: value` an fn
     # only, a bare `return` also a callable without a result (lm_p0_return_closes_bare).  Every
     # other trailer word closes any Frame.  The rule is written here; the trailer.target lookup it
-    # replaces always answered nothing (every lm_p0_registry_* is a stub returning 0, D-16).
+    # replaced always answered nothing (the P0 registry was stubs returning 0; D-16 removed it).
     if: role = c.LM_P0_TRAILER_ROLE_RETURN
         if: lm_p0_node_head_is(target, "fn")
             return: 1
@@ -4671,10 +4621,6 @@ external:
         if: (source = 0)
             source: ""
             source_length: 0U
-        if: (lm_p0_registry_load_default() != 0)
-            lm_p0_document_destroy_owners(document)
-            lm_own_delete(document, 0)
-            return: 1
         document\source_length: source_length
         document\source: lm_own_arena_copy_bytes(document\source_owner, source, document\source_length)
         if: (document\source = 0)

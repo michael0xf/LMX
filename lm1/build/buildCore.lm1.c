@@ -148,7 +148,6 @@ int lm_build_write_platform_tests_script(FILE * file, const char * output_dir, c
     fputs("if (-not $lmTestSuite) { $lmTestSuite = 'full' }\n", file);
     fputs("if ('smoke','core','full' -notcontains $lmTestSuite) { throw ('unknown LM_TEST_SUITE: ' + $lmTestSuite) }\n", file);
     fputs("Write-Host ('lm0 staged tests suite: ' + $lmTestSuite)\n", file);
-    fputs("foreach ($k in @('LM_TRANS_REGISTRY','LM_P0_REGISTRY','LM_TRANS_REGISTRY_VIEW','LM_P0_COMPARE_REGISTRY')) { Remove-Item ('Env:' + $k) -ErrorAction SilentlyContinue }\n", file);
     fprintf(file, "$trans = '%s/l1trans.lm0%s'\n", output_dir, lm_build_exe_suffix());
     fprintf(file, "$make = '%s/make.lm0%s'\n", output_dir, lm_build_exe_suffix());
     fprintf(file, "$printTree = '%s/printTree.lm0%s'\n", output_dir, lm_build_exe_suffix());
@@ -293,7 +292,6 @@ int lm_build_write_platform_tests_script(FILE * file, const char * output_dir, c
     fputs("lm_test_suite=${LM_TEST_SUITE:-full}\n", file);
     fputs("if [ \"$lm_test_suite\" != smoke ] && [ \"$lm_test_suite\" != core ] && [ \"$lm_test_suite\" != full ]; then echo \"unknown LM_TEST_SUITE: $lm_test_suite\" >&2; exit 1; fi\n", file);
     fputs("echo \"lm0 staged tests suite: $lm_test_suite\"\n", file);
-    fputs("unset LM_TRANS_REGISTRY LM_P0_REGISTRY LM_TRANS_REGISTRY_VIEW LM_P0_COMPARE_REGISTRY || true\n", file);
     fprintf(file, "trans='%s/l1trans.lm0%s'\n", output_dir, lm_build_exe_suffix());
     fprintf(file, "make='%s/make.lm0%s'\n", output_dir, lm_build_exe_suffix());
     fprintf(file, "printTree='%s/printTree.lm0%s'\n", output_dir, lm_build_exe_suffix());

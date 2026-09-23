@@ -31,7 +31,6 @@ $map = @(
     @('l1src/buildCore.lm1', 'lm1/build/buildCore.lm1.c')
 )
 $flags = '-std=c99 -Wall -Wextra -Wpedantic -Werror=incompatible-pointer-types -Werror=discarded-qualifiers -Werror=implicit-function-declaration -Werror=implicit-int'
-foreach ($k in 'LM_TRANS_REGISTRY', 'LM_TRANS_REGISTRY_VIEW', 'LM_P0_REGISTRY', 'LM_P0_COMPARE_REGISTRY') { Remove-Item ('Env:' + $k) -ErrorAction SilentlyContinue }
 $logs = Join-Path $OutDir 'logs'
 foreach ($d in 'b0', 'b1', 'b2', 'pass1\lm1\build\l1src', 'pass2\lm1\build\l1src', 'pass3\lm1\build\l1src', 'logs') { New-Item -ItemType Directory -Force -Path (Join-Path $OutDir $d) | Out-Null }
 Set-Location $repo

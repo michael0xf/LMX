@@ -20,8 +20,6 @@ def main():
     output.mkdir(parents=True, exist_ok=True)
     (output / 'l1src').mkdir(exist_ok=True)
     env = os.environ.copy()
-    for key in ('LM_TRANS_REGISTRY', 'LM_TRANS_REGISTRY_VIEW', 'LM_P0_REGISTRY', 'LM_P0_COMPARE_REGISTRY'):
-        env.pop(key, None)
     mapping = [
         ('l1src/p0.h.lm1', 'l1src/p0.lm1.h'),
         ('l1src/own.lm1', 'l1src/own.lm1.c'),

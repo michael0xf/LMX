@@ -14,6 +14,12 @@
 #
 # Each line is "<case> <local> <graph field>".  A size_t or ulong is printed alone, as the LAST
 # argument of its own printf, so that a 64-bit value read by %d cannot shift a later argument.
+#
+# WORKAROUND, NAMED (GROK-FABLE-20260923-120 x FABLE-SONNET-NODE-ROOT-20260923-121): `M\x` read
+# directly inside a compound expression (a printf argument list, here) lands in Grok Bot's -120
+# c-member-access dispatch and emits a wrong raw C member access instead of a typed load -- a
+# defect in that dispatcher's root test, handed to him as a separate ticket. Every read below is
+# routed through a freshly assigned `<x>_g` local first (unit_occ_root_field.lm2's pattern).
 fn: pokeu (@: unsigned p) int
     \p: 50U
     return: 0
@@ -31,37 +37,43 @@ fn: nop () int
 end: nop
 
 fn: uns (unsigned: u) int
+    unsigned: u_g
     pokeu(@: u)
     unsigned: u
     u: u + 1U
     nop()
-    node\u: 100U
+    uns\u: 100U
     nop()
-    c.printf: "U %u %u\n" u node\u
+    u_g: uns\u
+    c.printf: "U %u %u\n" u u_g
     return: 0
 end: uns
 
 fn: siz (size_t: z) int
+    size_t: z_g
     pokez(@: z)
     size_t: z
     z: z + 1U
     nop()
-    node\z: 100U
+    siz\z: 100U
     nop()
     c.printf: "Z local %d\n" z
-    c.printf: "Z graph %d\n" node\z
+    z_g: siz\z
+    c.printf: "Z graph %d\n" z_g
     return: 0
 end: siz
 
 fn: lng (ulong: w) int
+    ulong: w_g
     pokel(@: w)
     ulong: w
     w: w + 1U
     nop()
-    node\w: 100U
+    lng\w: 100U
     nop()
     c.printf: "L local %d\n" w
-    c.printf: "L graph %d\n" node\w
+    w_g: lng\w
+    c.printf: "L graph %d\n" w_g
     return: 0
 end: lng
 

@@ -726,9 +726,9 @@ $fixtures = @(
         Says = @('A1 6 6', 'A2 6 6', 'A3 9 9', 'A4 9 9', 'B 5 100', 'B 5 100', 'B+ 6 6', 'B 5 100', 'C1 4 4', 'C2 9 9', 'C3 9 9', 'D1 6 6', 'D0 5 5', 'E 6 6');
         BindOrder = $true;
         Absent = @('l2_q0_early', 'l2_q0_bound');
-        Debt = @('int: l2_q0_sticky 0', 'int: l2_q0_active 0 - 1',
-                 'l2_q0_sticky: 1',
-                 'if: l2_q0_dirty != 0 || (l2_q0_sticky != 0 && l2_q0_active = 0)') },
+        Debt = @('int: l2_q1_sticky 0', 'int: l2_q1_active 0 - 1',
+                 'l2_q1_sticky: 1',
+                 'if: l2_q1_dirty != 0 || (l2_q1_sticky != 0 && l2_q1_active = 1)') },
     # TYPE IS AN INDEPENDENT AXIS.  unsigned was REFUSED in the declared form (a formal's type code
     # was compared with an own field's storage code: 34 against 3) and silently left a plain local
     # in the assignment form; a pointer was never bound at all.  Both now go through the same
@@ -738,7 +738,7 @@ $fixtures = @(
         Says = @('U 51 51', 'Z local 71', 'Z graph 71', 'L local 81', 'L graph 81');
         BindOrder = $true;
         Absent = @();
-        Debt = @('lmx_unsigned_store_known(l2_q0_from[0], l2_q', 'if: l2_q0_dirty != 0 || (l2_q0_sticky != 0 && l2_q0_active = 0)') },
+        Debt = @('lmx_unsigned_store_known(l2_q1_from[0], l2_q', 'if: l2_q1_dirty != 0 || (l2_q1_sticky != 0 && l2_q1_active = 1)') },
     [pscustomobject]@{ Name = 'unit_arg_addr_pointer.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Says = @('P local is null');
@@ -839,7 +839,7 @@ $fixtures = @(
         Absent = @('(cast: (uchar)');
         Debt = @('lmx_char_rebind_known(l2_q0_from[0], ((cast: (int) l2_q0) & 255))',
                  'lmx_char_rebind_known(l2_q1_from[0], ((cast: (int) l2_q1) & 255))',
-                 'lmx_char_rebind_known(l2_xp[0], ((cast: (int) l2_p1_0) & 255))') },
+                 'lmx_char_rebind_known(l2_pxp[0], ((cast: (int) l2_p1_0) & 255))') },
     # TWO LIBRARY UNITS IN ONE LINK (FABLE-L2-LIBRARY-P2-UNIQUE-STATE-20260921-137).  A library unit keeps
     # two module cells of its own -- its arena and its opened mark -- and both were emitted under ONE
     # unhashed name for every unit, so two units could not share a link: measured, exit 1 with
@@ -962,6 +962,10 @@ $fixtures = @(
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_message\graph: l2_entry_unit') },
     [pscustomobject]@{ Name = 'unit_field_path_formal_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 5; Needle = '';
+        Args = @('0');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
+        Debt = @('l2_message\graph: l2_entry_unit') },
+    [pscustomobject]@{ Name = 'unit_occ_self_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 0; EmptyEntry = $true; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_message\graph: l2_entry_unit') },
@@ -1287,7 +1291,13 @@ $fixtures = @(
                  'l2_q1_from: lmx_arena_ref_cell(self, 2U)') },
     [pscustomobject]@{ Name = 'unit_occ_sticky_selector.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
-        Says = @('BEFORE 1 1', 'BETWEEN 2', 'AFTER 9 9', 'NONE 7 100', 'NONE 7 100', 'NONE+ 1 1', 'LAST 9');
+        Says = @('BEFORE 1 1', 'AFTER 9 9', 'NONE 7 100', 'NONE 7 100', 'NONE+ 1 1');
+        BindOrder = $true;
+        Absent = @('l2_q0_early', 'l2_q0_bound');
+        Debt = @('int: l2_q1_sticky 0', 'int: l2_q1_active 0 - 1', 'l2_q1_sticky: 1') },
+    [pscustomobject]@{ Name = 'unit_occ_snapshot_selector.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Says = @('BETWEEN 2', 'LAST 9');
         BindOrder = $true;
         Absent = @('l2_q0_early', 'l2_q0_bound');
         Debt = @('int: l2_q0_sticky 0', 'int: l2_q0_active 0 - 1', 'l2_q0_sticky: 1') }

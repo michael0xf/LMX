@@ -9798,9 +9798,9 @@ fn: l2_path_rhs (const: @(LmP0Structure body); int: kind; @: size_t out_v) int
     if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM
         return: 1
     t: f\value\as\atom
-    if: (kind = 0 || kind = 7) && l2_num(t) = 0
+    if: (kind = 0 || kind = 7 || kind = 8 || kind = 9) && l2_num(t) = 0
         return: 1
-    if: kind = 0 || kind = 7
+    if: kind = 0 || kind = 7 || kind = 8 || kind = 9
         \out_v: l2_literal_value(t)
         return: 0
     cv: l2_char_literal(t)
@@ -10132,10 +10132,13 @@ return: 0
 # numeric value, only the found/not-found sign, so this stays timing-safe
 # for both callers and lets l2_emit_path translate own-index to the real
 # offset itself, only once it is safe to). A field whose own-declared
-# type is none of these (unsigned, ulong, pointer, callable, Structure-
-# typed without a recorded nsty) is not mapped to a kind here and reads
-# as not found -- refusing is the honest state until that wider
-# capability is built, not a wrong kind.
+# type is none of these (pointer, callable, Structure-typed without a
+# recorded nsty) is not mapped to a kind here and reads as not found --
+# refusing is the honest state until that wider capability is built, not
+# a wrong kind. Kinds 8 (unsigned) and 9 (ulong) reuse plain numeral
+# parsing exactly like 0 (size_t) and 7 (int) -- see l2_path_rhs -- and
+# store through lmx_unsigned_store_known/lmx_ulong_store_known, the same
+# helpers l2_own_store_helper already names for a checkpoint.
 fn: l2_own_seg_scan (int: mi; const: @(LmP0Node host); const: @(char pd); size_t: off; size_t: len; @: int out_kind; @: int out_ent) int
     int: i 0
     int: hit 0 - 1
@@ -10155,6 +10158,12 @@ fn: l2_own_seg_scan (int: mi; const: @(LmP0Node host); const: @(char pd); size_t
         return: hit
     if: l2_own_ty[hit] = 0
         \out_kind: 7
+        return: hit
+    if: l2_own_ty[hit] = 3
+        \out_kind: 8
+        return: hit
+    if: l2_own_ty[hit] = 36
+        \out_kind: 9
         return: hit
     if: l2_own_nsty_get(hit) >= 0
         \out_kind: 3
@@ -10396,7 +10405,7 @@ fn: l2_emit_path (const: @(char pd); size_t: pn; int: mi; const: @(char ind); co
             ni: ent
             res: 0 - 1
         ---
-        if: i + 1 = segs && kind != 0 && kind != 1 && kind != 4 && kind != 7
+        if: i + 1 = segs && kind != 0 && kind != 1 && kind != 4 && kind != 7 && kind != 8 && kind != 9
             return: l2_error(l2_src, at, "a field path must end at a primitive field")
         if: i + 1 = segs && kind = 4 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(l2_pst, %uU)\n%sif: l2_pst = 0\n", ind, (cast: (unsigned) slot), ind) < 0
             return: 1
@@ -10444,7 +10453,7 @@ fn: l2_field_path_check (int: mi; const: @(LmP0Text left); const: @(LmP0Text rig
     memcpy((cast: (@: void) (buf + left\length + 1U)), (cast: (@: void) right\data), right\length)
     n: left\length + right\length + 1U
     \out_kind: l2_path_kind(buf, n, @ leaf_mi)
-    if: \out_kind != 0 && \out_kind != 1 && \out_kind != 7
+    if: \out_kind != 0 && \out_kind != 1 && \out_kind != 7 && \out_kind != 8 && \out_kind != 9
         return: 1
 return: 0
 
@@ -10476,6 +10485,10 @@ fn: l2_field_path_read (int: mi; const: @(LmP0Text left); const: @(LmP0Text righ
     if: kind = 1 && l2_emit_cell_load(1, ind, t, at) != 0
         return: 1
     if: kind = 7 && l2_emit_cell_load(0, ind, t, at) != 0
+        return: 1
+    if: kind = 8 && l2_emit_cell_load(3, ind, t, at) != 0
+        return: 1
+    if: kind = 9 && l2_emit_cell_load(36, ind, t, at) != 0
         return: 1
     if: c.sprintf(dest, "l2_t%d", t) < 0
         return: 1
@@ -15077,6 +15090,7 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
     int: l2_proot 0
     int: l2_pfi 0
     int: l2_pown 0
+    int: l2_prhs_lit 0
     c.array: [256]: char l2_pbuf
     c.array: [256]: char l2_pnm
     c.array: [256]: char pdest
@@ -15435,16 +15449,39 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
                 return: l2_error(l2_src, stmt, "an eternal branch field cannot be updated")
             if: l2_emit_path(stmt\as\frame\head\data, stmt\as\frame\head\length, mi, ind, stmt, @ l2_pkind) != 0
                 return: 1
-            if: l2_path_rhs(stmt\as\frame\body, l2_pkind, @ l2_pv) != 0
-                return: l2_error(l2_src, stmt, "unsupported field path value")
+            # A literal RHS parses directly. Any other shape (a name, a call, an
+            # expression) evaluates through l2_eval_fields exactly like an
+            # ordinary own-field assignment's RHS does -- the generality the old
+            # node/for write block had (FABLE-L2-ARG-ADDRESS-DIRTY-20260921-67's
+            # `node\x: hi` case), lost when FABLE-SONNET-NODE-ROOT-20260923-121
+            # folded node/for writes into this general path-write branch (which
+            # only ever parsed a literal), restored here rather than left a
+            # silent narrowing of what a path write accepts.
+            l2_prhs_lit: l2_path_rhs(stmt\as\frame\body, l2_pkind, @ l2_pv) = 0
+            if: l2_prhs_lit = 0 && l2_eval_fields(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), mi, ind, l2_tok) != 0
+                return: 1
             # A size_t assignment writes the addressed cell IN PLACE. A char
             # assignment REBINDS the field pointer cell to the cell of the new
             # character; the character bytes of the table are never written.
-            if: l2_pkind = 0 && c.fprintf(l2_out, "%sif: lmx_size_store_known(l2_pxp[0], %zuU) != 0\n", ind, l2_pv) < 0
+            if: l2_pkind = 0 && l2_prhs_lit != 0 && c.fprintf(l2_out, "%sif: lmx_size_store_known(l2_pxp[0], %zuU) != 0\n", ind, l2_pv) < 0
                 return: 1
-            if: l2_pkind = 1 && c.fprintf(l2_out, "%sl2_pxp[0]: lmx_char_rebind_known(l2_pxp[0], %d)\n%sif: l2_pxp[0] = 0\n", ind, (cast: (int) l2_pv), ind) < 0
+            if: l2_pkind = 0 && l2_prhs_lit = 0 && c.fprintf(l2_out, "%sif: lmx_size_store_known(l2_pxp[0], %s) != 0\n", ind, l2_tok) < 0
                 return: 1
-            if: l2_pkind = 7 && c.fprintf(l2_out, "%sif: lmx_int_store_known(l2_pxp[0], %d) != 0\n", ind, (cast: (int) l2_pv)) < 0
+            if: l2_pkind = 1 && l2_prhs_lit != 0 && c.fprintf(l2_out, "%sl2_pxp[0]: lmx_char_rebind_known(l2_pxp[0], %d)\n%sif: l2_pxp[0] = 0\n", ind, (cast: (int) l2_pv), ind) < 0
+                return: 1
+            if: l2_pkind = 1 && l2_prhs_lit = 0 && c.fprintf(l2_out, "%sl2_pxp[0]: lmx_char_rebind_known(l2_pxp[0], ((cast: (int) %s) & 255))\n%sif: l2_pxp[0] = 0\n", ind, l2_tok, ind) < 0
+                return: 1
+            if: l2_pkind = 7 && l2_prhs_lit != 0 && c.fprintf(l2_out, "%sif: lmx_int_store_known(l2_pxp[0], %d) != 0\n", ind, (cast: (int) l2_pv)) < 0
+                return: 1
+            if: l2_pkind = 7 && l2_prhs_lit = 0 && c.fprintf(l2_out, "%sif: lmx_int_store_known(l2_pxp[0], %s) != 0\n", ind, l2_tok) < 0
+                return: 1
+            if: l2_pkind = 8 && l2_prhs_lit != 0 && c.fprintf(l2_out, "%sif: lmx_unsigned_store_known(l2_pxp[0], %zuU) != 0\n", ind, l2_pv) < 0
+                return: 1
+            if: l2_pkind = 8 && l2_prhs_lit = 0 && c.fprintf(l2_out, "%sif: lmx_unsigned_store_known(l2_pxp[0], %s) != 0\n", ind, l2_tok) < 0
+                return: 1
+            if: l2_pkind = 9 && l2_prhs_lit != 0 && c.fprintf(l2_out, "%sif: lmx_ulong_store_known(l2_pxp[0], %zuU) != 0\n", ind, l2_pv) < 0
+                return: 1
+            if: l2_pkind = 9 && l2_prhs_lit = 0 && c.fprintf(l2_out, "%sif: lmx_ulong_store_known(l2_pxp[0], %s) != 0\n", ind, l2_tok) < 0
                 return: 1
             if: l2_emit_path_bail(mi, ind) != 0
                 return: 1
@@ -15454,7 +15491,12 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
         ---
         if: stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\body != 0
             l2_pn: l2_join_path(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), l2_pbuf, 255U)
-        if: l2_pn != 0U && l2_path_root(l2_pbuf, l2_pn, @ l2_pni, @ l2_pres, @ l2_poi, @ l2_proot, @ l2_pfi) = 0
+        # A field path is an ordinary expression: it only claims this statement
+        # when the head is a real declared own field (an assignment into that
+        # field). Any other head (return, a call argument, ...) falls through
+        # to the general expression-value handling below -- a field path used
+        # there resolves and reads through l2_eval_fields like any other value.
+        if: l2_pn != 0U && l2_path_root(l2_pbuf, l2_pn, @ l2_pni, @ l2_pres, @ l2_poi, @ l2_proot, @ l2_pfi) = 0 && l2_own_find(mi, stmt\as\frame\head) >= 0
             if: l2_emit_path(l2_pbuf, l2_pn, mi, ind, stmt, @ l2_pkind) != 0
                 return: 1
             # The destination is an OWN field: a cached value with a dirty
@@ -15467,11 +15509,23 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
                 return: l2_error(l2_src, stmt, "a size_t field needs a size_t local")
             if: l2_pown >= 0 && l2_pkind = 1 && l2_own_ty[l2_pown] != 1
                 return: l2_error(l2_src, stmt, "a char field needs a char local")
+            if: l2_pown >= 0 && l2_pkind = 7 && l2_own_ty[l2_pown] != 0
+                return: l2_error(l2_src, stmt, "an int field needs an int local")
+            if: l2_pown >= 0 && l2_pkind = 8 && l2_own_ty[l2_pown] != 3
+                return: l2_error(l2_src, stmt, "an unsigned field needs an unsigned local")
+            if: l2_pown >= 0 && l2_pkind = 9 && l2_own_ty[l2_pown] != 36
+                return: l2_error(l2_src, stmt, "a ulong field needs a ulong local")
             if: l2_pown >= 0 && c.sprintf(l2_pnm, "l2_q%d", l2_pown) < 0
                 return: 1
             if: l2_pkind = 0 && c.fprintf(l2_out, "%s%s: lmx_size_value_known(l2_pxp[0])\n", ind, l2_pnm) < 0
                 return: 1
             if: l2_pkind = 1 && c.fprintf(l2_out, "%s%s: (cast: (char) lmx_char_value_known(l2_pxp[0]))\n", ind, l2_pnm) < 0
+                return: 1
+            if: l2_pkind = 7 && c.fprintf(l2_out, "%s%s: lmx_int_value_known(l2_pxp[0])\n", ind, l2_pnm) < 0
+                return: 1
+            if: l2_pkind = 8 && c.fprintf(l2_out, "%s%s: lmx_unsigned_value_known(l2_pxp[0])\n", ind, l2_pnm) < 0
+                return: 1
+            if: l2_pkind = 9 && c.fprintf(l2_out, "%s%s: lmx_ulong_value_known(l2_pxp[0])\n", ind, l2_pnm) < 0
                 return: 1
             if: l2_pown >= 0 && c.fprintf(l2_out, "%sl2_q%d_dirty: 1\n", ind, l2_pown) < 0
                 return: 1

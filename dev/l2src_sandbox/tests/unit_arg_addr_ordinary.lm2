@@ -8,6 +8,12 @@
 # OC2 9 9, OC3 9 9, OE 6 6, OD2 9 9 and OD3 9 9, and those are plain wrong lines, not a crash.
 #
 # Each line is "<case> <local> <graph field>".
+#
+# WORKAROUND, NAMED (GROK-FABLE-20260923-120 x FABLE-SONNET-NODE-ROOT-20260923-121): `M\x` read
+# directly inside a compound expression (a printf argument list, here) lands in Grok Bot's -120
+# c-member-access dispatch and emits a wrong raw C member access instead of a typed load -- a
+# defect in that dispatcher's root test, handed to him as a separate ticket. Every read below is
+# routed through a freshly assigned `<x>_g` local first (unit_occ_root_field.lm2's pattern).
 fn: poke5 (@: int p) int
     \p: 5
     return: 0
@@ -27,43 +33,53 @@ end: nop
 # A declared formal: bound, then address.  The checkpoint before the call publishes and clears;
 # the write through the address is no assignment and is not published.
 fn: after_bind (int: oc) int
+    int: oc_g
     int: oc
     oc: oc + 1
     nop()
-    c.printf: "OC1 %d %d\n" oc node\oc
+    oc_g: after_bind\oc
+    c.printf: "OC1 %d %d\n" oc oc_g
     poke9(@: oc)
-    c.printf: "OC2 %d %d\n" oc node\oc
-    node\oc: 100
+    oc_g: after_bind\oc
+    c.printf: "OC2 %d %d\n" oc oc_g
+    after_bind\oc: 100
     nop()
-    c.printf: "OC3 %d %d\n" oc node\oc
+    oc_g: after_bind\oc
+    c.printf: "OC3 %d %d\n" oc oc_g
     return: 0
 end: after_bind
 
 # The DECLARATION is a binding line: declared, then address, then assigned.
 fn: decl_binds (int: oe) int
+    int: oe_g
     int: oe
     poke5(@: oe)
     oe: oe + 1
     nop()
-    node\oe: 100
+    decl_binds\oe: 100
     nop()
-    c.printf: "OE %d %d\n" oe node\oe
+    oe_g: decl_binds\oe
+    c.printf: "OE %d %d\n" oe oe_g
     return: 0
 end: decl_binds
 
 # A dynamic input: read in the condition (that is what makes it one), bound, then address.
 fn: dyn_after () int
+    size_t: od_g
     if: od = 0U
         return: 0
     size_t: od
     od: od + 1U
     nop()
-    c.printf: "OD1 %d %d\n" (cast: (int) od) (cast: (int) node\od)
+    od_g: dyn_after\od
+    c.printf: "OD1 %d %d\n" (cast: (int) od) (cast: (int) od_g)
     pokez9(@: od)
-    c.printf: "OD2 %d %d\n" (cast: (int) od) (cast: (int) node\od)
-    node\od: 100U
+    od_g: dyn_after\od
+    c.printf: "OD2 %d %d\n" (cast: (int) od) (cast: (int) od_g)
+    dyn_after\od: 100U
     nop()
-    c.printf: "OD3 %d %d\n" (cast: (int) od) (cast: (int) node\od)
+    od_g: dyn_after\od
+    c.printf: "OD3 %d %d\n" (cast: (int) od) (cast: (int) od_g)
     return: 0
 end: dyn_after
 

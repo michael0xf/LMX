@@ -1,7 +1,17 @@
 # GROK-COLON-OCCURRENCE-20260922-02. Unified model. No method-level `int: x` on
 # multi-occ names: that decl row is not an assignment, so a later assignment does
-# not split (l2_own_add). Graph dest of occ 0 is still not readable as node\x
-# when the field is assignment-only (leftover from FABLE-67). Snapshots are \[N].
+# not split (l2_own_add). The `\[N]x` snapshot-selector cases (occ 0 of an
+# assignment-only field, leftover from FABLE-67) moved to
+# unit_occ_snapshot_selector.lm2 -- these three read/write the occurrence through
+# the method's own name (FABLE-SONNET-NODE-ROOT-20260923-121): `node\x` no longer
+# resolves (node is now M.parent, not self), and a method's own name is a path
+# root inside its own body, denoting the same published cell `node\x` used to.
+#
+# WORKAROUND, NAMED (GROK-FABLE-20260923-120 x FABLE-SONNET-NODE-ROOT-20260923-121): `M\x` read
+# directly inside a compound expression (a printf argument list, here) lands in Grok Bot's -120
+# c-member-access dispatch and emits a wrong raw C member access instead of a typed load -- a
+# defect in that dispatcher's root test, handed to him as a separate ticket. Every read below is
+# routed through a freshly assigned `<x>_g` local first (unit_occ_root_field.lm2's pattern).
 fn: poke7 (@: int p) int
     \p: 7
     return: 0
@@ -15,73 +25,50 @@ fn: nop () int
 end: nop
 
 fn: before (int: ba) int
+    int: ba_g
     poke7(@: ba)
     int: ba
     ba: 1
     nop()
-    node\ba: 100
+    before\ba: 100
     nop()
-    c.printf: "BEFORE %d %d\n" ba node\ba
+    ba_g: before\ba
+    c.printf: "BEFORE %d %d\n" ba ba_g
     return: 0
 end: before
 
-fn: between (int: bt) int
-    bt: 1
-    nop()
-    poke7(@: bt)
-    nop()
-    bt: 2
-    nop()
-    if: \[0]bt != 7
-        return: 1
-    if: \[1]bt != 2
-        return: 2
-    c.printf: "BETWEEN %d\n" bt
-    return: 0
-end: between
-
 fn: after (int: af) int
+    int: af_g
     int: af
     af: 1
     nop()
     poke9(@: af)
-    node\af: 100
+    after\af: 100
     nop()
-    c.printf: "AFTER %d %d\n" af node\af
+    af_g: after\af
+    c.printf: "AFTER %d %d\n" af af_g
     return: 0
 end: after
 
 fn: none (int: nn; int: go) int
+    int: nn_g
     poke7(@: nn)
-    node\nn: 100
+    none\nn: 100
     nop()
-    c.printf: "NONE %d %d\n" nn node\nn
+    nn_g: none\nn
+    c.printf: "NONE %d %d\n" nn nn_g
     if: go = 0
         return: 0
     int: nn
     nn: 1
     nop()
-    c.printf: "NONE+ %d %d\n" nn node\nn
+    nn_g: none\nn
+    c.printf: "NONE+ %d %d\n" nn nn_g
     return: 0
 end: none
 
-fn: after_last (int: al) int
-    al: 1
-    al: 2
-    poke9(@: al)
-    nop()
-    if: \[0]al != 1
-        return: 1
-    if: \[1]al != 9
-        return: 2
-    c.printf: "LAST %d\n" al
-    return: 0
-end: after_last
-
 before(3)
-between(3)
 after(3)
 none(3, 0)
 none(3, 1)
-after_last(3)
 return: 0

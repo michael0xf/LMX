@@ -1,0 +1,50 @@
+# GROK-COLON-OCCURRENCE-20260922-02. Split out of unit_occ_sticky_selector.lm2
+# (FABLE-SONNET-NODE-ROOT-20260923-121): these two cases use the `\[N]x` snapshot
+# selector, a mechanism the node/occurrence-root change does not touch -- occ 0 of
+# an assignment-only field is not reachable through a method-name path root either
+# (leftover from FABLE-67), so `\[N]` remains the only way to read it. Kept
+# separate from the node\X -> <Method>\X rewrite so each file's discriminating
+# mechanism stays unambiguous.
+fn: poke7 (@: int p) int
+    \p: 7
+    return: 0
+end: poke7
+fn: poke9 (@: int p) int
+    \p: 9
+    return: 0
+end: poke9
+fn: nop () int
+    return: 0
+end: nop
+
+fn: between (int: bt) int
+    bt: 1
+    nop()
+    poke7(@: bt)
+    nop()
+    bt: 2
+    nop()
+    if: \[0]bt != 7
+        return: 1
+    if: \[1]bt != 2
+        return: 2
+    c.printf: "BETWEEN %d\n" bt
+    return: 0
+end: between
+
+fn: after_last (int: al) int
+    al: 1
+    al: 2
+    poke9(@: al)
+    nop()
+    if: \[0]al != 1
+        return: 1
+    if: \[1]al != 9
+        return: 2
+    c.printf: "LAST %d\n" al
+    return: 0
+end: after_last
+
+between(3)
+after_last(3)
+return: 0

@@ -6,17 +6,26 @@
 #   same name (docs/L2_spec); whichever runs first decides.  From it to the end of the activation
 #   every checkpoint publishes the current local value and none of them clears the state.
 #
-# Every method names its field differently (na .. ne): an explicit WRITE `node\x: v` resolves x
-# in the FIRST method that has a field of that name, not in the current one -- a separate
-# translator defect, found while writing this fixture and reported with it.
+# Every method names its field differently (na .. ne): under FABLE-SONNET-NODE-ROOT-20260923-121
+# an explicit write is spelled through the method's OWN name (`before_bind\na: v`, not `node\x: v`
+# -- node is now M.parent, not self), so the old cross-method-collision defect this comment used
+# to report is now structurally impossible: there is no shared alias to scan multiple methods'
+# fields through, only the current method's own resolved name.
 #
 # Each line printed is "<case> <local> <graph field>".
 #
-# HOW STICKINESS IS SEEN WITH LEGAL L2 ONLY.  `node\x: v` writes the graph cell and not the
-# activation's value.  A later checkpoint of a STICKY field publishes the local over it; a
+# HOW STICKINESS IS SEEN WITH LEGAL L2 ONLY.  `M\x: v` (M the enclosing method) writes the graph
+# cell and not the activation's value.  A later checkpoint of a STICKY field publishes the local over it; a
 # checkpoint of an ordinary field, whose dirty an earlier checkpoint cleared, leaves it alone.
 # That is also what tells sticky from "raise dirty again after the call returns": the A2 and A4
 # checkpoints follow no address-taking call at all.
+#
+# WORKAROUND, NAMED (GROK-FABLE-20260923-120 x FABLE-SONNET-NODE-ROOT-20260923-121): `M\x` read
+# directly inside a compound expression (a printf argument list, here) lands in Grok Bot's -120
+# c-member-access dispatch and emits a wrong raw C member access (`lmx_arena_ref_struct(node, N)
+# ->x`) instead of a typed load -- a defect in that dispatcher's root test, handed to him as a
+# separate ticket. Every read below is routed through a freshly assigned `<x>_g` local first
+# (exactly unit_occ_root_field.lm2's pattern) and only the local is ever printed.
 fn: poke5 (@: int p) int
     \p: 5
     return: 0
@@ -32,26 +41,31 @@ end: nop
 # A. `@: na` BEFORE the first binding line, then the binding: sticky to the end.
 #    One checkpoint before the address-taking call (nop) and five after the binding.
 fn: before_bind (int: na) int
+    int: na_g
     nop()
     poke5(@: na)
     int: na
     na: na + 1
     nop()
-    c.printf: "A1 %d %d\n" na node\na
-    node\na: 100
+    na_g: before_bind\na
+    c.printf: "A1 %d %d\n" na na_g
+    before_bind\na: 100
     nop()
-    c.printf: "A2 %d %d\n" na node\na
+    na_g: before_bind\na
+    c.printf: "A2 %d %d\n" na na_g
     poke9(@: na)
-    c.printf: "A3 %d %d\n" na node\na
-    node\na: 200
+    na_g: before_bind\na
+    c.printf: "A3 %d %d\n" na na_g
+    before_bind\na: 200
     nop()
     nop()
-    c.printf: "A4 %d %d\n" na node\na
+    na_g: before_bind\na
+    c.printf: "A4 %d %d\n" na na_g
     return: 0
 end: before_bind
 
 # B. NEVER BOUND, and now SEEN (FABLE-L2-ARG-ADDRESS-PROOF-20260921-84).  The declaration stays at
-#    METHOD level, so `node\nb` can read the field -- a field declared inside an `if` body lives in
+#    METHOD level, so `never_bound\nb` can read the field -- a field declared inside an `if` body lives in
 #    that body's Structure and no path reaches it -- and an early `return` skips it, so with go = 0
 #    its line never executes.  The first line is printed by BOTH activations, before the binding
 #    line: nothing a parameter holds before that line is ever published, so the graph keeps the
@@ -60,39 +74,47 @@ end: before_bind
 #    binding line then runs with the address already taken: sticky, B+ 6 6.  The third call is a
 #    never-bound activation AFTER a sticky one: the state belongs to the activation, not the method.
 fn: never_bound (int: nb; int: go) int
+    int: nb_g
     poke5(@: nb)
-    node\nb: 100
+    never_bound\nb: 100
     nop()
     nop()
-    c.printf: "B %d %d\n" nb node\nb
+    nb_g: never_bound\nb
+    c.printf: "B %d %d\n" nb nb_g
     if: go = 0
         return: 0
     int: nb
     nb: nb + 1
-    node\nb: 200
+    never_bound\nb: 200
     nop()
-    c.printf: "B+ %d %d\n" nb node\nb
+    nb_g: never_bound\nb
+    c.printf: "B+ %d %d\n" nb nb_g
     return: 0
 end: never_bound
 
 # C. The binding FIRST, `@: nc` after it: now sticky too.  C2 is before the next checkpoint
 #    so the graph still holds the published binding; C3 republishes the pointer write.
 fn: after_bind (int: nc) int
+    int: nc_g
     int: nc
     nc: nc + 1
     nop()
-    c.printf: "C1 %d %d\n" nc node\nc
+    nc_g: after_bind\nc
+    c.printf: "C1 %d %d\n" nc nc_g
     poke9(@: nc)
-    c.printf: "C2 %d %d\n" nc node\nc
-    node\nc: 100
+    nc_g: after_bind\nc
+    c.printf: "C2 %d %d\n" nc nc_g
+    after_bind\nc: 100
     nop()
-    c.printf: "C3 %d %d\n" nc node\nc
+    nc_g: after_bind\nc
+    c.printf: "C3 %d %d\n" nc nc_g
     return: 0
 end: after_bind
 
 # D. One method, both orders: the condition decides at RUN time whether the address comes before
 #    the binding.  A translator that decides stickiness from the text alone fails one of the two.
 fn: either (int: nd; int: early) int
+    int: nd_g
     if: early != 0
         poke5(@: nd)
     int: nd
@@ -100,22 +122,25 @@ fn: either (int: nd; int: early) int
     if: early = 0
         poke5(@: nd)
     nop()
-    node\nd: 100
+    either\nd: 100
     nop()
-    c.printf: "D%d %d %d\n" early nd node\nd
+    nd_g: either\nd
+    c.printf: "D%d %d %d\n" early nd nd_g
     return: 0
 end: either
 
 # E. The DECLARATION is a binding line too: declared first, address after, assignment last --
 #    @ after binding is still sticky.
 fn: decl_binds (int: ne) int
+    int: ne_g
     int: ne
     poke5(@: ne)
     ne: ne + 1
     nop()
-    node\ne: 100
+    decl_binds\ne: 100
     nop()
-    c.printf: "E %d %d\n" ne node\ne
+    ne_g: decl_binds\ne
+    c.printf: "E %d %d\n" ne ne_g
     return: 0
 end: decl_binds
 

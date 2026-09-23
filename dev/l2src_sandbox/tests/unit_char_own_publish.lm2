@@ -5,14 +5,20 @@
 # alias that exists only where the translator itself is built, so every program below stopped at
 # the C compiler.  Three emitters wrote it, and each has its line here:
 #
-#   K   the checkpoint of a char own field       (the publication descriptor)
-#   P   an explicit write through a node path    (its direct twin)
-#   M   the program entry writing a unit field   (its other twin)
+#   K   the checkpoint of a char own field           (the publication descriptor)
+#   P   an explicit write through the method's own occurrence path (its direct twin)
+#   M   the program entry writing a unit field       (its other twin)
 #
 # The second line of each pair carries a byte above 127 IN A char: as a signed char 200 is -56, a
 # plain conversion to int hands the rebind -56, the rebind refuses it and answers 0 -- the field's
 # cell is lost.  (A literal would not do: 202 written as a literal is already an int.)
 # Each line is "<case> <local or written byte> <byte read back from the graph>", bytes as 0..255.
+#
+# WORKAROUND, NAMED (GROK-FABLE-20260923-120 x FABLE-SONNET-NODE-ROOT-20260923-121): `M\x` read
+# directly inside a compound expression (the cast-and-mask here) lands in Grok Bot's -120
+# c-member-access dispatch and emits a wrong raw C member access instead of a typed load -- a
+# defect in that dispatcher's root test, handed to him as a separate ticket. Every read below is
+# routed through a freshly assigned `kept_g` local first (unit_occ_root_field.lm2's pattern).
 L2:
     char: mark 'a'
 
@@ -22,16 +28,21 @@ L2:
 
     fn: holder (char: hi) int
         char: kept
+        char: kept_g
         kept: 65
         nop()
-        c.printf: "K1 %d %d\n" ((cast: (int) kept) & 255) ((cast: (int) node\kept) & 255)
+        kept_g: holder\kept
+        c.printf: "K1 %d %d\n" ((cast: (int) kept) & 255) ((cast: (int) kept_g) & 255)
         kept: 200
         nop()
-        c.printf: "K2 %d %d\n" ((cast: (int) kept) & 255) ((cast: (int) node\kept) & 255)
-        node\kept: 66
-        c.printf: "P1 %d %d\n" 66 ((cast: (int) node\kept) & 255)
-        node\kept: hi
-        c.printf: "P2 %d %d\n" ((cast: (int) hi) & 255) ((cast: (int) node\kept) & 255)
+        kept_g: holder\kept
+        c.printf: "K2 %d %d\n" ((cast: (int) kept) & 255) ((cast: (int) kept_g) & 255)
+        holder\kept: 66
+        kept_g: holder\kept
+        c.printf: "P1 %d %d\n" 66 ((cast: (int) kept_g) & 255)
+        holder\kept: hi
+        kept_g: holder\kept
+        c.printf: "P2 %d %d\n" ((cast: (int) hi) & 255) ((cast: (int) kept_g) & 255)
         return: 0
     end: holder
 

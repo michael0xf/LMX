@@ -1,0 +1,21 @@
+# FABLE-SONNET-NODE-ROOT-20260923-121, author's second correction on the -67/-84
+# blocker: the occurrence root is NOT external-only -- a method's own name resolves
+# as a path root INSIDE its own body too. `probe\v` from within probe denotes the
+# published occurrence cell of v, distinct from the bare local `v` (the activation
+# cell): a direct write to the occurrence cell (bypassing the local's dirty-flag
+# cache) and a read of it back, in the same activation, with no call boundary and
+# no checkpoint between them. This is the minimal witness for that fact; the 7
+# rewritten sticky/dirty fixtures (unit_arg_addr_*.lm2, unit_char_own_publish.lm2,
+# unit_occ_sticky_selector.lm2) exercise the same mechanism under the sticky rule.
+fn: probe () int
+    size_t: v 3U
+    size_t: g
+    probe\v: 9U
+    g: probe\v
+    if: g != 9U
+        return: 95
+    if: v != 3U
+        return: 96
+    return: 0
+
+return: probe()

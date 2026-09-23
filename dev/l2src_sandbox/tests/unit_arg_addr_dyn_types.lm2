@@ -13,6 +13,12 @@
 # Every case takes the address BEFORE the binding line, so every case is also the sticky rule:
 # the second line of each pair follows an explicit graph write and no address-taking call.
 # char is absent on purpose: its checkpoint does not compile today (a separate, ticketed defect).
+#
+# WORKAROUND, NAMED (GROK-FABLE-20260923-120 x FABLE-SONNET-NODE-ROOT-20260923-121): `M\x` read
+# directly inside a compound expression (a printf argument list, here) lands in Grok Bot's -120
+# c-member-access dispatch and emits a wrong raw C member access instead of a typed load -- a
+# defect in that dispatcher's root test, handed to him as a separate ticket. Every read below is
+# routed through a freshly assigned `<x>_g` local first (unit_occ_root_field.lm2's pattern).
 fn: pokeu (@: unsigned p) int
     \p: 5U
     return: 0
@@ -35,39 +41,48 @@ fn: reads_width () int
 end: reads_width
 
 fn: dyn_unsigned () int
+    unsigned: du_g
     pokeu(@: du)
     unsigned: du
     du: du + 1U
     nop()
-    c.printf: "U1 %d %d\n" (cast: (int) du) (cast: (int) node\du)
-    node\du: 100U
+    du_g: dyn_unsigned\du
+    c.printf: "U1 %d %d\n" (cast: (int) du) (cast: (int) du_g)
+    dyn_unsigned\du: 100U
     nop()
-    c.printf: "U2 %d %d\n" (cast: (int) du) (cast: (int) node\du)
+    du_g: dyn_unsigned\du
+    c.printf: "U2 %d %d\n" (cast: (int) du) (cast: (int) du_g)
     return: 0
 end: dyn_unsigned
 
 fn: dyn_ulong () int
+    ulong: dl_g
     pokel(@: dl)
     ulong: dl
     dl: dl + 1U
     nop()
-    c.printf: "L1 %d %d\n" (cast: (int) dl) (cast: (int) node\dl)
-    node\dl: 100U
+    dl_g: dyn_ulong\dl
+    c.printf: "L1 %d %d\n" (cast: (int) dl) (cast: (int) dl_g)
+    dyn_ulong\dl: 100U
     nop()
-    c.printf: "L2 %d %d\n" (cast: (int) dl) (cast: (int) node\dl)
+    dl_g: dyn_ulong\dl
+    c.printf: "L2 %d %d\n" (cast: (int) dl) (cast: (int) dl_g)
     return: 0
 end: dyn_ulong
 
 # The source is the caller's FORMAL, not its own field.
 fn: dyn_from_formal () int
+    unsigned: df_g
     pokeu(@: df)
     unsigned: df
     df: df + 1U
     nop()
-    c.printf: "F1 %d %d\n" (cast: (int) df) (cast: (int) node\df)
-    node\df: 100U
+    df_g: dyn_from_formal\df
+    c.printf: "F1 %d %d\n" (cast: (int) df) (cast: (int) df_g)
+    dyn_from_formal\df: 100U
     nop()
-    c.printf: "F2 %d %d\n" (cast: (int) df) (cast: (int) node\df)
+    df_g: dyn_from_formal\df
+    c.printf: "F2 %d %d\n" (cast: (int) df) (cast: (int) df_g)
     return: 0
 end: dyn_from_formal
 

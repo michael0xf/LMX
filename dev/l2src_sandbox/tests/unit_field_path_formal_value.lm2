@@ -2,21 +2,19 @@
 # formal path root must read the ARGUMENT's value, not the unit's static
 # declaration child for the formal's type. Before the fix, get(a) read
 # the Model declaration site (value 1) instead of a's own value (5).
-# Routed through a declared local rather than fable's own "return:
-# x\value" spelling directly: that shape hits a separate, pre-existing
-# "a field path value needs a declared destination" refusal in
-# l2_emit_body's value-position join-path dispatch, for ANY root
-# (reproduced with a plain own-field root too, unaffected by this fix) --
-# a different gap than D1, not folded in here (matches fable's own D2
-# precedent: report, do not fold in).
+# Spelled exactly as fable required -- `return: x\value` -- exercising
+# fix (b) in the same ticket: a field path is an ordinary expression
+# value, not gated on the statement head being a declared own field
+# (l2_emit_body's value-position join-path dispatch used to refuse this
+# shape unconditionally with "a field path value needs a declared
+# destination", for ANY root, reproduced with a plain own-field root too
+# -- a different gap than D1, now fixed here per fable's instruction).
 Model:
     size_t: value 1U
 end: Model
 
 fn: get (Model: x) size_t
-    size_t: got
-    got: x\value
-    return: got
+    return: x\value
 
 Model: a
 a\value: 5U

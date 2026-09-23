@@ -72,6 +72,8 @@ fn: main () int
     @: Lmx empty 0
     @: Lmx plain 0
     @: Lmx zero_callable 0
+    @: Lmx bare_occ 0
+    @: LmxMethod bare_method 0
     @: LmxMethod method 0
     @: LmxCallable info 0
     @: LmxCallable zero_info 0
@@ -156,7 +158,21 @@ fn: main () int
     ---
     call_check(counts, plain != 0 && lmx_call_ready(arena_at, plain) = c.LMX_CALL_NOT_CALLABLE, "a child[0] that is not an LmxCallable was taken for a callable")
 
-    # A method record whose addr is zero is still a method -- and there is nothing to call.
+    # Mutant: a bare METHOD in child[0] is refused (descriptor-only). Pin: NOT_CALLABLE.
+    bare_method: (cast: (@: LmxMethod) lmx_pool_take(@ arena, @ methods))
+    bare_occ: call_struct(@ arena, 1U)
+    if: bare_method = 0 || bare_occ = 0
+        free(counts)
+        return: 2
+    ---
+    bare_method\addr: (cast: (LmxEntry) call_entry)
+    bare_method\sig: 1U
+    lmx_arena_ref_store(bare_occ, 0U, (cast: (@: void) bare_method))
+    call_check(counts, lmx_call_ready(arena_at, bare_occ) = c.LMX_CALL_NOT_CALLABLE, "a bare METHOD in child[0] was taken for a callable")
+    call_check(counts, lmx_call0(arena_at, bare_occ) = c.LMX_CALL_NOT_CALLABLE, "a bare METHOD in child[0] was called")
+    call_check(counts, call_taken = 1U, "a refused bare-METHOD call reached an entry")
+
+    # A descriptor whose method addr is zero is still a callable -- and there is nothing to call.
     zero_method: (cast: (@: LmxMethod) lmx_pool_take(@ arena, @ methods))
     zero_callable: call_struct(@ arena, 1U)
     if: zero_method = 0 || zero_callable = 0

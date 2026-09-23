@@ -9,13 +9,11 @@ predef: "l2src/lmx_arena.h.lm1"
 # physical child[0] (7.1/21.8).  A callable is not a new kind of Structure: its physical
 # child[0] holds an LmxCallable descriptor that refers to the METHOD record, its later slots hold
 # that occurrence's own fields, and `M.parent` is its immediate structural parent
-# (lmx.h.lm1 spells all of this out for the merge traversal). A direct METHOD in child[0]
-# is admitted only as the transitional
-# pre-descriptor shape.
+# (lmx.h.lm1 spells all of this out for the merge traversal).
 #
 # Nothing is stored to say "this is a callable": the check is the same domain question everything
-# else in this kernel asks -- the VALUE in slot 0 falls into the LmxCallable address range (or the
-# legacy METHOD range), and a child carries no type tag.
+# else in this kernel asks -- the VALUE in slot 0 falls into the LmxCallable address range, and a
+# child carries no type tag. A bare METHOD in child[0] is not a callable occurrence.
 #
 # The descriptor-backed typed entry receives the RESERVED NODE FIRST, selected SELF second, then
 # the arguments its signature lists; its status is the result carrier of 21.13.4.  This header
@@ -35,12 +33,11 @@ predef: "l2src/lmx_arena.h.lm1"
 # ADMISSION IS DECIDED, and decided AGAINST for this stage -- Mikhail, 2026-09-18, verbatim:
 # "сверок на данном этапе надо не больше чем в Си. Так как полная типизация будет делаться
 # отдельно".  So there is NO signature check here: like C, the call goes through the loaded
-# child[0] METHOD target and its typed `addr`, and matching the signature to the call site is the
-# TRANSLATOR's business, because the translator is what wrote both.  Full typing is a separate,
-# later effort; `sig` stays what it is (the dispatch contract of 21.8) and nothing here decodes it.
-# Legacy/native-host entry: it predates the descriptor-backed callable ABI and receives only the
-# lexical space above the method.  A bare METHOD in child[0] is the explicit compatibility
-# shape for this ABI.
+# child[0] descriptor's METHOD target and its typed `addr`, and matching the signature to the call
+# site is the TRANSLATOR's business, because the translator is what wrote both.  Full typing is a
+# separate, later effort; `sig` stays what it is (the dispatch contract of 21.8) and nothing here
+# decodes it.
+# Host/root entries that are not graph callables may still use the one-node shape below.
 fnptr: LmxCallEntry (@: Lmx node) int
 # Descriptor-backed native entry. Source `node` stays first and is the lexical space above the
 # method; `self` is the selected physical occurrence and is the home for own-field
@@ -49,8 +46,8 @@ fnptr: LmxCallEntrySelf (@: Lmx node; @: Lmx self) int
 
 define: LMX_CALL_OK 0
 define: LMX_CALL_INVALID 1
-# Not callable: not a Structure, no physical child[0], or a child[0] value outside both the
-# LmxCallable and transitional METHOD address ranges.
+# Not callable: not a Structure, no physical child[0], or a child[0] value outside the
+# LmxCallable address range (including a bare METHOD).
 define: LMX_CALL_NOT_CALLABLE 2
 
 prototype:
@@ -64,10 +61,9 @@ prototype:
     # For the selected method occurrence M this is M.parent; nested bodies inside M have their
     # own structural parent chain and do not change the activation's reserved `node`.
     fn: lmx_call_node (@: Lmx callable) @: Lmx
-    # The call, for the zero-source-argument shape.  An LmxCallable descriptor selects the
-    # `(node,self)` ABI by its physical range; a bare METHOD selects the one-node compatibility
-    # ABI.  No signature bit, numeric slot, text or registry chooses between them.
+    # The call, for the zero-source-argument shape.  child[0] must be an LmxCallable descriptor;
+    # the call uses the `(node,self)` ABI.
     fn: lmx_call0 (@: LmxArena arena; @: Lmx callable) int
-    # Null when child[0] is still a two-field METHOD. Native addr is then METHOD.addr.
+    # The LmxCallable in child[0], or null when the node is not a callable occurrence.
     fn: lmx_call_callable (@: LmxArena arena; @: Lmx node) @: LmxCallable
 end: prototype

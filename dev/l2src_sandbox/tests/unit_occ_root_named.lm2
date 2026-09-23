@@ -1,0 +1,29 @@
+# FABLE-SONNET-OCC-ROOT-20260924-146: a repeated own-field occurrence under
+# a NAMED (method) root, `test\[N]field`, resolved by the same occurrence
+# lookup the rootless `\[N]field` form already uses (l2_own_find_occ) -- no
+# second scanner.
+#
+# Measured (not assumed): an argument-bound field has no independent
+# per-occurrence graph value. l2_emit_checkpoint publishes EVERY occurrence
+# row of an argument-aliased field from the one canonical parameter cell
+# (l2_p%d_%d), never from that row's own l2_q%d snapshot (the argument
+# same-name-binding rule, L2 spec 18.3: "Its address and lifetime remain
+# those of the parameter"). So test\[0]arg and test\[1]arg both read test's
+# FINAL arg value once test has returned, same as unqualified test\arg --
+# still a real, correctly-typed, non-crashing graph read reaching the right
+# own row, just not distinguishing history for an argument specifically.
+fn: test (int: arg) int
+    arg: 1
+    arg: 2
+    return: 0
+end: test
+
+int: got
+got: test(0)
+if: test\[0]arg != 2
+    return: 81
+if: test\[1]arg != 2
+    return: 82
+if: test\arg != 2
+    return: 83
+return: 0

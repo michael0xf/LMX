@@ -6673,12 +6673,21 @@ fn: l2_scan_fields (@: LmP0Field field; int: n; int: mi; @: int seen) int
     while: i < n && f != 0
         nxt: l2_next_active(f\next)
         if: after != 0 && f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM
-            after: 0
+            after: after - 1
             f: nxt
             i: i + 1
             continue
         if: f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM && l2_is_slash(f\value\as\atom)
             after: 1
+            # A root-qualified occurrence index, `root\[N]name` (FABLE-SONNET-
+            # OCC-ROOT-20260924-146): the 4 tokens after the slash ([, N, ],
+            # name) are all part of one resolved path, none a bare name
+            # reference a dynamic-input scan should register -- mirrors the
+            # l2_check_fields/l2_emit_fields recognizer for the same shape.
+            if: nxt != 0 && nxt\value != 0 && nxt\value\kind = c.LM_P0_NODE_ATOM && l2_text_eq(nxt\value\as\atom, "[") != 0
+                after: 4
+                ---
+            ---
         if: l2_scan_node(f\value, mi, seen) != 0
             return: 1
         f: nxt
@@ -13260,6 +13269,9 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
     int: cpraw_fld 0
     @: LmP0Field p1
     @: LmP0Field p2
+    @: LmP0Field p3
+    @: LmP0Field p4
+    @: LmP0Field p5
     int: i
     int: skip
     int: after 0
@@ -13338,6 +13350,41 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
         if: fpc = 1
             return: l2_error(path, p2\value, "unresolved name")
         if: fpc = 0
+            have_value: 1
+            i: i + 3
+            f: l2_next_active(p2\next)
+            continue
+        # A method name as a path root denotes its occurrence (l2_path_root's
+        # own method-occurrence branch, FABLE-SONNET-NODE-ROOT-20260923-121)
+        # -- but l2_join_path's strict name\name\... alternation cannot carry
+        # a bracket segment, so a root-qualified occurrence index is
+        # recognized here at the flat-token level instead of inside
+        # l2_path_root, reusing the two primitives every other occurrence
+        # form already uses: l2_find_method (the root) and l2_own_find_occ
+        # (the same lookup l2_occ_head's rootless `\[N]name` already calls).
+        # `test\[N]name` picks occurrence N; unqualified `test\arg` is
+        # occurrence 0 (FABLE-SONNET-OCC-ROOT-20260924-146).
+        if: f\value\kind = c.LM_P0_NODE_ATOM && l2_ident(f\value\as\atom) != 0 && l2_find_method(f\value\as\atom) >= 0 && p1 != 0 && p1\value != 0 && p1\value\kind = c.LM_P0_NODE_ATOM && l2_is_slash(p1\value\as\atom) && p2 != 0 && p2\value != 0 && p2\value\kind = c.LM_P0_NODE_ATOM && l2_text_eq(p2\value\as\atom, "[") != 0
+            p3: l2_next_active(p2\next)
+            p4: 0
+            p5: 0
+            if: p3 != 0
+                p4: l2_next_active(p3\next)
+            if: p4 != 0
+                p5: l2_next_active(p4\next)
+            if: p3 = 0 || p3\value = 0 || p3\value\kind != c.LM_P0_NODE_ATOM || l2_num(p3\value\as\atom) = 0 || p4 = 0 || p4\value = 0 || p4\value\kind != c.LM_P0_NODE_ATOM || l2_text_eq(p4\value\as\atom, "]") = 0 || p5 = 0 || p5\value = 0 || p5\value\kind != c.LM_P0_NODE_ATOM || l2_ident(p5\value\as\atom) = 0
+                return: l2_error(path, p2\value, "unsupported index")
+            po: l2_own_find_occ(l2_find_method(f\value\as\atom), p5\value\as\atom, (cast: (int) l2_literal_value(p3\value\as\atom)))
+            if: po < 0 || l2_m_uses[l2_own_off(l2_find_method(f\value\as\atom), po)] = 0
+                return: l2_error(path, p5\value, "own occurrence index out of range")
+            have_value: 1
+            i: i + 6
+            f: l2_next_active(p5\next)
+            continue
+        if: f\value\kind = c.LM_P0_NODE_ATOM && l2_ident(f\value\as\atom) != 0 && l2_find_method(f\value\as\atom) >= 0 && p1 != 0 && p1\value != 0 && p1\value\kind = c.LM_P0_NODE_ATOM && l2_is_slash(p1\value\as\atom) && p2 != 0 && p2\value != 0 && p2\value\kind = c.LM_P0_NODE_ATOM && l2_ident(p2\value\as\atom) != 0
+            po: l2_own_find_occ(l2_find_method(f\value\as\atom), p2\value\as\atom, 0)
+            if: po < 0 || l2_m_uses[l2_own_off(l2_find_method(f\value\as\atom), po)] = 0
+                return: l2_error(path, p2\value, "unresolved name")
             have_value: 1
             i: i + 3
             f: l2_next_active(p2\next)
@@ -15308,6 +15355,7 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
     @: LmP0Field p2
     @: LmP0Field p3
     @: LmP0Field p4
+    @: LmP0Field p5
     @: LmP0Node at 0
     int: i
     int: ao
@@ -15332,6 +15380,8 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
     c.array: [256]: char piece
     @: LmP0Field aidx_f
     c.array: [256]: char aptr
+    c.array: [128]: char occx
+    int: occt
     if: dest = 0
         return: 1
     buf[0]: 0
@@ -15379,6 +15429,71 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
         if: fpr = 1
             return: 1
         if: fpr = 0
+            if: l2_cat(buf, piece) != 0
+                return: l2_error(l2_src, at, "expression too long")
+            ao: 0
+            after: 0
+            have_value: 1
+            i: i + 3
+            f: l2_next_active(p2\next)
+            continue
+        # A method name as a path root denotes its occurrence -- see
+        # l2_check_fields's copy of this comment (FABLE-SONNET-OCC-ROOT-
+        # 20260924-146): recognized at the flat-token level, not inside
+        # l2_path_root, reusing l2_find_method and l2_own_find_occ (the same
+        # pair the rootless `\[N]name` form just below already uses).
+        if: f\value\kind = c.LM_P0_NODE_ATOM && l2_ident(f\value\as\atom) != 0 && l2_find_method(f\value\as\atom) >= 0 && p1 != 0 && p1\value != 0 && p1\value\kind = c.LM_P0_NODE_ATOM && l2_is_slash(p1\value\as\atom) && p2 != 0 && p2\value != 0 && p2\value\kind = c.LM_P0_NODE_ATOM && l2_text_eq(p2\value\as\atom, "[") != 0
+            p3: l2_next_active(p2\next)
+            p4: 0
+            p5: 0
+            if: p3 != 0
+                p4: l2_next_active(p3\next)
+            if: p4 != 0
+                p5: l2_next_active(p4\next)
+            if: p3 = 0 || p3\value = 0 || p3\value\kind != c.LM_P0_NODE_ATOM || l2_num(p3\value\as\atom) = 0 || p4 = 0 || p4\value = 0 || p4\value\kind != c.LM_P0_NODE_ATOM || l2_text_eq(p4\value\as\atom, "]") = 0 || p5 = 0 || p5\value = 0 || p5\value\kind != c.LM_P0_NODE_ATOM || l2_ident(p5\value\as\atom) = 0
+                return: 1
+            po: l2_own_find_occ(l2_find_method(f\value\as\atom), p5\value\as\atom, (cast: (int) l2_literal_value(p3\value\as\atom)))
+            if: po < 0 || l2_m_uses[l2_own_off(l2_find_method(f\value\as\atom), po)] = 0
+                return: 1
+            # This own row belongs to ANOTHER method's activation, not the
+            # one this C function is being emitted for: l2_q%d is that
+            # OTHER method's own local, out of scope here (a same-method
+            # rootless \[N]name never has this problem). Read it through
+            # the graph instead, l2_own_from_expr, the same accessor
+            # l2_emit_array_ptr and l2_emit_own_from already use for a
+            # cross-activation own cell.
+            if: l2_own_from_expr(po, occx) != 0
+                return: 1
+            if: c.fprintf(l2_out, "%sl2_xp: %s\n", ind, occx) < 0
+                return: 1
+            occt: l2_tn
+            l2_tn: l2_tn + 1
+            if: l2_emit_cell_load(l2_own_ty[po], ind, occt, at) != 0
+                return: 1
+            if: c.sprintf(piece, "l2_t%d", occt) < 0
+                return: 1
+            if: l2_cat(buf, piece) != 0
+                return: l2_error(l2_src, at, "expression too long")
+            ao: 0
+            after: 0
+            have_value: 1
+            i: i + 6
+            f: l2_next_active(p5\next)
+            continue
+        if: f\value\kind = c.LM_P0_NODE_ATOM && l2_ident(f\value\as\atom) != 0 && l2_find_method(f\value\as\atom) >= 0 && p1 != 0 && p1\value != 0 && p1\value\kind = c.LM_P0_NODE_ATOM && l2_is_slash(p1\value\as\atom) && p2 != 0 && p2\value != 0 && p2\value\kind = c.LM_P0_NODE_ATOM && l2_ident(p2\value\as\atom) != 0
+            po: l2_own_find_occ(l2_find_method(f\value\as\atom), p2\value\as\atom, 0)
+            if: po < 0 || l2_m_uses[l2_own_off(l2_find_method(f\value\as\atom), po)] = 0
+                return: 1
+            if: l2_own_from_expr(po, occx) != 0
+                return: 1
+            if: c.fprintf(l2_out, "%sl2_xp: %s\n", ind, occx) < 0
+                return: 1
+            occt: l2_tn
+            l2_tn: l2_tn + 1
+            if: l2_emit_cell_load(l2_own_ty[po], ind, occt, at) != 0
+                return: 1
+            if: c.sprintf(piece, "l2_t%d", occt) < 0
+                return: 1
             if: l2_cat(buf, piece) != 0
                 return: l2_error(l2_src, at, "expression too long")
             ao: 0

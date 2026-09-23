@@ -1623,6 +1623,16 @@ $fixtures = @(
         Debt = @('l2_message\graph: l2_entry_unit', 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)',
                  'l2_q0_from: lmx_arena_ref_cell(self, 1U)',
                  'l2_q1_from: lmx_arena_ref_cell(self, 2U)') },
+    # FABLE-SONNET-OCC-ROOT-20260924-146 commit 1: a named (method) root's
+    # occurrence index, test\[N]arg, resolved through l2_own_find_occ --
+    # the same lookup the rootless \[N]arg form already uses, no second
+    # scanner.
+    [pscustomobject]@{ Name = 'unit_occ_root_named.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @();
+        Debt = @() },
+    [pscustomobject]@{ Name = 'unit_occ_root_out_of_range_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'own occurrence index out of range'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_occ_sticky_selector.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Says = @('BEFORE 1 1', 'AFTER 9 9', 'NONE 7 100', 'NONE 7 100', 'NONE+ 1 1');

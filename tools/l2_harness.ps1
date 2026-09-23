@@ -1162,8 +1162,13 @@ $fixtures = @(
         Needle = 'incompatible entry signature'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_call_args_refuse_named.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'incompatible entry signature'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_call_args_refuse_struct.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
+    # Superseded by FABLE-SONNET-EMPTY-STRUCT-20260923-132: `mystruct: ()`
+    # now declares an empty Structure instead of refusing as an unresolved
+    # call (see the fixture's own header comment).
+    [pscustomobject]@{ Name = 'unit_call_args_refuse_struct.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
+        Debt = @() },
     [pscustomobject]@{ Name = 'unit_fnptr_call_args_paren.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
         Absent = @('f((l2_p0_1))');
         Debt = @('f(l2_p0_1)') },
@@ -1210,6 +1215,22 @@ $fixtures = @(
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @() },
+    # FABLE-SONNET-EMPTY-STRUCT-20260923-132: the three empty-Structure
+    # declaration spellings, name absent.
+    [pscustomobject]@{ Name = 'unit_empty_struct_decl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
+        Debt = @() },
+    [pscustomobject]@{ Name = 'unit_empty_struct_hanging_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'empty colon Frame is not allowed'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_empty_struct_existing_nonstruct_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unsupported body'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_typed_decl_vertical.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
+        Debt = @() },
+    [pscustomobject]@{ Name = 'unit_duplicate_named_struct_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'duplicate named Structure'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_colon_method_lexical_model.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');

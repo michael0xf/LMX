@@ -375,6 +375,7 @@ prototype:
     fn: l2_colon_types_compatible (int: target_ty; int: value_ty) int
     fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
     fn: l2_colon_decl_shape (const: @(LmP0Node stmt); @@: LmP0Text out_model; @@: LmP0Text out_name) int
+    fn: l2_empty_struct_decl_shape (const: @(LmP0Node stmt); int: mi) int
     fn: l2_next_msg_shape (const: @(LmP0Node stmt); @@: LmP0Text out_name) int
     fn: l2_body_receives (const: @(LmP0Structure body)) int
     fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char path)) int
@@ -2961,6 +2962,14 @@ fn: l2_translate (const: @(char in_path); const: @(char out_path)) int
         diagnostic: lm_p0_document_diagnostic(document)
         if: diagnostic != 0
             c.fprintf(l1_stderr(), "l2trans parse error %d at %zu:%zu: %s\n", diagnostic\code, diagnostic\line, diagnostic\column, diagnostic\message)
+            # A located P0 parse diagnostic already told the user what and
+            # where; main's own no-located-diagnostic safety net (FABLE-
+            # SONNET-EMPTY-STRUCT-20260923-132) only knows about l2_error's
+            # OWN counter, so without this it fires a second, useless line
+            # for every P0-level parse refusal (e.g. a hanging `f:`, P0
+            # error 32) -- the same silent-diagnostic class closed for
+            # l2_error call sites in -129 part 1, here for the parser's.
+            l2_diag_n: l2_diag_n + 1
         else:
             c.fprintf(l1_stderr(), "l2trans parse error: %s\n", in_path)
         lm_p0_document_destroy(document)
@@ -5634,6 +5643,45 @@ fn: l2_colon_decl_shape (const: @(LmP0Node stmt); @@: LmP0Text out_model; @@: Lm
     \out_model: fr\head
     \out_name: only\value\as\atom
 return: 0
+
+# `f()`, `f: ()` and the closed empty vertical, name absent (FABLE-SONNET-
+# EMPTY-STRUCT-20260923-132, book SS10/SS12, after -127's P0 parity all
+# three spellings are the identical Frame -- head plus a body with 0
+# active fields). When that head resolves to nothing at all -- not a
+# formal, own field, slot, merge result or model/type name -- the empty
+# Structure-body itself supplies the structural type: this is a
+# declaration, not a failed call, the same as l2_colon_decl_shape's
+# `Model: fresh` minus a named model to merge from. Kept separate from
+# l2_colon_decl_shape (whose other callers run before or without full name
+# resolution, e.g. the dynamic-input pre-pass, and read a shape match as
+# "a named model, merge-shaped, throws") rather than widening what a
+# 0-argument body means to them too; this needs mi to resolve the head,
+# which that shape check deliberately does not take.
+#
+# "Resolves to nothing" has to mean the same thing on BOTH calls this gets
+# (l2_check_body's admission, then l2_emit_body's construction): once the
+# first call has run l2_own_add for this exact statement, l2_own_find(mi,
+# fr\head) finds THAT row on the second call, and a plain oi>=0 exclusion
+# would make the shape stop matching its own declaration the moment
+# emission looks for it -- measured: l2_emit_body never reached its
+# construction branch, and l2_translate's own no-located-diagnostic
+# safety net (the (c) fix, a few lines up) fired instead, since nothing
+# had called l2_error. An existing row is only a genuine conflict when
+# some OTHER statement declared it.
+fn: l2_empty_struct_decl_shape (const: @(LmP0Node stmt); int: mi) int
+    @: LmP0Frame fr
+    int: existing
+    if: l2_is_asgn(stmt) = 0
+        return: 0
+    fr: stmt\as\frame
+    if: fr\body = 0 || fr\trailer != 0 || fr\body\trailer != 0 || l2_count_active(fr\body) != 0
+        return: 0
+    existing: l2_own_find(mi, fr\head)
+    if: existing >= 0 && l2_own_decl[existing] != stmt
+        return: 0
+    if: l2_param_find(mi, fr\head) >= 0 || l2_slot_find(mi, fr\head) >= 0 || l2_ml_find(fr\head) >= 0 || l2_colon_model(fr\head) != 0
+        return: 0
+return: 1
 
 # nextMessage: m (author, Q10, 2026-09-23) -- the general mail receiver: m is
 # bound to the graph of the next admitted letter of the CURRENT Thread, and to 0
@@ -12869,6 +12917,25 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             return: l2_error(path, stmt, "invalid raw dereference")
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && raw = 2
             return: l2_error(path, stmt, "unknown foreign field")
+        # `f()`/`f: ()`/closed empty vertical, name absent (FABLE-SONNET-
+        # EMPTY-STRUCT-20260923-132): the empty Structure-body supplies its
+        # own structural type -- declare f as a new, empty structural own
+        # field through the ordinary declaration path, exactly like
+        # `Model: fresh` two cases above minus a named model to record (no
+        # l2_own_nsty_set: there is no name to look up, and an opaque,
+        # no-namespace own field is exactly what a 0-field type has to be).
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_empty_struct_decl_shape(stmt, mi) != 0
+            cj: l2_own_add(mi, stmt\as\frame\head, l2_own_of_dt(l2_colon_graph_ty()), path, stmt)
+            if: cj < 0
+                return: 1
+            if: l2_own_off(mi, cj) = (cast: (size_t) -1)
+                return: l2_error(path, stmt, "size overflow")
+            l2_m_uses[l2_own_off(mi, cj)]: 1
+            l2_m_own[mi]: l2_m_own[mi] + 1
+            if: l2_bind_own(mi, cj, path, stmt) != 0
+                return: 1
+            field: l2_next_active(field\next)
+            continue
         # A bare colon frame whose head is not a call is an update only when
         # that head already has a typed mutable binding.  In particular,
         # `arg: 7` must not silently invent arg; the graph-construction role was
@@ -16049,6 +16116,7 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
     int: cni
     @: LmP0Text cmodel
     @: LmP0Text cname
+    c.array: [64]: char l2_esd_tok
     int: aj 0
     int: aj2 0
     int: am 0
@@ -16826,6 +16894,37 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
             if: l2_emit_invariant(ind, "an own field did not take its fresh value") != 0
                 return: 1
             if: l2_emit_occ_write(mi, oi, ind, "(cast: (@: void) l2_mresult)") != 0
+                return: 1
+            field: l2_next_active(field\next)
+            continue
+        # `f()`/`f: ()`/closed empty vertical, name absent (FABLE-SONNET-
+        # EMPTY-STRUCT-20260923-132): the row l2_check_body already
+        # registered gets a fresh, genuinely empty Lmx node every
+        # activation -- the same lmx_node_new_owned the unit root and a
+        # merge result body use, but with NO lmx_arena_refs_open_owned
+        # call: that refuses a 0-children count outright (lmx_arena_refs
+        # .lm1), and a 0-field structural type has none to open. No
+        # lmx_merge_owned either -- there is no model to merge a
+        # declaration from, so nothing here can fail on admission the way
+        # `Model: fresh` can; only allocation, the same class the unit
+        # root's own construction already leaves as a bare propagated
+        # failure, not a caught throw.
+        if: l2_empty_struct_decl_shape(stmt, mi) != 0
+            oi: l2_own_find(mi, stmt\as\frame\head)
+            if: oi < 0
+                return: l2_error(l2_src, stmt, "unresolved name")
+            if: c.fprintf(l2_out, "%s@: Lmx l2_t%d\n%sl2_t%d: lmx_node_new_owned(l2_program_arena)\n%sif: l2_t%d = 0\n", ind, l2_tn, ind, l2_tn, ind, l2_tn) < 0
+                return: 1
+            if: l2_emit_invariant(ind, "a fresh empty Structure did not allocate") != 0
+                return: 1
+            if: c.sprintf(l2_esd_tok, "(cast: (@: void) l2_t%d)", l2_tn) < 0
+                return: 1
+            l2_tn: l2_tn + 1
+            if: c.fprintf(l2_out, "%sl2_xp: lmx_arena_ref_cell(%s, %uU)\n%sif: l2_xp = 0 || lmx_pointer_store_known(l2_xp[0], %s) != 0\n", ind, l2_own_ctr(oi), (cast: (unsigned) l2_own_uchild[oi]), ind, l2_esd_tok) < 0
+                return: 1
+            if: l2_emit_invariant(ind, "an own field did not take its fresh value") != 0
+                return: 1
+            if: l2_emit_occ_write(mi, oi, ind, l2_esd_tok) != 0
                 return: 1
             field: l2_next_active(field\next)
             continue

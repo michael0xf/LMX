@@ -1,0 +1,46 @@
+# FABLE-SONNET-EMPTY-STRUCT-20260923-132 (book SS10/SS12): the three empty-
+# Structure spellings -- `f()`, `f: ()`, the closed empty vertical -- each
+# declare a new, empty structural own field when the name is absent, through
+# the ordinary declaration path (no KnownModel, no reserved name, no special
+# branch). Each declaration below is followed by a second statement that only
+# runs if control fell through the declaration normally (there is nothing to
+# read back from a 0-field structural type -- the witness is that execution
+# continues, not a field value).
+fn: probe_paren () int
+    a()
+    int: r 1
+    r: 0
+    return: r
+end: probe_paren
+
+fn: probe_colon () int
+    b: ()
+    int: r 1
+    r: 0
+    return: r
+end: probe_colon
+
+fn: probe_vertical () int
+    c:
+    ---
+    int: r 1
+    r: 0
+    return: r
+end: probe_vertical
+
+int: rp
+rp: probe_paren()
+if: rp != 0
+    return: 90
+
+int: rc
+rc: probe_colon()
+if: rc != 0
+    return: 91
+
+int: rv
+rv: probe_vertical()
+if: rv != 0
+    return: 92
+
+return: 0

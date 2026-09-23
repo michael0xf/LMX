@@ -490,6 +490,7 @@ if ($driver) { Add-Row 'OK' 'build:eternal_driver' ($made.ToString() + ' kernel 
 # makes the question answerable before it exists.
 $fixtures = @(
     [pscustomobject]@{ Name = 'entry_return7.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+
     # S2: there is no standalone L1-only program any more -- every program is its unit, E runs in
     # R0 -- so the c.puts entries run on the kernel route, and say what they print.  The empty
     # line of entry_puts_empty is not countable by Says (blank lines are not the program's).
@@ -768,6 +769,13 @@ $fixtures = @(
         Absent = @('l2_out_throw[0]: node'); Debt = @('l2_out_throw[0]: 0', 'l2_out_throw[0]: l2_te') },
     [pscustomobject]@{ Name = 'unit_s1_merge_uncaught_entry.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; MergeFail = 1; Stopped = 1; Thrown = 1;
         Absent = @('l2_out_throw[0]: node'); Debt = @('l2_out_throw[0]: 0') },
+    # D-07: qualified-operand merge emits lmx_merge_profiles_owned; MergeFail 1 fails it via the
+    # profiles tap (shared mergefail counter). Mutant without -Dlmx_merge_profiles_owned cannot
+    # fail the merge -- the program completes with 5 and the row goes RED.
+    [pscustomobject]@{ Name = 'unit_s1_merge_profiles_uncaught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('2'); Fails = 1; MergeFail = 1; Stopped = 1; Thrown = 1;
+        Absent = @('l2_out_throw[0]: node');
+        Debt = @('lmx_merge_profiles_owned(l2_mops, 2U, l2_mbody, node, 0, l2_program_arena, l2_program_arena, l2_mprofiles, 2U, @ l2_mresult)',
+                 'l2_out_throw[0]: 0', 'l2_out_throw[0]: l2_te') },
     [pscustomobject]@{ Name = 'unit_s1_implements_uncaught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0; Fails = 1; Stopped = 1; Thrown = 2;
         Absent = @('l2_out_throw[0]: node'); Debt = @('l2_out_throw[0]: 0', 'l2_out_throw[0]: l2_te') },
     # A `return:` trailer of a method on the throw ABI returns its value through the normal output
@@ -1942,7 +1950,7 @@ foreach ($fx in $fixtures) {
         # native dispatch discards: without it a failing entry body still exits 0 (l2_eternal_driver.lm1).
         # The merge rename (S1.1) passes every merge the program makes through the driver's tap, which
         # fails the Nth on `MergeFail`.
-        $code = Invoke-Step ('fixture.' + $stem + '.compile') $gcc ($kflags + @('-Dmain=l2_generated_main', '-Dlmx_root_close=l2_driver_root_close', '-Dlmx_root_open=l2_driver_root_open', '-Dlmx_merge_owned=l2_driver_merge_owned', '-c', $genC, '-o', $genO)) $root
+        $code = Invoke-Step ('fixture.' + $stem + '.compile') $gcc ($kflags + @('-Dmain=l2_generated_main', '-Dlmx_root_close=l2_driver_root_close', '-Dlmx_root_open=l2_driver_root_open', '-Dlmx_merge_owned=l2_driver_merge_owned', '-Dlmx_merge_profiles_owned=l2_driver_merge_profiles_owned', '-c', $genC, '-o', $genO)) $root
         if ($code -ne 0 -or -not (Test-Path -LiteralPath $genO)) { Add-Row 'FAIL' ('fixture:' + $stem) "gcc exit $code on the generated C"; continue }
         $code = Invoke-Step ('fixture.' + $stem + '.link') $gcc @('-o', $exe, $driverO, $genO, $l2libcO) $root
         if ($code -ne 0 -or -not (Test-Path -LiteralPath $exe)) { Add-Row 'FAIL' ('fixture:' + $stem) "link exit $code"; continue }

@@ -946,6 +946,16 @@ $fixtures = @(
                  '# const: @(char l2_own1) "hosted"',
                  'l2_message\graph: l2_entry_unit', 'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)') },
     [pscustomobject]@{ Name = 'unit_nested_body_own_not_node.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unknown field path segment'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_node_root_unit_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
+        Debt = @('l2_message\graph: l2_entry_unit') },
+    [pscustomobject]@{ Name = 'unit_for_root_hosted_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); EmptyEntry = $true;
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
+        Debt = @('l2_message\graph: l2_entry_unit') },
+    [pscustomobject]@{ Name = 'unit_node_root_in_entry_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown field path root'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_colon_formal_update.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
@@ -1116,7 +1126,7 @@ $fixtures = @(
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_message\graph: l2_entry_unit') },
     [pscustomobject]@{ Name = 'unit_field_path_array_dispatch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
-        Args = @('0');
+        Args = @('0'); EmptyEntry = $true;
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_message\graph: l2_entry_unit') },
     # FABLE-GROKBOT-C-MEMBER-ACCESS-20260923-120 part1: c.* raw member paths.

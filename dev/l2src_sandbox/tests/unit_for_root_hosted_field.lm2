@@ -1,0 +1,18 @@
+# FABLE-SONNET-NODE-ROOT-20260923-121: for\x is the field x of the
+# enclosing for-frame taken as a Structure -- for\hosted here is the SAME
+# cell as the bare hosted own declared in this for-body, read and written
+# through the for root instead of by its own bare name.
+fn: touch_for_hosted () int
+    int: got
+    for: int(i, 0) (i < 1) i++
+        int: hosted 4
+        got: for\hosted
+        if: got != 4
+            return: 95
+        for\hosted: 8
+        if: hosted != 8
+            return: 96
+    end: for
+    return: 0
+
+return: touch_for_hosted()

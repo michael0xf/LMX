@@ -139,6 +139,14 @@ int: l2_ns_has_char 0
 # emitted predef under the SAME condition: without it the constructor is
 # called with no prototype and its pointer is truncated to int.
 int: l2_ns_has_array 0
+# Set when l2_path_root resolves node or for as a root anywhere in the
+# program (FABLE-SONNET-NODE-ROOT-20260923-121): the l2_pst/l2_pxp locals
+# every method's body prelude declares are gated on l2_ns_n/l2_mres_n
+# (an ordinary Structure type or bound merge result exists somewhere), a
+# condition node/for's own-scope roots never need or set -- a program with
+# neither could otherwise still emit a node/for path with nowhere to hold
+# the walk.
+int: l2_uses_node_for_root 0
 # Named-structure type of a formal (k>=0) or return (k=-1).  The emitted ABI
 # is the ordinary graph pointer; this table is only the implements descriptor.
 int: l2_nsty_n 0
@@ -415,10 +423,6 @@ prototype:
     fn: l2_slot_reserve (int: need) int
     fn: l2_dyn_add (int: mi; const: @(LmP0Text t); int: ty) int
     fn: l2_collect_decls (const: @(LmP0Structure body); int: mi; const: @(char path); int: depth; @: int sn) int
-    fn: l2_slash_own (const: @(LmP0Text t)) int
-    fn: l2_slash_for (int: mi; const: @(LmP0Text t)) int
-    fn: l2_slash_for_prefix (int: mi; const: @(LmP0Text t); size_t: stop) int
-    fn: l2_slash_node_prefix (int: mi; const: @(LmP0Text t); size_t: stop) int
     fn: l2_is_char_decl (const: @(LmP0Node stmt)) int
     fn: l2_address_depth (const: @(LmP0Text head)) int
     fn: l2_emit_address_marks (@: FILE out; int: depth) int
@@ -494,7 +498,7 @@ prototype:
     fn: l2_name_is_seg (const: @(LmP0Text name); const: @(char pd); size_t: off; size_t: len) int
     fn: l2_ns_slot_named (int: ni; const: @(char pd); size_t: off; size_t: len; @: int out_kind; @: int out_ent) int
     fn: l2_mrs_slot_named (int: res; const: @(char pd); size_t: off; size_t: len; @: int out_kind; @: int out_ent) int
-    fn: l2_path_root (const: @(char pd); size_t: pn; @: int out_ni; @: int out_res; @: int out_oi) int
+    fn: l2_path_root (const: @(char pd); size_t: pn; @: int out_ni; @: int out_res; @: int out_oi; @: int out_root) int
     fn: l2_path_in_eternal (const: @(char pd); size_t: pn) int
     fn: l2_addr_names_eternal (@: LmP0Field name; @: LmP0Field fld) int
     fn: l2_addr_flat_eternal (@: LmP0Field at) int
@@ -535,7 +539,6 @@ prototype:
     fn: l2_emit_path_load (int: mi; int: oi; const: @(char ind); @: char dest) int
     fn: l2_own_find_host (int: mi; const: @(LmP0Text t); const: @(LmP0Node host)) int
     fn: l2_own_any (int: mi; const: @(LmP0Text t)) int
-    fn: l2_path_own (int: mi; const: @(LmP0Text left); const: @(LmP0Text right)) int
     fn: l2_emit_ccall (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
     fn: l2_slot_decl_ty (const: @(LmP0Node stmt)) int
     fn: l2_slot_find (int: mi; const: @(LmP0Text t)) int
@@ -7334,81 +7337,21 @@ fn: l2_call_args (const: @(LmP0Structure body)) @: LmP0Field
         return: f\value\as\structure\first_field
 return: body\first_field
 
-fn: l2_slash_own (const: @(LmP0Text t)) int
-    int: i 0
-    size_t: n
-    if: t = 0 || t\data = 0 || t\length < 6U
-        return: -1
-    if: t\data[0] != 110 || t\data[1] != 111 || t\data[2] != 100 || t\data[3] != 101 || t\data[4] != 92
-        return: -1
-    n: t\length - 5U
-    while: i < l2_own_n
-        if: l2_own_host[i] = 0 && l2_own_name[i] != 0 && l2_own_name[i]\length = n && memcmp(l2_own_name[i]\data, t\data + 5, n) = 0
-            return: i
-        i: i + 1
-return: -1
-
-fn: l2_slash_for (int: mi; const: @(LmP0Text t)) int
-    if: t = 0
-        return: -1
-return: l2_slash_for_prefix(mi, t, t\length)
-
-fn: l2_slash_for_prefix (int: mi; const: @(LmP0Text t); size_t: stop) int
-    int: i 0
-    int: hit
-    size_t: n
-    hit: -1
-    if: mi < 0 || t = 0 || t\data = 0 || stop < 5U || stop > t\length
-        return: -1
-    if: t\data[0] != 102 || t\data[1] != 111 || t\data[2] != 114 || t\data[3] != 92
-        return: -1
-    n: stop - 4U
-    while: i < l2_own_n
-        if: l2_own_mi[i] = mi && l2_own_host[i] != 0 && l2_frame_head(l2_own_host[i], "for") && l2_own_name[i] != 0 && l2_own_name[i]\length = n && memcmp(l2_own_name[i]\data, t\data + 4, n) = 0 && hit >= 0
-            return: -1
-        if: l2_own_mi[i] = mi && l2_own_host[i] != 0 && l2_frame_head(l2_own_host[i], "for") && l2_own_name[i] != 0 && l2_own_name[i]\length = n && memcmp(l2_own_name[i]\data, t\data + 4, n) = 0
-            hit: i
-        i: i + 1
-return: hit
-
-
-# Array node paths use the same method-local unique lookup as l2_path_own.
-fn: l2_slash_node_prefix (int: mi; const: @(LmP0Text t); size_t: stop) int
-    int: i 0
-    int: hit
-    size_t: n
-    hit: -1
-    if: mi < 0 || t = 0 || t\data = 0 || stop < 6U || stop > t\length
-        return: -1
-    if: t\data[0] != 110 || t\data[1] != 111 || t\data[2] != 100 || t\data[3] != 101 || t\data[4] != 92
-        return: -1
-    n: stop - 5U
-    while: i < l2_own_n
-        if: l2_own_mi[i] = mi && l2_own_host[i] = 0 && l2_own_name[i] != 0 && l2_own_name[i]\length = n && memcmp(l2_own_name[i]\data, t\data + 5, n) = 0
-            if: hit >= 0
-                return: -1
-            hit: i
-        i: i + 1
-return: hit
-
-# The l2_slash_node_prefix/l2_slash_for_prefix shape (root \ arrayname, text
-# form, root ending at the first backslash within t\data[0..stop-1]),
-# generalized past the two literal roots -- FABLE-SONNET-UNIT-LEVEL-ROOTS-
-# 20260923-117, the text-span sibling of l2_own_array_root for
-# l2_own_index_head specifically (statement-head array read/write, which
-# does not go through l2_own_index_tail's field-list walk at all). Same
-# rule: root is a spelling gate (own field or formal, by name), the array
-# name after the backslash is looked up directly in mi's own table exactly
-# as the node/for branches above already do.
-# FABLE-SONNET-ARRAY-WRITE-DISPATCH-20260923-119 (fable's correction to
-# -117): see l2_own_array_root -- a general own-field/formal root's suffix
-# must denote a field of the root's TYPE, never a same-named sibling in
-# mi's own table. That capability is not built here; refusing is the
-# honest state, and the caller's fallback (the ordinary field-path
-# machinery) already gives "unknown field path segment" for this shape.
-# node/for are excluded from this function already (l2_slash_node_prefix/
-# l2_slash_for_prefix handle them, unchanged), so every remaining input
-# now refuses.
+# node's/for's own single-hop own-table lookups (l2_slash_own,
+# l2_slash_for/l2_slash_for_prefix, l2_slash_node_prefix) are removed --
+# FABLE-SONNET-NODE-ROOT-20260923-121, author Q9: node/for are ordinary
+# roots of the -113 path dispatcher now (l2_path_root, l2_e_own_seg,
+# l2_for_own_seg), not reserved spelling prefixes onto the current
+# method's own table, and no longer excluded from this function either --
+# FABLE-SONNET-ARRAY-WRITE-DISPATCH-20260923-119 already made it (the
+# text-span sibling of l2_own_array_root, for l2_own_index_head
+# specifically -- statement-head array read/write) refuse unconditionally
+# for every root: a root's suffix must denote an Array-typed field of the
+# root's TYPE, never a same-named sibling in mi's own table, and that
+# capability (walking the root's type through the namespace slots to an
+# indexed store) is not built. Refusing is the honest state; the caller's
+# fallback (the ordinary field-path machinery) gives "unsupported index"
+# for this shape.
 fn: l2_own_array_root_span (int: mi; const: @(LmP0Text t); size_t: stop) int
 return: 0 - 1
 
@@ -7447,22 +7390,12 @@ fn: l2_own_index_head (const: @(LmP0Text t); int: mi; @: int out_own; @: size_t 
         lb: lb + 1U
     if: lb = t\length || lb = 0U
         return: 1
-    if: lb >= 5U && t\data[0] = 110 && t\data[1] = 111 && t\data[2] = 100 && t\data[3] = 101 && t\data[4] = 92
-        oi: l2_slash_node_prefix(mi, t, lb)
-        if: oi < 0 || t\data[t\length - 1U] != 93
-            return: 2
-        if: l2_array_literal(oi, t, lb + 1U, t\length - 1U, out_index) != 0
-            return: 2
-        \out_own: oi
-        return: 0
-    if: lb >= 4U && t\data[0] = 102 && t\data[1] = 111 && t\data[2] = 114 && t\data[3] = 92
-        oi: l2_slash_for_prefix(mi, t, lb)
-        if: oi < 0 || t\data[t\length - 1U] != 93
-            return: 2
-        if: l2_array_literal(oi, t, lb + 1U, t\length - 1U, out_index) != 0
-            return: 2
-        \out_own: oi
-        return: 0
+    # node/for (FABLE-SONNET-NODE-ROOT-20260923-121): no more literal-
+    # spelling shortcut here -- l2_own_array_root_span refuses every rooted
+    # array head uniformly now, node/for included, exactly like any other
+    # general root (indexing into an Array-typed field of the resolved
+    # root's type is a capability -119 already parked, not this ticket's
+    # either). The bare (unrooted) own-array case just below is unaffected.
     oi: l2_own_array_root_span(mi, t, lb)
     if: oi >= 0
         if: t\data[t\length - 1U] != 93
@@ -7499,8 +7432,6 @@ fn: l2_own_index_tail (@: LmP0Field f; int: mi; @: int out_own; @: size_t out_in
             if: name = 0 || name\value = 0 || name\value\kind != c.LM_P0_NODE_ATOM
                 return: 2
             oi: l2_own_array_root(mi, f\value\as\atom, name\value\as\atom)
-            if: oi < 0
-                oi: l2_path_own(mi, f\value\as\atom, name\value\as\atom)
             bracket: l2_next_active(name\next)
             if: bracket != 0 && bracket\value != 0 && bracket\value\kind = c.LM_P0_NODE_ATOM && l2_text_eq(bracket\value\as\atom, "[")
                 if: oi < 0 || l2_own_is_array(l2_own_ty[oi]) = 0
@@ -7557,8 +7488,6 @@ fn: l2_array_length_own (const: @(LmP0Node node); int: mi) int
         if: name = 0 || name\value = 0 || name\value\kind != c.LM_P0_NODE_ATOM
             return: -1
         oi: l2_own_array_root(mi, arg\value\as\atom, name\value\as\atom)
-        if: oi < 0
-            oi: l2_path_own(mi, arg\value\as\atom, name\value\as\atom)
         ---
     ---
     if: oi < 0
@@ -8490,34 +8419,9 @@ fn: l2_for_cstyle (const: @(LmP0Node stmt)) int
         return: 0
 return: 1
 
-fn: l2_path_own (int: mi; const: @(LmP0Text left); const: @(LmP0Text right)) int
-    int: i 0
-    int: hit
-    int: for_path
-    int: node_path
-    hit: -1
-    for_path: 0
-    node_path: 0
-    if: mi < 0 || left = 0 || right = 0
-        return: -1
-    if: l2_text_eq(left, "for") != 0
-        for_path: 1
-    if: l2_text_eq(left, "node") != 0
-        node_path: 1
-    if: for_path = 0 && node_path = 0
-        return: -1
-    while: i < l2_own_n
-        if: for_path != 0 && l2_own_mi[i] = mi && l2_text_same(l2_own_name[i], right) && l2_own_host[i] != 0 && l2_frame_head(l2_own_host[i], "for") && hit >= 0
-            return: -1
-        if: for_path != 0 && l2_own_mi[i] = mi && l2_text_same(l2_own_name[i], right) && l2_own_host[i] != 0 && l2_frame_head(l2_own_host[i], "for")
-            hit: i
-        if: node_path != 0 && l2_own_mi[i] = mi && l2_own_host[i] = 0 && l2_text_same(l2_own_name[i], right) && hit >= 0
-            return: -1
-        if: node_path != 0 && l2_own_mi[i] = mi && l2_own_host[i] = 0 && l2_text_same(l2_own_name[i], right)
-            hit: i
-        i: i + 1
-return: hit
-
+# l2_path_own (node/for's own single-hop own-table lookup) is removed --
+# FABLE-SONNET-NODE-ROOT-20260923-121, author Q9: node/for are ordinary
+# roots of the -113 path dispatcher now.
 fn: l2_slot_decl_ty (const: @(LmP0Node stmt)) int
     @: LmP0Field f
     @: LmP0Field g
@@ -9894,9 +9798,9 @@ fn: l2_path_rhs (const: @(LmP0Structure body); int: kind; @: size_t out_v) int
     if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM
         return: 1
     t: f\value\as\atom
-    if: kind = 0 && l2_num(t) = 0
+    if: (kind = 0 || kind = 6) && l2_num(t) = 0
         return: 1
-    if: kind = 0
+    if: kind = 0 || kind = 6
         \out_v: l2_literal_value(t)
         return: 0
     cv: l2_char_literal(t)
@@ -10008,11 +9912,12 @@ fn: l2_is_path_head (const: @(LmP0Text t)) int
     int: ni 0
     int: res 0
     int: oi 0
+    int: root 0
     if: t = 0 || t\data = 0 || t\length >= 256U
         return: 0
     if: l2_seg_count(t\data, t\length) < 2
         return: 0
-    if: l2_path_root(t\data, t\length, @ ni, @ res, @ oi) != 0
+    if: l2_path_root(t\data, t\length, @ ni, @ res, @ oi, @ root) != 0
         return: 0
 return: 1
 
@@ -10108,13 +10013,25 @@ return: hit
 # is still a root (l2_is_path_head still routes it to the path machinery),
 # it simply cannot be walked past segment 1; l2_path_kind/l2_emit_path
 # refuse that explicitly instead of guessing, at the segment that needs it.
-fn: l2_path_root (const: @(char pd); size_t: pn; @: int out_ni; @: int out_res; @: int out_oi) int
+# out_root: -1 ordinary (out_ni/out_res/out_oi as before); -2 the literal
+# root "node" (FABLE-SONNET-NODE-ROOT-20260923-121: M.parent, the callable
+# occurrence's lexical parent -- the unit, for any method other than E
+# itself; E has no parent, so "node" inside E resolves nothing here and the
+# path fails downstream as an ordinary unresolved name); >=0 the literal
+# root "for", value = the innermost enclosing for-frame's l2_for_* index
+# (the for-frame's own Structure, read as CORE.md's "for\x" rule). node/for
+# are ordinary roots of this dispatcher now, not reserved spelling prefixes
+# -- an own field or formal literally named "node"/"for" (checked first,
+# unchanged) still wins, matching this dispatcher's existing precedence.
+fn: l2_path_root (const: @(char pd); size_t: pn; @: int out_ni; @: int out_res; @: int out_oi; @: int out_root) int
     size_t: off 0U
     size_t: len 0U
     int: i 0
+    int: fid
     \out_ni: 0 - 1
     \out_res: 0 - 1
     \out_oi: 0 - 1
+    \out_root: 0 - 1
     if: l2_seg_count(pd, pn) < 2
         return: 1
     if: l2_seg_at(pd, pn, 0, @ off, @ len) != 0 || len = 0U
@@ -10127,6 +10044,22 @@ fn: l2_path_root (const: @(char pd); size_t: pn; @: int out_ni; @: int out_res; 
         ---
     if: \out_oi >= 0
         return: 0
+    if: len = 4U && memcmp(pd + off, "node", 4U) = 0 && l2_cur_mi >= 0 && l2_cur_mi != l2_e
+        \out_root: 0 - 2
+        l2_uses_node_for_root: 1
+        return: 0
+    if: len = 3U && memcmp(pd + off, "for", 3U) = 0
+        i: 0
+        fid: 0 - 1
+        while: i < l2_scope_n
+            if: l2_frame_head(l2_scope_at[i], "for") != 0
+                fid: l2_for_find(l2_scope_at[i])
+            i: i + 1
+        if: fid >= 0
+            \out_root: fid
+            l2_uses_node_for_root: 1
+            return: 0
+        ---
     i: 0
     while: i < l2_ns_n
         if: l2_ns_parent[i] < 0 && l2_name_is_seg(l2_ns_name[i], pd, off, len) != 0
@@ -10151,6 +10084,67 @@ fn: l2_path_root (const: @(char pd); size_t: pn; @: int out_ni; @: int out_res; 
         return: 1
 return: 0
 
+# The l2_ns_slot_named/l2_mrs_slot_named contract (kind 0 size_t, 1 char, 2
+# nested, 3 reference, 4 callable, 5 array, 6 a new kind this ticket adds
+# for a plain own-declared int (own_ty 0 -- a leaf l2_ns_slot_named/
+# l2_nsf_kind never needed, since a named-Structure field can only be
+# declared size_t:/char:, but an ordinary own declaration commonly is
+# int:, l2_own_ty 0, and refusing every int:-typed E/for-frame field
+# would have refused far more of the existing corpus than a narrow gap);
+# out_ent the target ni for kind 2/3), but the search is l2_own_* by (mi,
+# host) instead of l2_nsf_* by ni: node/for's segment 1 (FABLE-SONNET-
+# NODE-ROOT-20260923-121) is a field of an own-declared scope (E's
+# top-level own fields, or a for-frame's hosted own fields), not of a
+# named Structure type. Returns the found own-index (never the arena
+# offset -- l2_own_uchild/l2_own_fchild depend on l2_layout_owns, an
+# emit-setup pass; l2_path_kind, a check-time caller, never reads the
+# numeric value, only the found/not-found sign, so this stays timing-safe
+# for both callers and lets l2_emit_path translate own-index to the real
+# offset itself, only once it is safe to). A field whose own-declared
+# type is none of these (unsigned, ulong, pointer, callable, Structure-
+# typed without a recorded nsty) is not mapped to a kind here and reads
+# as not found -- refusing is the honest state until that wider
+# capability is built, not a wrong kind.
+fn: l2_own_seg_scan (int: mi; const: @(LmP0Node host); const: @(char pd); size_t: off; size_t: len; @: int out_kind; @: int out_ent) int
+    int: i 0
+    int: hit 0 - 1
+    \out_kind: 0 - 1
+    \out_ent: 0 - 1
+    while: i < l2_own_n
+        if: l2_own_mi[i] = mi && l2_own_host[i] = (cast: (@: LmP0Node) host) && l2_name_is_seg(l2_own_name[i], pd, off, len) != 0
+            hit: i
+        i: i + 1
+    if: hit < 0
+        return: 0 - 1
+    if: l2_own_ty[hit] = 2
+        \out_kind: 0
+        return: hit
+    if: l2_own_ty[hit] = 1
+        \out_kind: 1
+        return: hit
+    if: l2_own_ty[hit] = 0
+        \out_kind: 6
+        return: hit
+    if: l2_own_nsty_get(hit) >= 0
+        \out_kind: 3
+        \out_ent: l2_own_nsty_get(hit)
+        return: hit
+return: 0 - 1
+
+fn: l2_e_own_seg (const: @(char pd); size_t: off; size_t: len; @: int out_kind; @: int out_ent) int
+    if: l2_e < 0
+        \out_kind: 0 - 1
+        \out_ent: 0 - 1
+        return: 0 - 1
+return: l2_own_seg_scan(l2_e, 0, pd, off, len, out_kind, out_ent)
+
+fn: l2_for_own_seg (int: fid; const: @(char pd); size_t: off; size_t: len; @: int out_kind; @: int out_ent) int
+    if: fid < 0 || fid >= l2_for_n
+        \out_kind: 0 - 1
+        \out_ent: 0 - 1
+        return: 0 - 1
+return: l2_own_seg_scan(l2_for_mi[fid], l2_for_node[fid], pd, off, len, out_kind, out_ent)
+
 # Walk a path without emitting: reports the leaf kind (0 size_t, 1 char,
 # 2 nested, 3 reference, 4 callable) and, for a callable leaf, the method index
 # in out_mi. Returns -1 when the path does not resolve.
@@ -10163,12 +10157,13 @@ fn: l2_path_in_eternal (const: @(char pd); size_t: pn) int
     int: ni 0 - 1
     int: res 0 - 1
     int: oi 0 - 1
+    int: root 0 - 1
     int: segs
     int: i 1
     int: slot
     int: kind 0 - 1
     int: ent 0 - 1
-    if: l2_path_root(pd, pn, @ ni, @ res, @ oi) != 0
+    if: l2_path_root(pd, pn, @ ni, @ res, @ oi, @ root) != 0
         return: 0
     if: ni >= 0 && l2_ns_eternal[ni] >= 0
         return: 1
@@ -10204,8 +10199,9 @@ fn: l2_path_kind (const: @(char pd); size_t: pn; @: int out_mi) int
     int: slot
     int: kind 0 - 1
     int: ent 0 - 1
+    int: root 0 - 1
     \out_mi: 0 - 1
-    if: l2_path_root(pd, pn, @ ni, @ res, @ oi) != 0
+    if: l2_path_root(pd, pn, @ ni, @ res, @ oi, @ root) != 0
         return: 0 - 1
     # An own-rooted path (FABLE-SONNET-FIELD-PATHS-20260923-113): walk it
     # like a namespace root once seeded with the own field's Structure type,
@@ -10221,9 +10217,18 @@ fn: l2_path_kind (const: @(char pd); size_t: pn; @: int out_mi) int
         slot: 0 - 1
         if: i = 1 && res >= 0
             slot: l2_mrs_slot_named(res, pd, off, len, @ kind, @ ent)
-        if: (i > 1 || res < 0) && ni < 0
+        # node/for (FABLE-SONNET-NODE-ROOT-20260923-121): segment 1 of a
+        # node-/for-rooted path is a field of an own-declared scope, found
+        # through l2_own_seg_scan, not l2_ns_slot_named -- root is only
+        # meaningful at i=1, ni takes over for any further segment exactly
+        # as an ordinary own/ns root already does.
+        if: i = 1 && root = 0 - 2
+            slot: l2_e_own_seg(pd, off, len, @ kind, @ ent)
+        if: i = 1 && root >= 0
+            slot: l2_for_own_seg(root, pd, off, len, @ kind, @ ent)
+        if: (i > 1 || (res < 0 && root = 0 - 1)) && ni < 0
             return: 0 - 1
-        if: (i > 1 || res < 0) && ni >= 0
+        if: (i > 1 || (res < 0 && root = 0 - 1)) && ni >= 0
             slot: l2_ns_slot_named(ni, pd, off, len, @ kind, @ ent)
         if: slot < 0
             return: 0 - 1
@@ -10252,8 +10257,9 @@ fn: l2_emit_path (const: @(char pd); size_t: pn; int: mi; const: @(char ind); co
     int: slot
     int: kind 0 - 1
     int: ent 0 - 1
+    int: root 0 - 1
     c.array: [64]: char l2_proot
-    if: l2_path_root(pd, pn, @ ni, @ res, @ oi) != 0
+    if: l2_path_root(pd, pn, @ ni, @ res, @ oi, @ root) != 0
         return: l2_error(l2_src, at, "unknown field path root")
     segs: l2_seg_count(pd, pn)
     # An own-rooted path (FABLE-SONNET-FIELD-PATHS-20260923-113): seed l2_pst
@@ -10273,9 +10279,21 @@ fn: l2_emit_path (const: @(char pd); size_t: pn; int: mi; const: @(char ind); co
         return: 1
     if: oi < 0 && ni >= 0 && l2_emit_path_bail(mi, ind) != 0
         return: 1
-    if: oi < 0 && ni < 0 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(%s, %uU)\n%sif: l2_pst = 0\n", ind, l2_unit_ref, (cast: (unsigned) (l2_mres_base + res)), ind) < 0
+    # node/for (FABLE-SONNET-NODE-ROOT-20260923-121): node's value is the
+    # unit itself (l2_own_ctr's rule for any own field E owns), needing no
+    # arena hop to reach; for's value is the innermost enclosing for-frame's
+    # own Structure, one hop from self at its already-laid-out child slot
+    # (l2_for_uchild, safe here: l2_emit_path only ever runs after the
+    # layout pass that fills it, never at check time).
+    if: oi < 0 && root = 0 - 2 && c.fprintf(l2_out, "%sl2_pst: %s\n", ind, l2_unit_ref) < 0
         return: 1
-    if: oi < 0 && ni < 0 && l2_emit_path_bail(mi, ind) != 0
+    if: oi < 0 && root >= 0 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(self, %uU)\n%sif: l2_pst = 0\n", ind, (cast: (unsigned) l2_for_uchild[root]), ind) < 0
+        return: 1
+    if: oi < 0 && root >= 0 && l2_emit_path_bail(mi, ind) != 0
+        return: 1
+    if: oi < 0 && root = 0 - 1 && ni < 0 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(%s, %uU)\n%sif: l2_pst = 0\n", ind, l2_unit_ref, (cast: (unsigned) (l2_mres_base + res)), ind) < 0
+        return: 1
+    if: oi < 0 && root = 0 - 1 && ni < 0 && l2_emit_path_bail(mi, ind) != 0
         return: 1
     # c.* / foreign member paths on formals and activation locals are emitted by
     # l2_raw_path via l2_ty_raw_c_members (FABLE-GROKBOT-C-MEMBER-ACCESS part1).
@@ -10286,9 +10304,19 @@ fn: l2_emit_path (const: @(char pd); size_t: pn; int: mi; const: @(char ind); co
         slot: 0 - 1
         if: i = 1 && res >= 0
             slot: l2_mrs_slot_named(res, pd, off, len, @ kind, @ ent)
-        if: (i > 1 || res < 0) && ni < 0
+        if: i = 1 && root = 0 - 2
+            slot: l2_e_own_seg(pd, off, len, @ kind, @ ent)
+            if: slot >= 0
+                slot: l2_own_uchild[slot]
+            ---
+        if: i = 1 && root >= 0
+            slot: l2_for_own_seg(root, pd, off, len, @ kind, @ ent)
+            if: slot >= 0
+                slot: l2_own_fchild[slot]
+            ---
+        if: (i > 1 || (res < 0 && root = 0 - 1)) && ni < 0
             return: l2_error(l2_src, at, "field path goes through a slot with no Structure")
-        if: (i > 1 || res < 0) && ni >= 0
+        if: (i > 1 || (res < 0 && root = 0 - 1)) && ni >= 0
             slot: l2_ns_slot_named(ni, pd, off, len, @ kind, @ ent)
         if: slot = 0 - 2
             return: l2_error(l2_src, at, "ambiguous field path segment")
@@ -10304,7 +10332,7 @@ fn: l2_emit_path (const: @(char pd); size_t: pn; int: mi; const: @(char ind); co
             ni: ent
             res: 0 - 1
         ---
-        if: i + 1 = segs && kind != 0 && kind != 1 && kind != 4
+        if: i + 1 = segs && kind != 0 && kind != 1 && kind != 4 && kind != 6
             return: l2_error(l2_src, at, "a field path must end at a primitive field")
         if: i + 1 = segs && kind = 4 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(l2_pst, %uU)\n%sif: l2_pst = 0\n", ind, (cast: (unsigned) slot), ind) < 0
             return: 1
@@ -10322,15 +10350,19 @@ fn: l2_emit_path (const: @(char pd); size_t: pn; int: mi; const: @(char ind); co
 return: 0
 
 # Read-position field path, root \ field only (single hop): fresh\value, an
-# ordinary formal's m\value. FABLE-SONNET-FIELD-PATHS-20260923-113. Returns
-# -1 when left does not name an own field or a namespace-typed name at all
-# -- not this mechanism's path, caller falls back to l2_path_own for node\/
-# for\. Once left DOES resolve this way, any later failure is a real error
-# (1), never a silent fall-through: an unknown right or a non-primitive leaf
-# ends in the same diagnostics l2_path_kind/l2_emit_path already give a
-# write. Chained reads (a\b\c as a value, not an assignment target) are not
-# wired here; only the write side (l2_emit_path's own per-segment loop)
-# chains. No emission: shared by the check-time and emit-time callers.
+# ordinary formal's m\value, node\value or for\value (FABLE-SONNET-NODE-
+# ROOT-20260923-121: node/for are ordinary roots of this same dispatcher
+# now, ni seeded by l2_path_kind's own l2_path_root call, nothing special
+# needed here beyond widening this gate to admit them). FABLE-SONNET-
+# FIELD-PATHS-20260923-113. Returns -1 when left does not name an own
+# field, a namespace-typed name, or node/for in a method other than E --
+# not this mechanism's path. Once left DOES resolve this way, any later
+# failure is a real error (1), never a silent fall-through: an unknown
+# right or a non-primitive leaf ends in the same diagnostics l2_path_kind/
+# l2_emit_path already give a write. Chained reads (a\b\c as a value, not
+# an assignment target) are not wired here; only the write side
+# (l2_emit_path's own per-segment loop) chains. No emission: shared by the
+# check-time and emit-time callers.
 fn: l2_field_path_check (int: mi; const: @(LmP0Text left); const: @(LmP0Text right); @: int out_kind) int
     c.array: [256]: char buf
     size_t: n
@@ -10338,7 +10370,7 @@ fn: l2_field_path_check (int: mi; const: @(LmP0Text left); const: @(LmP0Text rig
     \out_kind: 0 - 1
     if: mi < 0 || left = 0 || right = 0 || left\data = 0 || right\data = 0
         return: 0 - 1
-    if: l2_own_find(mi, left) < 0 && l2_nsty_of_name(mi, left) < 0
+    if: l2_own_find(mi, left) < 0 && l2_nsty_of_name(mi, left) < 0 && l2_text_eq(left, "node") = 0 && l2_text_eq(left, "for") = 0
         return: 0 - 1
     if: left\length + right\length + 2U > 256U
         return: 1
@@ -10347,7 +10379,7 @@ fn: l2_field_path_check (int: mi; const: @(LmP0Text left); const: @(LmP0Text rig
     memcpy((cast: (@: void) (buf + left\length + 1U)), (cast: (@: void) right\data), right\length)
     n: left\length + right\length + 1U
     \out_kind: l2_path_kind(buf, n, @ leaf_mi)
-    if: \out_kind != 0 && \out_kind != 1
+    if: \out_kind != 0 && \out_kind != 1 && \out_kind != 6
         return: 1
 return: 0
 
@@ -10378,39 +10410,25 @@ fn: l2_field_path_read (int: mi; const: @(LmP0Text left); const: @(LmP0Text righ
         return: 1
     if: kind = 1 && l2_emit_cell_load(1, ind, t, at) != 0
         return: 1
+    if: kind = 6 && l2_emit_cell_load(0, ind, t, at) != 0
+        return: 1
     if: c.sprintf(dest, "l2_t%d", t) < 0
         return: 1
 return: 0
 
-# The l2_slash_own/l2_slash_for shape (root \ name[...]), generalized past
-# the two literal roots -- FABLE-SONNET-UNIT-LEVEL-ROOTS-20260923-117. left
-# is a spelling gate exactly as "node"/"for" already are (l2_slash_own does
-# not load node's value either -- the suffix is looked up directly by name
-# in mi's own table); this only widens which spellings are accepted past
-# the two reserved words, by the same l2_own_find/l2_formal_find test
-# l2_field_path_check already uses. Callers try this BEFORE l2_path_own,
-# which stays untouched and is still reached for literal node/for, and for
-# any other left this returns -1 unchanged.
+# The former l2_slash_own/l2_slash_for shape (root \ name[...]) refuses
+# unconditionally now, node/for included (FABLE-SONNET-NODE-ROOT-20260923-
+# 121, author Q9): a root's suffix must denote an Array-typed field of the
+# root's TYPE (FABLE-SONNET-ARRAY-WRITE-DISPATCH-20260923-119's rule),
+# never a same-named sibling in mi's own table, whether the root is
+# literally node/for or any other own-field/formal name -- neither is a
+# spelling gate onto mi's own table anymore. Resolving right as a genuine
+# Array-typed field of left's type through the namespace slots is a new
+# capability (the field lives through l2_own_nsty_get/l2_ns_slot_named on
+# left's type, not in mi's own table at all) no ticket has built yet.
+# Refusing is the honest state; the caller's fallback (the ordinary
+# field-path machinery) gives "unsupported index" for this shape.
 fn: l2_own_array_root (int: mi; const: @(LmP0Text left); const: @(LmP0Text right)) int
-    if: mi < 0 || left = 0 || right = 0
-        return: 0 - 1
-    if: l2_text_eq(left, "for") != 0 || l2_text_eq(left, "node") != 0
-        return: 0 - 1
-    # FABLE-SONNET-ARRAY-WRITE-DISPATCH-20260923-119 (fable's correction to
-    # -117): a general own-field/formal root is a genuine path root
-    # (FABLE-SONNET-FIELD-PATHS-20260923-113) -- left\right denotes the
-    # field "right" OF left's Structure TYPE, never a same-named sibling in
-    # mi's own table (that reading is the "for"/"node" spelling-gate
-    # semantics, wrongly generalized here between -117 and -119). Resolving
-    # right as a genuine Array-typed field of left's type through the
-    # namespace slots, and indexing that cell, is a new capability (the
-    # field lives through l2_own_nsty_get/l2_ns_slot_named on left's type,
-    # not in mi's own table at all) this ticket does not build. Refusing
-    # here for every non-node/for root is the honest state: the caller
-    # falls back to the ordinary field-path machinery, which already gives
-    # "unknown field path segment" for this shape either way -- whether
-    # right names no field of the type at all, or names a real Array field
-    # this mechanism cannot yet address.
 return: 0 - 1
 
 fn: l2_ns_field_ref (int: ni; int: j) int
@@ -11239,6 +11257,7 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
     int: pni 0
     int: pres 0
     int: poi 0
+    int: proot 0
     int: pmi 0
     @: LmP0Field a0
     @: LmP0Field a1
@@ -11406,7 +11425,7 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
     if: idx < 0 && call\head != 0 && call\head\data != 0 && call\head\length < 256U && l2_seg_count(call\head\data, call\head\length) > 1
         # The head is spelled as a path. Say which part of it failed rather
         # than calling the whole statement unsupported.
-        if: l2_path_root(call\head\data, call\head\length, @ pni, @ pres, @ poi) != 0
+        if: l2_path_root(call\head\data, call\head\length, @ pni, @ pres, @ poi, @ proot) != 0
             return: l2_error(path, node, "unknown field path root")
         if: l2_path_kind(call\head\data, call\head\length, @ pmi) < 0
             return: l2_error(path, node, "unknown field path segment")
@@ -11464,6 +11483,7 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
     int: cpni 0
     int: cpres 0
     int: cpoi 0
+    int: cproot 0
     int: fpk 0
     c.array: [256]: char cpbuf
     int: cpraw
@@ -11491,7 +11511,7 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
             return: l2_error(path, at, "unknown foreign field")
         ---
     ---
-    if: cpn != 0U && l2_path_root(cpbuf, cpn, @ cpni, @ cpres, @ cpoi) = 0
+    if: cpn != 0U && l2_path_root(cpbuf, cpn, @ cpni, @ cpres, @ cpoi, @ cproot) = 0
         return: 0
     f: l2_next_active(field)
     i: 0
@@ -11509,32 +11529,22 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
         skip: 0
         p1: 0
         p2: 0
-        po: -1
         if: f\value\kind = c.LM_P0_NODE_ATOM
             p1: l2_next_active(f\next)
         if: p1 != 0 && p1\value != 0 && p1\value\kind = c.LM_P0_NODE_ATOM && l2_is_slash(p1\value\as\atom)
             p2: l2_next_active(p1\next)
-        if: p2 != 0 && p2\value != 0 && p2\value\kind = c.LM_P0_NODE_ATOM
-            po: l2_path_own(mi, f\value\as\atom, p2\value\as\atom)
-        if: p2 != 0 && p2\value != 0 && p2\value\kind = c.LM_P0_NODE_ATOM && po < 0 && (l2_text_eq(f\value\as\atom, "for") || l2_text_eq(f\value\as\atom, "node"))
-            return: l2_error(path, p2\value, "unresolved name")
-        # A field path off an own field or a namespace-typed name, neither
-        # "node" nor "for" -- FABLE-SONNET-FIELD-PATHS-20260923-113. po stays
-        # the own-table single-hop check above; this is the general check
-        # l2_path_kind already gives a namespace path, reused here.
+        # A field path off an own field, a namespace-typed name, or node/for
+        # (FABLE-SONNET-NODE-ROOT-20260923-121: node/for are ordinary roots
+        # of the same dispatcher now, not a separate own-table check tried
+        # first -- FABLE-SONNET-FIELD-PATHS-20260923-113 for the general
+        # mechanism itself, which l2_field_path_check's own gate now also
+        # admits them into).
         fpc: 0 - 1
-        if: p2 != 0 && p2\value != 0 && p2\value\kind = c.LM_P0_NODE_ATOM && po < 0 && l2_text_eq(f\value\as\atom, "for") = 0 && l2_text_eq(f\value\as\atom, "node") = 0
+        if: p2 != 0 && p2\value != 0 && p2\value\kind = c.LM_P0_NODE_ATOM
             fpc: l2_field_path_check(mi, f\value\as\atom, p2\value\as\atom, @ fpk)
         if: fpc = 1
             return: l2_error(path, p2\value, "unresolved name")
         if: fpc = 0
-            have_value: 1
-            i: i + 3
-            f: l2_next_active(p2\next)
-            continue
-        if: po >= 0
-            if: l2_own_is_array(l2_own_ty[po]) != 0
-                return: l2_error(path, f\value, "own array use not yet supported")
             have_value: 1
             i: i + 3
             f: l2_next_active(p2\next)
@@ -11662,8 +11672,6 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
                 field: l2_next_active(field\next)
                 continue
             array_target: l2_own_find(mi, stmt\as\frame\head)
-            if: array_target < 0
-                array_target: l2_slash_own(stmt\as\frame\head)
             if: array_target >= 0 && l2_own_is_array(l2_own_ty[array_target]) != 0
                 return: l2_error(path, stmt, "own array use not yet supported")
         ---
@@ -11906,7 +11914,7 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             return: l2_error(path, stmt, "unsupported body")
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && raw = 0 && rj >= l2_m_arity[mi] && rj < l2_m_arity[mi] + l2_m_sn[mi] && l2_ty_raw_c_members(l2_st[l2_slot_off(mi, rj - l2_m_arity[mi])]) = 0
             return: l2_error(path, stmt, "unknown foreign field")
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && ix != 0 && pd != 0 && (stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\head = 0 || (l2_own_find(mi, stmt\as\frame\head) < 0 && l2_slot_find(mi, stmt\as\frame\head) < 0 && l2_slash_own(stmt\as\frame\head) < 0 && l2_slash_for(mi, stmt\as\frame\head) < 0 && l2_find_method(stmt\as\frame\head) < 0 && l2_param_find(mi, stmt\as\frame\head) < 0 && raw != 0 && l2_is_known(stmt\as\frame\head) = 0 && l2_is_path_head(stmt\as\frame\head) = 0))
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && ix != 0 && pd != 0 && (stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\head = 0 || (l2_own_find(mi, stmt\as\frame\head) < 0 && l2_slot_find(mi, stmt\as\frame\head) < 0 && l2_find_method(stmt\as\frame\head) < 0 && l2_param_find(mi, stmt\as\frame\head) < 0 && raw != 0 && l2_is_known(stmt\as\frame\head) = 0 && l2_is_path_head(stmt\as\frame\head) = 0))
             if: stmt\as\frame\head != 0 && stmt\as\frame\head\data != 0 && stmt\as\frame\head\length < 256U && l2_seg_count(stmt\as\frame\head\data, stmt\as\frame\head\length) > 1
                 return: l2_error(path, stmt, "unknown field path root")
             return: l2_error(path, stmt, "unsupported body")
@@ -12229,6 +12237,7 @@ fn: l2_prep_addr (const: @(LmP0Node node); int: mi; const: @(char ind); @: char 
     int: pni
     int: pres
     int: poi
+    int: proot
     int: pkind
     c.array: [256]: char nm
     if: node = 0 || dest = 0 || ind = 0 || node\as = 0 || node\as\frame = 0 || node\as\frame\body = 0
@@ -12242,7 +12251,7 @@ fn: l2_prep_addr (const: @(LmP0Node node); int: mi; const: @(char ind); @: char 
         pn: l2_join_path(f, 3, nm, 255U)
         pni: 0 - 1
         pres: 0 - 1
-        if: pn != 0U && l2_path_root(nm, pn, @ pni, @ pres, @ poi) = 0 && pni >= 0
+        if: pn != 0U && l2_path_root(nm, pn, @ pni, @ pres, @ poi, @ proot) = 0 && pni >= 0
             pkind: 0
             if: l2_emit_path(nm, pn, mi, ind, node, @ pkind) != 0
                 return: 1
@@ -13417,28 +13426,15 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
             p1: l2_next_active(f\next)
         if: p1 != 0 && p1\value != 0 && p1\value\kind = c.LM_P0_NODE_ATOM && l2_is_slash(p1\value\as\atom)
             p2: l2_next_active(p1\next)
-        if: p2 != 0 && p2\value != 0 && p2\value\kind = c.LM_P0_NODE_ATOM
-            po: l2_path_own(mi, f\value\as\atom, p2\value\as\atom)
-        # A field path off an own field or a namespace-typed name, tried once
-        # l2_path_own's own node\/for\ single-hop table lookup misses --
-        # FABLE-SONNET-FIELD-PATHS-20260923-113.
+        # A field path off an own field, a namespace-typed name, or node/for
+        # -- FABLE-SONNET-NODE-ROOT-20260923-121, FABLE-SONNET-FIELD-PATHS-
+        # 20260923-113.
         fpr: 0 - 1
-        if: p2 != 0 && p2\value != 0 && p2\value\kind = c.LM_P0_NODE_ATOM && po < 0
+        if: p2 != 0 && p2\value != 0 && p2\value\kind = c.LM_P0_NODE_ATOM
             fpr: l2_field_path_read(mi, f\value\as\atom, p2\value\as\atom, ind, at, piece)
         if: fpr = 1
             return: 1
         if: fpr = 0
-            if: l2_cat(buf, piece) != 0
-                return: l2_error(l2_src, at, "expression too long")
-            ao: 0
-            after: 0
-            have_value: 1
-            i: i + 3
-            f: l2_next_active(p2\next)
-            continue
-        if: po >= 0
-            if: l2_emit_path_load(mi, po, ind, piece) != 0
-                return: 1
             if: l2_cat(buf, piece) != 0
                 return: l2_error(l2_src, at, "expression too long")
             ao: 0
@@ -14351,17 +14347,12 @@ fn: l2_emit_ccall (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
         p1: 0
         p2: 0
         po: -1
-        if: f\value\kind = c.LM_P0_NODE_ATOM
-            p1: l2_next_active(f\next)
-        if: p1 != 0 && p1\value != 0 && p1\value\kind = c.LM_P0_NODE_ATOM && l2_is_slash(p1\value\as\atom)
-            p2: l2_next_active(p1\next)
-        if: p2 != 0 && p2\value != 0 && p2\value\kind = c.LM_P0_NODE_ATOM
-            po: l2_path_own(mi, f\value\as\atom, p2\value\as\atom)
-        if: po >= 0
-            if: l2_emit_path_load(mi, po, ind, piece) != 0
-                return: 1
-            i: i + 2
-            f: p2
+        # node/for no longer have their own single-hop own-table lookup here
+        # (FABLE-SONNET-NODE-ROOT-20260923-121): a field path was never
+        # otherwise supported as a call argument (FABLE-SONNET-FIELD-PATHS-
+        # 20260923-113 never wired l2_field_path_read into this position
+        # either), so node/for simply join that same, pre-existing gap now
+        # rather than keeping a special case ordinary roots never had.
         if: po < 0 && l2_index_tail(f, @ p1, @ p2) = 0
             if: first = 0 && l2_cat(buf, ", ") != 0
                 return: 1
@@ -15015,6 +15006,7 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
     int: l2_pni 0
     int: l2_pres 0
     int: l2_poi 0
+    int: l2_proot 0
     int: l2_pown 0
     c.array: [256]: char l2_pbuf
     c.array: [256]: char l2_pnm
@@ -15369,7 +15361,7 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
         # serves every method body, the entry E included.
         # ---------------------------------------------------------------
         l2_pn: 0U
-        if: stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && l2_is_path_head(stmt\as\frame\head) != 0 && l2_head_is_call(stmt\as\frame\head, stmt\as\frame\body, stmt\as\frame\flags, mi) = 0 && l2_slash_own(stmt\as\frame\head) < 0 && l2_slash_for(mi, stmt\as\frame\head) < 0
+        if: stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && l2_is_path_head(stmt\as\frame\head) != 0 && l2_head_is_call(stmt\as\frame\head, stmt\as\frame\body, stmt\as\frame\flags, mi) = 0
             if: l2_path_in_eternal(stmt\as\frame\head\data, stmt\as\frame\head\length) != 0
                 return: l2_error(l2_src, stmt, "an eternal branch field cannot be updated")
             if: l2_emit_path(stmt\as\frame\head\data, stmt\as\frame\head\length, mi, ind, stmt, @ l2_pkind) != 0
@@ -15383,6 +15375,8 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
                 return: 1
             if: l2_pkind = 1 && c.fprintf(l2_out, "%sl2_pxp[0]: lmx_char_rebind_known(l2_pxp[0], %d)\n%sif: l2_pxp[0] = 0\n", ind, (cast: (int) l2_pv), ind) < 0
                 return: 1
+            if: l2_pkind = 6 && c.fprintf(l2_out, "%sif: lmx_int_store_known(l2_pxp[0], %d) != 0\n", ind, (cast: (int) l2_pv)) < 0
+                return: 1
             if: l2_emit_path_bail(mi, ind) != 0
                 return: 1
             field: l2_next_active(field\next)
@@ -15391,7 +15385,7 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
         ---
         if: stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\body != 0
             l2_pn: l2_join_path(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), l2_pbuf, 255U)
-        if: l2_pn != 0U && l2_path_root(l2_pbuf, l2_pn, @ l2_pni, @ l2_pres, @ l2_poi) = 0
+        if: l2_pn != 0U && l2_path_root(l2_pbuf, l2_pn, @ l2_pni, @ l2_pres, @ l2_poi, @ l2_proot) = 0
             if: l2_emit_path(l2_pbuf, l2_pn, mi, ind, stmt, @ l2_pkind) != 0
                 return: 1
             # The destination is an OWN field: a cached value with a dirty
@@ -15850,44 +15844,14 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && raw = 0
             field: l2_next_active(field\next)
+        # node/for's own single-hop write emission (l2_slash_own/l2_slash_for)
+        # is removed (FABLE-SONNET-NODE-ROOT-20260923-121): the FIELD PATHS
+        # branch above now claims every node/for-rooted write first (l2_is_
+        # path_head recognizes them as ordinary roots), so this entire block
+        # -- reachable only when sl, exclusively set by those two calls, was
+        # >= 0 -- was already unreachable for anything else and is now dead.
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && fi < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && l2_is_known(fr\head) = 0 && raw != 0
-            sl: l2_slash_own(fr\head)
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && fi < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && l2_is_known(fr\head) = 0 && raw != 0 && sl < 0
-            sl: l2_slash_for(mi, fr\head)
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && fi < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && l2_is_known(fr\head) = 0 && raw != 0 && sl < 0
             return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && sl >= 0 && l2_eval_fields(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok) != 0
-            return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && sl >= 0 && l2_own_fid[sl] < 0 && l2_own_uchild[sl] < 0
-            return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && sl >= 0 && l2_own_fid[sl] >= 0 && c.fprintf(l2_out, "%sl2_xp: lmx_arena_ref_cell(l2_h%d, %uU)\n", ind, l2_own_fid[sl], (cast: (unsigned) l2_own_fchild[sl])) < 0
-            return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && sl >= 0 && l2_own_fid[sl] < 0 && c.fprintf(l2_out, "%sl2_xp: lmx_arena_ref_cell(%s, %uU)\n", ind, l2_own_ctr(sl), (cast: (unsigned) l2_own_uchild[sl])) < 0
-            return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && sl >= 0 && c.fprintf(l2_out, "%sif: l2_xp = 0\n", ind) < 0
-            return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && sl >= 0 && l2_emit_checkpoint(mi, deep) != 0
-            return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && sl >= 0 && l2_ret_uns(mi) != 0 && c.fprintf(l2_out, "%s    return: 0U\n", ind) < 0
-            return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && sl >= 0 && l2_ret_uns(mi) = 0 && c.fprintf(l2_out, "%s    %s\n", ind, l2_fail_return(mi)) < 0
-            return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && sl >= 0 && l2_own_ty[sl] = 1 && c.fprintf(l2_out, "%sl2_xp[0]: lmx_char_rebind_known(l2_xp[0], ((cast: (int) %s) & 255))\n", ind, l2_tok) < 0
-            return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && sl >= 0 && l2_own_ty[sl] = 2 && c.fprintf(l2_out, "%sif: lmx_size_store_known(l2_xp[0], %s) != 0\n%s    %s\n", ind, l2_tok, ind, l2_fail_return(mi)) < 0
-            return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && sl >= 0 && l2_own_ty[sl] = 0 && c.fprintf(l2_out, "%sif: lmx_int_store_known(l2_xp[0], %s) != 0\n%s    %s\n", ind, l2_tok, ind, l2_fail_return(mi)) < 0
-            return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && sl >= 0 && l2_own_ty[sl] = 3 && c.fprintf(l2_out, "%sif: lmx_unsigned_store_known(l2_xp[0], %s) != 0\n%s    %s\n", ind, l2_tok, ind, l2_fail_return(mi)) < 0
-            return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && sl >= 0 && l2_own_ty[sl] = 36 && c.fprintf(l2_out, "%sif: lmx_ulong_store_known(l2_xp[0], %s) != 0\n%s    %s\n", ind, l2_tok, ind, l2_fail_return(mi)) < 0
-            return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && sl >= 0 && l2_own_is_pointer(l2_own_ty[sl]) != 0 && c.fprintf(l2_out, "%sif: lmx_pointer_store_known(l2_xp[0], (cast: (@: void) %s)) != 0\n%s    %s\n", ind, l2_tok, ind, l2_fail_return(mi)) < 0
-            return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && sl >= 0 && l2_own_fid[sl] >= 0 && l2_m_uses[l2_own_off(mi, sl)] != 0 && c.fprintf(l2_out, "%sl2_q%d_dirty: 0\n", ind, sl) < 0
-            return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && sl >= 0
-            field: l2_next_active(field\next)
         ---
     # A body ending in an if/else can leave the last emitted line multiple
     # levels deeper than its caller's next statement. Source cutters need
@@ -16314,7 +16278,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
         # The field-path temps. A unit with no declaration and no bound
         # result can hold no path, so they are only declared where one is
         # possible.
-        if: (l2_ns_n != 0 || l2_mres_n != 0) && fputs("    @: Lmx l2_pst 0\n    @@: void l2_pxp 0\n", l2_out) < 0
+        if: (l2_ns_n != 0 || l2_mres_n != 0 || l2_uses_node_for_root != 0) && fputs("    @: Lmx l2_pst 0\n    @@: void l2_pxp 0\n", l2_out) < 0
             fclose(l2_out)
             return: 1
         l2_tn: 0

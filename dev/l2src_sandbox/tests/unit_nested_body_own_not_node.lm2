@@ -1,5 +1,12 @@
-# GROKBOT-NESTED-BODY-WITNESSES-20260922-69 negative: own declared inside nested body
-# is NOT reachable as node\name (host-attached; node path is host-less only).
+# GROKBOT-NESTED-BODY-WITNESSES-20260922-69 originally tested that an own
+# declared inside a nested body is NOT reachable as node\name because node
+# was a host-less spelling gate onto the CURRENT method's own table. Under
+# FABLE-SONNET-NODE-ROOT-20260923-121, node\x means "field x of M.parent"
+# (the unit, for any method other than E) -- host no longer matters, and
+# neither does which method's body node\inner is written in: E's own
+# fields are shared/int: shared below, not inner, so this still refuses,
+# now as an ordinary unresolved segment on the unit rather than a
+# host-filter rejection.
 int: shared
 
 fn: bad_node_inner () int

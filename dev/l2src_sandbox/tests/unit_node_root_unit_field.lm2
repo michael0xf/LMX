@@ -1,0 +1,23 @@
+# FABLE-SONNET-NODE-ROOT-20260923-121: node\x is the field x of the
+# callable occurrence's lexical parent (M.parent) -- for any method other
+# than E, that parent is the unit itself, so node\x reads/writes E's own
+# field x. shared is a genuine unit-level (E-owned) field, read and
+# written from a SEPARATE method (not E), then read back through E's own
+# body to confirm both methods see the SAME cell.
+size_t: shared 3U
+
+fn: bump () int
+    size_t: got
+    got: node\shared
+    if: got != 3U
+        return: 95
+    node\shared: 9U
+    return: 0
+
+int: r
+r: bump()
+if: r != 0
+    return: r
+if: shared != 9U
+    return: 96
+return: 0

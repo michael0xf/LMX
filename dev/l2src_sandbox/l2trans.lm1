@@ -525,7 +525,12 @@ prototype:
     fn: l2_type_inst (int: ni; @: char dest) int
     fn: l2_admit_site (int: mi) int
     fn: l2_emit_admit (int: mi; int: ni; const: @(char value); const: @(char ind)) int
-    fn: l2_admit_refusal_status () int
+    fn: l2_implicit_name (int: g) const: @: char
+    fn: l2_throws_declared (int: mi) int
+    fn: l2_implicit_status (int: mi; const: @(char name)) int
+    fn: l2_emit_implicit_throw (int: mi; const: @(char name); const: @(char ind)) int
+    fn: l2_emit_propagate (int: mi; int: callee; int: t; const: @(char ind)) int
+    fn: l2_emit_invariant (const: @(char ind); const: @(char what)) int
     fn: l2_ns_field_elem (int: ni; int: j) int
     fn: l2_ns_field_mi (int: ni; int: j) int
     fn: l2_ns_field_kind (int: ni; int: j) int
@@ -607,7 +612,6 @@ prototype:
     fn: l2_emit_foreign_return (@: FILE out; int: ty) int
     fn: l2_emit_foreign_formal (@: FILE out; int: ty; int: mi; int: fi) int
     fn: l2_ret_uns (int: mi) int
-    fn: l2_fail_return (int: mi) const: @: char
     fn: l2_write_dirs (@: FILE out) int
     fn: l2_emit_os (@: FILE out) int
     fn: l2_check_os (const: @(LmP0Node item); const: @(char path)) int
@@ -2357,12 +2361,16 @@ fn: l2_emit_ret_tr (int: mi; const: @(char ind); const: @(LmP0Structure body)) i
     if: body = 0 || ind = 0
         return: 0
     n: l2_count_active(body)
+    # In a throwing callable the return is the status, and a trailer, like a `return:` in the
+    # body, returns 0: its value goes to the normal output.  A value is never a status.
     if: l2_m_ret[mi] = 8
         if: n != 0
             return: 1
         if: l2_emit_checkpoint(mi, ind) != 0
             return: 1
-        if: c.fprintf(l2_out, "%sreturn\n", ind) < 0
+        if: (l2_m_throws = 0 || l2_m_throws[mi] = 0) && c.fprintf(l2_out, "%sreturn\n", ind) < 0
+            return: 1
+        if: l2_m_throws != 0 && l2_m_throws[mi] != 0 && c.fprintf(l2_out, "%sreturn: 0\n", ind) < 0
             return: 1
         return: 0
     if: n = 0
@@ -2371,7 +2379,9 @@ fn: l2_emit_ret_tr (int: mi; const: @(char ind); const: @(LmP0Structure body)) i
         return: 1
     if: l2_emit_checkpoint(mi, ind) != 0
         return: 1
-    if: c.fprintf(l2_out, "%sreturn: %s\n", ind, l2_tok) < 0
+    if: (l2_m_throws = 0 || l2_m_throws[mi] = 0) && c.fprintf(l2_out, "%sreturn: %s\n", ind, l2_tok) < 0
+        return: 1
+    if: l2_m_throws != 0 && l2_m_throws[mi] != 0 && c.fprintf(l2_out, "%sl2_out_result[0]: %s\n%sreturn: 0\n", ind, l2_tok, ind) < 0
         return: 1
 return: 0
 
@@ -5012,11 +5022,6 @@ fn: l2_ret_uns (int: mi) int
         return: 1
 return: 0
 
-fn: l2_fail_return (int: mi) const: @: char
-    if: l2_m_ret[mi] = 8 && (l2_m_throws = 0 || l2_m_throws[mi] = 0)
-        return: "return"
-return: "return: 0"
-
 fn: l2_write_dirs (@: FILE out) int
     int: j 0
     if: out = 0
@@ -5856,7 +5861,7 @@ fn: l2_emit_own_from (int: mi; int: oi; const: @(char ind)) int
         return: 0
     if: l2_own_from_expr(oi, l2_eof_expr) != 0
         return: 1
-    if: c.fprintf(l2_out, "%sif: l2_q%d_from = 0\n%s    l2_q%d_from: %s\n%sif: l2_q%d_from = 0\n%s    %s\n", ind, oi, ind, oi, l2_eof_expr, ind, oi, ind, l2_fail_return(mi)) < 0
+    if: c.fprintf(l2_out, "%sif: l2_q%d_from = 0\n%s    l2_q%d_from: %s\n%sif: l2_q%d_from = 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: own field %d has no cell\\n\")\n%s    c.abort()\n", ind, oi, ind, oi, l2_eof_expr, ind, oi, ind, oi, ind) < 0
         return: 1
 return: 0
 
@@ -9584,25 +9589,102 @@ fn: l2_admit_site (int: mi) int
     l2_need_admit: 1
 return: 0
 
-# The status a refused admission returns on the implicit throw channel.  Its NAME is
-# the author's Q17 (q17.md): until S1.1 renumbers the channel (declared 1..d, then the
-# implicit names in one global order), this is the one place that spells it.
-fn: l2_admit_refusal_status () int
-return: 1
+# THE IMPLICIT THROW NAMES (S1.1).  An operator that fails throws its own name; nobody has to
+# catch it, and uncaught it reaches the root of the executing Message, which stops (author Q11).
+# The team names them (Q17 = A), and this table is the one place that spells them.  Its ORDER is
+# the global g, the same in every method: a method's status for implicit name g is d + g, where d
+# is the number of names the method declares (0 is the normal return, 1..d its declared names), so
+# a caller that knows a callee's d -- from the callee, or from a callable formal's signature --
+# knows every implicit status the callee can return.  No other status is on the channel: the
+# translator's and the kernel's own broken promises take the diagnostic route (X1,
+# l2_emit_invariant), never a status.
+fn: l2_implicit_name (int: g) const: @: char
+    if: g = 1
+        return: "merge"
+    if: g = 2
+        return: "implements"
+return: 0
+
+# d: how many throw names method mi declares in its header (S1.2).  None until then.
+fn: l2_throws_declared (int: mi) int
+    if: mi < 0
+        return: 0
+return: 0
+
+# The status method mi returns for the implicit name `name`: d + g.  0: not an implicit name.
+fn: l2_implicit_status (int: mi; const: @(char name)) int
+    int: g 1
+    if: name = 0
+        return: 0
+    while: l2_implicit_name(g) != 0
+        if: c.strcmp(l2_implicit_name(g), name) = 0
+            return: l2_throws_declared(mi) + g
+        g: g + 1
+return: 0
+
+# AN IMPLICIT THROW LEAVES THE METHOD.  The caller has written the `if:` line at `ind`; this is
+# its body.  What the activation already wrote is published first -- a checkpoint precedes every
+# exit (§13) -- and the throw leaves with its status and no payload: merge has none (X2), and
+# neither has implements while no catch parameter asks for one.
+fn: l2_emit_implicit_throw (int: mi; const: @(char name); const: @(char ind)) int
+    @: char deep 0
+    int: st
+    st: l2_implicit_status(mi, name)
+    if: st <= 0
+        return: l2_error(l2_src, 0, "internal: not an implicit throw name")
+    if: l2_bump_ind(ind, @ deep) != 0
+        return: 1
+    if: l2_emit_checkpoint(mi, deep) != 0
+        return: 1
+    if: c.fprintf(l2_out, "%sl2_out_throw[0]: 0\n%sreturn: %d\n", deep, deep, st) < 0
+        return: 1
+return: 0
+
+# A THROW THAT PASSES THROUGH A CALL.  The callee's status k is in the callee's numbering and the
+# caller re-encodes it into its own: above d_callee, k is implicit name g = k - d_callee, which the
+# caller returns as d_caller + g.  (1..d_callee are declared names and map to the caller's
+# position of the same name -- S1.2; no method declares any yet.)  The post-call checkpoint is
+# already written.
+fn: l2_emit_propagate (int: mi; int: callee; int: t; const: @(char ind)) int
+    int: shift
+    if: mi < 0 || callee < 0 || ind = 0
+        return: 1
+    shift: l2_throws_declared(mi) - l2_throws_declared(callee)
+    if: c.fprintf(l2_out, "%sif: l2_ts%d != 0\n%s    l2_out_throw[0]: l2_te%d\n", ind, t, ind, t) < 0
+        return: 1
+    if: shift = 0 && c.fprintf(l2_out, "%s    return: l2_ts%d\n", ind, t) < 0
+        return: 1
+    if: shift != 0 && c.fprintf(l2_out, "%s    return: l2_ts%d + %d\n", ind, t, shift) < 0
+        return: 1
+return: 0
+
+# THE DIAGNOSTIC ROUTE (X1).  A check the generated program makes of the translator's or the
+# kernel's own promise -- the shape merge produced, a cell the unit was built with -- is an
+# invariant, not a throw: it is on no status, so no catch can take it and no caller reads it as a
+# name.  It says what broke on stderr and aborts: the kernel has no delivery to a diagnostic root
+# that could stop just this Message (lmx_msg_poll_abort reports only a letter that already
+# succeeded), and going on would bind the wrong shape or read through the missing cell.  The
+# `if:` line is the caller's, at `ind`; `what` is the diagnostic's text.
+fn: l2_emit_invariant (const: @(char ind); const: @(char what)) int
+    if: ind = 0 || what = 0
+        return: 1
+    if: c.fprintf(l2_out, "%s    c.fprintf(c.stderr, \"lmx: invariant: %s\\n\")\n%s    c.abort()\n", ind, what, ind) < 0
+        return: 1
+return: 0
 
 # varA = the candidate, varB = the declared type's shape, consumer = that same
 # shape: every declared field counts as used -- stricter than a uses tree, never
-# looser.  0 is no graph and is not admitted.  NO or UNKNOWN is the implicit
-# throw a failing merge takes: no silent binding.
+# looser.  0 is no graph and is not admitted.  NO or UNKNOWN throws the implicit
+# name `implements` (Q17 = A): no silent binding.
 fn: l2_emit_admit (int: mi; int: ni; const: @(char value); const: @(char ind)) int
     c.array: [128]: char inst
     if: mi < 0 || l2_m_throws = 0 || l2_m_throws[mi] = 0
         return: l2_error(l2_src, 0, "internal: an admission site was not checked")
     if: l2_type_inst(ni, inst) != 0
         return: l2_error(l2_src, 0, "internal: admission to a type with no shape")
-    if: c.fprintf(l2_out, "%sif: %s != 0 && lmx_runtime_implements(l2_program_arena, (cast: (@: Lmx) %s), %s, %s) != c.LMX_IMPLEMENTS_YES\n%s    l2_out_throw[0]: node\n%s    return: %d\n", ind, value, value, inst, inst, ind, ind, l2_admit_refusal_status()) < 0
+    if: c.fprintf(l2_out, "%sif: %s != 0 && lmx_runtime_implements(l2_program_arena, (cast: (@: Lmx) %s), %s, %s) != c.LMX_IMPLEMENTS_YES\n", ind, value, value, inst, inst) < 0
         return: 1
-return: 0
+return: l2_emit_implicit_throw(mi, "implements", ind)
 
 # `T: []: []: x` (author, Q15, 2026-09-23): `[]:` applied twice makes two levels
 # of independent one-dimensional Arrays -- the outer one holds references to
@@ -13837,7 +13919,7 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
     # mark a graph-backed own cache dirty.
     if: l2_emit_checkpoint(mi, ind) != 0
         return: 1
-    if: l2_m_throws[idx] != 0 && c.fprintf(l2_out, "%sif: l2_ts%d != 0\n%s    l2_out_throw[0]: l2_te%d\n%s    return: l2_ts%d\n", ind, t, ind, t, ind, t) < 0
+    if: l2_m_throws[idx] != 0 && l2_emit_propagate(mi, idx, t, ind) != 0
         return: 1
 return: l2_tok_temp(t, dest)
 
@@ -15644,8 +15726,9 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
         # result body fields and is refused below rather than silently dropped.
         #
         # In a source method, process_message is the compiler-selected dynamic
-        # input carried by METHOD.sig. Failure writes the throw graph and returns
-        # declared-throw status without publishing the ordinary result.
+        # input carried by METHOD.sig. Failure throws the implicit name `merge`
+        # (l2_emit_implicit_throw): a checkpoint, no payload, status d + 1, and
+        # the ordinary result is not published.
         if: l2_merge_frame(stmt) != 0
             fr: l2_merge_frame(stmt)\as\frame
             n: l2_merge_arity(l2_merge_frame(stmt))
@@ -15668,7 +15751,9 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
                 bn: l2_count_active(bd)
             if: bd != 0 && bn = 0
                 return: l2_error(l2_src, stmt, "an empty merge result body is not a field list")
-            if: bd != 0 && c.fprintf(l2_out, "%sl2_mbody: lmx_node_new_owned(l2_program_arena)\n%sif: l2_mbody = 0\n%s    return: 1\n%sif: lmx_arena_refs_open_owned(l2_program_arena, l2_mbody, %dU) != 0\n%s    return: 1\n", ind, ind, ind, ind, bn, ind) < 0
+            if: bd != 0 && c.fprintf(l2_out, "%sl2_mbody: lmx_node_new_owned(l2_program_arena)\n%sif: l2_mbody = 0 || lmx_arena_refs_open_owned(l2_program_arena, l2_mbody, %dU) != 0\n", ind, ind, bn) < 0
+                return: 1
+            if: bd != 0 && l2_emit_implicit_throw(mi, "merge", ind) != 0
                 return: 1
             bf: 0
             if: bd != 0
@@ -15682,7 +15767,17 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
                 if: last\value = 0 || last\value\kind != c.LM_P0_NODE_ATOM || l2_num(last\value\as\atom) = 0
                     return: l2_error(l2_src, stmt, "a merge result body field needs a literal")
                 bbody: l2_literal_value(last\value\as\atom)
-                if: c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mbody, %dU)\n%sif: l2_mxp = 0\n%s    return: 1\n%sl2_mxp[0]: lmx_size_new_owned(l2_program_arena)\n%sif: l2_mxp[0] = 0\n%s    return: 1\n%sif: lmx_size_store_known(l2_mxp[0], %zuU) != 0\n%s    return: 1\n", ind, k, ind, ind, ind, ind, ind, ind, l2_literal_value(last\value\as\atom), ind) < 0
+                if: c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mbody, %dU)\n%sif: l2_mxp = 0\n", ind, k, ind) < 0
+                    return: 1
+                if: l2_emit_invariant(ind, "merge result body has no cell for its field") != 0
+                    return: 1
+                if: c.fprintf(l2_out, "%sl2_mxp[0]: lmx_size_new_owned(l2_program_arena)\n%sif: l2_mxp[0] = 0\n", ind, ind) < 0
+                    return: 1
+                if: l2_emit_implicit_throw(mi, "merge", ind) != 0
+                    return: 1
+                if: c.fprintf(l2_out, "%sif: lmx_size_store_known(l2_mxp[0], %zuU) != 0\n", ind, l2_literal_value(last\value\as\atom)) < 0
+                    return: 1
+                if: l2_emit_invariant(ind, "merge result body field refused its value") != 0
                     return: 1
                 bf: l2_next_active(bf\next)
                 k: k + 1
@@ -15770,7 +15865,9 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
                 # expression profile to this call-local span. Duplicates are deliberately
                 # kept: the kernel treats them idempotently and no global/numeric identity
                 # is synthesized by the translator.
-                if: oi >= 0 && c.fprintf(l2_out, "%sl2_mprofiles[%dU]: lmx_range_profile(l2_program_arena, (cast: (@: void) l2_mops[%dU]))\n%sif: l2_mprofiles[%dU] = 0\n%s    return: 1\n", ind, ep, k, ind, ep, ind) < 0
+                if: oi >= 0 && c.fprintf(l2_out, "%sl2_mprofiles[%dU]: lmx_range_profile(l2_program_arena, (cast: (@: void) l2_mops[%dU]))\n%sif: l2_mprofiles[%dU] = 0\n", ind, ep, k, ind, ep) < 0
+                    return: 1
+                if: oi >= 0 && l2_emit_invariant(ind, "a qualified merge operand has no profile") != 0
                     return: 1
                 if: oi >= 0
                     ep: ep + 1
@@ -15794,12 +15891,14 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
                 return: 1
             if: ep > 0 && c.fprintf(l2_out, "%sl2_mstatus: lmx_merge_profiles_owned(l2_mops, %dU, l2_mbody, %s, 0, l2_program_arena, l2_program_arena, l2_mprofiles, %dU, @ l2_mresult)\n", ind, n, l2_unit_ref, ep) < 0
                 return: 1
-            if: c.fprintf(l2_out, "%sif: l2_mstatus != 0 || l2_mresult = 0\n%s    l2_out_throw[0]: node\n%s    return: 1\n", ind, ind, ind) < 0
+            if: c.fprintf(l2_out, "%sif: l2_mstatus != 0 || l2_mresult = 0\n", ind) < 0
+                return: 1
+            if: l2_emit_implicit_throw(mi, "merge", ind) != 0
                 return: 1
             # The generated program checks the SHAPE it was promised: the result width
             # is the sum of the operand child counts plus the body fields, all known
             # here. Without this the merge could succeed and produce anything.
-            if: c.fprintf(l2_out, "%sif: l2_mresult\\len != %d\n%s    return: 71\n", ind, bw, ind) < 0
+            if: c.fprintf(l2_out, "%sif: l2_mresult\\len != %d\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 71\\n\")\n%s    c.abort()\n", ind, bw, ind, ind) < 0
                 return: 1
             l2_mres_width[sl]: bw
             # Second walk, now that the result exists: every qualified-branch operand
@@ -15810,16 +15909,16 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
             bat: 0
             while: k < n
                 oi: l2_ebr_find(last\value\as\atom)
-                if: oi >= 0 && l2_ns_first_kind(l2_ebr_root(oi)) = 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sif: l2_mxp = 0 || lmx_size_value_known(l2_mxp[0]) != %zuU\n%s    return: 74\n", ind, bat, ind, l2_ns_first_value(l2_ebr_root(oi)), ind) < 0
+                if: oi >= 0 && l2_ns_first_kind(l2_ebr_root(oi)) = 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sif: l2_mxp = 0 || lmx_size_value_known(l2_mxp[0]) != %zuU\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 74\\n\")\n%s    c.abort()\n", ind, bat, ind, l2_ns_first_value(l2_ebr_root(oi)), ind, ind) < 0
                     return: 1
-                if: oi >= 0 && l2_ns_first_kind(l2_ebr_root(oi)) = 1 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sif: l2_mxp = 0 || lmx_char_value_known(l2_mxp[0]) != %d\n%s    return: 74\n", ind, bat, ind, (cast: (int) l2_ns_first_value(l2_ebr_root(oi))), ind) < 0
+                if: oi >= 0 && l2_ns_first_kind(l2_ebr_root(oi)) = 1 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sif: l2_mxp = 0 || lmx_char_value_known(l2_mxp[0]) != %d\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 74\\n\")\n%s    c.abort()\n", ind, bat, ind, (cast: (int) l2_ns_first_value(l2_ebr_root(oi))), ind, ind) < 0
                     return: 1
                 # AN ADMITTED BRANCH IS A TERMINAL. merge copies ordinary
                 # mutable state around it but keeps these exact addresses,
                 # which is the only thing that makes sharing it safe.
                 aj: 0
                 while: oi >= 0 && aj < l2_ns_count[l2_ebr_root(oi)]
-                    if: c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), %dU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] != l2_myp[0]\n%s    return: 80\n", ind, bat + aj, ind, l2_unit_ref, (cast: (unsigned) (l2_unit_base + l2_occ_n() + 1 + oi)), aj, ind, ind) < 0
+                    if: c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), %dU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] != l2_myp[0]\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 80\\n\")\n%s    c.abort()\n", ind, bat + aj, ind, l2_unit_ref, (cast: (unsigned) (l2_unit_base + l2_occ_n() + 1 + oi)), aj, ind, ind, ind) < 0
                         return: 1
                     aj: aj + 1
                 ---
@@ -15831,9 +15930,9 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
                     ni: 0 - 1
                 if: ni >= 0 && l2_ns_eternal[ni] >= 0
                     ni: 0 - 1
-                if: oi < 0 && ni >= 0 && l2_ns_first_kind(ni) = 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sif: l2_mxp = 0 || lmx_size_value_known(l2_mxp[0]) != %zuU\n%s    return: 74\n", ind, bat, ind, l2_ns_first_value(ni), ind) < 0
+                if: oi < 0 && ni >= 0 && l2_ns_first_kind(ni) = 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sif: l2_mxp = 0 || lmx_size_value_known(l2_mxp[0]) != %zuU\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 74\\n\")\n%s    c.abort()\n", ind, bat, ind, l2_ns_first_value(ni), ind, ind) < 0
                     return: 1
-                if: oi < 0 && ni >= 0 && l2_ns_first_kind(ni) = 1 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sif: l2_mxp = 0 || lmx_char_value_known(l2_mxp[0]) != %d\n%s    return: 74\n", ind, bat, ind, (cast: (int) l2_ns_first_value(ni)), ind) < 0
+                if: oi < 0 && ni >= 0 && l2_ns_first_kind(ni) = 1 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sif: l2_mxp = 0 || lmx_char_value_known(l2_mxp[0]) != %d\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 74\\n\")\n%s    c.abort()\n", ind, bat, ind, (cast: (int) l2_ns_first_value(ni)), ind, ind) < 0
                     return: 1
                 # ALIASES AND CYCLES THROUGH THE COMMON COPY MAP. Slot bat+j
                 # of the result is the copy of the entry that field j of this
@@ -15850,7 +15949,7 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
                         aj2: 0 - 1
                         if: au >= 0
                             aj2: l2_ns_slot_of_ref(ni, au)
-                        if: aj2 >= 0 && c.fprintf(l2_out, "%sl2_malias: lmx_arena_ref_struct(l2_mresult, %dU)\n%sif: l2_malias = 0\n%s    return: 75\n%sl2_mxp: lmx_arena_ref_cell(l2_malias, %dU)\n%sl2_myp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] != l2_myp[0]\n%s    return: 75\n", ind, bat + aj, ind, ind, ind, am, ind, bat + aj2, ind, ind) < 0
+                        if: aj2 >= 0 && c.fprintf(l2_out, "%sl2_malias: lmx_arena_ref_struct(l2_mresult, %dU)\n%sif: l2_malias = 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 75\\n\")\n%s    c.abort()\n%sl2_mxp: lmx_arena_ref_cell(l2_malias, %dU)\n%sl2_myp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] != l2_myp[0]\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 75\\n\")\n%s    c.abort()\n", ind, bat + aj, ind, ind, ind, ind, am, ind, bat + aj2, ind, ind, ind) < 0
                             return: 1
                         am: am + 1
                     ---
@@ -15865,25 +15964,25 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
                 while: ni >= 0 && aj < l2_ns_count[ni]
                     at: l2_ns_field_kind(ni, aj)
                     au: l2_ns_field_mi(ni, aj)
-                    if: at = 4 && c.fprintf(l2_out, "%sl2_malias: lmx_arena_ref_struct(l2_mresult, %dU)\n%sif: l2_malias = 0 || l2_malias = lmx_arena_ref_struct(%s, %uU)\n%s    return: 77\n", ind, bat + aj, ind, l2_unit_ref, (cast: (unsigned) (l2_unit_base + au)), ind) < 0
+                    if: at = 4 && c.fprintf(l2_out, "%sl2_malias: lmx_arena_ref_struct(l2_mresult, %dU)\n%sif: l2_malias = 0 || l2_malias = lmx_arena_ref_struct(%s, %uU)\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 77\\n\")\n%s    c.abort()\n", ind, bat + aj, ind, l2_unit_ref, (cast: (unsigned) (l2_unit_base + au)), ind, ind) < 0
                         return: 1
-                    if: at = 4 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_malias, 0U)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), 0U)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] != l2_myp[0]\n%s    return: 78\n", ind, ind, l2_unit_ref, (cast: (unsigned) (l2_unit_base + au)), ind, ind) < 0
+                    if: at = 4 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_malias, 0U)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), 0U)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] != l2_myp[0]\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 78\\n\")\n%s    c.abort()\n", ind, ind, l2_unit_ref, (cast: (unsigned) (l2_unit_base + au)), ind, ind, ind) < 0
                         return: 1
-                    if: at = 4 && l2_first_own_child(au) >= 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_malias, %uU)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), %uU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] = l2_myp[0]\n%s    return: 79\n", ind, (cast: (unsigned) l2_first_own_child(au)), ind, l2_unit_ref, (cast: (unsigned) (l2_unit_base + au)), (cast: (unsigned) l2_first_own_child(au)), ind, ind) < 0
+                    if: at = 4 && l2_first_own_child(au) >= 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_malias, %uU)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), %uU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] = l2_myp[0]\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 79\\n\")\n%s    c.abort()\n", ind, (cast: (unsigned) l2_first_own_child(au)), ind, l2_unit_ref, (cast: (unsigned) (l2_unit_base + au)), (cast: (unsigned) l2_first_own_child(au)), ind, ind, ind) < 0
                         return: 1
                     aj: aj + 1
                 ---
                 aj: 0
                 while: ni >= 0 && aj < l2_ns_count[ni]
-                    if: l2_ns_field_kind(ni, aj) = 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), %dU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] = l2_myp[0]\n%s    return: 90\n", ind, bat + aj, ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni))), aj, ind, ind) < 0
+                    if: l2_ns_field_kind(ni, aj) = 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), %dU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] = l2_myp[0]\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 90\\n\")\n%s    c.abort()\n", ind, bat + aj, ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni))), aj, ind, ind, ind) < 0
                         return: 1
-                    if: l2_ns_field_kind(ni, aj) = 5 && l2_ns_field_len(ni, aj) > 0U && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), %dU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] = l2_myp[0]\n%s    return: 91\n%sif: (cast: (@: LmxArrayDesc) l2_mxp[0])\\len != %zuU\n%s    return: 91\n%sif: (cast: (@: LmxArrayDesc) l2_mxp[0])\\data = (cast: (@: LmxArrayDesc) l2_myp[0])\\data\n%s    return: 91\n", ind, bat + aj, ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni))), aj, ind, ind, ind, l2_ns_field_len(ni, aj), ind, ind, ind) < 0
+                    if: l2_ns_field_kind(ni, aj) = 5 && l2_ns_field_len(ni, aj) > 0U && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), %dU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] = l2_myp[0]\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 91\\n\")\n%s    c.abort()\n%sif: (cast: (@: LmxArrayDesc) l2_mxp[0])\\len != %zuU\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 91\\n\")\n%s    c.abort()\n%sif: (cast: (@: LmxArrayDesc) l2_mxp[0])\\data = (cast: (@: LmxArrayDesc) l2_myp[0])\\data\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 91\\n\")\n%s    c.abort()\n", ind, bat + aj, ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni))), aj, ind, ind, ind, ind, l2_ns_field_len(ni, aj), ind, ind, ind, ind, ind) < 0
                         return: 1
-                    if: l2_ns_field_kind(ni, aj) = 5 && l2_ns_field_len(ni, aj) = 0U && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), %dU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] = l2_myp[0]\n%s    return: 91\n%sif: (cast: (@: LmxArrayDesc) l2_mxp[0])\\len != 0U || (cast: (@: LmxArrayDesc) l2_mxp[0])\\data != 0 || (cast: (@: LmxArrayDesc) l2_myp[0])\\data != 0\n%s    return: 91\n", ind, bat + aj, ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni))), aj, ind, ind, ind, ind) < 0
+                    if: l2_ns_field_kind(ni, aj) = 5 && l2_ns_field_len(ni, aj) = 0U && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), %dU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] = l2_myp[0]\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 91\\n\")\n%s    c.abort()\n%sif: (cast: (@: LmxArrayDesc) l2_mxp[0])\\len != 0U || (cast: (@: LmxArrayDesc) l2_mxp[0])\\data != 0 || (cast: (@: LmxArrayDesc) l2_myp[0])\\data != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 91\\n\")\n%s    c.abort()\n", ind, bat + aj, ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni))), aj, ind, ind, ind, ind, ind, ind) < 0
                         return: 1
-                    if: l2_ns_field_kind(ni, aj) = 6 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), %dU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] = l2_myp[0]\n%s    return: 91\n%sif: (cast: (@: LmxArrayDesc) l2_mxp[0])\\len != 0U || (cast: (@: LmxArrayDesc) l2_mxp[0])\\data != 0\n%s    return: 91\n", ind, bat + aj, ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni))), aj, ind, ind, ind, ind) < 0
+                    if: l2_ns_field_kind(ni, aj) = 6 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), %dU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] = l2_myp[0]\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 91\\n\")\n%s    c.abort()\n%sif: (cast: (@: LmxArrayDesc) l2_mxp[0])\\len != 0U || (cast: (@: LmxArrayDesc) l2_mxp[0])\\data != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 91\\n\")\n%s    c.abort()\n", ind, bat + aj, ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni))), aj, ind, ind, ind, ind, ind, ind) < 0
                         return: 1
-                    if: l2_ns_field_kind(ni, aj) = 3 && l2_ns_eternal[l2_ns_field_ref(ni, aj)] >= 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sif: l2_mxp = 0 || l2_mxp[0] != (cast: (@: void) lmx_arena_ref_struct(%s, %uU))\n%s    return: 80\n", ind, bat + aj, ind, l2_unit_ref, (cast: (unsigned) (l2_unit_base + l2_occ_n() + 1 + l2_ns_eternal[l2_ns_field_ref(ni, aj)])), ind) < 0
+                    if: l2_ns_field_kind(ni, aj) = 3 && l2_ns_eternal[l2_ns_field_ref(ni, aj)] >= 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sif: l2_mxp = 0 || l2_mxp[0] != (cast: (@: void) lmx_arena_ref_struct(%s, %uU))\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 80\\n\")\n%s    c.abort()\n", ind, bat + aj, ind, l2_unit_ref, (cast: (unsigned) (l2_unit_base + l2_occ_n() + 1 + l2_ns_eternal[l2_ns_field_ref(ni, aj)])), ind, ind) < 0
                         return: 1
                     aj: aj + 1
                 ---
@@ -15904,16 +16003,18 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
             # operand first field, the last child the last field of the body when there
             # is one, otherwise of the last operand. A shape check alone would pass a
             # copy that moved the right number of wrong values.
-            if: bfok = 1 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, 0U)\n%sif: l2_mxp = 0 || lmx_size_value_known(l2_mxp[0]) != %zuU\n%s    return: 72\n", ind, ind, bfirst, ind) < 0
+            if: bfok = 1 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, 0U)\n%sif: l2_mxp = 0 || lmx_size_value_known(l2_mxp[0]) != %zuU\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 72\\n\")\n%s    c.abort()\n", ind, ind, bfirst, ind, ind) < 0
                 return: 1
-            if: bfok = 2 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, 0U)\n%sif: l2_mxp = 0 || lmx_char_value_known(l2_mxp[0]) != %d\n%s    return: 72\n", ind, ind, (cast: (int) bfirst), ind) < 0
+            if: bfok = 2 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, 0U)\n%sif: l2_mxp = 0 || lmx_char_value_known(l2_mxp[0]) != %d\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 72\\n\")\n%s    c.abort()\n", ind, ind, (cast: (int) bfirst), ind, ind) < 0
                 return: 1
-            if: blok = 1 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sif: l2_mxp = 0 || lmx_size_value_known(l2_mxp[0]) != %zuU\n%s    return: 73\n", ind, bw - 1, ind, blast, ind) < 0
+            if: blok = 1 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sif: l2_mxp = 0 || lmx_size_value_known(l2_mxp[0]) != %zuU\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 73\\n\")\n%s    c.abort()\n", ind, bw - 1, ind, blast, ind, ind) < 0
                 return: 1
-            if: blok = 2 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sif: l2_mxp = 0 || lmx_char_value_known(l2_mxp[0]) != %d\n%s    return: 73\n", ind, bw - 1, ind, (cast: (int) blast), ind) < 0
+            if: blok = 2 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sif: l2_mxp = 0 || lmx_char_value_known(l2_mxp[0]) != %d\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 73\\n\")\n%s    c.abort()\n", ind, bw - 1, ind, (cast: (int) blast), ind, ind) < 0
                 return: 1
             # The result is bound under its source name: a reserved unit child.
-            if: c.fprintf(l2_out, "%sif: lmx_arena_ref_store(%s, %uU, (cast: (@: void) l2_mresult)) != 0\n%s    return: 1\n", ind, l2_unit_ref, (cast: (unsigned) (l2_mres_base + sl)), ind) < 0
+            if: c.fprintf(l2_out, "%sif: lmx_arena_ref_store(%s, %uU, (cast: (@: void) l2_mresult)) != 0\n", ind, l2_unit_ref, (cast: (unsigned) (l2_mres_base + sl))) < 0
+                return: 1
+            if: l2_emit_invariant(ind, "merge result not bound to its name") != 0
                 return: 1
             l2_merge_n: l2_merge_n + 1
             field: l2_next_active(field\next)
@@ -16342,7 +16443,13 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
             cni: l2_ns_find(cmodel)
             if: oi < 0 || cni < 0
                 return: l2_error(l2_src, stmt, "unresolved name")
-            if: c.fprintf(l2_out, "%sl2_mops[0U]: lmx_arena_ref_struct(%s, %uU)\n%sl2_mbody: 0\n%sl2_mstatus: lmx_merge_owned(l2_mops, 1U, l2_mbody, %s, 0, l2_program_arena, l2_program_arena, @ l2_mresult)\n%sif: l2_mstatus != 0 || l2_mresult = 0\n%s    l2_out_throw[0]: node\n%s    return: 1\n%sl2_xp: lmx_arena_ref_cell(%s, %uU)\n%sif: l2_xp = 0\n%s    l2_out_throw[0]: node\n%s    return: 1\n%sif: lmx_pointer_store_known(l2_xp[0], (cast: (@: void) l2_mresult)) != 0\n%s    l2_out_throw[0]: node\n%s    return: 1\n", ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(cni))), ind, ind, l2_unit_ref, ind, ind, ind, ind, l2_own_ctr(oi), (cast: (unsigned) l2_own_uchild[oi]), ind, ind, ind, ind, ind, ind) < 0
+            if: c.fprintf(l2_out, "%sl2_mops[0U]: lmx_arena_ref_struct(%s, %uU)\n%sl2_mbody: 0\n%sl2_mstatus: lmx_merge_owned(l2_mops, 1U, l2_mbody, %s, 0, l2_program_arena, l2_program_arena, @ l2_mresult)\n%sif: l2_mstatus != 0 || l2_mresult = 0\n", ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(cni))), ind, ind, l2_unit_ref, ind) < 0
+                return: 1
+            if: l2_emit_implicit_throw(mi, "merge", ind) != 0
+                return: 1
+            if: c.fprintf(l2_out, "%sl2_xp: lmx_arena_ref_cell(%s, %uU)\n%sif: l2_xp = 0 || lmx_pointer_store_known(l2_xp[0], (cast: (@: void) l2_mresult)) != 0\n", ind, l2_own_ctr(oi), (cast: (unsigned) l2_own_uchild[oi]), ind) < 0
+                return: 1
+            if: l2_emit_invariant(ind, "an own field did not take its fresh value") != 0
                 return: 1
             if: l2_emit_occ_write(mi, oi, ind, "(cast: (@: void) l2_mresult)") != 0
                 return: 1
@@ -16902,10 +17009,10 @@ fn: l2_emit_unit (const: @(char out_path)) int
                     fclose(l2_out)
                     return: 1
             ---
-            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_fid[k] >= 0 && c.fprintf(l2_out, "    l2_q%d_from: lmx_arena_ref_cell(l2_h%d, %uU)\n    if: l2_q%d_from = 0\n        %s\n", k, l2_own_fid[k], (cast: (unsigned) l2_own_fchild[k]), k, l2_fail_return(i)) < 0
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_fid[k] >= 0 && c.fprintf(l2_out, "    l2_q%d_from: lmx_arena_ref_cell(l2_h%d, %uU)\n    if: l2_q%d_from = 0\n        c.fprintf(c.stderr, \"lmx: invariant: own field %d has no cell\\n\")\n        c.abort()\n", k, l2_own_fid[k], (cast: (unsigned) l2_own_fchild[k]), k, k) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && c.fprintf(l2_out, "    l2_q%d_from: lmx_arena_ref_cell(%s, %uU)\n    if: l2_q%d_from = 0\n        %s\n", k, l2_own_ctr(k), (cast: (unsigned) l2_own_uchild[k]), k, l2_fail_return(i)) < 0
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && c.fprintf(l2_out, "    l2_q%d_from: lmx_arena_ref_cell(%s, %uU)\n    if: l2_q%d_from = 0\n        c.fprintf(c.stderr, \"lmx: invariant: own field %d has no cell\\n\")\n        c.abort()\n", k, l2_own_ctr(k), (cast: (unsigned) l2_own_uchild[k]), k, k) < 0
                 fclose(l2_out)
                 return: 1
             if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_param_of(i, k) < 0 && l2_own_ty[k] = 1 && c.fprintf(l2_out, "    l2_q%d: (cast: (char) lmx_char_value_known(l2_q%d_from[0]))\n", k, k) < 0
@@ -17488,7 +17595,10 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: l2_e >= 0 && fputs(")\n", l2_out) < 0
         fclose(l2_out)
         return: 1
-    if: l2_e >= 0 && l2_m_throws[l2_e] != 0 && fputs("        if: l2_entry_status != 0\n            return: 70\n", l2_out) < 0
+    # An uncaught throw has reached the root (author Q11): the executing Message stops -- it
+    # takes no further turn -- and the entry has no value.  The adapter's own int, which the kernel
+    # does not read, is the status that arrived: E declares no throws, so it is the implicit g.
+    if: l2_e >= 0 && l2_m_throws[l2_e] != 0 && fputs("        if: l2_entry_status != 0\n            l2_message\\running: 0\n            return: l2_entry_status\n", l2_out) < 0
         fclose(l2_out)
         return: 1
     if: l2_e >= 0 && fputs("        l2_program_result: l2_entry_value\n        l2_program_done: 1\n        return: l2_entry_value\n", l2_out) < 0

@@ -541,19 +541,20 @@ $fixtures = @(
     # ADMISSION (fable's B2, author Q12): an untyped graph -- the letter nextMessage takes -- bound
     # to a declared Structure type (nextMessage into a typed own field, rebinding it, a typed
     # formal's argument) is admitted at run time by the kernel's implements walk against the
-    # declared type's shape; a refusal is the implicit failure a failing merge takes (`Fails`: the
-    # entry has no value, exit 1).  MainLetter is an ordinary declared Structure (author Q15).
+    # declared type's shape; a refusal throws the implicit name implements (Q17 = A; g = 2, where a
+    # failing merge is 1), and uncaught (`Fails`) the entry has no value, exit 1.  MainLetter is an
+    # ordinary declared Structure (author Q15).
     [pscustomobject]@{ Name = 'unit_admit_letter_typed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0; Argv = @('a', 'b');
         Absent = @(); Debt = @('lmx_runtime_implements(l2_program_arena, (cast: (@: Lmx) l2_ngraph)') },
     [pscustomobject]@{ Name = 'unit_admit_letter_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_admit_letter_not_model.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0; Fails = 1;
+    [pscustomobject]@{ Name = 'unit_admit_letter_not_model.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0; Fails = 1; Stopped = 1; Thrown = 2;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_admit_formal_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0; Fails = 1;
+    [pscustomobject]@{ Name = 'unit_admit_formal_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0; Fails = 1; Stopped = 1; Thrown = 2;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_admit_rebind_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0; Fails = 1;
+    [pscustomobject]@{ Name = 'unit_admit_rebind_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0; Fails = 1; Stopped = 1; Thrown = 2;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_admit_letter_extra_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0; Fails = 1;
+    [pscustomobject]@{ Name = 'unit_admit_letter_extra_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0; Fails = 1; Stopped = 1; Thrown = 2;
         Absent = @(); Debt = @() },
     # KNOWN COARSENESS (next_core_tasks.md 7): the walk does not look inside the outer Array, so an
     # `int: []: []:` field admits the char letter.  This row flips to Fails with the port.
@@ -715,17 +716,17 @@ $fixtures = @(
     # still forwarding its own single `node`.  The compile is the regression: the L1 generated
     # before the change fails these rows on the text, and its C fails gcc on the duplicate alone.
     #
-    # WHAT THE RUN DOES AND DOES NOT PROVE.  It proves the generated C compiles unchanged, links
-    # against the kernel closure, takes its turn through merge-in-method without dying and closes
-    # its root once.  It does NOT prove the source program's own result: lmx_thread_dispatch_native
-    # drops the entry's return, so `return: 81`, the throw status 70 and the merge shape codes
-    # 71..80 are all mute and the process exits 0 regardless.  Two of the three declare no eternal
-    # branch; the driver is given 0 and checks that the array exists and is empty.
-    # `l2_out_throw[0]: node` is pinned as it IS, not as it should be: what the failure payload
-    # ought to be is an open question of the model, and this row must change with that answer.
-    [pscustomobject]@{ Name = 'unit_merge_in_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+    # WHAT THE RUN PROVES.  The generated C compiles unchanged, links against the kernel closure,
+    # takes its turn through merge-in-method and closes its root once, and the driver keeps the
+    # entry's own int (the root-open tap), so a `return: 81` fails the row.  The failure exit is
+    # pinned as S1.1 made it (-133): merge has no payload (X2), so a failing merge leaves
+    # `l2_out_throw[0]: 0` -- not the old `node` stub -- and returns its status d + g; the shape
+    # checks 71..91 are invariants on the diagnostic route, never a status (X1).  A completed turn
+    # leaves the Message running (`Stopped` 0).  Two of the three declare no eternal branch; the
+    # driver is given 0 and checks that the array exists and is empty.
+    [pscustomobject]@{ Name = 'unit_merge_in_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Stopped = 0;
         Args = @('1', 'size', '0', '0', '7');
-        Absent = @('Lmx node; @: Lmx node', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
+        Absent = @('Lmx node; @: Lmx node', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)', 'l2_out_throw[0]: node', 'return: 71');
         Debt = @('fn: l2_m0 (@: Lmx node; @: Lmx self; @: Lmx l2_msg; @: int l2_out_result; @@: Lmx l2_out_throw) int',
                  'fn: l2_m1 (@: Lmx node; @: Lmx self) int',
                  'fn: l2_m2 (@: Lmx node; @: Lmx self; @: Lmx l2_msg; @: int l2_out_result; @@: Lmx l2_out_throw) int',
@@ -733,23 +734,44 @@ $fixtures = @(
                  'l2_m3(l2_c0\parent, l2_c0, l2_msg, @ l2_te1)',
                  'l2_m0(l2_c2\parent, l2_c2, l2_msg, @ l2_t3, @ l2_te3)',
                  'l2_m2(l2_c0\parent, l2_c0, l2_msg, @ l2_t1, @ l2_te1)',
-                 'l2_out_throw[0]: node',
+                 'l2_out_throw[0]: 0',
+                 'c.fprintf(c.stderr, "lmx: invariant: merge result check 71\n")',
                  'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)') },
     [pscustomobject]@{ Name = 'unit_throwing_callable.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
-        Absent = @('Lmx node; @: Lmx node');
+        Absent = @('Lmx node; @: Lmx node', 'l2_out_throw[0]: node', 'return: 71');
         Debt = @('fn: l2_m0 (@: Lmx node; @: Lmx self; @: Lmx l2_msg; @: int l2_out_result; @@: Lmx l2_out_throw) int',
                  'l2_m0(l2_c0\parent, l2_c0, l2_msg, @ l2_t1, @ l2_te1)',
-                 'l2_out_throw[0]: node',
+                 'l2_out_throw[0]: 0',
                  'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)') },
     [pscustomobject]@{ Name = 'unit_recursion.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
-        Absent = @('Lmx node; @: Lmx node', 'l2_p2_0; @: Lmx node');
+        Absent = @('Lmx node; @: Lmx node', 'l2_p2_0; @: Lmx node', 'l2_out_throw[0]: node', 'return: 71');
         Debt = @('fn: l2_m2 (@: Lmx node; @: Lmx self; size_t: l2_p2_0; @: Lmx l2_msg; @: size_t l2_out_result; @@: Lmx l2_out_throw) int',
                  'l2_m2(l2_c0\parent, l2_c0, l2_q7, l2_msg, @ l2_t1, @ l2_te1)',
                  'l2_m2(l2_c4\parent, l2_c4, 2U, l2_msg, @ l2_t5, @ l2_te5)',
-                 'l2_out_throw[0]: node',
+                 'l2_out_throw[0]: 0',
                  'lmx_root_open(@ l2_program_root, l2_program_entry, 5000U)') },
+    # S1.1, THE STATUS DISCIPLINE OF THE IMPLICIT CHANNEL (FABLE-OPUS-S1-STATUS-20260923-133).  One
+    # numbering per method: 0 normal, 1..d its declared names (none before S1.2), then the implicit
+    # names at d + g in one global order, merge = 1 and implements = 2 (author Q11; Q17 = A).  A
+    # merge made to fail from the outside (`MergeFail`, the driver's merge tap) throws merge: a
+    # checkpoint, no payload (X2), status d + 1.  Nothing catches it (catch is S1.3), so it passes
+    # each caller -- re-encoded into the caller's numbering -- and reaches the root: the entry has
+    # no value (`Fails`, exit 1), the Message is stopped (`Stopped` 1: R0's running = 0 at close)
+    # and the status that arrived is the name's g (`Thrown`).  The first row fails the merge
+    # statement inside a method E calls, the second the `Model: fresh` merge in E itself; the
+    # third is a refused admission, thrown inside a method E calls, which arrives as 2.
+    [pscustomobject]@{ Name = 'unit_s1_merge_uncaught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; MergeFail = 1; Stopped = 1; Thrown = 1;
+        Absent = @('l2_out_throw[0]: node'); Debt = @('l2_out_throw[0]: 0', 'l2_out_throw[0]: l2_te') },
+    [pscustomobject]@{ Name = 'unit_s1_merge_uncaught_entry.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; MergeFail = 1; Stopped = 1; Thrown = 1;
+        Absent = @('l2_out_throw[0]: node'); Debt = @('l2_out_throw[0]: 0') },
+    [pscustomobject]@{ Name = 'unit_s1_implements_uncaught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0; Fails = 1; Stopped = 1; Thrown = 2;
+        Absent = @('l2_out_throw[0]: node'); Debt = @('l2_out_throw[0]: 0', 'l2_out_throw[0]: l2_te') },
+    # A `return:` trailer of a method on the throw ABI returns its value through the normal output
+    # with status 0, as a `return:` in the body does: the row completes with the value.
+    [pscustomobject]@{ Name = 'unit_s1_trailer_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 5; Stopped = 0;
+        Absent = @(); Debt = @('l2_out_result[0]: 5') },
     # THE STICKY DIRTY OF AN ADDRESS-TAKEN LOCAL (GROK-COLON-OCCURRENCE-20260922-02).  Any executed
     # `@x` of an addressable activation-local makes sticky through activation end -- before, between
     # or after occurrence bindings.  Address-taking invents no graph field; `p` always addresses the
@@ -1552,10 +1574,12 @@ foreach ($fx in $fixtures) {
         if (-not $driver) { Add-Row 'FAIL' ('fixture:' + $stem) 'the driver did not build, so the program cannot be run'; continue }
         $genO = Join-Path $gen ($stem + '.o')
         $exe = Join-Path $bin ($stem + '.exe')
-        # The generated C is compiled AS IT IS; the three renames are what hands its root to the driver.
+        # The generated C is compiled AS IT IS; the renames are what hands its root to the driver.
         # The root-open rename lets the driver observe the entry adapter's own int, which the kernel's
         # native dispatch discards: without it a failing entry body still exits 0 (l2_eternal_driver.lm1).
-        $code = Invoke-Step ('fixture.' + $stem + '.compile') $gcc ($kflags + @('-Dmain=l2_generated_main', '-Dlmx_root_close=l2_driver_root_close', '-Dlmx_root_open=l2_driver_root_open', '-c', $genC, '-o', $genO)) $root
+        # The merge rename (S1.1) passes every merge the program makes through the driver's tap, which
+        # fails the Nth on `MergeFail`.
+        $code = Invoke-Step ('fixture.' + $stem + '.compile') $gcc ($kflags + @('-Dmain=l2_generated_main', '-Dlmx_root_close=l2_driver_root_close', '-Dlmx_root_open=l2_driver_root_open', '-Dlmx_merge_owned=l2_driver_merge_owned', '-c', $genC, '-o', $genO)) $root
         if ($code -ne 0 -or -not (Test-Path -LiteralPath $genO)) { Add-Row 'FAIL' ('fixture:' + $stem) "gcc exit $code on the generated C"; continue }
         $code = Invoke-Step ('fixture.' + $stem + '.link') $gcc @('-o', $exe, $driverO, $genO, $l2libcO) $root
         if ($code -ne 0 -or -not (Test-Path -LiteralPath $exe)) { Add-Row 'FAIL' ('fixture:' + $stem) "link exit $code"; continue }
@@ -1569,6 +1593,12 @@ foreach ($fx in $fixtures) {
         # `Fails`: the entry does not complete (an uncaught implicit failure), so the program has no
         # value and exits 1; the driver checks exactly that instead of an entry value.
         if ($fx.PSObject.Properties['Fails']) { $runArgs = $runArgs + @('fails', [string]$fx.Fails) }
+        # S1.1: `MergeFail` N fails the program's Nth merge (the driver's merge tap); `Stopped` 1 is R0's
+        # Message stopped at close (running = 0) and 0 still running; `Thrown` is the status that
+        # reached the root -- the implicit name's g, since E declares no throws.
+        if ($fx.PSObject.Properties['MergeFail']) { $runArgs = $runArgs + @('mergefail', [string]$fx.MergeFail) }
+        if ($fx.PSObject.Properties['Stopped']) { $runArgs = $runArgs + @('stopped', [string]$fx.Stopped) }
+        if ($fx.PSObject.Properties['Thrown']) { $runArgs = $runArgs + @('thrown', [string]$fx.Thrown) }
         if ($fx.PSObject.Properties['Argv']) { $runArgs = $runArgs + @('--') + @($fx.Argv | ForEach-Object { $_.Replace('{source}', $source) }) }
         $ran = Invoke-Step ('fixture.' + $stem + '.run') $exe $runArgs $bin
         $said = ((Log-Text ('fixture.' + $stem + '.run')) -split "`r?`n" | Where-Object { $_ -match '^l2_eternal_driver: \d+ checks' } | Select-Object -Last 1)

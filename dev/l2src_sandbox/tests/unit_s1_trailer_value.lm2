@@ -1,0 +1,12 @@
+# S1.1: a method on the throw ABI -- it merges -- closed by a `return:` trailer.  The trailer's
+# value goes to the normal output and the status is 0, as for a `return:` in the body: a value is
+# never a status.  (Returned as the status, 5 would reach the root as a throw.)
+P:
+    size_t: p 3U
+end: P
+
+fn: m () int
+    Q: merge: P
+return: 5
+
+return: m()

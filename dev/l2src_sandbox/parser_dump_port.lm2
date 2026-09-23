@@ -75,7 +75,7 @@ sub: p0_dump_indent (@: LmP0Dump dump; size_t: indent)
         i: i + 1U
 end: p0_dump_indent
 
-sub: p0_dump_text (@: LmP0Dump dump; const: @(LmP0Text text))
+sub: p0_dump_text (@: LmP0Dump dump; const: @(c.LmP0Text text))
     p0_dump_append_cstr(dump, "\"")
     if: (text != 0)
         p0_dump_append(dump, text\data, text\length)
@@ -297,7 +297,7 @@ sub: p0_dump_delete (@: LmP0Dump dump)
     ---
 end: p0_dump_delete
 
-fn: p0_dump_alloc (const: @(LmP0Document document)) @: char
+fn: p0_dump_alloc (const: @(c.LmP0Document document)) @: char
     @: LmP0Dump dump
     @: char data
     dump: p0_dump_new()

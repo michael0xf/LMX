@@ -1,16 +1,15 @@
-include: "l1src/p0.lm1.h" "<stdlib.h>"
+﻿include: "l1src/p0.lm1.h" "<stdlib.h>"
 
 # A const-qualified pointer return of a foreign type, `const: @(T)` (Stage B).
 # Only `const: @(char)` had a code; any other pointee was "unknown foreign
 # type". The return and the call-result temporary keep the qualifier:
-# `) const: @(LmP0Text)` and `const: @(LmP0Text l2_tN)`.
-fn: same_text (const: @(LmP0Text t)) const: @(LmP0Text)
-    return: t
-end: same_text
+# `) const: @(c.LmP0Text)` and `const: @(c.LmP0Text l2_tN)`.
+fn: same_text (const: @(c.LmP0Text t)) const: @(c.LmP0Text)
+return: t
 
 fn: const_return () int
     @: c.LmP0Text x
-    x: (cast: (@: LmP0Text) c.calloc(1U, c.sizeof(c.LmP0Text)))
+    x: (cast: (@: c.LmP0Text) c.calloc(1U, c.sizeof(c.LmP0Text)))
     if: x = 0
         return: 1
     if: same_text(x) != x

@@ -23,17 +23,21 @@ include: "<stdlib.h>"
 
 fn: lmx_arena_index_data (@: LmxArena arena) @: LmxRange
     @: LmxRangeDynamicArray da
+    @: LmxRangeArray base
     if: arena = 0
         return: 0
     da: @ arena\index
-return: da\data
+    base: (cast: (@: LmxRangeArray) da)
+return: base\data
 
 fn: lmx_arena_index_len (@: LmxArena arena) size_t
     @: LmxRangeDynamicArray da
+    @: LmxRangeArray base
     if: arena = 0
         return: 0U
     da: @ arena\index
-return: da\len
+    base: (cast: (@: LmxRangeArray) da)
+return: base\len
 
 fn: lmx_arena_index_cap (@: LmxArena arena) size_t
     @: LmxRangeDynamicArray da
@@ -44,18 +48,22 @@ return: da\capacity
 
 fn: lmx_arena_index_set_data (@: LmxArena arena; @: LmxRange data) void
     @: LmxRangeDynamicArray da
+    @: LmxRangeArray base
     if: arena = 0
         return
     da: @ arena\index
-    da\data: data
+    base: (cast: (@: LmxRangeArray) da)
+    base\data: data
 return
 
 fn: lmx_arena_index_set_len (@: LmxArena arena; size_t: len) void
     @: LmxRangeDynamicArray da
+    @: LmxRangeArray base
     if: arena = 0
         return
     da: @ arena\index
-    da\len: len
+    base: (cast: (@: LmxRangeArray) da)
+    base\len: len
 return
 
 fn: lmx_arena_index_set_cap (@: LmxArena arena; size_t: capacity) void
@@ -65,8 +73,6 @@ fn: lmx_arena_index_set_cap (@: LmxArena arena; size_t: capacity) void
     da: @ arena\index
     da\capacity: capacity
 return
-
-
 
 fn: lmx_arena_open (@: LmxArena arena) int
     if: arena = 0

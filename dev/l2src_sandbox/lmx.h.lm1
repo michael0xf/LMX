@@ -232,11 +232,16 @@ end: LmxArrayDynamicArray
 # Arrays never move, so it is these ENTRIES that are ordered and bisected, never
 # the arrays.
 
-# Flat DynamicArray of bytes (len + data + capacity).
-# Layout: len, data, capacity — same as compositional {array; capacity} with offsetof 0.
-struct: LmxByteDynamicArray
+# Fixed byte array descriptor (element type byte / unsigned char at the C ABI).
+# `char *` is the LM1 spelling for a byte pointer; cell helpers treat payload as raw bytes.
+struct: LmxByteArray
     size_t: len
-    @: void data
+    @: char data
+end: LmxByteArray
+
+# Compositional DynamicArray: fixed byte descriptor + capacity (Q18 / FABLE-134 REVIEW).
+struct: LmxByteDynamicArray
+    LmxByteArray: array
     size_t: capacity
 end: LmxByteDynamicArray
 
@@ -283,14 +288,17 @@ end: LmxRange
 # what frees the storage, at lmx_arena_release.
 # Chunk payload is stride-generic RAW storage (coordinator -134): element type is known
 # only at run time via the pool's stride/kind/type. Static element type is therefore byte.
-# cells.len / cells.capacity are BYTES; cell counts go through lmx_chunk_cells / lmx_chunk_room
+# cells.array.len / cells.capacity are BYTES; cell counts go through lmx_chunk_cells / lmx_chunk_room
 # (the sole cell-arithmetic helper pair). Not a void cast, not a wrapper/union, not per-T families.
 # Fixed array of arena index entries.
-# Flat DynamicArray of LmxRange (len + data + capacity).
-# Dynamic arena index (replaces the index/count/capacity triple).
-struct: LmxRangeDynamicArray
+struct: LmxRangeArray
     size_t: len
     @: LmxRange data
+end: LmxRangeArray
+
+# Compositional DynamicArray over LmxRangeArray (Q18 / FABLE-134 REVIEW).
+struct: LmxRangeDynamicArray
+    LmxRangeArray: array
     size_t: capacity
 end: LmxRangeDynamicArray
 

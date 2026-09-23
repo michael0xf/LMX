@@ -44,14 +44,13 @@ MAX_NAME = 64          # l1_hdr_type_add's buffer: one more maximal name must st
 
 # suite -> header type names of its translation unit. Cliff is 128 names / 8192 bytes
 # (raised from 64/4096 in FABLE-134 so typed Post/Thread mail fnptrs need not be erased).
-# Thread units after six DynamicArray sites with typed Post Accept/Take/Count/Close kept:
-# measure with the pad method (names = 128 - K); EXPECT set to that measurement.
-# Only units near the cliff are pinned.
+# Compositional DynamicArrays (fixed <T>Array + capacity) with typed Post Accept/Take/Count/Close
+# and Thread MailAccept/Take/Count/Close kept; EXPECT=72 is the pad-method measurement.
 EXPECT = {
-    'tests/l3_thread_bind_selftest.lm1': 68,
-    'tests/l3_n9_walk_selftest.lm1': 68,
-    'tests/l3_n10_walk_selftest.lm1': 68,
-    'tests/l3_mail_prim_selftest.lm1': 68,
+    'tests/l3_thread_bind_selftest.lm1': 72,
+    'tests/l3_n9_walk_selftest.lm1': 72,
+    'tests/l3_n10_walk_selftest.lm1': 72,
+    'tests/l3_mail_prim_selftest.lm1': 72,
 }
 
 PREDEF = re.compile(r'^predef:\s*(.*)$')

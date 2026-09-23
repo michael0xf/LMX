@@ -60,17 +60,21 @@ thread_local: int: lmx_post_monitor_thread_token 0
 
 fn: lmx_post_inbox_data (@: LmxPost box) @: LmxPostInboxSlot
     @: LmxPostInboxSlotDynamicArray da
+    @: LmxPostInboxSlotArray base
     if: box = 0
         return: 0
     da: @ box\inbox
-return: da\data
+    base: (cast: (@: LmxPostInboxSlotArray) da)
+return: base\data
 
 fn: lmx_post_inbox_len (@: LmxPost box) size_t
     @: LmxPostInboxSlotDynamicArray da
+    @: LmxPostInboxSlotArray base
     if: box = 0
         return: 0U
     da: @ box\inbox
-return: da\len
+    base: (cast: (@: LmxPostInboxSlotArray) da)
+return: base\len
 
 fn: lmx_post_inbox_cap (@: LmxPost box) size_t
     @: LmxPostInboxSlotDynamicArray da
@@ -81,18 +85,22 @@ return: da\capacity
 
 fn: lmx_post_inbox_set_data (@: LmxPost box; @: LmxPostInboxSlot data) void
     @: LmxPostInboxSlotDynamicArray da
+    @: LmxPostInboxSlotArray base
     if: box = 0
         return
     da: @ box\inbox
-    da\data: data
+    base: (cast: (@: LmxPostInboxSlotArray) da)
+    base\data: data
 return
 
 fn: lmx_post_inbox_set_len (@: LmxPost box; size_t: len) void
     @: LmxPostInboxSlotDynamicArray da
+    @: LmxPostInboxSlotArray base
     if: box = 0
         return
     da: @ box\inbox
-    da\len: len
+    base: (cast: (@: LmxPostInboxSlotArray) da)
+    base\len: len
 return
 
 fn: lmx_post_inbox_set_cap (@: LmxPost box; size_t: capacity) void

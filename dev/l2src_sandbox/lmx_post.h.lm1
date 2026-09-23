@@ -110,10 +110,15 @@ struct: LmxPostInboxSlot
 end: LmxPostInboxSlot
 
 
-# Flat DynamicArray of LmxPostInboxSlot (len + data + capacity).
-struct: LmxPostInboxSlotDynamicArray
+# Fixed array of inbox slot pairs.
+struct: LmxPostInboxSlotArray
     size_t: len
     @: LmxPostInboxSlot data
+end: LmxPostInboxSlotArray
+
+# Compositional DynamicArray over LmxPostInboxSlotArray (Q18 / FABLE-134 REVIEW).
+struct: LmxPostInboxSlotDynamicArray
+    LmxPostInboxSlotArray: array
     size_t: capacity
 end: LmxPostInboxSlotDynamicArray
 

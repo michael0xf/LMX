@@ -11,17 +11,21 @@ include: "<stdlib.h>" "<string.h>" "<stdint.h>"
 
 fn: lmx_service_entries_data (@: LmxService service) @: LmxServiceEntry
     @: LmxServiceEntryDynamicArray da
+    @: LmxServiceEntryArray base
     if: service = 0
         return: 0
     da: @ service\entries
-return: da\data
+    base: (cast: (@: LmxServiceEntryArray) da)
+return: base\data
 
 fn: lmx_service_entries_len (@: LmxService service) size_t
     @: LmxServiceEntryDynamicArray da
+    @: LmxServiceEntryArray base
     if: service = 0
         return: 0U
     da: @ service\entries
-return: da\len
+    base: (cast: (@: LmxServiceEntryArray) da)
+return: base\len
 
 fn: lmx_service_entries_cap (@: LmxService service) size_t
     @: LmxServiceEntryDynamicArray da
@@ -32,18 +36,22 @@ return: da\capacity
 
 fn: lmx_service_entries_set_data (@: LmxService service; @: LmxServiceEntry data) void
     @: LmxServiceEntryDynamicArray da
+    @: LmxServiceEntryArray base
     if: service = 0
         return
     da: @ service\entries
-    da\data: data
+    base: (cast: (@: LmxServiceEntryArray) da)
+    base\data: data
 return
 
 fn: lmx_service_entries_set_len (@: LmxService service; size_t: len) void
     @: LmxServiceEntryDynamicArray da
+    @: LmxServiceEntryArray base
     if: service = 0
         return
     da: @ service\entries
-    da\len: len
+    base: (cast: (@: LmxServiceEntryArray) da)
+    base\len: len
 return
 
 fn: lmx_service_entries_set_cap (@: LmxService service; size_t: capacity) void

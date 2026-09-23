@@ -15320,6 +15320,8 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
     @: LmP0Field aafter 0
     c.array: [256]: char buf
     c.array: [256]: char piece
+    @: LmP0Field aidx_f
+    c.array: [256]: char aptr
     if: dest = 0
         return: 1
     buf[0]: 0
@@ -15378,6 +15380,27 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
         if: after != 0 && f\value\kind = c.LM_P0_NODE_ATOM && l2_ident(f\value\as\atom)
             fld: 1
         if: fld = 0 && f\value\kind = c.LM_P0_NODE_ATOM && l2_text_eq(f\value\as\atom, "@")
+            # D-21 (steps/defects.md): `@` immediately in front of a bare
+            # own-array element must address the real backing the same way
+            # l2_emit_array_ptr already does for the Structure-field route,
+            # not splice "@ " onto whatever the ordinary (value-reading)
+            # dispatch below produces for the element -- that read the
+            # value into a temp, so the address taken was the temp's, and a
+            # write through it never reached the array. l2_own_index_tail is
+            # the exact recognizer the plain read a few checks above uses.
+            aidx_f: l2_next_active(f\next)
+            if: aidx_f != 0 && l2_own_index_tail(aidx_f, mi, @ po, @ array_index, @ p2, @ array_count) = 0
+                if: l2_emit_array_ptr(po, ind, aptr) != 0
+                    return: 1
+                if: c.sprintf(piece, "@ %s[%zuU]", aptr, array_index) < 0 || l2_cat(buf, piece) != 0
+                    return: l2_error(l2_src, at, "expression too long")
+                ao: 0
+                after: 0
+                have_value: 1
+                i: i + 1 + array_count
+                f: p2
+                continue
+            ---
             if: l2_cat(buf, "@ ") != 0
                 return: l2_error(l2_src, at, "expression too long")
             ao: 0

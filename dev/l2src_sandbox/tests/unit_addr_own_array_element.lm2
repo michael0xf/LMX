@@ -1,0 +1,26 @@
+# D-21 (steps/defects.md): `@` on a bare own-array element must address the
+# real backing (l2_emit_array_ptr), not the value a plain read would have
+# copied into a temp -- a write through the address must reach the array,
+# both directly on the own-array and through a formal pointer it decays to.
+fn: poke (@: int p) int
+    @: int q
+    q: @ p[1]
+    \q: 9
+    return: p[1]
+end: poke
+
+fn: build () int
+    []: int buf 3
+    @: int p
+    p: @ buf[1]
+    \p: 9
+    if: buf[1] != 9
+        return: 81
+    return: poke(buf)
+end: build
+
+int: got
+got: build()
+if: got != 9
+    return: 82
+return: 0

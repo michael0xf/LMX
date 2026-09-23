@@ -1468,6 +1468,13 @@ $fixtures = @(
         Says = @('1 2 3 4 5');
         Absent = @();
         Debt = @() },
+    # FABLE-SONNET-ARRAY-ADDR-20260924-144 D-21: `@` on a bare own-array
+    # element addresses the real backing (l2_emit_array_ptr), both directly
+    # and through a formal pointer the array decays to.
+    [pscustomobject]@{ Name = 'unit_addr_own_array_element.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @();
+        Debt = @() },
     [pscustomobject]@{ Name = 'unit_addr_unknown_type_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown type'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_dyn_hidden_from_cross_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';

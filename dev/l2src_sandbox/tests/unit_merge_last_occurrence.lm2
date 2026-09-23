@@ -1,0 +1,43 @@
+Model:
+    size_t: x 1U
+    size_t: y 2U
+end: Model
+
+Over:
+    size_t: x 7U
+end: Over
+
+R: merge: Model Over
+
+# FABLE-OPUS-MERGE-ADDRESSING-20260924-154 commit 2: the author's merge rule (plan §4): the operands'
+# fields are appended flat, so R carries Model's x, Model's y and Over's x.  `R\x` is
+# `R\[lastIndex]x`, the override; `R\[N]x` counts occurrences in operand order.  A write through the
+# unqualified name lands on the last occurrence too.  Success is 7.
+fn: check () int
+    size_t: last
+    size_t: first
+    size_t: second
+    size_t: only
+    last: R\x
+    first: R\[0]x
+    second: R\[1]x
+    only: R\y
+    if: last != 7U
+        return: 81
+    if: first != 1U
+        return: 82
+    if: second != 7U
+        return: 83
+    if: only != 2U
+        return: 84
+    R\x: 70U
+    first: R\[0]x
+    second: R\[1]x
+    if: second != 70U
+        return: 85
+    if: first != 1U
+        return: 86
+    return: 7
+end: check
+
+return: check()

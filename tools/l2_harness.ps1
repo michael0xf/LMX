@@ -719,6 +719,15 @@ $fixtures = @(
                  'l2_program_qualified_roots[2U]: l2_nsp[2]',
                  'lmx_merge_profiles_owned',
                  'l2_message\graph: l2_entry_unit') },
+    # FABLE-OPUS-MERGE-ADDRESSING-20260924-154 commit 2 (the author's merge rule, plan §4): a name
+    # several operands carry is its LAST occurrence -- `R\x` is `R\[lastIndex]x`, the override, for
+    # reads and writes -- and `R\[N]x` counts occurrences in operand order.  Success is 7.
+    [pscustomobject]@{ Name = 'unit_merge_last_occurrence.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
+        Args = @('0');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
+        Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_occurrence_range_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'merge occurrence index out of range'; Absent = @(); Debt = @() },
     # THE DECLARED-THROW ABI (FABLE-L2TRANS-THROW-FORMAL-20260920-05).  Every method that merges,
     # and every caller of one, carries the executing Message as a hidden formal.  It was spelled
     # `node`, the spelling of the reserved first formal, so EVERY such method came out as

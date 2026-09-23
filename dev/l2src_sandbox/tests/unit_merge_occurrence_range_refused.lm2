@@ -1,0 +1,19 @@
+Model:
+    size_t: x 1U
+end: Model
+
+Over:
+    size_t: x 7U
+end: Over
+
+R: merge: Model Over
+
+# FABLE-OPUS-MERGE-ADDRESSING-20260924-154 commit 2: R carries x twice (Model's, then Over's), so
+# `R\[0]x` and `R\[1]x` exist and `R\[2]x` does not.
+fn: third () size_t
+    size_t: v
+    v: R\[2]x
+    return: v
+end: third
+
+return: 0

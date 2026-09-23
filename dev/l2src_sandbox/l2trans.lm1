@@ -5367,7 +5367,7 @@ fn: l2_emit_os_fn (@: FILE out; const: @(LmP0Node fn); const: @(char ind)) int
         return: 1
     if: l2_emit_sig(mi) != 0 || fputs("\n", out) < 0
         return: 1
-    if: c.fprintf(out, "%s    if: self = 0\n%s        return: 0\n", ind, ind) < 0
+    if: c.fprintf(out, "%s    if: self = 0\n%s        c.fprintf(c.stderr, \"lmx: invariant: a method was entered without its occurrence\\n\")\n%s        c.abort()\n", ind, ind, ind) < 0
         return: 1
     if: l2_emit_poll(mi, "            ") != 0
         return: 1
@@ -11298,23 +11298,12 @@ fn: l2_head_method (const: @(LmP0Text t)) int
         return: 0 - 1
 return: k
 
+# A field path that meets no Structure where it needs one (D-05) takes the X1 route: a message and
+# an abort (l2_emit_invariant).  It used to return 0 from the whole method, a silent success.
 fn: l2_emit_path_bail (int: mi; const: @(char ind)) int
-    @: char deep 0
-    if: l2_bump_ind(ind, @ deep) != 0
+    if: mi < 0
         return: 1
-    if: l2_emit_checkpoint(mi, deep) != 0
-        return: 1
-    if: l2_m_ret[mi] = 8 && c.fprintf(l2_out, "%sreturn\n", deep) < 0
-        return: 1
-    if: l2_ret_uns(mi) != 0 && (l2_m_throws = 0 || l2_m_throws[mi] = 0) && c.fprintf(l2_out, "%sreturn: 0U\n", deep) < 0
-        return: 1
-    if: l2_ret_uns(mi) != 0 && l2_m_throws != 0 && l2_m_throws[mi] != 0 && c.fprintf(l2_out, "%sl2_out_result[0]: 0U\n%sreturn: 0\n", deep, deep) < 0
-        return: 1
-    if: l2_ret_uns(mi) = 0 && l2_m_ret[mi] != 8 && (l2_m_throws = 0 || l2_m_throws[mi] = 0) && c.fprintf(l2_out, "%sreturn: 0\n", deep) < 0
-        return: 1
-    if: l2_ret_uns(mi) = 0 && l2_m_ret[mi] != 8 && l2_m_throws != 0 && l2_m_throws[mi] != 0 && c.fprintf(l2_out, "%sl2_out_result[0]: 0\n%sreturn: 0\n", deep, deep) < 0
-        return: 1
-return: 0
+return: l2_emit_invariant(ind, "a field path met no Structure")
 
 # ---------------------------------------------------------------------------
 # SOURCE FIELD PATHS (SPEC 8252, 8366). A path is a name, then field-follow
@@ -16230,18 +16219,16 @@ fn: l2_emit_checkpoint (int: mi; const: @(char ind)) int
         # diagnostic route, never a silent success or a plain return. Entry
         # admission of a missing field is a separate case, not handled here.
         #
-        # The route is the existing turn diagnostic root: lmx_msg_poll_abort
-        # escapes to it when one is installed, which fails this Message's turn
-        # under the executor's ordinary handling and leaves the host and other
-        # Messages running (SPEC 19.13). It returns nonzero only when no such
-        # root exists, and then the process has no Message boundary to honour
-        # and abort is the last resort.
+        # The route is X1 (D-06): a message and an abort, as l2_emit_invariant spells
+        # it.  It was the turn diagnostic root that lmx_msg_poll_abort escapes to;
+        # during a turn that delivered nowhere, so the message was printed and the
+        # activation went on.
         #
         # A failed store leaves ITS OWN field as it was: the char path checks
         # the rebind before assigning the slot, and the int/size_t helpers do
         # not write on a rejected cell. Fields published earlier in this same
         # checkpoint keep their new values; no rollback is claimed or required.
-        if: l2_m_uses[l2_own_off(mi, i)] != 0 && c.fprintf(l2_out, "%s    if: l2_q%d_from = 0\n%s        c.fprintf(c.stderr, \"lmx: checkpoint lost own field %d\\n\")\n%s        if: lmx_msg_poll_abort() != 0\n%s            c.abort()\n", ind, i, ind, i, ind, ind) < 0
+        if: l2_m_uses[l2_own_off(mi, i)] != 0 && c.fprintf(l2_out, "%s    if: l2_q%d_from = 0\n%s        c.fprintf(c.stderr, \"lmx: invariant: checkpoint lost own field %d\\n\")\n%s        c.abort()\n", ind, i, ind, i, ind) < 0
             return: 1
         if: l2_m_uses[l2_own_off(mi, i)] != 0 && c.fprintf(l2_out, "%s    ---\n", ind) < 0
             return: 1
@@ -16262,9 +16249,9 @@ fn: l2_emit_checkpoint (int: mi; const: @(char ind)) int
             return: l2_error(l2_src, l2_own_decl[i], "own field type has no graph cell to publish to")
         if: l2_m_uses[l2_own_off(mi, i)] != 0 && l2_own_store_value(l2_own_ty[i], local, val) != 0
             return: 1
-        if: l2_m_uses[l2_own_off(mi, i)] != 0 && l2_own_store_rebinds(l2_own_ty[i]) != 0 && c.fprintf(l2_out, "%s    if: %s(l2_q%d_from[0], %s) = 0\n%s        c.fprintf(c.stderr, \"lmx: checkpoint store failed for own field %d\\n\")\n%s        if: lmx_msg_poll_abort() != 0\n%s            c.abort()\n%s    ---\n%s    l2_q%d_from[0]: %s(l2_q%d_from[0], %s)\n", ind, l2_own_store_helper(l2_own_ty[i]), i, val, ind, i, ind, ind, ind, ind, i, l2_own_store_helper(l2_own_ty[i]), i, val) < 0
+        if: l2_m_uses[l2_own_off(mi, i)] != 0 && l2_own_store_rebinds(l2_own_ty[i]) != 0 && c.fprintf(l2_out, "%s    if: %s(l2_q%d_from[0], %s) = 0\n%s        c.fprintf(c.stderr, \"lmx: invariant: checkpoint store failed for own field %d\\n\")\n%s        c.abort()\n%s    ---\n%s    l2_q%d_from[0]: %s(l2_q%d_from[0], %s)\n", ind, l2_own_store_helper(l2_own_ty[i]), i, val, ind, i, ind, ind, ind, i, l2_own_store_helper(l2_own_ty[i]), i, val) < 0
             return: 1
-        if: l2_m_uses[l2_own_off(mi, i)] != 0 && l2_own_store_rebinds(l2_own_ty[i]) = 0 && c.fprintf(l2_out, "%s    if: %s(l2_q%d_from[0], %s) != 0\n%s        c.fprintf(c.stderr, \"lmx: checkpoint store failed for own field %d\\n\")\n%s        if: lmx_msg_poll_abort() != 0\n%s            c.abort()\n", ind, l2_own_store_helper(l2_own_ty[i]), i, val, ind, i, ind, ind) < 0
+        if: l2_m_uses[l2_own_off(mi, i)] != 0 && l2_own_store_rebinds(l2_own_ty[i]) = 0 && c.fprintf(l2_out, "%s    if: %s(l2_q%d_from[0], %s) != 0\n%s        c.fprintf(c.stderr, \"lmx: invariant: checkpoint store failed for own field %d\\n\")\n%s        c.abort()\n", ind, l2_own_store_helper(l2_own_ty[i]), i, val, ind, i, ind) < 0
             return: 1
         if: l2_m_uses[l2_own_off(mi, i)] != 0 && l2_own_store_rebinds(l2_own_ty[i]) = 0 && c.fprintf(l2_out, "%s    ---\n", ind) < 0
             return: 1
@@ -16323,19 +16310,8 @@ fn: l2_emit_path_load (int: mi; int: oi; const: @(char ind); @: char dest) int
         return: 1
     if: c.fprintf(l2_out, "%sif: l2_xp = 0\n", ind) < 0
         return: 1
-    if: l2_emit_checkpoint(mi, deep) != 0
-        return: 1
-    if: l2_m_ret[mi] = 8 && (l2_m_throws = 0 || l2_m_throws[mi] = 0) && c.fprintf(l2_out, "%sreturn\n", deep) < 0
-        return: 1
-    if: l2_m_ret[mi] = 8 && l2_m_throws != 0 && l2_m_throws[mi] != 0 && c.fprintf(l2_out, "%sreturn: 0\n", deep) < 0
-        return: 1
-    if: l2_ret_uns(mi) != 0 && (l2_m_throws = 0 || l2_m_throws[mi] = 0) && c.fprintf(l2_out, "%sreturn: 0U\n", deep) < 0
-        return: 1
-    if: l2_ret_uns(mi) != 0 && l2_m_throws != 0 && l2_m_throws[mi] != 0 && c.fprintf(l2_out, "%sl2_out_result[0]: 0U\n%sreturn: 0\n", deep, deep) < 0
-        return: 1
-    if: l2_ret_uns(mi) = 0 && l2_m_ret[mi] != 8 && (l2_m_throws = 0 || l2_m_throws[mi] = 0) && c.fprintf(l2_out, "%sreturn: 0\n", deep) < 0
-        return: 1
-    if: l2_ret_uns(mi) = 0 && l2_m_ret[mi] != 8 && l2_m_throws != 0 && l2_m_throws[mi] != 0 && c.fprintf(l2_out, "%sl2_out_result[0]: 0\n%sreturn: 0\n", deep, deep) < 0
+    # A missing cell of a bound own field is a broken promise (D-05): X1, not a return of 0.
+    if: l2_emit_invariant(ind, "an own field has no cell to load") != 0
         return: 1
     t: l2_tn
     l2_tn: l2_tn + 1
@@ -18069,7 +18045,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                 return: 1
             if: l2_emit_own_from(mi, oi, ind) != 0
                 return: 1
-            if: c.fprintf(l2_out, "%sif: lmx_pointer_store_known(l2_q%d_from[0], (cast: (@: void) l2_ngraph)) != 0\n%s    c.fprintf(c.stderr, \"lmx: nextMessage store failed for own field %d\\n\")\n%s    if: lmx_msg_poll_abort() != 0\n%s        c.abort()\n%s---\n", ind, oi, ind, oi, ind, ind, ind) < 0
+            if: c.fprintf(l2_out, "%sif: lmx_pointer_store_known(l2_q%d_from[0], (cast: (@: void) l2_ngraph)) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: nextMessage store failed for own field %d\\n\")\n%s    c.abort()\n%s---\n", ind, oi, ind, oi, ind, ind) < 0
                 return: 1
             if: l2_emit_occ_write(mi, oi, ind, "l2_ngraph") != 0
                 return: 1
@@ -18177,7 +18153,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                 return: 1
             if: l2_emit_own_from(mi, oi, ind) != 0
                 return: 1
-            if: c.fprintf(l2_out, "%sif: lmx_pointer_store_known(l2_q%d_from[0], (cast: (@: void) %s)) != 0\n%s    c.fprintf(c.stderr, \"lmx: rebinding store failed for own field %d\\n\")\n%s    if: lmx_msg_poll_abort() != 0\n%s        c.abort()\n%s---\n", ind, oi, l2_esd_tok, ind, oi, ind, ind, ind) < 0
+            if: c.fprintf(l2_out, "%sif: lmx_pointer_store_known(l2_q%d_from[0], (cast: (@: void) %s)) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: rebinding store failed for own field %d\\n\")\n%s    c.abort()\n%s---\n", ind, oi, l2_esd_tok, ind, oi, ind, ind) < 0
                 return: 1
             if: l2_emit_occ_write(mi, oi, ind, l2_esd_tok) != 0
                 return: 1
@@ -18276,7 +18252,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             return: 1
         if: rbadmit != 0 && l2_emit_own_from(mi, oi, ind) != 0
             return: 1
-        if: rbadmit != 0 && c.fprintf(l2_out, "%sif: lmx_pointer_store_known(l2_q%d_from[0], (cast: (@: void) %s)) != 0\n%s    c.fprintf(c.stderr, \"lmx: rebinding store failed for own field %d\\n\")\n%s    if: lmx_msg_poll_abort() != 0\n%s        c.abort()\n%s---\n", ind, oi, l2_tok, ind, oi, ind, ind, ind) < 0
+        if: rbadmit != 0 && c.fprintf(l2_out, "%sif: lmx_pointer_store_known(l2_q%d_from[0], (cast: (@: void) %s)) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: rebinding store failed for own field %d\\n\")\n%s    c.abort()\n%s---\n", ind, oi, l2_tok, ind, oi, ind, ind) < 0
             return: 1
         # FABLE-SONNET-OWN-LOOKUP-AUDIT-20260923-131 (a): was a byte-identical
         # hand-inlined copy of l2_emit_own_from's own two branches (guard
@@ -18640,22 +18616,9 @@ fn: l2_emit_unit (const: @(char out_path)) int
         if: l2_emit_sig(i) != 0
             fclose(l2_out)
             return: 1
-        if: l2_ret_uns(i) != 0 && l2_m_throws[i] = 0 && fputs("\n    if: self = 0\n        return: 0U\n", l2_out) < 0
-            fclose(l2_out)
-            return: 1
-        if: l2_ret_uns(i) != 0 && l2_m_throws[i] != 0 && fputs("\n    if: self = 0\n        l2_out_result[0]: 0U\n        return: 0\n", l2_out) < 0
-            fclose(l2_out)
-            return: 1
-        if: l2_m_ret[i] = 8 && l2_m_throws[i] = 0 && fputs("\n    if: self = 0\n        return\n", l2_out) < 0
-            fclose(l2_out)
-            return: 1
-        if: l2_m_ret[i] = 8 && l2_m_throws[i] != 0 && fputs("\n    if: self = 0\n        return: 0\n", l2_out) < 0
-            fclose(l2_out)
-            return: 1
-        if: l2_ret_uns(i) = 0 && l2_m_ret[i] != 8 && l2_m_throws[i] = 0 && fputs("\n    if: self = 0\n        return: 0\n", l2_out) < 0
-            fclose(l2_out)
-            return: 1
-        if: l2_ret_uns(i) = 0 && l2_m_ret[i] != 8 && l2_m_throws[i] != 0 && fputs("\n    if: self = 0\n        l2_out_result[0]: 0\n        return: 0\n", l2_out) < 0
+        # A method entered without its occurrence is its caller's broken promise (D-05): X1, not
+        # a return of 0 -- which was a silent success, whatever the method's return shape.
+        if: fputs("\n    if: self = 0\n        c.fprintf(c.stderr, \"lmx: invariant: a method was entered without its occurrence\\n\")\n        c.abort()\n", l2_out) < 0
             fclose(l2_out)
             return: 1
         if: l2_m_throws[i] != 0 && c.fprintf(l2_out, "    c.array: [%d]: @: Lmx l2_mops\n    c.array: [%d]: @: Lmx l2_mprofiles\n    int: l2_mstatus 0\n    @: Lmx l2_mresult 0\n    @: Lmx l2_mbody 0\n    @@: void l2_mxp 0\n    @@: void l2_myp 0\n    @: Lmx l2_malias 0\n", l2_merge_max, l2_merge_max) < 0
@@ -18678,16 +18641,15 @@ fn: l2_emit_unit (const: @(char out_path)) int
         l2_vis_method(i)
         k: 0
         while: k < l2_for_n
-            if: l2_for_owner(k) = i && l2_for_parent[k] < 0 && l2_m_ret[i] = 8 && l2_m_throws[i] = 0 && c.fprintf(l2_out, "    @: Lmx l2_h%d 0\n    l2_h%d: lmx_arena_ref_struct(self, %uU)\n    if: l2_h%d = 0\n        return\n", k, k, (cast: (unsigned) l2_for_uchild[k]), k) < 0
+            # A control body's Structure is built with the unit; missing, it is a broken promise
+            # (D-05): X1, whatever the method returns -- it used to return 0, a silent success.
+            if: l2_for_owner(k) = i && l2_for_parent[k] < 0 && c.fprintf(l2_out, "    @: Lmx l2_h%d 0\n    l2_h%d: lmx_arena_ref_struct(self, %uU)\n    if: l2_h%d = 0\n", k, k, (cast: (unsigned) l2_for_uchild[k]), k) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_for_owner(k) = i && l2_for_parent[k] < 0 && (l2_m_ret[i] != 8 || l2_m_throws[i] != 0) && c.fprintf(l2_out, "    @: Lmx l2_h%d 0\n    l2_h%d: lmx_arena_ref_struct(self, %uU)\n    if: l2_h%d = 0\n        return: 0\n", k, k, (cast: (unsigned) l2_for_uchild[k]), k) < 0
+            if: l2_for_owner(k) = i && l2_for_parent[k] >= 0 && c.fprintf(l2_out, "    @: Lmx l2_h%d 0\n    l2_h%d: lmx_arena_ref_struct(l2_h%d, %uU)\n    if: l2_h%d = 0\n", k, k, l2_for_parent[k], (cast: (unsigned) l2_for_uchild[k]), k) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_for_owner(k) = i && l2_for_parent[k] >= 0 && l2_m_ret[i] = 8 && l2_m_throws[i] = 0 && c.fprintf(l2_out, "    @: Lmx l2_h%d 0\n    l2_h%d: lmx_arena_ref_struct(l2_h%d, %uU)\n    if: l2_h%d = 0\n        return\n", k, k, l2_for_parent[k], (cast: (unsigned) l2_for_uchild[k]), k) < 0
-                fclose(l2_out)
-                return: 1
-            if: l2_for_owner(k) = i && l2_for_parent[k] >= 0 && (l2_m_ret[i] != 8 || l2_m_throws[i] != 0) && c.fprintf(l2_out, "    @: Lmx l2_h%d 0\n    l2_h%d: lmx_arena_ref_struct(l2_h%d, %uU)\n    if: l2_h%d = 0\n        return: 0\n", k, k, l2_for_parent[k], (cast: (unsigned) l2_for_uchild[k]), k) < 0
+            if: l2_for_owner(k) = i && l2_emit_invariant("    ", "a control body has no Structure") != 0
                 fclose(l2_out)
                 return: 1
             k: k + 1

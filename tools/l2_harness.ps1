@@ -569,8 +569,10 @@ $fixtures = @(
     # `{source}` in Argv is this fixture's own path.
     [pscustomobject]@{ Name = 'unit_arr_path_read.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
         Absent = @(); Debt = @() },
+    # D-06: a failed nextMessage or rebinding store is an invariant on the X1 route, not a printed line.
     [pscustomobject]@{ Name = 'unit_admit_rebind_read.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0; Argv = @('ok'); Entry = 2;
-        Absent = @(); Debt = @() },
+        Absent = @('lmx_msg_poll_abort', 'lmx: nextMessage', 'lmx: rebinding');
+        Debt = @('c.fprintf(c.stderr, "lmx: invariant: nextMessage store failed for own field ', 'c.fprintf(c.stderr, "lmx: invariant: rebinding store failed for own field ') },
     [pscustomobject]@{ Name = 'entry_argc_if.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'entry_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0; Argv = @('word'); Says = @('word');
@@ -903,8 +905,10 @@ $fixtures = @(
         Needle = 'a callable without a result has no value'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_empty_assign_untyped.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0;
         Absent = @(); Debt = @() },
+    # D-06: the f() assignment's failed rebinding store is an invariant on the X1 route, not a printed line.
     [pscustomobject]@{ Name = 'unit_empty_assign_admit.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 421;
-        Absent = @(); Debt = @() },
+        Absent = @('lmx_msg_poll_abort', 'lmx: rebinding');
+        Debt = @('c.fprintf(c.stderr, "lmx: invariant: rebinding store failed for own field ') },
     [pscustomobject]@{ Name = 'unit_empty_assign_named.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 74;
         Absent = @(); Debt = @() },
     # A BARE `return` CLOSES A SUB (P0, FABLE-OPUS-RECEIVER-CONTRACT-20260924-139 commit 3; author
@@ -1065,8 +1069,10 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_char_own_publish.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Says = @('M1 67 67', 'M2 202 202', 'K1 65 65', 'K2 200 200', 'P1 66 66', 'P2 202 202');
-        Absent = @('(cast: (uchar)');
-        Debt = @('lmx_char_rebind_known(l2_q0_from[0], ((cast: (int) l2_q0) & 255))',
+        # D-06: the char checkpoint's failed rebinding is an invariant on the X1 route, not a printed line.
+        Absent = @('(cast: (uchar)', 'lmx_msg_poll_abort', 'lmx: checkpoint');
+        Debt = @(('lmx_char_rebind_known(l2_q0_from[0], ((cast: (int) l2_q0) & 255)) = 0' + "`n" + '            c.fprintf(c.stderr, "lmx: invariant: checkpoint store failed for own field 0\n")'),
+                 'lmx_char_rebind_known(l2_q0_from[0], ((cast: (int) l2_q0) & 255))',
                  'lmx_char_rebind_known(l2_q1_from[0], ((cast: (int) l2_q1) & 255))',
                  'lmx_char_rebind_known(l2_pxp[0], ((cast: (int) l2_p1_0) & 255))') },
     # TWO LIBRARY UNITS IN ONE LINK (FABLE-L2-LIBRARY-P2-UNIQUE-STATE-20260921-137).  A library unit keeps
@@ -1438,10 +1444,22 @@ $fixtures = @(
     # all read/write it through the ordinary machinery.
     # FABLE-OPUS-DISCARD-20260924-147: until the builder gave kind 7 its cell this row was vacuous
     # (the first write met an empty slot and a silent bail returned 0 from E); success is now 7.
+    # D-05/D-06: a field path meeting no Structure, an own field without a cell, a method entered
+    # without its occurrence, a missing control body and a failed checkpoint are invariants on the
+    # X1 route (a message and an abort), never a return from the method or a printed line.
     [pscustomobject]@{ Name = 'unit_struct_int_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
         Args = @('0');
-        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
-        Debt = @('lmx_int_store_known(l2_entry_slot[0], 1)', 'lmx_int_store_known(l2_entry_slot[0], 2)') },
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'lmx_msg_poll_abort', 'lmx: checkpoint',
+                   "if: self = 0`n        return", "if: self = 0`n        l2_out_result",
+                   "if: l2_h0 = 0`n        return", "if: l2_pst = 0`n        if: l2_q",
+                   "if: l2_pxp = 0`n        if: l2_q", "if: l2_xp = 0`n        if: l2_q");
+        Debt = @('lmx_int_store_known(l2_entry_slot[0], 1)', 'lmx_int_store_known(l2_entry_slot[0], 2)',
+                 'c.fprintf(c.stderr, "lmx: invariant: a field path met no Structure\n")',
+                 'c.fprintf(c.stderr, "lmx: invariant: an own field has no cell to load\n")',
+                 'c.fprintf(c.stderr, "lmx: invariant: a method was entered without its occurrence\n")',
+                 'c.fprintf(c.stderr, "lmx: invariant: a control body has no Structure\n")',
+                 'c.fprintf(c.stderr, "lmx: invariant: checkpoint lost own field ',
+                 'c.fprintf(c.stderr, "lmx: invariant: checkpoint store failed for own field ') },
     # Every numeric field of a named Structure -- size_t, int, unsigned, ulong -- has its own cell
     # holding its literal, in the Structure and in a merge copy (FABLE-OPUS-DISCARD-20260924-147).
     [pscustomobject]@{ Name = 'unit_struct_num_fields.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';

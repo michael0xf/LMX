@@ -908,7 +908,7 @@ fn: main () int
         check(lmx_int_value_known(cell) = 2, "original n untouched by the copy's run")
         check(lmx_int_value_known(lmx_arena_ref_value(copy, 1U)) = 3, "copy published into its own n")
         # C: the copy was never prepared -- it shares the descriptor, hence the plan, and
-        # the same positions resolve to ITS slots.
+        # and the same positions resolve to ITS slots.
         info: (cast: (@: LmxCallable) lmx_arena_ref_value(counter, 0U))
         check(lmx_plan_slot_known(copy, info\header, 0U) = lmx_arena_ref_cell(copy, 1U) && lmx_plan_slot_known(copy, info\header, 0U) != lmx_plan_slot_known(counter, info\header, 0U), "one plan, two occurrences, two different slots")
         # E: changing the shape of ONE occurrence starts with a fresh descriptor in ITS

@@ -1768,7 +1768,15 @@ Source: §§4.0.1, 4.1 and 15 of the previous specification; the author's direct
 
 A Frame's argument list is itself a Structure. If a sole anonymous Structure field occupies the whole positional sequence, P0 replaces it with its fields exactly once, independently of the head and emptiness. Thus `f()`, `f: ()`, and `f:` with an explicitly empty vertical body closed by `---` yield the same Frame with an empty Structure-body; `f(a b)` and `f: (a b)` likewise yield one list. An anonymous Structure among other fields or a named field remains a distinct field. A separate empty Structure value requires such a nontransparent position.
 
+Parentheses are not a call marker. P0 does not label `f()` as a call or decide whether `f` exists: the same normalized Frame from `f()` and `f: ()` is passed to general head resolution. Calling, assignment, and declaration are defined by [semantics](LMX_semantics.en.md#construction), not by this spelling.
+
 P0 rejects bare `f:` without arguments, a vertical body, or an explicit `---`. Bare `f` is an ordinary admitted atomic expression; resolved as callable, it has the same nullary effect, although P0 may retain it as an atom. The translator does not distinguish Frame forms by COLON/COMPACT or source spelling. An empty inline tail followed by a nonempty vertical body is valid. Bare `end` remains forbidden.
+
+**Valid: the same empty P0 Frame; parentheses do not select a call** — author / автор, 2026-09-23.
+
+````text
+f()
+````
 
 **Valid: an empty container, zero arguments** — author / автор, 2026-09-19.
 

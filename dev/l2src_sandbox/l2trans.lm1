@@ -13287,6 +13287,7 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
     size_t: ai0 0U
     size_t: ai1 0U
     @: LmP0Field aafter 0
+    @: LmP0Field aidx_f
     if: n <= 0
         return: l2_error(path, at, "unsupported body")
     cpn: l2_join_path(field, n, cpbuf, 255U)
@@ -13375,6 +13376,23 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
         if: f\value\kind = c.LM_P0_NODE_ATOM && l2_text_eq(f\value\as\atom, "@") && l2_addr_flat_eternal(f) != 0
             return: l2_error(path, f\value, "the address of an eternal branch field cannot be taken")
         if: f\value\kind = c.LM_P0_NODE_ATOM && l2_text_eq(f\value\as\atom, "@")
+            # D-22 (steps/defects.md): L2 spec 18.2 gives `@array[i]` address
+            # arithmetic a meaning ("subsequent loads, stores and address
+            # arithmetic follow the C machine contract"), but l2trans has no
+            # expression-type inference to carry a pointer result through
+            # the rest of a compound expression and refuse it landing in a
+            # numeric target -- return-statement and assignment checking
+            # both stop at a single value (l2_colon_simple_ty's own comment:
+            # "the general expression checker still owns compound
+            # expressions", and that checker has no out_ty at all). Until
+            # that type tracking exists, refuse the compound shape outright
+            # at the point it becomes ambiguous, rather than let a pointer
+            # reach a numeric target unnoticed the way D-21's own fixture
+            # family did. `@ buf[i]` alone, with nothing after the addressed
+            # element, is the D-21 shape and is unaffected.
+            aidx_f: l2_next_active(f\next)
+            if: aidx_f != 0 && l2_own_index_tail(aidx_f, mi, @ po, @ array_index, @ p2, @ array_count) = 0 && p2 != 0
+                return: l2_error(path, f\value, "address arithmetic past an own-array element is not yet supported")
             skip: 1
             have_value: 0
         if: f\value\kind = c.LM_P0_NODE_ATOM && l2_is_binop(f\value\as\atom)

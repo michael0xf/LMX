@@ -1475,6 +1475,13 @@ $fixtures = @(
         Args = @('0');
         Absent = @();
         Debt = @() },
+    # FABLE-SONNET-ARRAY-ADDR-20260924-144 D-22: measured L2 spec 18.2 --
+    # address arithmetic IS meaningful, but l2trans has no expression-type
+    # inference to stop a pointer result reaching a numeric target, so the
+    # compound shape is refused outright rather than silently miscompiled
+    # (ex-address_array_element_sum.lm2, D-13).
+    [pscustomobject]@{ Name = 'unit_addr_own_array_arithmetic_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'address arithmetic past an own-array element is not yet supported'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_addr_unknown_type_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown type'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_dyn_hidden_from_cross_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';

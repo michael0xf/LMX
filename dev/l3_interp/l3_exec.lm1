@@ -205,21 +205,32 @@ fn: l3_exec_stmt (@: LmxArena arena; @: L3Frame f; @: void v) int
     if: v = 0
         return: c.L3_ABSENT
     kind: lmx_domain_kind(arena, v)
+    # N7 / D-03: a primitive that is not an own-field cell of this activation is a
+    # headless data statement -- explicit UNSUPPORTED until discard exists. Own-field
+    # cells share the child range with body steps and are not statements.
     if: kind = c.LMX_KIND_PRIMITIVE
-        return: c.L3_OK
+        hk: 0
+        while: hk < f\nown
+            if: f\owns != 0 && f\owns[hk].value = v
+                return: c.L3_OK
+            ---
+            hk: hk + 1
+        ---
+        return: c.L3_UNSUPPORTED
     if: kind = c.LMX_DOMAIN_KIND_OP
         return: l3_exec_op(arena, f, 0, (cast: (@: LmxOp) v))
     ---
     if: kind = c.LMX_KIND_STRUCT
         host: (cast: (@: Lmx) v)
         if: host\len < 1
-            return: c.L3_OK
+            return: c.L3_UNSUPPORTED
         head: lmx_arena_ref_value(host, 0U)
         if: head = 0
-            return: c.L3_OK
+            return: c.L3_UNSUPPORTED
         hk: lmx_domain_kind(arena, head)
         if: hk = c.LMX_DOMAIN_KIND_OP
             return: l3_exec_op(arena, f, host, (cast: (@: LmxOp) head))
+        # Bare callable occurrence: nullary activation, same path a call Frame takes.
         if: hk = c.LMX_DOMAIN_KIND_CALLABLE
             if: l3_own_checkpoint_all(f) != 0
                 return: c.L3_INVALID
@@ -241,10 +252,12 @@ fn: l3_exec_stmt (@: LmxArena arena; @: L3Frame f; @: void v) int
         ---
         if: hk = c.LMX_KIND_METHOD
             return: c.L3_UNSUPPORTED
-        return: c.L3_OK
+        # Plain Structure with no op/callable head: explicit until discard exists.
+        return: c.L3_UNSUPPORTED
     ---
+    # A bare CALLABLE descriptor has no occurrence M to activate; never silent OK.
     if: kind = c.LMX_DOMAIN_KIND_CALLABLE
-        return: c.L3_OK
+        return: c.L3_UNSUPPORTED
     if: kind = c.LMX_KIND_METHOD
         return: c.L3_UNSUPPORTED
 return: c.L3_UNSUPPORTED

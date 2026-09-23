@@ -196,7 +196,71 @@ fn: main () int
     lmx_arena_ref_store(m, 1U, (cast: (@: void) inner))
     lmx_arena_ref_store(m, 2U, (cast: (@: void) mk_return_int(a, 3)))
     memset((cast: (@: void) (@ rr)), 0, c.sizeof(c.L3Result))
-    fail(counts, l3_exec_run_on(a, m, 0, prr) = c.L3_OK && prr\value = 3, "data Structure is not a body")
+    fail(counts, l3_exec_run_on(a, m, 0, prr) = c.L3_UNSUPPORTED, "D-03 plain Structure statement is UNSUPPORTED")
+
+    # D-03: bare callable occurrence as statement executes (own assign + return).
+    info2: lmx_callable_new_owned(a)
+    inner: lmx_node_new_owned(a)
+    info: lmx_callable_new_owned(a)
+    m: lmx_node_new_owned(a)
+    stmt: lmx_node_new_owned(a)
+    cell: lmx_int_new_owned(a)
+    cell2: lmx_int_new_owned(a)
+    if: info2 = 0 || inner = 0 || info = 0 || m = 0 || stmt = 0 || cell = 0 || cell2 = 0
+        free(counts)
+        return: 2
+    ---
+    if: lmx_arena_refs_open_owned(a, inner, 4U) != 0 || lmx_arena_refs_open_owned(a, m, 3U) != 0 || lmx_arena_refs_open_owned(a, stmt, 3U) != 0
+        free(counts)
+        return: 2
+    ---
+    lmx_int_store_known(cell, 0)
+    lmx_int_store_known(cell2, 42)
+    info2\method: meth
+    lmx_arena_ref_store(inner, 0U, (cast: (@: void) info2))
+    lmx_arena_ref_store(inner, 1U, cell)
+    lmx_arena_ref_store(stmt, 0U, (cast: (@: void) lmx_op_new_owned(a, c.L3_NODE_ASSIGN)))
+    lmx_arena_ref_store(stmt, 1U, lmx_int_new_owned(a))
+    lmx_int_store_known(lmx_arena_ref_value(stmt, 1U), 1)
+    lmx_arena_ref_store(stmt, 2U, cell2)
+    lmx_arena_ref_store(inner, 2U, (cast: (@: void) stmt))
+    lmx_arena_ref_store(inner, 3U, (cast: (@: void) mk_return(a)))
+    info\method: meth
+    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
+    lmx_arena_ref_store(m, 1U, (cast: (@: void) inner))
+    lmx_arena_ref_store(m, 2U, (cast: (@: void) mk_return(a)))
+    fail(counts, l3_exec_run(a, m) = c.L3_OK, "D-03 bare callable statement runs")
+    fail(counts, lmx_int_value_known(lmx_arena_ref_value(inner, 1U)) = 42, "D-03 bare callable statement published own")
+
+    # D-03: non-own primitive (size_t) as statement is explicit UNSUPPORTED.
+    # Top-level int cells are own fields of the plan and are not statements.
+    info: lmx_callable_new_owned(a)
+    m: lmx_node_new_owned(a)
+    cell: lmx_size_new_owned(a)
+    if: info = 0 || m = 0 || cell = 0 || lmx_arena_refs_open_owned(a, m, 3U) != 0
+        free(counts)
+        return: 2
+    ---
+    info\method: meth
+    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
+    lmx_arena_ref_store(m, 1U, cell)
+    lmx_arena_ref_store(m, 2U, (cast: (@: void) mk_return(a)))
+    fail(counts, l3_exec_run(a, m) = c.L3_UNSUPPORTED, "D-03 primitive statement is UNSUPPORTED")
+
+    # D-03: bare CALLABLE descriptor (no occurrence) is explicit UNSUPPORTED.
+    info: lmx_callable_new_owned(a)
+    info2: lmx_callable_new_owned(a)
+    m: lmx_node_new_owned(a)
+    if: info = 0 || info2 = 0 || m = 0 || lmx_arena_refs_open_owned(a, m, 3U) != 0
+        free(counts)
+        return: 2
+    ---
+    info\method: meth
+    info2\method: meth
+    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
+    lmx_arena_ref_store(m, 1U, (cast: (@: void) info2))
+    lmx_arena_ref_store(m, 2U, (cast: (@: void) mk_return(a)))
+    fail(counts, l3_exec_run(a, m) = c.L3_UNSUPPORTED, "D-03 bare CALLABLE descriptor is UNSUPPORTED")
 
     # Child returns 3, parent returns 7: parent result must survive.
     info2: lmx_callable_new_owned(a)

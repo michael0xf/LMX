@@ -231,6 +231,9 @@ fn: main () int
     @: Lmx test3 0
     @: Lmx test4 0
     @: Lmx host 0
+    @: Lmx tracer 0
+    @: Lmx bare_stmt 0
+    @: Lmx data_stmt 0
     @: Lmx pair 0
     @: Lmx tramp 0
     @: Lmx tramp2 0
@@ -275,7 +278,7 @@ fn: main () int
     abox: lmx_int_new_owned(ga)
     unit: lmx_node_new_owned(ga)
     argv[0]: abox
-    if: groles = 0 || gplan_roles = 0 || flat = 0 || lens = 0 || paths = 0 || argv = 0 || gv = 0 || abox = 0 || unit = 0 || lmx_arena_refs_open_owned(ga, unit, 40U) != 0
+    if: groles = 0 || gplan_roles = 0 || flat = 0 || lens = 0 || paths = 0 || argv = 0 || gv = 0 || abox = 0 || unit = 0 || lmx_arena_refs_open_owned(ga, unit, 42U) != 0
         fputs("lmx_walk: unit\n", l1_stdout())
         return: 2
     ---
@@ -334,6 +337,9 @@ fn: main () int
     test3: mk_m(unit, 29U, 1U)
     test4: mk_m(unit, 30U, 2U)
     host: mk_m(unit, 31U, 2U)
+    tracer: mk_m(unit, 37U, 3U)
+    bare_stmt: mk_m(unit, 38U, 3U)
+    data_stmt: mk_m(unit, 39U, 3U)
     # A subject: plain data, not a callable.  [ 7, 35 ]
     subject: pl(unit, 25U, 2U)
     icell(subject, 0U, 7)
@@ -587,11 +593,25 @@ fn: main () int
     # host: return: 7  -- nullary callee for optional bag-arg CALL forms
     n: fr(host, 1U, c.LMX_WALK_OP_RET, 2U)
     lit(n, 1U, 7)
+    # tracer: own t 0; t: 1  -- side effect for bare-callable statement
+    icell(tracer, 1U, 0)
+    n: fr(tracer, 2U, c.LMX_WALK_OP_SET, 3U)
+    own(n, 1U, tracer, 1U)
+    lit(n, 2U, 1)
+    # bare_stmt: tracer; return: 9  -- bare callable occurrence then return
+    ref(bare_stmt, 1U, tracer)
+    n: fr(bare_stmt, 2U, c.LMX_WALK_OP_RET, 2U)
+    lit(n, 1U, 9)
     # a plain Structure (1 2) under unit, handed to a call as one argument; parent==caller
     # set at the use site
     pair: pl(unit, 33U, 2U)
     icell(pair, 0U, 1)
     icell(pair, 1U, 2)
+    # data_stmt: plain; return: 1  -- plain Structure statement must not be silent OK
+    e: pl(data_stmt, 1U, 1U)
+    icell(e, 0U, 0)
+    n: fr(data_stmt, 2U, c.LMX_WALK_OP_RET, 2U)
+    lit(n, 1U, 1)
 
     check(broken = 0, "construction")
     if: broken != 0
@@ -908,6 +928,9 @@ fn: main () int
     check(lmx_walk_prepare(gctx, ga, gplan_roles, test2) = c.LMX_WALK_OK, "test2 prepared")
     check(lmx_walk_prepare(gctx, ga, gplan_roles, test4) = c.LMX_WALK_OK, "test4 prepared")
     check(lmx_walk_prepare(gctx, ga, gplan_roles, host) = c.LMX_WALK_OK, "host prepared")
+    check(lmx_walk_prepare(gctx, ga, gplan_roles, tracer) = c.LMX_WALK_OK, "tracer prepared")
+    check(lmx_walk_prepare(gctx, ga, gplan_roles, bare_stmt) = c.LMX_WALK_OK, "bare_stmt prepared")
+    check(lmx_walk_prepare(gctx, ga, gplan_roles, data_stmt) = c.LMX_WALK_OK, "data_stmt prepared")
     # test3 stays unprepared / header unset
     info: (cast: (@: LmxCallable) lmx_arena_ref_value(test3, 0U))
     check(info != 0 && info\header = 0, "test3 descriptor-only, header unset")
@@ -932,6 +955,13 @@ fn: main () int
     check(lmx_walk_prepare(gctx, ga, gplan_roles, tramp) = c.LMX_WALK_OK, "tramp: host() prepared")
     st: go(tramp, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_OK && r = 7 && v = 1, "CALL host with no argument children => 7")
+    # D-03: bare callable in body executes (tracer own published), then return 9.
+    st: go(bare_stmt, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && r = 9 && v = 1, "D-03 bare callable statement then return => 9")
+    check(lmx_int_value_known(lmx_arena_ref_value(tracer, 1U)) = 1, "D-03 bare callable statement published tracer")
+    # D-03: plain Structure statement is explicit UNSUPPORTED (never silent OK).
+    st: go(data_stmt, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_UNSUPPORTED, "D-03 plain Structure statement is UNSUPPORTED")
     # A plain Structure child of a call is ONE Structure argument (-133): test2(pair), pair =
     # (1 2) -- the graph of `test2(((1 2)))` after P0's one-level normalization -- reaches the
     # formal as that very Structure, as it does natively.  The CALL-only unwrap would have

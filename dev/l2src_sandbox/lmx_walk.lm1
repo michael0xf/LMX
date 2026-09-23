@@ -806,10 +806,15 @@ return: c.LMX_WALK_INVALID
 # a frame node are data, not steps.  An executed return ends the walk of every enclosing
 # body of this activation.  The value of a step is dropped; its destination is a C int of
 # this very frame.
+# N7 / D-03: a bare callable occurrence (no frame role) is activated nullarily -- the same
+# path a CALL takes with no argument children.  A plain Structure or primitive statement is
+# explicit UNSUPPORTED until discard is implemented; never skipped as silent OK.
 fn: lmx_walk_body (@: LmxWalkFrame f; @: Lmx body; size_t: first) int
     @: void child 0
     @: void dropped 0
     int: spare 0
+    int: present 0
+    int: kind
     int: status c.LMX_WALK_OK
     size_t: i first
     if: f = 0 || body = 0
@@ -818,6 +823,23 @@ fn: lmx_walk_body (@: LmxWalkFrame f; @: Lmx body; size_t: first) int
         child: lmx_arena_ref_value(body, i)
         if: lmx_walk_op(f, child) != c.LMX_WALK_OP_NONE
             status: lmx_walk_eval(f, child, (cast: (@: void) (@ spare)), @ dropped)
+        else:
+            if: child != 0 && lmx_range_classify(f\arena, child) != c.LMX_KIND_PRIMITIVE
+                # Direct primitive children of M are own-field cells (plan or not); skip
+                # without going through lmx_walk_kind (that door counts classified).
+                kind: lmx_walk_kind(f, child)
+                if: kind = c.LMX_KIND_STRUCT && lmx_call_ready(f\arena, (cast: (@: Lmx) child)) = c.LMX_CALL_OK
+                    status: lmx_walk_checkpoint(f)
+                    if: status = c.LMX_WALK_OK
+                        status: lmx_walk_activate(f\context, (cast: (@: Lmx) child), 0, 0U, (cast: (@: void) (@ spare)), @ dropped, @ present)
+                    ---
+                else:
+                    if: kind = c.LMX_KIND_STRUCT || kind = c.LMX_DOMAIN_KIND_CALLABLE
+                        status: c.LMX_WALK_UNSUPPORTED
+                    ---
+                ---
+            ---
+        ---
         i: i + 1U
     ---
 return: status

@@ -12,7 +12,13 @@ MainLetter: m
 nextMessage: m
 if: length(m\mainArgs) != 2
     return: 1
-if: lm_p0_parse_file(@ m\mainArgs[1][0], @ document) != 0
+# FABLE-SONNET-DECL-PREPASS-20260923-137 part 3 (Opus's finding 2): the
+# assignment form, `status: <predef call>`, not just the call inside a
+# condition -- l2_colon_simple_ty used to refuse this with "assignment
+# value has unknown type" since it only recognized L2-declared methods.
+int: status
+status: lm_p0_parse_file(@ m\mainArgs[1][0], @ document)
+if: status != 0
     lm_p0_document_destroy: document
     return: 2
 if: document = 0

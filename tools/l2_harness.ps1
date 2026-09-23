@@ -1341,6 +1341,15 @@ $fixtures = @(
         Debt = @() },
     [pscustomobject]@{ Name = 'unit_struct_return_assign_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'graph assignment admission requires receiving-expression tests'; Absent = @(); Debt = @() },
+    # FABLE-SONNET-DECL-PREPASS-20260923-137 part 3 (Opus's finding 2): a
+    # predef'd C function's result reads as numeric -- safe into a numeric
+    # target (entry_parse_min.lm2's own assignment form), still refused
+    # into an incompatible one, and not caught until gcc for a genuinely
+    # void return (l2trans cannot know a predef's real C signature).
+    [pscustomobject]@{ Name = 'unit_predef_result_struct_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_predef_result_void_refused.lm2'; Expect = 'toolchain-refuses'; Exit = 0; Needle = '';
+        Absent = @(); Debt = @() },
     # FABLE-SONNET-OWN-LOOKUP-AUDIT-20260923-131 part 3: the -92 leftover --
     # a Structure value assigned through a path ending at a nested
     # Structure-typed field stays a located, fail-closed refusal.

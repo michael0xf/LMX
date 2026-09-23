@@ -5573,6 +5573,26 @@ fn: l2_colon_simple_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
     ---
     # A call by name or through a callable field path (`Holder\viaPath(4U)`).
     m: l2_head_method(value\as\frame\head)
+    # A predef'd C function (l2_is_known: the c.* door, or a name the unit's
+    # own predef: files declare) is an external ABI leaf, not an L2 method
+    # l2_head_method can find -- l2trans never learns its exact return type
+    # (the generated predef header supplies the checked C prototype; l2trans
+    # itself only re-parses the predef file, on demand, for a yes/no
+    # existence check, l2_predef_has_function/l2_predef_file_has_function,
+    # not its signature). Assigning its result already works in every
+    # non-assignment expression context (`if: lm_p0_parse_file(...) != 0`,
+    # entry_parse_min.lm2), which needs no type at all; only this narrower
+    # `target: call()` compatibility pre-check did not (Opus's finding 2,
+    # FABLE-SONNET-DECL-PREPASS-20260923-137 part 3: "assignment value has
+    # unknown type"). Read as a numeric literal would (-10, the same code
+    # l2_num gives above) -- safe, not a wider door: l2_colon_types_compatible
+    # accepts -10 only into a numeric target (int/size_t/unsigned/ulong) and
+    # still refuses a pointer or Structure target, the same fail-closed
+    # outcome an unknown type gave before, for every case this cannot be
+    # the realistic `status: predef_call(...)` shape.
+    if: m < 0 && l2_is_known(value\as\frame\head) != 0
+        \out_ty: -10
+        return: 0
     if: m < 0
         return: 1
     \out_ty: l2_m_ret[m]

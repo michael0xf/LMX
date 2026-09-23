@@ -18,8 +18,11 @@ line-specific conclusion. This document introduces no new language rules.
 ## 1. Engineering boundary
 
 L2 is LMX plus the machine operations required by the kernel. L3 is the
-hermetic graph-level language. L1 is a technical lowering intermediate, and
-C99 is its current machine target. The **present** build paths are:
+hermetic graph-level language and a subset of L2: a named or anonymous
+Structure is always L3, L2 operations are available only inside method
+bodies, and `@` of any depth in L3 is a reference-declaration receiver only.
+L1 is a technical
+lowering intermediate, and C99 is its current machine target. The **present** build paths are:
 
 ```text
 live kernel .lm1 ───────────────→ L1 translator ─→ C99 runtime
@@ -207,7 +210,8 @@ language operations, but a green test in one is not evidence for the other.
 A callable's body after `child[0]` preserves lexical fields and nested Frame
 Structures. Repeated fields are distinct occurrences, not one name-keyed
 runtime slot. The intended path selector `[N]field` identifies an occurrence;
-an unqualified path selects `[0]`. A current translator path can still
+an unqualified path selects the last occurrence (`[lastIndex]`), so after a
+`merge` it reads the last operand that has the name. A current translator path can still
 collapse repeated same-name fields into one own slot and does not completely
 lower the selector. This is an [open core task](next_core_tasks.md),
 not a license to add a second runtime name table or journal.

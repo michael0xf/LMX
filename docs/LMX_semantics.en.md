@@ -62,6 +62,8 @@ A file extension selects its outer profile: `.lm1` selects direct L1 lowering, `
 
 The model supports interpretation of the constructed L3 graph and translation preserving the same semantics. The interpreter executes L3 only: not source text, L1/L2 or `c.*` operations. The interpreter's implementation does not expand the language of the interpreted program. L2 defines machine mechanisms, L3 defines high-level programs, and L1 is an intermediate lowering stage toward C99. The parser, graph interpreter and translator serve different purposes. Grammatical forms, body boundaries, literals, comments and normalization are defined in the [grammar specification](LMX_grammar.en.md).
 
+The levels relate as sets: L3 is a subset of L2. A named Structure and an anonymous Structure always belong to level L3; L2 operations -- address, machine, `c.*` -- are available only inside method bodies (`fn`, `sub`, `fm`). The `@` spelling of any depth (`@:`, `@@:`, `@@@:` ...) in L3 is a reference-declaration receiver only; its other uses are L2 operations and are prohibited in L3. Hence a Structure graph built from any profile is admissible to the L3 interpreter, while a method body may require native lowering.
+
 <a id="l3-receiver"></a>
 ### L3 receiving expression
 
@@ -115,7 +117,7 @@ A structural path `object\field\nested` selects graph fields in sequence. Each s
 | `parent` | ordinary field of every working-graph `Lmx` Structure | immediately enclosing Structure; differs for a method, `if`, loop and other nested bodies |
 | `self` | hidden ABI context only | physical selected callable occurrence and its own-load/dirty base; not a language word |
 
-Repeated source names are retained. `name` is equivalent to `[0]name`, selecting the first occurrence; `[1]name` selects the second. A name's occurrence number differs from the physical field index among all fields. A later `merge` part does not automatically override an earlier one. Reordering distinct names does not change a named path; reordering same-name occurrences may change the selected value.
+Repeated source names are retained. An unqualified `name` selects the **last** occurrence of the name, i.e. it is equivalent to `[lastIndex]name`; the explicit selector `[N]name` numbers occurrences in lexical order: `[0]name` is the first, `[1]name` the second. A name's occurrence number differs from the physical field index among all fields. Consequently, after `merge` an unqualified name reads the occurrence from the last operand that contains the name; earlier occurrences remain reachable through `[N]`. Reordering distinct names does not change a named path; reordering same-name occurrences changes the selected value.
 
 A Structure's field count and positions are fixed at construction. Graph fields follow strictly lexical order; native-code emission order does not authorize rearranging the graph's fields. Updating an existing field replaces its stored reference; it does not append an occurrence. A different set of fields requires a new Structure. Array operations follow their own contracts and do not change this Structure rule.
 
@@ -249,7 +251,7 @@ The body's free dynamic names are part of its interface. Adding one changes `Dyn
 <a id="admission-case-10"></a>
 ### 10. Selecting the intended part of a composition
 
-Select the occurrence explicitly or construct the intended fields. `merge` builds a new tree, preserves forward occurrence order, does not mutate its operands and does not implement last-wins inheritance. If the result contains A's `read` followed by B's, `result\read` and `result\[0]read` select A; `result\[1]read` selects B. Analytical diagnostics may expose an unintended unqualified selection after an import or composition changes. Source parts need not be adjacent or statically available.
+Select the occurrence explicitly or construct the intended fields. `merge` builds a new tree, preserves forward occurrence order and does not mutate its operands; earlier same-name occurrences are neither removed nor overwritten -- they stay in the result. If the result contains A's `read` followed by B's, unqualified `result\read` and `result\[1]read` select B (the last occurrence); `result\[0]read` selects A. Analytical diagnostics may expose an unintended unqualified selection after an import or composition changes. Source parts need not be adjacent or statically available.
 
 <a id="admission-case-11"></a>
 ### 11. Changing an existing Structure
@@ -327,7 +329,7 @@ For example, a method inside independent Structure S can use S's field through i
 <a id="callables"></a>
 ## 10. Callable expressions and their interfaces
 
-An executable body is a structural expression. Every named Structure may be executed through the bare atom of its name, but declaring or constructing it does not itself execute its body. `fn` defines an expression with one logical result; `sub` performs execution without a returned value; `fm` has one result Structure whose fields provide a multiple-return surface. The signature defines explicit arguments, required dynamic and lexical inputs, each value's pass mode, the result and declared `throws` exits. Bare `return` exits without a value; `return: value` supplies a value in a body admitting a result. An ordinary named Structure may contain either form; `sub` admits bare `return` but does not acquire a result from it. At the opening level `return` may also close a named Structure as a trailer under the general grammar rule.
+An executable body is a structural expression. Every named Structure may be executed through the bare atom of its name, but declaring or constructing it does not itself execute its body. `fn` defines an expression with one logical result; `sub` performs execution without a returned value; `fm` has one result Structure whose fields provide a multiple-return surface. The signature defines explicit arguments, required dynamic and lexical inputs, each value's pass mode, the result and declared `throws` exits. Bare `return` exits without a value; `return: value` supplies a value in a body admitting a result. An ordinary named Structure is a callable without a result: only bare `return` is admitted in it, and `return: value` is rejected; `sub` likewise admits bare `return` but does not acquire a result from it. At the opening level `return` -- bare, or with a value in a body admitting a result -- may also close any callable Structure (a method or a named Structure) as a trailer under the general grammar rule; `return` does not close a non-callable Structure. A structural path through a callable Structure (`Counter\n`) reads its published field and does not execute it, even when it is a method.
 
 A callable occurrence has its own structural identity and a `parent` link into its above-method lexical space. Multiple occurrences can reference one immutable method. Graph copying neither creates another method implementation nor changes its signature; state belongs to particular structural occurrences and activations. A nested definition does not capture a caller frame in a hidden environment.
 
@@ -373,7 +375,7 @@ The presence in a source body of a resolved bare assignment `x: value`, where `x
 
 Locality and storage duration are separate properties here. The own field lets the current callable occurrence retain the published value for later activations, but does not turn the write into a mutation of an outer binding: the caller's argument cell and the above-method space's field remain unchanged. Only an explicit `node\x` path write mutates that outer field.
 
-In L3, `@` exists only as the head of a distinct reference-declaration receiver. The form `@: Type var` declares the typed reference binding `var`; `Type` and `var` are two separate tail fields, and `Type` must resolve. This declaration neither constructs a new `Type` instance, takes the address of the binding, nor exposes a machine cell. An argument or a later ordinary assignment `var: value`, with mandatory admission, must supply the value before its first read; using an as-yet unbound reference is an error.
+In L3, `@` exists only as the head of a distinct reference-declaration receiver. The form `@: Type var` declares the typed reference binding `var`; `Type` and `var` are two separate tail fields, and `Type` must resolve. The head depth is unbounded: `@@: Type var` declares a reference to a reference, `@@@: Type var` the next depth; thus L3 data Structures hold references of any depth, and a method works with a received Structure as with C data. This declaration neither constructs a new `Type` instance, takes the address of the binding, nor exposes a machine cell. An argument or a later ordinary assignment `var: value`, with mandatory admission, must supply the value before its first read; using an as-yet unbound reference is an error.
 
 ```text
 @: Type var
@@ -384,7 +386,7 @@ In L3, `@` exists only as the head of a distinct reference-declaration receiver.
 | `@: Type var` | Declare reference `var` to a value of resolved `Type` |
 | `@: Type: var` | Different structure `@(Type(var))`; not a reference declaration and not a synonym of the preceding form |
 | `@x`, including `return: @x` and passing `@x` as an argument | Prefix address-of form, invalid in L3 |
-| `@@:`, `@@@:`, and subsequent heads | L2 machine-address depth, invalid in L3 |
+| `@@: Type var`, `@@@: Type var`, and subsequent heads | Declaration of a deeper reference (reference to a reference ...); admissible in L3 only as a declaration receiver |
 
 A reference binding carries an already existing reference identity: ordinary passing and `return: var` pass `var`, not the address of a local variable. Assignment rebinds it only after common `implements`/admission. A new value uses ordinary typed construction, such as `Type: fresh`, not `@`. L3 has no prefix address-of, raw load, address arithmetic, machine `cast`, or backing access; its same-spelled `@` receiver does not reuse the L2 machine-family implementation.
 
@@ -496,7 +498,7 @@ Two same-named handlers in one block are prohibited; separate nested blocks can 
 
 Language operators whose `throws` list the programmer does not see written out (for example `merge`, including the one inside a `Model: fresh` declaration) also throw a named failure, but catching it is optional: a `catch: merge` handler -- before the call, after it, or in a separate nested block -- handles it in the ordinary way and nothing flies anywhere; an uncaught implicit failure flies to the root of the executing Message and the Thread stops (`running = 0`). The only placement constraint is the one declared names have: two same-named `catch` handlers cannot compete at one level.
 
-Worked example from the older specification (`tests/t2.lmx`): handlers before the call in separate anonymous blocks, and a handler after the blocks.
+Worked example from the older specification (`lingvamyxa_prev/tests/t2.lmx`): handlers before the call in separate anonymous blocks, and a handler after the blocks. Each `checkedGreeting(...)` call stands at its `catch`'s level, after the handler; the older specification's rendering put it inside the handler body by an indentation slip, so the example here follows the original (tab = 8).
 
 ```text
 fn: checkedGreeting (HelloConfig(cfg)) (Text)
@@ -529,27 +531,17 @@ sub: helloMain
     ---
         catch: GreetingRetry ()
             cfg\greeting\len++
-            System\out\println: checkedGreeting(cfg)
+        System\out\println: checkedGreeting(cfg)
     ---
         catch: GreetingRetry ()
             emptyCfg\greeting\len++
-            System\out\println: checkedGreeting(emptyCfg)
+        System\out\println: checkedGreeting(emptyCfg)
 
     catch: GreetingSkip (Text: badText)
         System\out\println: ("handled EmptyGreeting: " + badText)
-
-
-`checkedGreeting` may leave by `return: cfg\greeting` or by `throw`. The empty
-`GreetingRetry ()` catch parameters mean this landing pad takes no payload
-fields; it mutates the outer `cfg` or `emptyCfg`. `GreetingSkip` binds
-`cfg\greeting` from `throw: GreetingSkip(cfg\greeting)` to `badText`.
-
-Each anonymous `---` block owns one `GreetingRetry` catch and one call. The
-two `GreetingRetry` names are therefore not duplicates. `GreetingSkip` sits
-in `helloMain` after those blocks, so a skip continues at the statements
-after that `catch`.
-
 ```
+
+`checkedGreeting` may leave by `return: cfg\greeting` or by `throw`. The empty `GreetingRetry ()` catch parameters mean this landing pad takes no payload fields; it mutates the outer `cfg` or `emptyCfg`. `GreetingSkip` binds `cfg\greeting` from `throw: GreetingSkip(cfg\greeting)` to `badText`. Each anonymous `---` block owns one `GreetingRetry` catch and one call, so the two `GreetingRetry` names are not duplicates; the repeat call from the handler is a new activation. `GreetingSkip` sits in `helloMain` after those blocks, so a skip continues at the statements after that `catch`.
 
 `assert` checks a diagnostic invariant. A false condition produces `AssertionViolation`, not a recoverable `throw`; ordinary `catch` cannot handle it and it is not part of `throws`. In the actor profile, publication and cleanup precede delivery to the executing Message's diagnostic root; that Message stops executing and receives no further turns. This need not terminate the OS worker; stopping execution and destroying the object are distinct.
 
@@ -620,7 +612,7 @@ The complete used graph is copied with required references and lexical chains to
 
 Shared method references are terminals under their contracts. When `merge` encounters an [eternal branch](#eternal) qualified `independent: const: immutable`, it MUST **not copy** it and MUST place the original physical value reference directly into the result. Physical identity is preserved and the source module remains the owner. Range-index visibility and bookkeeping occur inside merge/classification; they are neither a separate visible operation nor an alternative to `merge`. Other used mutable state receives distinct storage, and the algorithm leaves no references into another mutable arena.
 
-Repeated fields retain forward order: the first `read` remains `read`/`[0]read`, the next is `[1]read`. A later operand does not automatically override the first. Different selection requires choosing an occurrence explicitly or constructing the intended result. Successful composition publishes a fully initialized result, requires no short-name registration and leaves sources unchanged.
+Operand fields are appended to the result flat, in operand order; same-name fields retain forward order: the first `read` is `[0]read`, the next `[1]read`, and unqualified `read` selects the last occurrence (`[lastIndex]read`), see [names and paths](#fields). Methods are never merged into each other: only named and anonymous Structures merge, and the callable occurrences inside them are copied as ordinary subtrees sharing one immutable method record. A copied callable occurrence receives `parent` = the `merge` result and a hidden `offset` in its descriptor (field 0) -- the number of result fields preceding the fields of its source operand; through `offset` the method body addresses its lexical parent's fields inside the actual `node`, so `node\x` in the copied method reads the same field as in the original; an unmerged occurrence has `offset = 0`. A returned nested method is built the same way: the activation assembles a Structure from the values actually used and copies the nested callable occurrence into it by the same `merge`; no hidden closure environment arises. Successful composition publishes a fully initialized result, requires no short-name registration and leaves sources unchanged.
 
 Failure is a throw named `merge` (as for every operator whose `throws` list the programmer does not see written out): catching it is optional; an uncaught one flies to the root and the Thread stops (`running = 0`); a handling point `catch: merge` -- before the call, after it, or in a separate nested block, under the rules of [declared failures](#exceptions) -- handles it in the ordinary way and nothing flies anywhere. There is no separate partial-result protocol. This does not promise rollback of operand-evaluation effects. Temporary-storage release follows the owning Message's rules. The exact low-level mechanism is in [L2](L2_spec_en.md#copy-merge).
 

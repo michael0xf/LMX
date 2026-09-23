@@ -205,6 +205,15 @@ Acceptance:
 - [x] Formal of callable signature (`test: f` / `test3: f`) receives a whole callable `@: Lmx` occurrence (AUTHOR-CALLABLE-DESCRIPTOR-IMPLEMENT-20260922-43 / G2 whole-occurrence; routes -41 a-f + descriptor-only -44/46). Passing/using that formal stays on the general occurrence path — not a new bind/registry act. Bodiless `test3` is always a valid descriptor (`l2_m_body=0`, `addr=0`); native proven CONTINUE-54 Stage B; interpreter proven STAGEC-65 (`test2`/`test4` RET-of-ARG nullary activate; `test3` ⇒ `LMX_WALK_NOT_CALLABLE`).
 - [ ] Проверять полную сигнатуру, dynamic inputs, admission и checkpoints одинаково для native lowering и интерпретатора.
 
+### throws / catch (S1; автор Q11–Q13, 2026-09-23; `LMX_blog/2026-09-23.md`)
+
+- [ ] `throws:` — в шапке метода (декларативная голова определения); объявленное имя, не отловленное явно вызывающим (`catch:`) и не перечисленное в его `throws:`, — ошибка трансляции (§14); у точки входа E списка throws нет → необработанное объявленное имя, дошедшее до E, — ошибка трансляции «unhandled throw in entry: <Name>».
+- [ ] Неявные имена операторов без видимого `throws` (сегодня `merge`, в т.ч. внутри `Model: fresh`): бросают, отлов не обязателен; неотловленный — в корень исполняющегося Message, `running = 0`, без результата, код выхода 1; `catch: merge` обрабатывает стандартно.
+- [ ] Размещение `catch:` — до вызова (повторный вход в участок), после вызова, или отдельным вложенным блоком; два одноимённых `catch` на одном уровне — ошибка (§14, пример t2 перенесён в книгу).
+- [ ] Payload `throw: Name(args)` → параметры `catch: Name (params)`: позиционный префикс, связывание — обычное присваивание через runtime `implements` (§7); intern сигнатуры несёт имена throws.
+- [ ] Понижение (native): статус-возврат + существующий out-параметр `l2_out_throw`; одна нумерация статусов на метод — объявленные 1..d, затем неявные d+1..; без отдельного «abort»-статуса; `assert` — своим маршрутом; landing pads структурно, без правки L1/пина; интерпретатор — явное «unsupported» до своей реализации.
+- [ ] Источники нормы: L2/L3-спека и `lingvamyxa_prev/Lingvamyxa_spec.txt` + старые примеры; `l1.txt` (спека L1) — наш промежуточный язык, не норма L2.
+
 ### Expression statement и discard
 
 Авторски утверждено (`LMX-DISCARD-PLAN-20260922-01`). Write-реализация входит в sole-writer ticket `GROK-BOT-C-DOOR-UNIFY-20260922-11` (вместе с унификацией двери `c.*`). Evidence addendum (held RO reviews released into this plan before code):

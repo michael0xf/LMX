@@ -1,4 +1,14 @@
-CURRENT CORE MODEL / ДЕЙСТВУЮЩАЯ МОДЕЛЬ (2026-09-12)
+ACCEPTED TARGET ABI / ПРИНЯТЫЙ ЦЕЛЕВОЙ ABI (2026-09-23; code not migrated)
+VoidArray is exactly {size_t size, void *data}; LmxArrayDesc is an alias of
+VoidArray; Lmx is {Lmx *parent, VoidArray array}. Embedded Lmx.array is the
+actual array of physical child references. Its backing is registered in the
+arena address-range index; the descriptor itself is not an LmxRange entry.
+The standalone base Array uses the same VoidArray type, with no capacity or
+growth. Dynamic List remains separate. Current source still uses Lmx's flat
+{parent, int len, void *data} and LmxArrayDesc's {size_t len, void *data}; the
+dated evidence below describes that older implementation, not this new ABI.
+
+HISTORICAL CORE MODEL / ИСТОРИЧЕСКАЯ МОДЕЛЬ (2026-09-12)
 Read L2_CORE_AND_MESSAGE_MODEL_20260912.md at repository root: parts I-III
 describe the full core/Message mechanism; part IV records implementation limits,
 and only the final part is the work plan. SPEC and Revision 2 remain normative.

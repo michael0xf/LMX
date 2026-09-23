@@ -53,21 +53,28 @@ external failures still require precise diagnostics.
 
 ## 2. Physical graph and identity
 
-The universal Structure is [`Lmx`](dev/l2src_sandbox/lmx.h.lm1), exactly:
+The accepted target physical layout for the universal Structure is:
 
-```text
-Lmx = { Lmx *parent; int len; void *data; }
+```c
+typedef struct { size_t size; void *data; } VoidArray;
+typedef VoidArray LmxArrayDesc;
+typedef struct Lmx { struct Lmx *parent; VoidArray array; } Lmx;
 ```
 
-`parent` is the immediate *structural* parent in the working graph. `len` is
-the number of immediate child slots; it is not a byte count, Array length, or
-capacity. `data` addresses an ordered `void *` child-slot array. The slots are
+The current [`lmx.h.lm1`](dev/l2src_sandbox/lmx.h.lm1) still has the old flat
+`{parent, int len, void *data}` layout; the migration is pending. In the target,
+`parent` is the immediate *structural* parent in the working graph.
+`array` is the actual by-value child-reference array descriptor, not a C-only
+wrapper: `array.size` is the number of immediate child slots, not bytes or
+capacity, and `array.data` addresses their ordered `void *` backing. That
+backing is registered as a child-reference address range in the arena;
+`VoidArray` is not the `LmxRange` index entry. The slots are
 fixed in number when the Structure is constructed; their stored references may
 change. The header has no name, type tag, method pointer, vtable, list capacity,
 dirty flag, or Message state. In particular, an empty Structure remains an
-ordinary three-field Structure with zero child slots.
+ordinary two-direct-member Structure with zero child slots.
 
-For a slot `i`, `((void **)s->data)[i]` is a **physical reference value**. Its
+For a slot `i`, `((void **)s->array.data)[i]` is a **physical reference value**. Its
 type comes from the registered address range containing that value, not from
 the address of the slot. The latter belongs to the `REFS`/children-storage
 range. A primitive child points to a primitive cell; a Structure child points
@@ -134,11 +141,13 @@ storage by `lmx_arena_refs`; typed pools by `lmx_pool`.
 
 ### 2.2 The base Array and the separate List
 
-[`LmxArrayDesc`](dev/l2src_sandbox/lmx.h.lm1) is **exactly** `{len, data}`.
-Its backing has exactly `len` elements. The base Array has no `capacity`,
-reserve, resize, append, backing switch, or implicit growth. `Lmx.len` and
-`LmxArrayDesc.len` count different things. Changing the Array ABI to serve one
-dynamic consumer is a kernel defect.
+The accepted `LmxArrayDesc` is a typedef alias of `VoidArray`, exactly
+`{size_t size, void *data}`. Standalone Array backing has exactly `size`
+elements; embedded `Lmx.array.size` counts child-reference slots. The current
+code still uses `size_t len` for `LmxArrayDesc` and `int len` for `Lmx`.
+The base Array has no `capacity`, reserve, resize, append, backing switch, or
+implicit growth. Changing its ABI to serve one dynamic consumer is a kernel
+defect.
 
 A dynamic container is a separate implementation:
 [`lmx_list_owned`](dev/l2src_sandbox/lmx_list_owned.h.lm1) uses `KIND_LIST`

@@ -1,0 +1,21 @@
+# S1.2: a throw's payload is a fresh Structure in the program arena whose child k is argument k:
+# a Structure argument is the reference itself (x, no copy), a primitive a fresh cell of its type
+# (k an int, 9U a size_t).  What the activation wrote (k) is published before the throw leaves.
+# E does not call m or p (S1.3 catches); the row compiles, links and runs.
+Model:
+    size_t: value 1U
+end: Model
+
+fn: m (Model: x) int
+    throws: Bad
+    int: k 0
+    k: 4
+    if: x\value = 0U
+        throw: Bad(x k 9U)
+return: k
+
+fn: p (Model: x) int
+    throws: Bad
+return: m(x)
+
+return: 0

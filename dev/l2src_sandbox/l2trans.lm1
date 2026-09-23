@@ -283,6 +283,7 @@ int: l2_alloc_kind 0
 @: int l2_it_dyn 0
 @: int l2_it_ret 0
 @: int l2_it_throws 0
+@: int l2_it_tmi 0
 @@: char l2_it_n 0
 @@: size_t l2_it_nl 0
 @@: int l2_it_ty 0
@@ -526,7 +527,17 @@ prototype:
     fn: l2_admit_site (int: mi) int
     fn: l2_emit_admit (int: mi; int: ni; const: @(char value); const: @(char ind)) int
     fn: l2_implicit_name (int: g) const: @: char
+    fn: l2_throws_frame (int: mi) @: LmP0Node
     fn: l2_throws_declared (int: mi) int
+    fn: l2_throws_name (int: mi; int: k) @: LmP0Text
+    fn: l2_throws_pos (int: mi; const: @(LmP0Text name)) int
+    fn: l2_throws_same (int: a; int: b) int
+    fn: l2_check_throws_list (const: @(LmP0Node body); const: @(char path)) int
+    fn: l2_check_throws_handled (int: mi; int: callee; const: @(char path); const: @(LmP0Node at)) int
+    fn: l2_throw_arg_ty (@: LmP0Field a0; int: span; int: mi) int
+    fn: l2_check_throw (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
+    fn: l2_scan_throw_args (const: @(LmP0Node stmt); int: mi; @: int seen) int
+    fn: l2_emit_throw (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
     fn: l2_implicit_status (int: mi; const: @(char name)) int
     fn: l2_emit_implicit_throw (int: mi; const: @(char name); const: @(char ind)) int
     fn: l2_emit_propagate (int: mi; int: callee; int: t; const: @(char ind)) int
@@ -892,6 +903,8 @@ fn: l2_release () int
         l2_xfree((cast: (@: void) l2_it_ret))
     if: l2_it_throws != 0
         l2_xfree((cast: (@: void) l2_it_throws))
+    if: l2_it_tmi != 0
+        l2_xfree((cast: (@: void) l2_it_tmi))
     if: l2_it_n != 0
         l2_xfree((cast: (@: void) l2_it_n))
     if: l2_it_nl != 0
@@ -910,6 +923,7 @@ fn: l2_release () int
     l2_it_dyn: 0
     l2_it_ret: 0
     l2_it_throws: 0
+    l2_it_tmi: 0
     l2_it_n: 0
     l2_it_nl: 0
     l2_it_ty: 0
@@ -3005,6 +3019,7 @@ fn: l2_intern_reserve (unsigned: need) int
     @: int ndyn 0
     @: int nret 0
     @: int nthrows 0
+    @: int ntmi 0
     @@: char nn 0
     @@: size_t nnl 0
     @@: int nty 0
@@ -3035,13 +3050,14 @@ fn: l2_intern_reserve (unsigned: need) int
     ndyn: (cast: (@: int) l2_xmalloc(nbi))
     nret: (cast: (@: int) l2_xmalloc(nbi))
     nthrows: (cast: (@: int) l2_xmalloc(nbi))
+    ntmi: (cast: (@: int) l2_xmalloc(nbi))
     nn: (cast: (@@: char) l2_xmalloc(nbp))
     nnl: (cast: (@@: size_t) l2_xmalloc(nbp))
     nty: (cast: (@@: int) l2_xmalloc(nbp))
     nhn: (cast: (@@: char) l2_xmalloc(nbp))
     nhnl: (cast: (@@: size_t) l2_xmalloc(nbp))
     nhty: (cast: (@@: int) l2_xmalloc(nbp))
-    if: nar = 0 || ndyn = 0 || nret = 0 || nthrows = 0 || nn = 0 || nnl = 0 || nty = 0 || nhn = 0 || nhnl = 0 || nhty = 0
+    if: nar = 0 || ndyn = 0 || nret = 0 || nthrows = 0 || ntmi = 0 || nn = 0 || nnl = 0 || nty = 0 || nhn = 0 || nhnl = 0 || nhty = 0
         if: nar != 0
             l2_xfree((cast: (@: void) nar))
         if: ndyn != 0
@@ -3050,6 +3066,8 @@ fn: l2_intern_reserve (unsigned: need) int
             l2_xfree((cast: (@: void) nret))
         if: nthrows != 0
             l2_xfree((cast: (@: void) nthrows))
+        if: ntmi != 0
+            l2_xfree((cast: (@: void) ntmi))
         if: nn != 0
             l2_xfree((cast: (@: void) nn))
         if: nnl != 0
@@ -3067,6 +3085,7 @@ fn: l2_intern_reserve (unsigned: need) int
     memset((cast: (@: void) ndyn), 0, nbi)
     memset((cast: (@: void) nret), 0, nbi)
     memset((cast: (@: void) nthrows), 0, nbi)
+    memset((cast: (@: void) ntmi), 0, nbi)
     memset((cast: (@: void) nn), 0, nbp)
     memset((cast: (@: void) nnl), 0, nbp)
     memset((cast: (@: void) nty), 0, nbp)
@@ -3079,6 +3098,7 @@ fn: l2_intern_reserve (unsigned: need) int
         ndyn[i]: l2_it_dyn[i]
         nret[i]: l2_it_ret[i]
         nthrows[i]: l2_it_throws[i]
+        ntmi[i]: l2_it_tmi[i]
         nn[i]: l2_it_n[i]
         nnl[i]: l2_it_nl[i]
         nty[i]: l2_it_ty[i]
@@ -3094,6 +3114,8 @@ fn: l2_intern_reserve (unsigned: need) int
         l2_xfree((cast: (@: void) l2_it_ret))
     if: l2_it_throws != 0
         l2_xfree((cast: (@: void) l2_it_throws))
+    if: l2_it_tmi != 0
+        l2_xfree((cast: (@: void) l2_it_tmi))
     if: l2_it_n != 0
         l2_xfree((cast: (@: void) l2_it_n))
     if: l2_it_nl != 0
@@ -3110,6 +3132,7 @@ fn: l2_intern_reserve (unsigned: need) int
     l2_it_dyn: ndyn
     l2_it_ret: nret
     l2_it_throws: nthrows
+    l2_it_tmi: ntmi
     l2_it_n: nn
     l2_it_nl: nnl
     l2_it_ty: nty
@@ -3194,6 +3217,7 @@ fn: l2_intern_store (int: ar; const: @(char n0); size_t: l0; int: t0; const: @(c
     l2_it_dyn[s]: 0
     l2_it_ret[s]: 0
     l2_it_throws[s]: 0
+    l2_it_tmi[s]: 0 - 1
     l2_it_n[s]: (cast: (@: char) ns)
     l2_it_nl[s]: nl
     l2_it_ty[s]: nt
@@ -3218,6 +3242,8 @@ fn: l2_intern_eq_mi (unsigned: s; int: mi) int
     if: s >= l2_intern_n || mi < 0
         return: 0
     if: l2_it_ar[s] != l2_m_arity[mi] || l2_it_dyn[s] != l2_m_dyn[mi] || l2_it_ret[s] != l2_m_ret[mi] || l2_it_throws[s] != l2_m_throws[mi]
+        return: 0
+    if: l2_throws_same(l2_it_tmi[s], mi) = 0
         return: 0
     ns: (cast: (@@: char) l2_it_n[s])
     nl: l2_it_nl[s]
@@ -3357,6 +3383,7 @@ fn: l2_intern_store_mi (int: mi) unsigned
     l2_it_dyn[s]: dyn
     l2_it_ret[s]: l2_m_ret[mi]
     l2_it_throws[s]: l2_m_throws[mi]
+    l2_it_tmi[s]: mi
     l2_it_n[s]: (cast: (@: char) ns)
     l2_it_nl[s]: nl
     l2_it_ty[s]: nt
@@ -6477,6 +6504,15 @@ fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
         # See the assignment collector: a normalized colon constructor is the
         # one merge form whose operand remains a dynamic free graph name.
         if: l2_merge_frame(stmt) != 0
+            field: l2_next_active(field\next)
+            continue
+        # S1.2: a `throws:` list names exits, not values; a `throw:` references its payload.
+        if: l2_frame_head(stmt, "throws")
+            field: l2_next_active(field\next)
+            continue
+        if: l2_frame_head(stmt, "throw")
+            if: l2_scan_throw_args(stmt, mi, seen) != 0
+                return: 1
             field: l2_next_active(field\next)
             continue
         # Model: fresh -- the declared name is bound here, not referenced;
@@ -9605,10 +9641,279 @@ fn: l2_implicit_name (int: g) const: @: char
         return: "implements"
 return: 0
 
-# d: how many throw names method mi declares in its header (S1.2).  None until then.
-fn: l2_throws_declared (int: mi) int
-    if: mi < 0
+# THE DECLARED THROW NAMES (S1.2).  `throws:` is the first item of a method head (author Q13):
+# the names that may leave the method, in order.  A name's position is its status -- name k
+# leaves method mi as k, 1..d -- and the implicit names follow at d + g.  E has no list: its row
+# has no method frame.  The list is read from the source tree, like the formals.
+fn: l2_throws_frame (int: mi) @: LmP0Node
+    @: LmP0Field f
+    if: mi < 0 || mi >= l2_m_n || l2_m_node[mi] = 0 || l2_m_body[mi] = 0 || l2_m_body[mi]\kind != c.LM_P0_NODE_STRUCTURE || l2_m_body[mi]\as = 0 || l2_m_body[mi]\as\structure = 0
         return: 0
+    f: l2_next_active(l2_m_body[mi]\as\structure\first_field)
+    if: f = 0 || l2_frame_head(f\value, "throws") = 0
+        return: 0
+return: f\value
+
+# d: how many throw names method mi declares.
+fn: l2_throws_declared (int: mi) int
+    @: LmP0Node t
+    t: l2_throws_frame(mi)
+    if: t = 0 || t\as = 0 || t\as\frame = 0 || t\as\frame\body = 0
+        return: 0
+return: l2_count_active(t\as\frame\body)
+
+# Name k (1..d) of method mi's `throws:`; 0 past its end.
+fn: l2_throws_name (int: mi; int: k) @: LmP0Text
+    @: LmP0Node t
+    @: LmP0Field f
+    int: i 1
+    t: l2_throws_frame(mi)
+    if: t = 0 || t\as = 0 || t\as\frame = 0 || t\as\frame\body = 0 || k < 1
+        return: 0
+    f: l2_next_active(t\as\frame\body\first_field)
+    while: f != 0 && i < k
+        f: l2_next_active(f\next)
+        i: i + 1
+    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0
+        return: 0
+return: f\value\as\atom
+
+# The position of `name` in method mi's `throws:`, 1..d; 0: not declared there.
+fn: l2_throws_pos (int: mi; const: @(LmP0Text name)) int
+    int: k 1
+    int: d
+    if: name = 0
+        return: 0
+    d: l2_throws_declared(mi)
+    while: k <= d
+        if: l2_text_same(l2_throws_name(mi, k), name) != 0
+            return: k
+        k: k + 1
+return: 0
+
+# Two methods declare the same names in the same order: one signature for the intern, and a
+# callable formal's contract (S1.4).  A row < 0 declares none.
+fn: l2_throws_same (int: a; int: b) int
+    int: k 1
+    int: d
+    d: l2_throws_declared(a)
+    if: d != l2_throws_declared(b)
+        return: 0
+    while: k <= d
+        if: l2_text_same(l2_throws_name(a, k), l2_throws_name(b, k)) = 0
+            return: 0
+        k: k + 1
+return: 1
+
+# `throws:` leading a method head names at least one exit: each an identifier, none twice, and
+# none an implicit name -- those are thrown by their operators and are not declared (fable,
+# -135: a rule may one day promote them; the translator does not).
+fn: l2_check_throws_list (const: @(LmP0Node body); const: @(char path)) int
+    @: LmP0Field f
+    @: LmP0Field g
+    @: LmP0Node t
+    int: gi
+    if: body = 0 || body\kind != c.LM_P0_NODE_STRUCTURE || body\as = 0 || body\as\structure = 0
+        return: 0
+    f: l2_next_active(body\as\structure\first_field)
+    if: f = 0 || l2_frame_head(f\value, "throws") = 0
+        return: 0
+    t: f\value
+    if: t\as\frame\trailer != 0 || t\as\frame\body = 0 || t\as\frame\body\trailer != 0 || l2_count_active(t\as\frame\body) = 0
+        return: l2_error(path, t, "throws: lists the names that may leave the method")
+    f: l2_next_active(t\as\frame\body\first_field)
+    while: f != 0
+        if: f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0 || l2_ident(f\value\as\atom) = 0 || f\value\as\atom\length >= 63U
+            return: l2_error(path, t, "a throws: item is a name")
+        gi: 1
+        while: l2_implicit_name(gi) != 0
+            if: l2_text_eq(f\value\as\atom, l2_implicit_name(gi)) != 0
+                return: l2_error(path, f\value, "an implicit throw name is not declared")
+            gi: gi + 1
+        g: l2_next_active(t\as\frame\body\first_field)
+        while: g != f
+            if: l2_text_same(g\value\as\atom, f\value\as\atom) != 0
+                return: l2_error(path, f\value, "duplicate name in throws:")
+            g: l2_next_active(g\next)
+        f: l2_next_active(f\next)
+return: 0
+
+# THE STATIC RULE (§14, author Q13): every name a callee declares is caught in the caller's
+# enclosing blocks (S1.3) or listed in the caller's own `throws:`, else the call is refused.  E
+# lists none, so a declared name that would reach E is refused there.
+fn: l2_check_throws_handled (int: mi; int: callee; const: @(char path); const: @(LmP0Node at)) int
+    int: k 1
+    int: d
+    @: LmP0Text nm
+    c.array: [160]: char msg
+    d: l2_throws_declared(callee)
+    while: k <= d
+        nm: l2_throws_name(callee, k)
+        if: nm != 0 && l2_throws_pos(mi, nm) = 0
+            if: mi = l2_e && c.sprintf(msg, "unhandled throw in entry: %.*s", (cast: (int) nm\length), nm\data) < 0
+                return: 1
+            if: mi != l2_e && c.sprintf(msg, "unhandled throw: %.*s", (cast: (int) nm\length), nm\data) < 0
+                return: 1
+            return: l2_error(path, at, msg)
+        k: k + 1
+return: 0
+
+# The payload cell of one throw argument: an own storage type -- 0 int, 2 size_t, 3 unsigned,
+# 36 ulong -- whose fresh cell holds the value as an own field of that type holds it, or the
+# `@: Lmx` pointer type (>= 1000) of a Structure, whose reference is the child itself.  -1:
+# nothing a payload carries yet -- a char (a method has no char table to intern it in), a text,
+# a value of several fields.
+fn: l2_throw_arg_ty (@: LmP0Field a0; int: span; int: mi) int
+    int: ty 0
+    int: own
+    const: @: LmP0Text at
+    if: a0 = 0 || span != 1 || a0\value = 0
+        return: -1
+    if: l2_colon_simple_ty(a0\value, mi, @ ty) != 0
+        return: -1
+    if: ty = -10
+        if: a0\value\kind != c.LM_P0_NODE_ATOM || a0\value\as = 0 || a0\value\as\atom = 0
+            return: -1
+        at: a0\value\as\atom
+        if: at\length = 0U || at\data[0] = 39
+            return: -1
+        if: at\length >= 2U && (at\data[at\length - 1U] = 76 || at\data[at\length - 1U] = 108) && (at\data[at\length - 2U] = 85 || at\data[at\length - 2U] = 117)
+            return: 36
+        if: at\data[at\length - 1U] = 85 || at\data[at\length - 1U] = 117
+            return: 2
+        return: 0
+    if: ty < 0
+        return: -1
+    # A declared graph formal carries the graph type itself (l2_colon_is_graph_ty).
+    if: ty = l2_colon_graph_ty()
+        return: l2_own_of_dt(ty)
+    own: l2_own_ty_of_param(ty)
+    if: own = 0 || own = 2 || own = 3 || own = 36
+        return: own
+    if: own >= 1000 && l2_dt_of_own(own) = l2_colon_graph_ty()
+        return: own
+return: -1
+
+# `throw: Name(args)` / `throw: Name`: Name is declared in this method's `throws:` (§14), and
+# each argument is one value a payload can carry (l2_throw_arg_ty), checked like a call's.
+fn: l2_check_throw (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
+    @: LmP0Node what
+    @: LmP0Field a0
+    @: LmP0Text name 0
+    int: span
+    int: pmi
+    const: @: LmP0Frame fr
+    fr: stmt\as\frame
+    if: fr\trailer != 0 || fr\body = 0 || fr\body\trailer != 0 || l2_count_active(fr\body) != 1
+        return: l2_error(path, stmt, "throw: takes one name and its payload")
+    what: l2_next_active(fr\body\first_field)\value
+    if: what != 0 && what\kind = c.LM_P0_NODE_ATOM && what\as != 0
+        name: what\as\atom
+    if: what != 0 && what\kind = c.LM_P0_NODE_FRAME && what\as != 0 && what\as\frame != 0
+        name: what\as\frame\head
+    if: name = 0 || l2_ident(name) = 0
+        return: l2_error(path, stmt, "throw: takes one name and its payload")
+    if: l2_throws_pos(mi, name) = 0
+        return: l2_error(path, stmt, "throw of an undeclared name")
+    if: what\kind != c.LM_P0_NODE_FRAME
+        return: 0
+    if: what\as\frame\trailer != 0 || what\as\frame\body = 0 || what\as\frame\body\trailer != 0
+        return: l2_error(path, stmt, "unsupported trailer")
+    a0: l2_next_active(what\as\frame\body\first_field)
+    while: a0 != 0
+        span: l2_expr_span(a0)
+        if: span < 1 || l2_check_fields(a0, span, mi, path, stmt) != 0
+            return: 1
+        if: l2_throw_arg_ty(a0, span, mi) < 0
+            return: l2_error(path, stmt, "unsupported throw payload value")
+        pmi: 0
+        while: pmi < span && a0 != 0
+            a0: l2_next_active(a0\next)
+            pmi: pmi + 1
+        ---
+    ---
+return: 0
+
+# A `throw:` references its payload arguments; its name is an exit, not a value.
+fn: l2_scan_throw_args (const: @(LmP0Node stmt); int: mi; @: int seen) int
+    @: LmP0Field w
+    if: stmt = 0 || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\body = 0
+        return: 0
+    w: l2_next_active(stmt\as\frame\body\first_field)
+    if: w = 0 || w\value = 0 || w\value\kind != c.LM_P0_NODE_FRAME || w\value\as = 0 || w\value\as\frame = 0 || w\value\as\frame\body = 0
+        return: 0
+return: l2_scan_fields(w\value\as\frame\body\first_field, l2_count_active(w\value\as\frame\body), mi, seen)
+
+# THE THROW (S1.2).  The arguments are evaluated in order into a fresh payload Structure in
+# l2_program_arena: child k is argument k -- a fresh cell of its type holding the value, or the
+# Structure reference itself (no copy, no reparenting).  A payload that cannot be allocated
+# leaves as no payload, 0; a catch parameter's binding refuses it (S1.3).  Then what the
+# activation wrote is published (§13) and the throw leaves: `l2_out_throw[0]: payload; return:
+# pos(Name)`.
+fn: l2_emit_throw (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
+    @: LmP0Node what
+    @: LmP0Field a0 0
+    @: LmP0Text name
+    int: n 0
+    int: k 0
+    int: span
+    int: pmi
+    int: ty
+    int: t
+    int: pos
+    const: @(char newf) 0
+    what: l2_next_active(stmt\as\frame\body\first_field)\value
+    if: what\kind = c.LM_P0_NODE_ATOM
+        name: what\as\atom
+    else:
+        name: what\as\frame\head
+        if: what\as\frame\body != 0
+            a0: l2_next_active(what\as\frame\body\first_field)
+        ---
+    ---
+    if: a0 != 0
+        n: l2_actual_count(a0)
+    pos: l2_throws_pos(mi, name)
+    if: pos <= 0
+        return: l2_error(l2_src, stmt, "internal: a throw was not checked")
+    t: l2_tn
+    l2_tn: l2_tn + 1
+    if: n > 0 && c.fprintf(l2_out, "%s@: Lmx l2_tp%d 0\n%s@: void l2_tc%d 0\n%sl2_tp%d: lmx_node_new_owned(l2_program_arena)\n%sif: l2_tp%d != 0 && lmx_arena_refs_open_owned(l2_program_arena, l2_tp%d, %dU) != 0\n%s    l2_tp%d: 0\n", ind, t, ind, t, ind, t, ind, t, t, n, ind, t) < 0
+        return: 1
+    while: a0 != 0 && k < n
+        span: l2_expr_span(a0)
+        ty: l2_throw_arg_ty(a0, span, mi)
+        if: ty < 0
+            return: l2_error(l2_src, stmt, "internal: a throw payload value was not checked")
+        if: l2_eval_fields(a0, span, mi, ind, l2_tok) != 0
+            return: 1
+        newf: 0
+        if: ty = 0
+            newf: "lmx_int_new_owned"
+        if: ty = 2
+            newf: "lmx_size_new_owned"
+        if: ty = 3
+            newf: "lmx_unsigned_new_owned"
+        if: ty = 36
+            newf: "lmx_ulong_new_owned"
+        if: newf != 0 && c.fprintf(l2_out, "%sif: l2_tp%d != 0\n%s    l2_tc%d: %s(l2_program_arena)\n%sif: l2_tp%d != 0 && l2_tc%d = 0\n%s    l2_tp%d: 0\n%sif: l2_tp%d != 0 && (%s(l2_tc%d, %s) != 0 || lmx_arena_ref_store(l2_tp%d, %dU, l2_tc%d) != 0)\n", ind, t, ind, t, newf, ind, t, t, ind, t, ind, t, l2_own_store_helper(ty), t, l2_tok, t, k, t) < 0
+            return: 1
+        if: newf = 0 && c.fprintf(l2_out, "%sif: l2_tp%d != 0 && lmx_arena_ref_store(l2_tp%d, %dU, (cast: (@: void) %s)) != 0\n", ind, t, t, k, l2_tok) < 0
+            return: 1
+        if: l2_emit_invariant(ind, "a throw payload refused its field") != 0
+            return: 1
+        pmi: 0
+        while: pmi < span && a0 != 0
+            a0: l2_next_active(a0\next)
+            pmi: pmi + 1
+        k: k + 1
+    ---
+    if: l2_emit_checkpoint(mi, ind) != 0
+        return: 1
+    if: n > 0 && c.fprintf(l2_out, "%sl2_out_throw[0]: l2_tp%d\n%sreturn: %d\n", ind, t, ind, pos) < 0
+        return: 1
+    if: n = 0 && c.fprintf(l2_out, "%sl2_out_throw[0]: 0\n%sreturn: %d\n", ind, ind, pos) < 0
+        return: 1
 return: 0
 
 # The status method mi returns for the implicit name `name`: d + g.  0: not an implicit name.
@@ -9641,20 +9946,31 @@ fn: l2_emit_implicit_throw (int: mi; const: @(char name); const: @(char ind)) in
 return: 0
 
 # A THROW THAT PASSES THROUGH A CALL.  The callee's status k is in the callee's numbering and the
-# caller re-encodes it into its own: above d_callee, k is implicit name g = k - d_callee, which the
-# caller returns as d_caller + g.  (1..d_callee are declared names and map to the caller's
-# position of the same name -- S1.2; no method declares any yet.)  The post-call checkpoint is
-# already written.
+# caller re-encodes it into its own.  1..d_callee are declared names: k becomes the caller's
+# position of the same NAME, which the static rule (l2_check_throws_handled) proved exists.  Above
+# d_callee, k is implicit name g = k - d_callee, which the caller returns as d_caller + g.  The
+# post-call checkpoint is already written.
 fn: l2_emit_propagate (int: mi; int: callee; int: t; const: @(char ind)) int
     int: shift
+    int: k 1
+    int: pos
     if: mi < 0 || callee < 0 || ind = 0
         return: 1
     shift: l2_throws_declared(mi) - l2_throws_declared(callee)
     if: c.fprintf(l2_out, "%sif: l2_ts%d != 0\n%s    l2_out_throw[0]: l2_te%d\n", ind, t, ind, t) < 0
         return: 1
+    while: k <= l2_throws_declared(callee)
+        pos: l2_throws_pos(mi, l2_throws_name(callee, k))
+        if: pos <= 0
+            return: l2_error(l2_src, 0, "internal: a callee's declared throw is not handled by its caller")
+        if: c.fprintf(l2_out, "%s    if: l2_ts%d = %d\n%s        return: %d\n", ind, t, k, ind, pos) < 0
+            return: 1
+        k: k + 1
     if: shift = 0 && c.fprintf(l2_out, "%s    return: l2_ts%d\n", ind, t) < 0
         return: 1
-    if: shift != 0 && c.fprintf(l2_out, "%s    return: l2_ts%d + %d\n", ind, t, shift) < 0
+    if: shift > 0 && c.fprintf(l2_out, "%s    return: l2_ts%d + %d\n", ind, t, shift) < 0
+        return: 1
+    if: shift < 0 && c.fprintf(l2_out, "%s    return: l2_ts%d - %d\n", ind, t, 0 - shift) < 0
         return: 1
 return: 0
 
@@ -11845,6 +12161,8 @@ fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path)) int
         return: l2_error(path, fn_node, "unsupported body")
     if: body != 0 && body\as\structure\trailer != 0
         return: l2_error(path, fn_node, "unsupported trailer")
+    if: l2_check_throws_list(body, path) != 0
+        return: 1
     l2_m_name[l2_m_n]: nm
     l2_m_node[l2_m_n]: (cast: (@: LmP0Node) fn_node)
     l2_m_body[l2_m_n]: (cast: (@: LmP0Node) body)
@@ -12054,6 +12372,8 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
     if: l2_m_body[idx] = 0 && fi < 0 && (l2_m_node[idx] = 0 || l2_m_node[idx]\as = 0 || l2_ret_tr(l2_m_node[idx]\as\frame) = 0)
         return: l2_error(path, node, "not callable")
     l2_m_edge[l2_edge_off(mi, idx)]: 1
+    if: l2_check_throws_handled(mi, idx, path, node) != 0
+        return: 1
     a0: l2_next_active(call\body\first_field)
     actual_i: 0
     while: a0 != 0
@@ -12276,6 +12596,18 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
         # statement, in the entry or in any body.
         if: l2_frame_head(stmt, "end") != 0 || l2_frame_head(stmt, "until") != 0
             return: l2_error(path, stmt, "stray trailer: the frame above is already closed")
+        # S1.2 (author Q13): `throws:` is the first item of a method head -- l2_collect_method
+        # took the list from there -- and nowhere else.
+        if: l2_frame_head(stmt, "throws")
+            if: l2_throws_frame(mi) != stmt
+                return: l2_error(path, stmt, "throws: must be the first item of a method head")
+            field: l2_next_active(field\next)
+            continue
+        if: l2_frame_head(stmt, "throw")
+            if: l2_check_throw(stmt, mi, path) != 0
+                return: 1
+            field: l2_next_active(field\next)
+            continue
         # 19.17 merge is an ordinary statement frame here. Its operands are
         # checked at emission, where the qualified branch table is complete.
         if: l2_merge_frame(stmt) != 0
@@ -12595,6 +12927,8 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
                 if: l2_m_arity[cidx] != 0
                     return: l2_error(path, stmt, "incompatible entry signature")
                 l2_m_edge[l2_edge_off(mi, cidx)]: 1
+                if: l2_check_throws_handled(mi, cidx, path, stmt) != 0
+                    return: 1
                 field: l2_next_active(field\next)
                 continue
             ---
@@ -13354,6 +13688,8 @@ fn: l2_method_sig_compatible (int: cand; int: req) int
         return: 0
     if: l2_m_ret[cand] != l2_m_ret[req]
         return: 0
+    if: l2_throws_same(cand, req) = 0
+        return: 0
     while: j < l2_m_arity[cand]
         if: l2_ft(cand, j) != l2_ft(req, j)
             return: 0
@@ -13404,13 +13740,24 @@ fn: l2_emit_nullary_call (int: idx; int: call_sel; int: call_fi; int: mi; const:
         return: 1
     if: l2_ret_uns(idx) = 0 && l2_m_ret[idx] != 2 && l2_m_ret[idx] != 8 && l2_m_ret[idx] < 100 && c.fprintf(l2_out, "%sint: l2_t%d\n", ind, t) < 0
         return: 1
-    if: l2_m_ret[idx] != 8 && c.fprintf(l2_out, "%sl2_t%d: ", ind, t) < 0
+    # A callee on the throw channel is called as l2_prep calls it: the status is the return, the
+    # value comes through its out-parameter, and a throw passes on.  (It was called with node and
+    # self alone, and the caller read the uninitialized status as the value.)
+    if: l2_m_throws[idx] != 0 && c.fprintf(l2_out, "%sint: l2_ts%d 0\n%s@: Lmx l2_te%d 0\n%sl2_ts%d: ", ind, t, ind, t, ind, t) < 0
+        return: 1
+    if: l2_m_throws[idx] = 0 && l2_m_ret[idx] != 8 && c.fprintf(l2_out, "%sl2_t%d: ", ind, t) < 0
         return: 1
     if: l2_write_sym(l2_out, idx) != 0
         return: 1
-    if: c.fprintf(l2_out, "(l2_c%d\\parent, l2_c%d)\n", self_t, self_t) < 0
+    if: l2_m_throws[idx] = 0 && c.fprintf(l2_out, "(l2_c%d\\parent, l2_c%d)\n", self_t, self_t) < 0
+        return: 1
+    if: l2_m_throws[idx] != 0 && l2_m_ret[idx] != 8 && c.fprintf(l2_out, "(l2_c%d\\parent, l2_c%d, l2_msg, @ l2_t%d, @ l2_te%d)\n", self_t, self_t, t, t) < 0
+        return: 1
+    if: l2_m_throws[idx] != 0 && l2_m_ret[idx] = 8 && c.fprintf(l2_out, "(l2_c%d\\parent, l2_c%d, l2_msg, @ l2_te%d)\n", self_t, self_t, t) < 0
         return: 1
     if: l2_emit_checkpoint(mi, ind) != 0
+        return: 1
+    if: l2_m_throws[idx] != 0 && l2_emit_propagate(mi, idx, t, ind) != 0
         return: 1
 return: l2_tok_temp(t, dest)
 
@@ -15491,6 +15838,9 @@ fn: l2_body_throws (const: @(LmP0Structure body); int: mi) int
     @: LmP0Text cname
     if: body = 0
         return: 0
+    # A method that declares throw names is on the throw channel by its declaration (S1.2).
+    if: l2_throws_declared(mi) > 0
+        return: 1
     field: l2_next_active(body\first_field)
     while: field != 0
         stmt: field\value
@@ -15732,6 +16082,14 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
             return: 1
         if: l2_frame_head(stmt, "return") = 0 && l2_frame_head(stmt, "if") = 0
             need_cut: 0
+        if: l2_frame_head(stmt, "throws")
+            field: l2_next_active(field\next)
+            continue
+        if: l2_frame_head(stmt, "throw")
+            if: l2_emit_throw(stmt, mi, ind) != 0
+                return: 1
+            field: l2_next_active(field\next)
+            continue
         oi: -1
         si: -1
         fi: -1

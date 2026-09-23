@@ -772,6 +772,54 @@ $fixtures = @(
     # with status 0, as a `return:` in the body does: the row completes with the value.
     [pscustomobject]@{ Name = 'unit_s1_trailer_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 5; Stopped = 0;
         Absent = @(); Debt = @('l2_out_result[0]: 5') },
+    # S1.2, DECLARED THROWS (FABLE-OPUS-S1-DECLARED-20260923-135; author Q13, §14).  `throws:` is the
+    # first item of a method head: the ordered names that may leave the method; name k leaves as
+    # status k, the implicit names after them at d + g.  `throw: Name(args)` builds a payload
+    # Structure (child k = argument k: a fresh cell of its type, or a Structure reference), publishes
+    # and leaves with pos(Name).  Each declared name of a callee must be listed by its caller (catch
+    # is S1.3), E lists none, and propagation maps a declared name by name.  Before S1.3 no program
+    # whose E reaches a declared name compiles, so the positive rows keep the throwing methods away
+    # from E: they prove emission, compilation and linking, and pin the emitted numbering and the
+    # by-name mapping in the text (the multi-line pins).  The runtime distinction of declared
+    # positions from d + g is the obligation of S1.3's first catch rows.
+    [pscustomobject]@{ Name = 'unit_s1_declared_links.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Stopped = 0;
+        Absent = @('l2_out_throw[0]: node');
+        Debt = @("        l2_out_throw[0]: l2_tp0`n        return: 1",
+                 "        l2_out_throw[0]: 0`n        return: 2",
+                 "        l2_out_throw[0]: 0`n        return: 3",
+                 "        if: l2_ts1 = 1`n            return: 2`n        if: l2_ts1 = 2`n            return: 1`n        return: l2_ts1") },
+    [pscustomobject]@{ Name = 'unit_s1_declared_payload.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Stopped = 0;
+        Absent = @();
+        Debt = @('lmx_arena_ref_store(l2_tp1, 0U, (cast: (@: void) l2_p0_0))', 'lmx_size_store_known(l2_tc1, 9U)') },
+    # The intern carries the ordered names: a and c share a signature, d and e differ by order only.
+    [pscustomobject]@{ Name = 'unit_s1_throws_intern.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Absent = @('l2_entry_rec\sig: 6U'); Debt = @('l2_entry_rec\sig: 5U') },
+    # `return: f` of a callable on the throw channel is called on that channel (it was called with
+    # node and self alone, which gcc refused), and a throw passes through it like through any call.
+    [pscustomobject]@{ Name = 'unit_s1_return_callable_throw_abi.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 5; Stopped = 0;
+        Absent = @(); Debt = @('l2_ts1: l2_m0(l2_c0\parent, l2_c0, l2_msg, @ l2_t1, @ l2_te1)') },
+    [pscustomobject]@{ Name = 'unit_s1_return_callable_throw_abi_fails.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; MergeFail = 1; Stopped = 1; Thrown = 1;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s1_throws_unlisted_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unhandled throw: Oops'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s1_throws_entry_unhandled_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unhandled throw in entry: Oops'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s1_throw_undeclared_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'throw of an undeclared name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s1_throws_not_first_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'throws: must be the first item of a method head'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s1_throws_nested_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'throws: must be the first item of a method head'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s1_throws_entry_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'throws: must be the first item of a method head'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s1_throws_duplicate_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'duplicate name in throws:'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s1_throws_implicit_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'an implicit throw name is not declared'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s1_throw_payload_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unsupported throw payload value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s1_throws_formal_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'incompatible entry signature'; Absent = @(); Debt = @() },
     # THE STICKY DIRTY OF AN ADDRESS-TAKEN LOCAL (GROK-COLON-OCCURRENCE-20260922-02).  Any executed
     # `@x` of an addressable activation-local makes sticky through activation end -- before, between
     # or after occurrence bindings.  Address-taking invents no graph field; `p` always addresses the

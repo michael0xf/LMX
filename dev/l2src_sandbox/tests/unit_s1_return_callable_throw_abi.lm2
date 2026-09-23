@@ -1,0 +1,17 @@
+# `return: m` of a callable on the throw channel calls it on that channel: the status is the
+# return and the value comes through the out-parameter (it was called with node and self alone,
+# which the C compiler refuses).  Completes with 5.
+P:
+    size_t: p 3U
+end: P
+
+fn: m () int
+    Q: merge: P
+return: 5
+
+fn: w () int
+    int: k 1
+    return: m
+end: w
+
+return: w()

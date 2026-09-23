@@ -490,6 +490,17 @@ if ($driver) { Add-Row 'OK' 'build:eternal_driver' ($made.ToString() + ' kernel 
 # makes the question answerable before it exists.
 $fixtures = @(
     [pscustomobject]@{ Name = 'entry_return7.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    # F-30 gap: os: block under the eternal driver; l2_emit_os_fn pins the X1 prologue
+    # (invariant + abort), success is Entry 7 (not return: 0 alone).
+    [pscustomobject]@{ Name = 'unit_os_prologue.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT',
+                   "if: self = 0`n        return", "if: self = 0`n        l2_out_result");
+        Debt = @('os:',
+                 'fn: l2_m0 (@: Lmx node; @: Lmx self) @: char',
+                 'c.fprintf(c.stderr, "lmx: invariant: a method was entered without its occurrence\n")',
+                 'c.abort()',
+                 'return: "win32"',
+                 'return: "pthread"') },
 
     # S2: there is no standalone L1-only program any more -- every program is its unit, E runs in
     # R0 -- so the c.puts entries run on the kernel route, and say what they print.  The empty

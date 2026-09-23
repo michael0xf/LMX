@@ -884,8 +884,6 @@ $fixtures = @(
         Needle = 'executing a named Structure is not supported yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bare_unknown_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unresolved name'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_bare_expr_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'an expression statement is not supported yet'; Absent = @(); Debt = @() },
     # THE RECEIVER CONTRACT (plan §3 native gate (б)-(е); FABLE-OPUS-RECEIVER-CONTRACT-20260924-139).
     # A callable named where a value is consumed gives its result: it runs with no arguments on the
     # call path of `m()` -- a method or a callable formal, in a declaration, assignment, operand,
@@ -913,6 +911,24 @@ $fixtures = @(
     # 2026-09-24 Q19.1/Q19.3): the trailer ends the body of s, and each call runs it.
     [pscustomobject]@{ Name = 'unit_sub_return_trailer.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 6;
         Absent = @(); Debt = @() },
+    # THE EXPRESSION STATEMENT (plan §3 "Expression statement и discard"; FABLE-OPUS-DISCARD-20260924-147).
+    # One consumer, l2_eval_discard: a bare atom, a run of fields l2_expr_span groups into one
+    # expression, a call Frame.  A callable atom is called with no arguments; anything else is
+    # evaluated on the value path and dropped into the typed temporaries its calls already have (a
+    # pure expression emits nothing).  An anonymous Structure is a nested body; `()` and one with
+    # nothing to run emit nothing.  A sub cannot be an operand.
+    [pscustomobject]@{ Name = 'unit_discard_codex.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 2;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_discard_forms.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 3;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_discard_calls.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 11112;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_discard_fnptr.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+        Absent = @('f()'); Debt = @('L2TestAllocFn: f l2_p0_0\alloc', 'f(l2_p0_1)') },
+    [pscustomobject]@{ Name = 'unit_discard_void_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a callable without a result has no value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_discard_unknown_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unresolved name'; Absent = @(); Debt = @() },
     # THE STICKY DIRTY OF AN ADDRESS-TAKEN LOCAL (GROK-COLON-OCCURRENCE-20260922-02).  Any executed
     # `@x` of an addressable activation-local makes sticky through activation end -- before, between
     # or after occurrence bindings.  Address-taking invents no graph field; `p` always addresses the

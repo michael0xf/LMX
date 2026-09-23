@@ -333,7 +333,11 @@ prototype:
     fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Structure body); int: mi; const: @(char path)) int
     fn: l2_atom_callee (const: @(LmP0Text t); int: mi; @: int fi) int
     fn: l2_bare_structure (const: @(LmP0Text t); int: mi) int
-    fn: l2_check_bare (@: LmP0Field field; int: mi; const: @(char path)) int
+    fn: l2_check_discard (@: LmP0Field field; int: span; int: mi; const: @(char path)) int
+    fn: l2_eval_discard (@: LmP0Field field; int: span; int: mi; const: @(char ind)) int
+    fn: l2_frame_void_call (const: @(LmP0Node node); int: mi) int
+    fn: l2_discard_run (@: LmP0Field field) int
+    fn: l2_body_inert (const: @(LmP0Structure body); int: mi) int
     fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @(LmP0Structure body); int: mi; const: @(char ind); @: char dest) int
     fn: l2_check_value_call (const: @(LmP0Node node); int: idx; int: fi; int: mi; const: @(char path)) int
     fn: l2_tok_method_occ (int: idx; @: char dest) int
@@ -6361,7 +6365,11 @@ fn: l2_collect_decls (const: @(LmP0Structure body); int: mi; const: @(char path)
                 return: 1
             field: l2_next_active(field\next)
             continue
-        # An anonymous `---` block is a nested executable body, like an if body (§14, Q14 K).
+        # An anonymous `---` block is a nested executable body, like an if body (§14, Q14 K) --
+        # unless it opens an expression run (l2_discard_run): an operand, not a block.
+        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_STRUCTURE && stmt\as != 0 && stmt\as\structure != 0 && l2_discard_run(field) > 0
+            field: l2_next_active(field\next)
+            continue
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_STRUCTURE && stmt\as != 0 && stmt\as\structure != 0
             if: l2_for_add(stmt, mi, l2_for_find(l2_scope_host())) < 0 || l2_scope_push(stmt) != 0
                 return: l2_alloc_or(path, stmt, "out of memory")
@@ -13251,6 +13259,24 @@ fn: l2_check_value_call (const: @(LmP0Node node); int: idx; int: fi; int: mi; co
         return: l2_error(path, node, "a callable without a result has no value")
 return: l2_check_call(node, idx, fi, 0, mi, path)
 
+# A call Frame whose callee has no result: a sub, or a callable formal whose contract is one.  As a
+# value it has none to give (l2_check_fields); as a statement it is simply called.
+fn: l2_frame_void_call (const: @(LmP0Node node); int: mi) int
+    int: idx
+    int: fi
+    if: node = 0 || node\kind != c.LM_P0_NODE_FRAME || node\as = 0 || node\as\frame = 0
+        return: 0
+    idx: l2_head_method(node\as\frame\head)
+    if: idx < 0
+        fi: l2_formal_find(mi, node\as\frame\head)
+        if: fi >= 0
+            idx: l2_cf_get(mi, fi)
+        ---
+    ---
+    if: idx < 0
+        return: 0
+return: l2_m_ret[idx] = 8
+
 fn: l2_check_expr (const: @(LmP0Node node); int: mi; const: @(char path)) int
 return: l2_check_primary(node, mi, path)
 
@@ -13448,6 +13474,8 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
             have_value: 1
         if: skip = 0 && l2_check_primary(f\value, mi, path) != 0
             return: 1
+        if: skip = 0 && l2_frame_void_call(f\value, mi) != 0
+            return: l2_error(path, f\value, "a callable without a result has no value")
         if: skip = 0
             have_value: 1
         i: i + 1
@@ -13480,20 +13508,21 @@ fn: l2_bare_structure (const: @(LmP0Text t); int: mi) int
         return: l2_colon_is_graph_ty(ty)
 return: l2_ns_find(t) >= 0
 
-# A BARE ATOM IN AN EXECUTABLE BODY is an expression statement (plan §3, "Expression statement и
-# discard"; FABLE-OPUS-RECEIVER-CONTRACT-20260924-139).  It resolves like any value, and the kind
-# of its binding decides: a callable is called with no arguments -- the check of `m()`,
-# l2_check_call -- and its result, if any, discarded; a Structure is refused until executing one
-# is settled (Q19.2); any other value is evaluated and discarded, never called.  P0 gives a
-# statement line of several atoms (`y + 1`, `A\f`) as that many fields, one expression by
-# l2_expr_span: that is not a bare atom, and it is refused by name.
-fn: l2_check_bare (@: LmP0Field field; int: mi; const: @(char path)) int
+# THE EXPRESSION STATEMENT (plan §3 "Expression statement и discard"; FABLE-OPUS-DISCARD-
+# 20260924-147).  Any expression in statement position is evaluated and its value discarded: a
+# bare atom, and a run of fields l2_expr_span groups into one expression -- P0 gives a statement
+# line of several atoms (`2 + 2`, `g(m()) + 1`) as that many fields.  A bare atom resolves like
+# any value, and the kind of its binding decides (FABLE-OPUS-RECEIVER-CONTRACT-20260924-139): a
+# callable is called with no arguments -- the check of `m()`, l2_check_call -- a Structure is
+# refused until executing one is settled (q20), any other value is evaluated and discarded,
+# never called.  A run is an ordinary value expression (l2_check_fields).
+fn: l2_check_discard (@: LmP0Field field; int: span; int: mi; const: @(char path)) int
     @: LmP0Node stmt
     int: idx
     int: fi 0
     stmt: field\value
-    if: l2_expr_span(field) != 1
-        return: l2_error(path, stmt, "an expression statement is not supported yet")
+    if: span != 1 || stmt\kind != c.LM_P0_NODE_ATOM
+        return: l2_check_fields(field, span, mi, path, stmt)
     idx: l2_atom_callee(stmt\as\atom, mi, @ fi)
     if: idx >= 0
         return: l2_check_call(stmt, idx, fi, 0, mi, path)
@@ -13501,6 +13530,24 @@ fn: l2_check_bare (@: LmP0Field field; int: mi; const: @(char path)) int
         return: 1
     if: l2_bare_structure(stmt\as\atom, mi) != 0
         return: l2_error(path, stmt, "executing a named Structure is not supported yet")
+return: 0
+
+# How many fields a statement that is an expression run takes: 0 when the field starts no run
+# (a single Frame is a statement of its own kind; a single Structure is a nested body), else the
+# l2_expr_span of the run -- one bare atom, or several fields read as one expression.
+fn: l2_discard_run (@: LmP0Field field) int
+    @: LmP0Node e
+    int: n
+    if: field = 0 || field\value = 0
+        return: 0
+    e: field\value
+    n: l2_expr_span(field)
+    if: e\kind = c.LM_P0_NODE_ATOM
+        if: l2_text_eq(e\as\atom, "break") || l2_text_eq(e\as\atom, "continue") || l2_text_eq(e\as\atom, "return")
+            return: 0
+        return: n
+    if: n > 1
+        return: n
 return: 0
 
 fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); int: depth) int
@@ -13535,7 +13582,18 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
     while: field != 0
         stmt: field\value
         l2_vis_stmt(mi, stmt)
-        # An anonymous `---` block is a nested executable body, like an if body (§14, Q14 K).
+        # An expression statement (l2_check_discard); the walker moves past its whole run.
+        n: l2_discard_run(field)
+        if: n > 0
+            if: l2_check_discard(field, n, mi, path) != 0
+                return: 1
+            field: l2_skip_span(field, n)
+            continue
+        # An anonymous `---` block is a nested executable body, like an if body (§14, Q14 K);
+        # `()` is an empty one, with nothing to run.
+        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_STRUCTURE && stmt\as != 0 && stmt\as\structure != 0 && l2_count_active(stmt\as\structure) = 0
+            field: l2_next_active(field\next)
+            continue
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_STRUCTURE && stmt\as != 0 && stmt\as\structure != 0
             if: l2_scope_push(stmt) != 0
                 return: l2_alloc_or(path, stmt, "out of memory")
@@ -13588,12 +13646,6 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM && l2_text_eq(stmt\as\atom, "return") && l2_m_ret[mi] != 8
             return: l2_error(path, stmt, "unsupported body")
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM && l2_text_eq(stmt\as\atom, "return")
-            field: l2_next_active(field\next)
-            continue
-        # Any other atom is a bare atom statement (l2_check_bare).
-        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM
-            if: l2_check_bare(field, mi, path) != 0
-                return: 1
             field: l2_next_active(field\next)
             continue
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0
@@ -15196,6 +15248,9 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
         l2_prep_drop(acts, hides)
         if: l2_emit_checkpoint(mi, ind) != 0
             return: 1
+        if: l2_m_ret[idx] = 8
+            dest[0]: 0
+            return: 0
         return: l2_tok_temp(t, dest)
     ---
     if: l2_m_body[idx] = 0 && (l2_m_node[idx] = 0 || l2_m_node[idx]\as = 0 || l2_ret_tr(l2_m_node[idx]\as\frame) = 0)
@@ -15237,6 +15292,10 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
         return: 1
     if: l2_m_throws[idx] != 0 && l2_emit_propagate(mi, idx, t, ind) != 0
         return: 1
+    # A callable without a result names no value: its temporary is never declared.
+    if: l2_m_ret[idx] = 8
+        dest[0]: 0
+        return: 0
 return: l2_tok_temp(t, dest)
 
 # The unit's own occurrence of method idx (@: Lmx): what a callable formal receives.
@@ -17091,6 +17150,55 @@ fn: l2_merge_scan (const: @(LmP0Structure body)) int
     ---
 return: 0
 
+# THE EXPRESSION STATEMENT, emitted (l2_check_discard; plan §3; FABLE-OPUS-DISCARD-20260924-147).
+# One consumer for every expression in statement position: a bare atom, a run of fields, and a
+# call Frame -- a callable head or a known external.  A callable atom is called with no arguments
+# on the call path of `m()` (a void one too); anything else is evaluated on the value path
+# (l2_prep, l2_eval_fields) and the value is dropped.  Its destination is the typed l2_tN the
+# calls in it already declared; a pure expression declares none and emits nothing.
+fn: l2_eval_discard (@: LmP0Field field; int: span; int: mi; const: @(char ind)) int
+    @: LmP0Node e
+    int: idx
+    int: fi 0
+    e: field\value
+    if: span = 1 && e\kind = c.LM_P0_NODE_ATOM
+        idx: l2_atom_callee(e\as\atom, mi, @ fi)
+        if: idx >= 0 && fi >= 0
+            return: l2_emit_call(e, idx, 2, fi, 0, mi, ind, l2_tok)
+        if: idx >= 0
+            return: l2_emit_call(e, idx, 0, 0 - 1, 0, mi, ind, l2_tok)
+        return: 0
+    if: span = 1
+        return: l2_prep(e, mi, ind, l2_tok)
+return: l2_eval_fields(field, span, mi, ind, l2_tok)
+
+# A body with nothing to run: every statement in it is an expression with no call in it -- no
+# callable atom, no call among its fields -- or such a body itself.  Its block emits no code.
+fn: l2_body_inert (const: @(LmP0Structure body); int: mi) int
+    @: LmP0Field f
+    @: LmP0Node e
+    int: n
+    int: fi 0
+    if: body = 0
+        return: 1
+    f: l2_next_active(body\first_field)
+    while: f != 0
+        e: f\value
+        n: l2_discard_run(f)
+        if: n > 0
+            if: n = 1 && e\kind = c.LM_P0_NODE_ATOM && l2_atom_callee(e\as\atom, mi, @ fi) >= 0
+                return: 0
+            if: l2_fields_has_call(f, n) != 0
+                return: 0
+            f: l2_skip_span(f, n)
+            continue
+        if: e != 0 && e\kind = c.LM_P0_NODE_STRUCTURE && e\as != 0 && e\as\structure != 0 && l2_body_inert(e\as\structure, mi) != 0
+            f: l2_next_active(f\next)
+            continue
+        return: 0
+    ---
+return: 1
+
 fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field stop; int: mi; const: @(char ind)) int
     int: rbadmit 0
     int: array_own
@@ -17168,7 +17276,19 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             return: 1
         if: l2_frame_head(stmt, "return") = 0 && l2_frame_head(stmt, "if") = 0
             need_cut: 0
-        # An anonymous `---` block is a nested executable body, like an if body (§14, Q14 K).
+        # An expression statement (l2_eval_discard); the walker moves past its whole run.
+        n: l2_discard_run(field)
+        if: n > 0
+            if: l2_eval_discard(field, n, mi, ind) != 0
+                return: 1
+            field: l2_skip_span(field, n)
+            continue
+        # An anonymous `---` block is a nested executable body, like an if body (§14, Q14 K); one
+        # with nothing to run (`()`, `(2 + 2)`: l2_body_inert) emits nothing -- its graph
+        # Structure is built like every control body's, and an L1 `if:` needs a body.
+        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_STRUCTURE && stmt\as != 0 && stmt\as\structure != 0 && l2_body_inert(stmt\as\structure, mi) != 0
+            field: l2_next_active(field\next)
+            continue
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_STRUCTURE && stmt\as != 0 && stmt\as\structure != 0
             if: c.fprintf(l2_out, "%sif: 1\n", ind) < 0
                 return: 1
@@ -17831,17 +17951,6 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             continue
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM && l2_text_eq(stmt\as\atom, "return")
             return: 1
-        # A bare atom (l2_check_bare): a callable is called with no arguments on the call path of
-        # `m()` (l2_emit_call) and its result, if any, discarded; any other value is discarded --
-        # an atom has nothing to evaluate.
-        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM
-            oi: l2_atom_callee(stmt\as\atom, mi, @ fi)
-            if: oi >= 0 && fi >= 0 && l2_emit_call(stmt, oi, 2, fi, 0, mi, ind, l2_tok) != 0
-                return: 1
-            if: oi >= 0 && fi < 0 && l2_emit_call(stmt, oi, 0, fi, 0, mi, ind, l2_tok) != 0
-                return: 1
-            field: l2_next_active(field\next)
-            continue
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0
             pd: l2_prefix_deref(stmt\as\frame\head, mi, pdest)
         if: pd = 0
@@ -18146,11 +18255,11 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && fi >= 0
             field: l2_next_active(field\next)
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && fi < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) != 0 && l2_prep(stmt, mi, ind, l2_tok) != 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && fi < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) != 0 && l2_eval_discard(field, 1, mi, ind) != 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) != 0
             field: l2_next_active(field\next)
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && l2_is_known(fr\head) != 0 && l2_prep(stmt, mi, ind, l2_tok) != 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && l2_is_known(fr\head) != 0 && l2_eval_discard(field, 1, mi, ind) != 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && l2_is_known(fr\head) != 0
             field: l2_next_active(field\next)

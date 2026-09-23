@@ -57,7 +57,6 @@ include: "<stdlib.h>"
 thread_local: int: lmx_post_monitor_thread_token 0
 
 
-
 fn: lmx_post_inbox_data (@: LmxPost box) @: LmxPostInboxSlot
     @: LmxPostInboxSlotDynamicArray da
     @: LmxPostInboxSlotArray base
@@ -66,15 +65,6 @@ fn: lmx_post_inbox_data (@: LmxPost box) @: LmxPostInboxSlot
     da: @ box\inbox
     base: (cast: (@: LmxPostInboxSlotArray) da)
 return: base\data
-
-fn: lmx_post_inbox_len (@: LmxPost box) size_t
-    @: LmxPostInboxSlotDynamicArray da
-    @: LmxPostInboxSlotArray base
-    if: box = 0
-        return: 0U
-    da: @ box\inbox
-    base: (cast: (@: LmxPostInboxSlotArray) da)
-return: base\len
 
 fn: lmx_post_inbox_cap (@: LmxPost box) size_t
     @: LmxPostInboxSlotDynamicArray da
@@ -110,7 +100,6 @@ fn: lmx_post_inbox_set_cap (@: LmxPost box; size_t: capacity) void
     da: @ box\inbox
     da\capacity: capacity
 return
-
 
 
 fn: lmx_post_monitor_enter (@: LmxPost box) int

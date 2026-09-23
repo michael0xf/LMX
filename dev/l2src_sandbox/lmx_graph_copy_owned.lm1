@@ -5,16 +5,6 @@ include: "<stdlib.h>" "<string.h>" "<stdint.h>"
 # ---- operation-local map: source address -> destination address -------------
 
 
-
-
-
-
-
-
-
-
-
-
 fn: lmx_copy_map_keys_data (@: LmxCopyMap m) @@: void
     @: LmxArrayDynamicArray da
     @: LmxArrayDesc base
@@ -371,11 +361,6 @@ fn: lmx_copy_retained_profiles (@: LmxArena src_arena; @: void p; @@: Lmx retain
     ---
 return: 0
 
-fn: lmx_copy_retained (@: LmxArena src_arena; @: void p; @: Lmx retain_profile) int
-return: lmx_copy_retained_profiles(src_arena, p, @ retain_profile, 1U)
-
-# Values in the exact retained profile, METHOD and runtime descriptors are copy terminals:
-# shared by physical address.
 fn: lmx_copy_is_terminal_profiles (@: LmxArena src_arena; @: void p; @@: Lmx retain_profiles; size_t: retain_count) int
     int: kind
     if: p = 0
@@ -808,11 +793,6 @@ fn: lmx_graph_copy_many_profiles_owned (@@: Lmx sources; size_t: count; @: char 
 
 fn: lmx_graph_copy_many_owned (@@: Lmx sources; size_t: count; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx outs) int
 return: lmx_graph_copy_many_profiles_owned(sources, count, dst_chars, src_arena, dst_arena, 0, 0U, outs)
-
-fn: lmx_graph_copy_many_profiled_owned (@@: Lmx sources; size_t: count; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @: Lmx retain_profile; @@: Lmx outs) int
-    if: retain_profile = 0
-        return: lmx_graph_copy_many_profiles_owned(sources, count, dst_chars, src_arena, dst_arena, 0, 0U, outs)
-return: lmx_graph_copy_many_profiles_owned(sources, count, dst_chars, src_arena, dst_arena, @ retain_profile, 1U, outs)
 
 fn: lmx_graph_copy_profiles_owned (@: Lmx source; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx out) int
     @: Lmx one_source source

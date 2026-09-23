@@ -284,6 +284,16 @@ int: l2_alloc_kind 0
 @: int l2_it_ret 0
 @: int l2_it_throws 0
 @: int l2_it_tmi 0
+# S1.3: while a method body is emitted, the loops that enclose the point being written -- a
+# user while/for (kind 0) or a catch block's pad (kind 1, its pad number) -- and the open pads
+# with the block each one lowers.
+c.array: [64]: int l2_lpk
+c.array: [64]: int l2_lpp
+int: l2_lp_n 0
+c.array: [64]: @: LmP0Structure l2_padb
+c.array: [64]: int l2_padi
+int: l2_pad_n 0
+int: l2_pad_seq 0
 @@: char l2_it_n 0
 @@: size_t l2_it_nl 0
 @@: int l2_it_ty 0
@@ -539,6 +549,25 @@ prototype:
     fn: l2_check_throw (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
     fn: l2_scan_throw_args (const: @(LmP0Node stmt); int: mi; @: int seen) int
     fn: l2_emit_throw (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
+    fn: l2_scope_block (const: @(LmP0Node node)) @: LmP0Structure
+    fn: l2_catch_name (const: @(LmP0Node cf)) @: LmP0Text
+    fn: l2_catch_params (const: @(LmP0Node cf)) @: LmP0Structure
+    fn: l2_catch_body (const: @(LmP0Node cf)) @: LmP0Structure
+    fn: l2_block_catch (const: @(LmP0Structure blk); const: @(LmP0Text tname); const: @(char cname); @: int out_idx) @: LmP0Node
+    fn: l2_block_has_catch (const: @(LmP0Structure blk)) int
+    fn: l2_catch_find (int: mi; const: @(LmP0Text tname); const: @(char cname); @@: LmP0Structure out_blk; @: int out_idx) @: LmP0Node
+    fn: l2_lp_push (int: kind; int: pad) int
+    fn: l2_lp_pop () int
+    fn: l2_pad_of (const: @(LmP0Structure blk)) int
+    fn: l2_emit_deliver (int: mi; const: @(LmP0Text tname); const: @(char cname); const: @(char payload); const: @(char ind)) int
+    fn: l2_emit_loop_exit (int: closed; const: @(char ind)) int
+    fn: l2_catch_param_own (int: ty) int
+    fn: l2_scan_catch_bound (const: @(LmP0Node cf); int: mi; @: int seen) int
+    fn: l2_check_catch (const: @(LmP0Node cf); const: @(LmP0Structure blk); const: @(char path); int: mi; int: depth) int
+    fn: l2_collect_catch (const: @(LmP0Node cf); int: mi; const: @(char path); int: depth; @: int sn) int
+    fn: l2_emit_handler (const: @(LmP0Node cf); int: p; int: i; int: mi; const: @(char d1); const: @(char d2)) int
+    fn: l2_emit_pad (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
+    fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field stop; int: mi; const: @(char ind)) int
     fn: l2_implicit_status (int: mi; const: @(char name)) int
     fn: l2_emit_implicit_throw (int: mi; const: @(char name); const: @(char ind)) int
     fn: l2_emit_propagate (int: mi; int: callee; int: t; const: @(char ind)) int
@@ -6050,6 +6079,17 @@ fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char p
     while: field != 0
         stmt: field\value
         l2_vis_stmt(mi, stmt)
+        if: l2_frame_head(stmt, "catch")
+            if: l2_catch_body(stmt) != 0
+                if: l2_scope_push(stmt) != 0
+                    return: l2_alloc_or(path, stmt, "out of memory")
+                if: l2_collect_asgn_body(l2_catch_body(stmt), mi, path) != 0
+                    l2_scope_pop()
+                    return: 1
+                l2_scope_pop()
+            ---
+            field: l2_next_active(field\next)
+            continue
         # An anonymous `---` block is a nested executable body, like an if body (§14, Q14 K).
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_STRUCTURE && stmt\as != 0 && stmt\as\structure != 0
             if: l2_scope_push(stmt) != 0
@@ -6233,6 +6273,12 @@ fn: l2_collect_decls (const: @(LmP0Structure body); int: mi; const: @(char path)
     while: field != 0
         stmt: field\value
         l2_vis_stmt(mi, stmt)
+        # S1.3: a catch hosts its parameters; its handler is a nested body under it.
+        if: l2_frame_head(stmt, "catch")
+            if: l2_collect_catch(stmt, mi, path, depth, sn) != 0
+                return: 1
+            field: l2_next_active(field\next)
+            continue
         # An anonymous `---` block is a nested executable body, like an if body (§14, Q14 K).
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_STRUCTURE && stmt\as != 0 && stmt\as\structure != 0
             if: l2_for_add(stmt, mi, l2_for_find(l2_scope_host())) < 0 || l2_scope_push(stmt) != 0
@@ -6598,6 +6644,22 @@ fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
         if: l2_frame_head(stmt, "throw")
             if: l2_scan_throw_args(stmt, mi, seen) != 0
                 return: 1
+            field: l2_next_active(field\next)
+            continue
+        # S1.3: a catch's name is an exit and its parameters are declared and bound by the delivery
+        # before its handler runs; the handler is scanned under the catch's scope.
+        if: l2_frame_head(stmt, "catch")
+            if: l2_catch_body(stmt) != 0
+                if: l2_scope_push(stmt) != 0
+                    return: 1
+                if: l2_scan_catch_bound(stmt, mi, seen) != 0
+                    l2_scope_pop()
+                    return: 1
+                if: l2_scan_body(l2_catch_body(stmt), mi, seen) != 0
+                    l2_scope_pop()
+                    return: 1
+                l2_scope_pop()
+            ---
             field: l2_next_active(field\next)
             continue
         # Model: fresh -- the declared name is bound here, not referenced;
@@ -9823,6 +9885,500 @@ fn: l2_check_throws_list (const: @(LmP0Node body); const: @(char path)) int
         f: l2_next_active(f\next)
 return: 0
 
+# THE CATCH BLOCKS (S1.3, §14).  `catch: Name (params)` with its handler body is a landing pad in
+# the caller's block.  A handler covers every call of its block and of the statement blocks
+# nested in it (Q14 K); the innermost block that catches the name takes it, and a sibling block
+# is not searched.  A name thrown inside its own handler is not caught by that handler: the
+# search goes on in the enclosing blocks (§14 :495).
+#
+# The statements of the block a scope entry stands for: an if/while body or an anonymous `---`
+# (the Structure itself), an else, a for's body, a catch's handler body.
+fn: l2_scope_block (const: @(LmP0Node node)) @: LmP0Structure
+    @: LmP0Field f
+    int: k 1
+    if: node = 0 || node\as = 0
+        return: 0
+    if: node\kind = c.LM_P0_NODE_STRUCTURE
+        return: node\as\structure
+    if: node\kind != c.LM_P0_NODE_FRAME || node\as\frame = 0 || node\as\frame\body = 0
+        return: 0
+    if: l2_frame_head(node, "else")
+        return: node\as\frame\body
+    f: l2_next_active(node\as\frame\body\first_field)
+    if: l2_frame_head(node, "catch")
+        k: 3
+    if: l2_frame_head(node, "for")
+        k: 5
+    if: k = 1
+        return: 0
+    while: f != 0 && k > 1
+        f: l2_next_active(f\next)
+        k: k - 1
+    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_STRUCTURE || f\value\as = 0
+        return: 0
+return: f\value\as\structure
+
+# The name a catch frame handles.
+fn: l2_catch_name (const: @(LmP0Node cf)) @: LmP0Text
+    @: LmP0Field f
+    if: l2_frame_head(cf, "catch") = 0 || cf\as\frame\body = 0
+        return: 0
+    f: l2_next_active(cf\as\frame\body\first_field)
+    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0
+        return: 0
+return: f\value\as\atom
+
+# A catch frame's parameters, and its handler body (0: none).
+fn: l2_catch_params (const: @(LmP0Node cf)) @: LmP0Structure
+    @: LmP0Field f
+    if: l2_frame_head(cf, "catch") = 0 || cf\as\frame\body = 0
+        return: 0
+    f: l2_next_active(cf\as\frame\body\first_field)
+    if: f != 0
+        f: l2_next_active(f\next)
+    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_STRUCTURE || f\value\as = 0
+        return: 0
+return: f\value\as\structure
+
+fn: l2_catch_body (const: @(LmP0Node cf)) @: LmP0Structure
+return: l2_scope_block(cf)
+
+# The catch of `name` among the direct statements of block blk, and its place among the block's
+# catches, 1..m (0: none).  A declared name comes as text, an implicit one as its table spelling.
+fn: l2_block_catch (const: @(LmP0Structure blk); const: @(LmP0Text tname); const: @(char cname); @: int out_idx) @: LmP0Node
+    @: LmP0Field f
+    @: LmP0Text nm
+    int: i 0
+    if: out_idx != 0
+        \out_idx: 0
+    if: blk = 0
+        return: 0
+    f: l2_next_active(blk\first_field)
+    while: f != 0
+        if: l2_frame_head(f\value, "catch")
+            i: i + 1
+            nm: l2_catch_name(f\value)
+            if: nm != 0 && ((tname != 0 && l2_text_same(nm, tname) != 0) || (cname != 0 && l2_text_eq(nm, cname) != 0))
+                if: out_idx != 0
+                    \out_idx: i
+                return: f\value
+            ---
+        f: l2_next_active(f\next)
+return: 0
+
+# Does block blk hold a catch at all?
+fn: l2_block_has_catch (const: @(LmP0Structure blk)) int
+    @: LmP0Field f
+    if: blk = 0
+        return: 0
+    f: l2_next_active(blk\first_field)
+    while: f != 0
+        if: l2_frame_head(f\value, "catch")
+            return: 1
+        f: l2_next_active(f\next)
+return: 0
+
+# THE HANDLER OF A NAME thrown at the point being checked or emitted: the enclosing blocks from
+# the innermost out -- the scope stack, then the method body -- and in each the catch of that
+# name, unless it is the very handler the point is in (the same name inside its own handler goes
+# to the enclosing context).  0: no handler in this method.
+fn: l2_catch_find (int: mi; const: @(LmP0Text tname); const: @(char cname); @@: LmP0Structure out_blk; @: int out_idx) @: LmP0Node
+    int: lv
+    int: idx 0
+    @: LmP0Node prev 0
+    @: LmP0Node cf 0
+    @: LmP0Structure blk 0
+    lv: l2_scope_n - 1
+    while: lv >= -1
+        blk: 0
+        if: lv >= 0
+            blk: l2_scope_block(l2_scope_at[lv])
+        if: lv < 0 && mi >= 0 && mi < l2_m_n && l2_m_body[mi] != 0 && l2_m_body[mi]\kind = c.LM_P0_NODE_STRUCTURE && l2_m_body[mi]\as != 0
+            blk: l2_m_body[mi]\as\structure
+        cf: l2_block_catch(blk, tname, cname, @ idx)
+        if: cf != 0 && cf != prev
+            if: out_blk != 0
+                \out_blk: blk
+            if: out_idx != 0
+                \out_idx: idx
+            return: cf
+        prev: 0
+        if: lv >= 0 && l2_frame_head(l2_scope_at[lv], "catch")
+            prev: l2_scope_at[lv]
+        lv: lv - 1
+return: 0
+
+# THE PADS.  A block that holds catches is emitted as one loop, its pad:
+#     int: l2_atP 0            -- 0 on the straight pass, i after a delivery to catch i
+#     while: 1
+#         if: l2_atP <= 0      -- segment 0, before the first catch
+#         if: l2_atP = 1       -- catch 1: bind its parameters, run its handler
+#         if: l2_atP <= 1      -- segment 1
+#         ...
+#         break
+# A delivery to catch i stores the payload, sets l2_atP to i and restarts the pad: the segments
+# before catch i are skipped, its handler runs, and the statements after it run -- so a catch
+# before the call re-enters the region, and one after it continues past (§14).  From inside
+# nested loops the delivery leaves each of them first: l2_goP and a break, and after each loop
+# `if: l2_goP != 0` breaks again or, at the pad, restarts it.  A user break or continue written
+# directly in a pad leaves the pad the same way (l2_ubP / l2_ucP) and is done at its own loop.
+fn: l2_lp_push (int: kind; int: pad) int
+    if: l2_lp_n >= 64
+        return: l2_error(l2_src, 0, "loops and catch blocks nested too deeply")
+    l2_lpk[l2_lp_n]: kind
+    l2_lpp[l2_lp_n]: pad
+    l2_lp_n: l2_lp_n + 1
+return: 0
+
+fn: l2_lp_pop () int
+    if: l2_lp_n > 0
+        l2_lp_n: l2_lp_n - 1
+return: 0
+
+fn: l2_pad_of (const: @(LmP0Structure blk)) int
+    int: i
+    i: l2_pad_n - 1
+    while: i >= 0
+        if: l2_padb[i] = blk
+            return: l2_padi[i]
+        i: i - 1
+return: -1
+
+# A throw of `name` arrives here with `payload`: if a handler in this method takes it, deliver
+# (1); if none does, write nothing (0) and the caller propagates it.  -1: an error.
+fn: l2_emit_deliver (int: mi; const: @(LmP0Text tname); const: @(char cname); const: @(char payload); const: @(char ind)) int
+    @: LmP0Structure blk 0
+    int: idx 0
+    int: p
+    if: l2_catch_find(mi, tname, cname, @ blk, @ idx) = 0
+        return: 0
+    p: l2_pad_of(blk)
+    if: p < 0 || idx < 1
+        l2_error(l2_src, 0, "internal: a catch without its pad")
+        return: -1
+    if: c.fprintf(l2_out, "%sl2_pl%d: %s\n%sl2_at%d: %d\n", ind, p, payload, ind, p, idx) < 0
+        return: -1
+    if: l2_lp_n > 0 && l2_lpk[l2_lp_n - 1] = 1 && l2_lpp[l2_lp_n - 1] = p
+        if: c.fprintf(l2_out, "%scontinue\n", ind) < 0
+            return: -1
+        return: 1
+    if: c.fprintf(l2_out, "%sl2_go%d: 1\n%sbreak\n", ind, p, ind) < 0
+        return: -1
+return: 1
+
+# After a loop's end (it is off the stack already): a delivery that left it restarts its pad if
+# the pad is the loop around, or leaves the next loop too; a user break or continue that left the
+# pad `closed` (>= 0) is done by the loop around it, or leaves the next pad too.
+fn: l2_emit_loop_exit (int: closed; const: @(char ind)) int
+    int: i 0
+    int: topk -1
+    int: top -1
+    if: l2_lp_n > 0
+        topk: l2_lpk[l2_lp_n - 1]
+        top: l2_lpp[l2_lp_n - 1]
+    ---
+    while: i < l2_lp_n
+        if: l2_lpk[i] = 1 && topk = 1 && l2_lpp[i] = top && c.fprintf(l2_out, "%sif: l2_go%d != 0\n%s    l2_go%d: 0\n%s    continue\n", ind, top, ind, top, ind) < 0
+            return: 1
+        if: l2_lpk[i] = 1 && (topk != 1 || l2_lpp[i] != top) && c.fprintf(l2_out, "%sif: l2_go%d != 0\n%s    break\n", ind, l2_lpp[i], ind) < 0
+            return: 1
+        i: i + 1
+    if: closed >= 0 && topk = 0 && c.fprintf(l2_out, "%sif: l2_ub%d != 0\n%s    l2_ub%d: 0\n%s    break\n%sif: l2_uc%d != 0\n%s    l2_uc%d: 0\n%s    continue\n", ind, closed, ind, closed, ind, ind, closed, ind, closed, ind) < 0
+        return: 1
+    if: closed >= 0 && topk = 1 && c.fprintf(l2_out, "%sif: l2_ub%d != 0\n%s    l2_ub%d: 0\n%s    l2_ub%d: 1\n%s    break\n%sif: l2_uc%d != 0\n%s    l2_uc%d: 0\n%s    l2_uc%d: 1\n%s    break\n", ind, closed, ind, closed, ind, top, ind, ind, closed, ind, closed, ind, top, ind) < 0
+        return: 1
+return: 0
+
+# The parameters of a catch are written by its delivery before the handler reads them: to the
+# use scan they are bound, never an input the activation reads from outside.
+fn: l2_scan_catch_bound (const: @(LmP0Node cf); int: mi; @: int seen) int
+    @: LmP0Field p
+    @: LmP0Structure ps
+    @: LmP0Text fa 0
+    int: ty 0
+    int: oi
+    ps: l2_catch_params(cf)
+    if: ps = 0 || seen = 0
+        return: 0
+    p: l2_next_active(ps\first_field)
+    while: p != 0
+        fa: 0
+        if: l2_typed_formal(p\value, l2_src, @ fa, @ ty) != 0
+            return: 1
+        oi: l2_own_find_decl(mi, fa, p\value)
+        if: oi >= 0
+            seen[oi]: 1
+        p: l2_next_active(p\next)
+return: 0
+
+# A catch parameter binds argument k of the payload by ordinary assignment (Q12, §7): a
+# primitive after its domain check, a Structure after the runtime implements of its declared
+# type.  The own storage type of a parameter type (-1: not a parameter type).
+fn: l2_catch_param_own (int: ty) int
+    if: ty = 0 || ty = 2 || ty = 34 || ty = 36
+        return: l2_own_ty_of_param(ty)
+    if: ty = l2_colon_graph_ty()
+        return: l2_own_of_dt(ty)
+return: -1
+
+# `catch: Name (params)` and its handler: the name, no second catch of it in this block, the
+# parameters (an implicit name has none, X2), and the handler body under the catch's scope.
+fn: l2_check_catch (const: @(LmP0Node cf); const: @(LmP0Structure blk); const: @(char path); int: mi; int: depth) int
+    @: LmP0Field f
+    @: LmP0Field p
+    @: LmP0Text nm
+    @: LmP0Text fa 0
+    @: LmP0Structure ps
+    @: LmP0Structure hb
+    int: n
+    int: ty 0
+    int: gi
+    c.array: [160]: char msg
+    n: 0
+    if: cf\as\frame\body != 0
+        n: l2_count_active(cf\as\frame\body)
+    nm: l2_catch_name(cf)
+    ps: l2_catch_params(cf)
+    hb: l2_catch_body(cf)
+    if: cf\as\frame\trailer != 0 || n < 2 || n > 3 || nm = 0 || l2_ident(nm) = 0 || ps = 0 || (n = 3 && hb = 0)
+        return: l2_error(path, cf, "catch: takes a name, its parameters and a handler body")
+    f: l2_next_active(blk\first_field)
+    while: f != 0 && f\value != cf
+        if: l2_frame_head(f\value, "catch") && l2_text_same(l2_catch_name(f\value), nm) != 0
+            if: c.sprintf(msg, "duplicate catch: %.*s", (cast: (int) nm\length), nm\data) < 0
+                return: 1
+            return: l2_error(path, cf, msg)
+        f: l2_next_active(f\next)
+    gi: 1
+    while: l2_implicit_name(gi) != 0
+        if: l2_text_eq(nm, l2_implicit_name(gi)) != 0 && l2_count_active(ps) != 0
+            return: l2_error(path, cf, "an implicit throw carries no payload")
+        gi: gi + 1
+    p: l2_next_active(ps\first_field)
+    while: p != 0
+        fa: 0
+        if: l2_typed_formal(p\value, path, @ fa, @ ty) != 0
+            return: 1
+        if: l2_catch_param_own(ty) < 0
+            return: l2_error(path, p\value, "unsupported catch parameter type")
+        if: ty = l2_colon_graph_ty() && (p\value\kind != c.LM_P0_NODE_FRAME || l2_ns_find(p\value\as\frame\head) < 0)
+            return: l2_error(path, p\value, "unsupported catch parameter type")
+        # The handler reads its parameter by name; a visible formal, method, own or unit field of
+        # the same name would be found first.
+        if: l2_formal_find(mi, fa) >= 0 || l2_find_method(fa) >= 0 || l2_own_find(mi, fa) >= 0
+            return: l2_error(path, p\value, "a catch parameter hides a visible name")
+        l2_need_admit: 1
+        if: ty = l2_colon_graph_ty() && l2_admit_site(mi) != 0
+            return: l2_error(path, p\value, "internal: admission outside a method")
+        p: l2_next_active(p\next)
+    if: hb = 0
+        return: 0
+    if: l2_scope_push(cf) != 0
+        return: l2_alloc_or(path, cf, "out of memory")
+    if: l2_check_body(hb, mi, path, depth + 1) != 0
+        l2_scope_pop()
+        return: 1
+    l2_scope_pop()
+return: 0
+
+# The parameters of a catch are own fields hosted by the catch (declared under its scope, like a
+# for's variable): bound on delivery, read in the handler, published like any own field.
+fn: l2_collect_catch (const: @(LmP0Node cf); int: mi; const: @(char path); int: depth; @: int sn) int
+    @: LmP0Field p
+    @: LmP0Text fa 0
+    @: LmP0Structure ps
+    @: LmP0Structure hb
+    int: ty 0
+    int: own
+    int: j
+    ps: l2_catch_params(cf)
+    hb: l2_catch_body(cf)
+    if: l2_for_add(cf, mi, l2_for_find(l2_scope_host())) < 0 || l2_scope_push(cf) != 0
+        return: l2_alloc_or(path, cf, "out of memory")
+    p: 0
+    if: ps != 0
+        p: l2_next_active(ps\first_field)
+    while: p != 0
+        fa: 0
+        if: l2_typed_formal(p\value, path, @ fa, @ ty) != 0
+            l2_scope_pop()
+            return: 1
+        own: l2_catch_param_own(ty)
+        if: own < 0
+            l2_scope_pop()
+            return: l2_error(path, p\value, "unsupported catch parameter type")
+        j: l2_own_add(mi, fa, own, path, p\value)
+        if: j < 0
+            l2_scope_pop()
+            return: 1
+        if: l2_own_off(mi, j) = (cast: (size_t) -1)
+            l2_scope_pop()
+            return: l2_error(path, p\value, "size overflow")
+        if: l2_m_uses[l2_own_off(mi, j)] = 0
+            l2_m_own[mi]: l2_m_own[mi] + 1
+        l2_m_uses[l2_own_off(mi, j)]: 1
+        if: ty = l2_colon_graph_ty() && l2_own_nsty_set(j, l2_ns_find(p\value\as\frame\head)) != 0
+            l2_scope_pop()
+            return: 1
+        p: l2_next_active(p\next)
+    if: hb != 0 && l2_collect_decls(hb, mi, path, depth + 1, sn) != 0
+        l2_scope_pop()
+        return: 1
+    l2_scope_pop()
+return: 0
+
+# Catch i of pad p: `if: l2_atP = i`, then the parameters bound from the payload and the handler
+# body, under the catch's scope.  A payload shorter than the parameters, or a field that is not
+# of the parameter's type, is a refused admission: the implicit throw `implements`, raised here.
+fn: l2_emit_handler (const: @(LmP0Node cf); int: p; int: i; int: mi; const: @(char d1); const: @(char d2)) int
+    @: LmP0Field f
+    @: LmP0Text fa 0
+    @: LmP0Structure ps
+    @: LmP0Structure hb
+    int: np 0
+    int: k 0
+    int: ty 0
+    int: oi
+    const: @(char vfn) 0
+    const: @(char tcode) 0
+    c.array: [96]: char val
+    ps: l2_catch_params(cf)
+    hb: l2_catch_body(cf)
+    if: ps != 0
+        np: l2_count_active(ps)
+    if: np = 0 && hb = 0
+        return: 0
+    if: c.fprintf(l2_out, "%sif: l2_at%d = %d\n", d1, p, i) < 0
+        return: 1
+    if: l2_scope_push(cf) != 0
+        return: 1
+    if: np > 0 && c.fprintf(l2_out, "%sif: l2_pl%d = 0 || l2_pl%d\\len < %d\n", d2, p, p, np) < 0
+        return: 1
+    if: np > 0 && l2_emit_implicit_throw(mi, "implements", d2) != 0
+        return: 1
+    f: 0
+    if: ps != 0
+        f: l2_next_active(ps\first_field)
+    while: f != 0
+        fa: 0
+        if: l2_typed_formal(f\value, l2_src, @ fa, @ ty) != 0
+            return: 1
+        oi: l2_own_find_decl(mi, fa, f\value)
+        if: oi < 0
+            return: l2_error(l2_src, f\value, "internal: a catch parameter has no own field")
+        if: c.fprintf(l2_out, "%sl2_pv%d: lmx_arena_ref_value(l2_pl%d, %dU)\n", d2, p, p, k) < 0
+            return: 1
+        vfn: 0
+        if: ty = 0
+            vfn: "lmx_int_value_known"
+            tcode: "c.LMX_TYPE_INT"
+        if: ty = 2
+            vfn: "lmx_size_value_known"
+            tcode: "c.LMX_TYPE_SIZE_T"
+        if: ty = 34
+            vfn: "lmx_unsigned_value_known"
+            tcode: "c.LMX_TYPE_UNSIGNED"
+        if: ty = 36
+            vfn: "lmx_ulong_value_known"
+            tcode: "c.LMX_TYPE_ULONG"
+        if: vfn != 0
+            if: c.fprintf(l2_out, "%sif: l2_pv%d = 0 || lmx_domain_type(l2_program_arena, l2_pv%d) != %s\n", d2, p, p, tcode) < 0
+                return: 1
+            if: l2_emit_implicit_throw(mi, "implements", d2) != 0
+                return: 1
+            if: c.sprintf(val, "%s(l2_pv%d)", vfn, p) < 0 || l2_emit_occ_write(mi, oi, d2, val) != 0
+                return: 1
+            ---
+        if: vfn = 0
+            if: c.sprintf(val, "(cast: (@: Lmx) l2_pv%d)", p) < 0
+                return: 1
+            if: l2_emit_admit(mi, l2_own_nsty_get(oi), val, d2) != 0 || l2_emit_occ_write(mi, oi, d2, val) != 0
+                return: 1
+            ---
+        f: l2_next_active(f\next)
+        k: k + 1
+    if: hb != 0 && l2_emit_body(hb, mi, d2) != 0
+        l2_scope_pop()
+        return: 1
+    l2_scope_pop()
+    if: c.fprintf(l2_out, "%s---\n", d2) < 0
+        return: 1
+return: 0
+
+# A block that holds catches, lowered to its pad (see THE PADS).
+fn: l2_emit_pad (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
+    @: LmP0Field f
+    @: LmP0Field seg
+    @: char d1 0
+    @: char d2 0
+    int: p
+    int: j 0
+    int: parent 0
+    int: q 0
+    # A user break or continue can be written directly in this pad only if a user loop encloses
+    # it; only then does the pad carry the flags that take one out.
+    while: q < l2_lp_n
+        if: l2_lpk[q] = 0
+            parent: 1
+        q: q + 1
+    if: l2_bump_ind(ind, @ d1) != 0 || l2_bump_ind(d1, @ d2) != 0
+        return: 1
+    if: l2_pad_n >= 64
+        return: l2_error(l2_src, 0, "catch blocks nested too deeply")
+    p: l2_pad_seq
+    l2_pad_seq: l2_pad_seq + 1
+    if: c.fprintf(l2_out, "%sint: l2_at%d 0\n%sint: l2_go%d 0\n%s@: Lmx l2_pl%d 0\n%s@: void l2_pv%d 0\n", ind, p, ind, p, ind, p, ind, p) < 0
+        return: 1
+    if: parent > 0 && c.fprintf(l2_out, "%sint: l2_ub%d 0\n%sint: l2_uc%d 0\n", ind, p, ind, p) < 0
+        return: 1
+    if: c.fprintf(l2_out, "%swhile: 1\n", ind) < 0
+        return: 1
+    l2_padb[l2_pad_n]: (cast: (@: LmP0Structure) body)
+    l2_padi[l2_pad_n]: p
+    l2_pad_n: l2_pad_n + 1
+    if: l2_lp_push(1, p) != 0
+        return: 1
+    if: l2_emit_poll(mi, d1) != 0
+        return: 1
+    seg: l2_next_active(body\first_field)
+    f: seg
+    while: f != 0
+        if: l2_frame_head(f\value, "catch")
+            if: seg != f && c.fprintf(l2_out, "%sif: l2_at%d <= %d\n", d1, p, j) < 0
+                return: 1
+            if: seg != f && l2_emit_stmts(body, seg, f, mi, d2) != 0
+                return: 1
+            if: seg != f && c.fprintf(l2_out, "%s---\n", d2) < 0
+                return: 1
+            j: j + 1
+            if: l2_emit_handler(f\value, p, j, mi, d1, d2) != 0
+                return: 1
+            seg: l2_next_active(f\next)
+            f: seg
+            continue
+        f: l2_next_active(f\next)
+    if: seg != 0 && c.fprintf(l2_out, "%sif: l2_at%d <= %d\n", d1, p, j) < 0
+        return: 1
+    if: seg != 0 && l2_emit_stmts(body, seg, 0, mi, d2) != 0
+        return: 1
+    if: seg != 0 && c.fprintf(l2_out, "%s---\n", d2) < 0
+        return: 1
+    if: c.fprintf(l2_out, "%sbreak\n%send: while\n", d1, ind) < 0
+        return: 1
+    l2_lp_pop()
+    l2_pad_n: l2_pad_n - 1
+    if: parent > 0
+        return: l2_emit_loop_exit(p, ind)
+return: l2_emit_loop_exit(0 - 1, ind)
+
+# A block with catches is its pad; any other block is its statements.
+fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
+    if: body = 0
+        return: 0
+    if: l2_block_has_catch(body) != 0
+        return: l2_emit_pad(body, mi, ind)
+return: l2_emit_stmts(body, l2_next_active(body\first_field), 0, mi, ind)
+
 # THE STATIC RULE (§14, author Q13): every name a callee declares is caught in the caller's
 # enclosing blocks (S1.3) or listed in the caller's own `throws:`, else the call is refused.  E
 # lists none, so a declared name that would reach E is refused there.
@@ -9834,7 +10390,7 @@ fn: l2_check_throws_handled (int: mi; int: callee; const: @(char path); const: @
     d: l2_throws_declared(callee)
     while: k <= d
         nm: l2_throws_name(callee, k)
-        if: nm != 0 && l2_throws_pos(mi, nm) = 0
+        if: nm != 0 && l2_throws_pos(mi, nm) = 0 && l2_catch_find(mi, nm, 0, 0, 0) = 0
             if: mi = l2_e && c.sprintf(msg, "unhandled throw in entry: %.*s", (cast: (int) nm\length), nm\data) < 0
                 return: 1
             if: mi != l2_e && c.sprintf(msg, "unhandled throw: %.*s", (cast: (int) nm\length), nm\data) < 0
@@ -10019,6 +10575,7 @@ return: 0
 fn: l2_emit_implicit_throw (int: mi; const: @(char name); const: @(char ind)) int
     @: char deep 0
     int: st
+    int: dv
     st: l2_implicit_status(mi, name)
     if: st <= 0
         return: l2_error(l2_src, 0, "internal: not an implicit throw name")
@@ -10026,6 +10583,12 @@ fn: l2_emit_implicit_throw (int: mi; const: @(char name); const: @(char ind)) in
         return: 1
     if: l2_emit_checkpoint(mi, deep) != 0
         return: 1
+    # A handler in this method takes it (S1.3: a catch of the operator's name); else it leaves.
+    dv: l2_emit_deliver(mi, 0, name, "0", deep)
+    if: dv < 0
+        return: 1
+    if: dv > 0
+        return: 0
     if: c.fprintf(l2_out, "%sl2_out_throw[0]: 0\n%sreturn: %d\n", deep, deep, st) < 0
         return: 1
 return: 0
@@ -10038,19 +10601,41 @@ return: 0
 fn: l2_emit_propagate (int: mi; int: callee; int: t; const: @(char ind)) int
     int: shift
     int: k 1
+    int: g 1
     int: pos
+    int: dv
+    @: char d2 0
+    @: char d3 0
+    c.array: [32]: char pl
     if: mi < 0 || callee < 0 || ind = 0
+        return: 1
+    if: l2_bump_ind(ind, @ d2) != 0 || l2_bump_ind(d2, @ d3) != 0 || c.sprintf(pl, "l2_te%d", t) < 0
         return: 1
     shift: l2_throws_declared(mi) - l2_throws_declared(callee)
     if: c.fprintf(l2_out, "%sif: l2_ts%d != 0\n%s    l2_out_throw[0]: l2_te%d\n", ind, t, ind, t) < 0
         return: 1
+    # A handler in this method takes a name first (S1.3); else a declared name leaves by its
+    # position in this method's list.
     while: k <= l2_throws_declared(callee)
+        if: c.fprintf(l2_out, "%sif: l2_ts%d = %d\n", d2, t, k) < 0
+            return: 1
+        dv: l2_emit_deliver(mi, l2_throws_name(callee, k), 0, pl, d3)
+        if: dv < 0
+            return: 1
         pos: l2_throws_pos(mi, l2_throws_name(callee, k))
-        if: pos <= 0
+        if: dv = 0 && pos <= 0
             return: l2_error(l2_src, 0, "internal: a callee's declared throw is not handled by its caller")
-        if: c.fprintf(l2_out, "%s    if: l2_ts%d = %d\n%s        return: %d\n", ind, t, k, ind, pos) < 0
+        if: dv = 0 && c.fprintf(l2_out, "%sreturn: %d\n", d3, pos) < 0
             return: 1
         k: k + 1
+    while: l2_implicit_name(g) != 0
+        if: l2_catch_find(mi, 0, l2_implicit_name(g), 0, 0) != 0
+            if: c.fprintf(l2_out, "%sif: l2_ts%d = %d\n", d2, t, l2_throws_declared(callee) + g) < 0
+                return: 1
+            if: l2_emit_deliver(mi, 0, l2_implicit_name(g), pl, d3) < 0
+                return: 1
+            ---
+        g: g + 1
     if: shift = 0 && c.fprintf(l2_out, "%s    return: l2_ts%d\n", ind, t) < 0
         return: 1
     if: shift > 0 && c.fprintf(l2_out, "%s    return: l2_ts%d + %d\n", ind, t, shift) < 0
@@ -12700,6 +13285,12 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             continue
         if: l2_frame_head(stmt, "throw")
             if: l2_check_throw(stmt, mi, path) != 0
+                return: 1
+            field: l2_next_active(field\next)
+            continue
+        # S1.3: a catch and its handler (l2_check_catch).
+        if: l2_frame_head(stmt, "catch")
+            if: l2_check_catch(stmt, body, path, mi, depth) != 0
                 return: 1
             field: l2_next_active(field\next)
             continue
@@ -16128,7 +16719,7 @@ fn: l2_merge_scan (const: @(LmP0Structure body)) int
     ---
 return: 0
 
-fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
+fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field stop; int: mi; const: @(char ind)) int
     int: rbadmit 0
     int: array_own
     size_t: array_index
@@ -16195,8 +16786,8 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
         return: 0
     if: l2_bump_ind(ind, @ deep) != 0
         return: 1
-    field: l2_next_active(body\first_field)
-    while: field != 0
+    field: from
+    while: field != 0 && field != stop
         stmt: field\value
         l2_vis_stmt(mi, stmt)
         pd: 1
@@ -16725,16 +17316,19 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
             if: l2_emit_poll(mi, wdeep) != 0
                 return: 1
             l2_loop_depth: l2_loop_depth + 1
-            if: l2_scope_push(last\value) != 0
+            if: l2_scope_push(last\value) != 0 || l2_lp_push(0, 0 - 1) != 0
                 l2_loop_depth: l2_loop_depth - 1
                 return: 1
             if: l2_emit_body(last\value\as\structure, mi, wdeep) != 0
                 l2_scope_pop()
                 l2_loop_depth: l2_loop_depth - 1
                 return: 1
+            l2_lp_pop()
             l2_scope_pop()
             l2_loop_depth: l2_loop_depth - 1
             if: c.fprintf(l2_out, "%send: while\n", ind) < 0
+                return: 1
+            if: l2_emit_loop_exit(0 - 1, ind) != 0
                 return: 1
             field: l2_next_active(field\next)
             continue
@@ -16825,24 +17419,31 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
                 last: l2_next_active(last\next)
                 k: k + 1
             l2_loop_depth: l2_loop_depth + 1
-            if: last = 0 || last\value = 0 || last\value\as = 0 || l2_emit_body(last\value\as\structure, mi, wdeep) != 0
+            if: l2_lp_push(0, 0 - 1) != 0 || last = 0 || last\value = 0 || last\value\as = 0 || l2_emit_body(last\value\as\structure, mi, wdeep) != 0
                 l2_loop_depth: l2_loop_depth - 1
                 l2_scope_pop()
                 return: 1
+            l2_lp_pop()
             l2_loop_depth: l2_loop_depth - 1
             if: c.fprintf(l2_out, "%send: while\n", ind) < 0
                 l2_scope_pop()
                 return: 1
             l2_scope_pop()
+            if: l2_emit_loop_exit(0 - 1, ind) != 0
+                return: 1
             field: l2_next_active(field\next)
             continue
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM && l2_text_eq(stmt\as\atom, "continue")
-            if: c.fprintf(l2_out, "%scontinue\n", ind) < 0
+            if: l2_lp_n > 0 && l2_lpk[l2_lp_n - 1] = 1 && c.fprintf(l2_out, "%sl2_uc%d: 1\n%sbreak\n", ind, l2_lpp[l2_lp_n - 1], ind) < 0
+                return: 1
+            if: (l2_lp_n = 0 || l2_lpk[l2_lp_n - 1] = 0) && c.fprintf(l2_out, "%scontinue\n", ind) < 0
                 return: 1
             field: l2_next_active(field\next)
             continue
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM && l2_text_eq(stmt\as\atom, "break")
-            if: c.fprintf(l2_out, "%sbreak\n", ind) < 0
+            if: l2_lp_n > 0 && l2_lpk[l2_lp_n - 1] = 1 && c.fprintf(l2_out, "%sl2_ub%d: 1\n%sbreak\n", ind, l2_lpp[l2_lp_n - 1], ind) < 0
+                return: 1
+            if: (l2_lp_n = 0 || l2_lpk[l2_lp_n - 1] = 0) && c.fprintf(l2_out, "%sbreak\n", ind) < 0
                 return: 1
             field: l2_next_active(field\next)
             continue

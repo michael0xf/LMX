@@ -1,0 +1,22 @@
+# A user break or continue written directly in a block with catches -- the while body here -- is the
+# user's, not the pad's: continue skips k = 2, the throw at k = 3 lands in the catch (+100), break
+# ends the loop at k = 5.  1 + 100 + 4 = 105.
+fn: m (int: a) int
+    throws: Oops
+    if: a = 3
+        throw: Oops(a)
+return: a
+
+int: r 0
+int: k 0
+while: k < 10
+    k: k + 1
+    if: k = 5
+        break
+    if: k = 2
+        continue
+    r: r + m(k)
+    catch: Oops (int: x)
+        r: r + 100
+---
+return: r

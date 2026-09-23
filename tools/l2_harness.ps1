@@ -822,6 +822,47 @@ $fixtures = @(
         Needle = 'unsupported throw payload value'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s1_throws_formal_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'incompatible entry signature'; Absent = @(); Debt = @() },
+    # S1.3, CATCH (FABLE-OPUS-S1-CATCH-20260923-136; §14, author Q11-Q14).  `catch: Name (params)` is a
+    # landing pad in the caller's block: a block with catches is lowered to one loop (its pad) whose
+    # segments and handlers are guarded by where the last delivery landed, so a catch before the
+    # call re-enters and one after it continues past.  The innermost enclosing block that catches a
+    # name takes it (nested blocks and loops included, siblings not, Q14 K); the same name inside its
+    # own handler goes to the enclosing context; parameters bind the payload by assignment (a
+    # primitive after its domain check, a Structure after runtime implements; a short payload is
+    # `implements`).  The first row is S1.2's obligation: a declared name and an implicit one reach
+    # different handlers at run time (Oops is 1, merge d + 1 = 2).
+    [pscustomobject]@{ Name = 'unit_s1_catch_declared_vs_merge.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 27; MergeFail = 1; Stopped = 0;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s1_catch_declared_vs_merge_ok.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 8; Stopped = 0;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s1_catch_tc.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Stopped = 0;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s1_catch_t2.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 103;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s1_catch_sibling.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 3;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s1_catch_rethrow.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 1011;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s1_catch_nested_while.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 122;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s1_catch_merge_local.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 50; MergeFail = 1;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s1_catch_publish.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s1_catch_user_break.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 105;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s1_catch_implements.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 42; Letters = 0;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s1_catch_duplicate_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'duplicate catch: Oops'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s1_catch_merge_params_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'an implicit throw carries no payload'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s1_catch_param_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unsupported catch parameter type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s1_catch_shadow_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a catch parameter hides a visible name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s1_catch_unhandled_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unhandled throw in entry: Oops'; Absent = @(); Debt = @() },
     # THE STICKY DIRTY OF AN ADDRESS-TAKEN LOCAL (GROK-COLON-OCCURRENCE-20260922-02).  Any executed
     # `@x` of an addressable activation-local makes sticky through activation end -- before, between
     # or after occurrence bindings.  Address-taking invents no graph field; `p` always addresses the

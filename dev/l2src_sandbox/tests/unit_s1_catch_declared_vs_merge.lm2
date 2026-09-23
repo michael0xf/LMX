@@ -1,0 +1,32 @@
+# S1.3 (the obligation S1.2 left): a declared name and an implicit one reach different handlers at
+# run time.  m declares Oops (status 1) and merges (merge is d + 1 = 2).  E calls m twice, each call
+# in its own block catching both: m(0) throws Oops(7), m(1) reaches its merge.  With the driver
+# failing the first merge (mergefail 1) the second call throws merge: 7 + 20 = 27.  Without the
+# failure m(1) returns 1: 7 + 1 = 8 (unit_s1_catch_declared_vs_merge_ok).
+P:
+    size_t: p 3U
+end: P
+
+fn: m (int: a) int
+    throws: Oops
+    if: a = 0
+        throw: Oops(7)
+    Q: merge: P
+return: 1
+
+int: r 0
+int: s 0
+---
+    r: m(0)
+    catch: Oops (int: v)
+        r: v
+    catch: merge ()
+        r: 100
+---
+    s: m(1)
+    catch: Oops (int: w)
+        s: w
+    catch: merge ()
+        s: 20
+---
+return: r + s

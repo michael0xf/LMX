@@ -1,0 +1,21 @@
+# The same name thrown inside its own handler does not re-enter it: it goes to the enclosing
+# context (§14).  m(0) throws Oops(0) into the inner handler, which throws Oops(1) through m(1); the
+# enclosing catch takes it: r 101, n 1, 1011.  (Re-entering the inner handler instead would call
+# m(2) and m(3), which returns 3: 33.)
+fn: m (int: a) int
+    throws: Oops
+    if: a < 3
+        throw: Oops(a)
+return: a
+
+int: r 0
+int: n 0
+---
+    r: m(0)
+    catch: Oops (int: x)
+        n: n + 1
+        r: m(n)
+---
+catch: Oops (int: o)
+    r: 100 + o
+return: r * 10 + n

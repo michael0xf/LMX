@@ -230,6 +230,17 @@ Acceptance:
 - [ ] Один общий `l2_eval_discard` / body dispatch **заменяет обе** существующие ad-hoc ветки (старые якоря ~15741 call-frame и ~15745 `l2_is_known` external/adapter Frame). Не оставлять параллельные discard/call paths.
 - [ ] Удалить body-emptiness call heuristic и COMPACT-gated fnptr call contradictions (call vs value только по resolved binding KIND).
 - [ ] Тесты: `2+2`, bare data, bare nullary callable + side effect, nested call, unknown name → `unresolved name`, typed fnptr discard без call, void без undeclared temp, `size_t`/`ulong`/pointer discard temps, отсутствие access violation.
+- [ ] **Норма (автор через Codex, CODEX-FABLE-HEADLESS-DOC-20260923-01):** допустимые expression statements в исполняемом теле — голое `2`, `2 + 2`, голое `f`, `(f)`, `(2 + 2)`, пустое `()` и эквивалентные анонимные вертикальные структуры; один общий путь парсер → consumer без исключений по синтаксической форме; callable разрешается по KIND (вызов), не-callable вычисляется и отбрасывается; destination отброшенного результата — уже существующий типизированный generated `l2_tN`, чья жизнь заканчивается после полного выражения (не новый буфер и не арена). **Реализация:** транслятор сегодня отвергает голый атом/`()`/скобочную группу как оператор («unsupported body», `l2_check_body` / эмиттер) — принятая норма отделена от нереализованного; закрывать по свидетельствам ниже.
+- [ ] **Обязательный свидетель P0 и runtime (автор):** фикстура с анонимной скобочной структурой, каждая строка на своей строке исходника с сохранением отступа:
+  ```text
+  (
+      f: 1
+      f: 2
+      2 * 2
+      f
+  )
+  ```
+  — при строгой типизации `f` должен быть явно объявлен в объемлющем контексте (`int: f 0`), тип из литерала `1` не выводится; проверить последовательное исполнение: `f: 1`, затем `f: 2` (присваивания с admission), затем `2 * 2` вычислено и отброшено в `l2_tN`, затем голое `f` вычислено и отброшено (для callable `f` — нульарный вызов); P0-dump той же структуры — одно дерево с вертикальным эквивалентом; native и interpreter — одинаковые результат и побочные эффекты; никакого синтаксически-особого пути.
 - [ ] **P0 TRANSPARENCY HOLD:** отдельную P0-прозрачность sole anonymous argument-container / пустого Frame сохранять по `steps/current.md` и §2 выше; не смешивать её с discard expression-statement и не переносить решение о допустимости Frame на translator/receiver по исходной форме.
 
 ### Решённый дискриминатор
@@ -270,6 +281,7 @@ Acceptance:
 - [ ] На границе P0 проверить одинаковый нормальный нульарный результат для `f()`, `f: ()` и явно закрытого `f:`/`---`; отдельно закрепить синтаксический отказ P0 для одиночного незавершённого `f:`. Голый callable `f` проверить как expression statement / discard (callable-first, zero consumed args), а не как четвёртую синтаксическую форму Frame и не как отдельное исключение нульарного вызова; соседний голый data-атом вычисляется и отбрасывается, но не автовызывается.
 - [ ] Проверить передачу empty Structure/unit как одного именованного значения отдельно от пустого списка аргументов.
 - [ ] Проверить, что bare data expression **вычисляется** и его результат **отбрасывается** (discard), но **не вызывается**; bare callable в executable statement position вызывается (expression-statement / callable-first). Согласовано с п. выше про голый data-атом.
+- [ ] Строки-свидетели headless expression statements (CODEX-FABLE-HEADLESS-DOC-20260923-01): P0-dump для голого `2`, `2 + 2`, голого `f`, `(f)`, `(2 + 2)`, пустого `()` и их анонимных вертикальных эквивалентов — одно дерево на форму; native и interpreter — результат и побочный эффект наблюдаются (счётчик в callable `f`, значение `f` после `f: 1`/`f: 2`, отброшенный `2 * 2` не оставляет незадекларированного temp; `l2_tN` типизирован и не используется после полного выражения); отдельно строка со скобочной структурой `( f: 1 / f: 2 / 2 * 2 / f )` из §3.
 - [ ] Проверить terminal Structure-reference rebinding; отдельно проверить отсутствие прямого callable-field assignment и три разрешённых общих пути замены callable.
 - [ ] Проверить наблюдаемое выполнение `implements` на каждом известном присваивании, включая identity и empty-uses случаи после решения автора.
 - [ ] Проверить повторные occurrences, `[N]field`, canonical address, selector switch и sticky publication.
@@ -301,20 +313,20 @@ Acceptance:
 
 - [x] Спецификация L2 **не** задаёт name-specific семантику `c.puts`. Ordinary `c.*` call path уже токенизирует quoted arguments.
 - [x] Удалить closed special checker/emitter cluster (`l2_simple_puts_main`, исключения в `l2_c_stmt_door`, специальные `frame_head`/`leaf` ветки); `c.puts` → ordinary foreign-call / `c.name` statement routing. (99 PART2: deleted puts helpers; door no longer excludes c.puts.)
-- [ ] Проверить derivation stdio include и ordinary `c.name` statement routing после удаления specials.
+- [ ] Проверить derivation stdio include и ordinary `c.name` statement routing после удаления specials. **Gap (measured 17d54bc):** ordinary `c.name` routing OK (`rg l2_simple_puts_main` = 0; harness `entry_puts_*`/`unit_puts_*` GREEN). **stdio.h still unconditional**, not use-derived: `dev/l2src_sandbox/l2trans.lm1:3` + generated emit ~:16007 always emits `"<stdio.h>"`. Remaining: use-derived stdio (or document unconditional as intentional mapping rule).
 
 ### Поля C-структур (автор, Q7 = P1, 2026-09-23)
 
-- [ ] Путь `\field` на значении, чей тип спелен `c.*`, — сырой C-доступ к члену: эмитится дословно, проверяет C-компилятор; транслятор не знает C-структур. Удалить фиксированные коды типов по имени (`LmP0Text` ty=5, `LmP0IndentStack` 14, `LmP0TrailerRole` 10, `LmP0Diagnostic` 21, `LmP0Document`/`need_p0`, per-name include-флаги в `l2_is_known`; группа B инвентаря `FABLE-GROKBOT-TYPE-NAME-SPECIALS-20260922-111`), мигрировать порт парсера `parser_*_port.lm2` и фикстуры на `c.LmP0*` с сырыми путями; `lm_own_*`/`lm_p0_*`-адаптеры видимы только через `predef`-объявления, не по зашитому списку.
+- [x] Путь `\field` на значении, чей тип спелен `c.*`, — сырой C-доступ к члену: эмитится дословно, проверяет C-компилятор; транслятор не знает C-структур. Удалить фиксированные коды типов по имени (`LmP0Text` ty=5, `LmP0IndentStack` 14, `LmP0TrailerRole` 10, `LmP0Diagnostic` 21, `LmP0Document`/`need_p0`, per-name include-флаги в `l2_is_known`; группа B инвентаря `FABLE-GROKBOT-TYPE-NAME-SPECIALS-20260922-111`), мигрировать порт парсера `parser_*_port.lm2` и фикстуры на `c.LmP0*` с сырыми путями; `lm_own_*`/`lm_p0_*`-адаптеры видимы только через `predef`-объявления, не по зашитому списку. **(988d19a raw member path; a2cf69e delete LmP0* ty codes + port/fixture migrate; 1b395ff raw-dispatch root only for `c.*` / foreign≠Lmx; harness `unit_c_member_*` + `unit_raw_root_*`. Residual emit heuristic: `strstr(s0,"IndentStack"|size_t)` arms ~12966 — track under GATE inventory.)**
 - [x] 20 puts fixtures сейчас ungated — добавить real witness, обновить diagnostics намеренно, ввести gate coverage. (Gated hello/seq/empty/nl/esc + method_body + main_beside_method; arity refusals deferred to C.)
-- [ ] L2-библиотека puts — обычный L2-код **без** `c.`; C puts — внешний C через ту же общую дверь `c.*`.
+- [ ] L2-библиотека puts — обычный L2-код **без** `c.`; C puts — внешний C через ту же общую дверь `c.*`. **Gap:** no L2 puts library unit yet; callers still use raw `c.puts` (gated). Bounded ticket: add L2 library without `c.`.
 
 ### L2 `c.array` (declarator, not a call)
 
-- [ ] Спецификация L2 **не** определяет семантику `c.array`. Это declarator, не call. Special L2 semantics сейчас: ~3 name tests + одно user-facing lowering.
-- [ ] Удалить `c.array` из L2 docs и L2 translator/input corpus; мигрировать уже общими механизмами L2 либо внешней библиотекой через `c.*`. Не изобретать replacement syntax / hard-coded helper.
-- [ ] `parser_dump_port.lm2` → owned allocation: явная length **32** (`c.sizeof(pointer)` дал бы 8), allocation failure handling, free, и документированное отклонение от oracle.
-- [ ] 4 `c.array` fixtures ungated; вместе с puts — **24** affected fixtures, сейчас **zero** gate coverage — закрыть в этой партии.
+- [ ] Спецификация L2 **не** определяет семантику `c.array`. Это declarator, не call. Special L2 semantics сейчас: ~3 name tests + одно user-facing lowering. **Gap (17d54bc):** `l2_array_local` still matches `frame_head(stmt, "c.array")` (`l2trans.lm1:5031`); call sites ~3643/~11780/~14507. CORE rejects name-specific `c.array` but translator still accepts the declarator.
+- [ ] Удалить `c.array` из L2 docs и L2 translator/input corpus; мигрировать уже общими механизмами L2 либо внешней библиотекой через `c.*`. Не изобретать replacement syntax / hard-coded helper. **Gap:** ~46 `c.array:` decls remain in `l2trans.lm1` (L1 source). L2 user fixtures migrated (17d54bc). Delete `l2_array_local` after L1 HOLD measurement.
+- [x] `parser_dump_port.lm2` → owned allocation: явная length **32** (`c.sizeof(pointer)` дал бы 8), allocation failure handling, free, и документированное отклонение от oracle. **(17d54bc:** sandbox+frozen `[]: char buffer 32`; `dump\failed` + `p0_dump_delete`; comment «Deviation from L1 oracle spelling»; `rg c.array` on file = 0.)
+- [x] 4 `c.array` fixtures ungated; вместе с puts — **24** affected fixtures, сейчас **zero** gate coverage — закрыть в этой партии. **(17d54bc:** frozen twins → `[]: char`; harness gates `entry_array`/`entry_array_leading_zero`/`entry_nul` + `unit_native_activation` Absent=`c.array`; puts already gated; full harness GREEN 177/177 `build/l2_harness/fable126_part2a`.)
 
 ### Raw-C door (`c.*`) — AUTHOR-C-RAW-DOOR-20260922-14
 
@@ -322,9 +334,9 @@ Acceptance:
 
 - [x] Сделать raw-C door **syntax-transparent**: `c.sizeof(...)` понижается в C `sizeof(...)` через общий raw-C door; unevaluated семантика sizeof даёт **C compiler**, не L2 semantic resolution. (123 part2: deleted c.sizeof special + LmP0 name arms; `unit_sizeof_c_door_arena`.)
 - [x] `c.puts(...)` проходит тем же raw-C door **без** name-specific L2 checker/emitter.
-- [ ] Удалить header scanners / entity dictionaries / name whitelists / special `c.*` semantic classification. Сначала **inventory** точных obsolete scanners/dictionaries (известные кандидаты в `dev/l2src_sandbox/l2trans.lm1`: `l2_c_header_walk`, `l2_c_header_chain_has`, `l2_c_header_chain_has_typedef`, `l2_predef_has_function`, `l2_predef_has_type`, `l2_predef_has_fnptr`, `l2_foreign_intern`, `l2_c_stmt_door` exclusions, `l2_simple_puts_main` — полный список уточнить inventory). (99 PART2: deleted puts helpers; door no longer excludes c.puts.)
-- [ ] **Ownership/dependency:** DeepSeek ранее был tasked автором удалить эти scanners/dictionaries — **не дублировать и не отклоняться**; зафиксировать ownership/dependency и координировать. Grok Bot не invents параллельный removal path.
-- [ ] Preserve только mapping rules, реально нужные чтобы emit valid C; неизвестные механики — label for audit, **не** invent registry.
+- [ ] Удалить header scanners / entity dictionaries / name whitelists / special `c.*` semantic classification. Сначала **inventory** точных obsolete scanners/dictionaries. **(Inventory 17d54bc — still present; DeepSeek owns deletion):** `l2_c_header_walk:4168`, `l2_c_header_chain_has:4266`, `l2_c_header_chain_has_typedef:4296`, `l2_predef_has_function:4516`, `l2_predef_has_type:3982`, `l2_predef_has_fnptr:3877`, `l2_foreign_intern:4547`, `l2_c_stmt_door:8624` (syntax-only `c.` prefix; no puts exclusion), `l2_array_local:5021` (c.array declarator). `l2_simple_puts_main` = 0. Gap: deletion + zero residual refs.
+- [x] **Ownership/dependency:** DeepSeek ранее был tasked автором удалить эти scanners/dictionaries — **не дублировать и не отклоняться**; зафиксировать ownership/dependency и координировать. Grok Bot не invents параллельный removal path. **(126 part2:** inventory above; no parallel removal by Grok Bot.)
+- [x] Preserve только mapping rules, реально нужные чтобы emit valid C; неизвестные механики — label for audit, **не** invent registry. **Kept mapping rules (126 inventory):** (1) c.* token → raw C spelling via l2_c_door / l2_c_stmt_door (prefix c.); (2) foreign intern/slot tables for typed c.Name values (l2_foreign_intern / byvalue) until DeepSeek deletion lands — currently required to emit typed temps; (3) raw member path when root type is c.* (l2_ty_raw_c_members + l2_raw_path; Structure/Lmx roots excluded — 1b395ff); (4) unconditional bootstrap includes currently emitted (stdio.h/stdlib.h/string.h + predef chain) — audit whether use-derived later; (5) l2_emit_ccall ordinary foreign call lowering. **Label for audit/delete (DeepSeek):** header walk/chain/predef_has_* dictionaries.
 
 
 ### `sizeof:` — ввести language receiver-operator (AUTHOR-SIZEOF-DESIGN-20260922-20)
@@ -344,7 +356,7 @@ Clarifies / overrides overstatements in -19. Unhold from -18 stands (no global-c
 
 ### L1 `c.array` (separate, unproven — do not merge)
 
-- [ ] **HOLD / separately owned foreign-backend debt:** L1 `[]` и L1 `c.array` имеют разные emitters; `l2trans` ещё эмитит `c.array` в generated L1 (~5 sites). Перед любым scheduling removal — read-only byte-output equivalence measurement + inventory golden/self-build consequences. **Не** смешивать с bounded L2 cleanup.
+- [ ] **HOLD / separately owned foreign-backend debt:** L1 `[]` и L1 `c.array` имеют разные emitters; `l2trans` ещё эмитит `c.array` в generated L1 (~5 sites). Перед любым scheduling removal — read-only byte-output equivalence measurement + inventory golden/self-build consequences. **Не** смешивать с bounded L2 cleanup. **HOLD report (17d54bc):** emits L1 `c.array:` via `c.fprintf` at **14510**, **16047**, **16182**, **16414**, **16417**. Reason: L1 lowering still needs `c.array:` for tables/buffers; not L2 declarator semantics.
 
 ## GATE. Чистое ядро перед самосборкой L2 (blocking)
 

@@ -1,0 +1,76 @@
+Model:
+    size_t: value 1U
+end: Model
+
+# FABLE-SONNET-OWN-LOOKUP-AUDIT-20260923-131 part 3: the terminal
+# Structure-reference assignment checklist next_core_tasks.md asks for --
+# one assertion per (direct name / path) x (own / unit / formal) x
+# (primitive / Structure) combination, all through the ordinary path.
+int: u_prim 5
+Model: u_struct
+
+fn: writer (Model: f_struct) int
+    # formal x path x primitive: write then read through a formal's own field.
+    f_struct\value: 77U
+    if: f_struct\value != 77U
+        return: 90
+
+    # own x direct name x primitive.
+    int: o_prim 1
+    o_prim: 8
+    if: o_prim != 8
+        return: 91
+
+    # own x direct name x Structure: -105 colon declaration, read right back.
+    Model: o_struct
+    if: o_struct\value != 1U
+        return: 92
+
+    # own x path x primitive: write then read through an own Structure field.
+    o_struct\value: 99U
+    if: o_struct\value != 99U
+        return: 93
+
+    # unit x direct name x primitive.
+    u_prim: 55
+    if: u_prim != 55
+        return: 94
+
+    # unit x path x primitive: write through a unit-level Structure own
+    # field succeeds via the ordinary path (l2_check_fields's whole-path
+    # fast exit only needs l2_path_root, FABLE-SONNET-OWN-LOOKUP-AUDIT-
+    # 20260923-131 part 3's l2_path_root unit-fallback fix).
+    u_struct\value: 66U
+
+    # WORKAROUND, NAMED (FABLE-SONNET-OWN-LOOKUP-AUDIT-20260923-131 part 3
+    # finding, unit-nsty-order): the same read, inline inside a compound
+    # expression (`if: u_struct\value != 66U`), hits a located "unresolved
+    # name" refusal instead of the value it should read. Root cause: a
+    # compound-expression read walks the path segment by segment through
+    # l2_field_path_check/l2_path_kind, which seeds the walk's namespace
+    # from l2_own_nsty_get(oi) -- but l2_own_nsty_set for a unit-level
+    # (E-owned) Structure own field only runs when E's OWN body reaches its
+    # `Model: fresh`-shaped declaration statement (l2trans.lm1 ~12421,
+    # inside l2_check_body), and l2_parse_unit's per-method check loop
+    # always checks E LAST (S2: E is the last method row). A method checked
+    # earlier than E, like this one, sees ni<0 and is refused, even though
+    # the identical path already resolves fine as a bare assignment target
+    # or a bare-RHS read one statement earlier -- both take l2_check_fields's
+    # whole-path fast exit (l2trans.lm1 ~12049-12059), which only needs
+    # l2_path_root, never nsty. Reading into a local first (the same shape
+    # as the GROK-FABLE-20260923-120 workaround, a different root cause)
+    # sidesteps the segment walk entirely.
+    size_t: u_check
+    u_check: u_struct\value
+    if: u_check != 66U
+        return: 95
+
+    return: 0
+end: writer
+
+Model: a
+int: r
+r: writer(a)
+if: r != 0
+    return: r
+return: 0

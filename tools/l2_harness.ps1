@@ -1213,6 +1213,18 @@ $fixtures = @(
         Args = @('0'); EmptyEntry = $true;
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_message\graph: l2_entry_unit') },
+    # FABLE-SONNET-OWN-LOOKUP-AUDIT-20260923-131 part 3: the terminal
+    # Structure-reference assignment checklist, one assertion per (direct
+    # name / path) x (own / unit / formal) x (primitive / Structure).
+    [pscustomobject]@{ Name = 'unit_field_path_terminal_checklist.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
+        Debt = @() },
+    # FABLE-SONNET-OWN-LOOKUP-AUDIT-20260923-131 part 3: the -92 leftover --
+    # a Structure value assigned through a path ending at a nested
+    # Structure-typed field stays a located, fail-closed refusal.
+    [pscustomobject]@{ Name = 'unit_field_path_struct_rebind_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a field path must end at a primitive field'; Absent = @(); Debt = @() },
     # FABLE-GROKBOT-C-MEMBER-ACCESS-20260923-120 part1: c.* raw member paths.
     # Mutant: l2_ty_raw_c_members always 0 -> unit_c_member_len refuses unsupported body.
     [pscustomobject]@{ Name = 'unit_c_member_len.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';

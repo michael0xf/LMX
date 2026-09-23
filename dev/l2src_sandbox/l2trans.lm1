@@ -10284,6 +10284,22 @@ fn: l2_path_root (const: @(char pd); size_t: pn; @: int out_ni; @: int out_res; 
                 \out_oi: i
             i: i + 1
         ---
+    # A unit field is an own field of the entry E, whose occurrence is the
+    # unit: visible through the callable's node chain from below its
+    # declaration (author's backward-visibility norm) -- the same fallback
+    # l2_own_find already has (FABLE-SONNET-OWN-LOOKUP-AUDIT-20260923-131
+    # Part 3: this own-field-name-as-root scan was hand-rolled against raw
+    # pd/off/len instead of calling l2_own_find, and had drifted without
+    # it, exactly the D1/D2/-129/l2_own_first pattern -- a Structure-typed
+    # unit field used as a path root from inside another method hit
+    # "unknown field path root" with no fallback at all).
+    if: l2_cur_mi >= 0 && \out_oi < 0
+        i: 0
+        while: i < l2_own_n
+            if: l2_own_unit_seen(i, l2_cur_mi) != 0 && l2_name_is_seg(l2_own_name[i], pd, off, len) != 0
+                \out_oi: i
+            i: i + 1
+        ---
     if: \out_oi >= 0
         return: 0
     # A resolved method name as a path root denotes its occurrence

@@ -1087,6 +1087,24 @@ $fixtures = @(
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_message\graph: l2_entry_unit') },
+    # FABLE-GROKBOT-C-MEMBER-ACCESS-20260923-120 part1: c.* raw member paths.
+    # Mutant: l2_ty_raw_c_members always 0 -> unit_c_member_len refuses unsupported body.
+    [pscustomobject]@{ Name = 'unit_c_member_len.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'unsupported body');
+        Debt = @('l2_message\graph: l2_entry_unit', 'l2_p0_0\length') },
+    [pscustomobject]@{ Name = 'unit_c_member_write.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'unsupported body');
+        Debt = @('l2_message\graph: l2_entry_unit', 'length: 3U') },
+    [pscustomobject]@{ Name = 'unit_c_member_twohop.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'unsupported body');
+        Debt = @('l2_message\graph: l2_entry_unit', 'diagnostic') },
+    [pscustomobject]@{ Name = 'unit_c_member_struct_control.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
+        Debt = @('l2_pst:', 'l2_pxp: lmx_arena_ref_cell(l2_pst,', 'l2_message\graph: l2_entry_unit') },
     [pscustomobject]@{ Name = 'unit_array_write_root_out_of_range.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'own array index requires an in-bounds primitive literal'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_array_write_general_root_no_field.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

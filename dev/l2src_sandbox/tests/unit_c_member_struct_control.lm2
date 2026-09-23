@@ -1,0 +1,20 @@
+﻿# FABLE-GROKBOT-C-MEMBER-ACCESS-20260923-120 part1 (d): control -- a
+# Structure-typed root still goes through the L2 path dispatcher (l2_pst /
+# l2_pxp), not the raw c.* member rule.
+Model:
+    size_t: value 1U
+end: Model
+
+fn: build () size_t
+    Model: fresh
+    fresh\value: 99U
+    size_t: got
+    got: fresh\value
+    return: got
+end: build
+
+size_t: got
+got: build()
+if: got != 99U
+    return: 90
+return: 0

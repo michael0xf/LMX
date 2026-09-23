@@ -602,6 +602,7 @@ prototype:
     fn: l2_is_binop (const: @(LmP0Text t)) int
     fn: l2_raw_path (const: @(char pd); size_t: pn; int: mi; @: int out_j; @: int out_fld) int
     fn: l2_raw_head (const: @(LmP0Text t); int: mi; @: int out_j; @: int out_fld) int
+    fn: l2_ty_raw_c_members (int: ty) int
     fn: l2_pointer_depth (int: ty) int
     fn: l2_prefix_deref (const: @(LmP0Text t); int: mi; @: char dest) int
     fn: l2_index_head (const: @(LmP0Text t); int: mi; @: int out_j) int
@@ -6674,6 +6675,18 @@ fn: l2_dyn_analyze (const: @(char path)) int
 return: 0
 
 
+# FABLE-GROKBOT-C-MEMBER-ACCESS-20260923-120 part1: a value typed c.* (or an
+# equivalent foreign intern / runtime-struct code) admits raw C member paths.
+# The translator does not know C struct layouts; the remainder of a \path is
+# emitted verbatim (-> or . follows from pointer vs by-value at the C seam).
+# Mutant: make this always return 0 -- c.LmP0Text fixtures refuse unsupported body.
+fn: l2_ty_raw_c_members (int: ty) int
+    if: ty = 28 || ty = 29 || ty = 30
+        return: 1
+    if: ty >= 100
+        return: 1
+return: 0
+
 fn: l2_raw_path (const: @(char pd); size_t: pn; int: mi; @: int out_j; @: int out_fld) int
     size_t: i 0U
     size_t: sl 0U
@@ -6692,7 +6705,7 @@ fn: l2_raw_path (const: @(char pd); size_t: pn; int: mi; @: int out_j; @: int ou
         if: l2_fn(mi, j) != 0 && l2_fn(mi, j)\length = sl && memcmp(l2_fn(mi, j)\data, pd, sl) = 0
             \out_j: j
             # A runtime struct or foreign type field is spelled as written.
-            if: l2_ft(mi, j) = 28 || l2_ft(mi, j) = 29 || l2_ft(mi, j) = 30 || l2_ft(mi, j) >= 100
+            if: l2_ty_raw_c_members(l2_ft(mi, j)) != 0
                 \out_fld: 5
                 return: 0
             if: pn - sl - 1U = 4U && memcmp(pd + sl + 1U, "data", 4U) = 0
@@ -6720,7 +6733,7 @@ fn: l2_raw_path (const: @(char pd); size_t: pn; int: mi; @: int out_j; @: int ou
             # arity remains disjoint without a reserved numeric band.
             \out_j: l2_m_arity[mi] + j
             # A runtime struct or foreign type field is spelled as written.
-            if: l2_st[l2_slot_off(mi, j)] = 28 || l2_st[l2_slot_off(mi, j)] = 29 || l2_st[l2_slot_off(mi, j)] = 30 || l2_st[l2_slot_off(mi, j)] >= 100
+            if: l2_ty_raw_c_members(l2_st[l2_slot_off(mi, j)]) != 0
                 \out_fld: 5
                 return: 0
             if: pn - sl - 1U = 4U && memcmp(pd + sl + 1U, "data", 4U) = 0
@@ -6743,7 +6756,7 @@ fn: l2_raw_path (const: @(char pd); size_t: pn; int: mi; @: int out_j; @: int ou
     j: 0
     while: j < l2_ml_n
         # A runtime struct or foreign type field is spelled as written.
-        if: (l2_ml_ty[j] = 28 || l2_ml_ty[j] = 29 || l2_ml_ty[j] = 30 || l2_ml_ty[j] >= 100) && l2_ml_nm[j] != 0 && l2_ml_nm[j]\length = sl && memcmp(l2_ml_nm[j]\data, pd, sl) = 0
+        if: l2_ty_raw_c_members(l2_ml_ty[j]) != 0 && l2_ml_nm[j] != 0 && l2_ml_nm[j]\length = sl && memcmp(l2_ml_nm[j]\data, pd, sl) = 0
             \out_j: l2_m_arity[mi] + l2_m_sn[mi] + j
             \out_fld: 5
             return: 0
@@ -10194,6 +10207,9 @@ fn: l2_emit_path (const: @(char pd); size_t: pn; int: mi; const: @(char ind); co
         return: 1
     if: oi < 0 && ni < 0 && l2_emit_path_bail(mi, ind) != 0
         return: 1
+    # c.* / foreign member paths on formals and activation locals are emitted by
+    # l2_raw_path via l2_ty_raw_c_members (FABLE-GROKBOT-C-MEMBER-ACCESS part1).
+    # Structure-typed roots keep this L2 slot walk; do not divert Lmx projection owns.
     while: i < segs
         if: l2_seg_at(pd, pn, i, @ off, @ len) != 0 || len = 0U
             return: l2_error(l2_src, at, "malformed field path")
@@ -11828,9 +11844,9 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && raw = 0 && rj < l2_m_arity[mi] && (l2_ft(mi, rj) = 4 || l2_ft(mi, rj) = 6 || l2_ft(mi, rj) = 15)
             return: l2_error(path, stmt, "const write")
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && raw = 0 && rj < l2_m_arity[mi] && l2_ft(mi, rj) != 5 && l2_ft(mi, rj) != 7 && l2_ft(mi, rj) != 14 && l2_ft(mi, rj) < 100
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && raw = 0 && rj < l2_m_arity[mi] && l2_ty_raw_c_members(l2_ft(mi, rj)) = 0 && l2_ft(mi, rj) != 5 && l2_ft(mi, rj) != 7 && l2_ft(mi, rj) != 14
             return: l2_error(path, stmt, "unsupported body")
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && raw = 0 && rj >= l2_m_arity[mi] && rj < l2_m_arity[mi] + l2_m_sn[mi] && l2_st[l2_slot_off(mi, rj - l2_m_arity[mi])] != 5 && l2_st[l2_slot_off(mi, rj - l2_m_arity[mi])] != 14 && l2_st[l2_slot_off(mi, rj - l2_m_arity[mi])] < 100
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && raw = 0 && rj >= l2_m_arity[mi] && rj < l2_m_arity[mi] + l2_m_sn[mi] && l2_ty_raw_c_members(l2_st[l2_slot_off(mi, rj - l2_m_arity[mi])]) = 0 && l2_st[l2_slot_off(mi, rj - l2_m_arity[mi])] != 5 && l2_st[l2_slot_off(mi, rj - l2_m_arity[mi])] != 14
             return: l2_error(path, stmt, "unknown foreign field")
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && ix != 0 && pd != 0 && (stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\head = 0 || (l2_own_find(mi, stmt\as\frame\head) < 0 && l2_slot_find(mi, stmt\as\frame\head) < 0 && l2_slash_own(stmt\as\frame\head) < 0 && l2_slash_for(mi, stmt\as\frame\head) < 0 && l2_find_method(stmt\as\frame\head) < 0 && l2_param_find(mi, stmt\as\frame\head) < 0 && raw != 0 && l2_is_known(stmt\as\frame\head) = 0 && l2_is_path_head(stmt\as\frame\head) = 0))
             if: stmt\as\frame\head != 0 && stmt\as\frame\head\data != 0 && stmt\as\frame\head\length < 256U && l2_seg_count(stmt\as\frame\head\data, stmt\as\frame\head\length) > 1

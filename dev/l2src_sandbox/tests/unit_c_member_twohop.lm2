@@ -1,0 +1,33 @@
+﻿include: "l1src/p0.lm1.h" "<stdlib.h>"
+
+# FABLE-GROKBOT-C-MEMBER-ACCESS-20260923-120 part1 (c): two-hop raw C path
+# doc\diagnostic\code on a c.LmP0Document pointer.
+fn: diag_code (@: c.LmP0Document doc) int
+    if: doc = 0 || doc\diagnostic = 0
+        return: 0
+    return: doc\diagnostic\code
+end: diag_code
+
+fn: c_member_twohop () int
+    @: c.LmP0Document d
+    @: c.LmP0Diagnostic diag
+    d: (cast: (@: LmP0Document) c.calloc(1U, c.sizeof(c.LmP0Document)))
+    diag: (cast: (@: LmP0Diagnostic) c.calloc(1U, c.sizeof(c.LmP0Diagnostic)))
+    if: d = 0 || diag = 0
+        if: d != 0
+            c.free(d)
+        if: diag != 0
+            c.free(diag)
+        return: 1
+    d\diagnostic: diag
+    diag\code: 42
+    if: diag_code(d) != 42
+        c.free(diag)
+        c.free(d)
+        return: 2
+    c.free(diag)
+    c.free(d)
+    return: 0
+end: c_member_twohop
+
+return: c_member_twohop()

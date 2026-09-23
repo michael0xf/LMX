@@ -1,0 +1,25 @@
+﻿include: "l1src/p0.lm1.h" "<stdlib.h>"
+
+# FABLE-GROKBOT-C-MEMBER-ACCESS-20260923-120 part1 (a):
+# Path on a c.*-typed formal is raw C member access. Translator knows no
+# LmP0Text layout; C compiler checks t->length.
+fn: len (@: c.LmP0Text t) size_t
+    if: t = 0
+        return: 0U
+    return: t\length
+end: len
+
+fn: c_member_len () int
+    @: c.LmP0Text x
+    x: (cast: (@: LmP0Text) c.calloc(1U, c.sizeof(c.LmP0Text)))
+    if: x = 0
+        return: 1
+    x\length: 3U
+    if: len(x) != 3U
+        c.free(x)
+        return: 2
+    c.free(x)
+    return: 0
+end: c_member_len
+
+return: c_member_len()

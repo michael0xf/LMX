@@ -1,0 +1,17 @@
+﻿include: "l1src/p0.lm1.h" "<stdlib.h>"
+
+# FABLE-GROKBOT-C-MEMBER-ACCESS-20260923-120 part1 (b): write through raw path.
+fn: c_member_write () int
+    @: c.LmP0Text x
+    x: (cast: (@: LmP0Text) c.calloc(1U, c.sizeof(c.LmP0Text)))
+    if: x = 0
+        return: 1
+    x\length: 3U
+    if: x\length != 3U
+        c.free(x)
+        return: 2
+    c.free(x)
+    return: 0
+end: c_member_write
+
+return: c_member_write()

@@ -1173,6 +1173,12 @@ $fixtures = @(
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_message\graph: l2_entry_unit') },
+    [pscustomobject]@{ Name = 'unit_field_write_from_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @();
+        Debt = @() },
+    [pscustomobject]@{ Name = 'unit_field_write_below_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_raw_root_c_control_compound.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'unsupported body');

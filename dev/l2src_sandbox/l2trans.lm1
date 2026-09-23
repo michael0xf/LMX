@@ -3417,7 +3417,21 @@ fn: l2_own_find_last (int: mi; const: @(LmP0Text t)) int
                 hit: i
         ---
         i: i + 1
-return: hit
+    if: hit >= 0
+        return: hit
+    # A unit field is an own field of the entry E, whose occurrence is the
+    # unit: visible through the callable's node chain from below its
+    # declaration (FABLE-SONNET-UNIT-FIELD-WRITE-20260923-129, author's
+    # backward-visibility norm, 2026-09-22 blog 857692c). l2_own_find already
+    # falls back to it this same way; an assignment target needs the same
+    # fallback its own-name lookup lacked -- no new mechanism, this function's
+    # sibling already has it.
+    i: 0
+    while: i < l2_own_n
+        if: l2_own_unit_seen(i, mi) != 0 && l2_text_same(l2_own_name[i], t)
+            return: i
+        i: i + 1
+return: -1
 
 # Head `\[N]name` — occurrence ordinal, not C `name[i]`. 0 = parsed, 1 = not this form, 2 = bad index.
 fn: l2_occ_head (const: @(LmP0Text t); @: int out_occ; @@: LmP0Text out_name) int
@@ -15987,11 +16001,24 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
         # node/for's own single-hop write emission (l2_slash_own/l2_slash_for)
         # is removed (FABLE-SONNET-NODE-ROOT-20260923-121): the FIELD PATHS
         # branch above now claims every node/for-rooted write first (l2_is_
-        # path_head recognizes them as ordinary roots), so this entire block
-        # -- reachable only when sl, exclusively set by those two calls, was
-        # >= 0 -- was already unreachable for anything else and is now dead.
+        # path_head recognizes them as ordinary roots), so the sl-based block
+        # this used to be is gone. What remains is the general backstop: an
+        # assignment target that resolved to none of own/slot/formal/call/
+        # known/raw-dispatch by the time emission reaches it. l2_check_body
+        # already refuses an unresolvable assignment target with a location
+        # ("assignment target must be a declared typed mutable value") before
+        # emission runs at all -- undeclared and declared-below both measured
+        # refused there (FABLE-SONNET-UNIT-FIELD-WRITE-20260923-129). This was
+        # a SILENT return: 1 regardless, reachable the moment check-time and
+        # emit-time own-field lookup ever disagree (exactly what happened
+        # here: l2_own_find_last lacked the same unit-field fallback
+        # l2_own_find already had, so a name check_body accepted -- a
+        # backward-visible unit field -- still fell all the way through
+        # emission unresolved). Translation must never fail without a
+        # located diagnostic; this is the same one check_body already gives,
+        # as a backstop, not a new rule.
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && fi < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && l2_is_known(fr\head) = 0 && raw != 0
-            return: 1
+            return: l2_error(l2_src, stmt, "assignment target must be a declared typed mutable value")
         ---
     # A body ending in an if/else can leave the last emitted line multiple
     # levels deeper than its caller's next statement. Source cutters need

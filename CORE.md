@@ -57,19 +57,20 @@ The accepted target physical layout for the universal Structure is:
 
 ```c
 typedef struct { size_t size; void *data; } VoidArray;
-typedef VoidArray LmxArrayDesc;
-typedef struct Lmx { struct Lmx *parent; VoidArray array; } Lmx;
+typedef struct Lmx { VoidArray array; struct Lmx *parent; } Lmx;
 ```
 
 The current [`lmx.h.lm1`](dev/l2src_sandbox/lmx.h.lm1) still has the old flat
 `{parent, int len, void *data}` layout; the migration is pending. In the target,
-`parent` is the immediate *structural* parent in the working graph.
-`array` is the actual by-value child-reference array descriptor, not a C-only
-wrapper: `array.size` is the number of immediate child slots, not bytes or
+`array` is the first member and the actual by-value child-reference array
+descriptor, not a C-only wrapper: `array.size` is the number of immediate child slots, not bytes or
 capacity, and `array.data` addresses their ordered `void *` backing. That
-backing is registered as a child-reference address range in the arena;
-`VoidArray` is not the `LmxRange` index entry. The slots are
-fixed in number when the Structure is constructed; their stored references may
+backing is registered as a `CHILDREN`/`REFS` address range in the arena;
+`VoidArray` is not the `LmxRange` index entry. `&node->array` and `node` have
+the same address, while the arena still classifies the `Lmx` allocation as a
+Structure rather than a standalone Array descriptor. `parent` is the immediate
+*structural* parent in the working graph.
+The slots are fixed in number when the Structure is constructed; their stored references may
 change. The header has no name, type tag, method pointer, vtable, list capacity,
 dirty flag, or Message state. In particular, an empty Structure remains an
 ordinary two-direct-member Structure with zero child slots.
@@ -141,9 +142,10 @@ storage by `lmx_arena_refs`; typed pools by `lmx_pool`.
 
 ### 2.2 The base Array and the separate List
 
-The accepted `LmxArrayDesc` is a typedef alias of `VoidArray`, exactly
-`{size_t size, void *data}`. Standalone Array backing has exactly `size`
-elements; embedded `Lmx.array.size` counts child-reference slots. The current
+The accepted base Array type is `VoidArray`, exactly
+`{size_t size, void *data}`; a separate `LmxArrayDesc` alias is unnecessary.
+Standalone Array backing has exactly `size` elements; embedded
+`Lmx.array.size` counts child-reference slots. The current
 code still uses `size_t len` for `LmxArrayDesc` and `int len` for `Lmx`.
 The base Array has no `capacity`, reserve, resize, append, backing switch, or
 implicit growth. Changing its ABI to serve one dynamic consumer is a kernel

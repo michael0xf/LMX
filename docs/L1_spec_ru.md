@@ -23,7 +23,7 @@ Translator-L1 (`l1src/l1trans.lm1`) — синтаксически направ�
 <a id="lmx"></a>
 ## 3. `Lmx` на L1
 
-Определение полей — [L2 §2](L2_spec_ru.md#lmx). Целевая L1-проекция в `l2src/lmx.h.lm1` задаёт `VoidArray` с `size_t: size` и `@: void data`, псевдоним `LmxArrayDesc` того же типа, затем `Lmx` с `@: Lmx parent` и вложенным **по значению** `VoidArray array`; C-заголовок порождается транслятором. Это именно встроенный массив физических дочерних ссылок, чей backing зарегистрирован в индексе диапазонов арены, а не дополнительная обёртка над прежними полями `len` и `data`. Нет отдельного тега в записи. Слот поля Structure — ячейка массива `void *`; динамический состав ссылок на дочерние Message является отдельным List (`KIND_LIST`) в графе и не понижается в фиксированный набор таких слотов.
+Определение полей — [L2 §2](L2_spec_ru.md#lmx). Целевая L1-проекция в `l2src/lmx.h.lm1` задаёт `VoidArray` с `size_t: size` и `@: void data`, затем `Lmx` со встроенным **по значению первым полем** `VoidArray array` и вторым `@: Lmx parent`; C-заголовок порождается транслятором. Отдельного псевдонима `LmxArrayDesc` целевой ABI не требует. Это именно встроенный массив физических дочерних ссылок, чей backing зарегистрирован в индексе диапазонов арены, а не дополнительная обёртка над прежними полями `len` и `data`. Нет отдельного тега в записи. Слот поля Structure — ячейка массива `void *`; динамический состав ссылок на дочерние Message является отдельным List (`KIND_LIST`) в графе и не понижается в фиксированный набор таких слотов.
 
 <a id="type-by-range"></a>
 ## 4. Тип по диапазону на L1
@@ -38,7 +38,7 @@ Translator-L1 (`l1src/l1trans.lm1`) — синтаксически направ�
 <a id="method-array"></a>
 ## 6. METHOD и Array на L1
 
-Правило — [L2 §5](L2_spec_ru.md#method-array). `fnptr: LmxEntry () void`; `struct: LmxMethod` и `VoidArray` в `lmx.h.lm1`; `LmxArrayDesc` — псевдоним `VoidArray`. Дескриптор понижается ровно в два поля `{size, data}` в этом порядке; backing самостоятельного Array содержит ровно `size` ячеек. То же физическое представление вложено в `Lmx` для дочерних ссылок. У базового Array нет `capacity`, он не растёт и не переключает backing. Динамическое членство — отдельные модули List (`KIND_LIST`), например `lmx_list_owned`. Типизированные пулы Array — модули `lmx_array_owned`, `lmx_array_ref_owned`, `lmx_chars_owned`, `lmx_value_owned`.
+Правило — [L2 §5](L2_spec_ru.md#method-array). `fnptr: LmxEntry () void`; `struct: LmxMethod` и `VoidArray` в `lmx.h.lm1`. Дескриптор понижается ровно в два поля `{size, data}` в этом порядке; backing самостоятельного Array содержит ровно `size` ячеек. То же физическое представление первым полем вложено в `Lmx` для дочерних ссылок. У базового Array нет `capacity`, он не растёт и не переключает backing. Динамическое членство — отдельные модули List (`KIND_LIST`), например `lmx_list_owned`. Типизированные пулы Array — модули `lmx_array_owned`, `lmx_array_ref_owned`, `lmx_chars_owned`, `lmx_value_owned`.
 
 <a id="arena"></a>
 ## 7. Арена на L1

@@ -1,8 +1,10 @@
 ACCEPTED TARGET ABI / ПРИНЯТЫЙ ЦЕЛЕВОЙ ABI (2026-09-23; code not migrated)
-VoidArray is exactly {size_t size, void *data}; LmxArrayDesc is an alias of
-VoidArray; Lmx is {Lmx *parent, VoidArray array}. Embedded Lmx.array is the
+VoidArray is exactly {size_t size, void *data}; Lmx is
+{VoidArray array, Lmx *parent}. The array is first; no separate LmxArrayDesc
+alias is needed in the target. Embedded Lmx.array is the
 actual array of physical child references. Its backing is registered in the
-arena address-range index; the descriptor itself is not an LmxRange entry.
+arena address-range index as CHILDREN/REFS; the Lmx header remains STRUCT,
+and the descriptor itself is not an LmxRange entry.
 The standalone base Array uses the same VoidArray type, with no capacity or
 growth. Dynamic List remains separate. Current source still uses Lmx's flat
 {parent, int len, void *data} and LmxArrayDesc's {size_t len, void *data}; the

@@ -23,7 +23,7 @@ The libc door is declarations in `l1src/libc_abi.lm1` and `c.name` calls. L1 hea
 <a id="lmx"></a>
 ## 3. `Lmx` in L1
 
-Field definition: [L2 §2](L2_spec_en.md#lmx). The target L1 projection in `l2src/lmx.h.lm1` defines `VoidArray` with `size_t: size` and `@: void data`, an `LmxArrayDesc` alias for that same type, then `Lmx` with `@: Lmx parent` and a **by-value** `VoidArray array`; the C header is generated. This is the embedded physical child-reference array itself, whose backing is registered in the arena range index, not an additional wrapper over the old `len` and `data` fields. No tag is stored on the record. A Structure field slot is a `void *` array cell; the dynamic membership of child-Message references is a separate List (`KIND_LIST`) in the graph and is not lowered to a fixed group of such slots.
+Field definition: [L2 §2](L2_spec_en.md#lmx). The target L1 projection in `l2src/lmx.h.lm1` defines `VoidArray` with `size_t: size` and `@: void data`, then `Lmx` with a **by-value first member** `VoidArray array` and a second member `@: Lmx parent`; the C header is generated. The target ABI needs no separate `LmxArrayDesc` alias. This is the embedded physical child-reference array itself, whose backing is registered in the arena range index, not an additional wrapper over the old `len` and `data` fields. No tag is stored on the record. A Structure field slot is a `void *` array cell; the dynamic membership of child-Message references is a separate List (`KIND_LIST`) in the graph and is not lowered to a fixed group of such slots.
 
 <a id="type-by-range"></a>
 ## 4. Type by range in L1
@@ -38,7 +38,7 @@ Rule: [L2 §4](L2_spec_en.md#pool). Chunk and pool structs are in `lmx.h.lm1`. O
 <a id="method-array"></a>
 ## 6. METHOD and Array in L1
 
-Rule: [L2 §5](L2_spec_en.md#method-array). `fnptr: LmxEntry () void`; `struct: LmxMethod` and `VoidArray` in `lmx.h.lm1`; `LmxArrayDesc` aliases `VoidArray`. The descriptor lowers to exactly two fields `{size, data}` in that order; standalone Array backing contains exactly `size` cells. The same physical representation is embedded in `Lmx` for child references. Base Array has no `capacity` and does not grow or switch backing. Dynamic membership uses separate List (`KIND_LIST`) modules such as `lmx_list_owned`. Typed Array pools: `lmx_array_owned`, `lmx_array_ref_owned`, `lmx_chars_owned`, `lmx_value_owned`.
+Rule: [L2 §5](L2_spec_en.md#method-array). `fnptr: LmxEntry () void`; `struct: LmxMethod` and `VoidArray` in `lmx.h.lm1`. The descriptor lowers to exactly two fields `{size, data}` in that order; standalone Array backing contains exactly `size` cells. The same physical representation is embedded as the first member of `Lmx` for child references. Base Array has no `capacity` and does not grow or switch backing. Dynamic membership uses separate List (`KIND_LIST`) modules such as `lmx_list_owned`. Typed Array pools: `lmx_array_owned`, `lmx_array_ref_owned`, `lmx_chars_owned`, `lmx_value_owned`.
 
 <a id="arena"></a>
 ## 7. Arena in L1

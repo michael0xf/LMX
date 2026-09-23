@@ -1,0 +1,70 @@
+include: "<stdint.h>" "<stdlib.h>"
+
+# FABLE-OPUS-GATE-TRANSLATOR-20260924-151 commit 2: the sizeof: receiver takes a type frame.
+# `sizeof(@: T)` is the size of a pointer to T -- C `sizeof(T *)` -- for a primitive type word T;
+# `@@: T` is a pointer to a pointer.  Every data pointer has the size of `sizeof(@: void)`, and the
+# raw door's own uintptr_t is the yardstick.  The methods carry each line form the Mixa manager's
+# `c.sizeof(@: T)` became: an assignment, a division guard, calloc and realloc counts, a cast
+# count.  All of it runs inside methods (sizeof: and c.* belong to method bodies); the root only
+# calls check.  Success is 7.
+fn: ptr_bytes () size_t
+    size_t: ptr_sz
+    ptr_sz: sizeof(@: char)
+    return: ptr_sz
+end: ptr_bytes
+
+fn: too_many (size_t: count) int
+    if: count > ((cast: (size_t) -1) / sizeof(@: char))
+        return: 1
+    return: 0
+end: too_many
+
+fn: grow (size_t: count) int
+    @@: char fresh
+    @@: char grown
+    @@: void owned
+    fresh: (cast: (@@: char) c.calloc(count, sizeof(@: char)))
+    if: fresh = 0
+        return: 1
+    grown: (cast: (@@: char) c.realloc(fresh, (count * 2U) * sizeof(@: char)))
+    if: grown = 0
+        c.free(fresh)
+        return: 2
+    owned: (cast: (@@: void) c.calloc((cast: (size_t) count), sizeof(@: void)))
+    if: owned = 0
+        c.free(grown)
+        return: 3
+    c.free(owned)
+    c.free(grown)
+    return: 0
+end: grow
+
+fn: check () int
+    size_t: pt
+    size_t: pv
+    size_t: pc
+    size_t: pi
+    size_t: pu
+    size_t: pp
+    pt: c.sizeof(c.uintptr_t)
+    pv: sizeof(@: void)
+    pc: sizeof(@: char)
+    pi: sizeof(@: int)
+    pu: sizeof(@: ulong)
+    pp: sizeof(@@: void)
+    if: pt < 4U
+        return: 80
+    if: pv != pt
+        return: 81
+    if: pc != pt || pi != pt || pu != pt || pp != pt
+        return: 82
+    if: ptr_bytes() != pt
+        return: 83
+    if: too_many(4U) != 0 || too_many((cast: (size_t) -1)) != 1
+        return: 84
+    if: grow(4U) != 0
+        return: 85
+    return: 7
+end: check
+
+return: check()

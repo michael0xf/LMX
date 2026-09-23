@@ -258,7 +258,6 @@ int: l2_need_stdlib 0
 int: l2_need_p0 0
 int: l2_need_query 0
 int: l2_need_own 0
-int: l2_need_diag 0
 # `profile: runtime`: the unit implements the running/stop protocol that the
 # escape polls consult, and the executor calls it during an unwind, so it is
 # emitted without escape polls (decision 12, LEAD_REVIEW_20260914 section 6).
@@ -619,6 +618,7 @@ prototype:
     fn: l2_is_known (const: @(LmP0Text t)) int
     fn: l2_c_door (const: @(LmP0Text t)) int
     fn: l2_c_stmt_door (const: @(LmP0Text t)) int
+    fn: l2_prim_type_word (const: @(LmP0Text t)) int
     fn: l2_upper_name (const: @(LmP0Text t)) int
     fn: l2_ccall_box_int (const: @(LmP0Node node); int: mi) int
     fn: l2_pd_free () int
@@ -693,6 +693,7 @@ prototype:
     fn: l2_emit_array_length (int: oi; const: @(char ind); @: char dest) int
     fn: l2_sizeof_name_bytes (const: @(LmP0Node node); const: @(char d); size_t: b; size_t: e; int: mi; const: @(char ind); @: char dest) int
     fn: l2_emit_sizeof (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest) int
+    fn: l2_sizeof_type_frame (const: @(LmP0Node frame)) const: @: LmP0Text
     fn: l2_check_sizeof (const: @(LmP0Node node); int: mi; const: @(char path)) int
     fn: l2_fn (int: mi; int: k) @: LmP0Text
     fn: l2_ft (int: mi; int: k) int
@@ -2879,7 +2880,6 @@ fn: l2_translate_unit (const: @(LmP0Structure unit); const: @(char path)) int
     l2_need_p0: 0
     l2_need_query: 0
     l2_need_own: 0
-    l2_need_diag: 0
     l2_pd_free()
     l2_def_free()
     l2_inc_free()
@@ -5630,11 +5630,6 @@ fn: l2_colon_simple_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
         \out_ty: 2
         return: 0
     ---
-    # Raw c.sizeof(...) through the c.* door is also size_t.
-    if: l2_text_eq(value\as\frame\head, "c.sizeof")
-        \out_ty: 2
-        return: 0
-    ---
     # A call by name or through a callable field path (`Holder\viaPath(4U)`).
     m: l2_head_method(value\as\frame\head)
     # A predef'd C function (l2_is_known: the c.* door, or a name the unit's
@@ -6641,7 +6636,7 @@ fn: l2_scan_ident (int: mi; const: @(LmP0Text t); @: int seen) int
         return: 0
     if: l2_is_known(t)
         return: 0
-    if: l2_text_eq(t, "return") || l2_text_eq(t, "if") || l2_text_eq(t, "else") || l2_text_eq(t, "while") || l2_text_eq(t, "for") || l2_text_eq(t, "continue") || l2_text_eq(t, "break") || l2_text_eq(t, "fn") || l2_text_eq(t, "sub") || l2_text_eq(t, "end") || l2_text_eq(t, "node") || l2_text_eq(t, "int") || l2_text_eq(t, "char") || l2_text_eq(t, "size_t") || l2_text_eq(t, "unsigned") || l2_text_eq(t, "ulong") || l2_text_eq(t, "data") || l2_text_eq(t, "length") || l2_text_eq(t, "sizeof") || l2_text_eq(t, "cast") || l2_text_eq(t, "columns") || l2_text_eq(t, "count") || l2_text_eq(t, "capacity") || l2_text_eq(t, "slots") || l2_text_eq(t, "alloc_next") || l2_text_eq(t, "addr") || l2_text_eq(t, "next")
+    if: l2_text_eq(t, "return") || l2_text_eq(t, "if") || l2_text_eq(t, "else") || l2_text_eq(t, "while") || l2_text_eq(t, "for") || l2_text_eq(t, "continue") || l2_text_eq(t, "break") || l2_text_eq(t, "fn") || l2_text_eq(t, "sub") || l2_text_eq(t, "end") || l2_text_eq(t, "node") || l2_prim_type_word(t) || l2_text_eq(t, "data") || l2_text_eq(t, "length") || l2_text_eq(t, "sizeof") || l2_text_eq(t, "cast") || l2_text_eq(t, "columns") || l2_text_eq(t, "count") || l2_text_eq(t, "capacity") || l2_text_eq(t, "slots") || l2_text_eq(t, "alloc_next") || l2_text_eq(t, "addr") || l2_text_eq(t, "next")
         return: 0
     if: t\length >= 2U && t\data[0] = 99 && t\data[1] = 46
         return: 0
@@ -6693,15 +6688,6 @@ fn: l2_scan_node (const: @(LmP0Node node); int: mi; @: int seen) int
                 return: 0
             ---
         ---
-    # c.sizeof names a C type; nothing inside it is a lexical reference.
-    if: node\kind = c.LM_P0_NODE_FRAME && l2_frame_head(node, "c.sizeof")
-        return: 0
-    # sizeof: is an operator; scan its one operand for lexical refs, not the head.
-    if: node\kind = c.LM_P0_NODE_FRAME && l2_frame_head(node, "sizeof")
-        if: node\as = 0 || node\as\frame = 0 || node\as\frame\body = 0
-            return: 0
-        return: l2_scan_fields(node\as\frame\body\first_field, l2_count_active(node\as\frame\body), mi, seen)
-    ---
     # implements(candidate, required, consumer) is decided at translation from
     # declarations; its head and operands are not lexical references either.
     if: node\kind = c.LM_P0_NODE_FRAME && l2_frame_head(node, "implements")
@@ -8915,6 +8901,10 @@ fn: l2_c_stmt_door (const: @(LmP0Text t)) int
     if: t = 0 || t\data = 0 || t\length <= 2U || t\data[0] != 99 || t\data[1] != 46
         return: 0
 return: 1
+
+# The primitive type words: a type operand of sizeof:, never a lexical reference.
+fn: l2_prim_type_word (const: @(LmP0Text t)) int
+return: l2_text_eq(t, "int") || l2_text_eq(t, "char") || l2_text_eq(t, "size_t") || l2_text_eq(t, "unsigned") || l2_text_eq(t, "ulong") || l2_text_eq(t, "void")
 
 # Constants supplied by a predef C seam retain conventional uppercase
 # spelling. They are compile-time names, not lexical graph dependencies; the
@@ -13183,17 +13173,9 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
             idx: l2_cf_get(mi, fi)
         ---
     ---
-    if: idx < 0 && l2_text_eq(call\head, "sizeof")
-        return: l2_check_sizeof(node, mi, path)
     if: idx < 0 && l2_text_eq(call\head, "length")
         if: l2_array_length_own(node, mi) < 0 && l2_arr_len_shape(node, lpd, @ lpn, @ lkind, @ lelem, @ ldepth, @ li0) != 0
             return: l2_error(path, node, "length requires one known primitive own array")
-        return: 0
-    # Raw c.sizeof(...) is unevaluated C: operands are type/expression text for the
-    # C compiler. Do not resolve them as L2 values (door transparency).
-    if: idx < 0 && l2_text_eq(call\head, "c.sizeof")
-        if: call\body = 0 || l2_next_active(call\body\first_field) = 0
-            return: l2_error(path, node, "incompatible entry signature")
         return: 0
     if: idx < 0 && l2_is_known(call\head)
         if: l2_text_eq(call\head, "lm_own_new_zero") || l2_text_eq(call\head, "lm_own_copy_bytes") || l2_text_eq(call\head, "lm_own_delete") || l2_text_eq(call\head, "lm_own_resize")
@@ -14579,6 +14561,7 @@ return: 0
 # Not a callable. c.sizeof(...) stays raw C through the c.* door.
 fn: l2_emit_sizeof (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest) int
     @: LmP0Frame call
+    const: @: LmP0Text tn
     @: LmP0Field a0
     int: k
     int: ml
@@ -14595,18 +14578,18 @@ fn: l2_emit_sizeof (const: @(LmP0Node node); int: mi; const: @(char ind); @: cha
     if: a0 = 0 || a0\value = 0
         return: 1
     if: a0\value\kind = c.LM_P0_NODE_FRAME && a0\value\as != 0 && a0\value\as\frame != 0 && l2_address_depth(a0\value\as\frame\head) != 0
-        s0[0]: 0
-        if: l2_emit_fields(a0, 1, mi, ind, s0) != 0
-            return: 1
-        if: strlen(s0) + 11U >= 256U
+        tn: l2_sizeof_type_frame(a0\value)
+        if: tn = 0
+            return: l2_error(l2_src, node, "sizeof: a type frame names a primitive type")
+        if: a0\value\as\frame\head\length + tn\length + 14U >= 256U
             return: l2_error(l2_src, node, "expression too long")
-        if: c.sprintf(dest, "c.sizeof(%s)", s0) < 0
+        if: c.sprintf(dest, "c.sizeof(%.*s: %.*s)", (cast: (int) a0\value\as\frame\head\length), a0\value\as\frame\head\data, (cast: (int) tn\length), tn\data) < 0
             return: 1
         return: 0
     ---
     if: a0\value\kind != c.LM_P0_NODE_ATOM || a0\value\as = 0 || a0\value\as\atom = 0
         return: l2_error(l2_src, node, "sizeof: unsupported operand")
-    if: l2_text_eq(a0\value\as\atom, "int") || l2_text_eq(a0\value\as\atom, "char") || l2_text_eq(a0\value\as\atom, "size_t") || l2_text_eq(a0\value\as\atom, "unsigned") || l2_text_eq(a0\value\as\atom, "void") || l2_text_eq(a0\value\as\atom, "ulong")
+    if: l2_prim_type_word(a0\value\as\atom)
         if: c.sprintf(dest, "c.sizeof(%.*s)", (cast: (int) a0\value\as\atom\length), a0\value\as\atom\data) < 0
             return: 1
         return: 0
@@ -14638,6 +14621,24 @@ fn: l2_emit_sizeof (const: @(LmP0Node node); int: mi; const: @(char ind); @: cha
     ---
 return: l2_error(l2_src, node, "unresolved name")
 
+# The type a sizeof: type frame names (`@: T`, `@@: T`): its one atom when that is a primitive type
+# word, 0 otherwise.  L1 lowers `c.sizeof(@: T)` to C `sizeof(T *)` for exactly these; any other
+# name it reads as an address (`sizeof(&T)`).  Every data pointer has one size: `sizeof(@: void)`.
+fn: l2_sizeof_type_frame (const: @(LmP0Node frame)) const: @: LmP0Text
+    @: LmP0Field f
+    const: @: LmP0Text t
+    if: frame = 0 || frame\kind != c.LM_P0_NODE_FRAME || frame\as = 0 || frame\as\frame = 0 || frame\as\frame\body = 0
+        return: 0
+    if: l2_count_active(frame\as\frame\body) != 1
+        return: 0
+    f: l2_next_active(frame\as\frame\body\first_field)
+    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0
+        return: 0
+    t: f\value\as\atom
+    if: l2_prim_type_word(t) != 0
+        return: t
+return: 0
+
 fn: l2_check_sizeof (const: @(LmP0Node node); int: mi; const: @(char path)) int
     @: LmP0Frame call
     @: LmP0Field a0
@@ -14654,10 +14655,12 @@ fn: l2_check_sizeof (const: @(LmP0Node node); int: mi; const: @(char path)) int
     if: a0 = 0 || a0\value = 0
         return: l2_error(path, node, "sizeof: requires one operand")
     if: a0\value\kind = c.LM_P0_NODE_FRAME && a0\value\as != 0 && a0\value\as\frame != 0 && l2_address_depth(a0\value\as\frame\head) != 0
+        if: l2_sizeof_type_frame(a0\value) = 0
+            return: l2_error(path, node, "sizeof: a type frame names a primitive type")
         return: 0
     if: a0\value\kind != c.LM_P0_NODE_ATOM || a0\value\as = 0 || a0\value\as\atom = 0
         return: l2_error(path, node, "sizeof: unsupported operand")
-    if: l2_text_eq(a0\value\as\atom, "int") || l2_text_eq(a0\value\as\atom, "char") || l2_text_eq(a0\value\as\atom, "size_t") || l2_text_eq(a0\value\as\atom, "unsigned") || l2_text_eq(a0\value\as\atom, "void") || l2_text_eq(a0\value\as\atom, "ulong")
+    if: l2_prim_type_word(a0\value\as\atom)
         return: 0
     if: a0\value\as\atom\length > 2U && a0\value\as\atom\data[0] = 99 && a0\value\as\atom\data[1] = 46
         return: 0
@@ -15058,34 +15061,6 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
         if: c.fprintf(l2_out, "%s@: size_t l2_t%d\n%sl2_t%d: (cast: (@: size_t) lm_own_resize(%s, %s))\n", ind, t, ind, t, s0, s1) < 0
             return: 1
         return: l2_tok_temp(t, dest)
-    if: idx < 0 && l2_text_eq(call\head, "c.lm_p0_set_diagnostic")
-        if: call\body = 0
-            return: 1
-        a0: l2_next_active(call\body\first_field)
-        s0[0]: 0
-        s1[0]: 0
-        s2[0]: 0
-        s3[0]: 0
-        t: 0
-        while: a0 != 0 && t < 5
-            if: t = 0 && l2_prep(a0\value, mi, ind, s0) != 0
-                return: 1
-            if: t = 1 && l2_prep(a0\value, mi, ind, s1) != 0
-                return: 1
-            if: t = 2 && l2_prep(a0\value, mi, ind, s2) != 0
-                return: 1
-            if: t = 3 && l2_prep(a0\value, mi, ind, s3) != 0
-                return: 1
-            if: t = 4 && l2_prep(a0\value, mi, ind, s4) != 0
-                return: 1
-            a0: l2_next_active(a0\next)
-            t: t + 1
-        if: l2_emit_checkpoint(mi, ind) != 0
-            return: 1
-        if: t = 5 && c.fprintf(l2_out, "%sc.lm_p0_set_diagnostic(%s, %s, %s, %s, %s)\n", ind, s0, s1, s2, s3, s4) < 0
-            return: 1
-        dest[0]: 0
-        return: 0
     if: idx < 0 && l2_text_eq(call\head, "l2_immut_query_fill")
         if: call\body = 0
             return: 1
@@ -18551,9 +18526,6 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: fputs("\nprototype:\n", l2_out) < 0
         fclose(l2_out)
         return: 1
-    if: l2_need_diag != 0 && fputs("    sub: lm_p0_set_diagnostic (@: LmP0Document document; int: code; size_t: line; size_t: column; const: @(char message))\n", l2_out) < 0
-        fclose(l2_out)
-        return: 1
     i: 0
     while: i < l2_m_n
         if: l2_m_ret[i] = 8 && l2_m_throws[i] = 0 && fputs("    sub: ", l2_out) < 0
@@ -18591,9 +18563,6 @@ fn: l2_emit_unit (const: @(char out_path)) int
             return: 1
         i: i + 1
     if: fputs("end: prototype\n\n# Backend method symbols are l2_m{i}; intern and find_method keep source names. c.malloc stays the foreign door.\n# Publication: write tmp; if dest.bak exists pick dest.bak.N; rename dest to that bak; rename tmp to dest; on fail restore bak or report its path. Not atomic. No recursive FS. Foreign bak is not deleted.\n# OwnUsed char/int/size_t/unsigned fields are children of the selected callable occurrence `self`; source-visible `node` is the fixed lexical space above the method for the whole activation. Char cache is typed char; graph data is all_chars cell. Numeric caches keep their declared C type; graph data uses a distinct owned LMX_TYPE_INT, LMX_TYPE_SIZE_T or LMX_TYPE_UNSIGNED cell mutated in place (no interned shared size_t, no int narrowing). Dirty-only checkpoint after actuals, immediately before the executed call, and before return. Explicit node\\name writes that fixed above-method graph, not the cache.\n# LmP0Text is the existing C ABI from l1src/p0.lm1.h (data, length), a limited migration adapter, not a general C header parser and not a silent layout for new L2 Structures. LmP0TrailerRole is that same header's typedef int (NONE/DASH_CUTTER/END/RETURN/UNTIL), not intern16. Lmx structural access stays child-index. Foreign C is spelled c.name and emitted as written; the C compiler checks it. A bare name is an L2 call resolved against unit methods and parsed prototype: declarations. Body @: LmP0Text is an 11.2.1 address slot l2_s, not OwnUsed and not lmx_own. Pointer results @: char / @: LmP0Text; sub: is void. return: slot is the pointer value, not @slot. @: size_t is a typed out-param; name[0]: stores through it (literal 0 only). L2 @ actuals are not emitted; a type-9 actual is the pointer value forwarded. Checkpoint even if OwnUsed is empty. Same-name char/size_t argument and own field share the parameter from the own-decl line; dirty-only publish is to this method's selected occurrence self, not to source node and not to the caller. An argument without that bind is never published. Executable if/else/while/for bodies are graph Structures; body own fields publish into their exact host without rebinding source node. L2ImmutQuery is a borrowed immutable-query adapter (not LmP0Text); fill is a temporary L1 helper behind the L2 make method. text_equals is the mutable fallback (strlen+memcmp). equals_query hashes current text bytes against a prepared query hash. &&/|| with calls use guarded if/temps; skipped RHS does not prep nested actuals. Pure &&/|| stay L1 C expressions.\n\n", l2_out) < 0
-        fclose(l2_out)
-        return: 1
-    if: l2_need_diag != 0 && fputs("sub: lm_p0_set_diagnostic (@: LmP0Document document; int: code; size_t: line; size_t: column; const: @(char message))\n    if: document = 0 || document\\diagnostic = 0 || document\\diagnostic\\code != 0\n        return\n    if: message = 0\n        message: \"\"\n    document\\diagnostic\\code: code\n    document\\diagnostic\\line: line\n    document\\diagnostic\\column: column\n    c.snprintf(document\\diagnostic\\message, c.sizeof(document\\diagnostic\\message), \"%s\", message)\nend: lm_p0_set_diagnostic\n\n", l2_out) < 0
         fclose(l2_out)
         return: 1
     i: 0

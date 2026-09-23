@@ -783,7 +783,7 @@ fn: mixa_share_win32_make_storage_item_iterable (@: void items; int: count; @@: 
         return: MIXA_SHARE_ERR_NOMEM
     owned: 0
     if: count > 0
-        owned: (cast: (@@: void) c.calloc((cast: (size_t) count), c.sizeof(@: void)))
+        owned: (cast: (@@: void) c.calloc((cast: (size_t) count), sizeof(@: void)))
         if: owned = 0
             c.free(vtbl)
             c.free(obj)
@@ -1329,7 +1329,7 @@ fn: mixa_share_handler_invoke (@: void this_raw; @: void sender; @: void args) l
         # front, not grown incrementally, so a mid-chain allocation
         # failure can never happen after some files already resolved).
         nfiles: (cast: (int) mixa_share_file_count(req))
-        ctx\pending_items: c.calloc((cast: (size_t) nfiles), c.sizeof(@: void))
+        ctx\pending_items: c.calloc((cast: (size_t) nfiles), sizeof(@: void))
         if: ctx\pending_items = 0
             ctx\invoke_status: MIXA_SHARE_ERR_NOMEM
             c.__x_ABI_CWindows_CApplicationModel_CDataTransfer_CIDataRequestDeferral_Complete((cast: (@: __x_ABI_CWindows_CApplicationModel_CDataTransfer_CIDataRequestDeferral) ctx\file_deferral))

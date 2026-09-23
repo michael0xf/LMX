@@ -54,7 +54,7 @@ fn: mixa_sel_grow_ptrs (@@: char slots; size_t: count; size_t: cap; @: size_t ou
     if: count < cap
         out_cap[0]: cap
         return: slots
-    ptr_sz: c.sizeof(@: char)
+    ptr_sz: sizeof(@: char)
     if: ptr_sz = 0U
         return: 0
     if: cap = 0U
@@ -294,7 +294,7 @@ fn: mixa_sel_add_exception (@: MixaSelection sel; const: @(char path); const: @(
     if: sel\exc_count > ((cast: (size_t) -1) - 1U)
         return: MIXA_SEL_ERR
     if: sel\exc_count >= sel\exc_cap
-        ptr_sz: c.sizeof(@: char)
+        ptr_sz: sizeof(@: char)
         if: ptr_sz = 0U
             return: MIXA_SEL_ERR
         if: sel\exc_cap = 0U
@@ -583,7 +583,7 @@ fn: mixa_selection_query (@: MixaSelection sel; const: @(char path)) int
     if: cur = 0
         return: 0
     c.memcpy(cur, path, n + 1U)
-    ptr_sz: c.sizeof(@: char)
+    ptr_sz: sizeof(@: char)
     excess_cap: sel\selected_count + 1U
     if: excess_cap < 8U
         excess_cap: 8U

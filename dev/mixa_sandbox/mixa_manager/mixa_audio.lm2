@@ -559,7 +559,7 @@ fn: mixa_audio_set_list (@: MixaAudio a; @@: char items; size_t: count; size_t: 
     if: a = 0
         return: MIXA_AUDIO_ERR_ARG
     if: count > 0U
-        if: count > ((cast: (size_t) -1) / c.sizeof(@: char))
+        if: count > ((cast: (size_t) -1) / sizeof(@: char))
             return: MIXA_AUDIO_ERR_ARG
         ---
     ---
@@ -600,7 +600,7 @@ fn: mixa_audio_set_list (@: MixaAudio a; @@: char items; size_t: count; size_t: 
         a\duration: 0U
         return: MIXA_AUDIO_OK
     ---
-    fresh: (cast: (@@: char) c.calloc(count, c.sizeof(@: char)))
+    fresh: (cast: (@@: char) c.calloc(count, sizeof(@: char)))
     if: fresh = 0
         return: MIXA_AUDIO_ERR_NOMEM
     i: 0U

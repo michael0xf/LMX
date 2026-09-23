@@ -1648,6 +1648,18 @@ $fixtures = @(
         Needle = 'unresolved name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_sizeof_c_door_arena.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0'); Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT'); Debt = @('l2_message\graph: l2_entry_unit', 'c.sizeof(c.size_t)') },
+    # FABLE-OPUS-GATE-TRANSLATOR-20260924-151 commit 2: the sizeof: receiver takes a type frame --
+    # `sizeof(@: T)` is C `sizeof(T *)` for a primitive type word T, lowered as L1 spells it
+    # (`c.sizeof(@: T)`); the Mixa manager's line forms ride along.  Success is 7.
+    [pscustomobject]@{ Name = 'unit_sizeof_type_frame.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
+        Args = @('0'); Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
+        Debt = @('c.sizeof(@: void)', 'c.sizeof(@: char)', 'c.sizeof(@@: void)', 'c.sizeof(@: ulong)') },
+    # A type frame names a primitive type word: L1 reads any other name as an address.
+    [pscustomobject]@{ Name = 'unit_sizeof_type_frame_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'sizeof: a type frame names a primitive type'; Absent = @(); Debt = @() },
+    # The raw door has no c.sizeof semantics: `@: void` is not an L2 expression (reading N).
+    [pscustomobject]@{ Name = 'unit_csizeof_type_frame_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unresolved name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_sizeof_own_local.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0'); Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT'); Debt = @('l2_message\graph: l2_entry_unit') },
     [pscustomobject]@{ Name = 'unit_native_activation.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';

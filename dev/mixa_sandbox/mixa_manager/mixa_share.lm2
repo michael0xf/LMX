@@ -228,9 +228,9 @@ fn: mixa_share_set_files (@: MixaShareRequest r; @@: char paths_utf8; size_t: co
         return: MIXA_SHARE_OK
     if: paths_utf8 = 0
         return: MIXA_SHARE_ERR_ARG
-    if: count > ((cast: (size_t) -1) / c.sizeof(@: char))
+    if: count > ((cast: (size_t) -1) / sizeof(@: char))
         return: MIXA_SHARE_ERR_ARG
-    fresh: (cast: (@@: char) c.calloc(count, c.sizeof(@: char)))
+    fresh: (cast: (@@: char) c.calloc(count, sizeof(@: char)))
     if: fresh = 0
         return: MIXA_SHARE_ERR_NOMEM
     kept: 0U

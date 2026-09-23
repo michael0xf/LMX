@@ -10,6 +10,11 @@ predef: "l2src/lmx_primitive.h.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<string.h>"
 
+prototype:
+    fn: lmx_walk_arg_arity_node (@: LmxWalkFrame f; @: void node; @: size_t need) int
+    fn: lmx_walk_arg_arity (@: LmxWalkFrame f; @: Lmx node) size_t
+end: prototype
+
 # lmx_walk.lm1 - one activation of the graph interpreter.  The contract, its sources and
 # the limits of this slice are in lmx_walk.h.lm1.
 
@@ -288,6 +293,13 @@ fn: lmx_walk_scan_node (@: LmxWalkFrame f; @: void node) int
     # argument -- data passed by reference, not a node to scan.
     i: 1U
     if: op = c.LMX_WALK_OP_CALL
+        # D-04: argument count vs callee at prepare, same rule as lmx_walk_call entry.
+        target: lmx_arena_ref_value(code, 1U)
+        if: target = 0 || lmx_walk_kind(f, target) != c.LMX_KIND_STRUCT
+            return: c.LMX_WALK_INVALID
+        if: (cast: (size_t) code\len) - 2U != lmx_walk_arg_arity(f, (cast: (@: Lmx) target))
+            return: c.LMX_WALK_INVALID
+        ---
         i: 2U
         while: status = c.LMX_WALK_OK && i < (cast: (size_t) code\len)
             child: lmx_arena_ref_value(code, i)
@@ -446,6 +458,56 @@ fn: lmx_walk_leaving (@: LmxWalkFrame f; int: producer; @: void value) @: void
     lmx_int_store_known(f\dest, lmx_int_value_known(value))
 return: f\dest
 
+# How many declared inputs the body of M names: max ARG index + 1, or 0 if none (D-04).
+# Recurses into operand frame nodes the same way the prepare scan does.
+fn: lmx_walk_arg_arity_node (@: LmxWalkFrame f; @: void node; @: size_t need) int
+    @: Lmx code 0
+    @: void child 0
+    size_t: i
+    size_t: index
+    int: op
+    if: f = 0 || node = 0
+        return: c.LMX_WALK_OK
+    op: lmx_walk_op(f, node)
+    if: op = c.LMX_WALK_OP_NONE || op = c.LMX_WALK_OP_UNKNOWN
+        return: c.LMX_WALK_OK
+    if: lmx_walk_bare(f, node) != 0
+        return: c.LMX_WALK_OK
+    code: (cast: (@: Lmx) node)
+    if: op = c.LMX_WALK_OP_ARG
+        index: lmx_size_value_known(lmx_arena_ref_value(code, 1U))
+        if: index + 1U > \need
+            \need: index + 1U
+        return: c.LMX_WALK_OK
+    ---
+    i: 1U
+    if: op = c.LMX_WALK_OP_CALL || op = c.LMX_WALK_OP_PRIM
+        i: 2U
+    if: op = c.LMX_WALK_OP_PUT
+        i: 3U
+    while: i < (cast: (size_t) code\len)
+        child: lmx_arena_ref_value(code, i)
+        if: child != 0 && lmx_walk_op(f, child) != c.LMX_WALK_OP_NONE
+            lmx_walk_arg_arity_node(f, child, need)
+        ---
+        i: i + 1U
+    ---
+return: c.LMX_WALK_OK
+
+fn: lmx_walk_arg_arity (@: LmxWalkFrame f; @: Lmx node) size_t
+    @: void child 0
+    size_t: need 0U
+    size_t: i 1U
+    if: f = 0 || node = 0
+        return: 0U
+    while: i < (cast: (size_t) node\len)
+        child: lmx_arena_ref_value(node, i)
+        if: child != 0 && lmx_walk_op(f, child) != c.LMX_WALK_OP_NONE
+            lmx_walk_arg_arity_node(f, child, @ need)
+        ---
+        i: i + 1U
+    ---
+return: need
 # [call, M, arg ...].  The callee's inputs are REFERENCES, kept with the cells that hold
 # the integers among them in one scratch slice of this activation; the slice is gone
 # with the rewind below, after the callee has returned.  The callee's destination is
@@ -475,6 +537,11 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
     # sole anonymous argument container is P0's to normalize, one level, for every
     # head (-127), and a Structure among the children is a Structure argument.
     n: (cast: (size_t) code\len) - 2U
+    # D-04: refuse a wrong count at entry (native does). Extra Structure to a nullary
+    # callee must not be ignored because the body never reads ARG.
+    if: n != lmx_walk_arg_arity(f, callee)
+        return: c.LMX_WALK_INVALID
+    ---
     pm: @ mark
     if: lmx_scratch_mark(f\context\scratch, pm) != c.LMX_SCRATCH_OK
         return: c.LMX_WALK_INVALID

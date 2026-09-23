@@ -237,6 +237,7 @@ fn: main () int
     @: Lmx pair 0
     @: Lmx tramp 0
     @: Lmx tramp2 0
+    @: Lmx tramp3 0
     int: r 0
     int: v 0
     int: st 0
@@ -278,7 +279,7 @@ fn: main () int
     abox: lmx_int_new_owned(ga)
     unit: lmx_node_new_owned(ga)
     argv[0]: abox
-    if: groles = 0 || gplan_roles = 0 || flat = 0 || lens = 0 || paths = 0 || argv = 0 || gv = 0 || abox = 0 || unit = 0 || lmx_arena_refs_open_owned(ga, unit, 42U) != 0
+    if: groles = 0 || gplan_roles = 0 || flat = 0 || lens = 0 || paths = 0 || argv = 0 || gv = 0 || abox = 0 || unit = 0 || lmx_arena_refs_open_owned(ga, unit, 43U) != 0
         fputs("lmx_walk: unit\n", l1_stdout())
         return: 2
     ---
@@ -955,6 +956,16 @@ fn: main () int
     check(lmx_walk_prepare(gctx, ga, gplan_roles, tramp) = c.LMX_WALK_OK, "tramp: host() prepared")
     st: go(tramp, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_OK && r = 7 && v = 1, "CALL host with no argument children => 7")
+    # D-04: host() with one extra Structure argument is refused at entry (native refuses).
+    tramp3: mk_m(unit, 40U, 2U)
+    n: fr(tramp3, 1U, c.LMX_WALK_OP_RET, 2U)
+    e: fr(n, 1U, c.LMX_WALK_OP_CALL, 3U)
+    ref(e, 1U, host)
+    if: pair != 0
+        pair\parent: e
+        check(lmx_arena_ref_store(e, 2U, (cast: (@: void) pair)) = 0, "pair under tramp3 CALL as extra arg")
+    ---
+    check(lmx_walk_prepare(gctx, ga, gplan_roles, tramp3) = c.LMX_WALK_INVALID, "D-04 host(extra Structure) refused at prepare")
     # D-03: bare callable in body executes (tracer own published), then return 9.
     st: go(bare_stmt, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_OK && r = 9 && v = 1, "D-03 bare callable statement then return => 9")

@@ -1,0 +1,17 @@
+Model:
+    size_t: value 1U
+end: Model
+
+# FABLE-SONNET-ARRAY-WRITE-DISPATCH-20260923-119: an out-of-range literal
+# index on a general-own-field-rooted array write (fresh\buf[5], buf has
+# length 3) must refuse with the same diagnostic an unrooted own array
+# write already gives -- l2_own_index_head's own bounds check, unchanged,
+# reached first for this root exactly as for a plain buf[5] or node\buf[5].
+fn: broken () int
+    Model: fresh
+    []: int buf 3
+    fresh\buf[5]: 1
+    return: 0
+end: broken
+
+return: broken()

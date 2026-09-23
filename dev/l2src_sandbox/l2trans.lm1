@@ -15258,6 +15258,24 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
             need_cut: 1
             continue
         ---
+        # An indexed final segment (root\name[idx]) is a case of the own
+        # array store, tried before FIELD PATHS below exactly as
+        # l2_check_body already orders its own copy of this same check
+        # ahead of the path guards (FABLE-SONNET-ARRAY-WRITE-DISPATCH-
+        # 20260923-119): an Array-typed own field followed by an index is
+        # not a competing path that needs the head to have escaped
+        # l2_is_path_head, it is resolved first, uniformly, whether or not
+        # the root is also a general path root (fresh\buf[0], not just the
+        # legacy node\/for\).
+        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0 && l2_own_index_head(stmt\as\frame\head, mi, @ array_own, @ array_index) = 0
+            fr: stmt\as\frame
+            if: l2_eval_fields(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok) != 0 || l2_emit_array_ptr(array_own, ind, array_ptr) != 0
+                return: 1
+            if: c.fprintf(l2_out, "%s%s[%zuU]: %s\n", ind, array_ptr, array_index, l2_tok) < 0
+                return: 1
+            field: l2_next_active(field\next)
+            continue
+        ---
         # ---------------------------------------------------------------
         # FIELD PATHS. In UPDATE position the whole path is the statement head
         # and the single body item is the value:  R\x: 5U
@@ -15535,14 +15553,6 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
             pd: 1
             continue
         ---
-        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0 && l2_own_index_head(stmt\as\frame\head, mi, @ array_own, @ array_index) = 0
-            fr: stmt\as\frame
-            if: l2_eval_fields(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok) != 0 || l2_emit_array_ptr(array_own, ind, array_ptr) != 0
-                return: 1
-            if: c.fprintf(l2_out, "%s%s[%zuU]: %s\n", ind, array_ptr, array_index, l2_tok) < 0
-                return: 1
-            field: l2_next_active(field\next)
-            continue
         ix: 1
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0
             ix: l2_index_head(stmt\as\frame\head, mi, @ rj)

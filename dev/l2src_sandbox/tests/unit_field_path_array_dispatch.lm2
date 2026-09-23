@@ -2,32 +2,41 @@ Model:
     size_t: value 1U
 end: Model
 
-# FABLE-SONNET-UNIT-LEVEL-ROOTS-20260923-117: l2_own_index_tail and
-# l2_array_length_own (length()) generalized past the two literal roots
-# "for"/"node" -- fresh (an ordinary own field, not "for" or "node") gates
-# buf\[i] and length(...) exactly as node\/for\ already did, reusing the
-# same l2_own_find-by-name lookup for the array itself. Read position only:
-# fresh\buf[0]: 7 as an ASSIGNMENT TARGET does not reach l2_own_index_head
-# at all -- it is routed into l2_check_primary's call-head-as-path check
-# instead ("unknown field path segment"), because -113's l2_path_root now
-# recognizes fresh as a valid path root and l2_is_path_head claims the
-# whole statement before the array-specific dispatch gets a turn. node\
-# buf[0]: 7 does NOT hit this (node is never itself an own field, so
-# l2_path_root never matches it and the statement reaches the array path
-# untouched) -- the interaction is specific to a root that is a genuine
-# own field, not a pre-existing gap in the write side generally. Not
-# attempted here, reported instead.
+# FABLE-SONNET-UNIT-LEVEL-ROOTS-20260923-117 generalized l2_own_index_tail
+# and length() past the two literal roots "for"/"node" for READS: fresh (an
+# ordinary own field, not "for" or "node") gates buf\[i] and length(...)
+# exactly as node\/for\ already did. The WRITE side had a gap at -117 time:
+# fresh\buf[0]: 7 as an assignment target was routed into l2_emit_path's
+# general field-path walk instead of the own array store, because -113's
+# l2_path_root recognizes fresh as a valid path root and l2_is_path_head
+# claimed the whole statement first, and l2_emit_path has no notion of a
+# bracketed segment ("unknown field path segment").
+# FABLE-SONNET-ARRAY-WRITE-DISPATCH-20260923-119 closed that gap by moving
+# the l2_own_index_head check in l2_emit_body ahead of the FIELD PATHS
+# branch, mirroring the order l2_check_body already used (its own
+# l2_own_index_head check has always run before the path guards) -- an
+# indexed final segment is resolved as an own array store uniformly,
+# whether or not the root also happens to be a general path root, rather
+# than the array path needing the head to have escaped path recognition.
+# This fixture now writes through all three root shapes that reach
+# l2_own_index_head: a plain own array name, the legacy "node" gate, and a
+# general own-field root (fresh) -- the case -119 fixed.
 fn: build () int
     Model: fresh
     []: int buf 3
-    buf[0]: 7
-    buf[1]: 8
+    buf[0]: 6
+    node\buf[1]: 8
+    fresh\buf[2]: 9
     int: got
-    got: fresh\buf[0]
-    if: got != 7
+    got: fresh\buf[2]
+    if: got != 9
         return: 95
     if: length(fresh\buf) != 3
         return: 96
+    if: buf[0] != 6
+        return: 97
+    if: node\buf[1] != 8
+        return: 98
     return: 0
 end: build
 

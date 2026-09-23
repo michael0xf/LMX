@@ -16,23 +16,23 @@ return
 fn: main () int
     int: failures 0
     LmxArrayDynamicArray: a
-    LmxByteDynamicArray: b
+    LmxCharDynamicArray: b
     LmxRangeDynamicArray: r
     LmxServiceEntryDynamicArray: s
     LmxPostInboxSlotDynamicArray: i
     LmxChunk: ch
     @: LmxArrayDynamicArray pa
-    @: LmxByteDynamicArray pb
+    @: LmxCharDynamicArray pb
     @: LmxRangeDynamicArray pr
     @: LmxServiceEntryDynamicArray ps
     @: LmxPostInboxSlotDynamicArray pi
     @: LmxChunk pch
     @: LmxArrayDesc a_base
-    @: LmxByteArray b_base
+    @: LmxCharArray b_base
     @: LmxRangeArray r_base
     @: LmxServiceEntryArray s_base
     @: LmxPostInboxSlotArray i_base
-    @: LmxByteDynamicArray ch_cells
+    @: LmxCharDynamicArray ch_cells
     pa: @ a
     pb: @ b
     pr: @ r
@@ -40,16 +40,16 @@ fn: main () int
     pi: @ i
     pch: @ ch
     a_base: (cast: (@: LmxArrayDesc) pa)
-    b_base: (cast: (@: LmxByteArray) pb)
+    b_base: (cast: (@: LmxCharArray) pb)
     r_base: (cast: (@: LmxRangeArray) pr)
     s_base: (cast: (@: LmxServiceEntryArray) ps)
     i_base: (cast: (@: LmxPostInboxSlotArray) pi)
-    ch_cells: (cast: (@: LmxByteDynamicArray) pch)
+    ch_cells: (cast: (@: LmxCharDynamicArray) pch)
     if: (cast: (size_t) a_base) != (cast: (size_t) pa)
         fail(@ failures, "LmxArrayDynamicArray offsetof(array)")
     ---
     if: (cast: (size_t) b_base) != (cast: (size_t) pb)
-        fail(@ failures, "LmxByteDynamicArray offsetof(array)")
+        fail(@ failures, "LmxCharDynamicArray offsetof(array)")
     ---
     if: (cast: (size_t) r_base) != (cast: (size_t) pr)
         fail(@ failures, "LmxRangeDynamicArray offsetof(array)")
@@ -63,8 +63,8 @@ fn: main () int
     if: c.sizeof(c.LmxArrayDesc) != c.sizeof(c.size_t) + c.sizeof(@: void)
         fail(@ failures, "LmxArrayDesc has no capacity (base is len+data only)")
     ---
-    if: c.sizeof(c.LmxByteArray) != c.sizeof(c.size_t) + c.sizeof(@: char)
-        fail(@ failures, "LmxByteArray sizeof")
+    if: c.sizeof(c.LmxCharArray) != c.sizeof(c.size_t) + c.sizeof(@: char)
+        fail(@ failures, "LmxCharArray sizeof")
     ---
     if: c.sizeof(c.LmxRangeArray) != c.sizeof(c.size_t) + c.sizeof(@: void)
         fail(@ failures, "LmxRangeArray sizeof")
@@ -78,8 +78,8 @@ fn: main () int
     if: c.sizeof(c.LmxArrayDynamicArray) != c.sizeof(c.LmxArrayDesc) + c.sizeof(c.size_t)
         fail(@ failures, "LmxArrayDynamicArray sizeof")
     ---
-    if: c.sizeof(c.LmxByteDynamicArray) != c.sizeof(c.LmxByteArray) + c.sizeof(c.size_t)
-        fail(@ failures, "LmxByteDynamicArray sizeof")
+    if: c.sizeof(c.LmxCharDynamicArray) != c.sizeof(c.LmxCharArray) + c.sizeof(c.size_t)
+        fail(@ failures, "LmxCharDynamicArray sizeof")
     ---
     if: c.sizeof(c.LmxRangeDynamicArray) != c.sizeof(c.LmxRangeArray) + c.sizeof(c.size_t)
         fail(@ failures, "LmxRangeDynamicArray sizeof")

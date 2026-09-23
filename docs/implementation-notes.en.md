@@ -26,6 +26,8 @@ This document is not a language specification. It contains state of concrete tra
 
 - The accepted target physical layout is `VoidArray {size_t size, void *data}` and `Lmx {VoidArray array, Lmx *parent}`: the array is first, and no separate `LmxArrayDesc` alias is needed. `Lmx.array` is the actual array of physical child references; its backing is registered as an arena range but does not replace the `LmxRange` index entry. **The code migration is not implemented:** `dev/l2src_sandbox/lmx.h.lm1` still has `Lmx {parent, int len, void *data}` and a separate `LmxArrayDesc {size_t len, void *data}`. Migration touches backing/range ownership, all member accesses and uses of the old type name, copy/merge, `INT_MAX` bounds and negative-`len` checks, the stable twin, and generated seeds; green runs of the old ABI do not validate the new one.
 
+- Author 2026-09-24 (FABLE-140): the char-element fixed descriptor is named `LmxCharArray {size_t len; char *data}` (exact `len`, no NUL) — it is the string-literal type and the pool chunk-cell descriptor (`LmxChunk.cells: LmxCharDynamicArray`). The -134 twin `LmxByteArray` / `LmxByteDynamicArray` is removed; one type per char element (Q18).
+
 - The inspected `l2trans.lm1` accepted a bounded `.lm2` subset; the snapshot did not establish a complete L2→L1 translator. Kernel low-level operations and support for concrete frontend spellings must be checked separately.
 - Placement of atomic handshake flags relative to parent/child arenas remained open; provenance is kept in `steps/l1-l2-migration.md#handshake-flags`.
 - Interpreter-frame auxiliary storage should use one reusable standard L2 mechanism suitable for later code rewriting, not a private C allocator belonging only to `lmx_walk`.

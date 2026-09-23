@@ -4,7 +4,7 @@ predef: "lmx_arena.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<string.h>"
 
-# A byte array of this test's own, in no array of the arena: it is what a direct
+# A char array of this test's own, in no array of the arena: it is what a direct
 # character read is measured against.
 []: char unregistered 2 65 66
 
@@ -82,7 +82,7 @@ fn: main () int
     # statically, and the table answers only about an untyped void *).  The refusal
     # that used to stand here went with the re-check it belonged to.
     if: lmx_range_classify(@ arena, cast: (@: void) unregistered) != c.LMX_KIND_NONE
-        fputs("lmx: the byte array of this test is registered after all\n", l1_stdout())
+        fputs("lmx: the char array of this test is registered after all\n", l1_stdout())
         failures: failures + 1
     if: lmx_char_value(cast: (@: void) (unregistered + 1)) != 66
         fputs("lmx: a direct character read refused instead of reading its byte\n", l1_stdout())

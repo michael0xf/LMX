@@ -28,33 +28,33 @@ include: "<stdlib.h>"
 
 # --- FABLE-134: sole cell-arithmetic helper pair (bytes <-> cells via stride) ---
 # Nested by-value DynamicArray fields must be addressed (@ chunk\cells); the base
-# Compositional LmxByteDynamicArray {array; capacity}. Address via @ chunk\cells; avoid
+# Compositional LmxCharDynamicArray {array; capacity} (char-element descriptor; author 2026-09-24). Address via @ chunk\cells; avoid
 # paths miscompile as -> through a by-value struct.
 
 
 fn: lmx_chunk_cells (@: LmxChunk chunk; size_t: stride) size_t
-    @: LmxByteDynamicArray cells
-    @: LmxByteArray base
+    @: LmxCharDynamicArray cells
+    @: LmxCharArray base
     if: chunk = 0 || stride = 0U
         return: 0U
     cells: @ chunk\cells
-    base: (cast: (@: LmxByteArray) cells)
+    base: (cast: (@: LmxCharArray) cells)
 return: base\len / stride
 
 fn: lmx_chunk_room (@: LmxChunk chunk; size_t: stride) size_t
-    @: LmxByteDynamicArray cells
+    @: LmxCharDynamicArray cells
     if: chunk = 0 || stride = 0U
         return: 0U
     cells: @ chunk\cells
 return: cells\capacity / stride
 
 fn: lmx_chunk_set_used (@: LmxChunk chunk; size_t: stride; size_t: n) void
-    @: LmxByteDynamicArray cells
-    @: LmxByteArray base
+    @: LmxCharDynamicArray cells
+    @: LmxCharArray base
     if: chunk = 0
         return
     cells: @ chunk\cells
-    base: (cast: (@: LmxByteArray) cells)
+    base: (cast: (@: LmxCharArray) cells)
     if: stride = 0U
         base\len: 0U
         return
@@ -62,7 +62,7 @@ fn: lmx_chunk_set_used (@: LmxChunk chunk; size_t: stride; size_t: n) void
 return
 
 fn: lmx_chunk_set_room (@: LmxChunk chunk; size_t: stride; size_t: n) void
-    @: LmxByteDynamicArray cells
+    @: LmxCharDynamicArray cells
     if: chunk = 0
         return
     cells: @ chunk\cells
@@ -73,12 +73,12 @@ fn: lmx_chunk_set_room (@: LmxChunk chunk; size_t: stride; size_t: n) void
 return
 
 fn: lmx_chunk_data (@: LmxChunk chunk) @: void
-    @: LmxByteDynamicArray cells
-    @: LmxByteArray base
+    @: LmxCharDynamicArray cells
+    @: LmxCharArray base
     if: chunk = 0
         return: 0
     cells: @ chunk\cells
-    base: (cast: (@: LmxByteArray) cells)
+    base: (cast: (@: LmxCharArray) cells)
 return: (cast: (@: void) base\data)
 
 fn: lmx_pool_add_chunk (@: LmxArena arena; @: LmxPool pool) int
@@ -86,8 +86,8 @@ fn: lmx_pool_add_chunk (@: LmxArena arena; @: LmxPool pool) int
     @: void block
     @: LmxArenaBlock payload_block
     @: LmxArenaBlock chunk_block
-    @: LmxByteDynamicArray cells
-    @: LmxByteArray base
+    @: LmxCharDynamicArray cells
+    @: LmxCharArray base
     size_t: bytes
     if: arena = 0 || pool = 0
         return: 1
@@ -125,7 +125,7 @@ fn: lmx_pool_add_chunk (@: LmxArena arena; @: LmxPool pool) int
         free(block)
         return: 1
     cells: @ chunk\cells
-    base: (cast: (@: LmxByteArray) cells)
+    base: (cast: (@: LmxCharArray) cells)
     base\data: (cast: (@: char) block)
     lmx_chunk_set_room(chunk, pool\stride, pool\chunk_capacity)
     lmx_chunk_set_used(chunk, pool\stride, 0U)
@@ -345,8 +345,8 @@ fn: lmx_pool_make_profiled (@: LmxArena arena; size_t: bytes; size_t: stride; in
     @: LmxPool pool
     @: LmxChunk chunk
     @: void payload
-    @: LmxByteDynamicArray cells
-    @: LmxByteArray base
+    @: LmxCharDynamicArray cells
+    @: LmxCharArray base
     size_t: count
     if: arena = 0 || bytes = 0U || stride = 0U
         return: 0
@@ -388,7 +388,7 @@ fn: lmx_pool_make_profiled (@: LmxArena arena; size_t: bytes; size_t: stride; in
     pool\sealed: 0U
     pool\next: 0
     cells: @ chunk\cells
-    base: (cast: (@: LmxByteArray) cells)
+    base: (cast: (@: LmxCharArray) cells)
     base\data: (cast: (@: char) payload)
     lmx_chunk_set_room(chunk, stride, count)
     lmx_chunk_set_used(chunk, stride, count)
@@ -435,8 +435,8 @@ return: lmx_pool_make_profiled(arena, bytes, stride, kind, type, 0)
 # own it and nothing to free.  The two records are filled, the array joins the arena and
 # the array's interval is registered; that single call is the whole act.
 fn: lmx_pool_over (@: LmxArena arena; @: LmxPool pool; @: LmxChunk chunk; @: void base; size_t: bytes; size_t: stride; int: kind; int: type) int
-    @: LmxByteDynamicArray cells
-    @: LmxByteArray ba
+    @: LmxCharDynamicArray cells
+    @: LmxCharArray ba
     size_t: count
     if: arena = 0 || pool = 0 || chunk = 0 || base = 0 || bytes = 0U || stride = 0U
         return: 1
@@ -453,7 +453,7 @@ fn: lmx_pool_over (@: LmxArena arena; @: LmxPool pool; @: LmxChunk chunk; @: voi
     pool\sealed: 0U
     pool\next: 0
     cells: @ chunk\cells
-    ba: (cast: (@: LmxByteArray) cells)
+    ba: (cast: (@: LmxCharArray) cells)
     ba\data: (cast: (@: char) base)
     lmx_chunk_set_room(chunk, stride, count)
     lmx_chunk_set_used(chunk, stride, count)

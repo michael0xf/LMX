@@ -1,4 +1,4 @@
-﻿param([string]$Root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path)
+param([string]$Root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path)
 $ErrorActionPreference = 'Stop'
 $sandbox = Join-Path $Root 'dev\l2src_sandbox'
 $bad = New-Object System.Collections.Generic.List[string]
@@ -21,10 +21,26 @@ foreach ($f in $files) {
     }
   }
 }
+
+# Author 2026-09-24 / FABLE-140: LmxByteArray is a removed twin of LmxCharArray.
+# Active sandbox sources and tests must not spell the old names (blog/plan history may).
+$banned = @('LmxByteArray', 'LmxByteDynamicArray')
+foreach ($f in $files) {
+  $rel = $f.FullName.Substring($sandbox.Length).TrimStart('\','/')
+  $i = 0
+  foreach ($line in (Get-Content -LiteralPath $f.FullName)) {
+    $i++
+    foreach ($name in $banned) {
+      if ($line.Contains($name)) {
+        $bad.Add(("{0}:{1}: banned name {2}" -f $rel, $i, $name)) | Out-Null
+      }
+    }
+  }
+}
 if ($bad.Count -gt 0) {
-  Write-Output 'GATE FAIL: capacity field outside *DynamicArray:'
+  Write-Output 'GATE FAIL: dynarray capacity / banned ByteArray names:'
   $bad | ForEach-Object { Write-Output ('  ' + $_) }
   exit 1
 }
-Write-Output 'GATE OK: capacity fields only on *DynamicArray'
+Write-Output 'GATE OK: capacity fields only on *DynamicArray; no LmxByteArray / LmxByteDynamicArray'
 exit 0

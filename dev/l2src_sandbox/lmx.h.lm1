@@ -232,18 +232,20 @@ end: LmxArrayDynamicArray
 # Arrays never move, so it is these ENTRIES that are ordered and bisected, never
 # the arrays.
 
-# Fixed byte array descriptor (element type byte / unsigned char at the C ABI).
-# `char *` is the LM1 spelling for a byte pointer; cell helpers treat payload as raw bytes.
-struct: LmxByteArray
+# Fixed char-array descriptor `{size_t len; char *data}` (author 2026-09-24: string = this
+# descriptor with exact len, no NUL). One type for the char element: string values and
+# pool chunk cells (`LmxChunk.cells`) share it. `char *` is the LM1 spelling; chunk
+# helpers still count capacity/len in BYTES and convert via lmx_chunk_cells/lmx_chunk_room.
+struct: LmxCharArray
     size_t: len
     @: char data
-end: LmxByteArray
+end: LmxCharArray
 
-# Compositional DynamicArray: fixed byte descriptor + capacity (Q18 / FABLE-134 REVIEW).
-struct: LmxByteDynamicArray
-    LmxByteArray: array
+# Compositional DynamicArray: fixed char descriptor + capacity (Q18 / FABLE-134; LmxCharArray).
+struct: LmxCharDynamicArray
+    LmxCharArray: array
     size_t: capacity
-end: LmxByteDynamicArray
+end: LmxCharDynamicArray
 
 struct: LmxRange
     @: void lo
@@ -287,7 +289,8 @@ end: LmxRange
 # retires only the interval of each chunk and the array itself; the arena's block list is
 # what frees the storage, at lmx_arena_release.
 # Chunk payload is stride-generic RAW storage (coordinator -134): element type is known
-# only at run time via the pool's stride/kind/type. Static element type is therefore byte.
+# only at run time via the pool's stride/kind/type. Static descriptor is LmxCharArray
+# (one char-element type for strings and chunk cells; author 2026-09-24).
 # cells.array.len / cells.capacity are BYTES; cell counts go through lmx_chunk_cells / lmx_chunk_room
 # (the sole cell-arithmetic helper pair). Not a void cast, not a wrapper/union, not per-T families.
 # Fixed array of arena index entries.
@@ -303,7 +306,7 @@ struct: LmxRangeDynamicArray
 end: LmxRangeDynamicArray
 
 struct: LmxChunk
-    LmxByteDynamicArray: cells
+    LmxCharDynamicArray: cells
     @: LmxChunk next
     # The collection pass that last WALKED this chunk (lmx_gc): a chunk whose stamp is the
     # arena's current generation was reached from a root, so it stays.  A stamp and not a

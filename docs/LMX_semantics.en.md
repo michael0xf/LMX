@@ -561,7 +561,7 @@ Shared method references are terminals under their contracts. When `merge` encou
 
 Repeated fields retain forward order: the first `read` remains `read`/`[0]read`, the next is `[1]read`. A later operand does not automatically override the first. Different selection requires choosing an occurrence explicitly or constructing the intended result. Successful composition publishes a fully initialized result, requires no short-name registration and leaves sources unchanged.
 
-Failure follows declared `throws merge(args)`, not an invented partial-result protocol. This does not promise rollback of operand-evaluation effects. Temporary-storage release follows the owning Message's rules. The exact low-level mechanism is in [L2](L2_spec_en.md#copy-merge).
+Failure is a throw named `merge` (as for every operator whose `throws` list the programmer does not see written out): catching it is optional; an uncaught one flies to the root and the Thread stops (`running = 0`); a handling point `catch: merge` -- later in the same body at the same level, with no wrapper -- handles it in the ordinary way and nothing flies anywhere. There is no separate partial-result protocol. This does not promise rollback of operand-evaluation effects. Temporary-storage release follows the owning Message's rules. The exact low-level mechanism is in [L2](L2_spec_en.md#copy-merge).
 
 A type description, schema, module data or Table is ordinary data: applying `merge` does not select a special descriptor-composition algorithm. `table` materializes an explicitly selected table representation; `join` creates a new table graph without mutating operands. Row, key, conflict and priority policies belong to the table operation, not structural field lookup.
 

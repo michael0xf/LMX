@@ -2,41 +2,34 @@ Model:
     size_t: value 1U
 end: Model
 
-# FABLE-SONNET-UNIT-LEVEL-ROOTS-20260923-117 generalized l2_own_index_tail
-# and length() past the two literal roots "for"/"node" for READS: fresh (an
-# ordinary own field, not "for" or "node") gates buf\[i] and length(...)
-# exactly as node\/for\ already did. The WRITE side had a gap at -117 time:
-# fresh\buf[0]: 7 as an assignment target was routed into l2_emit_path's
-# general field-path walk instead of the own array store, because -113's
-# l2_path_root recognizes fresh as a valid path root and l2_is_path_head
-# claimed the whole statement first, and l2_emit_path has no notion of a
-# bracketed segment ("unknown field path segment").
-# FABLE-SONNET-ARRAY-WRITE-DISPATCH-20260923-119 closed that gap by moving
-# the l2_own_index_head check in l2_emit_body ahead of the FIELD PATHS
-# branch, mirroring the order l2_check_body already used (its own
-# l2_own_index_head check has always run before the path guards) -- an
-# indexed final segment is resolved as an own array store uniformly,
-# whether or not the root also happens to be a general path root, rather
-# than the array path needing the head to have escaped path recognition.
-# This fixture now writes through all three root shapes that reach
-# l2_own_index_head: a plain own array name, the legacy "node" gate, and a
-# general own-field root (fresh) -- the case -119 fixed.
+# FABLE-SONNET-UNIT-LEVEL-ROOTS-20260923-117 generalized the own-array
+# helpers past the two literal roots "for"/"node". FABLE-SONNET-ARRAY-
+# WRITE-DISPATCH-20260923-119 found and fixed a write-dispatch ordering
+# gap for that generalization, then fable corrected the generalization's
+# MEANING itself: root\name[idx] for a general own-field/formal root
+# (anything other than literally "for"/"node") is a field path -- name
+# must denote a field OF root's Structure type, never a same-named
+# sibling own array elsewhere in the method. l2_own_array_root/_span (the
+# -117 helpers) now refuse unconditionally for any non-node/for root, so
+# this shape falls through to the ordinary field-path machinery. See
+# unit_array_write_general_root_no_field.lm2 and
+# unit_array_write_general_root_real_field.lm2 for that refusal, both
+# sub-cases (no such field at all; a real Array field this ticket still
+# cannot address). This fixture covers only what "for"/"node" and a bare
+# own name have always meant, unaffected by any of this: the own-table
+# gate/lookup itself.
 fn: build () int
-    Model: fresh
     []: int buf 3
     buf[0]: 6
     node\buf[1]: 8
-    fresh\buf[2]: 9
-    int: got
-    got: fresh\buf[2]
-    if: got != 9
-        return: 95
-    if: length(fresh\buf) != 3
-        return: 96
     if: buf[0] != 6
         return: 97
     if: node\buf[1] != 8
         return: 98
+    if: length(buf) != 3
+        return: 96
+    if: length(node\buf) != 3
+        return: 99
     return: 0
 end: build
 

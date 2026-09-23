@@ -1,0 +1,26 @@
+Model:
+    size_t: value 1U
+    []: int buf 3
+end: Model
+
+# FABLE-SONNET-ARRAY-WRITE-DISPATCH-20260923-119 (fable's correction): buf
+# IS a real Array-typed field of Model here, so a wrong write is not
+# possible -- but resolving a field path that ends in a namespace-typed
+# Array field, through an index, into a store on that cell, is a new
+# capability (the field lives through l2_own_nsty_get/l2_ns_slot_named on
+# fresh's type, not in mi's own table l2_own_index_head addresses) this
+# ticket does not build. Refusing here is the honest state fable asked
+# for rather than a wrong write: same diagnostic as the no-such-field
+# case (unit_array_write_general_root_no_field.lm2, "unsupported index"
+# from l2_index_head, a separate pre-existing guard on any bracket-
+# terminated head -- not "unknown field path segment", which either of
+# us predicted but is not what actually fires), since neither mechanism
+# distinguishes "no field named buf" from "a real buf field this
+# mechanism can't address".
+fn: broken () int
+    Model: fresh
+    fresh\buf[2]: 9
+    return: 0
+end: broken
+
+return: broken()

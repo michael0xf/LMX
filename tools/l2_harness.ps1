@@ -1089,6 +1089,10 @@ $fixtures = @(
         Debt = @('l2_message\graph: l2_entry_unit') },
     [pscustomobject]@{ Name = 'unit_array_write_root_out_of_range.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'own array index requires an in-bounds primitive literal'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_array_write_general_root_no_field.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unsupported index'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_array_write_general_root_real_field.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unsupported index'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_colon_undeclared_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_colon_unknown_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

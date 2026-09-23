@@ -3,14 +3,17 @@ Model:
 end: Model
 
 # FABLE-SONNET-ARRAY-WRITE-DISPATCH-20260923-119: an out-of-range literal
-# index on a general-own-field-rooted array write (fresh\buf[5], buf has
-# length 3) must refuse with the same diagnostic an unrooted own array
-# write already gives -- l2_own_index_head's own bounds check, unchanged,
-# reached first for this root exactly as for a plain buf[5] or node\buf[5].
+# index on a node-prefixed array write (buf has length 3) must refuse
+# with l2_own_index_head's own bounds check, unchanged -- node keeps
+# today's prefix meaning (fable's correction, point 2), so this is the
+# same diagnostic a plain buf[5] already gave before this ticket. A
+# general own-field root (fresh\buf[5]) no longer reaches this bounds
+# check at all: it refuses earlier, as "unknown field path segment", per
+# unit_array_write_general_root_no_field.lm2 -- this fixture is about the
+# node/for route staying exactly as it was.
 fn: broken () int
-    Model: fresh
     []: int buf 3
-    fresh\buf[5]: 1
+    node\buf[5]: 1
     return: 0
 end: broken
 

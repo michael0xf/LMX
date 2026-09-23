@@ -1,0 +1,22 @@
+Model:
+    size_t: value 1U
+end: Model
+
+# FABLE-SONNET-ARRAY-WRITE-DISPATCH-20260923-119 (fable's correction): a
+# general own-field root (fresh, not the literal "for"/"node") makes
+# fresh\buf a field PATH -- buf must be a field of fresh's Model type.
+# Model has no buf field, so this must refuse, never silently address the
+# unrelated own array buf declared alongside fresh in the same method.
+# Measured refusal is "unsupported index", from l2_index_head -- a
+# separate, pre-existing guard on any bracket-terminated head that
+# reaches it before l2_emit_path's segment walk gets a turn, not the
+# "unknown field path segment" either of us predicted. Reporting the
+# actual text rather than the prediction.
+fn: broken () int
+    Model: fresh
+    []: int buf 3
+    fresh\buf[2]: 9
+    return: 0
+end: broken
+
+return: broken()

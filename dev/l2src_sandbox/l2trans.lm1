@@ -7282,41 +7282,17 @@ return: hit
 # rule: root is a spelling gate (own field or formal, by name), the array
 # name after the backslash is looked up directly in mi's own table exactly
 # as the node/for branches above already do.
+# FABLE-SONNET-ARRAY-WRITE-DISPATCH-20260923-119 (fable's correction to
+# -117): see l2_own_array_root -- a general own-field/formal root's suffix
+# must denote a field of the root's TYPE, never a same-named sibling in
+# mi's own table. That capability is not built here; refusing is the
+# honest state, and the caller's fallback (the ordinary field-path
+# machinery) already gives "unknown field path segment" for this shape.
+# node/for are excluded from this function already (l2_slash_node_prefix/
+# l2_slash_for_prefix handle them, unchanged), so every remaining input
+# now refuses.
 fn: l2_own_array_root_span (int: mi; const: @(LmP0Text t); size_t: stop) int
-    size_t: bs 0U
-    size_t: n
-    size_t: i 0U
-    int: root_ok 0
-    int: hit 0 - 1
-    if: mi < 0 || t = 0 || t\data = 0 || stop < 3U || stop > t\length
-        return: 0 - 1
-    while: bs < stop && t\data[bs] != 92
-        bs: bs + 1U
-    if: bs = 0U || bs >= stop - 1U
-        return: 0 - 1
-    while: i < l2_own_n
-        if: l2_own_mi[i] = mi && l2_own_name[i] != 0 && l2_own_name[i]\length = bs && memcmp(l2_own_name[i]\data, t\data, bs) = 0
-            root_ok: 1
-        i: i + 1
-    if: root_ok = 0
-        i: 0U
-        while: i < l2_m_arity[mi]
-            if: l2_fn(mi, i) != 0 && l2_fn(mi, i)\length = bs && memcmp(l2_fn(mi, i)\data, t\data, bs) = 0
-                root_ok: 1
-            i: i + 1
-        ---
-    ---
-    if: root_ok = 0
-        return: 0 - 1
-    n: stop - bs - 1U
-    i: 0U
-    while: i < l2_own_n
-        if: l2_own_mi[i] = mi && (l2_own_host[i] = 0 || l2_scope_has(l2_own_host[i])) && l2_own_name[i] != 0 && l2_own_name[i]\length = n && memcmp(l2_own_name[i]\data, t\data + bs + 1U, n) = 0
-            if: hit >= 0
-                return: 0 - 1
-            hit: i
-        i: i + 1
-return: hit
+return: 0 - 1
 
 # Static proof for fixed-extent own INT/CHAR arrays. General indexing requires
 # throw: Bounds; an unsupported form gets no runtime sentinel substitute.
@@ -10334,9 +10310,22 @@ fn: l2_own_array_root (int: mi; const: @(LmP0Text left); const: @(LmP0Text right
         return: 0 - 1
     if: l2_text_eq(left, "for") != 0 || l2_text_eq(left, "node") != 0
         return: 0 - 1
-    if: l2_own_find(mi, left) < 0 && l2_formal_find(mi, left) < 0
-        return: 0 - 1
-return: l2_own_find(mi, right)
+    # FABLE-SONNET-ARRAY-WRITE-DISPATCH-20260923-119 (fable's correction to
+    # -117): a general own-field/formal root is a genuine path root
+    # (FABLE-SONNET-FIELD-PATHS-20260923-113) -- left\right denotes the
+    # field "right" OF left's Structure TYPE, never a same-named sibling in
+    # mi's own table (that reading is the "for"/"node" spelling-gate
+    # semantics, wrongly generalized here between -117 and -119). Resolving
+    # right as a genuine Array-typed field of left's type through the
+    # namespace slots, and indexing that cell, is a new capability (the
+    # field lives through l2_own_nsty_get/l2_ns_slot_named on left's type,
+    # not in mi's own table at all) this ticket does not build. Refusing
+    # here for every non-node/for root is the honest state: the caller
+    # falls back to the ordinary field-path machinery, which already gives
+    # "unknown field path segment" for this shape either way -- whether
+    # right names no field of the type at all, or names a real Array field
+    # this mechanism cannot yet address.
+return: 0 - 1
 
 fn: l2_ns_field_ref (int: ni; int: j) int
     int: k 0

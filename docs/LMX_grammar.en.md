@@ -861,6 +861,12 @@ Sources: §§4.0.1, 4.2.1, 4.6.1.
 
 An argument list is itself a Structure. P0 normalizes a sole anonymous container of the entire positional sequence into the list's own fields, independently of the head and emptiness. An anonymous Structure among other fields remains one field. A named argument can explicitly retain a Structure as one value.
 
+Headless fields are also valid in an executable body: a lone atom `f` or `2`, an atom/operator sequence `2 + 2`, a bounded anonymous Structure `(f)` or `(2 + 2)`, and an empty Structure `()` all follow the general P0 rules. An anonymous Structure written vertically preserves the same field order and boundaries; P0 neither rejects it for lacking a head nor decides whether its result is discarded. Ordinary Frames and expressions inside a bounded Structure remain separate fields, for example `( f: 1
+. f: 2
+. 2 * 2
+. f
+)` (dots indicate levels).
+
 A declaration profile may consume neighboring headless Structures as repetitions of the preceding template. A pointer template includes depth and base type; an array template includes the head shape and type prefix. The next segment may replace the type with its own valid storage type. This is a P0 normalization rule, not name lookup or profile-specific grouping; neighboring expressions do not disappear.
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 2709–2714.

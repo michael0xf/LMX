@@ -874,7 +874,7 @@ Provenance: `next_core_tasks.md` section 3 / universal binding priority (`GROK-B
 - **Norm:** accepted (design fixed at f559f9dd; implementation open — see next_core_tasks.md, subsection `### Expression statement и discard`)
 - **Implementation:** partial
 - **Verification:** none — the six-case probe set from the `### Expression statement и discard` subsection is not gated yet
-- **definition:** A receiverless body statement evaluates its span and discards the result to a typed `l2_tN` slot. `2+2` and bare data are control cases (already work); a bare nullary callable must invoke (side-effect observable); a nested call follows the same path; an unknown name must error; no access violation. Bare-atom execution remains separate from the P0 Frame tree-shape invariant in `next_parser_fix.md`.
+- **definition:** A receiverless body statement evaluates its span and discards the result to the already existing typed generated `l2_tN` destination, dead after the complete expression. The same body consumer covers lone `2`, bare `f`, `2 + 2`, bounded `(f)` and `(2 + 2)`, empty `()`, and the corresponding vertical anonymous Structure. Mixed Frame and headless fields execute in lexical order. Bare callable invocation is resolved by KIND, while bare data are evaluated without invocation; neither parentheses nor an empty Structure constitute an error or a separate semantic route. These are accepted rules, not claims that the current translator passes the full matrix. Bare-atom execution remains separate from the P0 Frame tree-shape invariant in `next_parser_fix.md`.
 - **invariants:**
   - Single shared `l2_eval_discard` / body-dispatch, not per-form branches
   - `l2_new_temp` (:9038–:9044) must become `l2_new_temp_ty(oty)` — today it emits `"%sint: l2_t%d\n"` unconditionally (no type parameter)
@@ -893,17 +893,17 @@ Provenance: `next_core_tasks.md` section 3 / universal binding priority (`GROK-B
   - Token emitter for new temp: `l2_tok_temp` — referenced by `l2_new_temp` at :9039, full range TBD
   - Call return type lookup: `l2_ret_uns` :4947–:4953, `l2_m_ret` array (base TBD in article)
 - **witnesses:** none — implementation is `absent`; the `### Expression statement и discard` subsection six-case probe set has no harness rows
-- **open gap to next_core_tasks.md:** the `### Expression statement и discard` subsection demand `l2_eval_discard` / shared body dispatch + the six-case fixture rows
-- **positive behavior:** `2+2`, bare data, bare callable side-effect, nested call, unknown-name error, no access violation — all observable via exit code + printed text
-- **forbidden / contrast:** FORBIDDEN: per-form name-specific branches; inventing a global `sizeof:`-style HOLD; `l2_new_temp` staying int-only; P0 tree-shape assertion (that decision is OPEN)
+- **open gap to next_core_tasks.md:** the `### Expression statement и discard` subsection requires `l2_eval_discard` / shared body dispatch plus both the initial six cases and the expanded anonymous-Structure matrix
+- **positive behavior:** `2`, `2 + 2`, `(2 + 2)`, `f`, `(f)`, `()`, anonymous vertical body, mixed four-field Structure, bare callable side effect, nested call, unknown-name error and no access violation — gate each with parser tree and/or observable runtime result as appropriate
+- **forbidden / contrast:** FORBIDDEN: per-form name-specific branches; inventing a global `sizeof:`-style HOLD; `l2_new_temp` staying int-only; treating the accepted P0 normalization as optional or CALL-only
 
 ## `discard-test-matrix`
 
 - **level:** L2 / `tools/l2_harness.ps1`
 - **Norm:** accepted — defines the six-case probe set from next_core_tasks.md, subsection `### Expression statement и discard`
-- **Implementation:** absent — fixtures exist as source files but have ZERO harness rows
+- **Implementation:** absent — dedicated `tb_discard_*` fixtures and harness rows still need to be created and verified on the current tree
 - **Verification:** fixture (must add harness rows)
-- **definition:** Six cases that exercise `l2_eval_discard` via the body-dispatch path. Must be gated — ungated `.lm2` files are never run, so the removal of any case is invisible to the gate.
+- **definition:** Initial six cases plus the author's expanded P0/native/interpreter matrix exercise one `l2_eval_discard` body-dispatch path. Cover lone `2`, bare `f`, `2 + 2`, `(f)`, `(2 + 2)`, `()`, the corresponding anonymous vertical form and the mixed form below; fixtures alone do not count until gated. With an explicitly typed `f` already in scope, the mixed source witness is `( f: 1 / . f: 2 / . 2 * 2 / . f )` (slashes denote line breaks): P0 must preserve four ordered fields, and runtime must execute both writes, evaluate/discard the multiplication, then consume bare `f` through the same resolver. The literal `1` does not infer `f`'s type.
 
 | Fixture file | Expect class | Needle / Says / Exit | Absent | Debt |
 |---|---|---|---|---|
@@ -914,6 +914,8 @@ Provenance: `next_core_tasks.md` section 3 / universal binding priority (`GROK-B
 | `tb_discard_unknown_name.lm2` | `l2trans-refuses` | **Needle: error text** — must NOT route through `runs`/`eternal-runs` (that class is green-on-refusal) | (empty — the refusal IS the assertion) | (none) |
 | `tb_discard_no_av.lm2` | `runs` | Exit 0; no crash, no segfault | `SIGSEGV` / `access violation` | (clean run proves no dangling deref) |
 
+Additional required witnesses, each with a current P0 dump and a real native/interpreter runtime assertion: lone `2`; `(2 + 2)` versus `2 + 2`; `(f)` versus bare `f` for both callable and non-callable bindings; empty `()`; and bounded versus vertical anonymous Structure. The mixed `( f: 1 / . f: 2 / . 2 * 2 / . f )` witness must additionally pin four P0 fields and observable sequencing. Use a declared `f` in the runtime context; do not treat `f: 1` as type inference. These cases may share a fixture only when its assertions still distinguish each operation and a failing gate localizes the fault.
+
 - **rows required by [`binding-kind`](#binding-kind) beyond the six** (same columns; counters are unit-level `int:` cells printed once at the end, so `Says` pins a number and no row asserts a P0 field count):
 
 | Fixture file | Expect class | Needle / Says / Exit | Purpose |
@@ -922,7 +924,7 @@ Provenance: `next_core_tasks.md` section 3 / universal binding priority (`GROK-B
 | `tb_call_fnptr_paren.lm2` / `_colon.lm2` / `_vertical.lm2` | `runs` | Exit 0; Says: counter 1 | invocation through the pointer in each Frame form gives the same count; the colon/vertical rows are the regression rows for the COMPACT gates `:11553` / `:14531` |
 | `tb_call_nonpath_empty_body.lm2` | `l2trans-refuses` | Needle: the call/assignment-role diagnostic | `x()` with `int: x` must NOT be classified a call by the empty-body clause of `l2_head_is_call` `:10215-10216` |
 
-- **harness rows:** Add six `[pscustomobject]` rows to `tools/l2_harness.ps1` `$fixtures` array with the `Expect` / `Needle` / `Says` / `Absent` / `Exit` columns named above. **A new .lm2 file is NOT coverage until its row exists.** The six cases map to the six Expect classes measured in the harness (eternal-runs 40, l2trans-refuses 21, runs 1, library-links 1) — four are `runs`, one is `l2trans-refuses`, one is `runs` with no-access-violation; `l2trans-refuses` MUST use Needle+refusal, not `runs` exit-code.
+- **harness rows:** Add the initial six `[pscustomobject]` rows and the expanded witnesses above to `tools/l2_harness.ps1` `$fixtures` array with the appropriate `Expect` / `Needle` / `Says` / `Absent` / `Exit` assertions. **A new .lm2 file is NOT coverage until its row exists.** `l2trans-refuses` MUST use Needle+refusal, not `runs` exit-code. Recount current harness classes from HEAD before claiming coverage.
 
 - **invariants**
   - `tb_discard_bare_callable`: side effect is the evidence of invocation, not any form-specific marker — bare callable resolves by the ordinary callable-first rule, invocation is proven by its observable effect, not by a form marker
@@ -934,10 +936,10 @@ Provenance: `next_core_tasks.md` section 3 / universal binding priority (`GROK-B
 - **links:** requires=[fnptr-value-discard](#fnptr-value-discard); [head-resolution](#head-resolution); [call-first](#call-first); [surface-form-equivalence](#surface-form-equivalence); produces=harness rows; consumes=body dispatch
 - **authoritative sources:** next_core_tasks.md, subsection `### Expression statement и discard`; AUTHOR-DISCARD-PLAN-20260922-01
 - **implementation (files/functions):** NEW FIXTURES only — no code change yet; harness rows go in tools/l2_harness.ps1 `$fixtures` array alongside lines :471–:473 (existing runs + l2trans-refuses rows)
-- **witnesses:** none — six new rows must be added; nothing globs `*.lm2`
+- **witnesses:** none for this expanded matrix — current harness must receive explicit rows; nothing globs `*.lm2`
 - **open gap to next_core_tasks.md:** the `### Expression statement и discard` subsection (shared `l2_eval_discard`); the six fixture rows must be ADDED to `$fixtures`, not found
 - **positive behavior:** each case asserts exactly one observable (exit, printed line, or Needle); no cross-case bundling
-- **forbidden / contrast:** FORBIDDEN: one row for multiple cases (failure cannot localize); `runs` class for a refused test; P0 tree-shape assertion; quoting verbatim ticket/provenance text into the row
+- **forbidden / contrast:** FORBIDDEN: a combined row whose assertions cannot localize a failing operation; `runs` class for a refused test; CALL-only P0 tree shape; quoting ticket/provenance text verbatim into a harness row
 
 ## `harness-coverage-census`
 

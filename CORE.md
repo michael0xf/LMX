@@ -255,6 +255,15 @@ named position remains a field. A bare `f` is an expression statement: a
 callable expression is invoked nullarily and a data expression is evaluated
 and discarded. The result can use a typed dead temporary; no special
 bare-name call rule is needed. Source-form flags are not semantic inputs.
+The same executable-body consumer accepts lone `2`, atom/operator spans such
+as `2 + 2`, bounded anonymous Structures `(f)` and `(2 + 2)`, empty `()`, and
+their corresponding anonymous vertical form. It visits mixed Frame and
+headless fields in lexical order, including `( f: 1 / . f: 2 / . 2 * 2 / . f )`
+(slashes here denote line breaks; `f` must already have an explicit type).
+There is no form-specific call or discard branch: the existing typed generated
+`l2_tN` is the destination for an unused non-void result and is dead after the
+complete expression. This describes the required route, not a claim that the
+current translator already lowers every case.
 The current P0 goldens and native/interpreter CALL-only unwrapping conflict
 with this rule; see `next_parser_fix.md`. Structural declaration such as
 `mystruct: ()` must use the same normalized body as `mystruct()` and the

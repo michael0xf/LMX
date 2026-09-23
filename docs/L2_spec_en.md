@@ -227,6 +227,8 @@ The minimal profile includes grouping; prefix `@`, `\`, `++`, `--`, `+`, `-`, `!
 
 `target[index]` consumes an index expression. It is not a repeated-field qualifier `target\[index]field` or the constructor head `[]:`. Target category determines how data are located without adding L2 bounds checks. Checked Array operations belong to L3; L2 provides machine access to the selected cell. Assignment neither appends a repeated field nor creates a namespace.
 
+In an executable body, headless `2`, `f`, `2 + 2`, `(f)`, `(2 + 2)`, and empty `()` are valid ordinary expressions or anonymous Structures. A bounded anonymous Structure and the corresponding vertical body are consumed in field order by one mechanism; named Frames and headless expressions within them are not lost. An expression without a destination is evaluated and its result discarded. Bare `f` invokes nullarily only if it resolves to a callable; a non-callable value is evaluated without invocation. No spelling infers a type from a literal or changes the general declaration, assignment, call, or admission rules.
+
 Control forms are `if`/`else`, `while`, `until`, `for(init, condition, step)`, `return`, `break`, `continue`, and [synchronized](#lowlevel-sync). Shared branch and loop rules are in [L3](LMX_semantics.en.md#branches); `match`, `each`, `retry`, and `yield` require separate L2 operations or a profile. Lowering to [L1](L1_spec_en.md#lowlevel-expression) preserves the distinction between graph updates and raw stores.
 
 <a id="lowlevel-sync"></a>

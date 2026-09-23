@@ -14392,9 +14392,12 @@ fn: l2_check_sizeof (const: @(LmP0Node node); int: mi; const: @(char path)) int
         return: 0
     if: a0\value\as\atom\length > 2U && a0\value\as\atom\data[0] = 99 && a0\value\as\atom\data[1] = 46
         return: 0
+    # D-10 (steps/defects.md): l2_own_find and l2_own_find_last differ only
+    # in WHICH own-scope match they return when several exist (first vs
+    # last); both share the exact same unit-fallback phase, so one finds
+    # nothing only where the other does too. This site only asks whether
+    # the name resolves at all -- a single try is enough.
     oi: l2_own_find(mi, a0\value\as\atom)
-    if: oi < 0
-        oi: l2_own_find_last(mi, a0\value\as\atom)
     if: oi >= 0
         return: 0
     if: l2_formal_find(mi, a0\value\as\atom) >= 0
@@ -14633,9 +14636,9 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
         if: idx >= 0
             return: l2_tok_formal(mi, idx, dest)
         ---
+        # D-10 (steps/defects.md): the l2_own_find fallback here was dead --
+        # see l2_check_sizeof's copy of this reasoning above.
         idx: l2_own_find_last(mi, node\as\atom)
-        if: idx < 0
-            idx: l2_own_find(mi, node\as\atom)
         if: idx >= 0 && l2_own_is_array(l2_own_ty[idx]) != 0
             return: l2_emit_array_ptr(idx, ind, dest)
         if: idx >= 0 && l2_m_uses[l2_own_off(mi, idx)] != 0

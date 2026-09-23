@@ -498,6 +498,10 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'entry_puts_empty.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'entry_puts_nl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Says = @('x', 'y'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'entry_puts_esc.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Says = @('a"b\c'); Absent = @(); Debt = @() },
+    # FABLE-126 part2: migrate/gate former c.array entry fixtures (owned []: char).
+    [pscustomobject]@{ Name = 'entry_array.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Absent = @('c.array'); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_array_leading_zero.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Absent = @('c.array'); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_nul.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Absent = @('c.array'); Debt = @() },
     # THE UNIT IS THE ENTRY (FABLE-OPUS-S2-UNIT-IS-ENTRY-20260923-112).  Every non-callable is
     # visible only after its declaration, methods both ways.  unit_s2_vis_dynamic: a method ABOVE a
     # unit field cannot see it, so the name is its dynamic input, handed over by its caller (wrap's

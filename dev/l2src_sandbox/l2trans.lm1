@@ -6766,17 +6766,29 @@ fn: l2_dyn_analyze (const: @(char path)) int
 return: 0
 
 
-# FABLE-GROKBOT-C-MEMBER-ACCESS-20260923-120 part1: a value typed c.* (or an
-# equivalent foreign intern / runtime-struct code) admits raw C member paths.
-# The translator does not know C struct layouts; the remainder of a \path is
-# emitted verbatim (-> or . follows from pointer vs by-value at the C seam).
+# FABLE-GROKBOT-C-MEMBER-ACCESS-20260923-120 part1 / FABLE-GROKBOT-RAW-MEMBER-ROOT-AND-7A-CLOSE-20260923-126 part1:
+# Raw C member paths fire ONLY when the root's resolved type is spelled c.*
+# (foreign intern whose name is not the Lmx Structure projection). Runtime
+# struct codes 28/29/30 stay raw. A Structure / own / formal / occurrence root
+# that also interns as foreign Lmx (ty >= 100) must NOT take this door -- the
+# L2 path dispatcher (l2_path_root / l2_emit_path) decides first.
+# Mutant: restore "if: ty >= 100 / return: 1" alone -- Model compound fixture
+# emits wrong literal C member access (RED).
 # Mutant: make this always return 0 -- c.LmP0Text fixtures refuse unsupported body.
 fn: l2_ty_raw_c_members (int: ty) int
+    int: i
     if: ty = 28 || ty = 29 || ty = 30
         return: 1
-    if: ty >= 100
-        return: 1
-return: 0
+    if: ty < 100
+        return: 0
+    i: ty - 100
+    if: i < 0 || i >= l2_foreign_n
+        return: 0
+    if: l2_foreign_name[i] = 0
+        return: 0
+    if: l2_text_eq(l2_foreign_name[i], "Lmx")
+        return: 0
+return: 1
 
 fn: l2_raw_path (const: @(char pd); size_t: pn; int: mi; @: int out_j; @: int out_fld) int
     size_t: i 0U
@@ -6814,7 +6826,8 @@ fn: l2_raw_path (const: @(char pd); size_t: pn; int: mi; @: int out_j; @: int ou
             if: pn - sl - 1U = 8U && memcmp(pd + sl + 1U, "capacity", 8U) = 0
                 \out_fld: 4
                 return: 0
-            return: 2
+            # Root matched a formal but is not c.*-raw: L2 dispatcher decides.
+            return: 1
         j: j + 1
     j: 0
     while: j < l2_m_sn[mi]
@@ -6842,7 +6855,8 @@ fn: l2_raw_path (const: @(char pd); size_t: pn; int: mi; @: int out_j; @: int ou
             if: pn - sl - 1U = 8U && memcmp(pd + sl + 1U, "capacity", 8U) = 0
                 \out_fld: 4
                 return: 0
-            return: 2
+            # Root matched a slot but is not c.*-raw: L2 dispatcher decides.
+            return: 1
         j: j + 1
     j: 0
     while: j < l2_ml_n

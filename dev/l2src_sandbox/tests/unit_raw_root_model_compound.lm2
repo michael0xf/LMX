@@ -1,0 +1,16 @@
+Model:
+    size_t: value 1U
+end: Model
+
+# FABLE-GROKBOT-RAW-MEMBER-ROOT-AND-7A-CLOSE-20260923-126 part1:
+# Structure-rooted path inside a compound expression must use the L2
+# dispatcher (l2_pst/l2_pxp), never raw C member access.
+fn: probe () int
+    Model: fresh
+    fresh\value: 9U
+    if: fresh\value != 9U
+        return: 11
+    return: 0
+end: probe
+
+return: probe()

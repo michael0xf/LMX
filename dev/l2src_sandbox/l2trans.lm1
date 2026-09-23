@@ -233,7 +233,6 @@ int: l2_need_stdlib 0
 @@: LmP0Node l2_m_node 0
 @@: LmP0Node l2_m_body 0
 @: unsigned l2_m_sig 0
-@: int l2_m_mark 0
 @: int l2_m_arity 0
 @: int l2_m_dyn 0
 @: int l2_m_ret 0
@@ -276,7 +275,6 @@ int: l2_alloc_live 0
 int: l2_alloc_fail_at 0
 int: l2_alloc_fail_kind 0
 int: l2_alloc_kind 0
-@: char l2_ptr_probe 0
 @: int l2_m_edge 0
 @: int l2_it_ar 0
 @: int l2_it_dyn 0
@@ -327,7 +325,6 @@ prototype:
     fn: l2_check_expr (const: @(LmP0Node node); int: mi; const: @(char path)) int
     fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); const: @(LmP0Node at)) int
     fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); int: depth) int
-    fn: l2_dfs (int: u) int
     fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest) int
     fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Structure body); int: mi; const: @(char path)) int
     fn: l2_atom_callee (const: @(LmP0Text t); int: mi; @: int fi) int
@@ -364,7 +361,6 @@ prototype:
     fn: l2_throws_close () int
     fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
     fn: l2_merge_scan (const: @(LmP0Structure body)) int
-    fn: l2_emit_expr (const: @(LmP0Node node); int: mi; const: @(char ind)) int
     fn: l2_emit_poll (int: mi; const: @(char ind)) int
     fn: l2_emit_checkpoint (int: mi; const: @(char ind)) int
     fn: l2_emit_sig (int: mi) int
@@ -390,7 +386,6 @@ prototype:
     fn: l2_colon_graph_ty () int
     fn: l2_colon_is_graph_ty (int: ty) int
     fn: l2_colon_bound_before (const: @(LmP0Structure body); const: @(LmP0Node stop); int: mi; const: @(LmP0Text name)) int
-    fn: l2_colon_value_bound (int: mi; const: @(LmP0Text name)) int
     fn: l2_colon_bound_ty (int: mi; const: @(LmP0Text name); @: int out_ty) int
     fn: l2_colon_simple_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
     fn: l2_colon_types_compatible (int: target_ty; int: value_ty) int
@@ -428,7 +423,6 @@ prototype:
     fn: l2_own_ctr (int: oi) const: @: char
     fn: l2_emit_addr_mark (int: mi; int: k; const: @(char ind)) int
     fn: l2_emit_bind_mark (int: mi; int: oi; const: @(char ind)) int
-    fn: l2_dyn_analyze (const: @(char path)) int
     fn: l2_dyn_local (const: @(char path)) int
     fn: l2_dyn_close (const: @(char path)) int
     fn: l2_dyn_step (const: @(char path); @: int changed) int
@@ -455,7 +449,6 @@ prototype:
     fn: l2_unimpl_numeric (const: @(LmP0Node stmt)) const: @: char
     fn: l2_own_array_pointer_ty (const: @(LmP0Node stmt)) int
     fn: l2_own_decl_name (const: @(LmP0Node stmt)) @: LmP0Text
-    fn: l2_unit_decl_name (const: @(LmP0Node stmt)) @: LmP0Text
     fn: l2_own_is_array (int: ty) int
     fn: l2_own_is_pointer (int: ty) int
     fn: l2_has_pointer_array () int
@@ -468,7 +461,6 @@ prototype:
     fn: l2_array_count_is (const: @(LmP0Text t)) int
     fn: l2_literal_value (const: @(LmP0Text t)) size_t
     fn: l2_ns_find (const: @(LmP0Text t)) int
-    fn: l2_ident_payload (const: @(LmP0Text atom); @: LmP0Text out) int
     fn: l2_payload_eq (const: @(LmP0Text atom); const: @(char s)) int
     fn: l2_ns_find_payload (const: @(LmP0Text t)) int
     fn: l2_ns_has_field (int: ni; const: @(char name)) int
@@ -501,7 +493,6 @@ prototype:
     fn: l2_ebr_find (const: @(LmP0Text t)) int
     fn: l2_emit_ns_num_cell (int: k; int: oi; int: fx) int
     fn: l2_ns_rank (int: ni) int
-    fn: l2_ns_in_eternal (int: ni) int
     fn: l2_ns_top_count () int
     fn: l2_ns_field_in_parent (int: ni) int
     fn: l2_ns_push (const: @(LmP0Text name); int: parent; const: @(LmP0Node at)) int
@@ -583,7 +574,6 @@ prototype:
     fn: l2_emit_implicit_throw (int: mi; const: @(char name); const: @(char ind)) int
     fn: l2_emit_propagate (int: mi; int: callee; int: t; const: @(char ind)) int
     fn: l2_emit_invariant (const: @(char ind); const: @(char what)) int
-    fn: l2_ns_field_elem (int: ni; int: j) int
     fn: l2_ns_field_mi (int: ni; int: j) int
     fn: l2_ns_field_kind (int: ni; int: j) int
     fn: l2_ns_field_ref (int: ni; int: j) int
@@ -641,7 +631,6 @@ prototype:
     fn: l2_text_skip (const: @(LmP0Text t); size_t: n) @: LmP0Text
     fn: l2_ptr_local_ty (const: @(LmP0Node stmt); @@: LmP0Text out_name; @: int out_ty) int
     fn: l2_const_local_ty (const: @(LmP0Node stmt); @@: LmP0Text out_name; @: int out_ty) int
-    fn: l2_diag_field (const: @(LmP0Text t)) int
     fn: l2_foreign_intern (const: @(LmP0Text name); int: depth; int: is_const) int
     fn: l2_predef_has_fnptr (const: @(LmP0Text name)) int
     fn: l2_predef_has_type (const: @(LmP0Text name)) int
@@ -665,7 +654,6 @@ prototype:
     fn: l2_emit_foreign_return (@: FILE out; int: ty) int
     fn: l2_emit_foreign_formal (@: FILE out; int: ty; int: mi; int: fi) int
     fn: l2_ret_uns (int: mi) int
-    fn: l2_write_dirs (@: FILE out) int
     fn: l2_emit_os (@: FILE out) int
     fn: l2_check_os (const: @(LmP0Node item); const: @(char path)) int
     fn: l2_array_local (const: @(LmP0Node stmt); @@: LmP0Text out_name; @@: LmP0Text out_n) int
@@ -827,23 +815,6 @@ fn: l2_ns_rank (int: ni) int
         i: i + 1
     ---
 return: r
-
-# Is this namespace entry INSIDE a qualified eternal branch?  l2_ns_eternal is set on the ROOT
-# alone -- the declaration does l2_ns_eternal[root] = l2_ebr_n -- so a nested member answers by
-# the chain it hangs from, never by itself, and asking l2_ns_eternal[k] of a member would call
-# every member of an eternal branch ordinary.
-fn: l2_ns_in_eternal (int: ni) int
-    int: at ni
-    if: at < 0
-        return: 0
-    ---
-    while: l2_ns_parent[at] >= 0
-        at: l2_ns_parent[at]
-    ---
-    if: l2_ns_eternal[at] >= 0
-        return: 1
-    ---
-return: 0
 
 fn: l2_ns_top_count () int
     int: i 0
@@ -1486,8 +1457,6 @@ fn: l2_meth_free () int
         l2_xfree((cast: (@: void) l2_m_body))
     if: l2_m_sig != 0
         l2_xfree((cast: (@: void) l2_m_sig))
-    if: l2_m_mark != 0
-        l2_xfree((cast: (@: void) l2_m_mark))
     if: l2_m_arity != 0
         l2_xfree((cast: (@: void) l2_m_arity))
     if: l2_m_dyn != 0
@@ -1524,7 +1493,6 @@ fn: l2_meth_free () int
     l2_m_node: 0
     l2_m_body: 0
     l2_m_sig: 0
-    l2_m_mark: 0
     l2_m_arity: 0
     l2_m_dyn: 0
     l2_m_ret: 0
@@ -1567,7 +1535,6 @@ fn: l2_meth_reserve (int: need) int
     @@: LmP0Node nnode 0
     @@: LmP0Node nbody 0
     @: unsigned nsig 0
-    @: int nmark 0
     @: int narity 0
     @: int ndyn 0
     @: int nret 0
@@ -1646,7 +1613,6 @@ fn: l2_meth_reserve (int: need) int
     nnode: (cast: (@@: LmP0Node) l2_xmalloc(nb))
     nbody: (cast: (@@: LmP0Node) l2_xmalloc(nb))
     nsig: (cast: (@: unsigned) l2_xmalloc(nu))
-    nmark: (cast: (@: int) l2_xmalloc(ni))
     narity: (cast: (@: int) l2_xmalloc(ni))
     ndyn: (cast: (@: int) l2_xmalloc(ni))
     nret: (cast: (@: int) l2_xmalloc(ni))
@@ -1661,7 +1627,7 @@ fn: l2_meth_reserve (int: need) int
     nedge: (cast: (@: int) l2_xmalloc(nedge_n * c.sizeof(c.int)))
     nslots: (cast: (@@: LmP0Text) l2_xmalloc(nslot * psz))
     nst: (cast: (@: int) l2_xmalloc(nslot * c.sizeof(c.int)))
-    if: nname = 0 || nf0 = 0 || nf1 = 0 || nnode = 0 || nbody = 0 || nsig = 0 || nmark = 0 || narity = 0 || ndyn = 0 || nret = 0 || nown = 0 || nsn = 0 || nhcap = 0 || nfcap = 0 || ndn = 0 || ndt = 0 || nfn = 0 || nft = 0 || nedge = 0 || nslots = 0 || nst = 0
+    if: nname = 0 || nf0 = 0 || nf1 = 0 || nnode = 0 || nbody = 0 || nsig = 0 || narity = 0 || ndyn = 0 || nret = 0 || nown = 0 || nsn = 0 || nhcap = 0 || nfcap = 0 || ndn = 0 || ndt = 0 || nfn = 0 || nft = 0 || nedge = 0 || nslots = 0 || nst = 0
         if: nname != 0
             l2_xfree((cast: (@: void) nname))
         if: nf0 != 0
@@ -1674,8 +1640,6 @@ fn: l2_meth_reserve (int: need) int
             l2_xfree((cast: (@: void) nbody))
         if: nsig != 0
             l2_xfree((cast: (@: void) nsig))
-        if: nmark != 0
-            l2_xfree((cast: (@: void) nmark))
         if: narity != 0
             l2_xfree((cast: (@: void) narity))
         if: ndyn != 0
@@ -1711,7 +1675,6 @@ fn: l2_meth_reserve (int: need) int
     memset((cast: (@: void) nnode), 0, nb)
     memset((cast: (@: void) nbody), 0, nb)
     memset((cast: (@: void) nsig), 0, nu)
-    memset((cast: (@: void) nmark), 0, ni)
     memset((cast: (@: void) narity), 0, ni)
     memset((cast: (@: void) ndyn), 0, ni)
     memset((cast: (@: void) nret), 0, ni)
@@ -1735,7 +1698,6 @@ fn: l2_meth_reserve (int: need) int
         nnode[i]: l2_m_node[i]
         nbody[i]: l2_m_body[i]
         nsig[i]: l2_m_sig[i]
-        nmark[i]: l2_m_mark[i]
         narity[i]: l2_m_arity[i]
         ndyn[i]: l2_m_dyn[i]
         nret[i]: l2_m_ret[i]
@@ -1781,7 +1743,6 @@ fn: l2_meth_reserve (int: need) int
             l2_xfree((cast: (@: void) nnode))
             l2_xfree((cast: (@: void) nbody))
             l2_xfree((cast: (@: void) nsig))
-            l2_xfree((cast: (@: void) nmark))
             l2_xfree((cast: (@: void) narity))
             l2_xfree((cast: (@: void) ndyn))
             l2_xfree((cast: (@: void) nret))
@@ -1813,7 +1774,6 @@ fn: l2_meth_reserve (int: need) int
             l2_xfree((cast: (@: void) nnode))
             l2_xfree((cast: (@: void) nbody))
             l2_xfree((cast: (@: void) nsig))
-            l2_xfree((cast: (@: void) nmark))
             l2_xfree((cast: (@: void) narity))
             l2_xfree((cast: (@: void) ndyn))
             l2_xfree((cast: (@: void) nret))
@@ -1872,8 +1832,6 @@ fn: l2_meth_reserve (int: need) int
         l2_xfree((cast: (@: void) l2_m_body))
     if: l2_m_sig != 0
         l2_xfree((cast: (@: void) l2_m_sig))
-    if: l2_m_mark != 0
-        l2_xfree((cast: (@: void) l2_m_mark))
     if: l2_m_arity != 0
         l2_xfree((cast: (@: void) l2_m_arity))
     if: l2_m_dyn != 0
@@ -1908,7 +1866,6 @@ fn: l2_meth_reserve (int: need) int
     l2_m_node: nnode
     l2_m_body: nbody
     l2_m_sig: nsig
-    l2_m_mark: nmark
     l2_m_arity: narity
     l2_m_dyn: ndyn
     l2_m_ret: nret
@@ -2144,15 +2101,6 @@ fn: l2_write_sym (@: FILE out; int: i) int
     if: l2_library_mode != 0 && c.fprintf(out, "l2_u%08X%08X_m%d", l2_module_hash_a, l2_module_hash_b, i) < 0
         return: 1
     if: l2_library_mode = 0 && c.fprintf(out, "l2_m%d", i) < 0
-        return: 1
-return: 0
-
-fn: l2_tok_sym (int: i; @: char dest) int
-    if: dest = 0
-        return: 1
-    if: l2_library_mode != 0 && c.sprintf(dest, "l2_u%08X%08X_m%d", l2_module_hash_a, l2_module_hash_b, i) < 0
-        return: 1
-    if: l2_library_mode = 0 && c.sprintf(dest, "l2_m%d", i) < 0
         return: 1
 return: 0
 
@@ -2533,60 +2481,6 @@ fn: l2_quoted (const: @(LmP0Text t)) int
         return: 0
 return: 1
 
-fn: l2_write_l1_string (@: FILE out; const: @(char data); size_t: n) int
-    size_t: i 0U
-    int: ch
-    c.array: []: char oct 5
-    if: out = 0
-        return: 1
-    if: c.fputc(34, out) < 0
-        return: 1
-    while: i < n
-        ch: (cast: (int) data[i])
-        if: ch < 0
-            ch: ch + 256
-        if: ch = 34 && fputs("\\\"", out) < 0
-            return: 1
-        if: ch = 34
-            i: i + 1U
-            continue
-        if: ch = 92 && fputs("\\\\", out) < 0
-            return: 1
-        if: ch = 92
-            i: i + 1U
-            continue
-        if: ch = 10 && fputs("\\n", out) < 0
-            return: 1
-        if: ch = 10
-            i: i + 1U
-            continue
-        if: ch = 13 && fputs("\\r", out) < 0
-            return: 1
-        if: ch = 13
-            i: i + 1U
-            continue
-        if: ch = 63 && fputs("\\?", out) < 0
-            return: 1
-        if: ch = 63
-            i: i + 1U
-            continue
-        if: ch < 32 || ch > 126
-            oct[0]: 92
-            oct[1]: (cast: (char) (48 + (ch / 64)))
-            oct[2]: (cast: (char) (48 + ((ch / 8) % 8)))
-            oct[3]: (cast: (char) (48 + (ch % 8)))
-            oct[4]: 0
-            if: fputs(oct, out) < 0
-                return: 1
-            i: i + 1U
-            continue
-        if: c.fputc(ch, out) < 0
-            return: 1
-        i: i + 1U
-    if: c.fputc(34, out) < 0
-        return: 1
-return: 0
-
 fn: l2_decode_triple_body (const: @(LmP0Text t); @@: char outp; @: size_t outn) int
     @: char buf 0
     size_t: nfen
@@ -2703,18 +2597,6 @@ fn: l2_fmt_l1_string (@: char dest; size_t: cap; const: @(char data); size_t: n)
     dest[o]: 34
     dest[o + 1U]: 0
 return: 0
-
-fn: l2_write_triple_as_l1 (@: FILE out; const: @(LmP0Text t)) int
-    @: char buf 0
-    size_t: n 0U
-    int: rc
-    if: l2_decode_triple_body(t, @ buf, @ n) != 0
-        return: 1
-    if: buf = 0
-        return: l2_write_l1_string(out, "", 0U)
-    rc: l2_write_l1_string(out, buf, n)
-    l2_xfree((cast: (@: void) buf))
-return: rc
 
 fn: l2_write_text (@: FILE out; const: @(LmP0Text t)) int
     if: out = 0 || t = 0 || t\data = 0
@@ -5085,13 +4967,6 @@ fn: l2_ptr_local_ty (const: @(LmP0Node stmt); @@: LmP0Text out_name; @: int out_
         return: 2
 return: 2
 
-fn: l2_diag_field (const: @(LmP0Text t)) int
-    if: t = 0
-        return: 0
-    if: l2_text_eq(t, "code") || l2_text_eq(t, "line") || l2_text_eq(t, "column") || l2_text_eq(t, "message")
-        return: 1
-return: 0
-
 fn: l2_const_local_ty (const: @(LmP0Node stmt); @@: LmP0Text out_name; @: int out_ty) int
     @: LmP0Field f
     const: @: LmP0Node inner
@@ -5153,31 +5028,6 @@ fn: l2_ret_uns (int: mi) int
     if: mi < 0 || l2_m_ret = 0
         return: 0
     if: l2_m_ret[mi] = 2 || l2_m_ret[mi] = 30 || l2_m_ret[mi] = 33 || l2_m_ret[mi] = 36
-        return: 1
-return: 0
-
-fn: l2_write_dirs (@: FILE out) int
-    int: j 0
-    if: out = 0
-        return: 1
-    while: j < l2_pd_n
-        if: fputs("predef: ", out) < 0
-            return: 1
-        if: l2_write_text(out, l2_pd[j]) != 0
-            return: 1
-        if: fputs("\n", out) < 0
-            return: 1
-        j: j + 1
-    j: 0
-    while: j < l2_inc_n
-        if: j = 0 && fputs("include:", out) < 0
-            return: 1
-        if: fputs(" ", out) < 0
-            return: 1
-        if: l2_write_text(out, l2_inc[j]) != 0
-            return: 1
-        j: j + 1
-    if: l2_inc_n != 0 && fputs("\n", out) < 0
         return: 1
 return: 0
 
@@ -5561,17 +5411,6 @@ fn: l2_colon_bound_before (const: @(LmP0Structure body); const: @(LmP0Node stop)
                 ---
             f: l2_next_active(f\next)
         ---
-    if: l2_ns_find(name) >= 0 || l2_ebr_find(name) >= 0 || l2_mres_find(name) >= 0 || l2_find_method(name) >= 0 || l2_is_known(name)
-        return: 1
-return: 0
-
-fn: l2_colon_value_bound (int: mi; const: @(LmP0Text name)) int
-    if: name = 0
-        return: 0
-    if: l2_num(name) || l2_signed_num(name) || l2_quoted(name)
-        return: 1
-    if: (l2_param_find(mi, name) >= 0 || l2_own_find(mi, name) >= 0 || l2_slot_find(mi, name) >= 0 || l2_ml_find(name) >= 0)
-        return: 1
     if: l2_ns_find(name) >= 0 || l2_ebr_find(name) >= 0 || l2_mres_find(name) >= 0 || l2_find_method(name) >= 0 || l2_is_known(name)
         return: 1
 return: 0
@@ -7147,11 +6986,6 @@ fn: l2_dyn_close (const: @(char path)) int
             return: 1
 return: l2_dyn_typed(path)
 
-fn: l2_dyn_analyze (const: @(char path)) int
-    if: l2_dyn_local(path) != 0
-        return: 1
-return: 0
-
 
 # FABLE-GROKBOT-C-MEMBER-ACCESS-20260923-120 part1 / FABLE-GROKBOT-RAW-MEMBER-ROOT-AND-7A-CLOSE-20260923-126 part1:
 # Raw C member paths fire ONLY when the root's resolved type is spelled c.*
@@ -8082,17 +7916,6 @@ fn: l2_own_decl_ty (const: @(LmP0Node stmt)) int
     if: l2_ident(f\value\as\atom) = 0
         return: 0
 return: ty
-
-fn: l2_unit_decl_name (const: @(LmP0Node stmt)) @: LmP0Text
-    @: LmP0Text name 0
-    int: ty 0
-    if: l2_own_decl_ty(stmt) != 0
-        return: l2_own_decl_name(stmt)
-    if: l2_ptr_local_ty(stmt, @ name, @ ty) = 0
-        return: name
-    if: l2_const_local_ty(stmt, @ name, @ ty) = 0
-        return: name
-return: 0
 
 fn: l2_own_is_array (int: ty) int
     if: ty = 4 || ty = 5 || ty = 7 || ty = 8 || ty = 37 || ty >= 2000
@@ -9195,18 +9018,6 @@ fn: l2_ns_find (const: @(LmP0Text t)) int
         i: i + 1
     ---
 return: 0 - 1
-
-# Backtick-quoted identifier payload (parser_text lm_p0_identifier_payload).
-fn: l2_ident_payload (const: @(LmP0Text atom); @: LmP0Text out) int
-    if: atom = 0 || out = 0 || atom\data = 0
-        return: 0
-    out\data: atom\data
-    out\length: atom\length
-    if: atom\length >= 2U && atom\data[0] = 96 && atom\data[atom\length - 1U] = 96
-        out\data: atom\data + 1U
-        out\length: atom\length - 2U
-    ---
-return: 1
 
 fn: l2_payload_eq (const: @(LmP0Text atom); const: @(char s)) int
     const: @(char data)
@@ -11074,20 +10885,6 @@ fn: l2_ns_field_len (int: ni; int: j) size_t
         k: k + 1
     ---
 return: 0U
-
-fn: l2_ns_field_elem (int: ni; int: j) int
-    int: k 0
-    int: slotix 0
-    while: k < l2_nsf_n
-        if: l2_nsf_owner[k] = ni && slotix = j && l2_nsf_kind[k] = 5
-            return: l2_nsf_ref[k]
-        if: l2_nsf_owner[k] = ni && slotix = j
-            return: 0 - 1
-        if: l2_nsf_owner[k] = ni
-            slotix: slotix + 1
-        k: k + 1
-    ---
-return: 0 - 1
 
 fn: l2_ns_field_mi (int: ni; int: j) int
     int: k 0
@@ -13988,20 +13785,6 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             field: l2_next_active(field\next)
 return: 0
 
-fn: l2_dfs (int: u) int
-    int: v 0
-    if: l2_m_mark[u] = 1
-        return: 1
-    if: l2_m_mark[u] = 2
-        return: 0
-    l2_m_mark[u]: 1
-    while: v < l2_m_n
-        if: l2_m_edge[l2_edge_off(u, v)] != 0 && l2_dfs(v) != 0
-            return: 1
-        v: v + 1
-    l2_m_mark[u]: 2
-return: 0
-
 fn: l2_parse_unit (const: @(char path)) int
     int: i 0
     # Merge result names are reserved here, before any statement is checked: a
@@ -15932,9 +15715,6 @@ fn: l2_emit_sig (int: mi) int
     if: l2_ret_uns(mi) = 0 && ret_ty != 3 && ret_ty != 5 && ret_ty != 8 && ret_ty != 10 && ret_ty != 13 && ret_ty != 16 && ret_ty != 32 && ret_ty != 35 && ret_ty < 100 && fputs(") int", l2_out) < 0
         return: 1
 return: 0
-
-fn: l2_emit_expr (const: @(LmP0Node node); int: mi; const: @(char ind)) int
-return: l2_prep(node, mi, ind, l2_tok)
 
 # Public C/L1 adapter signature for a source method. The fixed lexical space
 # above the method and selected occurrence remain internal ABI arguments and

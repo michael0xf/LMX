@@ -5764,6 +5764,9 @@ int lm_p0_normalize_sole_anonymous_container(LmP0Structure * body)
     if (container -> kind != LM_P0_NODE_STRUCTURE) {
     return 1;
     }
+    if ((container -> flags & (LM_P0_NODE_INACTIVE | LM_P0_NODE_MIX | LM_P0_NODE_POSITIONAL_SKIP)) != 0U) {
+    return 1;
+    }
     if (container -> as == 0 || container -> as -> structure == 0) {
     return 1;
     }

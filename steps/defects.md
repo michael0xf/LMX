@@ -20,7 +20,7 @@
 | D-12 | 2026-09-23, Opus S3 | `dev/l2src_sandbox/printTree.lm2` и `l2src/printTree.lm2` — документный пример на старом `fn: main (int: argc; @@: char argv)`; ничем не собирается; L2-спека §18.2 ссылается | Codex | OPEN |
 | D-13 | 2026-09-23, Opus S3 | `address_array_element_sum.lm2` — тот же устаревший own-array случай `@ buf[i]`, что удалённая `address_array_element.lm2` | Sonnet | OPEN (own-array follow-up §4/§5) |
 | D-14 | 2026-09-23, Opus -136 | Книга §14: пример t2 ставит `checkedGreeting(...)` внутрь обработчика, в оригинале `t2.lmx` вызов на уровне catch после обработчика | Codex | IN WORK FABLE-CODEX-BOOK-T2-20260923-01 (pipe Codex лежит — очередь у lmx_uds) |
-| D-15 | 2026-09-24, Opus -138 | Именованная Structure не принимает поле `int:` (`l2_ns_field_kind` :10913: только size_t/char/вложенная/`Name: field`/fn/массивы) — `int: greeting 0` читается как Structure-ссылка и отвергается | Sonnet | OPEN |
+| D-15 | 2026-09-24, Opus -138 | Именованная Structure не принимает поле `int:` (`l2_ns_field_kind` :10913: только size_t/char/вложенная/`Name: field`/fn/массивы) — `int: greeting 0` читается как Structure-ссылка и отвергается | Sonnet | FIXED (см. F-16) |
 | D-16 | 2026-09-24, Opus -138 | Мёртвый реестр P0 `lm_p0_registry_*` (6 заглушек, всегда 0; вызовы :653/:658/:4652) и переменные `LM_*_REGISTRY`, которые все раннеры очищают, но никто не читает | Opus | OPEN (в -139 к.3, если строгий no-op; иначе отдельно) |
 | D-18 | 2026-09-24, автор | Дублёр типа: `LmxByteArray`/`LmxByteDynamicArray` (-134) для `{size_t len; char *data}` — по норме это `LmxCharArray` (тип строкового литерала с точной `len`, без NUL), один тип на элемент char | Grok | IN WORK -140 (переименование первым коммитом) |
 | D-17 | 2026-09-23 | Канал `codex_inbound.py` → Codex (pipe `codex-browser-use`) лежит; ответы Codex стоят в очереди у lmx_uds | инфраструктура/автор | OPEN |
@@ -44,3 +44,4 @@
 | F-13 | Результат predef C-функции не присваивался («unknown type») | `790258b` (-137 ч.3) |
 | F-14 | Mix-узел `{...}` разворачивался нормализацией единственного контейнера | `e446835` (-127 PART1b) |
 | F-15 | Таблица имён типов заголовков l1trans 64/4096 на пределе → 128/8192, перепин | `9bacfd0` (-134) |
+| F-16 | D-15: именованная Structure не принимала поля `int:`/`unsigned:`/`ulong:` (цепочка `l2_take_ns_body` без этих звеньев → «a Structure reference field needs a name») | -141 D-15 (Sonnet `3b669cb`, на main следующим SHA) |

@@ -520,6 +520,31 @@ $fixtures = @(
         Absent = @(); Debt = @('# entry statements: 0') },
     [pscustomobject]@{ Name = 'unit_s2_stray_end_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'stray trailer: the frame above is already closed'; Absent = @(); Debt = @() },
+    # S3 (FABLE-OPUS-S3-MAIL-ARGS-20260923-122, author Q10): C main posts argv to R0 inside ONE
+    # letter; `nextMessage: m` takes the next admitted letter of the current Thread (0 when the
+    # inbox is empty).  Every eternal-runs row checks at close how many letters R0 still holds
+    # (`Letters`, default 1: the argv letter untaken) and that close released them (P5).
+    [pscustomobject]@{ Name = 'unit_next_message_twice.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0;
+        Absent = @(); Debt = @('l2_nmsg: (cast: (@: LmxMsg) lmx_thread_mail_take(lmx_thread_current(), c.LMX_POST_INBOX))') },
+    [pscustomobject]@{ Name = 'unit_next_message_loop.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_next_message_in_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_next_message_method_first.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Absent = @('lmx_thread_mail_take'); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_next_message_one_name.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'nextMessage binds one name'; Absent = @(); Debt = @() },
+    # A letter's graph has no static Structure type: into a typed binding it is an unadmitted
+    # graph rebinding, fail-closed as `a: b` is.
+    [pscustomobject]@{ Name = 'unit_next_message_typed_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'graph assignment admission requires receiving-expression tests'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_argc.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0; Argv = @('one', 'two');
+        Absent = @(); Debt = @() },
+    # The former main-signature refusals test ordinary method formals now (L2 has no main, S2).
+    [pscustomobject]@{ Name = 'entry_argc_bad.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'unknown type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_argc_dup.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'duplicate formal'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_bad_sig.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'incompatible entry signature'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_two_main.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'duplicate definition'; Absent = @(); Debt = @() },
     # The unit's fields are E's own fields: a second typed declaration of one name in one scope is
     # refused, at unit level as in a method body (before S2 only the unit said so).  And E is the
     # root of every activation: a callee's dynamic input that E does not bind stops at E and is
@@ -1376,6 +1401,11 @@ foreach ($fx in $fixtures) {
         # The expected entry value travels as the driver fact `entry N` (default 0, the fixtures' pass).
         $runArgs = @($fx.Args)
         if ($fx.PSObject.Properties['Entry']) { $runArgs = $runArgs + @('entry', [string]$fx.Entry) }
+        # S3: C main posts argv to R0 inside a letter.  `Letters` is how many letters R0 still holds
+        # at close (default 1: the argv letter, untaken; close must release it); `Argv` is the
+        # program's own arguments, given to it after `--` (its argv[0] is the driver's).
+        if ($fx.PSObject.Properties['Letters']) { $runArgs = $runArgs + @('letters', [string]$fx.Letters) }
+        if ($fx.PSObject.Properties['Argv']) { $runArgs = $runArgs + @('--') + @($fx.Argv) }
         $ran = Invoke-Step ('fixture.' + $stem + '.run') $exe $runArgs $bin
         $said = ((Log-Text ('fixture.' + $stem + '.run')) -split "`r?`n" | Where-Object { $_ -match '^l2_eternal_driver: \d+ checks' } | Select-Object -Last 1)
         # A run that completed but whose entry returned nonzero is a RESULT failure, named as such.

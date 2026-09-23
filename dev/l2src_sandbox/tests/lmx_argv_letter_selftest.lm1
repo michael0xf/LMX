@@ -1,0 +1,169 @@
+predef: "l2src/lmx_root.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# THE ARGV LETTER (S3, FABLE-OPUS-S3-MAIL-ARGS-20260923-122; author, Q10).  The generated C main
+# puts the process arguments INTO a letter -- a root Structure whose one field, mainArgs, is an
+# Array of references to char Arrays, argv[i] with its NUL -- built in the letter's own full arena
+# and posted to R0 by the ordinary mail pair before the first turn.  This selftest builds the same
+# letter by the same acts and witnesses both ends of it:
+#   A. untaken: R0's turn takes nothing; close releases the donor arena (P5), so that arena is
+#      empty afterwards, and R0 never owned the letter;
+#   B. taken: the turn takes it as `nextMessage:` does (lmx_thread_mail_take on the current
+#      Thread); the owner attached the arena before exposing the letter, and R0 then reads an
+#      Array of char Arrays holding exactly the bytes C passed.  That read is made inside the
+#      turn: nothing here keeps the letter reachable from R0's graph afterwards (a program keeps
+#      it in its own field `m`), so the end-turn collection may take it.
+
+int: al_take 0
+int: al_calls 0
+@: LmxMsg al_letter 0
+int: al_owned 0
+int: al_shape 0
+int: al_success 0
+@@: char al_words 0
+
+sub: al_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: al_check
+
+# The letter exactly as the generated C main builds it.
+fn: al_make (@: LmxArena arena; int: argc; @@: char argv) @: LmxMsg
+    @: LmxMsg letter
+    @: Lmx graph
+    @: LmxArrayDesc args
+    @: LmxArrayDesc arg
+    @@: void slots
+    size_t: len
+    int: i 0
+    letter: (cast: (@: LmxMsg) lmx_arena_take(arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    graph: lmx_node_new_owned(arena)
+    args: lmx_array_ref_new_owned(c.LMX_TYPE_ARRAY_OF_DESC, (cast: (size_t) argc), arena)
+    if: letter = 0 || graph = 0 || args = 0 || lmx_arena_refs_open_owned(arena, graph, 1U) != 0
+        return: 0
+    slots: (cast: (@@: void) args\data)
+    while: i < argc
+        len: strlen(argv[i]) + 1U
+        arg: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, len, arena)
+        if: arg = 0
+            return: 0
+        memcpy(arg\data, (cast: (@: void) argv[i]), len)
+        slots[i]: (cast: (@: void) arg)
+        i: i + 1
+    ---
+    if: lmx_arena_ref_store(graph, 0U, (cast: (@: void) args)) != 0
+        return: 0
+    letter\running: 1
+    letter\success: 0
+    letter\handoff_ready: 0
+    letter\graph: graph
+return: letter
+
+# The letter's graph is an independent Structure with one field: an Array of references to char
+# Arrays, classified as such in `arena`, holding exactly these words with their NUL.
+fn: al_holds (@: LmxArena arena; @: Lmx graph; int: argc; @@: char argv) int
+    @: LmxArrayDesc args
+    @: LmxArrayDesc arg
+    @@: void slots
+    int: i 0
+    if: graph = 0 || graph\parent != 0 || graph\len != 1
+        return: 0
+    args: (cast: (@: LmxArrayDesc) lmx_arena_ref_value(graph, 0U))
+    if: args = 0 || args\len != (cast: (size_t) argc)
+        return: 0
+    if: lmx_domain_kind(arena, (cast: (@: void) args)) != c.LMX_KIND_ARRAY || lmx_domain_type(arena, (cast: (@: void) args)) != c.LMX_TYPE_ARRAY_OF_DESC
+        return: 0
+    slots: (cast: (@@: void) args\data)
+    while: i < argc
+        arg: (cast: (@: LmxArrayDesc) slots[i])
+        if: arg = 0 || lmx_domain_type(arena, (cast: (@: void) arg)) != c.LMX_TYPE_ARRAY_OF_CHAR
+            return: 0
+        if: arg\len != strlen(argv[i]) + 1U || memcmp(arg\data, (cast: (@: void) argv[i]), arg\len) != 0
+            return: 0
+        i: i + 1
+    ---
+return: 1
+
+fn: al_entry (@: Lmx node) int
+    @: void taken
+    @: LmxThread t
+    al_calls: al_calls + 1
+    if: al_take = 0
+        return: 0
+    t: lmx_thread_current()
+    taken: lmx_thread_mail_take(t, c.LMX_POST_INBOX)
+    al_letter: (cast: (@: LmxMsg) taken)
+    if: taken != 0 && t != 0 && t\slot != 0 && lmx_range_classify(t\slot\arena, taken) = c.LMX_DOMAIN_KIND_MSG_RECORD
+        al_owned: 1
+        al_shape: al_holds(t\slot\arena, al_letter\graph, 3, al_words)
+        al_success: (cast: (int) al_letter\success)
+    ---
+return: 0
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    @@: char words (cast: (@@: char) calloc(3U, c.sizeof(@: char)))
+    LmxRoot: root
+    LmxRoot: taker
+    LmxArena: untaken_arena
+    LmxArena: taken_arena
+    @: LmxArena untaken_at
+    @: LmxArena taken_at
+    @: LmxMsg letter 0
+    int: failures
+    if: counts = 0 || words = 0
+        return: 2
+    words[0]: "prog"
+    words[1]: "ok"
+    words[2]: ""
+    al_words: words
+    memset((cast: (@: void) (@ root)), 0, c.sizeof(c.LmxRoot))
+    memset((cast: (@: void) (@ taker)), 0, c.sizeof(c.LmxRoot))
+    memset((cast: (@: void) (@ untaken_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ taken_arena)), 0, c.sizeof(c.LmxArena))
+    untaken_at: @ untaken_arena
+    taken_at: @ taken_arena
+
+    # A. The untaken letter is released at close (P5).
+    al_check(counts, lmx_root_open(@ root, al_entry, 5000U) = c.LMX_ROOT_OK, "A: root open")
+    al_check(counts, lmx_arena_open(@ untaken_arena) = 0, "A: the letter's own full arena opened")
+    letter: al_make(@ untaken_arena, 3, words)
+    al_check(counts, letter != 0 && al_holds(@ untaken_arena, letter\graph, 3, words) != 0, "A: the letter carries an Array of char Arrays, NUL kept")
+    al_check(counts, letter != 0 && lmx_service_post(lmx_root_service(@ root), (cast: (@: void) lmx_root_thread(@ root)), letter, @ untaken_arena) = c.LMX_SERVICE_OK, "A: posted to R0")
+    al_check(counts, lmx_thread_mail_count(lmx_root_thread(@ root), c.LMX_POST_INBOX) = 1U, "A: R0's inbox holds the letter")
+    al_check(counts, untaken_at\count != 0U && untaken_at\blocks != 0, "A: the producer owns the letter's arena before any take")
+    al_check(counts, lmx_root_turn(@ root, 1U) = c.LMX_ROOT_OK && al_calls = 1, "A: R0 ran one turn that took nothing")
+    al_check(counts, lmx_thread_mail_count(lmx_root_thread(@ root), c.LMX_POST_INBOX) = 1U, "A: the letter is still untaken after the turn")
+    al_check(counts, lmx_range_classify(lmx_root_arena(@ root), (cast: (@: void) letter)) = c.LMX_KIND_NONE, "A: R0 never owned the untaken letter")
+    al_check(counts, lmx_root_close(@ root) = c.LMX_ROOT_OK, "A: root close")
+    al_check(counts, untaken_at\count = 0U && untaken_at\blocks = 0, "A: close released the untaken letter's arena")
+
+    # B. The letter taken as nextMessage takes it.
+    al_take: 1
+    al_calls: 0
+    al_check(counts, lmx_root_open(@ taker, al_entry, 5000U) = c.LMX_ROOT_OK, "B: root open")
+    al_check(counts, lmx_arena_open(@ taken_arena) = 0, "B: the letter's own full arena opened")
+    letter: al_make(@ taken_arena, 3, words)
+    al_check(counts, letter != 0 && lmx_service_post(lmx_root_service(@ taker), (cast: (@: void) lmx_root_thread(@ taker)), letter, @ taken_arena) = c.LMX_SERVICE_OK, "B: posted to R0")
+    al_check(counts, lmx_root_turn(@ taker, 1U) = c.LMX_ROOT_OK && al_calls = 1, "B: R0 ran one turn")
+    al_check(counts, al_letter = letter && al_owned = 1, "B: the turn took this letter, owned by R0 before it was exposed")
+    al_check(counts, taken_at\count = 0U && taken_at\blocks = 0, "B: the donor arena emptied into R0's at the take")
+    al_check(counts, al_success != 0, "B: a plain letter is marked success at its delivery")
+    al_check(counts, al_shape = 1, "B: R0 reads the Array of char Arrays C passed")
+    al_check(counts, lmx_thread_mail_count(lmx_root_thread(@ taker), c.LMX_POST_INBOX) = 0U, "B: the inbox is empty after the take")
+    al_check(counts, lmx_root_close(@ taker) = c.LMX_ROOT_OK, "B: root close")
+    failures: counts[1]
+    c.printf("lmx_argv_letter_selftest checks=%d failures=%d\n", counts[0], failures)
+    free((cast: (@: void) words))
+    free(counts)
+    if: failures != 0
+        return: 1
+return: 0

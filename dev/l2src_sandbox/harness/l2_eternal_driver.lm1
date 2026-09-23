@@ -15,6 +15,11 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
 int: gargc 0
 @@: char gargv 0
+# The PROGRAM's own argv (S3): the driver's argv[0], then every word after `--`.
+int: pargc 0
+@@: char pargv 0
+int: letters_at_close -1
+int: close_rc -1
 int: hooked 0
 int: checks 0
 int: failures 0
@@ -27,7 +32,7 @@ int: entry_rc 0
 @: Lmx entry_node 0
 
 prototype:
-    fn: l2_generated_main () int
+    fn: l2_generated_main (int: argc; @@: char argv) int
     fn: l2_program_entry (@: Lmx node) int
     fn: l2_program_graph () @: Lmx
     fn: l2_program_qualified_count () size_t
@@ -156,8 +161,8 @@ fn: inspect (@: LmxRoot root) int
                     check(member != 0 && member\parent = other && lmx_range_profile(arena, cell) = root_profile(arena, other) && sealed_here(arena, cell) != 0, "slot member keeps its lexical parent and exact sealed profile")
                     at: at + 5
                 else:
-                    # `entry N` is read by main (the expected entry value), not a root fact.
-                    if: c.strcmp(gargv[at], "entry") = 0 && at + 1 < gargc
+                    # `entry N` and `letters N` are read by main, not root facts.
+                    if: (c.strcmp(gargv[at], "entry") = 0 || c.strcmp(gargv[at], "letters") = 0) && at + 1 < gargc
                         at: at + 2
                     else:
                         check(0, "all driver fact arguments are recognized")
@@ -174,6 +179,10 @@ fn: l2_driver_root_close (@: LmxRoot root) int
     size_t: n
     size_t: i 0U
     hooked: hooked + 1
+    # P5: how many letters R0 leaves untaken; close must release them (S3).
+    if: root != 0
+        letters_at_close: (cast: (int) lmx_thread_mail_count(lmx_root_thread(root), c.LMX_POST_INBOX))
+    ---
     phase: "after generated turn"
     check(root != 0 && lmx_root_state(root) = c.LMX_ROOT_OPEN, "generated root is open at close hook")
     if: root = 0
@@ -212,7 +221,8 @@ fn: l2_driver_root_close (@: LmxRoot root) int
         free((cast: (@: void) saved_profiles))
         saved_profiles: 0
     ---
-return: lmx_root_close(root)
+    close_rc: lmx_root_close(root)
+return: close_rc
 
 # THE ENTRY'S OWN RESULT.  lmx_thread_dispatch_native calls the generated entry adapter and
 # discards its int, so the generated C main's exit status says only that the root turn ran.  The
@@ -237,25 +247,59 @@ return: lmx_root_open(root, l2_driver_entry_tap, limit)
 fn: main (int: argc; @@: char argv) int
     int: status
     int: expected 0
+    int: letters 1
     int: at 2
+    int: dash 0
+    int: k 0
     gargc: argc
     gargv: argv
     if: argc < 2
         fputs("l2_eternal_driver: expected number of roots missing\n", l1_stdout())
         return: 2
     ---
+    # THE PROGRAM'S ARGV (S3).  Words after `--` are the program's arguments; its argv[0] is this
+    # process's own, and the facts end at `--`.  C main posts them to R0 inside a letter.
+    while: dash < argc && c.strcmp(argv[dash], "--") != 0
+        dash: dash + 1
+    ---
+    gargc: dash
+    pargc: 1
+    if: dash < argc
+        pargc: argc - dash
+    ---
+    pargv: (cast: (@@: char) calloc((cast: (size_t) (pargc + 1)), c.sizeof(@: char)))
+    if: pargv = 0
+        fputs("l2_eternal_driver: out of memory\n", l1_stdout())
+        return: 2
+    ---
+    pargv[0]: argv[0]
+    k: 1
+    while: k < pargc
+        pargv[k]: argv[dash + k]
+        k: k + 1
+    ---
     # E1: the process exit value is the int the entry returns.  `entry N` names it (default 0, the
     # fixtures' own pass value); the generated C main returns it and the adapter returns it too.
-    while: at + 1 < argc
+    # `letters N`: the letters R0 still holds at close (default 1: the argv letter, untaken).
+    while: at + 1 < gargc
         if: c.strcmp(argv[at], "entry") = 0
             expected: arg(at + 1)
+        ---
+        if: c.strcmp(argv[at], "letters") = 0
+            letters: arg(at + 1)
         ---
         at: at + 1
     ---
     phase: "generated program"
-    status: l2_generated_main()
+    status: l2_generated_main(pargc, pargv)
     check(status = expected, "generated main returned the entry's value")
     check(hooked = 1, "generated main closed exactly one root")
+    phase: "argv letter"
+    check(letters_at_close = letters, "R0 holds the expected number of untaken letters at close")
+    if: letters_at_close != letters
+        c.printf("l2_eternal_driver: %d letters untaken at close, expected %d\n", letters_at_close, letters)
+    ---
+    check(close_rc = c.LMX_ROOT_OK, "root close released every untaken letter and succeeded")
     phase: "generated entry"
     check(entry_opened = 1, "generated main opened its root with the generated entry adapter")
     check(entry_calls = 1, "generated entry ran exactly once")

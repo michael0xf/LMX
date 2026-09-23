@@ -43,11 +43,23 @@ o-defensive-kernel](next_core_tasks_dictionary.md#no-defensive-kernel) — kerne
 
 ### Неподвижный контракт
 
-- [x] Базовый `LmxArrayDesc` оставить ровно `{len, data}`.
-- [x] Базовый `Lmx` оставить ровно `{parent, len, data}`.
+- [x] Базовый `LmxArrayDesc` оставить ровно `{len, data}`. *(Уточнено автором 2026-09-23: тот же контракт «размер + данные, без capacity» в представлении `VoidArray {size_t size; void *data}` — см. «Представление `VoidArray`» ниже; смысл не изменён, меняются имя/тип поля и вложенность.)*
+- [x] Базовый `Lmx` оставить ровно `{parent, len, data}`. *(Уточнено автором 2026-09-23: `Lmx {parent; VoidArray array}` — те же два смысла, дескриптор детей вложен как одно поле; четвёртого поля по-прежнему нет.)*
 - [x] Удалить из базового Array понятия `capacity`, `reserve`, `resize`, `append`, `grow` и переключения backing storage.
 - [x] Не добавлять wrapper, inheritance или ABI shim, скрывающий прежнюю growable-семантику.
 - [x] Динамический контейнер держать отдельным механизмом со своим состоянием, операциями и инвариантами. В checkpoint `7419470` List имеет `KIND_LIST`, использует открытую пару `{len,data}`, хранит capacity во внутреннем префиксе backing, а `LmxListDesc` не экспортируется в headers. Перенос работающей L1-реализации на L2 выполняется позже.
+
+### Представление `VoidArray` (автор через Codex, CODEX-FABLE-VOIDARRAY-PLAN-20260923-01; документация и план, НЕ реализация сейчас)
+
+Принято автором (2026-09-23; дословно — `LMX_blog/2026-09-23.md`, архивирует Codex): `typedef struct { size_t size; void *data; } VoidArray; typedef VoidArray LmxArrayDesc; typedef struct Lmx { struct Lmx *parent; VoidArray array; } Lmx;`. `VoidArray`, вложенный в `Lmx`, — настоящий дескриптор массива ссылок на детей; его backing — зарегистрированный в арене диапазон адресов (сам дескриптор — не `LmxRange`). Отдельный дескриптор Array и вложенный массив `Lmx` — ровно один C-тип. Capacity/рост в базе не появляются; `List` остаётся отдельным механизмом (§1 выше). Сегодня в коде: `Lmx {parent; int len; void *data}` (`dev/l2src_sandbox/lmx.h.lm1` :65–:69; stable `l2src/lmx.h.lm1` :60), `LmxArrayDesc {size_t len; void *data}` (:206–:209; stable :175).
+
+Порядок: один писатель ядра; после S1/S3 2b/-127 (не пересекать с писателями транслятора и парсера) и до GATE (представление ядра фиксируется до самосборки §8); документация и гейты — ДО кода. Ни один пункт не отмечать выполненным без свидетельства.
+
+- [ ] Инвентарь (read-only, число мест по файлам): чтения/записи `\len`/`\data` у `Lmx` и `LmxArrayDesc` (dev `~300` строк с `LmxArrayDesc`/`\len`), структурные смещения в эмиттере транслятора (аудит G2: 26 мест), `c.INT_MAX`/отрицательные сентинелы (`lmx_arena_refs.lm1` :27/:47, `lmx_merge_owned.lm1` :20/:32, `lmx_merge_owned.h.lm1` :63, `l2trans.lm1` — 32 упоминания), классификация диапазонов арены (`lmx_arena*`), копирование/слияние графа (`lmx_copy_process`, `lmx_merge_owned`), `dev/l3_interp` (34 обращения), stable `l2src/` и generated seeds `lm1/build`.
+- [ ] Документация RU/EN синхронно (L1/L2 спеки, `provenance/semantics-book.md` → `docs/LMX_semantics.*`, `docs/implementation-notes.*`, `dev/l2src_sandbox/LMX_ARRAY_OWNED.txt`, комментарий в `lmx.h.lm1`): `VoidArray` — единственный C-тип дескриптора; `Lmx = {parent, array}`; `size` — `size_t`, логическое число элементов, backing ровно `size` ячеек; дескриптор ≠ диапазон арены; без capacity/grow; List отдельно. (Ведёт Codex; `check_docs` зелёный.)
+- [ ] Гейты до кода: selftest раскладки (размер/смещения `Lmx`, `VoidArray`, тождество типов `LmxArrayDesc` = `VoidArray`), строки harness, пиннящие чтения `node\array\size`/`\data` в сгенерированном C, self-build 8/8 на seeds; мутанты (лишнее поле в `Lmx`; `int` вместо `size_t`; чтение `len` мимо вложенности) — RED.
+- [ ] Миграция кода одним коммитом-серией на одном SHA: `int len` → `size_t size` с вложенным доступом `node\array\size`/`node\array\data`; сентинелы `INT_MAX`/отрицательные длины → явные проверки размера без отрицательных значений; arena refs и классификация диапазонов; copy/merge графа; stable `l2src/` + dev + `lm1/build` seeds синхронно; эмиттер транслятора и `dev/l3_interp` — по инвентарю. Полный набор гейтов (harness, build_l2src -Run, L3, run_parser, self-build, check_docs, diff --check) на одном SHA. Новых полей в `Lmx` нет.
+- [ ] Логические конфликты, обнаруженные при инвентаре (например, место, которому нужен отрицательный `len` как состояние), — автору минимальной программой, без обходного пути.
 
 ### Оставшиеся исправления и gate
 

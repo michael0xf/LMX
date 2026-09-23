@@ -114,3 +114,16 @@ Invariant: **no two types share an element type.** Void fixed remains exactly `L
 - `struct: Lmx` / VoidArray embed rename (separate ticket)
 - `lmx_walk.lm1`
 
+
+
+## Addendum 3 (author): real element types; void is only void*
+
+- int array descriptor = `{size_t len; int *data}` — never void descriptor + casts.
+- void descriptor (`LmxArrayDesc`) only for `void *` elements (List cells; future Lmx embed).
+- Per site real T: (1) List `void *` (2) index `LmxRange` (3) service `LmxServiceEntry`
+  (4) inbox pair-record (5) chunk = pool stride/kind cell type (6) copier map key/value pairs;
+  stack `Lmx *`.
+- **Chunk finding:** one `LmxChunk` serves many pool element types. Embedding one concrete
+  typed `*DynamicArray` per kind without inventing a wrapper, without void casts, and without
+  splitting `LmxChunk`/`LmxPool` into per-T families is **not possible** under current single
+  `LmxChunk` ABI. Named for coordinator — not silently worked around in inventory.

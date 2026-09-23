@@ -1,3 +1,28 @@
+DYNAMIC ARRAY DESCRIPTORS / ДЕСКРИПТОРЫ ДИНАМИЧЕСКИХ МАССИВОВ (Q18, 2026-09-23)
+================================================================================
+General rule: a fixed array descriptor is only {size_t len; T *data} with no
+capacity. Any dynamic implementation that needs capacity declares
+{ <T>Array array; size_t capacity } where <T>Array is the already existing fixed
+descriptor of the REAL element type T (never a parallel twin; grep-before-add).
+void is one element type only: today's LmxArrayDesc {size_t len; void *data}
+serves solely arrays of void* (List pointer cells; the type Lmx will embed).
+An int array is {size_t len; int *data} — never the void descriptor with casts.
+
+Type list for the six kernel capacity sites (after FABLE-134 code):
+- LmxArrayDesc (void*) + LmxArrayDynamicArray — List; also void* sides of copier map
+- LmxRangeArray + LmxRangeDynamicArray — arena index
+- LmxServiceEntryArray + LmxServiceEntryDynamicArray — service registry
+- LmxPostInboxSlot (+ Array/DynamicArray) — inbox ring pair record + head/tail
+- LmxPtrArray {len; Lmx *data} + LmxPtrDynamicArray — copier stack
+- Pool chunk: element type is the pool's real cell type (int/char/LmxArrayDesc/…).
+  One shared LmxChunk today cannot embed one concrete typed DynamicArray for every
+  pool kind without a void cast (forbidden) or a wrapper/union (forbidden) or
+  splitting into per-T chunk records — measured; see inventory addendum.
+
+Base Array and mailbox must not be described as carrying capacity on a base
+{len,data} descriptor. Capacity exists only on *DynamicArray fields.
+
+
 ACCEPTED TARGET ABI / ПРИНЯТЫЙ ЦЕЛЕВОЙ ABI (2026-09-23; code not migrated)
 VoidArray is exactly {size_t size, void *data}; Lmx is
 {VoidArray array, Lmx *parent}. The array is first; no separate LmxArrayDesc

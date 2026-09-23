@@ -306,6 +306,8 @@ Acceptance:
 
 ## 7a. Унификация двери `c.*` (`c.puts` / `c.array`)
 
+**FABLE-GROKBOT-RAW-MEMBER-ROOT-AND-7A-CLOSE-20260923-126 part2 (Grok Bot):** §7a measured on 17d54bc (code) with gates harness 177 / build_l2src 250 / L3 11; ticks carry commit+row/rg witnesses; open items name exact remaining gaps. sizeof: block re-confirmed closed via ancestor 6a07f37.
+
 Авторское решение (`GROK-BOT-C-DOOR-UNIFY-20260922-11`) + evidence (`GROK-BOT-C-DOOR-EVIDENCE-20260922-13`) + **AUTHOR CORRECTION** (`AUTHOR-C-RAW-DOOR-20260922-14`). + **AUTHOR-SIZEOF-RECEIVER-20260922-15** / **AUTHOR-SIZEOF-DOCSET-20260922-16** (`sizeof:` ordinary receiver). + **AUTHOR-ARCH-DOCTRINE-20260922-17** + **AUTHOR-SIZEOF-UNHOLD-20260922-18** + **AUTHOR-SIZEOF-OPERATOR-20260922-19** / **AUTHOR-SIZEOF-DESIGN-20260922-20** (`sizeof:` planned receiver-operator — ввести). Норма: `c.*` — **raw door into C**. Нет declared foreign-entity registry, нет header scanning, нет generated dictionary of C entities, нет classification `c.sizeof` как declared/builtin entity kind. Bounded cleanup: raw-C door transparency + remove `c.puts` specials + remove L2 `c.array` special declarator + expression-statement/discard. L1 `c.array` остаётся отдельно owned measurement boundary (не L2-семантика).
 
 ### `c.puts` (removable closed cluster)

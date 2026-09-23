@@ -1,0 +1,19 @@
+# An anonymous `---` block is a nested executable body (§14: the statement blocks a handler
+# covers are `if`, `while`, `for` and an anonymous `---`): its statements run in order, a
+# declaration in it is hosted by it, and blocks nest.  (l2trans used to crash on one: it read the
+# Structure statement as a Frame.)  0 + 5 + 1 + 5 + 5 = 16.
+fn: m () int
+    int: n 0
+    ---
+        int: t 5
+        n: n + t
+        ---
+            n: n + 1
+    ---
+        int: k 0
+        while: k < 2
+            k: k + 1
+            n: n + 5
+return: n
+
+return: m()

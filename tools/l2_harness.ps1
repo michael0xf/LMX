@@ -772,6 +772,8 @@ $fixtures = @(
     # with status 0, as a `return:` in the body does: the row completes with the value.
     [pscustomobject]@{ Name = 'unit_s1_trailer_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 5; Stopped = 0;
         Absent = @(); Debt = @('l2_out_result[0]: 5') },
+    [pscustomobject]@{ Name = 'unit_anon_block.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 16;
+        Absent = @(); Debt = @() },
     # S1.2, DECLARED THROWS (FABLE-OPUS-S1-DECLARED-20260923-135; author Q13, §14).  `throws:` is the
     # first item of a method head: the ordered names that may leave the method; name k leaves as
     # status k, the implicit names after them at d + g.  `throw: Name(args)` builds a payload

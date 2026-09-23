@@ -3705,6 +3705,11 @@ fn: l2_ml_collect (const: @(LmP0Structure body); const: @(char path)) int
     field: l2_next_active(body\first_field)
     while: field != 0
         stmt: field\value
+        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_STRUCTURE && stmt\as != 0 && stmt\as\structure != 0
+            if: l2_ml_collect(stmt\as\structure, path) != 0
+                return: 1
+            field: l2_next_active(field\next)
+            continue
         # An address slot is not an activation local: @: char and its
         # companions in a method body are the 11.2.1 slot form and are
         # declared by the method preamble, not by this table.
@@ -5721,6 +5726,8 @@ fn: l2_body_receives (const: @(LmP0Structure body)) int
     field: l2_next_active(body\first_field)
     while: field != 0
         stmt: field\value
+        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_STRUCTURE && stmt\as != 0 && stmt\as\structure != 0 && l2_body_receives(stmt\as\structure) != 0
+            return: 1
         if: l2_next_msg_shape(stmt, @ nm) = 0
             return: 1
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\body != 0
@@ -6043,6 +6050,16 @@ fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char p
     while: field != 0
         stmt: field\value
         l2_vis_stmt(mi, stmt)
+        # An anonymous `---` block is a nested executable body, like an if body (§14, Q14 K).
+        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_STRUCTURE && stmt\as != 0 && stmt\as\structure != 0
+            if: l2_scope_push(stmt) != 0
+                return: l2_alloc_or(path, stmt, "out of memory")
+            if: l2_collect_asgn_body(stmt\as\structure, mi, path) != 0
+                l2_scope_pop()
+                return: 1
+            l2_scope_pop()
+            field: l2_next_active(field\next)
+            continue
         # Ordinary merge operands are graph names resolved by the merge
         # pre-pass.  A colon declaration is different: its source receiver is
         # dynamically visible, with the same-name lexical Structure only the
@@ -6216,6 +6233,16 @@ fn: l2_collect_decls (const: @(LmP0Structure body); int: mi; const: @(char path)
     while: field != 0
         stmt: field\value
         l2_vis_stmt(mi, stmt)
+        # An anonymous `---` block is a nested executable body, like an if body (§14, Q14 K).
+        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_STRUCTURE && stmt\as != 0 && stmt\as\structure != 0
+            if: l2_for_add(stmt, mi, l2_for_find(l2_scope_host())) < 0 || l2_scope_push(stmt) != 0
+                return: l2_alloc_or(path, stmt, "out of memory")
+            if: l2_collect_decls(stmt\as\structure, mi, path, depth + 1, sn) != 0
+                l2_scope_pop()
+                return: 1
+            l2_scope_pop()
+            field: l2_next_active(field\next)
+            continue
         if: l2_frame_head(stmt, "if")
             if: stmt\as\frame\body = 0
                 return: l2_error(path, stmt, "unsupported body")
@@ -6549,6 +6576,16 @@ fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
     while: field != 0
         stmt: field\value
         l2_vis_stmt(mi, stmt)
+        # An anonymous `---` block is a nested executable body, like an if body (§14, Q14 K).
+        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_STRUCTURE && stmt\as != 0 && stmt\as\structure != 0
+            if: l2_scope_push(stmt) != 0
+                return: 1
+            if: l2_scan_body(stmt\as\structure, mi, seen) != 0
+                l2_scope_pop()
+                return: 1
+            l2_scope_pop()
+            field: l2_next_active(field\next)
+            continue
         # See the assignment collector: a normalized colon constructor is the
         # one merge form whose operand remains a dynamic free graph name.
         if: l2_merge_frame(stmt) != 0
@@ -12639,6 +12676,16 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
     while: field != 0
         stmt: field\value
         l2_vis_stmt(mi, stmt)
+        # An anonymous `---` block is a nested executable body, like an if body (§14, Q14 K).
+        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_STRUCTURE && stmt\as != 0 && stmt\as\structure != 0
+            if: l2_scope_push(stmt) != 0
+                return: l2_alloc_or(path, stmt, "out of memory")
+            if: l2_check_body(stmt\as\structure, mi, path, depth + 1) != 0
+                l2_scope_pop()
+                return: 1
+            l2_scope_pop()
+            field: l2_next_active(field\next)
+            continue
         # A trailer word closes the frame it follows. After a frame that is
         # already closed P0 leaves it an ordinary item; it is still not a
         # statement, in the entry or in any body.
@@ -15911,6 +15958,8 @@ fn: l2_body_throws (const: @(LmP0Structure body); int: mi) int
     field: l2_next_active(body\first_field)
     while: field != 0
         stmt: field\value
+        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_STRUCTURE && stmt\as != 0 && stmt\as\structure != 0 && l2_body_throws(stmt\as\structure, mi) != 0
+            return: 1
         if: l2_merge_frame(stmt) != 0
             return: 1
         # A colon declaration (Model: fresh) is the same construction as an
@@ -16018,6 +16067,11 @@ fn: l2_merge_scan (const: @(LmP0Structure body)) int
     field: l2_next_active(body\first_field)
     while: field != 0
         stmt: field\value
+        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_STRUCTURE && stmt\as != 0 && stmt\as\structure != 0
+            if: l2_merge_scan(stmt\as\structure) != 0
+                return: 1
+            field: l2_next_active(field\next)
+            continue
         mf: l2_merge_frame(stmt)
         if: mf != 0
             n: l2_merge_arity(mf)
@@ -16150,6 +16204,21 @@ fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
             return: 1
         if: l2_frame_head(stmt, "return") = 0 && l2_frame_head(stmt, "if") = 0
             need_cut: 0
+        # An anonymous `---` block is a nested executable body, like an if body (§14, Q14 K).
+        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_STRUCTURE && stmt\as != 0 && stmt\as\structure != 0
+            if: c.fprintf(l2_out, "%sif: 1\n", ind) < 0
+                return: 1
+            if: l2_scope_push(stmt) != 0
+                return: 1
+            if: l2_emit_body(stmt\as\structure, mi, deep) != 0
+                l2_scope_pop()
+                return: 1
+            l2_scope_pop()
+            if: c.fprintf(l2_out, "%s---\n", deep) < 0
+                return: 1
+            field: l2_next_active(field\next)
+            need_cut: 1
+            continue
         if: l2_frame_head(stmt, "throws")
             field: l2_next_active(field\next)
             continue

@@ -1,0 +1,25 @@
+# FABLE-SONNET-DECL-PREPASS-20260923-137 part 2: assigning a Structure-
+# returning call's result into an EXISTING Structure variable now correctly
+# reaches the pre-existing, deliberate "graph assignment admission requires
+# receiving-expression tests" fail-closed boundary (typed-typed graph
+# rebind, unrelated to this ticket and not changed by it) -- before the
+# l2_colon_simple_ty fix, the call result's dt-space return-type number was
+# compared raw against the target's already-recovered foreign code, so this
+# refused one step earlier and for the wrong reason: "assignment value has
+# incompatible type".
+Model:
+    size_t: value 1U
+end: Model
+
+fn: same (Model: x) Model
+    return: x
+end: same
+
+fn: probe () int
+    Model: a
+    Model: b
+    b: same(a)
+    return: 0
+end: probe
+
+return: probe()

@@ -1,0 +1,58 @@
+# FABLE-SONNET-DECL-PREPASS-20260923-137 part 2 (Opus's finding 1): a method
+# whose return type is a named Structure used to fail translation SILENTLY
+# ("translation failed with no located diagnostic"). Root cause: a named-
+# Structure return is stored dt_of_own(1000+foreign) (l2_colon_graph_ty),
+# the same as a Structure formal or an own field -- but only l2_emit_formal
+# (and l2_colon_bound_ty's own-field branch) recovered the raw foreign code
+# before this ticket; l2_emit_sig's own return-type dispatch,
+# l2_colon_simple_ty's call-result branch, and l2_prep's call-result-temp
+# branch all read the dt-space number raw, silently misreading it as an
+# out-of-range foreign index. Fixed at all three sites, through the
+# ordinary @: Lmx return ABI (the same lowering a Structure formal or a
+# merge result already uses) -- no new rule, no located refusal needed for
+# the method itself.
+Model:
+    size_t: value 1U
+end: Model
+
+# Non-throwing: declare, return, discard the result as a bare statement
+# (l2_prep's call-result-temp path, a silent failure on its own before this
+# ticket even for a call whose result nothing consumes).
+fn: same (Model: x) Model
+    return: x
+end: same
+
+# Declared-throw ABI variant of the same return type (l2_emit_sig's other
+# dispatch block, @@: Lmx l2_out_result -- the same pointer depth
+# l2_out_throw already uses in this exact signature, matched by measurement
+# rather than assumed).
+fn: same_throws (Model: x) Model
+    Model: fresh
+    fresh\value: x\value
+    return: fresh
+end: same_throws
+
+# size_t through a Structure formal: the round-trip witness. Assigning a
+# call's Structure result into an existing typed variable is a separate,
+# already fail-closed boundary (graph assignment admission requires
+# receiving-expression tests, unrelated to this ticket) -- passing it
+# straight on as an argument is not, so nesting the calls is what proves
+# the value the ABI carries is the right one, not just that translation
+# does not crash.
+fn: check (Model: m) size_t
+    return: m\value
+end: check
+
+fn: probe () size_t
+    Model: a
+    a\value: 77U
+    same(a)
+    same_throws(a)
+    return: check(same(a))
+end: probe
+
+size_t: r
+r: probe()
+if: r != 77U
+    return: 90
+return: 0

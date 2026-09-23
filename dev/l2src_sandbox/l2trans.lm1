@@ -5546,6 +5546,7 @@ return: 1
 
 fn: l2_colon_simple_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
     int: m
+    int: sty
     const: @: LmP0Text atom
     if: value = 0 || out_ty = 0 || value\as = 0
         return: 1
@@ -5575,6 +5576,17 @@ fn: l2_colon_simple_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
     if: m < 0
         return: 1
     \out_ty: l2_m_ret[m]
+    # A named-Structure return is stored dt_of_own(1000+foreign)
+    # (l2_colon_graph_ty), the same recovery l2_colon_bound_ty's own-field
+    # branch already applies (l2_ft_of_own(l2_own_ty[i])) -- a call result's
+    # type must match it, or `target: b\value` from `Model: fresh` two
+    # lines above stays the only working consumer of a Structure result
+    # (FABLE-SONNET-DECL-PREPASS-20260923-137 part 2).
+    if: \out_ty > 1
+        sty: l2_own_of_dt(\out_ty)
+        if: sty >= 1000 && sty < 2000
+            \out_ty: l2_ft_of_own(sty)
+        ---
     # Return codes and formal codes only differ for these ABI spellings.
     if: \out_ty = 33
         \out_ty: 34
@@ -14508,6 +14520,8 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
     int: idx
     int: n
     int: k
+    int: prty
+    int: prsty
     int: occ 0
     @: LmP0Text onm 0
     int: actual_span
@@ -14935,34 +14949,47 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
         return: l2_prep_drop(acts, hides)
     t: l2_tn
     l2_tn: l2_tn + 1
-    if: l2_m_ret[idx] = 2 && c.fprintf(l2_out, "%ssize_t: l2_t%d\n", ind, t) < 0
+    # A named-Structure return is stored dt_of_own(1000+foreign)
+    # (l2_colon_graph_ty); recover the raw foreign code the same way
+    # l2_emit_formal/l2_emit_sig already do, or a discarded or captured
+    # call to a Structure-returning method silently fails here
+    # (FABLE-SONNET-DECL-PREPASS-20260923-137 part 2): l2_emit_foreign_temp
+    # would see the unconverted dt-space number as an out-of-range foreign
+    # index and return 1 with no l2_error call.
+    prty: l2_m_ret[idx]
+    if: prty > 1
+        prsty: l2_own_of_dt(prty)
+        if: prsty >= 1000 && prsty < 2000
+            prty: l2_ft_of_own(prsty)
+        ---
+    if: prty = 2 && c.fprintf(l2_out, "%ssize_t: l2_t%d\n", ind, t) < 0
         return: l2_prep_drop(acts, hides)
-    if: l2_m_ret[idx] = 30 && c.fprintf(l2_out, "%sunsigned: l2_t%d\n", ind, t) < 0
+    if: prty = 30 && c.fprintf(l2_out, "%sunsigned: l2_t%d\n", ind, t) < 0
         return: 1
-    if: l2_m_ret[idx] = 33 && c.fprintf(l2_out, "%sunsigned: l2_t%d\n", ind, t) < 0
+    if: prty = 33 && c.fprintf(l2_out, "%sunsigned: l2_t%d\n", ind, t) < 0
         return: l2_prep_drop(acts, hides)
-    if: l2_m_ret[idx] = 36 && c.fprintf(l2_out, "%sulong: l2_t%d\n", ind, t) < 0
+    if: prty = 36 && c.fprintf(l2_out, "%sulong: l2_t%d\n", ind, t) < 0
         return: l2_prep_drop(acts, hides)
-    if: l2_m_ret[idx] = 3 && c.fprintf(l2_out, "%s@: char l2_t%d\n", ind, t) < 0
+    if: prty = 3 && c.fprintf(l2_out, "%s@: char l2_t%d\n", ind, t) < 0
         return: l2_prep_drop(acts, hides)
-    if: l2_m_ret[idx] = 16 && c.fprintf(l2_out, "%s@: void l2_t%d\n", ind, t) < 0
+    if: prty = 16 && c.fprintf(l2_out, "%s@: void l2_t%d\n", ind, t) < 0
         return: l2_prep_drop(acts, hides)
-    if: l2_m_ret[idx] = 35 && c.fprintf(l2_out, "%sconst: @(char l2_t%d)\n", ind, t) < 0
+    if: prty = 35 && c.fprintf(l2_out, "%sconst: @(char l2_t%d)\n", ind, t) < 0
         return: l2_prep_drop(acts, hides)
-    if: l2_m_ret[idx] = 32 && c.fprintf(l2_out, "%s@@: char l2_t%d\n", ind, t) < 0
+    if: prty = 32 && c.fprintf(l2_out, "%s@@: char l2_t%d\n", ind, t) < 0
         return: l2_prep_drop(acts, hides)
-    if: l2_m_ret[idx] >= 100 && l2_emit_foreign_temp(l2_out, l2_m_ret[idx], ind, t) != 0
-        return: l2_prep_drop(acts, hides)
-        return: l2_prep_drop(acts, hides)
+    if: prty >= 100 && l2_emit_foreign_temp(l2_out, prty, ind, t) != 0
         return: l2_prep_drop(acts, hides)
         return: l2_prep_drop(acts, hides)
-    if: l2_ret_uns(idx) = 0 && l2_m_ret[idx] != 3 && l2_m_ret[idx] != 5 && l2_m_ret[idx] != 8 && l2_m_ret[idx] != 10 && l2_m_ret[idx] != 13 && l2_m_ret[idx] != 16 && l2_m_ret[idx] != 32 && l2_m_ret[idx] != 35 && l2_m_ret[idx] < 100 && c.fprintf(l2_out, "%sint: l2_t%d\n", ind, t) < 0
+        return: l2_prep_drop(acts, hides)
+        return: l2_prep_drop(acts, hides)
+    if: l2_ret_uns(idx) = 0 && prty != 3 && prty != 5 && prty != 8 && prty != 10 && prty != 13 && prty != 16 && prty != 32 && prty != 35 && prty < 100 && c.fprintf(l2_out, "%sint: l2_t%d\n", ind, t) < 0
         return: l2_prep_drop(acts, hides)
     if: l2_m_throws[idx] != 0 && c.fprintf(l2_out, "%sint: l2_ts%d 0\n%s@: Lmx l2_te%d 0\n", ind, t, ind, t) < 0
         return: l2_prep_drop(acts, hides)
-    if: l2_m_ret[idx] = 8 && l2_m_throws[idx] = 0 && c.fprintf(l2_out, "%s", ind) < 0
+    if: prty = 8 && l2_m_throws[idx] = 0 && c.fprintf(l2_out, "%s", ind) < 0
         return: l2_prep_drop(acts, hides)
-    if: l2_m_ret[idx] != 8 && l2_m_throws[idx] = 0 && c.fprintf(l2_out, "%sl2_t%d: ", ind, t) < 0
+    if: prty != 8 && l2_m_throws[idx] = 0 && c.fprintf(l2_out, "%sl2_t%d: ", ind, t) < 0
         return: l2_prep_drop(acts, hides)
     if: l2_m_throws[idx] != 0 && c.fprintf(l2_out, "%sl2_ts%d: ", ind, t) < 0
         return: l2_prep_drop(acts, hides)
@@ -15441,6 +15468,29 @@ return: 0
 fn: l2_emit_sig (int: mi) int
     int: j 0
     long: mark
+    int: ret_ty
+    int: roty
+    # A named-Structure return type is stored dt_of_own(1000+foreign) like any
+    # other declared graph type (l2_colon_graph_ty), not the raw >=100 foreign
+    # code l2_emit_foreign_return expects -- l2_emit_formal already runs a
+    # formal's own type through this exact recovery (own_of_dt then
+    # ft_of_own, matching l2_colon_is_graph_ty's own comment: "Declared graph
+    # formals store dt_of_own(1000+foreign); recover foreign @: Lmx"), but
+    # the return-type dispatch below read l2_m_ret[mi] raw. Measured
+    # (FABLE-SONNET-DECL-PREPASS-20260923-137 part 2, Opus's finding):
+    # `fn: same (Model: x) Model / return: x` silently failed translation --
+    # l2_emit_foreign_return(l2_out, 1101) computed foreign index 1001 against
+    # a 1-entry table and returned 1 with no l2_error call. A no-op for every
+    # primitive return code already in this dispatch (only a declared graph
+    # type round-trips through the 1000..1999 own-type space), so recomputed
+    # once and used everywhere l2_m_ret[mi] meant "this method's return type"
+    # in this function, in both the declared-throws ABI and the ordinary one.
+    ret_ty: l2_m_ret[mi]
+    if: ret_ty > 1
+        roty: l2_own_of_dt(ret_ty)
+        if: roty >= 1000 && roty < 2000
+            ret_ty: l2_ft_of_own(roty)
+        ---
     if: fputs(" (@: Lmx node; @: Lmx self", l2_out) < 0
         return: 1
     while: j < l2_m_arity[mi]
@@ -15466,49 +15516,51 @@ fn: l2_emit_sig (int: mi) int
     # first and the throw payload last, and the control status is the return.
     # A callable that cannot throw keeps its direct return unchanged.
     if: l2_m_throws != 0 && l2_m_throws[mi] != 0
-        if: l2_m_ret[mi] = 2 && fputs("; @: size_t l2_out_result", l2_out) < 0
+        if: ret_ty = 2 && fputs("; @: size_t l2_out_result", l2_out) < 0
             return: 1
-        if: l2_m_ret[mi] = 30 && fputs("; @: unsigned l2_out_result", l2_out) < 0
+        if: ret_ty = 30 && fputs("; @: unsigned l2_out_result", l2_out) < 0
             return: 1
-        if: l2_m_ret[mi] = 33 && fputs("; @: unsigned l2_out_result", l2_out) < 0
+        if: ret_ty = 33 && fputs("; @: unsigned l2_out_result", l2_out) < 0
             return: 1
-        if: l2_m_ret[mi] = 36 && fputs("; @: ulong l2_out_result", l2_out) < 0
+        if: ret_ty = 36 && fputs("; @: ulong l2_out_result", l2_out) < 0
             return: 1
-        if: l2_m_ret[mi] = 3 && fputs("; @@: char l2_out_result", l2_out) < 0
+        if: ret_ty = 3 && fputs("; @@: char l2_out_result", l2_out) < 0
             return: 1
-        if: l2_m_ret[mi] = 16 && fputs("; @@: void l2_out_result", l2_out) < 0
+        if: ret_ty = 16 && fputs("; @@: void l2_out_result", l2_out) < 0
             return: 1
-        if: l2_m_ret[mi] = 35 && fputs("; const: @@(char l2_out_result)", l2_out) < 0
+        if: ret_ty = 35 && fputs("; const: @@(char l2_out_result)", l2_out) < 0
             return: 1
-        if: l2_m_ret[mi] = 32 && fputs("; @@@: char l2_out_result", l2_out) < 0
+        if: ret_ty = 32 && fputs("; @@@: char l2_out_result", l2_out) < 0
             return: 1
-        if: l2_ret_uns(mi) = 0 && l2_m_ret[mi] != 3 && l2_m_ret[mi] != 8 && l2_m_ret[mi] != 16 && l2_m_ret[mi] != 32 && l2_m_ret[mi] != 35 && fputs("; @: int l2_out_result", l2_out) < 0
+        if: ret_ty >= 100 && fputs("; @@: Lmx l2_out_result", l2_out) < 0
+            return: 1
+        if: l2_ret_uns(mi) = 0 && ret_ty != 3 && ret_ty != 8 && ret_ty != 16 && ret_ty != 32 && ret_ty != 35 && ret_ty < 100 && fputs("; @: int l2_out_result", l2_out) < 0
             return: 1
         if: fputs("; @@: Lmx l2_out_throw) int", l2_out) < 0
             return: 1
         return: 0
     ---
-    if: l2_m_ret[mi] = 2 && fputs(") size_t", l2_out) < 0
+    if: ret_ty = 2 && fputs(") size_t", l2_out) < 0
         return: 1
-    if: l2_m_ret[mi] = 30 && fputs(") unsigned", l2_out) < 0
+    if: ret_ty = 30 && fputs(") unsigned", l2_out) < 0
         return: 1
-    if: l2_m_ret[mi] = 33 && fputs(") unsigned", l2_out) < 0
+    if: ret_ty = 33 && fputs(") unsigned", l2_out) < 0
         return: 1
-    if: l2_m_ret[mi] = 36 && fputs(") ulong", l2_out) < 0
+    if: ret_ty = 36 && fputs(") ulong", l2_out) < 0
         return: 1
-    if: l2_m_ret[mi] = 3 && fputs(") @: char", l2_out) < 0
+    if: ret_ty = 3 && fputs(") @: char", l2_out) < 0
         return: 1
-    if: l2_m_ret[mi] = 16 && fputs(") @: void", l2_out) < 0
+    if: ret_ty = 16 && fputs(") @: void", l2_out) < 0
         return: 1
-    if: l2_m_ret[mi] = 35 && fputs(") const: @(char)", l2_out) < 0
+    if: ret_ty = 35 && fputs(") const: @(char)", l2_out) < 0
         return: 1
-    if: l2_m_ret[mi] = 32 && fputs(") @@: char", l2_out) < 0
+    if: ret_ty = 32 && fputs(") @@: char", l2_out) < 0
         return: 1
-    if: l2_m_ret[mi] >= 100 && l2_emit_foreign_return(l2_out, l2_m_ret[mi]) != 0
+    if: ret_ty >= 100 && l2_emit_foreign_return(l2_out, ret_ty) != 0
         return: 1
-    if: l2_m_ret[mi] = 8 && fputs(")", l2_out) < 0
+    if: ret_ty = 8 && fputs(")", l2_out) < 0
         return: 1
-    if: l2_ret_uns(mi) = 0 && l2_m_ret[mi] != 3 && l2_m_ret[mi] != 5 && l2_m_ret[mi] != 8 && l2_m_ret[mi] != 10 && l2_m_ret[mi] != 13 && l2_m_ret[mi] != 16 && l2_m_ret[mi] != 32 && l2_m_ret[mi] != 35 && l2_m_ret[mi] < 100 && fputs(") int", l2_out) < 0
+    if: l2_ret_uns(mi) = 0 && ret_ty != 3 && ret_ty != 5 && ret_ty != 8 && ret_ty != 10 && ret_ty != 13 && ret_ty != 16 && ret_ty != 32 && ret_ty != 35 && ret_ty < 100 && fputs(") int", l2_out) < 0
         return: 1
 return: 0
 

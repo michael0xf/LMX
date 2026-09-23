@@ -1332,6 +1332,15 @@ $fixtures = @(
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @() },
+    # FABLE-SONNET-DECL-PREPASS-20260923-137 part 2 (Opus's finding 1): a
+    # named-Structure method return, non-throwing and declared-throw ABI,
+    # a discarded call and a nested-call value round-trip witness.
+    [pscustomobject]@{ Name = 'unit_struct_return.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
+        Debt = @() },
+    [pscustomobject]@{ Name = 'unit_struct_return_assign_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'graph assignment admission requires receiving-expression tests'; Absent = @(); Debt = @() },
     # FABLE-SONNET-OWN-LOOKUP-AUDIT-20260923-131 part 3: the -92 leftover --
     # a Structure value assigned through a path ending at a nested
     # Structure-typed field stays a located, fail-closed refusal.

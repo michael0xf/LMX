@@ -330,6 +330,11 @@ prototype:
     fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); int: depth) int
     fn: l2_dfs (int: u) int
     fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest) int
+    fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Structure body); int: mi; const: @(char path)) int
+    fn: l2_atom_callee (const: @(LmP0Text t); int: mi; @: int fi) int
+    fn: l2_bare_structure (const: @(LmP0Text t); int: mi) int
+    fn: l2_check_bare (@: LmP0Field field; int: mi; const: @(char path)) int
+    fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @(LmP0Structure body); int: mi; const: @(char ind); @: char dest) int
     fn: l2_prep_addr (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest) int
     fn: l2_check_addr (const: @(LmP0Node node); int: mi; const: @(char path)) int
     fn: l2_cat (@: char dest; const: @(char src)) int
@@ -6681,6 +6686,16 @@ fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
             l2_scope_pop()
             field: l2_next_active(field\next)
             continue
+        # A bare atom statement, or a statement line P0 gives as several fields (`y + 1`): one
+        # expression (l2_expr_span), whose names are read as the same expression's are anywhere.
+        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM
+            k: l2_expr_span(field)
+            if: k < 1
+                k: 1
+            if: l2_scan_fields(field, k, mi, seen) != 0
+                return: 1
+            field: l2_skip_span(field, k)
+            continue
         # See the assignment collector: a normalized colon constructor is the
         # one merge form whose operand remains a dynamic free graph name.
         if: l2_merge_frame(stmt) != 0
@@ -12956,10 +12971,6 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
     @: LmP0Field a1
     int: idx
     int: fi
-    int: req_mi
-    int: cand_mi
-    int: actual_span
-    int: actual_i
     int: array_status
     int: raw
     int: raw_j
@@ -13129,7 +13140,25 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
         return: l2_error(path, node, "unsupported trailer")
     if: call\body = 0 || call\body\trailer != 0
         return: l2_error(path, node, "unsupported trailer")
-    if: l2_actual_count(call\body\first_field) != l2_m_arity[idx]
+return: l2_check_call(node, idx, fi, call\body, mi, path)
+
+# A CALL OF THE RESOLVED CALLEE idx (FABLE-OPUS-RECEIVER-CONTRACT-20260924-139): one check for
+# every spelling of a call -- `m(args)`, `m: args`, the vertical form, and a bare atom `m`, which
+# has no argument Structure (body 0) and so no actuals.  fi is the callable formal the call goes
+# through, idx then being its required contract, or -1 for a unit method or a method path.
+fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Structure body); int: mi; const: @(char path)) int
+    @: LmP0Field a0 0
+    int: nact 0
+    int: actual_span
+    int: actual_i
+    int: req_mi
+    int: cand_mi
+    int: k
+    if: body != 0
+        a0: l2_next_active(body\first_field)
+        nact: l2_actual_count(body\first_field)
+    ---
+    if: nact != l2_m_arity[idx]
         return: l2_error(path, node, "incompatible entry signature")
     # Descriptor-only required method is legal as a formal contract; refuse bodiless only on direct calls.
     if: l2_m_body[idx] = 0 && fi < 0 && (l2_m_node[idx] = 0 || l2_m_node[idx]\as = 0 || l2_ret_tr(l2_m_node[idx]\as\frame) = 0)
@@ -13137,7 +13166,6 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
     l2_m_edge[l2_edge_off(mi, idx)]: 1
     if: l2_check_throws_handled(mi, idx, path, node) != 0
         return: 1
-    a0: l2_next_active(call\body\first_field)
     actual_i: 0
     while: a0 != 0
         actual_span: l2_expr_span(a0)
@@ -13164,10 +13192,10 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
                 ---
             ---
         ---
-        pmi: 0
-        while: pmi < actual_span && a0 != 0
+        k: 0
+        while: k < actual_span && a0 != 0
             a0: l2_next_active(a0\next)
-            pmi: pmi + 1
+            k: k + 1
         actual_i: actual_i + 1
     ---
 return: 0
@@ -13319,6 +13347,55 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
         f: l2_next_active(f\next)
 return: 0
 
+# THE CALLABLE A BARE ATOM NAMES (FABLE-OPUS-RECEIVER-CONTRACT-20260924-139), resolved as the head
+# of a call is (l2_check_primary, l2_prep): a unit method, else a callable formal -- the result is
+# then the formal's required contract and \fi the formal.  -1: the atom is not callable here.
+fn: l2_atom_callee (const: @(LmP0Text t); int: mi; @: int fi) int
+    int: k
+    int: idx
+    \fi: 0 - 1
+    idx: l2_find_method(t)
+    if: idx >= 0
+        return: idx
+    k: l2_formal_find(mi, t)
+    if: k < 0
+        return: 0 - 1
+    idx: l2_cf_get(mi, k)
+    if: idx >= 0
+        \fi: k
+return: idx
+
+# Does a bare atom denote a Structure: a formal, dynamic input, own field, slot or local whose type
+# is a graph, or else a declared named Structure?
+fn: l2_bare_structure (const: @(LmP0Text t); int: mi) int
+    int: ty 0
+    if: l2_colon_bound_ty(mi, t, @ ty) = 0
+        return: l2_colon_is_graph_ty(ty)
+return: l2_ns_find(t) >= 0
+
+# A BARE ATOM IN AN EXECUTABLE BODY is an expression statement (plan §3, "Expression statement и
+# discard"; FABLE-OPUS-RECEIVER-CONTRACT-20260924-139).  It resolves like any value, and the kind
+# of its binding decides: a callable is called with no arguments -- the check of `m()`,
+# l2_check_call -- and its result, if any, discarded; a Structure is refused until executing one
+# is settled (Q19.2); any other value is evaluated and discarded, never called.  P0 gives a
+# statement line of several atoms (`y + 1`, `A\f`) as that many fields, one expression by
+# l2_expr_span: that is not a bare atom, and it is refused by name.
+fn: l2_check_bare (@: LmP0Field field; int: mi; const: @(char path)) int
+    @: LmP0Node stmt
+    int: idx
+    int: fi 0
+    stmt: field\value
+    if: l2_expr_span(field) != 1
+        return: l2_error(path, stmt, "an expression statement is not supported yet")
+    idx: l2_atom_callee(stmt\as\atom, mi, @ fi)
+    if: idx >= 0
+        return: l2_check_call(stmt, idx, fi, 0, mi, path)
+    if: l2_check_primary(stmt, mi, path) != 0
+        return: 1
+    if: l2_bare_structure(stmt\as\atom, mi) != 0
+        return: l2_error(path, stmt, "executing a named Structure is not supported yet")
+return: 0
+
 fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); int: depth) int
     int: nmk
     int: array_target
@@ -13407,6 +13484,12 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM && l2_text_eq(stmt\as\atom, "return") && l2_m_ret[mi] != 8
             return: l2_error(path, stmt, "unsupported body")
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM && l2_text_eq(stmt\as\atom, "return")
+            field: l2_next_active(field\next)
+            continue
+        # Any other atom is a bare atom statement (l2_check_bare).
+        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM
+            if: l2_check_bare(field, mi, path) != 0
+                return: 1
             field: l2_next_active(field\next)
             continue
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0
@@ -14583,16 +14666,12 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
     @: LmP0Field a0
     @: LmP0Field a1
     int: t
-    int: self_t
     int: idx
     int: n
     int: k
-    int: prty
-    int: prsty
     int: occ 0
     @: LmP0Text onm 0
     int: actual_span
-    int: actual_i
     int: raw_j
     int: raw_fld
     c.array: [256]: char s0
@@ -14600,11 +14679,6 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
     c.array: [256]: char s2
     c.array: [256]: char s3
     c.array: [256]: char s4
-    @: char acts 0
-    @: char hides 0
-    int: nact 0
-    int: nhid 0
-    int: ai
     size_t: array_index
     if: node = 0 || dest = 0
         return: 1
@@ -14952,19 +15026,41 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
         return: l2_tok_temp(t, dest)
     if: idx < 0
         return: 1
+return: l2_emit_call(node, idx, l2_call_sel, l2_call_fi, call\body, mi, ind, dest)
+
+# THE CALL (FABLE-OPUS-RECEIVER-CONTRACT-20260924-139).  One emission for every spelling of a call
+# of the resolved callee idx: l2_prep's call Frame, and a bare atom statement, which has no
+# argument Structure (body 0).  sel is how the called occurrence is selected: 0 the unit's own
+# occurrence of the method, 1 the occurrence a method path has just selected (l2_pst), 2 the one
+# the callable formal fi holds.  sel and fi arrive as values: a call among the actuals goes
+# through l2_prep again and must not re-select this one.
+fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @(LmP0Structure body); int: mi; const: @(char ind); @: char dest) int
+    @: LmP0Field a0 0
+    int: t
+    int: self_t
+    int: actual_span
+    int: actual_i
+    @: char acts 0
+    @: char hides 0
+    int: nact 0
+    int: nhid 0
+    int: ai
+    int: prty
+    int: prsty
     # Capture the selected physical occurrence before evaluating actuals: a
     # nested call may reuse l2_pst, but `self` for this call must remain the
     # originally selected callable. Source `node` is self\parent; own storage
     # is based on self itself.
     self_t: l2_tn
     l2_tn: l2_tn + 1
-    if: l2_call_sel = 0 && c.fprintf(l2_out, "%s@: Lmx l2_c%d lmx_arena_ref_struct(%s, %uU)\n", ind, self_t, l2_unit_ref, (cast: (unsigned) (l2_unit_base + idx))) < 0
+    if: sel = 0 && c.fprintf(l2_out, "%s@: Lmx l2_c%d lmx_arena_ref_struct(%s, %uU)\n", ind, self_t, l2_unit_ref, (cast: (unsigned) (l2_unit_base + idx))) < 0
         return: 1
-    if: l2_call_sel = 1 && c.fprintf(l2_out, "%s@: Lmx l2_c%d l2_pst\n", ind, self_t) < 0
+    if: sel = 1 && c.fprintf(l2_out, "%s@: Lmx l2_c%d l2_pst\n", ind, self_t) < 0
         return: 1
-    if: l2_call_sel = 2 && c.fprintf(l2_out, "%s@: Lmx l2_c%d l2_p%d_%d\n", ind, self_t, mi, l2_call_fi) < 0
+    if: sel = 2 && c.fprintf(l2_out, "%s@: Lmx l2_c%d l2_p%d_%d\n", ind, self_t, mi, fi) < 0
         return: 1
-    a0: l2_next_active(call\body\first_field)
+    if: body != 0
+        a0: l2_next_active(body\first_field)
     t: 0
     nact: l2_m_arity[idx]
     nhid: l2_m_dyn[idx]
@@ -15060,7 +15156,7 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
         return: l2_prep_drop(acts, hides)
     if: l2_m_throws[idx] != 0 && c.fprintf(l2_out, "%sl2_ts%d: ", ind, t) < 0
         return: l2_prep_drop(acts, hides)
-    if: l2_call_sel = 2
+    if: sel = 2
         if: nact != 0 || nhid != 0
             l2_prep_drop(acts, hides)
             return: l2_error(l2_src, node, "incompatible entry signature")
@@ -17604,6 +17700,17 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             continue
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM && l2_text_eq(stmt\as\atom, "return")
             return: 1
+        # A bare atom (l2_check_bare): a callable is called with no arguments on the call path of
+        # `m()` (l2_emit_call) and its result, if any, discarded; any other value is discarded --
+        # an atom has nothing to evaluate.
+        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM
+            oi: l2_atom_callee(stmt\as\atom, mi, @ fi)
+            if: oi >= 0 && fi >= 0 && l2_emit_call(stmt, oi, 2, fi, 0, mi, ind, l2_tok) != 0
+                return: 1
+            if: oi >= 0 && fi < 0 && l2_emit_call(stmt, oi, 0, fi, 0, mi, ind, l2_tok) != 0
+                return: 1
+            field: l2_next_active(field\next)
+            continue
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0
             pd: l2_prefix_deref(stmt\as\frame\head, mi, pdest)
         if: pd = 0

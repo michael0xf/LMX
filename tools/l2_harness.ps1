@@ -863,6 +863,29 @@ $fixtures = @(
         Needle = 'a catch parameter hides a visible name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s1_catch_unhandled_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unhandled throw in entry: Oops'; Absent = @(); Debt = @() },
+    # A BARE ATOM STATEMENT (plan §3, "Expression statement и discard"; FABLE-OPUS-RECEIVER-CONTRACT-
+    # 20260924-139).  The atom resolves like any value and the kind of its binding decides: a callable
+    # (a unit method, a callable formal) is called with no arguments on the call path of `m()`, its
+    # result discarded; a Structure is refused until the author settles executing one (Q19.2); any
+    # other value is discarded, never called.  Every one of these crashed the translator before.
+    [pscustomobject]@{ Name = 'unit_bare_fn_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 2;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_bare_sub_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 3;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_bare_in_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 25;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_bare_literal_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_bare_own_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 49;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_bare_struct_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'executing a named Structure is not supported yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_bare_struct_field_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'executing a named Structure is not supported yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_bare_unknown_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unresolved name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_bare_expr_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'an expression statement is not supported yet'; Absent = @(); Debt = @() },
     # THE STICKY DIRTY OF AN ADDRESS-TAKEN LOCAL (GROK-COLON-OCCURRENCE-20260922-02).  Any executed
     # `@x` of an addressable activation-local makes sticky through activation end -- before, between
     # or after occurrence bindings.  Address-taking invents no graph field; `p` always addresses the

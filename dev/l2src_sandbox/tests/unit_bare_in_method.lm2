@@ -1,0 +1,19 @@
+# Inside a method body the same holds, and for a callable formal too: w calls m bare, then f,
+# which holds a whole callable occurrence (here m's), with no arguments.  m runs twice (hits 2)
+# and w returns 5: 25.
+int: hits 0
+
+fn: m () int
+    hits: hits + 1
+    return: 7
+end: m
+
+fn: w (m: f) int
+    m
+    f
+    return: 5
+end: w
+
+int: r 0
+r: w(m)
+return: hits * 10 + r

@@ -1324,6 +1324,38 @@ After primary-credential confirmation, policy may issue a delegated module/servi
 
 AuthEvidence may explicitly contain user, verifier realm, ticket, permitted actions and quorum satisfaction. It is data with dependencies and lifetime. The receiving expression checks required properties in its unit tests under [unified admission](#admission). A password match or valid signature creates no implicit roles, name bindings or indefinite admission.
 
+### Explicit protection instead of global lockout
+
+The default realm should make ordinary local work boring. It should avoid permanent `access denied` behavior for unprotected services, directories and applications. If a service or directory is not declared protected, the empty or bootstrap verifier may be enough for ordinary access.
+
+System services and dangerous administrative surfaces may belong to an admin realm with a sysadmin verifier. Ordinary user services may remain in the default realm. When a user or administrator decides that a particular service, directory or archive is important, they create a new verifier realm for that object.
+
+Encrypted data should belong to its own protection realm:
+
+```text
+protected directory
+    -> separate verifier realm
+    -> separate encryption key material
+
+`.lmz` archive
+    -> separate verifier realm
+    -> archive-local encryption key material
+```
+
+This is different from treating the whole disk as one secret. Full-disk encryption may protect a powered-off stolen device, but it mixes device recovery, operating-system access, ordinary files and truly protected data into one global mechanism. If the global secret is lost, the whole machine may be lost. If it is unlocked, too much may be unlocked.
+
+Lingvamyxa protection should keep recovery and secrecy separate:
+
+```text
+system recovery
+    -> reset default realm, reinstall, recreate ordinary access
+
+protected data recovery
+    -> requires the protected realm credential or its recovery policy
+```
+
+Forgetting the default password should not destroy the computer. Forgetting a protected archive or protected directory verifier may make that protected data unrecoverable, and that is the honest cost of real encryption.
+
 <a id="crypto-values"></a>
 ## 33. Cryptographic values and providers
 

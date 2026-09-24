@@ -2,8 +2,6 @@ predef: "l3_interp/l3_recv.h.lm1"
 predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_arena_refs.h.lm1"
-predef: "l2src/lmx_own.h.lm1"
-predef: "l2src/lmx_own.lm1"
 predef: "l2src/lmx_scratch.lm1"
 predef: "l2src/lmx_interp.h.lm1"
 predef: "l2src/lmx_implements.h.lm1"
@@ -12,64 +10,17 @@ predef: "l3_interp/l3_path.lm1"
 predef: "l3_interp/l3_plan.lm1"
 include: "<string.h>"
 
+# -187 c4: no lmx_own working copies / checkpoint. ASSIGN stores into the field
+# cell on self; nested calls see writes immediately (no flush).
+
 prototype:
     fn: l3_exec_stmt (@: LmxArena arena; @: L3Frame f; @: void v) int
     fn: l3_exec_range (@: LmxArena arena; @: L3Frame f; @: Lmx node; size_t: from) int
     fn: l3_exec_op (@: LmxArena arena; @: L3Frame f; @: Lmx host; @: LmxOp op) int
     fn: l3_cond_int (@: LmxArena arena; @: void v; @: int out) int
-    fn: l3_own_load_ints (@: LmxArena arena; @: L3Frame f; @: Lmx node) int
-    fn: l3_own_checkpoint_all (@: L3Frame f) int
     fn: l3_exec_frame (@: LmxArena arena; @: L3Frame f; @: Lmx node) int
+    fn: l3_is_self_field (@: L3Frame f; @: void v) int
 end: prototype
-
-fn: l3_own_load_ints (@: LmxArena arena; @: L3Frame f; @: Lmx node) int
-    @: LmxCallable info
-    @: Lmx plan
-    @: void slice 0
-    @@: void slot
-    @: LmxOwnLocal loc
-    size_t: n
-    size_t: i
-    f\nown: 0
-    f\owns: 0
-    if: arena = 0 || f = 0 || node = 0 || f\scratch = 0
-        return: 1
-    if: l3_plan_prepare(arena, node) != 0
-        return: 1
-    info: lmx_call_callable(arena, node)
-    if: info = 0
-        return: 1
-    plan: info\header
-    n: lmx_plan_entry_count(plan)
-    if: n = 0U
-        return: 0
-    if: lmx_scratch_take(f\scratch, n * c.sizeof(c.LmxOwnLocal), @ slice) != c.LMX_SCRATCH_OK
-        return: 1
-    f\owns: (cast: (@: LmxOwnLocal) slice)
-    i: 0U
-    while: i < n
-        slot: lmx_plan_slot_known(node, plan, i)
-        if: slot = 0
-            return: 1
-        loc: f\owns + i
-        loc\from: slot
-        loc\value: slot[0]
-        loc\dirty: 0
-        i: i + 1U
-    ---
-    f\nown: (cast: (int) n)
-return: 0
-
-fn: l3_own_checkpoint_all (@: L3Frame f) int
-    int: i 0
-    if: f = 0
-        return: 1
-    while: i < f\nown
-        if: lmx_own_checkpoint(@ f\owns[i]) != 0
-            return: 1
-        i: i + 1
-    ---
-return: 0
 
 fn: l3_cond_int (@: LmxArena arena; @: void v; @: int out) int
     if: v = 0
@@ -81,13 +32,26 @@ fn: l3_cond_int (@: LmxArena arena; @: void v; @: int out) int
     \out: lmx_int_value_known(v)
 return: c.L3_OK
 
+# True when v is a direct child cell of the activation Structure (slot 1..).
+fn: l3_is_self_field (@: L3Frame f; @: void v) int
+    size_t: i
+    if: f = 0 || f\self = 0 || v = 0
+        return: 0
+    i: 1U
+    while: i < (cast: (size_t) f\self\len)
+        if: lmx_arena_ref_value(f\self, i) = v
+            return: 1
+        ---
+        i: i + 1U
+    ---
+return: 0
+
 fn: l3_exec_op (@: LmxArena arena; @: L3Frame f; @: Lmx host; @: LmxOp op) int
     int: code
     int: st
     int: cond 0
     int: n 0
     int: idx
-    int: k
     @: void body
     @: void arg
     @: void leaf 0
@@ -99,8 +63,6 @@ fn: l3_exec_op (@: LmxArena arena; @: L3Frame f; @: Lmx host; @: LmxOp op) int
     if: code = c.L3_NODE_RETURN
         f\has_ret: 0
         if: host = 0 || host\len < 2
-            if: l3_own_checkpoint_all(f) != 0
-                return: c.L3_INVALID
             return: c.L3_RETURN
         ---
         if: host\len > 2
@@ -114,8 +76,6 @@ fn: l3_exec_op (@: LmxArena arena; @: L3Frame f; @: Lmx host; @: LmxOp op) int
             return: c.L3_UNSUPPORTED
         f\last_int: lmx_int_value_known(arg)
         f\has_ret: 1
-        if: l3_own_checkpoint_all(f) != 0
-            return: c.L3_INVALID
         return: c.L3_RETURN
     ---
     if: code = c.L3_NODE_MATCH || code = c.L3_NODE_EACH || code = c.L3_NODE_YIELD || code = c.L3_NODE_FINALLY || code = c.L3_NODE_THROW
@@ -149,16 +109,15 @@ fn: l3_exec_op (@: LmxArena arena; @: L3Frame f; @: Lmx host; @: LmxOp op) int
         st: l3_cond_int(arena, lmx_arena_ref_value(host, 1U), @ idx)
         if: st != c.L3_OK
             return: st
-        arg: lmx_arena_ref_value(host, 2U)
-        k: 0
-        while: k < f\nown
-            if: f\owns[k].from = lmx_arena_ref_cell(f\self, (cast: (size_t) idx))
-                lmx_own_write(@ f\owns[k], arg)
-                return: c.L3_OK
-            ---
-            k: k + 1
+        if: idx < 1 || (cast: (size_t) idx) >= (cast: (size_t) f\self\len)
+            return: c.L3_UNSUPPORTED
         ---
-        return: c.L3_UNSUPPORTED
+        arg: lmx_arena_ref_value(host, 2U)
+        # Direct typed store into the field cell / slot (no working copy).
+        if: lmx_arena_ref_store(f\self, (cast: (size_t) idx), arg) != 0
+            return: c.L3_INVALID
+        ---
+        return: c.L3_OK
     ---
     if: code = c.L3_NODE_IF
         if: host\len < 3
@@ -205,16 +164,12 @@ fn: l3_exec_stmt (@: LmxArena arena; @: L3Frame f; @: void v) int
     if: v = 0
         return: c.L3_ABSENT
     kind: lmx_domain_kind(arena, v)
-    # N7 / D-03: a primitive that is not an own-field cell of this activation is a
-    # headless data statement -- explicit UNSUPPORTED until discard exists. Own-field
-    # cells share the child range with body steps and are not statements.
+    # N7 / D-03: a primitive that is a field cell of this activation is not a
+    # statement (shared child range with body steps). Other primitives are
+    # headless data -- explicit UNSUPPORTED until discard exists.
     if: kind = c.LMX_KIND_PRIMITIVE
-        hk: 0
-        while: hk < f\nown
-            if: f\owns != 0 && f\owns[hk].value = v
-                return: c.L3_OK
-            ---
-            hk: hk + 1
+        if: l3_is_self_field(f, v) != 0
+            return: c.L3_OK
         ---
         return: c.L3_UNSUPPORTED
     if: kind = c.LMX_DOMAIN_KIND_OP
@@ -230,10 +185,9 @@ fn: l3_exec_stmt (@: LmxArena arena; @: L3Frame f; @: void v) int
         hk: lmx_domain_kind(arena, head)
         if: hk = c.LMX_DOMAIN_KIND_OP
             return: l3_exec_op(arena, f, host, (cast: (@: LmxOp) head))
-        # Bare callable occurrence: nullary activation, same path a call Frame takes.
+        # Bare callable occurrence: nullary activation. Writes already in cells
+        # -- no checkpoint before the child.
         if: hk = c.LMX_DOMAIN_KIND_CALLABLE
-            if: l3_own_checkpoint_all(f) != 0
-                return: c.L3_INVALID
             if: f\scratch = 0
                 return: c.L3_INVALID
             if: lmx_scratch_mark(f\scratch, @ mark) != c.LMX_SCRATCH_OK
@@ -252,10 +206,8 @@ fn: l3_exec_stmt (@: LmxArena arena; @: L3Frame f; @: void v) int
         ---
         if: hk = c.LMX_KIND_METHOD
             return: c.L3_UNSUPPORTED
-        # Plain Structure with no op/callable head: explicit until discard exists.
         return: c.L3_UNSUPPORTED
     ---
-    # A bare CALLABLE descriptor has no occurrence M to activate; never silent OK.
     if: kind = c.LMX_DOMAIN_KIND_CALLABLE
         return: c.L3_UNSUPPORTED
     if: kind = c.LMX_KIND_METHOD
@@ -299,13 +251,12 @@ fn: l3_exec_frame (@: LmxArena arena; @: L3Frame f; @: Lmx node) int
         return: c.L3_UNSUPPORTED
     saved_self: f\self
     f\self: node
-    if: l3_own_load_ints(arena, f, node) != 0
+    # Plan publish only (no own-load / working copies).
+    if: l3_plan_prepare(arena, node) != 0
         f\self: saved_self
         return: c.L3_INVALID
-    st: l3_exec_range(arena, f, node, 1U)
-    if: st != c.L3_RETURN
-        l3_own_checkpoint_all(f)
     ---
+    st: l3_exec_range(arena, f, node, 1U)
     f\self: saved_self
     if: st = c.L3_RETURN
         return: c.L3_OK

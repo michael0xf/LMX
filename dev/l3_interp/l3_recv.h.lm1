@@ -1,7 +1,6 @@
 predef: "l2src/lmx.h.lm1"
 predef: "l2src/lmx_arena.h.lm1"
 predef: "l2src/lmx_implements.h.lm1"
-predef: "l2src/lmx_own.h.lm1"
 predef: "l2src/lmx_scratch.h.lm1"
 
 struct: L3Frame
@@ -10,8 +9,6 @@ struct: L3Frame
     int: last_int
     int: has_ret
     @: LmxScratch scratch
-    @: LmxOwnLocal owns
-    int: nown
 end: L3Frame
 
 struct: L3Result
@@ -26,6 +23,7 @@ end: L3Seen
 
 # L3-01 receiver: consume an already-built graph as the L3 subset
 # N1-N3. Not admission (#admission). Unsupported nodes fail; never METHOD.addr.
+# -187 c4: no LmxOwnLocal / working copies; field writes land in the cell.
 
 define: L3_OK 0
 define: L3_INVALID 1

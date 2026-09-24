@@ -124,13 +124,13 @@ live=0; compare does not read garbage. identifier_payload
 keeps aliasing. No process-global bind table.
 Body `@: LmP0Text result` is an explicit 11.2.1 address-depth-1
 slot (C `LmP0Text *`, symbol `l2_s`), not OwnUsed, not an Lmx
-child, and not the lmx_own cache. `return: result` is the pointer
+child, and not a working-field cache. `return: result` is the pointer
 VALUE; `return: @result` would be the address of the slot
 (dangling) and is not emitted. `result\data` / `result\length`
 are raw foreign follow of the frozen p0.h ABI. `lm_own_*` comes
 from frozen `l1src/own.lm1` (new_zero / copy_bytes / delete /
 alloc_fails), imported as-is; that is heap allocation, not
-lmx_own field cache. `c.sizeof` admits `LmP0Text` /
+working-field cache. `c.sizeof` admits `LmP0Text` /
 `c.LmP0Text` only. parser_text_heap.lm2 ports
 lm_p0_copy_bytes, lm_p0_text_view_new_cstr,
 lm_p0_text_view_delete (sub), and lm_p0_text_from_cstr.

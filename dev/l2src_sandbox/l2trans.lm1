@@ -651,6 +651,10 @@ prototype:
     fn: l2_define_count (const: @(LmP0Text name)) @: LmP0Text
     fn: l2_predef_file_has_function (const: @(LmP0Text name); const: @(LmP0Text quoted)) int
     fn: l2_predef_has_function (const: @(LmP0Text name)) int
+    fn: l2_resolve_type_atom (const: @(LmP0Text atom); int: depth; int: is_const; @: int out_ty) int
+    fn: l2_proto_ret_ty (const: @(LmP0Node rt); @: int out_ty) int
+    fn: l2_predef_file_result_ty (const: @(LmP0Text name); const: @(LmP0Text quoted); @: int out_ty) int
+    fn: l2_predef_result_ty (const: @(LmP0Text name); @: int out_ty) int
     fn: l2_foreign_free () int
     fn: l2_emit_foreign_named (@: FILE out; int: ty; const: @(char prefix); const: @(LmP0Text name)) int
     fn: l2_emit_foreign_temp (@: FILE out; int: ty; const: @(char ind); int: temp) int
@@ -4570,6 +4574,146 @@ fn: l2_predef_has_function (const: @(LmP0Text name)) int
     ---
 return: 0
 
+# FABLE-SONNET-PREDEF-RESULT-TYPE-20260924-160 commit 2 (steps/predef-
+# result-type-inventory.md): a predef'd function's return type, read from
+# the same prototype: declaration l2_predef_file_has_function already
+# re-parses for its yes/no existence check -- the narrow vocabulary the
+# corpus actually assigns (bare int/size_t/unsigned/ulong, void/absent
+# for sub:, @: char, @: void, a named-Structure atom). Anything else
+# (an exotic pointer depth, a const-qualified return, @@:) is left for a
+# future need to extend, not guessed at here: the caller falls back to
+# -10 exactly as it did before this ticket, the same fail-closed choice
+# l2_colon_simple_ty already made for every l2_is_known call.
+fn: l2_proto_ret_ty (const: @(LmP0Node rt); @: int out_ty) int
+    @: LmP0Field inner_f
+    @: LmP0Node inner
+    if: out_ty = 0
+        return: 1
+    \out_ty: 8
+    if: rt = 0
+        return: 0
+    if: rt\kind = c.LM_P0_NODE_ATOM
+        if: rt\as = 0 || rt\as\atom = 0
+            return: 1
+        if: l2_text_eq(rt\as\atom, "int")
+            \out_ty: 0
+            return: 0
+        if: l2_text_eq(rt\as\atom, "size_t")
+            \out_ty: 2
+            return: 0
+        if: l2_text_eq(rt\as\atom, "unsigned")
+            \out_ty: 33
+            return: 0
+        if: l2_text_eq(rt\as\atom, "ulong")
+            \out_ty: 36
+            return: 0
+        if: l2_text_eq(rt\as\atom, "void")
+            \out_ty: 8
+            return: 0
+        if: l2_ns_find(rt\as\atom) >= 0
+            \out_ty: l2_colon_graph_ty()
+            return: 0
+        return: 1
+    if: rt\kind != c.LM_P0_NODE_FRAME || rt\as = 0 || rt\as\frame = 0
+        return: 1
+    if: l2_frame_head(rt, "@") = 0
+        return: 1
+    if: rt\as\frame\body = 0 || l2_count_active(rt\as\frame\body) != 1
+        return: 1
+    inner_f: l2_next_active(rt\as\frame\body\first_field)
+    if: inner_f = 0
+        return: 1
+    inner: inner_f\value
+    if: inner = 0 || inner\kind != c.LM_P0_NODE_ATOM || inner\as = 0 || inner\as\atom = 0
+        return: 1
+    if: l2_text_eq(inner\as\atom, "char")
+        \out_ty: 3
+        return: 0
+    if: l2_text_eq(inner\as\atom, "void")
+        \out_ty: 16
+        return: 0
+    if: l2_resolve_type_atom(inner\as\atom, 1, 0, out_ty) != 0
+        return: 1
+return: 0
+
+fn: l2_predef_file_result_ty (const: @(LmP0Text name); const: @(LmP0Text quoted); @: int out_ty) int
+    size_t: n
+    @: char path 0
+    @: LmP0Document document 0
+    const: @: LmP0Node root
+    @: LmP0Field f
+    @: LmP0Field pf
+    @: LmP0Field nf
+    @: LmP0Field pp
+    @: LmP0Field rtf
+    @: LmP0Node rtnode
+    @: LmP0Field first
+    @: LmP0Node item
+    @: LmP0Node decl
+    int: found 0
+    if: out_ty = 0
+        return: 0
+    if: name = 0 || quoted = 0 || quoted\data = 0 || quoted\length < 2U || quoted\data[0] != 34 || quoted\data[quoted\length - 1U] != 34
+        return: 0
+    n: quoted\length - 2U
+    path: (cast: (@: char) l2_xmalloc(n + 1U))
+    if: path = 0
+        return: 0
+    memcpy(path, quoted\data + 1U, n)
+    path[n]: 0
+    if: lm_p0_parse_file(path, @ document) = 0 && document != 0
+        root: lm_p0_document_root(document)
+        if: root != 0 && root\kind = c.LM_P0_NODE_STRUCTURE && root\as != 0
+            f: l2_next_active(root\as\structure\first_field)
+            while: f != 0 && found = 0
+                item: f\value
+                if: l2_frame_head(item, "prototype") && item\as\frame\body != 0
+                    pf: l2_next_active(item\as\frame\body\first_field)
+                    while: pf != 0 && found = 0
+                        decl: pf\value
+                        if: (l2_frame_head(decl, "fn") || l2_frame_head(decl, "sub")) && decl\as\frame\body != 0
+                            nf: l2_next_active(decl\as\frame\body\first_field)
+                            if: nf != 0 && nf\value != 0 && nf\value\kind = c.LM_P0_NODE_ATOM && l2_text_same(nf\value\as\atom, name)
+                                pp: l2_next_active(nf\next)
+                                rtf: 0
+                                if: pp != 0
+                                    rtf: l2_next_active(pp\next)
+                                rtnode: 0
+                                if: rtf != 0
+                                    rtnode: rtf\value
+                                if: l2_proto_ret_ty(rtnode, out_ty) != 0
+                                    \out_ty: -10
+                                found: 1
+                            ---
+                        ---
+                        pf: l2_next_active(pf\next)
+                    ---
+                ---
+                if: found = 0 && l2_frame_head(item, "predef") && item\as\frame\body != 0 && l2_count_active(item\as\frame\body) = 1
+                    first: l2_next_active(item\as\frame\body\first_field)
+                    if: first != 0 && first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM
+                        found: l2_predef_file_result_ty(name, first\value\as\atom, out_ty)
+                    ---
+                ---
+                f: l2_next_active(f\next)
+            ---
+        ---
+        lm_p0_document_destroy(document)
+    ---
+    l2_xfree((cast: (@: void) path))
+return: found
+
+fn: l2_predef_result_ty (const: @(LmP0Text name); @: int out_ty) int
+    int: i 0
+    if: name = 0 || out_ty = 0
+        return: 0
+    while: i < l2_pd_n
+        if: l2_predef_file_result_ty(name, l2_pd[i], out_ty) != 0
+            return: 1
+        i: i + 1
+    ---
+return: 0
+
 fn: l2_address_depth (const: @(LmP0Text head)) int
     size_t: i 0U
     if: head = 0 || head\data = 0 || head\length = 0U || head\length > (cast: (size_t) c.INT_MAX)
@@ -5443,23 +5587,24 @@ fn: l2_colon_simple_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
     m: l2_head_method(value\as\frame\head)
     # A predef'd C function (l2_is_known: the c.* door, or a name the unit's
     # own predef: files declare) is an external ABI leaf, not an L2 method
-    # l2_head_method can find -- l2trans never learns its exact return type
-    # (the generated predef header supplies the checked C prototype; l2trans
-    # itself only re-parses the predef file, on demand, for a yes/no
-    # existence check, l2_predef_has_function/l2_predef_file_has_function,
-    # not its signature). Assigning its result already works in every
+    # l2_head_method can find. Assigning its result already works in every
     # non-assignment expression context (`if: lm_p0_parse_file(...) != 0`,
     # entry_parse_min.lm2), which needs no type at all; only this narrower
     # `target: call()` compatibility pre-check did not (Opus's finding 2,
     # FABLE-SONNET-DECL-PREPASS-20260923-137 part 3: "assignment value has
-    # unknown type"). Read as a numeric literal would (-10, the same code
-    # l2_num gives above) -- safe, not a wider door: l2_colon_types_compatible
-    # accepts -10 only into a numeric target (int/size_t/unsigned/ulong) and
-    # still refuses a pointer or Structure target, the same fail-closed
-    # outcome an unknown type gave before, for every case this cannot be
-    # the realistic `status: predef_call(...)` shape.
+    # unknown type"). FABLE-SONNET-PREDEF-RESULT-TYPE-20260924-160 commit 2
+    # (steps/predef-result-type-inventory.md): l2_predef_result_ty reads the
+    # function's own prototype: declaration for its real return type (the
+    # same file l2_is_known already re-parses for the yes/no check) -- a
+    # predef'd function's result now carries its declared type, the same as
+    # a real L2 method's would. -10 (the numeric-literal code, safe into a
+    # numeric target, fail-closed into anything else) remains only for a
+    # genuine `c.*` door call, which has no prototype anywhere to read
+    # (measured, commit 1: no corpus fixture assigns one into a non-numeric
+    # target; the norm gives raw door text to gcc, not to L2 type inference).
     if: m < 0 && l2_is_known(value\as\frame\head) != 0
-        \out_ty: -10
+        if: l2_predef_result_ty(value\as\frame\head, out_ty) = 0
+            \out_ty: -10
         return: 0
     if: m < 0
         return: 1

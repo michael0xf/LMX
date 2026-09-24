@@ -412,21 +412,30 @@ if ($provenanceMode -and $built) {
 }
 
 # ---- 2b. the kernel's headers and the driver of generated programs ----------------------------
-# Generated C says #include "l2src/<unit>.lm1.h": every staged header is translated once, to
-# <out>\headers\l2src\.  The driver is staged NEXT TO l2src\, not inside it: it is not a unit.
+# Generated C says #include "l2src/<unit>.lm1.h" or "l1src/<unit>.lm1.h" (FABLE-SONNET-PREDEF-
+# RESULT-TYPE-20260924-160: l1src/own.h.lm1, the first .h.lm1 prototype header outside l2src\, is
+# what surfaced the gap -- this loop only ever staged l2src\'s headers, so any fixture whose
+# generated C reached gcc while predef'ing an l1src\*.h.lm1 header got "No such file or directory"
+# there, never before hit since no earlier fixture's predef chain reached gcc through one): every
+# staged header, in EITHER directory, is translated once, to <out>\headers\l2src\ or
+# <out>\headers\l1src\ respectively.  The driver is staged NEXT TO l2src\, not inside it: it is
+# not a unit.
 $headers = Join-Path $OutDir 'headers'
 New-Item -ItemType Directory -Force -Path (Join-Path $headers 'l2src') | Out-Null
+New-Item -ItemType Directory -Force -Path (Join-Path $headers 'l1src') | Out-Null
 $kflags = @('-std=c99', '-I', $root, '-I', (Join-Path $root 'lm1\build'), '-I', $src, '-I', $headers)
 $driverSource = Join-Path $sandbox 'harness\l2_eternal_driver.lm1'
 $driverC = Join-Path $gen 'l2_eternal_driver.c'
 $driverO = Join-Path $gen 'l2_eternal_driver.o'
 $driver = $true
 $made = 0
-foreach ($h in @(Get-ChildItem -LiteralPath (Join-Path $src 'l2src') -File -Filter '*.h.lm1' | Sort-Object Name)) {
-    $base = $h.Name.Substring(0, $h.Name.Length - '.h.lm1'.Length)
-    $target = Join-Path $headers ('l2src\' + $base + '.lm1.h')
-    if (Step-Made ('header.' + $base) $Translator @(('l2src/' + $h.Name), $target) $src $target) { $made++ }
-    else { Add-Row 'FAIL' ('header:' + $base) 'l1trans produced no header; see the log'; $driver = $false }
+foreach ($hdrDir in @('l2src', 'l1src')) {
+    foreach ($h in @(Get-ChildItem -LiteralPath (Join-Path $src $hdrDir) -File -Filter '*.h.lm1' | Sort-Object Name)) {
+        $base = $h.Name.Substring(0, $h.Name.Length - '.h.lm1'.Length)
+        $target = Join-Path $headers ($hdrDir + '\' + $base + '.lm1.h')
+        if (Step-Made ('header.' + $hdrDir + '.' + $base) $Translator @(($hdrDir + '/' + $h.Name), $target) $src $target) { $made++ }
+        else { Add-Row 'FAIL' ('header:' + $hdrDir + '.' + $base) 'l1trans produced no header; see the log'; $driver = $false }
+    }
 }
 if (-not (Test-Path -LiteralPath $driverSource)) { Add-Row 'FAIL' 'build:eternal_driver' 'driver source is missing'; $driver = $false }
 if ($driver) {
@@ -1509,14 +1518,30 @@ $fixtures = @(
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'c.sizeof(unsigned long)');
         Debt = @('c.LMX_TYPE_UNSIGNED, l2_eprofile0)', 'c.LMX_TYPE_ULONG, l2_eprofile0)',
                  'c.sizeof(l2_ulong_probe), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_ULONG, l2_eprofile0)') },
-    # FABLE-SONNET-DECL-PREPASS-20260923-137 part 3 (Opus's finding 2): a
-    # predef'd C function's result reads as numeric -- safe into a numeric
-    # target (entry_parse_min.lm2's own assignment form), still refused
-    # into an incompatible one, and not caught until gcc for a genuinely
-    # void return (l2trans cannot know a predef's real C signature).
+    # FABLE-SONNET-DECL-PREPASS-20260923-137 part 3 (Opus's finding 2), updated by
+    # FABLE-SONNET-PREDEF-RESULT-TYPE-20260924-160 commit 2: a predef'd C function's result now
+    # carries its own declared return type (l2_predef_result_ty, reading the prototype:
+    # declaration l2_is_known already re-parses) -- entry_parse_min.lm2's `int` target and this
+    # Structure target are unaffected (int is numeric either way; a Structure target was and
+    # remains incompatible with a predef'd int-returning call), but a genuinely void-returning
+    # predef assigned anywhere is now refused AT l2trans, not left for gcc (below).
     [pscustomobject]@{ Name = 'unit_predef_result_struct_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_predef_result_void_refused.lm2'; Expect = 'toolchain-refuses'; Exit = 0; Needle = '';
+    [pscustomobject]@{ Name = 'unit_predef_result_void_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
+    # FABLE-SONNET-PREDEF-RESULT-TYPE-20260924-160 commit 2: the primary motivating case --
+    # lm_own_copy_bytes's declared `@: char` return now matches copy's `@: char` target (was
+    # refused under the old numeric-only -10 code, found during -155, recorded as D-35).
+    # l2trans and l1trans both succeed clean (measured); `eternal-runs` was tried and reached a
+    # SEPARATE, unrelated gap this ticket does not own -- the per-fixture eternal-runs link step
+    # only links l2_eternal_driver.o + the fixture + l2_libc.o, never l1src/own.lm1's own compiled
+    # body (unit_lm_own_actual_span.lm2 is the first fixture ever to reach a link needing it;
+    # every other lm_own_* use links inside the full kernel build, tools/build_l2src.ps1, a
+    # different object graph entirely) -- "undefined reference to `lm_own_copy_bytes'" etc.
+    # translates-with-debt with an empty Debt stops at l1trans success, the layer this ticket
+    # actually changes, without the unrelated link-object gap; flagged for whoever owns extending
+    # the per-fixture link step, not fixed here.
+    [pscustomobject]@{ Name = 'unit_lm_own_actual_span.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
         Absent = @(); Debt = @() },
     # FABLE-SONNET-OWN-LOOKUP-AUDIT-20260923-131 part 3: the -92 leftover --
     # a Structure value assigned through a path ending at a nested

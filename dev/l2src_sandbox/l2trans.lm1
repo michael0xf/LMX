@@ -98,6 +98,18 @@ int: l2_rw_send_rec 0
 @: int l2_rw_send_count 0
 @: int l2_rw_sf_kind 0
 @@: LmP0Text l2_rw_sf_text 0
+# FABLE-SONNET-SEND-IN-METHODS-20260925-168: `sendMessage: X` inside a method body, a direct
+# native call of the same generated l2_msend<k> (l2_emit_send, prefix "l2_msend") -- its own
+# k-space, entirely separate from the root's above, so the two never collide. l2_msend_i is reset
+# to 0 once before l2_check_body's method loop and once before l2_emit_body's: check and emit
+# walk every method's statements (recursing into if/while/for bodies alike) in the same order, so
+# the Nth method-body send site gets the same k both times, exactly as l2_tn/l2_own_find_decl
+# already rely on that same check/emit mirroring elsewhere in this file.
+int: l2_msend_n 0
+int: l2_msend_i 0
+@: int l2_msend_count 0
+@: int l2_msend_kind 0
+@@: LmP0Text l2_msend_text 0
 # The unit's field that holds the host's settings reference (lmx_root_launch), program mode.
 int: l2_settings_field 0
 int: l2_e_n 0
@@ -421,7 +433,9 @@ prototype:
     fn: l2_rw_expr (@: LmP0Field field; int: n; int: parent; @: int out) int
     fn: l2_rw_count (@: LmP0Field first) int
     fn: l2_rw_send (@: LmP0Node stmt; int: into; @: int out) int
-    fn: l2_emit_send (int: k; int: proto) int
+    fn: l2_emit_send (int: k; int: proto; @: char prefix; @: int count_arr; @: int kind_arr; @@: LmP0Text text_arr) int
+    fn: l2_msend_register (const: @(LmP0Node stmt); const: @(char path); @: int out_k; @: int out_ni) int
+    fn: l2_emit_msend (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
     fn: l2_rw_body (@: LmP0Field first; int: parent; int: slot) int
     fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @: int made) int
     fn: l2_rw_stmts (@: LmP0Field first; int: into; int: base; @: int made) int
@@ -2957,6 +2971,10 @@ fn: l2_parse_library (const: @(char path)) int
         i: i + 1
     ---
     i: 0
+    # FABLE-SONNET-SEND-IN-METHODS-20260925-168 commit 2: k-assignment for a method-body
+    # sendMessage is check/emit order, not a persistent identity -- reset before this check pass
+    # visits every method's statements from the start, and again before l2_emit_body's own pass.
+    l2_msend_i: 0
     while: i < l2_m_n
         if: l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && l2_ml_rebuild(l2_m_body[i]\as\structure, path) != 0
             return: 1
@@ -13736,6 +13754,8 @@ return: 0
 
 fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); int: depth) int
     int: nmk
+    int: msk
+    int: msni
     int: array_target
     int: array_status
     size_t: array_index
@@ -13989,12 +14009,17 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             field: l2_next_active(field\next)
             continue
         # sendMessage: X (author 2026-09-24): a send, not an assignment.  The root's is built as a
-        # walker step (l2_rw_send); a method's has no emission yet.
+        # walker step (l2_rw_send); a method's (FABLE-SONNET-SEND-IN-METHODS-20260925-168 commit
+        # 2) is a direct native call of the same generated l2_msend<k> (l2_msend_register here
+        # validates and records the shape; l2_emit_body re-derives the same k to call it).
         if: l2_frame_head(stmt, "sendMessage") != 0 && mi = l2_e
             field: l2_next_active(field\next)
             continue
         if: l2_frame_head(stmt, "sendMessage") != 0
-            return: l2_error(path, stmt, "sendMessage is built in the root only yet")
+            if: l2_msend_register(stmt, path, @ msk, @ msni) != 0
+                return: 1
+            field: l2_next_active(field\next)
+            continue
         # receiveMessage: m (Q10). The first receiveMessage that names m declares it
         # (an own field of graph type, bound here); a later one rebinds it.  A
         # letter's graph has no static Structure type: into a typed own field it
@@ -14191,6 +14216,7 @@ fn: l2_parse_unit (const: @(char path)) int
         i: i + 1
     ---
     i: 0
+    l2_msend_i: 0
     while: i < l2_m_n
         l2_vis_method(i)
         if: l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && l2_ml_rebuild(l2_m_body[i]\as\structure, path) != 0
@@ -16663,6 +16689,92 @@ fn: l2_rw_count (@: LmP0Field first) int
         return: 0 - 1
 return: made
 
+# FABLE-SONNET-SEND-IN-METHODS-20260925-168 commit 2: `sendMessage: X` inside a method body --
+# the same field shape l2_rw_send validates for the root (one Structure `Name(f: v; ...)`, fields
+# `name: literal-or-int-expr`, at most 16, a text field is a quoted literal with no escape),
+# recorded into the method-send arrays instead of a walker-op-tree. `sendMessage: Ref X` (2
+# fields) is not yet supported here either -- Q3(ref) is commit 3's question, not this one's.
+fn: l2_msend_register (const: @(LmP0Node stmt); const: @(char path); @: int out_k; @: int out_ni) int
+    @: LmP0Field f
+    @: LmP0Field g
+    @: LmP0Field b
+    @: LmP0Node x
+    @: LmP0Node v
+    @: LmP0Text t
+    int: k
+    int: nf 0
+    int: ni 0
+    int: n
+    size_t: i
+    \out_k: -1
+    \out_ni: 0
+    if: stmt\as\frame\body = 0 || l2_count_active(stmt\as\frame\body) = 0
+        return: l2_error(path, stmt, "this sendMessage")
+    if: l2_count_active(stmt\as\frame\body) = 2
+        return: l2_error(path, stmt, "sendMessage to a referenced Message is not built in a method body yet")
+    if: l2_count_active(stmt\as\frame\body) != 1
+        return: l2_error(path, stmt, "this sendMessage")
+    ---
+    f: l2_next_active(stmt\as\frame\body\first_field)
+    x: f\value
+    if: x = 0 || x\kind != c.LM_P0_NODE_FRAME || x\as = 0 || x\as\frame = 0 || x\as\frame\body = 0 || l2_ident(x\as\frame\head) = 0
+        return: l2_error(path, stmt, "a message that is not one Structure")
+    ---
+    k: l2_msend_i
+    l2_msend_i: l2_msend_i + 1
+    if: k >= 64
+        return: l2_error(path, stmt, "more than 64 sends in method bodies")
+    if: l2_msend_count = 0
+        l2_msend_count: (cast: (@: int) calloc(64U, c.sizeof(int)))
+        l2_msend_kind: (cast: (@: int) calloc(1024U, c.sizeof(int)))
+        l2_msend_text: (cast: (@@: LmP0Text) calloc(1024U, c.sizeof(@: void)))
+        if: l2_msend_count = 0 || l2_msend_kind = 0 || l2_msend_text = 0
+            return: l2_error(path, stmt, "out of memory")
+        ---
+    ---
+    g: l2_next_active(x\as\frame\body\first_field)
+    while: g != 0
+        v: g\value
+        if: v = 0 || v\kind != c.LM_P0_NODE_FRAME || v\as = 0 || v\as\frame = 0 || v\as\frame\body = 0 || l2_ident(v\as\frame\head) = 0
+            return: l2_error(path, v, "a message field that is not `name: value`")
+        ---
+        if: nf >= 16
+            return: l2_error(path, v, "a message of more than 16 fields")
+        n: l2_count_active(v\as\frame\body)
+        b: l2_next_active(v\as\frame\body\first_field)
+        t: 0
+        if: n = 1 && b\value != 0 && b\value\kind = c.LM_P0_NODE_ATOM && b\value\as != 0
+            t: b\value\as\atom
+        ---
+        if: t != 0 && t\length > 0U && t\data[0] = 34
+            if: t\length < 2U || t\data[t\length - 1U] != 34
+                return: l2_error(path, b\value, "this text")
+            i: 1U
+            while: i + 1U < t\length
+                if: t\data[i] = 92 || t\data[i] = 34
+                    return: l2_error(path, b\value, "a text with an escape in a message")
+                i: i + 1U
+            ---
+            l2_msend_kind[k * 16 + nf]: 2
+            l2_msend_text[k * 16 + nf]: t
+        else:
+            l2_msend_kind[k * 16 + nf]: 1
+            l2_msend_text[k * 16 + nf]: 0
+            ni: ni + 1
+        ---
+        nf: nf + 1
+        g: l2_next_active(g\next)
+    ---
+    if: nf = 0
+        return: l2_error(path, x, "an empty message")
+    l2_msend_count[k]: nf
+    if: k + 1 > l2_msend_n
+        l2_msend_n: k + 1
+    ---
+    \out_k: k
+    \out_ni: ni
+return: 0
+
 # `sendMessage: X` in the root (author 2026-09-24, LMX_blog/2026-09-24.md; K3 = a): X, one
 # Structure `Name(f: v; ...)`, goes to the parent of the current Message -- for R0 the host -- as
 # the letter (sender; X), an anonymous Structure whose field 0 is the sender's reference.  It goes
@@ -16777,26 +16889,76 @@ fn: l2_rw_send (@: LmP0Node stmt; int: into; @: int out) int
     ---
 return: 0
 
+# FABLE-SONNET-SEND-IN-METHODS-20260925-168 commit 2: `sendMessage: X` inside a method body --
+# a direct native call of l2_msend<k> (l2_emit_send, prefix "l2_msend"), the same generated
+# sender the root's own walker step calls through a prim record, no twin. Each int-typed field's
+# value is evaluated the ordinary way (l2_eval_fields, exactly as any other native call's actual
+# argument) into a local temp; refs[i] is just that temp's address (lmx_int_value_known is
+# *(int*)cell, no boxing needed). A nonzero status is the same invariant-failure shape the root's
+# own walker step would give a failed send -- there is no separate recoverable-failure route for
+# this prim there either.
+fn: l2_emit_msend (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
+    @: LmP0Field f
+    @: LmP0Field g
+    @: LmP0Node v
+    @: LmP0Node x
+    int: k
+    int: ni
+    int: nf
+    int: j
+    int: ii
+    c.array: [256]: char tok
+    if: l2_msend_register(stmt, l2_src, @ k, @ ni) != 0
+        return: 1
+    nf: l2_msend_count[k]
+    if: c.fprintf(l2_out, "%sc.array: [%d]: @: void l2_msr%d\n", ind, (cast: (int) (1 + ni)), k) < 0
+        return: 1
+    f: l2_next_active(stmt\as\frame\body\first_field)
+    x: f\value
+    g: l2_next_active(x\as\frame\body\first_field)
+    j: 0
+    ii: 0
+    while: g != 0
+        v: g\value
+        if: l2_msend_kind[k * 16 + j] = 1
+            if: l2_eval_fields(l2_next_active(v\as\frame\body\first_field), l2_count_active(v\as\frame\body), mi, ind, tok) != 0
+                return: 1
+            # A copy into a named local first: l2_eval_fields's own token can be a bare literal
+            # (e.g. "7"), and `@` needs an addressable variable, never a literal.
+            if: c.fprintf(l2_out, "%sint: l2_msf%d_%d %s\n%sl2_msr%d[%d]: @ l2_msf%d_%d\n", ind, k, ii, tok, ind, k, ii, k, ii) < 0
+                return: 1
+            ii: ii + 1
+        ---
+        j: j + 1
+        g: l2_next_active(g\next)
+    ---
+    if: c.fprintf(l2_out, "%sif: l2_msend%d(0, l2_msr%d, %dU, 0, 0) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: sendMessage failed\\n\")\n%s    c.abort()\n%s---\n", ind, k, k, ni, ind, ind, ind) < 0
+        return: 1
+return: 0
+
 # The primitive of send site k: it builds the letter (sender; payload) in an arena of its own and
 # posts it through the current Message's service to its parent.  The payload is a Structure of the
 # site's fields in order: an int cell from the next input, or a char Array holding the text
 # (exact length, no NUL).  The letter's arena is the service's from the post on (attached to the
 # receiver at its take); the record that describes it is this primitive's, and stays allocated.
-fn: l2_emit_send (int: k; int: proto) int
+# FABLE-SONNET-SEND-IN-METHODS-20260925-168 commit 2: parameterised (prefix, count/kind/text
+# arrays) so a method-body send site and a root send site share this one emission path -- no
+# twin -- while keeping their k-spaces (and so their generated function names) apart.
+fn: l2_emit_send (int: k; int: proto; @: char prefix; @: int count_arr; @: int kind_arr; @@: LmP0Text text_arr) int
     int: j
     int: ni 0
     int: nf
     @: LmP0Text t
-    nf: l2_rw_send_count[k]
+    nf: count_arr[k]
     if: proto != 0
-        return: (cast: (int) (c.fprintf(l2_out, "    fn: l2_send%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n", k) < 0))
-    if: c.fprintf(l2_out, "fn: l2_send%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n", k) < 0
+        return: (cast: (int) (c.fprintf(l2_out, "    fn: %s%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n", prefix, k) < 0))
+    if: c.fprintf(l2_out, "fn: %s%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n", prefix, k) < 0
         return: 1
     if: fputs("    @: LmxThread t lmx_thread_current()\n    @: LmxArena a (cast: (@: LmxArena) calloc(1U, c.sizeof(c.LmxArena)))\n    @: LmxMsg m 0\n    @: Lmx g 0\n    @: Lmx p 0\n    @: void cell 0\n    @: LmxArrayDesc text 0\n    if: t = 0 || a = 0 || lmx_arena_open(a) != 0\n        return: 1\n", l2_out) < 0
         return: 1
     j: 0
     while: j < nf
-        if: l2_rw_sf_kind[k * 16 + j] = 1
+        if: kind_arr[k * 16 + j] = 1
             ni: ni + 1
         ---
         j: j + 1
@@ -16806,21 +16968,21 @@ fn: l2_emit_send (int: k; int: proto) int
     ni: 0
     j: 0
     while: j < nf
-        t: l2_rw_sf_text[k * 16 + j]
-        if: l2_rw_sf_kind[k * 16 + j] = 1 && c.fprintf(l2_out, "    cell: lmx_int_new_owned(a)\n    if: cell = 0 || refs[%d] = 0 || lmx_int_store_known(cell, lmx_int_value_known(refs[%d])) != 0 || lmx_arena_ref_store(p, %dU, cell) != 0\n        return: 1\n", ni, ni, j) < 0
+        t: text_arr[k * 16 + j]
+        if: kind_arr[k * 16 + j] = 1 && c.fprintf(l2_out, "    cell: lmx_int_new_owned(a)\n    if: cell = 0 || refs[%d] = 0 || lmx_int_store_known(cell, lmx_int_value_known(refs[%d])) != 0 || lmx_arena_ref_store(p, %dU, cell) != 0\n        return: 1\n", ni, ni, j) < 0
             return: 1
-        if: l2_rw_sf_kind[k * 16 + j] = 1
+        if: kind_arr[k * 16 + j] = 1
             ni: ni + 1
         ---
-        if: l2_rw_sf_kind[k * 16 + j] = 2 && c.fprintf(l2_out, "    text: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, %uU, a)\n    if: text = 0 || lmx_arena_ref_store(p, %dU, (cast: (@: void) text)) != 0\n        return: 1\n", (cast: (unsigned) (t\length - 2U)), j) < 0
+        if: kind_arr[k * 16 + j] = 2 && c.fprintf(l2_out, "    text: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, %uU, a)\n    if: text = 0 || lmx_arena_ref_store(p, %dU, (cast: (@: void) text)) != 0\n        return: 1\n", (cast: (unsigned) (t\length - 2U)), j) < 0
             return: 1
-        if: l2_rw_sf_kind[k * 16 + j] = 2 && t\length > 2U && c.fprintf(l2_out, "    memcpy(text\\data, (cast: (@: void) %.*s), %uU)\n", (cast: (int) t\length), t\data, (cast: (unsigned) (t\length - 2U))) < 0
+        if: kind_arr[k * 16 + j] = 2 && t\length > 2U && c.fprintf(l2_out, "    memcpy(text\\data, (cast: (@: void) %.*s), %uU)\n", (cast: (int) t\length), t\data, (cast: (unsigned) (t\length - 2U))) < 0
             return: 1
         j: j + 1
     ---
     if: fputs("    if: lmx_arena_ref_store(g, 0U, (cast: (@: void) lmx_thread_message(t))) != 0 || lmx_arena_ref_store(g, 1U, (cast: (@: void) p)) != 0\n        return: 1\n    m\\running: 1\n    m\\success: 0\n    m\\handoff_ready: 0\n    m\\graph: g\n    if: lmx_service_post(lmx_child_service(t), (cast: (@: void) lmx_thread_parent(t)), m, a) != c.LMX_SERVICE_OK\n        return: 1\n    return: 0\n", l2_out) < 0
         return: 1
-return: (cast: (int) (c.fprintf(l2_out, "end: l2_send%d\n\n", k) < 0))
+return: (cast: (int) (c.fprintf(l2_out, "end: %s%d\n\n", prefix, k) < 0))
 
 # A body of the walker (an if's or an else's) under node `parent` at slot `slot`: a plain
 # Structure whose children are its steps.
@@ -19095,6 +19257,13 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         if: n = 0
             field: l2_next_active(field\next)
             continue
+        # sendMessage: X (FABLE-SONNET-SEND-IN-METHODS-20260925-168 commit 2) -- see
+        # l2_emit_msend's own comment; l2_check_body already validated and registered the shape.
+        if: l2_frame_head(stmt, "sendMessage") != 0
+            if: l2_emit_msend(stmt, mi, ind) != 0
+                return: 1
+            field: l2_next_active(field\next)
+            continue
         # receiveMessage: m -- take the next admitted letter of the current Thread
         # (the owner attaches its arena before exposing it) and assign m its
         # graph, or 0 when the inbox is empty.  Like `Model: fresh` (-121 fixup,
@@ -19696,7 +19865,15 @@ fn: l2_emit_unit (const: @(char out_path)) int
     # The walked root's send primitives (l2_emit_send).
     i: 0
     while: i < l2_rw_send_n
-        if: l2_emit_send(i, 1) != 0
+        if: l2_emit_send(i, 1, "l2_send", l2_rw_send_count, l2_rw_sf_kind, l2_rw_sf_text) != 0
+            fclose(l2_out)
+            return: 1
+        i: i + 1
+    # FABLE-SONNET-SEND-IN-METHODS-20260925-168 commit 2: a method body's own send primitives,
+    # a separate k-space (l2_msend_*) so they cannot collide with the root's (l2_rw_send_*).
+    i: 0
+    while: i < l2_msend_n
+        if: l2_emit_send(i, 1, "l2_msend", l2_msend_count, l2_msend_kind, l2_msend_text) != 0
             fclose(l2_out)
             return: 1
         i: i + 1
@@ -19725,6 +19902,9 @@ fn: l2_emit_unit (const: @(char out_path)) int
         fclose(l2_out)
         return: 1
     i: 0
+    # FABLE-SONNET-SEND-IN-METHODS-20260925-168 commit 2: reset before this emit pass, matching
+    # the reset before the check pass -- see the comment there.
+    l2_msend_i: 0
     while: i < l2_m_n
         # Platform variants already emitted their graph-callable l2_mN bodies
         # inside the L1 os block above. Keep the common prototype and METHOD
@@ -19939,7 +20119,13 @@ fn: l2_emit_unit (const: @(char out_path)) int
         i: i + 1
     i: 0
     while: i < l2_rw_send_n
-        if: l2_emit_send(i, 0) != 0
+        if: l2_emit_send(i, 0, "l2_send", l2_rw_send_count, l2_rw_sf_kind, l2_rw_sf_text) != 0
+            fclose(l2_out)
+            return: 1
+        i: i + 1
+    i: 0
+    while: i < l2_msend_n
+        if: l2_emit_send(i, 0, "l2_msend", l2_msend_count, l2_msend_kind, l2_msend_text) != 0
             fclose(l2_out)
             return: 1
         i: i + 1

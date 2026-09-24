@@ -96,3 +96,39 @@ translator**: an L2-level way to read a graph cell KNOWING it holds a Message re
 Structure reference), so `m\[0]` can be typed and passed as `sendMessage: Ref X`'s `Ref`. Per the
 ticket's own fallback, commit 3 reports this and stops there rather than inventing an ad hoc
 reinterpretation of the existing untyped cell.
+
+## Commit 2: `sendMessage: X` inside a method body -- landed
+
+`l2_emit_send` parameterised (`prefix`, `count_arr`/`kind_arr`/`text_arr`) -- the SAME function
+now generates both `l2_send<k>` (root, `l2_rw_send_*` arrays) and `l2_msend<k>` (a method body,
+new `l2_msend_*` arrays, its own k-space so the two can never collide) -- one emission path, not a
+twin, exactly per the plan above. A new `l2_msend_register` extracts `l2_rw_send`'s field
+parse/validation (the shape checks: one Structure, `name: literal-or-int-expr` fields, <=16
+fields, a text field a quoted literal with no escape) unchanged, recording into the method-send
+arrays instead of a walker-op-tree. `l2_check_body` calls it (replacing the old refusal) to
+validate and register each method-body `sendMessage: X`; `l2_emit_body` (a new `l2_emit_msend`)
+calls it again to re-derive the same `k` for the call site -- check and emit walk every method's
+statements in the same order, so the Nth send site gets the same k both times (the same mirroring
+`l2_tn`/`l2_own_find_decl` already rely on elsewhere in this file); `l2_msend_i` is reset to 0
+once before each of check's two method loops and once before emit's, so a fresh count starts each
+pass.
+
+Emission per int-typed field: `l2_eval_fields` evaluates its value expression the ordinary way,
+into a local temp; `refs[i]` is that temp's ADDRESS (`lmx_int_value_known` is just
+`*(int*)cell`) -- caught by testing, not assumed: `l2_eval_fields`'s own token can be a bare
+literal ("7" for `exit_code: 7`, no C lvalue), so the emitted code always copies it into a named
+`int:` local FIRST, then takes that local's address, never the token directly. The refs array
+itself is `c.array: [N]: @: void` (an array of pointers -- confirmed against `l2trans.lm1`'s own
+existing `c.array: [64]: @: LmP0Structure` usage elsewhere in this file, not `c.array: [N]: void`,
+which does not compile: C disallows an array of incomplete `void`). A nonzero status from
+`l2_msend<k>` is the X1 (invariant-abort) route -- the same shape a failed send would already get
+at the root, since `l2_rw_send`'s own generated walker step has no separate recoverable-failure
+path for this prim either.
+
+Witness: `unit_send_in_method.lm2` -- a method called from the root sends `exit(exit_code: 7; ...)`
+directly; host reports 7. Mutant (per the ticket's own spec): the fixture with the send dropped
+gives "ran under the driver, exit 1" (success unset) -- confirmed directly, then the real fixture
+restored and reverified GREEN.
+
+Gates: l2_harness GREEN 338/338 (337 base + 1 new row), build_l2src -Run 254/254, L3 11/11 + type
+budget, check_docs OK, git diff --check clean.

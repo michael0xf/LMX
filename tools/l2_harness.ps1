@@ -667,6 +667,12 @@ $fixtures = @(
         Debt = @() },
     [pscustomobject]@{ Name = 'unit_asgn_fallback.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call of a method with dynamic inputs'; Args = @('0');
         Absent = @(); Debt = @() },
+    # FABLE-SONNET-SEND-IN-METHODS-20260925-168 commit 2: sendMessage: X inside a method body --
+    # a method called from the root sends exit(exit_code: 7; ...) directly (l2_msend<k>).
+    [pscustomobject]@{ Name = 'unit_send_in_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
+        Args = @('0');
+        Absent = @();
+        Debt = @() },
     [pscustomobject]@{ Name = 'entry_ret_tr_bad.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
     # One return-literal rule for every callable: an int result literal must fit int in a lone
     # main (literal and full body), in main beside a method (body and trailer), and in a method.

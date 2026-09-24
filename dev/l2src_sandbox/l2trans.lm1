@@ -8699,8 +8699,9 @@ fn: l2_is_known (const: @(LmP0Text t)) int
     if: t = 0 || t\data = 0
         return: 0
     # Includes for runtime headers come from the source unit's own predef:/include:
-    # (plus the profile prelude). Name-driven need_stdlib/need_string/need_p0 are gone.
-    # Emitter-set need_query/need_own remain where the translator emits its own helpers.
+    # (plus the profile prelude). Name-driven need_stdlib/need_string/need_p0/need_own
+    # (FABLE-SONNET-NAME-SPECIALS-20260924-155 commit 3, :18296) are gone. Emitter-set
+    # need_query remains where the translator emits its own helper.
     # c.* is the raw door; c.array declarators are matched by l2_array_local, not here.
     if: t\length > 2U && t\data[0] = 99 && t\data[1] = 46
         return: 1
@@ -13059,8 +13060,6 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
             return: l2_error(path, node, "length requires one known primitive own array")
         return: 0
     if: idx < 0 && l2_is_known(call\head)
-        if: l2_text_eq(call\head, "lm_own_new_zero") || l2_text_eq(call\head, "lm_own_copy_bytes") || l2_text_eq(call\head, "lm_own_delete") || l2_text_eq(call\head, "lm_own_resize")
-            l2_need_own: 1
         # A foreign C call may take no arguments: c.rand(), c.abort(). The
         # parser gives it an empty body, and l2_check_fields refuses 0 fields.
         if: l2_c_stmt_door(call\head) != 0 && (call\body = 0 || l2_count_active(call\body) = 0)
@@ -14866,89 +14865,20 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
             return: 1
         return: 0
     ---
-    if: idx < 0 && l2_text_eq(call\head, "lm_own_new_zero")
-        l2_need_own: 1
-        if: call\body = 0
-            return: 1
-        if: l2_emit_fields(call\body\first_field, l2_count_active(call\body), mi, ind, s0) != 0
-            return: 1
-        if: l2_emit_checkpoint(mi, ind) != 0
-            return: 1
-        t: l2_tn
-        l2_tn: l2_tn + 1
-        if: c.strstr(s0, "IndentStack") != 0 && c.fprintf(l2_out, "%s@: LmP0IndentStack l2_t%d\n%sl2_t%d: (cast: (@: LmP0IndentStack) lm_own_new_zero(%s))\n", ind, t, ind, t, s0) < 0
-            return: 1
-        if: c.strstr(s0, "IndentStack") = 0 && c.strstr(s0, "size_t") != 0 && c.fprintf(l2_out, "%s@: size_t l2_t%d\n%sl2_t%d: (cast: (@: size_t) lm_own_new_zero(%s))\n", ind, t, ind, t, s0) < 0
-            return: 1
-        if: c.strstr(s0, "IndentStack") = 0 && c.strstr(s0, "size_t") = 0 && c.fprintf(l2_out, "%s@: LmP0Text l2_t%d\n%sl2_t%d: (cast: (@: LmP0Text) lm_own_new_zero(%s))\n", ind, t, ind, t, s0) < 0
-            return: 1
-        return: l2_tok_temp(t, dest)
-    if: idx < 0 && l2_text_eq(call\head, "lm_own_copy_bytes")
-        l2_need_own: 1
-        if: call\body = 0
-            return: 1
-        a0: l2_next_active(call\body\first_field)
-        s0[0]: 0
-        s1[0]: 0
-        t: 0
-        while: a0 != 0 && t < 2
-            n: 1
-            if: t = 0 && l2_prep(a0\value, mi, ind, s0) != 0
-                return: 1
-            if: t = 1 && l2_prep(a0\value, mi, ind, s1) != 0
-                return: 1
-            a0: l2_next_active(a0\next)
-            t: t + 1
-        if: l2_emit_checkpoint(mi, ind) != 0
-            return: 1
-        t: l2_tn
-        l2_tn: l2_tn + 1
-        if: c.fprintf(l2_out, "%s@: char l2_t%d\n%sl2_t%d: lm_own_copy_bytes(%s, %s)\n", ind, t, ind, t, s0, s1) < 0
-            return: 1
-        return: l2_tok_temp(t, dest)
-    if: idx < 0 && l2_text_eq(call\head, "lm_own_delete")
-        l2_need_own: 1
-        if: call\body = 0
-            return: 1
-        a0: l2_next_active(call\body\first_field)
-        s0[0]: 0
-        s1[0]: 0
-        t: 0
-        while: a0 != 0 && t < 2
-            if: t = 0 && l2_prep(a0\value, mi, ind, s0) != 0
-                return: 1
-            if: t = 1 && l2_prep(a0\value, mi, ind, s1) != 0
-                return: 1
-            a0: l2_next_active(a0\next)
-            t: t + 1
-        if: l2_emit_checkpoint(mi, ind) != 0
-            return: 1
-        if: c.fprintf(l2_out, "%slm_own_delete(%s, %s)\n", ind, s0, s1) < 0
-            return: 1
-        dest[0]: 0
-        return: 0
-    if: idx < 0 && l2_text_eq(call\head, "lm_own_resize")
-        l2_need_own: 1
-        if: call\body = 0
-            return: 1
-        a0: l2_next_active(call\body\first_field)
-        s0[0]: 0
-        s1[0]: 0
-        t: 0
-        while: a0 != 0 && t < 2
-            if: t = 0 && l2_prep(a0\value, mi, ind, s0) != 0
-                return: 1
-            if: t = 1 && l2_prep(a0\value, mi, ind, s1) != 0
-                return: 1
-            a0: l2_next_active(a0\next)
-            t: t + 1
-        if: l2_emit_checkpoint(mi, ind) != 0
-            return: 1
-        t: l2_tn
-        l2_tn: l2_tn + 1
-        if: c.fprintf(l2_out, "%s@: size_t l2_t%d\n%sl2_t%d: (cast: (@: size_t) lm_own_resize(%s, %s))\n", ind, t, ind, t, s0, s1) < 0
-            return: 1
-        return: l2_tok_temp(t, dest)
+    # WHAT STOOD HERE AND IS GONE (FABLE-SONNET-NAME-SPECIALS-20260924-155
+    # commit 3): four name-keyed branches hand-emitting lm_own_new_zero/
+    # _copy_bytes/_delete/_resize, dead since commit 2 -- l2_predef_has_
+    # function(call\head) is now required just to reach this emitter for
+    # one of these names (l2_check_fields :13061 admits on l2_is_known,
+    # which for a non-c.* name IS that check), so the l2_predef_has_
+    # function(...) arm just above (:14862) always fires first and returns
+    # before any of these four could run. The lm_own_new_zero arm was also
+    # the strstr(s0,"IndentStack"|"size_t") substring dispatch named in
+    # plan §7a; its replacement is simply that it is gone -- the call now
+    # emits through the general l2_emit_ccall path, verbatim, and the
+    # caller's own cast (if any) supplies the type, exactly like every
+    # other predef'd C call. See :18296 for the matching auto-injected-
+    # header deletion (same commit, same reasoning).
     if: idx < 0 && l2_text_eq(call\head, "l2_immut_query_fill")
         if: call\body = 0
             return: 1
@@ -18293,14 +18223,22 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: (l2_has_own_ty(1) != 0 || l2_ns_has_char != 0) && c.fprintf(l2_out, "predef: \"%slmx_chars_owned.h.lm1\"\n", l2_rt_root) < 0
         fclose(l2_out)
         return: 1
-    # lm_own_* are profile-installed LMX functions implemented in L1 (spec
-    # 9.0/9.2). A unit declares them and the implementation is linked:
-    # l1src/own.lm1 where the real arena is linked, l2_foreign_alloc.lm1 in the
-    # translator's own runners. Inlining a copy gave every unit a second
-    # definition, which collides with own.lm1 at link.
-    if: l2_need_own != 0 && fputs("include: \"l1src/p0.lm1.h\"\nprototype:\n    fn: lm_own_new_zero (size_t: size) @: void\n    fn: lm_own_resize (@: void object; size_t: size) @: void\n    fn: lm_own_copy_bytes (const: @(char source); size_t: length) @: char\n    sub: lm_own_delete (@: void object; LmOwnDestroyFields: destroy_fields)\nend: prototype\n", l2_out) < 0
-        fclose(l2_out)
-        return: 1
+    # WHAT STOOD HERE AND IS GONE (FABLE-SONNET-NAME-SPECIALS-20260924-155
+    # commit 3): a literal prototype: block for the four lm_own_* names,
+    # auto-injected by NAME (l2_need_own, set by l2_text_eq against each of
+    # them) whenever any of the four was called, regardless of whether the
+    # source unit predef'd them itself. That was a second, narrower name
+    # special sitting right next to the one commit 2 deleted from
+    # l2_is_known -- and since commit 2, admitting the call at all already
+    # REQUIRES l2_predef_has_function(call\head) to be true (l2_check_fields
+    # :13061 gates on l2_is_known, which for a non-c.* name is exactly that
+    # check), so any unit whose code reaches this emitter for one of these
+    # calls already carries a working predef chain for it. Measured
+    # (unit_bad_sizeof.lm2, predef: "l1src/own.h.lm1"): the generated L1 had
+    # BOTH this injected block and the unit's own predef line, declaring the
+    # same four signatures twice: l1trans accepted the duplication (exit 0),
+    # which is exactly the redundancy this deletion removes, not a
+    # regression it introduces.
     # The root descriptor array is emitted unconditionally, so its constructor
     # is always needed.
     #

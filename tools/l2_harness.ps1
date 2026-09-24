@@ -1851,7 +1851,18 @@ $fixtures = @(
     # refused.lm2); this row pins the message l2trans actually gives here. Mutant: restoring
     # the deleted 11-name list in l2_is_known turns this row GREEN (wrongly admitted) -- RED.
     [pscustomobject]@{ Name = 'unit_own_missing_predef_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unknown method'; Absent = @(); Debt = @() }
+        Needle = 'unknown method'; Absent = @(); Debt = @() },
+    # FABLE-SONNET-NAME-SPECIALS-20260924-155 commit 3: pins the DELETION of the
+    # auto-injected lm_own_* prototype: block (former :18301) and the four hand-written
+    # strstr-dispatch emission branches (former :14869-:14951) -- both dead since commit 2,
+    # because reaching either one at all already requires l2_predef_has_function(call\head)
+    # to be true, which the general l2_emit_ccall path (:14862) already satisfies first.
+    # unit_bad_sizeof.lm2 calls lm_own_copy_bytes with only its own predef: "l1src/own.h.lm1"
+    # (no c.* door, no other own-support); Absent pins that the generated L1 no longer
+    # carries the literal injected signature text. Mutant: restoring the injection (or a
+    # strstr arm) makes this string reappear -- Absent fires, RED.
+    [pscustomobject]@{ Name = 'unit_bad_sizeof.lm2'; Expect = 'translates-with-debt'; Exit = 0;
+        Absent = @('fn: lm_own_new_zero (size_t: size) @: void'); Debt = @() }
 )
 
 foreach ($fx in $fixtures) {

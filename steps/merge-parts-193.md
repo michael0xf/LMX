@@ -450,3 +450,41 @@ Questions:
 - Q4: emit always (recommended, with K-OT1), or only for merge operands plus the knob?
 - Q5 (K-OT2): holder-less own-field frames («this activation's data») as the form for a method's own
   fields?
+
+## 7. T1b: the spelling rule goes (branch opus/merge-193-t1b, base 158bf6e)
+
+fable's decisions: Q6 = (a), Q4 = always, Q5 = the root's form with holder operand 0 meaning «this
+activation's data» (f\data), and K-OT1 as stated.  The kernel work (K-OT1, K-OT2, G-call) is
+Sonnet's, after -192 and K1, and T4a comes after it.
+
+l2trans.lm1:
+- `l2_upper_name` and both its call sites are gone.
+- New `l2_define_name`: a `define:` of the unit (`l2_def`) or of its predef chain declares its name.
+  - `l2_predef_file_define` takes a new flag, `any`: with it, any value counts; without it, only an
+    own-array count literal does (`l2_define_count`, unchanged).
+  - It is asked LAST at both sites, after every L2 name:
+    - in the expression atom check, before «unresolved name»;
+    - in `l2_scan_ident`, before a name becomes a dynamic input.
+  - So an own field, formal, method, declaration or merge result of the same spelling always wins,
+    and the unit-field use marking runs for every name.
+- Any other name is a located refusal.  In an expression inside a method, that is «unresolved name»
+  at the method with the detail `unresolved dynamic=NAME`.
+
+Rows:
+- unit_upper_unit_field: `int: N 5` read in a method gives 6.  On main it reaches gcc («'N'
+  undeclared»).
+- unit_upper_undeclared_refused: `NOPE + 1`, needle `unresolved dynamic=NOPE`.  Main translates it.
+- unit_merge_path_condition_refused: D-61's `if: R\x != 1U` gets a located «unresolved name».  Main
+  sends it to gcc.  The row flips when D-61 lands.
+- unit_define_actual, translates-with-debt: its root `return: 0` became `return`.  It pins the three
+  declared names being admitted and `PROBE_DEFINE_OK` compared as itself.
+- DEBT, found here and the same on main before T1b: PROBE_DEFINE_LABEL, _FG and PROBE_UNIT_LABEL
+  are staged into `int` temporaries again.
+  - This is the b5 mixa crash the fixture was written for: a char* constant losing its high bits.
+  - Nothing noticed because the fixture had no row.
+  - The row pins the staging, so it goes red when the staging is fixed.
+
+Witnesses:
+- main's translator, which still has the spelling rule, turns three of the four rows red (gcc,
+  translates, translates);
+- the mutant `l2_define_name` → 0 refuses unit_define_actual («unresolved dynamic=PROBE_DEFINE_FG»).

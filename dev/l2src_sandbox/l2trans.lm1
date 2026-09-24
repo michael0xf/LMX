@@ -765,7 +765,6 @@ prototype:
     fn: l2_c_door (const: @(LmP0Text t)) int
     fn: l2_c_stmt_door (const: @(LmP0Text t)) int
     fn: l2_prim_type_word (const: @(LmP0Text t)) int
-    fn: l2_upper_name (const: @(LmP0Text t)) int
     fn: l2_ccall_box_int (const: @(LmP0Node node); int: mi) int
     fn: l2_pd_free () int
     fn: l2_def_free () int
@@ -802,7 +801,7 @@ prototype:
     fn: l2_c_header_chain_has_typedef (const: @(LmP0Text name); const: @(LmP0Text quoted)) int
     fn: l2_cnt_keep (const: @(LmP0Text src)) @: LmP0Text
     fn: l2_cnt_free () int
-    fn: l2_predef_file_define (const: @(LmP0Text name); const: @(LmP0Text quoted)) @: LmP0Text
+    fn: l2_predef_file_define (const: @(LmP0Text name); const: @(LmP0Text quoted); int: any) @: LmP0Text
     fn: l2_define_count (const: @(LmP0Text name)) @: LmP0Text
     fn: l2_predef_file_has_function (const: @(LmP0Text name); const: @(LmP0Text quoted)) int
     fn: l2_predef_has_function (const: @(LmP0Text name)) int
@@ -4632,8 +4631,10 @@ return: 0
 
 # A top-level `define: NAME <literal>` in a predef'd .h.lm1, or in a .h.lm1 that
 # one predefs (the same single-file predef closure l2_predef_file_has_type
-# follows). The literal is kept, because this document is destroyed here.
-fn: l2_predef_file_define (const: @(LmP0Text name); const: @(LmP0Text quoted)) @: LmP0Text
+# follows). The literal is kept, because this document is destroyed here.  With
+# `any` the define may give any value (l2_define_name): its first value token is
+# kept; without it only an own-array count literal answers (l2_define_count).
+fn: l2_predef_file_define (const: @(LmP0Text name); const: @(LmP0Text quoted); int: any) @: LmP0Text
     size_t: n
     @: char path 0
     @: LmP0Document document 0
@@ -4657,20 +4658,20 @@ fn: l2_predef_file_define (const: @(LmP0Text name); const: @(LmP0Text quoted)) @
             f: l2_next_active(root\as\structure\first_field)
             while: f != 0 && found = 0
                 item: f\value
-                if: l2_frame_head(item, "define") && item\as\frame\body != 0 && l2_count_active(item\as\frame\body) = 2
+                if: l2_frame_head(item, "define") && item\as\frame\body != 0 && (l2_count_active(item\as\frame\body) = 2 || (any != 0 && l2_count_active(item\as\frame\body) > 2))
                     first: l2_next_active(item\as\frame\body\first_field)
                     second: 0
                     if: first != 0
                         second: l2_next_active(first\next)
                     ---
-                    if: first != 0 && first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM && l2_text_same(first\value\as\atom, name) && second != 0 && second\value != 0 && second\value\kind = c.LM_P0_NODE_ATOM && l2_array_count_is(second\value\as\atom) != 0
+                    if: first != 0 && first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM && l2_text_same(first\value\as\atom, name) && second != 0 && second\value != 0 && second\value\kind = c.LM_P0_NODE_ATOM && (any != 0 || l2_array_count_is(second\value\as\atom) != 0)
                         found: l2_cnt_keep(second\value\as\atom)
                     ---
                 ---
                 if: found = 0 && l2_frame_head(item, "predef") && item\as\frame\body != 0 && l2_count_active(item\as\frame\body) = 1
                     first: l2_next_active(item\as\frame\body\first_field)
                     if: first != 0 && first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM
-                        found: l2_predef_file_define(name, first\value\as\atom)
+                        found: l2_predef_file_define(name, first\value\as\atom, any)
                     ---
                 ---
                 f: l2_next_active(f\next)
@@ -4707,10 +4708,37 @@ fn: l2_define_count (const: @(LmP0Text name)) @: LmP0Text
     ---
     i: 0
     while: i < l2_pd_n && r = 0
-        r: l2_predef_file_define(name, l2_pd[i])
+        r: l2_predef_file_define(name, l2_pd[i], 0)
         i: i + 1
     ---
 return: r
+
+# A `define:` of the unit or of its predef chain DECLARES its name (FABLE-OPUS-MERGE-PARTS-20260926-193
+# T1b, Q6 = a): `define:` is L1 the translator passes through, and it reads these declarations
+# already for own-array counts (l2_define_count).  An atom naming one is a declared constant, asked
+# after every L2 name, whatever its spelling.  Any other name is unresolved (a located refusal); a
+# name only C knows comes through the raw door, `c.NAME`.
+fn: l2_define_name (const: @(LmP0Text name)) int
+    int: i 0
+    @: LmP0Field first
+    if: name = 0 || l2_ident(name) = 0
+        return: 0
+    while: i < l2_def_n
+        if: l2_def[i] != 0 && l2_def[i]\as != 0 && l2_def[i]\as\frame != 0 && l2_def[i]\as\frame\body != 0 && l2_count_active(l2_def[i]\as\frame\body) >= 2
+            first: l2_next_active(l2_def[i]\as\frame\body\first_field)
+            if: first != 0 && first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM && l2_text_same(first\value\as\atom, name)
+                return: 1
+            ---
+        ---
+        i: i + 1
+    ---
+    i: 0
+    while: i < l2_pd_n
+        if: l2_predef_file_define(name, l2_pd[i], 1) != 0
+            return: 1
+        i: i + 1
+    ---
+return: 0
 fn: l2_predef_file_has_function (const: @(LmP0Text name); const: @(LmP0Text quoted)) int
     size_t: n
     @: char path 0
@@ -7001,8 +7029,6 @@ fn: l2_scan_ident (int: mi; const: @(LmP0Text t); @: int seen) int
         return: 0
     if: t\length >= 2U && t\data[0] = 99 && t\data[1] = 46
         return: 0
-    if: l2_upper_name(t)
-        return: 0
     oi: l2_own_find_last(mi, t)
     if: oi >= 0 && l2_own_unit_seen(oi, mi) != 0
         if: l2_own_off(mi, oi) = (cast: (size_t) -1)
@@ -7018,6 +7044,8 @@ fn: l2_scan_ident (int: mi; const: @(LmP0Text t); @: int seen) int
     if: oi >= 0 && l2_m_uses[l2_own_off(mi, oi)] != 0
         return: 0
     if: l2_own_any(mi, t) >= 0
+        return: 0
+    if: l2_define_name(t) != 0
         return: 0
     if: l2_dyn_add(mi, t, 0) != 0
         return: 1
@@ -9236,22 +9264,6 @@ return: 1
 fn: l2_prim_type_word (const: @(LmP0Text t)) int
     int: dummy_ty 0
 return: l2_ptr_type_word(t, 1, @ dummy_ty) = 0
-
-# Constants supplied by a predef C seam retain conventional uppercase
-# spelling. They are compile-time names, not lexical graph dependencies; the
-# downstream C compiler verifies that the included predef declares them.
-fn: l2_upper_name (const: @(LmP0Text t)) int
-    int: letter 0
-    size_t: i 0U
-    if: t = 0 || t\data = 0 || t\length = 0U
-        return: 0
-    while: i < t\length
-        if: t\data[i] >= 65 && t\data[i] <= 90
-            letter: 1
-        if: (t\data[i] < 65 || t\data[i] > 90) && (t\data[i] < 48 || t\data[i] > 57) && t\data[i] != 95
-            return: 0
-        i: i + 1U
-return: letter
 
 fn: l2_is_binop (const: @(LmP0Text t)) int
     if: l2_is_plus(t) || l2_is_cmp(t) || l2_is_andor(t)
@@ -13638,8 +13650,6 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
             return: 0
         if: l2_quoted(node\as\atom)
             return: 0
-        if: l2_upper_name(node\as\atom)
-            return: 0
         if: node\as\atom\length >= 3U && node\as\atom\data[0] = 39 && node\as\atom\data[node\as\atom\length - 1U] = 39
             return: 0
         if: node\as\atom\length >= 2U && node\as\atom\data[0] = 99 && node\as\atom\data[1] = 46
@@ -13678,6 +13688,8 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
         if: l2_slot_find(mi, node\as\atom) >= 0
             return: 0
         if: l2_ns_find(node\as\atom) >= 0
+            return: 0
+        if: l2_define_name(node\as\atom) != 0
             return: 0
         return: l2_error(path, node, "unresolved name")
     if: node\kind = c.LM_P0_NODE_FRAME && l2_frame_head(node, "@")

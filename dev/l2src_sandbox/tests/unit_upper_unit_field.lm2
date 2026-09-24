@@ -1,0 +1,14 @@
+int: N 5
+
+# FABLE-OPUS-MERGE-PARTS-20260926-193 T1b: a name's spelling decides nothing.  N is a unit field; read
+# in a method it is that field, as `nn` would be.  The spelling rule l2_upper_name took an all-caps
+# name for a C constant, skipped marking the unit field as read, and left a raw `N` for gcc («'N'
+# undeclared»).  Success is 6.
+fn: m () int
+    int: k 0
+    k: N + 1
+    return: k
+end: m
+
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

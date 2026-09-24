@@ -861,6 +861,25 @@ $fixtures = @(
         Absent = @(); Debt = @('merge result check 77') },
     [pscustomobject]@{ Name = 'unit_merged_callable.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 5;
         Absent = @(); Debt = @('merge result check 77', 'merge result check 79') },
+    # -193 T1b (Q6 = a): no name is decided by its spelling.  l2_upper_name (all-caps = a C constant
+    # for gcc) is gone: a `define:` of the unit or its predef chain is a DECLARED name
+    # (l2_define_name, asked after every L2 name), anything else is a located refusal, and a name only
+    # C knows is `c.NAME`.  An all-caps unit field read in a method is that field (6; it was a raw `N`
+    # and gcc «'N' undeclared»); an undeclared all-caps name and D-61's `R\x` in a condition are
+    # refused, located (both reached gcc).  Mutant: l2_define_name answering 0 refuses
+    # unit_define_actual.
+    [pscustomobject]@{ Name = 'unit_upper_unit_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 6;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_upper_undeclared_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unresolved dynamic=NOPE'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_path_condition_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unresolved name'; Absent = @(); Debt = @() },
+    # The declared names are admitted and PROBE_DEFINE_OK is compared as itself.  DEBT: LABEL, FG and
+    # UNIT_LABEL are staged into `int` temporaries again -- the b5 mixa crash this fixture was written
+    # for (a char* constant losing its high bits); the same before T1b, the fixture had no row.
+    [pscustomobject]@{ Name = 'unit_define_actual.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+        Absent = @();
+        Debt = @('probe_define_take(l2_p0_0, 0U, l2_t0, l2_t1) != PROBE_DEFINE_OK', 'l2_t0: PROBE_DEFINE_LABEL', 'l2_t1: PROBE_DEFINE_FG', 'l2_t0: PROBE_UNIT_LABEL') },
     # THE DECLARED-THROW ABI (FABLE-L2TRANS-THROW-FORMAL-20260920-05).  Every method that merges,
     # and every caller of one, carries the executing Message as a hidden formal.  It was spelled
     # `node`, the spelling of the reserved first formal, so EVERY such method came out as

@@ -188,14 +188,11 @@ end: LmxMethod
 # child[0] remains the temporary one-node compatibility ABI.
 # Holds a REFERENCE to the native METHOD record and the descriptor tree itself.
 # The body tree is M after slot 0, in order: every return: and the rest live
-# there (there can be many returns). Plain graph copy may SHARE this descriptor by address; merge clone-on-writes
-# a private record when it stores offset (LmxMethod stays shared by address). offset is the hidden
-# base for lexical-parent field indices inside the actual node after a flat
-# merge (0 for an unmerged occurrence). M stays the three-field Lmx.
+# there (there can be many returns). Copies SHARE this descriptor. M stays
+# the three-field Lmx.
 struct: LmxCallable
     @: LmxMethod method
     @: Lmx header
-    size_t: offset
 end: LmxCallable
 
 # One executable node in the body tree (after M's slot 0). Not a name: the

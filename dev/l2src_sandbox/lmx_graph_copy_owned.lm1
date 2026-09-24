@@ -371,10 +371,6 @@ fn: lmx_copy_is_terminal_profiles (@: LmxArena src_arena; @: void p; @@: Lmx ret
     kind: lmx_range_classify(src_arena, p)
     if: kind = c.LMX_KIND_METHOD
         return: 1
-    # LmxCallable stays a share-terminal on plain graph copy (same pointer, same
-    # offset). Merge clone-on-writes a private descriptor when it stores offset
-    # (see lmx_merge_owned.lm1), so a merged occurrence never mutates a shared
-    # record. LmxMethod stays shared by address either way.
     if: kind = c.LMX_DOMAIN_KIND_CALLABLE
         return: 1
     if: kind = c.LMX_DOMAIN_KIND_OP
@@ -701,9 +697,8 @@ fn: lmx_graph_copy_many_profiles_owned (@@: Lmx sources; size_t: count; @: char 
             return: LMX_GRAPH_COPY_INVALID
         root_kind: lmx_range_classify(src_arena, (cast: (@: void) sources[r]))
         # Roots are Structures.  Store-resident Structures are admitted below
-        # by address; METHOD/OP/ROLE and every other representation are
+        # by address; METHOD/CALLABLE/OP/ROLE and every other representation are
         # values, not graph roots, and must never succeed with a null output.
-        # CALLABLE descriptors are share-terminals on plain copy; merge may COW them.
         if: root_kind != c.LMX_KIND_STRUCT
             return: LMX_GRAPH_COPY_INVALID
         ---

@@ -42,12 +42,8 @@ predef: "lmx_graph_copy_owned.h.lm1"
 # question; `dst_arena` is the arena the copies and the result are built in.
 #
 # `container` is the live Structure through which the merge receiver executed.
-# It becomes the RESULT's parent. A lifted Structure child whose parent is the
-# operand/body copy (structural nesting under that copy) is reparented to the
-# result; a lexical parent outside the copy is left alone. A callable
-# occurrence among them also receives offset = sum of preceding operand widths
-# on its own LmxCallable descriptor (COW when the stored offset must change).
-# A nonzero container
+# It becomes the RESULT's parent and nothing else: it is not assigned as the parent
+# of any copied child, whose parent links come from the map. A nonzero container
 # must classify as a Structure of src_arena -- the arena's table answers that,
 # not an inventory -- and a foreign address is refused rather than stored.
 #

@@ -69,26 +69,6 @@ fn: lmx_call_ready (@: LmxArena arena; @: Lmx callable) int
     ---
 return: c.LMX_CALL_OK
 
-fn: lmx_callable_offset (@: LmxArena arena; @: Lmx occurrence) size_t
-    @: void target
-    @: LmxCallable info
-    int: kind
-    if: arena = 0 || occurrence = 0
-        return: (cast: (size_t) -1)
-    if: occurrence\len < 1
-        return: (cast: (size_t) -1)
-    ---
-    target: lmx_arena_ref_value(occurrence, 0U)
-    if: target = 0
-        return: (cast: (size_t) -1)
-    ---
-    kind: lmx_domain_kind(arena, target)
-    if: kind != c.LMX_KIND_NONE && kind != c.LMX_DOMAIN_KIND_CALLABLE
-        return: (cast: (size_t) -1)
-    ---
-    info: (cast: (@: LmxCallable) target)
-return: info\offset
-
 fn: lmx_call_method (@: LmxArena arena; @: Lmx callable) @: LmxMethod
     @: void target
     @: LmxCallable info

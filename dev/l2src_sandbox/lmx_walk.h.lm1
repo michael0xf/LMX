@@ -106,9 +106,9 @@ predef: "l2src/lmx_plan.h.lm1"
 #     that would LEAVE an activation through `ret` is copied -- four bytes, by value --
 #     into the destination of the caller; a reference into the graph leaves as it is;
 #   * the inputs of a callee are an array of references in the caller's scratch slice.
-# Own fields keep their numeric working values (LmxWalkOwn.value is size_t, the widest numeric the walker types):
-# a read copies the working value into the destination, because the field may be assigned
-# again before the value is used. Load and publish go by the CELL's arena type.
+# Own fields keep working copies: numerics in LmxWalkOwn.value (size_t, widest); Structure
+# fields (pointer cells) in LmxWalkOwn.ref (-174 c2). A read copies the working value /
+# reference into the destination, because the field may be assigned again before use.
 #
 #   ret   [ret, value?]               a return; no value for a void callable
 #   call  [call, M, arg ...]          M is the callee occurrence itself, by reference
@@ -144,9 +144,9 @@ predef: "l2src/lmx_plan.h.lm1"
 #
 # CURRENT UNSUPPORTED LIMITS of this slice -- what this prototype does not do YET, stated
 # rather than hidden, and NOT the final semantics of L3: Part A (-167) types numeric
-# cells (int/char/size_t/unsigned/ulong) from the arena; a PUT into a pointer cell or a
-# Structure is INVALID (X1 under D-37). Own REFERENCE / Structure fields, OF-deref, and
-# merge are Part B. Arithmetic same-type rules land with -167 commit 2. A return carries
+# cells (int/char/size_t/unsigned/ulong) from the arena. PUT into a pointer cell stores a
+# Structure reference type-checked (-174 c2). Own REFERENCE fields keep Structure in
+# LmxWalkOwn.ref. OF-deref is c1; merge-as-PRIM is c3. Arithmetic same-type rules land with -167 commit 2. A return carries
 # 0 or 1 value; no poll; no arrays; no dynamic inputs of 21.3.
 #
 # What is outside the slice is REPORTED, never skipped and never handed to native code
@@ -237,6 +237,7 @@ end: LmxWalkValue
 struct: LmxWalkOwn
     @@: void from
     size_t: value
+    @: void ref
     int: dirty
 end: LmxWalkOwn
 

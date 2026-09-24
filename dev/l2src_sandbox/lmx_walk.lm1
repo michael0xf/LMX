@@ -341,6 +341,19 @@ fn: lmx_walk_store_numeric_into (@: LmxArena arena; @: void cell; size_t: value)
         return: c.LMX_WALK_OK
 return: c.LMX_WALK_INVALID
 
+
+# True when cell is a typed pointer primitive (POINTER_BASE+).
+fn: lmx_walk_is_pointer_cell (@: LmxArena arena; @: void cell) int
+    int: ty
+    if: arena = 0 || cell = 0
+        return: 0
+    if: lmx_domain_kind(arena, cell) != c.LMX_KIND_PRIMITIVE
+        return: 0
+    ty: lmx_domain_type(arena, cell)
+    if: ty < c.LMX_TYPE_POINTER_BASE
+        return: 0
+return: 1
+
 # Publish a working numeric into a Structure slot. CHAR replaces the interned reference;
 # other numerics mutate the cell. Pointer / Structure / unknown -> INVALID (X1 at call).
 fn: lmx_walk_publish_slot (@: LmxArena arena; @@: void slot; size_t: value) int
@@ -605,8 +618,13 @@ fn: lmx_walk_scan_node (@: LmxWalkFrame f; @: void node) int
         o: f\found + f\nfound
         o\from: from
         o\value: 0U
-        if: lmx_walk_load_numeric(f\arena, from[0], @ o\value) != c.LMX_WALK_OK
-            return: c.LMX_WALK_INVALID
+        o\ref: 0
+        if: lmx_walk_is_pointer_cell(f\arena, from[0]) != 0
+            o\ref: lmx_pointer_value_known(from[0])
+        else:
+            if: lmx_walk_load_numeric(f\arena, from[0], @ o\value) != c.LMX_WALK_OK
+                return: c.LMX_WALK_INVALID
+            ---
         ---
         o\dirty: 0
         f\nfound: f\nfound + 1U
@@ -631,6 +649,8 @@ fn: lmx_walk_scan_node (@: LmxWalkFrame f; @: void node) int
     # sole anonymous argument container (-127, bc22881/e446835) and the translator no
     # longer unwraps one (6ca54c9), so a plain Structure among them is a Structure
     # argument -- data passed by reference, not a node to scan.
+    # PUT's value (slot 3) and SET's value likewise: a plain Structure is data by
+    # reference (-174 c2), not a body node -- same OP_NONE skip as call args.
     i: 1U
     if: op = c.LMX_WALK_OP_CALL
         # D-04: argument count vs callee at prepare, same rule as lmx_walk_call entry.
@@ -660,7 +680,10 @@ fn: lmx_walk_scan_node (@: LmxWalkFrame f; @: void node) int
     if: op = c.LMX_WALK_OP_PUT
         i: 3U
     while: status = c.LMX_WALK_OK && i < (cast: (size_t) code\len)
-        status: lmx_walk_scan_node(f, lmx_arena_ref_value(code, i))
+        child: lmx_arena_ref_value(code, i)
+        if: child = 0 || lmx_walk_op(f, child) != c.LMX_WALK_OP_NONE
+            status: lmx_walk_scan_node(f, child)
+        ---
         i: i + 1U
     ---
 return: status
@@ -720,6 +743,7 @@ fn: lmx_walk_order (@: LmxWalkFrame f; @: Lmx s; size_t: depth) int
             to: f\owns + f\nowns
             to\from: o\from
             to\value: o\value
+            to\ref: o\ref
             to\dirty: 0
             f\nowns: f\nowns + 1U
         ---
@@ -769,8 +793,17 @@ fn: lmx_walk_checkpoint (@: LmxWalkFrame f) int
     while: i < f\nowns
         o: f\owns + i
         if: o\dirty != 0
-            if: o\from = 0 || lmx_walk_publish_slot(f\arena, o\from, o\value) != c.LMX_WALK_OK
+            if: o\from = 0 || o\from[0] = 0
                 return: c.LMX_WALK_CHECKPOINT
+            if: lmx_walk_is_pointer_cell(f\arena, o\from[0]) != 0
+                if: lmx_pointer_store_known(o\from[0], o\ref) != 0
+                    return: c.LMX_WALK_CHECKPOINT
+                ---
+            else:
+                if: lmx_walk_publish_slot(f\arena, o\from, o\value) != c.LMX_WALK_OK
+                    return: c.LMX_WALK_CHECKPOINT
+                ---
+            ---
             o\dirty: 0
         ---
         i: i + 1U
@@ -1026,6 +1059,11 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
     if: op = c.LMX_WALK_OP_UNKNOWN
         return: c.LMX_WALK_UNSUPPORTED
     if: op = c.LMX_WALK_OP_NONE
+        # A plain Structure as a value (-174 c2): the reference is the Structure itself.
+        if: lmx_walk_kind(f, node) = c.LMX_KIND_STRUCT
+            \out: node
+            return: c.LMX_WALK_OK
+        ---
         return: c.LMX_WALK_INVALID
     if: lmx_walk_bare(f, node) != 0
         # A bare role record: only a void return has no operands.
@@ -1045,10 +1083,14 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
         return: c.LMX_WALK_OK
     if: op = c.LMX_WALK_OP_OWN
         # The working value of this activation, not the graph's (21.5) -- and copied, because
-        # the field may be assigned again before this value is used.
+        # the field may be assigned again before this value is used. Pointer owns yield ref.
         o: lmx_walk_own_in(f\owns, f\nowns, lmx_walk_slot(f, code, 1U))
         if: o = 0
             return: c.LMX_WALK_INVALID
+        if: o\from != 0 && o\from[0] != 0 && lmx_walk_is_pointer_cell(f\arena, o\from[0]) != 0
+            \out: o\ref
+            return: c.LMX_WALK_OK
+        ---
         if: lmx_walk_numeric_type(f\arena, dest) != 0
             if: lmx_walk_store_numeric_into(f\arena, dest, o\value) != c.LMX_WALK_OK
                 return: c.LMX_WALK_INVALID
@@ -1108,7 +1150,17 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
         slot: lmx_walk_slot(f, code, 1U)
         if: value = 0 || slot = 0 || slot[0] = 0
             return: c.LMX_WALK_INVALID
-        # Target type from the CELL the slot holds. Pointer / Structure -> INVALID (X1).
+        # Pointer cell: store a Structure reference, type-checked (-174 c2).
+        # Mutant: skip STRUCT kind check -> wrong-type RED.
+        if: lmx_walk_is_pointer_cell(f\arena, slot[0]) != 0
+            if: lmx_walk_kind(f, value) != c.LMX_KIND_STRUCT
+                return: c.LMX_WALK_INVALID
+            if: lmx_pointer_store_known(slot[0], value) != 0
+                return: c.LMX_WALK_INVALID
+            \out: slot[0]
+            return: c.LMX_WALK_OK
+        ---
+        # Numeric cell: operand type must match.
         b: lmx_walk_numeric_type(f\arena, slot[0])
         if: b = 0
             return: c.LMX_WALK_INVALID
@@ -1130,6 +1182,14 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
         if: o = 0 || o\from = 0 || o\from[0] = 0
             return: c.LMX_WALK_INVALID
         # An executed assignment, and the only thing that sets dirty (21.6).
+        if: lmx_walk_is_pointer_cell(f\arena, o\from[0]) != 0
+            if: lmx_walk_kind(f, value) != c.LMX_KIND_STRUCT
+                return: c.LMX_WALK_INVALID
+            o\ref: value
+            o\dirty: 1
+            \out: o\ref
+            return: c.LMX_WALK_OK
+        ---
         b: lmx_walk_numeric_type(f\arena, o\from[0])
         if: b = 0
             return: c.LMX_WALK_INVALID
@@ -1482,8 +1542,13 @@ fn: lmx_walk_enter (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx node; @
         o: f\owns + i
         o\from: from
         o\value: 0U
-        if: lmx_walk_load_numeric(f\arena, from[0], @ o\value) != c.LMX_WALK_OK
-            return: c.LMX_WALK_INVALID
+        o\ref: 0
+        if: lmx_walk_is_pointer_cell(f\arena, from[0]) != 0
+            o\ref: lmx_pointer_value_known(from[0])
+        else:
+            if: lmx_walk_load_numeric(f\arena, from[0], @ o\value) != c.LMX_WALK_OK
+                return: c.LMX_WALK_INVALID
+            ---
         ---
         o\dirty: 0
         i: i + 1U

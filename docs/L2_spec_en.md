@@ -180,18 +180,18 @@ The operation's common meaning is to obtain the selected data's address, not a t
 
 | Category of x | Result | Effect of writing through the result |
 | --- | --- | --- |
-| Own graph field | Typed address of its classified payload | Changes the graph; neither assigns nor dirties the working copy |
+| Own graph field | Typed address of its classified cell | Changes the field's cell; the bare name reads the new value — there is no working copy |
 | Explicit formal argument | Address of the current activation's parameter | Changes the parameter without copy-back |
 | Dynamic input | Address of the current activation's through-parameter | Changes the local parameter, not the caller's source binding |
 | Machine address slot | Address of the slot itself | Changes the address stored in it |
 
-For an own field this is neither the `void *` slot address, `Lmx.data`, nor the own-cache address. For an Array value it addresses the descriptor rather than backing; the separate `@array[i]` form below addresses the selected backing element. A callable Structure is addressed as a Structure; obtaining its METHOD and executable entry are separate actions. Address-taking alone neither extends lifetime nor constitutes a write.
+For an own field this is neither the `void *` slot address nor `Lmx.data`; there is no own cache. For an Array value it addresses the descriptor rather than backing; the separate `@array[i]` form below addresses the selected backing element. A callable Structure is addressed as a Structure; obtaining its METHOD and executable entry are separate actions. Address-taking alone neither extends lifetime nor constitutes a write.
 
 A local machine slot's address is needed, for example, for an output parameter: [printTree.lm2](../l2src/printTree.lm2) passes `@document` to `lm_p0_parse_file` so the function can store its result pointer. This addresses the pointer variable, not the document. [library_struct_local_forms.lm2](../l2src/tests/library_struct_local_forms.lm2) addresses a local imported C-ABI record. A temporary copy's address does not correctly implement addressing the selected data.
 
 `@array[i]` is a valid L2 expression. It obtains the actual element's address in graph storage; no separate adapter or prior index check is required. Subsequent loads, stores and address arithmetic follow the C machine contract. Address-taking must not be implemented by reading the element into a temporary and then addressing that copy.
 
-Starting with graph and working `x = 5`, `p: @x` followed by `\p: 9` leaves bare working `x` at 5 while an explicit graph read sees 9. If working `x` was not assigned, exit does not republish the old 5. A later assignment to working `x` creates a dirty write published under the ordinary rule. A parameter address exists only for the activation's lifetime; storing it in the graph does not extend that lifetime.
+Starting with `x = 5`, `p: @x` followed by `\p: 9` makes bare `x` read 9: the name and the explicit graph read address the same cell, and there is no working copy or publication. A parameter address exists only for the activation's lifetime; storing it in the graph does not extend that lifetime.
 
 ### 18.3. Loads, paths and restrictions
 

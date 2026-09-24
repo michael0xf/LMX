@@ -291,3 +291,80 @@ Per-row check of all 354 rows (fable's gate, verify2b on this tree):
 - No existing row changed its facts.  The three sticky and selector rows keep today's Says in c2,
   because the working copies publish into the activation's own instance, which is also what the slot
   shows.  Their §4 Says come with c3.
+
+## Commit 3: the plan after the author's Q28 and Q29 (main b7b7b99)
+
+The decisions (plan §3 items 1-4 and 7, §4 Q29; L2 §10; L3 §11/§12; CORE §3/§3.1):
+- One graph may be both code and data.  An ordinary call runs M over its own graph, (M, M); the root
+  runs as (R0, R0).  Code stays immutable in its operators, literals and `native`; execution writes
+  only declared fields.
+- Q28: a fresh prototype instance is made only where the translator cannot rule out re-entry
+  (recursion in the static call graph, a dynamic call by reference) or where data is passed
+  explicitly.
+  - It lives in the activation's frame and is not visible from outside.
+  - `M\x` from outside reads M's own fields.
+  - A field whose declaration did not run in this activation keeps the previous activation's value.
+- Q29: one cell per declaration.  A repeated bare assignment writes the same cell, and `\[N]` numbers
+  declarations.
+
+So c2's `l2_new<i>` on every call becomes the exception, not the rule.  c3 is planned as three
+commits, each gated:
+
+### c3a: M over its own graph; a fresh instance only on re-entry
+
+- A call by name, and a call through a path (sel 1), pass the occurrence itself as `self`, as before
+  c2.
+- `l2_new<i>` stays, with two changes.  It no longer stores into the parent's slot, because a
+  frame-only instance is not visible outside; its parent stays `node` for `node\x`.  And only these
+  call sites use it:
+  - Recursion in the static call graph: a call site in method j that calls i, where i and j are in
+    one strongly connected component (i = j included).  The translator knows every direct call
+    (sel 0 and sel 1 with a static callee).  The first entry into the cycle from outside runs over M
+    itself; each re-entry from inside the cycle gets a fresh instance.
+  - A dynamic call by reference: a callable formal, `lmx_call_prim` through the trampoline.
+- OPEN, for fable and Grok (-188): the trampoline is also how the walked root's CALL enters a native
+  method.  The trampoline cannot tell a static CALL (which should run over M) from a call by
+  reference (which should get a fresh instance).
+  - (i) The caller chooses the data and passes it as `owner`.  But a dynamic native caller does not
+    know the callee's prototype, so it would need a kernel entry that makes one from the callee.
+  - (ii) Every trampoline entry gets a fresh instance, the root's CALL included.  `M\x` then does
+    not show a root-called activation.  The rows measure whether any row reads it.
+  - (iii) Two entries: `<sym>_tr` over `owner`, and a fresh-instance entry for calls by reference;
+    that needs a place for the second address.
+  - Proposed: measure (ii) first, since it needs no kernel change, then decide.
+- The probe row unit_fresh_instance_skipped_decl returns to 77: over M's own graph, keep(0) leaves
+  keep(1)'s 7 (plan §3 item 7).
+- A new row, unit_recursive_fresh_instance.  A recursive method declares `int: x n` and recurses
+  before it reads x.
+  - With a fresh instance per re-entry, the outer activation reads its own n.
+  - Mutant: recursion over M itself, where the inner activation's write clobbers the outer's x.
+    RED, once the working copies are gone (c3b).  While they remain, the outer's working copy hides
+    it, so the row is pinned in c3b.
+- The working copies stay in c3a, so every fact but the probe's should hold.  The gate measures it.
+
+### c3b: no working copies
+
+- Own reads and writes are typed loads and stores on `self`'s cells: M itself, or the re-entry
+  instance.
+- The checkpoint, publication, reload, dirty, sticky and selector go, along with the prelude's
+  value declarations (§2's table).  A slot-address handle may stay.
+- The three rows' Says change to §4's table, accepted as c3's pins (R2 with carry).  The `5 100` and
+  `7 100` lines stay.
+- The Debt and Absent pins re-pin (§6's list).
+- Mutants: a write that misses the cell makes a cross-method `M\x` read RED (fable's); recursion
+  without a fresh instance makes unit_recursive_fresh_instance RED.
+
+### c3c: Q29, one cell per declaration
+
+- Today l2_collect_asgn_body (:6746) adds an own row for every bare assignment to a parameter.
+  `arg: 1` then `arg: 2` are two slots, and `\[0]arg` / `\[1]arg` read them (l2_own_find_occ).
+- Under Q29 the first bare assignment binds the field (L3 §12), and later ones write the same cell.
+  `\[N]` counts declarations only, so `\[1]arg` with one declaration is refused at translation, «no
+  such occurrence».
+- The rows to rewrite are named in plan §4: unit_occ_arg_slots, unit_occ_root_named,
+  unit_occ_snapshot_selector.  Their new facts come with the commit, measured.
+- The sticky rows are unaffected: their binding line is a declaration (`int: na`), and
+  `na: na + 1` writes that field.
+
+Gates: one per commit, asked «GATE?» and «GATE DONE» with fable.  c4 (the `Lmx.native` word, and
+the signature as a graph field) is joint with Grok's -188 c4.

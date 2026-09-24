@@ -14,6 +14,7 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
 # -186: PUT_REF binds/replaces a direct Structure own slot (lmx_arena_ref_store).
 # Read via AT/OF -- no DEREF. Mutant: PUT into a direct slot (no pointer cell) -> RED.
+# -186 c4: empty AT -> null; EQ/NE Structure or empty slot by address. Mutant: empty AT INVALID -> RED.
 
 @: LmxArena ga 0
 @: Lmx groles 0
@@ -92,6 +93,11 @@ fn: main () int
     @: Lmx model2 0
     @: Lmx ofn 0
     @: Lmx atn 0
+    @: Lmx atn2 0
+    @: Lmx eqn 0
+    @: Lmx litn 0
+    @: Lmx lit1 0
+    @: Lmx subn 0
     @: void got 0
     int: st 0
 
@@ -182,6 +188,81 @@ fn: main () int
     check((cast: (int) (st = c.LMX_WALK_INVALID)), "mutant PUT into direct slot -> RED")
     got: lmx_arena_ref_value(holder, 1U)
     check((cast: (int) (got = (cast: (@: void) model2))), "mutant PUT left slot unchanged")
+
+    # -186 c4: empty direct Structure slot -- AT yields null (no value), not INVALID.
+    # Mutant: reject slot[0]=0 in OP_AT -> RED on empty AT.
+    if: lmx_arena_ref_store(holder, 1U, 0) != 0
+        broken: broken + 1
+    ---
+    m: mk_m(unit, 0U, 2U)
+    n: fr(m, 1U, c.LMX_WALK_OP_RET, 2U)
+    atn: fr(n, 1U, c.LMX_WALK_OP_AT, 3U)
+    ref(atn, 1U, holder)
+    sz(atn, 2U, 1U)
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\ref = 0)), "empty AT -> null (not INVALID)")
+
+    # EQ empty AT vs LIT 0 -> true (address compare). Mutant: load_operand on 0 -> RED.
+    m: mk_m(unit, 0U, 2U)
+    n: fr(m, 1U, c.LMX_WALK_OP_RET, 2U)
+    eqn: fr(n, 1U, c.LMX_WALK_OP_EQ, 3U)
+    atn: fr(eqn, 1U, c.LMX_WALK_OP_AT, 3U)
+    ref(atn, 1U, holder)
+    sz(atn, 2U, 1U)
+    litn: fr(eqn, 2U, c.LMX_WALK_OP_LIT, 2U)
+    if: litn != 0 && lmx_walk_store_int(ga, litn, 1U, 0) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\ref != 0 && lmx_int_value_known(gv\ref) = 1)), "EQ empty AT vs 0 -> true")
+
+    # NE empty vs 0 is 1-(EQ) -> false (covers source != via walked NE).
+    m: mk_m(unit, 0U, 2U)
+    n: fr(m, 1U, c.LMX_WALK_OP_RET, 2U)
+    subn: fr(n, 1U, c.LMX_WALK_OP_SUB, 3U)
+    lit1: fr(subn, 1U, c.LMX_WALK_OP_LIT, 2U)
+    if: lit1 != 0 && lmx_walk_store_int(ga, lit1, 1U, 1) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+    eqn: fr(subn, 2U, c.LMX_WALK_OP_EQ, 3U)
+    atn: fr(eqn, 1U, c.LMX_WALK_OP_AT, 3U)
+    ref(atn, 1U, holder)
+    sz(atn, 2U, 1U)
+    litn: fr(eqn, 2U, c.LMX_WALK_OP_LIT, 2U)
+    if: litn != 0 && lmx_walk_store_int(ga, litn, 1U, 0) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\ref != 0 && lmx_int_value_known(gv\ref) = 0)), "NE empty AT vs 0 -> false")
+
+    # Bind model; EQ AT vs 0 -> false; EQ AT vs struct address (same model via AT twice) -> true.
+    if: lmx_arena_ref_store(holder, 1U, (cast: (@: void) model)) != 0
+        broken: broken + 1
+    ---
+    m: mk_m(unit, 0U, 2U)
+    n: fr(m, 1U, c.LMX_WALK_OP_RET, 2U)
+    eqn: fr(n, 1U, c.LMX_WALK_OP_EQ, 3U)
+    atn: fr(eqn, 1U, c.LMX_WALK_OP_AT, 3U)
+    ref(atn, 1U, holder)
+    sz(atn, 2U, 1U)
+    litn: fr(eqn, 2U, c.LMX_WALK_OP_LIT, 2U)
+    if: litn != 0 && lmx_walk_store_int(ga, litn, 1U, 0) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\ref != 0 && lmx_int_value_known(gv\ref) = 0)), "EQ struct AT vs 0 -> false")
+
+    m: mk_m(unit, 0U, 2U)
+    n: fr(m, 1U, c.LMX_WALK_OP_RET, 2U)
+    eqn: fr(n, 1U, c.LMX_WALK_OP_EQ, 3U)
+    atn: fr(eqn, 1U, c.LMX_WALK_OP_AT, 3U)
+    ref(atn, 1U, holder)
+    sz(atn, 2U, 1U)
+    atn2: fr(eqn, 2U, c.LMX_WALK_OP_AT, 3U)
+    ref(atn2, 1U, holder)
+    sz(atn2, 2U, 1U)
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\ref != 0 && lmx_int_value_known(gv\ref) = 1)), "EQ struct AT vs same AT -> true")
 
     if: broken != 0
         c.printf("broken fixture %d\n", broken)

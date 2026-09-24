@@ -258,6 +258,9 @@ fn: main () int
     @: Lmx caller2 0
     @: LmxMethod method7 0
     @: LmxMethod method2 0
+    @: Lmx plain_data 0
+    @: Lmx g3_body 0
+    @: Lmx g3_decl 0
     @: Lmx tramp3 0
     int: r 0
     int: v 0
@@ -629,9 +632,12 @@ fn: main () int
     pair: pl(unit, 33U, 2U)
     icell(pair, 0U, 1)
     icell(pair, 1U, 2)
-    # data_stmt: plain; return: 1  -- plain Structure statement must not be silent OK
-    e: pl(data_stmt, 1U, 1U)
-    icell(e, 0U, 0)
+    # data_stmt: plain; return: 1  -- plain Structure STATEMENT (parent != body) must not be silent OK
+    # G3: a Structure whose parent IS the body is a declaration and is skipped; D-03 needs a
+    # reference to an occurrence held elsewhere (same shape as bare_stmt / tracer).
+    plain_data: pl(unit, 46U, 1U)
+    icell(plain_data, 0U, 0)
+    ref(data_stmt, 1U, plain_data)
     n: fr(data_stmt, 2U, c.LMX_WALK_OP_RET, 2U)
     lit(n, 1U, 1)
 
@@ -1046,6 +1052,29 @@ fn: main () int
     st: go(caller2, 0, 0U, @ r, @ v)
     check(st = 2, "G1 METHOD trampoline status 2 reaches walk as 2 (mutant: collapsed to LMX_WALK_PRIMITIVE)")
     check(st != c.LMX_WALK_PRIMITIVE, "G1 status distinct from LMX_WALK_PRIMITIVE (LmxCallable vs LmxPrimitive)")
+
+
+    # ---- G3: declarations among root fields (FABLE-158) --------------------------------
+    # body {int cell, callable occurrence (addr=0, never run), OP literal 7} -> value 7;
+    # occurrence body untouched (side-effect cell stays 0). Mutant: declared callable
+    # activated -> RED.
+    g3_body: mk_m(unit, 45U, 4U)
+    check(g3_body != 0, "G3 body")
+    icell(g3_body, 1U, 0)
+    g3_decl: mk_m(g3_body, 2U, 3U)
+    check(g3_decl != 0 && g3_decl\parent = g3_body, "G3 declared callable parent is body")
+    icell(g3_decl, 1U, 0)
+    n: fr(g3_decl, 2U, c.LMX_WALK_OP_SET, 3U)
+    own(n, 1U, g3_decl, 1U)
+    lit(n, 2U, 1)
+    n: fr(g3_body, 3U, c.LMX_WALK_OP_LIT, 2U)
+    check(lmx_walk_store_int(ga, n, 1U, 7) = c.LMX_WALK_OK, "G3 LIT 7")
+    check(lmx_walk_prepare(gctx, ga, gplan_roles, g3_body) = c.LMX_WALK_OK, "G3 body prepared")
+    # Prepare the declared callable so a mutant activation would run its SET.
+    check(lmx_walk_prepare(gctx, ga, gplan_roles, g3_decl) = c.LMX_WALK_OK, "G3 decl prepared (must not run)")
+    st: go(g3_body, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && v = 1 && r = 7, "G3 body {cell, decl callable, LIT 7} -> 7")
+    check(lmx_int_value_known(lmx_arena_ref_value(g3_decl, 1U)) = 0, "G3 declared callable not activated (mutant: activated)")
 
     free((cast: (@: void) argv))
     free((cast: (@: void) gv))

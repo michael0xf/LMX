@@ -271,16 +271,13 @@ fn: main () int
     child_mail: (cast: (@: LmxPost) lmx_arena_take(@ dropped, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
     child_slot: (cast: (@: LmxSchedule) lmx_arena_take(@ dropped, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
     turn_check(counts, child_thread != 0 && child_mail != 0 && child_slot != 0 && lmx_post_init(@ dropped, child_mail) = c.LMX_POST_OK && lmx_schedule_init(child_slot, @ dropped, (cast: (@: void) child_thread), 8U) = c.LMX_SCHEDULE_OK && lmx_thread_init(@ dropped, child_thread, child_message\graph, child_mail, child_slot) = c.LMX_THREAD_OK && lmx_child_thread(t, child_message, child_thread) = c.LMX_CHILD_OK, "the publication-failure child did not initialize")
-    turn_check(counts, lmx_thread_request_mode(t, c.LMX_THREAD_MODE_INTERPRETED) = c.LMX_THREAD_OK, "the publication-failure request was refused")
     turn_check(counts, lmx_thread_leave(t) = c.LMX_THREAD_OK, "the publication-failure turn did not close")
     children_saved: lmx_thread_children(t)
     t\children: 0
     boundary_code: lmx_turn_end(t, lmx_clock_ticks())
     t\children: children_saved
     turn_check(counts, boundary_code = c.LMX_TURN_INVALID, "child publication failure was reported as a successful boundary")
-    turn_check(counts, lmx_thread_mode(t) = c.LMX_THREAD_MODE_NATIVE && lmx_thread_requested_mode(t) = c.LMX_THREAD_MODE_NATIVE, "child publication failure left its mode request pending")
     turn_check(counts, lmx_arena_ref_value(parent, 1U) = 0 && lmx_range_classify(@ dropped, (cast: (@: void) child_message)) = c.LMX_KIND_NONE, "failed publication exposed or retained its child")
-    turn_check(counts, lmx_turn_end(t, lmx_clock_ticks()) = c.LMX_TURN_OK && lmx_thread_mode(t) = c.LMX_THREAD_MODE_NATIVE, "a later boundary committed the cancelled publication request")
 
     # 9. PARTIAL GC is the other late boundary failure.  A real too-deep reachable graph makes
     #    marking refuse without a sweep.  Its pending request is cancelled before INVALID, and
@@ -298,12 +295,9 @@ fn: main () int
     ---
     lmx_arena_ref_store(run_graph, 0U, (cast: (@: void) deep))
     turn_check(counts, lmx_thread_enter(t) = c.LMX_THREAD_OK, "the partial-GC turn did not open")
-    turn_check(counts, lmx_thread_request_mode(t, c.LMX_THREAD_MODE_INTERPRETED) = c.LMX_THREAD_OK, "the partial-GC request was refused")
     turn_check(counts, lmx_thread_leave(t) = c.LMX_THREAD_OK, "the partial-GC turn did not close")
     turn_check(counts, lmx_turn_end(t, lmx_clock_ticks()) = c.LMX_TURN_INVALID, "partial GC was reported as a successful boundary")
-    turn_check(counts, lmx_thread_mode(t) = c.LMX_THREAD_MODE_NATIVE && lmx_thread_requested_mode(t) = c.LMX_THREAD_MODE_NATIVE, "partial GC left its mode request pending")
     lmx_arena_ref_store(run_graph, 0U, (cast: (@: void) source))
-    turn_check(counts, lmx_turn_end(t, lmx_clock_ticks()) = c.LMX_TURN_OK && lmx_thread_mode(t) = c.LMX_THREAD_MODE_NATIVE, "a later boundary committed the cancelled partial-GC request")
 
     failures: counts[1]
     c.printf("lmx_turn checks=%d failures=%d\n", counts[0], counts[1])

@@ -159,11 +159,10 @@ fn: main () int
     ---
     forged_t: (cast: (@: LmxThread) plain_message)
     forged_t\slot: unbound_t\slot
-    fail(counts, lmx_thread_request_mode(t, c.LMX_THREAD_MODE_INTERPRETED) = c.LMX_THREAD_OK, "request interpreted")
-    fail(counts, lmx_thread_turn(t, native_noop, 1U) = c.LMX_THREAD_OK, "first turn is still native until endturn")
-    fail(counts, native_hits = 1, "native handler ran once to commit the request")
-    fail(counts, lmx_thread_mode(t) = c.LMX_THREAD_MODE_INTERPRETED, "endturn committed interpreted")
-    fail(counts, lmx_thread_turn(t, 0, 2U) = c.LMX_THREAD_INVALID, "interpreted without bind is not native fallback")
+    # Without a bound walker, a host entry still runs (single turn shape, no mode).
+    fail(counts, lmx_thread_turn(t, native_noop, 1U) = c.LMX_THREAD_OK, "host entry runs when no walker is bound")
+    fail(counts, native_hits = 1, "native handler ran once before bind")
+    fail(counts, lmx_thread_turn(t, 0, 2U) = c.LMX_THREAD_OK, "call0 with no walker and no entry is a quiet empty body")
     fail(counts, l3_thread_bind(a, 0) = c.LMX_THREAD_INVALID && l3_thread_bind(0, t) = c.LMX_THREAD_INVALID, "null bind input is refused before assignment")
     fail(counts, l3_thread_bind(@ unbound_arena, forged_t) = c.LMX_THREAD_INVALID && l3_thread_roles(forged_t) = 0, "a standalone Message cast upward cannot bind as a Thread")
     fail(counts, l3_thread_roles(unbound_t) = 0 && l3_thread_plan_roles(unbound_t) = 0, "before bind no other Thread owns tables")
@@ -194,10 +193,9 @@ fn: main () int
     fail(counts, graph != 0 && msg != 0, "walk body")
     msg\graph: graph
     fail(counts, msg\graph = graph, "graph pointer installed, not copied")
-    fail(counts, lmx_thread_turn(t, native_noop, 3U) = c.LMX_THREAD_OK, "interpreted turn via lmx_walk")
+    fail(counts, lmx_thread_turn(t, 0, 3U) = c.LMX_THREAD_OK, "interpreted turn via lmx_walk")
     fail(counts, native_hits = 1, "native handler not used on interpreted turn")
-    fail(counts, lmx_thread_mode(t) = c.LMX_THREAD_MODE_INTERPRETED, "one mode for the turn")
-    fail(counts, lmx_thread_turn(t, native_noop, 4U) = c.LMX_THREAD_OK, "second interpreted turn")
+    fail(counts, lmx_thread_turn(t, 0, 4U) = c.LMX_THREAD_OK, "second interpreted turn")
     fail(counts, native_hits = 1, "still no native fallback")
     # Two turn boundaries have collected the arena. Sealed owner ranges survive unchanged.
     fail(counts, l3_thread_roles(t) = roles && l3_thread_plan_roles(t) = plan_roles, "two turns later the tables are the same tables")
@@ -210,12 +208,12 @@ fn: main () int
     graph: mk_walk_int(a, l3_thread_roles(t), 7)
     fail(counts, graph != 0, "entry returning 7")
     msg\graph: graph
-    fail(counts, lmx_thread_turn(t, native_noop, 5U) = c.LMX_THREAD_OK, "an entry returning 7 is an ordinary successful turn")
+    fail(counts, lmx_thread_turn(t, 0, 5U) = c.LMX_THREAD_OK, "an entry returning 7 is an ordinary successful turn")
     fail(counts, l3_thread_result(t, @ result) = 1 && result = 7, "the entry's 7 is observed as the host's exit value")
     graph: mk_walk_int(a, l3_thread_roles(t), 0)
     fail(counts, graph != 0, "entry returning 0")
     msg\graph: graph
-    fail(counts, lmx_thread_turn(t, native_noop, 6U) = c.LMX_THREAD_OK, "an entry returning 0 is an ordinary successful turn")
+    fail(counts, lmx_thread_turn(t, 0, 6U) = c.LMX_THREAD_OK, "an entry returning 0 is an ordinary successful turn")
     fail(counts, l3_thread_result(t, @ result) = 1 && result = 0, "the entry's 0 is observed as 0")
     fail(counts, l3_thread_result(other_t, @ result) = 0, "an unbound Thread has no exit value")
 

@@ -196,7 +196,7 @@ fn: run_graph (@: LmxThread t; @: Lmx m) int
     if: t = 0 || m = 0 || msg = 0
         return: -1
     msg\graph: m
-    st: lmx_thread_turn(t, native_noop, 8U)
+    st: lmx_thread_turn(t, 0, 8U)
     # Nothing to refresh: the role records live in sealed exact-profile ranges of the
     # owner arena, which end-turn collection does not sweep.
     groles: l3_thread_roles(t)
@@ -256,7 +256,6 @@ fn: main () int
         free(counts)
         return: 2
     ---
-    fail(counts, lmx_thread_request_mode(t, c.LMX_THREAD_MODE_INTERPRETED) = c.LMX_THREAD_OK, "request interpreted")
     fail(counts, lmx_thread_turn(t, native_noop, 1U) = c.LMX_THREAD_OK, "commit mode on native turn")
     fail(counts, native_hits = 1, "native ran once")
     fail(counts, l3_thread_bind(gb, t) = c.LMX_THREAD_OK, "bind walk dispatch")
@@ -314,7 +313,6 @@ fn: main () int
     fail(counts, run_graph(t, m) = c.LMX_THREAD_OK, "set-own turn")
     fail(counts, field(m, 1U) = 7, "interpreted SET published 7")
     fail(counts, native_hits = 1, "set-own did not call native")
-    fail(counts, lmx_thread_mode(t) = c.LMX_THREAD_MODE_INTERPRETED, "one mode for the turn")
 
     # THE SAME GRAPH, A SECOND REAL TURN.  The end-turn collection has run once.  With the role
     # records in the collected arena this turn did nothing: the frame's role address was compared

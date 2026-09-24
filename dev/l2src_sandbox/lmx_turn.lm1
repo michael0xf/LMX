@@ -43,9 +43,7 @@ return: lmx_turn_end_status(t, now, c.LMX_TURN_BODY_OK)
 # publication and GC marking are both later acts.  Such a failure is still a FAILED turn for mode
 # selection.  Resolve the request here before reporting the boundary failure so it cannot survive
 # and commit at some later successful endturn.  The execution mode itself never falls back or
-# changes on this path; lmx_thread_mode_end(FAILED) only cancels requested_mode to current_mode.
 fn: lmx_turn_boundary_fail (@: LmxThread t) int
-    lmx_thread_mode_end(t, c.LMX_TURN_FAILED)
 return: c.LMX_TURN_INVALID
 
 fn: lmx_turn_end_status (@: LmxThread t; ulong: now; int: body_status) int
@@ -170,18 +168,12 @@ fn: lmx_turn_end_status (@: LmxThread t; ulong: now; int: body_status) int
         # A thread that never joined a schedule has no arena this boundary may collect.  The
         # publication above stands (it asks no storage), and the collection is simply not this
         # boundary's to make -- not a failure of the turn.
-        if: lmx_thread_mode_end(t, outcome) != c.LMX_THREAD_OK
-            return: lmx_turn_boundary_fail(t)
-        ---
         return: c.LMX_TURN_OK
     ---
     if: lmx_gc_collect(arena, t) = c.LMX_GC_PARTIAL
         # The mark could not be completed, so NOTHING was swept: the boundary refuses instead
         # of reporting an arena it did not collect.  It also resolves this entered turn's pending
         # mode request as FAILED before returning; a later healthy boundary cannot inherit it.
-        return: lmx_turn_boundary_fail(t)
-    ---
-    if: lmx_thread_mode_end(t, outcome) != c.LMX_THREAD_OK
         return: lmx_turn_boundary_fail(t)
     ---
 return: c.LMX_TURN_OK

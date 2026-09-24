@@ -1,0 +1,31 @@
+# Typed numbers at the walked root (FABLE-OPUS-ROOT-TYPED-20260925-175; -167 Part A): size_t,
+# unsigned, ulong and char root fields, each literal typed by its place (`got != 41U` with a size_t
+# got is LIT size_t 41; 'a' is a char), + - and the comparisons over one type, and a size_t input
+# to a method.  Each check that holds adds its bit: all hold -> Entry 63.
+fn: twice (size_t: v) int
+    if: v = 21U
+        return: 2
+    return: 0
+end: twice
+
+size_t: got
+got: 40U
+got: got + 2U
+unsigned: u 7U
+ulong: w 5U
+char: ch 'a'
+int: r 0
+if: got = 42U
+    r: r + 1
+if: got != 41U
+    r: r + 2
+if: u + 1U > 7U
+    r: r + 4
+if: w - 5U = 0U
+    r: r + 8
+if: ch = 'a'
+    r: r + 16
+if: twice(21U) = 2
+    r: r + 32
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

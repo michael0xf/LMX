@@ -598,21 +598,21 @@ $fixtures = @(
     # declared type's shape; a refusal throws the implicit name implements (Q17 = A; g = 2, where a
     # failing merge is 1), and uncaught (`Fails`) the entry has no value, exit 1.  MainLetter is an
     # ordinary declared Structure (author Q15).
-    [pscustomobject]@{ Name = 'unit_admit_letter_typed.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int'; Args = @('0'); Letters = 0; Argv = @('a', 'b');
+    [pscustomobject]@{ Name = 'unit_admit_letter_typed.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field'; Args = @('0'); Letters = 0; Argv = @('a', 'b');
         Absent = @(); Debt = @('lmx_runtime_implements(l2_program_arena, (cast: (@: Lmx) l2_ngraph)') },
     [pscustomobject]@{ Name = 'unit_admit_letter_formal.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: receiveMessage'; Args = @('0'); Letters = 0;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_admit_letter_not_model.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int'; Args = @('0'); Letters = 0; Fails = 1; Stopped = 1; Thrown = 2;
+    [pscustomobject]@{ Name = 'unit_admit_letter_not_model.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field'; Args = @('0'); Letters = 0; Fails = 1; Stopped = 1; Thrown = 2;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_admit_formal_refused.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: receiveMessage'; Args = @('0'); Letters = 0; Fails = 1; Stopped = 1; Thrown = 2;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_admit_rebind_refused.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int'; Args = @('0'); Letters = 0; Fails = 1; Stopped = 1; Thrown = 2;
+    [pscustomobject]@{ Name = 'unit_admit_rebind_refused.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field'; Args = @('0'); Letters = 0; Fails = 1; Stopped = 1; Thrown = 2;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_admit_letter_extra_field.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int'; Args = @('0'); Letters = 0; Fails = 1; Stopped = 1; Thrown = 2;
+    [pscustomobject]@{ Name = 'unit_admit_letter_extra_field.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field'; Args = @('0'); Letters = 0; Fails = 1; Stopped = 1; Thrown = 2;
         Absent = @(); Debt = @() },
     # KNOWN COARSENESS (next_core_tasks.md 7): the walk does not look inside the outer Array, so an
     # `int: []: []:` field admits the char letter.  This row flips to Fails with the port.
-    [pscustomobject]@{ Name = 'unit_admit_letter_coarse.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int'; Args = @('0'); Letters = 0;
+    [pscustomobject]@{ Name = 'unit_admit_letter_coarse.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field'; Args = @('0'); Letters = 0;
         Absent = @(); Debt = @() },
     # `T: []: []: x` (author Q15): the outer Array is constructed empty and merge copies it as a new one.
     [pscustomobject]@{ Name = 'unit_arrarr_field.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure value'; Args = @('0');
@@ -621,21 +621,21 @@ $fixtures = @(
     # type through a typed root; `@` before an element addresses it in graph storage; length() on
     # both levels.  The former formal-`main` fixtures now read argv from the letter (mainArgs);
     # `{source}` in Argv is this fixture's own path.
-    [pscustomobject]@{ Name = 'unit_arr_path_read.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int'; Args = @('0');
+    [pscustomobject]@{ Name = 'unit_arr_path_read.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field'; Args = @('0');
         Absent = @(); Debt = @() },
     # D-06: a failed receiveMessage or rebinding store is an invariant on the X1 route, not a printed line.
-    [pscustomobject]@{ Name = 'unit_admit_rebind_read.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int'; Args = @('0'); Letters = 0; Argv = @('ok'); Entry = 2;
+    [pscustomobject]@{ Name = 'unit_admit_rebind_read.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field'; Args = @('0'); Letters = 0; Argv = @('ok'); Entry = 2;
         Absent = @('lmx_msg_poll_abort', 'lmx: receiveMessage', 'lmx: rebinding');
         Debt = @('c.fprintf(c.stderr, "lmx: invariant: receiveMessage store failed for own field ', 'c.fprintf(c.stderr, "lmx: invariant: rebinding store failed for own field ') },
-    [pscustomobject]@{ Name = 'entry_argc_if.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int'; Args = @('0'); Letters = 0;
+    [pscustomobject]@{ Name = 'entry_argc_if.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field'; Args = @('0'); Letters = 0;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'entry_index.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int'; Args = @('0'); Letters = 0; Argv = @('word'); Says = @('word');
+    [pscustomobject]@{ Name = 'entry_index.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field'; Args = @('0'); Letters = 0; Argv = @('word'); Says = @('word');
         Absent = @(); Debt = @('c.puts(@ l2_cp') },
-    [pscustomobject]@{ Name = 'entry_strcmp.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int'; Args = @('0'); Letters = 0; Argv = @('ok');
+    [pscustomobject]@{ Name = 'entry_strcmp.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field'; Args = @('0'); Letters = 0; Argv = @('ok');
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_charpp_return.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int'; Args = @('0'); Letters = 0;
+    [pscustomobject]@{ Name = 'unit_charpp_return.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field'; Args = @('0'); Letters = 0;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_entry_args.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int'; Args = @('0'); Letters = 0; Entry = 2;
+    [pscustomobject]@{ Name = 'unit_entry_args.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field'; Args = @('0'); Letters = 0; Entry = 2;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'entry_parse_min.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Letters = 0; Argv = @('{source}');
         Absent = @(); Debt = @() },
@@ -740,7 +740,7 @@ $fixtures = @(
                  'l2_entry_unit: graph') },
     # A nested member, a reference to the branch itself, a reference to the OTHER branch, and a
     # mutable Holder beside them: two roots are retained, the nested member and Holder are not.
-    [pscustomobject]@{ Name = 'unit_eternal_shape.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int';
+    [pscustomobject]@{ Name = 'unit_eternal_shape.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure value';
         Args = @('2', 'size', '0', '0', '7', 'size', '0', '4', '13', 'same', '0', '3', '0', 'same', '1', '0', '0', 'size', '1', '1', '17');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
         Debt = @('c.array: [2]: @: Lmx l2_program_qualified_roots',
@@ -748,7 +748,7 @@ $fixtures = @(
                  'l2_program_qualified_roots[1U]: l2_nsp[2]',
                  'l2_entry_unit: graph') },
     # A cross-reference INTO another branch: F\into is E's member `deep`, not a copy of it.
-    [pscustomobject]@{ Name = 'unit_eternal_xref.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int';
+    [pscustomobject]@{ Name = 'unit_eternal_xref.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a field path';
         Args = @('2', 'slot', '1', '0', '0', '0', 'size', '0', '1', '7', 'size', '1', '1', '23');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
         Debt = @('c.array: [2]: @: Lmx l2_program_qualified_roots',
@@ -763,14 +763,14 @@ $fixtures = @(
                  'l2_profile_array: (cast: (@: LmxArrayDesc) lmx_arena_take_profiled',
                  'l2_program_qualified_roots[0U]: l2_nsp[0]',
                  'l2_entry_unit: graph') },
-    [pscustomobject]@{ Name = 'unit_array_field.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int';
+    [pscustomobject]@{ Name = 'unit_array_field.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure value';
         Args = @('1');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
         Debt = @('c.array: [1]: @: Lmx l2_program_qualified_roots',
                  'l2_profile_array: (cast: (@: LmxArrayDesc) lmx_arena_take_profiled',
                  'l2_program_qualified_roots[0U]: l2_nsp[0]',
                  'l2_entry_unit: graph') },
-    [pscustomobject]@{ Name = 'unit_merge_site.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int';
+    [pscustomobject]@{ Name = 'unit_merge_site.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure value';
         Args = @('3');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
         Debt = @('c.array: [3]: @: Lmx l2_program_qualified_roots',
@@ -818,14 +818,14 @@ $fixtures = @(
                  'l2_out_throw[0]: 0',
                  'c.fprintf(c.stderr, "lmx: invariant: merge result check 71\n")',
                  'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ') },
-    [pscustomobject]@{ Name = 'unit_throwing_callable.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int';
+    [pscustomobject]@{ Name = 'unit_throwing_callable.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure value';
         Args = @('0');
         Absent = @('Lmx node; @: Lmx node', 'l2_out_throw[0]: node', 'return: 71');
         Debt = @('fn: l2_m0 (@: Lmx node; @: Lmx self; @: Lmx l2_msg; @: int l2_out_result; @@: Lmx l2_out_throw) int',
                  'l2_m0(l2_c0\parent, l2_c0, l2_msg, @ l2_t1, @ l2_te1)',
                  'l2_out_throw[0]: 0',
                  'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ') },
-    [pscustomobject]@{ Name = 'unit_recursion.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int';
+    [pscustomobject]@{ Name = 'unit_recursion.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call whose result is not an int';
         Args = @('0');
         Absent = @('Lmx node; @: Lmx node', 'l2_p2_0; @: Lmx node', 'l2_out_throw[0]: node', 'return: 71');
         Debt = @('fn: l2_m2 (@: Lmx node; @: Lmx self; size_t: l2_p2_0; @: Lmx l2_msg; @: size_t l2_out_result; @@: Lmx l2_out_throw) int',
@@ -845,7 +845,7 @@ $fixtures = @(
     # third is a refused admission, thrown inside a method E calls, which arrives as 2.
     [pscustomobject]@{ Name = 'unit_s1_merge_uncaught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; MergeFail = 1; Stopped = 1; Thrown = 1;
         Absent = @('l2_out_throw[0]: node'); Debt = @('l2_out_throw[0]: 0', 'return: l2_ts', 'l2_rw1 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw0, c.LMX_WALK_OP_CALL, 2U)', 'if: lmx_arena_ref_store(l2_rw1, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 1U))) != 0') },
-    [pscustomobject]@{ Name = 'unit_s1_merge_uncaught_entry.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int'; Args = @('0'); Fails = 1; MergeFail = 1; Stopped = 1; Thrown = 1;
+    [pscustomobject]@{ Name = 'unit_s1_merge_uncaught_entry.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field'; Args = @('0'); Fails = 1; MergeFail = 1; Stopped = 1; Thrown = 1;
         Absent = @('l2_out_throw[0]: node'); Debt = @('l2_out_throw[0]: 0') },
     # D-07: qualified-operand merge emits lmx_merge_profiles_owned; MergeFail 1 fails it via the
     # profiles tap (shared mergefail counter). Mutant without -Dlmx_merge_profiles_owned cannot
@@ -925,7 +925,7 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s1_catch_tc.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Stopped = 0;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s1_catch_t2.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int'; Args = @('0'); Entry = 103;
+    [pscustomobject]@{ Name = 'unit_s1_catch_t2.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field'; Args = @('0'); Entry = 103;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s1_catch_sibling.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: throw and catch'; Args = @('0'); Entry = 3;
         Absent = @(); Debt = @() },
@@ -1001,13 +1001,13 @@ $fixtures = @(
     # anywhere it is consumed as a value), one diagnostic, now that this fixture's own case is fixed.
     [pscustomobject]@{ Name = 'unit_void_value.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'a callable without a result has no value'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_empty_assign_untyped.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int'; Args = @('0'); Letters = 0;
+    [pscustomobject]@{ Name = 'unit_empty_assign_untyped.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field'; Args = @('0'); Letters = 0;
         Absent = @(); Debt = @() },
     # D-06: the f() assignment's failed rebinding store is an invariant on the X1 route, not a printed line.
-    [pscustomobject]@{ Name = 'unit_empty_assign_admit.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int'; Args = @('0'); Entry = 421;
+    [pscustomobject]@{ Name = 'unit_empty_assign_admit.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field'; Args = @('0'); Entry = 421;
         Absent = @('lmx_msg_poll_abort', 'lmx: rebinding');
         Debt = @('c.fprintf(c.stderr, "lmx: invariant: rebinding store failed for own field ') },
-    [pscustomobject]@{ Name = 'unit_empty_assign_named.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int'; Args = @('0'); Entry = 74;
+    [pscustomobject]@{ Name = 'unit_empty_assign_named.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field'; Args = @('0'); Entry = 74;
         Absent = @(); Debt = @() },
     # A BARE `return` CLOSES A SUB (P0, FABLE-OPUS-RECEIVER-CONTRACT-20260924-139 commit 3; author
     # 2026-09-24 Q19.1/Q19.3): the trailer ends the body of s, and each call runs it.
@@ -1023,6 +1023,11 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_discard_forms.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 3;
         Absent = @(); Debt = @() },
+    # TYPED NUMBERS AT THE WALKED ROOT (FABLE-OPUS-ROOT-TYPED-20260925-175): size_t, unsigned, ulong
+    # and char root fields; a literal takes its place's type -- the pin is `got != 41U`'s LIT size_t --
+    # and two types in one operation are a conversion, refused (unit_addr_arg).
+    [pscustomobject]@{ Name = 'unit_root_typed_numerics.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 63;
+        Absent = @(); Debt = @('lmx_walk_store_size(l2_program_arena, l2_rw', ', 1U, 41U) != c.LMX_WALK_OK', 'lmx_walk_store_char(l2_program_arena, l2_rw') },
     [pscustomobject]@{ Name = 'unit_discard_calls.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: * / %'; Args = @('0'); Entry = 11112;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_discard_fnptr.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
@@ -1064,13 +1069,13 @@ $fixtures = @(
     # was compared with an own field's storage code: 34 against 3) and silently left a plain local
     # in the assignment form; a pointer was never bound at all.  Both now go through the same
     # mechanism, and the type only names the cell.
-    [pscustomobject]@{ Name = 'unit_arg_addr_types.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call with an input that is not an int';
+    [pscustomobject]@{ Name = 'unit_arg_addr_types.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Says = @('U 51 51', 'Z local 71', 'Z graph 71', 'L local 81', 'L graph 81');
         BindOrder = $true;
         Absent = @();
         Debt = @('lmx_unsigned_store_known(l2_q1_from[0], l2_q', 'if: l2_q1_dirty != 0 || (l2_q1_sticky != 0 && l2_q1_active = 1)') },
-    [pscustomobject]@{ Name = 'unit_arg_addr_pointer.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call with an input that is not an int';
+    [pscustomobject]@{ Name = 'unit_arg_addr_pointer.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call with an input that is not a number';
         Args = @('0');
         Says = @('P local is null');
         BindOrder = $true;
@@ -1090,7 +1095,7 @@ $fixtures = @(
     # field-path helper to the leaf cell and yields a typed address of that cell.  The M0 rows
     # above still refuse the eternal spelling; this row must keep running.  The former residue
     # `@ A\e)` is Absent; the typed cell pointer is the positive lowering.
-    [pscustomobject]@{ Name = 'unit_named_addr_gap.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int';
+    [pscustomobject]@{ Name = 'unit_named_addr_gap.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call with an input that is not a number';
         Args = @('0');
         Absent = @('@ A\e)');
         Debt = @('(cast: (@: size_t) l2_pxp[0])') },
@@ -1164,7 +1169,7 @@ $fixtures = @(
     # The second line of each pair carries a byte above 127 in a CHAR (a literal is already an
     # int): a plain conversion to int hands the rebind a negative value, which it refuses.
     # Measured, one mutant per emitter: K2 200 255; the entry stops after M1; P2 202 255.
-    [pscustomobject]@{ Name = 'unit_char_own_publish.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int';
+    [pscustomobject]@{ Name = 'unit_char_own_publish.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body';
         Args = @('0');
         Says = @('M1 67 67', 'M2 202 202', 'K1 65 65', 'K2 200 200', 'P1 66 66', 'P2 202 202');
         # D-06: the char checkpoint's failed rebinding is an invariant on the X1 route, not a printed line.
@@ -1280,7 +1285,7 @@ $fixtures = @(
                  'l2_entry_unit: graph', 'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ') },
     [pscustomobject]@{ Name = 'unit_nested_body_own_not_node.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown field path segment'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_node_root_unit_field.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int';
+    [pscustomobject]@{ Name = 'unit_node_root_unit_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_entry_unit: graph') },
@@ -1315,11 +1320,11 @@ $fixtures = @(
         Says = @('9', '9 42');
         Absent = @();
         Debt = @() },
-    [pscustomobject]@{ Name = 'unit_occ_root_field.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int';
+    [pscustomobject]@{ Name = 'unit_occ_root_field.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a field path';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_entry_unit: graph') },
-    [pscustomobject]@{ Name = 'unit_field_path_formal_value.lm2'; Expect = 'root-pending'; Exit = 0; Entry = 5; Needle = 'root operation not walkable yet: a value that is not an int';
+    [pscustomobject]@{ Name = 'unit_field_path_formal_value.lm2'; Expect = 'root-pending'; Exit = 0; Entry = 5; Needle = 'root operation not walkable yet: a Structure-typed field';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_entry_unit: graph') },
@@ -1449,7 +1454,7 @@ $fixtures = @(
         Debt = @('l2_entry_unit: graph', 'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ') },
     # S2: the unit's `Model: fresh` is an own field of the entry E, registered by the same
     # recognizer every method uses (l2_own_add(E, ...)), so the unit declares it again.
-    [pscustomobject]@{ Name = 'unit_colon_model_decl.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int';
+    [pscustomobject]@{ Name = 'unit_colon_model_decl.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @() },
@@ -1463,7 +1468,7 @@ $fixtures = @(
         Needle = 'empty colon Frame is not allowed'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_empty_struct_existing_nonstruct_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unsupported body'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_typed_decl_vertical.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int';
+    [pscustomobject]@{ Name = 'unit_typed_decl_vertical.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call whose result is not an int';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @() },
@@ -1486,15 +1491,15 @@ $fixtures = @(
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('lmx_merge_owned(l2_mops, 1U, l2_mbody, node, 0, l2_program_arena, l2_program_arena, 0, 0U, @ l2_mresult)',
                  'l2_entry_unit: graph') },
-    [pscustomobject]@{ Name = 'unit_field_path_own_write.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int';
+    [pscustomobject]@{ Name = 'unit_field_path_own_write.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call whose result is not an int';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_pst:', 'l2_pxp: lmx_arena_ref_cell(l2_pst,', 'l2_entry_unit: graph') },
-    [pscustomobject]@{ Name = 'unit_field_path_formal.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int';
+    [pscustomobject]@{ Name = 'unit_field_path_formal.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call whose result is not an int';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_pst:', 'l2_pxp: lmx_arena_ref_cell(l2_pst,', 'l2_entry_unit: graph') },
-    [pscustomobject]@{ Name = 'unit_field_path_nested.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int';
+    [pscustomobject]@{ Name = 'unit_field_path_nested.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call whose result is not an int';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_pst: lmx_arena_ref_struct(l2_pst,', 'l2_pxp: lmx_arena_ref_cell(l2_pst,', 'l2_mops[0U]: l2_nsp[', 'lmx_merge_owned(l2_mops, 1U, l2_mbody, l2_nsp[') },
@@ -1504,15 +1509,15 @@ $fixtures = @(
         Debt = @('l2_pst: lmx_arena_ref_struct(l2_pst,', 'l2_pxp: lmx_arena_ref_cell(l2_pst,', 'l2_mops[0U]: l2_nsp[', 'lmx_merge_owned(l2_mops, 1U, l2_mbody, l2_nsp[') },
     [pscustomobject]@{ Name = 'unit_field_path_unknown_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown field path segment'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_field_path_unit_addr.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int';
+    [pscustomobject]@{ Name = 'unit_field_path_unit_addr.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_entry_unit: graph') },
-    [pscustomobject]@{ Name = 'unit_field_path_unit_colon.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int';
+    [pscustomobject]@{ Name = 'unit_field_path_unit_colon.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_pst:', 'l2_pxp: lmx_arena_ref_cell(l2_pst,', 'l2_entry_unit: graph') },
-    [pscustomobject]@{ Name = 'unit_field_path_unit_qualified.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int';
+    [pscustomobject]@{ Name = 'unit_field_path_unit_qualified.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a field path';
         Args = @('1');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_entry_unit: graph') },
@@ -1523,14 +1528,14 @@ $fixtures = @(
     # FABLE-SONNET-OWN-LOOKUP-AUDIT-20260923-131 part 3: the terminal
     # Structure-reference assignment checklist, one assertion per (direct
     # name / path) x (own / unit / formal) x (primitive / Structure).
-    [pscustomobject]@{ Name = 'unit_field_path_terminal_checklist.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int';
+    [pscustomobject]@{ Name = 'unit_field_path_terminal_checklist.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @() },
     # FABLE-SONNET-DECL-PREPASS-20260923-137 part 2 (Opus's finding 1): a
     # named-Structure method return, non-throwing and declared-throw ABI,
     # a discarded call and a nested-call value round-trip witness.
-    [pscustomobject]@{ Name = 'unit_struct_return.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int';
+    [pscustomobject]@{ Name = 'unit_struct_return.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call whose result is not an int';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @() },
@@ -1545,7 +1550,7 @@ $fixtures = @(
     # D-05/D-06: a field path meeting no Structure, an own field without a cell, a method entered
     # without its occurrence, a missing control body and a failed checkpoint are invariants on the
     # X1 route (a message and an abort), never a return from the method or a printed line.
-    [pscustomobject]@{ Name = 'unit_struct_int_field.lm2'; Expect = 'root-pending'; Exit = 0; Entry = 7; Needle = 'root operation not walkable yet: a value that is not an int';
+    [pscustomobject]@{ Name = 'unit_struct_int_field.lm2'; Expect = 'root-pending'; Exit = 0; Entry = 7; Needle = 'root operation not walkable yet: a Structure-typed field';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'lmx_msg_poll_abort', 'lmx: checkpoint',
                    "if: self = 0`n        return", "if: self = 0`n        l2_out_result",
@@ -1560,7 +1565,7 @@ $fixtures = @(
                  'c.fprintf(c.stderr, "lmx: invariant: checkpoint store failed for own field ') },
     # Every numeric field of a named Structure -- size_t, int, unsigned, ulong -- has its own cell
     # holding its literal, in the Structure and in a merge copy (FABLE-OPUS-DISCARD-20260924-147).
-    [pscustomobject]@{ Name = 'unit_struct_num_fields.lm2'; Expect = 'root-pending'; Exit = 0; Entry = 7; Needle = 'root operation not walkable yet: a value that is not an int';
+    [pscustomobject]@{ Name = 'unit_struct_num_fields.lm2'; Expect = 'root-pending'; Exit = 0; Entry = 7; Needle = 'root operation not walkable yet: a field path';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('lmx_int_store_known(l2_entry_slot[0], 4)', 'lmx_unsigned_store_known(l2_entry_slot[0], 5U)',
@@ -1599,13 +1604,13 @@ $fixtures = @(
     # translates-with-debt with an empty Debt stops at l1trans success, the layer this ticket
     # actually changes, without the unrelated link-object gap; flagged for whoever owns extending
     # the per-fixture link step, not fixed here.
-    [pscustomobject]@{ Name = 'unit_lm_own_actual_span.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call with an input that is not an int';
+    [pscustomobject]@{ Name = 'unit_lm_own_actual_span.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call with an input that is not a number';
         Absent = @(); Debt = @() },
     # FABLE-SONNET-OWN-LOOKUP-AUDIT-20260923-131 part 3: the -92 leftover --
     # a Structure value assigned through a path ending at a nested
     # Structure-typed field stays a located, fail-closed refusal.
     [pscustomobject]@{ Name = 'unit_field_path_struct_rebind_refused.lm2'; Expect = 'root-pending'; Exit = 0;
-        Needle = 'root operation not walkable yet: a value that is not an int'; Absent = @(); Debt = @() },
+        Needle = 'root operation not walkable yet: a Structure-typed field'; Absent = @(); Debt = @() },
     # FABLE-GROKBOT-C-MEMBER-ACCESS-20260923-120 part1: c.* raw member paths.
     # Mutant: l2_ty_raw_c_members always 0 -> unit_c_member_len refuses unsupported body.
     [pscustomobject]@{ Name = 'unit_c_member_len.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
@@ -1620,7 +1625,7 @@ $fixtures = @(
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'unsupported body');
         Debt = @('l2_entry_unit: graph', 'diagnostic') },
-    [pscustomobject]@{ Name = 'unit_c_member_struct_control.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int';
+    [pscustomobject]@{ Name = 'unit_c_member_struct_control.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call whose result is not an int';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_pst:', 'l2_pxp: lmx_arena_ref_cell(l2_pst,', 'l2_entry_unit: graph') },
@@ -1650,7 +1655,7 @@ $fixtures = @(
         Debt = @() },
     [pscustomobject]@{ Name = 'unit_callable_priority_arity_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'incompatible entry signature'; Absent = @('assignment target must be a declared typed mutable value'); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_model_fresh_synonyms.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int';
+    [pscustomobject]@{ Name = 'unit_model_fresh_synonyms.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call whose result is not an int';
         Args = @('0');
         Absent = @();
         Debt = @() },
@@ -1665,11 +1670,11 @@ $fixtures = @(
     # its own witness function, so a broken address write would have
     # passed silently either way. Completed with a real call and assertion
     # rather than rewritten from scratch (the shapes were already correct).
-    [pscustomobject]@{ Name = 'unit_addr_arg.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int';
+    [pscustomobject]@{ Name = 'unit_addr_arg.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: mixed numeric types (a conversion)';
         Args = @('0');
         Absent = @();
         Debt = @() },
-    [pscustomobject]@{ Name = 'unit_addr_depth.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int';
+    [pscustomobject]@{ Name = 'unit_addr_depth.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call whose result is not an int';
         Args = @('0');
         Absent = @();
         Debt = @() },
@@ -1677,7 +1682,7 @@ $fixtures = @(
         Args = @('0');
         Absent = @();
         Debt = @() },
-    [pscustomobject]@{ Name = 'unit_addr_entry_name_collision.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int';
+    [pscustomobject]@{ Name = 'unit_addr_entry_name_collision.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field';
         Args = @('0');
         Says = @('1 2 3 4 5');
         Absent = @();
@@ -1705,7 +1710,7 @@ $fixtures = @(
         Debt = @() },
     [pscustomobject]@{ Name = 'unit_dyn_hidden_from_undeclared_refused.lm2'; Expect = 'root-pending'; Exit = 0;
         Needle = 'root operation not walkable yet: a call of a method with dynamic inputs'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_own_find_last_sizeof.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int';
+    [pscustomobject]@{ Name = 'unit_own_find_last_sizeof.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body';
         Args = @('0');
         Absent = @();
         Debt = @() },
@@ -1762,7 +1767,7 @@ $fixtures = @(
         Needle = 'unresolved name'; Absent = @(); Debt = @() },
     # FABLE-OPUS-P0-SIZEOF-ATOM-20260924-157: a private buffer's element size through the sizeof:
     # receiver, `sizeof(unsigned)`, lowered as L1's single-word `c.sizeof(unsigned)`.  Success is 7.
-    [pscustomobject]@{ Name = 'unit_ptr_grow.lm2'; Expect = 'root-pending'; Exit = 0; Entry = 7; Needle = 'root operation not walkable yet: a call with an input that is not an int';
+    [pscustomobject]@{ Name = 'unit_ptr_grow.lm2'; Expect = 'root-pending'; Exit = 0; Entry = 7; Needle = 'root operation not walkable yet: a call with an input that is not a number';
         Args = @('0'); Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('c.sizeof(unsigned)') },
     # FABLE-OPUS-P0-SIZEOF-ATOM-20260924-157 commit 2: P0 keeps no raw `c.sizeof(...)` atom, so an L2
@@ -1771,7 +1776,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_csizeof_operand_lowered.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
         Args = @('0'); Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'c.sizeof(x)');
         Debt = @('return: c.sizeof(l2_t') },
-    [pscustomobject]@{ Name = 'unit_sizeof_own_local.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call with an input that is not an int';
+    [pscustomobject]@{ Name = 'unit_sizeof_own_local.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0'); Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT'); Debt = @('l2_entry_unit: graph') },
     [pscustomobject]@{ Name = 'unit_native_activation.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body';
         Args = @('0'); Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'c.array'); Debt = @('l2_entry_unit: graph') },
@@ -1845,7 +1850,7 @@ $fixtures = @(
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_entry_unit: graph', 'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ') },
-    [pscustomobject]@{ Name = 'unit_implements_admission.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int';
+    [pscustomobject]@{ Name = 'unit_implements_admission.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a field path';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_entry_unit: graph', 'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ') },
@@ -1914,16 +1919,16 @@ $fixtures = @(
         Needle = 'graph assignment admission requires receiving-expression tests'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_matrix_callable_prim.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0'); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_matrix_callable_struct_identity.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int';
+    [pscustomobject]@{ Name = 'unit_matrix_callable_struct_identity.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field';
         Args = @('0'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_matrix_callable_array_elem.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an array';
         Args = @('0'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_matrix_callable_callable_arg.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0'); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_matrix_path_prim.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int';
+    [pscustomobject]@{ Name = 'unit_matrix_path_prim.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field';
         Args = @('0'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_matrix_path_struct_rebind_refused.lm2'; Expect = 'root-pending'; Exit = 0;
-        Needle = 'root operation not walkable yet: a value that is not an int'; Absent = @(); Debt = @() },
+        Needle = 'root operation not walkable yet: a Structure-typed field'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_matrix_path_array_elem.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an array';
         Args = @('0'); Absent = @(); Debt = @() },
     # (e) empty Structure as ONE named value vs empty arg list. Named form is

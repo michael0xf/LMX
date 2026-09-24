@@ -129,3 +129,43 @@ the nextMessage class (8 rows, after Sonnet's receiveMessage rename).
 A first: it is self-contained in the walker's value sites.  B depends on A's typed-cell reading for
 its pointer cells, and on a merge primitive.  Both are Grok's files (lmx_walk.lm1, lmx_walk.h.lm1).
 The translator's side of each (l2_rw_*) is small once the roles exist.
+
+## Status after part A (-167 walker; -175 translator)
+
+Built (FABLE-OPUS-ROOT-TYPED-20260925-175, l2trans.lm1 `l2_rw_*`):
+- Numeric root fields: int, char, size_t, unsigned, ulong.  They are declared with or without an
+  initializer, assigned and read.
+- The static type of every root expression (`l2_rw_tyof`).  A literal takes the type of its place:
+  a decimal, a `U` literal only in an unsigned type, a char literal as its byte.  Two types in one
+  operation, or in one place, are refused: «mixed numeric types (a conversion)».
+- A call's inputs are typed by their formals, as the trampoline reads them.  A call's result is
+  still an int only.
+- The refusals now name what a non-number is: «a Structure-typed field» (`Model: m`, and a read of
+  such a field), «an array», «a value that is not a number».
+
+Rows (split eternal-runs 97 -> 101, root-pending 97 -> 92, l2trans-refuses 119 -> 121):
+- Run:
+  - `unit_node_root_unit_field`, after its tail rewrite;
+  - `unit_arg_addr_types`;
+  - `unit_sizeof_own_local`;
+  - the new `unit_root_typed_numerics` (Entry 63).
+- Refused for good: `unit_char_own_publish` and `unit_own_find_last_sizeof` reach «L2 operation
+  outside a method body» (`c.printf`, `sizeof:` at the root).
+- Still pending (all root-pending rows with these needles), each at its next gap:
+  - 28 on «a Structure-typed field»: part B, Grok -174;
+  - 9 on «a call whose result is not an int»: a size_t call result;
+  - 5 on «a field path»;
+  - 5 on «a Structure value» (merge);
+  - 4 on «a call with an input that is not a number» (pointer or Structure inputs);
+  - 1 on «mixed numeric types (a conversion)»: `unit_addr_arg`, `got: go(0U)` with an int `go`.
+
+What the size_t call results need from the walker: CALL writes the trampoline's result into the
+evaluator's destination, an int temp (4 bytes).  A size_t result would overrun it.  The CALL needs
+a destination of the callee's result type, for example a fresh cell of that type as
+`lmx_walk_arith_out` makes for + and -.
+
+Walker defects found on the way, with probe fixtures and no harness rows yet (Grok registers them
+with the fix):
+- D-50: an int LT compares unsigned (`unit_walk_int_lt_negative.lm2`, Entry 1).
+- D-51: the working width is `ulong`, 32 bits on LLP64, and truncates size_t
+  (`unit_walk_size_t_wide.lm2`, Entry 2).

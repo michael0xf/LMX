@@ -168,7 +168,7 @@ fn: l3_exec_stmt (@: LmxArena arena; @: L3Frame f; @: void v) int
     # statement (shared child range with body steps). Other primitives are
     # headless data -- explicit UNSUPPORTED until discard exists.
     if: kind = c.LMX_KIND_PRIMITIVE
-        if: l3_is_self_field(f, v) != 0
+        if: lmx_domain_type(arena, v) = c.LMX_TYPE_INT && l3_is_self_field(f, v) != 0
             return: c.L3_OK
         ---
         return: c.L3_UNSUPPORTED

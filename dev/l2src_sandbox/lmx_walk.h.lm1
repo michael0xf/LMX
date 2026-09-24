@@ -106,9 +106,9 @@ predef: "l2src/lmx_plan.h.lm1"
 #     that would LEAVE an activation through `ret` is copied -- four bytes, by value --
 #     into the destination of the caller; a reference into the graph leaves as it is;
 #   * the inputs of a callee are an array of references in the caller's scratch slice.
-# Own fields keep working copies: numerics in LmxWalkOwn.value (size_t, widest); Structure
-# fields (pointer cells) in LmxWalkOwn.ref (-174 c2). A read copies the working value /
-# reference into the destination, because the field may be assigned again before use.
+# -188 k.2 / CODE-DATA-SPLIT: cells ARE the graph. Own fields have no working copies:
+# OWN reads the cell; SET/PUT/PUT_OF write the cell immediately. Activation state lives
+# only on LmxWalkFrame. LmxWalkOwn keeps only from (survey/plan slot address).
 # MUL/DIV/MOD (-170 c1 / D-58): [mul|div|mod, a, b]; same-type arith_out; div/mod 0 -> INVALID.
 # PUT_OF (-177 c4 / D-54): [put_of, struct-expr, slot, value]; holder evaluated.
 # lmx_walk_slot refuses an OP-node holder (X1). receiveMessage take (-177 c1): PRIM record whose fn is lmx_walk_mail_take (nargs 0);
@@ -124,7 +124,7 @@ predef: "l2src/lmx_plan.h.lm1"
 #   lit   [lit, cell]                 the int cell that holds the value, by reference
 #   own   [own, holder, slot]         an own field of the running M: `holder` is M or a
 #                                     body lexically inside M, by reference; `slot` is a
-#                                     size_t cell.  Loaded at entry, cached, dirty-tracked
+#                                     size_t cell.  Read every time from the graph cell
 #   arg   [arg, k]                    k-th declared input of this activation (size_t cell):
 #                                     the reference the caller passed, as it is
 #   of    [of, value, slot]           a field of a REFERENCE VALUE: `value` is a node whose
@@ -136,7 +136,7 @@ predef: "l2src/lmx_plan.h.lm1"
 #   at    [at, holder, slot]          explicit graph field read: every execution, never
 #                                     cached (21.5); `holder` is any Structure, by reference
 #   put   [put, holder, slot, value]  explicit graph field write, never cached
-#   set   [set, own-node, value]      executed assignment of an own field: sets dirty
+#   set   [set, own-node, value]      executed assignment: writes the own field cell now
 #   add sub lt eq  [op, a, b]
 #   if    [if, cond, then, else?]     then / else are bodies
 #   while [while, cond, body]
@@ -155,7 +155,7 @@ predef: "l2src/lmx_plan.h.lm1"
 # rather than hidden, and NOT the final semantics of L3: Part A (-167) types numeric
 # cells (int/char/size_t/unsigned/ulong) from the arena. PUT into a pointer cell stores a
 # Structure reference type-checked (-174 c2). Own REFERENCE fields keep Structure in
-# LmxWalkOwn.ref. OF-deref is c1; merge-as-PRIM (lmx_walk_merge_model) is c3. Arithmetic same-type rules land with -167 commit 2. A return carries
+# pointer cells via SET/PUT. OF-deref is c1; merge-as-PRIM (lmx_walk_merge_model) is c3. Arithmetic same-type rules land with -167 commit 2. A return carries
 # 0 or 1 value; no poll; no arrays; no dynamic inputs of 21.3.
 #
 # What is outside the slice is REPORTED, never skipped and never handed to native code
@@ -173,7 +173,7 @@ define: LMX_WALK_INVALID 1
 # A callable with no body node: nothing to walk.
 define: LMX_WALK_NO_GRAPH 2
 define: LMX_WALK_NOMEM 3
-# A dirty own value could not be published (21.6: checkpoint failure, never silent).
+# Legacy: was dirty publish failure (21.6). Checkpoint is a no-op in -188 k.2; code kept.
 define: LMX_WALK_CHECKPOINT 4
 # A body node this slice does not read, or a body whose descriptor has no activation
 # plan (lmx_walk_prepare was not run for it).  Nothing of the activation has run.
@@ -246,16 +246,11 @@ struct: LmxWalkValue
     int: present
 end: LmxWalkValue
 
-# One own field of the running M as this activation sees it: the slot it was loaded from
-# (the publication target), the working value, and the dirty state of 21.6.  The records
-# of an activation are kept in the lexical order of the fields (LMX_blog/2026-09-20.md,
-# "Поля Lmx лексические"), found by walking M's own tree in order at entry; that is the
-# order of every checkpoint -- not the order in which the body happens to mention them.
+# -188 k.2: survey/plan only — the slot an OWN node addresses. Activation does not copy
+# the cell; OWN/SET use lmx_walk_slot at eval time (same addressing as AT). Records stay
+# in lexical field order for plan_check (LMX_blog/2026-09-20.md).
 struct: LmxWalkOwn
     @@: void from
-    size_t: value
-    @: void ref
-    int: dirty
 end: LmxWalkOwn
 
 # What graph mode needs from its surroundings, for one Message on one thread: the

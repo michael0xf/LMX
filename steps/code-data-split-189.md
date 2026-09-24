@@ -396,7 +396,9 @@ Proposed shapes (Grok -188 c3: the kernel and the walker; mine, c3a: the emissio
      - an Array descriptor: a fresh Array of the same element type and length, zeroed;
      - a Structure whose parent is `code` (a control body, fields only): the same rule, recursively,
        its parent the new instance;
-     - anything else: refused.  The translator never puts anything else there; it is not guessed.
+     - a terminal reference (a field pointing to a callable occurrence or a METHOD, e.g. `A: fn: M`:
+       the copier's shared terminals, §4): kept by address, like child 0 (fable's correction);
+     - only what the arena does not classify is refused: it is not guessed.
    - This is the layout the builder and c2's `l2_new<i>` make, read from the graph itself: no
      translator table and no role record.  That is plan §3 item 9's «ничего сверх самой
      Structure».  If Grok prefers `lmx_plan`'s paths, the result is the same instance.

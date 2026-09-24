@@ -314,12 +314,189 @@ l2_harness GREEN 343/343, `build_l2src -Run` GREEN 260/260 (kernel selftests
 included), L3 selftest 11/11 + type budget OK, check_docs OK,
 `git diff --check` clean.
 
+## Commit 3: `sendMessage: Ref X`, root + method body
+
+Base: origin/main after commit 2 integrated (`fbd3081`), then rebased again
+onto `8292bc3` once -178 c3 / -179 / D-57 / D-58 landed (harness 349 clean
+before this commit's own edits).
+
+### The witness-construction blocker, and fable's design answer
+
+Before writing translator code, traced whether either of fable's two
+proposed driver-side witness shapes (a sibling child of the host root, or a
+standalone Message record) could actually observe a real reply. Both hit
+the same root cause: `lmx_root_launch` (`lmx_root.lm1:990-1123`) is one
+opaque call giving R0 exactly one scheduled turn
+(`lmx_manager_round(mgr, 1U, now)`, ticks=1U literally = one
+`lmx_manager_step`); R0's own mailbox/service do not exist until partway
+through that same call, and the only existing driver hook
+(`l2_driver_program`) fires even earlier, before R0 has a mailbox at all.
+No hook existed between R0's mailbox coming into existence and its one
+turn running, so nothing the driver built could get a second letter into
+R0's inbox before that turn -- not just a host-graph-field-count problem
+(fable's own first guess), a deeper one. Reported with line numbers rather
+than working around it, per the ticket's standing rule; fable's answer:
+Grok issues a real kernel tap (FABLE-GROKBOT-LAUNCH-TAP-20260925-182,
+landed after this commit as `LmxRootBeforeTurn`/`before_turn` on
+`LmxRootLaunch`), and this commit proceeds on the translator mechanism
+alone, with a structural (generated-C) witness instead of a behavioral one
+-- the driver-side behavioral witness is commit 4, gated on -182.
+
+### The shape: Ref is everything before the last field, not a fixed 1-or-2 count
+
+First design (matching commit 2's `receiveMessage: m Model`) assumed
+`sendMessage: Ref X` is always exactly 2 top-level items. Wrong: P0 does
+not lex a field path as one atom with an embedded backslash -- `m\sender`
+is three SEPARATE sibling fields (`m`, `\`, `sender`), only merged back
+into one logical token by `l2_rw_tokens`/`l2_rw_path_run`'s own path-run
+detection (confirmed by reading `l2_rw_path_run`'s doc comment and body,
+`l2trans.lm1:16957-16973`, before writing any shape-parsing code). So
+`sendMessage: m\sender Pong(n: 1)`'s body is FOUR active fields (`m`, `\`,
+`sender`, the `Pong(...)` frame), not two. Redesigned the shape check
+around this: the message Structure is always the body's LAST active field
+(`l2_count_active(body) - 1` fields before it, 0 meaning no Ref, the
+ordinary form unchanged); the Ref run, whatever its own internal field
+count, is handed whole to `l2_rw_texpr` (root) / `l2_eval_fields` (method
+body) -- both already tokenize an arbitrary field-path run internally
+(`l2_rw_path_run`/`l2_rw_path_atom`), so no new path-merging code was
+needed, only the boundary computation (`l2_skip_span(f, refn)` to find the
+message field, matching `l2_rw_tokens`'s own use of the same helper).
+
+### Where the Ref value travels: refs[], not dest
+
+`l2_emit_send`'s shared generated-function signature already carries a
+`dest` parameter, unused inside the body -- the pre-commit-3 comment
+called it "the natural place" for an explicit addressee. Measured this is
+wrong before using it: at the walked root, `dest` is the WALKER's own
+per-step result-destination slot (`lmx_walk_prim(f, code, dest, out)` ->
+`record\fn(record\owner, refs, n, dest, out)`, `dest = f\dest`, read in
+`lmx_walk.lm1:1082-1123`), not a caller-suppliable input -- reusing it for
+an addressee would collide with what every other prim already uses it for
+(a call's or merge's own result slot). `refs[]`, by contrast, is the
+walker's ordinary per-step EVALUATED-INPUT array, already how every
+payload int field reaches the prim; the Ref value travels the same way,
+as one more evaluated input, placed LAST (`refs[ni]`, after the payload's
+own `ni` int fields) so the existing payload-field indices need no
+renumbering. `has_ref_arr[k]`, a new per-site STATIC flag threaded through
+`l2_emit_send`'s existing `count_arr`/`kind_arr`/`text_arr` parameters,
+picks which of two `lmx_service_post` lines this k's OWN generated
+function gets -- a generation-time choice, not a runtime branch, since
+each `l2_send<k>`/`l2_msend<k>` is a freshly emitted function per site
+either way.
+
+### Two forms, one shared mechanism
+
+`l2_msend_register` (method body) and `l2_rw_send` (root) both gained the
+same shape logic (total/refn/has_ref, `l2_skip_span` to the message
+field); `l2_rw_send` additionally type-checks the Ref via
+`l2_rw_fields_ty(f, refn)`, refusing "a Ref that is not a reference" when
+its static type is not >= 1000 (the file's own reference-type convention,
+`l2trans.lm1:17751`). `l2_msend_register`'s method-body side leaves this
+to `l2_eval_fields`'s own natural refusal instead of a duplicate check
+(consistent with how payload fields are not separately type-checked there
+either). `l2_emit_msend` evaluates the stored Ref field run
+(`l2_eval_fields(f, refn, ...)`) into the last `l2_msr%d[]` slot;
+`l2_rw_send` walks it (`l2_rw_texpr(f, refn, refty, ...)`) into the last
+PRIM input slot (`l2_rw_put(\out, 2 + ni, e)`). Both call sites, and
+`l2_emit_send`'s own `nargs`/array-size arithmetic, extend by exactly
+`has_ref` (0 or 1). A `l2_scan_body` name-visibility pre-pass (unrelated
+to emission, feeds forward-reference checking) had its own hardcoded
+"item 0 is always the message" assumption, found by grepping every
+`sendMessage` reference in the file, not just the emission sites --
+updated the same way (scan the Ref run too, via `l2_scan_fields`, which
+already skips a path run's own `\name` segments for the same reason
+`l2_rw_tokens` does).
+
+### L1 syntax traps (again), caught by building, not guessing
+
+Two multi-level dedents needing an extra `---` cutter (matching this
+project's own recurring "source level decrease must be one step" gotcha):
+the `if: has_ref != 0 / if: ... / return: 1` -> `else:` shape in
+`l2_emit_send`'s addressee branch, and the parallel one-level-too-shallow
+`---` after `l2_rw_send`'s own Ref-input `l2_rw_put` call. Both found by
+running `l2_harness.ps1` and reading `build.l2trans.translate.log`'s exact
+line:column, not by re-reading the L1 source for reasonableness.
+
+### The root-walked form's witness: three measured probes, not a guess
+
+Tried three things before settling on what to pin, each an actual
+`l2trans.exe` invocation against the currently staged build, not a
+prediction:
+
+1. `receiveMessage: m MainLetter` (the 2-name form) at the root, then
+   `sendMessage: m\sender exit(...)` -- refuses "an admission to a
+   Structure type" at the `receiveMessage` line itself, before ever
+   reaching the `sendMessage`. Pre-existing and unrelated: the same
+   refusal is already documented in `0e4b00e`'s own integration message
+   ("the two-name form receiveMessage: m Model at the walked root refuses
+   as an admission to a Structure type -- -178 c3's receive-if, not the
+   take"), landed before this commit touched anything.
+2. A root-level `const: @(LmxMsg m 0)` own-field declaration (the same
+   unit-level cursor form `l2_const_local_ty`'s own comment describes,
+   `l2trans.lm1:5428-5430`) -- refuses "this statement" (`frame=const`), a
+   different, separately pre-existing root-walk gap.
+3. The bare `receiveMessage: m` (untyped, 1-name) letter reference itself,
+   used directly as Ref -- TRANSLATES, BUILDS, and LINKS cleanly (the only
+   root-walkable reference value reachable today), but at RUNTIME crashes
+   uncontrolled (`lmx: walk error: PRIMITIVE`, exit 3): `m` is the letter
+   Structure, not a Thread/Message address, so `lmx_service_post` correctly
+   refuses it -- not a `Fails`/`Thrown`-shaped outcome any harness row
+   category fits, so nothing is pinned on this probe; the file (and its
+   would-be row) were dropped rather than forced into a category that
+   does not describe what actually happens.
+
+Net: the root-walked mechanism itself (`l2_rw_send`'s shape detection,
+`l2_rw_fields_ty`'s type check, `l2_emit_send`'s shared refs[]-based
+addressee) is exercised and correct -- probe 3 proves the ACCEPT path,
+`unit_send_ref_root_type_refused.lm2` (kept as a harness row) proves the
+REFUSE path -- but there is no reference value at the root today that is
+both type-accepted AND a real postable address, so no positive root-level
+harness row exists for this commit. That gap is entirely upstream of
+`sendMessage`, in `receiveMessage`'s own root-walked admission; not this
+ticket's to fix.
+
+### Witnesses
+
+`unit_send_ref_method.lm2`: `receiveMessage: m MainLetter` inside a
+method (R0's own mainArgs letter, as `unit_receive_letter_model.lm2`
+already establishes), then `sendMessage: m\sender exit(exit_code: 0; ...)`
+-- ONE send site only, deliberately (a defensive fallback send for the
+m=0/m\sender=0 paths would emit its own `lmx_thread_parent(t)` for a
+DIFFERENT k, defeating the Absent pin below on an unrelated function, not
+a real regression). R0's own mainArgs sender is the host, the same
+destination the implicit form already reaches, so this cannot pin a
+BEHAVIORAL difference from Ref (no L2-level second sender exists before
+-182) -- it pins the STRUCTURAL one instead: `Absent = @('lmx_thread_parent')`,
+`Debt = @('lmx_service_post(lmx_child_service(t), refs[')`, reading the
+generated C directly the way the harness's own Debt/Absent mechanism is
+designed for. `unit_send_ref_root_type_refused.lm2`: a plain `int` own
+field named as Ref at the root, refused at the exact statement --
+positive/refusal-shape confirmation that `l2_rw_send`'s new type-check
+actually fires (measured via probe, not assumed).
+
+### Mutation witness
+
+Reverted `l2_emit_send`'s `if: has_ref != 0` to `if: 0 != 0` (scratchpad
+backup/restore, confirmed byte-identical after restore) -- RED, exactly 1
+of 351 targets, `unit_send_ref_method` failing its Debt/Absent text check
+(the generated C reverts to `lmx_thread_parent(t)` for every site);
+`unit_send_ref_root_type_refused` unaffected (it refuses before reaching
+the addressee-emission code at all, correctly isolating what the mutant
+touches). Restored; harness GREEN again, 351/351.
+
+### Gates (commit 3)
+
+l2_harness GREEN 351/351 (349 + this commit's 2 new rows), `build_l2src -Run`
+GREEN (kernel selftests included), L3 selftest 11/11 suites + type budget
+OK (4 units), check_docs OK, `git diff --check` clean.
+
 ## Still open for -172
 
-Commit 3 (`sendMessage: Ref X`, root + method body, an explicit addressee
-in place of `lmx_thread_parent`) -- not started. Its whole point is
-reading `m\sender` and passing it on as the addressee, so it depends
-directly on commit 2's now-working `m\sender`.
+Commit 4 (the driver-side behavioral witness: a peer Message built via
+Grok's new `before_turn` launch tap, FABLE-GROKBOT-LAUNCH-TAP-20260925-182,
+posting a `Ping` letter to R0 with that peer as sender, observing the
+reply land in the peer's own inbox rather than the host's) -- not started,
+gated on -182 landing on origin/main.
 
 D-53 (the pre-existing `@`-on-a-Structure-typed-own-field double-indirection
 bug, found building commit 1's witness) remains open, reported to fable,

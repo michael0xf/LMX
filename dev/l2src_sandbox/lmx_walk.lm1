@@ -1259,9 +1259,11 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
         \out: f\args[index]
         return: c.LMX_WALK_OK
     if: op = c.LMX_WALK_OP_AT
-        # What the field holds, by reference.
+        # What the field holds, by reference.  An empty direct Structure own
+        # (slot[0] = 0) is legal no value (-186 c4 / Opus c3b-3); only a missing
+        # slot cell is INVALID. Mutant: also reject slot[0]=0 -> take_empty RED.
         slot: lmx_walk_slot(f, code, 1U)
-        if: slot = 0 || slot[0] = 0
+        if: slot = 0
             return: c.LMX_WALK_INVALID
         \out: slot[0]
         return: c.LMX_WALK_OK
@@ -1477,6 +1479,24 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
                     return: c.LMX_WALK_INVALID
                 ---
                 ua: 0U
+            ---
+            lmx_int_store_known(dest, (cast: (int) (ua = ub)))
+            \out: dest
+            return: c.LMX_WALK_OK
+        ---
+        # -186 c4 / Opus c3b-3: EQ (and source != via 1-EQ) with a Structure
+        # reference or empty slot (null) compares addresses. A non-Structure side
+        # must be the int literal 0. Mutant: always load_operand -> struct EQ RED.
+        if: op = c.LMX_WALK_OP_EQ && (value = 0 || lmx_walk_kind(f, value) = c.LMX_KIND_STRUCT || other = 0 || lmx_walk_kind(f, other) = c.LMX_KIND_STRUCT)
+            ua: (cast: (size_t) value)
+            ub: (cast: (size_t) other)
+            if: value != 0 && lmx_walk_kind(f, value) != c.LMX_KIND_STRUCT
+                if: lmx_walk_load_operand(f\arena, value, @ ua, @ a) != c.LMX_WALK_OK || a != c.LMX_TYPE_INT || ua != 0U
+                    return: c.LMX_WALK_INVALID
+            ---
+            if: other != 0 && lmx_walk_kind(f, other) != c.LMX_KIND_STRUCT
+                if: lmx_walk_load_operand(f\arena, other, @ ub, @ b) != c.LMX_WALK_OK || b != c.LMX_TYPE_INT || ub != 0U
+                    return: c.LMX_WALK_INVALID
             ---
             lmx_int_store_known(dest, (cast: (int) (ua = ub)))
             \out: dest

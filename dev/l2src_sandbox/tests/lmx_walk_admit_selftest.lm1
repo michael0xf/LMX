@@ -1,0 +1,283 @@
+predef: "l2src/lmx_walk.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_chars.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_plan.lm1"
+predef: "l2src/lmx_primitive.h.lm1"
+predef: "l2src/lmx_merge_owned.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# -180 / FABLE-GROKBOT-WALK-ADMIT-20260925-180 (+ addendum): admit + admit_letter PRIM.
+# Mutants RED: copy not ref (test4); NO->OK / NO->FAIL (mismatch test); admit_letter slot0; null->THROW.
+
+@: LmxArena ga 0
+@: Lmx groles 0
+@: Lmx gplan_roles 0
+@: LmxWalkContext gctx 0
+@: LmxWalkValue gv 0
+int: broken 0
+int: checks 0
+int: failures 0
+
+sub: check (int: ok; const: @(char label))
+    checks: checks + 1
+    if: ok = 0
+        failures: failures + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: check
+
+fn: fr (@: Lmx parent; size_t: slot; int: op; size_t: children) @: Lmx
+    @: Lmx n lmx_walk_frame(ga, groles, parent, op, children)
+    if: n = 0 || lmx_arena_ref_store(parent, slot, (cast: (@: void) n)) != 0
+        broken: broken + 1
+        return: 0
+    ---
+return: n
+
+fn: pl (@: Lmx parent; size_t: slot; size_t: children) @: Lmx
+    @: Lmx n lmx_walk_plain(ga, parent, children)
+    if: n = 0 || lmx_arena_ref_store(parent, slot, (cast: (@: void) n)) != 0
+        broken: broken + 1
+        return: 0
+    ---
+return: n
+
+sub: ref (@: Lmx code; size_t: slot; @: Lmx target)
+    if: code = 0 || target = 0 || lmx_arena_ref_store(code, slot, (cast: (@: void) target)) != 0
+        broken: broken + 1
+    ---
+end: ref
+
+sub: sz (@: Lmx code; size_t: slot; size_t: value)
+    if: code = 0 || lmx_walk_store_size(ga, code, slot, value) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+end: sz
+
+fn: mk_m (@: Lmx unit; size_t: slot; size_t: children) @: Lmx
+    @: Lmx m pl(unit, slot, children)
+    @: LmxCallable info lmx_callable_new_owned(ga)
+    if: m = 0 || info = 0 || lmx_arena_ref_store(m, 0U, (cast: (@: void) info)) != 0
+        broken: broken + 1
+        return: 0
+    ---
+return: m
+
+fn: go (@: Lmx m) int
+    int: st
+    if: m = 0 || gctx = 0 || gv = 0
+        return: c.LMX_WALK_INVALID
+    st: lmx_walk_prepare(gctx, ga, gplan_roles, m)
+    if: st != c.LMX_WALK_OK
+        return: st
+return: lmx_walk_run(gctx, m, 0, 0U, gv)
+
+fn: main () int
+    LmxArena: arena
+    LmxArena: context_arena
+    LmxPool: context_cells
+    LmxScratch: store
+    LmxWalkContext: context
+    @: Lmx unit 0
+    @: Lmx m 0
+    @: Lmx n 0
+    @: Lmx pn 0
+    @: Lmx model_x 0
+    @: Lmx model_y 0
+    @: Lmx value 0
+    @: Lmx value_y 0
+    @: Lmx letter 0
+    @: Lmx payload 0
+    @: Lmx prim_rec 0
+    @: Lmx prim_letter_rec 0
+    @: LmxPrimitive prim 0
+    @: LmxPrimitive prim_letter 0
+    @: void pcell 0
+    @: void got 0
+    @: void cell 0
+    @: Lmx litn 0
+    @: void null_out 0
+    @@: void nrefs 0
+    int: st 0
+    int: pty c.LMX_TYPE_POINTER_BASE + 1
+
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ arena) != 0
+        return: 2
+    ga: @ arena
+    if: lmx_chars_init(ga) != 0
+        return: 2
+    groles: lmx_walk_roles_open(ga)
+    gplan_roles: lmx_plan_roles_open(ga)
+    if: groles = 0 || gplan_roles = 0
+        return: 2
+    memset((cast: (@: void) (@ context_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ context_cells)), 0, c.sizeof(c.LmxPool))
+    memset((cast: (@: void) (@ store)), 0, c.sizeof(c.LmxScratch))
+    if: lmx_arena_open(@ context_arena) != 0 || lmx_scratch_open(@ store, @ context_arena, @ context_cells, 16U) != c.LMX_SCRATCH_OK
+        return: 2
+    memset((cast: (@: void) (@ context)), 0, c.sizeof(c.LmxWalkContext))
+    context.arena: ga
+    context.scratch: @ store
+    context.roles: groles
+    context.plan_roles: gplan_roles
+    context.immutable_profile: 0
+    context.classified: 0U
+    gctx: @ context
+    gv: (cast: (@: LmxWalkValue) calloc(1U, c.sizeof(c.LmxWalkValue)))
+    if: gv = 0
+        return: 2
+
+    unit: lmx_node_new_owned(ga)
+    if: unit = 0 || lmx_arena_refs_open_owned(ga, unit, 32U) != 0
+        return: 2
+    ---
+    # model {x}: 1 int slot; model {y}: 2 int slots (mismatch vs 1-slot value)
+    model_x: pl(unit, 1U, 1U)
+    model_y: pl(unit, 2U, 2U)
+    value: pl(unit, 3U, 1U)
+    value_y: pl(unit, 4U, 1U)
+    if: model_x = 0 || model_y = 0 || value = 0 || value_y = 0
+        return: 2
+    if: lmx_walk_store_int(ga, model_x, 0U, 0) != c.LMX_WALK_OK || lmx_walk_store_int(ga, model_y, 0U, 0) != c.LMX_WALK_OK || lmx_walk_store_int(ga, model_y, 1U, 0) != c.LMX_WALK_OK
+        return: 2
+    if: lmx_walk_store_int(ga, value, 0U, 7) != c.LMX_WALK_OK || lmx_walk_store_int(ga, value_y, 0U, 1) != c.LMX_WALK_OK
+        return: 2
+
+    prim: (cast: (@: LmxPrimitive) lmx_arena_take(ga, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))
+    prim_letter: (cast: (@: LmxPrimitive) lmx_arena_take(ga, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))
+    if: prim = 0 || prim_letter = 0
+        return: 2
+    ---
+    prim\fn: lmx_walk_admit
+    prim\signature: 0
+    prim\owner: (cast: (@: Lmx) ga)
+    prim_rec: (cast: (@: Lmx) prim)
+    prim_letter\fn: lmx_walk_admit_letter
+    prim_letter\signature: 0
+    prim_letter\owner: (cast: (@: Lmx) ga)
+    prim_letter_rec: (cast: (@: Lmx) prim_letter)
+
+    # 1. value {x:7} admit to model {x}: out == value address, OK
+    m: mk_m(unit, 0U, 2U)
+    n: fr(m, 1U, c.LMX_WALK_OP_RET, 2U)
+    pn: fr(n, 1U, c.LMX_WALK_OP_PRIM, 4U)
+    ref(pn, 1U, prim_rec)
+    ref(pn, 2U, value)
+    ref(pn, 3U, model_x)
+    st: go(m)
+    got: gv\ref
+    check((cast: (int) (st = c.LMX_WALK_OK && got = (cast: (@: void) value))), "admit value->model_x same pointer OK")
+
+    # 2. value {y-shape mismatch: 1-slot vs model 2-slot} -> THROWN+2
+    m: mk_m(unit, 5U, 2U)
+    n: fr(m, 1U, c.LMX_WALK_OP_RET, 2U)
+    pn: fr(n, 1U, c.LMX_WALK_OP_PRIM, 4U)
+    ref(pn, 1U, prim_rec)
+    ref(pn, 2U, value_y)
+    ref(pn, 3U, model_y)
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_THROWN + 2)), "admit mismatch -> THROWN+2")
+
+    # 3. value = numeric cell (via LIT so eval yields the cell) -> PRIMITIVE (FAIL=1)
+    cell: lmx_int_new_owned(ga)
+    if: cell = 0 || lmx_int_store_known(cell, 1) != 0
+        return: 2
+    ---
+    m: mk_m(unit, 6U, 2U)
+    n: fr(m, 1U, c.LMX_WALK_OP_RET, 2U)
+    pn: fr(n, 1U, c.LMX_WALK_OP_PRIM, 4U)
+    ref(pn, 1U, prim_rec)
+    litn: fr(pn, 2U, c.LMX_WALK_OP_LIT, 2U)
+    if: litn != 0 && lmx_arena_ref_store(litn, 1U, cell) != 0
+        broken: broken + 1
+    ---
+    ref(pn, 3U, model_x)
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_PRIMITIVE)), "admit numeric cell -> PRIMITIVE")
+
+    # 4. write through PUT into admitted value; visible on original (reference)
+    m: mk_m(unit, 7U, 2U)
+    n: fr(m, 1U, c.LMX_WALK_OP_PUT, 4U)
+    ref(n, 1U, value)
+    sz(n, 2U, 0U)
+    litn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
+    if: litn != 0 && lmx_walk_store_int(ga, litn, 1U, 99) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_OK && lmx_int_value_known(lmx_arena_ref_value(value, 0U)) = 99)), "PUT into admitted value visible on original")
+
+    # null value -> out 0 OK (admit): direct PRIM ABI — walk_eval refuses a null child node
+    nrefs: (cast: (@@: void) calloc(2U, c.sizeof(@: void)))
+    if: nrefs = 0
+        return: 2
+    ---
+    nrefs[0]: 0
+    nrefs[1]: (cast: (@: void) model_x)
+    null_out: (cast: (@: void) 1)
+    st: lmx_walk_admit((cast: (@: void) ga), nrefs, 2U, 0, @ null_out)
+    check((cast: (int) (st = 0 && null_out = 0)), "admit null -> out 0 OK")
+    null_out: (cast: (@: void) 1)
+    st: lmx_walk_admit_letter((cast: (@: void) ga), nrefs, 2U, 0, @ null_out)
+    check((cast: (int) (st = 0 && null_out = 0)), "admit_letter null -> out 0 OK")
+
+    # pointer cell holding Structure admitted through the cell (LIT yields the cell)
+    pcell: lmx_pointer_new_owned(pty, ga)
+    if: pcell = 0 || lmx_pointer_store_known(pcell, (cast: (@: void) value)) != 0
+        return: 2
+    ---
+    m: mk_m(unit, 10U, 2U)
+    n: fr(m, 1U, c.LMX_WALK_OP_RET, 2U)
+    pn: fr(n, 1U, c.LMX_WALK_OP_PRIM, 4U)
+    ref(pn, 1U, prim_rec)
+    litn: fr(pn, 2U, c.LMX_WALK_OP_LIT, 2U)
+    if: litn != 0 && lmx_arena_ref_store(litn, 1U, pcell) != 0
+        broken: broken + 1
+    ---
+    ref(pn, 3U, model_x)
+    st: go(m)
+    got: gv\ref
+    check((cast: (int) (st = c.LMX_WALK_OK && got = (cast: (@: void) value))), "admit via pointer cell -> value")
+
+    # admit_letter: (sender; payload={x}) vs model_x -> out = payload address
+    payload: pl(unit, 11U, 1U)
+    letter: pl(unit, 12U, 2U)
+    if: payload = 0 || letter = 0 || lmx_walk_store_int(ga, payload, 0U, 5) != c.LMX_WALK_OK
+        return: 2
+    if: lmx_arena_ref_store(letter, 0U, 0) != 0 || lmx_arena_ref_store(letter, 1U, (cast: (@: void) payload)) != 0
+        return: 2
+    ---
+    m: mk_m(unit, 13U, 2U)
+    n: fr(m, 1U, c.LMX_WALK_OP_RET, 2U)
+    pn: fr(n, 1U, c.LMX_WALK_OP_PRIM, 4U)
+    ref(pn, 1U, prim_letter_rec)
+    ref(pn, 2U, letter)
+    ref(pn, 3U, model_x)
+    st: go(m)
+    got: gv\ref
+    check((cast: (int) (st = c.LMX_WALK_OK && got = (cast: (@: void) payload))), "admit_letter -> payload address")
+
+    # same letter vs model_y -> THROWN+2
+    m: mk_m(unit, 14U, 2U)
+    n: fr(m, 1U, c.LMX_WALK_OP_RET, 2U)
+    pn: fr(n, 1U, c.LMX_WALK_OP_PRIM, 4U)
+    ref(pn, 1U, prim_letter_rec)
+    ref(pn, 2U, letter)
+    ref(pn, 3U, model_y)
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_THROWN + 2)), "admit_letter mismatch -> THROWN+2")
+
+    c.printf("lmx_walk_admit_selftest checks=%d failures=%d broken=%d\n", checks, failures, broken)
+    if: failures != 0 || broken != 0
+        return: 1
+return: 0

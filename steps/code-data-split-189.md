@@ -849,3 +849,141 @@ So these go:
 
 Witness: every fixture translated before and after (n159/genall.sh: 214 outputs, the library form
 too, and each refusal's stderr) is byte-identical.  l2trans.lm1 is 552 lines shorter.
+
+## c4 plan (k.1, read-only): the `Lmx.native` word
+
+Base: main 2f8d475.  The norm (plan §3 item 8; L2 §2/§5/§11; CORE §2/§3):
+- `Lmx` becomes `{array, parent, native}`, with `native` the C entry of the body or 0.
+- Dispatch is by that word: non-null enters native code, 0 runs the walker over the operators.
+- The signature is an ordinary lexical graph field.
+- These go: the `child[0]` descriptor, `LmxCallable {method, header}`, `LmxMethod {addr, sig}`, the
+  `sig` word, lmx_plan's role records (the plan is the data prototype's layout), and child[0]
+  classification in lmx_call.
+- The copier carries `native` verbatim.  A merge result takes the word of its last operand with a
+  body.
+
+Measured at 2f8d475: the kernel `Lmx` is still `{parent, len, data}`.
+- lmx.h.lm1:59-70: «THIS STRUCTURE IS CLOSED… A fourth field here is a DEFECT».  That comment goes
+  with the author's refactoring (k.4).
+- `VoidArray` exists only in LMX_ARRAY_OWNED.txt (the accepted target, «code not migrated»).
+
+### (1) Where the translator builds or reads the descriptor, and what goes
+
+Built:
+- The builder's descriptor loop (l2trans.lm1 :21475-:21512):
+  - for every occurrence, `lmx_method_new_owned` + `\addr` (`<sym>_tr`, or 0 for a bodiless `fn`
+    and for E) + `\sig` (`l2_method_sig_text`);
+  - then `lmx_callable_new_owned` + `\method`, `\header: 0`, and `lmx_arena_ref_store(leaf, 0U,
+    callable)`.
+  - The loop also fills `l2_methods`, an ARRAY_OF_METHOD, at unit child `l2_unit_base +
+    l2_occ_n()` (:21481, :21702), which carries the `l2_entry_rec\sig` recheck.
+  - All of that goes.  It becomes one store per native occurrence: `leaf\native: (cast: (LmxEntry)
+    <sym>_tr)`.  E, a bodiless `fn` and every named Structure keep 0.
+- `l2_method_sig_text` (:20764) and the emitted intern recheck (`l2_intern_again != l2_sigv`, :21705)
+  go.
+  - `l2_tramp_class` stays: it types the trampoline's result, a machine matter.
+- The numbering that reserves child 0 moves down by one:
+  - `l2_own_mslot` starts at 1 (:8941);
+  - `l2_m_kids` = 1 + own + bodies (:9004);
+  - `l2_for_uchild` = 1 + own + rank (:9039);
+  - `l2_unit_base` = `l2_m_kids(l2_e)` (:9043), and everything after it: `l2_mres_base`, `l2_ns_base`,
+    eternal refs, `kids`, the entry-length check at :21387.
+  - Without the METHOD array the unit tail loses one more child.
+  - `l2_m_kids(idx) > 1` («a method with no data fields», the fresh-instance gate at :15527) becomes
+    `> 0`.
+- Named Structures' callable field (kind 4, :11326/:21663) keeps its reference to the occurrence.
+  - Merge check 78 (child-0 identity, :20001) goes.  Checks 77 (the occurrence) and 79 (the first
+    own child, `l2_first_own_child`) stay, renumbered.
+
+Read at run time:
+- Generated code reads child 0 directly only in merge check 78.
+- Everything else reads it through the kernel: `lmx_call_prim` for a callable formal (:16457), the
+  walked root's CALL (:17451), and `lmx_fresh` on a re-entry (:15528).
+
+### (2) The emission: the native entry and the signature as a graph field
+
+- The native entry: `native` holds the trampoline `<sym>_tr (owner, refs, nargs, dest, out)`, which
+  is today's `\addr`.  The trampoline itself does not change.
+- The signature: the norm says the callable's named parts are `args`, `return` and `body` (semantics
+  «Вызываемая Structure состоит из именованных частей»; merge is by these parts).  PROPOSED, for fable
+  and the author:
+  - Form A: two leading parts of the occurrence, in lexical order — the header precedes the body.
+    - Slot 0 `args`: a Structure with one typed cell per formal, in order, holding the prototype's 0.
+      A callable formal's cell is a slot holding its contract's occurrence.
+    - Slot 1 `return`: a Structure with one typed cell of the result type, empty for a `sub`.
+    - Own fields and bodies from slot 2.
+    - The translator's numbering then shifts by +1 instead of -1.  No offset is hidden: the parts are
+      lexical fields, which merge by parts can use as they are.
+    - Formals stay the machine activation's (C parameters).  The `args` cells are the signature's
+      shape, not the arguments.
+  - Form B: no signature graph in a native occurrence until merge by parts needs one.
+    - The walker's CALL still needs the result class that `sig`'s low byte carries today
+      (`lmx_walk_callable_result_type`).  So B needs some other carrier, and that is exactly what the
+      norm removes.
+  - Recommended: A.  It is the norm's shape, and it gives the walker the result type
+    (`return`'s cell type) and implements its comparison (args/return by type ranges) without any
+    word.
+  - OPEN: whether `M\x` resolution must skip the two parts.  The translator resolves by its own
+    tables, so no name lookup reaches them.
+
+### (3) The walked root and named Structures
+
+- `native` = 0 for E (the root is always walked) and for every named Structure.
+- E loses child 0.  Its own fields start at slot 0, or 2 under form A.  The walked root's
+  `l2_rw_cell` indices follow `l2_own_uchild` and so need no change.
+- A merge result has an empty `native` unless its last operand with a body has one (kernel).
+
+### (4) What lmx_call_prim and the walker see after k.4, and which rows change
+
+- `lmx_call_prim(arena, code, data, …)`: `code\native` non-null means `entry(data, refs, nargs,
+  dest, out)`; 0 means walk `code` over `data`.  No child-0 classification remains, and no
+  «callable» test: any Structure in head position executes, and a refusal is the translator's.
+- The walker CALL:
+  - `lmx_walk_callable_addr` becomes `callee\native`;
+  - the result class comes from the `return` part under form A;
+  - `lmx_walk_data_holder`'s child-0 comparison goes, since data and code are already separate
+    operands;
+  - `lmx_walk_steps` / `lmx_walk_scan` / `lmx_walk_body` start at 0, not 1;
+  - the plan is the prototype's layout, not `info\header`.
+- lmx_fresh's `keep_slot0` goes, and `native` is copied into the instance.  So is the copier's
+  METHOD/CALLABLE terminal handling.
+- The harness pins that change:
+  - 13 slot-number strings in 11 rows (unit base: merge_in_method, s1_merge_uncaught,
+    s1_merge_profiles_uncaught, s1_implements_uncaught, colon_method_lexical_model,
+    recursive_fresh_instance ×2, fresh_instance_skipped_decl; own slots: nested_body_else ×2,
+    nested_body_while, nested_body_for, occ_arg_slots);
+  - the `SIG_MARK` pins in unit_s1_throws_intern, unit_root_call_wide and unit_method_sig_distinct.
+    Those rows test the sig word itself, so they are rewritten to the `return` part (A) or retired
+    with the word.
+  - No pin names `l2_entry_rec`, `lmx_callable_new_owned`, `lmx_method_new_owned`, `\sig` or `_tr`.
+
+### (5) Dependencies: grok_bot k.4, one joint landing (as c3a)
+
+grok_bot's kernel side:
+- `Lmx` gets its `native` word (lmx.h.lm1; the author's refactoring, not a precedent);
+- lmx_call: `lmx_call_ready`, `lmx_call0`, `lmx_call_prim`, `lmx_call_method` / `lmx_call_callable`
+  go or become the word;
+- lmx_walk: callable_addr, is_callable, result_type, data_holder, the descriptor paths, and enter /
+  prepare / plan_check on `info\header`;
+- lmx_plan: publish and the role records;
+- lmx_fresh: keep_slot0;
+- lmx_graph_copy_owned: callable-occurrence recognition by child 0, METHOD sharing;
+- lmx_implements: the sig comparison, which becomes args/return under A;
+- lmx_value_owned: `lmx_method_new_owned` / `lmx_callable_new_owned`;
+- lmx_interp, lmx_thread (`lmx_call0`), lmx_pool `lmx_method_intern`, and the
+  ARRAY_OF_METHOD users.
+
+My side (the translator): (1)-(3) above and the harness pins.  The order is the same as c3a: his k.4
+branch, my commit on top, per-row check, one gate.
+
+### Do generated programs still reference lmx_own / lmx_dirty?
+
+- No, as code.  No emitted predef/include names `lmx_own`, `lmx_dirty`, `own.h` or `l1src/own`.  The
+  only hit is a sentence inside the emitted header comment, «…not OwnUsed and not lmx_own…», written
+  at l2trans.lm1 :21143.  It can go with c4.  unit_bad_sizeof's `lm_own_copy_bytes` is that
+  fixture's own `predef: "l1src/own.h.lm1"`, the L1 own module, not lmx_own.
+- Kernel and L3:
+  - lmx_dirty has no user but its selftest.
+  - lmx_own is still used by the L3 interpreter: dev/l3_interp/l3_exec.lm1 (predef, `lmx_own_checkpoint`,
+    `lmx_own_write`), l3_recv.h.lm1 and tests/l3_02_selftest.lm1.
+  - So -187 k.3 can delete lmx_dirty.  lmx_own goes only after L3's own working copies do.

@@ -92,6 +92,8 @@ int: l2_rw_base 0
 # Where the static typing of a root expression first met two numeric types (l2_rw_tyof), for the
 # located refusal.
 @: LmP0Node l2_rw_mix_at 0
+# The root name of a path being resolved (l2_rw_path).
+@: LmP0Text l2_rw_seg 0
 # The walked root's sends (`sendMessage: X`), one generated primitive l2_send<k> each: the sites
 # recorded by the top-level count pass (l2_rw_send_rec 1), the next site's number, and per site its
 # payload's field count, each field's kind (1 an int expression, 2 a text literal) and text atom.
@@ -449,6 +451,14 @@ prototype:
     fn: l2_method_sig_text (int: i; @: char dest) int
     fn: l2_rw_opty (const: @(LmP0Node node)) int
     fn: l2_rw_fields_ty (@: LmP0Field first; int: n) int
+    fn: l2_rw_path_run (@: LmP0Field f; int: avail) int
+    fn: l2_rw_path_atom (@: LmP0Field f; int: run) @: LmP0Node
+    fn: l2_rw_tokens (@: LmP0Field field; int: n; @@: LmP0Node tok) int
+    fn: l2_rw_path (const: @(LmP0Node node); const: @(LmP0Text t); int: say; @: int path) int
+    fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
+    fn: l2_rw_path_read (const: @(LmP0Node node); const: @(LmP0Text t); int: parent; @: int out) int
+    fn: l2_rw_path_write (const: @(LmP0Node stmt); const: @(LmP0Text t); @: LmP0Field value; int: n; int: into; @: int out) int
+    fn: l2_rw_model (const: @(LmP0Node stmt); const: @(LmP0Text h); int: into; @: int out) int
     fn: l2_rw_count (@: LmP0Field first) int
     fn: l2_rw_send (@: LmP0Node stmt; int: into; @: int out) int
     fn: l2_emit_send (int: k; int: proto; @: char prefix; @: int count_arr; @: int kind_arr; @@: LmP0Text text_arr) int
@@ -16652,6 +16662,7 @@ fn: l2_rw_opty (const: @(LmP0Node node)) int
     int: v 0
     int: ty
     int: idx
+    c.array: [40]: int path
     if: node = 0
         return: 0 - 1
     if: node\kind = c.LM_P0_NODE_STRUCTURE && node\as != 0 && node\as\structure != 0
@@ -16674,6 +16685,11 @@ fn: l2_rw_opty (const: @(LmP0Node node)) int
     ---
     if: l2_rw_char_lit(t, @ v) != 0
         return: 1
+    if: l2_rw_has_slash(t) != 0 && t\data[0] != 92
+        if: l2_rw_path(node, t, 0, path) = 0 && path[3] >= 0
+            return: path[3]
+        return: 0 - 1
+    ---
     ty: l2_rw_own_ty(t)
     if: ty >= 0
         return: ty
@@ -16686,25 +16702,309 @@ return: 0 - 1
 # not one: its emission refuses it).
 fn: l2_rw_fields_ty (@: LmP0Field first; int: n) int
     c.array: [64]: @: LmP0Node tok
+    int: m
+    int: k 1
+    if: n < 1 || n > 63
+        return: 0 - 1
+    m: l2_rw_tokens(first, n, tok)
+    if: m < 1
+        return: 0 - 1
+    while: k < m
+        if: tok[k] = 0 || tok[k]\kind != c.LM_P0_NODE_ATOM || tok[k]\as = 0 || l2_rw_prec(tok[k]\as\atom) = 0
+            return: 0 - 1
+        k: k + 2
+    ---
+return: l2_rw_tyof(tok, 0, m - 1)
+
+# A path operand `a\b...`, which P0 gives inside an expression as the fields `a`, `\`, `b` (and
+# more): the count of fields from f the run takes (1 when f does not start one), at most `avail`.
+fn: l2_rw_path_run (@: LmP0Field f; int: avail) int
+    int: n 1
+    @: LmP0Field s
+    @: LmP0Field g
+    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0 || f\value\as\atom = 0
+        return: 1
+    s: l2_next_active(f\next)
+    while: n + 2 <= avail && s != 0 && s\value != 0 && s\value\kind = c.LM_P0_NODE_ATOM && s\value\as != 0 && l2_is_slash(s\value\as\atom)
+        g: l2_next_active(s\next)
+        if: g = 0 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || g\value\as = 0 || g\value\as\atom = 0
+            return: n
+        n: n + 2
+        s: l2_next_active(g\next)
+    ---
+return: n
+
+# The path run of `run` fields from f as ONE atom `a\b...`, located where the path begins: the shape
+# a path has as a statement's head, so a read and a write resolve it alike (l2_rw_path).
+fn: l2_rw_path_atom (@: LmP0Field f; int: run) @: LmP0Node
+    @: LmP0Node node
+    @: LmP0NodeAs as
+    @: LmP0Text text
+    @: LmP0Text piece
+    @: char buf
+    @: LmP0Field g
+    size_t: len 0U
+    size_t: at 0U
+    int: i 0
+    g: f
+    while: i < run && g != 0
+        piece: g\value\as\atom
+        len: len + piece\length
+        g: l2_next_active(g\next)
+        i: i + 1
+    ---
+    node: (cast: (@: LmP0Node) calloc(1U, c.sizeof(c.LmP0Node)))
+    as: (cast: (@: LmP0NodeAs) calloc(1U, c.sizeof(c.LmP0NodeAs)))
+    text: (cast: (@: LmP0Text) calloc(1U, c.sizeof(c.LmP0Text)))
+    buf: (cast: (@: char) calloc(len + 1U, 1U))
+    if: node = 0 || as = 0 || text = 0 || buf = 0
+        return: 0
+    g: f
+    i: 0
+    while: i < run && g != 0
+        piece: g\value\as\atom
+        memcpy((cast: (@: void) (buf + at)), (cast: (@: void) piece\data), piece\length)
+        at: at + piece\length
+        g: l2_next_active(g\next)
+        i: i + 1
+    ---
+    text\data: buf
+    text\length: len
+    as\atom: text
+    node\kind: c.LM_P0_NODE_ATOM
+    node\flags: 0U
+    node\span: f\value\span
+    node\as: as
+return: node
+
+# The tokens of an expression given as the run of n fields from `field`: operands at even places,
+# operators between, a path operand as one atom (l2_rw_path_atom).  Their count, or -1 when the
+# fields are not operand, operator, ..., operand.
+fn: l2_rw_tokens (@: LmP0Field field; int: n; @@: LmP0Node tok) int
     @: LmP0Field f
     int: m 0
-    if: n < 1 || n > 63 || (n % 2) = 0
-        return: 0 - 1
-    f: l2_next_active(first)
-    while: f != 0 && m < n
-        tok[m]: f\value
-        m: m + 1
-        f: l2_next_active(f\next)
-    ---
-    if: m != n
-        return: 0 - 1
-    m: 1
-    while: m < n
-        if: tok[m] = 0 || tok[m]\kind != c.LM_P0_NODE_ATOM || tok[m]\as = 0 || l2_rw_prec(tok[m]\as\atom) = 0
+    int: k 0
+    int: run
+    f: l2_next_active(field)
+    while: f != 0 && k < n
+        if: m >= 63
             return: 0 - 1
-        m: m + 2
+        run: 1
+        if: (m % 2) = 0
+            run: l2_rw_path_run(f, n - k)
+        ---
+        if: run > 1
+            tok[m]: l2_rw_path_atom(f, run)
+            if: tok[m] = 0
+                return: 0 - 1
+            ---
+        else:
+            tok[m]: f\value
+        ---
+        m: m + 1
+        k: k + run
+        f: l2_skip_span(f, run)
     ---
-return: l2_rw_tyof(tok, 0, n - 1)
+    if: k != n || (m % 2) = 0
+        return: 0 - 1
+return: m
+
+# A path at the walked root, `a\b...` (FABLE-OPUS-ROOT-STRUCTS-20260925-178 commit 2), resolved
+# through the named Structures' field table (l2_ns_slot_named) into `path`:
+#   [0] 1: its root is a root own field of a Structure type -- a reference, whose Structure is
+#       DEREF(AT(unit, its cell)); 2: a named Structure of the unit, which the builder makes before
+#       the steps; [1] that own field, or that named Structure;
+#   [2] the count of names after the root; [3] the last field's number type (own storage code), or
+#       -1 when it is not a number; [4] the Structure that holds the last field; [5] 1 when the way
+#       goes through a reference (the root, or a reference field, kind 3);
+#   [6 + 2i], [7 + 2i] the slot and the kind of name i + 1.
+# Each name but the last is an inline nested Structure (kind 2) or a reference field (kind 3); the
+# last is a number field -- size_t, char, int, unsigned, ulong (kinds 0, 1, 7, 8, 9) -- or not.  0,
+# or 1 with the refusal made when `say` (the typing pass asks silently).
+fn: l2_rw_path (const: @(LmP0Node node); const: @(LmP0Text t); int: say; @: int path) int
+    size_t: i 0U
+    size_t: b
+    int: oi
+    int: ni
+    int: n 0
+    int: slot
+    int: kind 0
+    int: ent 0
+    int: last
+    if: t = 0 || t\data = 0 || path = 0
+        return: 1
+    while: i < t\length && t\data[i] != 92
+        i: i + 1U
+    ---
+    if: l2_rw_seg = 0
+        l2_rw_seg: (cast: (@: LmP0Text) calloc(1U, c.sizeof(c.LmP0Text)))
+        if: l2_rw_seg = 0
+            return: 1
+        ---
+    ---
+    l2_rw_seg\data: t\data
+    l2_rw_seg\length: i
+    path[5]: 0
+    oi: l2_own_find_last(l2_e, l2_rw_seg)
+    if: oi >= 0 && l2_own_mi[oi] = l2_e && l2_own_host[oi] = 0 && l2_own_fid[oi] < 0 && l2_own_uchild[oi] >= 0 && l2_own_nsty_get(oi) >= 0
+        path[0]: 1
+        path[1]: oi
+        ni: l2_own_nsty_get(oi)
+        path[5]: 1
+    else:
+        ni: l2_ns_find(l2_rw_seg)
+        if: ni < 0 || l2_ns_parent[ni] >= 0 || l2_ns_eternal[ni] >= 0
+            if: say != 0
+                l2_rw_refuse(node, "a field path")
+            return: 1
+        path[0]: 2
+        path[1]: ni
+    ---
+    while: i < t\length
+        # i stands on a backslash: the next name runs to the next one.
+        i: i + 1U
+        b: i
+        while: i < t\length && t\data[i] != 92
+            i: i + 1U
+        ---
+        if: n >= 12 || i = b || t\data[b] = 91
+            if: say != 0
+                l2_rw_refuse(node, "a field path")
+            return: 1
+        slot: l2_ns_slot_named(ni, t\data, b, i - b, @ kind, @ ent)
+        last: (cast: (int) (i >= t\length))
+        if: slot < 0 || (last = 0 && kind != 2 && kind != 3)
+            if: say != 0
+                l2_rw_refuse(node, "a field path")
+            return: 1
+        path[6 + 2 * n]: slot
+        path[7 + 2 * n]: kind
+        path[4]: ni
+        n: n + 1
+        if: last = 0
+            if: kind = 3
+                path[5]: 1
+            ni: ent
+        ---
+    ---
+    if: n = 0
+        if: say != 0
+            l2_rw_refuse(node, "a field path")
+        return: 1
+    path[2]: n
+    path[3]: 0 - 1
+    if: kind = 0
+        path[3]: 2
+    if: kind = 1
+        path[3]: 1
+    if: kind = 7
+        path[3]: 0
+    if: kind = 8
+        path[3]: 3
+    if: kind = 9
+        path[3]: 36
+return: 0
+
+# The value of a resolved path at `level` (0 its root, path[2] its last name), a node under
+# container `parent`: the Structure reached so far, or the last field's cell.  A reference is
+# opened by DEREF (-174 c1): the root when it is an own field, and a reference field (kind 3) when
+# the way goes on through it.  A named Structure root is AT(unit, its unit child).
+fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
+    int: node
+    int: raw
+    int: base
+    int: kind
+    if: level = 0 && path[0] = 1
+        if: l2_rw_frame(parent, "LMX_WALK_OP_DEREF", 2, out) != 0 || l2_rw_own(\out, path[1], @ raw) != 0
+            return: 1
+        return: l2_rw_put(\out, 1, raw)
+    ---
+    if: level = 0
+        if: l2_rw_frame(parent, "LMX_WALK_OP_AT", 3, out) != 0
+            return: 1
+        if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_entry_unit)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, \out, l2_ns_base + l2_ns_rank(path[1])) < 0
+            return: 1
+        return: 0
+    ---
+    kind: path[7 + 2 * (level - 1)]
+    node: parent
+    if: kind = 3 && level < path[2]
+        if: l2_rw_frame(parent, "LMX_WALK_OP_DEREF", 2, out) != 0
+            return: 1
+        node: \out
+    ---
+    if: l2_rw_frame(node, "LMX_WALK_OP_OF", 3, @ raw) != 0 || l2_rw_path_value(path, level - 1, raw, @ base) != 0 || l2_rw_put(raw, 1, base) != 0
+        return: 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", raw, path[6 + 2 * (level - 1)]) < 0
+        return: 1
+    if: node != parent
+        return: l2_rw_put(node, 1, raw)
+    \out: raw
+return: 0
+
+# A path read `a\b...` as an operand: the last field's cell (OF over the way to it).
+fn: l2_rw_path_read (const: @(LmP0Node node); const: @(LmP0Text t); int: parent; @: int out) int
+    c.array: [40]: int path
+    if: l2_rw_path(node, t, 1, path) != 0
+        return: 1
+    if: path[3] < 0
+        return: l2_rw_refuse(node, "a Structure value")
+return: l2_rw_path_value(path, path[2], parent, out)
+
+# A path write `a\b...: v`: PUT into the last field.  PUT's holder is a Structure fixed when the
+# graph is built (lmx_walk_slot), so the way must not go through a reference: a named Structure and
+# its inline nested ones, whose nodes the builder has made (l2_nsp).  Through a reference the
+# holder exists only in R0's turn, and PUT has no evaluated holder yet (D-54, Grok -177 c4).
+fn: l2_rw_path_write (const: @(LmP0Node stmt); const: @(LmP0Text t); @: LmP0Field value; int: n; int: into; @: int out) int
+    c.array: [40]: int path
+    int: v
+    if: l2_rw_path(stmt, t, 1, path) != 0
+        return: 1
+    if: path[5] != 0
+        return: l2_rw_refuse(stmt, "a field write through a reference")
+    if: path[3] < 0
+        return: l2_rw_refuse(stmt, "a Structure value")
+    if: n < 1
+        return: l2_rw_refuse(stmt, "this assignment")
+    if: l2_rw_frame(into, "LMX_WALK_OP_PUT", 4, out) != 0
+        return: 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_nsp[%d])) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, path[4], \out, path[6 + 2 * (path[2] - 1)]) < 0
+        return: 1
+    if: l2_rw_texpr(value, n, path[3], \out, @ v) != 0
+        return: 1
+return: l2_rw_put(\out, 3, v)
+
+# `Model: m` at the walked root: m, a root own field of the named Structure type Model, takes a
+# fresh merge of Model (merge(Model, empty), the contextual `left: right` rule), made in R0's turn
+# by the walker's one kernel merge primitive (-174 c3: a PRIM whose record's fn is
+# lmx_walk_merge_model, its owner the program's arena, its input the model) and stored by reference
+# into m's pointer cell (PUT, -174 c2).
+fn: l2_rw_model (const: @(LmP0Node stmt); const: @(LmP0Text h); int: into; @: int out) int
+    @: LmP0Field f
+    int: ni l2_ns_find(h)
+    int: oi 0
+    int: prim
+    # `Model()` / `Model: ()` assigns the empty Structure to the named Structure itself, admitted to
+    # its own type (the book §12): an admission, not a declaration.
+    if: stmt\as\frame\body = 0 || l2_count_active(stmt\as\frame\body) = 0
+        return: l2_rw_refuse(stmt, "an admission to a Structure type")
+    f: l2_next_active(stmt\as\frame\body\first_field)
+    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || l2_next_active(f\next) != 0
+        return: l2_rw_refuse(stmt, "this declaration")
+    while: oi < l2_own_n && (l2_own_decl[oi] != stmt || l2_own_mi[oi] != l2_e)
+        oi: oi + 1
+    ---
+    if: oi >= l2_own_n
+        return: l2_rw_refuse(stmt, "this declaration")
+    if: l2_own_host[oi] != 0 || l2_own_fid[oi] >= 0 || l2_own_uchild[oi] < 0
+        return: l2_rw_refuse(stmt, "a field declared in a nested body")
+    if: ni < 0 || l2_own_nsty_get(oi) != ni || l2_ns_parent[ni] >= 0 || l2_ns_eternal[ni] >= 0
+        return: l2_rw_refuse(stmt, "a Structure-typed field")
+    if: l2_rw_frame(into, "LMX_WALK_OP_PUT", 4, out) != 0 || l2_rw_cell(\out, oi) != 0 || l2_rw_frame(\out, "LMX_WALK_OP_PRIM", 3, @ prim) != 0
+        return: 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: lmx_walk_merge_model\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0 || lmx_arena_ref_store(l2_rw%d, 2U, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", prim, prim, prim, prim, prim, prim, prim, prim, ni) < 0
+        return: 1
+return: l2_rw_put(\out, 3, prim)
 
 # The root's own int field oi is a field of the unit, and a unit field's cell is shared with every
 # method that can see it (the rule of l2_emit_own_reload: a callee's write is what the activation
@@ -16907,6 +17207,8 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
         return: l2_rw_l2(node)
     if: t != 0 && t\length > 2U && t\data[0] = 99 && t\data[1] = 46
         return: l2_rw_l2(node)
+    if: l2_rw_has_slash(t) != 0
+        return: l2_rw_path_read(node, t, parent, out)
     oi: l2_rw_own_row(node, t)
     if: oi = 0 - 1
         return: 1
@@ -17031,29 +17333,29 @@ fn: l2_rw_texpr (@: LmP0Field field; int: n; int: want; int: parent; @: int out)
     c.array: [64]: @: LmP0Node tok
     @: LmP0Field f
     int: m 0
+    int: k 1
     int: ty
     if: n < 1 || n > 63
         return: l2_rw_refuse(0, "an expression this long")
-    f: l2_next_active(field)
-    while: f != 0 && m < n
-        tok[m]: f\value
-        m: m + 1
-        f: l2_next_active(f\next)
+    m: l2_rw_tokens(field, n, tok)
+    if: m < 1
+        f: l2_next_active(field)
+        if: f = 0
+            return: l2_rw_refuse(0, "this expression")
+        return: l2_rw_refuse(f\value, "this expression")
     ---
-    if: m != n || (n % 2) = 0
-        return: l2_rw_refuse(tok[0], "this expression")
-    m: 1
-    while: m < n
-        if: tok[m] = 0 || tok[m]\kind != c.LM_P0_NODE_ATOM || tok[m]\as = 0
-            return: l2_rw_refuse(tok[m], "this expression")
-        if: l2_is_slash(tok[m]\as\atom)
-            return: l2_rw_refuse(tok[m], "a field path")
-        if: l2_text_eq(tok[m]\as\atom, "[")
-            return: l2_rw_refuse(tok[m], "an array")
-        if: l2_rw_prec(tok[m]\as\atom) = 0
-            return: l2_rw_refuse(tok[m], "this expression")
-        m: m + 2
+    while: k < m
+        if: tok[k] = 0 || tok[k]\kind != c.LM_P0_NODE_ATOM || tok[k]\as = 0
+            return: l2_rw_refuse(tok[k], "this expression")
+        if: l2_is_slash(tok[k]\as\atom)
+            return: l2_rw_refuse(tok[k], "a field path")
+        if: l2_text_eq(tok[k]\as\atom, "[")
+            return: l2_rw_refuse(tok[k], "an array")
+        if: l2_rw_prec(tok[k]\as\atom) = 0
+            return: l2_rw_refuse(tok[k], "this expression")
+        k: k + 2
     ---
+    n: m
     l2_rw_mix_at: 0
     ty: l2_rw_tyof(tok, 0, n - 1)
     if: ty = 0 - 3
@@ -17538,9 +17840,15 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
     # its initializer if it has one.
     if: l2_prim_type_word(h) != 0
         if: l2_text_eq(h, "int") = 0 && l2_text_eq(h, "char") = 0 && l2_text_eq(h, "size_t") = 0 && l2_text_eq(h, "unsigned") = 0 && l2_text_eq(h, "ulong") = 0
-            # A type word names a Structure too (`Model: m`, l2_ptr_type_word).
+            # A type word names a Structure too (`Model: m`, l2_ptr_type_word): m takes a fresh
+            # merge of Model (-178).
             if: l2_ns_find(h) >= 0
-                return: l2_rw_refuse(stmt, "a Structure-typed field")
+                if: l2_rw_model(stmt, h, into, @ node) != 0
+                    return: 1
+                \made: 1
+                if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, node) < 0
+                    return: 1
+                return: 0
             return: l2_rw_refuse(stmt, "a value that is not a number")
         f: l2_next_active(stmt\as\frame\body\first_field)
         if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM
@@ -17579,8 +17887,16 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
         if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, node) < 0
             return: 1
         return: 0
+    # A write through a path `a\b...: v` (-178).
     if: l2_rw_has_slash(h) != 0
-        return: l2_rw_refuse(stmt, "a field path")
+        if: stmt\as\frame\body = 0
+            return: l2_rw_refuse(stmt, "this assignment")
+        if: l2_rw_path_write(stmt, h, stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), into, @ node) != 0
+            return: 1
+        \made: 1
+        if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, node) < 0
+            return: 1
+        return: 0
     # A declaration by an empty frame (`f()`, `f: ()`): the root's own field it declares is a
     # field of the unit, and nothing runs.
     oi: 0

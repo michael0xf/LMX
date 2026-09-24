@@ -606,23 +606,23 @@ $fixtures = @(
     # declared type's shape; a refusal throws the implicit name implements (Q17 = A; g = 2, where a
     # failing merge is 1), and uncaught (`Fails`) the entry has no value, exit 1.  MainLetter is an
     # ordinary declared Structure (author Q15).
-    [pscustomobject]@{ Name = 'unit_admit_letter_typed.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field'; Args = @('0'); Argv = @('a', 'b');
+    [pscustomobject]@{ Name = 'unit_admit_letter_typed.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: receiveMessage needs the take primitive'; Args = @('0'); Argv = @('a', 'b');
         Absent = @(); Debt = @('lmx_runtime_implements(l2_program_arena, (cast: (@: Lmx) l2_ngraph)') },
     # -176: pending on the take and null test (-177), a graph input's admission (the caller's implements), `MainLetter: m` (part B); tails.
     [pscustomobject]@{ Name = 'unit_admit_letter_formal.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: receiveMessage needs the take primitive'; Args = @('0');
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_admit_letter_not_model.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field'; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+    [pscustomobject]@{ Name = 'unit_admit_letter_not_model.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: receiveMessage needs the take primitive'; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
         Absent = @(); Debt = @() },
     # -176: pending on the take (-177), a graph input's admission (the caller's implements, 2 at the root), a size_t call result (-174 c4).
     [pscustomobject]@{ Name = 'unit_admit_formal_refused.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: receiveMessage needs the take primitive'; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_admit_rebind_refused.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field'; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+    [pscustomobject]@{ Name = 'unit_admit_rebind_refused.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: receiveMessage needs the take primitive'; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_admit_letter_extra_field.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field'; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+    [pscustomobject]@{ Name = 'unit_admit_letter_extra_field.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: receiveMessage needs the take primitive'; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
         Absent = @(); Debt = @() },
     # KNOWN COARSENESS (next_core_tasks.md 7): the walk does not look inside the outer Array, so an
     # `int: []: []:` field admits the char letter.  This row flips to Fails with the port.
-    [pscustomobject]@{ Name = 'unit_admit_letter_coarse.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field'; Args = @('0');
+    [pscustomobject]@{ Name = 'unit_admit_letter_coarse.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: receiveMessage needs the take primitive'; Args = @('0');
         Absent = @(); Debt = @() },
     # `T: []: []: x` (author Q15): the outer Array is constructed empty and merge copies it as a new one.
     [pscustomobject]@{ Name = 'unit_arrarr_field.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure value'; Args = @('0');
@@ -631,21 +631,21 @@ $fixtures = @(
     # type through a typed root; `@` before an element addresses it in graph storage; length() on
     # both levels.  The former formal-`main` fixtures now read argv from the letter (mainArgs);
     # `{source}` in Argv is this fixture's own path.
-    [pscustomobject]@{ Name = 'unit_arr_path_read.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field'; Args = @('0');
+    [pscustomobject]@{ Name = 'unit_arr_path_read.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0');
         Absent = @(); Debt = @() },
     # D-06: a failed receiveMessage or rebinding store is an invariant on the X1 route, not a printed line.
-    [pscustomobject]@{ Name = 'unit_admit_rebind_read.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field'; Args = @('0'); Argv = @('ok'); Entry = 2;
+    [pscustomobject]@{ Name = 'unit_admit_rebind_read.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: receiveMessage needs the take primitive'; Args = @('0'); Argv = @('ok'); Entry = 2;
         Absent = @('lmx_msg_poll_abort', 'lmx: receiveMessage', 'lmx: rebinding');
         Debt = @('c.fprintf(c.stderr, "lmx: invariant: receiveMessage store failed for own field ', 'c.fprintf(c.stderr, "lmx: invariant: rebinding store failed for own field ') },
-    [pscustomobject]@{ Name = 'entry_argc_if.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field'; Args = @('0');
+    [pscustomobject]@{ Name = 'entry_argc_if.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: receiveMessage needs the take primitive'; Args = @('0');
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'entry_index.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field'; Args = @('0'); Argv = @('word'); Says = @('word');
+    [pscustomobject]@{ Name = 'entry_index.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: receiveMessage needs the take primitive'; Args = @('0'); Argv = @('word'); Says = @('word');
         Absent = @(); Debt = @('c.puts(@ l2_cp') },
-    [pscustomobject]@{ Name = 'entry_strcmp.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field'; Args = @('0'); Argv = @('ok');
+    [pscustomobject]@{ Name = 'entry_strcmp.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: receiveMessage needs the take primitive'; Args = @('0'); Argv = @('ok');
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_charpp_return.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field'; Args = @('0');
+    [pscustomobject]@{ Name = 'unit_charpp_return.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: receiveMessage needs the take primitive'; Args = @('0');
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_entry_args.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field'; Args = @('0'); Entry = 2;
+    [pscustomobject]@{ Name = 'unit_entry_args.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: receiveMessage needs the take primitive'; Args = @('0'); Entry = 2;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'entry_parse_min.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Argv = @('{source}');
         Absent = @(); Debt = @() },
@@ -856,8 +856,13 @@ $fixtures = @(
     # third is a refused admission, thrown inside a method E calls, which arrives as 2.
     [pscustomobject]@{ Name = 'unit_s1_merge_uncaught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; MergeFail = 1; Stopped = 1; Thrown = 1;
         Absent = @('l2_out_throw[0]: node'); Debt = @('l2_out_throw[0]: 0', 'return: l2_ts', 'l2_rw1 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw0, c.LMX_WALK_OP_CALL, 2U)', 'if: lmx_arena_ref_store(l2_rw1, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 1U))) != 0') },
-    [pscustomobject]@{ Name = 'unit_s1_merge_uncaught_entry.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field'; Args = @('0'); Fails = 1; MergeFail = 1; Stopped = 1; Thrown = 1;
-        Absent = @('l2_out_throw[0]: node'); Debt = @('l2_out_throw[0]: 0') },
+    # -178 commit 2: `P: q` is the walker's merge primitive now, and the row translates -- but it is not
+    # run: the primitive's failure is LMX_WALK_PRIMITIVE (X1), not the implicit throw `merge` (E's
+    # 0 + 1), and the driver's mergefail tap does not reach the kernel's own merge.  D-55: it runs
+    # when a kernel primitive that fails an admission reports it as THROWN + k in the caller's
+    # numbering (Grok -177 commit 5; the typed receive's `implements` is the same mechanism).
+    [pscustomobject]@{ Name = 'unit_s1_merge_uncaught_entry.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; MergeFail = 1; Stopped = 1; Thrown = 1;
+        Absent = @('l2_out_throw[0]: node'); Debt = @('\fn: lmx_walk_merge_model') },
     # D-07: qualified-operand merge emits lmx_merge_profiles_owned; MergeFail 1 fails it via the
     # profiles tap (shared mergefail counter). Mutant without -Dlmx_merge_profiles_owned cannot
     # fail the merge -- the program completes with 5 and the row goes RED.
@@ -936,7 +941,7 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s1_catch_tc.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Stopped = 0;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s1_catch_t2.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field'; Args = @('0'); Entry = 103;
+    [pscustomobject]@{ Name = 'unit_s1_catch_t2.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a field write through a reference'; Args = @('0'); Entry = 103;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s1_catch_sibling.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: throw and catch'; Args = @('0'); Entry = 3;
         Absent = @(); Debt = @() },
@@ -1019,7 +1024,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_empty_assign_admit.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field'; Args = @('0'); Entry = 421;
         Absent = @('lmx_msg_poll_abort', 'lmx: rebinding');
         Debt = @('c.fprintf(c.stderr, "lmx: invariant: rebinding store failed for own field ') },
-    [pscustomobject]@{ Name = 'unit_empty_assign_named.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field'; Args = @('0'); Entry = 74;
+    [pscustomobject]@{ Name = 'unit_empty_assign_named.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an admission to a Structure type'; Args = @('0'); Entry = 74;
         Absent = @(); Debt = @() },
     # A BARE `return` CLOSES A SUB (P0, FABLE-OPUS-RECEIVER-CONTRACT-20260924-139 commit 3; author
     # 2026-09-24 Q19.1/Q19.3): the trailer ends the body of s, and each call runs it.
@@ -1048,6 +1053,12 @@ $fixtures = @(
         Absent = @(); Debt = @('c.LMX_WALK_RESULT_SIG_MARK) | 256U) | (cast: (unsigned) c.LMX_TYPE_SIZE_T))') },
     [pscustomobject]@{ Name = 'unit_method_sig_distinct.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 3;
         Absent = @(); Debt = @('c.LMX_WALK_RESULT_SIG_MARK) | 256U) | (cast: (unsigned) c.LMX_TYPE_SIZE_T))', 'c.LMX_WALK_RESULT_SIG_MARK) | 512U) | (cast: (unsigned) c.LMX_TYPE_SIZE_T))') },
+    # STRUCTURE-TYPED ROOT FIELDS (-178 commit 2): `Model: m` is the walker's merge primitive (-174 c3)
+    # stored by reference into m's pointer cell (-174 c2); `m\value` opens the reference (DEREF, -174 c1)
+    # and takes the field (OF); `Model\value: 7U` writes the named Structure itself (PUT, its node
+    # fixed when the graph is built).  n, merged after the write, sees 7; m keeps its own 41.
+    [pscustomobject]@{ Name = 'unit_root_model_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 15;
+        Absent = @(); Debt = @('\fn: lmx_walk_merge_model', 'c.LMX_WALK_OP_DEREF, 2U)') },
     [pscustomobject]@{ Name = 'unit_discard_calls.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: * / %'; Args = @('0'); Entry = 11112;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_discard_fnptr.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
@@ -1344,7 +1355,7 @@ $fixtures = @(
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_entry_unit: graph') },
-    [pscustomobject]@{ Name = 'unit_field_path_formal_value.lm2'; Expect = 'root-pending'; Exit = 0; Entry = 5; Needle = 'root operation not walkable yet: a Structure-typed field';
+    [pscustomobject]@{ Name = 'unit_field_path_formal_value.lm2'; Expect = 'root-pending'; Exit = 0; Entry = 5; Needle = 'root operation not walkable yet: a field write through a reference';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_entry_unit: graph') },
@@ -1474,7 +1485,7 @@ $fixtures = @(
         Debt = @('l2_entry_unit: graph', 'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ') },
     # S2: the unit's `Model: fresh` is an own field of the entry E, registered by the same
     # recognizer every method uses (l2_own_add(E, ...)), so the unit declares it again.
-    [pscustomobject]@{ Name = 'unit_colon_model_decl.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field';
+    [pscustomobject]@{ Name = 'unit_colon_model_decl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @() },
@@ -1529,11 +1540,11 @@ $fixtures = @(
         Debt = @('l2_pst: lmx_arena_ref_struct(l2_pst,', 'l2_pxp: lmx_arena_ref_cell(l2_pst,', 'l2_mops[0U]: l2_nsp[', 'lmx_merge_owned(l2_mops, 1U, l2_mbody, l2_nsp[') },
     [pscustomobject]@{ Name = 'unit_field_path_unknown_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown field path segment'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_field_path_unit_addr.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field';
+    [pscustomobject]@{ Name = 'unit_field_path_unit_addr.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_entry_unit: graph') },
-    [pscustomobject]@{ Name = 'unit_field_path_unit_colon.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field';
+    [pscustomobject]@{ Name = 'unit_field_path_unit_colon.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a field write through a reference';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_pst:', 'l2_pxp: lmx_arena_ref_cell(l2_pst,', 'l2_entry_unit: graph') },
@@ -1548,7 +1559,7 @@ $fixtures = @(
     # FABLE-SONNET-OWN-LOOKUP-AUDIT-20260923-131 part 3: the terminal
     # Structure-reference assignment checklist, one assertion per (direct
     # name / path) x (own / unit / formal) x (primitive / Structure).
-    [pscustomobject]@{ Name = 'unit_field_path_terminal_checklist.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field';
+    [pscustomobject]@{ Name = 'unit_field_path_terminal_checklist.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call with an input that is not a number';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @() },
@@ -1570,7 +1581,7 @@ $fixtures = @(
     # D-05/D-06: a field path meeting no Structure, an own field without a cell, a method entered
     # without its occurrence, a missing control body and a failed checkpoint are invariants on the
     # X1 route (a message and an abort), never a return from the method or a printed line.
-    [pscustomobject]@{ Name = 'unit_struct_int_field.lm2'; Expect = 'root-pending'; Exit = 0; Entry = 7; Needle = 'root operation not walkable yet: a Structure-typed field';
+    [pscustomobject]@{ Name = 'unit_struct_int_field.lm2'; Expect = 'root-pending'; Exit = 0; Entry = 7; Needle = 'root operation not walkable yet: a field write through a reference';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'lmx_msg_poll_abort', 'lmx: checkpoint',
                    "if: self = 0`n        return", "if: self = 0`n        l2_out_result",
@@ -1585,7 +1596,7 @@ $fixtures = @(
                  'c.fprintf(c.stderr, "lmx: invariant: checkpoint store failed for own field ') },
     # Every numeric field of a named Structure -- size_t, int, unsigned, ulong -- has its own cell
     # holding its literal, in the Structure and in a merge copy (FABLE-OPUS-DISCARD-20260924-147).
-    [pscustomobject]@{ Name = 'unit_struct_num_fields.lm2'; Expect = 'root-pending'; Exit = 0; Entry = 7; Needle = 'root operation not walkable yet: a field path';
+    [pscustomobject]@{ Name = 'unit_struct_num_fields.lm2'; Expect = 'root-pending'; Exit = 0; Entry = 7; Needle = 'root operation not walkable yet: a Structure value';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('lmx_int_store_known(l2_entry_slot[0], 4)', 'lmx_unsigned_store_known(l2_entry_slot[0], 5U)',
@@ -1630,7 +1641,7 @@ $fixtures = @(
     # a Structure value assigned through a path ending at a nested
     # Structure-typed field stays a located, fail-closed refusal.
     [pscustomobject]@{ Name = 'unit_field_path_struct_rebind_refused.lm2'; Expect = 'root-pending'; Exit = 0;
-        Needle = 'root operation not walkable yet: a Structure-typed field'; Absent = @(); Debt = @() },
+        Needle = 'root operation not walkable yet: a field write through a reference'; Absent = @(); Debt = @() },
     # FABLE-GROKBOT-C-MEMBER-ACCESS-20260923-120 part1: c.* raw member paths.
     # Mutant: l2_ty_raw_c_members always 0 -> unit_c_member_len refuses unsupported body.
     [pscustomobject]@{ Name = 'unit_c_member_len.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
@@ -1706,7 +1717,7 @@ $fixtures = @(
         Args = @('0');
         Absent = @();
         Debt = @() },
-    [pscustomobject]@{ Name = 'unit_addr_entry_name_collision.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field';
+    [pscustomobject]@{ Name = 'unit_addr_entry_name_collision.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body';
         Args = @('0');
         Says = @('1 2 3 4 5');
         Absent = @();
@@ -1874,7 +1885,7 @@ $fixtures = @(
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_entry_unit: graph', 'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ') },
-    [pscustomobject]@{ Name = 'unit_implements_admission.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a field path';
+    [pscustomobject]@{ Name = 'unit_implements_admission.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_entry_unit: graph', 'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ') },
@@ -1943,16 +1954,16 @@ $fixtures = @(
         Needle = 'graph assignment admission requires receiving-expression tests'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_matrix_callable_prim.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0'); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_matrix_callable_struct_identity.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field';
+    [pscustomobject]@{ Name = 'unit_matrix_callable_struct_identity.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call with an input that is not a number';
         Args = @('0'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_matrix_callable_array_elem.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an array';
         Args = @('0'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_matrix_callable_callable_arg.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0'); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_matrix_path_prim.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field';
+    [pscustomobject]@{ Name = 'unit_matrix_path_prim.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a field write through a reference';
         Args = @('0'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_matrix_path_struct_rebind_refused.lm2'; Expect = 'root-pending'; Exit = 0;
-        Needle = 'root operation not walkable yet: a Structure-typed field'; Absent = @(); Debt = @() },
+        Needle = 'root operation not walkable yet: a field write through a reference'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_matrix_path_array_elem.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an array';
         Args = @('0'); Absent = @(); Debt = @() },
     # (e) empty Structure as ONE named value vs empty arg list. Named form is

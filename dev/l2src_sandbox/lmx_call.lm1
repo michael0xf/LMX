@@ -19,6 +19,19 @@ include: "<stdio.h>" "<string.h>"
 @: void lmx_call_walk_fn 0
 int: lmx_call_walk_status_mode 0
 
+
+# G2: walk_run failure status observed by call0_dispatch (METHOD throw / walk error).
+# Thread turn reads this to stop the Message; cleared at each call0 walk entry.
+int: lmx_call_walk_fail_status_g 0
+
+fn: lmx_call_walk_fail_status () int
+return: lmx_call_walk_fail_status_g
+
+fn: lmx_call_note_walk_fail (int: st) void
+    lmx_call_walk_fail_status_g: st
+
+fn: lmx_call_clear_walk_fail () void
+    lmx_call_walk_fail_status_g: 0
 fn: lmx_call_install_walk (LmxCallWalkFn: fn) void
     lmx_call_walk_fn: (cast: (@: void) fn)
     lmx_call_walk_status_mode: 0

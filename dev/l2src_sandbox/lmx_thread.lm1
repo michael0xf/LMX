@@ -519,6 +519,7 @@ fn: lmx_thread_dispatch_native (@: LmxThread t; LmxCallEntry: entry) int
     @: Lmx graph
     @: LmxArena arena
     int: st
+    int: fail
     message: lmx_thread_message(t)
     if: message = 0
         return: c.LMX_THREAD_INVALID
@@ -544,14 +545,21 @@ fn: lmx_thread_dispatch_native (@: LmxThread t; LmxCallEntry: entry) int
                 arena: t\slot\arena
                 if: arena != 0
                     # One turn shape: lmx_call0. L2 walk returns an activation int (ignored
-                    # here -- model 31 / Message flags). L3 bind installs a status walk:
-                    # INTERP_* is the turn body status (kept since 4ab2877).
+                    # here -- model 31 / Message flags) on success. G2: a nonzero walk_run
+                    # status (METHOD throw / walk failure) is in lmx_call_walk_fail_status
+                    # and stops the Message like today's entry adapter (S1.1 numbering).
+                    # L3 bind installs a status walk: INTERP_* is the turn body status.
                     st: lmx_call0(arena, graph)
                     if: lmx_call_walk_returns_status() != 0
                         if: st = c.LMX_CALL_NOT_CALLABLE
                             return: c.LMX_TURN_BODY_OK
                         ---
                         return: st
+                    ---
+                    fail: lmx_call_walk_fail_status()
+                    if: fail != 0
+                        message\running: 0
+                        return: fail
                     ---
                 ---
             ---
@@ -633,15 +641,19 @@ fn: lmx_thread_turn (@: LmxThread t; LmxCallEntry: entry; ulong: now) int
         return: c.LMX_THREAD_INVALID
     ---
     if: body != c.LMX_TURN_BODY_OK
+        # G2: running=0 for a walked throw is written in dispatch_native when
+        # lmx_call_walk_fail_status is set (adapter shape). L3 INTERP_* body statuses
+        # keep today's contract (Message flags / existing ABI) -- do not blanket-clear.
         # The body failed, and the boundary has run.  What it wrote STANDS: there is no rollback
         # engine and this return value does not promise one -- the turn's graph and own writes
         # are exactly where the body left them, while its staging and its reservations are gone.
         #
         # The report is the Thread ABI's EXISTING failure status.  The finer distinction lives
         # where it is meaningful and stays there: the walk reports a primitive failure as
-        # LMX_WALK_PRIMITIVE, and the body's status carries it to this line.  The Thread ABI has
-        # no status for "a body ran and failed", and this act does not invent one -- adding a
-        # value to a public enum is a new contract, not a repair.  (Documented ABI compromise,
+        # LMX_WALK_PRIMITIVE, and a METHOD trampoline throw as its S1.1 number (G1); the body's
+        # status carries it to this line.  The Thread ABI has no status for "a body ran and
+        # failed", and this act does not invent one -- adding a value to a public enum is a new
+        # contract, not a repair.  (Documented ABI compromise,
         # DEEPSEEK-L2-PRIMITIVE-KERNEL-IMPLEMENT-20260921-27.)
         return: c.LMX_THREAD_INVALID
     ---

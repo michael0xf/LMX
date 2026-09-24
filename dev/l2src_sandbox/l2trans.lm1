@@ -659,7 +659,6 @@ prototype:
     fn: l2_ret_uns (int: mi) int
     fn: l2_emit_os (@: FILE out) int
     fn: l2_check_os (const: @(LmP0Node item); const: @(char path)) int
-    fn: l2_array_local (const: @(LmP0Node stmt); @@: LmP0Text out_name; @@: LmP0Text out_n) int
     fn: l2_index_tail (@: LmP0Field f; @@: LmP0Field out_idx; @@: LmP0Field out_after) int
     fn: l2_addr_tail (@: LmP0Field f; @@: LmP0Field out_name; @@: LmP0Field out_after) int
     fn: l2_expr_span (@: LmP0Field field) int
@@ -3678,7 +3677,6 @@ fn: l2_ml_collect (const: @(LmP0Structure body); const: @(char path)) int
     @: LmP0Field inner
     @: LmP0Node stmt
     @: LmP0Text nm 0
-    @: LmP0Text count 0
     int: ty 0
     if: body = 0
         return: 0
@@ -3694,23 +3692,16 @@ fn: l2_ml_collect (const: @(LmP0Structure body); const: @(char path)) int
         # companions in a method body are the 11.2.1 slot form and are
         # declared by the method preamble, not by this table.
         nm: 0
-        count: 0
-        if: l2_array_local(stmt, @ nm, @ count) = 0
-            if: l2_ml_find(nm) < 0 && l2_ml_add(nm, 22, path, stmt) != 0
-                return: 1
-            ---
-        else:
-            if: l2_slot_decl_ty(stmt) = 0 && l2_ptr_local_ty(stmt, @ nm, @ ty) = 2
-                return: l2_error(path, l2_next_active(stmt\as\frame\body\first_field)\value, "unknown type")
-            if: l2_slot_decl_ty(stmt) = 0 && l2_ptr_local_ty(stmt, @ nm, @ ty) = 0 && l2_ml_find(nm) < 0 && l2_ml_add(nm, ty, path, stmt) != 0
-                return: 1
-            if: l2_const_local_ty(stmt, @ nm, @ ty) = 0 && l2_ml_find(nm) < 0 && l2_ml_add(nm, ty, path, stmt) != 0
-                return: 1
-            if: l2_fnptr_local(stmt, @ nm) = 0 && l2_ml_find(nm) < 0 && l2_ml_add(nm, 40, path, stmt) != 0
-                return: 1
-            if: l2_struct_local(stmt, @ nm) = 0 && l2_ml_find(nm) < 0 && l2_ml_add(nm, 41, path, stmt) != 0
-                return: 1
-            ---
+        if: l2_slot_decl_ty(stmt) = 0 && l2_ptr_local_ty(stmt, @ nm, @ ty) = 2
+            return: l2_error(path, l2_next_active(stmt\as\frame\body\first_field)\value, "unknown type")
+        if: l2_slot_decl_ty(stmt) = 0 && l2_ptr_local_ty(stmt, @ nm, @ ty) = 0 && l2_ml_find(nm) < 0 && l2_ml_add(nm, ty, path, stmt) != 0
+            return: 1
+        if: l2_const_local_ty(stmt, @ nm, @ ty) = 0 && l2_ml_find(nm) < 0 && l2_ml_add(nm, ty, path, stmt) != 0
+            return: 1
+        if: l2_fnptr_local(stmt, @ nm) = 0 && l2_ml_find(nm) < 0 && l2_ml_add(nm, 40, path, stmt) != 0
+            return: 1
+        if: l2_struct_local(stmt, @ nm) = 0 && l2_ml_find(nm) < 0 && l2_ml_add(nm, 41, path, stmt) != 0
+            return: 1
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\body != 0
             inner: l2_next_active(stmt\as\frame\body\first_field)
             while: inner != 0
@@ -5036,44 +5027,18 @@ fn: l2_ret_uns (int: mi) int
         return: 1
 return: 0
 
-fn: l2_array_local (const: @(LmP0Node stmt); @@: LmP0Text out_name; @@: LmP0Text out_n) int
-    @: LmP0Field f
-    const: @: LmP0Node inner
-    @: LmP0Field t
-    @: LmP0Field nm
-    @: LmP0Field sz
-    if: out_name = 0 || out_n = 0
-        return: 1
-    \out_name: 0
-    \out_n: 0
-    if: l2_frame_head(stmt, "c.array") = 0
-        return: 1
-    if: stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\body = 0
-        return: 1
-    if: l2_count_active(stmt\as\frame\body) != 1
-        return: 1
-    f: l2_next_active(stmt\as\frame\body\first_field)
-    if: f = 0 || f\value = 0
-        return: 1
-    inner: f\value
-    if: l2_frame_head(inner, "[]") = 0
-        return: 1
-    if: inner\as = 0 || inner\as\frame = 0 || inner\as\frame\body = 0
-        return: 1
-    if: l2_count_active(inner\as\frame\body) != 3
-        return: 1
-    t: l2_next_active(inner\as\frame\body\first_field)
-    nm: l2_next_active(t\next)
-    sz: l2_next_active(nm\next)
-    if: t = 0 || t\value = 0 || t\value\kind != c.LM_P0_NODE_ATOM || l2_text_eq(t\value\as\atom, "char") = 0
-        return: 1
-    if: nm = 0 || nm\value = 0 || nm\value\kind != c.LM_P0_NODE_ATOM || l2_ident(nm\value\as\atom) = 0
-        return: 1
-    if: sz = 0 || sz\value = 0 || sz\value\kind != c.LM_P0_NODE_ATOM || l2_num(sz\value\as\atom) = 0
-        return: 1
-    \out_name: nm\value\as\atom
-    \out_n: sz\value\as\atom
-return: 0
+# WHAT STOOD HERE AND IS GONE (FABLE-SONNET-NAME-SPECIALS-20260924-155 commit 4):
+# l2_array_local, the L2 c.array: [char name size] local-declarator special (plan
+# §7a "L2 c.array (declarator, not a call)"). Measured (commit 1, steps/name-
+# specials-inventory.md): zero current .lm2 fixtures use the L2-level form (all
+# migrated to ordinary own-array locals, 17d54bc); its 5 call sites (l2_ml_collect,
+# l2_check_fields, and l2_emit_loc_stmt's guard + its own emission arm) are deleted
+# alongside it. c.array: in an L2 source is now just an ordinary c.* raw-door frame
+# -- door text the C compiler checks, no L2-side recognition, no replacement syntax,
+# no helper. l2trans.lm1's OWN ~70 L1-level c.array: declarations (a different axis
+# entirely -- l1trans's syntax, used to write ITS OWN buffers, never read by this
+# function) are untouched; so is the separate, HOLD, unproven L1 c.array: EMISSION
+# gap (next_core_tasks.md "L1 c.array (separate, unproven -- do not merge)").
 
 fn: l2_check_os_fn (const: @(LmP0Node fn); const: @(char path)) int
     @: LmP0Field f
@@ -8702,7 +8667,9 @@ fn: l2_is_known (const: @(LmP0Text t)) int
     # (plus the profile prelude). Name-driven need_stdlib/need_string/need_p0/need_own
     # (FABLE-SONNET-NAME-SPECIALS-20260924-155 commit 3, :18296) are gone. Emitter-set
     # need_query remains where the translator emits its own helper.
-    # c.* is the raw door; c.array declarators are matched by l2_array_local, not here.
+    # c.* is the raw door; a leading c.array: local declarator is gone too
+    # (FABLE-SONNET-NAME-SPECIALS-20260924-155 commit 4, :5029) -- it is
+    # just an ordinary c.* frame now, matched here like any other.
     if: t\length > 2U && t\data[0] = 99 && t\data[1] = 46
         return: 1
     # FABLE-SONNET-NAME-SPECIALS-20260924-155 commit 2 (steps/name-specials-
@@ -13495,7 +13462,6 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
     c.array: [256]: char pdest
     int: lty 0
     @: LmP0Text lnm 0
-    @: LmP0Text lsz 0
     int: cj
     @: LmP0Text cmodel
     @: LmP0Text cname
@@ -13697,11 +13663,6 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
                 return: 1
             l2_loop_depth: l2_loop_depth - 1
             l2_scope_pop()
-            field: l2_next_active(field\next)
-            continue
-        if: l2_frame_head(stmt, "if") = 0 && l2_array_local(stmt, @ lnm, @ lsz) = 0
-            if: (l2_ml_find(lnm) < 0 || l2_ml_ty[l2_ml_find(lnm)] != 22)
-                return: l2_error(path, stmt, "unsupported body")
             field: l2_next_active(field\next)
             continue
         if: l2_frame_head(stmt, "if") = 0 && stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0 && l2_ml_array_head(stmt\as\frame\head) >= 0
@@ -16492,29 +16453,14 @@ return: 0
 
 fn: l2_emit_loc_stmt (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
     @: LmP0Text lnm 0
-    @: LmP0Text lsz 0
     int: lty 0
     @: LmP0Field initf
     @: LmP0Field last
     const: @: LmP0Frame fr
     if: stmt = 0
         return: 1
-    if: l2_array_local(stmt, @ lnm, @ lsz) != 0 && (l2_ptr_local_ty(stmt, @ lnm, @ lty) != 0 || l2_ml_find(lnm) < 0) && (l2_const_local_ty(stmt, @ lnm, @ lty) != 0 || l2_ml_find(lnm) < 0) && (l2_fnptr_local(stmt, @ lnm) != 0 || l2_ml_find(lnm) < 0) && (l2_struct_local(stmt, @ lnm) != 0 || l2_ml_find(lnm) < 0) && (stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\head = 0 || l2_ml_find(stmt\as\frame\head) < 0) && (stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\head = 0 || l2_ml_array_head(stmt\as\frame\head) < 0)
+    if: (l2_ptr_local_ty(stmt, @ lnm, @ lty) != 0 || l2_ml_find(lnm) < 0) && (l2_const_local_ty(stmt, @ lnm, @ lty) != 0 || l2_ml_find(lnm) < 0) && (l2_fnptr_local(stmt, @ lnm) != 0 || l2_ml_find(lnm) < 0) && (l2_struct_local(stmt, @ lnm) != 0 || l2_ml_find(lnm) < 0) && (stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\head = 0 || l2_ml_find(stmt\as\frame\head) < 0) && (stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\head = 0 || l2_ml_array_head(stmt\as\frame\head) < 0)
         return: 1
-    if: l2_array_local(stmt, @ lnm, @ lsz) = 0
-        if: (l2_ml_find(lnm) < 0 || l2_ml_ty[l2_ml_find(lnm)] != 22)
-            return: 2
-        if: c.fprintf(l2_out, "%sc.array: []: char ", ind) < 0
-            return: 2
-        if: l2_write_text(l2_out, lnm) != 0
-            return: 2
-        if: fputs(" ", l2_out) < 0
-            return: 2
-        if: l2_write_text(l2_out, lsz) != 0
-            return: 2
-        if: fputs("\n", l2_out) < 0
-            return: 2
-        return: 0
     if: stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0
         if: l2_ml_array_head(stmt\as\frame\head) >= 0
             if: c.fprintf(l2_out, "%s", ind) < 0

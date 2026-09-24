@@ -234,7 +234,7 @@ last-occurrence by construction, same as `l2_path_root`'s own hand-rolled loops 
 noted in commit 1 above).
 
 **Measured directly, it is NOT consistently last -- a genuine, newly-found, NOT-yet-fixed defect,
-filed as D-43.** A probe fixture (`fn: test (int: arg) int / arg: 1 / arg: 2 / return: 0`, called
+filed as D-47.** A probe fixture (`fn: test (int: arg) int / arg: 1 / arg: 2 / return: 0`, called
 and read via `test\[0]arg`/`test\[1]arg`/`test\arg` from INSIDE a second method, `check()`) gives
 `test\arg` = occurrence 1 (last, correct). The SAME shape read from ROOT LEVEL instead -- exactly
 `unit_occ_root_named.lm2`'s existing, tracked, gated fixture -- gives `test\arg` = occurrence 0
@@ -260,16 +260,16 @@ on when the CALLER of the read is root rather than an ordinary method; the read 
 `l2_own_seg_scan` with the exact same literal arguments either way, so the divergence must be in
 what got REGISTERED for `test`'s two `arg` rows, or in `l2_own_n`'s ordering, by the time root-level
 code runs versus by the time a same-shaped method's body runs -- not yet traced further. Recommend
-a focused follow-up (D-43) rather than a rushed fix to a mechanism not yet fully understood.
+a focused follow-up (D-47) rather than a rushed fix to a mechanism not yet fully understood.
 
 **Witness landed this commit**: `unit_own_last_occurrence.lm2` (poke9 probe, reads via `check()`,
 not root) -- pins that the method-context case is already correct, both read and write
 (`test\[0]arg=9`, `test\[1]arg=2`, `test\arg=2`, then `test\arg: 5` lands in occurrence 1 leaving
 occurrence 0 at 9). Documented in its own header as NOT a mutation witness for this commit's
 routing changes (per the inert-routing finding above) -- a regression/behavior-pin test, not
-evidence the diff did anything. No fixture in this commit exercises D-43 (root-level); doing so
+evidence the diff did anything. No fixture in this commit exercises D-47 (root-level); doing so
 safely needs `unit_occ_root_named.lm2` itself to gain new, currently-masked assertions, which is
-D-43's own fix, not this commit's.
+D-47's own fix, not this commit's.
 
 Gates: build_l2src 252/252, l2_harness 334/334 GREEN (333 base + 1 new row), L3 11/11 + type
 budget, check_docs OK, git diff --check clean -- all green with the routing change in place, no

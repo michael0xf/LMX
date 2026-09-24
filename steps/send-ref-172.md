@@ -705,3 +705,88 @@ not fixed by this ticket.
 D-61 (a bound merge result's own field path as an expression operand is
 "unresolved name" natively; unrelated to this ticket, Opus's own -183 c4
 finding) is not touched here either.
+
+## Read-only survey: where the letter/receive/send paths assume "own fields are cells beside the body"
+
+Fable asked (after -172 closed, while the author has the cells/occurrences/
+graph rule under consideration -- "declarations as nodes with a receiver
+head, no side storage") for a measurement-only list, from this ticket's own
+vantage, of what in the letter/receive/send paths assumes the CURRENT
+architecture: a declared field's slot (part of the graph, "the body") holds
+the ADDRESS OF A SEPARATE CELL (owned storage the field's own construction
+allocates), not the value or the pointee directly. No proposal, no edits --
+just where this ticket's own code touches that seam.
+
+**The bookkeeping tables themselves.** `l2_own_add` (`l2trans.lm1:3704`,
+used by commit 2's `receiveMessage: m Model` to declare `m`),
+`l2_own_nsty_set` (`:9986`, same site) and the whole `l2_own_*` parallel-array
+family they write into (`l2_own_ty`, `l2_own_n`, ...) exist to answer "where
+is this declaration's VALUE stored" as an indirection -- a own-storage CODE
+(`l2_own_ty[oi]`), not the value's own address directly. Every read/write
+this ticket emits for a typed own field goes through this table first.
+
+**The read primitive.** `l2_emit_cell_load` (`:14634`) is the canonical
+"own fields are cells" reader: given an own-storage code, it emits
+`lmx_int_value_known(l2_xp[0])` / `lmx_char_value_known(...)` / ... /
+`lmx_pointer_value_known(l2_xp[0])` -- `l2_xp[0]` is always read as a CELL
+(a primitive value cell, or, for a pointer code via `l2_own_is_pointer`, a
+cell holding another address) via the store-helper gate
+`l2_own_store_helper` (`:18669`) refusing anything that has no such cell.
+Commit 4 put kind 10/11's own read back onto this exact primitive
+(`l2_field_path_read`'s kind=10||11 branch, `l2_own_ty_of_param(ent)` then
+`l2_emit_cell_load`) -- the whole D-52/D-56/commit-4 back-and-forth this
+ticket lived through was entirely about whether a REFERENCE field's own
+slot holds a cell's address (this architecture) or the pointee's address
+directly (kind 3's own shape, and D-56's short-lived kind 10/11 shape) --
+the author's Q26.2 ruling settled it FOR REFERENCES, in this architecture's
+own terms (a cell), without touching whether the architecture itself
+persists.
+
+**The write side.** The mirror of the read: `lmx_pointer_store_known`
+(`l2trans.lm1:20235`, this ticket's own kind 10/11 write branch) writes
+THROUGH a cell whose address the slot already holds -- it does not write
+the slot itself. A representation with no side cell would have no
+`_store_known`/`_value_known` pair to call at all; the field's own graph
+slot would just be the value (or, for a reference, the field's own read
+would need a different "which node reads which" model altogether, not
+"read the cell this slot's address points at").
+
+**Prototype builders.** The named-Structure prototype-construction loop
+this ticket's D-52/commit-4 restored (`l2trans.lm1:21861`/`:21864`, kind
+10/11's two arms) is the constructor side of the same assumption: building
+an instance means, per field kind, ALLOCATING A CELL
+(`lmx_pointer_new_owned`/`lmx_arena_take_profiled`, or, for kind 0/1/7/8/9,
+the analogous `lmx_int_new_owned`/... elsewhere in the same loop) and
+storing the CELL's address into the Structure's own slot -- never storing a
+value directly into the slot at construction time. A letter's synthesized
+model (`l2_letter_ns_for`, commit 2) is built by this SAME loop, so the
+sender field (kind 10) and, transitively, anything the payload field
+(kind 3, a reference to the caller's own Model) itself declares, are cells
+this way too.
+
+**The letter/message payload's own construction.** `l2_emit_send`'s
+generated body (`:18184`, this ticket's own `sendMessage` emission,
+touched in -168 and this ticket's commits 1/3/4) builds each int-typed
+payload field the identical way: `cell: lmx_int_new_owned(a)` then
+`lmx_arena_ref_store(p, jU, cell)` -- a message's own payload Structure is
+built with exactly the same "allocate a cell, store its address" pattern
+as a named-Structure's own prototype, not a special case.
+
+**The method-body prelude's own walk locals** (`l2_pst`/`l2_pxp`/`l2_xp`,
+gated by `l2_uses_node_for_root`, mentioned in commit 1's own design notes
+above) are the field-PATH-WALKING side of the same thing: they exist
+because reaching a field's own value means walking to its SLOT first
+(`l2_pxp`, a pointer to the slot) and then, for cell-backed kinds,
+dereferencing once more through the cell the slot's address names --
+`l2_field_path_read`'s branch structure (kind 0/1/7/8/9 vs the cell-pointer
+kinds) is exactly this two-level structure made explicit per kind.
+
+None of this is new to -172 -- it is the established own-field architecture
+every ticket before this one already built on. What -172 adds to the
+picture is a concrete, worked example of the SEAM at its sharpest: a
+reference field's slot can EITHER be "the cell's address" (this
+architecture, the author's Q26.2 answer) OR "the pointee's address
+directly, no cell" (D-56's brief attempt, and kind 3's own existing shape
+for an inline nested Structure) -- the SAME two shapes a "no side storage,
+declarations as nodes" architecture would need to choose between for EVERY
+own field, not just references, if own fields stopped being cells at all.

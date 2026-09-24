@@ -703,3 +703,61 @@ Mutants (private variants, each RED by behaviour):
 - MB4, a body's bindings outlive it: body_scope exits 14 (scoped 77).
 
 Per-row check (verify2b, 357 rows, scratch driver): 0 red.
+
+## c3b-3 plan (prep, not built): pointer own fields direct; an own Structure field is a direct slot
+
+Agreed with grok_bot -186, whose PUT_REF is walker op 24 with frame [put_ref, holder, slot, value]
+(branch fable/grokbot-186-putref-k2).  It lands with or after that op; the builder's slot layout is
+shared by native methods and the walked root, so both change in one commit.
+
+Measured on c3b-2 (7ce60f9):
+- The one gate is `l2_own_direct`, numbers only.  `l2_own_load` / `l2_own_addr` return 1 for a
+  pointer; `l2_own_store`'s template has no `(cast: (@: void) ...)` for one.
+- The builder makes every pointer own row a pointer cell: `l2_emit_cell_new`,
+  `lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + t)`.
+  - `@: T` reference fields are not own rows but namespace fields (kind 10/11, a separate builder
+    loop), so they stay cells without a test.
+  - Every Structure-typed own row has `ty = l2_own_of_dt(l2_colon_graph_ty())`.  The test is
+    `l2_colon_is_graph_ty(l2_dt_of_own(ty))`, which also covers untyped `receiveMessage: m` and `f()`.
+    `l2_own_nsty_get` covers typed rows only.
+- Native writes of an own Structure field, which become one helper (bind = `lmx_arena_ref_store(ctr,
+  uchild, g)`):
+  - receiveMessage / `T: m` (:20877);
+  - `Model: m` (:20913, via `l2_xp`);
+  - `f()` declaration (:20944);
+  - `f()` assignment (:20985);
+  - the S3 admitted rebinding (:21103, which then also falls through to the generic write);
+  - generic `m: expr` and the catch parameter (occ_write + the checkpoint).
+- Native reads, which become `lmx_arena_ref_struct(ctr, uchild)` for a Structure field and
+  `lmx_pointer_value_known(l2_q<k>_from[0])` for any other pointer:
+  - l2_own_spell;
+  - l2_canon_spell;
+  - l2_prefix_deref :7886 (no direct check today);
+  - `c.sizeof(l2_q%d)` :15216 (the declared working copy);
+  - the path-root load (`l2_emit_cell_load`'s pointer branch :14810);
+  - the prelude's initial load;
+  - the checkpoint's publication and reload.
+- `@x` of a Structure field: a direct slot has no pointer cell to take the address of.  Proposed:
+  refuse it by name of the reason («an own Structure field has no cell address»), unless a row needs
+  it.
+- Walked root:
+  - DEREF(AT(m)) becomes a direct slot read at :17367 (the path root) and :17753 (struct_arg);
+  - PUT(m, ...) becomes PUT_REF at :17483 (admit_assign), :17524/:17531 (take) and :17570 (model);
+  - AT reads of the cell at :17485, :17747 and :17820 (`m = 0`) follow;
+  - :17381, a kind-3 reference in a path, stays DEREF.
+- Harness:
+  - DEREF pins in unit_root_model_field, unit_field_path_unit_colon and
+    unit_matrix_callable_struct_identity;
+  - the pointer sticky pins in unit_arg_addr_pointer and unit_arg_addr_dyn_types, whose
+    `BindOrder` then has no sticky row left.  `Test-BindOrder` and the flag go.
+- The copier, shared with grok_bot: lmx_fresh copies a POINTER_BASE cell per instance.
+  - A direct slot holding a Structure bound in an earlier activation would be kept BY ADDRESS in a
+    re-entry's fresh instance: a Structure whose parent is not the code counts as a shared terminal.
+  - The fresh instance's own Structure slot must start empty (null), as the prototype's does.
+  - That is lmx_fresh's rule to add: an own Structure slot of the prototype becomes null, not shared.
+    The kernel is grok_bot's, joint with c3b-3.
+
+Witnesses planned:
+- Mutant: bind through a pointer cell while reading the slot.  unit_root_model_field and the
+  receive rows go RED.
+- Recursion with a `Model: m` field read after the inner call: each activation keeps its own m.

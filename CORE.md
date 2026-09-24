@@ -210,8 +210,8 @@ language operations, but a green test in one is not evidence for the other.
 A callable's body after `child[0]` preserves lexical fields and nested Frame
 Structures. Repeated fields are distinct occurrences, not one name-keyed
 runtime slot. The intended path selector `[N]field` identifies an occurrence;
-an unqualified path selects one occurrence by the semantics' occurrence
-rule (`merge` creates no repeats: it overrides the model's slot in place). A current translator path can still
+an unqualified path selects the last occurrence (`[lastIndex]`); `merge`
+creates no repeats, it overrides the model's slot in place. A current translator path can still
 collapse repeated same-name fields into one own slot and does not completely
 lower the selector. This is an [open core task](next_core_tasks.md),
 not a license to add a second runtime name table or journal.

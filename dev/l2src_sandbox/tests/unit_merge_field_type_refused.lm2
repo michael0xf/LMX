@@ -1,0 +1,18 @@
+Model:
+    size_t: x 1U
+end: Model
+
+Other:
+    int: x 2
+end: Other
+
+# FABLE-OPUS-MERGE-PARTS-20260926-193 T1 (the author's merge rule, plan §4): a later operand's field
+# goes INTO the model's field of its name when its type is the model field's.  Other's x is an int,
+# Model's a size_t: refused, located, rather than stored across types or kept as a second x.
+fn: m () int
+    R: merge: Model Other
+    return: 0
+end: m
+
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

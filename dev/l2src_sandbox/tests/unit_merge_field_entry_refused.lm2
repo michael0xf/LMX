@@ -1,0 +1,26 @@
+Point:
+    size_t: x 3U
+end: Point
+
+Size:
+    size_t: w 4U
+end: Size
+
+Model:
+    Point: at
+end: Model
+
+Other:
+    Size: at
+end: Other
+
+# FABLE-OPUS-MERGE-PARTS-20260926-193 T1 (the author's merge rule, plan §4): a later operand's field
+# goes INTO the model's field of its name when its type is the model field's.  Both `at` fields are
+# Structure references, but to different Structures (Point, Size): refused, located.
+fn: m () int
+    R: merge: Model Other
+    return: 0
+end: m
+
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

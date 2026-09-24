@@ -639,6 +639,7 @@ prototype:
     fn: l2_struct_local (const: @(LmP0Node stmt); @@: LmP0Text out_name) int
     fn: l2_lmx_text () @: LmP0Text
     fn: l2_text_skip (const: @(LmP0Text t); size_t: n) @: LmP0Text
+    fn: l2_ptr_type_word (const: @(LmP0Text word); int: depth; @: int out_ty) int
     fn: l2_ptr_local_ty (const: @(LmP0Node stmt); @@: LmP0Text out_name; @: int out_ty) int
     fn: l2_const_local_ty (const: @(LmP0Node stmt); @@: LmP0Text out_name; @: int out_ty) int
     fn: l2_foreign_intern (const: @(LmP0Text name); int: depth; int: is_const) int
@@ -659,7 +660,9 @@ prototype:
     fn: l2_predef_file_has_function (const: @(LmP0Text name); const: @(LmP0Text quoted)) int
     fn: l2_predef_has_function (const: @(LmP0Text name)) int
     fn: l2_resolve_type_atom (const: @(LmP0Text atom); int: depth; int: is_const; @: int out_ty) int
-    fn: l2_proto_ret_ty (const: @(LmP0Node rt); @: int out_ty) int
+    fn: l2_foreign_byvalue (const: @(LmP0Text t)) int
+    fn: l2_ret_type_word (const: @(LmP0Text word); int: depth; int: is_const; @: int out_ty) int
+    fn: l2_ret_type_node (const: @(LmP0Node rt); @: int out_ty) int
     fn: l2_predef_file_result_ty (const: @(LmP0Text name); const: @(LmP0Text quoted); @: int out_ty) int
     fn: l2_predef_result_ty (const: @(LmP0Text name); @: int out_ty) int
     fn: l2_foreign_free () int
@@ -4581,19 +4584,79 @@ fn: l2_predef_has_function (const: @(LmP0Text name)) int
     ---
 return: 0
 
-# FABLE-SONNET-PREDEF-RESULT-TYPE-20260924-160 commit 2 (steps/predef-
-# result-type-inventory.md): a predef'd function's return type, read from
-# the same prototype: declaration l2_predef_file_has_function already
-# re-parses for its yes/no existence check -- the narrow vocabulary the
-# corpus actually assigns (bare int/size_t/unsigned/ulong, void/absent
-# for sub:, @: char, @: void, a named-Structure atom). Anything else
-# (an exotic pointer depth, a const-qualified return, @@:) is left for a
-# future need to extend, not guessed at here: the caller falls back to
-# -10 exactly as it did before this ticket, the same fail-closed choice
-# l2_colon_simple_ty already made for every l2_is_known call.
-fn: l2_proto_ret_ty (const: @(LmP0Node rt); @: int out_ty) int
+# FABLE-SONNET-TYPE-WORD-FOLD-20260924-162 commit 2 (steps/type-word-fold-
+# inventory.md): the return-code word(+depth+const) -> code table, shared
+# by l2_collect_method's real-method return type (its own structural
+# validation -- body counts, "incompatible entry signature" vs "unknown
+# type" -- stays there; only the word lookup moves here) and
+# l2_ret_type_node below (for a predef'd prototype: declaration, which
+# has no structural context of its own to preserve). depth=0 is a
+# bare-value return (is_const never applies there); is_const only
+# matters at depth=1 (l2_collect_method's own const: (@: T) case; no
+# const @@: or deeper return exists in the corpus, measured). Returns
+# 0 = found (out_ty set), 1 = word not recognized (not one of the known
+# words at this depth/const combination, not a Structure name at
+# depth=0, and l2_foreign_byvalue/l2_resolve_type_atom also refused).
+fn: l2_ret_type_word (const: @(LmP0Text word); int: depth; int: is_const; @: int out_ty) int
+    if: out_ty = 0 || word = 0
+        return: 1
+    \out_ty: 0
+    if: depth = 0 && l2_text_eq(word, "int")
+        \out_ty: 0
+        return: 0
+    if: depth = 0 && l2_text_eq(word, "size_t")
+        \out_ty: 2
+        return: 0
+    if: depth = 0 && l2_text_eq(word, "unsigned")
+        \out_ty: 33
+        return: 0
+    if: depth = 0 && l2_text_eq(word, "ulong")
+        \out_ty: 36
+        return: 0
+    if: depth = 0 && l2_text_eq(word, "void")
+        \out_ty: 8
+        return: 0
+    if: depth = 0 && l2_text_eq(word, "LmxMsgAddr")
+        \out_ty: 33
+        return: 0
+    if: depth = 0 && l2_ns_find(word) >= 0
+        \out_ty: l2_colon_graph_ty()
+        if: \out_ty >= 100
+            return: 0
+        return: 1
+    if: depth = 0
+        \out_ty: l2_foreign_byvalue(word)
+        if: \out_ty >= 100
+            return: 0
+        return: 1
+    if: depth = 1 && is_const = 0 && l2_text_eq(word, "char")
+        \out_ty: 3
+        return: 0
+    if: depth = 1 && is_const != 0 && l2_text_eq(word, "char")
+        \out_ty: 35
+        return: 0
+    if: depth = 1 && is_const = 0 && l2_text_eq(word, "void")
+        \out_ty: 16
+        return: 0
+    if: depth = 2 && is_const = 0 && l2_text_eq(word, "char")
+        \out_ty: 32
+        return: 0
+    if: l2_resolve_type_atom(word, depth, is_const, out_ty) != 0
+        return: 1
+return: 0
+
+# The full return-type NODE, structural parsing included (const: (@: T),
+# depth>2, @:, @@:, bare atom) -- used where the caller has no structural
+# validation of its own to reuse (l2_predef_file_result_ty, a predef'd
+# prototype: declaration). l2_collect_method keeps its own structural
+# parsing (for its per-case "incompatible entry signature" errors) and
+# calls l2_ret_type_word directly once it already has word+depth+const.
+fn: l2_ret_type_node (const: @(LmP0Node rt); @: int out_ty) int
     @: LmP0Field inner_f
+    @: LmP0Field cf
     @: LmP0Node inner
+    @: LmP0Node cinner
+    int: depth
     if: out_ty = 0
         return: 1
     \out_ty: 8
@@ -4602,28 +4665,26 @@ fn: l2_proto_ret_ty (const: @(LmP0Node rt); @: int out_ty) int
     if: rt\kind = c.LM_P0_NODE_ATOM
         if: rt\as = 0 || rt\as\atom = 0
             return: 1
-        if: l2_text_eq(rt\as\atom, "int")
-            \out_ty: 0
-            return: 0
-        if: l2_text_eq(rt\as\atom, "size_t")
-            \out_ty: 2
-            return: 0
-        if: l2_text_eq(rt\as\atom, "unsigned")
-            \out_ty: 33
-            return: 0
-        if: l2_text_eq(rt\as\atom, "ulong")
-            \out_ty: 36
-            return: 0
-        if: l2_text_eq(rt\as\atom, "void")
-            \out_ty: 8
-            return: 0
-        if: l2_ns_find(rt\as\atom) >= 0
-            \out_ty: l2_colon_graph_ty()
-            return: 0
-        return: 1
+        return: l2_ret_type_word(rt\as\atom, 0, 0, out_ty)
     if: rt\kind != c.LM_P0_NODE_FRAME || rt\as = 0 || rt\as\frame = 0
         return: 1
-    if: l2_frame_head(rt, "@") = 0
+    if: l2_frame_head(rt, "const") != 0
+        if: rt\as\frame\body = 0 || l2_count_active(rt\as\frame\body) != 1
+            return: 1
+        cf: l2_next_active(rt\as\frame\body\first_field)
+        if: cf = 0 || cf\value = 0
+            return: 1
+        cinner: cf\value
+        if: cinner\kind != c.LM_P0_NODE_FRAME || cinner\as = 0 || cinner\as\frame = 0 || l2_frame_head(cinner, "@") = 0
+            return: 1
+        if: cinner\as\frame\body = 0 || l2_count_active(cinner\as\frame\body) != 1
+            return: 1
+        inner_f: l2_next_active(cinner\as\frame\body\first_field)
+        if: inner_f = 0 || inner_f\value = 0 || inner_f\value\kind != c.LM_P0_NODE_ATOM || inner_f\value\as = 0 || inner_f\value\as\atom = 0
+            return: 1
+        return: l2_ret_type_word(inner_f\value\as\atom, 1, 1, out_ty)
+    depth: l2_address_depth(rt\as\frame\head)
+    if: depth < 1 || depth > 2
         return: 1
     if: rt\as\frame\body = 0 || l2_count_active(rt\as\frame\body) != 1
         return: 1
@@ -4633,15 +4694,7 @@ fn: l2_proto_ret_ty (const: @(LmP0Node rt); @: int out_ty) int
     inner: inner_f\value
     if: inner = 0 || inner\kind != c.LM_P0_NODE_ATOM || inner\as = 0 || inner\as\atom = 0
         return: 1
-    if: l2_text_eq(inner\as\atom, "char")
-        \out_ty: 3
-        return: 0
-    if: l2_text_eq(inner\as\atom, "void")
-        \out_ty: 16
-        return: 0
-    if: l2_resolve_type_atom(inner\as\atom, 1, 0, out_ty) != 0
-        return: 1
-return: 0
+return: l2_ret_type_word(inner\as\atom, depth, 0, out_ty)
 
 fn: l2_predef_file_result_ty (const: @(LmP0Text name); const: @(LmP0Text quoted); @: int out_ty) int
     size_t: n
@@ -4688,7 +4741,7 @@ fn: l2_predef_file_result_ty (const: @(LmP0Text name); const: @(LmP0Text quoted)
                                 rtnode: 0
                                 if: rtf != 0
                                     rtnode: rtf\value
-                                if: l2_proto_ret_ty(rtnode, out_ty) != 0
+                                if: l2_ret_type_node(rtnode, out_ty) != 0
                                     \out_ty: -10
                                 found: 1
                             ---
@@ -5040,6 +5093,71 @@ fn: l2_text_skip (const: @(LmP0Text t); size_t: n) @: LmP0Text
     r\length: t\length - n
 return: r
 
+# FABLE-SONNET-TYPE-WORD-FOLD-20260924-162 commit 2 (steps/type-word-fold-
+# inventory.md): the pointer-local word+depth -> code table, shared
+# byte-identically (measured, commit 1) by l2_ptr_local_ty, l2_own_array_
+# pointer_ty and l2_typed_formal's @:/@@: blocks -- one function instead
+# of three copies. Callers already validated the SHAPE (a `@: T name` /
+# `@@: T name`-like frame at a nonzero depth) before reaching here, so
+# this only ever answers for the WORD: 0 = found (out_ty set); 2 = word
+# not one of the six core words at this depth, not a known Structure
+# name, not a c.* door name, OR recognized as an attempted Structure/
+# foreign name but l2_foreign_intern itself failed (l2_ptr_local_ty's
+# own exact convention -- verified against its original inline chain,
+# which returns 2 here, never 1; 1 is reserved by its callers for the
+# shape check, never produced by the word lookup itself).
+fn: l2_ptr_type_word (const: @(LmP0Text word); int: depth; @: int out_ty) int
+    if: out_ty = 0 || word = 0
+        return: 2
+    \out_ty: 0
+    if: depth = 1 && l2_text_eq(word, "char")
+        \out_ty: 12
+        return: 0
+    if: depth = 1 && l2_text_eq(word, "size_t")
+        \out_ty: 9
+        return: 0
+    if: depth = 1 && l2_text_eq(word, "int")
+        \out_ty: 11
+        return: 0
+    if: depth = 1 && l2_text_eq(word, "void")
+        \out_ty: 16
+        return: 0
+    if: depth = 1 && l2_text_eq(word, "unsigned")
+        \out_ty: 25
+        return: 0
+    if: depth = 1 && l2_text_eq(word, "ulong")
+        \out_ty: 38
+        return: 0
+    if: depth = 2 && l2_text_eq(word, "char")
+        \out_ty: 17
+        return: 0
+    if: depth = 2 && l2_text_eq(word, "size_t")
+        \out_ty: 20
+        return: 0
+    if: depth = 2 && l2_text_eq(word, "int")
+        \out_ty: 19
+        return: 0
+    if: depth = 2 && l2_text_eq(word, "void")
+        \out_ty: 18
+        return: 0
+    if: depth = 2 && l2_text_eq(word, "unsigned")
+        \out_ty: 24
+        return: 0
+    if: depth = 2 && l2_text_eq(word, "ulong")
+        \out_ty: 39
+        return: 0
+    if: l2_ns_find(word) >= 0
+        \out_ty: l2_foreign_intern(l2_lmx_text(), depth + 1, 0)
+        if: \out_ty >= 100
+            return: 0
+        return: 2
+    if: l2_c_door(word) != 0
+        \out_ty: l2_foreign_intern(l2_text_skip(word, 2U), depth, 0)
+        if: \out_ty >= 100
+            return: 0
+        return: 2
+return: 2
+
 fn: l2_ptr_local_ty (const: @(LmP0Node stmt); @@: LmP0Text out_name; @: int out_ty) int
     @: LmP0Field f
     @: LmP0Field g
@@ -5066,66 +5184,7 @@ fn: l2_ptr_local_ty (const: @(LmP0Node stmt); @@: LmP0Text out_name; @: int out_
     if: g = 0 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || l2_ident(g\value\as\atom) = 0
         return: 1
     \out_name: g\value\as\atom
-    if: depth = 2
-        if: l2_text_eq(f\value\as\atom, "char")
-            \out_ty: 17
-            return: 0
-        if: l2_text_eq(f\value\as\atom, "void")
-            \out_ty: 18
-            return: 0
-        if: l2_text_eq(f\value\as\atom, "int")
-            \out_ty: 19
-            return: 0
-        if: l2_text_eq(f\value\as\atom, "size_t")
-            \out_ty: 20
-            return: 0
-        if: l2_text_eq(f\value\as\atom, "unsigned")
-            \out_ty: 24
-            return: 0
-        if: l2_text_eq(f\value\as\atom, "ulong")
-            \out_ty: 39
-            return: 0
-        if: l2_ns_find(f\value\as\atom) >= 0
-            \out_ty: l2_foreign_intern(l2_lmx_text(), 3, 0)
-            if: \out_ty >= 100
-                return: 0
-            return: 2
-        if: l2_c_door(f\value\as\atom) != 0
-            \out_ty: l2_foreign_intern(l2_text_skip(f\value\as\atom, 2U), 2, 0)
-            if: \out_ty >= 100
-                return: 0
-            return: 2
-        return: 2
-    ---
-    if: depth = 1 && l2_text_eq(f\value\as\atom, "char")
-        \out_ty: 12
-        return: 0
-    if: depth = 1 && l2_text_eq(f\value\as\atom, "size_t")
-        \out_ty: 9
-        return: 0
-    if: depth = 1 && l2_text_eq(f\value\as\atom, "int")
-        \out_ty: 11
-        return: 0
-    if: depth = 1 && l2_text_eq(f\value\as\atom, "void")
-        \out_ty: 16
-        return: 0
-    if: depth = 1 && l2_text_eq(f\value\as\atom, "unsigned")
-        \out_ty: 25
-        return: 0
-    if: depth = 1 && l2_text_eq(f\value\as\atom, "ulong")
-        \out_ty: 38
-        return: 0
-    if: l2_ns_find(f\value\as\atom) >= 0
-        \out_ty: l2_foreign_intern(l2_lmx_text(), depth + 1, 0)
-        if: \out_ty >= 100
-            return: 0
-        return: 2
-    if: l2_c_door(f\value\as\atom) != 0
-        \out_ty: l2_foreign_intern(l2_text_skip(f\value\as\atom, 2U), depth, 0)
-        if: \out_ty >= 100
-            return: 0
-        return: 2
-return: 2
+return: l2_ptr_type_word(f\value\as\atom, depth, out_ty)
 
 fn: l2_const_local_ty (const: @(LmP0Node stmt); @@: LmP0Text out_name; @: int out_ty) int
     @: LmP0Field f
@@ -7926,6 +7985,7 @@ fn: l2_own_array_pointer_ty (const: @(LmP0Node stmt)) int
     const: @: LmP0Node wrapper
     const: @: LmP0Node ptr
     int: depth
+    int: result 0
     if: l2_frame_head(stmt, "[]") = 0 || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\body = 0
         return: 0
     f: l2_next_active(stmt\as\frame\body\first_field)
@@ -7946,35 +8006,13 @@ fn: l2_own_array_pointer_ty (const: @(LmP0Node stmt)) int
     f: l2_next_active(ptr\as\frame\body\first_field)
     if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM
         return: 0
-    if: depth = 1 && l2_text_eq(f\value\as\atom, "char")
-        return: 12
-    if: depth = 1 && l2_text_eq(f\value\as\atom, "size_t")
-        return: 9
-    if: depth = 1 && l2_text_eq(f\value\as\atom, "int")
-        return: 11
-    if: depth = 1 && l2_text_eq(f\value\as\atom, "void")
-        return: 16
-    if: depth = 1 && l2_text_eq(f\value\as\atom, "unsigned")
-        return: 25
-    if: depth = 1 && l2_text_eq(f\value\as\atom, "ulong")
-        return: 38
-    if: depth = 2 && l2_text_eq(f\value\as\atom, "char")
-        return: 17
-    if: depth = 2 && l2_text_eq(f\value\as\atom, "size_t")
-        return: 20
-    if: depth = 2 && l2_text_eq(f\value\as\atom, "int")
-        return: 19
-    if: depth = 2 && l2_text_eq(f\value\as\atom, "void")
-        return: 18
-    if: depth = 2 && l2_text_eq(f\value\as\atom, "unsigned")
-        return: 24
-    if: depth = 2 && l2_text_eq(f\value\as\atom, "ulong")
-        return: 39
-    if: l2_ns_find(f\value\as\atom) >= 0
-        return: l2_foreign_intern(l2_lmx_text(), depth + 1, 0)
-    if: l2_c_door(f\value\as\atom) != 0
-        return: l2_foreign_intern(l2_text_skip(f\value\as\atom, 2U), depth, 0)
-return: 0
+    # FABLE-SONNET-TYPE-WORD-FOLD-20260924-162 commit 2: l2_ptr_type_word's out-param
+    # already carries exactly what this function used to return in every case (a core
+    # code, l2_foreign_intern's raw result whether >=100 or not -- this function never
+    # checked that threshold itself -- or 0 when nothing matched at all); its 0-vs-2
+    # status is not needed here.
+    l2_ptr_type_word(f\value\as\atom, depth, @ result)
+return: result
 
 fn: l2_own_decl_name (const: @(LmP0Node stmt)) @: LmP0Text
     @: LmP0Field f l2_next_active(stmt\as\frame\body\first_field)
@@ -8865,9 +8903,14 @@ fn: l2_c_stmt_door (const: @(LmP0Text t)) int
         return: 0
 return: 1
 
-# The primitive type words: a type operand of sizeof:, never a lexical reference.
+# The primitive type words: a type operand of sizeof:, never a lexical
+# reference. FABLE-SONNET-TYPE-WORD-FOLD-20260924-162 commit 2: thin
+# wrapper over the shared pointer-local word-matcher (l2_ptr_type_word's
+# depth=1 table already has exactly these six words; depth=2 would add
+# nothing not already covered).
 fn: l2_prim_type_word (const: @(LmP0Text t)) int
-return: l2_text_eq(t, "int") || l2_text_eq(t, "char") || l2_text_eq(t, "size_t") || l2_text_eq(t, "unsigned") || l2_text_eq(t, "ulong") || l2_text_eq(t, "void")
+    int: dummy_ty 0
+return: l2_ptr_type_word(t, 1, @ dummy_ty) = 0
 
 # Constants supplied by a predef C seam retain conventional uppercase
 # spelling. They are compile-time names, not lexical graph dependencies; the
@@ -12460,33 +12503,26 @@ fn: l2_typed_formal (const: @(LmP0Node node); const: @(char path); @@: LmP0Text 
             return: l2_error(path, node, "incompatible entry signature")
         if: g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || l2_ident(g\value\as\atom) = 0
             return: l2_error(path, node, "incompatible entry signature")
-        if: l2_text_eq(f\value\as\atom, "char")
-            \out_ty: 17
+        # FABLE-SONNET-TYPE-WORD-FOLD-20260924-162 commit 2: the six core words
+        # (char/void/int/unsigned/ulong/size_t) via the shared pointer-local table;
+        # this formal's own extra named kernel types stay here, not in the shared
+        # function (l2_ptr_local_ty/l2_own_array_pointer_ty never recognized them).
+        if: l2_ptr_type_word(f\value\as\atom, 2, out_ty) = 0
             \out_name: g\value\as\atom
             return: 0
-        if: l2_text_eq(f\value\as\atom, "void")
-            \out_ty: 18
-            \out_name: g\value\as\atom
-            return: 0
-        if: l2_text_eq(f\value\as\atom, "int")
-            \out_ty: 19
-            \out_name: g\value\as\atom
-            return: 0
-        if: l2_text_eq(f\value\as\atom, "unsigned")
-            \out_ty: 24
-            \out_name: g\value\as\atom
-            return: 0
-        if: l2_text_eq(f\value\as\atom, "ulong")
-            \out_ty: 39
-            \out_name: g\value\as\atom
-            return: 0
+        # D-42 FIXED (steps/defects.md): the LmxMsgBlock branch below was missing
+        # its own return: 0 (fell through into the LmxArenaBlock check instead of
+        # returning with ty=26 immediately), and LmxArenaBlock's branch carried a
+        # stray doubled return: 0 right after it -- one line landed one if: block
+        # too high. Fixed in place, not folded into the shared function (only this
+        # site names these two kernel block types).
         if: l2_text_eq(f\value\as\atom, "LmxMsgBlock")
             \out_ty: 26
             \out_name: g\value\as\atom
+            return: 0
         if: l2_text_eq(f\value\as\atom, "LmxArenaBlock")
             \out_ty: 26
             \out_name: g\value\as\atom
-            return: 0
             return: 0
         if: l2_text_eq(f\value\as\atom, "LmxOwnedRange")
             \out_ty: 27
@@ -12494,10 +12530,6 @@ fn: l2_typed_formal (const: @(LmP0Node node); const: @(char path); @@: LmP0Text 
             return: 0
         if: l2_text_eq(f\value\as\atom, "LmxMsgCopy")
             \out_ty: 31
-            \out_name: g\value\as\atom
-            return: 0
-        if: l2_text_eq(f\value\as\atom, "size_t")
-            \out_ty: 20
             \out_name: g\value\as\atom
             return: 0
         if: l2_resolve_type_atom(f\value\as\atom, 2, 0, out_ty) != 0
@@ -12513,28 +12545,10 @@ fn: l2_typed_formal (const: @(LmP0Node node); const: @(char path); @@: LmP0Text 
             return: l2_error(path, node, "incompatible entry signature")
         if: g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || l2_ident(g\value\as\atom) = 0
             return: l2_error(path, node, "incompatible entry signature")
-        if: l2_text_eq(f\value\as\atom, "size_t")
-            \out_ty: 9
-            \out_name: g\value\as\atom
-            return: 0
-        if: l2_text_eq(f\value\as\atom, "int")
-            \out_ty: 11
-            \out_name: g\value\as\atom
-            return: 0
-        if: l2_text_eq(f\value\as\atom, "unsigned")
-            \out_ty: 25
-            \out_name: g\value\as\atom
-            return: 0
-        if: l2_text_eq(f\value\as\atom, "ulong")
-            \out_ty: 38
-            \out_name: g\value\as\atom
-            return: 0
-        if: l2_text_eq(f\value\as\atom, "char")
-            \out_ty: 12
-            \out_name: g\value\as\atom
-            return: 0
-        if: l2_text_eq(f\value\as\atom, "void")
-            \out_ty: 16
+        # FABLE-SONNET-TYPE-WORD-FOLD-20260924-162 commit 2: the six core words
+        # via the shared pointer-local table (below, L2ImmutQuery is this
+        # formal's own extra case, unchanged).
+        if: l2_ptr_type_word(f\value\as\atom, 1, out_ty) = 0
             \out_name: g\value\as\atom
             return: 0
         if: l2_text_eq(f\value\as\atom, "L2ImmutQuery") = 0
@@ -12909,19 +12923,21 @@ fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path)) int
         l2_m_ret[l2_m_n]: 8
     if: is_sub = 0 && field\value = 0
         return: l2_error(path, fn_node, "incompatible entry signature")
-    if: is_sub = 0 && field\value\kind = c.LM_P0_NODE_ATOM && l2_text_eq(field\value\as\atom, "int")
-        l2_m_ret[l2_m_n]: 0
-    if: is_sub = 0 && field\value\kind = c.LM_P0_NODE_ATOM && l2_text_eq(field\value\as\atom, "size_t")
-        l2_m_ret[l2_m_n]: 2
-    if: is_sub = 0 && field\value\kind = c.LM_P0_NODE_ATOM && l2_text_eq(field\value\as\atom, "unsigned")
-        l2_m_ret[l2_m_n]: 33
-    if: is_sub = 0 && field\value\kind = c.LM_P0_NODE_ATOM && l2_text_eq(field\value\as\atom, "ulong")
-        l2_m_ret[l2_m_n]: 36
-    if: is_sub = 0 && field\value\kind = c.LM_P0_NODE_ATOM && l2_text_eq(field\value\as\atom, "void")
-        l2_m_ret[l2_m_n]: 8
-    # The Message address of the Message runtime adapter, unsigned. (Old name LmxMsgAddr — folded to unsigned.)
-    if: is_sub = 0 && field\value\kind = c.LM_P0_NODE_ATOM && l2_text_eq(field\value\as\atom, "LmxMsgAddr")
-        l2_m_ret[l2_m_n]: 33
+    # FABLE-SONNET-TYPE-WORD-FOLD-20260924-162 commit 2 (steps/type-word-fold-
+    # inventory.md): the bare-atom return word (int/size_t/unsigned/ulong/
+    # void/LmxMsgAddr), the named-Structure return, and the by-value-foreign
+    # fallback are one call to the shared l2_ret_type_word (depth=0) now,
+    # instead of three separate chains; l2_nsty_set's own side effect (which
+    # Structure specifically) stays here, unique to a registered method.
+    if: is_sub = 0 && field\value\kind = c.LM_P0_NODE_ATOM
+        int: ret_code_a 0
+        if: l2_ret_type_word(field\value\as\atom, 0, 0, @ ret_code_a) != 0
+            return: l2_error(path, field\value, "unknown type")
+        ---
+        l2_m_ret[l2_m_n]: ret_code_a
+        if: l2_ns_find(field\value\as\atom) >= 0 && l2_nsty_set(l2_m_n, 0 - 1, l2_ns_find(field\value\as\atom)) != 0
+            return: l2_error(path, fn_node, "out of memory")
+        ---
     if: is_sub = 0 && field\value\kind = c.LM_P0_NODE_FRAME && field\value\as != 0 && field\value\as\frame != 0
         return_depth: l2_address_depth(field\value\as\frame\head)
     # A const-qualified pointer return is the same pointer value at runtime,
@@ -12940,14 +12956,10 @@ fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path)) int
         rbase: l2_next_active(rty\as\frame\body\first_field)\value
         if: rbase = 0 || rbase\kind != c.LM_P0_NODE_ATOM
             return: l2_error(path, fn_node, "incompatible entry signature")
-        if: l2_text_eq(rbase\as\atom, "char")
-            l2_m_ret[l2_m_n]: 35
-        else:
-            int: rty_code_c 0
-            if: l2_resolve_type_atom(rbase\as\atom, 1, 1, @ rty_code_c) != 0
-                return: l2_error(path, rbase, "unknown type")
-            l2_m_ret[l2_m_n]: rty_code_c
-            ---
+        int: rty_code_c 0
+        if: l2_ret_type_word(rbase\as\atom, 1, 1, @ rty_code_c) != 0
+            return: l2_error(path, rbase, "unknown type")
+        l2_m_ret[l2_m_n]: rty_code_c
         return_depth: 0 - 1
         ---
     if: is_sub = 0 && return_depth > 2
@@ -12957,7 +12969,7 @@ fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path)) int
         if: rty = 0 || rty\kind != c.LM_P0_NODE_ATOM
             return: l2_error(path, fn_node, "incompatible entry signature")
         int: rty_code_d 0
-        if: l2_resolve_type_atom(rty\as\atom, return_depth, 0, @ rty_code_d) != 0
+        if: l2_ret_type_word(rty\as\atom, return_depth, 0, @ rty_code_d) != 0
             return: l2_error(path, rty, "unknown type")
         l2_m_ret[l2_m_n]: rty_code_d
         ---
@@ -12967,15 +12979,10 @@ fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path)) int
         rty: l2_next_active(field\value\as\frame\body\first_field)\value
         if: rty = 0 || rty\kind != c.LM_P0_NODE_ATOM
             return: l2_error(path, fn_node, "incompatible entry signature")
-        if: l2_text_eq(rty\as\atom, "char")
-            l2_m_ret[l2_m_n]: 3
-        if: l2_text_eq(rty\as\atom, "void")
-            l2_m_ret[l2_m_n]: 16
-        if: l2_text_eq(rty\as\atom, "char") = 0 && l2_text_eq(rty\as\atom, "void") = 0
-            int: rty_code 0
-            if: l2_resolve_type_atom(rty\as\atom, 1, 0, @ rty_code) != 0
-                return: l2_error(path, rty, "unknown type")
-            l2_m_ret[l2_m_n]: rty_code
+        int: rty_code 0
+        if: l2_ret_type_word(rty\as\atom, 1, 0, @ rty_code) != 0
+            return: l2_error(path, rty, "unknown type")
+        l2_m_ret[l2_m_n]: rty_code
         ---
     if: is_sub = 0 && l2_frame_head(field\value, "@@")
         if: field\value\as\frame\body = 0 || l2_count_active(field\value\as\frame\body) != 1
@@ -12983,28 +12990,12 @@ fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path)) int
         rty: l2_next_active(field\value\as\frame\body\first_field)\value
         if: rty = 0 || rty\kind != c.LM_P0_NODE_ATOM
             return: l2_error(path, fn_node, "incompatible entry signature")
-        if: l2_text_eq(rty\as\atom, "char")
-            l2_m_ret[l2_m_n]: 32
-        else:
-            int: rty_code2 0
-            if: l2_resolve_type_atom(rty\as\atom, 2, 0, @ rty_code2) != 0
-                return: l2_error(path, rty, "unknown type")
-            l2_m_ret[l2_m_n]: rty_code2
+        int: rty_code2 0
+        if: l2_ret_type_word(rty\as\atom, 2, 0, @ rty_code2) != 0
+            return: l2_error(path, rty, "unknown type")
+        l2_m_ret[l2_m_n]: rty_code2
         ---
     ---
-    if: is_sub = 0 && field\value\kind = c.LM_P0_NODE_ATOM && l2_ns_find(field\value\as\atom) >= 0
-        l2_m_ret[l2_m_n]: l2_colon_graph_ty()
-        if: l2_m_ret[l2_m_n] < 100
-            return: l2_error(path, fn_node, "out of memory")
-        if: l2_nsty_set(l2_m_n, 0 - 1, l2_ns_find(field\value\as\atom)) != 0
-            return: l2_error(path, fn_node, "out of memory")
-        ---
-    # By-value foreign return: `c.T` only. Bare foreign names are unknown type.
-    if: is_sub = 0 && field\value\kind = c.LM_P0_NODE_ATOM && l2_ns_find(field\value\as\atom) < 0 && l2_text_eq(field\value\as\atom, "int") = 0 && l2_text_eq(field\value\as\atom, "size_t") = 0 && l2_text_eq(field\value\as\atom, "unsigned") = 0 && l2_text_eq(field\value\as\atom, "ulong") = 0 && l2_text_eq(field\value\as\atom, "void") = 0 && l2_text_eq(field\value\as\atom, "LmxMsgAddr") = 0
-        l2_m_ret[l2_m_n]: l2_foreign_byvalue(field\value\as\atom)
-        if: l2_m_ret[l2_m_n] < 100
-            return: l2_error(path, field\value, "unknown type")
-        ---
     if: is_sub = 0 && field\value\kind != c.LM_P0_NODE_ATOM && return_depth = 0
         return: l2_error(path, fn_node, "incompatible entry signature")
     ret_node: 0

@@ -653,8 +653,8 @@ prototype:
     fn: l2_char_literal (const: @(LmP0Text t)) int
     fn: l2_take_ns_body (const: @(LmP0Text name); int: parent; const: @(LmP0Structure body); const: @(LmP0Node at); const: @(char path)) int
     fn: l2_mrs_push (int: res; const: @(LmP0Text name); int: kind; int: ent; int: vk; size_t: val) int
-    fn: l2_mrs_take_entry (int: res; int: k; int: ni; int: model_w; const: @(LmP0Node at)) int
-    fn: l2_mrs_take_result (int: res; int: k; int: src; int: model_w; const: @(LmP0Node at)) int
+    fn: l2_mrs_take_entry (int: res; int: k; int: ni; const: @(LmP0Node at)) int
+    fn: l2_mrs_take_result (int: res; int: k; int: src; const: @(LmP0Node at)) int
     fn: l2_first_own_child (int: mi) int
     fn: l2_head_is_call (const: @(LmP0Text t); const: @(LmP0Structure body); unsigned: flags; int: mi) int
     fn: l2_head_method (const: @(LmP0Text t)) int
@@ -11613,11 +11613,12 @@ return: slot
 
 # Field j of operand k joins merge result res by the author's rule (plan §4).  The model's
 # fields (k = 0) are the first rows, its own repeats included.  A later field whose name a
-# model row carries goes INTO that row -- the last such row, the one `merged\x` names --
-# when its type is the row's; any other later field is a row of its own.  A later field
-# repeating a name an earlier operand ADDED would need a pair into an appended slot, which
-# the kernel does not take yet (-193 K1): refused here.
-fn: l2_mrs_join (int: res; int: k; int: j; const: @(LmP0Text name); int: kind; int: ent; int: vk; size_t: val; int: model_w; const: @(LmP0Node at)) int
+# placed row carries -- the model's (the last such row, the one `merged\x` names) or one an
+# earlier operand added -- goes INTO that row when its type is the row's; any other later
+# field is a row of its own.  So merge makes no repeated names.  The body joins last, as
+# operand n (the kernel's `operand = count`, -194 K1); pairs apply in this order, so a later
+# operand's value wins.
+fn: l2_mrs_join (int: res; int: k; int: j; const: @(LmP0Text name); int: kind; int: ent; int: vk; size_t: val; const: @(LmP0Node at)) int
     int: r 0
     int: slotix 0
     int: hit 0 - 1
@@ -11630,8 +11631,6 @@ fn: l2_mrs_join (int: res; int: k; int: j; const: @(LmP0Text name); int: kind; i
             slotix: slotix + 1
         r: r + 1
     ---
-    if: hit >= model_w
-        return: l2_error(l2_src, at, "a merge operand field repeats a field an earlier operand added")
     if: hit >= 0 && l2_mrs_kind[hr] != kind
         return: l2_error(l2_src, at, "a merge operand field has another type than the model field of its name")
     if: hit >= 0 && kind >= 2 && kind <= 6 && l2_mrs_ent[hr] != ent
@@ -11645,7 +11644,7 @@ fn: l2_mrs_join (int: res; int: k; int: j; const: @(LmP0Text name); int: kind; i
 return: l2_mrs_push(res, name, kind, ent, vk, val)
 
 # Every field of one declaration joins merge result res as operand k, in declared order.
-fn: l2_mrs_take_entry (int: res; int: k; int: ni; int: model_w; const: @(LmP0Node at)) int
+fn: l2_mrs_take_entry (int: res; int: k; int: ni; const: @(LmP0Node at)) int
     int: q 0
     int: j 0
     int: vk 0
@@ -11656,7 +11655,7 @@ fn: l2_mrs_take_entry (int: res; int: k; int: ni; int: model_w; const: @(LmP0Nod
                 vk: 1
             if: l2_nsf_kind[q] = 1
                 vk: 2
-            if: l2_mrs_join(res, k, j, l2_nsf_fname[q], l2_nsf_kind[q], l2_nsf_ref[q], vk, l2_nsf_val[q], model_w, at) != 0
+            if: l2_mrs_join(res, k, j, l2_nsf_fname[q], l2_nsf_kind[q], l2_nsf_ref[q], vk, l2_nsf_val[q], at) != 0
                 return: 1
             j: j + 1
         ---
@@ -11665,14 +11664,14 @@ fn: l2_mrs_take_entry (int: res; int: k; int: ni; int: model_w; const: @(LmP0Nod
 return: 0
 
 # The rows an already bound result contributes when it is itself operand k.
-fn: l2_mrs_take_result (int: res; int: k; int: src; int: model_w; const: @(LmP0Node at)) int
+fn: l2_mrs_take_result (int: res; int: k; int: src; const: @(LmP0Node at)) int
     int: r 0
     int: j 0
     int: n
     n: l2_mrs_n
     while: r < n
         if: l2_mrs_res[r] = src
-            if: l2_mrs_join(res, k, j, l2_mrs_name[r], l2_mrs_kind[r], l2_mrs_ent[r], l2_mrs_vk[r], l2_mrs_val[r], model_w, at) != 0
+            if: l2_mrs_join(res, k, j, l2_mrs_name[r], l2_mrs_kind[r], l2_mrs_ent[r], l2_mrs_vk[r], l2_mrs_val[r], at) != 0
                 return: 1
             j: j + 1
         ---
@@ -19641,8 +19640,8 @@ fn: l2_reenters (int: caller; int: callee) int
 return: l2_m_reach[l2_edge_off(callee, caller)] != 0
 
 # Build the result-slot map for one merge statement by the author's rule (plan §4): the
-# model's fields, then each later operand's -- INTO the model's slot of the same name, or
-# a slot of its own -- then the body fields. Runs in the PRE-SCAN, because a method
+# model's fields, then each later operand's and the body's -- INTO the placed slot of the
+# same name, or a slot of their own. Runs in the PRE-SCAN, because a method
 # lowered before the entry E may already read a field of the result.
 fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
     const: @: LmP0Frame fr
@@ -19655,12 +19654,10 @@ fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
     int: oi
     int: ni
     int: sl
-    int: model_w 0
+    int: bj 0
     int: pairs 0
     int: q 0
     int: vk
-    int: dk 0
-    int: de 0
     size_t: val
     if: mf = 0 || mf\as = 0 || mf\as\frame = 0 || mf\as\frame\body = 0
         return: 0
@@ -19675,14 +19672,12 @@ fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
         if: ni >= 0 && l2_ns_parent[ni] >= 0
             ni: 0 - 1
         sl: l2_mres_find(last\value\as\atom)
-        if: oi >= 0 && l2_mrs_take_entry(res, k, l2_ebr_root(oi), model_w, last\value) != 0
+        if: oi >= 0 && l2_mrs_take_entry(res, k, l2_ebr_root(oi), last\value) != 0
             return: 1
-        if: oi < 0 && ni >= 0 && l2_mrs_take_entry(res, k, ni, model_w, last\value) != 0
+        if: oi < 0 && ni >= 0 && l2_mrs_take_entry(res, k, ni, last\value) != 0
             return: 1
-        if: oi < 0 && ni < 0 && sl >= 0 && l2_mrs_take_result(res, k, sl, model_w, last\value) != 0
+        if: oi < 0 && ni < 0 && sl >= 0 && l2_mrs_take_result(res, k, sl, last\value) != 0
             return: 1
-        if: k = 0
-            model_w: l2_mrs_width(res)
         last: l2_next_active(last\next)
         k: k + 1
     ---
@@ -19696,18 +19691,15 @@ fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
         bv: l2_next_active(bf\value\as\frame\body\first_field)
         if: bv = 0 || bv\value = 0 || bv\value\kind != c.LM_P0_NODE_ATOM
             return: 0
-        # A body field naming a slot the operands gave would go INTO it: the body as a pair
-        # source is the kernel's (-193 K1), not there yet.
-        if: l2_mrs_slot_named(res, bv\value\as\atom\data, 0U, bv\value\as\atom\length, @ dk, @ de) >= 0
-            return: l2_error(l2_src, bf\value, "a merge result body field repeats a field of the operands")
         vk: 0
         val: 0U
         if: l2_next_active(bv\next) != 0 && l2_next_active(bv\next)\value != 0 && l2_next_active(bv\next)\value\kind = c.LM_P0_NODE_ATOM && l2_num(l2_next_active(bv\next)\value\as\atom) != 0
             vk: 1
             val: l2_literal_value(l2_next_active(bv\next)\value\as\atom)
         ---
-        if: l2_mrs_push(res, bv\value\as\atom, 0, 0 - 1, vk, val) != 0
+        if: l2_mrs_join(res, n, bj, bv\value\as\atom, 0, 0 - 1, vk, val, bf\value) != 0
             return: 1
+        bj: bj + 1
         bf: l2_next_active(bf\next)
     ---
     l2_mres_width[res]: l2_mrs_width(res)

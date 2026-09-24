@@ -490,3 +490,36 @@ Witnesses:
 - main's translator, which still has the spelling rule, turns three of the four rows red (gcc,
   translates, translates);
 - the mutant `l2_define_name` → 0 refuses unit_define_actual («unresolved dynamic=PROBE_DEFINE_FG»).
+
+## 8. T2: pairs from the body and into appended slots (branch opus/merge-193-t2, base d877738)
+
+Sonnet's K1 (-194 k.2, main d877738):
+- the body is a pair source (`operand = count`);
+- a pair may target any placed slot;
+- the unpaired fields append in operand order, then the body's;
+- pairs apply last, in array order, so a later duplicate target wins;
+- a duplicate source is INVALID;
+- the result's children are re-parented.
+
+l2trans.lm1:
+- `l2_mrs_join` pairs a later field into ANY placed row of its name: the model's (its last one), or
+  one an earlier operand added.  T1's refusal «a merge operand field repeats a field an earlier
+  operand added» is gone.
+- The body joins through the same `l2_mrs_join` as operand n.  T1's refusal «a merge result body
+  field repeats a field of the operands» is gone.
+  - Body fields are now in the source table too, so `l2_msrc_at` skips an operand field the body
+    overwrote.
+  - A pair's operand is `n` for the body; the emission is unchanged.
+- The `model_w` parameter is gone from `l2_mrs_join`, `l2_mrs_take_entry` and `l2_mrs_take_result`.
+- The type refusals stay (kind, and the entry for kinds 2-6).
+- The rows hold no repeats but the model's own, so `merged\x` is the one slot and `[N]` is unchanged.
+
+Rows:
+- unit_merge_added_repeat_refused → unit_merge_added_repeat.  Eternal-runs, 4: `merge: Model B C`,
+  where C's z goes into B's appended z, so `R\z` = `R\[0]z` = 3 and the width is 2.
+- unit_merge_body_repeat_refused → unit_merge_body_repeat.  Eternal-runs, 19:
+  - R's body x goes into Model's x, so `R\x` = `R\[0]x` = 5;
+  - S's body z goes into B's appended z (9), and w is new.
+- Mutants:
+  - the body appended instead of joined: body_repeat exits 83;
+  - only model slots matchable: added_repeat exits 83.

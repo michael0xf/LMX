@@ -846,13 +846,18 @@ $fixtures = @(
                  'if: l2_mresult\len != 3') },
     [pscustomobject]@{ Name = 'unit_merge_occurrence_range_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'merge occurrence index out of range'; Absent = @(); Debt = @() },
-    # -193 T1: what the kernel's pairs do not take yet (-193 K1) is refused, located -- a later field
-    # repeating a name an earlier operand ADDED, a body field repeating an operand's -- and so is a
-    # later field whose type is not the model field's.  Never a second slot of the same name.
-    [pscustomobject]@{ Name = 'unit_merge_added_repeat_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'a merge operand field repeats a field an earlier operand added'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_merge_body_repeat_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'a merge result body field repeats a field of the operands'; Absent = @(); Debt = @() },
+    # -193 T2 (on -194 K1): a later field repeating a name an earlier operand ADDED goes INTO that
+    # appended slot, and the body merges INTO the result as the last operand (the kernel's `operand =
+    # count`) -- both were located refusals in T1.  Never a second slot of the same name: `R\[0]z` and
+    # `R\[0]x` read the one slot.  Mutants: the body appended instead of joined (body_repeat exits
+    # 83); only model slots matchable (added_repeat exits 83).  A later field whose type is not the
+    # placed field's stays refused.  4 and 19.
+    [pscustomobject]@{ Name = 'unit_merge_added_repeat.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 4;
+        Absent = @();
+        Debt = @('l2_mpp[0U]\model_slot: 1U', 'l2_mpp[0U]\operand: 2U', 'lmx_merge_owned(l2_mops, 3U, l2_mbody, node, 0, l2_program_arena, l2_program_arena, l2_mpp, 1U, @ l2_mresult)', 'if: l2_mresult\len != 2') },
+    [pscustomobject]@{ Name = 'unit_merge_body_repeat.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 19;
+        Absent = @();
+        Debt = @('lmx_merge_owned(l2_mops, 1U, l2_mbody, node, 0, l2_program_arena, l2_program_arena, l2_mpp, 1U, @ l2_mresult)', 'lmx_merge_owned(l2_mops, 2U, l2_mbody, node, 0, l2_program_arena, l2_program_arena, l2_mpp, 1U, @ l2_mresult)', 'if: l2_mresult\len != 1', 'if: l2_mresult\len != 3') },
     [pscustomobject]@{ Name = 'unit_merge_field_type_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'a merge operand field has another type than the model field of its name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_field_entry_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

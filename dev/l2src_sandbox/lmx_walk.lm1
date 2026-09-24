@@ -1121,8 +1121,18 @@ fn: lmx_walk_prim (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
     ---
     if: status = c.LMX_WALK_OK
         said: record\fn(record\owner, refs, n, dest, out)
-        if: said != c.LMX_PRIMITIVE_OK
-            status: c.LMX_WALK_PRIMITIVE
+        # -177 c5 / D-55: admission throw statuses -> THROWN+k at the walked root (d=0).
+        # Mutant: map them to LMX_WALK_PRIMITIVE -> unit_s1_merge_uncaught RED.
+        if: said = c.LMX_PRIMITIVE_THROW_MERGE
+            status: c.LMX_WALK_THROWN + 1
+        else:
+            if: said = c.LMX_PRIMITIVE_THROW_IMPLEMENTS
+                status: c.LMX_WALK_THROWN + 2
+            else:
+                if: said != c.LMX_PRIMITIVE_OK
+                    status: c.LMX_WALK_PRIMITIVE
+                ---
+            ---
         ---
     ---
     if: lmx_scratch_rewind(f\context\scratch, pm) != c.LMX_SCRATCH_OK && status = c.LMX_WALK_OK

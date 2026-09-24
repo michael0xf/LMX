@@ -182,17 +182,95 @@ change itself -- worth citing as such, not only as "sites to switch."
 No other fixture in the corpus has a repeated same-name own/local declaration combined with an
 unqualified occurrence-path read/write and an internal pinned assertion.
 
-## Commit 2 plan (for the next commit in this ticket)
+## Commit 2 done -- and a bigger, load-bearing discovery along the way
 
-1. Move every Category-A site (20) plus `:13467`/`:15536` (hardcoded `0` -> `l2_own_find_last`) to
-   `l2_own_find_last`. Leave Category B (existence-only, 9 incl. `:14688`) untouched.
-2. Move the 5 Category-C self-identity sites (`5853`, `5871`, `6956`, `6998`, `18310`) to
-   `l2_own_find_decl(mi, name, at)`.
-3. Fix the two live inconsistencies: `:6984`'s fallback -> `l2_own_find_last` (matching `:18373`);
-   `:17876` -> `l2_own_find_last` (matching `l2_path_root`'s already-last `l2_poi`).
-4. New witness: the ticket's own example (`fn: test () int` / `int: arg 1` / `int: arg 2`,
-   plain own field, non-argument-bound) -- `test\arg = 2`, `test\[0]arg = 1`, entry built to 7
-   (per the ticket text); a write `test\arg: 5` landing in the last occurrence (`test\[1]arg` reads
-   5 back, `test\[0]arg` still reads 1).
-5. Mutant: revert the resolver choice at the new fixture's site back to first -> RED.
-6. Gates: build_l2src 252, harness base 333 (+1 new row), L3 11/11, check_docs, git diff --check.
+Landed exactly per the plan above: Category-A (20 sites) + `:13467`/`:15536` (hardcoded `0` ->
+`l2_own_find_last`, both the check-time and emit-time twins) moved to `l2_own_find_last`; the two
+live inconsistencies (`:6984`'s fallback, `:17876`) moved to match their already-correct siblings
+(`:18373`, `l2_path_root`'s `l2_poi`). Category B left alone (cosmetic). Category C's 5
+self-identity sites were **not** moved to `l2_own_find_decl` after all -- see below; left as
+plain `l2_own_find`, documented as an explicit, deliberate non-change (out of this ticket's scope,
+not an oversight).
+
+**The planned witness (fable's own literal example) does not translate.** `int: arg 1` / `int:
+arg 2` (two TYPED declarations of the same name) hits `l2_own_add`'s pre-existing, deliberate
+"duplicate declaration" refusal (`:3554`, "one name, one cell per scope") -- unrelated to this
+ticket, not relaxed here. Measured directly. The rule's own repeat mechanism, confirmed against
+`unit_occ_arg_slots.lm2`'s header comment ("Two assignment occurrences of arg are two physical own
+slots"), is: one typed declaration, then a PLAIN (untyped) reassignment -- but this ALSO measured
+false for a plain (non-formal) field: `fn: test () int / int: arg 1 / arg: 2` then
+`test\[1]arg` -> "own occurrence index out of range". **A repeated own-field occurrence, in the
+corpus's current legal syntax, can only be created via the argument same-name-binding rule (L2
+spec 18.3) -- the name must be a formal, reassigned by name.** Plain (non-argument) own fields are
+capped at exactly one occurrence today; D-27 (steps/defects.md, OPEN, `\[N]x` on a non-parameter
+own-local crashing without a located diagnostic) is the closest existing echo of this same
+boundary, not a counterexample to it.
+
+**This makes most of commit 2's routing observationally inert today, and explains why.** Every
+consumer this ticket touches checks `l2_param_find(mi, name)` (is this name a formal of the
+CURRENT method) before ever reaching `l2_own_find`/`l2_own_find_last` -- confirmed directly at
+every site read in this investigation (`l2_check_addr`/`l2_prep_addr` :14282/:14354,
+`l2_hidden_from` caller/callee :14178/:14202, and the pattern recurs structurally everywhere a
+formal and an own field can share a name). Since a repeated own row can only exist for a name that
+IS a formal, and the formal fast path always wins first, `l2_own_find` vs `l2_own_find_last` never
+actually gets to choose between two DIFFERENT rows for any program this corpus can express today.
+The routing change is still correct, still closes two real cross-path disagreements (worth having
+fixed regardless, as defense against the day the duplicate-declaration or plain-reassignment
+restriction relaxes), and the full harness stays GREEN (334/334, zero regressions) -- but it is not
+demonstrably load-bearing today, and this note says so plainly rather than claiming a witness that
+does not exist.
+
+**The actually-live mechanism for fable's example (a method-rooted 2-segment path, `test\arg`,
+`test\[N]arg`) is a third function neither this ticket's own commit-1 catalog nor the research
+fork named: `l2_own_seg_scan` (`:11589`), reached through `l2_path_root`'s method-name-root branch
+(`root <= -1000`) via `l2_path_kind`/`l2_emit_path_to` (`:11719`, `:11840`) -- NOT through
+`l2_check_fields`/`l2_emit_fields`'s flat-token branches (those exist for the bracketed `[N]` form
+specifically, per their own comment: `l2_join_path` cannot carry a bracket segment; the plain,
+unbracketed `test\arg` is already a normal multi-segment path `l2_path_root` parses directly, so
+the flat-token branch at `:13467`/`:15536` this commit "fixed" is dead code for this exact shape --
+harmless, still correct, just not reachable here). `l2_own_seg_scan`'s own scan loop never returns
+early and keeps overwriting `hit`, exactly `l2_own_find_last`'s pattern -- so it SHOULD be
+last-occurrence by construction, same as `l2_path_root`'s own hand-rolled loops (`:11460`-`:11480`,
+noted in commit 1 above).
+
+**Measured directly, it is NOT consistently last -- a genuine, newly-found, NOT-yet-fixed defect,
+filed as D-43.** A probe fixture (`fn: test (int: arg) int / arg: 1 / arg: 2 / return: 0`, called
+and read via `test\[0]arg`/`test\[1]arg`/`test\arg` from INSIDE a second method, `check()`) gives
+`test\arg` = occurrence 1 (last, correct). The SAME shape read from ROOT LEVEL instead -- exactly
+`unit_occ_root_named.lm2`'s existing, tracked, gated fixture -- gives `test\arg` = occurrence 0
+(first, wrong per the new rule): confirmed by direct inspection of its generated C/L1
+(`l2_xp: lmx_arena_ref_cell(lmx_arena_ref_struct(self,5U), 1U)` for BOTH `test\[0]arg` and
+unqualified `test\arg`, cell 1 = occurrence 0's own slot, not occurrence 1's cell 2).
+`unit_occ_root_named.lm2`'s own assertions (`test\[0]arg = 2`, `test\arg = 2`) do not catch this,
+for the SAME reason documented above in commit 1: `arg` there is argument-bound, and occurrence 0's
+checkpoint-publish re-syncs from the live formal cell, which happens to equal 2 (the last plain
+assignment's value) regardless of which row is nominally "occurrence 0" -- masking a first-vs-last
+bug that is real and would be visible with a non-monotonic value sequence (confirmed with the
+`unit_own_last_occurrence.lm2` poke9 probe below, which DOES distinguish them, but only tests the
+method-body-read case, where the bug does not reproduce).
+
+Root cause not yet isolated within this ticket's remaining budget: `l2_own_seg_scan`'s host
+parameter is a literal `0` at both its `root <= -1000` call sites (`:11719`, `:11840`), matched
+against `l2_own_host[i]`, set at registration time to `l2_scope_host()` (`:3594`) -- a simple
+scope-depth flag (0 outside any nested if/while/for), which SHOULD be 0 for both of `test`'s
+top-level assignment statements regardless of who later reads `test\arg`. Something about
+ROOT-level translation specifically (the entry/E method's own special-cased handling, pervasive
+elsewhere in this file -- `l2_e`, `l2_e_own_seg`, etc.) changes which row `l2_own_seg_scan` lands
+on when the CALLER of the read is root rather than an ordinary method; the read side calls
+`l2_own_seg_scan` with the exact same literal arguments either way, so the divergence must be in
+what got REGISTERED for `test`'s two `arg` rows, or in `l2_own_n`'s ordering, by the time root-level
+code runs versus by the time a same-shaped method's body runs -- not yet traced further. Recommend
+a focused follow-up (D-43) rather than a rushed fix to a mechanism not yet fully understood.
+
+**Witness landed this commit**: `unit_own_last_occurrence.lm2` (poke9 probe, reads via `check()`,
+not root) -- pins that the method-context case is already correct, both read and write
+(`test\[0]arg=9`, `test\[1]arg=2`, `test\arg=2`, then `test\arg: 5` lands in occurrence 1 leaving
+occurrence 0 at 9). Documented in its own header as NOT a mutation witness for this commit's
+routing changes (per the inert-routing finding above) -- a regression/behavior-pin test, not
+evidence the diff did anything. No fixture in this commit exercises D-43 (root-level); doing so
+safely needs `unit_occ_root_named.lm2` itself to gain new, currently-masked assertions, which is
+D-43's own fix, not this commit's.
+
+Gates: build_l2src 252/252, l2_harness 334/334 GREEN (333 base + 1 new row), L3 11/11 + type
+budget, check_docs OK, git diff --check clean -- all green with the routing change in place, no
+regressions.

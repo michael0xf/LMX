@@ -1833,6 +1833,15 @@ $fixtures = @(
         Debt = @() },
     [pscustomobject]@{ Name = 'unit_occ_root_out_of_range_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'own occurrence index out of range'; Absent = @(); Debt = @() },
+    # FABLE-SONNET-LAST-OCCURRENCE-20260924-164: unqualified test\arg is the
+    # LAST occurrence of a repeated plain own field (not argument-bound, so
+    # first-vs-last is the only thing deciding the read) -- test\[N]arg still
+    # counts in declaration order; a write through the unqualified name lands
+    # on the last occurrence too.
+    [pscustomobject]@{ Name = 'unit_own_last_occurrence.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
+        Args = @('0');
+        Absent = @();
+        Debt = @() },
     [pscustomobject]@{ Name = 'unit_occ_sticky_selector.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Says = @('BEFORE 1 1', 'AFTER 9 9', 'NONE 7 100', 'NONE 7 100', 'NONE+ 1 1');

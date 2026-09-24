@@ -5625,7 +5625,7 @@ fn: l2_colon_bound_ty (int: mi; const: @(LmP0Text name); @: int out_ty) int
         return: 0
     if: i >= 0
         return: 1
-    i: l2_own_find(mi, name)
+    i: l2_own_find_last(mi, name)
     if: i >= 0
         \out_ty: l2_ft_of_own(l2_own_ty[i])
         return: 0
@@ -6683,7 +6683,7 @@ fn: l2_scan_ident (int: mi; const: @(LmP0Text t); @: int seen) int
         return: 0
     if: l2_upper_name(t)
         return: 0
-    oi: l2_own_find(mi, t)
+    oi: l2_own_find_last(mi, t)
     if: oi >= 0 && l2_own_unit_seen(oi, mi) != 0
         if: l2_own_off(mi, oi) = (cast: (size_t) -1)
             return: 1
@@ -6721,7 +6721,7 @@ fn: l2_scan_node (const: @(LmP0Node node); int: mi; @: int seen) int
     if: node\kind = c.LM_P0_NODE_FRAME && l2_frame_head(node, "@") && node\as\frame\body != 0 && l2_count_active(node\as\frame\body) = 1
         f: l2_next_active(node\as\frame\body\first_field)
         if: f != 0 && f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM
-            oi: l2_own_find(mi, f\value\as\atom)
+            oi: l2_own_find_last(mi, f\value\as\atom)
             if: oi >= 0 && l2_own_unit_seen(oi, mi) != 0
                 if: l2_m_uses[l2_own_off(mi, oi)] = 0
                     l2_m_own[mi]: l2_m_own[mi] + 1
@@ -6981,7 +6981,7 @@ fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
                 return: 1
             oi: l2_own_find_decl(mi, stmt\as\frame\head, stmt)
             if: oi < 0
-                oi: l2_own_find(mi, stmt\as\frame\head)
+                oi: l2_own_find_last(mi, stmt\as\frame\head)
             ---
             if: oi >= 0 && l2_own_unit_seen(oi, mi) != 0
                 if: l2_own_off(mi, oi) = (cast: (size_t) -1)
@@ -7115,7 +7115,7 @@ fn: l2_dyn_step (const: @(char path); @: int changed) int
                 ty: l2_dt(cidx, k)
                 src: l2_param_find(m, nm)
                 if: src < 0
-                    src: l2_own_find(m, nm)
+                    src: l2_own_find_last(m, nm)
                 sdt: 0
                 if: src >= 0 && l2_param_find(m, nm) < 0 && l2_m_uses[l2_own_off(m, src)] != 0 && l2_dt_of_source(l2_own_ty[src], path, l2_m_node[m], @ sdt) != 0
                     return: 1
@@ -7832,7 +7832,7 @@ fn: l2_own_index_tail (@: LmP0Field f; int: mi; @: int out_own; @: size_t out_in
     if: mi < 0 || f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || out_own = 0 || out_index = 0 || out_after = 0 || out_count = 0
         return: 1
     \out_count: 4
-    oi: l2_own_find(mi, f\value\as\atom)
+    oi: l2_own_find_last(mi, f\value\as\atom)
     if: l2_text_eq(f\value\as\atom, "for") || l2_text_eq(f\value\as\atom, "node") || l2_own_find(mi, f\value\as\atom) >= 0 || l2_formal_find(mi, f\value\as\atom) >= 0
         slash: l2_next_active(f\next)
         if: slash != 0 && slash\value != 0 && slash\value\kind = c.LM_P0_NODE_ATOM && l2_is_slash(slash\value\as\atom)
@@ -7887,7 +7887,7 @@ fn: l2_array_length_own (const: @(LmP0Node node); int: mi) int
     count: l2_count_active(node\as\frame\body)
     oi: -1
     if: count = 1
-        oi: l2_own_find(mi, arg\value\as\atom)
+        oi: l2_own_find_last(mi, arg\value\as\atom)
     if: count = 3 && (l2_text_eq(arg\value\as\atom, "for") || l2_text_eq(arg\value\as\atom, "node") || l2_own_find(mi, arg\value\as\atom) >= 0 || l2_formal_find(mi, arg\value\as\atom) >= 0)
         slash: l2_next_active(arg\next)
         name: l2_next_active(slash\next)
@@ -9888,7 +9888,7 @@ fn: l2_graph_nsty (int: mi; const: @(LmP0Text name)) int
     i: l2_formal_find(mi, name)
     if: i >= 0
         return: l2_nsty_get(mi, i)
-    i: l2_own_find(mi, name)
+    i: l2_own_find_last(mi, name)
     if: i >= 0
         return: l2_own_nsty_get(i)
 return: 0 - 1
@@ -13133,7 +13133,7 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
             return: 0
         if: node\as\atom\length >= 2U && node\as\atom\data[0] = 99 && node\as\atom\data[1] = 46
             return: 0
-        idx: l2_own_find(mi, node\as\atom)
+        idx: l2_own_find_last(mi, node\as\atom)
         # In expression position a primitive array is its backing pointer,
         # matching ordinary C array decay. Indexed graph access remains a
         # separate checked operation above.
@@ -13444,8 +13444,9 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
         # l2_path_root, reusing the two primitives every other occurrence
         # form already uses: l2_find_method (the root) and l2_own_find_occ
         # (the same lookup l2_occ_head's rootless `\[N]name` already calls).
-        # `test\[N]name` picks occurrence N; unqualified `test\arg` is
-        # occurrence 0 (FABLE-SONNET-OCC-ROOT-20260924-146).
+        # `test\[N]name` picks occurrence N; unqualified `test\arg` is the
+        # LAST occurrence (FABLE-SONNET-LAST-OCCURRENCE-20260924-164, author's
+        # rule Q22.2 -- this replaces the -146 "occurrence 0" reading).
         if: f\value\kind = c.LM_P0_NODE_ATOM && l2_ident(f\value\as\atom) != 0 && l2_find_method(f\value\as\atom) >= 0 && p1 != 0 && p1\value != 0 && p1\value\kind = c.LM_P0_NODE_ATOM && l2_is_slash(p1\value\as\atom) && p2 != 0 && p2\value != 0 && p2\value\kind = c.LM_P0_NODE_ATOM && l2_text_eq(p2\value\as\atom, "[") != 0
             p3: l2_next_active(p2\next)
             p4: 0
@@ -13464,7 +13465,7 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
             f: l2_next_active(p5\next)
             continue
         if: f\value\kind = c.LM_P0_NODE_ATOM && l2_ident(f\value\as\atom) != 0 && l2_find_method(f\value\as\atom) >= 0 && p1 != 0 && p1\value != 0 && p1\value\kind = c.LM_P0_NODE_ATOM && l2_is_slash(p1\value\as\atom) && p2 != 0 && p2\value != 0 && p2\value\kind = c.LM_P0_NODE_ATOM && l2_ident(p2\value\as\atom) != 0
-            po: l2_own_find_occ(l2_find_method(f\value\as\atom), p2\value\as\atom, 0)
+            po: l2_own_find_last(l2_find_method(f\value\as\atom), p2\value\as\atom)
             if: po < 0 || l2_m_uses[l2_own_off(l2_find_method(f\value\as\atom), po)] = 0
                 return: l2_error(path, p2\value, "unresolved name")
             have_value: 1
@@ -13715,7 +13716,7 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
                     return: 1
                 field: l2_next_active(field\next)
                 continue
-            array_target: l2_own_find(mi, stmt\as\frame\head)
+            array_target: l2_own_find_last(mi, stmt\as\frame\head)
             if: array_target >= 0 && l2_own_is_array(l2_own_ty[array_target]) != 0
                 return: l2_error(path, stmt, "own array use not yet supported")
         ---
@@ -14174,7 +14175,7 @@ fn: l2_hidden_from (int: mi; int: callee; int: k; int: callee_self; const: @(cha
     if: pi >= 0
         return: l2_tok_formal(mi, pi, dest)
     oi: -1
-    oi: l2_own_find(mi, nm)
+    oi: l2_own_find_last(mi, nm)
     fi: -1
     if: oi >= 0 && l2_m_uses[l2_own_off(mi, oi)] != 0
         fi: l2_m_alias[l2_own_off(mi, oi)]
@@ -14198,7 +14199,7 @@ fn: l2_hidden_from (int: mi; int: callee; int: k; int: callee_self; const: @(cha
         if: c.sprintf(dest, "lmx_arena_ref_struct(l2_c%d\\parent, %uU)", callee_self, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni)))) < 0
             return: 1
         return: 0
-    child: l2_own_find(callee, nm)
+    child: l2_own_find_last(callee, nm)
     if: child < 0
         if: c.snprintf(l2_hf_msg, 256U, "unbound dynamic input %.*s", (cast: (int) nm\length), nm\data) < 0
             return: 1
@@ -14278,7 +14279,7 @@ fn: l2_check_addr (const: @(LmP0Node node); int: mi; const: @(char path)) int
     if: idx >= 0
         return: 0
     oi: -1
-    oi: l2_own_find(mi, t)
+    oi: l2_own_find_last(mi, t)
     if: oi >= 0 && l2_m_uses[l2_own_off(mi, oi)] != 0 && l2_own_is_array(l2_own_ty[oi]) = 0
         return: 0
 return: l2_error(path, node, "unresolved name")
@@ -14350,7 +14351,7 @@ fn: l2_prep_addr (const: @(LmP0Node node); int: mi; const: @(char ind); @: char 
             return: 1
         return: 0
     oi: -1
-    oi: l2_own_find(mi, t)
+    oi: l2_own_find_last(mi, t)
     if: oi < 0 || l2_m_uses[l2_own_off(mi, oi)] = 0
         return: 1
     if: l2_own_is_array(l2_own_ty[oi]) != 0
@@ -15532,8 +15533,11 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
             i: i + 6
             f: l2_next_active(p5\next)
             continue
+        # `test\arg` (no [N]): unqualified is the LAST occurrence
+        # (FABLE-SONNET-LAST-OCCURRENCE-20260924-164) -- see l2_check_fields's
+        # copy of this comment.
         if: f\value\kind = c.LM_P0_NODE_ATOM && l2_ident(f\value\as\atom) != 0 && l2_find_method(f\value\as\atom) >= 0 && p1 != 0 && p1\value != 0 && p1\value\kind = c.LM_P0_NODE_ATOM && l2_is_slash(p1\value\as\atom) && p2 != 0 && p2\value != 0 && p2\value\kind = c.LM_P0_NODE_ATOM && l2_ident(p2\value\as\atom) != 0
-            po: l2_own_find_occ(l2_find_method(f\value\as\atom), p2\value\as\atom, 0)
+            po: l2_own_find_last(l2_find_method(f\value\as\atom), p2\value\as\atom)
             if: po < 0 || l2_m_uses[l2_own_off(l2_find_method(f\value\as\atom), po)] = 0
                 return: 1
             if: l2_own_from_expr(po, occx) != 0
@@ -16595,7 +16599,7 @@ fn: l2_ccall_box_int (const: @(LmP0Node node); int: mi) int
         if: ty = 0 || ty = 1
             return: 1
         return: 0
-    oi: l2_own_find(mi, node\as\atom)
+    oi: l2_own_find_last(mi, node\as\atom)
     if: oi >= 0
         ty: l2_own_ty[oi]
         if: ty = 0 || ty = 1
@@ -17873,7 +17877,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             # The destination is an OWN field: a cached value with a dirty
             # flag, published at the next checkpoint exactly like any other
             # own-field assignment. Nothing here is a new category.
-            l2_pown: l2_own_find(mi, stmt\as\frame\head)
+            l2_pown: l2_own_find_last(mi, stmt\as\frame\head)
             if: l2_pown < 0
                 return: l2_error(l2_src, stmt, "a field path value needs a declared destination")
             if: l2_pown >= 0 && l2_pkind = 0 && l2_own_ty[l2_pown] != 2
@@ -18176,7 +18180,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         # cannot be stored is an invariant failure on the checkpoint's own
         # diagnostic route, never a throw (X1, -128).
         if: l2_next_msg_shape(stmt, @ cname) = 0
-            oi: l2_own_find(mi, cname)
+            oi: l2_own_find_last(mi, cname)
             if: oi < 0
                 return: l2_error(l2_src, stmt, "unresolved name")
             if: c.fprintf(l2_out, "%sl2_nmsg: (cast: (@: LmxMsg) lmx_thread_mail_take(lmx_thread_current(), c.LMX_POST_INBOX))\n%sl2_ngraph: 0\n%sif: l2_nmsg != 0\n%s    l2_ngraph: l2_nmsg\\graph\n", ind, ind, ind, ind) < 0
@@ -18213,7 +18217,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         # eventual checkpoint re-stores the identical value -- redundant,
         # not wrong.
         if: l2_colon_decl_shape(stmt, @ cmodel, @ cname) = 0
-            oi: l2_own_find(mi, cname)
+            oi: l2_own_find_last(mi, cname)
             cni: l2_ns_find(cmodel)
             if: oi < 0 || cni < 0
                 return: l2_error(l2_src, stmt, "unresolved name")

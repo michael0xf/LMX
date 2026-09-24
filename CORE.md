@@ -278,8 +278,10 @@ occurrence before the corresponding binding executes. The current `lmx_own`
 and `lmx_dirty` implementation is a partial precursor to this full rule, so
 do not describe repeated-occurrence/sticky behavior as fully landed. Under the
 accepted execution pair (§3) working copies, dirty flags, and checkpoints are
-replaced by a fresh data instance in the parent's slot that execution writes
-directly; the canonical-cell mechanism is transitional.
+replaced by direct writes into the declared fields of the executed Structure; a
+fresh instance exists only on re-entry or with explicitly passed data, lives in
+the activation frame and is not visible from outside; the canonical-cell
+mechanism is transitional.
 
 `@x`, `\p`, and `\p: value` in L2 are machine address, load, and store
 operations. For a Structure binding, `@fresh` is the address of the Structure

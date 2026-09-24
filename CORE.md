@@ -64,7 +64,7 @@ The accepted target physical layout for the universal Structure is:
 
 ```c
 typedef struct { size_t size; void *data; } VoidArray;
-typedef struct Lmx { VoidArray array; struct Lmx *parent; } Lmx;
+typedef struct Lmx { VoidArray array; struct Lmx *parent; LmxEntry native; } Lmx;
 ```
 
 The current [`lmx.h.lm1`](dev/l2src_sandbox/lmx.h.lm1) still has the old flat
@@ -76,7 +76,12 @@ backing is registered as a `CHILDREN`/`REFS` address range in the arena;
 `VoidArray` is not the `LmxRange` index entry. `&node->array` and `node` have
 the same address, while the arena still classifies the `Lmx` allocation as a
 Structure rather than a standalone Array descriptor. `parent` is the immediate
-*structural* parent in the working graph.
+*structural* parent in the working graph. `native` (accepted 2026-09-25) is
+the direct reference to the native implementation of this Structure's body:
+the C entry, or null when there is none. It is not a lexical element and not a
+graph field, so it sits in the record after `parent` rather than among the
+child slots; graph copy carries the word verbatim. The current header has no
+such member yet.
 The slots are fixed in number when the Structure is constructed; their stored references may
 change. The header has no name, type tag, method pointer, vtable, list capacity,
 dirty flag, or Message state. In particular, an empty Structure remains an
@@ -96,6 +101,7 @@ There are three different relationships that must not be merged:
 | Relationship | Physical source | Meaning |
 | --- | --- | --- |
 | `Lmx.parent` | Structure header | Immediate structural enclosing node. |
+| `Lmx.native` | Structure header | Direct reference to the native body implementation; null when interpreted. Not a graph field. |
 | Method `node` | `M.parent` at entry | Reserved lexical space above callable occurrence `M`; fixed for that activation. |
 | `LmxThread.parent` | Thread state | Supervision/postal route to the parent Thread; not lexical graph parent. |
 
@@ -172,17 +178,23 @@ discrepancy, not permission to put capacity into `LmxArrayDesc`.
 
 ## 3. Callable graph representation and activation
 
-An executable method occurrence `M` is an ordinary Structure. Its physical
-`child[0]` is currently an [`LmxCallable`](dev/l2src_sandbox/lmx.h.lm1)
-descriptor containing `{method, header}`. `method` refers to an immutable
-[`LmxMethod`](dev/l2src_sandbox/lmx.h.lm1) record `{addr, sig}`; `header`
-can publish a shared activation plan. Later children of `M` are its body and
-own fields in lexical order. A direct METHOD in `child[0]` remains a
-transitional ABI. Copying an occurrence preserves shared immutable method
-and callable descriptors while remapping copied graph Structures.
+An executable method occurrence `M` is an ordinary Structure with no special
+slot. In the accepted form (2026-09-25) its signature is an ordinary graph field
+and its native implementation, if any, is the `Lmx.native` word (§2); execution
+dispatches on that word: non-null enters native code, null runs the walker over
+the body operators. Graph copy carries the word verbatim while remapping copied
+graph Structures. The current implementation is transitional: physical
+`child[0]` is an [`LmxCallable`](dev/l2src_sandbox/lmx.h.lm1) descriptor
+containing `{method, header}`, `method` refers to an immutable
+[`LmxMethod`](dev/l2src_sandbox/lmx.h.lm1) record `{addr, sig}`, `header`
+can publish a shared activation plan, later children of `M` are its body and
+own fields in lexical order, and a direct METHOD in `child[0]` is an older
+ABI; the descriptor, the method record, the `sig` word and the `lmx_plan` role
+records go away with the execution pair.
 
-[`lmx_call`](dev/l2src_sandbox/lmx_call.h.lm1) classifies the stored
-`child[0]` **value**. The callable-descriptor ABI enters native code with
+[`lmx_call`](dev/l2src_sandbox/lmx_call.h.lm1) currently classifies the stored
+`child[0]` **value**; in the accepted form it reads `Lmx.native`. The
+callable-descriptor ABI enters native code with
 `(node, self, ...)`, where `node = M.parent` and `self = M`. The transitional
 direct-METHOD ABI enters with `(node, ...)`. The `sig` word currently selects
 a dispatch contract; `lmx_call0` is not the full semantic signature checker.
@@ -535,7 +547,7 @@ an implementation's current behavior, an accepted rule, and a planned fix.
 | --- | --- | --- |
 | P0 argument-container normal form | P0 goldens distinguish `f()` from `f: ()`; native/interpreter add CALL-only unwrapping, leaving other roles inconsistent. | Normalize the sole whole-sequence anonymous Structure once in P0 (empty and nonempty), then remove redundant consumer unwrapping; see `next_parser_fix.md`. |
 | Structural declaration | `mystruct: ()` may fail native lowering although the universal absent-target/Structure rule requires declaration. | Resolve declaration from the same normalized P0 Structure-body as `mystruct()`; no declaration-only wrapper restoration. |
-| Execution pair | Code and data still share one callable Structure; own locals, dirty flags, and checkpoints emulate the data instance (§3, §3.1). | Split each body into a data prototype and a code graph; fresh instance in the parent's data slot, in the walker and the native translator. |
+| Execution pair | Code and data still share one callable Structure; own locals, dirty flags, and checkpoints emulate the data instance (§3, §3.1); the `child[0]` descriptor stands in for the `Lmx.native` word and the signature field (§2). | Split each body into a data prototype and a code graph; fresh instance in the parent's data slot, in the walker and the native translator. |
 | Repeated fields and sticky addresses | Current own-slot paths do not fully preserve `[N]field`, selector publication, and universal sticky `@local`. | One occurrence-to-physical-path algorithm shared by native and interpreter. |
 | Admission | Coarse address compatibility and some fast paths are not the complete Consumer/uses plus runtime-test model or full directed conversion table. | Urgent kernel fixes first; then bounded port from the prior implementation. |
 | Raw C door | Name-specific `c.puts`/`c.array`/`c.sizeof` handling and header-derived C-name machinery remain cleanup debt. | One raw `c.*` door; separately introduce ordinary `sizeof:` if needed. |

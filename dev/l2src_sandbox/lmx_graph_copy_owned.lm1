@@ -555,22 +555,18 @@ fn: lmx_copy_value (@: void v; @: char dst_chars; @: LmxArena src_arena; @: LmxA
                 return: 0
             lmx_charptr_store_known(cell, lmx_charptr_value_known(v))
         if: vtype >= c.LMX_TYPE_POINTER_BASE
+            # -186 k3: reference field (@: T) is a pointer cell; the pointee is SHARED
+            # (not descended). Own Structure bindings are direct slots (Commit 2) and
+            # are copied as STRUCT children instead. Mutant: lmx_copy_value(pointee)
+            # -> independent copy, share-pointee selftest RED.
             cell: lmx_pointer_new_owned(vtype, dst_arena)
             if: cell = 0
                 \status: LMX_GRAPH_COPY_NOMEM
                 return: 0
-            # Publish the cell mapping before following its value so pointer
-            # cycles and aliases terminate on this same destination cell.
             if: lmx_copy_map_put(map, v, cell) != 0
                 \status: LMX_GRAPH_COPY_NOMEM
                 return: 0
             pointee: lmx_pointer_value_known(v)
-            if: pointee != 0
-                pointee: lmx_copy_value(pointee, dst_chars, src_arena, dst_arena, retain_profiles, retain_count, map, inside, todo, status)
-                if: \status != LMX_GRAPH_COPY_OK
-                    return: 0
-                ---
-            ---
             if: lmx_pointer_store_known(cell, pointee) != 0
                 \status: LMX_GRAPH_COPY_INVALID
                 return: 0

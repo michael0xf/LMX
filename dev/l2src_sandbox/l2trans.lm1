@@ -447,6 +447,7 @@ prototype:
     fn: l2_emit_tramp_call (int: i; int: n; int: thr; int: cls) int
     fn: l2_emit_trampoline (int: i; int: proto) int
     fn: l2_rw_refuse (const: @(LmP0Node node); const: @(char what)) int
+    fn: l2_rw_bind_op (int: oi) const: @: char
     fn: l2_rw_l2 (const: @(LmP0Node node)) int
     sub: l2_rw_name (int: t; @: char dest)
     fn: l2_rw_frame (int: parent; const: @(char code); int: children; @: int out) int
@@ -561,6 +562,9 @@ prototype:
     fn: l2_canon_spell (int: mi; int: oi; @: char dest) int
     fn: l2_own_from_expr (int: oi; @: char dest) int
     fn: l2_own_direct (int: mi; int: k) int
+    fn: l2_own_is_slot (int: k) int
+    fn: l2_own_slot_at (int: k; @: char dest) int
+    fn: l2_emit_own_cell_load (int: k; const: @(char ind); int: t; const: @(LmP0Node at)) int
     fn: l2_formal_row (int: mi; int: pk) int
     fn: l2_own_formal (int: mi; int: k) int
     fn: l2_name_cell (int: mi; const: @(LmP0Text t)) int
@@ -603,6 +607,7 @@ prototype:
     fn: l2_own_is_array (int: ty) int
     fn: l2_own_is_pointer (int: ty) int
     fn: l2_has_pointer_array () int
+    fn: l2_pointer_decl_text (int: raw; int: extra_depth; const: @(char name); @: char dest) int
     fn: l2_emit_raw_pointer_type (@: FILE out; int: raw; int: extra_depth) int
     fn: l2_emit_own_pointer_type (@: FILE out; int: ty) int
     fn: l2_emit_own_pointer_temp_decl (@: FILE out; int: ty; const: @(char ind); int: temp) int
@@ -830,7 +835,8 @@ prototype:
     fn: l2_raw_head (const: @(LmP0Text t); int: mi; @: int out_j; @: int out_fld) int
     fn: l2_ty_raw_c_members (int: ty) int
     fn: l2_pointer_depth (int: ty) int
-    fn: l2_prefix_deref (const: @(LmP0Text t); int: mi; @: char dest) int
+    fn: l2_prefix_deref (const: @(LmP0Text t); int: mi; const: @(char ind); @: char dest) int
+    fn: l2_deref_load (int: k; const: @(char ind); @: char dest) int
     fn: l2_index_head (const: @(LmP0Text t); int: mi; @: int out_j) int
     fn: l2_index_token (const: @(LmP0Text t); int: mi; const: @(char ind); @: char dest) int
     fn: l2_array_literal (int: oi; const: @(LmP0Text t); size_t: begin; size_t: stop; @: size_t out_index) int
@@ -6495,17 +6501,46 @@ fn: l2_own_from_expr (int: oi; @: char dest) int
         return: 1
 return: 0
 
-# A DIRECT own field (-189 c3b-1, c3b-2): a number -- int, char, size_t, unsigned, ulong -- is its
-# cell.  It has no working copy: a read is a typed load of its cell (l2_own_load), a write a typed
-# store into it (l2_own_store), and a checkpoint neither publishes nor reloads it.  A field bound to
-# a formal or a dynamic input is one too, from its binding line on (l2_formal_row); before that line
-# the name is the machine argument.  Pointer own fields keep their working copy until c3b-3.
+# A DIRECT own field (-189 c3b-1, c3b-2, c3b-3): a number -- int, char, size_t, unsigned, ulong -- or
+# a pointer is its cell, and an own Structure field its slot (l2_own_is_slot).  It has no working
+# copy: a read is a typed load (l2_own_load), a write a typed store (l2_own_store), and a checkpoint
+# neither publishes nor reloads it.  A field bound to a formal or a dynamic input is one too, from
+# its binding line on (l2_formal_row); before that line the name is the machine argument.
 fn: l2_own_direct (int: mi; int: k) int
     int: ty
     if: mi < 0 || k < 0 || k >= l2_own_n
         return: 0
     ty: l2_own_ty[k]
-return: ty = 0 || ty = 1 || ty = 2 || ty = 3 || ty = 36
+return: ty = 0 || ty = 1 || ty = 2 || ty = 3 || ty = 36 || l2_own_is_pointer(ty) != 0
+
+# AN OWN STRUCTURE FIELD IS A DIRECT SLOT (-189 c3b-3; q26: an own binding is the slot itself, a
+# reference `@: T x` a pointer cell): a field of the graph type whose declaration is not a pointer
+# declaration -- `Model: m`, `T: m`, `receiveMessage: m`, `f()`, a Structure catch parameter.  Its
+# slot holds the Structure, empty (0) until the field is bound; the builder makes no cell for it.
+fn: l2_own_is_slot (int: k) int
+    if: k < 0 || k >= l2_own_n || l2_own_is_pointer(l2_own_ty[k]) = 0 || l2_colon_is_graph_ty(l2_dt_of_own(l2_own_ty[k])) = 0
+        return: 0
+return: l2_frame_head(l2_own_decl[k], "@") = 0
+
+# The container and index of own field k's slot, "ctr, NU" -- the two halves of l2_own_from_expr.
+fn: l2_own_slot_at (int: k; @: char dest) int
+    if: k < 0 || dest = 0
+        return: 1
+    if: l2_own_fid[k] >= 0
+        return: (cast: (int) (c.sprintf(dest, "l2_h%d, %uU", l2_own_fid[k], (cast: (unsigned) l2_own_fchild[k])) < 0))
+return: (cast: (int) (c.sprintf(dest, "%s, %uU", l2_own_ctr(k), (cast: (unsigned) l2_own_uchild[k])) < 0))
+
+# Load own field k from the slot address l2_xp into temporary t: a slot holds the Structure itself,
+# any other field a typed cell (l2_emit_cell_load).
+fn: l2_emit_own_cell_load (int: k; const: @(char ind); int: t; const: @(LmP0Node at)) int
+    c.array: [1024]: char txt
+    c.array: [1024]: char dcl
+    c.array: [32]: char nm
+    if: l2_own_is_slot(k) = 0
+        return: l2_emit_cell_load(l2_own_ty[k], ind, t, at)
+    if: c.sprintf(nm, "l2_t%d", t) < 0 || l2_pointer_decl_text(l2_own_ty[k] - 1000, 0, nm, dcl) != 0 || l2_pointer_decl_text(l2_own_ty[k] - 1000, 0, 0, txt) != 0
+        return: 1
+return: (cast: (int) (c.fprintf(l2_out, "%s%s\n%sl2_t%d: (cast: (%s) l2_xp[0])\n", ind, dcl, ind, t, txt) < 0))
 
 # The parameter of mi (a formal, or a dynamic input) that own field k's name names, or -1: a field
 # of that name binds it -- at method level, or in a body, whose hosted field it then is (fable).
@@ -6544,6 +6579,7 @@ return: 0 - 1
 # The typed load of direct own field k's cell, spelled into dest.
 fn: l2_own_load (int: k; @: char dest) int
     int: ty l2_own_ty[k]
+    c.array: [1024]: char txt
     if: ty = 0
         return: (cast: (int) (c.sprintf(dest, "lmx_int_value_known(l2_q%d_from[0])", k) < 0))
     if: ty = 1
@@ -6554,6 +6590,12 @@ fn: l2_own_load (int: k; @: char dest) int
         return: (cast: (int) (c.sprintf(dest, "lmx_unsigned_value_known(l2_q%d_from[0])", k) < 0))
     if: ty = 36
         return: (cast: (int) (c.sprintf(dest, "lmx_ulong_value_known(l2_q%d_from[0])", k) < 0))
+    if: l2_own_is_pointer(ty) != 0 && l2_pointer_decl_text(ty - 1000, 0, 0, txt) != 0
+        return: 1
+    if: l2_own_is_slot(k) != 0
+        return: (cast: (int) (c.sprintf(dest, "(cast: (%s) l2_q%d_from[0])", txt, k) < 0))
+    if: l2_own_is_pointer(ty) != 0
+        return: (cast: (int) (c.sprintf(dest, "(cast: (%s) lmx_pointer_value_known(l2_q%d_from[0]))", txt, k) < 0))
 return: 1
 
 # The address of direct own field k's cell, typed by the field (L2 §10: `@x` of a data field is its
@@ -6561,6 +6603,7 @@ return: 1
 # gives an own field.
 fn: l2_own_addr (int: k; @: char dest) int
     int: ty l2_own_ty[k]
+    c.array: [1024]: char txt
     if: ty = 0
         return: (cast: (int) (c.sprintf(dest, "(cast: (@: int) l2_q%d_from[0])", k) < 0))
     if: ty = 1
@@ -6571,6 +6614,9 @@ fn: l2_own_addr (int: k; @: char dest) int
         return: (cast: (int) (c.sprintf(dest, "(cast: (@: unsigned) l2_q%d_from[0])", k) < 0))
     if: ty = 36
         return: (cast: (int) (c.sprintf(dest, "(cast: (@: ulong) l2_q%d_from[0])", k) < 0))
+    # A pointer field's cell is the address of its pointer; a slot has no cell to address.
+    if: l2_own_is_pointer(ty) != 0 && l2_own_is_slot(k) = 0 && l2_pointer_decl_text(ty - 1000, 1, 0, txt) = 0
+        return: (cast: (int) (c.sprintf(dest, "(cast: (%s) l2_q%d_from[0])", txt, k) < 0))
 return: 1
 
 # The value of own field k as method mi's code reads it: a direct field's cell load, a pointer field's
@@ -6586,6 +6632,7 @@ return: (cast: (int) (c.sprintf(dest, "l2_q%d", k) < 0))
 # was spelled before, while the name was still the argument.
 fn: l2_own_store (int: mi; int: k; const: @(char ind); const: @(char val)) int
     const: @(char helper) 0
+    c.array: [256]: char at
     if: k < 0 || ind = 0 || val = 0
         return: 1
     if: l2_own_bseq[k] = 0 && l2_own_formal(mi, k) >= 0
@@ -6595,6 +6642,15 @@ fn: l2_own_store (int: mi; int: k; const: @(char ind); const: @(char val)) int
     helper: l2_own_store_helper(l2_own_ty[k])
     if: helper = 0 || l2_emit_own_from(mi, k, ind) != 0
         return: 1
+    # An own Structure field binds its slot (-189 c3b-3); a pointer stores into its cell.
+    if: l2_own_is_slot(k) != 0
+        if: l2_own_slot_at(k, at) != 0
+            return: 1
+        return: (cast: (int) (c.fprintf(l2_out, "%sif: lmx_arena_ref_store(%s, (cast: (@: void) (%s))) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: own field %d store failed\\n\")\n%s    c.abort()\n%s---\n", ind, at, val, ind, k, ind, ind) < 0))
+    ---
+    if: l2_own_is_pointer(l2_own_ty[k]) != 0
+        return: (cast: (int) (c.fprintf(l2_out, "%sif: lmx_pointer_store_known(l2_q%d_from[0], (cast: (@: void) (%s))) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: own field %d store failed\\n\")\n%s    c.abort()\n%s---\n", ind, k, val, ind, k, ind, ind) < 0))
+    ---
     if: l2_own_store_rebinds(l2_own_ty[k]) != 0
         return: (cast: (int) (c.fprintf(l2_out, "%sl2_q%d_from[0]: %s(l2_q%d_from[0], ((cast: (int) (%s)) & 255))\n%sif: l2_q%d_from[0] = 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: own field %d store failed\\n\")\n%s    c.abort()\n%s---\n", ind, k, helper, k, val, ind, k, ind, k, ind, ind) < 0))
 return: (cast: (int) (c.fprintf(l2_out, "%sif: %s(l2_q%d_from[0], (%s)) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: own field %d store failed\\n\")\n%s    c.abort()\n%s---\n", ind, helper, k, val, ind, k, ind, ind) < 0))
@@ -7837,7 +7893,26 @@ return: 0
 # Prefix `\` is raw dereference. Only the leading run is dereference; any
 # later `\field` stays postfix field-follow. Rename the selected L2 binding,
 # preserve both positional operators, and leave `[]` to the index path.
-fn: l2_prefix_deref (const: @(LmP0Text t); int: mi; @: char dest) int
+# The pointer own field k, loaded into a new temporary for a dereference (-189 c3b-3): its name,
+# appended to dest.  With ind 0 (a check, which emits nothing) the load expression is spelled.
+fn: l2_deref_load (int: k; const: @(char ind); @: char dest) int
+    c.array: [1024]: char load
+    c.array: [1024]: char dcl
+    c.array: [32]: char nm
+    int: t
+    if: l2_own_load(k, load) != 0
+        return: 1
+    if: ind = 0
+        return: (cast: (int) (c.sprintf(dest, "%s", load) < 0))
+    t: l2_tn
+    l2_tn: l2_tn + 1
+    if: c.sprintf(nm, "l2_t%d", t) < 0 || l2_pointer_decl_text(l2_own_ty[k] - 1000, 0, nm, dcl) != 0
+        return: 1
+    if: c.fprintf(l2_out, "%s%s\n%s%s: %s\n", ind, dcl, ind, nm, load) < 0
+        return: 1
+return: (cast: (int) (c.sprintf(dest, "%s", nm) < 0))
+
+fn: l2_prefix_deref (const: @(LmP0Text t); int: mi; const: @(char ind); @: char dest) int
     size_t: lead 0U
     size_t: base_end
     size_t: i
@@ -7865,7 +7940,9 @@ fn: l2_prefix_deref (const: @(LmP0Text t); int: mi; @: char dest) int
                 dest[at]: 92
                 at: at + 1U
                 i: i + 1U
-            if: c.sprintf(dest + at, "l2_p%d_%d", mi, j) < 0
+            if: l2_formal_row(mi, j) >= 0 && l2_deref_load(l2_formal_row(mi, j), ind, dest + at) != 0
+                return: 2
+            if: l2_formal_row(mi, j) < 0 && c.sprintf(dest + at, "l2_p%d_%d", mi, j) < 0
                 return: 2
             at: strlen(dest)
             found: 1
@@ -7883,7 +7960,9 @@ fn: l2_prefix_deref (const: @(LmP0Text t); int: mi; @: char dest) int
                 i: i + 1U
             if: l2_m_alias[l2_own_off(mi, j)] >= 0 && c.sprintf(dest + at, "l2_p%d_%d", mi, l2_m_alias[l2_own_off(mi, j)]) < 0
                 return: 2
-            if: l2_m_alias[l2_own_off(mi, j)] < 0 && c.sprintf(dest + at, "l2_q%d", j) < 0
+            if: l2_m_alias[l2_own_off(mi, j)] < 0 && l2_own_direct(mi, j) != 0 && l2_deref_load(j, ind, dest + at) != 0
+                return: 2
+            if: l2_m_alias[l2_own_off(mi, j)] < 0 && l2_own_direct(mi, j) = 0 && c.sprintf(dest + at, "l2_q%d", j) < 0
                 return: 2
             at: strlen(dest)
             found: 1
@@ -8640,12 +8719,17 @@ fn: l2_own_is_pointer (int: ty) int
         return: 1
 return: 0
 
-fn: l2_emit_raw_pointer_type (@: FILE out; int: raw; int: extra_depth) int
+# The L1 spelling of raw pointer type `raw` with extra_depth more address levels, into dest: the
+# type alone (name 0), or a declarator of `name` -- a const type keeps the name inside
+# `const: @(... name)`, where appending it after the closing parenthesis would be invalid L1.
+fn: l2_pointer_decl_text (int: raw; int: extra_depth; const: @(char name); @: char dest) int
     int: fi raw - 100
-    int: depth
+    int: depth 0
     int: is_const 0
+    int: i 0
     const: @(char base) 0
-    if: out = 0 || extra_depth < 0
+    c.array: [256]: char nm
+    if: dest = 0 || extra_depth < 0
         return: 1
     if: raw = 3
         base: "char"
@@ -8700,32 +8784,35 @@ fn: l2_emit_raw_pointer_type (@: FILE out; int: raw; int: extra_depth) int
     if: depth < 1
         return: 1
     depth: depth + extra_depth
-    if: depth < 1
+    dest[0]: 0
+    if: is_const != 0 && l2_cat(dest, "const: ") != 0
         return: 1
-    if: is_const != 0 && fputs("const: ", out) < 0
-        return: 1
-    if: l2_emit_address_marks(out, depth) != 0
-        return: 1
-    if: is_const != 0
-        if: fputs("(", out) < 0
+    while: i < depth
+        if: l2_cat(dest, "@") != 0
             return: 1
-        ---
-    else:
-        if: fputs(": ", out) < 0
-            return: 1
+        i: i + 1
     ---
-    if: raw >= 100
-        if: l2_write_text(out, l2_foreign_name[fi]) != 0
-            return: 1
-        ---
-    else:
-        if: fputs(base, out) < 0
-            return: 1
-    ---
-    if: is_const != 0 && fputs(")", out) < 0
+    if: is_const != 0 && l2_cat(dest, "(") != 0
+        return: 1
+    if: is_const = 0 && l2_cat(dest, ": ") != 0
+        return: 1
+    if: raw >= 100 && c.snprintf(nm, 256U, "%.*s", (cast: (int) l2_foreign_name[fi]\length), l2_foreign_name[fi]\data) < 0
+        return: 1
+    if: raw < 100 && c.snprintf(nm, 256U, "%s", base) < 0
+        return: 1
+    if: l2_cat(dest, nm) != 0
+        return: 1
+    if: name != 0 && (l2_cat(dest, " ") != 0 || l2_cat(dest, name) != 0)
+        return: 1
+    if: is_const != 0 && l2_cat(dest, ")") != 0
         return: 1
 return: 0
 
+fn: l2_emit_raw_pointer_type (@: FILE out; int: raw; int: extra_depth) int
+    c.array: [1024]: char txt
+    if: out = 0 || l2_pointer_decl_text(raw, extra_depth, 0, txt) != 0
+        return: 1
+return: (cast: (int) (fputs(txt, out) < 0))
 fn: l2_emit_own_pointer_type (@: FILE out; int: ty) int
     if: ty < 1000 || ty >= 2000
         return: 1
@@ -8735,92 +8822,11 @@ return: l2_emit_raw_pointer_type(out, ty - 1000, 0)
 # is correct in casts and returns, but appending a name after the closing ')'
 # would produce invalid L1.  Emit the complete generated cache declaration.
 fn: l2_emit_own_pointer_temp_decl (@: FILE out; int: ty; const: @(char ind); int: temp) int
-    int: raw ty - 1000
-    int: fi raw - 100
-    int: depth
-    int: is_const 0
-    const: @(char base) 0
-    if: out = 0 || ind = 0 || ty < 1000 || ty >= 2000
+    c.array: [1024]: char txt
+    c.array: [32]: char nm
+    if: out = 0 || ind = 0 || ty < 1000 || ty >= 2000 || c.sprintf(nm, "l2_q%d", temp) < 0 || l2_pointer_decl_text(ty - 1000, 0, nm, txt) != 0
         return: 1
-    if: raw = 3
-        base: "char"
-        depth: 1
-        is_const: 1
-    if: raw = 29
-        base: "LmxMsg"
-        depth: 1
-        is_const: 1
-    if: raw = 9
-        base: "size_t"
-        depth: 1
-    if: raw = 11
-        base: "int"
-        depth: 1
-    if: raw = 12
-        base: "char"
-        depth: 1
-    if: raw = 16
-        base: "void"
-        depth: 1
-    if: raw = 25
-        base: "unsigned"
-        depth: 1
-    if: raw = 38
-        base: "ulong"
-        depth: 1
-    if: raw = 17
-        base: "char"
-        depth: 2
-    if: raw = 18
-        base: "void"
-        depth: 2
-    if: raw = 19
-        base: "int"
-        depth: 2
-    if: raw = 20
-        base: "size_t"
-        depth: 2
-    if: raw = 24
-        base: "unsigned"
-        depth: 2
-    if: raw = 39
-        base: "ulong"
-        depth: 2
-    if: raw >= 100
-        if: fi < 0 || fi >= l2_foreign_n
-            return: 1
-        depth: l2_foreign_depth[fi]
-        is_const: l2_foreign_const[fi]
-    ---
-    if: depth < 1 || fputs(ind, out) < 0
-        return: 1
-    if: is_const != 0 && fputs("const: ", out) < 0
-        return: 1
-    if: l2_emit_address_marks(out, depth) != 0
-        return: 1
-    if: is_const != 0
-        if: fputs("(", out) < 0
-            return: 1
-        ---
-    else:
-        if: fputs(": ", out) < 0
-            return: 1
-        ---
-    ---
-    if: raw >= 100
-        if: l2_write_text(out, l2_foreign_name[fi]) != 0
-            return: 1
-        ---
-    else:
-        if: fputs(base, out) < 0
-            return: 1
-        ---
-    ---
-    if: c.fprintf(out, " l2_q%d", temp) < 0
-        return: 1
-    if: is_const != 0 && fputs(")", out) < 0
-        return: 1
-return: fputs("\n", out) < 0
+return: (cast: (int) (fputs(ind, out) < 0 || fputs(txt, out) < 0 || fputs("\n", out) < 0))
 
 # Type of Array<@^n T>.data is @^(n+1) T. The extra level is the address of
 # the contiguous element backing, not a replacement void** representation.
@@ -13704,7 +13710,7 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
                 return: l2_error(path, node, "unresolved name")
             return: 0
         ---
-        raw: l2_prefix_deref(node\as\atom, mi, cast_ty)
+        raw: l2_prefix_deref(node\as\atom, mi, 0, cast_ty)
         if: raw = 0
             return: 0
         if: raw = 2
@@ -14588,7 +14594,7 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             return: l2_error(path, stmt, "unsupported index")
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && stmt\as != 0 && stmt\as\frame != 0
             raw: l2_raw_head(stmt\as\frame\head, mi, @ rj, @ rf)
-            pd: l2_prefix_deref(stmt\as\frame\head, mi, pdest)
+            pd: l2_prefix_deref(stmt\as\frame\head, mi, 0, pdest)
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && pd = 2
             return: l2_error(path, stmt, "invalid raw dereference")
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && raw = 2
@@ -14884,7 +14890,9 @@ fn: l2_hidden_from (int: mi; int: callee; int: k; int: callee_self; const: @(cha
         return: 1
     t: l2_tn
     l2_tn: l2_tn + 1
-    if: l2_emit_cell_load(l2_own_of_dt(ty), ind, t, 0) != 0
+    if: l2_own_is_slot(child) != 0 && l2_emit_own_cell_load(child, ind, t, 0) != 0
+        return: 1
+    if: l2_own_is_slot(child) = 0 && l2_emit_cell_load(l2_own_of_dt(ty), ind, t, 0) != 0
         return: 1
     if: c.sprintf(dest, "l2_t%d", t) < 0
         return: 1
@@ -15041,6 +15049,8 @@ fn: l2_prep_addr (const: @(LmP0Node node); int: mi; const: @(char ind); @: char 
         return: 1
     if: l2_own_ty[oi] = 36 && c.sprintf(dest, "(cast: (@: ulong) l2_q%d_from[0])", oi) < 0
         return: 1
+    if: l2_own_is_slot(oi) != 0
+        return: l2_error(l2_src, node, "an own Structure field has no cell address")
     if: l2_own_is_pointer(l2_own_ty[oi]) != 0
         temp: l2_tn
         l2_tn: l2_tn + 1
@@ -15143,6 +15153,7 @@ return: memcmp(a\data, d, n) = 0
 # sizeof: operand name bytes. Formals and scalar/array/pointer owns.
 # Returns 2 when the name is not lowered here; caller may accept a type or refuse.
 fn: l2_sizeof_name_bytes (const: @(LmP0Node node); const: @(char d); size_t: b; size_t: e; int: mi; const: @(char ind); @: char dest) int
+    c.array: [1024]: char l2_szt
     size_t: n 0U
     size_t: i 0U
     int: k 0
@@ -15213,7 +15224,7 @@ fn: l2_sizeof_name_bytes (const: @(LmP0Node node); const: @(char d); size_t: b; 
     ---
     if: l2_own_is_pointer(l2_own_ty[oi]) != 0
         if: l2_m_uses[l2_own_off(mi, oi)] != 0
-            if: c.sprintf(dest, "c.sizeof(l2_q%d)", oi) < 0
+            if: l2_pointer_decl_text(l2_own_ty[oi] - 1000, 0, 0, l2_szt) != 0 || c.sprintf(dest, "c.sizeof(%s)", l2_szt) < 0
                 return: 1
             return: 0
         ---
@@ -15506,7 +15517,7 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
             ---
             return: 1
         ---
-        k: l2_prefix_deref(node\as\atom, mi, dest)
+        k: l2_prefix_deref(node\as\atom, mi, ind, dest)
         if: k = 0
             return: 0
         if: k = 2
@@ -16199,7 +16210,7 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
                 return: 1
             occt: l2_tn
             l2_tn: l2_tn + 1
-            if: l2_emit_cell_load(l2_own_ty[po], ind, occt, at) != 0
+            if: l2_emit_own_cell_load(po, ind, occt, at) != 0
                 return: 1
             if: c.sprintf(piece, "l2_t%d", occt) < 0
                 return: 1
@@ -16224,7 +16235,7 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
                 return: 1
             occt: l2_tn
             l2_tn: l2_tn + 1
-            if: l2_emit_cell_load(l2_own_ty[po], ind, occt, at) != 0
+            if: l2_emit_own_cell_load(po, ind, occt, at) != 0
                 return: 1
             if: c.sprintf(piece, "l2_t%d", occt) < 0
                 return: 1
@@ -17363,6 +17374,9 @@ fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
     int: raw
     int: base
     int: kind
+    # An own Structure root is its slot (-189 c3b-3): AT reads the Structure the slot holds.
+    if: level = 0 && path[0] = 1 && l2_own_is_slot(path[1]) != 0
+        return: l2_rw_own(parent, path[1], out)
     if: level = 0 && path[0] = 1
         if: l2_rw_frame(parent, "LMX_WALK_OP_DEREF", 2, out) != 0 || l2_rw_own(\out, path[1], @ raw) != 0
             return: 1
@@ -17480,7 +17494,7 @@ fn: l2_rw_admit_assign (const: @(LmP0Node stmt); int: oi; int: into; @: int out)
     src: l2_own_find_last(l2_e, f\value\as\atom)
     if: src < 0 || l2_own_mi[src] != l2_e || l2_own_host[src] != 0 || l2_own_fid[src] >= 0 || l2_own_uchild[src] < 0 || l2_own_is_pointer(l2_own_ty[src]) = 0 || l2_own_nsty_get(src) >= 0
         return: l2_rw_refuse(stmt, "an admission to a Structure type")
-    if: l2_rw_frame(into, "LMX_WALK_OP_PUT", 4, out) != 0 || l2_rw_cell(\out, oi) != 0 || l2_rw_admit(\out, l2_own_nsty_get(oi), l2_rw_is_letter(src), @ adm) != 0
+    if: l2_rw_frame(into, l2_rw_bind_op(oi), 4, out) != 0 || l2_rw_cell(\out, oi) != 0 || l2_rw_admit(\out, l2_own_nsty_get(oi), l2_rw_is_letter(src), @ adm) != 0
         return: 1
     if: l2_rw_own(adm, src, @ raw) != 0 || l2_rw_put(adm, 2, raw) != 0
         return: 1
@@ -17521,7 +17535,7 @@ fn: l2_rw_take (const: @(LmP0Node stmt); int: into; @: int out) int
         return: l2_rw_refuse(stmt, "a field declared in a nested body")
     if: l2_own_is_pointer(l2_own_ty[oi]) = 0
         return: l2_rw_refuse(stmt, "this receiveMessage")
-    if: l2_rw_frame(into, "LMX_WALK_OP_PUT", 4, out) != 0 || l2_rw_cell(\out, oi) != 0
+    if: l2_rw_frame(into, l2_rw_bind_op(oi), 4, out) != 0 || l2_rw_cell(\out, oi) != 0
         return: 1
     holder: \out
     # m of a declared Structure type T takes the NEXT letter and admits it to T -- its payload, the
@@ -17567,7 +17581,7 @@ fn: l2_rw_model (const: @(LmP0Node stmt); const: @(LmP0Text h); int: into; @: in
         return: l2_rw_refuse(stmt, "a field declared in a nested body")
     if: ni < 0 || l2_own_nsty_get(oi) != ni || l2_ns_parent[ni] >= 0 || l2_ns_eternal[ni] >= 0
         return: l2_rw_refuse(stmt, "a Structure-typed field")
-    if: l2_rw_frame(into, "LMX_WALK_OP_PUT", 4, out) != 0 || l2_rw_cell(\out, oi) != 0 || l2_rw_frame(\out, "LMX_WALK_OP_PRIM", 3, @ prim) != 0
+    if: l2_rw_frame(into, l2_rw_bind_op(oi), 4, out) != 0 || l2_rw_cell(\out, oi) != 0 || l2_rw_frame(\out, "LMX_WALK_OP_PRIM", 3, @ prim) != 0
         return: 1
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: lmx_walk_merge_model\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0 || lmx_arena_ref_store(l2_rw%d, 2U, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", prim, prim, prim, prim, prim, prim, prim, prim, ni) < 0
         return: 1
@@ -17581,6 +17595,14 @@ fn: l2_rw_cell (int: node; int: oi) int
     if: l2_rw_emit = 0
         return: 0
 return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_entry_unit)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %uU) != c.LMX_WALK_OK\n            return: 1\n", node, node, (cast: (unsigned) l2_own_uchild[oi])) < 0))
+
+# The walker op that binds the root's own field oi (-189 c3b-3; grok_bot -186): an own Structure
+# field's slot takes the Structure itself, [put_ref, holder, slot, value]; any other field is a cell,
+# [put, holder, slot, value].
+fn: l2_rw_bind_op (int: oi) const: @: char
+    if: l2_own_is_slot(oi) != 0
+        return: "LMX_WALK_OP_PUT_REF"
+return: "LMX_WALK_OP_PUT"
 
 # A read of the root's own int field oi.
 fn: l2_rw_own (int: parent; int: oi; @: int out) int
@@ -17750,6 +17772,8 @@ fn: l2_rw_struct_arg (const: @(LmP0Node node); @: LmP0Field a; int: span; int: n
     ---
     if: l2_own_nsty_get(oi) != ni
         return: l2_rw_refuse(node, "an admission to a Structure type")
+    if: l2_own_is_slot(oi) != 0
+        return: l2_rw_own(parent, oi, out)
     if: l2_rw_frame(parent, "LMX_WALK_OP_DEREF", 2, out) != 0 || l2_rw_own(\out, oi, @ raw) != 0
         return: 1
 return: l2_rw_put(\out, 1, raw)
@@ -19050,7 +19074,7 @@ fn: l2_emit_path_load (int: mi; int: oi; const: @(char ind); @: char dest) int
         return: 1
     t: l2_tn
     l2_tn: l2_tn + 1
-    if: l2_emit_cell_load(l2_own_ty[oi], ind, t, l2_own_decl[oi]) != 0
+    if: l2_emit_own_cell_load(oi, ind, t, l2_own_decl[oi]) != 0
         return: 1
     if: c.sprintf(dest, "l2_t%d", t) < 0
         return: 1
@@ -20797,7 +20821,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM && l2_text_eq(stmt\as\atom, "return")
             return: 1
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0
-            pd: l2_prefix_deref(stmt\as\frame\head, mi, pdest)
+            pd: l2_prefix_deref(stmt\as\frame\head, mi, ind, pdest)
         if: pd = 0
             fr: stmt\as\frame
             if: fr\body = 0 || fr\trailer != 0 || fr\body\trailer != 0 || l2_eval_fields(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok) != 0
@@ -20872,10 +20896,6 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                 return: 1
             if: l2_own_nsty_get(oi) >= 0 && l2_emit_admit(mi, l2_own_nsty_get(oi), "l2_ngraph", ind) != 0
                 return: 1
-            if: l2_emit_own_from(mi, oi, ind) != 0
-                return: 1
-            if: c.fprintf(l2_out, "%sif: lmx_pointer_store_known(l2_q%d_from[0], (cast: (@: void) l2_ngraph)) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: receiveMessage store failed for own field %d\\n\")\n%s    c.abort()\n%s---\n", ind, oi, ind, oi, ind, ind) < 0
-                return: 1
             if: l2_emit_occ_write(mi, oi, ind, "l2_ngraph") != 0
                 return: 1
             field: l2_next_active(field\next)
@@ -20910,10 +20930,6 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                 return: 1
             if: l2_emit_implicit_throw(mi, "merge", ind) != 0
                 return: 1
-            if: c.fprintf(l2_out, "%sl2_xp: lmx_arena_ref_cell(%s, %uU)\n%sif: l2_xp = 0 || lmx_pointer_store_known(l2_xp[0], (cast: (@: void) l2_mresult)) != 0\n", ind, l2_own_ctr(oi), (cast: (unsigned) l2_own_uchild[oi]), ind) < 0
-                return: 1
-            if: l2_emit_invariant(ind, "an own field did not take its fresh value") != 0
-                return: 1
             if: l2_emit_occ_write(mi, oi, ind, "(cast: (@: void) l2_mresult)") != 0
                 return: 1
             field: l2_next_active(field\next)
@@ -20941,10 +20957,6 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             if: c.sprintf(l2_esd_tok, "(cast: (@: void) l2_t%d)", l2_tn) < 0
                 return: 1
             l2_tn: l2_tn + 1
-            if: c.fprintf(l2_out, "%sl2_xp: lmx_arena_ref_cell(%s, %uU)\n%sif: l2_xp = 0 || lmx_pointer_store_known(l2_xp[0], %s) != 0\n", ind, l2_own_ctr(oi), (cast: (unsigned) l2_own_uchild[oi]), ind, l2_esd_tok) < 0
-                return: 1
-            if: l2_emit_invariant(ind, "an own field did not take its fresh value") != 0
-                return: 1
             if: l2_emit_occ_write(mi, oi, ind, l2_esd_tok) != 0
                 return: 1
             field: l2_next_active(field\next)
@@ -20979,10 +20991,6 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             if: oi < 0
                 return: l2_error(l2_src, stmt, "unresolved name")
             if: l2_graph_nsty(mi, stmt\as\frame\head) >= 0 && l2_emit_admit(mi, l2_graph_nsty(mi, stmt\as\frame\head), l2_esd_tok, ind) != 0
-                return: 1
-            if: l2_emit_own_from(mi, oi, ind) != 0
-                return: 1
-            if: c.fprintf(l2_out, "%sif: lmx_pointer_store_known(l2_q%d_from[0], (cast: (@: void) %s)) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: rebinding store failed for own field %d\\n\")\n%s    c.abort()\n%s---\n", ind, oi, l2_esd_tok, ind, oi, ind, ind) < 0
                 return: 1
             if: l2_emit_occ_write(mi, oi, ind, l2_esd_tok) != 0
                 return: 1
@@ -21097,10 +21105,6 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         if: rbadmit != 0 && l2_is_letter_name(mi, l2_next_active(fr\body\first_field)\value) != 0 && l2_payload_expr(l2_tok) != 0
             return: 1
         if: rbadmit != 0 && l2_emit_admit(mi, l2_graph_nsty(mi, fr\head), l2_tok, ind) != 0
-            return: 1
-        if: rbadmit != 0 && l2_emit_own_from(mi, oi, ind) != 0
-            return: 1
-        if: rbadmit != 0 && c.fprintf(l2_out, "%sif: lmx_pointer_store_known(l2_q%d_from[0], (cast: (@: void) %s)) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: rebinding store failed for own field %d\\n\")\n%s    c.abort()\n%s---\n", ind, oi, l2_tok, ind, oi, ind, ind) < 0
             return: 1
         # FABLE-SONNET-OWN-LOOKUP-AUDIT-20260923-131 (a): was a byte-identical
         # hand-inlined copy of l2_emit_own_from's own two branches (guard
@@ -21232,6 +21236,9 @@ return: 0
 fn: l2_emit_cell_new (int: oi; const: @(char ind); const: @(char slot); const: @(char chr0); const: @(char fail); const: @(char fail2)) int
     int: ty l2_own_ty[oi]
     size_t: n 0U
+    # An own Structure field is a direct slot, empty until it is bound (-189 c3b-3): no cell.
+    if: l2_own_is_slot(oi) != 0
+        return: 0
     if: ty = 1
         return: (cast: (int) (c.fprintf(l2_out, "%s%s[0]: %s\n", ind, slot, chr0) < 0))
     if: l2_own_is_array(ty) != 0
@@ -21657,7 +21664,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
             if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_ty[k] = 36 && l2_own_direct(i, k) = 0 && c.fprintf(l2_out, "    ulong: l2_q%d\n    @@: void l2_q%d_from 0\n    int: l2_q%d_dirty 0\n", k, k, k) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_is_pointer(l2_own_ty[k]) != 0
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_is_pointer(l2_own_ty[k]) != 0 && l2_own_direct(i, k) = 0
                 if: l2_emit_own_pointer_temp_decl(l2_out, l2_own_ty[k], "    ", k) != 0 || c.fprintf(l2_out, "    @@: void l2_q%d_from 0\n    int: l2_q%d_dirty 0\n", k, k) < 0
                     fclose(l2_out)
                     return: 1
@@ -21687,7 +21694,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
             if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_param_of(i, k) < 0 && l2_own_ty[k] = 36 && l2_own_direct(i, k) = 0 && c.fprintf(l2_out, "    l2_q%d: lmx_ulong_value_known(l2_q%d_from[0])\n", k, k) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_param_of(i, k) < 0 && l2_own_is_pointer(l2_own_ty[k]) != 0
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_param_of(i, k) < 0 && l2_own_is_pointer(l2_own_ty[k]) != 0 && l2_own_direct(i, k) = 0
                 if: c.fprintf(l2_out, "    l2_q%d: (cast: (", k) < 0 || l2_emit_own_pointer_type(l2_out, l2_own_ty[k]) != 0 || c.fprintf(l2_out, ") lmx_pointer_value_known(l2_q%d_from[0]))\n", k) < 0
                     fclose(l2_out)
                     return: 1
@@ -21707,7 +21714,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
             if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] >= 0 && l2_own_ty[k] = 36 && l2_own_direct(i, k) = 0 && c.fprintf(l2_out, "    ulong: l2_q%d\n    @@: void l2_q%d_from 0\n    int: l2_q%d_dirty 0\n", k, k, k) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] >= 0 && l2_own_is_pointer(l2_own_ty[k]) != 0
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] >= 0 && l2_own_is_pointer(l2_own_ty[k]) != 0 && l2_own_direct(i, k) = 0
                 if: l2_emit_own_pointer_temp_decl(l2_out, l2_own_ty[k], "    ", k) != 0 || c.fprintf(l2_out, "    @@: void l2_q%d_from 0\n    int: l2_q%d_dirty 0\n", k, k) < 0
                     fclose(l2_out)
                     return: 1

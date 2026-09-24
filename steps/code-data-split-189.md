@@ -761,3 +761,72 @@ Witnesses planned:
 - Mutant: bind through a pointer cell while reading the slot.  unit_root_model_field and the
   receive rows go RED.
 - Recursion with a `Model: m` field read after the inner call: each activation keeps its own m.
+
+## Commit c3b-3: pointer own fields direct; an own Structure field is a direct slot
+
+Base: main 260c6ce + grok_bot's -186 k3 (10f9e38, the copier shares a pointer cell's pointee) +
+k4 when it lands (below).  Plan: «c3b-3 plan» above.
+
+What is built:
+- `l2_own_direct` now also covers every pointer own field.  No own field keeps a working copy.
+  - The fixtures' generated L1 (197 programs) has no `_dirty`, `_sticky`, `_active` and no
+    `l2_q<k>: ...` assignment left.
+- `l2_own_is_slot(k)` is a field of the graph type whose declaration is not `@: T x`.  That covers
+  `Model: m`, `T: m`, `receiveMessage: m`, `f()` and a Structure catch parameter.  Its slot holds
+  the Structure:
+  - the builder makes no cell for it (`l2_emit_cell_new`); it stays 0 until the field is bound;
+  - a read is `(cast: (@: Lmx) l2_q<k>_from[0])`, the slot itself;
+  - a binding is `lmx_arena_ref_store(<ctr>, <slot>, g)`, inside `l2_own_store`.
+- A pointer field reads `(cast: (T) lmx_pointer_value_known(l2_q<k>_from[0]))`.  It stores with
+  `lmx_pointer_store_known(l2_q<k>_from[0], (cast: (@: void) v))`, and `@p` is its cell's address.
+- The pointer type spelling is one function, `l2_pointer_decl_text`: a type alone or a declarator.
+  - l2_emit_raw_pointer_type and l2_emit_own_pointer_temp_decl had each carried the table.
+  - An unknown code now returns 1 with depth 0, not with an uninitialized depth.
+- The native binding sites that each hand-emitted `lmx_pointer_store_known(<cell>, g)` before the
+  working-copy write are now the one `l2_own_store`, through occ_write: receiveMessage / `T: m`,
+  `Model: m`, `f()` declaration, `f()` assignment, the S3 admitted rebinding.
+- Own-row loads from a slot address go through `l2_emit_own_cell_load`: the path root, `M\x` and
+  `M\[N]x` from another method, a hidden input.  `@m` of an own Structure field is refused: «an own
+  Structure field has no cell address».
+- `\p` of a direct pointer field: L1 dereferences a name only.  `\(expr)` is refused, «prefix
+  dereference expects an operand» (measured on l1trans).
+  - So an emitting caller loads the pointer into a temporary first (`l2_deref_load`).
+  - l2_prefix_deref takes `ind`; the two check-phase callers pass 0.
+- Walked root:
+  - an own Structure root is AT(slot), not DEREF(AT(cell)) (l2_rw_path_value, l2_rw_struct_arg);
+  - admit-assign, take and model bind it with PUT_REF (`l2_rw_bind_op`), op 24,
+    [put_ref, holder, slot, value];
+  - a kind-3 reference field in a path keeps DEREF.
+
+The kernel side, grok_bot -186 k4 (in progress):
+- Six root rows compare an own Structure field: `if: m = 0`, `m != 0`, `letter = m`.  They are
+  take_empty, take_letter, next_message_twice, next_message_in_method, admit_letter_coarse and
+  charpp_return.  On the walker as of k3 they fail «walk error: INVALID»:
+  - AT of an empty slot was INVALID;
+  - EQ with a Structure reference or no value was INVALID.
+- Measured with a private scratch patch of the staged lmx_walk.lm1 (n159/kslot.json): with AT of an
+  empty slot giving no value, and EQ comparing addresses when a side is STRUCT or 0, all six are
+  green.  grok_bot is writing that as k4.
+- lmx_fresh (83e1bda) clears an own Structure slot of a re-entry's instance to 0, the prototype's
+  value; an OP/ROLE frame's Structure operand is still kept by address.  That is the rule the
+  c3b-3 plan named: no discrepancy.
+- The copier (k3): a pointer cell's pointee is shared.  An own Structure field is a STRUCT child now,
+  so it is copied with its parent.
+
+Rows:
+- Pins:
+  - unit_root_model_field, unit_field_path_unit_colon and unit_matrix_callable_struct_identity pin
+    `c.LMX_WALK_OP_PUT_REF, 4U)`, with `c.LMX_WALK_OP_DEREF` Absent;
+  - unit_arg_addr_pointer loses its sticky pins.
+- `BindOrder` and `Test-BindOrder` are gone from the harness: no own field carries a sticky flag.
+- New: unit_recursive_model_slot.  `nest` recurses with `Box: b` and `b\v: n`; each activation
+  binds its own slot, so nest(3) = 123.
+
+Mutants (private variants, each RED by behaviour):
+- MS1, the old form (the builder's pointer cell, binding stored into it) under slot reads: the
+  recursive row, model_field, take_letter and admit_letter_coarse all stop with exit 3.
+- MS2, the walked root binding by PUT: model_field, take_letter and admit_letter_coarse exit 3.
+- MS3, a native binding stored into the method's occurrence M instead of the activation's data:
+  unit_recursive_model_slot exits 3.
+
+Per-row check (357 rows, a scratch driver with the scratch walker patch): 0 red after the re-pins.

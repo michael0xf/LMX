@@ -172,3 +172,38 @@ into inner's slots and appends the new ones.
 - So the primitive gets either an override span and an «into» flag, or a sibling
   `lmx_walk_merge_into [prim, record, target, op]`.
 - Natively, the l2_emit_admit / merge sites stay as they are.
+
+## q26 follow-up: how lingvamyxa_prev handled a reference to a Structure (read)
+
+C:\Nyasha_Planet\lingvamyxa_prev, HEAD 98b66a75a8f0e83f84a56b67e634e386d609a666.  Each place below was
+read at the line cited.
+
+| what | prev | file:line |
+|---|---|---|
+| the type | A named Structure carries one IMPLICIT C address level: `Inner` is `LmLmxStructure *`, `@: Inner` is `LmLmxStructure **`.  The double level lives in the translation only; the code writes one `@`. | lm2/trans_l1_expr.lm2:1566-1589 (lm_trans_layout_type_implicit_address_depth, lm_trans_effective_address_depth), :1694-1702 (the type printer adds one `*` per level) |
+| `@x` | C `&` of the BINDING.  If x already holds an address, it is address-of-address. | lm2/trans_registry.lm2:1014; Lingvamyxa_spec.txt:7184-7192 («`@: User slot` is an L2 address of a machine slot that stores that Lmx reference»), :7226-7228, :7272-7278 |
+| a path hop `o\inner\value` | One dereference per field: `(*((T *)lm_lmx_structure_field_cell((LmLmxStructure *)(...), i)))`.  The next hop casts the held value to `LmLmxStructure *`, with NO extra dereference for a field declared `@: Inner`. | lm2/trans_l1_expr.lm2:5655-5708; the field class lookup ignores the address depth, :3313-3342 |
+| `o\inner: a`, an own Structure field | A plain pointer store: `target = expr;`.  That shares, it does not merge. | lm2/trans_l1_statement.lm2:11308 (the lvalue), :11757-11765 (the store); tests/trans_structure_graph_nested.lm2:63-66 (`a\child\x: 7` changes `p\x`) |
+| an `@: User` slot | Written THROUGH explicitly: `return_source[0]: user`, filled by `@ returnSource`.  In that fixture the level is visible in the code. | tests/trans_inferred_class_return_pointer.lm2:46, :50, :72 |
+| the refactoring note | «`@: LmHashArray` then `array\hash` emitted `LmHashArray **`» was a workaround: «`@ⁿ` is an L2 address slot, not "Structure starts at C depth 1"». | struct_refactoring.txt:243-248; «A StructureReference slot is a pointer to another such chunk», :315-319 |
+
+What follows from it:
+- prev resolved the TYPE level: one `@` in the code, two levels in C.
+- prev's `@ a` is the address of a's binding.  That is what D-53 records as the native behavior
+  today (`@mo` gives the pointer cell's address), so under prev's rule D-53 is the specified
+  behavior, not a defect.
+- prev never built the read through a reference field (the second dereference).  No prev fixture
+  reads `o\inner\value` through `@: Inner inner`.
+- prev's own-field assignment shares.  The author's q26 answer, merge in place with identity kept,
+  replaces that.
+
+The open choice, for `@: Inner inner` and `o\inner: @ a` (sent to fable):
+- (A) prev's rule: the slot holds the address of a's binding, and a read through it is two
+  dereferences, absorbed by the translator.
+- (B) The slot holds the Structure reference a holds, and a read is one DEREF.  `@` of a
+  Structure-typed binding gives the held reference, which is D-53's fix.
+- The difference shows only when a is itself rebindable (a reference, `@: Inner a` then
+  `a: @ b`).  For an own a, the merge in place keeps a's identity, so (A) and (B) read the same.
+- Under (A), the graph would hold the address of a slot inside a Structure's field array, not a
+  Structure or a cell.  Whether the arena's table classifies such an interior address is not
+  measured.  If it does not, it is KIND_NONE for the copier, as D-60 is.

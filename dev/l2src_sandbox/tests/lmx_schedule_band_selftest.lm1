@@ -36,9 +36,15 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
 size_t: sb_calls 0U
 
-fn: sb_body (@: Lmx node; @: Lmx self) int
+fn: sb_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
     sb_calls: sb_calls + 1U
-return: 1
+    if: dest != 0
+        lmx_int_store_known(dest, 1)
+    ---
+    if: out != 0
+        \out: dest
+    ---
+return: 0
 
 # The disposal this file can SEE, one counter per arena.
 size_t: sb_disposed_a 0U

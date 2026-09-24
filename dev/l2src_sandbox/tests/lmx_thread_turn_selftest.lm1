@@ -51,12 +51,23 @@ size_t: tt_host_calls 0U
 @: LmxThread tt_current 0
 
 # The body of a translated Message.  It records what it was handed and who was current while it ran.
-fn: tt_body (@: Lmx node; @: Lmx self) int
+fn: tt_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    @: Lmx self (cast: (@: Lmx) owner)
+    @: Lmx node 0
+    if: self != 0
+        node: self\parent
+    ---
     tt_calls: tt_calls + 1U
     tt_node: node
     tt_self: self
     tt_current: lmx_thread_current()
-return: 7
+    if: dest != 0
+        lmx_int_store_known(dest, 7)
+    ---
+    if: out != 0
+        \out: dest
+    ---
+return: 0
 
 # A handler given from OUTSIDE -- R0's shape (25 (ii)): there is no METHOD record for it.
 fn: tt_host (@: Lmx node) int

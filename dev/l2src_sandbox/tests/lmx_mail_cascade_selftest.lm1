@@ -92,7 +92,7 @@ size_t: mc_seen_root_mail_slots 0U
 # The child's body.  mc_body_ends decides whether this child ENDS (success + stopped, which is what
 # makes lmx_thread_finish act at the end of its turn) or stays live forever.  mc_observe makes it
 # record what R0's mailbox looked like AT ITS OWN BOUNDARY -- the ordering evidence.
-fn: mc_body (@: Lmx node; @: Lmx self) int
+fn: mc_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
     @: LmxThread t
     @: LmxMsg message
     t: lmx_thread_current()
@@ -126,7 +126,7 @@ return: 0
 # end state.  Nothing here is timing-dependent: the main lane waits for `entered`, the stop ends this
 # wait, and the stop happens strictly after the mutation's destructor and strictly before the
 # corrected close's.
-fn: mc_w_body (@: Lmx node; @: Lmx self) int
+fn: mc_w_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
     @: LmxThread t
     @: LmxMsg message
     @: LmxMsg letter

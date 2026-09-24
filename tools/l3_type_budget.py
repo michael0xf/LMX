@@ -46,12 +46,15 @@ MAX_NAME = 64          # l1_hdr_type_add's buffer: one more maximal name must st
 # (raised from 64/4096 in FABLE-134 so typed Post/Thread mail fnptrs need not be erased).
 # Compositional DynamicArrays (fixed <T>Array + capacity) with typed Post Accept/Take/Count/Close
 # and Thread MailAccept/Take/Count/Close kept; EXPECT=71 after mode removal (dropped RequestMode+Dispatch; WalkFn remains) (descriptor
-# dispatch hook in lmx_call.h.lm1, FABLE-GROKBOT-DESCRIPTOR-DISPATCH-20260924-156).
+# dispatch hook in lmx_call.h.lm1, FABLE-GROKBOT-DESCRIPTOR-DISPATCH-20260924-156).  EXPECT=70 after
+# FABLE-OPUS-ROOT-WALK-TRANSLATOR-20260924-159 commit 1 (D-38): lmx_call.h.lm1 dropped fnptr
+# LmxCallEntrySelf -- METHOD.addr is the method's prim-ABI trampoline, so no user of the two-reference
+# entry type is left.
 EXPECT = {
-    'tests/l3_thread_bind_selftest.lm1': 71,
-    'tests/l3_n9_walk_selftest.lm1': 71,
-    'tests/l3_n10_walk_selftest.lm1': 71,
-    'tests/l3_mail_prim_selftest.lm1': 71,
+    'tests/l3_thread_bind_selftest.lm1': 70,
+    'tests/l3_n9_walk_selftest.lm1': 70,
+    'tests/l3_n10_walk_selftest.lm1': 70,
+    'tests/l3_mail_prim_selftest.lm1': 70,
 }
 
 PREDEF = re.compile(r'^predef:\s*(.*)$')

@@ -65,7 +65,7 @@ size_t: t3_diag 0U
 # A's body: ONE job, on its first turn -- build B in A's own arena, wire B under A, and give B's
 # slot to A's OWN manager.  A does not declare itself done: it stays live until the close stops it,
 # which is the case this file is about.
-fn: t3_body_a (@: Lmx node; @: Lmx self) int
+fn: t3_body_a (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
     @: LmxThread t
     @: LmxMsg message
     @: Lmx graph_a
@@ -130,7 +130,7 @@ fn: t3_body_a (@: Lmx node; @: Lmx self) int
     t3_phase: 2U
 return: 0
 
-fn: t3_body_b (@: Lmx node; @: Lmx self) int
+fn: t3_body_b (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
     t3_b_turns: t3_b_turns + 1U
 return: 0
 

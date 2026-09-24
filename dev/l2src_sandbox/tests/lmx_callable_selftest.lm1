@@ -23,15 +23,28 @@ size_t: taken 0U
 @: Lmx seen_self 0
 @: void seen_own 0
 
-fn: callable_entry (@: Lmx node; @: Lmx self) int
+# The occurrence's trampoline (the prim ABI of every dynamic call, D-38): handed the occurrence
+# as its owner, it takes the reserved node from the occurrence's parent; its value 9 comes back
+# through dest/out and its status is 0.
+fn: callable_entry (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    @: Lmx self (cast: (@: Lmx) owner)
     taken: taken + 1U
-    seen_node: node
+    seen_node: 0
+    if: self != 0
+        seen_node: self\parent
+    ---
     seen_self: self
     seen_own: 0
     if: self != 0 && self\len > 1
         seen_own: lmx_arena_ref_value(self, 1U)
     ---
-return: 9
+    if: dest != 0
+        lmx_int_store_known(dest, 9)
+    ---
+    if: out != 0
+        \out: dest
+    ---
+return: 0
 
 sub: fail (@: int counts; int: ok; const: @(char label))
     counts[0]: counts[0] + 1

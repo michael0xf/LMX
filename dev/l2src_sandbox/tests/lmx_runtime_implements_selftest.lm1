@@ -43,7 +43,12 @@ fn: ri_struct (@: LmxArena arena; size_t: slots) @: Lmx
 return: structure
 
 # The entry `lmx_method_intern` needs: it refuses a zero addr, and this file never calls it.
-fn: ri_entry (@: Lmx node; @: Lmx self) int
+fn: ri_entry (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    @: Lmx self (cast: (@: Lmx) owner)
+    @: Lmx node 0
+    if: self != 0
+        node: self\parent
+    ---
     if: node = 0
         return: 0
     ---

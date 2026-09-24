@@ -71,7 +71,7 @@ size_t: t5_b_spins 0U
 
 # B: A BODY THAT NEVER RETURNS.  It yields the CPU (Sleep) so the rest of the process keeps running
 # -- the point is not a busy machine, it is a stack that cannot come back.
-fn: t5_body_b (@: Lmx node; @: Lmx self) int
+fn: t5_body_b (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
     t5_b_spins: t5_b_spins + 1U
     while: t5_run = 1
         c.Sleep(1U)
@@ -80,7 +80,7 @@ return: 0
 
 # A: build B under itself, give B's slot to A's OWN queue, and stay live.  A's body returns, which is
 # what makes the difference visible: it is B's BODY, not A's, that never comes back.
-fn: t5_body_a (@: Lmx node; @: Lmx self) int
+fn: t5_body_a (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
     @: LmxThread t
     @: LmxMsg message
     @: Lmx graph_a

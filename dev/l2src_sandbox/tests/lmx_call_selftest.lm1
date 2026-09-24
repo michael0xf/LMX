@@ -20,8 +20,10 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 #     the selected method occurrence M -- not M itself, not M.parent.parent and not the method
 #     record; a body entered while M runs has its own parent but does not rebind this activation's
 #     node, and an explicit node\field starts at M.parent;
-#   * the entry is reached THROUGH the method record and handed that node: the entry below sees
-#     the above-method space, and its status is what the call answers;
+#   * the entry is reached THROUGH the method record: METHOD.addr is the occurrence's trampoline,
+#     the prim ABI of every dynamic call (D-38), handed the occurrence, from which it takes the
+#     above-method space as its node; its value is what call0 answers and its status is the
+#     callee's throw status, which lmx_call_prim returns apart from the value;
 #   * the occurrence's own fields (the slots after child[0]) are untouched by the call: the shared
 #     record carries {addr, sig} and nothing of this occurrence;
 #   * a value that is not a callable is refused, not called: a primitive, a Structure with an
@@ -31,16 +33,45 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 size_t: call_taken 0U
 @: Lmx call_seen 0
 @: void call_seen_field 0
+size_t: call_nargs 0U
+int: call_arg 0
+@: Lmx call_thrown 0
 
-# The typed entry of the occurrence: the reserved node first, the status out (19.29.5, 21.13.4).
-fn: call_entry (@: Lmx node; @: Lmx self) int
+# The occurrence's trampoline, as the translator writes one (l2_emit_trampoline): the prim ABI
+# every dynamic call uses (FABLE-OPUS-ROOT-WALK-TRANSLATOR-20260924-159, D-38).  owner is the
+# occurrence; the reserved node is its parent; its value 7 comes back through dest/out and its
+# status is 0.  An int input, when there is one, is read from the storage its reference addresses.
+fn: call_entry (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    @: Lmx self (cast: (@: Lmx) owner)
+    @: Lmx node 0
     call_taken: call_taken + 1U
+    call_nargs: nargs
+    if: nargs > 0U && refs != 0
+        call_arg: lmx_int_value_known(refs[0])
+    ---
+    if: self != 0
+        node: self\parent
+    ---
     call_seen: node
     call_seen_field: 0
     if: node != 0 && node\len > 0
         call_seen_field: lmx_arena_ref_value(node, 0U)
     ---
-return: 7
+    if: dest != 0
+        lmx_int_store_known(dest, 7)
+    ---
+    if: out != 0
+        \out: dest
+    ---
+return: 0
+
+# A trampoline whose method throws: status 2 (a throw number), the thrown record in `out`.
+fn: call_throw_entry (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    call_taken: call_taken + 1U
+    if: out != 0
+        \out: (cast: (@: void) call_thrown)
+    ---
+return: 2
 
 sub: call_check (@: int counts; int: ok; const: @(char label))
     counts[0]: counts[0] + 1
@@ -87,6 +118,14 @@ fn: main () int
     @: LmxMethod zero_method 0
     @: void cell 0
     @: void own_field 0
+    @: Lmx throw_occ 0
+    @: LmxMethod throw_method 0
+    @: LmxCallable throw_info 0
+    @: void prim_in 0
+    c.array: [1]: @: void prim_refs
+    @: void prim_out 0
+    int: prim_value 0
+    int: st 0
     int: answer 0
     int: failures
     if: counts = 0
@@ -142,10 +181,12 @@ fn: main () int
     call_check(counts, lmx_call_node(callable) != outer, "the call skipped M.parent and used its parent's parent")
     call_check(counts, method\sig = 1U, "the shared record lost its signature")
 
-    # The call: the entry is reached through the record and handed the node.
+    # The call: the trampoline is reached through the record, handed the occurrence, and derives
+    # the node from it.
     answer: lmx_call0(arena_at, callable)
-    call_check(counts, answer = 7, "the call did not answer the entry's status")
+    call_check(counts, answer = 7, "the call did not answer the trampoline's value")
     call_check(counts, call_taken = 1U, "the entry was not called exactly once")
+    call_check(counts, call_nargs = 0U, "call0 passed inputs to a zero-source-argument call")
     call_check(counts, call_seen = parent, "the entry did not receive the selected M's above-method space as its reserved node")
     call_check(counts, call_seen_field = own_field, "node\\field did not start at the selected M's above-method space")
     call_check(counts, lmx_arena_ref_value(callable, 1U) = own_field, "the call disturbed the occurrence's own field")
@@ -221,6 +262,40 @@ fn: main () int
     answer: lmx_call0(arena_at, walk_m)
     call_check(counts, answer = 7, "addr=0 call0 must return last expression 7 (mutant: walker value dropped)")
     call_check(counts, call_taken = 1U, "walk dispatch must not call a native entry")
+
+    # THE DYNAMIC CALL (lmx_call_prim, D-38): the one prim ABI of every call whose callee is known
+    # only at run time.  addr != 0: the trampoline, handed the occurrence and the inputs, its
+    # value through dest/out, its status the return.
+    call_taken: 0U
+    prim_in: lmx_int_new_owned(@ arena)
+    call_check(counts, prim_in != 0 && lmx_int_store_known(prim_in, 5) = 0, "dynamic call input cell")
+    prim_refs[0]: prim_in
+    st: lmx_call_prim(arena_at, callable, prim_refs, 1U, (cast: (@: void) (@ prim_value)), @ prim_out)
+    call_check(counts, st = 0 && prim_value = 7 && prim_out = (cast: (@: void) (@ prim_value)), "lmx_call_prim did not deliver the trampoline's value through dest/out")
+    call_check(counts, call_taken = 1U && call_nargs = 1U && call_arg = 5, "lmx_call_prim did not hand the trampoline the occurrence's inputs")
+    call_check(counts, call_seen = parent, "lmx_call_prim's trampoline did not reach the selected M's above-method space")
+    # A method that throws: its trampoline's status is the throw status and the thrown record is
+    # in `out`; call0 returns the status and notes it for the turn.
+    call_thrown: parent
+    throw_method: (cast: (@: LmxMethod) lmx_pool_take(@ arena, @ methods))
+    throw_occ: call_struct(@ arena, 1U)
+    throw_info: lmx_callable_new_owned(@ arena)
+    call_check(counts, throw_method != 0 && throw_occ != 0 && throw_info != 0, "throwing callable fixtures")
+    throw_method\addr: (cast: (LmxEntry) call_throw_entry)
+    throw_method\sig: 4U
+    throw_info\method: throw_method
+    lmx_arena_ref_store(throw_occ, 0U, (cast: (@: void) throw_info))
+    prim_out: 0
+    st: lmx_call_prim(arena_at, throw_occ, 0, 0U, 0, @ prim_out)
+    call_check(counts, st = 2 && prim_out = (cast: (@: void) call_thrown), "lmx_call_prim collapsed the throw status or lost the thrown record")
+    answer: lmx_call0(arena_at, throw_occ)
+    call_check(counts, answer = 2 && lmx_call_walk_fail_status() = 2, "call0 did not return and note the trampoline's throw status")
+    # addr=0 through lmx_call_prim: the walk hook's value through dest.
+    prim_value: 0
+    prim_out: 0
+    st: lmx_call_prim(arena_at, walk_m, 0, 0U, (cast: (@: void) (@ prim_value)), @ prim_out)
+    call_check(counts, st = 0 && prim_value = 7 && prim_out = (cast: (@: void) (@ prim_value)), "lmx_call_prim did not walk an addr=0 body into dest")
+    call_check(counts, call_taken = 3U, "a walked body reached a native entry, or a trampoline call went missing")
 
     failures: counts[1]
     c.printf("lmx_call checks=%d failures=%d\n", counts[0], failures)

@@ -364,6 +364,13 @@ prototype:
     fn: l2_emit_poll (int: mi; const: @(char ind)) int
     fn: l2_emit_checkpoint (int: mi; const: @(char ind)) int
     fn: l2_emit_sig (int: mi) int
+    fn: l2_sig_ret (int: mi) int
+    fn: l2_input_ft (int: mi; int: k) int
+    fn: l2_m_native (int: i) int
+    fn: l2_tramp_class (int: mi) int
+    fn: l2_emit_dyn_call (int: idx; int: t; int: self_t; const: @(char ind)) int
+    fn: l2_emit_tramp_call (int: i; int: n; int: thr; int: cls) int
+    fn: l2_emit_trampoline (int: i; int: proto) int
     fn: l2_emit_public_sig (int: mi) int
     fn: l2_emit_library_wrappers () int
     fn: l2_fn_close (const: @(LmP0Frame frame); const: @(LmP0Text name); const: @(char head)) int
@@ -404,7 +411,7 @@ prototype:
     fn: l2_own_of_dt (int: dt) int
     fn: l2_dt_of_source (int: oty; const: @(char path); const: @(LmP0Node at); @: int dt) int
     fn: l2_emit_cell_load (int: oty; const: @(char ind); int: t; const: @(LmP0Node at)) int
-    fn: l2_emit_formal (int: ft; int: mi; int: idx) int
+    fn: l2_emit_formal (int: ft; int: mi; int: idx; int: arg) int
     fn: l2_own_store_helper (int: ty) @: char
     fn: l2_own_store_rebinds (int: ty) int
     fn: l2_own_store_value (int: ty; const: @(char local); @: char dest) int
@@ -659,7 +666,7 @@ prototype:
     fn: l2_emit_foreign_named (@: FILE out; int: ty; const: @(char prefix); const: @(LmP0Text name)) int
     fn: l2_emit_foreign_temp (@: FILE out; int: ty; const: @(char ind); int: temp) int
     fn: l2_emit_foreign_return (@: FILE out; int: ty) int
-    fn: l2_emit_foreign_formal (@: FILE out; int: ty; int: mi; int: fi) int
+    fn: l2_emit_foreign_formal (@: FILE out; int: ty; int: mi; int: fi; int: arg) int
     fn: l2_ret_uns (int: mi) int
     fn: l2_emit_os (@: FILE out) int
     fn: l2_check_os (const: @(LmP0Node item); const: @(char path)) int
@@ -4918,10 +4925,23 @@ fn: l2_emit_foreign_return (@: FILE out; int: ty) int
         return: 1
 return: l2_write_text(out, l2_foreign_name[i])
 
-fn: l2_emit_foreign_formal (@: FILE out; int: ty; int: mi; int: fi) int
+fn: l2_emit_foreign_formal (@: FILE out; int: ty; int: mi; int: fi; int: arg) int
     int: i ty - 100
     if: out = 0 || i < 0 || i >= l2_foreign_n
         return: 1
+    # The trampoline input (l2_emit_formal): a foreign value is read from the typed storage its
+    # reference addresses, through the typed pointer declared for it (arg 2); a foreign pointer
+    # is the reference itself.
+    if: arg = 2 && l2_foreign_depth[i] = 0
+        if: fputs("    @: ", out) < 0 || l2_write_text(out, l2_foreign_name[i]) != 0 || c.fprintf(out, " l2_b%d (cast: (@: ", fi) < 0 || l2_write_text(out, l2_foreign_name[i]) != 0 || c.fprintf(out, ") refs[%d])\n", fi) < 0
+            return: 1
+        ---
+    if: arg = 2
+        return: 0
+    if: arg = 1 && l2_foreign_depth[i] = 0
+        return: (cast: (int) (c.fprintf(out, ", \\l2_b%d", fi) < 0))
+    if: arg = 1
+        return: (cast: (int) (c.fprintf(out, ", refs[%d]", fi) < 0))
     if: fputs("; ", out) < 0
         return: 1
     if: l2_foreign_depth[i] = 0
@@ -15174,20 +15194,27 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
         return: l2_prep_drop(acts, hides)
     if: l2_m_throws[idx] != 0 && c.fprintf(l2_out, "%sint: l2_ts%d 0\n%s@: Lmx l2_te%d 0\n", ind, t, ind, t) < 0
         return: l2_prep_drop(acts, hides)
-    if: prty = 8 && l2_m_throws[idx] = 0 && c.fprintf(l2_out, "%s", ind) < 0
+    if: sel != 2 && prty = 8 && l2_m_throws[idx] = 0 && c.fprintf(l2_out, "%s", ind) < 0
         return: l2_prep_drop(acts, hides)
-    if: prty != 8 && l2_m_throws[idx] = 0 && c.fprintf(l2_out, "%sl2_t%d: ", ind, t) < 0
+    if: sel != 2 && prty != 8 && l2_m_throws[idx] = 0 && c.fprintf(l2_out, "%sl2_t%d: ", ind, t) < 0
         return: l2_prep_drop(acts, hides)
-    if: l2_m_throws[idx] != 0 && c.fprintf(l2_out, "%sl2_ts%d: ", ind, t) < 0
+    if: sel != 2 && l2_m_throws[idx] != 0 && c.fprintf(l2_out, "%sl2_ts%d: ", ind, t) < 0
         return: l2_prep_drop(acts, hides)
     if: sel = 2
         if: nact != 0 || nhid != 0
             l2_prep_drop(acts, hides)
             return: l2_error(l2_src, node, "incompatible entry signature")
-        if: c.fprintf(l2_out, "lmx_call0(l2_program_arena, l2_c%d)\n", self_t) < 0
+        # A callable formal is called through the one dynamic call ABI, lmx_call_prim
+        # (lmx_call.h.lm1; its native callee is the method's trampoline, l2_emit_trampoline): the
+        # status apart from the value.  A throwing callable's status is its throw status, carried
+        # on by l2_emit_propagate exactly as a direct call's, with the thrown record from `out`;
+        # a callable that cannot throw and reports a status is a broken promise (X1).
+        if: l2_emit_dyn_call(idx, t, self_t, ind) != 0
             return: l2_prep_drop(acts, hides)
         l2_prep_drop(acts, hides)
         if: l2_emit_checkpoint(mi, ind) != 0
+            return: 1
+        if: l2_m_throws[idx] != 0 && l2_emit_propagate(mi, idx, t, ind) != 0
             return: 1
         if: l2_m_ret[idx] = 8
             dest[0]: 0
@@ -15715,59 +15742,77 @@ return: 0
 
 # One formal of a generated signature: its FORMAL type code, the method, and its position among
 # the method's parameters (declared formals first, hidden/dynamic inputs after them).
-fn: l2_emit_formal (int: ft; int: mi; int: idx) int
+# With `arg` 1, the same formal is written as its TRAMPOLINE input (l2_emit_trampoline): the
+# argument read from refs[idx].  A scalar is read from the typed storage its reference addresses
+# (a cell is that storage, lmx_value_owned.lm1); a pointer is the reference itself.  With `arg` 2
+# only a by-value foreign input writes something: the trampoline's typed pointer to that storage.
+# One table spells all three, so a trampoline passes exactly the arguments the signature declares.
+fn: l2_emit_formal (int: ft; int: mi; int: idx; int: arg) int
     int: oty
-    if: ft = 0 && c.fprintf(l2_out, "; int: l2_p%d_%d", mi, idx) < 0
+    const: @(char sig) 0
+    const: @(char read) 0
+    if: ft = 0
+        sig: "; int: l2_p%d_%d"
+        read: ", lmx_int_value_known(refs[%d])"
+    if: ft = 1
+        sig: "; char: l2_p%d_%d"
+        read: ", (cast: (char) lmx_char_value_known(refs[%d]))"
+    if: ft = 2
+        sig: "; size_t: l2_p%d_%d"
+        read: ", lmx_size_value_known(refs[%d])"
+    if: ft = 34
+        sig: "; unsigned: l2_p%d_%d"
+        read: ", lmx_unsigned_value_known(refs[%d])"
+    if: ft = 36
+        sig: "; ulong: l2_p%d_%d"
+        read: ", lmx_ulong_value_known(refs[%d])"
+    if: ft = 3
+        sig: "; const: @(char l2_p%d_%d)"
+    if: ft = 6
+        sig: "; const: @(L2ImmutQuery l2_p%d_%d)"
+    if: ft = 7
+        sig: "; @: L2ImmutQuery l2_p%d_%d"
+    if: ft = 9
+        sig: "; @: size_t l2_p%d_%d"
+    if: ft = 11
+        sig: "; @: int l2_p%d_%d"
+    if: ft = 12
+        sig: "; @: char l2_p%d_%d"
+    if: ft = 16
+        sig: "; @: void l2_p%d_%d"
+    if: ft = 17
+        sig: "; @@: char l2_p%d_%d"
+    if: ft = 18
+        sig: "; @@: void l2_p%d_%d"
+    if: ft = 19
+        sig: "; @@: int l2_p%d_%d"
+    if: ft = 24
+        sig: "; @@: unsigned l2_p%d_%d"
+    if: ft = 39
+        sig: "; @@: ulong l2_p%d_%d"
+    if: ft = 26
+        sig: "; @@: LmxArenaBlock l2_p%d_%d"
+    if: ft = 28
+        sig: "; @: LmxRoot l2_p%d_%d"
+    if: ft = 29
+        sig: "; const: @(LmxMsg l2_p%d_%d)"
+    if: ft = 30
+        sig: "; const: @(unsigned l2_p%d_%d)"
+    if: ft = 31
+        sig: "; @@: unsigned l2_p%d_%d"
+    if: ft = 27
+        sig: "; @@: LmxOwnedRange l2_p%d_%d"
+    if: ft = 25
+        sig: "; @: unsigned l2_p%d_%d"
+    if: ft = 38
+        sig: "; @: ulong l2_p%d_%d"
+    if: ft = 20
+        sig: "; @@: size_t l2_p%d_%d"
+    if: sig != 0 && arg = 0 && c.fprintf(l2_out, sig, mi, idx) < 0
         return: 1
-    if: ft = 1 && c.fprintf(l2_out, "; char: l2_p%d_%d", mi, idx) < 0
+    if: sig != 0 && arg = 1 && read != 0 && c.fprintf(l2_out, read, idx) < 0
         return: 1
-    if: ft = 2 && c.fprintf(l2_out, "; size_t: l2_p%d_%d", mi, idx) < 0
-        return: 1
-    if: ft = 34 && c.fprintf(l2_out, "; unsigned: l2_p%d_%d", mi, idx) < 0
-        return: 1
-    if: ft = 36 && c.fprintf(l2_out, "; ulong: l2_p%d_%d", mi, idx) < 0
-        return: 1
-    if: ft = 3 && c.fprintf(l2_out, "; const: @(char l2_p%d_%d)", mi, idx) < 0
-        return: 1
-    if: ft = 6 && c.fprintf(l2_out, "; const: @(L2ImmutQuery l2_p%d_%d)", mi, idx) < 0
-        return: 1
-    if: ft = 7 && c.fprintf(l2_out, "; @: L2ImmutQuery l2_p%d_%d", mi, idx) < 0
-        return: 1
-    if: ft = 9 && c.fprintf(l2_out, "; @: size_t l2_p%d_%d", mi, idx) < 0
-        return: 1
-    if: ft = 11 && c.fprintf(l2_out, "; @: int l2_p%d_%d", mi, idx) < 0
-        return: 1
-    if: ft = 12 && c.fprintf(l2_out, "; @: char l2_p%d_%d", mi, idx) < 0
-        return: 1
-    if: ft = 16 && c.fprintf(l2_out, "; @: void l2_p%d_%d", mi, idx) < 0
-        return: 1
-    if: ft = 17 && c.fprintf(l2_out, "; @@: char l2_p%d_%d", mi, idx) < 0
-        return: 1
-    if: ft = 18 && c.fprintf(l2_out, "; @@: void l2_p%d_%d", mi, idx) < 0
-        return: 1
-    if: ft = 19 && c.fprintf(l2_out, "; @@: int l2_p%d_%d", mi, idx) < 0
-        return: 1
-    if: ft = 24 && c.fprintf(l2_out, "; @@: unsigned l2_p%d_%d", mi, idx) < 0
-        return: 1
-    if: ft = 39 && c.fprintf(l2_out, "; @@: ulong l2_p%d_%d", mi, idx) < 0
-        return: 1
-    if: ft = 26 && c.fprintf(l2_out, "; @@: LmxArenaBlock l2_p%d_%d", mi, idx) < 0
-        return: 1
-    if: ft = 28 && c.fprintf(l2_out, "; @: LmxRoot l2_p%d_%d)", mi, idx) < 0
-        return: 1
-    if: ft = 29 && c.fprintf(l2_out, "; const: @(LmxMsg l2_p%d_%d)", mi, idx) < 0
-        return: 1
-    if: ft = 30 && c.fprintf(l2_out, "; const: @(unsigned l2_p%d_%d)", mi, idx) < 0
-        return: 1
-    if: ft = 31 && c.fprintf(l2_out, "; @@: unsigned l2_p%d_%d", mi, idx) < 0
-        return: 1
-    if: ft = 27 && c.fprintf(l2_out, "; @@: LmxOwnedRange l2_p%d_%d", mi, idx) < 0
-        return: 1
-    if: ft = 25 && c.fprintf(l2_out, "; @: unsigned l2_p%d_%d", mi, idx) < 0
-        return: 1
-    if: ft = 38 && c.fprintf(l2_out, "; @: ulong l2_p%d_%d", mi, idx) < 0
-        return: 1
-    if: ft = 20 && c.fprintf(l2_out, "; @@: size_t l2_p%d_%d", mi, idx) < 0
+    if: sig != 0 && arg = 1 && read = 0 && c.fprintf(l2_out, ", refs[%d]", idx) < 0
         return: 1
     # Graph / foreign pointer formals may be stored as dt_of_own(1000+foreign).
     if: ft > 1
@@ -15776,47 +15821,48 @@ fn: l2_emit_formal (int: ft; int: mi; int: idx) int
             ft: l2_ft_of_own(oty)
         ---
     ---
-    if: ft >= 100 && l2_emit_foreign_formal(l2_out, ft, mi, idx) != 0
+    if: ft >= 100 && l2_emit_foreign_formal(l2_out, ft, mi, idx, arg) != 0
         return: 1
 return: 0
 
-fn: l2_emit_sig (int: mi) int
-    int: j 0
-    long: mark
-    int: ret_ty
+# The return type of method mi as its signature spells it.  A named-Structure return type is
+# stored dt_of_own(1000+foreign) like any other declared graph type (l2_colon_graph_ty), not the
+# raw >=100 foreign code l2_emit_foreign_return expects -- l2_emit_formal already runs a formal's
+# own type through this exact recovery (own_of_dt then ft_of_own, matching l2_colon_is_graph_ty's
+# own comment: "Declared graph formals store dt_of_own(1000+foreign); recover foreign @: Lmx"),
+# but the return-type dispatch of l2_emit_sig read l2_m_ret[mi] raw. Measured
+# (FABLE-SONNET-DECL-PREPASS-20260923-137 part 2, Opus's finding): `fn: same (Model: x) Model /
+# return: x` silently failed translation -- l2_emit_foreign_return(l2_out, 1101) computed foreign
+# index 1001 against a 1-entry table and returned 1 with no l2_error call. A no-op for every
+# primitive return code (only a declared graph type round-trips through the 1000..1999 own-type
+# space).  The signature and the method's trampoline both read it here.
+fn: l2_sig_ret (int: mi) int
+    int: ret_ty l2_m_ret[mi]
     int: roty
-    # A named-Structure return type is stored dt_of_own(1000+foreign) like any
-    # other declared graph type (l2_colon_graph_ty), not the raw >=100 foreign
-    # code l2_emit_foreign_return expects -- l2_emit_formal already runs a
-    # formal's own type through this exact recovery (own_of_dt then
-    # ft_of_own, matching l2_colon_is_graph_ty's own comment: "Declared graph
-    # formals store dt_of_own(1000+foreign); recover foreign @: Lmx"), but
-    # the return-type dispatch below read l2_m_ret[mi] raw. Measured
-    # (FABLE-SONNET-DECL-PREPASS-20260923-137 part 2, Opus's finding):
-    # `fn: same (Model: x) Model / return: x` silently failed translation --
-    # l2_emit_foreign_return(l2_out, 1101) computed foreign index 1001 against
-    # a 1-entry table and returned 1 with no l2_error call. A no-op for every
-    # primitive return code already in this dispatch (only a declared graph
-    # type round-trips through the 1000..1999 own-type space), so recomputed
-    # once and used everywhere l2_m_ret[mi] meant "this method's return type"
-    # in this function, in both the declared-throws ABI and the ordinary one.
-    ret_ty: l2_m_ret[mi]
     if: ret_ty > 1
         roty: l2_own_of_dt(ret_ty)
         if: roty >= 1000 && roty < 2000
             ret_ty: l2_ft_of_own(roty)
         ---
+    ---
+return: ret_ty
+
+fn: l2_emit_sig (int: mi) int
+    int: j 0
+    long: mark
+    int: ret_ty
+    ret_ty: l2_sig_ret(mi)
     if: fputs(" (@: Lmx node; @: Lmx self", l2_out) < 0
         return: 1
     while: j < l2_m_arity[mi]
-        if: l2_emit_formal(l2_ft(mi, j), mi, j) != 0
+        if: l2_emit_formal(l2_ft(mi, j), mi, j, 0) != 0
             return: 1
         j: j + 1
     j: 0
     while: j < l2_m_dyn[mi]
         # A hidden formal that spells nothing is a signature that quietly lacks a parameter.
         mark: c.ftell(l2_out)
-        if: l2_emit_formal(l2_ft_of_own(l2_own_of_dt(l2_dt(mi, j))), mi, l2_m_arity[mi] + j) != 0
+        if: l2_emit_formal(l2_ft_of_own(l2_own_of_dt(l2_dt(mi, j))), mi, l2_m_arity[mi] + j, 0) != 0
             return: 1
         if: c.ftell(l2_out) = mark
             return: l2_error(l2_src, l2_m_node[mi], "dynamic input type has no formal spelling")
@@ -15876,6 +15922,194 @@ fn: l2_emit_sig (int: mi) int
     if: ret_ty = 8 && fputs(")", l2_out) < 0
         return: 1
     if: l2_ret_uns(mi) = 0 && ret_ty != 3 && ret_ty != 5 && ret_ty != 8 && ret_ty != 10 && ret_ty != 13 && ret_ty != 16 && ret_ty != 32 && ret_ty != 35 && ret_ty < 100 && fputs(") int", l2_out) < 0
+        return: 1
+return: 0
+
+# The formal type code of input k of method mi, in signature order: declared formals first,
+# hidden/dynamic inputs after them.
+fn: l2_input_ft (int: mi; int: k) int
+    if: k < l2_m_arity[mi]
+        return: l2_ft(mi, k)
+return: l2_ft_of_own(l2_own_of_dt(l2_dt(mi, k - l2_m_arity[mi])))
+
+# THE TRAMPOLINE (FABLE-OPUS-ROOT-WALK-TRANSLATOR-20260924-159; plan §3 «Пользовательский код
+# интерпретируется по умолчанию»; steps/root-walk-trampolines.md).  Every method with a native
+# body has one more entry, with the uniform prim ABI LmxPrimitiveEntry (owner, refs, nargs,
+# dest, out) -> status (lmx_primitive.h.lm1), and its METHOD.addr is that entry: a walked body's
+# call op, lmx_call0 and lmx_call_prim reach a native method the same way.  A direct native call
+# keeps calling the method by its own symbol.
+#   * owner is the method's occurrence: node = owner\parent (lmx_call_node), self = owner;
+#   * refs are the inputs in signature order, read by l2_emit_formal's own table;
+#   * nargs that differs from the signature is the caller's broken promise -- the translator
+#     wrote both -- so it is X1, never a status;
+#   * the status is the method's own throw status (S1.1: declared names 1..d in `throws:`
+#     order, implicit d+g), 0 for a method that cannot throw; on a throw `out` carries the
+#     thrown record (the method's l2_out_throw);
+#   * the result reaches the caller the way the walker takes values: a scalar is written into
+#     the typed storage `dest` addresses and `out` is dest; a pointer is the reference itself
+#     in `out`; no result leaves `out` 0.  l2_msg is 0, as the entry adapter passes it: it is
+#     only ever passed down.
+# A method with a native body: a body, or a return trailer that is its body.
+fn: l2_m_native (int: i) int
+    if: i < 0
+        return: 0
+return: (cast: (int) (l2_m_body[i] != 0 || (l2_m_node[i] != 0 && l2_m_node[i]\as != 0 && l2_ret_tr(l2_m_node[i]\as\frame) != 0)))
+
+# How a trampoline delivers the result of method mi -- the cases l2_emit_sig spells: 0 none,
+# 1 int, 2 size_t, 3 unsigned, 4 ulong, 5 a pointer (the reference itself), 6 a foreign value
+# (the typed storage `dest` addresses).
+fn: l2_tramp_class (int: mi) int
+    int: rt l2_sig_ret(mi)
+    int: fi
+    int: thr 0
+    if: l2_m_throws != 0 && l2_m_throws[mi] != 0
+        thr: 1
+    ---
+    if: rt = 8
+        return: 0
+    if: rt = 2
+        return: 2
+    if: rt = 30 || rt = 33
+        return: 3
+    if: rt = 36
+        return: 4
+    if: rt = 3 || rt = 16 || rt = 35 || rt = 32
+        return: 5
+    # The declared-throw ABI returns every foreign result as @: Lmx (l2_emit_sig).
+    fi: rt - 100
+    if: rt >= 100 && thr = 0 && fi < l2_foreign_n && l2_foreign_depth[fi] = 0
+        return: 6
+    if: rt >= 100
+        return: 5
+    if: l2_ret_uns(mi) = 0 && rt != 3 && rt != 8 && rt != 16 && rt != 32 && rt != 35 && (thr != 0 || (rt != 5 && rt != 10 && rt != 13))
+        return: 1
+return: 0
+
+# The typed store of a scalar result class (l2_tramp_class 1-4).
+fn: l2_tramp_store (int: cls) const: @: char
+    if: cls = 2
+        return: "lmx_size_store_known"
+    if: cls = 3
+        return: "lmx_unsigned_store_known"
+    if: cls = 4
+        return: "lmx_ulong_store_known"
+return: "lmx_int_store_known"
+
+# The dynamic call of the callable formal occurrence l2_c<self_t> that carries the signature of
+# method idx (l2_emit_call, sel 2): nullary, through lmx_call_prim.  The value lands the way the
+# method's trampoline delivers it (l2_tramp_class): a scalar or a foreign value in l2_t<t> through
+# dest; a pointer through out, then into l2_t<t>.  On a throw `out` is the thrown record.
+fn: l2_emit_dyn_call (int: idx; int: t; int: self_t; const: @(char ind)) int
+    int: cls l2_tramp_class(idx)
+    if: c.fprintf(l2_out, "%s@: void l2_o%d 0\n", ind, t) < 0
+        return: 1
+    if: l2_m_throws[idx] != 0 && c.fprintf(l2_out, "%sl2_ts%d: lmx_call_prim(l2_program_arena, l2_c%d, 0, 0U, ", ind, t, self_t) < 0
+        return: 1
+    if: l2_m_throws[idx] = 0 && c.fprintf(l2_out, "%sif: lmx_call_prim(l2_program_arena, l2_c%d, 0, 0U, ", ind, self_t) < 0
+        return: 1
+    if: (cls = 0 || cls = 5) && fputs("0", l2_out) < 0
+        return: 1
+    if: cls != 0 && cls != 5 && c.fprintf(l2_out, "(cast: (@: void) (@ l2_t%d))", t) < 0
+        return: 1
+    if: c.fprintf(l2_out, ", @ l2_o%d)", t) < 0
+        return: 1
+    if: l2_m_throws[idx] = 0 && c.fprintf(l2_out, " != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: a callable that cannot throw reported a status\\n\")\n%s    c.abort()\n", ind, ind) < 0
+        return: 1
+    if: l2_m_throws[idx] != 0 && c.fprintf(l2_out, "\n%sif: l2_ts%d != 0\n%s    l2_te%d: (cast: (@: Lmx) l2_o%d)\n", ind, t, ind, t, t) < 0
+        return: 1
+    if: cls = 5 && l2_m_throws[idx] = 0 && c.fprintf(l2_out, "%sl2_t%d: l2_o%d\n", ind, t, t) < 0
+        return: 1
+    if: cls = 5 && l2_m_throws[idx] != 0 && c.fprintf(l2_out, "%sif: l2_ts%d = 0\n%s    l2_t%d: l2_o%d\n", ind, t, ind, t, t) < 0
+        return: 1
+return: 0
+
+# The call of method i from its trampoline: node, self, the inputs, and for the declared-throw
+# ABI l2_msg 0, the result local and the thrown-record local.
+fn: l2_emit_tramp_call (int: i; int: n; int: thr; int: cls) int
+    int: k 0
+    if: l2_write_sym(l2_out, i) != 0 || fputs("(l2_self\\parent, l2_self", l2_out) < 0
+        return: 1
+    while: k < n
+        if: l2_emit_formal(l2_input_ft(i, k), i, k, 1) != 0
+            return: 1
+        k: k + 1
+    if: thr != 0 && fputs(", 0", l2_out) < 0
+        return: 1
+    if: thr != 0 && cls != 0 && fputs(", @ l2_tv", l2_out) < 0
+        return: 1
+    if: thr != 0 && fputs(", @ l2_tt", l2_out) < 0
+        return: 1
+return: (cast: (int) (fputs(")", l2_out) < 0))
+
+# The trampoline of method i: its prototype line (proto) or its definition.
+fn: l2_emit_trampoline (int: i; int: proto) int
+    int: k 0
+    int: n l2_m_arity[i] + l2_m_dyn[i]
+    int: cls l2_tramp_class(i)
+    int: rt l2_sig_ret(i)
+    int: thr 0
+    if: l2_m_throws != 0 && l2_m_throws[i] != 0
+        thr: 1
+    ---
+    if: proto != 0 && fputs("    fn: ", l2_out) < 0
+        return: 1
+    if: proto = 0 && fputs("fn: ", l2_out) < 0
+        return: 1
+    if: l2_write_sym(l2_out, i) != 0 || fputs("_tr (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n", l2_out) < 0
+        return: 1
+    if: proto != 0
+        return: 0
+    if: c.fprintf(l2_out, "    @: Lmx l2_self (cast: (@: Lmx) owner)\n    if: nargs != %dU || out = 0", n) < 0
+        return: 1
+    if: (cls = 1 || cls = 2 || cls = 3 || cls = 4 || cls = 6) && fputs(" || dest = 0", l2_out) < 0
+        return: 1
+    if: fputs("\n        c.fprintf(c.stderr, \"lmx: invariant: a trampoline was called outside its method's signature\\n\")\n        c.abort()\n", l2_out) < 0
+        return: 1
+    while: k < n
+        if: l2_emit_formal(l2_input_ft(i, k), i, k, 2) != 0
+            return: 1
+        k: k + 1
+    # The method that cannot throw: its value is the call's own result.
+    if: thr = 0 && cls = 0 && (fputs("    ", l2_out) < 0 || l2_emit_tramp_call(i, n, thr, cls) != 0 || fputs("\n    \\out: 0\n", l2_out) < 0)
+        return: 1
+    if: thr = 0 && cls >= 1 && cls <= 4 && (c.fprintf(l2_out, "    %s(dest, ", l2_tramp_store(cls)) < 0 || l2_emit_tramp_call(i, n, thr, cls) != 0 || fputs(")\n    \\out: dest\n", l2_out) < 0)
+        return: 1
+    if: thr = 0 && cls = 5 && (fputs("    \\out: (cast: (@: void) ", l2_out) < 0 || l2_emit_tramp_call(i, n, thr, cls) != 0 || fputs(")\n", l2_out) < 0)
+        return: 1
+    if: thr = 0 && cls = 6 && (fputs("    @: ", l2_out) < 0 || l2_write_text(l2_out, l2_foreign_name[rt - 100]) != 0 || fputs(" l2_rv (cast: (@: ", l2_out) < 0 || l2_write_text(l2_out, l2_foreign_name[rt - 100]) != 0 || fputs(") dest)\n    \\l2_rv: ", l2_out) < 0)
+        return: 1
+    if: thr = 0 && cls = 6 && (l2_emit_tramp_call(i, n, thr, cls) != 0 || fputs("\n    \\out: dest\n", l2_out) < 0)
+        return: 1
+    # The declared-throw ABI: the result through its local, the status as the throw status.
+    if: thr != 0 && cls = 1 && fputs("    int: l2_tv 0\n", l2_out) < 0
+        return: 1
+    if: thr != 0 && cls = 2 && fputs("    size_t: l2_tv 0U\n", l2_out) < 0
+        return: 1
+    if: thr != 0 && cls = 3 && fputs("    unsigned: l2_tv 0U\n", l2_out) < 0
+        return: 1
+    if: thr != 0 && cls = 4 && fputs("    ulong: l2_tv 0U\n", l2_out) < 0
+        return: 1
+    if: thr != 0 && cls = 5 && rt = 3 && fputs("    @: char l2_tv 0\n", l2_out) < 0
+        return: 1
+    if: thr != 0 && cls = 5 && rt = 16 && fputs("    @: void l2_tv 0\n", l2_out) < 0
+        return: 1
+    if: thr != 0 && cls = 5 && rt = 35 && fputs("    const: @(char l2_tv) 0\n", l2_out) < 0
+        return: 1
+    if: thr != 0 && cls = 5 && rt = 32 && fputs("    @@: char l2_tv 0\n", l2_out) < 0
+        return: 1
+    if: thr != 0 && cls = 5 && rt >= 100 && fputs("    @: Lmx l2_tv 0\n", l2_out) < 0
+        return: 1
+    if: thr != 0 && (fputs("    @: Lmx l2_tt 0\n    int: l2_ts 0\n    l2_ts: ", l2_out) < 0 || l2_emit_tramp_call(i, n, thr, cls) != 0)
+        return: 1
+    if: thr != 0 && fputs("\n    if: l2_ts != 0\n        \\out: (cast: (@: void) l2_tt)\n        return: l2_ts\n", l2_out) < 0
+        return: 1
+    if: thr != 0 && cls = 0 && fputs("    \\out: 0\n", l2_out) < 0
+        return: 1
+    if: thr != 0 && cls >= 1 && cls <= 4 && c.fprintf(l2_out, "    %s(dest, l2_tv)\n    \\out: dest\n", l2_tramp_store(cls)) < 0
+        return: 1
+    if: thr != 0 && cls = 5 && fputs("    \\out: (cast: (@: void) l2_tv)\n", l2_out) < 0
+        return: 1
+    if: fputs("    return: 0\nend: ", l2_out) < 0 || l2_write_sym(l2_out, i) != 0 || fputs("_tr\n\n", l2_out) < 0
         return: 1
 return: 0
 
@@ -18480,6 +18714,13 @@ fn: l2_emit_unit (const: @(char out_path)) int
             fclose(l2_out)
             return: 1
         i: i + 1
+    # Each native method's trampoline (l2_emit_trampoline): its METHOD.addr.
+    i: 0
+    while: i < l2_m_n
+        if: l2_m_native(i) != 0 && l2_emit_trampoline(i, 1) != 0
+            fclose(l2_out)
+            return: 1
+        i: i + 1
     # Source method names can be used as ordinary C callback values inside an
     # earlier body. Their public wrappers are emitted after all graph-callable
     # bodies, so declare those wrapper signatures here as well.
@@ -18703,6 +18944,13 @@ fn: l2_emit_unit (const: @(char out_path)) int
         i: i + 1
     l2_vis_on: 0
     l2_cur_mi: 0 - 1
+    # Each native method's trampoline, after every body it calls (l2_emit_trampoline).
+    i: 0
+    while: i < l2_m_n
+        if: l2_m_native(i) != 0 && l2_emit_trampoline(i, 0) != 0
+            fclose(l2_out)
+            return: 1
+        i: i + 1
     # One ordinary program-unit child references the immutable typed array of
     # translation-known METHOD descriptors (SPEC 9.1.4). It is built once here
     # and never appended at runtime; this is not an R0 slot.
@@ -18943,19 +19191,22 @@ fn: l2_emit_unit (const: @(char out_path)) int
         if: i = l2_e && fputs("        l2_entry_leaf: l2_entry_unit\n", l2_out) < 0
             fclose(l2_out)
             return: 1
-        if: l2_m_body[i] = 0 && (l2_m_node[i] = 0 || l2_m_node[i]\as = 0 || l2_ret_tr(l2_m_node[i]\as\frame) = 0)
+        # A bodiless `fn` (an interface) has no native entry: addr 0.  A method with a native
+        # body is reached through its trampoline (l2_emit_trampoline), the one prim-ABI entry
+        # every dynamic call uses; direct native calls keep the method's own symbol.
+        if: l2_m_native(i) = 0
             if: c.fprintf(l2_out, "        l2_entry_rec: lmx_method_new_owned(l2_program_arena)\n        if: l2_entry_rec = 0\n            return: 1\n        l2_entry_rec\\addr: (cast: (LmxEntry) 0)\n        l2_entry_rec\\sig: %uU\n        l2_entry_callable: lmx_callable_new_owned(l2_program_arena)\n        if: l2_entry_callable = 0\n            return: 1\n        l2_entry_callable\\method: l2_entry_rec\n        l2_entry_callable\\header: 0\n        if: lmx_arena_ref_store(l2_entry_leaf, 0U, (cast: (@: void) l2_entry_callable)) != 0\n            return: 1\n        l2_method_refs[%uU]: l2_entry_rec\n        if: l2_entry_rec\\sig != %uU\n            return: 1\n", l2_m_sig[i], (cast: (unsigned) i), l2_m_sig[i]) < 0
                 fclose(l2_out)
                 return: 1
             ---
         ---
-        if: (l2_m_body[i] != 0 || (l2_m_node[i] != 0 && l2_m_node[i]\as != 0 && l2_ret_tr(l2_m_node[i]\as\frame) != 0)) && fputs("        l2_entry_rec: lmx_method_new_owned(l2_program_arena)\n        if: l2_entry_rec = 0\n            return: 1\n        l2_entry_rec\\addr: (cast: (LmxEntry) ", l2_out) < 0
+        if: l2_m_native(i) != 0 && fputs("        l2_entry_rec: lmx_method_new_owned(l2_program_arena)\n        if: l2_entry_rec = 0\n            return: 1\n        l2_entry_rec\\addr: (cast: (LmxEntry) ", l2_out) < 0
             fclose(l2_out)
             return: 1
-        if: (l2_m_body[i] != 0 || (l2_m_node[i] != 0 && l2_m_node[i]\as != 0 && l2_ret_tr(l2_m_node[i]\as\frame) != 0)) && l2_write_sym(l2_out, i) != 0
+        if: l2_m_native(i) != 0 && (l2_write_sym(l2_out, i) != 0 || fputs("_tr", l2_out) < 0)
             fclose(l2_out)
             return: 1
-        if: (l2_m_body[i] != 0 || (l2_m_node[i] != 0 && l2_m_node[i]\as != 0 && l2_ret_tr(l2_m_node[i]\as\frame) != 0)) && c.fprintf(l2_out, ")\n        l2_entry_rec\\sig: %uU\n        l2_entry_callable: lmx_callable_new_owned(l2_program_arena)\n        if: l2_entry_callable = 0\n            return: 1\n        l2_entry_callable\\method: l2_entry_rec\n        l2_entry_callable\\header: 0\n        if: lmx_arena_ref_store(l2_entry_leaf, 0U, (cast: (@: void) l2_entry_callable)) != 0\n            return: 1\n        # DEBT: method-admit / method-ranges acts absent in new kernel\n        l2_method_refs[%uU]: l2_entry_rec\n        if: l2_entry_rec\\sig != %uU\n            return: 1\n", l2_m_sig[i], (cast: (unsigned) i), l2_m_sig[i]) < 0
+        if: l2_m_native(i) != 0 && c.fprintf(l2_out, ")\n        l2_entry_rec\\sig: %uU\n        l2_entry_callable: lmx_callable_new_owned(l2_program_arena)\n        if: l2_entry_callable = 0\n            return: 1\n        l2_entry_callable\\method: l2_entry_rec\n        l2_entry_callable\\header: 0\n        if: lmx_arena_ref_store(l2_entry_leaf, 0U, (cast: (@: void) l2_entry_callable)) != 0\n            return: 1\n        # DEBT: method-admit / method-ranges acts absent in new kernel\n        l2_method_refs[%uU]: l2_entry_rec\n        if: l2_entry_rec\\sig != %uU\n            return: 1\n", l2_m_sig[i], (cast: (unsigned) i), l2_m_sig[i]) < 0
             fclose(l2_out)
             return: 1
         i: i + 1

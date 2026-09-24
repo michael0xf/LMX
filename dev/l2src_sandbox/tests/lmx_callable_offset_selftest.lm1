@@ -23,7 +23,8 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 #   * two-operand merge, callable in second operand + body -> body offset == width(A)+width(B)
 # Mutant: if merge never writes offset, the width(B) check goes RED.
 
-fn: offset_entry (@: Lmx node; @: Lmx self) int
+# METHOD.addr is a trampoline in the prim ABI (D-38); this one is never called.
+fn: offset_entry (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
 return: 0
 
 sub: offset_check (@: int counts; int: ok; const: @(char label))

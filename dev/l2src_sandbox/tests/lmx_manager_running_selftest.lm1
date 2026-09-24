@@ -40,7 +40,12 @@ size_t: rb_calls 0U
 @: Lmx rb_node 0
 @: LmxThread rb_current 0
 
-fn: rb_body (@: Lmx node; @: Lmx self) int
+fn: rb_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    @: Lmx self (cast: (@: Lmx) owner)
+    @: Lmx node 0
+    if: self != 0
+        node: self\parent
+    ---
     rb_calls: rb_calls + 1U
     rb_node: node
     rb_current: lmx_thread_current()

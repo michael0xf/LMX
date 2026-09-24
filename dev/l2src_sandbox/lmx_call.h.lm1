@@ -15,9 +15,12 @@ predef: "l2src/lmx_arena.h.lm1"
 # else in this kernel asks -- the VALUE in slot 0 falls into the LmxCallable address range, and a
 # child carries no type tag. A bare METHOD in child[0] is not a callable occurrence.
 #
-# The descriptor-backed typed entry receives the RESERVED NODE FIRST, selected SELF second, then
-# the arguments its signature lists; its status is the result carrier of 21.13.4.  This header
-# names the ZERO-SOURCE-ARGUMENT shape, which is the one this kernel calls today.
+# A method's typed entry receives the RESERVED NODE FIRST, selected SELF second, then the
+# arguments its signature lists; its status is the result carrier of 21.13.4.  Generated code
+# calls it directly, by its symbol.  METHOD.addr is not that entry: it is the method's TRAMPOLINE
+# (FABLE-OPUS-ROOT-WALK-TRANSLATOR-20260924-159, D-38), the one prim ABI every dynamic call uses
+# (LmxPrimitiveEntry, lmx_primitive.h.lm1): owner = the occurrence, the inputs as references,
+# the value through dest/out, the callee's throw status as the return.
 #
 # WHAT IS ACTUALLY MISSING, corrected 2026-09-18 (the earlier note here blamed an encoding that
 # is not the blocker, and cited `OPEN_POINTS.txt`, which is NOT in this tree -- that file lives
@@ -39,10 +42,6 @@ predef: "l2src/lmx_arena.h.lm1"
 # decodes it.
 # Host/root entries that are not graph callables may still use the one-node shape below.
 fnptr: LmxCallEntry (@: Lmx node) int
-# Descriptor-backed native entry. Source `node` stays first and is the lexical space above the
-# method; `self` is the selected physical occurrence and is the home for own-field
-# load/dirty publication.  Declared, dynamic and explicit arguments follow these two references.
-fnptr: LmxCallEntrySelf (@: Lmx node; @: Lmx self) int
 # Optional walker for METHOD.addr == 0 (installed by lmx_walk / program bind).
 fnptr: LmxCallWalkFn (@: LmxArena arena; @: Lmx callable) int
 
@@ -69,8 +68,9 @@ prototype:
     # own structural parent chain and do not change the activation's reserved `node`.
     fn: lmx_call_node (@: Lmx callable) @: Lmx
     # The call, for the zero-source-argument shape.  child[0] must be an LmxCallable descriptor.
-    # METHOD.addr != 0: `(node,self)` native entry. METHOD.addr == 0: walk the occurrence
-    # body (lmx_walk_run_occurrence); the result is the last evaluated expression.
+    # METHOD.addr != 0: the method's trampoline, through a local dest; a nonzero status is its
+    # throw status, noted like a walk's. METHOD.addr == 0: walk the occurrence body
+    # (lmx_walk_run_occurrence); the result is the last evaluated expression.
     fn: lmx_call_install_walk (LmxCallWalkFn: fn) void
     fn: lmx_call_walk_ready () int
     # Nonzero when the installed walk reports turn-body status (L3), not an activation int (L2).
@@ -81,6 +81,12 @@ prototype:
     fn: lmx_call_note_walk_fail (int: st) void
     fn: lmx_call_clear_walk_fail () void
     fn: lmx_call0 (@: LmxArena arena; @: Lmx callable) int
+    # THE DYNAMIC CALL: every call whose callee is known only at run time, in the prim ABI.
+    # METHOD.addr != 0: the method's trampoline, called as it is.  METHOD.addr == 0: the walk
+    # hook, nullary, whose int is the activation's value.  The return is 0 or the callee's throw
+    # status; the value comes through dest/out.  A value that is not a callable occurrence, or a
+    # walked body called with inputs, is the caller's broken promise (X1).
+    fn: lmx_call_prim (@: LmxArena arena; @: Lmx callable; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
     # The LmxCallable in child[0], or null when the node is not a callable occurrence.
     fn: lmx_call_callable (@: LmxArena arena; @: Lmx node) @: LmxCallable
 end: prototype

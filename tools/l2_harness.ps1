@@ -941,6 +941,12 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_value_call_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 2;
         Absent = @(); Debt = @() },
+    # FABLE-OPUS-ROOT-WALK-TRANSLATOR-20260924-159 commit 1 (D-38): a callable formal whose callable
+    # throws is called through lmx_call_prim -- the throw status apart from the value, the thrown
+    # record through `out` -- and propagated like a direct call's, so the handler takes the payload
+    # (5 + 2) and the calm callable's value arrives (3).  Success is 10.
+    [pscustomobject]@{ Name = 'unit_dyn_call_throw_caught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 10;
+        Absent = @('lmx_call0('); Debt = @('lmx_call_prim(l2_program_arena, l2_c') },
     [pscustomobject]@{ Name = 'unit_value_call_sub_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'a callable without a result has no value'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_return_trailer_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 14;

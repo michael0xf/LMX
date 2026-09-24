@@ -83,7 +83,7 @@ size_t: lm_turns_b 0U
 size_t: lm_t0 0U
 
 # A: кладёт письма в чужой ящик ИЗ СВОЕЙ ПОЛОСЫ, свой счёт ведёт в своём графе.
-fn: lm_a_body (@: Lmx node; @: Lmx self) int
+fn: lm_a_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
     @: LmxThread t
     @: LmxMsg message
     @: Lmx graph
@@ -129,7 +129,7 @@ fn: lm_a_body (@: Lmx node; @: Lmx self) int
 return: 0
 
 # B: вынимает письма из СВОЕГО ящика ИЗ СВОЕЙ ПОЛОСЫ и считает их в своём графе.
-fn: lm_b_body (@: Lmx node; @: Lmx self) int
+fn: lm_b_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
     @: LmxThread t
     @: LmxMsg message
     @: Lmx graph

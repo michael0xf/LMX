@@ -104,6 +104,7 @@ return: lmx_walk_program_roles_g
 fn: lmx_walk_program_plan_roles () @: Lmx
 return: lmx_walk_program_plan_roles_g
 
+
 # Descriptor-dispatch body for lmx_call0 (addr=0): ephemeral scratch, program-bound
 # roles, prepare + run; return last expression as int (LmxWalkValue.number / int cell).
 fn: lmx_walk_call0_dispatch (@: LmxArena arena; @: Lmx callable) int
@@ -120,6 +121,7 @@ fn: lmx_walk_call0_dispatch (@: LmxArena arena; @: Lmx callable) int
     int: st
     if: arena = 0 || callable = 0
         return: c.LMX_CALL_NOT_CALLABLE
+    lmx_call_clear_walk_fail()
     roles: lmx_walk_program_roles()
     plan_roles: lmx_walk_program_plan_roles()
     if: roles = 0
@@ -171,7 +173,9 @@ fn: lmx_walk_call0_dispatch (@: LmxArena arena; @: Lmx callable) int
     lmx_scratch_close(@ scratch)
     lmx_arena_release(@ sa)
     if: st != c.LMX_WALK_OK
-        return: c.LMX_CALL_NOT_CALLABLE
+        # G2: METHOD throw / walk failure status reaches the turn (not collapsed to NOT_CALLABLE).
+        lmx_call_note_walk_fail(st)
+        return: st
     ---
     if: wv.present = 0
         return: 0

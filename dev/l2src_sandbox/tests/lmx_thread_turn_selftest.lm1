@@ -1,5 +1,8 @@
-﻿predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_thread.lm1"
 predef: "l2src/lmx_call.lm1"
+predef: "l2src/lmx_walk.lm1"
+predef: "l2src/lmx_plan.lm1"
+predef: "l2src/lmx_scratch.lm1"
 predef: "l2src/lmx_turn.lm1"
 predef: "l2src/lmx_child.lm1"
 predef: "l2src/lmx_post.lm1"
@@ -35,6 +38,11 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 #     entry program has no METHOD record: it is not a graph callable;
 #   * a stopped or completed object runs no turn at all: the boundary refuses it, and a close is
 #     never resurrected -- while leaving that turn is what marks the object handoff-safe.
+
+# G2: METHOD trampoline returning throw status 1 (S1.1). Mutant: running stays 1 -> RED.
+fn: g2_throw1 (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    \out: 0
+return: 1
 
 size_t: tt_calls 0U
 size_t: tt_host_calls 0U
@@ -163,6 +171,20 @@ fn: main () int
     @: Lmx own_field 0
     @: LmxMethod method 0
     @: LmxCallable callable_info 0
+    @: Lmx roles 0
+    @: Lmx plan_roles 0
+    @: Lmx walk_graph 0
+    @: Lmx thrower 0
+    @: LmxMethod throw_method 0
+    @: LmxMethod walk_method 0
+    @: LmxCallable throw_info 0
+    @: LmxCallable walk_info 0
+    @: Lmx call_node 0
+    @: LmxMsg walk_message 0
+    @: LmxThread walk_thread 0
+    @: LmxPost walk_mail 0
+    @: LmxSchedule walk_sched 0
+    int: g2_code 0
     @: void tt_taken 0
     unsigned: turn_before 0U
     int: built
@@ -179,7 +201,7 @@ fn: main () int
         return: 2
     ---
     arena_at: @ arena
-    if: lmx_pool_open(@ arena, @ methods, c.sizeof(c.LmxMethod), 2U, c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD) != 0
+    if: lmx_pool_open(@ arena, @ methods, c.sizeof(c.LmxMethod), 6U, c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD) != 0
         fputs("lmx_thread_turn: the method pool did not open\n", l1_stdout())
         free(counts)
         return: 2
@@ -304,6 +326,40 @@ fn: main () int
     tt_check(counts, lmx_thread_turn(done_thread, 0, 30U) = c.LMX_THREAD_STOPPED, "a completed object ran a turn")
     tt_check(counts, tt_calls = 2U, "a completed object ran its body")
 
+
+    # ---- G2: walked body whose last op throws 1 -> running 0 after the turn --------------
+    # Graph addr=0 (walked) with CALL to a METHOD trampoline that returns 1. Mutant: turn
+    # leaves running=1 -> RED. Eternal driver will need entry_rc from this walk status
+    # (today: adapter tap in l2_eternal_driver.lm1 ~entry_rc / thrown / running_at_close).
+    throw_method: (cast: (@: LmxMethod) lmx_pool_take(@ arena, @ methods))
+    throw_info: lmx_callable_new_owned(@ arena)
+    walk_info: lmx_callable_new_owned(@ arena)
+    walk_method: (cast: (@: LmxMethod) lmx_pool_take(@ arena, @ methods))
+    thrower: tt_struct(@ arena, 1U)
+    walk_graph: tt_struct(@ arena, 2U)
+    tt_check(counts, throw_method != 0 && throw_info != 0 && walk_info != 0 && walk_method != 0 && thrower != 0 && walk_graph != 0, "G2 fixtures")
+    throw_method\addr: (cast: (LmxEntry) g2_throw1)
+    throw_method\sig: 0U
+    throw_info\method: throw_method
+    lmx_arena_ref_store(thrower, 0U, (cast: (@: void) throw_info))
+    walk_method\addr: 0
+    walk_method\sig: 0U
+    walk_info\method: walk_method
+    lmx_arena_ref_store(walk_graph, 0U, (cast: (@: void) walk_info))
+    roles: lmx_walk_roles_open(arena_at)
+    plan_roles: lmx_plan_roles_open(arena_at)
+    tt_check(counts, roles != 0 && plan_roles != 0, "G2 walk/plan roles")
+    lmx_walk_program_bind(roles, plan_roles)
+    call_node: lmx_walk_frame(arena_at, roles, walk_graph, c.LMX_WALK_OP_CALL, 2U)
+    tt_check(counts, call_node != 0, "G2 CALL frame")
+    tt_check(counts, lmx_arena_ref_store(call_node, 1U, (cast: (@: void) thrower)) = 0, "G2 CALL -> thrower")
+    tt_check(counts, lmx_arena_ref_store(walk_graph, 1U, (cast: (@: void) call_node)) = 0, "G2 CALL as body step")
+    built: tt_message(@ arena, walk_graph, @ walk_message, @ walk_thread, @ walk_mail, @ walk_sched)
+    tt_check(counts, built != 0 && walk_message != 0 && walk_thread != 0, "G2 Message built")
+    tt_check(counts, walk_message\running = 1, "G2 Message starts running")
+    g2_code: lmx_thread_turn(walk_thread, 0, 40U)
+    tt_check(counts, walk_message\running = 0, "G2 walked body throw 1 -> running 0 after turn (mutant: running stays 1)")
+    tt_check(counts, g2_code = c.LMX_THREAD_INVALID, "G2 turn returns INVALID after throw body status")
     failures: counts[1]
     c.printf("lmx_thread_turn checks=%d failures=%d\n", counts[0], failures)
     free(counts)

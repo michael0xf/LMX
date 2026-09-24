@@ -275,6 +275,15 @@ fn: l3_prim_success (@: void owner; @@: void refs; size_t: nargs; @: void dest; 
     message\success: 1
 return: c.LMX_PRIMITIVE_OK
 
+# call0 walk hook installed by l3_thread_bind: one turn shape (no Thread mode).
+fn: l3_thread_call0_walk (@: LmxArena arena; @: Lmx callable) int
+    @: LmxThread t l3_bound_t
+    if: t = 0 || arena = 0
+        return: c.LMX_INTERP_INVALID
+    ---
+    # callable is the Message graph tip (may be non-CALLABLE L3 IR).
+return: l3_thread_dispatch(t)
+
 fn: l3_thread_dispatch (@: LmxThread t) int
     @: LmxMsg message 0
     @: Lmx graph
@@ -363,7 +372,8 @@ fn: l3_thread_bind (@: LmxArena arena; @: LmxThread t) int
         return: c.LMX_THREAD_INVALID
     if: l3_bound_t != 0
         if: l3_bound_t = t && l3_bound_owner = arena && l3_bound_profile != 0 && l3_bound_roles != 0 && l3_bound_plan != 0 && l3_bound_mail_count != 0 && l3_bound_mail_take != 0 && l3_bound_success != 0
-            return: lmx_thread_interpreter_set(t, l3_thread_dispatch)
+            lmx_call_install_walk_status((cast: (LmxCallWalkFn) l3_thread_call0_walk))
+            return: c.LMX_THREAD_OK
         ---
         return: c.LMX_THREAD_INVALID
     mark: lmx_arena_mark(arena)
@@ -401,4 +411,5 @@ fn: l3_thread_bind (@: LmxArena arena; @: LmxThread t) int
     l3_bound_mail_count: mail_count
     l3_bound_mail_take: mail_take
     l3_bound_success: success
-return: lmx_thread_interpreter_set(t, l3_thread_dispatch)
+    lmx_call_install_walk_status((cast: (LmxCallWalkFn) l3_thread_call0_walk))
+return: c.LMX_THREAD_OK

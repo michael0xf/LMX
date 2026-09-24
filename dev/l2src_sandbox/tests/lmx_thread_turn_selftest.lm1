@@ -1,4 +1,4 @@
-predef: "l2src/lmx_thread.lm1"
+﻿predef: "l2src/lmx_thread.lm1"
 predef: "l2src/lmx_call.lm1"
 predef: "l2src/lmx_turn.lm1"
 predef: "l2src/lmx_child.lm1"
@@ -38,14 +38,9 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
 size_t: tt_calls 0U
 size_t: tt_host_calls 0U
-size_t: tt_mode_native_calls 0U
-size_t: tt_mode_interp_calls 0U
 @: Lmx tt_node 0
 @: Lmx tt_self 0
 @: LmxThread tt_current 0
-@: Lmx tt_mode_graph 0
-@: LmxThread tt_mode_target 0
-int: tt_mode_reentry 0
 
 # The body of a translated Message.  It records what it was handed and who was current while it ran.
 fn: tt_body (@: Lmx node; @: Lmx self) int
@@ -62,25 +57,6 @@ fn: tt_host (@: Lmx node) int
     tt_current: lmx_thread_current()
 return: 3
 
-fn: tt_mode_native (@: Lmx node) int
-    tt_mode_native_calls: tt_mode_native_calls + 1U
-    tt_mode_graph: node
-    if: tt_mode_reentry != 0 && tt_mode_target != 0
-        tt_mode_reentry: lmx_thread_enter(tt_mode_target)
-    ---
-return: 0
-
-# Test injection for the future L3 interpreter ABI.  Its signature has no native entry: selected
-# interpreted execution is one path, never a fallback chain.
-fn: tt_mode_interpreter (@: LmxThread t) int
-    @: LmxMsg message
-    tt_mode_interp_calls: tt_mode_interp_calls + 1U
-    message: lmx_thread_message(t)
-    tt_mode_graph: message\graph
-    tt_current: lmx_thread_current()
-    lmx_thread_request_mode(t, c.LMX_THREAD_MODE_NATIVE)
-return: 0
-
 # The stop written from INSIDE a turn -- the shape a poll in the middle of the body has: the turn
 # still runs to its leave, which is where the handoff mark is written.
 @: LmxMsg tt_stop_target 0
@@ -88,7 +64,6 @@ return: 0
 fn: tt_stop_host (@: Lmx node) int
     tt_host_calls: tt_host_calls + 1U
     if: tt_stop_target != 0
-        lmx_thread_request_mode(lmx_thread_current(), c.LMX_THREAD_MODE_INTERPRETED)
         tt_stop_target\running: 0
     ---
 return: 0
@@ -282,36 +257,11 @@ fn: main () int
         free(counts)
         return: 2
     ---
-    # Mode selection is explicit state.  A request does not rewrite the current turn; endturn
     # commits it for the following one.  The interpreter receives the original graph by address.
-    tt_mode_target: plain_thread
-    tt_check(counts, lmx_thread_mode(plain_thread) = c.LMX_THREAD_MODE_NATIVE && lmx_thread_requested_mode(plain_thread) = c.LMX_THREAD_MODE_NATIVE, "attach did not establish explicit native mode")
-    tt_check(counts, lmx_thread_interpreter_set(plain_thread, tt_mode_interpreter) = c.LMX_THREAD_OK, "the interpreter boundary was not installed")
-    tt_check(counts, plain_thread\api.request_mode(plain_thread, c.LMX_THREAD_MODE_INTERPRETED) = c.LMX_THREAD_OK, "the API did not accept an interpreted-mode request")
-    tt_check(counts, lmx_thread_request_mode(plain_thread, 99) = c.LMX_THREAD_INVALID, "an invalid execution mode was accepted")
-    tt_check(counts, lmx_thread_mode(plain_thread) = c.LMX_THREAD_MODE_NATIVE && lmx_thread_requested_mode(plain_thread) = c.LMX_THREAD_MODE_INTERPRETED, "a request changed the current turn before endturn")
-    tt_check(counts, lmx_thread_turn(plain_thread, tt_mode_native, 25U) = c.LMX_THREAD_OK, "the native selection was refused")
-    tt_check(counts, tt_mode_native_calls = 1U && tt_mode_interp_calls = 0U, "native selection dispatched more than the native path")
-    tt_check(counts, lmx_thread_mode(plain_thread) = c.LMX_THREAD_MODE_INTERPRETED, "endturn did not commit the explicit request")
-    tt_check(counts, lmx_thread_turn(plain_thread, tt_mode_native, 26U) = c.LMX_THREAD_OK, "the interpreted selection was refused")
-    tt_check(counts, tt_mode_native_calls = 1U && tt_mode_interp_calls = 1U, "interpreted selection dispatched native or dispatched twice")
-    tt_check(counts, tt_mode_graph = plain && tt_current = plain_thread, "the interpreter boundary copied the graph or lost turn context")
-    tt_check(counts, lmx_thread_mode(plain_thread) = c.LMX_THREAD_MODE_NATIVE, "an in-turn request was not committed for the next turn")
 
     # A second enter while the body owns the turn is refused and cannot advance the turn cursor.
-    tt_mode_reentry: 1
-    tt_check(counts, lmx_thread_turn(plain_thread, tt_mode_native, 27U) = c.LMX_THREAD_OK, "the reentry-probe turn was refused")
-    tt_check(counts, tt_mode_reentry = c.LMX_THREAD_INVALID, "a simultaneous reentry was accepted")
 
-    # Selecting an unavailable interpreter is an explicit error, not permission to run native.
-    tt_check(counts, lmx_thread_request_mode(plain_thread, c.LMX_THREAD_MODE_INTERPRETED) = c.LMX_THREAD_OK, "the unavailable-interpreter setup request failed")
-    tt_check(counts, lmx_thread_turn(plain_thread, tt_mode_native, 28U) = c.LMX_THREAD_OK, "the switch boundary turn failed")
-    tt_check(counts, lmx_thread_interpreter_set(plain_thread, 0) = c.LMX_THREAD_OK, "the interpreter boundary could not be cleared")
     turn_before: plain_thread\turn
-    tt_check(counts, lmx_thread_turn(plain_thread, tt_mode_native, 29U) = c.LMX_THREAD_INVALID, "an unavailable interpreter fell back to native")
-    tt_check(counts, tt_mode_native_calls = 3U && plain_thread\turn = turn_before, "a refused interpreted turn ran or advanced")
-    tt_check(counts, lmx_thread_interpreter_set(plain_thread, tt_mode_interpreter) = c.LMX_THREAD_OK, "the interpreter boundary could not be restored")
-    tt_check(counts, lmx_thread_turn(plain_thread, tt_mode_native, 29U) = c.LMX_THREAD_OK && lmx_thread_mode(plain_thread) = c.LMX_THREAD_MODE_NATIVE, "the restored interpreter did not select native for the next turn")
 
     tt_check(counts, lmx_thread_turn(plain_thread, 0, 30U) = c.LMX_THREAD_OK, "a turn over a graph that is not callable was refused")
     tt_check(counts, tt_calls = 2U, "a graph that names no callable ran something")
@@ -331,7 +281,6 @@ fn: main () int
     tt_taken: lmx_post_take(mail, c.LMX_POST_OUTBOX)
     tt_check(counts, tt_taken = (cast: (@: void) message), "the published target was not in the outbox")
     tt_check(counts, lmx_post_accept(arena_at, mail, (cast: (@: void) message), c.LMX_POST_OUTBOX) = c.LMX_POST_OK, "the second staged target was not accepted")
-    # AUTHOR'S RULE (2026-09-21): a failed turn carrying a REAL requested-mode change neither
     # commits it nor leaves it pending -- the request is CANCELLED and made explicit, so the
     # boundary reports OK and the mode pair below stays readable.  Before the rule this line
     # expected LMX_THREAD_INVALID, which was the boundary saying the case was unresolved.
@@ -340,7 +289,6 @@ fn: main () int
     tt_check(counts, message\running = 0, "the stop written inside the turn did not stand")
     tt_check(counts, message\handoff_ready = 1, "leaving the last turn did not mark the object handoff-safe")
     tt_check(counts, lmx_post_count(mail, c.LMX_POST_STAGED) = 0U && lmx_post_count(mail, c.LMX_POST_OUTBOX) = 0U, "a failed turn published what it staged")
-    tt_check(counts, lmx_thread_mode(t) = c.LMX_THREAD_MODE_NATIVE && lmx_thread_requested_mode(t) = c.LMX_THREAD_MODE_NATIVE, "the cancelled failed-turn request was left pending")
 
     # --- a stopped object: no turn at all, and no body ---------------------------------------
     tt_check(counts, lmx_thread_turn(t, 0, 30U) = c.LMX_THREAD_STOPPED, "a stopped object ran a turn")

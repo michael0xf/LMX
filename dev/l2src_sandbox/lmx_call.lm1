@@ -17,9 +17,25 @@ include: "<stdio.h>" "<string.h>"
 # walk/plan/scratch (avoids duplicate symbols with selftests that embed those units).
 
 @: void lmx_call_walk_fn 0
+int: lmx_call_walk_status_mode 0
 
 fn: lmx_call_install_walk (LmxCallWalkFn: fn) void
     lmx_call_walk_fn: (cast: (@: void) fn)
+    lmx_call_walk_status_mode: 0
+
+fn: lmx_call_install_walk_status (LmxCallWalkFn: fn) void
+    lmx_call_walk_fn: (cast: (@: void) fn)
+    lmx_call_walk_status_mode: 1
+
+fn: lmx_call_walk_returns_status () int
+    if: lmx_call_walk_status_mode = 0
+        return: 0
+return: 1
+
+fn: lmx_call_walk_ready () int
+    if: lmx_call_walk_fn = 0
+        return: 0
+return: 1
 
 fn: lmx_call_ready (@: LmxArena arena; @: Lmx callable) int
     @: void target
@@ -90,6 +106,12 @@ fn: lmx_call0 (@: LmxArena arena; @: Lmx callable) int
     LmxCallWalkFn: walk
     LmxEntry: addr
     if: lmx_call_ready(arena, callable) != c.LMX_CALL_OK
+        # Installed walker (L2 walk / L3 bind): one turn shape still goes through
+        # call0 even when the graph tip is not yet a CALLABLE occurrence.
+        if: lmx_call_walk_fn != 0
+            walk: (cast: (LmxCallWalkFn) lmx_call_walk_fn)
+            return: walk(arena, callable)
+        ---
         return: c.LMX_CALL_NOT_CALLABLE
     target: lmx_arena_ref_value(callable, 0U)
     info: (cast: (@: LmxCallable) target)

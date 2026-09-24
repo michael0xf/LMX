@@ -94,9 +94,6 @@ fn: lmx_thread_init (@: LmxArena arena; @: LmxThread t; @: Lmx graph; @: LmxPost
     t\turn: 0U
     t\state: c.LMX_THREAD_IDLE
     # Bootstrap compatibility is an explicit state, not an inference from entry or graph shape.
-    t\current_mode: c.LMX_THREAD_MODE_NATIVE
-    t\requested_mode: c.LMX_THREAD_MODE_NATIVE
-    t\interpreter_dispatch: 0
     # No turn has run yet, so nothing was reserved, and nothing has linked this object into a
     # family: the up-link of the address walk starts empty (lmx_child's publication writes it).
     t\prepared: 0
@@ -117,7 +114,6 @@ fn: lmx_thread_init (@: LmxArena arena; @: LmxThread t; @: Lmx graph; @: LmxPost
     t\api.leave: lmx_thread_leave
     t\api.running: lmx_thread_running
     t\api.current: lmx_thread_current
-    t\api.request_mode: lmx_thread_request_mode
     t\mail_api.accept: lmx_thread_mail_accept
     t\mail_api.take: lmx_thread_mail_take
     t\mail_api.count: lmx_thread_mail_count
@@ -431,58 +427,10 @@ fn: lmx_thread_running (@: LmxThread t) int
         return: 0
 return: message\running
 
-fn: lmx_thread_request_mode (@: LmxThread t; int: mode) int
-    if: t = 0 || t\state = c.LMX_THREAD_DONE
-        return: c.LMX_THREAD_INVALID
-    if: mode != c.LMX_THREAD_MODE_NATIVE && mode != c.LMX_THREAD_MODE_INTERPRETED
-        return: c.LMX_THREAD_INVALID
-    t\requested_mode: mode
-return: c.LMX_THREAD_OK
 
-fn: lmx_thread_mode (@: LmxThread t) int
-    if: t = 0
-        return: 0
-return: t\current_mode
 
-fn: lmx_thread_requested_mode (@: LmxThread t) int
-    if: t = 0
-        return: 0
-return: t\requested_mode
 
-fn: lmx_thread_interpreter_set (@: LmxThread t; LmxThreadDispatch: dispatch) int
-    if: t = 0 || t\state = c.LMX_THREAD_TURN || t\state = c.LMX_THREAD_DONE
-        return: c.LMX_THREAD_INVALID
-    t\interpreter_dispatch: dispatch
-return: c.LMX_THREAD_OK
 
-fn: lmx_thread_mode_end (@: LmxThread t; int: outcome) int
-    if: t = 0
-        return: c.LMX_THREAD_INVALID
-    if: outcome != c.LMX_TURN_SUCCESS && outcome != c.LMX_TURN_FAILED
-        return: c.LMX_THREAD_INVALID
-    if: t\current_mode != c.LMX_THREAD_MODE_NATIVE && t\current_mode != c.LMX_THREAD_MODE_INTERPRETED
-        return: c.LMX_THREAD_INVALID
-    if: t\requested_mode != c.LMX_THREAD_MODE_NATIVE && t\requested_mode != c.LMX_THREAD_MODE_INTERPRETED
-        return: c.LMX_THREAD_INVALID
-    if: t\requested_mode = t\current_mode
-        return: c.LMX_THREAD_OK
-    # AUTHOR'S RULE, 2026-09-21, verbatim: "Отменить запрос -- мой рекомендуемый вариант."  A
-    # failed turn carrying a REAL requested-mode change neither commits it nor leaves it pending:
-    # the request is CANCELLED, and the cancellation is made explicit by resetting requested_mode
-    # to current_mode.  current_mode is unchanged, so the NEXT turn runs in the mode it ran in
-    # before, and a later switch requires a NEW explicit request_mode -- nothing is deferred.
-    #
-    # This replaces the previous reading, which returned LMX_THREAD_INVALID here to make an
-    # "unresolved" case visible.  It is resolved now, so a failed turn with a pending request is
-    # an ordinary cancelled turn and reports OK.  One consequence is deliberate and must not be
-    # read as a bug: a caller that wants to know the mode change did not happen reads
-    # requested_mode (it equals current_mode again), not this return value.
-    if: outcome = c.LMX_TURN_FAILED
-        t\requested_mode: t\current_mode
-        return: c.LMX_THREAD_OK
-    ---
-    t\current_mode: t\requested_mode
-return: c.LMX_THREAD_OK
 
 # Entering a turn.  Refused when the object is already done (a close never
 # resurrects it) and refused when the boundary says stop: not running, or already
@@ -570,6 +518,7 @@ fn: lmx_thread_dispatch_native (@: LmxThread t; LmxCallEntry: entry) int
     @: LmxMsg message
     @: Lmx graph
     @: LmxArena arena
+    int: st
     message: lmx_thread_message(t)
     if: message = 0
         return: c.LMX_THREAD_INVALID
@@ -594,12 +543,21 @@ fn: lmx_thread_dispatch_native (@: LmxThread t; LmxCallEntry: entry) int
             if: t\slot != 0
                 arena: t\slot\arena
                 if: arena != 0
-                    lmx_call0(arena, graph)
+                    # One turn shape: lmx_call0. L2 walk returns an activation int (ignored
+                    # here -- model 31 / Message flags). L3 bind installs a status walk:
+                    # INTERP_* is the turn body status (kept since 4ab2877).
+                    st: lmx_call0(arena, graph)
+                    if: lmx_call_walk_returns_status() != 0
+                        if: st = c.LMX_CALL_NOT_CALLABLE
+                            return: c.LMX_TURN_BODY_OK
+                        ---
+                        return: st
+                    ---
                 ---
             ---
         ---
     ---
-return: c.LMX_THREAD_OK
+return: c.LMX_TURN_BODY_OK
 
 fn: lmx_thread_turn (@: LmxThread t; LmxCallEntry: entry; ulong: now) int
     @: LmxMsg message
@@ -609,15 +567,7 @@ fn: lmx_thread_turn (@: LmxThread t; LmxCallEntry: entry; ulong: now) int
     message: lmx_thread_message(t)
     if: message = 0
         return: c.LMX_THREAD_INVALID
-    # Validate the selected path before entering: an unavailable interpreter is not permission
-    # to execute native code, and a refused turn must not advance the cursor.  NEITHER PATH IS
-    # EVER A FALLBACK FOR THE OTHER: the mode is selected before the body runs, a refusal here is
-    # a refusal and not a switch, and a body that FAILS does not make this turn native either --
-    # it makes it a failed turn in the mode it ran (below).
-    if: t\current_mode != c.LMX_THREAD_MODE_NATIVE && t\current_mode != c.LMX_THREAD_MODE_INTERPRETED
-        return: c.LMX_THREAD_INVALID
-    if: t\current_mode = c.LMX_THREAD_MODE_INTERPRETED && t\interpreter_dispatch = 0
-        return: c.LMX_THREAD_INVALID
+    # One turn shape: enter, body via dispatch_native (lmx_call0), leave, boundary.
     code: lmx_thread_enter(t)
     if: code != c.LMX_THREAD_OK
         # A THREAD STOPPED FROM OUTSIDE MUST STILL CLOSE ITS OWN LEVEL.  Its boundary acts are
@@ -672,22 +622,12 @@ fn: lmx_thread_turn (@: LmxThread t; LmxCallEntry: entry; ulong: now) int
         ---
         return: code
     ---
-    # THE INTERPRETER'S ANSWER IS KEPT.  It used to be dropped, so an interpreted body that
-    # failed -- a primitive failure inside it included -- reached the boundary as an ordinary
-    # continuing turn.  The NATIVE branch still discards its handler's status on purpose (model
-    # 31: a handler reports its own business, and dispatch_native carries the reason), so the two
-    # paths are NOT made symmetric: redefining a native handler's return would change a contract
-    # this ticket does not own.  What is carried goes into the boundary below, where it decides
-    # the staging and the reservations, and into this act's own report at the end.
-    if: t\current_mode = c.LMX_THREAD_MODE_NATIVE
-        body: lmx_thread_dispatch_native(t, entry)
-    else:
-        body: t\interpreter_dispatch(t)
+    # Body: always dispatch_native -> host entry or lmx_call0.
+    body: lmx_thread_dispatch_native(t, entry)
     ---
     lmx_thread_leave(t)
     # THE BOUNDARY RUNS EVEN FOR A FAILED BODY, and it runs WITH the body's status: a failed turn
-    # discards what it staged, drops what it reserved, and carries out its cleanup -- the mode
-    # rule of lmx_thread_mode_end included -- before this act reports anything.  A failure that
+    # discards what it staged, drops what it reserved, and carries out its cleanup -- before this act reports anything.  A failure that
     # skipped the boundary would leave the letters and the children of a dead turn in flight.
     if: lmx_turn_end_status(t, now, body) != c.LMX_TURN_OK
         return: c.LMX_THREAD_INVALID

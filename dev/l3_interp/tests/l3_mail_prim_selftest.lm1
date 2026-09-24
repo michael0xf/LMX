@@ -307,7 +307,7 @@ fn: run_graph (@: LmxThread t; @: Lmx m) int
     if: t = 0 || m = 0 || msg = 0
         return: -1
     msg\graph: m
-    st: lmx_thread_turn(t, native_noop, 1U)
+    st: lmx_thread_turn(t, 0, 1U)
     groles: l3_thread_roles(t)
     if: groles = 0
         return: -1
@@ -367,7 +367,6 @@ fn: main () int
         free(counts)
         return: 2
     ---
-    fail(counts, lmx_thread_request_mode(t, c.LMX_THREAD_MODE_INTERPRETED) = c.LMX_THREAD_OK, "request interpreted")
     fail(counts, lmx_thread_turn(t, native_noop, 1U) = c.LMX_THREAD_OK, "commit mode on native turn")
     fail(counts, native_hits = 1, "native ran once")
     fail(counts, l3_thread_bind(a, t) = c.LMX_THREAD_OK, "bind with mail primitives")
@@ -417,9 +416,7 @@ fn: main () int
     fail(counts, run_graph(t, m) = c.LMX_THREAD_OK, "count after delivery")
     fail(counts, field(m, 1U) = 3, "count is 3 after delivery")
 
-    fail(counts, lmx_thread_request_mode(t, c.LMX_THREAD_MODE_NATIVE) = c.LMX_THREAD_OK, "request native pending")
     # The instrument first: the request IS pending, or "cancelled" below would say nothing.
-    fail(counts, lmx_thread_mode(t) = c.LMX_THREAD_MODE_INTERPRETED && lmx_thread_requested_mode(t) = c.LMX_THREAD_MODE_NATIVE, "before the failed turn: current interpreted, native REQUESTED")
     m: mk_bad_arity()
     probe: mk_int(a, 1)
     probe_before: lmx_range_classify(a, probe)
@@ -428,8 +425,6 @@ fn: main () int
     # Two facts, two checks.  The CURRENT mode does not move while a request is merely pending, so
     # it cannot show a cancellation; the REQUESTED mode can, and it is what a later good boundary
     # would otherwise commit.
-    fail(counts, lmx_thread_mode(t) = c.LMX_THREAD_MODE_INTERPRETED, "failed turn left the current mode interpreted")
-    fail(counts, lmx_thread_requested_mode(t) = c.LMX_THREAD_MODE_INTERPRETED, "failed turn cancelled the pending native request")
     fail(counts, native_hits = 1, "wrong arity did not call native")
     m: mk_count()
     fail(counts, run_graph(t, m) = c.LMX_THREAD_OK, "later interpreted turn still runs")
@@ -507,12 +502,15 @@ fn: main () int
     fail(counts, native_hits = 1, "impostor success did not call native")
     fail(counts, message\success = 0, "impostor success left the flag at 0")
 
-    t\interpreter_dispatch: 0
+    # Mode gone: clearing the walk hook is the old null walk hook (old interpreter slot).
+    # With no walker and no host entry, call0 is a quiet empty body (NOT_CALLABLE) --
+    # not a native fallback. Re-bind restores the status walker.
+    lmx_call_install_walk(0)
     m: mk_count()
-    fail(counts, broken = 0 && m != 0 && run_graph(t, m) = c.LMX_THREAD_INVALID, "null dispatch is INVALID, not a native fallback")
-    fail(counts, native_hits = 1, "null dispatch did not call native")
-    fail(counts, message\success = 0, "null dispatch left success at 0")
-    fail(counts, l3_thread_bind(a, t) = c.LMX_THREAD_OK && t\interpreter_dispatch != 0, "bind restores dispatch")
+    fail(counts, broken = 0 && m != 0 && run_graph(t, m) = c.LMX_THREAD_OK, "cleared walker: quiet empty body, not a native fallback")
+    fail(counts, native_hits = 1, "cleared walker did not call native")
+    fail(counts, message\success = 0, "cleared walker left success at 0")
+    fail(counts, l3_thread_bind(a, t) = c.LMX_THREAD_OK && lmx_call_walk_ready() != 0, "bind restores walk")
     groles: l3_thread_roles(t)
 
     m: mk_worker()

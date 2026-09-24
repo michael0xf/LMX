@@ -1,17 +1,11 @@
-# FABLE-SONNET-OCC-ROOT-20260924-146: a repeated own-field occurrence under
-# a NAMED (method) root, `test\[N]field`, resolved by the same occurrence
-# lookup the rootless `\[N]field` form already uses (l2_own_find_occ) -- no
-# second scanner.
+# FABLE-SONNET-OCC-ROOT-20260924-146: an own-field occurrence under a NAMED (method) root,
+# `test\[N]field`, resolved by the same occurrence lookup the rootless `\[N]field` form uses
+# (l2_own_find_occ) -- no second scanner.
 #
-# Measured (not assumed): an argument-bound field has no independent
-# per-occurrence graph value. l2_emit_checkpoint publishes EVERY occurrence
-# row of an argument-aliased field from the one canonical parameter cell
-# (l2_p%d_%d), never from that row's own l2_q%d snapshot (the argument
-# same-name-binding rule, L2 spec 18.3: "Its address and lifetime remain
-# those of the parameter"). So test\[0]arg and test\[1]arg both read test's
-# FINAL arg value once test has returned, same as unqualified test\arg --
-# still a real, correctly-typed, non-crashing graph read reaching the right
-# own row, just not distinguishing history for an argument specifically.
+# Q29 (author, 2026-09-25; FABLE-OPUS-CODE-DATA-SPLIT-20260925-189 c3c): the two bare assignments
+# of `arg` are one cell -- `\[N]` numbers declarations, and a repeated bare assignment is not an
+# occurrence.  So test\[0]arg and testrg read that one cell, 2; test\[1]arg names nothing (the
+# refusal is unit_occ_arg_second_refused.lm2).
 fn: test (int: arg) int
     arg: 1
     arg: 2
@@ -22,9 +16,6 @@ int: got
 got: test(0)
 if: test\[0]arg != 2
     sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
-    return
-if: test\[1]arg != 2
-    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
     return
 if: test\arg != 2
     sendMessage: exit(exit_code: 83; stdout: ""; stderr: "")

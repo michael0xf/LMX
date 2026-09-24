@@ -555,7 +555,7 @@ $fixtures = @(
     # by name.
     [pscustomobject]@{ Name = 'unit_s2_vis_dynamic.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
         Absent = @();
-        Debt = @('fn: l2_m0 (@: Lmx node; @: Lmx self; int: l2_p0_0) int', 'l2_t1: l2_m0(l2_c0\parent, l2_c0, l2_q0)') },
+        Debt = @('fn: l2_m0 (@: Lmx node; @: Lmx self; int: l2_p0_0) int', 'l2_t1: l2_m0(l2_c0\parent, l2_c0, lmx_int_value_known(l2_q0_from[0]))') },
     [pscustomobject]@{ Name = 'unit_s2_vis_structure_below_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s2_vis_signature_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -1389,10 +1389,10 @@ $fixtures = @(
                  'l2_entry_unit: graph', 'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ') },
     [pscustomobject]@{ Name = 'unit_nested_body_for.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
-        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'lmx_branch_struct_known(unit,');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'lmx_branch_struct_known(unit,', 'int: l2_q1_dirty');
         Debt = @('l2_h0: lmx_arena_ref_struct(self, 1U)',
                  'lmx_arena_ref_cell(l2_h0, 1U)',
-                 'l2_q1: 4',
+                 'if: lmx_int_store_known(l2_q1_from[0], (4)) != 0',
                  '# const: @(char l2_own1) "hosted"',
                  'l2_entry_unit: graph', 'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ') },
     [pscustomobject]@{ Name = 'unit_nested_body_own_not_node.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -1427,9 +1427,12 @@ $fixtures = @(
         Args = @('0');
         Absent = @();
         Debt = @() },
+    # -189 c3b-1: `j` has no working copy -- it IS its cell -- so after `for\j: 42` the bare `j` reads 42
+    # too.  The old «a bare working x may keep its previous value while the path sees the new one» (L3
+    # §12) was removed by the author (061d753, «for example (9 9)»); it printed `9 42` here.
     [pscustomobject]@{ Name = 'unit_forj_stale.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
-        Says = @('9', '9 42');
+        Says = @('9', '42 42');
         Absent = @();
         Debt = @() },
     [pscustomobject]@{ Name = 'unit_occ_root_field.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a field path';
@@ -1491,7 +1494,7 @@ $fixtures = @(
         Absent = @('unsupported body'); Debt = @('f()') },
     [pscustomobject]@{ Name = 'unit_fnptr_noncallable_assign.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
         Absent = @();
-        Debt = @('l2_q0: 7') },
+        Debt = @('if: lmx_int_store_known(l2_q0_from[0], (7)) != 0') },
     # FABLE-GROKBOT-CALL-ARGS-20260922-92: paren-group call args via l2_call_args
     [pscustomobject]@{ Name = 'unit_call_args_empty_paren.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
@@ -1983,12 +1986,15 @@ $fixtures = @(
         Needle = 'unknown consumer descriptor'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_invalid_implements_used_field.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'implements is false in function argument'; Absent = @(); Debt = @() },
+    # Q29 (FABLE-OPUS-CODE-DATA-SPLIT-20260925-189 c3c): the two bare assignments of `arg` are one cell,
+    # \[0]arg is 2, and there is no second slot; \[1]arg is refused where it stands.
     [pscustomobject]@{ Name = 'unit_occ_arg_slots.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
-        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_q1_from');
         Debt = @('l2_entry_unit: graph', 'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ',
-                 'l2_q0_from: lmx_arena_ref_cell(self, 1U)',
-                 'l2_q1_from: lmx_arena_ref_cell(self, 2U)') },
+                 'l2_q0_from: lmx_arena_ref_cell(self, 1U)') },
+    [pscustomobject]@{ Name = 'unit_occ_arg_second_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'own occurrence index out of range'; Absent = @(); Debt = @() },
     # FABLE-SONNET-OCC-ROOT-20260924-146 commit 1: a named (method) root's
     # occurrence index, test\[N]arg, resolved through l2_own_find_occ --
     # the same lookup the rootless \[N]arg form already uses, no second

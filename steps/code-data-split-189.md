@@ -428,3 +428,88 @@ On my side (c3a), after -188 c3 lands:
     a dynamic call.
 - c2's `l2_new<i>` then goes: one mechanism for a fresh instance (CORE, one mechanism per role).
 - So c3a lands with or after -188 c3.  c3b (no working copies) and c3c (Q29) do not depend on it.
+
+## Commit c3c: Q29, one cell per declaration
+
+fable accepted doing c3c before c3b.  With repeated bare assignments as occurrences, a read without
+working copies would need a runtime selector; Q29 removes that case first.
+
+What is built:
+- l2_own_add dropped the branch «a later assignment of the same name is a new occurrence only when
+  the existing row is itself an assignment» (`l2_is_asgn(...) && l2_is_asgn(at) → i: -1`).
+  - A later bare assignment now resolves to the existing row, the one cell.
+  - `\[N]` counts declarations.
+- A missing occurrence is refused where it stands, «own occurrence index out of range».
+  - The check pass already said so for a method-rooted `M\[N]x` (:13930).
+  - Three emission paths returned 1 silently and gave «translation failed with no located
+    diagnostic»: l2_prep's atom form, l2_emit_fields' `\ [ N ] x` run, and both method-rooted
+    spellings.  They now give that same message at the name.
+
+Rows (measured), the three the plan named plus one:
+- unit_occ_arg_slots: `arg: 1; arg: 2` is one cell and `\[0]arg` is 2.  Re-pinned: `l2_q0_from`
+  stays, and `l2_q1_from` (the second slot) is Absent.
+- unit_occ_arg_second_refused (new, l2trans-refuses): `\[1]arg` with one cell, «own occurrence index
+  out of range».
+- unit_occ_root_named: its `test\[1]arg` check goes.  `test\[0]arg` and `test\arg` read the one cell;
+  it stays root-pending, needle unchanged.
+- unit_occ_snapshot_selector: `\[0]bt` is 2 and `\[0]al` is 9 (the cell's last value), and the `\[1]`
+  checks go.  Its Says (`BETWEEN 2`, `LAST 9`) are unchanged.
+- Mutant: the branch restored (the translator without c3c).  unit_occ_arg_slots has `l2_q1_from`,
+  RED; unit_occ_arg_second_refused translates, RED; unit_occ_snapshot_selector prints nothing,
+  because it returns before its line: RED on Says.
+- The per-row tool (n159/verify2b.py) now checks `Says` the harness's way: the program's non-empty
+  lines, whole and in order.
+  - Until now it checked exit codes and pins only, so the Says rows were covered by fable's full
+    gates alone.
+  - The full gate on bf86717, which checks Says, was GREEN for c2.
+
+## Commit c3b-1: no working copy for a plain own field
+
+A PLAIN own field is a number (int, char, size_t, unsigned, ulong) with its own cell, not bound to
+a formal or a dynamic input, and self-canonical (`l2_own_plain`).  That covers ordinary declared own
+fields, hosted fields in control bodies, and the unit's fields a method reads.
+
+What is built:
+- A read is a typed load of the field's cell (`l2_own_load` / `l2_own_spell`): `lmx_int_value_known(
+  l2_q<k>_from[0])` and the like.  It is used at every read spelling: l2_index_token (both),
+  l2_hidden_from, l2_prep (both), l2_emit_fields.
+- A write is a typed store into the cell (`l2_own_store`: X1 when it fails, a char rebinding its
+  interned cell, `---` closing the failure branch).  It is used for an own assignment
+  (l2_emit_occ_write), a field-path value into an own local, and a C-style `for`'s init and step.
+- The prelude keeps only the slot handle `@@: void l2_q<k>_from`, an address bound at entry.  The
+  value `l2_q<k>`, its load and `_dirty` go.
+- The checkpoint skips a plain field: nothing to publish, and no reload.
+- Formal-bound fields (argument-as-own, dynamic inputs) and pointer fields keep the old machinery
+  until c3b-2.
+
+Rows:
+- unit_nested_body_for: re-pinned to the store `if: lmx_int_store_known(l2_q1_from[0], (4)) != 0`,
+  with `int: l2_q1_dirty` Absent.
+- unit_s2_vis_dynamic: re-pinned to the cell load passed as the dynamic input.
+- unit_forj_stale: a fact change, intended (fable).  Says `9 | 9 42` became `9 | 42 42`.
+  - After `for\j: 42` the bare `j` is the cell.
+  - The old «a bare working x may keep its previous value while the path sees the new one» is the
+    L3 §12 text the author removed (061d753, «for example (9 9)»).  Sonnet's -190 predicted this.
+- Mutant W1: a plain store emits nothing, so a write misses the cell.  unit_fresh_instance_skipped_decl
+  exits 0 instead of 70: probe's read of `keep\v` from another method sees 0.  RED.
+
+Found by the per-row check (first run: 6 red), then fixed:
+- `@x` of a bare plain own field was spliced as `@ ` onto its load (a C error in
+  unit_ns_ref_field_general).
+  - `l2_own_addr` now spells the cell's address (L2 §10), as l2_prep_addr does for an own field.
+  - It is used in l2_emit_fields' `@` operator and in the call-argument list.
+- The text buffers were fixed at 256.  The cell loads are longer than the old names, so
+  unit_sizeof_type_frame's eight-field condition overflowed.
+  - Every 256-byte text buffer is now 1024, with l2_cat's and l2_index_token's limits to match.
+  - The call actuals' and hidden inputs' slots (`l2_act_at`) are 1024 each.
+  - Three `memcpy(dest, ..., 256U)` copies, which cut the expression short, now copy the string.
+  - The spelling itself is not shortened.
+- Two more rows change facts (intended).  unit_addr_take and unit_addr_depth: after
+  `set_one(@: n)` writes 1 through the taken address, the bare `n` reads that cell, so 1, not 0.
+  - The rows pinned L2 §18.2's example, «`p: @x`, `\p: 9` leaves bare working x at 5».  That is the
+    old model, and it is still in docs/L2_spec_{ru,en}.md §18.2 (lines ~177-194): a leftover for
+    fable.
+  - The sibling unit_addr_arg, where n is a formal, already read 1 and is unchanged.
+- One more Q29 row: unit_own_last_occurrence numbered assignment occurrences (`test\[1]arg`).  It now
+  reads the one cell: 2, then 5 after `test\arg: 5`.  Entry 7 is kept.
+- unit_fnptr_noncallable_assign (translates-with-debt): re-pinned from `l2_q0: 7` to the store.

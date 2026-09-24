@@ -1359,7 +1359,7 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
         ---
         \out: dest
         return: c.LMX_WALK_OK
-    if: op = c.LMX_WALK_OP_ADD || op = c.LMX_WALK_OP_SUB || op = c.LMX_WALK_OP_LT || op = c.LMX_WALK_OP_EQ
+    if: op = c.LMX_WALK_OP_ADD || op = c.LMX_WALK_OP_SUB || op = c.LMX_WALK_OP_MUL || op = c.LMX_WALK_OP_DIV || op = c.LMX_WALK_OP_MOD || op = c.LMX_WALK_OP_LT || op = c.LMX_WALK_OP_EQ
         status: lmx_walk_eval(f, lmx_arena_ref_value(code, 1U), (cast: (@: void) (@ a)), @ value)
         if: status != c.LMX_WALK_OK
             return: status
@@ -1428,11 +1428,49 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
             \out: dest
             return: c.LMX_WALK_OK
         if: op = c.LMX_WALK_OP_ADD
-            wv: ua + ub
-        else:
-            wv: ua - ub
+            if: a = c.LMX_TYPE_INT
+                wv: (cast: (size_t) ((cast: (int) ua) + (cast: (int) ub)))
+            else:
+                wv: ua + ub
+            ---
+            return: lmx_walk_arith_out(f, dest, a, wv, out)
         ---
-        return: lmx_walk_arith_out(f, dest, a, wv, out)
+        if: op = c.LMX_WALK_OP_SUB
+            if: a = c.LMX_TYPE_INT
+                wv: (cast: (size_t) ((cast: (int) ua) - (cast: (int) ub)))
+            else:
+                wv: ua - ub
+            ---
+            return: lmx_walk_arith_out(f, dest, a, wv, out)
+        ---
+        # -170 c1 / D-58: MUL/DIV/MOD. Mutant: MUL as ADD -> RED. Div/mod by 0 -> INVALID (X1 of D-37/D-44), not a throw.
+        if: op = c.LMX_WALK_OP_MUL
+            if: a = c.LMX_TYPE_INT
+                wv: (cast: (size_t) ((cast: (int) ua) * (cast: (int) ub)))
+            else:
+                wv: ua * ub
+            ---
+            return: lmx_walk_arith_out(f, dest, a, wv, out)
+        ---
+        if: op = c.LMX_WALK_OP_DIV || op = c.LMX_WALK_OP_MOD
+            if: ub = 0U
+                return: c.LMX_WALK_INVALID
+            ---
+            if: a = c.LMX_TYPE_INT
+                if: op = c.LMX_WALK_OP_DIV
+                    wv: (cast: (size_t) ((cast: (int) ua) / (cast: (int) ub)))
+                else:
+                    wv: (cast: (size_t) ((cast: (int) ua) % (cast: (int) ub)))
+                ---
+            else:
+                if: op = c.LMX_WALK_OP_DIV
+                    wv: ua / ub
+                else:
+                    wv: ua % ub
+                ---
+            ---
+            return: lmx_walk_arith_out(f, dest, a, wv, out)
+        ---
     if: op = c.LMX_WALK_OP_IF
         status: lmx_walk_eval(f, lmx_arena_ref_value(code, 1U), (cast: (@: void) (@ a)), @ value)
         if: status != c.LMX_WALK_OK

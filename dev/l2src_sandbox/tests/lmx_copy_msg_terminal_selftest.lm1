@@ -16,6 +16,10 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 # D-59 / FABLE-GROKBOT-COPY-MSG-TERMINAL-20260925-181:
 # MSG_RECORD is a copier terminal (lmx_copy_is_terminal_profiles), like D-49 PRIMITIVE.
 # Mutants RED: treat MSG as Structure (merge refuses); copy the record (address differs).
+#
+# -186 c5 / k3: an OWN Structure binding is a DIRECT slot (deep-copied). A POINTER
+# cell keeps the pointee SHARED (cell shell copied, address unchanged). Mutant:
+# expect deep-copy through a pointer cell -> RED under k3.
 
 sub: check (@: int counts; int: ok; const: @(char label))
     counts[0]: counts[0] + 1
@@ -33,12 +37,14 @@ fn: main () int
     @: LmxArena arena_b_at 0
     @: LmxArena dst_at 0
     @: Lmx unit 0
+    @: Lmx unit_ptr 0
     @: Lmx letter 0
     @: Lmx payload 0
     @: Lmx model 0
     @: Lmx container 0
     @: Lmx result 0
     @: Lmx unit_copy 0
+    @: Lmx unit_ptr_copy 0
     @: Lmx copied_letter 0
     @: void pcopy 0
     @: LmxMsg msg 0
@@ -80,12 +86,14 @@ fn: main () int
     payload: lmx_node_new_owned(@ arena_a)
     letter: lmx_node_new_owned(@ arena_a)
     unit: lmx_node_new_owned(@ arena_a)
+    unit_ptr: lmx_node_new_owned(@ arena_a)
     model: lmx_node_new_owned(@ arena_a)
     container: lmx_node_new_owned(@ arena_a)
-    check(counts, payload != 0 && letter != 0 && unit != 0 && model != 0 && container != 0, "structures")
+    check(counts, payload != 0 && letter != 0 && unit != 0 && unit_ptr != 0 && model != 0 && container != 0, "structures")
     check(counts, lmx_arena_refs_open_owned(@ arena_a, payload, 1U) = 0, "payload open")
     check(counts, lmx_arena_refs_open_owned(@ arena_a, letter, 2U) = 0, "letter open")
     check(counts, lmx_arena_refs_open_owned(@ arena_a, unit, 1U) = 0, "unit open")
+    check(counts, lmx_arena_refs_open_owned(@ arena_a, unit_ptr, 1U) = 0, "unit_ptr open")
     check(counts, lmx_arena_refs_open_owned(@ arena_a, model, 1U) = 0, "model open")
     orig_payload_cell: lmx_int_new_owned(@ arena_a)
     check(counts, orig_payload_cell != 0 && lmx_int_store_known(orig_payload_cell, 7) = 0, "payload int 7")
@@ -93,9 +101,8 @@ fn: main () int
     lmx_arena_ref_store(letter, 0U, (cast: (@: void) msg))
     lmx_arena_ref_store(letter, 1U, (cast: (@: void) payload))
 
-    pcell: lmx_pointer_new_owned(pty, @ arena_a)
-    check(counts, pcell != 0 && lmx_pointer_store_known(pcell, (cast: (@: void) letter)) = 0, "pointer -> letter")
-    lmx_arena_ref_store(unit, 0U, pcell)
+    # Case A: OWN letter in a DIRECT slot (k3 / c3b-3 model).
+    lmx_arena_ref_store(unit, 0U, (cast: (@: void) letter))
     model\parent: unit
     lmx_arena_ref_store(model, 0U, lmx_int_new_owned(@ arena_a))
     if: lmx_arena_ref_value(model, 0U) != 0
@@ -105,18 +112,12 @@ fn: main () int
     operands[0]: model
     status: lmx_merge_owned(operands, 1U, 0, container, 0, @ arena_a, @ dst, 0, 0U, @ result)
     check(counts, status = LMX_MERGE_OK && result != 0, "merge OK with MSG sender in letter")
-
-    # Copied unit is result's parent chain; find letter via pointer on copied unit.
-    # result.parent = container; model was copied — its parent (unit) was copied too.
     check(counts, result != 0 && result\parent = container, "result parent is container")
-    # Walk: the merge operand's parent unit was copied; locate via model's source parent mapping.
-    # Simpler: graph_copy the unit directly and check letter slots (same terminal rule).
+
     status: lmx_graph_copy_owned(unit, 0, @ arena_a, @ dst, @ unit_copy)
-    check(counts, status = LMX_GRAPH_COPY_OK && unit_copy != 0 && unit_copy != unit, "unit copy OK")
+    check(counts, status = LMX_GRAPH_COPY_OK && unit_copy != 0 && unit_copy != unit, "unit copy OK (direct OWN)")
     if: unit_copy != 0
-        pcopy: lmx_arena_ref_value(unit_copy, 0U)
-        check(counts, pcopy != 0 && pcopy != pcell, "pointer cell was copied")
-        copied_letter: (cast: (@: Lmx) lmx_pointer_value_known(pcopy))
+        copied_letter: (cast: (@: Lmx) lmx_arena_ref_value(unit_copy, 0U))
         check(counts, copied_letter != 0 && copied_letter != letter, "letter Structure was copied")
         slot0: lmx_arena_ref_value(copied_letter, 0U)
         slot1: lmx_arena_ref_value(copied_letter, 1U)
@@ -125,6 +126,21 @@ fn: main () int
         check(counts, lmx_int_value_known(lmx_arena_ref_value((cast: (@: Lmx) slot1), 0U)) = 7, "payload value 7")
         check(counts, lmx_int_value_known(orig_payload_cell) = 7, "original payload untouched")
         check(counts, lmx_arena_ref_value(letter, 0U) = (cast: (@: void) msg), "original letter still holds msg")
+    ---
+
+    # Case B: POINTER cell -> letter; pointee SHARED after copy (k3 rule).
+    pcell: lmx_pointer_new_owned(pty, @ arena_a)
+    check(counts, pcell != 0 && lmx_pointer_store_known(pcell, (cast: (@: void) letter)) = 0, "pointer -> letter")
+    lmx_arena_ref_store(unit_ptr, 0U, pcell)
+    status: lmx_graph_copy_owned(unit_ptr, 0, @ arena_a, @ dst, @ unit_ptr_copy)
+    check(counts, status = LMX_GRAPH_COPY_OK && unit_ptr_copy != 0 && unit_ptr_copy != unit_ptr, "unit_ptr copy OK")
+    if: unit_ptr_copy != 0
+        pcopy: lmx_arena_ref_value(unit_ptr_copy, 0U)
+        check(counts, pcopy != 0 && pcopy != pcell, "pointer cell shell was copied")
+        copied_letter: (cast: (@: Lmx) lmx_pointer_value_known(pcopy))
+        check(counts, copied_letter = letter, "pointer pointee SHARED (same letter address)")
+        check(counts, lmx_arena_ref_value(copied_letter, 0U) = (cast: (@: void) msg), "shared letter still holds msg")
+        check(counts, lmx_arena_ref_value(copied_letter, 1U) = (cast: (@: void) payload), "shared letter still holds same payload")
     ---
 
     c.printf("lmx_copy_msg_terminal_selftest checks=%d failures=%d\n", counts[0], counts[1])

@@ -459,6 +459,7 @@ prototype:
     fn: l2_rw_path_read (const: @(LmP0Node node); const: @(LmP0Text t); int: parent; @: int out) int
     fn: l2_rw_path_write (const: @(LmP0Node stmt); const: @(LmP0Text t); @: LmP0Field value; int: n; int: into; @: int out) int
     fn: l2_rw_model (const: @(LmP0Node stmt); const: @(LmP0Text h); int: into; @: int out) int
+    fn: l2_rw_take (const: @(LmP0Node stmt); int: into; @: int out) int
     fn: l2_rw_count (@: LmP0Field first) int
     fn: l2_rw_send (@: LmP0Node stmt; int: into; @: int out) int
     fn: l2_emit_send (int: k; int: proto; @: char prefix; @: int count_arr; @: int kind_arr; @@: LmP0Text text_arr) int
@@ -16479,7 +16480,9 @@ fn: l2_rw_own_ty (const: @(LmP0Text t)) int
     int: oi l2_own_find_last(l2_e, t)
     if: oi < 0 || l2_own_mi[oi] != l2_e || l2_own_host[oi] != 0 || l2_own_fid[oi] >= 0 || l2_own_uchild[oi] < 0
         return: 0 - 9
-    if: l2_rw_num_ty(l2_own_ty[oi]) = 0
+    # A reference field (a pointer cell: a letter, a Structure-typed field) has its own type too,
+    # 1000 and above: it is compared with 0 or another reference only (-179).
+    if: l2_rw_num_ty(l2_own_ty[oi]) = 0 && l2_own_is_pointer(l2_own_ty[oi]) = 0
         return: 0 - 9
 return: l2_own_ty[oi]
 
@@ -16554,6 +16557,12 @@ return: 0
 # (a negative one as C stores it, -1 is 255).
 fn: l2_rw_tlit (const: @(LmP0Node node); int: parent; int: ty; int: neg; size_t: mag; int: usuf; @: int out) int
     int: v 0
+    # Beside a reference only 0 stands, "no Structure": the walker's EQ takes LIT int 0 there.
+    if: ty >= 1000
+        if: neg != 0 || usuf != 0 || mag != 0U
+            return: l2_rw_refuse(node, "a reference compared with a number other than 0")
+        return: l2_rw_lit(parent, 0, out)
+    ---
     if: usuf != 0 && (ty = 0 || ty = 1)
         return: l2_rw_refuse(node, "a U literal in a signed type")
     if: neg != 0 && (ty = 2 || ty = 3 || ty = 36)
@@ -16974,6 +16983,33 @@ fn: l2_rw_path_write (const: @(LmP0Node stmt); const: @(LmP0Text t); @: LmP0Fiel
         return: 1
 return: l2_rw_put(\out, 3, v)
 
+# `receiveMessage: m` at the walked root (FABLE-OPUS-ROOT-TAKE-20260925-179; Grok -177 c1): the
+# current Thread's next letter, taken by the walker's one kernel take primitive (a PRIM
+# [prim, record] whose record's fn is lmx_walk_mail_take: the letter's graph through `out`, or no
+# value when the inbox is empty), stored by reference into m's pointer cell -- null for no letter
+# (a PUT into a pointer cell admits it).  m of a declared Structure type admits the letter first:
+# that is an admission (the caller's implicit `implements`, D-55), not this take.
+fn: l2_rw_take (const: @(LmP0Node stmt); int: into; @: int out) int
+    @: LmP0Text cname 0
+    int: oi
+    int: prim
+    if: l2_receive_msg_shape(stmt, @ cname) != 0 || cname = 0
+        return: l2_rw_refuse(stmt, "this receiveMessage")
+    oi: l2_own_find_last(l2_e, cname)
+    if: oi < 0 || l2_own_mi[oi] != l2_e
+        return: l2_rw_refuse(stmt, "this receiveMessage")
+    if: l2_own_host[oi] != 0 || l2_own_fid[oi] >= 0 || l2_own_uchild[oi] < 0
+        return: l2_rw_refuse(stmt, "a field declared in a nested body")
+    if: l2_own_nsty_get(oi) >= 0
+        return: l2_rw_refuse(stmt, "an admission to a Structure type")
+    if: l2_own_is_pointer(l2_own_ty[oi]) = 0
+        return: l2_rw_refuse(stmt, "this receiveMessage")
+    if: l2_rw_frame(into, "LMX_WALK_OP_PUT", 4, out) != 0 || l2_rw_cell(\out, oi) != 0 || l2_rw_frame(\out, "LMX_WALK_OP_PRIM", 2, @ prim) != 0
+        return: 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: lmx_walk_mail_take\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: l2_entry_unit\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", prim, prim, prim, prim, prim, prim, prim) < 0
+        return: 1
+return: l2_rw_put(\out, 3, prim)
+
 # `Model: m` at the walked root: m, a root own field of the named Structure type Model, takes a
 # fresh merge of Model (merge(Model, empty), the contextual `left: right` rule), made in R0's turn
 # by the walker's one kernel merge primitive (-174 c3: a PRIM whose record's fn is
@@ -17209,6 +17245,14 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
         return: l2_rw_l2(node)
     if: l2_rw_has_slash(t) != 0
         return: l2_rw_path_read(node, t, parent, out)
+    # A reference where a reference is asked (`m = 0`, -179): the field's pointer cell, as AT
+    # gives it; the walker's EQ compares the address it holds.
+    if: ty >= 1000
+        oi: l2_own_find_last(l2_e, t)
+        if: oi >= 0 && l2_own_mi[oi] = l2_e && l2_own_host[oi] = 0 && l2_own_fid[oi] < 0 && l2_own_uchild[oi] >= 0 && l2_own_is_pointer(l2_own_ty[oi]) != 0
+            return: l2_rw_own(parent, oi, out)
+        ---
+    ---
     oi: l2_rw_own_row(node, t)
     if: oi = 0 - 1
         return: 1
@@ -17268,7 +17312,12 @@ fn: l2_rw_bin (@@: LmP0Node tok; int: lo; int: hi; int: ty; int: parent; @: int 
             ot: 0
         if: ot = 0 - 2
             ot: 3
+        # References are equal or not (-179): the walker's EQ over pointer cells has no order.
+        if: ot >= 1000 && bestp = 4
+            return: l2_rw_refuse(tok[best], "a reference compared by order")
     ---
+    if: bestp = 5 && ty >= 1000
+        return: l2_rw_refuse(tok[best], "arithmetic on a reference")
     op: tok[best]\as\atom
     if: bestp = 1 || bestp = 2
         return: l2_rw_refuse(tok[best], "&& and || (a short-circuit the walker has no role for)")
@@ -17360,6 +17409,10 @@ fn: l2_rw_texpr (@: LmP0Field field; int: n; int: want; int: parent; @: int out)
     ty: l2_rw_tyof(tok, 0, n - 1)
     if: ty = 0 - 3
         return: l2_rw_refuse(l2_rw_mix_at, "mixed numeric types (a conversion)")
+    # A reference stands only where its own type is asked (-179): compared with 0 inside a
+    # condition, or passed to a formal of that type.
+    if: ty >= 1000 && ty != want
+        return: l2_rw_refuse(tok[0], "a reference where a number is asked")
     if: want >= 0
         if: ty >= 0 && ty != want
             return: l2_rw_refuse(tok[0], "mixed numeric types (a conversion)")
@@ -17820,11 +17873,16 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
         return: l2_rw_refuse(stmt, "a loop")
     if: l2_text_eq(h, "catch") || l2_text_eq(h, "throw") || l2_text_eq(h, "throws")
         return: l2_rw_refuse(stmt, "throw and catch")
-    # receiveMessage takes the current Thread's next letter: a take the walker has no primitive
-    # for yet.  A method the unit declares under that name takes precedence, as every callable
-    # head does (l2_receive_msg_shape): its call is built below (-176).
+    # receiveMessage takes the current Thread's next letter (l2_rw_take, -179).  A method the unit
+    # declares under that name takes precedence, as every callable head does
+    # (l2_receive_msg_shape): its call is built below (-176).
     if: l2_text_eq(h, "receiveMessage") && l2_find_method(h) < 0
-        return: l2_rw_refuse(stmt, "receiveMessage needs the take primitive")
+        if: l2_rw_take(stmt, into, @ node) != 0
+            return: 1
+        \made: 1
+        if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, node) < 0
+            return: 1
+        return: 0
     if: l2_text_eq(h, "sendMessage")
         if: l2_rw_send(stmt, into, @ node) != 0
             return: 1
@@ -17908,6 +17966,14 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
     # A declaration of a root field that is not a number (`Model: m`): what it is.
     if: oi < l2_own_n && l2_rw_num_ty(l2_own_ty[oi]) = 0
         return: l2_rw_refuse_ty(stmt, oi)
+    # An assignment into a reference field (-179): of a declared Structure type it admits the value
+    # first -- the caller's implicit `implements` (D-55); an untyped one takes the reference.
+    oi: l2_own_find_last(l2_e, h)
+    if: oi >= 0 && l2_own_mi[oi] = l2_e && l2_own_host[oi] = 0 && l2_own_fid[oi] < 0 && l2_own_uchild[oi] >= 0 && l2_own_is_pointer(l2_own_ty[oi]) != 0
+        if: l2_own_nsty_get(oi) >= 0
+            return: l2_rw_refuse(stmt, "an admission to a Structure type")
+        return: l2_rw_refuse(stmt, "a reference assignment")
+    ---
     # An assignment of the root's own numeric field.
     oi: l2_rw_own_row(stmt, h)
     if: oi = 0 - 1

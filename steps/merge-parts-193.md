@@ -280,7 +280,9 @@ Static scan: code only (no comments, strings, `end:` lines or declarations), all
   - Every other all-caps token is an L2 name: a Structure or merge-result name such as A, B, R, Z2,
     E0..E69.
 - dev/mixa_sandbox is not gated, and 50 of its 54 `.lm2` files are refused today for «unknown type»
-  before any atom is checked.  Its uses:
+  before any atom is checked.  (Correction, -195: that count was measured from the wrong working
+  directory.  From `dev/mixa_sandbox`, 53 of 54 are refused, 51 of them for «unknown type»; see
+  steps/next-phase-195.md §5.)  Its uses:
   - 1084 of names a predef `define:` declares;
   - 88 of its own `define:`s;
   - 914 uses (247 file/name pairs) of names declared nowhere in the repo.  These are C constants and

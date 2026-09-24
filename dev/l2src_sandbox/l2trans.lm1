@@ -16316,7 +16316,8 @@ return: 0
 #     char, size_t, unsigned, ulong (declared with or without an initializer, assigned, read) --,
 #     a decimal or char literal typed by its place, + - < = and != > <= >= over one type (-175:
 #     two types are a conversion, refused), a call of a method with numeric inputs and an int
-#     result (one that can throw included: a throw at the root is uncaught and stops R0), an
+#     result (one that can throw included: a throw at the root is uncaught and stops R0),
+#     `implements(candidate, required, consumer)` (its translation-time answer, an int literal), an
 #     expression statement, if/else, an anonymous block, a bare `return`, and
 #     `sendMessage: Name(f: v; ...)` to the parent (l2_rw_send);
 #   * otherwise refused, located: «root operation not walkable yet: <op>» -- never dropped and
@@ -16586,6 +16587,8 @@ fn: l2_rw_opty (const: @(LmP0Node node)) int
         idx: l2_find_method(node\as\frame\head)
         if: idx >= 0 && idx != l2_e
             return: l2_rw_call_ty(idx)
+        if: l2_text_eq(node\as\frame\head, "implements")
+            return: 0
         return: 0 - 1
     ---
     if: node\kind != c.LM_P0_NODE_ATOM || node\as = 0
@@ -16780,6 +16783,7 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
     size_t: mag 0U
     int: usuf 0
     @: LmP0Text t
+    c.array: [8]: char ib
     if: node = 0
         return: l2_rw_refuse(node, "an empty operand")
     if: node\kind = c.LM_P0_NODE_STRUCTURE && node\as != 0 && node\as\structure != 0
@@ -16801,8 +16805,13 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
             return: l2_rw_refuse(node, "merge")
         if: l2_text_eq(t, "length")
             return: l2_rw_refuse(node, "an array")
+        # `implements(candidate, required, consumer)` over descriptor names is decided when the
+        # program is translated: l2_prep_implements' own answer, 1 or 0, as the native emission
+        # writes it, is an int literal here (-176).
         if: l2_text_eq(t, "implements")
-            return: l2_rw_refuse(node, "implements")
+            if: l2_prep_implements(node, ib) != 0
+                return: 1
+            return: l2_rw_lit(parent, (cast: (int) (ib[0] = 49)), out)
         return: l2_rw_refuse(node, "this operand")
     if: node\kind != c.LM_P0_NODE_ATOM || node\as = 0
         return: l2_rw_refuse(node, "this operand")
@@ -17432,8 +17441,11 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
         return: l2_rw_refuse(stmt, "a loop")
     if: l2_text_eq(h, "catch") || l2_text_eq(h, "throw") || l2_text_eq(h, "throws")
         return: l2_rw_refuse(stmt, "throw and catch")
-    if: l2_text_eq(h, "receiveMessage")
-        return: l2_rw_refuse(stmt, "receiveMessage")
+    # receiveMessage takes the current Thread's next letter: a take the walker has no primitive
+    # for yet.  A method the unit declares under that name takes precedence, as every callable
+    # head does (l2_receive_msg_shape): its call is built below (-176).
+    if: l2_text_eq(h, "receiveMessage") && l2_find_method(h) < 0
+        return: l2_rw_refuse(stmt, "receiveMessage needs the take primitive")
     if: l2_text_eq(h, "sendMessage")
         if: l2_rw_send(stmt, into, @ node) != 0
             return: 1

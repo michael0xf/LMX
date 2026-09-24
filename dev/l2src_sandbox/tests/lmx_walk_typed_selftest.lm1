@@ -13,7 +13,7 @@ predef: "l2src/lmx_plan.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
-# -167 commit 1: typed numeric cells (size_t / char / int). Mutant: int PUT on size_t RED.
+# -167: typed numeric cells + same-typed arith (c1+c2). Mutants: 4-byte PUT; mixed ADD accepted.
 
 @: LmxArena ga 0
 @: Lmx groles 0
@@ -218,6 +218,49 @@ fn: main () int
     ---
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_INVALID)), "mixed put INVALID")
+
+
+    # size_t EQ: lit 99 == own/at field 99 -> 1 via ret
+    unit: lmx_node_new_owned(ga)
+    if: unit = 0 || lmx_arena_refs_open_owned(ga, unit, 8U) != 0
+        return: 2
+    ---
+    holder: pl(unit, 1U, 2U)
+    cell: lmx_size_new_owned(ga)
+    if: holder = 0 || cell = 0 || lmx_size_store_known(cell, 99U) != 0 || lmx_arena_ref_store(holder, 1U, cell) != 0
+        return: 2
+    m: mk_m(unit, 0U, 2U)
+    n: fr(m, 1U, c.LMX_WALK_OP_RET, 2U)
+    @: Lmx eqn fr(n, 1U, c.LMX_WALK_OP_EQ, 3U)
+    @: Lmx atn fr(eqn, 1U, c.LMX_WALK_OP_AT, 3U)
+    ref(atn, 1U, holder)
+    sz(atn, 2U, 1U)
+    litn: fr(eqn, 2U, c.LMX_WALK_OP_LIT, 2U)
+    if: litn != 0 && lmx_walk_store_size(ga, litn, 1U, 99U) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\present != 0 && gv\number = 1)), "size_t EQ 99")
+
+    # mixed ADD int + size_t -> INVALID
+    unit: lmx_node_new_owned(ga)
+    if: unit = 0 || lmx_arena_refs_open_owned(ga, unit, 8U) != 0
+        return: 2
+    ---
+    m: mk_m(unit, 0U, 2U)
+    n: fr(m, 1U, c.LMX_WALK_OP_RET, 2U)
+    eqn: fr(n, 1U, c.LMX_WALK_OP_ADD, 3U)
+    litn: fr(eqn, 1U, c.LMX_WALK_OP_LIT, 2U)
+    if: litn != 0 && lmx_walk_store_int(ga, litn, 1U, 1) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+    litn: fr(eqn, 2U, c.LMX_WALK_OP_LIT, 2U)
+    if: litn != 0 && lmx_walk_store_size(ga, litn, 1U, 1U) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_INVALID)), "mixed ADD INVALID")
+
 
     c.printf("lmx_walk_typed_selftest checks=%d failures=%d broken=%d\n", checks, failures, broken)
     if: failures != 0 || broken != 0

@@ -17723,20 +17723,21 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                     ---
                     aj: aj + 1
                 ---
-                # A CALLABLE field that came through merge. The copy is a
-                # DIFFERENT occurrence with its own mutable storage, and the
-                # METHOD descriptor at child 0 is the SAME root-owned terminal,
-                # never cloned. Checked in the generated program because both
-                # are addresses, not values.
+                # A CALLABLE field of kind 4 (A: fn: M -- reference to a unit
+                # method occurrence). Q22 = II: merge keeps the SAME occurrence
+                # address and the SAME mutable storage; the METHOD descriptor at
+                # child 0 is the shared root-owned terminal. Nested callables
+                # declared inside the operand (when emitted) still require a
+                # distinct copy -- not this kind-4 path. Checks 77/78/79 uniquely.
                 aj: 0
                 while: ni >= 0 && aj < l2_ns_count[ni]
                     at: l2_ns_field_kind(ni, aj)
                     au: l2_ns_field_mi(ni, aj)
-                    if: at = 4 && c.fprintf(l2_out, "%sl2_malias: lmx_arena_ref_struct(l2_mresult, %dU)\n%sif: l2_malias = 0 || l2_malias = lmx_arena_ref_struct(%s, %uU)\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 77\\n\")\n%s    c.abort()\n", ind, bat + aj, ind, l2_unit_ref, (cast: (unsigned) (l2_unit_base + au)), ind, ind) < 0
+                    if: at = 4 && c.fprintf(l2_out, "%sl2_malias: lmx_arena_ref_struct(l2_mresult, %dU)\n%sif: l2_malias = 0 || l2_malias != lmx_arena_ref_struct(%s, %uU)\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 77\\n\")\n%s    c.abort()\n", ind, bat + aj, ind, l2_unit_ref, (cast: (unsigned) (l2_unit_base + au)), ind, ind) < 0
                         return: 1
                     if: at = 4 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_malias, 0U)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), 0U)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] != l2_myp[0]\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 78\\n\")\n%s    c.abort()\n", ind, ind, l2_unit_ref, (cast: (unsigned) (l2_unit_base + au)), ind, ind, ind) < 0
                         return: 1
-                    if: at = 4 && l2_first_own_child(au) >= 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_malias, %uU)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), %uU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] = l2_myp[0]\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 79\\n\")\n%s    c.abort()\n", ind, (cast: (unsigned) l2_first_own_child(au)), ind, l2_unit_ref, (cast: (unsigned) (l2_unit_base + au)), (cast: (unsigned) l2_first_own_child(au)), ind, ind, ind) < 0
+                    if: at = 4 && l2_first_own_child(au) >= 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_malias, %uU)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), %uU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] != l2_myp[0]\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 79\\n\")\n%s    c.abort()\n", ind, (cast: (unsigned) l2_first_own_child(au)), ind, l2_unit_ref, (cast: (unsigned) (l2_unit_base + au)), (cast: (unsigned) l2_first_own_child(au)), ind, ind, ind) < 0
                         return: 1
                     aj: aj + 1
                 ---

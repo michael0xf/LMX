@@ -884,6 +884,81 @@ fn: lmx_walk_arg_arity (@: LmxWalkFrame f; @: Lmx node) size_t
         i: i + 1U
     ---
 return: need
+
+# -174 c4: CALL trampoline dest typed by callee result type (method.sig mark).
+# Opus: method.sig = LMX_WALK_RESULT_SIG_MARK | LMX_TYPE_* for non-int trampolines
+# (size_t/unsigned/ulong). sig without the mark (incl. 0) -> INT (today). Mutant: always
+# pass the evaluator int temp -> size_t trampoline overruns / truncated RED.
+fn: lmx_walk_callable_result_type (@: LmxArena arena; @: Lmx callee) int
+    @: LmxCallable info 0
+    @: LmxMethod method 0
+    unsigned: sig
+    int: ty
+    if: arena = 0 || callee = 0
+        return: c.LMX_TYPE_INT
+    info: (cast: (@: LmxCallable) lmx_arena_ref_value(callee, 0U))
+    if: info = 0 || info\method = 0
+        return: c.LMX_TYPE_INT
+    ---
+    method: info\method
+    sig: method\sig
+    if: (sig & (cast: (unsigned) c.LMX_WALK_RESULT_SIG_MARK)) != (cast: (unsigned) c.LMX_WALK_RESULT_SIG_MARK)
+        return: c.LMX_TYPE_INT
+    ---
+    ty: (cast: (int) (sig & 255U))
+    if: ty = c.LMX_TYPE_SIZE_T || ty = c.LMX_TYPE_UNSIGNED || ty = c.LMX_TYPE_ULONG || ty = c.LMX_TYPE_INT || ty = c.LMX_TYPE_CHAR
+        return: ty
+return: c.LMX_TYPE_INT
+
+# Fresh typed cell for a CALL trampoline dest, or the consumer's dest when it already matches.
+fn: lmx_walk_call_dest (@: LmxWalkFrame f; @: void dest; int: ty; @@: void call_dest) int
+    @: void cell 0
+    if: f = 0 || dest = 0 || call_dest = 0
+        return: c.LMX_WALK_INVALID
+    \call_dest: 0
+    if: ty = 0 || ty = c.LMX_TYPE_INT
+        \call_dest: dest
+        return: c.LMX_WALK_OK
+    ---
+    if: lmx_walk_numeric_type(f\arena, dest) = ty
+        \call_dest: dest
+        return: c.LMX_WALK_OK
+    ---
+    # Same doors as lmx_walk_arith_out for wider numerics.
+    if: ty = c.LMX_TYPE_SIZE_T
+        cell: lmx_size_new_owned(f\arena)
+        if: cell = 0
+            return: c.LMX_WALK_NOMEM
+        \call_dest: cell
+        return: c.LMX_WALK_OK
+    ---
+    if: ty = c.LMX_TYPE_UNSIGNED
+        cell: lmx_unsigned_new_owned(f\arena)
+        if: cell = 0
+            return: c.LMX_WALK_NOMEM
+        \call_dest: cell
+        return: c.LMX_WALK_OK
+    ---
+    if: ty = c.LMX_TYPE_ULONG
+        cell: lmx_ulong_new_owned(f\arena)
+        if: cell = 0
+            return: c.LMX_WALK_NOMEM
+        \call_dest: cell
+        return: c.LMX_WALK_OK
+    ---
+    if: ty = c.LMX_TYPE_CHAR
+        if: lmx_chars_init(f\arena) != 0 && lmx_arena_find(f\arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR) = 0
+            return: c.LMX_WALK_NOMEM
+        ---
+        cell: lmx_char_cell(f\arena, 0)
+        if: cell = 0
+            return: c.LMX_WALK_INVALID
+        \call_dest: cell
+        return: c.LMX_WALK_OK
+    ---
+    \call_dest: dest
+return: c.LMX_WALK_OK
+
 # [call, M, arg ...].  The callee's inputs are REFERENCES, kept with the cells that hold
 # the integers among them in one scratch slice of this activation; the slice is gone
 # with the rewind below, after the callee has returned.  The callee's destination is
@@ -895,6 +970,7 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
     @: Lmx callee 0
     @: Lmx child 0
     @: void room 0
+    @: void call_dest 0
     @@: void refs 0
     @@: void cells 0
     LmxEntry: addr 0
@@ -961,8 +1037,15 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
             # number and must reach the walk caller as k -- distinct from LMX_WALK_PRIMITIVE
             # (LmxPrimitive record path in lmx_walk_prim). Told apart by the descriptor
             # record: LmxCallable here vs LmxPrimitive there (domain kind CALLABLE vs PRIMITIVE).
+            # -174 c4: dest is a fresh typed cell of the callee result type when the consumer
+            # handed an int temp (size_t trampoline writes 8 into 4 otherwise).
             entry: (cast: (LmxPrimitiveEntry) addr)
-            said: entry((cast: (@: void) callee), refs, n, dest, out)
+            if: lmx_walk_call_dest(f, dest, lmx_walk_callable_result_type(f\arena, callee), @ call_dest) != c.LMX_WALK_OK
+                status: c.LMX_WALK_INVALID
+            ---
+            if: status = c.LMX_WALK_OK
+                said: entry((cast: (@: void) callee), refs, n, call_dest, out)
+            ---
             if: said != 0
                 # D-37: throw k is LMX_WALK_THROWN + k, never a walker error code.
                 status: c.LMX_WALK_THROWN + said

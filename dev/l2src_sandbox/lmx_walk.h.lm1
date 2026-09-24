@@ -111,6 +111,8 @@ predef: "l2src/lmx_plan.h.lm1"
 # reference into the destination, because the field may be assigned again before use.
 # Model: m creation (-174 c3): PRIM record whose fn is lmx_walk_merge_model over
 # lmx_merge_owned (null override map); see prototype note below.
+# CALL dest (-174 c4): fresh typed cell of callee result type when method.sig carries
+# LMX_WALK_RESULT_SIG_MARK | LMX_TYPE_* (size_t trampoline must not write into an int temp).
 #
 #   ret   [ret, value?]               a return; no value for a void callable
 #   call  [call, M, arg ...]          M is the callee occurrence itself, by reference
@@ -219,6 +221,8 @@ define: LMX_WALK_OP_PRIM 16
 define: LMX_WALK_OP_EXPECT_INT 17
 define: LMX_WALK_OP_DEREF 18
 define: LMX_WALK_OP_COUNT 19
+# -174 c4: method.sig = MARK | LMX_TYPE_* names the trampoline result class for CALL dest.
+define: LMX_WALK_RESULT_SIG_MARK 0x57000000
 
 # What a direct caller gets back.  `ref` is the value, 0 when there is none; `present` says
 # so explicitly.  `number` is the destination cell this record lends the activation: when
@@ -301,6 +305,8 @@ prototype:
     # -174 c3: Model: m. LmxPrimitive.fn = this; LmxPrimitive.owner = (cast: (@: Lmx) program_arena);
     # PRIM node [prim, record, model]; null override map; result Structure in out.
     fn: lmx_walk_merge_model (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    fn: lmx_walk_callable_result_type (@: LmxArena arena; @: Lmx callee) int
+    fn: lmx_walk_call_dest (@: LmxWalkFrame f; @: void dest; int: ty; @@: void call_dest) int
     fn: lmx_walk_run (@: LmxWalkContext context; @: Lmx node; @@: void args; size_t: nargs; @: LmxWalkValue out) int
     # The same activation for a caller INSIDE this unit: the inputs are values it produced
     # itself and are not asked about; an integer result goes into `dest`.

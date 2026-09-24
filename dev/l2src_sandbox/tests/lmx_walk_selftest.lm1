@@ -731,26 +731,24 @@ fn: main () int
     check(lmx_arena_ref_value(lmx_arena_ref_struct(counter, 3U), 0U) = lmx_arena_ref_value(lmx_arena_ref_struct(outer, 3U), 0U), "two returns share one role record")
     check(lmx_arena_ref_value(lmx_arena_ref_struct(counter, 3U), 0U) != lmx_arena_ref_value(lmx_arena_ref_struct(counter, 2U), 0U), "different roles are different records")
 
-    # counter: the executed assignment is published at the return, and the next
-    # activation starts from the published value.
+    # counter: SET writes the cell; the next activation reads that cell.
     r: -1
     st: go(counter, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_OK && r = 1 && v = 1, "counter first run returns 1, and says it returned a value")
-    check(lmx_int_value_known(cell) = 1, "counter published n = 1")
+    check(lmx_int_value_known(cell) = 1, "counter cell n = 1 after SET")
     st: go(counter, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_OK && r = 2, "counter second run returns 2")
 
-    # 21.6: inner rewrote outer's graph field; outer's clean working value is neither
-    # reloaded (it returns its entry snapshot) nor republished over the newer value.
+    # -188: cells are the graph — outer RET OWN after CALL sees inner's PUT (no snapshot).
     r: -1
     st: go(outer, 0, 0U, @ r, @ v)
-    check(st = c.LMX_WALK_OK && r = 1, "outer returns its entry snapshot, no reload")
-    check(lmx_int_value_known(xcell) = 2, "clean own value was not republished")
+    check(st = c.LMX_WALK_OK && r = 2, "outer RET OWN sees callee PUT (mutant snapshot -> RED)")
+    check(lmx_int_value_known(xcell) = 2, "callee write visible in cell immediately")
 
-    # 21.6: a dirty value is published before the outbound call.
+    # -188: SET writes the cell before the outbound call; reader sees it.
     r: -1
     st: go(publisher, 0, 0U, @ r, @ v)
-    check(st = c.LMX_WALK_OK && r = 5, "dirty value published before the call")
+    check(st = c.LMX_WALK_OK && r = 5, "SET cell visible to callee before the call")
 
     # Recursion is recursion of the C stack on one published M; an early return inside
     # a nested body ends the activation, the last return is never reached then.
@@ -770,8 +768,8 @@ fn: main () int
     lmx_int_store_known(abox, 4)
     st: go(looper, argv, 1U, @ r, @ v)
     check(st = c.LMX_WALK_OK && r = 10, "looper(4) = 10")
-    check(lmx_int_value_known(lmx_arena_ref_value(looper, 1U)) = 10, "looper published acc")
-    check(lmx_int_value_known(lmx_arena_ref_value(looper, 2U)) = 4, "looper published i")
+    check(lmx_int_value_known(lmx_arena_ref_value(looper, 1U)) = 10, "looper cell acc")
+    check(lmx_int_value_known(lmx_arena_ref_value(looper, 2U)) = 4, "looper cell i")
 
     # No body node: nothing to walk, nothing is invented, nothing native is called.
     st: go(bare, 0, 0U, @ r, @ v)

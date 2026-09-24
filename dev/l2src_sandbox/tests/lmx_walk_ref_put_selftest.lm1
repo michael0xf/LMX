@@ -13,7 +13,7 @@ predef: "l2src/lmx_plan.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
-# -174 c2: PUT Structure into pointer cell (type-checked); Own.ref SET + publish.
+# -174 c2: PUT Structure into pointer cell (type-checked); Own SET writes pointer cell immediately (-188).
 # Mutant: PUT/SET without STRUCT kind check -> wrong-type RED.
 
 @: LmxArena ga 0
@@ -169,7 +169,7 @@ fn: main () int
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_OK && gv\ref != 0 && lmx_int_value_known(gv\ref) = 99)), "read after put model2")
 
-    # Own.ref: pointer cell is a field of M; SET own := model; RET own; checkpoint publishes.
+    # Own: pointer cell field of M; SET own := model; RET own; cell holds model (-188).
     m: mk_m(unit, 0U, 4U)
     pcell: lmx_pointer_new_owned(pty, ga)
     if: pcell = 0 || lmx_arena_ref_store(m, 1U, pcell) != 0
@@ -185,7 +185,7 @@ fn: main () int
     ref(ownn, 1U, m)
     sz(ownn, 2U, 1U)
     st: go(m)
-    check((cast: (int) (st = c.LMX_WALK_OK && gv\ref = (cast: (@: void) model) && lmx_pointer_value_known(pcell) = (cast: (@: void) model))), "Own.ref set+publish")
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\ref = (cast: (@: void) model) && lmx_pointer_value_known(pcell) = (cast: (@: void) model))), "Own SET pointer cell immediate")
 
     # Own.ref wrong type: SET int into pointer own -> INVALID
     m: mk_m(unit, 0U, 3U)

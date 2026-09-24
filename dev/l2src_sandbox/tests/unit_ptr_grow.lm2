@@ -15,10 +15,10 @@ fn: grow (@@: unsigned buf; @: int cap; int: need) int
     want: need
     # The byte size must refuse before it wraps. -1 converted to size_t is the
     # largest size_t, which is the guard the handwritten module is written with.
-    if: (cast: (size_t) want) > ((cast: (size_t) -1) / c.sizeof(unsigned))
+    if: (cast: (size_t) want) > ((cast: (size_t) -1) / sizeof(unsigned))
         return: 3
     old: buf[0]
-    bytes: (cast: (size_t) want) * c.sizeof(unsigned)
+    bytes: (cast: (size_t) want) * sizeof(unsigned)
     grown: (cast: (@: unsigned) c.realloc(old, bytes))
     if: grown = 0
         return: 3
@@ -30,8 +30,10 @@ end: grow
 int: r
 # A null owner slot is not an owner: the refusal happens before anything is
 # read, allocated or published. The parity runner drives the rest against
-# the handwritten module; what this fixture pins is the lowering.
+# the handwritten module; what this fixture pins is the lowering (the element
+# size is the sizeof: receiver's `sizeof(unsigned)`, FABLE-OPUS-P0-SIZEOF-ATOM-
+# 20260924-157; it was a raw c.sizeof).  Success is 7.
 r: grow(0, 0, 1)
 if: r != 2
     return: 81
-return: 0
+return: 7

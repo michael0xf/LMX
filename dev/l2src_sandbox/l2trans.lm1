@@ -747,8 +747,10 @@ fn: l2_emit_ns_num_cell (int: k; int: oi; int: fx) int
     if: l2_nsf_kind[fx] = 9
         newf: "lmx_ulong_new_owned"
         store: "lmx_ulong_store_known"
-        # c.sizeof passes its operand through as written, and C has no `ulong`.
-        ctype: "unsigned long"
+        # c.sizeof passes its operand to C as written: C has no `ulong`, and the two words
+        # of `unsigned long` are two operands once P0 parses `c.sizeof(...)` as a Frame.
+        # A ulong local (declared with the profile locals) names the size in one word.
+        ctype: "l2_ulong_probe"
         tcode: "c.LMX_TYPE_ULONG"
         if: c.sprintf(lit, "%zuU", l2_nsf_val[fx]) < 0
             return: 1
@@ -18681,7 +18683,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: fputs(") int\n        @: Lmx l2_entry_unit 0\n        @: Lmx l2_entry_leaf 0\n        @@: void l2_entry_slot 0\n        @: LmxMethod l2_entry_rec 0\n        @: LmxCallable l2_entry_callable 0\n        @: LmxArrayDesc l2_methods 0\n        @@: LmxMethod l2_method_refs 0\n        @: Lmx l2_ebr 0\n        @: Lmx l2_fkid 0\n        @: Lmx l2_pst 0\n        @@: void l2_pxp 0\n        @: LmxThread l2_current 0\n        @: LmxMsg l2_message 0\n        @: LmxArrayDesc l2_children 0\n", l2_out) < 0
         fclose(l2_out)
         return: 1
-    if: l2_ebr_n != 0 && fputs("        @: LmxPool l2_profile_pool 0\n        @: void l2_profile_refs 0\n        @: LmxArrayDesc l2_profile_array 0\n        @: char l2_profile_char 0\n", l2_out) < 0
+    if: l2_ebr_n != 0 && fputs("        @: LmxPool l2_profile_pool 0\n        @: void l2_profile_refs 0\n        @: LmxArrayDesc l2_profile_array 0\n        @: char l2_profile_char 0\n        ulong: l2_ulong_probe 0U\n", l2_out) < 0
         fclose(l2_out)
         return: 1
     # Construction-time handles preserve the exact parent of every executable

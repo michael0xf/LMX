@@ -1499,8 +1499,9 @@ $fixtures = @(
     # exact sealed profile, holding their literals (the driver's numeric root facts).
     [pscustomobject]@{ Name = 'unit_eternal_num_fields.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
         Args = @('1', 'int', '0', '0', '4', 'unsigned', '0', '1', '5', 'ulong', '0', '2', '6', 'size', '0', '3', '3');
-        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
-        Debt = @('c.LMX_TYPE_UNSIGNED, l2_eprofile0)', 'c.LMX_TYPE_ULONG, l2_eprofile0)') },
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'c.sizeof(unsigned long)');
+        Debt = @('c.LMX_TYPE_UNSIGNED, l2_eprofile0)', 'c.LMX_TYPE_ULONG, l2_eprofile0)',
+                 'c.sizeof(l2_ulong_probe), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_ULONG, l2_eprofile0)') },
     # FABLE-SONNET-DECL-PREPASS-20260923-137 part 3 (Opus's finding 2): a
     # predef'd C function's result reads as numeric -- safe into a numeric
     # target (entry_parse_min.lm2's own assignment form), still refused
@@ -1669,6 +1670,11 @@ $fixtures = @(
     # The raw door has no c.sizeof semantics: `@: void` is not an L2 expression (reading N).
     [pscustomobject]@{ Name = 'unit_csizeof_type_frame_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unresolved name'; Absent = @(); Debt = @() },
+    # FABLE-OPUS-P0-SIZEOF-ATOM-20260924-157: a private buffer's element size through the sizeof:
+    # receiver, `sizeof(unsigned)`, lowered as L1's single-word `c.sizeof(unsigned)`.  Success is 7.
+    [pscustomobject]@{ Name = 'unit_ptr_grow.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
+        Args = @('0'); Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
+        Debt = @('c.sizeof(unsigned)') },
     [pscustomobject]@{ Name = 'unit_sizeof_own_local.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0'); Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT'); Debt = @('l2_message\graph: l2_entry_unit') },
     [pscustomobject]@{ Name = 'unit_native_activation.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';

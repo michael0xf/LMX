@@ -29,10 +29,11 @@ fn: lmx_call_ready (@: LmxArena arena; @: Lmx callable) int
     ---
 return: c.LMX_CALL_OK
 
-fn: lmx_callable_offset (@: Lmx occurrence) size_t
+fn: lmx_callable_offset (@: LmxArena arena; @: Lmx occurrence) size_t
     @: void target
     @: LmxCallable info
-    if: occurrence = 0
+    int: kind
+    if: arena = 0 || occurrence = 0
         return: (cast: (size_t) -1)
     if: occurrence\len < 1
         return: (cast: (size_t) -1)
@@ -41,14 +42,16 @@ fn: lmx_callable_offset (@: Lmx occurrence) size_t
     if: target = 0
         return: (cast: (size_t) -1)
     ---
-    # child[0] present: read the descriptor's offset. A non-CALLABLE value in
-    # child[0] is not a callable occurrence -- refuse with the same sentinel so
-    # missing and not-callable never look like offset 0. Domain is answered by
-    # the arena of the occurrence's own fields: STRUCT headers live with their
-    # children, and CALLABLE descriptors are taken from that arena.
-    # Without an arena parameter the ticket keeps the signature occurrence-only;
-    # a null descriptor was refused above. Cast and read: producers and the
-    # copier only store LmxCallable here for callable occurrences.
+    # child[0] present: classify in the arena of the occurrence's own fields.
+    # A positive non-CALLABLE in that arena is not a callable occurrence --
+    # refuse with the same sentinel so missing and not-callable never look like
+    # offset 0. LMX_KIND_NONE means this arena does not index the pointer
+    # (shared descriptor after plain copy / offset-0 merge first-operand keep);
+    # cast as for a foreign CALLABLE -- the occurrence arena cannot say otherwise.
+    kind: lmx_domain_kind(arena, target)
+    if: kind != c.LMX_KIND_NONE && kind != c.LMX_DOMAIN_KIND_CALLABLE
+        return: (cast: (size_t) -1)
+    ---
     info: (cast: (@: LmxCallable) target)
 return: info\offset
 

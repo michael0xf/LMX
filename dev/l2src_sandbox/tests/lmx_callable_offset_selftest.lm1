@@ -111,17 +111,24 @@ fn: main () int
     ---
 
     # --- accessor: missing must not look like offset 0 ---
-    offset_check(counts, lmx_callable_offset(0) = missing, "null occurrence returned 0-as-missing")
+    offset_check(counts, lmx_callable_offset(arena_at, 0) = missing, "null occurrence returned 0-as-missing")
     a: offset_struct(@ arena, 0U)
-    offset_check(counts, a != 0 && lmx_callable_offset(a) = missing, "empty Structure returned 0-as-missing")
+    offset_check(counts, a != 0 && lmx_callable_offset(arena_at, a) = missing, "empty Structure returned 0-as-missing")
     a: offset_struct(@ arena, 1U)
-    offset_check(counts, a != 0 && lmx_callable_offset(a) = missing, "null child[0] returned 0-as-missing")
+    offset_check(counts, a != 0 && lmx_callable_offset(arena_at, a) = missing, "null child[0] returned 0-as-missing")
+    # D-32: child[0] that is not CALLABLE must use the same sentinel (classified
+    # in the occurrence-field arena), never look like offset 0.
+    a: offset_struct(@ arena, 1U)
+    cell: lmx_size_new_owned(@ arena)
+    offset_check(counts, a != 0 && cell != 0 && lmx_arena_ref_store(a, 0U, cell) = 0, "non-CALLABLE child[0] fixture")
+    offset_check(counts, lmx_callable_offset(arena_at, a) = missing, "non-CALLABLE child[0] returned 0-as-missing")
+
 
     # --- constructor offset is 0 ---
     occ_a: offset_callable_occ(@ arena, method)
     info_src: (cast: (@: LmxCallable) lmx_arena_ref_value(occ_a, 0U))
     offset_check(counts, occ_a != 0 && info_src != 0 && info_src\offset = 0U, "constructor offset was not 0")
-    offset_check(counts, lmx_callable_offset(occ_a) = 0U, "accessor did not see constructor 0")
+    offset_check(counts, lmx_callable_offset(arena_at, occ_a) = 0U, "accessor did not see constructor 0")
 
     # --- plain graph copy: per-copy descriptor, source offset kept ---
     info_src\offset: 5U
@@ -131,7 +138,7 @@ fn: main () int
     info_dst: (cast: (@: LmxCallable) lmx_arena_ref_value(copied, 0U))
     offset_check(counts, info_dst != 0 && info_dst = info_src, "plain copy must SHARE LmxCallable by address")
     offset_check(counts, info_dst\method = info_src\method, "plain copy did not share LmxMethod by address")
-    offset_check(counts, info_dst\offset = 5U && lmx_callable_offset(copied) = 5U, "plain copy did not keep source offset")
+    offset_check(counts, info_dst\offset = 5U && lmx_callable_offset(dst_at, copied) = 5U, "plain copy did not keep source offset")
     offset_check(counts, info_src\offset = 5U, "plain copy mutated source offset")
     info_src\offset: 0U
 
@@ -147,8 +154,8 @@ fn: main () int
     offset_check(counts, status = LMX_MERGE_OK && result != 0 && result\len = 1, "merge: A failed")
     copied: (cast: (@: Lmx) lmx_arena_ref_value(result, 0U))
     offset_check(counts, copied != 0 && copied\parent = result, "merge: A did not rewrite parent to result")
-    offset_check(counts, lmx_callable_offset(copied) = 0U, "merge: A offset was not 0")
-    offset_check(counts, info_src\offset = 0U && lmx_callable_offset(occ_a) = 0U, "merge: A mutated original offset")
+    offset_check(counts, lmx_callable_offset(dst_at, copied) = 0U, "merge: A offset was not 0")
+    offset_check(counts, info_src\offset = 0U && lmx_callable_offset(arena_at, occ_a) = 0U, "merge: A mutated original offset")
 
     # --- merge: B A with callable in A -> offset == width(B) ---
     b: offset_struct(@ arena, 1U)
@@ -170,7 +177,7 @@ fn: main () int
     offset_check(counts, status = LMX_MERGE_OK && result != 0 && result\len = 2, "merge: B A failed")
     copied: (cast: (@: Lmx) lmx_arena_ref_value(result, 1U))
     offset_check(counts, copied != 0 && copied\parent = result, "merge: B A parent not result")
-    off: lmx_callable_offset(copied)
+    off: lmx_callable_offset(dst_at, copied)
     offset_check(counts, off = width_b, "merge: B A copied offset != width(B) (mutant: offset never written)")
     info_dst: (cast: (@: LmxCallable) lmx_arena_ref_value(copied, 0U))
     offset_check(counts, info_dst != 0 && info_dst != info_src, "merge: B A did not COW-clone LmxCallable")
@@ -199,7 +206,7 @@ fn: main () int
     offset_check(counts, status = LMX_MERGE_OK && result != 0 && result\len = 3, "merge: A B + body failed")
     copied: (cast: (@: Lmx) lmx_arena_ref_value(result, 2U))
     offset_check(counts, copied != 0 && copied\parent = result, "body callable parent not result")
-    off: lmx_callable_offset(copied)
+    off: lmx_callable_offset(dst_at, copied)
     offset_check(counts, off = width_a + width_b, "body callable offset != width(A)+width(B)")
 
     failures: counts[1]

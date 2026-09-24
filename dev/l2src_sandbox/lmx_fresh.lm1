@@ -55,8 +55,23 @@ fn: lmx_fresh_child (@: LmxArena arena; @: Lmx proto; @: void child; @: Lmx fres
             \out: cell
             return: 0
         ---
-        # Shared Structure / callable occurrence terminal: keep by address.
-        \out: child
+        # Operand of an OP/ROLE frame (CALL target, OWN holder, FRESH proto, ...): keep
+        # by address. Model data field that is a direct Structure own slot (-186): clear
+        # to empty 0. Reference fields are POINTER cells (branch below), still additive.
+        # Mutant: always keep-by-address -> fresh own slot still shares code's M RED.
+        head: 0
+        hk: 0
+        if: proto != 0 && (cast: (size_t) proto\len) > 0U
+            head: lmx_arena_ref_value(proto, 0U)
+            if: head != 0
+                hk: lmx_range_classify(arena, head)
+                if: hk = c.LMX_DOMAIN_KIND_OP || hk = c.LMX_DOMAIN_KIND_ROLE
+                    \out: child
+                    return: 0
+                ---
+            ---
+        ---
+        \out: 0
         return: 0
     ---
     if: kind = c.LMX_KIND_PRIMITIVE
@@ -176,6 +191,9 @@ fn: lmx_fresh_child (@: LmxArena arena; @: Lmx proto; @: void child; @: Lmx fres
             \out: cell
             return: 0
         ---
+        # -186 additive: Structure-typed owns that are STILL pointer cells (pre-c3b-3)
+        # keep a fresh null pointer cell so PUT/DEREF paths stay green. Empty direct
+        # slots (child 0) already store 0 above; c3b-3 switches the builder to that form.
         if: vtype >= c.LMX_TYPE_POINTER_BASE
             cell: lmx_pointer_new_owned(vtype, arena)
             if: cell = 0

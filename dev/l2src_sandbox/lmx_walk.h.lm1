@@ -233,7 +233,10 @@ define: LMX_WALK_OP_DIV 21
 define: LMX_WALK_OP_MOD 22
 # -188 k.3c: [fresh, code] -> lmx_fresh(arena, code); NULL = X1.
 define: LMX_WALK_OP_FRESH 23
-define: LMX_WALK_OP_COUNT 24
+# -186: [put_ref, holder, slot, value] -> lmx_arena_ref_store (direct Structure own slot).
+# Same operand order as PUT. Mutant: PUT+pointer_store into a direct slot -> RED.
+define: LMX_WALK_OP_PUT_REF 24
+define: LMX_WALK_OP_COUNT 25
 # -174 c4: method.sig = MARK | LMX_TYPE_* names the trampoline result class for CALL dest.
 define: LMX_WALK_RESULT_SIG_MARK 0x57000000
 

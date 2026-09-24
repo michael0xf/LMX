@@ -1,35 +1,38 @@
 # CODE-DATA-SPLIT -188 — FABLE-GROKBOT-CODE-DATA-SPLIT-20260925-188
 
-Норма: next_core §3, q27/Q28/Q29 (b7b7b99), L2 §10, L3 §11/12, CORE §3. WIP 13b27d4 — только замер.
+Норма: next_core §3 п.1–4, §4 Q29 (b7b7b99); Opus proposal steps/code-data-split-189.md § re-entry (Grok c3). k.2 = f86717 tip. Order: **k.3 → -186 → -187 → -170 c2 (D-63 first)**.
 
-## (a) Старая модель (к.2 снял)
-| Место | Было → стало в к.2 |
-|-------|-------------------|
-| LmxWalkOwn value/ref/dirty | только rom (plan membership) |
-| publish_slot / checkpoint 21.6 | store_slot; checkpoint no-op |
-| enter 21.5 load | plan → rom only |
-| OWN/SET | ячейка графа (+ own_in membership) |
-| lmx_own/lmx_dirty | остаются до Opus -189 c3 |
+## Done (k.2)
+OWN/SET/PUT/PUT_OF → graph cell; store_slot; checkpoint no-op; LmxWalkOwn={from}; mutant lmx_walk_off_instance_selftest. lmx_own/lmx_dirty stay to Opus c3b.
 
-## (b) Модель после b7b7b99 (автор)
-1. Один граф может быть и code, и data: обычный вызов = (M, M); корень = (R0, R0). Неизменность кода = исполнение не пишет узлы-операторы, литералы и слово 
-ative — только объявленные поля.
-2. **Q28:** свежий экземпляр прототипа **только** при повторном входе (рекурсия в стат. графе / динамический вызов по ссылке) или явных данных; живёт в кадре, снаружи не виден; M\x снаружи читает поля самого M (без мусора на каждый вызов).
-3. **Q29:** одна ячейка там, где объявление; повторное голое присваивание пишет туда же (не вхождение); [N] нумерует только объявления.
-4. Формалы→поле только L3 §12 / merge. interpreted iff Lmx.native empty (acb00d4).
+## Model (author)
+(M,M)/(R0,R0); code immutability = no write to ops/literals/
+ative. Q28: fresh only on re-entry/explicit, frame-local; M\x outside = fields of M. Q29: one cell at declaration; [N] = declarations.
 
-## (c) Порядок / deps
-к.2 (done) → **-186 PUT_REF** → к.3 → к.4 (+ Opus -189 c4). D-63 → -170 c2 first. Defects **D-64+**.
+## k.3 plan (concrete; GO waits)
 
-## (d) Фикстуры
-lmx_walk_selftest (publisher/reader/counter/outer r=2); lmx_walk_off_instance_selftest (SET→AT M\x; mutant off-instance RED).
+### Sites today
+- lmx_call_prim(arena, callable, refs, nargs, dest, out) :177 — entry(callable,…) owner=occurrence (lmx_call.lm1). Callers: l2trans ~16520, lmx_call_selftest.
+- Walker CALL [call, M, arg…] :948 — callee child1, args from 2; native entry(callee,…) / lmx_walk_activate (lmx_walk.lm1).
+- Fixtures: r(..., OP_CALL, 2U) + 
+ef(n,1U,M) (walk_selftest / off_instance) — **no data operand yet**.
+- Copier classify: lmx_graph_copy_owned + lmx_range_classify / domain kind+type — reuse for lmx_fresh child rules.
+- Char 0: lmx_char_cell(arena,0) after lmx_chars_init (lmx_chars.lm1). D-63 = char table vs Array — fable order: after -186 in -170c2; fresh char cells use intern path (not Array).
 
-## (e) Коммиты
-| К | Что | Гейт |
-|---|-----|------|
-| к.2 | dirty/cp/publish/enter-load off; OWN/SET/PUT/PUT_OF→cell; mutant; addendum | GREEN 086f978 |
-| к.3 | **не** fresh в слот родителя по умолчанию; OWN/SET/PUT на own-ячейках вхождения; fresh instance **только** для помеченных translator'ом реентрантных CALL; кадр для fresh (Q28); Q29 same-cell | walk+harness |
-| к.4 | call: self=data=(M,M); Lmx.native dispatch; без child[0]; стык -186 | harness+L3 с Opus c4 |
+### Commits (each + gate after GATE OK)
+| # | Scope | Selftests / mutants | Harness |
+|---|-------|---------------------|---------|
+| **k.3a** | lmx_fresh(arena,code)→Lmx: parent=code.parent, len=code.len; child0 by addr (until k.4); else by arena class (num→0, char→interned0, ptr→null same type, Array→fresh same etype/len, control-body Struct parent=code→recurse); terminal callable/METHOD refs by addr; refuse unclassified; NULL→caller X1 | lmx_fresh_selftest.lm1: numeric/char/ptr/array/nested body; mutant guess unclassified→RED; shared child0 identity | build +1 selftest; harness 0 |
+| **k.3b** | lmx_call_prim(arena, code, data, refs, nargs, dest, out): dispatch on code (child0 now); entry(data,…) owner=data=self, node=data.parent; trampoline builds nothing. Update call_selftest + note Opus c3a must emit new arity | lmx_call_selftest pass data=M; mutant owner=code when data≠code→RED | may RED until Opus c3a; Debt rows on lmx_call_prim arity if any |
+| **k.3c** | New role FRESH (OP_COUNT bump); CALL=[call, code, data, args…]; in-place data=code Structure; re-entry data=[fresh, code]. Walker eval data operand; activate/native use that data as self. Fixtures: migrate all hand CALL nodes; recursion fresh instance; after return M\x = M fields (not frame instance) | extend walk_selftest summer/publisher; new lmx_walk_fresh_call_selftest; mutant CALL without data child / flag-word→RED | harness rows with walk CALL debt may need data operand in emitted trees (Opus); eternal rows unchanged if native emit lands with c3a |
 
-## Addendum к.2 — Callable/Method → к.4
-lmx.h.lm1:180/:193; lmx_value_owned.lm1:45/:53; lmx_call.*; lmx_plan.*; copy :372/:498; implements :151; fixtures mk_m/callable_new; l2trans~21734. к.2 не трогал.
+### Risks / open Q
+1. **Emission:** Opus owns l2trans CALL/data/lmx_fresh emit (189 c3a). Grok migrates kernel + hand fixtures; land k.3b/c so harness can go RED until Opus, or stage behind #/compat? Prefer: k.3a green alone; k.3b+c coordinated GO with Opus or accept harness Debt until c3a.
+2. Walked activation: pass data into lmx_walk_activate as \self/node fields target — confirm OWN writes data not code when data≠code (re-entry).
+3. D-63: fresh Array of CHAR elements before table fix — avoid in k.3a fixtures; use scalar char via lmx_char_cell only.
+4. lmx_call0 / walk hook still nullary on occurrence — leave until k.4 native word?
+
+### After k.3
+-186 PUT_REF (no instance slot); -187; -170c2 D-63 first. k.4: Lmx.native dispatch, drop child0 descriptor (with Opus c4).
+
+Gate: GATE? → GATE OK. Texts ≤4 KB. No code until GO k.3.

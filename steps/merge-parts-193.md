@@ -154,3 +154,70 @@ Open, for fable and the author:
 - Q3.  T4 widens the walkable subset from the root to method bodies.  It is the prerequisite of
   everything callable here; is that the intended order, or does the author want the callable
   merges refused until the full L2 body port?
+
+## 4. T1: data merge on model-slot pairs (branch opus/merge-193-t1, base 1889ca1)
+
+fable: «GO T1» with Q1 = no new pair kind (one «merge into» primitive; the translator emits the
+parts), Q2 = yes (the operand body's OP frames replace the model's, fields pair up), Q3 = T4 first,
+and until then a callable merge is a located refusal.
+
+The translator (l2trans.lm1) builds the MERGED layout in the pre-scan and hands the kernel a pair map:
+- `l2_mrs_build` → `l2_mrs_join`, field by field:
+  - the model's fields (operand 0) are the first rows, its own repeats included;
+  - a later operand's field whose name a model row carries goes INTO that row (the last such row, the
+    one `merged\x` names) when its type is the row's: same kind, and the same entry for kinds 2–6
+    (nested, reference, callable, arrays).  It becomes a pair (model slot, operand, field) in the
+    new source table `l2_msrc_*`, and it takes over the row's known value;
+  - any other later field is a row of its own; the body fields come last.
+- Refused, located (they need K1, or they are not an override):
+  - a later field repeating a name an EARLIER operand added: «a merge operand field repeats a field
+    an earlier operand added»;
+  - a body field repeating an operand's field: «a merge result body field repeats a field of the
+    operands»;
+  - a same-name field of another type: «a merge operand field has another type than the model field
+    of its name».
+- The width is the map's (`l2_mres_width` is set in the pre-scan).  `l2_mres_first/last/fok/lok` are
+  gone: each row carries the value the translator knows it holds (`l2_mrs_vk/val`).
+- Emission: `c.array: [P]: LmxMergePair l2_mpv` and `c.array: [P]: @: LmxMergePair l2_mpp` beside
+  `l2_mops` (P = the most pairs one merge passes, `l2_merge_pmax`).  At a merge with pairs:
+  `l2_mpp[k]: @ l2_mpv[k]`, the three fields, and `…, l2_mpp, <P>U, @ l2_mresult)` in place of
+  `0, 0U`.  A merge with no pairs keeps `0, 0U` (the kernel's layouts agree then).
+- Checks.
+  - 71: the width is the map's.
+  - 74/75/77/79/80/90/91: each operand field is checked at the slot the map gave it, and only if it
+    SURVIVED there (`l2_msrc_at`: no later operand wrote that slot again).
+  - 72/73: the first and last slot's known values, from the rows.
+- `merged\x` is the one slot.  `merged\[N]x` past 0 exists only for the model's own repeats, since
+  the rows have no other repeats (`l2_mrs_slot_nth` unchanged).
+- The other merge sites (`Model: m`, the unit's typed-occurrence copies) have one operand, so no
+  pairs.
+
+Rows (tools/l2_harness.ps1):
+- unit_merge_last_occurrence: rewritten to the override rule and moved into a method (it was
+  root-pending, so it never ran): R = {x, y}, `R\x` = `R\[0]x` = 7, the write lands in slot 0, and
+  the operands keep 1 and 7.  eternal-runs, Entry 7, with the pair and the call pinned.
+- unit_merge_occurrence_range_refused: `R\[1]x` is now the one out of range.
+- New:
+  - unit_merge_three_operands (B's x and C's x both into Model's x, C's last; B's z added; {3, 2, 9});
+  - unit_merge_eternal_pair (FrozenB's value into FrozenA's slot: one slot, FrozenB's retained cell,
+    2);
+  - the three refusals above, and unit_merge_field_entry_refused (both `at` fields are
+    references, to Point and to Size).
+- FrozenA/FrozenB: unit_s1_merge_profiles_uncaught pins `…, l2_mprofiles, 2U, l2_mpp, 1U, @
+  l2_mresult)`.  unit_eternal_multi_profile_merge_refused (root-pending, Debt not checked) gets the
+  same pin.
+- unit_merged_callable: moved into a method (it was root-level, root-pending «a Structure value»),
+  its BOM dropped, and given its row (Entry 5; checks 77/79 pinned).
+- q22 and q20-next §2 inside a method: unit_q22_merge_in_method (3) and unit_q20_merge_in_method (5).
+
+Mutants (private variants, each against unit_merge_last_occurrence unless named):
+- no pair found (flat layout): exit 82, and unit_merge_occurrence_range_refused translates;
+- checking a field a later operand overwrote: X1 check 74;
+- a pair that leaves the model's known value on the row: X1 check 72;
+- no kind check: unit_merge_field_type_refused translates;
+- no entry check: unit_merge_field_entry_refused translates.
+
+For K1 (the kernel's map validity, 1c): with today's kernel an unpaired later field is APPENDED, so
+two later operands carrying the model's name must both be pairs on the same model slot, applied in
+operand order (unit_merge_three_operands).  «The same target twice is INVALID» would refuse this.
+Either keep taking duplicate targets in order, or give the map a way to say «dropped».

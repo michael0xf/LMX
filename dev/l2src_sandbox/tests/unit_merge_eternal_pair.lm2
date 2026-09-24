@@ -1,0 +1,33 @@
+# FABLE-OPUS-MERGE-PARTS-20260926-193 T1: the author's merge rule (plan §4) on qualified (eternal)
+# operands.  FrozenA and FrozenB share `size_t: value`, so FrozenB's value is written INTO the model's
+# slot: R has one slot (check 71), and it is FrozenB's retained cell, by address (check 80).  The
+# model's own cell is not checked there, since a later operand wrote its slot.  Success is 2.
+independent:
+    const:
+        immutable:
+            (): FrozenA
+                size_t: value 1U
+            end: FrozenA
+        end: immutable
+    end: const
+end: independent
+
+independent:
+    const:
+        immutable:
+            (): FrozenB
+                size_t: value 2U
+            end: FrozenB
+        end: immutable
+    end: const
+end: independent
+
+fn: m () int
+    size_t: v
+    R: merge: FrozenA FrozenB
+    v: R\value
+    return: (cast: (int) v)
+end: m
+
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

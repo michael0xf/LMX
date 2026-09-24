@@ -223,20 +223,31 @@ int: l2_nsty_cap 0
 @: int l2_nsty_k 0
 @: int l2_nsty_ni 0
 @: int l2_m_throws 0
-@: size_t l2_mres_first 0
-@: size_t l2_mres_last 0
-@: int l2_mres_fok 0
-@: int l2_mres_lok 0
 # One row per RESULT SLOT, in result order: which bound result it belongs to,
 # the name the contributing field was declared with, that field's kind, and the
 # entry a nested or reference field names. The merged result has no names of its
 # own, so a source field path is resolved through the field that CONTRIBUTED the
-# slot. A qualified-branch operand contributes one anonymous row.
+# slot. A qualified-branch operand contributes one anonymous row.  vk/val is the value
+# the slot holds right after the merge when the translator knows it: 1 a size_t literal,
+# 2 a char literal, 0 not known.
 @: int l2_mrs_res 0
 @@: LmP0Text l2_mrs_name 0
 @: int l2_mrs_kind 0
 @: int l2_mrs_ent 0
+@: int l2_mrs_vk 0
+@: size_t l2_mrs_val 0
 int: l2_mrs_n 0
+# Where each operand field of a merge lands (the author's merge rule, plan §4): result
+# res, operand op, its field fld, the result slot, and pair = 1 when the field is written
+# INTO a model slot (a LmxMergePair) rather than being a slot of its own.
+@: int l2_msrc_res 0
+@: int l2_msrc_op 0
+@: int l2_msrc_fld 0
+@: int l2_msrc_slot 0
+@: int l2_msrc_pair 0
+int: l2_msrc_n 0
+# The most pairs one merge passes: the size of the LmxMergePair scratch.
+int: l2_merge_pmax 0
 int: l2_ebr_cap 0
 @@: LmP0Text l2_ebr_name 0
 @@: LmP0Node l2_ebr_at 0
@@ -641,9 +652,9 @@ prototype:
     fn: l2_nsf_push (int: kind; size_t: value; int: ref; int: owner) int
     fn: l2_char_literal (const: @(LmP0Text t)) int
     fn: l2_take_ns_body (const: @(LmP0Text name); int: parent; const: @(LmP0Structure body); const: @(LmP0Node at); const: @(char path)) int
-    fn: l2_mrs_push (int: res; const: @(LmP0Text name); int: kind; int: ent) int
-    fn: l2_mrs_take_entry (int: res; int: ni) int
-    fn: l2_mrs_take_result (int: res; int: src) int
+    fn: l2_mrs_push (int: res; const: @(LmP0Text name); int: kind; int: ent; int: vk; size_t: val) int
+    fn: l2_mrs_take_entry (int: res; int: k; int: ni; int: model_w; const: @(LmP0Node at)) int
+    fn: l2_mrs_take_result (int: res; int: k; int: src; int: model_w; const: @(LmP0Node at)) int
     fn: l2_first_own_child (int: mi) int
     fn: l2_head_is_call (const: @(LmP0Text t); const: @(LmP0Structure body); unsigned: flags; int: mi) int
     fn: l2_head_method (const: @(LmP0Text t)) int
@@ -11479,9 +11490,10 @@ return: 0 - 1
 # Slot index -> reference target for one declaration, or -1 when that slot is
 # not a reference. Fields are selected by owner because the table is flat.
 # Append one result-slot row. Kind -1 marks a slot with no source name.
-fn: l2_mrs_push (int: res; const: @(LmP0Text name); int: kind; int: ent) int
+fn: l2_mrs_push (int: res; const: @(LmP0Text name); int: kind; int: ent; int: vk; size_t: val) int
     @@: LmP0Text gt
     @: int gi
+    @: size_t gv
     size_t: want (cast: (size_t) (l2_mrs_n + 1))
     gi: (cast: (@: int) realloc((cast: (@: void) l2_mrs_res), want * c.sizeof(c.int)))
     if: gi = 0
@@ -11495,6 +11507,14 @@ fn: l2_mrs_push (int: res; const: @(LmP0Text name); int: kind; int: ent) int
     if: gi = 0
         return: 0 - 1
     l2_mrs_ent: gi
+    gi: (cast: (@: int) realloc((cast: (@: void) l2_mrs_vk), want * c.sizeof(c.int)))
+    if: gi = 0
+        return: 0 - 1
+    l2_mrs_vk: gi
+    gv: (cast: (@: size_t) realloc((cast: (@: void) l2_mrs_val), want * c.sizeof(c.size_t)))
+    if: gv = 0
+        return: 0 - 1
+    l2_mrs_val: gv
     gt: (cast: (@@: LmP0Text) realloc((cast: (@: void) l2_mrs_name), want * c.sizeof(@: void)))
     if: gt = 0
         return: 0 - 1
@@ -11503,28 +11523,148 @@ fn: l2_mrs_push (int: res; const: @(LmP0Text name); int: kind; int: ent) int
     l2_mrs_name[l2_mrs_n]: (cast: (@: LmP0Text) name)
     l2_mrs_kind[l2_mrs_n]: kind
     l2_mrs_ent[l2_mrs_n]: ent
+    l2_mrs_vk[l2_mrs_n]: vk
+    l2_mrs_val[l2_mrs_n]: val
     l2_mrs_n: l2_mrs_n + 1
 return: 0
 
-# Every field of one declaration becomes a result slot row, in declared order.
-fn: l2_mrs_take_entry (int: res; int: ni) int
-    int: k 0
-    while: k < l2_nsf_n
-        if: l2_nsf_owner[k] = ni && l2_mrs_push(res, l2_nsf_fname[k], l2_nsf_kind[k], l2_nsf_ref[k]) != 0
-            return: 1
-        k: k + 1
+# The number of slots merge result res has so far.
+fn: l2_mrs_width (int: res) int
+    int: r 0
+    int: w 0
+    while: r < l2_mrs_n
+        if: l2_mrs_res[r] = res
+            w: w + 1
+        r: r + 1
+    ---
+return: w
+
+# The row of slot `slot` of merge result res, or -1.
+fn: l2_mrs_row (int: res; int: slot) int
+    int: r 0
+    int: slotix 0
+    while: r < l2_mrs_n
+        if: l2_mrs_res[r] = res && slotix = slot
+            return: r
+        if: l2_mrs_res[r] = res
+            slotix: slotix + 1
+        r: r + 1
+    ---
+return: 0 - 1
+
+# Record where field j of operand k of merge result res lands (l2_msrc_*).
+fn: l2_msrc_push (int: res; int: k; int: j; int: slot; int: pair) int
+    @: int gi
+    size_t: want (cast: (size_t) (l2_msrc_n + 1))
+    gi: (cast: (@: int) realloc((cast: (@: void) l2_msrc_res), want * c.sizeof(c.int)))
+    if: gi = 0
+        return: 0 - 1
+    l2_msrc_res: gi
+    gi: (cast: (@: int) realloc((cast: (@: void) l2_msrc_op), want * c.sizeof(c.int)))
+    if: gi = 0
+        return: 0 - 1
+    l2_msrc_op: gi
+    gi: (cast: (@: int) realloc((cast: (@: void) l2_msrc_fld), want * c.sizeof(c.int)))
+    if: gi = 0
+        return: 0 - 1
+    l2_msrc_fld: gi
+    gi: (cast: (@: int) realloc((cast: (@: void) l2_msrc_slot), want * c.sizeof(c.int)))
+    if: gi = 0
+        return: 0 - 1
+    l2_msrc_slot: gi
+    gi: (cast: (@: int) realloc((cast: (@: void) l2_msrc_pair), want * c.sizeof(c.int)))
+    if: gi = 0
+        return: 0 - 1
+    l2_msrc_pair: gi
+    l2_msrc_res[l2_msrc_n]: res
+    l2_msrc_op[l2_msrc_n]: k
+    l2_msrc_fld[l2_msrc_n]: j
+    l2_msrc_slot[l2_msrc_n]: slot
+    l2_msrc_pair[l2_msrc_n]: pair
+    l2_msrc_n: l2_msrc_n + 1
+return: 0
+
+# The slot field j of operand k of merge result res still holds when the merge is done, or
+# -1: none, or a later operand wrote that slot again.  A check of the operand's own value
+# belongs only where it survived.
+fn: l2_msrc_at (int: res; int: k; int: j) int
+    int: q 0
+    int: slot 0 - 1
+    while: q < l2_msrc_n
+        if: slot >= 0 && l2_msrc_res[q] = res && l2_msrc_slot[q] = slot
+            return: 0 - 1
+        if: l2_msrc_res[q] = res && l2_msrc_op[q] = k && l2_msrc_fld[q] = j
+            slot: l2_msrc_slot[q]
+        q: q + 1
+    ---
+return: slot
+
+# Field j of operand k joins merge result res by the author's rule (plan §4).  The model's
+# fields (k = 0) are the first rows, its own repeats included.  A later field whose name a
+# model row carries goes INTO that row -- the last such row, the one `merged\x` names --
+# when its type is the row's; any other later field is a row of its own.  A later field
+# repeating a name an earlier operand ADDED would need a pair into an appended slot, which
+# the kernel does not take yet (-193 K1): refused here.
+fn: l2_mrs_join (int: res; int: k; int: j; const: @(LmP0Text name); int: kind; int: ent; int: vk; size_t: val; int: model_w; const: @(LmP0Node at)) int
+    int: r 0
+    int: slotix 0
+    int: hit 0 - 1
+    int: hr 0 - 1
+    while: k > 0 && r < l2_mrs_n
+        if: l2_mrs_res[r] = res && l2_text_same(l2_mrs_name[r], name)
+            hit: slotix
+            hr: r
+        if: l2_mrs_res[r] = res
+            slotix: slotix + 1
+        r: r + 1
+    ---
+    if: hit >= model_w
+        return: l2_error(l2_src, at, "a merge operand field repeats a field an earlier operand added")
+    if: hit >= 0 && l2_mrs_kind[hr] != kind
+        return: l2_error(l2_src, at, "a merge operand field has another type than the model field of its name")
+    if: hit >= 0 && kind >= 2 && kind <= 6 && l2_mrs_ent[hr] != ent
+        return: l2_error(l2_src, at, "a merge operand field has another type than the model field of its name")
+    if: hit >= 0
+        l2_mrs_vk[hr]: vk
+        l2_mrs_val[hr]: val
+        return: l2_msrc_push(res, k, j, hit, 1)
+    if: l2_msrc_push(res, k, j, l2_mrs_width(res), 0) != 0
+        return: 0 - 1
+return: l2_mrs_push(res, name, kind, ent, vk, val)
+
+# Every field of one declaration joins merge result res as operand k, in declared order.
+fn: l2_mrs_take_entry (int: res; int: k; int: ni; int: model_w; const: @(LmP0Node at)) int
+    int: q 0
+    int: j 0
+    int: vk 0
+    while: q < l2_nsf_n
+        if: l2_nsf_owner[q] = ni
+            vk: 0
+            if: l2_nsf_kind[q] = 0
+                vk: 1
+            if: l2_nsf_kind[q] = 1
+                vk: 2
+            if: l2_mrs_join(res, k, j, l2_nsf_fname[q], l2_nsf_kind[q], l2_nsf_ref[q], vk, l2_nsf_val[q], model_w, at) != 0
+                return: 1
+            j: j + 1
+        ---
+        q: q + 1
     ---
 return: 0
 
-# The rows an already bound result contributes when it is itself an operand.
-fn: l2_mrs_take_result (int: res; int: src) int
-    int: k 0
+# The rows an already bound result contributes when it is itself operand k.
+fn: l2_mrs_take_result (int: res; int: k; int: src; int: model_w; const: @(LmP0Node at)) int
+    int: r 0
+    int: j 0
     int: n
     n: l2_mrs_n
-    while: k < n
-        if: l2_mrs_res[k] = src && l2_mrs_push(res, l2_mrs_name[k], l2_mrs_kind[k], l2_mrs_ent[k]) != 0
-            return: 1
-        k: k + 1
+    while: r < n
+        if: l2_mrs_res[r] = src
+            if: l2_mrs_join(res, k, j, l2_mrs_name[r], l2_mrs_kind[r], l2_mrs_ent[r], l2_mrs_vk[r], l2_mrs_val[r], model_w, at) != 0
+                return: 1
+            j: j + 1
+        ---
+        r: r + 1
     ---
 return: 0
 
@@ -11748,9 +11888,10 @@ fn: l2_ns_slot_named (int: ni; const: @(char pd); size_t: off; size_t: len; @: i
 return: hit
 
 # The same for a bound merge result, whose slots carry the names of the fields
-# that CONTRIBUTED them.  A name several operands carry is its LAST occurrence:
-# `merged\x` is `merged\[lastIndex]x` (the author's merge rule, plan §4); an explicit
-# `merged\[N]x` is l2_mrs_slot_nth.  It used to refuse such a name as ambiguous.
+# that CONTRIBUTED them.  merge makes no repeated names (the author's merge rule, plan §4):
+# a later operand's field of a model name went INTO the model's slot, so a name has one
+# slot -- or the model's own repeats, of which `merged\x` is the last; an explicit
+# `merged\[N]x` is l2_mrs_slot_nth.
 fn: l2_mrs_slot_named (int: res; const: @(char pd); size_t: off; size_t: len; @: int out_kind; @: int out_ent) int
     int: k 0
     int: slotix 0
@@ -11766,8 +11907,9 @@ fn: l2_mrs_slot_named (int: res; const: @(char pd); size_t: off; size_t: len; @:
     ---
 return: hit
 
-# Occurrence occ (0 = the first, in operand order) of field `name` of bound merge result res:
-# its slot, with the field kind and entry; -1 when there is no such occurrence.
+# Occurrence occ (0 = the first) of field `name` of bound merge result res: its slot, with the
+# field kind and entry; -1 when there is no such occurrence.  Only the model's own repeats
+# are occurrences past the first.
 fn: l2_mrs_slot_nth (int: res; const: @(LmP0Text name); int: occ; @: int out_kind; @: int out_ent) int
     int: k 0
     int: slotix 0
@@ -19474,19 +19616,28 @@ return: 0
 fn: l2_reenters (int: caller; int: callee) int
 return: l2_m_reach[l2_edge_off(callee, caller)] != 0
 
-# Build the result-slot map for one merge statement: each operand's fields in
-# result order, then the body fields. Runs in the PRE-SCAN, because a method
+# Build the result-slot map for one merge statement by the author's rule (plan §4): the
+# model's fields, then each later operand's -- INTO the model's slot of the same name, or
+# a slot of its own -- then the body fields. Runs in the PRE-SCAN, because a method
 # lowered before the entry E may already read a field of the result.
 fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
     const: @: LmP0Frame fr
     @: LmP0Field last
     @: LmP0Field bf
+    @: LmP0Field bv
     @: LmP0Structure bd
     int: n
     int: k 0
     int: oi
     int: ni
     int: sl
+    int: model_w 0
+    int: pairs 0
+    int: q 0
+    int: vk
+    int: dk 0
+    int: de 0
+    size_t: val
     if: mf = 0 || mf\as = 0 || mf\as\frame = 0 || mf\as\frame\body = 0
         return: 0
     fr: mf\as\frame
@@ -19500,12 +19651,14 @@ fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
         if: ni >= 0 && l2_ns_parent[ni] >= 0
             ni: 0 - 1
         sl: l2_mres_find(last\value\as\atom)
-        if: oi >= 0 && l2_mrs_take_entry(res, l2_ebr_root(oi)) != 0
+        if: oi >= 0 && l2_mrs_take_entry(res, k, l2_ebr_root(oi), model_w, last\value) != 0
             return: 1
-        if: oi < 0 && ni >= 0 && l2_mrs_take_entry(res, ni) != 0
+        if: oi < 0 && ni >= 0 && l2_mrs_take_entry(res, k, ni, model_w, last\value) != 0
             return: 1
-        if: oi < 0 && ni < 0 && sl >= 0 && l2_mrs_take_result(res, sl) != 0
+        if: oi < 0 && ni < 0 && sl >= 0 && l2_mrs_take_result(res, k, sl, model_w, last\value) != 0
             return: 1
+        if: k = 0
+            model_w: l2_mrs_width(res)
         last: l2_next_active(last\next)
         k: k + 1
     ---
@@ -19516,10 +19669,31 @@ fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
     while: bf != 0
         if: bf\value = 0 || bf\value\kind != c.LM_P0_NODE_FRAME || bf\value\as = 0 || bf\value\as\frame = 0 || bf\value\as\frame\body = 0
             return: 0
-        if: l2_mrs_push(res, l2_next_active(bf\value\as\frame\body\first_field)\value\as\atom, 0, 0 - 1) != 0
+        bv: l2_next_active(bf\value\as\frame\body\first_field)
+        if: bv = 0 || bv\value = 0 || bv\value\kind != c.LM_P0_NODE_ATOM
+            return: 0
+        # A body field naming a slot the operands gave would go INTO it: the body as a pair
+        # source is the kernel's (-193 K1), not there yet.
+        if: l2_mrs_slot_named(res, bv\value\as\atom\data, 0U, bv\value\as\atom\length, @ dk, @ de) >= 0
+            return: l2_error(l2_src, bf\value, "a merge result body field repeats a field of the operands")
+        vk: 0
+        val: 0U
+        if: l2_next_active(bv\next) != 0 && l2_next_active(bv\next)\value != 0 && l2_next_active(bv\next)\value\kind = c.LM_P0_NODE_ATOM && l2_num(l2_next_active(bv\next)\value\as\atom) != 0
+            vk: 1
+            val: l2_literal_value(l2_next_active(bv\next)\value\as\atom)
+        ---
+        if: l2_mrs_push(res, bv\value\as\atom, 0, 0 - 1, vk, val) != 0
             return: 1
         bf: l2_next_active(bf\next)
     ---
+    l2_mres_width[res]: l2_mrs_width(res)
+    while: q < l2_msrc_n
+        if: l2_msrc_res[q] = res && l2_msrc_pair[q] != 0
+            pairs: pairs + 1
+        q: q + 1
+    ---
+    if: pairs > l2_merge_pmax
+        l2_merge_pmax: pairs
 return: 0
 
 fn: l2_merge_scan (const: @(LmP0Structure body)) int
@@ -19528,8 +19702,6 @@ fn: l2_merge_scan (const: @(LmP0Structure body)) int
     @: LmP0Node mf
     @@: LmP0Text grown
     @: int widths 0
-    @: size_t firsts 0
-    @: size_t lasts 0
     @: LmP0Text cmodel
     @: LmP0Text cname
     int: n
@@ -19558,24 +19730,6 @@ fn: l2_merge_scan (const: @(LmP0Structure body)) int
                     return: 1
                 l2_mres_width: widths
                 l2_mres_width[l2_mres_n]: 0
-                firsts: (cast: (@: size_t) realloc((cast: (@: void) l2_mres_first), (cast: (size_t) (l2_mres_n + 1)) * c.sizeof(c.size_t)))
-                lasts: (cast: (@: size_t) realloc((cast: (@: void) l2_mres_last), (cast: (size_t) (l2_mres_n + 1)) * c.sizeof(c.size_t)))
-                if: firsts = 0 || lasts = 0
-                    return: 1
-                l2_mres_first: firsts
-                l2_mres_last: lasts
-                l2_mres_first[l2_mres_n]: 0U
-                l2_mres_last[l2_mres_n]: 0U
-                widths: (cast: (@: int) realloc((cast: (@: void) l2_mres_fok), (cast: (size_t) (l2_mres_n + 1)) * c.sizeof(c.int)))
-                if: widths = 0
-                    return: 1
-                l2_mres_fok: widths
-                widths: (cast: (@: int) realloc((cast: (@: void) l2_mres_lok), (cast: (size_t) (l2_mres_n + 1)) * c.sizeof(c.int)))
-                if: widths = 0
-                    return: 1
-                l2_mres_lok: widths
-                l2_mres_fok[l2_mres_n]: 1
-                l2_mres_lok[l2_mres_n]: 1
                 l2_mres_name[l2_mres_n]: (cast: (@: LmP0Text) stmt\as\frame\head)
                 l2_mres_n: l2_mres_n + 1
                 if: l2_mrs_build(l2_mres_n - 1, stmt, mf) != 0
@@ -19700,12 +19854,9 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
     int: am 0
     int: at 0
     int: au 0
-    int: bfok 1
-    int: blok 1
-    size_t: bfirst 0U
-    size_t: blast 0U
-    size_t: bbody 0U
-    int: bat 0
+    int: mnp 0
+    int: mq 0
+    int: mrw 0
     int: ni 0
     @: LmP0Field bf 0
     int: bn 0
@@ -19786,11 +19937,6 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             # helper as its body operand. Only a size_t leaf is admitted, the same
             # restriction the qualified branches carry.
             bw: 0
-            bfok: 1
-            blok: 1
-            bfirst: 0U
-            blast: 0U
-            bbody: 0U
             ep: 0
             bd: l2_merge_body(stmt)
             bn: 0
@@ -19813,7 +19959,6 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                 last: l2_next_active(last\next)
                 if: last\value = 0 || last\value\kind != c.LM_P0_NODE_ATOM || l2_num(last\value\as\atom) = 0
                     return: l2_error(l2_src, stmt, "a merge result body field needs a literal")
-                bbody: l2_literal_value(last\value\as\atom)
                 if: c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mbody, %dU)\n%sif: l2_mxp = 0\n", ind, k, ind) < 0
                     return: 1
                 if: l2_emit_invariant(ind, "merge result body has no cell for its field") != 0
@@ -19848,58 +19993,6 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                 # The result-slot map was built in the pre-scan, because a
                 # method lowered before the entry E may already read a field of this
                 # result. Nothing to add here.
-                # Expected result width, known at translation: every qualified branch in
-                # this subset has exactly one child, and a bound result has the width its
-                # own merge produced.
-                if: oi >= 0
-                    bw: bw + l2_ns_count[l2_ebr_root(oi)]
-                ---
-                if: oi >= 0 && k = 0
-                    bfirst: l2_ns_first_value(l2_ebr_root(oi))
-                    bfok: 0
-                    if: l2_ns_first_kind(l2_ebr_root(oi)) = 0
-                        bfok: 1
-                    if: l2_ns_first_kind(l2_ebr_root(oi)) = 1
-                        bfok: 2
-                ---
-                if: oi >= 0
-                    blast: l2_ns_last_value(l2_ebr_root(oi))
-                    blok: 0
-                    if: l2_ns_last_kind(l2_ebr_root(oi)) = 0
-                        blok: 1
-                    if: l2_ns_last_kind(l2_ebr_root(oi)) = 1
-                        blok: 2
-                ---
-                if: oi < 0 && sl >= 0
-                    bw: bw + l2_mres_width[sl]
-                ---
-                if: oi < 0 && sl < 0 && ni >= 0
-                    bw: bw + l2_ns_count[ni]
-                ---
-                if: oi < 0 && sl < 0 && ni >= 0 && k = 0
-                    bfirst: l2_ns_first_value(ni)
-                    bfok: 0
-                    if: l2_ns_first_kind(ni) = 0
-                        bfok: 1
-                    if: l2_ns_first_kind(ni) = 1
-                        bfok: 2
-                ---
-                if: oi < 0 && sl < 0 && ni >= 0
-                    blast: l2_ns_last_value(ni)
-                    blok: 0
-                    if: l2_ns_last_kind(ni) = 0
-                        blok: 1
-                    if: l2_ns_last_kind(ni) = 1
-                        blok: 2
-                ---
-                if: oi < 0 && sl >= 0 && k = 0
-                    bfirst: l2_mres_first[sl]
-                    bfok: l2_mres_fok[sl]
-                ---
-                if: oi < 0 && sl >= 0
-                    blast: l2_mres_last[sl]
-                    blok: l2_mres_lok[sl]
-                ---
                 if: oi < 0 && sl < 0 && ni < 0
                     return: l2_error(l2_src, stmt, "unknown merge operand")
                 if: oi >= 0 && c.fprintf(l2_out, "%sl2_mops[%dU]: lmx_arena_ref_struct(%s, %uU)\n", ind, k, l2_unit_ref, (cast: (unsigned) (l2_unit_base + l2_occ_n() + oi))) < 0
@@ -19924,67 +20017,70 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             ---
             if: bd = 0 && c.fprintf(l2_out, "%sl2_mbody: 0\n", ind) < 0
                 return: 1
-            bw: bw + bn
-            # A body field, when present, is the LAST child of the result, so it wins
-            # over the last operand.
-            if: bn != 0
-                blast: bbody
-                blok: 1
+            sl: msf
+            # The width and the pairs are the result-slot map's (l2_mrs_build): the model's
+            # slots, the fields the later operands added, the body fields; a pair writes a later
+            # operand's field INTO a model slot (the author's merge rule, plan §4).
+            bw: l2_mres_width[sl]
+            mnp: 0
+            mq: 0
+            while: mq < l2_msrc_n
+                if: l2_msrc_res[mq] = sl && l2_msrc_pair[mq] != 0 && c.fprintf(l2_out, "%sl2_mpp[%dU]: @ l2_mpv[%dU]\n%sl2_mpp[%dU]\\model_slot: %dU\n%sl2_mpp[%dU]\\operand: %dU\n%sl2_mpp[%dU]\\field: %dU\n", ind, mnp, mnp, ind, mnp, l2_msrc_slot[mq], ind, mnp, l2_msrc_op[mq], ind, mnp, l2_msrc_fld[mq]) < 0
+                    return: 1
+                if: l2_msrc_res[mq] = sl && l2_msrc_pair[mq] != 0
+                    mnp: mnp + 1
+                mq: mq + 1
             ---
-            sl: l2_mres_find(stmt\as\frame\head)
-            if: sl < 0
-                return: l2_error(l2_src, stmt, "merge result name was not reserved")
-            if: ep = 0 && c.fprintf(l2_out, "%sl2_mstatus: lmx_merge_owned(l2_mops, %dU, l2_mbody, %s, 0, l2_program_arena, l2_program_arena, 0, 0U, @ l2_mresult)\n", ind, n, l2_unit_ref) < 0
+            if: ep = 0 && mnp = 0 && c.fprintf(l2_out, "%sl2_mstatus: lmx_merge_owned(l2_mops, %dU, l2_mbody, %s, 0, l2_program_arena, l2_program_arena, 0, 0U, @ l2_mresult)\n", ind, n, l2_unit_ref) < 0
                 return: 1
-            if: ep > 0 && c.fprintf(l2_out, "%sl2_mstatus: lmx_merge_profiles_owned(l2_mops, %dU, l2_mbody, %s, 0, l2_program_arena, l2_program_arena, l2_mprofiles, %dU, 0, 0U, @ l2_mresult)\n", ind, n, l2_unit_ref, ep) < 0
+            if: ep = 0 && mnp > 0 && c.fprintf(l2_out, "%sl2_mstatus: lmx_merge_owned(l2_mops, %dU, l2_mbody, %s, 0, l2_program_arena, l2_program_arena, l2_mpp, %dU, @ l2_mresult)\n", ind, n, l2_unit_ref, mnp) < 0
+                return: 1
+            if: ep > 0 && mnp = 0 && c.fprintf(l2_out, "%sl2_mstatus: lmx_merge_profiles_owned(l2_mops, %dU, l2_mbody, %s, 0, l2_program_arena, l2_program_arena, l2_mprofiles, %dU, 0, 0U, @ l2_mresult)\n", ind, n, l2_unit_ref, ep) < 0
+                return: 1
+            if: ep > 0 && mnp > 0 && c.fprintf(l2_out, "%sl2_mstatus: lmx_merge_profiles_owned(l2_mops, %dU, l2_mbody, %s, 0, l2_program_arena, l2_program_arena, l2_mprofiles, %dU, l2_mpp, %dU, @ l2_mresult)\n", ind, n, l2_unit_ref, ep, mnp) < 0
                 return: 1
             if: c.fprintf(l2_out, "%sif: l2_mstatus != 0 || l2_mresult = 0\n", ind) < 0
                 return: 1
             if: l2_emit_implicit_throw(mi, "merge", ind) != 0
                 return: 1
             # The generated program checks the SHAPE it was promised: the result width
-            # is the sum of the operand child counts plus the body fields, all known
-            # here. Without this the merge could succeed and produce anything.
+            # the map gives, known here. Without this the merge could succeed and produce
+            # anything.
             if: c.fprintf(l2_out, "%sif: l2_mresult\\len != %d\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 71\\n\")\n%s    c.abort()\n", ind, bw, ind, ind) < 0
                 return: 1
-            l2_mres_width[sl]: bw
-            # Second walk, now that the result exists: every qualified-branch operand
-            # contributes one child at a known offset, so its value is checked at THAT
-            # index. This pins the order of those operands, not only the two ends.
+            # Second walk, now that the result exists: each operand field that SURVIVED
+            # in the result (l2_msrc_at: no later operand wrote its slot again) is checked
+            # at the slot the map gave it. This pins the placement, not only the two ends.
             last: l2_next_active(fr\body\first_field)
             k: 0
-            bat: 0
             while: k < n
                 oi: l2_ebr_find(last\value\as\atom)
-                if: oi >= 0 && l2_ns_first_kind(l2_ebr_root(oi)) = 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sif: l2_mxp = 0 || lmx_size_value_known(l2_mxp[0]) != %zuU\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 74\\n\")\n%s    c.abort()\n", ind, bat, ind, l2_ns_first_value(l2_ebr_root(oi)), ind, ind) < 0
+                if: oi >= 0 && l2_ns_first_kind(l2_ebr_root(oi)) = 0 && l2_msrc_at(sl, k, 0) >= 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sif: l2_mxp = 0 || lmx_size_value_known(l2_mxp[0]) != %zuU\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 74\\n\")\n%s    c.abort()\n", ind, l2_msrc_at(sl, k, 0), ind, l2_ns_first_value(l2_ebr_root(oi)), ind, ind) < 0
                     return: 1
-                if: oi >= 0 && l2_ns_first_kind(l2_ebr_root(oi)) = 1 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sif: l2_mxp = 0 || lmx_char_value_known(l2_mxp[0]) != %d\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 74\\n\")\n%s    c.abort()\n", ind, bat, ind, (cast: (int) l2_ns_first_value(l2_ebr_root(oi))), ind, ind) < 0
+                if: oi >= 0 && l2_ns_first_kind(l2_ebr_root(oi)) = 1 && l2_msrc_at(sl, k, 0) >= 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sif: l2_mxp = 0 || lmx_char_value_known(l2_mxp[0]) != %d\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 74\\n\")\n%s    c.abort()\n", ind, l2_msrc_at(sl, k, 0), ind, (cast: (int) l2_ns_first_value(l2_ebr_root(oi))), ind, ind) < 0
                     return: 1
                 # AN ADMITTED BRANCH IS A TERMINAL. merge copies ordinary
                 # mutable state around it but keeps these exact addresses,
                 # which is the only thing that makes sharing it safe.
                 aj: 0
                 while: oi >= 0 && aj < l2_ns_count[l2_ebr_root(oi)]
-                    if: c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), %dU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] != l2_myp[0]\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 80\\n\")\n%s    c.abort()\n", ind, bat + aj, ind, l2_unit_ref, (cast: (unsigned) (l2_unit_base + l2_occ_n() + oi)), aj, ind, ind, ind) < 0
+                    if: l2_msrc_at(sl, k, aj) >= 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), %dU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] != l2_myp[0]\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 80\\n\")\n%s    c.abort()\n", ind, l2_msrc_at(sl, k, aj), ind, l2_unit_ref, (cast: (unsigned) (l2_unit_base + l2_occ_n() + oi)), aj, ind, ind, ind) < 0
                         return: 1
                     aj: aj + 1
-                ---
-                if: oi >= 0
-                    bat: bat + l2_ns_count[l2_ebr_root(oi)]
                 ---
                 ni: l2_ns_find(last\value\as\atom)
                 if: ni >= 0 && l2_ns_parent[ni] >= 0
                     ni: 0 - 1
                 if: ni >= 0 && l2_ns_eternal[ni] >= 0
                     ni: 0 - 1
-                if: oi < 0 && ni >= 0 && l2_ns_first_kind(ni) = 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sif: l2_mxp = 0 || lmx_size_value_known(l2_mxp[0]) != %zuU\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 74\\n\")\n%s    c.abort()\n", ind, bat, ind, l2_ns_first_value(ni), ind, ind) < 0
+                if: oi < 0 && ni >= 0 && l2_ns_first_kind(ni) = 0 && l2_msrc_at(sl, k, 0) >= 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sif: l2_mxp = 0 || lmx_size_value_known(l2_mxp[0]) != %zuU\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 74\\n\")\n%s    c.abort()\n", ind, l2_msrc_at(sl, k, 0), ind, l2_ns_first_value(ni), ind, ind) < 0
                     return: 1
-                if: oi < 0 && ni >= 0 && l2_ns_first_kind(ni) = 1 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sif: l2_mxp = 0 || lmx_char_value_known(l2_mxp[0]) != %d\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 74\\n\")\n%s    c.abort()\n", ind, bat, ind, (cast: (int) l2_ns_first_value(ni)), ind, ind) < 0
+                if: oi < 0 && ni >= 0 && l2_ns_first_kind(ni) = 1 && l2_msrc_at(sl, k, 0) >= 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sif: l2_mxp = 0 || lmx_char_value_known(l2_mxp[0]) != %d\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 74\\n\")\n%s    c.abort()\n", ind, l2_msrc_at(sl, k, 0), ind, (cast: (int) l2_ns_first_value(ni)), ind, ind) < 0
                     return: 1
-                # ALIASES AND CYCLES THROUGH THE COMMON COPY MAP. Slot bat+j
-                # of the result is the copy of the entry that field j of this
+                # ALIASES AND CYCLES THROUGH THE COMMON COPY MAP. The slot
+                # field j went to holds the copy of the entry that field j of this
                 # operand names. If that entry in turn names an entry u which
-                # this operand also names at slot j2, then ONE map means the two
+                # this operand also names at field j2, then ONE map means the two
                 # paths must arrive at the SAME copy. A merge that copied the
                 # graph twice, or broke a cycle, fails here instead of passing.
                 aj: 0
@@ -19996,7 +20092,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                         aj2: 0 - 1
                         if: au >= 0
                             aj2: l2_ns_slot_of_ref(ni, au)
-                        if: aj2 >= 0 && c.fprintf(l2_out, "%sl2_malias: lmx_arena_ref_struct(l2_mresult, %dU)\n%sif: l2_malias = 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 75\\n\")\n%s    c.abort()\n%sl2_mxp: lmx_arena_ref_cell(l2_malias, %dU)\n%sl2_myp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] != l2_myp[0]\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 75\\n\")\n%s    c.abort()\n", ind, bat + aj, ind, ind, ind, ind, am, ind, bat + aj2, ind, ind, ind) < 0
+                        if: aj2 >= 0 && l2_msrc_at(sl, k, aj) >= 0 && l2_msrc_at(sl, k, aj2) >= 0 && c.fprintf(l2_out, "%sl2_malias: lmx_arena_ref_struct(l2_mresult, %dU)\n%sif: l2_malias = 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 75\\n\")\n%s    c.abort()\n%sl2_mxp: lmx_arena_ref_cell(l2_malias, %dU)\n%sl2_myp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] != l2_myp[0]\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 75\\n\")\n%s    c.abort()\n", ind, l2_msrc_at(sl, k, aj), ind, ind, ind, ind, am, ind, l2_msrc_at(sl, k, aj2), ind, ind, ind) < 0
                             return: 1
                         am: am + 1
                     ---
@@ -20011,50 +20107,42 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                 while: ni >= 0 && aj < l2_ns_count[ni]
                     at: l2_ns_field_kind(ni, aj)
                     au: l2_ns_field_mi(ni, aj)
-                    if: at = 4 && c.fprintf(l2_out, "%sl2_malias: lmx_arena_ref_struct(l2_mresult, %dU)\n%sif: l2_malias = 0 || l2_malias != lmx_arena_ref_struct(%s, %uU)\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 77\\n\")\n%s    c.abort()\n", ind, bat + aj, ind, l2_unit_ref, (cast: (unsigned) (l2_unit_base + au)), ind, ind) < 0
+                    if: at = 4 && l2_msrc_at(sl, k, aj) >= 0 && c.fprintf(l2_out, "%sl2_malias: lmx_arena_ref_struct(l2_mresult, %dU)\n%sif: l2_malias = 0 || l2_malias != lmx_arena_ref_struct(%s, %uU)\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 77\\n\")\n%s    c.abort()\n", ind, l2_msrc_at(sl, k, aj), ind, l2_unit_ref, (cast: (unsigned) (l2_unit_base + au)), ind, ind) < 0
                         return: 1
-                    if: at = 4 && l2_first_own_child(au) >= 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_malias, %uU)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), %uU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] != l2_myp[0]\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 79\\n\")\n%s    c.abort()\n", ind, (cast: (unsigned) l2_first_own_child(au)), ind, l2_unit_ref, (cast: (unsigned) (l2_unit_base + au)), (cast: (unsigned) l2_first_own_child(au)), ind, ind, ind) < 0
+                    if: at = 4 && l2_first_own_child(au) >= 0 && l2_msrc_at(sl, k, aj) >= 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_malias, %uU)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), %uU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] != l2_myp[0]\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 79\\n\")\n%s    c.abort()\n", ind, (cast: (unsigned) l2_first_own_child(au)), ind, l2_unit_ref, (cast: (unsigned) (l2_unit_base + au)), (cast: (unsigned) l2_first_own_child(au)), ind, ind, ind) < 0
                         return: 1
                     aj: aj + 1
                 ---
                 aj: 0
                 while: ni >= 0 && aj < l2_ns_count[ni]
-                    if: l2_ns_field_kind(ni, aj) = 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), %dU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] = l2_myp[0]\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 90\\n\")\n%s    c.abort()\n", ind, bat + aj, ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni))), aj, ind, ind, ind) < 0
+                    if: l2_ns_field_kind(ni, aj) = 0 && l2_msrc_at(sl, k, aj) >= 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), %dU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] = l2_myp[0]\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 90\\n\")\n%s    c.abort()\n", ind, l2_msrc_at(sl, k, aj), ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni))), aj, ind, ind, ind) < 0
                         return: 1
-                    if: l2_ns_field_kind(ni, aj) = 5 && l2_ns_field_len(ni, aj) > 0U && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), %dU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] = l2_myp[0]\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 91\\n\")\n%s    c.abort()\n%sif: (cast: (@: LmxArrayDesc) l2_mxp[0])\\len != %zuU\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 91\\n\")\n%s    c.abort()\n%sif: (cast: (@: LmxArrayDesc) l2_mxp[0])\\data = (cast: (@: LmxArrayDesc) l2_myp[0])\\data\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 91\\n\")\n%s    c.abort()\n", ind, bat + aj, ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni))), aj, ind, ind, ind, ind, l2_ns_field_len(ni, aj), ind, ind, ind, ind, ind) < 0
+                    if: l2_ns_field_kind(ni, aj) = 5 && l2_ns_field_len(ni, aj) > 0U && l2_msrc_at(sl, k, aj) >= 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), %dU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] = l2_myp[0]\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 91\\n\")\n%s    c.abort()\n%sif: (cast: (@: LmxArrayDesc) l2_mxp[0])\\len != %zuU\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 91\\n\")\n%s    c.abort()\n%sif: (cast: (@: LmxArrayDesc) l2_mxp[0])\\data = (cast: (@: LmxArrayDesc) l2_myp[0])\\data\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 91\\n\")\n%s    c.abort()\n", ind, l2_msrc_at(sl, k, aj), ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni))), aj, ind, ind, ind, ind, l2_ns_field_len(ni, aj), ind, ind, ind, ind, ind) < 0
                         return: 1
-                    if: l2_ns_field_kind(ni, aj) = 5 && l2_ns_field_len(ni, aj) = 0U && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), %dU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] = l2_myp[0]\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 91\\n\")\n%s    c.abort()\n%sif: (cast: (@: LmxArrayDesc) l2_mxp[0])\\len != 0U || (cast: (@: LmxArrayDesc) l2_mxp[0])\\data != 0 || (cast: (@: LmxArrayDesc) l2_myp[0])\\data != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 91\\n\")\n%s    c.abort()\n", ind, bat + aj, ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni))), aj, ind, ind, ind, ind, ind, ind) < 0
+                    if: l2_ns_field_kind(ni, aj) = 5 && l2_ns_field_len(ni, aj) = 0U && l2_msrc_at(sl, k, aj) >= 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), %dU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] = l2_myp[0]\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 91\\n\")\n%s    c.abort()\n%sif: (cast: (@: LmxArrayDesc) l2_mxp[0])\\len != 0U || (cast: (@: LmxArrayDesc) l2_mxp[0])\\data != 0 || (cast: (@: LmxArrayDesc) l2_myp[0])\\data != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 91\\n\")\n%s    c.abort()\n", ind, l2_msrc_at(sl, k, aj), ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni))), aj, ind, ind, ind, ind, ind, ind) < 0
                         return: 1
-                    if: l2_ns_field_kind(ni, aj) = 6 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), %dU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] = l2_myp[0]\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 91\\n\")\n%s    c.abort()\n%sif: (cast: (@: LmxArrayDesc) l2_mxp[0])\\len != 0U || (cast: (@: LmxArrayDesc) l2_mxp[0])\\data != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 91\\n\")\n%s    c.abort()\n", ind, bat + aj, ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni))), aj, ind, ind, ind, ind, ind, ind) < 0
+                    if: l2_ns_field_kind(ni, aj) = 6 && l2_msrc_at(sl, k, aj) >= 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), %dU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] = l2_myp[0]\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 91\\n\")\n%s    c.abort()\n%sif: (cast: (@: LmxArrayDesc) l2_mxp[0])\\len != 0U || (cast: (@: LmxArrayDesc) l2_mxp[0])\\data != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 91\\n\")\n%s    c.abort()\n", ind, l2_msrc_at(sl, k, aj), ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni))), aj, ind, ind, ind, ind, ind, ind) < 0
                         return: 1
-                    if: l2_ns_field_kind(ni, aj) = 3 && l2_ns_eternal[l2_ns_field_ref(ni, aj)] >= 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sif: l2_mxp = 0 || l2_mxp[0] != (cast: (@: void) lmx_arena_ref_struct(%s, %uU))\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 80\\n\")\n%s    c.abort()\n", ind, bat + aj, ind, l2_unit_ref, (cast: (unsigned) (l2_unit_base + l2_occ_n() + l2_ns_eternal[l2_ns_field_ref(ni, aj)])), ind, ind) < 0
+                    if: l2_ns_field_kind(ni, aj) = 3 && l2_ns_eternal[l2_ns_field_ref(ni, aj)] >= 0 && l2_msrc_at(sl, k, aj) >= 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sif: l2_mxp = 0 || l2_mxp[0] != (cast: (@: void) lmx_arena_ref_struct(%s, %uU))\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 80\\n\")\n%s    c.abort()\n", ind, l2_msrc_at(sl, k, aj), ind, l2_unit_ref, (cast: (unsigned) (l2_unit_base + l2_occ_n() + l2_ns_eternal[l2_ns_field_ref(ni, aj)])), ind, ind) < 0
                         return: 1
                     aj: aj + 1
-                ---
-                if: oi < 0 && ni >= 0
-                    bat: bat + l2_ns_count[ni]
-                ---
-                if: oi < 0 && ni < 0
-                    bat: bat + l2_mres_width[l2_mres_find(last\value\as\atom)]
                 ---
                 last: l2_next_active(last\next)
                 k: k + 1
             ---
-            l2_mres_first[sl]: bfirst
-            l2_mres_last[sl]: blast
-            l2_mres_fok[sl]: bfok
-            l2_mres_lok[sl]: blok
-            # and the CONTENT it was promised: the first child carries the first
-            # operand first field, the last child the last field of the body when there
-            # is one, otherwise of the last operand. A shape check alone would pass a
-            # copy that moved the right number of wrong values.
-            if: bfok = 1 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, 0U)\n%sif: l2_mxp = 0 || lmx_size_value_known(l2_mxp[0]) != %zuU\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 72\\n\")\n%s    c.abort()\n", ind, ind, bfirst, ind, ind) < 0
+            # and the CONTENT it was promised: the first and the last slot carry the values
+            # the map says they hold -- the model's first field or the later field written
+            # into it, the last field added (the body's last when there is a body). A shape
+            # check alone would pass a copy that moved the right number of wrong values.
+            mrw: l2_mrs_row(sl, 0)
+            if: mrw >= 0 && l2_mrs_vk[mrw] = 1 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, 0U)\n%sif: l2_mxp = 0 || lmx_size_value_known(l2_mxp[0]) != %zuU\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 72\\n\")\n%s    c.abort()\n", ind, ind, l2_mrs_val[mrw], ind, ind) < 0
                 return: 1
-            if: bfok = 2 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, 0U)\n%sif: l2_mxp = 0 || lmx_char_value_known(l2_mxp[0]) != %d\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 72\\n\")\n%s    c.abort()\n", ind, ind, (cast: (int) bfirst), ind, ind) < 0
+            if: mrw >= 0 && l2_mrs_vk[mrw] = 2 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, 0U)\n%sif: l2_mxp = 0 || lmx_char_value_known(l2_mxp[0]) != %d\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 72\\n\")\n%s    c.abort()\n", ind, ind, (cast: (int) l2_mrs_val[mrw]), ind, ind) < 0
                 return: 1
-            if: blok = 1 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sif: l2_mxp = 0 || lmx_size_value_known(l2_mxp[0]) != %zuU\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 73\\n\")\n%s    c.abort()\n", ind, bw - 1, ind, blast, ind, ind) < 0
+            mrw: l2_mrs_row(sl, bw - 1)
+            if: mrw >= 0 && l2_mrs_vk[mrw] = 1 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sif: l2_mxp = 0 || lmx_size_value_known(l2_mxp[0]) != %zuU\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 73\\n\")\n%s    c.abort()\n", ind, bw - 1, ind, l2_mrs_val[mrw], ind, ind) < 0
                 return: 1
-            if: blok = 2 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sif: l2_mxp = 0 || lmx_char_value_known(l2_mxp[0]) != %d\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 73\\n\")\n%s    c.abort()\n", ind, bw - 1, ind, (cast: (int) blast), ind, ind) < 0
+            if: mrw >= 0 && l2_mrs_vk[mrw] = 2 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sif: l2_mxp = 0 || lmx_char_value_known(l2_mxp[0]) != %d\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 73\\n\")\n%s    c.abort()\n", ind, bw - 1, ind, (cast: (int) l2_mrs_val[mrw]), ind, ind) < 0
                 return: 1
             # The result is bound under its source name: a reserved unit child.
             if: c.fprintf(l2_out, "%sif: lmx_arena_ref_store(%s, %uU, (cast: (@: void) l2_mresult)) != 0\n", ind, l2_unit_ref, (cast: (unsigned) (l2_mres_base + sl))) < 0
@@ -21231,6 +21319,9 @@ fn: l2_emit_unit (const: @(char out_path)) int
         if: l2_m_throws[i] != 0 && c.fprintf(l2_out, "    c.array: [%d]: @: Lmx l2_mops\n    c.array: [%d]: @: Lmx l2_mprofiles\n    int: l2_mstatus 0\n    @: Lmx l2_mresult 0\n    @: Lmx l2_mbody 0\n    @@: void l2_mxp 0\n    @@: void l2_myp 0\n    @: Lmx l2_malias 0\n", l2_merge_max, l2_merge_max) < 0
             fclose(l2_out)
             return: 1
+        if: l2_m_throws[i] != 0 && l2_merge_pmax > 0 && c.fprintf(l2_out, "    c.array: [%d]: LmxMergePair l2_mpv\n    c.array: [%d]: @: LmxMergePair l2_mpp\n", l2_merge_pmax, l2_merge_pmax) < 0
+            fclose(l2_out)
+            return: 1
         if: l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && l2_body_receives(l2_m_body[i]\as\structure) != 0 && fputs("    @: LmxMsg l2_nmsg 0\n    @: Lmx l2_ngraph 0\n", l2_out) < 0
             fclose(l2_out)
             return: 1
@@ -21426,6 +21517,9 @@ fn: l2_emit_unit (const: @(char out_path)) int
         fclose(l2_out)
         return: 1
     if: l2_merge_max != 0 && c.fprintf(l2_out, "        c.array: [%d]: @: Lmx l2_mops\n        c.array: [%d]: @: Lmx l2_mprofiles\n        int: l2_mstatus 0\n        @: Lmx l2_mresult 0\n        @: Lmx l2_mbody 0\n        @@: void l2_mxp 0\n        @@: void l2_myp 0\n        @: Lmx l2_malias 0\n", l2_merge_max, l2_merge_max) < 0
+        fclose(l2_out)
+        return: 1
+    if: l2_merge_max != 0 && l2_merge_pmax > 0 && c.fprintf(l2_out, "        c.array: [%d]: LmxMergePair l2_mpv\n        c.array: [%d]: @: LmxMergePair l2_mpp\n", l2_merge_pmax, l2_merge_pmax) < 0
         fclose(l2_out)
         return: 1
     if: l2_library_mode = 0 && fputs("        l2_program_arena: arena\n", l2_out) < 0

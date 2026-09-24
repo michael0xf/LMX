@@ -1,0 +1,16 @@
+Model:
+    size_t: x 1U
+end: Model
+
+# FABLE-OPUS-MERGE-PARTS-20260926-193 T1 (the author's merge rule, plan §4): the body's x belongs INTO
+# the model's x.  The body as a pair source is the kernel's next step (-193 K1); until then the merge
+# is refused, located, rather than giving R two x.
+fn: m () int
+    R: merge: Model
+        size_t: x 5U
+    end: merge
+    return: 0
+end: m
+
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

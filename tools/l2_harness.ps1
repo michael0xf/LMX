@@ -813,15 +813,54 @@ $fixtures = @(
                  'l2_program_qualified_roots[2U]: l2_nsp[2]',
                  'lmx_merge_profiles_owned',
                  'l2_entry_unit: graph') },
-    # FABLE-OPUS-MERGE-ADDRESSING-20260924-154 commit 2 (the author's merge rule, plan §4): a name
-    # several operands carry is its LAST occurrence -- `R\x` is `R\[lastIndex]x`, the override, for
-    # reads and writes -- and `R\[N]x` counts occurrences in operand order.  Success is 7.
-    [pscustomobject]@{ Name = 'unit_merge_last_occurrence.lm2'; Expect = 'root-pending'; Exit = 0; Entry = 7; Needle = 'root operation not walkable yet: a Structure value';
-        Args = @('0');
+    # FABLE-OPUS-MERGE-PARTS-20260926-193 T1 (the author's merge rule, plan §4): a later operand's
+    # field of a model name is written INTO the model's slot -- one LmxMergePair (model slot, operand,
+    # field) -- so merge makes no repeated names: R is {x, y}, `R\x` = `R\[0]x` = 7 for reads and
+    # writes, and `R\[1]x` does not exist.  The merge runs in a method (a root merge is root-pending).
+    # Mutants: the flat layout (no pair found) exits 82; checking the model's own overwritten x
+    # aborts at check 74; a pair that leaves the slot's known value the model's aborts at check 72.
+    # Success is 7.
+    [pscustomobject]@{ Name = 'unit_merge_last_occurrence.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
-        Debt = @() },
+        Debt = @('l2_mpp[0U]\model_slot: 0U', 'l2_mpp[0U]\operand: 1U', 'l2_mpp[0U]\field: 0U',
+                 'lmx_merge_owned(l2_mops, 2U, l2_mbody, node, 0, l2_program_arena, l2_program_arena, l2_mpp, 1U, @ l2_mresult)',
+                 'if: l2_mresult\len != 2') },
+    # -193 T1: later operands merge INTO the model in operand order -- two pairs on one model slot, the
+    # last one C's -- and a new name is added.  R = {3, 2, 9}.  Success is 4.
+    [pscustomobject]@{ Name = 'unit_merge_three_operands.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 4;
+        Absent = @();
+        Debt = @('l2_mpp[0U]\operand: 1U', 'l2_mpp[1U]\model_slot: 0U', 'l2_mpp[1U]\operand: 2U',
+                 'lmx_merge_owned(l2_mops, 3U, l2_mbody, node, 0, l2_program_arena, l2_program_arena, l2_mpp, 2U, @ l2_mresult)',
+                 'if: l2_mresult\len != 3') },
     [pscustomobject]@{ Name = 'unit_merge_occurrence_range_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'merge occurrence index out of range'; Absent = @(); Debt = @() },
+    # -193 T1: what the kernel's pairs do not take yet (-193 K1) is refused, located -- a later field
+    # repeating a name an earlier operand ADDED, a body field repeating an operand's -- and so is a
+    # later field whose type is not the model field's.  Never a second slot of the same name.
+    [pscustomobject]@{ Name = 'unit_merge_added_repeat_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a merge operand field repeats a field an earlier operand added'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_body_repeat_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a merge result body field repeats a field of the operands'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_field_type_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a merge operand field has another type than the model field of its name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_field_entry_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a merge operand field has another type than the model field of its name'; Absent = @(); Debt = @() },
+    # -193 T1 on qualified operands: FrozenB's value goes INTO FrozenA's slot -- one slot, FrozenB's
+    # retained cell by address (check 80), read back as 2.
+    [pscustomobject]@{ Name = 'unit_merge_eternal_pair.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('2', 'size', '0', '0', '1', 'size', '1', '0', '2'); Entry = 2;
+        Absent = @();
+        Debt = @('lmx_merge_profiles_owned(l2_mops, 2U, l2_mbody, node, 0, l2_program_arena, l2_program_arena, l2_mprofiles, 2U, l2_mpp, 1U, @ l2_mresult)',
+                 'if: l2_mresult\len != 1', 'merge result check 80') },
+    # Q22 = II (q22.md, q20-next.md §2): `A: fn: M` is a shared occurrence; merge keeps its address
+    # and storage, and `node` in M stays the file Structure.  In methods, since a root merge is
+    # root-pending.  q22: R\M() = 3.  q20-next §2: A\M(), R\M(), Q\M() all 3.  merged_callable: the
+    # hits accumulate across A and R.
+    [pscustomobject]@{ Name = 'unit_q22_merge_in_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 3;
+        Absent = @(); Debt = @('merge result check 77') },
+    [pscustomobject]@{ Name = 'unit_q20_merge_in_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 5;
+        Absent = @(); Debt = @('merge result check 77') },
+    [pscustomobject]@{ Name = 'unit_merged_callable.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 5;
+        Absent = @(); Debt = @('merge result check 77', 'merge result check 79') },
     # THE DECLARED-THROW ABI (FABLE-L2TRANS-THROW-FORMAL-20260920-05).  Every method that merges,
     # and every caller of one, carries the executing Message as a hidden formal.  It was spelled
     # `node`, the spelling of the reserved first formal, so EVERY such method came out as
@@ -893,7 +932,7 @@ $fixtures = @(
     # fail the merge -- the program completes with 5 and the row goes RED.
     [pscustomobject]@{ Name = 'unit_s1_merge_profiles_uncaught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('2'); Fails = 1; MergeFail = 1; Stopped = 1; Thrown = 1;
         Absent = @('l2_out_throw[0]: node');
-        Debt = @('lmx_merge_profiles_owned(l2_mops, 2U, l2_mbody, node, 0, l2_program_arena, l2_program_arena, l2_mprofiles, 2U, 0, 0U, @ l2_mresult)',
+        Debt = @('lmx_merge_profiles_owned(l2_mops, 2U, l2_mbody, node, 0, l2_program_arena, l2_program_arena, l2_mprofiles, 2U, l2_mpp, 1U, @ l2_mresult)',
                  'l2_out_throw[0]: 0', 'return: l2_ts', 'l2_rw1 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw0, c.LMX_WALK_OP_CALL, 4U)', 'if: lmx_arena_ref_store(l2_rw1, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 0U))) != 0') },
     [pscustomobject]@{ Name = 'unit_s1_implements_uncaught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
         Absent = @('l2_out_throw[0]: node'); Debt = @('l2_out_throw[0]: 0', 'return: l2_ts', 'l2_rw1 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw0, c.LMX_WALK_OP_CALL, 4U)', 'if: lmx_arena_ref_store(l2_rw1, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 1U))) != 0') },
@@ -1896,7 +1935,7 @@ $fixtures = @(
         Debt = @('c.array: [2]: @: Lmx l2_program_qualified_roots',
                  'l2_program_qualified_roots[0U]: l2_nsp[0]',
                  'l2_program_qualified_roots[1U]: l2_nsp[1]',
-                 'lmx_merge_profiles_owned(l2_mops, 2U, l2_mbody, self, 0, l2_program_arena, l2_program_arena, l2_mprofiles, 2U, 0, 0U, @ l2_mresult)',
+                 'lmx_merge_profiles_owned(l2_mops, 2U, l2_mbody, self, 0, l2_program_arena, l2_program_arena, l2_mprofiles, 2U, l2_mpp, 1U, @ l2_mresult)',
                  'l2_entry_unit: graph') },
     [pscustomobject]@{ Name = 'unit_eternal_profile_partial_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'independent branch requires const'; Absent = @(); Debt = @() },

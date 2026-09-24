@@ -549,32 +549,38 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_s2_stray_end_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'stray trailer: the frame above is already closed'; Absent = @(); Debt = @() },
     # S3 (FABLE-OPUS-S3-MAIL-ARGS-20260923-122, author Q10): C main posts argv to R0 inside ONE
-    # letter; `nextMessage: m` takes the next admitted letter of the current Thread (0 when the
+    # letter; `receiveMessage: m` takes the next admitted letter of the current Thread (0 when the
     # inbox is empty).  Every eternal-runs row checks at close how many letters R0 still holds
     # (`Letters`, default 1: the argv letter untaken) and that close released them (P5).
-    [pscustomobject]@{ Name = 'unit_next_message_twice.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: nextMessage'; Args = @('0'); Letters = 0;
+    [pscustomobject]@{ Name = 'unit_next_message_twice.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: receiveMessage'; Args = @('0'); Letters = 0;
         Absent = @(); Debt = @('l2_nmsg: (cast: (@: LmxMsg) lmx_thread_mail_take(lmx_thread_current(), c.LMX_POST_INBOX))') },
-    [pscustomobject]@{ Name = 'unit_next_message_loop.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: nextMessage'; Args = @('0'); Letters = 0;
+    [pscustomobject]@{ Name = 'unit_next_message_loop.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: receiveMessage'; Args = @('0'); Letters = 0;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_next_message_in_method.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: nextMessage'; Args = @('0'); Letters = 0;
+    [pscustomobject]@{ Name = 'unit_next_message_in_method.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: receiveMessage'; Args = @('0'); Letters = 0;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_next_message_method_first.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: nextMessage'; Args = @('0');
+    [pscustomobject]@{ Name = 'unit_next_message_method_first.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: receiveMessage'; Args = @('0');
         Absent = @('lmx_thread_mail_take'); Debt = @() },
     [pscustomobject]@{ Name = 'unit_next_message_one_name.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'nextMessage binds one name'; Absent = @(); Debt = @() },
-    # ADMISSION (fable's B2, author Q12): an untyped graph -- the letter nextMessage takes -- bound
-    # to a declared Structure type (nextMessage into a typed own field, rebinding it, a typed
+        Needle = 'receiveMessage binds one name'; Absent = @(); Debt = @() },
+    # FABLE-SONNET-RECEIVE-RENAME-20260924-166 commit 1: `nextMessage` is no longer a language
+    # word (renamed to `receiveMessage`) -- `nextMessage: m` is now an ordinary colon-assignment
+    # to an undeclared name, refused like any other (measured: not "unknown method" -- the shape
+    # is an assignment target, not a call).
+    [pscustomobject]@{ Name = 'unit_next_message_word_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
+    # ADMISSION (fable's B2, author Q12): an untyped graph -- the letter receiveMessage takes -- bound
+    # to a declared Structure type (receiveMessage into a typed own field, rebinding it, a typed
     # formal's argument) is admitted at run time by the kernel's implements walk against the
     # declared type's shape; a refusal throws the implicit name implements (Q17 = A; g = 2, where a
     # failing merge is 1), and uncaught (`Fails`) the entry has no value, exit 1.  MainLetter is an
     # ordinary declared Structure (author Q15).
     [pscustomobject]@{ Name = 'unit_admit_letter_typed.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int'; Args = @('0'); Letters = 0; Argv = @('a', 'b');
         Absent = @(); Debt = @('lmx_runtime_implements(l2_program_arena, (cast: (@: Lmx) l2_ngraph)') },
-    [pscustomobject]@{ Name = 'unit_admit_letter_formal.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: nextMessage'; Args = @('0'); Letters = 0;
+    [pscustomobject]@{ Name = 'unit_admit_letter_formal.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: receiveMessage'; Args = @('0'); Letters = 0;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_admit_letter_not_model.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int'; Args = @('0'); Letters = 0; Fails = 1; Stopped = 1; Thrown = 2;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_admit_formal_refused.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: nextMessage'; Args = @('0'); Letters = 0; Fails = 1; Stopped = 1; Thrown = 2;
+    [pscustomobject]@{ Name = 'unit_admit_formal_refused.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: receiveMessage'; Args = @('0'); Letters = 0; Fails = 1; Stopped = 1; Thrown = 2;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_admit_rebind_refused.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int'; Args = @('0'); Letters = 0; Fails = 1; Stopped = 1; Thrown = 2;
         Absent = @(); Debt = @() },
@@ -593,10 +599,10 @@ $fixtures = @(
     # `{source}` in Argv is this fixture's own path.
     [pscustomobject]@{ Name = 'unit_arr_path_read.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int'; Args = @('0');
         Absent = @(); Debt = @() },
-    # D-06: a failed nextMessage or rebinding store is an invariant on the X1 route, not a printed line.
+    # D-06: a failed receiveMessage or rebinding store is an invariant on the X1 route, not a printed line.
     [pscustomobject]@{ Name = 'unit_admit_rebind_read.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int'; Args = @('0'); Letters = 0; Argv = @('ok'); Entry = 2;
-        Absent = @('lmx_msg_poll_abort', 'lmx: nextMessage', 'lmx: rebinding');
-        Debt = @('c.fprintf(c.stderr, "lmx: invariant: nextMessage store failed for own field ', 'c.fprintf(c.stderr, "lmx: invariant: rebinding store failed for own field ') },
+        Absent = @('lmx_msg_poll_abort', 'lmx: receiveMessage', 'lmx: rebinding');
+        Debt = @('c.fprintf(c.stderr, "lmx: invariant: receiveMessage store failed for own field ', 'c.fprintf(c.stderr, "lmx: invariant: rebinding store failed for own field ') },
     [pscustomobject]@{ Name = 'entry_argc_if.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int'; Args = @('0'); Letters = 0;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'entry_index.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int'; Args = @('0'); Letters = 0; Argv = @('word'); Says = @('word');
@@ -619,7 +625,7 @@ $fixtures = @(
         Needle = 'an indexed field path needs decimal literal indices'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_arr_path_three_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'an indexed field path needs decimal literal indices'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'entry_argc.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: nextMessage'; Args = @('0'); Letters = 0; Argv = @('one', 'two');
+    [pscustomobject]@{ Name = 'entry_argc.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: receiveMessage'; Args = @('0'); Letters = 0; Argv = @('one', 'two');
         Absent = @(); Debt = @() },
     # The former main-signature refusals test ordinary method formals now (L2 has no main, S2).
     [pscustomobject]@{ Name = 'entry_argc_bad.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'unknown type'; Absent = @(); Debt = @() },
@@ -900,7 +906,7 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s1_catch_user_break.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a loop'; Args = @('0'); Entry = 105;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s1_catch_implements.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: nextMessage'; Args = @('0'); Entry = 42; Letters = 0;
+    [pscustomobject]@{ Name = 'unit_s1_catch_implements.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: receiveMessage'; Args = @('0'); Entry = 42; Letters = 0;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s1_catch_duplicate_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'duplicate catch: Oops'; Absent = @(); Debt = @() },

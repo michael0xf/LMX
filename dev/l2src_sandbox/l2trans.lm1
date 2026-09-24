@@ -445,7 +445,7 @@ prototype:
     fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
     fn: l2_colon_decl_shape (const: @(LmP0Node stmt); @@: LmP0Text out_model; @@: LmP0Text out_name) int
     fn: l2_empty_struct_decl_shape (const: @(LmP0Node stmt); int: mi) int
-    fn: l2_next_msg_shape (const: @(LmP0Node stmt); @@: LmP0Text out_name) int
+    fn: l2_receive_msg_shape (const: @(LmP0Node stmt); @@: LmP0Text out_name) int
     fn: l2_body_receives (const: @(LmP0Structure body)) int
     fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char path)) int
     fn: l2_collect_asgn_binds (const: @(char path)) int
@@ -5576,7 +5576,7 @@ fn: l2_is_asgn (const: @(LmP0Node stmt)) int
         return: 0
     if: h\length >= 2U && h\data[0] = 99 && h\data[1] = 46
         return: 0
-    if: l2_text_eq(h, "nextMessage")
+    if: l2_text_eq(h, "receiveMessage")
         return: 0
     if: stmt\as\frame\body = 0
         return: 0
@@ -5924,14 +5924,14 @@ fn: l2_empty_struct_decl_shape (const: @(LmP0Node stmt); int: mi) int
         return: 0
 return: 1
 
-# nextMessage: m (author, Q10, 2026-09-23) -- the general mail receiver: m is
+# receiveMessage: m (author, Q10, 2026-09-23) -- the general mail receiver: m is
 # bound to the graph of the next admitted letter of the CURRENT Thread, and to 0
 # when its inbox is empty. It is a receiver of the profile, not syntax: a
-# declared method named nextMessage takes precedence, as every callable head
+# declared method named receiveMessage takes precedence, as every callable head
 # does. m is an own field of graph type, the cell kind `Model: fresh` uses,
-# declared by the first nextMessage that names it and rebound by every later
+# declared by the first receiveMessage that names it and rebound by every later
 # one. 0 = the shape, 2 = the receiver with anything but one name, 1 = not it.
-fn: l2_next_msg_shape (const: @(LmP0Node stmt); @@: LmP0Text out_name) int
+fn: l2_receive_msg_shape (const: @(LmP0Node stmt); @@: LmP0Text out_name) int
     @: LmP0Frame fr
     @: LmP0Field only
     if: out_name = 0
@@ -5940,7 +5940,7 @@ fn: l2_next_msg_shape (const: @(LmP0Node stmt); @@: LmP0Text out_name) int
     if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0
         return: 1
     fr: stmt\as\frame
-    if: fr\head = 0 || l2_text_eq(fr\head, "nextMessage") = 0 || l2_find_method(fr\head) >= 0
+    if: fr\head = 0 || l2_text_eq(fr\head, "receiveMessage") = 0 || l2_find_method(fr\head) >= 0
         return: 1
     if: fr\body = 0 || fr\trailer != 0 || fr\body\trailer != 0 || l2_count_active(fr\body) != 1
         return: 2
@@ -5964,7 +5964,7 @@ fn: l2_body_receives (const: @(LmP0Structure body)) int
         stmt: field\value
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_STRUCTURE && stmt\as != 0 && stmt\as\structure != 0 && l2_body_receives(stmt\as\structure) != 0
             return: 1
-        if: l2_next_msg_shape(stmt, @ nm) = 0
+        if: l2_receive_msg_shape(stmt, @ nm) = 0
             return: 1
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\body != 0
             inner: l2_next_active(stmt\as\frame\body\first_field)
@@ -6342,8 +6342,8 @@ fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char p
                 return: 1
             field: l2_next_active(field\next)
             continue
-        # nextMessage: m declares m the same way (an own field of graph type).
-        if: l2_next_msg_shape(stmt, @ fa) = 0
+        # receiveMessage: m declares m the same way (an own field of graph type).
+        if: l2_receive_msg_shape(stmt, @ fa) = 0
             if: l2_own_add(mi, fa, l2_own_of_dt(l2_colon_graph_ty()), path, stmt) < 0
                 return: 1
             field: l2_next_active(field\next)
@@ -6928,7 +6928,7 @@ fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
                 return: 1
             field: l2_next_active(field\next)
             continue
-        if: l2_next_msg_shape(stmt, @ fa) = 0
+        if: l2_receive_msg_shape(stmt, @ fa) = 0
             if: l2_own_add(mi, fa, l2_own_of_dt(l2_colon_graph_ty()), l2_src, stmt) < 0
                 return: 1
             field: l2_next_active(field\next)
@@ -7085,7 +7085,7 @@ fn: l2_colon_decl_room (const: @(LmP0Node node)) int
         return: 0
     if: node\kind = c.LM_P0_NODE_FRAME && l2_colon_decl_shape(node, @ cm, @ cn) = 0
         return: 1
-    if: node\kind = c.LM_P0_NODE_FRAME && l2_next_msg_shape(node, @ cn) = 0
+    if: node\kind = c.LM_P0_NODE_FRAME && l2_receive_msg_shape(node, @ cn) = 0
         return: 1
     if: node\kind = c.LM_P0_NODE_STRUCTURE && node\as\structure != 0
         f: node\as\structure\first_field
@@ -9937,8 +9937,8 @@ fn: l2_char_literal (const: @(LmP0Text t)) int
 return: (cast: (int) (cast: (unsigned char) t\data[1]))
 
 # ADMISSION OF AN UNTYPED GRAPH (fable's B2 for S3, the author's Q12): a graph
-# with no declared Structure type -- the letter nextMessage takes, an `@: Lmx`
-# value -- bound to a declared Structure type, by `nextMessage:` into a typed
+# with no declared Structure type -- the letter receiveMessage takes, an `@: Lmx`
+# value -- bound to a declared Structure type, by `receiveMessage:` into a typed
 # own field, by rebinding a typed own field, or as the argument of a typed
 # formal, is admitted at that binding by the kernel's runtime implements walk.
 # The translator's part is the static one: the target's type is a declared
@@ -12179,7 +12179,7 @@ fn: l2_arr_operand (@: LmP0Field f; int: allow0; @: char pd; @: size_t out_pn; @
         return: 1
     if: oi >= 0
         ni: l2_own_nsty_get(oi)
-    # An own field holding a graph with no declared type (the letter nextMessage gives an
+    # An own field holding a graph with no declared type (the letter receiveMessage gives an
     # untyped m): the path has no fields to walk.  A c.* raw root is not a graph and is left
     # to the raw-path machinery.
     if: oi >= 0 && ni < 0 && l2_colon_is_graph_ty(l2_dt_of_own(l2_own_ty[oi])) != 0
@@ -13934,13 +13934,13 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             continue
         if: l2_frame_head(stmt, "sendMessage") != 0
             return: l2_error(path, stmt, "sendMessage is built in the root only yet")
-        # nextMessage: m (Q10). The first nextMessage that names m declares it
+        # receiveMessage: m (Q10). The first receiveMessage that names m declares it
         # (an own field of graph type, bound here); a later one rebinds it.  A
         # letter's graph has no static Structure type: into a typed own field it
         # is admitted at run time (l2_emit_admit); a formal is not its target.
-        if: l2_next_msg_shape(stmt, @ cname) = 2
-            return: l2_error(path, stmt, "nextMessage binds one name")
-        if: l2_next_msg_shape(stmt, @ cname) = 0
+        if: l2_receive_msg_shape(stmt, @ cname) = 2
+            return: l2_error(path, stmt, "receiveMessage binds one name")
+        if: l2_receive_msg_shape(stmt, @ cname) = 0
             nmk: l2_param_find(mi, cname)
             if: nmk >= 0 && l2_colon_is_graph_ty(l2_ft(mi, nmk)) != 0
                 return: l2_error(path, stmt, "graph assignment admission requires receiving-expression tests")
@@ -16882,8 +16882,8 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
         return: l2_rw_refuse(stmt, "a loop")
     if: l2_text_eq(h, "catch") || l2_text_eq(h, "throw") || l2_text_eq(h, "throws")
         return: l2_rw_refuse(stmt, "throw and catch")
-    if: l2_text_eq(h, "nextMessage")
-        return: l2_rw_refuse(stmt, "nextMessage")
+    if: l2_text_eq(h, "receiveMessage")
+        return: l2_rw_refuse(stmt, "receiveMessage")
     if: l2_text_eq(h, "sendMessage")
         if: l2_rw_send(stmt, into, @ node) != 0
             return: 1
@@ -19031,7 +19031,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         if: n = 0
             field: l2_next_active(field\next)
             continue
-        # nextMessage: m -- take the next admitted letter of the current Thread
+        # receiveMessage: m -- take the next admitted letter of the current Thread
         # (the owner attaches its arena before exposing it) and assign m its
         # graph, or 0 when the inbox is empty.  Like `Model: fresh` (-121 fixup,
         # 520b8fe), the binding writes both, both at once: the field's graph cell
@@ -19039,7 +19039,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         # working local via l2_emit_occ_write (a bare m reads that).  A cell that
         # cannot be stored is an invariant failure on the checkpoint's own
         # diagnostic route, never a throw (X1, -128).
-        if: l2_next_msg_shape(stmt, @ cname) = 0
+        if: l2_receive_msg_shape(stmt, @ cname) = 0
             oi: l2_own_find_last(mi, cname)
             if: oi < 0
                 return: l2_error(l2_src, stmt, "unresolved name")
@@ -19049,7 +19049,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                 return: 1
             if: l2_emit_own_from(mi, oi, ind) != 0
                 return: 1
-            if: c.fprintf(l2_out, "%sif: lmx_pointer_store_known(l2_q%d_from[0], (cast: (@: void) l2_ngraph)) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: nextMessage store failed for own field %d\\n\")\n%s    c.abort()\n%s---\n", ind, oi, ind, oi, ind, ind) < 0
+            if: c.fprintf(l2_out, "%sif: lmx_pointer_store_known(l2_q%d_from[0], (cast: (@: void) l2_ngraph)) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: receiveMessage store failed for own field %d\\n\")\n%s    c.abort()\n%s---\n", ind, oi, ind, oi, ind, ind) < 0
                 return: 1
             if: l2_emit_occ_write(mi, oi, ind, "l2_ngraph") != 0
                 return: 1
@@ -19247,7 +19247,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && l2_eval_fields(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok) != 0
             return: 1
         # An untyped graph into a Structure-typed own field (S3): admitted at run time, then
-        # bound like nextMessage and `Model: fresh` -- the graph cell now (a path through the
+        # bound like receiveMessage and `Model: fresh` -- the graph cell now (a path through the
         # field reads that cell before any checkpoint) and the working local below.
         rbadmit: 0
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && l2_count_active(fr\body) = 1 && l2_formal_find(mi, fr\head) < 0 && l2_graph_nsty(mi, fr\head) >= 0 && l2_untyped_graph(mi, l2_next_active(fr\body\first_field)\value) != 0

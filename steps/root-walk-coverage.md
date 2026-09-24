@@ -110,7 +110,7 @@ Each row is placed in the highest class it needs.
 | K3 | + merge (`Model: fresh`, `x: merge: A B`) | 7 | 0 | 0 | 0 | 4 |
 | K4 | + non-int values, arrays, `*` `/` `%` and bit operators | 32 | 0 | 0 | 0 | 5 |
 | K5 | + throw/catch at root | 9 | 0 | 0 | 0 | 5 |
-| K6 | + `nextMessage` / `mainArgs` (S3 mail) | 18 | 0 | 0 | 0 | 4 |
+| K6 | + `receiveMessage` (formerly `nextMessage`) / `mainArgs` (S3 mail) | 18 | 0 | 0 | 0 | 4 |
 | K7 | + `implements` | 6 | 0 | 0 | 0 | 0 |
 | K8 | L2 at root (`c.*`, `@`, `\p`, `sizeof:`, `cast:`, a predef C function): first moves into a method | 19 | 0 | 1 | 0 | 11 |
 | K9 | not placed by the census | 8 | 0 | 0 | 0 | 18 |

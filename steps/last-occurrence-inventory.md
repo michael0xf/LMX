@@ -102,7 +102,7 @@ exercise this site and distinguish first from last.
 | 17876 | `l2_emit_body` field-path assignment | write-destination identity -- see live inconsistency below |
 | 18010 | `l2_emit_body` (C-style `for` init) | loop counter's own row, emission |
 | 18046 | `l2_emit_body` (C-style `for` step) | same counter, emission |
-| 18179 | `l2_emit_body` (`nextMessage:`) | own row for emission |
+| 18179 | `l2_emit_body` (`receiveMessage:`, formerly `nextMessage:`) | own row for emission |
 | 18216 | `l2_emit_body` (`Model: fresh`) | own row for emission |
 | 18245 | `l2_emit_body` (empty-struct decl) | own row for emission -- pairs with 5871 |
 

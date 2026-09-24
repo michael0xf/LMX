@@ -13,7 +13,7 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 # letter by the same acts and witnesses both ends of it:
 #   A. untaken: R0's turn takes nothing; close releases the donor arena (P5), so that arena is
 #      empty afterwards, and R0 never owned the letter;
-#   B. taken: the turn takes it as `nextMessage:` does (lmx_thread_mail_take on the current
+#   B. taken: the turn takes it as `receiveMessage:` does (lmx_thread_mail_take on the current
 #      Thread); the owner attached the arena before exposing the letter, and R0 then reads an
 #      Array of char Arrays holding exactly the bytes C passed.  That read is made inside the
 #      turn: nothing here keeps the letter reachable from R0's graph afterwards (a program keeps
@@ -146,7 +146,7 @@ fn: main () int
     al_check(counts, lmx_root_close(@ root) = c.LMX_ROOT_OK, "A: root close")
     al_check(counts, lmx_arena_index_len(untaken_at) = 0U && untaken_at\blocks = 0, "A: close released the untaken letter's arena")
 
-    # B. The letter taken as nextMessage takes it.
+    # B. The letter taken as receiveMessage takes it.
     al_take: 1
     al_calls: 0
     al_check(counts, lmx_root_open(@ taker, al_entry, 5000U) = c.LMX_ROOT_OK, "B: root open")

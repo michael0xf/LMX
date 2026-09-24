@@ -106,7 +106,7 @@ predef: "l2src/lmx_plan.h.lm1"
 #     that would LEAVE an activation through `ret` is copied -- four bytes, by value --
 #     into the destination of the caller; a reference into the graph leaves as it is;
 #   * the inputs of a callee are an array of references in the caller's scratch slice.
-# Own fields keep their numeric working values (LmxWalkOwn.value is ulong, the widest):
+# Own fields keep their numeric working values (LmxWalkOwn.value is size_t, the widest numeric the walker types):
 # a read copies the working value into the destination, because the field may be assigned
 # again before the value is used. Load and publish go by the CELL's arena type.
 #
@@ -232,7 +232,7 @@ end: LmxWalkValue
 # order of every checkpoint -- not the order in which the body happens to mention them.
 struct: LmxWalkOwn
     @@: void from
-    ulong: value
+    size_t: value
     int: dirty
 end: LmxWalkOwn
 

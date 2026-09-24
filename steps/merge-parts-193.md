@@ -105,7 +105,8 @@ e. Callable merge needs walked method bodies.
    - Today the translator emits an op-tree for the root only.
    - Prerequisite T-OT: every method whose body lies in the walkable subset (L3: numbers, fields,
      calls, if/while, return) also gets its body as an op-tree.  It lives in the occurrence after
-     the fields, as code: OP frames are copier terminals, shared by address.
+     the fields, as code: OP frames are copier terminals, shared by address.  (Not yet: only the role
+     records are; see §6, K-OT1.)
    - The native word stays for direct calls.  A merge result has `native` 0 and walks the copied
      tree over its own data.
    - A body outside the subset is a located refusal at the merge.
@@ -221,3 +222,231 @@ For K1 (the kernel's map validity, 1c): with today's kernel an unpaired later fi
 two later operands carrying the model's name must both be pairs on the same model slot, applied in
 operand order (unit_merge_three_operands).  «The same target twice is INVALID» would refuse this.
 Either keep taking duplicate targets in order, or give the map a way to say «dropped».
+
+fable (T1 landed, main a952dd5): ordered duplicate targets are legal; K1 records «pairs apply in
+operand order, duplicate targets allowed».  The `if: R\x` finding is D-61 (§5 explains why the
+spelling decides between a located refusal and gcc).
+
+## 5. T1b: `l2_upper_name`, measured (read-only, main a952dd5)
+
+fable: a spelling name special, which the doctrine (§0) forbids.  The raw door into C is `c.*`, by
+token.  An unresolved L2 name is always a located refusal, and C constants come as `c.NAME`.
+Measure before changing anything.
+
+### What it is
+
+l2trans.lm1 :9240-:9254.  An atom of `[A-Z0-9_]` with at least one capital is «a constant supplied
+by a predef C seam», and the translator leaves it to the C compiler.  It has two call sites, and
+nothing else calls it; no kernel `.lm1` has one.
+- :13641, the expression atom check.  It admits the atom before any L2 lookup: formal, method,
+  local, own field, declaration or merge result.
+- :7004, `l2_scan_ident`, the free-name scan.  This scan makes an unresolved name a dynamic input of
+  the method, and it marks the unit fields a method reads (`l2_own_unit_seen` → `l2_m_uses`).  The
+  all-caps return comes BEFORE that marking.
+
+### What else it does: two defects, measured on scratch builds of main
+
+- A unit field with an all-caps name, read in a method, reaches gcc.
+  - Program: `int: N 5` in the unit, `k: N + 1` in method m.  It is emitted as a raw `N`, and gcc
+    stops with «'N' undeclared».  The same program with `nn` runs, and gives 6.
+  - :7004 skips the use marking, then :13641 passes the name on.
+  - With both sites off the program runs (6).  With only :7004 off it runs (6).  With only :13641
+    off it gets a located «unresolved name».
+  - An all-caps OWN field of the method (`int: N 5` inside m) is not affected (6), because other
+    paths find it.
+- D-61's `R\x`: an all-caps merge-result name in an expression reaches gcc, and a lowercase one gets
+  a located «unresolved name».  It is the same rule.
+
+### Who relies on it
+
+Dynamic measurement:
+- Every tracked `.lm2` (1012 files) was translated by main's translator and by three variants:
+  both sites off, only :13641 off, only :7004 off.  The outcome compared was the exit code, the
+  first error, and a hash of the output.  Of the 1012, 419 translate and 593 are refused for other
+  reasons.
+- One file changes: unit_define_actual.lm2, plus its copy under l2src/tests.  With the rule off,
+  PROBE_DEFINE_LABEL/_FG/_OK (the `define:`s of its predef) get «unresolved name»:
+  - with :7004 off, as an unresolved dynamic input;
+  - with :13641 off, at the atom check.
+- No harness row changes.  unit_define_actual has no row, and none of the 370 rows uses a bare
+  all-caps constant.
+
+Static scan: code only (no comments, strings, `end:` lines or declarations), all 1012 files.
+- The gated tree (dev/l2src_sandbox and its l2src copy):
+  - PROBE_DEFINE_* ×3: a predef `define:`, in an expression.
+  - PROBE_UNIT_LABEL: the unit's own `define:`, in an expression.
+  - L2_TEST_OWN_COUNT (a predef `define:`) and L2_TEST_UNIT_COUNT (the unit's own): own-array
+    COUNTS.  These resolve through `l2_define_count`, not this rule, and are unchanged dynamically.
+  - Every other all-caps token is an L2 name: a Structure or merge-result name such as A, B, R, Z2,
+    E0..E69.
+- dev/mixa_sandbox is not gated, and 50 of its 54 `.lm2` files are refused today for «unknown type»
+  before any atom is checked.  Its uses:
+  - 1084 of names a predef `define:` declares;
+  - 88 of its own `define:`s;
+  - 914 uses (247 file/name pairs) of names declared nowhere in the repo.  These are C constants and
+    types from system or C headers (e.g. WIN32_FIND_DATAW), which only `c.NAME` can name.
+
+### Migration
+
+(a) The declared constants: `define:`, which is L1 that l2trans passes through (`l2_take_define`).
+    The translator already reads them:
+    - the unit's own `define:`s, in `l2_def`;
+    - the predef chain's, through `l2_predef_file_define`, used today only for own-array counts
+      (`l2_define_count`).
+
+    Generalize it: an atom that names a `define:` of the unit or of its predef chain is admitted at
+    both sites.  That is the resolution of a declared name, not spelling.  unit_define_actual needs
+    no change, and neither do mixa's 1172 uses of declared names.
+
+    The other way is `c.NAME` for these too.  That touches 4 gated sites and about 1170 mixa ones.
+(b) Any other name that no L2 declaration and no `define:` names gets a located «unresolved name».
+    C-only names go through the raw door `c.NAME`.  That is mixa's 914 uses, and 0 in the gated
+    tree.
+(c) `l2_upper_name` goes, at both sites, in the same commit as (a).
+    - Rows: the all-caps unit field read in a method gives 6 (today gcc); unit_define_actual gets a
+      row; D-61's `R\x` gets a located refusal until D-61 itself lands.
+    - Mixa's move to `c.NAME` is separate work: mixa is not gated, and its sources are behind on
+      types too.
+
+Q6 (fable/author): is a `define:` name, the unit's own or a predef's, a declared name the translator
+resolves (a)?  Or does everything that is not L2 go through `c.`?  I recommend (a): the translator
+already treats these names as declarations for array counts.
+
+## 6. T4 k.1: op-trees for walkable method bodies (read-only plan)
+
+### Facts (main a952dd5)
+
+- The walker already runs a walked callee.
+  - CALL `[call, code, data, rtype, args...]` dispatches on `code\native`.  When native is 0 it
+    calls `lmx_walk_activate(code, data, refs, n)`.
+  - ARG k reads the k-th reference passed in.
+  - OWN, SET and PUT read and write the cells of `data` when the holder is the activation's code
+    (`lmx_walk_data_holder`, lmx_walk.lm1 :479).
+  - RET hands back a value.
+  - The arity is the highest ARG k + 1 (`lmx_walk_arg_arity`), checked when native is 0.
+  - The body is the OP frames among the code Structure's DIRECT children.  `lmx_walk_body` scans
+    from slot 0 and skips non-op slots: header parts and own fields.
+- `lmx_call_prim`, the dynamic call from native code, walks a native-0 callee only if it has no
+  args and returns int, and it ignores data (lmx_call.lm1 :155-:169, «stays nullary until k.4»).  A
+  native caller of a walked method with args is a kernel gap, G-call below.
+- The root's op-tree is built by `l2_rw_*`: l2trans :16753-:18620, 49 functions, in two passes
+  (count, then emit from `l2_rw_base` into the unit).  Only 9 lines name the root's holder
+  (`l2_entry_unit`): the OWN holder, the CALL code and data refs, and the PRIM owner.
+- A method occurrence (form A, `l2_emit_parts` :20948): args@0, return@1 (the result cell), own
+  fields from slot 2 (`l2_own_mslot`), width `l2_m_kids(i)`, native = `<sym>_tr`.
+- A correction to §2(2e): only the role RECORDS (LmxOp, `LMX_DOMAIN_KIND_OP`) are terminals for the
+  copier and for `lmx_fresh`.
+  - An OP FRAME is an ordinary Structure (`lmx_walk_plain` → `lmx_struct_new_owned(parent)`).
+  - So frames whose parent is M are deep-copied by `lmx_fresh` on every re-entry («Control-body /
+    field-only Structure whose parent is the prototype: recurse», lmx_fresh.lm1 :49-:57).
+  - Any merge that copies M copies them too.
+
+### (1) Which bodies
+
+- At run time a method body is walked only when a CALL reaches an occurrence whose native is 0.
+  - Today every method's native is its trampoline, and a Structure merge keeps `A: fn: M` by address
+    (Q22 = II).  So nothing walks a method body yet.
+  - The first need is T5: the result of a callable merge (native 0 by the kernel), whose body is the
+    model operand's frames (Q2).  Then T6 needs addN's frames, and T7 the frames of the converter's
+    callable occurrence.
+- implements needs no op-tree: `lmx_implements` compares structure and never interprets.
+- Proposal: emit the op-tree of EVERY method whose body is in the walkable subset, always.
+  - The native word stays, so direct and dynamic calls stay native.
+  - The graph then carries each method's code, as the doctrine says (one graph = code + data), and
+    T5 only picks the frames.
+- Alternative, for smaller graphs: only the operands of a callable merge (none before T5), plus a
+  test knob.
+- I recommend «always» once K-OT1 below is in.  Without it, every re-entry copies the frames, which
+  argues for the alternative.
+- A method outside the subset gets no frames.  That is not a refusal: the refusal comes where a walk
+  is needed, at T5's merge site («a callable merge needs a walkable body: <class>»).
+
+### (2) Emission form, beside the native entry
+
+- The frames are M's own children after its own fields, from slot `l2_m_head` + own count.
+  `l2_m_kids(i)` grows by the step count.  No field slot moves, so the native code (direct cells by
+  slot) is unchanged.
+- They are built in the program build right after `l2_emit_parts(i)`, by the `l2_rw_*` builder
+  parametrized by the method:
+  - holder = M's occurrence (`lmx_arena_ref_struct(l2_entry_unit, l2_unit_base + i)`) instead of
+    the unit, or no holder (K-OT2);
+  - own slot = `l2_own_mslot`;
+  - formal j → ARG j;
+  - `return: V` → RET V.  The root rewrites value returns into tails; a method keeps them.
+  - CALL passes the callee as data, or FRESH on re-entry (`l2_reenters`), as the root does.
+- The `l2_rw_*` state is global (`l2_rw_n`, `l2_rw_base`, `l2_rw_steps`), so it becomes per method.
+
+### (3) The operator subset
+
+- The subset is the root's: the walker's roles LIT, OWN, AT, PUT, SET, the arithmetic and
+  comparisons, IF, WHILE, OF, DEREF, PUT_OF, PUT_REF, PRIM, CALL, FRESH and RET.  Methods add ARG
+  and RET V.
+- The classes the root still refuses stay out, and such a method gets no frames.  From the needles
+  of the root-pending rows:
+
+  | Refused class | Rows |
+  |---|---|
+  | arrays | 10 |
+  | Structure values (root merge; T3) | 9 |
+  | throw and catch | 7 |
+  | field paths | 4 |
+  | non-number call inputs | 4 |
+  | loops | 3 |
+  | conversions | 2 |
+  | admission | 2 |
+  | dynamic inputs | 2 |
+  | `&&` and `\|\|` | 2 |
+  | strings | 1 |
+  | reference assignment | 1 |
+  | non-number results | 1 |
+  | other | 1 |
+
+- A Structure formal: ARG gives the reference, and OF or DEREF read through it.  Callable formals
+  stay out at first.
+
+### (4) Kernel dependencies (the walker is Sonnet's, after K1)
+
+- K-OT1: OP frames are code.  `lmx_fresh` and the copier keep them by address: structurally, a
+  Structure whose child 0 is an OP role record.  Then a re-entry's fresh data and a merge copy carry
+  no copy of the code.  Mutant: a frame copied per re-entry.
+- K-OT2: frames shareable between occurrences of the same layout.
+  - The problem: T5 hands the model's frames to the merge result R.  Their OWN holder is M, but the
+    running code is R, so `lmx_walk_data_holder` does not map M to data.
+  - Proposal: the method's own-field frames name no holder, meaning «this activation's data»: an
+    OWN/SET/PUT form without a holder, or holder = 0.  That is exactly what makes the model's frames
+    valid on R, because merge keeps every model slot in place (§4).
+  - If the kernel takes that form, T4 emits it from the start.  Otherwise T4 emits holder = M, and
+    T5 has to rebuild the frames.
+- G-call: `lmx_call_prim` walking a native-0 callee with args, data and a typed dest (today it is
+  nullary, int and ignores data).
+  - It is needed once native code dynamically calls a walked result, e.g. T5's `add5: 1` inside a
+    method body.
+  - The walker's own CALL already does this.
+- Structural consumers that iterate an occurrence's children will now see frames:
+  - a method occurrence's merge width, which only matters in callable merges (K3);
+  - implements, which compares parts (to verify on a row);
+  - harness check 79 (first own child) is unaffected.
+
+### (5) Witness and fixture volume
+
+- A differential run.  A translator knob (`--walk-methods`, test only) sets native = 0 on every
+  method that has frames.
+  - The root's CALLs then walk those methods, while native-to-native calls stay native.
+  - Every eternal-runs row runs both ways and must give the same exit.  139 of the 160 eternal-runs
+    rows declare methods (261 methods in all).
+  - A method outside the subset keeps its native, and the build says so.
+- Direct rows: a method with formals, own fields, a value return, recursion (FRESH), a loop, and a
+  call chain.  The rows for the refused classes come with T5.
+- Mutants: ARG off by one; RET without its value; the unit as OWN holder; re-entry without FRESH.
+
+Order:
+1. K-OT1 and K-OT2 decided (Sonnet, after K1 or with it).
+2. T4a (translator): `l2_rw_*` parametrized by method, frames after the fields, the knob and the
+   differential run.
+3. T4b: the direct rows.
+4. G-call before T5.
+
+Questions:
+- Q4: emit always (recommended, with K-OT1), or only for merge operands plus the knob?
+- Q5 (K-OT2): holder-less own-field frames («this activation's data») as the form for a method's own
+  fields?

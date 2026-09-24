@@ -601,3 +601,19 @@ ticket's own read-only constraint.
    pass) so §4.1's two OPEN verification items can be closed before the coding commit.
 
 See [[lmx-coordination-state]] for the running session index.
+
+## Addendum, 2026-09-24 (Sonnet c.3): L3's own `L3_NODE_CALL` has no args tail — conscious limitation
+
+c.2 (kernel) and c.3 (`dev/l3_interp/` — never itself migrated in c.2, was unbuildable the whole
+time on the deleted `l2src/lmx_plan.lm1`) both landed; this ticket's own scope was always the
+kernel/L3 *migration* off the child[0] descriptor, not new L3 language features. One place that
+distinction mattered: fable's ruling on c.3 (bare-occurrence auto-invoke retired in L3 too, same
+rule as L2's — "declaring/constructing a Structure never executes it; only an explicit call does")
+required a new `L3_NODE_CALL`, mirroring L2's `[call, code, data, rtype, args...]` shape. L3's own
+op set has no formal-parameter op (no `L3_NODE_ARG`) and `L3Frame` (`l3_recv.h.lm1`) carries no
+`args` field at all — nothing in L3 can *receive* an argument today. Building the `args...` tail
+onto `L3_NODE_CALL` regardless, to mirror L2's shape structurally, would have been unused,
+untested machinery with no way to ever exercise it: a call in L3 is, and stays, nullary. Landed
+`L3_NODE_CALL` as `[call, code, data, rtype]` only, documented at its definition
+(`l3_recv.h.lm1`). Adding real argument-passing to L3 (an `L3_NODE_ARG` and an `args` field on
+`L3Frame`) is a new feature for a future ticket, not part of this migration.

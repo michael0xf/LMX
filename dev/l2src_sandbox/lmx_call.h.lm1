@@ -81,12 +81,13 @@ prototype:
     fn: lmx_call_note_walk_fail (int: st) void
     fn: lmx_call_clear_walk_fail () void
     fn: lmx_call0 (@: LmxArena arena; @: Lmx callable) int
-    # THE DYNAMIC CALL: every call whose callee is known only at run time, in the prim ABI.
-    # METHOD.addr != 0: the method's trampoline, called as it is.  METHOD.addr == 0: the walk
-    # hook, nullary, whose int is the activation's value.  The return is 0 or the callee's throw
-    # status; the value comes through dest/out.  A value that is not a callable occurrence, or a
-    # walked body called with inputs, is the caller's broken promise (X1).
-    fn: lmx_call_prim (@: LmxArena arena; @: Lmx callable; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    # THE DYNAMIC CALL (-188 k.3b): every call whose callee is known only at run time, in the
+    # prim ABI.  Dispatch on CODE (child 0 / METHOD.addr; native word after k.4).  Owner = DATA
+    # = self; node = data.parent.  METHOD.addr != 0: trampoline(owner=data, ...), builds nothing.
+    # METHOD.addr == 0: the walk hook stays nullary (until k.4).  Return is 0 or the callee's
+    # throw status; the value comes through dest/out.  A code that is not a callable occurrence,
+    # or a walked body called with inputs, is the caller's broken promise (X1).
+    fn: lmx_call_prim (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
     # The LmxCallable in child[0], or null when the node is not a callable occurrence.
     fn: lmx_call_callable (@: LmxArena arena; @: Lmx node) @: LmxCallable
 end: prototype

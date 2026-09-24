@@ -513,3 +513,133 @@ Found by the per-row check (first run: 6 red), then fixed:
 - One more Q29 row: unit_own_last_occurrence numbered assignment occurrences (`test\[1]arg`).  It now
   reads the one cell: 2, then 5 after `test\arg: 5`.  Entry 7 is kept.
 - unit_fnptr_noncallable_assign (translates-with-debt): re-pinned from `l2_q0: 7` to the store.
+
+## Commit c3a: the caller passes the data
+
+Base: fable/join-k3 (main a6a79cd + Grok -188 k.3b `lmx_call_prim(arena, code, data, ...)` + k.3c
+walker CALL `[call, code, data, args...]` and FRESH op 23).  Decision (i) and Q28, as planned above.
+
+What is built:
+- Re-entry is decided from the call graph (`l2_reach_close`, after the throws closure, for a unit
+  and a library alike).
+  - `l2_m_edge` now has two bits.  Bit 1: a call of the method itself, by name or path.  Bit 2: a
+    call through a callable formal whose contract is that method.
+  - A bit-2 edge calls whichever method its actual names, so it counts as an edge to every method
+    passed by reference (`l2_m_value_used`).
+  - `l2_m_reach` is Warshall's closure over the methods.  A call in j of i is a re-entry when i
+    reaches j (`l2_reenters`): i may then be active.  A call of the method itself is one.
+- A call by name or path (native, sel 0/1) passes the occurrence itself: `l2_m<i>(M\parent, M, ...)`.
+  On a re-entry it passes `lmx_fresh(l2_program_arena, M)`, with X1 on NULL.  A method with no data
+  fields keeps its occurrence (nothing to lay out), as in c2.
+- A call by reference (a callable formal, sel 2) always makes `l2_d<t>: lmx_fresh(arena, code)` and
+  calls `lmx_call_prim(arena, code, l2_d<t>, 0, 0U, ...)`.  The caller does not know the callee's
+  prototype; the kernel makes the instance from the code.
+- The trampoline makes nothing: `owner` is the data its caller passed.  c2's callee-side
+  `l2_self: l2_new<i>(l2_self\parent)` goes.
+- c2's `l2_new<i>` (l2_emit_fresh) goes: `lmx_fresh` is the one mechanism for a fresh instance.
+  `l2_emit_cell_new` stays: the builder uses it.
+- The generated program predefs `lmx_fresh.h.lm1`.  Its body reaches the eternal driver through
+  lmx_walk.lm1 (grok_bot k.3c-fix, f6e55e1); the driver's own predef, needed before that fix, went.
+- The walked root's CALL is `[call, code, data, args...]`: code and data are both the occurrence,
+  (M, M), and the inputs move from 2 to 3.
+  - No root CALL needs `[fresh, code]`.  The root has no name (l2_make_entry), so no call and no
+    actual can name it; it is in no cycle, and no call from it is a re-entry.
+  - A `[fresh, code]` branch there would be unreachable, so it is not emitted.  The first walked
+    CALL that can be a re-entry is one inside a walked method body, which does not exist yet.
+  - The walker's FRESH node (Grok -188 k.3c) stays, for those future interpreted method bodies
+    (fable, 2026-09-25).
+
+Rows:
+- unit_fresh_instance_skipped_decl returns to 77 (Entry 77): probe's call of keep is outside any
+  cycle, so keep(0) leaves keep(1)'s 7.  Its pins: `l2_c0 lmx_arena_ref_struct(node, 1U)`, and
+  `lmx_fresh(` and `l2_new0` Absent.
+- New: unit_recursive_fresh_instance.
+  - `down` recurses (re-entry, fresh instance); r = down(3) = 123.
+  - The root's CALL of `down` passes `down` itself, so down\x is 3 afterwards.
+  - `apply` calls `seven` by reference (fresh instance), so seven\s stays 0.
+  - The exit is r + 1000 * (down\x + 100 * seven\s) - 3123 + (d - 7) = 0.
+- 15 Debt pins on a walked CALL frame's child count move up by one, for the data operand
+  (12 rows).
+- The five rows that did not compile on k3b's `lmx_call_prim` (unit_bare_in_method,
+  unit_value_call_formal, unit_dyn_call_throw_caught, unit_callable_formal_descriptor,
+  unit_matrix_callable_callable_arg) run green.
+
+Mutants (private variants; each is RED by behaviour, not only by a pin):
+- M1, no fresh instance on a re-entry: unit_recursive_fresh_instance exits -3123.
+- M2, a fresh instance on every native static call (option (ii) for native code):
+  unit_fresh_instance_skipped_decl exits 0 instead of 77.
+- M3, the root CALL's data a builder-time fresh instance instead of M: unit_recursive_fresh_instance
+  exits -3000 (down\x reads 0).
+- M4, a call by reference over the code itself (data = code): unit_recursive_fresh_instance exits
+  700000 (seven\s reads 7).
+
+Per-row check (verify2b over all 356 rows, scratch driver with lmx_fresh): 0 red after the CALL
+re-pin.  The 2 argv rows are run by the harness only.
+
+## c3b-2 plan (prep, not built): a formal-bound field is its cell after its binding line
+
+Today (measured on the c3a tree), a formal-bound own row k (`l2_m_alias` >= 0, or `l2_own_param_of`
+>= 0 through the canonical row) has no runtime selector.  Every bare read spells the parameter
+`l2_p<mi>_<fi>`, before and after the binding line (l2_prep :15444, l2_index_token :8029/:8075,
+l2_hidden_from :14768/:14775, l2_prep_addr :14942/:14956, l2_prefix_deref :7825/:7841).  A write
+goes to the parameter and copies it into `l2_q<k>` with `_dirty` (l2_emit_occ_write).  The
+checkpoint publishes the parameter, or, when `@x` was evaluated (`_sticky`/`_active`), republishes
+it over any graph write.  That republication is what the old facts pin.
+
+The rule (R2 with carry, static by position; fable):
+- Before its binding line the name is the machine argument; after it, the field.  The binding line
+  is the row's declaration (`int: na`, with or without an initializer) or its first bare assignment
+  (Q29: later ones write the same cell).
+- A binding inside an if/for body binds that body's hosted field.  Outside the body the name is
+  whatever it was before: the parameter, or an enclosing field already bound.
+- Carry: a declaration without an initializer stores the name's current value, read as the name
+  just before the line (the parameter, or an enclosing bound field).
+
+What the emitter does:
+- Keep emission-time state per own row: `l2_own_bseq[k]`, 0 before its binding line, else the
+  emission sequence number at which it was bound.
+  - At a body's exit, every row bound inside the body is cleared (bseq > the value at entry).  A
+    row's binding statement is in its host body, so exactly the rows scoped to that body are
+    cleared.
+  - A use resolves to the bound row of that name with the largest bseq (the innermost in scope), or
+    to the parameter when there is none.  One helper, used by the six spelling sites above.
+- Numeric formal-bound rows (0/1/2/3/36) become direct, like c3b-1's plain rows:
+  - prelude: `_from` only, bound eagerly; no `l2_q<k>`, `_dirty`, `_sticky` or `_active`;
+  - read: `l2_own_load(k)`; write: `l2_own_store(k, value)`; `@x`: `l2_own_addr(k)` after binding,
+    `@ l2_p` before;
+  - binding line: evaluate the RHS (or the carry) with the row still unbound, store it into the
+    cell, then mark the row bound.
+- The checkpoint neither publishes nor reloads them.  l2_emit_addr_mark, l2_emit_bind_mark and
+  l2_emit_finalize_old lose their numeric cases.
+  - Pointer formal-bound rows keep the old machinery until c3b-3 (pointer own fields), so the sticky
+    code goes with c3b-3.
+- The harness's BindOrder assertion (Test-BindOrder, on 8 rows) asserts the sticky machinery's text
+  order.  It goes where that machinery goes: c3b-2 for the numeric rows, and the function with c3b-3.
+
+Facts, predicted by the rule.  Every changed line is printed after `M\x: v` wrote a bound name's
+field, so it shows v:
+- unit_arg_addr_sticky: A2 100 100, A4 200 200, B+ 200 200, C3 100 100, D1 100 100, D0 100 100,
+  E 100 100 (§4).
+- unit_arg_addr_dynamic: IA2, IA4, IB+, IC3 and ZA2, ZA4, ZB+, ZC3 the same way (§4).
+- unit_occ_sticky_selector: BEFORE 100 100, AFTER 100 100 (§4).
+- Not in §4's table, found reading the fixtures:
+  - unit_arg_addr_types: U 100 100, Z local/graph 100, L local/graph 100 (today 51 and 71/81);
+  - unit_arg_addr_dyn_types: U2, L2, F2 100 100 (today 6 6);
+  - unit_arg_addr_ordinary: OC3 100 100, OE 100 100, OD3 100 100 (today 9 9, 6 6, 9 9).
+  Sonnet's -190 inventory predicted these three rows unchanged.  They are the same sticky shape
+  (address taken before or after the binding, then `M\x: 100`), so I expect them to change.  The
+  build measures it.
+- Unchanged: the `5 100` / `7 100` lines, unit_occ_snapshot_selector (BETWEEN 2, LAST 9: every read
+  is after the binding), unit_arg_addr_pointer (a pointer row, c3b-3), and the CALLER line.
+
+Witnesses:
+- A new row for the body scope: a formal bound by a bare assignment inside an `if`, read inside and
+  after the body.  Inside it is the body's field; after it, the parameter.
+- Mutants, each to be RED by behaviour:
+  - MB1: never bound (always the parameter);
+  - MB2: bound from entry (R1): the `5 100` lines become `100 100`;
+  - MB3: no carry: A1 becomes `1 1`;
+  - MB4: a body's bindings not cleared at its exit: the new row.
+
+Order: after c3a lands on main.  c3b-3 (pointer own fields, `Model: m` / received `m`) follows as
+its own commit.

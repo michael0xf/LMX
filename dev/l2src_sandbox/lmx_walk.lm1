@@ -1,5 +1,6 @@
 predef: "l2src/lmx_walk.h.lm1"
 predef: "l2src/lmx_call.h.lm1"
+predef: "l2src/lmx_fresh.lm1"
 predef: "l2src/lmx_implements.h.lm1"
 predef: "l2src/lmx_range.lm1"
 predef: "l2src/lmx_arena_refs.lm1"
@@ -9,13 +10,15 @@ predef: "l2src/lmx_scratch.lm1"
 predef: "l2src/lmx_plan.lm1"
 predef: "l2src/lmx_primitive.h.lm1"
 predef: "l1src/libc_abi.lm1"
-include: "<string.h>"
+include: "<stdio.h>" "<string.h>"
 
 prototype:
     fn: lmx_walk_arg_arity_node (@: LmxWalkFrame f; @: void node; @: size_t need) int
     fn: lmx_walk_arg_arity (@: LmxWalkFrame f; @: Lmx node) size_t
     fn: lmx_walk_call0_dispatch (@: LmxArena arena; @: Lmx callable) int
     fn: lmx_walk_callable_addr (@: LmxArena arena; @: Lmx node) LmxEntry
+    fn: lmx_walk_fresh (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) int
+    fn: lmx_walk_data_holder (@: LmxWalkFrame f; @: void holder) @: void
 end: prototype
 
 # Same question as lmx_call_ready, asked here so this unit does not link against call.o
@@ -507,6 +510,8 @@ fn: lmx_walk_slot (@: LmxWalkFrame f; @: Lmx code; size_t: first) @@: void
     holder: lmx_arena_ref_value(code, first)
     if: holder = 0
         return: 0
+    # -188 k.3c: when holder is the code occurrence family, use activation data (f\node).
+    holder: lmx_walk_data_holder(f, holder)
     # -177 c4 / D-54 X1: a fixed holder must be a plain Structure reference, not an OP node.
     # Asked via role-of-head without lmx_walk_kind (that door counts classified).
     # Mutant: accept DEREF as holder -> silent write into the node RED.
@@ -518,6 +523,33 @@ fn: lmx_walk_slot (@: LmxWalkFrame f; @: Lmx code; size_t: first) @@: void
     if: f\counting != 0 && lmx_walk_kind(f, holder) != c.LMX_KIND_STRUCT
         return: 0
 return: lmx_arena_ref_cell((cast: (@: Lmx) holder), lmx_size_value_known(lmx_arena_ref_value(code, first + 1U)))
+
+# -188 k.3c: OWN/SET/PUT target = data. Hand fixtures name the code occurrence as holder;
+# when the activation node (data) shares child0 (callable) with that holder, use data.
+fn: lmx_walk_data_holder (@: LmxWalkFrame f; @: void holder) @: void
+    @: void a 0
+    @: void b 0
+    if: f = 0 || holder = 0 || f\node = 0
+        return: holder
+    ---
+    if: holder = (cast: (@: void) f\node)
+        return: holder
+    ---
+    if: lmx_domain_kind(f\arena, holder) != c.LMX_KIND_STRUCT
+        return: holder
+    ---
+    if: lmx_domain_kind(f\arena, (cast: (@: void) f\node)) != c.LMX_KIND_STRUCT
+        return: holder
+    ---
+    a: lmx_arena_ref_value((cast: (@: Lmx) holder), 0U)
+    b: lmx_arena_ref_value(f\node, 0U)
+    if: a = 0 || a != b
+        return: holder
+    ---
+    if: lmx_domain_kind(f\arena, a) != c.LMX_DOMAIN_KIND_CALLABLE
+        return: holder
+    ---
+return: (cast: (@: void) f\node)
 
 fn: lmx_walk_own_in (@: LmxWalkOwn set; size_t: count; @@: void from) @: LmxWalkOwn
     @: LmxWalkOwn o 0
@@ -647,8 +679,8 @@ fn: lmx_walk_scan_node (@: LmxWalkFrame f; @: void node) int
         ---
         return: status
     # The operands that are nodes: put [put, holder, slot, value] from 3, call
-    # [call, M, arg ...] from 2, everything else from 1.
-    # A call's children from 2 are its arguments, one each (-133): P0 normalizes the
+    # [call, code, data, args...] data+args from 2, everything else from 1.
+    # A call's children from 3 are its arguments, one each (-133): P0 normalizes the
     # sole anonymous argument container (-127, bc22881/e446835) and the translator no
     # longer unwraps one (6ca54c9), so a plain Structure among them is a Structure
     # argument -- data passed by reference, not a node to scan.
@@ -656,16 +688,20 @@ fn: lmx_walk_scan_node (@: LmxWalkFrame f; @: void node) int
     # reference (-174 c2), not a body node -- same OP_NONE skip as call args.
     i: 1U
     if: op = c.LMX_WALK_OP_CALL
-        # D-04: argument count vs callee at prepare, same rule as lmx_walk_call entry.
+        # -188 k.3c: [call, code, data, args...]. D-04 arity vs code; data at 2 may be a frame (FRESH).
         # Native trampoline (METHOD.addr != 0): no ARG body nodes; trampoline checks nargs (X1).
+        if: (cast: (size_t) code\len) < 3U
+            return: c.LMX_WALK_INVALID
+        ---
         target: lmx_arena_ref_value(code, 1U)
         if: target = 0 || lmx_walk_kind(f, target) != c.LMX_KIND_STRUCT
             return: c.LMX_WALK_INVALID
         if: lmx_walk_callable_addr(f\arena, (cast: (@: Lmx) target)) = 0
-            if: (cast: (size_t) code\len) - 2U != lmx_walk_arg_arity(f, (cast: (@: Lmx) target))
+            if: (cast: (size_t) code\len) - 3U != lmx_walk_arg_arity(f, (cast: (@: Lmx) target))
                 return: c.LMX_WALK_INVALID
             ---
         ---
+        # Scan data (2) and args (from 3): plain Structure refs are not body nodes.
         i: 2U
         while: status = c.LMX_WALK_OK && i < (cast: (size_t) code\len)
             child: lmx_arena_ref_value(code, i)
@@ -836,7 +872,9 @@ fn: lmx_walk_arg_arity_node (@: LmxWalkFrame f; @: void node; @: size_t need) in
         return: c.LMX_WALK_OK
     ---
     i: 1U
-    if: op = c.LMX_WALK_OP_CALL || op = c.LMX_WALK_OP_PRIM
+    if: op = c.LMX_WALK_OP_CALL
+        i: 3U
+    if: op = c.LMX_WALK_OP_PRIM
         i: 2U
     if: op = c.LMX_WALK_OP_PUT
         i: 3U
@@ -945,13 +983,37 @@ return: c.LMX_WALK_OK
 # with the rewind below, after the callee has returned.  The callee's destination is
 # this node's own destination, so an integer result lands where this node's consumer
 # expects it and needs no copy on the way.
+# -188 k.3c: [fresh, code] -> lmx_fresh; NULL = X1 (stderr + abort).
+fn: lmx_walk_fresh (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) int
+    @: Lmx proto 0
+    @: Lmx made 0
+    \out: 0
+    if: f = 0 || code = 0 || (cast: (size_t) code\len) < 2U
+        return: c.LMX_WALK_INVALID
+    ---
+    proto: lmx_arena_ref_struct(code, 1U)
+    if: proto = 0
+        return: c.LMX_WALK_INVALID
+    ---
+    made: lmx_fresh(f\arena, proto)
+    if: made = 0
+        c.fprintf(l1_stderr(), "lmx: fresh refused (NULL)\n")
+        c.abort()
+    ---
+    \out: (cast: (@: void) made)
+return: c.LMX_WALK_OK
+
 fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) int
     LmxScratchMark: mark
     @: LmxScratchMark pm 0
     @: Lmx callee 0
+    @: Lmx data 0
     @: Lmx child 0
+    @: void data_child 0
+    @: void data_ref 0
     @: void room 0
     @: void call_dest 0
+    @: void data_cell 0
     @@: void refs 0
     @@: void cells 0
     LmxEntry: addr 0
@@ -962,23 +1024,18 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
     int: status c.LMX_WALK_OK
     int: said 0
     \out: 0
-    if: code\len < 2
+    # -188 k.3c: [call, code, data, args...]. Mutant: len < 3 (no data) -> INVALID.
+    if: (cast: (size_t) code\len) < 3U
         return: c.LMX_WALK_INVALID
-    # The callee is the occurrence M itself, by reference -- an operand, read as the
-    # builder's proof; its own entry is what asks the arena whether it is a callable.
+    ---
+    # code = occurrence used for dispatch (child 0 / METHOD.addr).
     callee: lmx_arena_ref_struct(code, 1U)
     if: callee = 0
         return: c.LMX_WALK_INVALID
-    # The arguments are the children from 2, one each, whatever they hold (-133): the
-    # sole anonymous argument container is P0's to normalize, one level, for every
-    # head (-127), and a Structure among the children is a Structure argument.
-    n: (cast: (size_t) code\len) - 2U
-    # Native trampoline (METHOD.addr != 0): prim ABI; arity is the trampoline's nargs
-    # check (X1 on mismatch), never ARG-body counting. addr == 0: today's walk + D-04.
+    ---
+    n: (cast: (size_t) code\len) - 3U
     addr: lmx_walk_callable_addr(f\arena, callee)
     if: addr = 0
-        # D-04: refuse a wrong count at entry (native does). Extra Structure to a nullary
-        # callee must not be ignored because the body never reads ARG.
         if: n != lmx_walk_arg_arity(f, callee)
             return: c.LMX_WALK_INVALID
         ---
@@ -986,9 +1043,31 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
     pm: @ mark
     if: lmx_scratch_mark(f\context\scratch, pm) != c.LMX_SCRATCH_OK
         return: c.LMX_WALK_INVALID
-    if: n != 0U
+    ---
+    # Evaluate data (child 2) first: plain Structure by ref, else frame (e.g. FRESH).
+    data_child: lmx_arena_ref_value(code, 2U)
+    if: data_child = 0
+        status: c.LMX_WALK_INVALID
+    else:
+        if: lmx_walk_op(f, data_child) = c.LMX_WALK_OP_NONE
+            if: lmx_walk_kind(f, data_child) != c.LMX_KIND_STRUCT
+                status: c.LMX_WALK_INVALID
+            ---
+            data: (cast: (@: Lmx) data_child)
+        else:
+            status: lmx_walk_eval(f, data_child, (cast: (@: void) (@ data_cell)), @ data_ref)
+            if: status = c.LMX_WALK_OK
+                data: (cast: (@: Lmx) data_ref)
+                if: data = 0 || lmx_walk_kind(f, (cast: (@: void) data)) != c.LMX_KIND_STRUCT
+                    status: c.LMX_WALK_INVALID
+                ---
+            ---
+        ---
+    ---
+    if: n != 0U && status = c.LMX_WALK_OK
         if: lmx_scratch_take(f\context\scratch, (n * 2U) * c.sizeof(@: void), @ room) != c.LMX_SCRATCH_OK
             status: c.LMX_WALK_NOMEM
+        ---
         refs: (cast: (@@: void) room)
         cells: refs + n
     ---
@@ -996,9 +1075,7 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
     while: status = c.LMX_WALK_OK && i < n
         refs[i]: 0
         cells[i]: 0
-        child: (cast: (@: Lmx) lmx_arena_ref_value(code, i + 2U))
-        # An argument that is plain data (no frame role) -- a Structure, a cell -- is
-        # passed by reference; a frame node is evaluated (LIT/ARG/OWN/...).
+        child: (cast: (@: Lmx) lmx_arena_ref_value(code, i + 3U))
         if: child != 0 && lmx_walk_op(f, (cast: (@: void) child)) = c.LMX_WALK_OP_NONE
             refs[i]: (cast: (@: void) child)
         else:
@@ -1006,34 +1083,26 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
         ---
         i: i + 1U
     ---
-    # -188 k.2: checkpoint is a no-op; SET already wrote cells before the call.
     if: status = c.LMX_WALK_OK
         status: lmx_walk_checkpoint(f)
     ---
     if: status = c.LMX_WALK_OK
         if: addr != 0
-            # G1: call through prim ABI. owner = occurrence; trampoline passes l2_msg = 0.
-            # Status: LmxCallable METHOD trampoline nonzero k is that method's S1.1 throw
-            # number and must reach the walk caller as k -- distinct from LMX_WALK_PRIMITIVE
-            # (LmxPrimitive record path in lmx_walk_prim). Told apart by the descriptor
-            # record: LmxCallable here vs LmxPrimitive there (domain kind CALLABLE vs PRIMITIVE).
-            # -174 c4: dest is a fresh typed cell of the callee result type when the consumer
-            # handed an int temp (size_t trampoline writes 8 into 4 otherwise).
+            # Native: entry(owner=data); dispatch word from code. Walk does not link call.o
+            # (duplicate symbols); same owner=data rule as lmx_call_prim.
             entry: (cast: (LmxPrimitiveEntry) addr)
             if: lmx_walk_call_dest(f, dest, lmx_walk_callable_result_type(f\arena, callee), @ call_dest) != c.LMX_WALK_OK
                 status: c.LMX_WALK_INVALID
             ---
             if: status = c.LMX_WALK_OK
-                said: entry((cast: (@: void) callee), refs, n, call_dest, out)
+                said: entry((cast: (@: void) data), refs, n, call_dest, out)
             ---
             if: said != 0
-                # D-37: throw k is LMX_WALK_THROWN + k, never a walker error code.
                 status: c.LMX_WALK_THROWN + said
             ---
         else:
-            status: lmx_walk_activate(f\context, callee, refs, n, dest, out, @ present)
-            # Descriptor-only callee: call_ready but no walkable plan/body. Prefer
-            # NOT_CALLABLE over a bare NO_GRAPH when that distinction holds.
+            # Walked body: activate with node = data (OWN/SET/PUT target = data).
+            status: lmx_walk_activate(f\context, data, refs, n, dest, out, @ present)
             if: (status = c.LMX_WALK_NO_GRAPH || status = c.LMX_WALK_NOT_CALLABLE) && lmx_walk_is_callable(f\arena, callee) != 0
                 status: c.LMX_WALK_NOT_CALLABLE
             ---
@@ -1521,6 +1590,8 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
         return: c.LMX_WALK_OK
     if: op = c.LMX_WALK_OP_PRIM
         return: lmx_walk_prim(f, code, dest, out)
+    if: op = c.LMX_WALK_OP_FRESH
+        return: lmx_walk_fresh(f, code, dest, out)
     if: op = c.LMX_WALK_OP_CALL
         return: lmx_walk_call(f, code, dest, out)
     if: op = c.LMX_WALK_OP_EXPECT_INT

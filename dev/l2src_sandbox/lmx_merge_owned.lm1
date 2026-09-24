@@ -354,3 +354,35 @@ fn: lmx_merge_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: L
     if: retain_profile = 0
         return: lmx_merge_profiles_owned(operands, count, body, container, dst_chars, src_arena, dst_arena, 0, 0U, overrides, override_count, out)
 return: lmx_merge_profiles_owned(operands, count, body, container, dst_chars, src_arena, dst_arena, @ retain_profile, 1U, overrides, override_count, out)
+
+
+# -174 c3: Model: m = merge(Model, empty) as one kernel PRIM over lmx_merge_owned.
+# Lives here (not walk.lm1) so walk selftests do not link merge.o. Declared in lmx_walk.h.lm1.
+# Opus: LmxPrimitive.fn = lmx_walk_merge_model; owner = (cast: (@: Lmx) program_arena);
+# PRIM [prim, record, model]; null override map (-161 c1 arity). Result Structure in \out.
+# Mutant: drop this / leave \out 0 -> Model: m yields 0 RED.
+# Status 0/1 = LMX_PRIMITIVE_OK/FAIL (same numbers; no primitive.h predef here -- link closure).
+fn: lmx_walk_merge_model (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    @: LmxArena arena 0
+    @: Lmx model 0
+    @: Lmx container 0
+    @: Lmx result 0
+    @: Lmx op0 0
+    int: status
+    \out: 0
+    if: owner = 0 || refs = 0 || out = 0 || nargs != 1U
+        return: 1
+    ---
+    arena: (cast: (@: LmxArena) owner)
+    model: (cast: (@: Lmx) refs[0])
+    if: model = 0 || lmx_range_classify(arena, (cast: (@: void) model)) != c.LMX_KIND_STRUCT
+        return: 1
+    ---
+    container: model\parent
+    op0: model
+    status: lmx_merge_owned(@ op0, 1U, 0, container, 0, arena, arena, 0, 0U, @ result)
+    if: status != c.LMX_MERGE_OK || result = 0
+        return: 1
+    ---
+    \out: (cast: (@: void) result)
+return: 0

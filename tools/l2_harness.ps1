@@ -850,7 +850,7 @@ $fixtures = @(
                  'fn: l2_m3 (@: Lmx node; @: Lmx self; @: Lmx l2_msg; @@: Lmx l2_out_throw) int',
                  'l2_m3(l2_c0\parent, l2_c0, l2_msg, @ l2_te1)',
                  'l2_m0(l2_c2\parent, l2_c2, l2_msg, @ l2_t3, @ l2_te3)',
-                 'l2_rw1 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw0, c.LMX_WALK_OP_CALL, 3U)', 'if: lmx_arena_ref_store(l2_rw1, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 3U))) != 0',
+                 'l2_rw1 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw0, c.LMX_WALK_OP_CALL, 4U)', 'if: lmx_arena_ref_store(l2_rw1, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 2U))) != 0',
                  'l2_out_throw[0]: 0',
                  'c.fprintf(c.stderr, "lmx: invariant: merge result check 71\n")',
                  'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ') },
@@ -880,7 +880,7 @@ $fixtures = @(
     # statement inside a method E calls, the second the `Model: fresh` merge in E itself; the
     # third is a refused admission, thrown inside a method E calls, which arrives as 2.
     [pscustomobject]@{ Name = 'unit_s1_merge_uncaught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; MergeFail = 1; Stopped = 1; Thrown = 1;
-        Absent = @('l2_out_throw[0]: node'); Debt = @('l2_out_throw[0]: 0', 'return: l2_ts', 'l2_rw1 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw0, c.LMX_WALK_OP_CALL, 3U)', 'if: lmx_arena_ref_store(l2_rw1, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 1U))) != 0') },
+        Absent = @('l2_out_throw[0]: node'); Debt = @('l2_out_throw[0]: 0', 'return: l2_ts', 'l2_rw1 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw0, c.LMX_WALK_OP_CALL, 4U)', 'if: lmx_arena_ref_store(l2_rw1, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 0U))) != 0') },
     # -178 commit 2: `P: q` is the walker's merge primitive now, and the row translates -- but it is not
     # run: the primitive's failure is LMX_WALK_PRIMITIVE (X1), not the implicit throw `merge` (E's
     # 0 + 1), and the driver's mergefail tap does not reach the kernel's own merge.  D-55: it runs
@@ -894,9 +894,9 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_s1_merge_profiles_uncaught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('2'); Fails = 1; MergeFail = 1; Stopped = 1; Thrown = 1;
         Absent = @('l2_out_throw[0]: node');
         Debt = @('lmx_merge_profiles_owned(l2_mops, 2U, l2_mbody, node, 0, l2_program_arena, l2_program_arena, l2_mprofiles, 2U, 0, 0U, @ l2_mresult)',
-                 'l2_out_throw[0]: 0', 'return: l2_ts', 'l2_rw1 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw0, c.LMX_WALK_OP_CALL, 3U)', 'if: lmx_arena_ref_store(l2_rw1, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 1U))) != 0') },
+                 'l2_out_throw[0]: 0', 'return: l2_ts', 'l2_rw1 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw0, c.LMX_WALK_OP_CALL, 4U)', 'if: lmx_arena_ref_store(l2_rw1, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 0U))) != 0') },
     [pscustomobject]@{ Name = 'unit_s1_implements_uncaught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
-        Absent = @('l2_out_throw[0]: node'); Debt = @('l2_out_throw[0]: 0', 'return: l2_ts', 'l2_rw1 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw0, c.LMX_WALK_OP_CALL, 3U)', 'if: lmx_arena_ref_store(l2_rw1, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 2U))) != 0') },
+        Absent = @('l2_out_throw[0]: node'); Debt = @('l2_out_throw[0]: 0', 'return: l2_ts', 'l2_rw1 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw0, c.LMX_WALK_OP_CALL, 4U)', 'if: lmx_arena_ref_store(l2_rw1, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 1U))) != 0') },
     # A `return:` trailer of a method on the throw ABI returns its value through the normal output
     # with status 0, as a `return:` in the body does: the row completes with the value.
     [pscustomobject]@{ Name = 'unit_s1_trailer_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 5; Stopped = 0;
@@ -923,8 +923,10 @@ $fixtures = @(
         Absent = @();
         Debt = @('lmx_arena_ref_store(l2_tp1, 0U, (cast: (@: void) l2_p0_0))', 'lmx_size_store_known(l2_tc1, 9U)') },
     # The intern carries the ordered names: a and c share a signature, d and e differ by order only.
+    # -189 c4: no sig word carries it into the graph any more (the signature is the args/return
+    # parts); the throws lists are the translator's check (l2_check_throws_handled).
     [pscustomobject]@{ Name = 'unit_s1_throws_intern.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
-        Absent = @('c.LMX_WALK_RESULT_SIG_MARK) | 1536U)'); Debt = @('c.LMX_WALK_RESULT_SIG_MARK) | 1280U)') },
+        Absent = @('LMX_WALK_RESULT_SIG_MARK'); Debt = @() },
     # `return: f` of a callable on the throw channel is called on that channel (it was called with
     # node and self alone, which gcc refused), and a throw passes through it like through any call.
     [pscustomobject]@{ Name = 'unit_s1_return_callable_throw_abi.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 5; Stopped = 0;
@@ -1071,14 +1073,19 @@ $fixtures = @(
     # and two types in one operation are a conversion, refused (unit_addr_arg).
     [pscustomobject]@{ Name = 'unit_root_typed_numerics.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 63;
         Absent = @(); Debt = @('lmx_walk_store_size(l2_program_arena, l2_rw', ', 1U, 41U) != c.LMX_WALK_OK', 'lmx_walk_store_char(l2_program_arena, l2_rw') },
-    # A CALL'S RESULT OF A WIDER TYPE (FABLE-OPUS-ROOT-STRUCTS-20260925-178 commit 1; -174 c4): a method
-    # record's sig is LMX_WALK_RESULT_SIG_MARK | (signature id << 8) | the result's type, so the walk
-    # hands a size_t trampoline a size_t cell; the id keeps equal sigs equal signatures (runtime
-    # implements), which the second row pins: two size_t methods with different inputs, ids 1 and 2.
+    # A CALL'S RESULT OF A WIDER TYPE (FABLE-OPUS-ROOT-STRUCTS-20260925-178 commit 1; -174 c4; -189 c4):
+    # the CALL's rtype operand is the callee's result cell in its `return` part, by reference, so the
+    # walk hands a size_t trampoline a size_t cell.  The second row: two size_t methods with
+    # different inputs, each CALL referring to its own callee's return cell.
     [pscustomobject]@{ Name = 'unit_root_call_wide.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 1;
-        Absent = @(); Debt = @('c.LMX_WALK_RESULT_SIG_MARK) | 256U) | (cast: (unsigned) c.LMX_TYPE_SIZE_T))') },
+        Absent = @('LMX_WALK_RESULT_SIG_MARK'); Debt = @('if: lmx_arena_ref_store(l2_rw1, 3U, lmx_arena_ref_value(lmx_arena_ref_struct(lmx_arena_ref_struct(l2_entry_unit, 3U), 1U), 0U)) != 0') },
     [pscustomobject]@{ Name = 'unit_method_sig_distinct.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 3;
-        Absent = @(); Debt = @('c.LMX_WALK_RESULT_SIG_MARK) | 256U) | (cast: (unsigned) c.LMX_TYPE_SIZE_T))', 'c.LMX_WALK_RESULT_SIG_MARK) | 512U) | (cast: (unsigned) c.LMX_TYPE_SIZE_T))') },
+        Absent = @('LMX_WALK_RESULT_SIG_MARK'); Debt = @('lmx_arena_ref_store(l2_rw2, 3U, lmx_arena_ref_value(lmx_arena_ref_struct(lmx_arena_ref_struct(l2_entry_unit, 3U), 1U), 0U))', 'lmx_arena_ref_store(l2_rw4, 3U, lmx_arena_ref_value(lmx_arena_ref_struct(lmx_arena_ref_struct(l2_entry_unit, 4U), 1U), 0U))') },
+    # D-03 (-189 c4): a callable named at the walked root is an explicit CALL the translator emits --
+    # the walker calls nothing on its own; a bare statement drops the result, a value takes it.
+    [pscustomobject]@{ Name = 'unit_root_bare_callable_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
+        Absent = @(); Debt = @('l2_rw0 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_entry_unit, c.LMX_WALK_OP_CALL, 4U)',
+                 'l2_rw2 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw1, c.LMX_WALK_OP_CALL, 4U)') },
     # STRUCTURE-TYPED ROOT FIELDS (-178 commit 2): `Model: m` is the walker's merge primitive (-174 c3)
     # stored by reference into m's pointer cell (-174 c2); `m\value` opens the reference (DEREF, -174 c1)
     # and takes the field (OF); `Model\value: 7U` writes the named Structure itself (PUT, its node
@@ -1284,15 +1291,15 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_colon_callable_receiver.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'merge');
-        Debt = @('l2_rw0 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_entry_unit, c.LMX_WALK_OP_CALL, 4U)', 'lmx_walk_store_int(l2_program_arena, l2_rw1, 1U, 7)', 'l2_entry_unit: graph', 'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ') },
+        Debt = @('l2_rw0 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_entry_unit, c.LMX_WALK_OP_CALL, 5U)', 'lmx_walk_store_int(l2_program_arena, l2_rw1, 1U, 7)', 'l2_entry_unit: graph', 'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ') },
     # GROK-UNIVERSAL-RESOLUTION-PARTA-20260922-03. Three call forms must share one
     # physical METHOD op; an existing int is assigned. Debt/Absent distinguish that.
     [pscustomobject]@{ Name = 'unit_universal_head_resolution.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'merge');
-        Debt = @('l2_rw7 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw6, c.LMX_WALK_OP_CALL, 4U)', 'lmx_walk_store_int(l2_program_arena, l2_rw8, 1U, 7)',
-                 'l2_rw10 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw9, c.LMX_WALK_OP_CALL, 4U)', 'lmx_walk_store_int(l2_program_arena, l2_rw11, 1U, 7)',
-                 'l2_rw12 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_entry_unit, c.LMX_WALK_OP_CALL, 4U)', 'lmx_walk_store_int(l2_program_arena, l2_rw13, 1U, 7)',
+        Debt = @('l2_rw7 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw6, c.LMX_WALK_OP_CALL, 5U)', 'lmx_walk_store_int(l2_program_arena, l2_rw8, 1U, 7)',
+                 'l2_rw10 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw9, c.LMX_WALK_OP_CALL, 5U)', 'lmx_walk_store_int(l2_program_arena, l2_rw11, 1U, 7)',
+                 'l2_rw12 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_entry_unit, c.LMX_WALK_OP_CALL, 5U)', 'lmx_walk_store_int(l2_program_arena, l2_rw13, 1U, 7)',
                  'lmx_walk_store_int(l2_program_arena, l2_rw37, 1U, 2)') },
     # One logical negative fixture, three TUs: l2trans reports only the first
     # diagnostic. Needle is the converged class for every representable form.
@@ -1323,15 +1330,15 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_nested_body_else.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'lmx_branch_struct_known(unit,');
-        Debt = @('l2_h0: lmx_arena_ref_struct(self, 1U)',
-                 'l2_h1: lmx_arena_ref_struct(self, 2U)',
+        Debt = @('l2_h0: lmx_arena_ref_struct(self, 2U)',
+                 'l2_h1: lmx_arena_ref_struct(self, 3U)',
                  'lmx_arena_ref_cell(l2_h1, 0U)',
                  '# const: @(char l2_own1) "hosted"',
                  'l2_entry_unit: graph', 'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ') },
     [pscustomobject]@{ Name = 'unit_nested_body_while.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'lmx_branch_struct_known(unit,');
-        Debt = @('l2_h0: lmx_arena_ref_struct(self, 2U)',
+        Debt = @('l2_h0: lmx_arena_ref_struct(self, 3U)',
                  'lmx_arena_ref_cell(l2_h0, 0U)',
                  'while: l2_t0',
                  '# const: @(char l2_own1) "hosted"',
@@ -1339,7 +1346,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_nested_body_for.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'lmx_branch_struct_known(unit,', 'int: l2_q1_dirty');
-        Debt = @('l2_h0: lmx_arena_ref_struct(self, 1U)',
+        Debt = @('l2_h0: lmx_arena_ref_struct(self, 2U)',
                  'lmx_arena_ref_cell(l2_h0, 1U)',
                  'if: lmx_int_store_known(l2_q1_from[0], (4)) != 0',
                  '# const: @(char l2_own1) "hosted"',
@@ -1448,23 +1455,23 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_call_args_empty_paren.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @();
-        Debt = @('l2_rw3 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw2, c.LMX_WALK_OP_CALL, 3U)') },
+        Debt = @('l2_rw3 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw2, c.LMX_WALK_OP_CALL, 4U)') },
     [pscustomobject]@{ Name = 'unit_call_args_empty_vertical.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @();
-        Debt = @('l2_rw3 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw2, c.LMX_WALK_OP_CALL, 3U)') },
+        Debt = @('l2_rw3 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw2, c.LMX_WALK_OP_CALL, 4U)') },
     [pscustomobject]@{ Name = 'unit_call_args_paren_seq.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @();
-        Debt = @('l2_rw3 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw2, c.LMX_WALK_OP_CALL, 5U)', 'lmx_walk_store_int(l2_program_arena, l2_rw4, 1U, 1)', 'lmx_walk_store_int(l2_program_arena, l2_rw5, 1U, 2)') },
+        Debt = @('l2_rw3 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw2, c.LMX_WALK_OP_CALL, 6U)', 'lmx_walk_store_int(l2_program_arena, l2_rw4, 1U, 1)', 'lmx_walk_store_int(l2_program_arena, l2_rw5, 1U, 2)') },
     [pscustomobject]@{ Name = 'unit_call_args_controls.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @();
-        Debt = @('l2_rw14 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw13, c.LMX_WALK_OP_CALL, 5U)', 'lmx_walk_store_int(l2_program_arena, l2_rw15, 1U, 1)', 'lmx_walk_store_int(l2_program_arena, l2_rw16, 1U, 2)', 'l2_rw29 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw28, c.LMX_WALK_OP_CALL, 5U)', 'lmx_walk_store_int(l2_program_arena, l2_rw30, 1U, 1)', 'lmx_walk_store_int(l2_program_arena, l2_rw31, 1U, 2)') },
+        Debt = @('l2_rw14 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw13, c.LMX_WALK_OP_CALL, 6U)', 'lmx_walk_store_int(l2_program_arena, l2_rw15, 1U, 1)', 'lmx_walk_store_int(l2_program_arena, l2_rw16, 1U, 2)', 'l2_rw29 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw28, c.LMX_WALK_OP_CALL, 6U)', 'lmx_walk_store_int(l2_program_arena, l2_rw30, 1U, 1)', 'lmx_walk_store_int(l2_program_arena, l2_rw31, 1U, 2)') },
     [pscustomobject]@{ Name = 'unit_call_args_control_split.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @();
-        Debt = @('l2_rw3 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw2, c.LMX_WALK_OP_CALL, 5U)', 'lmx_walk_store_int(l2_program_arena, l2_rw4, 1U, 1)', 'lmx_walk_store_int(l2_program_arena, l2_rw5, 1U, 2)') },
+        Debt = @('l2_rw3 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw2, c.LMX_WALK_OP_CALL, 6U)', 'lmx_walk_store_int(l2_program_arena, l2_rw4, 1U, 1)', 'lmx_walk_store_int(l2_program_arena, l2_rw5, 1U, 2)') },
     [pscustomobject]@{ Name = 'unit_call_args_refuse_nested.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'incompatible entry signature'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_call_args_refuse_named.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -1541,7 +1548,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_colon_method_lexical_model.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
-        Debt = @('l2_rw1 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw0, c.LMX_WALK_OP_CALL, 3U)', 'if: lmx_arena_ref_store(l2_rw1, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 3U))) != 0',
+        Debt = @('l2_rw1 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw0, c.LMX_WALK_OP_CALL, 4U)', 'if: lmx_arena_ref_store(l2_rw1, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 2U))) != 0',
                  'lmx_merge_owned(l2_mops, 1U, l2_mbody, node, 0, l2_program_arena, l2_program_arena, 0, 0U, @ l2_mresult)',
                  'l2_entry_unit: graph') },
     [pscustomobject]@{ Name = 'unit_colon_method_dynamic_precedence.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
@@ -1941,7 +1948,7 @@ $fixtures = @(
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_q1_from');
         Debt = @('l2_entry_unit: graph', 'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ',
-                 'l2_q0_from: lmx_arena_ref_cell(self, 1U)') },
+                 'l2_q0_from: lmx_arena_ref_cell(self, 2U)') },
     [pscustomobject]@{ Name = 'unit_occ_arg_second_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'own occurrence index out of range'; Absent = @(); Debt = @() },
     # FABLE-SONNET-OCC-ROOT-20260924-146 commit 1: a named (method) root's
@@ -1983,13 +1990,13 @@ $fixtures = @(
     # fresh instance keeps the prototype's 0: 7 * 10 + 0 = 70.  A shared occurrence (until -189) gives
     # 77; an activation that writes an instance other than the one its slot shows gives 0.
     [pscustomobject]@{ Name = 'unit_fresh_instance_skipped_decl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 77;
-        Absent = @('lmx_fresh(', 'l2_new0'); Debt = @('@: Lmx l2_c0 lmx_arena_ref_struct(node, 1U)') },
+        Absent = @('lmx_fresh(', 'l2_new0'); Debt = @('@: Lmx l2_c0 lmx_arena_ref_struct(node, 0U)') },
     # -189 c3a (Q28): a call inside a cycle of calls, and a call by reference, run over a fresh instance
     # (lmx_fresh); the walked root's CALL, outside any cycle, over the callee itself -- its data operand
     # is the occurrence.  The trampoline makes nothing.
     [pscustomobject]@{ Name = 'unit_recursive_fresh_instance.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
-        Absent = @('l2_new0', 'l2_self: '); Debt = @('l2_c0: lmx_fresh(l2_program_arena, l2_c0)', 'l2_rw1 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw0, c.LMX_WALK_OP_CALL, 4U)',
-                 'if: lmx_arena_ref_store(l2_rw1, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 4U))) != 0', 'if: lmx_arena_ref_store(l2_rw1, 2U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 4U))) != 0',
+        Absent = @('l2_new0', 'l2_self: '); Debt = @('l2_c0: lmx_fresh(l2_program_arena, l2_c0)', 'l2_rw1 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw0, c.LMX_WALK_OP_CALL, 5U)',
+                 'if: lmx_arena_ref_store(l2_rw1, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 3U))) != 0', 'if: lmx_arena_ref_store(l2_rw1, 2U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 3U))) != 0',
                  '@: Lmx l2_d1 lmx_fresh(l2_program_arena, l2_c0)', 'if: lmx_call_prim(l2_program_arena, l2_c0, l2_d1, 0, 0U, ') },
     # -189 c3b-3: an own Structure field is a direct slot of its activation's data.  `nest` recurses (each
     # re-entry over a fresh instance whose slot starts empty) and binds `Box: b` in its own slot, so

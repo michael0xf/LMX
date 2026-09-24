@@ -2003,3 +2003,102 @@ fn: lmx_walk_run (@: LmxWalkContext context; @: Lmx node; @@: void args; size_t:
         out\present: present
     ---
 return: status
+
+# -180 / FABLE-GROKBOT-WALK-ADMIT-20260925-180 (+ Opus addendum):
+# Resolve value operand: null -> out 0 OK; pointer cell -> held null OK / held Structure admit /
+# else FAIL; Structure -> admit; anything else FAIL=1 (PRIMITIVE).
+# admit: implements(value, model, model); YES -> \out=value (ref, never copy); else THROW_IMPLEMENTS.
+# admit_letter: same resolve, then admit slot 1 (payload); null/non-Structure payload -> THROW_IMPLEMENTS.
+# Mutants RED: copy instead of ref; NO->OK; NO->FAIL; admit_letter slot0; null->THROW.
+fn: lmx_walk_admit_resolve (@: LmxArena arena; @: void raw; @@: void out_value) int
+    @: void held 0
+    \out_value: 0
+    if: arena = 0
+        return: 1
+    ---
+    if: raw = 0
+        return: 0
+    ---
+    if: lmx_walk_is_pointer_cell(arena, raw) != 0
+        held: lmx_pointer_value_known(raw)
+        if: held = 0
+            return: 0
+        ---
+        if: lmx_range_classify(arena, held) = c.LMX_KIND_STRUCT
+            \out_value: held
+            return: 0
+        ---
+        return: 1
+    ---
+    if: lmx_range_classify(arena, raw) = c.LMX_KIND_STRUCT
+        \out_value: raw
+        return: 0
+    ---
+return: 1
+
+fn: lmx_walk_admit_against (@: LmxArena arena; @: Lmx value; @: Lmx model; @@: void out) int
+    int: admit
+    if: arena = 0 || value = 0 || model = 0 || out = 0
+        return: 1
+    ---
+    admit: lmx_runtime_implements(arena, value, model, model)
+    if: admit = c.LMX_IMPLEMENTS_YES
+        \out: (cast: (@: void) value)
+        return: 0
+    ---
+    \out: 0
+return: c.LMX_PRIMITIVE_THROW_IMPLEMENTS
+
+fn: lmx_walk_admit (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    @: LmxArena arena 0
+    @: Lmx model 0
+    @: void value 0
+    int: st
+    \out: 0
+    if: owner = 0 || refs = 0 || out = 0 || nargs != 2U
+        return: 1
+    ---
+    arena: (cast: (@: LmxArena) owner)
+    model: (cast: (@: Lmx) refs[1])
+    if: model = 0 || lmx_range_classify(arena, (cast: (@: void) model)) != c.LMX_KIND_STRUCT
+        return: 1
+    ---
+    st: lmx_walk_admit_resolve(arena, refs[0], @ value)
+    if: st != 0
+        return: 1
+    ---
+    if: value = 0
+        return: 0
+    ---
+return: lmx_walk_admit_against(arena, (cast: (@: Lmx) value), model, out)
+
+fn: lmx_walk_admit_letter (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    @: LmxArena arena 0
+    @: Lmx model 0
+    @: Lmx letter 0
+    @: void value 0
+    @: void payload 0
+    int: st
+    \out: 0
+    if: owner = 0 || refs = 0 || out = 0 || nargs != 2U
+        return: 1
+    ---
+    arena: (cast: (@: LmxArena) owner)
+    model: (cast: (@: Lmx) refs[1])
+    if: model = 0 || lmx_range_classify(arena, (cast: (@: void) model)) != c.LMX_KIND_STRUCT
+        return: 1
+    ---
+    st: lmx_walk_admit_resolve(arena, refs[0], @ value)
+    if: st != 0
+        return: 1
+    ---
+    if: value = 0
+        return: 0
+    ---
+    letter: (cast: (@: Lmx) value)
+    # q25 (ii): admit payload at slot 1; \out = payload (keep this line obvious if author picks (i)=\out letter).
+    payload: lmx_arena_ref_value(letter, 1U)
+    if: payload = 0 || lmx_range_classify(arena, payload) != c.LMX_KIND_STRUCT
+        return: c.LMX_PRIMITIVE_THROW_IMPLEMENTS
+    ---
+return: lmx_walk_admit_against(arena, (cast: (@: Lmx) payload), model, out)

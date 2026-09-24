@@ -10,7 +10,7 @@ include: "<string.h>"
 
 prototype:
     fn: lmx_fresh_child (@: LmxArena arena; @: Lmx proto; @: void child; @: Lmx fresh_parent; @@: void out) int
-    fn: lmx_fresh_struct (@: LmxArena arena; @: Lmx proto; @: Lmx fresh_parent) @: Lmx
+    fn: lmx_fresh_struct (@: LmxArena arena; @: Lmx proto; @: Lmx fresh_parent; int: keep_slot0) @: Lmx
 end: prototype
 
 # One child of a prototype: write the destination reference into \out.
@@ -24,7 +24,6 @@ fn: lmx_fresh_child (@: LmxArena arena; @: Lmx proto; @: void child; @: Lmx fres
     @: LmxArrayDesc dst_arr 0
     size_t: n 0U
     size_t: stride 0U
-    ulong: uz 0U
     \out: 0
     if: arena = 0 || out = 0
         return: 1
@@ -46,7 +45,7 @@ fn: lmx_fresh_child (@: LmxArena arena; @: Lmx proto; @: void child; @: Lmx fres
         nested: (cast: (@: Lmx) child)
         # Control-body / field-only Structure whose parent is the prototype: recurse.
         if: nested\parent = proto
-            cell: (cast: (@: void) lmx_fresh_struct(arena, nested, fresh_parent))
+            cell: (cast: (@: void) lmx_fresh_struct(arena, nested, fresh_parent, 0))
             if: cell = 0
                 return: 1
             ---
@@ -153,7 +152,7 @@ fn: lmx_fresh_child (@: LmxArena arena; @: Lmx proto; @: void child; @: Lmx fres
     ---
 return: 1
 
-fn: lmx_fresh_struct (@: LmxArena arena; @: Lmx proto; @: Lmx fresh_parent) @: Lmx
+fn: lmx_fresh_struct (@: LmxArena arena; @: Lmx proto; @: Lmx fresh_parent; int: keep_slot0) @: Lmx
     @: Lmx out 0
     @: void child 0
     @: void made 0
@@ -179,8 +178,8 @@ fn: lmx_fresh_struct (@: LmxArena arena; @: Lmx proto; @: Lmx fresh_parent) @: L
     ---
     while: i < n
         child: lmx_arena_ref_value(proto, i)
-        if: i = 0U
-            # Child 0 kept by address until k.4 (shared callable / descriptor).
+        if: i = 0U && keep_slot0 != 0
+            # Top-level Model child 0 kept by address until k.4 (callable). Nested bodies freshen all slots.
             if: lmx_arena_ref_store(out, i, child) != 0
                 return: 0
             ---
@@ -204,4 +203,4 @@ fn: lmx_fresh (@: LmxArena arena; @: Lmx code) @: Lmx
     if: lmx_range_classify(arena, (cast: (@: void) code)) != c.LMX_KIND_STRUCT
         return: 0
     ---
-return: lmx_fresh_struct(arena, code, code\parent)
+return: lmx_fresh_struct(arena, code, code\parent, 1)

@@ -864,7 +864,10 @@ fn: lmx_root_host_make (@: LmxThread host; @: Lmx graph; @: LmxRootLaunch launch
     @: LmxPost r0_mail 0
     @: LmxSchedule r0_slot 0
     @: LmxPool pool 0
-    if: host = 0 || graph = 0 || launch = 0 || host\slot = 0 || launch\program = 0 || launch\fields < 2U
+    # k.4 (authorized by fable, FABLE-SONNET-NATIVE-WORD-20260926-191 c.2): the reserved
+    # child[0] descriptor is gone, so a minimal R0 program needs only its children-list
+    # field -- the floor was 2 (descriptor + children), it is 1 now.
+    if: host = 0 || graph = 0 || launch = 0 || host\slot = 0 || launch\program = 0 || launch\fields < 1U
         return: 1
     ---
     arena: host\slot\arena
@@ -1015,7 +1018,9 @@ fn: lmx_root_launch_tapped (@: LmxRoot root; int: argc; @@: char argv; LmxRootPr
     memset((cast: (@: void) (@ launch)), 0, c.sizeof(c.LmxRootLaunch))
     memset((cast: (@: void) (@ letter_arena)), 0, c.sizeof(c.LmxArena))
     at: @ launch
-    if: root = 0 || argc < 1 || argv = 0 || program = 0 || fields < 2U
+    # k.4 (authorized by fable, FABLE-SONNET-NATIVE-WORD-20260926-191 c.2): see the same
+    # floor change in lmx_root_host_make -- 1, not 2, now that there is no descriptor slot.
+    if: root = 0 || argc < 1 || argv = 0 || program = 0 || fields < 1U
         return: lmx_root_launch_refuse(0, 0, (cast: (@: char) "lmx: the host was given no root storage, no program name or no program\n"), out, err)
     ---
     at\program: program

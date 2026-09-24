@@ -84,14 +84,16 @@ sub: call_check (@: int counts; int: ok; const: @(char label))
     ---
 end: call_check
 
-# A Structure with `slots` children, in this arena.
+# A Structure with `slots` children, in this arena. slots = 0 leaves it a bare
+# Structure with no data/len array (lmx_arena_refs_open_owned refuses children = 0,
+# same as lmx_walk_plain's own children != 0U guard).
 fn: call_struct (@: LmxArena arena; size_t: slots) @: Lmx
     @: Lmx structure
     structure: lmx_node_new_owned(arena)
     if: structure = 0
         return: 0
     ---
-    if: lmx_arena_refs_open_owned(arena, structure, slots) != 0
+    if: slots != 0U && lmx_arena_refs_open_owned(arena, structure, slots) != 0
         return: 0
     ---
 return: structure

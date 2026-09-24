@@ -1,7 +1,6 @@
 predef: "l2src/lmx_thread.lm1"
 predef: "l2src/lmx_call.lm1"
 predef: "l2src/lmx_walk.lm1"
-predef: "l2src/lmx_plan.lm1"
 predef: "l2src/lmx_scratch.lm1"
 predef: "l2src/lmx_turn.lm1"
 predef: "l2src/lmx_child.lm1"
@@ -93,7 +92,7 @@ fn: tt_struct (@: LmxArena arena; size_t: slots) @: Lmx
     if: structure = 0
         return: 0
     ---
-    if: lmx_arena_refs_open_owned(arena, structure, slots) != 0
+    if: slots != 0U && lmx_arena_refs_open_owned(arena, structure, slots) != 0
         return: 0
     ---
 return: structure

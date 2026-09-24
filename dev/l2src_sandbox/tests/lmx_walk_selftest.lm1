@@ -204,7 +204,6 @@ fn: main () int
     int: i 0
     @: LmxArena pa 0
     @: LmxWalkFrame pf 0
-    @: LmxWalkOwn po 0
     @: Lmx unit 0
     @: Lmx immutable_profile 0
     @: Lmx other_profile 0
@@ -224,7 +223,6 @@ fn: main () int
     @: Lmx faller 0
     @: Lmx stopper 0
     @: Lmx refuser 0
-    @: Lmx orderer 0
     @: Lmx stranger 0
     @: Lmx copy 0
     @: void cell 0
@@ -338,7 +336,6 @@ fn: main () int
     faller: mk_m(unit, 8U, 3U)
     stopper: mk_m(unit, 9U, 5U)
     refuser: mk_m(unit, 10U, 4U)
-    orderer: mk_m(unit, 11U, 6U)
     stranger: mk_m(unit, 12U, 2U)
     impostor: mk_m(unit, 13U, 2U)
     lexer: mk_m(unit, 14U, 6U)
@@ -491,24 +488,6 @@ fn: main () int
         broken: broken + 1
     ---
 
-    # orderer:   own a 0; own b 0;  b: 2;  while: 0 { own t 0;  t: 3 };  a: 1
-    # The body mentions b, then t, then a; lexically the fields stand a, b, t.
-    icell(orderer, 1U, 0)
-    icell(orderer, 2U, 0)
-    n: fr(orderer, 3U, c.LMX_WALK_OP_SET, 3U)
-    own(n, 1U, orderer, 2U)
-    lit(n, 2U, 2)
-    n: fr(orderer, 4U, c.LMX_WALK_OP_WHILE, 3U)
-    lit(n, 1U, 0)
-    b: pl(n, 2U, 2U)
-    icell(b, 0U, 0)
-    e: fr(b, 1U, c.LMX_WALK_OP_SET, 3U)
-    own(e, 1U, b, 0U)
-    lit(e, 2U, 3)
-    n: fr(orderer, 5U, c.LMX_WALK_OP_SET, 3U)
-    own(n, 1U, orderer, 1U)
-    lit(n, 2U, 1)
-
     # stranger:  return: <counter's n, named as if it were stranger's OWN field>
     n: fr(stranger, 1U, c.LMX_WALK_OP_RET, 2U)
     own(n, 1U, counter, 1U)
@@ -647,12 +626,14 @@ fn: main () int
     check(st = c.LMX_WALK_INVALID && lmx_int_value_known(lmx_arena_ref_value(immutable_local, 0U)) = 0, "owner-local exact-profile write is refused when the PUT actually runs")
     pc\immutable_profile: 0
     check(ps\used = 0U && ps\top = 0U, "a refused run rewound everything it took from the store")
-    lmx_int_store_known(cell, 1)
+    lmx_int_store_known(cell, 0)
 
-    # No body node: nothing to walk -- this is still refused (there is nothing there to
-    # run, not a zero-step body: NOT_CALLABLE, ready but nothing to call).
+    # No body node: none of bare's children classify as an op (its one field is an own
+    # int cell, not a step) -- k.4 has no separate "callable" test any more, so this is
+    # not a refusal, it is a body that runs zero steps and falls off the end (same as an
+    # empty body: lmx_walk_enter's own doc, next_core_tasks.md §3 item 9).
     st: go(bare, 0, 0U, @ r, @ v)
-    check(st = c.LMX_WALK_NOT_CALLABLE, "a callable with no body node at all is NOT_CALLABLE")
+    check(st = c.LMX_WALK_OK && v = 0, "a callable with no op-classified child runs zero steps, not NOT_CALLABLE")
 
     # A role outside this slice, even hidden in a branch that is never taken: k.4 does not
     # scan the whole body ahead of running it any more, so an untaken branch's unsupported
@@ -740,11 +721,12 @@ fn: main () int
     check(lmx_int_value_known(lmx_arena_ref_value(looper, 1U)) = 10, "looper cell acc")
     check(lmx_int_value_known(lmx_arena_ref_value(looper, 2U)) = 4, "looper cell i")
 
-    # No body node: nothing to walk, nothing is invented, nothing native is called.
-    st: go(bare, 0, 0U, @ r, @ v)
-    check(st = c.LMX_WALK_NOT_CALLABLE, "a callable without body nodes is NOT_CALLABLE (ready, nothing to walk)")
+    # unit itself is a Structure too: every one of its own fields is an occurrence whose
+    # slot 0 is inert (never a role record), so lmx_walk_head finds nothing to dispatch
+    # and each field is skipped as a step -- unit runs zero steps and falls off the end,
+    # the same as bare, not refused (k.4: no domain check for "is this callable").
     st: go(unit, 0, 0U, @ r, @ v)
-    check(st = c.LMX_WALK_INVALID, "a Structure that is not a callable is refused")
+    check(st = c.LMX_WALK_OK && v = 0, "a Structure whose fields are not op-classified runs zero steps, not refused")
 
     # Falling off the end is an exit: the dirty value is published, no result is written.
     r: -77
@@ -755,28 +737,6 @@ fn: main () int
     # A bare role record as a return still publishes what is dirty, and ends the body.
     st: go(stopper, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_OK && lmx_int_value_known(lmx_arena_ref_value(stopper, 1U)) = 9, "bare return publishes and stops")
-
-    # A node outside the slice is reported at entry, wherever it sits, and nothing of the
-    # activation runs: the assignment before it is neither executed nor published.
-    st: go(refuser, 0, 0U, @ r, @ v)
-    check(st = c.LMX_WALK_UNSUPPORTED, "an unprepared body with an unread role is UNSUPPORTED, not skipped")
-    check(lmx_int_value_known(lmx_arena_ref_value(refuser, 1U)) = 0, "nothing ran before the refusal")
-
-    # Entry keeps the own records in the lexical order of the fields, which is the order
-    # of every checkpoint -- not the order in which the body mentions them.
-    pf: @ frame
-    lmx_scratch_mark(ps, pm)
-    st: lmx_walk_enter(pf, gctx, orderer, 0, 0U)
-    check(st = c.LMX_WALK_OK && pf\nowns = 3U, "orderer loads three own fields")
-    if: st = c.LMX_WALK_OK && pf\nowns = 3U
-        po: pf\owns
-        check(po\from = lmx_arena_ref_cell(orderer, 1U), "first record is field a")
-        po: pf\owns + 1U
-        check(po\from = lmx_arena_ref_cell(orderer, 2U), "second record is field b")
-        po: pf\owns + 2U
-        check(po\from = lmx_arena_ref_cell(lmx_arena_ref_struct(lmx_arena_ref_struct(orderer, 4U), 2U), 0U), "third record is the loop body's field t")
-    ---
-    check(lmx_scratch_rewind(ps, pm) = c.LMX_SCRATCH_OK && ps\used = 0U && ps\top = 0U, "the store is empty again after the rewind")
 
     # The role is a physical reference: the right NUMBER in a record of one's own is not
     # the role, and such a step is refused rather than skipped or guessed.
@@ -950,15 +910,18 @@ fn: main () int
     ---
     st: go(tramp3, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_INVALID, "D-04 host(extra Structure) refused when the CALL runs")
-    # D-03: bare callable in body executes (tracer own published), then return 9.
+    # D-03 (k.4): a nested occurrence used as a bare body statement is not auto-invoked
+    # any more -- lmx_walk_op's own contract classifies "a nested callable's M" as NONE,
+    # the same rule that already dropped RET-of-ARG auto-invoke above ("an explicit CALL
+    # is the only way to invoke anything"). The reference is skipped, never evaluated;
+    # tracer's own SET never runs, and the body falls through to its own return: 9.
     st: go(bare_stmt, 0, 0U, @ r, @ v)
-    check(st = c.LMX_WALK_OK && r = 9 && v = 1, "D-03 bare callable statement then return => 9")
-    check(lmx_int_value_known(lmx_arena_ref_value(tracer, 1U)) = 1, "D-03 bare callable statement published tracer")
-    # D-03 (k.4): a plain Structure statement is a plain value, evaluated and discarded --
-    # never UNSUPPORTED any more (§3 item 8: the walker runs what the graph says; there is
-    # no separate "is this callable" test left to refuse a bare data reference with).
+    check(st = c.LMX_WALK_OK && r = 9 && v = 1, "D-03 (k.4): a bare occurrence statement is skipped, then return => 9")
+    check(lmx_int_value_known(lmx_arena_ref_value(tracer, 1U)) = 0, "D-03 (k.4): tracer's own SET never ran; the bare statement was not invoked")
+    # D-03 (k.4): same rule for a plain data Structure -- skipped, never evaluated; the
+    # observable r/v come entirely from data_stmt's own subsequent return: 1.
     st: go(data_stmt, 0, 0U, @ r, @ v)
-    check(st = c.LMX_WALK_OK && v = 0, "D-03 (k.4): a plain Structure statement is discarded, not refused")
+    check(st = c.LMX_WALK_OK && r = 1 && v = 1, "D-03 (k.4): a plain Structure statement is skipped, then return => 1")
     # A plain Structure child of a call is ONE Structure argument (-133): test2(pair), pair =
     # (1 2) -- the graph of `test2(((1 2)))` after P0's one-level normalization -- reaches the
     # formal as that very Structure, as it does natively.  The CALL-only unwrap would have

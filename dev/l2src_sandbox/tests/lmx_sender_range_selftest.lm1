@@ -1,0 +1,186 @@
+predef: "l2src/lmx_merge_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_service.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_primitive.h.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+# D-60 / FABLE-GROKBOT-SENDER-RANGE-20260925-185:
+# Post A->B: delivery (lmx_service_post) imports sender Message range into letter_arena;
+# after take, classify(B, sender) = MSG_RECORD; merge letter/sender shape keeps sender by address.
+# Mutant: skip import in post -> classify stays KIND_NONE; merge THROWN.
+
+sub: sr_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: sr_check
+
+fn: sr_thread (@: LmxArena arena; @@: LmxMsg out_message) @: LmxThread
+    @: LmxThread t
+    @: LmxMsg message
+    @: Lmx graph
+    @: LmxArrayDesc children
+    @: LmxPost mail
+    @: LmxSchedule sched
+    \out_message: 0
+    t: (cast: (@: LmxThread) lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
+    message: (cast: (@: LmxMsg) t)
+    graph: lmx_node_new_owned(arena)
+    mail: (cast: (@: LmxPost) lmx_arena_take(arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    sched: (cast: (@: LmxSchedule) lmx_arena_take(arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: t = 0 || graph = 0 || mail = 0 || sched = 0
+        return: 0
+    ---
+    if: lmx_arena_refs_open_owned(arena, graph, 1U) != 0
+        return: 0
+    ---
+    children: lmx_thread_children_field_new(arena, graph, 0U)
+    if: children = 0
+        return: 0
+    ---
+    if: lmx_post_init(arena, mail) != c.LMX_POST_OK || lmx_schedule_init(sched, arena, (cast: (@: void) t), 8U) != c.LMX_SCHEDULE_OK || lmx_thread_init(arena, t, graph, mail, sched) != c.LMX_THREAD_OK || lmx_thread_children_bind(t, children, arena) != c.LMX_THREAD_OK
+        return: 0
+    ---
+    \out_message: message
+return: t
+
+fn: main () int
+    LmxArena: arena_a
+    LmxArena: arena_b
+    LmxArena: letter_arena
+    LmxArena: dst
+    LmxService: svc
+    @: LmxArena a_at 0
+    @: LmxArena b_at 0
+    @: LmxArena letter_at 0
+    @: LmxArena dst_at 0
+    @: LmxThread ta 0
+    @: LmxThread tb 0
+    @: LmxMsg msg_a 0
+    @: LmxMsg msg_b 0
+    @: LmxMsg letter 0
+    @: LmxMsg taken 0
+    @: Lmx letter_graph 0
+    @: Lmx letter_payload 0
+    @: Lmx unit 0
+    @: Lmx model 0
+    @: Lmx container 0
+    @: Lmx result 0
+    @: void pcell 0
+    @: void slot0 0
+    @: void payload_cell 0
+    @: LmxPool msg_pool 0
+    @: Lmx unit_copy 0
+    @: void pcopy 0
+    @: Lmx copied_letter 0
+    @: int counts 0
+    @@: Lmx operands 0
+    int: status 0
+    int: pty c.LMX_TYPE_POINTER_BASE + 1
+
+    counts: (cast: (@: int) calloc(2U, c.sizeof(int)))
+    operands: (cast: (@@: Lmx) calloc(1U, c.sizeof(@: Lmx)))
+    if: counts = 0 || operands = 0
+        return: 2
+    ---
+
+    memset((cast: (@: void) (@ arena_a)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ arena_b)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ letter_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ dst)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ svc)), 0, c.sizeof(c.LmxService))
+    if: lmx_arena_open(@ arena_a) != 0 || lmx_arena_open(@ arena_b) != 0 || lmx_arena_open(@ letter_arena) != 0 || lmx_arena_open(@ dst) != 0
+        return: 2
+    ---
+    a_at: @ arena_a
+    b_at: @ arena_b
+    letter_at: @ letter_arena
+    dst_at: @ dst
+    sr_check(counts, lmx_service_open(@ svc) = c.LMX_SERVICE_OK, "service open")
+
+    ta: sr_thread(a_at, @ msg_a)
+    tb: sr_thread(b_at, @ msg_b)
+    sr_check(counts, ta != 0 && msg_a != 0 && tb != 0 && msg_b != 0, "threads A and B")
+    sr_check(counts, lmx_service_register(@ svc, ta, a_at) = c.LMX_SERVICE_OK, "register A")
+    sr_check(counts, lmx_service_register(@ svc, tb, b_at) = c.LMX_SERVICE_OK, "register B")
+    sr_check(counts, lmx_range_classify(a_at, (cast: (@: void) msg_a)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "A classifies own sender")
+    sr_check(counts, lmx_range_classify(b_at, (cast: (@: void) msg_a)) = c.LMX_KIND_NONE, "B does not classify A before delivery")
+    # Producer seals before delivery; post must not seal the live host pool.
+    msg_pool: lmx_range_pool(a_at, (cast: (@: void) msg_a))
+    sr_check(counts, msg_pool != 0 && lmx_pool_seal(msg_pool) = 0, "seal A's MSG THREAD pool")
+
+    letter: (cast: (@: LmxMsg) lmx_arena_take(letter_at, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    letter_graph: lmx_node_new_owned(letter_at)
+    letter_payload: lmx_node_new_owned(letter_at)
+    sr_check(counts, letter != 0 && letter_graph != 0 && letter_payload != 0, "letter structures")
+    sr_check(counts, lmx_arena_refs_open_owned(letter_at, letter_graph, 2U) = 0, "letter graph open")
+    sr_check(counts, lmx_arena_refs_open_owned(letter_at, letter_payload, 1U) = 0, "letter payload open")
+    payload_cell: lmx_int_new_owned(letter_at)
+    sr_check(counts, payload_cell != 0 && lmx_int_store_known(payload_cell, 7) = 0, "payload int 7")
+    lmx_arena_ref_store(letter_payload, 0U, payload_cell)
+    lmx_arena_ref_store(letter_graph, 0U, (cast: (@: void) msg_a))
+    lmx_arena_ref_store(letter_graph, 1U, (cast: (@: void) letter_payload))
+    letter\running: 1
+    letter\success: 0
+    letter\handoff_ready: 0
+    letter\graph: letter_graph
+
+    sr_check(counts, lmx_service_post(@ svc, (cast: (@: void) tb), letter, letter_at) = c.LMX_SERVICE_OK, "post A->B")
+    # letter_arena claimed by B on take; letter_at must not be released here.
+    taken: (cast: (@: LmxMsg) lmx_thread_mail_take(tb, c.LMX_POST_INBOX))
+    sr_check(counts, taken = letter, "B took the letter")
+    sr_check(counts, lmx_range_classify(b_at, (cast: (@: void) msg_a)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "B classifies sender MSG_RECORD after take")
+    sr_check(counts, lmx_copy_is_terminal(b_at, (cast: (@: void) msg_a)) = 1, "imported MSG is terminal in B")
+
+    unit: lmx_node_new_owned(b_at)
+    model: lmx_node_new_owned(b_at)
+    container: lmx_node_new_owned(b_at)
+    sr_check(counts, unit != 0 && model != 0 && container != 0, "merge structures")
+    sr_check(counts, lmx_arena_refs_open_owned(b_at, unit, 1U) = 0, "unit open")
+    sr_check(counts, lmx_arena_refs_open_owned(b_at, model, 1U) = 0, "model open")
+    pcell: lmx_pointer_new_owned(pty, b_at)
+    sr_check(counts, pcell != 0 && lmx_pointer_store_known(pcell, (cast: (@: void) letter_graph)) = 0, "pointer -> letter graph")
+    lmx_arena_ref_store(unit, 0U, pcell)
+    model\parent: unit
+    lmx_arena_ref_store(model, 0U, lmx_int_new_owned(b_at))
+    if: lmx_arena_ref_value(model, 0U) != 0
+        lmx_int_store_known(lmx_arena_ref_value(model, 0U), 1)
+    ---
+    operands[0]: model
+    status: lmx_merge_owned(operands, 1U, 0, container, 0, b_at, dst_at, 0, 0U, @ result)
+    sr_check(counts, status = LMX_MERGE_OK && result != 0, "merge OK with imported sender")
+    if: result != 0 && result\parent = container
+        # Copied unit's letter slot0 must keep the same Message address.
+        status: lmx_graph_copy_owned(unit, 0, b_at, dst_at, @ unit_copy)
+        sr_check(counts, status = LMX_GRAPH_COPY_OK && unit_copy != 0, "unit copy OK")
+        if: unit_copy != 0
+            pcopy: lmx_arena_ref_value(unit_copy, 0U)
+            copied_letter: (cast: (@: Lmx) lmx_pointer_value_known(pcopy))
+            slot0: lmx_arena_ref_value(copied_letter, 0U)
+            sr_check(counts, slot0 = (cast: (@: void) msg_a), "merge/copy keeps sender by address")
+        ---
+    ---
+
+    c.printf("lmx_sender_range_selftest checks=%d failures=%d\n", counts[0], counts[1])
+    free((cast: (@: void) operands))
+    if: counts[1] != 0
+        free(counts)
+        return: 1
+    ---
+    free(counts)
+return: 0

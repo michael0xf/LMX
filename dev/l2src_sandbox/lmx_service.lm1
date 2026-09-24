@@ -1,5 +1,6 @@
 predef: "l2src/lmx_service.h.lm1"
 predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdlib.h>" "<string.h>" "<stdint.h>"
 
@@ -233,8 +234,14 @@ return: entry\target
 # letter means release that arena, not an LmxPostLink (no queue node was made).
 fn: lmx_service_post (@: LmxService service; @: void address; @: LmxMsg letter; @: LmxArena letter_arena) int
     @: LmxServiceEntry entry
+    @: LmxServiceEntry sender_entry
     @: LmxThread target_thread
+    @: void sender_addr
+    @: LmxArena sender_home
+    @: LmxRange sender_range
     size_t: point
+    size_t: sender_point
+    size_t: sender_scan
     if: service = 0 || address = 0 || letter = 0
         return: c.LMX_SERVICE_INVALID
     point: lmx_service_point(service, address)
@@ -262,6 +269,43 @@ fn: lmx_service_post (@: LmxService service; @: void address; @: LmxMsg letter; 
             lmx_arena_release(letter_arena)
         ---
         return: c.LMX_SERVICE_MISSING
+    ---
+    # -185 / D-60 / FABLE-GROKBOT-SENDER-RANGE-20260925-185:
+    # Delivery publishes ONE view of the sender Message's sealed MSG_RECORD interval into
+    # letter_arena (not a whole-arena import — that pulled host eternal/profile seals into the
+    # letter and broke host close). Place: lmx_service_post, before accept_transfer. Sender home
+    # = this service registry. DECISION: do not seal here; producer seals when publishable.
+    # Residual BLOCKER for walked root: host THREAD pool stays open, so add_view refuses until
+    # a separate seal-or-view act. Mutant skip-view: classify(receiver, sender) stays KIND_NONE.
+    if: letter_arena != 0 && letter\graph != 0
+        sender_addr: lmx_arena_ref_value(letter\graph, 0U)
+        if: sender_addr != 0
+            sender_point: lmx_service_point(service, sender_addr)
+            sender_home: 0
+            if: sender_point < lmx_service_entries_len(service)
+                sender_entry: lmx_service_entries_data(service) + sender_point
+                if: lmx_service_compare(sender_entry\address, sender_addr) = 0
+                    sender_home: sender_entry\arena
+                ---
+            ---
+            if: sender_home != 0 && sender_home != letter_arena
+                if: lmx_range_classify(letter_arena, sender_addr) = c.LMX_KIND_NONE
+                    sender_scan: 0U
+                    while: sender_scan < lmx_arena_index_len(sender_home)
+                        sender_range: lmx_arena_index_data(sender_home) + sender_scan
+                        if: sender_addr >= sender_range\lo && sender_addr < sender_range\hi
+                            if: sender_range\array != 0 && sender_range\array\kind = c.LMX_DOMAIN_KIND_MSG_RECORD && sender_range\array\sealed != 0U
+                                if: lmx_range_add_view(letter_arena, (cast: (@: LmxArena) sender_range\owner), sender_range\array, sender_range\lo, sender_range\hi) != 0
+                                    return: c.LMX_SERVICE_INVALID
+                                ---
+                            ---
+                            break
+                        ---
+                        sender_scan: sender_scan + 1U
+                    ---
+                ---
+            ---
+        ---
     ---
     # The mailbox owns the transaction and the only synchronization. The producer publishes the
     # physical letter together with its still-owning arena; the receiver owner claims that arena

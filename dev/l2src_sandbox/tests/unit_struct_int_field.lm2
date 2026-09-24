@@ -12,7 +12,12 @@ end: Model
 # FABLE-OPUS-DISCARD-20260924-147: until the graph builder gave kind 7 its
 # cell, the first write below met an empty slot and a silent bail returned
 # 0 from E, which passed; success is now 7 and the literals are checked.
-fn: bump (@(Lmx Model)) int
+# D-28 (steps/defects.md): bump's formal is TYPED as Model, not the
+# generic L1-style `@(Lmx Model)` this fixture used before -- that
+# spelling only ever silently reached the eternal unit-level Model
+# (the same bug D-28 fixed elsewhere), so this "formal" axis was never
+# really testing a formal at all until now.
+fn: bump (Model: Model) int
     Model\value: 99
     int: got
     got: Model\value

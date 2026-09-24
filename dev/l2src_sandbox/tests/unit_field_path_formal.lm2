@@ -9,7 +9,13 @@ end: Model
 # declaration inside main, in a unit that also has a namespace-typed formal
 # elsewhere, hits a pre-existing, unrelated "assignment target must be a
 # declared typed mutable value" refusal this ticket does not touch.
-fn: bump (@(Lmx Model)) size_t
+# D-28 (steps/defects.md): the formal is TYPED as Model, not the generic
+# L1-style `@(Lmx Model)` this fixture used before -- that spelling
+# declares an opaque Lmx, not a formal typed as the Structure, and only
+# ever silently reached the eternal unit-level Model (the same D-28 bug),
+# so despite the comment above this was never actually a namespace-typed
+# formal until now.
+fn: bump (Model: Model) size_t
     Model\value: 99U
     size_t: got
     got: Model\value

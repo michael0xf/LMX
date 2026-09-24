@@ -11334,37 +11334,25 @@ fn: l2_path_root (const: @(char pd); size_t: pn; @: int out_ni; @: int out_res; 
     # unit-level named Structure sharing that spelling -- tried and
     # returned on FIRST, ahead of the named-Structure/method-result loops
     # below, not as a fallback tried only once those already missed (the
-    # order this sat in before, which let `fn: bump (@(Lmx Model))`'s
-    # formal never be seen at all whenever a unit-level `Model:` also
-    # existed). Sets the same \out_ni a plain named-Structure match would
-    # (a formal's declared type IS a named-Structure reference,
-    # l2_nsty_get), \out_fi is the discriminator downstream callers
-    # already use (l2_emit_path_to's oi<0&&fi>=0 branch, l2_tok_formal).
+    # order this sat in before, which let a typed formal's own name never
+    # be seen at all whenever a unit-level Structure of the same spelling
+    # also existed). \out_ni comes only from the formal's own DECLARED
+    # type (l2_nsty_get, set at method registration when the formal's
+    # declaration frame head is itself a known Structure name) -- never
+    # inferred from the formal's NAME (norm §3: a type comes only from
+    # the declaration, no name specials). A generically-typed formal
+    # (e.g. the L1-style `@(Lmx x)` spelling, whose declared type is the
+    # opaque Lmx, not a Structure) keeps \out_ni < 0 here: the root
+    # itself is still recognized (\out_fi is set, so l2_emit_path_to's
+    # existing oi<0&&fi>=0 branch correctly seeds from it), but a field
+    # path continuing off it is a located refusal -- correct for a
+    # genuinely opaque formal, not a gap this ticket papers over.
     if: l2_cur_mi >= 0
         i: 0
         while: i < l2_m_arity[l2_cur_mi]
             if: l2_fn(l2_cur_mi, i) != 0 && l2_name_is_seg(l2_fn(l2_cur_mi, i), pd, off, len) != 0
                 \out_fi: i
                 \out_ni: l2_nsty_get(l2_cur_mi, i)
-                # The L1-style @(Lmx name) formal spelling declares a
-                # generic graph pointer, never a named-Structure type --
-                # l2_nsty_set is never called for it (its own gate checks
-                # the FRAME HEAD against l2_ns_find, and that head is the
-                # literal "Lmx", not a Structure name), so l2_nsty_get
-                # above stays -1 even though the formal is real and this
-                # root segment did name it. Fall back to the formal's OWN
-                # name as its Structure-shape hint (D-28, steps/defects.md,
-                # author's reading A): `@(Lmx Model)` names the parameter
-                # Model, and a path continuing off it, `Model\value`, is
-                # exactly how the author spells "this Lmx is Model-shaped"
-                # for this formal spelling. A formal whose name is not
-                # also a Structure's stays \out_ni < 0, same as today --
-                # the root itself is still recognized (\out_fi is set),
-                # only further field-path segments off it are refused,
-                # which is correct for a genuinely opaque Lmx formal.
-                if: \out_ni < 0
-                    \out_ni: l2_ns_find(l2_fn(l2_cur_mi, i))
-                ---
             i: i + 1
         ---
     if: \out_fi >= 0

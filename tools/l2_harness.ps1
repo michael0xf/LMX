@@ -647,7 +647,7 @@ $fixtures = @(
     # D-28 (steps/defects.md): a formal parameter must shadow a unit-level
     # named Structure sharing its spelling -- l2_path_root tried the wrong
     # one first since -113.
-    [pscustomobject]@{ Name = 'unit_formal_shadows_struct.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+    [pscustomobject]@{ Name = 'unit_formal_shadows_struct.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
         Args = @('0');
         Absent = @();
         Debt = @() },

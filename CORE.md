@@ -101,7 +101,7 @@ There are three different relationships that must not be merged:
 | Relationship | Physical source | Meaning |
 | --- | --- | --- |
 | `Lmx.parent` | Structure header | Immediate structural enclosing node. |
-| `Lmx.native` | Structure header | Direct reference to the native body implementation; null when interpreted. Not a graph field. |
+| `Lmx.native` | Structure header | Direct reference to the native body implementation; null when no native form exists (any Structure can be interpreted). Not a graph field. |
 | Method `node` | `M.parent` at entry | Reserved lexical space above callable occurrence `M`; fixed for that activation. |
 | `LmxThread.parent` | Thread state | Supervision/postal route to the parent Thread; not lexical graph parent. |
 
@@ -281,11 +281,10 @@ replaced by a fresh data instance in the parent's slot that execution writes
 directly; the canonical-cell mechanism is transitional.
 
 `@x`, `\p`, and `\p: value` in L2 are machine address, load, and store
-operations. For a nonprimitive Structure binding, the binding already holds a
-physical descriptor reference (conceptually `Lmx *` in C99); `@fresh` therefore
-addresses the **slot holding that reference** (conceptually `Lmx **`), not a
-by-value C aggregate and not a temporary copy. `@: Model slot` must have the
-same physical reference-slot projection. Machine addresses do not extend the
+operations. For a Structure binding, `@fresh` is the address of the Structure
+itself (Q26.2), not of the slot holding its reference and not of a copy; a
+reference field `@: Model slot` is a pointer cell whose extra indirection is
+absorbed on read, so `@ slot` is again the Structure's address. Machine addresses do not extend the
 lifetime of activation locals. The same `@` spelling in L3 is a separate
 reference-declaration receiver with its own restricted contract; L2 pointer
 operations must not leak into pure L3.

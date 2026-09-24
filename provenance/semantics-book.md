@@ -99,9 +99,9 @@ The [independent qualifier](#qualification) cuts the external lexical parent at 
 | --- | --- | --- |
 | `node` | зарезервированное слово L3 и первый ABI-параметр метода | пространство над методом; неизменно для всей активации, включая вложенные тела |
 | `parent` | обычное поле каждой `Lmx` Structure рабочего графа | непосредственно объемлющая Structure; различается у метода, `if`, цикла и других вложенных тел |
-| `self` | только скрытый ABI-контекст | физическое выбранное вызываемое вхождение и база его own-load/dirty; не слово языка |
+| `self` | только скрытый ABI-контекст | экземпляр данных текущей активации; не слово языка |
 
-Исполнение отдельно удерживает физическую ссылку на само выбранное вызываемое вхождение как базу own-load/dirty. Это скрытый ABI-контекст, а не новое исходное имя `self` и не замена зарезервированного `node`.
+Исполнение отдельно удерживает физическую ссылку на экземпляр данных текущей активации (§12). Это скрытый ABI-контекст, а не новое исходное имя `self` и не замена зарезервированного `node`.
 
 Повторные исходные имена сохраняются. Неуточнённое `name` выбирает **последнее** вхождение имени, то есть эквивалентно `[lastIndex]name`; явный селектор `[N]name` нумерует вхождения в лексическом порядке: `[0]name` — первое, `[1]name` — второе. Номер вхождения имени отличается от физического номера поля среди всех полей. `merge` повторных имён не создаёт: одноимённое поле операнда записывается в слот модели (см. [композицию](#composition)). Изменение порядка различных имён не меняет именованный путь; изменение порядка одноимённых вхождений меняет выбранное значение.
 
@@ -117,13 +117,13 @@ A structural path `object\field\nested` selects graph fields in sequence. Each s
 | --- | --- | --- |
 | `node` | reserved L3 word and first method ABI parameter | space above the method; fixed for the whole activation, including nested bodies |
 | `parent` | ordinary field of every working-graph `Lmx` Structure | immediately enclosing Structure; differs for a method, `if`, loop and other nested bodies |
-| `self` | hidden ABI context only | physical selected callable occurrence and its own-load/dirty base; not a language word |
+| `self` | hidden ABI context only | the current activation's data instance; not a language word |
 
 Repeated source names are retained. An unqualified `name` selects the **last** occurrence of the name, i.e. it is equivalent to `[lastIndex]name`; the explicit selector `[N]name` numbers occurrences in lexical order: `[0]name` is the first, `[1]name` the second. A name's occurrence number differs from the physical field index among all fields. `merge` creates no repeated names: an operand's same-name field is written into the model's slot (see [composition](#composition)). Reordering distinct names does not change a named path; reordering same-name occurrences changes the selected value.
 
 A Structure's field count and positions are fixed at construction. Graph fields follow strictly lexical order; native-code emission order does not authorize rearranging the graph's fields. Updating an existing field replaces its stored reference; it does not append an occurrence. A different set of fields requires a new Structure. Array operations follow their own contracts and do not change this Structure rule.
 
-Execution separately retains the physical reference to the selected callable occurrence itself as the base for own-load/dirty. This is hidden ABI context, not a new source name `self` and not a replacement for reserved `node`.
+Execution separately retains the physical reference to the current activation's data instance (§12). This is hidden ABI context, not a new source name `self` and not a replacement for reserved `node`.
 @@ descriptions | Явные описания значений и преобразования | Explicit value descriptions and conversions | 2.2.2-2.2.4; 2.4; 9.1; 9.1.1; 9.2
 [RU]
 Описание значения — обычная явно доступная структура. Принимающее выражение получает его через аргумент или ссылку. Описание не прикрепляется скрыто к каждому примитиву и не нужно для определения физического типа по адресу. Названия `class`, `class.range` и подобных таблиц обозначают данные конкретного профиля, а не обязательные глобальные сущности языка.
@@ -991,7 +991,7 @@ Naming does not add a descriptor, class or special layout to the object. Branch 
 
 Квалификация применяется только после успешной полной предварительной проверки. При неудаче нет частично замороженного дерева и опубликованного успешного результата; запрещено молча пропускать ветвь, копировать её или перенаправлять ссылки. Повторная квалификация уже подходящего дерева ничего не меняет. Правило не откатывает ранее выполненные инициализаторы, вычисление аргументов или публикацию рабочих полей перед вызовом; транзакция графа не возникает.
 
-Защита обязательна для записей через любой путь и для публикации рабочих полей. Заведомо недопустимая запись отвергается до исполнения, динамически выбранная — проверяется при исполнении. Вызов метода разрешён, но не снимает защиты. Изменение локальной копии аргумента или перепривязка локальной ссылки не меняют защищённое значение. Построение нового значения, в том числе `merge`, не размораживает исходное.
+Защита обязательна для записей через любой путь. Заведомо недопустимая запись отвергается до исполнения, динамически выбранная — проверяется при исполнении. Вызов метода разрешён, но не снимает защиты. Изменение локальной копии аргумента или перепривязка локальной ссылки не меняют защищённое значение. Построение нового значения, в том числе `merge`, не размораживает исходное.
 
 `independent` при построении устанавливает у корня `parent = 0`; это и есть отсутствие внешнего лексического родителя. Внутренние связи `parent` дерева и собственные поля сохраняются. Квалификация не обнуляет задним числом `parent` уже существующих объектов и не запрещает явно переданные ссылки, динамические аргументы текущего вызывающего выражения, сообщения или выбор вызываемого выражения по совместимой сигнатуре. Это не требование чистоты и не закрытый интерфейс только из явных аргументов.
 
@@ -1011,7 +1011,7 @@ Primitives and methods are leaves, not lexical-tree branches. An Array reference
 
 Qualification is applied only after successful complete preflight. Failure leaves no partially frozen tree or published successful result; silently skipping a branch, copying it or retargeting links is prohibited. Requalifying an already suitable tree changes nothing. This rule does not roll back earlier initializers, argument evaluation or pre-call publication of working fields; it establishes no graph transaction.
 
-Protection applies to writes through every path and to publication of working fields. A known-invalid write is rejected before execution; a dynamically selected write is checked during execution. Calling a method is allowed but does not remove protection. Changing a local argument copy or rebinding a local reference does not modify the protected value. Constructing a new value, including through `merge`, does not thaw the source.
+Protection applies to writes through every path. A known-invalid write is rejected before execution; a dynamically selected write is checked during execution. Calling a method is allowed but does not remove protection. Changing a local argument copy or rebinding a local reference does not modify the protected value. Constructing a new value, including through `merge`, does not thaw the source.
 
 Construction-time `independent` sets the root's `parent = 0`; that is exactly the absence of an external lexical parent. Internal tree `parent` links and own fields remain. The qualification neither retroactively clears existing objects' `parent` links nor prohibits explicitly supplied references, current-caller dynamic arguments, Messages or selection of a callable by a compatible signature. It does not require purity or an interface closed over explicit arguments alone.
 
@@ -1117,38 +1117,38 @@ fn: remember (int: x) int
 end: remember
 ```
 
-Здесь входной `x` становится собственным полем тела при исполнении `x: 7`. Меняется состояние `remember`, а не переменная вызывающего выражения. Кэшируются только собственные поля, реально используемые голым именем либо для передачи динамического входа дальше; явный путь сам по себе не создаёт own-кэш. Существующее поле не исчезает из графа из-за отсутствия кэширования.
+Здесь входной `x` становится полем экземпляра данных тела при исполнении `x: 7`. Меняется состояние `remember`, а не переменная вызывающего выражения. Кэшей нет: голое имя после связывания читает и пишет это поле; явный путь читает граф; поле не исчезает из графа оттого, что голое имя его не использует.
 
-Перед передачей управления другому вызываемому выражению публикуются только собственные рабочие поля с активной отметкой `dirty`. После публикации отметки очищаются. Неизменённое кэшированное поле без такой отметки не записывается обратно: вложенный вызов мог уже изменить его через явную ссылку. После возврата вызывающая активация не перечитывает свои рабочие значения из графа.
+Публикации нет: запись в поле экземпляра видна сразу любому пути к нему, в том числе вложенному вызову через `node\x`, и после возврата вызывающая активация читает то же поле. Невозможность разрешить или записать связанное поле — диагностический `assert`; предназначенный внешний вызов после этого не выполняется. Общей транзакции с откатом предыдущих записей нет.
 
-`dirty` определяется выполненной записью, не сравнением значений и не наличием возможного присваивания в исходном тексте. Публикация следует прямому порядку полей; успешная запись очищает отметку соответствующего поля. Невозможность разрешить уже связанный слот или записать его — диагностический `assert`; предназначенный внешний вызов после этого не выполняется. Общей транзакции с откатом предыдущих записей нет. Публикация нужна также перед внешней границей, способной вызвать LMX обратно или раскрыть состояние графа.
+Отметок `dirty`, рабочих копий и контрольных точек нет; внешняя граница, способная вызвать LMX обратно или показать состояние графа, видит текущие поля экземпляров.
 
-Следовательно, после вложенного изменения `node\x` рабочее голое `x` вызывающего выражения может сохранять прежнее значение, тогда как явный путь видит новое. Позднейшее присваивание голому собственному `x` намеренно создаёт новую запись и опубликует её на следующей границе. Отсутствие автоматического перечитывания — часть семантики, а не разрешение терять отмеченные изменения.
+Следовательно, после вложенного изменения `node\x` голое `x` вызывающего выражения видит новое значение: это одно и то же поле экземпляра. Позднейшее присваивание голому `x` — просто следующая запись в него.
 
 <a id="activation-history"></a>
 ### Стек активаций, рекурсия и явная история
 
-Стек активаций является единственной неявной историей вызовов. Нативное исполнение использует обычный стек вызовов C; интерпретатор — эквивалентный управляющий стек. Прямая, взаимная и callback-рекурсия создаёт отдельную активацию с собственными формальными и динамическими значениями, рабочими локальными значениями, результатом и отметками `dirty`. Для каждого вызова не создаются отдельная Lmx-структура вызова или тела, скрытый узел активации, окружение замыкания либо глобальная запись активных аргументов.
+Стек активаций является единственной неявной историей вызовов. Нативное исполнение использует обычный стек вызовов C; интерпретатор — эквивалентный управляющий стек. Прямая, взаимная и callback-рекурсия создаёт отдельную активацию с собственными формальными и динамическими значениями, локалами, результатом и собственным экземпляром данных в слоте родителя. Скрытый узел активации, окружение замыкания или глобальная запись активного аргумента не создаются.
 
-Выбранная вызываемая структура хранит текущее опубликованное рабочее состояние метода, но не журнал вызовов. Рекурсивные вызовы через одно вхождение могут публиковать в одну структуру. Другое вызываемое вхождение, указывающее на ту же неизменяемую запись метода, публикует в собственную скопированную структуру. Приостановленная внешняя активация не перечитывается и сохраняет свои рабочие значения; позже own-поле публикуется только после нового реального изменения. Итог определяет последовательный порядок публикаций только `dirty`-полей, а не неявное восстановление снимка активации.
+Слот вызываемого вхождения хранит экземпляр последней созданной активации, но не журнал вызовов: рекурсивные вызовы через одно вхождение получают каждый свой экземпляр, и приостановленная внешняя активация продолжает работать со своим. Другое вызываемое вхождение того же метода имеет свой слот и свои экземпляры. Итог определяется порядком записей в поля экземпляров, а не восстановлением снимка.
 
-Трасса рекурсивного примера ниже не вводит новый синтаксис. Метод M имеет вызываемую структуру S (`M = S`) с собственным полем `x`; оба вызова выбирают ту же S, а `n` является частным объявленным аргументом каждой активации.
+Трасса рекурсивного примера ниже не вводит новый синтаксис. Метод M имеет вызываемое вхождение S с полем прототипа `x`, начальное значение по объявлению 1; каждая активация получает свой экземпляр, а `n` является частным объявленным аргументом каждой активации.
 
-| Шаг | Локальное значение внешнего вызова | Локальное значение внутреннего вызова | Опубликованное `S.x` |
+| Шаг | `x` внешнего экземпляра | `x` внутреннего экземпляра | Экземпляр в слоте S |
 | --- | --- | --- | --- |
-| Внешний вход загружает `S.x = 1` | 1, clean | — | 1 |
-| Внешний вызов присваивает собственному `x` значение 2 | 2, dirty | — | 1 |
-| Публикация перед вызовом, затем вход `M(0)` | 2, clean | 2, clean | 2 |
-| Внутренний вызов присваивает собственному `x` значение 9 | 2, clean | 9, dirty | 2 |
-| Внутренний возврат проходит публикацию | 2, clean | кадр завершён | 9 |
-| Внешний вызов продолжается без перечитывания | 2, clean | — | 9 |
-| Внешний вызов возвращается без присваивания `x` | кадр завершён | — | 9 |
+| Внешний вход создаёт экземпляр I1 | 1 | — | I1 |
+| Внешний вызов присваивает `x: 2` | 2 | — | I1 |
+| Вход `M(0)` создаёт экземпляр I2 | 2 | 1 | I2 |
+| Внутренний вызов присваивает `x: 9` | 2 | 9 | I2 |
+| Внутренний возврат | 2 | 9, активация завершена | I2 |
+| Внешний вызов продолжается | 2 | — | I2 |
+| Внешний вызов возвращается | 2, активация завершена | — | I2 |
 
-После возобновления внешнего кадра голое `x` читает 2, а явное `node\x` — 9. Если внешний кадр затем выполняет `x: x + 1`, его рабочее значение становится 3 и получает `dirty`; следующая граница публикует 3 в S. Это новая запись внешней активации, не восстановление её прежнего снимка. Динамически переданный `x`, который ни разу не является целью разрешённого голого присваивания, остаётся только локальным аргументом. Если же в теле есть такое `x: ...`, скрытый аргумент подчиняется тому же правилу подготовки и привязки own-поля, что и явный.
+После возврата внутреннего вызова голое `x` внешней активации читает 2 — своё поле; путь `S\x` снаружи читает 9, потому что слот показывает последний созданный экземпляр. Если внешняя активация затем выполняет `x: x + 1`, её поле становится 3, а `S\x` по-прежнему 9. Динамически переданный `x`, который ни разу не является целью разрешённого голого присваивания, остаётся только локальным аргументом; если в теле есть такое `x: ...`, скрытый аргумент подчиняется тому же правилу, что и явный.
 
-Тем самым поле вызываемой структуры сочетает свойства постоянного поля экземпляра с рабочей локальностью стековой переменной: использованное own-поле загружается в типизированное рабочее значение и записывается обратно только после изменения. Граф хранит опубликованное состояние; стек хранит историю активаций. Неявного захвата кадра вызывающего выражения нет, поэтому кадры не приходится размещать в куче или связывать скрытой цепочкой замыканий для решения upward-funarg-проблемы.
+Тем самым поле экземпляра данных — обычное поле графа со временем жизни экземпляра, а не стековая переменная; граф хранит экземпляры, стек — историю активаций, локалы и результаты. Неявного захвата кадра вызывающего выражения нет, поэтому кадры не приходится размещать в куче или связывать скрытой цепочкой замыканий для решения upward-funarg-проблемы.
 
-Следующий пример вызова показывает порядок между кэшем, явным чтением графа и фактическими аргументами; это трасса установленной формы `for:`, не новое правило грамматики. Ячейка графа `j` в фикстуре начинается с 0 — это условие примера, не общее правило инициализации `int`. `print` здесь — высокоуровневое вызываемое выражение профиля, не операция `c.*`.
+Следующий пример вызова показывает чтение поля голым именем и явным путём и вычисление фактических аргументов; это трасса установленной формы `for:`, не новое правило грамматики. Поле `j` — поле вложенной Structure тела `for` в экземпляре; `print` здесь — высокоуровневое вызываемое выражение профиля, не операция `c.*`.
 
 ```text
 fn: test () int
@@ -1163,13 +1163,13 @@ fn: test () int
 end: test
 ```
 
-После цикла рабочее `acc` равно 9. `end: for` не является контрольной точкой, как и само явное чтение пути. Перед вызовом объявленные фактические аргументы вычисляются в типизированные временные значения: `acc` даёт 9 из кэша, а `for\j` читает прежнее опубликованное значение графа 0. Затем публикация записывает 9 в граф, но вызов получает уже выбранные временные значения и печатает `9 0`. Последующее явное чтение `for\j` в другом операторе видит 9. Публикация не меняет задним числом уже вычисленные фактические аргументы; запись `for\j: 42` в той же активации меняет ячейку графа, не кэш.
+После цикла `acc` равно 9, и `for\j` тоже 9: оба — поля экземпляра, записанные последней итерацией. Перед вызовом фактические аргументы вычисляются в типизированные временные значения из этих полей, и `print` печатает `9 9`. Контрольных точек и публикации нет; явное чтение пути в любом операторе видит текущее значение поля.
 
-Одна логическая последовательная полоса исполнения каждого Message делает эту модель безопасной без блокировок и барьеров памяти внутри такта. Приостановленные локальные значения вызывающего выражения не участвуют в гонке; другие Message работают со своими аренами. Интерпретатор может реализовать ту же семантику малым управляющим стеком возвратов и объявленных аргументов вместе с разреженным набором изменённых рабочих значений. Ему не нужно копировать полное состояние метода при каждом входе; опубликованное состояние остаётся в графе, а история активаций — на стеке.
+Одна логическая последовательная полоса исполнения каждого Message делает эту модель безопасной без блокировок и барьеров памяти внутри такта. Приостановленные активации не участвуют в гонке; другие Message работают со своими аренами. Интерпретатор реализует ту же семантику управляющим стеком возвратов, аргументов и локалов; полное состояние метода при вызове не копируется — создаётся экземпляр прототипа данных.
 
 Тело, переданное принимающему выражению как структура, и аргументы исполняемого вызова также не становятся общим скрытым окружением.
 
-Публикация обязательна на границах вызова, возврата, `throw`, диагностического прекращения и `yield`. Выход с `finally` имеет две публикации, описанные в [выходах](#exits). `retry` и локальный переход цикла сами по себе не создают новую активацию и не перечитывают поля. Сигнатуры и граф сохраняют требования этой модели независимо от того, исполняется ли граф интерпретатором или транслируется.
+Границы вызова, возврата, `throw`, диагностического прекращения и `yield` не требуют публикации: поля экземпляра уже актуальны. Выход с `finally` описан в [выходах](#exits). `retry` и локальный переход цикла сами по себе не создают новую активацию. Сигнатуры и граф сохраняют требования этой модели независимо от того, исполняется ли граф интерпретатором или транслируется.
 [EN]
 A persistent graph field, a field of the current activation's data instance, an explicit formal argument and a dynamic input must be distinguished. They are separate storage locations with separate mutation rules. Ordinary passing copies a mutable primitive's value and a Structure or Array's reference; the special identity of an immutable value is retained under [qualification](#qualification).
 
@@ -1209,38 +1209,38 @@ fn: remember (int: x) int
 end: remember
 ```
 
-Here input `x` becomes the body's own field when `x: 7` executes. This changes `remember` state, not the caller's variable. Only own fields actually used by a bare name or to forward a dynamic input are cached; an explicit path alone creates no own cache. Lack of caching does not remove an existing field from the graph.
+Here input `x` becomes a field of the body's data instance when `x: 7` executes. This changes `remember` state, not the caller's variable. There are no caches: after binding, the bare name reads and writes this field; an explicit path reads the graph; a field does not vanish from the graph because no bare name uses it.
 
-Before control passes to another callable expression, only own working fields with an active `dirty` mark are published. Marks are cleared after publication. A cached field without such a mark must not be written back: a nested call may already have changed it through an explicit reference. After return, the caller activation does not reload its working values from the graph.
+There is no publication: a write into an instance field is immediately visible through every path to it, including a nested call through `node\x`, and after return the caller activation reads the same field. Failure to resolve or store into a bound field uses diagnostic `assert`; the intended outbound call is not executed afterward. There is no general transaction rolling back earlier writes.
 
-Dirty state follows an executed write, not value comparison or the presence of a possible assignment in source. Publication follows forward field order; a successful write clears the corresponding mark. Failure to resolve an already bound slot or store into it uses diagnostic `assert`; the intended outbound call is not executed afterward. There is no general transaction rolling back earlier writes. Publication is also required before a foreign boundary capable of calling back into LMX or exposing graph state.
+There are no `dirty` marks, working copies or checkpoints; a foreign boundary capable of calling back into LMX or exposing graph state sees the current instance fields.
 
-Consequently, after a nested modification of `node\x`, the caller's bare working `x` can retain its earlier value while an explicit path observes the new value. A later assignment to bare own `x` deliberately creates a new write and publishes it at the next boundary. No automatic reload is part of the semantics, not permission to lose dirty changes.
+Consequently, after a nested modification of `node\x`, the caller's bare `x` observes the new value: it is the same instance field. A later assignment to bare `x` is simply the next write into it.
 
 <a id="activation-history"></a>
 ### Activation stack, recursion and explicit history
 
-The activation stack is the sole implicit call history. Native execution uses the ordinary C call stack; the interpreter uses an equivalent control stack. Direct, mutual and callback recursion creates a distinct activation with its own formal and dynamic values, working locals, result and `dirty` marks. No per-call Lmx call/body Structure, hidden activation node, closure environment or global active-argument record is created.
+The activation stack is the sole implicit call history. Native execution uses the ordinary C call stack; the interpreter uses an equivalent control stack. Direct, mutual and callback recursion creates a distinct activation with its own formal and dynamic values, locals, result and its own data instance in the parent's slot. No hidden activation node, closure environment or global active-argument record is created.
 
-The selected callable Structure holds the method's currently published working state, but it is not a call journal. Recursive calls through one occurrence may publish into the same Structure. Another callable occurrence referring to the same immutable method record publishes into its own copied Structure. A suspended outer activation is not reloaded and retains its working values; an own field is published later only after another actual modification. The result is determined by the serial order of dirty-only publications, not by implicit restoration of an activation snapshot.
+The callable occurrence's slot holds the instance of the latest created activation, but it is not a call journal: recursive calls through one occurrence each receive their own instance, and a suspended outer activation keeps working with its own. Another callable occurrence of the same method has its own slot and its own instances. The result is determined by the order of writes into instance fields, not by restoring a snapshot.
 
-The following recursive trace introduces no new syntax. Method M has callable Structure S (`M = S`) with own field `x`; both calls select the same S, while `n` is a private declared argument in each activation.
+The following recursive trace introduces no new syntax. Method M has callable occurrence S with prototype field `x`, initial value 1 by declaration; each activation receives its own instance, while `n` is a private declared argument in each activation.
 
-| Step | Outer working value | Inner working value | Published `S.x` |
+| Step | Outer instance `x` | Inner instance `x` | Instance in slot S |
 | --- | --- | --- | --- |
-| Outer entry loads `S.x = 1` | 1, clean | — | 1 |
-| Outer call assigns own `x = 2` | 2, dirty | — | 1 |
-| Pre-call publication, then `M(0)` enters | 2, clean | 2, clean | 2 |
-| Inner call assigns own `x = 9` | 2, clean | 9, dirty | 2 |
-| Inner return crosses publication | 2, clean | frame ends | 9 |
-| Outer call resumes without reload | 2, clean | — | 9 |
-| Outer call returns without assigning `x` | frame ends | — | 9 |
+| Outer entry creates instance I1 | 1 | — | I1 |
+| Outer call assigns `x: 2` | 2 | — | I1 |
+| `M(0)` entry creates instance I2 | 2 | 1 | I2 |
+| Inner call assigns `x: 9` | 2 | 9 | I2 |
+| Inner return | 2 | 9, activation ended | I2 |
+| Outer call resumes | 2 | — | I2 |
+| Outer call returns | 2, activation ended | — | I2 |
 
-On the resumed outer frame, bare `x` reads 2 and explicit `node\x` reads 9. If the outer frame then executes `x: x + 1`, its working value becomes 3 and is marked `dirty`; the next boundary publishes 3 into S. This is a new outer-activation write, not restoration of its previous snapshot. A dynamically supplied `x` that is never the target of a resolved bare assignment remains only a local argument. If the body does contain such an `x: ...`, the hidden argument follows the same own-field preparation and binding rule as an explicit argument.
+After the inner return, the outer activation's bare `x` reads 2, its own field; the path `S\x` from outside reads 9, because the slot shows the latest created instance. If the outer activation then executes `x: x + 1`, its field becomes 3 while `S\x` is still 9. A dynamically supplied `x` that is never the target of a resolved bare assignment remains only a local argument; if the body does contain such an `x: ...`, the hidden argument follows the same rule as an explicit argument.
 
-The callable Structure's field therefore combines the persistence of an instance field with the working locality of a stack variable: a used own field is loaded into a typed working value and written back only after a change. The graph stores published state; the stack stores activation history. There is no implicit caller-frame capture, so frames need not be heapified or connected by a hidden closure chain to avoid the upward-funarg problem.
+The data instance's field is therefore an ordinary graph field with the instance's lifetime, not a stack variable; the graph stores instances, the stack stores activation history, locals and results. There is no implicit caller-frame capture, so frames need not be heapified or connected by a hidden closure chain to avoid the upward-funarg problem.
 
-The following call example shows the order among cache, explicit graph read and actual arguments; it is a trace using the established `for:` form, not a new grammar rule. The fixture's graph cell for `j` starts at 0; that is an example condition, not a general initialization rule for `int`. Here `print` is a high-level profile callable, not a `c.*` operation.
+The following call example shows a field read by bare name and by explicit path, and the evaluation of actual arguments; it is a trace using the established `for:` form, not a new grammar rule. The field `j` is a field of the nested `for` body Structure in the instance; here `print` is a high-level profile callable, not a `c.*` operation.
 
 ```text
 fn: test () int
@@ -1255,13 +1255,13 @@ fn: test () int
 end: test
 ```
 
-After the loop, working `acc` is 9. `end: for` is not a checkpoint, and neither is an explicit path read by itself. Before the call, declared actual arguments are evaluated into typed temporaries: `acc` contributes 9 from the cache, while `for\j` reads the previously published graph value 0. Publication then writes 9 into the graph, but the call receives the already selected temporaries and prints `9 0`. A later explicit `for\j` read in another statement sees 9. Publication cannot retroactively change actual arguments already evaluated; a same-activation `for\j: 42` writes the graph cell, not the cache.
+After the loop `acc` is 9 and `for\j` is 9 as well: both are instance fields written by the last iteration. Before the call the actual arguments are evaluated into typed temporaries from these fields, and `print` prints `9 9`. There are no checkpoints and no publication; an explicit path read in any statement sees the field's current value.
 
-One logical serial execution lane per Message makes this model safe without locks or memory barriers inside a turn. A suspended caller's working values cannot be raced; other Messages operate on their own arenas. The interpreter may implement the same semantics with a small control stack of return states and declared arguments plus a sparse set of modified working values. It need not copy a method's complete state at each entry: published state remains in the graph and activation history on the stack.
+One logical serial execution lane per Message makes this model safe without locks or memory barriers within a turn. Suspended activations take no part in a race; other Messages work in their own arenas. The interpreter implements the same semantics with a control stack of returns, arguments and locals; the method's full state is not copied on a call — an instance of the data prototype is created.
 
 A body supplied to a receiving expression as a Structure and an executable call's arguments likewise do not become one hidden environment.
 
-Publication is required at call, return, `throw`, diagnostic termination and `yield` boundaries. An exit with `finally` has the two publications specified under [exits](#exits). `retry` and local loop transfers do not by themselves create a new activation or reload fields. Signatures and the graph retain this model's requirements whether the graph is interpreted or translated.
+The boundaries of call, return, `throw`, diagnostic termination and `yield` require no publication: the instance fields are already current. Exit with `finally` is described under [exits](#exits). `retry` and a local loop transfer by themselves create no new activation. Signatures and the graph preserve this model's requirements whether the graph is interpreted or translated.
 
 @@ branches | Ветвления и циклы | Branches and loops | 10; 19.1–19.9; 19.14; 19.16
 [RU]
@@ -1445,7 +1445,7 @@ Expected input errors use an explicit condition and declared failure rather than
 
 Сам `retry` — локальный переход текущей активации, не новый вызов и не восстановление скрытого окружения. Текущие рабочие значения продолжают существовать, дополнительной публикации только из-за перехода нет. Если повтор достигает вызова или выхода, действует соответствующая обычная граница. Нагрузка пойманного отказа остаётся явными аргументами обработчика.
 
-`yield` передаёт произведённое значение и приостанавливает активацию. Перед приостановкой публикуются изменённые собственные поля. Явные аргументы, динамические входы, рабочие значения и их последующее состояние сохраняются для возобновления; они не превращаются в поля тела или публичное скрытое окружение. Возобновление не перечитывает их из структуры метода.
+`yield` передаёт произведённое значение и приостанавливает активацию. Публикации перед приостановкой нет: поля экземпляра данных уже актуальны. Явные аргументы, динамические входы, локалы и их последующее состояние сохраняются для возобновления; они не превращаются в поля тела или публичное скрытое окружение. Возобновление продолжает работать с тем же экземпляром данных.
 
 Входы производителя фиксируются при начале его активации. Следующий вызывающий `next` не заменяет их своим динамическим окружением. Если `next` реализован отдельным выражением-обёрткой, его входы относятся к его активации, пока явная операция не изменит сохранённое состояние производителя. Представление продолжения и результата итератора не наблюдаемо, если сохраняется описанная семантика.
 [EN]
@@ -1453,7 +1453,7 @@ Expected input errors use an explicit condition and declared failure rather than
 
 `retry` itself is a local transfer in the current activation, not a new call or restoration of a hidden environment. Current working values continue to exist, with no additional publication merely because of the transfer. If repeated execution reaches a call or exit, that boundary's ordinary rules apply. A caught failure's payload remains the handler's explicit arguments.
 
-`yield` transfers a produced value and suspends the activation. Dirty own fields are published before suspension. Explicit arguments, dynamic inputs, working values and their subsequent state are retained for resumption; they do not become body fields or a public hidden environment. Resumption does not reload them from the method Structure.
+`yield` transfers a produced value and suspends the activation. There is no publication before suspension: the data instance's fields are already current. Explicit arguments, dynamic inputs, locals and their subsequent state are retained for resumption; they do not become body fields or a public hidden environment. Resumption keeps working with the same data instance.
 
 Producer inputs are fixed when its activation begins. A later `next` caller does not replace them with its own dynamic context. If `next` is a separate wrapper expression, its inputs belong to its activation unless an explicit operation changes the producer's saved state. The continuation and iterator-result representation is not observable when it preserves these semantics.
 

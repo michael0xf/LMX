@@ -116,13 +116,13 @@ A structural path `object\field\nested` selects graph fields in sequence. Each s
 | --- | --- | --- |
 | `node` | reserved L3 word and first method ABI parameter | space above the method; fixed for the whole activation, including nested bodies |
 | `parent` | ordinary field of every working-graph `Lmx` Structure | immediately enclosing Structure; differs for a method, `if`, loop and other nested bodies |
-| `self` | hidden ABI context only | physical selected callable occurrence and its own-load/dirty base; not a language word |
+| `self` | hidden ABI context only | the current activation's data instance; not a language word |
 
 Repeated source names are retained. An unqualified `name` selects the **last** occurrence of the name, i.e. it is equivalent to `[lastIndex]name`; the explicit selector `[N]name` numbers occurrences in lexical order: `[0]name` is the first, `[1]name` the second. A name's occurrence number differs from the physical field index among all fields. `merge` creates no repeated names: an operand's same-name field is written into the model's slot (see [composition](#composition)). Reordering distinct names does not change a named path; reordering same-name occurrences changes the selected value.
 
 A Structure's field count and positions are fixed at construction. Graph fields follow strictly lexical order; native-code emission order does not authorize rearranging the graph's fields. Updating an existing field replaces its stored reference; it does not append an occurrence. A different set of fields requires a new Structure. Array operations follow their own contracts and do not change this Structure rule.
 
-Execution separately retains the physical reference to the selected callable occurrence itself as the base for own-load/dirty. This is hidden ABI context, not a new source name `self` and not a replacement for reserved `node`.
+Execution separately retains the physical reference to the current activation's data instance (§12). This is hidden ABI context, not a new source name `self` and not a replacement for reserved `node`.
 
 <a id="descriptions"></a>
 ## 5. Explicit value descriptions and conversions
@@ -591,7 +591,7 @@ Primitives and methods are leaves, not lexical-tree branches. An Array reference
 
 Qualification is applied only after successful complete preflight. Failure leaves no partially frozen tree or published successful result; silently skipping a branch, copying it or retargeting links is prohibited. Requalifying an already suitable tree changes nothing. This rule does not roll back earlier initializers, argument evaluation or pre-call publication of working fields; it establishes no graph transaction.
 
-Protection applies to writes through every path and to publication of working fields. A known-invalid write is rejected before execution; a dynamically selected write is checked during execution. Calling a method is allowed but does not remove protection. Changing a local argument copy or rebinding a local reference does not modify the protected value. Constructing a new value, including through `merge`, does not thaw the source.
+Protection applies to writes through every path. A known-invalid write is rejected before execution; a dynamically selected write is checked during execution. Calling a method is allowed but does not remove protection. Changing a local argument copy or rebinding a local reference does not modify the protected value. Constructing a new value, including through `merge`, does not thaw the source.
 
 Construction-time `independent` sets the root's `parent = 0`; that is exactly the absence of an external lexical parent. Internal tree `parent` links and own fields remain. The qualification neither retroactively clears existing objects' `parent` links nor prohibits explicitly supplied references, current-caller dynamic arguments, Messages or selection of a callable by a compatible signature. It does not require purity or an interface closed over explicit arguments alone.
 
@@ -673,38 +673,38 @@ fn: remember (int: x) int
 end: remember
 ```
 
-Here input `x` becomes the body's own field when `x: 7` executes. This changes `remember` state, not the caller's variable. Only own fields actually used by a bare name or to forward a dynamic input are cached; an explicit path alone creates no own cache. Lack of caching does not remove an existing field from the graph.
+Here input `x` becomes a field of the body's data instance when `x: 7` executes. This changes `remember` state, not the caller's variable. There are no caches: after binding, the bare name reads and writes this field; an explicit path reads the graph; a field does not vanish from the graph because no bare name uses it.
 
-Before control passes to another callable expression, only own working fields with an active `dirty` mark are published. Marks are cleared after publication. A cached field without such a mark must not be written back: a nested call may already have changed it through an explicit reference. After return, the caller activation does not reload its working values from the graph.
+There is no publication: a write into an instance field is immediately visible through every path to it, including a nested call through `node\x`, and after return the caller activation reads the same field. Failure to resolve or store into a bound field uses diagnostic `assert`; the intended outbound call is not executed afterward. There is no general transaction rolling back earlier writes.
 
-Dirty state follows an executed write, not value comparison or the presence of a possible assignment in source. Publication follows forward field order; a successful write clears the corresponding mark. Failure to resolve an already bound slot or store into it uses diagnostic `assert`; the intended outbound call is not executed afterward. There is no general transaction rolling back earlier writes. Publication is also required before a foreign boundary capable of calling back into LMX or exposing graph state.
+There are no `dirty` marks, working copies or checkpoints; a foreign boundary capable of calling back into LMX or exposing graph state sees the current instance fields.
 
-Consequently, after a nested modification of `node\x`, the caller's bare working `x` can retain its earlier value while an explicit path observes the new value. A later assignment to bare own `x` deliberately creates a new write and publishes it at the next boundary. No automatic reload is part of the semantics, not permission to lose dirty changes.
+Consequently, after a nested modification of `node\x`, the caller's bare `x` observes the new value: it is the same instance field. A later assignment to bare `x` is simply the next write into it.
 
 <a id="activation-history"></a>
 ### Activation stack, recursion and explicit history
 
-The activation stack is the sole implicit call history. Native execution uses the ordinary C call stack; the interpreter uses an equivalent control stack. Direct, mutual and callback recursion creates a distinct activation with its own formal and dynamic values, working locals, result and `dirty` marks. No per-call Lmx call/body Structure, hidden activation node, closure environment or global active-argument record is created.
+The activation stack is the sole implicit call history. Native execution uses the ordinary C call stack; the interpreter uses an equivalent control stack. Direct, mutual and callback recursion creates a distinct activation with its own formal and dynamic values, locals, result and its own data instance in the parent's slot. No hidden activation node, closure environment or global active-argument record is created.
 
-The selected callable Structure holds the method's currently published working state, but it is not a call journal. Recursive calls through one occurrence may publish into the same Structure. Another callable occurrence referring to the same immutable method record publishes into its own copied Structure. A suspended outer activation is not reloaded and retains its working values; an own field is published later only after another actual modification. The result is determined by the serial order of dirty-only publications, not by implicit restoration of an activation snapshot.
+The callable occurrence's slot holds the instance of the latest created activation, but it is not a call journal: recursive calls through one occurrence each receive their own instance, and a suspended outer activation keeps working with its own. Another callable occurrence of the same method has its own slot and its own instances. The result is determined by the order of writes into instance fields, not by restoring a snapshot.
 
-The following recursive trace introduces no new syntax. Method M has callable Structure S (`M = S`) with own field `x`; both calls select the same S, while `n` is a private declared argument in each activation.
+The following recursive trace introduces no new syntax. Method M has callable occurrence S with prototype field `x`, initial value 1 by declaration; each activation receives its own instance, while `n` is a private declared argument in each activation.
 
-| Step | Outer working value | Inner working value | Published `S.x` |
+| Step | Outer instance `x` | Inner instance `x` | Instance in slot S |
 | --- | --- | --- | --- |
-| Outer entry loads `S.x = 1` | 1, clean | — | 1 |
-| Outer call assigns own `x = 2` | 2, dirty | — | 1 |
-| Pre-call publication, then `M(0)` enters | 2, clean | 2, clean | 2 |
-| Inner call assigns own `x = 9` | 2, clean | 9, dirty | 2 |
-| Inner return crosses publication | 2, clean | frame ends | 9 |
-| Outer call resumes without reload | 2, clean | — | 9 |
-| Outer call returns without assigning `x` | frame ends | — | 9 |
+| Outer entry creates instance I1 | 1 | — | I1 |
+| Outer call assigns `x: 2` | 2 | — | I1 |
+| `M(0)` entry creates instance I2 | 2 | 1 | I2 |
+| Inner call assigns `x: 9` | 2 | 9 | I2 |
+| Inner return | 2 | 9, activation ended | I2 |
+| Outer call resumes | 2 | — | I2 |
+| Outer call returns | 2, activation ended | — | I2 |
 
-On the resumed outer frame, bare `x` reads 2 and explicit `node\x` reads 9. If the outer frame then executes `x: x + 1`, its working value becomes 3 and is marked `dirty`; the next boundary publishes 3 into S. This is a new outer-activation write, not restoration of its previous snapshot. A dynamically supplied `x` that is never the target of a resolved bare assignment remains only a local argument. If the body does contain such an `x: ...`, the hidden argument follows the same own-field preparation and binding rule as an explicit argument.
+After the inner return, the outer activation's bare `x` reads 2, its own field; the path `S\x` from outside reads 9, because the slot shows the latest created instance. If the outer activation then executes `x: x + 1`, its field becomes 3 while `S\x` is still 9. A dynamically supplied `x` that is never the target of a resolved bare assignment remains only a local argument; if the body does contain such an `x: ...`, the hidden argument follows the same rule as an explicit argument.
 
-The callable Structure's field therefore combines the persistence of an instance field with the working locality of a stack variable: a used own field is loaded into a typed working value and written back only after a change. The graph stores published state; the stack stores activation history. There is no implicit caller-frame capture, so frames need not be heapified or connected by a hidden closure chain to avoid the upward-funarg problem.
+The data instance's field is therefore an ordinary graph field with the instance's lifetime, not a stack variable; the graph stores instances, the stack stores activation history, locals and results. There is no implicit caller-frame capture, so frames need not be heapified or connected by a hidden closure chain to avoid the upward-funarg problem.
 
-The following call example shows the order among cache, explicit graph read and actual arguments; it is a trace using the established `for:` form, not a new grammar rule. The fixture's graph cell for `j` starts at 0; that is an example condition, not a general initialization rule for `int`. Here `print` is a high-level profile callable, not a `c.*` operation.
+The following call example shows a field read by bare name and by explicit path, and the evaluation of actual arguments; it is a trace using the established `for:` form, not a new grammar rule. The field `j` is a field of the nested `for` body Structure in the instance; here `print` is a high-level profile callable, not a `c.*` operation.
 
 ```text
 fn: test () int
@@ -719,13 +719,13 @@ fn: test () int
 end: test
 ```
 
-After the loop, working `acc` is 9. `end: for` is not a checkpoint, and neither is an explicit path read by itself. Before the call, declared actual arguments are evaluated into typed temporaries: `acc` contributes 9 from the cache, while `for\j` reads the previously published graph value 0. Publication then writes 9 into the graph, but the call receives the already selected temporaries and prints `9 0`. A later explicit `for\j` read in another statement sees 9. Publication cannot retroactively change actual arguments already evaluated; a same-activation `for\j: 42` writes the graph cell, not the cache.
+After the loop `acc` is 9 and `for\j` is 9 as well: both are instance fields written by the last iteration. Before the call the actual arguments are evaluated into typed temporaries from these fields, and `print` prints `9 9`. There are no checkpoints and no publication; an explicit path read in any statement sees the field's current value.
 
-One logical serial execution lane per Message makes this model safe without locks or memory barriers inside a turn. A suspended caller's working values cannot be raced; other Messages operate on their own arenas. The interpreter may implement the same semantics with a small control stack of return states and declared arguments plus a sparse set of modified working values. It need not copy a method's complete state at each entry: published state remains in the graph and activation history on the stack.
+One logical serial execution lane per Message makes this model safe without locks or memory barriers within a turn. Suspended activations take no part in a race; other Messages work in their own arenas. The interpreter implements the same semantics with a control stack of returns, arguments and locals; the method's full state is not copied on a call — an instance of the data prototype is created.
 
 A body supplied to a receiving expression as a Structure and an executable call's arguments likewise do not become one hidden environment.
 
-Publication is required at call, return, `throw`, diagnostic termination and `yield` boundaries. An exit with `finally` has the two publications specified under [exits](#exits). `retry` and local loop transfers do not by themselves create a new activation or reload fields. Signatures and the graph retain this model's requirements whether the graph is interpreted or translated.
+The boundaries of call, return, `throw`, diagnostic termination and `yield` require no publication: the instance fields are already current. Exit with `finally` is described under [exits](#exits). `retry` and a local loop transfer by themselves create no new activation. Signatures and the graph preserve this model's requirements whether the graph is interpreted or translated.
 
 <a id="branches"></a>
 ## 13. Branches and loops
@@ -828,7 +828,7 @@ Expected input errors use an explicit condition and declared failure rather than
 
 `retry` itself is a local transfer in the current activation, not a new call or restoration of a hidden environment. Current working values continue to exist, with no additional publication merely because of the transfer. If repeated execution reaches a call or exit, that boundary's ordinary rules apply. A caught failure's payload remains the handler's explicit arguments.
 
-`yield` transfers a produced value and suspends the activation. Dirty own fields are published before suspension. Explicit arguments, dynamic inputs, working values and their subsequent state are retained for resumption; they do not become body fields or a public hidden environment. Resumption does not reload them from the method Structure.
+`yield` transfers a produced value and suspends the activation. There is no publication before suspension: the data instance's fields are already current. Explicit arguments, dynamic inputs, locals and their subsequent state are retained for resumption; they do not become body fields or a public hidden environment. Resumption keeps working with the same data instance.
 
 Producer inputs are fixed when its activation begins. A later `next` caller does not replace them with its own dynamic context. If `next` is a separate wrapper expression, its inputs belong to its activation unless an explicit operation changes the producer's saved state. The continuation and iterator-result representation is not observable when it preserves these semantics.
 

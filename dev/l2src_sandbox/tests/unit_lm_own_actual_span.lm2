@@ -36,7 +36,10 @@ fn: grow () int
     return: 0
 end: grow
 if: copy_tail("abc", 2U) != 0
-    return: 1
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
 if: grow() != 0
-    return: 2
-return: 10
+    sendMessage: exit(exit_code: 2; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 10; stdout: ""; stderr: "")
+return

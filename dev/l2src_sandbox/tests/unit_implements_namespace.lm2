@@ -27,9 +27,13 @@ fn: m () int
 end: m
 
 if: implements(ImportedCandidate, ImportedRequirement, ImportedRequirement) != 1
-    return: 1
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
 if: implements(LocalCandidate, LocalRequirement, LocalRequirement) != 1
-    return: 2
+    sendMessage: exit(exit_code: 2; stdout: ""; stderr: "")
+    return
 if: implements(LocalCandidate, ImportedRequirement, ImportedRequirement) != 0
-    return: 3
-return: 0
+    sendMessage: exit(exit_code: 3; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

@@ -14,10 +14,13 @@ return: probe()
 
 int: n 3
 if: wrap() != 7
-    return: 1
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
 if: later() != 5
-    return: 2
-return: 0
+    sendMessage: exit(exit_code: 2; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return
 
 fn: later () int
 return: n + 2

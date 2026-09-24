@@ -31,16 +31,20 @@ end: probe_vertical
 int: rp
 rp: probe_paren()
 if: rp != 0
-    return: 90
+    sendMessage: exit(exit_code: 90; stdout: ""; stderr: "")
+    return
 
 int: rc
 rc: probe_colon()
 if: rc != 0
-    return: 91
+    sendMessage: exit(exit_code: 91; stdout: ""; stderr: "")
+    return
 
 int: rv
 rv: probe_vertical()
 if: rv != 0
-    return: 92
+    sendMessage: exit(exit_code: 92; stdout: ""; stderr: "")
+    return
 
-return: 0
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

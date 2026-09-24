@@ -6,11 +6,15 @@ fn: add (int: a; int: b) int
 end: add
 int: r 0
 if: test() != 7
-    return: 1
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
 r: add: 1 2
 if: r != 3
-    return: 2
+    sendMessage: exit(exit_code: 2; stdout: ""; stderr: "")
+    return
 r: add(1 2)
 if: r != 3
-    return: 3
-return: 0
+    sendMessage: exit(exit_code: 3; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

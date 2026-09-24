@@ -30,27 +30,40 @@ fn: m () int
 end: m
 
 if: implements(`int`, `int`, WordMover) != 1
-    return: 1
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
 if: implements(`int`, `u32`, WordMover) != 1
-    return: 2
+    sendMessage: exit(exit_code: 2; stdout: ""; stderr: "")
+    return
 if: implements(`u32`, `int`, WordMover) != 1
-    return: 3
+    sendMessage: exit(exit_code: 3; stdout: ""; stderr: "")
+    return
 if: implements(`int`, `long`, WordMover) != 1
-    return: 4
+    sendMessage: exit(exit_code: 4; stdout: ""; stderr: "")
+    return
 if: implements(`int`, `double`, WordMover) != 1
-    return: 5
+    sendMessage: exit(exit_code: 5; stdout: ""; stderr: "")
+    return
 if: implements(Boolean, `int`, WordMover) != 1
-    return: 6
+    sendMessage: exit(exit_code: 6; stdout: ""; stderr: "")
+    return
 if: implements(`u32`, `FILE`, WordMover) != 1
-    return: 7
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+    return
 if: implements(`int`, `u32`, DescriptionWalker) != 1
-    return: 8
+    sendMessage: exit(exit_code: 8; stdout: ""; stderr: "")
+    return
 if: implements(`void`, `int`, WordMover) != 0
-    return: 9
+    sendMessage: exit(exit_code: 9; stdout: ""; stderr: "")
+    return
 if: implements(`int`, `void`, WordMover) != 0
-    return: 10
+    sendMessage: exit(exit_code: 10; stdout: ""; stderr: "")
+    return
 if: implements(`u32`, File, OpaqueCloser) != 0
-    return: 11
+    sendMessage: exit(exit_code: 11; stdout: ""; stderr: "")
+    return
 if: implements(File, File, OpaqueCloser) != 1
-    return: 12
-return: 0
+    sendMessage: exit(exit_code: 12; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

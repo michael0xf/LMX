@@ -59,21 +59,31 @@ fn: m () int
 end: m
 
 if: implements(User, Equatable, Equatable) != 1
-    return: 1
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
 if: implements(Plain, Equatable, Equatable) != 0
-    return: 2
+    sendMessage: exit(exit_code: 2; stdout: ""; stderr: "")
+    return
 if: implements(User, Serializable, Serializable) != 0
-    return: 3
+    sendMessage: exit(exit_code: 3; stdout: ""; stderr: "")
+    return
 if: implements(MultiCandidate, CompleteRequirement, CompleteRequirement) != 1
-    return: 4
+    sendMessage: exit(exit_code: 4; stdout: ""; stderr: "")
+    return
 if: implements(MultiCandidate, IncompleteRequirement, IncompleteRequirement) != 0
-    return: 5
+    sendMessage: exit(exit_code: 5; stdout: ""; stderr: "")
+    return
 if: implements(QuotedCandidate, QuotedRequirement, QuotedRequirement) != 1
-    return: 6
+    sendMessage: exit(exit_code: 6; stdout: ""; stderr: "")
+    return
 if: implements(SelfDescribing, SelfDescribing, SelfDescribing) != 1
-    return: 7
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+    return
 if: implements(Plain, Equatable, ThinConsumer) != 1
-    return: 8
+    sendMessage: exit(exit_code: 8; stdout: ""; stderr: "")
+    return
 if: implements(User, Equatable, ThinConsumer) != 1
-    return: 9
-return: 0
+    sendMessage: exit(exit_code: 9; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

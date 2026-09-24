@@ -37,9 +37,11 @@ fresh\inner\deep: 55
 ov: fresh\value
 od: fresh\inner\deep
 if: ov != 42
-    return: 81
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
 if: od != 55
-    return: 82
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
 
 copy: merge: Model
 copy\value: 7
@@ -50,14 +52,19 @@ ev: Model\value
 cv: copy\value
 ed: Model\inner\deep
 if: ev != 1
-    return: 83
+    sendMessage: exit(exit_code: 83; stdout: ""; stderr: "")
+    return
 if: cv != 7
-    return: 84
+    sendMessage: exit(exit_code: 84; stdout: ""; stderr: "")
+    return
 if: ed != 2
-    return: 85
+    sendMessage: exit(exit_code: 85; stdout: ""; stderr: "")
+    return
 
 int: fv
 fv: make()
 if: fv != 99
-    return: 90
-return: 7
+    sendMessage: exit(exit_code: 90; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

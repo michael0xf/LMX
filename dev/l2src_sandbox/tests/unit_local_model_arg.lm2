@@ -49,5 +49,7 @@ fn: fresh_read () int
 int: r
 r: probe()
 if: r != 0
-    return: r
-return: fresh_read()
+    sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: fresh_read(); stdout: ""; stderr: "")
+return

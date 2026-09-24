@@ -5,10 +5,14 @@ predef: "l2src/lmx_array_owned.lm1"
 predef: "l2src/lmx_array_ref_owned.lm1"
 predef: "l2src/lmx_graph_copy_owned.lm1"
 predef: "l2src/lmx_merge_owned.lm1"
+# The walked root: the program builds walker nodes and R0's turn walks them (-159).
+predef: "l2src/lmx_walk.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
-# The producer publishes its completed program unit as the current Message graph and exports
+# The generated main is the launch (lmx_root_launch): the host reserves R0 and calls the generated
+# program builder, which builds the program unit in R0's own graph and arena; R0's turn walks it,
+# and the exit is R0's exit letter or the mapping of its success.  The producer exports
 # count/root_at accessors over a translation-sized C array of exact qualified root references.
 # The array is observation state only. Lifetime and classification come from the ordinary graph
 # path plus the roots' exact sealed owner-arena profiles; no Root slot or private store exists.
@@ -18,29 +22,26 @@ int: gargc 0
 # The PROGRAM's own argv (S3): the driver's argv[0], then every word after `--`.
 int: pargc 0
 @@: char pargv 0
-int: letters_at_close -1
-int: close_rc -1
-int: hooked 0
+# THE LAUNCH (FABLE-OPUS-ROOT-WALK-TRANSLATOR-20260924-159 commit 2b): the generated main is
+# `return: lmx_root_launch(...)` and is compiled with -Dlmx_root_launch=l2_driver_root_launch, so
+# the driver sees the launch and the program builder the host calls: how many launches, how many
+# builds, what the builder answered and the host's state after the launch.
+int: launches 0
+int: builds 0
+int: build_rc -1
+int: host_state -1
+int: program_passed 0
 int: checks 0
 int: failures 0
 const: @: char phase ""
-@@: void saved 0
-@@: void saved_profiles 0
-int: entry_opened 0
-int: entry_calls 0
-int: entry_rc 0
-@: Lmx entry_node 0
-# S1.1: the merges the program made, the one the row fails (`mergefail N`, 0 = none), and R0's
-# `running` at close.
+# S1.1: the merges the program made and the one the row fails (`mergefail N`, 0 = none).
 int: merge_calls 0
 int: merge_fail_at 0
-int: running_at_close -1
 
 prototype:
     fn: l2_generated_main (int: argc; @@: char argv) int
-    fn: l2_program_entry (@: Lmx node) int
+    fn: l2_program_build (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int
     fn: l2_program_graph () @: Lmx
-    fn: l2_program_completed () int
     fn: l2_program_qualified_count () size_t
     fn: l2_program_qualified_at (size_t: index) @: Lmx
 end: prototype
@@ -93,16 +94,14 @@ fn: numeric_holds (@: void cell; int: ty; int: want) int
         return: 1
 return: 0
 
-fn: inspect (@: LmxRoot root) int
-    @: LmxArena arena lmx_root_arena(root)
-    @: LmxMsg message lmx_root_message(root)
-    @: LmxThread thread lmx_root_thread(root)
-    @: LmxArrayDesc children (cast: (@: LmxArrayDesc) lmx_thread_children(thread))
+fn: inspect (@: LmxArena arena; @: Lmx graph) int
+    @: LmxArrayDesc children 0
     @: Lmx value 0
     @: Lmx other 0
     @: Lmx member 0
     @: Lmx profile 0
     @: void cell 0
+    @: void field 0
     size_t: produced l2_program_qualified_count()
     int: expected arg(1)
     int: i 0
@@ -112,20 +111,19 @@ fn: inspect (@: LmxRoot root) int
     int: duplicate 0
     int: shared_profile 0
     int: children_seen 0
-    check(message != 0 && l2_program_graph() != 0 && message\graph = l2_program_graph(), "program unit is the current Message graph")
-    # The parent frame above R0 is Message supervision, not a lexical `node` link (LMX_semantics
-    # §23), so the published program unit is a lexical root.  A parent here lets graph copy climb
-    # out of this Message into the supervising Message's graph.
-    check(l2_program_graph() != 0 && l2_program_graph()\parent = 0, "program unit is a lexical root: its parent Message is supervision, not a lexical node")
-    check(lmx_domain_kind(arena, (cast: (@: void) l2_program_graph())) = c.LMX_KIND_STRUCT && lmx_domain_type(arena, (cast: (@: void) l2_program_graph())) = c.LMX_TYPE_STRUCT, "program unit remains a live owner-arena Structure")
-    i: 0
-    while: message != 0 && message\graph != 0 && i < message\graph\len
-        if: lmx_arena_ref_value(message\graph, (cast: (size_t) i)) = (cast: (@: void) children)
+    check(graph != 0 && l2_program_graph() = graph, "the builder built the program unit in R0's own graph")
+    # R0's graph is independent: the host above it is Message supervision, not a lexical space.
+    check(graph != 0 && graph\parent = 0, "program unit is a lexical root: its parent Message is supervision, not a lexical node")
+    check(lmx_domain_kind(arena, (cast: (@: void) graph)) = c.LMX_KIND_STRUCT && lmx_domain_type(arena, (cast: (@: void) graph)) = c.LMX_TYPE_STRUCT, "program unit is a live Structure of R0's arena")
+    while: graph != 0 && i < graph\len
+        field: lmx_arena_ref_value(graph, (cast: (size_t) i))
+        if: field != 0 && lmx_domain_kind(arena, field) = c.LMX_KIND_LIST && lmx_domain_type(arena, field) = c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD
+            children: (cast: (@: LmxArrayDesc) field)
             children_seen: children_seen + 1
         ---
         i: i + 1
     ---
-    check(children != 0 && children_seen = 1 && lmx_domain_kind(arena, (cast: (@: void) children)) = c.LMX_KIND_LIST && lmx_domain_type(arena, (cast: (@: void) children)) = c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, "program unit preserves the one exact children list")
+    check(children != 0 && children_seen = 1, "program unit holds exactly one children list, R0's own")
     i: 0
     check(expected >= 0 && produced = (cast: (size_t) expected), "producer count is the translation-known number of qualified roots")
     if: expected < 0 || produced != (cast: (size_t) expected)
@@ -207,82 +205,32 @@ fn: inspect (@: LmxRoot root) int
     ---
 return: 1
 
-fn: l2_driver_root_close (@: LmxRoot root) int
-    @: LmxArena arena 0
-    @: LmxMsg message 0
-    size_t: n
-    size_t: i 0U
-    hooked: hooked + 1
-    # P5: how many letters R0 leaves untaken; close must release them (S3).
-    if: root != 0
-        letters_at_close: (cast: (int) lmx_thread_mail_count(lmx_root_thread(root), c.LMX_POST_INBOX))
-        message: lmx_root_message(root)
-    ---
-    # S1.1: an uncaught throw that reached the root stopped the Message -- it takes no further
-    # turn -- so R0's `running` is 0 here; a turn that completed leaves it 1.
-    if: message != 0
-        running_at_close: message\running
-    ---
-    phase: "after generated turn"
-    check(root != 0 && lmx_root_state(root) = c.LMX_ROOT_OPEN, "generated root is open at close hook")
-    if: root = 0
-        return: 1
-    ---
-    inspect(root)
-    arena: lmx_root_arena(root)
-    n: l2_program_qualified_count()
-    if: n != 0U
-        saved: (cast: (@@: void) calloc(n, c.sizeof(@: void)))
-        saved_profiles: (cast: (@@: void) calloc(n, c.sizeof(@: void)))
-        check(saved != 0 && saved_profiles != 0, "comparison storage opened")
-        if: saved != 0 && saved_profiles != 0
-            while: i < n
-                saved[i]: (cast: (@: void) l2_program_qualified_at(i))
-                saved_profiles[i]: (cast: (@: void) root_profile(arena, l2_program_qualified_at(i)))
-                i: i + 1U
-            ---
-        ---
-    ---
-    phase: "after explicit collection"
-    check(lmx_gc_collect(arena, lmx_root_thread(root)) = c.LMX_GC_OK, "owner-arena collection completes")
-    check(l2_program_qualified_count() = n, "producer count is unchanged by collection")
-    i: 0U
-    while: saved != 0 && saved_profiles != 0 && i < n
-        check((cast: (@: void) l2_program_qualified_at(i)) = saved[i], "qualified root physical address is unchanged by collection")
-        check((cast: (@: void) root_profile(arena, l2_program_qualified_at(i))) = saved_profiles[i], "qualified root exact profile is unchanged by collection")
-        i: i + 1U
-    ---
-    inspect(root)
-    if: saved != 0
-        free((cast: (@: void) saved))
-        saved: 0
-    ---
-    if: saved_profiles != 0
-        free((cast: (@: void) saved_profiles))
-        saved_profiles: 0
-    ---
-    close_rc: lmx_root_close(root)
-return: close_rc
-
-# THE ENTRY'S OWN RESULT.  lmx_thread_dispatch_native calls the generated entry adapter and
-# discards its int, so the generated C main's exit status says only that the root turn ran.  The
-# generated C is compiled with -Dlmx_root_open=l2_driver_root_open (tools/l2_harness.ps1), so R0 is
-# opened with this tap in place of the adapter.  The tap calls the adapter once, exactly as the
-# kernel would, keeps its int, and hands the same int back to the kernel: the driver observes, it
-# does not change what the kernel does with the result.
-fn: l2_driver_entry_tap (@: Lmx node) int
+# THE BUILDER TAP: the host calls the program builder it was given right after it reserved R0;
+# the driver hands the host this one, which calls the generated builder once, as the host would,
+# and inspects the unit it built in R0's own arena.
+fn: l2_driver_program (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int
     int: rc
-    rc: l2_program_entry(node)
-    entry_calls: entry_calls + 1
-    entry_rc: rc
-    entry_node: node
+    builds: builds + 1
+    rc: l2_program_build(arena, graph, settings)
+    build_rc: rc
+    phase: "R0's program"
+    if: rc = 0
+        inspect(arena, graph)
+    ---
 return: rc
 
-fn: l2_driver_root_open (@: LmxRoot root; LmxCallEntry: entry; ulong: limit) int
-    if: entry = l2_program_entry
-        entry_opened: entry_opened + 1
+# THE LAUNCH TAP: the generated main's one call.  The kernel's lmx_root_launch runs as main asked,
+# with the builder tap in place of the generated builder it was handed; the driver keeps the exit
+# code it returns and reads the host's state after it.
+fn: l2_driver_root_launch (@: LmxRoot root; int: argc; @@: char argv; LmxRootProgram: program; size_t: fields; LmxRootSettings: settings; ulong: limit; @: void out; @: void err) int
+    int: code
+    launches: launches + 1
+    if: program = l2_program_build
+        program_passed: 1
     ---
-return: lmx_root_open(root, l2_driver_entry_tap, limit)
+    code: lmx_root_launch(root, argc, argv, l2_driver_program, fields, settings, limit, out, err)
+    host_state: lmx_root_state(root)
+return: code
 
 # THE MERGE TAP (S1.1 / D-07).  The generated C is compiled with
 # -Dlmx_merge_owned=l2_driver_merge_owned and
@@ -316,7 +264,7 @@ return: lmx_merge_profiles_owned(operands, count, body, container, dst_chars, sr
 fn: main (int: argc; @@: char argv) int
     int: status
     int: expected 0
-    int: letters 1
+    int: letters -1
     int: fails 0
     int: stopped -1
     int: thrown -1
@@ -350,15 +298,11 @@ fn: main (int: argc; @@: char argv) int
         pargv[k]: argv[dash + k]
         k: k + 1
     ---
-    # E1: the process exit value is the int the entry returns.  `entry N` names it (default 0, the
-    # fixtures' own pass value); the generated C main returns it and the adapter returns it too.
-    # `letters N`: the letters R0 still holds at close (default 1: the argv letter, untaken).
-    # `fails 1`: the entry does not complete -- an uncaught implicit failure (a refused admission,
-    # a failing merge) reaches the adapter -- so the program has no value and exits 1.
-    # S1.1: `mergefail N` fails the program's Nth merge (the tap above); `stopped 1` is R0's
-    # Message stopped at close (running = 0), `stopped 0` still running; `thrown N` is the status
-    # that reached the root, which the adapter returns -- E declares no throws, so it is the
-    # implicit name's g: 1 merge, 2 implements.
+    # The exit (author 2026-09-24): the launch's exit code is R0's exit letter's, else the mapping of
+    # R0's success (1 -> 0, 0 -> 1).  `entry N` names it (default 0).  `fails 1`: R0 does not
+    # complete -- an uncaught failure -- so the exit is 1.  `mergefail N` fails the program's Nth
+    # merge (the tap above).  `letters N`, `stopped N` and `thrown N` were read at R0's close, which
+    # is the host's now: they cannot be observed from here, and a row that names one is red.
     while: at + 1 < gargc
         if: c.strcmp(argv[at], "entry") = 0
             expected: arg(at + 1)
@@ -382,49 +326,23 @@ fn: main (int: argc; @@: char argv) int
     ---
     phase: "generated program"
     status: l2_generated_main(pargc, pargv)
+    check(launches = 1, "generated main launched the host exactly once")
+    check(program_passed = 1, "generated main handed the host its generated program builder")
+    check(builds = 1 && build_rc = 0, "the host built R0's program exactly once, and the builder succeeded")
+    check(host_state = c.LMX_ROOT_CLOSED, "the launch closed the host")
+    phase: "exit"
     if: fails = 0
-        check(status = expected, "generated main returned the entry's value")
-        check(l2_program_completed() = 1, "the entry completed")
+        check(status = expected, "the launch's exit code is the expected one: R0's exit letter, or its success")
     else:
-        check(status = 1, "a failed entry leaves the program without a value: exit 1")
-        check(l2_program_completed() = 0, "the entry did not complete: an uncaught failure")
+        check(status = 1, "a failed R0 leaves the launch with exit 1")
     ---
-    check(hooked = 1, "generated main closed exactly one root")
-    phase: "argv letter"
-    check(letters_at_close = letters, "R0 holds the expected number of untaken letters at close")
-    if: letters_at_close != letters
-        c.printf("l2_eternal_driver: %d letters untaken at close, expected %d\n", letters_at_close, letters)
+    if: fails = 0 && status != expected
+        c.printf("l2_eternal_driver: exit %d, expected %d\n", status, expected)
     ---
-    check(close_rc = c.LMX_ROOT_OK, "root close released every untaken letter and succeeded")
-    phase: "generated entry"
-    check(entry_opened = 1, "generated main opened its root with the generated entry adapter")
-    check(entry_calls = 1, "generated entry ran exactly once")
-    # R0's graph is independent (parent = 0), so the adapter's reserved `node` is 0.
-    check(entry_node = 0, "the entry adapter's node is 0: the graph hanging in R0 is independent")
-    if: fails = 0
-        check(entry_rc = expected, "generated entry returned the expected value")
-    else:
-        check(entry_rc != 0, "the entry reported its failure to the host")
-    ---
-    if: fails = 0 && entry_rc != expected
-        c.printf("l2_eternal_driver: entry returned %d\n", entry_rc)
-    ---
-    phase: "uncaught throw"
     if: merge_fail_at > 0
         check(merge_calls >= merge_fail_at, "the program made the merge the row fails")
     ---
-    if: stopped = 1
-        check(running_at_close = 0, "the uncaught throw stopped R0's Message: running = 0 at close")
-    ---
-    if: stopped = 0
-        check(running_at_close = 1, "R0's Message is still running at close")
-    ---
-    if: thrown >= 0
-        check(fails != 0 && entry_rc = thrown, "the root received the thrown implicit name's status")
-    ---
-    if: thrown >= 0 && entry_rc != thrown
-        c.printf("l2_eternal_driver: status %d reached the root, expected %d\n", entry_rc, thrown)
-    ---
+    check(letters < 0 && stopped < 0 && thrown < 0, "no fact read at R0's close is named: the close is the host's")
     if: failures != 0
         c.printf("l2_eternal_driver: %d failed of %d\n", failures, checks)
         return: 1

@@ -22,7 +22,10 @@ fn: m () int
 end: m
 
 if: implements(Plain, Equatable, ThinConsumer) != 1
-    return: 1
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
 if: implements(Plain, Equatable, Equatable) != 0
-    return: 2
-return: 0
+    sendMessage: exit(exit_code: 2; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

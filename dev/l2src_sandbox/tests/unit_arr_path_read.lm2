@@ -14,15 +14,21 @@ return: h\buf[1]
 Holder: a
 @: int p
 if: a\buf[0] != 0 || a\buf[2] != 0
-    return: 1
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
 if: length(a\buf) != 3 || length(a\cs) != 2
-    return: 2
+    sendMessage: exit(exit_code: 2; stdout: ""; stderr: "")
+    return
 p: @ a\buf[1]
 \p: 9
 if: a\buf[1] != 9
-    return: 3
+    sendMessage: exit(exit_code: 3; stdout: ""; stderr: "")
+    return
 if: pick(a) != 9
-    return: 4
+    sendMessage: exit(exit_code: 4; stdout: ""; stderr: "")
+    return
 if: Holder\buf[1] != 0
-    return: 5
-return: 0
+    sendMessage: exit(exit_code: 5; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

@@ -187,6 +187,16 @@ int: l2_ns_has_char 0
 # emitted predef under the SAME condition: without it the constructor is
 # called with no prototype and its pointer is truncated to int.
 int: l2_ns_has_array 0
+# The synthesized letter model (FABLE-SONNET-SEND-REF-20260925-172 commit 2):
+# `receiveMessage: m Model` types m as an internal, not source-findable named
+# Structure {sender: @: LmxMsg; payload: Model} (or, for a bare `receiveMessage:
+# m`, payload untyped -- see l2_letter_ns_for). Memoized by payload model
+# (0 = the untyped case): a letter's shape is a TYPE, so every receive site
+# naming the same payload model, or none, shares one synthesized l2_ns entry --
+# not one per site. l2_letter_model_name[k] is 0 for the untyped entry.
+int: l2_letter_model_n 0
+@@: LmP0Text l2_letter_model_name 0
+@: int l2_letter_model_ns 0
 # Set when l2_path_root resolves node or for as a root anywhere in the
 # program (FABLE-SONNET-NODE-ROOT-20260923-121): the l2_pst/l2_pxp locals
 # every method's body prelude declares are gated on l2_ns_n/l2_mres_n
@@ -499,7 +509,11 @@ prototype:
     fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
     fn: l2_colon_decl_shape (const: @(LmP0Node stmt); @@: LmP0Text out_model; @@: LmP0Text out_name) int
     fn: l2_empty_struct_decl_shape (const: @(LmP0Node stmt); int: mi) int
-    fn: l2_receive_msg_shape (const: @(LmP0Node stmt); @@: LmP0Text out_name) int
+    fn: l2_receive_msg_shape (const: @(LmP0Node stmt); @@: LmP0Text out_name; @@: LmP0Text out_model) int
+    fn: l2_sender_text () @: LmP0Text
+    fn: l2_payload_text () @: LmP0Text
+    fn: l2_letter_synth_name (const: @(LmP0Text model)) @: LmP0Text
+    fn: l2_letter_ns_for (const: @(LmP0Text model); const: @(LmP0Node at); const: @(char path); @: int out_ni) int
     fn: l2_body_receives (const: @(LmP0Structure body)) int
     fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char path)) int
     fn: l2_collect_asgn_binds (const: @(char path)) int
@@ -6054,30 +6068,166 @@ fn: l2_empty_struct_decl_shape (const: @(LmP0Node stmt); int: mi) int
         return: 0
 return: 1
 
-# receiveMessage: m (author, Q10, 2026-09-23) -- the general mail receiver: m is
-# bound to the graph of the next admitted letter of the CURRENT Thread, and to 0
-# when its inbox is empty. It is a receiver of the profile, not syntax: a
-# declared method named receiveMessage takes precedence, as every callable head
-# does. m is an own field of graph type, the cell kind `Model: fresh` uses,
-# declared by the first receiveMessage that names it and rebound by every later
-# one. 0 = the shape, 2 = the receiver with anything but one name, 1 = not it.
-fn: l2_receive_msg_shape (const: @(LmP0Node stmt); @@: LmP0Text out_name) int
+# receiveMessage: m / receiveMessage: m Model (author, Q10, 2026-09-23; the
+# two-name form, FABLE-SONNET-SEND-REF-20260925-172 commit 2) -- the general
+# mail receiver: m is bound to the graph of the next admitted letter of the
+# CURRENT Thread, and to 0 when its inbox is empty. It is a receiver of the
+# profile, not syntax: a declared method named receiveMessage takes
+# precedence, as every callable head does. m is an own field typed to the
+# synthesized letter model (l2_letter_ns_for), declared by the first
+# receiveMessage that names it and rebound by every later one. With a second
+# name, that name is the user's model for the letter's payload (field 1);
+# without one, the payload is untyped -- either way m\sender and, when typed,
+# m\payload\<field> resolve as ordinary field paths. 0 = the shape (out_model
+# 0 for the one-name form), 2 = the receiver with anything but one or two
+# names, 1 = not it.
+fn: l2_receive_msg_shape (const: @(LmP0Node stmt); @@: LmP0Text out_name; @@: LmP0Text out_model) int
     @: LmP0Frame fr
     @: LmP0Field only
+    @: LmP0Field second
     if: out_name = 0
         return: 1
     \out_name: 0
+    if: out_model != 0
+        \out_model: 0
     if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0
         return: 1
     fr: stmt\as\frame
     if: fr\head = 0 || l2_text_eq(fr\head, "receiveMessage") = 0 || l2_find_method(fr\head) >= 0
         return: 1
-    if: fr\body = 0 || fr\trailer != 0 || fr\body\trailer != 0 || l2_count_active(fr\body) != 1
+    if: fr\body = 0 || fr\trailer != 0 || fr\body\trailer != 0 || (l2_count_active(fr\body) != 1 && l2_count_active(fr\body) != 2)
         return: 2
     only: l2_next_active(fr\body\first_field)
     if: only = 0 || only\value = 0 || only\value\kind != c.LM_P0_NODE_ATOM || only\value\as = 0 || only\value\as\atom = 0 || l2_ident(only\value\as\atom) = 0
         return: 2
+    if: l2_count_active(fr\body) = 2
+        second: l2_next_active(only\next)
+        if: second = 0 || second\value = 0 || second\value\kind != c.LM_P0_NODE_ATOM || second\value\as = 0 || second\value\as\atom = 0 || l2_ident(second\value\as\atom) = 0
+            return: 2
+        \out_name: only\value\as\atom
+        if: out_model != 0
+            \out_model: second\value\as\atom
+        return: 0
     \out_name: only\value\as\atom
+return: 0
+
+# The fixed field names of a synthesized letter model, cached like l2_lmx_text.
+@: LmP0Text l2_sender_name_cache 0
+fn: l2_sender_text () @: LmP0Text
+    if: l2_sender_name_cache != 0
+        return: l2_sender_name_cache
+    l2_sender_name_cache: (cast: (@: LmP0Text) l2_xmalloc(c.sizeof(c.LmP0Text)))
+    if: l2_sender_name_cache = 0
+        return: 0
+    l2_sender_name_cache\data: "sender"
+    l2_sender_name_cache\length: 6U
+return: l2_sender_name_cache
+
+@: LmP0Text l2_payload_name_cache 0
+fn: l2_payload_text () @: LmP0Text
+    if: l2_payload_name_cache != 0
+        return: l2_payload_name_cache
+    l2_payload_name_cache: (cast: (@: LmP0Text) l2_xmalloc(c.sizeof(c.LmP0Text)))
+    if: l2_payload_name_cache = 0
+        return: 0
+    l2_payload_name_cache\data: "payload"
+    l2_payload_name_cache\length: 7U
+return: l2_payload_name_cache
+
+# A deterministic, never-source-spellable name for a synthesized letter
+# model, so it is traceable (and distinct per payload model) without ever
+# being findable by l2_ns_find over real source text: a leading space is not
+# a character any L2 identifier can start with. 0 model = the untyped letter.
+fn: l2_letter_synth_name (const: @(LmP0Text model)) @: LmP0Text
+    @: LmP0Text r
+    @: char buf
+    r: (cast: (@: LmP0Text) l2_xmalloc(c.sizeof(c.LmP0Text)))
+    if: r = 0
+        return: 0
+    if: model = 0
+        r\data: " receiveMessage"
+        r\length: 16U
+        return: r
+    buf: (cast: (@: char) l2_xmalloc((cast: (size_t) model\length) + 1U))
+    if: buf = 0
+        return: 0
+    buf[0]: 32
+    memcpy((cast: (@: void) (buf + 1)), (cast: (@: void) model\data), model\length)
+    r\data: buf
+    r\length: model\length + 1U
+return: r
+
+# The synthesized letter model for a receiveMessage payload (0 model =
+# untyped): a Structure {sender: @: LmxMsg; payload: Model}, memoized by
+# model so every receive site naming the same model -- or none -- shares one
+# entry (a letter's shape is a type, not a per-site construction). The
+# untyped payload uses the SAME general reference kind (10) the sender field
+# does, pointee Lmx (the generic model projection, l2_lmx_text) -- not kind 3
+# with no target: kind 3's own resolution is deferred to a later pass over
+# the whole unit and its construction-phase arm (l2trans.lm1's own eternal/
+# instance builders) indexes l2_nsp by l2_nsf_ref unconditionally, which a
+# permanently-unresolved -1 would read out of bounds. Kind 10 has no such
+# forward-reference step; its pointee is resolved immediately, exactly like
+# a formal's or local's `@: Lmx` would be.
+fn: l2_letter_ns_for (const: @(LmP0Text model); const: @(LmP0Node at); const: @(char path); @: int out_ni) int
+    int: k 0
+    int: mni 0 - 1
+    int: ni
+    int: lmx_ty
+    @@: LmP0Text gn
+    @: int gi
+    size_t: want
+    if: out_ni = 0
+        return: 1
+    \out_ni: -1
+    while: k < l2_letter_model_n
+        if: model = 0 && l2_letter_model_name[k] = 0
+            \out_ni: l2_letter_model_ns[k]
+            return: 0
+        if: model != 0 && l2_letter_model_name[k] != 0 && l2_text_same(l2_letter_model_name[k], model) != 0
+            \out_ni: l2_letter_model_ns[k]
+            return: 0
+        k: k + 1
+    ---
+    if: model != 0
+        mni: l2_ns_find(model)
+        if: mni < 0
+            return: l2_error(path, at, "receiveMessage: unknown payload model")
+        ---
+    ---
+    ni: l2_ns_push(l2_letter_synth_name(model), 0 - 1, at)
+    if: ni < 0
+        return: l2_error(path, at, "out of memory")
+    l2_ns_first[ni]: l2_nsf_n
+    if: l2_nsf_push(10, 0U, 29, ni) < 0
+        return: l2_error(path, at, "out of memory")
+    l2_nsf_fname[l2_nsf_n - 1]: l2_sender_text()
+    if: model != 0
+        if: l2_nsf_push(3, 0U, mni, ni) < 0
+            return: l2_error(path, at, "out of memory")
+        l2_nsf_fname[l2_nsf_n - 1]: l2_payload_text()
+    else:
+        lmx_ty: l2_foreign_intern(l2_lmx_text(), 1, 0)
+        if: lmx_ty < 100
+            return: l2_error(path, at, "out of memory")
+        if: l2_nsf_push(10, 0U, lmx_ty, ni) < 0
+            return: l2_error(path, at, "out of memory")
+        l2_nsf_fname[l2_nsf_n - 1]: l2_payload_text()
+    ---
+    l2_ns_count[ni]: 2
+    want: (cast: (size_t) (l2_letter_model_n + 1))
+    gn: (cast: (@@: LmP0Text) realloc((cast: (@: void) l2_letter_model_name), want * c.sizeof(@: void)))
+    if: gn = 0
+        return: l2_error(path, at, "out of memory")
+    l2_letter_model_name: gn
+    gi: (cast: (@: int) realloc((cast: (@: void) l2_letter_model_ns), want * c.sizeof(c.int)))
+    if: gi = 0
+        return: l2_error(path, at, "out of memory")
+    l2_letter_model_ns: gi
+    l2_letter_model_name[l2_letter_model_n]: (cast: (@: LmP0Text) model)
+    l2_letter_model_ns[l2_letter_model_n]: ni
+    l2_letter_model_n: l2_letter_model_n + 1
+    \out_ni: ni
 return: 0
 
 # Does a body take a letter anywhere? Such a method declares the two locals
@@ -6094,7 +6244,7 @@ fn: l2_body_receives (const: @(LmP0Structure body)) int
         stmt: field\value
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_STRUCTURE && stmt\as != 0 && stmt\as\structure != 0 && l2_body_receives(stmt\as\structure) != 0
             return: 1
-        if: l2_receive_msg_shape(stmt, @ nm) = 0
+        if: l2_receive_msg_shape(stmt, @ nm, 0) = 0
             return: 1
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\body != 0
             inner: l2_next_active(stmt\as\frame\body\first_field)
@@ -6420,6 +6570,7 @@ fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char p
     int: oty
     int: used
     int: cj
+    int: letni
     if: body = 0 || mi < 0
         return: 0
     field: l2_next_active(body\first_field)
@@ -6481,10 +6632,25 @@ fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char p
                 return: 1
             field: l2_next_active(field\next)
             continue
-        # receiveMessage: m declares m the same way (an own field of graph type).
-        if: l2_receive_msg_shape(stmt, @ fa) = 0
-            if: l2_own_add(mi, fa, l2_own_of_dt(l2_colon_graph_ty()), path, stmt) < 0
+        # receiveMessage: m declares m the same way (an own field of graph
+        # type). receiveMessage: m Model (FABLE-SONNET-SEND-REF-20260925-172
+        # commit 2) additionally types it to the synthesized letter model,
+        # exactly as the colon-decl branch above types its own field --
+        # cmodel is reused, the two branches never both match the same
+        # statement. The bare (no-model) form stays untyped, unchanged: it is
+        # admitted at run time into WHATEVER typed field it is later bound
+        # to or assigned into (unit_admit_letter_formal.lm2 and its siblings
+        # depend on this -- retyping it broke them, measured directly).
+        if: l2_receive_msg_shape(stmt, @ fa, @ cmodel) = 0
+            cj: l2_own_add(mi, fa, l2_own_of_dt(l2_colon_graph_ty()), path, stmt)
+            if: cj < 0
                 return: 1
+            if: cmodel != 0
+                if: l2_letter_ns_for(cmodel, stmt, path, @ letni) != 0
+                    return: 1
+                if: l2_own_nsty_set(cj, letni) != 0
+                    return: 1
+                ---
             field: l2_next_active(field\next)
             continue
         if: l2_frame_head(stmt, "if")
@@ -7067,7 +7233,7 @@ fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
                 return: 1
             field: l2_next_active(field\next)
             continue
-        if: l2_receive_msg_shape(stmt, @ fa) = 0
+        if: l2_receive_msg_shape(stmt, @ fa, 0) = 0
             if: l2_own_add(mi, fa, l2_own_of_dt(l2_colon_graph_ty()), l2_src, stmt) < 0
                 return: 1
             field: l2_next_active(field\next)
@@ -7226,7 +7392,7 @@ fn: l2_colon_decl_room (const: @(LmP0Node node)) int
         return: 0
     if: node\kind = c.LM_P0_NODE_FRAME && l2_colon_decl_shape(node, @ cm, @ cn) = 0
         return: 1
-    if: node\kind = c.LM_P0_NODE_FRAME && l2_receive_msg_shape(node, @ cn) = 0
+    if: node\kind = c.LM_P0_NODE_FRAME && l2_receive_msg_shape(node, @ cn, 0) = 0
         return: 1
     if: node\kind = c.LM_P0_NODE_STRUCTURE && node\as\structure != 0
         f: node\as\structure\first_field
@@ -12187,15 +12353,33 @@ fn: l2_field_path_read (int: mi; const: @(LmP0Text left); const: @(LmP0Text righ
     oty: l2_kind_cell_ty(kind)
     if: kind = 10 || kind = 11
         # A reference field leaf (FABLE-SONNET-SEND-REF-20260925-172 commit
-        # 1): its pointee code is not fixed per kind the way a primitive's
-        # is, so re-derive it (l2_path_kind's out_mi carries it for these
-        # two kinds) and convert formal/local raw code -> own-storage code
-        # the same way any other declared pointer own field does.
+        # 1, revised commit 2 / D-56): l2_xp is already the SLOT's own
+        # address (set above from l2_pxp) -- the slot holds the pointee's
+        # address directly, like kind 3's own reference field, so this is
+        # ONE deref of l2_xp[0], not l2_emit_cell_load's own-storage-cell
+        # convention (that is for a separately allocated pointer cell, a
+        # different representation this kind no longer uses). Its pointee
+        # code is not fixed per kind the way a primitive's is, so re-derive
+        # it (l2_path_kind's out_mi carries it for these two kinds) and
+        # spell it with the same raw-code table a formal's/local's own
+        # pointer type already uses.
         ent: 0 - 1
         l2_path_kind(buf, n, @ ent)
-        oty: l2_own_ty_of_param(ent)
-    if: l2_emit_cell_load(oty, ind, t, at) != 0
-        return: 1
+        if: fputs(ind, l2_out) < 0
+            return: 1
+        if: l2_emit_raw_pointer_type(l2_out, ent, 0) != 0
+            return: 1
+        if: c.fprintf(l2_out, " l2_t%d\n%sl2_t%d: (cast: (", t, ind, t) < 0
+            return: 1
+        if: l2_emit_raw_pointer_type(l2_out, ent, 0) != 0
+            return: 1
+        if: fputs(") l2_xp[0])\n", l2_out) < 0
+            return: 1
+        ---
+    else:
+        if: l2_emit_cell_load(oty, ind, t, at) != 0
+            return: 1
+        ---
     if: c.sprintf(dest, "l2_t%d", t) < 0
         return: 1
 return: 0
@@ -13877,6 +14061,7 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
     int: lty 0
     @: LmP0Text lnm 0
     int: cj
+    int: letni
     @: LmP0Text cmodel
     @: LmP0Text cname
     if: body = 0
@@ -14122,13 +14307,19 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
                 return: 1
             field: l2_next_active(field\next)
             continue
-        # receiveMessage: m (Q10). The first receiveMessage that names m declares it
-        # (an own field of graph type, bound here); a later one rebinds it.  A
-        # letter's graph has no static Structure type: into a typed own field it
-        # is admitted at run time (l2_emit_admit); a formal is not its target.
-        if: l2_receive_msg_shape(stmt, @ cname) = 2
-            return: l2_error(path, stmt, "receiveMessage binds one name")
-        if: l2_receive_msg_shape(stmt, @ cname) = 0
+        # receiveMessage: m / receiveMessage: m Model (Q10; the two-name form,
+        # FABLE-SONNET-SEND-REF-20260925-172 commit 2). The first
+        # receiveMessage that names m declares it (an own field typed to the
+        # synthesized letter model, bound here); a later one rebinds it.  A
+        # letter's graph has no static Structure type of its own: into the
+        # letter model own field it is admitted at run time (l2_emit_admit);
+        # a formal is not its target.  Set here too, not only in the
+        # collection pre-pass (l2_collect_asgn_body): idempotent on a repeat,
+        # and the only way this site's own l2_own_nsty_get check below sees
+        # the type on a first declaration if that pre-pass has not run yet.
+        if: l2_receive_msg_shape(stmt, @ cname, 0) = 2
+            return: l2_error(path, stmt, "receiveMessage binds one or two names")
+        if: l2_receive_msg_shape(stmt, @ cname, @ cmodel) = 0
             nmk: l2_param_find(mi, cname)
             if: nmk >= 0 && l2_colon_is_graph_ty(l2_ft(mi, nmk)) != 0
                 return: l2_error(path, stmt, "graph assignment admission requires receiving-expression tests")
@@ -14137,6 +14328,12 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             cj: l2_own_add(mi, cname, l2_own_of_dt(l2_colon_graph_ty()), path, stmt)
             if: cj < 0
                 return: 1
+            if: cmodel != 0
+                if: l2_letter_ns_for(cmodel, stmt, path, @ letni) != 0
+                    return: 1
+                if: l2_own_nsty_set(cj, letni) != 0
+                    return: 1
+                ---
             if: l2_own_nsty_get(cj) >= 0 && l2_admit_site(mi) != 0
                 return: l2_error(path, stmt, "internal: admission outside a method")
             if: l2_own_off(mi, cj) = (cast: (size_t) -1)
@@ -19773,13 +19970,21 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                 return: 1
             if: l2_pkind = 9 && l2_prhs_lit = 0 && c.fprintf(l2_out, "%sif: lmx_ulong_store_known(l2_pxp[0], %s) != 0\n", ind, l2_tok) < 0
                 return: 1
-            # A reference field (FABLE-SONNET-SEND-REF-20260925-172 commit 1):
-            # the cell holds a raw pointer, stored the same generic way every
-            # other own-field pointer cell already is (l2_emit_msend/
-            # receiveMessage's own lmx_pointer_store_known calls) -- never a
-            # literal RHS (l2_path_rhs does not recognize one for this kind),
-            # so only the l2_eval_fields token side applies.
-            if: (l2_pkind = 10 || l2_pkind = 11) && c.fprintf(l2_out, "%sif: lmx_pointer_store_known(l2_pxp[0], (cast: (@: void) %s)) != 0\n", ind, l2_tok) < 0
+            # A reference field (FABLE-SONNET-SEND-REF-20260925-172 commit 1,
+            # revised commit 2 / D-56): l2_pxp is already the SLOT's own
+            # address (l2_emit_path_to's walk, same as every other kind
+            # here) -- the slot holds the pointee's address directly, like
+            # kind 3's own reference field, not a separately allocated
+            # pointer cell (lmx_arena_ref_store's own body is exactly this
+            # plain assignment; no status to check, a store here cannot
+            # fail). Never a literal RHS (l2_path_rhs does not recognize one
+            # for this kind), so only the l2_eval_fields token side applies.
+            # The trailing `if: 0` is not a status check (there is none) --
+            # every branch here ends a line l2_emit_path_bail's own body
+            # (below, unconditional, shared by every kind) nests under; a
+            # bare assignment has nothing to nest it under, which without
+            # this misparses the two into one statement (measured directly).
+            if: (l2_pkind = 10 || l2_pkind = 11) && c.fprintf(l2_out, "%sl2_pxp[0]: (cast: (@: void) %s)\n%sif: 0\n", ind, l2_tok, ind) < 0
                 return: 1
             if: l2_emit_path_bail(mi, ind) != 0
                 return: 1
@@ -20109,7 +20314,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         # working local via l2_emit_occ_write (a bare m reads that).  A cell that
         # cannot be stored is an invariant failure on the checkpoint's own
         # diagnostic route, never a throw (X1, -128).
-        if: l2_receive_msg_shape(stmt, @ cname) = 0
+        if: l2_receive_msg_shape(stmt, @ cname, 0) = 0
             oi: l2_own_find_last(mi, cname)
             if: oi < 0
                 return: l2_error(l2_src, stmt, "unresolved name")
@@ -21385,22 +21590,22 @@ fn: l2_emit_unit (const: @(char out_path)) int
                     return: 1
                 ---
             # A reference field (kind 10/11, FABLE-SONNET-SEND-REF-20260925-172
-            # commit 1): a plain pointer cell, the same allocator the walked
-            # root's graph-typed own fields and a formal's/local's own pointer
-            # locals already use (l2trans.lm1's own l2_own_is_pointer-gated
-            # sites) -- NOT a Structure reference (kind 3), which stays null
-            # here and is materialized by the second phase's merge(Type,
-            # empty) below. Without this the slot stays the arena's raw
-            # zeroed child (never lmx_value_allocate_owned'd), which is not a
-            # cell lmx_pointer_store_known/_value_known or the merge copier
-            # can treat as one -- found via a witness that read/wrote such a
-            # field and hit "a field path met no Structure" on every read.
-            if: l2_nsf_owner[fx] = k && (l2_nsf_kind[fx] = 10 || l2_nsf_kind[fx] = 11) && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + %d, l2_program_arena)\n        if: l2_entry_slot[0] = 0\n            return: 1\n", k, (cast: (unsigned) oi), l2_nsf_ref[fx]) < 0
-                fclose(l2_out)
-                return: 1
-            if: l2_nsf_owner[fx] = k && (l2_nsf_kind[fx] = 10 || l2_nsf_kind[fx] = 11) && l2_ns_eternal[k] >= 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: lmx_arena_take_profiled(l2_program_arena, c.sizeof(@: void), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_POINTER_BASE + %d, l2_eprofile%u)\n        if: l2_entry_slot[0] = 0\n            return: 1\n", k, (cast: (unsigned) oi), l2_nsf_ref[fx], (cast: (unsigned) l2_ns_eternal[k])) < 0
-                fclose(l2_out)
-                return: 1
+            # commit 1, revised commit 2 / D-56): the slot holds the pointee's
+            # address DIRECTLY (lmx_arena_ref_store/ref_value), exactly like
+            # kind 3's own reference slot -- not a separately allocated
+            # pointer CELL (that representation is for an own local/root own
+            # field, a primitive of the pointer pool the walker can PUT/
+            # DEREF; a Structure field that references something is not
+            # that). So, like kind 3/4, no arm here at all: the slot stays
+            # the arena's raw null child, materialized by an ordinary store
+            # wherever the field is later assigned -- lmx_implements_walk
+            # (lmx_implements.lm1:135, "if: c != 0") skips a null consumer
+            # slot as unused, which is exactly what admission of a received
+            # letter's sender field needs. (D-52's now-removed pointer-cell
+            # allocation here made a real letter's raw LmxMsg* address --
+            # stored the same direct way -- disagree in domain kind with
+            # this field's own prototype cell, an uncaught "implements"
+            # throw on every receiveMessage: m Model.)
             if: l2_nsf_owner[fx] = k
                 oi: oi + 1
             ---

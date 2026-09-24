@@ -590,7 +590,9 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_next_message_method_first.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
         Absent = @('lmx_thread_mail_take'); Debt = @() },
     [pscustomobject]@{ Name = 'unit_next_message_one_name.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'receiveMessage binds one name'; Absent = @(); Debt = @() },
+        Needle = 'receiveMessage: unknown payload model'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_receive_letter_model.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Absent = @(); Debt = @() },
     # FABLE-SONNET-RECEIVE-RENAME-20260924-166 commit 1: `nextMessage` is no longer a language
     # word (renamed to `receiveMessage`) -- `nextMessage: m` is now an ordinary colon-assignment
     # to an undeclared name, refused like any other (measured: not "unknown method" -- the shape

@@ -155,9 +155,172 @@ GREEN 256/256 (kernel selftests included, all exit 0 or the one documented
 expected-fatal), L3 selftest 11/11 suites + type budget OK (4 units),
 check_docs OK, `git diff --check` clean.
 
+## Commit 2: `receiveMessage: m Model`, the synthesized letter, and D-56
+
+Base: origin/main after commit 1 integrated (4aee8cf).
+
+### The two-name form
+
+`receiveMessage: m Model` types `m` to a synthesized letter model
+`{sender: @: LmxMsg; payload: Model}` -- `l2_receive_msg_shape` widened to
+accept a 1- or 2-item body (`out_model` new out param, 0 for the 1-item
+form), all 7 call sites updated. Synthesis is memoized by payload model
+(`l2_letter_ns_for`, a small parallel-array table keyed by model text,
+`l2_text_same`) -- two receive sites naming the same Model, or the same
+name rebound later, share one synthesized `l2_ns_push` entry: a letter's
+shape is a type, not a per-site construction. The synthesized entry's name
+is never source-findable (`l2_letter_synth_name`: a leading space, which no
+L2 identifier can start with, prepended to the model's own name text, or a
+fixed `" receiveMessage"` for the untyped form -- built but unused, see
+below).
+
+Wired at both sites `Model: m`'s own colon-decl mechanism already uses:
+the early collection pass (`l2_collect_asgn_body`, runs before any
+statement is checked) and `l2_check_body`'s own pass -- `l2_own_add` then
+`l2_own_nsty_set`, mirroring `l2_colon_decl_shape`'s exact sequence.
+`l2_emit_body`'s own binding site needed no change at all: its admission
+call (`l2_own_nsty_get(oi) >= 0 && l2_emit_admit(...)`) was already
+conditional on the own field actually being typed, so once `l2_own_nsty_set`
+runs at check time, the existing admission machinery fires automatically.
+
+**First attempt over-scoped, reverted**: retyping even the BARE
+`receiveMessage: m` (no model) broke `unit_admit_letter_formal.lm2` and two
+siblings, which rely on the bare form staying untyped -- an untyped graph
+value is admissible into WHATEVER typed target it is later bound to or
+assigned into; a synthesized type would make it match only itself. Narrowed
+so ONLY the two-name form synthesizes; the bare form is byte-for-byte
+unchanged from before this ticket. One harness row's expected text updated
+(`unit_next_message_one_name.lm2`): `receiveMessage: a b` is now valid
+2-name syntax, refusing on `b` not being a declared model
+("receiveMessage: unknown payload model"), not on the shape itself
+("receiveMessage binds one name" is gone, replaced by "...binds one or two
+names").
+
+### D-56: typed admission had never actually run, ever
+
+The witness (`receiveMessage: m MainLetter` inside a method, receiving R0's
+own mainArgs letter -- the -168 method-body path, since the walked root's
+own `take` primitive doesn't exist yet, Grok -177 later) aborted every time:
+`R0 closed ... R0 was stopped`, an uncaught `implements` throw. Bisected
+past this ticket's own code entirely -- swapped in the PRE-EXISTING,
+untouched mechanism (`MainLetter: m` / bare `receiveMessage: m`, no
+synthesis) in the same position: identical failure. Checked every existing
+"admit a typed letter" fixture's harness row: every single one is
+`root-pending`, never actually executed. Typed receiveMessage admission has
+never run in this codebase's history; this witness is the first.
+
+fable's first hypothesis (a stale `l2_program_arena`, the host's instead of
+the running Thread's) was measured directly with a temporary debug print at
+the admit site and disproven: the two arena addresses printed identical,
+and classifying the letter's graph in that arena succeeded (kind != NONE).
+
+Reading `lmx_implements_walk` in full (`lmx_implements.lm1:106-184`) found
+the real cause: per field the consumer (the model's own prototype instance)
+declares, it compares `lmx_domain_kind` of the incoming value, of `varB`,
+and of the consumer's own slot value at that index -- ANY kind mismatch is
+NO. Commit 1's D-52 fix gave the prototype's kind-10 sender slot the
+address of a freshly `lmx_pointer_new_owned`-allocated cell (`KIND_PRIMITIVE`).
+A real letter's sender slot holds the raw `LmxMsg*` address directly, no
+wrapper (`lmx_arena_ref_store(letter_graph, 0U, message)`, -173's own code)
+-- a different domain. Kind mismatch, refused.
+
+fable's diagnosis (confirmed by re-reading `lmx_implements_walk:135`,
+`if: c != 0`): the guard is keyed on the CONSUMER's own slot -- when it is
+null, the WHOLE field check (including reading `varA`/`varB`) is skipped,
+matching the file's own ":78 an empty uses is true" reasoning. My admission
+call passes the same prototype instance for both `varB` and `consumer`, so
+the fix is representational, not kernel-side: a kind-10/11 field's slot
+should hold the pointee's address DIRECTLY, exactly like kind 3's own
+reference field (`lmx_arena_ref_store`/`ref_value`, no cell) -- a pointer
+CELL is the representation an own local or root own field's own pointer
+value uses (a primitive of the pointer pool the walker PUTs/DEREFs), not
+what a Structure field that merely references something needs. With no
+cell, the prototype's slot for a reference field simply stays null (matching
+kind 3/4's own silence in the same construction loop), so `lmx_implements_walk`
+skips it entirely -- admission never compares the sender field's domain at
+all, and the bound letter still carries its real sender for `m\sender` to
+read afterward (a runtime read of the bound value, independent of the
+static admission check).
+
+Revised commit 1's own D-52 fix accordingly:
+- **Prototype construction**: the two kind-10/11 arms (ordinary and
+  profiled) removed entirely -- no arm at all, like kind 3/4.
+- **Write side**: `l2_pxp` is already the slot's own address (the walk gives
+  it generically, same as every other kind); the store is now a direct
+  `l2_pxp[0]: (cast: (@: void) <token>)`, not `lmx_pointer_store_known`
+  (which would treat the slot's contents as ANOTHER pointer to write
+  through -- the double indirection D-52's cell representation needed,
+  gone now that there is no cell).
+- **Read side**: `l2_xp[0]` (== `l2_pxp[0]`, the slot's own contents) is the
+  pointee's address directly, one deref; rewritten to bypass
+  `l2_emit_cell_load`/`l2_own_ty_of_param` (that path is specifically for a
+  separately allocated own-storage pointer cell, the representation this
+  kind no longer uses) and instead emit a plain declare-and-cast using
+  `l2_emit_raw_pointer_type` directly with the raw pointee code
+  `l2_path_kind`'s `out_mi` already carries.
+
+Two L1 syntax traps hit and fixed by testing, not guessing, matching this
+project's own established gotcha: (1) a `source level decrease must be one
+step` parse error from a multi-level dedent needing an explicit `---`
+cutter; (2) a subtler one -- `l2_emit_path_bail`'s own output is only the
+BODY of an `if: ... != 0` block (the `if:` line itself is always the
+caller's own, emitted separately, one per kind), so a bare assignment with
+no `if:` of its own left that body dangling, and l1trans merged the next
+two statements into one malformed C expression -- fixed by giving the write
+its own (trivially false, no real status to check) `if: 0` line to nest
+under, matching the shape every other kind already uses. A third,
+independent bug in the SAME area: the read side's declaration line was
+missing its leading `fputs(ind, l2_out)` (indentation prefix) before the
+type spelling, landing the declaration at column 0 while its own
+initializer line stayed indented -- l1trans read the indented line as
+nested inside the declaration, merging two statements into one. Both were
+found by actually compiling the generated C, not by re-reading the L1
+source for reasonableness.
+
+### D-56's mutation witness
+
+Reverted just the prototype-construction removal (restored the D-52-style
+`lmx_pointer_new_owned` arm, scratchpad backup/restore, confirmed
+byte-identical restore afterward): `unit_receive_letter_model` RED, the
+exact same `R0 was stopped` failure; `unit_ns_ref_field_general` (commit 1's
+own witness) stayed GREEN even with the mutant, since its write
+unconditionally overwrites whatever the prototype's slot held before
+copying, never reading it -- correctly isolating that the prototype
+representation, not the read/write rewrite, is what D-56 needed.
+
+### Witness
+
+`unit_receive_letter_model.lm2`: `MainLetter` (the existing K6 payload
+shape, one field `mainArgs`); a method `check()` does
+`receiveMessage: m MainLetter`, receiving R0's own mainArgs letter (the
+same one the host posts, per -168's own established "a method called during
+R0's turn takes the letter of the current Thread"); asserts `m != 0`,
+`m\sender != 0` (the general reference field, live), and
+`length(m\payload\mainArgs) != 0` (an ordinary field path through the
+payload, kind 3, into MainLetter's own field -- no new machinery needed
+there at all: an intermediate Structure-reference field already composed
+correctly before this ticket, proven by the pre-existing
+`unit_field_path_nested.lm2`). Called from the root; result relayed via
+`sendMessage: exit(...)`.
+
+Per fable's scope note: the walked root's own version of this same read
+needs the `take` primitive at the root, which does not exist yet (Grok -177
+later) -- the existing root-level K6 fixtures (`entry_argc_if.lm2` etc.)
+stay `root-pending`, untouched by this commit.
+
+### Gates (commit 2)
+
+l2_harness GREEN 343/343, `build_l2src -Run` GREEN 260/260 (kernel selftests
+included), L3 selftest 11/11 + type budget OK, check_docs OK,
+`git diff --check` clean.
+
 ## Still open for -172
 
-Part (2) (`m\sender`/`m\payload\mainArgs` reads via a synthesized letter
-model at the receive site) and part (3) (`sendMessage: Ref X`) per fable's
-design message -- not started; commit 1 was this field-branch/helper/runtime
-plumbing alone.
+Commit 3 (`sendMessage: Ref X`, root + method body, an explicit addressee
+in place of `lmx_thread_parent`) -- not started. Its whole point is
+reading `m\sender` and passing it on as the addressee, so it depends
+directly on commit 2's now-working `m\sender`.
+
+D-53 (the pre-existing `@`-on-a-Structure-typed-own-field double-indirection
+bug, found building commit 1's witness) remains open, reported to fable,
+not fixed by this ticket.

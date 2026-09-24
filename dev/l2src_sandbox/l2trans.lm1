@@ -12416,8 +12416,13 @@ return: 0
 # occurrence root are ordinary roots of this same dispatcher now, ni/root
 # seeded by l2_path_kind's own l2_path_root call, nothing special needed
 # here beyond widening this gate to admit them). FABLE-SONNET-FIELD-
-# PATHS-20260923-113. Returns -1 when left does not name an own field, a
-# namespace-typed name, node/for in a method other than E, or a method --
+# PATHS-20260923-113. A bound merge result is a root of the same kind (D-61,
+# FABLE-OPUS-MERGE-PARTS-20260926-193): l2_path_root already resolves it and
+# l2_path_kind/l2_emit_path walk its slot map, so `R\x` in an expression is
+# the value `v: R\x` reads -- it used to be an unresolved name, or, for an
+# all-caps R, a raw C name gcc refused. Returns -1 when left does not name an
+# own field, a namespace-typed name, a merge result, node/for in a method
+# other than E, or a method --
 # not this mechanism's path. Once left DOES resolve this way, any later
 # failure is a real error (1), never a silent fall-through: an unknown
 # right or a non-primitive leaf ends in the same diagnostics l2_path_kind/
@@ -12430,9 +12435,10 @@ fn: l2_field_path_check (int: mi; const: @(LmP0Text left); const: @(LmP0Text rig
     size_t: n
     int: leaf_mi
     \out_kind: 0 - 1
-    if: mi < 0 || left = 0 || right = 0 || left\data = 0 || right\data = 0
+    # A segment is a name: `merged\[N]x` is the occurrence branch's, not this one's.
+    if: mi < 0 || left = 0 || right = 0 || left\data = 0 || right\data = 0 || l2_ident(right) = 0
         return: 0 - 1
-    if: l2_own_find(mi, left) < 0 && l2_nsty_of_name(mi, left) < 0 && l2_text_eq(left, "node") = 0 && l2_text_eq(left, "for") = 0
+    if: l2_own_find(mi, left) < 0 && l2_nsty_of_name(mi, left) < 0 && l2_mres_find(left) < 0 && l2_text_eq(left, "node") = 0 && l2_text_eq(left, "for") = 0
         return: 0 - 1
     if: left\length + right\length + 2U > 256U
         return: 1
@@ -18983,6 +18989,12 @@ fn: l2_ccall_box_int (const: @(LmP0Node node); int: mi) int
             return: 1
         return: 0
     ---
+    # A `define:` constant (l2_define_name) is passed as itself (D-68): it holds no L2 value to
+    # stage, and an `int` temporary cut a char* define to 32 bits -- the b5 mixa crash
+    # unit_define_actual was written for, back until this.  Its type is C's, checked against
+    # the callee's prototype, as `c.NAME`'s is.
+    if: l2_define_name(node\as\atom) != 0
+        return: 0
 return: 1
 
 fn: l2_emit_ccall (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int

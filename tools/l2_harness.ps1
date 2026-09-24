@@ -398,6 +398,18 @@ foreach ($hdrDir in @('l2src', 'l1src')) {
         else { Add-Row 'FAIL' ('header:' + $hdrDir + '.' + $base) 'l1trans produced no header; see the log'; $driver = $false }
     }
 }
+# The fixtures' own predef headers (tests\*.h.lm1, staged into l2src\tests\): a running fixture whose
+# predef declares a C function reaches gcc through one (D-68, unit_define_ccall).  They are not the
+# driver's closure: a refused one is its own FAIL row and leaves the driver alone.
+$testsStaged = Join-Path $src 'l2src\tests'
+if (Test-Path -LiteralPath $testsStaged) {
+    New-Item -ItemType Directory -Force -Path (Join-Path $headers 'l2src\tests') | Out-Null
+    foreach ($h in @(Get-ChildItem -LiteralPath $testsStaged -File -Filter '*.h.lm1' | Sort-Object Name)) {
+        $base = $h.Name.Substring(0, $h.Name.Length - '.h.lm1'.Length)
+        $target = Join-Path $headers ('l2src\tests\' + $base + '.lm1.h')
+        if (-not (Step-Made ('header.tests.' + $base) $Translator @(('l2src/tests/' + $h.Name), $target) $src $target)) { Add-Row 'FAIL' ('header:tests.' + $base) 'l1trans produced no header; see the log' }
+    }
+}
 if (-not (Test-Path -LiteralPath $driverSource)) { Add-Row 'FAIL' 'build:eternal_driver' 'driver source is missing'; $driver = $false }
 if ($driver) {
     Copy-Item -LiteralPath $driverSource -Destination (Join-Path $src 'l2_eternal_driver.lm1') -Force
@@ -865,21 +877,32 @@ $fixtures = @(
     # for gcc) is gone: a `define:` of the unit or its predef chain is a DECLARED name
     # (l2_define_name, asked after every L2 name), anything else is a located refusal, and a name only
     # C knows is `c.NAME`.  An all-caps unit field read in a method is that field (6; it was a raw `N`
-    # and gcc «'N' undeclared»); an undeclared all-caps name and D-61's `R\x` in a condition are
-    # refused, located (both reached gcc).  Mutant: l2_define_name answering 0 refuses
-    # unit_define_actual.
+    # and gcc «'N' undeclared»); an undeclared all-caps name is refused, located (it reached gcc).
+    # Mutant: l2_define_name answering 0 refuses unit_define_actual.
     [pscustomobject]@{ Name = 'unit_upper_unit_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 6;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_upper_undeclared_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unresolved dynamic=NOPE'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_merge_path_condition_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unresolved name'; Absent = @(); Debt = @() },
-    # The declared names are admitted and PROBE_DEFINE_OK is compared as itself.  DEBT: LABEL, FG and
-    # UNIT_LABEL are staged into `int` temporaries again -- the b5 mixa crash this fixture was written
-    # for (a char* constant losing its high bits); the same before T1b, the fixture had no row.
+    # D-61: a bound merge result is a root of the read-position field path resolver
+    # (l2_field_path_check), so its path is a value in any expression -- a condition, arithmetic, a
+    # loop condition -- read through its slot map like `v: R\x`.  It was «unresolved name» (and, for
+    # an all-caps R before T1b, a raw C name gcc refused).  Mutant: the gate without merge results
+    # refuses both rows.  4 and 7.
+    [pscustomobject]@{ Name = 'unit_merge_path_condition.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 4;
+        Absent = @(); Debt = @('l2_pst: lmx_arena_ref_struct(node, 1U)') },
+    [pscustomobject]@{ Name = 'unit_merge_path_expr.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    # D-68: a `define:` constant (the predef's and the unit's) passed to a C function is passed as
+    # itself (l2_ccall_box_int asks l2_define_name) -- it used to be staged into an `int` temporary,
+    # which cut a char* define to 32 bits: the b5 mixa crash this fixture was written for.  It links
+    # against a prototype only, so it stops after l1trans; unit_define_ccall RUNS the same shape
+    # (strlen of a predef and a unit define: 11; without the fix the program faults).  Mutant:
+    # l2_ccall_box_int without the define test brings the staging back and turns both rows red.
     [pscustomobject]@{ Name = 'unit_define_actual.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
-        Absent = @();
-        Debt = @('probe_define_take(l2_p0_0, 0U, l2_t0, l2_t1) != PROBE_DEFINE_OK', 'l2_t0: PROBE_DEFINE_LABEL', 'l2_t1: PROBE_DEFINE_FG', 'l2_t0: PROBE_UNIT_LABEL') },
+        Absent = @('l2_t0: PROBE_DEFINE_LABEL', 'l2_t1: PROBE_DEFINE_FG', 'l2_t0: PROBE_UNIT_LABEL');
+        Debt = @('probe_define_take(l2_p0_0, 0U, PROBE_DEFINE_LABEL, PROBE_DEFINE_FG) != PROBE_DEFINE_OK', 'return: probe_define_take(l2_p1_0, 1U, PROBE_UNIT_LABEL, 7U)') },
+    [pscustomobject]@{ Name = 'unit_define_ccall.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 11;
+        Absent = @('l2_t0: PROBE_WORD', 'l2_t1: UNIT_WORD'); Debt = @('strlen(PROBE_WORD)', 'strlen(UNIT_WORD)') },
     # THE DECLARED-THROW ABI (FABLE-L2TRANS-THROW-FORMAL-20260920-05).  Every method that merges,
     # and every caller of one, carries the executing Message as a hidden formal.  It was spelled
     # `node`, the spelling of the reserved first formal, so EVERY such method came out as

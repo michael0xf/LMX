@@ -545,6 +545,8 @@ What is built:
     actual can name it; it is in no cycle, and no call from it is a re-entry.
   - A `[fresh, code]` branch there would be unreachable, so it is not emitted.  The first walked
     CALL that can be a re-entry is one inside a walked method body, which does not exist yet.
+  - The walker's FRESH node (Grok -188 k.3c) stays, for those future interpreted method bodies
+    (fable, 2026-09-25).
 
 Rows:
 - unit_fresh_instance_skipped_decl returns to 77 (Entry 77): probe's call of keep is outside any

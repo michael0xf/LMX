@@ -20,34 +20,35 @@ LMX is also a grammar capable of representing both data in a complex, uniquely s
 - [3. Identity and lexical trees](#identity)
 - [4. Names, paths and repeated occurrences](#fields)
 - [5. Explicit value descriptions and conversions](#descriptions)
-- [6. Analytical checking and candidate validation](#admission)
-- [7. Obtaining a required guarantee: fourteen practical cases](#admission-recipes)
-- [8. Value construction](#construction)
-- [9. const, immutable and independent](#qualification)
-- [10. Callable expressions and their interfaces](#callables)
-- [11. Dynamic inputs and working state](#dynamic)
-- [12. Branches and loops](#branches)
-- [13. Exits and finally](#exits)
-- [14. Declared failures and diagnostics](#exceptions)
-- [15. Restart and suspension](#suspension)
-- [16. Arrays, shape and shared backing](#arrays)
-- [17. Array operations](#array-operations)
-- [18. Numeric operations, purity and contexts](#mathematics)
-- [19. Composition and graph copying](#composition)
-- [20. Tables, queries, linking and providers](#registries)
-- [21. Ownership, reachability and lifetime](#memory)
-- [22. Eternal branches and shared methods](#eternal)
-- [23. Message, actor and serial turn](#messages)
-- [24. Delivery, ownership and mutation order](#delivery)
-- [25. Completion, children and retained failure state](#lifecycle)
-- [26. Incoming-message admission and execution](#pipeline)
-- [27. Mix: active marks and intervals](#mix)
-- [28. WorldWideMix: addresses, cells and navigation](#worldwide)
-- [29. Prefix coordination and mirrors](#mix-coordination)
-- [30. HTTP and service boundaries](#transport)
-- [31. Authentication, authority and evidence](#authentication)
-- [32. Cryptographic values and providers](#crypto-values)
-- [33. Cryptographic operation contracts](#crypto-operations)
+- [6. Message-local type bindings and conversion context](#conversion-context)
+- [7. Analytical checking and candidate validation](#admission)
+- [8. Obtaining a required guarantee: fourteen practical cases](#admission-recipes)
+- [9. Value construction](#construction)
+- [10. const, immutable and independent](#qualification)
+- [11. Callable expressions and their interfaces](#callables)
+- [12. Dynamic inputs and working state](#dynamic)
+- [13. Branches and loops](#branches)
+- [14. Exits and finally](#exits)
+- [15. Declared failures and diagnostics](#exceptions)
+- [16. Restart and suspension](#suspension)
+- [17. Arrays, shape and shared backing](#arrays)
+- [18. Array operations](#array-operations)
+- [19. Numeric operations, purity and contexts](#mathematics)
+- [20. Composition and graph copying](#composition)
+- [21. Tables, queries, linking and providers](#registries)
+- [22. Ownership, reachability and lifetime](#memory)
+- [23. Eternal branches and shared methods](#eternal)
+- [24. Message, actor and serial turn](#messages)
+- [25. Delivery, ownership and mutation order](#delivery)
+- [26. Completion, children and retained failure state](#lifecycle)
+- [27. Incoming-message admission and execution](#pipeline)
+- [28. Mix: active marks and intervals](#mix)
+- [29. WorldWideMix: addresses, cells and navigation](#worldwide)
+- [30. Prefix coordination and mirrors](#mix-coordination)
+- [31. HTTP and service boundaries](#transport)
+- [32. Authentication, authority and evidence](#authentication)
+- [33. Cryptographic values and providers](#crypto-values)
+- [34. Cryptographic operation contracts](#crypto-operations)
 
 <a id="scope"></a>
 ## 1. Language scope and execution modes
@@ -140,8 +141,281 @@ A converter is an explicitly selected receiving expression. Conversion keys come
 
 Numeric conversion preserves the destination-range contract: `u16(255) → u8` is admitted when the converter exists, while `u16(256) → u8` produces a range error, not zero. Rounding `1.5 → i32` and in-range precision loss require explicit numeric-profile rules. Proven range inclusion may eliminate a redundant machine operation while preserving the semantic requirement. Format, range and converter-behavior failures are not replaced by a positive `implements` result.
 
+<a id="conversion-context"></a>
+## 6. Message-local type bindings and conversion context
+
+LMX has no process-global built-in type environment, conversion registry, generic-instantiation state, or implicit system table. Type descriptions, symbolic type bindings, conversion relations, and the expressions implementing those conversions are ordinary explicitly supplied LMX data.
+
+An executing Message has one type-and-conversion context for its graph. That context is initialized from Structures explicitly supplied to the Message when it is constructed. The initial root may provide the application's initial type descriptions, symbolic bindings, conversion tables, and related receiving expressions, but a child Message does not inherit them merely because it was created by that root or by another Message.
+
+If a Message requires such data, the creating operation must explicitly supply the corresponding Structures or references under the ordinary Message-construction rules.
+
+Conceptually:
+
+```text
+Root
+    type descriptions
+    symbolic type bindings
+    conversion relations
+    converter callables
+
+        ↓ explicitly supplied
+
+Message M
+    application graph
+    Message-local type bindings
+    Message-local conversion context
+```
+
+The word "common" in this context means common to one concrete Message, not global to the process.
+
+### Stable symbolic type bindings
+
+A symbolic type name may be bound once in the type context of a Message and then used consistently throughout that Message.
+
+For example, a Message may contain the bindings:
+
+```text
+a -> int
+b -> String
+```
+
+Every use of `a` in that Message resolves through the same Message-local binding unless an explicit language operation constructs a different Message-local context.
+
+The binding is not repeatedly inferred or re-instantiated for each function call.
+
+Thus, within one Message:
+
+```text
+fn: identity (a: x) a
+return: x
+```
+
+uses the same binding of `a` at every occurrence of `a`.
+
+If this Message binds:
+
+```text
+a -> int
+```
+
+then its effective contract is:
+
+```text
+fn: identity (int: x) int
+return: x
+```
+
+Another Message may receive a different binding:
+
+```text
+a -> String
+```
+
+without changing the first Message.
+
+A symbolic type name therefore represents a stable relation inside one Message, not a process-global type variable and not a fresh generic parameter instantiated independently at every call site.
+
+This rule prevents separate parts of one executing graph from silently assigning different meanings to the same symbolic type name.
+
+### Genericity is the default structural case
+
+LMX does not require a separate generic, template, or type-parameter instantiation construct in order for an expression to accept structurally different candidates.
+
+An expression states only the paths, values, callable operations, result contracts, and other properties that its Consumer actually requires. Candidate admission determines whether those requirements can be satisfied.
+
+Consequently, structural generality is the ordinary case. Additional type information narrows the accepted domain; it does not activate genericity.
+
+A symbolic binding such as `a` is required only when several positions must refer to one stable Message-local type relation.
+
+For example:
+
+```text
+fn: identity (a: x) a
+return: x
+```
+
+states that the input and result use the same Message-local type binding.
+
+By contrast, an expression that merely consumes whatever fields and operations it requires does not need an artificial type variable solely to declare itself generic.
+
+### Message-local conversion table
+
+The conversion table used by a Message is likewise explicit Message-local data.
+
+It is not a hidden global registry and is not implicitly shared by all Messages.
+
+Conceptually:
+
+```text
+Message M
+    type bindings:
+        a -> int
+        b -> String
+
+    conversions:
+        int -> String
+        String -> int
+        Meter -> Foot
+        Foot -> Meter
+        ...
+```
+
+The actual representation remains ordinary LMX Structures, descriptions, relations, Tables, and callable expressions. This notation only illustrates their role.
+
+A conversion is available to an operation only when the concrete Message can reach the corresponding explicitly supplied description/relation/converter under the ordinary graph rules.
+
+Absence of a conversion from the Message context does not trigger a process-wide search and does not cause the runtime to invent one.
+
+### Conversion and candidate consumption
+
+When a Consumer requires a value of description T, a candidate need not originate with an identical primitive or semantic description if the Message-local conversion context explicitly provides a valid path accepted by the Consumer's rules.
+
+The ordinary sequence is:
+
+```text
+candidate value
+    ↓
+Consumer requirement
+    ↓
+explicitly available Message-local conversion
+    ↓
+conversion contract and range validation
+    ↓
+formed value satisfying the destination requirement
+```
+
+Converters remain ordinary receiving expressions. Analytical checking does not execute them. When execution actually requires the conversion, the selected converter is executed under its declared contract.
+
+Range, representation, unit, precision, and other semantic constraints belong to the applicable descriptions and conversion contracts.
+
+A successful structural admission therefore never authorizes unchecked reinterpretation of primitive storage.
+
+### Units and semantic quantities
+
+Units of measurement require no separate built-in kernel mechanism.
+
+A Message may explicitly receive descriptions and conversion relations for semantic quantities such as:
+
+```text
+Meter
+Foot
+Second
+Kilogram
+```
+
+If the Message-local context contains an admitted conversion such as:
+
+```text
+Foot -> Meter
+```
+
+then an operation requiring Meter may consume a value described as Foot through that ordinary conversion mechanism.
+
+The conversion remains subject to its normal contracts, including range, numeric representation, precision, and any unit-specific conditions.
+
+The kernel therefore needs no privileged list of physical units. Unit conversion is one application of the same description-and-conversion mechanism used for other values.
+
+### Callable arguments and results
+
+The same Message-local conversion context applies when forming callable arguments and consuming callable results.
+
+For a selected callable:
+
+```text
+actual value
+    ↓
+ordinary Message-local conversion if required
+    ↓
+formed argument
+    ↓
+exact selected callable argument contract
+```
+
+and on return:
+
+```text
+callable result
+    ↓
+ordinary Message-local conversion if required
+    ↓
+Consumer's required result contract
+```
+
+This permits a callable to be used when its original primitive descriptions differ from the Consumer's descriptions, provided that the concrete Message contains the required explicit conversions and all conversion contracts succeed.
+
+For example, a Consumer may conceptually require:
+
+```text
+int -> int
+```
+
+while the selected callable has:
+
+```text
+String -> decimal
+```
+
+if this Message explicitly provides and admits:
+
+```text
+int -> String
+decimal -> int
+```
+
+The resulting call is still fully typed. The arguments presented to the selected callable must satisfy its actual descriptor after formation, and the value presented to the result Consumer must satisfy the Consumer's requirement after result conversion.
+
+### Message boundary
+
+Type bindings and conversion availability do not silently cross a Message boundary.
+
+If Message A contains:
+
+```text
+a -> int
+```
+
+and a conversion:
+
+```text
+String -> int
+```
+
+Message B does not obtain either merely because A creates B, sends to B, or is B's parent.
+
+They become available to B only if the relevant Structures or references are explicitly supplied under the applicable Message creation or delivery contract.
+
+Therefore two Messages may intentionally execute the same reusable expression under different type-and-conversion contexts while each Message remains internally consistent.
+
+Example:
+
+```text
+Message A:
+    a -> int
+
+Message B:
+    a -> decimal
+```
+
+The source expression:
+
+```text
+fn: identity (a: x) a
+return: x
+```
+
+may consequently have different concrete bindings in A and B, but within either Message the binding remains stable.
+
+### No hidden system state
+
+The implementation must not introduce any of the following as an alternative semantic source: a process-global conversion registry; an implicit universal type-variable environment; automatic inheritance of the root's conversion context; per-call re-instantiation of an already Message-bound symbolic type; a hidden search across conversion providers not reachable from the Message; built-in privileged knowledge of units or semantic quantity classes.
+
+An implementation may cache resolved bindings or conversion selections as an optimization, but the observable result must be identical to resolving the explicitly supplied Message-local data.
+
+The semantic source of a binding or conversion is always ordinary reachable LMX state.
+
 <a id="admission"></a>
-## 6. Analytical checking and candidate validation
+## 7. Analytical checking and candidate validation
 
 The single candidate-admission mechanism consists of analytical tree-based `implements` for the receiving expression and execution of that expression's unit tests by the graph interpreter. Arena address classification supports value representation; it is not alternative validation. A matching signature, an attached explicit description or a positive analytical answer does not replace execution of the required tests.
 
@@ -197,7 +471,7 @@ Ordinary values may store test results when the program explicitly does so. Appl
 A statically established violation is reported during analysis. Failure of any mandatory unit test makes `admitted(aVar, bVar, Consumer)` false; declared failures follow the [exception rules](#exceptions). Neither validation nor memory reclamation rolls back already published messages or external effects.
 
 <a id="admission-recipes"></a>
-## 7. Obtaining a required guarantee: fourteen practical cases
+## 8. Obtaining a required guarantee: fourteen practical cases
 
 Most questions about guarantees reduce to a practical choice: where must a distinction be placed so that the required property is actually checked? A guarantee does not arise from a global strict mode; it arises from the part of a Structure that Consumer must traverse and from the tests defined by the receiving expression. Just as a C `typedef` merely names an alias while a wrapping `struct` creates a separately enforced boundary, LMX relies on the expressed path and its consumption contract.
 
@@ -274,7 +548,7 @@ Additional explicit keys widen only the available leaf conversions. They do not 
 A foreign handle requires a checked high-level wrapper and explicit resource and cleanup contracts. A thin `FILE`-like leaf does not establish validity, authority or single close. The receiving expression's unit tests check declared properties within their contract; immutable handle bits do not keep a resource alive. L3 has no ordinary machine-level `own:`/`borrow:`/`move:`, and `copy:` does not invent a foreign resource's duplication policy.
 
 <a id="construction"></a>
-## 8. Value construction
+## 9. Value construction
 
 A structural expression constructs a value when execution reaches it. Declaring a name, importing a unit or providing a description does not eagerly create every instance. Named and anonymous branches are created by the sole full-`merge` mechanism: determine the lexical parent, traverse the complete used graph closure, create fields with stable identity, evaluate initializers in source order, rewrite references and `parent`, and publish the fully initialized result. An `independent` root has `parent = 0`; that is exactly what absence of an external lexical parent means.
 
@@ -303,7 +577,7 @@ end: result
 Naming does not add a descriptor, class or special layout to the object. Branch construction is a particular use of [full `merge`](#composition), not a separate shortened constructor; the source form selects the operand, proposed name and publication site. The evaluation/reuse policy of a top-level named construction still requires definition; eager materialization of every value during translation does not follow from it.
 
 <a id="qualification"></a>
-## 9. const, immutable and independent
+## 10. const, immutable and independent
 
 `const` protects a binding: it cannot be assigned, rebound or replaced. The value behind a protected reference may remain mutable. `immutable` protects the value itself for its entire life through every alias; a variable holding its reference may remain rebindable. `const: immutable` combines both guarantees. They are independent qualifications, not degrees of one scale.
 
@@ -327,7 +601,7 @@ For example, a method inside independent Structure S can use S's field through i
 
 <a id="execution"></a>
 <a id="callables"></a>
-## 10. Callable expressions and their interfaces
+## 11. Callable expressions and their interfaces
 
 An executable body is a structural expression. Every named Structure may be executed through the bare atom of its name, but declaring or constructing it does not itself execute its body. `fn` defines an expression with one logical result; `sub` performs execution without a returned value; `fm` has one result Structure whose fields provide a multiple-return surface. The signature defines explicit arguments, required dynamic and lexical inputs, each value's pass mode, the result and declared `throws` exits. Bare `return` exits without a value; `return: value` supplies a value in a body admitting a result. An ordinary named Structure is a callable without a result: only bare `return` is admitted in it, and `return: value` is rejected; `sub` likewise admits bare `return` but does not acquire a result from it. At the opening level `return` -- bare, or with a value in a body admitting a result -- may also close any callable Structure (a method or a named Structure) as a trailer under the general grammar rule; `return` does not close a non-callable Structure. A structural path through a callable Structure (`Counter\n`) reads its published field and does not execute it, even when it is a method.
 
@@ -359,7 +633,7 @@ A returned reference preserves its exact target identity. Constructing a result,
 
 <a id="publication"></a>
 <a id="dynamic"></a>
-## 11. Dynamic inputs and working state
+## 12. Dynamic inputs and working state
 
 A persistent graph field, the current activation's working value of an own field, an explicit formal argument and a dynamic input must be distinguished. They are separate storage locations with separate mutation rules. Ordinary passing copies a mutable primitive's value and a Structure or Array's reference; the special identity of an immutable value is retained under [qualification](#qualification).
 
@@ -454,7 +728,7 @@ A body supplied to a receiving expression as a Structure and an executable call'
 Publication is required at call, return, `throw`, diagnostic termination and `yield` boundaries. An exit with `finally` has the two publications specified under [exits](#exits). `retry` and local loop transfers do not by themselves create a new activation or reload fields. Signatures and the graph retain this model's requirements whether the graph is interpreted or translated.
 
 <a id="branches"></a>
-## 12. Branches and loops
+## 13. Branches and loops
 
 Control receivers determine how their structural bodies are consumed. Membership in a body does not require immediate execution of all its fields. Control labels denote visible transfer targets; mentioning a label neither invokes its body nor constitutes an implicit `goto`.
 
@@ -475,7 +749,7 @@ Control receivers determine how their structural bodies are consumed. Membership
 An unlabelled transfer targets the nearest suitable active loop. A labelled transfer requires a visible label; `continue` to a non-loop target is erroneous. `redo` is valid only within a loop and may fail to make progress. Every abandoned scope performs its registered cleanups. The complete set of scope kinds that can carry a label requires a separate grammar definition.
 
 <a id="exits"></a>
-## 13. Exits and finally
+## 14. Exits and finally
 
 `finally` registers cleanup in the current scope without executing it at registration. Registered cleanups run in reverse order when that scope is exited. This applies to normal completion, `return`, `throw`, transfers out of a loop scope, `redo`, `retry`, diagnostic termination and other profile exits. It is neither a `try` construct nor an exception-only handler.
 
@@ -486,7 +760,7 @@ Dynamic inputs are not copied back, clean cached fields are not published, and t
 An exit within an already running cleanup does not re-enter that cleanup. Remaining applicable outer cleanups retain their obligations. Calls within cleanup have ordinary publication boundaries. Removing an activation through stopping or cancellation does not permit these rules to be bypassed.
 
 <a id="exceptions"></a>
-## 14. Declared failures and diagnostics
+## 15. Declared failures and diagnostics
 
 `throws` lists names of an expression's possible recoverable exits, not exception types. The caller must provide a `catch` for each name or include it in its own `throws`. A call without either treatment is rejected. Failure detection uses ordinary `if`; module `guard` is not a failure-handling operator.
 
@@ -548,7 +822,7 @@ sub: helloMain
 Expected input errors use an explicit condition and declared failure rather than a diagnostic abort. `log` and `error` record observations through the selected profile. `error` alone does not imply `throw`, `assert`, return or termination. A non-literal argument resolves as an ordinary value; an unknown name does not automatically become a log string.
 
 <a id="suspension"></a>
-## 15. Restart and suspension
+## 16. Restart and suspension
 
 `retryable` defines a restartable region. Unlabelled `retry` repeats the nearest active such region; `retry: label` repeats the named one. Abandoned-attempt cleanups run before restarting. The transfer does not roll back external effects, graph mutations, already published fields or Messages. Transactional rollback requires an explicitly represented data protocol.
 
@@ -559,7 +833,7 @@ Expected input errors use an explicit condition and declared failure rather than
 Producer inputs are fixed when its activation begins. A later `next` caller does not replace them with its own dynamic context. If `next` is a separate wrapper expression, its inputs belong to its activation unless an explicit operation changes the producer's saved state. The continuation and iterator-result representation is not observable when it preserves these semantics.
 
 <a id="arrays"></a>
-## 16. Arrays, shape and shared backing
+## 17. Arrays, shape and shared backing
 
 An ordinary Array is a typed value with stable reference identity. Constructor `[]` creates it when execution reaches the construction site. A Structure field holding its reference is not the Array itself. Passing a reference does not copy elements; an element mutation is visible through other references, whereas rebinding a local reference is not.
 
@@ -576,7 +850,7 @@ A view can share backing within one Message; a copy has separate backing. `slice
 `reshape` preserves values and total element count; changing the count requires an explicit fill/truncate/copy contract. Compatible storage permits a view; otherwise explicitly defined materialization is necessary. `transpose` exchanges the last two axes for rank at least two or follows the selected matrix profile. `permute(array, axes)` specifies an axis permutation. An operation's logical stride data need not add fields to every universal descriptor.
 
 <a id="array-operations"></a>
-## 17. Array operations
+## 18. Array operations
 
 Array arithmetic and comparisons are elementwise by default. Element operations follow their numeric domain and explicitly selected context. `*` means elementwise multiplication, not matrix multiplication. `matmul`, `dot`, `contract` and `outer` are separate explicit operations; a profile-specific matrix symbol must not make ordinary `*` ambiguous.
 
@@ -591,7 +865,7 @@ Broadcasting aligns positive extents from the right. A pair is admitted if equal
 The minimal numeric profile defined here covers ranks 1/2, contiguous storage, checked indexing, shape, copying, elementwise `+ - * /`, scalar broadcasting, equal-shape operations and whole-array reduction. Other numeric profiles may add operations through separate contracts.
 
 <a id="mathematics"></a>
-## 18. Numeric operations, purity and contexts
+## 19. Numeric operations, purity and contexts
 
 Numeric names and operators resolve to available constructors, explicit descriptions and callable operations. Families include machine integers/floats, `bigint`, `real`, `decimal`; these are not a mandatory closed language type list. GMP, MPFR and decNumber are possible implementations, not L3 source ontology. Conversions specify range, precision and rounding under the [description contract](#descriptions).
 
@@ -604,7 +878,7 @@ A `real` context may define precision, rounding, status, traps and exactness req
 Arrays use the same scalar operations and contexts. Vectorization, reduction and tensor operations do not create a different meaning of addition. The minimal mathematics profile includes basic arithmetic, Boolean operations, comparisons, construction/arithmetic for the three extended numeric families, explicit conversions, selected pure functions and numeric-Array operations. It does not imply exposure of the entire C library.
 
 <a id="composition"></a>
-## 19. Composition and graph copying
+## 20. Composition and graph copying
 
 `merge` is an executable operation over live structural operands. It is neither a preprocessor include, C-type composition nor mutation of source values. Operands are evaluated once left-to-right; a fresh root is then built with direct fields in operand and appended-body order. A previous `merge` result can itself be an operand.
 
@@ -621,7 +895,7 @@ A type description, schema, module data or Table is ordinary data: applying `mer
 Ownership transfer of existing storage during Message delivery is a [different operation](#delivery), without copying or changing the structural `parent`. Admission-policy combination is likewise not `merge`: it selects and checks explicit data without default structural copying.
 
 <a id="registries"></a>
-## 20. Tables, queries, linking and providers
+## 21. Tables, queries, linking and providers
 
 Registry, Table, RegistryView, schema and policy are roles of ordinary values, not additional categories or hidden namespaces. Each operation receives a registry root explicitly or reaches it through an expressed reference. Merely having a Table does not trigger lookup; a row keyed `class`, `type`, `provides` or `satisfies` does not change language meaning.
 
@@ -834,7 +1108,7 @@ A diagnostic result can also be an ordinary cell value. For a higher-arity relat
 ```
 
 <a id="memory"></a>
-## 21. Ownership, reachability and lifetime
+## 22. Ownership, reachability and lifetime
 
 Every Message, executing or not, owns one logical arena of mutable data. It can contain multiple disjoint regions; these are not additional source-level arenas. Calls, blocks, handlers, branches and retries do not create their own semantic arenas. L3 does not select an arena through an operation argument.
 
@@ -851,7 +1125,7 @@ An adopted graph with no application-retained references can be collected at end
 A foreign resource has a separate ownership, retention, release and transfer contract. `copy`, serialization and `merge` do not invent native-resource duplication. Immutability of its identifier does not extend resource lifetime. The physical collector, typed pools and region registration are described in [L2](L2_spec_en.md#arena) and [L1](L1_spec_en.md#arena).
 
 <a id="eternal"></a>
-## 22. Eternal branches and shared methods
+## 23. Eternal branches and shared methods
 
 Combined qualification `independent: const: immutable` establishes a sealed immutable independent branch: its root has `parent = 0`, and its contents and protected bindings are immutable. For the initial lexically known module, explicit retention by owner R0 gives process-long storage. The qualification itself neither selects a global owner nor defines unloading of a future module. Any one qualification alone does not establish this sharing contract.
 
@@ -870,7 +1144,7 @@ R0 retains immutable independent branches of the initial module only because it 
 For example, A and B constructed from A's template can have the same eternal E address and distinct mutable x cells. Finishing A and B does not release E. Equal contents of separately constructed branches do not imply automatic interning. Across processes a native address is not wire identity: an explicit codec is required.
 
 <a id="messages"></a>
-## 23. Message, actor and serial turn
+## 24. Message, actor and serial turn
 
 A Message is an isolated graph with its own ownership. A plain template or letter is non-executable and may exist as a standalone minimal `LmxMsg`. An executable object is instead constructed as an L3 Thread from the beginning. Its `LmxMsg message` is the first member by value, so the Thread and its Message prefix have the same physical address. This common prefix supplies Message identity and operations only; it does not turn every Message into a Thread or put mail, scheduling, turn mode, or other Thread mechanisms into `LmxMsg`. A standalone Message cannot later be upgraded in place to a Thread. Exact address-range classification still distinguishes standalone Message storage from Thread storage: the generic Message kind admits both, whereas access to the Thread-only tail requires the exact Thread type. Receiving a letter does not automatically create a thread or actor. Launching a separate child requires an explicit operation.
 
@@ -892,7 +1166,7 @@ The process's initial graph belongs to the root Message. Initial settings and us
 
 <a id="addressing"></a>
 <a id="delivery"></a>
-## 24. Delivery, ownership and mutation order
+## 25. Delivery, ownership and mutation order
 
 The local intermediate organization level addresses participants by physical memory addresses within admitted Message-mechanism operations. Hierarchical index chains belong to [WorldWideMix](#worldwide), starting at the third organization scale, not to every local letter. Organization scale must not be confused with language profile L3. A native address is not serialized as a portable address on another machine.
 
@@ -911,7 +1185,7 @@ Delivery success means admission, not application of a requested change. A resul
 Current-turn outgoing letters are staged separately from the published queue. A successful boundary publishes them in staging order; failure discards unpublished staging. This does not undo graph mutations already performed. The [collection boundary](#memory) follows outcome and temporary-root processing.
 
 <a id="lifecycle"></a>
-## 25. Completion, children and retained failure state
+## 26. Completion, children and retained failure state
 
 An executing Message's `success` is set only by user code: the system never resets it to 0, not even on failure, and never sets it to 1 itself; `success = 1` is a sufficient condition for stopping the Thread at end turn. The system sets `success = 1` only for a plain letter, at its delivery. An empty mailbox is not success. Once `success` is set, the Message's main algorithm receives no next turn; finishing local child maintenance depends on implementation. `running = 0` during execution may be a stop request: physical storage-handoff safety is established by a separate protocol, not inferred from one flag.
 
@@ -924,7 +1198,7 @@ Stopped failed state may be transferred to the parent without copying and retain
 A participant that loses its parent closes under an orphan policy: successful completion releases it, while failure history may remain until an explicit deadline. This policy creates neither a second global registry nor an indefinite owner outside Messages.
 
 <a id="pipeline"></a>
-## 26. Incoming-message admission and execution
+## 27. Incoming-message admission and execution
 
 Incoming data pass through an explicit decoder to become a Message graph. The destination, route and receiving expression are then selected through supplied references or lookup from a supplied root. Neither Message text nor a Table reference installs a hidden environment or grants automatic trust.
 
@@ -937,7 +1211,7 @@ After admission, an explicit implementation/provider reference is selected and a
 A logical generator may construct zero or more proposed Messages. Each re-enters the same path; generator origin confers no trust. Received text does not transfer another actor's running frame. Work executes in the receiver's serial turn unless a separate child launch is explicit.
 
 <a id="mix"></a>
-## 27. Mix: active marks and intervals
+## 28. Mix: active marks and intervals
 
 Mix is a parallel mark/interval overlay on document positions, not a second parse tree or XML-like nesting. One source traversal builds ordinary Structures and anchors Mix marks. Structural nodes, fields, Array rows and source intervals can participate in overlapping active sets even without explicit braces.
 
@@ -958,7 +1232,7 @@ Closing red here does not close green. A later mark does not destroy an earlier 
 Mix has three distinct roles: source-mark overlay, document placement tree and cooperating-Message execution. An interval, placement cell and Message do not correspond one-to-one. Document updates, notifications and cursors follow ownership and FIFO; locks and callbacks do not arise implicitly from Mix membership.
 
 <a id="worldwide"></a>
-## 28. WorldWideMix: addresses, cells and navigation
+## 29. WorldWideMix: addresses, cells and navigation
 
 WorldWideMix defines a placement tree: where a cell is situated. The LMX graph defines a value: its fields and what an expression consumes. These trees meet in a cell but are not identical: address `3.17.4` is not field path `file\close`, and `implements` does not number Mix neighbours.
 
@@ -977,7 +1251,7 @@ Sorting services are placed outside an individual application, at WorldWideMix n
 The Mix overlay places intersecting marks, cursors, attributes and intervals on the same positions. Page-value composition uses ordinary [merge](#composition) with first `[0]` occurrence, not neighbour-address overriding. Disk exhaustion does not authorize automatically spilling data to an arbitrary neighbour: refusal, compaction or an explicitly authorized mirror belongs to storage policy.
 
 <a id="mix-coordination"></a>
-## 29. Prefix coordination and mirrors
+## 30. Prefix coordination and mirrors
 
 Mutable Mix state belongs to a Message. A change request addresses its owner and executes in that owner's serial turn. Concurrent senders to one owner need only FIFO; concurrency alone does not require an extra lock-grant step.
 
@@ -992,7 +1266,7 @@ A mirror is another prefix with corresponding content for a particular consumer,
 Equivalence of primary and mirrored values is relative to the receiving expression's used tree and tests. It does not mean perpetual byte equality. A last-wins projection is permitted for a selected renderer but does not destroy the complete occurrence chain. History and undo may consume Mix changes; a new whole-document version on every edit is not a core rule.
 
 <a id="transport"></a>
-## 30. HTTP and service boundaries
+## 31. HTTP and service boundaries
 
 HTTP/REST LMX is a transport profile, not the execution core or WorldWideMix. A service is a set of cooperating Messages, not a shared mutable heap. An external request becomes a Message, then undergoes [intake and admission](#pipeline), execution and result-to-transport mapping.
 
@@ -1038,7 +1312,7 @@ The declarative routing rule below is profile data. A separate receiving express
 ```
 
 <a id="authentication"></a>
-## 31. Authentication, authority and evidence
+## 32. Authentication, authority and evidence
 
 Credentials, verifiers, authority and evidence are explicit values in Message flow, not a global role hierarchy. A protected verifier checks a primary credential without retaining its original secret. A cryptographic result is a fact for policy, not automatic authority for every action.
 
@@ -1051,7 +1325,7 @@ After primary-credential confirmation, policy may issue a delegated module/servi
 AuthEvidence may explicitly contain user, verifier realm, ticket, permitted actions and quorum satisfaction. It is data with dependencies and lifetime. The receiving expression checks required properties in its unit tests under [unified admission](#admission). A password match or valid signature creates no implicit roles, name bindings or indefinite admission.
 
 <a id="crypto-values"></a>
-## 32. Cryptographic values and providers
+## 33. Cryptographic values and providers
 
 L3 expresses cryptographic intent, key relationships, policy and protocol state. A provider implements primitives, secure storage and platform interfaces. The names below denote semantic contract roles; a concrete profile binds them to receivers and a type structure. Providers are explicitly selected by profile, reference, capability, configuration or service.
 
@@ -1068,7 +1342,7 @@ Passing KeyRef, returning it, storing it in a field, composition and provider ch
 Secure memory is a set of distinct capabilities: controlled secret storage, erasure, page locking, guard pages, non-extractability and hardware protection. One does not imply the others. Erasing copies outside provider control in UI, VM or host cannot be promised. Direct calls, service Messages and asynchronous adapters may implement one contract without introducing a new common scheduler or an already defined language `await`.
 
 <a id="crypto-operations"></a>
-## 33. Cryptographic operation contracts
+## 34. Cryptographic operation contracts
 
 The following signatures specify semantic inputs/results, not physical ABI. Byte results remain ordinary values; provider-private key representation stays hidden. These operations do not create another argument-admission mechanism.
 

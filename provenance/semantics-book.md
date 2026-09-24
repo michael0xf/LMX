@@ -153,6 +153,547 @@ Descriptions are composed with ordinary `merge` under the common [occurrence-ord
 A converter is an explicitly selected receiving expression. Conversion keys come from explicit descriptions and their composition; there is no hidden search across all type pairs. Analytical checking does not execute a converter. When an operation requires conversion, the selected call is executed; a missing key does not create a nonexistent converter. A later same-name key does not displace the first without explicit occurrence selection.
 
 Numeric conversion preserves the destination-range contract: `u16(255) → u8` is admitted when the converter exists, while `u16(256) → u8` produces a range error, not zero. Rounding `1.5 → i32` and in-range precision loss require explicit numeric-profile rules. Proven range inclusion may eliminate a redundant machine operation while preserving the semantic requirement. Format, range and converter-behavior failures are not replaced by a positive `implements` result.
+@@ conversion-context | Привязки типов и контекст преобразований на уровне Message | Message-local type bindings and conversion context | 2.2.3; 2.2.4; 7; 19.16
+[RU]
+В LMX нет процесс-глобального встроенного окружения типов, реестра преобразований, состояния инстанцирования generic-параметров или неявной системной таблицы. Описания типов, символические привязки типов, отношения преобразования и выражения, реализующие эти преобразования, — обычные явно переданные данные LMX.
+
+У исполняющегося Message есть один контекст типов и преобразований для его графа. Этот контекст инициализируется из Structure, явно переданных Message при его построении. Начальный корень может предоставить исходные описания типов приложения, символические привязки, таблицы преобразований и связанные принимающие выражения, но дочерний Message не наследует их лишь потому, что был создан этим корнем или другим Message.
+
+Если Message нужны такие данные, создающая операция обязана явно передать соответствующие Structure или ссылки по обычным правилам построения Message.
+
+Концептуально:
+
+```text
+Root
+    type descriptions
+    symbolic type bindings
+    conversion relations
+    converter callables
+
+        ↓ explicitly supplied
+
+Message M
+    application graph
+    Message-local type bindings
+    Message-local conversion context
+```
+
+Слово «общий» здесь означает общий для одного конкретного Message, а не глобальный для процесса.
+
+### Устойчивые символические привязки типов
+
+Символическое имя типа может быть привязано один раз в контексте типов Message и затем единообразно использоваться во всём этом Message.
+
+Например, Message может содержать привязки:
+
+```text
+a -> int
+b -> String
+```
+
+Каждое употребление `a` в этом Message разрешается через одну и ту же локальную для Message привязку, если явная операция языка не строит другой локальный контекст.
+
+Привязка не выводится и не инстанцируется заново при каждом вызове функции.
+
+Так, внутри одного Message:
+
+```text
+fn: identity (a: x) a
+return: x
+```
+
+использует одну и ту же привязку `a` в каждом вхождении `a`.
+
+Если этот Message привязывает:
+
+```text
+a -> int
+```
+
+то его действующий контракт:
+
+```text
+fn: identity (int: x) int
+return: x
+```
+
+Другой Message может получить иную привязку:
+
+```text
+a -> String
+```
+
+не меняя первого.
+
+Символическое имя типа, следовательно, обозначает устойчивое отношение внутри одного Message, а не процесс-глобальную переменную типа и не свежий generic-параметр, инстанцируемый независимо в каждом месте вызова.
+
+Это правило не даёт разным частям одного исполняющегося графа молча приписать одному символическому имени типа разные значения.
+
+### Обобщённость — обычный структурный случай
+
+LMX не требует отдельной конструкции generic, шаблона или инстанцирования параметра типа, чтобы выражение принимало структурно различных кандидатов.
+
+Выражение указывает только пути, значения, вызываемые операции, контракты результата и прочие свойства, которые действительно требует его Consumer. Допуск кандидата решает, выполнимы ли эти требования.
+
+Поэтому структурная общность — обычный случай. Дополнительная информация о типе сужает принимаемую область, а не включает обобщённость.
+
+Символическая привязка вроде `a` нужна лишь тогда, когда несколько позиций должны ссылаться на одно устойчивое локальное для Message отношение типов.
+
+Например:
+
+```text
+fn: identity (a: x) a
+return: x
+```
+
+утверждает, что вход и результат используют одну и ту же локальную привязку типа.
+
+Напротив, выражение, которое просто потребляет требуемые ему поля и операции, не нуждается в искусственной переменной типа лишь для того, чтобы объявить себя обобщённым.
+
+### Локальная для Message таблица преобразований
+
+Таблица преобразований, используемая Message, — такие же явные локальные для Message данные.
+
+Это не скрытый глобальный реестр, и она не разделяется неявно всеми Message.
+
+Концептуально:
+
+```text
+Message M
+    type bindings:
+        a -> int
+        b -> String
+
+    conversions:
+        int -> String
+        String -> int
+        Meter -> Foot
+        Foot -> Meter
+        ...
+```
+
+Фактическое представление остаётся обычными Structure, описаниями, отношениями, Table и вызываемыми выражениями LMX. Эта запись лишь иллюстрирует их роль.
+
+Преобразование доступно операции, только когда конкретный Message может достичь соответствующего явно переданного описания/отношения/конвертера по обычным правилам графа.
+
+Отсутствие преобразования в контексте Message не запускает поиск по всему процессу и не заставляет runtime его выдумывать.
+
+### Преобразование и потребление кандидата
+
+Когда Consumer требует значение описания T, кандидат не обязан исходно иметь тождественное примитивное или семантическое описание, если локальный для Message контекст преобразований явно предоставляет допустимый путь, принимаемый правилами Consumer.
+
+Обычная последовательность:
+
+```text
+candidate value
+    ↓
+Consumer requirement
+    ↓
+explicitly available Message-local conversion
+    ↓
+conversion contract and range validation
+    ↓
+formed value satisfying the destination requirement
+```
+
+Конвертеры остаются обычными принимающими выражениями. Аналитическая проверка их не исполняет. Когда исполнение действительно требует преобразования, выбранный конвертер исполняется по своему объявленному контракту.
+
+Диапазон, представление, единица, точность и прочие семантические ограничения принадлежат применимым описаниям и контрактам преобразования.
+
+Успешный структурный допуск, следовательно, никогда не разрешает непроверенную переинтерпретацию примитивного хранилища.
+
+### Единицы и семантические величины
+
+Единицы измерения не требуют отдельного встроенного механизма ядра.
+
+Message может явно получить описания и отношения преобразования для семантических величин, таких как:
+
+```text
+Meter
+Foot
+Second
+Kilogram
+```
+
+Если локальный для Message контекст содержит допущенное преобразование вроде:
+
+```text
+Foot -> Meter
+```
+
+то операция, требующая Meter, может потребить значение, описанное как Foot, через этот обычный механизм преобразования.
+
+Преобразование остаётся под своими обычными контрактами, включая диапазон, числовое представление, точность и любые условия конкретной единицы.
+
+Ядру, следовательно, не нужен привилегированный список физических единиц. Преобразование единиц — одно из применений того же механизма описаний и преобразований, что и для других значений.
+
+### Аргументы и результаты вызываемых выражений
+
+Тот же локальный для Message контекст преобразований действует при формировании аргументов вызываемого выражения и потреблении его результата.
+
+Для выбранного вызываемого выражения:
+
+```text
+actual value
+    ↓
+ordinary Message-local conversion if required
+    ↓
+formed argument
+    ↓
+exact selected callable argument contract
+```
+
+и при возврате:
+
+```text
+callable result
+    ↓
+ordinary Message-local conversion if required
+    ↓
+Consumer's required result contract
+```
+
+Это позволяет использовать вызываемое выражение, когда его исходные примитивные описания отличаются от описаний Consumer, при условии что конкретный Message содержит требуемые явные преобразования и все контракты преобразования успешны.
+
+Например, Consumer может концептуально требовать:
+
+```text
+int -> int
+```
+
+тогда как выбранное вызываемое выражение имеет:
+
+```text
+String -> decimal
+```
+
+если этот Message явно предоставляет и допускает:
+
+```text
+int -> String
+decimal -> int
+```
+
+Получившийся вызов остаётся полностью типизированным. Аргументы, предъявленные выбранному вызываемому выражению, должны удовлетворять его фактическому дескриптору после формирования, а значение, предъявленное Consumer результата, — требованию Consumer после преобразования результата.
+
+### Граница Message
+
+Привязки типов и доступность преобразований не пересекают границу Message молча.
+
+Если Message A содержит:
+
+```text
+a -> int
+```
+
+и преобразование:
+
+```text
+String -> int
+```
+
+Message B не получает ни того, ни другого лишь потому, что A создаёт B, отправляет в B или является родителем B.
+
+Они становятся доступны B, только если соответствующие Structure или ссылки явно переданы по применимому контракту создания или доставки Message.
+
+Поэтому два Message могут намеренно исполнять одно и то же переиспользуемое выражение в разных контекстах типов и преобразований, оставаясь каждый внутренне согласованным.
+
+Пример:
+
+```text
+Message A:
+    a -> int
+
+Message B:
+    a -> decimal
+```
+
+Исходное выражение:
+
+```text
+fn: identity (a: x) a
+return: x
+```
+
+может, следовательно, иметь разные конкретные привязки в A и B, но внутри каждого Message привязка остаётся устойчивой.
+
+### Нет скрытого системного состояния
+
+Реализация не вправе вводить в качестве альтернативного источника смысла ничего из следующего: процесс-глобальный реестр преобразований; неявное универсальное окружение переменных типа; автоматическое наследование контекста преобразований корня; повторное инстанцирование при каждом вызове уже привязанного в Message символического типа; скрытый поиск по провайдерам преобразований, недостижимым из Message; встроенное привилегированное знание единиц или классов семантических величин.
+
+Реализация может кэшировать разрешённые привязки или выбор преобразований как оптимизацию, но наблюдаемый результат должен совпадать с разрешением явно переданных локальных для Message данных.
+
+Источник смысла привязки или преобразования — всегда обычное достижимое состояние LMX.
+[EN]
+LMX has no process-global built-in type environment, conversion registry, generic-instantiation state, or implicit system table. Type descriptions, symbolic type bindings, conversion relations, and the expressions implementing those conversions are ordinary explicitly supplied LMX data.
+
+An executing Message has one type-and-conversion context for its graph. That context is initialized from Structures explicitly supplied to the Message when it is constructed. The initial root may provide the application's initial type descriptions, symbolic bindings, conversion tables, and related receiving expressions, but a child Message does not inherit them merely because it was created by that root or by another Message.
+
+If a Message requires such data, the creating operation must explicitly supply the corresponding Structures or references under the ordinary Message-construction rules.
+
+Conceptually:
+
+```text
+Root
+    type descriptions
+    symbolic type bindings
+    conversion relations
+    converter callables
+
+        ↓ explicitly supplied
+
+Message M
+    application graph
+    Message-local type bindings
+    Message-local conversion context
+```
+
+The word "common" in this context means common to one concrete Message, not global to the process.
+
+### Stable symbolic type bindings
+
+A symbolic type name may be bound once in the type context of a Message and then used consistently throughout that Message.
+
+For example, a Message may contain the bindings:
+
+```text
+a -> int
+b -> String
+```
+
+Every use of `a` in that Message resolves through the same Message-local binding unless an explicit language operation constructs a different Message-local context.
+
+The binding is not repeatedly inferred or re-instantiated for each function call.
+
+Thus, within one Message:
+
+```text
+fn: identity (a: x) a
+return: x
+```
+
+uses the same binding of `a` at every occurrence of `a`.
+
+If this Message binds:
+
+```text
+a -> int
+```
+
+then its effective contract is:
+
+```text
+fn: identity (int: x) int
+return: x
+```
+
+Another Message may receive a different binding:
+
+```text
+a -> String
+```
+
+without changing the first Message.
+
+A symbolic type name therefore represents a stable relation inside one Message, not a process-global type variable and not a fresh generic parameter instantiated independently at every call site.
+
+This rule prevents separate parts of one executing graph from silently assigning different meanings to the same symbolic type name.
+
+### Genericity is the default structural case
+
+LMX does not require a separate generic, template, or type-parameter instantiation construct in order for an expression to accept structurally different candidates.
+
+An expression states only the paths, values, callable operations, result contracts, and other properties that its Consumer actually requires. Candidate admission determines whether those requirements can be satisfied.
+
+Consequently, structural generality is the ordinary case. Additional type information narrows the accepted domain; it does not activate genericity.
+
+A symbolic binding such as `a` is required only when several positions must refer to one stable Message-local type relation.
+
+For example:
+
+```text
+fn: identity (a: x) a
+return: x
+```
+
+states that the input and result use the same Message-local type binding.
+
+By contrast, an expression that merely consumes whatever fields and operations it requires does not need an artificial type variable solely to declare itself generic.
+
+### Message-local conversion table
+
+The conversion table used by a Message is likewise explicit Message-local data.
+
+It is not a hidden global registry and is not implicitly shared by all Messages.
+
+Conceptually:
+
+```text
+Message M
+    type bindings:
+        a -> int
+        b -> String
+
+    conversions:
+        int -> String
+        String -> int
+        Meter -> Foot
+        Foot -> Meter
+        ...
+```
+
+The actual representation remains ordinary LMX Structures, descriptions, relations, Tables, and callable expressions. This notation only illustrates their role.
+
+A conversion is available to an operation only when the concrete Message can reach the corresponding explicitly supplied description/relation/converter under the ordinary graph rules.
+
+Absence of a conversion from the Message context does not trigger a process-wide search and does not cause the runtime to invent one.
+
+### Conversion and candidate consumption
+
+When a Consumer requires a value of description T, a candidate need not originate with an identical primitive or semantic description if the Message-local conversion context explicitly provides a valid path accepted by the Consumer's rules.
+
+The ordinary sequence is:
+
+```text
+candidate value
+    ↓
+Consumer requirement
+    ↓
+explicitly available Message-local conversion
+    ↓
+conversion contract and range validation
+    ↓
+formed value satisfying the destination requirement
+```
+
+Converters remain ordinary receiving expressions. Analytical checking does not execute them. When execution actually requires the conversion, the selected converter is executed under its declared contract.
+
+Range, representation, unit, precision, and other semantic constraints belong to the applicable descriptions and conversion contracts.
+
+A successful structural admission therefore never authorizes unchecked reinterpretation of primitive storage.
+
+### Units and semantic quantities
+
+Units of measurement require no separate built-in kernel mechanism.
+
+A Message may explicitly receive descriptions and conversion relations for semantic quantities such as:
+
+```text
+Meter
+Foot
+Second
+Kilogram
+```
+
+If the Message-local context contains an admitted conversion such as:
+
+```text
+Foot -> Meter
+```
+
+then an operation requiring Meter may consume a value described as Foot through that ordinary conversion mechanism.
+
+The conversion remains subject to its normal contracts, including range, numeric representation, precision, and any unit-specific conditions.
+
+The kernel therefore needs no privileged list of physical units. Unit conversion is one application of the same description-and-conversion mechanism used for other values.
+
+### Callable arguments and results
+
+The same Message-local conversion context applies when forming callable arguments and consuming callable results.
+
+For a selected callable:
+
+```text
+actual value
+    ↓
+ordinary Message-local conversion if required
+    ↓
+formed argument
+    ↓
+exact selected callable argument contract
+```
+
+and on return:
+
+```text
+callable result
+    ↓
+ordinary Message-local conversion if required
+    ↓
+Consumer's required result contract
+```
+
+This permits a callable to be used when its original primitive descriptions differ from the Consumer's descriptions, provided that the concrete Message contains the required explicit conversions and all conversion contracts succeed.
+
+For example, a Consumer may conceptually require:
+
+```text
+int -> int
+```
+
+while the selected callable has:
+
+```text
+String -> decimal
+```
+
+if this Message explicitly provides and admits:
+
+```text
+int -> String
+decimal -> int
+```
+
+The resulting call is still fully typed. The arguments presented to the selected callable must satisfy its actual descriptor after formation, and the value presented to the result Consumer must satisfy the Consumer's requirement after result conversion.
+
+### Message boundary
+
+Type bindings and conversion availability do not silently cross a Message boundary.
+
+If Message A contains:
+
+```text
+a -> int
+```
+
+and a conversion:
+
+```text
+String -> int
+```
+
+Message B does not obtain either merely because A creates B, sends to B, or is B's parent.
+
+They become available to B only if the relevant Structures or references are explicitly supplied under the applicable Message creation or delivery contract.
+
+Therefore two Messages may intentionally execute the same reusable expression under different type-and-conversion contexts while each Message remains internally consistent.
+
+Example:
+
+```text
+Message A:
+    a -> int
+
+Message B:
+    a -> decimal
+```
+
+The source expression:
+
+```text
+fn: identity (a: x) a
+return: x
+```
+
+may consequently have different concrete bindings in A and B, but within either Message the binding remains stable.
+
+### No hidden system state
+
+The implementation must not introduce any of the following as an alternative semantic source: a process-global conversion registry; an implicit universal type-variable environment; automatic inheritance of the root's conversion context; per-call re-instantiation of an already Message-bound symbolic type; a hidden search across conversion providers not reachable from the Message; built-in privileged knowledge of units or semantic quantity classes.
+
+An implementation may cache resolved bindings or conversion selections as an optimization, but the observable result must be identical to resolving the explicitly supplied Message-local data.
+
+The semantic source of a binding or conversion is always ordinary reachable LMX state.
 @@ admission | Аналитическая проверка и валидация кандидата | Analytical checking and candidate validation | 2.1; 2.1.1-3; 2.5.1-3; 2.5.5-6; 19.21.3; 19.22; author 2026-09-20
 [RU]
 Единственный механизм допуска кандидата состоит из аналитического `implements` по дереву принимающего выражения и выполнения заданных этим выражением юнит-тестов через интерпретатор графа. Классификация адресов арены обслуживает представление значений; она не является альтернативной валидацией. Совпадение сигнатуры, наличие описания или положительный аналитический ответ не заменяют исполнение требуемых тестов.

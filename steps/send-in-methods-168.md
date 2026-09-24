@@ -132,3 +132,27 @@ restored and reverified GREEN.
 
 Gates: l2_harness GREEN 338/338 (337 base + 1 new row), build_l2src -Run 254/254, L3 11/11 + type
 budget, check_docs OK, git diff --check clean.
+
+## Commit 3: `sendMessage: Ref X` -- re-confirmed, still the missing piece, stopping here
+
+Per the ticket's own fallback ("else report the missing piece... and stop"). Re-checked directly
+against the commit-2 tree (not assumed unchanged): both refusal sites still refuse the 2-field
+form unconditionally -- `l2_rw_send` (root, `"sendMessage to a referenced Message"`) and the new
+`l2_msend_register` (a method body, `"...is not built in a method body yet"`, commit 2's own
+mirror of the same refusal). Neither was touched by commit 2, deliberately: the reference-value
+question is orthogonal to "can a method body call the same generated sender", and building `Ref`
+support on top of an untyped `void*` cell would be exactly the ad hoc reinterpretation the ticket
+says not to invent.
+
+The blocker is unchanged from commit 1's measurement: a received letter's sender field (what
+`m\[0]` would read) is an `@: LmxMsg` pointer stored through the SAME untyped `void*` graph-cell
+mechanism an ordinary Structure reference uses (`lmx_arena_ref_store(g, 0U, (cast: (@: void)
+lmx_thread_message(t)))` -- identical shape in `l2_emit_send`'s letter-building code and in the
+generated C `main`/`lmx_root_launch` construction of the mainArgs letter). Nothing in
+`l2trans.lm1`'s kind/type vocabulary (`l2_own_ty`, `l2_nsf_kind`, every place a "kind" number maps
+to a meaning) has a slot for "this cell holds a Message reference, not a Structure reference" --
+reading `m\[0]` through the ordinary graph-field path today would treat that `LmxMsg*` as if it
+were an `Lmx*`, a kind confusion. This needs an L2-level (and likely kernel-level) way to type a
+cell as a Message reference specifically, before `sendMessage: Ref X` can read one out and pass it
+on as a reply address -- a design question for the author/kernel layer, not something this
+translator ticket can safely invent on its own. No code changed in this commit.

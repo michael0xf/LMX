@@ -361,7 +361,8 @@ return: lmx_merge_profiles_owned(operands, count, body, container, dst_chars, sr
 # Opus: LmxPrimitive.fn = lmx_walk_merge_model; owner = (cast: (@: Lmx) program_arena);
 # PRIM [prim, record, model]; null override map (-161 c1 arity). Result Structure in \out.
 # Mutant: drop this / leave \out 0 -> Model: m yields 0 RED.
-# Status 0/1 = LMX_PRIMITIVE_OK/FAIL (same numbers; no primitive.h predef here -- link closure).
+# Status: 0=OK; 1=FAIL (bad call); 2=THROW_MERGE (admission refused) -- numbers match
+# LMX_PRIMITIVE_* (no primitive.h predef here -- link closure). -177 c5 / D-55.
 fn: lmx_walk_merge_model (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
     @: LmxArena arena 0
     @: Lmx model 0
@@ -376,13 +377,13 @@ fn: lmx_walk_merge_model (@: void owner; @@: void refs; size_t: nargs; @: void d
     arena: (cast: (@: LmxArena) owner)
     model: (cast: (@: Lmx) refs[0])
     if: model = 0 || lmx_range_classify(arena, (cast: (@: void) model)) != c.LMX_KIND_STRUCT
-        return: 1
+        return: 2
     ---
     container: model\parent
     op0: model
     status: lmx_merge_owned(@ op0, 1U, 0, container, 0, arena, arena, 0, 0U, @ result)
     if: status != c.LMX_MERGE_OK || result = 0
-        return: 1
+        return: 2
     ---
     \out: (cast: (@: void) result)
 return: 0

@@ -19,7 +19,6 @@ predef: "l2src/lmx_array_owned.lm1"
 predef: "l2src/lmx_array_ref_owned.lm1"
 predef: "l2src/lmx_graph_copy_owned.lm1"
 predef: "l2src/lmx_clock.lm1"
-predef: "l2src/lmx_plan.lm1"
 predef: "l2src/lmx_scratch.lm1"
 predef: "l2src/lmx_walk.lm1"
 predef: "l1src/libc_abi.lm1"
@@ -119,21 +118,16 @@ fn: mk_int (@: LmxArena a; int: v) @: void
         return: 0
 return: lmx_arena_ref_value(n, 0U)
 
+# k.4 (c.3): a plain occurrence, slot 0 reserved/unused.
 fn: mk_m (size_t: children) @: Lmx
     @: Lmx unit lmx_node_new_owned(gb)
     @: Lmx m 0
-    @: LmxCallable info 0
     if: unit = 0 || lmx_arena_refs_open_owned(gb, unit, 1U) != 0
         broken: broken + 1
         return: 0
     ---
     m: lmx_walk_plain(gb, unit, children)
-    info: lmx_callable_new_owned(gb)
-    if: m = 0 || info = 0 || lmx_arena_ref_store(unit, 0U, (cast: (@: void) m)) != 0
-        broken: broken + 1
-        return: 0
-    ---
-    if: lmx_arena_ref_store(m, 0U, (cast: (@: void) info)) != 0
+    if: m = 0 || lmx_arena_ref_store(unit, 0U, (cast: (@: void) m)) != 0
         broken: broken + 1
         return: 0
     ---
@@ -141,10 +135,8 @@ return: m
 
 fn: mk_dummy (@: LmxArena a) @: Lmx
     @: Lmx m lmx_node_new_owned(a)
-    @: LmxCallable info lmx_callable_new_owned(a)
-    if: m = 0 || info = 0 || lmx_arena_refs_open_owned(a, m, 1U) != 0
+    if: m = 0 || lmx_arena_refs_open_owned(a, m, 1U) != 0
         return: 0
-    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
 return: m
 
 fn: mk_thread (@: LmxArena arena; @: Lmx graph; @@: LmxThread out_t) int

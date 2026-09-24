@@ -19,7 +19,6 @@ predef: "l2src/lmx_array_owned.lm1"
 predef: "l2src/lmx_array_ref_owned.lm1"
 predef: "l2src/lmx_graph_copy_owned.lm1"
 predef: "l2src/lmx_clock.lm1"
-predef: "l2src/lmx_plan.lm1"
 predef: "l2src/lmx_scratch.lm1"
 predef: "l2src/lmx_walk.lm1"
 predef: "l1src/libc_abi.lm1"
@@ -94,21 +93,16 @@ fn: field (@: Lmx m; size_t: slot) int
         return: -999
 return: lmx_int_value_known(cell)
 
+# k.4 (c.3): a plain occurrence, slot 0 reserved/unused.
 fn: mk_m (size_t: children) @: Lmx
     @: Lmx unit lmx_node_new_owned(gb)
     @: Lmx m 0
-    @: LmxCallable info 0
     if: unit = 0 || lmx_arena_refs_open_owned(gb, unit, 1U) != 0
         broken: broken + 1
         return: 0
     ---
     m: lmx_walk_plain(gb, unit, children)
-    info: lmx_callable_new_owned(gb)
-    if: m = 0 || info = 0 || lmx_arena_ref_store(unit, 0U, (cast: (@: void) m)) != 0
-        broken: broken + 1
-        return: 0
-    ---
-    if: lmx_arena_ref_store(m, 0U, (cast: (@: void) info)) != 0
+    if: m = 0 || lmx_arena_ref_store(unit, 0U, (cast: (@: void) m)) != 0
         broken: broken + 1
         return: 0
     ---
@@ -116,10 +110,8 @@ return: m
 
 fn: mk_dummy (@: LmxArena a) @: Lmx
     @: Lmx m lmx_node_new_owned(a)
-    @: LmxCallable info lmx_callable_new_owned(a)
-    if: m = 0 || info = 0 || lmx_arena_refs_open_owned(a, m, 1U) != 0
+    if: m = 0 || lmx_arena_refs_open_owned(a, m, 1U) != 0
         return: 0
-    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
 return: m
 
 fn: mk_thread (@: LmxArena arena; @: Lmx graph; @@: LmxThread out_t) int
@@ -226,7 +218,6 @@ fn: main () int
     @: Lmx arg_role 0
     @: Lmx of_role 0
     @: Lmx roles_at_bind 0
-    @: Lmx plan_at_bind 0
     @: void ret_at_bind 0
     @: void set_at_bind 0
     @: LmxOp fake 0
@@ -260,15 +251,13 @@ fn: main () int
     fail(counts, native_hits = 1, "native ran once")
     fail(counts, l3_thread_bind(gb, t) = c.LMX_THREAD_OK, "bind walk dispatch")
     groles: l3_thread_roles(t)
-    fail(counts, groles != 0 && l3_thread_plan_roles(t) != 0, "shared walk/plan roles")
+    fail(counts, groles != 0, "shared walk roles")
     # The identity a frame carries is an ADDRESS in one sealed exact-profile range of the
     # owner arena, so it outlives end-turn collection without a separate store.
     roles_at_bind: groles
-    plan_at_bind: l3_thread_plan_roles(t)
     ret_at_bind: lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_RET))
     set_at_bind: lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_SET))
     fail(counts, lmx_range_home(gb, (cast: (@: void) groles)) = gb && lmx_range_profile(gb, (cast: (@: void) groles)) != 0 && lmx_pool_is_sealed(lmx_range_pool(gb, (cast: (@: void) groles))) != 0, "the role table is sealed in its owner arena")
-    fail(counts, lmx_range_home(gb, (cast: (@: void) plan_at_bind)) = gb && lmx_range_profile(gb, (cast: (@: void) plan_at_bind)) = lmx_range_profile(gb, (cast: (@: void) groles)) && lmx_pool_is_sealed(lmx_range_pool(gb, (cast: (@: void) plan_at_bind))) != 0, "plan roles share the exact sealed profile")
     fail(counts, ret_at_bind != 0 && set_at_bind != 0 && lmx_range_home(gb, set_at_bind) = gb && lmx_range_profile(gb, set_at_bind) = lmx_range_profile(gb, (cast: (@: void) groles)) && lmx_pool_is_sealed(lmx_range_pool(gb, set_at_bind)) != 0, "the SET record has the same owner and exact profile")
 
     cand: lmx_node_new_owned(gb)
@@ -294,7 +283,6 @@ fn: main () int
     context.arena: gb
     context.scratch: @ store
     context.roles: groles
-    context.plan_roles: l3_thread_plan_roles(t)
     context.classified: 0U
     subject: (cast: (@: void) cand)
     args: @ subject
@@ -318,7 +306,7 @@ fn: main () int
     # records in the collected arena this turn did nothing: the frame's role address was compared
     # with freed cells.  (It even returned LMX_THREAD_OK then -- the dispatch status was dropped
     # until 4ab2877; the witness here was and is the own cell, not the turn's status.)
-    fail(counts, groles = roles_at_bind && l3_thread_plan_roles(t) = plan_at_bind, "after a turn the tables are the same tables")
+    fail(counts, groles = roles_at_bind, "after a turn the table is the same table")
     fail(counts, lmx_range_classify(gb, (cast: (@: void) groles)) = c.LMX_KIND_STRUCT, "and the role table is still a Structure by the arena's ranges")
     fail(counts, lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_RET)) = ret_at_bind && lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_SET)) = set_at_bind, "RET and SET are the records they were at bind")
     fail(counts, lmx_arena_ref_value(lmx_arena_ref_struct(m, 2U), 0U) = set_at_bind, "the graph's SET frame still carries that record")
@@ -328,12 +316,11 @@ fn: main () int
     fail(counts, field(m, 1U) = 7, "the second turn published 7 again")
     fail(counts, native_hits = 1, "two interpreted turns, native_hits still 1")
     fail(counts, groles = roles_at_bind && lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_RET)) = ret_at_bind && lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_SET)) = set_at_bind, "two turns later: same table, same RET, same SET")
-    fail(counts, l3_thread_bind(gb, t) = c.LMX_THREAD_OK && l3_thread_roles(t) = roles_at_bind && l3_thread_plan_roles(t) = plan_at_bind, "a repeated bind hands out the same tables")
+    fail(counts, l3_thread_bind(gb, t) = c.LMX_THREAD_OK && l3_thread_roles(t) = roles_at_bind, "a repeated bind hands out the same table")
 
     context.arena: gb
     context.scratch: @ store
     context.roles: groles
-    context.plan_roles: l3_thread_plan_roles(t)
     context.classified: 0U
     m: mk_set_own(7)
     set_role: lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_SET))
@@ -342,7 +329,9 @@ fn: main () int
     fail(counts, broken = 0 && m != 0 && fake != 0 && frame != 0, "set-impostor construction")
     fail(counts, (cast: (@: void) fake) != set_role, "set-impostor address is not the shared SET record")
     fail(counts, lmx_arena_ref_value(frame, 0U) = (cast: (@: void) fake), "set-impostor planted at child[0]")
-    fail(counts, lmx_walk_prepare(@ context, gb, l3_thread_plan_roles(t), m) = c.LMX_WALK_UNSUPPORTED, "set-impostor prepare is UNSUPPORTED")
+    # k.4 (c.3): no separate prepare pass -- the impostor is caught at the point it is
+    # actually reached and evaluated (lmx_walk_op: an OP-classified child whose address
+    # matches no known role is UNKNOWN, refused, never skipped).
     fail(counts, lmx_interp_run(@ context, m) = c.LMX_INTERP_INVALID, "set-impostor interp is INVALID")
     fail(counts, field(m, 1U) = 0, "set-impostor did not run SET")
     # Since 4ab2877 lmx_thread_turn KEEPS the body's status.  The refused impostor is a FAILED

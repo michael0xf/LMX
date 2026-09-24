@@ -9,7 +9,8 @@ predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
 # L3-01 smoke: N1 empty Structure, N2 field refs, N3 int cell.
-# METHOD in a field is unsupported — not a native call. Not admission.
+# A non-int primitive in a field is unsupported (l3_eval_value only ever admits
+# LMX_KIND_STRUCT and LMX_KIND_PRIMITIVE/LMX_TYPE_INT). Not admission.
 
 sub: fail (@: int counts; int: ok; const: @(char label))
     counts[0]: counts[0] + 1
@@ -27,7 +28,7 @@ fn: main () int
     @: Lmx root 0
     @: Lmx inner 0
     @: void cell 0
-    @: LmxMethod method 0
+    @: void other 0
     if: counts = 0
         return: 2
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
@@ -62,13 +63,13 @@ fn: main () int
     lmx_arena_ref_store(root, 0U, cell)
     fail(counts, l3_recv_eval(a, root) = c.L3_OK, "N3 int cell in a field")
 
-    method: lmx_method_new_owned(a)
-    if: method = 0
+    other: lmx_size_new_owned(a)
+    if: other = 0
         free(counts)
         return: 2
     ---
-    lmx_arena_ref_store(root, 0U, (cast: (@: void) method))
-    fail(counts, l3_recv_eval(a, root) = c.L3_UNSUPPORTED, "METHOD is not L3-01 and not native escape")
+    lmx_arena_ref_store(root, 0U, other)
+    fail(counts, l3_recv_eval(a, root) = c.L3_UNSUPPORTED, "a non-int primitive is not L3-01")
 
     if: counts[1] != 0
         c.printf("%d failed of %d\n", counts[1], counts[0])

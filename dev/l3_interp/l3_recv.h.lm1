@@ -22,7 +22,7 @@ struct: L3Seen
 end: L3Seen
 
 # L3-01 receiver: consume an already-built graph as the L3 subset
-# N1-N3. Not admission (#admission). Unsupported nodes fail; never METHOD.addr.
+# N1-N3. Not admission (#admission). Unsupported nodes fail; never native trampoline.
 # -187 c4: no LmxOwnLocal / working copies; field writes land in the cell.
 
 define: L3_OK 0
@@ -43,12 +43,21 @@ define: L3_NODE_FINALLY 37
 define: L3_NODE_THROW 38
 define: L3_NODE_EXPECT_INT 39
 define: L3_NODE_ASSIGN 40
+# k.4 (FABLE-SONNET-NATIVE-WORD-20260926-191 c.3): the only way to invoke an occurrence.
+# [call, code, data, rtype]: code (child 1) names the occurrence dispatched on its own
+# \native word; data (child 2) is the Structure whose own fields the walked body reads
+# and writes (= code for an ordinary direct call); rtype (child 3) is a plain reference,
+# never evaluated, reserved for a future typed destination (L3 has none yet -- every L3
+# return is an int, read the same way regardless of rtype) and 0 for a sub/void callee.
+# No args tail: L3 has no formal-parameter op, so a call is always nullary.
+define: L3_NODE_CALL 41
 define: L3_WHILE_CAP 10000
 
 prototype:
     # Root must be a Structure (empty is present). Walks fields by index.
     fn: l3_recv_eval (@: LmxArena arena; @: Lmx root) int
-    # N4-N8: execute callable M. Slot 0 is LmxCallable. Never METHOD.addr.
+    # N4-N8: execute an occurrence. A nested occurrence is a declaration (skipped) unless
+    # named by an explicit CALL; dispatch is the \native word alone (k.4).
     fn: l3_exec_run (@: LmxArena arena; @: Lmx node) int
     fn: l3_exec_run_on (@: LmxArena arena; @: Lmx node; @: Lmx subject; @: L3Result out) int
     fn: l3_follow_path (@: LmxArena arena; @: Lmx start; @: Lmx path) int
@@ -56,5 +65,4 @@ prototype:
     # N10: used index-paths of receiver, then its test callables. Not names.
     fn: l3_implements_paths (@: LmxArena arena; @: Lmx candidate; @: Lmx paths) int
     fn: l3_admit (@: LmxArena arena; @: Lmx candidate; @: Lmx receiver) int
-    fn: l3_plan_prepare (@: LmxArena arena; @: Lmx node) int
 end: prototype

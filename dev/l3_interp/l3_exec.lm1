@@ -6,12 +6,16 @@ predef: "l2src/lmx_scratch.lm1"
 predef: "l2src/lmx_interp.h.lm1"
 predef: "l2src/lmx_implements.h.lm1"
 predef: "l2src/lmx_value_owned.h.lm1"
+predef: "l2src/lmx_primitive.h.lm1"
 predef: "l3_interp/l3_path.lm1"
-predef: "l3_interp/l3_plan.lm1"
 include: "<string.h>"
 
 # -187 c4: no lmx_own working copies / checkpoint. ASSIGN stores into the field
 # cell on self; nested calls see writes immediately (no flush).
+# k.4 (FABLE-SONNET-NATIVE-WORD-20260926-191 c.3): no lmx_plan / LmxCallable descriptor.
+# Dispatch is the occurrence's own \native word; a nested occurrence encountered as a
+# plain body field is a declaration (skipped, never auto-invoked) -- invoking one is
+# always an explicit L3_NODE_CALL.
 
 prototype:
     fn: l3_exec_stmt (@: LmxArena arena; @: L3Frame f; @: void v) int
@@ -52,11 +56,19 @@ fn: l3_exec_op (@: LmxArena arena; @: L3Frame f; @: Lmx host; @: LmxOp op) int
     int: cond 0
     int: n 0
     int: idx
+    int: native_value 0
     @: void body
     @: void arg
     @: void leaf 0
     @: void want
     @: Lmx path
+    @: Lmx callee
+    @: Lmx data
+    @: void native_out 0
+    LmxPrimitiveEntry: entry
+    LmxScratchMark: mark
+    @: void slice 0
+    @: L3Frame child
     if: op = 0 || f = 0
         return: c.L3_INVALID
     code: op\code
@@ -150,17 +162,52 @@ fn: l3_exec_op (@: LmxArena arena; @: L3Frame f; @: Lmx host; @: LmxOp op) int
         ---
         return: c.L3_UNSUPPORTED
     ---
+    if: code = c.L3_NODE_CALL
+        if: host\len < 4
+            return: c.L3_INVALID
+        ---
+        callee: (cast: (@: Lmx) lmx_arena_ref_value(host, 1U))
+        data: (cast: (@: Lmx) lmx_arena_ref_value(host, 2U))
+        if: callee = 0 || lmx_domain_kind(arena, (cast: (@: void) callee)) != c.LMX_KIND_STRUCT
+            return: c.L3_INVALID
+        if: data = 0 || lmx_domain_kind(arena, (cast: (@: void) data)) != c.LMX_KIND_STRUCT
+            return: c.L3_INVALID
+        ---
+        if: callee\native != 0
+            entry: (cast: (LmxPrimitiveEntry) callee\native)
+            native_value: 0
+            native_out: 0
+            st: entry((cast: (@: void) data), 0, 0U, (cast: (@: void) (@ native_value)), @ native_out)
+            if: st != 0
+                return: c.L3_UNSUPPORTED
+            ---
+            return: c.L3_OK
+        ---
+        # Walked path: a fresh child frame, own-field target = data. The call's own value
+        # is not read by the caller (D-03: a call used as a statement discards its value,
+        # only status and the direct field writes it made are visible).
+        if: f\scratch = 0
+            return: c.L3_INVALID
+        if: lmx_scratch_mark(f\scratch, @ mark) != c.LMX_SCRATCH_OK
+            return: c.L3_INVALID
+        if: lmx_scratch_take(f\scratch, c.sizeof(c.L3Frame), @ slice) != c.LMX_SCRATCH_OK
+            lmx_scratch_rewind(f\scratch, @ mark)
+            return: c.L3_INVALID
+        ---
+        child: (cast: (@: L3Frame) slice)
+        memset((cast: (@: void) child), 0, c.sizeof(c.L3Frame))
+        child\scratch: f\scratch
+        child\subject: f\subject
+        st: l3_exec_frame(arena, child, data)
+        lmx_scratch_rewind(f\scratch, @ mark)
+        return: st
+    ---
 return: c.L3_UNSUPPORTED
 
 fn: l3_exec_stmt (@: LmxArena arena; @: L3Frame f; @: void v) int
     @: Lmx host
     @: void head
-    @: L3Frame child
-    @: void slice 0
-    int: hk
     int: kind
-    LmxScratchMark: mark
-    int: st
     if: v = 0
         return: c.L3_ABSENT
     kind: lmx_domain_kind(arena, v)
@@ -177,41 +224,17 @@ fn: l3_exec_stmt (@: LmxArena arena; @: L3Frame f; @: void v) int
     ---
     if: kind = c.LMX_KIND_STRUCT
         host: (cast: (@: Lmx) v)
-        if: host\len < 1
-            return: c.L3_UNSUPPORTED
-        head: lmx_arena_ref_value(host, 0U)
-        if: head = 0
-            return: c.L3_UNSUPPORTED
-        hk: lmx_domain_kind(arena, head)
-        if: hk = c.LMX_DOMAIN_KIND_OP
-            return: l3_exec_op(arena, f, host, (cast: (@: LmxOp) head))
-        # Bare callable occurrence: nullary activation. Writes already in cells
-        # -- no checkpoint before the child.
-        if: hk = c.LMX_DOMAIN_KIND_CALLABLE
-            if: f\scratch = 0
-                return: c.L3_INVALID
-            if: lmx_scratch_mark(f\scratch, @ mark) != c.LMX_SCRATCH_OK
-                return: c.L3_INVALID
-            if: lmx_scratch_take(f\scratch, c.sizeof(c.L3Frame), @ slice) != c.LMX_SCRATCH_OK
-                lmx_scratch_rewind(f\scratch, @ mark)
-                return: c.L3_INVALID
+        if: host\len >= 1
+            head: lmx_arena_ref_value(host, 0U)
+            if: head != 0 && lmx_domain_kind(arena, head) = c.LMX_DOMAIN_KIND_OP
+                return: l3_exec_op(arena, f, host, (cast: (@: LmxOp) head))
             ---
-            child: (cast: (@: L3Frame) slice)
-            memset((cast: (@: void) child), 0, c.sizeof(c.L3Frame))
-            child\scratch: f\scratch
-            child\subject: f\subject
-            st: l3_exec_frame(arena, child, host)
-            lmx_scratch_rewind(f\scratch, @ mark)
-            return: st
         ---
-        if: hk = c.LMX_KIND_METHOD
-            return: c.L3_UNSUPPORTED
-        return: c.L3_UNSUPPORTED
+        # k.4 (L3 §11, c.3): not an op-wrapper -- a declaration, not a statement to run.
+        # Constructing/naming a Structure never executes it; only an explicit CALL does
+        # (l3_exec_op's L3_NODE_CALL branch). No recursion here.
+        return: c.L3_OK
     ---
-    if: kind = c.LMX_DOMAIN_KIND_CALLABLE
-        return: c.L3_UNSUPPORTED
-    if: kind = c.LMX_KIND_METHOD
-        return: c.L3_UNSUPPORTED
 return: c.L3_UNSUPPORTED
 
 fn: l3_exec_range (@: LmxArena arena; @: L3Frame f; @: Lmx node; size_t: from) int
@@ -230,32 +253,19 @@ fn: l3_exec_range (@: LmxArena arena; @: L3Frame f; @: Lmx node; size_t: from) i
     ---
 return: c.L3_OK
 
+# ENTRY (k.4, c.3, mirrors lmx_walk_enter): node classifying as a Structure is the
+# whole check -- no descriptor, no plan, no refusal for a zero-step body (slot 0 stays
+# reserved/unused for the hand-built fixtures; l3_exec_range from 1U already returns OK
+# on zero iterations, same as an occurrence with no other fields at all).
 fn: l3_exec_frame (@: LmxArena arena; @: L3Frame f; @: Lmx node) int
-    @: void head
-    int: hk
     int: st
     @: Lmx saved_self
     if: arena = 0 || f = 0 || node = 0
         return: c.L3_INVALID
     if: lmx_domain_kind(arena, (cast: (@: void) node)) != c.LMX_KIND_STRUCT
         return: c.L3_UNSUPPORTED
-    if: node\len < 1
-        return: c.L3_UNSUPPORTED
-    head: lmx_arena_ref_value(node, 0U)
-    if: head = 0
-        return: c.L3_UNSUPPORTED
-    hk: lmx_domain_kind(arena, head)
-    if: hk = c.LMX_KIND_METHOD
-        return: c.L3_UNSUPPORTED
-    if: hk != c.LMX_DOMAIN_KIND_CALLABLE
-        return: c.L3_UNSUPPORTED
     saved_self: f\self
     f\self: node
-    # Plan publish only (no own-load / working copies).
-    if: l3_plan_prepare(arena, node) != 0
-        f\self: saved_self
-        return: c.L3_INVALID
-    ---
     st: l3_exec_range(arena, f, node, 1U)
     f\self: saved_self
     if: st = c.L3_RETURN

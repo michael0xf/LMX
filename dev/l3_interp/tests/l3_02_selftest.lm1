@@ -9,6 +9,12 @@ predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
 # N4-N8 smoke. Not admission.
+# k.4 (FABLE-SONNET-NATIVE-WORD-20260926-191 c.3): no LmxCallable/LmxMethod descriptor.
+# Dispatch is an occurrence's own \native word (0 = walked); slot 0 of a hand-built
+# occurrence here stays reserved/unused, same convention as the L2 kernel selftests, so
+# body statements keep starting at slot 1 with their numbering unchanged. A nested
+# occurrence used as a bare statement is a declaration (skipped, not invoked) -- every
+# former "bare callable statement" fixture below now goes through an explicit CALL.
 
 sub: fail (@: int counts; int: ok; const: @(char label))
     counts[0]: counts[0] + 1
@@ -46,6 +52,24 @@ fn: mk_return_int (@: LmxArena a; int: n) @: Lmx
     lmx_arena_ref_store(stmt, 1U, cell)
 return: stmt
 
+# [call, code, data, rtype]: the only way to invoke an occurrence (k.4, c.3). data is
+# passed explicitly by the caller (every fixture below passes the same occurrence for
+# both, matching "data = code by default"); rtype stays 0 (L3 has no typed destination).
+fn: mk_call (@: LmxArena a; @: Lmx callee; @: Lmx data) @: Lmx
+    @: Lmx stmt
+    @: LmxOp op
+    stmt: lmx_node_new_owned(a)
+    op: lmx_op_new_owned(a, c.L3_NODE_CALL)
+    if: stmt = 0 || op = 0 || callee = 0 || data = 0
+        return: 0
+    if: lmx_arena_refs_open_owned(a, stmt, 4U) != 0
+        return: 0
+    lmx_arena_ref_store(stmt, 0U, (cast: (@: void) op))
+    lmx_arena_ref_store(stmt, 1U, (cast: (@: void) callee))
+    lmx_arena_ref_store(stmt, 2U, (cast: (@: void) data))
+    lmx_arena_ref_store(stmt, 3U, 0)
+return: stmt
+
 fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxArena: arena
@@ -53,9 +77,6 @@ fn: main () int
     @: Lmx m 0
     @: Lmx inner 0
     @: Lmx stmt 0
-    @: LmxCallable info 0
-    @: LmxCallable info2 0
-    @: LmxMethod meth 0
     @: void cell 0
     @: void cell2 0
     L3Result: rr
@@ -71,92 +92,66 @@ fn: main () int
     ---
     a: @ arena
     prr: @ rr
-    meth: lmx_method_new_owned(a)
-    fail(counts, meth != 0, "native METHOD cell")
 
-    # METHOD in slot 0 is not L3 (N4).
-    m: lmx_node_new_owned(a)
-    if: m = 0 || lmx_arena_refs_open_owned(a, m, 1U) != 0
-        free(counts)
-        return: 2
-    ---
-    lmx_arena_ref_store(m, 0U, (cast: (@: void) meth))
-    fail(counts, l3_exec_run(a, m) = c.L3_UNSUPPORTED, "N4 METHOD.addr is not L3")
-
-    # Callable + return in body (N4 N5 N6).
-    info: lmx_callable_new_owned(a)
+    # Return in body after the reserved slot 0 (N5/N6).
     stmt: mk_return(a)
     m: lmx_node_new_owned(a)
-    if: info = 0 || stmt = 0 || m = 0 || lmx_arena_refs_open_owned(a, m, 2U) != 0
+    if: stmt = 0 || m = 0 || lmx_arena_refs_open_owned(a, m, 2U) != 0
         free(counts)
         return: 2
     ---
-    info\method: meth
-    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
     lmx_arena_ref_store(m, 1U, (cast: (@: void) stmt))
     memset((cast: (@: void) (@ rr)), 0, c.sizeof(c.L3Result))
     fail(counts, l3_exec_run_on(a, m, 0, prr) = c.L3_OK, "N5/N6 return: in body after slot 0")
     fail(counts, prr\present = 0, "void return has no value")
 
-    info: lmx_callable_new_owned(a)
     m: lmx_node_new_owned(a)
-    if: info = 0 || m = 0 || lmx_arena_refs_open_owned(a, m, 2U) != 0
+    if: m = 0 || lmx_arena_refs_open_owned(a, m, 2U) != 0
         free(counts)
         return: 2
     ---
-    info\method: meth
-    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
     lmx_arena_ref_store(m, 1U, (cast: (@: void) mk_return_int(a, 7)))
     memset((cast: (@: void) (@ rr)), 0, c.sizeof(c.L3Result))
     fail(counts, l3_exec_run_on(a, m, 0, prr) = c.L3_OK, "N6 return argument is read")
     fail(counts, prr\present != 0 && prr\value = 7, "N6 returned int 7")
 
-    # Nested call then return (N7).
-    info2: lmx_callable_new_owned(a)
+    # Nested call then return (N7): explicit CALL to inner, not a bare statement.
     inner: lmx_node_new_owned(a)
-    if: info2 = 0 || inner = 0 || lmx_arena_refs_open_owned(a, inner, 2U) != 0
+    if: inner = 0 || lmx_arena_refs_open_owned(a, inner, 2U) != 0
         free(counts)
         return: 2
     ---
-    info2\method: meth
-    lmx_arena_ref_store(inner, 0U, (cast: (@: void) info2))
     lmx_arena_ref_store(inner, 1U, (cast: (@: void) mk_return(a)))
     m: lmx_node_new_owned(a)
     if: m = 0 || lmx_arena_refs_open_owned(a, m, 3U) != 0
         free(counts)
         return: 2
     ---
-    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
-    lmx_arena_ref_store(m, 1U, (cast: (@: void) inner))
+    lmx_arena_ref_store(m, 1U, (cast: (@: void) mk_call(a, inner, inner)))
     lmx_arena_ref_store(m, 2U, (cast: (@: void) mk_return(a)))
-    fail(counts, l3_exec_run(a, m) = c.L3_OK, "N7 nested callable then return")
+    fail(counts, l3_exec_run(a, m) = c.L3_OK, "N7 explicit call to nested occurrence then return")
 
     # Dirty-only (N8): write publishes; clean does not restore.
     cell: lmx_int_new_owned(a)
     cell2: lmx_int_new_owned(a)
-    info: lmx_callable_new_owned(a)
     m: lmx_node_new_owned(a)
-    if: cell = 0 || cell2 = 0 || info = 0 || m = 0 || lmx_arena_refs_open_owned(a, m, 3U) != 0
+    if: cell = 0 || cell2 = 0 || m = 0 || lmx_arena_refs_open_owned(a, m, 3U) != 0
         free(counts)
         return: 2
     ---
     lmx_int_store_known(cell, 1)
     lmx_int_store_known(cell2, 99)
-    info\method: meth
-    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
     lmx_arena_ref_store(m, 1U, cell)
     lmx_arena_ref_store(m, 2U, (cast: (@: void) mk_return(a)))
     fail(counts, l3_exec_run(a, m) = c.L3_OK, "N8 run with own int")
-    fail(counts, info\header != 0, "L3 adapter published activation plan on header")
     fail(counts, lmx_int_value_known(cell) = 1, "N8 clean own not flushed over")
 
     # Dirty assign publishes. Data Structure with a nested return is not a body.
-    info: lmx_callable_new_owned(a)
     m: lmx_node_new_owned(a)
     cell: lmx_int_new_owned(a)
     cell2: lmx_int_new_owned(a)
     stmt: lmx_node_new_owned(a)
-    if: info = 0 || m = 0 || cell = 0 || cell2 = 0 || stmt = 0
+    if: m = 0 || cell = 0 || cell2 = 0 || stmt = 0
         free(counts)
         return: 2
     ---
@@ -166,22 +161,21 @@ fn: main () int
     ---
     lmx_int_store_known(cell, 1)
     lmx_int_store_known(cell2, 99)
-    info\method: meth
     lmx_arena_ref_store(stmt, 0U, (cast: (@: void) lmx_op_new_owned(a, c.L3_NODE_ASSIGN)))
     lmx_arena_ref_store(stmt, 1U, lmx_int_new_owned(a))
     lmx_int_store_known(lmx_arena_ref_value(stmt, 1U), 1)
     lmx_arena_ref_store(stmt, 2U, cell2)
-    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
     lmx_arena_ref_store(m, 1U, cell)
     lmx_arena_ref_store(m, 2U, (cast: (@: void) stmt))
     lmx_arena_ref_store(m, 3U, (cast: (@: void) mk_return(a)))
     fail(counts, l3_exec_run(a, m) = c.L3_OK, "N8 assign")
     fail(counts, lmx_int_value_known(lmx_arena_ref_value(m, 1U)) = 99, "N8 dirty own published")
 
+    # k.4: a Structure statement that is not an op-wrapper (its own slot 0 is itself a
+    # Structure, not an LmxOp record) is a declaration -- skipped, not refused.
     inner: lmx_node_new_owned(a)
-    info: lmx_callable_new_owned(a)
     m: lmx_node_new_owned(a)
-    if: inner = 0 || info = 0 || m = 0
+    if: inner = 0 || m = 0
         free(counts)
         return: 2
     ---
@@ -190,22 +184,19 @@ fn: main () int
         return: 2
     ---
     lmx_arena_ref_store(inner, 0U, (cast: (@: void) mk_return(a)))
-    info\method: meth
-    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
     lmx_arena_ref_store(m, 1U, (cast: (@: void) inner))
     lmx_arena_ref_store(m, 2U, (cast: (@: void) mk_return_int(a, 3)))
     memset((cast: (@: void) (@ rr)), 0, c.sizeof(c.L3Result))
-    fail(counts, l3_exec_run_on(a, m, 0, prr) = c.L3_UNSUPPORTED, "D-03 plain Structure statement is UNSUPPORTED")
+    fail(counts, l3_exec_run_on(a, m, 0, prr) = c.L3_OK && prr\present != 0 && prr\value = 3, "k.4: a plain Structure statement (not an op-wrapper) is a declaration, skipped, then return => 3")
 
-    # D-03: bare callable occurrence as statement executes (own assign + return).
-    info2: lmx_callable_new_owned(a)
+    # D-03: what used to be a bare callable statement now runs only through an explicit
+    # CALL. Nested call field write is still visible without a checkpoint.
     inner: lmx_node_new_owned(a)
-    info: lmx_callable_new_owned(a)
     m: lmx_node_new_owned(a)
     stmt: lmx_node_new_owned(a)
     cell: lmx_int_new_owned(a)
     cell2: lmx_int_new_owned(a)
-    if: info2 = 0 || inner = 0 || info = 0 || m = 0 || stmt = 0 || cell = 0 || cell2 = 0
+    if: inner = 0 || m = 0 || stmt = 0 || cell = 0 || cell2 = 0
         free(counts)
         return: 2
     ---
@@ -215,8 +206,6 @@ fn: main () int
     ---
     lmx_int_store_known(cell, 0)
     lmx_int_store_known(cell2, 42)
-    info2\method: meth
-    lmx_arena_ref_store(inner, 0U, (cast: (@: void) info2))
     lmx_arena_ref_store(inner, 1U, cell)
     lmx_arena_ref_store(stmt, 0U, (cast: (@: void) lmx_op_new_owned(a, c.L3_NODE_ASSIGN)))
     lmx_arena_ref_store(stmt, 1U, lmx_int_new_owned(a))
@@ -224,49 +213,27 @@ fn: main () int
     lmx_arena_ref_store(stmt, 2U, cell2)
     lmx_arena_ref_store(inner, 2U, (cast: (@: void) stmt))
     lmx_arena_ref_store(inner, 3U, (cast: (@: void) mk_return(a)))
-    info\method: meth
-    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
-    lmx_arena_ref_store(m, 1U, (cast: (@: void) inner))
+    lmx_arena_ref_store(m, 1U, (cast: (@: void) mk_call(a, inner, inner)))
     lmx_arena_ref_store(m, 2U, (cast: (@: void) mk_return(a)))
-    fail(counts, l3_exec_run(a, m) = c.L3_OK, "D-03 bare callable statement runs")
+    fail(counts, l3_exec_run(a, m) = c.L3_OK, "D-03: explicit call to a nested occurrence runs")
     fail(counts, lmx_int_value_known(lmx_arena_ref_value(inner, 1U)) = 42, "nested call field write visible (no checkpoint)")
 
     # D-03: non-own primitive (size_t) as statement is explicit UNSUPPORTED.
-    # Top-level int cells are own fields of the plan and are not statements.
-    info: lmx_callable_new_owned(a)
+    # Top-level int cells are own fields of the occurrence and are not statements.
     m: lmx_node_new_owned(a)
     cell: lmx_size_new_owned(a)
-    if: info = 0 || m = 0 || cell = 0 || lmx_arena_refs_open_owned(a, m, 3U) != 0
+    if: m = 0 || cell = 0 || lmx_arena_refs_open_owned(a, m, 3U) != 0
         free(counts)
         return: 2
     ---
-    info\method: meth
-    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
     lmx_arena_ref_store(m, 1U, cell)
     lmx_arena_ref_store(m, 2U, (cast: (@: void) mk_return(a)))
     fail(counts, l3_exec_run(a, m) = c.L3_UNSUPPORTED, "D-03 primitive statement is UNSUPPORTED")
 
-    # D-03: bare CALLABLE descriptor (no occurrence) is explicit UNSUPPORTED.
-    info: lmx_callable_new_owned(a)
-    info2: lmx_callable_new_owned(a)
-    m: lmx_node_new_owned(a)
-    if: info = 0 || info2 = 0 || m = 0 || lmx_arena_refs_open_owned(a, m, 3U) != 0
-        free(counts)
-        return: 2
-    ---
-    info\method: meth
-    info2\method: meth
-    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
-    lmx_arena_ref_store(m, 1U, (cast: (@: void) info2))
-    lmx_arena_ref_store(m, 2U, (cast: (@: void) mk_return(a)))
-    fail(counts, l3_exec_run(a, m) = c.L3_UNSUPPORTED, "D-03 bare CALLABLE descriptor is UNSUPPORTED")
-
-    # Child returns 3, parent returns 7: parent result must survive.
-    info2: lmx_callable_new_owned(a)
+    # Child returns 3, parent returns 7: parent result must survive an explicit call.
     inner: lmx_node_new_owned(a)
-    info: lmx_callable_new_owned(a)
     m: lmx_node_new_owned(a)
-    if: info2 = 0 || inner = 0 || info = 0 || m = 0
+    if: inner = 0 || m = 0
         free(counts)
         return: 2
     ---
@@ -274,20 +241,15 @@ fn: main () int
         free(counts)
         return: 2
     ---
-    info2\method: meth
-    info\method: meth
-    lmx_arena_ref_store(inner, 0U, (cast: (@: void) info2))
     lmx_arena_ref_store(inner, 1U, (cast: (@: void) mk_return_int(a, 3)))
-    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
-    lmx_arena_ref_store(m, 1U, (cast: (@: void) inner))
+    lmx_arena_ref_store(m, 1U, (cast: (@: void) mk_call(a, inner, inner)))
     lmx_arena_ref_store(m, 2U, (cast: (@: void) mk_return_int(a, 7)))
     memset((cast: (@: void) (@ rr)), 0, c.sizeof(c.L3Result))
-    fail(counts, l3_exec_run_on(a, m, 0, prr) = c.L3_OK && prr\present != 0 && prr\value = 7, "parent return survives child")
+    fail(counts, l3_exec_run_on(a, m, 0, prr) = c.L3_OK && prr\present != 0 && prr\value = 7, "parent return survives explicit call to child")
 
     stmt: lmx_node_new_owned(a)
-    info: lmx_callable_new_owned(a)
     m: lmx_node_new_owned(a)
-    if: stmt = 0 || info = 0 || m = 0
+    if: stmt = 0 || m = 0
         free(counts)
         return: 2
     ---
@@ -306,16 +268,13 @@ fn: main () int
     lmx_int_store_known(cell2, 2)
     lmx_arena_ref_store(stmt, 1U, cell)
     lmx_arena_ref_store(stmt, 2U, cell2)
-    info\method: meth
-    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
     lmx_arena_ref_store(m, 1U, (cast: (@: void) stmt))
     fail(counts, l3_exec_run(a, m) = c.L3_UNSUPPORTED, "return arity more than one fails")
 
     # GROK-L3-FRAME-32: 65 own ints, exact scratch slice, dirty last field.
-    info: lmx_callable_new_owned(a)
     m: lmx_node_new_owned(a)
     stmt: lmx_node_new_owned(a)
-    if: info = 0 || m = 0 || stmt = 0
+    if: m = 0 || stmt = 0
         free(counts)
         return: 2
     ---
@@ -323,8 +282,6 @@ fn: main () int
         free(counts)
         return: 2
     ---
-    info\method: meth
-    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
     i: 1U
     while: i < 66U
         cell: lmx_int_new_owned(a)
@@ -353,12 +310,10 @@ fn: main () int
     fail(counts, lmx_int_value_known(lmx_arena_ref_value(m, 65U)) = 99, "65: dirty own 65 published")
 
     # Child scratch rewind must leave parent owns writable.
-    info2: lmx_callable_new_owned(a)
     inner: lmx_node_new_owned(a)
-    info: lmx_callable_new_owned(a)
     m: lmx_node_new_owned(a)
     stmt: lmx_node_new_owned(a)
-    if: info2 = 0 || inner = 0 || info = 0 || m = 0 || stmt = 0
+    if: inner = 0 || m = 0 || stmt = 0
         free(counts)
         return: 2
     ---
@@ -366,8 +321,6 @@ fn: main () int
         free(counts)
         return: 2
     ---
-    info2\method: meth
-    lmx_arena_ref_store(inner, 0U, (cast: (@: void) info2))
     i: 1U
     while: i < 41U
         cell: lmx_int_new_owned(a)
@@ -380,7 +333,6 @@ fn: main () int
         i: i + 1U
     ---
     lmx_arena_ref_store(inner, 41U, (cast: (@: void) mk_return(a)))
-    info\method: meth
     cell: lmx_int_new_owned(a)
     cell2: lmx_int_new_owned(a)
     if: cell = 0 || cell2 = 0
@@ -389,9 +341,8 @@ fn: main () int
     ---
     lmx_int_store_known(cell, 1)
     lmx_int_store_known(cell2, 77)
-    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
     lmx_arena_ref_store(m, 1U, cell)
-    lmx_arena_ref_store(m, 2U, (cast: (@: void) inner))
+    lmx_arena_ref_store(m, 2U, (cast: (@: void) mk_call(a, inner, inner)))
     lmx_arena_ref_store(stmt, 0U, (cast: (@: void) lmx_op_new_owned(a, c.L3_NODE_ASSIGN)))
     lmx_arena_ref_store(stmt, 1U, lmx_int_new_owned(a))
     lmx_int_store_known(lmx_arena_ref_value(stmt, 1U), 1)

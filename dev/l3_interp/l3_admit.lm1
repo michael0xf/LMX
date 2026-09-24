@@ -36,11 +36,12 @@ fn: l3_implements_paths (@: LmxArena arena; @: Lmx candidate; @: Lmx paths) int
     ---
 return: c.L3_OK
 
+# k.4 (c.3): a test occurrence is any Structure -- no descriptor to classify, l3_exec_run_on
+# itself refuses anything that does not classify as a Structure (l3_exec_frame's own check).
 fn: l3_run_tests (@: LmxArena arena; @: Lmx tests; @: Lmx candidate) int
     size_t: i
     @: void item
     @: Lmx m
-    @: void head
     int: st
     if: tests = 0
         return: c.L3_INVALID
@@ -56,11 +57,6 @@ fn: l3_run_tests (@: LmxArena arena; @: Lmx tests; @: Lmx candidate) int
         if: lmx_domain_kind(arena, item) != c.LMX_KIND_STRUCT
             return: c.L3_UNSUPPORTED
         m: (cast: (@: Lmx) item)
-        if: m\len < 1
-            return: c.L3_UNSUPPORTED
-        head: lmx_arena_ref_value(m, 0U)
-        if: head = 0 || lmx_domain_kind(arena, head) != c.LMX_DOMAIN_KIND_CALLABLE
-            return: c.L3_UNSUPPORTED
         st: l3_exec_run_on(arena, m, candidate, 0)
         if: st != c.L3_OK
             return: st

@@ -43,26 +43,21 @@ fn: mk_path2 (@: LmxArena a; int: i0; int: i1) @: Lmx
     lmx_arena_ref_store(p, 1U, mk_int(a, i1))
 return: p
 
+# k.4 (c.3): a plain occurrence, slot 0 reserved/unused, RETURN at slot 1.
 fn: mk_return_test (@: LmxArena a) @: Lmx
     @: Lmx m
-    @: LmxCallable info
-    @: LmxMethod meth
     @: Lmx stmt
     @: LmxOp op
     m: lmx_node_new_owned(a)
-    info: lmx_callable_new_owned(a)
-    meth: lmx_method_new_owned(a)
     stmt: lmx_node_new_owned(a)
     op: lmx_op_new_owned(a, c.L3_NODE_RETURN)
-    if: m = 0 || info = 0 || meth = 0 || stmt = 0 || op = 0
+    if: m = 0 || stmt = 0 || op = 0
         return: 0
     if: lmx_arena_refs_open_owned(a, m, 2U) != 0
         return: 0
     if: lmx_arena_refs_open_owned(a, stmt, 1U) != 0
         return: 0
-    info\method: meth
     lmx_arena_ref_store(stmt, 0U, (cast: (@: void) op))
-    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
     lmx_arena_ref_store(m, 1U, (cast: (@: void) stmt))
 return: m
 

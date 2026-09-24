@@ -50,12 +50,19 @@ MAX_NAME = 64          # l1_hdr_type_add's buffer: one more maximal name must st
 # FABLE-OPUS-ROOT-WALK-TRANSLATOR-20260924-159 commit 1 (D-38): lmx_call.h.lm1 dropped fnptr
 # LmxCallEntrySelf -- METHOD.addr is the method's prim-ABI trampoline, so no user of the two-reference
 # entry type is left.  EXPECT=71 after FABLE-GROKBOT-WALK-RECEIVE-20260925-177 c2: LmxPostCursor
-# (selective-receive inbox iterator) in lmx_post.h.lm1.
+# (selective-receive inbox iterator) in lmx_post.h.lm1.  EXPECT=68 after
+# FABLE-SONNET-NATIVE-WORD-20260926-191: three struct declarations dropped from the Thread
+# closure -- LmxCallable and LmxMethod from lmx.h.lm1 (c.2: Lmx.native replaces the child[0]
+# descriptor entirely) and LmxWalkOwn from lmx_walk.h.lm1 (c.2 gate fix-forward: dead since
+# LmxWalkFrame lost its owns/nowns fields, no cached activation plan any more).  This is the
+# first count taken against that baseline: dev/l3_interp did not translate at all between c.2
+# landing and c.3 fixing these four suites' own LmxCallable/LmxMethod/lmx_plan uses, so the
+# budget script could not run and catch the shift until now.
 EXPECT = {
-    'tests/l3_thread_bind_selftest.lm1': 71,
-    'tests/l3_n9_walk_selftest.lm1': 71,
-    'tests/l3_n10_walk_selftest.lm1': 71,
-    'tests/l3_mail_prim_selftest.lm1': 71,
+    'tests/l3_thread_bind_selftest.lm1': 68,
+    'tests/l3_n9_walk_selftest.lm1': 68,
+    'tests/l3_n10_walk_selftest.lm1': 68,
+    'tests/l3_mail_prim_selftest.lm1': 68,
 }
 
 PREDEF = re.compile(r'^predef:\s*(.*)$')

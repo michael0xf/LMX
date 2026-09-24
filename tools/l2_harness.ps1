@@ -1991,6 +1991,11 @@ $fixtures = @(
         Absent = @('l2_new0', 'l2_self: '); Debt = @('l2_c0: lmx_fresh(l2_program_arena, l2_c0)', 'l2_rw1 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw0, c.LMX_WALK_OP_CALL, 4U)',
                  'if: lmx_arena_ref_store(l2_rw1, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 4U))) != 0', 'if: lmx_arena_ref_store(l2_rw1, 2U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 4U))) != 0',
                  '@: Lmx l2_d1 lmx_fresh(l2_program_arena, l2_c0)', 'if: lmx_call_prim(l2_program_arena, l2_c0, l2_d1, 0, 0U, ') },
+    # -189 c3b-3: an own Structure field is a direct slot of its activation's data.  `nest` recurses (each
+    # re-entry over a fresh instance whose slot starts empty) and binds `Box: b` in its own slot, so
+    # the outer activation still reads its own Box after the inner calls: nest(3) = 123.
+    [pscustomobject]@{ Name = 'unit_recursive_model_slot.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
+        Absent = @('[0]: lmx_pointer_new_owned('); Debt = @('lmx_arena_ref_store(self, ') },
     # FABLE-GROKBOT-MATRIX-20260924-143 -- B2 semantic matrix (fixtures only).
     # Grid: {absent, existing non-callable, existing callable, path} x
     # {primitive, Structure ref, Array/ref, callable} over one head-consumes-tail

@@ -9,7 +9,7 @@ Both descriptions define one mechanism at their respective levels; the primary d
 
 L2 is the language of kernel mechanisms: `Lmx` structures, the arena's typed arrays, Message, mail, an L3 Thread turn, graph copy, and call. Its lowering chain is L2 → L1 → C99, as defined in [semantics](LMX_semantics.en.md#scope).
 
-L2 defines machine mechanisms and L3 defines high-level programs. Generated intermediate L1 is a lowering stage, not the program's source graph. The interpreter consumes only the [L3 graph](LMX_semantics.en.md#l3-receiver), not L2 operations. L3 is a subset of L2: a named and an anonymous Structure always belong to level L3, L2 operations are available only inside method bodies (`fn`, `sub`, `fm`), and `@` of any depth in L3 is a reference-declaration receiver only ([semantics](LMX_semantics.en.md#scope)).
+L2 defines machine mechanisms and L3 defines high-level programs. Generated intermediate L1 is a lowering stage, not the program's source graph. The interpreter consumes only the [L3 graph](LMX_semantics.en.md#l3-receiver), not L2 operations. User code is interpreted by default: the root body of a `.lm2` file is an interpreted L3 Structure and only method bodies execute natively; a Thread has no mode -- dispatch follows the descriptor (`METHOD.addr != 0` is a native entry through the prim ABI, `addr = 0` walks the occurrence's body); the value of an activation/file is its last evaluated expression. L3 is a subset of L2: a named and an anonymous Structure always belong to level L3, L2 operations are available only inside method bodies (`fn`, `sub`, `fm`), and `@` of any depth in L3 is a reference-declaration receiver only ([semantics](LMX_semantics.en.md#scope)).
 
 <a id="lmx"></a>
 ## 2. `Lmx` structure

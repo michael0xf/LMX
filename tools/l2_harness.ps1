@@ -527,6 +527,10 @@ $fixtures = @(
                  'c.abort()',
                  'return: "win32"',
                  'return: "pthread"') },
+    # D-50 / D-51 probes (Opus -175 UNGATED fixtures; registered -174 c0b after walker fixes).
+    # unit_walk_int_lt_negative: -1 < 0 at root -> Entry 1. unit_walk_size_t_wide: size_t 2^32 -> Entry 2.
+    [pscustomobject]@{ Name = 'unit_walk_int_lt_negative.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 1; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_size_t_wide.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 2; Absent = @(); Debt = @() },
 
     # S2: there is no standalone L1-only program any more -- every program is its unit, E runs in
     # R0 -- so the c.puts entries run on the kernel route, and say what they print.  The empty

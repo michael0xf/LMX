@@ -156,11 +156,20 @@ end: LmxRoot
 #
 # What the host keeps of an exit: its code, its two texts (exact-length char descriptors) and the
 # letter's sender (0 when the host decided the exit itself).
+#
+# D-66: out/err, when lmx_root_exit_admit fills them, are host-seam COPIES (calloc'd here, not
+# arena cells) -- the letter's own arena is only held by lmx_root_host_take's own locals, and
+# becomes GC-unreachable the instant that call returns, so a bare pointer into it left in this
+# struct (which is not itself a graph node the collector's root walk ever reaches) is dangling
+# the moment admission finishes.  owns_text says whether out.data/err.data are this struct's own
+# calloc'd copies (lmx_root_exit_write frees them once written) or borrowed/static text
+# (lmx_root_exit_set's own "why" strings, or the empty default): never both in the same LmxRootExit.
 struct: LmxRootExit
     int: exit_code
     LmxCharArray: out
     LmxCharArray: err
     @: void sender
+    int: owns_text
 end: LmxRootExit
 
 # THE HOST'S TWO BUILDERS.  The settings builder makes the host's eternal settings in the host's

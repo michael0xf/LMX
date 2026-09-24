@@ -602,7 +602,7 @@ fn: lmx_walk_scan_node (@: LmxWalkFrame f; @: void node) int
     if: lmx_walk_bare(f, node) != 0
         return: c.LMX_WALK_OK
     code: (cast: (@: Lmx) node)
-    if: f\counting != 0 && (op = c.LMX_WALK_OP_OWN || op = c.LMX_WALK_OP_AT || op = c.LMX_WALK_OP_PUT)
+    if: f\counting != 0 && (op = c.LMX_WALK_OP_OWN || op = c.LMX_WALK_OP_AT || op = c.LMX_WALK_OP_PUT || op = c.LMX_WALK_OP_PUT_REF)
         if: lmx_walk_slot(f, code, 1U) = 0
             return: c.LMX_WALK_INVALID
     ---
@@ -611,7 +611,7 @@ fn: lmx_walk_scan_node (@: LmxWalkFrame f; @: void node) int
     # write: `put` into the holder it names, and `set` into the own field its first operand
     # names -- which is a field in that profile when the occurrence itself is qualified, and
     # would be written by the next checkpoint.  Reading either is not refused.
-    if: f\counting != 0 && op = c.LMX_WALK_OP_PUT && lmx_walk_immutable(f, lmx_arena_ref_value(code, 1U)) != 0
+    if: f\counting != 0 && (op = c.LMX_WALK_OP_PUT || op = c.LMX_WALK_OP_PUT_REF) && lmx_walk_immutable(f, lmx_arena_ref_value(code, 1U)) != 0
         return: c.LMX_WALK_INVALID
     if: f\counting != 0 && op = c.LMX_WALK_OP_SET
         target: lmx_arena_ref_value(code, 1U)
@@ -716,7 +716,7 @@ fn: lmx_walk_scan_node (@: LmxWalkFrame f; @: void node) int
     # is not a body node to scan; its arguments from 2 are.
     if: op = c.LMX_WALK_OP_PRIM
         i: 2U
-    if: op = c.LMX_WALK_OP_PUT
+    if: op = c.LMX_WALK_OP_PUT || op = c.LMX_WALK_OP_PUT_REF
         i: 3U
     while: status = c.LMX_WALK_OK && i < (cast: (size_t) code\len)
         child: lmx_arena_ref_value(code, i)
@@ -876,7 +876,7 @@ fn: lmx_walk_arg_arity_node (@: LmxWalkFrame f; @: void node; @: size_t need) in
         i: 3U
     if: op = c.LMX_WALK_OP_PRIM
         i: 2U
-    if: op = c.LMX_WALK_OP_PUT
+    if: op = c.LMX_WALK_OP_PUT || op = c.LMX_WALK_OP_PUT_REF
         i: 3U
     if: op = c.LMX_WALK_OP_PUT_OF
         i: 1U
@@ -1233,6 +1233,12 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
             \out: lmx_pointer_value_known(slot[0])
             return: c.LMX_WALK_OK
         ---
+        # -186: direct Structure own slot -- the slot holds the Structure; no DEREF.
+        # Mutant: require pointer cell here -> PUT_REF bind unread RED.
+        if: lmx_walk_kind(f, slot[0]) = c.LMX_KIND_STRUCT
+            \out: slot[0]
+            return: c.LMX_WALK_OK
+        ---
         if: lmx_walk_load_numeric(f\arena, slot[0], @ wv) != c.LMX_WALK_OK
             return: c.LMX_WALK_INVALID
         ---
@@ -1319,6 +1325,38 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
         if: lmx_walk_store_slot(f\arena, slot, wv) != c.LMX_WALK_OK
             return: c.LMX_WALK_INVALID
         \out: slot[0]
+        return: c.LMX_WALK_OK
+    if: op = c.LMX_WALK_OP_PUT_REF
+        # -186: [put_ref, holder, slot, value] -> lmx_arena_ref_store (direct own Structure slot).
+        # Additive: pointer-cell slots stay on PUT; PUT_REF refuses a pointer cell in the slot.
+        # Mutant: PUT into a direct slot (no pointer cell) -> INVALID (numeric/type miss).
+        if: (cast: (size_t) code\len) < 4U
+            return: c.LMX_WALK_INVALID
+        ---
+        other: lmx_arena_ref_value(code, 1U)
+        if: other = 0
+            return: c.LMX_WALK_INVALID
+        ---
+        other: lmx_walk_data_holder(f, other)
+        if: other = 0 || lmx_walk_kind(f, other) != c.LMX_KIND_STRUCT
+            return: c.LMX_WALK_INVALID
+        ---
+        index: lmx_size_value_known(lmx_arena_ref_value(code, 2U))
+        status: lmx_walk_eval(f, lmx_arena_ref_value(code, 3U), (cast: (@: void) (@ a)), @ value)
+        if: status != c.LMX_WALK_OK
+            return: status
+        ---
+        if: value != 0 && lmx_walk_kind(f, value) != c.LMX_KIND_STRUCT
+            return: c.LMX_WALK_INVALID
+        ---
+        expect_leaf: lmx_arena_ref_value((cast: (@: Lmx) other), index)
+        if: expect_leaf != 0 && lmx_walk_is_pointer_cell(f\arena, expect_leaf) != 0
+            return: c.LMX_WALK_INVALID
+        ---
+        if: lmx_arena_ref_store((cast: (@: Lmx) other), index, value) != 0
+            return: c.LMX_WALK_INVALID
+        ---
+        \out: value
         return: c.LMX_WALK_OK
     if: op = c.LMX_WALK_OP_PUT_OF
         # -177 c4 / D-54: evaluate the holder, then write slot. Mutant: use walk_slot on child1 -> RED.
@@ -1673,7 +1711,7 @@ fn: lmx_walk_body (@: LmxWalkFrame f; @: Lmx body; size_t: first) int
             status: lmx_walk_eval(f, child, step_dest, @ dropped)
             # Activation value = last evaluated expression. SET/PUT/IF/WHILE are
             # statements (void fall-off). LIT/arith/CALL/OWN/... count. RET sets valued itself.
-            if: status = c.LMX_WALK_OK && dropped != 0 && step_op != c.LMX_WALK_OP_SET && step_op != c.LMX_WALK_OP_PUT && step_op != c.LMX_WALK_OP_PUT_OF && step_op != c.LMX_WALK_OP_IF && step_op != c.LMX_WALK_OP_WHILE
+            if: status = c.LMX_WALK_OK && dropped != 0 && step_op != c.LMX_WALK_OP_SET && step_op != c.LMX_WALK_OP_PUT && step_op != c.LMX_WALK_OP_PUT_REF && step_op != c.LMX_WALK_OP_PUT_OF && step_op != c.LMX_WALK_OP_IF && step_op != c.LMX_WALK_OP_WHILE
                 f\result: dropped
                 f\valued: 1
             ---

@@ -95,6 +95,21 @@ fn: argn (@: Lmx parent; size_t: slot; size_t: k) @: Lmx
     sz(n, 1U, k)
 return: n
 
+
+# G1 native trampolines (prim ABI). Mutant: refuse addr!=0 -> RED; collapse status -> RED.
+fn: g1_seven (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    if: nargs != 1U || refs = 0 || dest = 0 || out = 0
+        c.fprintf(l1_stderr(), "lmx: invariant: g1_seven nargs\n")
+        c.abort()
+    ---
+    lmx_int_store_known(dest, 7)
+    \out: dest
+return: 0
+
+fn: g1_throw2 (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    \out: 0
+return: 2
+
 # A callable occurrence under the unit: child[0] is a fresh LmxCallable, nothing native.
 fn: mk_m (@: Lmx unit; size_t: slot; size_t: children) @: Lmx
     @: Lmx m pl(unit, slot, children)
@@ -237,6 +252,12 @@ fn: main () int
     @: Lmx pair 0
     @: Lmx tramp 0
     @: Lmx tramp2 0
+    @: Lmx native7 0
+    @: Lmx native2 0
+    @: Lmx caller7 0
+    @: Lmx caller2 0
+    @: LmxMethod method7 0
+    @: LmxMethod method2 0
     @: Lmx tramp3 0
     int: r 0
     int: v 0
@@ -279,7 +300,7 @@ fn: main () int
     abox: lmx_int_new_owned(ga)
     unit: lmx_node_new_owned(ga)
     argv[0]: abox
-    if: groles = 0 || gplan_roles = 0 || flat = 0 || lens = 0 || paths = 0 || argv = 0 || gv = 0 || abox = 0 || unit = 0 || lmx_arena_refs_open_owned(ga, unit, 43U) != 0
+    if: groles = 0 || gplan_roles = 0 || flat = 0 || lens = 0 || paths = 0 || argv = 0 || gv = 0 || abox = 0 || unit = 0 || lmx_arena_refs_open_owned(ga, unit, 50U) != 0
         fputs("lmx_walk: unit\n", l1_stdout())
         return: 2
     ---
@@ -989,6 +1010,42 @@ fn: main () int
     st: lmx_walk_run(gctx, tramp2, 0, 0U, gv)
     check(st = c.LMX_WALK_OK && gv\present != 0 && gv\ref = (cast: (@: void) pair), "a sole Structure argument reaches the formal unchanged")
     check(pair != 0 && pair\len = 2 && lmx_int_value_known(lmx_arena_ref_value(pair, 0U)) = 1 && lmx_int_value_known(lmx_arena_ref_value(pair, 1U)) = 2, "the Structure argument keeps its two fields")
+
+
+    # ---- G1: native descriptor via prim ABI (FABLE-158) --------------------------------
+    # Prim-ABI callee behind LmxCallable.addr, called from walked op tree with one int
+    # operand -> dest = 7. Mutant: addr!=0 refused (old never-METHOD.addr) -> RED.
+    native7: mk_m(unit, 41U, 1U)
+    native2: mk_m(unit, 42U, 1U)
+    caller7: mk_m(unit, 43U, 2U)
+    caller2: mk_m(unit, 44U, 2U)
+    method7: lmx_method_new_owned(ga)
+    method2: lmx_method_new_owned(ga)
+    check(native7 != 0 && native2 != 0 && caller7 != 0 && caller2 != 0 && method7 != 0 && method2 != 0, "G1 fixtures")
+    method7\addr: (cast: (LmxEntry) g1_seven)
+    method7\sig: 0U
+    method2\addr: (cast: (LmxEntry) g1_throw2)
+    method2\sig: 0U
+    info: (cast: (@: LmxCallable) lmx_arena_ref_value(native7, 0U))
+    check(info != 0, "G1 native7 descriptor")
+    info\method: method7
+    info: (cast: (@: LmxCallable) lmx_arena_ref_value(native2, 0U))
+    check(info != 0, "G1 native2 descriptor")
+    info\method: method2
+    # caller7: CALL native7(LIT 1) -- one int operand; trampoline writes 7
+    n: fr(caller7, 1U, c.LMX_WALK_OP_CALL, 3U)
+    ref(n, 1U, native7)
+    lit(n, 2U, 1)
+    check(lmx_walk_prepare(gctx, ga, gplan_roles, caller7) = c.LMX_WALK_OK, "G1 caller7 prepared (addr!=0 skips ARG arity)")
+    st: go(caller7, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && v = 1 && r = 7, "G1 native addr!=0 CALL with one int -> dest 7 (mutant: addr!=0 refused)")
+    # caller2: CALL native2() -- status 2 must reach walk as 2, not LMX_WALK_PRIMITIVE
+    n: fr(caller2, 1U, c.LMX_WALK_OP_CALL, 2U)
+    ref(n, 1U, native2)
+    check(lmx_walk_prepare(gctx, ga, gplan_roles, caller2) = c.LMX_WALK_OK, "G1 caller2 prepared")
+    st: go(caller2, 0, 0U, @ r, @ v)
+    check(st = 2, "G1 METHOD trampoline status 2 reaches walk as 2 (mutant: collapsed to LMX_WALK_PRIMITIVE)")
+    check(st != c.LMX_WALK_PRIMITIVE, "G1 status distinct from LMX_WALK_PRIMITIVE (LmxCallable vs LmxPrimitive)")
 
     free((cast: (@: void) argv))
     free((cast: (@: void) gv))

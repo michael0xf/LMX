@@ -14,6 +14,7 @@ prototype:
     fn: lmx_walk_arg_arity_node (@: LmxWalkFrame f; @: void node; @: size_t need) int
     fn: lmx_walk_arg_arity (@: LmxWalkFrame f; @: Lmx node) size_t
     fn: lmx_walk_call0_dispatch (@: LmxArena arena; @: Lmx callable) int
+    fn: lmx_walk_callable_addr (@: LmxArena arena; @: Lmx node) LmxEntry
 end: prototype
 
 # Same question as lmx_call_ready, asked here so this unit does not link against call.o
@@ -34,6 +35,21 @@ fn: lmx_walk_is_callable (@: LmxArena arena; @: Lmx node) int
         return: 0
     ---
 return: 1
+
+# METHOD.addr of a callable occurrence, or 0.  Used by call/prepare: addr != 0 means
+# the callee is a native trampoline (prim ABI); arity comes from the trampoline, not ARG nodes.
+fn: lmx_walk_callable_addr (@: LmxArena arena; @: Lmx node) LmxEntry
+    @: void target 0
+    @: LmxCallable info 0
+    if: lmx_walk_is_callable(arena, node) = 0
+        return: 0
+    ---
+    target: lmx_arena_ref_value(node, 0U)
+    info: (cast: (@: LmxCallable) target)
+    if: info = 0 || info\method = 0
+        return: 0
+    ---
+return: info\method\addr
 
 # lmx_walk.lm1 - one activation of the graph interpreter.  The contract, its sources and
 # the limits of this slice are in lmx_walk.h.lm1.
@@ -415,11 +431,14 @@ fn: lmx_walk_scan_node (@: LmxWalkFrame f; @: void node) int
     i: 1U
     if: op = c.LMX_WALK_OP_CALL
         # D-04: argument count vs callee at prepare, same rule as lmx_walk_call entry.
+        # Native trampoline (METHOD.addr != 0): no ARG body nodes; trampoline checks nargs (X1).
         target: lmx_arena_ref_value(code, 1U)
         if: target = 0 || lmx_walk_kind(f, target) != c.LMX_KIND_STRUCT
             return: c.LMX_WALK_INVALID
-        if: (cast: (size_t) code\len) - 2U != lmx_walk_arg_arity(f, (cast: (@: Lmx) target))
-            return: c.LMX_WALK_INVALID
+        if: lmx_walk_callable_addr(f\arena, (cast: (@: Lmx) target)) = 0
+            if: (cast: (size_t) code\len) - 2U != lmx_walk_arg_arity(f, (cast: (@: Lmx) target))
+                return: c.LMX_WALK_INVALID
+            ---
         ---
         i: 2U
         while: status = c.LMX_WALK_OK && i < (cast: (size_t) code\len)
@@ -642,10 +661,13 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
     @: void room 0
     @@: void refs 0
     @@: void cells 0
+    LmxEntry: addr 0
+    LmxPrimitiveEntry: entry 0
     size_t: n
     size_t: i 0U
     int: present 0
     int: status c.LMX_WALK_OK
+    int: said 0
     \out: 0
     if: code\len < 2
         return: c.LMX_WALK_INVALID
@@ -658,10 +680,15 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
     # sole anonymous argument container is P0's to normalize, one level, for every
     # head (-127), and a Structure among the children is a Structure argument.
     n: (cast: (size_t) code\len) - 2U
-    # D-04: refuse a wrong count at entry (native does). Extra Structure to a nullary
-    # callee must not be ignored because the body never reads ARG.
-    if: n != lmx_walk_arg_arity(f, callee)
-        return: c.LMX_WALK_INVALID
+    # Native trampoline (METHOD.addr != 0): prim ABI; arity is the trampoline's nargs
+    # check (X1 on mismatch), never ARG-body counting. addr == 0: today's walk + D-04.
+    addr: lmx_walk_callable_addr(f\arena, callee)
+    if: addr = 0
+        # D-04: refuse a wrong count at entry (native does). Extra Structure to a nullary
+        # callee must not be ignored because the body never reads ARG.
+        if: n != lmx_walk_arg_arity(f, callee)
+            return: c.LMX_WALK_INVALID
+        ---
     ---
     pm: @ mark
     if: lmx_scratch_mark(f\context\scratch, pm) != c.LMX_SCRATCH_OK
@@ -690,13 +717,27 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
     # reloaded after it.
     if: status = c.LMX_WALK_OK
         status: lmx_walk_checkpoint(f)
+    ---
     if: status = c.LMX_WALK_OK
-        status: lmx_walk_activate(f\context, callee, refs, n, dest, out, @ present)
-    # Descriptor-only callee: call_ready but no walkable plan/body. Prefer
-    # NOT_CALLABLE over a bare NO_GRAPH when that distinction holds. Never
-    # METHOD.addr / lmx_call0 for walk execution.
-    if: (status = c.LMX_WALK_NO_GRAPH || status = c.LMX_WALK_NOT_CALLABLE) && lmx_walk_is_callable(f\arena, callee) != 0
-        status: c.LMX_WALK_NOT_CALLABLE
+        if: addr != 0
+            # G1: call through prim ABI. owner = occurrence; trampoline passes l2_msg = 0.
+            # Status: LmxCallable METHOD trampoline nonzero k is that method's S1.1 throw
+            # number and must reach the walk caller as k -- distinct from LMX_WALK_PRIMITIVE
+            # (LmxPrimitive record path in lmx_walk_prim). Told apart by the descriptor
+            # record: LmxCallable here vs LmxPrimitive there (domain kind CALLABLE vs PRIMITIVE).
+            entry: (cast: (LmxPrimitiveEntry) addr)
+            said: entry((cast: (@: void) callee), refs, n, dest, out)
+            if: said != 0
+                status: said
+            ---
+        else:
+            status: lmx_walk_activate(f\context, callee, refs, n, dest, out, @ present)
+            # Descriptor-only callee: call_ready but no walkable plan/body. Prefer
+            # NOT_CALLABLE over a bare NO_GRAPH when that distinction holds.
+            if: (status = c.LMX_WALK_NO_GRAPH || status = c.LMX_WALK_NOT_CALLABLE) && lmx_walk_is_callable(f\arena, callee) != 0
+                status: c.LMX_WALK_NOT_CALLABLE
+            ---
+        ---
     ---
     if: lmx_scratch_rewind(f\context\scratch, pm) != c.LMX_SCRATCH_OK && status = c.LMX_WALK_OK
         status: c.LMX_WALK_INVALID

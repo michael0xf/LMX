@@ -122,6 +122,16 @@ struct: LmxPostInboxSlotDynamicArray
     size_t: capacity
 end: LmxPostInboxSlotDynamicArray
 
+# -177 c2: selective-receive iterator over the inbox in admission order (mail-wrappers K1).
+# open positions before the first letter; next advances and returns the letter under the
+# cursor; take removes that letter (others keep order); close ends the walk.
+struct: LmxPostCursor
+    @: LmxPost box
+    size_t: index
+    int: has_current
+    int: open
+end: LmxPostCursor
+
 struct: LmxPost
     # THE INBOX IS THE ONE CROSS-LANE STRUCTURE AND IT IS A RING, NOT A LINKED LIST (20.09).
     #
@@ -203,4 +213,9 @@ prototype:
     fn: lmx_post_inbox_set_data (@: LmxPost box; @: LmxPostInboxSlot data) void
     fn: lmx_post_inbox_set_len (@: LmxPost box; size_t: len) void
     fn: lmx_post_inbox_set_cap (@: LmxPost box; size_t: capacity) void
+    # -177 c2: inbox cursor (admission order). Mutant: take removes wrong slot -> RED.
+    fn: lmx_post_cursor_open (@: LmxPost box; @: LmxPostCursor cur) int
+    fn: lmx_post_cursor_next (@: LmxPostCursor cur) @: void
+    fn: lmx_post_cursor_take (@: LmxArena arena; @: LmxPostCursor cur) @: void
+    fn: lmx_post_cursor_close (@: LmxPostCursor cur) void
 end: prototype

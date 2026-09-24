@@ -1,0 +1,38 @@
+# A binding in a body is scoped to it (FABLE-OPUS-CODE-DATA-SPLIT-20260925-189 commit c3b-2; L3 §12,
+# R2 with carry, static by position -- fable).  A formal is the machine argument until its binding
+# line and its field from then on.  A bare assignment inside an `if` body binds that body's hosted
+# field, and after the body the name is again what it was before it.
+# - scoped(3, 1): `x: 7` in the body binds the body's field, so inner is 7.  After the body, x is the
+#   argument again: 3.  73.  Without the scoping, x after the body is the body's field: 77.
+# - nested(3): `int: y` carries the argument into the method's field (3) and `y: y + 1` makes it 4.
+#   In the body `y: y + 10` binds the body's field from the enclosing one: 14, so in2 is 14.  After
+#   the body, y is the method's field again: 4.  1404.
+# The exit code is (scoped(3, 1) - 73) + (nested(3) - 1404): 0.
+fn: scoped (int: x; int: c) int
+    int: inner 0
+    if: c != 0
+        x: 7
+        inner: x
+    return: inner * 10 + x
+end: scoped
+
+fn: nested (int: y) int
+    int: in2 0
+    int: y
+    y: y + 1
+    if: y > 0
+        y: y + 10
+        in2: y
+    return: in2 * 100 + y
+end: nested
+
+fn: probe () int
+    int: a 0
+    int: b 0
+    a: scoped(3, 1)
+    b: nested(3)
+    return: (a - 73) + (b - 1404)
+end: probe
+
+sendMessage: exit(exit_code: probe(); stdout: ""; stderr: "")
+return

@@ -643,3 +643,63 @@ Witnesses:
 
 Order: after c3a lands on main.  c3b-3 (pointer own fields, `Model: m` / received `m`) follows as
 its own commit.
+
+## Commit c3b-2: a formal-bound field is its cell after its binding line
+
+Base: main 039bf22 (c3a landed).  Built as planned above; what changed from the plan is marked.
+
+What is built:
+- `l2_own_plain` became `l2_own_direct`: every numeric own field (int, char, size_t, unsigned, ulong) is
+  its cell.  Plain fields and formal-bound ones alike have no working copy.
+  - Direct fields get no `l2_q<k>` in the prelude, and no `_dirty`, `_sticky` or `_active`.
+  - Their `_from` is bound eagerly, and the checkpoint skips them.
+  - The sticky helpers (bind_mark, addr_mark, finalize_old) do nothing for them.
+- The binding state is `l2_own_bseq[k]`.  It replaces `l2_own_live`, which was written and never read.
+  - A row gets its number (`l2_bseq_n`) at its first store (`l2_own_store`).  That store is the binding
+    line, whose value was spelled before the line, with the name still the argument.
+  - `l2_emit_body` became a wrapper around the old body, now `l2_emit_body_in`.  On leaving a body it
+    clears every row bound inside it.
+- `l2_formal_row(mi, pk)`: the latest bound row whose name is parameter pk, else -1 (the argument).
+  - `l2_tok_formal` resolves through it, so l2_prep, l2_hidden_from and the field-path root follow.
+  - l2_index_token (both own-row sites) and l2_prep_addr (`@x`: the cell after binding, `@ l2_p`
+    before) follow it too.  So do the `@ name` operator and the call-argument list, through
+    `l2_name_cell`.
+- Carry: a declaration without an initializer stores the name's value, read just before the line
+  (the argument, or an enclosing bound field).
+- Changed from the plan: a field binds the formal by NAME (`l2_own_formal(mi, k)` = l2_param_find of
+  the row's name), not by `l2_own_param_of`.
+  - A bare assignment in a body makes that body's hosted row.  l2_bind_own aliases occurrence 0
+    only, and the hosted row is its own canonical row, so its param_of is -1.
+  - Measured on a probe: `y: y + 10` in an `if` body was stored in the body's cell, but `in2: y` read
+    the method-level field (1404 expected, 404 printed).  The old model gave 404 too.
+- Pointer own fields keep the working copy and the sticky machinery until c3b-3.  So
+  unit_arg_addr_dyn_types (its DP pointer row) and unit_arg_addr_pointer keep `BindOrder`.
+
+Rows:
+- The facts predicted in the plan, all measured as predicted:
+  - unit_arg_addr_sticky: A2 100 100, A4 200 200, B+ 200 200, C3 100 100, D1 100 100, D0 100 100,
+    E 100 100;
+  - unit_arg_addr_dynamic: IA2, IA4, IB+, IC3, ZA2, ZA4, ZB+, ZC3 the same way;
+  - unit_occ_sticky_selector: BEFORE 100 100, AFTER 100 100;
+  - unit_arg_addr_types: U 100 100, Z 100/100, L 100/100;
+  - unit_arg_addr_dyn_types: U2, L2, F2 100 100;
+  - unit_arg_addr_ordinary: OC3, OE, OD3 100 100.
+  - Every `5 100` / `7 100` line, unit_occ_snapshot_selector and the CALLER line are unchanged.
+- The -67 sticky pins were re-pinned to the new text, with `_sticky`/`_active`/`_dirty` Absent:
+  - the carry store `if: lmx_int_store_known(l2_q1_from[0], (l2_p3_0)) != 0`;
+  - `@ l2_p3_0` before the binding, `(cast: (@: int) l2_q1_from[0])` after it.
+- `BindOrder` was dropped from the numeric rows: sticky, types, dynamic, ordinary, sticky_selector,
+  snapshot_selector.
+- Each changed fixture got a header note: the facts are now R2 with carry, and the sticky text below
+  it is the old model's.
+- New: unit_arg_bind_body_scope.  scoped(3, 1) is 73: in the body the field (7); after it the
+  argument (3).  nested(3) is 1404: the body's field is 14, the method's 4.
+
+Mutants (private variants, each RED by behaviour):
+- MB1, never bound (always the argument): sticky prints A1 5 6, ...; body_scope exits -1141.
+- MB2, bound from entry (R1): the `5 100` lines become `100 100`, C1 1 1; body_scope exits -1299.
+- MB3, the declaration binds with the prototype's 0 instead of carrying: A1 1 1, C1 1 1; body_scope
+  exits -303.
+- MB4, a body's bindings outlive it: body_scope exits 14 (scoped 77).
+
+Per-row check (verify2b, 357 rows, scratch driver): 0 red.

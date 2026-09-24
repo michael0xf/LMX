@@ -391,8 +391,9 @@ fn: main () int
     # outer:     own x 1;  inner;  return: x          (21.6's worked case)
     # inner:     outer\x: 2                           (explicit field write, no cache)
     xcell: icell(outer, 1U, 1)
-    n: fr(outer, 2U, c.LMX_WALK_OP_CALL, 2U)
+    n: fr(outer, 2U, c.LMX_WALK_OP_CALL, 3U)
     ref(n, 1U, inner)
+    ref(n, 2U, inner)
     n: fr(outer, 3U, c.LMX_WALK_OP_RET, 2U)
     own(n, 1U, outer, 1U)
     n: fr(inner, 1U, c.LMX_WALK_OP_PUT, 4U)
@@ -407,8 +408,9 @@ fn: main () int
     own(n, 1U, publisher, 1U)
     lit(n, 2U, 5)
     n: fr(publisher, 3U, c.LMX_WALK_OP_RET, 2U)
-    e: fr(n, 1U, c.LMX_WALK_OP_CALL, 2U)
+    e: fr(n, 1U, c.LMX_WALK_OP_CALL, 3U)
     ref(e, 1U, reader)
+    ref(e, 2U, reader)
     n: fr(reader, 1U, c.LMX_WALK_OP_RET, 2U)
     e: fr(n, 1U, c.LMX_WALK_OP_AT, 3U)
     ref(e, 1U, publisher)
@@ -425,9 +427,11 @@ fn: main () int
     n: fr(summer, 2U, c.LMX_WALK_OP_RET, 2U)
     e: fr(n, 1U, c.LMX_WALK_OP_ADD, 3U)
     argn(e, 1U, 0U)
-    n: fr(e, 2U, c.LMX_WALK_OP_CALL, 3U)
+    n: fr(e, 2U, c.LMX_WALK_OP_CALL, 4U)
     ref(n, 1U, summer)
-    e: fr(n, 2U, c.LMX_WALK_OP_SUB, 3U)
+    e: fr(n, 2U, c.LMX_WALK_OP_FRESH, 2U)
+    ref(e, 1U, summer)
+    e: fr(n, 3U, c.LMX_WALK_OP_SUB, 3U)
     argn(e, 1U, 0U)
     lit(e, 2U, 1)
 
@@ -581,18 +585,20 @@ fn: main () int
     lit(e, 2U, 1)
     # relay (s):  return: peek(s)        a reference handed down and back through two frames
     n: fr(relay, 1U, c.LMX_WALK_OP_RET, 2U)
-    e: fr(n, 1U, c.LMX_WALK_OP_CALL, 3U)
+    e: fr(n, 1U, c.LMX_WALK_OP_CALL, 4U)
     ref(e, 1U, peek)
-    argn(e, 2U, 0U)
+    ref(e, 2U, peek)
+    argn(e, 3U, 0U)
     # echo (k):   return: k              an input returned as it came
     n: fr(echo, 1U, c.LMX_WALK_OP_RET, 2U)
     argn(n, 1U, 0U)
     # hop (k):    return: echo(k - 1)    the dangerous one: k - 1 lives in hop's scratch slice,
     #                                    echo returns that very reference, hop returns it on
     n: fr(hop, 1U, c.LMX_WALK_OP_RET, 2U)
-    e: fr(n, 1U, c.LMX_WALK_OP_CALL, 3U)
+    e: fr(n, 1U, c.LMX_WALK_OP_CALL, 4U)
     ref(e, 1U, echo)
-    b: fr(e, 2U, c.LMX_WALK_OP_SUB, 3U)
+    ref(e, 2U, echo)
+    b: fr(e, 3U, c.LMX_WALK_OP_SUB, 3U)
     argn(b, 1U, 0U)
     lit(b, 2U, 1)
     # self (s):   return: s              the subject itself
@@ -978,19 +984,21 @@ fn: main () int
     # meets no container to unwrap (-133).
     tramp: mk_m(unit, 35U, 2U)
     n: fr(tramp, 1U, c.LMX_WALK_OP_RET, 2U)
-    e: fr(n, 1U, c.LMX_WALK_OP_CALL, 2U)
+    e: fr(n, 1U, c.LMX_WALK_OP_CALL, 3U)
     ref(e, 1U, host)
+    ref(e, 2U, host)
     check(lmx_walk_prepare(gctx, ga, gplan_roles, tramp) = c.LMX_WALK_OK, "tramp: host() prepared")
     st: go(tramp, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_OK && r = 7 && v = 1, "CALL host with no argument children => 7")
     # D-04: host() with one extra Structure argument is refused at entry (native refuses).
     tramp3: mk_m(unit, 40U, 2U)
     n: fr(tramp3, 1U, c.LMX_WALK_OP_RET, 2U)
-    e: fr(n, 1U, c.LMX_WALK_OP_CALL, 3U)
+    e: fr(n, 1U, c.LMX_WALK_OP_CALL, 4U)
     ref(e, 1U, host)
+    ref(e, 2U, host)
     if: pair != 0
         pair\parent: e
-        check(lmx_arena_ref_store(e, 2U, (cast: (@: void) pair)) = 0, "pair under tramp3 CALL as extra arg")
+        check(lmx_arena_ref_store(e, 3U, (cast: (@: void) pair)) = 0, "pair under tramp3 CALL as extra arg")
     ---
     check(lmx_walk_prepare(gctx, ga, gplan_roles, tramp3) = c.LMX_WALK_INVALID, "D-04 host(extra Structure) refused at prepare")
     # D-03: bare callable in body executes (tracer own published), then return 9.
@@ -1006,11 +1014,12 @@ fn: main () int
     # made it two int arguments and returned the first.
     tramp2: mk_m(unit, 36U, 2U)
     n: fr(tramp2, 1U, c.LMX_WALK_OP_RET, 2U)
-    e: fr(n, 1U, c.LMX_WALK_OP_CALL, 3U)
+    e: fr(n, 1U, c.LMX_WALK_OP_CALL, 4U)
     ref(e, 1U, test2)
+    ref(e, 2U, test2)
     if: pair != 0
         pair\parent: e
-        check(lmx_arena_ref_store(e, 2U, (cast: (@: void) pair)) = 0, "pair under tramp2 CALL")
+        check(lmx_arena_ref_store(e, 3U, (cast: (@: void) pair)) = 0, "pair under tramp2 CALL")
     ---
     check(lmx_walk_prepare(gctx, ga, gplan_roles, tramp2) = c.LMX_WALK_OK, "tramp2(pair) prepared")
     st: lmx_walk_run(gctx, tramp2, 0, 0U, gv)
@@ -1039,15 +1048,17 @@ fn: main () int
     check(info != 0, "G1 native2 descriptor")
     info\method: method2
     # caller7: CALL native7(LIT 1) -- one int operand; trampoline writes 7
-    n: fr(caller7, 1U, c.LMX_WALK_OP_CALL, 3U)
+    n: fr(caller7, 1U, c.LMX_WALK_OP_CALL, 4U)
     ref(n, 1U, native7)
-    lit(n, 2U, 1)
+    ref(n, 2U, native7)
+    lit(n, 3U, 1)
     check(lmx_walk_prepare(gctx, ga, gplan_roles, caller7) = c.LMX_WALK_OK, "G1 caller7 prepared (addr!=0 skips ARG arity)")
     st: go(caller7, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_OK && v = 1 && r = 7, "G1 native addr!=0 CALL with one int -> dest 7 (mutant: addr!=0 refused)")
     # caller2: CALL native2() -- status 2 must reach walk as 2, not LMX_WALK_PRIMITIVE
-    n: fr(caller2, 1U, c.LMX_WALK_OP_CALL, 2U)
+    n: fr(caller2, 1U, c.LMX_WALK_OP_CALL, 3U)
     ref(n, 1U, native2)
+    ref(n, 2U, native2)
     check(lmx_walk_prepare(gctx, ga, gplan_roles, caller2) = c.LMX_WALK_OK, "G1 caller2 prepared")
     st: go(caller2, 0, 0U, @ r, @ v)
     # D-37: throw k is LMX_WALK_THROWN + k (never bare 2 / NO_GRAPH). Mutant: status: said -> RED.

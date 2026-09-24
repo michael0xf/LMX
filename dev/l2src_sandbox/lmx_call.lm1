@@ -174,7 +174,7 @@ fn: lmx_call0 (@: LmxArena arena; @: Lmx callable) int
     ---
 return: value
 
-fn: lmx_call_prim (@: LmxArena arena; @: Lmx callable; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: lmx_call_prim (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
     @: void target
     @: LmxCallable info
     LmxPrimitiveEntry: entry
@@ -182,12 +182,13 @@ fn: lmx_call_prim (@: LmxArena arena; @: Lmx callable; @@: void refs; size_t: na
     LmxEntry: addr
     int: value
     int: st
-    if: out = 0 || lmx_call_ready(arena, callable) != c.LMX_CALL_OK
+    # Dispatch on CODE (callable occurrence). Owner / self = DATA; trampoline builds nothing.
+    if: out = 0 || data = 0 || lmx_call_ready(arena, code) != c.LMX_CALL_OK
         c.fprintf(l1_stderr(), "lmx: invariant: a dynamic call of a value that is not a callable occurrence\n")
         c.abort()
     ---
     \out: 0
-    target: lmx_arena_ref_value(callable, 0U)
+    target: lmx_arena_ref_value(code, 0U)
     info: (cast: (@: LmxCallable) target)
     addr: 0
     if: info != 0 && info\method != 0
@@ -195,18 +196,17 @@ fn: lmx_call_prim (@: LmxArena arena; @: Lmx callable; @@: void refs; size_t: na
     ---
     if: addr != 0
         # Local fnptr (not a void* cast in the call expr) so l1trans emits commas.
+        # owner = data = self (node = data.parent inside the trampoline / typed entry).
         entry: (cast: (LmxPrimitiveEntry) addr)
-        return: entry((cast: (@: void) callable), refs, nargs, dest, out)
+        return: entry((cast: (@: void) data), refs, nargs, dest, out)
     ---
-    # A walked body: the L2 walk hook answers the activation's value, and its failure status is
-    # the one lmx_call_walk_fail_status holds (D-37: until -161 that status also carries the
-    # walker's own errors).  The hook is nullary.
+    # A walked body: the L2 walk hook stays nullary until k.4 (lmx_call0 unchanged). Walk CODE.
     if: lmx_call_walk_fn = 0 || nargs != 0U
         c.fprintf(l1_stderr(), "lmx: invariant: a dynamic call of a body with no native entry and no walk for it\n")
         c.abort()
     ---
     walk: (cast: (LmxCallWalkFn) lmx_call_walk_fn)
-    value: walk(arena, callable)
+    value: walk(arena, code)
     st: lmx_call_walk_fail_status()
     if: st != 0
         return: st

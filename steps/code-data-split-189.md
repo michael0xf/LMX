@@ -574,3 +574,71 @@ Mutants (private variants; each is RED by behaviour, not only by a pin):
 
 Per-row check (verify2b over all 356 rows, scratch driver with lmx_fresh): 0 red after the CALL
 re-pin.  The 2 argv rows are run by the harness only.
+
+## c3b-2 plan (prep, not built): a formal-bound field is its cell after its binding line
+
+Today (measured on the c3a tree), a formal-bound own row k (`l2_m_alias` >= 0, or `l2_own_param_of`
+>= 0 through the canonical row) has no runtime selector.  Every bare read spells the parameter
+`l2_p<mi>_<fi>`, before and after the binding line (l2_prep :15444, l2_index_token :8029/:8075,
+l2_hidden_from :14768/:14775, l2_prep_addr :14942/:14956, l2_prefix_deref :7825/:7841).  A write
+goes to the parameter and copies it into `l2_q<k>` with `_dirty` (l2_emit_occ_write).  The
+checkpoint publishes the parameter, or, when `@x` was evaluated (`_sticky`/`_active`), republishes
+it over any graph write.  That republication is what the old facts pin.
+
+The rule (R2 with carry, static by position; fable):
+- Before its binding line the name is the machine argument; after it, the field.  The binding line
+  is the row's declaration (`int: na`, with or without an initializer) or its first bare assignment
+  (Q29: later ones write the same cell).
+- A binding inside an if/for body binds that body's hosted field.  Outside the body the name is
+  whatever it was before: the parameter, or an enclosing field already bound.
+- Carry: a declaration without an initializer stores the name's current value, read as the name
+  just before the line (the parameter, or an enclosing bound field).
+
+What the emitter does:
+- Keep emission-time state per own row: `l2_own_bseq[k]`, 0 before its binding line, else the
+  emission sequence number at which it was bound.
+  - At a body's exit, every row bound inside the body is cleared (bseq > the value at entry).  A
+    row's binding statement is in its host body, so exactly the rows scoped to that body are
+    cleared.
+  - A use resolves to the bound row of that name with the largest bseq (the innermost in scope), or
+    to the parameter when there is none.  One helper, used by the six spelling sites above.
+- Numeric formal-bound rows (0/1/2/3/36) become direct, like c3b-1's plain rows:
+  - prelude: `_from` only, bound eagerly; no `l2_q<k>`, `_dirty`, `_sticky` or `_active`;
+  - read: `l2_own_load(k)`; write: `l2_own_store(k, value)`; `@x`: `l2_own_addr(k)` after binding,
+    `@ l2_p` before;
+  - binding line: evaluate the RHS (or the carry) with the row still unbound, store it into the
+    cell, then mark the row bound.
+- The checkpoint neither publishes nor reloads them.  l2_emit_addr_mark, l2_emit_bind_mark and
+  l2_emit_finalize_old lose their numeric cases.
+  - Pointer formal-bound rows keep the old machinery until c3b-3 (pointer own fields), so the sticky
+    code goes with c3b-3.
+- The harness's BindOrder assertion (Test-BindOrder, on 8 rows) asserts the sticky machinery's text
+  order.  It goes where that machinery goes: c3b-2 for the numeric rows, and the function with c3b-3.
+
+Facts, predicted by the rule.  Every changed line is printed after `M\x: v` wrote a bound name's
+field, so it shows v:
+- unit_arg_addr_sticky: A2 100 100, A4 200 200, B+ 200 200, C3 100 100, D1 100 100, D0 100 100,
+  E 100 100 (§4).
+- unit_arg_addr_dynamic: IA2, IA4, IB+, IC3 and ZA2, ZA4, ZB+, ZC3 the same way (§4).
+- unit_occ_sticky_selector: BEFORE 100 100, AFTER 100 100 (§4).
+- Not in §4's table, found reading the fixtures:
+  - unit_arg_addr_types: U 100 100, Z local/graph 100, L local/graph 100 (today 51 and 71/81);
+  - unit_arg_addr_dyn_types: U2, L2, F2 100 100 (today 6 6);
+  - unit_arg_addr_ordinary: OC3 100 100, OE 100 100, OD3 100 100 (today 9 9, 6 6, 9 9).
+  Sonnet's -190 inventory predicted these three rows unchanged.  They are the same sticky shape
+  (address taken before or after the binding, then `M\x: 100`), so I expect them to change.  The
+  build measures it.
+- Unchanged: the `5 100` / `7 100` lines, unit_occ_snapshot_selector (BETWEEN 2, LAST 9: every read
+  is after the binding), unit_arg_addr_pointer (a pointer row, c3b-3), and the CALLER line.
+
+Witnesses:
+- A new row for the body scope: a formal bound by a bare assignment inside an `if`, read inside and
+  after the body.  Inside it is the body's field; after it, the parameter.
+- Mutants, each to be RED by behaviour:
+  - MB1: never bound (always the parameter);
+  - MB2: bound from entry (R1): the `5 100` lines become `100 100`;
+  - MB3: no carry: A1 becomes `1 1`;
+  - MB4: a body's bindings not cleared at its exit: the new row.
+
+Order: after c3a lands on main.  c3b-3 (pointer own fields, `Model: m` / received `m`) follows as
+its own commit.

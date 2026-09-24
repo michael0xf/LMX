@@ -121,6 +121,9 @@ predef: "l2src/lmx_plan.h.lm1"
 #   of    [of, value, slot]           a field of a REFERENCE VALUE: `value` is a node whose
 #                                     value must be a Structure (asked of the arena);
 #                                     the result is what that slot holds, by reference
+#   deref [deref, value]             the Structure a POINTER CELL holds (-174): value is a
+#                                     node whose value is a pointer cell (AT stays the cell);
+#                                     OF over deref follows m\f on a Structure-typed field
 #   at    [at, holder, slot]          explicit graph field read: every execution, never
 #                                     cached (21.5); `holder` is any Structure, by reference
 #   put   [put, holder, slot, value]  explicit graph field write, never cached
@@ -212,7 +215,8 @@ define: LMX_WALK_OP_PRIM 16
 # [expect_int, path, want] -- type/equality check on a subject's path.  Uses f\args[0]
 # as the subject (the input graph), never f\self or own-field semantics.
 define: LMX_WALK_OP_EXPECT_INT 17
-define: LMX_WALK_OP_COUNT 18
+define: LMX_WALK_OP_DEREF 18
+define: LMX_WALK_OP_COUNT 19
 
 # What a direct caller gets back.  `ref` is the value, 0 when there is none; `present` says
 # so explicitly.  `number` is the destination cell this record lends the activation: when

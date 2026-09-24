@@ -614,7 +614,8 @@ fn: lmx_walk_scan_node (@: LmxWalkFrame f; @: void node) int
     if: op = c.LMX_WALK_OP_LIT || op = c.LMX_WALK_OP_ARG || op = c.LMX_WALK_OP_AT || op = c.LMX_WALK_OP_EXPECT_INT
         return: c.LMX_WALK_OK
     # of [of, value, slot]: one node, then a slot number.
-    if: op = c.LMX_WALK_OP_OF
+    # deref [deref, value]: one node (a pointer cell).
+    if: op = c.LMX_WALK_OP_OF || op = c.LMX_WALK_OP_DEREF
         return: lmx_walk_scan_node(f, lmx_arena_ref_value(code, 1U))
     if: op = c.LMX_WALK_OP_IF || op = c.LMX_WALK_OP_WHILE
         status: lmx_walk_scan_node(f, lmx_arena_ref_value(code, 1U))
@@ -1071,6 +1072,21 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
         if: slot = 0 || slot[0] = 0
             return: c.LMX_WALK_INVALID
         \out: slot[0]
+        return: c.LMX_WALK_OK
+    if: op = c.LMX_WALK_OP_DEREF
+        # The Structure a pointer cell holds (-174). AT stays the cell; deref opens it
+        # so OF can follow m\f. Mutant: return the cell address -> OF INVALID.
+        status: lmx_walk_eval(f, lmx_arena_ref_value(code, 1U), (cast: (@: void) (@ a)), @ value)
+        if: status != c.LMX_WALK_OK
+            return: status
+        if: value = 0 || lmx_domain_kind(f\arena, value) != c.LMX_KIND_PRIMITIVE
+            return: c.LMX_WALK_INVALID
+        if: lmx_domain_type(f\arena, value) < c.LMX_TYPE_POINTER_BASE
+            return: c.LMX_WALK_INVALID
+        other: lmx_pointer_value_known(value)
+        if: other = 0 || lmx_walk_kind(f, other) != c.LMX_KIND_STRUCT
+            return: c.LMX_WALK_INVALID
+        \out: other
         return: c.LMX_WALK_OK
     if: op = c.LMX_WALK_OP_OF
         # A field of a reference value.  Here the kind HAS to be established: reading a

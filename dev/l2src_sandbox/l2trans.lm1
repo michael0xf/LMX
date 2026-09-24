@@ -17189,10 +17189,15 @@ return: l2_rw_put(\out, 3, v)
 # that is an admission (the caller's implicit `implements`, D-55), not this take.
 fn: l2_rw_take (const: @(LmP0Node stmt); int: into; @: int out) int
     @: LmP0Text cname 0
+    @: LmP0Text cmodel 0
     int: oi
     int: prim
-    if: l2_receive_msg_shape(stmt, @ cname) != 0 || cname = 0
+    if: l2_receive_msg_shape(stmt, @ cname, @ cmodel) != 0 || cname = 0
         return: l2_rw_refuse(stmt, "this receiveMessage")
+    # `receiveMessage: m Model` (-172 c2, the two-name form) at the walked root is the receive-if
+    # admission (-178 c3), not this take.
+    if: cmodel != 0
+        return: l2_rw_refuse(stmt, "an admission to a Structure type")
     oi: l2_own_find_last(l2_e, cname)
     if: oi < 0 || l2_own_mi[oi] != l2_e
         return: l2_rw_refuse(stmt, "this receiveMessage")

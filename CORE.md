@@ -189,6 +189,33 @@ a dispatch contract; `lmx_call0` is not the full semantic signature checker.
 Static checking, admission, and generated typed calls belong in the translator
 and broader language model, not in a fabricated per-node tag.
 
+**Execution pair.** An execution consists of exactly two Structure roots: the
+Structure selected as the code graph and the Structure supplied as its data
+graph. `code` and `data` name roles in one execution, not kinds, qualifiers,
+storage classes, or persistent properties of a Structure: in `f(a b)` the head
+`f` is code and `(a b)` is data, while the same `f` in `merge: f other` or
+`send: f` is data. Code is immutable during execution and holds the descriptor,
+the argument and return parts, and the body operators with literals at the
+leaves. Data is an ordinary Structure holding the declared fields of the body in
+lexical order, nested bodies as nested field-only Structures (`M\for\y` keeps
+its path), and formals as fields; a body declaration such as `int: i 5` names a
+slot of the data prototype and, as an operator, writes into the passed data.
+An activation creates a fresh instance of the data prototype **as a field of the
+lexical parent's data, in the slot answering this callable**, writes the actual
+arguments into its slots, and runs the code over it; execution writes only into
+the passed data, never into code. Hence `node` is the parent's data and
+`node\x` follows the parent chain of the data graph only; there is no third
+context graph. The slot holds the instance of the latest activation, so `M\x`
+from outside reads it; a recursive callable has one instance per activation.
+Formals, temporaries, and the activation result live in an ordinary machine
+frame. The native entry `(node, self)` therefore means `(data.parent, data)`.
+Merging callables follows the accepted rule: argument and return parts stay
+their own, data fields merge pairwise into the model's slots, and the result's
+code is the code of the last operand with a body. The representation described
+in this section and in §3.1 (descriptor, body, and own fields in one Structure;
+activation-local cells, dirty flags, checkpoints) is the transitional
+implementation of this pair; see §9.
+
 [`lmx_plan`](dev/l2src_sandbox/lmx_plan.h.lm1) records positional paths to
 own fields. Its producer scans the body in lexical order; a plan entry is a
 path of child indexes **relative to an occurrence**, never an address into
@@ -230,7 +257,10 @@ cell. Graph publication happens at a checkpoint, not at every machine write.
 Sticky state makes later checkpoints conservative; it does not invent an
 occurrence before the corresponding binding executes. The current `lmx_own`
 and `lmx_dirty` implementation is a partial precursor to this full rule, so
-do not describe repeated-occurrence/sticky behavior as fully landed.
+do not describe repeated-occurrence/sticky behavior as fully landed. Under the
+accepted execution pair (§3) working copies, dirty flags, and checkpoints are
+replaced by a fresh data instance in the parent's slot that execution writes
+directly; the canonical-cell mechanism is transitional.
 
 `@x`, `\p`, and `\p: value` in L2 are machine address, load, and store
 operations. For a nonprimitive Structure binding, the binding already holds a
@@ -499,6 +529,7 @@ an implementation's current behavior, an accepted rule, and a planned fix.
 | --- | --- | --- |
 | P0 argument-container normal form | P0 goldens distinguish `f()` from `f: ()`; native/interpreter add CALL-only unwrapping, leaving other roles inconsistent. | Normalize the sole whole-sequence anonymous Structure once in P0 (empty and nonempty), then remove redundant consumer unwrapping; see `next_parser_fix.md`. |
 | Structural declaration | `mystruct: ()` may fail native lowering although the universal absent-target/Structure rule requires declaration. | Resolve declaration from the same normalized P0 Structure-body as `mystruct()`; no declaration-only wrapper restoration. |
+| Execution pair | Code and data still share one callable Structure; own locals, dirty flags, and checkpoints emulate the data instance (§3, §3.1). | Split each body into a data prototype and a code graph; fresh instance in the parent's data slot, in the walker and the native translator. |
 | Repeated fields and sticky addresses | Current own-slot paths do not fully preserve `[N]field`, selector publication, and universal sticky `@local`. | One occurrence-to-physical-path algorithm shared by native and interpreter. |
 | Admission | Coarse address compatibility and some fast paths are not the complete Consumer/uses plus runtime-test model or full directed conversion table. | Urgent kernel fixes first; then bounded port from the prior implementation. |
 | Raw C door | Name-specific `c.puts`/`c.array`/`c.sizeof` handling and header-derived C-name machinery remain cleanup debt. | One raw `c.*` door; separately introduce ordinary `sizeof:` if needed. |

@@ -5758,6 +5758,14 @@ fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char p
         if: l2_array_length_own(only\value, mi) < 0 && l2_arr_len_shape(only\value, lpd, @ lpn, @ lkind, @ lelem, @ ldepth, @ li0) != 0
             return: l2_error(path, only\value, "length requires one known primitive own array")
     ---
+    # FABLE-SONNET-DIAG-AND-INDEX-20260924-163 commit 1 (D-40): a call whose
+    # callee has no result (value_ty = 8, l2_colon_simple_ty's own void code,
+    # the same one a real sub or a void-returning predef gives) refuses with
+    # the ONE existing "no result" text everywhere this shape is caught, not
+    # the generic incompatible-type message -- matching l2_check_value_call
+    # (the bare-atom case) and l2_check_call's own argument-position check.
+    if: value_ty = 8
+        return: l2_error(path, stmt, "a callable without a result has no value")
     if: l2_colon_types_compatible(target_ty, value_ty) = 0
         return: l2_error(path, stmt, "assignment value has incompatible type")
     if: only\value != 0 && only\value\kind = c.LM_P0_NODE_ATOM && l2_check_literal_kind(only\value\as\atom, l2_lit_kind_from_ft(target_ty), path, stmt) != 0
@@ -13987,8 +13995,12 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             return: l2_error(path, stmt, "unsupported body")
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_count_active(fr\body) = 0
             return: l2_error(path, stmt, "unsupported body")
+        # FABLE-SONNET-DIAG-AND-INDEX-20260924-163 commit 1 (D-40): the same
+        # "no result" refusal l2_check_value_call gives for a bare callable
+        # atom, not the generic entry-signature text this branch used to
+        # give for a call-shaped return whose callee is a sub.
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_count_active(fr\body) = 1 && l2_next_active(fr\body\first_field)\value != 0 && l2_next_active(fr\body\first_field)\value\kind = c.LM_P0_NODE_FRAME && l2_find_method(l2_next_active(fr\body\first_field)\value\as\frame\head) >= 0 && l2_m_ret[l2_find_method(l2_next_active(fr\body\first_field)\value\as\frame\head)] = 8
-            return: l2_error(path, stmt, "incompatible entry signature")
+            return: l2_error(path, stmt, "a callable without a result has no value")
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) != 0 && l2_check_primary(stmt, mi, path) != 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && l2_check_fields(fr\body\first_field, l2_count_active(fr\body), mi, path, stmt) != 0

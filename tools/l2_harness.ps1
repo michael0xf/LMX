@@ -953,6 +953,12 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_return_sub_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'a callable without a result has no value'; Absent = @(); Debt = @() },
+    # FABLE-SONNET-DIAG-AND-INDEX-20260924-163 commit 1 (D-40): the call-shaped sibling of the two
+    # rows just above (`return: d()`, d a sub, vs their bare-atom `return: s`) used to give
+    # "incompatible entry signature" here -- one rule (a callable without a result has no value
+    # anywhere it is consumed as a value), one diagnostic, now that this fixture's own case is fixed.
+    [pscustomobject]@{ Name = 'unit_void_value.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a callable without a result has no value'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_empty_assign_untyped.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Letters = 0;
         Absent = @(); Debt = @() },
     # D-06: the f() assignment's failed rebinding store is an invariant on the X1 route, not a printed line.
@@ -1533,8 +1539,12 @@ $fixtures = @(
     # predef assigned anywhere is now refused AT l2trans, not left for gcc (below).
     [pscustomobject]@{ Name = 'unit_predef_result_struct_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
+    # FABLE-SONNET-DIAG-AND-INDEX-20260924-163 commit 1 (D-40): the assignment's value_ty=8
+    # (void, from a void-returning predef -- the same code a plain sub: gives) now matches the
+    # new "no result" check in l2_colon_check_assignment before the generic incompatible-type
+    # one, unifying this row's message with unit_void_value.lm2's; Needle updated accordingly.
     [pscustomobject]@{ Name = 'unit_predef_result_void_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
+        Needle = 'a callable without a result has no value'; Absent = @(); Debt = @() },
     # FABLE-SONNET-PREDEF-RESULT-TYPE-20260924-160 commit 2: the primary motivating case --
     # lm_own_copy_bytes's declared `@: char` return now matches copy's `@: char` target (was
     # refused under the old numeric-only -10 code, found during -155, recorded as D-35).

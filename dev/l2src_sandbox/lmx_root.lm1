@@ -987,7 +987,8 @@ fn: lmx_root_host_entry (@: Lmx node) int
 return: 0
 
 # THE LAUNCH.  The Thread lmx_root_open makes is the host here, and the program's R0 is its child.
-fn: lmx_root_launch (@: LmxRoot root; int: argc; @@: char argv; LmxRootProgram: program; size_t: fields; LmxRootSettings: settings; ulong: limit; @: void out; @: void err) int
+# -182: before_turn tap (nullable). lmx_root_launch wraps this with before_turn = 0.
+fn: lmx_root_launch_tapped (@: LmxRoot root; int: argc; @@: char argv; LmxRootProgram: program; size_t: fields; LmxRootSettings: settings; ulong: limit; LmxRootBeforeTurn: before_turn; @: void out; @: void err) int
     LmxRootLaunch: launch
     LmxArena: letter_arena
     @: LmxRootLaunch at 0
@@ -1017,6 +1018,7 @@ fn: lmx_root_launch (@: LmxRoot root; int: argc; @@: char argv; LmxRootProgram: 
         return: lmx_root_launch_refuse(0, 0, (cast: (@: char) "lmx: the host was given no root storage, no program name or no program\n"), out, err)
     ---
     at\program: program
+    at\before_turn: before_turn
     at\settings: settings
     at\fields: fields
     at\limit: limit
@@ -1089,6 +1091,13 @@ fn: lmx_root_launch (@: LmxRoot root; int: argc; @@: char argv; LmxRootProgram: 
     if: post != c.LMX_SERVICE_OK
         return: lmx_root_launch_refuse(root, 0, (cast: (@: char) "lmx: the host could not post the mainArgs letter to R0\n"), out, err)
     ---
+    # -182 / FABLE-GROKBOT-LAUNCH-TAP-20260925-182: host before_turn seam. R0's mail exists
+    # (host_make) and mainArgs is posted; manager round has not run. 0 skips. Non-zero = launch failure.
+    if: at\before_turn != 0
+        if: at\before_turn(root, r0) != 0
+            return: lmx_root_launch_refuse(root, 0, (cast: (@: char) "lmx: the host before_turn tap failed\n"), out, err)
+        ---
+    ---
     # R0'S ONE TURN, from the host's cycle: its record waits in the host's manager, which steps it
     # once.
     now: lmx_clock_ticks()
@@ -1121,6 +1130,9 @@ fn: lmx_root_launch (@: LmxRoot root; int: argc; @@: char argv; LmxRootProgram: 
         return: 1
     ---
 return: code
+
+fn: lmx_root_launch (@: LmxRoot root; int: argc; @@: char argv; LmxRootProgram: program; size_t: fields; LmxRootSettings: settings; ulong: limit; @: void out; @: void err) int
+return: lmx_root_launch_tapped(root, argc, argv, program, fields, settings, limit, 0, out, err)
 
 # THE EXIT MESSAGE'S MODEL: a Structure of three fields by position -- an int, a char Array, a
 # char Array.

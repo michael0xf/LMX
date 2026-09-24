@@ -12,10 +12,14 @@ return: 1
 MainLetter: m
 receiveMessage: m
 if: m = 0
-    return: 1
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
 receiveMessage: raw
 if: raw != 0
-    return: 2
+    sendMessage: exit(exit_code: 2; stdout: ""; stderr: "")
+    return
 if: present(m) != 1
-    return: 3
-return: 0
+    sendMessage: exit(exit_code: 3; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

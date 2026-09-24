@@ -470,6 +470,11 @@ prototype:
     fn: l2_rw_path_write (const: @(LmP0Node stmt); const: @(LmP0Text t); @: LmP0Field value; int: n; int: into; @: int out) int
     fn: l2_rw_model (const: @(LmP0Node stmt); const: @(LmP0Text h); int: into; @: int out) int
     fn: l2_rw_take (const: @(LmP0Node stmt); int: into; @: int out) int
+    fn: l2_is_letter_name (int: mi; const: @(LmP0Node node)) int
+    fn: l2_payload_expr (@: char val) int
+    fn: l2_rw_admit (int: parent; int: ni; int: letter; @: int out) int
+    fn: l2_rw_is_letter (int: oi) int
+    fn: l2_rw_admit_assign (const: @(LmP0Node stmt); int: oi; int: into; @: int out) int
     fn: l2_rw_struct_arg (const: @(LmP0Node node); @: LmP0Field a; int: span; int: ni; int: parent; @: int out) int
     fn: l2_rw_count (@: LmP0Field first) int
     fn: l2_rw_send (@: LmP0Node stmt; int: into; @: int out) int
@@ -11183,6 +11188,29 @@ fn: l2_emit_invariant (const: @(char ind); const: @(char what)) int
         return: 1
 return: 0
 
+# D-57 (-178 commit 3): a letter is admitted by its PAYLOAD.  Since -173 a letter is (sender;
+# payload), and the user's model describes the payload (the mail design), so admitting the whole
+# letter refused every host letter.  Is `node` the name of a letter -- an own field of method mi
+# declared by `receiveMessage: name`?
+fn: l2_is_letter_name (int: mi; const: @(LmP0Node node)) int
+    @: LmP0Text name 0
+    int: oi
+    if: node = 0 || node\kind != c.LM_P0_NODE_ATOM || node\as = 0 || node\as\atom = 0
+        return: 0
+    oi: l2_own_find_last(mi, node\as\atom)
+    if: oi < 0 || l2_own_decl[oi] = 0
+        return: 0
+return: (cast: (int) (l2_receive_msg_shape(l2_own_decl[oi], @ name, 0) = 0))
+
+# The value expression `val` (a 256-byte buffer) rewritten into its letter's payload, slot 1 --
+# lmx_arena_ref_value answers 0 for a null letter, so a null stays null and passes unadmitted.
+fn: l2_payload_expr (@: char val) int
+    c.array: [320]: char tmp
+    if: c.snprintf(tmp, 320U, "(cast: (@: Lmx) lmx_arena_ref_value((cast: (@: Lmx) %s), 1U))", val) >= 256
+        return: l2_error(l2_src, 0, "a letter's value expression too long")
+    strcpy(val, tmp)
+return: 0
+
 # varA = the candidate, varB = the declared type's shape, consumer = that same
 # shape: every declared field counts as used -- stricter than a uses tree, never
 # looser.  0 is no graph and is not admitted.  NO or UNKNOWN throws the implicit
@@ -15591,6 +15619,9 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
             return: l2_prep_drop(acts, hides)
         if: l2_cf_get(idx, t) < 0 && (actual_span < 1 || l2_emit_fields(a0, actual_span, mi, ind, l2_act_at(acts, t)) != 0)
             return: l2_prep_drop(acts, hides)
+        # A letter goes to a typed formal as its payload, admitted (D-57).
+        if: actual_span = 1 && l2_nsty_get(idx, t) >= 0 && l2_untyped_graph(mi, a0\value) != 0 && l2_is_letter_name(mi, a0\value) != 0 && l2_payload_expr(l2_act_at(acts, t)) != 0
+            return: l2_prep_drop(acts, hides)
         if: actual_span = 1 && l2_nsty_get(idx, t) >= 0 && l2_untyped_graph(mi, a0\value) != 0 && l2_emit_admit(mi, l2_nsty_get(idx, t), l2_act_at(acts, t), ind) != 0
             return: l2_prep_drop(acts, hides)
         t: t + 1
@@ -17181,6 +17212,59 @@ fn: l2_rw_path_write (const: @(LmP0Node stmt); const: @(LmP0Text t); @: LmP0Fiel
         return: 1
 return: l2_rw_put(\out, 3, v)
 
+# An admission at the walked root (FABLE-OPUS-ROOT-STRUCTS-20260925-178 commit 3; the 2026-09-23
+# rule B2: binding an untyped graph to a typed place admits it at the binding point, and a refusal
+# is the implicit throw `implements`).  One registered kernel primitive (Grok -180):
+#   PRIM [prim, record, value, model]
+# - record: fn lmx_walk_admit, or lmx_walk_admit_letter when the value is a letter, whose payload
+#   (slot 1) is what the user's model describes (the mail design); owner the program's arena.
+# - value: a node the caller builds next, into slot 2: a take, or AT of a reference field.  A null
+#   value passes unadmitted, as natively (l2_emit_admit: `value != 0 && ...`).
+# - model: the named Structure T itself (l2_nsp).
+# Its out is the admitted value (what a letter gives is q25's answer).  A refusal is
+# LMX_PRIMITIVE_THROW_IMPLEMENTS, which the walk carries as the caller's implicit throw
+# (-177 c5: THROWN + 2 at the root).
+fn: l2_rw_admit (int: parent; int: ni; int: letter; @: int out) int
+    const: @(char rec) "lmx_walk_admit"
+    if: letter != 0
+        rec: "lmx_walk_admit_letter"
+    ---
+    if: l2_rw_frame(parent, "LMX_WALK_OP_PRIM", 4, out) != 0
+        return: 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: %s\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0 || lmx_arena_ref_store(l2_rw%d, 3U, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", \out, \out, \out, rec, \out, \out, \out, \out, \out, ni) < 0
+        return: 1
+return: 0
+
+# `m: raw` at the walked root, m of a declared Structure type T and raw an untyped reference field
+# (a letter, or another untyped graph): raw is admitted to T at this binding point, a refusal the
+# implicit throw `implements` (-178 commit 3): PUT(m, admit(AT(raw), T)), admit_letter for a
+# letter.  Another typed field, or anything but a field's name, is not built here.
+fn: l2_rw_admit_assign (const: @(LmP0Node stmt); int: oi; int: into; @: int out) int
+    @: LmP0Field f
+    int: src
+    int: adm
+    int: raw
+    if: stmt\as\frame\body = 0 || l2_count_active(stmt\as\frame\body) != 1
+        return: l2_rw_refuse(stmt, "an admission to a Structure type")
+    f: l2_next_active(stmt\as\frame\body\first_field)
+    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0
+        return: l2_rw_refuse(stmt, "an admission to a Structure type")
+    src: l2_own_find_last(l2_e, f\value\as\atom)
+    if: src < 0 || l2_own_mi[src] != l2_e || l2_own_host[src] != 0 || l2_own_fid[src] >= 0 || l2_own_uchild[src] < 0 || l2_own_is_pointer(l2_own_ty[src]) = 0 || l2_own_nsty_get(src) >= 0
+        return: l2_rw_refuse(stmt, "an admission to a Structure type")
+    if: l2_rw_frame(into, "LMX_WALK_OP_PUT", 4, out) != 0 || l2_rw_cell(\out, oi) != 0 || l2_rw_admit(\out, l2_own_nsty_get(oi), l2_rw_is_letter(src), @ adm) != 0
+        return: 1
+    if: l2_rw_own(adm, src, @ raw) != 0 || l2_rw_put(adm, 2, raw) != 0
+        return: 1
+return: l2_rw_put(\out, 3, adm)
+
+# Is the root own field oi a letter -- declared by `receiveMessage: oi`?
+fn: l2_rw_is_letter (int: oi) int
+    @: LmP0Text name 0
+    if: oi < 0 || l2_own_decl[oi] = 0
+        return: 0
+return: (cast: (int) (l2_receive_msg_shape(l2_own_decl[oi], @ name, 0) = 0))
+
 # `receiveMessage: m` at the walked root (FABLE-OPUS-ROOT-TAKE-20260925-179; Grok -177 c1): the
 # current Thread's next letter, taken by the walker's one kernel take primitive (a PRIM
 # [prim, record] whose record's fn is lmx_walk_mail_take: the letter's graph through `out`, or no
@@ -17192,6 +17276,10 @@ fn: l2_rw_take (const: @(LmP0Node stmt); int: into; @: int out) int
     @: LmP0Text cmodel 0
     int: oi
     int: prim
+    int: ni
+    int: adm
+    int: holder
+    int: slotv 3
     if: l2_receive_msg_shape(stmt, @ cname, @ cmodel) != 0 || cname = 0
         return: l2_rw_refuse(stmt, "this receiveMessage")
     # `receiveMessage: m Model` (-172 c2, the two-name form) at the walked root is the receive-if
@@ -17203,15 +17291,27 @@ fn: l2_rw_take (const: @(LmP0Node stmt); int: into; @: int out) int
         return: l2_rw_refuse(stmt, "this receiveMessage")
     if: l2_own_host[oi] != 0 || l2_own_fid[oi] >= 0 || l2_own_uchild[oi] < 0
         return: l2_rw_refuse(stmt, "a field declared in a nested body")
-    if: l2_own_nsty_get(oi) >= 0
-        return: l2_rw_refuse(stmt, "an admission to a Structure type")
     if: l2_own_is_pointer(l2_own_ty[oi]) = 0
         return: l2_rw_refuse(stmt, "this receiveMessage")
-    if: l2_rw_frame(into, "LMX_WALK_OP_PUT", 4, out) != 0 || l2_rw_cell(\out, oi) != 0 || l2_rw_frame(\out, "LMX_WALK_OP_PRIM", 2, @ prim) != 0
+    if: l2_rw_frame(into, "LMX_WALK_OP_PUT", 4, out) != 0 || l2_rw_cell(\out, oi) != 0
+        return: 1
+    holder: \out
+    # m of a declared Structure type T takes the NEXT letter and admits it to T -- its payload, the
+    # user's model describes the payload -- a refusal being the implicit throw `implements`
+    # (-178 commit 3; the pre-typed form, not the selective `receiveMessage: m T`):
+    # PUT(m, admit_letter(take, T)).
+    ni: l2_own_nsty_get(oi)
+    if: ni >= 0
+        if: l2_rw_admit(holder, ni, 1, @ adm) != 0 || l2_rw_put(holder, 3, adm) != 0
+            return: 1
+        holder: adm
+        slotv: 2
+    ---
+    if: l2_rw_frame(holder, "LMX_WALK_OP_PRIM", 2, @ prim) != 0
         return: 1
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: lmx_walk_mail_take\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: l2_entry_unit\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", prim, prim, prim, prim, prim, prim, prim) < 0
         return: 1
-return: l2_rw_put(\out, 3, prim)
+return: l2_rw_put(holder, slotv, prim)
 
 # `Model: m` at the walked root: m, a root own field of the named Structure type Model, takes a
 # fresh merge of Model (merge(Model, empty), the contextual `left: right` rule), made in R0's turn
@@ -17407,6 +17507,14 @@ fn: l2_rw_struct_arg (const: @(LmP0Node node); @: LmP0Field a; int: span; int: n
     oi: l2_own_find_last(l2_e, a\value\as\atom)
     if: oi < 0 || l2_own_mi[oi] != l2_e || l2_own_host[oi] != 0 || l2_own_fid[oi] >= 0 || l2_own_uchild[oi] < 0 || l2_own_is_pointer(l2_own_ty[oi]) = 0
         return: l2_rw_refuse(node, "a Structure argument that is not a field's name")
+    # An untyped graph -- a letter -- is admitted to the formal's type at the call site, the
+    # caller's implicit `implements` (-178 commit 3): the input is admit(AT(the field), T), the
+    # primitive reading the reference the cell holds.
+    if: l2_own_nsty_get(oi) < 0
+        if: l2_rw_admit(parent, ni, l2_rw_is_letter(oi), out) != 0 || l2_rw_own(\out, oi, @ raw) != 0
+            return: 1
+        return: l2_rw_put(\out, 2, raw)
+    ---
     if: l2_own_nsty_get(oi) != ni
         return: l2_rw_refuse(node, "an admission to a Structure type")
     if: l2_rw_frame(parent, "LMX_WALK_OP_DEREF", 2, out) != 0 || l2_rw_own(\out, oi, @ raw) != 0
@@ -18200,7 +18308,13 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
     oi: l2_own_find_last(l2_e, h)
     if: oi >= 0 && l2_own_mi[oi] = l2_e && l2_own_host[oi] = 0 && l2_own_fid[oi] < 0 && l2_own_uchild[oi] >= 0 && l2_own_is_pointer(l2_own_ty[oi]) != 0
         if: l2_own_nsty_get(oi) >= 0
-            return: l2_rw_refuse(stmt, "an admission to a Structure type")
+            if: l2_rw_admit_assign(stmt, oi, into, @ node) != 0
+                return: 1
+            \made: 1
+            if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, node) < 0
+                return: 1
+            return: 0
+        ---
         return: l2_rw_refuse(stmt, "a reference assignment")
     ---
     # An assignment of the root's own numeric field.
@@ -20325,6 +20439,12 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                 return: l2_error(l2_src, stmt, "unresolved name")
             if: c.fprintf(l2_out, "%sl2_nmsg: (cast: (@: LmxMsg) lmx_thread_mail_take(lmx_thread_current(), c.LMX_POST_INBOX))\n%sl2_ngraph: 0\n%sif: l2_nmsg != 0\n%s    l2_ngraph: l2_nmsg\\graph\n", ind, ind, ind, ind) < 0
                 return: 1
+            # A field of a declared Structure type, in the one-name form `T: m` / `receiveMessage:
+            # m`, takes the letter's payload, admitted to its type (D-57; q25 (ii): the field holds
+            # what its declaration says).  The two-name form `receiveMessage: m T` (-172 c2) types m
+            # with the synthesized letter model, and m holds the whole letter.
+            if: l2_own_nsty_get(oi) >= 0 && l2_count_active(stmt\as\frame\body) = 1 && c.fprintf(l2_out, "%sl2_ngraph: (cast: (@: Lmx) lmx_arena_ref_value(l2_ngraph, 1U))\n", ind) < 0
+                return: 1
             if: l2_own_nsty_get(oi) >= 0 && l2_emit_admit(mi, l2_own_nsty_get(oi), "l2_ngraph", ind) != 0
                 return: 1
             if: l2_emit_own_from(mi, oi, ind) != 0
@@ -20544,6 +20664,9 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         rbadmit: 0
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && l2_count_active(fr\body) = 1 && l2_formal_find(mi, fr\head) < 0 && l2_graph_nsty(mi, fr\head) >= 0 && l2_untyped_graph(mi, l2_next_active(fr\body\first_field)\value) != 0
             rbadmit: 1
+        # A letter is bound by its payload, admitted (D-57).
+        if: rbadmit != 0 && l2_is_letter_name(mi, l2_next_active(fr\body\first_field)\value) != 0 && l2_payload_expr(l2_tok) != 0
+            return: 1
         if: rbadmit != 0 && l2_emit_admit(mi, l2_graph_nsty(mi, fr\head), l2_tok, ind) != 0
             return: 1
         if: rbadmit != 0 && l2_emit_own_from(mi, oi, ind) != 0

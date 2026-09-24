@@ -1,0 +1,17 @@
+# D-57 (FABLE-OPUS-ROOT-STRUCTS-20260925-178 commit 3): the NATIVE pre-typed receive in a method.
+# The host's letter is (sender; payload) since -173, and MainLetter describes its payload
+# ({mainArgs}), so the method admits and binds the letter's payload: probe() returns 7.  Admitting
+# the whole letter (what the native path did) refused every host letter: an uncaught implements,
+# exit 1.
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+
+fn: probe () int
+    MainLetter: m
+    receiveMessage: m
+    return: 7
+end: probe
+
+sendMessage: exit(exit_code: probe(); stdout: ""; stderr: "")
+return

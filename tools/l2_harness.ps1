@@ -615,23 +615,31 @@ $fixtures = @(
     # declared type's shape; a refusal throws the implicit name implements (Q17 = A; g = 2, where a
     # failing merge is 1), and uncaught (`Fails`) the entry has no value, exit 1.  MainLetter is an
     # ordinary declared Structure (author Q15).
-    [pscustomobject]@{ Name = 'unit_admit_letter_typed.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an admission to a Structure type'; Args = @('0'); Argv = @('a', 'b');
-        Absent = @(); Debt = @('lmx_runtime_implements(l2_program_arena, (cast: (@: Lmx) l2_ngraph)') },
-    # -179: the take is built; pending on a graph input's admission (the caller's implements, D-55), then `MainLetter: m`'s admission.
-    [pscustomobject]@{ Name = 'unit_admit_letter_formal.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an admission to a Structure type'; Args = @('0');
+    # D-57 (-178 commit 3): the native pre-typed receive admits and binds the letter's PAYLOAD -- a whole
+    # letter (sender; payload) refused every host letter since -173.
+    [pscustomobject]@{ Name = 'unit_native_typed_receive.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @('l2_ngraph: (cast: (@: Lmx) lmx_arena_ref_value(l2_ngraph, 1U))') },
+    [pscustomobject]@{ Name = 'unit_admit_letter_typed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('a', 'b');
+        Absent = @(); Debt = @('\fn: lmx_walk_admit_letter') },
+    # -178 commit 3: the letter goes to present's MainLetter formal admitted by its payload (admit_letter at
+    # the call site), and `m: raw` binds it the same way -- translated, NOT run: `MainLetter: m` after the
+    # take throws `merge` at the walked root (D-59: the root merge copies the unit, which holds the letter,
+    # whose sender is the host's Message; a method is unaffected).  It runs when the copier is fixed.
+    [pscustomobject]@{ Name = 'unit_admit_letter_formal.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = ''; Args = @('0');
+        Absent = @(); Debt = @('\fn: lmx_walk_admit_letter') },
+    [pscustomobject]@{ Name = 'unit_admit_letter_not_model.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_admit_letter_not_model.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an admission to a Structure type'; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+    # -178 commit 3: the letter to get's Model formal is admitted by its payload at the call site; {mainArgs}
+    # is not a Model, so the caller's implicit `implements` (2 at the root) stops R0.
+    [pscustomobject]@{ Name = 'unit_admit_formal_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
         Absent = @(); Debt = @() },
-    # -179: the take is built; pending on a graph input's admission (the caller's implements, 2 at the root, D-55).
-    [pscustomobject]@{ Name = 'unit_admit_formal_refused.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an admission to a Structure type'; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+    [pscustomobject]@{ Name = 'unit_admit_rebind_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_admit_rebind_refused.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an admission to a Structure type'; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
-        Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_admit_letter_extra_field.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an admission to a Structure type'; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+    [pscustomobject]@{ Name = 'unit_admit_letter_extra_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
         Absent = @(); Debt = @() },
     # KNOWN COARSENESS (next_core_tasks.md 7): the walk does not look inside the outer Array, so an
     # `int: []: []:` field admits the char letter.  This row flips to Fails with the port.
-    [pscustomobject]@{ Name = 'unit_admit_letter_coarse.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an admission to a Structure type'; Args = @('0');
+    [pscustomobject]@{ Name = 'unit_admit_letter_coarse.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
         Absent = @(); Debt = @() },
     # `T: []: []: x` (author Q15): the outer Array is constructed empty and merge copies it as a new one.
     [pscustomobject]@{ Name = 'unit_arrarr_field.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure value'; Args = @('0');
@@ -643,18 +651,18 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_arr_path_read.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0');
         Absent = @(); Debt = @() },
     # D-06: a failed receiveMessage or rebinding store is an invariant on the X1 route, not a printed line.
-    [pscustomobject]@{ Name = 'unit_admit_rebind_read.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an admission to a Structure type'; Args = @('0'); Argv = @('ok'); Entry = 2;
+    [pscustomobject]@{ Name = 'unit_admit_rebind_read.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an array'; Args = @('0'); Argv = @('ok'); Entry = 2;
         Absent = @('lmx_msg_poll_abort', 'lmx: receiveMessage', 'lmx: rebinding');
         Debt = @('c.fprintf(c.stderr, "lmx: invariant: receiveMessage store failed for own field ', 'c.fprintf(c.stderr, "lmx: invariant: rebinding store failed for own field ') },
-    [pscustomobject]@{ Name = 'entry_argc_if.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an admission to a Structure type'; Args = @('0');
+    [pscustomobject]@{ Name = 'entry_argc_if.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an array'; Args = @('0');
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'entry_index.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an admission to a Structure type'; Args = @('0'); Argv = @('word'); Says = @('word');
+    [pscustomobject]@{ Name = 'entry_index.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an array'; Args = @('0'); Argv = @('word'); Says = @('word');
         Absent = @(); Debt = @('c.puts(@ l2_cp') },
-    [pscustomobject]@{ Name = 'entry_strcmp.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an admission to a Structure type'; Args = @('0'); Argv = @('ok');
+    [pscustomobject]@{ Name = 'entry_strcmp.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an array'; Args = @('0'); Argv = @('ok');
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_charpp_return.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an admission to a Structure type'; Args = @('0');
+    [pscustomobject]@{ Name = 'unit_charpp_return.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_entry_args.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an admission to a Structure type'; Args = @('0'); Entry = 2;
+    [pscustomobject]@{ Name = 'unit_entry_args.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an array'; Args = @('0'); Entry = 2;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'entry_parse_min.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Argv = @('{source}');
         Absent = @(); Debt = @() },
@@ -964,8 +972,9 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s1_catch_user_break.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a loop'; Args = @('0'); Entry = 105;
         Absent = @(); Debt = @() },
-    # -179: the take is built; pending on a graph input's admission (D-55), then the catch role (-171).
-    [pscustomobject]@{ Name = 'unit_s1_catch_implements.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an admission to a Structure type'; Args = @('0'); Entry = 42;
+    # -178 commit 3: the letter's admission to get's Model formal is built (it throws implements); pending on
+    # the catch role (-171).
+    [pscustomobject]@{ Name = 'unit_s1_catch_implements.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: throw and catch'; Args = @('0'); Entry = 42;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s1_catch_duplicate_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'duplicate catch: Oops'; Absent = @(); Debt = @() },

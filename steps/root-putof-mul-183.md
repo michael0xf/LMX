@@ -229,6 +229,24 @@ is then copied with lmx_graph_copy_owned into a second arena.
   pointer-cell form survives a copy only by duplicating the binding, which loses (A)'s one
   observable difference in any copied graph.  (B) is the copier's ordinary case.
 
+### The ruling: Q26.2 = (B) (the author, via fable, 2026-09-25)
+
+The author, verbatim: «ну самой конечно структуры, а чего ещё?» (the Structure itself, what else).
+- `@` of any Structure binding is the address of the Structure.
+- A reference field `@: Inner inner` holds that address.  A read through it is one DEREF.
+- `o\inner: @ a` is PUT_REF of a's reference (Grok -186).
+- prev's address-of-binding rule is not carried over.
+
+The build that follows, after -186 and c4:
+- The reference-field rebind `o\inner: @ a`, at the root and natively.
+- D-53: `@` of a Structure-typed own field or local gives the Structure's reference, not the
+  pointer cell's address.  D-53 closes with that commit.
+- The two `*_struct_rebind_refused` rows are rewritten to the rebind form, with running facts
+  (renamed if the name lies).
+- The own-field form `o\inner: a` waits for Q26.1 (a new occurrence vs a write into the same
+  Structure).  If Q26.1 is still open by then, it goes with the n-operand merge primitive's
+  ticket.
+
 ## One shape for a Structure bound at run time: the measured cost (open, next_core_tasks.md §3)
 
 fable's ruling, an engineering rule (CORE: one mechanism per role), not a language question:

@@ -68,7 +68,9 @@ fn: main () int
     @: void mcx 0
     @: void mcy 0
     @: void ocz 0
-    @: LmxMergePair pairs_c 0
+    @: LmxMergePair pair_c0 0
+    @: LmxMergePair pair_c1 0
+    @@: LmxMergePair pairs_c 0
     @@: Lmx ops_c 0
     @: Lmx result_c 0
     int: status_c LMX_MERGE_OK
@@ -119,7 +121,7 @@ fn: main () int
     pair_a\model_slot: 0U
     pair_a\operand: 1U
     pair_a\field: 0U
-    status_a: lmx_merge_owned(op_a, 1U, body_a, 0, 0, @ arena, @ dst, pair_a, 1U, @ result_a)
+    status_a: lmx_merge_owned(op_a, 1U, body_a, 0, 0, @ arena, @ dst, @ pair_a, 1U, @ result_a)
     mk_check(counts, status_a = LMX_MERGE_OK && result_a != 0, "1a merge OK")
     mk_check(counts, result_a\len = 2, "1a body's x paired (not appended) -> len 2 (mutant: 1a off -> len 3 RED)")
     mk_check(counts, lmx_int_value_known(lmx_arena_ref_value(result_a, 0U)) = 99, "1a result[0] = body's x (99), overriding model's own 1")
@@ -155,7 +157,7 @@ fn: main () int
     pair_b\model_slot: 1U
     pair_b\operand: 2U
     pair_b\field: 0U
-    status_b: lmx_merge_owned(ops_b, 3U, 0, 0, 0, @ arena, @ dst, pair_b, 1U, @ result_b)
+    status_b: lmx_merge_owned(ops_b, 3U, 0, 0, 0, @ arena, @ dst, @ pair_b, 1U, @ result_b)
     mk_check(counts, status_b = LMX_MERGE_OK && result_b != 0, "1b merge OK")
     mk_check(counts, result_b\len = 2, "1b -> len 2 (model's x + one appended slot, z/w share)")
     mk_check(counts, lmx_int_value_known(lmx_arena_ref_value(result_b, 0U)) = 1, "1b result[0] = model's x, untouched")
@@ -182,18 +184,25 @@ fn: main () int
     mk_check(counts, ops_c != 0, "1c operand array allocated")
     ops_c[0]: model_c
     ops_c[1]: op_c
-    pairs_c: (cast: (@: LmxMergePair) calloc(2U, c.sizeof(c.LmxMergePair)))
-    mk_check(counts, pairs_c != 0, "1c pairs allocated")
-    pairs_c[0]\model_slot: 0U
-    pairs_c[0]\operand: 1U
-    pairs_c[0]\field: 0U
-    pairs_c[1]\model_slot: 1U
-    pairs_c[1]\operand: 1U
-    pairs_c[1]\field: 0U
+    pair_c0: (cast: (@: LmxMergePair) calloc(1U, c.sizeof(c.LmxMergePair)))
+    pair_c1: (cast: (@: LmxMergePair) calloc(1U, c.sizeof(c.LmxMergePair)))
+    mk_check(counts, pair_c0 != 0 && pair_c1 != 0, "1c pairs allocated")
+    pair_c0\model_slot: 0U
+    pair_c0\operand: 1U
+    pair_c0\field: 0U
+    pair_c1\model_slot: 1U
+    pair_c1\operand: 1U
+    pair_c1\field: 0U
+    pairs_c: (cast: (@@: LmxMergePair) calloc(2U, c.sizeof(@: void)))
+    mk_check(counts, pairs_c != 0, "1c pair array allocated")
+    pairs_c[0]: pair_c0
+    pairs_c[1]: pair_c1
     status_c: lmx_merge_owned(ops_c, 2U, 0, 0, 0, @ arena, @ dst, pairs_c, 2U, @ result_c)
     mk_check(counts, status_c = LMX_MERGE_INVALID && result_c = 0, "1c duplicate source refused (mutant: guard off -> OK, last-written wins silently, RED)")
     free((cast: (@: void) ops_c))
     free((cast: (@: void) pairs_c))
+    free((cast: (@: void) pair_c0))
+    free((cast: (@: void) pair_c1))
 
     # ==== 1d: a nested Structure child's parent is re-pointed to the result ====
     iv: lmx_int_new_owned(@ arena)

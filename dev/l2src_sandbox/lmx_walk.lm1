@@ -507,6 +507,14 @@ fn: lmx_walk_slot (@: LmxWalkFrame f; @: Lmx code; size_t: first) @@: void
     holder: lmx_arena_ref_value(code, first)
     if: holder = 0
         return: 0
+    # -177 c4 / D-54 X1: a fixed holder must be a plain Structure reference, not an OP node.
+    # Asked via role-of-head without lmx_walk_kind (that door counts classified).
+    # Mutant: accept DEREF as holder -> silent write into the node RED.
+    if: lmx_domain_kind(f\arena, holder) = c.LMX_KIND_STRUCT
+        if: lmx_walk_role(f, lmx_arena_ref_value((cast: (@: Lmx) holder), 0U)) > c.LMX_WALK_OP_NONE
+            return: 0
+        ---
+    ---
     if: f\counting != 0 && lmx_walk_kind(f, holder) != c.LMX_KIND_STRUCT
         return: 0
 return: lmx_arena_ref_cell((cast: (@: Lmx) holder), lmx_size_value_known(lmx_arena_ref_value(code, first + 1U)))
@@ -635,6 +643,11 @@ fn: lmx_walk_scan_node (@: LmxWalkFrame f; @: void node) int
     # deref [deref, value]: one node (a pointer cell).
     if: op = c.LMX_WALK_OP_OF || op = c.LMX_WALK_OP_DEREF
         return: lmx_walk_scan_node(f, lmx_arena_ref_value(code, 1U))
+    if: op = c.LMX_WALK_OP_PUT_OF
+        status: lmx_walk_scan_node(f, lmx_arena_ref_value(code, 1U))
+        if: status != c.LMX_WALK_OK
+            return: status
+        return: lmx_walk_scan_node(f, lmx_arena_ref_value(code, 3U))
     if: op = c.LMX_WALK_OP_IF || op = c.LMX_WALK_OP_WHILE
         status: lmx_walk_scan_node(f, lmx_arena_ref_value(code, 1U))
         i: 2U
@@ -861,6 +874,8 @@ fn: lmx_walk_arg_arity_node (@: LmxWalkFrame f; @: void node; @: size_t need) in
         i: 2U
     if: op = c.LMX_WALK_OP_PUT
         i: 3U
+    if: op = c.LMX_WALK_OP_PUT_OF
+        i: 1U
     while: i < (cast: (size_t) code\len)
         child: lmx_arena_ref_value(code, i)
         if: child != 0 && lmx_walk_op(f, child) != c.LMX_WALK_OP_NONE
@@ -1259,6 +1274,45 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
             return: c.LMX_WALK_INVALID
         \out: slot[0]
         return: c.LMX_WALK_OK
+    if: op = c.LMX_WALK_OP_PUT_OF
+        # -177 c4 / D-54: evaluate the holder, then write slot. Mutant: use walk_slot on child1 -> RED.
+        status: lmx_walk_eval(f, lmx_arena_ref_value(code, 1U), (cast: (@: void) (@ a)), @ other)
+        if: status != c.LMX_WALK_OK
+            return: status
+        if: other = 0 || lmx_walk_kind(f, other) != c.LMX_KIND_STRUCT
+            return: c.LMX_WALK_INVALID
+        ---
+        status: lmx_walk_eval(f, lmx_arena_ref_value(code, 3U), (cast: (@: void) (@ a)), @ value)
+        if: status != c.LMX_WALK_OK
+            return: status
+        ---
+        slot: lmx_arena_ref_cell((cast: (@: Lmx) other), lmx_size_value_known(lmx_arena_ref_value(code, 2U)))
+        if: slot = 0 || slot[0] = 0
+            return: c.LMX_WALK_INVALID
+        ---
+        if: lmx_walk_is_pointer_cell(f\arena, slot[0]) != 0
+            if: value != 0 && lmx_walk_kind(f, value) != c.LMX_KIND_STRUCT
+                return: c.LMX_WALK_INVALID
+            ---
+            if: lmx_pointer_store_known(slot[0], value) != 0
+                return: c.LMX_WALK_INVALID
+            \out: slot[0]
+            return: c.LMX_WALK_OK
+        ---
+        if: value = 0
+            return: c.LMX_WALK_INVALID
+        ---
+        b: lmx_walk_numeric_type(f\arena, slot[0])
+        if: b = 0
+            return: c.LMX_WALK_INVALID
+        if: lmx_walk_load_operand(f\arena, value, @ wv, @ a) != c.LMX_WALK_OK
+            return: c.LMX_WALK_INVALID
+        if: a != b
+            return: c.LMX_WALK_INVALID
+        if: lmx_walk_publish_slot(f\arena, slot, wv) != c.LMX_WALK_OK
+            return: c.LMX_WALK_INVALID
+        \out: slot[0]
+        return: c.LMX_WALK_OK
     if: op = c.LMX_WALK_OP_SET
         status: lmx_walk_eval(f, lmx_arena_ref_value(code, 2U), (cast: (@: void) (@ a)), @ value)
         if: status != c.LMX_WALK_OK
@@ -1531,7 +1585,7 @@ fn: lmx_walk_body (@: LmxWalkFrame f; @: Lmx body; size_t: first) int
             status: lmx_walk_eval(f, child, step_dest, @ dropped)
             # Activation value = last evaluated expression. SET/PUT/IF/WHILE are
             # statements (void fall-off). LIT/arith/CALL/OWN/... count. RET sets valued itself.
-            if: status = c.LMX_WALK_OK && dropped != 0 && step_op != c.LMX_WALK_OP_SET && step_op != c.LMX_WALK_OP_PUT && step_op != c.LMX_WALK_OP_IF && step_op != c.LMX_WALK_OP_WHILE
+            if: status = c.LMX_WALK_OK && dropped != 0 && step_op != c.LMX_WALK_OP_SET && step_op != c.LMX_WALK_OP_PUT && step_op != c.LMX_WALK_OP_PUT_OF && step_op != c.LMX_WALK_OP_IF && step_op != c.LMX_WALK_OP_WHILE
                 f\result: dropped
                 f\valued: 1
             ---

@@ -9,7 +9,6 @@ predef: "l2src/lmx_array_owned.lm1"
 predef: "l2src/lmx_array_ref_owned.lm1"
 predef: "l2src/lmx_graph_copy_owned.lm1"
 predef: "l2src/lmx_value_owned.lm1"
-predef: "l2src/lmx_plan.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
@@ -17,7 +16,6 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
 @: LmxArena ga 0
 @: Lmx groles 0
-@: Lmx gplan_roles 0
 @: LmxWalkContext gctx 0
 @: LmxWalkValue gv 0
 int: broken 0
@@ -60,22 +58,15 @@ sub: sz (@: Lmx code; size_t: slot; size_t: value)
     ---
 end: sz
 
+# k.4: a walked callable occurrence is just the ordinary body Structure -- no descriptor;
+# `native` stays 0 by construction. `children` now counts body steps only, so every call
+# site below shrinks by one and its first body-step frame moves from slot 1 to slot 0.
 fn: mk_m (@: Lmx unit; size_t: slot; size_t: children) @: Lmx
-    @: Lmx m pl(unit, slot, children)
-    @: LmxCallable info lmx_callable_new_owned(ga)
-    if: m = 0 || info = 0 || lmx_arena_ref_store(m, 0U, (cast: (@: void) info)) != 0
-        broken: broken + 1
-        return: 0
-    ---
-return: m
+return: pl(unit, slot, children)
 
 fn: go (@: Lmx m) int
-    int: st
     if: m = 0 || gctx = 0 || gv = 0
         return: c.LMX_WALK_INVALID
-    st: lmx_walk_prepare(gctx, ga, gplan_roles, m)
-    if: st != c.LMX_WALK_OK
-        return: st
 return: lmx_walk_run(gctx, m, 0, 0U, gv)
 
 fn: main () int
@@ -102,7 +93,6 @@ fn: main () int
     if: lmx_chars_init(ga) != 0
         return: 2
     groles: lmx_walk_roles_open(ga)
-    gplan_roles: lmx_plan_roles_open(ga)
     memset((cast: (@: void) (@ context_arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ context_cells)), 0, c.sizeof(c.LmxPool))
     memset((cast: (@: void) (@ store)), 0, c.sizeof(c.LmxScratch))
@@ -111,7 +101,6 @@ fn: main () int
     context.arena: ga
     context.scratch: @ store
     context.roles: groles
-    context.plan_roles: gplan_roles
     context.immutable_profile: 0
     context.classified: 0U
     gctx: @ context
@@ -127,8 +116,8 @@ fn: main () int
         return: 2
     if: lmx_size_store_known(cell, ((cast: (size_t) 1U) << 32) + 7U) != 0 || lmx_arena_ref_store(holder, 1U, cell) != 0
         return: 2
-    m: mk_m(unit, 0U, 2U)
-    n: fr(m, 1U, c.LMX_WALK_OP_PUT, 4U)
+    m: mk_m(unit, 0U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_PUT, 4U)
     ref(n, 1U, holder)
     sz(n, 2U, 1U)
     litn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
@@ -148,8 +137,8 @@ fn: main () int
     cell: lmx_int_new_owned(ga)
     if: cell = 0 || lmx_int_store_known(cell, 1) != 0 || lmx_arena_ref_store(holder, 1U, cell) != 0
         return: 2
-    m: mk_m(unit, 0U, 2U)
-    n: fr(m, 1U, c.LMX_WALK_OP_PUT, 4U)
+    m: mk_m(unit, 0U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_PUT, 4U)
     ref(n, 1U, holder)
     sz(n, 2U, 1U)
     litn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
@@ -168,8 +157,8 @@ fn: main () int
     cell: lmx_char_cell(ga, 97)
     if: cell = 0 || lmx_arena_ref_store(holder, 1U, cell) != 0
         return: 2
-    m: mk_m(unit, 0U, 2U)
-    n: fr(m, 1U, c.LMX_WALK_OP_PUT, 4U)
+    m: mk_m(unit, 0U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_PUT, 4U)
     ref(n, 1U, holder)
     sz(n, 2U, 1U)
     litn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
@@ -189,8 +178,8 @@ fn: main () int
     ptr: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + 1, ga)
     if: ptr = 0 || lmx_arena_ref_store(holder, 1U, ptr) != 0
         return: 2
-    m: mk_m(unit, 0U, 2U)
-    n: fr(m, 1U, c.LMX_WALK_OP_PUT, 4U)
+    m: mk_m(unit, 0U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_PUT, 4U)
     ref(n, 1U, holder)
     sz(n, 2U, 1U)
     litn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
@@ -208,8 +197,8 @@ fn: main () int
     cell: lmx_size_new_owned(ga)
     if: cell = 0 || lmx_size_store_known(cell, 1U) != 0 || lmx_arena_ref_store(holder, 1U, cell) != 0
         return: 2
-    m: mk_m(unit, 0U, 2U)
-    n: fr(m, 1U, c.LMX_WALK_OP_PUT, 4U)
+    m: mk_m(unit, 0U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_PUT, 4U)
     ref(n, 1U, holder)
     sz(n, 2U, 1U)
     litn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
@@ -229,8 +218,8 @@ fn: main () int
     cell: lmx_size_new_owned(ga)
     if: holder = 0 || cell = 0 || lmx_size_store_known(cell, 99U) != 0 || lmx_arena_ref_store(holder, 1U, cell) != 0
         return: 2
-    m: mk_m(unit, 0U, 2U)
-    n: fr(m, 1U, c.LMX_WALK_OP_RET, 2U)
+    m: mk_m(unit, 0U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
     @: Lmx eqn fr(n, 1U, c.LMX_WALK_OP_EQ, 3U)
     @: Lmx atn fr(eqn, 1U, c.LMX_WALK_OP_AT, 3U)
     ref(atn, 1U, holder)
@@ -247,8 +236,8 @@ fn: main () int
     if: unit = 0 || lmx_arena_refs_open_owned(ga, unit, 8U) != 0
         return: 2
     ---
-    m: mk_m(unit, 0U, 2U)
-    n: fr(m, 1U, c.LMX_WALK_OP_RET, 2U)
+    m: mk_m(unit, 0U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
     eqn: fr(n, 1U, c.LMX_WALK_OP_ADD, 3U)
     litn: fr(eqn, 1U, c.LMX_WALK_OP_LIT, 2U)
     if: litn != 0 && lmx_walk_store_int(ga, litn, 1U, 1) != c.LMX_WALK_OK

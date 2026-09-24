@@ -7,7 +7,6 @@ predef: "l2src/lmx_post.lm1"
 predef: "l2src/lmx_thread.lm1"
 predef: "l2src/lmx_schedule.lm1"
 predef: "l2src/lmx_manager.lm1"
-predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_gc.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_arena_blocks.lm1"
@@ -81,9 +80,6 @@ fn: app_root_entry (@: Lmx node) int
     @: LmxThread child_t
     @: LmxPost child_mail
     @: LmxSchedule child_sched
-    @: LmxMethod method
-    @: LmxCallable info
-    @: LmxPool methods
     @: Lmx graph
     if: app_phase != 0U || app_root = 0 || app_child_arena = 0 || app_source = 0
         app_entry_diag: 1U
@@ -101,25 +97,14 @@ fn: app_root_entry (@: Lmx node) int
         return: 0
     ---
     app_child_msg: child
-    methods: lmx_pool_make(app_child_arena, 2U * c.sizeof(c.LmxMethod), c.sizeof(c.LmxMethod),
-                           c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD)
-    if: methods = 0
-        app_entry_diag: 3U
-        return: 0
-    ---
-    method: lmx_method_intern(app_child_arena, methods, (cast: (LmxEntry) app_child_body), 1U)
+    # k.4: no descriptor, no shared method record -- the copied graph's `native` word is
+    # set directly.
     graph: child\graph
-    if: method = 0 || graph = 0
+    if: graph = 0
         app_entry_diag: 4U
         return: 0
     ---
-    info: lmx_callable_new_owned(app_child_arena)
-    if: info = 0
-        app_entry_diag: 4U
-        return: 0
-    ---
-    info\method: method
-    lmx_arena_ref_store(graph, 0U, (cast: (@: void) info))
+    graph\native: (cast: (LmxEntry) app_child_body)
     child_mail: (cast: (@: LmxPost) lmx_arena_take(app_child_arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
     child_sched: (cast: (@: LmxSchedule) lmx_arena_take(app_child_arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
     if: child_mail = 0 || child_t = 0 || child_sched = 0
@@ -167,10 +152,11 @@ fn: app_make_source (@: LmxArena arena) @: Lmx
     if: source = 0 || source_children = 0
         return: 0
     ---
-    if: lmx_arena_refs_open_owned(arena, source, 2U) != 0
+    # k.4: no reserved descriptor slot -- the children list is the sole own field, at 0.
+    if: lmx_arena_refs_open_owned(arena, source, 1U) != 0
         return: 0
     ---
-    if: lmx_arena_ref_store(source, 1U, (cast: (@: void) source_children)) != 0
+    if: lmx_arena_ref_store(source, 0U, (cast: (@: void) source_children)) != 0
         return: 0
     ---
 return: source
@@ -286,7 +272,7 @@ fn: main () int
     app_check(counts, lmx_manager_add(manager, app_child_sched) = c.LMX_MANAGER_OK, "success child not in manager")
     app_check(counts, lmx_service_find(service, (cast: (@: void) child_t)) = (cast: (@: void) child_t), "success child not in service")
     witness: lmx_arena_take(@ child_arena, 1U, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT)
-    app_check(counts, witness != 0 && lmx_arena_ref_store(child_msg\graph, 1U, witness) = 0, "success witness not rooted")
+    app_check(counts, witness != 0 && lmx_arena_ref_store(child_msg\graph, 0U, witness) = 0, "success witness not rooted")
     app_check(counts, lmx_arena_open_simple(@ letter_arena) = 0, "letter arena did not open")
     letter: (cast: (@: LmxMsg) lmx_arena_take(@ letter_arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
     app_check(counts, letter != 0, "success letter missing")
@@ -353,7 +339,7 @@ fn: main () int
     app_check(counts, lmx_manager_add(manager, app_child_sched) = c.LMX_MANAGER_OK, "fail child not in manager")
     app_check(counts, lmx_service_find(service, (cast: (@: void) child_t)) = (cast: (@: void) child_t), "fail child not in service")
     fail_witness: lmx_arena_take(@ child_arena, 1U, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT)
-    app_check(counts, fail_witness != 0 && lmx_arena_ref_store(child_msg\graph, 1U, fail_witness) = 0, "fail witness not rooted")
+    app_check(counts, fail_witness != 0 && lmx_arena_ref_store(child_msg\graph, 0U, fail_witness) = 0, "fail witness not rooted")
     app_check(counts, lmx_arena_open_simple(@ fail_letter_arena) = 0, "fail letter arena did not open")
     fail_letter: (cast: (@: LmxMsg) lmx_arena_take(@ fail_letter_arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
     app_check(counts, fail_letter != 0, "fail letter missing")

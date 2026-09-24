@@ -169,27 +169,20 @@ fn: al_r0_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: v
     message\success: 1
 return: 0
 
-# C: R0's program: its body and its children list.
+# C: R0's program: its body (k.4: `graph\native` set directly, no descriptor) and its
+# children list, now the graph's only field (was field 1, after the reserved descriptor
+# slot; that slot is gone, so lmx_root_launch is called with `fields = 1U` below, not 2U).
 fn: al_program (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int
-    @: LmxPool methods
-    @: LmxMethod method
-    @: LmxCallable info
     @: LmxArrayDesc children
-    if: arena = 0 || graph = 0 || graph\len < 2
+    if: arena = 0 || graph = 0 || graph\len < 1
         return: 1
     ---
-    methods: lmx_pool_make(arena, 2U * c.sizeof(c.LmxMethod), c.sizeof(c.LmxMethod), c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD)
-    info: lmx_callable_new_owned(arena)
     children: lmx_list_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, arena)
-    if: methods = 0 || info = 0 || children = 0
+    if: children = 0
         return: 1
     ---
-    method: lmx_method_intern(arena, methods, (cast: (LmxEntry) al_r0_body), 1U)
-    if: method = 0
-        return: 1
-    ---
-    info\method: method
-    if: lmx_arena_ref_store(graph, 0U, (cast: (@: void) info)) != 0 || lmx_arena_ref_store(graph, 1U, (cast: (@: void) children)) != 0
+    graph\native: (cast: (LmxEntry) al_r0_body)
+    if: lmx_arena_ref_store(graph, 0U, (cast: (@: void) children)) != 0
         return: 1
     ---
 return: 0
@@ -252,7 +245,7 @@ fn: main () int
     al_check(counts, lmx_root_close(@ taker) = c.LMX_ROOT_OK, "B: root close")
 
     # C. The mirror: the letter the host's launch builds has al_make's shape.
-    code: lmx_root_launch(@ launcher, 3, words, al_program, 2U, 0, 5000U, 0, (cast: (@: void) c.stderr))
+    code: lmx_root_launch(@ launcher, 3, words, al_program, 1U, 0, 5000U, 0, (cast: (@: void) c.stderr))
     al_check(counts, code = 0 && al_host_calls = 1, "C: the host launched R0, whose one turn succeeded")
     al_check(counts, al_host_shape = 1, "C: the host's mainArgs letter holds by al_holds, as al_make's does: (sender = the host's Message; payload whose one field is mainArgs) (mutants: a bare letter, a flat one)")
     failures: counts[1]

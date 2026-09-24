@@ -7,7 +7,6 @@ predef: "l2src/lmx_post.lm1"
 predef: "l2src/lmx_thread.lm1"
 predef: "l2src/lmx_schedule.lm1"
 predef: "l2src/lmx_manager.lm1"
-predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_gc.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_arena_blocks.lm1"
@@ -40,8 +39,8 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 # scheduler and works on ITS OWN thread).  What the settle does now is measured below, at the two
 # boundaries it takes: boundary 1 stops B and postpones, boundary 2 runs B's ending and then A's.
 #
-# Graph A (source refs = 2): 0 method | 1 slot for B
-# B source built in A's arena during A's turn (2 slots); B never runs a turn.
+# Graph A (source refs = 1, k.4 -- native set directly, no descriptor slot): 0 slot for B
+# B source built in A's arena during A's turn (2 slots: spare, children Array); B never runs a turn.
 # After A util: only lmx_arena_index_len(a_at), lmx_arena_index_len(b_at), service/manager counts, R0 graph slot —
 # never read cells inside arena A or arena B (B's record lived in A's arena).
 
@@ -95,13 +94,14 @@ fn: cs_body_a (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: vo
             ---
         ---
     ---
-    # Build B's source template in A's arena (method, spare, ordinary children Array).
+    # Build B's source template in A's arena (k.4: no descriptor slot -- spare, ordinary
+    # children Array).
     source_b: lmx_node_new_owned(cs_arena_a)
-    if: source_b = 0 || lmx_arena_refs_open_owned(cs_arena_a, source_b, 3U) != 0 || lmx_thread_children_field_new(cs_arena_a, source_b, 2U) = 0
+    if: source_b = 0 || lmx_arena_refs_open_owned(cs_arena_a, source_b, 2U) != 0 || lmx_thread_children_field_new(cs_arena_a, source_b, 1U) = 0
         cs_a_create_diag: 3U
         return: 0
     ---
-    child_b: lmx_child_reserve(t, cs_arena_a, cs_arena_b, lmx_arena_ref_cell(graph_a, 1U), source_b)
+    child_b: lmx_child_reserve(t, cs_arena_a, cs_arena_b, lmx_arena_ref_cell(graph_a, 0U), source_b)
     if: child_b = 0
         cs_a_create_diag: 4U
         return: 0
@@ -143,9 +143,6 @@ fn: cs_root_entry (@: Lmx node) int
     @: LmxThread child_t
     @: LmxPost child_mail
     @: LmxSchedule child_sched
-    @: LmxMethod method
-    @: LmxCallable info
-    @: LmxPool methods
     @: Lmx graph
     if: cs_phase != 0U || cs_root = 0 || cs_arena_a = 0 || cs_source_a = 0
         cs_entry_diag: 1U
@@ -157,24 +154,14 @@ fn: cs_root_entry (@: Lmx node) int
         return: 0
     ---
     cs_msg_a: child
-    methods: lmx_pool_make(cs_arena_a, 2U * c.sizeof(c.LmxMethod), c.sizeof(c.LmxMethod),
-                           c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD)
-    if: methods = 0
-        cs_entry_diag: 3U
-        return: 0
-    ---
-    method: lmx_method_intern(cs_arena_a, methods, (cast: (LmxEntry) cs_body_a), 1U)
+    # k.4: no descriptor, no shared method record -- the copied graph's `native` word is
+    # set directly; slot 0 stays the B-reservation cell source_a already reserved.
     graph: child\graph
-    if: method = 0 || graph = 0
+    if: graph = 0
         cs_entry_diag: 4U
         return: 0
     ---
-    info: lmx_callable_new_owned(cs_arena_a)
-    if: info = 0
-        return: 0
-    ---
-    info\method: method
-    lmx_arena_ref_store(graph, 0U, (cast: (@: void) info))
+    graph\native: (cast: (LmxEntry) cs_body_a)
     child_mail: (cast: (@: LmxPost) lmx_arena_take(cs_arena_a, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
     child_t: (cast: (@: LmxThread) child)
     child_sched: (cast: (@: LmxSchedule) lmx_arena_take(cs_arena_a, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
@@ -284,9 +271,9 @@ fn: main () int
         free(counts)
         return: failures
     ---
-    # A's template: method at 0, B at 1, ordinary children Array at 2.
+    # A's template (k.4: no descriptor slot): B at 0, ordinary children Array at 1.
     source_a: lmx_node_new_owned(root_arena)
-    cs_check(counts, source_a != 0 && lmx_arena_refs_open_owned(root_arena, source_a, 3U) = 0 && lmx_thread_children_field_new(root_arena, source_a, 2U) != 0, "template A not built")
+    cs_check(counts, source_a != 0 && lmx_arena_refs_open_owned(root_arena, source_a, 2U) = 0 && lmx_thread_children_field_new(root_arena, source_a, 1U) != 0, "template A not built")
     if: source_a = 0
         failures: counts[1]
         c.printf("lmx_app_chain_settle checks=%d failures=%d entry_diag=%u create_diag=%u (abort templates)\n",
@@ -317,7 +304,7 @@ fn: main () int
     cs_check(counts, lmx_thread_child_is(r0, t_a) != 0, "A not published in R0's children Array")
     cs_check(counts, lmx_range_classify(@ arena_a, (cast: (@: void) msg_a)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "A not in own arena")
     cs_check(counts, lmx_thread_child_is(r0, t_a) != 0, "A not live child of R0")
-    cs_check(counts, graph_a != 0 && graph_a\len >= 2, "A graph has no slot for B")
+    cs_check(counts, graph_a != 0 && graph_a\len >= 1, "A graph has no slot for B")
     cs_check(counts, lmx_schedule_wait(cs_sched_a, lmx_root_clock(@ root)) = c.LMX_SCHEDULE_OK, "A schedule wait failed")
     cs_check(counts, lmx_manager_add(manager, cs_sched_a) = c.LMX_MANAGER_OK, "A not in manager")
     cs_check(counts, lmx_service_find(service, (cast: (@: void) t_a)) = (cast: (@: void) t_a), "A not in service")
@@ -363,7 +350,7 @@ fn: main () int
     cs_check(counts, msg_a\running = 0, "kernel did not clear A running")
     cs_check(counts, msg_a\handoff_ready != 0, "kernel did not mark A handoff_ready")
     cs_check(counts, lmx_settle_ready(msg_a) != 0, "A not settle_ready")
-    cs_check(counts, lmx_arena_ref_value(graph_a, 1U) = (cast: (@: void) msg_b), "B not published in A's slot 1")
+    cs_check(counts, lmx_arena_ref_value(graph_a, 0U) = (cast: (@: void) msg_b), "B not published in A's slot 0")
     # THE CASCADE, measured at its own boundary: A has just ENDED its incarnation (success=1,
     # running cleared by its end-turn), and that boundary is where the model makes it stop its own
     # live child -- spec 32: "a stopped Message has no lane, so nothing runs its children's turns

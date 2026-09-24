@@ -10,7 +10,7 @@ include: "<string.h>"
 
 prototype:
     fn: lmx_fresh_child (@: LmxArena arena; @: Lmx proto; @: void child; @: Lmx fresh_parent; @@: void out) int
-    fn: lmx_fresh_struct (@: LmxArena arena; @: Lmx proto; @: Lmx fresh_parent; int: keep_slot0) @: Lmx
+    fn: lmx_fresh_struct (@: LmxArena arena; @: Lmx proto; @: Lmx fresh_parent) @: Lmx
 end: prototype
 
 # One child of a prototype: write the destination reference into \out.
@@ -39,8 +39,10 @@ fn: lmx_fresh_child (@: LmxArena arena; @: Lmx proto; @: void child; @: Lmx fres
         return: 1
     ---
     vtype: lmx_range_type_of(arena, child)
-    # Terminals kept by address (METHOD / callable descriptor / OP / ROLE / MSG_RECORD).
-    if: kind = c.LMX_KIND_METHOD || kind = c.LMX_DOMAIN_KIND_CALLABLE || kind = c.LMX_DOMAIN_KIND_OP || kind = c.LMX_DOMAIN_KIND_ROLE || kind = c.LMX_DOMAIN_KIND_MSG_RECORD
+    # Terminals kept by address (OP / ROLE / MSG_RECORD).  k.4: LmxMethod/LmxCallable
+    # are gone; the STRUCT branch below (own-child-by-parent) covers what a callable
+    # occurrence used to need this list for.
+    if: kind = c.LMX_DOMAIN_KIND_OP || kind = c.LMX_DOMAIN_KIND_ROLE || kind = c.LMX_DOMAIN_KIND_MSG_RECORD
         \out: child
         return: 0
     ---
@@ -48,7 +50,7 @@ fn: lmx_fresh_child (@: LmxArena arena; @: Lmx proto; @: void child; @: Lmx fres
         nested: (cast: (@: Lmx) child)
         # Control-body / field-only Structure whose parent is the prototype: recurse.
         if: nested\parent = proto
-            cell: (cast: (@: void) lmx_fresh_struct(arena, nested, fresh_parent, 0))
+            cell: (cast: (@: void) lmx_fresh_struct(arena, nested, fresh_parent))
             if: cell = 0
                 return: 1
             ---
@@ -248,7 +250,10 @@ fn: lmx_fresh_child (@: LmxArena arena; @: Lmx proto; @: void child; @: Lmx fres
     ---
 return: 1
 
-fn: lmx_fresh_struct (@: LmxArena arena; @: Lmx proto; @: Lmx fresh_parent; int: keep_slot0) @: Lmx
+# k.4: every slot is freshened uniformly, including slot 0 -- there is no descriptor to
+# keep by address any more (`native` is a sibling Lmx member, copied verbatim below, not a
+# child slot).
+fn: lmx_fresh_struct (@: LmxArena arena; @: Lmx proto; @: Lmx fresh_parent) @: Lmx
     @: Lmx out 0
     @: void child 0
     @: void made 0
@@ -266,6 +271,7 @@ fn: lmx_fresh_struct (@: LmxArena arena; @: Lmx proto; @: Lmx fresh_parent; int:
         return: 0
     ---
     out\parent: fresh_parent
+    out\native: proto\native
     n: (cast: (size_t) proto\len)
     if: n != 0U
         if: lmx_arena_refs_open_owned(arena, out, n) != 0
@@ -274,19 +280,12 @@ fn: lmx_fresh_struct (@: LmxArena arena; @: Lmx proto; @: Lmx fresh_parent; int:
     ---
     while: i < n
         child: lmx_arena_ref_value(proto, i)
-        if: i = 0U && keep_slot0 != 0
-            # Top-level Model child 0 kept by address until k.4 (callable). Nested bodies freshen all slots.
-            if: lmx_arena_ref_store(out, i, child) != 0
-                return: 0
-            ---
-        else:
-            st: lmx_fresh_child(arena, proto, child, out, @ made)
-            if: st != 0
-                return: 0
-            ---
-            if: lmx_arena_ref_store(out, i, made) != 0
-                return: 0
-            ---
+        st: lmx_fresh_child(arena, proto, child, out, @ made)
+        if: st != 0
+            return: 0
+        ---
+        if: lmx_arena_ref_store(out, i, made) != 0
+            return: 0
         ---
         i: i + 1U
     ---
@@ -299,4 +298,4 @@ fn: lmx_fresh (@: LmxArena arena; @: Lmx code) @: Lmx
     if: lmx_range_classify(arena, (cast: (@: void) code)) != c.LMX_KIND_STRUCT
         return: 0
     ---
-return: lmx_fresh_struct(arena, code, code\parent, 1)
+return: lmx_fresh_struct(arena, code, code\parent)

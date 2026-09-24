@@ -160,7 +160,6 @@ fn: main () int
     LmxArena: arena
     LmxArena: bare_arena
     LmxArena: parent_arena
-    LmxPool: methods
     LmxManager: mgr
     @: LmxArena arena_at 0
     @: LmxMsg message 0
@@ -180,16 +179,9 @@ fn: main () int
     @: Lmx graph_parent 0
     @: Lmx plain 0
     @: Lmx own_field 0
-    @: LmxMethod method 0
-    @: LmxCallable callable_info 0
     @: Lmx roles 0
-    @: Lmx plan_roles 0
     @: Lmx walk_graph 0
     @: Lmx thrower 0
-    @: LmxMethod throw_method 0
-    @: LmxMethod walk_method 0
-    @: LmxCallable throw_info 0
-    @: LmxCallable walk_info 0
     @: Lmx call_node 0
     @: LmxMsg walk_message 0
     @: LmxThread walk_thread 0
@@ -205,29 +197,16 @@ fn: main () int
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ bare_arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ parent_arena)), 0, c.sizeof(c.LmxArena))
-    memset((cast: (@: void) (@ methods)), 0, c.sizeof(c.LmxPool))
     if: lmx_arena_open(@ arena) != 0 || lmx_arena_open(@ bare_arena) != 0 || lmx_arena_open(@ parent_arena) != 0
         fputs("lmx_thread_turn: an arena did not open\n", l1_stdout())
         free(counts)
         return: 2
     ---
     arena_at: @ arena
-    if: lmx_pool_open(@ arena, @ methods, c.sizeof(c.LmxMethod), 6U, c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD) != 0
-        fputs("lmx_thread_turn: the method pool did not open\n", l1_stdout())
-        free(counts)
-        return: 2
-    ---
-    method: lmx_method_intern(@ arena, @ methods, (cast: (LmxEntry) tt_body), 1U)
-    callable_info: lmx_callable_new_owned(@ arena)
-    if: method = 0 || callable_info = 0
-        free(counts)
-        return: 2
-    ---
-    callable_info\method: method
 
-    # The Message's graph: an ordinary Structure that IS a callable occurrence -- the shared method
-    # record in physical child[0], one own field after it.
-    graph: tt_struct(@ arena, 2U)
+    # The Message's graph: an ordinary Structure whose `native` word is set directly (k.4
+    # -- no descriptor, no shared method record), one own field after it.
+    graph: tt_struct(@ arena, 1U)
     graph_parent: tt_struct(@ arena, 1U)
     own_field: lmx_int_new_owned(@ arena)
     # In the OTHER arena on purpose: a graph is a value of the band its Message belongs to.
@@ -238,8 +217,8 @@ fn: main () int
     ---
     lmx_int_store_known(own_field, 4242)
     graph\parent: graph_parent
-    lmx_arena_ref_store(graph, 0U, (cast: (@: void) callable_info))
-    lmx_arena_ref_store(graph, 1U, own_field)
+    graph\native: (cast: (LmxEntry) tt_body)
+    lmx_arena_ref_store(graph, 0U, own_field)
 
     built: tt_message(@ arena, graph, @ message, @ t, @ mail, @ sched)
     tt_check(counts, built != 0 && message != 0 && t != 0 && mail != 0 && sched != 0, "the Message was not built")
@@ -342,30 +321,23 @@ fn: main () int
     # Graph addr=0 (walked) with CALL to a METHOD trampoline that returns 1. Mutant: turn
     # leaves running=1 -> RED. Eternal driver will need entry_rc from this walk status
     # (today: adapter tap in l2_eternal_driver.lm1 ~entry_rc / thrown / running_at_close).
-    throw_method: (cast: (@: LmxMethod) lmx_pool_take(@ arena, @ methods))
-    throw_info: lmx_callable_new_owned(@ arena)
-    walk_info: lmx_callable_new_owned(@ arena)
-    walk_method: (cast: (@: LmxMethod) lmx_pool_take(@ arena, @ methods))
-    thrower: tt_struct(@ arena, 1U)
-    walk_graph: tt_struct(@ arena, 2U)
-    tt_check(counts, throw_method != 0 && throw_info != 0 && walk_info != 0 && walk_method != 0 && thrower != 0 && walk_graph != 0, "G2 fixtures")
-    throw_method\addr: (cast: (LmxEntry) g2_throw1)
-    throw_method\sig: 0U
-    throw_info\method: throw_method
-    lmx_arena_ref_store(thrower, 0U, (cast: (@: void) throw_info))
-    walk_method\addr: 0
-    walk_method\sig: 0U
-    walk_info\method: walk_method
-    lmx_arena_ref_store(walk_graph, 0U, (cast: (@: void) walk_info))
+    # k.4: thrower/walk_graph carry `native` directly (thrower's, non-null: a native
+    # trampoline; walk_graph's stays 0, walked).  No descriptor slot, so thrower needs no
+    # own slots at all and walk_graph's CALL step moves from slot 1 to slot 0.  The CALL
+    # node itself gains a 4th child (rtype, left 0 -- a plain int result, matching the old
+    # sig=0U/no-mark default).
+    thrower: tt_struct(@ arena, 0U)
+    walk_graph: tt_struct(@ arena, 1U)
+    tt_check(counts, thrower != 0 && walk_graph != 0, "G2 fixtures")
+    thrower\native: (cast: (LmxEntry) g2_throw1)
     roles: lmx_walk_roles_open(arena_at)
-    plan_roles: lmx_plan_roles_open(arena_at)
-    tt_check(counts, roles != 0 && plan_roles != 0, "G2 walk/plan roles")
-    lmx_walk_program_bind(roles, plan_roles)
-    call_node: lmx_walk_frame(arena_at, roles, walk_graph, c.LMX_WALK_OP_CALL, 3U)
+    tt_check(counts, roles != 0, "G2 walk roles")
+    lmx_walk_program_bind(roles)
+    call_node: lmx_walk_frame(arena_at, roles, walk_graph, c.LMX_WALK_OP_CALL, 4U)
     tt_check(counts, call_node != 0, "G2 CALL frame")
     tt_check(counts, lmx_arena_ref_store(call_node, 1U, (cast: (@: void) thrower)) = 0, "G2 CALL -> thrower code")
     tt_check(counts, lmx_arena_ref_store(call_node, 2U, (cast: (@: void) thrower)) = 0, "G2 CALL -> thrower data")
-    tt_check(counts, lmx_arena_ref_store(walk_graph, 1U, (cast: (@: void) call_node)) = 0, "G2 CALL as body step")
+    tt_check(counts, lmx_arena_ref_store(walk_graph, 0U, (cast: (@: void) call_node)) = 0, "G2 CALL as body step")
     built: tt_message(@ arena, walk_graph, @ walk_message, @ walk_thread, @ walk_mail, @ walk_sched)
     tt_check(counts, built != 0 && walk_message != 0 && walk_thread != 0, "G2 Message built")
     tt_check(counts, walk_message\running = 1, "G2 Message starts running")

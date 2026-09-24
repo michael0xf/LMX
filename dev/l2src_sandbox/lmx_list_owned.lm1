@@ -84,14 +84,10 @@ fn: lmx_list_grow (@: void list; size_t: need; @: LmxArena arena) int
             backing_kind: c.LMX_KIND_REF
             etype: c.LMX_TYPE_DESC
         else:
-            if: vtype = c.LMX_TYPE_ARRAY_OF_METHOD
-                backing_kind: c.LMX_KIND_REF
-                etype: c.LMX_TYPE_METHOD
-            else:
-                if: vtype >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
-                    backing_kind: c.LMX_KIND_PRIMITIVE
-                    etype: c.LMX_TYPE_POINTER_BASE + (vtype - c.LMX_TYPE_ARRAY_OF_POINTER_BASE)
-                ---
+            # k.4: ARRAY_OF_METHOD is gone with LmxMethod.
+            if: vtype >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+                backing_kind: c.LMX_KIND_PRIMITIVE
+                etype: c.LMX_TYPE_POINTER_BASE + (vtype - c.LMX_TYPE_ARRAY_OF_POINTER_BASE)
             ---
         ---
     ---
@@ -134,15 +130,11 @@ fn: lmx_list_new_owned (int: type; @: LmxArena arena) @: void
             backing_kind: c.LMX_KIND_REF
             etype: c.LMX_TYPE_DESC
         else:
-            if: type = c.LMX_TYPE_ARRAY_OF_METHOD
-                backing_kind: c.LMX_KIND_REF
-                etype: c.LMX_TYPE_METHOD
-            else:
-                if: type < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
-                    return: 0
-                backing_kind: c.LMX_KIND_PRIMITIVE
-                etype: c.LMX_TYPE_POINTER_BASE + (type - c.LMX_TYPE_ARRAY_OF_POINTER_BASE)
-            ---
+            # k.4: ARRAY_OF_METHOD is gone with LmxMethod.
+            if: type < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+                return: 0
+            backing_kind: c.LMX_KIND_PRIMITIVE
+            etype: c.LMX_TYPE_POINTER_BASE + (type - c.LMX_TYPE_ARRAY_OF_POINTER_BASE)
         ---
     ---
     list: (cast: (@: LmxArrayDynamicArray) lmx_arena_take(arena, c.sizeof(c.LmxArrayDynamicArray), c.LMX_KIND_LIST, type))

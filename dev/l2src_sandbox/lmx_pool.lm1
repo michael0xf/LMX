@@ -494,20 +494,6 @@ fn: lmx_pool_count (@: LmxPool pool) size_t
     ---
 return: total
 
-# An immutable method record (2). addr is the generated C entry, sig fixes the typed input
-# list. Neither is interpreted here: this unit stores them and never calls addr. The
-# encoding of sig is not settled (see OPEN_POINTS.txt).
-fn: lmx_method_intern (@: LmxArena arena; @: LmxPool pool; LmxEntry: addr; unsigned: sig) @: LmxMethod
-    @: LmxMethod record
-    if: addr = 0
-        return: 0
-    record: (cast: (@: LmxMethod) lmx_pool_take(arena, pool))
-    if: record = 0
-        return: 0
-    record\addr: addr
-    record\sig: sig
-return: record
-
 # An Array descriptor: logical length and a pointer to element storage,
 # no node, no name, no tag. Its len is element count, unlike the len in the Lmx header.
 fn: lmx_array_desc_new (@: LmxArena arena; @: LmxPool pool; size_t: len; @: void data) @: LmxArrayDesc

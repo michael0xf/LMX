@@ -7,16 +7,15 @@ predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<string.h>"
 
 # lmx_call.lm1 - the call.  Every check here is the domain question, and the call itself is one
-# cast: the METHOD's `addr` is the method's trampoline, the prim ABI LmxPrimitiveEntry
-# (lmx_primitive.h.lm1; FABLE-OPUS-ROOT-WALK-TRANSLATOR-20260924-159, D-38).  child[0] must be an
-# LmxCallable descriptor.  A generated body WITH source arguments is called directly by
-# generated code, which knows the signature it emitted; this unit is what a runtime calls when it
-# holds a Structure and must find out whether it can call it at all, and what a dynamic call
-# (lmx_call_prim) goes through.
+# cast: `Lmx.native` is the method's trampoline, the prim ABI LmxPrimitiveEntry
+# (lmx_primitive.h.lm1; FABLE-OPUS-ROOT-WALK-TRANSLATOR-20260924-159, D-38).  A generated body
+# WITH source arguments is called directly by generated code, which knows the signature it
+# emitted; this unit is what a runtime calls when it holds a Structure and must find out
+# whether it can call it at all, and what a dynamic call (lmx_call_prim) goes through.
 #
-# Descriptor dispatch (FABLE-156): METHOD.addr != 0 -> native; addr == 0 -> optional walk
-# hook (lmx_call_install_walk). The walk unit installs the hook so call.o does not link
-# walk/plan/scratch (avoids duplicate symbols with selftests that embed those units).
+# Dispatch (k.4, next_core_tasks.md §3 item 8): `native` != 0 -> native; `native` == 0 ->
+# optional walk hook (lmx_call_install_walk). The walk unit installs the hook so call.o does
+# not link walk/scratch (avoids duplicate symbols with selftests that embed those units).
 
 @: void lmx_call_walk_fn 0
 int: lmx_call_walk_status_mode 0
@@ -84,50 +83,19 @@ fn: lmx_call_walk_ready () int
 return: 1
 
 fn: lmx_call_ready (@: LmxArena arena; @: Lmx callable) int
-    @: void target
     if: arena = 0 || callable = 0
         return: c.LMX_CALL_NOT_CALLABLE
     if: lmx_domain_kind(arena, (cast: (@: void) callable)) != c.LMX_KIND_STRUCT
         return: c.LMX_CALL_NOT_CALLABLE
-    if: callable\len < 1
-        return: c.LMX_CALL_NOT_CALLABLE
-    ---
-    target: lmx_arena_ref_value(callable, 0U)
-    if: target = 0
-        return: c.LMX_CALL_NOT_CALLABLE
-    if: lmx_domain_kind(arena, target) != c.LMX_DOMAIN_KIND_CALLABLE
-        return: c.LMX_CALL_NOT_CALLABLE
     ---
 return: c.LMX_CALL_OK
-
-fn: lmx_call_method (@: LmxArena arena; @: Lmx callable) @: LmxMethod
-    @: void target
-    @: LmxCallable info
-    if: lmx_call_ready(arena, callable) != c.LMX_CALL_OK
-        return: 0
-    target: lmx_arena_ref_value(callable, 0U)
-    info: (cast: (@: LmxCallable) target)
-    if: info = 0
-        return: 0
-return: info\method
 
 fn: lmx_call_node (@: Lmx callable) @: Lmx
     if: callable = 0
         return: 0
 return: callable\parent
 
-fn: lmx_call_callable (@: LmxArena arena; @: Lmx node) @: LmxCallable
-    @: void target
-    if: lmx_call_ready(arena, node) != c.LMX_CALL_OK
-        return: 0
-    target: lmx_arena_ref_value(node, 0U)
-    if: lmx_domain_kind(arena, target) != c.LMX_DOMAIN_KIND_CALLABLE
-        return: 0
-return: (cast: (@: LmxCallable) target)
-
 fn: lmx_call0 (@: LmxArena arena; @: Lmx callable) int
-    @: void target
-    @: LmxCallable info
     LmxPrimitiveEntry: entry
     LmxCallWalkFn: walk
     LmxEntry: addr
@@ -136,18 +104,13 @@ fn: lmx_call0 (@: LmxArena arena; @: Lmx callable) int
     int: st
     if: lmx_call_ready(arena, callable) != c.LMX_CALL_OK
         # Installed walker (L2 walk / L3 bind): one turn shape still goes through
-        # call0 even when the graph tip is not yet a CALLABLE occurrence.
+        # call0 even when the value is not a Structure.
         if: lmx_call_walk_fn != 0
             walk: (cast: (LmxCallWalkFn) lmx_call_walk_fn)
             return: walk(arena, callable)
         ---
         return: c.LMX_CALL_NOT_CALLABLE
-    target: lmx_arena_ref_value(callable, 0U)
-    info: (cast: (@: LmxCallable) target)
-    addr: 0
-    if: info != 0 && info\method != 0
-        addr: info\method\addr
-    ---
+    addr: callable\native
     if: addr = 0
         # Walk hook: activation value = last evaluated expression. Mutant that
         # drops the hook / returns 0 without walking goes RED in call_selftest.
@@ -157,10 +120,6 @@ fn: lmx_call0 (@: LmxArena arena; @: Lmx callable) int
         # Local fnptr (not a void* cast in the call expr) so l1trans emits commas.
         walk: (cast: (LmxCallWalkFn) lmx_call_walk_fn)
         return: walk(arena, callable)
-    ---
-    if: addr = 0
-        c.fprintf(l1_stderr(), "lmx: invariant: descriptor without a native address\n")
-        c.abort()
     ---
     # The native entry is the method's trampoline (prim ABI): the value through a local int; a
     # nonzero status is the callee's throw status, noted for the turn as a walk's is.
@@ -175,25 +134,18 @@ fn: lmx_call0 (@: LmxArena arena; @: Lmx callable) int
 return: value
 
 fn: lmx_call_prim (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
-    @: void target
-    @: LmxCallable info
     LmxPrimitiveEntry: entry
     LmxCallWalkFn: walk
     LmxEntry: addr
     int: value
     int: st
-    # Dispatch on CODE (callable occurrence). Owner / self = DATA; trampoline builds nothing.
+    # Dispatch on CODE's native word. Owner / self = DATA; trampoline builds nothing.
     if: out = 0 || data = 0 || lmx_call_ready(arena, code) != c.LMX_CALL_OK
-        c.fprintf(l1_stderr(), "lmx: invariant: a dynamic call of a value that is not a callable occurrence\n")
+        c.fprintf(l1_stderr(), "lmx: invariant: a dynamic call of a value that is not a Structure\n")
         c.abort()
     ---
     \out: 0
-    target: lmx_arena_ref_value(code, 0U)
-    info: (cast: (@: LmxCallable) target)
-    addr: 0
-    if: info != 0 && info\method != 0
-        addr: info\method\addr
-    ---
+    addr: code\native
     if: addr != 0
         # Local fnptr (not a void* cast in the call expr) so l1trans emits commas.
         # owner = data = self (node = data.parent inside the trampoline / typed entry).

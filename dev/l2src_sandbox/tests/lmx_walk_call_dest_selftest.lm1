@@ -9,17 +9,16 @@ predef: "l2src/lmx_array_owned.lm1"
 predef: "l2src/lmx_array_ref_owned.lm1"
 predef: "l2src/lmx_graph_copy_owned.lm1"
 predef: "l2src/lmx_value_owned.lm1"
-predef: "l2src/lmx_plan.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
-# -174 c4: CALL dest is a fresh typed cell of the callee result type.
+# -174 c4 / k.4: CALL dest is a fresh typed cell of the type the CALL's rtype operand
+# (a reference to the callee's declared result cell) classifies as.
 # A size_t trampoline writes 8 bytes; the evaluator int temp is 4. Mutant: pass
-# dest (int temp) -> truncated / RED. method.sig = MARK | LMX_TYPE_SIZE_T.
+# dest (int temp) -> truncated / RED.
 
 @: LmxArena ga 0
 @: Lmx groles 0
-@: Lmx gplan_roles 0
 @: LmxWalkContext gctx 0
 @: LmxWalkValue gv 0
 int: broken 0
@@ -62,22 +61,14 @@ sub: sz (@: Lmx code; size_t: slot; size_t: value)
     ---
 end: sz
 
+# k.4: a walked/native callable occurrence is just the ordinary body Structure -- no
+# descriptor; `native` stays 0 by construction unless set directly.
 fn: mk_m (@: Lmx unit; size_t: slot; size_t: children) @: Lmx
-    @: Lmx m pl(unit, slot, children)
-    @: LmxCallable info lmx_callable_new_owned(ga)
-    if: m = 0 || info = 0 || lmx_arena_ref_store(m, 0U, (cast: (@: void) info)) != 0
-        broken: broken + 1
-        return: 0
-    ---
-return: m
+return: pl(unit, slot, children)
 
 fn: go (@: Lmx m) int
-    int: st
     if: m = 0 || gctx = 0 || gv = 0
         return: c.LMX_WALK_INVALID
-    st: lmx_walk_prepare(gctx, ga, gplan_roles, m)
-    if: st != c.LMX_WALK_OK
-        return: st
 return: lmx_walk_run(gctx, m, 0, 0U, gv)
 
 
@@ -106,19 +97,16 @@ fn: main () int
     @: Lmx n 0
     @: Lmx native 0
     @: Lmx caller 0
-    @: LmxCallable info 0
-    @: LmxMethod method 0
+    @: void rtype_cell 0
     size_t: got 0U
     size_t: want 1U
     int: st 0
-    int: ty 0
 
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
     if: lmx_arena_open(@ arena) != 0
         return: 2
     ga: @ arena
     groles: lmx_walk_roles_open(ga)
-    gplan_roles: lmx_plan_roles_open(ga)
     memset((cast: (@: void) (@ context_arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ context_cells)), 0, c.sizeof(c.LmxPool))
     memset((cast: (@: void) (@ store)), 0, c.sizeof(c.LmxScratch))
@@ -127,7 +115,6 @@ fn: main () int
     context.arena: ga
     context.scratch: @ store
     context.roles: groles
-    context.plan_roles: gplan_roles
     context.immutable_profile: 0
     context.classified: 0U
     gctx: @ context
@@ -137,25 +124,21 @@ fn: main () int
     if: unit = 0 || lmx_arena_refs_open_owned(ga, unit, 8U) != 0
         return: 2
     ---
-    native: mk_m(unit, 1U, 1U)
-    caller: mk_m(unit, 0U, 2U)
-    method: lmx_method_new_owned(ga)
-    if: native = 0 || caller = 0 || method = 0
+    # k.4: no descriptor, no LmxMethod/LmxCallable -- dispatch is the `native` word
+    # directly, and the result type comes from classifying the CALL's rtype operand
+    # (a reference to a size_t-typed cell here) rather than a sig mark.
+    native: mk_m(unit, 1U, 0U)
+    caller: mk_m(unit, 0U, 1U)
+    rtype_cell: lmx_size_new_owned(ga)
+    if: native = 0 || caller = 0 || rtype_cell = 0
         return: 2
     ---
-    method\addr: (cast: (LmxEntry) g1_wide)
-    method\sig: (cast: (unsigned) c.LMX_WALK_RESULT_SIG_MARK) | (cast: (unsigned) c.LMX_TYPE_SIZE_T)
-    info: (cast: (@: LmxCallable) lmx_arena_ref_value(native, 0U))
-    if: info = 0
-        return: 2
-    ---
-    info\method: method
-    ty: lmx_walk_callable_result_type(ga, native)
-    check((cast: (int) (ty = c.LMX_TYPE_SIZE_T)), "callable result type size_t from marked sig")
+    native\native: (cast: (LmxEntry) g1_wide)
 
-    n: fr(caller, 1U, c.LMX_WALK_OP_CALL, 3U)
+    n: fr(caller, 0U, c.LMX_WALK_OP_CALL, 4U)
     ref(n, 1U, native)
     ref(n, 2U, native)
+    ref(n, 3U, (cast: (@: Lmx) rtype_cell))
     st: go(caller)
     want: 1U
     want: want << 32

@@ -9,7 +9,6 @@ predef: "l2src/lmx_array_owned.lm1"
 predef: "l2src/lmx_array_ref_owned.lm1"
 predef: "l2src/lmx_graph_copy_owned.lm1"
 predef: "l2src/lmx_value_owned.lm1"
-predef: "l2src/lmx_plan.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
@@ -18,7 +17,6 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
 @: LmxArena ga 0
 @: Lmx groles 0
-@: Lmx gplan_roles 0
 @: LmxWalkContext gctx 0
 @: LmxWalkValue gv 0
 int: broken 0
@@ -61,22 +59,15 @@ sub: sz (@: Lmx code; size_t: slot; size_t: value)
     ---
 end: sz
 
+# k.4: a walked callable occurrence is just the ordinary body Structure -- no descriptor;
+# `native` stays 0 by construction. `children` now counts body steps only, so every call
+# site below shrinks by one and every stored slot index moves down by one.
 fn: mk_m (@: Lmx unit; size_t: slot; size_t: children) @: Lmx
-    @: Lmx m pl(unit, slot, children)
-    @: LmxCallable info lmx_callable_new_owned(ga)
-    if: m = 0 || info = 0 || lmx_arena_ref_store(m, 0U, (cast: (@: void) info)) != 0
-        broken: broken + 1
-        return: 0
-    ---
-return: m
+return: pl(unit, slot, children)
 
 fn: go (@: Lmx m) int
-    int: st
     if: m = 0 || gctx = 0 || gv = 0
         return: c.LMX_WALK_INVALID
-    st: lmx_walk_prepare(gctx, ga, gplan_roles, m)
-    if: st != c.LMX_WALK_OK
-        return: st
 return: lmx_walk_run(gctx, m, 0, 0U, gv)
 
 fn: main () int
@@ -103,7 +94,6 @@ fn: main () int
         return: 2
     ga: @ arena
     groles: lmx_walk_roles_open(ga)
-    gplan_roles: lmx_plan_roles_open(ga)
     memset((cast: (@: void) (@ context_arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ context_cells)), 0, c.sizeof(c.LmxPool))
     memset((cast: (@: void) (@ store)), 0, c.sizeof(c.LmxScratch))
@@ -112,7 +102,6 @@ fn: main () int
     context.arena: ga
     context.scratch: @ store
     context.roles: groles
-    context.plan_roles: gplan_roles
     context.immutable_profile: 0
     context.classified: 0U
     gctx: @ context
@@ -131,16 +120,16 @@ fn: main () int
     if: pcell = 0 || lmx_arena_ref_store(holder, 1U, pcell) != 0
         return: 2
 
-    m: mk_m(unit, 0U, 2U)
-    n: fr(m, 1U, c.LMX_WALK_OP_PUT, 4U)
+    m: mk_m(unit, 0U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_PUT, 4U)
     ref(n, 1U, holder)
     sz(n, 2U, 1U)
     ref(n, 3U, model)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_OK && lmx_pointer_value_known(pcell) = (cast: (@: void) model))), "put Structure into pointer")
 
-    m: mk_m(unit, 0U, 2U)
-    n: fr(m, 1U, c.LMX_WALK_OP_PUT, 4U)
+    m: mk_m(unit, 0U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_PUT, 4U)
     ref(n, 1U, holder)
     sz(n, 2U, 1U)
     atn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
@@ -150,16 +139,16 @@ fn: main () int
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_INVALID)), "put int into pointer INVALID")
 
-    m: mk_m(unit, 0U, 2U)
-    n: fr(m, 1U, c.LMX_WALK_OP_PUT, 4U)
+    m: mk_m(unit, 0U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_PUT, 4U)
     ref(n, 1U, holder)
     sz(n, 2U, 1U)
     ref(n, 3U, model2)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_OK && lmx_pointer_value_known(pcell) = (cast: (@: void) model2))), "put model2")
 
-    m: mk_m(unit, 0U, 2U)
-    n: fr(m, 1U, c.LMX_WALK_OP_RET, 2U)
+    m: mk_m(unit, 0U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
     putn: fr(n, 1U, c.LMX_WALK_OP_OF, 3U)
     atn: fr(putn, 1U, c.LMX_WALK_OP_DEREF, 2U)
     ownn: fr(atn, 1U, c.LMX_WALK_OP_AT, 3U)
@@ -170,33 +159,35 @@ fn: main () int
     check((cast: (int) (st = c.LMX_WALK_OK && gv\ref != 0 && lmx_int_value_known(gv\ref) = 99)), "read after put model2")
 
     # Own: pointer cell field of M; SET own := model; RET own; cell holds model (-188).
-    m: mk_m(unit, 0U, 4U)
+    # k.4: no descriptor slot -- own field at slot 0, SET at slot 1, RET at slot 2.
+    m: mk_m(unit, 0U, 3U)
     pcell: lmx_pointer_new_owned(pty, ga)
-    if: pcell = 0 || lmx_arena_ref_store(m, 1U, pcell) != 0
+    if: pcell = 0 || lmx_arena_ref_store(m, 0U, pcell) != 0
         return: 2
     ---
-    n: fr(m, 2U, c.LMX_WALK_OP_SET, 3U)
+    n: fr(m, 1U, c.LMX_WALK_OP_SET, 3U)
     ownn: fr(n, 1U, c.LMX_WALK_OP_OWN, 3U)
     ref(ownn, 1U, m)
-    sz(ownn, 2U, 1U)
+    sz(ownn, 2U, 0U)
     ref(n, 2U, model)
-    n: fr(m, 3U, c.LMX_WALK_OP_RET, 2U)
+    n: fr(m, 2U, c.LMX_WALK_OP_RET, 2U)
     ownn: fr(n, 1U, c.LMX_WALK_OP_OWN, 3U)
     ref(ownn, 1U, m)
-    sz(ownn, 2U, 1U)
+    sz(ownn, 2U, 0U)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_OK && gv\ref = (cast: (@: void) model) && lmx_pointer_value_known(pcell) = (cast: (@: void) model))), "Own SET pointer cell immediate")
 
     # Own.ref wrong type: SET int into pointer own -> INVALID
-    m: mk_m(unit, 0U, 3U)
+    # k.4: own field at slot 0, SET at slot 1.
+    m: mk_m(unit, 0U, 2U)
     pcell: lmx_pointer_new_owned(pty, ga)
-    if: pcell = 0 || lmx_arena_ref_store(m, 1U, pcell) != 0
+    if: pcell = 0 || lmx_arena_ref_store(m, 0U, pcell) != 0
         return: 2
     ---
-    n: fr(m, 2U, c.LMX_WALK_OP_SET, 3U)
+    n: fr(m, 1U, c.LMX_WALK_OP_SET, 3U)
     ownn: fr(n, 1U, c.LMX_WALK_OP_OWN, 3U)
     ref(ownn, 1U, m)
-    sz(ownn, 2U, 1U)
+    sz(ownn, 2U, 0U)
     atn: fr(n, 2U, c.LMX_WALK_OP_LIT, 2U)
     if: atn != 0 && lmx_walk_store_int(ga, atn, 1U, 3) != c.LMX_WALK_OK
         broken: broken + 1

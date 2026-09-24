@@ -5,18 +5,27 @@ predef: "l2src/lmx_arena_refs.lm1"
 predef: "l2src/lmx_array_owned.lm1"
 predef: "l2src/lmx_array_ref_owned.lm1"
 predef: "l2src/lmx_chars_owned.lm1"
-predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_range.lm1"
 predef: "l2src/lmx_implements.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
-# Q22 = II shared method references (FABLE-GROKBOT-MERGE-OVERRIDE-20260924-161 c2).
+# Q22 = II shared method references (FABLE-GROKBOT-MERGE-OVERRIDE-20260924-161 c2),
+# generalized structurally under k.4 (fable, 2026-09-26): a Structure is an OWN CHILD
+# of the copy -- and so gets copied as a subtree -- exactly when its parent lies INSIDE
+# the copied operand subtree; a Structure whose parent lies outside it is a shared
+# terminal kept by address, parent untouched.  There is no descriptor and no domain
+# classification any more; `native` (set directly) only illustrates that the shared/
+# copied occurrence happens to be a method.
 # A: fn: M where M's parent is the unit (outside the operand) -- merge keeps the
 # same occurrence address and does not rewrite M.parent. Mutant (descended into
 # M) yields a distinct address -> RED. A nested callable whose parent is inside
 # the operand is still copied.
+
+# A stand-in native entry: never called by this file, only its address is compared.
+fn: sample_entry (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+return: 0
 
 sub: sh_check (@: int counts; int: ok; const: @(char label))
     counts[0]: counts[0] + 1
@@ -36,9 +45,6 @@ fn: main () int
     @: Lmx m 0
     @: Lmx nested_m 0
     @: Lmx result 0
-    @: LmxMethod meth 0
-    @: LmxCallable info 0
-    @: LmxCallable nested_info 0
     @: void got 0
     @@: Lmx operands 0
     int: status LMX_MERGE_OK
@@ -58,30 +64,25 @@ fn: main () int
     nested: lmx_node_new_owned(@ arena)
     m: lmx_node_new_owned(@ arena)
     nested_m: lmx_node_new_owned(@ arena)
-    meth: lmx_method_new_owned(@ arena)
-    info: lmx_callable_new_owned(@ arena)
-    nested_info: lmx_callable_new_owned(@ arena)
-    sh_check(counts, operands != 0 && unit != 0 && a != 0 && nested != 0 && m != 0 && nested_m != 0 && meth != 0 && info != 0 && nested_info != 0, "structures constructed")
+    sh_check(counts, operands != 0 && unit != 0 && a != 0 && nested != 0 && m != 0 && nested_m != 0, "structures constructed")
     if: counts[1] != 0
         free(counts)
         return: 2
     ---
-    info\method: meth
-    nested_info\method: meth
+    # k.4: native set directly, no descriptor. M and its nested counterpart may point at
+    # the same C entry; what decides shared-vs-copied is only where `parent` points.
+    m\native: (cast: (LmxEntry) sample_entry)
+    nested_m\native: (cast: (LmxEntry) sample_entry)
     # Unit holds the shared method occurrence M (parent = unit).
     sh_check(counts, lmx_arena_refs_open_owned(@ arena, unit, 1U) = 0, "unit opened")
-    sh_check(counts, lmx_arena_refs_open_owned(@ arena, m, 1U) = 0, "M opened")
     m\parent: unit
-    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
     lmx_arena_ref_store(unit, 0U, (cast: (@: void) m))
     # A references M (A: fn: M) and nests a Structure with its own method.
     sh_check(counts, lmx_arena_refs_open_owned(@ arena, a, 2U) = 0, "A opened")
     sh_check(counts, lmx_arena_refs_open_owned(@ arena, nested, 1U) = 0, "nested opened")
-    sh_check(counts, lmx_arena_refs_open_owned(@ arena, nested_m, 1U) = 0, "nested M opened")
     a\parent: unit
     nested\parent: a
     nested_m\parent: nested
-    lmx_arena_ref_store(nested_m, 0U, (cast: (@: void) nested_info))
     lmx_arena_ref_store(nested, 0U, (cast: (@: void) nested_m))
     lmx_arena_ref_store(a, 0U, (cast: (@: void) m))
     lmx_arena_ref_store(a, 1U, (cast: (@: void) nested))
@@ -106,6 +107,7 @@ fn: main () int
     @: Lmx nested_m_copy (cast: (@: Lmx) got)
     sh_check(counts, nested_m_copy\parent = nested_copy, "nested method parent rewritten to the copy")
     sh_check(counts, nested_m\parent = nested, "source nested method parent untouched")
+    sh_check(counts, nested_m_copy\native = nested_m\native, "the copy's native word carried verbatim (k.4)")
 
     failures: counts[1]
     c.printf("lmx_shared_method_selftest: %d checks, %d failed\n", counts[0], failures)

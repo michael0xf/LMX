@@ -199,7 +199,12 @@ fn: lmx_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: L
         return: LMX_MERGE_OK
     ---
     # The result root, built in the destination arena like the copies, so that
-    # the whole merge is admitted or nothing is.
+    # the whole merge is admitted or nothing is.  k.4 (author, norm (5) / L3 §20,
+    # corrected 2026-09-26): the result of merging two Structures ALWAYS has an empty
+    # `native` -- interpretation only.  Nested methods keep their own native word,
+    # carried verbatim by the copier (lmx_graph_copy_owned.lm1) as an ordinary shared
+    # or copied Structure; nothing here inspects or selects among operand native words.
+    # lmx_node_new_owned already zeroes `native`, so no further store is needed.
     if: status = LMX_MERGE_OK
         result: lmx_node_new_owned(dst_arena)
         if: result = 0

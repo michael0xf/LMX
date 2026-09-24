@@ -18,9 +18,12 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 # that holds every copy. What this file pins:
 #
 #   * an operand is admitted because the source arena's table classifies it as a
-#     Structure -- a METHOD record, a primitive cell or a raw address is refused;
-#   * a METHOD child is a TERMINAL, kept by the very same address (2's
-#     all_methods_array row), because classification says METHOD;
+#     Structure -- a primitive cell or a raw address is refused;
+#   * a Structure child whose parent lies OUTSIDE the copied operand subtree is a
+#     shared TERMINAL, kept by the very same address, parent not rewritten (k.4,
+#     Q22=II generalized: there is no separate METHOD/CALLABLE domain any more --
+#     lmx_graph_copy_owned.lm1's lmx_copy_value decides this structurally, by
+#     `child\parent`, not by classification);
 #   * a mutable primitive child is COPIED -- a new cell in the destination
 #     arena, the same value, the source cell untouched;
 #   * a child the table does not classify at all (a raw pointer) makes the whole
@@ -93,7 +96,7 @@ fn: main () int
     @: Lmx bad 0
     @: Lmx container 0
     @: Lmx result 0
-    @: LmxMethod method 0
+    @: Lmx shared 0
     @: LmxPrimitive prim_rec 0
     @: Lmx unit 0
     @: Lmx child_p 0
@@ -130,18 +133,19 @@ fn: main () int
     ---
 
     # The source arena: an interned character table, a mutable int cell, a
-    # shared METHOD record, and three structures.
+    # shared Structure reference (parent OUTSIDE the merge operands -- k.4's
+    # own-child-by-parent terminal rule), and three structures.
     table: lmx_chars_new_owned(@ arena)
     char_cell: lmx_char_cell_known(table, 33)
     int_cell: lmx_int_new_owned(@ arena)
     lmx_int_store_known(int_cell, 42)
-    method: lmx_method_new_owned(@ arena)
+    shared: lmx_node_new_owned(@ arena)
     container: lmx_node_new_owned(@ arena)
     a: lmx_node_new_owned(@ arena)
     b: lmx_node_new_owned(@ arena)
     bad: lmx_node_new_owned(@ arena)
     merge_check(counts, table != 0 && char_cell != 0 && int_cell != 0, "source arena constructed")
-    merge_check(counts, method != 0 && lmx_range_classify(@ arena, (cast: (@: void) method)) = c.LMX_KIND_METHOD, "the shared record classifies as METHOD")
+    merge_check(counts, shared != 0 && shared\parent = 0, "the shared record's parent is outside the merge operands (eternal root)")
     if: a = 0 || b = 0 || bad = 0 || container = 0
         fputs("lmx: structures not constructed\n", l1_stdout())
         lmx_arena_release(@ arena)
@@ -153,7 +157,7 @@ fn: main () int
     merge_check(counts, lmx_arena_refs_open_owned(@ arena, b, 1U) = 0, "operand b opened")
     lmx_arena_ref_store(a, 0U, char_cell)
     lmx_arena_ref_store(a, 1U, int_cell)
-    lmx_arena_ref_store(b, 0U, (cast: (@: void) method))
+    lmx_arena_ref_store(b, 0U, (cast: (@: void) shared))
 
     # 1. Two structures in, three out.
     operands[0]: a
@@ -179,10 +183,11 @@ fn: main () int
     merge_check(counts, lmx_int_value_known(int_cell) = 42, "the source cell is untouched")
     merge_check(counts, lmx_range_classify(@ dst, copied) = c.LMX_KIND_PRIMITIVE, "the copy lives in the destination arena")
 
-    # 3. A METHOD child is a terminal: the very same descriptor address.
+    # 3. A Structure child whose parent lies outside the copied subtree is a
+    # terminal: the very same address, kept, parent not rewritten (k.4, Q22=II).
     copied: lmx_arena_ref_value(result, 2U)
-    merge_check(counts, copied = (cast: (@: void) method), "a METHOD child is shared by address")
-    merge_check(counts, lmx_range_classify(@ arena, copied) = c.LMX_KIND_METHOD, "the shared child still classifies as METHOD")
+    merge_check(counts, copied = (cast: (@: void) shared), "a Structure child with a foreign parent is shared by address")
+    merge_check(counts, (cast: (@: Lmx) copied)\parent = 0, "the shared child's parent was not rewritten")
 
     # 3b. A child-pointer array is an array of the arena like every other: it has its
     # own descriptor and its own entry, and a slot ADDRESS classifies as the storage

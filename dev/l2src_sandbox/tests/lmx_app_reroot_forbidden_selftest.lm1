@@ -7,7 +7,6 @@ predef: "l2src/lmx_post.lm1"
 predef: "l2src/lmx_thread.lm1"
 predef: "l2src/lmx_schedule.lm1"
 predef: "l2src/lmx_manager.lm1"
-predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_gc.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_arena_blocks.lm1"
@@ -132,13 +131,13 @@ fn: rf_body_a (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: vo
         ---
     ---
     if: rf_a_turns = 1U
-        # A's source for B: 2 slots, opened, so graph_A can hold method at 0 and B at 1.
+        # A's source for B (k.4: no descriptor slot): B at 0.
         source_b: lmx_node_new_owned(rf_arena_a)
-        if: source_b = 0 || lmx_arena_refs_open_owned(rf_arena_a, source_b, 3U) != 0 || lmx_thread_children_field_new(rf_arena_a, source_b, 2U) = 0
+        if: source_b = 0 || lmx_arena_refs_open_owned(rf_arena_a, source_b, 2U) != 0 || lmx_thread_children_field_new(rf_arena_a, source_b, 1U) = 0
             rf_create_diag: 3U
             return: 0
         ---
-        child_b: lmx_child_reserve(t, rf_arena_a, rf_arena_b, lmx_arena_ref_cell(graph_a, 1U), source_b)
+        child_b: lmx_child_reserve(t, rf_arena_a, rf_arena_b, lmx_arena_ref_cell(graph_a, 0U), source_b)
         if: child_b = 0
             rf_create_diag: 4U
             return: 0
@@ -183,9 +182,6 @@ fn: rf_root_entry (@: Lmx node) int
     @: LmxThread child_t
     @: LmxPost child_mail
     @: LmxSchedule child_sched
-    @: LmxMethod method
-    @: LmxCallable info
-    @: LmxPool methods
     @: Lmx graph
     if: rf_phase != 0U || rf_root = 0 || rf_arena_a = 0 || rf_source_a = 0
         rf_entry_diag: 1U
@@ -197,24 +193,14 @@ fn: rf_root_entry (@: Lmx node) int
         return: 0
     ---
     rf_msg_a: child
-    methods: lmx_pool_make(rf_arena_a, 2U * c.sizeof(c.LmxMethod), c.sizeof(c.LmxMethod),
-                           c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD)
-    if: methods = 0
-        rf_entry_diag: 3U
-        return: 0
-    ---
-    method: lmx_method_intern(rf_arena_a, methods, (cast: (LmxEntry) rf_body_a), 1U)
+    # k.4: no descriptor, no shared method record -- the copied graph's `native` word is
+    # set directly; slot 0 stays the B-reservation cell source_a already reserved.
     graph: child\graph
-    if: method = 0 || graph = 0
+    if: graph = 0
         rf_entry_diag: 4U
         return: 0
     ---
-    info: lmx_callable_new_owned(rf_arena_a)
-    if: info = 0
-        return: 0
-    ---
-    info\method: method
-    lmx_arena_ref_store(graph, 0U, (cast: (@: void) info))
+    graph\native: (cast: (LmxEntry) rf_body_a)
     child_mail: (cast: (@: LmxPost) lmx_arena_take(rf_arena_a, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
     child_t: (cast: (@: LmxThread) child)
     child_sched: (cast: (@: LmxSchedule) lmx_arena_take(rf_arena_a, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
@@ -345,9 +331,9 @@ fn: rf_scenario (int: live; int: pending; @: int counts) int
         c.fflush(0)
         return: failures
     ---
-    # A's template: 2 slots so graph_A can hold method at 0 and publish B at 1.
+    # A's template (k.4: no descriptor slot): B at 0.
     source_a: lmx_node_new_owned(root_arena)
-    rf_check(counts, source_a != 0 && lmx_arena_refs_open_owned(root_arena, source_a, 3U) = 0 && lmx_thread_children_field_new(root_arena, source_a, 2U) != 0, "template A not built")
+    rf_check(counts, source_a != 0 && lmx_arena_refs_open_owned(root_arena, source_a, 2U) = 0 && lmx_thread_children_field_new(root_arena, source_a, 1U) != 0, "template A not built")
     if: source_a = 0
         failures: counts[1]
         c.printf("rf_scenario live=%d checks=%d failures=%d entry_diag=%u (abort template)\n",
@@ -387,7 +373,7 @@ fn: rf_scenario (int: live; int: pending; @: int counts) int
     rf_check(counts, lmx_thread_child_is(r0, t_a) != 0, "A not published in R0's children Array")
     rf_check(counts, lmx_range_classify(@ arena_a, (cast: (@: void) msg_a)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "A not in own arena")
     rf_check(counts, lmx_thread_child_is(r0, t_a) != 0, "A not live child of R0")
-    rf_check(counts, graph_a != 0 && graph_a\len >= 2, "A graph has no slot for B")
+    rf_check(counts, graph_a != 0 && graph_a\len >= 1, "A graph has no slot for B")
     rf_check(counts, lmx_schedule_wait(rf_sched_a, lmx_root_clock(@ root)) = c.LMX_SCHEDULE_OK, "A schedule wait failed")
     rf_check(counts, lmx_manager_add(manager, rf_sched_a) = c.LMX_MANAGER_OK, "A not in manager")
     rf_check(counts, lmx_service_find(service, (cast: (@: void) t_a)) = (cast: (@: void) t_a), "A not in service")
@@ -424,7 +410,7 @@ fn: rf_scenario (int: live; int: pending; @: int counts) int
     rf_check(counts, msg_b\handoff_ready = 0, "B reads handoff-safe before it ever ended")
     rf_check(counts, lmx_thread_child_is(t_a, t_b) != 0, "B not live child of A after publish")
     rf_check(counts, lmx_service_find(service, (cast: (@: void) t_b)) = (cast: (@: void) t_b), "B not in service")
-    rf_check(counts, lmx_arena_ref_value(graph_a, 1U) = (cast: (@: void) msg_b), "B not published in A's slot 1")
+    rf_check(counts, lmx_arena_ref_value(graph_a, 0U) = (cast: (@: void) msg_b), "B not published in A's slot 0")
 
     # Letter 2 -> B: PENDING INPUT.  It is what the stop cannot close without the child's own turn
     # (and in the (live, 0) run it is deliberately NOT sent, so the box is empty).

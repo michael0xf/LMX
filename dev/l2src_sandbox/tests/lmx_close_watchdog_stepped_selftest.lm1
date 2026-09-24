@@ -9,7 +9,6 @@ predef: "l2src/lmx_schedule.lm1"
 predef: "l2src/lmx_manager.lm1"
 predef: "l2src/lmx_manager_running.h.lm1"
 predef: "l2src/lmx_process_deadline.lm1"
-predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_gc.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_arena_blocks.lm1"
@@ -89,9 +88,7 @@ fn: t5_body_a (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: vo
     @: LmxThread t_b
     @: LmxPost mail_b
     @: LmxSchedule sched_b
-    @: LmxMethod method
-    @: LmxCallable info_b
-    @: LmxPool methods
+    @: Lmx graph_b
     t: lmx_thread_current()
     message: lmx_thread_message(t)
     if: message = 0 || message\graph = 0
@@ -106,33 +103,25 @@ fn: t5_body_a (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: vo
         return: 0
     ---
     graph_a: message\graph
+    # k.4: no descriptor slot -- spare, ordinary children Array.
     source_b: lmx_node_new_owned(t5_arena_a)
-    if: source_b = 0 || lmx_arena_refs_open_owned(t5_arena_a, source_b, 3U) != 0 || lmx_thread_children_field_new(t5_arena_a, source_b, 2U) = 0
+    if: source_b = 0 || lmx_arena_refs_open_owned(t5_arena_a, source_b, 2U) != 0 || lmx_thread_children_field_new(t5_arena_a, source_b, 1U) = 0
         t5_diag: 3U
         return: 0
     ---
-    child_b: lmx_child_reserve(t, t5_arena_a, t5_arena_b, lmx_arena_ref_cell(graph_a, 1U), source_b)
+    child_b: lmx_child_reserve(t, t5_arena_a, t5_arena_b, lmx_arena_ref_cell(graph_a, 0U), source_b)
     if: child_b = 0
         t5_diag: 4U
         return: 0
     ---
-    methods: lmx_pool_make(t5_arena_b, 2U * c.sizeof(c.LmxMethod), c.sizeof(c.LmxMethod),
-                           c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD)
-    if: methods = 0
-        t5_diag: 5U
-        return: 0
-    ---
-    method: lmx_method_intern(t5_arena_b, methods, (cast: (LmxEntry) t5_body_b), 1U)
-    if: method = 0 || child_b\graph = 0
+    graph_b: child_b\graph
+    if: graph_b = 0
         t5_diag: 6U
         return: 0
     ---
-    info_b: lmx_callable_new_owned(t5_arena_b)
-    if: info_b = 0
-        return: 0
-    ---
-    info_b\method: method
-    lmx_arena_ref_store(child_b\graph, 0U, (cast: (@: void) info_b))
+    # k.4: no descriptor, no shared method record -- the copied graph's `native` word is
+    # set directly.
+    graph_b\native: (cast: (LmxEntry) t5_body_b)
     mail_b: t5_mail_b
     t_b: (cast: (@: LmxThread) child_b)
     sched_b: (cast: (@: LmxSchedule) lmx_arena_take(t5_arena_b, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
@@ -166,9 +155,6 @@ fn: t5_root_entry (@: Lmx node) int
     @: LmxThread child_t
     @: LmxPost child_mail
     @: LmxSchedule child_sched
-    @: LmxMethod method
-    @: LmxCallable info_a
-    @: LmxPool methods
     @: Lmx graph
     if: t5_phase != 0U
         return: 0
@@ -183,23 +169,13 @@ fn: t5_root_entry (@: Lmx node) int
         return: 0
     ---
     graph: child\graph
-    methods: lmx_pool_make(t5_arena_a, 2U * c.sizeof(c.LmxMethod), c.sizeof(c.LmxMethod),
-                           c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD)
-    if: graph = 0 || methods = 0
+    if: graph = 0
         t5_diag: 15U
         return: 0
     ---
-    method: lmx_method_intern(t5_arena_a, methods, (cast: (LmxEntry) t5_body_a), 1U)
-    if: method = 0
-        t5_diag: 16U
-        return: 0
-    ---
-    info_a: lmx_callable_new_owned(t5_arena_a)
-    if: info_a = 0
-        return: 0
-    ---
-    info_a\method: method
-    lmx_arena_ref_store(graph, 0U, (cast: (@: void) info_a))
+    # k.4: no descriptor, no shared method record -- the copied graph's `native` word is
+    # set directly.
+    graph\native: (cast: (LmxEntry) t5_body_a)
     child_mail: t5_mail_a
     child_t: (cast: (@: LmxThread) child)
     child_sched: (cast: (@: LmxSchedule) lmx_arena_take(t5_arena_a, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
@@ -287,7 +263,7 @@ fn: main () int
     ---
     live_graph: message\graph
     source: lmx_node_new_owned(root_arena)
-    if: source = 0 || lmx_arena_refs_open_owned(root_arena, source, 5U) != 0 || lmx_thread_children_field_new(root_arena, source, 4U) = 0
+    if: source = 0 || lmx_arena_refs_open_owned(root_arena, source, 4U) != 0 || lmx_thread_children_field_new(root_arena, source, 3U) = 0
         c.printf("PROBE-STEPPED the template was not built\n")
         c.fflush(0)
         return: 2

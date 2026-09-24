@@ -92,25 +92,11 @@ return: c.LMX_IMPLEMENTS_YES
 # Everything the walk cannot inspect -- an address of no known domain, a signature that is not
 # there, a path deeper than the working bound -- is UNKNOWN, and UNKNOWN is never YES: "Unavailable
 # information is not invented and is not certified by success" (2.5.1).  A KNOWN mismatch is NO.
-fn: lmx_implements_signature (@: LmxMethod a; @: LmxMethod b; @: LmxMethod c) int
-    if: a = 0 || b = 0 || c = 0
-        return: c.LMX_IMPLEMENTS_UNKNOWN
-    if: a\sig = 0U || b\sig = 0U || c\sig = 0U
-        return: c.LMX_IMPLEMENTS_UNKNOWN
-    ---
-    if: a\sig != b\sig || a\sig != c\sig
-        return: c.LMX_IMPLEMENTS_NO
-    ---
-return: c.LMX_IMPLEMENTS_YES
-
 fn: lmx_implements_walk (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx consumer; int: depth) int
     size_t: index
     @: void a
     @: void b
     @: void c
-    @: LmxCallable ca
-    @: LmxCallable cb
-    @: LmxCallable cc
     int: kindA
     int: kindB
     int: kindC
@@ -148,34 +134,17 @@ fn: lmx_implements_walk (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx con
             if: kindA != kindC || kindB != kindC
                 return: c.LMX_IMPLEMENTS_NO
             ---
-            if: kindC = c.LMX_KIND_METHOD
-                answer: lmx_implements_signature((cast: (@: LmxMethod) a), (cast: (@: LmxMethod) b), (cast: (@: LmxMethod) c))
+            # k.4: no separate METHOD/CALLABLE domain any more -- a callable's signature
+            # (args/return) is ordinary lexical Structure fields, handled by the same
+            # recursion every other Structure-typed field already gets.
+            if: kindC = c.LMX_KIND_STRUCT
+                answer: lmx_implements_walk(arena, (cast: (@: Lmx) a), (cast: (@: Lmx) b), (cast: (@: Lmx) c), depth + 1)
                 if: answer != c.LMX_IMPLEMENTS_YES
                     return: answer
                 ---
             else:
-                if: kindC = c.LMX_DOMAIN_KIND_CALLABLE
-                    ca: (cast: (@: LmxCallable) a)
-                    cb: (cast: (@: LmxCallable) b)
-                    cc: (cast: (@: LmxCallable) c)
-                    if: ca = 0 || cb = 0 || cc = 0
-                        return: c.LMX_IMPLEMENTS_UNKNOWN
-                    ---
-                    answer: lmx_implements_signature(ca\method, cb\method, cc\method)
-                    if: answer != c.LMX_IMPLEMENTS_YES
-                        return: answer
-                    ---
-                else:
-                    if: kindC = c.LMX_KIND_STRUCT
-                        answer: lmx_implements_walk(arena, (cast: (@: Lmx) a), (cast: (@: Lmx) b), (cast: (@: Lmx) c), depth + 1)
-                        if: answer != c.LMX_IMPLEMENTS_YES
-                            return: answer
-                        ---
-                    else:
-                        if: lmx_domain_type(arena, a) != lmx_domain_type(arena, c) || lmx_domain_type(arena, b) != lmx_domain_type(arena, c)
-                            return: c.LMX_IMPLEMENTS_NO
-                        ---
-                    ---
+                if: lmx_domain_type(arena, a) != lmx_domain_type(arena, c) || lmx_domain_type(arena, b) != lmx_domain_type(arena, c)
+                    return: c.LMX_IMPLEMENTS_NO
                 ---
             ---
         ---

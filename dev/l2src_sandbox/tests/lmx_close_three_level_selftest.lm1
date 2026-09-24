@@ -7,7 +7,6 @@ predef: "l2src/lmx_post.lm1"
 predef: "l2src/lmx_thread.lm1"
 predef: "l2src/lmx_schedule.lm1"
 predef: "l2src/lmx_manager.lm1"
-predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_gc.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_arena_blocks.lm1"
@@ -89,12 +88,13 @@ fn: t3_body_a (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: vo
         return: 0
     ---
     graph_a: message\graph
+    # k.4: no descriptor slot -- spare, ordinary children Array.
     source_b: lmx_node_new_owned(t3_arena_a)
-    if: source_b = 0 || lmx_arena_refs_open_owned(t3_arena_a, source_b, 3U) != 0 || lmx_thread_children_field_new(t3_arena_a, source_b, 2U) = 0
+    if: source_b = 0 || lmx_arena_refs_open_owned(t3_arena_a, source_b, 2U) != 0 || lmx_thread_children_field_new(t3_arena_a, source_b, 1U) = 0
         t3_diag: 3U
         return: 0
     ---
-    child_b: lmx_child_reserve(t, t3_arena_a, t3_arena_b, lmx_arena_ref_cell(graph_a, 1U), source_b)
+    child_b: lmx_child_reserve(t, t3_arena_a, t3_arena_b, lmx_arena_ref_cell(graph_a, 0U), source_b)
     if: child_b = 0
         t3_diag: 4U
         return: 0
@@ -141,9 +141,6 @@ fn: t3_root_entry (@: Lmx node) int
     @: LmxThread child_t
     @: LmxPost child_mail
     @: LmxSchedule child_sched
-    @: LmxMethod method
-    @: LmxCallable info
-    @: LmxPool methods
     @: Lmx graph
     if: t3_phase != 0U
         return: 0
@@ -162,23 +159,9 @@ fn: t3_root_entry (@: Lmx node) int
         t3_diag: 12U
         return: 0
     ---
-    methods: lmx_pool_make(t3_arena_a, 2U * c.sizeof(c.LmxMethod), c.sizeof(c.LmxMethod),
-                           c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD)
-    if: methods = 0
-        t3_diag: 13U
-        return: 0
-    ---
-    method: lmx_method_intern(t3_arena_a, methods, (cast: (LmxEntry) t3_body_a), 1U)
-    if: method = 0
-        t3_diag: 14U
-        return: 0
-    ---
-    info: lmx_callable_new_owned(t3_arena_a)
-    if: info = 0
-        return: 0
-    ---
-    info\method: method
-    lmx_arena_ref_store(graph, 0U, (cast: (@: void) info))
+    # k.4: no descriptor, no shared method record -- the copied graph's `native` word is
+    # set directly; slot 0 stays the B-reservation cell source_a already reserved.
+    graph\native: (cast: (LmxEntry) t3_body_a)
     child_mail: t3_mail_a
     child_t: (cast: (@: LmxThread) child)
     child_sched: (cast: (@: LmxSchedule) lmx_arena_take(t3_arena_a, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
@@ -285,7 +268,7 @@ fn: main () int
     t3_check(counts, root_arena != 0 && r0 != 0 && message != 0 && service != 0 && root_mail_p != 0, "the three-level R0 is missing pieces")
     live_graph: message\graph
     source: lmx_node_new_owned(root_arena)
-    t3_check(counts, source != 0 && lmx_arena_refs_open_owned(root_arena, source, 5U) = 0 && lmx_thread_children_field_new(root_arena, source, 4U) != 0, "the template was not built")
+    t3_check(counts, source != 0 && lmx_arena_refs_open_owned(root_arena, source, 4U) = 0 && lmx_thread_children_field_new(root_arena, source, 3U) != 0, "the template was not built")
     lmx_arena_ref_store(live_graph, 3U, (cast: (@: void) source))
     t3_source_a: source
     # Build and publish A without scheduling it in the same operation. The following cycle is

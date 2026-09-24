@@ -2,10 +2,8 @@ predef: "l2src/lmx_interp.h.lm1"
 predef: "l2src/lmx_walk.lm1"
 predef: "l2src/lmx_call.lm1"
 
-# L3 graph entry: recognises a callable, then one walk activation.
-# Never METHOD.addr. Body nodes are walk roles (physical refs), not L3_NODE tags.
-# Prepare names the descriptor's home (lmx_plan_home), not always context.arena:
-# a store-resident LmxCallable is INVALID if the plan is built in the Message arena.
+# L3 graph entry: recognises a Structure, then one walk activation.  k.4: no plan, no
+# descriptor home -- lmx_walk_enter needs nothing beyond the Structure itself.
 
 fn: lmx_interp_callable (@: LmxArena arena; @: Lmx node) int
 return: lmx_call_ready(arena, node)
@@ -29,9 +27,6 @@ return: lmx_interp_apply_value(context, node, args, nargs, 0)
 # The callable's returned value goes to `out` as lmx_walk_run reports it; a refusal before the
 # walk leaves `out` empty, which is the same answer lmx_walk_run gives when it refuses.
 fn: lmx_interp_apply_value (@: LmxWalkContext context; @: Lmx node; @@: void args; size_t: nargs; @: LmxWalkValue out) int
-    int: st
-    @: LmxCallable info 0
-    @: LmxArena home 0
     if: out != 0
         out\ref: 0
         out\number: 0
@@ -41,17 +36,6 @@ fn: lmx_interp_apply_value (@: LmxWalkContext context; @: Lmx node; @@: void arg
         return: c.LMX_INTERP_INVALID
     if: lmx_interp_callable(context\arena, node) != c.LMX_CALL_OK
         return: c.LMX_INTERP_INVALID
-    info: lmx_call_callable(context\arena, node)
-    if: info = 0
-        return: c.LMX_INTERP_INVALID
-    # Walk builds the plan in the descriptor's home and publishes through context.arena.
-    # context.arena is the occurrence; the LmxCallable may live in the bound store.
-    home: lmx_plan_home(context\arena, (cast: (@: void) info))
-    if: home = 0
-        return: c.LMX_INTERP_INVALID
-    st: lmx_walk_prepare(context, home, context\plan_roles, node)
-    if: st != c.LMX_WALK_OK
-        return: lmx_interp_map(st)
 return: lmx_interp_map(lmx_walk_run(context, node, args, nargs, out))
 
 fn: lmx_interp_run (@: LmxWalkContext context; @: Lmx node) int

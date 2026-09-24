@@ -43,9 +43,6 @@ fn: main () int
     @: LmxThread child
     @: LmxSchedule donor_slot
     @: LmxSchedule child_slot
-    @: LmxPool methods
-    @: LmxMethod method
-    @: LmxCallable info
     int: failures
     if: counts = 0
         return: 2
@@ -57,17 +54,12 @@ fn: main () int
     dr_check(counts, lmx_arena_open(@ donor_arena) = 0 && lmx_arena_open(@ child_arena) = 0, "arenas open")
     donor_graph: lmx_node_new_owned(@ donor_arena)
     donor_children: lmx_list_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, @ donor_arena)
+    # k.4: no descriptor, no shared method record -- the graph's `native` word is set
+    # directly, and it needs no slot at all.
     child_graph: lmx_node_new_owned(@ child_arena)
-    methods: lmx_pool_make(@ child_arena, 2U * c.sizeof(c.LmxMethod), c.sizeof(c.LmxMethod), c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD)
-    method: lmx_method_intern(@ child_arena, methods, (cast: (LmxEntry) dr_body), 1U)
-    dr_check(counts, donor_graph != 0 && donor_children != 0 && child_graph != 0 && method != 0, "graph values")
+    dr_check(counts, donor_graph != 0 && donor_children != 0 && child_graph != 0, "graph values")
     dr_check(counts, lmx_arena_refs_open_owned(@ donor_arena, donor_graph, 1U) = 0 && lmx_arena_ref_store(donor_graph, 0U, (cast: (@: void) donor_children)) = 0, "donor graph")
-    info: lmx_callable_new_owned(@ child_arena)
-    dr_check(counts, info != 0, "callable descriptor")
-    if: info != 0
-        info\method: method
-    ---
-    dr_check(counts, lmx_arena_refs_open_owned(@ child_arena, child_graph, 1U) = 0 && lmx_arena_ref_store(child_graph, 0U, (cast: (@: void) info)) = 0, "child callable")
+    child_graph\native: (cast: (LmxEntry) dr_body)
     donor_mail: (cast: (@: LmxPost) lmx_arena_take(@ donor_arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
     donor: (cast: (@: LmxThread) lmx_arena_take(@ donor_arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
     donor_message: (cast: (@: LmxMsg) donor)

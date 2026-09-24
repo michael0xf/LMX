@@ -54,18 +54,6 @@ prototype:
     # that drops them drops the interval with them.
     fn: lmx_pool_take_n (@: LmxArena arena; @: LmxPool pool; size_t: count) @: void
     fn: lmx_pool_count (@: LmxPool pool) size_t
-    # An immutable method record (model 2): `addr` is the generated C entry and `sig` fixes the
-    # typed input list.  Neither is interpreted here -- this unit stores them and never calls
-    # `addr`; the call guard (lmx_call) is what asks whether a graph names one.  The encoding of
-    # `sig` is not settled (OPEN_POINTS.txt), which is why a caller passes it as a number.
-    #
-    # DECLARED LATE, and that is worth saying: this act was defined in lmx_pool.lm1 from the
-    # start but named in no header, so only a caller that pulled the SOURCE could use it --
-    # which is exactly what every selftest did.  It is the act that gives a Message its BODY
-    # (interned method -> the Message's graph slot 0 -> lmx_call0), so an application built on
-    # headers could not give a thread a body at all.  Found 20260919 while reviewing the mixa
-    # assembly: four threads with four arenas, four schedules and NO bodies anywhere.
-    fn: lmx_method_intern (@: LmxArena arena; @: LmxPool pool; LmxEntry: addr; unsigned: sig) @: LmxMethod
     # An Array descriptor: logical length and a pointer to element storage --
     # no node, no name, no tag. Its `len` is an element count, unlike the `len` in the Lmx header;
     # the backing has exactly `len` cells. Dynamic membership is an L1 list (KIND_LIST), not Array.

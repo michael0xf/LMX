@@ -1089,7 +1089,10 @@ fn: lmx_walk_body (@: LmxWalkFrame f; @: Lmx body; size_t: first) int
                     # G3: a child whose structural parent is the body is a DECLARATION
                     # (cell already skipped above; Structure / callable occurrence) --
                     # never activated by walk. Parent test lives in lmx_walk_order.
-                    if: inner\parent != body
+                    # D-45 (F3): parent = 0 is also a declaration (eternal / independent
+                    # root, host settings ref) -- skip like parent = body; otherwise
+                    # UNSUPPORTED (5) aborts every Opus 2b program that carries one.
+                    if: inner\parent != body && inner\parent != 0
                         if: lmx_walk_is_callable(f\arena, inner) != 0
                             # D-03: bare callable statement (occurrence held elsewhere)
                             status: lmx_walk_checkpoint(f)

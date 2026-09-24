@@ -1,3 +1,8 @@
+# Q29 (author, 2026-09-25: «одна ячейка там где объявление»; FABLE-OPUS-CODE-DATA-SPLIT-20260925-189
+# c3c) supersedes what follows: `arg: 1`, poke9 and `arg: 2` write ONE cell -- a repeated bare
+# assignment is not an occurrence, `\[N]` numbers declarations.  So test\[0]arg and test\arg read
+# that cell, 2, and 5 after `test\arg: 5`; there is no test\[1]arg (unit_occ_arg_second_refused.lm2).
+#
 # FABLE-SONNET-LAST-OCCURRENCE-20260924-164: the author's rule (Q22.2, LMX_blog/2026-09-24.md,
 # book Sfields, CORE S3.1) -- an unqualified name is its LAST occurrence, including repeated
 # occurrences of the same name in one method body. `test\[N]arg` still counts in lexical (source)
@@ -41,25 +46,18 @@ end: test
 
 fn: check () int
     int: first
-    int: second
     int: last
     test(0)
     first: test\[0]arg
-    second: test\[1]arg
     last: test\arg
-    if: first != 9
+    if: first != 2
         return: 81
-    if: second != 2
-        return: 82
     if: last != 2
         return: 83
     test\arg: 5
-    second: test\[1]arg
     first: test\[0]arg
-    if: second != 5
+    if: first != 5
         return: 84
-    if: first != 9
-        return: 85
     return: 7
 end: check
 

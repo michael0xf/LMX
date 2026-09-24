@@ -1,3 +1,9 @@
+# -189 c3b-1 (FABLE-OPUS-CODE-DATA-SPLIT-20260925-189; L2 §10: «`@x` для поля данных даёт адрес его
+# ячейки в экземпляре», and no working copies): `n` IS its cell, so the write through the taken
+# address is what the bare `return: n` reads -- 1, not 0.  The reasoning below (L2 18.2's «leaves
+# bare working x at 5») is the old model's, superseded; the author removed the same stale-read rule
+# from L3 §12 (061d753).
+#
 # FABLE-SONNET-OCC-ROOT-20260924-146 commit 2 / D-25: orphan, measured and
 # completed -- the original never called go(), so this was untested either
 # way. @: n (address of a plain own-declared local, not a formal) into a
@@ -31,7 +37,7 @@ end: go
 
 int: got
 got: go()
-if: got != 0
+if: got != 1
     sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
     return
 sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")

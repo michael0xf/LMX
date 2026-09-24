@@ -59,12 +59,12 @@ fn: main () int
     status: lmx_list_append_owned(thread, p0, @ arena)
     kind_check(counts, status != c.LMX_LIST_OK, "lmx_list_append_owned refuses a Thread record")
     kind_check(counts, lmx_list_append_owned(list, thread, @ arena) = c.LMX_LIST_OK && lmx_list_len(list) = 1U, "the real List accepts the Thread reference")
-    # Graph copy reaching a Thread record answers the copier's existing precise status for a
-    # value that is not a graph value (INVALID), not the List branch's allocation refusal.
+    # D-59: MSG_RECORD (Thread prefix) is a shared copier terminal — copy keeps the same
+    # address, no descent, no refusal. Not the old List-branch NOMEM, and not INVALID.
     holder: lmx_node_new_owned(@ arena)
     kind_check(counts, holder != 0 && lmx_arena_refs_open_owned(@ arena, holder, 1U) = 0 && lmx_arena_ref_store(holder, 0U, thread) = 0, "a Structure holds the Thread record in a slot")
     status: lmx_graph_copy_owned(holder, 0, @ arena, @ arena, @ copy)
-    kind_check(counts, status = c.LMX_GRAPH_COPY_INVALID && copy = 0, "graph copy of a Thread record reference is INVALID, not NOMEM")
+    kind_check(counts, status = c.LMX_GRAPH_COPY_OK && copy != 0 && lmx_arena_ref_value(copy, 0U) = thread, "graph copy of a Thread record keeps SAME address (D-59 terminal)")
     failures: counts[1]
     c.printf("lmx_kind_collision_selftest checks=%d failures=%d\n", counts[0], failures)
     free(counts)

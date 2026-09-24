@@ -1,0 +1,207 @@
+predef: "l2src/lmx_fresh.h.lm1"
+predef: "l2src/lmx_value_owned.h.lm1"
+predef: "l2src/lmx_array_owned.h.lm1"
+predef: "l2src/lmx_arena_refs.h.lm1"
+predef: "l2src/lmx_chars.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.h.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<string.h>"
+
+prototype:
+    fn: lmx_fresh_child (@: LmxArena arena; @: Lmx proto; @: void child; @: Lmx fresh_parent; @@: void out) int
+    fn: lmx_fresh_struct (@: LmxArena arena; @: Lmx proto; @: Lmx fresh_parent) @: Lmx
+end: prototype
+
+# One child of a prototype: write the destination reference into \out.
+# Returns 0 OK, 1 refusal/NOMEM (caller maps to NULL fresh).
+fn: lmx_fresh_child (@: LmxArena arena; @: Lmx proto; @: void child; @: Lmx fresh_parent; @@: void out) int
+    int: kind 0
+    int: vtype 0
+    @: void cell 0
+    @: Lmx nested 0
+    @: LmxArrayDesc src_arr 0
+    @: LmxArrayDesc dst_arr 0
+    size_t: n 0U
+    size_t: stride 0U
+    ulong: uz 0U
+    \out: 0
+    if: arena = 0 || out = 0
+        return: 1
+    ---
+    if: child = 0
+        return: 0
+    ---
+    kind: lmx_range_classify(arena, child)
+    if: kind = c.LMX_KIND_NONE
+        return: 1
+    ---
+    vtype: lmx_range_type_of(arena, child)
+    # Terminals kept by address (METHOD / callable descriptor / OP / ROLE / MSG_RECORD).
+    if: kind = c.LMX_KIND_METHOD || kind = c.LMX_DOMAIN_KIND_CALLABLE || kind = c.LMX_DOMAIN_KIND_OP || kind = c.LMX_DOMAIN_KIND_ROLE || kind = c.LMX_DOMAIN_KIND_MSG_RECORD
+        \out: child
+        return: 0
+    ---
+    if: kind = c.LMX_KIND_STRUCT
+        nested: (cast: (@: Lmx) child)
+        # Control-body / field-only Structure whose parent is the prototype: recurse.
+        if: nested\parent = proto
+            cell: (cast: (@: void) lmx_fresh_struct(arena, nested, fresh_parent))
+            if: cell = 0
+                return: 1
+            ---
+            \out: cell
+            return: 0
+        ---
+        # Shared Structure / callable occurrence terminal: keep by address.
+        \out: child
+        return: 0
+    ---
+    if: kind = c.LMX_KIND_PRIMITIVE
+        if: vtype = c.LMX_TYPE_CHAR
+            if: lmx_chars_init(arena) != 0 && lmx_arena_find(arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR) = 0
+                return: 1
+            ---
+            cell: lmx_char_cell(arena, 0)
+            if: cell = 0
+                return: 1
+            ---
+            \out: cell
+            return: 0
+        ---
+        if: vtype = c.LMX_TYPE_INT
+            cell: lmx_int_new_owned(arena)
+            if: cell = 0 || lmx_int_store_known(cell, 0) != 0
+                return: 1
+            ---
+            \out: cell
+            return: 0
+        ---
+        if: vtype = c.LMX_TYPE_SIZE_T
+            cell: lmx_size_new_owned(arena)
+            if: cell = 0 || lmx_size_store_known(cell, 0U) != 0
+                return: 1
+            ---
+            \out: cell
+            return: 0
+        ---
+        if: vtype = c.LMX_TYPE_UNSIGNED
+            cell: lmx_unsigned_new_owned(arena)
+            if: cell = 0 || lmx_unsigned_store_known(cell, 0U) != 0
+                return: 1
+            ---
+            \out: cell
+            return: 0
+        ---
+        if: vtype = c.LMX_TYPE_ULONG
+            cell: lmx_ulong_new_owned(arena)
+            if: cell = 0 || lmx_ulong_store_known(cell, 0U) != 0
+                return: 1
+            ---
+            \out: cell
+            return: 0
+        ---
+        if: vtype = c.LMX_TYPE_UNSIGNED_CHAR
+            cell: lmx_uchar_new_owned(arena)
+            if: cell = 0 || lmx_uchar_store_known(cell, 0U) != 0
+                return: 1
+            ---
+            \out: cell
+            return: 0
+        ---
+        if: vtype >= c.LMX_TYPE_POINTER_BASE
+            cell: lmx_pointer_new_owned(vtype, arena)
+            if: cell = 0 || lmx_pointer_store_known(cell, 0) != 0
+                return: 1
+            ---
+            \out: cell
+            return: 0
+        ---
+        return: 1
+    ---
+    if: kind = c.LMX_KIND_ARRAY
+        src_arr: (cast: (@: LmxArrayDesc) child)
+        n: src_arr\len
+        dst_arr: lmx_array_new_owned(vtype, n, arena)
+        if: dst_arr = 0
+            return: 1
+        ---
+        if: n != 0U && dst_arr\data != 0
+            # Zero backing. Element stride from arena type of first element when present,
+            # else from descriptor type via a conservative void* width for pointer arrays.
+            if: vtype = c.LMX_TYPE_ARRAY_OF_INT
+                stride: c.sizeof(c.int)
+            else:
+                if: vtype = c.LMX_TYPE_ARRAY_OF_SIZE_T
+                    stride: c.sizeof(c.size_t)
+                else:
+                    if: vtype = c.LMX_TYPE_ARRAY_OF_ULONG
+                        stride: c.sizeof(c.size_t)
+                    else:
+                        if: vtype = c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR
+                            stride: c.sizeof(c.char)
+                        else:
+                            stride: c.sizeof(@: void)
+                        ---
+                    ---
+                ---
+            ---
+            memset(dst_arr\data, 0, n * stride)
+        ---
+        \out: (cast: (@: void) dst_arr)
+        return: 0
+    ---
+return: 1
+
+fn: lmx_fresh_struct (@: LmxArena arena; @: Lmx proto; @: Lmx fresh_parent) @: Lmx
+    @: Lmx out 0
+    @: void child 0
+    @: void made 0
+    size_t: i 0U
+    size_t: n 0U
+    int: st 0
+    if: arena = 0 || proto = 0
+        return: 0
+    ---
+    if: lmx_range_classify(arena, (cast: (@: void) proto)) != c.LMX_KIND_STRUCT
+        return: 0
+    ---
+    out: lmx_node_new_owned(arena)
+    if: out = 0
+        return: 0
+    ---
+    out\parent: fresh_parent
+    n: (cast: (size_t) proto\len)
+    if: n != 0U
+        if: lmx_arena_refs_open_owned(arena, out, n) != 0
+            return: 0
+        ---
+    ---
+    while: i < n
+        child: lmx_arena_ref_value(proto, i)
+        if: i = 0U
+            # Child 0 kept by address until k.4 (shared callable / descriptor).
+            if: lmx_arena_ref_store(out, i, child) != 0
+                return: 0
+            ---
+        else:
+            st: lmx_fresh_child(arena, proto, child, out, @ made)
+            if: st != 0
+                return: 0
+            ---
+            if: lmx_arena_ref_store(out, i, made) != 0
+                return: 0
+            ---
+        ---
+        i: i + 1U
+    ---
+return: out
+
+fn: lmx_fresh (@: LmxArena arena; @: Lmx code) @: Lmx
+    if: arena = 0 || code = 0
+        return: 0
+    ---
+    if: lmx_range_classify(arena, (cast: (@: void) code)) != c.LMX_KIND_STRUCT
+        return: 0
+    ---
+return: lmx_fresh_struct(arena, code, code\parent)

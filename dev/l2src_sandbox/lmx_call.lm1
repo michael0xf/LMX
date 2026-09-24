@@ -1,6 +1,9 @@
 predef: "l2src/lmx_call.h.lm1"
 predef: "l2src/lmx_arena_refs.h.lm1"
 predef: "l2src/lmx_implements.h.lm1"
+predef: "l2src/lmx_value_owned.h.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<string.h>"
 
 # lmx_call.lm1 - the call.  Every check here is the domain question, and the call itself is one
 # cast: the METHOD's `addr` is a typed entry, and the shape this unit names is the
@@ -8,6 +11,15 @@ predef: "l2src/lmx_implements.h.lm1"
 # selects the descriptor-backed `(node,self)` ABI.  A generated body WITH source arguments is
 # called by generated code, which knows the signature it emitted; this unit is what a runtime
 # calls when it holds a Structure and must find out whether it can call it at all.
+#
+# Descriptor dispatch (FABLE-156): METHOD.addr != 0 -> native; addr == 0 -> optional walk
+# hook (lmx_call_install_walk). The walk unit installs the hook so call.o does not link
+# walk/plan/scratch (avoids duplicate symbols with selftests that embed those units).
+
+@: void lmx_call_walk_fn 0
+
+fn: lmx_call_install_walk (LmxCallWalkFn: fn) void
+    lmx_call_walk_fn: (cast: (@: void) fn)
 
 fn: lmx_call_ready (@: LmxArena arena; @: Lmx callable) int
     @: void target
@@ -15,15 +27,12 @@ fn: lmx_call_ready (@: LmxArena arena; @: Lmx callable) int
         return: c.LMX_CALL_NOT_CALLABLE
     if: lmx_domain_kind(arena, (cast: (@: void) callable)) != c.LMX_KIND_STRUCT
         return: c.LMX_CALL_NOT_CALLABLE
-    # A callable with no slot has nothing to hold its method; a structure whose len is 0 is a
-    # value, not an occurrence of a callable.
     if: callable\len < 1
         return: c.LMX_CALL_NOT_CALLABLE
     ---
     target: lmx_arena_ref_value(callable, 0U)
     if: target = 0
         return: c.LMX_CALL_NOT_CALLABLE
-    # Descriptor-only: child[0] is LmxCallable. A bare METHOD is not a callable occurrence.
     if: lmx_domain_kind(arena, target) != c.LMX_DOMAIN_KIND_CALLABLE
         return: c.LMX_CALL_NOT_CALLABLE
     ---
@@ -42,12 +51,6 @@ fn: lmx_callable_offset (@: LmxArena arena; @: Lmx occurrence) size_t
     if: target = 0
         return: (cast: (size_t) -1)
     ---
-    # child[0] present: classify in the arena of the occurrence's own fields.
-    # A positive non-CALLABLE in that arena is not a callable occurrence --
-    # refuse with the same sentinel so missing and not-callable never look like
-    # offset 0. LMX_KIND_NONE means this arena does not index the pointer
-    # (shared descriptor after plain copy / offset-0 merge first-operand keep);
-    # cast as for a foreign CALLABLE -- the occurrence arena cannot say otherwise.
     kind: lmx_domain_kind(arena, target)
     if: kind != c.LMX_KIND_NONE && kind != c.LMX_DOMAIN_KIND_CALLABLE
         return: (cast: (size_t) -1)
@@ -84,6 +87,7 @@ fn: lmx_call0 (@: LmxArena arena; @: Lmx callable) int
     @: void target
     @: LmxCallable info
     LmxCallEntrySelf: self_entry
+    LmxCallWalkFn: walk
     LmxEntry: addr
     if: lmx_call_ready(arena, callable) != c.LMX_CALL_OK
         return: c.LMX_CALL_NOT_CALLABLE
@@ -94,7 +98,18 @@ fn: lmx_call0 (@: LmxArena arena; @: Lmx callable) int
         addr: info\method\addr
     ---
     if: addr = 0
-        return: c.LMX_CALL_NOT_CALLABLE
+        # Walk hook: activation value = last evaluated expression. Mutant that
+        # drops the hook / returns 0 without walking goes RED in call_selftest.
+        if: lmx_call_walk_fn = 0
+            return: c.LMX_CALL_NOT_CALLABLE
+        ---
+        # Local fnptr (not a void* cast in the call expr) so l1trans emits commas.
+        walk: (cast: (LmxCallWalkFn) lmx_call_walk_fn)
+        return: walk(arena, callable)
+    ---
+    if: addr = 0
+        c.fprintf(l1_stderr(), "lmx: invariant: descriptor without a native address\n")
+        c.abort()
     ---
     self_entry: (cast: (LmxCallEntrySelf) addr)
 return: self_entry(lmx_call_node(callable), callable)

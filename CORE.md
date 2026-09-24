@@ -198,20 +198,26 @@ storage classes, or persistent properties of a Structure: in `f(a b)` the head
 the argument and return parts, and the body operators with literals at the
 leaves. Data is an ordinary Structure holding the declared fields of the body in
 lexical order, nested bodies as nested field-only Structures (`M\for\y` keeps
-its path), and formals as fields; a body declaration such as `int: i 5` names a
-slot of the data prototype and, as an operator, writes into the passed data.
+its path); a body declaration such as `int: i 5` names a slot of the data
+prototype and, as an operator, writes into the passed data. Formal arguments,
+locals, and the returned value belong to the ordinary machine activation; an
+argument becomes a data field only by the assignment rule of L3 §12 or by
+binding through merge.
 An activation creates a fresh instance of the data prototype **as a field of the
-lexical parent's data, in the slot answering this callable**, writes the actual
-arguments into its slots, and runs the code over it; execution writes only into
+lexical parent's data, in the slot answering this callable**, passes the actual
+arguments to the machine activation, and runs the code over it; execution writes
+only into
 the passed data, never into code. Hence `node` is the parent's data and
 `node\x` follows the parent chain of the data graph only; there is no third
-context graph. The slot holds the instance of the latest activation, so `M\x`
-from outside reads it; a recursive callable has one instance per activation.
-Formals, temporaries, and the activation result live in an ordinary machine
-frame. The native entry `(node, self)` therefore means `(data.parent, data)`.
-Merging callables follows the accepted rule: argument and return parts stay
-their own, data fields merge pairwise into the model's slots, and the result's
-code is the code of the last operand with a body. The representation described
+context graph. The slot holds the latest created instance, so `M\x` from
+outside reads it; results are not read through the slot; a recursive callable
+has one instance per activation. Arguments, locals, and the activation result
+live in the ordinary machine activation: `fn` returns a value, `fm` a reference
+to its result Structure. The native entry `(node, self)` therefore means
+`(data.parent, data)`.
+Merging callables follows the accepted rule: the signature is derived (a bound
+formal leaves it), bound fields merge pairwise into the model's data slots, and
+the machine body is the code of the last operand with a body. The representation described
 in this section and in §3.1 (descriptor, body, and own fields in one Structure;
 activation-local cells, dirty flags, checkpoints) is the transitional
 implementation of this pair; see §9.

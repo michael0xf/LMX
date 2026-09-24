@@ -43,6 +43,8 @@ fnptr: LmxCallEntry (@: Lmx node) int
 # method; `self` is the selected physical occurrence and is the home for own-field
 # load/dirty publication.  Declared, dynamic and explicit arguments follow these two references.
 fnptr: LmxCallEntrySelf (@: Lmx node; @: Lmx self) int
+# Optional walker for METHOD.addr == 0 (installed by lmx_walk / program bind).
+fnptr: LmxCallWalkFn (@: LmxArena arena; @: Lmx callable) int
 
 define: LMX_CALL_OK 0
 define: LMX_CALL_INVALID 1
@@ -66,8 +68,10 @@ prototype:
     # For the selected method occurrence M this is M.parent; nested bodies inside M have their
     # own structural parent chain and do not change the activation's reserved `node`.
     fn: lmx_call_node (@: Lmx callable) @: Lmx
-    # The call, for the zero-source-argument shape.  child[0] must be an LmxCallable descriptor;
-    # the call uses the `(node,self)` ABI.
+    # The call, for the zero-source-argument shape.  child[0] must be an LmxCallable descriptor.
+    # METHOD.addr != 0: `(node,self)` native entry. METHOD.addr == 0: walk the occurrence
+    # body (lmx_walk_run_occurrence); the result is the last evaluated expression.
+    fn: lmx_call_install_walk (LmxCallWalkFn: fn) void
     fn: lmx_call0 (@: LmxArena arena; @: Lmx callable) int
     # The LmxCallable in child[0], or null when the node is not a callable occurrence.
     fn: lmx_call_callable (@: LmxArena arena; @: Lmx node) @: LmxCallable

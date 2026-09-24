@@ -1,4 +1,5 @@
 predef: "l2src/lmx_call.lm1"
+predef: "l2src/lmx_walk.lm1"
 predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_arena_blocks.lm1"
@@ -72,6 +73,12 @@ fn: main () int
     @: Lmx empty 0
     @: Lmx plain 0
     @: Lmx zero_callable 0
+    @: Lmx walk_m 0
+    @: Lmx lit 0
+    @: Lmx roles 0
+    @: Lmx plan_roles 0
+    @: LmxMethod walk_method 0
+    @: LmxCallable walk_info 0
     @: Lmx bare_occ 0
     @: LmxMethod bare_method 0
     @: LmxMethod method 0
@@ -94,7 +101,7 @@ fn: main () int
     # The pool is a by-value local and opening one that already holds a chunk is refused, so its
     # fields are cleared first (lmx_pool.h.lm1's rule for every owner).
     memset((cast: (@: void) (@ methods)), 0, c.sizeof(c.LmxPool))
-    if: lmx_pool_open(@ arena, @ methods, c.sizeof(c.LmxMethod), 2U, c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD) != 0
+    if: lmx_pool_open(@ arena, @ methods, c.sizeof(c.LmxMethod), 4U, c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD) != 0
         fputs("lmx_call: the method pool did not open\n", l1_stdout())
         free(counts)
         return: 2
@@ -189,8 +196,31 @@ fn: main () int
     zero_info\method: zero_method
     lmx_arena_ref_store(zero_callable, 0U, (cast: (@: void) zero_info))
     call_check(counts, lmx_call_ready(arena_at, zero_callable) = c.LMX_CALL_OK, "a descriptor whose method has a zero addr was not recognized as callable")
-    call_check(counts, lmx_call0(arena_at, zero_callable) = c.LMX_CALL_NOT_CALLABLE, "a callable with no entry was called")
+    # Empty body, addr=0: walker has nothing to run -> still NOT_CALLABLE.
+    call_check(counts, lmx_call0(arena_at, zero_callable) = c.LMX_CALL_NOT_CALLABLE, "addr=0 with no body steps must stay NOT_CALLABLE")
     call_check(counts, call_taken = 1U, "a refused call reached an entry")
+
+    # Descriptor dispatch: addr=0 + body last expr 7 -> call0 returns 7.
+    # Mutant: walker value dropped -> 0 RED. Roles program-bound (address identity).
+    roles: lmx_walk_roles_open(arena_at)
+    plan_roles: lmx_plan_roles_open(arena_at)
+    call_check(counts, roles != 0 && plan_roles != 0, "walk/plan roles for descriptor dispatch")
+    lmx_walk_program_bind(roles, plan_roles)
+    walk_m: call_struct(@ arena, 2U)
+    walk_method: (cast: (@: LmxMethod) lmx_pool_take(@ arena, @ methods))
+    walk_info: lmx_callable_new_owned(@ arena)
+    call_check(counts, walk_m != 0 && walk_method != 0 && walk_info != 0, "walk dispatch fixtures")
+    walk_method\addr: 0
+    walk_method\sig: 0U
+    walk_info\method: walk_method
+    lmx_arena_ref_store(walk_m, 0U, (cast: (@: void) walk_info))
+    lit: lmx_walk_frame(arena_at, roles, walk_m, c.LMX_WALK_OP_LIT, 2U)
+    call_check(counts, lit != 0, "LIT frame")
+    call_check(counts, lmx_walk_store_int(arena_at, lit, 1U, 7) = c.LMX_WALK_OK, "LIT 7 store")
+    call_check(counts, lmx_arena_ref_store(walk_m, 1U, (cast: (@: void) lit)) = 0, "LIT 7 as body step")
+    answer: lmx_call0(arena_at, walk_m)
+    call_check(counts, answer = 7, "addr=0 call0 must return last expression 7 (mutant: walker value dropped)")
+    call_check(counts, call_taken = 1U, "walk dispatch must not call a native entry")
 
     failures: counts[1]
     c.printf("lmx_call checks=%d failures=%d\n", counts[0], failures)

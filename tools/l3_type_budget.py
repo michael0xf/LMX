@@ -45,12 +45,13 @@ MAX_NAME = 64          # l1_hdr_type_add's buffer: one more maximal name must st
 # suite -> header type names of its translation unit. Cliff is 128 names / 8192 bytes
 # (raised from 64/4096 in FABLE-134 so typed Post/Thread mail fnptrs need not be erased).
 # Compositional DynamicArrays (fixed <T>Array + capacity) with typed Post Accept/Take/Count/Close
-# and Thread MailAccept/Take/Count/Close kept; EXPECT=72 is the pad-method measurement.
+# and Thread MailAccept/Take/Count/Close kept; EXPECT=73 after LmxCallWalkFn (descriptor
+# dispatch hook in lmx_call.h.lm1, FABLE-GROKBOT-DESCRIPTOR-DISPATCH-20260924-156).
 EXPECT = {
-    'tests/l3_thread_bind_selftest.lm1': 72,
-    'tests/l3_n9_walk_selftest.lm1': 72,
-    'tests/l3_n10_walk_selftest.lm1': 72,
-    'tests/l3_mail_prim_selftest.lm1': 72,
+    'tests/l3_thread_bind_selftest.lm1': 73,
+    'tests/l3_n9_walk_selftest.lm1': 73,
+    'tests/l3_n10_walk_selftest.lm1': 73,
+    'tests/l3_mail_prim_selftest.lm1': 73,
 }
 
 PREDEF = re.compile(r'^predef:\s*(.*)$')

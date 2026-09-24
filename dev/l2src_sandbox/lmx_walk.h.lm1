@@ -313,6 +313,11 @@ prototype:
     # The roles of a program: a plain Structure whose child k is THE record of role k.
     # Opened once per program graph; every frame node refers to these records.
     fn: lmx_walk_roles_open (@: LmxArena arena) @: Lmx
+    # Bind the program's shared role tables for descriptor dispatch (call0). Bodies
+    # and published plans compare role records by address against these.
+    fn: lmx_walk_program_bind (@: Lmx roles; @: Lmx plan_roles) void
+    fn: lmx_walk_program_roles () @: Lmx
+    fn: lmx_walk_program_plan_roles () @: Lmx
     # Construction of body nodes, for a translator and for tests.  A node is a fresh
     # Structure of `arena` with `children` slots and immediate structural parent `parent`; a frame
     # node gets the shared record of role `code` in child[0].  The caller stores the node

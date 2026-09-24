@@ -170,12 +170,16 @@ end: LmxRootExit
 # its children list, the settings reference (the host's branch itself) and its fields.  0 is success.
 fnptr: LmxRootSettings (@: LmxArena arena; @: Lmx profile) @: Lmx
 fnptr: LmxRootProgram (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int
+# -182: host seam after R0 mail exists + mainArgs posted, before the manager round. 0 = skip.
+fnptr: LmxRootBeforeTurn (@: LmxRoot root; @: LmxMsg r0) int
 
 # THE LAUNCH'S OWN RECORD, on lmx_root_launch's frame for the whole launch and referenced from the
 # host's graph, where the host's entry finds it.  R0's arena lives here: it is R0's storage until
 # the host's close settles R0 (released on success, attached to the host's on failure).
 struct: LmxRootLaunch
     LmxRootProgram: program
+    # Nullable; 0 skips. Called after mainArgs is posted, before R0's manager round.
+    LmxRootBeforeTurn: before_turn
     LmxRootSettings: settings
     size_t: fields
     ulong: limit
@@ -278,6 +282,8 @@ prototype:
     # and `err` (FILE *), the host is closed -- with the report to `err` when R0 sent no exit and
     # its success is 0 -- and the exit code is returned.
     fn: lmx_root_launch (@: LmxRoot root; int: argc; @@: char argv; LmxRootProgram: program; size_t: fields; LmxRootSettings: settings; ulong: limit; @: void out; @: void err) int
+    # Same as launch with an explicit before_turn tap (0 = skip). Existing callers keep lmx_root_launch.
+    fn: lmx_root_launch_tapped (@: LmxRoot root; int: argc; @@: char argv; LmxRootProgram: program; size_t: fields; LmxRootSettings: settings; ulong: limit; LmxRootBeforeTurn: before_turn; @: void out; @: void err) int
     # The host's entry: the launch's code in the host's turns (first: make R0; then: take the inbox).
     fn: lmx_root_host_entry (@: Lmx node) int
     # The host's settings (the LmxRootSettings a program's main passes): the process's working

@@ -1,0 +1,25 @@
+# An own Structure field is a direct slot of its activation's data (FABLE-OPUS-CODE-DATA-SPLIT-20260925-189
+# commit c3b-3; q26: an own binding is the slot itself).  `nest` recurses, so every inner call runs
+# over a fresh instance of its prototype (c3a, lmx_fresh), whose `b` slot starts empty; `Box: b`
+# binds each activation's own slot.  After the inner calls the outer activation still reads its
+# own Box: nest(3) is 3 + 10 * nest(2) = 123.  A binding that lands in the method's occurrence
+# instead of the activation's data leaves the outer b holding an inner activation's Box.
+Box:
+    int: v 0
+end: Box
+
+fn: nest (int: n) int
+    int: r 0
+    Box: b
+    b\v: n
+    if: n > 0
+        r: nest(n - 1)
+    return: b\v + 10 * r
+end: nest
+
+fn: probe () int
+    return: nest(3) - 123
+end: probe
+
+sendMessage: exit(exit_code: probe(); stdout: ""; stderr: "")
+return

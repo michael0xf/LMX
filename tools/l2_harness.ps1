@@ -280,48 +280,6 @@ function Log-Text([string]$Label) {
     if (Test-Path -LiteralPath $log) { return ((Get-Content -LiteralPath $log -Raw)) }
     return ''
 }
-# THE EMITTER-ORDER ASSERTION OF THE STICKY RULE, read off the generated L1 and not off a run.
-# Any executed @x sets sticky unconditionally; the selector (active) is the publication target.
-# Never-bound activations must not publish: sticky without active == this occurrence is a no-op.
-# What IS checkable, for every own field N that carries sticky/active:
-#   1. no early/bound flags remain;
-#   2. `l2_qN_sticky: 1` is an unguarded assignment at the address site, and from there to
-#      `@ l2_p...` nothing resolves the cell;
-#   3. `l2_qN_from:` is followed by `l2_qN_active:` (or another occurrence's active) before a call.
-function Test-BindOrder([string]$L1) {
-    $lines = @($L1 -split "`r?`n" | ForEach-Object { $_.Trim() })
-    $owns = @([regex]::Matches($L1, '(?m)^\s*int: l2_q(\d+)_sticky 0\s*$') | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique)
-    if ($owns.Count -eq 0) { return 'no own field carries the sticky flag' }
-    foreach ($n in $owns) {
-        $q = 'l2_q' + $n
-        if ($L1 -match [regex]::Escape($q + '_early') -or ($L1 -match ($q + '_bound'))) { return ($q + ': early/bound flags must be gone') }
-        $sticks = 0
-        for ($i = 0; $i -lt $lines.Count; $i++) {
-            $ln = $lines[$i]
-            if ($ln -ceq ($q + '_sticky: 1')) {
-                $sticks++
-                if ($i -ge 1 -and ($lines[$i - 1] -match '_bound|_early')) { return ($q + ': sticky is still guarded by bound/early (line ' + ($i + 1) + ')') }
-                $used = $false
-                for ($k = $i + 1; $k -lt $lines.Count -and -not $used; $k++) {
-                    if ($lines[$k].StartsWith($q + '_from: ')) { return ($q + ': taking the address resolves the cell (line ' + ($k + 1) + ')') }
-                    if ($lines[$k] -match '@ l2_p\d+_\d+') { $used = $true }
-                }
-                if (-not $used) { return ($q + ': sticky with no use of the address after it (line ' + ($i + 1) + ')') }
-            }
-            if ($ln.StartsWith($q + '_from: ')) {
-                $closed = $false
-                for ($k = $i + 1; $k -lt $lines.Count -and $k -le $i + 20; $k++) {
-                    if ($lines[$k] -match 'l2_q\d+_active:') { $closed = $true; break }
-                    if ($lines[$k] -match 'l2_m\d+\(' -or $lines[$k] -ceq ($q + '_sticky: 1')) { break }
-                }
-                if (-not $closed) { return ($q + ': the cell is resolved outside a binding site (line ' + ($i + 1) + ')') }
-            }
-        }
-        if ($sticks -eq 0) { return ($q + ': carries sticky but never raises it') }
-    }
-    return ''
-}
-
 Write-Output ('l2_harness on ' + ((git -C $root rev-parse HEAD) -join '').Substring(0, 8) + '; translator ' + $Translator + '; gcc ' + $gcc)
 Write-Output ('l2_harness: evidence ' + $OutDir)
 
@@ -1126,7 +1084,7 @@ $fixtures = @(
     # and takes the field (OF); `Model\value: 7U` writes the named Structure itself (PUT, its node
     # fixed when the graph is built).  n, merged after the write, sees 7; m keeps its own 41.
     [pscustomobject]@{ Name = 'unit_root_model_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 15;
-        Absent = @(); Debt = @('\fn: lmx_walk_merge_model', 'c.LMX_WALK_OP_DEREF, 2U)') },
+        Absent = @('c.LMX_WALK_OP_DEREF'); Debt = @('\fn: lmx_walk_merge_model', 'c.LMX_WALK_OP_PUT_REF, 4U)') },
     # A WRITE THROUGH A REFERENCE (FABLE-OPUS-ROOT-PUTOF-MUL-20260925-183 commit 1): `m\value: 42U` is
     # PUT_OF (-177 c4), its holder DEREF(AT(m)) evaluated in R0's turn; read back through m and through
     # a method's formal (the same Structure, by reference), Model itself untouched: 7.
@@ -1185,9 +1143,8 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_arg_addr_pointer.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call with an input that is not a number';
         Args = @('0');
         Says = @('P local is null');
-        BindOrder = $true;
         Absent = @();
-        Debt = @('lmx_pointer_store_known(l2_q1_from[0], (cast: (@: void) l2_q', 'int: l2_q1_sticky 0') },
+        Debt = @() },
     # THE ADDRESS OF AN ETERNAL FIELD IS REFUSED WHERE IT IS TAKEN (FABLE-L2-R0-WRITE-GUARD-DESIGN-20260921-111, M0).
     # `@` yields a WRITABLE address and a raw write through it bypasses every cell helper, so until a
     # read-only address exists as a type the translator refuses it by name, with the test that already
@@ -1233,7 +1190,6 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_arg_addr_dyn_types.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Says = @('W 3', 'U1 6 6', 'U2 100 100', 'L1 6 6', 'L2 100 100', 'F1 6 6', 'F2 100 100', 'DP local is null', 'DP caller keeps its pointer', 'FC 3', 'TC 3 3 3');
-        BindOrder = $true;
         Absent = @();
         Debt = @('fn: l2_m4 (@: Lmx node; @: Lmx self; int: l2_p4_0) int',
                  'fn: l2_m5 (@: Lmx node; @: Lmx self; unsigned: l2_p5_0) int',
@@ -1623,8 +1579,8 @@ $fixtures = @(
         Debt = @('l2_entry_unit: graph') },
     [pscustomobject]@{ Name = 'unit_field_path_unit_colon.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
-        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
-        Debt = @('c.LMX_WALK_OP_PUT_OF, 4U)', 'c.LMX_WALK_OP_DEREF, 2U)', 'l2_entry_unit: graph') },
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'c.LMX_WALK_OP_DEREF');
+        Debt = @('c.LMX_WALK_OP_PUT_OF, 4U)', 'c.LMX_WALK_OP_PUT_REF, 4U)', 'l2_entry_unit: graph') },
     [pscustomobject]@{ Name = 'unit_field_path_unit_qualified.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a field path';
         Args = @('1');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
@@ -2035,6 +1991,11 @@ $fixtures = @(
         Absent = @('l2_new0', 'l2_self: '); Debt = @('l2_c0: lmx_fresh(l2_program_arena, l2_c0)', 'l2_rw1 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw0, c.LMX_WALK_OP_CALL, 4U)',
                  'if: lmx_arena_ref_store(l2_rw1, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 4U))) != 0', 'if: lmx_arena_ref_store(l2_rw1, 2U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 4U))) != 0',
                  '@: Lmx l2_d1 lmx_fresh(l2_program_arena, l2_c0)', 'if: lmx_call_prim(l2_program_arena, l2_c0, l2_d1, 0, 0U, ') },
+    # -189 c3b-3: an own Structure field is a direct slot of its activation's data.  `nest` recurses (each
+    # re-entry over a fresh instance whose slot starts empty) and binds `Box: b` in its own slot, so
+    # the outer activation still reads its own Box after the inner calls: nest(3) = 123.
+    [pscustomobject]@{ Name = 'unit_recursive_model_slot.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
+        Absent = @('[0]: lmx_pointer_new_owned('); Debt = @('lmx_arena_ref_store(self, ') },
     # FABLE-GROKBOT-MATRIX-20260924-143 -- B2 semantic matrix (fixtures only).
     # Grid: {absent, existing non-callable, existing callable, path} x
     # {primitive, Structure ref, Array/ref, callable} over one head-consumes-tail
@@ -2057,7 +2018,7 @@ $fixtures = @(
     # input is DEREF(AT(m)), the Structure m holds -- so bump's three writes through x are m's own:
     # 4U after them.  Passed as a fresh merge copy instead, the writes are lost and the row exits 90.
     [pscustomobject]@{ Name = 'unit_matrix_callable_struct_identity.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
-        Args = @('0'); Absent = @(); Debt = @('c.LMX_WALK_OP_DEREF, 2U)') },
+        Args = @('0'); Absent = @('c.LMX_WALK_OP_DEREF'); Debt = @('c.LMX_WALK_OP_PUT_REF, 4U)') },
     [pscustomobject]@{ Name = 'unit_matrix_callable_array_elem.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an array';
         Args = @('0'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_matrix_callable_callable_arg.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
@@ -2248,11 +2209,6 @@ foreach ($fx in $fixtures) {
         foreach ($d in $fx.Debt) {
             if ($why -eq '' -and $l1 -notmatch [regex]::Escape($d)) { $why = 'the generated L1 lacks "' + $d + '"' }
         }
-        # `BindOrder`: the emitter-order assertion of the sticky rule, on the text (Test-BindOrder).
-        if ($why -eq '' -and $fx.PSObject.Properties['BindOrder'] -and $fx.BindOrder) {
-            $order = Test-BindOrder $l1
-            if ($order -ne '') { $why = 'binding order in the generated L1: ' + $order }
-        }
         if ($why -ne '') { Add-Row 'FAIL' ('fixture:' + $stem) $why; continue }
         if (-not $driver) { Add-Row 'FAIL' ('fixture:' + $stem) 'the driver did not build, so the program cannot be run'; continue }
         $genO = Join-Path $gen ($stem + '.o')
@@ -2307,7 +2263,6 @@ foreach ($fx in $fixtures) {
         $what = ', exact profiled roots in the current Message graph survive collection ('
         if ($fx.Args[0] -eq '0') { $what = ', no eternal branch: compiled unchanged, linked to the kernel closure, ran to its one close (' }
         if ($fx.PSObject.Properties['Says'] -and $fx.Says) { $what = ', said its ' + $fx.Says.Count + ' lines exactly (' }
-        if ($fx.PSObject.Properties['BindOrder'] -and $fx.BindOrder) { $what = $what + 'binding order asserted in the text, ' }
         Add-Row 'OK' ('fixture:' + $stem) (($said -replace '^l2_eternal_driver: ', '') + $what + $fx.Debt.Count + ' required, ' + $fx.Absent.Count + ' forbidden in the text)'); continue
     }
 

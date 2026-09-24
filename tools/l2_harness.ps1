@@ -919,19 +919,19 @@ $fixtures = @(
     # primitive after its domain check, a Structure after runtime implements; a short payload is
     # `implements`).  The first row is S1.2's obligation: a declared name and an implicit one reach
     # different handlers at run time (Oops is 1, merge d + 1 = 2).
-    [pscustomobject]@{ Name = 'unit_s1_catch_declared_vs_merge.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an anonymous block'; Args = @('0'); Entry = 27; MergeFail = 1; Stopped = 0;
+    [pscustomobject]@{ Name = 'unit_s1_catch_declared_vs_merge.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: throw and catch'; Args = @('0'); Entry = 27; MergeFail = 1; Stopped = 0;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s1_catch_declared_vs_merge_ok.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an anonymous block'; Args = @('0'); Entry = 8; Stopped = 0;
+    [pscustomobject]@{ Name = 'unit_s1_catch_declared_vs_merge_ok.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: throw and catch'; Args = @('0'); Entry = 8; Stopped = 0;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s1_catch_tc.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Stopped = 0;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s1_catch_t2.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int'; Args = @('0'); Entry = 103;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s1_catch_sibling.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an anonymous block'; Args = @('0'); Entry = 3;
+    [pscustomobject]@{ Name = 'unit_s1_catch_sibling.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: throw and catch'; Args = @('0'); Entry = 3;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s1_catch_rethrow.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an anonymous block'; Args = @('0'); Entry = 1011;
+    [pscustomobject]@{ Name = 'unit_s1_catch_rethrow.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: throw and catch'; Args = @('0'); Entry = 1011;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s1_catch_nested_while.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an anonymous block'; Args = @('0'); Entry = 122;
+    [pscustomobject]@{ Name = 'unit_s1_catch_nested_while.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a loop'; Args = @('0'); Entry = 122;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s1_catch_merge_local.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 50; MergeFail = 1;
         Absent = @(); Debt = @() },
@@ -1019,9 +1019,9 @@ $fixtures = @(
     # evaluated on the value path and dropped into the typed temporaries its calls already have (a
     # pure expression emits nothing).  An anonymous Structure is a nested body; `()` and one with
     # nothing to run emit nothing.  A sub cannot be an operand.
-    [pscustomobject]@{ Name = 'unit_discard_codex.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an anonymous block'; Args = @('0'); Entry = 2;
+    [pscustomobject]@{ Name = 'unit_discard_codex.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: * / %'; Args = @('0'); Entry = 2;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_discard_forms.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an anonymous block'; Args = @('0'); Entry = 3;
+    [pscustomobject]@{ Name = 'unit_discard_forms.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 3;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_discard_calls.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: * / %'; Args = @('0'); Entry = 11112;
         Absent = @(); Debt = @() },

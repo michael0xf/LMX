@@ -17046,10 +17046,20 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
         if: l2_text_eq(h, "break") || l2_text_eq(h, "continue")
             return: l2_rw_refuse(stmt, "break and continue")
         return: l2_rw_refuse(stmt, "this statement")
+    # An anonymous block (`---`, `( ... )`) is a nested executable body, as natively (§14, Q14 K;
+    # l2_emit_stmts): a step IF(LIT 1, body), the if role running a plain body.  One with nothing
+    # to run (l2_body_inert) makes no step.
     if: stmt\kind = c.LM_P0_NODE_STRUCTURE
-        if: stmt\as != 0 && stmt\as\structure != 0 && l2_count_active(stmt\as\structure) = 0
+        if: stmt\as = 0 || stmt\as\structure = 0 || l2_body_inert(stmt\as\structure, l2_e) != 0
             return: 0
-        return: l2_rw_refuse(stmt, "an anonymous block")
+        if: l2_rw_frame(into, "LMX_WALK_OP_IF", 3, @ node) != 0 || l2_rw_lit(node, 1, @ t) != 0 || l2_rw_put(node, 1, t) != 0
+            return: 1
+        if: l2_rw_body(stmt\as\structure\first_field, node, 2) != 0
+            return: 1
+        \made: 1
+        if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, node) < 0
+            return: 1
+        return: 0
     if: stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0
         return: l2_rw_refuse(stmt, "this statement")
     h: stmt\as\frame\head

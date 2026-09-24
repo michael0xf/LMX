@@ -15,9 +15,11 @@ executable body, like an if body (§14, Q14 K):
 - it emits `if: 1` plus the body;
 - an inert one (`()`, `(2 + 2)`: l2_body_inert) emits nothing.
 
-The root walk refuses it today (`l2trans.lm1:16890`, «an anonymous block»).  The walker has no
-block role.  Its IF role already runs a plain Structure body (`lmx_walk_plain`), the root's
-`if`/`else` bodies being built that way.
+The root walk refused it (`l2trans.lm1:16890`, «an anonymous block») until -169, which builds it as
+below (FABLE-OPUS-ROOT-BLOCKS-20260925-169).  The walker has no block role.  Its IF role already
+runs a plain Structure body (`lmx_walk_plain`), the root's `if`/`else` bodies being built that way.
+A plain body stored as a step on its own does not run: its parent is the body, so the walker's G3
+(`lmx_walk.lm1:1089`) passes over it as a declaration (-169's mutant).
 
 ### Measured: a block built as IF(LIT 1, body)
 

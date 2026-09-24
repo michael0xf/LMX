@@ -262,6 +262,54 @@ what got REGISTERED for `test`'s two `arg` rows, or in `l2_own_n`'s ordering, by
 code runs versus by the time a same-shaped method's body runs -- not yet traced further. Recommend
 a focused follow-up (D-47) rather than a rushed fix to a mechanism not yet fully understood.
 
+## D-47 retracted -- FABLE-SONNET-SEG-SCAN-ROOT-20260924-165, root-caused, NOT a real defect
+
+Investigated as its own ticket (base `f4ac8e5`, the integrated -164 tree). **The "root gives
+first" reading above was a testing artifact of mine, not a property of the translator.** What
+actually happened: the generated C/L1 I inspected for `unit_occ_root_named.lm2` (cell 1 for
+`test\arg`, quoted above) was read from `build/harness_164_mutant` -- the build directory where I
+had DELIBERATELY reverted the two hardcoded-occurrence-0 sites (`l2_check_fields`/`l2_emit_fields`'s
+flat-token branches, `:13467`/`:15536` pre-renumbering) back to `l2_own_find_occ(..., 0)` to build
+a mutation witness for -164's OWN fix. I never re-checked that specific fixture's generated code
+against a CLEAN (non-mutant) build before writing it up. The mutant naturally reproduced
+first-occurrence behavior there -- because `unit_occ_root_named.lm2`'s `test\arg` goes through
+THAT flat-token branch, not `l2_own_seg_scan` at all (see below) -- and I misread "the mutant's own
+deliberate revert doing exactly what it was built to do" as "a newly discovered root-level bug in
+a different function." Confirmed directly (`grep -n "l2_xp: lmx_arena_ref_cell(...self, 5U)"` on
+the CLEAN, real-fix build's generated `unit_occ_root_named.lm1`, no mutant applied): `test\arg`
+resolves to **cell 2** (occurrence 1, correct/last), not cell 1. The fixture has been giving the
+right answer since -164 commit 2 landed; nothing here needs fixing.
+
+While re-establishing this, direct instrumentation (temporary `c.fprintf` probes in
+`l2_own_seg_scan` and in `l2_path_root`'s method-root branch and in `l2_check_fields`'s flat-token
+branch, rebuilt and run through the harness, then fully reverted -- no trace left in the tree)
+settled the real shape of the two mechanisms, which commit 1/2's own writeup above did not have
+quite right either:
+
+- **Which of the two resolvers fires is decided by STATEMENT SHAPE, not by root-vs-method
+  context.** A method-rooted path used as an `if:` condition operand (`if: test\[0]arg != 2`, `if:
+  test\arg != 2` -- `unit_occ_root_named.lm2`'s own shape) goes through
+  `l2_check_fields`/`l2_emit_fields`'s flat-token branches (both the bracketed AND the unqualified
+  form) -- confirmed firing 1:1 with each such read, in EITHER a root-level `if:` or a method-level
+  `if:` (built and ran both; identical mechanism, identical correct result in both). The flat-token
+  branch is very much alive for this shape -- the "dead code" claim above (`:230`) was wrong; it
+  was dead only for the plain-assignment shape I had tested it with, not for `if:`-condition
+  operands. A method-rooted path used as a PLAIN colon-assignment RHS (`x: test\arg`) instead goes
+  through `l2_field_path_check`/`l2_field_path_read` -> `l2_path_root` -> `l2_own_seg_scan` --
+  confirmed firing for that shape and NOT for the `if:`-condition shape, in both a method body
+  (`unit_own_last_occurrence.lm2`'s own check()) and, newly tested here, at ROOT level too (`int:
+  last` / `test(0)` / `last: test\arg` at root, no method) -- both gave the correct last-occurrence
+  value (2), both went through `l2_own_seg_scan`, no root-vs-method divergence found anywhere.
+- Both mechanisms are already last-occurrence-correct, in both syntactic positions, in both
+  root-level and method-level translation contexts, on the current tree. No further fix needed for
+  D-47/last-occurrence beyond what -164 commit 2 already landed.
+
+D-47 closed as NOT REPRODUCIBLE (own testing artifact); see `steps/defects.md`. Lesson for next
+time, recorded plainly: when a mutant build and a "clean" build share a directory-naming
+convention this close, re-verify which one is loaded before citing its generated code as evidence
+of anything -- a diff against the pre-mutant backup, or a fresh non-mutant rebuild, would have
+caught this in minutes instead of costing a whole follow-up ticket.
+
 **Witness landed this commit**: `unit_own_last_occurrence.lm2` (poke9 probe, reads via `check()`,
 not root) -- pins that the method-context case is already correct, both read and write
 (`test\[0]arg=9`, `test\[1]arg=2`, `test\arg=2`, then `test\arg: 5` lands in occurrence 1 leaving

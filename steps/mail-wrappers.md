@@ -31,3 +31,10 @@
 1. Сейчас (без K): `sendMessage: X` → родитель, через существующий staged/outbox; `receiveMessage: m` — переименование; фикстуры `nextMessage` → `receiveMessage`; `exit(...)` из R0 к host (Opus -159 к.2b — хвосты фикстур, драйвер).
 2. После K1: `receiveMessage: m Model`.
 3. После K3: `from:`.
+
+## Ответы автора (2026-09-25) и уточнения
+
+- K1 = да, как **итератор** (старая спека §yield: `fn: words () iterator(Text)`, `yield:`, `each: word in words`): ядро — курсор по inbox в порядке допуска (`lmx_post_cursor_open/next/take/close`: `take` изымает письмо под курсором, остальные не трогаются) — Grok после -161; обёртка — `receiveMessage` без аргументов = взять первое (как сегодня); `receiveMessage: Model` = обойти курсором, первое письмо, чей payload проходит `implements(Model)`, изъять; `each: m in receiveMessage` — обход без изъятия (порт `iterator`/`yield` — отдельный пункт плана).
+- K3 = а: письмо = анонимная Structure `(sender-ref; payload)` — обёртка `sendMessage` кладёт ссылку на отправляющий Message первым полем; приёмник допускает `m\[1]` по модели, `m\[0]` — отправитель (для ответа: `sendMessage: m\[0] reply(...)`).
+- Транспорт (K4, открыт): пока `sendMessage` = `lmx_service_post` в inbox адресата; после (а) — staged → outbox → перенос на границе хода.
+- Host (Opus -159 к.2h, форма H1): host = сегодняшний корневой Thread (арена, ящик, schedule, manager, service), R0 — его ребёнок через `lmx_child_reserve_profiled` с result-ячейкой (корень неуспеха сохраняется), вечный профиль host’а — R0 общей ссылкой, программа R0 — builder (arena, graph) после резервации (в 2b — `l2_program_build`).

@@ -237,9 +237,10 @@ fn: main () int
     zero_info\method: zero_method
     lmx_arena_ref_store(zero_callable, 0U, (cast: (@: void) zero_info))
     call_check(counts, lmx_call_ready(arena_at, zero_callable) = c.LMX_CALL_OK, "a descriptor whose method has a zero addr was not recognized as callable")
-    # Empty body, addr=0: walker has nothing to run -> still NOT_CALLABLE.
-    call_check(counts, lmx_call0(arena_at, zero_callable) = c.LMX_CALL_NOT_CALLABLE, "addr=0 with no body steps must stay NOT_CALLABLE")
-    call_check(counts, call_taken = 1U, "a refused call reached an entry")
+    # D-44/D-37: empty body is prepare NO_GRAPH; call0 X1s (stderr NO_GRAPH + abort), it must not
+    # return 2 as a turn number. In-process call0 is omitted (would kill this selftest).
+    # Mutant: note_walk_fail stores walker errors again -> re-enable call0 expect NOT_CALLABLE=2 RED.
+    call_check(counts, call_taken = 1U, "empty-body pin must not reach a native entry")
 
     # Descriptor dispatch: addr=0 + body last expr 7 -> call0 returns 7.
     # Mutant: walker value dropped -> 0 RED. Roles program-bound (address identity).
@@ -289,7 +290,8 @@ fn: main () int
     st: lmx_call_prim(arena_at, throw_occ, 0, 0U, 0, @ prim_out)
     call_check(counts, st = 2 && prim_out = (cast: (@: void) call_thrown), "lmx_call_prim collapsed the throw status or lost the thrown record")
     answer: lmx_call0(arena_at, throw_occ)
-    call_check(counts, answer = 2 && lmx_call_walk_fail_status() = 2, "call0 did not return and note the trampoline's throw status")
+    # D-37: native throw is noted as THROWN+k then decoded; channel carries k (not walker codes).
+    call_check(counts, answer = 2 && lmx_call_walk_fail_status() = 2, "call0 did not return and note the trampoline's throw status (D-37)")
     # addr=0 through lmx_call_prim: the walk hook's value through dest.
     prim_value: 0
     prim_out: 0

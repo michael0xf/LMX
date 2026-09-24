@@ -128,3 +128,104 @@ The `L2:` wrapper's statements reach the root walk as root statements; its refus
 3. Array elements (int): 2 rows; the char rows follow part A.
 4. The catch role (PAD + per-site table + landing): the 5 S1 rows, `unit_s1_catch_publish` and
    the K5 rows.
+
+## Arrays: the translator's side, ready for -170 (prep; base origin/main 63cc240)
+
+Read-only prep for when Grok's -170 adds the element roles.  "Measured" means the refusal-prints
+variant (n159/tlp) on this tree.  Typed values landed in -175, so the char rows need no more than
+the int rows.  Line numbers are at 63cc240.
+
+### Every gap, measured
+
+| row | gaps (line: refusal) |
+|---|---|
+| unit_matrix_path_array_elem | 3 «an array» (`[]: int buf 3`); 4, 5, 6, 10 «this statement» (`buf[i]: v`); 7, 11 «this expression» (`if: buf[1] != 2`) |
+| unit_matrix_callable_array_elem | 7 «an array»; 8, 9 «this statement»; 11 `r: get(buf[0])` and 15 `r: get: buf[1]` «this expression» |
+| entry_array_leading_zero | 1 «an array» (`[]: char values 10`); 2 «this statement» (`values[08]: 1`) |
+| entry_array | 2 «an array» (`[]: char command 32`); 3 «this statement» (`command[0]: 0`) |
+| entry_nul | 2 «an array» (`[]: char command 8`); 3 «this statement» (`command[0]: '\0'`) |
+
+- Nothing else stands in these rows.
+- The `L2:` wrapper's statements are root statements.  No row refuses «L2 operation outside a method
+  body».
+- All 5 already end in the exit letter, so they need no tail rewrite.
+
+### What P0 gives the translator (read)
+
+There are three shapes:
+1. The declaration `[]: T x n`: a frame headed `[]`.  The root refuses it today at
+   l2trans.lm1:17458, «an array».
+   - It builds no step.  The builder already puts the typed Array descriptor in x's unit slot:
+     `lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT / _CHAR / _SIZE_T / _ULONG / _UNSIGNED_CHAR,
+     n, l2_program_arena)` (:20625 and on; own types 4 / 5 / 7 / 37 / 8).
+2. An element write `x[i]: v`: a frame whose head is one atom, `x[i]`.
+   - Natively, `l2_own_index_head(head, mi, @ oi, @ index)` (:7954) answers:
+     - 0: an own array with an in-bounds decimal index;
+     - 2: a bad index, «own array index requires an in-bounds primitive literal»;
+     - 1: not an element.
+   - The index is `l2_array_literal` (:7930): digits only, below the declared count.  `08` is 8.
+3. An element read inside an expression: a run of four fields, `x [ i ]` (six when rooted:
+   `root \ x [ i ]`).
+   - Natively, `l2_own_index_tail(f, mi, @ oi, @ index, @ after, @ count)` (:7987).
+   - A call's inputs already span such a run: `l2_expr_span` calls `l2_index_chain` (:7835).
+   - So `get(buf[0])` reaches `l2_rw_texpr` as one input of 4 fields.  There `l2_rw_texpr`'s
+     tokenizer (:16953) takes it as operand, operator, operand, operator: an even count, «this
+     expression».
+
+The E check pass is native, so an index that `l2_array_literal` rejects is refused before the walk:
+the walk only ever sees proven indices.
+
+### What the root emits once the roles exist (the translator half of -170)
+
+1. The declaration of a root own array (host 0, fid < 0, a unit child): no step.
+   - The same rule as the numeric declarations, «a field declared in a nested body» included.
+   - «an array» then stays only for what is not a root own array.
+2. `x[i]: v` becomes ELEMPUT [elemput, holder, slot, index, value]:
+   - holder and slot are the unit and x's unit child, as AT and PUT name them (l2_rw_cell);
+   - value is `l2_rw_texpr(v, want = the element's type)`.
+3. `x [ i ]` in an expression becomes ELEM [elem, holder, slot, index], an operand.
+   - The tokenizer of l2_rw_texpr and l2_rw_fields_ty groups the run with `l2_own_index_tail`
+     into one operand slot, which carries its field node and (oi, index).
+   - l2_rw_opty types it by the element (below), and l2_rw_operand emits ELEM.
+   - The rooted six-field form stays refused, «a field path», as today.
+4. The element's static type, per the array's own type:
+
+   | own type | array of | element type |
+   |---|---|---|
+   | 4 | int | int (0) |
+   | 5 | char | char (1) |
+   | 7 | size_t | size_t (2) |
+   | 37 | ulong | ulong (36) |
+   | 8 | unsigned char | no scalar code; refused until a row needs it |
+
+   So in `command[0]: 0` the 0 is LIT char 0; `'\0'` is LIT char 0 as well (-175's char literal);
+   and `buf[1] != 2` compares int with int.
+5. The index.  Preferred: an operand node, LIT size_t of the proven literal.
+   - The shape is then already the one a computed index would use (the author's question), and
+     only the index node changes.
+   - The alternative is a raw size stored in the node, as AT's slot is (`lmx_walk_store_size`).
+     It is one node less, but a computed index would need a new shape.
+   - Either way the translator only ever builds a proven literal.
+
+### What the translator needs the roles to do
+
+- ELEM: reads element `index` of the descriptor in `slot` of `holder`, by the descriptor's element
+  type (`lmx_domain_type`: ARRAY_OF_INT, ...).  It yields a value the typed ops read:
+  - an int cell, or the destination-passing int, for int;
+  - the interned `lmx_char_cell(byte)` for char;
+  - a fresh typed cell for size_t and ulong, as `lmx_walk_arith_out` makes for + and -.
+- ELEMPUT: loads the value by its cell's type, which must be the element's (else INVALID, as PUT),
+  and stores it into `data[index]` (a char as its byte).
+- Both: `index < len`, else INVALID.  With literal indices the translator has proven it already;
+  it is the guard a computed index would need.
+
+### Flips and witness
+
+- All 5 rows flip with the roles and this half: eternal-runs, Entry 0 each.  No other gap stands
+  (measured above).
+- Witness mutants for that commit:
+  - ELEMPUT built with index + 1: unit_matrix_path_array_elem RED (it reads back `buf[1]`);
+  - a char array's element type taken as int:
+    - entry_array is RED at run time: `0` becomes LIT int, and ELEMPUT's type check refuses it;
+    - entry_nul is refused at translation: `'\0'` is a char where an int is asked;
+  - the declaration's no-step made a refusal: all 5 RED.

@@ -987,3 +987,20 @@ branch, my commit on top, per-row check, one gate.
   - lmx_own is still used by the L3 interpreter: dev/l3_interp/l3_exec.lm1 (predef, `lmx_own_checkpoint`,
     `lmx_own_write`), l3_recv.h.lm1 and tests/l3_02_selftest.lm1.
   - So -187 k.3 can delete lmx_dirty.  lmx_own goes only after L3's own working copies do.
+
+### c4 decisions (fable, 2026-09-25, after k.1)
+
+- The signature is form A: `args` at slot 0 and `return` at slot 1 of a method occurrence, with
+  own fields and bodies from 2.  There is no carrier word.
+- A part exists physically if and only if it is declared.  A method with a header has args, return
+  and fields from 2.  E and a named Structure are pure body, with fields from 0, and E moves from 1
+  to 0 when child 0 goes.  A missing part is empty only in merge; anything else is a hidden offset,
+  which the norm rules out.
+- The graph carries no «has parts» marker.  The walker and implements do not inspect a Structure's
+  shape; the translator gives them positions («names only in the translator»):
+  - the result class comes from the CALL's typed destination, which the translator emits;
+  - implements works from a comparison plan by positions;
+  - lmx_call_prim and the walker do not classify slots 0/1.
+  This goes into grok_bot's k.4 plan as a requirement.
+- Order: grok_bot's -187 k.4 (L3's own working copies retired, lmx_own deleted), then -170 k.2,
+  then his -186/c4 k.4 branch.  My c4 commit goes on top of it, then the per-row check and one gate.

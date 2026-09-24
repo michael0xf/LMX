@@ -370,6 +370,7 @@ fn: main () int
     tt_check(counts, walk_message\running = 1, "G2 Message starts running")
     g2_code: lmx_thread_turn(walk_thread, 0, 40U)
     tt_check(counts, walk_message\running = 0, "G2 walked body throw 1 -> running 0 after turn (mutant: running stays 1)")
+    tt_check(counts, lmx_call_walk_fail_status() = 1, "D-37: turn channel carries throw 1 (not THROWN+1 / not INVALID walker code)")
     tt_check(counts, g2_code = c.LMX_THREAD_INVALID, "G2 turn returns INVALID after throw body status")
     failures: counts[1]
     c.printf("lmx_thread_turn checks=%d failures=%d\n", counts[0], failures)

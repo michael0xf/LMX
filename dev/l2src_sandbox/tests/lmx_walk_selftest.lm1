@@ -1052,8 +1052,10 @@ fn: main () int
     ref(n, 1U, native2)
     check(lmx_walk_prepare(gctx, ga, gplan_roles, caller2) = c.LMX_WALK_OK, "G1 caller2 prepared")
     st: go(caller2, 0, 0U, @ r, @ v)
-    check(st = 2, "G1 METHOD trampoline status 2 reaches walk as 2 (mutant: collapsed to LMX_WALK_PRIMITIVE)")
+    # D-37: throw k is LMX_WALK_THROWN + k (never bare 2 / NO_GRAPH). Mutant: status: said -> RED.
+    check(st = c.LMX_WALK_THROWN + 2, "G1 METHOD throw encoded as THROWN+2 (D-37; mutant: bare 2 collides with NO_GRAPH)")
     check(st != c.LMX_WALK_PRIMITIVE, "G1 status distinct from LMX_WALK_PRIMITIVE (LmxCallable vs LmxPrimitive)")
+    check(st != 2, "D-37: throw 2 must not equal bare walker status 2")
 
 
     # ---- G3: declarations among root fields (FABLE-158) --------------------------------

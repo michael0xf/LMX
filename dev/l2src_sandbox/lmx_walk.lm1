@@ -164,18 +164,17 @@ fn: lmx_walk_call0_dispatch (@: LmxArena arena; @: Lmx callable) int
     if: st != c.LMX_WALK_OK
         lmx_scratch_close(@ scratch)
         lmx_arena_release(@ sa)
-        if: st = c.LMX_WALK_NOT_CALLABLE || st = c.LMX_WALK_NO_GRAPH
-            return: c.LMX_CALL_NOT_CALLABLE
-        ---
+        # D-37/D-44: walker prepare errors (incl. NO_GRAPH) are X1, not a turn number.
+        lmx_call_note_walk_fail(st)
         return: c.LMX_CALL_NOT_CALLABLE
     ---
     st: lmx_walk_run(@ ctx, callable, 0, 0U, @ wv)
     lmx_scratch_close(@ scratch)
     lmx_arena_release(@ sa)
     if: st != c.LMX_WALK_OK
-        # G2: METHOD throw / walk failure status reaches the turn (not collapsed to NOT_CALLABLE).
+        # G2/D-37: note_walk_fail X1s walker errors; throws decode to k on the turn channel.
         lmx_call_note_walk_fail(st)
-        return: st
+        return: lmx_call_walk_fail_status()
     ---
     if: wv.present = 0
         return: 0
@@ -732,7 +731,8 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
             entry: (cast: (LmxPrimitiveEntry) addr)
             said: entry((cast: (@: void) callee), refs, n, dest, out)
             if: said != 0
-                status: said
+                # D-37: throw k is LMX_WALK_THROWN + k, never a walker error code.
+                status: c.LMX_WALK_THROWN + said
             ---
         else:
             status: lmx_walk_activate(f\context, callee, refs, n, dest, out, @ present)

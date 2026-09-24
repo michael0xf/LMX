@@ -109,6 +109,7 @@ predef: "l2src/lmx_plan.h.lm1"
 # Own fields keep working copies: numerics in LmxWalkOwn.value (size_t, widest); Structure
 # fields (pointer cells) in LmxWalkOwn.ref (-174 c2). A read copies the working value /
 # reference into the destination, because the field may be assigned again before use.
+# MUL/DIV/MOD (-170 c1 / D-58): [mul|div|mod, a, b]; same-type arith_out; div/mod 0 -> INVALID.
 # PUT_OF (-177 c4 / D-54): [put_of, struct-expr, slot, value]; holder evaluated.
 # lmx_walk_slot refuses an OP-node holder (X1). receiveMessage take (-177 c1): PRIM record whose fn is lmx_walk_mail_take (nargs 0);
 # empty inbox is null out OK. Null reference PUT + pointer EQ vs 0 also -177 c1.
@@ -225,7 +226,11 @@ define: LMX_WALK_OP_EXPECT_INT 17
 define: LMX_WALK_OP_DEREF 18
 # -177 c4 / D-54: PUT with an evaluated holder (m\f: v through a reference).
 define: LMX_WALK_OP_PUT_OF 19
-define: LMX_WALK_OP_COUNT 20
+# -170 c1 / D-58: * / % same shape as ADD/SUB (lmx_walk_arith_out). DIV/MOD by 0 = INVALID (X1).
+define: LMX_WALK_OP_MUL 20
+define: LMX_WALK_OP_DIV 21
+define: LMX_WALK_OP_MOD 22
+define: LMX_WALK_OP_COUNT 23
 # -174 c4: method.sig = MARK | LMX_TYPE_* names the trampoline result class for CALL dest.
 define: LMX_WALK_RESULT_SIG_MARK 0x57000000
 

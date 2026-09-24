@@ -89,8 +89,6 @@ int: l2_rw_emit 0
 int: l2_rw_t 0
 int: l2_rw_steps 0
 int: l2_rw_base 0
-# The unit's first eternal branch (`independent:`), for the located refusal of a walked root.
-@: LmP0Node l2_rw_eternal 0
 # The walked root's sends (`sendMessage: X`), one generated primitive l2_send<k> each: the sites
 # recorded by the top-level count pass (l2_rw_send_rec 1), the next site's number, and per site its
 # payload's field count, each field's kind (1 an int expression, 2 a text literal) and text atom.
@@ -1102,7 +1100,6 @@ fn: l2_e_free () int
     l2_e_as: 0
     l2_e_node: 0
     l2_e: 0 - 1
-    l2_rw_eternal: 0
     l2_e_n: 0
     l2_vis_on: 0
 return: 0
@@ -2903,8 +2900,6 @@ fn: l2_translate_unit (const: @(LmP0Structure unit); const: @(char path)) int
             return: 1
         if: role = 2 && l2_take_eternal(item, path) != 0
             return: 1
-        if: role = 2 && l2_rw_eternal = 0
-            l2_rw_eternal: item
         if: role = 3
             if: l2_os_node != 0
                 return: l2_error(path, item, "unsupported body")
@@ -16276,8 +16271,9 @@ return: 0
 #     `sendMessage: exit(exit_code: V; stdout: ""; stderr: "")`, then a bare `return`;
 #   * built as walker nodes, when this translator builds that form: an int own field (declared
 #     with or without an initializer, assigned, read), an int literal, + - < = and != > <= >= over
-#     them, a call of a method that cannot throw with int inputs, an expression statement,
-#     if/else, a bare `return`, and `sendMessage: Name(f: v; ...)` to the parent (l2_rw_send);
+#     them, a call of a method with int inputs (one that can throw included: a throw at the root
+#     is uncaught and stops R0), an expression statement, if/else, a bare `return`, and
+#     `sendMessage: Name(f: v; ...)` to the parent (l2_rw_send);
 #   * otherwise refused, located: «root operation not walkable yet: <op>» -- never dropped and
 #     never run natively.
 # Two passes over the same statements: the first (l2_rw_emit 0) checks and counts the unit's
@@ -16414,8 +16410,10 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; @: LmP0Field args; int: paren
     int: span
     int: arg
     int: j
-    if: l2_m_throws != 0 && l2_m_throws[idx] != 0
-        return: l2_rw_refuse(node, "a call of a method that can throw")
+    # A callee that can throw is called like any other (commit 3; -161 c3 D-37): its trampoline
+    # returns the throw's number k, the walk carries it as LMX_WALK_THROWN + k and stops, and the
+    # turn's channel holds k.  The root has no catch yet (no walker role), so a throw there is
+    # uncaught: R0 stops and the host maps its success 0 to exit 1.
     if: l2_m_dyn[idx] != 0
         return: l2_rw_refuse(node, "a call of a method with dynamic inputs")
     if: l2_tramp_class(idx) != 0 && l2_tramp_class(idx) != 1
@@ -19482,10 +19480,6 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: l2_library_mode = 0 && l2_e >= 0 && l2_e_n > 0 && l2_rw_stmts(l2_e_fields, 0 - 2, 0, @ l2_rw_steps) != 0
         return: 1
     l2_rw_send_rec: 0
-    # An eternal branch is a field of the unit whose parent is 0 (its band is not the unit's), and
-    # the walk takes a Structure field as a declaration only when its parent is the body (-158 G3).
-    if: l2_library_mode = 0 && l2_e >= 0 && l2_rw_eternal != 0
-        return: l2_rw_refuse(l2_rw_eternal, "an eternal branch among the root's fields")
     # A root with no step (no statement, or only declarations without an initializer) is one bare
     # `return`: the walker has no empty body (a callable with no body node is LMX_WALK_NO_GRAPH).
     # It sends no exit and sets no success, so the host maps it to 1 (lmx_root_launch).

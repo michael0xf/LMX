@@ -31,6 +31,11 @@ int: builds 0
 int: build_rc -1
 int: host_state -1
 int: program_passed 0
+# What the host reports of R0's end (commit 3): the throw number the walk noted (the turn's channel,
+# lmx_call_walk_fail_status; 0 when none) and whether R0 was stopped -- the host's reason for an
+# exit without a letter says so (lmx_root_launch).  -1 until the launch returned.
+int: walk_thrown -1
+int: r0_stopped -1
 int: checks 0
 int: failures 0
 const: @: char phase ""
@@ -224,12 +229,40 @@ return: rc
 # code it returns and reads the host's state after it.
 fn: l2_driver_root_launch (@: LmxRoot root; int: argc; @@: char argv; LmxRootProgram: program; size_t: fields; LmxRootSettings: settings; ulong: limit; @: void out; @: void err) int
     int: code
+    @: void cap 0
+    @: char text 0
+    size_t: n 0U
     launches: launches + 1
     if: program = l2_program_build
         program_passed: 1
     ---
-    code: lmx_root_launch(root, argc, argv, l2_driver_program, fields, settings, limit, out, err)
+    # The host's stderr goes through a file of the driver's own, so the driver reads what the host
+    # reported and then hands it on to the stream main gave.
+    cap: (cast: (@: void) c.fopen("l2_driver_launch.err", "w+b"))
+    if: cap = 0
+        cap: err
+    ---
+    code: lmx_root_launch(root, argc, argv, l2_driver_program, fields, settings, limit, out, cap)
     host_state: lmx_root_state(root)
+    walk_thrown: lmx_call_walk_fail_status()
+    r0_stopped: 0
+    if: cap != err
+        c.fflush(cap)
+        c.rewind(cap)
+        text: (cast: (@: char) calloc(65536U, 1U))
+        if: text != 0
+            n: c.fread((cast: (@: void) text), 1U, 65535U, cap)
+            text[n]: 0
+            if: strstr(text, "R0 was stopped") != 0
+                r0_stopped: 1
+            ---
+            if: err != 0 && n != 0U
+                c.fwrite((cast: (@: void) text), 1U, n, err)
+            ---
+            free((cast: (@: void) text))
+        ---
+        c.fclose(cap)
+    ---
 return: code
 
 # THE MERGE TAP (S1.1 / D-07).  The generated C is compiled with
@@ -301,8 +334,9 @@ fn: main (int: argc; @@: char argv) int
     # The exit (author 2026-09-24): the launch's exit code is R0's exit letter's, else the mapping of
     # R0's success (1 -> 0, 0 -> 1).  `entry N` names it (default 0).  `fails 1`: R0 does not
     # complete -- an uncaught failure -- so the exit is 1.  `mergefail N` fails the program's Nth
-    # merge (the tap above).  `letters N`, `stopped N` and `thrown N` were read at R0's close, which
-    # is the host's now: they cannot be observed from here, and a row that names one is red.
+    # merge (the tap above).  `thrown N`: the throw number the walk noted, which the turn's channel
+    # carries (0: none).  `stopped 1|0`: R0 was stopped, or not, as the host's exit reason says.
+    # `letters N` was read at R0's close, which is the host's now: a row that names it is red.
     while: at + 1 < gargc
         if: c.strcmp(argv[at], "entry") = 0
             expected: arg(at + 1)
@@ -342,7 +376,16 @@ fn: main (int: argc; @@: char argv) int
     if: merge_fail_at > 0
         check(merge_calls >= merge_fail_at, "the program made the merge the row fails")
     ---
-    check(letters < 0 && stopped < 0 && thrown < 0, "no fact read at R0's close is named: the close is the host's")
+    if: thrown >= 0
+        check(walk_thrown = thrown, "the walk noted the thrown status the row names")
+    ---
+    if: thrown >= 0 && walk_thrown != thrown
+        c.printf("l2_eternal_driver: the walk noted %d, expected %d\n", walk_thrown, thrown)
+    ---
+    if: stopped >= 0
+        check(r0_stopped = stopped, "the host reports R0 stopped (1) or not (0) as the row names")
+    ---
+    check(letters < 0, "no `letters` fact is named: R0's untaken letters are released at the host's close")
     if: failures != 0
         c.printf("l2_eternal_driver: %d failed of %d\n", failures, checks)
         return: 1

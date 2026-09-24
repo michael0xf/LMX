@@ -481,8 +481,22 @@ if ($driver) { Add-Row 'OK' 'build:eternal_driver' ($made.ToString() + ' kernel 
 # generated L1 how many top-level statements the entry executes, as one line `# entry statements: N`.
 # An `eternal-runs` row whose unit has none is red unless the row says EmptyEntry = $true:
 # a program that executes nothing proves nothing, and before S2 a unit without `main` was silently a
-# library.  `Entry` is the int the entry returns (the program's value, E1; default 0); the driver
-# checks the exit value and the adapter's own result against it.
+# library.
+#
+# THE FACTS OF A RUN (-159 commits 2b and 3).  The generated main is the launch (lmx_root_launch): the
+# host reserves R0, R0's one turn walks the unit, and the exit is the host's.  The driver sees it
+# through its -Dlmx_root_launch tap, and each fact is what the host reports:
+#   Entry N     the launch's exit code: R0's exit letter's `exit_code`, or else the mapping of R0's
+#               success (1 -> 0, 0 -> 1).  Default 0.
+#   Fails 1     R0 did not complete (an uncaught throw): the exit is 1.
+#   Thrown k    the throw number the walk noted -- lmx_call_walk_fail_status() read after the launch
+#               (the turn's channel carries k; 0 when nothing was thrown).
+#   Stopped 1|0 R0 was stopped, or not, as the host's exit reason says: the driver captures the
+#               launch's stderr and looks for "R0 was stopped" (the reason the host gives when R0
+#               sent no exit letter and its running is 0).
+#   MergeFail N the program's Nth merge fails (the -Dlmx_merge_owned / _profiles_owned taps).
+#   Letters N   is not observable any more: R0's close is the host's, which releases R0's untaken
+#               letters.  A row that names it is red.
 #
 # WHY THESE ROWS READ THE GENERATED L1 AS WELL AS RUN IT. Qualified immutable roots are ordinary
 # values of the current Message arena. Their type and lifetime come from exact physical profile
@@ -678,13 +692,13 @@ $fixtures = @(
     # D-28 (steps/defects.md): a formal parameter must shadow a unit-level
     # named Structure sharing its spelling -- l2_path_root tried the wrong
     # one first since -113.
-    [pscustomobject]@{ Name = 'unit_formal_shadows_struct.lm2'; Expect = 'root-pending'; Exit = 0; Entry = 7; Needle = 'root operation not walkable yet: a call of a method that can throw';
+    [pscustomobject]@{ Name = 'unit_formal_shadows_struct.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
         Args = @('0');
         Absent = @();
         Debt = @() },
     [pscustomobject]@{ Name = 'unit_file_bare_type_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'unknown type'; Absent = @(); Debt = @() },
 
-    [pscustomobject]@{ Name = 'unit_eternal_branch.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an eternal branch among the root''s fields';
+    [pscustomobject]@{ Name = 'unit_eternal_branch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('1', 'size', '0', '0', '7');
         Absent = @('lmx_owned_ranges', 'lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained',
                    'DEBT: eternal ranges/bootstrap-admit absent in new kernel',
@@ -699,8 +713,8 @@ $fixtures = @(
                  'slot[0]: lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.size_t), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_SIZE_T, l2_eprofile0)',
                  'if: l2_profile_pool = 0 || lmx_pool_seal(l2_profile_pool) != 0',
                  'l2_entry_unit: graph',
-                 'if: lmx_root_open(@ l2_program_root, l2_program_entry, 5000U) != c.LMX_ROOT_OK') },
-    [pscustomobject]@{ Name = 'unit_eternal_two.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an eternal branch among the root''s fields';
+                 'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ') },
+    [pscustomobject]@{ Name = 'unit_eternal_two.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('2', 'size', '0', '0', '7', 'size', '1', '0', '9');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
         Debt = @('c.array: [2]: @: Lmx l2_program_qualified_roots',
@@ -710,7 +724,7 @@ $fixtures = @(
                  'l2_entry_unit: graph') },
     # Seventy roots: the capacity is the COUNT.  Sizing by a root's INDEX -- the trap the two
     # tables invite, l2_ns_eternal[k] beside l2_ebr_n -- would pass every smaller fixture's text.
-    [pscustomobject]@{ Name = 'unit_eternal_many.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an eternal branch among the root''s fields';
+    [pscustomobject]@{ Name = 'unit_eternal_many.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('70', 'size', '0', '0', '1', 'size', '35', '0', '36', 'size', '69', '0', '70');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
         Debt = @('c.array: [70]: @: Lmx l2_program_qualified_roots',
@@ -785,7 +799,7 @@ $fixtures = @(
     # checks 71..91 are invariants on the diagnostic route, never a status (X1).  A completed turn
     # leaves the Message running (`Stopped` 0).  Two of the three declare no eternal branch; the
     # driver is given 0 and checks that the array exists and is empty.
-    [pscustomobject]@{ Name = 'unit_merge_in_method.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call of a method that can throw'; Stopped = 0;
+    [pscustomobject]@{ Name = 'unit_merge_in_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Stopped = 0;
         Args = @('1', 'size', '0', '0', '7');
         Absent = @('Lmx node; @: Lmx node', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)', 'l2_out_throw[0]: node', 'return: 71');
         Debt = @('fn: l2_m0 (@: Lmx node; @: Lmx self; @: Lmx l2_msg; @: int l2_out_result; @@: Lmx l2_out_throw) int',
@@ -794,7 +808,7 @@ $fixtures = @(
                  'fn: l2_m3 (@: Lmx node; @: Lmx self; @: Lmx l2_msg; @@: Lmx l2_out_throw) int',
                  'l2_m3(l2_c0\parent, l2_c0, l2_msg, @ l2_te1)',
                  'l2_m0(l2_c2\parent, l2_c2, l2_msg, @ l2_t3, @ l2_te3)',
-                 'l2_m2(l2_c0\parent, l2_c0, l2_msg, @ l2_t1, @ l2_te1)',
+                 'l2_rw1 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw0, c.LMX_WALK_OP_CALL, 2U)', 'if: lmx_arena_ref_store(l2_rw1, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 3U))) != 0',
                  'l2_out_throw[0]: 0',
                  'c.fprintf(c.stderr, "lmx: invariant: merge result check 71\n")',
                  'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ') },
@@ -823,22 +837,22 @@ $fixtures = @(
     # and the status that arrived is the name's g (`Thrown`).  The first row fails the merge
     # statement inside a method E calls, the second the `Model: fresh` merge in E itself; the
     # third is a refused admission, thrown inside a method E calls, which arrives as 2.
-    [pscustomobject]@{ Name = 'unit_s1_merge_uncaught.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call of a method that can throw'; Args = @('0'); Fails = 1; MergeFail = 1; Stopped = 1; Thrown = 1;
-        Absent = @('l2_out_throw[0]: node'); Debt = @('l2_out_throw[0]: 0', 'l2_out_throw[0]: l2_te') },
+    [pscustomobject]@{ Name = 'unit_s1_merge_uncaught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; MergeFail = 1; Stopped = 1; Thrown = 1;
+        Absent = @('l2_out_throw[0]: node'); Debt = @('l2_out_throw[0]: 0', 'return: l2_ts', 'l2_rw1 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw0, c.LMX_WALK_OP_CALL, 2U)', 'if: lmx_arena_ref_store(l2_rw1, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 1U))) != 0') },
     [pscustomobject]@{ Name = 'unit_s1_merge_uncaught_entry.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int'; Args = @('0'); Fails = 1; MergeFail = 1; Stopped = 1; Thrown = 1;
         Absent = @('l2_out_throw[0]: node'); Debt = @('l2_out_throw[0]: 0') },
     # D-07: qualified-operand merge emits lmx_merge_profiles_owned; MergeFail 1 fails it via the
     # profiles tap (shared mergefail counter). Mutant without -Dlmx_merge_profiles_owned cannot
     # fail the merge -- the program completes with 5 and the row goes RED.
-    [pscustomobject]@{ Name = 'unit_s1_merge_profiles_uncaught.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call of a method that can throw'; Args = @('2'); Fails = 1; MergeFail = 1; Stopped = 1; Thrown = 1;
+    [pscustomobject]@{ Name = 'unit_s1_merge_profiles_uncaught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('2'); Fails = 1; MergeFail = 1; Stopped = 1; Thrown = 1;
         Absent = @('l2_out_throw[0]: node');
         Debt = @('lmx_merge_profiles_owned(l2_mops, 2U, l2_mbody, node, 0, l2_program_arena, l2_program_arena, l2_mprofiles, 2U, 0, 0U, @ l2_mresult)',
-                 'l2_out_throw[0]: 0', 'l2_out_throw[0]: l2_te') },
-    [pscustomobject]@{ Name = 'unit_s1_implements_uncaught.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call of a method that can throw'; Args = @('0'); Letters = 0; Fails = 1; Stopped = 1; Thrown = 2;
-        Absent = @('l2_out_throw[0]: node'); Debt = @('l2_out_throw[0]: 0', 'l2_out_throw[0]: l2_te') },
+                 'l2_out_throw[0]: 0', 'return: l2_ts', 'l2_rw1 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw0, c.LMX_WALK_OP_CALL, 2U)', 'if: lmx_arena_ref_store(l2_rw1, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 1U))) != 0') },
+    [pscustomobject]@{ Name = 'unit_s1_implements_uncaught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+        Absent = @('l2_out_throw[0]: node'); Debt = @('l2_out_throw[0]: 0', 'return: l2_ts', 'l2_rw1 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw0, c.LMX_WALK_OP_CALL, 2U)', 'if: lmx_arena_ref_store(l2_rw1, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 2U))) != 0') },
     # A `return:` trailer of a method on the throw ABI returns its value through the normal output
     # with status 0, as a `return:` in the body does: the row completes with the value.
-    [pscustomobject]@{ Name = 'unit_s1_trailer_value.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call of a method that can throw'; Args = @('0'); Entry = 5; Stopped = 0;
+    [pscustomobject]@{ Name = 'unit_s1_trailer_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 5; Stopped = 0;
         Absent = @(); Debt = @('l2_out_result[0]: 5') },
     [pscustomobject]@{ Name = 'unit_anon_block.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 16;
         Absent = @(); Debt = @() },
@@ -852,13 +866,13 @@ $fixtures = @(
     # from E: they prove emission, compilation and linking, and pin the emitted numbering and the
     # by-name mapping in the text (the multi-line pins).  The runtime distinction of declared
     # positions from d + g is the obligation of S1.3's first catch rows.
-    [pscustomobject]@{ Name = 'unit_s1_declared_links.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+    [pscustomobject]@{ Name = 'unit_s1_declared_links.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Stopped = 0;
         Absent = @('l2_out_throw[0]: node');
         Debt = @("        l2_out_throw[0]: l2_tp0`n        return: 1",
                  "        l2_out_throw[0]: 0`n        return: 2",
                  "        l2_out_throw[0]: 0`n        return: 3",
                  "        if: l2_ts1 = 1`n            return: 2`n        if: l2_ts1 = 2`n            return: 1`n        return: l2_ts1") },
-    [pscustomobject]@{ Name = 'unit_s1_declared_payload.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+    [pscustomobject]@{ Name = 'unit_s1_declared_payload.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Stopped = 0;
         Absent = @();
         Debt = @('lmx_arena_ref_store(l2_tp1, 0U, (cast: (@: void) l2_p0_0))', 'lmx_size_store_known(l2_tc1, 9U)') },
     # The intern carries the ordered names: a and c share a signature, d and e differ by order only.
@@ -866,9 +880,9 @@ $fixtures = @(
         Absent = @('l2_entry_rec\sig: 6U'); Debt = @('l2_entry_rec\sig: 5U') },
     # `return: f` of a callable on the throw channel is called on that channel (it was called with
     # node and self alone, which gcc refused), and a throw passes through it like through any call.
-    [pscustomobject]@{ Name = 'unit_s1_return_callable_throw_abi.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call of a method that can throw'; Args = @('0'); Entry = 5; Stopped = 0;
+    [pscustomobject]@{ Name = 'unit_s1_return_callable_throw_abi.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 5; Stopped = 0;
         Absent = @(); Debt = @('l2_ts1: l2_m0(l2_c0\parent, l2_c0, l2_msg, @ l2_t1, @ l2_te1)') },
-    [pscustomobject]@{ Name = 'unit_s1_return_callable_throw_abi_fails.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call of a method that can throw'; Args = @('0'); Fails = 1; MergeFail = 1; Stopped = 1; Thrown = 1;
+    [pscustomobject]@{ Name = 'unit_s1_return_callable_throw_abi_fails.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; MergeFail = 1; Stopped = 1; Thrown = 1;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s1_throws_unlisted_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unhandled throw: Oops'; Absent = @(); Debt = @() },
@@ -903,7 +917,7 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s1_catch_declared_vs_merge_ok.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an anonymous block'; Args = @('0'); Entry = 8; Stopped = 0;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s1_catch_tc.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call of a method that can throw'; Args = @('0'); Stopped = 0;
+    [pscustomobject]@{ Name = 'unit_s1_catch_tc.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Stopped = 0;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s1_catch_t2.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int'; Args = @('0'); Entry = 103;
         Absent = @(); Debt = @() },
@@ -913,9 +927,9 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s1_catch_nested_while.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an anonymous block'; Args = @('0'); Entry = 122;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s1_catch_merge_local.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call of a method that can throw'; Args = @('0'); Entry = 50; MergeFail = 1;
+    [pscustomobject]@{ Name = 'unit_s1_catch_merge_local.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 50; MergeFail = 1;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s1_catch_publish.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call of a method that can throw'; Args = @('0'); Entry = 7;
+    [pscustomobject]@{ Name = 'unit_s1_catch_publish.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: throw and catch'; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s1_catch_user_break.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a loop'; Args = @('0'); Entry = 105;
         Absent = @(); Debt = @() },
@@ -967,7 +981,7 @@ $fixtures = @(
     # throws is called through lmx_call_prim -- the throw status apart from the value, the thrown
     # record through `out` -- and propagated like a direct call's, so the handler takes the payload
     # (5 + 2) and the calm callable's value arrives (3).  Success is 10.
-    [pscustomobject]@{ Name = 'unit_dyn_call_throw_caught.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call of a method that can throw'; Args = @('0'); Entry = 10;
+    [pscustomobject]@{ Name = 'unit_dyn_call_throw_caught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 10;
         Absent = @('lmx_call0('); Debt = @('lmx_call_prim(l2_program_arena, l2_c') },
     [pscustomobject]@{ Name = 'unit_value_call_sub_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'a callable without a result has no value'; Absent = @(); Debt = @() },
@@ -1449,19 +1463,19 @@ $fixtures = @(
         Debt = @() },
     [pscustomobject]@{ Name = 'unit_duplicate_named_struct_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'duplicate named Structure'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_colon_method_lexical_model.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call of a method that can throw';
+    [pscustomobject]@{ Name = 'unit_colon_method_lexical_model.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
+        Debt = @('l2_rw1 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw0, c.LMX_WALK_OP_CALL, 2U)', 'if: lmx_arena_ref_store(l2_rw1, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 3U))) != 0',
+                 'lmx_merge_owned(l2_mops, 1U, l2_mbody, node, 0, l2_program_arena, l2_program_arena, 0, 0U, @ l2_mresult)',
+                 'l2_entry_unit: graph') },
+    [pscustomobject]@{ Name = 'unit_colon_method_dynamic_precedence.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_m0(l2_c0\parent, l2_c0, l2_msg, @ l2_t1, @ l2_te1)',
                  'lmx_merge_owned(l2_mops, 1U, l2_mbody, node, 0, l2_program_arena, l2_program_arena, 0, 0U, @ l2_mresult)',
                  'l2_entry_unit: graph') },
-    [pscustomobject]@{ Name = 'unit_colon_method_dynamic_precedence.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call of a method that can throw';
-        Args = @('0');
-        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
-        Debt = @('l2_m0(l2_c0\parent, l2_c0, l2_msg, @ l2_t1, @ l2_te1)',
-                 'lmx_merge_owned(l2_mops, 1U, l2_mbody, node, 0, l2_program_arena, l2_program_arena, 0, 0U, @ l2_mresult)',
-                 'l2_entry_unit: graph') },
-    [pscustomobject]@{ Name = 'unit_colon_method_fresh_per_activation.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call of a method that can throw';
+    [pscustomobject]@{ Name = 'unit_colon_method_fresh_per_activation.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('lmx_merge_owned(l2_mops, 1U, l2_mbody, node, 0, l2_program_arena, l2_program_arena, 0, 0U, @ l2_mresult)',
@@ -1478,12 +1492,12 @@ $fixtures = @(
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_pst: lmx_arena_ref_struct(l2_pst,', 'l2_pxp: lmx_arena_ref_cell(l2_pst,', 'l2_mops[0U]: l2_nsp[', 'lmx_merge_owned(l2_mops, 1U, l2_mbody, l2_nsp[') },
-    [pscustomobject]@{ Name = 'unit_field_path_nested_two.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call of a method that can throw';
+    [pscustomobject]@{ Name = 'unit_field_path_nested_two.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_pst: lmx_arena_ref_struct(l2_pst,', 'l2_pxp: lmx_arena_ref_cell(l2_pst,', 'l2_mops[0U]: l2_nsp[', 'lmx_merge_owned(l2_mops, 1U, l2_mbody, l2_nsp[') },
-    [pscustomobject]@{ Name = 'unit_field_path_unknown_refused.lm2'; Expect = 'root-pending'; Exit = 0;
-        Needle = 'root operation not walkable yet: a call of a method that can throw'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_field_path_unknown_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unknown field path segment'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_field_path_unit_addr.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a value that is not an int';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
@@ -1547,7 +1561,7 @@ $fixtures = @(
                  'lmx_ulong_store_known(l2_entry_slot[0], 6U)', 'lmx_size_store_known(l2_entry_slot[0], 3U)') },
     # The same four kinds on an eternal branch: cells of their own primitive type in the branch's
     # exact sealed profile, holding their literals (the driver's numeric root facts).
-    [pscustomobject]@{ Name = 'unit_eternal_num_fields.lm2'; Expect = 'root-pending'; Exit = 0; Entry = 7; Needle = 'root operation not walkable yet: an eternal branch among the root''s fields';
+    [pscustomobject]@{ Name = 'unit_eternal_num_fields.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
         Args = @('1', 'int', '0', '0', '4', 'unsigned', '0', '1', '5', 'ulong', '0', '2', '6', 'size', '0', '3', '3');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'c.sizeof(unsigned long)');
         Debt = @('c.LMX_TYPE_UNSIGNED, l2_eprofile0)', 'c.LMX_TYPE_ULONG, l2_eprofile0)',
@@ -1606,15 +1620,15 @@ $fixtures = @(
         Debt = @('l2_pst:', 'l2_pxp: lmx_arena_ref_cell(l2_pst,', 'l2_entry_unit: graph') },
     # FABLE-GROKBOT-RAW-MEMBER-ROOT-AND-7A-CLOSE-20260923-126 part1: raw root only for c.*.
     # Mutant: restore ty>=100 alone in l2_ty_raw_c_members -> Model compound emits wrong access.
-    [pscustomobject]@{ Name = 'unit_raw_root_model_compound.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call of a method that can throw';
+    [pscustomobject]@{ Name = 'unit_raw_root_model_compound.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_pst:', 'l2_pxp: lmx_arena_ref_cell(l2_pst,', 'l2_entry_unit: graph') },
-    [pscustomobject]@{ Name = 'unit_raw_root_formal_compound.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call of a method that can throw';
+    [pscustomobject]@{ Name = 'unit_raw_root_formal_compound.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_pst:', 'l2_pxp: lmx_arena_ref_cell(l2_pst,', 'l2_entry_unit: graph') },
-    [pscustomobject]@{ Name = 'unit_local_model_arg.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call of a method that can throw';
+    [pscustomobject]@{ Name = 'unit_local_model_arg.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_entry_unit: graph') },
@@ -1775,7 +1789,7 @@ $fixtures = @(
         Needle = 'graph assignment admission requires receiving-expression tests'; Absent = @(); Debt = @() },
     # Two identical full qualifier occurrences get distinct physical profile identities.
     # Plain in the same file stays mutable/unprofiled and is not a qualified root.
-    [pscustomobject]@{ Name = 'unit_eternal_physical_profiles.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an eternal branch among the root''s fields';
+    [pscustomobject]@{ Name = 'unit_eternal_physical_profiles.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('2', 'size', '0', '0', '7', 'size', '1', '0', '7');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
         Debt = @('c.array: [2]: @: Lmx l2_program_qualified_roots',

@@ -228,8 +228,9 @@ live in the ordinary machine activation: `fn` returns a value, `fm` a reference
 to its result Structure. The native entry `(node, self)` therefore means
 `(data.parent, data)`.
 Merging callables follows the accepted rule: the signature is derived (a bound
-formal leaves it), bound fields merge pairwise into the model's data slots, and
-the machine body is the code of the last operand with a body. The representation described
+formal leaves it), bound fields merge pairwise into the model's data slots, the
+last operand's body operators replace the model's, the result's `native` word
+is empty (interpreted), and nested methods keep their words. The representation described
 in this section and in §3.1 (descriptor, body, and own fields in one Structure;
 activation-local cells, dirty flags, checkpoints) is the transitional
 implementation of this pair; see §9.

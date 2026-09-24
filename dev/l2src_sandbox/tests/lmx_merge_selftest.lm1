@@ -6,6 +6,8 @@ predef: "l2src/lmx_array_owned.lm1"
 predef: "l2src/lmx_array_ref_owned.lm1"
 predef: "l2src/lmx_chars_owned.lm1"
 predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_implements.h.lm1"
+predef: "l2src/lmx_primitive.h.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
@@ -92,6 +94,11 @@ fn: main () int
     @: Lmx container 0
     @: Lmx result 0
     @: LmxMethod method 0
+    @: LmxPrimitive prim_rec 0
+    @: Lmx unit 0
+    @: Lmx child_p 0
+    @: Lmx copied_unit 0
+    @: void prim_slot 0
     @: void char_cell 0
     @: void int_cell 0
     @: Lmx copied 0
@@ -231,6 +238,34 @@ fn: main () int
     status: lmx_merge_owned(operands, 1U, 0, container, 0, @ arena, @ dst, 0, 0U, @ refused)
     merge_check(counts, status = LMX_MERGE_UNSUPPORTED && refused = 0, "the same refusal a second time is refused the same way")
     merge_check(counts, lmx_arena_index_len(dst_at) = held && merge_arrays(@ dst) = held_arrays && merge_arrays_live(@ dst) = 1, "the destination is exactly as it was after a second refusal")
+
+    # ---- D-49: PRIMITIVE record is a copy terminal (same address after parent walk) ----
+    # unit { child_p, prim_rec }; child_p.parent = unit. Copying child_p walks to unit.
+    # Mutant without DOMAIN_KIND_PRIMITIVE terminal -> GRAPH_COPY_INVALID.
+    unit: lmx_node_new_owned(@ arena)
+    child_p: lmx_node_new_owned(@ arena)
+    prim_rec: (cast: (@: LmxPrimitive) lmx_arena_take(@ arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))
+    merge_check(counts, unit != 0 && child_p != 0 && prim_rec != 0, "D-49 fixtures")
+    if: unit != 0 && child_p != 0 && prim_rec != 0
+        prim_rec\fn: 0
+        prim_rec\signature: 0
+        prim_rec\owner: 0
+        merge_check(counts, lmx_range_classify(@ arena, (cast: (@: void) prim_rec)) = c.LMX_DOMAIN_KIND_PRIMITIVE, "D-49 prim classifies as DOMAIN_KIND_PRIMITIVE")
+        merge_check(counts, lmx_arena_refs_open_owned(@ arena, unit, 2U) = 0, "D-49 unit opened")
+        merge_check(counts, lmx_arena_refs_open_owned(@ arena, child_p, 1U) = 0, "D-49 child_p opened")
+        child_p\parent: unit
+        lmx_arena_ref_store(unit, 0U, (cast: (@: void) child_p))
+        lmx_arena_ref_store(unit, 1U, (cast: (@: void) prim_rec))
+        result: 0
+        status: lmx_graph_copy_owned(child_p, 0, @ arena, @ dst, @ result)
+        merge_check(counts, status = LMX_GRAPH_COPY_OK && result != 0 && result != child_p, "D-49 copy of child under unit with prim sibling")
+        if: result != 0
+            copied_unit: result\parent
+            merge_check(counts, copied_unit != 0 && copied_unit != unit, "D-49 parent unit was copied")
+            prim_slot: lmx_arena_ref_value(copied_unit, 1U)
+            merge_check(counts, prim_slot = (cast: (@: void) prim_rec), "D-49 copied unit keeps SAME primitive record address")
+        ---
+    ---
 
     merge_check(counts, lmx_arena_index_len(arena_at) > 0U && lmx_arena_index_len(dst_at) > 0U, "entries exist while the arenas do")
     merge_check(counts, lmx_arena_release(@ dst) = 0, "destination arena released")

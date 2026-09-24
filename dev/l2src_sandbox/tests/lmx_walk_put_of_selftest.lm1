@@ -1,0 +1,197 @@
+predef: "l2src/lmx_walk.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_chars.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_plan.lm1"
+predef: "l2src/lmx_primitive.h.lm1"
+predef: "l2src/lmx_merge_owned.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# -177 c4 / D-54: PUT_OF evaluates holder; walk_slot refuses OP-node holders.
+# Mutant1: holder not evaluated (write into node) RED.
+# Mutant2: plain PUT with DEREF holder accepted RED.
+
+@: LmxArena ga 0
+@: Lmx groles 0
+@: Lmx gplan_roles 0
+@: LmxWalkContext gctx 0
+@: LmxWalkValue gv 0
+int: broken 0
+int: checks 0
+int: failures 0
+
+sub: check (int: ok; const: @(char label))
+    checks: checks + 1
+    if: ok = 0
+        failures: failures + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: check
+
+fn: fr (@: Lmx parent; size_t: slot; int: op; size_t: children) @: Lmx
+    @: Lmx n lmx_walk_frame(ga, groles, parent, op, children)
+    if: n = 0 || lmx_arena_ref_store(parent, slot, (cast: (@: void) n)) != 0
+        broken: broken + 1
+        return: 0
+    ---
+return: n
+
+fn: pl (@: Lmx parent; size_t: slot; size_t: children) @: Lmx
+    @: Lmx n lmx_walk_plain(ga, parent, children)
+    if: n = 0 || lmx_arena_ref_store(parent, slot, (cast: (@: void) n)) != 0
+        broken: broken + 1
+        return: 0
+    ---
+return: n
+
+sub: ref (@: Lmx code; size_t: slot; @: Lmx target)
+    if: code = 0 || target = 0 || lmx_arena_ref_store(code, slot, (cast: (@: void) target)) != 0
+        broken: broken + 1
+    ---
+end: ref
+
+sub: sz (@: Lmx code; size_t: slot; size_t: value)
+    if: code = 0 || lmx_walk_store_size(ga, code, slot, value) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+end: sz
+
+fn: mk_m (@: Lmx unit; size_t: slot; size_t: children) @: Lmx
+    @: Lmx m pl(unit, slot, children)
+    @: LmxCallable info lmx_callable_new_owned(ga)
+    if: m = 0 || info = 0 || lmx_arena_ref_store(m, 0U, (cast: (@: void) info)) != 0
+        broken: broken + 1
+        return: 0
+    ---
+return: m
+
+fn: go (@: Lmx m) int
+    int: st
+    if: m = 0 || gctx = 0 || gv = 0
+        return: c.LMX_WALK_INVALID
+    st: lmx_walk_prepare(gctx, ga, gplan_roles, m)
+    if: st != c.LMX_WALK_OK
+        return: st
+return: lmx_walk_run(gctx, m, 0, 0U, gv)
+
+fn: main () int
+    LmxArena: arena
+    LmxArena: context_arena
+    LmxPool: context_cells
+    LmxScratch: store
+    LmxWalkContext: context
+    @: Lmx unit 0
+    @: Lmx m 0
+    @: Lmx n 0
+    @: Lmx holder 0
+    @: Lmx model 0
+    @: Lmx putn 0
+    @: Lmx atn 0
+    @: Lmx der 0
+    @: Lmx litn 0
+    @: Lmx pn 0
+    @: Lmx ofn 0
+    @: Lmx prim_rec 0
+    @: LmxPrimitive prim 0
+    @: void pcell 0
+    @: void got 0
+    int: st 0
+    int: pty c.LMX_TYPE_POINTER_BASE + 7
+
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ arena) != 0
+        return: 2
+    ga: @ arena
+    groles: lmx_walk_roles_open(ga)
+    gplan_roles: lmx_plan_roles_open(ga)
+    memset((cast: (@: void) (@ context_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ context_cells)), 0, c.sizeof(c.LmxPool))
+    memset((cast: (@: void) (@ store)), 0, c.sizeof(c.LmxScratch))
+    if: lmx_arena_open(@ context_arena) != 0 || lmx_scratch_open(@ store, @ context_arena, @ context_cells, 16U) != c.LMX_SCRATCH_OK
+        return: 2
+    context.arena: ga
+    context.scratch: @ store
+    context.roles: groles
+    context.plan_roles: gplan_roles
+    context.immutable_profile: 0
+    context.classified: 0U
+    gctx: @ context
+    gv: (cast: (@: LmxWalkValue) calloc(1U, c.sizeof(c.LmxWalkValue)))
+
+    unit: lmx_node_new_owned(ga)
+    if: unit = 0 || lmx_arena_refs_open_owned(ga, unit, 16U) != 0
+        return: 2
+    ---
+    holder: pl(unit, 1U, 2U)
+    model: pl(unit, 2U, 1U)
+    if: holder = 0 || model = 0 || lmx_walk_store_int(ga, model, 0U, 0) != c.LMX_WALK_OK
+        return: 2
+    pcell: lmx_pointer_new_owned(pty, ga)
+    if: pcell = 0 || lmx_arena_ref_store(holder, 1U, pcell) != 0
+        return: 2
+
+    prim: (cast: (@: LmxPrimitive) lmx_arena_take(ga, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))
+    if: prim = 0
+        return: 2
+    prim\fn: lmx_walk_merge_model
+    prim\signature: 0
+    prim\owner: (cast: (@: Lmx) ga)
+    prim_rec: (cast: (@: Lmx) prim)
+
+    # Model: m via merge; PUT_OF(DEREF(AT m), 0, LIT 7); RET OF(DEREF(AT m))
+    m: mk_m(unit, 0U, 4U)
+    # store pointer cell on M as own field slot 1; first put Structure into it via merge result
+    if: lmx_arena_ref_store(m, 1U, pcell) != 0
+        return: 2
+    ---
+    # SET/PUT path: put merge result into pointer via ordinary PUT (holder = m as struct with field)
+    # Simpler: PUT holder unit-field then PUT_OF into deref.
+    n: fr(m, 2U, c.LMX_WALK_OP_PUT, 4U)
+    ref(n, 1U, holder)
+    sz(n, 2U, 1U)
+    pn: fr(n, 3U, c.LMX_WALK_OP_PRIM, 3U)
+    ref(pn, 1U, prim_rec)
+    ref(pn, 2U, model)
+    putn: fr(m, 3U, c.LMX_WALK_OP_PUT_OF, 4U)
+    der: fr(putn, 1U, c.LMX_WALK_OP_DEREF, 2U)
+    atn: fr(der, 1U, c.LMX_WALK_OP_AT, 3U)
+    ref(atn, 1U, holder)
+    sz(atn, 2U, 1U)
+    sz(putn, 2U, 0U)
+    litn: fr(putn, 3U, c.LMX_WALK_OP_LIT, 2U)
+    if: litn != 0 && lmx_walk_store_int(ga, litn, 1U, 7) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+    # Need a RET of OF(DEREF(AT)) -- rebuild as separate method for readback
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_OK)), "PUT_OF prepare+run OK")
+    got: lmx_pointer_value_known(pcell)
+    check((cast: (int) (got != 0 && lmx_int_value_known(lmx_arena_ref_value((cast: (@: Lmx) got), 0U)) = 7)), "slot0 is 7 after PUT_OF")
+
+    # Mutant2 witness: plain PUT with DEREF holder is INVALID (walk_slot X1)
+    m: mk_m(unit, 0U, 2U)
+    n: fr(m, 1U, c.LMX_WALK_OP_PUT, 4U)
+    der: fr(n, 1U, c.LMX_WALK_OP_DEREF, 2U)
+    atn: fr(der, 1U, c.LMX_WALK_OP_AT, 3U)
+    ref(atn, 1U, holder)
+    sz(atn, 2U, 1U)
+    sz(n, 2U, 0U)
+    litn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
+    if: litn != 0 && lmx_walk_store_int(ga, litn, 1U, 9) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_INVALID)), "PUT with DEREF holder INVALID")
+
+    c.printf("lmx_walk_put_of_selftest checks=%d failures=%d broken=%d\n", checks, failures, broken)
+    if: failures != 0 || broken != 0
+        return: 1
+return: 0

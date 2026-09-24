@@ -109,6 +109,8 @@ predef: "l2src/lmx_plan.h.lm1"
 # Own fields keep working copies: numerics in LmxWalkOwn.value (size_t, widest); Structure
 # fields (pointer cells) in LmxWalkOwn.ref (-174 c2). A read copies the working value /
 # reference into the destination, because the field may be assigned again before use.
+# Model: m creation (-174 c3): PRIM record whose fn is lmx_walk_merge_model over
+# lmx_merge_owned (null override map); see prototype note below.
 #
 #   ret   [ret, value?]               a return; no value for a void callable
 #   call  [call, M, arg ...]          M is the callee occurrence itself, by reference
@@ -146,7 +148,7 @@ predef: "l2src/lmx_plan.h.lm1"
 # rather than hidden, and NOT the final semantics of L3: Part A (-167) types numeric
 # cells (int/char/size_t/unsigned/ulong) from the arena. PUT into a pointer cell stores a
 # Structure reference type-checked (-174 c2). Own REFERENCE fields keep Structure in
-# LmxWalkOwn.ref. OF-deref is c1; merge-as-PRIM is c3. Arithmetic same-type rules land with -167 commit 2. A return carries
+# LmxWalkOwn.ref. OF-deref is c1; merge-as-PRIM (lmx_walk_merge_model) is c3. Arithmetic same-type rules land with -167 commit 2. A return carries
 # 0 or 1 value; no poll; no arrays; no dynamic inputs of 21.3.
 #
 # What is outside the slice is REPORTED, never skipped and never handed to native code
@@ -296,6 +298,9 @@ prototype:
     # otherwise LMX_WALK_INVALID and nothing runs.  `out` may be 0.  A turn run through a
     # Thread passes 0: what a turn has to say it says by a Message
     # (LMX_blog/2026-09-20.md, "Общение только через Message").
+    # -174 c3: Model: m. LmxPrimitive.fn = this; LmxPrimitive.owner = (cast: (@: Lmx) program_arena);
+    # PRIM node [prim, record, model]; null override map; result Structure in out.
+    fn: lmx_walk_merge_model (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
     fn: lmx_walk_run (@: LmxWalkContext context; @: Lmx node; @@: void args; size_t: nargs; @: LmxWalkValue out) int
     # The same activation for a caller INSIDE this unit: the inputs are values it produced
     # itself and are not asked about; an integer result goes into `dest`.

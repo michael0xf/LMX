@@ -1,0 +1,44 @@
+# FABLE-SONNET-SEND-REF-20260925-172 commit 1: the general reference field in
+# a named Structure body, `@: T name` -- the same pointee vocabulary a formal
+# or local pointer accepts (a core word or another named Structure), not a
+# Message-only kind. Holder declares one of each: @: int p (a core word) and
+# @: Model q (another named Structure), proving both spellings are ADMITTED.
+# p round-trips a live address at runtime (non-null after assignment,
+# pointer-identical to the address taken). q's own runtime round-trip is
+# left out here: taking the address of a Structure-typed own field (`@mo`,
+# needed to get a Model address to assign into q) hits a separate, pre-
+# existing bug (l2_eval_fields's naive "@ " + token emission takes the
+# address of the working-copy POINTER variable instead of using its value --
+# a double-indirection -- unrelated to this ticket's field-kind work, found
+# while building this witness since no prior fixture ever executed that
+# combination; reported separately, not fixed here). Holder\q is exercised
+# for declaration only until that is fixed.
+Model:
+    size_t: value 1U
+end: Model
+
+Holder:
+    @: int p
+    @: Model q
+end: Holder
+
+fn: check () int
+    Holder: h
+    int: n
+    @: int pn
+    n: 5
+    pn: @n
+    h\p: pn
+    if: h\p = 0
+        return: 1
+    if: h\p != pn
+        return: 3
+return: 0
+
+int: got
+got: check()
+if: got != 0
+    sendMessage: exit(exit_code: got; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

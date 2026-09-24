@@ -1694,6 +1694,10 @@ $fixtures = @(
         Args = @('0');
         Absent = @();
         Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns_ref_field_general.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @();
+        Debt = @() },
     [pscustomobject]@{ Name = 'unit_addr_entry_name_collision.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure-typed field';
         Args = @('0');
         Says = @('1 2 3 4 5');

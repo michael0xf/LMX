@@ -727,6 +727,7 @@ prototype:
     fn: l2_lmx_text () @: LmP0Text
     fn: l2_text_skip (const: @(LmP0Text t); size_t: n) @: LmP0Text
     fn: l2_ptr_type_word (const: @(LmP0Text word); int: depth; @: int out_ty) int
+    fn: l2_kernel_ptr_word (const: @(LmP0Text word); @: int out_ty) int
     fn: l2_ptr_local_ty (const: @(LmP0Node stmt); @@: LmP0Text out_name; @: int out_ty) int
     fn: l2_const_local_ty (const: @(LmP0Node stmt); @@: LmP0Text out_name; @: int out_ty) int
     fn: l2_foreign_intern (const: @(LmP0Text name); int: depth; int: is_const) int
@@ -5292,6 +5293,41 @@ fn: l2_ptr_type_word (const: @(LmP0Text word); int: depth; @: int out_ty) int
         return: 2
 return: 2
 
+# The kernel pointee words: char, LmxMsgRuntime/LmxRoot, LmxMsg, LmxMsgCopy,
+# L2ImmutQuery -- depth 1 only (none of these has a depth-2 spelling in any of
+# the three sites that recognize them).  Folded out of l2_const_local_ty's own
+# inline check (FABLE-SONNET-SEND-REF-20260925-172 commit 1, per -162's
+# fold discipline): one table, codes unchanged (char=3, LmxMsgRuntime/
+# LmxRoot=28, LmxMsg=29, LmxMsgCopy=30, L2ImmutQuery=6), l2_const_local_ty
+# and l2_typed_formal's const branch both call it instead of repeating it;
+# a THIRD caller, the general reference field in l2_take_ns_body, needs the
+# same words for a field like `@: LmxMsg sender`.  0 = recognized (out_ty
+# set); 1 = not one of these five words.
+fn: l2_kernel_ptr_word (const: @(LmP0Text word); @: int out_ty) int
+    if: out_ty = 0 || word = 0
+        return: 1
+    \out_ty: 0
+    if: l2_text_eq(word, "char")
+        \out_ty: 3
+        return: 0
+    if: l2_text_eq(word, "LmxMsgRuntime")
+        \out_ty: 28
+        return: 0
+    if: l2_text_eq(word, "LmxRoot")
+        \out_ty: 28
+        return: 0
+    if: l2_text_eq(word, "LmxMsg")
+        \out_ty: 29
+        return: 0
+    if: l2_text_eq(word, "LmxMsgCopy")
+        \out_ty: 30
+        return: 0
+    if: l2_text_eq(word, "L2ImmutQuery")
+        \out_ty: 6
+        l2_need_query: 1
+        return: 0
+return: 1
+
 fn: l2_ptr_local_ty (const: @(LmP0Node stmt); @@: LmP0Text out_name; @: int out_ty) int
     @: LmP0Field f
     @: LmP0Field g
@@ -5361,11 +5397,7 @@ fn: l2_const_local_ty (const: @(LmP0Node stmt); @@: LmP0Text out_name; @: int ou
     if: h = 0 || h\value = 0 || h\value\kind != c.LM_P0_NODE_ATOM || l2_ident(h\value\as\atom) = 0
         return: 1
     \out_name: h\value\as\atom
-    if: depth = 1 && l2_text_eq(g\value\as\atom, "char")
-        \out_ty: 3
-        return: 0
-    if: depth = 1 && l2_text_eq(g\value\as\atom, "LmxMsg")
-        \out_ty: 29
+    if: depth = 1 && l2_kernel_ptr_word(g\value\as\atom, out_ty) = 0
         return: 0
     if: l2_c_door(g\value\as\atom) != 0
         \out_ty: l2_foreign_intern(l2_text_skip(g\value\as\atom, 2U), depth, 1)
@@ -11028,12 +11060,15 @@ fn: l2_take_ns_body (const: @(LmP0Text name); int: parent; const: @(LmP0Structur
     size_t: acount 0U
     @: LmP0Text fname 0
     @: LmP0Field g
+    @: LmP0Field h
     @: LmP0Node fld
     int: me
     int: sub_ix
     int: ref_ix
     int: count 0
     int: cval
+    int: rdepth
+    int: rty
     if: body = 0
         return: l2_error(path, at, "a named Structure needs at least one field")
     me: l2_ns_push(name, parent, at)
@@ -11184,15 +11219,45 @@ fn: l2_take_ns_body (const: @(LmP0Text name); int: parent; const: @(LmP0Structur
                                             return: 1
                                         l2_nsf_ref[sub_ix]: ref_ix
                                     else:
-                                        # Name: field, a reference to another named Structure. The
-                                        # TARGET is not resolved here: it may not have been read yet,
-                                        # it may be this very declaration, or one enclosing it.
-                                        if: l2_count_active(fld\as\frame\body) != 1 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || l2_ident(g\value\as\atom) = 0
-                                            return: l2_error(path, at, "a Structure reference field needs a name")
-                                        if: l2_nsf_push(3, 0U, 0 - 1, me) < 0
-                                            return: l2_error(path, at, "out of memory")
-                                        l2_nsf_fname[l2_nsf_n - 1]: (cast: (@: LmP0Text) g\value\as\atom)
-                                        l2_nsf_name[l2_nsf_n - 1]: (cast: (@: LmP0Text) fld\as\frame\head)
+                                        rdepth: l2_address_depth(fld\as\frame\head)
+                                        if: rdepth != 0
+                                            # @: T name / @@: T name (author's rule: `@` of any
+                                            # depth is a declaration receiver in L3, so a named
+                                            # Structure -- itself L3 -- admits a reference field
+                                            # the same way a formal or local does). The pointee
+                                            # vocabulary is exactly a formal's/local's: the six
+                                            # core words at this depth, the kernel types at depth
+                                            # 1 (LmxMsg code 29, the mail sender reference; D-52 --
+                                            # steps/defects.md -- covers the prototype-construction
+                                            # gap this kind needed, FABLE-SONNET-SEND-REF-20260925-172
+                                            # commit 1), or
+                                            # another named Structure. Not a Message-only kind.
+                                            if: l2_count_active(fld\as\frame\body) != 2 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM
+                                                return: l2_error(path, at, "a reference field needs a type and a name")
+                                            h: l2_next_active(g\next)
+                                            if: h\value = 0 || h\value\kind != c.LM_P0_NODE_ATOM || l2_ident(h\value\as\atom) = 0
+                                                return: l2_error(path, at, "a reference field needs a name")
+                                            rty: 0 - 1
+                                            if: l2_ptr_type_word(g\value\as\atom, rdepth, @ rty) != 0
+                                                if: rdepth != 1 || l2_kernel_ptr_word(g\value\as\atom, @ rty) != 0
+                                                    if: l2_resolve_type_atom(g\value\as\atom, rdepth, 0, @ rty) != 0
+                                                        return: l2_error(path, g\value, "unknown type")
+                                                    ---
+                                                ---
+                                            if: l2_nsf_push(9 + rdepth, 0U, rty, me) < 0
+                                                return: l2_error(path, at, "out of memory")
+                                            l2_nsf_fname[l2_nsf_n - 1]: (cast: (@: LmP0Text) h\value\as\atom)
+                                        else:
+                                            # Name: field, a reference to another named Structure. The
+                                            # TARGET is not resolved here: it may not have been read yet,
+                                            # it may be this very declaration, or one enclosing it.
+                                            if: l2_count_active(fld\as\frame\body) != 1 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || l2_ident(g\value\as\atom) = 0
+                                                return: l2_error(path, at, "a Structure reference field needs a name")
+                                            if: l2_nsf_push(3, 0U, 0 - 1, me) < 0
+                                                return: l2_error(path, at, "out of memory")
+                                            l2_nsf_fname[l2_nsf_n - 1]: (cast: (@: LmP0Text) g\value\as\atom)
+                                            l2_nsf_name[l2_nsf_n - 1]: (cast: (@: LmP0Text) fld\as\frame\head)
+                                            ---
                                         ---
                                     ---
                                 ---
@@ -11895,6 +11960,14 @@ fn: l2_path_kind (const: @(char pd); size_t: pn; @: int out_mi) int
     ---
     if: kind = 4
         \out_mi: ent
+    if: kind = 10 || kind = 11
+        # The reference field's pointee type code (FABLE-SONNET-SEND-REF-
+        # 20260925-172 commit 1), the same raw code l2_ptr_type_word/
+        # l2_kernel_ptr_word/l2_resolve_type_atom give a formal or local --
+        # out_mi doubles as this carrier (unused by any other caller for
+        # these two kinds), so l2_field_path_read can convert it to an own-
+        # storage pointer code (l2_own_ty_of_param) without a new out param.
+        \out_mi: ent
 return: kind
 
 # Emit the walk that leaves l2_pxp addressing the LEAF SLOT of the path, and
@@ -12021,7 +12094,7 @@ fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind);
             ni: ent
             res: 0 - 1
         ---
-        if: i + 1 = segs && kind != 0 && kind != 1 && kind != 4 && kind != 7 && kind != 8 && kind != 9 && (arr_ok = 0 || (kind != 5 && kind != 6))
+        if: i + 1 = segs && kind != 0 && kind != 1 && kind != 4 && kind != 7 && kind != 8 && kind != 9 && kind != 10 && kind != 11 && (arr_ok = 0 || (kind != 5 && kind != 6))
             return: l2_error(l2_src, at, "a field path must end at a primitive field")
         if: i + 1 = segs && kind = 4 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(l2_pst, %uU)\n%sif: l2_pst = 0\n", ind, (cast: (unsigned) slot), ind) < 0
             return: 1
@@ -12069,7 +12142,7 @@ fn: l2_field_path_check (int: mi; const: @(LmP0Text left); const: @(LmP0Text rig
     memcpy((cast: (@: void) (buf + left\length + 1U)), (cast: (@: void) right\data), right\length)
     n: left\length + right\length + 1U
     \out_kind: l2_path_kind(buf, n, @ leaf_mi)
-    if: \out_kind != 0 && \out_kind != 1 && \out_kind != 7 && \out_kind != 8 && \out_kind != 9
+    if: \out_kind != 0 && \out_kind != 1 && \out_kind != 7 && \out_kind != 8 && \out_kind != 9 && \out_kind != 10 && \out_kind != 11
         return: 1
 return: 0
 
@@ -12079,6 +12152,8 @@ fn: l2_field_path_read (int: mi; const: @(LmP0Text left); const: @(LmP0Text righ
     int: kind
     int: fpc
     int: t
+    int: oty
+    int: ent
     if: dest = 0
         return: 1
     fpc: l2_field_path_check(mi, left, right, @ kind)
@@ -12096,7 +12171,17 @@ fn: l2_field_path_read (int: mi; const: @(LmP0Text left); const: @(LmP0Text righ
         return: 1
     t: l2_tn
     l2_tn: l2_tn + 1
-    if: l2_emit_cell_load(l2_kind_cell_ty(kind), ind, t, at) != 0
+    oty: l2_kind_cell_ty(kind)
+    if: kind = 10 || kind = 11
+        # A reference field leaf (FABLE-SONNET-SEND-REF-20260925-172 commit
+        # 1): its pointee code is not fixed per kind the way a primitive's
+        # is, so re-derive it (l2_path_kind's out_mi carries it for these
+        # two kinds) and convert formal/local raw code -> own-storage code
+        # the same way any other declared pointer own field does.
+        ent: 0 - 1
+        l2_path_kind(buf, n, @ ent)
+        oty: l2_own_ty_of_param(ent)
+    if: l2_emit_cell_load(oty, ind, t, at) != 0
         return: 1
     if: c.sprintf(dest, "l2_t%d", t) < 0
         return: 1
@@ -12775,26 +12860,13 @@ fn: l2_typed_formal (const: @(LmP0Node node); const: @(char path); @@: LmP0Text 
             return: l2_error(path, f\value, "unknown type")
         \out_name: g\value\as\atom
         return: 0
-    if: l2_text_eq(f\value\as\atom, "char") = 0 && l2_text_eq(f\value\as\atom, "L2ImmutQuery") = 0 && l2_text_eq(f\value\as\atom, "LmxMsgRuntime") = 0 && l2_text_eq(f\value\as\atom, "LmxMsg") = 0 && l2_text_eq(f\value\as\atom, "LmxMsgCopy") = 0
+    if: l2_kernel_ptr_word(f\value\as\atom, out_ty) != 0
         if: l2_resolve_type_atom(f\value\as\atom, 1, 1, out_ty) != 0
             return: l2_error(path, f\value, "unknown type")
         \out_name: g\value\as\atom
         return: 0
     if: g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || l2_ident(g\value\as\atom) = 0
         return: l2_error(path, node, "incompatible entry signature")
-    if: l2_text_eq(f\value\as\atom, "char")
-        \out_ty: 3
-    if: l2_text_eq(f\value\as\atom, "LmxMsgRuntime")
-        \out_ty: 28
-    if: l2_text_eq(f\value\as\atom, "LmxRoot")
-        \out_ty: 28
-    if: l2_text_eq(f\value\as\atom, "LmxMsg")
-        \out_ty: 29
-    if: l2_text_eq(f\value\as\atom, "LmxMsgCopy")
-        \out_ty: 30
-    if: l2_text_eq(f\value\as\atom, "L2ImmutQuery")
-        \out_ty: 6
-        l2_need_query: 1
     \out_name: g\value\as\atom
 return: 0
 
@@ -19287,6 +19359,14 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                 return: 1
             if: l2_pkind = 9 && l2_prhs_lit = 0 && c.fprintf(l2_out, "%sif: lmx_ulong_store_known(l2_pxp[0], %s) != 0\n", ind, l2_tok) < 0
                 return: 1
+            # A reference field (FABLE-SONNET-SEND-REF-20260925-172 commit 1):
+            # the cell holds a raw pointer, stored the same generic way every
+            # other own-field pointer cell already is (l2_emit_msend/
+            # receiveMessage's own lmx_pointer_store_known calls) -- never a
+            # literal RHS (l2_path_rhs does not recognize one for this kind),
+            # so only the l2_eval_fields token side applies.
+            if: (l2_pkind = 10 || l2_pkind = 11) && c.fprintf(l2_out, "%sif: lmx_pointer_store_known(l2_pxp[0], (cast: (@: void) %s)) != 0\n", ind, l2_tok) < 0
+                return: 1
             if: l2_emit_path_bail(mi, ind) != 0
                 return: 1
             field: l2_next_active(field\next)
@@ -20854,6 +20934,23 @@ fn: l2_emit_unit (const: @(char out_path)) int
                     fclose(l2_out)
                     return: 1
                 ---
+            # A reference field (kind 10/11, FABLE-SONNET-SEND-REF-20260925-172
+            # commit 1): a plain pointer cell, the same allocator the walked
+            # root's graph-typed own fields and a formal's/local's own pointer
+            # locals already use (l2trans.lm1's own l2_own_is_pointer-gated
+            # sites) -- NOT a Structure reference (kind 3), which stays null
+            # here and is materialized by the second phase's merge(Type,
+            # empty) below. Without this the slot stays the arena's raw
+            # zeroed child (never lmx_value_allocate_owned'd), which is not a
+            # cell lmx_pointer_store_known/_value_known or the merge copier
+            # can treat as one -- found via a witness that read/wrote such a
+            # field and hit "a field path met no Structure" on every read.
+            if: l2_nsf_owner[fx] = k && (l2_nsf_kind[fx] = 10 || l2_nsf_kind[fx] = 11) && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + %d, l2_program_arena)\n        if: l2_entry_slot[0] = 0\n            return: 1\n", k, (cast: (unsigned) oi), l2_nsf_ref[fx]) < 0
+                fclose(l2_out)
+                return: 1
+            if: l2_nsf_owner[fx] = k && (l2_nsf_kind[fx] = 10 || l2_nsf_kind[fx] = 11) && l2_ns_eternal[k] >= 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: lmx_arena_take_profiled(l2_program_arena, c.sizeof(@: void), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_POINTER_BASE + %d, l2_eprofile%u)\n        if: l2_entry_slot[0] = 0\n            return: 1\n", k, (cast: (unsigned) oi), l2_nsf_ref[fx], (cast: (unsigned) l2_ns_eternal[k])) < 0
+                fclose(l2_out)
+                return: 1
             if: l2_nsf_owner[fx] = k
                 oi: oi + 1
             ---

@@ -135,3 +135,33 @@ prefix (`(cast: (@: c.LmP0IndentStack) ...)` / `(cast: (@: c.LmP0Text) ...)`), m
 established migration every other fixture in the corpus uses (`unit_c_member_*` etc.). Gate each to
 its nonzero success value if it then runs clean; if a further gap surfaces, report it rather than
 force a fix outside this ticket's scope.
+
+**Commit 3 landed: the respelling was wrong in scope, corrected, and each fixture hit a further,
+separate gap -- reported per the plan above, neither fixture gated.**
+
+Re-measured on the current tree (after commit 2) rather than trusting the -155-era note above: the
+"unknown type" in `unit_indent_stack_field_index.lm2` was NOT at the cast target -- it was at the
+FORMAL parameter (`fn: store_and_read (@: LmP0IndentStack stack; ...)`, column landed exactly on
+the type atom), i.e. the file's own header comment ("a formal is admitted and reads back") is
+itself stale. Respelled every bare `LmP0IndentStack` in the file (the formal, the local, and the
+cast target -- three sites, not one). That clears "unknown type" entirely (confirmed: re-running
+l2trans no longer names it), but the SAME statement that was always going to run next,
+`stack\columns[idx]: value` (`idx` a `size_t:` local, not a decimal literal), now refuses "own
+array index requires an in-bounds primitive literal" -- a raw-member-array-write limitation
+unrelated to the type spelling, was never reachable before since the formal failed first. Not
+fixed: dynamic own-array indexing through a raw member path is its own, separate capability gap,
+not a D-34 respelling.
+
+`unit_void_value.lm2`: the bare `LmP0Text` WAS exactly where expected (`sub: d`'s formal). Respelled
+it. That clears "unknown type", but the fixture's very next statement, `fn: m (...) int` returning
+`d(0)` where `d` is a `sub:` (no result), now refuses "incompatible entry signature" (frame=return)
+-- not the "a callable without a result has no value" message the same shape gets elsewhere in the
+corpus (`unit_value_call_sub_refused.lm2`, `unit_return_sub_refused.lm2`). The fixture's own name
+suggests this IS the void-value-in-return-position case it was written to probe, but whether
+"incompatible entry signature" is the intended/correct message for it, or itself a gap, is a
+separate question this ticket does not answer. Not fixed.
+
+Both respellings are correct and kept (they match the established `c.LmP0*` migration exactly, and
+demonstrably clear the type-resolution error each fixture led with) even though neither fixture
+newly gates -- reporting the deeper gap each one now surfaces, as the plan above said to, rather
+than chasing either into its own separate ticket's territory.

@@ -1231,17 +1231,21 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
         if: status != c.LMX_WALK_OK
             return: status
         slot: lmx_walk_slot(f, code, 1U)
-        if: value = 0 || slot = 0 || slot[0] = 0
+        if: slot = 0 || slot[0] = 0
             return: c.LMX_WALK_INVALID
-        # Pointer cell: store a Structure reference, type-checked (-174 c2).
-        # Mutant: skip STRUCT kind check -> wrong-type RED.
+        # Pointer cell: Structure reference or null (-177: null means "no letter").
+        # Mutant: refuse value 0 -> empty take / null PUT RED.
         if: lmx_walk_is_pointer_cell(f\arena, slot[0]) != 0
-            if: lmx_walk_kind(f, value) != c.LMX_KIND_STRUCT
+            if: value != 0 && lmx_walk_kind(f, value) != c.LMX_KIND_STRUCT
                 return: c.LMX_WALK_INVALID
+            ---
             if: lmx_pointer_store_known(slot[0], value) != 0
                 return: c.LMX_WALK_INVALID
             \out: slot[0]
             return: c.LMX_WALK_OK
+        ---
+        if: value = 0
+            return: c.LMX_WALK_INVALID
         ---
         # Numeric cell: operand type must match.
         b: lmx_walk_numeric_type(f\arena, slot[0])
@@ -1298,6 +1302,46 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
         status: lmx_walk_eval(f, lmx_arena_ref_value(code, 2U), (cast: (@: void) (@ b)), @ other)
         if: status != c.LMX_WALK_OK
             return: status
+        # -177: EQ on a pointer cell vs pointer cell or literal 0 compares held addresses.
+        # Mutant: always load_operand -> pointer EQ INVALID RED.
+        if: op = c.LMX_WALK_OP_EQ && value != 0 && lmx_walk_is_pointer_cell(f\arena, value) != 0
+            ua: (cast: (size_t) lmx_pointer_value_known(value))
+            if: other = 0
+                ub: 0U
+            else:
+                if: lmx_walk_is_pointer_cell(f\arena, other) != 0
+                    ub: (cast: (size_t) lmx_pointer_value_known(other))
+                else:
+                    if: lmx_walk_load_operand(f\arena, other, @ ub, @ b) != c.LMX_WALK_OK
+                        return: c.LMX_WALK_INVALID
+                    ---
+                    if: b != c.LMX_TYPE_INT || ub != 0U
+                        return: c.LMX_WALK_INVALID
+                    ---
+                    ub: 0U
+                ---
+            ---
+            lmx_int_store_known(dest, (cast: (int) (ua = ub)))
+            \out: dest
+            return: c.LMX_WALK_OK
+        ---
+        if: op = c.LMX_WALK_OP_EQ && other != 0 && lmx_walk_is_pointer_cell(f\arena, other) != 0
+            ub: (cast: (size_t) lmx_pointer_value_known(other))
+            if: value = 0
+                ua: 0U
+            else:
+                if: lmx_walk_load_operand(f\arena, value, @ ua, @ a) != c.LMX_WALK_OK
+                    return: c.LMX_WALK_INVALID
+                ---
+                if: a != c.LMX_TYPE_INT || ua != 0U
+                    return: c.LMX_WALK_INVALID
+                ---
+                ua: 0U
+            ---
+            lmx_int_store_known(dest, (cast: (int) (ua = ub)))
+            \out: dest
+            return: c.LMX_WALK_OK
+        ---
         if: value = 0 || other = 0
             return: c.LMX_WALK_INVALID
         if: lmx_walk_load_operand(f\arena, value, @ ua, @ a) != c.LMX_WALK_OK

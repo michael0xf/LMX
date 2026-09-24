@@ -1842,7 +1842,16 @@ $fixtures = @(
         Args = @('0'); Absent = @(); Debt = @() },
     # Parity native for D-04 (walker FIXED -140): extra Structure arg to nullary.
     [pscustomobject]@{ Name = 'unit_matrix_parity_extra_struct_native.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'incompatible entry signature'; Absent = @('assignment target must be a declared typed mutable value'); Debt = @() }
+        Needle = 'incompatible entry signature'; Absent = @('assignment target must be a declared typed mutable value'); Debt = @() },
+    # FABLE-SONNET-NAME-SPECIALS-20260924-155 commit 2: the norm's negative witness -- no
+    # predef: at all for lm_own_new_zero, so l2_is_known (name resolves only through c.* or a
+    # predef: declaration, never a hard-coded list) must refuse it. Measured message for a
+    # call-shaped reference to an unknown name is "unknown method" (l2_check_fields :13090),
+    # not "unresolved name" (that text is for a bare-atom reference, e.g. unit_bare_unknown_
+    # refused.lm2); this row pins the message l2trans actually gives here. Mutant: restoring
+    # the deleted 11-name list in l2_is_known turns this row GREEN (wrongly admitted) -- RED.
+    [pscustomobject]@{ Name = 'unit_own_missing_predef_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unknown method'; Absent = @(); Debt = @() }
 )
 
 foreach ($fx in $fixtures) {

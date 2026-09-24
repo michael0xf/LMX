@@ -2,6 +2,14 @@
 # lost every field after its first, so `lm_own_resize(cells, 8U * c.sizeof(c.int))` resized to 8 bytes and
 # `lm_own_copy_bytes(text, n + 1U)` copied n bytes. The copy is NUL-terminated at its length, so reading copy[2] is
 # in bounds either way and reads 0 before the repair; the resize's element 7 exists only after it.
+# FABLE-SONNET-NAME-SPECIALS-20260924-155: these lm_own_* names used to
+# resolve through l2_is_known's hard-coded adapter list; this predef is
+# the general mechanism's own declaration for all four of them (a
+# prototype-only header, matching every other predef target in this
+# corpus -- l2_predef_file_has_function only recognizes names inside a
+# prototype: block or a chained predef:, never a plain top-level fn:/sub:
+# body like l1src/own.lm1 itself).
+predef: "l1src/own.h.lm1"
 fn: copy_tail (const: @(char text); size_t: n) int
     @: char copy
     copy: lm_own_copy_bytes(text, n + 1U)

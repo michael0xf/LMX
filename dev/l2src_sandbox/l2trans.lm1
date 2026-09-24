@@ -8704,14 +8704,16 @@ fn: l2_is_known (const: @(LmP0Text t)) int
     # c.* is the raw door; c.array declarators are matched by l2_array_local, not here.
     if: t\length > 2U && t\data[0] = 99 && t\data[1] = 46
         return: 1
-    # The translator's own adapter families are LMX functions implemented in L1
-    # (l1src/parser.lm1, l1src/own.lm1, l2src/l2_text_hash.lm1). Their
-    # declarations are the adapter predefs the translator itself emits when it
-    # sees them, so they resolve here as declared LMX names -- never as c.
-    if: l2_text_eq(t, "lm_p0_parse_file") || l2_text_eq(t, "lm_p0_document_destroy") || l2_text_eq(t, "lm_p0_dump_alloc") || l2_text_eq(t, "lm_p0_free") || l2_text_eq(t, "lm_p0_document_diagnostic")
-        return: 1
-    if: l2_text_eq(t, "lm_own_new_zero") || l2_text_eq(t, "lm_own_copy_bytes") || l2_text_eq(t, "lm_own_delete") || l2_text_eq(t, "lm_own_resize") || l2_text_eq(t, "l2_immut_query_fill") || l2_text_eq(t, "l2_hash_compare_q")
-        return: 1
+    # FABLE-SONNET-NAME-SPECIALS-20260924-155 commit 2 (steps/name-specials-
+    # inventory.md): the translator's own adapter families are LMX functions
+    # implemented in L1 (l1src/parser.lm1, l1src/own.lm1, l2src/*.h.lm1) --
+    # visible ONLY through the source unit's own predef: declarations, like
+    # any other adapter, never through a name whitelist (plan §7a norm).
+    # This dropped a hard-coded 11-name list that used to answer for a
+    # handful of names before ever asking l2_predef_has_function; measured
+    # which fixtures actually relied on it (none of them redundant with the
+    # general mechanism) and gave each the predef:/prototype line it lacked
+    # instead of keeping the special case.
     if: l2_predef_has_function(t) != 0
         return: 1
 return: 0

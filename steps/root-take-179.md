@@ -68,3 +68,33 @@ The witness with one letter reads m != 0.  It does not read `m\payload`:
   unit_root_take_letter and unit_next_message_twice are RED.  The empty-box rows stay green, as
   they must: their m is null either way.
 - Mutant T2, the reference test's polarity flipped: all four take rows are RED.
+
+## Commit 2: a Structure argument by reference
+
+### What is built
+
+- A call's input whose formal is of a named Structure type (l2_nsty_get of the formal) takes a
+  root own field of that same type.
+- The CALL's input is DEREF(AT(unit, the field's cell)): the Structure the field holds, the very
+  node.  So the callee receives the address of the caller's Structure, not a copy, and a write
+  through the formal is the caller's (l2_rw_struct_arg).
+- Refused, located:
+  - an actual that is not such a field's name: «a Structure argument that is not a field's name»;
+  - an actual of another type, or an untyped letter: «an admission to a Structure type» (the
+    caller's implicit `implements` at the call, D-55).
+
+### Rows
+
+- eternal-runs:
+  - unit_matrix_callable_struct_identity: `bump(m)`, `bump: m` and the vertical `bump:` each write
+    `x\value` through the formal, and the caller reads 4U after them.  It pins the DEREF.
+  - unit_field_path_terminal_checklist: `writer(a)`, whose checks are inside the callee.
+- unit_admit_letter_formal, unit_admit_formal_refused and unit_s1_catch_implements move to «an
+  admission to a Structure type»: a letter to a Structure formal.
+
+### Witness
+
+- Mutant C1, the argument passed as a fresh merge copy (PRIM lmx_walk_merge_model over the DEREF):
+  unit_matrix_callable_struct_identity is RED (exit 90: bump's writes land in the copies).
+- unit_field_path_terminal_checklist stays green under C1, as it must: it observes nothing on the
+  caller's side.

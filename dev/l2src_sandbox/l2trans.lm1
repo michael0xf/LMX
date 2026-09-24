@@ -460,6 +460,7 @@ prototype:
     fn: l2_rw_path_write (const: @(LmP0Node stmt); const: @(LmP0Text t); @: LmP0Field value; int: n; int: into; @: int out) int
     fn: l2_rw_model (const: @(LmP0Node stmt); const: @(LmP0Text h); int: into; @: int out) int
     fn: l2_rw_take (const: @(LmP0Node stmt); int: into; @: int out) int
+    fn: l2_rw_struct_arg (const: @(LmP0Node node); @: LmP0Field a; int: span; int: ni; int: parent; @: int out) int
     fn: l2_rw_count (@: LmP0Field first) int
     fn: l2_rw_send (@: LmP0Node stmt; int: into; @: int out) int
     fn: l2_emit_send (int: k; int: proto; @: char prefix; @: int count_arr; @: int kind_arr; @@: LmP0Text text_arr) int
@@ -17138,11 +17139,12 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; @: LmP0Field args; int: paren
     # wider type a destination of that type, by the method record's sig (l2_method_sig_text).
     if: l2_tramp_class(idx) > 4
         return: l2_rw_refuse(node, "a call whose result is not a number")
-    # An input is a number (its formal's type: the trampoline reads that cell type), or a callable
-    # formal, which takes a method's occurrence by reference.
+    # An input is a number (its formal's type: the trampoline reads that cell type), a Structure
+    # of the formal's own named type (by reference, -179), or a callable formal, which takes a
+    # method's occurrence by reference.
     j: 0
     while: j < l2_m_arity[idx]
-        if: l2_cf_get(idx, j) < 0 && l2_rw_num_ty(l2_own_ty_of_param(l2_input_ft(idx, j))) = 0
+        if: l2_cf_get(idx, j) < 0 && l2_rw_num_ty(l2_own_ty_of_param(l2_input_ft(idx, j))) = 0 && l2_nsty_get(idx, j) < 0
             return: l2_rw_refuse(node, "a call with an input that is not a number")
         j: j + 1
     ---
@@ -17175,14 +17177,39 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; @: LmP0Field args; int: paren
                 return: 1
             ---
         else:
-            if: l2_rw_texpr(a, span, l2_own_ty_of_param(l2_input_ft(idx, k)), \out, @ arg) != 0 || l2_rw_put(\out, 2 + k, arg) != 0
-                return: 1
+            if: l2_nsty_get(idx, k) >= 0
+                if: l2_rw_struct_arg(node, a, span, l2_nsty_get(idx, k), \out, @ arg) != 0 || l2_rw_put(\out, 2 + k, arg) != 0
+                    return: 1
+                ---
+            else:
+                if: l2_rw_texpr(a, span, l2_own_ty_of_param(l2_input_ft(idx, k)), \out, @ arg) != 0 || l2_rw_put(\out, 2 + k, arg) != 0
+                    return: 1
+                ---
             ---
         ---
         k: k + 1
         a: l2_skip_span(a, span)
     ---
 return: 0
+
+# A Structure argument by reference (FABLE-OPUS-ROOT-TAKE-20260925-179 commit 2): the actual is a
+# root own field of the formal's own named Structure type `ni`, and the callee receives the
+# Structure that field holds -- DEREF(AT(unit, its cell)), the same node, not a copy -- so a write
+# through the formal is the caller's.  An actual of another type, or an untyped graph (a letter),
+# is admitted first: the caller's implicit `implements` (D-55), not built here.
+fn: l2_rw_struct_arg (const: @(LmP0Node node); @: LmP0Field a; int: span; int: ni; int: parent; @: int out) int
+    int: oi
+    int: raw
+    if: span != 1 || a\value = 0 || a\value\kind != c.LM_P0_NODE_ATOM || a\value\as = 0
+        return: l2_rw_refuse(node, "a Structure argument that is not a field's name")
+    oi: l2_own_find_last(l2_e, a\value\as\atom)
+    if: oi < 0 || l2_own_mi[oi] != l2_e || l2_own_host[oi] != 0 || l2_own_fid[oi] >= 0 || l2_own_uchild[oi] < 0 || l2_own_is_pointer(l2_own_ty[oi]) = 0
+        return: l2_rw_refuse(node, "a Structure argument that is not a field's name")
+    if: l2_own_nsty_get(oi) != ni
+        return: l2_rw_refuse(node, "an admission to a Structure type")
+    if: l2_rw_frame(parent, "LMX_WALK_OP_DEREF", 2, out) != 0 || l2_rw_own(\out, oi, @ raw) != 0
+        return: 1
+return: l2_rw_put(\out, 1, raw)
 
 # One operand of type ty (resolved by l2_rw_texpr): an atom, a call frame, or a parenthesized
 # expression.

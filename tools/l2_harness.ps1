@@ -616,12 +616,12 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_admit_letter_typed.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an admission to a Structure type'; Args = @('0'); Argv = @('a', 'b');
         Absent = @(); Debt = @('lmx_runtime_implements(l2_program_arena, (cast: (@: Lmx) l2_ngraph)') },
     # -179: the take is built; pending on a graph input's admission (the caller's implements, D-55), then `MainLetter: m`'s admission.
-    [pscustomobject]@{ Name = 'unit_admit_letter_formal.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call with an input that is not a number'; Args = @('0');
+    [pscustomobject]@{ Name = 'unit_admit_letter_formal.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an admission to a Structure type'; Args = @('0');
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_admit_letter_not_model.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an admission to a Structure type'; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
         Absent = @(); Debt = @() },
     # -179: the take is built; pending on a graph input's admission (the caller's implements, 2 at the root, D-55).
-    [pscustomobject]@{ Name = 'unit_admit_formal_refused.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call with an input that is not a number'; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+    [pscustomobject]@{ Name = 'unit_admit_formal_refused.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an admission to a Structure type'; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_admit_rebind_refused.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an admission to a Structure type'; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
         Absent = @(); Debt = @() },
@@ -963,7 +963,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_s1_catch_user_break.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a loop'; Args = @('0'); Entry = 105;
         Absent = @(); Debt = @() },
     # -179: the take is built; pending on a graph input's admission (D-55), then the catch role (-171).
-    [pscustomobject]@{ Name = 'unit_s1_catch_implements.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call with an input that is not a number'; Args = @('0'); Entry = 42;
+    [pscustomobject]@{ Name = 'unit_s1_catch_implements.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an admission to a Structure type'; Args = @('0'); Entry = 42;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s1_catch_duplicate_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'duplicate catch: Oops'; Absent = @(); Debt = @() },
@@ -1566,7 +1566,7 @@ $fixtures = @(
     # FABLE-SONNET-OWN-LOOKUP-AUDIT-20260923-131 part 3: the terminal
     # Structure-reference assignment checklist, one assertion per (direct
     # name / path) x (own / unit / formal) x (primitive / Structure).
-    [pscustomobject]@{ Name = 'unit_field_path_terminal_checklist.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call with an input that is not a number';
+    [pscustomobject]@{ Name = 'unit_field_path_terminal_checklist.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @() },
@@ -1961,8 +1961,11 @@ $fixtures = @(
         Needle = 'graph assignment admission requires receiving-expression tests'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_matrix_callable_prim.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0'); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_matrix_callable_struct_identity.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call with an input that is not a number';
-        Args = @('0'); Absent = @(); Debt = @() },
+    # -179 commit 2: a Structure argument of the formal's own type goes BY REFERENCE -- the CALL's
+    # input is DEREF(AT(m)), the Structure m holds -- so bump's three writes through x are m's own:
+    # 4U after them.  Passed as a fresh merge copy instead, the writes are lost and the row exits 90.
+    [pscustomobject]@{ Name = 'unit_matrix_callable_struct_identity.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Absent = @(); Debt = @('c.LMX_WALK_OP_DEREF, 2U)') },
     [pscustomobject]@{ Name = 'unit_matrix_callable_array_elem.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an array';
         Args = @('0'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_matrix_callable_callable_arg.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';

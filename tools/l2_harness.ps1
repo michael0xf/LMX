@@ -568,6 +568,16 @@ $fixtures = @(
     # is an assignment target, not a call).
     [pscustomobject]@{ Name = 'unit_next_message_word_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
+    # FABLE-SONNET-RECEIVE-RENAME-20260924-166 commit 3 (D-48, Q24 = A): a repeated typed
+    # declaration of one name is a new occurrence.
+    [pscustomobject]@{ Name = 'unit_q24_repeated_decl.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
+        Args = @('0');
+        Absent = @();
+        Debt = @() },
+    # FABLE-SONNET-RECEIVE-RENAME-20260924-166 commit 3 (D-48): a DIFFERENT-typed repeated
+    # declaration needs the not-yet-ported S7 converters -- a located refusal, not a C cast.
+    [pscustomobject]@{ Name = 'unit_q24_mixed_type_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'conversion int -> char: converters not ported yet (S7)'; Absent = @(); Debt = @() },
     # ADMISSION (fable's B2, author Q12): an untyped graph -- the letter receiveMessage takes -- bound
     # to a declared Structure type (receiveMessage into a typed own field, rebinding it, a typed
     # formal's argument) is admitted at run time by the kernel's implements walk against the
@@ -632,12 +642,15 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'entry_argc_dup.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'duplicate formal'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'entry_bad_sig.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'incompatible entry signature'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'entry_two_main.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'duplicate definition'; Absent = @(); Debt = @() },
-    # The unit's fields are E's own fields: a second typed declaration of one name in one scope is
-    # refused, at unit level as in a method body (before S2 only the unit said so).  And E is the
-    # root of every activation: a callee's dynamic input that E does not bind stops at E and is
-    # resolved at the call by the callee's lexical fallback, as it was from `main`.
-    [pscustomobject]@{ Name = 'unit_root_field_duplicate.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'duplicate declaration'; Absent = @(); Debt = @() },
+    # The unit's fields are E's own fields, the same mechanism a method body uses.  FABLE-SONNET-
+    # RECEIVE-RENAME-20260924-166 commit 3 (D-48, Q24 = A): a repeated typed declaration of one
+    # name is now a new occurrence at unit level too (was refused, S2 rule 4, self-made).  E is
+    # still the root of every activation: a callee's dynamic input that E does not bind stops at E
+    # and is resolved at the call by the callee's lexical fallback, as it was from `main`.
+    [pscustomobject]@{ Name = 'unit_root_field_duplicate.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0');
+        Absent = @();
+        Debt = @() },
     [pscustomobject]@{ Name = 'unit_asgn_fallback.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call of a method with dynamic inputs'; Args = @('0');
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'entry_ret_tr_bad.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },

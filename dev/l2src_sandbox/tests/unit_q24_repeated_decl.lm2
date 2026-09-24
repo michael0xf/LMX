@@ -1,0 +1,52 @@
+# FABLE-SONNET-RECEIVE-RENAME-20260924-166 commit 3 (D-48): Q24 = A (author, LMX_blog/2026-09-25.md,
+# q24.md) -- a repeated TYPED declaration of one name in one body is a new occurrence, the same
+# mechanism the argument same-name-binding rule already uses. `test\[0]arg` = 1 (first), `test\[1]arg`
+# = 2 (second), unqualified `test\arg` = 2 (last, Q22.2 = A, FABLE-SONNET-LAST-OCCURRENCE-20260924-164).
+fn: test () int
+    int: arg 1
+    int: arg 2
+    return: 0
+end: test
+
+# The author's own example (LMX_blog/2026-09-25.md): a repeated declaration's initialiser
+# expression reads whatever occurrence was declared BEFORE this statement -- `x + 2` reads the
+# first `x` (1), not the row this very declaration is creating -- giving 3, not 2 or 4.
+fn: expr_init () int
+    int: x 1
+    int: x (x + 2)
+    return: 0
+end: expr_init
+
+fn: check () int
+    int: first
+    int: second
+    int: last
+    test()
+    first: test\[0]arg
+    second: test\[1]arg
+    last: test\arg
+    if: first != 1
+        return: 81
+    if: second != 2
+        return: 82
+    if: last != 2
+        return: 83
+    test\arg: 5
+    second: test\[1]arg
+    first: test\[0]arg
+    if: second != 5
+        return: 84
+    if: first != 1
+        return: 85
+    expr_init()
+    first: expr_init\[0]x
+    second: expr_init\[1]x
+    if: first != 1
+        return: 86
+    if: second != 3
+        return: 87
+    return: 7
+end: check
+
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

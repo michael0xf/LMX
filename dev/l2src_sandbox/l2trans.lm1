@@ -27,6 +27,16 @@ int: l2_m_cap 0
 int: l2_slot_cap 0
 int: l2_own_n 0
 int: l2_own_cap 0
+# Q19.2/Q24 (FABLE-SONNET-RECEIVE-RENAME-20260924-166 commit 3, D-48): a repeated declaration's
+# own initialiser expression reads whatever occurrence was declared before it, never itself --
+# `int: x (x + 2)` after `int: x 1` reads the first x, not the row this statement is creating.
+# Registration runs a whole body ahead of emission, so by the time this row's initialiser is
+# emitted every occurrence of its name -- including this row itself -- is already in l2_own_n;
+# name-only lookup cannot tell "before this row" from "this row". l2_own_find_last (the general
+# bare-name resolver used inside an initialiser's expression, among many other call sites) skips
+# this one row while it is set, restored right after: the declaration's own row is invisible to
+# its own initialiser, every other lookup is unaffected.
+int: l2_own_excl -1
 int: l2_tn 0
 int: l2_loop_depth 0
 int: l2_scope_n 0
@@ -430,6 +440,8 @@ prototype:
     fn: l2_own_find_last (int: mi; const: @(LmP0Text t)) int
     fn: l2_occ_head (const: @(LmP0Text t); @: int out_occ; @@: LmP0Text out_name) int
     fn: l2_own_add (int: mi; const: @(LmP0Text t); int: ty; const: @(char path); const: @(LmP0Node at)) int
+    fn: l2_own_ty_word (int: ty) @: char
+    fn: l2_conversion_refused_msg (@: char dest; int: from_ty; int: to_ty) int
     fn: l2_formal_find (int: mi; const: @(LmP0Text t)) int
     fn: l2_param_find (int: mi; const: @(LmP0Text t)) int
     fn: l2_param_is (int: mi; const: @(LmP0Text t)) int
@@ -3515,7 +3527,7 @@ fn: l2_own_find_last (int: mi; const: @(LmP0Text t)) int
     if: t = 0
         return: -1
     while: i < l2_own_n
-        if: l2_text_same(l2_own_name[i], t)
+        if: i != l2_own_excl && l2_text_same(l2_own_name[i], t)
             if: l2_own_mi[i] = mi && (l2_own_host[i] = 0 || l2_scope_has(l2_own_host[i]))
                 hit: i
         ---
@@ -3531,7 +3543,7 @@ fn: l2_own_find_last (int: mi; const: @(LmP0Text t)) int
     # sibling already has it.
     i: 0
     while: i < l2_own_n
-        if: l2_own_unit_seen(i, mi) != 0 && l2_text_same(l2_own_name[i], t)
+        if: i != l2_own_excl && l2_own_unit_seen(i, mi) != 0 && l2_text_same(l2_own_name[i], t)
             return: i
         i: i + 1
 return: -1
@@ -3589,6 +3601,35 @@ fn: l2_own_any (int: mi; const: @(LmP0Text t)) int
         i: i + 1
 return: -1
 
+# A readable name for an l2_own_ty code (0 int, 1 char, 2 size_t, 3 unsigned, 36 ulong), for the
+# Q24 conversion-refusal message below -- not l2_own_store_helper's C API function names.
+fn: l2_own_ty_word (int: ty) @: char
+    if: ty = 0
+        return: "int"
+    if: ty = 1
+        return: "char"
+    if: ty = 2
+        return: "size_t"
+    if: ty = 3
+        return: "unsigned"
+    if: ty = 36
+        return: "ulong"
+return: "?"
+
+# Q24 = A (author, LMX_blog/2026-09-25.md; q24.md): a repeated declaration of one name in one
+# body is a new occurrence, same mechanism the argument same-name-binding rule already uses.
+# Same-type is unconditional (l2_own_add falls it through to occurrence creation). A DIFFERENT-
+# typed repeat needs its initialiser value carried across types to seed the new occurrence's own
+# cell (`char: x (x + 2)` from an int x) -- the author: "в трансляции так как в Си такое
+# невозможно прямо", through the ported lingvamyxa_prev converters (S7), not a C cast and not
+# implicit numeric widening. That port has not landed, so this is the located refusal instead.
+fn: l2_conversion_refused_msg (@: char dest; int: from_ty; int: to_ty) int
+    if: dest = 0
+        return: 1
+    if: c.snprintf(dest, 256U, "conversion %s -> %s: converters not ported yet (S7)", l2_own_ty_word(from_ty), l2_own_ty_word(to_ty)) < 0
+        return: 1
+return: 0
+
 fn: l2_own_add (int: mi; const: @(LmP0Text t); int: ty; const: @(char path); const: @(LmP0Node at)) int
     int: i
     if: mi < 0 || t = 0 || l2_ident(t) = 0
@@ -3598,12 +3639,26 @@ fn: l2_own_add (int: mi; const: @(LmP0Text t); int: ty; const: @(char path); con
     i: l2_own_find_decl(mi, t, at)
     if: i < 0
         i: l2_own_find_host(mi, t, l2_scope_host())
-        # One name, one cell per scope: a second typed declaration of it is refused
-        # (in a method body as at unit level, where the unit is the entry E).
-        if: i >= 0 && l2_own_decl[i] != at && l2_own_decl_ty(l2_own_decl[i]) != 0 && l2_own_decl_ty(at) != 0
-            if: l2_error(path, at, "duplicate declaration") != 0
+        # Q24 = A: a repeated TYPED declaration of one ORDINARY name (not a formal, not a
+        # dynamic input -- those already have their own, older, unchanged binding-line
+        # mechanisms below, e.g. unit_arg_addr_*.lm2's proof fixtures) in one scope is a new
+        # occurrence, same-type unconditionally -- the old "one name, one cell per scope"
+        # refusal was a self-made S2 rule (Opus -112), never the author's; the book keeps
+        # repeats. A DIFFERENT-typed repeat is the located conversion refusal
+        # (l2_conversion_refused_msg above): initialising the new occurrence's cell from a
+        # value of another type needs the ported lingvamyxa_prev converters (S7), not landed.
+        # Kept as its own branch, entirely separate from the pre-existing fall-through just
+        # below, so nothing here changes what that fall-through already did.
+        if: i >= 0 && l2_own_decl[i] != at && l2_own_decl_ty(l2_own_decl[i]) != 0 && l2_own_decl_ty(at) != 0 && l2_param_find(mi, t) < 0 && l2_dyn_find(mi, t) < 0
+            if: l2_own_ty[i] != ty
+                c.array: [256]: char l2_conv_msg
+                if: l2_conversion_refused_msg(l2_conv_msg, l2_own_ty[i], ty) != 0
+                    return: -1
+                if: l2_error(path, at, l2_conv_msg) != 0
+                    return: -1
                 return: -1
-            return: -1
+            i: -1
+            ---
         if: i >= 0 && l2_own_decl[i] != at
             if: l2_own_ty[i] != ty
                 if: l2_error(path, at, "incompatible entry signature") != 0
@@ -6117,8 +6172,17 @@ fn: l2_own_canon (int: mi; int: oi) int
     int: i 0
     if: mi < 0 || oi < 0 || oi >= l2_own_n
         return: -1
+    # FABLE-SONNET-RECEIVE-RENAME-20260924-166 commit 3 (D-48): this canonical-cell sharing
+    # exists for the UNTYPED rebinding mechanisms (the argument same-name-binding rule and
+    # receiveMessage's own repeated-name rebind, l2_is_asgn = 0 for both by construction --
+    # l2_is_asgn excludes typed frames AND the receiveMessage word itself), which genuinely
+    # share one cell across occurrences. Q24 = A's repeated TYPED declaration of an ordinary
+    # name is a DIFFERENT case: each occurrence gets its own independent cell, never
+    # canonicalised to an earlier one -- excluding l2_own_decl_ty(l2_own_decl[i]) != 0 (a Q24
+    # row) keeps this loop matching only the untyped mechanisms, so a typed-declared row always
+    # falls through to "return: oi" below (self-canonical) unless an EARLIER row is untyped.
     while: i < l2_own_n
-        if: l2_own_mi[i] = mi && l2_text_same(l2_own_name[i], l2_own_name[oi]) && l2_m_uses[l2_own_off(mi, i)] != 0
+        if: l2_own_mi[i] = mi && l2_text_same(l2_own_name[i], l2_own_name[oi]) && l2_m_uses[l2_own_off(mi, i)] != 0 && l2_own_decl_ty(l2_own_decl[i]) = 0
             return: i
         i: i + 1
 return: oi
@@ -7060,8 +7124,10 @@ fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
                 seen[oi]: 1
             field: l2_next_active(field\next)
         if: l2_frame_head(stmt, "if") = 0 && l2_frame_head(stmt, "while") = 0 && l2_frame_head(stmt, "for") = 0 && l2_is_asgn(stmt) = 0 && l2_own_decl_ty(stmt) != 0
+            # FABLE-SONNET-RECEIVE-RENAME-20260924-166 commit 3 (D-48): the check-time twin of
+            # l2_emit_body's own-decl-line branch -- same Q24 fix, this statement's own row.
             fa: l2_own_decl_name(stmt)
-            oi: l2_own_find(mi, fa)
+            oi: l2_own_find_decl(mi, fa, stmt)
             if: oi >= 0 && seen != 0
                 seen[oi]: 1
             field: l2_next_active(field\next)
@@ -19170,8 +19236,13 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                 return: 1
             field: l2_next_active(field\next)
             continue
+        # FABLE-SONNET-RECEIVE-RENAME-20260924-166 commit 3 (D-48): l2_own_find (first match)
+        # was safe here only because a repeated TYPED declaration was refused (pre-Q24) -- at
+        # most one row ever existed per name reaching this branch. Q24 = A lifts that refusal,
+        # so this line now needs the EXACT statement's own row, not the first same-named one
+        # (measured: without this, "int: arg 1" then "int: arg 2" both wrote occurrence 0).
         if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0
-            oi: l2_own_find(mi, l2_own_decl_name(stmt))
+            oi: l2_own_find_decl(mi, l2_own_decl_name(stmt), stmt)
         if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0
             l2_own_live[oi]: 1
         # The own-declaration line of a same-name parameter IS a binding line: docs/L2_spec "an
@@ -19189,8 +19260,15 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         # the guard around the two lines this branch already emitted.
         if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && l2_m_alias[l2_own_off(mi, oi)] >= 0 && (l2_own_ty[oi] = 1 || l2_own_ty[oi] = 2 || l2_own_ty[oi] = 3 || l2_own_ty[oi] = 36) && l2_emit_own_from(mi, oi, ind) != 0
             return: 1
+        # Q24 (D-48): this declaration's own row is invisible to its own initialiser expression
+        # (l2_own_excl above) -- "int: x (x + 2)" after "int: x 1" must read the first x.
+        if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && l2_count_active(stmt\as\frame\body) = 2
+            l2_own_excl: oi
         if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && l2_count_active(stmt\as\frame\body) = 2 && l2_eval_fields(l2_next_active(l2_next_active(stmt\as\frame\body\first_field)\next), 1, mi, ind, l2_tok) != 0
+            l2_own_excl: -1
             return: 1
+        if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && l2_count_active(stmt\as\frame\body) = 2
+            l2_own_excl: -1
         if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && l2_count_active(stmt\as\frame\body) = 2 && l2_emit_occ_write(mi, oi, ind, l2_tok) != 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt)

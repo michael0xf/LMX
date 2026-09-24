@@ -1,0 +1,12 @@
+# FABLE-SONNET-RECEIVE-RENAME-20260924-166 commit 3 (D-48): the author on the mixed-type case
+# (verbatim LMX_blog/2026-09-25.md): "главное чтобы так можно было сделать и (int: x 1; char: x
+# (x + 2)) читался правильно" -- a DIFFERENT-typed repeated declaration needs its initialiser
+# value carried across types (the ported lingvamyxa_prev converters, S7), not a C cast and not
+# implicit numeric widening. That port has not landed, so this is a located refusal.
+fn: test () int
+    int: x 1
+    char: x (x + 2)
+    return: 0
+end: test
+
+return: test()

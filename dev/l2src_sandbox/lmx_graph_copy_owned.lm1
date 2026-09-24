@@ -369,10 +369,9 @@ fn: lmx_copy_is_terminal_profiles (@: LmxArena src_arena; @: void p; @@: Lmx ret
         return: 1
     ---
     kind: lmx_range_classify(src_arena, p)
-    if: kind = c.LMX_KIND_METHOD
-        return: 1
-    if: kind = c.LMX_DOMAIN_KIND_CALLABLE
-        return: 1
+    # k.4: LmxMethod/LmxCallable are gone -- a callable's shared-reference status is
+    # decided structurally by lmx_copy_value's own-child test (parent inside the
+    # copied subtree), not by a domain classification here.
     if: kind = c.LMX_DOMAIN_KIND_OP
         return: 1
     # A role record is an address and nothing else: a copy that duplicated it would
@@ -438,21 +437,6 @@ fn: lmx_copy_ensure_struct (@: Lmx src; @: LmxCopyMap map; @: LmxCopyMap inside;
     return: 0
 
 
-# A callable occurrence is a Structure whose physical child[0] is an LmxCallable
-# descriptor (LMX_DOMAIN_KIND_CALLABLE). Used by Q22=II shared-method terminal.
-fn: lmx_copy_is_callable_occurrence (@: LmxArena src_arena; @: Lmx occ) int
-    @: void tip 0
-    if: occ = 0 || src_arena = 0
-        return: 0
-    if: occ\len < 1
-        return: 0
-    tip: lmx_arena_ref_value(occ, 0U)
-    if: tip = 0
-        return: 0
-    if: lmx_range_classify(src_arena, tip) = c.LMX_DOMAIN_KIND_CALLABLE
-        return: 1
-    return: 0
-
 # One child value or array element: returns the destination reference for it,
 # copying language-owned mutable data exactly once per source address.
 fn: lmx_copy_value (@: void v; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: LmxCopyMap map; @: LmxCopyMap inside; @: LmxCopyStack todo; @: int status) @: void
@@ -495,19 +479,21 @@ fn: lmx_copy_value (@: void v; @: char dst_chars; @: LmxArena src_arena; @: LmxA
         \status: LMX_GRAPH_COPY_UNSUPPORTED
         return: 0
     vtype: lmx_range_type_of(src_arena, v)
-    if: kind = c.LMX_KIND_METHOD
-        # Methods and their descriptors are shared.
-        return: v
     if: kind = c.LMX_KIND_STRUCT
-        # Q22 = II: a callable occurrence whose parent lies outside the copied
-        # operand subtree is a shared method reference -- keep the address, do
-        # not copy, do not rewrite parent. Ancestors queued only for parent
-        # fixup are not inside.
-        if: lmx_copy_is_callable_occurrence(src_arena, (cast: (@: Lmx) v)) != 0
-            @: Lmx occ (cast: (@: Lmx) v)
-            if: occ\parent = 0 || inside = 0 || lmx_copy_map_get(inside, (cast: (@: void) occ\parent)) = 0
-                return: v
-            ---
+        # k.4 / Q22 = II, generalized structurally (fable, 2026-09-26): a Structure
+        # is an OWN CHILD of the copy -- and so gets copied as a subtree -- exactly
+        # when its parent lies INSIDE the copied operand subtree.  A Structure whose
+        # parent lies outside it (an eternal/independent root with parent = 0, or a
+        # reference reached only as a field value whose own structural parent is
+        # somewhere else, such as a method occurrence's file-level lexical parent)
+        # is a shared terminal: keep the address, do not copy, do not rewrite parent.
+        # No descriptor and no "is this callable" classification are asked any more
+        # -- this covers any shared Structure reference, not only methods (there is
+        # no separate METHOD/CALLABLE domain left to ask).  Ancestors queued only for
+        # parent fixup are not inside.
+        @: Lmx occ (cast: (@: Lmx) v)
+        if: occ\parent = 0 || inside = 0 || lmx_copy_map_get(inside, (cast: (@: void) occ\parent)) = 0
+            return: v
         ---
         if: lmx_copy_ensure_struct((cast: (@: Lmx) v), map, inside, todo, dst_arena, status, 1) != 0
             return: 0
@@ -621,7 +607,7 @@ fn: lmx_copy_value (@: void v; @: char dst_chars; @: LmxArena src_arena; @: LmxA
             if: src_desc\len != 0U
                 memcpy(dst_desc\data, src_desc\data, src_desc\len * lmx_range_stride(src_arena, src_desc\data))
             ---
-        if: vtype = c.LMX_TYPE_ARRAY_OF_LMX || vtype = c.LMX_TYPE_ARRAY_OF_DESC || vtype = c.LMX_TYPE_ARRAY_OF_METHOD
+        if: vtype = c.LMX_TYPE_ARRAY_OF_LMX || vtype = c.LMX_TYPE_ARRAY_OF_DESC
             is_ref: 1
             dst_desc: lmx_array_ref_new_owned(vtype, src_desc\len, dst_arena)
             if: dst_desc = 0
@@ -801,6 +787,10 @@ fn: lmx_graph_copy_many_profiles_owned (@@: Lmx sources; size_t: count; @: char 
                     src: (cast: (@: Lmx) key)
                     dst: (cast: (@: Lmx) vals[i])
                     dst\parent: 0
+                    # k.4: native is a sibling Lmx member, not a graph field -- copied
+                    # verbatim like every other non-traversed part of the header, never
+                    # remapped (lmx.h.lm1, L2_spec_ru §2/§13).
+                    dst\native: src\native
                     if: src\parent != 0
                         # A structural parent is a Structure. Anything else in
                         # parent is a defect of the source, not a terminal.

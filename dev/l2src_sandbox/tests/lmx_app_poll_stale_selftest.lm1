@@ -7,7 +7,6 @@ predef: "l2src/lmx_post.lm1"
 predef: "l2src/lmx_thread.lm1"
 predef: "l2src/lmx_schedule.lm1"
 predef: "l2src/lmx_manager.lm1"
-predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_gc.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_arena_blocks.lm1"
@@ -102,12 +101,13 @@ fn: pw_body_a (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: vo
         letter: lmx_thread_mail_take(t, c.LMX_POST_INBOX)
     ---
     if: pw_a_turns = 1U
+        # k.4: no descriptor slot -- spare, ordinary children Array.
         source_b: lmx_node_new_owned(pw_arena_a)
-        if: source_b = 0 || lmx_arena_refs_open_owned(pw_arena_a, source_b, 3U) != 0 || lmx_thread_children_field_new(pw_arena_a, source_b, 2U) = 0
+        if: source_b = 0 || lmx_arena_refs_open_owned(pw_arena_a, source_b, 2U) != 0 || lmx_thread_children_field_new(pw_arena_a, source_b, 1U) = 0
             pw_create_diag: 3U
             return: 0
         ---
-        child_b: lmx_child_reserve(t, pw_arena_a, pw_arena_b, lmx_arena_ref_cell(graph_a, 1U), source_b)
+        child_b: lmx_child_reserve(t, pw_arena_a, pw_arena_b, lmx_arena_ref_cell(graph_a, 0U), source_b)
         if: child_b = 0
             pw_create_diag: 4U
             return: 0
@@ -152,9 +152,6 @@ fn: pw_root_entry (@: Lmx node) int
     @: LmxThread child_t
     @: LmxPost child_mail
     @: LmxSchedule child_sched
-    @: LmxMethod method
-    @: LmxCallable info
-    @: LmxPool methods
     @: Lmx graph
     if: pw_phase != 0U || pw_root = 0 || pw_arena_a = 0 || pw_source_a = 0
         pw_entry_diag: 1U
@@ -166,24 +163,14 @@ fn: pw_root_entry (@: Lmx node) int
         return: 0
     ---
     pw_msg_a: child
-    methods: lmx_pool_make(pw_arena_a, 2U * c.sizeof(c.LmxMethod), c.sizeof(c.LmxMethod),
-                           c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD)
-    if: methods = 0
-        pw_entry_diag: 3U
-        return: 0
-    ---
-    method: lmx_method_intern(pw_arena_a, methods, (cast: (LmxEntry) pw_body_a), 1U)
+    # k.4: no descriptor, no shared method record -- the copied graph's `native` word is
+    # set directly; slot 0 stays the B-reservation cell source_a already reserved.
     graph: child\graph
-    if: method = 0 || graph = 0
+    if: graph = 0
         pw_entry_diag: 4U
         return: 0
     ---
-    info: lmx_callable_new_owned(pw_arena_a)
-    if: info = 0
-        return: 0
-    ---
-    info\method: method
-    lmx_arena_ref_store(graph, 0U, (cast: (@: void) info))
+    graph\native: (cast: (LmxEntry) pw_body_a)
     child_mail: (cast: (@: LmxPost) lmx_arena_take(pw_arena_a, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
     child_t: (cast: (@: LmxThread) child)
     child_sched: (cast: (@: LmxSchedule) lmx_arena_take(pw_arena_a, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
@@ -288,8 +275,9 @@ fn: pw_scenario (int: with_mail; @: int counts) int
         c.fflush(0)
         return: failures
     ---
+    # k.4: no descriptor slot -- B at 0, ordinary children Array at 1.
     source_a: lmx_node_new_owned(root_arena)
-    pw_check(counts, source_a != 0 && lmx_arena_refs_open_owned(root_arena, source_a, 3U) = 0 && lmx_thread_children_field_new(root_arena, source_a, 2U) != 0, "template A not built")
+    pw_check(counts, source_a != 0 && lmx_arena_refs_open_owned(root_arena, source_a, 2U) = 0 && lmx_thread_children_field_new(root_arena, source_a, 1U) != 0, "template A not built")
     if: source_a = 0
         failures: counts[1]
         c.printf("pw_scenario mail=%d checks=%d failures=%d entry_diag=%u (abort template)\n",

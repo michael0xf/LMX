@@ -3,7 +3,6 @@
 # that would collide (missing lmx_pool.lm1 previously left U lmx_pool_* and
 # pulled lmx_root.o / amalgam, duplicating lmx_*_known from value_owned).
 predef: "l2src/lmx_call.lm1"
-predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_arena_blocks.lm1"
 predef: "l2src/lmx_range.lm1"
@@ -15,8 +14,10 @@ predef: "l2src/lmx_interp.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
-# Registers LMX_DOMAIN_CALLABLE by constructing a record, plants it in child[0],
-# and checks ready/call/interp. Does not invent an operator graph.
+# k.4: sets `native` directly on two occurrences and checks ready/call/interp. Does not
+# invent an operator graph. Two occurrences may point their `native` word at the SAME C
+# entry (own storage stays distinct; only self distinguishes them at activation time) --
+# the k.4 analogue of the old shared-method-record test.
 
 size_t: taken 0U
 @: Lmx seen_node 0
@@ -35,8 +36,8 @@ fn: callable_entry (@: void owner; @@: void refs; size_t: nargs; @: void dest; @
     ---
     seen_self: self
     seen_own: 0
-    if: self != 0 && self\len > 1
-        seen_own: lmx_arena_ref_value(self, 1U)
+    if: self != 0 && self\len > 0
+        seen_own: lmx_arena_ref_value(self, 0U)
     ---
     if: dest != 0
         lmx_int_store_known(dest, 9)
@@ -66,9 +67,6 @@ fn: main () int
     @: Lmx control_body 0
     @: void own 0
     @: void own2 0
-    @: LmxCallable info 0
-    @: LmxMethod meth 0
-    @: LmxMethod prefix 0
     int: answer 0
     if: counts = 0
         return: 2
@@ -79,8 +77,6 @@ fn: main () int
         return: 2
     ---
     a: @ arena
-    info: lmx_callable_new_owned(a)
-    meth: lmx_method_new_owned(a)
     m: lmx_node_new_owned(a)
     m2: lmx_node_new_owned(a)
     parent: lmx_node_new_owned(a)
@@ -89,31 +85,26 @@ fn: main () int
     control_body: lmx_node_new_owned(a)
     own: lmx_int_new_owned(a)
     own2: lmx_int_new_owned(a)
-    if: info = 0 || meth = 0 || m = 0 || m2 = 0 || parent = 0 || parent2 = 0 || outer = 0 || control_body = 0 || own = 0 || own2 = 0 || lmx_arena_refs_open_owned(a, m, 3U) != 0 || lmx_arena_refs_open_owned(a, m2, 2U) != 0
+    if: m = 0 || m2 = 0 || parent = 0 || parent2 = 0 || outer = 0 || control_body = 0 || own = 0 || own2 = 0 || lmx_arena_refs_open_owned(a, m, 2U) != 0 || lmx_arena_refs_open_owned(a, m2, 1U) != 0
         fputs("lmx_callable: construct\n", l1_stdout())
         free(counts)
         return: 2
     ---
-    meth\addr: (cast: (LmxEntry) callable_entry)
-    meth\sig: 1U
-    info\method: meth
+    m\native: (cast: (LmxEntry) callable_entry)
+    m2\native: (cast: (LmxEntry) callable_entry)
     parent\parent: outer
     m\parent: parent
     m2\parent: parent2
     control_body\parent: m
-    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
-    lmx_arena_ref_store(m, 1U, own)
-    lmx_arena_ref_store(m, 2U, (cast: (@: void) control_body))
-    # A second occurrence shares the immutable descriptor/plan but has distinct parent and own
-    # storage.  Only the explicit self argument can distinguish it at activation time.
-    lmx_arena_ref_store(m2, 0U, (cast: (@: void) info))
-    lmx_arena_ref_store(m2, 1U, own2)
+    lmx_arena_ref_store(m, 0U, own)
+    lmx_arena_ref_store(m, 1U, (cast: (@: void) control_body))
+    # A second occurrence points its native word at the SAME C entry but has distinct
+    # parent and own storage.  Only the explicit self argument can distinguish it at
+    # activation time.
+    lmx_arena_ref_store(m2, 0U, own2)
 
-    fail(counts, lmx_domain_kind(a, (cast: (@: void) info)) = c.LMX_DOMAIN_KIND_CALLABLE, "new record is not kind 16")
-    fail(counts, lmx_call_ready(a, m) = c.LMX_CALL_OK, "child[0] LmxCallable not ready")
-    prefix: lmx_call_method(a, m)
-    fail(counts, prefix = info\method, "call_method is not the native METHOD reference")
-    fail(counts, lmx_call_callable(a, m) = info, "call_callable missed the record")
+    fail(counts, lmx_call_ready(a, m) = c.LMX_CALL_OK, "occurrence not ready")
+    fail(counts, m\native = (cast: (LmxEntry) callable_entry), "native word did not hold the entry")
     answer: lmx_call0(a, m)
     fail(counts, answer = 9, "native addr of nested method")
     fail(counts, taken = 1U && seen_node = parent, "reserved node is not the callable's above-method space")
@@ -123,8 +114,8 @@ fn: main () int
     # not replace the method activation's reserved source `node`, which stays the space above M.
     fail(counts, control_body\parent = m && control_body\parent != seen_node && seen_node = m\parent, "nested body parent leaked into the method's reserved node")
     answer: lmx_call0(a, m2)
-    fail(counts, answer = 9 && taken = 2U, "second occurrence did not run through the shared descriptor")
-    fail(counts, seen_node = parent2 && seen_self = m2 && seen_own = own2, "shared descriptor lost the second occurrence's parent or own home")
+    fail(counts, answer = 9 && taken = 2U, "second occurrence did not run through the shared native entry")
+    fail(counts, seen_node = parent2 && seen_self = m2 && seen_own = own2, "shared native entry lost the second occurrence's parent or own home")
 
     if: counts[1] != 0
         c.printf("%d failed of %d\n", counts[1], counts[0])

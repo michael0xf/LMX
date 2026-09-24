@@ -1,6 +1,5 @@
 predef: "l2src/lmx_call.lm1"
 predef: "l2src/lmx_walk.lm1"
-predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_arena_blocks.lm1"
 predef: "l2src/lmx_range.lm1"
@@ -11,24 +10,26 @@ predef: "l2src/lmx_chars_owned.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
-# Calling a callable occurrence (spec 7.1, 21.2, 21.8, 21.13.4; the gaps note's item 8).  What
-# this file pins:
+# Calling a Structure in head position (spec 7.1, 21.2, 21.8, 21.13.4; k.4,
+# next_core_tasks.md §3 item 8: the `Lmx.native` word replaces the physical child[0]
+# LmxCallable/LmxMethod descriptor).  What this file pins:
 #
-#   * a callable is an ordinary Structure whose PHYSICAL CHILD[0] holds an LmxCallable
-#     descriptor (method + header): the check is the domain of the value in that slot;
+#   * dispatch is the `native` word alone: non-null is the occurrence's trampoline, null
+#     walks the body (or, with no walk hook installed at all, is refused);
 #   * the reserved source node of a call is exactly M.parent, the lexical space immediately above
-#     the selected method occurrence M -- not M itself, not M.parent.parent and not the method
-#     record; a body entered while M runs has its own parent but does not rebind this activation's
-#     node, and an explicit node\field starts at M.parent;
-#   * the entry is reached THROUGH the method record: METHOD.addr is the occurrence's trampoline,
-#     the prim ABI of every dynamic call (D-38), handed the occurrence, from which it takes the
-#     above-method space as its node; its value is what call0 answers and its status is the
-#     callee's throw status, which lmx_call_prim returns apart from the value;
-#   * the occurrence's own fields (the slots after child[0]) are untouched by the call: the shared
-#     record carries {addr, sig} and nothing of this occurrence;
-#   * a value that is not a callable is refused, not called: a primitive, a Structure with an
-#     empty child[0], a Structure whose child[0] holds something that is not an LmxCallable descriptor -- and a
-#     descriptor whose METHOD.addr is zero is a callable but has nothing to call.
+#     the selected method occurrence M -- not M itself, not M.parent.parent; a body entered while M
+#     runs has its own parent but does not rebind this activation's node, and an explicit
+#     node\field starts at M.parent;
+#   * the entry is `native` itself: the occurrence's trampoline, the prim ABI of every dynamic
+#     call (D-38), handed the occurrence, from which it takes the above-method space as its node;
+#     its value is what call0 answers and its status is the callee's throw status, which
+#     lmx_call_prim returns apart from the value;
+#   * the occurrence's own declared fields are untouched by the call: `native` is a sibling Lmx
+#     member, not a child slot, so no own field is ever disturbed by dispatch;
+#   * a value that is not a Structure is refused, not called: any Structure IS callable in
+#     principle (§3 item 8, "отказ — дело транслятора") -- `lmx_call_ready` answers OK for one
+#     with `native = 0` too, and only `lmx_call0`/`lmx_call_prim` refuse it, and only when no walk
+#     hook is installed to interpret its body.
 
 size_t: call_taken 0U
 @: Lmx call_seen 0
@@ -83,14 +84,16 @@ sub: call_check (@: int counts; int: ok; const: @(char label))
     ---
 end: call_check
 
-# A Structure with `slots` children, in this arena.
+# A Structure with `slots` children, in this arena. slots = 0 leaves it a bare
+# Structure with no data/len array (lmx_arena_refs_open_owned refuses children = 0,
+# same as lmx_walk_plain's own children != 0U guard).
 fn: call_struct (@: LmxArena arena; size_t: slots) @: Lmx
     @: Lmx structure
     structure: lmx_node_new_owned(arena)
     if: structure = 0
         return: 0
     ---
-    if: lmx_arena_refs_open_owned(arena, structure, slots) != 0
+    if: slots != 0U && lmx_arena_refs_open_owned(arena, structure, slots) != 0
         return: 0
     ---
 return: structure
@@ -98,34 +101,20 @@ return: structure
 fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxArena: arena
-    LmxPool: methods
     @: LmxArena arena_at 0
     @: Lmx callable 0
     @: Lmx parent 0
     @: Lmx outer 0
-    @: Lmx empty 0
-    @: Lmx plain 0
     @: Lmx zero_callable 0
     @: Lmx walk_m 0
     @: Lmx lit 0
     @: Lmx roles 0
-    @: Lmx plan_roles 0
-    @: LmxMethod walk_method 0
-    @: LmxCallable walk_info 0
-    @: Lmx bare_occ 0
-    @: LmxMethod bare_method 0
-    @: LmxMethod method 0
-    @: LmxCallable info 0
-    @: LmxCallable zero_info 0
-    @: LmxMethod zero_method 0
     @: void cell 0
     @: void own_field 0
     @: Lmx throw_occ 0
     @: Lmx data_inst 0
     @: Lmx data_parent 0
     @: void data_field 0
-    @: LmxMethod throw_method 0
-    @: LmxCallable throw_info 0
     @: void prim_in 0
     c.array: [1]: @: void prim_refs
     @: void prim_out 0
@@ -142,24 +131,10 @@ fn: main () int
         return: 2
     ---
     arena_at: @ arena
-    # The pool is a by-value local and opening one that already holds a chunk is refused, so its
-    # fields are cleared first (lmx_pool.h.lm1's rule for every owner).
-    memset((cast: (@: void) (@ methods)), 0, c.sizeof(c.LmxPool))
-    if: lmx_pool_open(@ arena, @ methods, c.sizeof(c.LmxMethod), 4U, c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD) != 0
-        fputs("lmx_call: the method pool did not open\n", l1_stdout())
-        free(counts)
-        return: 2
-    ---
-    method: lmx_method_intern(@ arena, @ methods, (cast: (LmxEntry) call_entry), 1U)
-    if: method = 0
-        fputs("lmx_call: the method record was not interned\n", l1_stdout())
-        free(counts)
-        return: 2
-    ---
 
-    # The occurrence M: an ordinary Structure, an LmxCallable descriptor in physical child[0], its own
-    # field after it.
-    callable: call_struct(@ arena, 2U)
+    # The occurrence M: an ordinary Structure, its `native` word set directly (k.4 --
+    # no descriptor, no shared method record), its own field after it.
+    callable: call_struct(@ arena, 1U)
     parent: call_struct(@ arena, 1U)
     outer: call_struct(@ arena, 1U)
     own_field: lmx_int_new_owned(@ arena)
@@ -171,20 +146,13 @@ fn: main () int
     parent\parent: outer
     callable\parent: parent
     lmx_arena_ref_store(parent, 0U, own_field)
-    info: lmx_callable_new_owned(@ arena)
-    if: info = 0
-        free(counts)
-        return: 2
-    ---
-    info\method: method
-    lmx_arena_ref_store(callable, 0U, (cast: (@: void) info))
-    lmx_arena_ref_store(callable, 1U, own_field)
+    callable\native: (cast: (LmxEntry) call_entry)
+    lmx_arena_ref_store(callable, 0U, own_field)
 
     call_check(counts, lmx_call_ready(arena_at, callable) = c.LMX_CALL_OK, "a callable occurrence was not recognized")
-    call_check(counts, lmx_call_method(arena_at, callable) = method, "the call did not select the method in physical child[0]")
+    call_check(counts, callable\native = (cast: (LmxEntry) call_entry), "the native word did not hold the entry")
     call_check(counts, lmx_call_node(callable) = parent, "the reserved node of a call is not the selected M's above-method space")
     call_check(counts, lmx_call_node(callable) != outer, "the call skipped M.parent and used its parent's parent")
-    call_check(counts, method\sig = 1U, "the shared record lost its signature")
 
     # The call: the trampoline is reached through the record, handed the occurrence, and derives
     # the node from it.
@@ -194,79 +162,41 @@ fn: main () int
     call_check(counts, call_nargs = 0U, "call0 passed inputs to a zero-source-argument call")
     call_check(counts, call_seen = parent, "the entry did not receive the selected M's above-method space as its reserved node")
     call_check(counts, call_seen_field = own_field, "node\\field did not start at the selected M's above-method space")
-    call_check(counts, lmx_arena_ref_value(callable, 1U) = own_field, "the call disturbed the occurrence's own field")
+    call_check(counts, lmx_arena_ref_value(callable, 0U) = own_field, "the call disturbed the occurrence's own field")
     call_check(counts, lmx_int_value_known(own_field) = 4242, "the occurrence's own field lost its value")
 
-    # What is not callable is refused, not called.
+    # What is not a Structure is refused, not called (k.4: any Structure is callable in
+    # principle -- lmx_call_ready answers OK for a `native = 0` one too; only call0/
+    # call_prim refuse it, and only with no walk hook installed to interpret its body).
     cell: lmx_int_new_owned(@ arena)
-    call_check(counts, cell != 0 && lmx_call_ready(arena_at, (cast: (@: Lmx) cell)) = c.LMX_CALL_NOT_CALLABLE, "a primitive was taken for a callable")
-    call_check(counts, lmx_call_ready(arena_at, 0) = c.LMX_CALL_NOT_CALLABLE, "no value was taken for a callable")
+    call_check(counts, cell != 0 && lmx_call_ready(arena_at, (cast: (@: Lmx) cell)) = c.LMX_CALL_NOT_CALLABLE, "a primitive was taken for a Structure")
+    call_check(counts, lmx_call_ready(arena_at, 0) = c.LMX_CALL_NOT_CALLABLE, "no value was taken for a Structure")
     call_check(counts, lmx_call0(arena_at, 0) = c.LMX_CALL_NOT_CALLABLE, "a call was made on no value")
-    empty: call_struct(@ arena, 1U)
-    call_check(counts, empty != 0 && lmx_call_ready(arena_at, empty) = c.LMX_CALL_NOT_CALLABLE, "a Structure with an empty child[0] was taken for a callable")
-    call_check(counts, lmx_call0(arena_at, empty) = c.LMX_CALL_NOT_CALLABLE, "a Structure with an empty child[0] was called")
-    plain: call_struct(@ arena, 1U)
-    if: plain != 0
-        lmx_arena_ref_store(plain, 0U, own_field)
-    ---
-    call_check(counts, plain != 0 && lmx_call_ready(arena_at, plain) = c.LMX_CALL_NOT_CALLABLE, "a child[0] that is not an LmxCallable was taken for a callable")
 
-    # Mutant: a bare METHOD in child[0] is refused (descriptor-only). Pin: NOT_CALLABLE.
-    bare_method: (cast: (@: LmxMethod) lmx_pool_take(@ arena, @ methods))
-    bare_occ: call_struct(@ arena, 1U)
-    if: bare_method = 0 || bare_occ = 0
-        free(counts)
-        return: 2
-    ---
-    bare_method\addr: (cast: (LmxEntry) call_entry)
-    bare_method\sig: 1U
-    lmx_arena_ref_store(bare_occ, 0U, (cast: (@: void) bare_method))
-    call_check(counts, lmx_call_ready(arena_at, bare_occ) = c.LMX_CALL_NOT_CALLABLE, "a bare METHOD in child[0] was taken for a callable")
-    call_check(counts, lmx_call0(arena_at, bare_occ) = c.LMX_CALL_NOT_CALLABLE, "a bare METHOD in child[0] was called")
-    call_check(counts, call_taken = 1U, "a refused bare-METHOD call reached an entry")
-
-    # A descriptor whose method addr is zero is still a callable -- and there is nothing to call.
-    zero_method: (cast: (@: LmxMethod) lmx_pool_take(@ arena, @ methods))
+    # A Structure whose native word is zero is still `ready` (k.4: any Structure is) --
+    # and, with no walk hook installed yet, has nothing to call.
     zero_callable: call_struct(@ arena, 1U)
-    if: zero_method = 0 || zero_callable = 0
+    if: zero_callable = 0
         free(counts)
         return: 2
     ---
-    zero_method\addr: 0
-    zero_method\sig: 3U
-    zero_info: lmx_callable_new_owned(@ arena)
-    if: zero_info = 0
-        free(counts)
-        return: 2
-    ---
-    zero_info\method: zero_method
-    lmx_arena_ref_store(zero_callable, 0U, (cast: (@: void) zero_info))
-    call_check(counts, lmx_call_ready(arena_at, zero_callable) = c.LMX_CALL_OK, "a descriptor whose method has a zero addr was not recognized as callable")
-    # D-44/D-37: empty body is prepare NO_GRAPH; call0 X1s (stderr NO_GRAPH + abort), it must not
-    # return 2 as a turn number. In-process call0 is omitted (would kill this selftest).
-    # Mutant: note_walk_fail stores walker errors again -> re-enable call0 expect NOT_CALLABLE=2 RED.
-    call_check(counts, call_taken = 1U, "empty-body pin must not reach a native entry")
+    call_check(counts, lmx_call_ready(arena_at, zero_callable) = c.LMX_CALL_OK, "a Structure with native = 0 was not recognized as ready")
+    call_check(counts, lmx_call0(arena_at, zero_callable) = c.LMX_CALL_NOT_CALLABLE, "a native = 0 Structure was called with no walk hook installed")
+    call_check(counts, call_taken = 1U, "a refused native = 0 call reached an entry")
 
-    # Descriptor dispatch: addr=0 + body last expr 7 -> call0 returns 7.
+    # Descriptor dispatch: native = 0 + body last expr 7 -> call0 returns 7.
     # Mutant: walker value dropped -> 0 RED. Roles program-bound (address identity).
     roles: lmx_walk_roles_open(arena_at)
-    plan_roles: lmx_plan_roles_open(arena_at)
-    call_check(counts, roles != 0 && plan_roles != 0, "walk/plan roles for descriptor dispatch")
-    lmx_walk_program_bind(roles, plan_roles)
-    walk_m: call_struct(@ arena, 2U)
-    walk_method: (cast: (@: LmxMethod) lmx_pool_take(@ arena, @ methods))
-    walk_info: lmx_callable_new_owned(@ arena)
-    call_check(counts, walk_m != 0 && walk_method != 0 && walk_info != 0, "walk dispatch fixtures")
-    walk_method\addr: 0
-    walk_method\sig: 0U
-    walk_info\method: walk_method
-    lmx_arena_ref_store(walk_m, 0U, (cast: (@: void) walk_info))
+    call_check(counts, roles != 0, "walk roles for descriptor dispatch")
+    lmx_walk_program_bind(roles)
+    walk_m: call_struct(@ arena, 1U)
+    call_check(counts, walk_m != 0, "walk dispatch fixture")
     lit: lmx_walk_frame(arena_at, roles, walk_m, c.LMX_WALK_OP_LIT, 2U)
     call_check(counts, lit != 0, "LIT frame")
     call_check(counts, lmx_walk_store_int(arena_at, lit, 1U, 7) = c.LMX_WALK_OK, "LIT 7 store")
-    call_check(counts, lmx_arena_ref_store(walk_m, 1U, (cast: (@: void) lit)) = 0, "LIT 7 as body step")
+    call_check(counts, lmx_arena_ref_store(walk_m, 0U, (cast: (@: void) lit)) = 0, "LIT 7 as body step")
     answer: lmx_call0(arena_at, walk_m)
-    call_check(counts, answer = 7, "addr=0 call0 must return last expression 7 (mutant: walker value dropped)")
+    call_check(counts, answer = 7, "native = 0 call0 must return last expression 7 (mutant: walker value dropped)")
     call_check(counts, call_taken = 1U, "walk dispatch must not call a native entry")
 
     # THE DYNAMIC CALL (lmx_call_prim, D-38): the one prim ABI of every call whose callee is known
@@ -305,25 +235,20 @@ fn: main () int
     # A method that throws: its trampoline's status is the throw status and the thrown record is
     # in `out`; call0 returns the status and notes it for the turn.
     call_thrown: parent
-    throw_method: (cast: (@: LmxMethod) lmx_pool_take(@ arena, @ methods))
-    throw_occ: call_struct(@ arena, 1U)
-    throw_info: lmx_callable_new_owned(@ arena)
-    call_check(counts, throw_method != 0 && throw_occ != 0 && throw_info != 0, "throwing callable fixtures")
-    throw_method\addr: (cast: (LmxEntry) call_throw_entry)
-    throw_method\sig: 4U
-    throw_info\method: throw_method
-    lmx_arena_ref_store(throw_occ, 0U, (cast: (@: void) throw_info))
+    throw_occ: call_struct(@ arena, 0U)
+    call_check(counts, throw_occ != 0, "throwing callable fixture")
+    throw_occ\native: (cast: (LmxEntry) call_throw_entry)
     prim_out: 0
     st: lmx_call_prim(arena_at, throw_occ, throw_occ, 0, 0U, 0, @ prim_out)
     call_check(counts, st = 2 && prim_out = (cast: (@: void) call_thrown), "lmx_call_prim collapsed the throw status or lost the thrown record")
     answer: lmx_call0(arena_at, throw_occ)
     # D-37: native throw is noted as THROWN+k then decoded; channel carries k (not walker codes).
     call_check(counts, answer = 2 && lmx_call_walk_fail_status() = 2, "call0 did not return and note the trampoline's throw status (D-37)")
-    # addr=0 through lmx_call_prim: the walk hook's value through dest.
+    # native = 0 through lmx_call_prim: the walk hook's value through dest.
     prim_value: 0
     prim_out: 0
     st: lmx_call_prim(arena_at, walk_m, walk_m, 0, 0U, (cast: (@: void) (@ prim_value)), @ prim_out)
-    call_check(counts, st = 0 && prim_value = 7 && prim_out = (cast: (@: void) (@ prim_value)), "lmx_call_prim did not walk an addr=0 body into dest")
+    call_check(counts, st = 0 && prim_value = 7 && prim_out = (cast: (@: void) (@ prim_value)), "lmx_call_prim did not walk a native = 0 body into dest")
     call_check(counts, call_taken = 3U, "a walked body reached a native entry, or a trampoline call went missing")
 
     failures: counts[1]

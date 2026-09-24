@@ -21,11 +21,10 @@ predef: "lmx_graph_copy_owned.h.lm1"
 # from two operands is therefore copied ONCE and both references point at that
 # one copy; cross-operand aliases and cycles keep their shape; every copied
 # Structure's parent is rewritten to the copy of its structural parent or to zero.
-# METHOD descriptors stay terminals, shared by address, and every operand is an
-# ordinary Structure: which value is a METHOD is answered by src_arena's table
-# (LMX_KIND_METHOD), never by a list the caller passes in. An operand that does
-# not classify as a Structure is refused -- a METHOD record is not one and
-# cannot be merged.
+# k.4: every operand is an ordinary Structure; a shared reference (a Structure whose
+# parent lies outside the copied set -- Q22 = II) stays a terminal by address, decided
+# structurally by the copier, never by a domain classification or a list the caller
+# passes in. An operand that does not classify as a Structure is refused.
 #
 # Qualification is an address-domain property.  A caller may name any number of ordinary
 # graph receiver-expressions whose physical addresses denote full

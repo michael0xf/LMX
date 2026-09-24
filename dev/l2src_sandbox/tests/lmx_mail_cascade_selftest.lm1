@@ -8,7 +8,6 @@ predef: "l2src/lmx_thread.lm1"
 predef: "l2src/lmx_schedule.lm1"
 predef: "l2src/lmx_manager.lm1"
 predef: "l2src/lmx_manager_running.lm1"
-predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_gc.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_arena_blocks.lm1"
@@ -166,9 +165,6 @@ fn: mc_entry (@: Lmx node) int
     @: LmxThread child_t
     @: LmxPost child_mail
     @: LmxSchedule child_sched
-    @: LmxMethod method
-    @: LmxCallable info
-    @: LmxPool methods
     @: Lmx graph
     if: mc_phase != 0U || mc_root = 0 || mc_child_arena = 0 || mc_source = 0 || mc_child_mail = 0
         return: 0
@@ -177,24 +173,14 @@ fn: mc_entry (@: Lmx node) int
     if: child = 0
         return: 0
     ---
-    methods: lmx_pool_make(mc_child_arena, 2U * c.sizeof(c.LmxMethod), c.sizeof(c.LmxMethod),
-                           c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD)
-    if: methods = 0
-        return: 0
-    ---
-    # WHICH BODY THE CHILD GETS IS THE TEST'S CHOICE (mc_body_fn), so phase 5 can wire its
-    # witness body through this same entry: `method: ...` is not re-derived here.
-    method: lmx_method_intern(mc_child_arena, methods, (cast: (LmxEntry) mc_body_fn), 1U)
+    # k.4: no descriptor, no shared method record -- the copied graph's `native` word is
+    # set directly.  WHICH BODY THE CHILD GETS IS THE TEST'S CHOICE (mc_body_fn), so phase 5
+    # can wire its witness body through this same entry.
     graph: child\graph
-    if: method = 0 || graph = 0
+    if: graph = 0
         return: 0
     ---
-    info: lmx_callable_new_owned(mc_child_arena)
-    if: info = 0
-        return: 0
-    ---
-    info\method: method
-    lmx_arena_ref_store(graph, 0U, (cast: (@: void) info))
+    graph\native: (cast: (LmxEntry) mc_body_fn)
     child_mail: mc_child_mail
     child_t: (cast: (@: LmxThread) child)
     child_sched: (cast: (@: LmxSchedule) lmx_arena_take(mc_child_arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
@@ -379,7 +365,7 @@ fn: main () int
     mc_check(counts, live_root_mail != 0, "R0 handed back no mailbox handle")
     mc_root_mail_p: live_root_mail
     source: lmx_node_new_owned(live_root_arena)
-    mc_check(counts, source != 0 && lmx_arena_refs_open_owned(live_root_arena, source, 5U) = 0 && lmx_thread_children_field_new(live_root_arena, source, 4U) != 0, "the live template was not built")
+    mc_check(counts, source != 0 && lmx_arena_refs_open_owned(live_root_arena, source, 4U) = 0 && lmx_thread_children_field_new(live_root_arena, source, 3U) != 0, "the live template was not built")
     lmx_arena_ref_store(live_graph, 3U, (cast: (@: void) source))
     mc_source: source
     mc_check(counts, lmx_root_turn(@ live_root, lmx_clock_ticks()) = c.LMX_ROOT_OK, "the live create turn did not run")
@@ -440,7 +426,7 @@ fn: main () int
     end_root_mail: root_p\mail
     mc_check(counts, end_root_arena != 0 && end_service != 0 && end_manager != 0 && end_graph != 0 && end_root_mail != 0, "the ending R0 is missing pieces")
     source: lmx_node_new_owned(end_root_arena)
-    mc_check(counts, source != 0 && lmx_arena_refs_open_owned(end_root_arena, source, 5U) = 0 && lmx_thread_children_field_new(end_root_arena, source, 4U) != 0, "the ending template was not built")
+    mc_check(counts, source != 0 && lmx_arena_refs_open_owned(end_root_arena, source, 4U) = 0 && lmx_thread_children_field_new(end_root_arena, source, 3U) != 0, "the ending template was not built")
     lmx_arena_ref_store(end_graph, 3U, (cast: (@: void) source))
     mc_source: source
     mc_check(counts, lmx_root_turn(@ end_root, lmx_clock_ticks()) = c.LMX_ROOT_OK, "the ending create turn did not run")
@@ -534,7 +520,7 @@ fn: main () int
     mc_root_mail_p: live_root_mail
     mc_check(counts, mc_w_service != 0 && mc_w_r0 != 0 && live_graph != 0, "the witness R0 is missing pieces")
     source: lmx_node_new_owned(live_root_arena)
-    mc_check(counts, source != 0 && lmx_arena_refs_open_owned(live_root_arena, source, 5U) = 0 && lmx_thread_children_field_new(live_root_arena, source, 4U) != 0, "the witness template was not built")
+    mc_check(counts, source != 0 && lmx_arena_refs_open_owned(live_root_arena, source, 4U) = 0 && lmx_thread_children_field_new(live_root_arena, source, 3U) != 0, "the witness template was not built")
     lmx_arena_ref_store(live_graph, 3U, (cast: (@: void) source))
     mc_source: source
     mc_check(counts, lmx_root_turn(@ w_root, lmx_clock_ticks()) = c.LMX_ROOT_OK, "the witness create turn did not run")

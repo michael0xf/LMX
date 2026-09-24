@@ -7,7 +7,6 @@ predef: "l2src/lmx_post.lm1"
 predef: "l2src/lmx_thread.lm1"
 predef: "l2src/lmx_schedule.lm1"
 predef: "l2src/lmx_manager.lm1"
-predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_gc.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_arena_blocks.lm1"
@@ -28,8 +27,8 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 # Child lives N turns; each turn drains inbox and stores taken letters + turn
 # counter IN THE CHILD GRAPH (not test globals). Parent posts one letter per
 # cycle so GC runs between turns. On turn N body sets success=1 only.
-# Graph layout (source refs = 3+N):
-#   0 method | 1 turns (size_t cell) | 2 accepted (size_t cell) | 3..3+N-1 letters
+# Graph layout (source refs = 2+N, k.4 -- no descriptor slot, native set directly):
+#   0 turns (size_t cell) | 1 accepted (size_t cell) | 2..2+N-1 letters
 
 @: LmxRoot mt_root 0
 @: LmxArena mt_child_arena 0
@@ -56,8 +55,8 @@ fn: mt_child_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@
         return: 0
     ---
     graph: message\graph
-    turns_cell: lmx_arena_ref_value(graph, 1U)
-    accepted_cell: lmx_arena_ref_value(graph, 2U)
+    turns_cell: lmx_arena_ref_value(graph, 0U)
+    accepted_cell: lmx_arena_ref_value(graph, 1U)
     if: turns_cell = 0 || accepted_cell = 0
         return: 0
     ---
@@ -68,7 +67,7 @@ fn: mt_child_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@
         if: letter != 0
             accepted: lmx_size_value_known(accepted_cell)
             if: accepted < mt_n
-                lmx_arena_ref_store(graph, 3U + accepted, letter)
+                lmx_arena_ref_store(graph, 2U + accepted, letter)
                 lmx_size_store_known(accepted_cell, accepted + 1U)
             ---
         ---
@@ -83,9 +82,6 @@ fn: mt_root_entry (@: Lmx node) int
     @: LmxThread child_t
     @: LmxPost child_mail
     @: LmxSchedule child_sched
-    @: LmxMethod method
-    @: LmxCallable info
-    @: LmxPool methods
     @: Lmx graph
     @: void turns_cell
     @: void accepted_cell
@@ -99,31 +95,21 @@ fn: mt_root_entry (@: Lmx node) int
         return: 0
     ---
     mt_child_msg: child
-    methods: lmx_pool_make(mt_child_arena, 2U * c.sizeof(c.LmxMethod), c.sizeof(c.LmxMethod),
-                           c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD)
-    if: methods = 0
-        mt_entry_diag: 3U
-        return: 0
-    ---
-    method: lmx_method_intern(mt_child_arena, methods, (cast: (LmxEntry) mt_child_body), 1U)
+    # k.4: no descriptor, no shared method record -- the copied graph's `native` word is
+    # set directly.
     graph: child\graph
-    if: method = 0 || graph = 0
+    if: graph = 0
         mt_entry_diag: 4U
         return: 0
     ---
-    info: lmx_callable_new_owned(mt_child_arena)
-    if: info = 0
-        return: 0
-    ---
-    info\method: method
-    lmx_arena_ref_store(graph, 0U, (cast: (@: void) info))
+    graph\native: (cast: (LmxEntry) mt_child_body)
     turns_cell: lmx_size_new_owned(mt_child_arena)
     accepted_cell: lmx_size_new_owned(mt_child_arena)
     if: turns_cell = 0 || accepted_cell = 0
         mt_entry_diag: 5U
         return: 0
     ---
-    if: lmx_arena_ref_store(graph, 1U, turns_cell) != 0 || lmx_arena_ref_store(graph, 2U, accepted_cell) != 0
+    if: lmx_arena_ref_store(graph, 0U, turns_cell) != 0 || lmx_arena_ref_store(graph, 1U, accepted_cell) != 0
         mt_entry_diag: 6U
         return: 0
     ---
@@ -206,7 +192,7 @@ fn: main () int
     mt_child_sched: 0
     mt_entry_diag: 0U
     mt_n: 5U
-    graph_slots: 4U + mt_n
+    graph_slots: 3U + mt_n
     mt_check(counts, lmx_root_open(@ root, mt_root_entry, 120000U) = c.LMX_ROOT_OK, "R0 did not open")
     message: lmx_root_message(@ root)
     r0: lmx_root_thread(@ root)
@@ -255,7 +241,7 @@ fn: main () int
     mt_check(counts, lmx_manager_add(manager, mt_child_sched) = c.LMX_MANAGER_OK, "child not in manager")
     mt_check(counts, lmx_service_find(service, (cast: (@: void) child_t)) = (cast: (@: void) child_t), "child not in service")
     mt_check(counts, child_graph != 0, "child graph missing")
-    mt_check(counts, lmx_arena_ref_value(child_graph, 1U) != 0 && lmx_arena_ref_value(child_graph, 2U) != 0, "graph counters not rooted")
+    mt_check(counts, lmx_arena_ref_value(child_graph, 0U) != 0 && lmx_arena_ref_value(child_graph, 1U) != 0, "graph counters not rooted")
 
     i: 0U
     # N-1 turns here, and the LAST one below ends the incarnation. The record remains valid in
@@ -274,8 +260,8 @@ fn: main () int
         mt_check(counts, lmx_range_classify(@ child_arena, (cast: (@: void) letter)) = c.LMX_KIND_NONE, "recipient classified letter before owner take")
         mt_check(counts, lmx_thread_mail_count(child_t, c.LMX_POST_INBOX) = 1U, "inbox empty after post")
         mt_check(counts, lmx_manager_round(manager, 1U, lmx_root_clock(@ root)) = c.LMX_MANAGER_OK, "manager round did not run")
-        turns_from_graph: lmx_size_value_known(lmx_arena_ref_value(child_graph, 1U))
-        accepted_from_graph: lmx_size_value_known(lmx_arena_ref_value(child_graph, 2U))
+        turns_from_graph: lmx_size_value_known(lmx_arena_ref_value(child_graph, 0U))
+        accepted_from_graph: lmx_size_value_known(lmx_arena_ref_value(child_graph, 1U))
         mt_check(counts, turns_from_graph = i + 1U, "turns from graph wrong after round")
         mt_check(counts, accepted_from_graph = i + 1U, "accepted from graph wrong after round")
         mt_check(counts, lmx_thread_mail_count(child_t, c.LMX_POST_INBOX) = 0U, "inbox not emptied after take")
@@ -285,15 +271,15 @@ fn: main () int
         i: i + 1U
     ---
 
-    turns_from_graph: lmx_size_value_known(lmx_arena_ref_value(child_graph, 1U))
-    accepted_from_graph: lmx_size_value_known(lmx_arena_ref_value(child_graph, 2U))
+    turns_from_graph: lmx_size_value_known(lmx_arena_ref_value(child_graph, 0U))
+    accepted_from_graph: lmx_size_value_known(lmx_arena_ref_value(child_graph, 1U))
     mt_check(counts, turns_from_graph = mt_n - 1U, "turns from graph != N-1 before the last turn")
     mt_check(counts, accepted_from_graph = mt_n - 1U, "accepted from graph != N-1 before the last turn")
     # The cells the child accumulated, asked of the CHILD while it is still alive: after its last
     # turn there is no arena of its to ask (it returns its own), and that is the model, not a gap.
     i: 0U
     while: i < mt_n - 1U
-        letter_slot: lmx_arena_ref_value(child_graph, 3U + i)
+        letter_slot: lmx_arena_ref_value(child_graph, 2U + i)
         mt_check(counts, letter_slot != 0, "accumulator slot empty after N-1 GC passes")
         mt_check(counts, lmx_range_classify(@ child_arena, letter_slot) = c.LMX_DOMAIN_KIND_MSG_RECORD, "accumulator cell not in child arena index")
         i: i + 1U

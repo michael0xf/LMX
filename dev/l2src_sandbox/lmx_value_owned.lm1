@@ -27,6 +27,7 @@ fn: lmx_node_new_profiled (@: LmxArena arena; @: Lmx profile) @: Lmx
         value\parent: 0
         value\len: 0
         value\data: 0
+        value\native: 0
     ---
     return: value
 
@@ -37,24 +38,6 @@ fn: lmx_struct_new_owned (@: Lmx parent; @: LmxArena arena) @: Lmx
     value: lmx_node_new_owned(arena)
     if: value != 0
         value\parent: parent
-    ---
-    return: value
-
-# The caller fills addr/sig before publishing this fresh entry into the graph.
-# Existing callable records are not mutable through this construction API.
-fn: lmx_method_new_owned (@: LmxArena arena) @: LmxMethod
-    @: LmxMethod value (cast: (@: LmxMethod) lmx_value_allocate_owned(arena, c.sizeof(c.LmxMethod), c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD))
-    if: value != 0
-        value\addr: 0
-        value\sig: 0U
-    ---
-    return: value
-
-fn: lmx_callable_new_owned (@: LmxArena arena) @: LmxCallable
-    @: LmxCallable value (cast: (@: LmxCallable) lmx_value_allocate_owned(arena, c.sizeof(c.LmxCallable), c.LMX_DOMAIN_KIND_CALLABLE, c.LMX_DOMAIN_CALLABLE))
-    if: value != 0
-        value\method: 0
-        value\header: 0
     ---
     return: value
 

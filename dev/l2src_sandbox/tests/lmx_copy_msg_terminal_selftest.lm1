@@ -100,6 +100,14 @@ fn: main () int
     lmx_arena_ref_store(payload, 0U, orig_payload_cell)
     lmx_arena_ref_store(letter, 0U, (cast: (@: void) msg))
     lmx_arena_ref_store(letter, 1U, (cast: (@: void) payload))
+    # k.4 / Q22 = II generalized (fable, 2026-09-26): the copier now decides own-child vs
+    # shared-terminal structurally, by whether a child's own `parent` lies inside the
+    # copied subtree -- so a declared own field's `parent` must actually name its real
+    # structural holder for the copier to descend into it (previously only a classified
+    # LmxCallable reference was checked this way; a plain Structure's parent was never
+    # asked). payload is declared inside letter, letter inside unit.
+    payload\parent: letter
+    letter\parent: unit
 
     # Case A: OWN letter in a DIRECT slot (k3 / c3b-3 model).
     lmx_arena_ref_store(unit, 0U, (cast: (@: void) letter))

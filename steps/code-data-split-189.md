@@ -1004,3 +1004,54 @@ branch, my commit on top, per-row check, one gate.
   This goes into grok_bot's k.4 plan as a requirement.
 - Order: grok_bot's -187 k.4 (L3's own working copies retired, lmx_own deleted), then -170 k.2,
   then his -186/c4 k.4 branch.  My c4 commit goes on top of it, then the per-row check and one gate.
+
+## Commit c4 (translator half of the `Lmx.native` word; local until Sonnet -191's kernel branch)
+
+What is built (l2trans.lm1):
+- Numbering: `l2_m_head(mi)` is 2 for a method (args@0, return@1) and 0 for E.  It drives
+  `l2_own_mslot`, `l2_m_kids` and `l2_for_uchild`.
+  - E's fields start at 0; named Structures are unchanged (0).
+  - The fresh-instance gate is «more children than the header parts».
+- The unit tail lost the METHOD array child: `l2_unit_base + l2_occ_n() + 1` became
+  `l2_unit_base + l2_occ_n()` at 8 sites, and `kids` changed with them.
+- The builder: the descriptor loop is gone, and with it LmxMethod/LmxCallable, the METHOD array, its
+  publication, the sig recheck and `l2_method_sig_text`.
+  - `l2_emit_parts(i)` runs once every occurrence and named Structure exists.
+    - args: one child per declared formal.  It is a typed cell (the prototype's 0), a callable
+      formal's contract occurrence, or a Structure formal's named Structure; a type with no cell
+      leaves the slot empty.
+    - return: no child for a sub, otherwise one child, the typed result cell (`l2_ret_cell_ty`),
+      empty when the type has none.
+    - Then `leaf
+ative: (cast: (LmxEntry) <sym>_tr)` for a native method.
+  - `l2_emit_cell_new_ty(ty, n, ...)` is the one typed-cell emission, for an own field and a part
+    alike.
+- The walked root's CALL is `[call, code, data, rtype, args...]`.  rtype is
+  `lmx_arena_ref_value(lmx_arena_ref_struct(M, 1U), 0U)`, the callee's return cell by reference
+  (fable), and it is not stored for a sub.
+- Merge check 78 (child-0 identity) is gone; 77 and 79 stay.
+- The emitted header comment no longer names lmx_own.
+
+D-03 (fable): the walker calls nothing on its own.  Measured: the translator already emits an
+explicit CALL at the root for a bare callable atom statement (a CALL step) and for a callable in
+value position (PUT(r, CALL)).  A `return: f` with a value has no root form («return with a value
+at the root»), and inside a native method a call is native.  The new row
+unit_root_bare_callable_call pins both CALLs.
+
+After the rebase onto Sonnet's kernel branch (sonnet/native-191 aa6a195: `Lmx` `{parent, len, data,
+native}`, CALL `[call, code, data, rtype, args...]`, lmx_plan gone), the root's builder opens only
+the walker's roles: `lmx_walk_program_bind(l2_rw_roles)`, with no plan roles.
+
+Mutants (private variants, each RED by behaviour):
+- MC1, no result cell in the return part: unit_root_call_wide exits 3.
+- MC2, no `native` word: every root call exits 3 (call_wide, bare_callable_call, arg_addr_sticky,
+  recursive_fresh_instance, recursive_model_slot).
+- MC3, the old offset (own fields from 1 under the parts): the builder fails, «the host built R0's
+  program exactly once, and the builder succeeded» RED.
+
+Per-row check on Sonnet's kernel (verify2b, 359 rows, scratch driver): 0 red.
+
+Rows: 16 CALL child-count pins +1; 13 slot pins in 11 rows (unit base -1, method-own +1); the sig
+rows now pin the rtype reference (root_call_wide, method_sig_distinct) or only the word's absence
+(s1_throws_intern).  Text check (n159/pincheck.py, no run): 360 rows, 0 red.  The programs run once
+the kernel has `native`.

@@ -1,7 +1,6 @@
 predef: "l3_interp/l3_thread.h.lm1"
 predef: "l2src/lmx_interp.lm1"
 predef: "l2src/lmx_walk.lm1"
-predef: "l2src/lmx_plan.lm1"
 predef: "l2src/lmx_scratch.lm1"
 predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_arena.lm1"
@@ -26,7 +25,6 @@ include: "<string.h>" "<limits.h>"
 @: LmxArena l3_bound_owner 0
 @: Lmx l3_bound_profile 0
 @: Lmx l3_bound_roles 0
-@: Lmx l3_bound_plan 0
 @: Lmx l3_bound_prim_reg 0
 @: Lmx l3_bound_mail_count 0
 @: Lmx l3_bound_mail_take 0
@@ -116,24 +114,6 @@ fn: l3_walk_roles_open_profiled (@: LmxArena arena; @: Lmx profile) @: Lmx
     ---
 return: roles
 
-fn: l3_plan_roles_open_profiled (@: LmxArena arena; @: Lmx profile) @: Lmx
-    @: Lmx roles 0
-    @@: void record 0
-    size_t: k 0U
-    roles: l3_profile_node_new(arena, profile)
-    if: roles = 0 || l3_profile_refs_open(arena, roles, (cast: (size_t) c.LMX_PLAN_ROLE_COUNT), profile) != 0
-        return: 0
-    while: k < (cast: (size_t) c.LMX_PLAN_ROLE_COUNT)
-        record: (cast: (@@: void) lmx_arena_take_profiled(arena, c.sizeof(@: void), c.LMX_DOMAIN_KIND_ROLE, c.LMX_DOMAIN_ROLE, profile))
-        if: record = 0
-            return: 0
-        \record: 0
-        if: lmx_arena_ref_store(roles, k, (cast: (@: void) record)) != 0
-            return: 0
-        k: k + 1U
-    ---
-return: roles
-
 fn: l3_primitive_registry_open_profiled (@: LmxArena arena; size_t: count; @: Lmx profile) @: Lmx
     @: Lmx registry l3_profile_node_new(arena, profile)
     if: registry = 0 || count = 0U || l3_profile_refs_open(arena, registry, count, profile) != 0
@@ -173,11 +153,6 @@ fn: l3_thread_roles (@: LmxThread t) @: Lmx
     if: t = 0 || t != l3_bound_t
         return: 0
 return: l3_bound_roles
-
-fn: l3_thread_plan_roles (@: LmxThread t) @: Lmx
-    if: t = 0 || t != l3_bound_t
-        return: 0
-return: l3_bound_plan
 
 fn: l3_thread_mail_count_prim (@: LmxThread t) @: Lmx
     if: t = 0 || t != l3_bound_t
@@ -305,7 +280,7 @@ fn: l3_thread_dispatch (@: LmxThread t) int
     if: message = 0
         return: c.LMX_INTERP_INVALID
     graph: message\graph
-    if: graph = 0 || l3_bound_roles = 0 || l3_bound_plan = 0
+    if: graph = 0 || l3_bound_roles = 0
         return: c.LMX_INTERP_INVALID
     arena: 0
     if: t\slot != 0
@@ -326,7 +301,6 @@ fn: l3_thread_dispatch (@: LmxThread t) int
     ctx.arena: arena
     ctx.scratch: @ scratch
     ctx.roles: l3_bound_roles
-    ctx.plan_roles: l3_bound_plan
     ctx.classified: 0U
     subject: (cast: (@: void) graph)
     args: @ subject
@@ -355,7 +329,6 @@ fn: l3_thread_bind (@: LmxArena arena; @: LmxThread t) int
     @: LmxArenaBlock mark 0
     @: Lmx profile 0
     @: Lmx roles 0
-    @: Lmx plan_roles 0
     @: Lmx registry 0
     @: Lmx mail_count 0
     @: Lmx mail_take 0
@@ -371,7 +344,7 @@ fn: l3_thread_bind (@: LmxArena arena; @: LmxThread t) int
     if: t\slot = 0 || t\slot\arena != arena
         return: c.LMX_THREAD_INVALID
     if: l3_bound_t != 0
-        if: l3_bound_t = t && l3_bound_owner = arena && l3_bound_profile != 0 && l3_bound_roles != 0 && l3_bound_plan != 0 && l3_bound_mail_count != 0 && l3_bound_mail_take != 0 && l3_bound_success != 0
+        if: l3_bound_t = t && l3_bound_owner = arena && l3_bound_profile != 0 && l3_bound_roles != 0 && l3_bound_mail_count != 0 && l3_bound_mail_take != 0 && l3_bound_success != 0
             lmx_call_install_walk_status((cast: (LmxCallWalkFn) l3_thread_call0_walk))
             return: c.LMX_THREAD_OK
         ---
@@ -382,9 +355,6 @@ fn: l3_thread_bind (@: LmxArena arena; @: LmxThread t) int
         roles: l3_walk_roles_open_profiled(arena, profile)
     ---
     if: roles != 0
-        plan_roles: l3_plan_roles_open_profiled(arena, profile)
-    ---
-    if: plan_roles != 0
         registry: l3_primitive_registry_open_profiled(arena, 3U, profile)
     ---
     if: registry != 0
@@ -396,7 +366,7 @@ fn: l3_thread_bind (@: LmxArena arena; @: LmxThread t) int
     if: mail_take != 0
         success: l3_primitive_register_profiled(arena, registry, 2U, l3_prim_success, (cast: (@: Lmx) t), profile)
     ---
-    if: profile = 0 || roles = 0 || plan_roles = 0 || registry = 0 || mail_count = 0 || mail_take = 0 || success = 0 || l3_profile_seal(arena, profile) != 0
+    if: profile = 0 || roles = 0 || registry = 0 || mail_count = 0 || mail_take = 0 || success = 0 || l3_profile_seal(arena, profile) != 0
         lmx_arena_revert(arena, mark)
         return: c.LMX_THREAD_INVALID
     ---
@@ -406,7 +376,6 @@ fn: l3_thread_bind (@: LmxArena arena; @: LmxThread t) int
     l3_bound_owner: arena
     l3_bound_profile: profile
     l3_bound_roles: roles
-    l3_bound_plan: plan_roles
     l3_bound_prim_reg: registry
     l3_bound_mail_count: mail_count
     l3_bound_mail_take: mail_take

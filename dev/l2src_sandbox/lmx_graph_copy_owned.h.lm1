@@ -22,14 +22,12 @@ predef: "l2src/lmx_arena.h.lm1"
 # cross-Message copy); with dst_chars = 0 the source cells are kept (a copy
 # inside the same Message).
 #
-# A callable occurrence whose parent lies outside the copied operand subtree is a shared method reference (Q22 = II): kept by address, not copied, parent not rewritten. Nested callables whose parent is inside the operand are copied as ordinary Structures.
-#
-# A METHOD record is a copy TERMINAL: a shared {addr, sig} descriptor keeps the
-# very same pointer, never cloned or node-rewritten, whether it is reached
-# through a slot, an array element or a copied Structure's lexical chain (2's
-# all_methods_array row). Which value is a METHOD is answered by src_arena's
-# table -- an address classified LMX_KIND_METHOD -- and by nothing else: no list
-# of METHOD ranges is carried through the copy.
+# k.4: any Structure whose parent lies outside the copied operand subtree is a shared
+# reference (Q22 = II, generalized -- not only a method occurrence): kept by address, not
+# copied, parent not rewritten. A Structure whose parent is inside the operand is copied
+# as an ordinary Structure. There is no separate METHOD/CALLABLE domain any more; the
+# question is answered structurally (child\parent inside the copied set, or not), never by
+# a domain classification.
 #
 # A branch qualified `independent: const: immutable` is retained only when its
 # address resolves to one of the exact physical profiles supplied by the caller.  The

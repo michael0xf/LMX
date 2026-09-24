@@ -1,5 +1,4 @@
 predef: "l2src/lmx_interp.lm1"
-predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_arena_blocks.lm1"
 predef: "l2src/lmx_implements.lm1"
@@ -10,9 +9,8 @@ predef: "l2src/lmx_graph_copy_owned.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
-# lmx_interp_run is the L3 entry: prepare + lmx_walk_run. No METHOD.addr.
-# A translation-known descriptor in a sealed imported range already carries its plan; this
-# focused test covers the ordinary local preparation path rather than recreating that producer ABI.
+# lmx_interp_run is the L3 entry: lmx_walk_run over a Structure (k.4: no prepare, no plan,
+# no descriptor -- next_core_tasks.md §3 item 9, "nothing beyond the Structure itself").
 
 int: checks 0
 int: failures 0
@@ -28,15 +26,13 @@ end: check
 # A callable occurrence under `unit` at `slot` whose body is `return: <value>` (RET over LIT).
 fn: mk_int_entry (@: LmxArena ga; @: Lmx roles; @: Lmx unit; size_t: slot; int: value) @: Lmx
     @: Lmx m
-    @: LmxCallable info
     @: Lmx ret
     @: Lmx lit
-    m: lmx_walk_plain(ga, unit, 2U)
-    info: lmx_callable_new_owned(ga)
-    if: m = 0 || info = 0 || lmx_arena_ref_store(unit, slot, (cast: (@: void) m)) != 0 || lmx_arena_ref_store(m, 0U, (cast: (@: void) info)) != 0
+    m: lmx_walk_plain(ga, unit, 1U)
+    if: m = 0 || lmx_arena_ref_store(unit, slot, (cast: (@: void) m)) != 0
         return: 0
     ret: lmx_walk_frame(ga, roles, m, c.LMX_WALK_OP_RET, 2U)
-    if: ret = 0 || lmx_arena_ref_store(m, 1U, (cast: (@: void) ret)) != 0
+    if: ret = 0 || lmx_arena_ref_store(m, 0U, (cast: (@: void) ret)) != 0
         return: 0
     lit: lmx_walk_frame(ga, roles, ret, c.LMX_WALK_OP_LIT, 2U)
     if: lit = 0 || lmx_arena_ref_store(ret, 1U, (cast: (@: void) lit)) != 0 || lmx_walk_store_int(ga, lit, 1U, value) != c.LMX_WALK_OK
@@ -51,12 +47,9 @@ fn: main () int
     LmxWalkContext: context
     @: LmxArena ga 0
     @: Lmx roles 0
-    @: Lmx plan_roles 0
     @: Lmx unit 0
     @: Lmx m 0
-    @: LmxCallable info 0
     @: Lmx ret 0
-    @: Lmx header 0
     @: Lmx m7 0
     @: Lmx m0 0
     LmxWalkValue: value
@@ -74,7 +67,6 @@ fn: main () int
     ---
     ga: @ arena
     roles: lmx_walk_roles_open(ga)
-    plan_roles: lmx_plan_roles_open(ga)
     if: lmx_arena_open(@ context_arena) != 0 || lmx_scratch_open(@ store, @ context_arena, @ context_cells, 16U) != c.LMX_SCRATCH_OK
         fputs("lmx_interp_walk: context\n", l1_stdout())
         return: 2
@@ -82,30 +74,21 @@ fn: main () int
     context.arena: ga
     context.scratch: @ store
     context.roles: roles
-    context.plan_roles: plan_roles
     unit: lmx_node_new_owned(ga)
-    if: roles = 0 || plan_roles = 0 || unit = 0 || lmx_arena_refs_open_owned(ga, unit, 3U) != 0
+    if: roles = 0 || unit = 0 || lmx_arena_refs_open_owned(ga, unit, 3U) != 0
         fputs("lmx_interp_walk: unit\n", l1_stdout())
         return: 2
     ---
-    m: lmx_walk_plain(ga, unit, 2U)
-    info: lmx_callable_new_owned(ga)
-    if: m = 0 || info = 0 || lmx_arena_ref_store(unit, 0U, (cast: (@: void) m)) != 0
-        return: 2
-    ---
-    if: lmx_arena_ref_store(m, 0U, (cast: (@: void) info)) != 0
+    m: lmx_walk_plain(ga, unit, 1U)
+    if: m = 0 || lmx_arena_ref_store(unit, 0U, (cast: (@: void) m)) != 0
         return: 2
     ---
     ret: lmx_walk_frame(ga, roles, m, c.LMX_WALK_OP_RET, 1U)
-    if: ret = 0 || lmx_arena_ref_store(m, 1U, (cast: (@: void) ret)) != 0
+    if: ret = 0 || lmx_arena_ref_store(m, 0U, (cast: (@: void) ret)) != 0
         return: 2
     ---
     check(lmx_interp_run(0, m) = c.LMX_INTERP_INVALID, "no context")
     check(lmx_interp_run(@ context, m) = c.LMX_INTERP_OK, "void return through walk")
-    header: info\header
-    check(header != 0, "prepare published the plan")
-    check(lmx_plan_home(ga, (cast: (@: void) info)) = ga, "Message-local descriptor lives in the graph arena")
-    check(lmx_plan_home(ga, (cast: (@: void) header)) = ga, "Message-local plan lives with the descriptor")
     # The entry's own result reaches the host through lmx_interp_apply_value: `return: 7` is
     # observed as 7 and `return: 0` as 0; the void return above carries no value.
     m7: mk_int_entry(ga, roles, unit, 1U, 7)

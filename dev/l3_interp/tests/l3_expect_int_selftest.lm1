@@ -7,7 +7,6 @@ predef: "l2src/lmx_schedule.lm1"
 predef: "l2src/lmx_manager.lm1"
 predef: "l2src/lmx_walk.lm1"
 predef: "l2src/lmx_call.lm1"
-predef: "l2src/lmx_plan.lm1"
 predef: "l2src/lmx_scratch.lm1"
 predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_arena.lm1"
@@ -103,12 +102,11 @@ fn: lit (@: Lmx parent; size_t: slot; int: value) @: Lmx
     ---
 return: n
 
+# k.4 (c.3): a plain occurrence, slot 0 reserved/unused.
 fn: mk_dummy (@: LmxArena a) @: Lmx
     @: Lmx m lmx_node_new_owned(a)
-    @: LmxCallable info lmx_callable_new_owned(a)
-    if: m = 0 || info = 0 || lmx_arena_refs_open_owned(a, m, 1U) != 0
+    if: m = 0 || lmx_arena_refs_open_owned(a, m, 1U) != 0
         return: 0
-    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
 return: m
 
 fn: mk_thread (@: LmxArena arena; @: Lmx graph; @@: LmxThread out_t) int
@@ -132,9 +130,9 @@ return: 1
 # subject's field at `path_index` is checked against want_value; if match, SET writes 42.
 # `path_kind` 0 = the ordinary path Structure [path_index]; 1 = a MALFORMED path: child[1] is
 # an int cell, not a Structure.
+# k.4 (c.3): a plain occurrence, slot 0 reserved/unused.
 fn: mk_graph (int: want_value; int: path_index; int: path_kind) @: Lmx
     @: Lmx m
-    @: LmxCallable info
     @: Lmx ifn
     @: Lmx ei
     @: Lmx path
@@ -149,12 +147,7 @@ fn: mk_graph (int: want_value; int: path_index; int: path_kind) @: Lmx
         broken: broken + 1
         return: 0
     ---
-    info: lmx_callable_new_owned(gb)
-    if: info = 0
-        return: 0
-    ---
-    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
-    icell(m, 1U, 0)  # own field starts at 0
+    icell(m, 1U, 0)  # own field starts at 1
 
     ifn: fr(m, 2U, c.LMX_WALK_OP_IF, 3U)
     if: ifn = 0
@@ -222,7 +215,6 @@ fn: main () int
     LmxScratch: store
     LmxWalkContext: context
     @: Lmx dummy 0
-    @: LmxCallable info 0
     @: LmxThread t 0
     @: Lmx m 0
     @: Lmx subject 0
@@ -230,7 +222,6 @@ fn: main () int
     @: void size_cell 0
     @: void subject_void 0
     @@: void args
-    int: st
 
     if: counts = 0
         return: 2
@@ -256,12 +247,11 @@ fn: main () int
     fail(counts, lmx_thread_turn(t, native_noop, 1U) = c.LMX_THREAD_OK, "commit mode on native turn")
     fail(counts, l3_thread_bind(gb, t) = c.LMX_THREAD_OK, "bind walk dispatch")
     groles: l3_thread_roles(t)
-    fail(counts, groles != 0 && l3_thread_plan_roles(t) != 0, "shared walk/plan roles")
+    fail(counts, groles != 0, "shared walk roles")
 
     context.arena: gb
     context.scratch: @ store
     context.roles: groles
-    context.plan_roles: l3_thread_plan_roles(t)
     context.classified: 0U
 
     # --- Positive: subject field 0 = 42, want = 42 -> match -> SET 42
@@ -274,16 +264,11 @@ fn: main () int
     context.arena: gb
     context.scratch: @ store
     context.roles: groles
-    context.plan_roles: l3_thread_plan_roles(t)
     context.classified: 0U
     m: mk_expect_int_graph(42)
-    fail(counts, broken = 0 && m != 0 && lmx_arena_ref_value(m, 0U) != 0, "expect-int match graph + callable")
-    info: lmx_call_callable(gb, m)
-    fail(counts, info != 0, "call_ready gives info")
-    fail(counts, info\header = 0, "callable has no prior plan")
-    fail(counts, lmx_plan_home(gb, info) = gb, "plan_home is gb")
-    st: lmx_walk_prepare(@ context, gb, l3_thread_plan_roles(t), m)
-    fail(counts, st = c.LMX_WALK_OK, "prepare OK")
+    # k.4 (c.3): no descriptor, no plan -- lmx_call_ready answers OK for any Structure
+    # and lmx_interp_apply needs nothing beyond it (no separate prepare step).
+    fail(counts, broken = 0 && m != 0 && lmx_call_ready(gb, m) = c.LMX_CALL_OK, "expect-int match graph is ready")
     subject_void: (cast: (@: void) subject)
     args: @ subject_void
     fail(counts, lmx_interp_apply(@ context, m, args, 1U) = c.LMX_INTERP_OK, "expect-int match interp_apply")
@@ -332,15 +317,13 @@ fn: main () int
     fail(counts, field(m, 1U) = 0, "non-INT leaf (STRUCT): own field stays 0")
 
     # --- Malformed path: child[1] is an int cell, not a STRUCT -> LMX_WALK_INVALID.
-    #     Asserted by the interp RESULT (lmx_interp_map: WALK_INVALID -> INTERP_INVALID), and
-    #     attributed to the run: prepare is asked first and its answer is named too.
+    #     Asserted by the interp RESULT (lmx_interp_map: WALK_INVALID -> INTERP_INVALID);
+    #     k.4 (c.3): no separate prepare pass, caught when EXPECT_INT actually runs.
     broken: 0
     subject: mk_subject()
     icell(subject, 1U, 42)
     m: mk_graph(42, 1, 1)
     fail(counts, broken = 0 && m != 0 && subject != 0, "malformed path graph built")
-    st: lmx_walk_prepare(@ context, gb, l3_thread_plan_roles(t), m)
-    fail(counts, st = c.LMX_WALK_OK, "malformed path: prepare accepts the graph (the path is data to the scan)")
     subject_void: (cast: (@: void) subject)
     args: @ subject_void
     fail(counts, lmx_interp_apply(@ context, m, args, 1U) = c.LMX_INTERP_INVALID, "malformed path (non-STRUCT): interp_apply answers LMX_INTERP_INVALID")

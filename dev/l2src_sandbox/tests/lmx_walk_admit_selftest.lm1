@@ -9,7 +9,6 @@ predef: "l2src/lmx_array_owned.lm1"
 predef: "l2src/lmx_array_ref_owned.lm1"
 predef: "l2src/lmx_graph_copy_owned.lm1"
 predef: "l2src/lmx_value_owned.lm1"
-predef: "l2src/lmx_plan.lm1"
 predef: "l2src/lmx_primitive.h.lm1"
 predef: "l2src/lmx_merge_owned.lm1"
 predef: "l1src/libc_abi.lm1"
@@ -20,7 +19,6 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
 @: LmxArena ga 0
 @: Lmx groles 0
-@: Lmx gplan_roles 0
 @: LmxWalkContext gctx 0
 @: LmxWalkValue gv 0
 int: broken 0
@@ -63,22 +61,17 @@ sub: sz (@: Lmx code; size_t: slot; size_t: value)
     ---
 end: sz
 
+# k.4: a walked callable occurrence is just the ordinary body Structure -- no descriptor,
+# no shared method record; `native` stays 0 by construction (lmx_node_new_owned zeroes it),
+# which is exactly what dispatches to the walker.  `children` now counts body steps only
+# (the old descriptor slot 0 is gone), so every call site below shrinks by one and its
+# first body-step frame moves from slot 1 to slot 0.
 fn: mk_m (@: Lmx unit; size_t: slot; size_t: children) @: Lmx
-    @: Lmx m pl(unit, slot, children)
-    @: LmxCallable info lmx_callable_new_owned(ga)
-    if: m = 0 || info = 0 || lmx_arena_ref_store(m, 0U, (cast: (@: void) info)) != 0
-        broken: broken + 1
-        return: 0
-    ---
-return: m
+return: pl(unit, slot, children)
 
 fn: go (@: Lmx m) int
-    int: st
     if: m = 0 || gctx = 0 || gv = 0
         return: c.LMX_WALK_INVALID
-    st: lmx_walk_prepare(gctx, ga, gplan_roles, m)
-    if: st != c.LMX_WALK_OK
-        return: st
 return: lmx_walk_run(gctx, m, 0, 0U, gv)
 
 fn: main () int
@@ -117,8 +110,7 @@ fn: main () int
     if: lmx_chars_init(ga) != 0
         return: 2
     groles: lmx_walk_roles_open(ga)
-    gplan_roles: lmx_plan_roles_open(ga)
-    if: groles = 0 || gplan_roles = 0
+    if: groles = 0
         return: 2
     memset((cast: (@: void) (@ context_arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ context_cells)), 0, c.sizeof(c.LmxPool))
@@ -129,7 +121,6 @@ fn: main () int
     context.arena: ga
     context.scratch: @ store
     context.roles: groles
-    context.plan_roles: gplan_roles
     context.immutable_profile: 0
     context.classified: 0U
     gctx: @ context
@@ -168,8 +159,8 @@ fn: main () int
     prim_letter_rec: (cast: (@: Lmx) prim_letter)
 
     # 1. value {x:7} admit to model {x}: out == value address, OK
-    m: mk_m(unit, 0U, 2U)
-    n: fr(m, 1U, c.LMX_WALK_OP_RET, 2U)
+    m: mk_m(unit, 0U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
     pn: fr(n, 1U, c.LMX_WALK_OP_PRIM, 4U)
     ref(pn, 1U, prim_rec)
     ref(pn, 2U, value)
@@ -179,8 +170,8 @@ fn: main () int
     check((cast: (int) (st = c.LMX_WALK_OK && got = (cast: (@: void) value))), "admit value->model_x same pointer OK")
 
     # 2. value {y-shape mismatch: 1-slot vs model 2-slot} -> THROWN+2
-    m: mk_m(unit, 5U, 2U)
-    n: fr(m, 1U, c.LMX_WALK_OP_RET, 2U)
+    m: mk_m(unit, 5U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
     pn: fr(n, 1U, c.LMX_WALK_OP_PRIM, 4U)
     ref(pn, 1U, prim_rec)
     ref(pn, 2U, value_y)
@@ -193,8 +184,8 @@ fn: main () int
     if: cell = 0 || lmx_int_store_known(cell, 1) != 0
         return: 2
     ---
-    m: mk_m(unit, 6U, 2U)
-    n: fr(m, 1U, c.LMX_WALK_OP_RET, 2U)
+    m: mk_m(unit, 6U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
     pn: fr(n, 1U, c.LMX_WALK_OP_PRIM, 4U)
     ref(pn, 1U, prim_rec)
     litn: fr(pn, 2U, c.LMX_WALK_OP_LIT, 2U)
@@ -206,8 +197,8 @@ fn: main () int
     check((cast: (int) (st = c.LMX_WALK_PRIMITIVE)), "admit numeric cell -> PRIMITIVE")
 
     # 4. write through PUT into admitted value; visible on original (reference)
-    m: mk_m(unit, 7U, 2U)
-    n: fr(m, 1U, c.LMX_WALK_OP_PUT, 4U)
+    m: mk_m(unit, 7U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_PUT, 4U)
     ref(n, 1U, value)
     sz(n, 2U, 0U)
     litn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
@@ -236,8 +227,8 @@ fn: main () int
     if: pcell = 0 || lmx_pointer_store_known(pcell, (cast: (@: void) value)) != 0
         return: 2
     ---
-    m: mk_m(unit, 10U, 2U)
-    n: fr(m, 1U, c.LMX_WALK_OP_RET, 2U)
+    m: mk_m(unit, 10U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
     pn: fr(n, 1U, c.LMX_WALK_OP_PRIM, 4U)
     ref(pn, 1U, prim_rec)
     litn: fr(pn, 2U, c.LMX_WALK_OP_LIT, 2U)
@@ -257,8 +248,8 @@ fn: main () int
     if: lmx_arena_ref_store(letter, 0U, 0) != 0 || lmx_arena_ref_store(letter, 1U, (cast: (@: void) payload)) != 0
         return: 2
     ---
-    m: mk_m(unit, 13U, 2U)
-    n: fr(m, 1U, c.LMX_WALK_OP_RET, 2U)
+    m: mk_m(unit, 13U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
     pn: fr(n, 1U, c.LMX_WALK_OP_PRIM, 4U)
     ref(pn, 1U, prim_letter_rec)
     ref(pn, 2U, letter)
@@ -268,8 +259,8 @@ fn: main () int
     check((cast: (int) (st = c.LMX_WALK_OK && got = (cast: (@: void) payload))), "admit_letter -> payload address")
 
     # same letter vs model_y -> THROWN+2
-    m: mk_m(unit, 14U, 2U)
-    n: fr(m, 1U, c.LMX_WALK_OP_RET, 2U)
+    m: mk_m(unit, 14U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
     pn: fr(n, 1U, c.LMX_WALK_OP_PRIM, 4U)
     ref(pn, 1U, prim_letter_rec)
     ref(pn, 2U, letter)

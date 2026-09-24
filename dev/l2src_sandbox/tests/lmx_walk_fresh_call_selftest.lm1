@@ -8,7 +8,6 @@ predef: "l2src/lmx_chars_owned.lm1"
 predef: "l2src/lmx_array_owned.lm1"
 predef: "l2src/lmx_array_ref_owned.lm1"
 predef: "l2src/lmx_value_owned.lm1"
-predef: "l2src/lmx_plan.lm1"
 predef: "l2src/lmx_scratch.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
@@ -18,7 +17,6 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
 @: LmxArena ga 0
 @: Lmx groles 0
-@: Lmx gplan_roles 0
 @: LmxWalkContext gctx 0
 @: LmxWalkValue gv 0
 int: broken 0
@@ -81,11 +79,12 @@ fn: own (@: Lmx parent; size_t: slot; @: Lmx holder; size_t: index) @: Lmx
     sz(n, 2U, index)
 return: n
 
+# k.4: a walked callable occurrence is just the ordinary body Structure -- no descriptor;
+# `native` stays 0 by construction. `children` now counts body steps only, so every call
+# site below shrinks by one and every stored slot index moves down by one.
 fn: mk_m (@: Lmx unit; size_t: slot; size_t: children) @: Lmx
     @: Lmx m pl(unit, slot, children)
-    @: LmxCallable info lmx_callable_new_owned(ga)
-    if: m = 0 || info = 0 || lmx_arena_ref_store(m, 0U, (cast: (@: void) info)) != 0
-        broken: broken + 1
+    if: m = 0
         return: 0
     ---
     m\parent: unit
@@ -129,23 +128,21 @@ fn: main () int
     ---
     ga: @ arena
     groles: lmx_walk_roles_open(ga)
-    gplan_roles: lmx_plan_roles_open(ga)
     memset((cast: (@: void) (@ context_arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ context_cells)), 0, c.sizeof(c.LmxPool))
     memset((cast: (@: void) (@ store)), 0, c.sizeof(c.LmxScratch))
     if: lmx_arena_open(@ context_arena) != 0 || lmx_scratch_open(@ store, @ context_arena, @ context_cells, 16U) != c.LMX_SCRATCH_OK
         return: 2
     ---
-    lmx_walk_program_bind(groles, gplan_roles)
+    lmx_walk_program_bind(groles)
     context.arena: ga
     context.scratch: @ store
     context.roles: groles
-    context.plan_roles: gplan_roles
     context.immutable_profile: 0
     context.classified: 0U
     gctx: @ context
     gv: (cast: (@: LmxWalkValue) calloc(1U, c.sizeof(c.LmxWalkValue)))
-    if: gv = 0 || groles = 0 || gplan_roles = 0
+    if: gv = 0 || groles = 0
         return: 2
     ---
 
@@ -157,21 +154,23 @@ fn: main () int
     # writer: own x 1;  x: 99;  return: x
     # Called with data = FRESH(writer): frame writes 99 on the fresh instance.
     # After return, writer\x must still be 1 (M fields, not frame). Mutant: data=writer -> 99 RED.
-    writer: mk_m(unit, 1U, 4U)
-    xcell: icell(writer, 1U, 1)
-    n: fr(writer, 2U, c.LMX_WALK_OP_SET, 3U)
-    own(n, 1U, writer, 1U)
+    # k.4: no descriptor slot -- own field x at slot 0, SET at slot 1, RET at slot 2.
+    writer: mk_m(unit, 1U, 3U)
+    xcell: icell(writer, 0U, 1)
+    n: fr(writer, 1U, c.LMX_WALK_OP_SET, 3U)
+    own(n, 1U, writer, 0U)
     lit(n, 2U, 99)
-    n: fr(writer, 3U, c.LMX_WALK_OP_RET, 2U)
-    own(n, 1U, writer, 1U)
-    check(lmx_walk_prepare(gctx, ga, gplan_roles, writer) = c.LMX_WALK_OK, "writer prepared")
+    n: fr(writer, 2U, c.LMX_WALK_OP_RET, 2U)
+    own(n, 1U, writer, 0U)
 
-    caller: mk_m(unit, 2U, 2U)
-    n: fr(caller, 1U, c.LMX_WALK_OP_CALL, 3U)
+    # k.4: caller's CALL step at slot 0 (no descriptor); CALL gains a 4th leading child
+    # (rtype, left 0 -- writer is walked, not native, so lmx_walk_call never reads it on
+    # that path); data (FRESH) stays at child 2, unaffected by rtype's insertion after it.
+    caller: mk_m(unit, 2U, 1U)
+    n: fr(caller, 0U, c.LMX_WALK_OP_CALL, 4U)
     ref(n, 1U, writer)
     e: fr(n, 2U, c.LMX_WALK_OP_FRESH, 2U)
     ref(e, 1U, writer)
-    check(lmx_walk_prepare(gctx, ga, gplan_roles, caller) = c.LMX_WALK_OK, "caller with FRESH data prepared")
     st: go(caller, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_OK && v = 1 && r = 99, "CALL data=FRESH: frame return 99")
     check(lmx_int_value_known(xcell) = 1, "after return M\\x = M fields (mutant data=M wrote 99 -> RED)")
@@ -179,14 +178,15 @@ fn: main () int
     fresh_alone: lmx_fresh(ga, writer)
     check(fresh_alone != 0 && fresh_alone != writer, "lmx_fresh alone: new Structure")
     check(fresh_alone\parent = writer\parent, "fresh.parent = code.parent")
-    check(lmx_arena_ref_value(fresh_alone, 0U) = lmx_arena_ref_value(writer, 0U), "fresh child0 shared by address")
+    check(fresh_alone\native = writer\native, "fresh copies native verbatim (k.4: sibling member, not child0)")
 
-    # Mutant: CALL with only code child (len 2, no data) -> INVALID.
-    bad: mk_m(unit, 3U, 2U)
-    n: fr(bad, 1U, c.LMX_WALK_OP_CALL, 2U)
+    # Mutant: CALL with only code child (no data, no rtype) -> INVALID (k.4 floor is 4
+    # children: role+code+data+rtype, was 3; 2 is still short either way).
+    bad: mk_m(unit, 3U, 1U)
+    n: fr(bad, 0U, c.LMX_WALK_OP_CALL, 2U)
     ref(n, 1U, writer)
-    st: lmx_walk_prepare(gctx, ga, gplan_roles, bad)
-    check(st = c.LMX_WALK_INVALID, "CALL without data child -> INVALID (mutant old arity greened -> RED)")
+    st: lmx_walk_run(gctx, bad, 0, 0U, gv)
+    check(st = c.LMX_WALK_INVALID, "CALL without data/rtype children -> INVALID (mutant old arity greened -> RED)")
 
     check(broken = 0, "fixture construction")
     if: failures != 0

@@ -7,7 +7,6 @@ predef: "l2src/lmx_post.lm1"
 predef: "l2src/lmx_thread.lm1"
 predef: "l2src/lmx_schedule.lm1"
 predef: "l2src/lmx_manager.lm1"
-predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_gc.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_arena_blocks.lm1"
@@ -26,8 +25,8 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
 # lmx_app_two_live_selftest.lm1 -- ticket 20260919-123500 / settle via lmx_settle_children (20260919-130500)
 # Two live children at once with DIFFERENT bodies (tl_body_a / tl_body_b).
-# Graph layout (source refs = 5):
-#   0 method | 1 turns | 2 body_id (11 vs 22) | 3 letter0 | 4 letter1
+# Graph layout (source refs = 4, k.4 -- no descriptor slot, native set directly):
+#   0 turns | 1 body_id (11 vs 22) | 2 letter0 | 3 letter1
 # A: 1 turn then success. B: turn1 take (no success); after A util, turn2 then success.
 
 @: LmxRoot tl_root 0
@@ -60,8 +59,8 @@ fn: tl_body_a (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: vo
         return: 0
     ---
     graph: message\graph
-    turns_cell: lmx_arena_ref_value(graph, 1U)
-    body_cell: lmx_arena_ref_value(graph, 2U)
+    turns_cell: lmx_arena_ref_value(graph, 0U)
+    body_cell: lmx_arena_ref_value(graph, 1U)
     if: turns_cell = 0 || body_cell = 0
         return: 0
     ---
@@ -73,7 +72,7 @@ fn: tl_body_a (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: vo
         letter: lmx_thread_mail_take(t, c.LMX_POST_INBOX)
         if: letter != 0
             if: accepted < 2U
-                lmx_arena_ref_store(graph, 3U + accepted, letter)
+                lmx_arena_ref_store(graph, 2U + accepted, letter)
                 accepted: accepted + 1U
             ---
         ---
@@ -103,8 +102,8 @@ fn: tl_body_b (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: vo
         return: 0
     ---
     graph: message\graph
-    turns_cell: lmx_arena_ref_value(graph, 1U)
-    body_cell: lmx_arena_ref_value(graph, 2U)
+    turns_cell: lmx_arena_ref_value(graph, 0U)
+    body_cell: lmx_arena_ref_value(graph, 1U)
     if: turns_cell = 0 || body_cell = 0
         return: 0
     ---
@@ -115,19 +114,19 @@ fn: tl_body_b (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: vo
         letter: lmx_thread_mail_take(t, c.LMX_POST_INBOX)
         if: letter != 0
             slot: 0U
-            if: lmx_arena_ref_value(graph, 3U) != 0
+            if: lmx_arena_ref_value(graph, 2U) != 0
                 slot: 1U
             ---
             if: slot < 2U
-                lmx_arena_ref_store(graph, 3U + slot, letter)
+                lmx_arena_ref_store(graph, 2U + slot, letter)
             ---
         ---
     ---
     accepted: 0U
-    if: lmx_arena_ref_value(graph, 3U) != 0
+    if: lmx_arena_ref_value(graph, 2U) != 0
         accepted: accepted + 1U
     ---
-    if: lmx_arena_ref_value(graph, 4U) != 0
+    if: lmx_arena_ref_value(graph, 3U) != 0
         accepted: accepted + 1U
     ---
     # ... and on the THIRD turn, for the same reason as A: everything the probe reads about B is
@@ -144,9 +143,6 @@ fn: tl_wire_child (@: LmxRoot root; @: LmxArena arena; size_t: slot; @: Lmx sour
     @: LmxThread child_t
     @: LmxPost child_mail
     @: LmxSchedule child_sched
-    @: LmxMethod method
-    @: LmxCallable info
-    @: LmxPool methods
     @: Lmx graph
     @: void turns_cell
     @: void body_cell
@@ -155,28 +151,19 @@ fn: tl_wire_child (@: LmxRoot root; @: LmxArena arena; size_t: slot; @: Lmx sour
         return: 2
     ---
     \out_msg: child
-    methods: lmx_pool_make(arena, 2U * c.sizeof(c.LmxMethod), c.sizeof(c.LmxMethod),
-                           c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD)
-    if: methods = 0
-        return: 3
-    ---
-    method: lmx_method_intern(arena, methods, body, 1U)
+    # k.4: no descriptor, no shared method record -- the copied graph's `native` word is
+    # set directly.
     graph: child\graph
-    if: method = 0 || graph = 0
+    if: graph = 0
         return: 4
     ---
-    info: lmx_callable_new_owned(arena)
-    if: info = 0
-        return: 4
-    ---
-    info\method: method
-    lmx_arena_ref_store(graph, 0U, (cast: (@: void) info))
+    graph\native: body
     turns_cell: lmx_size_new_owned(arena)
     body_cell: lmx_size_new_owned(arena)
     if: turns_cell = 0 || body_cell = 0
         return: 5
     ---
-    if: lmx_arena_ref_store(graph, 1U, turns_cell) != 0 || lmx_arena_ref_store(graph, 2U, body_cell) != 0
+    if: lmx_arena_ref_store(graph, 0U, turns_cell) != 0 || lmx_arena_ref_store(graph, 1U, body_cell) != 0
         return: 6
     ---
     child_mail: (cast: (@: LmxPost) lmx_arena_take(arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
@@ -309,8 +296,8 @@ fn: main () int
     ---
     source_a: lmx_node_new_owned(root_arena)
     source_b: lmx_node_new_owned(root_arena)
-    tl_check(counts, source_a != 0 && lmx_arena_refs_open_owned(root_arena, source_a, 6U) = 0 && lmx_thread_children_field_new(root_arena, source_a, 5U) != 0, "template A not built")
-    tl_check(counts, source_b != 0 && lmx_arena_refs_open_owned(root_arena, source_b, 6U) = 0 && lmx_thread_children_field_new(root_arena, source_b, 5U) != 0, "template B not built")
+    tl_check(counts, source_a != 0 && lmx_arena_refs_open_owned(root_arena, source_a, 5U) = 0 && lmx_thread_children_field_new(root_arena, source_a, 4U) != 0, "template A not built")
+    tl_check(counts, source_b != 0 && lmx_arena_refs_open_owned(root_arena, source_b, 5U) = 0 && lmx_thread_children_field_new(root_arena, source_b, 4U) != 0, "template B not built")
     if: source_a = 0 || source_b = 0
         failures: counts[1]
         c.printf("lmx_app_two_live checks=%d failures=%d entry_diag=%u (abort templates)\n", counts[0], failures, (cast: (unsigned) tl_entry_diag))
@@ -358,8 +345,8 @@ fn: main () int
     tl_check(counts, mgr_before = 2U, "manager count not 2 with both live")
     tl_check(counts, svc_before = 3U, "service count not R0+2 with both live")
     tl_check(counts, graph_a != 0 && graph_b != 0, "child graphs missing")
-    tl_check(counts, lmx_arena_ref_value(graph_a, 1U) != 0 && lmx_arena_ref_value(graph_a, 2U) != 0, "A counters not rooted")
-    tl_check(counts, lmx_arena_ref_value(graph_b, 1U) != 0 && lmx_arena_ref_value(graph_b, 2U) != 0, "B counters not rooted")
+    tl_check(counts, lmx_arena_ref_value(graph_a, 0U) != 0 && lmx_arena_ref_value(graph_a, 1U) != 0, "A counters not rooted")
+    tl_check(counts, lmx_arena_ref_value(graph_b, 0U) != 0 && lmx_arena_ref_value(graph_b, 1U) != 0, "B counters not rooted")
 
     # Post one letter to EACH via physical address (service bisect).
     tl_check(counts, lmx_arena_open_simple(@ letter_arena_a) = 0, "letter_a arena did not open")
@@ -394,11 +381,11 @@ fn: main () int
     tl_check(counts, lmx_manager_round(manager, 1U, lmx_root_clock(@ root)) = c.LMX_MANAGER_OK, "round A did not run")
     tl_check(counts, lmx_arena_index_len(letter_a_at) = 0U && lmx_range_classify(@ arena_a, (cast: (@: void) letter_a)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "A take did not claim letter_a")
     tl_check(counts, lmx_arena_index_len(letter_b_at) > 0U && lmx_range_classify(letter_b_at, (cast: (@: void) letter_b1)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "A take disturbed B's pending donor")
-    turns_a: lmx_size_value_known(lmx_arena_ref_value(graph_a, 1U))
-    body_a: lmx_size_value_known(lmx_arena_ref_value(graph_a, 2U))
+    turns_a: lmx_size_value_known(lmx_arena_ref_value(graph_a, 0U))
+    body_a: lmx_size_value_known(lmx_arena_ref_value(graph_a, 1U))
     tl_check(counts, turns_a = 1U, "A turns != 1 after its round")
     tl_check(counts, body_a = 11U, "A body_id != 11")
-    tl_check(counts, lmx_arena_ref_value(graph_a, 3U) = (cast: (@: void) letter_a), "A did not store its letter")
+    tl_check(counts, lmx_arena_ref_value(graph_a, 2U) = (cast: (@: void) letter_a), "A did not store its letter")
     # After its FIRST turn A is working, not finished: the probe's cut (see tl_body_a) gives A a
     # second turn to end on, because a successful child returns its own arena when it ends.
     tl_check(counts, msg_a\success = 0 && msg_a\running = 1, "A finished on its first turn")
@@ -408,12 +395,12 @@ fn: main () int
 
     tl_check(counts, lmx_manager_round(manager, 1U, lmx_root_clock(@ root)) = c.LMX_MANAGER_OK, "round B1 did not run")
     tl_check(counts, lmx_arena_index_len(letter_b_at) = 0U && lmx_range_classify(@ arena_b, (cast: (@: void) letter_b1)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "B take did not claim letter_b1")
-    turns_b: lmx_size_value_known(lmx_arena_ref_value(graph_b, 1U))
-    body_b: lmx_size_value_known(lmx_arena_ref_value(graph_b, 2U))
+    turns_b: lmx_size_value_known(lmx_arena_ref_value(graph_b, 0U))
+    body_b: lmx_size_value_known(lmx_arena_ref_value(graph_b, 1U))
     tl_check(counts, turns_b = 1U, "B turns != 1 after turn1")
     tl_check(counts, body_b = 22U, "B body_id != 22 (bodies not different)")
     tl_check(counts, body_a = 11U && body_b = 22U && body_a != body_b, "body ids not observably different")
-    tl_check(counts, lmx_arena_ref_value(graph_b, 3U) = (cast: (@: void) letter_b1), "B did not store letter_b1")
+    tl_check(counts, lmx_arena_ref_value(graph_b, 2U) = (cast: (@: void) letter_b1), "B did not store letter_b1")
     tl_check(counts, msg_b\success = 0 && msg_b\running = 1, "B set success on turn1")
     tl_check(counts, lmx_manager_count(manager) = 2U, "both children should stay in the manager while A works")
     tl_check(counts, lmx_service_count(service) = 3U, "service still R0+2 before A util")
@@ -448,9 +435,9 @@ fn: main () int
     tl_check(counts, lmx_range_classify(@ arena_b, (cast: (@: void) msg_b)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "B msg not in B arena after A util")
     tl_check(counts, lmx_range_classify(@ arena_b, (cast: (@: void) letter_b1)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "B letter cell lost after A util")
     tl_check(counts, lmx_service_find(service, (cast: (@: void) t_b)) = (cast: (@: void) t_b), "B address left service after A util")
-    tl_check(counts, lmx_size_value_known(lmx_arena_ref_value(graph_b, 2U)) = 22U, "B body_id damaged by A util")
+    tl_check(counts, lmx_size_value_known(lmx_arena_ref_value(graph_b, 1U)) = 22U, "B body_id damaged by A util")
     tl_check(counts, msg_b\success = 0 && msg_b\running = 1, "B finished because of A util")
-    turns_b: lmx_size_value_known(lmx_arena_ref_value(graph_b, 1U))
+    turns_b: lmx_size_value_known(lmx_arena_ref_value(graph_b, 0U))
     tl_check(counts, turns_b = 1U, "B gained a turn during A util")
 
     # B second letter + turn AFTER A utilized.
@@ -466,12 +453,12 @@ fn: main () int
     tl_check(counts, lmx_thread_mail_count(t_b, c.LMX_POST_INBOX) = 1U, "B inbox empty before turn2")
     tl_check(counts, lmx_manager_round(manager, 1U, lmx_root_clock(@ root)) = c.LMX_MANAGER_OK, "round B2 did not run")
     tl_check(counts, lmx_arena_index_len(letter_b_at) = 0U && lmx_range_classify(@ arena_b, (cast: (@: void) letter_b2)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "B take did not claim letter_b2")
-    turns_b: lmx_size_value_known(lmx_arena_ref_value(graph_b, 1U))
-    body_b: lmx_size_value_known(lmx_arena_ref_value(graph_b, 2U))
+    turns_b: lmx_size_value_known(lmx_arena_ref_value(graph_b, 0U))
+    body_b: lmx_size_value_known(lmx_arena_ref_value(graph_b, 1U))
     tl_check(counts, turns_b = 2U, "B turns != 2 after turn2")
     tl_check(counts, body_b = 22U, "B body_id changed on turn2")
-    tl_check(counts, lmx_arena_ref_value(graph_b, 3U) = (cast: (@: void) letter_b1), "B letter0 swapped")
-    tl_check(counts, lmx_arena_ref_value(graph_b, 4U) = (cast: (@: void) letter_b2), "B did not store letter_b2")
+    tl_check(counts, lmx_arena_ref_value(graph_b, 2U) = (cast: (@: void) letter_b1), "B letter0 swapped")
+    tl_check(counts, lmx_arena_ref_value(graph_b, 3U) = (cast: (@: void) letter_b2), "B did not store letter_b2")
     tl_check(counts, msg_b\success = 0 && msg_b\running = 1, "B finished before its third turn")
     # B'S THIRD TURN publishes its safe boundary; its arena remains until parent settle.
     tl_check(counts, lmx_arena_open_simple(@ letter_arena_b) = 0, "letter_b3 arena did not open")

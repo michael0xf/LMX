@@ -6,7 +6,6 @@ predef: "l2src/lmx_turn.lm1"
 predef: "l2src/lmx_child.lm1"
 predef: "l2src/lmx_post.lm1"
 predef: "l2src/lmx_schedule.lm1"
-predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_gc.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_arena_blocks.lm1"
@@ -57,7 +56,7 @@ fn: rb_struct (@: LmxArena arena; size_t: slots) @: Lmx
     if: structure = 0
         return: 0
     ---
-    if: lmx_arena_refs_open_owned(arena, structure, slots) != 0
+    if: slots != 0U && lmx_arena_refs_open_owned(arena, structure, slots) != 0
         return: 0
     ---
 return: structure
@@ -73,13 +72,10 @@ end: rb_check
 fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxArena: arena
-    LmxPool: methods
     LmxManager: running
     @: LmxArena arena_at 0
     @: Lmx graph 0
     @: Lmx own_field 0
-    @: LmxMethod method 0
-    @: LmxCallable info
     @: LmxMsg message 0
     @: LmxThread t 0
     @: LmxPost mail 0
@@ -95,20 +91,15 @@ fn: main () int
     if: counts = 0
         return: 2
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
-    memset((cast: (@: void) (@ methods)), 0, c.sizeof(c.LmxPool))
     if: lmx_arena_open(@ arena) != 0
         fputs("lmx_manager_running: the arena did not open\n", l1_stdout())
         free(counts)
         return: 2
     ---
     arena_at: @ arena
-    if: lmx_pool_open(arena_at, @ methods, c.sizeof(c.LmxMethod), 2U, c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD) != 0
-        fputs("lmx_manager_running: the method pool did not open\n", l1_stdout())
-        free(counts)
-        return: 2
-    ---
-    method: lmx_method_intern(arena_at, @ methods, (cast: (LmxEntry) rb_body), 1U)
-    graph: rb_struct(arena_at, 2U)
+    # k.4: no descriptor slot -- the own field is the graph's sole slot, and `native` is set
+    # directly.
+    graph: rb_struct(arena_at, 1U)
     own_field: lmx_int_new_owned(arena_at)
     t: (cast: (@: LmxThread) lmx_arena_take(arena_at, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
     message: (cast: (@: LmxMsg) t)
@@ -118,7 +109,7 @@ fn: main () int
     parent_mail: (cast: (@: LmxPost) lmx_arena_take(arena_at, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
     parent_sched: (cast: (@: LmxSchedule) lmx_arena_take(arena_at, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
     parent_graph: rb_struct(arena_at, 1U)
-    if: method = 0 || graph = 0 || own_field = 0 || message = 0 || t = 0 || mail = 0 || sched = 0 || parent = 0 || parent_mail = 0 || parent_sched = 0 || parent_graph = 0
+    if: graph = 0 || own_field = 0 || message = 0 || t = 0 || mail = 0 || sched = 0 || parent = 0 || parent_mail = 0 || parent_sched = 0 || parent_graph = 0
         free(counts)
         return: 2
     ---
@@ -126,14 +117,8 @@ fn: main () int
     # (parent = 0, author 2026-09-22), so its reserved source `node` is 0 -- nothing lexical lies
     # above a Thread's graph, and the parent Thread is supervision, not a lexical space.
     graph\parent: 0
-    info: lmx_callable_new_owned(arena_at)
-    if: info = 0
-        free(counts)
-        return: 2
-    ---
-    info\method: method
-    lmx_arena_ref_store(graph, 0U, (cast: (@: void) info))
-    lmx_arena_ref_store(graph, 1U, own_field)
+    graph\native: (cast: (LmxEntry) rb_body)
+    lmx_arena_ref_store(graph, 0U, own_field)
     # The record's own band, and a window wide enough that the lane's own ticks never end the wait.
     rb_check(counts, lmx_schedule_init(sched, arena_at, (cast: (@: void) t), 100000U) = c.LMX_SCHEDULE_OK, "the record did not initialize")
     rb_check(counts, lmx_post_init(arena_at, mail) = c.LMX_POST_OK && lmx_thread_init(arena_at, t, graph, mail, sched) = c.LMX_THREAD_OK, "the object did not initialize")

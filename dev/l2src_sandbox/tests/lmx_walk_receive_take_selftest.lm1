@@ -1,6 +1,5 @@
 predef: "l2src/lmx_thread.lm1"
 predef: "l2src/lmx_walk.lm1"
-predef: "l2src/lmx_plan.lm1"
 predef: "l2src/lmx_scratch.lm1"
 predef: "l2src/lmx_post.lm1"
 predef: "l2src/lmx_schedule.lm1"
@@ -23,7 +22,6 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
 @: LmxArena ga 0
 @: Lmx groles 0
-@: Lmx gplan_roles 0
 @: LmxWalkContext gctx 0
 @: LmxWalkValue gv 0
 int: broken 0
@@ -66,22 +64,15 @@ sub: sz (@: Lmx code; size_t: slot; size_t: value)
     ---
 end: sz
 
+# k.4: a walked callable occurrence is just the ordinary body Structure -- no descriptor;
+# `native` stays 0 by construction. `children` now counts body steps only, so every call
+# site below shrinks by one and every stored slot index moves down by one.
 fn: mk_m (@: Lmx unit; size_t: slot; size_t: children) @: Lmx
-    @: Lmx m pl(unit, slot, children)
-    @: LmxCallable info lmx_callable_new_owned(ga)
-    if: m = 0 || info = 0 || lmx_arena_ref_store(m, 0U, (cast: (@: void) info)) != 0
-        broken: broken + 1
-        return: 0
-    ---
-return: m
+return: pl(unit, slot, children)
 
 fn: go (@: Lmx m) int
-    int: st
     if: m = 0 || gctx = 0 || gv = 0
         return: c.LMX_WALK_INVALID
-    st: lmx_walk_prepare(gctx, ga, gplan_roles, m)
-    if: st != c.LMX_WALK_OK
-        return: st
 return: lmx_walk_run(gctx, m, 0, 0U, gv)
 
 fn: main () int
@@ -117,7 +108,6 @@ fn: main () int
         return: 2
     ga: @ arena
     groles: lmx_walk_roles_open(ga)
-    gplan_roles: lmx_plan_roles_open(ga)
     memset((cast: (@: void) (@ context_arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ context_cells)), 0, c.sizeof(c.LmxPool))
     memset((cast: (@: void) (@ store)), 0, c.sizeof(c.LmxScratch))
@@ -126,7 +116,6 @@ fn: main () int
     context.arena: ga
     context.scratch: @ store
     context.roles: groles
-    context.plan_roles: gplan_roles
     context.immutable_profile: 0
     context.classified: 0U
     gctx: @ context
@@ -170,8 +159,8 @@ fn: main () int
     prim_rec: (cast: (@: Lmx) prim)
 
     # take on empty inbox -> null out, OK
-    m: mk_m(unit, 0U, 2U)
-    n: fr(m, 1U, c.LMX_WALK_OP_RET, 2U)
+    m: mk_m(unit, 0U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
     pn: fr(n, 1U, c.LMX_WALK_OP_PRIM, 2U)
     ref(pn, 1U, prim_rec)
     st: go(m)
@@ -186,21 +175,22 @@ fn: main () int
     if: lmx_thread_mail_accept(ga, thread, (cast: (@: void) letter), c.LMX_POST_INBOX) != c.LMX_POST_OK
         return: 2
     ---
-    m: mk_m(unit, 0U, 2U)
-    n: fr(m, 1U, c.LMX_WALK_OP_RET, 2U)
+    m: mk_m(unit, 0U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
     pn: fr(n, 1U, c.LMX_WALK_OP_PRIM, 2U)
     ref(pn, 1U, prim_rec)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_OK && gv\ref = (cast: (@: void) letter_graph))), "take one -> letter graph")
 
     # PUT null (empty take as value) then EQ AT(pointer) vs LIT 0 -> true
-    m: mk_m(unit, 0U, 3U)
-    putn: fr(m, 1U, c.LMX_WALK_OP_PUT, 4U)
+    # k.4: no descriptor slot -- PUT at slot 0, RET at slot 1.
+    m: mk_m(unit, 0U, 2U)
+    putn: fr(m, 0U, c.LMX_WALK_OP_PUT, 4U)
     ref(putn, 1U, holder)
     sz(putn, 2U, 1U)
     pn: fr(putn, 3U, c.LMX_WALK_OP_PRIM, 2U)
     ref(pn, 1U, prim_rec)
-    eqn: fr(m, 2U, c.LMX_WALK_OP_RET, 2U)
+    eqn: fr(m, 1U, c.LMX_WALK_OP_RET, 2U)
     n: fr(eqn, 1U, c.LMX_WALK_OP_EQ, 3U)
     atn: fr(n, 1U, c.LMX_WALK_OP_AT, 3U)
     ref(atn, 1U, holder)

@@ -76,9 +76,6 @@ fn: host_make_child (@: LmxThread t) int
     @: LmxThread child_t
     @: LmxPost child_mail
     @: LmxSchedule child_sched
-    @: LmxMethod method
-    @: LmxCallable info
-    @: LmxPool methods
     @: Lmx graph
     @: Lmx source
     @: LmxArrayDesc source_children
@@ -89,10 +86,12 @@ fn: host_make_child (@: LmxThread t) int
     arena: t\slot\arena
     source: lmx_node_new_owned(arena)
     source_children: lmx_list_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, arena)
-    if: source = 0 || source_children = 0 || lmx_arena_refs_open_owned(arena, source, 3U) != 0
+    # k.4: 2 slots, not 3 -- no reserved descriptor slot (native is a sibling Lmx
+    # member); source_children moves from slot 1 to slot 0, witness from 2 to 1.
+    if: source = 0 || source_children = 0 || lmx_arena_refs_open_owned(arena, source, 2U) != 0
         return: 0
     ---
-    if: lmx_arena_ref_store(source, 1U, (cast: (@: void) source_children)) != 0
+    if: lmx_arena_ref_store(source, 0U, (cast: (@: void) source_children)) != 0
         return: 0
     ---
     child: lmx_child_reserve(t, arena, host_child_arena, 0, source)
@@ -100,20 +99,13 @@ fn: host_make_child (@: LmxThread t) int
         return: 0
     ---
     child_t: (cast: (@: LmxThread) child)
-    methods: lmx_pool_make(host_child_arena, 2U * c.sizeof(c.LmxMethod), c.sizeof(c.LmxMethod), c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD)
-    if: methods = 0
-        return: 0
-    ---
-    method: lmx_method_intern(host_child_arena, methods, (cast: (LmxEntry) host_child_body), 1U)
     graph: child\graph
-    info: lmx_callable_new_owned(host_child_arena)
-    if: method = 0 || graph = 0 || info = 0
+    if: graph = 0
         return: 0
     ---
-    info\method: method
-    lmx_arena_ref_store(graph, 0U, (cast: (@: void) info))
+    graph\native: (cast: (LmxEntry) host_child_body)
     witness: lmx_int_new_owned(host_child_arena)
-    if: witness = 0 || lmx_int_store_known(witness, 61727) != 0 || lmx_arena_ref_store(graph, 2U, witness) != 0
+    if: witness = 0 || lmx_int_store_known(witness, 61727) != 0 || lmx_arena_ref_store(graph, 1U, witness) != 0
         return: 0
     ---
     child_mail: (cast: (@: LmxPost) lmx_arena_take(host_child_arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
@@ -199,7 +191,7 @@ fn: host_settings_check (@: LmxThread t; @: Lmx graph) int
         return: 0
     ---
     arena: t\slot\arena
-    settings: lmx_arena_ref_value(graph, 2U)
+    settings: lmx_arena_ref_value(graph, 1U)
     host: lmx_thread_parent(t)
     if: settings = 0 || host = 0 || host\slot = 0
         return: 0
@@ -282,33 +274,29 @@ fn: host_r0_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@:
     ---
 return: 0
 
-# R0's PROGRAM, installed by the host in R0's own graph and arena: its body, its children list, the
-# host's settings and the witness 52525.
+# R0's PROGRAM, installed by the host in R0's own graph and arena: its body (k.4:
+# `graph\native` set directly, no descriptor), its children list, the host's settings
+# and the witness 52525 -- 3 fields now (was 4: no reserved descriptor slot), so
+# children/settings/witness shift from 1/2/3 down to 0/1/2.
 fn: host_program (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int
-    @: LmxPool methods
-    @: LmxMethod method
-    @: LmxCallable info
     @: LmxArrayDesc children
     @: void witness
-    if: arena = 0 || graph = 0 || graph\len < 4
+    if: arena = 0 || graph = 0 || graph\len < 3
         return: 1
     ---
-    methods: lmx_pool_make(arena, 2U * c.sizeof(c.LmxMethod), c.sizeof(c.LmxMethod), c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD)
-    info: lmx_callable_new_owned(arena)
     children: lmx_list_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, arena)
     witness: lmx_int_new_owned(arena)
-    if: methods = 0 || info = 0 || children = 0 || witness = 0
+    if: children = 0 || witness = 0
         return: 1
     ---
-    method: lmx_method_intern(arena, methods, (cast: (LmxEntry) host_r0_body), 1U)
-    if: method = 0 || lmx_int_store_known(witness, 52525) != 0
+    if: lmx_int_store_known(witness, 52525) != 0
         return: 1
     ---
-    info\method: method
-    if: lmx_arena_ref_store(graph, 0U, (cast: (@: void) info)) != 0 || lmx_arena_ref_store(graph, 1U, (cast: (@: void) children)) != 0
+    graph\native: (cast: (LmxEntry) host_r0_body)
+    if: lmx_arena_ref_store(graph, 0U, (cast: (@: void) children)) != 0
         return: 1
     ---
-    if: lmx_arena_ref_store(graph, 2U, (cast: (@: void) settings)) != 0 || lmx_arena_ref_store(graph, 3U, witness) != 0
+    if: lmx_arena_ref_store(graph, 1U, (cast: (@: void) settings)) != 0 || lmx_arena_ref_store(graph, 2U, witness) != 0
         return: 1
     ---
 return: 0
@@ -392,7 +380,7 @@ fn: host_launch (int: mode; int: argc; @: char out_text; @: char err_text) int
         c.printf("FAIL the streams could not be opened\n")
         return: 0 - 1
     ---
-    code: lmx_root_launch(@ root, argc, argv, host_program, 4U, lmx_root_settings, 120000U, out, err)
+    code: lmx_root_launch(@ root, argc, argv, host_program, 3U, lmx_root_settings, 120000U, out, err)
     host_read(out, out_text, 65536U)
     host_read(err, err_text, 65536U)
     c.fclose(out)

@@ -9,7 +9,6 @@ predef: "l2src/lmx_schedule.lm1"
 predef: "l2src/lmx_manager.lm1"
 predef: "l2src/lmx_manager_running.lm1"
 predef: "l2src/lmx_manager_running.h.lm1"
-predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_gc.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_arena_blocks.lm1"
@@ -97,8 +96,8 @@ fn: lm_a_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: vo
         return: 0
     ---
     graph: message\graph
-    posted_cell: lmx_arena_ref_value(graph, 1U)
-    tid_cell: lmx_arena_ref_value(graph, 2U)
+    posted_cell: lmx_arena_ref_value(graph, 0U)
+    tid_cell: lmx_arena_ref_value(graph, 1U)
     if: posted_cell = 0 || tid_cell = 0
         return: 0
     ---
@@ -145,8 +144,8 @@ fn: lm_b_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: vo
         return: 0
     ---
     graph: message\graph
-    got_cell: lmx_arena_ref_value(graph, 1U)
-    tid_cell: lmx_arena_ref_value(graph, 2U)
+    got_cell: lmx_arena_ref_value(graph, 0U)
+    tid_cell: lmx_arena_ref_value(graph, 1U)
     if: got_cell = 0 || tid_cell = 0
         return: 0
     ---
@@ -166,7 +165,7 @@ fn: lm_b_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: vo
     ---
     lmx_size_store_known(got_cell, got)
     # Ходы B: без этого числа не отличить «полоса кончилась» от «письма не видно из чужой нити».
-    turns_cell: lmx_arena_ref_value(graph, 4U)
+    turns_cell: lmx_arena_ref_value(graph, 3U)
     if: turns_cell != 0
         lmx_size_store_known(turns_cell, lmx_size_value_known(turns_cell) + 1U)
     ---
@@ -180,9 +179,6 @@ fn: lm_make_child (@: LmxArena child_arena; @: Lmx source; LmxEntry: body; size_
     @: LmxThread child_t
     @: LmxPost child_mail
     @: LmxSchedule child_sched
-    @: LmxMethod method
-    @: LmxCallable info
-    @: LmxPool methods
     @: Lmx graph
     @: void cell1
     @: void cell2
@@ -190,27 +186,19 @@ fn: lm_make_child (@: LmxArena child_arena; @: Lmx source; LmxEntry: body; size_
     if: child = 0
         return: 1
     ---
-    methods: lmx_pool_make(child_arena, 2U * c.sizeof(c.LmxMethod), c.sizeof(c.LmxMethod), c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD)
+    # k.4: no descriptor, no shared method record -- the copied graph's `native` word is
+    # set directly.
     graph: child\graph
-    if: methods = 0 || graph = 0
+    if: graph = 0
         return: 2
     ---
-    method: lmx_method_intern(child_arena, methods, body, 1U)
-    if: method = 0
-        return: 3
-    ---
-    info: lmx_callable_new_owned(child_arena)
-    if: info = 0
-        return: 3
-    ---
-    info\method: method
-    lmx_arena_ref_store(graph, 0U, (cast: (@: void) info))
+    graph\native: body
     cell1: lmx_size_new_owned(child_arena)
     cell2: lmx_size_new_owned(child_arena)
     if: cell1 = 0 || cell2 = 0
         return: 4
     ---
-    if: lmx_arena_ref_store(graph, 1U, cell1) != 0 || lmx_arena_ref_store(graph, 2U, cell2) != 0
+    if: lmx_arena_ref_store(graph, 0U, cell1) != 0 || lmx_arena_ref_store(graph, 1U, cell2) != 0
         return: 5
     ---
     child_mail: (cast: (@: LmxPost) lmx_arena_take(child_arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
@@ -255,7 +243,7 @@ fn: lm_make_child (@: LmxArena child_arena; @: Lmx source; LmxEntry: body; size_
         letter\handoff_ready: 0
         letter\graph: source
         lm_letter: (cast: (@: void) letter)
-        if: lmx_arena_ref_store(graph, 3U, lm_letter) != 0
+        if: lmx_arena_ref_store(graph, 2U, lm_letter) != 0
             return: 12
         ---
     ---
@@ -323,9 +311,9 @@ fn: main () int
     ---
     root_arena: lmx_root_arena(@ root)
     lm_root: @ root
-    # Шаблон дочернего графа плюс обычное поле Array<@LmxThread>.
+    # Шаблон дочернего графа плюс обычное поле Array<@LmxThread> (k.4: без слота дескриптора).
     source: lmx_node_new_owned(root_arena)
-    if: source = 0 || lmx_arena_refs_open_owned(root_arena, source, 6U) != 0 || lmx_thread_children_field_new(root_arena, source, 5U) = 0
+    if: source = 0 || lmx_arena_refs_open_owned(root_arena, source, 5U) != 0 || lmx_thread_children_field_new(root_arena, source, 4U) = 0
         c.printf("FAIL source template build failed\n")
         return: 2
     ---
@@ -365,8 +353,8 @@ fn: main () int
     # Ждём, пока письма дойдут: счётчики живут в графах детей, читаем их как значения.
     graph_a: lm_a_msg\graph
     graph_b: lm_b_msg\graph
-    cell_a: lmx_arena_ref_value(graph_a, 1U)
-    cell_b: lmx_arena_ref_value(graph_b, 1U)
+    cell_a: lmx_arena_ref_value(graph_a, 0U)
+    cell_b: lmx_arena_ref_value(graph_b, 0U)
     while: spins < 2000U
         posted: lmx_size_value_known(cell_a)
         got: lmx_size_value_known(cell_b)
@@ -379,8 +367,8 @@ fn: main () int
     ---
     posted: lmx_size_value_known(cell_a)
     got: lmx_size_value_known(cell_b)
-    tid_a: lmx_size_value_known(lmx_arena_ref_value(graph_a, 2U))
-    tid_b: lmx_size_value_known(lmx_arena_ref_value(graph_b, 2U))
+    tid_a: lmx_size_value_known(lmx_arena_ref_value(graph_a, 1U))
+    tid_b: lmx_size_value_known(lmx_arena_ref_value(graph_b, 1U))
     elapsed: lmx_clock_ticks() - lm_t0
     c.printf("LANES posted=%u got=%u turns_a=%u turns_b=%u elapsed_ms=%u tid_a=%u tid_b=%u diag=%u\n",
              posted, got, lm_turns_a, lm_turns_b, elapsed, tid_a, tid_b, lm_diag)

@@ -65,8 +65,9 @@ define: LMX_DOMAIN_RESERVED_28 28
 # a private movable dynamic array whose backing address never enters the graph or the range
 # classifier.  The number remains reserved so later domain values do not change ABI.
 define: LMX_DOMAIN_POST_RING 29
-# Descriptor in Structure child[0]: LmxCallable, not the two-field LmxMethod.
-define: LMX_DOMAIN_CALLABLE 30
+# k.4 (2026-09-25): LmxCallable is gone (Lmx.native replaces the child[0] descriptor);
+# reserved so later domain values do not change ABI.
+define: LMX_DOMAIN_RESERVED_30 30
 define: LMX_DOMAIN_OP 31
 # A cell of a temporary-frame store (lmx_scratch.h.lm1): pointer-sized storage of an
 # execution context, in an arena of its own that is never attached to a Message.  It is a
@@ -100,6 +101,13 @@ define: LMX_DOMAIN_KIND_RESERVATION 12
 define: LMX_DOMAIN_KIND_POST 13
 define: LMX_DOMAIN_KIND_RESERVED_14 14
 define: LMX_DOMAIN_KIND_POST_RING 15
+# k.4 (2026-09-25): the LmxCallable descriptor type is gone (Lmx.native replaces the
+# child[0] descriptor entirely); the domain NUMBER stays defined and in use, though,
+# because it is still the answer lmx_range_classify gives an address in this domain's
+# array -- lmx_fresh.lm1 and lmx_graph_copy_owned.lm1's Q22=II shared-method-reference
+# terminal test still read it (pending a decision on whether Q22=II's own test needs to
+# change shape under k.4 -- see the coding-commit report).  Only the STRUCT this domain
+# used to hold is gone; the domain slot itself is not retired.
 define: LMX_DOMAIN_KIND_CALLABLE 16
 define: LMX_DOMAIN_KIND_OP 17
 define: LMX_DOMAIN_KIND_SCRATCH 18
@@ -116,14 +124,15 @@ prototype:
     # The runtime predicate of 2.1: walk the used tree the Consumer IS (its shape gives the used
     # paths -- "the used tree is the contract", and names are absent from ordinary execution, so a
     # path is an index path), and answer over what is AVAILABLE:
-    #   every used path present on varA and varB, every leaf of the same domain and type, and
-    #   equal METHOD signatures at a callable on a used path.
+    #   every used path present on varA and varB, every leaf of the same domain and type.  A
+    #   callable's signature (args/return) is ordinary lexical Structure fields (k.4), so the
+    #   same recursion covers it with no separate comparison.
     # An unset child of the Consumer is not a used path ("An empty `uses` is true: there is
     # nothing to use"), a missing path or a known mismatch is NO, and anything the walk cannot
     # inspect is UNKNOWN -- never YES.
     fn: lmx_runtime_implements (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx consumer) int
-    # The walk's own two steps, declared here because the walk is recursive and L1 needs a name
-    # before its use: the used-tree walk, and the signature comparison at a callable path.
+    # The walk itself, declared here because it is recursive and L1 needs a name before its
+    # use.  k.4: a callable's signature is ordinary lexical Structure fields (args/return),
+    # so the used-tree walk alone covers it -- there is no separate signature comparison.
     fn: lmx_implements_walk (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx consumer; int: depth) int
-    fn: lmx_implements_signature (@: LmxMethod a; @: LmxMethod b; @: LmxMethod c) int
 end: prototype

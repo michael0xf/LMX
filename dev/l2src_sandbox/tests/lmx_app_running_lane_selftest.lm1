@@ -9,7 +9,6 @@ predef: "l2src/lmx_schedule.lm1"
 predef: "l2src/lmx_manager.lm1"
 predef: "l2src/lmx_manager_running.lm1"
 predef: "l2src/lmx_manager_running.h.lm1"
-predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_gc.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_arena_blocks.lm1"
@@ -60,7 +59,7 @@ fn: rl_child_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@
         return: 0
     ---
     graph: message\graph
-    turns_cell: lmx_arena_ref_value(graph, 1U)
+    turns_cell: lmx_arena_ref_value(graph, 0U)
     if: turns_cell = 0
         return: 0
     ---
@@ -74,9 +73,6 @@ fn: rl_root_entry (@: Lmx node) int
     @: LmxThread child_t
     @: LmxPost child_mail
     @: LmxSchedule child_sched
-    @: LmxMethod method
-    @: LmxCallable info
-    @: LmxPool methods
     @: Lmx graph
     @: void turns_cell
     if: rl_phase != 0U || rl_root = 0 || rl_child_arena = 0 || rl_source = 0
@@ -89,30 +85,20 @@ fn: rl_root_entry (@: Lmx node) int
         return: 0
     ---
     rl_child_msg: child
-    methods: lmx_pool_make(rl_child_arena, 2U * c.sizeof(c.LmxMethod), c.sizeof(c.LmxMethod),
-                           c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD)
-    if: methods = 0
-        rl_entry_diag: 3U
-        return: 0
-    ---
-    method: lmx_method_intern(rl_child_arena, methods, (cast: (LmxEntry) rl_child_body), 1U)
+    # k.4: no descriptor, no shared method record -- the copied graph's `native` word is
+    # set directly.
     graph: child\graph
-    if: method = 0 || graph = 0
+    if: graph = 0
         rl_entry_diag: 4U
         return: 0
     ---
-    info: lmx_callable_new_owned(rl_child_arena)
-    if: info = 0
-        return: 0
-    ---
-    info\method: method
-    lmx_arena_ref_store(graph, 0U, (cast: (@: void) info))
+    graph\native: (cast: (LmxEntry) rl_child_body)
     turns_cell: lmx_size_new_owned(rl_child_arena)
     if: turns_cell = 0
         rl_entry_diag: 5U
         return: 0
     ---
-    if: lmx_arena_ref_store(graph, 1U, turns_cell) != 0
+    if: lmx_arena_ref_store(graph, 0U, turns_cell) != 0
         rl_entry_diag: 6U
         return: 0
     ---
@@ -211,7 +197,7 @@ fn: main () int
         return: failures
     ---
     source: lmx_node_new_owned(root_arena)
-    rl_check(counts, source != 0 && lmx_arena_refs_open_owned(root_arena, source, 3U) = 0 && lmx_thread_children_field_new(root_arena, source, 2U) != 0, "template not built")
+    rl_check(counts, source != 0 && lmx_arena_refs_open_owned(root_arena, source, 2U) = 0 && lmx_thread_children_field_new(root_arena, source, 1U) != 0, "template not built")
     if: source = 0
         failures: counts[1]
         c.printf("lmx_app_running_lane checks=%d failures=%d entry_diag=%u (abort source)\n", counts[0], failures, (cast: (unsigned) rl_entry_diag))
@@ -243,7 +229,7 @@ fn: main () int
     rl_check(counts, lmx_thread_child_is(r0, child_t) != 0, "child not live after publish")
     rl_check(counts, child_msg\running = 1 && child_msg\success = 0, "child not left running")
     rl_check(counts, child_graph != 0, "child graph missing")
-    turns_cell: lmx_arena_ref_value(child_graph, 1U)
+    turns_cell: lmx_arena_ref_value(child_graph, 0U)
     rl_check(counts, turns_cell != 0, "graph turns cell not rooted")
 
     # R0 manager := running binding (ticket: manager R0 is running).
@@ -256,15 +242,15 @@ fn: main () int
 
     # Let the lane take several turns; counter lives in the child graph.
     wait_spins: 0U
-    turns_before: lmx_size_value_known(lmx_arena_ref_value(child_graph, 1U))
+    turns_before: lmx_size_value_known(lmx_arena_ref_value(child_graph, 0U))
     while: wait_spins < 50U && turns_before < 3U
         c.Sleep(20U)
-        turns_before: lmx_size_value_known(lmx_arena_ref_value(child_graph, 1U))
+        turns_before: lmx_size_value_known(lmx_arena_ref_value(child_graph, 0U))
         wait_spins: wait_spins + 1U
     ---
     rl_check(counts, turns_before >= 3U, "lane did not grow graph turns (>=3)")
     c.Sleep(40U)
-    turns_mid: lmx_size_value_known(lmx_arena_ref_value(child_graph, 1U))
+    turns_mid: lmx_size_value_known(lmx_arena_ref_value(child_graph, 0U))
     rl_check(counts, turns_mid > turns_before, "graph turns did not keep growing")
     rl_check(counts, child_msg\running = 1, "child stopped before close")
     rl_check(counts, child_sched\lane != 0, "lane gone before close")

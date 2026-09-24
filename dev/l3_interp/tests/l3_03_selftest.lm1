@@ -9,6 +9,8 @@ predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
 # N9: if/else, while. match/each/yield/finally/throw = unsupported.
+# k.4 (FABLE-SONNET-NATIVE-WORD-20260926-191 c.3): no LmxCallable/LmxMethod descriptor;
+# mk_callable is a plain occurrence, slot 0 reserved/unused, body from slot 1.
 
 sub: fail (@: int counts; int: ok; const: @(char label))
     counts[0]: counts[0] + 1
@@ -33,17 +35,13 @@ return: host
 fn: mk_return (@: LmxArena a) @: Lmx
 return: mk_op_host(a, c.L3_NODE_RETURN, 1U)
 
-fn: mk_callable (@: LmxArena a; @: LmxMethod meth; size_t: n) @: Lmx
+fn: mk_callable (@: LmxArena a; size_t: n) @: Lmx
     @: Lmx m
-    @: LmxCallable info
     m: lmx_node_new_owned(a)
-    info: lmx_callable_new_owned(a)
-    if: m = 0 || info = 0 || meth = 0
+    if: m = 0
         return: 0
     if: lmx_arena_refs_open_owned(a, m, n) != 0
         return: 0
-    info\method: meth
-    lmx_arena_ref_store(m, 0U, (cast: (@: void) info))
 return: m
 
 fn: main () int
@@ -53,7 +51,6 @@ fn: main () int
     @: Lmx m 0
     @: Lmx iff 0
     @: Lmx w 0
-    @: LmxMethod meth 0
     @: void one 0
     @: void zero 0
     if: counts = 0
@@ -65,10 +62,9 @@ fn: main () int
         return: 2
     ---
     a: @ arena
-    meth: lmx_method_new_owned(a)
     one: lmx_int_new_owned(a)
     zero: lmx_int_new_owned(a)
-    if: meth = 0 || one = 0 || zero = 0
+    if: one = 0 || zero = 0
         free(counts)
         return: 2
     ---
@@ -77,7 +73,7 @@ fn: main () int
 
     # if 1 then return
     iff: mk_op_host(a, c.L3_NODE_IF, 3U)
-    m: mk_callable(a, meth, 2U)
+    m: mk_callable(a, 2U)
     if: iff = 0 || m = 0
         free(counts)
         return: 2
@@ -89,7 +85,7 @@ fn: main () int
 
     # if 0 else return
     iff: mk_op_host(a, c.L3_NODE_IF, 4U)
-    m: mk_callable(a, meth, 2U)
+    m: mk_callable(a, 2U)
     if: iff = 0 || m = 0
         free(counts)
         return: 2
@@ -102,7 +98,7 @@ fn: main () int
 
     # if 0, no else, no later return -> OK
     iff: mk_op_host(a, c.L3_NODE_IF, 3U)
-    m: mk_callable(a, meth, 2U)
+    m: mk_callable(a, 2U)
     if: iff = 0 || m = 0
         free(counts)
         return: 2
@@ -116,7 +112,7 @@ fn: main () int
     # distinguish: while 0 then a MATCH after would still fail if we continued...
     # while 0 then MATCH: if while skips, MATCH runs -> UNSUPPORTED
     w: mk_op_host(a, c.L3_NODE_WHILE, 3U)
-    m: mk_callable(a, meth, 3U)
+    m: mk_callable(a, 3U)
     if: w = 0 || m = 0
         free(counts)
         return: 2
@@ -129,7 +125,7 @@ fn: main () int
 
     # while 1: body return exits
     w: mk_op_host(a, c.L3_NODE_WHILE, 3U)
-    m: mk_callable(a, meth, 2U)
+    m: mk_callable(a, 2U)
     if: w = 0 || m = 0
         free(counts)
         return: 2
@@ -139,7 +135,7 @@ fn: main () int
     lmx_arena_ref_store(m, 1U, (cast: (@: void) w))
     fail(counts, l3_exec_run(a, m) = c.L3_OK, "while true body return")
 
-    m: mk_callable(a, meth, 2U)
+    m: mk_callable(a, 2U)
     if: m = 0
         free(counts)
         return: 2

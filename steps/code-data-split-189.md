@@ -251,3 +251,43 @@ the field.
   - The recursion trace table (clean/dirty columns, «Опубликованное S.x»).
 - CORE.md §3.1's last paragraph says `@fresh` addresses «the slot holding that reference (conceptually
   `Lmx **`)».  Q26.2 = (B) (2026-09-25) made `@` of a Structure binding the Structure's address.
+
+## Commit 2: a fresh instance per activation
+
+Built on origin/main 20dc61a.  The working copies stay; commit 3 removes them.
+
+What is built:
+- `l2_emit_cell_new` makes one fresh typed own cell into `<slot>[0]`.
+  - The builder's two type ladders (unhosted own fields, and hosted ones in control bodies) now use it.
+  - Checked text-neutral: all 353 fixtures translate byte-identical to the translator without this
+    commit.
+- `l2_emit_fresh` emits `l2_new<i>(node)` for each native method with data fields (`l2_m_kids(i) > 1`).
+  It lays out method i's data prototype anew:
+  - the shared callable descriptor goes into child 0 (the code, until c4 takes it out);
+  - each own field gets a fresh typed cell;
+  - each control body gets a fresh Structure holding its hosted cells;
+  - a char field's first cell is the interned 0, found from the instance being replaced
+    (`lmx_char_rebind_known`).
+  - It stores the instance into the unit's slot answering i (`l2_unit_base + i`), which shows it from
+    then on, and returns it as `self`.
+  - A failure to make it is X1.
+- A call by name (sel 0) runs over `l2_new<idx>(node)`.
+- The trampoline (dynamic calls, and the walked root's CALL) makes the instance callee-side:
+  `l2_self: l2_new<i>(l2_self\parent)`.  The walker needs no change.
+- A method with no data fields keeps its occurrence: there is nothing to lay out.
+- A call through a path (sel 1) keeps the selected occurrence until c4.  No row needs more (the
+  per-row check below).
+
+New row: unit_fresh_instance_skipped_decl (Entry 70).
+- After keep(1), the slot shows its instance: `keep\v` is 7.
+- keep(0) returns before `int: v 7`, so its fresh instance keeps the prototype's 0 (plan §3 item 7):
+  7 * 10 + 0 = 70.
+- The translator without this commit gives 77 (a shared occurrence).
+- Mutant F1: the instance is made, but the activation runs over the occurrence the slot held before
+  (n159/mkc2m.py).  It gives 0: RED.
+
+Per-row check of all 354 rows (fable's gate, verify2b on this tree):
+- 0 red; eternal-runs 150 (148 + 2 argv rows) = main's 149 + the new row.
+- No existing row changed its facts.  The three sticky and selector rows keep today's Says in c2,
+  because the working copies publish into the activation's own instance, which is also what the slot
+  shows.  Their §4 Says come with c3.

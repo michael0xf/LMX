@@ -623,8 +623,10 @@ $fixtures = @(
         Absent = @(); Debt = @('\fn: lmx_walk_admit_letter') },
     # -178 commit 3: the letter goes to present's MainLetter formal admitted by its payload (admit_letter at
     # the call site), and `m: raw` binds it the same way -- translated, NOT run: `MainLetter: m` after the
-    # take throws `merge` at the walked root (D-59: the root merge copies the unit, which holds the letter,
-    # whose sender is the host's Message; a method is unaffected).  It runs when the copier is fixed.
+    # take throws `merge` at the walked root (D-60: the root merge copies the unit, which holds the letter,
+    # whose sender is the host's Message -- an address the program's arena cannot classify, KIND_NONE, so
+    # -181's MSG_RECORD terminal is never reached; a method is unaffected).  It runs when Grok -185 gives
+    # the receiver the sender's Message range.
     [pscustomobject]@{ Name = 'unit_admit_letter_formal.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = ''; Args = @('0');
         Absent = @(); Debt = @('\fn: lmx_walk_admit_letter') },
     [pscustomobject]@{ Name = 'unit_admit_letter_not_model.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
@@ -995,11 +997,11 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bare_sub_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 3;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_bare_in_method.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: * / %'; Args = @('0'); Entry = 25;
+    [pscustomobject]@{ Name = 'unit_bare_in_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 25;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bare_literal_stmt.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a string or char literal'; Args = @('0');
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_bare_own_stmt.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: * / %'; Args = @('0'); Entry = 49;
+    [pscustomobject]@{ Name = 'unit_bare_own_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 49;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bare_struct_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'executing a named Structure is not supported yet'; Absent = @(); Debt = @() },
@@ -1014,7 +1016,7 @@ $fixtures = @(
     # callable without a result has no value and is refused.  A callable formal of the callee takes
     # the occurrence itself.  `f()` on an existing ordinary Structure assigns the empty Structure,
     # with admission to its declared type (the book §12; refused admission is implements).
-    [pscustomobject]@{ Name = 'unit_value_call_result.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: * / %'; Args = @('0'); Entry = 7811;
+    [pscustomobject]@{ Name = 'unit_value_call_result.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: && and || (a short-circuit the walker has no role for)'; Args = @('0'); Entry = 7811;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_value_call_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 2;
         Absent = @(); Debt = @() },
@@ -1054,7 +1056,7 @@ $fixtures = @(
     # evaluated on the value path and dropped into the typed temporaries its calls already have (a
     # pure expression emits nothing).  An anonymous Structure is a nested body; `()` and one with
     # nothing to run emit nothing.  A sub cannot be an operand.
-    [pscustomobject]@{ Name = 'unit_discard_codex.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: * / %'; Args = @('0'); Entry = 2;
+    [pscustomobject]@{ Name = 'unit_discard_codex.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 2;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_discard_forms.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 3;
         Absent = @(); Debt = @() },
@@ -1082,7 +1084,15 @@ $fixtures = @(
     # a method's formal (the same Structure, by reference), Model itself untouched: 7.
     [pscustomobject]@{ Name = 'unit_root_putof.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @('c.LMX_WALK_OP_PUT_OF, 4U)') },
-    [pscustomobject]@{ Name = 'unit_discard_calls.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: * / %'; Args = @('0'); Entry = 11112;
+    # `* / %` AT THE WALKED ROOT (FABLE-OPUS-ROOT-PUTOF-MUL-20260925-183 commit 2): MUL/DIV/MOD (-170 c1) over
+    # one type -- precedence (2 + 3 * 4 = 14), a size_t %, an int / with a negative operand (-7 / 2 = -3,
+    # as C), left to right (3 * 5 % 4 = 3): 15.  A literal 0 divisor is refused at translation; a
+    # computed 0 is the walker's X1 in R0's turn.
+    [pscustomobject]@{ Name = 'unit_root_mul.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 15;
+        Absent = @(); Debt = @('c.LMX_WALK_OP_MUL, 3U)', 'c.LMX_WALK_OP_DIV, 3U)', 'c.LMX_WALK_OP_MOD, 3U)') },
+    [pscustomobject]@{ Name = 'unit_root_div_zero_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'root operation not walkable yet: a division by zero'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_discard_calls.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call whose result is not a number'; Args = @('0'); Entry = 11112;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_discard_fnptr.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
         Absent = @('f()'); Debt = @('L2TestAllocFn: f l2_p0_0\alloc', 'f(l2_p0_1)') },

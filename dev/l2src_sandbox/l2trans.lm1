@@ -17653,6 +17653,9 @@ fn: l2_rw_bin (@@: LmP0Node tok; int: lo; int: hi; int: ty; int: parent; @: int 
     const: @(char code) 0
     int: swap 0
     int: negate 0
+    int: zneg 0
+    size_t: zmag 1U
+    int: zu 0
     if: lo = hi
         return: l2_rw_operand(tok[lo], ty, parent, out)
     best: l2_rw_split(tok, lo, hi)
@@ -17675,8 +17678,21 @@ fn: l2_rw_bin (@@: LmP0Node tok; int: lo; int: hi; int: ty; int: parent; @: int 
     op: tok[best]\as\atom
     if: bestp = 1 || bestp = 2
         return: l2_rw_refuse(tok[best], "&& and || (a short-circuit the walker has no role for)")
+    # `* / %` (-183 commit 2; Grok -170 c1): MUL, DIV, MOD over one type, as + and - are -- an int
+    # divides as C does (-7 / 2 is -3), an unsigned one unsigned.  A divisor that is the literal 0
+    # is refused here; a computed 0 is the walker's X1 in R0's turn.
     if: bestp = 6
-        return: l2_rw_refuse(tok[best], "* / %")
+        if: ty >= 1000
+            return: l2_rw_refuse(tok[best], "arithmetic on a reference")
+        if: l2_text_eq(op, "*")
+            code: "LMX_WALK_OP_MUL"
+        if: l2_text_eq(op, "/")
+            code: "LMX_WALK_OP_DIV"
+        if: l2_text_eq(op, "%")
+            code: "LMX_WALK_OP_MOD"
+        if: code != 0 && l2_text_eq(op, "*") = 0 && best + 1 = hi && tok[hi] != 0 && tok[hi]\kind = c.LM_P0_NODE_ATOM && tok[hi]\as != 0 && l2_rw_num_lit(tok[hi]\as\atom, @ zneg, @ zmag, @ zu) != 0 && zmag = 0U
+            return: l2_rw_refuse(tok[hi], "a division by zero")
+    ---
     if: l2_text_eq(op, "+")
         code: "LMX_WALK_OP_ADD"
     if: l2_text_eq(op, "-")

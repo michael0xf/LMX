@@ -1,4 +1,5 @@
 predef: "l2src/lmx_thread.h.lm1"
+predef: "l2src/lmx_implements.h.lm1"
 predef: "l2src/lmx_call.lm1"
 predef: "l2src/lmx_turn.lm1"
 predef: "l2src/lmx_clock.lm1"
@@ -936,3 +937,62 @@ fn: lmx_walk_mail_take (@: void owner; @@: void refs; size_t: nargs; @: void des
     ---
     \out: (cast: (@: void) letter\graph)
 return: 0
+
+# -177 c3: receive-if PRIM over the inbox cursor. Operand = model; take first letter whose
+# payload (graph field 1) is LMX_IMPLEMENTS_YES against the model (native admit shape:
+# implements(arena, payload, model, model)). Others stay. Empty / no match -> \out 0 OK.
+# Mutant: take head always / skip implements -> RED.
+fn: lmx_walk_receive_if (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    @: LmxArena arena 0
+    @: Lmx model 0
+    @: LmxThread thread 0
+    @: LmxPost box 0
+    LmxPostCursor: cur
+    @: void target 0
+    @: LmxMsg letter 0
+    @: Lmx graph 0
+    @: Lmx payload 0
+    \out: 0
+    if: out = 0 || refs = 0 || nargs != 1U
+        return: 1
+    ---
+    arena: (cast: (@: LmxArena) owner)
+    model: (cast: (@: Lmx) refs[0])
+    if: arena = 0 || model = 0
+        return: 1
+    ---
+    thread: lmx_thread_current()
+    if: thread = 0 || thread\mail = 0
+        return: 0
+    ---
+    box: thread\mail
+    cur.box: 0
+    cur.index: 0U
+    cur.has_current: 0
+    cur.open: 0
+    if: lmx_post_cursor_open(box, @ cur) != c.LMX_POST_OK
+        return: 1
+    ---
+    while: 1
+        target: lmx_post_cursor_next(@ cur)
+        if: target = 0
+            lmx_post_cursor_close(@ cur)
+            return: 0
+        ---
+        letter: (cast: (@: LmxMsg) target)
+        graph: letter\graph
+        if: graph != 0 && lmx_range_classify(arena, (cast: (@: void) graph)) = c.LMX_KIND_STRUCT
+            payload: (cast: (@: Lmx) lmx_arena_ref_value(graph, 1U))
+            if: payload != 0 && lmx_runtime_implements(arena, payload, model, model) = c.LMX_IMPLEMENTS_YES
+                target: lmx_post_cursor_take(arena, @ cur)
+                lmx_post_cursor_close(@ cur)
+                if: target = 0
+                    return: 1
+                ---
+                letter: (cast: (@: LmxMsg) target)
+                \out: (cast: (@: void) letter\graph)
+                return: 0
+            ---
+        ---
+    ---
+return: 1

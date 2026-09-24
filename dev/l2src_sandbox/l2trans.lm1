@@ -310,7 +310,10 @@ int: l2_need_stdlib 0
 @@: void l2_m_dn 0
 @@: int l2_m_dt 0
 @: int l2_m_hcap 0
-@: int l2_own_live 0
+# -189 c3b-2: l2_own_bseq[k] is 0 until own row k's binding line has been emitted, then the
+# emission order at which it was bound (l2_bseq_n); leaving a body unbinds what was bound in it.
+@: int l2_own_bseq 0
+int: l2_bseq_n 0
 @@: LmP0Text l2_own_name 0
 @@: LmP0Text l2_own_count 0
 @: int l2_own_ty 0
@@ -421,6 +424,7 @@ prototype:
     fn: l2_node_has_call (const: @(LmP0Node node)) int
     fn: l2_advance (@: LmP0Field f; int: k) @: LmP0Field
     fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
+    fn: l2_emit_body_in (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
     fn: l2_merge_frame (const: @(LmP0Node stmt)) @: LmP0Node
     fn: l2_merge_body (const: @(LmP0Node stmt)) @: LmP0Structure
     fn: l2_merge_arity (const: @(LmP0Node mf)) int
@@ -556,7 +560,10 @@ prototype:
     fn: l2_own_addr_taken (int: mi; int: oi) int
     fn: l2_canon_spell (int: mi; int: oi; @: char dest) int
     fn: l2_own_from_expr (int: oi; @: char dest) int
-    fn: l2_own_plain (int: mi; int: k) int
+    fn: l2_own_direct (int: mi; int: k) int
+    fn: l2_formal_row (int: mi; int: pk) int
+    fn: l2_own_formal (int: mi; int: k) int
+    fn: l2_name_cell (int: mi; const: @(LmP0Text t)) int
     fn: l2_own_load (int: k; @: char dest) int
     fn: l2_own_addr (int: k; @: char dest) int
     fn: l2_own_spell (int: mi; int: k; @: char dest) int
@@ -1278,8 +1285,8 @@ fn: l2_own_free () int
         l2_xfree((cast: (@: void) l2_own_name))
     if: l2_own_ty != 0
         l2_xfree((cast: (@: void) l2_own_ty))
-    if: l2_own_live != 0
-        l2_xfree((cast: (@: void) l2_own_live))
+    if: l2_own_bseq != 0
+        l2_xfree((cast: (@: void) l2_own_bseq))
     if: l2_own_mi != 0
         l2_xfree((cast: (@: void) l2_own_mi))
     if: l2_own_host != 0
@@ -1303,7 +1310,7 @@ fn: l2_own_free () int
     l2_own_count: 0
     l2_own_name: 0
     l2_own_ty: 0
-    l2_own_live: 0
+    l2_own_bseq: 0
     l2_own_mi: 0
     l2_own_host: 0
     l2_own_decl: 0
@@ -1456,7 +1463,7 @@ fn: l2_own_reserve (int: need) int
             nn[oi]: l2_own_name[oi]
             nc[oi]: l2_own_count[oi]
             nt[oi]: l2_own_ty[oi]
-            nl[oi]: l2_own_live[oi]
+            nl[oi]: l2_own_bseq[oi]
             nmi[oi]: l2_own_mi[oi]
             nh[oi]: l2_own_host[oi]
             nd[oi]: l2_own_decl[oi]
@@ -1480,7 +1487,7 @@ fn: l2_own_reserve (int: need) int
         l2_xfree((cast: (@: void) l2_own_name))
         l2_xfree((cast: (@: void) l2_own_count))
         l2_xfree((cast: (@: void) l2_own_ty))
-        l2_xfree((cast: (@: void) l2_own_live))
+        l2_xfree((cast: (@: void) l2_own_bseq))
         l2_xfree((cast: (@: void) l2_own_mi))
         l2_xfree((cast: (@: void) l2_own_host))
         l2_xfree((cast: (@: void) l2_own_decl))
@@ -1493,7 +1500,7 @@ fn: l2_own_reserve (int: need) int
     l2_own_name: nn
     l2_own_count: nc
     l2_own_ty: nt
-    l2_own_live: nl
+    l2_own_bseq: nl
     l2_own_mi: nmi
     l2_own_host: nh
     l2_own_decl: nd
@@ -3777,7 +3784,7 @@ fn: l2_own_add (int: mi; const: @(LmP0Text t); int: ty; const: @(char path); con
         return: -1
     l2_own_name[l2_own_n]: (cast: (@: LmP0Text) t)
     l2_own_ty[l2_own_n]: ty
-    l2_own_live[l2_own_n]: 0
+    l2_own_bseq[l2_own_n]: 0
     l2_own_mi[l2_own_n]: mi
     l2_own_host[l2_own_n]: l2_scope_host()
     l2_own_decl[l2_own_n]: (cast: (@: LmP0Node) at)
@@ -6488,23 +6495,53 @@ fn: l2_own_from_expr (int: oi; @: char dest) int
         return: 1
 return: 0
 
-# A PLAIN own field (-189 c3b-1): a number -- int, char, size_t, unsigned, ulong -- with its own cell,
-# not bound to a formal or a dynamic input and sharing no canonical cell.  It has no working copy:
-# a read is a typed load of its cell (l2_own_load), a write a typed store into it (l2_own_store), and
-# a checkpoint neither publishes nor reloads it.  Every other own field keeps its working copy until
-# c3b-2.
-fn: l2_own_plain (int: mi; int: k) int
+# A DIRECT own field (-189 c3b-1, c3b-2): a number -- int, char, size_t, unsigned, ulong -- is its
+# cell.  It has no working copy: a read is a typed load of its cell (l2_own_load), a write a typed
+# store into it (l2_own_store), and a checkpoint neither publishes nor reloads it.  A field bound to
+# a formal or a dynamic input is one too, from its binding line on (l2_formal_row); before that line
+# the name is the machine argument.  Pointer own fields keep their working copy until c3b-3.
+fn: l2_own_direct (int: mi; int: k) int
     int: ty
     if: mi < 0 || k < 0 || k >= l2_own_n
         return: 0
     ty: l2_own_ty[k]
-    if: ty != 0 && ty != 1 && ty != 2 && ty != 3 && ty != 36
-        return: 0
-    if: l2_m_alias[l2_own_off(mi, k)] >= 0 || l2_own_param_of(mi, k) >= 0 || l2_own_canon(mi, k) != k || l2_own_addr_taken(mi, k) != 0
-        return: 0
-return: 1
+return: ty = 0 || ty = 1 || ty = 2 || ty = 3 || ty = 36
 
-# The typed load of plain own field k's cell, spelled into dest.
+# The parameter of mi (a formal, or a dynamic input) that own field k's name names, or -1: a field
+# of that name binds it -- at method level, or in a body, whose hosted field it then is (fable).
+fn: l2_own_formal (int: mi; int: k) int
+    if: mi < 0 || k < 0 || k >= l2_own_n
+        return: 0 - 1
+return: l2_param_find(mi, l2_own_name[k])
+
+# THE BOUND ROW (-189 c3b-2; R2 with carry, static by position -- L3 §12, fable).  Parameter pk of mi
+# (a formal, or a dynamic input) names the machine argument until an own field bound to it has had
+# its binding line -- its declaration, or its first bare assignment -- and that field from then on.
+# A binding in a body is scoped to the body (l2_emit_body).  The innermost binding in scope, the
+# latest, wins; -1 is the machine argument.
+fn: l2_formal_row (int: mi; int: pk) int
+    int: k 0
+    int: best 0 - 1
+    while: k < l2_own_n
+        if: l2_own_mi[k] = mi && l2_own_bseq[k] > 0 && l2_own_formal(mi, k) = pk && (best < 0 || l2_own_bseq[k] > l2_own_bseq[best])
+            best: k
+        k: k + 1
+    ---
+return: best
+
+# The direct own field a bare name means at this point of the emission, or -1: a formal's bound
+# row (l2_formal_row), else the method's own field of that name.
+fn: l2_name_cell (int: mi; const: @(LmP0Text t)) int
+    int: pi l2_param_find(mi, t)
+    int: k
+    if: pi >= 0
+        return: l2_formal_row(mi, pi)
+    k: l2_own_find_last(mi, t)
+    if: k >= 0 && l2_own_direct(mi, k) != 0
+        return: k
+return: 0 - 1
+
+# The typed load of direct own field k's cell, spelled into dest.
 fn: l2_own_load (int: k; @: char dest) int
     int: ty l2_own_ty[k]
     if: ty = 0
@@ -6519,9 +6556,7 @@ fn: l2_own_load (int: k; @: char dest) int
         return: (cast: (int) (c.sprintf(dest, "lmx_ulong_value_known(l2_q%d_from[0])", k) < 0))
 return: 1
 
-# The value of own field k as method mi's code reads it: a plain field's cell load, any other the
-# working value `l2_q<k>` (until c3b-2).
-# The address of plain own field k's cell, typed by the field (L2 §10: `@x` of a data field is its
+# The address of direct own field k's cell, typed by the field (L2 §10: `@x` of a data field is its
 # cell's address in the instance, stable for the instance's life) -- the same spelling l2_prep_addr
 # gives an own field.
 fn: l2_own_addr (int: k; @: char dest) int
@@ -6538,17 +6573,25 @@ fn: l2_own_addr (int: k; @: char dest) int
         return: (cast: (int) (c.sprintf(dest, "(cast: (@: ulong) l2_q%d_from[0])", k) < 0))
 return: 1
 
+# The value of own field k as method mi's code reads it: a direct field's cell load, a pointer field's
+# working value `l2_q<k>` (until c3b-3).
 fn: l2_own_spell (int: mi; int: k; @: char dest) int
-    if: l2_own_plain(mi, k) != 0
+    if: l2_own_direct(mi, k) != 0
         return: l2_own_load(k, dest)
 return: (cast: (int) (c.sprintf(dest, "l2_q%d", k) < 0))
 
-# Store `val` into plain own field k's cell: the typed store, X1 when it fails; a char rebinds its
-# interned cell.  The slot is bound first (the prelude has bound it already).
+# Store `val` into direct own field k's cell: the typed store, X1 when it fails; a char rebinds its
+# interned cell.  The slot is bound first (the prelude has bound it already).  A field bound to a
+# parameter is bound from its first store on (l2_formal_row): its binding line, whose value `val`
+# was spelled before, while the name was still the argument.
 fn: l2_own_store (int: mi; int: k; const: @(char ind); const: @(char val)) int
     const: @(char helper) 0
     if: k < 0 || ind = 0 || val = 0
         return: 1
+    if: l2_own_bseq[k] = 0 && l2_own_formal(mi, k) >= 0
+        l2_bseq_n: l2_bseq_n + 1
+        l2_own_bseq[k]: l2_bseq_n
+    ---
     helper: l2_own_store_helper(l2_own_ty[k])
     if: helper = 0 || l2_emit_own_from(mi, k, ind) != 0
         return: 1
@@ -6603,8 +6646,8 @@ fn: l2_emit_occ_write (int: mi; int: oi; const: @(char ind); const: @(char rhs))
     c.array: [64]: char canon
     if: mi < 0 || oi < 0 || ind = 0 || rhs = 0
         return: 1
-    # -189 c3b-1: a plain own field is written in its cell.
-    if: l2_own_plain(mi, oi) != 0
+    # -189 c3b-1/c3b-2: a direct own field is written in its cell.
+    if: l2_own_direct(mi, oi) != 0
         return: l2_own_store(mi, oi, ind, rhs)
     cn: l2_own_canon(mi, oi)
     pk: l2_own_param_of(mi, oi)
@@ -6629,7 +6672,7 @@ return: 0
 fn: l2_emit_addr_mark (int: mi; int: k; const: @(char ind)) int
     int: oi l2_own_of_param(mi, k)
     int: cn
-    if: oi < 0 || ind = 0 || l2_param_addr_taken(mi, k) = 0
+    if: oi < 0 || ind = 0 || l2_param_addr_taken(mi, k) = 0 || l2_own_direct(mi, oi) != 0
         return: 0
     cn: l2_own_canon(mi, oi)
     if: cn < 0
@@ -6640,7 +6683,7 @@ return: 0
 
 fn: l2_emit_bind_mark (int: mi; int: oi; const: @(char ind)) int
     int: cn
-    if: mi < 0 || oi < 0 || ind = 0 || l2_own_addr_taken(mi, oi) = 0
+    if: mi < 0 || oi < 0 || ind = 0 || l2_own_addr_taken(mi, oi) = 0 || l2_own_direct(mi, oi) != 0
         return: 0
     if: l2_emit_own_from(mi, oi, ind) != 0
         return: 1
@@ -8025,10 +8068,12 @@ fn: l2_index_token (const: @(LmP0Text t); int: mi; const: @(char ind); @: char d
     k: 0
     while: k < l2_own_n
         if: l2_own_mi[k] = mi && (l2_own_host[k] = 0 || l2_scope_has(l2_own_host[k])) && l2_own_name[k] != 0 && l2_own_name[k]\length = ilen && memcmp(l2_own_name[k]\data, t\data + lb + 1U, ilen) = 0
-            # An own field bound to a formal is spelled as that formal.
-            if: l2_m_alias[l2_own_off(mi, k)] >= 0 && c.sprintf(dest, "l2_p%d_%d", mi, l2_m_alias[l2_own_off(mi, k)]) < 0
+            # An own field bound to a formal is spelled as that formal is read here (l2_tok_formal).
+            if: l2_own_formal(mi, k) >= 0 && l2_own_direct(mi, k) != 0 && l2_tok_formal(mi, l2_own_formal(mi, k), dest) != 0
                 return: 1
-            if: l2_m_alias[l2_own_off(mi, k)] < 0 && l2_own_spell(mi, k, dest) != 0
+            if: l2_m_alias[l2_own_off(mi, k)] >= 0 && l2_own_direct(mi, k) = 0 && c.sprintf(dest, "l2_p%d_%d", mi, l2_m_alias[l2_own_off(mi, k)]) < 0
+                return: 1
+            if: l2_m_alias[l2_own_off(mi, k)] < 0 && (l2_own_formal(mi, k) < 0 || l2_own_direct(mi, k) = 0) && l2_own_spell(mi, k, dest) != 0
                 return: 1
             return: 0
         k: k + 1
@@ -8071,9 +8116,15 @@ fn: l2_index_token (const: @(LmP0Text t); int: mi; const: @(char ind); @: char d
                         k: c.sprintf(dest + out_n, "%s", load)
                         at: rb + 1U
                     else:
-                        if: l2_m_alias[l2_own_off(mi, j)] >= 0
+                        if: l2_own_formal(mi, j) >= 0 && l2_own_direct(mi, j) != 0
+                            if: l2_tok_formal(mi, l2_own_formal(mi, j), load) != 0
+                                return: 1
+                            k: c.sprintf(dest + out_n, "%s", load)
+                        ---
+                        if: l2_m_alias[l2_own_off(mi, j)] >= 0 && l2_own_direct(mi, j) = 0
                             k: c.sprintf(dest + out_n, "l2_p%d_%d", mi, l2_m_alias[l2_own_off(mi, j)])
-                        else:
+                        ---
+                        if: l2_m_alias[l2_own_off(mi, j)] < 0 && (l2_own_formal(mi, j) < 0 || l2_own_direct(mi, j) = 0)
                             if: l2_own_spell(mi, j, load) != 0
                                 return: 1
                             k: c.sprintf(dest + out_n, "%s", load)
@@ -11004,8 +11055,23 @@ fn: l2_emit_pad (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
         return: l2_emit_loop_exit(p, ind)
 return: l2_emit_loop_exit(0 - 1, ind)
 
-# A block with catches is its pad; any other block is its statements.
+# A body's bindings are scoped to it (-189 c3b-2, fable): leaving it unbinds every own field bound
+# inside it (l2_own_bseq), so a name is again what it was before the body -- the machine
+# argument, or an enclosing bound field (l2_formal_row).
 fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
+    int: s0 l2_bseq_n
+    int: k 0
+    if: l2_emit_body_in(body, mi, ind) != 0
+        return: 1
+    while: k < l2_own_n
+        if: l2_own_bseq[k] > s0
+            l2_own_bseq[k]: 0
+        k: k + 1
+    ---
+return: 0
+
+# A block with catches is its pad; any other block is its statements.
+fn: l2_emit_body_in (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
     if: body = 0
         return: 0
     if: l2_block_has_catch(body) != 0
@@ -14824,9 +14890,14 @@ fn: l2_hidden_from (int: mi; int: callee; int: k; int: callee_self; const: @(cha
         return: 1
 return: 0
 
+# Formal (or dynamic input) fi of mi as its code reads it here: its bound field's cell once bound
+# (l2_formal_row, -189 c3b-2), the machine argument before.
 fn: l2_tok_formal (int: mi; int: fi; @: char dest) int
+    int: k l2_formal_row(mi, fi)
     if: dest = 0
         return: 1
+    if: k >= 0
+        return: l2_own_load(k, dest)
     if: c.sprintf(dest, "l2_p%d_%d", mi, fi) < 0
         return: 1
 return: 0
@@ -14934,6 +15005,9 @@ fn: l2_prep_addr (const: @(LmP0Node node); int: mi; const: @(char ind); @: char 
             return: 1
         return: 0
     idx: l2_param_find(mi, t)
+    # -189 c3b-2: after its binding line a formal is its field, and `@x` that field's cell (L2 §10).
+    if: idx >= 0 && l2_formal_row(mi, idx) >= 0
+        return: l2_own_addr(l2_formal_row(mi, idx), dest)
     if: idx >= 0
         # The address is the ordinary address of the canonical working cell, always.  Any
         # executed @x sets sticky for that logical local (l2_emit_addr_mark).
@@ -16186,12 +16260,13 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
                 f: p2
                 continue
             ---
-            # -189 c3b-1: `@` of a bare plain own field is its cell's address, not `@ ` onto its load.
+            # -189 c3b-1/c3b-2: `@` of a bare name that is a direct field is its cell's address, not `@ `
+            # onto its load.
             aidx_f: l2_next_active(f\next)
-            if: aidx_f != 0 && aidx_f\value != 0 && aidx_f\value\kind = c.LM_P0_NODE_ATOM && l2_ident(aidx_f\value\as\atom) != 0 && l2_param_find(mi, aidx_f\value\as\atom) < 0
-                po: l2_own_find_last(mi, aidx_f\value\as\atom)
+            if: aidx_f != 0 && aidx_f\value != 0 && aidx_f\value\kind = c.LM_P0_NODE_ATOM && l2_ident(aidx_f\value\as\atom) != 0
+                po: l2_name_cell(mi, aidx_f\value\as\atom)
                 p2: l2_next_active(aidx_f\next)
-                if: po >= 0 && l2_own_plain(mi, po) != 0 && (p2 = 0 || p2\value = 0 || p2\value\kind != c.LM_P0_NODE_ATOM || l2_is_slash(p2\value\as\atom) = 0)
+                if: po >= 0 && (p2 = 0 || p2\value = 0 || p2\value\kind != c.LM_P0_NODE_ATOM || l2_is_slash(p2\value\as\atom) = 0)
                     if: l2_own_addr(po, piece) != 0 || l2_cat(buf, piece) != 0
                         return: l2_error(l2_src, at, "expression too long")
                     ao: 0
@@ -18854,8 +18929,8 @@ fn: l2_emit_checkpoint (int: mi; const: @(char ind)) int
         if: l2_own_is_array(l2_own_ty[i]) != 0
             i: i + 1
             continue
-        # -189 c3b-1: a plain own field's writes are already in its cell, and its reads load it.
-        if: l2_m_uses[l2_own_off(mi, i)] != 0 && l2_own_plain(mi, i) != 0
+        # -189 c3b-1/c3b-2: a direct own field's writes are already in its cell, and its reads load it.
+        if: l2_m_uses[l2_own_off(mi, i)] != 0 && l2_own_direct(mi, i) != 0
             i: i + 1
             continue
         fi: l2_m_alias[l2_own_off(mi, i)]
@@ -19232,15 +19307,15 @@ fn: l2_emit_ccall (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
             if: first = 0 && l2_cat(buf, ", ") != 0
                 return: 1
             piece[0]: 0
-            # -189 c3b-1: `@` of a bare plain own field is its cell's address.
+            # -189 c3b-1/c3b-2: `@` of a bare name that is a direct field is its cell's address.
             po: 0 - 1
-            if: p1\value != 0 && p1\value\kind = c.LM_P0_NODE_ATOM && l2_param_find(mi, p1\value\as\atom) < 0
-                po: l2_own_find_last(mi, p1\value\as\atom)
-            if: po >= 0 && l2_own_plain(mi, po) != 0 && l2_own_addr(po, piece) != 0
+            if: p1\value != 0 && p1\value\kind = c.LM_P0_NODE_ATOM
+                po: l2_name_cell(mi, p1\value\as\atom)
+            if: po >= 0 && l2_own_addr(po, piece) != 0
                 return: 1
-            if: (po < 0 || l2_own_plain(mi, po) = 0) && l2_cat(buf, "@ ") != 0
+            if: po < 0 && l2_cat(buf, "@ ") != 0
                 return: 1
-            if: (po < 0 || l2_own_plain(mi, po) = 0) && l2_prep(p1\value, mi, ind, piece) != 0
+            if: po < 0 && l2_prep(p1\value, mi, ind, piece) != 0
                 return: 1
             po: 0 - 1
             if: l2_cat(buf, piece) != 0
@@ -20479,9 +20554,9 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             if: l2_pkind = 9 && c.sprintf(l2_pval, "lmx_ulong_value_known(l2_pxp[0])") < 0
                 return: 1
             # -189 c3b-1: a plain own local takes the value in its cell.
-            if: l2_own_plain(mi, l2_pown) != 0 && l2_own_store(mi, l2_pown, ind, l2_pval) != 0
+            if: l2_own_direct(mi, l2_pown) != 0 && l2_own_store(mi, l2_pown, ind, l2_pval) != 0
                 return: 1
-            if: l2_own_plain(mi, l2_pown) = 0 && c.fprintf(l2_out, "%sl2_q%d: %s\n%sl2_q%d_dirty: 1\n", ind, l2_pown, l2_pval, ind, l2_pown) < 0
+            if: l2_own_direct(mi, l2_pown) = 0 && c.fprintf(l2_out, "%sl2_q%d: %s\n%sl2_q%d_dirty: 1\n", ind, l2_pown, l2_pval, ind, l2_pown) < 0
                 return: 1
             field: l2_next_active(field\next)
             need_cut: 1
@@ -20597,10 +20672,10 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             if: l2_eval_fields(l2_next_active(l2_next_active(last\value\as\frame\body\first_field)\next), 1, mi, ind, l2_tok) != 0
                 l2_scope_pop()
                 return: 1
-            if: l2_own_plain(mi, oi) != 0 && l2_own_store(mi, oi, ind, l2_tok) != 0
+            if: l2_own_direct(mi, oi) != 0 && l2_own_store(mi, oi, ind, l2_tok) != 0
                 l2_scope_pop()
                 return: 1
-            if: l2_own_plain(mi, oi) = 0 && c.fprintf(l2_out, "%sl2_q%d: %s\n%sl2_q%d_dirty: 1\n", ind, oi, l2_tok, ind, oi) < 0
+            if: l2_own_direct(mi, oi) = 0 && c.fprintf(l2_out, "%sl2_q%d: %s\n%sl2_q%d_dirty: 1\n", ind, oi, l2_tok, ind, oi) < 0
                 l2_scope_pop()
                 return: 1
             last: l2_next_active(last\next)
@@ -20635,7 +20710,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                 return: 1
             nxt: l2_next_active(nxt\next)
             # -189 c3b-1: a plain counter steps in its cell.
-            if: l2_own_plain(mi, si) != 0
+            if: l2_own_direct(mi, si) != 0
                 if: c.sprintf(l2_dind, "%s    ", deep) < 0 || l2_own_load(si, l2_pval) != 0
                     l2_scope_pop()
                     return: 1
@@ -20649,10 +20724,10 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                     l2_scope_pop()
                     return: 1
             ---
-            if: l2_own_plain(mi, si) = 0 && nxt != 0 && nxt\value != 0 && l2_text_eq(nxt\value\as\atom, "--") && c.fprintf(l2_out, "%s    l2_q%d: l2_q%d - 1\n%s    l2_q%d_dirty: 1\n", deep, si, si, deep, si) < 0
+            if: l2_own_direct(mi, si) = 0 && nxt != 0 && nxt\value != 0 && l2_text_eq(nxt\value\as\atom, "--") && c.fprintf(l2_out, "%s    l2_q%d: l2_q%d - 1\n%s    l2_q%d_dirty: 1\n", deep, si, si, deep, si) < 0
                 l2_scope_pop()
                 return: 1
-            if: l2_own_plain(mi, si) = 0 && nxt != 0 && nxt\value != 0 && l2_text_eq(nxt\value\as\atom, "--") = 0 && c.fprintf(l2_out, "%s    l2_q%d: l2_q%d + 1\n%s    l2_q%d_dirty: 1\n", deep, si, si, deep, si) < 0
+            if: l2_own_direct(mi, si) = 0 && nxt != 0 && nxt\value != 0 && l2_text_eq(nxt\value\as\atom, "--") = 0 && c.fprintf(l2_out, "%s    l2_q%d: l2_q%d + 1\n%s    l2_q%d_dirty: 1\n", deep, si, si, deep, si) < 0
                 l2_scope_pop()
                 return: 1
             if: c.fprintf(l2_out, "%s%s: 0\n", deep, wfirst) < 0
@@ -20927,8 +21002,6 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         # (measured: without this, "int: arg 1" then "int: arg 2" both wrote occurrence 0).
         if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0
             oi: l2_own_find_decl(mi, l2_own_decl_name(stmt), stmt)
-        if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0
-            l2_own_live[oi]: 1
         # The own-declaration line of a same-name parameter IS a binding line: docs/L2_spec "an
         # executed declaration or assignment-declaration binds the same local variable to the
         # body's field".  It selects this occurrence as the publication target; sticky is raised at @.
@@ -20955,6 +21028,12 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             l2_own_excl: -1
         if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && l2_count_active(stmt\as\frame\body) = 2 && l2_emit_occ_write(mi, oi, ind, l2_tok) != 0
             return: 1
+        # Carry (-189 c3b-2): a declaration binding a formal's field without an initializer stores the
+        # name's value as it reads just before the line -- the argument, or an enclosing bound field.
+        if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && l2_count_active(stmt\as\frame\body) = 1 && l2_m_uses[l2_own_off(mi, oi)] != 0 && l2_own_direct(mi, oi) != 0 && l2_own_formal(mi, oi) >= 0
+            if: l2_tok_formal(mi, l2_own_formal(mi, oi), l2_tok) != 0 || l2_own_store(mi, oi, ind, l2_tok) != 0
+                return: 1
+        ---
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt)
             field: l2_next_active(field\next)
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && (stmt = 0 || stmt\as = 0 || stmt\as\frame = 0)
@@ -21031,8 +21110,6 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         # format string with the same arguments either way.
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && fi >= 0 && l2_emit_own_from(mi, oi, ind) != 0
             return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && fi >= 0
-            l2_own_live[oi]: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && l2_emit_occ_write(mi, oi, ind, l2_tok) != 0
             return: 1
         # An executed assignment is a binding: it selects this occurrence as the publication
@@ -21562,25 +21639,22 @@ fn: l2_emit_unit (const: @(char out_path)) int
         ---
         k: 0
         while: k < l2_own_n
-            l2_own_live[k]: 0
             if: l2_own_is_array(l2_own_ty[k]) != 0
                 k: k + 1
                 continue
-            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0
-                l2_own_live[k]: 1
-            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_ty[k] = 1 && l2_own_plain(i, k) = 0 && c.fprintf(l2_out, "    char: l2_q%d\n    @@: void l2_q%d_from 0\n    int: l2_q%d_dirty 0\n", k, k, k) < 0
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_ty[k] = 1 && l2_own_direct(i, k) = 0 && c.fprintf(l2_out, "    char: l2_q%d\n    @@: void l2_q%d_from 0\n    int: l2_q%d_dirty 0\n", k, k, k) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_ty[k] = 2 && l2_own_plain(i, k) = 0 && c.fprintf(l2_out, "    size_t: l2_q%d\n    @@: void l2_q%d_from 0\n    int: l2_q%d_dirty 0\n", k, k, k) < 0
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_ty[k] = 2 && l2_own_direct(i, k) = 0 && c.fprintf(l2_out, "    size_t: l2_q%d\n    @@: void l2_q%d_from 0\n    int: l2_q%d_dirty 0\n", k, k, k) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_ty[k] = 0 && l2_own_plain(i, k) = 0 && c.fprintf(l2_out, "    int: l2_q%d\n    @@: void l2_q%d_from 0\n    int: l2_q%d_dirty 0\n", k, k, k) < 0
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_ty[k] = 0 && l2_own_direct(i, k) = 0 && c.fprintf(l2_out, "    int: l2_q%d\n    @@: void l2_q%d_from 0\n    int: l2_q%d_dirty 0\n", k, k, k) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_ty[k] = 3 && l2_own_plain(i, k) = 0 && c.fprintf(l2_out, "    unsigned: l2_q%d\n    @@: void l2_q%d_from 0\n    int: l2_q%d_dirty 0\n", k, k, k) < 0
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_ty[k] = 3 && l2_own_direct(i, k) = 0 && c.fprintf(l2_out, "    unsigned: l2_q%d\n    @@: void l2_q%d_from 0\n    int: l2_q%d_dirty 0\n", k, k, k) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_ty[k] = 36 && l2_own_plain(i, k) = 0 && c.fprintf(l2_out, "    ulong: l2_q%d\n    @@: void l2_q%d_from 0\n    int: l2_q%d_dirty 0\n", k, k, k) < 0
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_ty[k] = 36 && l2_own_direct(i, k) = 0 && c.fprintf(l2_out, "    ulong: l2_q%d\n    @@: void l2_q%d_from 0\n    int: l2_q%d_dirty 0\n", k, k, k) < 0
                 fclose(l2_out)
                 return: 1
             if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_is_pointer(l2_own_ty[k]) != 0
@@ -21588,29 +21662,29 @@ fn: l2_emit_unit (const: @(char out_path)) int
                     fclose(l2_out)
                     return: 1
             ---
-            # -189 c3b-1: a plain own field keeps only its slot handle (an address, not a value).
-            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_own_plain(i, k) != 0 && c.fprintf(l2_out, "    @@: void l2_q%d_from 0\n", k) < 0
+            # -189 c3b-1/c3b-2: a direct own field keeps only its slot handle (an address, not a value).
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_own_direct(i, k) != 0 && c.fprintf(l2_out, "    @@: void l2_q%d_from 0\n", k) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_fid[k] >= 0 && c.fprintf(l2_out, "    l2_q%d_from: lmx_arena_ref_cell(l2_h%d, %uU)\n    if: l2_q%d_from = 0\n        c.fprintf(c.stderr, \"lmx: invariant: own field %d has no cell\\n\")\n        c.abort()\n", k, l2_own_fid[k], (cast: (unsigned) l2_own_fchild[k]), k, k) < 0
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && (l2_m_alias[l2_own_off(i, k)] < 0 || l2_own_direct(i, k) != 0) && l2_own_fid[k] >= 0 && c.fprintf(l2_out, "    l2_q%d_from: lmx_arena_ref_cell(l2_h%d, %uU)\n    if: l2_q%d_from = 0\n        c.fprintf(c.stderr, \"lmx: invariant: own field %d has no cell\\n\")\n        c.abort()\n", k, l2_own_fid[k], (cast: (unsigned) l2_own_fchild[k]), k, k) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && c.fprintf(l2_out, "    l2_q%d_from: lmx_arena_ref_cell(%s, %uU)\n    if: l2_q%d_from = 0\n        c.fprintf(c.stderr, \"lmx: invariant: own field %d has no cell\\n\")\n        c.abort()\n", k, l2_own_ctr(k), (cast: (unsigned) l2_own_uchild[k]), k, k) < 0
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && (l2_m_alias[l2_own_off(i, k)] < 0 || l2_own_direct(i, k) != 0) && l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && c.fprintf(l2_out, "    l2_q%d_from: lmx_arena_ref_cell(%s, %uU)\n    if: l2_q%d_from = 0\n        c.fprintf(c.stderr, \"lmx: invariant: own field %d has no cell\\n\")\n        c.abort()\n", k, l2_own_ctr(k), (cast: (unsigned) l2_own_uchild[k]), k, k) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_param_of(i, k) < 0 && l2_own_ty[k] = 1 && l2_own_plain(i, k) = 0 && c.fprintf(l2_out, "    l2_q%d: (cast: (char) lmx_char_value_known(l2_q%d_from[0]))\n", k, k) < 0
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_param_of(i, k) < 0 && l2_own_ty[k] = 1 && l2_own_direct(i, k) = 0 && c.fprintf(l2_out, "    l2_q%d: (cast: (char) lmx_char_value_known(l2_q%d_from[0]))\n", k, k) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_param_of(i, k) < 0 && l2_own_ty[k] = 2 && l2_own_plain(i, k) = 0 && c.fprintf(l2_out, "    l2_q%d: lmx_size_value_known(l2_q%d_from[0])\n", k, k) < 0
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_param_of(i, k) < 0 && l2_own_ty[k] = 2 && l2_own_direct(i, k) = 0 && c.fprintf(l2_out, "    l2_q%d: lmx_size_value_known(l2_q%d_from[0])\n", k, k) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_param_of(i, k) < 0 && l2_own_ty[k] = 0 && l2_own_plain(i, k) = 0 && c.fprintf(l2_out, "    l2_q%d: lmx_int_value_known(l2_q%d_from[0])\n", k, k) < 0
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_param_of(i, k) < 0 && l2_own_ty[k] = 0 && l2_own_direct(i, k) = 0 && c.fprintf(l2_out, "    l2_q%d: lmx_int_value_known(l2_q%d_from[0])\n", k, k) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_param_of(i, k) < 0 && l2_own_ty[k] = 3 && l2_own_plain(i, k) = 0 && c.fprintf(l2_out, "    l2_q%d: lmx_unsigned_value_known(l2_q%d_from[0])\n", k, k) < 0
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_param_of(i, k) < 0 && l2_own_ty[k] = 3 && l2_own_direct(i, k) = 0 && c.fprintf(l2_out, "    l2_q%d: lmx_unsigned_value_known(l2_q%d_from[0])\n", k, k) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_param_of(i, k) < 0 && l2_own_ty[k] = 36 && l2_own_plain(i, k) = 0 && c.fprintf(l2_out, "    l2_q%d: lmx_ulong_value_known(l2_q%d_from[0])\n", k, k) < 0
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_param_of(i, k) < 0 && l2_own_ty[k] = 36 && l2_own_direct(i, k) = 0 && c.fprintf(l2_out, "    l2_q%d: lmx_ulong_value_known(l2_q%d_from[0])\n", k, k) < 0
                 fclose(l2_out)
                 return: 1
             if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] < 0 && l2_own_param_of(i, k) < 0 && l2_own_is_pointer(l2_own_ty[k]) != 0
@@ -21618,19 +21692,19 @@ fn: l2_emit_unit (const: @(char out_path)) int
                     fclose(l2_out)
                     return: 1
             ---
-            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] >= 0 && l2_own_ty[k] = 1 && c.fprintf(l2_out, "    char: l2_q%d\n    @@: void l2_q%d_from 0\n    int: l2_q%d_dirty 0\n", k, k, k) < 0
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] >= 0 && l2_own_ty[k] = 1 && l2_own_direct(i, k) = 0 && c.fprintf(l2_out, "    char: l2_q%d\n    @@: void l2_q%d_from 0\n    int: l2_q%d_dirty 0\n", k, k, k) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] >= 0 && l2_own_ty[k] = 2 && c.fprintf(l2_out, "    size_t: l2_q%d\n    @@: void l2_q%d_from 0\n    int: l2_q%d_dirty 0\n", k, k, k) < 0
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] >= 0 && l2_own_ty[k] = 2 && l2_own_direct(i, k) = 0 && c.fprintf(l2_out, "    size_t: l2_q%d\n    @@: void l2_q%d_from 0\n    int: l2_q%d_dirty 0\n", k, k, k) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] >= 0 && l2_own_ty[k] = 0 && c.fprintf(l2_out, "    int: l2_q%d\n    @@: void l2_q%d_from 0\n    int: l2_q%d_dirty 0\n", k, k, k) < 0
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] >= 0 && l2_own_ty[k] = 0 && l2_own_direct(i, k) = 0 && c.fprintf(l2_out, "    int: l2_q%d\n    @@: void l2_q%d_from 0\n    int: l2_q%d_dirty 0\n", k, k, k) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] >= 0 && l2_own_ty[k] = 3 && c.fprintf(l2_out, "    unsigned: l2_q%d\n    @@: void l2_q%d_from 0\n    int: l2_q%d_dirty 0\n", k, k, k) < 0
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] >= 0 && l2_own_ty[k] = 3 && l2_own_direct(i, k) = 0 && c.fprintf(l2_out, "    unsigned: l2_q%d\n    @@: void l2_q%d_from 0\n    int: l2_q%d_dirty 0\n", k, k, k) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] >= 0 && l2_own_ty[k] = 36 && c.fprintf(l2_out, "    ulong: l2_q%d\n    @@: void l2_q%d_from 0\n    int: l2_q%d_dirty 0\n", k, k, k) < 0
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] >= 0 && l2_own_ty[k] = 36 && l2_own_direct(i, k) = 0 && c.fprintf(l2_out, "    ulong: l2_q%d\n    @@: void l2_q%d_from 0\n    int: l2_q%d_dirty 0\n", k, k, k) < 0
                 fclose(l2_out)
                 return: 1
             if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_m_alias[l2_own_off(i, k)] >= 0 && l2_own_is_pointer(l2_own_ty[k]) != 0
@@ -21640,7 +21714,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
             ---
             # Sticky + publication selector, only where the body writes `@: x` for this
             # logical local; every other method is generated without these flags.
-            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_own_addr_taken(i, k) != 0 && l2_own_canon(i, k) = k && c.fprintf(l2_out, "    int: l2_q%d_sticky 0\n    int: l2_q%d_active 0 - 1\n", k, k) < 0
+            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_own_addr_taken(i, k) != 0 && l2_own_canon(i, k) = k && l2_own_direct(i, k) = 0 && c.fprintf(l2_out, "    int: l2_q%d_sticky 0\n    int: l2_q%d_active 0 - 1\n", k, k) < 0
                 fclose(l2_out)
                 return: 1
             k: k + 1

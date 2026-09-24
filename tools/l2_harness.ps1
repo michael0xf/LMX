@@ -1148,45 +1148,40 @@ $fixtures = @(
         Needle = 'a callable without a result has no value'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_discard_unknown_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unresolved name'; Absent = @(); Debt = @() },
-    # THE STICKY DIRTY OF AN ADDRESS-TAKEN LOCAL (GROK-COLON-OCCURRENCE-20260922-02).  Any executed
-    # `@x` of an addressable activation-local makes sticky through activation end -- before, between
-    # or after occurrence bindings.  Address-taking invents no graph field; `p` always addresses the
-    # canonical cell and never retargets.  The 2026-09-21 before/after split is superseded.
+    # AN ARGUMENT AND ITS FIELD (-189 c3b-2: the execution pair; L3 §12, R2 with carry, static by
+    # position -- steps/code-data-split-189.md «c3b-2 plan»).  A formal (or a dynamic input) is the
+    # machine argument until its binding line -- its declaration, or its first bare assignment -- and
+    # its field's cell from then on.  A declaration without an initializer carries the argument's
+    # value into the field.  `@x` is the argument's address before the line and the cell's after it
+    # (L2 §10).  There is no working copy, no checkpoint publication and no sticky flag: every line
+    # printed after `M\x: v` wrote the field shows v.  The -67 sticky rule these rows pinned
+    # (A2 6 6, C3 9 9, ...) was the working copy republished over the graph write; it is gone.
     #
-    # These rows have `Says`: the lines the PROGRAM must print, whole and in order.  That is the
-    # only verdict a generated program can give today -- lmx_thread_dispatch_native drops the
-    # entry's return, so an exit code proves nothing -- and each line is "<case> <local> <graph>".
-    # The matrix is mutually discriminating, measured on translator mutants:
-    #   A  before-bind, then bind   sticky: A2/A4 are checkpoints that follow NO address-taking call,
-    #                               so "raise dirty again after the call returns" fails them too;
-    #   B  never bound              sticky is set, but address-taking invented no field, so B 5 100
-    #                               keeps the graph poke through two checkpoints.  A translator that
-    #                               publishes through an unresolved cell dies (exit 139) here;
-    #                               load-at-bind is what keeps the to-be-bound activation alive.
-    #   C  bind, then address       NOW sticky (C3 9 9).  C2 9 4 is local-vs-graph before the next
-    #                               checkpoint; C2 9 9 would mean the address retargeted to the graph.
-    #   D  one method, both orders  decided at RUN time; D0 after-bind is sticky (D0 5 5).
-    #   E  declared, then address   the DECLARATION is a binding line too, and the later `@` is
-    #                               sticky (E 6 6).
-    # Before the 2026-09-21 sticky slice the translator printed A2 6 100, A3 9 100, A4 9 200 and D1 6 100.
+    # These rows have `Says`: the lines the PROGRAM must print, whole and in order; each line is
+    # "<case> <name> <graph field>".
+    #   A  address before the binding: the argument is poked (5), carried (6), then the field: A2 100 100.
+    #   B  never bound: the name stays the argument (5) while the field holds the graph write: B 5 100.
+    #   C  bound, then the address: the cell is poked (C2 9 9), then written through M\x: C3 100 100.
+    #   D  either order, decided at run time: the field shows the graph write in both: D1/D0 100 100.
+    #   E  declared, address after: E 100 100.
     [pscustomobject]@{ Name = 'unit_arg_addr_sticky.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
-        Says = @('A1 6 6', 'A2 6 6', 'A3 9 9', 'A4 9 9', 'B 5 100', 'B 5 100', 'B+ 6 6', 'B 5 100', 'C1 4 4', 'C2 9 9', 'C3 9 9', 'D1 6 6', 'D0 5 5', 'E 6 6');
-        BindOrder = $true;
-        Absent = @('l2_q0_early', 'l2_q0_bound');
-        Debt = @('int: l2_q1_sticky 0', 'int: l2_q1_active 0 - 1',
-                 'l2_q1_sticky: 1',
-                 'if: l2_q1_dirty != 0 || (l2_q1_sticky != 0 && l2_q1_active = 1)') },
+        Says = @('A1 6 6', 'A2 100 100', 'A3 9 9', 'A4 200 200', 'B 5 100', 'B 5 100', 'B+ 200 200', 'B 5 100', 'C1 4 4', 'C2 9 9', 'C3 100 100', 'D1 100 100', 'D0 100 100', 'E 100 100');
+        Absent = @('_sticky', '_active', '_dirty');
+        Debt = @('if: lmx_int_store_known(l2_q1_from[0], (l2_p3_0)) != 0',
+                 'l2_t3: l2_m0(l2_c2\parent, l2_c2, @ l2_p3_0)',
+                 'l2_t13: l2_m1(l2_c12\parent, l2_c12, (cast: (@: int) l2_q1_from[0]))') },
     # TYPE IS AN INDEPENDENT AXIS.  unsigned was REFUSED in the declared form (a formal's type code
     # was compared with an own field's storage code: 34 against 3) and silently left a plain local
     # in the assignment form; a pointer was never bound at all.  Both now go through the same
-    # mechanism, and the type only names the cell.
+    # mechanism, and the type only names the cell.  -189 c3b-2: the declaration carries the poked
+    # argument into the cell, and the graph write of 100 is what the bare name then reads.
     [pscustomobject]@{ Name = 'unit_arg_addr_types.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
-        Says = @('U 51 51', 'Z local 71', 'Z graph 71', 'L local 81', 'L graph 81');
-        BindOrder = $true;
-        Absent = @();
-        Debt = @('lmx_unsigned_store_known(l2_q1_from[0], l2_q', 'if: l2_q1_dirty != 0 || (l2_q1_sticky != 0 && l2_q1_active = 1)') },
+        Says = @('U 100 100', 'Z local 100', 'Z graph 100', 'L local 100', 'L graph 100');
+        Absent = @('_sticky', '_dirty');
+        Debt = @('if: lmx_unsigned_store_known(l2_q1_from[0], (l2_p4_0)) != 0', 'if: lmx_size_store_known(l2_q3_from[0], (l2_p5_0)) != 0',
+                 'if: lmx_ulong_store_known(l2_q5_from[0], (l2_p6_0)) != 0') },
     [pscustomobject]@{ Name = 'unit_arg_addr_pointer.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call with an input that is not a number';
         Args = @('0');
         Says = @('P local is null');
@@ -1221,10 +1216,9 @@ $fixtures = @(
     # Debt is the hidden formal itself: `int:` for int_before, and the mixed pair of int_never.
     [pscustomobject]@{ Name = 'unit_arg_addr_dynamic.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
-        Says = @('IA1 6 6', 'IA2 6 6', 'IA3 9 9', 'IA4 9 9', 'IB 5 100', 'IB 5 100', 'IB+ 6 6', 'IB 5 100', 'IC1 4 4', 'IC2 9 9', 'IC3 9 9',
-                 'ZA1 6 6', 'ZA2 6 6', 'ZA3 9 9', 'ZA4 9 9', 'ZB 5 100', 'ZB 5 100', 'ZB+ 6 6', 'ZB 5 100', 'ZC1 4 4', 'ZC2 9 9', 'ZC3 9 9',
+        Says = @('IA1 6 6', 'IA2 100 100', 'IA3 9 9', 'IA4 200 200', 'IB 5 100', 'IB 5 100', 'IB+ 200 200', 'IB 5 100', 'IC1 4 4', 'IC2 9 9', 'IC3 100 100',
+                 'ZA1 6 6', 'ZA2 100 100', 'ZA3 9 9', 'ZA4 200 200', 'ZB 5 100', 'ZB 5 100', 'ZB+ 200 200', 'ZB 5 100', 'ZC1 4 4', 'ZC2 9 9', 'ZC3 100 100',
                  'CALLER 3 3 3 3 3 3');
-        BindOrder = $true;
         Absent = @();
         Debt = @('fn: l2_m5 (@: Lmx node; @: Lmx self; int: l2_p5_0) int',
                  'fn: l2_m6 (@: Lmx node; @: Lmx self; int: l2_p6_0; int: l2_p6_1) int',
@@ -1238,7 +1232,7 @@ $fixtures = @(
     # site; DP -- "unresolved name".  Debt is each hidden formal spelled with its own type.
     [pscustomobject]@{ Name = 'unit_arg_addr_dyn_types.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
-        Says = @('W 3', 'U1 6 6', 'U2 6 6', 'L1 6 6', 'L2 6 6', 'F1 6 6', 'F2 6 6', 'DP local is null', 'DP caller keeps its pointer', 'FC 3', 'TC 3 3 3');
+        Says = @('W 3', 'U1 6 6', 'U2 100 100', 'L1 6 6', 'L2 100 100', 'F1 6 6', 'F2 100 100', 'DP local is null', 'DP caller keeps its pointer', 'FC 3', 'TC 3 3 3');
         BindOrder = $true;
         Absent = @();
         Debt = @('fn: l2_m4 (@: Lmx node; @: Lmx self; int: l2_p4_0) int',
@@ -1246,17 +1240,16 @@ $fixtures = @(
                  'fn: l2_m6 (@: Lmx node; @: Lmx self; ulong: l2_p6_0) int',
                  'fn: l2_m8 (@: Lmx node; @: Lmx self; @: int l2_p8_0) int',
                  'lmx_pointer_store_known(l2_q') },
-    # THE ORDINARY CASES ALONE.  Every address here is taken after the binding line, so every cell
-    # is already resolved when it is taken.  After-bind `@` is now sticky: OC3 9 9, OE 6 6, OD3 9 9.
-    # OC2 9 4 remains local-vs-graph before the next checkpoint; OC2 9 9 would mean retargeting.
+    # THE ORDINARY CASES ALONE.  Every address here is taken after the binding line, so it is the
+    # field's cell (-189 c3b-2): the poke is the field (OC2 9 9), and the later graph write of 100 is
+    # what the bare name reads (OC3 / OE / OD3 100 100).
     # CRASH WARNING, not an old expectation: a translator that raises sticky at the address site
     # AND publishes through a cell nobody resolved dies (exit 139) on a before-bind or never-bound
     # activation, and that death hid these lines -- which is why they have a program of their own.
     # Load-at-bind and "address-taking invents no graph field" keep those cases alive.
     [pscustomobject]@{ Name = 'unit_arg_addr_ordinary.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
-        Says = @('OC1 4 4', 'OC2 9 9', 'OC3 9 9', 'OE 6 6', 'OD1 4 4', 'OD2 9 9', 'OD3 9 9');
-        BindOrder = $true;
+        Says = @('OC1 4 4', 'OC2 9 9', 'OC3 100 100', 'OE 100 100', 'OD1 4 4', 'OD2 9 9', 'OD3 100 100');
         Absent = @();
         Debt = @('fn: l2_m6 (@: Lmx node; @: Lmx self; size_t: l2_p6_0) int') },
     # THE ONE BOUNDARY.  A dynamic input whose SOURCE exists but has no value cell (the caller's
@@ -2016,16 +2009,18 @@ $fixtures = @(
         Debt = @() },
     [pscustomobject]@{ Name = 'unit_occ_sticky_selector.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
-        Says = @('BEFORE 1 1', 'AFTER 9 9', 'NONE 7 100', 'NONE 7 100', 'NONE+ 1 1');
-        BindOrder = $true;
-        Absent = @('l2_q0_early', 'l2_q0_bound');
-        Debt = @('int: l2_q1_sticky 0', 'int: l2_q1_active 0 - 1', 'l2_q1_sticky: 1') },
+        Says = @('BEFORE 100 100', 'AFTER 100 100', 'NONE 7 100', 'NONE 7 100', 'NONE+ 1 1');
+        Absent = @('_sticky', '_active', '_dirty');
+        Debt = @('if: lmx_int_store_known(l2_q1_from[0], (l2_p3_0)) != 0', 'l2_t3: l2_m1(l2_c2\parent, l2_c2, (cast: (@: int) l2_q3_from[0]))') },
     [pscustomobject]@{ Name = 'unit_occ_snapshot_selector.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Says = @('BETWEEN 2', 'LAST 9');
-        BindOrder = $true;
-        Absent = @('l2_q0_early', 'l2_q0_bound');
-        Debt = @('int: l2_q0_sticky 0', 'int: l2_q0_active 0 - 1', 'l2_q0_sticky: 1') },
+        Absent = @('_sticky', '_active', '_dirty');
+        Debt = @('if: lmx_int_value_known(l2_q0_from[0]) != 2', 'if: lmx_int_value_known(l2_q1_from[0]) != 9') },
+    # -189 c3b-2: a binding in a body is scoped to it (fable).  `x: 7` in an `if` body binds the body's
+    # field, and after the body x is the argument again; a body's binding reads the enclosing field.
+    [pscustomobject]@{ Name = 'unit_arg_bind_body_scope.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
+        Absent = @('_sticky', '_dirty'); Debt = @() },
     # THE EXECUTION PAIR (FABLE-OPUS-CODE-DATA-SPLIT-20260925-189 commit 2): every activation runs over a
     # fresh instance of the method's data prototype in the unit's slot answering it, and the slot shows
     # the latest.  After keep(1) the slot shows its 7; keep(0) does not reach the declaration, so its

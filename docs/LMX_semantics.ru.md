@@ -1324,6 +1324,38 @@ HTTP/REST LMX — транспортный профиль, не ядро исп�
 
 AuthEvidence может явно содержать пользователя, область verifier, ticket, разрешённые действия и факт кворума. Это данные с зависимостями и временем действия. Принимающее выражение проверяет необходимые свойства в своих юнит-тестах по [единому механизму](#admission). Совпадение пароля или корректная подпись не создают неявных ролей, привязок имён или бессрочного допуска.
 
+### Явная защита вместо global lockout
+
+Default realm должен делать обычную локальную работу спокойной. Он должен избегать постоянного `access denied` behavior для незащищенных services, directories и applications. Если service или directory не объявлены protected, empty или bootstrap verifier может быть достаточным для ordinary access.
+
+System services и опасные administrative surfaces могут принадлежать admin realm с verifier сисадмина. Обычные user services могут оставаться в default realm. Когда пользователь или администратор решает, что конкретный service, directory или archive важен, он создает для этого объекта новый verifier realm.
+
+Encrypted data должны принадлежать собственному protection realm:
+
+```text
+protected directory
+    -> separate verifier realm
+    -> separate encryption key material
+
+`.lmz` archive
+    -> separate verifier realm
+    -> archive-local encryption key material
+```
+
+Это отличается от подхода, где весь диск считается одним secret. Full-disk encryption может защитить выключенное украденное устройство, но смешивает device recovery, operating-system access, ordinary files и truly protected data в один global mechanism. Если global secret потерян, можно потерять всю машину. Если он unlocked, слишком многое оказывается unlocked.
+
+Lingvamyxa protection должна разделять recovery и secrecy:
+
+```text
+system recovery
+    -> reset default realm, reinstall, recreate ordinary access
+
+protected data recovery
+    -> requires the protected realm credential or its recovery policy
+```
+
+Забытый default password не должен уничтожать компьютер. Забытый verifier от protected archive или protected directory может сделать эти protected data невосстановимыми, и это честная цена настоящего encryption.
+
 <a id="crypto-values"></a>
 ## 33. Криптографические значения и провайдеры
 

@@ -228,3 +228,65 @@ is then copied with lmx_graph_copy_owned into a second arena.
 - So under (A), the interior-slot form is refused by every merge or copy that reaches it.  The
   pointer-cell form survives a copy only by duplicating the binding, which loses (A)'s one
   observable difference in any copied graph.  (B) is the copier's ordinary case.
+
+## One shape for a Structure bound at run time: the measured cost (open, next_core_tasks.md §3)
+
+fable's ruling, an engineering rule (CORE: one mechanism per role), not a language question:
+- A Structure's slot holds its child's reference directly, and a Structure binding is written by
+  PUT_REF (Grok -186).
+- A pointer cell remains only where the cell itself is the value (`@: int p`).
+- Today these are DIRECT slots: a merge result (`R: merge: X`, -183 c4) and a named Structure's
+  reference fields (kinds 10/11, -172 c2).
+- These are POINTER CELLS, written by PUT and opened by DEREF on a path: an own Structure-typed
+  field (`Model: m`, the root's own Structure fields, -178 c2) and the take's `m`
+  (`receiveMessage: m`, -179).
+- They move in a later ticket, after the current queue.  This is the cost, measured on l2trans at
+  -183 c4's WIP d9623b6 (n159/sites.py, n159/shape_rows.py).
+
+Translator sites:
+- `l2_own_nsty_get`, a Structure-typed own field: 24 uses in 18 functions.
+  - The root: l2_rw_model, l2_rw_path (2), l2_rw_take, l2_rw_admit_assign (2), l2_rw_struct_arg (2),
+    l2_rw_stmt.
+  - Native: l2_emit_path_to, l2_path_kind, l2_emit_stmts (2), l2_check_body (2), l2_emit_handler,
+    l2_arr_operand, l2_index_chain, l2_path_arr_leaf, l2_own_seg_scan (2), l2_collect_asgn_body,
+    l2_graph_nsty, and one global.
+- `l2_colon_graph_ty()`, the reference-to-Structure own type: 18 uses in 11 functions.
+  - l2_check_body (3), l2_scan_body (2), l2_collect_asgn_body (2), l2_typed_formal (2),
+    l2_throw_arg_ty (2), l2_check_catch (2), l2_catch_param_own, l2_collect_catch, l2_dyn_step,
+    l2_hidden_from, l2_ret_type_word.
+- DEREF at the root: 3 (l2_rw_path_value 2, l2_rw_struct_arg 1).  Each loses one level.
+- The builder: `lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + ty - 1000)` for every pointer own
+  field (l2trans ~:21514, ~:21585).
+  - The Structure-typed ones get an empty direct slot instead.
+  - `@: T p` of a non-Structure keeps its cell.
+- Native own-field reads and writes go through the working copy and the checkpoint (21.6), with a
+  pointer load and store of the cell.  A direct slot is lmx_arena_ref_struct and
+  lmx_arena_ref_store instead.
+
+The walker:
+- LmxWalkOwn records hold a CELL (`o\from`).
+- A Structure-typed own field in a direct slot is no longer an own record (as a named Structure is
+  not), so SET does not apply to it.
+- A method's activation needs PUT_REF too.  How the per-activation copy (21.5) treats such a slot is
+  the ticket's first question.
+
+Rows that re-gate: an upper bound.  These rows' translation builds a pointer cell of the
+Structure-reference type (`LMX_TYPE_POINTER_BASE + 100`); any `@: Lmx` pointer shares it.
+- 44 rows: 42 eternal-runs, 2 translates-with-debt.
+- 10 of them walk a DEREF at the root: unit_admit_letter_typed, unit_arrarr_field, unit_charpp_return,
+  unit_root_model_field, unit_root_putof, unit_field_path_unit_colon,
+  unit_field_path_terminal_checklist, unit_struct_int_field, unit_matrix_callable_struct_identity,
+  unit_matrix_path_prim.
+- The other 34: unit_next_message_twice, unit_root_take_letter, unit_root_take_empty,
+  unit_next_message_in_method, unit_receive_letter_model, unit_native_typed_receive,
+  unit_admit_letter_formal, unit_admit_letter_not_model, unit_admit_formal_refused,
+  unit_admit_rebind_refused, unit_admit_letter_extra_field, unit_admit_letter_coarse, entry_argc,
+  unit_formal_shadows_struct, unit_s1_merge_uncaught_entry, unit_s1_implements_uncaught,
+  unit_call_args_refuse_struct, unit_colon_model_decl, unit_empty_struct_decl,
+  unit_typed_decl_vertical, unit_colon_method_lexical_model, unit_colon_method_dynamic_precedence,
+  unit_colon_method_fresh_per_activation, unit_field_path_own_write, unit_field_path_formal,
+  unit_field_path_nested, unit_field_path_nested_two, unit_struct_return, unit_c_member_struct_control,
+  unit_raw_root_model_compound, unit_raw_root_formal_compound, unit_local_model_arg,
+  unit_model_fresh_synonyms, unit_matrix_absent_struct_decl.
+- The 10 DEREF rows are measured with c4's two flips (unit_arrarr_field, unit_struct_int_field)
+  included.

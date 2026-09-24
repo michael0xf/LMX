@@ -593,6 +593,36 @@ $fixtures = @(
         Needle = 'receiveMessage: unknown payload model'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_receive_letter_model.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0'); Absent = @(); Debt = @() },
+    # FABLE-SONNET-SEND-REF-20260925-172 commit 3: `sendMessage: Ref X` inside a method body --
+    # explicit addressee (m\sender) instead of the implicit lmx_thread_parent(t). R0's own
+    # mainArgs letter's sender is the host, the same destination the implicit form already
+    # reaches, so this row cannot pin a BEHAVIORAL difference (no L2-level second sender exists
+    # yet, -182 pending) -- Debt/Absent pin the STRUCTURAL one instead: the generated C for this
+    # site's l2_msend<k> reads its addressee from refs[], never lmx_thread_parent.
+    # Mutant: revert l2_emit_send's has_ref branch -> lmx_thread_parent reappears -> RED.
+    [pscustomobject]@{ Name = 'unit_send_ref_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 0; Needle = '';
+        Args = @('0');
+        Absent = @('lmx_thread_parent');
+        Debt = @('lmx_service_post(lmx_child_service(t), refs[') },
+    # FABLE-SONNET-SEND-REF-20260925-172 commit 3: `sendMessage: Ref X` at the walked root -- no
+    # positive/running row here. Measured (not guessed, three probes) that no root-walkable
+    # reference today is BOTH type-accepted and a real postable address: `receiveMessage: m
+    # MainLetter` (2-name) refuses "an admission to a Structure type" (pre-existing,
+    # l2_rw_take/-178 c3's own documented scope); a root-level `const: @(LmxMsg m 0)` own field
+    # refuses "this statement" (frame=const, a separate pre-existing gap); the bare
+    # `receiveMessage: m` letter reference DOES type-check and build, but posting to it at runtime
+    # (it is the letter, not a Thread/Message address) crashes uncontrolled ("lmx: walk error:
+    # PRIMITIVE", exit 3) -- not a Fails/Thrown-shaped outcome any row category here fits, so nothing
+    # is pinned on it. steps/send-ref-172.md has the full account; the root mechanism itself
+    # (l2_rw_send's has_ref detection, l2_rw_fields_ty's type check, l2_emit_send's shared
+    # refs[]-based addressee) is exercised positively by unit_send_ref_method.lm2 above (same
+    # l2_emit_send body) and negatively by the refusal row just below.
+    # FABLE-SONNET-SEND-REF-20260925-172 commit 3: `sendMessage: Ref X` at the walked root refuses
+    # a Ref that is not a reference (l2_rw_fields_ty, ty < 1000) -- on-topic negative witness for
+    # the new type-check, at the exact statement.
+    [pscustomobject]@{ Name = 'unit_send_ref_root_type_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'root operation not walkable yet: a Ref that is not a reference';
+        Absent = @(); Debt = @() },
     # FABLE-SONNET-RECEIVE-RENAME-20260924-166 commit 1: `nextMessage` is no longer a language
     # word (renamed to `receiveMessage`) -- `nextMessage: m` is now an ordinary colon-assignment
     # to an undeclared name, refused like any other (measured: not "unknown method" -- the shape

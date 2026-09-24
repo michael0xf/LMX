@@ -30,7 +30,7 @@ predef: "l2src/lmx_value_owned.lm1"
 predef: "l2src/lmx_array_owned.lm1"
 predef: "l2src/lmx_array_ref_owned.lm1"
 predef: "l2src/lmx_implements.lm1"
-include: "<stdio.h>" "<string.h>"
+include: "<stdio.h>" "<string.h>" "<stdlib.h>"
 
 # lmx_root.lm1 - creating the runtime's root, running its turns, its cycle and its teardown.
 #
@@ -805,6 +805,8 @@ fn: lmx_root_exit_set (@: LmxRootExit done; int: code; @: char why) int
     if: why != 0
         done\err.len: strlen(why)
     ---
+    # D-66: why is a static string, never this struct's to free.
+    done\owns_text: 0
 return: code
 
 # The exit's texts, written: stdout's to `out`, stderr's to `err`.
@@ -822,6 +824,15 @@ fn: lmx_root_exit_write (@: LmxRootExit done; @: void out; @: void err) int
     n: done\err.len
     if: err != 0 && text != 0 && n != 0U
         c.fwrite((cast: (@: void) text), 1U, n, err)
+    ---
+    # D-66: written -- lmx_root_exit_admit's own host-seam copies are this struct's alone to
+    # free, and only ever this struct's (never lmx_root_exit_set's static "why" strings).
+    if: done\owns_text != 0
+        free((cast: (@: void) done\out.data))
+        free((cast: (@: void) done\err.data))
+        done\out.data: 0
+        done\err.data: 0
+        done\owns_text: 0
     ---
 return: 0
 
@@ -1189,10 +1200,36 @@ fn: lmx_root_exit_admit (@: LmxArena arena; @: Lmx model; @: Lmx letter; @: LmxR
     out: (cast: (@: LmxArrayDesc) lmx_arena_ref_value(payload, 1U))
     err: (cast: (@: LmxArrayDesc) lmx_arena_ref_value(payload, 2U))
     done\exit_code: lmx_int_value_known(lmx_arena_ref_value(payload, 0U))
-    done\out.len: out\len
-    done\out.data: (cast: (@: char) out\data)
-    done\err.len: err\len
-    done\err.data: (cast: (@: char) err\data)
+    # D-66: out/err\data point into the letter's own arena, unreachable to the collector the
+    # instant this call returns (the taken letter is held only by lmx_root_host_take's own
+    # locals, not any graph root the collector's mark walk reaches) -- copy the bytes into
+    # host memory now.  Explicit host-seam ownership (lmx_root_exit_write frees it once
+    # written), not a new reference keeping the letter's arena alive.
+    done\out.len: 0U
+    done\out.data: 0
+    done\err.len: 0U
+    done\err.data: 0
+    done\owns_text: 0
+    if: out\len != 0U && out\data != 0
+        done\out.data: (cast: (@: char) calloc(out\len, 1U))
+        if: done\out.data = 0
+            return: c.LMX_ROOT_INVALID
+        ---
+        memcpy((cast: (@: void) done\out.data), out\data, out\len)
+        done\out.len: out\len
+    ---
+    if: err\len != 0U && err\data != 0
+        done\err.data: (cast: (@: char) calloc(err\len, 1U))
+        if: done\err.data = 0
+            free((cast: (@: void) done\out.data))
+            done\out.data: 0
+            done\out.len: 0U
+            return: c.LMX_ROOT_INVALID
+        ---
+        memcpy((cast: (@: void) done\err.data), err\data, err\len)
+        done\err.len: err\len
+    ---
+    done\owns_text: 1
     # FABLE-SONNET-SEND-REF-20260925-172 commit 4 (lines edited under fable's authorization;
     # author's Q26.2 ruling): the sender slot is a pointer CELL, not the Message's address
     # directly -- classified before reading through it, so a raw address left there (the old

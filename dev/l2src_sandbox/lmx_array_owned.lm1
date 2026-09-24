@@ -1,5 +1,6 @@
 predef: "lmx_array_owned.h.lm1"
 predef: "l2src/lmx_pool.h.lm1"
+predef: "l2src/lmx_chars.h.lm1"
 include: "<stdlib.h>"
 
 # An Array of one element type: TWO arrays of the arena.  The descriptor is a cell of the
@@ -18,6 +19,14 @@ fn: lmx_array_new_owned (int: type; size_t: count; @: LmxArena arena) @: LmxArra
     if: type = c.LMX_TYPE_ARRAY_OF_CHAR
         stride: c.sizeof(c.char)
         element_type: c.LMX_TYPE_CHAR
+        # D-63: the interned char table (lmx_chars_init) and an ordinary char array's own
+        # backing share the one (KIND_PRIMITIVE, TYPE_CHAR) pool of this arena, and
+        # lmx_char_cell can only ever find the table in that pool's FIRST chunk.  Laying
+        # the table out here, before this array's own backing ever claims that pool,
+        # keeps the table first regardless of which char array a program declares first.
+        # A no-op once the table already exists (its own ordinary "already laid out"
+        # refusal); never refuses THIS array's own construction either way.
+        lmx_chars_init(arena)
     else:
         if: type = c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR
             stride: c.sizeof(c.char)

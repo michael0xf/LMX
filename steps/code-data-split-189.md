@@ -368,3 +368,61 @@ commits, each gated:
 
 Gates: one per commit, asked «GATE?» and «GATE DONE» with fable.  c4 (the `Lmx.native` word, and
 the signature as a graph field) is joint with Grok's -188 c4.
+
+### The re-entry data: fable's decision (i), and a proposal for Grok -188 c3
+
+Decision (fable, 2026-09-25): the caller always passes the data, explicitly.  That is role by
+position; the trampoline decides nothing and receives the data as an argument (for a native entry,
+`self`).
+- A static call outside a strongly connected component (the root's CALL included; `M\x` after a
+  call from the root must show that activation): data = M.
+- A static call inside one (a re-entry), and every dynamic call by reference: data = a fresh
+  instance (Q28).
+- A native caller that does not know the callee's prototype gets it from the kernel.
+- Option (ii) is out.  Option (iii) is not needed.
+
+Proposed shapes (Grok -188 c3: the kernel and the walker; mine, c3a: the emission):
+
+1. `lmx_fresh (@: LmxArena arena; @: Lmx code) @: Lmx`: the same operation as `Model: fresh`,
+   `merge(prototype, empty)`.
+   - It returns a new Structure with `parent = code\parent`, `len = code\len`, and no operators.
+   - Child 0 until c4: the code's child 0, the shared callable, kept by address so the slot numbers
+     stay those of the translator's own tables.  With `Lmx.native` (c4) the prototype's numbering
+     loses it.
+   - Each other child, by what the arena classifies it as in `code`:
+     - a numeric cell: a fresh cell of the same type, 0;
+     - a char: the interned 0 (`lmx_char_cell(arena, 0)`);
+     - a pointer cell: a fresh pointer cell of the same type, null;
+     - an Array descriptor: a fresh Array of the same element type and length, zeroed;
+     - a Structure whose parent is `code` (a control body, fields only): the same rule, recursively,
+       its parent the new instance;
+     - anything else: refused.  The translator never puts anything else there; it is not guessed.
+   - This is the layout the builder and c2's `l2_new<i>` make, read from the graph itself: no
+     translator table and no role record.  That is plan §3 item 9's «ничего сверх самой
+     Structure».  If Grok prefers `lmx_plan`'s paths, the result is the same instance.
+   - Status: NULL on NOMEM, or a refused child.  The caller's X1.
+2. The prim ABI carries data explicitly: `lmx_call_prim (@: LmxArena arena; @: Lmx code; @: Lmx
+   data; @@: void refs; size_t: nargs; @: void dest; @@: void out) int`.
+   - It dispatches on `code`: child 0 today, the `native` word after c4.
+   - It enters `entry(data, refs, nargs, dest, out)`: the trampoline's `owner` is the data, `self`,
+     and `node` is `data\parent`.
+   - The trampoline makes nothing.  c2's callee-side `l2_new` in the trampoline goes.
+3. The walker's CALL.  Proposed: the data is an operand, not a flag word:
+   `[call, code, data, arg ...]`.
+   - For an in-place call, `data` is the code Structure itself: a plain Structure child evaluates to
+     itself (-174 c2).
+   - For a re-entry it is `[fresh, code]`, a new role evaluating `lmx_fresh`.
+   - The translator decides per site, and the walker evaluates `data` like any operand and passes
+     it on.
+   - A flag word on CALL would work too; the operand keeps «data by position» in the graph.
+
+On my side (c3a), after -188 c3 lands:
+- The root's op tree gets the data operand of each CALL.
+- Native code:
+  - `l2_m<i>(M\parent, M, ...)` outside a strongly connected component;
+  - `l2_c<t>: lmx_fresh(l2_program_arena, M)` then `l2_m<i>(l2_c<t>\parent, l2_c<t>, ...)` on a
+    re-entry;
+  - `l2_d<t>: lmx_fresh(l2_program_arena, code)` then `lmx_call_prim(arena, code, l2_d<t>, ...)` on
+    a dynamic call.
+- c2's `l2_new<i>` then goes: one mechanism for a fresh instance (CORE, one mechanism per role).
+- So c3a lands with or after -188 c3.  c3b (no working copies) and c3c (Q29) do not depend on it.

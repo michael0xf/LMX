@@ -18989,6 +18989,12 @@ fn: l2_ccall_box_int (const: @(LmP0Node node); int: mi) int
             return: 1
         return: 0
     ---
+    # A `define:` constant (l2_define_name) is passed as itself (D-68): it holds no L2 value to
+    # stage, and an `int` temporary cut a char* define to 32 bits -- the b5 mixa crash
+    # unit_define_actual was written for, back until this.  Its type is C's, checked against
+    # the callee's prototype, as `c.NAME`'s is.
+    if: l2_define_name(node\as\atom) != 0
+        return: 0
 return: 1
 
 fn: l2_emit_ccall (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int

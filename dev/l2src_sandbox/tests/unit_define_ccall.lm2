@@ -1,0 +1,20 @@
+predef: "l2src/tests/unit_define_ccall.h.lm1"
+
+# D-68 (FABLE-OPUS-MERGE-PARTS-20260926-193): a `define:` constant -- of the predef and of this
+# unit -- passed to a C function is passed as itself.  Staged in an `int` temporary, a char*
+# define lost its high bits (the b5 mixa crash): strlen then read a cut pointer and the program
+# faulted.  Success is 11 (5 + 6).
+define: UNIT_WORD "world!"
+
+fn: m () int
+    size_t: a 0U
+    size_t: b 0U
+    a: strlen(PROBE_WORD)
+    b: strlen(UNIT_WORD)
+    if: strlen(PROBE_WORD) != 5U
+        return: 81
+    return: (cast: (int) (a + b))
+end: m
+
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

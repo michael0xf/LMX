@@ -157,21 +157,52 @@ program's arena, as for lmx_walk_merge_model.
   - mutants: drop the profiles span (the eternal operand is copied, its address differs); reverse
     the operand order.
 
-### Its first consumer: q26's merge in place
+### The «into» form: q26's own-field write (Q26.1, answered)
 
-The author's q26 (Q21 = A): `o\inner: a`, into an own Structure field, merges a's same-name fields
-into inner's slots and appends the new ones.
-- inner keeps its identity, and later writes to a are not seen through o\inner.
-- That is a two-operand merge with the target as the model: the override map (LmxMergePair) pairs a's
-  fields with inner's slots.
-- The open point for Grok: lmx_merge_profiles_owned with an override map keeps the model's LAYOUT
-  but writes into a fresh `result` (lmx_merge_owned.lm1 ~:290).  It does not merge in place.
-  «inner keeps its identity» needs an «into» form: the result is the model itself, grown when a
-  brings new fields.
-  - Or the author rules that a fresh result stored in the slot is enough.
-- So the primitive gets either an override span and an «into» flag, or a sibling
-  `lmx_walk_merge_into [prim, record, target, op]`.
-- Natively, the l2_emit_admit / merge sites stay as they are.
+The author (Q26.1, verbatim in the blog): «куда вы положите эти операции для интерпретатора? Они как
+if или for, и они, конечно, не новый occurrence inner».
+- `o\inner: a` on an own Structure field is a body operation that writes INTO the same Structure.
+  - a's same-name fields go into inner's slots, and new ones are appended (Q21 = A).
+  - inner keeps its identity, so references taken earlier see the new values.
+- New occurrences come only from declarations (Q24).
+
+So there are two records, not one PRIM with a null or non-null target.  The operands mean
+different things (container and body vs target and pairs), and one record would carry two
+contracts.
+- `lmx_walk_merge [prim, record, container, body, op1, ..., opn]`: a FRESH result, as above.  It is
+  for the 6 rows, `R: merge: A B ...`, and `\out` is the result.  One operand is
+  lmx_walk_merge_model's case (c4).
+- `lmx_walk_merge_into [prim, record, target, pairs, op]`: INTO target, for q26.
+  - target: the own Structure written, `o\inner`.  The translator gives it as an evaluated value
+    (the way to it, as PUT_OF's holder), so a Structure reached through a reference is a target
+    too.
+  - op: the source Structure (a), or a pointer cell holding one (-180's rule).
+  - pairs: which slot of target each field of op writes into.
+    - The graph has no names, so the translator pairs by name when the program is translated
+      (l2_ns_slot_named on both types).
+    - The builder makes them a plain Structure of size_t cells, two per pair (the target slot, the
+      op field), as LmxMergePair's (model_slot, field) with operand 1.
+  - Each paired field's VALUE is written into target's slot: a number's value into target's
+    cell, a char as its interned cell.
+  - An unpaired field of op is appended to target, which needs target's field array to grow in
+    place while the node keeps its address.
+    - No row needs that: in both q26 rows a is a Model and inner is a Model, so every field
+      pairs.
+    - So the first build may refuse an append (THROW_MERGE, or a translation refusal when the
+      layouts show it).
+    - How a Structure's refs array grows in place is Grok's call.
+  - A Structure-typed field of op (a nested merge into) is not needed by the rows either.
+  - \out is 0: a statement.
+  - Status 2 (THROW_MERGE, the root's THROWN+1) for a target or op that is not a Structure, or for
+    a pair out of range.
+- Under both, the kernel's C function `lmx_merge_into_owned(target, op, pairs, npairs, src_arena,
+  dst_arena, ...)`.
+  - The native own-field write `o\inner: a` emits it at its site.
+  - Today that site is refused: at the root «a Structure assigned through a path»
+    (l2_rw_path_write), and natively the -92/-131 located refusal.
+- The lmx_merge_profiles_owned override map (~:100-:130, ~:280-:310) already pairs op fields to
+  model slots and appends the unpaired ones.  What it lacks is the target itself: it writes a
+  fresh `result`.  The into form is that same pairing, written into the model in place.
 
 ## q26 follow-up: how lingvamyxa_prev handled a reference to a Structure (read)
 
@@ -234,32 +265,58 @@ is then copied with lmx_graph_copy_owned into a second arena.
 The author, verbatim: «ну самой конечно структуры, а чего ещё?» (the Structure itself, what else).
 - `@` of any Structure binding is the address of the Structure.
 - A reference field `@: Inner inner` holds that address.  A read through it is one DEREF.
-- `o\inner: @ a` is PUT_REF of a's reference (Grok -186).
 - prev's address-of-binding rule is not carried over.
 
-The build that follows, after -186 and c4:
+Correction, the same day (the author, verbatim in the blog): «you cannot put a direct reference to a
+Structure into data*void -- it would count as a Structure [a child].  You can put a reference to a
+reference.  But after reading it is just a reference to the Structure.»
+- An OWN Structure binding is a direct slot: the copier descends into it as a child, and admission
+  sees a Structure.  It is written by PUT_REF (Grok -186).  This covers `Inner: inner`, `Model: m`,
+  the root's Structure fields, the take's m, and a merge result (c4 is unaffected).
+- A REFERENCE is a pointer cell: the graph's marker that this is a reference, not a child.
+  - This covers a field `@: Inner inner` and a letter's `sender` (slot 0, `@: LmxMsg`; the author:
+    «разумеется, в L2 -- так»).
+  - The copier does not descend into the pointee, which stays shared.
+  - The program sees a plain Structure reference after a read: `o\inner\value` is one hop, and
+    `@ inner` is the Structure's address, never the cell's.  D-53 is exactly that read defect, on
+    the translator's side.
+- So `o\inner: @ a` is a PUT of a's Structure reference into the field's pointer cell, as -174
+  c2's reference PUT does.  It is not PUT_REF.
+- Q26.2 = (B) stands for what the program sees.  The cell is representation only.
+
+The build that follows, after Sonnet's c4 (the letter's sender and the kind 10/11 prototype
+fields as pointer cells), so the cell shape is the same on both sides:
 - The reference-field rebind `o\inner: @ a`, at the root and natively.
 - D-53: `@` of a Structure-typed own field or local gives the Structure's reference, not the
   pointer cell's address.  D-53 closes with that commit.
 - The two `*_struct_rebind_refused` rows are rewritten to the rebind form, with running facts
   (renamed if the name lies).
-- The own-field form `o\inner: a` waits for Q26.1 (a new occurrence vs a write into the same
-  Structure).  If Q26.1 is still open by then, it goes with the n-operand merge primitive's
-  ticket.
+- The own-field form `o\inner: a`: Q26.1 is answered.  It is a write INTO the same Structure
+  (merge in place, identity kept), so it goes with lmx_walk_merge_into (the shape above), not with
+  the rebind.
+- q26 is closed.  Own: merge in place.  Reference: rebind via `@`.  Q26.1: into the same
+  Structure.  Q26.2: `@` is the Structure; an own binding is a direct slot, and a reference is a
+  pointer cell read through.
 
 ## One shape for a Structure bound at run time: the measured cost (open, next_core_tasks.md §3)
 
-fable's ruling, an engineering rule (CORE: one mechanism per role), not a language question:
-- A Structure's slot holds its child's reference directly, and a Structure binding is written by
-  PUT_REF (Grok -186).
-- A pointer cell remains only where the cell itself is the value (`@: int p`).
-- Today these are DIRECT slots: a merge result (`R: merge: X`, -183 c4) and a named Structure's
-  reference fields (kinds 10/11, -172 c2).
-- These are POINTER CELLS, written by PUT and opened by DEREF on a path: an own Structure-typed
-  field (`Model: m`, the root's own Structure fields, -178 c2) and the take's `m`
-  (`receiveMessage: m`, -179).
-- They move in a later ticket, after the current queue.  This is the cost, measured on l2trans at
-  -183 c4's WIP d9623b6 (n159/sites.py, n159/shape_rows.py).
+The rule, after the author's correction above:
+- An OWN Structure binding is a direct slot, written by PUT_REF (Grok -186).
+- A REFERENCE is a pointer cell whose read is absorbed.  So is a cell that is itself the value
+  (`@: int p`).
+- Today's shapes:
+  - Direct slots: a merge result (`R: merge: X`, -183 c4).
+  - Direct slots, which revert to cells (Sonnet): a named Structure's reference fields (kinds
+    10/11, -172 c2) and the letter's raw sender in slot 0 (-173).
+  - Pointer cells that should be own direct slots, written by PUT and opened by DEREF on a path:
+    an own Structure-typed field (`Model: m`, the root's own Structure fields, -178 c2) and the
+    take's `m` (`receiveMessage: m`, -179).
+- The copier today copies a pointer cell TOGETHER WITH its pointee (the q26.2 probe above).
+  - That is right for today's own cells, and wrong for a reference, whose pointee stays shared.
+  - So the own bindings move to direct slots first; only then can the copier stop descending into
+    a cell's pointee, because until then it cannot tell the two apart.
+- The own bindings move in a later ticket, after the current queue.  This is the cost, measured on
+  l2trans at -183 c4's WIP d9623b6 (n159/sites.py, n159/shape_rows.py).
 
 Translator sites:
 - `l2_own_nsty_get`, a Structure-typed own field: 24 uses in 18 functions.
@@ -289,7 +346,8 @@ The walker:
   the ticket's first question.
 
 Rows that re-gate: an upper bound.  These rows' translation builds a pointer cell of the
-Structure-reference type (`LMX_TYPE_POINTER_BASE + 100`); any `@: Lmx` pointer shares it.
+Structure-reference type (`LMX_TYPE_POINTER_BASE + 100`).  Any `@: Lmx` pointer and any
+reference field shares it, and those stay cells.
 - 44 rows: 42 eternal-runs, 2 translates-with-debt.
 - 10 of them walk a DEREF at the root: unit_admit_letter_typed, unit_arrarr_field, unit_charpp_return,
   unit_root_model_field, unit_root_putof, unit_field_path_unit_colon,

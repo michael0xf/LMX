@@ -17189,21 +17189,38 @@ fn: l2_rw_path_read (const: @(LmP0Node node); const: @(LmP0Text t); int: parent;
         return: l2_rw_refuse(node, "a Structure value")
 return: l2_rw_path_value(path, path[2], parent, out)
 
-# A path write `a\b...: v`: PUT into the last field.  PUT's holder is a Structure fixed when the
-# graph is built (lmx_walk_slot), so the way must not go through a reference: a named Structure and
-# its inline nested ones, whose nodes the builder has made (l2_nsp).  Through a reference the
-# holder exists only in R0's turn, and PUT has no evaluated holder yet (D-54, Grok -177 c4).
+# A path write `a\b...: v` into a number field.
+# - A way fixed when the graph is built -- a named Structure and its inline nested ones, whose nodes
+#   the builder has made (l2_nsp) -- is PUT with that holder.
+# - Through a reference the holder exists only in R0's turn, so it is PUT_OF (-177 c4, D-54): its
+#   holder is evaluated -- the way to the Structure holding the last field (l2_rw_path_value one
+#   level up), DEREF opening each reference (-183).
+# A whole Structure assigned through a path stays fail-closed (the ruling pinned by
+# unit_*_struct_rebind_refused).
 fn: l2_rw_path_write (const: @(LmP0Node stmt); const: @(LmP0Text t); @: LmP0Field value; int: n; int: into; @: int out) int
     c.array: [40]: int path
     int: v
+    int: h
+    int: kind
     if: l2_rw_path(stmt, t, 1, path) != 0
         return: 1
-    if: path[5] != 0
-        return: l2_rw_refuse(stmt, "a field write through a reference")
     if: path[3] < 0
-        return: l2_rw_refuse(stmt, "a Structure value")
+        kind: path[7 + 2 * (path[2] - 1)]
+        if: kind = 2 || kind = 3
+            return: l2_rw_refuse(stmt, "a Structure assigned through a path")
+        return: l2_rw_refuse(stmt, "a field path")
+    ---
     if: n < 1
         return: l2_rw_refuse(stmt, "this assignment")
+    if: path[5] != 0
+        if: l2_rw_frame(into, "LMX_WALK_OP_PUT_OF", 4, out) != 0 || l2_rw_path_value(path, path[2] - 1, \out, @ h) != 0 || l2_rw_put(\out, 1, h) != 0
+            return: 1
+        if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, path[6 + 2 * (path[2] - 1)]) < 0
+            return: 1
+        if: l2_rw_texpr(value, n, path[3], \out, @ v) != 0
+            return: 1
+        return: l2_rw_put(\out, 3, v)
+    ---
     if: l2_rw_frame(into, "LMX_WALK_OP_PUT", 4, out) != 0
         return: 1
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_nsp[%d])) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, path[4], \out, path[6 + 2 * (path[2] - 1)]) < 0

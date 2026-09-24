@@ -1,0 +1,22 @@
+# A write through a reference at the walked root (FABLE-OPUS-ROOT-PUTOF-MUL-20260925-183 commit 1):
+# PUT_OF.  m\value: 42U writes the Structure m holds;
+# read back through m (bit 1) and, the Structure being passed by reference, through a method's
+# formal (bit 2); Model itself keeps its 1U (bit 4): 7.
+Model:
+    size_t: value 1U
+end: Model
+
+fn: peek (Model: x) size_t
+return: x\value
+
+Model: m
+int: r 0
+m\value: 42U
+if: m\value = 42U
+    r: r + 1
+if: peek(m) = 42U
+    r: r + 2
+if: Model\value = 1U
+    r: r + 4
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

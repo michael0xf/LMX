@@ -8,6 +8,11 @@ predef: "l2src/tests/unit_define_actual.h.lm1"
 # Two cases: a define from the predef chain inside an if condition, and a
 # define of this unit in a return. A constant has nothing to stage; each is
 # passed as itself.
+#
+# FABLE-OPUS-MERGE-PARTS-20260926-193 T1b: the three names are admitted as DECLARED -- a
+# `define:` of the predef and of this unit -- not by their spelling.  The staging is back,
+# though: LABEL, FG and UNIT_LABEL go through `int` temporaries again (measured the same
+# before T1b).  The harness row pins that as debt until it is fixed.
 
 define: PROBE_UNIT_LABEL "unit"
 
@@ -21,4 +26,4 @@ fn: probe_define_unit_actual (@: void panel) int
     return: probe_define_take(panel, 1U, PROBE_UNIT_LABEL, 7U)
 end: probe_define_unit_actual
 
-return: 0
+return

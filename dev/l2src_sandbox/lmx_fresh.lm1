@@ -191,9 +191,10 @@ fn: lmx_fresh_child (@: LmxArena arena; @: Lmx proto; @: void child; @: Lmx fres
             \out: cell
             return: 0
         ---
-        # -186 additive: Structure-typed owns that are STILL pointer cells (pre-c3b-3)
-        # keep a fresh null pointer cell so PUT/DEREF paths stay green. Empty direct
-        # slots (child 0) already store 0 above; c3b-3 switches the builder to that form.
+        # -186 k3: @: T reference fields stay null pointer cells on fresh (share later via
+        # PUT). Structure-typed owns that are still pointer cells (pre-c3b-3) keep the
+        # same null-cell form so PUT/DEREF paths stay green until the joint landing.
+        # Empty direct slots (child 0) already store 0 above.
         if: vtype >= c.LMX_TYPE_POINTER_BASE
             cell: lmx_pointer_new_owned(vtype, arena)
             if: cell = 0

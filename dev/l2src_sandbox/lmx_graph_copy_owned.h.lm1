@@ -14,8 +14,9 @@ predef: "l2src/lmx_arena.h.lm1"
 # Starting from `source`, walk its structural chain to parent = 0 and copy the whole
 # reachable lexical tree: every Structure reached through node or through a
 # child slot, all of its slots, mutable primitive cells, char * cells, Array
-# records with their backing and reference-valued elements. `independent`
-# bounds the walk because its root already has parent = 0. Methods are shared:
+# records with their backing and reference-valued elements.
+# Pointer cells (@: T): the cell is copied; the pointee is SHARED (-186 k3).
+# `independent` bounds the walk because its root already has parent = 0. Methods are shared:
 # a METHOD child keeps the very same {addr, sig} descriptor pointer. Interned
 # characters map to the destination table `dst_chars` when one is given (a
 # cross-Message copy); with dst_chars = 0 the source cells are kept (a copy

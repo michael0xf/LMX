@@ -490,14 +490,218 @@ l2_harness GREEN 351/351 (349 + this commit's 2 new rows), `build_l2src -Run`
 GREEN (kernel selftests included), L3 selftest 11/11 suites + type budget
 OK (4 units), check_docs OK, `git diff --check` clean.
 
-## Still open for -172
+## Commit 4: the author's Q26.2 ruling -- a reference is a reference TO a reference
 
-Commit 4 (the driver-side behavioral witness: a peer Message built via
-Grok's new `before_turn` launch tap, FABLE-GROKBOT-LAUNCH-TAP-20260925-182,
-posting a `Ping` letter to R0 with that peer as sender, observing the
-reply land in the peer's own inbox rather than the host's) -- not started,
-gated on -182 landing on origin/main.
+Base: origin/main after commit 3 integrated (`a685ce6`), then Grok's -182
+(`f5ad650`/`6284dc2`) and Opus's -183 c1/c2 landed alongside.
+
+### The ruling, and what it reverses
+
+The author (2026-09-25, blog verbatim, confirmed for L2 specifically on
+request -- "разумеется, в L2 -- так"): a slot holding a Structure's
+address DIRECTLY makes that Structure a CHILD of the holder (own field;
+the copier descends into it, admission sees a Structure there). A
+reference (`@: T name`) is a reference TO a reference: the slot must hold
+a pointer CELL's address instead, the copier does not descend into the
+pointee, and a read through the field yields the pointee (one level
+removed). This reverses commit 2's D-56 fix outright: kind 10/11's
+slot-reference representation (no cell, direct address in the slot) was
+the wrong shape -- fable's own words, "my mistake, not yours."
+
+Reverted `l2trans.lm1`'s kind 10/11 handling to commit 1's original
+pointer-cell code, byte-for-byte (recovered via `git show 4aee8cf` on the
+three sites, not rewritten from memory): the prototype builder's two
+construction arms (`lmx_pointer_new_owned`/`lmx_arena_take_profiled`,
+`LMX_TYPE_POINTER_BASE + <code>`); the read side
+(`l2_field_path_read`'s kind=10||11 branch, back to
+`l2_emit_cell_load`/`l2_own_ty_of_param`, one level through the cell, not
+a direct `l2_xp[0]` deref); the write side (back to
+`lmx_pointer_store_known`, through the cell, not a bare slot assignment).
+
+### D-56's real cause, now understood correctly
+
+D-56 was never about the FIELD's own representation choice -- it was that
+-173's mainArgs letter, and this ticket's own `sendMessage` letter
+emission, stored the sender's raw address DIRECTLY in the letter's own
+slot 0, the same shape kind 3 (an inline nested Structure) uses. Under
+the Q26.2 rule that is wrong for a Message reference specifically: a
+letter's sender needs the SAME pointer-cell treatment as any other
+reference field, not the "empty uses is true" null-consumer trick D-56's
+first fix relied on. Fixed both letter builders to store a pointer cell
+(`LMX_TYPE_POINTER_BASE + 29`, LmxMsg -- the same code `l2_kernel_ptr_word`
+already carries): `l2trans.lm1`'s `l2_emit_send` (this ticket's own
+site), and, under fable's explicit authorization for this commit,
+`lmx_root.lm1`'s mainArgs build (`lmx_root_launch_tapped`, the sender-store
+line) together with `lmx_root_exit_admit`'s own sender read, which now
+classifies the slot (`LMX_KIND_PRIMITIVE`, type `>= LMX_TYPE_POINTER_BASE`)
+before dereferencing it through `lmx_pointer_value_known` -- a raw
+address left there is a located `LMX_ROOT_INVALID`, not a misread. That
+classify-then-deref check is also this commit's own mutant on the letter
+side (see below).
+
+### Measured, not assumed: landing the translator side alone breaks 132 of 354 targets
+
+Before touching any kernel file, landed just the `l2trans.lm1` side and
+ran the harness to check the blast radius. 132 of 354 targets went RED --
+not only messaging fixtures. Root cause, found by reading both the
+failing logs and `lmx_root_exit_admit`'s own code, not guessed:
+`lmx_root_host_take` compares `launch\done.sender` (populated by
+`lmx_root_exit_admit`'s RAW read of a letter's sender field) against
+R0's own real address to decide whether R0 "exited". Since EVERY
+eternal-runs fixture reports its result via `sendMessage: exit(...)`,
+which now goes through the same `l2_emit_send` storing a cell, every
+single one of those admissions started failing, cascading into "R0
+closed without an exit Message ... its turn ended without setting
+success" -- this is why the two `lmx_root.lm1` sites (not just the
+letter builder fable's own message named) are both load-bearing, and why
+they had to land in the same commit as the translator side, atomically.
+
+### Downstream kernel selftests: four sites, two files, all reported before fixing
+
+Four pre-existing kernel selftests read or wrote a letter's sender field
+RAW, self-consistently, entirely outside `l2trans` -- broken by the same
+representation change, fixed under fable's explicit authorization (each
+one reported with its exact line before being touched, never silently
+patched, per her standing instruction):
+
+- `lmx_argv_letter_selftest.lm1`: `al_make` (built the letter) and
+  `al_holds` (read it back) both updated to the cell shape -- scenarios A
+  and B (self-referential, using only this file's own pair) were
+  already green even before the fix, since both sides agreed with each
+  other; only scenario C (checking the REAL host-built mainArgs letter
+  against `al_holds`'s raw read) was ever red.
+- `lmx_root_host_selftest.lm1`: three separate sites, found one commit at
+  a time by re-running `build_l2src -Run` after each authorized batch,
+  not all at once. `host_send_exit` (R0's own hand-written exit-letter
+  build) and `host_r0_body` (R0's own hand-written mainArgs-letter read)
+  were the two fable named first. A third, `build_l2src -Run` itself
+  turned up: a standalone, direct `lmx_root_exit_admit` API test (no
+  `lmx_root_launch` or R0 body involved) that hand-builds a letter with a
+  `Lmx` Structure pointer stored raw as the sender -- fixed the same way,
+  reported before fixing, under fable's standing authorization
+  ("the same shape applied again, not a new decision").
+
+### The driver-tap behavioral witness
+
+`unit_send_ref_driver_tap.lm2`, gated on Grok's
+FABLE-GROKBOT-LAUNCH-TAP-20260925-182 (`LmxRootBeforeTurn` /
+`lmx_root_launch_tapped`, landed between commits 3 and 4). Read Grok's
+own `lmx_root_before_turn_selftest.lm1` in full before writing any driver
+code, per fable's instruction, and mirrored its peer-construction shape
+closely: a standalone `LmxThread` (own arena, mail, schedule, thread
+record) built by the driver itself and registered directly in
+`lmx_root_service(root)` -- not a child of the host (the host's own graph
+has exactly `LMX_ROOT_HOST_FIELDS` = 3 fixed fields, no room for a
+second child, measured in commit 3's own witness-blocker investigation).
+
+New driver pieces, behind a new driver fact `ref 1` (opt-in, every other
+row's behavior is unchanged):
+
+- `l2_driver_before_turn (root, r0)`: the tap itself. Builds the peer,
+  registers it, then builds and posts a second letter to `r0` -- AFTER
+  the host's own mainArgs post (Grok's tap runs after that post and
+  before the manager round, so timing is fixed, not chosen) -- whose
+  payload is `Ping(n: 1)` and whose sender is a pointer cell holding the
+  peer's own address (the same shape every other letter now uses).
+- `l2_driver_service_post (service, address, letter, letter_arena)`: NOT
+  a launch-time tap -- a COMPILE-TIME one, `-Dlmx_service_post=
+  l2_driver_service_post` on the fixture's own generated-C compile step,
+  the same mechanism the existing merge taps already use. This is the
+  general observation point for every `lmx_service_post` call the
+  GENERATED PROGRAM makes (mainArgs's own post and the tap's own post are
+  driver code, not generated code, so they call the real kernel function
+  directly, unaffected): it counts a post addressed to the peer
+  (`reply_to_sender`) or to the host/parent (`reply_to_parent`) without
+  ever needing to inspect either mailbox after the fact, and unregisters
+  the peer SYNCHRONOUSLY, inside the very call a successful reply to it
+  makes -- the only point before the host's close where that can happen,
+  since the reply itself is generated by `sendMessage: Ref X`
+  (`l2_emit_send`), not native code this driver could edit the way
+  Grok's own selftest edits its hand-written R0 body.
+- `l2_driver_root_launch` now calls `lmx_root_launch_tapped` always
+  (passing `l2_driver_before_turn` when `ref 1` is set, `0` otherwise --
+  identical to what `lmx_root_launch` itself does internally), so every
+  other row's behavior is byte-for-byte unchanged.
+
+The fixture: `receiveMessage: junk MainLetter` (bare, discards mainArgs)
+THEN `receiveMessage: m Ping` (the peer's own letter). Measured directly,
+before writing this shape, that `receiveMessage` takes the NEXT letter
+in the inbox unconditionally and THROWS an `implements` error on a shape
+mismatch -- it does not search the inbox for an admitting one. So
+"selective" receive, as fable's own design phrase put it, is not a new
+search mechanism at all: it is exactly two sequential takes, mainArgs
+first (always first in the inbox, since the host posts it before the tap
+runs), the peer's letter second. Then `sendMessage: m\sender Pong(n: 2)`
+(the Ref-addressed reply) and, separately, `sendMessage:
+exit(exit_code: got; ...)` to report a defined exit code to the host --
+an L2-generated root program has no OTHER way to complete with a defined
+exit code, so this second send is unavoidable, not an oversight.
+
+One correction to my own first attempt, found by running the fixture and
+reading its actual output rather than assuming: expected `reply-to-parent
+0` at first (nothing should reach the host). Wrong -- the fixture's own
+`exit(...)` report IS a post to the host, so the baseline is
+`reply-to-parent 1` (the routine exit), not 0. Adjusted the row's
+expectation rather than the fixture; a real mutant (Ref addressing
+broken) is still cleanly visible as `reply-to-parent 2` (the misrouted
+Pong plus the routine exit), `reply-to-sender 0`.
+
+### D-62
+
+Logged while building the root-walked witness in commit 3, recorded here
+in commit 4 as fable asked: `sendMessage: Ref X` at the walked root,
+given a Structure reference that is not a Thread/Message address,
+translates and builds cleanly (the static reference-type check,
+`l2_rw_fields_ty`, is correct -- the operand really is a reference) but
+crashes uncontrolled at runtime, `lmx: walk error: PRIMITIVE`, instead of
+a located refusal or an X1 abort. Traced the exact mechanism:
+`lmx_service_post` returns non-OK, the generated `l2_send<k>`/`l2_msend<k>`
+body answers with a bare `return: 1`, and `lmx_walk_prim`
+(`lmx_walk.lm1:1119-1136`) maps any `said` that is not
+`LMX_PRIMITIVE_OK` and not one of the two named `LMX_PRIMITIVE_THROW_*`
+codes to the generic `LMX_WALK_PRIMITIVE` status -- not a THROWN code,
+not a location. Not specific to Ref: the exact same generic status is
+what ANY internal `l2_send<k>` failure (allocation failure, say) already
+produced, at the root, before this ticket; Ref is only the first thing
+that makes the addressee itself user-controlled, so this path is
+reachable through more than out-of-memory now. Kernel/emission-side (the
+generic `LMX_WALK_PRIMITIVE` fallback, or the shape `l2_emit_send`'s
+generated body reports failure in), not the translator's own static
+check, which is correct as it stands.
+
+### Mutation witnesses
+
+(1) Reverted `l2_emit_send`'s `if: has_ref != 0` addressee branch to a
+dead condition (scratchpad backup/restore, byte-identical restore
+confirmed both times) -- RED, exactly the 2 fixtures that depend on it:
+`unit_send_ref_method`'s own Debt/Absent text check (the generated C
+reverts to `lmx_thread_parent(t)`), and `unit_send_ref_driver_tap`'s
+`reply-to-sender 0` / `reply-to-parent 2` -- plus, unprompted, "the host
+could not close" (the mutant also leaves the peer permanently registered,
+since the unregister that depends on a successful reply-to-peer post
+never fires -- a second, independent signal isolating the same mutant).
+Restored; harness GREEN again, 355/355.
+
+(2) D-56's own mutant: reverted only the letter-builder cell-wrapping
+(raw address restored in the letter's own construction, prototype/read/
+write left as cells) -- `unit_receive_letter_model`/`unit_send_ref_method`
+RED via the domain-kind mismatch at admission, confirming both sides (the
+field's own representation AND the letter's own construction) must now
+agree as cells, neither alone is sufficient.
+
+### Gates (commit 4)
+
+l2_harness GREEN 355/355 (351 + this commit's 1 new row), `build_l2src -Run`
+GREEN 270/270 (kernel selftests included, all four fixed sites passing),
+L3 selftest 11/11 suites + type budget OK, check_docs OK, `git diff
+--check` clean.
+
+## Still open for -172
 
 D-53 (the pre-existing `@`-on-a-Structure-typed-own-field double-indirection
 bug, found building commit 1's witness) remains open, reported to fable,
 not fixed by this ticket.
+
+D-61 (a bound merge result's own field path as an expression operand is
+"unresolved name" natively; unrelated to this ticket, Opus's own -183 c4
+finding) is not touched here either.

@@ -1038,6 +1038,19 @@ value position (PUT(r, CALL)).  A `return: f` with a value has no root form («r
 at the root»), and inside a native method a call is native.  The new row
 unit_root_bare_callable_call pins both CALLs.
 
+After the rebase onto Sonnet's kernel branch (sonnet/native-191 aa6a195: `Lmx` `{parent, len, data,
+native}`, CALL `[call, code, data, rtype, args...]`, lmx_plan gone), the root's builder opens only
+the walker's roles: `lmx_walk_program_bind(l2_rw_roles)`, with no plan roles.
+
+Mutants (private variants, each RED by behaviour):
+- MC1, no result cell in the return part: unit_root_call_wide exits 3.
+- MC2, no `native` word: every root call exits 3 (call_wide, bare_callable_call, arg_addr_sticky,
+  recursive_fresh_instance, recursive_model_slot).
+- MC3, the old offset (own fields from 1 under the parts): the builder fails, «the host built R0's
+  program exactly once, and the builder succeeded» RED.
+
+Per-row check on Sonnet's kernel (verify2b, 359 rows, scratch driver): 0 red.
+
 Rows: 16 CALL child-count pins +1; 13 slot pins in 11 rows (unit base -1, method-own +1); the sig
 rows now pin the rtype reference (root_call_wide, method_sig_distinct) or only the word's absence
 (s1_throws_intern).  Text check (n159/pincheck.py, no run): 360 rows, 0 red.  The programs run once

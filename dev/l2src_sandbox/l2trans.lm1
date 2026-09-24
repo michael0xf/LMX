@@ -21744,8 +21744,9 @@ fn: l2_emit_unit (const: @(char out_path)) int
         return: 1
     # The program's root is walked (l2_rw_*): the roles its nodes refer to, bound for the turn's
     # walk, then its steps after every field of the unit.  Nothing runs here: R0's turn walks the
-    # unit, and an uncaught throw stops the Message there (-158 G2).
-    if: l2_library_mode = 0 && fputs("        @: Lmx l2_rw_roles lmx_walk_roles_open(l2_program_arena)\n        @: Lmx l2_rw_plan_roles lmx_plan_roles_open(l2_program_arena)\n        if: l2_rw_roles = 0 || l2_rw_plan_roles = 0\n            return: 1\n        lmx_walk_program_bind(l2_rw_roles, l2_rw_plan_roles)\n", l2_out) < 0
+    # unit, and an uncaught throw stops the Message there (-158 G2).  There are no plan roles: a
+    # plan is the prototype's layout (Sonnet -191).
+    if: l2_library_mode = 0 && fputs("        @: Lmx l2_rw_roles lmx_walk_roles_open(l2_program_arena)\n        if: l2_rw_roles = 0\n            return: 1\n        lmx_walk_program_bind(l2_rw_roles)\n", l2_out) < 0
         fclose(l2_out)
         return: 1
     l2_rw_emit: 1

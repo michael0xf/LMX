@@ -140,6 +140,58 @@ struct: LmxRoot
     int: state
 end: LmxRoot
 
+# THE HOST ROOT (author 2026-09-24, LMX_blog/2026-09-24.md): R0's parent is a full Thread made by
+# the same mechanisms as every other -- the one lmx_root_open makes, with its arena, mailbox,
+# schedule, manager and service; its own parent is the parentless structural frame, which stands
+# for the OS.  The launch runs in it, and R0 stays pure user code: C main hands the host argc, argv
+# and R0's program; in its first turn the host reserves R0 as its ordinary child (own arena,
+# published into the host's children at the host's end-turn, retained in a result cell of the
+# host's graph), and the host's `independent: const: immutable` settings reach R0 by the eternal
+# rule -- the same physical branch, imported into R0's arena as a view, never copied -- so R0 stays
+# platform-independent.  The host posts the mainArgs letter to R0, R0 takes one turn from the
+# host's cycle, and the host takes its own inbox: a letter from R0 whose payload is
+# `exit(exit_code: <code>; stdout: ""; stderr: "")` is the exit.  When R0 sent none the host maps
+# R0's `success` (1 -> 0, 0 -> 1) and fills stdout/stderr with the exit reasons; with success = 0
+# it also prints to stderr the arenas adopted under the success = 0 rule.
+#
+# What the host keeps of an exit: its code, its two texts (exact-length char descriptors) and the
+# letter's sender (0 when the host decided the exit itself).
+struct: LmxRootExit
+    int: exit_code
+    LmxCharArray: out
+    LmxCharArray: err
+    @: void sender
+end: LmxRootExit
+
+# THE HOST'S TWO BUILDERS.  The settings builder makes the host's eternal settings in the host's
+# arena: an independent: const: immutable branch whose every array is profiled by `profile` and
+# sealed, returned as the branch's root (0: no settings).  The program builder installs R0's program
+# into R0's own graph, in R0's own arena, right after the host reserved R0: its descriptor in field 0,
+# its children list, the settings reference (the host's branch itself) and its fields.  0 is success.
+fnptr: LmxRootSettings (@: LmxArena arena; @: Lmx profile) @: Lmx
+fnptr: LmxRootProgram (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int
+
+# THE LAUNCH'S OWN RECORD, on lmx_root_launch's frame for the whole launch and referenced from the
+# host's graph, where the host's entry finds it.  R0's arena lives here: it is R0's storage until
+# the host's close settles R0 (released on success, attached to the host's on failure).
+struct: LmxRootLaunch
+    LmxRootProgram: program
+    LmxRootSettings: settings
+    size_t: fields
+    ulong: limit
+    LmxArena: arena
+    @: LmxThread thread
+    @: LmxSchedule slot
+    @: Lmx branch
+    # 0 before the host's first turn, 1 after it made R0, 2 after it took its inbox.
+    int: phase
+    # 1 once R0 was reserved, its program installed and its Thread joined.
+    int: made
+    # 1 once a letter from R0 with an exit payload was admitted into `done`.
+    int: exited
+    LmxRootExit: done
+end: LmxRootLaunch
+
 prototype:
     # Create the runtime: R0, its arena, its mailbox and its schedule, with `entry` as its
     # handler and `limit` as its own deadline. Qualified sealed Arrays are ordinary typed ranges
@@ -205,6 +257,41 @@ prototype:
     # Teardown: stop R0, close its mailbox, release its arena -- everything the runtime owns,
     # attached children included. Synchronous linear close from OPEN; local deadline only.
     fn: lmx_root_close (@: LmxRoot root) int
+    # The same close, and the host's report of a failure: when `report` (a FILE *) is not null and
+    # R0's `success` is 0, R0's arena is printed to it after the close's settle -- which attaches
+    # the arenas of the failed children -- and before the release.  lmx_root_close is this with no
+    # report.
+    fn: lmx_root_close_report (@: LmxRoot root; @: void report) int
+    # The report: every array of `arena`, every cell of its Structures, Messages, Arrays and
+    # primitives, a reference as a<array>[<cell>].  The arrays in front of `joined_end` in the
+    # arena's list joined it after that point (lmx_arena_attach splices a donor's arrays in front)
+    # and are marked `joined`.
+    fn: lmx_root_report (@: LmxArena arena; @: LmxPool joined_end; @: void stream) int
+    # lmx_root_open with `fields` more fields in the root's graph after its children list, all empty.
+    fn: lmx_root_open_graph (@: LmxRoot root; LmxCallEntry: entry; ulong: limit; size_t: fields) int
+    # THE HOST'S LAUNCH -- everything a C main did.  `root` is the caller's storage for the host's
+    # handle (cleared here).  R0 gets `fields` graph fields, filled by `program`; `settings` (or 0)
+    # makes the host's eternal settings; `limit` is both Threads' own deadline.  The process's
+    # arguments go to R0 inside a letter whose graph's one field, mainArgs, is an Array of char
+    # Arrays (argv[i] with its NUL).  After R0's one turn the exit is decided, its texts go to `out`
+    # and `err` (FILE *), the host is closed -- with the report to `err` when R0 sent no exit and
+    # its success is 0 -- and the exit code is returned.
+    fn: lmx_root_launch (@: LmxRoot root; int: argc; @@: char argv; LmxRootProgram: program; size_t: fields; LmxRootSettings: settings; ulong: limit; @: void out; @: void err) int
+    # The host's entry: the launch's code in the host's turns (first: make R0; then: take the inbox).
+    fn: lmx_root_host_entry (@: Lmx node) int
+    # The host's settings (the LmxRootSettings a program's main passes): the process's working
+    # directory, read from the OS, as the one char Array of an eternal branch profiled by `profile`.
+    fn: lmx_root_settings (@: LmxArena arena; @: Lmx profile) @: Lmx
+    # The working directory into `buffer` (the OS's own call), or null.
+    fn: lmx_root_os_cwd (@: char buffer; size_t: size) @: char
+    # THE EXIT MESSAGE (author K3 = a: the letter is an anonymous Structure -- field 0 its sender's
+    # reference, field 1 its payload Structure).  The host model is a Structure of `arena` with three
+    # fields by position: an int, a char Array, a char Array.  A letter's payload is admitted against
+    # it by position through the runtime `implements` (lmx_runtime_implements, the model as its own
+    # consumer): no field name and no special shape.  An admitted letter fills `exit` -- the texts
+    # point into the payload's own char Arrays -- and its sender.
+    fn: lmx_root_exit_model (@: LmxArena arena) @: Lmx
+    fn: lmx_root_exit_admit (@: LmxArena arena; @: Lmx model; @: Lmx letter; @: LmxRootExit exit) int
     # The reads a caller outside needs; a by-value LmxRoot has no other way in (L1 follows a
     # field of a by-value record through a pointer, not through the value).
     fn: lmx_root_message (@: LmxRoot root) @: LmxMsg

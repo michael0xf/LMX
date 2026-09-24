@@ -627,3 +627,129 @@ fn: lmx_post_close (@: LmxArena arena; @: LmxPost box) int
     box\outbox_count: 0U
     box\staged_count: 0U
 return: c.LMX_POST_OK
+
+
+# -177 c2: selective-receive cursor over the inbox ring (admission order).
+# Mutant: take at cursor removes the head always / wrong index -> RED.
+
+fn: lmx_post_cursor_open (@: LmxPost box; @: LmxPostCursor cur) int
+    if: box = 0 || cur = 0
+        return: c.LMX_POST_INVALID
+    ---
+    cur\box: box
+    cur\index: 0U
+    cur\has_current: 0
+    cur\open: 1
+return: c.LMX_POST_OK
+
+fn: lmx_post_cursor_next (@: LmxPostCursor cur) @: void
+    @: LmxPost box 0
+    @: LmxPostInboxSlot slots 0
+    @: LmxPostInboxSlot slot 0
+    size_t: item 0U
+    size_t: cap 0U
+    @: void target 0
+    if: cur = 0 || cur\open = 0 || cur\box = 0
+        return: 0
+    ---
+    box: cur\box
+    if: lmx_post_monitor_enter(box) != c.LMX_POST_OK
+        return: 0
+    ---
+    if: cur\has_current != 0
+        cur\index: cur\index + 1U
+    ---
+    if: cur\index >= box\inbox_count || lmx_post_inbox_data(box) = 0
+        cur\has_current: 0
+        lmx_post_monitor_leave(box)
+        return: 0
+    ---
+    slots: (cast: (@: LmxPostInboxSlot) lmx_post_inbox_data(box))
+    cap: lmx_post_inbox_cap(box)
+    item: (cast: (size_t) ((box\inbox_head + (cast: (ulong) cur\index)) % (cast: (ulong) cap)))
+    slot: slots + item
+    target: (cast: (@: void) slot\target)
+    cur\has_current: 1
+    lmx_post_monitor_leave(box)
+return: target
+
+fn: lmx_post_cursor_take (@: LmxArena arena; @: LmxPostCursor cur) @: void
+    @: LmxPost box 0
+    @: LmxPostInboxSlot slots 0
+    @: LmxPostInboxSlot slot 0
+    @: LmxPostInboxSlot dst 0
+    @: LmxPostInboxSlot src 0
+    @: LmxMsg letter 0
+    @: LmxArena source_arena 0
+    @: void target 0
+    size_t: cap 0U
+    size_t: i 0U
+    size_t: from 0U
+    size_t: to 0U
+    size_t: item 0U
+    if: cur = 0 || cur\open = 0 || cur\box = 0 || cur\has_current = 0
+        return: 0
+    ---
+    box: cur\box
+    if: lmx_post_monitor_enter(box) != c.LMX_POST_OK
+        return: 0
+    ---
+    if: cur\index >= box\inbox_count || lmx_post_inbox_data(box) = 0
+        cur\has_current: 0
+        lmx_post_monitor_leave(box)
+        return: 0
+    ---
+    slots: (cast: (@: LmxPostInboxSlot) lmx_post_inbox_data(box))
+    cap: lmx_post_inbox_cap(box)
+    item: (cast: (size_t) ((box\inbox_head + (cast: (ulong) cur\index)) % (cast: (ulong) cap)))
+    slot: slots + item
+    source_arena: (cast: (@: LmxArena) slot\source_arena)
+    if: source_arena != 0
+        if: arena = 0 || lmx_arena_attach(arena, source_arena) != 0
+            lmx_post_monitor_leave(box)
+            return: 0
+        ---
+        slot\source_arena: 0U
+    ---
+    target: (cast: (@: void) slot\target)
+    # Compact: shift later unread slots down by one in admission order.
+    i: cur\index
+    while: i + 1U < box\inbox_count
+        from: (cast: (size_t) ((box\inbox_head + (cast: (ulong) (i + 1U))) % (cast: (ulong) cap)))
+        to: (cast: (size_t) ((box\inbox_head + (cast: (ulong) i)) % (cast: (ulong) cap)))
+        src: slots + from
+        dst: slots + to
+        dst\target: src\target
+        dst\source_arena: src\source_arena
+        i: i + 1U
+    ---
+    # Clear the vacated tail slot.
+    to: (cast: (size_t) ((box\inbox_head + (cast: (ulong) (box\inbox_count - 1U))) % (cast: (ulong) cap)))
+    dst: slots + to
+    dst\target: 0U
+    dst\source_arena: 0U
+    box\inbox_count: box\inbox_count - 1U
+    if: box\inbox_count = 0U
+        box\inbox_head: 0U
+        box\inbox_tail: 0U
+    else:
+        box\inbox_tail: (box\inbox_head + (cast: (ulong) box\inbox_count)) % (cast: (ulong) cap)
+    ---
+    # After take, the next letter (if any) now sits at the same index; next will advance.
+    cur\has_current: 0
+    lmx_post_monitor_leave(box)
+    if: arena != 0 && target != 0 && lmx_domain_kind(arena, target) = c.LMX_DOMAIN_KIND_MSG_RECORD && lmx_domain_type(arena, target) = c.LMX_DOMAIN_MSG_RECORD
+        letter: (cast: (@: LmxMsg) target)
+        letter\success: 1
+    ---
+return: target
+
+fn: lmx_post_cursor_close (@: LmxPostCursor cur) void
+    if: cur = 0
+        return
+    ---
+    cur\box: 0
+    cur\index: 0U
+    cur\has_current: 0
+    cur\open: 0
+return

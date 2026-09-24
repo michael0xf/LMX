@@ -49,12 +49,13 @@ MAX_NAME = 64          # l1_hdr_type_add's buffer: one more maximal name must st
 # dispatch hook in lmx_call.h.lm1, FABLE-GROKBOT-DESCRIPTOR-DISPATCH-20260924-156).  EXPECT=70 after
 # FABLE-OPUS-ROOT-WALK-TRANSLATOR-20260924-159 commit 1 (D-38): lmx_call.h.lm1 dropped fnptr
 # LmxCallEntrySelf -- METHOD.addr is the method's prim-ABI trampoline, so no user of the two-reference
-# entry type is left.
+# entry type is left.  EXPECT=71 after FABLE-GROKBOT-WALK-RECEIVE-20260925-177 c2: LmxPostCursor
+# (selective-receive inbox iterator) in lmx_post.h.lm1.
 EXPECT = {
-    'tests/l3_thread_bind_selftest.lm1': 70,
-    'tests/l3_n9_walk_selftest.lm1': 70,
-    'tests/l3_n10_walk_selftest.lm1': 70,
-    'tests/l3_mail_prim_selftest.lm1': 70,
+    'tests/l3_thread_bind_selftest.lm1': 71,
+    'tests/l3_n9_walk_selftest.lm1': 71,
+    'tests/l3_n10_walk_selftest.lm1': 71,
+    'tests/l3_mail_prim_selftest.lm1': 71,
 }
 
 PREDEF = re.compile(r'^predef:\s*(.*)$')

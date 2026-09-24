@@ -513,3 +513,62 @@ Found by the per-row check (first run: 6 red), then fixed:
 - One more Q29 row: unit_own_last_occurrence numbered assignment occurrences (`test\[1]arg`).  It now
   reads the one cell: 2, then 5 after `test\arg: 5`.  Entry 7 is kept.
 - unit_fnptr_noncallable_assign (translates-with-debt): re-pinned from `l2_q0: 7` to the store.
+
+## Commit c3a: the caller passes the data
+
+Base: fable/join-k3 (main a6a79cd + Grok -188 k.3b `lmx_call_prim(arena, code, data, ...)` + k.3c
+walker CALL `[call, code, data, args...]` and FRESH op 23).  Decision (i) and Q28, as planned above.
+
+What is built:
+- Re-entry is decided from the call graph (`l2_reach_close`, after the throws closure, for a unit
+  and a library alike).
+  - `l2_m_edge` now has two bits.  Bit 1: a call of the method itself, by name or path.  Bit 2: a
+    call through a callable formal whose contract is that method.
+  - A bit-2 edge calls whichever method its actual names, so it counts as an edge to every method
+    passed by reference (`l2_m_value_used`).
+  - `l2_m_reach` is Warshall's closure over the methods.  A call in j of i is a re-entry when i
+    reaches j (`l2_reenters`): i may then be active.  A call of the method itself is one.
+- A call by name or path (native, sel 0/1) passes the occurrence itself: `l2_m<i>(M\parent, M, ...)`.
+  On a re-entry it passes `lmx_fresh(l2_program_arena, M)`, with X1 on NULL.  A method with no data
+  fields keeps its occurrence (nothing to lay out), as in c2.
+- A call by reference (a callable formal, sel 2) always makes `l2_d<t>: lmx_fresh(arena, code)` and
+  calls `lmx_call_prim(arena, code, l2_d<t>, 0, 0U, ...)`.  The caller does not know the callee's
+  prototype; the kernel makes the instance from the code.
+- The trampoline makes nothing: `owner` is the data its caller passed.  c2's callee-side
+  `l2_self: l2_new<i>(l2_self\parent)` goes.
+- c2's `l2_new<i>` (l2_emit_fresh) goes: `lmx_fresh` is the one mechanism for a fresh instance.
+  `l2_emit_cell_new` stays: the builder uses it.
+- The generated program predefs `lmx_fresh.h.lm1`; the eternal driver predefs `lmx_fresh.lm1`.
+- The walked root's CALL is `[call, code, data, args...]`: code and data are both the occurrence,
+  (M, M), and the inputs move from 2 to 3.
+  - No root CALL needs `[fresh, code]`.  The root has no name (l2_make_entry), so no call and no
+    actual can name it; it is in no cycle, and no call from it is a re-entry.
+  - A `[fresh, code]` branch there would be unreachable, so it is not emitted.  The first walked
+    CALL that can be a re-entry is one inside a walked method body, which does not exist yet.
+
+Rows:
+- unit_fresh_instance_skipped_decl returns to 77 (Entry 77): probe's call of keep is outside any
+  cycle, so keep(0) leaves keep(1)'s 7.  Its pins: `l2_c0 lmx_arena_ref_struct(node, 1U)`, and
+  `lmx_fresh(` and `l2_new0` Absent.
+- New: unit_recursive_fresh_instance.
+  - `down` recurses (re-entry, fresh instance); r = down(3) = 123.
+  - The root's CALL of `down` passes `down` itself, so down\x is 3 afterwards.
+  - `apply` calls `seven` by reference (fresh instance), so seven\s stays 0.
+  - The exit is r + 1000 * (down\x + 100 * seven\s) - 3123 + (d - 7) = 0.
+- 15 Debt pins on a walked CALL frame's child count move up by one, for the data operand
+  (12 rows).
+- The five rows that did not compile on k3b's `lmx_call_prim` (unit_bare_in_method,
+  unit_value_call_formal, unit_dyn_call_throw_caught, unit_callable_formal_descriptor,
+  unit_matrix_callable_callable_arg) run green.
+
+Mutants (private variants; each is RED by behaviour, not only by a pin):
+- M1, no fresh instance on a re-entry: unit_recursive_fresh_instance exits -3123.
+- M2, a fresh instance on every native static call (option (ii) for native code):
+  unit_fresh_instance_skipped_decl exits 0 instead of 77.
+- M3, the root CALL's data a builder-time fresh instance instead of M: unit_recursive_fresh_instance
+  exits -3000 (down\x reads 0).
+- M4, a call by reference over the code itself (data = code): unit_recursive_fresh_instance exits
+  700000 (seven\s reads 7).
+
+Per-row check (verify2b over all 356 rows, scratch driver with lmx_fresh): 0 red after the CALL
+re-pin.  The 2 argv rows are run by the harness only.

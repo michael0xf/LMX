@@ -342,6 +342,8 @@ int: l2_alloc_fail_at 0
 int: l2_alloc_fail_kind 0
 int: l2_alloc_kind 0
 @: int l2_m_edge 0
+# l2_m_reach[l2_edge_off(a, b)]: an activation of a can lead to a call of b (l2_reach_close).
+@: int l2_m_reach 0
 @: int l2_it_ar 0
 @: int l2_it_dyn 0
 @: int l2_it_ret 0
@@ -426,6 +428,8 @@ prototype:
     fn: l2_merge_nested (const: @(LmP0Structure fields)) int
     fn: l2_body_throws (const: @(LmP0Structure body); int: mi) int
     fn: l2_throws_close () int
+    fn: l2_reach_close (const: @(char path)) int
+    fn: l2_reenters (int: caller; int: callee) int
     fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
     fn: l2_merge_scan (const: @(LmP0Structure body)) int
     fn: l2_emit_poll (int: mi; const: @(char ind)) int
@@ -437,7 +441,6 @@ prototype:
     fn: l2_tramp_class (int: mi) int
     fn: l2_emit_dyn_call (int: idx; int: t; int: self_t; const: @(char ind)) int
     fn: l2_emit_tramp_call (int: i; int: n; int: thr; int: cls) int
-    fn: l2_emit_fresh (int: i; int: proto) int
     fn: l2_emit_trampoline (int: i; int: proto) int
     fn: l2_rw_refuse (const: @(LmP0Node node); const: @(char what)) int
     fn: l2_rw_l2 (const: @(LmP0Node node)) int
@@ -1636,6 +1639,8 @@ fn: l2_meth_free () int
         l2_xfree((cast: (@: void) l2_m_ft))
     if: l2_m_edge != 0
         l2_xfree((cast: (@: void) l2_m_edge))
+    if: l2_m_reach != 0
+        l2_xfree((cast: (@: void) l2_m_reach))
     if: l2_sn != 0
         l2_xfree((cast: (@: void) l2_sn))
     if: l2_st != 0
@@ -1659,6 +1664,7 @@ fn: l2_meth_free () int
     l2_m_fn: 0
     l2_m_ft: 0
     l2_m_edge: 0
+    l2_m_reach: 0
     l2_sn: 0
     l2_st: 0
     l2_slot_cap: 0
@@ -3051,6 +3057,8 @@ fn: l2_parse_library (const: @(char path)) int
         i: i + 1
     l2_cur_mi: 0 - 1
     if: l2_throws_close() != 0
+        return: 1
+    if: l2_reach_close(path) != 0
         return: 1
     if: l2_dyn_close(path) != 0
         return: 1
@@ -13792,7 +13800,13 @@ fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Stru
     # Descriptor-only required method is legal as a formal contract; refuse bodiless only on direct calls.
     if: l2_m_body[idx] = 0 && fi < 0 && (l2_m_node[idx] = 0 || l2_m_node[idx]\as = 0 || l2_ret_tr(l2_m_node[idx]\as\frame) = 0)
         return: l2_error(path, node, "not callable")
-    l2_m_edge[l2_edge_off(mi, idx)]: 1
+    # Bit 1: a call of idx itself (by name or path).  Bit 2: a call through the callable formal fi,
+    # whose contract is idx -- the callee is whichever method the actual names (l2_reach_close).
+    if: fi < 0
+        l2_m_edge[l2_edge_off(mi, idx)]: l2_m_edge[l2_edge_off(mi, idx)] | 1
+    else:
+        l2_m_edge[l2_edge_off(mi, idx)]: l2_m_edge[l2_edge_off(mi, idx)] | 2
+    ---
     if: l2_check_throws_handled(mi, idx, path, node) != 0
         return: 1
     actual_i: 0
@@ -14645,6 +14659,8 @@ fn: l2_parse_unit (const: @(char path)) int
     l2_cur_mi: 0 - 1
     l2_vis_on: 0
     if: l2_throws_close() != 0
+        return: 1
+    if: l2_reach_close(path) != 0
         return: 1
     if: l2_dyn_close(path) != 0
         return: 1
@@ -15674,14 +15690,19 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
     # is based on self itself.
     self_t: l2_tn
     l2_tn: l2_tn + 1
-    # -189 c2: a call by name runs over a fresh data instance of the callee, made in the unit's slot
-    # answering it (l2_emit_fresh); a method with no data fields keeps its occurrence.
-    if: sel = 0 && l2_m_native(idx) != 0 && idx != l2_e && l2_m_kids(idx) > 1 && c.fprintf(l2_out, "%s@: Lmx l2_c%d l2_new%d(%s)\n", ind, self_t, idx, l2_unit_ref) < 0
-        return: 1
-    if: sel = 0 && (l2_m_native(idx) = 0 || idx = l2_e || l2_m_kids(idx) <= 1) && c.fprintf(l2_out, "%s@: Lmx l2_c%d lmx_arena_ref_struct(%s, %uU)\n", ind, self_t, l2_unit_ref, (cast: (unsigned) (l2_unit_base + idx))) < 0
+    # The caller passes the data (-189 c3a; Q28, fable's decision (i)).  A call by name or path runs
+    # the callee over its own graph, (M, M), so `M\x` shows that activation.  A re-entry
+    # (l2_reenters) runs over a fresh instance of M (lmx_fresh), frame-only, its parent M's: M may
+    # be active.  A method with no data fields has nothing to lay out and keeps its occurrence.
+    if: sel = 0 && c.fprintf(l2_out, "%s@: Lmx l2_c%d lmx_arena_ref_struct(%s, %uU)\n", ind, self_t, l2_unit_ref, (cast: (unsigned) (l2_unit_base + idx))) < 0
         return: 1
     if: sel = 1 && c.fprintf(l2_out, "%s@: Lmx l2_c%d l2_pst\n", ind, self_t) < 0
         return: 1
+    if: sel != 2 && l2_m_native(idx) != 0 && idx != l2_e && l2_m_kids(idx) > 1 && l2_reenters(mi, idx) != 0
+        if: c.fprintf(l2_out, "%sl2_c%d: lmx_fresh(l2_program_arena, l2_c%d)\n%sif: l2_c%d = 0\n", ind, self_t, self_t, ind, self_t) < 0 || l2_emit_invariant(ind, "a fresh instance could not be made") != 0
+            return: 1
+        ---
+    ---
     if: sel = 2 && c.fprintf(l2_out, "%s@: Lmx l2_c%d l2_p%d_%d\n", ind, self_t, mi, fi) < 0
         return: 1
     if: body != 0
@@ -16609,9 +16630,14 @@ fn: l2_emit_dyn_call (int: idx; int: t; int: self_t; const: @(char ind)) int
     int: cls l2_tramp_class(idx)
     if: c.fprintf(l2_out, "%s@: void l2_o%d 0\n", ind, t) < 0
         return: 1
-    if: l2_m_throws[idx] != 0 && c.fprintf(l2_out, "%sl2_ts%d: lmx_call_prim(l2_program_arena, l2_c%d, 0, 0U, ", ind, t, self_t) < 0
+    # -189 c3a (Q28): a call by reference runs over a fresh instance of the callee, made from its
+    # code by the kernel (lmx_fresh): the caller does not know the callee's prototype.  The data
+    # is lmx_call_prim's operand; the trampoline makes nothing.
+    if: c.fprintf(l2_out, "%s@: Lmx l2_d%d lmx_fresh(l2_program_arena, l2_c%d)\n%sif: l2_d%d = 0\n", ind, t, self_t, ind, t) < 0 || l2_emit_invariant(ind, "a fresh instance could not be made") != 0
         return: 1
-    if: l2_m_throws[idx] = 0 && c.fprintf(l2_out, "%sif: lmx_call_prim(l2_program_arena, l2_c%d, 0, 0U, ", ind, self_t) < 0
+    if: l2_m_throws[idx] != 0 && c.fprintf(l2_out, "%sl2_ts%d: lmx_call_prim(l2_program_arena, l2_c%d, l2_d%d, 0, 0U, ", ind, t, self_t, t) < 0
+        return: 1
+    if: l2_m_throws[idx] = 0 && c.fprintf(l2_out, "%sif: lmx_call_prim(l2_program_arena, l2_c%d, l2_d%d, 0, 0U, ", ind, self_t, t) < 0
         return: 1
     if: (cls = 0 || cls = 5) && fputs("0", l2_out) < 0
         return: 1
@@ -16648,73 +16674,6 @@ fn: l2_emit_tramp_call (int: i; int: n; int: thr; int: cls) int
 return: (cast: (int) (fputs(")", l2_out) < 0))
 
 # The trampoline of method i: its prototype line (proto) or its definition.
-# A fresh data instance of method i (-189 c2; the execution pair, next_core_tasks.md §3): M's data
-# prototype laid out anew -- each own field a fresh typed cell (l2_emit_cell_new), each control body a
-# fresh Structure holding its hosted cells -- in the unit's slot answering M, which shows it from now
-# on; it is the activation's self.  Slot 0 still carries M's shared callable descriptor (the code)
-# until the code tree (c4).  A char field's first cell is the interned 0, found from the instance
-# being replaced (lmx_char_rebind_known).  A method with no data fields has nothing to lay out and
-# keeps its occurrence (no l2_new).
-fn: l2_emit_fresh (int: i; int: proto) int
-    int: k 0
-    int: oi 0
-    c.array: [128]: char chr0
-    if: i < 0 || i = l2_e || l2_m_native(i) = 0 || l2_m_kids(i) <= 1
-        return: 0
-    if: proto != 0
-        return: (cast: (int) (c.fprintf(l2_out, "    fn: l2_new%d (@: Lmx node) @: Lmx\n", i) < 0))
-    if: c.fprintf(l2_out, "fn: l2_new%d (@: Lmx node) @: Lmx\n    @: Lmx l2_old lmx_arena_ref_struct(node, %uU)\n    @: Lmx l2_inst 0\n    @: Lmx l2_fkid 0\n    @@: void l2_slot 0\n", i, (cast: (unsigned) (l2_unit_base + i))) < 0
-        return: 1
-    while: k < l2_for_n
-        if: l2_for_owner(k) = i && c.fprintf(l2_out, "    @: Lmx l2_b%d 0\n    @: Lmx l2_ob%d 0\n", k, k) < 0
-            return: 1
-        k: k + 1
-    ---
-    if: fputs("    if: l2_old = 0\n", l2_out) < 0 || l2_emit_invariant("    ", "a fresh instance has no occurrence to replace") != 0
-        return: 1
-    if: c.fprintf(l2_out, "    l2_inst: lmx_struct_new_owned(node, l2_program_arena)\n    if: l2_inst = 0 || lmx_arena_refs_open_owned(l2_program_arena, l2_inst, %uU) != 0 || lmx_arena_ref_store(l2_inst, 0U, lmx_arena_ref_value(l2_old, 0U)) != 0\n", (cast: (unsigned) l2_m_kids(i))) < 0 || l2_emit_invariant("    ", "a fresh instance could not be made") != 0
-        return: 1
-    while: oi < l2_own_n
-        if: l2_own_mi[oi] = i && l2_own_fid[oi] < 0 && l2_own_uchild[oi] >= 0
-            if: c.fprintf(l2_out, "    l2_slot: lmx_arena_ref_cell(l2_inst, %uU)\n    if: l2_slot = 0\n", (cast: (unsigned) l2_own_uchild[oi])) < 0 || l2_emit_invariant("    ", "a fresh instance could not be made") != 0
-                return: 1
-            if: c.sprintf(chr0, "lmx_char_rebind_known(lmx_arena_ref_value(l2_old, %uU), 0)", (cast: (unsigned) l2_own_uchild[oi])) < 0 || l2_emit_cell_new(oi, "    ", "l2_slot", chr0, "c.fprintf(c.stderr, \"lmx: invariant: a fresh instance could not be made\\n\")", "c.abort()") != 0
-                return: 1
-        ---
-        oi: oi + 1
-    ---
-    k: 0
-    while: k < l2_for_n
-        if: l2_for_owner(k) = i
-            if: l2_for_parent[k] < 0 && c.fprintf(l2_out, "    l2_fkid: lmx_struct_new_owned(l2_inst, l2_program_arena)\n    if: l2_fkid = 0 || lmx_arena_ref_store(l2_inst, %uU, (cast: (@: void) l2_fkid)) != 0", (cast: (unsigned) l2_for_uchild[k])) < 0
-                return: 1
-            if: l2_for_parent[k] >= 0 && c.fprintf(l2_out, "    l2_fkid: lmx_struct_new_owned(l2_b%d, l2_program_arena)\n    if: l2_fkid = 0 || lmx_arena_ref_store(l2_b%d, %uU, (cast: (@: void) l2_fkid)) != 0", l2_for_parent[k], l2_for_parent[k], (cast: (unsigned) l2_for_uchild[k])) < 0
-                return: 1
-            if: l2_for_nkid[k] > 0 && c.fprintf(l2_out, " || lmx_arena_refs_open_owned(l2_program_arena, l2_fkid, %uU) != 0", (cast: (unsigned) l2_for_nkid[k])) < 0
-                return: 1
-            if: fputs("\n", l2_out) < 0 || l2_emit_invariant("    ", "a fresh instance could not be made") != 0
-                return: 1
-            if: l2_for_parent[k] < 0 && c.fprintf(l2_out, "    l2_b%d: l2_fkid\n    l2_ob%d: lmx_arena_ref_struct(l2_old, %uU)\n", k, k, (cast: (unsigned) l2_for_uchild[k])) < 0
-                return: 1
-            if: l2_for_parent[k] >= 0 && c.fprintf(l2_out, "    l2_b%d: l2_fkid\n    l2_ob%d: lmx_arena_ref_struct(l2_ob%d, %uU)\n", k, k, l2_for_parent[k], (cast: (unsigned) l2_for_uchild[k])) < 0
-                return: 1
-            oi: 0
-            while: oi < l2_own_n
-                if: l2_own_fid[oi] = k
-                    if: c.fprintf(l2_out, "    l2_slot: lmx_arena_ref_cell(l2_b%d, %uU)\n    if: l2_slot = 0\n", k, (cast: (unsigned) l2_own_fchild[oi])) < 0 || l2_emit_invariant("    ", "a fresh instance could not be made") != 0
-                        return: 1
-                    if: c.sprintf(chr0, "lmx_char_rebind_known(lmx_arena_ref_value(l2_ob%d, %uU), 0)", k, (cast: (unsigned) l2_own_fchild[oi])) < 0 || l2_emit_cell_new(oi, "    ", "l2_slot", chr0, "c.fprintf(c.stderr, \"lmx: invariant: a fresh instance could not be made\\n\")", "c.abort()") != 0
-                        return: 1
-                ---
-                oi: oi + 1
-            ---
-        ---
-        k: k + 1
-    ---
-    if: c.fprintf(l2_out, "    if: lmx_arena_ref_store(node, %uU, (cast: (@: void) l2_inst)) != 0\n", (cast: (unsigned) (l2_unit_base + i))) < 0 || l2_emit_invariant("    ", "a fresh instance could not be made") != 0
-        return: 1
-return: (cast: (int) (fputs("return: l2_inst\n\n", l2_out) < 0))
-
 fn: l2_emit_trampoline (int: i; int: proto) int
     int: k 0
     int: n l2_m_arity[i] + l2_m_dyn[i]
@@ -16732,10 +16691,8 @@ fn: l2_emit_trampoline (int: i; int: proto) int
         return: 1
     if: proto != 0
         return: 0
+    # owner is the data its caller passed (-189 c3a): the occurrence itself, or a fresh instance.
     if: c.fprintf(l2_out, "    @: Lmx l2_self (cast: (@: Lmx) owner)\n") < 0
-        return: 1
-    # -189 c2: the activation runs over a fresh data instance in the slot of its occurrence's parent.
-    if: l2_m_kids(i) > 1 && c.fprintf(l2_out, "    l2_self: l2_new%d(l2_self\\parent)\n", i) < 0
         return: 1
     if: c.fprintf(l2_out, "    if: nargs != %dU || out = 0", n) < 0
         return: 1
@@ -17656,9 +17613,14 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; @: LmP0Field args; int: paren
     ---
     if: n != l2_m_arity[idx]
         return: l2_rw_refuse(node, "this call's inputs")
-    if: l2_rw_frame(parent, "LMX_WALK_OP_CALL", 2 + n, out) != 0
+    # [call, code, data, args...] (-188 k.3c; -189 c3a): the code is the occurrence, and so is the
+    # data, (M, M).  The root has no name a call or an actual could use, so it is in no cycle of
+    # calls and no call from it is a re-entry (l2_reenters): none needs [fresh, code].
+    if: l2_rw_frame(parent, "LMX_WALK_OP_CALL", 3 + n, out) != 0
         return: 1
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, %uU))) != 0\n            return: 1\n", \out, (cast: (unsigned) (l2_unit_base + idx))) < 0
+        return: 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 2U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, %uU))) != 0\n            return: 1\n", \out, (cast: (unsigned) (l2_unit_base + idx))) < 0
         return: 1
     a: l2_next_active(args)
     while: a != 0
@@ -17671,16 +17633,16 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; @: LmP0Field args; int: paren
             j: l2_find_method(a\value\as\atom)
             if: j < 0 || j = l2_e
                 return: l2_rw_refuse(node, "a callable input that is not a method's name")
-            if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, %uU))) != 0\n            return: 1\n", \out, 2 + k, (cast: (unsigned) (l2_unit_base + j))) < 0
+            if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, %uU))) != 0\n            return: 1\n", \out, 3 + k, (cast: (unsigned) (l2_unit_base + j))) < 0
                 return: 1
             ---
         else:
             if: l2_nsty_get(idx, k) >= 0
-                if: l2_rw_struct_arg(node, a, span, l2_nsty_get(idx, k), \out, @ arg) != 0 || l2_rw_put(\out, 2 + k, arg) != 0
+                if: l2_rw_struct_arg(node, a, span, l2_nsty_get(idx, k), \out, @ arg) != 0 || l2_rw_put(\out, 3 + k, arg) != 0
                     return: 1
                 ---
             else:
-                if: l2_rw_texpr(a, span, l2_own_ty_of_param(l2_input_ft(idx, k)), \out, @ arg) != 0 || l2_rw_put(\out, 2 + k, arg) != 0
+                if: l2_rw_texpr(a, span, l2_own_ty_of_param(l2_input_ft(idx, k)), \out, @ arg) != 0 || l2_rw_put(\out, 3 + k, arg) != 0
                     return: 1
                 ---
             ---
@@ -19744,6 +19706,62 @@ fn: l2_throws_close () int
     ---
 return: 0
 
+# RE-ENTRY (FABLE-OPUS-CODE-DATA-SPLIT-20260925-189 commit c3a; Q28: a fresh instance only where
+# the translator cannot rule out re-entry).  l2_m_reach[l2_edge_off(a, b)] is 1 when an activation
+# of a can lead to a call of b: a path of one call or more.  A call of a method by name or path is
+# an edge to it (bit 1 of l2_m_edge).  A call through a callable formal (bit 2) calls whichever
+# method its actual names, so it is an edge to every method passed by reference
+# (l2_m_value_used).  The closure is Warshall's, over the methods.
+fn: l2_reach_close (const: @(char path)) int
+    size_t: n (cast: (size_t) l2_m_cap) * (cast: (size_t) l2_m_cap)
+    int: a 0
+    int: b 0
+    int: k 0
+    int: dyn 0
+    l2_m_reach: (cast: (@: int) l2_xmalloc(n * c.sizeof(c.int)))
+    if: l2_m_reach = 0
+        return: l2_error(path, 0, "out of memory")
+    memset((cast: (@: void) l2_m_reach), 0, n * c.sizeof(c.int))
+    while: a < l2_m_n
+        dyn: 0
+        b: 0
+        while: b < l2_m_n
+            if: (l2_m_edge[l2_edge_off(a, b)] & 1) != 0
+                l2_m_reach[l2_edge_off(a, b)]: 1
+            if: (l2_m_edge[l2_edge_off(a, b)] & 2) != 0
+                dyn: 1
+            b: b + 1
+        ---
+        b: 0
+        while: dyn != 0 && b < l2_m_n
+            if: l2_m_value_used[b] != 0
+                l2_m_reach[l2_edge_off(a, b)]: 1
+            b: b + 1
+        ---
+        a: a + 1
+    ---
+    while: k < l2_m_n
+        a: 0
+        while: a < l2_m_n
+            if: l2_m_reach[l2_edge_off(a, k)] != 0
+                b: 0
+                while: b < l2_m_n
+                    if: l2_m_reach[l2_edge_off(k, b)] != 0
+                        l2_m_reach[l2_edge_off(a, b)]: 1
+                    b: b + 1
+                ---
+            ---
+            a: a + 1
+        ---
+        k: k + 1
+    ---
+return: 0
+
+# A call in method caller of method callee is a re-entry when callee can lead back to caller:
+# callee may then be active when caller calls it.  A call of the method itself is one.
+fn: l2_reenters (int: caller; int: callee) int
+return: l2_m_reach[l2_edge_off(callee, caller)] != 0
+
 # Build the result-slot map for one merge statement: each operand's fields in
 # result order, then the body fields. Runs in the PRE-SCAN, because a method
 # lowered before the entry E may already read a field of the result.
@@ -21308,7 +21326,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: l2_library_mode = 0 && l2_e >= 0 && c.fprintf(l2_out, "predef: \"%slmx_walk.h.lm1\" \"%slmx_primitive.h.lm1\" \"%slmx_child.h.lm1\" \"%slmx_list_owned.h.lm1\"\n", l2_rt_root, l2_rt_root, l2_rt_root, l2_rt_root) < 0
         fclose(l2_out)
         return: 1
-    if: c.fprintf(l2_out, "predef: \"%slmx_arena_refs.h.lm1\" \"%slmx_value_owned.h.lm1\" \"%slmx.h.lm1\" \"%slmx_message.h.lm1\" \"%slmx_root.h.lm1\" \"%slmx_call.h.lm1\" \"%slmx_clock.h.lm1\"\ninclude: \"<stdio.h>\" \"<stdlib.h>\" \"<string.h>\"", l2_rt_root, l2_rt_root, l2_rt_root, l2_rt_root, l2_rt_root, l2_rt_root, l2_rt_root) < 0
+    if: c.fprintf(l2_out, "predef: \"%slmx_arena_refs.h.lm1\" \"%slmx_value_owned.h.lm1\" \"%slmx.h.lm1\" \"%slmx_message.h.lm1\" \"%slmx_root.h.lm1\" \"%slmx_call.h.lm1\" \"%slmx_fresh.h.lm1\" \"%slmx_clock.h.lm1\"\ninclude: \"<stdio.h>\" \"<stdlib.h>\" \"<string.h>\"", l2_rt_root, l2_rt_root, l2_rt_root, l2_rt_root, l2_rt_root, l2_rt_root, l2_rt_root, l2_rt_root) < 0
         fclose(l2_out)
         return: 1
     i: 0
@@ -21435,9 +21453,6 @@ fn: l2_emit_unit (const: @(char out_path)) int
     i: 0
     while: i < l2_m_n
         if: l2_m_native(i) != 0 && i != l2_e && l2_emit_trampoline(i, 1) != 0
-            fclose(l2_out)
-            return: 1
-        if: l2_emit_fresh(i, 1) != 0
             fclose(l2_out)
             return: 1
         i: i + 1
@@ -21696,9 +21711,6 @@ fn: l2_emit_unit (const: @(char out_path)) int
     # Each native method's trampoline, after every body it calls (l2_emit_trampoline).
     i: 0
     while: i < l2_m_n
-        if: l2_emit_fresh(i, 0) != 0
-            fclose(l2_out)
-            return: 1
         if: l2_m_native(i) != 0 && i != l2_e && l2_emit_trampoline(i, 0) != 0
             fclose(l2_out)
             return: 1

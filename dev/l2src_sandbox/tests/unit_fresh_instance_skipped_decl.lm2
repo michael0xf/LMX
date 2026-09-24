@@ -1,11 +1,10 @@
-# The execution pair (FABLE-OPUS-CODE-DATA-SPLIT-20260925-189 commit 2; next_core_tasks.md §3 item 7):
-# every activation of `keep` runs over a fresh instance of its data prototype in the unit's slot
-# answering it, and the slot shows the latest one.
-# - keep(1) reaches `int: v 7`, and the slot then shows its instance: keep\v is 7 (h).
-# - keep(0) returns before the declaration, so its fresh instance keeps the prototype's 0 -- not the
-#   7 of the activation before.
-# h * 10 + keep\v is 70.  A shared occurrence (until -189) gives 77; an activation that writes an
-# instance other than the one its slot shows gives 0.
+# The execution pair (FABLE-OPUS-CODE-DATA-SPLIT-20260925-189 commit c3a; next_core_tasks.md §3 item 7;
+# Q28): a call from outside a cycle of calls runs over the callee's own graph, (M, M), and a field
+# whose declaration did not run in this activation keeps the previous activation's value.
+# - keep(1) reaches `int: v 7`: keep\v is 7 (h).
+# - keep(0) returns before the declaration, so keep\v is still keep(1)'s 7.
+# h * 10 + keep\v is 77.  A fresh instance for every activation (c2, and option (ii)) gives 70 with
+# the slot showing the latest instance, or 0 with the instance frame-only, not in the slot.
 fn: keep (int: go) int
     if: go = 0
         return: 0

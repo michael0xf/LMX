@@ -27,11 +27,15 @@ lowering intermediate, and C99 is its current machine target. The **present** bu
 ```text
 live kernel .lm1 ───────────────→ L1 translator ─→ C99 runtime
 L2 .lm2 unit ─→ L2 translator ─→ generated L1 ───→ C99 program
-L3 graph ───────────────────────→ graph interpreter, or a native entry
+L3 .lm3 unit ─→ L2 translator (same rules) ─→ generated L1 ─→ C99 program
+L3 graph (constructed) ─────────→ graph interpreter as well (L3 only)
 ```
 
-This is not a mandate that every L3 program be translated to C: its graph can
-run in the interpreter. The L2 runtime presently contains mostly `.lm1`
+L3 is compiled by the same rules as L2; the one difference is that a
+constructed L3 graph *may* also run in the graph interpreter, while L2
+operations may not. The current toolchain runs a file's root body through the
+interpreter and method bodies natively: an implementation default, not a
+language rule. The L2 runtime presently contains mostly `.lm1`
 units. Porting this code to
 `.lm2` and attaining **full L2 self-build** are future milestones, not current
 facts. `myxa_manager` is an application above the kernel, not a reason to put
@@ -333,11 +337,13 @@ and separate `LmxThreadApi` and `LmxThreadMailApi` tables. These fields are
 not candidates for inclusion in `LmxMsg`.
 
 There is one active executor per Message identity. A Thread may be stepped or
-run on an OS thread, but one turn belongs to one execution lane. Its mode is
-explicitly native **or** interpreted; the dispatcher never infers mode from
-the body or retries through another mode on failure. `request_mode` selects a
-subsequent turn: a successful end boundary commits it, while failure cancels
-the pending request and retains the current mode.
+run on an OS thread, but one turn belongs to one execution lane. A Thread has no
+execution mode (author, 2026-09-24): each call's path follows the callable
+occurrence's descriptor -- a native address is a native entry, none means the
+body's op tree is walked by the interpreter (L3 only); the dispatcher never
+infers a path from the body or retries through the other path on failure. The
+kernel's `request_mode` field and its end-boundary commit are scheduled for
+removal (plan §3).
 
 The turn has a simple causal order:
 

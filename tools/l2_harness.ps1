@@ -1983,12 +1983,15 @@ $fixtures = @(
         Needle = 'unknown consumer descriptor'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_invalid_implements_used_field.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'implements is false in function argument'; Absent = @(); Debt = @() },
+    # Q29 (FABLE-OPUS-CODE-DATA-SPLIT-20260925-189 c3c): the two bare assignments of `arg` are one cell,
+    # \[0]arg is 2, and there is no second slot; \[1]arg is refused where it stands.
     [pscustomobject]@{ Name = 'unit_occ_arg_slots.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
-        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_q1_from');
         Debt = @('l2_entry_unit: graph', 'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ',
-                 'l2_q0_from: lmx_arena_ref_cell(self, 1U)',
-                 'l2_q1_from: lmx_arena_ref_cell(self, 2U)') },
+                 'l2_q0_from: lmx_arena_ref_cell(self, 1U)') },
+    [pscustomobject]@{ Name = 'unit_occ_arg_second_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'own occurrence index out of range'; Absent = @(); Debt = @() },
     # FABLE-SONNET-OCC-ROOT-20260924-146 commit 1: a named (method) root's
     # occurrence index, test\[N]arg, resolved through l2_own_find_occ --
     # the same lookup the rootless \[N]arg form already uses, no second

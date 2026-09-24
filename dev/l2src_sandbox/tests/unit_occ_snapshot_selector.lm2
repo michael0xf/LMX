@@ -5,6 +5,10 @@
 # (leftover from FABLE-67), so `\[N]` remains the only way to read it. Kept
 # separate from the node\X -> <Method>\X rewrite so each file's discriminating
 # mechanism stays unambiguous.
+#
+# Q29 (author, 2026-09-25; FABLE-OPUS-CODE-DATA-SPLIT-20260925-189 c3c): the repeated bare
+# assignments of `bt` and `al` are ONE cell each -- `\[N]` numbers declarations -- so \[0] reads the
+# cell's last value (2 after `bt: 2`; 9 after poke9 wrote through @: al) and \[1] names nothing.
 fn: poke7 (@: int p) int
     \p: 7
     return: 0
@@ -24,10 +28,8 @@ fn: between (int: bt) int
     nop()
     bt: 2
     nop()
-    if: \[0]bt != 7
+    if: \[0]bt != 2
         return: 1
-    if: \[1]bt != 2
-        return: 2
     c.printf: "BETWEEN %d\n" bt
     return: 0
 end: between
@@ -37,10 +39,8 @@ fn: after_last (int: al) int
     al: 2
     poke9(@: al)
     nop()
-    if: \[0]al != 1
+    if: \[0]al != 9
         return: 1
-    if: \[1]al != 9
-        return: 2
     c.printf: "LAST %d\n" al
     return: 0
 end: after_last

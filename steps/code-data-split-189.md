@@ -428,3 +428,37 @@ On my side (c3a), after -188 c3 lands:
     a dynamic call.
 - c2's `l2_new<i>` then goes: one mechanism for a fresh instance (CORE, one mechanism per role).
 - So c3a lands with or after -188 c3.  c3b (no working copies) and c3c (Q29) do not depend on it.
+
+## Commit c3c: Q29, one cell per declaration
+
+fable accepted doing c3c before c3b.  With repeated bare assignments as occurrences, a read without
+working copies would need a runtime selector; Q29 removes that case first.
+
+What is built:
+- l2_own_add dropped the branch «a later assignment of the same name is a new occurrence only when
+  the existing row is itself an assignment» (`l2_is_asgn(...) && l2_is_asgn(at) → i: -1`).
+  - A later bare assignment now resolves to the existing row, the one cell.
+  - `\[N]` counts declarations.
+- A missing occurrence is refused where it stands, «own occurrence index out of range».
+  - The check pass already said so for a method-rooted `M\[N]x` (:13930).
+  - Three emission paths returned 1 silently and gave «translation failed with no located
+    diagnostic»: l2_prep's atom form, l2_emit_fields' `\ [ N ] x` run, and both method-rooted
+    spellings.  They now give that same message at the name.
+
+Rows (measured), the three the plan named plus one:
+- unit_occ_arg_slots: `arg: 1; arg: 2` is one cell and `\[0]arg` is 2.  Re-pinned: `l2_q0_from`
+  stays, and `l2_q1_from` (the second slot) is Absent.
+- unit_occ_arg_second_refused (new, l2trans-refuses): `\[1]arg` with one cell, «own occurrence index
+  out of range».
+- unit_occ_root_named: its `test\[1]arg` check goes.  `test\[0]arg` and `test\arg` read the one cell;
+  it stays root-pending, needle unchanged.
+- unit_occ_snapshot_selector: `\[0]bt` is 2 and `\[0]al` is 9 (the cell's last value), and the `\[1]`
+  checks go.  Its Says (`BETWEEN 2`, `LAST 9`) are unchanged.
+- Mutant: the branch restored (the translator without c3c).  unit_occ_arg_slots has `l2_q1_from`,
+  RED; unit_occ_arg_second_refused translates, RED; unit_occ_snapshot_selector prints nothing,
+  because it returns before its line: RED on Says.
+- The per-row tool (n159/verify2b.py) now checks `Says` the harness's way: the program's non-empty
+  lines, whole and in order.
+  - Until now it checked exit codes and pins only, so the Says rows were covered by fable's full
+    gates alone.
+  - The full gate on bf86717, which checks Says, was GREEN for c2.

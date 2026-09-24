@@ -1,16 +1,14 @@
-# GROK-COLON-OCCURRENCE-20260922-02. Two assignment occurrences of arg are two
-# physical own slots. Explicit \[0]/\[1] are not the unresolved first-vs-last
-# unqualified path.
-
+# Q29 (author, 2026-09-25: «одна ячейка там где объявление»; FABLE-OPUS-CODE-DATA-SPLIT-20260925-189
+# c3c): the two bare assignments of the argument `arg` are ONE cell.  The first binds it (L3 §12), and
+# the second writes the same cell -- a repeated bare assignment is not an occurrence, and `\[N]`
+# numbers declarations.  So \[0]arg is 2.  (Until -189 they were two physical slots, 1 and 2.)
+# \[1]arg has no second declaration to number: unit_occ_arg_second_refused.lm2.
 fn: test (int: arg) int
     arg: 1
     arg: 2
-    if: \[0]arg != 1
+    if: \[0]arg != 2
         return: 1
-    if: \[1]arg != 2
-        return: 2
     return: 0
 end: test
-
 sendMessage: exit(exit_code: test(0); stdout: ""; stderr: "")
 return

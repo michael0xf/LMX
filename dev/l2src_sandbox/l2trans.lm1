@@ -3737,11 +3737,9 @@ fn: l2_own_add (int: mi; const: @(LmP0Text t); int: ty; const: @(char path); con
                 if: l2_error(path, at, "incompatible entry signature") != 0
                     return: -1
                 return: -1
-            # A later assignment of the same name is a new occurrence only when
-            # the existing row is itself an assignment, not a declaration/bind.
-            if: l2_is_asgn(l2_own_decl[i]) != 0 && l2_is_asgn(at) != 0
-                i: -1
-            ---
+            # Q29 (author, 2026-09-25: «одна ячейка там где объявление»): a later bare assignment of
+            # the same name writes the same cell -- it is never a new occurrence; `\[N]` numbers
+            # the declarations (-189 c3c).
         ---
     ---
     if: i >= 0 && l2_own_ty[i] != ty
@@ -15332,7 +15330,7 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
             if: onm != 0
                 l2_xfree((cast: (@: void) onm))
             if: idx < 0
-                return: 1
+                return: l2_error(l2_src, node, "own occurrence index out of range")
             if: l2_m_uses[l2_own_off(mi, idx)] != 0
                 if: c.sprintf(dest, "l2_q%d", idx) < 0
                     return: 1
@@ -16014,7 +16012,7 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
                 return: 1
             po: l2_own_find_occ(l2_find_method(f\value\as\atom), p5\value\as\atom, (cast: (int) l2_literal_value(p3\value\as\atom)))
             if: po < 0 || l2_m_uses[l2_own_off(l2_find_method(f\value\as\atom), po)] = 0
-                return: 1
+                return: l2_error(l2_src, p5\value, "own occurrence index out of range")
             # This own row belongs to ANOTHER method's activation, not the
             # one this C function is being emitted for: l2_q%d is that
             # OTHER method's own local, out of scope here (a same-method
@@ -16046,7 +16044,7 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
         if: f\value\kind = c.LM_P0_NODE_ATOM && l2_ident(f\value\as\atom) != 0 && l2_find_method(f\value\as\atom) >= 0 && p1 != 0 && p1\value != 0 && p1\value\kind = c.LM_P0_NODE_ATOM && l2_is_slash(p1\value\as\atom) && p2 != 0 && p2\value != 0 && p2\value\kind = c.LM_P0_NODE_ATOM && l2_ident(p2\value\as\atom) != 0
             po: l2_own_find_last(l2_find_method(f\value\as\atom), p2\value\as\atom)
             if: po < 0 || l2_m_uses[l2_own_off(l2_find_method(f\value\as\atom), po)] = 0
-                return: 1
+                return: l2_error(l2_src, p5\value, "own occurrence index out of range")
             if: l2_own_from_expr(po, occx) != 0
                 return: 1
             if: c.fprintf(l2_out, "%sl2_xp: %s\n", ind, occx) < 0
@@ -16111,7 +16109,7 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
             if: have_value = 0 && p1 != 0 && p2 != 0 && p3 != 0 && p4 != 0 && p1\value != 0 && p2\value != 0 && p3\value != 0 && p4\value != 0 && p1\value\kind = c.LM_P0_NODE_ATOM && p2\value\kind = c.LM_P0_NODE_ATOM && p3\value\kind = c.LM_P0_NODE_ATOM && p4\value\kind = c.LM_P0_NODE_ATOM && l2_text_eq(p1\value\as\atom, "[") != 0 && l2_num(p2\value\as\atom) != 0 && l2_text_eq(p3\value\as\atom, "]") != 0 && l2_ident(p4\value\as\atom) != 0
                 po: l2_own_find_occ(mi, p4\value\as\atom, (cast: (int) l2_literal_value(p2\value\as\atom)))
                 if: po < 0 || l2_m_uses[l2_own_off(mi, po)] = 0
-                    return: 1
+                    return: l2_error(l2_src, p4\value, "own occurrence index out of range")
                 if: c.sprintf(piece, "l2_q%d", po) < 0
                     return: 1
                 if: l2_cat(buf, piece) != 0

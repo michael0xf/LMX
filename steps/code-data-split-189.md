@@ -830,3 +830,22 @@ Mutants (private variants, each RED by behaviour):
   unit_recursive_model_slot exits 3.
 
 Per-row check (357 rows, a scratch driver with the scratch walker patch): 0 red after the re-pins.
+
+### c3b-3, part 2: the working-copy machinery goes
+
+Once every own field but an array is direct, nothing reaches the old machinery.  The 197 fixtures'
+generated L1 (c3b-3 part 1) has no `_dirty`, `_sticky`, `_active` and no `l2_q<k>: ...` assignment.
+So these go:
+- the checkpoint (`l2_emit_checkpoint`, 17 call sites), its reload (`l2_emit_own_reload`,
+  `l2_own_unit_field`);
+- occ_write, whose calls are now `l2_own_store`, and `l2_own_spell`, whose calls are now
+  `l2_own_load`;
+- the sticky rule: l2_canon_spell, l2_emit_finalize_old, l2_emit_addr_mark, l2_emit_bind_mark,
+  l2_own_addr_taken, l2_param_addr_taken and its memo, l2_addr_scan, l2_own_of_param;
+- the prelude's value declarations, initial loads and sticky flags: a direct field keeps its slot
+  handle;
+- helpers left without a caller: l2_own_param_of, l2_own_canon, l2_param_name, l2_own_store_value;
+- the comments that described publication at a checkpoint.
+
+Witness: every fixture translated before and after (n159/genall.sh: 214 outputs, the library form
+too, and each refusal's stderr) is byte-identical.  l2trans.lm1 is 552 lines shorter.

@@ -1,0 +1,202 @@
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_walk.lm1"
+predef: "l2src/lmx_plan.lm1"
+predef: "l2src/lmx_scratch.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_chars.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_primitive.h.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# -177 c3: receive-if PRIM. Two letters, different payload models; Model2 takes second, leaves first.
+# Mutant: take head / ignore implements -> RED.
+
+@: LmxArena ga 0
+@: Lmx groles 0
+@: Lmx gplan_roles 0
+@: LmxWalkContext gctx 0
+@: LmxWalkValue gv 0
+int: broken 0
+int: checks 0
+int: failures 0
+
+sub: check (int: ok; const: @(char label))
+    checks: checks + 1
+    if: ok = 0
+        failures: failures + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: check
+
+fn: fr (@: Lmx parent; size_t: slot; int: op; size_t: children) @: Lmx
+    @: Lmx n lmx_walk_frame(ga, groles, parent, op, children)
+    if: n = 0 || lmx_arena_ref_store(parent, slot, (cast: (@: void) n)) != 0
+        broken: broken + 1
+        return: 0
+    ---
+return: n
+
+fn: pl (@: Lmx parent; size_t: slot; size_t: children) @: Lmx
+    @: Lmx n lmx_walk_plain(ga, parent, children)
+    if: n = 0 || lmx_arena_ref_store(parent, slot, (cast: (@: void) n)) != 0
+        broken: broken + 1
+        return: 0
+    ---
+return: n
+
+sub: ref (@: Lmx code; size_t: slot; @: Lmx target)
+    if: code = 0 || target = 0 || lmx_arena_ref_store(code, slot, (cast: (@: void) target)) != 0
+        broken: broken + 1
+    ---
+end: ref
+
+fn: mk_m (@: Lmx unit; size_t: slot; size_t: children) @: Lmx
+    @: Lmx m pl(unit, slot, children)
+    @: LmxCallable info lmx_callable_new_owned(ga)
+    if: m = 0 || info = 0 || lmx_arena_ref_store(m, 0U, (cast: (@: void) info)) != 0
+        broken: broken + 1
+        return: 0
+    ---
+return: m
+
+fn: go (@: Lmx m) int
+    int: st
+    if: m = 0 || gctx = 0 || gv = 0
+        return: c.LMX_WALK_INVALID
+    st: lmx_walk_prepare(gctx, ga, gplan_roles, m)
+    if: st != c.LMX_WALK_OK
+        return: st
+return: lmx_walk_run(gctx, m, 0, 0U, gv)
+
+fn: mk_letter (@: Lmx payload) @: LmxMsg
+    @: LmxMsg letter 0
+    @: Lmx graph 0
+    letter: (cast: (@: LmxMsg) lmx_arena_take(ga, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    graph: lmx_node_new_owned(ga)
+    if: letter = 0 || graph = 0 || lmx_arena_refs_open_owned(ga, graph, 2U) != 0
+        return: 0
+    ---
+    if: lmx_arena_ref_store(graph, 0U, 0) != 0 || lmx_arena_ref_store(graph, 1U, (cast: (@: void) payload)) != 0
+        return: 0
+    ---
+    letter\graph: graph
+return: letter
+
+fn: main () int
+    LmxArena: arena
+    LmxArena: context_arena
+    LmxPool: context_cells
+    LmxScratch: store
+    LmxWalkContext: context
+    @: Lmx unit 0
+    @: Lmx m 0
+    @: Lmx n 0
+    @: Lmx pn 0
+    @: Lmx model1 0
+    @: Lmx model2 0
+    @: Lmx payload1 0
+    @: Lmx payload2 0
+    @: Lmx prim_rec 0
+    @: LmxPrimitive prim 0
+    @: LmxPost mailbox 0
+    @: LmxSchedule slot 0
+    @: LmxThread thread 0
+    @: LmxMsg letter1 0
+    @: LmxMsg letter2 0
+    @: LmxMsg thread_message 0
+    @: Lmx graph 0
+    @: void left 0
+    int: st 0
+
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ arena) != 0
+        return: 2
+    ga: @ arena
+    groles: lmx_walk_roles_open(ga)
+    gplan_roles: lmx_plan_roles_open(ga)
+    memset((cast: (@: void) (@ context_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ context_cells)), 0, c.sizeof(c.LmxPool))
+    memset((cast: (@: void) (@ store)), 0, c.sizeof(c.LmxScratch))
+    if: lmx_arena_open(@ context_arena) != 0 || lmx_scratch_open(@ store, @ context_arena, @ context_cells, 16U) != c.LMX_SCRATCH_OK
+        return: 2
+    context.arena: ga
+    context.scratch: @ store
+    context.roles: groles
+    context.plan_roles: gplan_roles
+    context.immutable_profile: 0
+    context.classified: 0U
+    gctx: @ context
+    gv: (cast: (@: LmxWalkValue) calloc(1U, c.sizeof(c.LmxWalkValue)))
+
+    unit: lmx_node_new_owned(ga)
+    if: unit = 0 || lmx_arena_refs_open_owned(ga, unit, 16U) != 0
+        return: 2
+    ---
+    # Distinct payload shapes: model1 has 1 int slot; model2 has 2 int slots.
+    model1: pl(unit, 1U, 1U)
+    model2: pl(unit, 2U, 2U)
+    payload1: pl(unit, 3U, 1U)
+    payload2: pl(unit, 4U, 2U)
+    if: model1 = 0 || model2 = 0 || payload1 = 0 || payload2 = 0
+        return: 2
+    if: lmx_walk_store_int(ga, model1, 0U, 1) != c.LMX_WALK_OK || lmx_walk_store_int(ga, model2, 0U, 2) != c.LMX_WALK_OK || lmx_walk_store_int(ga, model2, 1U, 3) != c.LMX_WALK_OK
+        return: 2
+    if: lmx_walk_store_int(ga, payload1, 0U, 1) != c.LMX_WALK_OK || lmx_walk_store_int(ga, payload2, 0U, 2) != c.LMX_WALK_OK || lmx_walk_store_int(ga, payload2, 1U, 3) != c.LMX_WALK_OK
+        return: 2
+
+    mailbox: (cast: (@: LmxPost) lmx_arena_take(ga, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    slot: (cast: (@: LmxSchedule) lmx_arena_take(ga, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    thread: (cast: (@: LmxThread) lmx_arena_take(ga, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
+    graph: lmx_node_new_owned(ga)
+    if: mailbox = 0 || slot = 0 || thread = 0 || graph = 0
+        return: 2
+    if: lmx_post_init(ga, mailbox) != c.LMX_POST_OK || lmx_schedule_init(slot, ga, (cast: (@: void) thread), 4U) != c.LMX_SCHEDULE_OK || lmx_thread_init(ga, thread, graph, mailbox, slot) != c.LMX_THREAD_OK
+        return: 2
+    thread_message: lmx_thread_message(thread)
+    thread_message\running: 1
+    if: lmx_thread_enter(thread) != c.LMX_THREAD_OK
+        return: 2
+
+    letter1: mk_letter(payload1)
+    letter2: mk_letter(payload2)
+    if: letter1 = 0 || letter2 = 0
+        return: 2
+    if: lmx_thread_mail_accept(ga, thread, (cast: (@: void) letter1), c.LMX_POST_INBOX) != c.LMX_POST_OK
+        return: 2
+    if: lmx_thread_mail_accept(ga, thread, (cast: (@: void) letter2), c.LMX_POST_INBOX) != c.LMX_POST_OK
+        return: 2
+
+    prim: (cast: (@: LmxPrimitive) lmx_arena_take(ga, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))
+    if: prim = 0
+        return: 2
+    prim\fn: lmx_walk_receive_if
+    prim\signature: 0
+    prim\owner: (cast: (@: Lmx) ga)
+    prim_rec: (cast: (@: Lmx) prim)
+
+    m: mk_m(unit, 0U, 2U)
+    n: fr(m, 1U, c.LMX_WALK_OP_RET, 2U)
+    pn: fr(n, 1U, c.LMX_WALK_OP_PRIM, 3U)
+    ref(pn, 1U, prim_rec)
+    ref(pn, 2U, model2)
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\ref = (cast: (@: void) letter2\graph))), "receive-if Model2 takes second")
+    check(lmx_thread_mail_count(thread, c.LMX_POST_INBOX) = 1U, "one letter left")
+    left: lmx_thread_mail_take(thread, c.LMX_POST_INBOX)
+    check(left = (cast: (@: void) letter1), "left letter is the first")
+
+    lmx_thread_leave(thread)
+    c.printf("lmx_walk_receive_if_selftest checks=%d failures=%d broken=%d\n", checks, failures, broken)
+    if: failures != 0 || broken != 0
+        return: 1
+return: 0

@@ -919,3 +919,20 @@ fn: lmx_msg_poll_abort () int
     if: message\success != 0
         return: 1
 return: 0
+
+# -177 c1: take as one registered kernel PRIM (prim ABI). Empty inbox -> \out 0, OK.
+# Lives here (not walk.lm1) so walk selftests that omit thread still link. Declared in lmx_walk.h.lm1.
+# Opus: LmxPrimitive.fn = lmx_walk_mail_take; PRIM [prim, record] (nargs 0). Graph through \out.
+# Mutant: refuse empty / leave status FAIL -> empty take RED.
+fn: lmx_walk_mail_take (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    @: LmxMsg letter 0
+    \out: 0
+    if: out = 0 || nargs != 0U
+        return: 1
+    ---
+    letter: (cast: (@: LmxMsg) lmx_thread_mail_take(lmx_thread_current(), c.LMX_POST_INBOX))
+    if: letter = 0
+        return: 0
+    ---
+    \out: (cast: (@: void) letter\graph)
+return: 0

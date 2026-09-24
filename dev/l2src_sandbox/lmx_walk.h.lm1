@@ -109,6 +109,8 @@ predef: "l2src/lmx_plan.h.lm1"
 # Own fields keep working copies: numerics in LmxWalkOwn.value (size_t, widest); Structure
 # fields (pointer cells) in LmxWalkOwn.ref (-174 c2). A read copies the working value /
 # reference into the destination, because the field may be assigned again before use.
+# receiveMessage take (-177 c1): PRIM record whose fn is lmx_walk_mail_take (nargs 0);
+# empty inbox is null out OK. Null reference PUT + pointer EQ vs 0 also -177 c1.
 # Model: m creation (-174 c3): PRIM record whose fn is lmx_walk_merge_model over
 # lmx_merge_owned (null override map); see prototype note below.
 # CALL dest (-174 c4): fresh typed cell of callee result type when method.sig carries
@@ -304,6 +306,9 @@ prototype:
     # (LMX_blog/2026-09-20.md, "Общение только через Message").
     # -174 c3: Model: m. LmxPrimitive.fn = this; LmxPrimitive.owner = (cast: (@: Lmx) program_arena);
     # PRIM node [prim, record, model]; null override map; result Structure in out.
+    # -177 c1: receiveMessage take. LmxPrimitive.fn = this; PRIM [prim, record] nargs 0;
+    # empty inbox -> out 0 OK; else letter\graph. Impl in lmx_thread.lm1 (link closure).
+    fn: lmx_walk_mail_take (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
     fn: lmx_walk_merge_model (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
     fn: lmx_walk_callable_result_type (@: LmxArena arena; @: Lmx callee) int
     fn: lmx_walk_call_dest (@: LmxWalkFrame f; @: void dest; int: ty; @@: void call_dest) int

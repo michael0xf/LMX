@@ -106,8 +106,9 @@ predef: "l2src/lmx_plan.h.lm1"
 #     that would LEAVE an activation through `ret` is copied -- four bytes, by value --
 #     into the destination of the caller; a reference into the graph leaves as it is;
 #   * the inputs of a callee are an array of references in the caller's scratch slice.
-# Own fields keep their int working values (LmxWalkOwn): a read copies the working value
-# into the destination, because the field may be assigned again before the value is used.
+# Own fields keep their numeric working values (LmxWalkOwn.value is ulong, the widest):
+# a read copies the working value into the destination, because the field may be assigned
+# again before the value is used. Load and publish go by the CELL's arena type.
 #
 #   ret   [ret, value?]               a return; no value for a void callable
 #   call  [call, M, arg ...]          M is the callee occurrence itself, by reference
@@ -139,13 +140,11 @@ predef: "l2src/lmx_plan.h.lm1"
 # owner targeting that exact profile makes preparation INVALID.  Reading remains valid.
 #
 # CURRENT UNSUPPORTED LIMITS of this slice -- what this prototype does not do YET, stated
-# rather than hidden, and NOT the final semantics of L3: a value is an integer, a
-# reference or nothing; arithmetic is int only; own fields are int only -- there is no
-# own REFERENCE field, and no char/size_t/pointer own field; whether a reference an
-# integer node reads IS an int cell is the producer's proof, not checked here; a return
-# carries 0 or 1 value; no throw, no poll (lmx_msg_poll_escape), no arrays, no dynamic
-# inputs of 21.3.  Lifting one of them is a new role or a new plan entry role, never a
-# runtime text or a type code carried by a value.
+# rather than hidden, and NOT the final semantics of L3: Part A (-167) types numeric
+# cells (int/char/size_t/unsigned/ulong) from the arena; a PUT into a pointer cell or a
+# Structure is INVALID (X1 under D-37). Own REFERENCE / Structure fields, OF-deref, and
+# merge are Part B. Arithmetic same-type rules land with -167 commit 2. A return carries
+# 0 or 1 value; no poll; no arrays; no dynamic inputs of 21.3.
 #
 # What is outside the slice is REPORTED, never skipped and never handed to native code
 # (docs/LMX_semantics.ru.md, #l3-receiver: a restricted profile reports an unsupported
@@ -233,7 +232,7 @@ end: LmxWalkValue
 # order of every checkpoint -- not the order in which the body happens to mention them.
 struct: LmxWalkOwn
     @@: void from
-    int: value
+    ulong: value
     int: dirty
 end: LmxWalkOwn
 
@@ -329,6 +328,9 @@ prototype:
     fn: lmx_walk_plain (@: LmxArena arena; @: Lmx parent; size_t: children) @: Lmx
     fn: lmx_walk_store_size (@: LmxArena arena; @: Lmx code; size_t: slot; size_t: value) int
     fn: lmx_walk_store_int (@: LmxArena arena; @: Lmx code; size_t: slot; int: value) int
+    fn: lmx_walk_store_char (@: LmxArena arena; @: Lmx code; size_t: slot; int: value) int
+    fn: lmx_walk_store_unsigned (@: LmxArena arena; @: Lmx code; size_t: slot; unsigned: value) int
+    fn: lmx_walk_store_ulong (@: LmxArena arena; @: Lmx code; size_t: slot; ulong: value) int
 
     # Internal steps, named here because they are mutually recursive.
     fn: lmx_walk_kind (@: LmxWalkFrame f; @: void p) int

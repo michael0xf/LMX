@@ -4,6 +4,7 @@ predef: "l2src/lmx_implements.h.lm1"
 predef: "l2src/lmx_range.lm1"
 predef: "l2src/lmx_arena_refs.lm1"
 predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_chars.lm1"
 predef: "l2src/lmx_scratch.lm1"
 predef: "l2src/lmx_plan.lm1"
 predef: "l2src/lmx_primitive.h.lm1"
@@ -219,6 +220,149 @@ fn: lmx_walk_store_int (@: LmxArena arena; @: Lmx code; size_t: slot; int: value
         return: c.LMX_WALK_INVALID
 return: c.LMX_WALK_OK
 
+
+fn: lmx_walk_store_char (@: LmxArena arena; @: Lmx code; size_t: slot; int: value) int
+    @: void cell 0
+    if: arena = 0 || code = 0
+        return: c.LMX_WALK_INVALID
+    if: lmx_chars_init(arena) != 0 && lmx_arena_find(arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR) = 0
+        return: c.LMX_WALK_NOMEM
+    ---
+    cell: lmx_char_cell(arena, value)
+    if: cell = 0 || lmx_arena_ref_store(code, slot, cell) != 0
+        return: c.LMX_WALK_INVALID
+return: c.LMX_WALK_OK
+
+fn: lmx_walk_store_unsigned (@: LmxArena arena; @: Lmx code; size_t: slot; unsigned: value) int
+    @: void cell lmx_unsigned_new_owned(arena)
+    if: cell = 0
+        return: c.LMX_WALK_NOMEM
+    if: lmx_unsigned_store_known(cell, value) != 0 || lmx_arena_ref_store(code, slot, cell) != 0
+        return: c.LMX_WALK_INVALID
+return: c.LMX_WALK_OK
+
+fn: lmx_walk_store_ulong (@: LmxArena arena; @: Lmx code; size_t: slot; ulong: value) int
+    @: void cell lmx_ulong_new_owned(arena)
+    if: cell = 0
+        return: c.LMX_WALK_NOMEM
+    if: lmx_ulong_store_known(cell, value) != 0 || lmx_arena_ref_store(code, slot, cell) != 0
+        return: c.LMX_WALK_INVALID
+return: c.LMX_WALK_OK
+
+# A value's C type is its CELL's, asked of the arena -- never a tag on the value (-167 A).
+# Returns the LMX_TYPE_* for a numeric primitive cell, or 0 when the address is not one
+# (pointer cell, Structure, unknown). Destination-passing temps (KIND_NONE) are not cells.
+fn: lmx_walk_numeric_type (@: LmxArena arena; @: void cell) int
+    int: kind
+    int: ty
+    if: arena = 0 || cell = 0
+        return: 0
+    kind: lmx_domain_kind(arena, cell)
+    if: kind != c.LMX_KIND_PRIMITIVE
+        return: 0
+    ty: lmx_domain_type(arena, cell)
+    if: ty = c.LMX_TYPE_INT || ty = c.LMX_TYPE_CHAR || ty = c.LMX_TYPE_SIZE_T || ty = c.LMX_TYPE_UNSIGNED || ty = c.LMX_TYPE_ULONG || ty = c.LMX_TYPE_UNSIGNED_CHAR
+        return: ty
+return: 0
+
+# Load a numeric arena cell into the widest working width. INVALID when not numeric.
+fn: lmx_walk_load_numeric (@: LmxArena arena; @: void cell; @: ulong out) int
+    int: ty
+    if: out = 0
+        return: c.LMX_WALK_INVALID
+    ty: lmx_walk_numeric_type(arena, cell)
+    if: ty = 0
+        return: c.LMX_WALK_INVALID
+    if: ty = c.LMX_TYPE_INT
+        \out: (cast: (ulong) lmx_int_value_known(cell))
+        return: c.LMX_WALK_OK
+    if: ty = c.LMX_TYPE_CHAR
+        \out: (cast: (ulong) lmx_char_value_known(cell))
+        return: c.LMX_WALK_OK
+    if: ty = c.LMX_TYPE_UNSIGNED_CHAR
+        \out: (cast: (ulong) lmx_uchar_value_known(cell))
+        return: c.LMX_WALK_OK
+    if: ty = c.LMX_TYPE_SIZE_T
+        \out: (cast: (ulong) lmx_size_value_known(cell))
+        return: c.LMX_WALK_OK
+    if: ty = c.LMX_TYPE_UNSIGNED
+        \out: (cast: (ulong) lmx_unsigned_value_known(cell))
+        return: c.LMX_WALK_OK
+    if: ty = c.LMX_TYPE_ULONG
+        \out: lmx_ulong_value_known(cell)
+        return: c.LMX_WALK_OK
+return: c.LMX_WALK_INVALID
+
+# Value operand of PUT/SET: an arena numeric cell, or a destination-passing temp
+# (unclassified address -- today's computed int in the caller's dest / spare).
+fn: lmx_walk_load_operand (@: LmxArena arena; @: void cell; @: ulong out; @: int out_ty) int
+    int: kind
+    if: out = 0 || out_ty = 0
+        return: c.LMX_WALK_INVALID
+    if: arena = 0 || cell = 0
+        return: c.LMX_WALK_INVALID
+    kind: lmx_domain_kind(arena, cell)
+    if: kind = c.LMX_KIND_NONE
+        \out: (cast: (ulong) lmx_int_value_known(cell))
+        \out_ty: c.LMX_TYPE_INT
+        return: c.LMX_WALK_OK
+    ---
+    if: lmx_walk_load_numeric(arena, cell, out) != c.LMX_WALK_OK
+        return: c.LMX_WALK_INVALID
+    \out_ty: lmx_walk_numeric_type(arena, cell)
+return: c.LMX_WALK_OK
+
+# Mutate an existing mutable numeric cell by its arena type. Interned CHAR is not mutable.
+fn: lmx_walk_store_numeric_into (@: LmxArena arena; @: void cell; ulong: value) int
+    int: ty lmx_walk_numeric_type(arena, cell)
+    if: ty = 0
+        return: c.LMX_WALK_INVALID
+    if: ty = c.LMX_TYPE_CHAR
+        return: c.LMX_WALK_INVALID
+    if: ty = c.LMX_TYPE_INT
+        if: lmx_int_store_known(cell, (cast: (int) value)) != 0
+            return: c.LMX_WALK_INVALID
+        return: c.LMX_WALK_OK
+    if: ty = c.LMX_TYPE_SIZE_T
+        if: lmx_size_store_known(cell, (cast: (size_t) value)) != 0
+            return: c.LMX_WALK_INVALID
+        return: c.LMX_WALK_OK
+    if: ty = c.LMX_TYPE_UNSIGNED
+        if: lmx_unsigned_store_known(cell, (cast: (unsigned) value)) != 0
+            return: c.LMX_WALK_INVALID
+        return: c.LMX_WALK_OK
+    if: ty = c.LMX_TYPE_ULONG
+        if: lmx_ulong_store_known(cell, value) != 0
+            return: c.LMX_WALK_INVALID
+        return: c.LMX_WALK_OK
+    if: ty = c.LMX_TYPE_UNSIGNED_CHAR
+        if: lmx_uchar_store_known(cell, (cast: (unsigned) value)) != 0
+            return: c.LMX_WALK_INVALID
+        return: c.LMX_WALK_OK
+return: c.LMX_WALK_INVALID
+
+# Publish a working numeric into a Structure slot. CHAR replaces the interned reference;
+# other numerics mutate the cell. Pointer / Structure / unknown -> INVALID (X1 at call).
+fn: lmx_walk_publish_slot (@: LmxArena arena; @@: void slot; ulong: value) int
+    @: void cell 0
+    int: ty
+    if: arena = 0 || slot = 0 || slot[0] = 0
+        return: c.LMX_WALK_INVALID
+    cell: slot[0]
+    ty: lmx_walk_numeric_type(arena, cell)
+    if: ty = 0
+        return: c.LMX_WALK_INVALID
+    if: ty = c.LMX_TYPE_CHAR
+        if: lmx_chars_init(arena) != 0 && lmx_arena_find(arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR) = 0
+            return: c.LMX_WALK_NOMEM
+        ---
+        cell: lmx_char_cell(arena, (cast: (int) (value & (cast: (ulong) 255))))
+        if: cell = 0
+            return: c.LMX_WALK_INVALID
+        slot[0]: cell
+        return: c.LMX_WALK_OK
+return: lmx_walk_store_numeric_into(arena, cell, value)
+
 # ---- recognition and field references --------------------------------------------------
 
 # The one door through which this unit asks the arena's index what an address is.  The
@@ -408,7 +552,10 @@ fn: lmx_walk_scan_node (@: LmxWalkFrame f; @: void node) int
             return: c.LMX_WALK_INVALID
         o: f\found + f\nfound
         o\from: from
-        o\value: lmx_int_value_known(from[0])
+        o\value: 0U
+        if: lmx_walk_load_numeric(f\arena, from[0], @ o\value) != c.LMX_WALK_OK
+            return: c.LMX_WALK_INVALID
+        ---
         o\dirty: 0
         f\nfound: f\nfound + 1U
         return: c.LMX_WALK_OK
@@ -569,7 +716,7 @@ fn: lmx_walk_checkpoint (@: LmxWalkFrame f) int
     while: i < f\nowns
         o: f\owns + i
         if: o\dirty != 0
-            if: o\from = 0 || lmx_int_store_known(o\from[0], o\value) != 0
+            if: o\from = 0 || lmx_walk_publish_slot(f\arena, o\from, o\value) != c.LMX_WALK_OK
                 return: c.LMX_WALK_CHECKPOINT
             o\dirty: 0
         ---
@@ -814,6 +961,7 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
     int: op
     int: a 0
     int: b 0
+    ulong: wv 0U
     int: going 1
     int: status c.LMX_WALK_OK
     if: f = 0 || node = 0 || dest = 0 || out = 0
@@ -846,7 +994,14 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
         o: lmx_walk_own_in(f\owns, f\nowns, lmx_walk_slot(f, code, 1U))
         if: o = 0
             return: c.LMX_WALK_INVALID
-        lmx_int_store_known(dest, o\value)
+        if: lmx_walk_numeric_type(f\arena, dest) != 0
+            if: lmx_walk_store_numeric_into(f\arena, dest, o\value) != c.LMX_WALK_OK
+                return: c.LMX_WALK_INVALID
+            ---
+        else:
+            # Destination-passing temp (untyped C int / WalkValue.number).
+            lmx_int_store_known(dest, (cast: (int) o\value))
+        ---
         \out: dest
         return: c.LMX_WALK_OK
     if: op = c.LMX_WALK_OP_ARG
@@ -881,7 +1036,17 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
         if: status != c.LMX_WALK_OK
             return: status
         slot: lmx_walk_slot(f, code, 1U)
-        if: value = 0 || slot = 0 || slot[0] = 0 || lmx_int_store_known(slot[0], lmx_int_value_known(value)) != 0
+        if: value = 0 || slot = 0 || slot[0] = 0
+            return: c.LMX_WALK_INVALID
+        # Target type from the CELL the slot holds. Pointer / Structure -> INVALID (X1).
+        b: lmx_walk_numeric_type(f\arena, slot[0])
+        if: b = 0
+            return: c.LMX_WALK_INVALID
+        if: lmx_walk_load_operand(f\arena, value, @ wv, @ a) != c.LMX_WALK_OK
+            return: c.LMX_WALK_INVALID
+        if: a != b
+            return: c.LMX_WALK_INVALID
+        if: lmx_walk_publish_slot(f\arena, slot, wv) != c.LMX_WALK_OK
             return: c.LMX_WALK_INVALID
         \out: slot[0]
         return: c.LMX_WALK_OK
@@ -892,12 +1057,25 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
         if: value = 0 || lmx_walk_node(f, lmx_arena_ref_value(code, 1U)) != c.LMX_WALK_OP_OWN
             return: c.LMX_WALK_INVALID
         o: lmx_walk_own_in(f\owns, f\nowns, lmx_walk_slot(f, lmx_arena_ref_struct(code, 1U), 1U))
-        if: o = 0
+        if: o = 0 || o\from = 0 || o\from[0] = 0
             return: c.LMX_WALK_INVALID
         # An executed assignment, and the only thing that sets dirty (21.6).
-        o\value: lmx_int_value_known(value)
+        b: lmx_walk_numeric_type(f\arena, o\from[0])
+        if: b = 0
+            return: c.LMX_WALK_INVALID
+        if: lmx_walk_load_operand(f\arena, value, @ wv, @ a) != c.LMX_WALK_OK
+            return: c.LMX_WALK_INVALID
+        if: a != b
+            return: c.LMX_WALK_INVALID
+        o\value: wv
         o\dirty: 1
-        lmx_int_store_known(dest, o\value)
+        if: lmx_walk_numeric_type(f\arena, dest) != 0
+            if: lmx_walk_store_numeric_into(f\arena, dest, o\value) != c.LMX_WALK_OK
+                return: c.LMX_WALK_INVALID
+            ---
+        else:
+            lmx_int_store_known(dest, (cast: (int) o\value))
+        ---
         \out: dest
         return: c.LMX_WALK_OK
     if: op = c.LMX_WALK_OP_ADD || op = c.LMX_WALK_OP_SUB || op = c.LMX_WALK_OP_LT || op = c.LMX_WALK_OP_EQ
@@ -1212,7 +1390,10 @@ fn: lmx_walk_enter (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx node; @
             return: c.LMX_WALK_INVALID
         o: f\owns + i
         o\from: from
-        o\value: lmx_int_value_known(from[0])
+        o\value: 0U
+        if: lmx_walk_load_numeric(f\arena, from[0], @ o\value) != c.LMX_WALK_OK
+            return: c.LMX_WALK_INVALID
+        ---
         o\dirty: 0
         i: i + 1U
     ---

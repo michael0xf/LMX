@@ -1675,6 +1675,12 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_ptr_grow.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
         Args = @('0'); Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('c.sizeof(unsigned)') },
+    # FABLE-OPUS-P0-SIZEOF-ATOM-20260924-157 commit 2: P0 keeps no raw `c.sizeof(...)` atom, so an L2
+    # operand of the door is lowered like any door operand -- an own int x becomes a temp -- where
+    # the raw atom passed the name `x` to C ("x undeclared").  Success is 7.
+    [pscustomobject]@{ Name = 'unit_csizeof_operand_lowered.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
+        Args = @('0'); Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'c.sizeof(x)');
+        Debt = @('return: c.sizeof(l2_t') },
     [pscustomobject]@{ Name = 'unit_sizeof_own_local.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0'); Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT'); Debt = @('l2_message\graph: l2_entry_unit') },
     [pscustomobject]@{ Name = 'unit_native_activation.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';

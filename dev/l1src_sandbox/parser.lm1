@@ -98,7 +98,6 @@ prototype:
     fn: lm_p0_scan_c_prefixed_quote_token (const: @(char text); size_t: end_index; size_t: start) size_t
     fn: lm_p0_starts_c_surface_atom (const: @(char text); size_t: end_index; size_t: start) int
     fn: lm_p0_is_c_surface_top_boundary (char: value) int
-    fn: lm_p0_scan_c_sizeof_surface_atom (const: @(char text); size_t: end_index; size_t: start) size_t
     fn: lm_p0_scan_c_surface_atom (const: @(char text); size_t: end_index; size_t: start) size_t
     fn: lm_p0_scan_c_char (@: LmP0Document document; const: @(char text); size_t: length; @: size_t index; size_t: line; size_t: base_column) int
     fn: lm_p0_scan_c_prefixed_quote (@: LmP0Document document; const: @(char text); size_t: length; @: size_t index; size_t: line; size_t: base_column) int
@@ -1837,66 +1836,11 @@ fn: lm_p0_is_c_surface_top_boundary (char: value) int
     return: ((((((lm_p0_is_field_space(value) || lm_p0_is_field_separator(value)) || (value = '(')) || (value = ')')) || (value = ':')) || (value = '#')) || (value = '{'))
 end: lm_p0_is_c_surface_top_boundary
 
-fn: lm_p0_scan_c_sizeof_surface_atom (const: @(char text); size_t: end_index; size_t: start) size_t
-    size_t: i
-    size_t: close_index
-    size_t: depth
-    int: raw_safe
-    if: ((((start + 8U) >= end_index) || (c.memcmp((text + start), "c.sizeof", 8U) != 0)) || (text[(start + 8U)] != '('))
-        return: start
-    i: (start + 9U)
-    depth: 1U
-    while: (i < end_index)
-        if: lm_p0_is_line_break(text[i])
-            return: start
-        if: lm_p0_starts_c_prefixed_quote(text, end_index, i)
-            size_t: quoted_end
-            quoted_end: lm_p0_scan_c_prefixed_quote_token(text, end_index, i)
-            if: (quoted_end > (i + 1U))
-                i: quoted_end
-                continue
-            ---
-        if: ((text[i] = '\'') || (text[i] = '"'))
-            size_t: quoted_end
-            quoted_end: lm_p0_scan_c_quoted_token(text, end_index, i)
-            if: (quoted_end > (i + 1U))
-                i: quoted_end
-                continue
-            ---
-        if: (text[i] = '(')
-            depth: depth + 1U
-        else:
-            if: (text[i] = ')')
-                depth: depth - 1U
-                if: (depth = 0U)
-                    break
-                ---
-            ---
-        i: i + 1U
-    if: ((i >= end_index) || (text[i] != ')'))
-        return: start
-    close_index: i
-    raw_safe: 1
-    i: (start + 9U)
-    while: (i < close_index)
-        if: (((text[i] = '\\') || (text[i] = '@')) || ((((i + 1U) < close_index) && (text[i] = 'c')) && (text[(i + 1U)] = '.')))
-            raw_safe: 0
-            break
-        i: i + 1U
-    if: raw_safe
-        return: (close_index + 1U)
-    return: start
-end: lm_p0_scan_c_sizeof_surface_atom
-
 fn: lm_p0_scan_c_surface_atom (const: @(char text); size_t: end_index; size_t: start) size_t
     size_t: i
-    size_t: sizeof_end
     size_t: bracket_depth
     if: (lm_p0_starts_c_surface_atom(text, end_index, start) = 0)
         return: start
-    sizeof_end: lm_p0_scan_c_sizeof_surface_atom(text, end_index, start)
-    if: (sizeof_end > start)
-        return: sizeof_end
     i: (start + 2U)
     bracket_depth: 0U
     while: (i < end_index)

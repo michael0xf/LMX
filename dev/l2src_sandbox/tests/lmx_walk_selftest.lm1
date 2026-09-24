@@ -820,9 +820,9 @@ fn: main () int
     st: go(impostor, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_UNSUPPORTED, "a private op record with the number of `ret` is not the role `ret`")
 
-    # An invocation is not a copy.  Twenty-one activations of summer neither allocate a
-    # cell in the graph's arena nor change a byte of it; and once the store is warm they
-    # add no block to the context's arena either, and leave the store empty.
+    # -188 k.3c: summer recurses with data=FRESH(summer), so each go allocates instances
+    # in the graph arena (mutant: data=code in-place -> allocate-nothing greened wrongly).
+    # Scratch/context still rewind: once warm, no new context blocks; store empty after.
     lmx_int_store_known(abox, 20)
     go(summer, argv, 1U, @ r, @ v)
     before: handed(ga)
@@ -835,8 +835,8 @@ fn: main () int
         i: i + 1
     ---
     check(st = c.LMX_WALK_OK && r = 210, "summer(20) = 210, fifty times")
-    check(handed(ga) = before, "invocations allocate nothing in the graph's arena")
-    check(digest(ga) = sum_before, "and write nothing into it")
+    check(handed(ga) > before, "FRESH recursion allocates instances in the graph arena")
+    check(digest(ga) != sum_before, "and those instances change the arena digest")
     check(lmx_arena_mark(pca) = blocks && lmx_pool_count(@ context_cells) = warm, "and, once warm, nothing in the context's arena")
     check(ps\used = 0U && ps\top = 0U, "every activation rewound what it took")
 

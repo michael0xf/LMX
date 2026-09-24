@@ -54,6 +54,7 @@ fn: al_make (@: LmxArena arena; @: void sender; int: argc; @@: char argv) @: Lmx
     @: LmxArrayDesc args
     @: LmxArrayDesc arg
     @@: void slots
+    @: void cell
     size_t: len
     int: i 0
     letter: (cast: (@: LmxMsg) lmx_arena_take(arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
@@ -76,7 +77,15 @@ fn: al_make (@: LmxArena arena; @: void sender; int: argc; @@: char argv) @: Lmx
     ---
     if: lmx_arena_ref_store(payload, 0U, (cast: (@: void) args)) != 0
         return: 0
-    if: lmx_arena_ref_store(graph, 0U, sender) != 0 || lmx_arena_ref_store(graph, 1U, (cast: (@: void) payload)) != 0
+    # FABLE-SONNET-SEND-REF-20260925-172 commit 4 (edited under fable's authorization): the sender
+    # slot is a pointer cell holding `sender`'s address, not `sender` directly -- the same shape
+    # lmx_root_launch now builds for the real mainArgs letter (author's Q26.2 ruling), so scenario C
+    # below (al_holds against the host's own letter) and A/B (against this synthetic one) exercise
+    # one shape.
+    cell: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + 29, arena)
+    if: cell = 0 || lmx_pointer_store_known(cell, sender) != 0
+        return: 0
+    if: lmx_arena_ref_store(graph, 0U, cell) != 0 || lmx_arena_ref_store(graph, 1U, (cast: (@: void) payload)) != 0
         return: 0
     letter\running: 1
     letter\success: 0
@@ -92,10 +101,17 @@ fn: al_holds (@: LmxArena arena; @: Lmx graph; @: void sender; int: argc; @@: ch
     @: LmxArrayDesc args
     @: LmxArrayDesc arg
     @@: void slots
+    @: void cell
     int: i 0
     if: graph = 0 || graph\parent != 0 || graph\len != 2
         return: 0
-    if: sender = 0 || lmx_arena_ref_value(graph, 0U) != sender
+    # FABLE-SONNET-SEND-REF-20260925-172 commit 4 (edited under fable's authorization): the sender
+    # slot is a pointer cell now, classified before it is read through (a raw address there is a
+    # located refusal, not a misread -- the same defensive shape lmx_root_exit_admit uses).
+    cell: lmx_arena_ref_value(graph, 0U)
+    if: cell = 0 || lmx_domain_kind(arena, cell) != c.LMX_KIND_PRIMITIVE || lmx_domain_type(arena, cell) < c.LMX_TYPE_POINTER_BASE
+        return: 0
+    if: sender = 0 || lmx_pointer_value_known(cell) != sender
         return: 0
     payload: (cast: (@: Lmx) lmx_arena_ref_value(graph, 1U))
     if: payload = 0 || lmx_range_classify(arena, (cast: (@: void) payload)) != c.LMX_KIND_STRUCT || payload\parent != 0 || payload\len != 1

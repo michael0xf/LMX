@@ -623,6 +623,24 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_send_ref_root_type_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'root operation not walkable yet: a Ref that is not a reference';
         Absent = @(); Debt = @() },
+    # FABLE-SONNET-SEND-REF-20260925-172 commit 4: the BEHAVIORAL driver-tap witness, gated on
+    # Grok's before_turn launch tap (FABLE-GROKBOT-LAUNCH-TAP-20260925-182). Behind `ref 1`,
+    # l2_driver_before_turn posts R0 a second letter (sender = a standalone peer Message the
+    # driver builds itself) after mainArgs; the fixture takes mainArgs bare, then the peer's own
+    # Ping letter, and replies to m\sender -- then reports its own exit(0) to the host, the ordinary
+    # implicit-addressee send every eternal-runs fixture already makes, needed here too since an
+    # L2-generated root program has no other way to report a defined exit code. l2_driver_service_post
+    # (-Dlmx_service_post) observes every post the generated program makes and prints both counts as
+    # the ONLY program output: reply-to-sender counts the Ref-addressed Pong (always 1 here);
+    # reply-to-parent counts posts to the host, which includes that ordinary exit(0) (baseline 1,
+    # not 0 -- measured, not assumed: a first attempt expecting 0 here was wrong, the exit call
+    # itself is a post to the parent). Mutant: hardcode the addressee to lmx_thread_parent(t)
+    # regardless of Ref -> the Pong reply ALSO lands on the parent -> reply-to-sender 0 /
+    # reply-to-parent 2 -> RED.
+    [pscustomobject]@{ Name = 'unit_send_ref_driver_tap.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 0; Needle = '';
+        Args = @('0', 'ref', '1');
+        Says = @('reply-to-sender 1', 'reply-to-parent 1');
+        Absent = @(); Debt = @() },
     # FABLE-SONNET-RECEIVE-RENAME-20260924-166 commit 1: `nextMessage` is no longer a language
     # word (renamed to `receiveMessage`) -- `nextMessage: m` is now an ordinary colon-assignment
     # to an undeclared name, refused like any other (measured: not "unknown method" -- the shape
@@ -2229,7 +2247,7 @@ foreach ($fx in $fixtures) {
         # program builder the host calls, and the exit code the launch returns (l2_eternal_driver.lm1).
         # The merge rename (S1.1) passes every merge the program makes through the driver's tap, which
         # fails the Nth on `MergeFail`.
-        $code = Invoke-Step ('fixture.' + $stem + '.compile') $gcc ($kflags + @('-Dmain=l2_generated_main', '-Dlmx_root_launch=l2_driver_root_launch', '-Dlmx_merge_owned=l2_driver_merge_owned', '-Dlmx_merge_profiles_owned=l2_driver_merge_profiles_owned', '-c', $genC, '-o', $genO)) $root
+        $code = Invoke-Step ('fixture.' + $stem + '.compile') $gcc ($kflags + @('-Dmain=l2_generated_main', '-Dlmx_root_launch=l2_driver_root_launch', '-Dlmx_merge_owned=l2_driver_merge_owned', '-Dlmx_merge_profiles_owned=l2_driver_merge_profiles_owned', '-Dlmx_service_post=l2_driver_service_post', '-c', $genC, '-o', $genO)) $root
         if ($code -ne 0 -or -not (Test-Path -LiteralPath $genO)) { Add-Row 'FAIL' ('fixture:' + $stem) "gcc exit $code on the generated C"; continue }
         $code = Invoke-Step ('fixture.' + $stem + '.link') $gcc @('-o', $exe, $driverO, $genO, $l2libcO) $root
         if ($code -ne 0 -or -not (Test-Path -LiteralPath $exe)) { Add-Row 'FAIL' ('fixture:' + $stem) "link exit $code"; continue }

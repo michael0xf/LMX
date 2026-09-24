@@ -1,0 +1,38 @@
+# FABLE-SONNET-SEND-REF-20260925-172 commit 4: `sendMessage: Ref X`'s driver-side behavioral
+# witness. Behind the driver fact `ref 1`, l2_driver_before_turn (Grok's before_turn launch tap,
+# FABLE-GROKBOT-LAUNCH-TAP-20260925-182) builds a standalone peer Message and posts R0 a
+# `Ping(n: 1)` letter whose sender is that peer, AFTER the host's own mainArgs letter -- so R0's
+# inbox holds [mainArgs, Ping] in that order when its one turn starts. receiveMessage always takes
+# the NEXT letter (no admission-driven search: a mismatched shape throws, it does not skip and try
+# again -- measured, not assumed), so the fixture takes mainArgs bare first (untyped, discarded,
+# the same shape a program that ignores its own arguments already uses) and only then
+# `receiveMessage: m Ping` for the peer's own letter. The reply (`sendMessage: m\sender Pong(...)`)
+# goes through l2_driver_service_post's own observation point (-Dlmx_service_post), which counts it
+# against the peer's address without needing to inspect any mailbox afterward, and unregisters the
+# peer synchronously so the host can still close.
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+
+Ping:
+    int: n 0
+end: Ping
+
+Pong:
+    int: n 0
+end: Pong
+
+fn: check () int
+    receiveMessage: junk MainLetter
+    receiveMessage: m Ping
+    if: m = 0
+        return: 90
+    if: m\sender = 0
+        return: 91
+    sendMessage: m\sender Pong(n: 2)
+    return: 0
+
+int: got
+got: check()
+sendMessage: exit(exit_code: got; stdout: ""; stderr: "")
+return

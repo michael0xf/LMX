@@ -1005,6 +1005,7 @@ fn: lmx_root_launch_tapped (@: LmxRoot root; int: argc; @@: char argv; LmxRootPr
     @: LmxThread r0_thread 0
     @: LmxMsg r0 0
     @: void report 0
+    @: void cell 0
     size_t: alen 0U
     ulong: now 0U
     int: ai 0
@@ -1048,6 +1049,13 @@ fn: lmx_root_launch_tapped (@: LmxRoot root; int: argc; @@: char argv; LmxRootPr
     # exactly as C passed them.  The letter goes to R0 by the ordinary mail pair; R0 takes it, and an
     # untaken one is released at close.  A full arena: a simple one seats one chunk per array, so its
     # char Array pool could not hold a second argument.
+    #
+    # FABLE-SONNET-SEND-REF-20260925-172 commit 4 (lines edited under fable's authorization; author's
+    # Q26.2 ruling): field 0 holds a pointer CELL to the host's Message, not the Message's address
+    # directly -- a direct address would make the host's own Message a CHILD of this letter's graph
+    # (the copier would descend into it); a reference is a reference TO a reference. Same shape
+    # l2trans.lm1's own kind-10/11 prototype cells and its sendMessage letter emission use:
+    # LMX_TYPE_POINTER_BASE + 29 (LmxMsg).
     if: lmx_arena_open(@ letter_arena) != 0
         return: lmx_root_launch_refuse(root, 0, (cast: (@: char) "lmx: the host could not build the mainArgs letter\n"), out, err)
     ---
@@ -1076,7 +1084,8 @@ fn: lmx_root_launch_tapped (@: LmxRoot root; int: argc; @@: char argv; LmxRootPr
     if: lmx_arena_ref_store(letter_payload, 0U, (cast: (@: void) main_args)) != 0
         return: lmx_root_launch_refuse(root, letter_at, (cast: (@: char) "lmx: the host could not build the mainArgs letter\n"), out, err)
     ---
-    if: lmx_arena_ref_store(letter_graph, 0U, (cast: (@: void) message)) != 0 || lmx_arena_ref_store(letter_graph, 1U, (cast: (@: void) letter_payload)) != 0
+    cell: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + 29, letter_at)
+    if: cell = 0 || lmx_pointer_store_known(cell, (cast: (@: void) message)) != 0 || lmx_arena_ref_store(letter_graph, 0U, cell) != 0 || lmx_arena_ref_store(letter_graph, 1U, (cast: (@: void) letter_payload)) != 0
         return: lmx_root_launch_refuse(root, letter_at, (cast: (@: char) "lmx: the host could not build the mainArgs letter\n"), out, err)
     ---
     letter\running: 1
@@ -1162,6 +1171,7 @@ fn: lmx_root_exit_admit (@: LmxArena arena; @: Lmx model; @: Lmx letter; @: LmxR
     @: Lmx payload 0
     @: LmxArrayDesc out 0
     @: LmxArrayDesc err 0
+    @: void sender_cell 0
     if: arena = 0 || model = 0 || letter = 0 || done = 0
         return: c.LMX_ROOT_INVALID
     if: letter\len < 2 || lmx_range_classify(arena, lmx_arena_ref_value(letter, 1U)) != c.LMX_KIND_STRUCT
@@ -1178,7 +1188,16 @@ fn: lmx_root_exit_admit (@: LmxArena arena; @: Lmx model; @: Lmx letter; @: LmxR
     done\out.data: (cast: (@: char) out\data)
     done\err.len: err\len
     done\err.data: (cast: (@: char) err\data)
-    done\sender: lmx_arena_ref_value(letter, 0U)
+    # FABLE-SONNET-SEND-REF-20260925-172 commit 4 (lines edited under fable's authorization;
+    # author's Q26.2 ruling): the sender slot is a pointer CELL, not the Message's address
+    # directly -- classified before reading through it, so a raw address left there (the old
+    # shape) is a located refusal, not a misread (this is also the commit's own mutant: put the
+    # raw address back -> classify fails -> INVALID, RED across the eternal-runs suite).
+    sender_cell: lmx_arena_ref_value(letter, 0U)
+    if: sender_cell = 0 || lmx_domain_kind(arena, sender_cell) != c.LMX_KIND_PRIMITIVE || lmx_domain_type(arena, sender_cell) < c.LMX_TYPE_POINTER_BASE
+        return: c.LMX_ROOT_INVALID
+    ---
+    done\sender: lmx_pointer_value_known(sender_cell)
 return: c.LMX_ROOT_OK
 
 # THE HOST'S SETTINGS (author 2026-09-24): one entry for now, something C cannot give a program --

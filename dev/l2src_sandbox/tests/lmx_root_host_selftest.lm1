@@ -147,6 +147,7 @@ fn: host_send_exit (@: LmxThread t) int
     @: void code
     @: LmxArrayDesc out
     @: LmxArrayDesc err
+    @: void cell
     if: t = 0 || host_exit_arena = 0 || lmx_arena_open(host_exit_arena) != 0
         return: 0
     ---
@@ -168,7 +169,14 @@ fn: host_send_exit (@: LmxThread t) int
     lmx_arena_ref_store(payload, 0U, code)
     lmx_arena_ref_store(payload, 1U, (cast: (@: void) out))
     lmx_arena_ref_store(payload, 2U, (cast: (@: void) err))
-    lmx_arena_ref_store(lgraph, 0U, (cast: (@: void) lmx_thread_message(t)))
+    # FABLE-SONNET-SEND-REF-20260925-172 commit 4 (edited under fable's authorization): the sender
+    # slot is a pointer cell holding R0's own Message, not the address directly (author's Q26.2
+    # ruling) -- the same shape l2trans.lm1's sendMessage letter emission now uses, so
+    # lmx_root_exit_admit's own defensive classify-then-deref accepts this exit letter.
+    cell: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + 29, host_exit_arena)
+    if: cell = 0 || lmx_pointer_store_known(cell, (cast: (@: void) lmx_thread_message(t))) != 0
+        return: 0
+    lmx_arena_ref_store(lgraph, 0U, cell)
     lmx_arena_ref_store(lgraph, 1U, (cast: (@: void) payload))
     letter\running: 1
     letter\success: 0
@@ -227,6 +235,7 @@ fn: host_r0_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@:
     @: LmxArrayDesc args 0
     @: LmxArrayDesc arg
     @@: void slots
+    @: void sender_cell 0
     host_turns: host_turns + 1
     t: lmx_thread_current()
     message: lmx_thread_message(t)
@@ -241,7 +250,11 @@ fn: host_r0_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@:
         letter: (cast: (@: LmxMsg) lmx_thread_mail_take(t, c.LMX_POST_INBOX))
         if: letter != 0 && letter\graph != 0 && letter\graph\len = 2
             host: lmx_thread_parent(t)
-            if: host != 0 && lmx_arena_ref_value(letter\graph, 0U) = (cast: (@: void) lmx_thread_message(host))
+            # FABLE-SONNET-SEND-REF-20260925-172 commit 4 (edited under fable's authorization): the
+            # sender slot is a pointer cell now (author's Q26.2 ruling) -- classified before it is
+            # read through, the same defensive shape lmx_root_exit_admit uses.
+            sender_cell: lmx_arena_ref_value(letter\graph, 0U)
+            if: host != 0 && sender_cell != 0 && lmx_domain_kind(t\slot\arena, sender_cell) = c.LMX_KIND_PRIMITIVE && lmx_domain_type(t\slot\arena, sender_cell) >= c.LMX_TYPE_POINTER_BASE && lmx_pointer_value_known(sender_cell) = (cast: (@: void) lmx_thread_message(host))
                 host_sender_ok: 1
             ---
             payload: (cast: (@: Lmx) lmx_arena_ref_value(letter\graph, 1U))
@@ -409,6 +422,7 @@ fn: main () int
     @: LmxArrayDesc err_arr 0
     @: char got_text 0
     @: void got_sender 0
+    @: void cell 0
     size_t: got_out 0U
     size_t: got_err 0U
     int: got_code 0
@@ -479,7 +493,12 @@ fn: main () int
     lmx_arena_ref_store(payload, 0U, code)
     lmx_arena_ref_store(payload, 1U, (cast: (@: void) out_arr))
     lmx_arena_ref_store(payload, 2U, (cast: (@: void) err_arr))
-    lmx_arena_ref_store(letter, 0U, (cast: (@: void) model))
+    # FABLE-SONNET-SEND-REF-20260925-172 commit 4 (edited under fable's authorization): the sender
+    # slot is a pointer cell holding `model`'s address, not `model` directly (author's Q26.2
+    # ruling) -- the same shape every other letter builder in this file now uses.
+    cell: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + 29, @ slot_arena)
+    host_check(counts, cell != 0 && lmx_pointer_store_known(cell, (cast: (@: void) model)) = 0, "the sender cell built")
+    lmx_arena_ref_store(letter, 0U, cell)
     lmx_arena_ref_store(letter, 1U, (cast: (@: void) payload))
     memset((cast: (@: void) (@ got)), 0, c.sizeof(c.LmxRootExit))
     host_check(counts, lmx_root_exit_admit(@ slot_arena, model, letter, @ got) = c.LMX_ROOT_OK, "a letter whose payload has the model's shape is admitted")

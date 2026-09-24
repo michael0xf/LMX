@@ -12398,33 +12398,25 @@ fn: l2_field_path_read (int: mi; const: @(LmP0Text left); const: @(LmP0Text righ
     oty: l2_kind_cell_ty(kind)
     if: kind = 10 || kind = 11
         # A reference field leaf (FABLE-SONNET-SEND-REF-20260925-172 commit
-        # 1, revised commit 2 / D-56): l2_xp is already the SLOT's own
-        # address (set above from l2_pxp) -- the slot holds the pointee's
-        # address directly, like kind 3's own reference field, so this is
-        # ONE deref of l2_xp[0], not l2_emit_cell_load's own-storage-cell
-        # convention (that is for a separately allocated pointer cell, a
-        # different representation this kind no longer uses). Its pointee
-        # code is not fixed per kind the way a primitive's is, so re-derive
-        # it (l2_path_kind's out_mi carries it for these two kinds) and
-        # spell it with the same raw-code table a formal's/local's own
-        # pointer type already uses.
+        # 1, RESTORED in commit 4 after the author's ruling on Q26.2: a
+        # slot holding a Structure's address directly makes that Structure
+        # a CHILD of the holder; a reference (`@: T name`) is a reference
+        # TO a reference, so the slot must hold a pointer CELL's address,
+        # and reading it is l2_emit_cell_load's ordinary own-storage-cell
+        # convention, one level removed from a bare primitive -- NOT a
+        # direct deref of the slot itself (D-56's now-reverted shortcut,
+        # which assumed the slot held the pointee directly; the letter's
+        # OWN sender slot was the actual bug, not this kind's shape -- see
+        # steps/send-ref-172.md commit 4). Its pointee code is not fixed
+        # per kind the way a primitive's is, so re-derive it (l2_path_kind's
+        # out_mi carries it for these two kinds) and convert formal/local
+        # raw code -> own-storage code the same way any other declared
+        # pointer own field does (l2_own_ty_of_param).
         ent: 0 - 1
         l2_path_kind(buf, n, @ ent)
-        if: fputs(ind, l2_out) < 0
-            return: 1
-        if: l2_emit_raw_pointer_type(l2_out, ent, 0) != 0
-            return: 1
-        if: c.fprintf(l2_out, " l2_t%d\n%sl2_t%d: (cast: (", t, ind, t) < 0
-            return: 1
-        if: l2_emit_raw_pointer_type(l2_out, ent, 0) != 0
-            return: 1
-        if: fputs(") l2_xp[0])\n", l2_out) < 0
-            return: 1
-        ---
-    else:
-        if: l2_emit_cell_load(oty, ind, t, at) != 0
-            return: 1
-        ---
+        oty: l2_own_ty_of_param(ent)
+    if: l2_emit_cell_load(oty, ind, t, at) != 0
+        return: 1
     if: c.sprintf(dest, "l2_t%d", t) < 0
         return: 1
 return: 0
@@ -18200,7 +18192,13 @@ fn: l2_emit_send (int: k; int: proto; @: char prefix; @: int count_arr; @: int k
             return: 1
         j: j + 1
     ---
-    if: fputs("    if: lmx_arena_ref_store(g, 0U, (cast: (@: void) lmx_thread_message(t))) != 0 || lmx_arena_ref_store(g, 1U, (cast: (@: void) p)) != 0\n        return: 1\n    m\\running: 1\n    m\\success: 0\n    m\\handoff_ready: 0\n    m\\graph: g\n", l2_out) < 0
+    # The sender slot is a pointer CELL holding the current Message's address, not the address
+    # itself (FABLE-SONNET-SEND-REF-20260925-172 commit 4, author's Q26.2 ruling: a reference is a
+    # reference TO a reference -- storing the raw address directly would make the sender a CHILD of
+    # the letter, and its domain would then disagree with a receiving field's own prototype cell at
+    # admission, D-56's real cause). Same shape D-52's kind-10/11 cells use: LMX_TYPE_POINTER_BASE +
+    # 29 (LmxMsg, l2_kernel_ptr_word's own code) so a receiver's `m\sender` field agrees.
+    if: fputs("    cell: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + 29, a)\n    if: cell = 0 || lmx_pointer_store_known(cell, (cast: (@: void) lmx_thread_message(t))) != 0 || lmx_arena_ref_store(g, 0U, cell) != 0 || lmx_arena_ref_store(g, 1U, (cast: (@: void) p)) != 0\n        return: 1\n    m\\running: 1\n    m\\success: 0\n    m\\handoff_ready: 0\n    m\\graph: g\n", l2_out) < 0
         return: 1
     if: has_ref != 0
         if: c.fprintf(l2_out, "    if: lmx_service_post(lmx_child_service(t), refs[%d], m, a) != c.LMX_SERVICE_OK\n        return: 1\n    return: 0\n", ni) < 0
@@ -20227,20 +20225,14 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             if: l2_pkind = 9 && l2_prhs_lit = 0 && c.fprintf(l2_out, "%sif: lmx_ulong_store_known(l2_pxp[0], %s) != 0\n", ind, l2_tok) < 0
                 return: 1
             # A reference field (FABLE-SONNET-SEND-REF-20260925-172 commit 1,
-            # revised commit 2 / D-56): l2_pxp is already the SLOT's own
-            # address (l2_emit_path_to's walk, same as every other kind
-            # here) -- the slot holds the pointee's address directly, like
-            # kind 3's own reference field, not a separately allocated
-            # pointer cell (lmx_arena_ref_store's own body is exactly this
-            # plain assignment; no status to check, a store here cannot
-            # fail). Never a literal RHS (l2_path_rhs does not recognize one
-            # for this kind), so only the l2_eval_fields token side applies.
-            # The trailing `if: 0` is not a status check (there is none) --
-            # every branch here ends a line l2_emit_path_bail's own body
-            # (below, unconditional, shared by every kind) nests under; a
-            # bare assignment has nothing to nest it under, which without
-            # this misparses the two into one statement (measured directly).
-            if: (l2_pkind = 10 || l2_pkind = 11) && c.fprintf(l2_out, "%sl2_pxp[0]: (cast: (@: void) %s)\n%sif: 0\n", ind, l2_tok, ind) < 0
+            # RESTORED in commit 4: l2_pxp is the SLOT's own address (a
+            # pointer CELL's address per the author's Q26.2 ruling -- a
+            # reference is a reference TO a reference, not the pointee
+            # stored directly), so the store goes THROUGH the cell like any
+            # other own-storage pointer write. Never a literal RHS
+            # (l2_path_rhs does not recognize one for this kind), so only
+            # the l2_eval_fields token side applies.
+            if: (l2_pkind = 10 || l2_pkind = 11) && c.fprintf(l2_out, "%sif: lmx_pointer_store_known(l2_pxp[0], (cast: (@: void) %s)) != 0\n", ind, l2_tok) < 0
                 return: 1
             if: l2_emit_path_bail(mi, ind) != 0
                 return: 1
@@ -21855,22 +21847,23 @@ fn: l2_emit_unit (const: @(char out_path)) int
                     return: 1
                 ---
             # A reference field (kind 10/11, FABLE-SONNET-SEND-REF-20260925-172
-            # commit 1, revised commit 2 / D-56): the slot holds the pointee's
-            # address DIRECTLY (lmx_arena_ref_store/ref_value), exactly like
-            # kind 3's own reference slot -- not a separately allocated
-            # pointer CELL (that representation is for an own local/root own
-            # field, a primitive of the pointer pool the walker can PUT/
-            # DEREF; a Structure field that references something is not
-            # that). So, like kind 3/4, no arm here at all: the slot stays
-            # the arena's raw null child, materialized by an ordinary store
-            # wherever the field is later assigned -- lmx_implements_walk
-            # (lmx_implements.lm1:135, "if: c != 0") skips a null consumer
-            # slot as unused, which is exactly what admission of a received
-            # letter's sender field needs. (D-52's now-removed pointer-cell
-            # allocation here made a real letter's raw LmxMsg* address --
-            # stored the same direct way -- disagree in domain kind with
-            # this field's own prototype cell, an uncaught "implements"
-            # throw on every receiveMessage: m Model.)
+            # commit 1, RESTORED in commit 4 per the author's Q26.2 ruling: a
+            # slot holding a Structure's address directly makes it a CHILD of
+            # the holder (the copier descends, admission sees a Structure);
+            # `@: T name` is a reference TO a reference, so the prototype
+            # needs its own pointer CELL here, the same allocator the walked
+            # root's own graph-typed own fields and a formal's/local's own
+            # pointer locals already use (D-56's now-reverted direct-slot
+            # shortcut assumed the slot held the pointee itself; the letter's
+            # OWN sender slot -- built with the raw address, not a cell --
+            # was the actual mismatch, fixed at the letter builders instead,
+            # not here; see steps/send-ref-172.md commit 4).
+            if: l2_nsf_owner[fx] = k && (l2_nsf_kind[fx] = 10 || l2_nsf_kind[fx] = 11) && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + %d, l2_program_arena)\n        if: l2_entry_slot[0] = 0\n            return: 1\n", k, (cast: (unsigned) oi), l2_nsf_ref[fx]) < 0
+                fclose(l2_out)
+                return: 1
+            if: l2_nsf_owner[fx] = k && (l2_nsf_kind[fx] = 10 || l2_nsf_kind[fx] = 11) && l2_ns_eternal[k] >= 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: lmx_arena_take_profiled(l2_program_arena, c.sizeof(@: void), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_POINTER_BASE + %d, l2_eprofile%u)\n        if: l2_entry_slot[0] = 0\n            return: 1\n", k, (cast: (unsigned) oi), l2_nsf_ref[fx], (cast: (unsigned) l2_ns_eternal[k])) < 0
+                fclose(l2_out)
+                return: 1
             if: l2_nsf_owner[fx] = k
                 oi: oi + 1
             ---

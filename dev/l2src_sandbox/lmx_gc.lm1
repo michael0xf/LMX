@@ -78,14 +78,22 @@ fn: lmx_gc_cells (@: LmxArena arena; @: LmxPool pool; @: LmxChunk chunk; unsigne
                 desc: (cast: (@: LmxArrayDesc) cell)
                 status: lmx_gc_note(status, lmx_gc_mark_value(arena, desc\data, gen, depth + 1))
             else:
-                # A child slot, a reference cell, or one of the kernel's own records: every
-                # pointer-sized word is a candidate address.  Over-retention is the only error
-                # this rule can make, and it is the safe direction.
-                words: pool\stride / c.sizeof(@: void)
-                word: 0U
-                while: word < words
-                    status: lmx_gc_note(status, lmx_gc_word(arena, (cast: (@@: void) (cell + (word * c.sizeof(@: void)))), gen, depth))
-                    word: word + 1U
+                if: pool\kind = c.LMX_DOMAIN_KIND_POST
+                    # D-43: Post.nodes.next is the arena->arrays list link. Word-walking a
+                    # live Post would retain every mailbox on the arena. The live mail's
+                    # node pool and inbox are marked explicitly in lmx_gc_mark; the Post
+                    # record's own chunk stays stamped by mark_value.
+                    status: status
+                else:
+                    # A child slot, a reference cell, or one of the kernel's own records: every
+                    # pointer-sized word is a candidate address.  Over-retention is the only error
+                    # this rule can make, and it is the safe direction.
+                    words: pool\stride / c.sizeof(@: void)
+                    word: 0U
+                    while: word < words
+                        status: lmx_gc_note(status, lmx_gc_word(arena, (cast: (@@: void) (cell + (word * c.sizeof(@: void)))), gen, depth))
+                        word: word + 1U
+                    ---
                 ---
             ---
         ---
@@ -269,6 +277,40 @@ fn: lmx_gc_block_dispose (@: LmxArenaBlock node) void
         free((cast: (@: void) node))
     ---
 
+
+# D-43: a pool descriptor embedded in a dying block (LmxPost.nodes) must leave
+# arena->arrays before the block is freed. Otherwise a recycled Post at the same
+# address finds itself already linked and lmx_post_init / lmx_pool_open fails.
+fn: lmx_gc_drop_arrays_in_block (@: LmxArena arena; @: LmxArenaBlock node) void
+    @: LmxPool pool
+    @: LmxPool next
+    @: char lo
+    @: char hi
+    @: char at
+    if: arena = 0 || node = 0 || node\base = 0 || node\n = 0U
+        return
+    ---
+    lo: (cast: (@: char) node\base)
+    hi: lo + node\n
+    pool: arena\arrays
+    while: pool != 0
+        next: pool\next
+        at: (cast: (@: char) pool)
+        if: at >= lo && at < hi
+            lmx_arena_array_drop(arena, pool)
+            pool\head: 0
+            pool\tail: 0
+            pool\next: 0
+            pool\stride: 0U
+            pool\chunk_capacity: 0U
+            pool\kind: 0
+            pool\type: 0
+            pool\profile: 0
+            pool\sealed: 0U
+        ---
+        pool: next
+    ---
+
 fn: lmx_gc_sweep (@: LmxArena arena; unsigned: gen) int
     @: LmxArenaBlock node
     @: LmxArenaBlock next
@@ -278,6 +320,8 @@ fn: lmx_gc_sweep (@: LmxArena arena; unsigned: gen) int
     while: node != 0
         next: node\next
         if: lmx_gc_block_live(arena, node, gen) = 0
+            # D-43: detach embedded pools (Post.nodes) before unlink/free of this block.
+            lmx_gc_drop_arrays_in_block(arena, node)
             lmx_gc_block_unlink(arena, node, gen)
             # The interval leaves the index, the block leaves the list -- and then its storage
             # goes: lmx_arena_drop detaches, it does not free.

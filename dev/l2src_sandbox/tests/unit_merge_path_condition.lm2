@@ -1,0 +1,16 @@
+Model:
+    size_t: x 1U
+end: Model
+
+# D-61 (FABLE-OPUS-MERGE-PARTS-20260926-193): a bound merge result is a root of the field path
+# resolver in an expression too, so `R\x` in a condition is the value `v: R\x` reads.  It was a
+# located refusal (T1b), and before that a raw C name for gcc («'R' undeclared»).  Success is 4.
+fn: m () int
+    R: merge: Model
+    if: R\x != 1U
+        return: 81
+    return: 4
+end: m
+
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

@@ -865,15 +865,21 @@ $fixtures = @(
     # for gcc) is gone: a `define:` of the unit or its predef chain is a DECLARED name
     # (l2_define_name, asked after every L2 name), anything else is a located refusal, and a name only
     # C knows is `c.NAME`.  An all-caps unit field read in a method is that field (6; it was a raw `N`
-    # and gcc «'N' undeclared»); an undeclared all-caps name and D-61's `R\x` in a condition are
-    # refused, located (both reached gcc).  Mutant: l2_define_name answering 0 refuses
-    # unit_define_actual.
+    # and gcc «'N' undeclared»); an undeclared all-caps name is refused, located (it reached gcc).
+    # Mutant: l2_define_name answering 0 refuses unit_define_actual.
     [pscustomobject]@{ Name = 'unit_upper_unit_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 6;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_upper_undeclared_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unresolved dynamic=NOPE'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_merge_path_condition_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unresolved name'; Absent = @(); Debt = @() },
+    # D-61: a bound merge result is a root of the read-position field path resolver
+    # (l2_field_path_check), so its path is a value in any expression -- a condition, arithmetic, a
+    # loop condition -- read through its slot map like `v: R\x`.  It was «unresolved name» (and, for
+    # an all-caps R before T1b, a raw C name gcc refused).  Mutant: the gate without merge results
+    # refuses both rows.  4 and 7.
+    [pscustomobject]@{ Name = 'unit_merge_path_condition.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 4;
+        Absent = @(); Debt = @('l2_pst: lmx_arena_ref_struct(node, 1U)') },
+    [pscustomobject]@{ Name = 'unit_merge_path_expr.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
     # The declared names are admitted and PROBE_DEFINE_OK is compared as itself.  DEBT: LABEL, FG and
     # UNIT_LABEL are staged into `int` temporaries again -- the b5 mixa crash this fixture was written
     # for (a char* constant losing its high bits); the same before T1b, the fixture had no row.

@@ -205,5 +205,26 @@ The open choice, for `@: Inner inner` and `o\inner: @ a` (sent to fable):
 - The difference shows only when a is itself rebindable (a reference, `@: Inner a` then
   `a: @ b`).  For an own a, the merge in place keeps a's identity, so (A) and (B) read the same.
 - Under (A), the graph would hold the address of a slot inside a Structure's field array, not a
-  Structure or a cell.  Whether the arena's table classifies such an interior address is not
-  measured.  If it does not, it is KIND_NONE for the copier, as D-60 is.
+  Structure or a cell.  The probe below measures what the arena and the copier do with it.
+
+### Probe: (A)'s addresses in the program's arena and the copier (measured, fable's q26.2 ask)
+
+A scratch kernel probe, not in the tree.  It uses the worktree's kernel at 1a9a2ad, staged like
+build_l2src.  a is a Structure {int 5}, bound in the unit's slot 0 through a pointer cell: the
+native shape of an own Structure-typed field.  Each value is held in a slot of a fresh holder, which
+is then copied with lmx_graph_copy_owned into a second arena.
+
+| value | lmx_range_classify (program arena) | the copier |
+|---|---|---|
+| a's Structure | 6 STRUCT | 0 OK: a fresh copy, (B)'s case |
+| a's pointer cell (a's binding as a cell) | 1 PRIMITIVE | 0 OK, but the cell is COPIED: a fresh cell holding a fresh copy of a.  The copy no longer tracks a's binding. |
+| the interior slot `lmx_arena_ref_cell(unit, 0U)` | 4 CHILDREN (not NONE) | 1 INVALID: «CHILDREN slot storage or a REF backing cell is never a valid child value», lmx_graph_copy_owned.lm1:668-670 |
+| a pointer cell → the interior slot (the field (A) would build) | – | 1 INVALID: the pointee is followed (:567-571) and refused as above |
+| a pointer cell → a's pointer cell | – | 0 OK: both cells copied, so a's binding is not shared by the copy |
+
+- The raw lmx_pointer_store_known accepts either address (0).  The walker's PUT into a pointer
+  cell refuses any value that is not a Structure (lmx_walk.lm1 PUT: «value != 0 && kind !=
+  STRUCT → INVALID»), so (A) needs a new store as well.
+- So under (A), the interior-slot form is refused by every merge or copy that reaches it.  The
+  pointer-cell form survives a copy only by duplicating the binding, which loses (A)'s one
+  observable difference in any copied graph.  (B) is the copier's ordinary case.

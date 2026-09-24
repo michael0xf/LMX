@@ -124,3 +124,21 @@ more flagged alongside it for the same reason (`unit_occ_snapshot_selector.lm2`)
 ticket's own named set, part (a)) hinging on one unresolved question about whether an unreified
 formal has a prototype field at all. Parts (b) and (c) are coverage gaps, not existing pins —
 recommend new fixtures once -188/-189 land rather than guessed predictions against nothing.
+
+## Correction (Opus, -189 c3b-2 prep, 2026-09-25; accepted by fable)
+
+Three rows in the per-fixture table above are not unchanged.  They have the same shape as
+unit_arg_addr_sticky and unit_addr_take: an address is taken (before or after the binding line),
+then `M\x: 100` writes the field before the print.  Without a working copy the bare name is that
+cell, so the printed line shows 100.  The rule is R2 with carry, static by position
+(steps/code-data-split-189.md, «c3b-2 plan»).
+- unit_arg_addr_types: `U 51 51` → `U 100 100`; `Z local 71`, `Z graph 71` → 100, 100; `L local
+  81`, `L graph 81` → 100, 100.  `pokeX(@: x)` is before the binding line here, not after as the
+  table says.
+- unit_arg_addr_dyn_types: `U2 6 6`, `L2 6 6`, `F2 6 6` → `100 100` each.  U1/L1/F1, W, DP, FC
+  and TC are unchanged.
+- unit_arg_addr_ordinary: `OC3 9 9` → `OC3 100 100`, `OE 6 6` → `OE 100 100`, `OD3 9 9` → `OD3
+  100 100`.  The address is taken after the binding; `M\x: 100` then follows it, and the old
+  sticky rule is what printed the local over it.
+
+The predictions are from reading the fixtures; c3b-2's build measures them.

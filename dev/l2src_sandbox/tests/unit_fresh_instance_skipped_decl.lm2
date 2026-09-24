@@ -1,0 +1,27 @@
+# The execution pair (FABLE-OPUS-CODE-DATA-SPLIT-20260925-189 commit 2; next_core_tasks.md §3 item 7):
+# every activation of `keep` runs over a fresh instance of its data prototype in the unit's slot
+# answering it, and the slot shows the latest one.
+# - keep(1) reaches `int: v 7`, and the slot then shows its instance: keep\v is 7 (h).
+# - keep(0) returns before the declaration, so its fresh instance keeps the prototype's 0 -- not the
+#   7 of the activation before.
+# h * 10 + keep\v is 70.  A shared occurrence (until -189) gives 77; an activation that writes an
+# instance other than the one its slot shows gives 0.
+fn: keep (int: go) int
+    if: go = 0
+        return: 0
+    int: v 7
+    return: 0
+end: keep
+
+fn: probe () int
+    int: h 0
+    int: g 0
+    keep(1)
+    h: keep\v
+    keep(0)
+    g: h * 10 + keep\v
+    return: g
+end: probe
+
+sendMessage: exit(exit_code: probe(); stdout: ""; stderr: "")
+return

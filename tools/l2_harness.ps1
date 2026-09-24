@@ -2020,6 +2020,13 @@ $fixtures = @(
         BindOrder = $true;
         Absent = @('l2_q0_early', 'l2_q0_bound');
         Debt = @('int: l2_q0_sticky 0', 'int: l2_q0_active 0 - 1', 'l2_q0_sticky: 1') },
+    # THE EXECUTION PAIR (FABLE-OPUS-CODE-DATA-SPLIT-20260925-189 commit 2): every activation runs over a
+    # fresh instance of the method's data prototype in the unit's slot answering it, and the slot shows
+    # the latest.  After keep(1) the slot shows its 7; keep(0) does not reach the declaration, so its
+    # fresh instance keeps the prototype's 0: 7 * 10 + 0 = 70.  A shared occurrence (until -189) gives
+    # 77; an activation that writes an instance other than the one its slot shows gives 0.
+    [pscustomobject]@{ Name = 'unit_fresh_instance_skipped_decl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 70;
+        Absent = @(); Debt = @('fn: l2_new0 (@: Lmx node) @: Lmx', '@: Lmx l2_c0 l2_new0(node)', 'l2_self: l2_new0(l2_self\parent)') },
     # FABLE-GROKBOT-MATRIX-20260924-143 -- B2 semantic matrix (fixtures only).
     # Grid: {absent, existing non-callable, existing callable, path} x
     # {primitive, Structure ref, Array/ref, callable} over one head-consumes-tail

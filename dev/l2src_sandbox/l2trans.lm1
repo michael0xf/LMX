@@ -387,6 +387,7 @@ prototype:
     fn: l2_parse_library (const: @(char path)) int
     fn: l2_intern_mi (int: mi) unsigned
     fn: l2_intern_prove (const: @(char path); const: @(LmP0Node node)) int
+    fn: l2_emit_cell_new (int: oi; const: @(char ind); const: @(char slot); const: @(char chr0); const: @(char fail); const: @(char fail2)) int
     fn: l2_emit_unit (const: @(char out_path)) int
     fn: l2_check_expr (const: @(LmP0Node node); int: mi; const: @(char path)) int
     fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); const: @(LmP0Node at)) int
@@ -436,6 +437,7 @@ prototype:
     fn: l2_tramp_class (int: mi) int
     fn: l2_emit_dyn_call (int: idx; int: t; int: self_t; const: @(char ind)) int
     fn: l2_emit_tramp_call (int: i; int: n; int: thr; int: cls) int
+    fn: l2_emit_fresh (int: i; int: proto) int
     fn: l2_emit_trampoline (int: i; int: proto) int
     fn: l2_rw_refuse (const: @(LmP0Node node); const: @(char what)) int
     fn: l2_rw_l2 (const: @(LmP0Node node)) int
@@ -15596,7 +15598,11 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
     # is based on self itself.
     self_t: l2_tn
     l2_tn: l2_tn + 1
-    if: sel = 0 && c.fprintf(l2_out, "%s@: Lmx l2_c%d lmx_arena_ref_struct(%s, %uU)\n", ind, self_t, l2_unit_ref, (cast: (unsigned) (l2_unit_base + idx))) < 0
+    # -189 c2: a call by name runs over a fresh data instance of the callee, made in the unit's slot
+    # answering it (l2_emit_fresh); a method with no data fields keeps its occurrence.
+    if: sel = 0 && l2_m_native(idx) != 0 && idx != l2_e && l2_m_kids(idx) > 1 && c.fprintf(l2_out, "%s@: Lmx l2_c%d l2_new%d(%s)\n", ind, self_t, idx, l2_unit_ref) < 0
+        return: 1
+    if: sel = 0 && (l2_m_native(idx) = 0 || idx = l2_e || l2_m_kids(idx) <= 1) && c.fprintf(l2_out, "%s@: Lmx l2_c%d lmx_arena_ref_struct(%s, %uU)\n", ind, self_t, l2_unit_ref, (cast: (unsigned) (l2_unit_base + idx))) < 0
         return: 1
     if: sel = 1 && c.fprintf(l2_out, "%s@: Lmx l2_c%d l2_pst\n", ind, self_t) < 0
         return: 1
@@ -16550,6 +16556,73 @@ fn: l2_emit_tramp_call (int: i; int: n; int: thr; int: cls) int
 return: (cast: (int) (fputs(")", l2_out) < 0))
 
 # The trampoline of method i: its prototype line (proto) or its definition.
+# A fresh data instance of method i (-189 c2; the execution pair, next_core_tasks.md §3): M's data
+# prototype laid out anew -- each own field a fresh typed cell (l2_emit_cell_new), each control body a
+# fresh Structure holding its hosted cells -- in the unit's slot answering M, which shows it from now
+# on; it is the activation's self.  Slot 0 still carries M's shared callable descriptor (the code)
+# until the code tree (c4).  A char field's first cell is the interned 0, found from the instance
+# being replaced (lmx_char_rebind_known).  A method with no data fields has nothing to lay out and
+# keeps its occurrence (no l2_new).
+fn: l2_emit_fresh (int: i; int: proto) int
+    int: k 0
+    int: oi 0
+    c.array: [128]: char chr0
+    if: i < 0 || i = l2_e || l2_m_native(i) = 0 || l2_m_kids(i) <= 1
+        return: 0
+    if: proto != 0
+        return: (cast: (int) (c.fprintf(l2_out, "    fn: l2_new%d (@: Lmx node) @: Lmx\n", i) < 0))
+    if: c.fprintf(l2_out, "fn: l2_new%d (@: Lmx node) @: Lmx\n    @: Lmx l2_old lmx_arena_ref_struct(node, %uU)\n    @: Lmx l2_inst 0\n    @: Lmx l2_fkid 0\n    @@: void l2_slot 0\n", i, (cast: (unsigned) (l2_unit_base + i))) < 0
+        return: 1
+    while: k < l2_for_n
+        if: l2_for_owner(k) = i && c.fprintf(l2_out, "    @: Lmx l2_b%d 0\n    @: Lmx l2_ob%d 0\n", k, k) < 0
+            return: 1
+        k: k + 1
+    ---
+    if: fputs("    if: l2_old = 0\n", l2_out) < 0 || l2_emit_invariant("    ", "a fresh instance has no occurrence to replace") != 0
+        return: 1
+    if: c.fprintf(l2_out, "    l2_inst: lmx_struct_new_owned(node, l2_program_arena)\n    if: l2_inst = 0 || lmx_arena_refs_open_owned(l2_program_arena, l2_inst, %uU) != 0 || lmx_arena_ref_store(l2_inst, 0U, lmx_arena_ref_value(l2_old, 0U)) != 0\n", (cast: (unsigned) l2_m_kids(i))) < 0 || l2_emit_invariant("    ", "a fresh instance could not be made") != 0
+        return: 1
+    while: oi < l2_own_n
+        if: l2_own_mi[oi] = i && l2_own_fid[oi] < 0 && l2_own_uchild[oi] >= 0
+            if: c.fprintf(l2_out, "    l2_slot: lmx_arena_ref_cell(l2_inst, %uU)\n    if: l2_slot = 0\n", (cast: (unsigned) l2_own_uchild[oi])) < 0 || l2_emit_invariant("    ", "a fresh instance could not be made") != 0
+                return: 1
+            if: c.sprintf(chr0, "lmx_char_rebind_known(lmx_arena_ref_value(l2_old, %uU), 0)", (cast: (unsigned) l2_own_uchild[oi])) < 0 || l2_emit_cell_new(oi, "    ", "l2_slot", chr0, "c.fprintf(c.stderr, \"lmx: invariant: a fresh instance could not be made\\n\")", "c.abort()") != 0
+                return: 1
+        ---
+        oi: oi + 1
+    ---
+    k: 0
+    while: k < l2_for_n
+        if: l2_for_owner(k) = i
+            if: l2_for_parent[k] < 0 && c.fprintf(l2_out, "    l2_fkid: lmx_struct_new_owned(l2_inst, l2_program_arena)\n    if: l2_fkid = 0 || lmx_arena_ref_store(l2_inst, %uU, (cast: (@: void) l2_fkid)) != 0", (cast: (unsigned) l2_for_uchild[k])) < 0
+                return: 1
+            if: l2_for_parent[k] >= 0 && c.fprintf(l2_out, "    l2_fkid: lmx_struct_new_owned(l2_b%d, l2_program_arena)\n    if: l2_fkid = 0 || lmx_arena_ref_store(l2_b%d, %uU, (cast: (@: void) l2_fkid)) != 0", l2_for_parent[k], l2_for_parent[k], (cast: (unsigned) l2_for_uchild[k])) < 0
+                return: 1
+            if: l2_for_nkid[k] > 0 && c.fprintf(l2_out, " || lmx_arena_refs_open_owned(l2_program_arena, l2_fkid, %uU) != 0", (cast: (unsigned) l2_for_nkid[k])) < 0
+                return: 1
+            if: fputs("\n", l2_out) < 0 || l2_emit_invariant("    ", "a fresh instance could not be made") != 0
+                return: 1
+            if: l2_for_parent[k] < 0 && c.fprintf(l2_out, "    l2_b%d: l2_fkid\n    l2_ob%d: lmx_arena_ref_struct(l2_old, %uU)\n", k, k, (cast: (unsigned) l2_for_uchild[k])) < 0
+                return: 1
+            if: l2_for_parent[k] >= 0 && c.fprintf(l2_out, "    l2_b%d: l2_fkid\n    l2_ob%d: lmx_arena_ref_struct(l2_ob%d, %uU)\n", k, k, l2_for_parent[k], (cast: (unsigned) l2_for_uchild[k])) < 0
+                return: 1
+            oi: 0
+            while: oi < l2_own_n
+                if: l2_own_fid[oi] = k
+                    if: c.fprintf(l2_out, "    l2_slot: lmx_arena_ref_cell(l2_b%d, %uU)\n    if: l2_slot = 0\n", k, (cast: (unsigned) l2_own_fchild[oi])) < 0 || l2_emit_invariant("    ", "a fresh instance could not be made") != 0
+                        return: 1
+                    if: c.sprintf(chr0, "lmx_char_rebind_known(lmx_arena_ref_value(l2_ob%d, %uU), 0)", k, (cast: (unsigned) l2_own_fchild[oi])) < 0 || l2_emit_cell_new(oi, "    ", "l2_slot", chr0, "c.fprintf(c.stderr, \"lmx: invariant: a fresh instance could not be made\\n\")", "c.abort()") != 0
+                        return: 1
+                ---
+                oi: oi + 1
+            ---
+        ---
+        k: k + 1
+    ---
+    if: c.fprintf(l2_out, "    if: lmx_arena_ref_store(node, %uU, (cast: (@: void) l2_inst)) != 0\n", (cast: (unsigned) (l2_unit_base + i))) < 0 || l2_emit_invariant("    ", "a fresh instance could not be made") != 0
+        return: 1
+return: (cast: (int) (fputs("return: l2_inst\n\n", l2_out) < 0))
+
 fn: l2_emit_trampoline (int: i; int: proto) int
     int: k 0
     int: n l2_m_arity[i] + l2_m_dyn[i]
@@ -16567,7 +16640,12 @@ fn: l2_emit_trampoline (int: i; int: proto) int
         return: 1
     if: proto != 0
         return: 0
-    if: c.fprintf(l2_out, "    @: Lmx l2_self (cast: (@: Lmx) owner)\n    if: nargs != %dU || out = 0", n) < 0
+    if: c.fprintf(l2_out, "    @: Lmx l2_self (cast: (@: Lmx) owner)\n") < 0
+        return: 1
+    # -189 c2: the activation runs over a fresh data instance in the slot of its occurrence's parent.
+    if: l2_m_kids(i) > 1 && c.fprintf(l2_out, "    l2_self: l2_new%d(l2_self\\parent)\n", i) < 0
+        return: 1
+    if: c.fprintf(l2_out, "    if: nargs != %dU || out = 0", n) < 0
         return: 1
     if: (cls = 1 || cls = 2 || cls = 3 || cls = 4 || cls = 6) && fputs(" || dest = 0", l2_out) < 0
         return: 1
@@ -20927,6 +21005,47 @@ fn: l2_method_sig_text (int: i; @: char dest) int
     ---
 return: 0
 
+# A fresh typed cell for own row oi into `<slot>[0]`, at indent `ind`: the builder's cells, and a
+# fresh instance's (-189).  A char is the interned cell `chr0` names; every other type gets a new
+# cell, checked, with `fail` (and `fail2`, a second line) when it could not be made.  A type with
+# no cell emits nothing, as the builder never did.
+fn: l2_emit_cell_new (int: oi; const: @(char ind); const: @(char slot); const: @(char chr0); const: @(char fail); const: @(char fail2)) int
+    int: ty l2_own_ty[oi]
+    size_t: n 0U
+    if: ty = 1
+        return: (cast: (int) (c.fprintf(l2_out, "%s%s[0]: %s\n", ind, slot, chr0) < 0))
+    if: l2_own_is_array(ty) != 0
+        n: l2_literal_value(l2_own_count[oi])
+    if: ty = 2 && c.fprintf(l2_out, "%s%s[0]: lmx_size_new_owned(l2_program_arena)\n", ind, slot) < 0
+        return: 1
+    if: ty = 0 && c.fprintf(l2_out, "%s%s[0]: lmx_int_new_owned(l2_program_arena)\n", ind, slot) < 0
+        return: 1
+    if: ty = 3 && c.fprintf(l2_out, "%s%s[0]: lmx_unsigned_new_owned(l2_program_arena)\n", ind, slot) < 0
+        return: 1
+    if: ty = 36 && c.fprintf(l2_out, "%s%s[0]: lmx_ulong_new_owned(l2_program_arena)\n", ind, slot) < 0
+        return: 1
+    if: l2_own_is_pointer(ty) != 0 && c.fprintf(l2_out, "%s%s[0]: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + %d, l2_program_arena)\n", ind, slot, ty - 1000) < 0
+        return: 1
+    if: ty = 4 && c.fprintf(l2_out, "%s%s[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, %zuU, l2_program_arena)\n", ind, slot, n) < 0
+        return: 1
+    if: ty = 5 && c.fprintf(l2_out, "%s%s[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, %zuU, l2_program_arena)\n", ind, slot, n) < 0
+        return: 1
+    if: ty = 7 && c.fprintf(l2_out, "%s%s[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_SIZE_T, %zuU, l2_program_arena)\n", ind, slot, n) < 0
+        return: 1
+    if: ty = 37 && c.fprintf(l2_out, "%s%s[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_ULONG, %zuU, l2_program_arena)\n", ind, slot, n) < 0
+        return: 1
+    if: ty = 8 && c.fprintf(l2_out, "%s%s[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR, %zuU, l2_program_arena)\n", ind, slot, n) < 0
+        return: 1
+    if: ty >= 2000 && c.fprintf(l2_out, "%s%s[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + %d, %zuU, l2_program_arena)\n", ind, slot, ty - 2000, n) < 0
+        return: 1
+    if: ty != 0 && ty != 2 && ty != 3 && ty != 36 && l2_own_is_pointer(ty) = 0 && l2_own_is_array(ty) = 0
+        return: 0
+    if: c.fprintf(l2_out, "%sif: %s[0] = 0\n%s    %s\n", ind, slot, ind, fail) < 0
+        return: 1
+    if: fail2 != 0 && c.fprintf(l2_out, "%s    %s\n", ind, fail2) < 0
+        return: 1
+return: 0
+
 fn: l2_emit_unit (const: @(char out_path)) int
     int: i 0
     int: k
@@ -21193,6 +21312,9 @@ fn: l2_emit_unit (const: @(char out_path)) int
         if: l2_m_native(i) != 0 && i != l2_e && l2_emit_trampoline(i, 1) != 0
             fclose(l2_out)
             return: 1
+        if: l2_emit_fresh(i, 1) != 0
+            fclose(l2_out)
+            return: 1
         i: i + 1
     # The walked root's send primitives (l2_emit_send).
     i: 0
@@ -21445,6 +21567,9 @@ fn: l2_emit_unit (const: @(char out_path)) int
     # Each native method's trampoline, after every body it calls (l2_emit_trampoline).
     i: 0
     while: i < l2_m_n
+        if: l2_emit_fresh(i, 0) != 0
+            fclose(l2_out)
+            return: 1
         if: l2_m_native(i) != 0 && i != l2_e && l2_emit_trampoline(i, 0) != 0
             fclose(l2_out)
             return: 1
@@ -21592,47 +21717,9 @@ fn: l2_emit_unit (const: @(char out_path)) int
         if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] != l2_e && c.fprintf(l2_out, "        l2_entry_leaf: lmx_arena_ref_struct(l2_entry_unit, %uU)\n        if: l2_entry_leaf = 0\n            return: 1\n        l2_entry_slot: lmx_arena_ref_cell(l2_entry_leaf, %uU)\n        if: l2_entry_slot = 0\n            return: 1\n", (cast: (unsigned) (l2_unit_base + l2_own_mi[k])), (cast: (unsigned) l2_own_uchild[k])) < 0
             fclose(l2_out)
             return: 1
-        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_ty[k] = 1 && fputs("        l2_entry_slot[0]: lmx_char_cell_known(process_chars, 0)\n", l2_out) < 0
+        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_emit_cell_new(k, "        ", "l2_entry_slot", "lmx_char_cell_known(process_chars, 0)", "return: 1", 0) != 0
             fclose(l2_out)
             return: 1
-        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_ty[k] = 2 && fputs("        l2_entry_slot[0]: lmx_size_new_owned(l2_program_arena)\n        if: l2_entry_slot[0] = 0\n            return: 1\n", l2_out) < 0
-            fclose(l2_out)
-            return: 1
-        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_ty[k] = 0 && fputs("        l2_entry_slot[0]: lmx_int_new_owned(l2_program_arena)\n        if: l2_entry_slot[0] = 0\n            return: 1\n", l2_out) < 0
-            fclose(l2_out)
-            return: 1
-        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_ty[k] = 3 && fputs("        l2_entry_slot[0]: lmx_unsigned_new_owned(l2_program_arena)\n        if: l2_entry_slot[0] = 0\n            return: 1\n", l2_out) < 0
-            fclose(l2_out)
-            return: 1
-        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_ty[k] = 36 && fputs("        l2_entry_slot[0]: lmx_ulong_new_owned(l2_program_arena)\n        if: l2_entry_slot[0] = 0\n            return: 1\n", l2_out) < 0
-            fclose(l2_out)
-            return: 1
-        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_is_pointer(l2_own_ty[k]) != 0 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + %d, l2_program_arena)\n        if: l2_entry_slot[0] = 0\n            return: 1\n", l2_own_ty[k] - 1000) < 0
-            fclose(l2_out)
-            return: 1
-        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_is_array(l2_own_ty[k]) != 0
-            if: l2_own_ty[k] = 4 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, %zuU, l2_program_arena)\n", l2_literal_value(l2_own_count[k])) < 0
-                fclose(l2_out)
-                return: 1
-            if: l2_own_ty[k] = 5 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, %zuU, l2_program_arena)\n", l2_literal_value(l2_own_count[k])) < 0
-                fclose(l2_out)
-                return: 1
-            if: l2_own_ty[k] = 7 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_SIZE_T, %zuU, l2_program_arena)\n", l2_literal_value(l2_own_count[k])) < 0
-                fclose(l2_out)
-                return: 1
-            if: l2_own_ty[k] = 37 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_ULONG, %zuU, l2_program_arena)\n", l2_literal_value(l2_own_count[k])) < 0
-                fclose(l2_out)
-                return: 1
-            if: l2_own_ty[k] = 8 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR, %zuU, l2_program_arena)\n", l2_literal_value(l2_own_count[k])) < 0
-                fclose(l2_out)
-                return: 1
-            if: l2_own_ty[k] >= 2000 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + %d, %zuU, l2_program_arena)\n", l2_own_ty[k] - 2000, l2_literal_value(l2_own_count[k])) < 0
-                fclose(l2_out)
-                return: 1
-            if: fputs("        if: l2_entry_slot[0] = 0\n            return: 1\n", l2_out) < 0
-                fclose(l2_out)
-                return: 1
-        ---
         k: k + 1
     ---
     k: 0
@@ -21663,47 +21750,9 @@ fn: l2_emit_unit (const: @(char out_path)) int
             if: l2_own_fid[oi] = k && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_entry_leaf, %uU)\n        if: l2_entry_slot = 0\n            return: 1\n", (cast: (unsigned) l2_own_fchild[oi])) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_own_fid[oi] = k && l2_own_ty[oi] = 1 && fputs("        l2_entry_slot[0]: lmx_char_cell_known(process_chars, 0)\n", l2_out) < 0
+            if: l2_own_fid[oi] = k && l2_emit_cell_new(oi, "        ", "l2_entry_slot", "lmx_char_cell_known(process_chars, 0)", "return: 1", 0) != 0
                 fclose(l2_out)
                 return: 1
-            if: l2_own_fid[oi] = k && l2_own_ty[oi] = 2 && fputs("        l2_entry_slot[0]: lmx_size_new_owned(l2_program_arena)\n        if: l2_entry_slot[0] = 0\n            return: 1\n", l2_out) < 0
-                fclose(l2_out)
-                return: 1
-            if: l2_own_fid[oi] = k && l2_own_ty[oi] = 0 && fputs("        l2_entry_slot[0]: lmx_int_new_owned(l2_program_arena)\n        if: l2_entry_slot[0] = 0\n            return: 1\n", l2_out) < 0
-                fclose(l2_out)
-                return: 1
-            if: l2_own_fid[oi] = k && l2_own_ty[oi] = 3 && fputs("        l2_entry_slot[0]: lmx_unsigned_new_owned(l2_program_arena)\n        if: l2_entry_slot[0] = 0\n            return: 1\n", l2_out) < 0
-                fclose(l2_out)
-                return: 1
-            if: l2_own_fid[oi] = k && l2_own_ty[oi] = 36 && fputs("        l2_entry_slot[0]: lmx_ulong_new_owned(l2_program_arena)\n        if: l2_entry_slot[0] = 0\n            return: 1\n", l2_out) < 0
-                fclose(l2_out)
-                return: 1
-            if: l2_own_fid[oi] = k && l2_own_is_pointer(l2_own_ty[oi]) != 0 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + %d, l2_program_arena)\n        if: l2_entry_slot[0] = 0\n            return: 1\n", l2_own_ty[oi] - 1000) < 0
-                fclose(l2_out)
-                return: 1
-            if: l2_own_fid[oi] = k && l2_own_is_array(l2_own_ty[oi]) != 0
-                if: l2_own_ty[oi] = 4 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, %zuU, l2_program_arena)\n", l2_literal_value(l2_own_count[oi])) < 0
-                    fclose(l2_out)
-                    return: 1
-                if: l2_own_ty[oi] = 5 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, %zuU, l2_program_arena)\n", l2_literal_value(l2_own_count[oi])) < 0
-                    fclose(l2_out)
-                    return: 1
-                if: l2_own_ty[oi] = 7 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_SIZE_T, %zuU, l2_program_arena)\n", l2_literal_value(l2_own_count[oi])) < 0
-                    fclose(l2_out)
-                    return: 1
-                if: l2_own_ty[oi] = 37 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_ULONG, %zuU, l2_program_arena)\n", l2_literal_value(l2_own_count[oi])) < 0
-                    fclose(l2_out)
-                    return: 1
-                if: l2_own_ty[oi] = 8 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR, %zuU, l2_program_arena)\n", l2_literal_value(l2_own_count[oi])) < 0
-                    fclose(l2_out)
-                    return: 1
-                if: l2_own_ty[oi] >= 2000 && c.fprintf(l2_out, "        l2_entry_slot[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + %d, %zuU, l2_program_arena)\n", l2_own_ty[oi] - 2000, l2_literal_value(l2_own_count[oi])) < 0
-                    fclose(l2_out)
-                    return: 1
-                if: fputs("        if: l2_entry_slot[0] = 0\n            return: 1\n", l2_out) < 0
-                    fclose(l2_out)
-                    return: 1
-            ---
             oi: oi + 1
         ---
         k: k + 1

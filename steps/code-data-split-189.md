@@ -251,3 +251,180 @@ the field.
   - The recursion trace table (clean/dirty columns, «Опубликованное S.x»).
 - CORE.md §3.1's last paragraph says `@fresh` addresses «the slot holding that reference (conceptually
   `Lmx **`)».  Q26.2 = (B) (2026-09-25) made `@` of a Structure binding the Structure's address.
+
+## Commit 2: a fresh instance per activation
+
+Built on origin/main 20dc61a.  The working copies stay; commit 3 removes them.
+
+What is built:
+- `l2_emit_cell_new` makes one fresh typed own cell into `<slot>[0]`.
+  - The builder's two type ladders (unhosted own fields, and hosted ones in control bodies) now use it.
+  - Checked text-neutral: all 353 fixtures translate byte-identical to the translator without this
+    commit.
+- `l2_emit_fresh` emits `l2_new<i>(node)` for each native method with data fields (`l2_m_kids(i) > 1`).
+  It lays out method i's data prototype anew:
+  - the shared callable descriptor goes into child 0 (the code, until c4 takes it out);
+  - each own field gets a fresh typed cell;
+  - each control body gets a fresh Structure holding its hosted cells;
+  - a char field's first cell is the interned 0, found from the instance being replaced
+    (`lmx_char_rebind_known`).
+  - It stores the instance into the unit's slot answering i (`l2_unit_base + i`), which shows it from
+    then on, and returns it as `self`.
+  - A failure to make it is X1.
+- A call by name (sel 0) runs over `l2_new<idx>(node)`.
+- The trampoline (dynamic calls, and the walked root's CALL) makes the instance callee-side:
+  `l2_self: l2_new<i>(l2_self\parent)`.  The walker needs no change.
+- A method with no data fields keeps its occurrence: there is nothing to lay out.
+- A call through a path (sel 1) keeps the selected occurrence until c4.  No row needs more (the
+  per-row check below).
+
+New row: unit_fresh_instance_skipped_decl (Entry 70).
+- After keep(1), the slot shows its instance: `keep\v` is 7.
+- keep(0) returns before `int: v 7`, so its fresh instance keeps the prototype's 0 (plan §3 item 7):
+  7 * 10 + 0 = 70.
+- The translator without this commit gives 77 (a shared occurrence).
+- Mutant F1: the instance is made, but the activation runs over the occurrence the slot held before
+  (n159/mkc2m.py).  It gives 0: RED.
+
+Per-row check of all 354 rows (fable's gate, verify2b on this tree):
+- 0 red; eternal-runs 150 (148 + 2 argv rows) = main's 149 + the new row.
+- No existing row changed its facts.  The three sticky and selector rows keep today's Says in c2,
+  because the working copies publish into the activation's own instance, which is also what the slot
+  shows.  Their §4 Says come with c3.
+
+## Commit 3: the plan after the author's Q28 and Q29 (main b7b7b99)
+
+The decisions (plan §3 items 1-4 and 7, §4 Q29; L2 §10; L3 §11/§12; CORE §3/§3.1):
+- One graph may be both code and data.  An ordinary call runs M over its own graph, (M, M); the root
+  runs as (R0, R0).  Code stays immutable in its operators, literals and `native`; execution writes
+  only declared fields.
+- Q28: a fresh prototype instance is made only where the translator cannot rule out re-entry
+  (recursion in the static call graph, a dynamic call by reference) or where data is passed
+  explicitly.
+  - It lives in the activation's frame and is not visible from outside.
+  - `M\x` from outside reads M's own fields.
+  - A field whose declaration did not run in this activation keeps the previous activation's value.
+- Q29: one cell per declaration.  A repeated bare assignment writes the same cell, and `\[N]` numbers
+  declarations.
+
+So c2's `l2_new<i>` on every call becomes the exception, not the rule.  c3 is planned as three
+commits, each gated:
+
+### c3a: M over its own graph; a fresh instance only on re-entry
+
+- A call by name, and a call through a path (sel 1), pass the occurrence itself as `self`, as before
+  c2.
+- `l2_new<i>` stays, with two changes.  It no longer stores into the parent's slot, because a
+  frame-only instance is not visible outside; its parent stays `node` for `node\x`.  And only these
+  call sites use it:
+  - Recursion in the static call graph: a call site in method j that calls i, where i and j are in
+    one strongly connected component (i = j included).  The translator knows every direct call
+    (sel 0 and sel 1 with a static callee).  The first entry into the cycle from outside runs over M
+    itself; each re-entry from inside the cycle gets a fresh instance.
+  - A dynamic call by reference: a callable formal, `lmx_call_prim` through the trampoline.
+- OPEN, for fable and Grok (-188): the trampoline is also how the walked root's CALL enters a native
+  method.  The trampoline cannot tell a static CALL (which should run over M) from a call by
+  reference (which should get a fresh instance).
+  - (i) The caller chooses the data and passes it as `owner`.  But a dynamic native caller does not
+    know the callee's prototype, so it would need a kernel entry that makes one from the callee.
+  - (ii) Every trampoline entry gets a fresh instance, the root's CALL included.  `M\x` then does
+    not show a root-called activation.  The rows measure whether any row reads it.
+  - (iii) Two entries: `<sym>_tr` over `owner`, and a fresh-instance entry for calls by reference;
+    that needs a place for the second address.
+  - Proposed: measure (ii) first, since it needs no kernel change, then decide.
+- The probe row unit_fresh_instance_skipped_decl returns to 77: over M's own graph, keep(0) leaves
+  keep(1)'s 7 (plan §3 item 7).
+- A new row, unit_recursive_fresh_instance.  A recursive method declares `int: x n` and recurses
+  before it reads x.
+  - With a fresh instance per re-entry, the outer activation reads its own n.
+  - Mutant: recursion over M itself, where the inner activation's write clobbers the outer's x.
+    RED, once the working copies are gone (c3b).  While they remain, the outer's working copy hides
+    it, so the row is pinned in c3b.
+- The working copies stay in c3a, so every fact but the probe's should hold.  The gate measures it.
+
+### c3b: no working copies
+
+- Own reads and writes are typed loads and stores on `self`'s cells: M itself, or the re-entry
+  instance.
+- The checkpoint, publication, reload, dirty, sticky and selector go, along with the prelude's
+  value declarations (§2's table).  A slot-address handle may stay.
+- The three rows' Says change to §4's table, accepted as c3's pins (R2 with carry).  The `5 100` and
+  `7 100` lines stay.
+- The Debt and Absent pins re-pin (§6's list).
+- Mutants: a write that misses the cell makes a cross-method `M\x` read RED (fable's); recursion
+  without a fresh instance makes unit_recursive_fresh_instance RED.
+
+### c3c: Q29, one cell per declaration
+
+- Today l2_collect_asgn_body (:6746) adds an own row for every bare assignment to a parameter.
+  `arg: 1` then `arg: 2` are two slots, and `\[0]arg` / `\[1]arg` read them (l2_own_find_occ).
+- Under Q29 the first bare assignment binds the field (L3 §12), and later ones write the same cell.
+  `\[N]` counts declarations only, so `\[1]arg` with one declaration is refused at translation, «no
+  such occurrence».
+- The rows to rewrite are named in plan §4: unit_occ_arg_slots, unit_occ_root_named,
+  unit_occ_snapshot_selector.  Their new facts come with the commit, measured.
+- The sticky rows are unaffected: their binding line is a declaration (`int: na`), and
+  `na: na + 1` writes that field.
+
+Gates: one per commit, asked «GATE?» and «GATE DONE» with fable.  c4 (the `Lmx.native` word, and
+the signature as a graph field) is joint with Grok's -188 c4.
+
+### The re-entry data: fable's decision (i), and a proposal for Grok -188 c3
+
+Decision (fable, 2026-09-25): the caller always passes the data, explicitly.  That is role by
+position; the trampoline decides nothing and receives the data as an argument (for a native entry,
+`self`).
+- A static call outside a strongly connected component (the root's CALL included; `M\x` after a
+  call from the root must show that activation): data = M.
+- A static call inside one (a re-entry), and every dynamic call by reference: data = a fresh
+  instance (Q28).
+- A native caller that does not know the callee's prototype gets it from the kernel.
+- Option (ii) is out.  Option (iii) is not needed.
+
+Proposed shapes (Grok -188 c3: the kernel and the walker; mine, c3a: the emission):
+
+1. `lmx_fresh (@: LmxArena arena; @: Lmx code) @: Lmx`: the same operation as `Model: fresh`,
+   `merge(prototype, empty)`.
+   - It returns a new Structure with `parent = code\parent`, `len = code\len`, and no operators.
+   - Child 0 until c4: the code's child 0, the shared callable, kept by address so the slot numbers
+     stay those of the translator's own tables.  With `Lmx.native` (c4) the prototype's numbering
+     loses it.
+   - Each other child, by what the arena classifies it as in `code`:
+     - a numeric cell: a fresh cell of the same type, 0;
+     - a char: the interned 0 (`lmx_char_cell(arena, 0)`);
+     - a pointer cell: a fresh pointer cell of the same type, null;
+     - an Array descriptor: a fresh Array of the same element type and length, zeroed;
+     - a Structure whose parent is `code` (a control body, fields only): the same rule, recursively,
+       its parent the new instance;
+     - a terminal reference (a field pointing to a callable occurrence or a METHOD, e.g. `A: fn: M`:
+       the copier's shared terminals, §4): kept by address, like child 0 (fable's correction);
+     - only what the arena does not classify is refused: it is not guessed.
+   - This is the layout the builder and c2's `l2_new<i>` make, read from the graph itself: no
+     translator table and no role record.  That is plan §3 item 9's «ничего сверх самой
+     Structure».  If Grok prefers `lmx_plan`'s paths, the result is the same instance.
+   - Status: NULL on NOMEM, or a refused child.  The caller's X1.
+2. The prim ABI carries data explicitly: `lmx_call_prim (@: LmxArena arena; @: Lmx code; @: Lmx
+   data; @@: void refs; size_t: nargs; @: void dest; @@: void out) int`.
+   - It dispatches on `code`: child 0 today, the `native` word after c4.
+   - It enters `entry(data, refs, nargs, dest, out)`: the trampoline's `owner` is the data, `self`,
+     and `node` is `data\parent`.
+   - The trampoline makes nothing.  c2's callee-side `l2_new` in the trampoline goes.
+3. The walker's CALL.  Proposed: the data is an operand, not a flag word:
+   `[call, code, data, arg ...]`.
+   - For an in-place call, `data` is the code Structure itself: a plain Structure child evaluates to
+     itself (-174 c2).
+   - For a re-entry it is `[fresh, code]`, a new role evaluating `lmx_fresh`.
+   - The translator decides per site, and the walker evaluates `data` like any operand and passes
+     it on.
+   - A flag word on CALL would work too; the operand keeps «data by position» in the graph.
+
+On my side (c3a), after -188 c3 lands:
+- The root's op tree gets the data operand of each CALL.
+- Native code:
+  - `l2_m<i>(M\parent, M, ...)` outside a strongly connected component;
+  - `l2_c<t>: lmx_fresh(l2_program_arena, M)` then `l2_m<i>(l2_c<t>\parent, l2_c<t>, ...)` on a
+    re-entry;
+  - `l2_d<t>: lmx_fresh(l2_program_arena, code)` then `lmx_call_prim(arena, code, l2_d<t>, ...)` on
+    a dynamic call.
+- c2's `l2_new<i>` then goes: one mechanism for a fresh instance (CORE, one mechanism per role).
+- So c3a lands with or after -188 c3.  c3b (no working copies) and c3c (Q29) do not depend on it.

@@ -1,0 +1,29 @@
+# D-28 (steps/defects.md, author's reading A): a formal parameter is the
+# nearest lexical binding for its own name and shadows a unit-level named
+# Structure sharing that spelling -- l2_path_root tried the unit-level
+# Structure before the formal since -113, so `bump`'s own formal `Model`
+# was never seen whenever the unit also declared `Model:`. `Model\value: 99`
+# inside bump must write through the FORMAL (fresh, the argument), not the
+# eternal unit-level Model. make() reads both afterward: fresh\value proves
+# the write landed on the argument; Model\value proves the eternal
+# Structure's own declared value was untouched.
+Model:
+    int: value 1
+end: Model
+
+fn: bump (@(Lmx Model)) int
+    Model\value: 99
+    return: Model\value
+end: bump
+
+fn: make () int
+    Model: fresh
+    bump(fresh)
+    if: fresh\value != 99
+        return: 91
+    if: Model\value != 1
+        return: 92
+    return: 0
+end: make
+
+return: make()

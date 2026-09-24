@@ -538,7 +538,8 @@ What is built:
   `l2_self: l2_new<i>(l2_self\parent)` goes.
 - c2's `l2_new<i>` (l2_emit_fresh) goes: `lmx_fresh` is the one mechanism for a fresh instance.
   `l2_emit_cell_new` stays: the builder uses it.
-- The generated program predefs `lmx_fresh.h.lm1`; the eternal driver predefs `lmx_fresh.lm1`.
+- The generated program predefs `lmx_fresh.h.lm1`.  Its body reaches the eternal driver through
+  lmx_walk.lm1 (grok_bot k.3c-fix, f6e55e1); the driver's own predef, needed before that fix, went.
 - The walked root's CALL is `[call, code, data, args...]`: code and data are both the occurrence,
   (M, M), and the inputs move from 2 to 3.
   - No root CALL needs `[fresh, code]`.  The root has no name (l2_make_entry), so no call and no

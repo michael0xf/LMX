@@ -34,6 +34,44 @@ fn: lmx_merge_add_width (@: size_t total; @: Lmx x) int
     \total: sum
 return: 0
 
+
+# Lifted Structure child: store merge offset on a callable occurrence in
+# child[0] (COW when it must change). Rewrite parent to the result ONLY when
+# the copier made this Structure's parent the operand/body copy itself -- a
+# lexical parent outside the copy (unit_throwing_callable) or a parentless
+# eternal (unit_eternal_shape) stays put.
+# Clone-on-write only when the stored offset must change. preceding==0 and
+# offset==0 keeps the shared descriptor (translator merge invariant 78:
+# first-operand callable child[0] still shares by address).
+fn: lmx_merge_lift_child (@: LmxArena dst_arena; @: LmxArena src_arena; @: Lmx child_struct; @: Lmx copied; @: Lmx result; size_t: preceding) int
+    @: void value 0
+    @: LmxCallable child_info 0
+    @: LmxCallable fresh_info 0
+    if: child_struct = 0
+        return: LMX_MERGE_INVALID
+    if: child_struct\len >= 1
+        value: lmx_arena_ref_value(child_struct, 0U)
+        if: value != 0 && (lmx_range_classify(dst_arena, value) = c.LMX_DOMAIN_KIND_CALLABLE || lmx_range_classify(src_arena, value) = c.LMX_DOMAIN_KIND_CALLABLE)
+            child_info: (cast: (@: LmxCallable) value)
+            if: child_info\offset != preceding
+                fresh_info: lmx_callable_new_owned(dst_arena)
+                if: fresh_info = 0
+                    return: LMX_MERGE_NOMEM
+                ---
+                fresh_info\method: child_info\method
+                fresh_info\header: child_info\header
+                fresh_info\offset: preceding
+                if: lmx_arena_ref_store(child_struct, 0U, (cast: (@: void) fresh_info)) != 0
+                    return: LMX_MERGE_INVALID
+                ---
+            ---
+        ---
+    ---
+    if: child_struct\parent = copied
+        child_struct\parent: result
+    ---
+return: LMX_MERGE_OK
+
 fn: lmx_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx out) int
     @: LmxArenaBlock mark 0
     @@: Lmx roots 0
@@ -43,9 +81,6 @@ fn: lmx_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: L
     @: Lmx copied 0
     @@: void slot 0
     @: void value 0
-    @: Lmx child_struct 0
-    @: LmxCallable child_info 0
-    @: LmxCallable fresh_info 0
     size_t: total 0U
     size_t: preceding 0U
     size_t: nroots 0U
@@ -185,33 +220,7 @@ fn: lmx_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: L
                         # lexical parent outside the copy (unit_throwing_callable)
                         # or a parentless eternal (unit_eternal_shape) stays put.
                         if: value != 0 && lmx_range_classify(dst_arena, value) = c.LMX_KIND_STRUCT
-                            child_struct: (cast: (@: Lmx) value)
-                            if: child_struct\len >= 1
-                                value: lmx_arena_ref_value(child_struct, 0U)
-                                if: value != 0 && (lmx_range_classify(dst_arena, value) = c.LMX_DOMAIN_KIND_CALLABLE || lmx_range_classify(src_arena, value) = c.LMX_DOMAIN_KIND_CALLABLE)
-                                    # Clone-on-write only when the stored offset must change.
-                                    # preceding==0 and offset==0 keeps the shared descriptor
-                                    # (translator merge invariant 78: first-operand callable
-                                    # child[0] still shares by address).
-                                    child_info: (cast: (@: LmxCallable) value)
-                                    if: child_info\offset != preceding
-                                        fresh_info: lmx_callable_new_owned(dst_arena)
-                                        if: fresh_info = 0
-                                            status: LMX_MERGE_NOMEM
-                                        else:
-                                            fresh_info\method: child_info\method
-                                            fresh_info\header: child_info\header
-                                            fresh_info\offset: preceding
-                                            if: lmx_arena_ref_store(child_struct, 0U, (cast: (@: void) fresh_info)) != 0
-                                                status: LMX_MERGE_INVALID
-                                            ---
-                                        ---
-                                    ---
-                                ---
-                            ---
-                            if: child_struct\parent = copied
-                                child_struct\parent: result
-                            ---
+                            status: lmx_merge_lift_child(dst_arena, src_arena, (cast: (@: Lmx) value), copied, result, preceding)
                         ---
                     ---
                     at: at + 1U
@@ -239,33 +248,7 @@ fn: lmx_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: L
                     status: LMX_MERGE_INVALID
                 else:
                     if: value != 0 && lmx_range_classify(dst_arena, value) = c.LMX_KIND_STRUCT
-                        child_struct: (cast: (@: Lmx) value)
-                        if: child_struct\len >= 1
-                            value: lmx_arena_ref_value(child_struct, 0U)
-                            if: value != 0 && (lmx_range_classify(dst_arena, value) = c.LMX_DOMAIN_KIND_CALLABLE || lmx_range_classify(src_arena, value) = c.LMX_DOMAIN_KIND_CALLABLE)
-                                # Clone-on-write only when the stored offset must change.
-                                # preceding==0 and offset==0 keeps the shared descriptor
-                                # (translator merge invariant 78: first-operand callable
-                                # child[0] still shares by address).
-                                child_info: (cast: (@: LmxCallable) value)
-                                if: child_info\offset != preceding
-                                    fresh_info: lmx_callable_new_owned(dst_arena)
-                                    if: fresh_info = 0
-                                        status: LMX_MERGE_NOMEM
-                                    else:
-                                        fresh_info\method: child_info\method
-                                        fresh_info\header: child_info\header
-                                        fresh_info\offset: preceding
-                                        if: lmx_arena_ref_store(child_struct, 0U, (cast: (@: void) fresh_info)) != 0
-                                            status: LMX_MERGE_INVALID
-                                        ---
-                                    ---
-                                ---
-                            ---
-                        ---
-                        if: child_struct\parent = copied
-                            child_struct\parent: result
-                        ---
+                        status: lmx_merge_lift_child(dst_arena, src_arena, (cast: (@: Lmx) value), copied, result, preceding)
                     ---
                 ---
                 at: at + 1U

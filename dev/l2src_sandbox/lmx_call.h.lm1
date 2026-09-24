@@ -55,9 +55,10 @@ prototype:
     # arena's index.
     fn: lmx_call_ready (@: LmxArena arena; @: Lmx callable) int
     # Hidden merge offset stored in the occurrence's LmxCallable descriptor (child 0).
-    # Returns 0 only when the descriptor's offset field is 0. Missing child 0 / not a
-    # callable occurrence returns (size_t)-1 -- never 0-as-missing.
-    fn: lmx_callable_offset (@: Lmx occurrence) size_t
+    # Returns 0 only when the descriptor's offset field is 0. Missing child 0 / a child 0
+    # that this arena positively classifies as not CALLABLE returns (size_t)-1 --
+    # never 0-as-missing. Shared foreign descriptors (KIND_NONE here) still cast.
+    fn: lmx_callable_offset (@: LmxArena arena; @: Lmx occurrence) size_t
     # The shared method record of a callable: what holds {addr, sig}.  Null when the value is not
     # a callable occurrence.
     fn: lmx_call_method (@: LmxArena arena; @: Lmx callable) @: LmxMethod

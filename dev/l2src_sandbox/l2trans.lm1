@@ -17655,9 +17655,9 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             sl: l2_mres_find(stmt\as\frame\head)
             if: sl < 0
                 return: l2_error(l2_src, stmt, "merge result name was not reserved")
-            if: ep = 0 && c.fprintf(l2_out, "%sl2_mstatus: lmx_merge_owned(l2_mops, %dU, l2_mbody, %s, 0, l2_program_arena, l2_program_arena, @ l2_mresult)\n", ind, n, l2_unit_ref) < 0
+            if: ep = 0 && c.fprintf(l2_out, "%sl2_mstatus: lmx_merge_owned(l2_mops, %dU, l2_mbody, %s, 0, l2_program_arena, l2_program_arena, 0, 0U, @ l2_mresult)\n", ind, n, l2_unit_ref) < 0
                 return: 1
-            if: ep > 0 && c.fprintf(l2_out, "%sl2_mstatus: lmx_merge_profiles_owned(l2_mops, %dU, l2_mbody, %s, 0, l2_program_arena, l2_program_arena, l2_mprofiles, %dU, @ l2_mresult)\n", ind, n, l2_unit_ref, ep) < 0
+            if: ep > 0 && c.fprintf(l2_out, "%sl2_mstatus: lmx_merge_profiles_owned(l2_mops, %dU, l2_mbody, %s, 0, l2_program_arena, l2_program_arena, l2_mprofiles, %dU, 0, 0U, @ l2_mresult)\n", ind, n, l2_unit_ref, ep) < 0
                 return: 1
             if: c.fprintf(l2_out, "%sif: l2_mstatus != 0 || l2_mresult = 0\n", ind) < 0
                 return: 1
@@ -18221,7 +18221,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             cni: l2_ns_find(cmodel)
             if: oi < 0 || cni < 0
                 return: l2_error(l2_src, stmt, "unresolved name")
-            if: c.fprintf(l2_out, "%sl2_mops[0U]: lmx_arena_ref_struct(%s, %uU)\n%sl2_mbody: 0\n%sl2_mstatus: lmx_merge_owned(l2_mops, 1U, l2_mbody, %s, 0, l2_program_arena, l2_program_arena, @ l2_mresult)\n%sif: l2_mstatus != 0 || l2_mresult = 0\n", ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(cni))), ind, ind, l2_unit_ref, ind) < 0
+            if: c.fprintf(l2_out, "%sl2_mops[0U]: lmx_arena_ref_struct(%s, %uU)\n%sl2_mbody: 0\n%sl2_mstatus: lmx_merge_owned(l2_mops, 1U, l2_mbody, %s, 0, l2_program_arena, l2_program_arena, 0, 0U, @ l2_mresult)\n%sif: l2_mstatus != 0 || l2_mresult = 0\n", ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(cni))), ind, ind, l2_unit_ref, ind) < 0
                 return: 1
             if: l2_emit_implicit_throw(mi, "merge", ind) != 0
                 return: 1
@@ -19336,7 +19336,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
         fx: 0
         while: fx < l2_nsf_n
             # Ordinary Structure-typed field: typed occurrence merge copies.
-            if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 3 && l2_ns_eternal[l2_nsf_ref[fx]] < 0 && c.fprintf(l2_out, "        l2_mops[0U]: l2_nsp[%d]\n        l2_mbody: 0\n        l2_mstatus: lmx_merge_owned(l2_mops, 1U, l2_mbody, l2_nsp[%d], 0, l2_program_arena, l2_program_arena, @ l2_mresult)\n        if: l2_mstatus != 0 || l2_mresult = 0\n            return: 1\n        if: lmx_arena_ref_store(l2_nsp[%d], %uU, (cast: (@: void) l2_mresult)) != 0\n            return: 1\n        if: l2_mresult\\parent != l2_nsp[%d]\n            return: 1\n", l2_nsf_ref[fx], k, k, (cast: (unsigned) oi), k) < 0
+            if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 3 && l2_ns_eternal[l2_nsf_ref[fx]] < 0 && c.fprintf(l2_out, "        l2_mops[0U]: l2_nsp[%d]\n        l2_mbody: 0\n        l2_mstatus: lmx_merge_owned(l2_mops, 1U, l2_mbody, l2_nsp[%d], 0, l2_program_arena, l2_program_arena, 0, 0U, @ l2_mresult)\n        if: l2_mstatus != 0 || l2_mresult = 0\n            return: 1\n        if: lmx_arena_ref_store(l2_nsp[%d], %uU, (cast: (@: void) l2_mresult)) != 0\n            return: 1\n        if: l2_mresult\\parent != l2_nsp[%d]\n            return: 1\n", l2_nsf_ref[fx], k, k, (cast: (unsigned) oi), k) < 0
                 fclose(l2_out)
                 return: 1
             # Eternal/qualified Structure reference: share by address, no reparent.

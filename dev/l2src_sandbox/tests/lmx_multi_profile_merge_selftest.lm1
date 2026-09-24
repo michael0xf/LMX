@@ -129,7 +129,7 @@ fn: main () int
     profiles[2]: profile_a
     operands[0]: a
     operands[1]: b
-    status: lmx_merge_profiles_owned(operands, 2U, 0, 0, 0, @ src, @ dst, profiles, 3U, @ out)
+    status: lmx_merge_profiles_owned(operands, 2U, 0, 0, 0, @ src, @ dst, profiles, 3U, 0, 0U, @ out)
     mcheck(status = c.LMX_MERGE_OK && out != 0 && out != a && out != b && out\len = 2, "two-profile merge succeeds with an ordinary result root")
     slots: (cast: (@@: void) out\data)
     mcheck(slots != 0 && slots[0] = value_a && slots[1] = value_b, "both exact profile leaves retain physical identity")
@@ -168,14 +168,14 @@ fn: main () int
     operands[0]: bad
     out: a
     before: lmx_arena_index_len(dst_at)
-    status: lmx_merge_profiles_owned(operands, 1U, 0, 0, 0, @ src, @ dst, profiles, 1U, @ out)
+    status: lmx_merge_profiles_owned(operands, 1U, 0, 0, 0, @ src, @ dst, profiles, 1U, 0, 0U, @ out)
     mcheck(status = c.LMX_MERGE_INVALID && out = 0 && lmx_arena_index_len(dst_at) = before, "unsealed profile ranges fail without destination change")
 
     profiles[0]: @ arbitrary_profile
     operands[0]: ordinary
     out: a
     before: lmx_arena_index_len(dst_at)
-    status: lmx_merge_profiles_owned(operands, 1U, 0, 0, 0, @ src, @ dst, profiles, 1U, @ out)
+    status: lmx_merge_profiles_owned(operands, 1U, 0, 0, 0, @ src, @ dst, profiles, 1U, 0, 0U, @ out)
     mcheck(status = c.LMX_MERGE_INVALID && out = 0 && lmx_arena_index_len(dst_at) = before, "activation-local arbitrary profile is refused transactionally")
 
     mcheck(lmx_arena_release(@ blind) = 0 && lmx_arena_release(@ dst) = 0, "destination arenas release")

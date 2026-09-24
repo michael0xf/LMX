@@ -151,22 +151,22 @@ fn: main () int
 
     # Only the exact full triple profile retains physical identity.
     one: a_triple
-    status: lmx_merge_profiled_owned(@ one, 1U, 0, 0, 0, @ borrower, @ blind_dst, triple_at, @ out)
+    status: lmx_merge_profiled_owned(@ one, 1U, 0, 0, 0, @ borrower, @ blind_dst, triple_at, 0, 0U, @ out)
     qcheck(status = c.LMX_MERGE_INVALID && out = 0, "qualified retain refuses a destination without an explicit range import")
     qcheck(lmx_range_import_profile(@ dst, @ borrower, triple_at) = 0, "merge destination imports only the physical profile it may retain")
     one: a_triple
-    status: lmx_merge_profiled_owned(@ one, 1U, 0, 0, 0, @ borrower, @ dst, triple_at, @ out)
+    status: lmx_merge_profiled_owned(@ one, 1U, 0, 0, 0, @ borrower, @ dst, triple_at, 0, 0U, @ out)
     qcheck(status = c.LMX_MERGE_OK && out = a_triple, "exact triple merge retains physical address")
     qcheck(lmx_range_home(@ dst, (cast: (@: void) out)) = (@ owner_a) && lmx_range_profile(@ dst, (cast: (@: void) out)) = triple_at, "retained address remains classified by its true owner and physical profile")
 
     out: 0
     one: a_other
-    status: lmx_merge_profiled_owned(@ one, 1U, 0, 0, 0, @ borrower, @ dst, triple_at, @ out)
+    status: lmx_merge_profiled_owned(@ one, 1U, 0, 0, 0, @ borrower, @ dst, triple_at, 0, 0U, @ out)
     qcheck(status = c.LMX_MERGE_OK && out != 0 && out != a_other, "different const-immutable profile is copied")
 
     out: 0
     one: b_plain
-    status: lmx_merge_profiled_owned(@ one, 1U, 0, 0, 0, @ borrower, @ dst, triple_at, @ out)
+    status: lmx_merge_profiled_owned(@ one, 1U, 0, 0, 0, @ borrower, @ dst, triple_at, 0, 0U, @ out)
     qcheck(status = c.LMX_MERGE_OK && out != 0 && out != b_plain, "sealed foreign ordinary independent is copied")
     qcheck(b_plain\parent = 0 && out\parent = 0, "parent zero alone never retains")
 

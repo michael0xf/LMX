@@ -293,7 +293,7 @@ return: lmx_root_open(root, l2_driver_entry_tap, limit)
 # plain tap is now countable).  The Nth is refused the way the kernel refuses a merge it
 # cannot allocate (NOMEM, no result).  From source, merge fails only on a non-Structure
 # operand, NOMEM or an unsupported copy, and none is reachable from a program.
-fn: l2_driver_merge_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx out) int
+fn: l2_driver_merge_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
     merge_calls: merge_calls + 1
     if: merge_fail_at > 0 && merge_calls = merge_fail_at
         if: out != 0
@@ -301,9 +301,9 @@ fn: l2_driver_merge_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx 
         ---
         return: c.LMX_MERGE_NOMEM
     ---
-return: lmx_merge_owned(operands, count, body, container, dst_chars, src_arena, dst_arena, out)
+return: lmx_merge_owned(operands, count, body, container, dst_chars, src_arena, dst_arena, overrides, override_count, out)
 
-fn: l2_driver_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx out) int
+fn: l2_driver_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
     merge_calls: merge_calls + 1
     if: merge_fail_at > 0 && merge_calls = merge_fail_at
         if: out != 0
@@ -311,7 +311,7 @@ fn: l2_driver_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body
         ---
         return: c.LMX_MERGE_NOMEM
     ---
-return: lmx_merge_profiles_owned(operands, count, body, container, dst_chars, src_arena, dst_arena, retain_profiles, retain_count, out)
+return: lmx_merge_profiles_owned(operands, count, body, container, dst_chars, src_arena, dst_arena, retain_profiles, retain_count, overrides, override_count, out)
 
 fn: main (int: argc; @@: char argv) int
     int: status

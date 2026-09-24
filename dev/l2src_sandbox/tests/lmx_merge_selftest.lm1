@@ -151,7 +151,7 @@ fn: main () int
     # 1. Two structures in, three out.
     operands[0]: a
     operands[1]: b
-    status: lmx_merge_owned(operands, 2U, 0, container, 0, @ arena, @ dst, @ result)
+    status: lmx_merge_owned(operands, 2U, 0, container, 0, @ arena, @ dst, 0, 0U, @ result)
     merge_check(counts, status = LMX_MERGE_OK, "merge succeeded")
     merge_check(counts, result != 0 && result != a && result != b, "the result is a third independent structure")
     merge_check(counts, result\parent = container, "the result's structural parent is the execution container")
@@ -195,7 +195,7 @@ fn: main () int
     held_arrays: merge_arrays(@ dst)
     operands[0]: (cast: (@: Lmx) int_cell)
     refused: 0
-    status: lmx_merge_owned(operands, 1U, 0, container, 0, @ arena, @ dst, @ refused)
+    status: lmx_merge_owned(operands, 1U, 0, container, 0, @ arena, @ dst, 0, 0U, @ refused)
     merge_check(counts, status = LMX_MERGE_INVALID && refused = 0, "a non-Structure operand is refused")
     merge_check(counts, lmx_arena_index_len(dst_at) = held, "a refusal before the mark left the destination untouched")
     merge_check(counts, merge_arrays(@ dst) = held_arrays && merge_arrays_live(@ dst) = 1, "a refusal before the mark left the destination with the arrays it had")
@@ -218,7 +218,7 @@ fn: main () int
     lmx_arena_ref_store(bad, 0U, raw)
     operands[0]: bad
     refused: 0
-    status: lmx_merge_owned(operands, 1U, 0, container, 0, @ arena, @ dst, @ refused)
+    status: lmx_merge_owned(operands, 1U, 0, container, 0, @ arena, @ dst, 0, 0U, @ refused)
     merge_check(counts, status = LMX_MERGE_UNSUPPORTED && refused = 0, "an unclassified child refuses the merge")
     merge_check(counts, bad\len = 1, "the refused source is untouched")
     merge_check(counts, lmx_arena_index_len(dst_at) = held, "a refused merge left the destination arena as it was")
@@ -228,7 +228,7 @@ fn: main () int
     # the arrays the first attempt opened left with their blocks, so the second attempt
     # starts from the same state and leaves the same state.
     refused: 0
-    status: lmx_merge_owned(operands, 1U, 0, container, 0, @ arena, @ dst, @ refused)
+    status: lmx_merge_owned(operands, 1U, 0, container, 0, @ arena, @ dst, 0, 0U, @ refused)
     merge_check(counts, status = LMX_MERGE_UNSUPPORTED && refused = 0, "the same refusal a second time is refused the same way")
     merge_check(counts, lmx_arena_index_len(dst_at) = held && merge_arrays(@ dst) = held_arrays && merge_arrays_live(@ dst) = 1, "the destination is exactly as it was after a second refusal")
 

@@ -9,11 +9,12 @@ predef: "lmx_graph_copy_owned.h.lm1"
 # produces a THIRD INDEPENDENT Structure. The operands are never written: two
 # structures in, three out.
 #
-# The result's direct slots are, in order, the copies of each operand's direct
-# children, operand by operand and child by child, then the body's fields. The
-# operand ROOTS are not visible result slots; only their children are. This is
-# what makes the result one flat tree rather than a container of containers,
-# and it is why a method that came in by copying is invoked through the result.
+# With a null override map the result's direct slots are, in order, the copies
+# of each operand's direct children, operand by operand and child by child, then
+# the body's fields (flat append). With a non-null map (Q21 = A): the model
+# (operands[0]) keeps its layout; each pair stores an operand field's value into
+# a model slot; unmatched later-operand fields append; body fields append. The
+# operand ROOTS are not visible result slots; only their children are.
 #
 # ONE lmx_graph_copy_many_owned operation, hence one operation-local map, spans
 # every ordinary operand root and the body root together. An object reachable
@@ -53,6 +54,16 @@ predef: "lmx_graph_copy_owned.h.lm1"
 # together or none of them does. On any failure out stays null, the destination
 # arena is left as it was at the mark, every source graph is unchanged. There is
 # no empty-success substitute for a failed merge.
+# One override pair from the translator: store operand[k].field[j]'s value into
+# the model's slot of the result (Q21 = A specialization). Null map / count 0
+# keeps today's flat append. The graph has no names; the translator resolves
+# matches and hands pairs of positions.
+struct: LmxMergePair
+    size_t: model_slot
+    size_t: operand
+    size_t: field
+end: LmxMergePair
+
 define: LMX_MERGE_OK 0
 define: LMX_MERGE_INVALID 1
 define: LMX_MERGE_NOMEM 2
@@ -64,10 +75,13 @@ prototype:
     # without fabricating a header, and a fabricated header would test the
     # fake rather than the guard.
     fn: lmx_merge_add_width (@: size_t total; @: Lmx x) int
-    fn: lmx_merge_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx out) int
-    fn: lmx_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx out) int
+    # `overrides` null or override_count 0 = flat append (today). Non-null: model
+    # (operands[0]) layout kept; each pair writes operand[k].field[j] into the
+    # model's slot; unmatched later-operand fields append; body appends as today.
+    fn: lmx_merge_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
+    fn: lmx_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
     # `retain_profile` is the exact physical profile representing the full
     # independent+const+immutable receiver chain.  No other profile/lifecycle/owner
     # property retains an address.
-    fn: lmx_merge_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @: Lmx retain_profile; @@: Lmx out) int
+    fn: lmx_merge_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @: Lmx retain_profile; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
 end: prototype

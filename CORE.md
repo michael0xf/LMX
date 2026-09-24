@@ -215,15 +215,15 @@ prototype and, as an operator, writes into the passed data. Formal arguments,
 locals, and the returned value belong to the ordinary machine activation; an
 argument becomes a data field only by the assignment rule of L3 §12 or by
 binding through merge.
-An activation creates a fresh instance of the data prototype **as a field of the
-lexical parent's data, in the slot answering this callable**, passes the actual
-arguments to the machine activation, and runs the code over it; execution writes
-only into
-the passed data, never into code. Hence `node` is the parent's data and
-`node\x` follows the parent chain of the data graph only; there is no third
-context graph. The slot holds the latest created instance, so `M\x` from
-outside reads it; results are not read through the slot; a recursive callable
-has one instance per activation. Arguments, locals, and the activation result
+One graph may stand in both positions: an ordinary call runs `M` over its own
+fields, and the host runs the file root the same way; execution never writes
+operator nodes, literals, or the `native` word, only declared fields. A fresh
+instance of the data prototype is created only on re-entry (recursion in the
+static call graph, a dynamic call) or when data is passed explicitly; it lives
+in the activation frame and is not visible from outside. Hence `node` is the
+parent's data and `node\x` follows the parent chain only; there is no third
+context graph. `M\x` from outside reads the fields of `M` itself; results are
+not read through them. Arguments, locals, and the activation result
 live in the ordinary machine activation: `fn` returns a value, `fm` a reference
 to its result Structure. The native entry `(node, self)` therefore means
 `(data.parent, data)`.
@@ -257,8 +257,9 @@ language operations, but a green test in one is not evidence for the other.
 ### 3.1 Body fields, occurrences, and own-state
 
 A callable's body after `child[0]` preserves lexical fields and nested Frame
-Structures. Repeated fields are distinct occurrences, not one name-keyed
-runtime slot. The intended path selector `[N]field` identifies an occurrence;
+Structures. Repeated declarations are distinct occurrences, not one name-keyed
+runtime slot; a repeated bare assignment writes the same declared cell and is
+not an occurrence. The intended path selector `[N]field` identifies an occurrence;
 an unqualified path selects the last occurrence (`[lastIndex]`); `merge`
 creates no repeats, it overrides the model's slot in place. A current translator path can still
 collapse repeated same-name fields into one own slot and does not completely

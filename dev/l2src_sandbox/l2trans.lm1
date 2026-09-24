@@ -446,6 +446,7 @@ prototype:
     fn: l2_rw_unify (int: a; int: b) int
     fn: l2_rw_tyof (@@: LmP0Node tok; int: lo; int: hi) int
     fn: l2_rw_call_ty (int: idx) int
+    fn: l2_method_sig_text (int: i; @: char dest) int
     fn: l2_rw_opty (const: @(LmP0Node node)) int
     fn: l2_rw_fields_ty (@: LmP0Field first; int: n) int
     fn: l2_rw_count (@: LmP0Field first) int
@@ -16797,8 +16798,10 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; @: LmP0Field args; int: paren
     # uncaught: R0 stops and the host maps its success 0 to exit 1.
     if: l2_m_dyn[idx] != 0
         return: l2_rw_refuse(node, "a call of a method with dynamic inputs")
-    if: l2_tramp_class(idx) != 0 && l2_tramp_class(idx) != 1
-        return: l2_rw_refuse(node, "a call whose result is not an int")
+    # A result is an int, a size_t, an unsigned or a ulong (-178): the walk hands a trampoline of a
+    # wider type a destination of that type, by the method record's sig (l2_method_sig_text).
+    if: l2_tramp_class(idx) > 4
+        return: l2_rw_refuse(node, "a call whose result is not a number")
     # An input is a number (its formal's type: the trampoline reads that cell type), or a callable
     # formal, which takes a method's occurrence by reference.
     j: 0
@@ -16875,6 +16878,8 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
             return: l2_rw_call(node, idx, node\as\frame\body\first_field, parent, out)
         if: l2_text_eq(t, "merge")
             return: l2_rw_refuse(node, "merge")
+        if: l2_rw_has_slash(t) != 0
+            return: l2_rw_refuse(node, "a field path")
         if: l2_text_eq(t, "length")
             return: l2_rw_refuse(node, "an array")
         # `implements(candidate, required, consumer)` over descriptor names is decided when the
@@ -20019,10 +20024,43 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         return: 1
 return: 0
 
+# A method record's sig (FABLE-OPUS-ROOT-STRUCTS-20260925-178; -174 c4).  It is the method's
+# interned signature id -- what runtime implements compares (lmx_implements_signature) -- above
+# the walker's result mark and the result's cell type:
+#   LMX_WALK_RESULT_SIG_MARK | (id << 8) | LMX_TYPE_INT / _SIZE_T / _UNSIGNED / _ULONG
+# (nothing for a void, pointer or Structure result).  The walk's CALL reads the mark and the low
+# byte (lmx_walk_callable_result_type), so a size_t, unsigned or ulong trampoline gets a
+# destination of its own type.  The id fixes the result type, so equal sigs are still equal
+# signatures.  A library unit has no walked root and no lmx_walk.h: its sig stays the id.
+fn: l2_method_sig_text (int: i; @: char dest) int
+    int: cls
+    const: @(char ty) 0
+    if: l2_m_sig[i] > 65535U
+        return: l2_error(l2_src, l2_m_node[i], "more than 65535 method signatures")
+    if: l2_library_mode != 0
+        c.sprintf(dest, "%uU", l2_m_sig[i])
+        return: 0
+    cls: l2_tramp_class(i)
+    if: cls = 1
+        ty: "LMX_TYPE_INT"
+    if: cls = 2
+        ty: "LMX_TYPE_SIZE_T"
+    if: cls = 3
+        ty: "LMX_TYPE_UNSIGNED"
+    if: cls = 4
+        ty: "LMX_TYPE_ULONG"
+    if: ty = 0
+        c.sprintf(dest, "((cast: (unsigned) c.LMX_WALK_RESULT_SIG_MARK) | %uU)", l2_m_sig[i] * 256U)
+    else:
+        c.sprintf(dest, "(((cast: (unsigned) c.LMX_WALK_RESULT_SIG_MARK) | %uU) | (cast: (unsigned) c.%s))", l2_m_sig[i] * 256U, ty)
+    ---
+return: 0
+
 fn: l2_emit_unit (const: @(char out_path)) int
     int: i 0
     int: k
     int: oi
+    c.array: [192]: char sx
     unsigned: kids
     unsigned: l2_children_field
     int: fx
@@ -20818,8 +20856,11 @@ fn: l2_emit_unit (const: @(char out_path)) int
         # A bodiless `fn` (an interface) has no native entry: addr 0.  A method with a native
         # body is reached through its trampoline (l2_emit_trampoline), the one prim-ABI entry
         # every dynamic call uses; direct native calls keep the method's own symbol.
+        if: l2_method_sig_text(i, sx) != 0
+            fclose(l2_out)
+            return: 1
         if: l2_m_native(i) = 0 || i = l2_e
-            if: c.fprintf(l2_out, "        l2_entry_rec: lmx_method_new_owned(l2_program_arena)\n        if: l2_entry_rec = 0\n            return: 1\n        l2_entry_rec\\addr: (cast: (LmxEntry) 0)\n        l2_entry_rec\\sig: %uU\n        l2_entry_callable: lmx_callable_new_owned(l2_program_arena)\n        if: l2_entry_callable = 0\n            return: 1\n        l2_entry_callable\\method: l2_entry_rec\n        l2_entry_callable\\header: 0\n        if: lmx_arena_ref_store(l2_entry_leaf, 0U, (cast: (@: void) l2_entry_callable)) != 0\n            return: 1\n        l2_method_refs[%uU]: l2_entry_rec\n        if: l2_entry_rec\\sig != %uU\n            return: 1\n", l2_m_sig[i], (cast: (unsigned) i), l2_m_sig[i]) < 0
+            if: c.fprintf(l2_out, "        l2_entry_rec: lmx_method_new_owned(l2_program_arena)\n        if: l2_entry_rec = 0\n            return: 1\n        l2_entry_rec\\addr: (cast: (LmxEntry) 0)\n        l2_entry_rec\\sig: %s\n        l2_entry_callable: lmx_callable_new_owned(l2_program_arena)\n        if: l2_entry_callable = 0\n            return: 1\n        l2_entry_callable\\method: l2_entry_rec\n        l2_entry_callable\\header: 0\n        if: lmx_arena_ref_store(l2_entry_leaf, 0U, (cast: (@: void) l2_entry_callable)) != 0\n            return: 1\n        l2_method_refs[%uU]: l2_entry_rec\n        if: l2_entry_rec\\sig != %s\n            return: 1\n", sx, (cast: (unsigned) i), sx) < 0
                 fclose(l2_out)
                 return: 1
             ---
@@ -20830,7 +20871,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
         if: l2_m_native(i) != 0 && i != l2_e && (l2_write_sym(l2_out, i) != 0 || fputs("_tr", l2_out) < 0)
             fclose(l2_out)
             return: 1
-        if: l2_m_native(i) != 0 && i != l2_e && c.fprintf(l2_out, ")\n        l2_entry_rec\\sig: %uU\n        l2_entry_callable: lmx_callable_new_owned(l2_program_arena)\n        if: l2_entry_callable = 0\n            return: 1\n        l2_entry_callable\\method: l2_entry_rec\n        l2_entry_callable\\header: 0\n        if: lmx_arena_ref_store(l2_entry_leaf, 0U, (cast: (@: void) l2_entry_callable)) != 0\n            return: 1\n        # DEBT: method-admit / method-ranges acts absent in new kernel\n        l2_method_refs[%uU]: l2_entry_rec\n        if: l2_entry_rec\\sig != %uU\n            return: 1\n", l2_m_sig[i], (cast: (unsigned) i), l2_m_sig[i]) < 0
+        if: l2_m_native(i) != 0 && i != l2_e && c.fprintf(l2_out, ")\n        l2_entry_rec\\sig: %s\n        l2_entry_callable: lmx_callable_new_owned(l2_program_arena)\n        if: l2_entry_callable = 0\n            return: 1\n        l2_entry_callable\\method: l2_entry_rec\n        l2_entry_callable\\header: 0\n        if: lmx_arena_ref_store(l2_entry_leaf, 0U, (cast: (@: void) l2_entry_callable)) != 0\n            return: 1\n        # DEBT: method-admit / method-ranges acts absent in new kernel\n        l2_method_refs[%uU]: l2_entry_rec\n        if: l2_entry_rec\\sig != %s\n            return: 1\n", sx, (cast: (unsigned) i), sx) < 0
             fclose(l2_out)
             return: 1
         i: i + 1

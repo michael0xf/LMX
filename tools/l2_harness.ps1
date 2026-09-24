@@ -836,7 +836,7 @@ $fixtures = @(
                  'l2_m0(l2_c0\parent, l2_c0, l2_msg, @ l2_t1, @ l2_te1)',
                  'l2_out_throw[0]: 0',
                  'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ') },
-    [pscustomobject]@{ Name = 'unit_recursion.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call whose result is not an int';
+    [pscustomobject]@{ Name = 'unit_recursion.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a field path';
         Args = @('0');
         Absent = @('Lmx node; @: Lmx node', 'l2_p2_0; @: Lmx node', 'l2_out_throw[0]: node', 'return: 71');
         Debt = @('fn: l2_m2 (@: Lmx node; @: Lmx self; size_t: l2_p2_0; @: Lmx l2_msg; @: size_t l2_out_result; @@: Lmx l2_out_throw) int',
@@ -894,7 +894,7 @@ $fixtures = @(
         Debt = @('lmx_arena_ref_store(l2_tp1, 0U, (cast: (@: void) l2_p0_0))', 'lmx_size_store_known(l2_tc1, 9U)') },
     # The intern carries the ordered names: a and c share a signature, d and e differ by order only.
     [pscustomobject]@{ Name = 'unit_s1_throws_intern.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
-        Absent = @('l2_entry_rec\sig: 6U'); Debt = @('l2_entry_rec\sig: 5U') },
+        Absent = @('c.LMX_WALK_RESULT_SIG_MARK) | 1536U)'); Debt = @('c.LMX_WALK_RESULT_SIG_MARK) | 1280U)') },
     # `return: f` of a callable on the throw channel is called on that channel (it was called with
     # node and self alone, which gcc refused), and a throw passes through it like through any call.
     [pscustomobject]@{ Name = 'unit_s1_return_callable_throw_abi.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 5; Stopped = 0;
@@ -1040,6 +1040,14 @@ $fixtures = @(
     # and two types in one operation are a conversion, refused (unit_addr_arg).
     [pscustomobject]@{ Name = 'unit_root_typed_numerics.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 63;
         Absent = @(); Debt = @('lmx_walk_store_size(l2_program_arena, l2_rw', ', 1U, 41U) != c.LMX_WALK_OK', 'lmx_walk_store_char(l2_program_arena, l2_rw') },
+    # A CALL'S RESULT OF A WIDER TYPE (FABLE-OPUS-ROOT-STRUCTS-20260925-178 commit 1; -174 c4): a method
+    # record's sig is LMX_WALK_RESULT_SIG_MARK | (signature id << 8) | the result's type, so the walk
+    # hands a size_t trampoline a size_t cell; the id keeps equal sigs equal signatures (runtime
+    # implements), which the second row pins: two size_t methods with different inputs, ids 1 and 2.
+    [pscustomobject]@{ Name = 'unit_root_call_wide.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 1;
+        Absent = @(); Debt = @('c.LMX_WALK_RESULT_SIG_MARK) | 256U) | (cast: (unsigned) c.LMX_TYPE_SIZE_T))') },
+    [pscustomobject]@{ Name = 'unit_method_sig_distinct.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 3;
+        Absent = @(); Debt = @('c.LMX_WALK_RESULT_SIG_MARK) | 256U) | (cast: (unsigned) c.LMX_TYPE_SIZE_T))', 'c.LMX_WALK_RESULT_SIG_MARK) | 512U) | (cast: (unsigned) c.LMX_TYPE_SIZE_T))') },
     [pscustomobject]@{ Name = 'unit_discard_calls.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: * / %'; Args = @('0'); Entry = 11112;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_discard_fnptr.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
@@ -1480,7 +1488,7 @@ $fixtures = @(
         Needle = 'empty colon Frame is not allowed'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_empty_struct_existing_nonstruct_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unsupported body'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_typed_decl_vertical.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call whose result is not an int';
+    [pscustomobject]@{ Name = 'unit_typed_decl_vertical.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @() },
@@ -1503,15 +1511,15 @@ $fixtures = @(
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('lmx_merge_owned(l2_mops, 1U, l2_mbody, node, 0, l2_program_arena, l2_program_arena, 0, 0U, @ l2_mresult)',
                  'l2_entry_unit: graph') },
-    [pscustomobject]@{ Name = 'unit_field_path_own_write.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call whose result is not an int';
+    [pscustomobject]@{ Name = 'unit_field_path_own_write.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_pst:', 'l2_pxp: lmx_arena_ref_cell(l2_pst,', 'l2_entry_unit: graph') },
-    [pscustomobject]@{ Name = 'unit_field_path_formal.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call whose result is not an int';
+    [pscustomobject]@{ Name = 'unit_field_path_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_pst:', 'l2_pxp: lmx_arena_ref_cell(l2_pst,', 'l2_entry_unit: graph') },
-    [pscustomobject]@{ Name = 'unit_field_path_nested.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call whose result is not an int';
+    [pscustomobject]@{ Name = 'unit_field_path_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_pst: lmx_arena_ref_struct(l2_pst,', 'l2_pxp: lmx_arena_ref_cell(l2_pst,', 'l2_mops[0U]: l2_nsp[', 'lmx_merge_owned(l2_mops, 1U, l2_mbody, l2_nsp[') },
@@ -1547,7 +1555,7 @@ $fixtures = @(
     # FABLE-SONNET-DECL-PREPASS-20260923-137 part 2 (Opus's finding 1): a
     # named-Structure method return, non-throwing and declared-throw ABI,
     # a discarded call and a nested-call value round-trip witness.
-    [pscustomobject]@{ Name = 'unit_struct_return.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call whose result is not an int';
+    [pscustomobject]@{ Name = 'unit_struct_return.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @() },
@@ -1637,7 +1645,7 @@ $fixtures = @(
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'unsupported body');
         Debt = @('l2_entry_unit: graph', 'diagnostic') },
-    [pscustomobject]@{ Name = 'unit_c_member_struct_control.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call whose result is not an int';
+    [pscustomobject]@{ Name = 'unit_c_member_struct_control.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_pst:', 'l2_pxp: lmx_arena_ref_cell(l2_pst,', 'l2_entry_unit: graph') },
@@ -1667,7 +1675,7 @@ $fixtures = @(
         Debt = @() },
     [pscustomobject]@{ Name = 'unit_callable_priority_arity_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'incompatible entry signature'; Absent = @('assignment target must be a declared typed mutable value'); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_model_fresh_synonyms.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call whose result is not an int';
+    [pscustomobject]@{ Name = 'unit_model_fresh_synonyms.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @();
         Debt = @() },
@@ -1686,7 +1694,7 @@ $fixtures = @(
         Args = @('0');
         Absent = @();
         Debt = @() },
-    [pscustomobject]@{ Name = 'unit_addr_depth.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call whose result is not an int';
+    [pscustomobject]@{ Name = 'unit_addr_depth.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @();
         Debt = @() },

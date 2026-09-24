@@ -23,7 +23,7 @@ predef: "l2src/lmx_graph_copy_owned.lm1"
 predef: "l2src/lmx_call.lm1"
 predef: "l2src/lmx_clock.lm1"
 predef: "l1src/libc_abi.lm1"
-include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>" "<direct.h>"
 
 # lmx_root_host_selftest.lm1 -- THE HOST ROOT (FABLE-OPUS-ROOT-WALK-TRANSLATOR-20260924-159, commit
 # 2h; author 2026-09-24, LMX_blog/2026-09-24.md).  The host is the Thread lmx_root_open makes (its
@@ -384,8 +384,10 @@ fn: host_launch (int: mode; int: argc; @: char out_text; @: char err_text) int
     host_settings_ok: 0
     host_child_ok: 0
     host_sent: 0
-    out: (cast: (@: void) c.fopen("lmx_root_host_selftest.out", "w+b"))
-    err: (cast: (@: void) c.fopen("lmx_root_host_selftest.err", "w+b"))
+    # FABLE-187: streams under build/ (not cwd/tree root).
+    c._mkdir("build")
+    out: (cast: (@: void) c.fopen("build/lmx_root_host_selftest.out", "w+b"))
+    err: (cast: (@: void) c.fopen("build/lmx_root_host_selftest.err", "w+b"))
     if: out = 0 || err = 0
         c.printf("FAIL the streams could not be opened\n")
         return: 0 - 1

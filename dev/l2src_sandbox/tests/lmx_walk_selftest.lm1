@@ -261,6 +261,8 @@ fn: main () int
     @: Lmx plain_data 0
     @: Lmx g3_body 0
     @: Lmx g3_decl 0
+    @: Lmx d45_body 0
+    @: Lmx d45_eternal 0
     @: Lmx tramp3 0
     int: r 0
     int: v 0
@@ -1075,6 +1077,21 @@ fn: main () int
     st: go(g3_body, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_OK && v = 1 && r = 7, "G3 body {cell, decl callable, LIT 7} -> 7")
     check(lmx_int_value_known(lmx_arena_ref_value(g3_decl, 1U)) = 0, "G3 declared callable not activated (mutant: activated)")
+
+    # ---- D-45 (F3): eternal branch (parent 0) among root fields ---------------------
+    # body {Structure with parent 0, OP literal 7} -> 7. Mutant (skip only parent=body)
+    # -> LMX_WALK_UNSUPPORTED RED.
+    d45_body: mk_m(unit, 46U, 3U)
+    check(d45_body != 0, "D-45 body")
+    d45_eternal: pl(d45_body, 1U, 1U)
+    check(d45_eternal != 0, "D-45 eternal field")
+    d45_eternal\parent: 0
+    check(d45_eternal\parent = 0, "D-45 eternal parent is 0")
+    n: fr(d45_body, 2U, c.LMX_WALK_OP_LIT, 2U)
+    check(lmx_walk_store_int(ga, n, 1U, 7) = c.LMX_WALK_OK, "D-45 LIT 7")
+    check(lmx_walk_prepare(gctx, ga, gplan_roles, d45_body) = c.LMX_WALK_OK, "D-45 body prepared")
+    st: go(d45_body, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && v = 1 && r = 7, "D-45 body {eternal parent0, LIT 7} -> 7 (mutant: UNSUPPORTED)")
 
     free((cast: (@: void) argv))
     free((cast: (@: void) gv))

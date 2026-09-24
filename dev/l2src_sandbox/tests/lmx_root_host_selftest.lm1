@@ -30,9 +30,10 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 # own arena, mailbox, schedule, manager, service); lmx_root_launch runs in it.  In its first turn it
 # reserves R0 as its ordinary child -- R0's own arena, R0's program installed by the program
 # builder, the host's eternal settings (the working directory, lmx_root_settings) retained by
-# reference -- and publishes it at the turn's end.  The host posts R0 the mainArgs letter, R0 takes
-# one turn from the host's manager, and the host's second turn takes its own inbox: a letter from
-# R0 whose payload is exit(code; stdout; stderr) decides the exit.  Otherwise R0's `success` does:
+# reference -- and publishes it at the turn's end.  The host posts R0 the mainArgs letter, which is
+# (sender; payload) like every letter: the host's Message, then a Structure holding mainArgs.  R0
+# takes one turn from the host's manager, and the host's second turn takes its own inbox: a letter
+# from R0 whose payload is exit(code; stdout; stderr) decides the exit.  Otherwise R0's `success` does:
 # 1 -> 0 with empty texts, 0 -> 1 with the reason and, after the close's settle, the host's arena
 # printed to stderr -- R0's arena, adopted under the success = 0 rule, marked `joined`.
 #
@@ -49,7 +50,8 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 #   4  nothing                               -> exit 1, reason, report: R0's 52525 joined
 #   0  no program name (argc 0)              -> exit 1, refused before the host opens
 # Mutants (n159/hb.sh with JSON on lmx_root.lm1): mapping inverted, report skipped, joined nowhere,
-# admission always yes, letter graph dropped, settings not retained, inbox not taken -> RED.
+# admission always yes, letter graph dropped, a bare mainArgs letter (no sender), settings not
+# retained, inbox not taken -> RED.
 
 @: LmxArena host_child_arena 0
 @: LmxArena host_exit_arena 0
@@ -58,6 +60,7 @@ int: host_turns 0
 int: host_letters 0
 int: host_args 0
 int: host_arg_ok 0
+int: host_sender_ok 0
 int: host_settings_ok 0
 int: host_child_ok 0
 int: host_sent 0
@@ -219,7 +222,9 @@ fn: host_r0_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@:
     @: LmxThread t
     @: LmxMsg message
     @: LmxMsg letter
-    @: LmxArrayDesc args
+    @: LmxThread host 0
+    @: Lmx payload 0
+    @: LmxArrayDesc args 0
     @: LmxArrayDesc arg
     @@: void slots
     host_turns: host_turns + 1
@@ -231,9 +236,18 @@ fn: host_r0_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@:
     host_settings_ok: host_settings_check(t, message\graph)
     host_letters: (cast: (int) lmx_thread_mail_count(t, c.LMX_POST_INBOX))
     if: host_mode = 1
+        # The letter is (sender; payload): field 0 the host's Message, field 1 the payload whose
+        # one field is mainArgs.
         letter: (cast: (@: LmxMsg) lmx_thread_mail_take(t, c.LMX_POST_INBOX))
-        if: letter != 0 && letter\graph != 0
-            args: (cast: (@: LmxArrayDesc) lmx_arena_ref_value(letter\graph, 0U))
+        if: letter != 0 && letter\graph != 0 && letter\graph\len = 2
+            host: lmx_thread_parent(t)
+            if: host != 0 && lmx_arena_ref_value(letter\graph, 0U) = (cast: (@: void) lmx_thread_message(host))
+                host_sender_ok: 1
+            ---
+            payload: (cast: (@: Lmx) lmx_arena_ref_value(letter\graph, 1U))
+            if: payload != 0 && payload\len = 1
+                args: (cast: (@: LmxArrayDesc) lmx_arena_ref_value(payload, 0U))
+            ---
             if: args != 0
                 host_args: (cast: (int) args\len)
                 slots: (cast: (@@: void) args\data)
@@ -353,6 +367,7 @@ fn: host_launch (int: mode; int: argc; @: char out_text; @: char err_text) int
     host_letters: 0
     host_args: 0
     host_arg_ok: 0
+    host_sender_ok: 0
     host_settings_ok: 0
     host_child_ok: 0
     host_sent: 0
@@ -408,7 +423,8 @@ fn: main () int
     host_check(counts, exit_code = 0, "R0 set success and sent no exit: the host's exit is 0 (mutant: mapping inverted)")
     host_check(counts, host_turns = 1, "R0's body ran exactly once: one turn from the host's manager")
     host_check(counts, host_letters = 1, "the mainArgs letter was in R0's inbox at its turn")
-    host_check(counts, host_args = 2 && host_arg_ok = 1, "the letter's mainArgs carries argc 2 and argv[1] = probe (mutant: letter graph dropped)")
+    host_check(counts, host_sender_ok = 1, "the letter's field 0 is its sender, the host's Message: R0 can post back to it (mutant: a bare letter)")
+    host_check(counts, host_args = 2 && host_arg_ok = 1, "the letter's field 1 is its payload, whose mainArgs carries argc 2 and argv[1] = probe (mutants: letter graph dropped, a bare letter)")
     host_check(counts, host_settings_ok = 1, "(5) R0 read the host's working directory through the retained reference: the host's branch, a view in R0's arena (mutant: settings not retained)")
     host_check(counts, out_text[0] = 0 && err_text[0] = 0, "a successful exit writes nothing to stdout or stderr")
 

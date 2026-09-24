@@ -995,6 +995,7 @@ fn: lmx_root_launch (@: LmxRoot root; int: argc; @@: char argv; LmxRootProgram: 
     @: LmxArena letter_at 0
     @: LmxMsg letter 0
     @: Lmx letter_graph 0
+    @: Lmx letter_payload 0
     @: LmxArrayDesc main_args 0
     @: LmxArrayDesc main_arg 0
     @@: void slots 0
@@ -1037,7 +1038,10 @@ fn: lmx_root_launch (@: LmxRoot root; int: argc; @@: char argv; LmxRootProgram: 
     if: turn != c.LMX_ROOT_OK || r0 = 0 || lmx_arena_ref_value(graph, c.LMX_ROOT_HOST_R0) != (cast: (@: void) r0)
         return: lmx_root_launch_refuse(root, 0, (cast: (@: char) "lmx: the host could not make R0\n"), out, err)
     ---
-    # The process arguments travel INSIDE a letter (author, Q10): its graph is a root Structure
+    # The process arguments travel INSIDE a letter (author, Q10), and a letter is (sender; payload)
+    # like every other (K3 = a; FABLE-OPUS-MAINARGS-SENDER-20260925-173): its graph is an anonymous
+    # Structure whose field 0 is the sender's reference -- the host's Message, which is the host
+    # Thread's address, so R0 can post back to it -- and whose field 1 is the payload, a Structure
     # whose one field, mainArgs, is an Array of references to char Arrays -- argv[i] with its NUL,
     # exactly as C passed them.  The letter goes to R0 by the ordinary mail pair; R0 takes it, and an
     # untaken one is released at close.  A full arena: a simple one seats one chunk per array, so its
@@ -1048,8 +1052,12 @@ fn: lmx_root_launch (@: LmxRoot root; int: argc; @@: char argv; LmxRootProgram: 
     letter_at: @ letter_arena
     letter: (cast: (@: LmxMsg) lmx_arena_take(letter_at, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
     letter_graph: lmx_node_new_owned(letter_at)
+    letter_payload: lmx_node_new_owned(letter_at)
     main_args: lmx_array_ref_new_owned(c.LMX_TYPE_ARRAY_OF_DESC, (cast: (size_t) argc), letter_at)
-    if: letter = 0 || letter_graph = 0 || main_args = 0 || lmx_arena_refs_open_owned(letter_at, letter_graph, 1U) != 0
+    if: letter = 0 || letter_graph = 0 || letter_payload = 0 || main_args = 0
+        return: lmx_root_launch_refuse(root, letter_at, (cast: (@: char) "lmx: the host could not build the mainArgs letter\n"), out, err)
+    ---
+    if: lmx_arena_refs_open_owned(letter_at, letter_graph, 2U) != 0 || lmx_arena_refs_open_owned(letter_at, letter_payload, 1U) != 0
         return: lmx_root_launch_refuse(root, letter_at, (cast: (@: char) "lmx: the host could not build the mainArgs letter\n"), out, err)
     ---
     slots: (cast: (@@: void) main_args\data)
@@ -1063,7 +1071,10 @@ fn: lmx_root_launch (@: LmxRoot root; int: argc; @@: char argv; LmxRootProgram: 
         slots[ai]: (cast: (@: void) main_arg)
         ai: ai + 1
     ---
-    if: lmx_arena_ref_store(letter_graph, 0U, (cast: (@: void) main_args)) != 0
+    if: lmx_arena_ref_store(letter_payload, 0U, (cast: (@: void) main_args)) != 0
+        return: lmx_root_launch_refuse(root, letter_at, (cast: (@: char) "lmx: the host could not build the mainArgs letter\n"), out, err)
+    ---
+    if: lmx_arena_ref_store(letter_graph, 0U, (cast: (@: void) message)) != 0 || lmx_arena_ref_store(letter_graph, 1U, (cast: (@: void) letter_payload)) != 0
         return: lmx_root_launch_refuse(root, letter_at, (cast: (@: char) "lmx: the host could not build the mainArgs letter\n"), out, err)
     ---
     letter\running: 1

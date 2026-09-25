@@ -1281,13 +1281,15 @@ $fixtures = @(
                  'if: lmx_walk_store_size(l2_program_arena, l2_rw51, 2U, 2U) != c.LMX_WALK_OK',
                  '@: Lmx l2_rw57 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw56, c.LMX_WALK_OP_ARG, 2U)',
                  '@: Lmx l2_rw62 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw61, c.LMX_WALK_OP_AT, 3U)') },
-    # T4b class 3: a numeric field declared in if/else/while is OF/PUT_OF of that body's
-    # Structure. branch's binding is inside the if; the return after it reads ARG, not the field.
+    # D-79: a field declared in if/else/while is OF/PUT_OF of that body. A bare
+    # write of a formal inside if is PUT of the method cell (l2_rw125), and
+    # keep's return reads that cell (AT), not a field of the if.
     [pscustomobject]@{ Name = 'unit_walk_nested_own.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m2_tr)');
         Debt = @('c.LMX_WALK_OP_PUT_OF, 4U)',
                  'c.LMX_WALK_OP_OF, 3U)',
-                 'c.LMX_WALK_OP_ARG, 2U)') },
+                 'c.LMX_WALK_OP_ARG, 2U)',
+                 '@: Lmx l2_rw125 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw124, c.LMX_WALK_OP_PUT, 4U)') },
     # Side fixes (-193 T4a): a root `M\x` of a method after the first, in a unit with no named Structure
     # (l2trans crashed); a repeated declaration's initializer reads the occurrence before it
     # (l2_own_excl, as natively); the root names its own fields by no holder (K-OT2).
@@ -2228,9 +2230,9 @@ $fixtures = @(
         Says = @('BETWEEN 2', 'LAST 9');
         Absent = @('_sticky', '_active', '_dirty');
         Debt = @('if: lmx_int_value_known(l2_q0_from[0]) != 2', 'if: lmx_int_value_known(l2_q1_from[0]) != 9') },
-    # -189 c3b-2: a binding in a body is scoped to it (fable).  `x: 7` in an `if` body binds the body's
-    # field, and after the body x is the argument again; a body's binding reads the enclosing field.
-    [pscustomobject]@{ Name = 'unit_arg_bind_body_scope.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
+    # D-79: a bare assignment binds the formal's method cell, including from inside
+    # `if`. scoped(3, 1) is 77; nested(3) is 1414. Success is exit 7.
+    [pscustomobject]@{ Name = 'unit_arg_bind_body_scope.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @('_sticky', '_dirty'); Debt = @() },
     # THE EXECUTION PAIR (FABLE-OPUS-CODE-DATA-SPLIT-20260925-189 commit 2): every activation runs over a
     # fresh instance of the method's data prototype in the unit's slot answering it, and the slot shows

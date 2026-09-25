@@ -467,6 +467,7 @@ prototype:
     fn: l2_advance (@: LmP0Field f; int: k) @: LmP0Field
     fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
     fn: l2_emit_body_in (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
+    fn: l2_host_is_body (const: @(LmP0Node host); const: @(LmP0Structure body)) int
     fn: l2_merge_frame (const: @(LmP0Node stmt)) @: LmP0Node
     fn: l2_merge_body (const: @(LmP0Node stmt)) @: LmP0Structure
     fn: l2_merge_arity (const: @(LmP0Node mf)) int
@@ -6175,11 +6176,11 @@ fn: l2_own_formal (int: mi; int: k) int
         return: 0 - 1
 return: l2_param_find(mi, l2_own_name[k])
 
-# THE BOUND ROW (-189 c3b-2; R2 with carry, static by position -- L3 §12, fable).  Parameter pk of mi
+# THE BOUND ROW (-189 c3b-2; R2 with carry, static by position -- L3 §12).  Parameter pk of mi
 # (a formal, or a dynamic input) names the machine argument until an own field bound to it has had
 # its binding line -- its declaration, or its first bare assignment -- and that field from then on.
-# A binding in a body is scoped to the body (l2_emit_body).  The innermost binding in scope, the
-# latest, wins; -1 is the machine argument.
+# A formal's binding is not scoped to a nested body (D-79): only a field declared in that body
+# ends when the body ends (l2_emit_body).  The latest mark wins; -1 is the machine argument.
 fn: l2_formal_row (int: mi; int: pk) int
     int: k 0
     int: best 0 - 1
@@ -6454,14 +6455,26 @@ fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char p
             pis: l2_param_is(mi, fa)
             j: -1
             used: 0
-            # No list of eligible types: an assignment to a parameter binds it to the body's own
-            # field whatever its type, and the type only names the cell (l2_own_ty_of_param).
+            # A data field is created only by a declaration (D-79, author). A bare assignment
+            # never creates a field of the nested body it sits in. The first write binds the
+            # formal as the method's one cell (L3 §12, host 0); a later write, from a nested
+            # body too, uses that cell. A declaration already in this host (`int: n` in the
+            # if) is that body's field and is the row the write uses.
             # oty < 0 is the one exception and it is a fact about the graph, not about this rule:
             # there is no cell that could hold the value, so the parameter stays a plain local.
             oty: -1
             if: pis != 0
                 oty: l2_own_ty_of_param(ty)
             if: oty >= 0
+                j: l2_own_find_host(mi, fa, l2_scope_host())
+            if: oty >= 0 && j < 0
+                j: l2_own_find_host(mi, fa, 0)
+            if: oty >= 0 && j < 0 && l2_scope_n > 0
+                cj: l2_scope_n
+                l2_scope_n: 0
+                j: l2_own_add(mi, fa, oty, path, stmt)
+                l2_scope_n: cj
+            if: oty >= 0 && j < 0
                 j: l2_own_add(mi, fa, oty, path, stmt)
             if: oty >= 0 && j < 0
                 return: 1
@@ -10613,19 +10626,29 @@ fn: l2_emit_pad (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
         return: l2_emit_loop_exit(p, ind)
 return: l2_emit_loop_exit(0 - 1, ind)
 
-# A body's bindings are scoped to it (-189 c3b-2, fable): leaving it unbinds every own field bound
-# inside it (l2_own_bseq), so a name is again what it was before the body -- the machine
-# argument, or an enclosing bound field (l2_formal_row).
+# Leaving a body drops marks of fields declared in that body only (D-79). A formal's
+# binding is one cell of the method: a bare write inside the body does not end at the
+# body's edge. A declaration in the body (`int: n` in the if) does.
 fn: l2_emit_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
     int: s0 l2_bseq_n
     int: k 0
     if: l2_emit_body_in(body, mi, ind) != 0
         return: 1
     while: k < l2_own_n
-        if: l2_own_bseq[k] > s0
+        if: l2_own_bseq[k] > s0 && l2_host_is_body(l2_own_host[k], body) != 0
             l2_own_bseq[k]: 0
         k: k + 1
     ---
+return: 0
+
+# host is the node pushed for this body: a structure node, or an else frame.
+fn: l2_host_is_body (const: @(LmP0Node host); const: @(LmP0Structure body)) int
+    if: host = 0 || body = 0 || host\as = 0
+        return: 0
+    if: host\kind = c.LM_P0_NODE_STRUCTURE && host\as\structure = body
+        return: 1
+    if: host\kind = c.LM_P0_NODE_FRAME && host\as\frame != 0 && host\as\frame\body = body
+        return: 1
 return: 0
 
 # A block with catches is its pad; any other block is its statements.
@@ -16676,8 +16699,8 @@ fn: l2_rw_find (const: @(LmP0Text t)) int
 return: l2_own_find_last(l2_rw_mi, t)
 
 # The numeric own field named t that is already bound to a formal, or -1.
-# The latest mark wins (l2_formal_row). A hosted field counts once its line has
-# run; leaving its body clears that mark.
+# The latest mark wins (l2_formal_row). Leaving a body clears only a field
+# declared in that body (D-79); a formal's method cell stays bound.
 fn: l2_rw_bound (const: @(LmP0Text t)) int
     int: oi 0
     int: best 0 - 1
@@ -16737,15 +16760,18 @@ fn: l2_rw_enter (const: @(LmP0Node host); @: int saved) int
     \saved: l2_rw_bseq_n
 return: l2_scope_push(host)
 
-# Leave the body: drop its scope and every binding mark made inside it (l2_emit_body).
+# Leave the body: drop its scope and the marks of fields declared in it (D-79).
+# A formal bound by a bare write keeps that mark past the body.
 fn: l2_rw_leave (int: saved) int
+    @: LmP0Node host
     int: k 0
+    host: l2_scope_host()
     if: l2_scope_pop() != 0
         return: 1
     if: l2_rw_bseq = 0
         return: 0
     while: k < l2_own_n
-        if: l2_rw_bseq[k] > saved
+        if: l2_rw_bseq[k] > saved && l2_own_host[k] = host
             l2_rw_bseq[k]: 0
         k: k + 1
     ---
@@ -19881,26 +19907,9 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
         ---
         return: l2_rw_refuse(stmt, "a reference assignment")
     ---
-    # An assignment whose name is a field of the nested body (collect_asgn binds a
-    # parameter's store to that body's own field). It hides an outer field of the
-    # same name for the body only. The value is read before this store binds it.
-    oi: l2_own_find_last(l2_rw_mi, h)
-    if: l2_rw_is_hosted(oi) != 0 && l2_scope_has(l2_own_host[oi]) != 0
-        n: l2_count_active(stmt\as\frame\body)
-        if: n < 1
-            return: l2_rw_refuse(stmt, "this assignment")
-        k: 0
-        if: l2_rw_bseq != 0 && l2_rw_bseq[oi] = 0 && l2_own_formal(l2_rw_mi, oi) >= 0
-            k: 1
-        if: l2_rw_assign(into, oi, stmt\as\frame\body\first_field, n, @ node) != 0
-            return: 1
-        if: k != 0 && l2_rw_bseq_mark(oi) != 0
-            return: 1
-        \made: 1
-        if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, node) < 0
-            return: 1
-        return: 0
-    # An assignment of the root's own numeric field.
+    # An assignment of the root's own numeric field. A field declared in the
+    # nested body is still that body's cell (class 3). A bare write of a formal
+    # is the method's cell, including from inside the body (D-79).
     oi: l2_rw_own_row(stmt, h)
     if: oi = 0 - 1
         return: 1

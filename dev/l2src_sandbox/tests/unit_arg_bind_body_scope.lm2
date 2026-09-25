@@ -1,13 +1,13 @@
-# A binding in a body is scoped to it (FABLE-OPUS-CODE-DATA-SPLIT-20260925-189 commit c3b-2; L3 §12,
-# R2 with carry, static by position -- fable).  A formal is the machine argument until its binding
-# line and its field from then on.  A bare assignment inside an `if` body binds that body's hosted
-# field, and after the body the name is again what it was before it.
-# - scoped(3, 1): `x: 7` in the body binds the body's field, so inner is 7.  After the body, x is the
-#   argument again: 3.  73.  Without the scoping, x after the body is the body's field: 77.
-# - nested(3): `int: y` carries the argument into the method's field (3) and `y: y + 1` makes it 4.
-#   In the body `y: y + 10` binds the body's field from the enclosing one: 14, so in2 is 14.  After
-#   the body, y is the method's field again: 4.  1404.
-# The exit code is (scoped(3, 1) - 73) + (nested(3) - 1404): 0.
+# D-79 (author): a bare assignment does not create a field of the body it sits in.
+# The first write binds the formal as the method's cell (L3 §12), and a later write
+# from inside `if` writes that same cell. A declaration in the body is the only
+# thing that creates the body's field. CORE.md §3.
+# - scoped(3, 1): `x: 7` binds the method cell. inner is 7, and after the body x
+#   is still that cell: 7. 77.
+# - nested(3): `int: y` carries 3 and `y: y + 1` makes the method cell 4. Inside
+#   the if `y: y + 10` writes that same cell, so in2 is 14 and y after the body
+#   is 14. 1414.
+# Success is 7 when both hold.
 fn: scoped (int: x; int: c) int
     int: inner 0
     if: c != 0
@@ -29,9 +29,14 @@ end: nested
 fn: probe () int
     int: a 0
     int: b 0
+    int: r 0
     a: scoped(3, 1)
     b: nested(3)
-    return: (a - 73) + (b - 1404)
+    if: a = 77
+        r: r + 3
+    if: b = 1414
+        r: r + 4
+    return: r
 end: probe
 
 sendMessage: exit(exit_code: probe(); stdout: ""; stderr: "")

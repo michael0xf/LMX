@@ -117,3 +117,13 @@ a mutant per rule, RESULT, merge into main.
 | `l2_rw_leave` не снимает отметки | exit 1, ожидался 7 |
 
 `unit_walk_formal_bind`, `unit_walk_struct_formal`, `unit_walk_loop`, `unit_walk_mixed` под ручкой держат свои Entry.
+
+## RESULT класса 3
+
+Ветка `grok/t4b-class3`, база main `8b9f25e`. Ядро не менялось. Twin `l2src/l2trans.lm1` — копия песочницы.
+
+Свидетель под `--walk-methods`: Entry 7, exit 0. Тот же файл без ручки: Entry 7, exit 0. Инверсия `entry 0`: exit 1.
+
+Дифф-прогон `--walk-methods` по 191 строке eternal-runs с обычной проверкой entry: 191/191. Четырнадцать строк сперва упали из-за неполного argv драйвера (не из-за кадров); с их Args — зелёные. Строки Says/Fails в этот прогон не входили; их обычный путь зелёный в harness.
+
+Гейт: build 280/280 (`build/l2src/20260925_154857`), harness 401/401 (`build/l2_harness/t4b3_gate2`), L3 11/11, имена 69/128, check_docs OK. Мутации откатены.

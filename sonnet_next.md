@@ -1,222 +1,152 @@
-# sonnet_next.md — старт Sonnet в облачной сессии
+# sonnet_next.md — Sonnet's own state at STOP (author's quota decision, §10)
 
-**2026-09-25 update: К2 (§6 ниже) закрыт и влит на main (`b7cce8c`), гейт
-GREEN (build 276/276, harness 390/390, L3 11/11) — см.
-`fable_next.md` §1/§2, это теперь авторитетный текущий статус.** Остальной
-текст этого файла (§1–§6) — исторический снимок на момент, когда К2 ещё
-ждал ребейза/гейта; сохранён как контекст ловушек и правил, но для
-ОЧЕРЕДИ работы читать `fable_next.md` §3, не §6 этого файла. Следующий шаг
-по очереди для Sonnet-ядра (её пункт 5) — начат: `steps/pool-chunk-growth-d67.md`
-(read-only план, D-67), код ещё не тронут — см. там §4 почему (эта облачная
-сессия не имеет доступа к гейту: `tools/build_l2src.ps1` требует
-PowerShell, пинованный `bin/l1trans.exe` — Windows PE, нет `wine`).
+Rewritten 2026-09-25 at STOP (`steps/tickets-20260925.md` §10: the author stopped Opus and
+Sonnet on overall quota; Grok, effort xhigh, becomes the sole code executor; fable reviews).
+Everything below §1-§3 of the PREVIOUS version of this file (the K2-pre-integration snapshot)
+is done and long since superseded — K2, K2b (-202), D-67, and -201 к.1/к.2 are all closed and on
+`main`, see §1. This file is now purely a STOP handoff: exact state, what's still open, and the
+traps hit this session — for whoever resumes (Grok picking up CATCH/-200, or a Sonnet session
+after the quota resets).
 
-Автор передаёт координацию через fable, но fable/Opus/Sonnet переезжают в
-`--cloud`-сессии; на машине остаётся только Grok CLI. Этот файл — то, с чего
-следующая (облачная) сессия Sonnet должна начать: кто я, что уже сделано,
-что дальше по ядру, какие правила уже даны автором/fable, и какие ловушки
-уже известны — чтобы не переоткрывать их заново.
+## 0. Who reads this and when
 
-## 0. Кто я и с чего начать
+Per `steps/tickets-20260925.md` §10: Grok is the only code writer from here; fable reviews and
+integrates docs. A Sonnet session resuming after the stop should start here, then re-read
+`steps/tickets-20260925.md` in full (especially §10 and anything appended after it) before
+picking up any ticket — do not assume this file's queue (§4 below) is still current without
+checking main first.
 
-Я — один из нескольких ИИ-агентов (fable = координатор/интегратор, opus,
-grok_bot), работающих вместе под human-автором (общение через fable) над
-LMX — самохостящимся компилятором/ядром L1→L2→L3. Каждое "user"-сообщение
-в этой работе — либо релей от fable/opus, либо системная/tool-инструкция,
-никогда не прямое сообщение человека мне напрямую.
+## 1. What closed this session, with SHA
 
-Порядок чтения при старте новой (облачной) сессии:
-1. `cwd` = корень репозитория LMX (в текущей рабочей копии —
-   `C:\Nyasha_Planet\LMX_sonnet_noderoot`, git worktree; канонический
-   репозиторий — `C:\Nyasha_Planet\LMX`).
-2. `README.md` (и/или `README.en.md`) — обзор.
-3. `steps/current.md` — текущий план и состояние, стиль записи тел L1
-   (`end: <name>`, `return:`-трейлер, лестница отступов), список дефектов,
-   правило "свидетель не может быть пустым", инструкция по общению агентов.
-4. `next_core_tasks.md` §3 (разрешение объявления/присваивания/вызова) и §4
-   (occurrences, repeated fields, `[N]field`, merge — правило автора) — это
-   нормативная модель, на которую опирается ядро merge/walker.
-5. `steps/merge-kernel-194.md` — план текущего тикета (K1/merge-into/K-OT1/
-   K-OT2/G-call/K2), с точными цитатами кода — основа всего, что я делала.
-6. `steps/native-word-191.md` — модель `Lmx = {array, parent, native}`,
-   `VoidArray`, правило "native пусто = интерпретация".
-7. `steps/code-data-split-188.md` — предыдущая модель code/data (уже
-   посажена в main), контекст для native-word-191.
+All merged to `main` (`--no-ff`, "machine GATE? pending" in each merge commit — none of this was
+run through the full machine gate, only the cloud-buildable subset):
 
-Команды (build/gate) запускать из корня репозитория, не из `build/...`.
+- **D-67** (`lmx_pool_add_chunk` chunk-growth defect) — fixed per fable's option A: `want`
+  parameter, the pool's configured step never moves. `steps/pool-chunk-growth-d67.md` (the
+  original read-only plan + QUESTION) → fable's decision in `steps/tickets-20260925.md` §6 →
+  fix + selftest witness + mutant. Merged `main 2d852fe`. Defect closed in `steps/defects.md`
+  (F-67).
+- **-202 (K2b)** — `lmx_walk_merge_map` now collects each operand's own `lmx_range_profile` and
+  passes the nonzero ones to `lmx_merge_profiles_owned`, matching the native emission
+  (`l2trans.lm1:20390-20399`): a merge at the walked root retains an immutable/const-qualified
+  branch by address instead of deep-copying it. 18 new witness checks in
+  `tests/lmx_walk_merge_selftest.lm1`, mutant verified. Merged `main eba1fb5`.
+  **Collision found and flagged during this merge**: Grok was independently working the SAME
+  ticket (`steps/merge-profiles-202.md`, branch `grok/merge-profiles-202`), still at a read-only
+  k.1 plan with no code when I merged my finished implementation — flagged explicitly in the
+  merge commit for fable to reconcile with Grok; not something I could resolve myself (no
+  channel to that session). Worth checking whether fable actually told Grok before Grok starts
+  к.2 code on a ticket that's already done.
+- **-201 к.1** (CATCH-role read-only plan) — `steps/catch-role-201.md`, merged earlier
+  (`main b93318f`, before this stop). Fable's decision on it is §7 of
+  `steps/tickets-20260925.md` — read that section in full before touching CATCH code; it
+  overrides several open questions from my own к.1 (chose neither Candidate A nor B literally,
+  a third synthesis: site table on CALL/PRIM + frame-level landing, no new status code).
+- **-201 к.2** (node-layout plan, walker side) — `steps/catch-role-201-k2.md`, merged
+  `main 1ddecef` (this stop's last action). Precise: `LmxWalkFrame` gains `landing`/`payload`;
+  PAD's own node shape `[pad, param_ref_0..P-1, body]`; exact CALL (`4→5`) / PRIM (`2→3`) operand
+  shifts and where the site-table consultation goes (right before each function's own scratch
+  rewind); the catch/resume itself needs NO new recursion — `lmx_walk_body` already takes a
+  `first` index, so landing is one inline check before the loop's own `i: i+1U`. Also shows how
+  this closes D-55 for free via the k_out renumber-on-no-match path. **Two things flagged as
+  NOT verified, not guessed** — read `steps/catch-role-201-k2.md` §4 before implementing:
+  1. whether `lmx_walk_activate`'s own out-params carry a walked callee's uncaught thrown record
+     the way they carry a normal result (CALL's walked branch today only copies `result` into
+     `\out` on `LMX_WALK_OK`, never on THROWN);
+  2. whether a thrown record's own memory can outlive its throwing call's own scratch rewind
+     (the same class of bug K-RET already hit and fixed for ordinary numeric results,
+     `lmx_walk.lm1:962-980` — if any throw producer builds its record in scratch rather than the
+     arena, the payload needs the same copy-before-rewind treatment).
+- **-200 к.1** (POSIX-twin read-only measurement) — `steps/posix-gate-200.md`, merged before
+  this stop (`main`, exact SHA in that file's own history). Fable's "go" on the к.2 FORM is §6 of
+  `steps/tickets-20260925.md` — a concrete 6-commit-order plan (headers first, win32 rename,
+  five-script staging table, then POSIX bodies). **к.2 CODE never started** — see §4.
 
-## 1. Точное состояние на момент написания (2026-09-25, main = 7ba030b)
+## 2. Exact state at STOP
 
-- **main** (после интеграции Opus T4a, `7ba030b`): op-trees для walkable
-  method bodies рядом с native entry (ARG/RET, holder 0, FRESH при
-  повторном входе, флаг `--walk-methods`), differential run 382/382 в обе
-  стороны, D-70..D-73 фикс (F-60..F-63); следом влит grok_bot -170 c2
-  (walker-роли `ELEM`=25/`ELEMPUT`=26/`LENGTH`=27, `LMX_WALK_OP_COUNT`=28).
-  Гейт на main: build 275/275, harness 384/384, L3 11/11.
-- **моя ветка `sonnet/merge-194`** (запушена, tip `41d646d`): база —
-  СТАРЫЙ `4d427ac` (до T4a и до -170 c2) — **перед следующим гейтом/
-  интеграцией её нужно перебазировать на текущий main** (`git rebase
-  origin/main`); коллизий не ожидается — K2 не трогает `LmxWalkOp`/
-  `LMX_WALK_OP_COUNT` вообще (см. §3 ниже), только `lmx_merge_owned.lm1`/
-  `.h.lm1` и один маленький хук внутри `lmx_walk_prim`'s per-arg loop в
-  `lmx_walk.lm1`.
-  - `f164d6c` — K2: ядерные функции `lmx_walk_merge_map`/
-    `lmx_walk_merge_into_map`/`lmx_walk_merge_pairs_decode`/`_free`
-    (реализация, компилируется чисто).
-  - `41d646d` — K2: селфтест `tests/lmx_walk_merge_selftest.lm1` (22
-    проверки, 0 провалов) + 2 мутанта, оба пойманы (проверено прямой
-    мутацией отслеживаемого файла на этой же ветке: правка →
-    `build_l2src -Run` RED → `git checkout --` откат → снова GREEN;
-    рабочее дерево оставалось чистым до и после).
-  - **build_l2src -Run: GREEN 275/275** (последний прогон на этой базе).
-  - **L3 + harness ещё НЕ гоняны на этой ветке** — GATE? отправлен fable,
-    в очереди за Opus'ом (T4a только что влит, гейт теперь свободен).
-  - **Рабочее дерево чистое** (`git status --short` пусто) кроме этого
-    самого файла (`sonnet_next.md`), который коммитится отдельным
-    docs-коммитом.
-- Остальные мои старые ветки (`sonnet/fixtures-190`, `sonnet/send-ref`,
-  `sonnet/send-in-methods`, `sonnet/receive-rename` и т.п.) — тикеты уже
-  ЗАКРЫТЫ и влиты (или ждали интеграции на момент закрытия — см.
-  `MEMORY.md`/`fable_next.md` за подробностями по каждому); для текущей
-  работы актуальна только `sonnet/merge-194`.
+`main` = `1ddecef` (this file's own commit is the top of it). My branch
+`claude/continue-sonnet-next-doc-aaz95e` is fast-forward-identical to `main` at this point
+(nothing left un-merged). Working tree clean.
 
-## 2. Очередь по ядру после K2
+Cron: I had set up session-only 15-minute polling per the author's ask; deleted per this stop
+instruction (`CronDelete b8f62ced` — already gone on its own by the time I was asked to delete
+it, confirming what I'd already flagged: this session's cron store does not survive a session
+restart, so it was silently not running for some stretch before the delete request). **Nothing
+autonomous is polling for this session anymore.**
 
-По убыванию приоритета (со слов fable, на момент передачи):
+## 3. Open threads (not mine to continue — Grok's queue now, §10)
 
-1. **Догнать K2 до конца**: дождаться очереди на гейт (Opus T4a только что
-   влит — очередь освобождается), перебазировать `sonnet/merge-194` на
-   текущий main, прогнать L3+harness, отправить RESULT к.6 fable (форма —
-   см. §4), дождаться интеграции.
-2. **CATCH-роль walker'а** (PAD + per-site table + landing) — план уже
-   есть у grok_bot в `steps/root-walk-blocks-arrays.md`, раздел ближе к
-   концу файла (искать "PAD"/"landing"/"catch role"): PAD-шаг пропускается
-   при обычном линейном проходе, несёт свои параметрические ячейки
-   (хостятся в своём блоке), плюс per-site таблица и посадка (landing) при
-   throw. Соответствует S1's 5 строкам (`unit_s1_catch_publish` и др.).
-3. **D-67** (моя находка, -192 к.2, OPEN, не чинить в -192 по решению
-   fable — отдельный тикет ядра): `lmx_pool_add_chunk` (`lmx_pool.lm1:108`)
-   растит ПОЗДНИЕ чанки общего пула по `chunk_capacity` ПУЛА (зафиксирован
-   при первой аллокации), а не по запросу вызывающего для этого конкретного
-   роста — лишний по размеру чанк, если разные по размеру запросы делят
-   один пул.
-4. **D-60/D-62** (наследие grok_bot/моё, оба OPEN): D-60 — получатель не
-   импортирует диапазон Message отправителя автоматически, поэтому merge
-   после receive в интерпретируемом корне всё ещё бросает `merge`
-   (`unit_admit_letter_formal` — translates-with-debt); D-62 —
-   `sendMessage: Ref X` с недостижимым/неверным адресатом в интерпретируемом
-   корне крашится (`LMX_WALK_PRIMITIVE` generic fallback → abort), а не
-   рефьюзится located-отказом или X1, как та же форма в теле метода.
-5. **Миграция раскладки `Lmx` → `{array, parent, native}`** (`VoidArray`,
-   `steps/native-word-191.md` §1) — контракт описан, `VoidArray` ещё не
-   существует в `lmx.h.lm1` (подтверждено grep'ом), реализация не начата.
-   Это большая структурная миграция (растёт `sizeof(Lmx)`, слот 0 сдвигается
-   для E/именованных Structure — "E loses child 0 entirely, into its own
-   `Lmx` member"), читать план целиком прежде чем трогать код.
-6. **D-12** (мелкое, низкий приоритет): `printTree.lm2`-пример (в
-   `dev/l2src_sandbox/` и `l2src/`) написан под старую сигнатуру
-   `fn: main (int: argc; @@: char argv)`, ничем не собирается, но
-   упоминается в L2-спеке §18.2 — обновить пример под текущую модель или
-   снять ссылку.
+- **-201 CATCH code**: waits on Grok's own **-203** landing first (`steps/tickets-20260925.md`
+  §10 п.3-4) — both touch `lmx_walk.lm1`, one writer per file. My к.2 plan
+  (`steps/catch-role-201-k2.md`) is the spec to build from; Opus's emitter list
+  (`steps/catch-emitters-201.md`) is the translator-side half, already cross-checked against
+  mine (§8 of my к.2 plan). 8 rows (not 7 — fable corrected my к.1 count), figures in §7 of the
+  к.2 plan.
+- **-200 к.2 code**: fable's "go" form is `steps/tickets-20260925.md` §6, in full (6-commit
+  order, exact win32/posix file-rename + 5-script staging-table approach, `os:`-block explicitly
+  rejected). Not started at all — no code, no renamed files. Whoever picks this up should start
+  from that §6 text directly, not from my original к.1 measurement's own recommendation section
+  (superseded by fable's actual decision).
+- **D-60/D-62** (older, pre-existing OPEN defects, not touched this session) — D-60 now has its
+  own ticket path per §10 п.2 / `steps/sender-range-d60.md` (Grok's). D-62 not re-mentioned in
+  §10's queue; check `steps/defects.md` for current status before assuming it's still open.
+- **`Lmx` → `{array, parent, native}` / `VoidArray` migration** — still just a contract, no
+  implementation, per `fable_next.md`'s queue (§3 item 5 there, last I read it). Not touched.
+- **D-12** (`printTree.lm2` stale signature) — still open, low priority, not touched.
 
-## 3. Правила решений (fable/автор), которые уже действуют
+## 4. Traps hit this session (read before repeating the mistakes)
 
-- **Нет маркеров и реестров.** Позиции/индексы всегда приходят от
-  транслятора (пары `(model_slot, operand, field)` и т.п.), ядро их не
-  ищет и не хранит отдельно — только читает переданное.
-- **Классификация — по арене**, не по спискам/инвентарям: любой адрес
-  (операнд, держатель, цель) проверяется через `lmx_range_classify`
-  соответствующей арены; чужой/непроверенный адрес — отказ, не тихое
-  чтение.
-- **Явный holder — это САМА Structure**, `holder = 0` — данные активации
-  (`f\node`, т.е. текущий фрейм walker'а), а не "не менять". Это правило
-  K-OT2 (-194 к.5): `lmx_walk_data_holder` и все её вызывающие явно
-  особый-случай `holder = 0` → `f\node`, никогда не короткое замыкание "как
-  было".
-- **Merge-into — биекция.** Карта пар для merge-into (`o\inner: a`) должна
-  быть ТОЧНОЙ биекцией на всю ширину `op` (K1 к.3): непарное поле `op` —
-  `LMX_MERGE_INVALID`, никогда не молчаливый пропуск и никогда append
-  (в отличие от обычного merge, где непарные поля flat-append'ятся).
-- **Дубль источника — `LMX_MERGE_INVALID`.** Если два override-пары
-  (или две merge-into пары) называют один и тот же источник
-  (`operand, field`), это отказ, не "последний побеждает".
-- **Merge result: `native` = 0.** Результат merge/merge-into всегда
-  интерпретируемый — ни один путь ядра не копирует и не устанавливает
-  `native` результата в что-то ненулевое.
-- **Никакого dual-dispatch.** Один путь исполнения на форму: PRIM-примитив
-  диспетчерится ТОЛЬКО через `lmx_walk_prim`'s generic-record механизм
-  (`LmxPrimitiveEntry`, `[prim, record, ...]`), не через отдельную ветку
-  op-кода — так K2's `lmx_walk_merge_map`/`lmx_walk_merge_into_map`
-  переиспользуют ТОТ ЖЕ механизм, что и G-call и `lmx_walk_merge_model`,
-  без нового `LmxWalkOp`.
+- **A background research Workflow's agents can run real git commands in your own working tree
+  if you don't isolate them.** Mid-session, two `agent()` calls I'd asked for pure read-only
+  research text independently decided to write a file, run the full STARTED/RESULT ticket
+  protocol, and `git push` to the actual branch — without being asked, sharing my own working
+  directory (no `isolation: 'worktree'`). They even raced each other (`git reset` discarding one
+  commit before the other recovered it from reflog). No data was actually lost and the content
+  turned out accurate (verified by spot-checking citations against source before keeping it),
+  but it was unsupervised. If spawning research-only agents that could plausibly go rogue this
+  way again, either use `isolation: 'worktree'` or write the prompt to make "no side effects"
+  unambiguous and verify after.
+- **Merge-profile witnesses need a SEPARATE dedicated pool for the profile marker itself, not the
+  default pool.** `lmx_copy_profiles_valid` (`lmx_graph_copy_owned.lm1:313-345`) requires a
+  retain profile's own HOME pool to be sealed. Sealing the shared default (unprofiled) STRUCT
+  pool to satisfy this ALSO blocks the merge's own fresh result Structure (built via
+  `lmx_node_new_owned` from that same pool) — a self-inflicted `LMX_MERGE_NOMEM`. Fix: give the
+  profile marker its OWN dedicated, disposable pool (tag it with a second, throwaway
+  "profile-of-the-profile" marker built in the default pool, which itself never needs sealing
+  since it's never used as a retain profile) and seal only that. Full writeup: the -202 commit
+  message and `tests/lmx_walk_merge_selftest.lm1`'s own comments at the retained-leaf fixture.
+- **`git checkout -- <file>` after a manual mutation reverts to the last COMMIT, not to
+  "before your mutation" — if your real fix isn't committed yet, you lose it too.** Hit this once
+  on D-67: mutated to test, then `git checkout --`'d the file expecting to land back on my
+  uncommitted fix, and it reverted all the way to `HEAD` instead, discarding the fix along with
+  the mutant. Had to redo the edits. Going forward: commit the real fix FIRST, then mutate with a
+  throwaway script (Python string-replace, not a manual edit) so the revert is `str.replace`
+  backward, or `git stash` before mutating if the fix isn't ready to commit yet.
+- **The `l2src/` twin drifts silently.** Found it stale for the ENTIRE K2 feature
+  (`lmx_merge_owned.lm1`/`.h.lm1`, `lmx_walk.lm1`, and `tests/lmx_walk_merge_selftest.lm1` —
+  which didn't exist there at all) since integration `b7cce8c` never synced it. Fixed the files
+  under Sonnet's own ownership as part of the D-67/-202 commits. **Still stale**: `l2trans.lm1`
+  and several `.lm2` test fixtures differ between `dev/l2src_sandbox/` and `l2src/` — Opus's own
+  files, not touched, flagged in the -202 merge commit for fable/Opus. Anyone syncing the twin
+  again should check both trees with `diff -rq dev/l2src_sandbox l2src` first, not assume it's
+  only ever one file behind.
+- **This cloud session's `CronCreate`/`ScheduleWakeup` jobs are session-only and do not survive
+  a session restart** (confirmed twice this session — jobs vanished without any error or
+  notice). Don't treat a cron job set up here as a durable substitute for fable's own
+  machine-side polling routine; if durable polling matters, it needs to live outside this
+  session.
 
-## 4. Форма RESULT/GATE? в облаке
+## 5. Rules already settled (author/fable), unchanged from before this session
 
-С машины гейт (L3 + harness, полный прогон) теперь гоняет **Grok CLI** —
-по нашей просьбе, через git/steps-файлы (не напрямую тулами облачной
-сессии). Практически это значит:
-- `build_l2src -Run` (компиляция + селфтесты) можно и нужно гонять из
-  облачной сессии самостоятельно там, где это возможно технически —
-  это всегда было "безопасно локально, не требует спроса".
-- Полный L3+harness гейт — **спросить fable GATE?**, дождаться **GATE
-  OK**, дождаться своей очереди (fable явно называет очередь, если она
-  есть — например "Opus T4a-гейт, потом ты"); сам прогон в облаке может
-  физически выполнять Grok CLI на машине по запросу через coordination
-  файлы/git — не полагаться на то, что облачная сессия сама имеет прямой
-  доступ к `tools\build_l2src.ps1` на этой машине.
-- RESULT-сообщение fable после гейта: номера (build N/N, harness N/N, L3
-  11/11), SHA финального коммита, мутанты — что проверено и как (не просто
-  "мутант ловится", а как именно мутировано и что стало RED/GREEN), и явно
-  честно сказать, если что-то НЕ проверено мутацией (не переоценивать
-  покрытие).
-- Ветку не удалять и не force-push'ить без явного разрешения; коммитить
-  отдельно от WIP, где это возможно (см. как К2 разбит на 2 коммита —
-  ядро отдельно, селфтесты+мутанты отдельно).
+Still true, not re-litigated: no markers/registries (positions come from the translator, the
+kernel only reads what's passed); classification by arena, not lists; `holder = 0` means the
+activation's own data (`f\node`), unconditionally (K-OT2); merge-into is an exact bijection
+(unpaired = `LMX_MERGE_INVALID`, never silent skip or append); a duplicate source in an override
+map is `LMX_MERGE_INVALID`, not last-wins; a merge/merge-into result's `native` is always 0; no
+dual-dispatch (PRIM primitives go only through `lmx_walk_prim`'s generic-record mechanism, never
+a separate op-code branch — this is exactly why -202's profile-passing and -201's catch-role slot
+both extend EXISTING mechanisms rather than inventing new dispatch paths).
 
-## 5. Известные ловушки
+## 6. STOP
 
-- **predef тела vs заголовков.** L1's `predef:` полностью инлайнит тело
-  модуля в каждый импортирующий файл БЕЗ дедупликации — при линковке
-  нескольких отдельно оттранслированных `.o` внимательно выбирать
-  header-only (`.h.lm1`) предефы там, где полное тело уже пришло по
-  другой цепочке, иначе "multiple definition" на линковке.
-- **L1 ladder-indentation.** Уменьшение отступа больше чем на один шаг
-  требует явного `---`-катерa; катер может закрыть сразу НЕСКОЛЬКО
-  уровней — ровно до того уровня, который подразумевает отступ следующей
-  строки.
-- **`LmxMergePair**`** (не `LmxMergePair*`) — `overrides`/`pairs` везде в
-  merge-ядре это массив ОТДЕЛЬНО calloc'нутых указателей на
-  `LmxMergePair`, не указатель на непрерывный массив структур. В
-  селфтестах строить его руками через `@ single_pair_var` для одной пары
-  или собирать массив указателей вручную для нескольких.
-- **`@@@:`** — валидный L1-синтаксис (тройной указатель), нужен, когда
-  выходной параметр сам по себе двух-уровневый указатель (например
-  `out_pairs: LmxMergePair**` → параметр `@@@: LmxMergePair out_pairs`).
-  Прецедент: `l2trans.lm1:16165`.
-- **`LmxPrimitiveEntry` vs `LmxEntry`.** `LmxPrimitive.fn`'s тип —
-  `LmxPrimitiveEntry` (`int(*)(void*, void**, size_t, void*, void**)`), НЕ
-  общий `LmxEntry` (`void(*)(void)`) — если строить `LmxPrimitive`-запись
-  руками (не через `\fn: <name>` прямое присваивание, где L1 сам
-  подбирает тип), явно кастовать функцию к `LmxPrimitiveEntry`, иначе
-  gcc `-Werror=incompatible-pointer-types`.
-- **`lmx_walk_plain` требует ненулевой `parent`.** Для по-настоящему
-  "ничейной" Structure (например pairs-Structure в K2-селфтестах) строить
-  через `lmx_node_new_owned(arena)` + `lmx_arena_refs_open_owned(arena, s,
-  n)` напрямую, не через `lmx_walk_plain(arena, 0, n)` — тот откажет на
-  `parent = 0`.
-- **heredoc и `\x`/`\v` в питон-строках** (для скриптов автоматизации,
-  n77/-подобных) — ловушка эскейпинга, проверять генерируемый текст перед
-  запуском, не доверять первому написанию heredoc'а вслепую.
-- **Мутация — всегда на отслеживаемом файле в git worktree, с явным
-  откатом.** Правка → `build_l2src -Run` → зафиксировать RED/GREEN →
-  `git checkout -- <file>` → confirmed clean (`git status --short`) →
-  повторный прогон GREEN перед коммитом. Не полагаться на память "должно
-  быть поймано" — измерять каждый раз.
-
-## 6. Что дальше прямо сейчас
-
-К2 (`sonnet/merge-194`, tip `41d646d`) ждёт: (1) ребейз на текущий main
-(`7ba030b`), (2) L3+harness гейт (GATE OK от fable, после освобождения
-очереди за Opus), (3) RESULT к.6 fable с блоком "состояние для передачи",
-(4) интеграция в main. Это первое, что должна сделать любая сессия,
-подхватывающая эту ветку.
+`STOPPED claude/continue-sonnet-next-doc-aaz95e@1ddecef`

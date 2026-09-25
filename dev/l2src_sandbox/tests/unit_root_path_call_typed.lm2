@@ -1,0 +1,18 @@
+A:
+    fn: M
+    size_t: tag 1U
+end: A
+
+fn: M () size_t
+    return: 5U
+end: M
+
+# D-75, the running twin of unit_root_path_call_type: the path call's type is M's, size_t, so it
+# meets the size_t place a1.  Success is 7.
+size_t: a1
+a1: A\M()
+if: a1 != 5U
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

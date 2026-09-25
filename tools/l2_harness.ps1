@@ -683,8 +683,9 @@ $fixtures = @(
         Absent = @('lmx_msg_poll_abort', 'lmx: receiveMessage', 'lmx: rebinding');
         Debt = @('c.fprintf(c.stderr, "lmx: invariant: receiveMessage store failed for own field ', 'c.fprintf(c.stderr, "lmx: invariant: rebinding store failed for own field ') },
     # length(m\mainArgs) is the outer array's size_t length (semantics §17: first dimension).
-    # No extra argv: the letter holds argv[0] alone, so length is 1 and the exit code is 0.
-    [pscustomobject]@{ Name = 'entry_argc_if.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
+    # No extra argv: the letter holds argv[0] alone, so length is 1. Success is exit 7,
+    # not the walker's silent 0. An inverted entry 0 is red.
+    [pscustomobject]@{ Name = 'entry_argc_if.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     # The index itself translates. What remains is c.puts, an L2 operation outside a method (Q7).
     [pscustomobject]@{ Name = 'entry_index.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Argv = @('word'); Says = @('word');

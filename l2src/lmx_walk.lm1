@@ -18,6 +18,8 @@ prototype:
     fn: lmx_walk_callable_addr (@: LmxArena arena; @: Lmx node) LmxEntry
     fn: lmx_walk_fresh (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) int
     fn: lmx_walk_data_holder (@: LmxWalkFrame f; @: void holder) @: void
+    fn: lmx_walk_body (@: LmxWalkFrame f; @: Lmx body; size_t: first) int
+    fn: lmx_walk_admit_against (@: LmxArena arena; @: Lmx value; @: Lmx model; @@: void out) int
     fn: lmx_walk_immutable (@: LmxWalkFrame f; @: void p) int
 end: prototype
 
@@ -845,6 +847,135 @@ fn: lmx_walk_fresh (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) 
     \out: (cast: (@: void) made)
 return: c.LMX_WALK_OK
 
+# -201: the catch table is a Structure of triples (k_in, pad, k_out), scanned in place.
+# k_in and k_out are size cells. pad is a reference (0 renumbers, no landing).
+# No decoded row array: nothing to free on the throw path.
+# A walked throw record lives in the arena, like a native throw: Name payload.
+# An implicit THROW_MERGE / THROW_IMPLEMENTS carries payload 0.
+fn: lmx_walk_catch_scan (@: LmxWalkFrame f; @: void table; int: status) int
+    @: Lmx rows 0
+    @: void kin_cell 0
+    @: void pad 0
+    @: void kout_cell 0
+    size_t: n 0U
+    size_t: i 0U
+    size_t: k 0U
+    size_t: k_in 0U
+    size_t: k_out 0U
+    int: hit 0
+    if: f = 0 || status < c.LMX_WALK_THROWN || table = 0
+        return: status
+    if: lmx_walk_kind(f, table) != c.LMX_KIND_STRUCT
+        return: c.LMX_WALK_INVALID
+    ---
+    rows: (cast: (@: Lmx) table)
+    if: (cast: (size_t) rows\len) % 3U != 0U
+        return: c.LMX_WALK_INVALID
+    ---
+    n: (cast: (size_t) rows\len) / 3U
+    k: (cast: (size_t) (status - c.LMX_WALK_THROWN))
+    while: i < n && hit = 0
+        kin_cell: lmx_arena_ref_value(rows, i * 3U)
+        pad: lmx_arena_ref_value(rows, i * 3U + 1U)
+        kout_cell: lmx_arena_ref_value(rows, i * 3U + 2U)
+        if: kin_cell = 0 || kout_cell = 0
+            return: c.LMX_WALK_INVALID
+        if: lmx_walk_numeric_type(f\arena, kin_cell) != c.LMX_TYPE_SIZE_T || lmx_walk_numeric_type(f\arena, kout_cell) != c.LMX_TYPE_SIZE_T
+            return: c.LMX_WALK_INVALID
+        ---
+        if: pad != 0 && lmx_walk_kind(f, pad) != c.LMX_KIND_STRUCT
+            return: c.LMX_WALK_INVALID
+        ---
+        k_in: lmx_size_value_known(kin_cell)
+        if: k_in = k
+            k_out: lmx_size_value_known(kout_cell)
+            hit: 1
+        ---
+        i: i + 1U
+    ---
+    if: hit = 0
+        return: status
+    if: pad = 0
+        return: c.LMX_WALK_THROWN + (cast: (int) k_out)
+    ---
+    f\landing: (cast: (@: Lmx) pad)
+return: status
+
+# Bind pad parameters from f\payload, then walk the handler body (the pad's last child).
+# A numeric parameter is a typed store; a type mismatch is an invariant (the translator
+# already knows both types). A Structure parameter is a pointer cell holding the model:
+# admit, then store the argument reference. Admit NO is THROWN+2 and payload 0.
+# Landing is cleared before the handler so a throw inside it can name an outer pad.
+fn: lmx_walk_catch_bind (@: LmxWalkFrame f) int
+    @: Lmx pad 0
+    @: Lmx payload 0
+    @: Lmx model 0
+    @: Lmx arg_s 0
+    @: Lmx handler 0
+    @: void cell 0
+    @: void arg 0
+    @: void admitted 0
+    size_t: pcount 0U
+    size_t: i 0U
+    size_t: wv 0U
+    int: cell_ty 0
+    int: arg_ty 0
+    int: st 0
+    int: status c.LMX_WALK_OK
+    if: f = 0 || f\landing = 0 || (cast: (size_t) f\landing\len) < 2U
+        return: c.LMX_WALK_INVALID
+    ---
+    pad: f\landing
+    pcount: (cast: (size_t) pad\len) - 2U
+    payload: (cast: (@: Lmx) f\payload)
+    if: pcount != 0U && (f\payload = 0 || lmx_walk_kind(f, f\payload) != c.LMX_KIND_STRUCT || (cast: (size_t) payload\len) < pcount)
+        c.fprintf(l1_stderr(), "lmx: invariant: catch payload\n")
+        c.abort()
+    ---
+    while: i < pcount && status = c.LMX_WALK_OK
+        cell: lmx_arena_ref_value(pad, i + 1U)
+        arg: lmx_arena_ref_value(payload, i)
+        cell_ty: lmx_walk_numeric_type(f\arena, cell)
+        if: cell_ty != 0
+            if: lmx_walk_load_operand(f\arena, arg, @ wv, @ arg_ty) != c.LMX_WALK_OK || arg_ty != cell_ty
+                c.fprintf(l1_stderr(), "lmx: invariant: catch parameter type\n")
+                c.abort()
+            ---
+            if: lmx_walk_store_numeric_into(f\arena, cell, wv) != c.LMX_WALK_OK
+                status: c.LMX_WALK_INVALID
+            ---
+        else:
+            if: lmx_walk_is_pointer_cell(f\arena, cell) = 0 || arg = 0 || lmx_walk_kind(f, arg) != c.LMX_KIND_STRUCT
+                c.fprintf(l1_stderr(), "lmx: invariant: catch parameter type\n")
+                c.abort()
+            ---
+            model: (cast: (@: Lmx) lmx_pointer_value_known(cell))
+            if: model = 0 || lmx_walk_kind(f, (cast: (@: void) model)) != c.LMX_KIND_STRUCT
+                c.fprintf(l1_stderr(), "lmx: invariant: catch structure model\n")
+                c.abort()
+            ---
+            arg_s: (cast: (@: Lmx) arg)
+            st: lmx_walk_admit_against(f\arena, arg_s, model, @ admitted)
+            if: st != 0
+                f\payload: 0
+                f\landing: 0
+                return: c.LMX_WALK_THROWN + 2
+            ---
+            if: lmx_pointer_store_known(cell, arg) != 0
+                status: c.LMX_WALK_INVALID
+            ---
+        ---
+        i: i + 1U
+    ---
+    if: status != c.LMX_WALK_OK
+        return: status
+    handler: lmx_arena_ref_struct(pad, (cast: (size_t) pad\len) - 1U)
+    f\landing: 0
+    f\payload: 0
+    if: handler = 0
+        return: c.LMX_WALK_INVALID
+    return: lmx_walk_body(f, handler, 0U)
+
 fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) int
     LmxScratchMark: mark
     @: LmxScratchMark pm 0
@@ -869,6 +1000,7 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
     int: ty c.LMX_TYPE_INT
     int: status c.LMX_WALK_OK
     int: said 0
+    @: void catch_ref 0
     \out: 0
     # -201: [call, code, data, rtype, catch, args...]. catch 0 = no pad.
     # Mutant: len < 5 (no catch slot) -> INVALID.
@@ -881,6 +1013,7 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
         return: c.LMX_WALK_INVALID
     ---
     n: (cast: (size_t) code\len) - 5U
+    catch_ref: lmx_arena_ref_value(code, 4U)
     addr: lmx_walk_callable_addr(f\arena, callee)
     if: addr = 0
         if: n != lmx_walk_arg_arity(f, callee)
@@ -990,9 +1123,17 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
                     ---
                 ---
             ---
-            if: status = c.LMX_WALK_OK
+            if: status = c.LMX_WALK_OK || status >= c.LMX_WALK_THROWN
                 \out: result
             ---
+        ---
+    ---
+    # Payload is the record entry() or activate already published. It is an arena
+    # address (or 0). The scratch rewind below must not be what keeps it alive.
+    if: status >= c.LMX_WALK_THROWN
+        f\payload: \out
+        if: catch_ref != 0
+            status: lmx_walk_catch_scan(f, catch_ref, status)
         ---
     ---
     if: lmx_scratch_rewind(f\context\scratch, pm) != c.LMX_SCRATCH_OK && status = c.LMX_WALK_OK
@@ -1013,6 +1154,7 @@ fn: lmx_walk_prim (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
     size_t: i 0U
     int: status c.LMX_WALK_OK
     int: said 0
+    @: void catch_ref 0
     \out: 0
     # -201: [prim, rec, catch, ops...]. catch 0 = no pad.
     if: code\len < 3
@@ -1036,6 +1178,7 @@ fn: lmx_walk_prim (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
         return: c.LMX_WALK_INVALID
     ---
     n: (cast: (size_t) code\len) - 3U
+    catch_ref: lmx_arena_ref_value(code, 2U)
     pm: @ mark
     if: lmx_scratch_mark(f\context\scratch, pm) != c.LMX_SCRATCH_OK
         return: c.LMX_WALK_INVALID
@@ -1078,6 +1221,12 @@ fn: lmx_walk_prim (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
                     status: c.LMX_WALK_PRIMITIVE
                 ---
             ---
+        ---
+    ---
+    if: status >= c.LMX_WALK_THROWN
+        f\payload: \out
+        if: catch_ref != 0
+            status: lmx_walk_catch_scan(f, catch_ref, status)
         ---
     ---
     if: lmx_scratch_rewind(f\context\scratch, pm) != c.LMX_SCRATCH_OK && status = c.LMX_WALK_OK
@@ -1715,6 +1864,11 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
         ---
         return: lmx_walk_arith_out(f, dest, c.LMX_TYPE_SIZE_T, adesc\len, out)
     ---
+    if: op = c.LMX_WALK_OP_PAD
+        # Reached in order: the handler runs only from a landing, not from this arm.
+        \out: 0
+        return: c.LMX_WALK_OK
+    ---
 return: c.LMX_WALK_INVALID
 
 # The children of a body from `first` on, in order.  Own cells and anything that is not
@@ -1733,9 +1887,11 @@ fn: lmx_walk_body (@: LmxWalkFrame f; @: Lmx body; size_t: first) int
     @: void dropped 0
     @: void step_dest 0
     int: spare 0
+    @: Lmx pad 0
     int: step_op
     int: status c.LMX_WALK_OK
     size_t: i first
+    size_t: j 0U
     if: f = 0 || body = 0
         return: c.LMX_WALK_INVALID
     while: status = c.LMX_WALK_OK && f\returned = 0 && i < (cast: (size_t) body\len)
@@ -1752,9 +1908,24 @@ fn: lmx_walk_body (@: LmxWalkFrame f; @: Lmx body; size_t: first) int
             status: lmx_walk_eval(f, child, step_dest, @ dropped)
             # Activation value = last evaluated expression. SET/PUT/IF/WHILE are
             # statements (void fall-off). LIT/arith/CALL/OWN/... count. RET sets valued itself.
-            if: status = c.LMX_WALK_OK && dropped != 0 && step_op != c.LMX_WALK_OP_SET && step_op != c.LMX_WALK_OP_PUT && step_op != c.LMX_WALK_OP_PUT_REF && step_op != c.LMX_WALK_OP_PUT_OF && step_op != c.LMX_WALK_OP_ELEMPUT && step_op != c.LMX_WALK_OP_IF && step_op != c.LMX_WALK_OP_WHILE
+            if: status = c.LMX_WALK_OK && dropped != 0 && step_op != c.LMX_WALK_OP_SET && step_op != c.LMX_WALK_OP_PUT && step_op != c.LMX_WALK_OP_PUT_REF && step_op != c.LMX_WALK_OP_PUT_OF && step_op != c.LMX_WALK_OP_ELEMPUT && step_op != c.LMX_WALK_OP_IF && step_op != c.LMX_WALK_OP_WHILE && step_op != c.LMX_WALK_OP_PAD
                 f\result: dropped
                 f\valued: 1
+            ---
+        ---
+        if: status != c.LMX_WALK_OK && f\landing != 0 && f\landing\parent = body
+            pad: f\landing
+            status: lmx_walk_catch_bind(f)
+            if: status = c.LMX_WALK_OK
+                j: 0U
+                while: j < (cast: (size_t) body\len) && lmx_arena_ref_value(body, j) != (cast: (@: void) pad)
+                    j: j + 1U
+                ---
+                if: j >= (cast: (size_t) body\len)
+                    status: c.LMX_WALK_INVALID
+                else:
+                    i: j
+                ---
             ---
         ---
         i: i + 1U
@@ -1820,6 +1991,11 @@ fn: lmx_walk_activate (@: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: 
         if: present != 0
             \present: 1
         ---
+    ---
+    # THROWN: the callee's landing stays 0 when its site renumbered. Only the
+    # payload crosses. The caller reads it from this out-parameter.
+    if: status >= c.LMX_WALK_THROWN && result != 0
+        \result: f\payload
     ---
     if: lmx_scratch_rewind(context\scratch, pm) != c.LMX_SCRATCH_OK && status = c.LMX_WALK_OK
         status: c.LMX_WALK_INVALID

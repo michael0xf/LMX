@@ -1,0 +1,255 @@
+predef: "l2src/lmx_walk.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_chars.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_primitive.h.lm1"
+predef: "l2src/lmx.h.lm1"
+predef: "l2src/lmx_merge_owned.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# -201: catch table on a PRIM, scanned in place. Success of a caught throw is the
+# statement after the pad (literal 7) plus the bound parameter.
+# Numeric parameter: typed store of payload child 0.
+# Structure parameter: pointer cell holds the model; admit YES stores the argument
+# reference; admit NO is THROWN+2 and leaves the model.
+# The uncaught row is the inverted check: the same throw with no pad does not return 7.
+# Admit NO is the structure check: the pointer stays on the model and the status is THROWN+2.
+
+@: LmxArena ga 0
+@: Lmx groles 0
+@: LmxWalkContext gctx 0
+@: LmxWalkValue gv 0
+@: Lmx gpayload 0
+int: broken 0
+int: checks 0
+int: failures 0
+
+sub: check (int: ok; const: @(char label))
+    checks: checks + 1
+    if: ok = 0
+        failures: failures + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: check
+
+fn: throw_merge (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    \out: (cast: (@: void) gpayload)
+return: c.LMX_PRIMITIVE_THROW_MERGE
+
+fn: fr (@: Lmx parent; size_t: slot; int: op; size_t: children) @: Lmx
+    @: Lmx n lmx_walk_frame(ga, groles, parent, op, children)
+    if: n = 0 || lmx_arena_ref_store(parent, slot, (cast: (@: void) n)) != 0
+        broken: broken + 1
+        return: 0
+    ---
+return: n
+
+fn: pl (@: Lmx parent; size_t: children) @: Lmx
+    @: Lmx n lmx_walk_plain(ga, parent, children)
+    if: n = 0
+        broken: broken + 1
+    ---
+return: n
+
+sub: ref (@: Lmx code; size_t: slot; @: void target)
+    if: code = 0 || lmx_arena_ref_store(code, slot, target) != 0
+        broken: broken + 1
+    ---
+end: ref
+
+fn: go (@: Lmx m) int
+    if: m = 0 || gctx = 0 || gv = 0
+        return: c.LMX_WALK_INVALID
+return: lmx_walk_run(gctx, m, 0, 0U, gv)
+
+fn: ret7 (@: Lmx m; size_t: slot) void
+    @: Lmx n fr(m, slot, c.LMX_WALK_OP_RET, 2U)
+    @: Lmx lit fr(n, 1U, c.LMX_WALK_OP_LIT, 2U)
+    if: lit = 0 || lmx_walk_store_int(ga, lit, 1U, 7) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+return
+
+fn: main () int
+    LmxArena: arena
+    LmxArena: context_arena
+    LmxPool: context_cells
+    LmxScratch: store
+    LmxWalkContext: context
+    @: Lmx unit 0
+    @: Lmx m 0
+    @: Lmx pn 0
+    @: Lmx table 0
+    @: Lmx pad 0
+    @: Lmx handler 0
+    @: Lmx holder 0
+    @: Lmx payload 0
+    @: Lmx model 0
+    @: Lmx value 0
+    @: Lmx prim_rec 0
+    @: LmxPrimitive prim 0
+    @: void cell 0
+    @: void pcell 0
+    int: st 0
+
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ arena) != 0
+        return: 2
+    ga: @ arena
+    groles: lmx_walk_roles_open(ga)
+    memset((cast: (@: void) (@ context_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ context_cells)), 0, c.sizeof(c.LmxPool))
+    memset((cast: (@: void) (@ store)), 0, c.sizeof(c.LmxScratch))
+    if: lmx_arena_open(@ context_arena) != 0 || lmx_scratch_open(@ store, @ context_arena, @ context_cells, 16U) != c.LMX_SCRATCH_OK
+        return: 2
+    context.arena: ga
+    context.scratch: @ store
+    context.roles: groles
+    context.immutable_profile: 0
+    context.classified: 0U
+    gctx: @ context
+    gv: (cast: (@: LmxWalkValue) calloc(1U, c.sizeof(c.LmxWalkValue)))
+    unit: lmx_node_new_owned(ga)
+    if: unit = 0 || groles = 0 || gv = 0
+        return: 2
+    ---
+    prim: (cast: (@: LmxPrimitive) lmx_arena_take(ga, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))
+    if: prim = 0
+        return: 2
+    prim\fn: throw_merge
+    prim\signature: 0
+    prim\owner: (cast: (@: Lmx) ga)
+    prim_rec: (cast: (@: Lmx) prim)
+
+    # catch 0: the throw propagates, the literal after it does not run.
+    gpayload: 0
+    m: pl(unit, 2U)
+    pn: fr(m, 0U, c.LMX_WALK_OP_PRIM, 3U)
+    ref(pn, 1U, (cast: (@: void) prim_rec))
+    ret7(m, 1U)
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_THROWN + 1)), "uncaught PRIM is THROWN+1")
+    check((cast: (int) (gv\number != 7)), "uncaught does not reach the literal 7")
+
+    # numeric parameter, then the literal 7 after the pad.
+    holder: pl(unit, 1U)
+    if: holder = 0 || lmx_walk_store_int(ga, holder, 0U, 0) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+    cell: lmx_arena_ref_value(holder, 0U)
+    payload: pl(unit, 1U)
+    if: payload = 0 || lmx_walk_store_int(ga, payload, 0U, 41) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+    gpayload: payload
+    m: pl(unit, 3U)
+    pn: fr(m, 0U, c.LMX_WALK_OP_PRIM, 3U)
+    ref(pn, 1U, (cast: (@: void) prim_rec))
+    table: pl(m, 3U)
+    if: table = 0 || lmx_walk_store_size(ga, table, 0U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, table, 2U, 1U) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+    ref(pn, 2U, (cast: (@: void) table))
+    pad: fr(m, 1U, c.LMX_WALK_OP_PAD, 3U)
+    ref(pad, 1U, cell)
+    handler: pl(m, 0U)
+    ref(pad, 2U, (cast: (@: void) handler))
+    ref(table, 1U, (cast: (@: void) pad))
+    ret7(m, 2U)
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_OK)), "numeric catch resumes")
+    check((cast: (int) (gv\present = 1 && gv\ref != 0 && lmx_int_value_known(gv\ref) = 7)), "numeric catch reaches literal 7")
+    check((cast: (int) (cell != 0 && lmx_int_value_known(cell) = 41)), "numeric parameter is 41")
+
+    # A pad reached in order is a no-op. The literal after it still runs.
+    m: pl(unit, 2U)
+    pad: fr(m, 0U, c.LMX_WALK_OP_PAD, 2U)
+    handler: pl(m, 0U)
+    ref(pad, 1U, (cast: (@: void) handler))
+    ret7(m, 1U)
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\present = 1 && gv\ref != 0 && lmx_int_value_known(gv\ref) = 7)), "pad in order is skipped")
+
+    # Structure parameter, admit YES: empty model, store the argument reference.
+    model: pl(unit, 0U)
+    value: pl(unit, 0U)
+    pcell: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + 1, ga)
+    if: pcell = 0 || model = 0 || value = 0 || lmx_pointer_store_known(pcell, (cast: (@: void) model)) != 0
+        broken: broken + 1
+    ---
+    payload: pl(unit, 1U)
+    ref(payload, 0U, (cast: (@: void) value))
+    gpayload: payload
+    m: pl(unit, 3U)
+    pn: fr(m, 0U, c.LMX_WALK_OP_PRIM, 3U)
+    ref(pn, 1U, (cast: (@: void) prim_rec))
+    table: pl(m, 3U)
+    if: table = 0 || lmx_walk_store_size(ga, table, 0U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, table, 2U, 1U) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+    ref(pn, 2U, (cast: (@: void) table))
+    pad: fr(m, 1U, c.LMX_WALK_OP_PAD, 3U)
+    ref(pad, 1U, pcell)
+    handler: pl(m, 0U)
+    ref(pad, 2U, (cast: (@: void) handler))
+    ref(table, 1U, (cast: (@: void) pad))
+    ret7(m, 2U)
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\present = 1 && gv\ref != 0 && lmx_int_value_known(gv\ref) = 7)), "structure catch resumes")
+    check((cast: (int) (lmx_pointer_value_known(pcell) = (cast: (@: void) value))), "structure parameter is the argument reference")
+
+    # Structure parameter, admit NO: the model keeps its child, the pointer stays.
+    model: pl(unit, 1U)
+    if: model = 0 || lmx_walk_store_int(ga, model, 0U, 3) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+    value: pl(unit, 0U)
+    pcell: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + 1, ga)
+    if: pcell = 0 || value = 0 || lmx_pointer_store_known(pcell, (cast: (@: void) model)) != 0
+        broken: broken + 1
+    ---
+    payload: pl(unit, 1U)
+    ref(payload, 0U, (cast: (@: void) value))
+    gpayload: payload
+    m: pl(unit, 2U)
+    pn: fr(m, 0U, c.LMX_WALK_OP_PRIM, 3U)
+    ref(pn, 1U, (cast: (@: void) prim_rec))
+    table: pl(m, 3U)
+    if: table = 0 || lmx_walk_store_size(ga, table, 0U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, table, 2U, 1U) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+    ref(pn, 2U, (cast: (@: void) table))
+    pad: fr(m, 1U, c.LMX_WALK_OP_PAD, 3U)
+    ref(pad, 1U, pcell)
+    handler: pl(m, 0U)
+    ref(pad, 2U, (cast: (@: void) handler))
+    ref(table, 1U, (cast: (@: void) pad))
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_THROWN + 2)), "structure admit NO is THROWN+2")
+    check((cast: (int) (lmx_pointer_value_known(pcell) = (cast: (@: void) model))), "admit NO leaves the model")
+
+    # pad 0 renumbers THROWN+1 to THROWN+4.
+    gpayload: 0
+    m: pl(unit, 1U)
+    pn: fr(m, 0U, c.LMX_WALK_OP_PRIM, 3U)
+    ref(pn, 1U, (cast: (@: void) prim_rec))
+    table: pl(m, 3U)
+    if: table = 0 || lmx_walk_store_size(ga, table, 0U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, table, 2U, 4U) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+    ref(pn, 2U, (cast: (@: void) table))
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_THROWN + 4)), "pad 0 renumbers to THROWN+4")
+
+    c.printf("lmx_walk_catch_selftest checks=%d failures=%d broken=%d\n", checks, failures, broken)
+    if: failures != 0 || broken != 0
+        return: 1
+return: 0

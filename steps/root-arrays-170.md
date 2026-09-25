@@ -175,3 +175,8 @@ Never ACK an ACK.
 - D-63: fixed -- not a blocker.
 - D-39, CATCH, root merge, VoidArray: other tickets.
 - Frozen `%TEMP%\lmx170` left alone; shared `C:\Nyasha_Planet\LMX` stays clean.
+
+## c2 opcode claim (coord with Sonnet via lmx_uds)
+
+Claimed on branch from 4d427ac (Sonnet MERGE takes 28+):
+- ELEM 25, ELEMPUT 26, LENGTH 27, OP_COUNT 28

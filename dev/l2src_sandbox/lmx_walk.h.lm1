@@ -250,7 +250,14 @@ define: LMX_WALK_OP_FRESH 23
 # -186: [put_ref, holder, slot, value] -> lmx_arena_ref_store (direct Structure own slot).
 # Same operand order as PUT. Mutant: PUT+pointer_store into a direct slot -> RED.
 define: LMX_WALK_OP_PUT_REF 24
-define: LMX_WALK_OP_COUNT 25
+# -170 c2: array element / length at the walked root (Grok). Contiguous claim after
+# PUT_REF; Sonnet MERGE prim takes 28+ (OP_COUNT coord via lmx_uds 2026-09-25).
+# [elem, holder, slot, index] / [elemput, holder, slot, index, value] / [length, holder, slot].
+# holder 0 = this activation data (K-OT2). Bounds by descriptor.len. Char via lmx_char_cell.
+define: LMX_WALK_OP_ELEM 25
+define: LMX_WALK_OP_ELEMPUT 26
+define: LMX_WALK_OP_LENGTH 27
+define: LMX_WALK_OP_COUNT 28
 # -174 c4: method.sig = MARK | LMX_TYPE_* names the trampoline result class for CALL dest.
 define: LMX_WALK_RESULT_SIG_MARK 0x57000000
 

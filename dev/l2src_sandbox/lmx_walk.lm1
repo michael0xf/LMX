@@ -543,6 +543,72 @@ fn: lmx_walk_data_holder (@: LmxWalkFrame f; @: void holder) @: void
     ---
 return: (cast: (@: void) f\node)
 
+# -170 c2: Array descriptor in holder[slot]. holder 0 = this activation data (K-OT2).
+# write=1 also refuses an immutable holder. Mutant: skip KIND_ARRAY -> silent trash RED.
+fn: lmx_walk_array_desc (@: LmxWalkFrame f; @: Lmx code; int: write) @: LmxArrayDesc
+    @: void holder 0
+    @: void leaf 0
+    size_t: index
+    if: f = 0 || code = 0 || (cast: (size_t) code\len) < 3U
+        return: 0
+    holder: lmx_arena_ref_value(code, 1U)
+    holder: lmx_walk_data_holder(f, holder)
+    if: holder = 0 || lmx_walk_kind(f, holder) != c.LMX_KIND_STRUCT
+        return: 0
+    ---
+    if: lmx_walk_role(f, lmx_arena_ref_value((cast: (@: Lmx) holder), 0U)) > c.LMX_WALK_OP_NONE
+        return: 0
+    ---
+    if: write != 0 && lmx_walk_immutable(f, holder) != 0
+        return: 0
+    ---
+    index: lmx_size_value_known(lmx_arena_ref_value(code, 2U))
+    if: index >= (cast: (size_t) (cast: (@: Lmx) holder)\len)
+        return: 0
+    leaf: lmx_arena_ref_value((cast: (@: Lmx) holder), index)
+    if: leaf = 0 || lmx_walk_kind(f, leaf) != c.LMX_KIND_ARRAY
+        return: 0
+return: (cast: (@: LmxArrayDesc) leaf)
+
+# Array-of type -> element LMX_TYPE_* and stride. 0 = unsupported.
+fn: lmx_walk_array_elem_meta (int: aty; @: int out_ety; @: size_t out_stride) int
+    ulong: ulong_probe 0U
+    if: out_ety = 0 || out_stride = 0
+        return: 0
+    if: aty = c.LMX_TYPE_ARRAY_OF_CHAR
+        \out_ety: c.LMX_TYPE_CHAR
+        \out_stride: c.sizeof(c.char)
+        return: 1
+    if: aty = c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR
+        \out_ety: c.LMX_TYPE_UNSIGNED_CHAR
+        \out_stride: c.sizeof(c.char)
+        return: 1
+    if: aty = c.LMX_TYPE_ARRAY_OF_INT
+        \out_ety: c.LMX_TYPE_INT
+        \out_stride: c.sizeof(c.int)
+        return: 1
+    if: aty = c.LMX_TYPE_ARRAY_OF_SIZE_T
+        \out_ety: c.LMX_TYPE_SIZE_T
+        \out_stride: c.sizeof(c.size_t)
+        return: 1
+    if: aty = c.LMX_TYPE_ARRAY_OF_ULONG
+        \out_ety: c.LMX_TYPE_ULONG
+        \out_stride: c.sizeof(ulong_probe)
+        return: 1
+    if: aty = c.LMX_TYPE_ARRAY_OF_LMX
+        \out_ety: c.LMX_TYPE_LMX
+        \out_stride: c.sizeof(@: void)
+        return: 1
+    if: aty = c.LMX_TYPE_ARRAY_OF_DESC
+        \out_ety: c.LMX_TYPE_DESC
+        \out_stride: c.sizeof(@: void)
+        return: 1
+    if: aty >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+        \out_ety: c.LMX_TYPE_POINTER_BASE + (aty - c.LMX_TYPE_ARRAY_OF_POINTER_BASE)
+        \out_stride: c.sizeof(@: void)
+        return: 1
+return: 0
+
 # Exact physical receiver-profile test for QUALIFIED IMMUTABILITY.  Ownership and sealing
 # are deliberately irrelevant: an owner-local address in this profile is immutable, while a
 # foreign or sealed address of any other profile is not made immutable by accident.  Asked
@@ -1024,10 +1090,15 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
     @: void value 0
     @: void other 0
     @: void expect_leaf 0
+    @: LmxArrayDesc adesc 0
+    @: char abytes 0
     size_t: index 0U
+    size_t: stride 0U
     int: op
     int: a 0
     int: b 0
+    int: aty 0
+    int: ety 0
     size_t: wv 0U
     size_t: ua 0U
     size_t: ub 0U
@@ -1521,6 +1592,116 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
         \out: dest
         return: c.LMX_WALK_OK
     ---
+    if: op = c.LMX_WALK_OP_ELEM
+        # -170 c2: [elem, holder, slot, index] -> element value. Char -> lmx_char_cell.
+        # Bounds by descriptor.len. Mutant: index == len -> INVALID.
+        adesc: lmx_walk_array_desc(f, code, 0)
+        if: adesc = 0 || (cast: (size_t) code\len) < 4U
+            return: c.LMX_WALK_INVALID
+        ---
+        index: lmx_size_value_known(lmx_arena_ref_value(code, 3U))
+        if: index >= adesc\len || adesc\data = 0
+            return: c.LMX_WALK_INVALID
+        ---
+        aty: lmx_domain_type(f\arena, (cast: (@: void) adesc))
+        if: lmx_walk_array_elem_meta(aty, @ ety, @ stride) = 0 || stride = 0U
+            return: c.LMX_WALK_INVALID
+        ---
+        if: ety = c.LMX_TYPE_CHAR
+            abytes: (cast: (@: char) adesc\data)
+            if: lmx_chars_init(f\arena) != 0 && lmx_arena_find(f\arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR) = 0
+                return: c.LMX_WALK_NOMEM
+            ---
+            value: lmx_char_cell(f\arena, (cast: (int) (cast: (unsigned) abytes[index] & 255U)))
+            if: value = 0
+                return: c.LMX_WALK_INVALID
+            \out: value
+            return: c.LMX_WALK_OK
+        ---
+        other: (cast: (@: void) ((cast: (@: char) adesc\data) + index * stride))
+        if: ety = c.LMX_TYPE_LMX || ety = c.LMX_TYPE_DESC || ety >= c.LMX_TYPE_POINTER_BASE
+            if: ety >= c.LMX_TYPE_POINTER_BASE
+                \out: lmx_pointer_value_known(other)
+            else:
+                slot: (cast: (@@: void) other)
+                \out: slot[0]
+            ---
+            return: c.LMX_WALK_OK
+        ---
+        \out: other
+        return: c.LMX_WALK_OK
+    if: op = c.LMX_WALK_OP_ELEMPUT
+        # -170 c2: [elemput, holder, slot, index, value]. Type must match element.
+        # Mutant: char value into int array -> INVALID; index == len -> INVALID.
+        if: (cast: (size_t) code\len) < 5U
+            return: c.LMX_WALK_INVALID
+        ---
+        adesc: lmx_walk_array_desc(f, code, 1)
+        if: adesc = 0
+            return: c.LMX_WALK_INVALID
+        ---
+        index: lmx_size_value_known(lmx_arena_ref_value(code, 3U))
+        if: index >= adesc\len || adesc\data = 0
+            return: c.LMX_WALK_INVALID
+        ---
+        status: lmx_walk_eval(f, lmx_arena_ref_value(code, 4U), (cast: (@: void) (@ a)), @ value)
+        if: status != c.LMX_WALK_OK
+            return: status
+        ---
+        aty: lmx_domain_type(f\arena, (cast: (@: void) adesc))
+        if: lmx_walk_array_elem_meta(aty, @ ety, @ stride) = 0 || stride = 0U
+            return: c.LMX_WALK_INVALID
+        ---
+        other: (cast: (@: void) ((cast: (@: char) adesc\data) + index * stride))
+        if: ety = c.LMX_TYPE_CHAR
+            if: value = 0 || lmx_walk_numeric_type(f\arena, value) != c.LMX_TYPE_CHAR
+                return: c.LMX_WALK_INVALID
+            ---
+            abytes: (cast: (@: char) adesc\data)
+            abytes[index]: (cast: (char) (lmx_char_value_known(value) & 255))
+            value: lmx_char_cell(f\arena, (cast: (int) (cast: (unsigned) abytes[index] & 255U)))
+            \out: value
+            return: c.LMX_WALK_OK
+        ---
+        if: ety = c.LMX_TYPE_LMX || ety = c.LMX_TYPE_DESC
+            if: value != 0 && lmx_walk_kind(f, value) != c.LMX_KIND_STRUCT && lmx_walk_kind(f, value) != c.LMX_KIND_ARRAY
+                return: c.LMX_WALK_INVALID
+            ---
+            slot: (cast: (@@: void) other)
+            slot[0]: value
+            \out: value
+            return: c.LMX_WALK_OK
+        ---
+        if: ety >= c.LMX_TYPE_POINTER_BASE
+            if: value != 0 && lmx_walk_kind(f, value) != c.LMX_KIND_STRUCT && lmx_walk_kind(f, value) != c.LMX_KIND_ARRAY
+                return: c.LMX_WALK_INVALID
+            ---
+            if: lmx_pointer_store_known(other, value) != 0
+                return: c.LMX_WALK_INVALID
+            \out: other
+            return: c.LMX_WALK_OK
+        ---
+        if: value = 0
+            return: c.LMX_WALK_INVALID
+        ---
+        if: lmx_walk_load_operand(f\arena, value, @ wv, @ a) != c.LMX_WALK_OK
+            return: c.LMX_WALK_INVALID
+        ---
+        if: a != ety
+            return: c.LMX_WALK_INVALID
+        ---
+        if: lmx_walk_store_numeric_into(f\arena, other, wv) != c.LMX_WALK_OK
+            return: c.LMX_WALK_INVALID
+        \out: other
+        return: c.LMX_WALK_OK
+    if: op = c.LMX_WALK_OP_LENGTH
+        # -170 c2: [length, holder, slot] -> descriptor.len as size_t.
+        adesc: lmx_walk_array_desc(f, code, 0)
+        if: adesc = 0
+            return: c.LMX_WALK_INVALID
+        ---
+        return: lmx_walk_arith_out(f, dest, c.LMX_TYPE_SIZE_T, adesc\len, out)
+    ---
 return: c.LMX_WALK_INVALID
 
 # The children of a body from `first` on, in order.  Own cells and anything that is not
@@ -1558,7 +1739,7 @@ fn: lmx_walk_body (@: LmxWalkFrame f; @: Lmx body; size_t: first) int
             status: lmx_walk_eval(f, child, step_dest, @ dropped)
             # Activation value = last evaluated expression. SET/PUT/IF/WHILE are
             # statements (void fall-off). LIT/arith/CALL/OWN/... count. RET sets valued itself.
-            if: status = c.LMX_WALK_OK && dropped != 0 && step_op != c.LMX_WALK_OP_SET && step_op != c.LMX_WALK_OP_PUT && step_op != c.LMX_WALK_OP_PUT_REF && step_op != c.LMX_WALK_OP_PUT_OF && step_op != c.LMX_WALK_OP_IF && step_op != c.LMX_WALK_OP_WHILE
+            if: status = c.LMX_WALK_OK && dropped != 0 && step_op != c.LMX_WALK_OP_SET && step_op != c.LMX_WALK_OP_PUT && step_op != c.LMX_WALK_OP_PUT_REF && step_op != c.LMX_WALK_OP_PUT_OF && step_op != c.LMX_WALK_OP_ELEMPUT && step_op != c.LMX_WALK_OP_IF && step_op != c.LMX_WALK_OP_WHILE
                 f\result: dropped
                 f\valued: 1
             ---

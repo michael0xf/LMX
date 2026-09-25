@@ -552,7 +552,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_root_take_empty.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 1;
         Absent = @(); Debt = @('\fn: lmx_walk_mail_take') },
     # -179: the take and the null test are built; pending on `while:` at the root, then `&&` (-170).
-    [pscustomobject]@{ Name = 'unit_next_message_loop.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a loop'; Args = @('0');
+    [pscustomobject]@{ Name = 'unit_next_message_loop.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
         Absent = @(); Debt = @() },
     # -179: the take and the null test run.
     [pscustomobject]@{ Name = 'unit_next_message_in_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
@@ -1110,7 +1110,7 @@ $fixtures = @(
     # callable without a result has no value and is refused.  A callable formal of the callee takes
     # the occurrence itself.  `f()` on an existing ordinary Structure assigns the empty Structure,
     # with admission to its declared type (the book §12; refused admission is implements).
-    [pscustomobject]@{ Name = 'unit_value_call_result.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: && and || (a short-circuit the walker has no role for)'; Args = @('0'); Entry = 7811;
+    [pscustomobject]@{ Name = 'unit_value_call_result.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7811;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_value_call_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 2;
         Absent = @(); Debt = @() },
@@ -1363,7 +1363,7 @@ $fixtures = @(
     # pending body=0. Source-line heuristics are not used: l2_fn_defined reads the translator
     # Structure (trailer or body field). The forward is skipped, so one_line is l2_m0; Debt is its
     # trailer return. A pending empty body would lack that return and fail one_line(40)!=41.
-    [pscustomobject]@{ Name = 'unit_forward_oneline.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: && and || (a short-circuit the walker has no role for)';
+    [pscustomobject]@{ Name = 'unit_forward_oneline.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 0;
         Args = @('0');
         Absent = @();
         Debt = @('return: l2_p0_0 + 1') },

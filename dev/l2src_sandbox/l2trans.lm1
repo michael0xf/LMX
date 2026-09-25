@@ -94,6 +94,12 @@ int: l2_rw_base 0
 @: LmP0Node l2_rw_mix_at 0
 # The root name of a path being resolved (l2_rw_path).
 @: LmP0Text l2_rw_seg 0
+# The flag steps of the statement being built (-196): a short-circuit `a && b` / `a || b` is an IF
+# step that runs before its statement and leaves the value in a cell (l2_rw_sc); l2_rw_stmts puts
+# them in front of the statement's own steps.
+@: int l2_rw_pre 0
+int: l2_rw_pre_n 0
+int: l2_rw_pre_cap 0
 # The walked root's sends (`sendMessage: X`), one generated primitive l2_send<k> each: the sites
 # recorded by the top-level count pass (l2_rw_send_rec 1), the next site's number, and per site its
 # payload's field count, each field's kind (1 an int expression, 2 a text literal) and text atom.
@@ -513,6 +519,7 @@ prototype:
     fn: l2_rw_body (@: LmP0Field first; int: parent; int: slot) int
     fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @: int made) int
     fn: l2_rw_stmts (@: LmP0Field first; int: into; int: base; @: int made) int
+    fn: l2_rw_pre_place (int: into; int: s; int: one; int: pbase; int: k) int
     fn: l2_emit_public_sig (int: mi) int
     fn: l2_emit_library_wrappers () int
     fn: l2_fn_close (const: @(LmP0Frame frame); const: @(LmP0Text name); const: @(char head)) int
@@ -16994,6 +17001,13 @@ fn: l2_rw_tyof (@@: LmP0Node tok; int: lo; int: hi) int
     if: lo = hi
         return: l2_rw_opty(tok[lo])
     best: l2_rw_split(tok, lo, hi)
+    # `a && b`, `a || b` (-196): two conditions, each of its own type; the value is an int.
+    p: l2_rw_prec(tok[best]\as\atom)
+    if: p = 1 || p = 2
+        if: l2_rw_tyof(tok, lo, best - 1) = 0 - 3 || l2_rw_tyof(tok, best + 1, hi) = 0 - 3
+            return: 0 - 3
+        return: 0
+    ---
     u: l2_rw_unify(l2_rw_tyof(tok, lo, best - 1), l2_rw_tyof(tok, best + 1, hi))
     if: u = 0 - 3
         if: l2_rw_mix_at = 0
@@ -17894,6 +17908,127 @@ fn: l2_rw_prec (const: @(LmP0Text t)) int
         return: 6
 return: 0
 
+# A flag step made while building an expression; its statement runs it first (l2_rw_stmts).
+fn: l2_rw_pre_push (int: node) int
+    @: int grown
+    if: l2_rw_pre_n >= l2_rw_pre_cap
+        grown: (cast: (@: int) realloc((cast: (@: void) l2_rw_pre), (cast: (size_t) (l2_rw_pre_cap + 16)) * c.sizeof(c.int)))
+        if: grown = 0
+            return: 1
+        l2_rw_pre: grown
+        l2_rw_pre_cap: l2_rw_pre_cap + 16
+    ---
+    l2_rw_pre[l2_rw_pre_n]: node
+    l2_rw_pre_n: l2_rw_pre_n + 1
+return: 0
+
+# A plain Structure of n slots under container `parent` -- a body, or the holder of a value.
+fn: l2_rw_plain (int: parent; int: n; @: int out) int
+    c.array: [32]: char pn
+    \out: l2_rw_t
+    l2_rw_t: l2_rw_t + 1
+    if: l2_rw_emit = 0
+        return: 0
+    l2_rw_name(parent, pn)
+return: (cast: (int) (c.fprintf(l2_out, "        @: Lmx l2_rw%d lmx_walk_plain(l2_program_arena, %s, %dU)\n        if: l2_rw%d = 0\n            return: 1\n", \out, pn, n, \out) < 0))
+
+# Slot `slot` of IF node `node` takes the body [PUT(h, 0, LIT v)]: the flag cell set to v.
+fn: l2_rw_sc_set (int: node; int: slot; int: h; int: v) int
+    int: body
+    int: put
+    int: lit
+    if: l2_rw_plain(node, 1, @ body) != 0 || l2_rw_frame(body, "LMX_WALK_OP_PUT", 4, @ put) != 0 || l2_rw_put(put, 1, h) != 0
+        return: 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, 0U) != c.LMX_WALK_OK\n            return: 1\n", put) < 0
+        return: 1
+    if: l2_rw_lit(put, v, @ lit) != 0 || l2_rw_put(put, 3, lit) != 0 || l2_rw_put(body, 0, put) != 0
+        return: 1
+return: l2_rw_put(node, slot, body)
+
+# The static type of one side of `&&` / `||`, normalized as a comparison's operands are (a bare
+# literal is an int, one with `U` an unsigned); -9 for a reference, which is not a condition here.
+fn: l2_rw_sc_ty (@@: LmP0Node tok; int: lo; int: hi) int
+    int: ty
+    ty: l2_rw_tyof(tok, lo, hi)
+    if: ty = 0 - 1
+        return: 0
+    if: ty = 0 - 2
+        return: 3
+    if: ty >= 1000
+        return: 0 - 9
+return: ty
+
+# `a && b` / `a || b` at the walked root (-196), short-circuit: b runs only when a does not decide.
+# The walker's IF has no value, so the value is a flag cell of a plain holder h, written on both ways
+# after a is known -- a flag STEP that the statement runs first (l2_rw_pre_push) -- and read by
+# AT(h, 0):
+#   a && b:  IF(a, [b's own flag steps, IF(b, [h: 1], [h: 0])], [h: 0])
+#   a || b:  IF(a, [h: 1], [b's own flag steps, IF(b, [h: 1], [h: 0])])
+# a's own flag steps run before this one (they were pushed first); b's run inside the way that runs
+# b, so a nested `&&` stays short-circuit.  andp is the operator's precedence: 2 &&, 1 ||.
+fn: l2_rw_sc (@@: LmP0Node tok; int: lo; int: best; int: hi; int: andp; int: parent; @: int out) int
+    int: h
+    int: pre
+    int: a
+    int: b
+    int: ib
+    int: bb
+    int: dummy
+    int: base
+    int: nb
+    int: k
+    int: save
+    int: aty
+    int: bty
+    aty: l2_rw_sc_ty(tok, lo, best - 1)
+    bty: l2_rw_sc_ty(tok, best + 1, hi)
+    if: aty = 0 - 3 || bty = 0 - 3
+        return: l2_rw_refuse(tok[best], "mixed numeric types (a conversion)")
+    if: aty = 0 - 9 || bty = 0 - 9
+        return: l2_rw_refuse(tok[best], "a reference as a condition of && or ||")
+    if: l2_rw_plain(parent, 1, @ h) != 0
+        return: 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_int(l2_program_arena, l2_rw%d, 0U, 0) != c.LMX_WALK_OK\n            return: 1\n", h) < 0
+        return: 1
+    if: l2_rw_frame(parent, "LMX_WALK_OP_IF", 4, @ pre) != 0
+        return: 1
+    if: l2_rw_bin(tok, lo, best - 1, aty, pre, @ a) != 0 || l2_rw_put(pre, 1, a) != 0
+        return: 1
+    # b's own flag steps are counted first: they fill the body that runs b, before IF(b, ...).
+    base: l2_rw_pre_n
+    save: l2_rw_emit
+    l2_rw_emit: 0
+    k: l2_rw_bin(tok, best + 1, hi, bty, parent, @ dummy)
+    l2_rw_emit: save
+    nb: l2_rw_pre_n - base
+    l2_rw_pre_n: base
+    if: k != 0
+        return: 1
+    if: l2_rw_plain(pre, nb + 1, @ bb) != 0 || l2_rw_frame(bb, "LMX_WALK_OP_IF", 4, @ ib) != 0
+        return: 1
+    if: l2_rw_bin(tok, best + 1, hi, bty, ib, @ b) != 0 || l2_rw_put(ib, 1, b) != 0
+        return: 1
+    k: 0
+    while: k < nb
+        if: l2_rw_put(bb, k, l2_rw_pre[base + k]) != 0
+            return: 1
+        k: k + 1
+    ---
+    l2_rw_pre_n: base
+    if: l2_rw_put(bb, nb, ib) != 0 || l2_rw_sc_set(ib, 2, h, 1) != 0 || l2_rw_sc_set(ib, 3, h, 0) != 0
+        return: 1
+    if: andp = 2 && (l2_rw_put(pre, 2, bb) != 0 || l2_rw_sc_set(pre, 3, h, 0) != 0)
+        return: 1
+    if: andp = 1 && (l2_rw_sc_set(pre, 2, h, 1) != 0 || l2_rw_put(pre, 3, bb) != 0)
+        return: 1
+    if: l2_rw_pre_push(pre) != 0
+        return: 1
+    if: l2_rw_frame(parent, "LMX_WALK_OP_AT", 3, out) != 0 || l2_rw_put(\out, 1, h) != 0
+        return: 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, 0U) != c.LMX_WALK_OK\n            return: 1\n", \out) < 0
+        return: 1
+return: 0
+
 # Tokens lo..hi of type ty (operands at lo, lo + 2, ...; operators between), split by l2_rw_split.
 # + and - take ty for both operands; a comparison is an int whose operands have their own one
 # type, resolved here (a literal alone is an int, with a `U` an unsigned).
@@ -17934,7 +18069,7 @@ fn: l2_rw_bin (@@: LmP0Node tok; int: lo; int: hi; int: ty; int: parent; @: int 
         return: l2_rw_refuse(tok[best], "arithmetic on a reference")
     op: tok[best]\as\atom
     if: bestp = 1 || bestp = 2
-        return: l2_rw_refuse(tok[best], "&& and || (a short-circuit the walker has no role for)")
+        return: l2_rw_sc(tok, lo, best, hi, bestp, parent, out)
     # `* / %` (-183 commit 2; Grok -170 c1): MUL, DIV, MOD over one type, as + and - are -- an int
     # divides as C does (-7 / 2 is -3), an unsigned one unsigned.  A divisor that is the literal 0
     # is refused here; a computed 0 is the walker's X1 in R0's turn.
@@ -18481,6 +18616,28 @@ fn: l2_rw_body (@: LmP0Field first; int: parent; int: slot) int
         return: 1
 return: 0
 
+# A body, as l2_rw_body, that ends with the k flag steps l2_rw_pre[pbase ..] (a while's condition,
+# -196): they run again after the body's own steps.
+fn: l2_rw_body_pre (@: LmP0Field first; int: parent; int: slot; int: pbase; int: k) int
+    int: n
+    int: t
+    int: j
+    int: made 0
+    n: l2_rw_count(first)
+    if: n < 0
+        return: 1
+    if: l2_rw_plain(parent, n + k, @ t) != 0
+        return: 1
+    if: l2_rw_stmts(first, t, 0, @ made) != 0
+        return: 1
+    j: 0
+    while: j < k
+        if: l2_rw_put(t, n + j, l2_rw_pre[pbase + j]) != 0
+            return: 1
+        j: j + 1
+    ---
+return: l2_rw_put(parent, slot, t)
+
 # Statement `field`: its step (if it makes one) goes to container `into` at slot `slot`, and
 # `made` says whether one was made; `next` is the field after the statement.
 fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @: int made) int
@@ -18593,7 +18750,34 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
         return: 0
     if: l2_text_eq(h, "else")
         return: l2_rw_refuse(stmt, "an else without its if")
-    if: l2_text_eq(h, "while") || l2_text_eq(h, "for") || l2_text_eq(h, "until")
+    # `while: c` + body (-196): WHILE(c, body), the walker's while role.  The condition's flag steps
+    # (l2_rw_sc) run before the loop, as any statement's do, and again at the end of each turn of the
+    # body, so the condition is known afresh each time it is asked.
+    if: l2_text_eq(h, "while")
+        last: 0
+        n: 0
+        f: l2_next_active(stmt\as\frame\body\first_field)
+        cond: f
+        while: f != 0
+            last: f
+            n: n + 1
+            f: l2_next_active(f\next)
+        ---
+        if: last = 0 || last\value = 0 || last\value\kind != c.LM_P0_NODE_STRUCTURE || n < 2
+            return: l2_rw_refuse(stmt, "this while")
+        k: l2_rw_pre_n
+        if: l2_rw_frame(into, "LMX_WALK_OP_WHILE", 3, @ node) != 0
+            return: 1
+        if: l2_rw_expr(cond, n - 1, node, @ t) != 0 || l2_rw_put(node, 1, t) != 0
+            return: 1
+        if: l2_rw_body_pre(last\value\as\structure\first_field, node, 2, k, l2_rw_pre_n - k) != 0
+            return: 1
+        \made: 1
+        if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, node) < 0
+            return: 1
+        return: 0
+    ---
+    if: l2_text_eq(h, "for") || l2_text_eq(h, "until")
         return: l2_rw_refuse(stmt, "a loop")
     if: l2_text_eq(h, "catch") || l2_text_eq(h, "throw") || l2_text_eq(h, "throws")
         return: l2_rw_refuse(stmt, "throw and catch")
@@ -18728,12 +18912,39 @@ fn: l2_rw_stmts (@: LmP0Field first; int: into; int: base; @: int made) int
     @: LmP0Field field
     @: LmP0Field next
     int: one
+    int: pbase
     field: l2_next_active(first)
     while: field != 0
+        pbase: l2_rw_pre_n
         if: l2_rw_stmt(field, @ next, into, base + \made, @ one) != 0
             return: 1
-        \made: \made + one
+        if: l2_rw_pre_n > pbase && l2_rw_pre_place(into, base + \made, one, pbase, l2_rw_pre_n - pbase) != 0
+            return: 1
+        \made: \made + one + l2_rw_pre_n - pbase
+        l2_rw_pre_n: pbase
         field: next
+    ---
+return: 0
+
+# The k flag steps a statement made (l2_rw_pre from pbase, -196) run before it: its `one` steps at
+# slot s of `into` move up by k, and the flag steps take slots s .. s + k - 1.
+fn: l2_rw_pre_place (int: into; int: s; int: one; int: pbase; int: k) int
+    c.array: [32]: char pn
+    int: j
+    if: l2_rw_emit = 0
+        return: 0
+    l2_rw_name(into, pn)
+    j: one - 1
+    while: j >= 0
+        if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, lmx_arena_ref_value(%s, %dU)) != 0\n            return: 1\n", pn, s + k + j, pn, s + j) < 0
+            return: 1
+        j: j - 1
+    ---
+    j: 0
+    while: j < k
+        if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, s + j, l2_rw_pre[pbase + j]) < 0
+            return: 1
+        j: j + 1
     ---
 return: 0
 

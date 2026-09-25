@@ -1174,8 +1174,16 @@ $fixtures = @(
     # D-03 (-189 c4): a callable named at the walked root is an explicit CALL the translator emits --
     # the walker calls nothing on its own; a bare statement drops the result, a value takes it.
     [pscustomobject]@{ Name = 'unit_root_bare_callable_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
-        Absent = @(); Debt = @('l2_rw0 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_entry_unit, c.LMX_WALK_OP_CALL, 4U)',
-                 'l2_rw2 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw1, c.LMX_WALK_OP_CALL, 4U)') },
+        Absent = @('"<string.h>"'); Debt = @('l2_rw0 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_entry_unit, c.LMX_WALK_OP_CALL, 4U)',
+                 'l2_rw2 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw1, c.LMX_WALK_OP_CALL, 4U)',
+                 'include: "<stdio.h>" "<stdlib.h>"') },
+    # -197 (b): the preamble's C headers are the program's own mechanics' -- <stdio.h> and
+    # <stdlib.h> always (X1 is fprintf(stderr) + abort, the launch hands the host stdout/stderr),
+    # <string.h> only where the emission uses it: a send copying a text field (memcpy), the library
+    # profile (memset).  unit_root_bare_callable_call above has no such use and no <string.h>.  (On this
+    # toolchain <windows.h>, through lmx_clock, declares memcpy too, so gcc cannot tell; the pins do.)
+    [pscustomobject]@{ Name = 'unit_send_text.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
+        Absent = @(); Debt = @('include: "<stdio.h>" "<stdlib.h>" "<string.h>"', 'memcpy(text') },
     # STRUCTURE-TYPED ROOT FIELDS (-178 commit 2): `Model: m` is the walker's merge primitive (-174 c3)
     # stored by reference into m's pointer cell (-174 c2); `m\value` opens the reference (DEREF, -174 c1)
     # and takes the field (OF); `Model\value: 7U` writes the named Structure itself (PUT, its node

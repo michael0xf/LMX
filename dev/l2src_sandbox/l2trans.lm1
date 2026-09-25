@@ -18210,6 +18210,22 @@ fn: l2_emit_msend (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
         return: 1
 return: 0
 
+# Whether one of the n sends of a registry has a text field whose literal is not empty: its bytes are
+# copied with memcpy (l2_emit_send), a use of <string.h> in the program's own emission (-197 (b)).
+fn: l2_send_copies_text (int: n; @: int count_arr; @: int kind_arr; @@: LmP0Text text_arr) int
+    int: k 0
+    int: j
+    while: k < n
+        j: 0
+        while: j < count_arr[k]
+            if: kind_arr[k * 16 + j] = 2 && text_arr[k * 16 + j] != 0 && text_arr[k * 16 + j]\length > 2U
+                return: 1
+            j: j + 1
+        ---
+        k: k + 1
+    ---
+return: 0
+
 # The primitive of send site k: it builds the letter (sender; payload) in an arena of its own and
 # posts it through the current Message's service to its parent.  The payload is a Structure of the
 # site's fields in order: an int cell from the next input, or a char Array holding the text
@@ -21142,7 +21158,16 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: l2_library_mode = 0 && l2_e >= 0 && c.fprintf(l2_out, "predef: \"%slmx_walk.h.lm1\" \"%slmx_primitive.h.lm1\" \"%slmx_child.h.lm1\" \"%slmx_list_owned.h.lm1\"\n", l2_rt_root, l2_rt_root, l2_rt_root, l2_rt_root) < 0
         fclose(l2_out)
         return: 1
-    if: c.fprintf(l2_out, "predef: \"%slmx_arena_refs.h.lm1\" \"%slmx_value_owned.h.lm1\" \"%slmx.h.lm1\" \"%slmx_message.h.lm1\" \"%slmx_root.h.lm1\" \"%slmx_call.h.lm1\" \"%slmx_fresh.h.lm1\" \"%slmx_clock.h.lm1\"\ninclude: \"<stdio.h>\" \"<stdlib.h>\" \"<string.h>\"", l2_rt_root, l2_rt_root, l2_rt_root, l2_rt_root, l2_rt_root, l2_rt_root, l2_rt_root, l2_rt_root) < 0
+    # The C headers of the program's OWN mechanics, which the translator emits (GATE §7a, -197 (b)):
+    # <stdio.h> and <stdlib.h> for every program -- an X1 invariant is `c.fprintf(c.stderr, ...)` then
+    # `c.abort()`, the launch hands the host root `c.stdout`/`c.stderr`, a send's arena is calloc'd --
+    # and <string.h> only where the emission uses it: the library profile's memset, a send copying a
+    # text field (l2_send_copies_text).  What the SOURCE uses through `c.*` comes with its own
+    # `include:` / `predef:` (the unit's list, written next).
+    if: c.fprintf(l2_out, "predef: \"%slmx_arena_refs.h.lm1\" \"%slmx_value_owned.h.lm1\" \"%slmx.h.lm1\" \"%slmx_message.h.lm1\" \"%slmx_root.h.lm1\" \"%slmx_call.h.lm1\" \"%slmx_fresh.h.lm1\" \"%slmx_clock.h.lm1\"\ninclude: \"<stdio.h>\" \"<stdlib.h>\"", l2_rt_root, l2_rt_root, l2_rt_root, l2_rt_root, l2_rt_root, l2_rt_root, l2_rt_root, l2_rt_root) < 0
+        fclose(l2_out)
+        return: 1
+    if: (l2_library_mode != 0 || l2_send_copies_text(l2_rw_send_n, l2_rw_send_count, l2_rw_sf_kind, l2_rw_sf_text) != 0 || l2_send_copies_text(l2_msend_n, l2_msend_count, l2_msend_kind, l2_msend_text) != 0) && fputs(" \"<string.h>\"", l2_out) < 0
         fclose(l2_out)
         return: 1
     i: 0

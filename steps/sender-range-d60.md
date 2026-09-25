@@ -33,3 +33,11 @@ Read-only. Кода в этом коммите нет. Код — после «g
 Код не менять, пока одна строка не исполнена. `unit_admit_letter_formal` перевести в прогон (сейчас harness останавливается на переводе). Если выход 0 и Entry как у соседних eternal-runs — долг устарел, строку перевернуть, ядро не трогать. Если снова THROWN+1 — в отчёте точный адрес, на котором `lmx_range_classify` дал `KIND_NONE`; это вопрос fable, какая арена названа на post для Message, а не заплатка копира.
 
 Селфтест после «go», если прогон красный: приём письма, чей слот 0 — ячейка на Message другой арены; merge графа письма зелёный и адрес Message в результате тот же; мутант «в слот 0 положен сырой адрес Message» — классификация ячейки ломается, RED. Файлы только свои: почта/копир, не `lmx_walk.lm1` (это -203).
+
+## RESULT
+
+Прогон на main `7ae7a40` (ядро то же, что гейт `410761b`). `unit_admit_letter_formal` переведена в `eternal-runs`. Успех фикстуры — `exit_code` 4, не умолчание драйвера 0: пути отказа остаются 1, 2 и 3. Debt как у `unit_admit_letter_typed`: `\fn: lmx_walk_admit_letter`. Ядро не менялось.
+
+Harness `398/398`, evidence `build/l2_harness/20260925_072721`. Строка: 12 checks, 0 roots, дошла до close. Инверт: тот же exe с `entry 0` — `exit 4, expected 0`, 1 failed of 12, код процесса 1. С `entry 4` — 12 checks, код 0.
+
+`translates-with-debt` осталась одна строка, `unit_s1_merge_uncaught_entry` (D-55, таблица -201). D-60 закрыт в `steps/defects.md` как F-68.

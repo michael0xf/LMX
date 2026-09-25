@@ -647,13 +647,11 @@ $fixtures = @(
         Absent = @(); Debt = @('l2_ngraph: (cast: (@: Lmx) lmx_arena_ref_value(l2_ngraph, 1U))') },
     [pscustomobject]@{ Name = 'unit_admit_letter_typed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('a', 'b');
         Absent = @(); Debt = @('\fn: lmx_walk_admit_letter') },
-    # -178 commit 3: the letter goes to present's MainLetter formal admitted by its payload (admit_letter at
-    # the call site), and `m: raw` binds it the same way -- translated, NOT run: `MainLetter: m` after the
-    # take throws `merge` at the walked root (D-60: the root merge copies the unit, which holds the letter,
-    # whose sender is the host's Message -- an address the program's arena cannot classify, KIND_NONE, so
-    # -181's MSG_RECORD terminal is never reached; a method is unaffected).  It runs when Grok -185 gives
-    # the receiver the sender's Message range.
-    [pscustomobject]@{ Name = 'unit_admit_letter_formal.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = ''; Args = @('0');
+    # D-60 re-measure (fable §11): present(raw) admits the letter by its payload, then
+    # `MainLetter: m` and `m: raw` run at the walked root. Success is exit_code 4, not
+    # the driver's default 0, so an inverted `entry 0` is red. admit_letter stays, as
+    # on unit_admit_letter_typed.
+    [pscustomobject]@{ Name = 'unit_admit_letter_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 4;
         Absent = @(); Debt = @('\fn: lmx_walk_admit_letter') },
     [pscustomobject]@{ Name = 'unit_admit_letter_not_model.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
         Absent = @(); Debt = @() },

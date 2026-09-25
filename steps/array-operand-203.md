@@ -52,3 +52,7 @@ STARTED FABLE-GROK-ARRAY-OPERAND-20260925-203: grok/array-operand-203 база m
 - `ELEMPUT` над дескриптором в immutable-профиле — `INVALID`. Мутант «не звать `lmx_walk_immutable` на адресе операнда» — запись проходит, RED.
 
 Полный машинный гейт — перед merge кода. Этот к.1 файлы ядра и транслятора не меняет.
+
+## length в корне
+
+`length` для массива положительного ранга — первая размерность (`docs/LMX_semantics.en.md` §17). В L2 это `descriptor.len`, `size_t`. `length(m\mainArgs)` в корне спрашивает таблицу own корня (`l2_rw_path`), не `l2_path_root`. Строка `entry_argc_if` бежит: без лишних argv длина 1, выход 0 (harness `20260925_081819`). `entry_index` и `entry_strcmp` доходят до массива и останавливаются на `c.puts` / `c.strcmp` — L2-операция вне метода. `length` в позиции `int` (`exit_code`, формал `plus_one`) — отказ конверсии `size_t` → `int`, это таблица §7, не этот пункт.

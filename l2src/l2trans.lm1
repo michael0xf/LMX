@@ -17740,15 +17740,18 @@ return: 0
 # length(array). Own name, length(path), or length(path[i]) of an array-of-arrays.
 fn: l2_rw_length_of (const: @(LmP0Node node); int: parent; @: int out) int
     @: LmP0Field first
+    @: LmP0Field g
+    @: LmP0Field nm
     int: n
+    int: nseen
     int: oi
     int: k
     int: arr
     int: elem
     c.array: [256]: char pd
     size_t: pn 0U
+    size_t: iv 0U
     int: kind
-    int: el
     int: depth
     size_t: i0 0U
     c.array: [40]: int path
@@ -17771,17 +17774,56 @@ fn: l2_rw_length_of (const: @(LmP0Node node); int: parent; @: int out) int
             ---
         ---
     ---
-    if: l2_arr_len_shape(node, pd, @ pn, @ kind, @ el, @ depth, @ i0) != 0
+    # The root's own table is l2_rw_find, not l2_path_root. Join the body into a path
+    # and ask that table. Kind 5/6 is an array field; one index is its inner array.
+    if: first = 0 || first\value = 0 || first\value\kind != c.LM_P0_NODE_ATOM || first\value\as = 0 || l2_ident(first\value\as\atom) = 0
+        return: l2_rw_refuse(node, "an array")
+    if: first\value\as\atom\length > 200U
+        return: l2_rw_refuse(node, "an array")
+    memcpy((cast: (@: void) pd), (cast: (@: void) first\value\as\atom\data), first\value\as\atom\length)
+    pn: first\value\as\atom\length
+    nseen: 1
+    g: l2_next_active(first\next)
+    while: g != 0 && g\value != 0 && g\value\kind = c.LM_P0_NODE_ATOM && g\value\as != 0 && l2_is_slash(g\value\as\atom)
+        nm: l2_next_active(g\next)
+        if: nm = 0 || nm\value = 0 || l2_ident(nm\value\as\atom) = 0
+            return: l2_rw_refuse(node, "an array")
+        if: pn + 1U + nm\value\as\atom\length > 250U
+            return: l2_rw_refuse(node, "an array")
+        pd[pn]: 92
+        memcpy((cast: (@: void) (pd + pn + 1U)), (cast: (@: void) nm\value\as\atom\data), nm\value\as\atom\length)
+        pn: pn + 1U + nm\value\as\atom\length
+        nseen: nseen + 2
+        g: l2_next_active(nm\next)
+    ---
+    depth: 0
+    while: g != 0 && g\value != 0 && l2_text_eq(g\value\as\atom, "[")
+        nm: l2_next_active(g\next)
+        if: nm = 0 || l2_dec_literal(nm\value\as\atom, @ iv) != 0
+            return: l2_rw_refuse(node, "an array")
+        g: l2_next_active(nm\next)
+        if: g = 0 || l2_text_eq(g\value\as\atom, "]") = 0
+            return: l2_rw_refuse(node, "an array")
+        depth: depth + 1
+        if: depth = 1
+            i0: iv
+        nseen: nseen + 3
+        g: l2_next_active(g\next)
+    ---
+    if: nseen != n || g != 0
         return: l2_rw_refuse(node, "an array")
     prefix: (cast: (@: LmP0Text) calloc(1U, c.sizeof(c.LmP0Text)))
     if: prefix = 0
         return: l2_rw_refuse(node, "an array")
     prefix\data: pd
     prefix\length: pn
-    if: l2_rw_path(node, prefix, 1, path) != 0
+    if: l2_rw_path(node, prefix, 0, path) != 0 || path[2] < 1
         free((cast: (@: void) prefix))
-        return: 1
+        return: l2_rw_refuse(node, "an array")
     free((cast: (@: void) prefix))
+    kind: path[7 + 2 * (path[2] - 1)]
+    if: kind != 5 && kind != 6
+        return: l2_rw_refuse(node, "an array")
     if: l2_rw_frame(parent, "LMX_WALK_OP_LENGTH", 2, out) != 0
         return: 1
     if: depth = 0

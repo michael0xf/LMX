@@ -33,4 +33,13 @@ struct: LmxPosixLane
     @: void slot
 end: LmxPosixLane
 
+# A selftest thread. `work` is LmxManagerWork stored as void so this header
+# does not predef the manager header. The lane body casts it back.
+struct: LmxManagerThread
+    pthread_t: thread
+    pthread_mutex_t: mu
+    int: finished
+    @: void work
+end: LmxManagerThread
+
 fnptr: LmxPosixStart (@: void arg) @: void

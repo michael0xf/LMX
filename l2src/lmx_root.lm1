@@ -30,7 +30,7 @@ predef: "l2src/lmx_value_owned.lm1"
 predef: "l2src/lmx_array_owned.lm1"
 predef: "l2src/lmx_array_ref_owned.lm1"
 predef: "l2src/lmx_implements.lm1"
-include: "<stdio.h>" "<string.h>" "<stdlib.h>"
+include: "<stdio.h>" "<string.h>" "<stdlib.h>" "<errno.h>"
 
 # lmx_root.lm1 - creating the runtime's root, running its turns, its cycle and its teardown.
 #
@@ -1253,13 +1253,23 @@ os:
         fn: lmx_root_os_cwd (@: char buffer; size_t: size) @: char
         return: c._getcwd(buffer, (cast: (int) size))
         fn: lmx_root_os_mkdir (const: @: char path) int
-        return: c._mkdir(path)
+            int: rc
+            rc: c._mkdir(path)
+            if: rc = 0 || c.errno = c.EEXIST
+                return: 0
+            ---
+        return: rc
     default:
         include: "<unistd.h>" "<sys/stat.h>"
         fn: lmx_root_os_cwd (@: char buffer; size_t: size) @: char
         return: c.getcwd(buffer, size)
         fn: lmx_root_os_mkdir (const: @: char path) int
-        return: c.mkdir(path, 493)
+            int: rc
+            rc: c.mkdir(path, 493)
+            if: rc = 0 || c.errno = c.EEXIST
+                return: 0
+            ---
+        return: rc
 end: os
 
 fn: lmx_root_settings (@: LmxArena arena; @: Lmx profile) @: Lmx

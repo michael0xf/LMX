@@ -73,3 +73,7 @@ build 279/279 (`build/l2src/20260925_124018`; +2 к 277: `header:lmx_posix_abi` 
 `c.Sleep` девяти селфтестов — `lmx_manager_running_pause_ms`. Поток селфтеста — `thread_start` / `thread_running` / `thread_join` / `thread_id` в том же заголовке и той же паре lane, без нового списка имён. `lmx_root_os_mkdir` в том же `os:`-блоке, что `lmx_root_os_cwd`. D-78 не в этом срезе.
 
 Гейт: build 280/280 (`build/l2src/20260925_141743`). Harness 400/400 (`build/l2_harness/20260925_142056`). L3 11/11, бюджет имён 69/128 (`LmxManagerWork`). `check_docs` OK. Облако 233/233 измеряет fable.
+
+## REVIEW e8daf3a
+
+`LmxManagerThread` живёт в `lmx_posix_abi.h.lm1` (поле `work` — `@: void`). POSIX-тело lane включает `<stdlib.h>`. После close селфтест lane не читает хэндл: завершение — сам close. `lmx_root_os_mkdir` считает `EEXIST` успехом. На машине тело переведено l1trans и собрано `gcc -c -pthread`. Windows-гейт: build 280/280 (`build/l2src/20260925_144603`), harness 400/400 (`build/l2_harness/20260925_144901`), L3 11/11, имена 69/128. Облако 232/233 снимет fable; D-78 отдельно.

@@ -273,13 +273,13 @@ fn: main () int
     # Give the lane a moment to touch freed storage if it will (crash = the finding).
     lmx_manager_running_pause_ms(100U)
 
-    # After close: read ONLY probe-owned state (stack arena header; remembered HANDLE).
+    # After close: read ONLY probe-owned state (stack arena header). The platform
+    # handle was reaped inside close. POSIX frees that record; Win32 has closed it.
+    # A successful close joined the lane, so the ended fact is the close itself.
     child_blocks_after: lmx_arena_index_len(child_at)
     arena_released: child_blocks_after = 0U
-    # The remembered value is the platform handle. thread_running is the zero-timeout
-    # look: still running, or already ended / already released.
     lane_ended: 0
-    if: lmx_manager_running_thread_running(lane_handle) = 0
+    if: close_ok != 0
         lane_ended: 1
     ---
     lane_wait_code: (cast: (unsigned) lane_ended)

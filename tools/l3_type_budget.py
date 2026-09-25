@@ -64,16 +64,16 @@ MAX_NAME = 64          # l1_hdr_type_add's buffer: one more maximal name must st
 # lmx_call0's narrower nullary-int hook).  EXPECT=68 after -200 slice (a): foreign ULONGLONG
 # left lmx_clock.h.lm1 (the reading is uint64_t from stdint.h, not a named header type).
 # EXPECT=69: fnptr LmxManagerWork in lmx_manager_running.h.lm1 (a selftest's own thread).
-# Slice (b): the POSIX clock body predefs lmx_posix_abi.h.lm1 (8 names:
-# 4 foreign, 1 type, 2 struct, 1 fnptr). Windows does not.
-# The POSIX lane body also declares struct LmxManagerThread. Windows keeps the handle in void*.
-_POSIX_ABI = 0 if os.name == 'nt' else 8
-_POSIX_THREAD = 0 if os.name == 'nt' else 1
+# Slice (b) plus REVIEW e8daf3a: the POSIX clock and lane bodies predef
+# lmx_posix_abi.h.lm1 (9 names: 4 foreign, 1 type, 3 struct, 1 fnptr).
+# LmxManagerThread lives in that header, not in the lane body. Windows does not
+# predef the header.
+_POSIX_ABI = 0 if os.name == 'nt' else 9
 EXPECT = {
-    'tests/l3_thread_bind_selftest.lm1': 69 + _POSIX_ABI + _POSIX_THREAD,
-    'tests/l3_n9_walk_selftest.lm1': 69 + _POSIX_ABI + _POSIX_THREAD,
-    'tests/l3_n10_walk_selftest.lm1': 69 + _POSIX_ABI + _POSIX_THREAD,
-    'tests/l3_mail_prim_selftest.lm1': 69 + _POSIX_ABI + _POSIX_THREAD,
+    'tests/l3_thread_bind_selftest.lm1': 69 + _POSIX_ABI,
+    'tests/l3_n9_walk_selftest.lm1': 69 + _POSIX_ABI,
+    'tests/l3_n10_walk_selftest.lm1': 69 + _POSIX_ABI,
+    'tests/l3_mail_prim_selftest.lm1': 69 + _POSIX_ABI,
 }
 
 PREDEF = re.compile(r'^predef:\s*(.*)$')

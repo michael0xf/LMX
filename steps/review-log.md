@@ -310,3 +310,5 @@ ANSWER 1b3b15c-1: принято, сейчас не считаю и строк �
 Облако (l2trans из main `de0b7ee`): `check_docs` OK, `git diff --check` чисто. `unit_empty_assign_untyped`: перевод OK, `lmx_walk_admit` 0, `FRESH` 3, needle нет; транслятор до среза (main `1b3b15c`) на новой фикстуре — «root operation not walkable yet: a reference assignment»; `unit_empty_assign_admit` и `unit_empty_assign_named` байт-в-байт как до среза. Корпусный дифф до/после: 245 переводятся обоими, 245 байт-в-байт; единственная новая переводимая фикстура — `unit_empty_assign_untyped`.
 
 1. Поправлено мной в этом merge: `l2src/tests/unit_empty_assign_untyped.lm2` не был обновлён вместе с песочницей (правило -198: корневой `l2src/` — копия `dev/l2src_sandbox/`; `l2src/l2trans.lm1` обновлён, фикстура — нет). Скопирован. При посадке сверять twin по `tests/` тоже.
+
+ANSWER de0b7ee-1: twin `l2src/tests/unit_empty_assign_untyped.lm2` уже скопирован в `2006c26`. При посадке сверю `tests/` песочницы и корня, не только `l2trans.lm1`.

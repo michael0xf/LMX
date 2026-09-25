@@ -12,7 +12,6 @@ predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<string.h>"
 
 prototype:
-    fn: lmx_walk_arg_arity_node (@: LmxWalkFrame f; @: void node; @: size_t need) int
     fn: lmx_walk_arg_arity (@: LmxWalkFrame f; @: Lmx node) size_t
     fn: lmx_walk_call0_dispatch (@: LmxArena arena; @: Lmx callable) int
     fn: lmx_walk_call_prim_dispatch (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
@@ -286,6 +285,40 @@ fn: lmx_walk_store_numeric_into (@: LmxArena arena; @: void cell; size_t: value)
         return: c.LMX_WALK_OK
 return: c.LMX_WALK_INVALID
 
+# A raw, UNCLASSIFIED numeric store into `cell`, keyed by a TYPE THE CALLER ALREADY
+# KNOWS (not re-derived from `cell` itself, unlike lmx_walk_store_numeric_into's own
+# lmx_walk_numeric_type(arena, cell) gate) -- for a destination that is not necessarily
+# an arena-classified cell at all (a dynamic caller's own local, a CALL trampoline's raw
+# dest). Shared by lmx_walk_call_prim_dispatch (G-call, -194 к.4) and lmx_walk_call's
+# own addr = 0 branch (K-RET, -194 к.5b) -- both copy a walked callee's numeric result
+# out of whatever reference lmx_walk_activate handed back and into the caller's own
+# destination, the same way the native path already does by construction. CHAR is
+# refused here (interned/shared cells; never meant to be mutated in place) -- the two
+# callers keep the reference instead in that case, never calling this for it.
+fn: lmx_walk_store_numeric_raw (@: void cell; int: ty; size_t: value) int
+    if: cell = 0 || ty = 0 || ty = c.LMX_TYPE_CHAR
+        return: c.LMX_WALK_INVALID
+    if: ty = c.LMX_TYPE_INT
+        if: lmx_int_store_known(cell, (cast: (int) value)) != 0
+            return: c.LMX_WALK_INVALID
+        return: c.LMX_WALK_OK
+    if: ty = c.LMX_TYPE_SIZE_T
+        if: lmx_size_store_known(cell, value) != 0
+            return: c.LMX_WALK_INVALID
+        return: c.LMX_WALK_OK
+    if: ty = c.LMX_TYPE_UNSIGNED
+        if: lmx_unsigned_store_known(cell, (cast: (unsigned) value)) != 0
+            return: c.LMX_WALK_INVALID
+        return: c.LMX_WALK_OK
+    if: ty = c.LMX_TYPE_ULONG
+        if: lmx_ulong_store_known(cell, (cast: (ulong) value)) != 0
+            return: c.LMX_WALK_INVALID
+        return: c.LMX_WALK_OK
+    if: ty = c.LMX_TYPE_UNSIGNED_CHAR
+        if: lmx_uchar_store_known(cell, (cast: (unsigned) value)) != 0
+            return: c.LMX_WALK_INVALID
+        return: c.LMX_WALK_OK
+return: c.LMX_WALK_INVALID
 
 # True when cell is a typed pointer primitive (POINTER_BASE+).
 fn: lmx_walk_is_pointer_cell (@: LmxArena arena; @: void cell) int
@@ -554,63 +587,33 @@ fn: lmx_walk_leaving (@: LmxWalkFrame f; int: producer; @: void value) @: void
     lmx_int_store_known(f\dest, lmx_int_value_known(value))
 return: f\dest
 
-# How many declared inputs the body of M names: max ARG index + 1, or 0 if none (D-04).
-# Recurses into operand frame nodes the same way the prepare scan does.
-fn: lmx_walk_arg_arity_node (@: LmxWalkFrame f; @: void node; @: size_t need) int
-    @: Lmx code 0
-    @: void child 0
-    size_t: i
-    size_t: index
-    int: op
-    if: f = 0 || node = 0
-        return: c.LMX_WALK_OK
-    op: lmx_walk_op(f, node)
-    if: op = c.LMX_WALK_OP_NONE || op = c.LMX_WALK_OP_UNKNOWN
-        return: c.LMX_WALK_OK
-    if: lmx_walk_bare(f, node) != 0
-        return: c.LMX_WALK_OK
-    code: (cast: (@: Lmx) node)
-    if: op = c.LMX_WALK_OP_ARG
-        index: lmx_size_value_known(lmx_arena_ref_value(code, 1U))
-        if: index + 1U > \need
-            \need: index + 1U
-        return: c.LMX_WALK_OK
-    ---
-    i: 1U
-    if: op = c.LMX_WALK_OP_CALL
-        i: 4U
-    if: op = c.LMX_WALK_OP_PRIM
-        i: 2U
-    if: op = c.LMX_WALK_OP_PUT || op = c.LMX_WALK_OP_PUT_REF
-        i: 3U
-    if: op = c.LMX_WALK_OP_PUT_OF
-        i: 1U
-    while: i < (cast: (size_t) code\len)
-        child: lmx_arena_ref_value(code, i)
-        if: child != 0 && lmx_walk_op(f, child) != c.LMX_WALK_OP_NONE
-            lmx_walk_arg_arity_node(f, child, need)
-        ---
-        i: i + 1U
-    ---
-return: c.LMX_WALK_OK
-
+# How many declared inputs M takes: the width of form A's own args-part (slot 0 of the
+# occurrence, one child per formal -- l2_emit_parts), not a scan of the body for the
+# highest ARG index actually READ (D-04's own original form). K-ARITY (-194 к.5b,
+# measured by Opus's T4a diff-run): a formal a method never reads in its own body (an
+# unused trailing parameter -- `first(3, 4)` where the body only ever reads ARG 0) is
+# still a DECLARED formal the caller must supply; the old body-scan undercounted it,
+# refusing a legitimate call whose own arity matched the declaration (X1, n=2 != 1).
 fn: lmx_walk_arg_arity (@: LmxWalkFrame f; @: Lmx node) size_t
     @: void child 0
-    size_t: need 0U
-    # k.4: scans from slot 0, same as lmx_walk_body -- no reserved descriptor slot to skip
-    # any more; a non-op slot (an args/return part, an own field) classifies OP_NONE and is
-    # silently skipped by the check below, the same way lmx_walk_body skips it.
-    size_t: i 0U
-    if: f = 0 || node = 0
+    @: Lmx args_part 0
+    if: f = 0 || node = 0 || node\len <= 0
         return: 0U
-    while: i < (cast: (size_t) node\len)
-        child: lmx_arena_ref_value(node, i)
-        if: child != 0 && lmx_walk_op(f, child) != c.LMX_WALK_OP_NONE
-            lmx_walk_arg_arity_node(f, child, @ need)
-        ---
-        i: i + 1U
+    child: lmx_arena_ref_value(node, 0U)
+    # A genuine args-part is a PLAIN Structure (op = NONE, kind = STRUCT): an occurrence
+    # with no declared formals at all has no reason to carry one, and its own slot 0 is
+    # whatever an older, pre-form-A body puts there instead -- a body's own first step
+    # (an op frame, op != NONE), or its own first data field (a primitive own cell, kind
+    # != STRUCT -- own(n, 1U, writer, 0U)'s own int x, say), or simply unused (0). All of
+    # those are "no args-part here," zero formals -- not a malformed one to refuse or,
+    # worse, misread as one (a primitive cast to Lmx and its raw bytes read as `len`).
+    if: child = 0 || lmx_walk_op(f, child) != c.LMX_WALK_OP_NONE || lmx_walk_kind(f, child) != c.LMX_KIND_STRUCT
+        return: 0U
     ---
-return: need
+    args_part: (cast: (@: Lmx) child)
+    if: args_part\len <= 0
+        return: 0U
+return: (cast: (size_t) args_part\len)
 
 # G-call (-194 к.4): the prim-walk hook for lmx_call_prim's own addr=0 branch -- the same
 # ephemeral-scratch, program-bound-roles shape as lmx_walk_call0_dispatch above, but
@@ -688,36 +691,19 @@ fn: lmx_walk_call_prim_dispatch (@: LmxArena arena; @: Lmx code; @: Lmx data; @@
         return: 0
     ---
     # `dest` here is the CALLER's own destination -- generated code's own local, not
-    # necessarily an arena-classified cell (lmx_walk_store_numeric_into's own dest-type
-    # gate would refuse it) -- so the raw, unclassified store the native path already
-    # uses (lmx_int_store_known and its siblings) is the right door, keyed by RESULT's
-    # own type, not dest's. CHAR is excluded (its cells are interned/shared; a mutating
-    # store into dest would not mean what it means for the other numerics) -- handed
-    # back as a reference instead, same as any non-numeric value.
+    # necessarily an arena-classified cell -- so lmx_walk_store_numeric_raw (the raw,
+    # unclassified store the native path already uses by construction), keyed by
+    # RESULT's own type, not dest's, is the right door. CHAR is excluded (its cells are
+    # interned/shared; a mutating store into dest would not mean what it means for the
+    # other numerics) -- handed back as a reference instead, same as any non-numeric
+    # value.
     rty: 0
     if: result != 0
         rty: lmx_walk_numeric_type(arena, result)
     ---
     if: rty != 0 && rty != c.LMX_TYPE_CHAR && lmx_walk_load_numeric(arena, result, @ wv) = c.LMX_WALK_OK
-        if: rty = c.LMX_TYPE_INT
-            if: lmx_int_store_known(dest, (cast: (int) wv)) != 0
-                return: c.LMX_CALL_NOT_CALLABLE
-        ---
-        if: rty = c.LMX_TYPE_SIZE_T
-            if: lmx_size_store_known(dest, wv) != 0
-                return: c.LMX_CALL_NOT_CALLABLE
-        ---
-        if: rty = c.LMX_TYPE_UNSIGNED
-            if: lmx_unsigned_store_known(dest, (cast: (unsigned) wv)) != 0
-                return: c.LMX_CALL_NOT_CALLABLE
-        ---
-        if: rty = c.LMX_TYPE_ULONG
-            if: lmx_ulong_store_known(dest, (cast: (ulong) wv)) != 0
-                return: c.LMX_CALL_NOT_CALLABLE
-        ---
-        if: rty = c.LMX_TYPE_UNSIGNED_CHAR
-            if: lmx_uchar_store_known(dest, (cast: (unsigned) wv)) != 0
-                return: c.LMX_CALL_NOT_CALLABLE
+        if: lmx_walk_store_numeric_raw(dest, rty, wv) != c.LMX_WALK_OK
+            return: c.LMX_CALL_NOT_CALLABLE
         ---
         \out: dest
         return: 0
@@ -815,8 +801,10 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
     @@: void cells 0
     LmxEntry: addr 0
     LmxPrimitiveEntry: entry 0
+    @: void result 0
     size_t: n
     size_t: i 0U
+    size_t: wv 0U
     int: present 0
     int: ty c.LMX_TYPE_INT
     int: status c.LMX_WALK_OK
@@ -906,7 +894,44 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
             ---
         else:
             # Walked body: code = callee, data = its data graph (OWN/SET/PUT target).
-            status: lmx_walk_activate(f\context, callee, data, refs, n, dest, out, @ present)
+            # K-RET (-194 к.5b, measured by Opus's T4a diff-run): the callee's own
+            # numeric result can come back as a REFERENCE to an existing cell (a bare
+            # ARG/OWN read, same shape as G-call's own result), not necessarily written
+            # into dest -- a second call whose body reuses/overwrites that same cell
+            # would then corrupt an earlier, still-unread call's result before an
+            # enclosing expression (e.g. an ADD) ever reads it: `pick(1) + pick(2)`
+            # native 3, walked 4 was exactly this. Build a fresh, properly-typed
+            # call_dest the same way the native branch above already does, and copy the
+            # numeric result's VALUE into it by rtype (lmx_walk_store_numeric_raw, same
+            # door G-call already uses) -- a non-numeric rtype (a Structure) keeps the
+            # reference, same as the native branch's own dest already would.
+            #
+            # Gated on rtype_ref itself (child 3 present), NOT on `ty` (its own default
+            # is LMX_TYPE_INT, the exact same value a GENUINELY int-typed rtype gives --
+            # rtype_ref = 0, no rtype at all, must NOT be read as "yes, copy," or a
+            # reference-returning callee with no declared rtype at all -- like this
+            # file's own peek/relay, built before rtype existed -- would have its result
+            # force-copied instead of left as the reference it actually is).
+            if: lmx_walk_call_dest(f, dest, ty, @ call_dest) != c.LMX_WALK_OK
+                status: c.LMX_WALK_INVALID
+            ---
+            if: status = c.LMX_WALK_OK
+                status: lmx_walk_activate(f\context, callee, data, refs, n, call_dest, @ result, @ present)
+            ---
+            if: status = c.LMX_WALK_OK && present != 0 && result != 0 && result != call_dest && rtype_ref != 0 && ty != c.LMX_TYPE_CHAR
+                if: lmx_walk_load_numeric(f\arena, result, @ wv) != c.LMX_WALK_OK
+                    status: c.LMX_WALK_INVALID
+                else:
+                    if: lmx_walk_store_numeric_raw(call_dest, ty, wv) != c.LMX_WALK_OK
+                        status: c.LMX_WALK_INVALID
+                    else:
+                        result: call_dest
+                    ---
+                ---
+            ---
+            if: status = c.LMX_WALK_OK
+                \out: result
+            ---
         ---
     ---
     if: lmx_scratch_rewind(f\context\scratch, pm) != c.LMX_SCRATCH_OK && status = c.LMX_WALK_OK

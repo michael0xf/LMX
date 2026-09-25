@@ -144,6 +144,23 @@ return: 2
 fn: mk_m (@: Lmx unit; size_t: slot; size_t: children) @: Lmx
 return: pl(unit, slot, children)
 
+# K-ARITY (-194 к.5b): an occurrence actually CALLED with arguments (via a CALL frame,
+# recursively or otherwise) now needs its own args-part at slot 0 -- form A's own shape,
+# lmx_walk_arg_arity reads its WIDTH (one child per formal), not a scan of the body's
+# own ARG uses any more (which undercounted a declared-but-unread formal). Slot 0 stays
+# mk_m's own convention (unused) for every occurrence never called with args; each
+# formal child is left at its own zero default -- only the count matters here.
+fn: mk_m_arity (@: Lmx unit; size_t: slot; size_t: children; size_t: arity) @: Lmx
+    @: Lmx m pl(unit, slot, children)
+    @: Lmx args_part 0
+    if: m = 0
+        return: 0
+    args_part: lmx_walk_plain(ga, m, arity)
+    if: args_part = 0 || lmx_arena_ref_store(m, 0U, (cast: (@: void) args_part)) != 0
+        broken: broken + 1
+        return: 0
+return: m
+
 # One direct call.  The value comes back as a REFERENCE; an int result is read through
 # it, whether it is the record's own destination cell or a cell of the graph.
 fn: go (@: Lmx m; @@: void args; size_t: nargs; @: int r; @: int v) int
@@ -347,7 +364,7 @@ fn: main () int
     inner: mk_m(unit, 2U, 2U)
     publisher: mk_m(unit, 3U, 4U)
     reader: mk_m(unit, 4U, 2U)
-    summer: mk_m(unit, 5U, 3U)
+    summer: mk_m_arity(unit, 5U, 3U, 1U)
     looper: mk_m(unit, 6U, 5U)
     bare: mk_m(unit, 7U, 2U)
     faller: mk_m(unit, 8U, 3U)
@@ -357,16 +374,16 @@ fn: main () int
     impostor: mk_m(unit, 13U, 2U)
     lexer: mk_m(unit, 14U, 6U)
     alone: mk_m(unit, 15U, 2U)
-    peek: mk_m(unit, 18U, 2U)
-    bump: mk_m(unit, 19U, 2U)
-    relay: mk_m(unit, 20U, 2U)
-    echo: mk_m(unit, 21U, 2U)
-    hop: mk_m(unit, 22U, 2U)
-    self: mk_m(unit, 23U, 2U)
+    peek: mk_m_arity(unit, 18U, 2U, 1U)
+    bump: mk_m_arity(unit, 19U, 2U, 1U)
+    relay: mk_m_arity(unit, 20U, 2U, 1U)
+    echo: mk_m_arity(unit, 21U, 2U, 1U)
+    hop: mk_m_arity(unit, 22U, 2U, 1U)
+    self: mk_m_arity(unit, 23U, 2U, 1U)
     poke: mk_m(unit, 24U, 4U)
     # Stage C fixtures (slots 27..)
     test: mk_m(unit, 27U, 2U)
-    test2: mk_m(unit, 28U, 2U)
+    test2: mk_m_arity(unit, 28U, 2U, 1U)
     test3: mk_m(unit, 29U, 1U)
     test4: mk_m(unit, 30U, 2U)
     host: mk_m(unit, 31U, 2U)

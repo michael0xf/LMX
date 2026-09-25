@@ -1,0 +1,30 @@
+# T4b class 1. A Structure formal is the reference the caller passed.
+# Walked (WalkMethods): m\value is OF(ARG j, the field's slot); a write is PUT_OF.
+# sum reads formal 0 then formal 1. poke writes through the formal. Success is 7.
+Model:
+    size_t: value 1U
+end: Model
+
+fn: peek (Model: m) size_t
+return: m\value
+
+fn: poke (Model: m) int
+    m\value: 9U
+return: 7
+
+fn: sum (Model: a; Model: b) size_t
+return: a\value + b\value
+
+Model: left
+Model: right
+int: r 0
+left\value: 3U
+right\value: 4U
+if: sum(left, right) = 7U
+    r: r + 1
+if: poke(left) = 7
+    r: r + 2
+if: peek(left) = 9U
+    r: r + 4
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

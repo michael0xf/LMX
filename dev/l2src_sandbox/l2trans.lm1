@@ -17113,8 +17113,10 @@ return: 0
 #       occurrence `M\[N]x`) is the one name after it (-196); 4: a qualified (eternal) branch, read
 #       only (-196); 5: a merge result (-193 T3), the unit child its merge statement writes, whose
 #       fields are the result-slot map's (l2_mrs_slot_named) -- a Structure that exists only in R0's
-#       turn, so the way to it is a value, as through a reference ([5] 1); [1] that own field, that
-#       named Structure or branch, that method, or that merge result;
+#       turn, so the way to it is a value, as through a reference ([5] 1); 6: a Structure formal of
+#       the method being built (T4b class 1: `T: m` and `@: T m`) -- [1] is the formal index, and
+#       the value is the reference the caller passed (ARG), not a cell; [1] that own field, that
+#       named Structure or branch, that method, that merge result, or that formal;
 #   [2] the count of names after the root; [3] the last field's number type (own storage code), or
 #       -1 when it is not a number; [4] the Structure that holds the last field; [5] 1 when the way
 #       goes through a reference (the root, or a reference field, kind 3);
@@ -17133,6 +17135,8 @@ fn: l2_rw_path (const: @(LmP0Node node); const: @(LmP0Text t); int: say; @: int 
     int: ent 0
     int: last
     int: res 0 - 1
+    int: fi 0 - 1
+    int: rooted 0
     if: t = 0 || t\data = 0 || path = 0
         return: 1
     while: i < t\length && t\data[i] != 92
@@ -17147,13 +17151,25 @@ fn: l2_rw_path (const: @(LmP0Node node); const: @(LmP0Text t); int: say; @: int 
     l2_rw_seg\data: t\data
     l2_rw_seg\length: i
     path[5]: 0
+    if: l2_rw_mi != l2_e
+        fi: l2_formal_find(l2_rw_mi, l2_rw_seg)
     oi: l2_rw_find(l2_rw_seg)
     if: l2_rw_seen(oi) != 0 && l2_own_host[oi] = 0 && l2_own_fid[oi] < 0 && l2_own_uchild[oi] >= 0 && l2_own_nsty_get(oi) >= 0
         path[0]: 1
         path[1]: oi
         ni: l2_own_nsty_get(oi)
         path[5]: 1
-    else:
+        rooted: 1
+    # T4b class 1. A Structure formal hides an own field of the same name (l2_rw_find already
+    # returned -1) and a unit Structure of the same spelling. The reference is the caller's.
+    if: rooted = 0 && fi >= 0 && l2_nsty_get(l2_rw_mi, fi) >= 0
+        path[0]: 6
+        path[1]: fi
+        ni: l2_nsty_get(l2_rw_mi, fi)
+        path[4]: 0 - 1
+        path[5]: 1
+        rooted: 1
+    if: rooted = 0
         ni: l2_ns_find(l2_rw_seg)
         if: ni < 0 && l2_find_method(l2_rw_seg) >= 0 && l2_find_method(l2_rw_seg) != l2_e
             return: l2_rw_path_occ(node, t, i, l2_find_method(l2_rw_seg), say, path)
@@ -17243,6 +17259,9 @@ fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
             return: 1
         return: l2_rw_put(\out, 1, raw)
     ---
+    # A Structure formal is already the Structure the caller passed (ARG), not a cell to open.
+    if: level = 0 && path[0] = 6
+        return: l2_rw_arg(parent, path[1], out)
     # A named Structure, a method's occurrence (-196) or a qualified branch (-196) is a unit child:
     # AT(unit, its child).
     if: level = 0
@@ -19553,8 +19572,9 @@ return: 0
 # (native 0).  A method outside the subset gets none, and nothing is said: its body is only tried
 # (l2_rw_quiet); the refusal comes where a walk is needed.
 # Its shape first (l2_rw_may): a method with a native body, no dynamic inputs and no throw, a result
-# that is a number (int, size_t, unsigned, ulong) or none, number formals, and own fields that are
-# neither declared in a nested body nor named like a formal.
+# that is a number (int, size_t, unsigned, ulong) or none, number formals or a Structure formal
+# (`T: m` and `@: T m`, T4b class 1), and own fields that are neither declared in a nested body
+# nor named like a formal. A callable formal and any other non-number formal stay out.
 fn: l2_rw_may (int: mi) int
     int: j 0
     int: oi 0
@@ -19567,7 +19587,9 @@ fn: l2_rw_may (int: mi) int
     if: l2_m_ret[mi] != 8 && (cls < 1 || cls > 4)
         return: 0
     while: j < l2_m_arity[mi]
-        if: l2_cf_get(mi, j) >= 0 || l2_nsty_get(mi, j) >= 0 || l2_rw_num_ty(l2_own_ty_of_param(l2_ft(mi, j))) = 0
+        if: l2_cf_get(mi, j) >= 0
+            return: 0
+        if: l2_nsty_get(mi, j) < 0 && l2_rw_num_ty(l2_own_ty_of_param(l2_ft(mi, j))) = 0
             return: 0
         j: j + 1
     ---

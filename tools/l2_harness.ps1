@@ -1252,6 +1252,15 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_walk_mixed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0; WalkMethods = $true;
         Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m2_tr)');
         Debt = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m3_tr)') },
+    # T4b class 1: a Structure formal is ARG j, the caller's Structure. peek reads OF(ARG 0, slot 0);
+    # poke writes PUT_OF of that ARG; sum reads ARG 0 and ARG 1. The three methods are walked.
+    [pscustomobject]@{ Name = 'unit_walk_struct_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m2_tr)');
+        Debt = @('@: Lmx l2_rw60 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw59, c.LMX_WALK_OP_ARG, 2U)',
+                 'if: lmx_walk_store_size(l2_program_arena, l2_rw60, 1U, 0U) != c.LMX_WALK_OK',
+                 'if: lmx_walk_store_size(l2_program_arena, l2_rw59, 2U, 0U) != c.LMX_WALK_OK',
+                 '@: Lmx l2_rw62 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw61, c.LMX_WALK_OP_PUT_OF, 4U)',
+                 'if: lmx_walk_store_size(l2_program_arena, l2_rw73, 1U, 1U) != c.LMX_WALK_OK') },
     # Side fixes (-193 T4a): a root `M\x` of a method after the first, in a unit with no named Structure
     # (l2trans crashed); a repeated declaration's initializer reads the occurrence before it
     # (l2_own_excl, as natively); the root names its own fields by no holder (K-OT2).

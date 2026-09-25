@@ -1248,10 +1248,12 @@ $fixtures = @(
                  '@: Lmx l2_rw80 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw79, c.LMX_WALK_OP_RET, 2U)',
                  'if: lmx_walk_store_size(l2_program_arena, l2_rw88, 2U, 2U) != c.LMX_WALK_OK',
                  'if: lmx_arena_ref_store(l2_rw90, 1U, (cast: (@: void) l2_entry_unit)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw90, 2U, 0U) != c.LMX_WALK_OK') },
-    # bind and native_caller assign a formal (the formal-binding rule): no frames, native kept.
+    # T4b class 2 walks bind and native_caller too. bind's first store is ARG + 100 into the field;
+    # the return reads that field (AT), not the argument.
     [pscustomobject]@{ Name = 'unit_walk_mixed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0; WalkMethods = $true;
-        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m2_tr)');
-        Debt = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m3_tr)') },
+        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m2_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m3_tr)');
+        Debt = @('@: Lmx l2_rw33 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw32, c.LMX_WALK_OP_ARG, 2U)',
+                 'if: lmx_walk_store_size(l2_program_arena, l2_rw36, 2U, 2U) != c.LMX_WALK_OK') },
     # T4b class 1: a Structure formal is ARG j, the caller's Structure. peek reads OF(ARG 0, slot 0);
     # poke writes PUT_OF of that ARG; sum reads ARG 0 and ARG 1. The three methods are walked.
     [pscustomobject]@{ Name = 'unit_walk_struct_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
@@ -1261,6 +1263,14 @@ $fixtures = @(
                  'if: lmx_walk_store_size(l2_program_arena, l2_rw59, 2U, 0U) != c.LMX_WALK_OK',
                  '@: Lmx l2_rw62 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw61, c.LMX_WALK_OP_PUT_OF, 4U)',
                  'if: lmx_walk_store_size(l2_program_arena, l2_rw73, 1U, 1U) != c.LMX_WALK_OK') },
+    # T4b class 2: a numeric field named like a formal is ARG until its binding line, then the
+    # field. bump carries ARG 0 into its cell and then reads that cell. see reads ARG before the line.
+    [pscustomobject]@{ Name = 'unit_walk_formal_bind.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m2_tr)');
+        Debt = @('@: Lmx l2_rw48 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw47, c.LMX_WALK_OP_ARG, 2U)',
+                 'if: lmx_walk_store_size(l2_program_arena, l2_rw51, 2U, 2U) != c.LMX_WALK_OK',
+                 '@: Lmx l2_rw57 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw56, c.LMX_WALK_OP_ARG, 2U)',
+                 '@: Lmx l2_rw62 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw61, c.LMX_WALK_OP_AT, 3U)') },
     # Side fixes (-193 T4a): a root `M\x` of a method after the first, in a unit with no named Structure
     # (l2trans crashed); a repeated declaration's initializer reads the occurrence before it
     # (l2_own_excl, as natively); the root names its own fields by no holder (K-OT2).

@@ -1,8 +1,6 @@
-# -193 T4a: walked and native methods together (WalkMethods).  A method outside the walkable subset
-# gets no frames and keeps its native word -- here `bind` assigns its formal, which binds an own
-# field of the formal's name (the formal-binding rule) --; a walked method's CALL of it runs the
-# native body through its trampoline, and a native method's direct call of a walked one stays a
-# direct native call.
+# -193 T4a, widened by T4b class 2. `bind` and `native_caller` assign a formal: that first store
+# reads the argument and writes the field, and the return reads the field. Both are walked.
+# wrap calls bind; native_caller calls leaf. Success is 0 (102 then 10).
 fn: bind (int: n) int
     n: n + 100
     return: n

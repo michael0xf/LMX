@@ -34,6 +34,22 @@ fn: lmx_merge_add_width (@: size_t total; @: Lmx x) int
     \total: sum
 return: 0
 
+# One pair's value, copied from `src`'s own field `field` into `dst`'s own slot
+# `target_slot` -- the one step every override (lmx_merge_profiles_owned's map path) and
+# every merge-into pair (lmx_merge_into_profiles_owned, K1's -194 к.3) does, shared so the
+# two callers never drift. `src`/`dst` are already-copied (destination-arena) Structures;
+# neither bound is asked here -- both callers validate field/slot range before calling.
+fn: lmx_merge_apply_pair (@: Lmx src; size_t: field; @: Lmx dst; size_t: target_slot) int
+    @@: void slot 0
+    @: void value 0
+    slot: lmx_arena_ref_cell(src, field)
+    if: slot = 0
+        return: LMX_MERGE_INVALID
+    value: \slot
+    if: lmx_arena_ref_store(dst, target_slot, value) != 0
+        return: LMX_MERGE_INVALID
+return: LMX_MERGE_OK
+
 
 fn: lmx_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
     @: LmxArenaBlock mark 0
@@ -394,14 +410,8 @@ fn: lmx_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: L
             if: copied = 0
                 status: LMX_MERGE_INVALID
             else:
-                slot: lmx_arena_ref_cell(copied, overrides[p]\field)
-                if: slot = 0
+                if: lmx_merge_apply_pair(copied, overrides[p]\field, result, overrides[p]\model_slot) != LMX_MERGE_OK
                     status: LMX_MERGE_INVALID
-                else:
-                    value: \slot
-                    if: lmx_arena_ref_store(result, overrides[p]\model_slot, value) != 0
-                        status: LMX_MERGE_INVALID
-                    ---
                 ---
             ---
             p: p + 1U
@@ -478,6 +488,117 @@ fn: lmx_merge_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: L
         return: lmx_merge_profiles_owned(operands, count, body, container, dst_chars, src_arena, dst_arena, 0, 0U, overrides, override_count, out)
 return: lmx_merge_profiles_owned(operands, count, body, container, dst_chars, src_arena, dst_arena, @ retain_profile, 1U, overrides, override_count, out)
 
+# -194 к.3, Q26.1 / Q1 ("merge into an existing target" -- the flat primitive T5's part-
+# recursion will call once per part, and the own-field write `o\inner: a`'s own form):
+# `op`'s fields are copied and written INTO `target`'s ALREADY-EXISTING slots -- unlike
+# lmx_merge_owned, nothing is built fresh, `target` keeps its address and its own parent
+# untouched, and the pair map is not a specialization/append mix but a required, EXACT
+# bijection: `target`'s own layout is fixed once built (no slot is ever added after
+# construction, L2 spec §2), so every field of `op` must land in some existing slot of
+# `target` (fable: unmatched is INVALID, not appended) and no two pairs may share a
+# source field or a target slot. A slot of `target` no pair names is simply untouched --
+# this is a specialization of some of `target`'s fields, not a replacement of the whole.
+fn: lmx_merge_into_profiles_owned (@: Lmx target; @: Lmx op; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: LmxMergePair pairs; size_t: pair_count) int
+    @: LmxArenaBlock mark 0
+    @@: Lmx roots 0
+    @@: Lmx copies 0
+    @: Lmx copied_op 0
+    @: Lmx nested_child 0
+    @: void slot_check 0
+    size_t: op_w 0U
+    size_t: target_w 0U
+    size_t: p 0U
+    size_t: q 0U
+    int: cst 0
+    int: status LMX_MERGE_OK
+    if: target = 0 || op = 0 || src_arena = 0 || dst_arena = 0 || pairs = 0 || pair_count = 0U
+        return: LMX_MERGE_INVALID
+    if: lmx_range_classify(src_arena, (cast: (@: void) target)) != c.LMX_KIND_STRUCT
+        return: LMX_MERGE_INVALID
+    if: lmx_range_classify(src_arena, (cast: (@: void) op)) != c.LMX_KIND_STRUCT
+        return: LMX_MERGE_INVALID
+    op_w: lmx_merge_width(op)
+    target_w: lmx_merge_width(target)
+    # Exactly one pair per field of op (a bijection onto a subset of target's slots): the
+    # count must match op's own width, and no two pairs may repeat a source field or a
+    # target slot -- with that and the count equal, every field of op is covered exactly
+    # once (pigeonhole: pair_count distinct values in [0, op_w) exhausts [0, op_w)).
+    if: pair_count != op_w
+        return: LMX_MERGE_INVALID
+    p: 0U
+    while: p < pair_count
+        if: pairs[p]\field >= op_w || pairs[p]\model_slot >= target_w
+            return: LMX_MERGE_INVALID
+        q: 0U
+        while: q < p
+            if: pairs[q]\field = pairs[p]\field || pairs[q]\model_slot = pairs[p]\model_slot
+                return: LMX_MERGE_INVALID
+            q: q + 1U
+        ---
+        p: p + 1U
+    ---
+    # From here the destination is all-or-nothing, as lmx_merge_owned: the mark is the
+    # arena's own head, every refusal below reverts to it. `target` itself is NOT reverted
+    # -- it already existed before this call, only what this call adds (op's own copy) is
+    # new state; the fields this call actually wrote are the only ones the caller may have
+    # observed change, and even those are only ever written after every admission check
+    # above has already passed.
+    mark: lmx_arena_mark(dst_arena)
+    roots: (cast: (@@: Lmx) malloc(c.sizeof(@: void)))
+    copies: (cast: (@@: Lmx) malloc(c.sizeof(@: void)))
+    if: roots = 0 || copies = 0
+        if: roots != 0
+            free((cast: (@: void) roots))
+        if: copies != 0
+            free((cast: (@: void) copies))
+        lmx_arena_revert(dst_arena, mark)
+        return: LMX_MERGE_NOMEM
+    roots[0]: op
+    cst: lmx_graph_copy_many_profiles_owned(roots, 1U, dst_chars, src_arena, dst_arena, retain_profiles, retain_count, copies)
+    if: cst = LMX_GRAPH_COPY_NOMEM
+        status: LMX_MERGE_NOMEM
+    if: cst = LMX_GRAPH_COPY_UNSUPPORTED
+        status: LMX_MERGE_UNSUPPORTED
+    if: cst != LMX_GRAPH_COPY_OK && cst != LMX_GRAPH_COPY_NOMEM && cst != LMX_GRAPH_COPY_UNSUPPORTED
+        status: LMX_MERGE_INVALID
+    ---
+    copied_op: copies[0]
+    if: status = LMX_MERGE_OK && copied_op = 0
+        status: LMX_MERGE_INVALID
+    ---
+    p: 0U
+    while: p < pair_count && status = LMX_MERGE_OK
+        if: lmx_merge_apply_pair(copied_op, pairs[p]\field, target, pairs[p]\model_slot) != LMX_MERGE_OK
+            status: LMX_MERGE_INVALID
+        ---
+        p: p + 1U
+    ---
+    # 1d's own fix (-194 к.2), here too: a nested Structure child this call just wrote
+    # into one of target's slots still has its OWN `\parent` set by the copier's parent-
+    # fixup to `copied_op` -- op's own copy-root, an address nothing else in target's tree
+    # reaches once this call returns. Re-point it to `target` itself, the same way.
+    if: status = LMX_MERGE_OK
+        p: 0U
+        while: p < pair_count
+            slot_check: lmx_arena_ref_value(target, pairs[p]\model_slot)
+            if: slot_check != 0 && lmx_range_classify(dst_arena, slot_check) = c.LMX_KIND_STRUCT
+                nested_child: (cast: (@: Lmx) slot_check)
+                if: nested_child\parent = copied_op
+                    nested_child\parent: target
+                ---
+            ---
+            p: p + 1U
+        ---
+    ---
+    if: status != LMX_MERGE_OK
+        lmx_arena_revert(dst_arena, mark)
+    ---
+    free((cast: (@: void) roots))
+    free((cast: (@: void) copies))
+return: status
+
+fn: lmx_merge_into_owned (@: Lmx target; @: Lmx op; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: LmxMergePair pairs; size_t: pair_count) int
+return: lmx_merge_into_profiles_owned(target, op, dst_chars, src_arena, dst_arena, 0, 0U, pairs, pair_count)
 
 # -174 c3: Model: m = merge(Model, empty) as one kernel PRIM over lmx_merge_owned.
 # Lives here (not walk.lm1) so walk selftests do not link merge.o. Declared in lmx_walk.h.lm1.

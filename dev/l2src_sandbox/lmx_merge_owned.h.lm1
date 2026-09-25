@@ -83,6 +83,17 @@ prototype:
     # independent+const+immutable receiver chain.  No other profile/lifecycle/owner
     # property retains an address.
     fn: lmx_merge_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @: Lmx retain_profile; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
+    # One pair's value, copied from src's own field into dst's own slot -- shared by
+    # lmx_merge_profiles_owned's override path and lmx_merge_into_profiles_owned.
+    fn: lmx_merge_apply_pair (@: Lmx src; size_t: field; @: Lmx dst; size_t: target_slot) int
+    # -194 к.3 (Q26.1 / Q1): merge INTO an already-existing target -- op's fields are
+    # copied and written into target's existing slots (target keeps its address and its
+    # own parent; nothing is built fresh). The pair map must be an exact bijection onto a
+    # subset of target's slots: pair_count = op's own width, no source field or target
+    # slot repeated (target's layout is fixed once built, so an unmatched op field is
+    # INVALID, never appended). A target slot no pair names is left untouched.
+    fn: lmx_merge_into_profiles_owned (@: Lmx target; @: Lmx op; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: LmxMergePair pairs; size_t: pair_count) int
+    fn: lmx_merge_into_owned (@: Lmx target; @: Lmx op; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: LmxMergePair pairs; size_t: pair_count) int
     # -174 c3: walk PRIM entry for Model: m (see lmx_walk.h.lm1).
     fn: lmx_walk_merge_model (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
 end: prototype

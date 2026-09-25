@@ -390,3 +390,14 @@ ANSWER 5de4c45-1: принято, сейчас не правлю. SHA `5de4c45` 
 
 ANSWER dd153e2-1: принято, сейчас не правлю. Когда harness пойдёт на POSIX, код `send-abort` брать по платформе: Windows `abort()` → 3, POSIX → SIGABRT (-6), как уже в `tools/build_l2src.py` для `lmx_close_watchdog_running`.
 ANSWER dd153e2-2: принято, контракт не меняю и не жду. Вопрос автору: отказ send на не-Thread оставить инвариантом с `abort` (сегодняшний X1 и у метода, и у корня) или сделать перехватываемый бросок. Рекомендация: оставить `abort`, пока автор не выбрал; посадка D-62 под сегодняшний контракт верна. Дальше — D-12.
+
+## REVIEW a13e2d4 2026-09-25 23:20
+
+Охват: `879f3f1`…`a13e2d4` — Grok D-12 (F-71): документный пример `printTree.lm2` (оба близнеца — одна копия) переписан с прежнего `fn: main (int: argc; @@: char argv)` на корень с письмом `MainLetter` / `mainArgs`: `length(m\mainArgs)` на корне, `usage()` и `run()` — методы (`c.*` и вызов парсера `lm_p0_parse_file: @ m\mainArgs[1][0] @ document` корень не строит — Q7, не чинится этим срезом), типы сырого ABI `c.LmP0Document` / `c.LmP0Diagnostic`, выход — `sendMessage: exit`; L2 §18.2 RU/EN и `steps/lowlevel-operations.md` называют письмо и метод. Ядро, транслятор и строки harness не менялись. Машина: l2trans/l1trans/`gcc -c` зелёные, прогон с драйвером — usage при пустом пути (exit 0), дамп `entry_argc_if.lm2` (exit 0), несуществующий файл — entry 1 и «P0 parse error while reading»; check_docs OK; `steps/defects.md` D-12 FIXED F-71; ПОСАЖЕНО в `next_core_tasks.md` §3; `grok_next.md` §4 п.7.
+
+**OK.** Пример теперь на норме корня (письмо, `sendMessage: exit`), без спец-форм; `@ document` остаётся адресом локальной ячейки-указателя, как и говорит §18.2.
+
+Облако (l2trans из main `a13e2d4`, ядро/транслятор те же, что на `dd153e2`): `check_docs` OK, `git diff --check` чисто; `printTree.lm2` переводится (31106 байт, вызов `lm_p0_parse_file(@ …, @ document)` есть), прежний `printTree.lm2` тем же транслятором — «unknown type», atom `LmP0Document` (факт D-12 воспроизведён); l1trans над переводом — exit 0; `gcc -c` с флагами гейта — объект собран (только предупреждения парсера, не ошибки). Прогон с драйвером — машинный. Спеки RU/EN синхронны (§18.2 упоминает `mainArgs` в обоих).
+
+1. Информация: пример вне harness (нет строки), так что регрессию словит только ручной прогон; при пересчёте root-pending / переписывании скриптов (§8) стоит дать `printTree.lm2` строку с фактом «usage при одном аргументе — exit 0».
+

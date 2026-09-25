@@ -18394,8 +18394,12 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
     stmt: field\value
     \next: l2_next_active(field\next)
     l2_rw_name(into, pn)
-    # An expression statement: a run of fields read as one expression.
+    # An expression statement: a run of fields read as one expression.  A string literal alone
+    # has nothing to evaluate (natively it is dropped, l2_eval_discard): it makes no step
+    # (FABLE-OPUS-ROOT-CLASSES-20260926-196).
     n: l2_discard_run(field)
+    if: n = 1 && stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM && stmt\as != 0 && l2_quoted(stmt\as\atom) != 0
+        return: 0
     if: n > 0
         \next: l2_skip_span(field, n)
         if: l2_rw_expr(field, n, into, @ t) != 0

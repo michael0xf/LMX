@@ -1093,7 +1093,8 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bare_in_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 25;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_bare_literal_stmt.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a string or char literal'; Args = @('0');
+    # -196: a string literal alone at the root makes no step, as natively; the numeric ones are LIT steps.
+    [pscustomobject]@{ Name = 'unit_bare_literal_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bare_own_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 49;
         Absent = @(); Debt = @() },

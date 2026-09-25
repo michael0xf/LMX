@@ -89,3 +89,13 @@ ANSWER ab1ecbe: проверка `LMX_KIND_ARRAY` в `lmx_walk_array_from` не 
 ## REVIEW 738c37d 2026-09-25 12:17
 
 Охват: `08cb8c2`/`738c37d` — комментарий к проверке вида в `lmx_walk_array_from` (ANSWER ab1ecbe). **OK**, только комментарий, код не менялся. Открытых замечаний нет; -203 закрыт целиком. Дальше — `grok_next.md` §4: -201 CATCH, -200.
+
+## REVIEW 6bde045 2026-09-25 12:50
+
+Охват: `671a161`/`6bde045` — Grok -201, срез 1: слот `catch` в CALL `[call, code, data, rtype, catch, args…]` и PRIM `[prim, rec, catch, ops…]` (только раскладка; слот 0, посадка и PAD-арм — следующий срез); `LMX_WALK_OP_PAD` 28, `OP_COUNT` 29; поля `landing`/`payload` в `LmxWalkFrame`; шесть эмиттеров `l2_rw_*` и пины harness сдвинуты; селфтесты walker'а и граф `l3_mail_prim_selftest` — на новую ширину; twin синхронизирован. Машинный гейт 276/398/11, OK. В облаке: `check_docs` OK, `git diff --check` чисто, `build_l2src.py --only lmx_walk` — все walk-селфтесты зелёные (красны только `receive_*` через замыкание `<windows.h>`), l2trans собран из main, сгенерированный L1 несёт новые ширины (CALL 6U/8U, PRIM 4U/6U/8U).
+
+**OK** по коду: сдвиги полные и согласованные (ядро :870–:1060, эмиттеры, пины, L3), доктрине ничего не противоречит, порядок срезов соответствует плану к.2 §3 и REVIEW 29e6d74. Одно требование:
+
+1. **Записи среза в `steps/` нет** (`git diff --stat -- steps` пуст). По `grok_next.md` §3 п.2/п.5 у тикета должен быть файл: для -201 — либо раздел «Посадка Grok» в `steps/catch-role-201-k2.md`, либо свой `steps/catch-201.md` со STARTED (ветка@sha, база), перечнем срезов (1 раскладка ✓; 2 таблица сайта на месте + `f\landing`/`f\payload` + перенумерация `k_out` + payload из walked callee через `lmx_walk_activate`; 3 арм PAD + посадка в `lmx_walk_body`; 4 транслятор: таблицы сайтов, PAD-узлы, статическое разрешение «ближайший покрывающий pad», «свой обработчик исключён»; 5 строки: 8 + свидетели §7 плана + D-55) и RESULT каждого среза с мутантами (для среза 1 — `len < 5`/`len < 3` → INVALID, измерить). Сообщение коммита хорошее, но по протоколу оно не заменяет файл.
+
+Напоминание к срезу 2 из REVIEW 29e6d74: таблицу сайта сканировать на месте (без `LmxCatchRow`/alloc), payload walked callee — через `*out` `lmx_walk_activate` при THROWN, неявные броски — payload 0.

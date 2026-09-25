@@ -22,7 +22,13 @@
 
 ## Мутант
 
-Не вызывать `lmx_gc_drop_arrays_in_block` в `lmx_gc_sweep`. Пул остаётся в `arena\arrays` → селфтест RED. Откат → GREEN.
+`lmx_gc_drop_arrays_in_block` сразу возвращается (`1 = 1` в условии). Пул остаётся в `arena\arrays`. Селфтест останавливает раунды на первом таком ответе, чтобы следующий take не шёл по уже освобождённому блоку.
+
+Замер на машине: мутант только в копии стейджа, ядро в git не менялось. Условие `lmx_gc_drop_arrays_in_block` заменено на `if: 1 = 1` и сразу `return`. RED: строка `FAIL D-43 embedded pool left the arena`, `checks=9 failures=1 reused=0 post=216`, exit 1. Откат: `checks=25 failures=0 reused=4 post=216`, exit 0. `sizeof(LmxPost)` на этой машине (LLP64) — 216. Повтор адреса здесь есть (4 из 4 сравнений) и в отказ не входит. Полный прогон селфтеста — `build/l2src/20260925_150326`, та же строка `checks=25 failures=0`.
+
+## RESULT
+
+Ветка `grok/d78-post-sweep`, база main `1988903` (REVIEW 8cb73b0 OK, облако 232/233). Ядро не менялось. Свидетель — отсутствие `@ orphan\nodes` в `arena\arrays` после каждого collect и `post_init` OK. `checks=25` (было 21; снята одна проверка равенства адресов, добавлена одна на раунд). `reused=` только печать. Мутант RED exit 1, откат GREEN exit 0. Гейт: build 280/280 (`build/l2src/20260925_150326`), harness 400/400 (`build/l2_harness/20260925_150619`), L3 11/11, имена 69/128, check_docs OK. Класс 3 T4b — следующий код.
 
 ## Доктрина
 

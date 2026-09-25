@@ -16,9 +16,11 @@ predef: "l2src/lmx_graph_copy_owned.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
-# D-43: five Message mails on one arena. Sweep must drop embedded Post.nodes from
-# arena->arrays before freeing a recycled Post cell; else lmx_post_init fails.
-# Mutant: skip lmx_gc_drop_arrays_in_block -> POST_INVALID on reused address.
+# D-43 / D-78: five Message mails on one arena. Sweep must drop embedded Post.nodes
+# from arena->arrays before freeing the chunk. The witness is that absence, plus
+# post_init on every later cell. Address reuse is the host malloc (LLP64 vs LP64
+# size class) and is printed as reused=, not a failure.
+# Mutant: skip lmx_gc_drop_arrays_in_block -> the pool stays on arena->arrays.
 #
 # GC must not word-walk Post records (nodes.next is arena->arrays); abandoned
 # Posts stay unmarked while the live mail is marked via mark_value + mark_pool.
@@ -30,6 +32,21 @@ sub: ps_check (@: int counts; int: ok; const: @(char label))
         c.printf("FAIL %s\n", label)
     ---
 end: ps_check
+
+# 1 when `nodes` is still one of the arena's arrays. Pointer compare only:
+# a detached pool is not followed.
+fn: ps_pool_linked (@: LmxArena arena; @: LmxPool nodes) int
+    @: LmxPool pool
+    if: arena = 0 || nodes = 0
+        return: 1
+    pool: arena\arrays
+    while: pool != 0
+        if: pool = nodes
+            return: 1
+        ---
+        pool: pool\next
+    ---
+return: 0
 
 fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
@@ -43,8 +60,10 @@ fn: main () int
     @: LmxPost orphan 0
     @: void prev 0
     @: void now 0
+    @: LmxPool nodes_at 0
     int: round 0
-    int: recycled 0
+    int: reused 0
+    int: linked 0
     int: failures
     if: counts = 0
         return: 2
@@ -72,7 +91,7 @@ fn: main () int
     ps_check(counts, lmx_thread_init(@ arena, thread, graph, mail, slot) = c.LMX_THREAD_OK, "thread init")
 
     round: 0
-    recycled: 0
+    reused: 0
     prev: 0
     while: round < 5
         orphan: (cast: (@: LmxPost) lmx_arena_take(@ arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
@@ -82,15 +101,21 @@ fn: main () int
         else:
             now: (cast: (@: void) orphan)
             if: prev != 0 && now = prev
-                recycled: recycled + 1
+                reused: reused + 1
             ---
             ps_check(counts, lmx_post_init(@ arena, orphan) = c.LMX_POST_OK, "D-43 post_init on Message mail")
+            nodes_at: @ orphan\nodes
             prev: now
             ps_check(counts, lmx_gc_collect(@ arena, thread) = c.LMX_GC_OK, "collect after orphan")
-            round: round + 1
+            linked: ps_pool_linked(arena_at, nodes_at)
+            ps_check(counts, linked = 0, "D-43 embedded pool left the arena")
+            if: linked != 0
+                round: 5
+            else:
+                round: round + 1
+            ---
         ---
     ---
-    ps_check(counts, recycled >= 1, "D-43 freelist recycled a Post address at least once")
 
     failures: counts[1]
     if: lmx_post_close(@ arena, mail) != c.LMX_POST_OK
@@ -99,6 +124,6 @@ fn: main () int
     if: lmx_arena_release(@ arena) != 0
         failures: failures + 1
     ---
-    c.printf("lmx_post_sweep checks=%d failures=%d recycled=%d\n", counts[0], failures, recycled)
+    c.printf("lmx_post_sweep checks=%d failures=%d reused=%d post=%u\n", counts[0], failures, reused, (cast: (unsigned) c.sizeof(c.LmxPost)))
     free(counts)
 return: failures

@@ -108,9 +108,11 @@ def main():
     exe = output / (f'{stem}.exe' if os.name == 'nt' else stem)
     command = [args.cc, '-std=c99', '-Wall', '-Wextra', '-Wpedantic',
                '-Werror=incompatible-pointer-types', '-Werror=discarded-qualifiers',
-               '-Werror=implicit-function-declaration', '-Werror=implicit-int',
-               '-I', generated, '-I', unit_root, '-o', exe,
-               generated / f'{stem}.c', generated / 'l2_libc.c']
+               '-Werror=implicit-function-declaration', '-Werror=implicit-int']
+    if os.name != 'nt':
+        command += ['-pthread', '-D_POSIX_C_SOURCE=200809L']
+    command += ['-I', generated, '-I', unit_root, '-o', exe,
+                generated / f'{stem}.c', generated / 'l2_libc.c']
     run(command, 'gcc')
     manifest['compiler_command'] = [str(x) for x in command]
 

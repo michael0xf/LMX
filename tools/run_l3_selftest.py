@@ -114,9 +114,11 @@ def run_one(translator, l1src, cc, test, output):
     exe = output / (f'{stem}.exe' if os.name == 'nt' else stem)
     command = [cc, '-std=c11', '-Wall', '-Wextra', '-Wpedantic',
                '-Werror=incompatible-pointer-types', '-Werror=discarded-qualifiers',
-               '-Werror=implicit-function-declaration', '-Werror=implicit-int',
-               '-I', str(generated), '-I', str(unit_root), '-o', str(exe),
-               str(generated / f'{stem}.c'), str(generated / 'l2_libc.c')]
+               '-Werror=implicit-function-declaration', '-Werror=implicit-int']
+    if os.name != 'nt':
+        command += ['-pthread', '-D_POSIX_C_SOURCE=200809L']
+    command += ['-I', str(generated), '-I', str(unit_root), '-o', str(exe),
+                str(generated / f'{stem}.c'), str(generated / 'l2_libc.c')]
     result = run(command, 'gcc')
     if result.returncode:
         return result.returncode

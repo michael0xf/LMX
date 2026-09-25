@@ -7,17 +7,15 @@ selftests by symbol and run them -- on any host with gcc, nm and python (the clo
     python tools/build_l2src.py --translator P  # use an existing l1trans (no pin check here)
     python tools/build_l2src.py --only lmx_pool # only the selftests whose name contains the text
 
-It is a PORT of the .ps1 (same staging, same flags, same nm link resolver, same expected-fatal
+It is a PORT of the .ps1 (same staging, same nm link resolver, same expected-fatal
 contract for lmx_close_watchdog_running_selftest), not a replacement: the .ps1 with the pinned
 bin/l1trans.exe stays the gate on the author's machine.  Two differences, said out loud:
   * the translator is gcc of lm1/build/l1trans.lm1.c AS CHECKED OUT (the self-build seed, the same
     B0 tools/run_self_build.sh starts from) unless --translator names one; L1_PIN.txt is not
     consulted, since the pin is the hash of a Windows executable;
-  * on a POSIX host the units whose headers `include: "<windows.h>"` (lmx_clock,
-    lmx_process_deadline, lmx_manager_running) and everything that predefs them are RED
-    (measured 2026-09-25: 174 of 230 targets green).  Until those three have a POSIX twin
-    (steps/posix-gate-200.md), a green run here proves the rest and a red run must be read by
-    name: a FAIL outside that closure is a real failure.
+  * off Windows the three platform bodies are the POSIX twins, and those compiles add
+    `-pthread` and `-D_POSIX_C_SOURCE=200809L`. The .ps1 gate always stages the Win32
+    body and does not change its flags.
 Evidence goes under build/l2src_py/<stamp>/ (ignored by git).
 """
 import argparse
@@ -95,6 +93,8 @@ def main():
     dec = ROOT / 'third_party' / 'decNumber' / 'decNumber-icu-368'
     flags = FLAGS_BASE + ['-I', str(ROOT), '-I', str(ROOT / 'lm1' / 'build'), '-I', str(source_base),
                           '-I', str(headers), '-I', str(dec)]
+    if host == 'posix':
+        flags += ['-pthread', '-D_POSIX_C_SOURCE=200809L']
     print(f'build_l2src.py: sources STAGED from {flat} -> {staged} ({n} files, incl. kernel-side l1src); cwd = {source_base}')
 
     rows = []

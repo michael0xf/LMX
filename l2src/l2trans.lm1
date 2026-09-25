@@ -19484,7 +19484,7 @@ fn: l2_emit_send (int: k; int: proto; @: char prefix; @: int count_arr; @: int k
         return: (cast: (int) (c.fprintf(l2_out, "    fn: %s%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n", prefix, k) < 0))
     if: c.fprintf(l2_out, "fn: %s%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n", prefix, k) < 0
         return: 1
-    if: fputs("    @: LmxThread t lmx_thread_current()\n    @: LmxArena a (cast: (@: LmxArena) calloc(1U, c.sizeof(c.LmxArena)))\n    @: LmxMsg m 0\n    @: Lmx g 0\n    @: Lmx p 0\n    @: void cell 0\n    @: LmxArrayDesc text 0\n    if: t = 0 || a = 0 || lmx_arena_open(a) != 0\n        return: 1\n", l2_out) < 0
+    if: fputs("    @: LmxThread t lmx_thread_current()\n    @: LmxArena a (cast: (@: LmxArena) calloc(1U, c.sizeof(c.LmxArena)))\n    @: LmxMsg m 0\n    @: Lmx g 0\n    @: Lmx p 0\n    @: void cell 0\n    @: LmxArrayDesc text 0\n    if: t = 0 || a = 0 || lmx_arena_open(a) != 0\n        l2_send_fail()\n", l2_out) < 0
         return: 1
     j: 0
     while: j < nf
@@ -19493,18 +19493,18 @@ fn: l2_emit_send (int: k; int: proto; @: char prefix; @: int count_arr; @: int k
         ---
         j: j + 1
     ---
-    if: c.fprintf(l2_out, "    if: nargs != %dU || (nargs != 0U && refs = 0)\n        return: 1\n    m: (cast: (@: LmxMsg) lmx_arena_take(a, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))\n    g: lmx_node_new_owned(a)\n    p: lmx_node_new_owned(a)\n    if: m = 0 || g = 0 || p = 0 || lmx_arena_refs_open_owned(a, g, 2U) != 0 || lmx_arena_refs_open_owned(a, p, %dU) != 0\n        return: 1\n", (ni + has_ref), nf) < 0
+    if: c.fprintf(l2_out, "    if: nargs != %dU || (nargs != 0U && refs = 0)\n        l2_send_fail()\n    m: (cast: (@: LmxMsg) lmx_arena_take(a, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))\n    g: lmx_node_new_owned(a)\n    p: lmx_node_new_owned(a)\n    if: m = 0 || g = 0 || p = 0 || lmx_arena_refs_open_owned(a, g, 2U) != 0 || lmx_arena_refs_open_owned(a, p, %dU) != 0\n        l2_send_fail()\n", (ni + has_ref), nf) < 0
         return: 1
     ni: 0
     j: 0
     while: j < nf
         t: text_arr[k * 16 + j]
-        if: kind_arr[k * 16 + j] = 1 && c.fprintf(l2_out, "    cell: lmx_int_new_owned(a)\n    if: cell = 0 || refs[%d] = 0 || lmx_int_store_known(cell, lmx_int_value_known(refs[%d])) != 0 || lmx_arena_ref_store(p, %dU, cell) != 0\n        return: 1\n", ni, ni, j) < 0
+        if: kind_arr[k * 16 + j] = 1 && c.fprintf(l2_out, "    cell: lmx_int_new_owned(a)\n    if: cell = 0 || refs[%d] = 0 || lmx_int_store_known(cell, lmx_int_value_known(refs[%d])) != 0 || lmx_arena_ref_store(p, %dU, cell) != 0\n        l2_send_fail()\n", ni, ni, j) < 0
             return: 1
         if: kind_arr[k * 16 + j] = 1
             ni: ni + 1
         ---
-        if: kind_arr[k * 16 + j] = 2 && c.fprintf(l2_out, "    text: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, %uU, a)\n    if: text = 0 || lmx_arena_ref_store(p, %dU, (cast: (@: void) text)) != 0\n        return: 1\n", (cast: (unsigned) (t\length - 2U)), j) < 0
+        if: kind_arr[k * 16 + j] = 2 && c.fprintf(l2_out, "    text: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, %uU, a)\n    if: text = 0 || lmx_arena_ref_store(p, %dU, (cast: (@: void) text)) != 0\n        l2_send_fail()\n", (cast: (unsigned) (t\length - 2U)), j) < 0
             return: 1
         if: kind_arr[k * 16 + j] = 2 && t\length > 2U && c.fprintf(l2_out, "    memcpy(text\\data, (cast: (@: void) %.*s), %uU)\n", (cast: (int) t\length), t\data, (cast: (unsigned) (t\length - 2U))) < 0
             return: 1
@@ -19516,14 +19516,14 @@ fn: l2_emit_send (int: k; int: proto; @: char prefix; @: int count_arr; @: int k
     # the letter, and its domain would then disagree with a receiving field's own prototype cell at
     # admission, D-56's real cause). Same shape D-52's kind-10/11 cells use: LMX_TYPE_POINTER_BASE +
     # 29 (LmxMsg, l2_kernel_ptr_word's own code) so a receiver's `m\sender` field agrees.
-    if: fputs("    cell: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + 29, a)\n    if: cell = 0 || lmx_pointer_store_known(cell, (cast: (@: void) lmx_thread_message(t))) != 0 || lmx_arena_ref_store(g, 0U, cell) != 0 || lmx_arena_ref_store(g, 1U, (cast: (@: void) p)) != 0\n        return: 1\n    m\\running: 1\n    m\\success: 0\n    m\\handoff_ready: 0\n    m\\graph: g\n", l2_out) < 0
+    if: fputs("    cell: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + 29, a)\n    if: cell = 0 || lmx_pointer_store_known(cell, (cast: (@: void) lmx_thread_message(t))) != 0 || lmx_arena_ref_store(g, 0U, cell) != 0 || lmx_arena_ref_store(g, 1U, (cast: (@: void) p)) != 0\n        l2_send_fail()\n    m\\running: 1\n    m\\success: 0\n    m\\handoff_ready: 0\n    m\\graph: g\n", l2_out) < 0
         return: 1
     if: has_ref != 0
-        if: c.fprintf(l2_out, "    if: lmx_service_post(lmx_child_service(t), refs[%d], m, a) != c.LMX_SERVICE_OK\n        return: 1\n    return: 0\n", ni) < 0
+        if: c.fprintf(l2_out, "    if: lmx_service_post(lmx_child_service(t), refs[%d], m, a) != c.LMX_SERVICE_OK\n        l2_send_fail()\n    return: 0\n", ni) < 0
             return: 1
         ---
     else:
-        if: fputs("    if: lmx_service_post(lmx_child_service(t), (cast: (@: void) lmx_thread_parent(t)), m, a) != c.LMX_SERVICE_OK\n        return: 1\n    return: 0\n", l2_out) < 0
+        if: fputs("    if: lmx_service_post(lmx_child_service(t), (cast: (@: void) lmx_thread_parent(t)), m, a) != c.LMX_SERVICE_OK\n        l2_send_fail()\n    return: 0\n", l2_out) < 0
             return: 1
         ---
     ---
@@ -23076,6 +23076,9 @@ fn: l2_emit_unit (const: @(char out_path)) int
             fclose(l2_out)
             return: 1
         i: i + 1
+    if: (l2_rw_send_n > 0 || l2_msend_n > 0) && fputs("sub: l2_send_fail ()\n    c.fprintf(c.stderr, \"lmx: invariant: sendMessage failed\\n\")\n    c.abort()\nend: l2_send_fail\n\n", l2_out) < 0
+        fclose(l2_out)
+        return: 1
     i: 0
     while: i < l2_rw_send_n
         if: l2_emit_send(i, 0, "l2_send", l2_rw_send_count, l2_rw_sf_kind, l2_rw_sf_text, l2_rw_send_has_ref) != 0

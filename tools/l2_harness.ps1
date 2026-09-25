@@ -797,7 +797,7 @@ $fixtures = @(
                  'l2_entry_unit: graph') },
     # A nested member, a reference to the branch itself, a reference to the OTHER branch, and a
     # mutable Holder beside them: two roots are retained, the nested member and Holder are not.
-    [pscustomobject]@{ Name = 'unit_eternal_shape.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a merge of a qualified branch';
+    [pscustomobject]@{ Name = 'unit_eternal_shape.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('2', 'size', '0', '0', '7', 'size', '0', '4', '13', 'same', '0', '3', '0', 'same', '1', '0', '0', 'size', '1', '1', '17');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
         Debt = @('c.array: [2]: @: Lmx l2_program_qualified_roots',
@@ -813,26 +813,26 @@ $fixtures = @(
                  'l2_program_qualified_roots[1U]: l2_nsp[2]',
                  'l2_entry_unit: graph') },
     # Array records/backing and merge sites use the same exact profiled owner ranges.
-    [pscustomobject]@{ Name = 'unit_array_empty.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a merge of a qualified branch';
+    [pscustomobject]@{ Name = 'unit_array_empty.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('1');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
         Debt = @('c.array: [1]: @: Lmx l2_program_qualified_roots',
                  'l2_profile_array: (cast: (@: LmxArrayDesc) lmx_arena_take_profiled',
                  'l2_program_qualified_roots[0U]: l2_nsp[0]',
                  'l2_entry_unit: graph') },
-    [pscustomobject]@{ Name = 'unit_array_field.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a merge of a qualified branch';
+    [pscustomobject]@{ Name = 'unit_array_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('1');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
         Debt = @('c.array: [1]: @: Lmx l2_program_qualified_roots',
                  'l2_profile_array: (cast: (@: LmxArrayDesc) lmx_arena_take_profiled',
                  'l2_program_qualified_roots[0U]: l2_nsp[0]',
                  'l2_entry_unit: graph') },
-    [pscustomobject]@{ Name = 'unit_merge_site.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a merge of a qualified branch';
+    [pscustomobject]@{ Name = 'unit_merge_site.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('3');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
         Debt = @('c.array: [3]: @: Lmx l2_program_qualified_roots',
                  'l2_program_qualified_roots[2U]: l2_nsp[2]',
-                 'lmx_merge_profiles_owned',
+                 '\fn: lmx_walk_merge_map',
                  'l2_entry_unit: graph') },
     # FABLE-OPUS-MERGE-PARTS-20260926-193 T1 (the author's merge rule, plan §4): a later operand's
     # field of a model name is written INTO the model's slot -- one LmxMergePair (model slot, operand,
@@ -2085,13 +2085,16 @@ $fixtures = @(
     # Filename says refused: the merge result is an ordinary Structure (not a third
     # qualified root). The translator emits merge_profiles_owned and both operands
     # remain exported roots. This is not an l2trans refusal.
-    [pscustomobject]@{ Name = 'unit_eternal_multi_profile_merge_refused.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a merge of a qualified branch';
+    # -199 + -202 (K2b): the root's merge of qualified branches is the walker's primitive, which
+    # retains each branch by its own profile (Sonnet's selftest tells retention from copy); the
+    # native merge_profiles call is gone from the root.  Success 7 (it was 0).
+    [pscustomobject]@{ Name = 'unit_eternal_multi_profile_merge_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('2', 'size', '0', '0', '1', 'size', '1', '0', '1');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
         Debt = @('c.array: [2]: @: Lmx l2_program_qualified_roots',
                  'l2_program_qualified_roots[0U]: l2_nsp[0]',
                  'l2_program_qualified_roots[1U]: l2_nsp[1]',
-                 'lmx_merge_profiles_owned(l2_mops, 2U, l2_mbody, self, 0, l2_program_arena, l2_program_arena, l2_mprofiles, 2U, l2_mpp, 1U, @ l2_mresult)',
+                 '\fn: lmx_walk_merge_map',
                  'l2_entry_unit: graph') },
     [pscustomobject]@{ Name = 'unit_eternal_profile_partial_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'independent branch requires const'; Absent = @(); Debt = @() },

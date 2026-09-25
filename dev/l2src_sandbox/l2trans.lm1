@@ -6191,8 +6191,12 @@ fn: l2_own_addr (int: k; @: char dest) int
         return: (cast: (int) (c.sprintf(dest, "(cast: (@: unsigned) l2_q%d_from[0])", k) < 0))
     if: ty = 36
         return: (cast: (int) (c.sprintf(dest, "(cast: (@: ulong) l2_q%d_from[0])", k) < 0))
-    # A pointer field's cell is the address of its pointer; a slot has no cell to address.
+    # A pointer field's cell is the address of its pointer.
     if: l2_own_is_pointer(ty) != 0 && l2_own_is_slot(k) = 0 && l2_pointer_decl_text(ty - 1000, 1, 0, txt) = 0
+        return: (cast: (int) (c.sprintf(dest, "(cast: (%s) l2_q%d_from[0])", txt, k) < 0))
+    # An own Structure field is a slot that holds the Structure itself (-189 c3b-3): `@mo` is that
+    # reference, the slot's value -- what l2_own_load gives the slot (D-53).
+    if: l2_own_is_pointer(ty) != 0 && l2_own_is_slot(k) != 0 && l2_pointer_decl_text(ty - 1000, 0, 0, txt) = 0
         return: (cast: (int) (c.sprintf(dest, "(cast: (%s) l2_q%d_from[0])", txt, k) < 0))
 return: 1
 
@@ -15865,7 +15869,9 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
                 po: l2_name_cell(mi, aidx_f\value\as\atom)
                 p2: l2_next_active(aidx_f\next)
                 if: po >= 0 && (p2 = 0 || p2\value = 0 || p2\value\kind != c.LM_P0_NODE_ATOM || l2_is_slash(p2\value\as\atom) = 0)
-                    if: l2_own_addr(po, piece) != 0 || l2_cat(buf, piece) != 0
+                    if: l2_own_addr(po, piece) != 0
+                        return: l2_error(l2_src, aidx_f\value, "this field has no address to take")
+                    if: l2_cat(buf, piece) != 0
                         return: l2_error(l2_src, at, "expression too long")
                     ao: 0
                     after: 0
@@ -19482,7 +19488,7 @@ fn: l2_emit_ccall (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
             if: p1\value != 0 && p1\value\kind = c.LM_P0_NODE_ATOM
                 po: l2_name_cell(mi, p1\value\as\atom)
             if: po >= 0 && l2_own_addr(po, piece) != 0
-                return: 1
+                return: l2_error(l2_src, p1\value, "this field has no address to take")
             if: po < 0 && l2_cat(buf, "@ ") != 0
                 return: 1
             if: po < 0 && l2_prep(p1\value, mi, ind, piece) != 0

@@ -1935,7 +1935,9 @@ $fixtures = @(
         Args = @('0');
         Absent = @();
         Debt = @() },
-    [pscustomobject]@{ Name = 'unit_ns_ref_field_general.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+    # D-53: `h\q: @mo` -- `@` of an own Structure field is the reference its slot holds, as its load
+    # is; h\q is non-null, `@mo` and `mo` itself.  Success is 7 (it was 0, an empty witness).
+    [pscustomobject]@{ Name = 'unit_ns_ref_field_general.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0');
         Absent = @();
         Debt = @() },

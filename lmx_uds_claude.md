@@ -45,7 +45,10 @@ cd C:\Nyasha_Planet\LMX
 python claude_chat/uds.py --name lmx_uds status
 C:\claude\claude.bat        # обычный запуск: uds.py serve в этом же окне
 python claude_chat/uds.py --name lmx_uds start     # старый фоновый режим
+python claude_chat/uds.py --name lmx_uds --remote-control serve   # + Remote Control (2026-09-25)
 ```
+
+**Remote Control (с 2026-09-25):** флаг `--remote-control` (`--rc`, или `LMX_UDS_REMOTE_CONTROL=1` в окружении, тогда `claude.bat` без правок) добавляет к прежней командной строке `--remote-control lmx_uds`: сессия сохраняет именованный пайп (Codex и Grok CLI шлют через `uds.py send`, как раньше) и дополнительно регистрируется в claude.ai — облачные сессии `fable`, `opus`, `sonnet` видят её в списке и шлют ей SendMessage по имени `lmx_uds`. Так замыкается цепочка облако → машина: fable шлёт строку в `lmx_uds`, тот передаёт её Grok CLI. Требования (code.claude.com/docs/en/remote-control): вход через `/login` в claude.ai (не API-ключ), переменные `DISABLE_TELEMETRY`, `DO_NOT_TRACK`, `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`, `DISABLE_GROWTHBOOK` не заданы (uds.py отказывает, если заданы), нет `ANTHROPIC_BASE_URL`, один раз подтвердить «Enable Remote Control? (y/n)» в окне сессии. Серверный режим `claude remote-control` не используется: он не принимает `--messaging-socket-path`; только `serve`, не `start` (фоновой сессии негде ответить на подтверждение). Внутри уже идущей сессии то же включается командой `/remote-control lmx_uds`.
 
 Основной способ — **serve**, а не `--bg` + `attach`: фоновая сессия включает
 полноэкранный рендерер ДО проверки `CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN`

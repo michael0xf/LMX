@@ -15,7 +15,7 @@ This directory contains instructions, not filesystem mailboxes. Read this guide 
 
 | Name | Launcher | Model and provider | Working directory |
 | --- | --- | --- | --- |
-| `lmx_uds` | `python claude_chat/uds.py --name lmx_uds start`; attach a terminal with `C:\claude\claude.bat` | Anthropic, background relay session | `C:\Nyasha_Planet\LMX\claude_chat` |
+| `lmx_uds` | `python claude_chat/uds.py --name lmx_uds --remote-control serve` (Remote Control: reachable from the cloud sessions by name; see `lmx_uds_claude.md`), or `start` + `C:\claude\claude.bat` (local only) | Anthropic, background relay session | `C:\Nyasha_Planet\LMX\claude_chat` |
 | `fable` | `C:\claude\fable.bat` | Anthropic Fable, effort xhigh | the directory it is started from |
 | `deepseek` | `C:\deepseek\deepseek.bat` | deepseek-flash through the DeepSeek Anthropic endpoint | `C:\Nyasha_Planet\L1` |
 | `openrouter` | `C:\openrouter\openrouter.bat` | poolside/laguna-s-2.1 through OpenRouter | `C:\Nyasha_Planet\L1` |

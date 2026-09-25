@@ -1633,6 +1633,10 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
         if: code\len > 3
             return: lmx_walk_body(f, lmx_arena_ref_struct(code, 3U), 0U)
         return: c.LMX_WALK_OK
+    if: op = c.LMX_WALK_OP_BREAK
+        return: c.LMX_WALK_BREAK
+    if: op = c.LMX_WALK_OP_CONTINUE
+        return: c.LMX_WALK_CONTINUE
     if: op = c.LMX_WALK_OP_WHILE
         while: going != 0
             wv: 0U
@@ -1648,6 +1652,13 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
                 going: 0
             if: going != 0
                 status: lmx_walk_body(f, lmx_arena_ref_struct(code, 2U), 0U)
+                if: status = c.LMX_WALK_CONTINUE
+                    status: c.LMX_WALK_OK
+                ---
+                if: status = c.LMX_WALK_BREAK
+                    status: c.LMX_WALK_OK
+                    going: 0
+                ---
                 if: status != c.LMX_WALK_OK || f\returned != 0
                     going: 0
                 ---

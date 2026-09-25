@@ -15,6 +15,7 @@ prototype:
     fn: lmx_walk_arg_arity_node (@: LmxWalkFrame f; @: void node; @: size_t need) int
     fn: lmx_walk_arg_arity (@: LmxWalkFrame f; @: Lmx node) size_t
     fn: lmx_walk_call0_dispatch (@: LmxArena arena; @: Lmx callable) int
+    fn: lmx_walk_call_prim_dispatch (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
     fn: lmx_walk_callable_addr (@: LmxArena arena; @: Lmx node) LmxEntry
     fn: lmx_walk_fresh (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) int
     fn: lmx_walk_data_holder (@: LmxWalkFrame f; @: void holder) @: void
@@ -62,6 +63,7 @@ fn: lmx_walk_roles_open (@: LmxArena arena) @: Lmx
         k: k + 1
     ---
     lmx_call_install_walk((cast: (LmxCallWalkFn) lmx_walk_call0_dispatch))
+    lmx_call_install_prim_walk((cast: (LmxCallPrimWalkFn) lmx_walk_call_prim_dispatch))
 return: roles
 
 # Program-stable roles for op dispatch (call0 / thread): address identity of role records
@@ -72,6 +74,7 @@ return: roles
 fn: lmx_walk_program_bind (@: Lmx roles) void
     lmx_walk_program_roles_g: roles
     lmx_call_install_walk((cast: (LmxCallWalkFn) lmx_walk_call0_dispatch))
+    lmx_call_install_prim_walk((cast: (LmxCallPrimWalkFn) lmx_walk_call_prim_dispatch))
 
 fn: lmx_walk_program_roles () @: Lmx
 return: lmx_walk_program_roles_g
@@ -586,6 +589,119 @@ fn: lmx_walk_arg_arity (@: LmxWalkFrame f; @: Lmx node) size_t
         i: i + 1U
     ---
 return: need
+
+# G-call (-194 к.4): the prim-walk hook for lmx_call_prim's own addr=0 branch -- the same
+# ephemeral-scratch, program-bound-roles shape as lmx_walk_call0_dispatch above, but
+# calling lmx_walk_activate directly with data/args/dest carried through, instead of
+# lmx_walk_run's narrower (callable, 0, 0U) shape. dest may be 0 (a discarded/void
+# dynamic call): lmx_walk_activate itself always needs a non-null one to publish steps
+# into as it walks (the same reason lmx_walk_run falls back to a local spare int when its
+# own caller has none), so a local spare stands in and \out stays 0 -- the caller asked
+# for nothing back.
+#
+# What lmx_walk_activate's own `result` gives back is not always dest's own address: a
+# LIT step (and several others) hand back a REFERENCE to an already-existing cell
+# (`\out: value` at the literal's own site) without ever writing into dest at all --
+# lmx_walk_call0_dispatch's own narrower int-only form already has to tell these two
+# shapes apart (its own `value = &wv.number` check). Generalized here: when `result`
+# IS dest, the value already landed there (an arithmetic result, say) and nothing more
+# is needed; otherwise, if it is some other numeric cell, its VALUE is copied into dest
+# (matching the native path's own "the value through dest" contract, not the reference);
+# anything else (a Structure) is handed back as itself, the same as any other op's \out.
+fn: lmx_walk_call_prim_dispatch (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    LmxArena: sa
+    LmxPool: cells
+    LmxScratch: scratch
+    LmxWalkContext: ctx
+    @: Lmx roles 0
+    @: void real_dest 0
+    @: void result 0
+    int: spare 0
+    int: present 0
+    int: st
+    int: rty 0
+    size_t: wv 0U
+    if: out = 0
+        return: c.LMX_CALL_NOT_CALLABLE
+    \out: 0
+    if: arena = 0 || code = 0 || data = 0
+        return: c.LMX_CALL_NOT_CALLABLE
+    lmx_call_clear_walk_fail()
+    roles: lmx_walk_program_roles()
+    if: roles = 0
+        roles: lmx_walk_roles_open(arena)
+    ---
+    if: roles = 0
+        return: c.LMX_CALL_NOT_CALLABLE
+    memset((cast: (@: void) (@ sa)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ cells)), 0, c.sizeof(c.LmxPool))
+    memset((cast: (@: void) (@ scratch)), 0, c.sizeof(c.LmxScratch))
+    memset((cast: (@: void) (@ ctx)), 0, c.sizeof(c.LmxWalkContext))
+    if: lmx_arena_open(@ sa) != 0
+        return: c.LMX_CALL_NOT_CALLABLE
+    if: lmx_scratch_open(@ scratch, @ sa, @ cells, 64U) != c.LMX_SCRATCH_OK
+        lmx_arena_release(@ sa)
+        return: c.LMX_CALL_NOT_CALLABLE
+    ---
+    ctx.arena: arena
+    ctx.scratch: @ scratch
+    ctx.roles: roles
+    real_dest: dest
+    if: real_dest = 0
+        real_dest: (cast: (@: void) (@ spare))
+    ---
+    st: lmx_walk_activate(@ ctx, code, data, refs, nargs, real_dest, @ result, @ present)
+    lmx_scratch_close(@ scratch)
+    lmx_arena_release(@ sa)
+    if: st != c.LMX_WALK_OK
+        # G2/D-37: note_walk_fail X1s walker errors; throws decode to k on the turn channel.
+        lmx_call_note_walk_fail(st)
+        return: lmx_call_walk_fail_status()
+    ---
+    if: present = 0 || dest = 0
+        return: 0
+    ---
+    if: result = dest
+        \out: dest
+        return: 0
+    ---
+    # `dest` here is the CALLER's own destination -- generated code's own local, not
+    # necessarily an arena-classified cell (lmx_walk_store_numeric_into's own dest-type
+    # gate would refuse it) -- so the raw, unclassified store the native path already
+    # uses (lmx_int_store_known and its siblings) is the right door, keyed by RESULT's
+    # own type, not dest's. CHAR is excluded (its cells are interned/shared; a mutating
+    # store into dest would not mean what it means for the other numerics) -- handed
+    # back as a reference instead, same as any non-numeric value.
+    rty: 0
+    if: result != 0
+        rty: lmx_walk_numeric_type(arena, result)
+    ---
+    if: rty != 0 && rty != c.LMX_TYPE_CHAR && lmx_walk_load_numeric(arena, result, @ wv) = c.LMX_WALK_OK
+        if: rty = c.LMX_TYPE_INT
+            if: lmx_int_store_known(dest, (cast: (int) wv)) != 0
+                return: c.LMX_CALL_NOT_CALLABLE
+        ---
+        if: rty = c.LMX_TYPE_SIZE_T
+            if: lmx_size_store_known(dest, wv) != 0
+                return: c.LMX_CALL_NOT_CALLABLE
+        ---
+        if: rty = c.LMX_TYPE_UNSIGNED
+            if: lmx_unsigned_store_known(dest, (cast: (unsigned) wv)) != 0
+                return: c.LMX_CALL_NOT_CALLABLE
+        ---
+        if: rty = c.LMX_TYPE_ULONG
+            if: lmx_ulong_store_known(dest, (cast: (ulong) wv)) != 0
+                return: c.LMX_CALL_NOT_CALLABLE
+        ---
+        if: rty = c.LMX_TYPE_UNSIGNED_CHAR
+            if: lmx_uchar_store_known(dest, (cast: (unsigned) wv)) != 0
+                return: c.LMX_CALL_NOT_CALLABLE
+        ---
+        \out: dest
+        return: 0
+    ---
+    \out: result
+return: 0
 
 # Fresh typed cell for a CALL trampoline dest, or the consumer's dest when it already matches.
 fn: lmx_walk_call_dest (@: LmxWalkFrame f; @: void dest; int: ty; @@: void call_dest) int

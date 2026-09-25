@@ -57,12 +57,16 @@ MAX_NAME = 64          # l1_hdr_type_add's buffer: one more maximal name must st
 # LmxWalkFrame lost its owns/nowns fields, no cached activation plan any more).  This is the
 # first count taken against that baseline: dev/l3_interp did not translate at all between c.2
 # landing and c.3 fixing these four suites' own LmxCallable/LmxMethod/lmx_plan uses, so the
-# budget script could not run and catch the shift until now.
+# budget script could not run and catch the shift until now.  EXPECT=69 after
+# FABLE-SONNET-MERGE-KERNEL-20260926-194 к.4 (G-call): fnptr LmxCallPrimWalkFn added to
+# lmx_call.h.lm1 -- the dynamic-call counterpart of LmxCallWalkFn, for lmx_call_prim's own
+# addr=0 branch (which now carries data/args/a typed dest to a walked callee, instead of
+# lmx_call0's narrower nullary-int hook).
 EXPECT = {
-    'tests/l3_thread_bind_selftest.lm1': 68,
-    'tests/l3_n9_walk_selftest.lm1': 68,
-    'tests/l3_n10_walk_selftest.lm1': 68,
-    'tests/l3_mail_prim_selftest.lm1': 68,
+    'tests/l3_thread_bind_selftest.lm1': 69,
+    'tests/l3_n9_walk_selftest.lm1': 69,
+    'tests/l3_n10_walk_selftest.lm1': 69,
+    'tests/l3_mail_prim_selftest.lm1': 69,
 }
 
 PREDEF = re.compile(r'^predef:\s*(.*)$')

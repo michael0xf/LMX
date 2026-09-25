@@ -552,7 +552,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_root_take_empty.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 1;
         Absent = @(); Debt = @('\fn: lmx_walk_mail_take') },
     # -179: the take and the null test are built; pending on `while:` at the root, then `&&` (-170).
-    [pscustomobject]@{ Name = 'unit_next_message_loop.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a loop'; Args = @('0');
+    [pscustomobject]@{ Name = 'unit_next_message_loop.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
         Absent = @(); Debt = @() },
     # -179: the take and the null test run.
     [pscustomobject]@{ Name = 'unit_next_message_in_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
@@ -796,7 +796,7 @@ $fixtures = @(
                  'l2_program_qualified_roots[1U]: l2_nsp[2]',
                  'l2_entry_unit: graph') },
     # A cross-reference INTO another branch: F\into is E's member `deep`, not a copy of it.
-    [pscustomobject]@{ Name = 'unit_eternal_xref.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a field path';
+    [pscustomobject]@{ Name = 'unit_eternal_xref.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 0;
         Args = @('2', 'slot', '1', '0', '0', '0', 'size', '0', '1', '7', 'size', '1', '1', '23');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
         Debt = @('c.array: [2]: @: Lmx l2_program_qualified_roots',
@@ -947,12 +947,11 @@ $fixtures = @(
                  'l2_m0(l2_c0\parent, l2_c0, l2_msg, @ l2_t1, @ l2_te1)',
                  'l2_out_throw[0]: 0',
                  'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ') },
-    [pscustomobject]@{ Name = 'unit_recursion.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a field path';
+    [pscustomobject]@{ Name = 'unit_recursion.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 0;
         Args = @('0');
         Absent = @('Lmx node; @: Lmx node', 'l2_p2_0; @: Lmx node', 'l2_out_throw[0]: node', 'return: 71');
         Debt = @('fn: l2_m2 (@: Lmx node; @: Lmx self; size_t: l2_p2_0; @: Lmx l2_msg; @: size_t l2_out_result; @@: Lmx l2_out_throw) int',
-                 'l2_m2(l2_c0\parent, l2_c0, l2_q7, l2_msg, @ l2_t1, @ l2_te1)',
-                 'l2_m2(l2_c4\parent, l2_c4, 2U, l2_msg, @ l2_t5, @ l2_te5)',
+                 'l2_ts1: l2_m2(l2_c0\parent, l2_c0, lmx_size_value_known(l2_q7_from[0]), l2_msg, @ l2_t1, @ l2_te1)',
                  'l2_out_throw[0]: 0',
                  'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ') },
     # S1.1, THE STATUS DISCIPLINE OF THE IMPLICIT CHANNEL (FABLE-OPUS-S1-STATUS-20260923-133).  One
@@ -1060,13 +1059,13 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s1_catch_rethrow.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: throw and catch'; Args = @('0'); Entry = 1011;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s1_catch_nested_while.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a loop'; Args = @('0'); Entry = 122;
+    [pscustomobject]@{ Name = 'unit_s1_catch_nested_while.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: throw and catch'; Args = @('0'); Entry = 122;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s1_catch_merge_local.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 50; MergeFail = 1;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s1_catch_publish.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: throw and catch'; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s1_catch_user_break.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a loop'; Args = @('0'); Entry = 105;
+    [pscustomobject]@{ Name = 'unit_s1_catch_user_break.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: break and continue'; Args = @('0'); Entry = 105;
         Absent = @(); Debt = @() },
     # -178 commit 3: the letter's admission to get's Model formal is built (it throws implements); pending on
     # the catch role (-171).
@@ -1093,7 +1092,8 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bare_in_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 25;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_bare_literal_stmt.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a string or char literal'; Args = @('0');
+    # -196: a string literal alone at the root makes no step, as natively; the numeric ones are LIT steps.
+    [pscustomobject]@{ Name = 'unit_bare_literal_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bare_own_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 49;
         Absent = @(); Debt = @() },
@@ -1110,7 +1110,7 @@ $fixtures = @(
     # callable without a result has no value and is refused.  A callable formal of the callee takes
     # the occurrence itself.  `f()` on an existing ordinary Structure assigns the empty Structure,
     # with admission to its declared type (the book §12; refused admission is implements).
-    [pscustomobject]@{ Name = 'unit_value_call_result.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: && and || (a short-circuit the walker has no role for)'; Args = @('0'); Entry = 7811;
+    [pscustomobject]@{ Name = 'unit_value_call_result.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7811;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_value_call_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 2;
         Absent = @(); Debt = @() },
@@ -1363,7 +1363,7 @@ $fixtures = @(
     # pending body=0. Source-line heuristics are not used: l2_fn_defined reads the translator
     # Structure (trailer or body field). The forward is skipped, so one_line is l2_m0; Debt is its
     # trailer return. A pending empty body would lack that return and fail one_line(40)!=41.
-    [pscustomobject]@{ Name = 'unit_forward_oneline.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: && and || (a short-circuit the walker has no role for)';
+    [pscustomobject]@{ Name = 'unit_forward_oneline.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 0;
         Args = @('0');
         Absent = @();
         Debt = @('return: l2_p0_0 + 1') },
@@ -1477,7 +1477,7 @@ $fixtures = @(
         Says = @('9', '42 42');
         Absent = @();
         Debt = @() },
-    [pscustomobject]@{ Name = 'unit_occ_root_field.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a field path';
+    [pscustomobject]@{ Name = 'unit_occ_root_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 0;
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_entry_unit: graph') },
@@ -1674,7 +1674,7 @@ $fixtures = @(
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'c.LMX_WALK_OP_DEREF');
         Debt = @('c.LMX_WALK_OP_PUT_OF, 4U)', 'c.LMX_WALK_OP_PUT_REF, 4U)', 'l2_entry_unit: graph') },
-    [pscustomobject]@{ Name = 'unit_field_path_unit_qualified.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a field path';
+    [pscustomobject]@{ Name = 'unit_field_path_unit_qualified.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 0;
         Args = @('1');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_entry_unit: graph') },
@@ -2041,7 +2041,7 @@ $fixtures = @(
     # occurrence index, test\[N]arg, resolved through l2_own_find_occ --
     # the same lookup the rootless \[N]arg form already uses, no second
     # scanner.
-    [pscustomobject]@{ Name = 'unit_occ_root_named.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: this expression';
+    [pscustomobject]@{ Name = 'unit_occ_root_named.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 0;
         Args = @('0');
         Absent = @();
         Debt = @() },

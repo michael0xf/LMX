@@ -1,6 +1,11 @@
+include: "<windows.h>"
 predef: "l2src/lmx_process_deadline.h.lm1"
 predef: "l2src/lmx_clock.lm1"
 predef: "l1src/libc_abi.lm1"
+
+prototype:
+    fn: lmx_process_deadline_body (@: void arg) DWORD
+end: prototype
 
 # The body of lmx_process_deadline.h.lm1's contract: the watchdog's algorithm, and the only place in
 # the kernel that owns an OS wait of its own.  Every handle it creates is closed on both paths --

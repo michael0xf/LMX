@@ -64,8 +64,15 @@ def run_one(translator, l1src, cc, test, output):
         shutil.copyfile(source, target)
         manifest['sources'][str(target.relative_to(unit_root)).replace(os.sep, '/')] = sha256(source)
 
+    host = 'win32' if os.name == 'nt' else 'posix'
+    twins = {'lmx_clock.lm1', 'lmx_process_deadline.lm1', 'lmx_manager_running.lm1'}
     for source in sorted(SANDBOX.glob('lmx*.lm1')):
+        if source.name.endswith('_win32.lm1') or source.name.endswith('_posix.lm1'):
+            continue
         take(source, unit_root / 'l2src' / source.name)
+    for logical in sorted(twins):
+        physical = logical.replace('.lm1', '_' + host + '.lm1')
+        take(SANDBOX / physical, unit_root / 'l2src' / logical)
     take(SANDBOX / 'l2_libc.lm1', unit_root / 'l2src' / 'l2_libc.lm1')
     for source in sorted(L3.glob('l3*.lm1')):
         take(source, unit_root / 'l3_interp' / source.name)

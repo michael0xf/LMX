@@ -66,8 +66,15 @@ def main():
         shutil.copyfile(source, target)
         manifest['sources'][str(target.relative_to(unit_root)).replace(os.sep, '/')] = sha256(source)
 
+    host = 'win32' if os.name == 'nt' else 'posix'
+    twins = {'lmx_clock.lm1', 'lmx_process_deadline.lm1', 'lmx_manager_running.lm1'}
     for source in sorted(SANDBOX.glob('lmx*.lm1')):
+        if source.name.endswith('_win32.lm1') or source.name.endswith('_posix.lm1'):
+            continue
         take(source, unit_root / 'l2src' / source.name)
+    for logical in sorted(twins):
+        physical = logical.replace('.lm1', '_' + host + '.lm1')
+        take(SANDBOX / physical, unit_root / 'l2src' / logical)
     take(SANDBOX / 'l2_libc.lm1', unit_root / 'l2src' / 'l2_libc.lm1')
     take(SANDBOX / test, unit_root / 'l2src' / test)
     for source in sorted(l1src.glob('*.lm1')):

@@ -21,6 +21,7 @@ bin/l1trans.exe stays the gate on the author's machine.  Two differences, said o
 Evidence goes under build/l2src_py/<stamp>/ (ignored by git).
 """
 import argparse
+import os
 import re
 import shutil
 import subprocess
@@ -73,8 +74,15 @@ def main():
     flat = ROOT / 'dev' / 'l2src_sandbox'
     staged = out / 'src' / 'l2src'
     n = 0
+    host = 'win32' if os.name == 'nt' else 'posix'
     for f in flat.glob('*.lm1'):
+        if f.name.endswith('_win32.lm1') or f.name.endswith('_posix.lm1'):
+            continue
         shutil.copy(f, staged / f.name); n += 1
+    # -200: one logical body name. Windows keeps the Win32 body; another host takes the POSIX body.
+    for logical in ('lmx_clock.lm1', 'lmx_process_deadline.lm1', 'lmx_manager_running.lm1'):
+        physical = logical.replace('.lm1', '_' + host + '.lm1')
+        shutil.copy(flat / physical, staged / logical); n += 1
     for f in (flat / 'tests').glob('*.lm1'):
         shutil.copy(f, staged / 'tests' / f.name); n += 1
     for f in (flat / 'l1src').iterdir():

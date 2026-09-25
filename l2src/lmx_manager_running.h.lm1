@@ -1,21 +1,9 @@
-include: "<windows.h>"
 predef: "l2src/lmx_manager.h.lm1"
 
-# The running manager's platform header.  It is separate from lmx_manager.h.lm1 on
-# purpose: the manager's INTERFACE is portable and lives there, while the thread entry
-# a platform hands to the OS has a platform type this file names once.
-#
-# `foreign:` names types the included C header already declares.  DWORD is needed as a
-# RETURN type (a Win32 thread entry returns DWORD = `unsigned long` on this toolchain,
-# which is NOT uint32_t, and the build guards incompatible pointer types as an error);
-# LPTHREAD_START_ROUTINE is needed to name the thread-entry type at the one call that
-# hands the body to the OS.
-#
-# Neither is spelled as an L1 fnptr with a foreign return: L1 refuses a by-value cycle
-# between such a fnptr typedef and the foreign type ("struct DWORD; make one a
-# pointer"), and the OS's own typedef is the honest thing to use anyway.
-foreign: DWORD
-foreign: LPTHREAD_START_ROUTINE
+# The running manager's header.  It is separate from lmx_manager.h.lm1 on purpose:
+# the manager's INTERFACE is portable and lives there.  The thread entry a platform
+# hands to the OS, and that platform's types, live in the body this header's consumers
+# predef under the neutral name.
 
 prototype:
     fn: lmx_manager_running_init (@: LmxManager m) int

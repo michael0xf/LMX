@@ -286,7 +286,12 @@ Write-Output ('l2_harness: evidence ' + $OutDir)
 # ---- 1. stage -------------------------------------------------------------------------------
 $staged = 0
 foreach ($f in @(Get-ChildItem -LiteralPath $sandbox -File -Filter '*.lm1')) {
+    if ($f.Name -match '_(win32|posix)\.lm1$') { continue }
     Copy-Item -LiteralPath $f.FullName -Destination (Join-Path $src ('l2src\' + $f.Name)) -Force; $staged++
+}
+foreach ($logical in @('lmx_clock.lm1', 'lmx_process_deadline.lm1', 'lmx_manager_running.lm1')) {
+    $physical = $logical -replace '\.lm1$', '_win32.lm1'
+    Copy-Item -LiteralPath (Join-Path $sandbox $physical) -Destination (Join-Path $src ('l2src\' + $logical)) -Force; $staged++
 }
 foreach ($f in @(Get-ChildItem -LiteralPath (Join-Path $sandbox 'l1src') -File)) {
     Copy-Item -LiteralPath $f.FullName -Destination (Join-Path $src ('l1src\' + $f.Name)) -Force; $staged++

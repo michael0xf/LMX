@@ -1949,6 +1949,10 @@ $fixtures = @(
     # -- and a path goes through it: a local (main: unknown field path root), a formal (main: refused
     # write, raw `->` read), a reference field (main: refused write).  Each reads and writes through
     # the reference; success is 7.
+    # D-69: a char formal's cell in the method's `args` part is the program's interned char, so the
+    # char table (process_chars) and lmx_chars_owned's predef come with it (main: gcc, both undeclared).
+    [pscustomobject]@{ Name = 'unit_char_formal_parts.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0');
+        Absent = @(); Debt = @('lmx_chars_owned.h.lm1', '@: char process_chars lmx_chars_new_owned(l2_program_arena)', 'l2_entry_slot[0]: lmx_char_cell_known(process_chars, 0)') },
     [pscustomobject]@{ Name = 'unit_ref_local_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0');
         Absent = @('@@: Lmx r'); Debt = @('@: Lmx r', 'l2_pst: (cast: (@: Lmx) r)') },
     [pscustomobject]@{ Name = 'unit_ref_formal_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0');

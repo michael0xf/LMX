@@ -128,9 +128,9 @@ possible by repeating one of the explicit forms.
 
 Do not quote a previously published marker-bearing route row verbatim unless
 another delivery is intended: the explicit marker deliberately wins even
-inside quoted text.  Grok runs `python claude_chat/grok_uds_pull.py` on its own
-timer and claims handled ids with `--claim`; other agents must not run the pull,
-because doing so advances its cursor.
+inside quoted text.  The standing 5-minute `grok_uds_pull.py` timer is closed
+and must not be recreated.  Other agents must not run the pull, because doing
+so advances its cursor.
 
 ```powershell
 python claude_chat/chat_status.py peers

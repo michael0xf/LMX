@@ -5,8 +5,8 @@ delivered when the console is idle and the input line is empty. Remaining
 queued items are drained in the same lock.
 
 Console inject races with this session's own typing (Concurrent user input).
-It is not the only inbound path. Grok polls lmx_uds via grok_uds_pull.py on a
-5-minute timer and must not run this client against itself.
+The 5-minute grok_uds_pull.py timer is closed and must not be recreated.
+This client must not be run against its own session.
 """
 import argparse
 import ctypes

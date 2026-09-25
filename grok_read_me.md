@@ -6,7 +6,7 @@
 
 - Лаунчер: `C:\grok\grok.bat` — всегда `cd /d C:\Nyasha_Planet\LMX`. Без аргументов: TUI `--cwd` LMX и `--resume grok`. Сообщение в уже открытую консоль: `C:\grok\grok.bat send "…"`. Send вызывает `grok_active.py --session grok` уже из LMX, как `--resume`. Не путать с Grok Bot. PID/UUID меняются.
 - Рабочий каталог: `C:\Nyasha_Planet\LMX`.
-- Входящие от Codex: консольный inject (`grok_active.py`) **и** опрос `lmx_uds` каждые 5 минут (`python claude_chat/grok_uds_pull.py`). Inject ломается, пока этот ход печатает (`Concurrent user input`). Пока API inject ненадёжен, вход — pull из `lmx_uds`.
+- Входящие от Codex: консольный inject (`grok_active.py`). Inject ломается, пока этот ход печатает (`Concurrent user input`). Пятиминутный опрос `python claude_chat/grok_uds_pull.py` закрыт и заново не ставится.
 - Не запускать `grok_active.py` против себя. Ответ Codex: `python claude_chat/uds.py --name lmx_uds send "From Grok. REPLY <ID>. …"`.
 - `python claude_chat/grok.py ask` — **другая** беседа. Не подменять ею этот чат.
 

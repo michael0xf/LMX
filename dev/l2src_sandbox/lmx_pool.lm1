@@ -81,7 +81,7 @@ fn: lmx_chunk_data (@: LmxChunk chunk) @: void
     base: (cast: (@: LmxCharArray) cells)
 return: (cast: (@: void) base\data)
 
-fn: lmx_pool_add_chunk (@: LmxArena arena; @: LmxPool pool) int
+fn: lmx_pool_add_chunk (@: LmxArena arena; @: LmxPool pool; size_t: want) int
     @: LmxChunk chunk
     @: void block
     @: LmxArenaBlock payload_block
@@ -89,6 +89,7 @@ fn: lmx_pool_add_chunk (@: LmxArena arena; @: LmxPool pool) int
     @: LmxCharDynamicArray cells
     @: LmxCharArray base
     size_t: bytes
+    size_t: capacity
     if: arena = 0 || pool = 0
         return: 1
     # A sealed array is complete.  The bit is lifecycle only; refusing growth here does not
@@ -103,10 +104,18 @@ fn: lmx_pool_add_chunk (@: LmxArena arena; @: LmxPool pool) int
         return: 1
     if: pool\chunk_capacity = 0U
         return: 1
-    if: pool\chunk_capacity > ((cast: (size_t) -1) / pool\stride)
+    # D-67: `want` is a floor under THIS chunk's own width, never a write to
+    # pool\chunk_capacity -- the pool's configured step stays what lmx_pool_open_profiled
+    # set it to, for every chunk after this one, whatever `want` was here.  0 means
+    # "no floor beyond the pool's own step."
+    capacity: pool\chunk_capacity
+    if: want > capacity
+        capacity: want
+    ---
+    if: capacity > ((cast: (size_t) -1) / pool\stride)
         return: 1
-    bytes: pool\chunk_capacity * pool\stride
-    block: calloc(pool\chunk_capacity, pool\stride)
+    bytes: capacity * pool\stride
+    block: calloc(capacity, pool\stride)
     if: block = 0
         return: 1
     chunk: (cast: (@: LmxChunk) calloc(1U, c.sizeof(c.LmxChunk)))
@@ -127,7 +136,7 @@ fn: lmx_pool_add_chunk (@: LmxArena arena; @: LmxPool pool) int
     cells: @ chunk\cells
     base: (cast: (@: LmxCharArray) cells)
     base\data: (cast: (@: char) block)
-    lmx_chunk_set_room(chunk, pool\stride, pool\chunk_capacity)
+    lmx_chunk_set_room(chunk, pool\stride, capacity)
     lmx_chunk_set_used(chunk, pool\stride, 0U)
     chunk\next: 0
     payload_block\base: block
@@ -205,7 +214,7 @@ fn: lmx_pool_open_profiled (@: LmxArena arena; @: LmxPool pool; size_t: stride; 
     pool\head: 0
     pool\tail: 0
     pool\next: 0
-    if: lmx_pool_add_chunk(arena, pool) != 0
+    if: lmx_pool_add_chunk(arena, pool, 0U) != 0
         return: 1
     ---
     # The array joins the arena's N arrays once it holds a chunk: nothing links an array
@@ -262,7 +271,6 @@ fn: lmx_pool_take_n (@: LmxArena arena; @: LmxPool pool; size_t: count) @: void
     @: LmxChunk chunk
     @: void first
     size_t: room 0U
-    size_t: old_capacity 0U
     if: pool = 0 || count = 0U
         return: 0
     if: pool\sealed != 0U
@@ -280,7 +288,7 @@ fn: lmx_pool_take_n (@: LmxArena arena; @: LmxPool pool; size_t: count) @: void
         # instead made a parent able to reserve ONE child in its whole life (measured 20260919:
         # the second lmx_root_create answered 0, lmx_child_reserve having released the child's
         # arena on the nil answer; the end-to-end run hid it by splitting into two R0 sessions).
-        if: lmx_pool_add_chunk(arena, pool) != 0
+        if: lmx_pool_add_chunk(arena, pool, 0U) != 0
             return: 0
         ---
         chunk: pool\tail
@@ -301,26 +309,18 @@ fn: lmx_pool_take_n (@: LmxArena arena; @: LmxPool pool; size_t: count) @: void
         room: 0U
     ---
     if: room < count
-        # A FAILED GROWTH MUST NOT POISON THE ARRAY.  chunk_capacity is raised BEFORE the
-        # allocation because lmx_pool_add_chunk allocates AT that size (calloc(chunk_capacity,
-        # stride), lmx_pool.lm1:47), so there is no way to ask for a bigger chunk without saying
-        # how big.  But the raise used to stand on the failure path: one failed attempt left the
-        # impossible size in the record, and every later request -- however small -- retried it
-        # and failed for a reason that was no longer true.  Measured: fable had to write the old
-        # step back from lmx_scratch (its :83) to keep a failed growth from crippling the array;
-        # that workaround is what this save/restore replaces.
+        # D-67: `count` is passed straight through as the new chunk's own floor
+        # (lmx_pool_add_chunk sizes THIS chunk at max(count, pool\chunk_capacity)) --
+        # pool\chunk_capacity itself is never read for a write here, so there is nothing
+        # to save or restore on a failed growth, and no earlier request's width can ever
+        # inflate what a later, unrelated growth of this same pool is sized at.
         # Two facts a reader of this function should not have to rediscover by measurement:
         #   * 0 is returned for EVERY reason -- refusal, no arena, allocation failure -- so a
         #     caller cannot tell a failed growth from a refusal.  Nothing here pretends otherwise.
         #   * lmx_pool_add_chunk refuses a SIMPLE arena every chunk after the first
         #     (lmx_pool.lm1:36-38, "Letter-scale: one chunk per array"), which is why a simple
         #     arena cannot be grown at all -- also not distinguishable from failure by the caller.
-        old_capacity: pool\chunk_capacity
-        if: count > pool\chunk_capacity
-            pool\chunk_capacity: count
-        ---
-        if: lmx_pool_add_chunk(arena, pool) != 0
-            pool\chunk_capacity: old_capacity
+        if: lmx_pool_add_chunk(arena, pool, count) != 0
             return: 0
         chunk: pool\tail
     ---

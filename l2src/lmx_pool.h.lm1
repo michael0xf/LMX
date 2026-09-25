@@ -19,7 +19,11 @@ predef: "l2src/lmx_arena.h.lm1"
 # list over them, the way lmx_post does.
 
 prototype:
-    fn: lmx_pool_add_chunk (@: LmxArena arena; @: LmxPool pool) int
+    # `want` is a floor under THIS one new chunk's width (max(want, pool\chunk_capacity));
+    # it is never written back to pool\chunk_capacity, which stays the pool's configured
+    # step for every future chunk regardless of `want` here (D-67).  0 = no floor beyond
+    # the pool's own step.
+    fn: lmx_pool_add_chunk (@: LmxArena arena; @: LmxPool pool; size_t: want) int
     fn: lmx_pool_open (@: LmxArena arena; @: LmxPool pool; size_t: stride; size_t: chunk_capacity; int: kind; int: type) int
     # A nonzero profile is an ordinary graph Structure already visible in arena's
     # local/imported address index; arbitrary or activation-local pointers are refused.
@@ -42,14 +46,14 @@ prototype:
     # `count` consecutive cells of one array, in one chunk.  The array grows when the
     # last chunk cannot seat them all, and growth ADDS a chunk (never reallocates), so an
     # address handed out earlier never moves.  A request larger than the array's own
-    # chunk makes that one chunk that big -- AND RAISES THE POOL'S GROWTH STEP: the
-    # capacity a chunk is allocated at is the pool's, so after one successful oversized
-    # request every LATER chunk is allocated at that size too, for the array's lifetime
-    # (measured: a step of 8 climbed to 36 through SUCCESSFUL requests, not through
-    # failures).  A FAILED growth leaves the step untouched -- it is restored -- so a
-    # refusal cannot poison later, smaller requests.  The cost is memory on a reused
-    # array whose frames differ in size; the gain is that a big frame is not grown
-    # twice.  Growth is the arena's act: the new chunk's
+    # chunk makes that one chunk that big -- and ONLY that chunk (D-67): the new chunk's
+    # width is `count` floored at the pool's configured step, never a write to the step
+    # itself, so one wide request never inflates what a LATER, unrelated growth of the
+    # same pool is sized at.  The doctrine draws no line between "a pool dedicated to one
+    # growing array" and "a pool shared across many independent requests" (lmx_scratch,
+    # for one) -- one rule serves both, at the cost of one add_chunk call per growth that
+    # outgrows the step, never fewer.  A FAILED growth changes nothing (the step was
+    # never touched to begin with).  Growth is the arena's act: the new chunk's
     # storage and the chunk's own record are blocks of the arena's list, so a rollback
     # that drops them drops the interval with them.
     fn: lmx_pool_take_n (@: LmxArena arena; @: LmxPool pool; size_t: count) @: void

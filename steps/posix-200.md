@@ -40,6 +40,8 @@ Lane: последним актом после `lmx_thread_finish` поток с
 
 Флаги `-pthread` и `-D_POSIX_C_SOURCE=200809L` добавлены только в POSIX-ветку `build_l2src.py`, `run_l3_selftest.py`, `run_walk_selftest.py`. `.ps1` флаги не меняет.
 
+Три логических имени — один список, скопированный в шести скриптах (`build_l2src.py`, `build_l2src.ps1`, `run_l3_selftest.py`, `l3_type_budget.py`, `l2_harness.ps1`, `run_walk_selftest.py`). Срез (б) новую копию не заводил.
+
 ## DWORD без foreign
 
 Открытый вопрос замера §5. После среза (а) `foreign: DWORD` из заголовка снят, а Win32-тело по-прежнему пишет `fn: … DWORD` и гейт 277/277 его собрал. `l1trans` печатает это имя как написано; определение даёт `<windows.h>`. Отдельный `foreign:` телу не нужен. POSIX-тело `DWORD` не использует: вход потока — `void* (*)(void*)` (`LmxPosixStart`).
@@ -48,6 +50,7 @@ Lane: последним актом после `lmx_thread_finish` поток с
 
 Исходник не мутировался в коммите: правка → прогон → откат на копии порождённого C. На этом MinGW `pthread_condattr_setclock(CLOCK_MONOTONIC)` возвращает EINVAL (22); `CLOCK_REALTIME` принимается. Поэтому прогон дедлайна шёл на копии, где оба `CLOCK_MONOTONIC` заменены на `CLOCK_REALTIME`. Строки флага и reap — те же, что в исходнике. Сам `lmx_clock_posix` на `CLOCK_MONOTONIC` собран и прочитан: `lmx_clock_now` = 395374560, второе чтение не меньше.
 
+- Часы. Верная формула против `clock_gettime(CLOCK_MONOTONIC)`: delta 0 (`got` = `expect` = 395848777). Мутант `nsec / 1000` вместо `/ 1000000`: delta 894012, exit 1.
 - Флаг дедлайна снят (`w->signaled = 1` убран): arm на `now+3000` мс, disarm не возвращается сразу; ожидание доходит до срока и процесс гибнет с прежней строкой `the overall close deadline expired`, exit 3. С флагом disarm по стенным часам 0.000 с, exit 0.
 - Проверка `finished` в `lane_reap` снята: поток крутится (`lmx_thread_running` = 1, состояние WAITING), `pthread_join` не возвращается; процесс убит на 1.5 с. С проверкой reap 0.000 с и `slot->lane` остаётся ненулевым (поток ещё жив).
 

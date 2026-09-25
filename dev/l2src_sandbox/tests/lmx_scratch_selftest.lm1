@@ -223,9 +223,9 @@ fn: main () int
     check((cast: (@: void) ((cast: (@: char) p) + word)) = q, "and occupies a whole cell")
     was_at: s1\at
     was_used: s1\used
-    # The step as the pool holds it NOW: by this point successful requests larger than
-    # the opening step have already raised it (lmx_pool_take_n keeps the largest chunk
-    # size it was asked for), so the honest claim is "unchanged", not "still 8".
+    # The pool's growth step never moves (D-67): it is still exactly the opening step
+    # here, same as at every other point in this file -- captured for the "unchanged"
+    # check below, not because it could plausibly differ.
     was_step: pp1\chunk_capacity
     check(lmx_scratch_take(s1, 0U, @ p) = c.LMX_SCRATCH_INVALID && p = 0, "zero bytes is refused")
     check(lmx_scratch_take(s1, (cast: (size_t) -1), @ p) = c.LMX_SCRATCH_INVALID && p = 0, "a size whose rounding wraps is refused")

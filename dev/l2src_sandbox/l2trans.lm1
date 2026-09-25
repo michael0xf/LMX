@@ -152,7 +152,6 @@ size_t: l2_vis_at 0U
 # sealed after construction. Only size_t/char/array leaves are admitted here.
 int: l2_ebr_n 0
 int: l2_merge_max 0
-int: l2_merge_n 0
 int: l2_mres_n 0
 @@: LmP0Text l2_mres_name 0
 int: l2_mres_base 0
@@ -291,7 +290,6 @@ int: l2_diag_n 0
 @@: LmP0Text l2_ml_nm 0
 @: int l2_ml_ty 0
 int: l2_ml_n 0
-int: l2_ml_cap 0
 # Open-ended source C type identities used by predef-backed pointer forms.
 # Codes 100+ name one exact (pointee spelling, pointer depth, const-pointee)
 # tuple. Encounter order is deterministic within one translated unit.
@@ -304,8 +302,6 @@ int: l2_foreign_cap 0
 @: LmP0Text l2_colon_lmx_name 0
 const: @: LmP0Node l2_os_node 0
 const: @: LmP0Structure l2_cur_unit 0
-int: l2_need_string 0
-int: l2_need_stdlib 0
 
 @@: LmP0Text l2_m_name 0
 @@: LmP0Text l2_m_f0 0
@@ -339,7 +335,6 @@ int: l2_bseq_n 0
 @: int l2_own_uchild 0
 int: l2_need_p0 0
 int: l2_need_query 0
-int: l2_need_own 0
 # `profile: runtime`: the unit implements the running/stop protocol that the
 # escape polls consult, and the executor calls it during an unwind, so it is
 # emitted without escape polls (decision 12, LEAD_REVIEW_20260914 section 6).
@@ -471,7 +466,6 @@ prototype:
     fn: l2_rw_cell (int: node; int: oi) int
     fn: l2_rw_own (int: parent; int: oi; @: int out) int
     fn: l2_rw_assign (int: into; int: oi; @: LmP0Field first; int: n; @: int out) int
-    fn: l2_rw_int_lit (const: @(LmP0Text t); @: int value) int
     fn: l2_rw_has_slash (const: @(LmP0Text t)) int
     fn: l2_rw_own_row (const: @(LmP0Node node); const: @(LmP0Text t)) int
     fn: l2_rw_call (const: @(LmP0Node node); int: idx; @: LmP0Field args; int: parent; @: int out) int
@@ -611,7 +605,6 @@ prototype:
     fn: l2_pointer_decl_text (int: raw; int: extra_depth; const: @(char name); @: char dest) int
     fn: l2_emit_raw_pointer_type (@: FILE out; int: raw; int: extra_depth) int
     fn: l2_emit_own_pointer_type (@: FILE out; int: ty) int
-    fn: l2_emit_own_pointer_temp_decl (@: FILE out; int: ty; const: @(char ind); int: temp) int
     fn: l2_emit_own_pointer_array_data_type (@: FILE out; int: ty) int
     fn: l2_own_array_count (const: @(LmP0Node stmt)) @: LmP0Text
     fn: l2_positive_decimal (const: @(LmP0Text t)) size_t
@@ -920,9 +913,9 @@ fn: l2_emit_ns_num_cell (int: k; int: oi; int: fx) int
         return: 1
 return: 0
 
-# First and last field VALUE of a named Structure, walking by owner. A nested
-# or reference field has no literal of its own and reads as zero, which is why
-# the runtime content check only pins literal ends.
+# First field VALUE of a named Structure, walking by owner. A nested or
+# reference field has no literal of its own and reads as zero, which is why the
+# runtime content check only pins literal values.
 fn: l2_ns_first_value (int: ni) size_t
     int: k 0
     while: k < l2_nsf_n
@@ -932,20 +925,10 @@ fn: l2_ns_first_value (int: ni) size_t
     ---
 return: 0U
 
-fn: l2_ns_last_value (int: ni) size_t
-    int: k 0
-    size_t: v 0U
-    while: k < l2_nsf_n
-        if: l2_nsf_owner[k] = ni
-            v: l2_nsf_val[k]
-        k: k + 1
-    ---
-return: v
-
-# Field KIND at each end of a named Structure: 0 size_t literal, 1 char literal,
-# 2 inline nested Structure, 3 reference. Only kind 0 carries a size_t value the
-# generated program can compare, so the ends of any other kind are left unpinned
-# rather than compared against a value they do not hold.
+# Field KIND of the first field of a named Structure: 0 size_t literal, 1 char
+# literal, 2 inline nested Structure, 3 reference. Only kinds 0 and 1 carry a value
+# the generated program can compare, so any other kind is left unpinned rather than
+# compared against a value it does not hold.
 fn: l2_ns_first_kind (int: ni) int
     int: k 0
     while: k < l2_nsf_n
@@ -954,16 +937,6 @@ fn: l2_ns_first_kind (int: ni) int
         k: k + 1
     ---
 return: 0 - 1
-
-fn: l2_ns_last_kind (int: ni) int
-    int: k 0
-    int: v 0 - 1
-    while: k < l2_nsf_n
-        if: l2_nsf_owner[k] = ni
-            v: l2_nsf_kind[k]
-        k: k + 1
-    ---
-return: v
 
 
 # Rank of a unit-level declaration among unit-level declarations: nested
@@ -2922,13 +2895,10 @@ fn: l2_translate_unit (const: @(LmP0Structure unit); const: @(char path)) int
     l2_unit_base: 0
     l2_need_p0: 0
     l2_need_query: 0
-    l2_need_own: 0
     l2_pd_free()
     l2_def_free()
     l2_inc_free()
     l2_os_node: 0
-    l2_need_string: 0
-    l2_need_stdlib: 0
     l2_intern_n: 0U
     l2_src: path
     l2_cur_unit: 0
@@ -3827,7 +3797,6 @@ fn: l2_ml_free () int
     l2_ml_nm: 0
     l2_ml_ty: 0
     l2_ml_n: 0
-    l2_ml_cap: 0
 return: 0
 
 fn: l2_ml_find (const: @(LmP0Text t)) int
@@ -8308,16 +8277,6 @@ fn: l2_emit_own_pointer_type (@: FILE out; int: ty) int
     if: ty < 1000 || ty >= 2000
         return: 1
 return: l2_emit_raw_pointer_type(out, ty - 1000, 0)
-
-# A const declarator keeps its name inside const: @(...).  Type-only spelling
-# is correct in casts and returns, but appending a name after the closing ')'
-# would produce invalid L1.  Emit the complete generated cache declaration.
-fn: l2_emit_own_pointer_temp_decl (@: FILE out; int: ty; const: @(char ind); int: temp) int
-    c.array: [1024]: char txt
-    c.array: [32]: char nm
-    if: out = 0 || ind = 0 || ty < 1000 || ty >= 2000 || c.sprintf(nm, "l2_q%d", temp) < 0 || l2_pointer_decl_text(ty - 1000, 0, nm, txt) != 0
-        return: 1
-return: (cast: (int) (fputs(ind, out) < 0 || fputs(txt, out) < 0 || fputs("\n", out) < 0))
 
 # Type of Array<@^n T>.data is @^(n+1) T. The extra level is the address of
 # the contiguous element backing, not a replacement void** representation.
@@ -17324,36 +17283,6 @@ fn: l2_rw_assign (int: into; int: oi; @: LmP0Field first; int: n; @: int out) in
         return: 1
 return: l2_rw_put(\out, 3, value)
 
-# A decimal int literal (an optional minus, digits, no suffix) and its value.
-fn: l2_rw_int_lit (const: @(LmP0Text t); @: int value) int
-    size_t: i 0U
-    size_t: v 0U
-    int: neg 0
-    if: t = 0 || t\data = 0 || t\length = 0U
-        return: 0
-    if: t\data[0] = 45
-        neg: 1
-        i: 1U
-    ---
-    if: i >= t\length
-        return: 0
-    while: i < t\length
-        if: t\data[i] < 48 || t\data[i] > 57
-            return: 0
-        v: v * 10U + (cast: (size_t) (t\data[i] - 48))
-        if: v > 2147483648U
-            return: 0
-        i: i + 1U
-    ---
-    if: neg = 0 && v > 2147483647U
-        return: 0
-    if: neg != 0 && v > 0U
-        \value: 0 - (cast: (int) (v - 1U)) - 1
-    else:
-        \value: (cast: (int) v)
-    ---
-return: 1
-
 # Does a head spell a field path (a\b)?
 fn: l2_rw_has_slash (const: @(LmP0Text t)) int
     size_t: i 0U
@@ -20192,7 +20121,6 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                 return: 1
             if: l2_emit_invariant(ind, "merge result not bound to its name") != 0
                 return: 1
-            l2_merge_n: l2_merge_n + 1
             field: l2_next_active(field\next)
             need_cut: 1
             continue

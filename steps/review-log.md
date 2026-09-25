@@ -37,3 +37,18 @@ ANSWER 784ad45-1: в коде -203. Комментарий арма `ELEM` в `l
 ANSWER 784ad45-2: селфтест `ELEMPUT immutable operand -> INVALID`. Дескриптор взят `lmx_arena_take_profiled`, `context.immutable_profile` равен этому профилю. Проверка — `lmx_walk_immutable` на адресе, который дал операнд. Мутант без неё записал бы в массив.
 ANSWER 784ad45-3: D-39 не закрыт. Индекс роли — ячейка `size` из десятичного литерала, не значение локала. `l2_own_index_head` / `l2_own_index_tail` не менялись. `unit_array_write_root_out_of_range` по-прежнему отказывает «own array index requires an in-bounds primitive literal».
 ANSWER 784ad45-4: `lmx_walk_array_desc` удалён. `l2_rw_cell` заполняет узел `AT`, который стоит операндом `ELEM` / `ELEMPUT`.
+
+## REVIEW 901ae2a 2026-09-25 11:20
+
+Охват: `299102f`/`901ae2a` (Grok -203: ядро + транслятор + селфтест + строки harness; машинный гейт 276/398/11, OK). Ответы ANSWER 784ad45-1…4 прочитаны и закрыты: соглашение о выходе ELEM записано в арме и в плане; свидетель неизменяемости через операнд есть; D-39 честно оставлен открытым (индекс — ячейка из литерала); `lmx_walk_array_desc` удалён. Проверено в облаке на main: `check_docs` OK, `git diff --check` чисто, `build_l2src.py --only lmx_walk_array` — селфтест `lmx_walk_array_elem_selftest` зелёный; l2trans собран из main, фикстуры переведены (ниже).
+
+**Ядро — OK.** `lmx_walk_array_from` (`lmx_walk.lm1` :548): операнд вычисляется `lmx_walk_eval`, вид — `lmx_walk_kind = LMX_KIND_ARRAY`, запись — `lmx_walk_immutable` на адресе, который дал операнд; армы ELEM `[elem, array, index]`, ELEMPUT `[elemput, array, index, value]`, LENGTH `[length, array]` — одна форма, старой пары нет, чисел транслятора нет. Twin `l2src/` синхронизирован.
+
+**Транслятор — посадка частичная, и это не сказано.** Замечания (не BLOCK, но 1 и 2 — обязательны до следующего тикета):
+
+1. **RESULT не написан.** В `steps/array-operand-203.md` раздела RESULT нет, сообщение коммита `299102f` — три строки без перечня строк и без мутантов. По `grok_next.md` §3 п.5 RESULT — в файле плана: ветка@tip, база, строки с новыми фактами, мутанты (как мутировано, что стало RED/GREEN — план назвал четыре), четыре числа, красное как есть. Дописать следующим коммитом.
+2. **Три строки 5b остались `an array`.** Замер fable на main `901ae2a` (l2trans из этого sha): `entry_argc_if.lm2:10:5`, `entry_index.lm2:9:5`, `entry_strcmp.lm2:9:5` — `root operation not walkable yet: an array`, `frame=length`. Общее у трёх: `MainLetter: m` + **`receiveMessage: m`** (приём прямо в объявленную Structure), тогда как две строки, прошедшие `length` (`unit_admit_rebind_read`, `unit_entry_args` — теперь needle «mixed numeric types», честно), используют `receiveMessage: raw` + `m: raw`. Значит `l2_rw_length_of` → `l2_arr_len_shape`/`l2_rw_path` не строит операнд для корня пути, который был целью прямого приёма. Либо доделать в -203 (это его заявленная цель — 5 строк 5b), либо открыть строку дефекта с этим замером — но не молча: в harness строки остались с прежним needle без комментария, читатель решит, что -203 их не касался.
+3. **`next_core_tasks.md` §3** — строки `[x] ПОСАЖЕНО` для -203 нет (последняя — пакет 25.09 от fable, где -203 назван остатком). Добавить с числами гейта и честным объёмом: ядро — одна форма; транслятор — `length(path)`/`path[i]` для pointer-корня, 5a на новой форме; 3 строки 5b — открыто (п.2).
+4. Мелочь: в `l2_rw_length_of` два `calloc`/`free` для `prefix` вокруг `l2_rw_path` — можно локальную `LmP0Text` на стеке, как соседние функции; не блок.
+
+Спеки L1/L2 формы узлов walker'а не описывают (grep по ELEMPUT/LENGTH пуст) — правка спек не требуется.

@@ -17344,9 +17344,9 @@ fn: l2_rw_admit (int: parent; int: ni; int: letter; @: int out) int
     if: letter != 0
         rec: "lmx_walk_admit_letter"
     ---
-    if: l2_rw_frame(parent, "LMX_WALK_OP_PRIM", 4, out) != 0
+    if: l2_rw_frame(parent, "LMX_WALK_OP_PRIM", 5, out) != 0
         return: 1
-    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: %s\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0 || lmx_arena_ref_store(l2_rw%d, 3U, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", \out, \out, \out, rec, \out, \out, \out, \out, \out, ni) < 0
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: %s\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0 || lmx_arena_ref_store(l2_rw%d, 4U, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", \out, \out, \out, rec, \out, \out, \out, \out, \out, ni) < 0
         return: 1
 return: 0
 
@@ -17369,7 +17369,7 @@ fn: l2_rw_admit_assign (const: @(LmP0Node stmt); int: oi; int: into; @: int out)
         return: l2_rw_refuse(stmt, "an admission to a Structure type")
     if: l2_rw_frame(into, l2_rw_bind_op(oi), 4, out) != 0 || l2_rw_cell(\out, oi) != 0 || l2_rw_admit(\out, l2_own_nsty_get(oi), l2_rw_is_letter(src), @ adm) != 0
         return: 1
-    if: l2_rw_own(adm, src, @ raw) != 0 || l2_rw_put(adm, 2, raw) != 0
+    if: l2_rw_own(adm, src, @ raw) != 0 || l2_rw_put(adm, 3, raw) != 0
         return: 1
 return: l2_rw_put(\out, 3, adm)
 
@@ -17420,9 +17420,9 @@ fn: l2_rw_take (const: @(LmP0Node stmt); int: into; @: int out) int
         if: l2_rw_admit(holder, ni, 1, @ adm) != 0 || l2_rw_put(holder, 3, adm) != 0
             return: 1
         holder: adm
-        slotv: 2
+        slotv: 3
     ---
-    if: l2_rw_frame(holder, "LMX_WALK_OP_PRIM", 2, @ prim) != 0
+    if: l2_rw_frame(holder, "LMX_WALK_OP_PRIM", 3, @ prim) != 0
         return: 1
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: lmx_walk_mail_take\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: l2_entry_unit\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", prim, prim, prim, prim, prim, prim, prim) < 0
         return: 1
@@ -17454,9 +17454,9 @@ fn: l2_rw_model (const: @(LmP0Node stmt); const: @(LmP0Text h); int: into; @: in
         return: l2_rw_refuse(stmt, "a field declared in a nested body")
     if: ni < 0 || l2_own_nsty_get(oi) != ni || l2_ns_parent[ni] >= 0 || l2_ns_eternal[ni] >= 0
         return: l2_rw_refuse(stmt, "a Structure-typed field")
-    if: l2_rw_frame(into, l2_rw_bind_op(oi), 4, out) != 0 || l2_rw_cell(\out, oi) != 0 || l2_rw_frame(\out, "LMX_WALK_OP_PRIM", 3, @ prim) != 0
+    if: l2_rw_frame(into, l2_rw_bind_op(oi), 4, out) != 0 || l2_rw_cell(\out, oi) != 0 || l2_rw_frame(\out, "LMX_WALK_OP_PRIM", 4, @ prim) != 0
         return: 1
-    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: lmx_walk_merge_model\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0 || lmx_arena_ref_store(l2_rw%d, 2U, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", prim, prim, prim, prim, prim, prim, prim, prim, ni) < 0
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: lmx_walk_merge_model\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0 || lmx_arena_ref_store(l2_rw%d, 3U, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", prim, prim, prim, prim, prim, prim, prim, prim, ni) < 0
         return: 1
 return: l2_rw_put(\out, 3, prim)
 
@@ -17500,7 +17500,7 @@ fn: l2_rw_merge (const: @(LmP0Node stmt); int: res; int: into; @: int out) int
             np: np + 1
         q: q + 1
     ---
-    if: l2_rw_frame(into, "LMX_WALK_OP_PUT_REF", 4, out) != 0 || l2_rw_frame(\out, "LMX_WALK_OP_PRIM", n + 4, @ prim) != 0
+    if: l2_rw_frame(into, "LMX_WALK_OP_PUT_REF", 4, out) != 0 || l2_rw_frame(\out, "LMX_WALK_OP_PRIM", n + 5, @ prim) != 0
         return: 1
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %uU) != c.LMX_WALK_OK\n            return: 1\n        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: lmx_walk_merge_map\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", \out, (cast: (unsigned) (l2_mres_base + res)), prim, prim, prim, prim, prim, prim, prim) < 0
         return: 1
@@ -17515,21 +17515,21 @@ fn: l2_rw_merge (const: @(LmP0Node stmt); int: res; int: into; @: int out) int
             return: l2_error(l2_src, stmt, "unknown merge operand")
         # A qualified branch is the Structure itself; the primitive retains it by its exact physical
         # profile (-202 K2b: lmx_range_profile of each operand, as the native merge passes them).
-        if: oi >= 0 && l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, %uU))) != 0\n            return: 1\n", prim, k + 2, (cast: (unsigned) (l2_unit_base + l2_occ_n() + oi))) < 0
+        if: oi >= 0 && l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, %uU))) != 0\n            return: 1\n", prim, k + 3, (cast: (unsigned) (l2_unit_base + l2_occ_n() + oi))) < 0
             return: 1
         if: oi < 0 && sl >= 0
-            if: l2_rw_frame(prim, "LMX_WALK_OP_AT", 3, @ node) != 0 || l2_rw_put(prim, k + 2, node) != 0
+            if: l2_rw_frame(prim, "LMX_WALK_OP_AT", 3, @ node) != 0 || l2_rw_put(prim, k + 3, node) != 0
                 return: 1
             if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %uU) != c.LMX_WALK_OK\n            return: 1\n", node, (cast: (unsigned) (l2_mres_base + sl))) < 0
                 return: 1
         ---
-        if: oi < 0 && sl < 0 && l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", prim, k + 2, ni) < 0
+        if: oi < 0 && sl < 0 && l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", prim, k + 3, ni) < 0
             return: 1
         last: l2_next_active(last\next)
         k: k + 1
     ---
     if: bd != 0
-        if: l2_rw_plain(prim, bn, @ node) != 0 || l2_rw_put(prim, n + 2, node) != 0
+        if: l2_rw_plain(prim, bn, @ node) != 0 || l2_rw_put(prim, n + 3, node) != 0
             return: 1
         bf: l2_next_active(bd\first_field)
         k: 0
@@ -17546,7 +17546,7 @@ fn: l2_rw_merge (const: @(LmP0Node stmt); int: res; int: into; @: int out) int
         ---
     ---
     if: np > 0
-        if: l2_rw_plain(prim, 3 * np, @ node) != 0 || l2_rw_put(prim, n + 3, node) != 0
+        if: l2_rw_plain(prim, 3 * np, @ node) != 0 || l2_rw_put(prim, n + 4, node) != 0
             return: 1
         q: 0
         k: 0
@@ -17949,7 +17949,7 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; @: LmP0Field args; int: paren
     # the native call does (-193 T4a; the native call site's rule: a callee with own fields).
     # rtype is the callee's result cell in its `return` part (l2_emit_parts), by reference: the walk
     # types the call's destination by that cell's range; a `sub` has none (0).
-    if: l2_rw_frame(parent, "LMX_WALK_OP_CALL", 4 + n, out) != 0
+    if: l2_rw_frame(parent, "LMX_WALK_OP_CALL", 5 + n, out) != 0
         return: 1
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, %uU))) != 0\n            return: 1\n", \out, (cast: (unsigned) (l2_unit_base + idx))) < 0
         return: 1
@@ -17979,16 +17979,16 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; @: LmP0Field args; int: paren
             j: l2_find_method(a\value\as\atom)
             if: j < 0 || j = l2_e
                 return: l2_rw_refuse(node, "a callable input that is not a method's name")
-            if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, %uU))) != 0\n            return: 1\n", \out, 4 + k, (cast: (unsigned) (l2_unit_base + j))) < 0
+            if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, %uU))) != 0\n            return: 1\n", \out, 5 + k, (cast: (unsigned) (l2_unit_base + j))) < 0
                 return: 1
             ---
         else:
             if: l2_nsty_get(idx, k) >= 0
-                if: l2_rw_struct_arg(node, a, span, l2_nsty_get(idx, k), \out, @ arg) != 0 || l2_rw_put(\out, 4 + k, arg) != 0
+                if: l2_rw_struct_arg(node, a, span, l2_nsty_get(idx, k), \out, @ arg) != 0 || l2_rw_put(\out, 5 + k, arg) != 0
                     return: 1
                 ---
             else:
-                if: l2_rw_texpr(a, span, l2_own_ty_of_param(l2_input_ft(idx, k)), \out, @ arg) != 0 || l2_rw_put(\out, 4 + k, arg) != 0
+                if: l2_rw_texpr(a, span, l2_own_ty_of_param(l2_input_ft(idx, k)), \out, @ arg) != 0 || l2_rw_put(\out, 5 + k, arg) != 0
                     return: 1
                 ---
             ---
@@ -18017,7 +18017,7 @@ fn: l2_rw_struct_arg (const: @(LmP0Node node); @: LmP0Field a; int: span; int: n
     if: l2_own_nsty_get(oi) < 0
         if: l2_rw_admit(parent, ni, l2_rw_is_letter(oi), out) != 0 || l2_rw_own(\out, oi, @ raw) != 0
             return: 1
-        return: l2_rw_put(\out, 2, raw)
+        return: l2_rw_put(\out, 3, raw)
     ---
     if: l2_own_nsty_get(oi) != ni
         return: l2_rw_refuse(node, "an admission to a Structure type")
@@ -18676,7 +18676,7 @@ fn: l2_rw_send (@: LmP0Node stmt; int: into; @: int out) int
             l2_rw_send_n: k + 1
         ---
     ---
-    if: l2_rw_frame(into, "LMX_WALK_OP_PRIM", 2 + ni + has_ref, out) != 0
+    if: l2_rw_frame(into, "LMX_WALK_OP_PRIM", 3 + ni + has_ref, out) != 0
         return: 1
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: l2_send%d\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: l2_entry_unit\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", \out, \out, \out, k, \out, \out, \out, \out) < 0
         return: 1
@@ -18692,14 +18692,14 @@ fn: l2_rw_send (@: LmP0Node stmt; int: into; @: int out) int
         ---
         if: t = 0 || t\length = 0U || t\data[0] != 34
             # l2_send<k> reads its number inputs as ints.
-            if: l2_rw_texpr(b, n, 0, \out, @ e) != 0 || l2_rw_put(\out, 2 + ni, e) != 0
+            if: l2_rw_texpr(b, n, 0, \out, @ e) != 0 || l2_rw_put(\out, 3 + ni, e) != 0
                 return: 1
             ni: ni + 1
         ---
         g: l2_next_active(g\next)
     ---
     if: has_ref != 0
-        if: l2_rw_texpr(f, refn, refty, \out, @ e) != 0 || l2_rw_put(\out, 2 + ni, e) != 0
+        if: l2_rw_texpr(f, refn, refty, \out, @ e) != 0 || l2_rw_put(\out, 3 + ni, e) != 0
             return: 1
         ---
     ---

@@ -164,25 +164,26 @@ fn: mk_count () @: Lmx
     icell(m, 1U, -1)
     n: fr(m, 2U, c.LMX_WALK_OP_SET, 3U)
     own(n, 1U, m, 1U)
-    p: fr(n, 2U, c.LMX_WALK_OP_PRIM, 3U)
+    # -201: [prim, rec, catch, lane]. catch 0.
+    p: fr(n, 2U, c.LMX_WALK_OP_PRIM, 4U)
     ref(p, 1U, rec)
-    lit(p, 2U, c.LMX_POST_INBOX)
+    lit(p, 3U, c.LMX_POST_INBOX)
 return: m
 
 fn: mk_take () @: Lmx
     @: Lmx m mk_m(2U)
     @: Lmx p 0
     @: Lmx rec l3_thread_mail_take_prim(l3_bound_t)
-    p: fr(m, 1U, c.LMX_WALK_OP_PRIM, 3U)
+    p: fr(m, 1U, c.LMX_WALK_OP_PRIM, 4U)
     ref(p, 1U, rec)
-    lit(p, 2U, c.LMX_POST_INBOX)
+    lit(p, 3U, c.LMX_POST_INBOX)
 return: m
 
 fn: mk_bad_arity () @: Lmx
     @: Lmx m mk_m(2U)
     @: Lmx p 0
     @: Lmx rec l3_thread_mail_count_prim(l3_bound_t)
-    p: fr(m, 1U, c.LMX_WALK_OP_PRIM, 2U)
+    p: fr(m, 1U, c.LMX_WALK_OP_PRIM, 3U)
     ref(p, 1U, rec)
 return: m
 
@@ -190,16 +191,16 @@ fn: mk_impostor () @: Lmx
     @: Lmx m mk_m(2U)
     @: Lmx p 0
     @: Lmx fake lmx_node_new_owned(gb)
-    p: fr(m, 1U, c.LMX_WALK_OP_PRIM, 3U)
+    p: fr(m, 1U, c.LMX_WALK_OP_PRIM, 4U)
     ref(p, 1U, fake)
-    lit(p, 2U, c.LMX_POST_INBOX)
+    lit(p, 3U, c.LMX_POST_INBOX)
 return: m
 
 fn: mk_impostor_success () @: Lmx
     @: Lmx m mk_m(2U)
     @: Lmx p 0
     @: Lmx fake lmx_node_new_owned(gb)
-    p: fr(m, 1U, c.LMX_WALK_OP_PRIM, 2U)
+    p: fr(m, 1U, c.LMX_WALK_OP_PRIM, 3U)
     ref(p, 1U, fake)
 return: m
 
@@ -217,16 +218,16 @@ fn: mk_worker () @: Lmx
     n: fr(m, 1U, c.LMX_WALK_OP_IF, 3U)
     e: fr(n, 1U, c.LMX_WALK_OP_LT, 3U)
     lit(e, 1U, 0)
-    p: fr(e, 2U, c.LMX_WALK_OP_PRIM, 3U)
+    p: fr(e, 2U, c.LMX_WALK_OP_PRIM, 4U)
     ref(p, 1U, count_rec)
-    lit(p, 2U, c.LMX_POST_INBOX)
+    lit(p, 3U, c.LMX_POST_INBOX)
     body: pl(n, 2U, 2U)
-    p: fr(body, 0U, c.LMX_WALK_OP_PRIM, 3U)
+    p: fr(body, 0U, c.LMX_WALK_OP_PRIM, 4U)
     ref(p, 1U, sink_rec)
-    q: fr(p, 2U, c.LMX_WALK_OP_PRIM, 3U)
+    q: fr(p, 3U, c.LMX_WALK_OP_PRIM, 4U)
     ref(q, 1U, take_rec)
-    lit(q, 2U, c.LMX_POST_INBOX)
-    p: fr(body, 1U, c.LMX_WALK_OP_PRIM, 2U)
+    lit(q, 3U, c.LMX_POST_INBOX)
+    p: fr(body, 1U, c.LMX_WALK_OP_PRIM, 3U)
     ref(p, 1U, success_rec)
 return: m
 
@@ -236,9 +237,9 @@ fn: mk_non_int_lane () @: Lmx
     @: Lmx n 0
     @: Lmx rec l3_thread_mail_count_prim(l3_bound_t)
     @: void sz lmx_size_new_owned(gb)
-    p: fr(m, 1U, c.LMX_WALK_OP_PRIM, 3U)
+    p: fr(m, 1U, c.LMX_WALK_OP_PRIM, 4U)
     ref(p, 1U, rec)
-    n: fr(p, 2U, c.LMX_WALK_OP_LIT, 2U)
+    n: fr(p, 3U, c.LMX_WALK_OP_LIT, 2U)
     if: n = 0 || sz = 0 || lmx_size_store_known(sz, 0U) != 0 || lmx_arena_ref_store(n, 1U, sz) != 0
         broken: broken + 1
         return: 0
@@ -257,17 +258,17 @@ fn: sink_letter (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: 
     \out: refs[0]
 return: c.LMX_PRIMITIVE_OK
 
-# [prim, sink, [prim, take, lane]]: the take is an OPERAND, so its result is consumed.
+# [prim, sink, catch, [prim, take, catch, lane]]: the take is an OPERAND, so its result is consumed.
 fn: mk_take_show () @: Lmx
     @: Lmx m mk_m(2U)
     @: Lmx p 0
     @: Lmx q 0
     @: Lmx rec l3_thread_mail_take_prim(l3_bound_t)
-    p: fr(m, 1U, c.LMX_WALK_OP_PRIM, 3U)
+    p: fr(m, 1U, c.LMX_WALK_OP_PRIM, 4U)
     ref(p, 1U, sink_rec)
-    q: fr(p, 2U, c.LMX_WALK_OP_PRIM, 3U)
+    q: fr(p, 3U, c.LMX_WALK_OP_PRIM, 4U)
     ref(q, 1U, rec)
-    lit(q, 2U, c.LMX_POST_INBOX)
+    lit(q, 3U, c.LMX_POST_INBOX)
 return: m
 
 # mk_count over a GIVEN record: own n <- prim(rec, INBOX), own starts at -1.  The lane cell is
@@ -285,9 +286,9 @@ fn: mk_count_of (@: Lmx rec; @: LmxArena lane_arena) @: Lmx
     icell(m, 1U, -1)
     n: fr(m, 2U, c.LMX_WALK_OP_SET, 3U)
     own(n, 1U, m, 1U)
-    p: fr(n, 2U, c.LMX_WALK_OP_PRIM, 3U)
+    p: fr(n, 2U, c.LMX_WALK_OP_PRIM, 4U)
     ref(p, 1U, rec)
-    q: fr(p, 2U, c.LMX_WALK_OP_LIT, 2U)
+    q: fr(p, 3U, c.LMX_WALK_OP_LIT, 2U)
     if: q = 0 || lmx_walk_store_int(lane_arena, q, 1U, c.LMX_POST_INBOX) != c.LMX_WALK_OK
         broken: broken + 1
     ---

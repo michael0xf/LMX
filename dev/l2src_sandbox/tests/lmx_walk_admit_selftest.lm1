@@ -161,10 +161,10 @@ fn: main () int
     # 1. value {x:7} admit to model {x}: out == value address, OK
     m: mk_m(unit, 0U, 1U)
     n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
-    pn: fr(n, 1U, c.LMX_WALK_OP_PRIM, 4U)
+    pn: fr(n, 1U, c.LMX_WALK_OP_PRIM, 5U)
     ref(pn, 1U, prim_rec)
-    ref(pn, 2U, value)
-    ref(pn, 3U, model_x)
+    ref(pn, 3U, value)
+    ref(pn, 4U, model_x)
     st: go(m)
     got: gv\ref
     check((cast: (int) (st = c.LMX_WALK_OK && got = (cast: (@: void) value))), "admit value->model_x same pointer OK")
@@ -172,10 +172,10 @@ fn: main () int
     # 2. value {y-shape mismatch: 1-slot vs model 2-slot} -> THROWN+2
     m: mk_m(unit, 5U, 1U)
     n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
-    pn: fr(n, 1U, c.LMX_WALK_OP_PRIM, 4U)
+    pn: fr(n, 1U, c.LMX_WALK_OP_PRIM, 5U)
     ref(pn, 1U, prim_rec)
-    ref(pn, 2U, value_y)
-    ref(pn, 3U, model_y)
+    ref(pn, 3U, value_y)
+    ref(pn, 4U, model_y)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_THROWN + 2)), "admit mismatch -> THROWN+2")
 
@@ -186,13 +186,13 @@ fn: main () int
     ---
     m: mk_m(unit, 6U, 1U)
     n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
-    pn: fr(n, 1U, c.LMX_WALK_OP_PRIM, 4U)
+    pn: fr(n, 1U, c.LMX_WALK_OP_PRIM, 5U)
     ref(pn, 1U, prim_rec)
-    litn: fr(pn, 2U, c.LMX_WALK_OP_LIT, 2U)
+    litn: fr(pn, 3U, c.LMX_WALK_OP_LIT, 2U)
     if: litn != 0 && lmx_arena_ref_store(litn, 1U, cell) != 0
         broken: broken + 1
     ---
-    ref(pn, 3U, model_x)
+    ref(pn, 4U, model_x)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_PRIMITIVE)), "admit numeric cell -> PRIMITIVE")
 
@@ -229,13 +229,13 @@ fn: main () int
     ---
     m: mk_m(unit, 10U, 1U)
     n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
-    pn: fr(n, 1U, c.LMX_WALK_OP_PRIM, 4U)
+    pn: fr(n, 1U, c.LMX_WALK_OP_PRIM, 5U)
     ref(pn, 1U, prim_rec)
-    litn: fr(pn, 2U, c.LMX_WALK_OP_LIT, 2U)
+    litn: fr(pn, 3U, c.LMX_WALK_OP_LIT, 2U)
     if: litn != 0 && lmx_arena_ref_store(litn, 1U, pcell) != 0
         broken: broken + 1
     ---
-    ref(pn, 3U, model_x)
+    ref(pn, 4U, model_x)
     st: go(m)
     got: gv\ref
     check((cast: (int) (st = c.LMX_WALK_OK && got = (cast: (@: void) value))), "admit via pointer cell -> value")
@@ -250,10 +250,10 @@ fn: main () int
     ---
     m: mk_m(unit, 13U, 1U)
     n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
-    pn: fr(n, 1U, c.LMX_WALK_OP_PRIM, 4U)
+    pn: fr(n, 1U, c.LMX_WALK_OP_PRIM, 5U)
     ref(pn, 1U, prim_letter_rec)
-    ref(pn, 2U, letter)
-    ref(pn, 3U, model_x)
+    ref(pn, 3U, letter)
+    ref(pn, 4U, model_x)
     st: go(m)
     got: gv\ref
     check((cast: (int) (st = c.LMX_WALK_OK && got = (cast: (@: void) payload))), "admit_letter -> payload address")
@@ -261,10 +261,10 @@ fn: main () int
     # same letter vs model_y -> THROWN+2
     m: mk_m(unit, 14U, 1U)
     n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
-    pn: fr(n, 1U, c.LMX_WALK_OP_PRIM, 4U)
+    pn: fr(n, 1U, c.LMX_WALK_OP_PRIM, 5U)
     ref(pn, 1U, prim_letter_rec)
-    ref(pn, 2U, letter)
-    ref(pn, 3U, model_y)
+    ref(pn, 3U, letter)
+    ref(pn, 4U, model_y)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_THROWN + 2)), "admit_letter mismatch -> THROWN+2")
 

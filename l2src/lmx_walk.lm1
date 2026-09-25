@@ -870,8 +870,9 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
     int: status c.LMX_WALK_OK
     int: said 0
     \out: 0
-    # k.4: [call, code, data, rtype, args...]. Mutant: len < 4 (no rtype) -> INVALID.
-    if: (cast: (size_t) code\len) < 4U
+    # -201: [call, code, data, rtype, catch, args...]. catch 0 = no pad.
+    # Mutant: len < 5 (no catch slot) -> INVALID.
+    if: (cast: (size_t) code\len) < 5U
         return: c.LMX_WALK_INVALID
     ---
     # code (child 1) = occurrence used for dispatch (Lmx.native).
@@ -879,7 +880,7 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
     if: callee = 0
         return: c.LMX_WALK_INVALID
     ---
-    n: (cast: (size_t) code\len) - 4U
+    n: (cast: (size_t) code\len) - 5U
     addr: lmx_walk_callable_addr(f\arena, callee)
     if: addr = 0
         if: n != lmx_walk_arg_arity(f, callee)
@@ -927,7 +928,7 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
     while: status = c.LMX_WALK_OK && i < n
         refs[i]: 0
         cells[i]: 0
-        child: (cast: (@: Lmx) lmx_arena_ref_value(code, i + 4U))
+        child: (cast: (@: Lmx) lmx_arena_ref_value(code, i + 5U))
         if: child != 0 && lmx_walk_op(f, (cast: (@: void) child)) = c.LMX_WALK_OP_NONE
             refs[i]: (cast: (@: void) child)
         else:
@@ -1013,7 +1014,8 @@ fn: lmx_walk_prim (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
     int: status c.LMX_WALK_OK
     int: said 0
     \out: 0
-    if: code\len < 2
+    # -201: [prim, rec, catch, ops...]. catch 0 = no pad.
+    if: code\len < 3
         return: c.LMX_WALK_INVALID
     target: lmx_arena_ref_value(code, 1U)
     # k.4: the record must classify as a primitive record -- asked here, unconditionally,
@@ -1033,7 +1035,7 @@ fn: lmx_walk_prim (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
     if: lmx_walk_immutable(f, record\owner) != 0
         return: c.LMX_WALK_INVALID
     ---
-    n: (cast: (size_t) code\len) - 2U
+    n: (cast: (size_t) code\len) - 3U
     pm: @ mark
     if: lmx_scratch_mark(f\context\scratch, pm) != c.LMX_SCRATCH_OK
         return: c.LMX_WALK_INVALID
@@ -1052,7 +1054,7 @@ fn: lmx_walk_prim (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
     while: status = c.LMX_WALK_OK && i < n
         refs[i]: 0
         cells[i]: 0
-        child: lmx_arena_ref_value(code, i + 2U)
+        child: lmx_arena_ref_value(code, i + 3U)
         if: child != 0
             status: lmx_walk_eval(f, child, (cast: (@: void) (cells + i)), refs + i)
         ---

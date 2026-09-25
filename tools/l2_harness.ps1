@@ -1271,6 +1271,13 @@ $fixtures = @(
                  'if: lmx_walk_store_size(l2_program_arena, l2_rw51, 2U, 2U) != c.LMX_WALK_OK',
                  '@: Lmx l2_rw57 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw56, c.LMX_WALK_OP_ARG, 2U)',
                  '@: Lmx l2_rw62 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw61, c.LMX_WALK_OP_AT, 3U)') },
+    # T4b class 3: a numeric field declared in if/else/while is OF/PUT_OF of that body's
+    # Structure. branch's binding is inside the if; the return after it reads ARG, not the field.
+    [pscustomobject]@{ Name = 'unit_walk_nested_own.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m2_tr)');
+        Debt = @('c.LMX_WALK_OP_PUT_OF, 4U)',
+                 'c.LMX_WALK_OP_OF, 3U)',
+                 'c.LMX_WALK_OP_ARG, 2U)') },
     # Side fixes (-193 T4a): a root `M\x` of a method after the first, in a unit with no named Structure
     # (l2trans crashed); a repeated declaration's initializer reads the occurrence before it
     # (l2_own_excl, as natively); the root names its own fields by no holder (K-OT2).

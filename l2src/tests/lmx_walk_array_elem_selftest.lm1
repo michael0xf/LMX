@@ -59,6 +59,16 @@ sub: sz (@: Lmx code; size_t: slot; size_t: value)
     ---
 end: sz
 
+# -203: child 1 of an array op is an AT. holder 0 is this activation's data.
+fn: atop (@: Lmx op; @: Lmx holder; size_t: slot) @: Lmx
+    @: Lmx at
+    at: fr(op, 1U, c.LMX_WALK_OP_AT, 3U)
+    if: holder != 0
+        ref(at, 1U, holder)
+    ---
+    sz(at, 2U, slot)
+return: at
+
 sub: lit_int (@: Lmx code; size_t: slot; int: value)
     if: code = 0 || lmx_walk_store_int(ga, code, slot, value) != c.LMX_WALK_OK
         broken: broken + 1
@@ -91,6 +101,9 @@ fn: main () int
     @: Lmx n 0
     @: Lmx litn 0
     @: LmxArrayDesc desc 0
+    @: LmxArrayDesc outer 0
+    @: Lmx prof 0
+    @: Lmx nest 0
     @: void got 0
     int: st 0
 
@@ -118,7 +131,7 @@ fn: main () int
     ---
 
     unit: lmx_node_new_owned(ga)
-    if: unit = 0 || lmx_arena_refs_open_owned(ga, unit, 16U) != 0
+    if: unit = 0 || lmx_arena_refs_open_owned(ga, unit, 32U) != 0
         return: 2
     ---
 
@@ -129,60 +142,54 @@ fn: main () int
         return: 2
     ---
     m: mk_m(unit, 1U, 1U)
-    n: fr(m, 0U, c.LMX_WALK_OP_ELEMPUT, 5U)
-    ref(n, 1U, data)
+    n: fr(m, 0U, c.LMX_WALK_OP_ELEMPUT, 4U)
+    atop(n, data, 1U)
     sz(n, 2U, 1U)
-    sz(n, 3U, 1U)
-    litn: fr(n, 4U, c.LMX_WALK_OP_LIT, 2U)
+    litn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
     lit_int(litn, 1U, 9)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_OK)), "ELEMPUT int[1]=9 OK")
     check((cast: (int) (lmx_int_value_known((cast: (@: void) ((cast: (@: char) desc\data) + 1U * c.sizeof(c.int)))) = 9)), "backing int[1]==9")
 
     m: mk_m(unit, 2U, 1U)
-    n: fr(m, 0U, c.LMX_WALK_OP_ELEM, 4U)
-    ref(n, 1U, data)
+    n: fr(m, 0U, c.LMX_WALK_OP_ELEM, 3U)
+    atop(n, data, 1U)
     sz(n, 2U, 1U)
-    sz(n, 3U, 1U)
     st: go(m)
     got: gv\ref
     check((cast: (int) (st = c.LMX_WALK_OK && got != 0 && lmx_int_value_known(got) = 9)), "ELEM int[1] -> 9")
 
     # ---- LENGTH ----
     m: mk_m(unit, 3U, 1U)
-    n: fr(m, 0U, c.LMX_WALK_OP_LENGTH, 3U)
-    ref(n, 1U, data)
-    sz(n, 2U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_LENGTH, 2U)
+    atop(n, data, 1U)
     st: go(m)
     got: gv\ref
     check((cast: (int) (st = c.LMX_WALK_OK && got != 0 && lmx_size_value_known(got) = 3U)), "LENGTH -> 3")
 
     # ---- OOB: index == len -> INVALID (mutant: accept -> RED) ----
     m: mk_m(unit, 4U, 1U)
-    n: fr(m, 0U, c.LMX_WALK_OP_ELEM, 4U)
-    ref(n, 1U, data)
-    sz(n, 2U, 1U)
-    sz(n, 3U, 3U)
+    n: fr(m, 0U, c.LMX_WALK_OP_ELEM, 3U)
+    atop(n, data, 1U)
+    sz(n, 2U, 3U)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_INVALID)), "ELEM index==len -> INVALID")
 
     m: mk_m(unit, 5U, 1U)
-    n: fr(m, 0U, c.LMX_WALK_OP_ELEMPUT, 5U)
-    ref(n, 1U, data)
-    sz(n, 2U, 1U)
-    sz(n, 3U, 3U)
-    litn: fr(n, 4U, c.LMX_WALK_OP_LIT, 2U)
+    n: fr(m, 0U, c.LMX_WALK_OP_ELEMPUT, 4U)
+    atop(n, data, 1U)
+    sz(n, 2U, 3U)
+    litn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
     lit_int(litn, 1U, 1)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_INVALID)), "ELEMPUT index==len -> INVALID")
 
     # ---- off-by-one: last index OK ----
     m: mk_m(unit, 6U, 1U)
-    n: fr(m, 0U, c.LMX_WALK_OP_ELEMPUT, 5U)
-    ref(n, 1U, data)
-    sz(n, 2U, 1U)
-    sz(n, 3U, 2U)
-    litn: fr(n, 4U, c.LMX_WALK_OP_LIT, 2U)
+    n: fr(m, 0U, c.LMX_WALK_OP_ELEMPUT, 4U)
+    atop(n, data, 1U)
+    sz(n, 2U, 2U)
+    litn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
     lit_int(litn, 1U, 42)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_OK)), "ELEMPUT last index OK")
@@ -194,32 +201,29 @@ fn: main () int
         return: 2
     ---
     m: mk_m(unit, 8U, 1U)
-    n: fr(m, 0U, c.LMX_WALK_OP_ELEMPUT, 5U)
-    ref(n, 1U, data)
-    sz(n, 2U, 1U)
-    sz(n, 3U, 0U)
-    litn: fr(n, 4U, c.LMX_WALK_OP_LIT, 2U)
+    n: fr(m, 0U, c.LMX_WALK_OP_ELEMPUT, 4U)
+    atop(n, data, 1U)
+    sz(n, 2U, 0U)
+    litn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
     lit_char(litn, 1U, 65)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_OK)), "ELEMPUT char[0]='A' OK")
     check((cast: (int) ((cast: (@: char) desc\data)[0] = 65)), "backing char[0]==65")
 
     m: mk_m(unit, 9U, 1U)
-    n: fr(m, 0U, c.LMX_WALK_OP_ELEM, 4U)
-    ref(n, 1U, data)
-    sz(n, 2U, 1U)
-    sz(n, 3U, 0U)
+    n: fr(m, 0U, c.LMX_WALK_OP_ELEM, 3U)
+    atop(n, data, 1U)
+    sz(n, 2U, 0U)
     st: go(m)
     got: gv\ref
     check((cast: (int) (st = c.LMX_WALK_OK && got != 0 && got = lmx_char_cell(ga, 65))), "ELEM char -> interned 'A'")
 
     # ---- char vs int cell (mutant: accept -> RED) ----
     m: mk_m(unit, 10U, 1U)
-    n: fr(m, 0U, c.LMX_WALK_OP_ELEMPUT, 5U)
-    ref(n, 1U, data)
+    n: fr(m, 0U, c.LMX_WALK_OP_ELEMPUT, 4U)
+    atop(n, data, 1U)
     sz(n, 2U, 1U)
-    sz(n, 3U, 1U)
-    litn: fr(n, 4U, c.LMX_WALK_OP_LIT, 2U)
+    litn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
     lit_int(litn, 1U, 1)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_INVALID)), "ELEMPUT int into char array -> INVALID")
@@ -231,11 +235,10 @@ fn: main () int
         return: 2
     ---
     m: mk_m(unit, 12U, 1U)
-    n: fr(m, 0U, c.LMX_WALK_OP_ELEMPUT, 5U)
-    ref(n, 1U, data)
-    sz(n, 2U, 1U)
-    sz(n, 3U, 0U)
-    litn: fr(n, 4U, c.LMX_WALK_OP_LIT, 2U)
+    n: fr(m, 0U, c.LMX_WALK_OP_ELEMPUT, 4U)
+    atop(n, data, 1U)
+    sz(n, 2U, 0U)
+    litn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
     lit_char(litn, 1U, 7)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_INVALID)), "ELEMPUT char into int array -> INVALID")
@@ -247,11 +250,11 @@ fn: main () int
     if: m = 0 || desc = 0 || lmx_arena_ref_store(m, 1U, (cast: (@: void) desc)) != 0
         return: 2
     ---
-    n: fr(m, 0U, c.LMX_WALK_OP_ELEMPUT, 5U)
-    # child 1 left 0 -> K-OT2 this activation data
-    sz(n, 2U, 1U)
-    sz(n, 3U, 0U)
-    litn: fr(n, 4U, c.LMX_WALK_OP_LIT, 2U)
+    n: fr(m, 0U, c.LMX_WALK_OP_ELEMPUT, 4U)
+    # AT holder 0 -> K-OT2 this activation data
+    atop(n, 0, 1U)
+    sz(n, 2U, 0U)
+    litn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
     lit_int(litn, 1U, 77)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_OK)), "ELEMPUT holder0 OK")
@@ -261,11 +264,86 @@ fn: main () int
     if: m = 0 || lmx_arena_ref_store(m, 1U, (cast: (@: void) desc)) != 0
         return: 2
     ---
-    n: fr(m, 0U, c.LMX_WALK_OP_LENGTH, 3U)
-    sz(n, 2U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_LENGTH, 2U)
+    atop(n, 0, 1U)
     st: go(m)
     got: gv\ref
     check((cast: (int) (st = c.LMX_WALK_OK && got != 0 && lmx_size_value_known(got) = 2U)), "LENGTH holder0 -> 2")
+
+    # A non-array operand is a refusal. Mutant: skip the kind test -> silent trash RED.
+    m: mk_m(unit, 15U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_ELEM, 3U)
+    litn: fr(n, 1U, c.LMX_WALK_OP_LIT, 2U)
+    lit_int(litn, 1U, 1)
+    sz(n, 2U, 0U)
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_INVALID)), "ELEM non-array -> INVALID")
+
+    # Nested descriptors: ELEM of an ARRAY_OF_DESC yields the inner descriptor
+    # address, and a second ELEM reads that address. \out of the outer ELEM is
+    # that address, not a numeric cell.
+    data: pl(unit, 16U, 2U)
+    desc: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, 2U, ga)
+    if: data = 0 || desc = 0 || lmx_arena_ref_store(data, 1U, (cast: (@: void) desc)) != 0
+        return: 2
+    ---
+    m: mk_m(unit, 17U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_ELEMPUT, 4U)
+    atop(n, data, 1U)
+    sz(n, 2U, 0U)
+    litn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
+    lit_int(litn, 1U, 5)
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_OK)), "inner ELEMPUT 5 OK")
+    outer: lmx_array_ref_new_owned(c.LMX_TYPE_ARRAY_OF_DESC, 1U, ga)
+    m: pl(unit, 18U, 2U)
+    if: outer = 0 || m = 0 || lmx_arena_ref_store(m, 1U, (cast: (@: void) outer)) != 0
+        return: 2
+    ---
+    n: fr(m, 0U, c.LMX_WALK_OP_ELEMPUT, 4U)
+    atop(n, m, 1U)
+    sz(n, 2U, 0U)
+    nest: fr(n, 3U, c.LMX_WALK_OP_AT, 3U)
+    ref(nest, 1U, data)
+    sz(nest, 2U, 1U)
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_OK)), "ELEMPUT inner desc into outer[0]")
+    litn: m
+    m: mk_m(unit, 19U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_ELEM, 3U)
+    nest: fr(n, 1U, c.LMX_WALK_OP_ELEM, 3U)
+    atop(nest, litn, 1U)
+    sz(nest, 2U, 0U)
+    sz(n, 2U, 0U)
+    st: go(m)
+    got: gv\ref
+    check((cast: (int) (st = c.LMX_WALK_OK && got != 0 && lmx_int_value_known(got) = 5)), "ELEM(ELEM(outer)) -> 5")
+
+    # Immutable descriptor through the evaluated operand. Mutant: skip
+    # lmx_walk_immutable on that address -> this ELEMPUT goes green, RED.
+    prof: lmx_node_new_owned(ga)
+    desc: (cast: (@: LmxArrayDesc) lmx_arena_take_profiled(ga, c.sizeof(c.LmxArrayDesc), c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_INT, prof))
+    if: prof = 0 || desc = 0
+        return: 2
+    desc\len: 1U
+    desc\data: lmx_arena_take_n(ga, c.sizeof(c.int), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT, 1U)
+    if: desc\data = 0
+        return: 2
+    ---
+    data: pl(unit, 20U, 2U)
+    if: data = 0 || lmx_arena_ref_store(data, 1U, (cast: (@: void) desc)) != 0
+        return: 2
+    ---
+    context.immutable_profile: prof
+    m: mk_m(unit, 21U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_ELEMPUT, 4U)
+    atop(n, data, 1U)
+    sz(n, 2U, 0U)
+    litn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
+    lit_int(litn, 1U, 3)
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_INVALID)), "ELEMPUT immutable operand -> INVALID")
+    context.immutable_profile: 0
 
     if: broken != 0
         c.printf("broken fixture %d\n", broken)

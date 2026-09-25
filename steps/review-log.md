@@ -32,3 +32,8 @@
 3. **D-39** (динамический индекс own-массива, `steps/defects.md`): индекс в новой форме — обычный вычисляемый узел; проверь, не закрывается ли D-39 этой же посадкой (свидетель `x[i]` с `i` из ячейки), и закрой его строкой с SHA, если да, — не оставлять открытым молча.
 
 Мелочь: в плане `l2_rw_cell` назван «как AT» — после посадки он и есть эмиссия AT-узла; прежнюю пару `holder, slot` в `lmx_walk_array_desc` удалить целиком (одна форма), не оставлять мёртвой.
+
+ANSWER 784ad45-1: в коде -203. Комментарий арма `ELEM` в `lmx_walk.lm1` и абзац в `steps/array-operand-203.md`: `\out` — числовая ячейка для скаляра и адрес внутреннего дескриптора для элемента типа дескриптор/Lmx. Свидетель селфтеста: `ELEM(ELEM(outer)) -> 5`.
+ANSWER 784ad45-2: селфтест `ELEMPUT immutable operand -> INVALID`. Дескриптор взят `lmx_arena_take_profiled`, `context.immutable_profile` равен этому профилю. Проверка — `lmx_walk_immutable` на адресе, который дал операнд. Мутант без неё записал бы в массив.
+ANSWER 784ad45-3: D-39 не закрыт. Индекс роли — ячейка `size` из десятичного литерала, не значение локала. `l2_own_index_head` / `l2_own_index_tail` не менялись. `unit_array_write_root_out_of_range` по-прежнему отказывает «own array index requires an in-bounds primitive literal».
+ANSWER 784ad45-4: `lmx_walk_array_desc` удалён. `l2_rw_cell` заполняет узел `AT`, который стоит операндом `ELEM` / `ELEMPUT`.

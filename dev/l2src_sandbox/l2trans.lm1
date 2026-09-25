@@ -483,6 +483,10 @@ prototype:
     fn: l2_rw_elem_ty (int: oi) int
     fn: l2_rw_elem (int: parent; int: oi; size_t: index; @: int out) int
     fn: l2_rw_elemput (int: into; int: oi; size_t: index; @: LmP0Field first; int: n; @: int out) int
+    fn: l2_rw_take_index (const: @(LmP0Text t); @: size_t at; @: size_t out_v) int
+    fn: l2_rw_indexed_path (const: @(LmP0Node node); const: @(LmP0Text t); int: parent; @: int out) int
+    fn: l2_rw_length_of (const: @(LmP0Node node); int: parent; @: int out) int
+    fn: l2_rw_index_ty (const: @(LmP0Node node); const: @(LmP0Text t)) int
     fn: l2_rw_plain (int: parent; int: n; @: int out) int
     fn: l2_rw_assign (int: into; int: oi; @: LmP0Field first; int: n; @: int out) int
     fn: l2_rw_has_slash (const: @(LmP0Text t)) int
@@ -16833,6 +16837,8 @@ fn: l2_rw_opty (const: @(LmP0Node node)) int
             return: l2_rw_call_ty(pmi)
         if: l2_text_eq(node\as\frame\head, "implements")
             return: 0
+        if: l2_text_eq(node\as\frame\head, "length")
+            return: 2
         return: 0 - 1
     ---
     if: node\kind != c.LM_P0_NODE_ATOM || node\as = 0
@@ -16846,6 +16852,12 @@ fn: l2_rw_opty (const: @(LmP0Node node)) int
     if: l2_rw_char_lit(t, @ v) != 0
         return: 1
     if: l2_rw_has_slash(t) != 0 && t\data[0] != 92
+        eix: 0U
+        while: eix < t\length && t\data[eix] != 91
+            eix: eix + 1U
+        ---
+        if: eix < t\length
+            return: l2_rw_index_ty(node, t)
         if: l2_rw_path(node, t, 0, path) = 0 && path[3] >= 0
             return: path[3]
         return: 0 - 1
@@ -16890,6 +16902,7 @@ fn: l2_rw_path_run (@: LmP0Field f; int: avail) int
     @: LmP0Field p3
     @: LmP0Field p4
     @: LmP0Field p5
+    size_t: ix 0U
     if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0 || f\value\as\atom = 0
         return: 1
     s: l2_next_active(f\next)
@@ -16924,6 +16937,19 @@ fn: l2_rw_path_run (@: LmP0Field f; int: avail) int
             p4: l2_next_active(p3\next)
         if: p4 != 0 && p3\value != 0 && p3\value\kind = c.LM_P0_NODE_ATOM && p4\value != 0 && p4\value\kind = c.LM_P0_NODE_ATOM && l2_text_eq(p4\value\as\atom, "]") != 0
             return: 4
+    ---
+    # `path[i]` and `path[i][j]` (-203): the index groups stay inside the one operand.
+    while: n + 3 <= avail && s != 0 && s\value != 0 && s\value\kind = c.LM_P0_NODE_ATOM && s\value\as != 0 && l2_text_eq(s\value\as\atom, "[") != 0
+        p3: l2_next_active(s\next)
+        p4: 0
+        if: p3 != 0
+            p4: l2_next_active(p3\next)
+        if: p4 = 0 || p3\value = 0 || p3\value\kind != c.LM_P0_NODE_ATOM || p3\value\as = 0 || p4\value = 0 || p4\value\kind != c.LM_P0_NODE_ATOM || p4\value\as = 0 || l2_text_eq(p4\value\as\atom, "]") = 0
+            return: n
+        if: l2_dec_literal(p3\value\as\atom, @ ix) != 0
+            return: n
+        n: n + 3
+        s: l2_next_active(p4\next)
     ---
 return: n
 
@@ -17584,24 +17610,219 @@ fn: l2_rw_elem_ty (int: oi) int
         return: 36
 return: 0 - 1
 
-# ELEM [elem, holder, slot, index]: the element's value.
-fn: l2_rw_elem (int: parent; int: oi; size_t: index; @: int out) int
-    if: l2_rw_frame(parent, "LMX_WALK_OP_ELEM", 4, out) != 0 || l2_rw_cell(\out, oi) != 0
+# Element type of `path[i]` (kind 5) or `path[i][j]` (kind 6): the field's element
+# code, 0 int or 1 char. An array value itself (one index of kind 6) is not a number.
+fn: l2_rw_index_ty (const: @(LmP0Node node); const: @(LmP0Text t)) int
+    size_t: cut 0U
+    size_t: b
+    size_t: nidx 0U
+    int: kind 0
+    int: ent 0
+    int: slot
+    int: ni
+    c.array: [40]: int path
+    @: LmP0Text prefix
+    if: t = 0
+        return: 0 - 1
+    while: cut < t\length && t\data[cut] != 91
+        cut: cut + 1U
+    ---
+    if: cut = 0U || cut >= t\length
+        return: 0 - 1
+    prefix: (cast: (@: LmP0Text) calloc(1U, c.sizeof(c.LmP0Text)))
+    if: prefix = 0
+        return: 0 - 1
+    prefix\data: t\data
+    prefix\length: cut
+    if: l2_rw_path(node, prefix, 0, path) != 0 || path[2] < 1
+        free((cast: (@: void) prefix))
+        return: 0 - 1
+    free((cast: (@: void) prefix))
+    b: cut
+    while: b < t\length
+        if: t\data[b] = 91
+            nidx: nidx + 1U
+        b: b + 1U
+    ---
+    b: cut
+    while: b > 0U && t\data[b - 1U] != 92
+        b: b - 1U
+    ---
+    ni: path[4]
+    if: ni < 0
+        return: 0 - 1
+    slot: l2_ns_slot_named(ni, t\data, b, cut - b, @ kind, @ ent)
+    if: slot < 0
+        return: 0 - 1
+    if: kind = 5 && nidx = 1U
+        return: ent
+    if: kind = 6 && nidx = 2U
+        return: ent
+return: 0 - 1
+
+# One `[digits]` at `at`. 0 = taken, `at` stands after the `]`.
+fn: l2_rw_take_index (const: @(LmP0Text t); @: size_t at; @: size_t out_v) int
+    size_t: i
+    size_t: v 0U
+    size_t: digit
+    i: \at
+    if: t = 0 || i >= t\length || t\data[i] != 91
         return: 1
-    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 3U, %zuU) != c.LMX_WALK_OK\n            return: 1\n", \out, index) < 0
+    i: i + 1U
+    if: i >= t\length || t\data[i] < 48 || t\data[i] > 57
+        return: 1
+    while: i < t\length && t\data[i] >= 48 && t\data[i] <= 57
+        digit: (cast: (size_t) (t\data[i] - 48))
+        if: v > (((cast: (size_t) -1) - digit) / 10U)
+            return: 1
+        v: v * 10U + digit
+        i: i + 1U
+    ---
+    if: i >= t\length || t\data[i] != 93
+        return: 1
+    \out_v: v
+    \at: i + 1U
+return: 0
+
+# `path[i]` or `path[i][j]`: ELEM over the path's array field. Two indices nest.
+fn: l2_rw_indexed_path (const: @(LmP0Node node); const: @(LmP0Text t); int: parent; @: int out) int
+    size_t: cut 0U
+    size_t: at
+    size_t: i0 0U
+    size_t: i1 0U
+    int: nidx 0
+    int: base
+    int: inner
+    c.array: [40]: int path
+    @: LmP0Text prefix
+    while: cut < t\length && t\data[cut] != 91
+        cut: cut + 1U
+    ---
+    if: cut = 0U || cut >= t\length
+        return: l2_rw_refuse(node, "an array")
+    prefix: (cast: (@: LmP0Text) calloc(1U, c.sizeof(c.LmP0Text)))
+    if: prefix = 0
+        return: l2_rw_refuse(node, "an array")
+    prefix\data: t\data
+    prefix\length: cut
+    if: l2_rw_path(node, prefix, 1, path) != 0
+        free((cast: (@: void) prefix))
+        return: 1
+    free((cast: (@: void) prefix))
+    at: cut
+    if: l2_rw_take_index(t, @ at, @ i0) != 0
+        return: l2_rw_refuse(node, "an array")
+    nidx: 1
+    if: at < t\length
+        if: l2_rw_take_index(t, @ at, @ i1) != 0 || at != t\length
+            return: l2_rw_refuse(node, "an array")
+        nidx: 2
+    ---
+    if: nidx = 1
+        if: l2_rw_frame(parent, "LMX_WALK_OP_ELEM", 3, out) != 0
+            return: 1
+        if: l2_rw_path_value(path, path[2], \out, @ base) != 0 || l2_rw_put(\out, 1, base) != 0
+            return: 1
+        if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %zuU) != c.LMX_WALK_OK\n            return: 1\n", \out, i0) < 0
+            return: 1
+        return: 0
+    ---
+    if: l2_rw_frame(parent, "LMX_WALK_OP_ELEM", 3, out) != 0
+        return: 1
+    if: l2_rw_frame(\out, "LMX_WALK_OP_ELEM", 3, @ inner) != 0 || l2_rw_put(\out, 1, inner) != 0
+        return: 1
+    if: l2_rw_path_value(path, path[2], inner, @ base) != 0 || l2_rw_put(inner, 1, base) != 0
+        return: 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %zuU) != c.LMX_WALK_OK\n            return: 1\n        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %zuU) != c.LMX_WALK_OK\n            return: 1\n", inner, i0, \out, i1) < 0
         return: 1
 return: 0
 
-# ELEMPUT [elemput, holder, slot, index, value]: `x[i]: v`, v at the element's type.
+# length(array). Own name, length(path), or length(path[i]) of an array-of-arrays.
+fn: l2_rw_length_of (const: @(LmP0Node node); int: parent; @: int out) int
+    @: LmP0Field first
+    int: n
+    int: oi
+    int: k
+    int: arr
+    int: elem
+    c.array: [256]: char pd
+    size_t: pn 0U
+    int: kind
+    int: el
+    int: depth
+    size_t: i0 0U
+    c.array: [40]: int path
+    @: LmP0Text prefix
+    if: node = 0 || node\as = 0 || node\as\frame = 0 || node\as\frame\body = 0
+        return: l2_rw_refuse(node, "an array")
+    first: l2_next_active(node\as\frame\body\first_field)
+    n: l2_count_active(node\as\frame\body)
+    if: n = 1 && first != 0 && first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM && first\value\as != 0 && first\value\as\atom != 0
+        k: 0
+        while: k < (cast: (int) first\value\as\atom\length) && first\value\as\atom\data[k] != 91
+            k: k + 1
+        ---
+        if: k = (cast: (int) first\value\as\atom\length)
+            oi: l2_rw_find(first\value\as\atom)
+            if: oi >= 0 && l2_own_is_array(l2_own_ty[oi]) != 0
+                if: l2_rw_frame(parent, "LMX_WALK_OP_LENGTH", 2, out) != 0 || l2_rw_own(\out, oi, @ arr) != 0 || l2_rw_put(\out, 1, arr) != 0
+                    return: 1
+                return: 0
+            ---
+        ---
+    ---
+    if: l2_arr_len_shape(node, pd, @ pn, @ kind, @ el, @ depth, @ i0) != 0
+        return: l2_rw_refuse(node, "an array")
+    prefix: (cast: (@: LmP0Text) calloc(1U, c.sizeof(c.LmP0Text)))
+    if: prefix = 0
+        return: l2_rw_refuse(node, "an array")
+    prefix\data: pd
+    prefix\length: pn
+    if: l2_rw_path(node, prefix, 1, path) != 0
+        free((cast: (@: void) prefix))
+        return: 1
+    free((cast: (@: void) prefix))
+    if: l2_rw_frame(parent, "LMX_WALK_OP_LENGTH", 2, out) != 0
+        return: 1
+    if: depth = 0
+        if: l2_rw_path_value(path, path[2], \out, @ arr) != 0 || l2_rw_put(\out, 1, arr) != 0
+            return: 1
+        return: 0
+    ---
+    if: depth != 1
+        return: l2_rw_refuse(node, "an array")
+    if: l2_rw_frame(\out, "LMX_WALK_OP_ELEM", 3, @ elem) != 0 || l2_rw_put(\out, 1, elem) != 0
+        return: 1
+    if: l2_rw_path_value(path, path[2], elem, @ arr) != 0 || l2_rw_put(elem, 1, arr) != 0
+        return: 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %zuU) != c.LMX_WALK_OK\n            return: 1\n", elem, i0) < 0
+        return: 1
+return: 0
+
+# ELEM [elem, array, index]: array is the AT of an own field. The element's value.
+fn: l2_rw_elem (int: parent; int: oi; size_t: index; @: int out) int
+    int: at
+    if: l2_rw_frame(parent, "LMX_WALK_OP_ELEM", 3, out) != 0
+        return: 1
+    if: l2_rw_frame(\out, "LMX_WALK_OP_AT", 3, @ at) != 0 || l2_rw_put(\out, 1, at) != 0 || l2_rw_cell(at, oi) != 0
+        return: 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %zuU) != c.LMX_WALK_OK\n            return: 1\n", \out, index) < 0
+        return: 1
+return: 0
+
+# ELEMPUT [elemput, array, index, value]: `x[i]: v`, v at the element's type.
 fn: l2_rw_elemput (int: into; int: oi; size_t: index; @: LmP0Field first; int: n; @: int out) int
     int: value
-    if: l2_rw_frame(into, "LMX_WALK_OP_ELEMPUT", 5, out) != 0 || l2_rw_cell(\out, oi) != 0
+    int: at
+    if: l2_rw_frame(into, "LMX_WALK_OP_ELEMPUT", 4, out) != 0
         return: 1
-    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 3U, %zuU) != c.LMX_WALK_OK\n            return: 1\n", \out, index) < 0
+    if: l2_rw_frame(\out, "LMX_WALK_OP_AT", 3, @ at) != 0 || l2_rw_put(\out, 1, at) != 0 || l2_rw_cell(at, oi) != 0
+        return: 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %zuU) != c.LMX_WALK_OK\n            return: 1\n", \out, index) < 0
         return: 1
     if: l2_rw_texpr(first, n, l2_rw_elem_ty(oi), \out, @ value) != 0
         return: 1
-return: l2_rw_put(\out, 4, value)
+return: l2_rw_put(\out, 3, value)
 
 fn: l2_rw_own (int: parent; int: oi; @: int out) int
     if: l2_rw_frame(parent, "LMX_WALK_OP_AT", 3, out) != 0
@@ -17816,7 +18037,7 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
         if: l2_rw_has_slash(t) != 0
             return: l2_rw_refuse(node, "a field path")
         if: l2_text_eq(t, "length")
-            return: l2_rw_refuse(node, "an array")
+            return: l2_rw_length_of(node, parent, out)
         # `implements(candidate, required, consumer)` over descriptor names is decided when the
         # program is translated: l2_prep_implements' own answer, 1 or 0, as the native emission
         # writes it, is an int literal here (-176).
@@ -17843,6 +18064,16 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
     if: t != 0 && t\length > 2U && t\data[0] = 99 && t\data[1] = 46
         return: l2_rw_l2(node)
     if: l2_rw_has_slash(t) != 0
+        # An element index is `[` after a name. `\[N]` is an occurrence, not an index.
+        oi: 0
+        idx: 0
+        while: oi < (cast: (int) t\length)
+            if: t\data[oi] = 91 && (oi = 0 || t\data[oi - 1] != 92)
+                idx: 1
+            oi: oi + 1
+        ---
+        if: idx != 0
+            return: l2_rw_indexed_path(node, t, parent, out)
         return: l2_rw_path_read(node, t, parent, out)
     oi: l2_rw_elem_of(t, @ eix)
     if: oi >= 0

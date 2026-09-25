@@ -35,7 +35,7 @@
 
 ## 3. Очередь дальше (порядок из `steps/next-phase-195.md` §7, уточнён)
 
-1. **T3 (Opus)** — merge в корне: эмиссия PRIM-узла с картой пар под K2 Sonnet; 9 строк «Structure value» из root-pending. Совместная посадка с K2, если K2 ещё не влит.
+1. ~~**T3 (Opus)**~~ — ПОСАЖЕН 2026-09-25 (`e4fdb62`): 3 строки бегут, 1 ушла в класс конверсий (D-75), 5 с квалифицированными операндами ждут K2b (Sonnet -202: профили в `lmx_walk_merge_map`) — совместная посадка.
 2. **-170 трансляторная половина (Opus)** — `ELEM`/`ELEMPUT`/`LENGTH` в корне + допуск корневых `[]:` объявлений; 10 array-строк (`steps/root-arrays-170.md` §5–6). Ядро уже на main.
 3. **T4b (Opus)** — строки под knob; **T5 (Sonnet + Opus)** — callable-части merge/PAP (`add5: merge(y: 5; add)` → 6): результат — walked (native 0), вызов через `lmx_call_prim`; **T6** makeAdder; **T7** конвертер §7 «Structure с callable → callable = ещё один merge».
 4. **CATCH-роль** — ядро (Sonnet): PAD + per-site landing по плану grok_bot в `steps/root-walk-blocks-arrays.md`; транслятор (Opus); 7 строк throw/catch. Свой тикет.
@@ -85,10 +85,12 @@
 - **Q11. Канал к Opus/Sonnet.** SendMessage между облачными сессиями не резолвится; автор не знает, как их связать. **Решение: тикеты и отчёты только через git, автор пересылает одну строку между чатами** — протокол `steps/cloud-protocol.md`.
 - **Q12. `grep.exe.stackdump`** в корне (коммит `2b0a594`). **Автор: да** — удалён, `*.stackdump` в `.gitignore`.
 - **Влитие моей ветки в main** — автор: да; выполнено merge `--no-ff`.
+- **Q13. Форма POSIX-двойника** (по замеру Sonnet -200 к.1): один общий `.h.lm1` без Win32-типов в прототипе, тела `lmx_clock_win32.lm1` / `lmx_clock_posix.lm1` (и для двух других модулей), выбор физического файла на шаге стейджинга под нейтральным именем во всех пяти копирующих скриптах, без `#ifdef` и без `os:`-блока (он генерирует `#ifdef _WIN32`). Это первая такая договорённость уровня сборки в LMX. **Решил как диспетчер и дал «go»; прошу возразить, если форма не устраивает.**
 
 ## 8. Облако: замер и первые действия (2026-09-25 по git)
 
 - Сделано: §3 `next_core_tasks.md` — строка «ПОСАЖЕНО» за T4a (`7ba030b`), -170 c2 (`5fa1ad4`), -198 (`da91903`), K2 (`b7cce8c`); D-53 перепроверен на main и переформулирован (не double indirection, а отсутствующая ветка слота в `l2_own_addr` + чужой текст отказа; владелец Opus); тикеты Opus -199/D-53 и Sonnet -200/-201/D-67 — `steps/tickets-20260925.md`; портативный `tools/build_l2src.py` (двойник `.ps1`: строит l1trans из seed, стейджит песочницу, линк по `nm`, expected-fatal watchdog).
 - Замер облака: l1trans и l2trans собираются gcc; `build_l2src.py` на main 174/230 (все красные — через `<windows.h>` трёх модулей, транзитивно `lmx_thread`/`lmx_turn`/`lmx_root`/`lmx_settle`/`lmx_manager` и 48 селфтестов); `run_l3_selftest.py --translator <b0>` 6/11 (те же модули); harness eternal-runs не запускается (драйвер предефит те же тела); `check_docs` OK. Полный гейт — на машине автора (`grok_next.md` §3) до решения Q10.
 - Сессии в облаке: `fable` (я, ветка `claude/continue-fable-next-documentation-5wkbtw`), `opus` (`claude/continue-opus-next-doc-rvjocj`), `sonnet` (`claude/continue-sonnet-next-doc-aaz95e`). Интеграция в main — я, merge из своей сессии; если push в main отсюда не пройдёт — просить Grok CLI.
+- Обход 05:15 UTC: Opus -199 T3 (`e4fdb62`) и D-53 (`5dae906`, F-65; D-75 F-66) влиты им самим в main по правилу автора; открыто D-76 (Opus, следующий) и K2b → Sonnet -202; Sonnet -200 к.1 принят, «go» к.2 в форме «общий `.h.lm1` + тела `_win32`/`_posix`, выбор на стейджинге в пяти скриптах» (§7 Q13), D-67 → вариант A; ветка Sonnet влита; ответы — `steps/tickets-20260925.md` §6. **Машинный GATE? main `5dae906`** — запрошен у автора. Опыт Opus: pwsh 7 + shim `windows.h` дают harness 394/394 в облаке (свидетельство, не гейт).
 - Ловушка облака: `L1_PIN.txt` не проверяем (хэш Windows-исполняемого); эквивалентность B0 seed'а и pinned exe — по self-build fixed point, не по хэшу. `build/l2src_py/` — evidence, ignored.

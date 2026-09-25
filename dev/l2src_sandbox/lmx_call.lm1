@@ -19,6 +19,14 @@ include: "<stdio.h>" "<string.h>"
 
 @: void lmx_call_walk_fn 0
 int: lmx_call_walk_status_mode 0
+# -194 к.4 (G-call): a second, parallel hook for lmx_call_prim's own addr=0 branch alone.
+# lmx_call_walk_fn above stays exactly what lmx_call0's two call sites need (nullary,
+# activation value as int); this one carries data/args/a typed dest through, since a
+# native-0 callee reached dynamically is not necessarily nullary or int-returning.
+@: void lmx_call_prim_walk_fn 0
+
+fn: lmx_call_install_prim_walk (LmxCallPrimWalkFn: fn) void
+    lmx_call_prim_walk_fn: (cast: (@: void) fn)
 
 
 # G2: walk_run failure status observed by call0_dispatch (METHOD throw / walk error).
@@ -135,10 +143,8 @@ return: value
 
 fn: lmx_call_prim (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
     LmxPrimitiveEntry: entry
-    LmxCallWalkFn: walk
+    LmxCallPrimWalkFn: prim_walk
     LmxEntry: addr
-    int: value
-    int: st
     # Dispatch on CODE's native word. Owner / self = DATA; trampoline builds nothing.
     if: out = 0 || data = 0 || lmx_call_ready(arena, code) != c.LMX_CALL_OK
         c.fprintf(l1_stderr(), "lmx: invariant: a dynamic call of a value that is not a Structure\n")
@@ -152,19 +158,12 @@ fn: lmx_call_prim (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; s
         entry: (cast: (LmxPrimitiveEntry) addr)
         return: entry((cast: (@: void) data), refs, nargs, dest, out)
     ---
-    # A walked body: the L2 walk hook stays nullary until k.4 (lmx_call0 unchanged). Walk CODE.
-    if: lmx_call_walk_fn = 0 || nargs != 0U
+    # A walked body (-194 к.4, G-call): the prim-walk hook carries data/args/a typed dest
+    # through -- unlike lmx_call0's own nullary hook, this call is not restricted to
+    # nargs = 0 or an int-typed activation value.
+    if: lmx_call_prim_walk_fn = 0
         c.fprintf(l1_stderr(), "lmx: invariant: a dynamic call of a body with no native entry and no walk for it\n")
         c.abort()
     ---
-    walk: (cast: (LmxCallWalkFn) lmx_call_walk_fn)
-    value: walk(arena, code)
-    st: lmx_call_walk_fail_status()
-    if: st != 0
-        return: st
-    ---
-    if: dest != 0
-        lmx_int_store_known(dest, value)
-        \out: dest
-    ---
-return: 0
+    prim_walk: (cast: (LmxCallPrimWalkFn) lmx_call_prim_walk_fn)
+return: prim_walk(arena, code, data, refs, nargs, dest, out)

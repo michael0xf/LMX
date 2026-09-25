@@ -103,6 +103,9 @@ prototype:
     fn: lmx_walk_merge_pairs_free (@@: LmxMergePair pairs; size_t: n) void
     # -194 к.6: walk PRIM entry for a fresh multi-operand merge with an override map,
     # `R: merge: A B ... [body]` -- [prim, record, op0, ..., opN-1, body_or_0, pairs_or_0].
+    # к.b (-202): each operand's lmx_range_profile, when nonzero, is collected and passed
+    # to lmx_merge_profiles_owned as retain_profiles -- classified by the arena alone,
+    # matching what the native emission already does (l2trans.lm1:20390-20399).
     fn: lmx_walk_merge_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
     # -194 к.6: walk PRIM entry for merge INTO an existing target (Q26.1's own-field
     # write, `o\inner: a`) -- [prim, record, target, op, pairs]; \out is always 0.

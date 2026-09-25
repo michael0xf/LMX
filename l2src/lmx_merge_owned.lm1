@@ -631,3 +631,187 @@ fn: lmx_walk_merge_model (@: void owner; @@: void refs; size_t: nargs; @: void d
     ---
     \out: (cast: (@: void) result)
 return: 0
+
+# -194 к.6 (K2): pairs[0..n-1], each a calloc'd LmxMergePair, freed by
+# lmx_walk_merge_pairs_free -- the same array-of-pointers shape the kernel's own
+# LmxMergePair** already takes everywhere else (T1/T2's own translator emission, K1's
+# own selftests).
+fn: lmx_walk_merge_pairs_free (@@: LmxMergePair pairs; size_t: n) void
+    size_t: p 0U
+    if: pairs = 0
+        return
+    while: p < n
+        if: pairs[p] != 0
+            free((cast: (@: void) pairs[p]))
+        ---
+        p: p + 1U
+    ---
+    free((cast: (@: void) pairs))
+
+# Decode the translator's pair-map Structure (built once at program build, like l2_nsp
+# for named Structures -- Opus, -194 к.6) into the LmxMergePair** shape lmx_merge_owned
+# and lmx_merge_into_owned already take: 3 direct size_t children per pair, flattened
+# (model_slot, operand, field) in order, P = len / 3U. pairs_s = 0 (no map at all) or an
+# empty one (len = 0) both decode to \out_pairs = 0 / \out_count = 0U, not a refusal --
+# "no pairs" is the flat-append merge's own ordinary case; the caller (lmx_merge_owned
+# or lmx_merge_into_owned) decides whether zero pairs is valid for what it is doing.
+# Returns 0 OK, 1 a malformed pairs_s (not a Structure, or a length not a multiple of 3)
+# or NOMEM.
+fn: lmx_walk_merge_pairs_decode (@: LmxArena arena; @: Lmx pairs_s; @@@: LmxMergePair out_pairs; @: size_t out_count) int
+    size_t: n 0U
+    size_t: p 0U
+    @@: LmxMergePair pairs 0
+    @: LmxMergePair one 0
+    \out_pairs: 0
+    \out_count: 0U
+    if: pairs_s = 0
+        return: 0
+    if: lmx_range_classify(arena, (cast: (@: void) pairs_s)) != c.LMX_KIND_STRUCT
+        return: 1
+    if: (cast: (size_t) pairs_s\len) % 3U != 0U
+        return: 1
+    ---
+    n: (cast: (size_t) pairs_s\len) / 3U
+    if: n = 0U
+        return: 0
+    pairs: (cast: (@@: LmxMergePair) calloc(n, c.sizeof(@: void)))
+    if: pairs = 0
+        return: 1
+    ---
+    p: 0U
+    while: p < n
+        one: (cast: (@: LmxMergePair) calloc(1U, c.sizeof(c.LmxMergePair)))
+        if: one = 0
+            lmx_walk_merge_pairs_free(pairs, p)
+            return: 1
+        ---
+        one\model_slot: lmx_size_value_known(lmx_arena_ref_value(pairs_s, p * 3U))
+        one\operand: lmx_size_value_known(lmx_arena_ref_value(pairs_s, p * 3U + 1U))
+        one\field: lmx_size_value_known(lmx_arena_ref_value(pairs_s, p * 3U + 2U))
+        pairs[p]: one
+        p: p + 1U
+    ---
+    \out_pairs: pairs
+    \out_count: n
+return: 0
+
+# -194 к.6 (K2): merge in the interpreted root, `R: merge: A B ... [body]`, with T2's own
+# override map. Node (Opus/T3): generic PRIM [prim, record, op0, ..., opN-1, body_or_0,
+# pairs_or_0] -- nargs = N + 2 always (the trailing two slots are fixed; lmx_walk_prim's
+# own null-slot skip, above in lmx_walk.lm1, makes an absent body/map refs[i] = 0
+# without refusing the call). refs[0] is the model, matching Q21 = A / T1's own
+# model-first rule; container = operands[0]'s own parent, the same rule
+# lmx_walk_merge_model already uses for the single-operand case. \out = the fresh
+# result. Status: 0 OK, 1 a malformed call (bad nargs, a non-Structure operand/body, a
+# malformed pairs Structure), 2 THROW_MERGE (lmx_merge_owned itself refused -- an
+# override the translator's own static checks should have already ruled out, same as
+# lmx_walk_merge_model's own admission-refusal case).
+fn: lmx_walk_merge_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    @: LmxArena arena 0
+    @@: Lmx operands 0
+    size_t: op_count 0U
+    @: Lmx body 0
+    @: Lmx pairs_s 0
+    @: Lmx container 0
+    @@: LmxMergePair pairs 0
+    size_t: pair_count 0U
+    @@: Lmx retain_profiles 0
+    size_t: retain_count 0U
+    @: Lmx profile 0
+    size_t: i 0U
+    @: Lmx result 0
+    int: status
+    \out: 0
+    if: owner = 0 || refs = 0 || out = 0 || nargs < 2U
+        return: 1
+    ---
+    arena: (cast: (@: LmxArena) owner)
+    op_count: nargs - 2U
+    if: op_count = 0U
+        return: 1
+    ---
+    i: 0U
+    while: i < op_count
+        if: refs[i] = 0 || lmx_range_classify(arena, refs[i]) != c.LMX_KIND_STRUCT
+            return: 1
+        ---
+        i: i + 1U
+    ---
+    operands: (cast: (@@: Lmx) refs)
+    body: (cast: (@: Lmx) refs[op_count])
+    if: body != 0 && lmx_range_classify(arena, (cast: (@: void) body)) != c.LMX_KIND_STRUCT
+        return: 1
+    ---
+    pairs_s: (cast: (@: Lmx) refs[op_count + 1U])
+    if: lmx_walk_merge_pairs_decode(arena, pairs_s, @ pairs, @ pair_count) != 0
+        return: 1
+    ---
+    # K2b (-202): an operand's profile says whether the copier RETAINS it (shares by
+    # address, lmx_graph_copy_owned.lm1:462-470) instead of deep-copying it. Classified
+    # by the arena alone (lmx_range_profile), never a translator-side inventory of which
+    # operand was a named/qualified receiver -- most operands carry no profile at all (0,
+    # skipped); those that do are collected exactly as the native emission does
+    # (l2trans.lm1:20390-20399), just read from the arena at call time instead of known
+    # statically. Duplicates across operands are kept, not deduplicated -- the copier
+    # treats retain_profiles as a plain membership scan, idempotently.
+    retain_profiles: (cast: (@@: Lmx) calloc(op_count, c.sizeof(@: void)))
+    if: retain_profiles = 0
+        lmx_walk_merge_pairs_free(pairs, pair_count)
+        return: 1
+    ---
+    i: 0U
+    while: i < op_count
+        profile: lmx_range_profile(arena, (cast: (@: void) operands[i]))
+        if: profile != 0
+            retain_profiles[retain_count]: profile
+            retain_count: retain_count + 1U
+        ---
+        i: i + 1U
+    ---
+    container: operands[0]\parent
+    status: lmx_merge_profiles_owned(operands, op_count, body, container, 0, arena, arena, retain_profiles, retain_count, pairs, pair_count, @ result)
+    free((cast: (@: void) retain_profiles))
+    lmx_walk_merge_pairs_free(pairs, pair_count)
+    if: status != c.LMX_MERGE_OK || result = 0
+        return: 2
+    ---
+    \out: (cast: (@: void) result)
+return: 0
+
+# -194 к.6 (K2): merge INTO an existing target, `o\inner: a` (Q26.1). Node (Opus/T3):
+# generic PRIM [prim, record, target, op, pairs] -- nargs = 3U always, pairs REQUIRED
+# (K1 к.3's own bijection rule refuses an absent/empty map for anything but a
+# zero-field op, so there is no "flat merge-into" case to special-case here). \out is 0:
+# an own-field write is a statement (Q26.1), never a value. Status: 0 OK, 1 a malformed
+# call (bad nargs, a non-Structure target/op, a malformed or absent pairs Structure), 2
+# THROW_MERGE (lmx_merge_into_owned itself refused -- an unmatched op field or a
+# duplicate pair the translator's own static checks should have already ruled out).
+fn: lmx_walk_merge_into_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    @: LmxArena arena 0
+    @: Lmx target 0
+    @: Lmx op 0
+    @: Lmx pairs_s 0
+    @@: LmxMergePair pairs 0
+    size_t: pair_count 0U
+    int: status
+    \out: 0
+    if: owner = 0 || refs = 0 || out = 0 || nargs != 3U
+        return: 1
+    ---
+    arena: (cast: (@: LmxArena) owner)
+    target: (cast: (@: Lmx) refs[0])
+    op: (cast: (@: Lmx) refs[1])
+    pairs_s: (cast: (@: Lmx) refs[2])
+    if: target = 0 || lmx_range_classify(arena, (cast: (@: void) target)) != c.LMX_KIND_STRUCT
+        return: 1
+    if: op = 0 || lmx_range_classify(arena, (cast: (@: void) op)) != c.LMX_KIND_STRUCT
+        return: 1
+    ---
+    if: lmx_walk_merge_pairs_decode(arena, pairs_s, @ pairs, @ pair_count) != 0 || pairs = 0
+        return: 1
+    ---
+    status: lmx_merge_into_owned(target, op, 0, arena, arena, pairs, pair_count)
+    lmx_walk_merge_pairs_free(pairs, pair_count)
+    if: status != c.LMX_MERGE_OK
+        return: 2
+return: 0

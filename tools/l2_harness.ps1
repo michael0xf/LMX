@@ -1081,29 +1081,29 @@ $fixtures = @(
     # primitive after its domain check, a Structure after runtime implements; a short payload is
     # `implements`).  The first row is S1.2's obligation: a declared name and an implicit one reach
     # different handlers at run time (Oops is 1, merge d + 1 = 2).
-    [pscustomobject]@{ Name = 'unit_s1_catch_declared_vs_merge.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: throw and catch'; Args = @('0'); Entry = 27; MergeFail = 1; Stopped = 0;
+    [pscustomobject]@{ Name = 'unit_s1_catch_declared_vs_merge.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 27; MergeFail = 1; Stopped = 0;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s1_catch_declared_vs_merge_ok.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: throw and catch'; Args = @('0'); Entry = 8; Stopped = 0;
+    [pscustomobject]@{ Name = 'unit_s1_catch_declared_vs_merge_ok.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 8; Stopped = 0;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s1_catch_tc.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Stopped = 0;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s1_catch_t2.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: throw and catch'; Args = @('0'); Entry = 103;
+    [pscustomobject]@{ Name = 'unit_s1_catch_t2.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 103;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s1_catch_sibling.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: throw and catch'; Args = @('0'); Entry = 3;
+    [pscustomobject]@{ Name = 'unit_s1_catch_sibling.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 3;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s1_catch_rethrow.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: throw and catch'; Args = @('0'); Entry = 1011;
+    [pscustomobject]@{ Name = 'unit_s1_catch_rethrow.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 1011;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s1_catch_nested_while.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: throw and catch'; Args = @('0'); Entry = 122;
+    [pscustomobject]@{ Name = 'unit_s1_catch_nested_while.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 122;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s1_catch_merge_local.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 50; MergeFail = 1;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s1_catch_publish.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: throw and catch'; Args = @('0'); Entry = 7;
+    [pscustomobject]@{ Name = 'unit_s1_catch_publish.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s1_catch_user_break.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: break and continue'; Args = @('0'); Entry = 105;
         Absent = @(); Debt = @() },
     # -178 commit 3: the letter's admission to get's Model formal is built (it throws implements); pending on
     # the catch role (-171).
-    [pscustomobject]@{ Name = 'unit_s1_catch_implements.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: throw and catch'; Args = @('0'); Entry = 42;
+    [pscustomobject]@{ Name = 'unit_s1_catch_implements.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 42;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s1_catch_duplicate_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'duplicate catch: Oops'; Absent = @(); Debt = @() },

@@ -384,6 +384,11 @@ c.array: [64]: @: LmP0Structure l2_padb
 c.array: [64]: int l2_padi
 int: l2_pad_n 0
 int: l2_pad_seq 0
+# -201: walker pads for the catches of one emission. The node id is stable from the
+# body's prep until the catch statement stores it in its slot.
+c.array: [64]: @: LmP0Node l2_rw_pcf
+c.array: [64]: int l2_rw_pid
+int: l2_rw_pn 0
 @@: char l2_it_n 0
 @@: size_t l2_it_nl 0
 @@: int l2_it_ty 0
@@ -492,6 +497,10 @@ prototype:
     fn: l2_rw_has_slash (const: @(LmP0Text t)) int
     fn: l2_rw_own_row (const: @(LmP0Node node); const: @(LmP0Text t)) int
     fn: l2_rw_call (const: @(LmP0Node node); int: idx; @: LmP0Field args; int: parent; @: int out) int
+    fn: l2_rw_pads (@: LmP0Field first; int: into) int
+    fn: l2_rw_catch_stmt (const: @(LmP0Node stmt); int: into; int: slot; @: int made) int
+    fn: l2_rw_catch_call (int: node; int: callee) int
+    fn: l2_rw_catch_fixed (int: node; int: k_in; const: @(char cname)) int
     fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) int
     fn: l2_rw_prec (const: @(LmP0Text t)) int
     fn: l2_rw_bin (@@: LmP0Node tok; int: lo; int: hi; int: ty; int: parent; @: int out) int
@@ -16619,7 +16628,14 @@ return: (cast: (int) (oi >= 0 && (l2_own_mi[oi] = l2_rw_mi || l2_own_mi[oi] = l2
 # The type of the root's own numeric field named t, or -9 (not one: the emission says why).
 fn: l2_rw_own_ty (const: @(LmP0Text t)) int
     int: oi l2_rw_find(t)
-    if: oi < 0 || l2_rw_seen(oi) = 0 || l2_own_host[oi] != 0 || l2_own_fid[oi] >= 0 || l2_own_uchild[oi] < 0
+    if: oi < 0 || l2_rw_seen(oi) = 0
+        return: 0 - 9
+    # A catch parameter is a hosted numeric cell of its catch frame (l2_b of that frame).
+    if: l2_own_host[oi] != 0
+        if: l2_frame_head(l2_own_host[oi], "catch") = 0 || l2_own_fid[oi] < 0 || l2_own_fchild[oi] < 0 || l2_rw_num_ty(l2_own_ty[oi]) = 0
+            return: 0 - 9
+        return: l2_own_ty[oi]
+    if: l2_own_fid[oi] >= 0 || l2_own_uchild[oi] < 0
         return: 0 - 9
     # A reference field (a pointer cell: a letter, a Structure-typed field) has its own type too,
     # 1000 and above: it is compared with 0 or another reference only (-179).
@@ -17348,7 +17364,7 @@ fn: l2_rw_admit (int: parent; int: ni; int: letter; @: int out) int
         return: 1
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: %s\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0 || lmx_arena_ref_store(l2_rw%d, 4U, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", \out, \out, \out, rec, \out, \out, \out, \out, \out, ni) < 0
         return: 1
-return: 0
+return: l2_rw_catch_fixed(\out, 2, "implements")
 
 # `m: raw` at the walked root, m of a declared Structure type T and raw an untyped reference field
 # (a letter, or another untyped graph): raw is admitted to T at this binding point, a refusal the
@@ -17504,6 +17520,8 @@ fn: l2_rw_merge (const: @(LmP0Node stmt); int: res; int: into; @: int out) int
         return: 1
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %uU) != c.LMX_WALK_OK\n            return: 1\n        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: lmx_walk_merge_map\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", \out, (cast: (unsigned) (l2_mres_base + res)), prim, prim, prim, prim, prim, prim, prim) < 0
         return: 1
+    if: l2_rw_catch_fixed(prim, 1, "merge") != 0
+        return: 1
     last: l2_next_active(mf\as\frame\body\first_field)
     while: k < n
         oi: l2_ebr_find(last\value\as\atom)
@@ -17572,6 +17590,9 @@ return: l2_rw_put(\out, 3, prim)
 fn: l2_rw_cell (int: node; int: oi) int
     if: l2_rw_emit = 0
         return: 0
+    # A catch parameter lives in its catch frame's Structure, which entry built as l2_b.
+    if: l2_own_fid[oi] >= 0 && l2_own_host[oi] != 0 && l2_frame_head(l2_own_host[oi], "catch") != 0
+        return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_b%d)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %uU) != c.LMX_WALK_OK\n            return: 1\n", node, l2_own_fid[oi], node, (cast: (unsigned) l2_own_fchild[oi])) < 0))
     if: l2_own_mi[oi] = l2_rw_mi
         return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %uU) != c.LMX_WALK_OK\n            return: 1\n", node, (cast: (unsigned) l2_own_uchild[oi])) < 0))
 return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_entry_unit)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %uU) != c.LMX_WALK_OK\n            return: 1\n", node, node, (cast: (unsigned) l2_own_uchild[oi])) < 0))
@@ -17895,13 +17916,237 @@ fn: l2_rw_own_row (const: @(LmP0Node node); const: @(LmP0Text t)) int
     int: oi l2_rw_find(t)
     if: l2_rw_seen(oi) = 0
         return: 0 - 2
-    if: l2_own_host[oi] != 0 || l2_own_fid[oi] >= 0
+    if: l2_own_host[oi] != 0
+        if: l2_frame_head(l2_own_host[oi], "catch") = 0 || l2_own_fid[oi] < 0 || l2_own_fchild[oi] < 0 || l2_rw_num_ty(l2_own_ty[oi]) = 0
+            l2_rw_refuse(node, "a field declared in a nested body")
+            return: 0 - 1
+        return: oi
+    if: l2_own_fid[oi] >= 0
         l2_rw_refuse(node, "a field declared in a nested body")
         return: 0 - 1
     if: l2_rw_num_ty(l2_own_ty[oi]) = 0 || l2_own_uchild[oi] < 0
         l2_rw_refuse_ty(node, oi)
         return: 0 - 1
 return: oi
+
+# The walker node already made for this catch, or -1.
+fn: l2_rw_pad_slot (const: @(LmP0Node cf)) int
+    int: i 0
+    while: i < l2_rw_pn
+        if: l2_rw_pcf[i] = cf
+            return: l2_rw_pid[i]
+        i: i + 1
+    ---
+return: 0 - 1
+
+fn: l2_rw_param_own (const: @(LmP0Node decl)) int
+    int: oi 0
+    while: oi < l2_own_n
+        if: l2_own_decl[oi] = decl && l2_own_mi[oi] = l2_rw_mi
+            return: oi
+        oi: oi + 1
+    ---
+return: 0 - 1
+
+# [pad, param cell..., handler]. The handler is filled when the catch statement is reached.
+# A parameter that is not a number is refused: this slice emits only numeric cells.
+fn: l2_rw_pad_new (int: into; const: @(LmP0Node cf)) int
+    @: LmP0Structure ps
+    @: LmP0Field f
+    int: np 0
+    int: id
+    int: oi
+    int: k 0
+    c.array: [160]: char at
+    if: l2_rw_emit = 0
+        return: 0
+    id: l2_rw_pad_slot(cf)
+    if: id >= 0
+        return: id
+    if: l2_rw_pn >= 64
+        return: 0 - 1
+    ps: l2_catch_params(cf)
+    if: ps != 0
+        np: l2_count_active(ps)
+    f: 0
+    if: ps != 0
+        f: l2_next_active(ps\first_field)
+    while: f != 0
+        oi: l2_rw_param_own(f\value)
+        if: oi < 0 || l2_rw_num_ty(l2_own_ty[oi]) = 0
+            return: 0 - 1
+        if: l2_own_fid[oi] >= 0
+            if: l2_own_fchild[oi] < 0 || l2_frame_head(l2_own_host[oi], "catch") = 0
+                return: 0 - 1
+            ---
+        else:
+            if: l2_own_uchild[oi] < 0
+                return: 0 - 1
+            ---
+        ---
+        f: l2_next_active(f\next)
+    ---
+    if: l2_rw_frame(into, "LMX_WALK_OP_PAD", 2 + np, @ id) != 0
+        return: 0 - 1
+    f: 0
+    if: ps != 0
+        f: l2_next_active(ps\first_field)
+    while: f != 0
+        oi: l2_rw_param_own(f\value)
+        if: l2_own_fid[oi] >= 0
+            if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, %dU, lmx_arena_ref_value(l2_b%d, %uU)) != 0\n            return: 1\n", id, 1 + k, l2_own_fid[oi], (cast: (unsigned) l2_own_fchild[oi])) < 0
+                return: 0 - 1
+            ---
+        else:
+            if: l2_own_slot_at(oi, at) != 0
+                return: 0 - 1
+            if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, %dU, lmx_arena_ref_value(%s)) != 0\n            return: 1\n", id, 1 + k, at) < 0
+                return: 0 - 1
+            ---
+        ---
+        k: k + 1
+        f: l2_next_active(f\next)
+    ---
+    l2_rw_pcf[l2_rw_pn]: (cast: (@: LmP0Node) cf)
+    l2_rw_pid[l2_rw_pn]: id
+    l2_rw_pn: l2_rw_pn + 1
+return: id
+
+# One row (k_in, pad, 0). k_out stays 0: the row catches.
+fn: l2_rw_catch_row (int: table; int: at; int: k_in; int: pad) int
+    if: l2_rw_emit = 0
+        return: 0
+    if: c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, %dU) != c.LMX_WALK_OK || lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, 0U) != c.LMX_WALK_OK || lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", table, at, k_in, table, at + 2, table, at + 1, pad) < 0
+        return: 1
+return: 0
+
+# The call's catch slot: one row per name this callee can throw that a pad here covers.
+# k_in is the callee's own status number.
+fn: l2_rw_catch_call (int: node; int: callee) int
+    @: LmP0Text nm
+    @: LmP0Node cf
+    int: n 0
+    int: k 1
+    int: d
+    int: g
+    int: at 0
+    int: table
+    int: pad
+    if: l2_rw_emit = 0 || callee < 0
+        return: 0
+    d: l2_throws_declared(callee)
+    while: k <= d
+        nm: l2_throws_name(callee, k)
+        cf: l2_catch_find(l2_rw_mi, nm, 0, 0, 0)
+        if: cf != 0 && l2_rw_pad_slot(cf) >= 0
+            n: n + 1
+        k: k + 1
+    ---
+    g: 1
+    while: l2_implicit_name(g) != 0
+        cf: l2_catch_find(l2_rw_mi, 0, l2_implicit_name(g), 0, 0)
+        if: cf != 0 && l2_rw_pad_slot(cf) >= 0 && l2_implicit_status(callee, l2_implicit_name(g)) > 0
+            n: n + 1
+        g: g + 1
+    ---
+    if: n = 0
+        return: 0
+    if: l2_rw_plain(node, 3 * n, @ table) != 0 || l2_rw_put(node, 4, table) != 0
+        return: 1
+    k: 1
+    while: k <= d
+        nm: l2_throws_name(callee, k)
+        cf: l2_catch_find(l2_rw_mi, nm, 0, 0, 0)
+        pad: l2_rw_pad_slot(cf)
+        if: cf != 0 && pad >= 0
+            if: l2_rw_catch_row(table, at, k, pad) != 0
+                return: 1
+            at: at + 3
+        ---
+        k: k + 1
+    ---
+    g: 1
+    while: l2_implicit_name(g) != 0
+        cf: l2_catch_find(l2_rw_mi, 0, l2_implicit_name(g), 0, 0)
+        pad: l2_rw_pad_slot(cf)
+        if: cf != 0 && pad >= 0 && l2_implicit_status(callee, l2_implicit_name(g)) > 0
+            if: l2_rw_catch_row(table, at, l2_implicit_status(callee, l2_implicit_name(g)), pad) != 0
+                return: 1
+            at: at + 3
+        ---
+        g: g + 1
+    ---
+return: 0
+
+# A primitive's own fixed throw code (merge 1, implements 2), caught here.
+fn: l2_rw_catch_fixed (int: node; int: k_in; const: @(char cname)) int
+    @: LmP0Node cf
+    int: pad
+    int: table
+    if: l2_rw_emit = 0
+        return: 0
+    cf: l2_catch_find(l2_rw_mi, 0, cname, 0, 0)
+    if: cf = 0
+        return: 0
+    pad: l2_rw_pad_slot(cf)
+    if: pad < 0
+        return: 0
+    if: l2_rw_plain(node, 3, @ table) != 0 || l2_rw_put(node, 2, table) != 0
+        return: 1
+return: l2_rw_catch_row(table, 0, k_in, pad)
+
+fn: l2_rw_pads (@: LmP0Field first; int: into) int
+    @: LmP0Field f
+    int: id
+    if: l2_rw_emit = 0
+        return: 0
+    f: l2_next_active(first)
+    while: f != 0
+        if: l2_frame_head(f\value, "catch")
+            id: l2_rw_pad_new(into, f\value)
+            if: id < 0
+                return: l2_rw_refuse(f\value, "a catch parameter that is not a number")
+            ---
+        f: l2_next_active(f\next)
+    ---
+return: 0
+
+fn: l2_rw_catch_stmt (const: @(LmP0Node stmt); int: into; int: slot; @: int made) int
+    @: LmP0Structure body
+    @: LmP0Structure ps
+    int: id
+    int: np 0
+    int: empty
+    c.array: [32]: char pn
+    \made: 1
+    if: l2_rw_emit = 0
+        return: 0
+    id: l2_rw_pad_new(into, stmt)
+    if: id < 0
+        return: l2_rw_refuse(stmt, "a catch parameter that is not a number")
+    ps: l2_catch_params(stmt)
+    if: ps != 0
+        np: l2_count_active(ps)
+    if: l2_scope_push(stmt) != 0
+        return: 1
+    body: l2_catch_body(stmt)
+    if: body != 0 && body\first_field != 0
+        if: l2_rw_body(body\first_field, id, 1 + np) != 0
+            l2_scope_pop()
+            return: 1
+        ---
+    else:
+        if: l2_rw_plain(id, 0, @ empty) != 0 || l2_rw_put(id, 1 + np, empty) != 0
+            l2_scope_pop()
+            return: 1
+        ---
+    ---
+    if: l2_scope_pop() != 0
+        return: 1
+    l2_rw_name(into, pn)
+    if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, id) < 0
+        return: 1
+return: 0
 
 # A call of method idx under container parent: the occurrence by reference, then each input from
 # `args` (a field run, split by l2_expr_span like any actual list).
@@ -17950,6 +18195,8 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; @: LmP0Field args; int: paren
     # rtype is the callee's result cell in its `return` part (l2_emit_parts), by reference: the walk
     # types the call's destination by that cell's range; a `sub` has none (0).
     if: l2_rw_frame(parent, "LMX_WALK_OP_CALL", 5 + n, out) != 0
+        return: 1
+    if: l2_rw_catch_call(\out, idx) != 0
         return: 1
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, %uU))) != 0\n            return: 1\n", \out, (cast: (unsigned) (l2_unit_base + idx))) < 0
         return: 1
@@ -18976,7 +19223,12 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
             return: 0
         if: l2_rw_frame(into, "LMX_WALK_OP_IF", 3, @ node) != 0 || l2_rw_lit(node, 1, @ t) != 0 || l2_rw_put(node, 1, t) != 0
             return: 1
+        if: l2_scope_push(stmt) != 0
+            return: 1
         if: l2_rw_body(stmt\as\structure\first_field, node, 2) != 0
+            l2_scope_pop()
+            return: 1
+        if: l2_scope_pop() != 0
             return: 1
         \made: 1
         if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, node) < 0
@@ -19073,7 +19325,9 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
     ---
     if: l2_text_eq(h, "for") || l2_text_eq(h, "until")
         return: l2_rw_refuse(stmt, "a loop")
-    if: l2_text_eq(h, "catch") || l2_text_eq(h, "throw") || l2_text_eq(h, "throws")
+    if: l2_text_eq(h, "catch")
+        return: l2_rw_catch_stmt(stmt, into, slot, made)
+    if: l2_text_eq(h, "throw") || l2_text_eq(h, "throws")
         return: l2_rw_refuse(stmt, "throw and catch")
     # receiveMessage takes the current Thread's next letter (l2_rw_take, -179).  A method the unit
     # declares under that name takes precedence, as every callable head does
@@ -19249,6 +19503,8 @@ fn: l2_rw_stmts (@: LmP0Field first; int: into; int: base; @: int made) int
     @: LmP0Field next
     int: one
     int: pbase
+    if: l2_rw_pads(first, into) != 0
+        return: 1
     field: l2_next_active(first)
     while: field != 0
         pbase: l2_rw_pre_n
@@ -21871,6 +22127,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     # statement refused here is refused before the unit is.
     l2_rw_emit: 0
     l2_rw_t: 0
+    l2_rw_pn: 0
     l2_rw_steps: 0
     l2_rw_send_n: 0
     l2_rw_send_i: 0
@@ -22703,6 +22960,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
         return: 1
     l2_rw_emit: 1
     l2_rw_t: 0
+    l2_rw_pn: 0
     l2_rw_send_i: 0
     l2_rw_mi: l2_e
     k: 0

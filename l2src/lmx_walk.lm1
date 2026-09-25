@@ -1901,7 +1901,9 @@ fn: lmx_walk_body (@: LmxWalkFrame f; @: Lmx body; size_t: first) int
             ---
         ---
         # A throw from the handler can name another pad of this same body.
-        # Keep landing until that pad is bound too.
+        # Landing is cleared before each handler, so this loop runs again only
+        # when that handler throws onto a pad whose parent is still this body.
+        # One such pad is bound once: the next turn sees landing 0 unless a new throw sets it.
         while: status != c.LMX_WALK_OK && f\landing != 0 && f\landing\parent = body
             pad: f\landing
             status: lmx_walk_catch_bind(f)

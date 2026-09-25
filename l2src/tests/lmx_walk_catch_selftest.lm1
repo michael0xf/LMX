@@ -54,6 +54,22 @@ fn: bump_throw_once (@: void owner; @@: void refs; size_t: nargs; @: void dest; 
     ---
 return: c.LMX_PRIMITIVE_OK
 
+fn: count_ok (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    gcount: gcount + 1
+    \out: 0
+return: c.LMX_PRIMITIVE_OK
+
+# The handler throws on its first entry and returns on the next, so a
+# landing that stays set finishes the walk instead of looping.
+fn: hand_once (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    gcount: gcount + 1
+    if: gcount = 1
+        \out: (cast: (@: void) gpayload)
+        return: c.LMX_PRIMITIVE_THROW_MERGE
+    ---
+    \out: 0
+return: c.LMX_PRIMITIVE_OK
+
 fn: fr (@: Lmx parent; size_t: slot; int: op; size_t: children) @: Lmx
     @: Lmx n lmx_walk_frame(ga, groles, parent, op, children)
     if: n = 0 || lmx_arena_ref_store(parent, slot, (cast: (@: void) n)) != 0
@@ -106,6 +122,7 @@ fn: main () int
     @: Lmx value 0
     @: Lmx prim_rec 0
     @: LmxPrimitive prim 0
+    @: LmxPrimitive counter 0
     @: void cell 0
     @: void pcell 0
     @: void cell_b 0
@@ -145,6 +162,12 @@ fn: main () int
     prim\signature: 0
     prim\owner: (cast: (@: Lmx) ga)
     prim_rec: (cast: (@: Lmx) prim)
+    counter: (cast: (@: LmxPrimitive) lmx_arena_take(ga, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))
+    if: counter = 0
+        return: 2
+    counter\fn: count_ok
+    counter\signature: 0
+    counter\owner: (cast: (@: Lmx) ga)
 
     # catch 0: the throw propagates, the literal after it does not run.
     gpayload: 0
@@ -364,14 +387,17 @@ fn: main () int
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_OK && gv\present = 1 && gv\ref != 0 && lmx_int_value_known(gv\ref) = 7)), "throw in the handler lands on the outer pad")
 
-    # A throw in the handler that names no pad must leave. If landing stays set,
-    # this same pad is entered again.
+    # A throw in the handler that names no pad must leave. The handler throws
+    # only on its first entry, so a landing that is not cleared comes back,
+    # the second entry returns OK, and the walk finishes instead of propagating.
+    gcount: 0
+    counter\fn: hand_once
     gpayload: 0
     m: pl(unit, 2U)
     pad: fr(m, 1U, c.LMX_WALK_OP_PAD, 2U)
     inner: pl(m, 1U)
     pn: fr(inner, 0U, c.LMX_WALK_OP_PRIM, 3U)
-    ref(pn, 1U, (cast: (@: void) prim_rec))
+    ref(pn, 1U, (cast: (@: void) counter))
     ref(pad, 1U, (cast: (@: void) inner))
     pn: fr(m, 0U, c.LMX_WALK_OP_PRIM, 3U)
     ref(pn, 1U, (cast: (@: void) prim_rec))
@@ -382,7 +408,40 @@ fn: main () int
     ref(table, 1U, (cast: (@: void) pad))
     ref(pn, 2U, (cast: (@: void) table))
     st: go(m)
-    check((cast: (int) (st = c.LMX_WALK_THROWN + 1)), "handler throw with no pad propagates")
+    check((cast: (int) (st = c.LMX_WALK_THROWN + 1 && gcount = 1)), "handler throw with no pad propagates")
+    counter\fn: count_ok
+
+    # A throw from one pad of this body onto the other pad lands once.
+    gcount: 0
+    gpayload: 0
+    m: pl(unit, 4U)
+    call: fr(m, 0U, c.LMX_WALK_OP_PRIM, 3U)
+    ref(call, 1U, (cast: (@: void) prim_rec))
+    pad: fr(m, 1U, c.LMX_WALK_OP_PAD, 2U)
+    outer_pad: fr(m, 2U, c.LMX_WALK_OP_PAD, 2U)
+    handler: pl(m, 1U)
+    pn: fr(handler, 0U, c.LMX_WALK_OP_PRIM, 3U)
+    ref(pn, 1U, (cast: (@: void) counter))
+    ref(outer_pad, 1U, (cast: (@: void) handler))
+    inner: pl(m, 1U)
+    pn: fr(inner, 0U, c.LMX_WALK_OP_PRIM, 3U)
+    ref(pn, 1U, (cast: (@: void) prim_rec))
+    table: pl(inner, 3U)
+    if: table = 0 || lmx_walk_store_size(ga, table, 0U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, table, 2U, 1U) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+    ref(table, 1U, (cast: (@: void) outer_pad))
+    ref(pn, 2U, (cast: (@: void) table))
+    ref(pad, 1U, (cast: (@: void) inner))
+    table: pl(m, 3U)
+    if: table = 0 || lmx_walk_store_size(ga, table, 0U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, table, 2U, 1U) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+    ref(table, 1U, (cast: (@: void) pad))
+    ref(call, 2U, (cast: (@: void) table))
+    ret7(m, 3U)
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_OK && gcount = 1 && gv\present = 1 && gv\ref != 0 && lmx_int_value_known(gv\ref) = 7)), "throw onto a sibling pad of the same body lands once")
 
     # (d) A throw inside an IF body lands on the pad of the enclosing block.
     gpayload: 0

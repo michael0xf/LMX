@@ -1174,11 +1174,15 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_empty_assign_untyped.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a reference assignment'; Args = @('0');
         Absent = @(); Debt = @() },
     # D-06: the f() assignment's failed rebinding store is an invariant on the X1 route, not a printed line.
-    [pscustomobject]@{ Name = 'unit_empty_assign_admit.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an admission to a Structure type'; Args = @('0'); Entry = 421;
+    # Empty Structure assigned to a typed binding (book §12): FRESH of an empty node, admitted by
+    # lmx_walk_admit.  () does not implement Model / S, so implements is caught and the previous
+    # binding stays: 421 and 74.  A store of the empty node without admission would not.
+    [pscustomobject]@{ Name = 'unit_empty_assign_admit.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 421;
         Absent = @('lmx_msg_poll_abort', 'lmx: rebinding');
-        Debt = @('c.fprintf(c.stderr, "lmx: invariant: rebinding store failed for own field ') },
-    [pscustomobject]@{ Name = 'unit_empty_assign_named.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an admission to a Structure type'; Args = @('0'); Entry = 74;
-        Absent = @(); Debt = @() },
+        Debt = @('fn: lmx_walk_admit', 'c.LMX_WALK_OP_FRESH, 2U)') },
+    [pscustomobject]@{ Name = 'unit_empty_assign_named.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 74;
+        Absent = @('lmx_msg_poll_abort');
+        Debt = @('fn: lmx_walk_admit', 'c.LMX_WALK_OP_FRESH, 2U)', 'c.LMX_WALK_OP_PUT_REF, 4U)') },
     # A BARE `return` CLOSES A SUB (P0, FABLE-OPUS-RECEIVER-CONTRACT-20260924-139 commit 3; author
     # 2026-09-24 Q19.1/Q19.3): the trailer ends the body of s, and each call runs it.
     [pscustomobject]@{ Name = 'unit_sub_return_trailer.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 6;

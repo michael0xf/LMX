@@ -143,7 +143,7 @@ fn: mc_w_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: vo
     # flight before main begins the close.
     c.__atomic_store_n((cast: (@: int) (@ mc_w_entered)), 1, c.__ATOMIC_RELEASE)
     while: c.__atomic_load_n((cast: (@: LmxFlag) (@ message\running)), c.__ATOMIC_RELAXED) != 0
-        c.Sleep(1U)
+        lmx_manager_running_pause_ms(1U)
     ---
     letter: (cast: (@: LmxMsg) lmx_arena_take(mc_w_letter_arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
     if: letter = 0
@@ -544,7 +544,7 @@ fn: main () int
     mc_check(counts, lmx_manager_running_round(lmx_root_manager(@ w_root), 4U, lmx_root_clock(@ w_root)) = c.LMX_MANAGER_OK, "the witness lane was not started")
     mc_w_waited: 0U
     while: c.__atomic_load_n((cast: (@: int) (@ mc_w_entered)), c.__ATOMIC_ACQUIRE) = 0 && mc_w_waited < 1000U
-        c.Sleep(1U)
+        lmx_manager_running_pause_ms(1U)
         mc_w_waited: mc_w_waited + 1U
     ---
     mc_check(counts, c.__atomic_load_n((cast: (@: int) (@ mc_w_entered)), c.__ATOMIC_ACQUIRE) != 0, "the witness child never entered its turn before close")

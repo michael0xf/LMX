@@ -244,12 +244,12 @@ fn: main () int
     wait_spins: 0U
     turns_before: lmx_size_value_known(lmx_arena_ref_value(child_graph, 0U))
     while: wait_spins < 50U && turns_before < 3U
-        c.Sleep(20U)
+        lmx_manager_running_pause_ms(20U)
         turns_before: lmx_size_value_known(lmx_arena_ref_value(child_graph, 0U))
         wait_spins: wait_spins + 1U
     ---
     rl_check(counts, turns_before >= 3U, "lane did not grow graph turns (>=3)")
-    c.Sleep(40U)
+    lmx_manager_running_pause_ms(40U)
     turns_mid: lmx_size_value_known(lmx_arena_ref_value(child_graph, 0U))
     rl_check(counts, turns_mid > turns_before, "graph turns did not keep growing")
     rl_check(counts, child_msg\running = 1, "child stopped before close")
@@ -271,23 +271,18 @@ fn: main () int
     rl_check(counts, lmx_root_state(@ root) = c.LMX_ROOT_CLOSED, "closed root not closed")
 
     # Give the lane a moment to touch freed storage if it will (crash = the finding).
-    c.Sleep(100U)
+    lmx_manager_running_pause_ms(100U)
 
     # After close: read ONLY probe-owned state (stack arena header; remembered HANDLE).
     child_blocks_after: lmx_arena_index_len(child_at)
     arena_released: child_blocks_after = 0U
-    lane_wait_code: (cast: (unsigned) c.WaitForSingleObject(lane_handle, 0U))
-    # The running manager may reap and close the handle after observing the ended lane. In that
-    # case a probe of the remembered handle returns Windows WAIT_FAILED (0xffffffff), which is an
-    # already-joined lane, not a still-running one.
-    if: lane_wait_code = (cast: (unsigned) c.WAIT_OBJECT_0) || lane_wait_code = 0xffffffffU
+    # The remembered value is the platform handle. thread_running is the zero-timeout
+    # look: still running, or already ended / already released.
+    lane_ended: 0
+    if: lmx_manager_running_thread_running(lane_handle) = 0
         lane_ended: 1
-        if: lane_wait_code = (cast: (unsigned) c.WAIT_OBJECT_0)
-            c.CloseHandle(lane_handle)
-        ---
-    else:
-        lane_ended: 0
     ---
+    lane_wait_code: (cast: (unsigned) lane_ended)
 
     c.printf("POST_CLOSE child_blocks_before=%u child_blocks_after=%u arena_released=%d lane_ended=%d lane_wait=0x%x turns_pre=%u turns_mid=%u\n",
              (cast: (unsigned) child_blocks_before), (cast: (unsigned) child_blocks_after),

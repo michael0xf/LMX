@@ -306,7 +306,7 @@ fn: main () int
     # deadline was disarmed before the frame returned; if that disarm had not happened, the armed
     # bound (400 ms) would have killed this process during the sleep below.  Reaching the next line
     # IS the proof; the check below records it under a name a reader can search for.
-    c.Sleep(1200U)
+    lmx_manager_running_pause_ms(1200U)
     c.printf("NO LATE WATCHDOG FIRE: the process slept 1200 ms past a 400 ms armed bound after a successful close\n")
     c.fflush(0)
     t3_check(counts, lmx_root_state(@ root) = c.LMX_ROOT_CLOSED, "NO LATE WATCHDOG FIRE: the process outlived its own close bound and the root is still CLOSED")

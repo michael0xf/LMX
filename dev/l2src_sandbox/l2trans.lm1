@@ -11446,6 +11446,10 @@ fn: l2_head_is_call (const: @(LmP0Text t); const: @(LmP0Structure body); unsigne
     ---
     if: l2_find_method(t) >= 0
         return: 1
+    # c.name(...) is the raw C door (spec 6.6.6): a call in every form, an empty argument list
+    # included (`c.abort()`), never an update of a field of that name.
+    if: l2_c_stmt_door(t) != 0
+        return: 1
     if: t\data = 0 || t\length >= 256U
         return: 0
     if: l2_seg_count(t\data, t\length) < 2

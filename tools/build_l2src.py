@@ -78,7 +78,7 @@ def main():
             continue
         shutil.copy(f, staged / f.name); n += 1
     # -200: one logical body name. Windows keeps the Win32 body; another host takes the POSIX body.
-    for logical in ('lmx_clock.lm1', 'lmx_process_deadline.lm1', 'lmx_manager_running.lm1'):
+    for logical in ('lmx_clock.lm1', 'lmx_process_deadline.lm1', 'lmx_manager_running.lm1', 'lmx_manager_running_lane.lm1'):
         physical = logical.replace('.lm1', '_' + host + '.lm1')
         shutil.copy(flat / physical, staged / logical); n += 1
     for f in (flat / 'tests').glob('*.lm1'):

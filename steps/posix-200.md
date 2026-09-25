@@ -59,3 +59,11 @@ Lane: последним актом после `lmx_thread_finish` поток с
 ## Гейт среза (б)
 
 build 279/279 (`build/l2src/20260925_124018`; +2 к 277: `header:lmx_posix_abi` и `unit:lmx_posix_abi.h`, как у прочих заголовков). Harness 398/398 (`build/l2_harness/20260925_124305`). L3 11/11, бюджет имён на Windows 68/128. `check_docs` OK. Облачный `build_l2src.py` 230/230 не измерен.
+
+## Остаток REVIEW b5e72d7
+
+`WaitForSingleObject` ушёл из `lmx_thread.lm1`. Вопрос «lane завершилась?» — `lmx_manager_running_lane_ended` в общем заголовке. Тело не в `lmx_manager_running_*.lm1`: тот файл тянет часы и ход, и селфтест, который их уже встроил, не может прилинковать его целиком. Отдельная пара `lmx_manager_running_lane_win32.lm1` / `_posix.lm1` стейджится под нейтральным именем, четвёртым в том же списке шести скриптов. `lmx_thread.lm1` встраивает это тело: драйвер harness линкует только свой объект. Win32 смотрит `WaitForSingleObject(lane, 0)`. POSIX читает `finished` под мьютексом lane и не делает join. Пауза селфтеста — `lmx_manager_running_pause_ms` (Win32 `Sleep`, POSIX `nanosleep`). Комментарии `lmx_clock.h.lm1` и `lmx_process_deadline.h.lm1` больше не называют `GetTickCount64` и `WaitForSingleObject`.
+
+Свидетель — `lmx_domain_selftest`: пауза сдвигает `lmx_clock_word` не меньше чем на 30 мс; живая lane не завершена; после `running: 0` и паузы завершена, reap ещё впереди.
+
+Гейт: build 280/280 (`build/l2src/20260925_133833`; +1 к 279 — `unit:lmx_manager_running_lane`). Harness 399/399 (`build/l2_harness/20260925_134128`). L3 11/11, бюджет имён 68/128. `check_docs` OK. Облако 232/232 измеряет fable.

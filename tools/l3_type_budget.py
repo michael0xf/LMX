@@ -83,7 +83,7 @@ def stage(unit_root, l1src):
     for folder in ('l2src', 'l3_interp/tests', 'l1src'):
         (unit_root / folder).mkdir(parents=True)
     host = 'win32' if os.name == 'nt' else 'posix'
-    twins = {'lmx_clock.lm1', 'lmx_process_deadline.lm1', 'lmx_manager_running.lm1'}
+    twins = {'lmx_clock.lm1', 'lmx_process_deadline.lm1', 'lmx_manager_running.lm1', 'lmx_manager_running_lane.lm1'}
     for source in sorted(SANDBOX.glob('lmx*.lm1')):
         if source.name.endswith('_win32.lm1') or source.name.endswith('_posix.lm1'):
             continue

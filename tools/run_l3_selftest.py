@@ -65,7 +65,7 @@ def run_one(translator, l1src, cc, test, output):
         manifest['sources'][str(target.relative_to(unit_root)).replace(os.sep, '/')] = sha256(source)
 
     host = 'win32' if os.name == 'nt' else 'posix'
-    twins = {'lmx_clock.lm1', 'lmx_process_deadline.lm1', 'lmx_manager_running.lm1'}
+    twins = {'lmx_clock.lm1', 'lmx_process_deadline.lm1', 'lmx_manager_running.lm1', 'lmx_manager_running_lane.lm1'}
     for source in sorted(SANDBOX.glob('lmx*.lm1')):
         if source.name.endswith('_win32.lm1') or source.name.endswith('_posix.lm1'):
             continue

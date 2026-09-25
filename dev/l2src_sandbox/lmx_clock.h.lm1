@@ -22,12 +22,11 @@ prototype:
     # The same reading as the 32-bit count a scheduler record keeps.
     fn: lmx_clock_ticks () ulong
     # THE PLATFORM WORD'S READING OF THE SAME CLOCK, and the width a stored close deadline lives in.
-    # IT MUST CAST GetTickCount64 DIRECTLY.  Routing it through lmx_clock_ticks() is a silent defect
-    # on this platform: `ulong` emits as C `unsigned long`, which is 32 BITS on Windows x64 while
-    # size_t is 64, so the truncation would be zero-extended into the wider word -- and a modular
-    # deadline test running at the wider width over values that really wrap at 2^32 would answer
-    # "not yet reached" for the ~49.7 days after the wrap.  No short test can reach that wrap, so
-    # the cast is the whole defence (lmx_uds, 2026-09-21).
+    # The body reads the full clock into this word.  Routing it through lmx_clock_ticks() is a
+    # silent defect where `ulong` is narrower than `size_t`: the truncation is zero-extended into
+    # the wider word, and a modular deadline test at the wider width then answers "not yet" for a
+    # long time after the narrow wrap.  No short test can reach that wrap, so the wide read is the
+    # whole defence (lmx_uds, 2026-09-21).
     fn: lmx_clock_word () size_t
     # HALF THE WORD RANGE: the width a modular deadline comparison is sound below, and therefore the
     # largest close limit the setter accepts (lmx_root_close_limit_set refuses at or above it).

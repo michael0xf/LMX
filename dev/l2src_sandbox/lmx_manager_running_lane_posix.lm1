@@ -1,0 +1,28 @@
+predef: "l2src/lmx_manager_running.h.lm1"
+predef: "l2src/lmx_posix_abi.h.lm1"
+
+# The look and the pause live here, not in the manager body. That body inlines
+# the clock and the turn, so a selftest that already inlined those cannot also
+# link it. Reap still joins; this look only reads the flag the lane set last.
+
+fn: lmx_manager_running_lane_ended (@: LmxSchedule slot) int
+    @: LmxPosixLane lane
+    int: done
+    if: slot = 0 || slot\lane = 0
+        return: 1
+    lane: (cast: (@: LmxPosixLane) slot\lane)
+    c.pthread_mutex_lock(@ lane\mu)
+    done: lane\finished
+    c.pthread_mutex_unlock(@ lane\mu)
+return: done
+
+fn: lmx_manager_running_pause_ms (unsigned: ms) int
+    LmxPosixTimespec: pause
+    unsigned: whole 0U
+    if: ms = 0U
+        return: 0
+    whole: ms / 1000U
+    c.pause.tv_sec: (cast: (long) whole)
+    c.pause.tv_nsec: (cast: (long) ((ms % 1000U) * 1000000U))
+    c.nanosleep(@ pause, (cast: (@: LmxPosixTimespec) 0))
+return: 0

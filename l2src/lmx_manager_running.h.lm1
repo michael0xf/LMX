@@ -28,4 +28,9 @@ prototype:
     fn: lmx_manager_running_step (@: LmxManager m; ulong: now) int
     fn: lmx_manager_running_round (@: LmxManager m; unsigned: ticks; ulong: now) int
     fn: lmx_manager_running_close (@: LmxManager m) int
+    # Has this record's lane already ended? No lane means yes: nothing else is
+    # still inside its storage. The body looks; a later reap still owns the join.
+    fn: lmx_manager_running_lane_ended (@: LmxSchedule slot) int
+    # Let other threads run for about this many milliseconds. Zero returns at once.
+    fn: lmx_manager_running_pause_ms (unsigned: ms) int
 end: prototype

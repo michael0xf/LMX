@@ -515,9 +515,13 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'entry_puts_nl.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Says = @('x', 'y'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'entry_puts_esc.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Says = @('a"b\c'); Absent = @(); Debt = @() },
     # FABLE-126 part2: migrate/gate former c.array entry fixtures (owned []: char).
-    [pscustomobject]@{ Name = 'entry_array.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an array'; Args = @('0'); Absent = @('c.array'); Debt = @() },
-    [pscustomobject]@{ Name = 'entry_array_leading_zero.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an array'; Args = @('0'); Absent = @('c.array'); Debt = @() },
-    [pscustomobject]@{ Name = 'entry_nul.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an array'; Args = @('0'); Absent = @('c.array'); Debt = @() },
+    # -170 (translator half, over grok_bot's ELEM 25 / ELEMPUT 26): an own Array of the root is its
+    # descriptor in the unit's slot (the graph build makes it; the declaration is no step); `x[N]: v`
+    # is ELEMPUT [elemput, 0, slot, N, v] and `x[N]` ELEM [elem, 0, slot, N], N a literal.  Each row
+    # writes and reads back; success 7 (it was 0, an empty witness).
+    [pscustomobject]@{ Name = 'entry_array.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0'); Absent = @('c.array'); Debt = @('c.LMX_WALK_OP_ELEMPUT, 5U)', 'c.LMX_WALK_OP_ELEM, 4U)') },
+    [pscustomobject]@{ Name = 'entry_array_leading_zero.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0'); Absent = @('c.array'); Debt = @('c.LMX_WALK_OP_ELEMPUT, 5U)', 'c.LMX_WALK_OP_ELEM, 4U)') },
+    [pscustomobject]@{ Name = 'entry_nul.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0'); Absent = @('c.array'); Debt = @('c.LMX_WALK_OP_ELEMPUT, 5U)', 'c.LMX_WALK_OP_ELEM, 4U)') },
     # THE UNIT IS THE ENTRY (FABLE-OPUS-S2-UNIT-IS-ENTRY-20260923-112).  Every non-callable is
     # visible only after its declaration, methods both ways.  unit_s2_vis_dynamic: a method ABOVE a
     # unit field cannot see it, so the name is its dynamic input, handed over by its caller (wrap's
@@ -1941,6 +1945,16 @@ $fixtures = @(
         Args = @('0');
         Absent = @();
         Debt = @() },
+    # D-76: a reference `@: T` to a named Structure is one level, `@: Lmx` -- its value is the Structure
+    # -- and a path goes through it: a local (main: unknown field path root), a formal (main: refused
+    # write, raw `->` read), a reference field (main: refused write).  Each reads and writes through
+    # the reference; success is 7.
+    [pscustomobject]@{ Name = 'unit_ref_local_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0');
+        Absent = @('@@: Lmx r'); Debt = @('@: Lmx r', 'l2_pst: (cast: (@: Lmx) r)') },
+    [pscustomobject]@{ Name = 'unit_ref_formal_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0');
+        Absent = @('@@: Lmx l2_p'); Debt = @('@: Lmx l2_p0_0') },
+    [pscustomobject]@{ Name = 'unit_ref_field_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0');
+        Absent = @(); Debt = @('l2_pst: (cast: (@: Lmx) lmx_pointer_value_known(l2_pxp[0]))') },
     [pscustomobject]@{ Name = 'unit_addr_entry_name_collision.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body';
         Args = @('0');
         Says = @('1 2 3 4 5');
@@ -2207,8 +2221,8 @@ $fixtures = @(
     # 4U after them.  Passed as a fresh merge copy instead, the writes are lost and the row exits 90.
     [pscustomobject]@{ Name = 'unit_matrix_callable_struct_identity.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0'); Absent = @('c.LMX_WALK_OP_DEREF'); Debt = @('c.LMX_WALK_OP_PUT_REF, 4U)') },
-    [pscustomobject]@{ Name = 'unit_matrix_callable_array_elem.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an array';
-        Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_matrix_callable_array_elem.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); Absent = @(); Debt = @('c.LMX_WALK_OP_ELEMPUT, 5U)', 'c.LMX_WALK_OP_ELEM, 4U)') },
     [pscustomobject]@{ Name = 'unit_matrix_callable_callable_arg.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_matrix_path_prim.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
@@ -2218,8 +2232,8 @@ $fixtures = @(
     # (merge in place / rebind / refusal).
     [pscustomobject]@{ Name = 'unit_matrix_path_struct_rebind_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'root operation not walkable yet: a Structure assigned through a path'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_matrix_path_array_elem.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an array';
-        Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_matrix_path_array_elem.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); Absent = @(); Debt = @('c.LMX_WALK_OP_ELEMPUT, 5U)', 'c.LMX_WALK_OP_ELEM, 4U)') },
     # (e) empty Structure as ONE named value vs empty arg list. Named form is
     # measured refuse today (D-21); arglist is nullary CALL.
     [pscustomobject]@{ Name = 'unit_matrix_empty_named_value.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

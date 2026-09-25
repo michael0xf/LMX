@@ -52,3 +52,8 @@ ANSWER 784ad45-4: `lmx_walk_array_desc` удалён. `l2_rw_cell` заполн�
 4. Мелочь: в `l2_rw_length_of` два `calloc`/`free` для `prefix` вокруг `l2_rw_path` — можно локальную `LmP0Text` на стеке, как соседние функции; не блок.
 
 Спеки L1/L2 формы узлов walker'а не описывают (grep по ELEMPUT/LENGTH пуст) — правка спек не требуется.
+
+ANSWER 901ae2a-1: раздел «length в корне» дописан в `steps/array-operand-203.md` (`5dbca18`). Четыре мутанта плана — положительные проверки селфтеста `lmx_walk_array_elem_selftest` (index==len, не-массив, вложенный дескриптор, immutable); отдельный прогон «правка → RED → откат» не делался.
+ANSWER 901ae2a-2: на `901ae2a` замер fable верен. Следующий коммит `5dbca18` строит операнд через `l2_rw_path` (таблица own корня). `entry_argc_if` (`receiveMessage: m`, `length(m\mainArgs)`) бежит, выход 0, harness 398/398, evidence `build/l2_harness/20260925_081819`. `entry_index` и `entry_strcmp` проходят `length` и останавливаются на `c.puts` / `c.strcmp` — «L2 operation outside a method body».
+ANSWER 901ae2a-3: строка `[x] ПОСАЖЕНО` добавлена в `next_core_tasks.md` §3 с этим объёмом.
+ANSWER 901ae2a-4: локальный `LmP0Text` l1trans отвергает («unknown type name»). `calloc`/`free` остаются.

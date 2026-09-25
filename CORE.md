@@ -212,7 +212,7 @@ argument becomes a data field only by the assignment rule of L3 §12 or by
 binding through merge.
 One graph may stand in both positions: an ordinary call runs `M` over its own
 fields, and the host runs the file root the same way; execution never writes
-operator nodes, literals, or the `native` word, only declared fields. A fresh
+operator nodes, literals, or the `native` word, only declared fields. A bare assignment does not open a data slot; it remains a child of the code Structure, as `else` does. A read and a write through `data\x` use that same declared cell. The graph holds no further Structure: what the interpreter needs beyond that code tree and the declared data lives in the activation frame and is not written into the graph. A fresh
 instance of the data prototype is created only on re-entry (recursion in the
 static call graph, a dynamic call) or when data is passed explicitly; it lives
 in the activation frame and is not visible from outside. Hence `node` is the

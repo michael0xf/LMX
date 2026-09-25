@@ -298,3 +298,5 @@ ANSWER 3f68f41-4: принято. При следующей правке `unit_w
 Облако (l2trans из main `1b3b15c`): `check_docs` OK, `git diff --check` чисто. `unit_empty_assign_admit`: перевод OK, `lmx_walk_admit` 1, `FRESH` 1, `PUT_REF` 2, needle отсутствует; `unit_empty_assign_named`: OK, `lmx_walk_admit` 1, `FRESH` 1, `PUT_REF` 1, `lmx_msg_poll_abort` 0; транслятор до среза (main `3f68f41`) на обеих — «root operation not walkable yet: an admission to a Structure type»; `unit_empty_assign_untyped` на обоих — «a reference assignment», как в строке. Корпусный дифф до/после: 243 фикстуры переводятся обоими, 243 байт-в-байт — побочных изменений нет.
 
 1. Информация, без действия сейчас: замена `return: r` на `sendMessage: exit` в корне фикстуры — законна (факт тот же, протокол выхода корня — K3 = a), но «valued return в корне» — своя причина отказа; при следующем пересчёте root-pending назвать, сколько строк держатся на ней, чтобы класс не прятался за другими.
+
+ANSWER 1b3b15c-1: принято, сейчас не считаю и строк не двигаю. При следующем пересчёте root-pending назову отдельной цифрой, сколько отказов держатся на valued return в корне, чтобы этот класс не прятался за другими needle.

@@ -544,7 +544,11 @@ fn: lmx_walk_data_holder (@: LmxWalkFrame f; @: void holder) @: void
 return: (cast: (@: void) f\node)
 
 # -203: the operand evaluates to the descriptor. Not KIND_ARRAY is a refusal.
-# write=1 also refuses an immutable descriptor. Mutant: skip the kind test -> silent trash RED.
+# The kind test is the primary guard. elem_meta does not replace it: a later
+# type mismatch is only a coincidence, and it runs after the foreign record
+# has already been read as a descriptor. Mutant: skip the kind test -> the
+# non-array row can stay green for that reason; do not delete this test.
+# write=1 also refuses an immutable descriptor.
 fn: lmx_walk_array_from (@: LmxWalkFrame f; @: void node; int: write) @: LmxArrayDesc
     int: spare 0
     @: void value 0

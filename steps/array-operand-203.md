@@ -55,4 +55,17 @@ STARTED FABLE-GROK-ARRAY-OPERAND-20260925-203: grok/array-operand-203 база m
 
 ## length в корне
 
-`length` для массива положительного ранга — первая размерность (`docs/LMX_semantics.en.md` §17). В L2 это `descriptor.len`, `size_t`. `length(m\mainArgs)` в корне спрашивает таблицу own корня (`l2_rw_path`), не `l2_path_root`. Строка `entry_argc_if` бежит: без лишних argv длина 1, выход 0 (harness `20260925_081819`). `entry_index` и `entry_strcmp` доходят до массива и останавливаются на `c.puts` / `c.strcmp` — L2-операция вне метода. `length` в позиции `int` (`exit_code`, формал `plus_one`) — отказ конверсии `size_t` → `int`, это таблица §7, не этот пункт.
+`length` для массива положительного ранга — первая размерность (`docs/LMX_semantics.en.md` §17). В L2 это `descriptor.len`, `size_t`. `length(m\mainArgs)` в корне спрашивает таблицу own корня (`l2_rw_path`), не `l2_path_root`. Строка `entry_argc_if`: без лишних argv длина 1. Успех — `exit_code` 7, не 0 (правило «свидетель не может быть пустым», REVIEW 8f8ad3a). Отказ `length != 1` остаётся `exit_code` 1. `entry_index` и `entry_strcmp` доходят до массива и останавливаются на `c.puts` / `c.strcmp` — L2-операция вне метода. `length` в позиции `int` (`exit_code`, формал `plus_one`) — отказ конверсии `size_t` → `int`, это таблица §7, не этот пункт.
+
+## Мутанты (REVIEW 8f8ad3a п.2)
+
+Селфтест `lmx_walk_array_elem_selftest`, исходник откатан после каждого прогона.
+
+| Что снято | Результат |
+| --- | --- |
+| проверка вида `LMX_KIND_ARRAY` в `lmx_walk_array_from` | не RED: `build_l2src.ps1 -Run` GREEN 276/276, селфтест exit 0 (`build/l2src/20260925_084717`). LIT не-массив всё равно `INVALID`: дальше отказывает `lmx_walk_array_elem_meta`, тип области не массив. Строка «ELEM non-array» этот тест не доказывает. |
+| `lmx_walk_immutable` на адресе операнда | RED: `FAIL ELEMPUT immutable operand -> INVALID`, 1/20, exit 1 (`build/l2src/20260925_084948`) |
+| граница `index >= len` в арме ELEM | RED: `FAIL ELEM index==len -> INVALID`, 1/20, exit 1 (`build/l2src/20260925_085220`) |
+| `lmx_walk_array_from` не считает операнд, а берёт ребёнка 1 как ссылку держателя | RED: 14/20, среди них `FAIL ELEM(ELEM(outer)) -> 5` (`build/l2src/20260925_085449`) |
+
+Исходник после прогонов совпадает с деревом до мутаций. Ядро в коммите не мутировано.

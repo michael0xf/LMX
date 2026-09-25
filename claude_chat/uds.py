@@ -171,13 +171,43 @@ def background_id(state):
     return state['bg_id']
 
 
-def cmd_serve(name):
+def remote_control_args(name, remote_control):
+    """The Remote Control flags, or nothing.
+
+    `claude --remote-control <name>` is the INTERACTIVE form: the session keeps its
+    named pipe (Codex / Grok CLI still reach it with `uds.py send`) and, in addition,
+    registers with claude.ai, so the cloud sessions (fable, opus, sonnet) can address
+    it by this name with SendMessage.  The SERVER form `claude remote-control` is not
+    used here: it refuses the messaging-socket flag the relay depends on.
+    Requirements (code.claude.com/docs/en/remote-control): a claude.ai login (not an
+    API key), the variables DISABLE_TELEMETRY / DO_NOT_TRACK /
+    CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC / DISABLE_GROWTHBOOK unset, no
+    ANTHROPIC_BASE_URL, and a one-time "Enable Remote Control? (y/n)" answered in
+    the session's own window.
+    """
+    if not remote_control:
+        return []
+    for variable in ('DISABLE_TELEMETRY', 'DO_NOT_TRACK',
+                     'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC', 'DISABLE_GROWTHBOOK'):
+        if os.environ.get(variable):
+            raise RuntimeError(f'Remote Control refuses to start while {variable} is set; unset it first.')
+    if os.environ.get('ANTHROPIC_BASE_URL'):
+        raise RuntimeError('Remote Control does not work with ANTHROPIC_BASE_URL; unset it first.')
+    return ['--remote-control', name]
+
+
+def remote_control_default():
+    return os.environ.get('LMX_UDS_REMOTE_CONTROL', '') not in ('', '0', 'false', 'no')
+
+
+def cmd_serve(name, remote_control=False):
     """Run the session in THIS window instead of --bg.
 
     A background session forces the fullscreen renderer before it ever looks at
     CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN, so an attached terminal loses its own
     scrollback. An ordinary session honours that variable. The price is that the
-    relay lives only as long as this window.
+    relay lives only as long as this window.  With remote_control the same window
+    also answers the one-time Remote Control confirmation.
     """
     if name in L1_NAMES:
         raise RuntimeError('Refusing L1 session names.')
@@ -186,7 +216,8 @@ def cmd_serve(name):
     debug.parent.mkdir(parents=True, exist_ok=True)
     args = [executable(), '--name', name,
             '--messaging-socket-path', pipe,
-            '--debug-file', str(debug)]
+            '--debug-file', str(debug),
+            *remote_control_args(name, remote_control)]
     # Inherit stdio: the child owns this console, and nothing may be printed
     # over its screen, so this command stays silent unless it fails.
     process = subprocess.Popen(args, cwd=str(ROOT))
@@ -198,15 +229,19 @@ def cmd_serve(name):
         'pipe': pipe,
         'kind': 'interactive',
         'cwd': str(ROOT),
+        'remote_control': bool(remote_control),
     }
     save_state(name, state)
     adopt_record(name, state)
     return process.wait()
 
 
-def cmd_start(name):
+def cmd_start(name, remote_control=False):
     if name in L1_NAMES:
         raise RuntimeError('Refusing L1 session names.')
+    if remote_control:
+        # The confirmation prompt needs a window; a background session has none.
+        raise RuntimeError('Remote Control needs the session\'s own window: use `serve --remote-control`, not start.')
     pipe = new_pipe()
     debug = profile_dir(name) / 'uds_debug.log'
     debug.parent.mkdir(parents=True, exist_ok=True)
@@ -296,6 +331,10 @@ def cmd_stop(name):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--name', default='lmx_uds', help='Independent session name (not an L1 name).')
+    parser.add_argument('--remote-control', '--rc', action='store_true', default=remote_control_default(),
+                        help='Also register the session with claude.ai (claude --remote-control <name>), so the '
+                             'cloud sessions can SendMessage it by name; the named pipe stays. Default from '
+                             'LMX_UDS_REMOTE_CONTROL=1. serve only.')
     sub = parser.add_subparsers(dest='command', required=True)
     sub.add_parser('start')
     sub.add_parser('serve', help='Run in this window (scrollback works); not --bg.')
@@ -307,9 +346,9 @@ def main():
     sub.add_parser('stop')
     args = parser.parse_args()
     if args.command == 'start':
-        return cmd_start(args.name)
+        return cmd_start(args.name, args.remote_control)
     if args.command == 'serve':
-        return cmd_serve(args.name)
+        return cmd_serve(args.name, args.remote_control)
     if args.command == 'status':
         return cmd_status(args.name)
     if args.command == 'attach':

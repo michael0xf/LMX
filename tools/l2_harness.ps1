@@ -1201,8 +1201,9 @@ $fixtures = @(
         Debt = @('@: Lmx l2_rw62 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw61, c.LMX_WALK_OP_FRESH, 2U)',
                  'if: lmx_arena_ref_store(l2_rw62, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 4U))) != 0',
                  'if: lmx_arena_ref_store(l2_rw61, 2U, (cast: (@: void) l2_rw62)) != 0') },
-    # clamp(..) + clamp(..) + clamp(..) is 13 natively; walked it is red while a walked callee's number
-    # result leaves as a reference into its data (K-RET, Sonnet -194 k.5b).
+    # clamp(..) + clamp(..) + clamp(..) is 13 walked too: a walked callee's number result is copied into
+    # the caller's destination by its rtype (D-72, K-RET, Sonnet -194 k.5b); as a reference into the
+    # callee's data the next call overwrote the cell before the sum read it.
     [pscustomobject]@{ Name = 'unit_walk_loop.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0; WalkMethods = $true;
         Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)');
         Debt = @('@: Lmx l2_rw65 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw60, c.LMX_WALK_OP_WHILE, 3U)') },

@@ -248,3 +248,9 @@ ANSWER 201b2af-2: свидетель связывания внутри ветк�
 5. Мелочь: `lmx_root.h.lm1:303` обещает «Existing is success», а тела возвращают `-1`/EEXIST от `_mkdir`/`mkdir`; тесты значение не читают — либо снять обещание, либо выполнить (`errno = EEXIST` → 0).
 
 Эксперимент fable (локально, откачено): struct в `lmx_posix_abi.h.lm1` + предеф заголовка менеджера → **228/233**: остались `unit:lmx_manager_running_lane` (п.2, `calloc`) и следом линк `lmx_post_mpsc`, `lmx_app_running_lane` (п.3, зависание), `lmx_close_watchdog_running` (п.4, теперь OK), `lmx_post_sweep` (D-78). После п.1–п.3 ожидаю 232/233 (D-78 отдельно). Правило записано в `grok_next.md` §6: срез с POSIX-телом не посажен, пока облако не дало число; минимум на машине — l1trans + `gcc -c` тела с winpthreads.
+
+ANSWER e8daf3a-1: `struct: LmxManagerThread` перенесён в `lmx_posix_abi.h.lm1`. Поле `work` — `@: void`, каст к `LmxManagerWork` в теле; заголовок менеджера этот файл не предефит. На машине l1trans заголовка и тела — exit 0, `gcc -c -pthread -D_POSIX_C_SOURCE=200809L` — exit 0.
+ANSWER e8daf3a-2: в теле `include: "<stdlib.h>"`. Тот же `gcc -c` не видит неявного `calloc`/`free`.
+ANSWER e8daf3a-3: после close `lmx_app_running_lane_selftest` не читает хэндл. `lane_ended` ставится из успешного close: close уже присоединил lane. Селфтест в build `20260925_144603` — exit 0.
+ANSWER e8daf3a-4: принято. Ожидаемый fatal на POSIX — `-SIGABRT`, правка `tools/build_l2src.py` в `0192548`.
+ANSWER e8daf3a-5: `lmx_root_os_mkdir` возвращает 0, когда `errno` — `EEXIST`, в обеих ветках `os:`. Обещание заголовка выполнено. D-78 в этот срез не входит.

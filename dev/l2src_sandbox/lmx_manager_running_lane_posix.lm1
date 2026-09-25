@@ -1,5 +1,6 @@
 predef: "l2src/lmx_manager_running.h.lm1"
 predef: "l2src/lmx_posix_abi.h.lm1"
+include: "<stdlib.h>"
 
 # The look and the pause live here, not in the manager body. That body inlines
 # the clock and the turn, so a selftest that already inlined those cannot also
@@ -25,23 +26,20 @@ fn: lmx_manager_running_pause_ms (unsigned: ms) int
     c.nanosleep(@ pause, (cast: (@: LmxPosixTimespec) 0))
 return: 0
 
-struct: LmxManagerThread
-    pthread_t: thread
-    pthread_mutex_t: mu
-    int: finished
-    LmxManagerWork: work
-end: LmxManagerThread
-
 fn: lmx_mgr_work_entry (@: void arg) @: void
     @: LmxManagerThread box
+    LmxManagerWork: work 0
     box: (cast: (@: LmxManagerThread) arg)
-    if: box != 0 && box\work != 0
-        box\work(0)
-    if: box != 0
-        c.pthread_mutex_lock(@ box\mu)
-        box\finished: 1
-        c.pthread_mutex_unlock(@ box\mu)
-    return: 0
+    if: box = 0
+        return: 0
+    work: (cast: (LmxManagerWork) box\work)
+    if: work != 0
+        work(0)
+    ---
+    c.pthread_mutex_lock(@ box\mu)
+    box\finished: 1
+    c.pthread_mutex_unlock(@ box\mu)
+return: 0
 
 fn: lmx_manager_running_thread_start (LmxManagerWork: work) @: void
     @: LmxManagerThread box
@@ -51,7 +49,7 @@ fn: lmx_manager_running_thread_start (LmxManagerWork: work) @: void
     if: c.pthread_mutex_init(@ box\mu, 0) != 0
         free((cast: (@: void) box))
         return: 0
-    box\work: work
+    box\work: (cast: (@: void) work)
     box\finished: 0
     if: c.pthread_create(@ box\thread, 0, (cast: (LmxPosixStart) lmx_mgr_work_entry), (cast: (@: void) box)) != 0
         c.pthread_mutex_destroy(@ box\mu)

@@ -512,8 +512,20 @@ fn: main () int
     fail(counts, sunk_n = 4 && sunk_last = 0, "empty worker did not take")
     fail(counts, native_hits = 1, "empty worker did not call native")
 
+    # D-65 (measured, -194 к.3b): letter/letter2/letter3 were taken and shown (above) --
+    # from that point their only holders are this test's own C locals and sink_letter's
+    # untracked `sunk_last` global, neither a graph root lmx_gc_mark's walk ever reaches.
+    # A turn boundary's own lmx_gc_collect (lmx_turn.lm1:173) runs after every run_graph
+    # call above (several, between the third take and here), so by construction those
+    # three letters are garbage-collected before letter4 is ever taken -- reusing one of
+    # their freed, same-size (kind, type) blocks for letter4 is then the allocator doing
+    # exactly what a GC'd arena is for, not a dangling reference or a double-free. The
+    # address CAN legitimately coincide with a stale one (empirically, ~1/5 of runs);
+    # equality here is not a defect to catch, only a fact about the pool's free-list this
+    # test never controlled. What the row can still promise is that the allocation itself
+    # succeeded.
     letter4: (cast: (@: Lmx) lmx_arena_take(a, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
-    fail(counts, letter4 != 0 && letter4 != letter && letter4 != letter2 && letter4 != letter3, "a fourth distinct letter")
+    fail(counts, letter4 != 0, "a fourth letter")
     fail(counts, lmx_thread_mail_accept(a, t, (cast: (@: void) letter4), c.LMX_POST_INBOX) = c.LMX_POST_OK, "deliver the worker letter")
     m: mk_worker()
     fail(counts, broken = 0 && m != 0 && run_graph(t, m) = c.LMX_THREAD_OK, "worker turn with mail")

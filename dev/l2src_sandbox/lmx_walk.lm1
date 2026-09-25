@@ -850,7 +850,8 @@ return: c.LMX_WALK_OK
 # -201: the catch table is a Structure of triples (k_in, pad, k_out), scanned in place.
 # k_in and k_out are size cells. pad is a reference (0 renumbers, no landing).
 # No decoded row array: nothing to free on the throw path.
-# A walked throw record lives in the arena, like a native throw: Name payload.
+# A walked throw record, when a walked `throw:` exists, must live in the arena,
+# like a native throw. There is no walked `throw:` producer yet.
 # An implicit THROW_MERGE / THROW_IMPLEMENTS carries payload 0.
 fn: lmx_walk_catch_scan (@: LmxWalkFrame f; @: void table; int: status) int
     @: Lmx rows 0
@@ -903,24 +904,22 @@ return: status
 
 # Bind pad parameters from f\payload, then walk the handler body (the pad's last child).
 # A numeric parameter is a typed store; a type mismatch is an invariant (the translator
-# already knows both types). A Structure parameter is a pointer cell holding the model:
-# admit, then store the argument reference. Admit NO is THROWN+2 and payload 0.
+# already knows both types). A Structure parameter is a pointer cell: store the argument
+# reference and nothing else. Admission is not this function. The translator emits PRIM
+# admit as the handler's own first statement, with that site's catch table, so a NO is
+# THROWN+k_out of that site rather than a constant in the kernel.
 # Landing is cleared before the handler so a throw inside it can name an outer pad.
 fn: lmx_walk_catch_bind (@: LmxWalkFrame f) int
     @: Lmx pad 0
     @: Lmx payload 0
-    @: Lmx model 0
-    @: Lmx arg_s 0
     @: Lmx handler 0
     @: void cell 0
     @: void arg 0
-    @: void admitted 0
     size_t: pcount 0U
     size_t: i 0U
     size_t: wv 0U
     int: cell_ty 0
     int: arg_ty 0
-    int: st 0
     int: status c.LMX_WALK_OK
     if: f = 0 || f\landing = 0 || (cast: (size_t) f\landing\len) < 2U
         return: c.LMX_WALK_INVALID
@@ -948,18 +947,6 @@ fn: lmx_walk_catch_bind (@: LmxWalkFrame f) int
             if: lmx_walk_is_pointer_cell(f\arena, cell) = 0 || arg = 0 || lmx_walk_kind(f, arg) != c.LMX_KIND_STRUCT
                 c.fprintf(l1_stderr(), "lmx: invariant: catch parameter type\n")
                 c.abort()
-            ---
-            model: (cast: (@: Lmx) lmx_pointer_value_known(cell))
-            if: model = 0 || lmx_walk_kind(f, (cast: (@: void) model)) != c.LMX_KIND_STRUCT
-                c.fprintf(l1_stderr(), "lmx: invariant: catch structure model\n")
-                c.abort()
-            ---
-            arg_s: (cast: (@: Lmx) arg)
-            st: lmx_walk_admit_against(f\arena, arg_s, model, @ admitted)
-            if: st != 0
-                f\payload: 0
-                f\landing: 0
-                return: c.LMX_WALK_THROWN + 2
             ---
             if: lmx_pointer_store_known(cell, arg) != 0
                 status: c.LMX_WALK_INVALID
@@ -1913,7 +1900,9 @@ fn: lmx_walk_body (@: LmxWalkFrame f; @: Lmx body; size_t: first) int
                 f\valued: 1
             ---
         ---
-        if: status != c.LMX_WALK_OK && f\landing != 0 && f\landing\parent = body
+        # A throw from the handler can name another pad of this same body.
+        # Keep landing until that pad is bound too.
+        while: status != c.LMX_WALK_OK && f\landing != 0 && f\landing\parent = body
             pad: f\landing
             status: lmx_walk_catch_bind(f)
             if: status = c.LMX_WALK_OK

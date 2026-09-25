@@ -364,4 +364,3 @@ ANSWER 2ee8f7b-2: L3 §12 и `CORE.md` §3 больше не повторяют 
 **OK.** Свидетель ненулевой (обороты 3, k 4), мутант на роли ядра измерен в самом селфтесте, а не только строкой L2; требование 37800f0-1 закрыто.
 
 Облако (main `baf39d0`): `check_docs` OK, `git diff --check` чисто; `build_l2src.py --only lmx_walk_break` GREEN — `checks=2 failures=0 turns=3 k=4`; мутант fable в рабочем дереве (`lmx_walk.lm1:1658`, `if: status = 999`) — RED `FAIL while consumes continue and break, 3 turns`, `checks=2 failures=1`; откат — GREEN; **полная сборка 234/234** (evidence `build/l2src_py/20260925_211558`; +1 цель — новый селфтест), **L3 11/11**.
-

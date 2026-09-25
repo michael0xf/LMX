@@ -715,6 +715,9 @@ fn: lmx_walk_merge_map (@: void owner; @@: void refs; size_t: nargs; @: void des
     @: Lmx container 0
     @@: LmxMergePair pairs 0
     size_t: pair_count 0U
+    @@: Lmx retain_profiles 0
+    size_t: retain_count 0U
+    @: Lmx profile 0
     size_t: i 0U
     @: Lmx result 0
     int: status
@@ -743,8 +746,31 @@ fn: lmx_walk_merge_map (@: void owner; @@: void refs; size_t: nargs; @: void des
     if: lmx_walk_merge_pairs_decode(arena, pairs_s, @ pairs, @ pair_count) != 0
         return: 1
     ---
+    # K2b (-202): an operand's profile says whether the copier RETAINS it (shares by
+    # address, lmx_graph_copy_owned.lm1:462-470) instead of deep-copying it. Classified
+    # by the arena alone (lmx_range_profile), never a translator-side inventory of which
+    # operand was a named/qualified receiver -- most operands carry no profile at all (0,
+    # skipped); those that do are collected exactly as the native emission does
+    # (l2trans.lm1:20390-20399), just read from the arena at call time instead of known
+    # statically. Duplicates across operands are kept, not deduplicated -- the copier
+    # treats retain_profiles as a plain membership scan, idempotently.
+    retain_profiles: (cast: (@@: Lmx) calloc(op_count, c.sizeof(@: void)))
+    if: retain_profiles = 0
+        lmx_walk_merge_pairs_free(pairs, pair_count)
+        return: 1
+    ---
+    i: 0U
+    while: i < op_count
+        profile: lmx_range_profile(arena, (cast: (@: void) operands[i]))
+        if: profile != 0
+            retain_profiles[retain_count]: profile
+            retain_count: retain_count + 1U
+        ---
+        i: i + 1U
+    ---
     container: operands[0]\parent
-    status: lmx_merge_owned(operands, op_count, body, container, 0, arena, arena, pairs, pair_count, @ result)
+    status: lmx_merge_profiles_owned(operands, op_count, body, container, 0, arena, arena, retain_profiles, retain_count, pairs, pair_count, @ result)
+    free((cast: (@: void) retain_profiles))
     lmx_walk_merge_pairs_free(pairs, pair_count)
     if: status != c.LMX_MERGE_OK || result = 0
         return: 2

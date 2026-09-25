@@ -96,4 +96,18 @@ prototype:
     fn: lmx_merge_into_owned (@: Lmx target; @: Lmx op; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: LmxMergePair pairs; size_t: pair_count) int
     # -174 c3: walk PRIM entry for Model: m (see lmx_walk.h.lm1).
     fn: lmx_walk_merge_model (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    # -194 к.6 (K2): decodes a translator-built pair-map Structure (3 size_t children per
+    # pair) into the LmxMergePair** shape the kernel's own merge functions take; freed by
+    # lmx_walk_merge_pairs_free. Shared by both walk PRIM entries below.
+    fn: lmx_walk_merge_pairs_decode (@: LmxArena arena; @: Lmx pairs_s; @@@: LmxMergePair out_pairs; @: size_t out_count) int
+    fn: lmx_walk_merge_pairs_free (@@: LmxMergePair pairs; size_t: n) void
+    # -194 к.6: walk PRIM entry for a fresh multi-operand merge with an override map,
+    # `R: merge: A B ... [body]` -- [prim, record, op0, ..., opN-1, body_or_0, pairs_or_0].
+    # к.b (-202): each operand's lmx_range_profile, when nonzero, is collected and passed
+    # to lmx_merge_profiles_owned as retain_profiles -- classified by the arena alone,
+    # matching what the native emission already does (l2trans.lm1:20390-20399).
+    fn: lmx_walk_merge_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    # -194 к.6: walk PRIM entry for merge INTO an existing target (Q26.1's own-field
+    # write, `o\inner: a`) -- [prim, record, target, op, pairs]; \out is always 0.
+    fn: lmx_walk_merge_into_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
 end: prototype

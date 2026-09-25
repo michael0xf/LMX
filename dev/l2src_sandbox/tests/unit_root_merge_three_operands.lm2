@@ -1,0 +1,57 @@
+Model:
+    size_t: x 1U
+    size_t: y 2U
+end: Model
+
+B:
+    size_t: x 5U
+    size_t: z 9U
+end: B
+
+C:
+    size_t: x 3U
+end: C
+
+# FABLE-OPUS-MERGE-PARTS-20260926-193 T3 (merge at the walked root, over Sonnet's K2): the root twin
+# of unit_merge_three_operands.  B's x and C's x both go into Model's x -- two pairs on one model
+# slot, C's last -- and B's z is added: R is {x, y, z} = {3, 2, 9}, made in R0's turn by the
+# walker's merge primitive with the pair map.  `R\x: 6U` writes the result's one slot x; S merges
+# the result R as its model (read when the step runs), so S\x is 6, and S's body w is new.  The
+# operands keep their own values.  Success is 7.
+size_t: a
+size_t: b
+size_t: c
+size_t: d
+size_t: e
+R: merge: Model B C
+a: R\x
+b: R\y
+c: R\z
+if: a != 3U
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+if: b != 2U
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+if: c != 9U
+    sendMessage: exit(exit_code: 83; stdout: ""; stderr: "")
+    return
+R\x: 6U
+S: merge: R
+    size_t: w 4U
+end: merge
+d: S\x
+e: S\w
+if: d != 6U
+    sendMessage: exit(exit_code: 84; stdout: ""; stderr: "")
+    return
+if: e != 4U
+    sendMessage: exit(exit_code: 85; stdout: ""; stderr: "")
+    return
+a: Model\x
+b: B\x
+if: a != 1U || b != 5U
+    sendMessage: exit(exit_code: 86; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

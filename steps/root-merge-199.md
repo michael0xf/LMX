@@ -204,3 +204,26 @@ kernel to retain their profiles -- a K2b for Sonnet?
   flip in the same landing.
 
 GATE? claude/continue-opus-next-doc-rvjocj -- after this RESULT commit.
+
+## RESULT 2: the qualified-branch operands, landed with -202 (K2b)
+
+Base main `eba1fb5` (Sonnet's -202: `lmx_walk_merge_map` collects each operand's own profile and retains
+the branch instead of copying it; the selftest tells retention from copy).
+
+- `l2_rw_merge`: the refusal «a merge of a qualified branch» is gone; a qualified-branch operand is the
+  branch itself, `lmx_arena_ref_struct(l2_entry_unit, l2_unit_base + l2_occ_n() + oi)` stored in its
+  operand slot (the private measurement of RESULT 1, now against the landed kernel).
+- Rows flipped to eternal-runs, Entry 7: `unit_eternal_shape`, `unit_array_empty`, `unit_array_field`,
+  `unit_merge_site`, `unit_eternal_multi_profile_merge_refused`.  Tails migrated to the exit letter
+  (`unit_eternal_shape`, `unit_array_field`, `unit_merge_site`: success 0 → 7); `unit_array_empty` and
+  `unit_eternal_multi_profile_merge_refused` had success 0 (empty witnesses) → 7.  Their driver facts
+  (roots, profiles, survival after collection) are the rows' own and unchanged.
+- Pins: `lmx_merge_profiles_owned` (the native root merge, gone) → `\fn: lmx_walk_merge_map` in
+  `unit_merge_site` and `unit_eternal_multi_profile_merge_refused`.
+- Retention itself is witnessed by Sonnet's selftest (`lmx_walk_merge_selftest`, -202); no root row
+  can observe a cell's identity.
+- Mutant Q1 (a branch operand one unit slot off): the three rows run red, walk PRIMITIVE (abort).
+  Inverted check (`entry 0`): red.
+- Cloud: `build_l2src.py` 174/230, check_docs OK; private shim: harness 397/397.  Root-pending «a
+  Structure value» is now 0 rows: 9 of 9 answered (8 run, `unit_throwing_callable` stops at its own
+  int/size_t mix).

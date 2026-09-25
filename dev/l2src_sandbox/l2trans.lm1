@@ -17437,9 +17437,9 @@ return: l2_rw_put(\out, 3, prim)
 # unit, l2_mres_base + res, takes the result of the walker's merge primitive by reference,
 # PUT_REF(0, slot, PRIM) -- holder 0, the root's own data, (R0, R0).  The PRIM is
 # [prim, record(lmx_walk_merge_map), op0 .. opN-1, body | 0, pairs | 0]:
-# - an operand is the Structure itself where the graph build made it (a named Structure), and the
-#   result slot of an earlier merge otherwise, read when the step runs (AT); a qualified branch is
-#   refused until the primitive retains its profile;
+# - an operand is the Structure itself where the graph build made it (a named Structure, a qualified
+#   branch -- retained by its profile, -202), and the result slot of an earlier merge otherwise, read
+#   when the step runs (AT);
 # - the body is a plain Structure of the declared fields' cells, made once with the graph, which the
 #   merge copies as it copies an operand;
 # - the pairs are l2_mrs_build's own map, one plain Structure of 3·P size cells (model_slot,
@@ -17486,10 +17486,10 @@ fn: l2_rw_merge (const: @(LmP0Node stmt); int: res; int: into; @: int out) int
         sl: l2_mres_find(last\value\as\atom)
         if: oi < 0 && sl < 0 && ni < 0
             return: l2_error(l2_src, stmt, "unknown merge operand")
-        # A qualified branch is retained by address, by its exact physical profile (natively
-        # lmx_merge_profiles_owned with the operands' profiles); the walker's merge passes none yet.
-        if: oi >= 0
-            return: l2_rw_refuse(stmt, "a merge of a qualified branch")
+        # A qualified branch is the Structure itself; the primitive retains it by its exact physical
+        # profile (-202 K2b: lmx_range_profile of each operand, as the native merge passes them).
+        if: oi >= 0 && l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, %uU))) != 0\n            return: 1\n", prim, k + 2, (cast: (unsigned) (l2_unit_base + l2_occ_n() + oi))) < 0
+            return: 1
         if: oi < 0 && sl >= 0
             if: l2_rw_frame(prim, "LMX_WALK_OP_AT", 3, @ node) != 0 || l2_rw_put(prim, k + 2, node) != 0
                 return: 1

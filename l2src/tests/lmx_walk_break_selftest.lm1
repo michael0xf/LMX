@@ -1,0 +1,200 @@
+predef: "l2src/lmx_walk.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_chars.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_primitive.h.lm1"
+predef: "l2src/lmx_merge_owned.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# REVIEW 37800f0-1. BREAK and CONTINUE are walk roles. WHILE consumes the
+# nearest one. A jump outside a WHILE is the status itself (-2 / -3).
+# The witness counts turns: k climbs 1..4, continue skips the count at k = 2,
+# break ends the loop at k = 4. Turns are 3.
+# Mutant: WHILE does not consume BREAK (compare the status with 999). The
+# walk then returns -2 and this file prints FAIL.
+
+@: LmxArena ga 0
+@: Lmx groles 0
+@: LmxWalkContext gctx 0
+@: LmxWalkValue gv 0
+int: broken 0
+int: checks 0
+int: failures 0
+int: gk 0
+int: gn 0
+
+sub: check (int: ok; const: @(char label))
+    checks: checks + 1
+    if: ok = 0
+        failures: failures + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: check
+
+fn: read_k (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    if: dest = 0
+        return: c.LMX_PRIMITIVE_FAIL
+    ---
+    lmx_int_store_known(dest, gk)
+    \out: dest
+return: c.LMX_PRIMITIVE_OK
+
+fn: bump_k (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    gk: gk + 1
+    if: dest = 0
+        return: c.LMX_PRIMITIVE_FAIL
+    ---
+    lmx_int_store_known(dest, gk)
+    \out: dest
+return: c.LMX_PRIMITIVE_OK
+
+fn: bump_n (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    gn: gn + 1
+    \out: 0
+return: c.LMX_PRIMITIVE_OK
+
+fn: fr (@: Lmx parent; size_t: slot; int: op; size_t: children) @: Lmx
+    @: Lmx n lmx_walk_frame(ga, groles, parent, op, children)
+    if: n = 0 || lmx_arena_ref_store(parent, slot, (cast: (@: void) n)) != 0
+        broken: broken + 1
+        return: 0
+    ---
+return: n
+
+fn: pl (@: Lmx parent; size_t: slot; size_t: children) @: Lmx
+    @: Lmx n lmx_walk_plain(ga, parent, children)
+    if: n = 0 || lmx_arena_ref_store(parent, slot, (cast: (@: void) n)) != 0
+        broken: broken + 1
+        return: 0
+    ---
+return: n
+
+sub: ref (@: Lmx code; size_t: slot; @: Lmx target)
+    if: code = 0 || target = 0 || lmx_arena_ref_store(code, slot, (cast: (@: void) target)) != 0
+        broken: broken + 1
+    ---
+end: ref
+
+fn: lit_int (@: Lmx parent; size_t: slot; int: value) @: Lmx
+    @: Lmx n fr(parent, slot, c.LMX_WALK_OP_LIT, 2U)
+    if: n != 0 && lmx_walk_store_int(ga, n, 1U, value) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+return: n
+
+fn: prim_at (@: Lmx parent; size_t: slot; @: Lmx record) @: Lmx
+    @: Lmx n fr(parent, slot, c.LMX_WALK_OP_PRIM, 3U)
+    ref(n, 1U, record)
+return: n
+
+fn: take_prim (LmxPrimitiveEntry: fn) @: Lmx
+    @: LmxPrimitive p (cast: (@: LmxPrimitive) lmx_arena_take(ga, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))
+    if: p = 0
+        broken: broken + 1
+        return: 0
+    ---
+    p\fn: fn
+    p\signature: 0
+    p\owner: (cast: (@: Lmx) ga)
+return: (cast: (@: Lmx) p)
+
+fn: go (@: Lmx m) int
+    if: m = 0 || gctx = 0 || gv = 0
+        return: c.LMX_WALK_INVALID
+return: lmx_walk_run(gctx, m, 0, 0U, gv)
+
+fn: main () int
+    LmxArena: arena
+    LmxArena: context_arena
+    LmxPool: context_cells
+    LmxScratch: store
+    LmxWalkContext: context
+    @: Lmx unit 0
+    @: Lmx m 0
+    @: Lmx wh 0
+    @: Lmx cond 0
+    @: Lmx body 0
+    @: Lmx cmp 0
+    @: Lmx arm 0
+    @: Lmx thenb 0
+    @: Lmx rk 0
+    @: Lmx bk 0
+    @: Lmx bn 0
+    int: st 0
+
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ arena) != 0
+        return: 2
+    ga: @ arena
+    groles: lmx_walk_roles_open(ga)
+    if: groles = 0
+        return: 2
+    memset((cast: (@: void) (@ context_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ context_cells)), 0, c.sizeof(c.LmxPool))
+    memset((cast: (@: void) (@ store)), 0, c.sizeof(c.LmxScratch))
+    if: lmx_arena_open(@ context_arena) != 0 || lmx_scratch_open(@ store, @ context_arena, @ context_cells, 16U) != c.LMX_SCRATCH_OK
+        return: 2
+    memset((cast: (@: void) (@ context)), 0, c.sizeof(c.LmxWalkContext))
+    context.arena: ga
+    context.scratch: @ store
+    context.roles: groles
+    context.immutable_profile: 0
+    context.classified: 0U
+    gctx: @ context
+    gv: (cast: (@: LmxWalkValue) calloc(1U, c.sizeof(c.LmxWalkValue)))
+    if: gv = 0
+        return: 2
+    rk: take_prim(read_k)
+    bk: take_prim(bump_k)
+    bn: take_prim(bump_n)
+    unit: lmx_node_new_owned(ga)
+    if: unit = 0 || rk = 0 || bk = 0 || bn = 0 || lmx_arena_refs_open_owned(ga, unit, 4U) != 0
+        return: 2
+    ---
+
+    # k < 5. Each turn bumps k. k = 2 continues before the turn count.
+    # k = 4 breaks after the count. Turns = 3, k = 4.
+    gk: 0
+    gn: 0
+    m: pl(unit, 0U, 1U)
+    wh: fr(m, 0U, c.LMX_WALK_OP_WHILE, 3U)
+    cond: fr(wh, 1U, c.LMX_WALK_OP_LT, 3U)
+    prim_at(cond, 1U, rk)
+    lit_int(cond, 2U, 5)
+    body: pl(wh, 2U, 4U)
+    prim_at(body, 0U, bk)
+    arm: fr(body, 1U, c.LMX_WALK_OP_IF, 3U)
+    cmp: fr(arm, 1U, c.LMX_WALK_OP_EQ, 3U)
+    prim_at(cmp, 1U, rk)
+    lit_int(cmp, 2U, 2)
+    thenb: pl(arm, 2U, 1U)
+    fr(thenb, 0U, c.LMX_WALK_OP_CONTINUE, 1U)
+    prim_at(body, 2U, bn)
+    arm: fr(body, 3U, c.LMX_WALK_OP_IF, 3U)
+    cmp: fr(arm, 1U, c.LMX_WALK_OP_EQ, 3U)
+    prim_at(cmp, 1U, rk)
+    lit_int(cmp, 2U, 4)
+    thenb: pl(arm, 2U, 1U)
+    fr(thenb, 0U, c.LMX_WALK_OP_BREAK, 1U)
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_OK && gn = 3 && gk = 4)), "while consumes continue and break, 3 turns")
+
+    # A break with no WHILE returns the status. The call layer names that
+    # unknown; this boundary returns -2.
+    m: pl(unit, 1U, 1U)
+    fr(m, 0U, c.LMX_WALK_OP_BREAK, 1U)
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_BREAK)), "break outside while is -2")
+
+    c.printf("lmx_walk_break_selftest checks=%d failures=%d broken=%d turns=%d k=%d\n", checks, failures, broken, gn, gk)
+    if: failures != 0 || broken != 0
+        return: 1
+return: 0

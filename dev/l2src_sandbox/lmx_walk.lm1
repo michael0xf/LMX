@@ -1623,7 +1623,8 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
             if: ety >= c.LMX_TYPE_POINTER_BASE
                 \out: lmx_pointer_value_known(other)
             else:
-                \out: (cast: (@@: void) other)[0]
+                slot: (cast: (@@: void) other)
+                \out: slot[0]
             ---
             return: c.LMX_WALK_OK
         ---
@@ -1666,7 +1667,8 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
             if: value != 0 && lmx_walk_kind(f, value) != c.LMX_KIND_STRUCT && lmx_walk_kind(f, value) != c.LMX_KIND_ARRAY
                 return: c.LMX_WALK_INVALID
             ---
-            (cast: (@@: void) other)[0]: value
+            slot: (cast: (@@: void) other)
+            slot[0]: value
             \out: value
             return: c.LMX_WALK_OK
         ---

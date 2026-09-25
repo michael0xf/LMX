@@ -1,0 +1,24 @@
+Model:
+    size_t: value 1U
+end: Model
+
+# D-76: a local reference `@: Model r` to a named Structure is one level, `@: Lmx`: its value is the
+# Structure `@mo` gives.  A path through it is the Structure's own field: a write to mo is read
+# through r, and a write through r is mo's.  Success is 7.
+fn: check () int
+    Model: mo
+    @: Model r
+    size_t: v
+    r: @mo
+    mo\value: 9U
+    v: r\value
+    if: v != 9U
+        return: 1
+    r\value: 11U
+    v: mo\value
+    if: v != 11U
+        return: 2
+return: 7
+
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

@@ -1,0 +1,28 @@
+Model:
+    size_t: value 1U
+end: Model
+
+# D-76: a reference formal `@: Model m` is one level, `@: Lmx`, typed Model for a path through it:
+# peek reads the caller's Structure, poke writes into it.  Success is 7.
+fn: peek (@: Model m) size_t
+return: m\value
+
+sub: poke (@: Model m; size_t: v)
+    m\value: v
+end: poke
+
+fn: check () int
+    Model: mo
+    size_t: v
+    mo\value: 9U
+    v: peek(@mo)
+    if: v != 9U
+        return: 1
+    poke(@mo, 13U)
+    v: mo\value
+    if: v != 13U
+        return: 2
+return: 7
+
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

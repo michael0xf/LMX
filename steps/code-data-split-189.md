@@ -454,6 +454,7 @@ Rows (measured), the three the plan named plus one:
   it stays root-pending, needle unchanged.
 - unit_occ_snapshot_selector: `\[0]bt` is 2 and `\[0]al` is 9 (the cell's last value), and the `\[1]`
   checks go.  Its Says (`BETWEEN 2`, `LAST 9`) are unchanged.
+- D-79 (2026-09-25, F-70) ПОСАЖЕНО: a bare assignment still does not create a second occurrence (c3c). It also does not create a field of the nested body it sits in. The first write binds the formal's method cell; a declaration is the only new field. `keep(3)` is 4. The three c3c rows kept their facts.
 - Mutant: the branch restored (the translator without c3c).  unit_occ_arg_slots has `l2_q1_from`,
   RED; unit_occ_arg_second_refused translates, RED; unit_occ_snapshot_selector prints nothing,
   because it returns before its line: RED on Says.

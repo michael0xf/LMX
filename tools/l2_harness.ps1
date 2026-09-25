@@ -430,8 +430,12 @@ if ($driver) { Add-Row 'OK' 'build:eternal_driver' ($made.ToString() + ' kernel 
 #   translates-with-debt -- the whole translator chain succeeds, AND the generated L1 is then
 #                           read: every string in Absent must be GONE from it and every string
 #                           in Debt must still be THERE.  This is for a gap that no longer stops
-#                           the toolchain but is not fixed, and the asymmetry is the point.  No
-#                           row uses it today; the kind stays for the next such gap.
+#                           the toolchain but is not fixed, and the asymmetry is the point: a Debt
+#                           that is gone means the gap closed and the row must change.
+#   translates           -- the same chain and the same reading, for a translation SHAPE that is
+#                           the point itself, not a gap (-197 (c)): the surface forms lowering
+#                           alike, a deletion's absence, a unit that links against a prototype
+#                           only.  Debt here is simply what must be there.  Nothing runs.
 #   eternal-runs         -- a program with `independent: const: immutable` branches.  The
 #                           generated L1 is read (Absent / Debt, as above -- here Debt is simply
 #                           what must be there), and then the program RUNS under the driver,
@@ -903,7 +907,7 @@ $fixtures = @(
     # against a prototype only, so it stops after l1trans; unit_define_ccall RUNS the same shape
     # (strlen of a predef and a unit define: 11; without the fix the program faults).  Mutant:
     # l2_ccall_box_int without the define test brings the staging back and turns both rows red.
-    [pscustomobject]@{ Name = 'unit_define_actual.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+    [pscustomobject]@{ Name = 'unit_define_actual.lm2'; Expect = 'translates'; Exit = 0; Needle = '';
         Absent = @('l2_t0: PROBE_DEFINE_LABEL', 'l2_t1: PROBE_DEFINE_FG', 'l2_t0: PROBE_UNIT_LABEL');
         Debt = @('probe_define_take(l2_p0_0, 0U, PROBE_DEFINE_LABEL, PROBE_DEFINE_FG) != PROBE_DEFINE_OK', 'return: probe_define_take(l2_p1_0, 1U, PROBE_UNIT_LABEL, 7U)') },
     [pscustomobject]@{ Name = 'unit_define_ccall.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 11;
@@ -1193,7 +1197,7 @@ $fixtures = @(
         Needle = 'root operation not walkable yet: a division by zero'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_discard_calls.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call whose result is not a number'; Args = @('0'); Entry = 11112;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_discard_fnptr.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+    [pscustomobject]@{ Name = 'unit_discard_fnptr.lm2'; Expect = 'translates'; Exit = 0; Needle = '';
         Absent = @('f()'); Debt = @('L2TestAllocFn: f l2_p0_0\alloc', 'f(l2_p0_1)') },
     [pscustomobject]@{ Name = 'unit_discard_void_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'a callable without a result has no value'; Absent = @(); Debt = @() },
@@ -1503,38 +1507,38 @@ $fixtures = @(
         Needle = 'incompatible entry signature'; Absent = @(); Debt = @() },
     # COMPACT-RAWFIELD-BATCHA-72: raw_fld=5 call without form-COMPACT. Debt pins emitted
     # raw-field ccall. Absent is unused (empty proves nothing; no genuine form-gate
-    # leftover string appears in generated L1). translates-with-debt catches
+    # leftover string appears in generated L1). `translates` catches
     # checker/emitter divergence (refuse vs missing Debt).
-    [pscustomobject]@{ Name = 'unit_rawfield_compact.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+    [pscustomobject]@{ Name = 'unit_rawfield_compact.lm2'; Expect = 'translates'; Exit = 0; Needle = '';
         Absent = @();
         Debt = @('l2_p0_0\zz(1)') },
-    [pscustomobject]@{ Name = 'unit_rawfield_colon.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+    [pscustomobject]@{ Name = 'unit_rawfield_colon.lm2'; Expect = 'translates'; Exit = 0; Needle = '';
         Absent = @();
         Debt = @('l2_p0_0\zz(1)') },
     # COMPACT-FNPTR-BATCHC-76: ty40 callable-first in all forms; decl+init via type head.
-    [pscustomobject]@{ Name = 'unit_fnptr_decl_init.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+    [pscustomobject]@{ Name = 'unit_fnptr_decl_init.lm2'; Expect = 'translates'; Exit = 0; Needle = '';
         Absent = @('f(l2_p0_0\alloc)');
         Debt = @('L2TestAllocFn: f l2_p0_0\alloc') },
-    [pscustomobject]@{ Name = 'unit_fnptr_call_compact.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+    [pscustomobject]@{ Name = 'unit_fnptr_call_compact.lm2'; Expect = 'translates'; Exit = 0; Needle = '';
         Absent = @('f: l2_p0_1');
         Debt = @('L2TestAllocFn: f l2_p0_0\alloc', 'f(l2_p0_1)') },
-    [pscustomobject]@{ Name = 'unit_fnptr_call_colon.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+    [pscustomobject]@{ Name = 'unit_fnptr_call_colon.lm2'; Expect = 'translates'; Exit = 0; Needle = '';
         Absent = @('f: l2_p0_1');
         Debt = @('L2TestAllocFn: f l2_p0_0\alloc', 'f(l2_p0_1)') },
-    [pscustomobject]@{ Name = 'unit_fnptr_call_vertical.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+    [pscustomobject]@{ Name = 'unit_fnptr_call_vertical.lm2'; Expect = 'translates'; Exit = 0; Needle = '';
         Absent = @('f: l2_p0_1');
         Debt = @('L2TestAllocFn: f l2_p0_0\alloc', 'f(l2_p0_1)') },
-    [pscustomobject]@{ Name = 'unit_fnptr_call_arg_compact.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+    [pscustomobject]@{ Name = 'unit_fnptr_call_arg_compact.lm2'; Expect = 'translates'; Exit = 0; Needle = '';
         Absent = @();
         Debt = @('L2TestAllocFn: f l2_p1_0\alloc', 'f(l2_p1_1)') },
-    [pscustomobject]@{ Name = 'unit_fnptr_call_arg_colon.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+    [pscustomobject]@{ Name = 'unit_fnptr_call_arg_colon.lm2'; Expect = 'translates'; Exit = 0; Needle = '';
         Absent = @();
         Debt = @('L2TestAllocFn: f l2_p1_0\alloc', 'f(l2_p1_1)') },
     # After CALL-ARGS-CLOSE: empty ty40 args are zero-args (call_args); arity admission still open.
     # Former 'unsupported body' refuse was the empty-Structure stand-in; now translates as f().
-    [pscustomobject]@{ Name = 'unit_fnptr_call_sig_refuse.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+    [pscustomobject]@{ Name = 'unit_fnptr_call_sig_refuse.lm2'; Expect = 'translates'; Exit = 0; Needle = '';
         Absent = @('unsupported body'); Debt = @('f()') },
-    [pscustomobject]@{ Name = 'unit_fnptr_noncallable_assign.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+    [pscustomobject]@{ Name = 'unit_fnptr_noncallable_assign.lm2'; Expect = 'translates'; Exit = 0; Needle = '';
         Absent = @();
         Debt = @('if: lmx_int_store_known(l2_q0_from[0], (7)) != 0') },
     # FABLE-GROKBOT-CALL-ARGS-20260922-92: paren-group call args via l2_call_args
@@ -1569,16 +1573,16 @@ $fixtures = @(
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @() },
-    [pscustomobject]@{ Name = 'unit_fnptr_call_args_paren.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+    [pscustomobject]@{ Name = 'unit_fnptr_call_args_paren.lm2'; Expect = 'translates'; Exit = 0; Needle = '';
         Absent = @('f((l2_p0_1))');
         Debt = @('f(l2_p0_1)') },
-    [pscustomobject]@{ Name = 'unit_fnptr_call_args_forms.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+    [pscustomobject]@{ Name = 'unit_fnptr_call_args_forms.lm2'; Expect = 'translates'; Exit = 0; Needle = '';
         Absent = @('f((l2_p0_1))');
         Debt = @('f(l2_p0_1)') },
-    [pscustomobject]@{ Name = 'unit_fnptr_call_args_nullary_stmt.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+    [pscustomobject]@{ Name = 'unit_fnptr_call_args_nullary_stmt.lm2'; Expect = 'translates'; Exit = 0; Needle = '';
         Absent = @('f(())', 'unsupported body');
         Debt = @('f()') },
-    [pscustomobject]@{ Name = 'unit_fnptr_call_args_nullary_value.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+    [pscustomobject]@{ Name = 'unit_fnptr_call_args_nullary_value.lm2'; Expect = 'translates'; Exit = 0; Needle = '';
         Absent = @('f(())', 'unsupported body');
         Debt = @('f()') },
     [pscustomobject]@{ Name = 'unit_puts_method_body.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
@@ -1591,19 +1595,19 @@ $fixtures = @(
         Debt = @('c.puts("beside-method")') },
     # COMPACT-DECL-BATCHB-75: struct local form-independent; float refuse form-independent;
     # opposite controls for fnptr call and ordinary call.
-    [pscustomobject]@{ Name = 'unit_struct_decl_colon.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+    [pscustomobject]@{ Name = 'unit_struct_decl_colon.lm2'; Expect = 'translates'; Exit = 0; Needle = '';
         Absent = @(); Debt = @('BatchBPoint: p') },
-    [pscustomobject]@{ Name = 'unit_struct_decl_compact.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+    [pscustomobject]@{ Name = 'unit_struct_decl_compact.lm2'; Expect = 'translates'; Exit = 0; Needle = '';
         Absent = @(); Debt = @('BatchBPoint: p') },
-    [pscustomobject]@{ Name = 'unit_struct_decl_vertical.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+    [pscustomobject]@{ Name = 'unit_struct_decl_vertical.lm2'; Expect = 'translates'; Exit = 0; Needle = '';
         Absent = @(); Debt = @('BatchBPoint: p') },
     [pscustomobject]@{ Name = 'unit_float_refuse_colon.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'by-value float local not yet implemented'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_float_refuse_compact.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'by-value float local not yet implemented'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_struct_decl_opp_fnptr_call.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+    [pscustomobject]@{ Name = 'unit_struct_decl_opp_fnptr_call.lm2'; Expect = 'translates'; Exit = 0; Needle = '';
         Absent = @('BatchBPoint:', 'f: l2_p0_0\alloc'); Debt = @('L2TestAllocFn: f l2_p0_0\alloc', 'return: f(l2_p0_1)') },
-    [pscustomobject]@{ Name = 'unit_struct_decl_opp_call.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+    [pscustomobject]@{ Name = 'unit_struct_decl_opp_call.lm2'; Expect = 'translates'; Exit = 0; Needle = '';
         Absent = @(); Debt = @('l2_t1: l2_m0(l2_c0\parent, l2_c0, 1)') }
     [pscustomobject]@{ Name = 'unit_colon_hidden_update.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
@@ -2152,7 +2156,7 @@ $fixtures = @(
     # (no c.* door, no other own-support); Absent pins that the generated L1 no longer
     # carries the literal injected signature text. Mutant: restoring the injection (or a
     # strstr arm) makes this string reappear -- Absent fires, RED.
-    [pscustomobject]@{ Name = 'unit_bad_sizeof.lm2'; Expect = 'translates-with-debt'; Exit = 0;
+    [pscustomobject]@{ Name = 'unit_bad_sizeof.lm2'; Expect = 'translates'; Exit = 0;
         Absent = @('fn: lm_own_new_zero (size_t: size) @: void'); Debt = @() }
 )
 
@@ -2207,7 +2211,7 @@ foreach ($fx in $fixtures) {
     $label2 = 'fixture.' + $stem + '.l1trans'
     $made2 = Step-Made $label2 $Translator @($genLm1, $genC) $src $genC
 
-    if ($fx.Expect -eq 'translates-with-debt') {
+    if ($fx.Expect -eq 'translates-with-debt' -or $fx.Expect -eq 'translates') {
         if (-not $made2) { Add-Row 'FAIL' ('fixture:' + $stem) 'l1trans produced no C from the generated L1; see the log'; continue }
         $l1 = (Get-Content -LiteralPath $genLm1 -Raw)
         $why = ''
@@ -2215,9 +2219,13 @@ foreach ($fx in $fixtures) {
             if ($why -eq '' -and $l1 -match [regex]::Escape($a)) { $why = 'the generated L1 still names "' + $a + '"' }
         }
         foreach ($d in $fx.Debt) {
-            if ($why -eq '' -and $l1 -notmatch [regex]::Escape($d)) { $why = 'the recorded debt "' + $d + '" is GONE -- update this fixture, the gap has closed' }
+            if ($why -eq '' -and $l1 -notmatch [regex]::Escape($d)) {
+                if ($fx.Expect -eq 'translates') { $why = 'the pinned "' + $d + '" is gone from the generated L1' }
+                else { $why = 'the recorded debt "' + $d + '" is GONE -- update this fixture, the gap has closed' }
+            }
         }
         if ($why -ne '') { Add-Row 'FAIL' ('fixture:' + $stem) $why; continue }
+        if ($fx.Expect -eq 'translates') { Add-Row 'OK' ('fixture:' + $stem) ('translation shape holds (' + $fx.Debt.Count + ' required, ' + $fx.Absent.Count + ' forbidden)'); continue }
         Add-Row 'OK' ('fixture:' + $stem) ('expected translation debt remains isolated (' + $fx.Debt.Count + ' required, ' + $fx.Absent.Count + ' forbidden)'); continue
     }
     if (-not $made2) { Add-Row 'FAIL' ('fixture:' + $stem) 'l1trans produced no C from the generated L1; see the log'; continue }

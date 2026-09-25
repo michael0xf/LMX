@@ -682,11 +682,15 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_admit_rebind_read.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: mixed numeric types (a conversion)'; Args = @('0'); Argv = @('ok'); Entry = 2;
         Absent = @('lmx_msg_poll_abort', 'lmx: receiveMessage', 'lmx: rebinding');
         Debt = @('c.fprintf(c.stderr, "lmx: invariant: receiveMessage store failed for own field ', 'c.fprintf(c.stderr, "lmx: invariant: rebinding store failed for own field ') },
-    [pscustomobject]@{ Name = 'entry_argc_if.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an array'; Args = @('0');
+    # length(m\mainArgs) is the outer array's size_t length (semantics §17: first dimension).
+    # No extra argv: the letter holds argv[0] alone, so length is 1 and the exit code is 0.
+    [pscustomobject]@{ Name = 'entry_argc_if.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'entry_index.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an array'; Args = @('0'); Argv = @('word'); Says = @('word');
-        Absent = @(); Debt = @('c.puts(@ l2_cp') },
-    [pscustomobject]@{ Name = 'entry_strcmp.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: an array'; Args = @('0'); Argv = @('ok');
+    # The index itself translates. What remains is c.puts, an L2 operation outside a method (Q7).
+    [pscustomobject]@{ Name = 'entry_index.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Argv = @('word'); Says = @('word');
+        Absent = @(); Debt = @() },
+    # length and m\mainArgs[1][0] translate. What remains is c.strcmp, same Q7 class.
+    [pscustomobject]@{ Name = 'entry_strcmp.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Argv = @('ok');
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_charpp_return.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
         Absent = @(); Debt = @() },

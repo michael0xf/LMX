@@ -27,13 +27,15 @@ fn: grow (@@: unsigned buf; @: int cap; int: need) int
     cap[0]: want
     return: 0
 end: grow
-fn: main () int
-    int: r
-    # A null owner slot is not an owner: the refusal happens before anything is
-    # read, allocated or published. The parity runner drives the rest against
-    # the handwritten module; what this fixture pins is the lowering.
-    r: grow(0, 0, 1)
-    if: r != 2
-        return: 81
-    return: 0
-end: main
+int: r
+# A null owner slot is not an owner: the refusal happens before anything is
+# read, allocated or published. The parity runner drives the rest against
+# the handwritten module; what this fixture pins is the lowering (the element
+# size is the sizeof: receiver's `sizeof(unsigned)`, FABLE-OPUS-P0-SIZEOF-ATOM-
+# 20260924-157; it was a raw c.sizeof).  Success is 7.
+r: grow(0, 0, 1)
+if: r != 2
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

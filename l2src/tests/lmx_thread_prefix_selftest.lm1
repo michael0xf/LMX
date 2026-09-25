@@ -1,0 +1,144 @@
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_turn.lm1"
+predef: "l2src/lmx_child.lm1"
+predef: "l2src/lmx_service.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<string.h>"
+
+# The executable Thread is one allocation with a closed Message as its by-value first member.
+# Address-range classification gives both views one common Message kind while exact type keeps a
+# standalone letter distinct from a Thread. No overlapping range or second Message allocation is
+# involved.
+
+int: prefix_checks 0
+int: prefix_failures 0
+
+sub: prefix_check (int: ok; const: @(char label))
+    prefix_checks: prefix_checks + 1
+    if: ok = 0
+        prefix_failures: prefix_failures + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: prefix_check
+
+fn: main () int
+    LmxArena: arena
+    LmxArena: foreign
+    @: Lmx graph
+    @: Lmx graph2
+    @: Lmx foreign_graph
+    @: LmxThread thread
+    @: LmxThread candidate
+    @: LmxThread wrong_stride_thread
+    @: LmxMsg message
+    @: LmxMsg candidate_message
+    @: LmxMsg letter
+    @: LmxMsg forged
+    @: LmxPost mail
+    @: LmxPost candidate_mail
+    @: LmxPost foreign_mail
+    @: LmxSchedule slot
+    @: LmxSchedule candidate_slot
+    @: LmxSchedule wrong_owner_slot
+    @: LmxSchedule foreign_slot
+    @: LmxPool forged_pool
+    @: LmxPool wrong_stride_pool
+    @: char forged_base
+    @: size_t neighbour
+    size_t: neighbour_value 2864434397U
+    LmxService: service
+    LmxService: service2
+
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ foreign)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ service)), 0, c.sizeof(c.LmxService))
+    memset((cast: (@: void) (@ service2)), 0, c.sizeof(c.LmxService))
+    if: lmx_arena_open(@ arena) != 0 || lmx_arena_open(@ foreign) != 0
+        return: 2
+    ---
+    graph: lmx_node_new_owned(@ arena)
+    graph2: lmx_node_new_owned(@ arena)
+    foreign_graph: lmx_node_new_owned(@ foreign)
+    thread: (cast: (@: LmxThread) lmx_arena_take(@ arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
+    candidate: (cast: (@: LmxThread) lmx_arena_take(@ arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
+    letter: (cast: (@: LmxMsg) lmx_arena_take(@ arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    mail: (cast: (@: LmxPost) lmx_arena_take(@ arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    candidate_mail: (cast: (@: LmxPost) lmx_arena_take(@ arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    foreign_mail: (cast: (@: LmxPost) lmx_arena_take(@ foreign, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    slot: (cast: (@: LmxSchedule) lmx_arena_take(@ arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    candidate_slot: (cast: (@: LmxSchedule) lmx_arena_take(@ arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    wrong_owner_slot: (cast: (@: LmxSchedule) lmx_arena_take(@ arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    foreign_slot: (cast: (@: LmxSchedule) lmx_arena_take(@ foreign, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    forged_pool: lmx_pool_make(@ arena, 2U * c.sizeof(c.LmxThread), c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD)
+    wrong_stride_pool: lmx_pool_make(@ arena, c.sizeof(c.LmxThread) + c.sizeof(c.size_t), c.sizeof(c.LmxThread) + c.sizeof(c.size_t), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD)
+    if: graph = 0 || graph2 = 0 || foreign_graph = 0 || thread = 0 || candidate = 0 || letter = 0 || mail = 0 || candidate_mail = 0 || foreign_mail = 0 || slot = 0 || candidate_slot = 0 || wrong_owner_slot = 0 || foreign_slot = 0 || forged_pool = 0 || wrong_stride_pool = 0
+        return: 2
+    ---
+    forged_base: (cast: (@: char) (cast: (@: void) lmx_chunk_data(forged_pool\head)))
+    forged: (cast: (@: LmxMsg) forged_base)
+    neighbour: (cast: (@: size_t) (forged_base + c.sizeof(c.LmxThread)))
+    \neighbour: neighbour_value
+    wrong_stride_thread: (cast: (@: LmxThread) (cast: (@: void) lmx_chunk_data(wrong_stride_pool\head)))
+    prefix_check(lmx_post_init(@ arena, mail) = c.LMX_POST_OK, "mail init")
+    prefix_check(lmx_schedule_init(slot, @ arena, (cast: (@: void) thread), 8U) = c.LMX_SCHEDULE_OK, "schedule init")
+    prefix_check(lmx_thread_init(@ arena, thread, graph, mail, slot) = c.LMX_THREAD_OK, "Thread init")
+
+    message: lmx_thread_message(thread)
+    prefix_check(message != 0 && (cast: (@: void) thread) = (cast: (@: void) message), "Thread and Message prefix addresses differ")
+    message\success: 1
+    prefix_check(lmx_thread_message(thread) = message && message\success = 1, "Message alias write did not remain visible through Thread accessor")
+    message\running: 1
+    prefix_check(lmx_thread_running(thread) = 1, "Message-prefix write did not reach Thread operation")
+    prefix_check(lmx_range_classify(@ arena, (cast: (@: void) thread)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "Thread lacks common Message kind")
+    prefix_check(lmx_range_classify(@ arena, (cast: (@: void) message)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "embedded Message lacks common Message kind")
+    prefix_check(lmx_range_type_of(@ arena, (cast: (@: void) thread)) = c.LMX_DOMAIN_THREAD, "Thread exact type was lost")
+
+    letter\graph: graph
+    prefix_check(lmx_range_classify(@ arena, (cast: (@: void) letter)) = c.LMX_DOMAIN_KIND_MSG_RECORD && lmx_range_type_of(@ arena, (cast: (@: void) letter)) = c.LMX_DOMAIN_MSG_RECORD, "standalone Message kind/type mismatch")
+    prefix_check(lmx_thread_init(@ arena, (cast: (@: LmxThread) letter), graph, mail, slot) = c.LMX_THREAD_INVALID, "standalone Message was accepted as Thread")
+    prefix_check(lmx_thread_init(@ arena, (cast: (@: LmxThread) forged), graph, mail, slot) = c.LMX_THREAD_INVALID && \neighbour = neighbour_value, "full-size non-Thread range was accepted or overwrote its neighbour")
+    prefix_check(lmx_thread_init(@ arena, wrong_stride_thread, graph, mail, slot) = c.LMX_THREAD_INVALID, "wrong-stride exact Thread range was accepted")
+    prefix_check(lmx_thread_init(@ arena, candidate, foreign_graph, candidate_mail, candidate_slot) = c.LMX_THREAD_INVALID && candidate\mail = 0 && candidate\slot = 0, "foreign graph mutated a candidate Thread")
+    prefix_check(lmx_thread_init(@ arena, candidate, graph, foreign_mail, candidate_slot) = c.LMX_THREAD_INVALID && candidate\mail = 0 && candidate\slot = 0, "foreign mailbox mutated a candidate Thread")
+    memset((cast: (@: void) candidate_slot), 0, c.sizeof(c.LmxSchedule))
+    candidate_slot\started: 1U
+    prefix_check(lmx_thread_init(@ arena, candidate, graph, candidate_mail, candidate_slot) = c.LMX_THREAD_INVALID && candidate\mail = 0 && candidate\slot = 0, "partly initialized deferred schedule was accepted")
+    memset((cast: (@: void) candidate_slot), 0, c.sizeof(c.LmxSchedule))
+    prefix_check(lmx_schedule_init(wrong_owner_slot, @ arena, (cast: (@: void) thread), 8U) = c.LMX_SCHEDULE_OK, "wrong-owner schedule init")
+    prefix_check(lmx_thread_init(@ arena, candidate, graph, candidate_mail, wrong_owner_slot) = c.LMX_THREAD_INVALID && candidate\mail = 0 && candidate\slot = 0, "same-arena schedule owned by another Thread was accepted")
+    prefix_check(lmx_schedule_init(foreign_slot, @ foreign, (cast: (@: void) candidate), 8U) = c.LMX_SCHEDULE_OK, "foreign schedule init")
+    prefix_check(lmx_thread_init(@ arena, candidate, graph, candidate_mail, foreign_slot) = c.LMX_THREAD_INVALID && candidate\mail = 0 && candidate\slot = 0, "foreign schedule mutated a candidate Thread")
+    prefix_check(lmx_post_init(@ arena, candidate_mail) = c.LMX_POST_OK && lmx_schedule_init(candidate_slot, @ arena, (cast: (@: void) candidate), 8U) = c.LMX_SCHEDULE_OK && lmx_thread_init(@ arena, candidate, graph, candidate_mail, candidate_slot) = c.LMX_THREAD_OK, "validated candidate Thread init")
+    candidate_message: lmx_thread_message(candidate)
+    prefix_check(lmx_thread_init(@ arena, candidate, graph2, mail, slot) = c.LMX_THREAD_INVALID && candidate_message\graph = graph && candidate\mail = candidate_mail && candidate\slot = candidate_slot, "repeat init rebound or mutated a live Thread")
+    prefix_check(lmx_post_admits(@ arena, (cast: (@: void) thread)) = c.LMX_POST_OK && lmx_post_admits(@ arena, (cast: (@: void) letter)) = c.LMX_POST_OK, "generic Message admission split prefix and standalone records")
+    prefix_check(lmx_service_open(@ service) = c.LMX_SERVICE_OK, "service open")
+    prefix_check(lmx_service_open(@ service2) = c.LMX_SERVICE_OK, "second service open")
+    prefix_check(lmx_service_register(@ service, thread, @ arena) = c.LMX_SERVICE_OK, "service refused exact Thread prefix")
+    prefix_check(lmx_service_register(@ service, thread, @ arena) = c.LMX_SERVICE_DUPLICATE, "same-service duplicate changed semantics")
+    prefix_check(lmx_service_register(@ service2, thread, @ arena) = c.LMX_SERVICE_INVALID && lmx_service_count(@ service2) = 0U && lmx_service_find(@ service, (cast: (@: void) message)) = (cast: (@: void) thread) && lmx_thread_service(thread) = (cast: (@: void) (@ service)), "second service stole a live Thread route")
+    prefix_check(lmx_service_register(@ service, (cast: (@: LmxThread) letter), @ arena) = c.LMX_SERVICE_INVALID && lmx_service_register(@ service, (cast: (@: LmxThread) forged), @ arena) = c.LMX_SERVICE_INVALID && lmx_service_register(@ service, wrong_stride_thread, @ arena) = c.LMX_SERVICE_INVALID, "service admitted a forged Thread range")
+    prefix_check(lmx_service_find(@ service, (cast: (@: void) message)) = (cast: (@: void) thread), "service Message address did not resolve its Thread")
+    prefix_check(lmx_service_release(@ service) = c.LMX_SERVICE_INVALID && lmx_thread_service(thread) = (cast: (@: void) (@ service)), "nonempty service release hid a live route")
+    prefix_check(lmx_service_unregister(@ service, thread) = c.LMX_SERVICE_OK && lmx_service_release(@ service) = c.LMX_SERVICE_OK && lmx_service_register(@ service2, thread, @ arena) = c.LMX_SERVICE_OK, "Thread could not re-register after explicit unregister")
+    prefix_check(lmx_service_unregister(@ service2, thread) = c.LMX_SERVICE_OK && lmx_service_release(@ service2) = c.LMX_SERVICE_OK && lmx_thread_service(thread) = 0, "second service close left a route")
+
+    prefix_check(lmx_post_close(@ arena, mail) = c.LMX_POST_OK, "mail close")
+    prefix_check(lmx_post_close(@ arena, candidate_mail) = c.LMX_POST_OK, "candidate mail close")
+    prefix_check(lmx_arena_release(@ foreign) = 0, "foreign arena release")
+    prefix_check(lmx_arena_release(@ arena) = 0, "arena release")
+    c.printf("thread-prefix checks=%d failures=%d\n", prefix_checks, prefix_failures)
+return: prefix_failures != 0

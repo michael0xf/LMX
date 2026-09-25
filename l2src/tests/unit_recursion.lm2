@@ -39,18 +39,20 @@ fn: rmerge (size_t: n) size_t
         sub: rmerge(next)
     return: keep
 end: rmerge
-fn: main () int
-    size_t: a
-    size_t: b
-    size_t: c
-    a: direct(3U)
-    if: a != 3U
-        return: 81
-    b: Holder\viaPath(4U)
-    if: b != 4U
-        return: 82
-    c: rmerge(2U)
-    if: c != 2U
-        return: 83
-    return: 0
-end: main
+size_t: a
+size_t: b
+size_t: c
+a: direct(3U)
+if: a != 3U
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+b: Holder\viaPath(4U)
+if: b != 4U
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+c: rmerge(2U)
+if: c != 2U
+    sendMessage: exit(exit_code: 83; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

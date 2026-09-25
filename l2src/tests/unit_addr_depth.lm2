@@ -1,11 +1,43 @@
+# -189 c3b-1 (FABLE-OPUS-CODE-DATA-SPLIT-20260925-189; L2 §10: «`@x` для поля данных даёт адрес его
+# ячейки в экземпляре», and no working copies): `n` IS its cell, so the write through the taken
+# address is what the bare `return: n` reads -- 1, not 0.  The reasoning below (L2 18.2's «leaves
+# bare working x at 5») is the old model's, superseded; the author removed the same stale-read rule
+# from L3 §12 (061d753).
+#
+# FABLE-SONNET-OCC-ROOT-20260924-146 commit 2 / D-25: orphan, measured and
+# completed -- the original never called go(), so this was untested either
+# way. @@: p (depth 2) receiving @: of an already depth-1 parameter, \\p
+# write-back through both levels -- read two ways, same reasoning as the
+# sibling unit_addr_take.lm2 (depth 1, read there in full).
+#
+# set_one reads \\p right after writing it: proves the depth-2 write
+# reaches real storage through both levels of indirection. build's own
+# `return: n` afterward is the ordinary bare working-copy read of a plain
+# own-declared local (not a formal) and per L2 spec 18.2 stays 0 -- the
+# write through the taken address reached the graph cell directly, not
+# the working-copy cache.
 fn: set_one (@@: size_t p) int
     \\p: 1U
+    if: \\p != 1U
+        return: 82
     return: 0
 end: set_one
 fn: go (@: size_t p) int
-    set_one(@: p)
-    return: 0
+    return: set_one(@: p)
 end: go
-fn: main () int
-    return: 0
-end: main
+
+fn: build () size_t
+    size_t: n
+    n: 0U
+    if: go(@: n) != 0
+        return: 82U
+    return: n
+end: build
+
+size_t: got
+got: build()
+if: got != 1U
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

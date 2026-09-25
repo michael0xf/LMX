@@ -1,0 +1,15 @@
+# FABLE-SONNET-CALLABLE-PRIORITY-20260923-130 negative (closes plan :213,
+# :216). `bar` is callable and takes NO argument. `bar: 5` (colon form with
+# a body) resolves bar as callable first -- per the universal priority, a
+# callable head is ALWAYS a call, never a fallback to assignment -- so the
+# refusal must be a CALL-signature error ("incompatible entry signature"),
+# never "assignment target must be a declared typed mutable value". That
+# second wording would mean the translator tried assignment as a fallback
+# after call resolution somehow failed silently, which the priority rule
+# forbids: an unusable call is a call error, with no fallback path at all.
+fn: bar () int
+    return: 0
+end: bar
+
+bar: 5
+return: 0

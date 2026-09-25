@@ -1,0 +1,70 @@
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# -177 c2: inbox cursor; take middle of three; remaining keep admission order.
+# Mutant: take always pops head / wrong index -> RED.
+
+int: checks 0
+int: failures 0
+
+sub: check (int: ok; const: @(char label))
+    checks: checks + 1
+    if: ok = 0
+        failures: failures + 1
+        c.printf("FAIL %s\\n", label)
+    ---
+end: check
+
+fn: main () int
+    LmxArena: arena
+    @: LmxPost mailbox 0
+    LmxPostCursor: cur
+    @: LmxMsg a 0
+    @: LmxMsg b 0
+    @: LmxMsg c 0
+    @: void t0 0
+    @: void t1 0
+    @: void t2 0
+    @: void taken 0
+
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ arena) != 0
+        return: 2
+    a: (cast: (@: LmxMsg) lmx_arena_take(@ arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    b: (cast: (@: LmxMsg) lmx_arena_take(@ arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    c: (cast: (@: LmxMsg) lmx_arena_take(@ arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    mailbox: (cast: (@: LmxPost) lmx_arena_take(@ arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    if: a = 0 || b = 0 || c = 0 || mailbox = 0 || lmx_post_init(@ arena, mailbox) != c.LMX_POST_OK
+        return: 2
+    check(lmx_post_accept(@ arena, mailbox, (cast: (@: void) a), c.LMX_POST_INBOX) = c.LMX_POST_OK, "accept a")
+    check(lmx_post_accept(@ arena, mailbox, (cast: (@: void) b), c.LMX_POST_INBOX) = c.LMX_POST_OK, "accept b")
+    check(lmx_post_accept(@ arena, mailbox, (cast: (@: void) c), c.LMX_POST_INBOX) = c.LMX_POST_OK, "accept c")
+    check(lmx_post_count(mailbox, c.LMX_POST_INBOX) = 3U, "count 3")
+
+    memset((cast: (@: void) (@ cur)), 0, c.sizeof(c.LmxPostCursor))
+    check(lmx_post_cursor_open(mailbox, @ cur) = c.LMX_POST_OK, "cursor open")
+    t0: lmx_post_cursor_next(@ cur)
+    check(t0 = (cast: (@: void) a), "next first is a")
+    t1: lmx_post_cursor_next(@ cur)
+    check(t1 = (cast: (@: void) b), "next second is b")
+    taken: lmx_post_cursor_take(@ arena, @ cur)
+    check(taken = (cast: (@: void) b), "take middle is b")
+    check(lmx_post_count(mailbox, c.LMX_POST_INBOX) = 2U, "count 2 after take")
+    t2: lmx_post_cursor_next(@ cur)
+    check(t2 = (cast: (@: void) c), "next after take is c")
+    check(lmx_post_cursor_next(@ cur) = 0, "cursor exhausted")
+    lmx_post_cursor_close(@ cur)
+
+    check(lmx_post_take_owned(@ arena, mailbox, c.LMX_POST_INBOX) = (cast: (@: void) a), "head remains a")
+    check(lmx_post_take_owned(@ arena, mailbox, c.LMX_POST_INBOX) = (cast: (@: void) c), "then c")
+    check(lmx_post_take_owned(@ arena, mailbox, c.LMX_POST_INBOX) = 0, "empty")
+
+    c.printf("lmx_post_cursor_selftest checks=%d failures=%d\\n", checks, failures)
+    if: failures != 0
+        return: 1
+return: 0

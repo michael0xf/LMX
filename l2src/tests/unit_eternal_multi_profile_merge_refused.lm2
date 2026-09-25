@@ -1,0 +1,30 @@
+# One merge carries a call-local span of exact physical receiver-expression
+# profiles.  Both distinct qualified branches are retained by address; the
+# result itself remains a fresh ordinary Structure.
+independent:
+    const:
+        immutable:
+            (): FrozenA
+                size_t: value 1U
+            end: FrozenA
+        end: immutable
+    end: const
+end: independent
+
+independent:
+    const:
+        immutable:
+            (): FrozenB
+                size_t: value 1U
+            end: FrozenB
+        end: immutable
+    end: const
+end: independent
+
+fn: keep_full_unit () int
+    return: 0
+end: keep_full_unit
+
+R: merge: FrozenA FrozenB
+sendMessage: exit(exit_code: keep_full_unit(); stdout: ""; stderr: "")
+return

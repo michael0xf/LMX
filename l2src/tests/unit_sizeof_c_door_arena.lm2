@@ -1,0 +1,14 @@
+# c.sizeof of a raw C type passes through the c.* door unchanged.
+include: "<stddef.h>"
+
+fn: probe () int
+    size_t: n
+    n: c.sizeof(c.size_t)
+    if: n < 1U
+        return: 1
+    return: 0
+end: probe
+
+sendMessage: exit(exit_code: probe(); stdout: ""; stderr: "")
+return
+

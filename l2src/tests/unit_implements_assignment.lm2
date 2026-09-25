@@ -1,0 +1,30 @@
+# Adapted from lingvamyxa_prev/tests/trans_implements_assignment.lm2.
+# Remaining P0 of an assignment that never field-follows Equatable is empty
+# uses: true. Fat Equatable as consumer is false for Plain.
+
+Plain:
+    size_t: toString 0U
+end: Plain
+
+Equatable:
+    size_t: equals 0U
+end: Equatable
+
+ThinConsumer:
+    size_t: extra 0U
+end: ThinConsumer
+
+fn: m () int
+    size_t: q
+    q: 1U
+    return: 0
+end: m
+
+if: implements(Plain, Equatable, ThinConsumer) != 1
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
+if: implements(Plain, Equatable, Equatable) != 0
+    sendMessage: exit(exit_code: 2; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

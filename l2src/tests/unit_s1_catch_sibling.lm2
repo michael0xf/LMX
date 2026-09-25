@@ -1,0 +1,19 @@
+# Delivery selects the handler by the calling block: the call sits in the second block, which has
+# no catch; the first block's catch is a sibling and is not searched; the enclosing body's catch
+# takes it.  3, where the sibling would have added 100.
+fn: m () int
+    throws: Oops
+    throw: Oops(3)
+return: 0
+
+int: r 0
+---
+    catch: Oops (int: a)
+        r: r + 100
+---
+    r: m()
+---
+catch: Oops (int: b)
+    r: r + b
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

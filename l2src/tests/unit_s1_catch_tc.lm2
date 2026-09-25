@@ -1,0 +1,43 @@
+# Port of lingvamyxa_prev/tests/trans_throw_catch.lm2 (TC).  A catch BEFORE the call re-enters the
+# region: parsePositive(0) throws, the handler sets n to 1 and the call runs again (value 1).  A
+# catch AFTER the call continues past it (skipped 0).  An int payload binds its parameter
+# (payload -4).  0 when all three hold.
+fn: parsePositive (int: n) int
+    throws: NonPositive
+    if: n <= 0
+        throw: NonPositive()
+return: n
+
+fn: parseOrZero (int: n) int
+    throws: NonPositive
+    if: n <= 0
+        throw: NonPositive(n)
+return: n
+
+fn: tc () int
+    int: n 0
+    int: value 0
+    int: skipped 5
+    int: payload 0
+    catch: NonPositive ()
+        n: 1
+    value: parsePositive(n)
+    ---
+        skipped: parsePositive(-1)
+        catch: NonPositive ()
+            skipped: 0
+    ---
+        payload: parseOrZero(-4)
+        catch: NonPositive (int: bad)
+            payload: bad
+    ---
+    if: value != 1
+        return: 1
+    if: skipped != 0
+        return: 2
+    if: payload != -4
+        return: 3
+return: 0
+
+sendMessage: exit(exit_code: tc(); stdout: ""; stderr: "")
+return

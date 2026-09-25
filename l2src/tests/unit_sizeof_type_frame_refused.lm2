@@ -1,0 +1,11 @@
+predef: "l2src/lmx.h.lm1"
+
+# FABLE-OPUS-GATE-TRANSLATOR-20260924-151 commit 2: a sizeof: type frame names a primitive type
+# word.  L1 lowers `c.sizeof(@: T)` to `sizeof(T *)` only for those; any other name it reads as an
+# address, so `sizeof(@: LmxArena)` is refused here, not left to the C compiler.  A pointer to
+# anything has the size of `sizeof(@: void)`.
+fn: arena_ptr_bytes () size_t
+    return: sizeof(@: LmxArena)
+end: arena_ptr_bytes
+
+return: 0

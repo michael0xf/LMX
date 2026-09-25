@@ -1,0 +1,45 @@
+# Port of the book's §14 worked example (lingvamyxa_prev/tests/t2.lmx, whose tab indentation puts
+# each call at its catch's level, after the handler).  Each anonymous block owns one
+# GreetingRetry catch placed before its call: a retry re-enters and calls again.  GreetingSkip is
+# caught once, in the enclosing body, after the blocks.  The greeting is a size_t here (a text
+# payload is not carried yet; a named Structure has no int field), and a greeting above 50 is the
+# one to skip.  cfg retries once and returns 10; emptyCfg (99) is skipped with its payload:
+# 100 + 3 = 103.
+HelloConfig:
+    size_t: greeting 0U
+end: HelloConfig
+
+fn: checkedGreeting (HelloConfig: cfg) size_t
+    throws:
+        GreetingRetry
+        GreetingSkip
+    size_t: g 0U
+    g: cfg\greeting
+    if: g = 0U
+        throw: GreetingRetry(cfg)
+    if: g > 50U
+        throw: GreetingSkip(g)
+return: g
+
+HelloConfig: cfg
+HelloConfig: emptyCfg
+size_t: out 0U
+size_t: skipped 0U
+int: res 0
+emptyCfg\greeting: 99U
+---
+    catch: GreetingRetry ()
+        cfg\greeting: cfg\greeting + 10U
+    out: out + checkedGreeting(cfg)
+---
+    catch: GreetingRetry ()
+        emptyCfg\greeting: emptyCfg\greeting + 1U
+    out: out + checkedGreeting(emptyCfg)
+---
+catch: GreetingSkip (size_t: badText)
+    skipped: badText
+if: out = 10U
+    res: res + 100
+if: skipped = 99U
+    res: res + 3
+return: res

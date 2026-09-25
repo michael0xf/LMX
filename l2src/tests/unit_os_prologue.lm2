@@ -1,0 +1,14 @@
+# F-30 gap / Opus -147: no eternal-driver fixture carried an `os:` block, so
+# l2_emit_os_fn's X1 prologue was unreached.  Smallest program: one os method on
+# both branches, entry returns nonzero 7 (not a lone return: 0 success).
+os:
+    win:
+        fn: pick () @: char
+        return: "win32"
+    default:
+        fn: pick () @: char
+        return: "pthread"
+end: os
+
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

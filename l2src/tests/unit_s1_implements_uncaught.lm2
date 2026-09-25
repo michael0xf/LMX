@@ -1,0 +1,18 @@
+# S1.1: a refused admission throws the implicit name `implements` (Q17 = A), g = 2 in the one
+# global order (merge = 1).  `relay` takes the argv letter, which is not a Model, and hands it to
+# get's Model formal: the admission refuses it, so relay leaves with status d + 2 = 2, E
+# re-encodes it (2) and the root receives 2 -- where an uncaught merge arrives as 1.  The entry
+# has no value (exit 1) and the Message is stopped.  Completing would return 5.
+Model:
+    size_t: value 1U
+end: Model
+
+fn: get (Model: x) int
+return: 5
+
+fn: relay () int
+    receiveMessage: m
+return: get(m)
+
+sendMessage: exit(exit_code: relay(); stdout: ""; stderr: "")
+return

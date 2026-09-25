@@ -1,4 +1,5 @@
 predef: "lmx_value_owned.h.lm1"
+predef: "lmx_implements.h.lm1"
 include: "<stdlib.h>"
 
 # A cell of one of the arena's arrays (Lingvamyxa_spec.txt 2, 6.5): the arena hands it out
@@ -15,14 +16,18 @@ return: lmx_arena_take(arena, stride, kind, type)
 
 # Initial root construction, not reparenting of an existing occurrence. The
 # header lives in the STRUCT domain (SPEC 2: only a Structure target has
-# node/len/data); its child-pointer array is a separate CHILDREN range opened
+# parent/len/data); its child-pointer array is a separate CHILDREN range opened
 # later by lmx_arena_refs_open_owned.
 fn: lmx_node_new_owned (@: LmxArena arena) @: Lmx
-    @: Lmx value (cast: (@: Lmx) lmx_value_allocate_owned(arena, c.sizeof(c.Lmx), c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT))
+return: lmx_node_new_profiled(arena, 0)
+
+fn: lmx_node_new_profiled (@: LmxArena arena; @: Lmx profile) @: Lmx
+    @: Lmx value (cast: (@: Lmx) lmx_arena_take_profiled(arena, c.sizeof(c.Lmx), c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT, profile))
     if: value != 0
-        value\node: 0
+        value\parent: 0
         value\len: 0
         value\data: 0
+        value\native: 0
     ---
     return: value
 
@@ -32,17 +37,14 @@ fn: lmx_struct_new_owned (@: Lmx parent; @: LmxArena arena) @: Lmx
         return: 0
     value: lmx_node_new_owned(arena)
     if: value != 0
-        value\node: parent
+        value\parent: parent
     ---
     return: value
 
-# The caller fills addr/sig before publishing this fresh entry into the graph.
-# Existing callable records are not mutable through this construction API.
-fn: lmx_method_new_owned (@: LmxArena arena) @: LmxMethod
-    @: LmxMethod value (cast: (@: LmxMethod) lmx_value_allocate_owned(arena, c.sizeof(c.LmxMethod), c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD))
+fn: lmx_op_new_owned (@: LmxArena arena; int: code) @: LmxOp
+    @: LmxOp value (cast: (@: LmxOp) lmx_value_allocate_owned(arena, c.sizeof(c.LmxOp), c.LMX_DOMAIN_KIND_OP, c.LMX_DOMAIN_OP))
     if: value != 0
-        value\addr: 0
-        value\sig: 0U
+        value\code: code
     ---
     return: value
 

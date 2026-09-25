@@ -1,0 +1,14 @@
+# S1.1: a merge that fails throws the implicit name `merge` (author Q11), g = 1.  The driver
+# fails the program's first merge (`mergefail 1`), the one in `m`.  Nothing catches it: it leaves
+# `m` with status d + 1 = 1, E re-encodes it into its own numbering (1) and the root receives it.
+# The entry has no value (exit 1) and the Message is stopped.  Completing would return 5.
+P:
+    size_t: p 3U
+end: P
+
+fn: m () int
+    Q: merge: P
+return: 5
+
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

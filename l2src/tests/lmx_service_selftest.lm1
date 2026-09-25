@@ -18,6 +18,19 @@ predef: "l2src/lmx_graph_copy_owned.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>" "<stdint.h>"
 
+prototype:
+    fn: __real_calloc (size_t: count; size_t: size) @: void
+end: prototype
+
+int: sv_fail_calloc 0
+
+fn: __wrap_calloc (size_t: count; size_t: size) @: void
+    if: sv_fail_calloc != 0
+        sv_fail_calloc: 0
+        return: 0
+    ---
+return: c.__real_calloc(count, size)
+
 # The mail service (spec 2 and 19.29.7; physical-address form).  What this file pins:
 #
 #   * entries are ordered BY PHYSICAL ADDRESS (uintptr of the LmxThread*), and membership
@@ -43,12 +56,14 @@ end: sv_check
 
 fn: sv_message (@: LmxArena arena; unsigned: index; size_t: slots) @: LmxMsg
     @: LmxMsg message
+    @: LmxThread thread
     @: Lmx graph
-    message: (cast: (@: LmxMsg) lmx_arena_take(arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    thread: (cast: (@: LmxThread) lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
     graph: lmx_node_new_owned(arena)
-    if: message = 0 || graph = 0
+    if: thread = 0 || graph = 0
         return: 0
     ---
+    message: lmx_thread_message(thread)
     if: slots = 0U || lmx_arena_refs_open_owned(arena, graph, slots) != 0
         return: 0
     ---
@@ -56,31 +71,37 @@ fn: sv_message (@: LmxArena arena; unsigned: index; size_t: slots) @: LmxMsg
     message\success: 0
     message\handoff_ready: 0
     message\graph: graph
-    message\index: index
 return: message
 
-fn: sv_object (@: LmxArena arena; @: LmxMsg message; @: LmxPost mail; @: LmxSchedule sched) @: LmxThread
+fn: sv_object (@: LmxArena arena; @: LmxMsg message) @: LmxThread
     @: LmxThread t
-    t: (cast: (@: LmxThread) lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
-    if: t = 0
+    @: LmxPost mail
+    @: LmxSchedule sched
+    t: (cast: (@: LmxThread) message)
+    mail: (cast: (@: LmxPost) lmx_arena_take(arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    sched: (cast: (@: LmxSchedule) lmx_arena_take(arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: t = 0 || mail = 0 || sched = 0
         return: 0
     ---
-    if: lmx_thread_attach(t, message, mail, sched) != c.LMX_THREAD_OK
+    if: lmx_post_init(arena, mail) != c.LMX_POST_OK || lmx_schedule_init(sched, arena, (cast: (@: void) t), 8U) != c.LMX_SCHEDULE_OK || lmx_thread_init(arena, t, message\graph, mail, sched) != c.LMX_THREAD_OK
+        return: 0
+    ---
+    if: lmx_thread_children_bind_graph(t, arena) != c.LMX_THREAD_OK
         return: 0
     ---
 return: t
 
-fn: sv_link (@: LmxThread parent; @: LmxArena src; @: LmxArena child_arena; @: Lmx parent_graph; size_t: slot; @: Lmx source; @: LmxPost mail; @: LmxSchedule sched) @: LmxThread
+fn: sv_link (@: LmxThread parent; @: LmxArena src; @: LmxArena child_arena; @: Lmx parent_graph; size_t: slot; @: Lmx source) @: LmxThread
     @: LmxMsg child
     @: LmxThread t
     if: lmx_thread_enter(parent) != c.LMX_THREAD_OK
         return: 0
     ---
-    child: lmx_child_reserve(parent, src, child_arena, parent_graph, slot, source)
+    child: lmx_child_reserve(parent, src, child_arena, lmx_arena_ref_cell(parent_graph, slot), source)
     if: child = 0
         return: 0
     ---
-    t: sv_object(child_arena, child, mail, sched)
+    t: sv_object(child_arena, child)
     if: t = 0 || lmx_child_thread(parent, child, t) != c.LMX_CHILD_OK
         return: 0
     ---
@@ -99,12 +120,12 @@ fn: sv_order_ok (@: LmxService service) int
     size_t: i
     @: void prev
     @: void cur
-    if: service = 0 || service\count = 0U
+    if: service = 0 || lmx_service_entries_len(service) = 0U
         return: 1
     ---
     prev: lmx_service_at(service, 0U)
     i: 1U
-    while: i < service\count
+    while: i < lmx_service_entries_len(service)
         cur: lmx_service_at(service, i)
         if: (cast: (uintptr_t) prev) >= (cast: (uintptr_t) cur)
             return: 0
@@ -125,8 +146,6 @@ fn: main () int
     LmxArena: b_arena
     LmxArena: letter_arena
     LmxService: service
-    LmxPost: mail
-    LmxSchedule: sched
     @: LmxMsg p 0
     @: Lmx p_graph 0
     @: Lmx template 0
@@ -140,6 +159,7 @@ fn: main () int
     @: LmxMsg a1_message 0
     @: LmxMsg letter 0
     @: LmxArena letter_arena_p 0
+    @: LmxArenaBlock donor_tail 0
     @: void unknown 0
     int: failures
     if: counts = 0
@@ -157,32 +177,35 @@ fn: main () int
         free(counts)
         return: 2
     ---
-    if: lmx_post_init(@ root_arena, @ mail) != c.LMX_POST_OK || lmx_schedule_init(@ sched, 0, 0, 8U) != c.LMX_SCHEDULE_OK
-        free(counts)
-        return: 2
-    ---
     sv_check(counts, lmx_service_open(@ service) = c.LMX_SERVICE_OK, "the service did not open")
-    p: sv_message(@ root_arena, 1U, 5U)
+    p: sv_message(@ root_arena, 1U, 7U)
     template: lmx_node_new_owned(@ root_arena)
-    if: p = 0 || template = 0 || lmx_arena_refs_open_owned(@ root_arena, template, 1U) != 0
+    if: p = 0 || template = 0 || lmx_arena_refs_open_owned(@ root_arena, template, 2U) != 0
         free(counts)
         return: 2
     ---
     p_graph: p\graph
-    pt: sv_object(@ root_arena, p, @ mail, @ sched)
+    if: lmx_thread_children_field_new(@ root_arena, p_graph, 5U) = 0 || lmx_thread_children_field_new(@ root_arena, template, 1U) = 0
+        free(counts)
+        return: 2
+    ---
+    # The reusable child template is an ordinary graph field, so end-turn GC keeps it alive across
+    # the five separate reservation turns. No runtime name or numeric ABI gives this field meaning.
+    lmx_arena_ref_store(p_graph, 6U, (cast: (@: void) template))
+    pt: sv_object(@ root_arena, p)
     if: pt = 0
         free(counts)
         return: 2
     ---
     # The tree: P -> A1..A5, and B under A1.  Hierarchy is for linking only -- service keys are physical.
-    a1: sv_link(pt, @ root_arena, @ a1_arena, p_graph, 0U, template, @ mail, @ sched)
-    a2: sv_link(pt, @ root_arena, @ a2_arena, p_graph, 1U, template, @ mail, @ sched)
-    a3: sv_link(pt, @ root_arena, @ a3_arena, p_graph, 2U, template, @ mail, @ sched)
-    a4: sv_link(pt, @ root_arena, @ a4_arena, p_graph, 3U, template, @ mail, @ sched)
-    a5: sv_link(pt, @ root_arena, @ a5_arena, p_graph, 4U, template, @ mail, @ sched)
+    a1: sv_link(pt, @ root_arena, @ a1_arena, p_graph, 0U, template)
+    a2: sv_link(pt, @ root_arena, @ a2_arena, p_graph, 1U, template)
+    a3: sv_link(pt, @ root_arena, @ a3_arena, p_graph, 2U, template)
+    a4: sv_link(pt, @ root_arena, @ a4_arena, p_graph, 3U, template)
+    a5: sv_link(pt, @ root_arena, @ a5_arena, p_graph, 4U, template)
     sv_check(counts, a1 != 0 && a2 != 0 && a3 != 0 && a4 != 0 && a5 != 0, "the children were not linked")
     a1_message: lmx_thread_message(a1)
-    bt: sv_link(a1, @ a1_arena, @ b_arena, a1_message\graph, 0U, template, @ mail, @ sched)
+    bt: sv_link(a1, @ a1_arena, @ b_arena, a1_message\graph, 0U, a1_message\graph)
     sv_check(counts, bt != 0, "the grandchild was not linked")
 
     # Registered in a scrambled order, so the ORDER the service keeps is its own doing.
@@ -220,9 +243,8 @@ fn: main () int
     sv_check(counts, sv_lookup(@ service, a5) = (cast: (@: void) a5), "the record after the gap was lost")
     sv_check(counts, lmx_service_unregister(@ service, a3) = c.LMX_SERVICE_MISSING, "a record left twice")
 
-    # 19.28.R2.5: successful delivery attaches the letter arena to the receiver's arena.
-    # Letter lives in its OWN simple arena; after post to a1, letter_arena is empty and the
-    # letter still classifies through a1_arena (ownership transfer, addresses stable).
+    # 19.28.R2.5: producer publication does not mutate the receiver arena. The inbox holds the
+    # physical pair until the receiver owner takes it; only that take claims the letter arena.
     memset((cast: (@: void) (@ letter_arena)), 0, c.sizeof(c.LmxArena))
     sv_check(counts, lmx_arena_open_simple(@ letter_arena) = 0, "letter simple arena did not open")
     letter_arena_p: @ letter_arena
@@ -233,13 +255,49 @@ fn: main () int
         letter\success: 0
         letter\handoff_ready: 0
         letter\graph: 0
-        letter\index: 0U
     ---
     sv_check(counts, lmx_service_post(@ service, (cast: (@: void) a1), letter, @ letter_arena) = c.LMX_SERVICE_OK, "delivery post refused")
-    sv_check(counts, letter_arena_p\blocks = 0 && letter_arena_p\index = 0 && letter_arena_p\count = 0U, "delivery did not attach/empty letter arena")
-    sv_check(counts, lmx_range_classify(@ a1_arena, (cast: (@: void) letter)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "delivered letter does not classify in receiver arena")
+    sv_check(counts, letter_arena_p\blocks != 0 && lmx_range_classify(letter_arena_p, (cast: (@: void) letter)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "producer publication consumed the source arena")
+    sv_check(counts, lmx_range_classify(@ a1_arena, (cast: (@: void) letter)) = c.LMX_KIND_NONE, "producer publication mutated the receiver arena")
     sv_check(counts, lmx_thread_mail_count(a1, c.LMX_POST_INBOX) = 1U, "delivery did not admit into a1 inbox")
+    # Malformed donor ownership makes the receiver-side attach refuse BEFORE mutating either arena.
+    # The exact pair stays at the inbox head; repairing the donor makes the same take retry succeed.
+    donor_tail: letter_arena_p\blocks
+    while: donor_tail != 0 && donor_tail\next != 0
+        donor_tail: donor_tail\next
+    ---
+    if: donor_tail != 0
+        donor_tail\next: letter_arena_p\blocks
+        sv_check(counts, lmx_thread_mail_take(a1, c.LMX_POST_INBOX) = 0, "malformed donor was partly claimed")
+        sv_check(counts, lmx_thread_mail_count(a1, c.LMX_POST_INBOX) = 1U && lmx_range_classify(@ a1_arena, (cast: (@: void) letter)) = c.LMX_KIND_NONE, "claim refusal lost the queued pair or mutated receiver")
+        sv_check(counts, lmx_post_close(@ a1_arena, a1\mail) = c.LMX_POST_INVALID, "mail close did not promptly refuse cyclic pending donor")
+        sv_check(counts, lmx_thread_mail_count(a1, c.LMX_POST_INBOX) = 1U && letter_arena_p\blocks != 0 && lmx_range_classify(letter_arena_p, (cast: (@: void) letter)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "failed close lost pair backing or donor ownership")
+        donor_tail\next: 0
+    else:
+        sv_check(counts, 0, "delivery donor has no ownership blocks")
+    ---
     sv_check(counts, lmx_thread_mail_take(a1, c.LMX_POST_INBOX) = (cast: (@: void) letter), "inbox did not hold the delivered letter")
+    sv_check(counts, letter_arena_p\blocks = 0 && lmx_arena_index_data(letter_arena_p) = 0 && lmx_arena_index_len(letter_arena_p) = 0U, "receiver take did not claim/empty letter arena")
+    sv_check(counts, lmx_range_classify(@ a1_arena, (cast: (@: void) letter)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "claimed letter does not classify in receiver arena")
+
+    # Capacity allocation fails BEFORE ownership transfer. Fill the two-slot ring, make precisely
+    # the next calloc fail, and prove the letter is still owned/classified by its source arena and
+    # was not published. This is the transaction boundary which the old attach-then-accept order
+    # could not roll back.
+    sv_check(counts, lmx_post_accept(@ a1_arena, a1\mail, (cast: (@: void) a1_message), c.LMX_POST_INBOX) = c.LMX_POST_OK, "first reserve witness did not fill inbox")
+    sv_check(counts, lmx_post_accept(@ a1_arena, a1\mail, (cast: (@: void) a1_message), c.LMX_POST_INBOX) = c.LMX_POST_OK, "second reserve witness did not fill inbox")
+    memset((cast: (@: void) (@ letter_arena)), 0, c.sizeof(c.LmxArena))
+    sv_check(counts, lmx_arena_open_simple(@ letter_arena) = 0, "rollback letter arena did not open")
+    letter: (cast: (@: LmxMsg) lmx_arena_take(@ letter_arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    sv_check(counts, letter != 0, "rollback letter was not taken")
+    sv_fail_calloc: 1
+    sv_check(counts, lmx_service_post(@ service, (cast: (@: void) a1), letter, @ letter_arena) = c.LMX_SERVICE_INVALID, "forced inbox allocation failure was not reported")
+    sv_check(counts, sv_fail_calloc = 0, "forced inbox allocation failure was not reached")
+    sv_check(counts, lmx_range_classify(@ letter_arena, (cast: (@: void) letter)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "failed delivery consumed the source letter arena")
+    sv_check(counts, lmx_range_classify(@ a1_arena, (cast: (@: void) letter)) = c.LMX_KIND_NONE, "failed delivery imported an unpublished letter")
+    sv_check(counts, lmx_thread_mail_count(a1, c.LMX_POST_INBOX) = 2U, "failed delivery changed inbox membership")
+    sv_check(counts, lmx_thread_mail_take(a1, c.LMX_POST_INBOX) = (cast: (@: void) a1_message) && lmx_thread_mail_take(a1, c.LMX_POST_INBOX) = (cast: (@: void) a1_message), "reserve witnesses did not remain FIFO")
+    sv_check(counts, lmx_arena_release(@ letter_arena) = 0, "rollback source arena did not release")
 
     # Undelivered letter -- service releases the letter's OWN arena on MISSING.
     # Letter lives in letter_arena (spec 19.29.2); post to an unknown address must MISSING
@@ -254,16 +312,18 @@ fn: main () int
         letter\success: 0
         letter\handoff_ready: 0
         letter\graph: 0
-        letter\index: 0U
     ---
     unknown: (cast: (@: void) 0x1)
     sv_check(counts, lmx_service_post(@ service, unknown, letter, @ letter_arena) = c.LMX_SERVICE_MISSING, "missing post did not refuse")
-    sv_check(counts, letter_arena_p\blocks = 0 && letter_arena_p\index = 0, "missing post did not release the letter arena")
+    sv_check(counts, letter_arena_p\blocks = 0 && lmx_arena_index_data(letter_arena_p) = 0, "missing post did not release the letter arena")
 
-    sv_check(counts, lmx_service_release(@ service) = c.LMX_SERVICE_OK && lmx_service_count(@ service) = 0U, "the service did not release")
+    # Release never dereferences possibly-dead targets. A live nonempty registry must first be
+    # drained through exact-address unregister operations.
+    sv_check(counts, lmx_service_release(@ service) = c.LMX_SERVICE_INVALID && lmx_service_count(@ service) = 6U, "a nonempty service released live registrations")
+    sv_check(counts, lmx_service_unregister(@ service, bt) = c.LMX_SERVICE_OK && lmx_service_unregister(@ service, a1) = c.LMX_SERVICE_OK && lmx_service_unregister(@ service, pt) = c.LMX_SERVICE_OK && lmx_service_unregister(@ service, a5) = c.LMX_SERVICE_OK && lmx_service_unregister(@ service, a2) = c.LMX_SERVICE_OK && lmx_service_unregister(@ service, a4) = c.LMX_SERVICE_OK, "the live registrations did not drain")
+    sv_check(counts, lmx_service_count(@ service) = 0U, "the drained service is not empty")
+    sv_check(counts, lmx_service_release(@ service) = c.LMX_SERVICE_OK && lmx_service_count(@ service) = 0U, "the empty service did not release")
     failures: counts[1]
     c.printf("lmx_service checks=%d failures=%d\n", counts[0], failures)
     free(counts)
 return: failures
-
-

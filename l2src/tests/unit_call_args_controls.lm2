@@ -1,0 +1,20 @@
+fn: test () int
+    return: 7
+end: test
+fn: add (int: a; int: b) int
+    return: a + b
+end: add
+int: r 0
+if: test() != 7
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
+r: add: 1 2
+if: r != 3
+    sendMessage: exit(exit_code: 2; stdout: ""; stderr: "")
+    return
+r: add(1 2)
+if: r != 3
+    sendMessage: exit(exit_code: 3; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

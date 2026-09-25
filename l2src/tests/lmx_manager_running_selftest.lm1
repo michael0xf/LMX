@@ -6,7 +6,6 @@ predef: "l2src/lmx_turn.lm1"
 predef: "l2src/lmx_child.lm1"
 predef: "l2src/lmx_post.lm1"
 predef: "l2src/lmx_schedule.lm1"
-predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_gc.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_arena_blocks.lm1"
@@ -28,7 +27,8 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 #   * the lane's turn runs the BODY the object's own graph names, not only the boundary: the entry
 #     below counts its own calls, and the count is the evidence;
 #   * the body runs INSIDE the lane's own turn: the object the body sees as current is the very
-#     thread whose turn it is;
+#     thread whose turn it is, while reserved `node` is the callable occurrence's parent -- 0,
+#     because the graph hanging in a Thread is independent (parent = 0);
 #   * the lane's turn is whole: its boundary collects the record's own band (the arena's generation
 #     moves), and this thread's current object is never touched by the lane (it is a per-thread cell).
 #
@@ -39,7 +39,12 @@ size_t: rb_calls 0U
 @: Lmx rb_node 0
 @: LmxThread rb_current 0
 
-fn: rb_body (@: Lmx node) int
+fn: rb_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    @: Lmx self (cast: (@: Lmx) owner)
+    @: Lmx node 0
+    if: self != 0
+        node: self\parent
+    ---
     rb_calls: rb_calls + 1U
     rb_node: node
     rb_current: lmx_thread_current()
@@ -51,7 +56,7 @@ fn: rb_struct (@: LmxArena arena; size_t: slots) @: Lmx
     if: structure = 0
         return: 0
     ---
-    if: lmx_arena_refs_open_owned(arena, structure, slots) != 0
+    if: slots != 0U && lmx_arena_refs_open_owned(arena, structure, slots) != 0
         return: 0
     ---
 return: structure
@@ -67,56 +72,63 @@ end: rb_check
 fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxArena: arena
-    LmxPool: methods
     LmxManager: running
     @: LmxArena arena_at 0
     @: Lmx graph 0
     @: Lmx own_field 0
-    @: LmxMethod method 0
     @: LmxMsg message 0
     @: LmxThread t 0
     @: LmxPost mail 0
     @: LmxSchedule sched 0
     @: LmxSchedule slotp 0
+    @: LmxThread parent 0
+    @: LmxPost parent_mail 0
+    @: LmxSchedule parent_sched 0
+    @: Lmx parent_graph 0
+    @: LmxArrayDesc parent_children 0
     unsigned: gen
     int: failures
     if: counts = 0
         return: 2
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
-    memset((cast: (@: void) (@ methods)), 0, c.sizeof(c.LmxPool))
     if: lmx_arena_open(@ arena) != 0
         fputs("lmx_manager_running: the arena did not open\n", l1_stdout())
         free(counts)
         return: 2
     ---
     arena_at: @ arena
-    if: lmx_pool_open(arena_at, @ methods, c.sizeof(c.LmxMethod), 2U, c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD) != 0
-        fputs("lmx_manager_running: the method pool did not open\n", l1_stdout())
-        free(counts)
-        return: 2
-    ---
-    method: lmx_method_intern(arena_at, @ methods, (cast: (LmxEntry) rb_body), 1U)
-    graph: rb_struct(arena_at, 2U)
+    # k.4: no descriptor slot -- the own field is the graph's sole slot, and `native` is set
+    # directly.
+    graph: rb_struct(arena_at, 1U)
     own_field: lmx_int_new_owned(arena_at)
-    message: (cast: (@: LmxMsg) lmx_arena_take(arena_at, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
-    t: (cast: (@: LmxThread) lmx_arena_take(arena_at, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    t: (cast: (@: LmxThread) lmx_arena_take(arena_at, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
+    message: (cast: (@: LmxMsg) t)
     mail: (cast: (@: LmxPost) lmx_arena_take(arena_at, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
     sched: (cast: (@: LmxSchedule) lmx_arena_take(arena_at, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
-    if: method = 0 || graph = 0 || own_field = 0 || message = 0 || t = 0 || mail = 0 || sched = 0
+    parent: (cast: (@: LmxThread) lmx_arena_take(arena_at, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
+    parent_mail: (cast: (@: LmxPost) lmx_arena_take(arena_at, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    parent_sched: (cast: (@: LmxSchedule) lmx_arena_take(arena_at, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    parent_graph: rb_struct(arena_at, 1U)
+    if: graph = 0 || own_field = 0 || message = 0 || t = 0 || mail = 0 || sched = 0 || parent = 0 || parent_mail = 0 || parent_sched = 0 || parent_graph = 0
         free(counts)
         return: 2
     ---
-    lmx_arena_ref_store(graph, 0U, (cast: (@: void) method))
-    lmx_arena_ref_store(graph, 1U, own_field)
-    message\running: 1
-    message\success: 0
-    message\handoff_ready: 0
-    message\graph: graph
-    message\index: 1U
-    rb_check(counts, lmx_post_init(arena_at, mail) = c.LMX_POST_OK && lmx_thread_attach(t, message, mail, sched) = c.LMX_THREAD_OK, "the object did not attach")
+    # The selected callable occurrence is `graph`, and it hangs in the Thread: it is independent
+    # (parent = 0, author 2026-09-22), so its reserved source `node` is 0 -- nothing lexical lies
+    # above a Thread's graph, and the parent Thread is supervision, not a lexical space.
+    graph\parent: 0
+    graph\native: (cast: (LmxEntry) rb_body)
+    lmx_arena_ref_store(graph, 0U, own_field)
     # The record's own band, and a window wide enough that the lane's own ticks never end the wait.
     rb_check(counts, lmx_schedule_init(sched, arena_at, (cast: (@: void) t), 100000U) = c.LMX_SCHEDULE_OK, "the record did not initialize")
+    rb_check(counts, lmx_post_init(arena_at, mail) = c.LMX_POST_OK && lmx_thread_init(arena_at, t, graph, mail, sched) = c.LMX_THREAD_OK, "the object did not initialize")
     rb_check(counts, lmx_schedule_wait(sched, lmx_clock_ticks()) = c.LMX_SCHEDULE_OK, "the record's wait did not start")
+
+    # A manager traverses its owner's sole graph Array; it is not a second queue. Build the
+    # ordinary parent and publish this Thread in that Array before asking either manager binding.
+    parent_children: lmx_thread_children_field_new(arena_at, parent_graph, 0U)
+    rb_check(counts, parent_children != 0 && lmx_post_init(arena_at, parent_mail) = c.LMX_POST_OK && lmx_schedule_init(parent_sched, arena_at, (cast: (@: void) parent), 100000U) = c.LMX_SCHEDULE_OK && lmx_thread_init(arena_at, parent, parent_graph, parent_mail, parent_sched) = c.LMX_THREAD_OK && lmx_thread_children_bind(parent, parent_children, arena_at) = c.LMX_THREAD_OK, "the running manager parent did not initialize")
+    rb_check(counts, lmx_thread_child_add(parent, t, arena_at) = c.LMX_THREAD_OK, "the record did not join its parent's sole Array")
 
     rb_check(counts, lmx_manager_running_init(@ running) = c.LMX_MANAGER_OK, "the running manager did not initialize")
     rb_check(counts, lmx_manager_running_add(@ running, sched) = c.LMX_MANAGER_OK, "the record did not join the running schedule")
@@ -130,7 +142,7 @@ fn: main () int
     c.Sleep(60U)
     rb_check(counts, rb_calls >= 1U, "the lane ran no body")
     rb_check(counts, rb_current = t, "the lane's body did not run inside its own turn")
-    rb_check(counts, rb_node = graph, "the lane's body was not handed its own graph")
+    rb_check(counts, rb_node = 0, "the lane's body was not handed node 0 for an independent Thread graph")
     rb_check(counts, lmx_thread_current() = 0, "the lane wrote this thread's current object")
     rb_check(counts, arena_at\generation > gen, "the lane's turn did not collect the record's own band")
 
@@ -140,6 +152,8 @@ fn: main () int
     rb_check(counts, lmx_manager_running_close(@ running) = c.LMX_MANAGER_OK, "the running manager did not join its lanes")
     rb_check(counts, slotp\lane = 0, "the lane was not released")
     rb_check(counts, rb_calls = 0U || rb_calls >= 1U, "the lane's count went backwards")
+    rb_check(counts, lmx_thread_child_remove(parent, t) = c.LMX_THREAD_OK, "the parent could not remove the stopped lane Thread")
+    rb_check(counts, lmx_post_close(arena_at, mail) = c.LMX_POST_OK && lmx_post_close(arena_at, parent_mail) = c.LMX_POST_OK, "the Thread mailboxes did not close")
 
     failures: counts[1]
     c.printf("lmx_manager_running checks=%d failures=%d calls=%d\n", counts[0], failures, rb_calls)

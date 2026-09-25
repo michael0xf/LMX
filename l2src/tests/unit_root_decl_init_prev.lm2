@@ -1,0 +1,10 @@
+# -193 T4a side fix (Q24 = A, D-48; as natively, l2_own_excl): a repeated declaration's initializer
+# reads the occurrence declared BEFORE it -- `x + 2` reads the first x (1), not the row this very
+# declaration makes (0): x is 3.  The walked root read its own new row (2).
+int: x 1
+int: x (x + 2)
+if: x != 3
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

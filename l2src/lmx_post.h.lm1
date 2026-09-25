@@ -101,6 +101,37 @@ end: LmxPostLink
 # storage lives there rather than on a foreign heap (model 22, 25).  Hence
 # lmx_post_init needs the arena open already: opening the pool registers the first
 # chunk, and every node the pool hands out is a cell of one of the arena's arrays.
+
+# Inbox slot pair + DynamicArray types for the post inbox ring.
+
+struct: LmxPostInboxSlot
+    @: void target
+    @: LmxArena source_arena
+end: LmxPostInboxSlot
+
+
+# Fixed array of inbox slot pairs.
+struct: LmxPostInboxSlotArray
+    size_t: len
+    @: LmxPostInboxSlot data
+end: LmxPostInboxSlotArray
+
+# Compositional DynamicArray over LmxPostInboxSlotArray (Q18 / FABLE-134 REVIEW).
+struct: LmxPostInboxSlotDynamicArray
+    LmxPostInboxSlotArray: array
+    size_t: capacity
+end: LmxPostInboxSlotDynamicArray
+
+# -177 c2: selective-receive iterator over the inbox in admission order (mail-wrappers K1).
+# open positions before the first letter; next advances and returns the letter under the
+# cursor; take removes that letter (others keep order); close ends the walk.
+struct: LmxPostCursor
+    @: LmxPost box
+    size_t: index
+    int: has_current
+    int: open
+end: LmxPostCursor
+
 struct: LmxPost
     # THE INBOX IS THE ONE CROSS-LANE STRUCTURE AND IT IS A RING, NOT A LINKED LIST (20.09).
     #
@@ -121,9 +152,12 @@ struct: LmxPost
     #
     # The slots are private mailbox metadata, not graph values and not an address-classified LMX
     # type.  They form an ordinary movable dynamic array: growth happens only while holding the
-    # monitor, copies unread addresses in FIFO order, and never exposes either backing address.
-    @: void inbox_slots
-    size_t: inbox_capacity
+    # monitor, copies unread target/source pairs in FIFO order, and never exposes the backing address.
+    # Private flat ring pairs `[target, source_arena]`. Producers publish both words under this
+    # mailbox's monitor and never mutate the receiver arena. A null source means same-arena.
+    # Private ring of pair records as one DynamicArray + head/tail (Q18).
+    # capacity = ring slots; array.len unused as occupancy (inbox_count + head/tail).
+    LmxPostInboxSlotDynamicArray: inbox
     # The counters and slots are ordinary mailbox state protected by inbox_monitor.  Tail is
     # advanced by every sender, head only by the owner, and count is what lmx_post_count reports.
     ulong: inbox_head
@@ -158,6 +192,12 @@ prototype:
     fn: lmx_post_api (@: LmxPost box) @: LmxPostApi
     fn: lmx_post_admits (@: LmxArena arena; @: void target) int
     fn: lmx_post_accept (@: LmxArena arena; @: LmxPost box; @: void target; int: lane) int
+    # Transactional cross-arena inbox publication. The producer only reserves/grows and publishes
+    # {target, source_arena} under the mailbox monitor; it never mutates the receiver arena.
+    fn: lmx_post_accept_transfer (@: LmxArena arena; @: LmxPost box; @: void target; @: LmxArena source_arena) int
+    # Receiver-owner take. Before exposing an imported inbox target, claim its source arena into
+    # the receiver arena. Refusal leaves the pair queued and owned by the source arena.
+    fn: lmx_post_take_owned (@: LmxArena arena; @: LmxPost box; int: lane) @: void
     fn: lmx_post_take (@: LmxPost box; int: lane) @: void
     fn: lmx_post_count (@: LmxPost box; int: lane) size_t
     # The end-turn boundary's first act (19.29.4.1), one call per outcome: publish moves
@@ -168,4 +208,14 @@ prototype:
     fn: lmx_post_publish (@: LmxPost box) int
     fn: lmx_post_discard (@: LmxPost box) int
     fn: lmx_post_close (@: LmxArena arena; @: LmxPost box) int
+    fn: lmx_post_inbox_data (@: LmxPost box) @: LmxPostInboxSlot
+    fn: lmx_post_inbox_cap (@: LmxPost box) size_t
+    fn: lmx_post_inbox_set_data (@: LmxPost box; @: LmxPostInboxSlot data) void
+    fn: lmx_post_inbox_set_len (@: LmxPost box; size_t: len) void
+    fn: lmx_post_inbox_set_cap (@: LmxPost box; size_t: capacity) void
+    # -177 c2: inbox cursor (admission order). Mutant: take removes wrong slot -> RED.
+    fn: lmx_post_cursor_open (@: LmxPost box; @: LmxPostCursor cur) int
+    fn: lmx_post_cursor_next (@: LmxPostCursor cur) @: void
+    fn: lmx_post_cursor_take (@: LmxArena arena; @: LmxPostCursor cur) @: void
+    fn: lmx_post_cursor_close (@: LmxPostCursor cur) void
 end: prototype

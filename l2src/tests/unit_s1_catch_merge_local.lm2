@@ -1,0 +1,15 @@
+# `catch: merge ()` in the method whose own merge fails (mergefail 1): the handler runs and the
+# method returns 50.  Catching an implicit name is optional; this one is caught.
+P:
+    size_t: p 3U
+end: P
+
+fn: m () int
+    int: r 1
+    Q: merge: P
+    catch: merge ()
+        r: 50
+return: r
+
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

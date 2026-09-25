@@ -1,0 +1,65 @@
+# Q29 (author, 2026-09-25: «одна ячейка там где объявление»; FABLE-OPUS-CODE-DATA-SPLIT-20260925-189
+# c3c) supersedes what follows: `arg: 1`, poke9 and `arg: 2` write ONE cell -- a repeated bare
+# assignment is not an occurrence, `\[N]` numbers declarations.  So test\[0]arg and test\arg read
+# that cell, 2, and 5 after `test\arg: 5`; there is no test\[1]arg (unit_occ_arg_second_refused.lm2).
+#
+# FABLE-SONNET-LAST-OCCURRENCE-20260924-164: the author's rule (Q22.2, LMX_blog/2026-09-24.md,
+# book Sfields, CORE S3.1) -- an unqualified name is its LAST occurrence, including repeated
+# occurrences of the same name in one method body. `test\[N]arg` still counts in lexical (source)
+# order; unqualified `test\arg` is `test\[lastIndex]arg`.
+#
+# Measured (not assumed): read from a METHOD body (check(), here), `test\arg` already resolves
+# through l2_own_seg_scan (l2_path_root -> l2_emit_path_to's method-root branch), whose
+# scan-and-overwrite loop is last-occurrence by construction -- this fixture pins that this
+# already holds correctly for the caller-is-a-method case, both read and write. It is NOT a
+# mutation witness for this ticket's l2_own_find -> l2_own_find_last call-site routing (commit 2):
+# every consumer of that routing checks l2_param_find (is this name a formal of the CURRENT
+# method) before ever reaching own-find, and a repeated own row can currently only exist for a
+# name that IS such a formal (the argument same-name-binding rule is the only legal way today to
+# get more than one row for one name) -- so the formal fast path always wins first, and the
+# routing change has no observable effect on any program this corpus can express today. It is
+# still correct and closes two real first/last inconsistencies between code paths that would
+# otherwise disagree if this ever becomes reachable (see steps/last-occurrence-inventory.md).
+#
+# poke9 writes arg's address BETWEEN the two named occurrences (unit_occ_snapshot_
+# selector.lm2's mechanism) so occurrence 0 and occurrence 1 hold OBSERVABLY DIFFERENT values (9
+# vs 2) -- without it (unit_occ_root_named.lm2's plain arg\1, arg\2 shape), occurrence 0
+# re-syncs to the same final value at checkpoint time regardless of which row is "last", so
+# first-vs-last is not observable there either.
+#
+# The READ-FROM-ROOT-LEVEL case is DIFFERENT and NOT covered here: unit_occ_root_named.lm2's own
+# `test\arg` (called and read at root, not from inside a method) resolves to occurrence 0 (first),
+# not last -- a genuine, separate, not-yet-fixed defect in the same l2_own_seg_scan mechanism,
+# masked there only because that fixture's arg is argument-bound and both occurrences happen to
+# publish the same value. See steps/last-occurrence-inventory.md and defects.md.
+fn: poke9 (@: int p) int
+    \p: 9
+    return: 0
+end: poke9
+
+fn: test (int: arg) int
+    arg: 1
+    poke9(@: arg)
+    arg: 2
+    return: 0
+end: test
+
+fn: check () int
+    int: first
+    int: last
+    test(0)
+    first: test\[0]arg
+    last: test\arg
+    if: first != 2
+        return: 81
+    if: last != 2
+        return: 83
+    test\arg: 5
+    first: test\[0]arg
+    if: first != 5
+        return: 84
+    return: 7
+end: check
+
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

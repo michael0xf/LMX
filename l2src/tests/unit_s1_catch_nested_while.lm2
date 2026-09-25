@@ -1,0 +1,22 @@
+# A handler covers the calls of the statement blocks nested in its block (Q14 K), a loop too.  The
+# throw at k = 2 leaves the while and the rest of the segment (the + 1000 does not run) and lands
+# after the loop's catch: r 1, k 2, seen 2 -- 122.
+fn: m (int: a) int
+    throws: Oops
+    if: a = 2
+        throw: Oops(a)
+return: a
+
+int: r 0
+int: k 0
+int: seen 0
+---
+    while: k < 5
+        k: k + 1
+        r: r + m(k)
+    r: r + 1000
+    catch: Oops (int: x)
+        seen: x
+---
+sendMessage: exit(exit_code: r * 100 + k * 10 + seen; stdout: ""; stderr: "")
+return

@@ -1,0 +1,189 @@
+predef: "l2src/lmx_walk.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# -194 к.5b, measured by Opus's own T4a diff-run.
+# K-RET: a walked callee's numeric result can come back as a REFERENCE to an existing
+# cell (a bare ARG/OWN read), not written into dest; a second call whose body reuses
+# that same cell then corrupts an earlier, still-unread call's result before an
+# enclosing ADD ever reads it. pick(x) = x, r: pick(1) + pick(2) -- native 3, walked 4
+# before the fix.
+# K-ARITY: for a walked (native = 0) callee, arity used to be max(ARG index) + 1 (a scan
+# of the body for ARG uses actually read), not the declared formal count -- a formal the
+# body never reads (an unused trailing parameter) undercounted. first(a, b) = a, called
+# first(3, 4): n = 2 != old arity 1 -> X1, refused, though the call's own arity matches
+# the declaration exactly.
+
+sub: rc_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: rc_check
+
+fn: rc_fr (@: LmxArena arena; @: Lmx roles; @: Lmx parent; size_t: slot; int: op; size_t: children) @: Lmx
+    @: Lmx n lmx_walk_frame(arena, roles, parent, op, children)
+    if: n = 0 || lmx_arena_ref_store(parent, slot, (cast: (@: void) n)) != 0
+        return: 0
+return: n
+
+fn: rc_argn (@: LmxArena arena; @: Lmx roles; @: Lmx parent; size_t: slot; size_t: k) @: Lmx
+    @: Lmx n rc_fr(arena, roles, parent, slot, c.LMX_WALK_OP_ARG, 2U)
+    if: n = 0 || lmx_walk_store_size(arena, n, 1U, k) != c.LMX_WALK_OK
+        return: 0
+return: n
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxArena: arena
+    LmxScratch: scratch
+    LmxPool: cells
+    LmxWalkContext: ctx
+    LmxWalkFrame: frame
+    @: LmxWalkFrame f 0
+    @: Lmx roles 0
+    @: Lmx unit 0
+
+    # -- K-RET fixture: pick(x) = x; an int rtype cell (its own TYPE is read, never its
+    # value) so the CALL below carries an explicit, non-zero rtype -- otherwise K-RET's
+    # own fix, gated on rtype_ref itself, never engages (matching every other reference-
+    # returning, untyped-rtype callee elsewhere in this file's own kernel selftests).
+    @: Lmx pick 0
+    @: void pick_rtype 0
+    @: Lmx caller 0
+    @: Lmx call_a 0
+    @: Lmx call_b 0
+    @: Lmx add_e 0
+    int: r_sum 0
+    @: void out_sum 0
+    int: present_sum 0
+    int: st
+
+    # -- K-ARITY fixture: first(a, b) = a; the body never reads ARG(1) at all.
+    @: Lmx first_m 0
+    @: void first_rtype 0
+    @: Lmx first_caller 0
+    @: Lmx call_first 0
+    int: r_first 0
+    @: void out_first 0
+    int: present_first 0
+    int: failures 0
+
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ scratch)), 0, c.sizeof(c.LmxScratch))
+    memset((cast: (@: void) (@ cells)), 0, c.sizeof(c.LmxPool))
+    memset((cast: (@: void) (@ ctx)), 0, c.sizeof(c.LmxWalkContext))
+    if: lmx_arena_open(@ arena) != 0
+        fputs("lmx: arena open failed\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    if: lmx_scratch_open(@ scratch, @ arena, @ cells, 64U) != c.LMX_SCRATCH_OK
+        lmx_arena_release(@ arena)
+        free(counts)
+        return: 2
+    ---
+    roles: lmx_walk_roles_open(@ arena)
+    rc_check(counts, roles != 0, "roles opened")
+    ctx.arena: @ arena
+    ctx.scratch: @ scratch
+    ctx.roles: roles
+    unit: lmx_node_new_owned(@ arena)
+    rc_check(counts, unit != 0 && lmx_arena_refs_open_owned(@ arena, unit, 8U) = 0, "unit opened")
+
+    # pick: args-part {x} at slot 0 (1 formal), RET ARG(0) at slot 1.
+    pick: lmx_node_new_owned(@ arena)
+    rc_check(counts, pick != 0 && lmx_arena_refs_open_owned(@ arena, pick, 2U) = 0, "pick opened {args, RET}")
+    lmx_arena_ref_store(pick, 0U, (cast: (@: void) lmx_walk_plain(@ arena, pick, 1U)))
+    rc_check(counts, lmx_arena_ref_value(pick, 0U) != 0, "pick's args-part built")
+    rc_argn(@ arena, roles, pick, 1U, 0U)
+    pick_rtype: (cast: (@: void) lmx_int_new_owned(@ arena))
+    rc_check(counts, pick_rtype != 0, "pick's rtype cell built")
+
+    # caller: RET (pick(1) + pick(2)) -- ADD [role, call_a, call_b], each CALL
+    # [call, code=pick, data=pick, rtype=pick_rtype, arg].
+    caller: lmx_node_new_owned(@ arena)
+    rc_check(counts, caller != 0 && lmx_arena_refs_open_owned(@ arena, caller, 1U) = 0, "caller opened")
+    add_e: rc_fr(@ arena, roles, caller, 0U, c.LMX_WALK_OP_RET, 2U)
+    add_e: rc_fr(@ arena, roles, add_e, 1U, c.LMX_WALK_OP_ADD, 3U)
+    call_a: rc_fr(@ arena, roles, add_e, 1U, c.LMX_WALK_OP_CALL, 5U)
+    lmx_arena_ref_store(call_a, 1U, (cast: (@: void) pick))
+    lmx_arena_ref_store(call_a, 2U, (cast: (@: void) pick))
+    lmx_arena_ref_store(call_a, 3U, pick_rtype)
+    rc_fr(@ arena, roles, call_a, 4U, c.LMX_WALK_OP_LIT, 2U)
+    lmx_walk_store_int(@ arena, lmx_arena_ref_struct(call_a, 4U), 1U, 1)
+    call_b: rc_fr(@ arena, roles, add_e, 2U, c.LMX_WALK_OP_CALL, 5U)
+    lmx_arena_ref_store(call_b, 1U, (cast: (@: void) pick))
+    lmx_arena_ref_store(call_b, 2U, (cast: (@: void) pick))
+    lmx_arena_ref_store(call_b, 3U, pick_rtype)
+    rc_fr(@ arena, roles, call_b, 4U, c.LMX_WALK_OP_LIT, 2U)
+    lmx_walk_store_int(@ arena, lmx_arena_ref_struct(call_b, 4U), 1U, 2)
+    rc_check(counts, caller != 0, "caller graph built")
+
+    st: lmx_walk_activate(@ ctx, caller, caller, 0, 0U, (cast: (@: void) (@ r_sum)), @ out_sum, @ present_sum)
+    rc_check(counts, st = c.LMX_WALK_OK, "pick(1) + pick(2) walked OK")
+    # Measured: this exact scratch-slot reuse did not reproduce here (this fixture's own
+    # ADD-operand allocation pattern differs enough from fable's own pick(1)+pick(2)
+    # trace that a mutant reverting the copy does not corrupt r_sum) -- kept as a direct,
+    # positive regression check for the named scenario; K-RET's own mutant coverage
+    # comes from first(3, 4) below instead (both the copy-removed and the
+    # call_dest-removed variants of the mutant turn it RED, verified on a private
+    # scratch copy).
+    rc_check(counts, r_sum = 3, "pick(1) + pick(2) = 3, not 4")
+
+    # -- K-ARITY: first(a, b) = a; args-part {a, b} at slot 0 (2 formals), body reads
+    # only ARG(0). Called through an ACTUAL CALL frame with 2 arguments, matching the
+    # declaration -- lmx_walk_run's own top-level entry (unlike lmx_walk_call) never
+    # checks arity at all, so the check has to go through a real CALL to mean anything.
+    first_m: lmx_node_new_owned(@ arena)
+    rc_check(counts, first_m != 0 && lmx_arena_refs_open_owned(@ arena, first_m, 2U) = 0, "first opened {args, RET}")
+    lmx_arena_ref_store(first_m, 0U, (cast: (@: void) lmx_walk_plain(@ arena, first_m, 2U)))
+    rc_check(counts, lmx_arena_ref_value(first_m, 0U) != 0 && (cast: (@: Lmx) lmx_arena_ref_value(first_m, 0U))\len = 2, "first's args-part built, 2 formals")
+    rc_fr(@ arena, roles, first_m, 1U, c.LMX_WALK_OP_RET, 2U)
+    rc_argn(@ arena, roles, lmx_arena_ref_struct(first_m, 1U), 1U, 0U)
+
+    # first_caller: RET first(3, 4) -- CALL [call, code=first, data=first, rtype, arg0=LIT
+    # 3, arg1=LIT 4], n = 2. An explicit rtype (same reason as pick's own witness above):
+    # first's own ARG(0) result lives in THIS call's own scratch args, rewound
+    # unconditionally at the end of lmx_walk_call -- without K-RET's own copy engaging
+    # (gated on rtype_ref), the reference handed back would already dangle by the time
+    # this check reads it, which is a bug in the WITNESS, not evidence of anything about
+    # K-ARITY itself.
+    first_rtype: (cast: (@: void) lmx_int_new_owned(@ arena))
+    rc_check(counts, first_rtype != 0, "first's rtype cell built")
+    first_caller: lmx_node_new_owned(@ arena)
+    rc_check(counts, first_caller != 0 && lmx_arena_refs_open_owned(@ arena, first_caller, 1U) = 0, "first_caller opened")
+    call_first: rc_fr(@ arena, roles, first_caller, 0U, c.LMX_WALK_OP_RET, 2U)
+    call_first: rc_fr(@ arena, roles, call_first, 1U, c.LMX_WALK_OP_CALL, 6U)
+    lmx_arena_ref_store(call_first, 1U, (cast: (@: void) first_m))
+    lmx_arena_ref_store(call_first, 2U, (cast: (@: void) first_m))
+    lmx_arena_ref_store(call_first, 3U, first_rtype)
+    rc_fr(@ arena, roles, call_first, 4U, c.LMX_WALK_OP_LIT, 2U)
+    lmx_walk_store_int(@ arena, lmx_arena_ref_struct(call_first, 4U), 1U, 3)
+    rc_fr(@ arena, roles, call_first, 5U, c.LMX_WALK_OP_LIT, 2U)
+    lmx_walk_store_int(@ arena, lmx_arena_ref_struct(call_first, 5U), 1U, 4)
+    rc_check(counts, first_caller != 0, "first_caller graph built")
+
+    st: lmx_walk_activate(@ ctx, first_caller, first_caller, 0, 0U, (cast: (@: void) (@ r_first)), @ out_first, @ present_first)
+    rc_check(counts, st != c.LMX_WALK_INVALID, "first(3, 4) is not refused (mutant: K-ARITY fix off -> body-scan arity 1 != n 2, X1, RED)")
+    rc_check(counts, st = c.LMX_WALK_OK && r_first = 3, "first(3, 4) = 3, the unread second formal reached the call correctly (K-RET's own mutant witness too: dropping either the copy or the call_dest substitution leaves r_first at its own initial 0, RED)")
+
+    failures: counts[1]
+    c.printf("lmx_walk_call_ret_arity_selftest: %d checks, %d failed\n", counts[0], failures)
+    free(counts)
+    lmx_scratch_close(@ scratch)
+    lmx_arena_release(@ arena)
+    if: failures != 0
+        return: 1
+return: 0

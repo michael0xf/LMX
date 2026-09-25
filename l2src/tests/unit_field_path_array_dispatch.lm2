@@ -1,0 +1,23 @@
+# FABLE-SONNET-UNIT-LEVEL-ROOTS-20260923-117 generalized the own-array
+# helpers past the two literal roots "for"/"node". FABLE-SONNET-ARRAY-
+# WRITE-DISPATCH-20260923-119 found and fixed a write-dispatch ordering
+# gap for that generalization, then fable corrected the generalization's
+# MEANING for any OTHER root: root\name[idx] denotes a field OF root's
+# type, never a same-named sibling own array. FABLE-SONNET-NODE-ROOT-
+# 20260923-121 (author Q9) then removed node/for's own single-hop
+# own-table lookup entirely -- node\name[idx]/for\name[idx] are no longer
+# a spelling gate onto the own table either; see
+# unit_array_write_general_root_no_field.lm2 for the resulting uniform
+# "unsupported index" refusal (node/for included). This fixture is left
+# covering only what a bare own name has always meant: the own-table
+# gate/lookup itself, with no root at all.
+fn: build () int
+    []: int buf 3
+    buf[0]: 6
+    if: buf[0] != 6
+        return: 97
+    if: length(buf) != 3
+        return: 96
+    return: 0
+
+return: build()

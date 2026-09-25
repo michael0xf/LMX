@@ -1,0 +1,17 @@
+# FABLE-OPUS-P0-SIZEOF-ATOM-20260924-157: `c.sizeof(...)` is an ordinary c.* door call.  P0 no longer
+# keeps it as one raw atom, so its non-c.* operand is an L2 expression like any door operand's: an
+# own int x is lowered (`c.sizeof(l2_tN)`), where the raw atom left the name `x`, which C does not
+# know.  The c.* token operand stays raw.  Success is 7.
+fn: own_bytes () size_t
+    int: x
+    return: c.sizeof(x)
+end: own_bytes
+
+fn: check () int
+    if: own_bytes() != c.sizeof(c.int)
+        return: 81
+    return: 7
+end: check
+
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

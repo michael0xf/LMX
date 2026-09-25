@@ -1,0 +1,89 @@
+predef: "l2src/lmx_list_owned.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# List grow witness (FABLE-134). Public descriptor is LmxArrayDynamicArray; capacity is on
+# that record (offsetof(array)==0 so LmxArrayDesc* reads of len/data still work). Backing is
+# plain void* cells — no size_t capacity prefix.
+
+sub: grow_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: grow_check
+
+fn: main () int
+    LmxArena: arena
+    LmxArena: viewer
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    @: void list
+    @: LmxArrayDesc fixed
+    @: LmxPool descriptor_pool
+    @: LmxPool backing_pool
+    @: void p0
+    @: void p1
+    @: void p2
+    @: void p3
+    @: void p4
+    @: void removed 0
+    @: void old_raw
+    @: void cells
+    @@: void old_cells
+    @@: void cellv
+    int: type c.LMX_TYPE_ARRAY_OF_POINTER_BASE + 77
+    int: element_type c.LMX_TYPE_POINTER_BASE + 77
+    int: failures
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ viewer)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ arena) != 0 || lmx_arena_open(@ viewer) != 0
+        free(counts)
+        return: 2
+    p0: lmx_int_new_owned(@ arena)
+    p1: lmx_int_new_owned(@ arena)
+    p2: lmx_int_new_owned(@ arena)
+    p3: lmx_int_new_owned(@ arena)
+    p4: lmx_int_new_owned(@ arena)
+    list: lmx_list_new_owned(type, @ arena)
+    grow_check(counts, list != 0 && lmx_list_len(list) = 0U && lmx_list_cap(list) = 2U && (cast: (@: LmxArrayDesc) list)\data != 0, "empty list starts at cap two")
+    grow_check(counts, lmx_range_classify(@ arena, list) = c.LMX_KIND_LIST && lmx_range_type_of(@ arena, list) = type, "list descriptor is typed by its arena range")
+    cells: lmx_list_data(list)
+    grow_check(counts, cells != 0 && lmx_range_classify(@ arena, (cast: (@: LmxArrayDesc) list)\data) = c.LMX_KIND_PRIMITIVE && lmx_range_type_of(@ arena, cells) = element_type && lmx_range_stride(@ arena, cells) = c.sizeof(@: void), "backing cells are typed by their arena range")
+    # DynamicArray layout: capacity on the descriptor; data pointer IS the cell vector.
+    grow_check(counts, (cast: (@: LmxArrayDynamicArray) list)\capacity = lmx_list_cap(list) && cells = (cast: (@: LmxArrayDesc) list)\data, "DynamicArray: capacity on descriptor; data pointer is the cell vector")    grow_check(counts, lmx_list_append_owned(list, p0, @ arena) = c.LMX_LIST_OK && lmx_list_append_owned(list, p1, @ arena) = c.LMX_LIST_OK, "two values fit without growth")
+    old_raw: (cast: (@: LmxArrayDesc) list)\data
+    old_cells: (cast: (@@: void) lmx_list_data(list))
+    grow_check(counts, old_cells[0] = p0 && old_cells[1] = p1, "physical referent values are stored unchanged")
+    grow_check(counts, lmx_list_append_owned(list, p2, @ arena) = c.LMX_LIST_OK && lmx_list_len(list) = 3U && lmx_list_cap(list) = 3U && (cast: (@: LmxArrayDesc) list)\data != old_raw, "third append grows two to three")
+    cellv: (cast: (@@: void) lmx_list_data(list))
+    grow_check(counts, cellv[0] = p0 && cellv[1] = p1 && cellv[2] = p2, "growth preserves all physical referent values")
+    grow_check(counts, old_cells[0] = 0 && old_cells[1] = 0 && lmx_range_type_of(@ arena, old_raw) = element_type, "old typed backing is cleared, not illegally range-dropped")
+    old_raw: (cast: (@: LmxArrayDesc) list)\data
+    grow_check(counts, lmx_list_append_owned(list, p3, @ arena) = c.LMX_LIST_OK && lmx_list_cap(list) = 4U && (cast: (@: LmxArrayDesc) list)\data != old_raw, "fourth append grows three to four")
+    old_raw: (cast: (@: LmxArrayDesc) list)\data
+    grow_check(counts, lmx_list_append_owned(list, p4, @ arena) = c.LMX_LIST_OK && lmx_list_len(list) = 5U && lmx_list_cap(list) = 6U && (cast: (@: LmxArrayDesc) list)\data != old_raw, "fifth append grows four to six")
+    grow_check(counts, lmx_list_value(list, 0U) = p0 && lmx_list_value(list, 4U) = p4, "iteration reads physical values from logical zero through len")
+    grow_check(counts, lmx_list_remove_owned(list, 1U, @ removed, @ arena) = c.LMX_LIST_OK && removed = p1 && lmx_list_len(list) = 4U && lmx_list_cap(list) = 6U, "remove returns the physical value and keeps cap")
+    cellv: (cast: (@@: void) lmx_list_data(list))
+    grow_check(counts, cellv[0] = p0 && cellv[1] = p2 && cellv[2] = p3 && cellv[3] = p4 && cellv[4] = 0, "remove compacts logical values and clears the stale tail")
+    fixed: lmx_array_new_owned(type, 3U, @ arena)
+    grow_check(counts, fixed != 0 && fixed\len = 3U, "fixed Array has len, not capacity")
+    descriptor_pool: lmx_range_pool(@ arena, list)
+    backing_pool: lmx_range_pool(@ arena, (cast: (@: LmxArrayDesc) list)\data)
+    grow_check(counts, descriptor_pool != 0 && backing_pool != 0 && lmx_pool_seal(descriptor_pool) = 0 && lmx_pool_seal(backing_pool) = 0 && lmx_range_import(@ viewer, @ arena) = 0, "sealed owner ranges imported as views")
+    grow_check(counts, lmx_range_classify(@ viewer, list) = c.LMX_KIND_LIST && lmx_list_append_owned(list, p0, @ viewer) = c.LMX_LIST_INVALID && lmx_list_len(list) = 4U, "foreign classified list refused mutation")
+    grow_check(counts, lmx_arena_release(@ viewer) = 0, "foreign view arena released without owning storage")
+    old_raw: (cast: (@: LmxArrayDesc) list)\data
+    grow_check(counts, lmx_arena_release(@ arena) = 0, "arena release retires descriptor and every backing range")
+    grow_check(counts, lmx_range_classify(@ arena, old_raw) = c.LMX_KIND_NONE && lmx_range_classify(@ arena, list) = c.LMX_KIND_NONE, "retirement leaves no stale address-range entry")
+    failures: counts[1]
+    c.printf("list checks=%d failures=%d\n", counts[0], failures)
+    free(counts)
+return: failures != 0

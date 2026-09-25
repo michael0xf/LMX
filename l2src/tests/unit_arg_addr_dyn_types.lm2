@@ -1,0 +1,135 @@
+# -189 c3b-2 (FABLE-OPUS-CODE-DATA-SPLIT-20260925-189; L3 §12, R2 with carry, static by position):
+# the name is the machine argument until its binding line and its field's cell from then on; a
+# declaration without an initializer carries the argument's value into the field, and `@x` after
+# the line is the cell's address.  There is no working copy and no sticky republication, so a line
+# printed after `M\x: v` shows v (U2, L2, F2).  The sticky-rule text below is the old model's.
+#
+# FABLE-L2-ARG-ADDRESS-PROOF-20260921-84.  TYPE IS AN INDEPENDENT AXIS for a dynamic input too.
+#
+# Which types could BE a dynamic input used to be decided by five separate lists (char and size_t),
+# two of which disagreed with each other, and one of which compared a FORMAL code with a dynamic
+# code raw.  What each case below did before the lists went:
+#
+#   W   a callee reads the caller's int          the translator never finished (the typing fixed
+#                                                point stored "not typed" over "not typed" forever)
+#   U L unsigned, ulong from the caller's field  refused, "unresolved name"
+#   F   unsigned from the caller's FORMAL        refused, "incompatible entry signature" (34 against 3)
+#   DP  a pointer from the caller's formal       refused, "unresolved name"
+#
+# Every case takes the address BEFORE the binding line, so every case is also the sticky rule:
+# the second line of each pair follows an explicit graph write and no address-taking call.
+# char is absent on purpose: its checkpoint does not compile today (a separate, ticketed defect).
+#
+# WORKAROUND, NAMED (GROK-FABLE-20260923-120 x FABLE-SONNET-NODE-ROOT-20260923-121): `M\x` read
+# directly inside a compound expression (a printf argument list, here) lands in Grok Bot's -120
+# c-member-access dispatch and emits a wrong raw C member access instead of a typed load -- a
+# defect in that dispatcher's root test, handed to him as a separate ticket. Every read below is
+# routed through a freshly assigned `<x>_g` local first (unit_occ_root_field.lm2's pattern).
+fn: pokeu (@: unsigned p) int
+    \p: 5U
+    return: 0
+end: pokeu
+fn: pokel (@: ulong p) int
+    \p: 5U
+    return: 0
+end: pokel
+fn: setnull (@@: int q) int
+    \q: 0
+    return: 0
+end: setnull
+fn: nop () int
+    return: 0
+end: nop
+
+fn: reads_width () int
+    c.printf: "W %d\n" width
+    return: 0
+end: reads_width
+
+fn: dyn_unsigned () int
+    unsigned: du_g
+    pokeu(@: du)
+    unsigned: du
+    du: du + 1U
+    nop()
+    du_g: dyn_unsigned\du
+    c.printf: "U1 %d %d\n" (cast: (int) du) (cast: (int) du_g)
+    dyn_unsigned\du: 100U
+    nop()
+    du_g: dyn_unsigned\du
+    c.printf: "U2 %d %d\n" (cast: (int) du) (cast: (int) du_g)
+    return: 0
+end: dyn_unsigned
+
+fn: dyn_ulong () int
+    ulong: dl_g
+    pokel(@: dl)
+    ulong: dl
+    dl: dl + 1U
+    nop()
+    dl_g: dyn_ulong\dl
+    c.printf: "L1 %d %d\n" (cast: (int) dl) (cast: (int) dl_g)
+    dyn_ulong\dl: 100U
+    nop()
+    dl_g: dyn_ulong\dl
+    c.printf: "L2 %d %d\n" (cast: (int) dl) (cast: (int) dl_g)
+    return: 0
+end: dyn_ulong
+
+# The source is the caller's FORMAL, not its own field.
+fn: dyn_from_formal () int
+    unsigned: df_g
+    pokeu(@: df)
+    unsigned: df
+    df: df + 1U
+    nop()
+    df_g: dyn_from_formal\df
+    c.printf: "F1 %d %d\n" (cast: (int) df) (cast: (int) df_g)
+    dyn_from_formal\df: 100U
+    nop()
+    df_g: dyn_from_formal\df
+    c.printf: "F2 %d %d\n" (cast: (int) df) (cast: (int) df_g)
+    return: 0
+end: dyn_from_formal
+
+# A pointer is bound by assignment (a pointer declared in a body is a local, not an own field);
+# it is published to the one generic pointer cell, and the caller keeps its own pointer.
+fn: dyn_pointer () int
+    setnull(@: dp)
+    dp: dp
+    nop()
+    nop()
+    if: dp = 0
+        c.printf: "DP local is null\n"
+    return: 0
+end: dyn_pointer
+
+fn: formal_outer (unsigned: df; @: int dp) int
+    dyn_from_formal()
+    dyn_pointer()
+    if: dp != 0
+        c.printf: "DP caller keeps its pointer\n"
+    c.printf: "FC %d\n" (cast: (int) df)
+    return: 0
+end: formal_outer
+
+fn: outer () int
+    int: width
+    unsigned: du
+    ulong: dl
+    int: target
+    width: 3
+    du: 3U
+    dl: 3U
+    target: 7
+    reads_width()
+    dyn_unsigned()
+    dyn_ulong()
+    formal_outer(3U, @: target)
+    c.printf: "TC %d %d %d\n" width (cast: (int) du) (cast: (int) dl)
+    return: 0
+end: outer
+
+outer()
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

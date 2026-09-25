@@ -1,0 +1,17 @@
+# sizeof: of an own int array is storage bytes (count * sizeof(int)); length is element count.
+fn: probe () int
+    []: int xs 4
+    size_t: bytes
+    size_t: n
+    bytes: sizeof: xs
+    n: length(xs)
+    if: bytes != 16U
+        return: 1
+    if: n != 4
+        return: 2
+    return: 0
+end: probe
+
+sendMessage: exit(exit_code: probe(); stdout: ""; stderr: "")
+return
+

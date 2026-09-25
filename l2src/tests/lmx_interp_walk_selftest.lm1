@@ -1,0 +1,118 @@
+predef: "l2src/lmx_interp.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# lmx_interp_run is the L3 entry: lmx_walk_run over a Structure (k.4: no prepare, no plan,
+# no descriptor -- next_core_tasks.md §3 item 9, "nothing beyond the Structure itself").
+
+int: checks 0
+int: failures 0
+
+sub: check (int: ok; const: @(char label))
+    checks: checks + 1
+    if: ok = 0
+        failures: failures + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: check
+
+# A callable occurrence under `unit` at `slot` whose body is `return: <value>` (RET over LIT).
+fn: mk_int_entry (@: LmxArena ga; @: Lmx roles; @: Lmx unit; size_t: slot; int: value) @: Lmx
+    @: Lmx m
+    @: Lmx ret
+    @: Lmx lit
+    m: lmx_walk_plain(ga, unit, 1U)
+    if: m = 0 || lmx_arena_ref_store(unit, slot, (cast: (@: void) m)) != 0
+        return: 0
+    ret: lmx_walk_frame(ga, roles, m, c.LMX_WALK_OP_RET, 2U)
+    if: ret = 0 || lmx_arena_ref_store(m, 0U, (cast: (@: void) ret)) != 0
+        return: 0
+    lit: lmx_walk_frame(ga, roles, ret, c.LMX_WALK_OP_LIT, 2U)
+    if: lit = 0 || lmx_arena_ref_store(ret, 1U, (cast: (@: void) lit)) != 0 || lmx_walk_store_int(ga, lit, 1U, value) != c.LMX_WALK_OK
+        return: 0
+return: m
+
+fn: main () int
+    LmxArena: arena
+    LmxArena: context_arena
+    LmxPool: context_cells
+    LmxScratch: store
+    LmxWalkContext: context
+    @: LmxArena ga 0
+    @: Lmx roles 0
+    @: Lmx unit 0
+    @: Lmx m 0
+    @: Lmx ret 0
+    @: Lmx m7 0
+    @: Lmx m0 0
+    LmxWalkValue: value
+    @: void got 0
+    int: present 0
+    int: status 0
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ context_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ context_cells)), 0, c.sizeof(c.LmxPool))
+    memset((cast: (@: void) (@ store)), 0, c.sizeof(c.LmxScratch))
+    memset((cast: (@: void) (@ context)), 0, c.sizeof(c.LmxWalkContext))
+    if: lmx_arena_open(@ arena) != 0
+        fputs("lmx_interp_walk: arena\n", l1_stdout())
+        return: 2
+    ---
+    ga: @ arena
+    roles: lmx_walk_roles_open(ga)
+    if: lmx_arena_open(@ context_arena) != 0 || lmx_scratch_open(@ store, @ context_arena, @ context_cells, 16U) != c.LMX_SCRATCH_OK
+        fputs("lmx_interp_walk: context\n", l1_stdout())
+        return: 2
+    ---
+    context.arena: ga
+    context.scratch: @ store
+    context.roles: roles
+    unit: lmx_node_new_owned(ga)
+    if: roles = 0 || unit = 0 || lmx_arena_refs_open_owned(ga, unit, 3U) != 0
+        fputs("lmx_interp_walk: unit\n", l1_stdout())
+        return: 2
+    ---
+    m: lmx_walk_plain(ga, unit, 1U)
+    if: m = 0 || lmx_arena_ref_store(unit, 0U, (cast: (@: void) m)) != 0
+        return: 2
+    ---
+    ret: lmx_walk_frame(ga, roles, m, c.LMX_WALK_OP_RET, 1U)
+    if: ret = 0 || lmx_arena_ref_store(m, 0U, (cast: (@: void) ret)) != 0
+        return: 2
+    ---
+    check(lmx_interp_run(0, m) = c.LMX_INTERP_INVALID, "no context")
+    check(lmx_interp_run(@ context, m) = c.LMX_INTERP_OK, "void return through walk")
+    # The entry's own result reaches the host through lmx_interp_apply_value: `return: 7` is
+    # observed as 7 and `return: 0` as 0; the void return above carries no value.
+    m7: mk_int_entry(ga, roles, unit, 1U, 7)
+    m0: mk_int_entry(ga, roles, unit, 2U, 0)
+    check(m7 != 0 && m0 != 0, "two int entries are built")
+    memset((cast: (@: void) (@ value)), 0, c.sizeof(c.LmxWalkValue))
+    status: lmx_interp_apply_value(@ context, m7, 0, 0U, @ value)
+    got: value.ref
+    present: value.present
+    check(status = c.LMX_INTERP_OK && present != 0 && got != 0 && lmx_int_value_known(got) = 7, "an entry returning 7 is observed as 7")
+    status: lmx_interp_apply_value(@ context, m0, 0, 0U, @ value)
+    got: value.ref
+    present: value.present
+    check(status = c.LMX_INTERP_OK && present != 0 && got != 0 && lmx_int_value_known(got) = 0, "an entry returning 0 is observed as 0")
+    status: lmx_interp_apply_value(@ context, m, 0, 0U, @ value)
+    present: value.present
+    check(status = c.LMX_INTERP_OK && present = 0, "a void return carries no value")
+    status: lmx_interp_apply_value(0, m7, 0, 0U, @ value)
+    got: value.ref
+    present: value.present
+    check(status = c.LMX_INTERP_INVALID && present = 0 && got = 0, "a refusal leaves the value empty")
+    if: failures != 0
+        c.printf("%d failed of %d\n", failures, checks)
+        return: 1
+    ---
+    c.printf("lmx_interp_walk: %d checks\n", checks)
+return: 0

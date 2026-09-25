@@ -2,21 +2,14 @@ predef: "l2src/lmx_manager.h.lm1"
 predef: "l2src/lmx_implements.h.lm1"
 predef: "l2src/lmx_turn.lm1"
 
-# lmx_manager.lm1 - the schedule, and one step of running over it.
-#
-# A step: take the next record, run one turn of its object, tick the record's wait,
-# and put the record back while the letter is still running.  Nothing blocks, and
-# nothing runs forever: the wait has its own limit (lmx_schedule) and a round is
-# bounded by the caller's tick budget.
+# The stepped scheduler traverses its owner's sole graph Array. `cursor` is only transient order;
+# it is never another statement of membership.
 
 fn: lmx_manager_init (@: LmxManager m) int
     if: m = 0
         return: c.LMX_MANAGER_INVALID
-    m\head: 0
-    m\tail: 0
-    m\count: 0U
-    # The stepped binding: this implementation walks the objects itself.  The running
-    # binding fills the same six slots with its own functions (lmx_manager_running).
+    m\owner: 0
+    m\cursor: 0U
     m\api.init: lmx_manager_init
     m\api.add: lmx_manager_add
     m\api.remove: lmx_manager_remove
@@ -26,82 +19,72 @@ fn: lmx_manager_init (@: LmxManager m) int
     m\api.round: lmx_manager_round
 return: c.LMX_MANAGER_OK
 
-# The interface the manager is bound to.  A caller that holds this holds the manager's
-# API and calls through it, whichever implementation is behind it.
+fn: lmx_manager_bind (@: LmxManager m; @: LmxThread owner) int
+    if: m = 0 || owner = 0
+        return: c.LMX_MANAGER_INVALID
+    if: m\owner != 0 && m\owner != owner
+        return: c.LMX_MANAGER_INVALID
+    m\owner: owner
+    if: m\cursor > lmx_thread_child_count(owner)
+        m\cursor: 0U
+    ---
+return: c.LMX_MANAGER_OK
+
 fn: lmx_manager_api (@: LmxManager m) @: LmxManagerApi
     if: m = 0
         return: 0
 return: @ m\api
 
-# A record joins the schedule only if its owner really is an executable object --
-# the domain question, asked of the address in the record's OWN band (the arena its cells were taken
-# from and the arena its turn boundary will collect), not assumed from the caller.  A record that is
-# already queued is refused: `next` is the queue link and a record cannot be in two places.
+# Compatibility admission validates that the schedule belongs to an element already present in
+# the owner's Array. It never enqueues or duplicates that membership.
 fn: lmx_manager_add (@: LmxManager m; @: LmxSchedule slot) int
-    if: m = 0 || slot = 0 || slot\next != 0
+    @: LmxThread child
+    @: LmxThread parent
+    if: m = 0 || slot = 0 || slot\owner = 0
         return: c.LMX_MANAGER_INVALID
-    if: lmx_domain_kind(slot\arena, slot\owner) != c.LMX_DOMAIN_KIND_THREAD
+    child: (cast: (@: LmxThread) slot\owner)
+    if: lmx_domain_type(slot\arena, slot\owner) != c.LMX_DOMAIN_THREAD
         return: c.LMX_MANAGER_INVALID
-    ---
-    if: m\tail = 0
-        m\head: slot
-    else:
-        m\tail\next: slot
-    m\tail: slot
-    m\count: m\count + 1U
+    parent: lmx_thread_parent(child)
+    if: parent = 0
+        return: c.LMX_MANAGER_INVALID
+    if: lmx_manager_bind(m, parent) != c.LMX_MANAGER_OK
+        return: c.LMX_MANAGER_INVALID
+    if: lmx_thread_child_is(parent, child) = 0
+        return: c.LMX_MANAGER_INVALID
 return: c.LMX_MANAGER_OK
 
-# A record leaves the schedule.  The walk is the queue's own list, and what it fixes is the ONE
-# thing a settle needs: a record whose storage is about to be released must not stay queued, or a
-# later step would run a turn on freed cells (the reclaim of a re-rooted orphan is exactly that
-# case).  A record that is not in this queue is refused rather than quietly forgotten.
 fn: lmx_manager_remove (@: LmxManager m; @: LmxSchedule slot) int
-    @: LmxSchedule walk
-    @: LmxSchedule before
-    if: m = 0 || slot = 0
+    @: LmxThread child
+    if: m = 0 || m\owner = 0 || slot = 0 || slot\owner = 0
         return: c.LMX_MANAGER_INVALID
-    if: m\head = slot
-        m\head: slot\next
-        if: m\head = 0
-            m\tail: 0
-        ---
-        slot\next: 0
-        m\count: m\count - 1U
-        return: c.LMX_MANAGER_OK
-    ---
-    before: m\head
-    walk: m\head
-    while: walk != 0
-        if: walk = slot
-            before\next: slot\next
-            if: m\tail = slot
-                m\tail: before
-            ---
-            slot\next: 0
-            m\count: m\count - 1U
-            return: c.LMX_MANAGER_OK
-        ---
-        before: walk
-        walk: walk\next
-    ---
-return: c.LMX_MANAGER_INVALID
+    child: (cast: (@: LmxThread) slot\owner)
+    if: lmx_thread_parent(child) != m\owner || lmx_thread_child_is(m\owner, child) = 0
+        return: c.LMX_MANAGER_INVALID
+    # Membership removal belongs to lmx_thread_child_remove at the serialized parent boundary.
+return: c.LMX_MANAGER_OK
 
 fn: lmx_manager_take (@: LmxManager m) @: LmxSchedule
-    @: LmxSchedule slot
-    if: m = 0 || m\head = 0
+    @: LmxThread child
+    size_t: count
+    if: m = 0 || m\owner = 0
         return: 0
-    slot: m\head
-    m\head: slot\next
-    if: m\head = 0
-        m\tail: 0
-    slot\next: 0
-    m\count: m\count - 1U
-return: slot
+    count: lmx_thread_child_count(m\owner)
+    if: count = 0U
+        m\cursor: 0U
+        return: 0
+    if: m\cursor >= count
+        m\cursor: 0U
+    child: lmx_thread_child_at(m\owner, m\cursor)
+    m\cursor: m\cursor + 1U
+    if: child = 0
+        return: 0
+return: child\slot
 
 fn: lmx_manager_count (@: LmxManager m) size_t
-    if: m = 0
+    if: m = 0 || m\owner = 0
         return: 0U
-return: m\count
+return: lmx_thread_child_count(m\owner)
 
 fn: lmx_manager_step (@: LmxManager m; ulong: now) int
     @: LmxSchedule slot
@@ -112,29 +95,15 @@ fn: lmx_manager_step (@: LmxManager m; ulong: now) int
     if: slot = 0
         return: c.LMX_MANAGER_EMPTY
     t: (cast: (@: LmxThread) slot\owner)
-    # One turn of the object: the boundary, its body, the boundary -- the manager names no handler
-    # of its own, so the body is the callable the object's own graph names (lmx_thread_turn).  A
-    # Message that names none runs nothing, which is a legitimate state.  The band the turn's
-    # boundary collects is the record's own, and the record was handed to this queue knowing it.
-    lmx_thread_turn(t, 0, now)
-    # The record ages against the cycle's reading, handed down by the caller: this unit
-    # asks no clock.
-    lmx_schedule_tick(slot, now)
-    if: lmx_schedule_state(slot) = c.LMX_SCHEDULE_OVERDUE
-        return: c.LMX_MANAGER_OK
-    if: lmx_thread_running(t) = 0
-        # The object ended: this record is no longer this queue's, so the driver's last act is the
-        # thread's own -- a successful incarnation returns its arena (lmx_thread.lm1,
-        # lmx_thread_finish).  Nothing of `t` is read after it.
-        lmx_thread_finish(t)
-        return: c.LMX_MANAGER_OK
-    if: lmx_manager_add(m, slot) != c.LMX_MANAGER_OK
+    if: t = 0
         return: c.LMX_MANAGER_INVALID
+    lmx_thread_turn(t, 0, now)
+    lmx_schedule_tick(slot, now)
+    if: lmx_thread_running(t) = 0
+        lmx_thread_finish(t)
+    ---
 return: c.LMX_MANAGER_OK
 
-# A bounded pass.  It stops at the budget even if work remains, so a caller can
-# never be held by the schedule; an empty schedule is a normal end of a pass, not
-# an error.
 fn: lmx_manager_round (@: LmxManager m; unsigned: ticks; ulong: now) int
     unsigned: i
     int: code

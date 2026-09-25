@@ -1,0 +1,76 @@
+predef: "l2src/lmx_chars.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# D-63: a char array built BEFORE the interned char table used to block the table from
+# ever being laid out -- lmx_chars_init's only "already laid out" signal is the shared
+# (KIND_PRIMITIVE, TYPE_CHAR) pool existing at all, which an ordinary char array's own
+# backing already satisfies, and lmx_char_cell only ever reads that pool's first chunk.
+# lmx_array_new_owned's ARRAY_OF_CHAR branch now lays the table out itself before it ever
+# claims that pool, so the table is always the first chunk no matter which char array (if
+# any) a program declares first.
+
+sub: fail (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: fail
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxArena: arena
+    @: LmxArena a 0
+    @: LmxArrayDesc command 0
+    @: void bang 0
+    @: char data 0
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ arena) != 0
+        fputs("lmx_chars_array_order: arena\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    a: @ arena
+
+    # The order D-63 names: a char array declared first, the interned table never
+    # requested directly by this program at all -- exactly what `[]: char command 32`
+    # alone (no char literal) builds.
+    command: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, 32U, a)
+    fail(counts, command != 0 && command\len = 32U && command\data != 0, "the char array itself was built")
+
+    # The table exists (found among the arena's arrays) even though nothing asked for
+    # it by name -- the array's own constructor laid it out.
+    fail(counts, lmx_arena_find(a, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR) != 0, "a (PRIMITIVE, CHAR) pool exists after the array alone")
+
+    # The interned cell for '!' (33) is real and reads back 33 -- the mutant this
+    # fixture exists to catch: without the constructor's own lmx_chars_init call, this
+    # pool is the array's 32-byte backing (mistaken for the table), room for 256 is
+    # refused there, and lmx_char_cell returns null.
+    bang: lmx_char_cell(a, 33)
+    fail(counts, bang != 0, "lmx_char_cell(33) is not null")
+    if: bang != 0
+        fail(counts, lmx_char_value(bang) = 33, "the interned cell reads back 33")
+    ---
+
+    # The array's own 32 bytes are still an independent, ordinary, writable backing --
+    # laying the table out first does not repurpose or alias the array's own storage.
+    if: command != 0 && command\data != 0
+        data: (cast: (@: char) command\data)
+        data[0]: 65
+        fail(counts, (cast: (int) data[0]) = 65, "the array's own data[0] is independently 65")
+    ---
+
+    if: counts[1] != 0
+        c.printf("%d failed of %d\n", counts[1], counts[0])
+        free(counts)
+        return: 1
+    ---
+    c.printf("lmx_chars_array_order: %d checks\n", counts[0])
+    free(counts)
+return: 0

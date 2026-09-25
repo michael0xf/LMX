@@ -1,0 +1,13 @@
+# D-51 (steps/defects.md; FABLE-OPUS-ROOT-TYPED-20260925-175): a size_t above 2^32 at the walked
+# root.  big is 2^32, not 0, so only the second test holds and r is 2: Entry 2.  The translator
+# builds the literal in full (lmx_walk_store_size(..., 4294967296U)); the walker's working width is
+# `ulong`, 32 bits on LLP64, so big and the literal both load as 0 and this row exits 3.  NO HARNESS
+# ROW YET: Grok registers it (eternal-runs, Entry 2) with the walker's fix.
+size_t: big 4294967296U
+int: r 0
+if: big = 0U
+    r: 1
+if: big = 4294967296U
+    r: r + 2
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

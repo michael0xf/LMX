@@ -1,0 +1,22 @@
+# FABLE-GROKBOT-MATRIX-20260924-143 cell: existing callable x Structure
+# reference, three spellings. CALL + graph identity: formal write-through
+# mutates the SAME physical Model the caller holds (addr fixtures / -121).
+Model:
+    size_t: value 1U
+end: Model
+
+fn: bump (Model: x) int
+    x\value: x\value + 1U
+    return: 0
+end: bump
+
+Model: m
+bump(m)
+bump: m
+bump:
+    m
+if: m\value != 4U
+    sendMessage: exit(exit_code: 90; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

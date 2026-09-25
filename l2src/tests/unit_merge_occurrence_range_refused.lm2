@@ -1,0 +1,20 @@
+Model:
+    size_t: x 1U
+end: Model
+
+Over:
+    size_t: x 7U
+end: Over
+
+R: merge: Model Over
+
+# FABLE-OPUS-MERGE-PARTS-20260926-193 T1 (the author's merge rule, plan §4): Over's x is written INTO
+# Model's x, so R carries x once.  `R\[0]x` exists and `R\[1]x` does not: `[N]` counts only the
+# model's own repeats.
+fn: second () size_t
+    size_t: v
+    v: R\[1]x
+    return: v
+end: second
+
+return: 0

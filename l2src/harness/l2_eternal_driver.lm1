@@ -1,0 +1,533 @@
+predef: "l2src/lmx_root.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_merge_owned.lm1"
+# The walked root: the program builds walker nodes and R0's turn walks them (-159).
+predef: "l2src/lmx_walk.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# The generated main is the launch (lmx_root_launch): the host reserves R0 and calls the generated
+# program builder, which builds the program unit in R0's own graph and arena; R0's turn walks it,
+# and the exit is R0's exit letter or the mapping of its success.  The producer exports
+# count/root_at accessors over a translation-sized C array of exact qualified root references.
+# The array is observation state only. Lifetime and classification come from the ordinary graph
+# path plus the roots' exact sealed owner-arena profiles; no Root slot or private store exists.
+
+int: gargc 0
+@@: char gargv 0
+# The PROGRAM's own argv (S3): the driver's argv[0], then every word after `--`.
+int: pargc 0
+@@: char pargv 0
+# THE LAUNCH (FABLE-OPUS-ROOT-WALK-TRANSLATOR-20260924-159 commit 2b): the generated main is
+# `return: lmx_root_launch(...)` and is compiled with -Dlmx_root_launch=l2_driver_root_launch, so
+# the driver sees the launch and the program builder the host calls: how many launches, how many
+# builds, what the builder answered and the host's state after the launch.
+int: launches 0
+int: builds 0
+int: build_rc -1
+int: host_state -1
+int: program_passed 0
+# What the host reports of R0's end (commit 3): the throw number the walk noted (the turn's channel,
+# lmx_call_walk_fail_status; 0 when none) and whether R0 was stopped -- the host's reason for an
+# exit without a letter says so (lmx_root_launch).  -1 until the launch returned.
+int: walk_thrown -1
+int: r0_stopped -1
+int: checks 0
+int: failures 0
+const: @: char phase ""
+# S1.1: the merges the program made and the one the row fails (`mergefail N`, 0 = none).
+int: merge_calls 0
+int: merge_fail_at 0
+# FABLE-SONNET-SEND-REF-20260925-172 commit 4: `sendMessage: Ref X`'s behavioral witness. Behind
+# the driver fact `ref 1`, l2_driver_before_turn (Grok's FABLE-GROKBOT-LAUNCH-TAP-20260925-182 host
+# seam, lmx_root_launch_tapped) builds a standalone peer Message in the driver's own long-lived
+# arena, registers it in the host's service, and posts R0 a `Ping(n: 1)` letter whose sender is a
+# pointer cell holding the peer's address (the shape every letter now uses, author's Q26.2 ruling).
+# l2_driver_service_post (-Dlmx_service_post=l2_driver_service_post) is the general observation
+# point: every lmx_service_post call in the generated program passes through it, so it counts a
+# post addressed to the peer (`reply_to_sender`) or to the host/parent (`reply_to_parent`) without
+# needing to inspect either mailbox after the fact, and unregisters the peer the moment a reply to
+# it succeeds -- synchronously, inside the same call R0's own sendMessage: Ref X makes, the only
+# point before the host's close where that unregister can happen (lmx_service_release refuses to
+# close over a still-registered peer; Grok's own -182 selftest does this from native code in the
+# body it hand-writes, which this driver cannot do since the reply is L2-generated).
+int: l2_ref_active 0
+@: LmxArena l2_ref_peer_arena 0
+@: LmxMsg l2_ref_peer 0
+@: LmxPost l2_ref_peer_mail 0
+@: void l2_ref_parent_addr 0
+int: l2_ref_reply_to_sender 0
+int: l2_ref_reply_to_parent 0
+
+prototype:
+    fn: l2_generated_main (int: argc; @@: char argv) int
+    fn: l2_program_build (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int
+    fn: l2_program_graph () @: Lmx
+    fn: l2_program_qualified_count () size_t
+    fn: l2_program_qualified_at (size_t: index) @: Lmx
+end: prototype
+
+sub: check (int: ok; const: @(char label))
+    checks: checks + 1
+    if: ok = 0
+        failures: failures + 1
+        c.printf("FAIL [%s] %s\n", phase, label)
+    ---
+end: check
+
+fn: arg (int: at) int
+    if: at < 0 || at >= gargc
+        return: -1
+return: atoi(gargv[at])
+
+fn: root_profile (@: LmxArena arena; @: Lmx root) @: Lmx
+    if: arena = 0 || root = 0
+        return: 0
+return: lmx_range_profile(arena, (cast: (@: void) root))
+
+fn: sealed_here (@: LmxArena arena; @: void value) int
+    @: LmxPool pool lmx_range_pool(arena, value)
+    if: pool = 0
+        return: 0
+return: lmx_pool_is_sealed(pool)
+
+# The primitive type a numeric root fact names -- `size`, `int`, `unsigned`, `ulong` -- or 0.
+fn: numeric_type (const: @(char word)) int
+    if: c.strcmp(word, "size") = 0
+        return: c.LMX_TYPE_SIZE_T
+    if: c.strcmp(word, "int") = 0
+        return: c.LMX_TYPE_INT
+    if: c.strcmp(word, "unsigned") = 0
+        return: c.LMX_TYPE_UNSIGNED
+    if: c.strcmp(word, "ulong") = 0
+        return: c.LMX_TYPE_ULONG
+return: 0
+
+# Whether a numeric cell of type `ty` holds `want` (the facts are small non-negative literals).
+fn: numeric_holds (@: void cell; int: ty; int: want) int
+    if: ty = c.LMX_TYPE_SIZE_T && lmx_size_value_known(cell) = (cast: (size_t) want)
+        return: 1
+    if: ty = c.LMX_TYPE_INT && lmx_int_value_known(cell) = want
+        return: 1
+    if: ty = c.LMX_TYPE_UNSIGNED && lmx_unsigned_value_known(cell) = (cast: (unsigned) want)
+        return: 1
+    if: ty = c.LMX_TYPE_ULONG && lmx_ulong_value_known(cell) = (cast: (ulong) want)
+        return: 1
+return: 0
+
+fn: inspect (@: LmxArena arena; @: Lmx graph) int
+    @: LmxArrayDesc children 0
+    @: Lmx value 0
+    @: Lmx other 0
+    @: Lmx member 0
+    @: Lmx profile 0
+    @: void cell 0
+    @: void field 0
+    size_t: produced l2_program_qualified_count()
+    int: expected arg(1)
+    int: i 0
+    int: j
+    int: at 2
+    int: missing 0
+    int: duplicate 0
+    int: shared_profile 0
+    int: children_seen 0
+    check(graph != 0 && l2_program_graph() = graph, "the builder built the program unit in R0's own graph")
+    # R0's graph is independent: the host above it is Message supervision, not a lexical space.
+    check(graph != 0 && graph\parent = 0, "program unit is a lexical root: its parent Message is supervision, not a lexical node")
+    check(lmx_domain_kind(arena, (cast: (@: void) graph)) = c.LMX_KIND_STRUCT && lmx_domain_type(arena, (cast: (@: void) graph)) = c.LMX_TYPE_STRUCT, "program unit is a live Structure of R0's arena")
+    while: graph != 0 && i < graph\len
+        field: lmx_arena_ref_value(graph, (cast: (size_t) i))
+        if: field != 0 && lmx_domain_kind(arena, field) = c.LMX_KIND_LIST && lmx_domain_type(arena, field) = c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD
+            children: (cast: (@: LmxArrayDesc) field)
+            children_seen: children_seen + 1
+        ---
+        i: i + 1
+    ---
+    check(children != 0 && children_seen = 1, "program unit holds exactly one children list, R0's own")
+    i: 0
+    check(expected >= 0 && produced = (cast: (size_t) expected), "producer count is the translation-known number of qualified roots")
+    if: expected < 0 || produced != (cast: (size_t) expected)
+        return: 0
+    ---
+    if: expected = 0
+        check(l2_program_qualified_at(0U) = 0, "zero-root accessor refuses every index")
+        return: 1
+    ---
+    while: i < expected
+        value: l2_program_qualified_at((cast: (size_t) i))
+        if: value = 0
+            missing: missing + 1
+        else:
+            profile: root_profile(arena, value)
+            check(value\parent = 0, "qualified root remains parentless")
+            check(lmx_domain_kind(arena, (cast: (@: void) value)) = c.LMX_KIND_STRUCT && lmx_domain_type(arena, (cast: (@: void) value)) = c.LMX_TYPE_STRUCT, "qualified root is an exact Structure range value")
+            check(profile != 0 && sealed_here(arena, (cast: (@: void) value)) != 0, "qualified root has a nonzero exact profile in a sealed owner range")
+            check(sealed_here(arena, (cast: (@: void) profile)) != 0 && lmx_domain_kind(arena, (cast: (@: void) profile)) = c.LMX_KIND_STRUCT, "receiver-expression profile is itself a sealed physical Structure")
+            j: 0
+            while: j < i
+                if: l2_program_qualified_at((cast: (size_t) j)) = value
+                    duplicate: duplicate + 1
+                ---
+                if: root_profile(arena, l2_program_qualified_at((cast: (size_t) j))) = profile
+                    shared_profile: shared_profile + 1
+                ---
+                j: j + 1
+            ---
+        ---
+        i: i + 1
+    ---
+    check(missing = 0, "every exported entry is an exact physical root reference")
+    check(duplicate = 0, "no physical root reference is duplicated")
+    check(shared_profile = 0, "distinct qualified roots have distinct exact physical profiles")
+    if: missing != 0
+        return: 0
+    ---
+    while: at < gargc
+        # `size|int|unsigned|ulong R F V`: field F of root R is a cell of that primitive type in
+        # R's exact sealed profile, holding V.
+        if: numeric_type(gargv[at]) != 0 && at + 3 < gargc
+            value: l2_program_qualified_at((cast: (size_t) arg(at + 1)))
+            profile: root_profile(arena, value)
+            cell: lmx_arena_ref_value(value, (cast: (size_t) arg(at + 2)))
+            check(cell != 0 && lmx_domain_kind(arena, cell) = c.LMX_KIND_PRIMITIVE && lmx_domain_type(arena, cell) = numeric_type(gargv[at]), "numeric field has the declared primitive type")
+            check(cell != 0 && lmx_range_profile(arena, cell) = profile && sealed_here(arena, cell) != 0, "numeric field belongs to the same exact sealed profile")
+            if: cell != 0
+                check(numeric_holds(cell, numeric_type(gargv[at]), arg(at + 3)), "numeric field holds the declared value")
+            ---
+            at: at + 4
+        else:
+            if: c.strcmp(gargv[at], "same") = 0 && at + 3 < gargc
+                value: l2_program_qualified_at((cast: (size_t) arg(at + 1)))
+                other: l2_program_qualified_at((cast: (size_t) arg(at + 3)))
+                check(other != 0 && lmx_arena_ref_value(value, (cast: (size_t) arg(at + 2))) = (cast: (@: void) other), "same field retains the other root's exact physical reference")
+                at: at + 4
+            else:
+                if: c.strcmp(gargv[at], "slot") = 0 && at + 4 < gargc
+                    value: l2_program_qualified_at((cast: (size_t) arg(at + 1)))
+                    other: l2_program_qualified_at((cast: (size_t) arg(at + 3)))
+                    cell: lmx_arena_ref_value(other, (cast: (size_t) arg(at + 4)))
+                    check(cell != 0 && lmx_arena_ref_value(value, (cast: (size_t) arg(at + 2))) = cell, "slot field retains the other branch member's exact physical reference")
+                    member: (cast: (@: Lmx) cell)
+                    check(member != 0 && member\parent = other && lmx_range_profile(arena, cell) = root_profile(arena, other) && sealed_here(arena, cell) != 0, "slot member keeps its lexical parent and exact sealed profile")
+                    at: at + 5
+                else:
+                    # `entry N`, `letters N`, `fails N`, `mergefail N`, `stopped N`, `thrown N` and
+                    # `ref N` are read by main, not root facts.
+                    if: (c.strcmp(gargv[at], "entry") = 0 || c.strcmp(gargv[at], "letters") = 0 || c.strcmp(gargv[at], "fails") = 0 || c.strcmp(gargv[at], "mergefail") = 0 || c.strcmp(gargv[at], "stopped") = 0 || c.strcmp(gargv[at], "thrown") = 0 || c.strcmp(gargv[at], "ref") = 0) && at + 1 < gargc
+                        at: at + 2
+                    else:
+                        check(0, "all driver fact arguments are recognized")
+                        at: gargc
+                    ---
+                ---
+            ---
+        ---
+    ---
+return: 1
+
+# THE BUILDER TAP: the host calls the program builder it was given right after it reserved R0;
+# the driver hands the host this one, which calls the generated builder once, as the host would,
+# and inspects the unit it built in R0's own arena.
+fn: l2_driver_program (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int
+    int: rc
+    builds: builds + 1
+    rc: l2_program_build(arena, graph, settings)
+    build_rc: rc
+    phase: "R0's program"
+    if: rc = 0
+        inspect(arena, graph)
+    ---
+return: rc
+
+# FABLE-SONNET-SEND-REF-20260925-172 commit 4: the before_turn tap (behind `ref 1`). Runs after R0's
+# mail/schedule/thread exist and before its one turn (lmx_root.lm1's own before_turn seam), so the
+# peer's letter is already in R0's inbox, after mainArgs, when the turn starts -- one manager tick
+# is enough for the fixture's own `receiveMessage: mainArgs` / `receiveMessage: m Ping` pair to take
+# both in order. Same construction Grok's -182 selftest uses for its own peer (a full LmxThread, not
+# a child of the host: the host's own graph has no free field for one, measured in this ticket's own
+# commit 3), registered directly in the host's service.
+fn: l2_driver_before_turn (@: LmxRoot root; @: LmxMsg r0) int
+    @: LmxSchedule peer_slot 0
+    @: LmxThread peer_thread 0
+    @: Lmx peer_graph 0
+    @: LmxArena letter_arena 0
+    @: LmxMsg letter 0
+    @: Lmx letter_graph 0
+    @: Lmx payload 0
+    @: void ncell 0
+    @: void sender_cell 0
+    int: st
+    if: root = 0 || r0 = 0 || l2_ref_peer_arena = 0
+        return: 1
+    ---
+    memset((cast: (@: void) l2_ref_peer_arena), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(l2_ref_peer_arena) != 0
+        return: 1
+    ---
+    l2_ref_peer: (cast: (@: LmxMsg) lmx_arena_take(l2_ref_peer_arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
+    l2_ref_peer_mail: (cast: (@: LmxPost) lmx_arena_take(l2_ref_peer_arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    peer_slot: (cast: (@: LmxSchedule) lmx_arena_take(l2_ref_peer_arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    peer_thread: (cast: (@: LmxThread) l2_ref_peer)
+    if: l2_ref_peer = 0 || l2_ref_peer_mail = 0 || peer_slot = 0
+        return: 1
+    ---
+    peer_graph: lmx_node_new_owned(l2_ref_peer_arena)
+    if: peer_graph = 0 || lmx_arena_refs_open_owned(l2_ref_peer_arena, peer_graph, 2U) != 0
+        return: 1
+    ---
+    if: lmx_post_init(l2_ref_peer_arena, l2_ref_peer_mail) != c.LMX_POST_OK
+        return: 1
+    ---
+    if: lmx_schedule_init(peer_slot, l2_ref_peer_arena, (cast: (@: void) peer_thread), 120000U) != c.LMX_SCHEDULE_OK
+        return: 1
+    ---
+    if: lmx_thread_init(l2_ref_peer_arena, peer_thread, peer_graph, l2_ref_peer_mail, peer_slot) != c.LMX_THREAD_OK
+        return: 1
+    ---
+    if: lmx_service_register(lmx_root_service(root), peer_thread, l2_ref_peer_arena) != c.LMX_SERVICE_OK
+        return: 1
+    ---
+    l2_ref_parent_addr: (cast: (@: void) lmx_thread_parent((cast: (@: LmxThread) r0)))
+    letter_arena: (cast: (@: LmxArena) calloc(1U, c.sizeof(c.LmxArena)))
+    if: letter_arena = 0 || lmx_arena_open(letter_arena) != 0
+        return: 1
+    ---
+    letter: (cast: (@: LmxMsg) lmx_arena_take(letter_arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    letter_graph: lmx_node_new_owned(letter_arena)
+    payload: lmx_node_new_owned(letter_arena)
+    ncell: lmx_int_new_owned(letter_arena)
+    if: letter = 0 || letter_graph = 0 || payload = 0 || ncell = 0
+        return: 1
+    ---
+    if: lmx_arena_refs_open_owned(letter_arena, letter_graph, 2U) != 0 || lmx_arena_refs_open_owned(letter_arena, payload, 1U) != 0
+        return: 1
+    ---
+    if: lmx_int_store_known(ncell, 1) != 0 || lmx_arena_ref_store(payload, 0U, ncell) != 0
+        return: 1
+    ---
+    # The sender is a pointer cell holding the peer's own address (author's Q26.2 ruling -- the
+    # same shape lmx_root_launch_tapped now builds mainArgs's own sender with).
+    sender_cell: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + 29, letter_arena)
+    if: sender_cell = 0 || lmx_pointer_store_known(sender_cell, (cast: (@: void) l2_ref_peer)) != 0
+        return: 1
+    ---
+    if: lmx_arena_ref_store(letter_graph, 0U, sender_cell) != 0 || lmx_arena_ref_store(letter_graph, 1U, (cast: (@: void) payload)) != 0
+        return: 1
+    ---
+    letter\running: 1
+    letter\success: 0
+    letter\handoff_ready: 0
+    letter\graph: letter_graph
+    st: lmx_service_post(lmx_root_service(root), (cast: (@: void) r0), letter, letter_arena)
+return: (cast: (int) (st != c.LMX_SERVICE_OK))
+
+# The observation point for EVERY lmx_service_post the generated program makes
+# (-Dlmx_service_post=l2_driver_service_post): counts a post addressed to the peer or the host's
+# parent without inspecting either mailbox afterward, and unregisters the peer the instant a reply
+# to it succeeds -- the one point before the host's close where that can happen at all, since the
+# reply itself is L2-generated (sendMessage: Ref X), not native code this driver could edit.
+fn: l2_driver_service_post (@: LmxService service; @: void address; @: LmxMsg letter; @: LmxArena letter_arena) int
+    int: st
+    if: l2_ref_peer != 0 && address = (cast: (@: void) l2_ref_peer)
+        l2_ref_reply_to_sender: l2_ref_reply_to_sender + 1
+    ---
+    if: l2_ref_parent_addr != 0 && address = l2_ref_parent_addr
+        l2_ref_reply_to_parent: l2_ref_reply_to_parent + 1
+    ---
+    st: lmx_service_post(service, address, letter, letter_arena)
+    if: st = c.LMX_SERVICE_OK && l2_ref_peer != 0 && address = (cast: (@: void) l2_ref_peer)
+        lmx_service_unregister(service, (cast: (@: LmxThread) l2_ref_peer))
+    ---
+return: st
+
+# THE LAUNCH TAP: the generated main's one call.  The kernel's lmx_root_launch runs as main asked,
+# with the builder tap in place of the generated builder it was handed; the driver keeps the exit
+# code it returns and reads the host's state after it.
+fn: l2_driver_root_launch (@: LmxRoot root; int: argc; @@: char argv; LmxRootProgram: program; size_t: fields; LmxRootSettings: settings; ulong: limit; @: void out; @: void err) int
+    int: code
+    @: void cap 0
+    @: char text 0
+    size_t: n 0U
+    launches: launches + 1
+    if: program = l2_program_build
+        program_passed: 1
+    ---
+    # The host's stderr goes through a file of the driver's own, so the driver reads what the host
+    # reported and then hands it on to the stream main gave.
+    cap: (cast: (@: void) c.fopen("l2_driver_launch.err", "w+b"))
+    if: cap = 0
+        cap: err
+    ---
+    if: l2_ref_active != 0
+        code: lmx_root_launch_tapped(root, argc, argv, l2_driver_program, fields, settings, limit, l2_driver_before_turn, out, cap)
+    else:
+        code: lmx_root_launch_tapped(root, argc, argv, l2_driver_program, fields, settings, limit, 0, out, cap)
+    ---
+    host_state: lmx_root_state(root)
+    walk_thrown: lmx_call_walk_fail_status()
+    r0_stopped: 0
+    if: cap != err
+        c.fflush(cap)
+        c.rewind(cap)
+        text: (cast: (@: char) calloc(65536U, 1U))
+        if: text != 0
+            n: c.fread((cast: (@: void) text), 1U, 65535U, cap)
+            text[n]: 0
+            if: strstr(text, "R0 was stopped") != 0
+                r0_stopped: 1
+            ---
+            if: err != 0 && n != 0U
+                c.fwrite((cast: (@: void) text), 1U, n, err)
+            ---
+            free((cast: (@: void) text))
+        ---
+        c.fclose(cap)
+    ---
+return: code
+
+# THE MERGE TAP (S1.1 / D-07).  The generated C is compiled with
+# -Dlmx_merge_owned=l2_driver_merge_owned and
+# -Dlmx_merge_profiles_owned=l2_driver_merge_profiles_owned, so every merge the program emits
+# -- plain (`lmx_merge_owned`) or qualified-operand (`lmx_merge_profiles_owned`) -- comes here
+# first.  Both taps share one counter: `mergefail N` fails the program's Nth merge of either
+# kind (existing plain-merge rows keep their meaning; a qualified merge that never hit the
+# plain tap is now countable).  The Nth is refused the way the kernel refuses a merge it
+# cannot allocate (NOMEM, no result).  From source, merge fails only on a non-Structure
+# operand, NOMEM or an unsupported copy, and none is reachable from a program.
+fn: l2_driver_merge_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
+    merge_calls: merge_calls + 1
+    if: merge_fail_at > 0 && merge_calls = merge_fail_at
+        if: out != 0
+            out[0]: 0
+        ---
+        return: c.LMX_MERGE_NOMEM
+    ---
+return: lmx_merge_owned(operands, count, body, container, dst_chars, src_arena, dst_arena, overrides, override_count, out)
+
+fn: l2_driver_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
+    merge_calls: merge_calls + 1
+    if: merge_fail_at > 0 && merge_calls = merge_fail_at
+        if: out != 0
+            out[0]: 0
+        ---
+        return: c.LMX_MERGE_NOMEM
+    ---
+return: lmx_merge_profiles_owned(operands, count, body, container, dst_chars, src_arena, dst_arena, retain_profiles, retain_count, overrides, override_count, out)
+
+fn: main (int: argc; @@: char argv) int
+    int: status
+    int: expected 0
+    int: letters -1
+    int: fails 0
+    int: stopped -1
+    int: thrown -1
+    int: at 2
+    int: dash 0
+    int: k 0
+    gargc: argc
+    gargv: argv
+    if: argc < 2
+        fputs("l2_eternal_driver: expected number of roots missing\n", l1_stdout())
+        return: 2
+    ---
+    # THE PROGRAM'S ARGV (S3).  Words after `--` are the program's arguments; its argv[0] is this
+    # process's own, and the facts end at `--`.  C main posts them to R0 inside a letter.
+    while: dash < argc && c.strcmp(argv[dash], "--") != 0
+        dash: dash + 1
+    ---
+    gargc: dash
+    pargc: 1
+    if: dash < argc
+        pargc: argc - dash
+    ---
+    pargv: (cast: (@@: char) calloc((cast: (size_t) (pargc + 1)), c.sizeof(@: char)))
+    if: pargv = 0
+        fputs("l2_eternal_driver: out of memory\n", l1_stdout())
+        return: 2
+    ---
+    pargv[0]: argv[0]
+    k: 1
+    while: k < pargc
+        pargv[k]: argv[dash + k]
+        k: k + 1
+    ---
+    # The exit (author 2026-09-24): the launch's exit code is R0's exit letter's, else the mapping of
+    # R0's success (1 -> 0, 0 -> 1).  `entry N` names it (default 0).  `fails 1`: R0 does not
+    # complete -- an uncaught failure -- so the exit is 1.  `mergefail N` fails the program's Nth
+    # merge (the tap above).  `thrown N`: the throw number the walk noted, which the turn's channel
+    # carries (0: none).  `stopped 1|0`: R0 was stopped, or not, as the host's exit reason says.
+    # `letters N` was read at R0's close, which is the host's now: a row that names it is red.
+    while: at + 1 < gargc
+        if: c.strcmp(argv[at], "entry") = 0
+            expected: arg(at + 1)
+        ---
+        if: c.strcmp(argv[at], "letters") = 0
+            letters: arg(at + 1)
+        ---
+        if: c.strcmp(argv[at], "fails") = 0
+            fails: arg(at + 1)
+        ---
+        if: c.strcmp(argv[at], "mergefail") = 0
+            merge_fail_at: arg(at + 1)
+        ---
+        if: c.strcmp(argv[at], "stopped") = 0
+            stopped: arg(at + 1)
+        ---
+        if: c.strcmp(argv[at], "thrown") = 0
+            thrown: arg(at + 1)
+        ---
+        if: c.strcmp(argv[at], "ref") = 0 && arg(at + 1) != 0
+            l2_ref_active: 1
+        ---
+        at: at + 1
+    ---
+    if: l2_ref_active != 0
+        l2_ref_peer_arena: (cast: (@: LmxArena) calloc(1U, c.sizeof(c.LmxArena)))
+        if: l2_ref_peer_arena = 0
+            fputs("l2_eternal_driver: out of memory\n", l1_stdout())
+            return: 2
+        ---
+    ---
+    phase: "generated program"
+    status: l2_generated_main(pargc, pargv)
+    check(launches = 1, "generated main launched the host exactly once")
+    check(program_passed = 1, "generated main handed the host its generated program builder")
+    check(builds = 1 && build_rc = 0, "the host built R0's program exactly once, and the builder succeeded")
+    check(host_state = c.LMX_ROOT_CLOSED, "the launch closed the host")
+    phase: "exit"
+    if: fails = 0
+        check(status = expected, "the launch's exit code is the expected one: R0's exit letter, or its success")
+    else:
+        check(status = 1, "a failed R0 leaves the launch with exit 1")
+    ---
+    if: fails = 0 && status != expected
+        c.printf("l2_eternal_driver: exit %d, expected %d\n", status, expected)
+    ---
+    if: merge_fail_at > 0
+        check(merge_calls >= merge_fail_at, "the program made the merge the row fails")
+    ---
+    if: thrown >= 0
+        check(walk_thrown = thrown, "the walk noted the thrown status the row names")
+    ---
+    if: thrown >= 0 && walk_thrown != thrown
+        c.printf("l2_eternal_driver: the walk noted %d, expected %d\n", walk_thrown, thrown)
+    ---
+    if: stopped >= 0
+        check(r0_stopped = stopped, "the host reports R0 stopped (1) or not (0) as the row names")
+    ---
+    check(letters < 0, "no `letters` fact is named: R0's untaken letters are released at the host's close")
+    if: l2_ref_active != 0
+        c.printf("reply-to-sender %d\n", l2_ref_reply_to_sender)
+        c.printf("reply-to-parent %d\n", l2_ref_reply_to_parent)
+    ---
+    if: failures != 0
+        c.printf("l2_eternal_driver: %d failed of %d\n", failures, checks)
+        return: 1
+    ---
+    c.printf("l2_eternal_driver: %d checks, %d roots\n", checks, arg(1))
+return: 0

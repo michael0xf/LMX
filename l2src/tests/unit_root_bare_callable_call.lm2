@@ -1,0 +1,13 @@
+# A callable named at the walked root is called by an explicit CALL the translator emits
+# (FABLE-OPUS-CODE-DATA-SPLIT-20260925-189 commit c4; D-03; callable priority -130): the walker calls
+# nothing on its own (lmx_walk_is_callable goes with the `native` word).  A bare `ping` statement is
+# the step CALL(ping) with its result dropped; `int: r ping` binds r to the CALL's result.  The exit
+# code is r - 7: 0.
+fn: ping () int
+    return: 7
+end: ping
+
+ping
+int: r ping
+sendMessage: exit(exit_code: r - 7; stdout: ""; stderr: "")
+return

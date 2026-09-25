@@ -1,0 +1,64 @@
+Model:
+    size_t: value 1U
+end: Model
+
+# FABLE-SONNET-OWN-LOOKUP-AUDIT-20260923-131 part 3: the terminal
+# Structure-reference assignment checklist next_core_tasks.md asks for --
+# one assertion per (direct name / path) x (own / unit / formal) x
+# (primitive / Structure) combination, all through the ordinary path.
+int: u_prim 5
+Model: u_struct
+
+fn: writer (Model: f_struct) int
+    # formal x path x primitive: write then read through a formal's own field.
+    f_struct\value: 77U
+    if: f_struct\value != 77U
+        return: 90
+
+    # own x direct name x primitive.
+    int: o_prim 1
+    o_prim: 8
+    if: o_prim != 8
+        return: 91
+
+    # own x direct name x Structure: -105 colon declaration, read right back.
+    Model: o_struct
+    if: o_struct\value != 1U
+        return: 92
+
+    # own x path x primitive: write then read through an own Structure field.
+    o_struct\value: 99U
+    if: o_struct\value != 99U
+        return: 93
+
+    # unit x direct name x primitive.
+    u_prim: 55
+    if: u_prim != 55
+        return: 94
+
+    # unit x path x primitive: write through a unit-level Structure own
+    # field succeeds via the ordinary path (l2_check_fields's whole-path
+    # fast exit only needs l2_path_root, FABLE-SONNET-OWN-LOOKUP-AUDIT-
+    # 20260923-131 part 3's l2_path_root unit-fallback fix), and a
+    # compound-expression read of the same path -- l2_field_path_check/
+    # l2_path_kind's per-segment walk, which needs l2_own_nsty_get(oi) --
+    # now resolves directly too (FABLE-SONNET-DECL-PREPASS-20260923-137:
+    # l2_collect_asgn_binds, called early, records nsty for every unit-level
+    # `Model: fresh`-shaped own field before any method's own check runs,
+    # closing the l2_parse_unit-always-checks-E-last gap -131 part 3 found
+    # and reported; the local-read-first workaround this line used is gone).
+    u_struct\value: 66U
+    if: u_struct\value != 66U
+        return: 95
+
+    return: 0
+end: writer
+
+Model: a
+int: r
+r: writer(a)
+if: r != 0
+    sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

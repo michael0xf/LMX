@@ -1,0 +1,257 @@
+predef: "l2src/lmx_root.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_list_owned.lm1"
+predef: "l2src/lmx_call.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# THE ARGV LETTER (S3, FABLE-OPUS-S3-MAIL-ARGS-20260923-122; author, Q10).  The host's launch
+# (lmx_root_launch) puts the process arguments INTO a letter, built in the letter's own full arena
+# and posted to R0 by the ordinary mail pair before R0's turn.  The letter is (sender; payload) like
+# every letter (K3 = a; FABLE-OPUS-MAINARGS-SENDER-20260925-173): an anonymous root Structure whose
+# field 0 is the sender's Message and whose field 1 is the payload, a Structure whose one field,
+# mainArgs, is an Array of references to char Arrays, argv[i] with its NUL.  This selftest builds
+# the same letter by the same acts (al_make) and witnesses both ends of it:
+#   A. untaken: R0's turn takes nothing; close releases the donor arena (P5), so that arena is
+#      empty afterwards, and R0 never owned the letter;
+#   B. taken: the turn takes it as `receiveMessage:` does (lmx_thread_mail_take on the current
+#      Thread); the owner attached the arena before exposing the letter, and R0 then reads an
+#      Array of char Arrays holding exactly the bytes C passed.  That read is made inside the
+#      turn: nothing here keeps the letter reachable from R0's graph afterwards (a program keeps
+#      it in its own field `m`), so the end-turn collection may take it;
+#   C. the mirror: lmx_root_launch runs, and R0 finds in its one turn the letter the host built.
+#      One predicate (al_holds: the field count at both levels, the sender, the nesting, the words)
+#      holds for al_make's letter in A and B and for the host's in C, so the two have one shape.
+# In A and B the only Thread is R0, which is therefore the letter's sender; in C it is the host.
+
+int: al_take 0
+int: al_calls 0
+@: LmxMsg al_letter 0
+@: void al_sender 0
+int: al_owned 0
+int: al_shape 0
+int: al_success 0
+int: al_host_calls 0
+int: al_host_shape 0
+@@: char al_words 0
+
+sub: al_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: al_check
+
+# The letter exactly as the host's launch builds it (lmx_root_launch): (sender; (mainArgs)).
+fn: al_make (@: LmxArena arena; @: void sender; int: argc; @@: char argv) @: LmxMsg
+    @: LmxMsg letter
+    @: Lmx graph
+    @: Lmx payload
+    @: LmxArrayDesc args
+    @: LmxArrayDesc arg
+    @@: void slots
+    @: void cell
+    size_t: len
+    int: i 0
+    letter: (cast: (@: LmxMsg) lmx_arena_take(arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    graph: lmx_node_new_owned(arena)
+    payload: lmx_node_new_owned(arena)
+    args: lmx_array_ref_new_owned(c.LMX_TYPE_ARRAY_OF_DESC, (cast: (size_t) argc), arena)
+    if: letter = 0 || graph = 0 || payload = 0 || args = 0
+        return: 0
+    if: lmx_arena_refs_open_owned(arena, graph, 2U) != 0 || lmx_arena_refs_open_owned(arena, payload, 1U) != 0
+        return: 0
+    slots: (cast: (@@: void) args\data)
+    while: i < argc
+        len: strlen(argv[i]) + 1U
+        arg: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, len, arena)
+        if: arg = 0
+            return: 0
+        memcpy(arg\data, (cast: (@: void) argv[i]), len)
+        slots[i]: (cast: (@: void) arg)
+        i: i + 1
+    ---
+    if: lmx_arena_ref_store(payload, 0U, (cast: (@: void) args)) != 0
+        return: 0
+    # FABLE-SONNET-SEND-REF-20260925-172 commit 4 (edited under fable's authorization): the sender
+    # slot is a pointer cell holding `sender`'s address, not `sender` directly -- the same shape
+    # lmx_root_launch now builds for the real mainArgs letter (author's Q26.2 ruling), so scenario C
+    # below (al_holds against the host's own letter) and A/B (against this synthetic one) exercise
+    # one shape.
+    cell: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + 29, arena)
+    if: cell = 0 || lmx_pointer_store_known(cell, sender) != 0
+        return: 0
+    if: lmx_arena_ref_store(graph, 0U, cell) != 0 || lmx_arena_ref_store(graph, 1U, (cast: (@: void) payload)) != 0
+        return: 0
+    letter\running: 1
+    letter\success: 0
+    letter\handoff_ready: 0
+    letter\graph: graph
+return: letter
+
+# The letter's graph is an independent Structure with two fields: `sender`, then the payload -- an
+# independent Structure of `arena` with one field: an Array of references to char Arrays,
+# classified as such in `arena`, holding exactly these words with their NUL.
+fn: al_holds (@: LmxArena arena; @: Lmx graph; @: void sender; int: argc; @@: char argv) int
+    @: Lmx payload
+    @: LmxArrayDesc args
+    @: LmxArrayDesc arg
+    @@: void slots
+    @: void cell
+    int: i 0
+    if: graph = 0 || graph\parent != 0 || graph\len != 2
+        return: 0
+    # FABLE-SONNET-SEND-REF-20260925-172 commit 4 (edited under fable's authorization): the sender
+    # slot is a pointer cell now, classified before it is read through (a raw address there is a
+    # located refusal, not a misread -- the same defensive shape lmx_root_exit_admit uses).
+    cell: lmx_arena_ref_value(graph, 0U)
+    if: cell = 0 || lmx_domain_kind(arena, cell) != c.LMX_KIND_PRIMITIVE || lmx_domain_type(arena, cell) < c.LMX_TYPE_POINTER_BASE
+        return: 0
+    if: sender = 0 || lmx_pointer_value_known(cell) != sender
+        return: 0
+    payload: (cast: (@: Lmx) lmx_arena_ref_value(graph, 1U))
+    if: payload = 0 || lmx_range_classify(arena, (cast: (@: void) payload)) != c.LMX_KIND_STRUCT || payload\parent != 0 || payload\len != 1
+        return: 0
+    args: (cast: (@: LmxArrayDesc) lmx_arena_ref_value(payload, 0U))
+    if: args = 0 || args\len != (cast: (size_t) argc)
+        return: 0
+    if: lmx_domain_kind(arena, (cast: (@: void) args)) != c.LMX_KIND_ARRAY || lmx_domain_type(arena, (cast: (@: void) args)) != c.LMX_TYPE_ARRAY_OF_DESC
+        return: 0
+    slots: (cast: (@@: void) args\data)
+    while: i < argc
+        arg: (cast: (@: LmxArrayDesc) slots[i])
+        if: arg = 0 || lmx_domain_type(arena, (cast: (@: void) arg)) != c.LMX_TYPE_ARRAY_OF_CHAR
+            return: 0
+        if: arg\len != strlen(argv[i]) + 1U || memcmp(arg\data, (cast: (@: void) argv[i]), arg\len) != 0
+            return: 0
+        i: i + 1
+    ---
+return: 1
+
+fn: al_entry (@: Lmx node) int
+    @: void taken
+    @: LmxThread t
+    al_calls: al_calls + 1
+    if: al_take = 0
+        return: 0
+    t: lmx_thread_current()
+    taken: lmx_thread_mail_take(t, c.LMX_POST_INBOX)
+    al_letter: (cast: (@: LmxMsg) taken)
+    if: taken != 0 && t != 0 && t\slot != 0 && lmx_range_classify(t\slot\arena, taken) = c.LMX_DOMAIN_KIND_MSG_RECORD
+        al_owned: 1
+        al_shape: al_holds(t\slot\arena, al_letter\graph, al_sender, 3, al_words)
+        al_success: (cast: (int) al_letter\success)
+    ---
+return: 0
+
+# C: R0's body under the host's launch.  It takes the host's letter and reads it with al_holds, the
+# sender being its parent's Message -- the host's.
+fn: al_r0_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    @: LmxThread t
+    @: LmxThread host
+    @: LmxMsg message
+    @: LmxMsg letter
+    al_host_calls: al_host_calls + 1
+    t: lmx_thread_current()
+    message: lmx_thread_message(t)
+    if: t = 0 || t\slot = 0 || message = 0
+        return: 0
+    ---
+    host: lmx_thread_parent(t)
+    letter: (cast: (@: LmxMsg) lmx_thread_mail_take(t, c.LMX_POST_INBOX))
+    if: host != 0 && letter != 0 && lmx_range_classify(t\slot\arena, (cast: (@: void) letter)) = c.LMX_DOMAIN_KIND_MSG_RECORD
+        al_host_shape: al_holds(t\slot\arena, letter\graph, (cast: (@: void) lmx_thread_message(host)), 3, al_words)
+    ---
+    message\success: 1
+return: 0
+
+# C: R0's program: its body (k.4: `graph\native` set directly, no descriptor) and its
+# children list, now the graph's only field (was field 1, after the reserved descriptor
+# slot; that slot is gone, so lmx_root_launch is called with `fields = 1U` below, not 2U).
+fn: al_program (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int
+    @: LmxArrayDesc children
+    if: arena = 0 || graph = 0 || graph\len < 1
+        return: 1
+    ---
+    children: lmx_list_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, arena)
+    if: children = 0
+        return: 1
+    ---
+    graph\native: (cast: (LmxEntry) al_r0_body)
+    if: lmx_arena_ref_store(graph, 0U, (cast: (@: void) children)) != 0
+        return: 1
+    ---
+return: 0
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    @@: char words (cast: (@@: char) calloc(3U, c.sizeof(@: char)))
+    LmxRoot: root
+    LmxRoot: taker
+    LmxRoot: launcher
+    LmxArena: untaken_arena
+    LmxArena: taken_arena
+    @: LmxArena untaken_at
+    @: LmxArena taken_at
+    @: LmxMsg letter 0
+    int: code
+    int: failures
+    if: counts = 0 || words = 0
+        return: 2
+    words[0]: "prog"
+    words[1]: "ok"
+    words[2]: ""
+    al_words: words
+    memset((cast: (@: void) (@ root)), 0, c.sizeof(c.LmxRoot))
+    memset((cast: (@: void) (@ taker)), 0, c.sizeof(c.LmxRoot))
+    memset((cast: (@: void) (@ untaken_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ taken_arena)), 0, c.sizeof(c.LmxArena))
+    untaken_at: @ untaken_arena
+    taken_at: @ taken_arena
+
+    # A. The untaken letter is released at close (P5).
+    al_check(counts, lmx_root_open(@ root, al_entry, 5000U) = c.LMX_ROOT_OK, "A: root open")
+    al_check(counts, lmx_arena_open(@ untaken_arena) = 0, "A: the letter's own full arena opened")
+    al_sender: (cast: (@: void) lmx_root_message(@ root))
+    letter: al_make(@ untaken_arena, al_sender, 3, words)
+    al_check(counts, letter != 0 && al_holds(@ untaken_arena, letter\graph, al_sender, 3, words) != 0, "A: the letter is (sender; payload) and its payload carries an Array of char Arrays, NUL kept (mutant: al_make flat)")
+    al_check(counts, letter != 0 && lmx_service_post(lmx_root_service(@ root), (cast: (@: void) lmx_root_thread(@ root)), letter, @ untaken_arena) = c.LMX_SERVICE_OK, "A: posted to R0")
+    al_check(counts, lmx_thread_mail_count(lmx_root_thread(@ root), c.LMX_POST_INBOX) = 1U, "A: R0's inbox holds the letter")
+    al_check(counts, lmx_arena_index_len(untaken_at) != 0U && untaken_at\blocks != 0, "A: the producer owns the letter's arena before any take")
+    al_check(counts, lmx_root_turn(@ root, 1U) = c.LMX_ROOT_OK && al_calls = 1, "A: R0 ran one turn that took nothing")
+    al_check(counts, lmx_thread_mail_count(lmx_root_thread(@ root), c.LMX_POST_INBOX) = 1U, "A: the letter is still untaken after the turn")
+    al_check(counts, lmx_range_classify(lmx_root_arena(@ root), (cast: (@: void) letter)) = c.LMX_KIND_NONE, "A: R0 never owned the untaken letter")
+    al_check(counts, lmx_root_close(@ root) = c.LMX_ROOT_OK, "A: root close")
+    al_check(counts, lmx_arena_index_len(untaken_at) = 0U && untaken_at\blocks = 0, "A: close released the untaken letter's arena")
+
+    # B. The letter taken as receiveMessage takes it.
+    al_take: 1
+    al_calls: 0
+    al_check(counts, lmx_root_open(@ taker, al_entry, 5000U) = c.LMX_ROOT_OK, "B: root open")
+    al_check(counts, lmx_arena_open(@ taken_arena) = 0, "B: the letter's own full arena opened")
+    al_sender: (cast: (@: void) lmx_root_message(@ taker))
+    letter: al_make(@ taken_arena, al_sender, 3, words)
+    al_check(counts, letter != 0 && lmx_service_post(lmx_root_service(@ taker), (cast: (@: void) lmx_root_thread(@ taker)), letter, @ taken_arena) = c.LMX_SERVICE_OK, "B: posted to R0")
+    al_check(counts, lmx_root_turn(@ taker, 1U) = c.LMX_ROOT_OK && al_calls = 1, "B: R0 ran one turn")
+    al_check(counts, al_letter = letter && al_owned = 1, "B: the turn took this letter, owned by R0 before it was exposed")
+    al_check(counts, lmx_arena_index_len(taken_at) = 0U && taken_at\blocks = 0, "B: the donor arena emptied into R0's at the take")
+    al_check(counts, al_success != 0, "B: a plain letter is marked success at its delivery")
+    al_check(counts, al_shape = 1, "B: R0 reads its sender and, in the payload, the Array of char Arrays C passed")
+    al_check(counts, lmx_thread_mail_count(lmx_root_thread(@ taker), c.LMX_POST_INBOX) = 0U, "B: the inbox is empty after the take")
+    al_check(counts, lmx_root_close(@ taker) = c.LMX_ROOT_OK, "B: root close")
+
+    # C. The mirror: the letter the host's launch builds has al_make's shape.
+    code: lmx_root_launch(@ launcher, 3, words, al_program, 1U, 0, 5000U, 0, (cast: (@: void) c.stderr))
+    al_check(counts, code = 0 && al_host_calls = 1, "C: the host launched R0, whose one turn succeeded")
+    al_check(counts, al_host_shape = 1, "C: the host's mainArgs letter holds by al_holds, as al_make's does: (sender = the host's Message; payload whose one field is mainArgs) (mutants: a bare letter, a flat one)")
+    failures: counts[1]
+    c.printf("lmx_argv_letter_selftest checks=%d failures=%d\n", counts[0], failures)
+    free((cast: (@: void) words))
+    free(counts)
+    if: failures != 0
+        return: 1
+return: 0

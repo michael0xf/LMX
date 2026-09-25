@@ -51,10 +51,10 @@ fn: main () int
     cell: lmx_int_new_owned(@ arena)
     ro_check(counts, cell != 0 && lmx_range_classify(@ arena, cell) = c.LMX_KIND_PRIMITIVE, "the first cell does not answer in the index")
     ro_check(counts, lmx_arena_release(@ arena) = 0, "the first release refused")
-    ro_check(counts, arena_at\count = 0U, "release left a non-zero count")
+    ro_check(counts, lmx_arena_index_len(arena_at) = 0U, "release left a non-zero count")
     ro_check(counts, arena_at\blocks = 0, "release left a non-null block list")
     ro_check(counts, arena_at\arrays = 0, "release left a non-null array list")
-    ro_check(counts, arena_at\index = 0, "release left a non-null index")
+    ro_check(counts, lmx_arena_index_data(arena_at) = 0, "release left a non-null index")
 
     # 2. THE POINT: the same arena, opened again.  A released arena is a free one.
     ro_check(counts, lmx_arena_open(@ arena) = 0, "OPEN AFTER RELEASE WAS REFUSED")

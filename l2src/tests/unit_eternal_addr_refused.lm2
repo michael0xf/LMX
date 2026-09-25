@@ -1,0 +1,24 @@
+# FABLE-L2-R0-WRITE-GUARD-DESIGN-20260921-111, step M0.  THE ADDRESS OF AN ETERNAL FIELD IS REFUSED WHERE IT IS TAKEN.
+#
+# An address taken with `@` is a WRITABLE address and nothing downstream can refuse a write through
+# it: a raw pointer write bypasses every cell helper.  Until a read-only address exists as a type,
+# the translator refuses this by name -- "the address of an eternal branch field cannot be taken" --
+# with the same test that refuses a path write to the field.  Before the rule the program passed the
+# translator and died at the C compiler for want of a lowering, which is not a protection.
+# This file is the FRAME spelling, `@: E\e`, on a size_t; its twin is the flat spelling on a char.
+independent:
+    const:
+        immutable:
+            (): E
+                size_t: e 7U
+            end: E
+        end: immutable
+    end: const
+end: independent
+
+fn: pokez (@: size_t p) int
+    \p: 9U
+    return: 0
+end: pokez
+pokez(@: E\e)
+return: 0

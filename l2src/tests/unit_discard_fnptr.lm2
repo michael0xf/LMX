@@ -1,0 +1,15 @@
+predef: "l2src/tests/fnptr_local_forms.h.lm1"
+
+# A typed fnptr named alone is a value: evaluated and dropped, never called (plan §3, "Binding
+# KIND decides call vs value").  `f: n` is its call.  probe only has to translate and compile.
+fn: probe (const: @(c.L2TestAllocVTable av); size_t: n) @: void
+    L2TestAllocFn: f av\alloc
+    if: f = 0
+        return: 0
+    f
+    f: n
+    return: 0
+end: probe
+
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

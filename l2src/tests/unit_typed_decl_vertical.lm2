@@ -1,0 +1,24 @@
+# FABLE-SONNET-EMPTY-STRUCT-20260923-132 (b): the block-form spelling of a
+# typed declaration of an EXISTING type -- a vertical body with one atom,
+# `Model:` / `    fresh` -- measured against the ordinary colon/paren forms
+# (unit_colon_model_decl, unit_struct_decl_*): same P0 tree as `Model: fresh`,
+# no code change needed, l2_colon_decl_shape already treats it identically.
+# Not a new spelling: the type is invented nowhere else in this file.
+Model:
+    size_t: value 1U
+end: Model
+
+fn: probe () size_t
+    Model:
+        fresh
+    ---
+    return: fresh\value
+end: probe
+
+size_t: r
+r: probe()
+if: r != 1U
+    sendMessage: exit(exit_code: 90; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

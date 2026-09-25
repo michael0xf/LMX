@@ -8,15 +8,13 @@ fn: size_args (ulong: w) int
     int: zero 0
     if: c.abs(c.sizeof(c.wchar_t)) < 1
         return: 1
-    if: c.abs(c.sizeof(zero)) != c.abs(c.sizeof(c.int))
+    if: c.abs(sizeof: zero) != c.abs(c.sizeof(c.int))
         return: 2
-    if: c.abs(c.sizeof(w)) < 4
+    if: c.abs(sizeof: w) < 4
         return: 3
     if: zero != 0 || w != 7U
         return: 4
     return: 0
 end: size_args
 
-fn: main () int
-    return: size_args(7U)
-end: main
+return: size_args(7U)

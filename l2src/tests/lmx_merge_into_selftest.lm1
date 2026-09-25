@@ -1,0 +1,226 @@
+predef: "l2src/lmx_merge_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# -194 к.3 (Q26.1's own-field write `o\inner: a`, Q1's flat "merge into" primitive):
+# lmx_merge_into_owned writes op's fields into an ALREADY-EXISTING target's own slots --
+# target keeps its address and its own parent, nothing is built fresh. Tested directly
+# against the kernel (the walker PRIM lmx_walk_merge_into and its translator counterpart
+# are not built yet).
+# - basic: target's paired slot takes op's value, an unpaired target slot stays untouched,
+#   target's own address does not change.
+# - an op field with no pair is refused (target's layout is fixed, no append).
+# - two pairs sharing a target slot are refused.
+# - a nested own-Structure field of op, written into target, is re-parented to target
+#   (not left pointing at op's own copy-root) -- proved the same way K1's 1d selftest
+#   proves it: merge the now-written slot's value again and check its address changes.
+
+sub: mi_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: mi_check
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxArena: arena
+    LmxArena: dst
+    int: failures
+
+    # -- basic locals
+    @: Lmx target_a 0
+    @: Lmx op_a 0
+    @: void tx 0
+    @: void ty 0
+    @: void ox 0
+    @: LmxMergePair pair_a 0
+    int: status_a LMX_MERGE_OK
+    @: void target_a_before 0
+
+    # -- unmatched-refused locals
+    @: Lmx target_b 0
+    @: Lmx op_b 0
+    @: void tbx 0
+    @: void oba 0
+    @: void obb 0
+    @: LmxMergePair pair_b 0
+    int: status_b LMX_MERGE_OK
+
+    # -- duplicate-target-refused locals
+    @: Lmx target_c 0
+    @: Lmx op_c 0
+    @: void tcx 0
+    @: void tcy 0
+    @: void oca 0
+    @: void ocb 0
+    @: LmxMergePair pair_c0 0
+    @: LmxMergePair pair_c1 0
+    @@: LmxMergePair pairs_c 0
+    int: status_c LMX_MERGE_OK
+
+    # -- nested re-parent locals
+    @: Lmx target_d 0
+    @: Lmx op_d 0
+    @: Lmx nested_d 0
+    @: void tdx 0
+    @: void nv 0
+    @: LmxMergePair pair_d 0
+    int: status_d LMX_MERGE_OK
+    @: void slot0_after 0
+    @@: Lmx op_d2 0
+    @: Lmx result_d2 0
+    int: status_d2 LMX_MERGE_OK
+    @: void inner2 0
+
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ dst)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ arena) != 0 || lmx_arena_open(@ dst) != 0
+        fputs("lmx: arena open failed\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+
+    # ==== basic: paired slot updated, unpaired slot untouched, target's address unchanged ====
+    tx: lmx_int_new_owned(@ arena)
+    ty: lmx_int_new_owned(@ arena)
+    ox: lmx_int_new_owned(@ arena)
+    lmx_int_store_known(tx, 1)
+    lmx_int_store_known(ty, 2)
+    lmx_int_store_known(ox, 99)
+    target_a: lmx_node_new_owned(@ arena)
+    op_a: lmx_node_new_owned(@ arena)
+    mi_check(counts, tx != 0 && ty != 0 && ox != 0 && target_a != 0 && op_a != 0, "basic cells and structures constructed")
+    mi_check(counts, lmx_arena_refs_open_owned(@ arena, target_a, 2U) = 0, "basic target opened {x, y}")
+    mi_check(counts, lmx_arena_refs_open_owned(@ arena, op_a, 1U) = 0, "basic op opened {x'}")
+    lmx_arena_ref_store(target_a, 0U, tx)
+    lmx_arena_ref_store(target_a, 1U, ty)
+    lmx_arena_ref_store(op_a, 0U, ox)
+    target_a_before: (cast: (@: void) target_a)
+    pair_a: (cast: (@: LmxMergePair) calloc(1U, c.sizeof(c.LmxMergePair)))
+    mi_check(counts, pair_a != 0, "basic pair allocated")
+    pair_a\model_slot: 0U
+    pair_a\field: 0U
+    status_a: lmx_merge_into_owned(target_a, op_a, 0, @ arena, @ arena, @ pair_a, 1U)
+    mi_check(counts, status_a = LMX_MERGE_OK, "basic merge-into OK")
+    mi_check(counts, (cast: (@: void) target_a) = target_a_before, "basic target's own address unchanged (nothing built fresh)")
+    mi_check(counts, target_a\len = 2, "basic target's layout unchanged (no growth)")
+    mi_check(counts, lmx_int_value_known(lmx_arena_ref_value(target_a, 0U)) = 99, "basic target[0] = op's paired value 99")
+    mi_check(counts, lmx_int_value_known(lmx_arena_ref_value(target_a, 1U)) = 2, "basic target[1] untouched (2)")
+    mi_check(counts, op_a\len = 1, "basic op untouched")
+    free((cast: (@: void) pair_a))
+
+    # ==== an op field with no pair is refused ====
+    tbx: lmx_int_new_owned(@ arena)
+    oba: lmx_int_new_owned(@ arena)
+    obb: lmx_int_new_owned(@ arena)
+    lmx_int_store_known(tbx, 1)
+    lmx_int_store_known(oba, 7)
+    lmx_int_store_known(obb, 8)
+    target_b: lmx_node_new_owned(@ arena)
+    op_b: lmx_node_new_owned(@ arena)
+    mi_check(counts, tbx != 0 && oba != 0 && obb != 0 && target_b != 0 && op_b != 0, "unmatched cells and structures constructed")
+    mi_check(counts, lmx_arena_refs_open_owned(@ arena, target_b, 1U) = 0, "unmatched target opened {x}")
+    mi_check(counts, lmx_arena_refs_open_owned(@ arena, op_b, 2U) = 0, "unmatched op opened {a, b}")
+    lmx_arena_ref_store(target_b, 0U, tbx)
+    lmx_arena_ref_store(op_b, 0U, oba)
+    lmx_arena_ref_store(op_b, 1U, obb)
+    pair_b: (cast: (@: LmxMergePair) calloc(1U, c.sizeof(c.LmxMergePair)))
+    mi_check(counts, pair_b != 0, "unmatched pair allocated")
+    pair_b\model_slot: 0U
+    pair_b\field: 0U
+    status_b: lmx_merge_into_owned(target_b, op_b, 0, @ arena, @ arena, @ pair_b, 1U)
+    mi_check(counts, status_b = LMX_MERGE_INVALID, "unmatched op field (b) refused -- pair_count != op's width (mutant: width check off -> OK, RED)")
+    free((cast: (@: void) pair_b))
+
+    # ==== two pairs sharing a target slot are refused ====
+    tcx: lmx_int_new_owned(@ arena)
+    tcy: lmx_int_new_owned(@ arena)
+    oca: lmx_int_new_owned(@ arena)
+    ocb: lmx_int_new_owned(@ arena)
+    lmx_int_store_known(tcx, 1)
+    lmx_int_store_known(tcy, 2)
+    lmx_int_store_known(oca, 7)
+    lmx_int_store_known(ocb, 8)
+    target_c: lmx_node_new_owned(@ arena)
+    op_c: lmx_node_new_owned(@ arena)
+    mi_check(counts, tcx != 0 && tcy != 0 && oca != 0 && ocb != 0 && target_c != 0 && op_c != 0, "dup-target cells and structures constructed")
+    mi_check(counts, lmx_arena_refs_open_owned(@ arena, target_c, 2U) = 0, "dup-target target opened {x, y}")
+    mi_check(counts, lmx_arena_refs_open_owned(@ arena, op_c, 2U) = 0, "dup-target op opened {a, b}")
+    lmx_arena_ref_store(target_c, 0U, tcx)
+    lmx_arena_ref_store(target_c, 1U, tcy)
+    lmx_arena_ref_store(op_c, 0U, oca)
+    lmx_arena_ref_store(op_c, 1U, ocb)
+    pair_c0: (cast: (@: LmxMergePair) calloc(1U, c.sizeof(c.LmxMergePair)))
+    pair_c1: (cast: (@: LmxMergePair) calloc(1U, c.sizeof(c.LmxMergePair)))
+    mi_check(counts, pair_c0 != 0 && pair_c1 != 0, "dup-target pairs allocated")
+    pair_c0\model_slot: 0U
+    pair_c0\field: 0U
+    pair_c1\model_slot: 0U
+    pair_c1\field: 1U
+    pairs_c: (cast: (@@: LmxMergePair) calloc(2U, c.sizeof(@: void)))
+    mi_check(counts, pairs_c != 0, "dup-target pair array allocated")
+    pairs_c[0]: pair_c0
+    pairs_c[1]: pair_c1
+    status_c: lmx_merge_into_owned(target_c, op_c, 0, @ arena, @ arena, pairs_c, 2U)
+    mi_check(counts, status_c = LMX_MERGE_INVALID, "dup-target refused (mutant: duplicate-target guard off -> OK, last write wins silently, RED)")
+    free((cast: (@: void) pairs_c))
+    free((cast: (@: void) pair_c0))
+    free((cast: (@: void) pair_c1))
+
+    # ==== nested own-Structure field of op is re-parented to target ====
+    nv: lmx_int_new_owned(@ arena)
+    lmx_int_store_known(nv, 5)
+    nested_d: lmx_node_new_owned(@ arena)
+    mi_check(counts, nv != 0 && nested_d != 0, "nested inner cell/structure constructed")
+    mi_check(counts, lmx_arena_refs_open_owned(@ arena, nested_d, 1U) = 0, "nested inner opened {v}")
+    lmx_arena_ref_store(nested_d, 0U, nv)
+    op_d: lmx_node_new_owned(@ arena)
+    mi_check(counts, op_d != 0, "nested op constructed")
+    mi_check(counts, lmx_arena_refs_open_owned(@ arena, op_d, 1U) = 0, "nested op opened {inner}")
+    lmx_arena_ref_store(op_d, 0U, (cast: (@: void) nested_d))
+    nested_d\parent: op_d
+    tdx: lmx_int_new_owned(@ arena)
+    lmx_int_store_known(tdx, 0)
+    target_d: lmx_node_new_owned(@ arena)
+    mi_check(counts, tdx != 0 && target_d != 0, "nested target constructed")
+    mi_check(counts, lmx_arena_refs_open_owned(@ arena, target_d, 1U) = 0, "nested target opened {slot0}")
+    lmx_arena_ref_store(target_d, 0U, tdx)
+    pair_d: (cast: (@: LmxMergePair) calloc(1U, c.sizeof(c.LmxMergePair)))
+    mi_check(counts, pair_d != 0, "nested pair allocated")
+    pair_d\model_slot: 0U
+    pair_d\field: 0U
+    status_d: lmx_merge_into_owned(target_d, op_d, 0, @ arena, @ arena, @ pair_d, 1U)
+    mi_check(counts, status_d = LMX_MERGE_OK, "nested merge-into OK")
+    slot0_after: lmx_arena_ref_value(target_d, 0U)
+    mi_check(counts, slot0_after != 0 && lmx_range_classify(@ arena, slot0_after) = c.LMX_KIND_STRUCT, "nested target's slot 0 is now a Structure copy")
+    mi_check(counts, (cast: (@: Lmx) slot0_after)\parent = target_d, "nested copy's parent re-pointed to target_d (mutant: re-parent pass off -> orphan op copy, RED)")
+    op_d2: (cast: (@@: Lmx) calloc(1U, c.sizeof(@: void)))
+    mi_check(counts, op_d2 != 0, "nested second-merge operand array allocated")
+    op_d2[0]: target_d
+    status_d2: lmx_merge_owned(op_d2, 1U, 0, 0, 0, @ arena, @ dst, 0, 0U, @ result_d2)
+    mi_check(counts, status_d2 = LMX_MERGE_OK && result_d2 != 0, "nested second merge OK")
+    inner2: lmx_arena_ref_value(result_d2, 0U)
+    mi_check(counts, inner2 != 0 && inner2 != slot0_after, "nested second merge deep-copies target's slot 0 (fresh address, not shared) -- proves the re-parent, not the bug")
+    free((cast: (@: void) pair_d))
+    free((cast: (@: void) op_d2))
+
+    failures: counts[1]
+    c.printf("lmx_merge_into_selftest: %d checks, %d failed\n", counts[0], failures)
+    free(counts)
+    lmx_arena_release(@ arena)
+    lmx_arena_release(@ dst)
+    if: failures != 0
+        return: 1
+return: 0

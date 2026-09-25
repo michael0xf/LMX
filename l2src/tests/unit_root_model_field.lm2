@@ -1,0 +1,22 @@
+# Structure-typed root fields at the walked root (FABLE-OPUS-ROOT-STRUCTS-20260925-178 commit 2).
+# m and n are fresh merges of Model; a read through m opens m's pointer cell (DEREF) and takes the
+# field (OF); Model\value: 7U writes the named Structure itself; n, merged after it, sees 7; m keeps
+# its own copy.  Each check adds its bit: 15.
+Model:
+    size_t: value 41U
+end: Model
+
+Model: m
+int: r 0
+if: m\value = 41U
+    r: r + 1
+Model\value: 7U
+if: Model\value = 7U
+    r: r + 2
+Model: n
+if: n\value = 7U
+    r: r + 4
+if: m\value = 41U
+    r: r + 8
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

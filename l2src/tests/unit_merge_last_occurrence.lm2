@@ -1,0 +1,41 @@
+Model:
+    size_t: x 1U
+    size_t: y 2U
+end: Model
+
+Over:
+    size_t: x 7U
+end: Over
+
+# FABLE-OPUS-MERGE-PARTS-20260926-193 T1: the author's merge rule (plan §4).  The first operand is the
+# model; a later operand's field whose name the model carries is written INTO the model's slot, and
+# merge makes no repeated names.  R has Model's layout {x, y}, with Over's x in the model's x: `R\x`
+# is the one slot for reads and writes, `R\[0]x` is that same slot, and `R\[1]x` does not exist
+# (unit_merge_occurrence_range_refused).  The operands keep their own values.  Success is 7.
+fn: check () int
+    size_t: x
+    size_t: first
+    size_t: only
+    R: merge: Model Over
+    x: R\x
+    first: R\[0]x
+    only: R\y
+    if: x != 7U
+        return: 81
+    if: first != 7U
+        return: 82
+    if: only != 2U
+        return: 84
+    R\x: 70U
+    first: R\[0]x
+    if: first != 70U
+        return: 85
+    if: Model\x != 1U
+        return: 86
+    if: Over\x != 7U
+        return: 87
+    return: 7
+end: check
+
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

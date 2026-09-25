@@ -1,0 +1,17 @@
+# FABLE-GROKBOT-MATRIX-20260924-143 (e): empty argument list `f()` -- nullary
+# CALL, not an empty Structure value. Contrasts unit_matrix_empty_named_value.
+fn: f () int
+    return: 7
+end: f
+
+int: r
+r: f()
+if: r != 7
+    sendMessage: exit(exit_code: 11; stdout: ""; stderr: "")
+    return
+r: f: ()
+if: r != 7
+    sendMessage: exit(exit_code: 12; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

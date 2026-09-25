@@ -1,0 +1,136 @@
+predef: "l2src/lmx_fresh.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_chars.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# -188 k.3a: lmx_fresh = Model: fresh.  k.4: no child[0] descriptor any more -- `native`
+# is a sibling Lmx member, carried verbatim onto the fresh instance (mutant: leave it 0 /
+# fail to copy it -> RED).  No Array-of-char (D-63). Scalar char via intern.
+
+int: checks 0
+int: failures 0
+
+sub: check (int: ok; const: @(char label))
+    checks: checks + 1
+    if: ok = 0
+        failures: failures + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: check
+
+fn: fresh_native_entry (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+return: 0
+
+fn: main () int
+    LmxArena: arena
+    @: Lmx unit 0
+    @: Lmx code 0
+    @: Lmx body 0
+    @: Lmx fresh 0
+    @: Lmx fresh_body 0
+    @: void icell 0
+    @: void ccell 0
+    @: void pcell 0
+    @: void got 0
+    @: LmxArrayDesc adesc 0
+    @: LmxArrayDesc farr 0
+    int: pty c.LMX_TYPE_POINTER_BASE + 3
+
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ arena) != 0
+        return: 2
+    ---
+    unit: lmx_node_new_owned(@ arena)
+    if: unit = 0 || lmx_arena_refs_open_owned(@ arena, unit, 4U) != 0
+        return: 2
+    ---
+    # code: [int=7, char='A', pointer->unit, nested body{int=9}, Array<int> len3], native set directly
+    code: lmx_node_new_owned(@ arena)
+    if: code = 0 || lmx_arena_refs_open_owned(@ arena, code, 5U) != 0
+        return: 2
+    ---
+    code\parent: unit
+    code\native: (cast: (LmxEntry) fresh_native_entry)
+    icell: lmx_int_new_owned(@ arena)
+    if: icell = 0 || lmx_int_store_known(icell, 7) != 0 || lmx_arena_ref_store(code, 0U, icell) != 0
+        return: 2
+    ---
+    if: lmx_chars_init(@ arena) != 0 && lmx_arena_find(@ arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR) = 0
+        return: 2
+    ---
+    ccell: lmx_char_cell(@ arena, 65)
+    if: ccell = 0 || lmx_arena_ref_store(code, 1U, ccell) != 0
+        return: 2
+    ---
+    pcell: lmx_pointer_new_owned(pty, @ arena)
+    if: pcell = 0 || lmx_pointer_store_known(pcell, (cast: (@: void) unit)) != 0 || lmx_arena_ref_store(code, 2U, pcell) != 0
+        return: 2
+    ---
+    body: lmx_node_new_owned(@ arena)
+    if: body = 0 || lmx_arena_refs_open_owned(@ arena, body, 1U) != 0
+        return: 2
+    ---
+    body\parent: code
+    got: lmx_int_new_owned(@ arena)
+    if: got = 0 || lmx_int_store_known(got, 9) != 0 || lmx_arena_ref_store(body, 0U, got) != 0
+        return: 2
+    ---
+    if: lmx_arena_ref_store(code, 3U, (cast: (@: void) body)) != 0
+        return: 2
+    ---
+    adesc: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, 3U, @ arena)
+    if: adesc = 0 || adesc\data = 0
+        return: 2
+    ---
+    # Source values need not be read; fresh must be a new zeroed Array of len 3.
+    if: lmx_arena_ref_store(code, 4U, (cast: (@: void) adesc)) != 0
+        return: 2
+    ---
+
+    fresh: lmx_fresh(@ arena, code)
+    check(fresh != 0, "fresh non-null")
+    check(fresh != code, "fresh is a new Structure")
+    check(fresh\parent = unit, "fresh.parent = code.parent")
+    check(fresh\len = 5, "fresh.len = code.len")
+
+    # k.4: native is a sibling Lmx member, copied verbatim (mutant: drop it -> RED).
+    check(fresh\native = code\native, "native word copied verbatim onto the fresh instance")
+
+    got: lmx_arena_ref_value(fresh, 0U)
+    check(got != 0 && got != icell && lmx_int_value_known(got) = 0, "int field fresh 0, new cell")
+
+    got: lmx_arena_ref_value(fresh, 1U)
+    check(got = lmx_char_cell(@ arena, 0), "char field interned 0")
+
+    got: lmx_arena_ref_value(fresh, 2U)
+    check(got != 0 && got != pcell && lmx_pointer_value_known(got) = 0, "pointer field fresh null")
+
+    fresh_body: (cast: (@: Lmx) lmx_arena_ref_value(fresh, 3U))
+    check(fresh_body != 0 && fresh_body != body, "nested body freshened")
+    check(fresh_body\parent = fresh, "nested body.parent = fresh instance (mutant keep code -> RED)")
+    got: lmx_arena_ref_value(fresh_body, 0U)
+    check(got != 0 && lmx_int_value_known(got) = 0, "nested int fresh 0")
+
+    farr: (cast: (@: LmxArrayDesc) lmx_arena_ref_value(fresh, 4U))
+    check(farr != 0 && farr != adesc && farr\len = 3U, "array fresh same length")
+    check(farr\data != 0 && lmx_int_value_known(farr\data) = 0, "array zeroed")
+
+    # Refusal: unclassified raw pointer as a fake "code" child is not built here;
+    # NULL code / non-struct:
+    check(lmx_fresh(@ arena, 0) = 0, "NULL code -> NULL")
+    check(lmx_fresh(@ arena, (cast: (@: Lmx) icell)) = 0, "non-struct code -> NULL")
+
+    if: failures != 0
+        c.printf("%d/%d FAILED\n", failures, checks)
+        return: 1
+    ---
+    c.printf("OK %d checks\n", checks)
+return: 0

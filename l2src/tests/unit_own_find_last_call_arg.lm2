@@ -1,0 +1,27 @@
+# FABLE-SONNET-OWN-LOOKUP-AUDIT-20260923-131 Part 2 (b): re-verifying
+# l2_prep's l2_own_find_last call (tried FIRST there, l2_own_find only as
+# its fallback) against -129's fallback. `x` is a unit field, passed AS A
+# CALL ARGUMENT from inside a nested method -- backward-visible per the
+# author's norm. Since -129 gave l2_own_find_last the same unit-fallback
+# l2_own_find already had, whichever of the two actually resolves `x`
+# here, the chain as a whole must still find it -- this fixture confirms
+# that (see the -131 Part 2 report for the resulting redundancy note: the
+# second try in this pair can now never add anything the first didn't
+# already cover).
+int: x 5
+
+fn: helper (int: n) int
+    return: n
+end: helper
+
+fn: bump () int
+    return: helper(x)
+end: bump
+
+int: r
+r: bump()
+if: r != 5
+    sendMessage: exit(exit_code: 90; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

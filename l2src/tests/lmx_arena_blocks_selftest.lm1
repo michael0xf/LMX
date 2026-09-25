@@ -85,7 +85,7 @@ fn: main () int
     first: (cast: (@: Lmx) a\base)
     second: (cast: (@: Lmx) b\base)
     first\data: (cast: (@: void) second)
-    second\node: first
+    second\parent: first
     second\data: (cast: (@: void) first)
     check(lmx_arena_blocks_push(@ src, b) = LMX_ARENA_BLOCKS_OK, "push first node")
     check(lmx_arena_blocks_push(@ src, a) = LMX_ARENA_BLOCKS_OK, "push second node")
@@ -104,7 +104,7 @@ fn: main () int
     check(src = 0 && dst = a && a\next = b && b\next = d, "move source cleared and order retained")
     check(frees = before && callbacks = 0, "move performs no disposal")
     check(a\base = (cast: (@: void) first) && b\base = (cast: (@: void) second), "payload pointer identity")
-    check(first\data = (cast: (@: void) second) && second\node = first && second\data = (cast: (@: void) first), "internal graph aliases unchanged")
+    check(first\data = (cast: (@: void) second) && second\parent = first && second\data = (cast: (@: void) first), "internal graph aliases unchanged")
     check(a\class = 11U && b\class = 12U && d\class = 13U, "metadata classes retained")
     check(a\n = c.sizeof(c.Lmx) && a\dispose = custom_dispose, "length and disposer retained")
     check(lmx_arena_blocks_dispose_all(@ src) = LMX_ARENA_BLOCKS_OK, "source cleanup after transfer")
@@ -169,7 +169,7 @@ fn: main () int
     first: (cast: (@: Lmx) a\base)
     second: (cast: (@: Lmx) d\base)
     first\data: second
-    second\node: first
+    second\parent: first
     second\data: first
     before: frees
     check(lmx_arena_blocks_remove(@ src, a) = LMX_ARENA_BLOCKS_INVALID && src = 0 && a\next = 0, "remove from empty owner")
@@ -189,12 +189,12 @@ fn: main () int
     check(lmx_arena_blocks_remove(@ src, b) = LMX_ARENA_BLOCKS_OK, "remove exact middle member")
     check(src = a && a\next = d && d\next = 0 && b\next = 0, "middle detached and survivors ordered")
     check(frees = before && callbacks = 2, "remove has no disposal or callback")
-    check(a\base = (cast: (@: void) first) && d\base = (cast: (@: void) second) && first\data = (cast: (@: void) second) && second\node = first && second\data = (cast: (@: void) first), "survivor addresses and graph links unchanged")
+    check(a\base = (cast: (@: void) first) && d\base = (cast: (@: void) second) && first\data = (cast: (@: void) second) && second\parent = first && second\data = (cast: (@: void) first), "survivor addresses and graph links unchanged")
     alias: b
     check(lmx_arena_blocks_dispose_all(@ alias) = LMX_ARENA_BLOCKS_OK && alias = 0, "existing disposer releases detached block only")
     check(frees = before + 2 && src = a && a\next = d && first\data = (cast: (@: void) second), "selective disposal preserves live owner")
     check(lmx_arena_blocks_remove(@ src, d) = LMX_ARENA_BLOCKS_OK && src = a && a\next = 0 && d\next = 0, "remove exact tail")
-    check(a\base = (cast: (@: void) first) && first\data = (cast: (@: void) second) && second\node = first, "detaching tail does not change graph payload")
+    check(a\base = (cast: (@: void) first) && first\data = (cast: (@: void) second) && second\parent = first, "detaching tail does not change graph payload")
     check(lmx_arena_blocks_push(@ src, d) = LMX_ARENA_BLOCKS_OK && src = d && d\next = a, "reinsert detached block")
     check(lmx_arena_blocks_remove(@ src, d) = LMX_ARENA_BLOCKS_OK, "remove exact head")
     check(src = a && a\next = 0 && d\next = 0, "head removal preserves remaining member")

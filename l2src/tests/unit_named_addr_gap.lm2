@@ -1,0 +1,21 @@
+# FABLE-L2-R0-WRITE-GUARD-DESIGN-20260921-111, step M0.  THE CONTROL, WITH A READBACK WITNESS.
+#
+# The same shape on an ORDINARY, MUTABLE named Structure is NOT refused: the rule is about the
+# permanent store, not about named Structures.  Commit 4a8bc62 lowers `@: Named\field` to a typed
+# cell address; this row must keep running, and the two M0 eternal-address fixtures must keep
+# refusing.  A zero exit after `pokez(@: A\e)` does not prove the write landed.  Read A\e itself
+# after that write and fail nonzero unless it is exactly 9.
+A:
+    size_t: e 7U
+end: A
+
+fn: pokez (@: size_t p) int
+    \p: 9U
+    return: 0
+end: pokez
+size_t: got
+pokez(@: A\e)
+got: A\e
+if: got != 9U
+    return: 91
+return: 0

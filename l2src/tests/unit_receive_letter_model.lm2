@@ -1,0 +1,32 @@
+# FABLE-SONNET-SEND-REF-20260925-172 commit 2: `receiveMessage: m Model`
+# types m to the synthesized letter model {sender: @: LmxMsg; payload:
+# Model} -- m\sender (the general reference field, commit 1's kind 10,
+# pointee LmxMsg) and m\payload\mainArgs (an ordinary field path through the
+# payload, kind 3, into MainLetter's own field -- no new machinery needed
+# there: an intermediate Structure-reference field already composes) both
+# resolve and read live values. Run inside a method (the -168 path): R0's
+# own turn already has the host's mainArgs letter in its inbox, so a method
+# it calls receives that SAME letter -- the root-walked form of this same
+# read (Grok -177 later, the take primitive at the walked root) stays
+# root-pending, untouched here.
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+
+fn: check () int
+    receiveMessage: m MainLetter
+    if: m = 0
+        return: 90
+    if: m\sender = 0
+        return: 91
+    if: length(m\payload\mainArgs) = 0
+        return: 92
+return: 0
+
+int: got
+got: check()
+if: got != 0
+    sendMessage: exit(exit_code: got; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

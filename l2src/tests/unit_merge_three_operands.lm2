@@ -1,0 +1,38 @@
+Model:
+    size_t: x 1U
+    size_t: y 2U
+end: Model
+
+B:
+    size_t: x 5U
+    size_t: z 9U
+end: B
+
+C:
+    size_t: x 3U
+end: C
+
+# FABLE-OPUS-MERGE-PARTS-20260926-193 T1 (the author's merge rule, plan §4): later operands merge INTO
+# the model in operand order.  B's x and C's x both go into Model's x -- two pairs on one model slot,
+# C's last -- and B's z is added.  R is {x, y, z} = {3, 2, 9}.  With today's kernel an unpaired later
+# field is appended, so B's x must be a pair too, not left out: K1's map validity has to keep taking
+# two pairs on one target in operand order.  Success is 4.
+fn: m () int
+    size_t: a
+    size_t: b
+    size_t: c
+    R: merge: Model B C
+    a: R\x
+    b: R\y
+    c: R\z
+    if: a != 3U
+        return: 81
+    if: b != 2U
+        return: 82
+    if: c != 9U
+        return: 83
+    return: 4
+end: m
+
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

@@ -1,0 +1,23 @@
+Model:
+    size_t: value 41U
+end: Model
+
+fn: build () int
+    Model: fresh_branch_xyz
+    return: 0
+end: build
+
+# A caller binding with the receiver name is forwarded before build's lexical
+# Model fallback.  This method need not execute: its generated call is the ABI
+# precedence witness, while main below exercises the lexical fallback.
+fn: forward (@(Lmx Model)) int
+    return: build()
+end: forward
+
+int: got
+got: build()
+if: got != 0
+    sendMessage: exit(exit_code: 90; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

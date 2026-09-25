@@ -31,31 +31,35 @@ sub: ps_check (@: int counts; int: ok; const: @(char label))
     ---
 end: ps_check
 
-# Minimal Thread: Message + Post + Schedule (arena=0 so turn_end skips GC).
-fn: ps_make (@@: LmxThread out_t; @@: LmxMsg out_m; @@: LmxSchedule out_s; ulong: limit) int
+# Minimal Thread: Message + Post + Schedule.  The schedule names the same arena and exact owner
+# as the Thread; each probe Thread therefore gets its own arena so its end-turn collection cannot
+# sweep another probe's records.
+fn: ps_make (@: LmxArena arena; @@: LmxThread out_t; @@: LmxMsg out_m; @@: LmxSchedule out_s; ulong: limit) int
     @: LmxThread t
     @: LmxMsg message
+    @: Lmx graph
+    @: LmxArrayDesc children
     @: LmxPost mail
     @: LmxSchedule slot
     \out_t: 0
     \out_m: 0
     \out_s: 0
-    t: (cast: (@: LmxThread) calloc(1U, c.sizeof(c.LmxThread)))
-    message: (cast: (@: LmxMsg) calloc(1U, c.sizeof(c.LmxMsg)))
-    mail: (cast: (@: LmxPost) calloc(1U, c.sizeof(c.LmxPost)))
-    slot: (cast: (@: LmxSchedule) calloc(1U, c.sizeof(c.LmxSchedule)))
-    if: t = 0 || message = 0 || mail = 0 || slot = 0
+    graph: lmx_node_new_owned(arena)
+    children: lmx_list_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, arena)
+    t: (cast: (@: LmxThread) lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
+    message: (cast: (@: LmxMsg) t)
+    mail: (cast: (@: LmxPost) lmx_arena_take(arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    slot: (cast: (@: LmxSchedule) lmx_arena_take(arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: graph = 0 || children = 0 || t = 0 || mail = 0 || slot = 0
         return: 0
     ---
-    message\running: 1
-    message\success: 0
-    message\handoff_ready: 0
-    message\graph: 0
-    message\index: 1U
-    if: lmx_schedule_init(slot, 0, (cast: (@: void) t), limit) != c.LMX_SCHEDULE_OK
+    if: lmx_arena_refs_open_owned(arena, graph, 1U) != 0 || lmx_arena_ref_store(graph, 0U, (cast: (@: void) children)) != 0 || lmx_post_init(arena, mail) != c.LMX_POST_OK
         return: 0
     ---
-    if: lmx_thread_attach(t, message, mail, slot) != c.LMX_THREAD_OK
+    if: lmx_schedule_init(slot, arena, (cast: (@: void) t), limit) != c.LMX_SCHEDULE_OK
+        return: 0
+    ---
+    if: lmx_thread_init(arena, t, graph, mail, slot) != c.LMX_THREAD_OK || lmx_thread_children_bind(t, children, arena) != c.LMX_THREAD_OK
         return: 0
     ---
     \out_t: t
@@ -65,9 +69,11 @@ return: 1
 
 fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
-    # The chain nodes of live direct children are cells of the PARENT's arena; this probe
-    # builds its records by hand, so it names one arena for the links it makes.
-    LmxArena: link_arena
+    # The physical child references are cells of the PARENT's graph Array.  Each Thread's own
+    # record, mailbox and schedule stay in that Thread's arena.
+    LmxArena: parent_arena
+    LmxArena: child_arena
+    LmxArena: silent_arena
     @: LmxThread parent 0
     @: LmxThread child 0
     @: LmxThread silent 0
@@ -85,19 +91,21 @@ fn: main () int
     if: counts = 0
         return: 2
     ---
-    memset((cast: (@: void) (@ link_arena)), 0, c.sizeof(c.LmxArena))
-    if: lmx_arena_open(@ link_arena) != 0
+    memset((cast: (@: void) (@ parent_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ child_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ silent_arena)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ parent_arena) != 0 || lmx_arena_open(@ child_arena) != 0 || lmx_arena_open(@ silent_arena) != 0
         free(counts)
         return: 2
     ---
 
     # --- 1. parent answered -> child continues and writes new stamp ---
-    ps_check(counts, ps_make(@ parent, @ parent_m, @ parent_s, 3600000U) != 0, "make parent")
-    ps_check(counts, ps_make(@ child, @ child_m, @ child_s, 3600000U) != 0, "make child")
+    ps_check(counts, ps_make(@ parent_arena, @ parent, @ parent_m, @ parent_s, 3600000U) != 0, "make parent")
+    ps_check(counts, ps_make(@ child_arena, @ child, @ child_m, @ child_s, 3600000U) != 0, "make child")
     # THE LINK COMES FIRST, and that is the model, not bookkeeping: the handshake word lives in the
     # PARENT's arena (a Thread's own record carries no such cell), so a child that is nobody's
     # child yet has no word to stamp.  Linking is what gives it one (Mikhail, 19.09).
-    ps_check(counts, lmx_thread_child_add(parent, child, @ link_arena) = c.LMX_THREAD_OK, "link child")
+    ps_check(counts, lmx_thread_child_add(parent, child, @ parent_arena) = c.LMX_THREAD_OK, "link child")
     ps_check(counts, c.__atomic_load_n(lmx_thread_alive_cell(child), c.__ATOMIC_RELAXED) = 0U, "alive starts at 0")
     ps_check(counts, lmx_turn_end(child, lmx_clock_ticks()) = c.LMX_TURN_OK, "child turn_end writes stamp")
     mark: c.__atomic_load_n(lmx_thread_alive_cell(child), c.__ATOMIC_RELAXED)
@@ -129,8 +137,8 @@ fn: main () int
     ps_check(counts, child_m\handoff_ready = 1, "child self-closed handoff_ready")
 
     # --- 3. parent emergency: stale stamp -> parent closes (not zero-kill) ---
-    ps_check(counts, ps_make(@ silent, @ silent_m, @ silent_s, 1U) != 0, "make silent child")
-    ps_check(counts, lmx_thread_child_add(parent, silent, @ link_arena) = c.LMX_THREAD_OK, "link silent")
+    ps_check(counts, ps_make(@ silent_arena, @ silent, @ silent_m, @ silent_s, 1U) != 0, "make silent child")
+    ps_check(counts, lmx_thread_child_add(parent, silent, @ parent_arena) = c.LMX_THREAD_OK, "link silent")
     planted: lmx_clock_ticks() - 100U
     if: planted = 0U
         planted: 1U

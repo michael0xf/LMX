@@ -1,0 +1,25 @@
+# MainLetter is an ordinary declared Structure (author, Q15): its one field is
+# an Array of references to char Arrays.  `receiveMessage:` into a MainLetter own
+# field admits the argv letter at run time; the typed value then passes to a
+# MainLetter formal statically.
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+
+fn: present (MainLetter: letter) int
+return: 1
+
+MainLetter: m
+receiveMessage: m
+if: m = 0
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
+receiveMessage: raw
+if: raw != 0
+    sendMessage: exit(exit_code: 2; stdout: ""; stderr: "")
+    return
+if: present(m) != 1
+    sendMessage: exit(exit_code: 3; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

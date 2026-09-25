@@ -1,0 +1,6 @@
+# FABLE-OPUS-GATE-CLEANUP-20260926-197 (b): a send whose text field is not empty copies its bytes
+# (l2_emit_send: memcpy), so the generated program includes <string.h> -- the preamble names it only
+# where the program's own emission uses it.  The host root writes the exit letter's stderr text,
+# "hi": on stderr, so it does not run into the driver's stdout line (a text literal has no newline).
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "hi")
+return

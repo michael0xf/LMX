@@ -1,0 +1,23 @@
+﻿include: "l1src/p0.lm1.h" "<stdlib.h>"
+
+# FABLE-GROKBOT-INCLUDE-AND-SIZEOF-20260923-123 part1:
+# Unit declares its own include for c.LmP0Text; translator must not silently
+# patch p0.lm1.h from the LmP0* name prefix.
+fn: len (@: c.LmP0Text t) size_t
+return: t\length
+
+fn: p0_with_include () int
+    @: c.LmP0Text x
+    x: (cast: (@: LmP0Text) c.calloc(1U, c.sizeof(c.LmP0Text)))
+    if: x = 0
+        return: 1
+    x\length: 2U
+    if: len(x) != 2U
+        c.free(x)
+        return: 2
+    c.free(x)
+    return: 0
+end: p0_with_include
+
+sendMessage: exit(exit_code: p0_with_include(); stdout: ""; stderr: "")
+return

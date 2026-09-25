@@ -1,8 +1,10 @@
 predef: "l2src/lmx_child.h.lm1"
+# The store's bind and lookup (LMX-ETERNAL-R0-44D): a child arena inherits its source's store
+# BEFORE the copy.  Header only -- the unit's bodies are never pulled in.
 predef: "l2src/lmx_service.lm1"
-predef: "lmx_graph_copy_owned.lm1"
-predef: "lmx_arena_refs.h.lm1"
-predef: "lmx_implements.h.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_arena_refs.h.lm1"
+predef: "l2src/lmx_implements.h.lm1"
 predef: "l2src/lmx_pool.h.lm1"
 include: "<stdlib.h>"
 
@@ -18,55 +20,65 @@ include: "<stdlib.h>"
 # The gap note's item 3 is exactly this: before it, creation published immediately, and "до
 # успешной публикации turn'а родителя ребёнок недоступен" was not true of the code.
 
-fn: lmx_child_create (@: LmxArena src_arena; @: LmxArena child_arena; @: Lmx parent; size_t: slot; @: Lmx source) @: LmxMsg
+fn: lmx_child_create_profiled (@: LmxArena src_arena; @: LmxArena child_arena; @@: void result; @: Lmx source; @: Lmx retain_profile) @: LmxMsg
     @: LmxArenaBlock mark
     @: Lmx graph 0
     @: LmxMsg message
+    @: LmxThread thread
     int: status
-    if: src_arena = 0 || child_arena = 0 || parent = 0 || source = 0
+    if: src_arena = 0 || child_arena = 0 || source = 0
         return: 0
-    if: parent\data = 0 || parent\len <= 0
-        return: 0
-    if: slot >= (cast: (size_t) parent\len)
-        return: 0
+    if: result != 0
+        if: lmx_range_home(src_arena, (cast: (@: void) result)) != src_arena
+            return: 0
+        ---
     ---
     mark: lmx_arena_mark(child_arena)
+    if: retain_profile != 0
+        if: lmx_range_import_profile(child_arena, src_arena, retain_profile) != 0
+            lmx_arena_revert(child_arena, mark)
+            return: 0
+        ---
+    ---
     # The used graph, into the CHILD's arena, classified by the source's.  The copier is
     # all-or-nothing over its own mark, and its blocks are the child arena's.
-    status: lmx_graph_copy_owned(source, 0, src_arena, child_arena, @ graph)
+    status: lmx_graph_copy_profiled_owned(source, 0, src_arena, child_arena, retain_profile, @ graph)
     if: status != c.LMX_GRAPH_COPY_OK || graph = 0
         lmx_arena_revert(child_arena, mark)
         return: 0
     ---
-    # The record itself is a cell of the child's arena, registered as a Message record --
-    # a Message is found by its address, never by a tag on it.
-    message: (cast: (@: LmxMsg) lmx_arena_take(child_arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
-    if: message = 0
+    # An executable child is allocated once as a Thread whose first by-value member is its closed
+    # Message prefix. The common kind is Message; the exact type remains Thread.
+    thread: (cast: (@: LmxThread) lmx_arena_take(child_arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
+    if: thread = 0
         lmx_arena_revert(child_arena, mark)
         return: 0
     ---
-    # The five fields, and nothing else (the record is closed).  A child starts running
+    message: (cast: (@: LmxMsg) thread)
+    # The four fields, and nothing else (the record is closed).  A child starts running
     # with success cleared, and it is NOT handoff-safe yet: its arena may not be attached
     # until it has left its last turn (model 32).
     message\running: 1
     message\success: 0
     message\handoff_ready: 0
     message\graph: graph
-    # Its index at the parent: the counter starts at 1, so the child in slot 0 is index 1.
-    message\index: (cast: (unsigned) slot) + 1U
-    # NOTHING is published here, and the slot was checked above rather than written: the
-    # parent's slot receives the child at the successful END of this turn
+    # NOTHING is published here, and the optional physical result cell was checked rather than
+    # written: it receives the Message at the successful END of this turn
     # (lmx_child_publish_prepared).  Until then the child is reachable from the reservation
     # alone -- which is what "ребёнок не становится доступным до успешной публикации
     # родительского turn" means mechanically (model 26).
 return: message
 
+fn: lmx_child_create (@: LmxArena src_arena; @: LmxArena child_arena; @@: void result; @: Lmx source) @: LmxMsg
+return: lmx_child_create_profiled(src_arena, child_arena, result, source, 0)
+
 # Reserve a child in the turn that owns it: build it, then remember it in the turn's own list
 # so the boundary can publish it or drop it.  The reservation node is a mechanism record of
 # the parent's arena (under its own domain), and it carries the child's arena so that a drop
 # releases exactly what the reservation created.
-fn: lmx_child_reserve (@: LmxThread t; @: LmxArena src_arena; @: LmxArena child_arena; @: Lmx parent; size_t: slot; @: Lmx source) @: LmxMsg
+fn: lmx_child_reserve_profiled (@: LmxThread t; @: LmxArena src_arena; @: LmxArena child_arena; @@: void result; @: Lmx source; @: Lmx retain_profile) @: LmxMsg
     @: LmxReservation node
+    @: LmxReservation tail
     @: LmxMsg message
     if: t = 0 || src_arena = 0 || child_arena = 0
         return: 0
@@ -78,7 +90,7 @@ fn: lmx_child_reserve (@: LmxThread t; @: LmxArena src_arena; @: LmxArena child_
     if: t\state != c.LMX_THREAD_TURN
         return: 0
     ---
-    message: lmx_child_create(src_arena, child_arena, parent, slot, source)
+    message: lmx_child_create_profiled(src_arena, child_arena, result, source, retain_profile)
     if: message = 0
         return: 0
     ---
@@ -87,14 +99,24 @@ fn: lmx_child_reserve (@: LmxThread t; @: LmxArena src_arena; @: LmxArena child_
         lmx_arena_release(child_arena)
         return: 0
     ---
-    node\parent: parent
-    node\slot: slot
+    node\result: result
     node\message: message
     node\arena: child_arena
     node\thread: 0
-    node\next: (cast: (@: LmxReservation) t\prepared)
-    t\prepared: (cast: (@: void) node)
+    node\next: 0
+    tail: (cast: (@: LmxReservation) t\prepared)
+    if: tail = 0
+        t\prepared: (cast: (@: void) node)
+    else:
+        while: tail\next != 0
+            tail: tail\next
+        ---
+        tail\next: node
+    ---
 return: message
+
+fn: lmx_child_reserve (@: LmxThread t; @: LmxArena src_arena; @: LmxArena child_arena; @@: void result; @: Lmx source) @: LmxMsg
+return: lmx_child_reserve_profiled(t, src_arena, child_arena, result, source, 0)
 
 # The child's own L3 Thread joins the turn's reservation for it, so the publication below writes
 # the up-link.  A child whose reservation is not in THIS turn's list is refused: the list is the
@@ -103,9 +125,32 @@ fn: lmx_child_thread (@: LmxThread t; @: LmxMsg child; @: LmxThread child_thread
     @: LmxReservation node
     if: t = 0 || child = 0 || child_thread = 0
         return: c.LMX_CHILD_INVALID
+    # Address equality is necessary but cannot prove that a standalone Message has a Thread tail.
+    # Locate the private reservation first; its child arena is the only classification authority
+    # for this unpublished value. Do not dereference a Thread-only field before both range checks.
+    if: child_thread != (cast: (@: LmxThread) child)
+        return: c.LMX_CHILD_INVALID
+    ---
     node: (cast: (@: LmxReservation) t\prepared)
     while: node != 0
         if: node\message = child
+            if: node\arena = 0 || lmx_range_classify(node\arena, (cast: (@: void) child_thread)) != c.LMX_DOMAIN_KIND_MSG_RECORD || lmx_range_type_of(node\arena, (cast: (@: void) child_thread)) != c.LMX_DOMAIN_THREAD || lmx_range_stride(node\arena, (cast: (@: void) child_thread)) != c.sizeof(c.LmxThread) || lmx_range_home(node\arena, (cast: (@: void) child_thread)) != node\arena
+                return: c.LMX_CHILD_INVALID
+            ---
+            if: child_thread\slot = 0
+                return: c.LMX_CHILD_INVALID
+            ---
+            if: lmx_range_classify(node\arena, (cast: (@: void) child_thread\slot)) != c.LMX_DOMAIN_KIND_SCHEDULE || lmx_range_type_of(node\arena, (cast: (@: void) child_thread\slot)) != c.LMX_DOMAIN_SCHEDULE || lmx_range_stride(node\arena, (cast: (@: void) child_thread\slot)) != c.sizeof(c.LmxSchedule) || lmx_range_home(node\arena, (cast: (@: void) child_thread\slot)) != node\arena
+                return: c.LMX_CHILD_INVALID
+            ---
+            if: child_thread\slot\arena != node\arena
+                return: c.LMX_CHILD_INVALID
+            ---
+            if: child_thread\children = 0
+                if: lmx_thread_children_bind_graph(child_thread, child_thread\slot\arena) != c.LMX_THREAD_OK
+                    return: c.LMX_CHILD_INVALID
+                ---
+            ---
             node\thread: child_thread
             return: c.LMX_CHILD_OK
         ---
@@ -123,15 +168,14 @@ return: c.LMX_CHILD_INVALID
 # telling the caller what happened.
 
 fn: lmx_child_service (@: LmxThread t) @: LmxService
-    @: LmxServiceEntry entry
-    if: t = 0 || t\entry = 0
+    if: t = 0 || t\service = 0
         return: 0
-    entry: (cast: (@: LmxServiceEntry) t\entry)
-return: entry\service
+return: (cast: (@: LmxService) t\service)
 fn: lmx_child_publish_prepared (@: LmxThread t; @: LmxArena arena) int
     @: LmxReservation node
     @: LmxReservation next
     @: LmxService service
+    @@: void result
     int: answer
     if: t = 0
         return: c.LMX_CHILD_INVALID
@@ -140,30 +184,47 @@ fn: lmx_child_publish_prepared (@: LmxThread t; @: LmxArena arena) int
     t\prepared: 0
     while: node != 0
         next: node\next
-        if: lmx_arena_ref_store(node\parent, node\slot, (cast: (@: void) node\message)) != 0
+        # Every reserved child is born as an executable Thread.  A reservation that never joined
+        # its exact Thread is not a publishable Message category: keep the application result
+        # empty, release the private arena, and make the boundary fail visibly.
+        if: node\thread = 0
             lmx_arena_release(node\arena)
             answer: c.LMX_CHILD_INVALID
-        else:
-            # The publication IS the link, so the parent up-link is written here
-            # and nowhere else -- on the parent's lane, which is this band (spec 19.29.6: "the
-            # parent owns ... the parent link at link, unlink and supervision handoff").
-            if: node\thread != 0
-                node\thread\parent: (cast: (@: void) t)
-                # ... and the same act seen from the other side: the child joins the parent's
-                # list of LIVE DIRECT CHILDREN.  Spec 19.29.6 gives the parent "the parent link
-                # at LINK, unlink and supervision handoff", and link is here and nowhere else --
-                # until this store the child was nobody's.  Without it the kernel's own
-                # supervision never sees a child the application created: settling (19.29.8)
-                # walks this list, and so do the stop request (32) and the liveness handshake
-                # (19.29.7.1); the settling side unlinks with lmx_thread_child_remove, so the
-                # two halves must name the same list.  (Found by the end-to-end run of
-                # 20260919: every test had wired this by hand, so no kernel path did it.)
-                lmx_thread_child_add(t, node\thread, arena)
-                # The parent registers the child in the service the parent itself was registered
-                # in; registration writes the child's own entry (physical-address key).
+        ---
+        # The publication IS the link, so the parent up-link is written here
+        # and nowhere else -- on the parent's lane, which is this band (spec 19.29.6: "the
+        # parent owns ... the parent link at link, unlink and supervision handoff").
+        if: node\thread != 0
+            # Remember the exact application-graph cell by physical address.  Success may
+            # clear this cell after the Thread leaves the sole children Array; failure keeps
+            # the value as its retained result.  No child index is reconstructed later.
+            node\thread\result: node\result
+            # ... and the same act seen from the other side: the child joins the parent's
+            # list of LIVE DIRECT CHILDREN.  Spec 19.29.6 gives the parent "the parent link
+            # at LINK, unlink and supervision handoff", and link is here and nowhere else --
+            # until this store the child was nobody's.  Without it the kernel's own
+            # supervision never sees a child the application created: settling (19.29.8)
+            # walks this list, and so do the stop request (32) and the liveness handshake
+            # (19.29.7.1); the settling side unlinks with lmx_thread_child_remove, so the
+            # two halves must name the same list.  (Found by the end-to-end run of
+            # 20260919: every test had wired this by hand, so no kernel path did it.)
+            if: lmx_thread_child_add(t, node\thread, arena) != c.LMX_THREAD_OK
+                lmx_arena_release(node\arena)
+                answer: c.LMX_CHILD_INVALID
+            else:
+                # The parent registers the child in the service the parent itself was
+                # registered in; registration writes the child's own entry.
                 service: lmx_child_service(t)
                 if: service != 0 && lmx_service_register(service, (cast: (@: LmxThread) node\thread), node\arena) != c.LMX_SERVICE_OK
+                    lmx_thread_child_remove(t, node\thread)
+                    lmx_arena_release(node\arena)
                     answer: c.LMX_CHILD_INVALID
+                else:
+                    # Publication happens only after both canonical membership acts succeeded.
+                    if: node\result != 0
+                        result: node\result
+                        \result: (cast: (@: void) node\message)
+                    ---
                 ---
             ---
         ---
@@ -172,8 +233,8 @@ fn: lmx_child_publish_prepared (@: LmxThread t; @: LmxArena arena) int
 return: answer
 
 # Drop what this turn reserved: nothing was published, so each reserved child's arena is
-# released -- the child's identity, its graph and its record go together, and no slot needs
-# clearing because no slot was ever written.  This is NOT a rollback of the turn's graph
+# released -- the child's identity, its graph and its record go together, and no result cell needs
+# clearing because no result cell was written. This is NOT a rollback of the turn's graph
 # writes; only the reservations are undone (spec 19.29.4.1).
 fn: lmx_child_drop_prepared (@: LmxThread t) int
     @: LmxReservation node
@@ -190,7 +251,7 @@ fn: lmx_child_drop_prepared (@: LmxThread t) int
 return: c.LMX_CHILD_OK
 
 # Handing a finished child over (model 19.29.7): the child's arena attaches to the
-# parent's, so from here on ONE index answers for both and nothing was copied -- the
+# parent's, so from here on one address-range table answers for both and nothing was copied -- the
 # child's cells keep every address they had, which is the whole point of attaching rather
 # than transferring a copy.
 #

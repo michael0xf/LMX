@@ -1,0 +1,13 @@
+# Rebinding a MainLetter own field from the untyped letter is admitted at run
+# time and binds like receiveMessage: a path through the field right after it --
+# before any checkpoint -- reads the letter, not the empty MainLetter the
+# declaration constructed.
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+
+MainLetter: m
+receiveMessage: raw
+m: raw
+sendMessage: exit(exit_code: length(m\mainArgs); stdout: ""; stderr: "")
+return

@@ -1,0 +1,68 @@
+# L1-слой libc: обычные L1-функции, которые зовут libc БЕЗ ресивера c.
+#
+# Распоряжение Михаила (2026-09-18): «ресивер C: не используем — он остаётся в языке
+# как возможность, рабочих употреблений не заводим. Нужен printf и прочая libc —
+# берём из L1-слоя (обычные L1-функции, вызов без ресивера); вариативные
+# (fprintf/sprintf) покрываются L1-обёртками — varargs в языке нет».
+#
+# Как это работает: файл объявляет функции БЕЗ тела — такие объявления
+# отображаются на одноимённые функции C, которые даёт сама libc, и вызываются из
+# L1 как обычные акты. Функции С телом (ниже l1_stdout/l1_stderr) транслируются в
+# C-функции и тоже зовутся без ресивера.
+#
+# ЧЕГО ЗДЕСЬ ПОКА НЕТ (считать долгом, а не сделанным):
+#   * вариативные printf / fprintf / sprintf — нужны обёртки под каждую форму
+#     вызова (varargs в языке нет). Замер употреблений c.* по дереву на 18.09:
+#     c.fprintf 515, c.printf 382, c.fputs 240, c.free 212, c.fclose 205,
+#     c.memset 151, c.memcmp 84, c.stderr 65, c.memcpy 61, c.calloc 61,
+#     c.sprintf 51, c.strlen 35, c.INT_MAX 35;
+#   * INT_MAX — это макрос C, а не функция; как отдавать его из L1-слоя, решается
+#     отдельно (подставлять число — это заявление о переносимости, которого я не
+#     делаю молча).
+
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# --- память -------------------------------------------------------------------
+fn: malloc (size_t: bytes) @: void
+fn: calloc (size_t: count; size_t: size) @: void
+fn: realloc (@: void block; size_t: bytes) @: void
+fn: free (@: void block) void
+
+# --- байты и строки (сравнение/копирование уже были ниже) ----------------------
+fn: memset (@: void target; int: value; size_t: length) @: void
+fn: memmove (@: void target; const: @(void source); size_t: length) @: void
+fn: memcmp (const: @(void left); const: @(void right); size_t: length) int
+
+# --- вывод --------------------------------------------------------------------
+fn: fputs (const: @(char text); @: FILE stream) int
+fn: puts (const: @(char text)) int
+fn: putchar (int: value) int
+
+# --- отказ --------------------------------------------------------------------
+fn: abort () void
+fn: exit (int: status) void
+
+# --- потоки: без ресивера c. --------------------------------------------------
+# ОБЪЯВЛЕНИЯ, без тел — и это не мелочь. `predef:` тянет тела в каждый модуль,
+# который подключает файл, поэтому функция С ТЕЛОМ здесь давала бы по определению
+# на каждый модуль и «multiple definition» на линковке (поймано гейтом 18.09:
+# lmx_dec.o и lmx_dec_selftest.o). Тела живут ровно в одном компилируемом юните —
+# l2src\l2_libc.lm1; здесь только прототипы.
+fn: l1_stdout () @: FILE
+fn: l1_stderr () @: FILE
+
+# --- уже было (парсер и транслятор на них стоят) -------------------------------
+fn: getenv (const: @(char name)) @: char
+fn: strlen (const: @(char text)) size_t
+fn: strchr (const: @(char text); int: value) @: char
+fn: memcpy (@: void target; const: @(void source); size_t: length) @: void
+fn: strcpy (@: char target; const: @(char source)) @: char
+fn: strcat (@: char target; const: @(char source)) @: char
+fn: system (const: @(char command)) int
+fn: remove (const: @(char path)) int
+fn: fopen (const: @(char path); const: @(char mode)) @: FILE
+fn: fclose (@: FILE file) int
+fn: fread (@: void buffer; size_t: item_size; size_t: item_count; @: FILE file) size_t
+fn: fwrite (const: @(void buffer); size_t: item_size; size_t: item_count; @: FILE file) size_t
+fn: ferror (@: FILE file) int
+fn: strcmp (const: @(char left); const: @(char right)) int

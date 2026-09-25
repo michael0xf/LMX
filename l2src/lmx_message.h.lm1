@@ -1,16 +1,16 @@
 predef: "l2src/lmx.h.lm1"
 include: "<stdint.h>"
 
-# lmx_message.h.lm1 - the Message record: the kernel's own five fields, and nothing
+# lmx_message.h.lm1 - the Message record: the kernel's own four fields, and nothing
 # else.  Written in L1, like the arena's headers; the generated C is
 # lmx_message.lm1.h.
 #
 # THIS RECORD IS CLOSED.  NOTHING IS ADDED TO IT.  Not a queue link, not a
 # deadline, not a mailbox, not a parent or child link, not a scheduler slot, not a
 # flag of convenience.  Every one of those has an owner of its own now: the mail is
-# lmx_post, the scheduler's record is lmx_schedule, the queue is lmx_manager's, the
-# executable object is lmx_thread, the arena is lmx_arena_*, the family chain is
-# the parent's supervision data in the graph.  A new field here is a DEFECT, not a
+# lmx_post, one Thread's timing state is lmx_schedule, the executable object is
+# lmx_thread, the arena is lmx_arena_*, and direct-child membership is the sole
+# dynamic Array<@LmxThread> in the parent's graph.  A new field here is a DEFECT, not a
 # convenience -- this is exactly how the record reached 61 fields once, and every
 # one of them had a good reason at the time.
 #
@@ -22,10 +22,9 @@ include: "<stdint.h>"
 # cells), 31 (running, success and stop), 32 (closing the family).
 #
 # This replaces the 61-field record the previous implementation carried.  The
-# kernel's own fields are these five -- "the kernel record is running, success,
-# handoff_safe, root, index" (Mikhail, 2026-09-16) -- spelled with the C names this
-# build uses for the last two: `graph` is the C projection of the language root,
-# `handoff_ready` is the mark of handoff_safe.  Field order is as Mikhail wrote it.
+# The record contains only execution permission, outcome, handoff boundary and its graph.
+# Parent/child membership and routing are physical Thread references in the parent's graph Array;
+# a numeric Message index would duplicate and contradict that model.
 #
 # Everything that used to sit beside them belongs elsewhere:
 #   - the arena: its block list is lmx_arena_blocks and its typed arrays are the
@@ -38,7 +37,7 @@ include: "<stdint.h>"
 #   - the family chain (parent, first and last child, siblings) is the parent's
 #     supervision data in the language graph;
 #   - the executor's bind record is the executor's.
-# A field that is not one of the five must have an LMX owner in the graph, or go.
+# A field that is not one of the four must have an LMX owner in the graph, or go.
 
 # The control flags' type is the one the specification names for them,
 # uint_fast8_t.  On this target that is one byte, which is why the record is 24
@@ -52,9 +51,12 @@ struct: LmxMsg
     # designated cross-lane writer: the parent stopping a child, or the lane that
     # takes the turn.
     LmxFlag: running
-    # Set only by the actual completion of the whole assigned work.  A heartbeat,
-    # an empty inbox, the absence of a physical thread or the end of a single turn
-    # must not set it (model 31).
+    # Set by the user's code: `success = 1` is a sufficient condition for stopping the
+    # Thread at its end turn.  The system never resets it to 0, not even when a body
+    # fails.  The system sets it to 1 in one place only: for a plain letter, at the
+    # receiver owner's take after the attach (lmx_post_take_inbox).  A heartbeat, an
+    # empty inbox, the absence of a physical thread or the end of a single turn does not
+    # set it (model 31).  A new record starts at 0 (its constructor's initial state).
     LmxFlag: success
     # The handoff-safe mark: this Message's storage may be transferred without a
     # copy.  Read together with the absence of native users (model 32).
@@ -72,8 +74,4 @@ struct: LmxMsg
     LmxFlag: handoff_ready
     # The Message's own graph root: the C projection of the language root.
     @: Lmx graph
-    # This Message's index at its parent -- the whole of what the hierarchical
-    # address adds at this level; the full address is composed by walking the
-    # parent links, so no array is stored.  The root's index is 1.
-    unsigned: index
 end: LmxMsg

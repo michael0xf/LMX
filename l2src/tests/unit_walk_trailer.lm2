@@ -1,0 +1,43 @@
+# -193 T4a: a walked method's return trailer (WalkMethods) is one more step at the end of its
+# frames: `return: V` a value, [ret, V] -- a method's name there a call --, a sub's bare `return`
+# the RET record.  A walked method reads and writes a unit field through the unit (its holder
+# named), and its own field through its data (holder 0).
+int: y 0
+
+sub: s ()
+    y: y + 3
+return
+
+fn: one () int
+    return: 1
+end: one
+
+fn: inc (int: x) int
+return: x + 1
+
+fn: w () int
+return: one
+
+fn: acc (int: by) int
+    int: mine
+    mine: y + by
+    y: mine
+    return: mine
+end: acc
+
+int: r
+s()
+s()
+if: y != 6
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+r: inc(4) + w()
+if: r != 6
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+r: acc(10)
+if: r != 16 || y != 16
+    sendMessage: exit(exit_code: 83; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

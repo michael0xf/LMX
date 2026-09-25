@@ -63,7 +63,7 @@ fn: main () int
     # the index and one descriptor, so the arena's entries outnumber its arrays here.
     # A take that made a new array instead of growing this one would leave the two
     # counts equal -- that is the reading this check refuses.
-    if: arena_at\count != 2U || arena_at\count <= size_arrays_of(@ arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_SIZE_T)
+    if: lmx_arena_index_len(arena_at) != 2U || lmx_arena_index_len(arena_at) <= size_arrays_of(@ arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_SIZE_T)
         fputs("lmx: the arena's entries do not outnumber its arrays\n", l1_stdout())
         failures: failures + 1
     if: lmx_range_type_of(@ arena, a) != c.LMX_TYPE_SIZE_T

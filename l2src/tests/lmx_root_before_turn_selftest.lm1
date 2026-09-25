@@ -1,0 +1,312 @@
+predef: "l2src/lmx_root.lm1"
+predef: "l2src/lmx_settle.lm1"
+predef: "l2src/lmx_service.lm1"
+predef: "l2src/lmx_turn.lm1"
+predef: "l2src/lmx_child.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_manager.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_gc.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_list_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_call.lm1"
+predef: "l2src/lmx_clock.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>" "<direct.h>"
+
+# -182 / FABLE-GROKBOT-LAUNCH-TAP-20260925-182: before_turn host seam.
+# Tap posts a second letter to R0 after mail exists; R0 takes mainArgs then that letter and
+# replies to the letter's sender. Mutants: tap before mailbox; skip when 0; reply to parent.
+# R0 body is native (host_selftest shape): take×2 + lmx_service_post. No walk send PRIM yet;
+# one manager tick must finish the body (inbox already has both letters when the turn starts).
+
+@: LmxArena bt_peer_arena 0
+@: LmxArena bt_letter_arena 0
+@: LmxArena bt_reply_arena 0
+@: LmxMsg bt_peer 0
+@: LmxPost bt_peer_mail 0
+int: bt_posted 0
+int: bt_took_main 0
+int: bt_took_peer 0
+int: bt_replied 0
+int: bt_fail_step 0
+
+sub: bt_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: bt_check
+
+# before_turn: register standalone Message, post R0 a letter (sender=peer; payload {x:5}).
+fn: bt_before_turn (@: LmxRoot root; @: LmxMsg r0) int
+    @: LmxMsg letter 0
+    @: Lmx letter_graph 0
+    @: Lmx payload 0
+    @: void xcell 0
+    @: LmxSchedule peer_slot 0
+    @: LmxThread peer_thread 0
+    @: Lmx graph 0
+    int: st
+    bt_fail_step: 0
+    if: root = 0 || r0 = 0
+        bt_fail_step: 1
+        return: 1
+    ---
+    if: bt_peer_arena = 0 || bt_letter_arena = 0
+        bt_fail_step: 2
+        return: 1
+    ---
+    memset((cast: (@: void) bt_peer_arena), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) bt_letter_arena), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(bt_peer_arena) != 0 || lmx_arena_open(bt_letter_arena) != 0
+        bt_fail_step: 3
+        return: 1
+    ---
+    bt_peer: (cast: (@: LmxMsg) lmx_arena_take(bt_peer_arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
+    bt_peer_mail: (cast: (@: LmxPost) lmx_arena_take(bt_peer_arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    peer_slot: (cast: (@: LmxSchedule) lmx_arena_take(bt_peer_arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    peer_thread: (cast: (@: LmxThread) bt_peer)
+    if: bt_peer = 0 || bt_peer_mail = 0 || peer_slot = 0
+        bt_fail_step: 4
+        return: 1
+    ---
+    graph: lmx_node_new_owned(bt_peer_arena)
+    if: graph = 0 || lmx_arena_refs_open_owned(bt_peer_arena, graph, 2U) != 0
+        bt_fail_step: 5
+        return: 1
+    ---
+    if: lmx_post_init(bt_peer_arena, bt_peer_mail) != c.LMX_POST_OK
+        bt_fail_step: 6
+        return: 1
+    ---
+    if: lmx_schedule_init(peer_slot, bt_peer_arena, (cast: (@: void) peer_thread), 120000U) != c.LMX_SCHEDULE_OK
+        bt_fail_step: 7
+        return: 1
+    ---
+    if: lmx_thread_init(bt_peer_arena, peer_thread, graph, bt_peer_mail, peer_slot) != c.LMX_THREAD_OK
+        bt_fail_step: 8
+        return: 1
+    ---
+    st: lmx_service_register(lmx_root_service(root), peer_thread, bt_peer_arena)
+    if: st != c.LMX_SERVICE_OK
+        bt_fail_step: 10 + st
+        return: 1
+    ---
+    letter: (cast: (@: LmxMsg) lmx_arena_take(bt_letter_arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    letter_graph: lmx_node_new_owned(bt_letter_arena)
+    payload: lmx_node_new_owned(bt_letter_arena)
+    xcell: lmx_int_new_owned(bt_letter_arena)
+    if: letter = 0 || letter_graph = 0 || payload = 0 || xcell = 0
+        bt_fail_step: 20
+        return: 1
+    ---
+    if: lmx_arena_refs_open_owned(bt_letter_arena, letter_graph, 2U) != 0 || lmx_arena_refs_open_owned(bt_letter_arena, payload, 1U) != 0
+        bt_fail_step: 21
+        return: 1
+    ---
+    if: lmx_int_store_known(xcell, 5) != 0 || lmx_arena_ref_store(payload, 0U, xcell) != 0
+        bt_fail_step: 22
+        return: 1
+    ---
+    if: lmx_arena_ref_store(letter_graph, 0U, (cast: (@: void) bt_peer)) != 0 || lmx_arena_ref_store(letter_graph, 1U, (cast: (@: void) payload)) != 0
+        bt_fail_step: 23
+        return: 1
+    ---
+    letter\running: 1
+    letter\success: 0
+    letter\handoff_ready: 0
+    letter\graph: letter_graph
+    # Post to R0 Thread address (same as launch's mainArgs post).
+    st: lmx_service_post(lmx_root_service(root), (cast: (@: void) r0), letter, bt_letter_arena)
+    if: st != c.LMX_SERVICE_OK
+        bt_fail_step: 30 + st
+        return: 1
+    ---
+    bt_posted: 1
+    bt_fail_step: 0
+return: 0
+
+# R0: take mainArgs, take peer letter, reply {y:6} to that letter's sender.
+fn: bt_r0_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    @: LmxThread t
+    @: LmxMsg message
+    @: LmxMsg letter
+    @: LmxMsg letter2
+    @: void sender 0
+    @: Lmx reply_graph 0
+    @: Lmx reply_payload 0
+    @: LmxMsg reply 0
+    @: void ycell 0
+    @: LmxArena ra 0
+    int: st
+    t: lmx_thread_current()
+    message: lmx_thread_message(t)
+    if: t = 0 || message = 0
+        return: 0
+    ---
+    letter: (cast: (@: LmxMsg) lmx_thread_mail_take(t, c.LMX_POST_INBOX))
+    if: letter != 0
+        bt_took_main: 1
+    ---
+    letter2: (cast: (@: LmxMsg) lmx_thread_mail_take(t, c.LMX_POST_INBOX))
+    if: letter2 = 0 || letter2\graph = 0
+        message\success: 1
+        return: 0
+    ---
+    bt_took_peer: 1
+    sender: lmx_arena_ref_value(letter2\graph, 0U)
+    if: bt_reply_arena = 0
+        return: 0
+    ---
+    memset((cast: (@: void) bt_reply_arena), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(bt_reply_arena) != 0
+        return: 0
+    ---
+    ra: bt_reply_arena
+    reply: (cast: (@: LmxMsg) lmx_arena_take(ra, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    reply_graph: lmx_node_new_owned(ra)
+    reply_payload: lmx_node_new_owned(ra)
+    ycell: lmx_int_new_owned(ra)
+    if: reply = 0 || reply_graph = 0 || reply_payload = 0 || ycell = 0
+        return: 0
+    ---
+    if: lmx_arena_refs_open_owned(ra, reply_graph, 2U) != 0 || lmx_arena_refs_open_owned(ra, reply_payload, 1U) != 0
+        return: 0
+    ---
+    if: lmx_int_store_known(ycell, 6) != 0 || lmx_arena_ref_store(reply_payload, 0U, ycell) != 0
+        return: 0
+    ---
+    if: lmx_arena_ref_store(reply_graph, 0U, (cast: (@: void) message)) != 0 || lmx_arena_ref_store(reply_graph, 1U, (cast: (@: void) reply_payload)) != 0
+        return: 0
+    ---
+    reply\running: 1
+    reply\success: 0
+    reply\handoff_ready: 0
+    reply\graph: reply_graph
+    st: lmx_service_post(lmx_child_service(t), sender, reply, ra)
+    if: st = c.LMX_SERVICE_OK
+        bt_replied: 1
+        # Peer was only a delivery target for this tap; drop it before host close.
+        if: bt_peer != 0
+            lmx_service_unregister(lmx_child_service(t), (cast: (@: LmxThread) bt_peer))
+        ---
+    ---
+    message\success: 1
+return: 0
+
+# k.4: 2 fields, not 3 -- no reserved descriptor slot (native is a sibling Lmx member);
+# children/settings shift from 1/2 down to 0/1.
+fn: bt_program (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int
+    @: LmxArrayDesc children
+    if: arena = 0 || graph = 0 || graph\len < 2
+        return: 1
+    ---
+    children: lmx_list_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, arena)
+    if: children = 0
+        return: 1
+    ---
+    graph\native: (cast: (LmxEntry) bt_r0_body)
+    if: lmx_arena_ref_store(graph, 0U, (cast: (@: void) children)) != 0
+        return: 1
+    ---
+    if: lmx_arena_ref_store(graph, 1U, (cast: (@: void) settings)) != 0
+        return: 1
+return: 0
+
+fn: main () int
+    LmxRoot: root
+    LmxArena: peer_arena
+    LmxArena: letter_arena
+    LmxArena: reply_arena
+    @@: char argv (cast: (@@: char) calloc(2U, c.sizeof(@: char)))
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    @: void out 0
+    @: void err 0
+    @: LmxMsg got 0
+    @: Lmx payload 0
+    @: void ycell 0
+    size_t: peer_inbox 0U
+    int: code
+    int: failures 0
+    if: argv = 0 || counts = 0
+        return: 2
+    ---
+    argv[0]: (cast: (@: char) "bt")
+    argv[1]: 0
+    memset((cast: (@: void) (@ peer_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ letter_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ reply_arena)), 0, c.sizeof(c.LmxArena))
+    bt_peer_arena: @ peer_arena
+    bt_letter_arena: @ letter_arena
+    bt_reply_arena: @ reply_arena
+    bt_peer: 0
+    bt_peer_mail: 0
+    bt_posted: 0
+    bt_took_main: 0
+    bt_took_peer: 0
+    bt_replied: 0
+    # FABLE-187: streams under build/ (not cwd/tree root).
+    c._mkdir("build")
+    out: (cast: (@: void) c.fopen("build/lmx_root_before_turn_selftest.out", "w+b"))
+    err: (cast: (@: void) c.fopen("build/lmx_root_before_turn_selftest.err", "w+b"))
+    if: out = 0 || err = 0
+        return: 2
+    ---
+    code: lmx_root_launch_tapped(@ root, 1, argv, bt_program, 2U, 0, 120000U, bt_before_turn, out, err)
+    c.fflush(err)
+    c.rewind(err)
+    c.array: [4096]: char err_buf
+    err_buf[0]: 0
+    c.fread((cast: (@: void) err_buf), 1U, 4095U, err)
+    c.printf("launch_err=<%s>\n", err_buf)
+    c.fclose(out)
+    c.fclose(err)
+    bt_check(counts, bt_posted = 1, "before_turn posted peer letter")
+    bt_check(counts, code = 0, "launch exit 0 (R0 success)")
+    c.printf("bt_fail_step=%d code=%d replied=%d peer_inbox_probe\n", bt_fail_step, code, bt_replied)
+    bt_check(counts, bt_took_main = 1, "R0 took mainArgs")
+    bt_check(counts, bt_took_peer = 1, "R0 took peer letter (one tick enough)")
+    bt_check(counts, bt_replied = 1, "R0 posted reply to sender")
+    bt_check(counts, bt_peer != 0 && bt_peer_mail != 0, "peer Message still live")
+    if: bt_peer_mail != 0
+        peer_inbox: lmx_post_count(bt_peer_mail, c.LMX_POST_INBOX)
+    ---
+    bt_check(counts, peer_inbox = 1U, "peer inbox has exactly one letter")
+    if: peer_inbox = 1U
+        got: (cast: (@: LmxMsg) lmx_thread_mail_take((cast: (@: LmxThread) bt_peer), c.LMX_POST_INBOX))
+        bt_check(counts, got != 0 && got\graph != 0, "took reply letter")
+        if: got != 0 && got\graph != 0
+            payload: (cast: (@: Lmx) lmx_arena_ref_value(got\graph, 1U))
+            if: payload != 0
+                ycell: lmx_arena_ref_value(payload, 0U)
+            ---
+            bt_check(counts, ycell != 0 && lmx_int_value_known(ycell) = 6, "reply payload y=6")
+        ---
+    ---
+    # Host inbox should not have absorbed the reply (addressed to peer, not parent).
+    # After launch the host is closed; pin via reply success flags above.
+
+
+    c.printf("lmx_root_before_turn_selftest checks=%d failures=%d code=%d\n", counts[0], counts[1], code)
+    free((cast: (@: void) argv))
+    failures: counts[1]
+    free(counts)
+    lmx_arena_release(@ peer_arena)
+    lmx_arena_release(@ letter_arena)
+    lmx_arena_release(@ reply_arena)
+    if: failures != 0
+        return: 1
+return: 0

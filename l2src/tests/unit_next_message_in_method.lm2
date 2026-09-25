@@ -1,0 +1,17 @@
+# The receiver is general, not entry-only: a method called during R0's turn
+# takes the letter of the current Thread, and the entry then finds none.
+fn: take () int
+    receiveMessage: letter
+    if: letter = 0
+        return: 1
+return: 0
+
+if: take() != 0
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
+receiveMessage: after
+if: after != 0
+    sendMessage: exit(exit_code: 2; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

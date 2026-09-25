@@ -1,0 +1,13 @@
+# receiveMessage: m (author, Q10) -- the next admitted letter of the current
+# Thread, 0 when its inbox is empty. C main posts exactly one letter to R0
+# (the argv letter), so the first take yields it and the second yields 0.
+receiveMessage: m
+if: m = 0
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
+receiveMessage: m
+if: m != 0
+    sendMessage: exit(exit_code: 2; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

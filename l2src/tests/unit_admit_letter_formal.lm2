@@ -1,0 +1,24 @@
+# An untyped graph -- the letter as receiveMessage gives it -- passed to a
+# MainLetter formal, and then rebound to a MainLetter own field: both are
+# admitted at run time by the same walk.
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+
+fn: present (MainLetter: letter) int
+return: 1
+
+receiveMessage: raw
+if: raw = 0
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
+if: present(raw) != 1
+    sendMessage: exit(exit_code: 2; stdout: ""; stderr: "")
+    return
+MainLetter: m
+m: raw
+if: m = 0
+    sendMessage: exit(exit_code: 3; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

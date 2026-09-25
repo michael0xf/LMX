@@ -1,0 +1,99 @@
+predef: "l2src/lmx.h.lm1"
+predef: "l2src/lmx_post.h.lm1"
+predef: "l2src/lmx_service.h.lm1"
+predef: "l2src/lmx_graph_copy_owned.h.lm1"
+include: "<stdio.h>"
+
+# FABLE-134 layout gate (compositional REVIEW).
+# Every DynamicArray is { <T>Array array; size_t capacity } with offsetof(array)==0
+# and sizeof(array) equal to the standalone fixed descriptor.
+
+fn: fail (@: int failures; @: char msg) void
+    \failures: \failures + 1
+    c.printf("FAIL %s\n", msg)
+return
+
+fn: main () int
+    int: failures 0
+    LmxArrayDynamicArray: a
+    LmxCharDynamicArray: b
+    LmxRangeDynamicArray: r
+    LmxServiceEntryDynamicArray: s
+    LmxPostInboxSlotDynamicArray: i
+    LmxChunk: ch
+    @: LmxArrayDynamicArray pa
+    @: LmxCharDynamicArray pb
+    @: LmxRangeDynamicArray pr
+    @: LmxServiceEntryDynamicArray ps
+    @: LmxPostInboxSlotDynamicArray pi
+    @: LmxChunk pch
+    @: LmxArrayDesc a_base
+    @: LmxCharArray b_base
+    @: LmxRangeArray r_base
+    @: LmxServiceEntryArray s_base
+    @: LmxPostInboxSlotArray i_base
+    @: LmxCharDynamicArray ch_cells
+    pa: @ a
+    pb: @ b
+    pr: @ r
+    ps: @ s
+    pi: @ i
+    pch: @ ch
+    a_base: (cast: (@: LmxArrayDesc) pa)
+    b_base: (cast: (@: LmxCharArray) pb)
+    r_base: (cast: (@: LmxRangeArray) pr)
+    s_base: (cast: (@: LmxServiceEntryArray) ps)
+    i_base: (cast: (@: LmxPostInboxSlotArray) pi)
+    ch_cells: (cast: (@: LmxCharDynamicArray) pch)
+    if: (cast: (size_t) a_base) != (cast: (size_t) pa)
+        fail(@ failures, "LmxArrayDynamicArray offsetof(array)")
+    ---
+    if: (cast: (size_t) b_base) != (cast: (size_t) pb)
+        fail(@ failures, "LmxCharDynamicArray offsetof(array)")
+    ---
+    if: (cast: (size_t) r_base) != (cast: (size_t) pr)
+        fail(@ failures, "LmxRangeDynamicArray offsetof(array)")
+    ---
+    if: (cast: (size_t) s_base) != (cast: (size_t) ps)
+        fail(@ failures, "LmxServiceEntryDynamicArray offsetof(array)")
+    ---
+    if: (cast: (size_t) i_base) != (cast: (size_t) pi)
+        fail(@ failures, "LmxPostInboxSlotDynamicArray offsetof(array)")
+    ---
+    if: c.sizeof(c.LmxArrayDesc) != c.sizeof(c.size_t) + c.sizeof(@: void)
+        fail(@ failures, "LmxArrayDesc has no capacity (base is len+data only)")
+    ---
+    if: c.sizeof(c.LmxCharArray) != c.sizeof(c.size_t) + c.sizeof(@: char)
+        fail(@ failures, "LmxCharArray sizeof")
+    ---
+    if: c.sizeof(c.LmxRangeArray) != c.sizeof(c.size_t) + c.sizeof(@: void)
+        fail(@ failures, "LmxRangeArray sizeof")
+    ---
+    if: c.sizeof(c.LmxServiceEntryArray) != c.sizeof(c.size_t) + c.sizeof(@: void)
+        fail(@ failures, "LmxServiceEntryArray sizeof")
+    ---
+    if: c.sizeof(c.LmxPostInboxSlotArray) != c.sizeof(c.size_t) + c.sizeof(@: void)
+        fail(@ failures, "LmxPostInboxSlotArray sizeof")
+    ---
+    if: c.sizeof(c.LmxArrayDynamicArray) != c.sizeof(c.LmxArrayDesc) + c.sizeof(c.size_t)
+        fail(@ failures, "LmxArrayDynamicArray sizeof")
+    ---
+    if: c.sizeof(c.LmxCharDynamicArray) != c.sizeof(c.LmxCharArray) + c.sizeof(c.size_t)
+        fail(@ failures, "LmxCharDynamicArray sizeof")
+    ---
+    if: c.sizeof(c.LmxRangeDynamicArray) != c.sizeof(c.LmxRangeArray) + c.sizeof(c.size_t)
+        fail(@ failures, "LmxRangeDynamicArray sizeof")
+    ---
+    if: c.sizeof(c.LmxServiceEntryDynamicArray) != c.sizeof(c.LmxServiceEntryArray) + c.sizeof(c.size_t)
+        fail(@ failures, "LmxServiceEntryDynamicArray sizeof")
+    ---
+    if: c.sizeof(c.LmxPostInboxSlotDynamicArray) != c.sizeof(c.LmxPostInboxSlotArray) + c.sizeof(c.size_t)
+        fail(@ failures, "LmxPostInboxSlotDynamicArray sizeof")
+    ---
+    if: (cast: (size_t) ch_cells) != (cast: (size_t) pch)
+        fail(@ failures, "LmxChunk cells at offset 0")
+    ---
+    c.printf("dynarray layout failures=%d\n", failures)
+    if: failures != 0
+        return: 1
+return: 0

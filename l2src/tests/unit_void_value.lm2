@@ -1,9 +1,24 @@
-sub: d (@: LmP0Text t)
+# FABLE-SONNET-NAME-SPECIALS-20260924-155: lm_own_delete used to resolve
+# through l2_is_known's hard-coded adapter list; this predef is the
+# general mechanism's own declaration for it (a prototype-only header,
+# matching every other predef target in this corpus -- l2_predef_file_has_
+# function only recognizes names inside a prototype: block or a chained
+# predef:, never a plain top-level fn:/sub: body like l1src/own.lm1 itself).
+# FABLE-SONNET-PREDEF-RESULT-TYPE-20260924-160 commit 3 (D-34): bare
+# LmP0Text respelled c.LmP0Text, per the a2cf69e migration every other
+# fixture in the corpus already uses -- measured stale (this file
+# predates it): "unknown type", atom=LmP0Text.
+# FABLE-SONNET-DIAG-AND-INDEX-20260924-163 commit 1 (D-40): `return: d(0)`
+# (d a sub:, no result) used to refuse "incompatible entry signature",
+# not the "a callable without a result has no value" message the bare-
+# atom form of this same rule gives elsewhere (unit_return_sub_refused.lm2,
+# unit_value_call_sub_refused.lm2) -- fixed, this fixture is the gated
+# witness (registered in l2_harness.ps1) for the call-shaped case.
+predef: "l1src/own.h.lm1"
+sub: d (@: c.LmP0Text t)
     lm_own_delete(t, 0)
 end: d
 fn: m (int: z) int
     return: d(0)
 end: m
-fn: main () int
-    return: 0
-end: main
+return: 0

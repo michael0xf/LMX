@@ -1,0 +1,24 @@
+Counts:
+    size_t: s 3U
+    size_t: t 4U
+end: Counts
+
+# D-61 (FABLE-OPUS-MERGE-PARTS-20260926-193): -183's probe.  A bound merge result's path as an
+# operand of an expression -- a condition, arithmetic, a loop condition -- is resolved like any
+# other typed root (l2_field_path_check).  Declared with the colon form, c is a merge result too.
+# It used to be «unresolved name».  Success is 7 (= s + t).
+fn: t () int
+    size_t: k 0U
+    size_t: n 0U
+    c: merge: Counts
+    if: c\s = 3U
+        k: c\s + c\t
+    while: n < c\t
+        n: n + 1U
+    if: n != 4U
+        return: 81
+    return: (cast: (int) k)
+end: t
+
+sendMessage: exit(exit_code: t(); stdout: ""; stderr: "")
+return

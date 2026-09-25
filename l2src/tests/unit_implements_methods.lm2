@@ -1,0 +1,89 @@
+# Adapted from lingvamyxa_prev/tests/trans_implements_methods.lm2.
+# Named Structures are the current descriptor representation; fields need a
+# literal. Compile-time implements(A, B, C) is first-level field names, empty
+# consumer overlap true (ThinConsumer).
+
+User:
+    size_t: equals 0U
+    size_t: extra 0U
+end: User
+
+Plain:
+    size_t: toString 0U
+end: Plain
+
+Equatable:
+    size_t: equals 0U
+end: Equatable
+
+Serializable:
+    size_t: serialize 0U
+end: Serializable
+
+MultiCandidate:
+    size_t: first 0U
+    size_t: second 0U
+    size_t: extra 0U
+end: MultiCandidate
+
+CompleteRequirement:
+    size_t: first 0U
+    size_t: second 0U
+end: CompleteRequirement
+
+IncompleteRequirement:
+    size_t: first 0U
+    size_t: missing 0U
+end: IncompleteRequirement
+
+QuotedCandidate:
+    size_t: quotedField 0U
+end: QuotedCandidate
+
+QuotedRequirement:
+    size_t: quotedField 0U
+end: QuotedRequirement
+
+SelfDescribing:
+    size_t: inspect 0U
+end: SelfDescribing
+
+ThinConsumer:
+    size_t: extra 0U
+end: ThinConsumer
+
+fn: m () int
+    size_t: q
+    q: 1U
+    return: 0
+end: m
+
+if: implements(User, Equatable, Equatable) != 1
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
+if: implements(Plain, Equatable, Equatable) != 0
+    sendMessage: exit(exit_code: 2; stdout: ""; stderr: "")
+    return
+if: implements(User, Serializable, Serializable) != 0
+    sendMessage: exit(exit_code: 3; stdout: ""; stderr: "")
+    return
+if: implements(MultiCandidate, CompleteRequirement, CompleteRequirement) != 1
+    sendMessage: exit(exit_code: 4; stdout: ""; stderr: "")
+    return
+if: implements(MultiCandidate, IncompleteRequirement, IncompleteRequirement) != 0
+    sendMessage: exit(exit_code: 5; stdout: ""; stderr: "")
+    return
+if: implements(QuotedCandidate, QuotedRequirement, QuotedRequirement) != 1
+    sendMessage: exit(exit_code: 6; stdout: ""; stderr: "")
+    return
+if: implements(SelfDescribing, SelfDescribing, SelfDescribing) != 1
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+    return
+if: implements(Plain, Equatable, ThinConsumer) != 1
+    sendMessage: exit(exit_code: 8; stdout: ""; stderr: "")
+    return
+if: implements(User, Equatable, ThinConsumer) != 1
+    sendMessage: exit(exit_code: 9; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

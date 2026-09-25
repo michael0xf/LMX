@@ -11,30 +11,35 @@ predef: "l2src/lmx_arena.h.lm1"
 # and nothing else answers.  `dst_arena` is the arena the copies are built in:
 # every constructor takes it and it owns everything the operation allocates.
 #
-# Starting from `source`, walk its lexical chain to node = 0 and copy the whole
+# Starting from `source`, walk its structural chain to parent = 0 and copy the whole
 # reachable lexical tree: every Structure reached through node or through a
 # child slot, all of its slots, mutable primitive cells, char * cells, Array
-# records with their backing and reference-valued elements. `independent`
-# bounds the walk because its root already has node = 0. Methods are shared:
+# records with their backing and reference-valued elements.
+# Pointer cells (@: T): the cell is copied; the pointee is SHARED (-186 k3).
+# `independent` bounds the walk because its root already has parent = 0. Methods are shared:
 # a METHOD child keeps the very same {addr, sig} descriptor pointer. Interned
 # characters map to the destination table `dst_chars` when one is given (a
 # cross-Message copy); with dst_chars = 0 the source cells are kept (a copy
 # inside the same Message).
 #
-# A METHOD record is a copy TERMINAL: a shared {addr, sig} descriptor keeps the
-# very same pointer, never cloned or node-rewritten, whether it is reached
-# through a slot, an array element or a copied Structure's lexical chain (2's
-# all_methods_array row). Which value is a METHOD is answered by src_arena's
-# table -- an address classified LMX_KIND_METHOD -- and by nothing else: no list
-# of METHOD ranges is carried through the copy.
+# k.4: any Structure whose parent lies outside the copied operand subtree is a shared
+# reference (Q22 = II, generalized -- not only a method occurrence): kept by address, not
+# copied, parent not rewritten. A Structure whose parent is inside the operand is copied
+# as an ordinary Structure. There is no separate METHOD/CALLABLE domain any more; the
+# question is answered structurally (child\parent inside the copied set, or not), never by
+# a domain classification.
 #
-# An eternal branch is a DIFFERENT mechanism (Mikhail, 2026-09-17: "«вечная
-# ветка» это совершенно другой механизм"): every void * data inside it points
-# into the root Message's arena's immutable part, and the translator substitutes
-# its values and explicit types into the code as const. A reference from a
-# mutable field to such a branch is an ordinary reference to that branch's
-# descriptor in its own arena, so the copier meets an ordinary Structure and
-# copies it like any other. There is no eternal-range list anywhere.
+# A branch qualified `independent: const: immutable` is retained only when its
+# address resolves to one of the exact physical profiles supplied by the caller.  The
+# profile belongs to the typed range's array descriptor; kind/type remain its
+# exact representation.  Sealing, foreign ownership and parent=0 are not
+# substitutes.  Imported sealed foreign ranges are visible in the same source
+# arena index, while local ownership queries remain local.  Before a retained reference
+# may enter the destination, its sealed owner range must also have been explicitly imported
+# into the destination; copy refuses rather than publishing an unclassifiable pointer.  The
+# profile set is a caller-provided span of ordinary physical graph references, bounded only
+# by this call. Duplicate references are idempotent; no global, numeric or textual profile
+# identity participates.
 #
 # A value the table does not classify at all (LMX_KIND_NONE) is neither
 # language-owned source state nor a terminal: the copy reports UNSUPPORTED
@@ -46,8 +51,8 @@ predef: "l2src/lmx_arena.h.lm1"
 # several operands): an object reachable from two roots is copied once and
 # both copies refer to it. A copy is registered before an object's edges are
 # followed, so shared targets and cycles keep their shape, and every copied
-# Structure's node is rewritten to the copy of its lexical parent, to an
-# eternal parent's own address, or to zero.
+# Structure's parent is rewritten to the copy of its immediate structural parent, to an
+# exact retained-profile parent's own address, or to zero.
 #
 # Atomicity is the arena's own act, exactly as it is for one Array: the
 # operation takes `mark: lmx_arena_mark(dst_arena)` before it builds anything
@@ -64,17 +69,19 @@ define: LMX_GRAPH_COPY_UNSUPPORTED 3
 
 # Operation-local bookkeeping: open-addressing pointer map and a work list.
 # Their buffers may move on growth; the addresses stored IN them never move.
+# Open-addressing pointer map: two void* DynamicArrays (table size = capacity;
+# occupancy tracked in n). Keys/vals always allocated to capacity slots.
+
+
+
 struct: LmxCopyMap
-    @@: void keys
-    @@: void vals
-    size_t: cap
+    LmxArrayDynamicArray: keys
+    LmxArrayDynamicArray: vals
     size_t: n
 end: LmxCopyMap
 
 struct: LmxCopyStack
-    @@: Lmx items
-    size_t: cap
-    size_t: n
+    LmxArrayDynamicArray: items
 end: LmxCopyStack
 
 prototype:
@@ -82,6 +89,9 @@ prototype:
     # sources[i]; on failure every outs[i] stays null and dst_arena is left as
     # it was at the mark.
     fn: lmx_graph_copy_many_owned (@@: Lmx sources; size_t: count; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx outs) int
+    fn: lmx_graph_copy_many_profiles_owned (@@: Lmx sources; size_t: count; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx outs) int
     # One root: the same operation with count 1.
     fn: lmx_graph_copy_owned (@: Lmx source; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx out) int
+    fn: lmx_graph_copy_profiles_owned (@: Lmx source; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx out) int
+    fn: lmx_graph_copy_profiled_owned (@: Lmx source; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @: Lmx retain_profile; @@: Lmx out) int
 end: prototype

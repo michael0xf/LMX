@@ -46,6 +46,9 @@ fn: main () int
     @: void got
     @: void ha
     @: void hb
+    @: size_t snapshot 0
+    size_t: snapshot_n 0U
+    size_t: snapshot_i 0U
     size_t: na 0U
     size_t: nb 0U
     size_t: total 0U
@@ -55,7 +58,7 @@ fn: main () int
     memset((cast: (@: void) (@ box)), 0, c.sizeof(c.LmxPost))
     if: lmx_arena_open(@ arena) != 0
         return: 2
-    letters: (cast: (@: LmxMsg) lmx_arena_take(@ arena, 2U * c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    letters: (cast: (@: LmxMsg) lmx_arena_take_n(@ arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD, 2U))
     if: letters = 0 || lmx_post_init(@ arena, @ box) != c.LMX_POST_OK
         lmx_arena_release(@ arena)
         return: 2
@@ -65,7 +68,7 @@ fn: main () int
     pm_a: (cast: (@: void) letters)
     pm_b: (cast: (@: void) (letters + 1))
 
-    if: pm_box\inbox_capacity != c.LMX_POST_INBOX_MIN_CAPACITY || pm_box\inbox_count != 0U
+    if: lmx_post_inbox_cap(@ box) != c.LMX_POST_INBOX_MIN_CAPACITY || pm_box\inbox_count != 0U
         failures: failures + 1
     ---
 
@@ -87,10 +90,10 @@ fn: main () int
     if: lmx_post_accept(@ arena, @ box, pm_a, c.LMX_POST_INBOX) != c.LMX_POST_OK || lmx_post_accept(@ arena, @ box, pm_b, c.LMX_POST_INBOX) != c.LMX_POST_OK
         failures: failures + 1
     ---
-    if: pm_box\inbox_capacity != 2U || pm_box\inbox_count != 2U
+    if: lmx_post_inbox_cap(@ box) != 2U || pm_box\inbox_count != 2U
         failures: failures + 1
     ---
-    if: lmx_post_accept(@ arena, @ box, pm_a, c.LMX_POST_INBOX) != c.LMX_POST_OK || pm_box\inbox_capacity != 3U
+    if: lmx_post_accept(@ arena, @ box, pm_a, c.LMX_POST_INBOX) != c.LMX_POST_OK || lmx_post_inbox_cap(@ box) != 3U
         failures: failures + 1
     ---
     if: lmx_post_take(@ box, c.LMX_POST_INBOX) != pm_a
@@ -99,7 +102,7 @@ fn: main () int
     if: lmx_post_accept(@ arena, @ box, pm_b, c.LMX_POST_INBOX) != c.LMX_POST_OK || lmx_post_accept(@ arena, @ box, pm_a, c.LMX_POST_INBOX) != c.LMX_POST_OK
         failures: failures + 1
     ---
-    if: pm_box\inbox_capacity != 4U || pm_box\inbox_count != 4U
+    if: lmx_post_inbox_cap(@ box) != 4U || pm_box\inbox_count != 4U
         failures: failures + 1
     ---
     if: lmx_post_take(@ box, c.LMX_POST_INBOX) != pm_b
@@ -121,10 +124,31 @@ fn: main () int
         return: 2
     c.__atomic_store_n(@ pm_start, 1, c.__ATOMIC_RELEASE)
 
+    # Snapshot while producers publish. The snapshot holds the same monitor only while copying and
+    # therefore sees one complete prefix of pairs: never a torn target/source cell. It is released
+    # before the next probe and does not consume anything.
+    while: c.WaitForSingleObject(ha, 0U) = c.WAIT_TIMEOUT || c.WaitForSingleObject(hb, 0U) = c.WAIT_TIMEOUT
+        if: lmx_post_snapshot_inbox(@ box, @ snapshot, @ snapshot_n) != c.LMX_POST_OK
+            failures: failures + 1
+            break
+        ---
+        snapshot_i: 0U
+        while: snapshot_i < snapshot_n
+            if: (cast: (@: void) snapshot[snapshot_i]) != pm_a && (cast: (@: void) snapshot[snapshot_i]) != pm_b
+                failures: failures + 1
+                break
+            ---
+            snapshot_i: snapshot_i + 1U
+        ---
+        free((cast: (@: void) snapshot))
+        snapshot: 0
+        snapshot_n: 0U
+        c.Sleep(0U)
+    ---
     # Do not consume until both producers finish: the ring must grow to hold all 20,000 entries.
     c.WaitForSingleObject(ha, c.INFINITE)
     c.WaitForSingleObject(hb, c.INFINITE)
-    if: lmx_post_count(@ box, c.LMX_POST_INBOX) != 2U * c.LMX_POST_MPSC_N || pm_box\inbox_capacity < 2U * c.LMX_POST_MPSC_N
+    if: lmx_post_count(@ box, c.LMX_POST_INBOX) != 2U * c.LMX_POST_MPSC_N || lmx_post_inbox_cap(@ box) < 2U * c.LMX_POST_MPSC_N
         failures: failures + 1
     ---
     c.CloseHandle(ha)
@@ -151,7 +175,7 @@ fn: main () int
     if: lmx_post_count(@ box, c.LMX_POST_INBOX) != 0U || pm_box\inbox_head != pm_box\inbox_tail
         failures: failures + 1
     ---
-    c.printf("lmx_post_mpsc a=%u b=%u total=%u capacity=%u checks=17 failures=%d\n", (cast: (unsigned) na), (cast: (unsigned) nb), (cast: (unsigned) total), (cast: (unsigned) pm_box\inbox_capacity), failures)
+    c.printf("lmx_post_mpsc a=%u b=%u total=%u capacity=%u checks=17 failures=%d\n", (cast: (unsigned) na), (cast: (unsigned) nb), (cast: (unsigned) total), (cast: (unsigned) lmx_post_inbox_cap(@ box)), failures)
     lmx_post_close(@ arena, @ box)
     lmx_arena_release(@ arena)
 return: failures

@@ -1,0 +1,28 @@
+Model:
+    size_t: value 1U
+end: Model
+
+# Formal Structure root: write + compound read inside the same method so both
+# sides share one seed (Sonnet -121 D1 seed fix is not on main yet; cross-
+# activation formal seed is that ticket). Proves raw-dispatch does not
+# intercept a Structure formal as literal C member access.
+fn: bump (Model: x) size_t
+    x\value: 99U
+    if: x\value != 99U
+        return: 12U
+    size_t: got
+    got: x\value
+    return: got
+end: bump
+
+fn: probe () int
+    Model: a
+    size_t: got
+    got: bump(a)
+    if: got != 99U
+        return: 13
+    return: 0
+end: probe
+
+sendMessage: exit(exit_code: probe(); stdout: ""; stderr: "")
+return

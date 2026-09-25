@@ -1,0 +1,40 @@
+# The execution pair on a re-entry and on a call by reference (FABLE-OPUS-CODE-DATA-SPLIT-20260925-189
+# commit c3a; Q28, fable's decision (i)): the caller passes the data.
+# - `down` calls itself, so every call of it from inside `down` is a re-entry and runs over a fresh
+#   instance of its prototype (lmx_fresh): each activation has its own x and y.  r = down(3) is
+#   3 + 10 * down(2) = 123: each activation reads back its own x after the inner calls.  Recursion
+#   over `down` itself (no fresh instance) gives 0: the innermost activation's x and y are what every
+#   outer one reads.
+# - The walked root's call of `down` is outside the cycle: its CALL's data is `down` itself,
+#   [call, down, down, 3], so down\x afterwards is that activation's 3.  A fresh instance for the
+#   root's call too gives 0, the prototype's.
+# - `apply` calls `seven` by reference (a callable formal), which runs over a fresh instance made
+#   from its code: d = 7, and seven\s stays the prototype's 0.  A call by reference over `seven`
+#   itself leaves 7 there.
+# q = peek() = down\x + 100 * seven\s = 3.  The exit code is r + 1000 * q - 3123 + (d - 7): 0.
+fn: down (int: n) int
+    int: x n
+    int: y 0
+    if: n > 0
+        y: down(n - 1)
+    return: x + 10 * y
+end: down
+
+fn: seven () int
+    int: s 7
+    return: s
+end: seven
+
+fn: apply (seven: g) int
+    return: g + 0
+end: apply
+
+fn: peek () int
+    return: down\x + 100 * seven\s
+end: peek
+
+int: r down(3)
+int: d apply(seven)
+int: q peek()
+sendMessage: exit(exit_code: r + 1000 * q - 3123 + (d - 7); stdout: ""; stderr: "")
+return

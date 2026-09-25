@@ -1,0 +1,16 @@
+include: "l1src/p0.lm1.h"
+
+# FABLE-SONNET-PREDEF-RESULT-TYPE-20260924-160: the include above supplies
+# LmOwnDestroyFields (l1trans generates it from l1src/p0.h.lm1's own
+# `fnptr: LmOwnDestroyFields` declaration) for lm_own_delete's second
+# formal below -- matching the same pattern every other header that
+# names LmOwnDestroyFields already uses (e.g. parser_text_port_l2.h.lm1).
+# Missing here since -155 (own.h.lm1 was never gated through gcc until
+# this ticket's unit_lm_own_actual_span.lm2 witness reached it): gcc
+# refused "unknown type name 'LmOwnDestroyFields'" without it, measured.
+prototype:
+    fn: lm_own_new_zero (size_t: size) @: void
+    fn: lm_own_resize (@: void object; size_t: size) @: void
+    fn: lm_own_copy_bytes (const: @(char source); size_t: length) @: char
+    sub: lm_own_delete (@: void object; LmOwnDestroyFields: destroy_fields)
+end: prototype

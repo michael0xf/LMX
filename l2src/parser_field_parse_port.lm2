@@ -21,7 +21,7 @@ sub: p0_field_parse_loop_frame_delete_any (@: void object)
     lm_own_delete(frame, 0)
 end: p0_field_parse_loop_frame_delete_any
 
-fn: p0_field_parse_loop_stack_new (@: LmP0Document document; size_t: line; size_t: column) @: LmOwnPtrStack
+fn: p0_field_parse_loop_stack_new (@: c.LmP0Document document; size_t: line; size_t: column) @: LmOwnPtrStack
     @: LmOwnPtrStack stack
     stack: (cast: (@: LmOwnPtrStack) lm_own_new_zero(c.sizeof(stack[0])))
     if: (stack = 0)
@@ -38,7 +38,7 @@ sub: p0_field_parse_loop_stack_delete (@: LmOwnPtrStack stack)
     lm_own_delete(stack, 0)
 end: p0_field_parse_loop_stack_delete
 
-fn: p0_field_parse_loop_push (@: LmP0Document document; @: LmOwnPtrStack stack; @: LmP0IndentStack indent_stack; int: indent_stack_owned; @: LmP0Structure structure; const: @(char text); size_t: length; size_t: line; size_t: column; size_t: offset; unsigned: flags; size_t: short_source_level; size_t: layout_base_level; size_t: i; size_t: current_source_level; int: allow_empty_fields; int: expect_field; int: headless_group_after_separator; LmP0FieldParseLoopContinuation: continuation; @: LmP0Node nd; size_t: start; size_t: close_index) int
+fn: p0_field_parse_loop_push (@: c.LmP0Document document; @: LmOwnPtrStack stack; @: c.LmP0IndentStack indent_stack; int: indent_stack_owned; @: LmP0Structure structure; const: @(char text); size_t: length; size_t: line; size_t: column; size_t: offset; unsigned: flags; size_t: short_source_level; size_t: layout_base_level; size_t: i; size_t: current_source_level; int: allow_empty_fields; int: expect_field; int: headless_group_after_separator; LmP0FieldParseLoopContinuation: continuation; @: LmP0Node nd; size_t: start; size_t: close_index) int
     @: LmP0FieldParseLoopFrame frame
     frame: (cast: (@: LmP0FieldParseLoopFrame) lm_own_new_zero(c.sizeof(frame[0])))
     if: (frame = 0)
@@ -71,7 +71,7 @@ fn: p0_field_parse_loop_push (@: LmP0Document document; @: LmOwnPtrStack stack; 
     return: 1
 end: p0_field_parse_loop_push
 
-fn: p0_field_parse_fail (@@: LmOwnPtrStack parse_stack; @@: LmP0IndentStack indent_stack; @: int indent_stack_owned) int
+fn: p0_field_parse_fail (@@: LmOwnPtrStack parse_stack; @@: c.LmP0IndentStack indent_stack; @: int indent_stack_owned) int
     if: ((((indent_stack_owned != 0) && indent_stack_owned[0]) && (indent_stack != 0)) && (indent_stack[0] != 0))
         lm_p0_indent_stack_delete(indent_stack[0])
         indent_stack[0]: 0
@@ -88,7 +88,7 @@ end: p0_field_parse_fail
 # fragment exists for any of these. Formals/locals named node in the
 # oracle renamed nd, same rule as every other renamed formal.
 
-fn: p0_append_atom_slice (@: LmP0Document document; @: LmP0Structure structure; const: @(char text); size_t: length; size_t: line; size_t: column; size_t: offset; size_t: start; size_t: end_index) int
+fn: p0_append_atom_slice (@: c.LmP0Document document; @: LmP0Structure structure; const: @(char text); size_t: length; size_t: line; size_t: column; size_t: offset; size_t: start; size_t: end_index) int
     @: LmP0Node nd
     nd: p0_new_node(document, c.LM_P0_NODE_ATOM)
     if: (nd = 0)
@@ -104,7 +104,7 @@ fn: p0_append_atom_slice (@: LmP0Document document; @: LmP0Structure structure; 
     return: lm_p0_append_field(document, structure, nd)
 end: p0_append_atom_slice
 
-fn: p0_append_positional_skip (@: LmP0Document document; @: LmP0Structure structure; const: @(char text); size_t: length; size_t: line; size_t: column; size_t: offset; size_t: index) int
+fn: p0_append_positional_skip (@: c.LmP0Document document; @: LmP0Structure structure; const: @(char text); size_t: length; size_t: line; size_t: column; size_t: offset; size_t: index) int
     @: LmP0Node nd
     nd: p0_new_node(document, c.LM_P0_NODE_ATOM)
     if: (nd = 0)
@@ -119,7 +119,7 @@ fn: p0_append_positional_skip (@: LmP0Document document; @: LmP0Structure struct
     return: lm_p0_append_field(document, structure, nd)
 end: p0_append_positional_skip
 
-fn: p0_append_compact_atom_pieces (@: LmP0Document document; @: LmP0Structure structure; const: @(char text); size_t: length; size_t: line; size_t: column; size_t: offset; size_t: start; size_t: end_index) int
+fn: p0_append_compact_atom_pieces (@: c.LmP0Document document; @: LmP0Structure structure; const: @(char text); size_t: length; size_t: line; size_t: column; size_t: offset; size_t: start; size_t: end_index) int
     size_t: i
     int: allow_signed_number
     i: start
@@ -154,7 +154,7 @@ fn: p0_append_compact_atom_pieces (@: LmP0Document document; @: LmP0Structure st
     return: 1
 end: p0_append_compact_atom_pieces
 
-fn: p0_parse_append_node_and_update (@: LmP0Document document; @: LmP0Structure structure; @: LmP0Node nd; unsigned: flags; int: allow_empty_fields; @: int expect_field; @: int headless_group_after_separator) int
+fn: p0_parse_append_node_and_update (@: c.LmP0Document document; @: LmP0Structure structure; @: LmP0Node nd; unsigned: flags; int: allow_empty_fields; @: int expect_field; @: int headless_group_after_separator) int
     if: (lm_p0_append_field(document, structure, nd) = 0)
         return: 0
     expect_field[0]: 0

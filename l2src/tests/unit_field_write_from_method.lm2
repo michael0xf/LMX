@@ -1,0 +1,54 @@
+# FABLE-SONNET-UNIT-FIELD-WRITE-20260923-129 (Opus's -128 side finding). A
+# method assigning a unit field declared ABOVE it used to fail translation
+# SILENTLY ("translation failed with no located diagnostic"): l2_check_body
+# already accepted the statement (l2_own_unit_seen, backward visibility for
+# every non-callable, author 2026-09-22 blog 857692c), but l2_emit_body's
+# own-field lookup for an assignment TARGET (l2_own_find_last) lacked the
+# same unit-field fallback its sibling l2_own_find already had, so the name
+# fell all the way through to a dead silent return: 1. `x: 7` inside bump is
+# an ordinary assignment to the unit's own field x through the lexical
+# parent -- the same route node\x already takes (author Q9): "any assignment
+# projects into the field of the structure that owns it."
+#
+# Three shapes: write from a method, read back at unit level (the reported
+# repro); write then read within the same method, same activation; write
+# from inside a nested if body within the method (the write route does not
+# care which control-flow depth it runs at, only which method -- mi is
+# unchanged by if/while nesting).
+int: x 5
+int: y 5
+
+fn: bump () int
+    x: 7
+    return: 0
+end: bump
+
+fn: bump_and_read () int
+    y: 8
+    if: y != 8
+        return: 1
+    return: 0
+end: bump_and_read
+
+int: z 5
+fn: bump_nested () int
+    if: 1 != 0
+        z: 9
+    return: 0
+end: bump_nested
+
+int: r
+bump()
+if: x != 7
+    sendMessage: exit(exit_code: 90; stdout: ""; stderr: "")
+    return
+r: bump_and_read()
+if: r != 0
+    sendMessage: exit(exit_code: 91; stdout: ""; stderr: "")
+    return
+bump_nested()
+if: z != 9
+    sendMessage: exit(exit_code: 92; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

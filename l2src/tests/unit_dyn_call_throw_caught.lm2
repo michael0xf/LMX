@@ -1,0 +1,31 @@
+# FABLE-OPUS-ROOT-WALK-TRANSLATOR-20260924-159 commit 1 (D-38, the S1.2 remainder): a callable
+# formal whose callable throws.  The dynamic call goes through lmx_call_prim -- the throw status
+# apart from the value, the thrown record through `out` -- and is propagated like a direct call's,
+# so the caller's handler takes the payload.  run(boom): boom throws Oops(5), the handler gives
+# 5 + 2 = 7; run(calm): calm returns 3.  Success is 10.
+fn: boom () int
+    throws: Oops
+    if: 1 = 1
+        throw: Oops(5)
+    return: 1
+end: boom
+
+fn: calm () int
+    throws: Oops
+    if: 1 = 0
+        throw: Oops(9)
+    return: 3
+end: calm
+
+fn: run (boom: f) int
+    int: got 0
+    ---
+        got: f + 0
+        catch: Oops (int: v)
+            got: v + 2
+    ---
+    return: got
+end: run
+
+sendMessage: exit(exit_code: run(boom) + run(calm); stdout: ""; stderr: "")
+return

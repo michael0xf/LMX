@@ -1,19 +1,31 @@
-L2:
-    predef: "l1src/parser.lm1"
-    include: "<stdio.h>"
-    fn: main (int: count; @@: char values) int
-        @: LmP0Document document 0
-        int: status
-        if: count != 2
-            return: 1
-        status: lm_p0_parse_file: values[1] @ document
-        if: status != 0
-            lm_p0_document_destroy: document
-            return: 1
-        if: document = 0
-            return: 1
-        lm_p0_document_destroy: document
-        return: 0
-    end: main
-end: L2
+predef: "l1src/parser.lm1"
+include: "<stdio.h>"
 
+# The P0 parser on a path given as argv[1] (the harness passes this file's own
+# path): the argument's C string is `@ m\mainArgs[1][0]`, in graph storage.
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+
+@: c.LmP0Document document
+MainLetter: m
+receiveMessage: m
+if: length(m\mainArgs) != 2
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
+# FABLE-SONNET-DECL-PREPASS-20260923-137 part 3 (Opus's finding 2): the
+# assignment form, `status: <predef call>`, not just the call inside a
+# condition -- l2_colon_simple_ty used to refuse this with "assignment
+# value has unknown type" since it only recognized L2-declared methods.
+int: status
+status: lm_p0_parse_file(@ m\mainArgs[1][0], @ document)
+if: status != 0
+    lm_p0_document_destroy: document
+    sendMessage: exit(exit_code: 2; stdout: ""; stderr: "")
+    return
+if: document = 0
+    sendMessage: exit(exit_code: 3; stdout: ""; stderr: "")
+    return
+lm_p0_document_destroy: document
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

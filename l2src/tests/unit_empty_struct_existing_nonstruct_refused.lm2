@@ -1,0 +1,12 @@
+# FABLE-SONNET-EMPTY-STRUCT-20260923-132: `f()` only declares when f's name
+# is ABSENT. When f already has a typed mutable binding of its own -- here
+# a plain int, not a Structure -- the empty-Structure-body rule does not
+# apply, and f() falls to the ordinary call machinery: f is not callable,
+# so this stays a located refusal, not a silent reinterpretation.
+fn: probe () int
+    int: f 5
+    f()
+    return: 0
+end: probe
+
+return: probe()

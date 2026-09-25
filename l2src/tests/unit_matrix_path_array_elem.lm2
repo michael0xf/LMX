@@ -1,0 +1,15 @@
+# FABLE-GROKBOT-MATRIX-20260924-143 cell: path target ending at Array element
+# x primitive. ASSIGNMENT into owned array storage; read-back confirms.
+[]: int buf 3
+buf[0]: 1
+buf[1]: 2
+buf[2]: 3
+if: buf[1] != 2
+    sendMessage: exit(exit_code: 11; stdout: ""; stderr: "")
+    return
+buf[1]: 9
+if: buf[1] != 9
+    sendMessage: exit(exit_code: 12; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

@@ -1,0 +1,211 @@
+# -189 c3b-2 (FABLE-OPUS-CODE-DATA-SPLIT-20260925-189; L3 §12, R2 with carry, static by position):
+# the name is the machine argument until its binding line and its field's cell from then on; a
+# declaration without an initializer carries the argument's value into the field, and `@x` after
+# the line is the cell's address.  There is no working copy and no sticky republication, so a line
+# printed after `M\x: v` shows v (IA2, IA4, IB+, IC3 and the Z lines alike).  The sticky-rule text below is the old model's.
+#
+# FABLE-L2-ARG-ADDRESS-PROOF-20260921-84.  The same rule for a HIDDEN/DYNAMIC input.
+#
+# A free name read before the body's own same-name binding line is a dynamic input: the callee
+# gets the caller's current value in a hidden formal, and the body's declaration (or an earlier
+# assignment) is its binding line -- exactly the shape of a declared formal, so exactly the rule:
+#
+#   sticky  <=>  `@: x` was EVALUATED before x's first EXECUTED binding line, and that line then ran.
+#
+# The matrix is run twice, for int and for size_t.  int is the case that was silently WRONG: its
+# storage code was also the dynamic-input code for "not typed yet", so an int was never passed at
+# all -- the callee read its OWN graph field (the first line was IA1 1 1 with the caller holding 3).
+# size_t already worked and pins that nothing moved.
+#
+# Each line is "<case> <local> <graph field>".  Callees come before `outer`: under
+# FABLE-SONNET-NODE-ROOT-20260923-121 an explicit write is spelled through the method's own name
+# (`int_before\ia: v`, not `node\x: v`), so it resolves the CURRENT method's field unambiguously
+# even though the caller `outer` declares a field of the same name.
+#
+# WORKAROUND, NAMED (GROK-FABLE-20260923-120 x FABLE-SONNET-NODE-ROOT-20260923-121): `M\x` read
+# directly inside a compound expression (a printf argument list, here) lands in Grok Bot's -120
+# c-member-access dispatch and emits a wrong raw C member access instead of a typed load -- a
+# defect in that dispatcher's root test, handed to him as a separate ticket. Every read below is
+# routed through a freshly assigned `<x>_g` local first (unit_occ_root_field.lm2's pattern).
+fn: poke5 (@: int p) int
+    \p: 5
+    return: 0
+end: poke5
+fn: poke9 (@: int p) int
+    \p: 9
+    return: 0
+end: poke9
+fn: pokez5 (@: size_t p) int
+    \p: 5U
+    return: 0
+end: pokez5
+fn: pokez9 (@: size_t p) int
+    \p: 9U
+    return: 0
+end: pokez9
+fn: nop () int
+    return: 0
+end: nop
+
+# BEFORE the binding line: sticky.  IA2 and IA4 follow no address-taking call, and an explicit
+# graph write sits between each of them and the previous publication.
+fn: int_before () int
+    int: ia_g
+    nop()
+    poke5(@: ia)
+    int: ia
+    ia: ia + 1
+    nop()
+    ia_g: int_before\ia
+    c.printf: "IA1 %d %d\n" ia ia_g
+    int_before\ia: 100
+    nop()
+    ia_g: int_before\ia
+    c.printf: "IA2 %d %d\n" ia ia_g
+    poke9(@: ia)
+    ia_g: int_before\ia
+    c.printf: "IA3 %d %d\n" ia ia_g
+    int_before\ia: 200
+    nop()
+    nop()
+    ia_g: int_before\ia
+    c.printf: "IA4 %d %d\n" ia ia_g
+    return: 0
+end: int_before
+
+# NEVER BOUND when go = 0: the declaration is at method level (readable) and an early return
+# skips it.  Nothing is published before the binding line in either activation.
+fn: int_never (int: go) int
+    int: ib_g
+    poke5(@: ib)
+    int_never\ib: 100
+    nop()
+    nop()
+    ib_g: int_never\ib
+    c.printf: "IB %d %d\n" ib ib_g
+    if: go = 0
+        return: 0
+    int: ib
+    ib: ib + 1
+    int_never\ib: 200
+    nop()
+    ib_g: int_never\ib
+    c.printf: "IB+ %d %d\n" ib ib_g
+    return: 0
+end: int_never
+
+# AFTER the binding line: ordinary.  The read in the condition is what makes `ic` a dynamic input
+# here -- it is neither an address nor a binding.
+fn: int_after () int
+    int: ic_g
+    if: ic = 0
+        return: 0
+    int: ic
+    ic: ic + 1
+    nop()
+    ic_g: int_after\ic
+    c.printf: "IC1 %d %d\n" ic ic_g
+    poke9(@: ic)
+    ic_g: int_after\ic
+    c.printf: "IC2 %d %d\n" ic ic_g
+    int_after\ic: 100
+    nop()
+    ic_g: int_after\ic
+    c.printf: "IC3 %d %d\n" ic ic_g
+    return: 0
+end: int_after
+
+fn: size_before () int
+    size_t: za_g
+    nop()
+    pokez5(@: za)
+    size_t: za
+    za: za + 1U
+    nop()
+    za_g: size_before\za
+    c.printf: "ZA1 %d %d\n" (cast: (int) za) (cast: (int) za_g)
+    size_before\za: 100U
+    nop()
+    za_g: size_before\za
+    c.printf: "ZA2 %d %d\n" (cast: (int) za) (cast: (int) za_g)
+    pokez9(@: za)
+    za_g: size_before\za
+    c.printf: "ZA3 %d %d\n" (cast: (int) za) (cast: (int) za_g)
+    size_before\za: 200U
+    nop()
+    nop()
+    za_g: size_before\za
+    c.printf: "ZA4 %d %d\n" (cast: (int) za) (cast: (int) za_g)
+    return: 0
+end: size_before
+
+fn: size_never (int: go) int
+    size_t: zb_g
+    pokez5(@: zb)
+    size_never\zb: 100U
+    nop()
+    nop()
+    zb_g: size_never\zb
+    c.printf: "ZB %d %d\n" (cast: (int) zb) (cast: (int) zb_g)
+    if: go = 0
+        return: 0
+    size_t: zb
+    zb: zb + 1U
+    size_never\zb: 200U
+    nop()
+    zb_g: size_never\zb
+    c.printf: "ZB+ %d %d\n" (cast: (int) zb) (cast: (int) zb_g)
+    return: 0
+end: size_never
+
+fn: size_after () int
+    size_t: zc_g
+    if: zc = 0U
+        return: 0
+    size_t: zc
+    zc: zc + 1U
+    nop()
+    zc_g: size_after\zc
+    c.printf: "ZC1 %d %d\n" (cast: (int) zc) (cast: (int) zc_g)
+    pokez9(@: zc)
+    zc_g: size_after\zc
+    c.printf: "ZC2 %d %d\n" (cast: (int) zc) (cast: (int) zc_g)
+    size_after\zc: 100U
+    nop()
+    zc_g: size_after\zc
+    c.printf: "ZC3 %d %d\n" (cast: (int) zc) (cast: (int) zc_g)
+    return: 0
+end: size_after
+
+# The caller holds every name as its own field.  Its values never change: a dynamic input is a
+# copy, and the address a callee takes is the address of that copy.
+fn: outer () int
+    int: ia
+    int: ib
+    int: ic
+    size_t: za
+    size_t: zb
+    size_t: zc
+    ia: 3
+    ib: 3
+    ic: 3
+    za: 3U
+    zb: 3U
+    zc: 3U
+    int_before()
+    int_never(0)
+    int_never(1)
+    int_never(0)
+    int_after()
+    size_before()
+    size_never(0)
+    size_never(1)
+    size_never(0)
+    size_after()
+    c.printf: "CALLER %d %d %d %d %d %d\n" ia ib ic (cast: (int) za) (cast: (int) zb) (cast: (int) zc)
+    return: 0
+end: outer
+
+outer()
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

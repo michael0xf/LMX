@@ -1,0 +1,323 @@
+predef: "l2src/lmx_fresh.h.lm1"
+predef: "l2src/lmx_value_owned.h.lm1"
+predef: "l2src/lmx_array_owned.h.lm1"
+predef: "l2src/lmx_arena_refs.h.lm1"
+predef: "l2src/lmx_chars.h.lm1"
+predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_implements.h.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<string.h>"
+
+prototype:
+    fn: lmx_fresh_child (@: LmxArena arena; @: Lmx proto; @: void child; @: Lmx fresh_parent; @@: void out) int
+    fn: lmx_fresh_struct (@: LmxArena arena; @: Lmx proto; @: Lmx fresh_parent) @: Lmx
+end: prototype
+
+# One child of a prototype: write the destination reference into \out.
+# Returns 0 OK, 1 refusal/NOMEM (caller maps to NULL fresh).
+fn: lmx_fresh_child (@: LmxArena arena; @: Lmx proto; @: void child; @: Lmx fresh_parent; @@: void out) int
+    int: kind 0
+    int: vtype 0
+    @: void cell 0
+    @: Lmx nested 0
+    @: LmxArrayDesc src_arr 0
+    @: LmxArrayDesc dst_arr 0
+    size_t: n 0U
+    size_t: stride 0U
+    int: preserve 0
+    @: void head 0
+    int: hk 0
+    \out: 0
+    if: arena = 0 || out = 0
+        return: 1
+    ---
+    if: child = 0
+        return: 0
+    ---
+    kind: lmx_range_classify(arena, child)
+    if: kind = c.LMX_KIND_NONE
+        return: 1
+    ---
+    vtype: lmx_range_type_of(arena, child)
+    # Terminals kept by address (OP / ROLE / MSG_RECORD).  k.4: LmxMethod/LmxCallable
+    # are gone; the STRUCT branch below (own-child-by-parent) covers what a callable
+    # occurrence used to need this list for.
+    if: kind = c.LMX_DOMAIN_KIND_OP || kind = c.LMX_DOMAIN_KIND_ROLE || kind = c.LMX_DOMAIN_KIND_MSG_RECORD
+        \out: child
+        return: 0
+    ---
+    if: kind = c.LMX_KIND_STRUCT
+        nested: (cast: (@: Lmx) child)
+        # K-OT1 (-194 к.5): nested is itself an OP/ROLE frame (an ordinary Structure
+        # headed by an op/role record in its own child 0) -- code, kept by address
+        # regardless of its own parent, the same way a bare OP/ROLE record already is
+        # above. Checked BEFORE the parent-based recursion below: every one of M's own
+        # body steps has parent = M (the prototype), so without this a frame falls
+        # through to the ordinary own-child recursion and is deep-copied on every
+        # re-entry, instead of shared by address the way code must be.
+        # Mutant: skip this check -> a re-entered method's own frames get fresh
+        # addresses each time, and OWN/SET holders embedded in them (K-OT2) stop
+        # matching the running activation's code.
+        head: 0
+        hk: 0
+        if: (cast: (size_t) nested\len) > 0U
+            head: lmx_arena_ref_value(nested, 0U)
+            if: head != 0
+                hk: lmx_range_classify(arena, head)
+                if: hk = c.LMX_DOMAIN_KIND_OP || hk = c.LMX_DOMAIN_KIND_ROLE
+                    \out: child
+                    return: 0
+                ---
+            ---
+        ---
+        # Control-body / field-only Structure whose parent is the prototype: recurse.
+        if: nested\parent = proto
+            cell: (cast: (@: void) lmx_fresh_struct(arena, nested, fresh_parent))
+            if: cell = 0
+                return: 1
+            ---
+            \out: cell
+            return: 0
+        ---
+        # Operand of an OP/ROLE frame (CALL target, OWN holder, FRESH proto, ...): keep
+        # by address. Model data field that is a direct Structure own slot (-186): clear
+        # to empty 0. Reference fields are POINTER cells (branch below), still additive.
+        # Mutant: always keep-by-address -> fresh own slot still shares code's M RED.
+        head: 0
+        hk: 0
+        if: proto != 0 && (cast: (size_t) proto\len) > 0U
+            head: lmx_arena_ref_value(proto, 0U)
+            if: head != 0
+                hk: lmx_range_classify(arena, head)
+                if: hk = c.LMX_DOMAIN_KIND_OP || hk = c.LMX_DOMAIN_KIND_ROLE
+                    \out: child
+                    return: 0
+                ---
+            ---
+        ---
+        \out: 0
+        return: 0
+    ---
+    if: kind = c.LMX_KIND_PRIMITIVE
+        # -188 k.3c-fix2: OP/ROLE frames are program text (LIT values, OWN/ARG slot
+        # indices). Clone those primitives WITH value. Model instance data fields still
+        # zero. Distinguisher: proto headed by OP or ROLE (not CALLABLE/plain).
+        # Mutant: always zero -> OWN index 0 / LIT 0 -> SET own_in miss + summer <1 never.
+        preserve: 0
+        head: 0
+        hk: 0
+        if: proto != 0 && (cast: (size_t) proto\len) > 0U
+            head: lmx_arena_ref_value(proto, 0U)
+            if: head != 0
+                hk: lmx_range_classify(arena, head)
+                if: hk = c.LMX_DOMAIN_KIND_OP || hk = c.LMX_DOMAIN_KIND_ROLE
+                    preserve: 1
+                ---
+            ---
+        ---
+        if: vtype = c.LMX_TYPE_CHAR
+            if: lmx_chars_init(arena) != 0 && lmx_arena_find(arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR) = 0
+                return: 1
+            ---
+            if: preserve != 0
+                cell: lmx_char_cell(arena, lmx_char_value(child))
+            else:
+                cell: lmx_char_cell(arena, 0)
+            ---
+            if: cell = 0
+                return: 1
+            ---
+            \out: cell
+            return: 0
+        ---
+        if: vtype = c.LMX_TYPE_INT
+            cell: lmx_int_new_owned(arena)
+            if: cell = 0
+                return: 1
+            ---
+            if: preserve != 0
+                if: lmx_int_store_known(cell, lmx_int_value_known(child)) != 0
+                    return: 1
+                ---
+            else:
+                if: lmx_int_store_known(cell, 0) != 0
+                    return: 1
+                ---
+            ---
+            \out: cell
+            return: 0
+        ---
+        if: vtype = c.LMX_TYPE_SIZE_T
+            cell: lmx_size_new_owned(arena)
+            if: cell = 0
+                return: 1
+            ---
+            if: preserve != 0
+                if: lmx_size_store_known(cell, lmx_size_value_known(child)) != 0
+                    return: 1
+                ---
+            else:
+                if: lmx_size_store_known(cell, 0U) != 0
+                    return: 1
+                ---
+            ---
+            \out: cell
+            return: 0
+        ---
+        if: vtype = c.LMX_TYPE_UNSIGNED
+            cell: lmx_unsigned_new_owned(arena)
+            if: cell = 0
+                return: 1
+            ---
+            if: preserve != 0
+                if: lmx_unsigned_store_known(cell, lmx_unsigned_value_known(child)) != 0
+                    return: 1
+                ---
+            else:
+                if: lmx_unsigned_store_known(cell, 0U) != 0
+                    return: 1
+                ---
+            ---
+            \out: cell
+            return: 0
+        ---
+        if: vtype = c.LMX_TYPE_ULONG
+            cell: lmx_ulong_new_owned(arena)
+            if: cell = 0
+                return: 1
+            ---
+            if: preserve != 0
+                if: lmx_ulong_store_known(cell, lmx_ulong_value_known(child)) != 0
+                    return: 1
+                ---
+            else:
+                if: lmx_ulong_store_known(cell, 0U) != 0
+                    return: 1
+                ---
+            ---
+            \out: cell
+            return: 0
+        ---
+        if: vtype = c.LMX_TYPE_UNSIGNED_CHAR
+            cell: lmx_uchar_new_owned(arena)
+            if: cell = 0
+                return: 1
+            ---
+            if: preserve != 0
+                if: lmx_uchar_store_known(cell, lmx_uchar_value_known(child)) != 0
+                    return: 1
+                ---
+            else:
+                if: lmx_uchar_store_known(cell, 0U) != 0
+                    return: 1
+                ---
+            ---
+            \out: cell
+            return: 0
+        ---
+        # -186 k3: @: T reference fields stay null pointer cells on fresh (share later via
+        # PUT). Structure-typed owns that are still pointer cells (pre-c3b-3) keep the
+        # same null-cell form so PUT/DEREF paths stay green until the joint landing.
+        # Empty direct slots (child 0) already store 0 above.
+        if: vtype >= c.LMX_TYPE_POINTER_BASE
+            cell: lmx_pointer_new_owned(vtype, arena)
+            if: cell = 0
+                return: 1
+            ---
+            if: preserve != 0
+                if: lmx_pointer_store_known(cell, lmx_pointer_value_known(child)) != 0
+                    return: 1
+                ---
+            else:
+                if: lmx_pointer_store_known(cell, 0) != 0
+                    return: 1
+                ---
+            ---
+            \out: cell
+            return: 0
+        ---
+        return: 1
+    ---
+    if: kind = c.LMX_KIND_ARRAY
+        src_arr: (cast: (@: LmxArrayDesc) child)
+        n: src_arr\len
+        dst_arr: lmx_array_new_owned(vtype, n, arena)
+        if: dst_arr = 0
+            return: 1
+        ---
+        if: n != 0U && dst_arr\data != 0
+            # Zero backing. Element stride from arena type of first element when present,
+            # else from descriptor type via a conservative void* width for pointer arrays.
+            if: vtype = c.LMX_TYPE_ARRAY_OF_INT
+                stride: c.sizeof(c.int)
+            else:
+                if: vtype = c.LMX_TYPE_ARRAY_OF_SIZE_T
+                    stride: c.sizeof(c.size_t)
+                else:
+                    if: vtype = c.LMX_TYPE_ARRAY_OF_ULONG
+                        stride: c.sizeof(c.size_t)
+                    else:
+                        if: vtype = c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR
+                            stride: c.sizeof(c.char)
+                        else:
+                            stride: c.sizeof(@: void)
+                        ---
+                    ---
+                ---
+            ---
+            memset(dst_arr\data, 0, n * stride)
+        ---
+        \out: (cast: (@: void) dst_arr)
+        return: 0
+    ---
+return: 1
+
+# k.4: every slot is freshened uniformly, including slot 0 -- there is no descriptor to
+# keep by address any more (`native` is a sibling Lmx member, copied verbatim below, not a
+# child slot).
+fn: lmx_fresh_struct (@: LmxArena arena; @: Lmx proto; @: Lmx fresh_parent) @: Lmx
+    @: Lmx out 0
+    @: void child 0
+    @: void made 0
+    size_t: i 0U
+    size_t: n 0U
+    int: st 0
+    if: arena = 0 || proto = 0
+        return: 0
+    ---
+    if: lmx_range_classify(arena, (cast: (@: void) proto)) != c.LMX_KIND_STRUCT
+        return: 0
+    ---
+    out: lmx_node_new_owned(arena)
+    if: out = 0
+        return: 0
+    ---
+    out\parent: fresh_parent
+    out\native: proto\native
+    n: (cast: (size_t) proto\len)
+    if: n != 0U
+        if: lmx_arena_refs_open_owned(arena, out, n) != 0
+            return: 0
+        ---
+    ---
+    while: i < n
+        child: lmx_arena_ref_value(proto, i)
+        st: lmx_fresh_child(arena, proto, child, out, @ made)
+        if: st != 0
+            return: 0
+        ---
+        if: lmx_arena_ref_store(out, i, made) != 0
+            return: 0
+        ---
+        i: i + 1U
+    ---
+return: out
+
+fn: lmx_fresh (@: LmxArena arena; @: Lmx code) @: Lmx
+    if: arena = 0 || code = 0
+        return: 0
+    ---
+    if: lmx_range_classify(arena, (cast: (@: void) code)) != c.LMX_KIND_STRUCT
+        return: 0
+    ---
+return: lmx_fresh_struct(arena, code, code\parent)

@@ -1,0 +1,76 @@
+predef: "l2src/lmx_root.lm1"
+predef: "l2src/lmx_list_owned.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# THE GRAPH HANGING IN A THREAD IS INDEPENDENT (author, LMX_blog 2026-09-22; independence IS
+# parent = 0).  R0's graph is not a lexical child of the stub above it: that stub is Message
+# supervision.  So R0's graph has parent 0 after open, and the host entry R0 runs receives
+# node = graph.parent = 0 -- a copy that starts inside R0's graph can never climb into the
+# stub's graph (FABLE-OPUS-THREAD-GRAPH-INDEPENDENT-20260922-110).
+#
+# The same holds for a CHILD (author, Q6 = R1, 2026-09-23): the source of a child's graph is a
+# unit, independent by definition (parent = 0), and the kernel neither checks nor repairs it.  So
+# a child created from an independent source hangs an independent graph: the copy's parent is 0.
+
+sub: gr_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: gr_check
+
+int: gr_calls 0
+int: gr_node_zero 0
+
+fn: gr_entry (@: Lmx node) int
+    gr_calls: gr_calls + 1
+    if: node = 0
+        gr_node_zero: gr_node_zero + 1
+    ---
+return: 0
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxRoot: root
+    @: LmxMsg message 0
+    @: Lmx graph 0
+    LmxArena: src_arena
+    LmxArena: child_arena
+    @: Lmx source 0
+    @: LmxArrayDesc source_children 0
+    @: LmxMsg child 0
+    int: failures
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ root)), 0, c.sizeof(c.LmxRoot))
+    gr_check(counts, lmx_root_open(@ root, gr_entry, 5000U) = c.LMX_ROOT_OK, "root open")
+    message: lmx_root_message(@ root)
+    gr_check(counts, message != 0 && message\graph != 0, "R0 has a graph")
+    if: message != 0
+        graph: message\graph
+    ---
+    gr_check(counts, graph != 0 && graph\parent = 0, "R0's graph is independent: its parent is 0")
+    gr_check(counts, lmx_root_turn(@ root, 1U) = c.LMX_ROOT_OK && gr_calls = 1, "R0 ran its entry once")
+    gr_check(counts, gr_node_zero = 1, "the entry received node 0")
+    gr_check(counts, lmx_root_close(@ root) = c.LMX_ROOT_OK, "root close")
+    memset((cast: (@: void) (@ src_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ child_arena)), 0, c.sizeof(c.LmxArena))
+    gr_check(counts, lmx_arena_open(@ src_arena) = 0 && lmx_arena_open(@ child_arena) = 0, "child: arenas open")
+    source: lmx_node_new_owned(@ src_arena)
+    source_children: lmx_list_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, @ src_arena)
+    gr_check(counts, source != 0 && source_children != 0 && lmx_arena_refs_open_owned(@ src_arena, source, 1U) = 0 && lmx_arena_ref_store(source, 0U, (cast: (@: void) source_children)) = 0 && source\parent = 0, "child: the source is an independent unit graph")
+    child: lmx_child_create(@ src_arena, @ child_arena, 0, source)
+    gr_check(counts, child != 0 && child\graph != 0 && child\graph != source, "child: created with its own copy of the source")
+    gr_check(counts, child != 0 && child\graph != 0 && child\graph\parent = 0, "child: the child's graph is independent: its parent is 0")
+    lmx_arena_release(@ child_arena)
+    lmx_arena_release(@ src_arena)
+    failures: counts[1]
+    c.printf("lmx_thread_graph_root_selftest checks=%d failures=%d\n", counts[0], failures)
+    free(counts)
+    if: failures != 0
+        return: 1
+return: 0

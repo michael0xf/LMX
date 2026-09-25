@@ -1,0 +1,28 @@
+Model:
+    size_t: value 1U
+end: Model
+
+# FABLE-SONNET-DECL-BINDING-20260922-105 witness: build() is called TWICE
+# from main. Under the old rewrite-based mechanism the value was constructed
+# once at unit-entry (l2_entry_unit) and shared across every call to build();
+# repeated activation of the same own-field slot from two independent call
+# frames is exactly the shape that mechanism could not support. This fixture
+# exercises two independent activations of the same Model: fresh declaration
+# and requires the program to run to completion both times.
+fn: build () int
+    Model: fresh_branch_xyz
+    return: 0
+end: build
+
+int: got1
+int: got2
+got1: build()
+if: got1 != 0
+    sendMessage: exit(exit_code: 95; stdout: ""; stderr: "")
+    return
+got2: build()
+if: got2 != 0
+    sendMessage: exit(exit_code: 96; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

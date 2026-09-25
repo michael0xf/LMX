@@ -616,21 +616,28 @@ Body refusals:
 | mail | 2 |
 | other | 5 |
 
-### The differential run (t4a3, driver on 939bfc8)
+### The differential run
 
-Every row runs twice through the per-row checker (`verify2b`): knob off, then with `--walk-methods`.
-- Knob off: 381 of 382 rows green.  The red one is `unit_walk_loop`, which runs walked even here, as a WalkMethods row.
-- Knob on: 380 of 382 green.
-- Red only because of the kernel, not fixed here, per fable:
-  - `unit_walk_loop` (D-72, K-RET): a walked callee's number result leaves as a reference into its data.  `clamp(..) + clamp(..) + clamp(..)`: the next call overwrites the cell before the sum reads it.
-  - `unit_method_sig_distinct` (D-73, K-ARITY): `a(5)` never reads its formal, so the walked arity is 0 against 1 argument.
-- The corpus, compared with main's l2trans:
-  - 1018 tracked `.lm2`: 0 changes of outcome (436 translate on both, 582 refuse on both); 301 outputs differ (root holder 0, frames, widths);
-  - the 54 tracked `.lm2` of the mixa sandbox, each translated from its own directory: 0 changes.
+First on 939bfc8 (t4a3), before the kernel fixes: knob off 381 of 382 rows green, knob on 380.  The
+only reds came from two kernel gaps, which Sonnet fixed in -194 k.5b (main 7634aa2):
+- `unit_walk_loop`, D-72 (K-RET): a walked callee's number result left as a reference into its
+  data, so in `clamp(..) + clamp(..) + clamp(..)` the next call overwrote the cell before the sum
+  read it.  Now the result is copied into `call_dest` by rtype.
+- `unit_method_sig_distinct`, D-73 (K-ARITY): `a(5)` never reads its formal, so the walked arity
+  (the highest ARG + 1) was 0 against 1 argument.  Now the arity is the width of the args part.
+
+Then, rebased, through the per-row checker (`verify2b`):
+- knob off, on main 4d427ac (k.5b in): 382 of 382 rows green; the gate's harness runs it again on 5fa1ad4;
+- knob on (`--walk-methods`), on main 5fa1ad4 (driver on that kernel): 382 of 382 rows green.
+
+The corpus, compared with main's l2trans on 939bfc8:
+- 1018 tracked `.lm2`: 0 changes of outcome (436 translate on both, 582 refuse on both); 301 outputs
+  differ (root holder 0, frames, widths);
+- the 54 tracked `.lm2` of the mixa sandbox, each translated from its own directory: 0 changes.
 
 ### Mutants
 
-All red on the rows.  At run time:
+All red on the rows, on both kernels.  At run time:
 - ARG off by one: X1 (arity);
 - RET without its value: X1;
 - the unit as a method's own holder: X1;
@@ -638,14 +645,10 @@ All red on the rows.  At run time:
 
 The pins catch each one as well.
 
-### What the joint landing waits for
+### The joint landing
 
-Sonnet -194 k.5b (fable): D-72 (a number result copied into `call_dest` by rtype) and D-73 (arity from the args part, form A).
-
-Then:
-1. her branch merged into this one;
-2. the full differential run;
-3. the per-row check;
-4. one gate.
+Sonnet's k.5b (D-72, D-73) is in main, and T4a is rebased onto main 5fa1ad4, which also has
+grok_bot's ELEM / ELEMPUT / LENGTH walker roles.  The mutants above were rerun on that kernel with
+the same outcome.
 
 D-69 (a method with a `char` formal does not compile: the args part's char cell) is open and mine.

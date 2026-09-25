@@ -288,9 +288,6 @@ int: l2_cnt_n 0
 int: l2_cnt_cap 0
 int: l2_diag_n 0
 @@: LmP0Text l2_cnt 0
-@@: char l2_hdr_seen 0
-int: l2_hdr_seen_n 0
-int: l2_hdr_seen_cap 0
 @@: LmP0Text l2_ml_nm 0
 @: int l2_ml_ty 0
 int: l2_ml_n 0
@@ -799,13 +796,6 @@ prototype:
     fn: l2_predef_has_fnptr (const: @(LmP0Text name)) int
     fn: l2_predef_has_type (const: @(LmP0Text name)) int
     fn: l2_predef_file_has_type (const: @(LmP0Text name); const: @(LmP0Text quoted)) int
-    fn: l2_include_has_simple_typedef (const: @(LmP0Text name)) int
-    fn: l2_list_has_simple_typedef (const: @(LmP0Text name); @@: LmP0Text list; int: count) int
-    fn: l2_hdr_seen_has (const: @(char path)) int
-    fn: l2_hdr_seen_add (const: @(char path)) int
-    fn: l2_c_header_walk (const: @(LmP0Text name); const: @(char path); int: want_fn) int
-    fn: l2_c_header_chain_has (const: @(LmP0Text name); const: @(LmP0Text quoted); int: want_fn) int
-    fn: l2_c_header_chain_has_typedef (const: @(LmP0Text name); const: @(LmP0Text quoted)) int
     fn: l2_cnt_keep (const: @(LmP0Text src)) @: LmP0Text
     fn: l2_cnt_free () int
     fn: l2_predef_file_define (const: @(LmP0Text name); const: @(LmP0Text quoted); int: any) @: LmP0Text
@@ -4199,13 +4189,6 @@ fn: l2_predef_file_has_type (const: @(LmP0Text name); const: @(LmP0Text quoted))
                     while: inc != 0 && found = 0
                         if: inc\value != 0 && inc\value\kind = c.LM_P0_NODE_ATOM
                             q: inc\value\as\atom
-                            # A plain C header reached through this predef header -- not a generated
-                            # foo.lm1.h, not a <system> header -- is where the manager declares its
-                            # aggregate handles (typedef struct X X;). The unit-level include list only
-                            # holds the unit's OWN includes, so without this a type one level down was
-                            # never scanned and came back "unknown foreign type".
-                            if: found = 0 && q != 0 && q\data != 0 && q\length > 3U && q\data[0] = 34 && q\data[1] != 60 && (q\length <= 8U || memcmp(q\data + q\length - 7U, ".lm1.h\"", 7U) != 0)
-                                found: l2_c_header_chain_has_typedef(name, q)
                             if: q != 0 && q\data != 0 && q\length > 8U && q\data[0] = 34 && memcmp(q\data + q\length - 7U, ".lm1.h\"", 7U) = 0
                                 mapped_data: (cast: (@: char) l2_xmalloc(q\length + 1U))
                                 mapped: (cast: (@: LmP0Text) l2_xmalloc(c.sizeof(c.LmP0Text)))
@@ -4248,313 +4231,16 @@ fn: l2_predef_has_type (const: @(LmP0Text name)) int
             return: 1
         i: i + 1
     ---
-return: l2_include_has_simple_typedef(name)
-
-# A quoted C include may contribute an ABI typedef such as
-# `typedef unsigned char MixaU8;` or `typedef struct X { ... } X;`. L2 only
-# needs its spelling for pointer, array and cast emission; field layout and the
-# final ABI stay under the downstream C compiler. Function and array typedefs
-# remain excluded because their declarators are not plain type names.
-fn: l2_list_has_simple_typedef (const: @(LmP0Text name); @@: LmP0Text list; int: count) int
-    int: ii 0
-    size_t: want_at 0U
-    size_t: want_n
-    size_t: pn
-    @: char path 0
-    @: FILE file 0
-    long: file_size
-    size_t: n
-    @: char data 0
-    size_t: got
-    size_t: p
-    size_t: q
-    size_t: last_at
-    size_t: last_n
-    int: bad
-    int: saw_unsigned
-    int: saw_char
-    int: braces
-    if: name = 0 || name\data = 0
-        return: 0
-    want_n: name\length
-    if: want_n > 2U && name\data[0] = 99 && name\data[1] = 46
-        want_at: 2U
-        want_n: want_n - 2U
-    ---
-    while: ii < count
-        if: list[ii] != 0 && list[ii]\data != 0 && list[ii]\length >= 2U && list[ii]\data[0] = 34 && list[ii]\data[list[ii]\length - 1U] = 34
-            pn: list[ii]\length - 2U
-            path: (cast: (@: char) l2_xmalloc(pn + 1U))
-            if: path = 0
-                return: 0
-            memcpy(path, list[ii]\data + 1U, pn)
-            path[pn]: 0
-            file: c.fopen(path, "rb")
-            if: file != 0 && c.fseek(file, 0L, c.SEEK_END) = 0
-                file_size: c.ftell(file)
-                if: file_size >= 0L && c.fseek(file, 0L, c.SEEK_SET) = 0
-                    n: (cast: (size_t) file_size)
-                    data: (cast: (@: char) l2_xmalloc(n + 1U))
-                    if: data != 0
-                        got: c.fread(data, 1U, n, file)
-                        data[got]: 0
-                        p: 0U
-                        while: p + 7U <= got
-                            if: memcmp(data + p, "typedef", 7U) = 0 && (p = 0U || ((data[p - 1U] < 48 || data[p - 1U] > 57) && (data[p - 1U] < 65 || data[p - 1U] > 90) && (data[p - 1U] < 97 || data[p - 1U] > 122) && data[p - 1U] != 95)) && (p + 7U = got || ((data[p + 7U] < 48 || data[p + 7U] > 57) && (data[p + 7U] < 65 || data[p + 7U] > 90) && (data[p + 7U] < 97 || data[p + 7U] > 122) && data[p + 7U] != 95))
-                                q: p + 7U
-                                last_at: 0U
-                                last_n: 0U
-                                bad: 0
-                                saw_unsigned: 0
-                                saw_char: 0
-                                braces: 0
-                                while: q < got && (data[q] != 59 || braces != 0)
-                                    if: data[q] = 123
-                                        braces: braces + 1
-                                    if: data[q] = 125
-                                        if: braces = 0
-                                            bad: 1
-                                        else:
-                                            braces: braces - 1
-                                        ---
-                                    if: braces = 0 && (data[q] = 40 || data[q] = 41 || data[q] = 91 || data[q] = 93)
-                                        bad: 1
-                                    if: (data[q] >= 65 && data[q] <= 90) || (data[q] >= 97 && data[q] <= 122) || data[q] = 95
-                                        last_at: q
-                                        q: q + 1U
-                                        while: q < got && ((data[q] >= 48 && data[q] <= 57) || (data[q] >= 65 && data[q] <= 90) || (data[q] >= 97 && data[q] <= 122) || data[q] = 95)
-                                            q: q + 1U
-                                        ---
-                                        last_n: q - last_at
-                                        if: last_n = 8U && memcmp(data + last_at, "unsigned", 8U) = 0
-                                            saw_unsigned: 1
-                                        ---
-                                        if: last_n = 4U && memcmp(data + last_at, "char", 4U) = 0
-                                            saw_char: 1
-                                        ---
-                                    else:
-                                        q: q + 1U
-                                    ---
-                                ---
-                                if: q < got && data[q] = 59 && braces = 0 && bad = 0 && last_n = want_n && memcmp(data + last_at, name\data + want_at, want_n) = 0
-                                    l2_xfree((cast: (@: void) data))
-                                    fclose(file)
-                                    l2_xfree((cast: (@: void) path))
-                                    if: saw_unsigned != 0 && saw_char != 0
-                                        return: 8
-                                    return: 1
-                                ---
-                                p: q
-                            ---
-                            p: p + 1U
-                        ---
-                        l2_xfree((cast: (@: void) data))
-                    ---
-                ---
-            ---
-            if: file != 0
-                fclose(file)
-            l2_xfree((cast: (@: void) path))
-            path: 0
-            file: 0
-        ---
-        ii: ii + 1
-    ---
 return: 0
 
-fn: l2_include_has_simple_typedef (const: @(LmP0Text name)) int
-return: l2_list_has_simple_typedef(name, l2_inc, l2_inc_n)
-
-# Has this C header path already been walked during the current query?
-fn: l2_hdr_seen_has (const: @(char path)) int
-    int: i 0
-    if: path = 0
-        return: 1
-    while: i < l2_hdr_seen_n
-        if: l2_hdr_seen[i] != 0 && strcmp(l2_hdr_seen[i], path) = 0
-            return: 1
-        i: i + 1
-    ---
-return: 0
-
-# Record a walked path. Grows by doubling. An allocation failure reports the
-# path as already seen, which ends the walk instead of looping.
-fn: l2_hdr_seen_add (const: @(char path)) int
-    int: cap
-    size_t: psz
-    size_t: nb
-    size_t: n
-    @@: char nn 0
-    @: char saved 0
-    if: path = 0
-        return: 1
-    cap: l2_hdr_seen_cap
-    if: l2_hdr_seen_n >= cap
-        if: cap < 1
-            cap: 4
-        ---
-        if: cap > (c.INT_MAX / 2)
-            return: 1
-        cap: cap * 2
-        psz: c.sizeof(@: char)
-        if: l2_mul_ok((cast: (size_t) cap), psz) = 0
-            return: 1
-        nb: (cast: (size_t) cap) * psz
-        nn: (cast: (@@: char) l2_xmalloc(nb))
-        if: nn = 0
-            return: 1
-        memset((cast: (@: void) nn), 0, nb)
-        if: l2_hdr_seen != 0 && l2_hdr_seen_n > 0
-            memcpy((cast: (@: void) nn), (cast: (@: void) l2_hdr_seen), (cast: (size_t) l2_hdr_seen_n) * psz)
-        ---
-        if: l2_hdr_seen != 0
-            l2_xfree((cast: (@: void) l2_hdr_seen))
-        ---
-        l2_hdr_seen: nn
-        l2_hdr_seen_cap: cap
-    ---
-    n: strlen(path)
-    saved: (cast: (@: char) l2_xmalloc(n + 1U))
-    if: saved = 0
-        return: 1
-    memcpy(saved, path, n + 1U)
-    l2_hdr_seen[l2_hdr_seen_n]: saved
-    l2_hdr_seen_n: l2_hdr_seen_n + 1
-return: 0
-
-# Look for a simple typedef in one C header and, failing that, in the quoted
-# headers it #includes, transitively. Each path is walked once per query, so
-# two headers that include each other under guards terminate.
-fn: l2_c_header_walk (const: @(LmP0Text name); const: @(char path); int: want_fn) int
-    size_t: pn
-    @: char quoted 0
-    @: LmP0Text qt 0
-    int: r 0
-    @: FILE file 0
-    long: file_size
-    size_t: n
-    @: char data 0
-    size_t: got
-    size_t: p
-    size_t: s
-    size_t: e
-    @: char child 0
-    if: name = 0 || path = 0
-        return: 0
-    if: l2_hdr_seen_has(path) != 0
-        return: 0
-    if: l2_hdr_seen_add(path) != 0
-        return: 0
-    pn: strlen(path)
-    quoted: (cast: (@: char) l2_xmalloc(pn + 3U))
-    qt: (cast: (@: LmP0Text) l2_xmalloc(c.sizeof(c.LmP0Text)))
-    if: quoted != 0 && qt != 0
-        quoted[0]: 34
-        memcpy(quoted + 1U, path, pn)
-        quoted[pn + 1U]: 34
-        quoted[pn + 2U]: 0
-        qt\data: quoted
-        qt\length: pn + 2U
-        r: l2_list_has_simple_typedef(name, @ qt, 1)
-    ---
-    if: quoted != 0
-        l2_xfree((cast: (@: void) quoted))
-    if: qt != 0
-        l2_xfree((cast: (@: void) qt))
-    if: r != 0
-        return: r
-    file: c.fopen(path, "rb")
-    if: file = 0
-        return: 0
-    if: c.fseek(file, 0L, c.SEEK_END) != 0
-        fclose(file)
-        return: 0
-    file_size: c.ftell(file)
-    if: file_size < 0L || c.fseek(file, 0L, c.SEEK_SET) != 0
-        fclose(file)
-        return: 0
-    n: (cast: (size_t) file_size)
-    data: (cast: (@: char) l2_xmalloc(n + 1U))
-    if: data = 0
-        fclose(file)
-        return: 0
-    got: c.fread(data, 1U, n, file)
-    data[got]: 0
-    fclose(file)
-    p: 0U
-    while: p < got && r = 0
-        s: p
-        while: s < got && (data[s] = 32 || data[s] = 9)
-            s: s + 1U
-        if: s < got && data[s] = 35
-            s: s + 1U
-            while: s < got && (data[s] = 32 || data[s] = 9)
-                s: s + 1U
-            if: s + 7U <= got && memcmp(data + s, "include", 7U) = 0
-                s: s + 7U
-                while: s < got && (data[s] = 32 || data[s] = 9)
-                    s: s + 1U
-                if: s < got && data[s] = 34
-                    s: s + 1U
-                    e: s
-                    while: e < got && data[e] != 34 && data[e] != 10
-                        e: e + 1U
-                    if: e < got && data[e] = 34 && e > s
-                        child: (cast: (@: char) l2_xmalloc(e - s + 1U))
-                        if: child != 0
-                            memcpy(child, data + s, e - s)
-                            child[e - s]: 0
-                            r: l2_c_header_walk(name, child, want_fn)
-                            l2_xfree((cast: (@: void) child))
-                            child: 0
-                        ---
-                    ---
-                ---
-            ---
-        ---
-        while: p < got && data[p] != 10
-            p: p + 1U
-        if: p < got
-            p: p + 1U
-    ---
-    l2_xfree((cast: (@: void) data))
-return: r
-
-# Walk a quoted C header and every quoted header it #includes, once each, for a
-# simple typedef named `name`. The seen-set exists only for this one query and
-# is released before returning, so no allocation outlives the lookup.
-fn: l2_c_header_chain_has (const: @(LmP0Text name); const: @(LmP0Text quoted); int: want_fn) int
-    size_t: n
-    @: char path 0
-    int: r 0
-    int: i 0
-    if: name = 0 || quoted = 0 || quoted\data = 0 || quoted\length < 3U || quoted\data[0] != 34 || quoted\data[quoted\length - 1U] != 34
-        return: 0
-    n: quoted\length - 2U
-    path: (cast: (@: char) l2_xmalloc(n + 1U))
-    if: path = 0
-        return: 0
-    memcpy(path, quoted\data + 1U, n)
-    path[n]: 0
-    l2_hdr_seen_n: 0
-    r: l2_c_header_walk(name, path, want_fn)
-    l2_xfree((cast: (@: void) path))
-    while: i < l2_hdr_seen_n
-        if: l2_hdr_seen[i] != 0
-            l2_xfree((cast: (@: void) l2_hdr_seen[i]))
-        ---
-        i: i + 1
-    ---
-    if: l2_hdr_seen != 0
-        l2_xfree((cast: (@: void) l2_hdr_seen))
-    ---
-    l2_hdr_seen: 0
-    l2_hdr_seen_n: 0
-    l2_hdr_seen_cap: 0
-return: r
-
-fn: l2_c_header_chain_has_typedef (const: @(LmP0Text name); const: @(LmP0Text quoted)) int
-return: l2_c_header_chain_has(name, quoted, 0)
+# WHAT STOOD HERE AND IS GONE (FABLE-OPUS-GATE-CLEANUP-20260926-197 (a)): the C-header scans --
+# l2_list_has_simple_typedef / l2_include_has_simple_typedef read the unit's quoted C includes for a
+# `typedef`, l2_c_header_walk / l2_c_header_chain_has(_typedef) followed a predef header's plain C
+# includes transitively.  That is a dictionary of C entities, which the raw-C door forbids (§7a,
+# AUTHOR-C-RAW-DOOR-20260922-14): a type only C knows is spelled `c.Type`.  Measured before removal:
+# no tracked .lm2 (1017, and the mixa corpus from its own directory) changes outcome without them.
+# The LMX predef readers (l2_predef_has_function / _type / _fnptr, l2_predef_file_define) stay: they
+# read DECLARATIONS of .h.lm1 headers, which is how a predef declares.
 
 fn: l2_cnt_keep (const: @(LmP0Text src)) @: LmP0Text
     int: i 0
@@ -8386,7 +8072,7 @@ fn: l2_own_array_count (const: @(LmP0Node stmt)) @: LmP0Text
     if: f = 0 || f\value = 0
         return: 0
     if: f\value\kind = c.LM_P0_NODE_ATOM
-        if: l2_text_eq(f\value\as\atom, "int") = 0 && l2_text_eq(f\value\as\atom, "char") = 0 && l2_text_eq(f\value\as\atom, "size_t") = 0 && l2_text_eq(f\value\as\atom, "ulong") = 0 && l2_include_has_simple_typedef(f\value\as\atom) != 8
+        if: l2_text_eq(f\value\as\atom, "int") = 0 && l2_text_eq(f\value\as\atom, "char") = 0 && l2_text_eq(f\value\as\atom, "size_t") = 0 && l2_text_eq(f\value\as\atom, "ulong") = 0
             return: 0
         ---
     else:

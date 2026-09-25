@@ -300,6 +300,8 @@ int: l2_diag_n 0
 @@: LmP0Text l2_cnt 0
 @@: LmP0Text l2_ml_nm 0
 @: int l2_ml_ty 0
+# The named Structure a local reference `@: T name` points at, or -1 (D-76): a path root.
+@: int l2_ml_ns 0
 int: l2_ml_n 0
 # Open-ended source C type identities used by predef-backed pointer forms.
 # Codes 100+ name one exact (pointee spelling, pointer depth, const-pointee)
@@ -686,6 +688,8 @@ prototype:
     fn: l2_mrs_slot_nth (int: res; const: @(LmP0Text name); int: occ; @: int out_kind; @: int out_ent) int
     fn: l2_kind_cell_ty (int: kind) int
     fn: l2_mrs_occ_read (int: res; const: @(LmP0Text name); int: occ; int: mi; const: @(char ind); @: char dest; const: @(LmP0Node at)) int
+    fn: l2_ref_formal_ns (const: @(LmP0Node decl)) int
+    fn: l2_ns_ref_pointee (int: ni; const: @(char pd); size_t: off; size_t: len) int
     fn: l2_ns_slot_named (int: ni; const: @(char pd); size_t: off; size_t: len; @: int out_kind; @: int out_ent) int
     fn: l2_mrs_slot_named (int: res; const: @(char pd); size_t: off; size_t: len; @: int out_kind; @: int out_ent) int
     fn: l2_path_root (const: @(char pd); size_t: pn; @: int out_ni; @: int out_res; @: int out_oi; @: int out_root; @: int out_fi) int
@@ -3862,8 +3866,13 @@ fn: l2_ml_add (const: @(LmP0Text t); int: ty; const: @(char path); const: @(LmP0
     if: nt = 0
         return: l2_error(path, at, "out of memory")
     l2_ml_ty: nt
+    nt: (cast: (@: int) realloc((cast: (@: void) l2_ml_ns), want * c.sizeof(c.int)))
+    if: nt = 0
+        return: l2_error(path, at, "out of memory")
+    l2_ml_ns: nt
     l2_ml_nm[l2_ml_n]: (cast: (@: LmP0Text) t)
     l2_ml_ty[l2_ml_n]: ty
+    l2_ml_ns[l2_ml_n]: l2_ref_formal_ns(at)
     l2_ml_n: l2_ml_n + 1
 return: 0
 
@@ -4805,8 +4814,10 @@ fn: l2_resolve_type_atom (const: @(LmP0Text atom); int: depth; int: is_const; @:
         if: \out_ty >= 100
             return: 0
         return: 2
+    # A reference `@: T` to a named Structure is one level, `@: Lmx` (D-76): its value is the Structure
+    # itself, the pointee its pointer cell holds -- the same value `@mo` gives and `T: mo`'s slot holds.
     if: l2_ns_find(atom) >= 0
-        \out_ty: l2_foreign_intern(l2_lmx_text(), depth + 1, is_const)
+        \out_ty: l2_foreign_intern(l2_lmx_text(), depth, is_const)
         if: \out_ty >= 100
             return: 0
         return: 2
@@ -5055,8 +5066,9 @@ fn: l2_ptr_type_word (const: @(LmP0Text word); int: depth; @: int out_ty) int
     if: depth = 2 && l2_text_eq(word, "ulong")
         \out_ty: 39
         return: 0
+    # `@: T` of a named Structure is one level, `@: Lmx` (D-76; l2_resolve_type_atom).
     if: l2_ns_find(word) >= 0
-        \out_ty: l2_foreign_intern(l2_lmx_text(), depth + 1, 0)
+        \out_ty: l2_foreign_intern(l2_lmx_text(), depth, 0)
         if: \out_ty >= 100
             return: 0
         return: 2
@@ -11096,6 +11108,11 @@ fn: l2_take_ns_body (const: @(LmP0Text name); int: parent; const: @(LmP0Structur
                                             if: l2_nsf_push(9 + rdepth, 0U, rty, me) < 0
                                                 return: l2_error(path, at, "out of memory")
                                             l2_nsf_fname[l2_nsf_n - 1]: (cast: (@: LmP0Text) h\value\as\atom)
+                                            # `@: T q` with T a named Structure (D-76): the pointee's name, so a
+                                            # path goes on through q (l2_ns_ref_pointee).
+                                            if: rdepth = 1 && l2_ns_find(g\value\as\atom) >= 0
+                                                l2_nsf_name[l2_nsf_n - 1]: (cast: (@: LmP0Text) g\value\as\atom)
+                                            ---
                                         else:
                                             # Name: field, a reference to another named Structure. The
                                             # TARGET is not resolved here: it may not have been read yet,
@@ -11583,6 +11600,16 @@ fn: l2_ns_slot_named (int: ni; const: @(char pd); size_t: off; size_t: len; @: i
     ---
 return: hit
 
+# The named Structure the reference field `@: T seg` of Structure ni points at, or -1 (D-76).
+fn: l2_ns_ref_pointee (int: ni; const: @(char pd); size_t: off; size_t: len) int
+    int: k 0
+    while: k < l2_nsf_n
+        if: l2_nsf_owner[k] = ni && l2_nsf_kind[k] = 10 && l2_nsf_name[k] != 0 && l2_name_is_seg(l2_nsf_fname[k], pd, off, len) != 0
+            return: l2_ns_find(l2_nsf_name[k])
+        k: k + 1
+    ---
+return: 0 - 1
+
 # The same for a bound merge result, whose slots carry the names of the fields
 # that CONTRIBUTED them.  merge makes no repeated names (the author's merge rule, plan §4):
 # a later operand's field of a model name went INTO the model's slot, so a name has one
@@ -11752,6 +11779,18 @@ fn: l2_path_root (const: @(char pd); size_t: pn; @: int out_ni; @: int out_res; 
             i: i + 1
         ---
     if: \out_fi >= 0
+        return: 0
+    # A local reference `@: T name` to a named Structure (D-76): its value is the Structure, the
+    # root; out_root -3 - i names local i (-2 is node, <= -1000 a method, >= 0 a for).
+    if: l2_cur_mi >= 0
+        i: 0
+        while: i < l2_ml_n && i < 990
+            if: l2_ml_ns[i] >= 0 && l2_name_is_seg(l2_ml_nm[i], pd, off, len) != 0
+                \out_root: 0 - 3 - i
+                \out_ni: l2_ml_ns[i]
+            i: i + 1
+        ---
+    if: \out_root <= 0 - 3 && \out_root > 0 - 1000
         return: 0
     i: 0
     while: i < l2_ns_n
@@ -11927,13 +11966,16 @@ fn: l2_path_kind (const: @(char pd); size_t: pn; @: int out_mi) int
             slot: l2_for_own_seg(root, pd, off, len, @ kind, @ ent)
         if: i = 1 && root <= 0 - 1000
             slot: l2_own_seg_scan(0 - 1000 - root, 0, pd, off, len, @ kind, @ ent)
-        if: (i > 1 || (res < 0 && root = 0 - 1)) && ni < 0
+        if: (i > 1 || (res < 0 && (root = 0 - 1 || (root <= 0 - 3 && root > 0 - 1000)))) && ni < 0
             return: 0 - 1
-        if: (i > 1 || (res < 0 && root = 0 - 1)) && ni >= 0
+        if: (i > 1 || (res < 0 && (root = 0 - 1 || (root <= 0 - 3 && root > 0 - 1000)))) && ni >= 0
             slot: l2_ns_slot_named(ni, pd, off, len, @ kind, @ ent)
         if: slot < 0
             return: 0 - 1
-        if: i + 1 < segs && kind != 2 && kind != 3
+        # Through a reference field `@: T q` (D-76): on into its pointee T.
+        if: i + 1 < segs && kind = 10 && res < 0
+            ent: l2_ns_ref_pointee(ni, pd, off, len)
+        if: i + 1 < segs && kind != 2 && kind != 3 && (kind != 10 || res >= 0 || ent < 0)
             return: 0 - 1
         if: i + 1 < segs
             ni: ent
@@ -12002,13 +12044,16 @@ fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind);
         return: 1
     if: oi < 0 && fi >= 0 && c.fprintf(l2_out, "%sl2_pst: %s\n%sif: l2_pst = 0\n", ind, l2_proot, ind) < 0
         return: 1
-    if: oi < 0 && fi < 0 && ni >= 0 && l2_ns_eternal[ni] < 0 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(%s, %uU)\n%sif: l2_pst = 0\n", ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni))), ind) < 0
+    # A local reference root (D-76): the local's own value is the Structure.
+    if: oi < 0 && root <= 0 - 3 && root > 0 - 1000 && (l2_tok_text(l2_ml_nm[0 - 3 - root], l2_proot, 64U) != 0 || c.fprintf(l2_out, "%sl2_pst: (cast: (@: Lmx) %s)\n%sif: l2_pst = 0\n", ind, l2_proot, ind) < 0 || l2_emit_path_bail(mi, ind) != 0)
         return: 1
-    if: oi < 0 && fi < 0 && ni >= 0 && l2_ns_eternal[ni] >= 0 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(%s, %uU)\n%sif: l2_pst = 0\n", ind, l2_unit_ref, (cast: (unsigned) (l2_unit_base + l2_occ_n() + l2_ns_eternal[ni])), ind) < 0
+    if: oi < 0 && fi < 0 && (root > 0 - 3 || root <= 0 - 1000) && ni >= 0 && l2_ns_eternal[ni] < 0 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(%s, %uU)\n%sif: l2_pst = 0\n", ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni))), ind) < 0
+        return: 1
+    if: oi < 0 && fi < 0 && (root > 0 - 3 || root <= 0 - 1000) && ni >= 0 && l2_ns_eternal[ni] >= 0 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(%s, %uU)\n%sif: l2_pst = 0\n", ind, l2_unit_ref, (cast: (unsigned) (l2_unit_base + l2_occ_n() + l2_ns_eternal[ni])), ind) < 0
         return: 1
     if: oi < 0 && fi >= 0 && l2_emit_path_bail(mi, ind) != 0
         return: 1
-    if: oi < 0 && fi < 0 && ni >= 0 && l2_emit_path_bail(mi, ind) != 0
+    if: oi < 0 && fi < 0 && (root > 0 - 3 || root <= 0 - 1000) && ni >= 0 && l2_emit_path_bail(mi, ind) != 0
         return: 1
     # node/for (FABLE-SONNET-NODE-ROOT-20260923-121): node's value is the
     # unit itself (l2_own_ctr's rule for any own field E owns), needing no
@@ -12059,17 +12104,26 @@ fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind);
             if: slot >= 0
                 slot: l2_own_uchild[slot]
             ---
-        if: (i > 1 || (res < 0 && root = 0 - 1)) && ni < 0
+        if: (i > 1 || (res < 0 && (root = 0 - 1 || (root <= 0 - 3 && root > 0 - 1000)))) && ni < 0
             return: l2_error(l2_src, at, "field path goes through a slot with no Structure")
-        if: (i > 1 || (res < 0 && root = 0 - 1)) && ni >= 0
+        if: (i > 1 || (res < 0 && (root = 0 - 1 || (root <= 0 - 3 && root > 0 - 1000)))) && ni >= 0
             slot: l2_ns_slot_named(ni, pd, off, len, @ kind, @ ent)
         if: slot = 0 - 2
             return: l2_error(l2_src, at, "ambiguous field path segment")
         if: slot < 0
             return: l2_error(l2_src, at, "unknown field path segment")
-        if: i + 1 < segs && kind != 2 && kind != 3
+        if: i + 1 < segs && kind = 10 && res < 0
+            ent: l2_ns_ref_pointee(ni, pd, off, len)
+        if: i + 1 < segs && kind != 2 && kind != 3 && (kind != 10 || res >= 0 || ent < 0)
             return: l2_error(l2_src, at, "field path goes through a slot with no Structure")
-        if: i + 1 < segs && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(l2_pst, %uU)\n%sif: l2_pst = 0\n", ind, (cast: (unsigned) slot), ind) < 0
+        # Through a reference field (D-76): its pointer cell holds the pointee Structure.
+        if: i + 1 < segs && kind = 10 && c.fprintf(l2_out, "%sl2_pxp: lmx_arena_ref_cell(l2_pst, %uU)\n%sif: l2_pxp = 0\n", ind, (cast: (unsigned) slot), ind) < 0
+            return: 1
+        if: i + 1 < segs && kind = 10 && l2_emit_path_bail(mi, ind) != 0
+            return: 1
+        if: i + 1 < segs && kind = 10 && c.fprintf(l2_out, "%sl2_pst: (cast: (@: Lmx) lmx_pointer_value_known(l2_pxp[0]))\n%sif: l2_pst = 0\n", ind, ind) < 0
+            return: 1
+        if: i + 1 < segs && kind != 10 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(l2_pst, %uU)\n%sif: l2_pst = 0\n", ind, (cast: (unsigned) slot), ind) < 0
             return: 1
         if: i + 1 < segs && l2_emit_path_bail(mi, ind) != 0
             return: 1
@@ -13046,6 +13100,16 @@ fn: l2_bind_same_unit_forward (const: @(LmP0Node fn_node); const: @(LmP0Text nam
     \out_bound: 1
 return: 0
 
+# The named Structure a reference declaration `@: T name` points at, or -1 (D-76).
+fn: l2_ref_formal_ns (const: @(LmP0Node decl)) int
+    @: LmP0Field f
+    if: l2_frame_head(decl, "@") = 0 || decl\as\frame\body = 0 || l2_count_active(decl\as\frame\body) != 2
+        return: 0 - 1
+    f: l2_next_active(decl\as\frame\body\first_field)
+    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM
+        return: 0 - 1
+return: l2_ns_find(f\value\as\atom)
+
 fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path)) int
     @: LmP0Field field
     const: @: LmP0Frame fr
@@ -13145,6 +13209,14 @@ fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path)) int
         ---
         if: p\value != 0 && p\value\kind = c.LM_P0_NODE_FRAME && p\value\as != 0 && p\value\as\frame != 0 && l2_ns_find(p\value\as\frame\head) >= 0
             if: l2_nsty_set(l2_m_n, j, l2_ns_find(p\value\as\frame\head)) != 0
+                l2_free_method(l2_m_n)
+                return: l2_error(path, fn_node, "out of memory")
+            ---
+        ---
+        # A reference formal `@: T name` to a named Structure T (D-76): its value is the Structure
+        # (`@: Lmx`, one level), so its type is T for a path through it, as `T: name`'s is.
+        if: l2_ref_formal_ns(p\value) >= 0
+            if: l2_nsty_set(l2_m_n, j, l2_ref_formal_ns(p\value)) != 0
                 l2_free_method(l2_m_n)
                 return: l2_error(path, fn_node, "out of memory")
             ---

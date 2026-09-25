@@ -1941,6 +1941,16 @@ $fixtures = @(
         Args = @('0');
         Absent = @();
         Debt = @() },
+    # D-76: a reference `@: T` to a named Structure is one level, `@: Lmx` -- its value is the Structure
+    # -- and a path goes through it: a local (main: unknown field path root), a formal (main: refused
+    # write, raw `->` read), a reference field (main: refused write).  Each reads and writes through
+    # the reference; success is 7.
+    [pscustomobject]@{ Name = 'unit_ref_local_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0');
+        Absent = @('@@: Lmx r'); Debt = @('@: Lmx r', 'l2_pst: (cast: (@: Lmx) r)') },
+    [pscustomobject]@{ Name = 'unit_ref_formal_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0');
+        Absent = @('@@: Lmx l2_p'); Debt = @('@: Lmx l2_p0_0') },
+    [pscustomobject]@{ Name = 'unit_ref_field_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0');
+        Absent = @(); Debt = @('l2_pst: (cast: (@: Lmx) lmx_pointer_value_known(l2_pxp[0]))') },
     [pscustomobject]@{ Name = 'unit_addr_entry_name_collision.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body';
         Args = @('0');
         Says = @('1 2 3 4 5');

@@ -1,9 +1,15 @@
+# The argument count reaches a method as an ordinary value: argv[0] alone is one.
 fn: plus_one (int: x) int
-    return: x + 1
-end: plus_one
+return: x + 1
 
-fn: main (int: argc; @@: char argv) int
-    if: argv = 0
-        return: 99
-    return: plus_one(argc)
-end: main
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+
+MainLetter: m
+receiveMessage: m
+if: m = 0
+    sendMessage: exit(exit_code: 99; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: plus_one(length(m\mainArgs)); stdout: ""; stderr: "")
+return

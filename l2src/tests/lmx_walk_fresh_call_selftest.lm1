@@ -1,0 +1,197 @@
+predef: "l2src/lmx_walk.lm1"
+predef: "l2src/lmx_fresh.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_scratch.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# -188 k.3c: FRESH + CALL data operand. Recursion gets its own instance; after return
+# outside M\x reads M's fields (not the frame instance). Mutant: CALL without data -> INVALID.
+
+@: LmxArena ga 0
+@: Lmx groles 0
+@: LmxWalkContext gctx 0
+@: LmxWalkValue gv 0
+int: broken 0
+int: checks 0
+int: failures 0
+
+sub: check (int: ok; const: @(char label))
+    checks: checks + 1
+    if: ok = 0
+        failures: failures + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: check
+
+fn: fr (@: Lmx parent; size_t: slot; int: op; size_t: children) @: Lmx
+    @: Lmx n lmx_walk_frame(ga, groles, parent, op, children)
+    if: n = 0 || lmx_arena_ref_store(parent, slot, (cast: (@: void) n)) != 0
+        broken: broken + 1
+        return: 0
+    ---
+return: n
+
+fn: pl (@: Lmx parent; size_t: slot; size_t: children) @: Lmx
+    @: Lmx n lmx_walk_plain(ga, parent, children)
+    if: n = 0 || lmx_arena_ref_store(parent, slot, (cast: (@: void) n)) != 0
+        broken: broken + 1
+        return: 0
+    ---
+return: n
+
+sub: ref (@: Lmx code; size_t: slot; @: Lmx target)
+    if: code = 0 || target = 0 || lmx_arena_ref_store(code, slot, (cast: (@: void) target)) != 0
+        broken: broken + 1
+    ---
+end: ref
+
+sub: sz (@: Lmx code; size_t: slot; size_t: value)
+    if: code = 0 || lmx_walk_store_size(ga, code, slot, value) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+end: sz
+
+fn: icell (@: Lmx holder; size_t: slot; int: value) @: void
+    if: holder = 0 || lmx_walk_store_int(ga, holder, slot, value) != c.LMX_WALK_OK
+        broken: broken + 1
+        return: 0
+    ---
+return: lmx_arena_ref_value(holder, slot)
+
+fn: lit (@: Lmx parent; size_t: slot; int: value) @: Lmx
+    @: Lmx n fr(parent, slot, c.LMX_WALK_OP_LIT, 2U)
+    if: n != 0 && lmx_walk_store_int(ga, n, 1U, value) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+return: n
+
+fn: own (@: Lmx parent; size_t: slot; @: Lmx holder; size_t: index) @: Lmx
+    @: Lmx n fr(parent, slot, c.LMX_WALK_OP_OWN, 3U)
+    ref(n, 1U, holder)
+    sz(n, 2U, index)
+return: n
+
+# k.4: a walked callable occurrence is just the ordinary body Structure -- no descriptor;
+# `native` stays 0 by construction. `children` now counts body steps only, so every call
+# site below shrinks by one and every stored slot index moves down by one.
+fn: mk_m (@: Lmx unit; size_t: slot; size_t: children) @: Lmx
+    @: Lmx m pl(unit, slot, children)
+    if: m = 0
+        return: 0
+    ---
+    m\parent: unit
+return: m
+
+fn: go (@: Lmx m; @@: void args; size_t: nargs; @: int out_r; @: int out_v) int
+    int: st
+    gv\ref: 0
+    gv\number: 0
+    gv\present: 0
+    st: lmx_walk_run(gctx, m, args, nargs, gv)
+    if: out_r != 0
+        \out_r: gv\number
+    ---
+    if: out_v != 0
+        \out_v: gv\present
+    ---
+return: st
+
+fn: main () int
+    LmxArena: arena
+    LmxArena: context_arena
+    LmxPool: context_cells
+    LmxScratch: store
+    LmxWalkContext: context
+    @: Lmx unit 0
+    @: Lmx writer 0
+    @: Lmx caller 0
+    @: Lmx bad 0
+    @: Lmx n 0
+    @: Lmx e 0
+    @: Lmx fresh_alone 0
+    @: void xcell 0
+    int: r 0
+    int: v 0
+    int: st 0
+
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ arena) != 0
+        return: 2
+    ---
+    ga: @ arena
+    groles: lmx_walk_roles_open(ga)
+    memset((cast: (@: void) (@ context_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ context_cells)), 0, c.sizeof(c.LmxPool))
+    memset((cast: (@: void) (@ store)), 0, c.sizeof(c.LmxScratch))
+    if: lmx_arena_open(@ context_arena) != 0 || lmx_scratch_open(@ store, @ context_arena, @ context_cells, 16U) != c.LMX_SCRATCH_OK
+        return: 2
+    ---
+    lmx_walk_program_bind(groles)
+    context.arena: ga
+    context.scratch: @ store
+    context.roles: groles
+    context.immutable_profile: 0
+    context.classified: 0U
+    gctx: @ context
+    gv: (cast: (@: LmxWalkValue) calloc(1U, c.sizeof(c.LmxWalkValue)))
+    if: gv = 0 || groles = 0
+        return: 2
+    ---
+
+    unit: lmx_node_new_owned(ga)
+    if: unit = 0 || lmx_arena_refs_open_owned(ga, unit, 8U) != 0
+        return: 2
+    ---
+
+    # writer: own x 1;  x: 99;  return: x
+    # Called with data = FRESH(writer): frame writes 99 on the fresh instance.
+    # After return, writer\x must still be 1 (M fields, not frame). Mutant: data=writer -> 99 RED.
+    # k.4: no descriptor slot -- own field x at slot 0, SET at slot 1, RET at slot 2.
+    writer: mk_m(unit, 1U, 3U)
+    xcell: icell(writer, 0U, 1)
+    n: fr(writer, 1U, c.LMX_WALK_OP_SET, 3U)
+    own(n, 1U, writer, 0U)
+    lit(n, 2U, 99)
+    n: fr(writer, 2U, c.LMX_WALK_OP_RET, 2U)
+    own(n, 1U, writer, 0U)
+
+    # k.4: caller's CALL step at slot 0 (no descriptor); CALL gains a 4th leading child
+    # (rtype, left 0 -- writer is walked, not native, so lmx_walk_call never reads it on
+    # that path); data (FRESH) stays at child 2, unaffected by rtype's insertion after it.
+    caller: mk_m(unit, 2U, 1U)
+    n: fr(caller, 0U, c.LMX_WALK_OP_CALL, 4U)
+    ref(n, 1U, writer)
+    e: fr(n, 2U, c.LMX_WALK_OP_FRESH, 2U)
+    ref(e, 1U, writer)
+    st: go(caller, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && v = 1 && r = 99, "CALL data=FRESH: frame return 99")
+    check(lmx_int_value_known(xcell) = 1, "after return M\\x = M fields (mutant data=M wrote 99 -> RED)")
+
+    fresh_alone: lmx_fresh(ga, writer)
+    check(fresh_alone != 0 && fresh_alone != writer, "lmx_fresh alone: new Structure")
+    check(fresh_alone\parent = writer\parent, "fresh.parent = code.parent")
+    check(fresh_alone\native = writer\native, "fresh copies native verbatim (k.4: sibling member, not child0)")
+
+    # Mutant: CALL with only code child (no data, no rtype) -> INVALID (k.4 floor is 4
+    # children: role+code+data+rtype, was 3; 2 is still short either way).
+    bad: mk_m(unit, 3U, 1U)
+    n: fr(bad, 0U, c.LMX_WALK_OP_CALL, 2U)
+    ref(n, 1U, writer)
+    st: lmx_walk_run(gctx, bad, 0, 0U, gv)
+    check(st = c.LMX_WALK_INVALID, "CALL without data/rtype children -> INVALID (mutant old arity greened -> RED)")
+
+    check(broken = 0, "fixture construction")
+    if: failures != 0
+        c.printf("lmx_walk_fresh_call_selftest %d/%d FAILED\n", failures, checks)
+        return: 1
+    ---
+    c.printf("OK %d checks\n", checks)
+return: 0

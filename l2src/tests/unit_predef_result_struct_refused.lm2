@@ -1,0 +1,16 @@
+# FABLE-SONNET-DECL-PREPASS-20260923-137 part 3: a predef'd C function's
+# result reads as numeric (the same code a literal gets) -- l2_colon_types_
+# compatible only accepts that into a numeric target (int/size_t/unsigned/
+# ulong); a Structure-typed target still correctly refuses, located, the
+# same fail-closed outcome an unknown type gave before this ticket, now
+# for the right reason.
+predef: "l1src/parser.lm1"
+
+Model:
+    size_t: value 1U
+end: Model
+
+@: c.LmP0Document document
+Model: bad
+bad: lm_p0_parse_file("dev/l2src_sandbox/tests/entry_return7.lm2", @ document)
+return: 0

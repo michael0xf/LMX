@@ -1,0 +1,19 @@
+# FABLE-GROKBOT-MATRIX-20260924-143 cell: existing non-callable x primitive,
+# three spellings. Physical operation = ASSIGNMENT (paren with a value is
+# still assignment of that value -- not a call; empty `f()` refuses separately).
+int: x 1
+x: 2
+if: x != 2
+    sendMessage: exit(exit_code: 11; stdout: ""; stderr: "")
+    return
+x(3)
+if: x != 3
+    sendMessage: exit(exit_code: 12; stdout: ""; stderr: "")
+    return
+x:
+    4
+if: x != 4
+    sendMessage: exit(exit_code: 13; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

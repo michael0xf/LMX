@@ -1,0 +1,15 @@
+Model:
+    size_t: value 1U
+end: Model
+
+# FABLE-SONNET-UNIT-LEVEL-ROOTS-20260923-117: the -104/-105 unit-level case,
+# now free under S2 -- the unit body is E's own body, mi = e, no special
+# casing needed. Model: fresh at unit level, @: Model p / p: @fresh.
+Model: fresh
+@: Model p
+p: @fresh
+if: p = 0
+    sendMessage: exit(exit_code: 80; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

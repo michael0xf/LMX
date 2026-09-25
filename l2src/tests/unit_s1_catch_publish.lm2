@@ -1,0 +1,16 @@
+# The exit checkpoint (§13; the witness S1.1 deferred): m writes the unit field x, then throws.
+# What the activation wrote is published before the throw leaves, so E, after catching, reads 7.
+int: x 0
+
+fn: m () int
+    throws: Oops
+    x: 7
+    throw: Oops()
+return: 0
+
+int: seen 0
+m()
+catch: Oops ()
+    seen: x
+sendMessage: exit(exit_code: seen; stdout: ""; stderr: "")
+return

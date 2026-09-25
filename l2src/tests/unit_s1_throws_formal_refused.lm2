@@ -1,0 +1,21 @@
+# S1.4: a callable given for a callable formal declares the same throw names in the same order.
+# bad declares Oops; the formal's signature `test` declares none.
+fn: test () int
+    return: 1
+end: test
+
+fn: bad () int
+    throws: Oops
+    throw: Oops()
+return: 0
+
+fn: test2 (test: f) int
+    return: f
+end: test2
+
+fn: p () int
+    throws: Oops
+    return: test2(bad)
+end: p
+
+return: 0

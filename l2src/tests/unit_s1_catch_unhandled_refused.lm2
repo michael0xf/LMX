@@ -1,0 +1,15 @@
+# A catch covers its block and the blocks nested in it -- not a sibling.  The call's block has no
+# handler and E lists nothing: refused.
+fn: m () int
+    throws: Oops
+    throw: Oops()
+return: 0
+
+int: r 0
+---
+    catch: Oops ()
+        r: 1
+---
+    r: m()
+---
+return: r

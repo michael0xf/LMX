@@ -1,0 +1,1091 @@
+predef: "l2src/lmx_walk.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# The walk of a body tree, on graphs built by hand: no translator emits body nodes yet.
+# Every program below is an ordinary callable occurrence M in one unit; its body is M's
+# own fields, in order (k.4: no reserved child[0] slot -- `native` is a sibling Lmx
+# member, zero by construction for every occurrence here, so every body below is walked,
+# never dispatched natively, except the G1 section which sets `native` directly).  A node
+# refers to its role, to the Structure that holds a field and to a callee by ADDRESS; the
+# only numbers are the slot of a field inside its Structure and the ordinal of a declared
+# input.  There are no names anywhere.
+#
+# k.4 (next_core_tasks.md §3 item 9; author, "отдельного признака callable нет... отказ —
+# дело транслятора"): there is no PREPARE step and no cached activation plan any more --
+# lmx_walk_prepare/lmx_plan_* are gone.  Entry (lmx_walk_enter) needs nothing beyond the
+# Structure itself: it classifies code and data as Structures and runs.  Own-field
+# membership, which used to be checked once against a published plan, is now checked at
+# the point of use by lmx_walk_slot (holder classifies as a Structure, index within its
+# `len`).  A body with zero op-classified steps is not a refusal any more -- it is a
+# legitimate empty run that falls through with no value, the same as reaching the end of
+# any other body.  Most of the "acceptance letters" of the retired steps/l3-activation-
+# plan.md therefore no longer name a distinct mechanism; where a comment below still cites
+# one it is a historical pointer to what the fixture originally pinned, not a live check.
+
+@: LmxArena ga 0
+@: Lmx groles 0
+@: LmxWalkContext gctx 0
+@: LmxWalkValue gv 0
+int: broken 0
+int: checks 0
+int: failures 0
+
+sub: check (int: ok; const: @(char label))
+    checks: checks + 1
+    if: ok = 0
+        failures: failures + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: check
+
+# A frame node under `parent`, stored into parent[slot].
+fn: fr (@: Lmx parent; size_t: slot; int: op; size_t: children) @: Lmx
+    @: Lmx n lmx_walk_frame(ga, groles, parent, op, children)
+    if: n = 0 || lmx_arena_ref_store(parent, slot, (cast: (@: void) n)) != 0
+        broken: broken + 1
+        return: 0
+    ---
+return: n
+
+# A plain Structure (a body) under `parent`, stored into parent[slot].
+fn: pl (@: Lmx parent; size_t: slot; size_t: children) @: Lmx
+    @: Lmx n lmx_walk_plain(ga, parent, children)
+    if: n = 0 || lmx_arena_ref_store(parent, slot, (cast: (@: void) n)) != 0
+        broken: broken + 1
+        return: 0
+    ---
+return: n
+
+# A reference stored into code[slot].
+sub: ref (@: Lmx code; size_t: slot; @: Lmx target)
+    if: code = 0 || target = 0 || lmx_arena_ref_store(code, slot, (cast: (@: void) target)) != 0
+        broken: broken + 1
+    ---
+end: ref
+
+sub: sz (@: Lmx code; size_t: slot; size_t: value)
+    if: code = 0 || lmx_walk_store_size(ga, code, slot, value) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+end: sz
+
+# An own int cell of `holder` at `slot`, with its initial value.
+fn: icell (@: Lmx holder; size_t: slot; int: value) @: void
+    if: holder = 0 || lmx_walk_store_int(ga, holder, slot, value) != c.LMX_WALK_OK
+        broken: broken + 1
+        return: 0
+    ---
+return: lmx_arena_ref_value(holder, slot)
+
+fn: lit (@: Lmx parent; size_t: slot; int: value) @: Lmx
+    @: Lmx n fr(parent, slot, c.LMX_WALK_OP_LIT, 2U)
+    if: n != 0 && lmx_walk_store_int(ga, n, 1U, value) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+return: n
+
+# [own, holder, slot]: the field `index` of the Structure `holder`, by reference.
+# An EXPLICIT holder (this one) names that one Structure -- a path, like `M\x` written
+# from outside -- and means it regardless of which occurrence's code the frame runs as
+# part of, copied or not: code is immutable and shared, and copying never rewrites a
+# reference embedded in it (K-OT1/-194 к.5; fable, 2026-09-26 -- the copier's OLD
+# per-copy rewrite was a side effect of the pre-K-OT1 model, never real semantics).
+fn: own (@: Lmx parent; size_t: slot; @: Lmx holder; size_t: index) @: Lmx
+    @: Lmx n fr(parent, slot, c.LMX_WALK_OP_OWN, 3U)
+    ref(n, 1U, holder)
+    sz(n, 2U, index)
+return: n
+
+# [own, 0, slot]: "this activation's own data" (K-OT2/-194 к.5) -- the ONE form that
+# means the running occurrence itself, holder = f\data, not an address. There is no
+# second frame regime: an explicit holder above is always that Structure; 0 here is the
+# only way a frame means "whichever occurrence is actually running it."
+fn: own0 (@: Lmx parent; size_t: slot; size_t: index) @: Lmx
+    @: Lmx n fr(parent, slot, c.LMX_WALK_OP_OWN, 3U)
+    sz(n, 2U, index)
+return: n
+
+fn: argn (@: Lmx parent; size_t: slot; size_t: k) @: Lmx
+    @: Lmx n fr(parent, slot, c.LMX_WALK_OP_ARG, 2U)
+    sz(n, 1U, k)
+return: n
+
+
+# G1 native trampolines (prim ABI). Mutant: refuse addr!=0 -> RED; collapse status -> RED.
+fn: g1_seven (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    if: nargs != 1U || refs = 0 || dest = 0 || out = 0
+        c.fprintf(l1_stderr(), "lmx: invariant: g1_seven nargs\n")
+        c.abort()
+    ---
+    lmx_int_store_known(dest, 7)
+    \out: dest
+return: 0
+
+fn: g1_throw2 (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    \out: 0
+return: 2
+
+# A callable occurrence under the unit (k.4: an ordinary Structure -- `native` is a
+# sibling Lmx member, zero by construction, not a child slot, so there is no descriptor
+# to reserve here any more).  Slot 0 of every occurrence built by this helper is simply
+# never used by the fixtures below (their own field/body numbering already starts at 1,
+# unchanged from before this migration) -- left that way deliberately, to avoid
+# renumbering several hundred cross-referenced slot literals throughout this file for a
+# purely cosmetic gain; nothing walks or classifies slot 0, so it is inert, not wrong.
+fn: mk_m (@: Lmx unit; size_t: slot; size_t: children) @: Lmx
+return: pl(unit, slot, children)
+
+# K-ARITY (-194 к.5b): an occurrence actually CALLED with arguments (via a CALL frame,
+# recursively or otherwise) now needs its own args-part at slot 0 -- form A's own shape,
+# lmx_walk_arg_arity reads its WIDTH (one child per formal), not a scan of the body's
+# own ARG uses any more (which undercounted a declared-but-unread formal). Slot 0 stays
+# mk_m's own convention (unused) for every occurrence never called with args; each
+# formal child is left at its own zero default -- only the count matters here.
+fn: mk_m_arity (@: Lmx unit; size_t: slot; size_t: children; size_t: arity) @: Lmx
+    @: Lmx m pl(unit, slot, children)
+    @: Lmx args_part 0
+    if: m = 0
+        return: 0
+    args_part: lmx_walk_plain(ga, m, arity)
+    if: args_part = 0 || lmx_arena_ref_store(m, 0U, (cast: (@: void) args_part)) != 0
+        broken: broken + 1
+        return: 0
+return: m
+
+# One direct call.  The value comes back as a REFERENCE; an int result is read through
+# it, whether it is the record's own destination cell or a cell of the graph.
+fn: go (@: Lmx m; @@: void args; size_t: nargs; @: int r; @: int v) int
+    int: st
+    st: lmx_walk_run(gctx, m, args, nargs, gv)
+    \v: gv\present
+    if: st = c.LMX_WALK_OK && gv\present != 0 && gv\ref != 0
+        \r: lmx_int_value_known(gv\ref)
+    ---
+return: st
+
+# Cells every array of the arena has handed out so far: an allocation anywhere moves it.
+fn: handed (@: LmxArena a) size_t
+    @: LmxPool pool 0
+    size_t: n 0U
+    if: a = 0
+        return: 0U
+    pool: a\arrays
+    while: pool != 0
+        n: n + lmx_pool_count(pool)
+        pool: pool\next
+    ---
+return: n
+
+# A sum over every byte the arena's arrays have handed out -- cells, slot arrays and
+# Structure headers alike: any write anywhere in the graph moves it.
+fn: digest (@: LmxArena a) size_t
+    @: LmxPool pool 0
+    @: LmxChunk chunk 0
+    @: char bytes 0
+    size_t: sum 0U
+    size_t: n
+    size_t: i
+    if: a = 0
+        return: 0U
+    pool: a\arrays
+    while: pool != 0
+        chunk: lmx_pool_chunk_head(pool)
+        while: chunk != 0
+            bytes: (cast: (@: char) (cast: (@: void) lmx_chunk_data(chunk)))
+            n: lmx_chunk_cells(chunk, pool\stride) * pool\stride
+            i: 0U
+            while: i < n
+                sum: (sum * 31U) + (cast: (size_t) ((cast: (int) bytes[i]) & 255))
+                i: i + 1U
+            ---
+            chunk: chunk\next
+        ---
+        pool: pool\next
+    ---
+return: sum
+
+fn: main () int
+    LmxArena: arena
+    LmxArena: context_arena
+    LmxPool: context_cells
+    LmxScratch: store
+    LmxWalkContext: context
+    LmxScratchMark: mark
+    LmxWalkFrame: frame
+    @: LmxArena pca 0
+    @: LmxScratch ps 0
+    @: LmxWalkContext pc 0
+    @: LmxScratchMark pm 0
+    @: LmxArenaBlock blocks 0
+    @: Lmx impostor 0
+    @: Lmx lexer 0
+    @: Lmx alone 0
+    size_t: before
+    size_t: sum_before
+    size_t: warm
+    int: i 0
+    @: LmxArena pa 0
+    @: LmxWalkFrame pf 0
+    @: Lmx unit 0
+    @: Lmx immutable_profile 0
+    @: Lmx other_profile 0
+    @: Lmx immutable_local 0
+    @: Lmx other_local 0
+    @: Lmx n 0
+    @: Lmx b 0
+    @: Lmx e 0
+    @: Lmx counter 0
+    @: Lmx outer 0
+    @: Lmx inner 0
+    @: Lmx publisher 0
+    @: Lmx reader 0
+    @: Lmx summer 0
+    @: Lmx looper 0
+    @: Lmx bare 0
+    @: Lmx faller 0
+    @: Lmx stopper 0
+    @: Lmx refuser 0
+    @: Lmx stranger 0
+    @: Lmx copy 0
+    @: Lmx explicit_target 0
+    @: Lmx explicit_writer 0
+    @: Lmx explicit_writer_copy 0
+    @: void cell 0
+    @: void xcell 0
+    @@: void argv 0
+    @: void abox 0
+    @: void foreign 0
+    @: Lmx subject 0
+    @: Lmx peek 0
+    @: Lmx bump 0
+    @: Lmx relay 0
+    @: Lmx echo 0
+    @: Lmx hop 0
+    @: Lmx self 0
+    @: Lmx poke 0
+    @: Lmx qualified_writer 0
+    # Stage C (GROKBOT-CALLABLE-INTERP-STAGEC): nullary RET invoke + descriptor-only.
+    @: Lmx test 0
+    @: Lmx test2 0
+    @: Lmx test3 0
+    @: Lmx test4 0
+    @: Lmx host 0
+    @: Lmx tracer 0
+    @: Lmx bare_stmt 0
+    @: Lmx data_stmt 0
+    @: Lmx pair 0
+    @: Lmx tramp 0
+    @: Lmx tramp2 0
+    @: Lmx native7 0
+    @: Lmx native2 0
+    @: Lmx caller7 0
+    @: Lmx caller2 0
+    @: Lmx plain_data 0
+    @: Lmx g3_body 0
+    @: Lmx g3_decl 0
+    @: Lmx d45_body 0
+    @: Lmx d45_eternal 0
+    @: Lmx tramp3 0
+    int: r 0
+    int: v 0
+    int: st 0
+
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ arena) != 0
+        fputs("lmx_walk: arena\n", l1_stdout())
+        return: 2
+    pa: @ arena
+    ga: pa
+    groles: lmx_walk_roles_open(ga)
+    # The execution context: an ordinary arena of its own, never attached to the graph's,
+    # the temporary-frame store in it, and the program's roles.
+    memset((cast: (@: void) (@ context_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ context_cells)), 0, c.sizeof(c.LmxPool))
+    memset((cast: (@: void) (@ store)), 0, c.sizeof(c.LmxScratch))
+    pca: @ context_arena
+    ps: @ store
+    pc: @ context
+    pm: @ mark
+    if: lmx_arena_open(pca) != 0 || lmx_scratch_open(ps, pca, @ context_cells, 16U) != c.LMX_SCRATCH_OK
+        fputs("lmx_walk: context\n", l1_stdout())
+        return: 2
+    pc\arena: ga
+    pc\scratch: ps
+    pc\roles: groles
+    pc\immutable_profile: 0
+    pc\classified: 0U
+    gctx: pc
+    argv: (cast: (@@: void) calloc(2U, c.sizeof(@: void)))
+    gv: (cast: (@: LmxWalkValue) calloc(1U, c.sizeof(c.LmxWalkValue)))
+    # An input is a reference: the one integer input of these tests lives in a cell of
+    # the graph's arena, and the programs are handed its address.
+    abox: lmx_int_new_owned(ga)
+    unit: lmx_node_new_owned(ga)
+    argv[0]: abox
+    if: groles = 0 || argv = 0 || gv = 0 || abox = 0 || unit = 0 || lmx_arena_refs_open_owned(ga, unit, 50U) != 0
+        fputs("lmx_walk: unit\n", l1_stdout())
+        return: 2
+    ---
+
+    # Immutable is an exact physical receiver-expression profile, not foreign ownership,
+    # sealing or representation.  Prove the owner-local case explicitly: two STRUCT values
+    # with different physical profiles must receive different answers.
+    immutable_profile: lmx_node_new_owned(ga)
+    other_profile: lmx_node_new_owned(ga)
+    immutable_local: lmx_node_new_profiled(ga, immutable_profile)
+    other_local: lmx_node_new_profiled(ga, other_profile)
+    pf: @ frame
+    pf\context: pc
+    pf\arena: ga
+    pc\immutable_profile: immutable_profile
+    check(immutable_profile != 0 && other_profile != 0 && immutable_profile != other_profile && immutable_local != 0 && other_local != 0, "physical immutable-profile fixtures")
+    check(lmx_range_classify(ga, (cast: (@: void) immutable_local)) = c.LMX_KIND_STRUCT && lmx_range_classify(ga, (cast: (@: void) other_local)) = c.LMX_KIND_STRUCT, "profile does not alter STRUCT representation")
+    check(lmx_walk_immutable(pf, (cast: (@: void) immutable_local)) != 0, "owner-local exact immutable profile was writable")
+    check(lmx_walk_immutable(pf, (cast: (@: void) other_local)) = 0, "same representation with another profile became immutable")
+    if: lmx_arena_refs_open_owned(ga, immutable_local, 1U) != 0 || icell(immutable_local, 0U, 0) = 0
+        broken: broken + 1
+    ---
+    pc\immutable_profile: 0
+    pc\classified: 0U
+
+    # Every occurrence first: a node refers to a callee and to a holder by address, so
+    # the Structures have to exist before the bodies that point at them.
+    counter: mk_m(unit, 0U, 4U)
+    outer: mk_m(unit, 1U, 4U)
+    inner: mk_m(unit, 2U, 2U)
+    publisher: mk_m(unit, 3U, 4U)
+    reader: mk_m(unit, 4U, 2U)
+    summer: mk_m_arity(unit, 5U, 3U, 1U)
+    looper: mk_m(unit, 6U, 5U)
+    bare: mk_m(unit, 7U, 2U)
+    faller: mk_m(unit, 8U, 3U)
+    stopper: mk_m(unit, 9U, 5U)
+    refuser: mk_m(unit, 10U, 4U)
+    stranger: mk_m(unit, 12U, 2U)
+    impostor: mk_m(unit, 13U, 2U)
+    lexer: mk_m(unit, 14U, 6U)
+    alone: mk_m(unit, 15U, 2U)
+    peek: mk_m_arity(unit, 18U, 2U, 1U)
+    bump: mk_m_arity(unit, 19U, 2U, 1U)
+    relay: mk_m_arity(unit, 20U, 2U, 1U)
+    echo: mk_m_arity(unit, 21U, 2U, 1U)
+    hop: mk_m_arity(unit, 22U, 2U, 1U)
+    self: mk_m_arity(unit, 23U, 2U, 1U)
+    poke: mk_m(unit, 24U, 4U)
+    # Stage C fixtures (slots 27..)
+    test: mk_m(unit, 27U, 2U)
+    test2: mk_m_arity(unit, 28U, 2U, 1U)
+    test3: mk_m(unit, 29U, 1U)
+    test4: mk_m(unit, 30U, 2U)
+    host: mk_m(unit, 31U, 2U)
+    tracer: mk_m(unit, 37U, 3U)
+    bare_stmt: mk_m(unit, 38U, 3U)
+    data_stmt: mk_m(unit, 39U, 3U)
+    # A subject: plain data, not a callable.  [ 7, 35 ]
+    subject: pl(unit, 25U, 2U)
+    icell(subject, 0U, 7)
+    icell(subject, 1U, 35)
+    # A body that would write an owner-local value of the exact immutable profile.
+    qualified_writer: mk_m(unit, 26U, 2U)
+    n: fr(qualified_writer, 1U, c.LMX_WALK_OP_PUT, 4U)
+    ref(n, 1U, immutable_local)
+    sz(n, 2U, 0U)
+    lit(n, 3U, 1)
+
+    # explicit_writer: explicit_target\n: 42 -- an EXPLICIT (non-zero) holder naming a
+    # Structure OTHER than explicit_writer itself. K-OT1/K-OT2 witness (-194 к.5, fable's
+    # ruling): a copy of explicit_writer still writes into explicit_target BY NAME,
+    # never into "the copy's own" anything -- an explicit holder is a path (`M\x`
+    # written from outside), and copying/re-entering the code it lives in never changes
+    # what that path means. This is the counterpart to counter's own own0 frames above
+    # (holder = 0, "this activation's data") -- the two are the whole of what a holder
+    # can mean; there is no third form and no "explicit holder rebinds per copy" case.
+    explicit_target: mk_m(unit, 40U, 2U)
+    icell(explicit_target, 1U, 0)
+    explicit_writer: mk_m(unit, 41U, 2U)
+    n: fr(explicit_writer, 1U, c.LMX_WALK_OP_SET, 3U)
+    own(n, 1U, explicit_target, 1U)
+    lit(n, 2U, 42)
+
+    # counter:   own n 0;  n: n + 1;  return: n
+    # K-OT2 (-194 к.5): counter's own frames name NO holder (own0, holder = 0) --
+    # "this activation's own data," resolved to whichever occurrence is actually
+    # running them. This is what makes a COPY of counter correctly own ITS OWN n after
+    # K-OT1 shares the frames by address between counter and its copy: an explicit
+    # holder here (the pre-K-OT1 form) would always mean counter's own n specifically,
+    # copy or not -- see the explicit_writer/explicit_target witness below for that case.
+    cell: icell(counter, 1U, 0)
+    n: fr(counter, 2U, c.LMX_WALK_OP_SET, 3U)
+    own0(n, 1U, 1U)
+    e: fr(n, 2U, c.LMX_WALK_OP_ADD, 3U)
+    own0(e, 1U, 1U)
+    lit(e, 2U, 1)
+    n: fr(counter, 3U, c.LMX_WALK_OP_RET, 2U)
+    own0(n, 1U, 1U)
+
+    # outer:     own x 1;  inner;  return: x          (21.6's worked case)
+    # inner:     outer\x: 2                           (explicit field write, no cache)
+    xcell: icell(outer, 1U, 1)
+    n: fr(outer, 2U, c.LMX_WALK_OP_CALL, 4U)
+    ref(n, 1U, inner)
+    ref(n, 2U, inner)
+    n: fr(outer, 3U, c.LMX_WALK_OP_RET, 2U)
+    own(n, 1U, outer, 1U)
+    n: fr(inner, 1U, c.LMX_WALK_OP_PUT, 4U)
+    ref(n, 1U, outer)
+    sz(n, 2U, 1U)
+    lit(n, 3U, 2)
+
+    # publisher: own y 0;  y: 5;  return: reader()    (dirty published before a call)
+    # reader:    return: publisher\y                  (reads the graph)
+    icell(publisher, 1U, 0)
+    n: fr(publisher, 2U, c.LMX_WALK_OP_SET, 3U)
+    own(n, 1U, publisher, 1U)
+    lit(n, 2U, 5)
+    n: fr(publisher, 3U, c.LMX_WALK_OP_RET, 2U)
+    e: fr(n, 1U, c.LMX_WALK_OP_CALL, 4U)
+    ref(e, 1U, reader)
+    ref(e, 2U, reader)
+    n: fr(reader, 1U, c.LMX_WALK_OP_RET, 2U)
+    e: fr(n, 1U, c.LMX_WALK_OP_AT, 3U)
+    ref(e, 1U, publisher)
+    sz(e, 2U, 1U)
+
+    # summer (k): if: k < 1 { return: 0 };  return: k + summer(k - 1)
+    n: fr(summer, 1U, c.LMX_WALK_OP_IF, 3U)
+    e: fr(n, 1U, c.LMX_WALK_OP_LT, 3U)
+    argn(e, 1U, 0U)
+    lit(e, 2U, 1)
+    b: pl(n, 2U, 1U)
+    e: fr(b, 0U, c.LMX_WALK_OP_RET, 2U)
+    lit(e, 1U, 0)
+    n: fr(summer, 2U, c.LMX_WALK_OP_RET, 2U)
+    e: fr(n, 1U, c.LMX_WALK_OP_ADD, 3U)
+    argn(e, 1U, 0U)
+    n: fr(e, 2U, c.LMX_WALK_OP_CALL, 5U)
+    ref(n, 1U, summer)
+    e: fr(n, 2U, c.LMX_WALK_OP_FRESH, 2U)
+    ref(e, 1U, summer)
+    e: fr(n, 4U, c.LMX_WALK_OP_SUB, 3U)
+    argn(e, 1U, 0U)
+    lit(e, 2U, 1)
+
+    # looper (k): own acc 0; own i 0
+    #             while: i < k { own t 0;  t: i + 1;  acc: acc + t;  i: t }
+    #             return: acc
+    # `t` is a field of the loop's body: its holder is that body.
+    icell(looper, 1U, 0)
+    icell(looper, 2U, 0)
+    n: fr(looper, 3U, c.LMX_WALK_OP_WHILE, 3U)
+    e: fr(n, 1U, c.LMX_WALK_OP_LT, 3U)
+    own(e, 1U, looper, 2U)
+    argn(e, 2U, 0U)
+    b: pl(n, 2U, 4U)
+    icell(b, 0U, 0)
+    n: fr(b, 1U, c.LMX_WALK_OP_SET, 3U)
+    own(n, 1U, b, 0U)
+    e: fr(n, 2U, c.LMX_WALK_OP_ADD, 3U)
+    own(e, 1U, looper, 2U)
+    lit(e, 2U, 1)
+    n: fr(b, 2U, c.LMX_WALK_OP_SET, 3U)
+    own(n, 1U, looper, 1U)
+    e: fr(n, 2U, c.LMX_WALK_OP_ADD, 3U)
+    own(e, 1U, looper, 1U)
+    own(e, 2U, b, 0U)
+    n: fr(b, 3U, c.LMX_WALK_OP_SET, 3U)
+    own(n, 1U, looper, 2U)
+    own(n, 2U, b, 0U)
+    n: fr(looper, 4U, c.LMX_WALK_OP_RET, 2U)
+    own(n, 1U, looper, 1U)
+
+    # bare:      own q 3                              (no body node at all)
+    icell(bare, 1U, 3)
+
+    # faller:    own z 0;  z: 7                       (void: falls off the end)
+    icell(faller, 1U, 0)
+    n: fr(faller, 2U, c.LMX_WALK_OP_SET, 3U)
+    own(n, 1U, faller, 1U)
+    lit(n, 2U, 7)
+
+    # stopper:   own w 0;  w: 9;  return;  w: 11      (a BARE role record as the return)
+    icell(stopper, 1U, 0)
+    n: fr(stopper, 2U, c.LMX_WALK_OP_SET, 3U)
+    own(n, 1U, stopper, 1U)
+    lit(n, 2U, 9)
+    if: stopper = 0 || lmx_arena_ref_store(stopper, 3U, lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_RET))) != 0
+        broken: broken + 1
+    ---
+    n: fr(stopper, 4U, c.LMX_WALK_OP_SET, 3U)
+    own(n, 1U, stopper, 1U)
+    lit(n, 2U, 11)
+
+    # refuser:   own v 0;  v: 5;  if: 1 { } else { <a node whose role nobody reads> }
+    # The unsupported node sits in a branch that would never be taken.
+    icell(refuser, 1U, 0)
+    n: fr(refuser, 2U, c.LMX_WALK_OP_SET, 3U)
+    own(n, 1U, refuser, 1U)
+    lit(n, 2U, 5)
+    n: fr(refuser, 3U, c.LMX_WALK_OP_IF, 4U)
+    lit(n, 1U, 1)
+    pl(n, 2U, 0U)
+    b: pl(n, 3U, 1U)
+    e: pl(b, 0U, 1U)
+    if: e = 0 || lmx_arena_ref_store(e, 0U, (cast: (@: void) lmx_op_new_owned(ga, 99))) != 0
+        broken: broken + 1
+    ---
+
+    # stranger:  return: <counter's n, named as if it were stranger's OWN field>
+    n: fr(stranger, 1U, c.LMX_WALK_OP_RET, 2U)
+    own(n, 1U, counter, 1U)
+
+    # impostor:  <a node whose child[0] is a PRIVATE op record with the number of `ret`>
+    # The role is the shared record's address; the same number in another record is not it.
+    n: pl(impostor, 1U, 1U)
+    if: n = 0 || lmx_arena_ref_store(n, 0U, (cast: (@: void) lmx_op_new_owned(ga, c.LMX_WALK_OP_RET))) != 0
+        broken: broken + 1
+    ---
+
+    # lexer (B):   own a 0;  while: 0 { own t 0;  t: 3 };  own b 0;  b: 2;  a: 1
+    # Lexically the fields stand a, t, b -- t, inside the loop body, BEFORE b.  The body
+    # mentions them t, b, a.  A layout that groups the fields of M before its bodies
+    # (l2_layout_owns) would say a, b, t; the plan must say a, t, b.
+    icell(lexer, 1U, 0)
+    n: fr(lexer, 2U, c.LMX_WALK_OP_WHILE, 3U)
+    lit(n, 1U, 0)
+    b: pl(n, 2U, 2U)
+    icell(b, 0U, 0)
+    e: fr(b, 1U, c.LMX_WALK_OP_SET, 3U)
+    own(e, 1U, b, 0U)
+    lit(e, 2U, 3)
+    icell(lexer, 3U, 0)
+    n: fr(lexer, 4U, c.LMX_WALK_OP_SET, 3U)
+    own(n, 1U, lexer, 3U)
+    lit(n, 2U, 2)
+    n: fr(lexer, 5U, c.LMX_WALK_OP_SET, 3U)
+    own(n, 1U, lexer, 1U)
+    lit(n, 2U, 1)
+
+    # alone (H):   return          the whole body is one BARE role record
+    if: alone = 0 || lmx_arena_ref_store(alone, 1U, lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_RET))) != 0
+        broken: broken + 1
+    ---
+
+    # (shorted, padded, retired: built only to test a hand-built plan against a body's
+    # actual own fields -- "G, the receiver's half" below -- which is gone with lmx_plan.)
+
+    # peek (s):   return: s\1            a field of a reference input, by reference
+    n: fr(peek, 1U, c.LMX_WALK_OP_RET, 2U)
+    e: fr(n, 1U, c.LMX_WALK_OP_OF, 3U)
+    argn(e, 1U, 0U)
+    sz(e, 2U, 1U)
+    # bump (s):   return: s\0 + 1        an integer computed from a field of the subject
+    n: fr(bump, 1U, c.LMX_WALK_OP_RET, 2U)
+    e: fr(n, 1U, c.LMX_WALK_OP_ADD, 3U)
+    b: fr(e, 1U, c.LMX_WALK_OP_OF, 3U)
+    argn(b, 1U, 0U)
+    sz(b, 2U, 0U)
+    lit(e, 2U, 1)
+    # relay (s):  return: peek(s)        a reference handed down and back through two frames
+    n: fr(relay, 1U, c.LMX_WALK_OP_RET, 2U)
+    e: fr(n, 1U, c.LMX_WALK_OP_CALL, 5U)
+    ref(e, 1U, peek)
+    ref(e, 2U, peek)
+    argn(e, 4U, 0U)
+    # echo (k):   return: k              an input returned as it came
+    n: fr(echo, 1U, c.LMX_WALK_OP_RET, 2U)
+    argn(n, 1U, 0U)
+    # hop (k):    return: echo(k - 1)    the dangerous one: k - 1 lives in hop's scratch slice,
+    #                                    echo returns that very reference, hop returns it on
+    n: fr(hop, 1U, c.LMX_WALK_OP_RET, 2U)
+    e: fr(n, 1U, c.LMX_WALK_OP_CALL, 5U)
+    ref(e, 1U, echo)
+    ref(e, 2U, echo)
+    b: fr(e, 4U, c.LMX_WALK_OP_SUB, 3U)
+    argn(b, 1U, 0U)
+    lit(b, 2U, 1)
+    # self (s):   return: s              the subject itself
+    n: fr(self, 1U, c.LMX_WALK_OP_RET, 2U)
+    argn(n, 1U, 0U)
+    # poke (s):   own z 0;  z: 1;  return: s       leaves a trace if it ever runs
+    icell(poke, 1U, 0)
+    n: fr(poke, 2U, c.LMX_WALK_OP_SET, 3U)
+    own(n, 1U, poke, 1U)
+    lit(n, 2U, 1)
+    n: fr(poke, 3U, c.LMX_WALK_OP_RET, 2U)
+    argn(n, 1U, 0U)
+
+    # ---- Stage C: callable occurrence fixtures ------------------------------------
+    # test: return: 1
+    n: fr(test, 1U, c.LMX_WALK_OP_RET, 2U)
+    lit(n, 1U, 1)
+    # test2(f): return: f   -- RET of ARG nullary-activates when f is callable
+    n: fr(test2, 1U, c.LMX_WALK_OP_RET, 2U)
+    argn(n, 1U, 0U)
+    # test3: descriptor-only (CALLABLE child0, no body steps, header unset)
+    # test4(f): same as test2; formal is the test3 shape (descriptor-compatible pass of test)
+    n: fr(test4, 1U, c.LMX_WALK_OP_RET, 2U)
+    argn(n, 1U, 0U)
+    # host: return: 7  -- nullary callee for optional bag-arg CALL forms
+    n: fr(host, 1U, c.LMX_WALK_OP_RET, 2U)
+    lit(n, 1U, 7)
+    # tracer: own t 0; t: 1  -- side effect for bare-callable statement
+    icell(tracer, 1U, 0)
+    n: fr(tracer, 2U, c.LMX_WALK_OP_SET, 3U)
+    own(n, 1U, tracer, 1U)
+    lit(n, 2U, 1)
+    # bare_stmt: tracer; return: 9  -- bare callable occurrence then return
+    ref(bare_stmt, 1U, tracer)
+    n: fr(bare_stmt, 2U, c.LMX_WALK_OP_RET, 2U)
+    lit(n, 1U, 9)
+    # a plain Structure (1 2) under unit, handed to a call as one argument; parent==caller
+    # set at the use site
+    pair: pl(unit, 33U, 2U)
+    icell(pair, 0U, 1)
+    icell(pair, 1U, 2)
+    # data_stmt: plain; return: 1  -- plain Structure STATEMENT (parent != body) must not be silent OK
+    # G3: a Structure whose parent IS the body is a declaration and is skipped; D-03 needs a
+    # reference to an occurrence held elsewhere (same shape as bare_stmt / tracer).
+    plain_data: pl(unit, 46U, 1U)
+    icell(plain_data, 0U, 0)
+    ref(data_stmt, 1U, plain_data)
+    n: fr(data_stmt, 2U, c.LMX_WALK_OP_RET, 2U)
+    lit(n, 1U, 1)
+
+    check(broken = 0, "construction")
+    if: broken != 0
+        c.printf("lmx_walk: %d construction steps failed\n", broken)
+        return: 2
+    ---
+
+    # ---- entry, k.4: no separate preparation step ------------------------------------
+    # There is no plan and no prepare call any more (next_core_tasks.md §3 item 9): a
+    # body runs the moment it is handed to go()/lmx_walk_run, needing nothing beyond the
+    # Structure itself.
+    r: -5
+    st: go(counter, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && r = 1 && v = 1, "counter runs directly, no preparation needed first")
+    lmx_int_store_known(cell, 0)
+    # QUALIFIED IMMUTABILITY: checked at the PUT itself now (lmx_walk_slot's write=1
+    # path), not by a separate whole-body scan before anything runs.
+    pc\immutable_profile: immutable_profile
+    st: go(qualified_writer, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_INVALID && lmx_int_value_known(lmx_arena_ref_value(immutable_local, 0U)) = 0, "owner-local exact-profile write is refused when the PUT actually runs")
+    pc\immutable_profile: 0
+    check(ps\used = 0U && ps\top = 0U, "a refused run rewound everything it took from the store")
+    lmx_int_store_known(cell, 0)
+
+    # No body node: none of bare's children classify as an op (its one field is an own
+    # int cell, not a step) -- k.4 has no separate "callable" test any more, so this is
+    # not a refusal, it is a body that runs zero steps and falls off the end (same as an
+    # empty body: lmx_walk_enter's own doc, next_core_tasks.md §3 item 9).
+    st: go(bare, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && v = 0, "a callable with no op-classified child runs zero steps, not NOT_CALLABLE")
+
+    # A role outside this slice, even hidden in a branch that is never taken: k.4 does not
+    # scan the whole body ahead of running it any more, so an untaken branch's unsupported
+    # node is simply never reached (the same rule as an untaken immutable write, D-45's
+    # eternal-branch case below, and lmx_primitive_selftest.lm1's m_hidden fixture).
+    st: go(refuser, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && v = 0, "an unsupported node in a branch never taken does not stop the run (k.4: no whole-body prescan)")
+    check(lmx_int_value_known(lmx_arena_ref_value(refuser, 1U)) = 5, "the SET before the untaken branch still ran and published")
+
+    # A private op record with the number of `ret` is not the role `ret`: this one sits
+    # directly in the body's own step sequence, so it IS reached, and is still refused.
+    st: go(impostor, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_UNSUPPORTED, "a private op record with the number of `ret` is not the role `ret`")
+
+    # An own node naming ANOTHER occurrence's field is not an error at all under k.4: it
+    # is exactly M\x read from outside (§3 item 3, "M\x снаружи читает поля самого M"),
+    # an ordinary path read of the graph -- the old plan-membership check refused it only
+    # because that model drew a line between "this occurrence's own scan" and everything
+    # else, a line the translator itself never needed (it emits a path, not an own node,
+    # for a genuinely cross-occurrence read; this hand-built fixture only ever used OWN's
+    # shape as a stand-in for one). Legitimate path read, expected OK.
+    st: go(stranger, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && r = lmx_int_value_known(cell), "k.4: a cross-occurrence own node is an ordinary M\\x path read, not a refusal")
+    # H (k.4): entry no longer asks a fixed, named pair of questions ("is M a Structure,
+    # is child[0] a CALLABLE") -- there is no child[0] to ask about.  lmx_walk_enter now
+    # classifies code and data (2 questions when they are the same occurrence, as go()
+    # always passes them).  The exact per-step cost inside the body is a direct
+    # consequence of lmx_walk_op/lmx_walk_role's address-compare-first order, not
+    # re-derived here by reasoning alone -- this pins only that the door is counted at
+    # all and stays proportional to entry + steps, not the specific old numbers, which
+    # depended on the deleted child[0] classification.
+    pc\classified: 0U
+    st: go(alone, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && v = 0 && pc\classified >= 2U, "at least entry's two classifications; a bare return reports no value")
+    pc\classified: 0U
+    lmx_int_store_known(abox, 0)
+    st: go(summer, argv, 1U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && pc\classified >= 3U, "summer(0): at least the public-boundary input plus entry's two")
+    pc\classified: 0U
+    st: go(faller, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && pc\classified >= 2U, "faller: at least entry's two")
+    lmx_int_store_known(lmx_arena_ref_value(faller, 1U), 0)
+
+    # The role is the reference: two nodes of one role point at the very same record.
+    check(lmx_arena_ref_value(lmx_arena_ref_struct(counter, 3U), 0U) = lmx_arena_ref_value(lmx_arena_ref_struct(outer, 3U), 0U), "two returns share one role record")
+    check(lmx_arena_ref_value(lmx_arena_ref_struct(counter, 3U), 0U) != lmx_arena_ref_value(lmx_arena_ref_struct(counter, 2U), 0U), "different roles are different records")
+
+    # counter: SET writes the cell; the next activation reads that cell.
+    r: -1
+    st: go(counter, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && r = 1 && v = 1, "counter first run returns 1, and says it returned a value")
+    check(lmx_int_value_known(cell) = 1, "counter cell n = 1 after SET")
+    st: go(counter, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && r = 2, "counter second run returns 2")
+
+    # -188: cells are the graph — outer RET OWN after CALL sees inner's PUT (no snapshot).
+    r: -1
+    st: go(outer, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && r = 2, "outer RET OWN sees callee PUT (mutant snapshot -> RED)")
+    check(lmx_int_value_known(xcell) = 2, "callee write visible in cell immediately")
+
+    # -188: SET writes the cell before the outbound call; reader sees it.
+    r: -1
+    st: go(publisher, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && r = 5, "SET cell visible to callee before the call")
+
+    # Recursion is recursion of the C stack on one published M; an early return inside
+    # a nested body ends the activation, the last return is never reached then.
+    r: -1
+    lmx_int_store_known(abox, 4)
+    st: go(summer, argv, 1U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && r = 10, "summer(4) = 10")
+    r: -1
+    lmx_int_store_known(abox, 0)
+    st: go(summer, argv, 1U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && r = 0, "summer(0) takes the early return")
+    st: go(summer, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_INVALID, "a missing declared input is refused")
+
+    # A field of a nested body is an own field too; its holder is the body.
+    r: -1
+    lmx_int_store_known(abox, 4)
+    st: go(looper, argv, 1U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && r = 10, "looper(4) = 10")
+    check(lmx_int_value_known(lmx_arena_ref_value(looper, 1U)) = 10, "looper cell acc")
+    check(lmx_int_value_known(lmx_arena_ref_value(looper, 2U)) = 4, "looper cell i")
+
+    # unit itself is a Structure too: every one of its own fields is an occurrence whose
+    # slot 0 is inert (never a role record), so lmx_walk_head finds nothing to dispatch
+    # and each field is skipped as a step -- unit runs zero steps and falls off the end,
+    # the same as bare, not refused (k.4: no domain check for "is this callable").
+    st: go(unit, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && v = 0, "a Structure whose fields are not op-classified runs zero steps, not refused")
+
+    # Falling off the end is an exit: the dirty value is published, no result is written.
+    r: -77
+    st: go(faller, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && r = -77 && v = 0, "void fall-off leaves the result alone and reports no value")
+    check(lmx_int_value_known(lmx_arena_ref_value(faller, 1U)) = 7, "void fall-off published z")
+
+    # A bare role record as a return still publishes what is dirty, and ends the body.
+    st: go(stopper, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && lmx_int_value_known(lmx_arena_ref_value(stopper, 1U)) = 9, "bare return publishes and stops")
+
+    # The role is a physical reference: the right NUMBER in a record of one's own is not
+    # the role, and such a step is refused rather than skipped or guessed.
+    st: go(impostor, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_UNSUPPORTED, "a private op record with the number of `ret` is not the role `ret`")
+
+    # -188 k.3c: summer recurses with data=FRESH(summer), so each go allocates instances
+    # in the graph arena (mutant: data=code in-place -> allocate-nothing greened wrongly).
+    # Scratch/context still rewind: once warm, no new context blocks; store empty after.
+    lmx_int_store_known(abox, 20)
+    go(summer, argv, 1U, @ r, @ v)
+    before: handed(ga)
+    sum_before: digest(ga)
+    blocks: lmx_arena_mark(pca)
+    warm: lmx_pool_count(@ context_cells)
+    i: 0
+    while: i < 50
+        st: go(summer, argv, 1U, @ r, @ v)
+        i: i + 1
+    ---
+    check(st = c.LMX_WALK_OK && r = 210, "summer(20) = 210, fifty times")
+    check(handed(ga) > before, "FRESH recursion allocates instances in the graph arena")
+    check(digest(ga) != sum_before, "and those instances change the arena digest")
+    check(lmx_arena_mark(pca) = blocks && lmx_pool_count(@ context_cells) = warm, "and, once warm, nothing in the context's arena")
+    check(ps\used = 0U && ps\top = 0U, "every activation rewound what it took")
+
+    # The ONLY write of an activation is the publication of a dirty own value: counter
+    # changes the graph, and putting n back restores it byte for byte.
+    sum_before: digest(ga)
+    before: handed(ga)
+    r: lmx_int_value_known(cell)
+    st: go(counter, 0, 0U, @ i, @ v)
+    check(st = c.LMX_WALK_OK && digest(ga) != sum_before && handed(ga) = before, "counter wrote, and allocated nothing")
+    lmx_int_store_known(cell, r)
+    check(digest(ga) = sum_before, "undoing the one published value restores the whole graph")
+
+    # (stranger already re-measured above: k.4 reads it as an ordinary M\x path, not a
+    # refusal -- see the comment there. Old second pin of the same fixture removed.)
+
+    # (F, retired: "data writes do not touch a plan" has no meaning left -- there is no
+    # plan any more, so nothing to touch or not touch.)
+
+    # ---- values are references: integer, nothing, Structure ---------------------------
+    before: handed(ga)
+    sum_before: digest(ga)
+    argv[0]: (cast: (@: void) subject)
+    # An integer the activation computed comes back in the caller's own destination cell:
+    # the reference IS that cell, and that identity is how the caller knows.
+    st: lmx_walk_run(gctx, bump, argv, 1U, gv)
+    check(st = c.LMX_WALK_OK && gv\present = 1 && gv\ref = (cast: (@: void) (@ gv\number)) && gv\number = 8, "an integer computed from a field of the subject: 7 + 1, in the caller's cell")
+    # A field of the subject comes back as the graph's own cell -- the same address.
+    st: lmx_walk_run(gctx, peek, argv, 1U, gv)
+    check(st = c.LMX_WALK_OK && gv\present = 1 && gv\ref = lmx_arena_ref_value(subject, 1U), "a field of a Structure input is returned BY REFERENCE: the very cell")
+    check(gv\ref != (cast: (@: void) (@ gv\number)) && lmx_int_value_known(gv\ref) = 35, "not a computed integer, and it reads 35")
+    # The subject itself, handed in and handed back: the same Structure, not a copy.
+    st: lmx_walk_run(gctx, self, argv, 1U, gv)
+    check(st = c.LMX_WALK_OK && gv\present = 1 && gv\ref = (cast: (@: void) subject), "a Structure input returned as it came: the same address")
+    # Through a nested call: two frames down and back, still the same cell.
+    st: lmx_walk_run(gctx, relay, argv, 1U, gv)
+    check(st = c.LMX_WALK_OK && gv\ref = lmx_arena_ref_value(subject, 1U), "a reference handed through a nested call is the same reference")
+    check(handed(ga) = before && digest(ga) = sum_before, "none of it allocated in the graph or wrote a byte of it: the subject was never copied")
+    check(ps\used = 0U && ps\top = 0U, "and the store is empty again")
+    # A temporary never outlives the frame that made it: k - 1 is a cell of hop's scratch
+    # slice, echo returns that reference, hop must not let it out.
+    argv[0]: abox
+    lmx_int_store_known(abox, 41)
+    st: lmx_walk_run(gctx, hop, argv, 1U, gv)
+    check(st = c.LMX_WALK_OK && gv\present = 1 && gv\ref = (cast: (@: void) (@ gv\number)) && gv\number = 40, "a temporary passed down and returned comes out by value, in the caller's cell")
+    st: go(summer, argv, 1U, @ r, @ v)
+    check(gv\number = 861 && v = 1, "and the store was reused since: summer(41) = 861")
+    # echo of an integer input that IS a cell of the graph: that cell, by reference.
+    st: lmx_walk_run(gctx, echo, argv, 1U, gv)
+    check(st = c.LMX_WALK_OK && gv\ref = abox, "an input that is a cell of the graph is returned as that cell")
+    # No value: nothing is a value, and says so.
+    st: lmx_walk_run(gctx, faller, 0, 0U, gv)
+    check(st = c.LMX_WALK_OK && gv\present = 0 && gv\ref = 0, "a void activation: no reference, present = 0")
+    argv[0]: 0
+    st: lmx_walk_run(gctx, echo, argv, 1U, gv)
+    check(st = c.LMX_WALK_OK && gv\present = 0 && gv\ref = 0, "an absent input returned is no value")
+    check(lmx_walk_run(gctx, echo, argv, 1U, 0) = c.LMX_WALK_OK, "a caller that wants no value passes none")
+    # ---- what is refused ----
+    # A FOREIGN reference: an address no arena of this context can classify.  Nothing runs.
+    foreign: calloc(1U, 64U)
+    argv[0]: foreign
+    st: lmx_walk_run(gctx, poke, argv, 1U, gv)
+    check(st = c.LMX_WALK_INVALID && gv\present = 0 && lmx_int_value_known(lmx_arena_ref_value(poke, 1U)) = 0, "a reference outside every arena of the context is INVALID, and nothing ran")
+    free(foreign)
+    # A cell of ANOTHER arena -- the context's own store arena, never bound to the graph's.
+    lmx_scratch_mark(ps, pm)
+    lmx_scratch_take(ps, c.sizeof(@: void), @ foreign)
+    argv[0]: foreign
+    st: lmx_walk_run(gctx, poke, argv, 1U, gv)
+    check(st = c.LMX_WALK_INVALID && lmx_int_value_known(lmx_arena_ref_value(poke, 1U)) = 0, "so is a cell of an arena the graph's arena is not bound to")
+    lmx_scratch_rewind(ps, pm)
+    # A reference that is NOT a Structure, read as one: `of` asks, and refuses.
+    argv[0]: abox
+    st: lmx_walk_run(gctx, peek, argv, 1U, gv)
+    check(st = c.LMX_WALK_INVALID && gv\present = 0, "a field of something that is not a Structure is INVALID")
+    argv[0]: (cast: (@: void) subject)
+    st: lmx_walk_run(gctx, poke, argv, 1U, gv)
+    check(st = c.LMX_WALK_OK && gv\ref = (cast: (@: void) subject) && lmx_int_value_known(lmx_arena_ref_value(poke, 1U)) = 1, "the same program with a good subject runs, and leaves its trace")
+    argv[0]: abox
+
+    # A COPY of M runs unchanged on its own state: `native` (k.4: a sibling Lmx member,
+    # not child[0]) is carried verbatim; the role records AND counter's own OP frames
+    # (K-OT1/-194 к.5: code, kept by address, never deep-copied -- the pre-K-OT1 copier
+    # used to copy-and-rewrite them, which is what this block used to check for) are
+    # shared by address between counter and its copy. counter's own DATA field (n, a
+    # plain int cell, not a frame) is still an ordinary own child and IS deep-copied as
+    # data always is; the copy owns ITS OWN n correctly because counter's frames name no
+    # holder at all (own0, holder = 0 -- K-OT2 resolves it to whichever occurrence is
+    # actually running: the copy when the copy runs, counter when counter runs).
+    # counter's own `native` is 0 (walked, not native) -- the check below only confirms
+    # verbatim copy of that 0, a weak but true check; there is no fixture elsewhere in
+    # this file with a real native word to copy for a stronger one.
+    before: handed(ga)
+    st: lmx_graph_copy_owned(counter, 0, ga, ga, @ copy)
+    check(st = c.LMX_GRAPH_COPY_OK && copy != 0 && copy != counter, "counter copied")
+    check(handed(ga) > before, "an explicit copy DOES allocate in the graph's arena; an invocation never did")
+    if: copy != 0
+        check(copy\native = counter\native, "copy carries native verbatim (k.4: sibling member, not child[0])")
+        check(lmx_arena_ref_value(copy, 1U) != cell, "copy has its own n (a data field, still deep-copied)")
+        check(lmx_arena_ref_value(lmx_arena_ref_struct(copy, 3U), 0U) = lmx_arena_ref_value(lmx_arena_ref_struct(counter, 3U), 0U), "copy shares the role records")
+        check(lmx_arena_ref_struct(copy, 3U) = lmx_arena_ref_struct(counter, 3U), "K-OT1: copy shares counter's own RET frame by address, not a rewritten copy of it")
+        r: -1
+        st: go(copy, 0, 0U, @ r, @ v)
+        check(st = c.LMX_WALK_OK && r = 3, "copy continues from the copied value")
+        check(lmx_int_value_known(cell) = 2, "original n untouched by the copy's run")
+        check(lmx_int_value_known(lmx_arena_ref_value(copy, 1U)) = 3, "copy published into its own n")
+        # (C/E, retired: k.4's code is immutable during execution -- next_core_tasks.md §3
+        # item 2, "исполнение никогда не пишет в узлы операторов, литералы и слово native"
+        # -- so there is no "changing the shape of one occurrence" operation left to start
+        # a fresh descriptor for, and no cached plan a shape change could invalidate. Both
+        # scenarios are gone with the mechanism they tested, not adjustable.)
+        r: -1
+        st: go(counter, 0, 0U, @ r, @ v)
+        check(st = c.LMX_WALK_OK && r = 3, "the original keeps running independently of the copy")
+    ---
+
+    # explicit_writer's own holder is NOT 0 -- it names explicit_target explicitly, and
+    # that never changes: copying/re-entering explicit_writer's (shared, K-OT1) frame
+    # still writes into explicit_target BY ADDRESS, regardless of which occurrence ran
+    # the code (fable, 2026-09-26: "явный holder в кадре — это ссылка на КОНКРЕТНУЮ
+    # Structure... и после копирования он обязан по-прежнему означать её"). This is the
+    # expected behavior an explicit holder gives, not a regression of counter's own
+    # independence above -- the two fixtures together are the whole of what a holder can
+    # mean (0 = this activation's data, non-zero = that Structure, always).
+    st: lmx_graph_copy_owned(explicit_writer, 0, ga, ga, @ explicit_writer_copy)
+    check(st = c.LMX_GRAPH_COPY_OK && explicit_writer_copy != 0 && explicit_writer_copy != explicit_writer, "explicit_writer copied")
+    if: explicit_writer_copy != 0
+        check(lmx_arena_ref_struct(explicit_writer_copy, 1U) = lmx_arena_ref_struct(explicit_writer, 1U), "K-OT1: the copy shares explicit_writer's own SET frame by address")
+        check(lmx_int_value_known(lmx_arena_ref_value(explicit_target, 1U)) = 0, "explicit_target starts at 0, untouched")
+        r: -1
+        st: go(explicit_writer_copy, 0, 0U, @ r, @ v)
+        check(st = c.LMX_WALK_OK, "the copy's own run reached the explicit-holder write")
+        check(lmx_int_value_known(lmx_arena_ref_value(explicit_target, 1U)) = 42, "the COPY's run wrote into explicit_target, the Structure the holder names -- not into itself or into explicit_writer (mutant: own0 in place of own here -> writes the running occurrence instead, RED)")
+    ---
+
+    # ---- Stage C acceptance (GROKBOT-CALLABLE-INTERP-STAGEC-20260922-65) ----------
+    st: go(test, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && r = 1 && v = 1, "test: body return lit 1 => 1")
+    # k.4: RET of ARG no longer auto-invokes (lmx_walk_is_callable is gone; §3 item 8,
+    # "отказ — дело транслятора" -- an explicit CALL is the only way to invoke anything,
+    # and CALL's code operand is a static graph reference, not a dynamically-evaluated
+    # one, so a formal argument cannot be the target of a hand-built CALL node here at
+    # all). test2/test4 are repurposed to pin the actual new behaviour: the argument
+    # reference comes back UNCHANGED.
+    argv[0]: (cast: (@: void) test)
+    st: lmx_walk_run(gctx, test2, argv, 1U, gv)
+    check(st = c.LMX_WALK_OK && gv\present != 0 && gv\ref = (cast: (@: void) test), "test2: RET of ARG returns the reference as-is (k.4: no auto-invoke)")
+    st: go(test3, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && v = 0, "test3: no body steps at all is a legitimate empty run, not a refusal (k.4)")
+    argv[0]: (cast: (@: void) test)
+    st: lmx_walk_run(gctx, test4, argv, 1U, gv)
+    check(st = c.LMX_WALK_OK && gv\present != 0 && gv\ref = (cast: (@: void) test), "test4: same as test2, k.4 returns the reference as-is")
+    # A call with no argument children is the empty argument list: P0 gives `host()`,
+    # `host: ()` and the closed vertical form one tree with no fields (-127), so the walker
+    # meets no container to unwrap (-133).
+    tramp: mk_m(unit, 35U, 2U)
+    n: fr(tramp, 1U, c.LMX_WALK_OP_RET, 2U)
+    e: fr(n, 1U, c.LMX_WALK_OP_CALL, 4U)
+    ref(e, 1U, host)
+    ref(e, 2U, host)
+    st: go(tramp, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && r = 7 && v = 1, "CALL host with no argument children => 7")
+    # D-04: host() with one extra Structure argument is refused when the CALL actually
+    # runs (k.4: the arity check inside lmx_walk_call, not a separate prepare pass).
+    tramp3: mk_m(unit, 40U, 2U)
+    n: fr(tramp3, 1U, c.LMX_WALK_OP_RET, 2U)
+    e: fr(n, 1U, c.LMX_WALK_OP_CALL, 5U)
+    ref(e, 1U, host)
+    ref(e, 2U, host)
+    if: pair != 0
+        pair\parent: e
+        check(lmx_arena_ref_store(e, 4U, (cast: (@: void) pair)) = 0, "pair under tramp3 CALL as extra arg")
+    ---
+    st: go(tramp3, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_INVALID, "D-04 host(extra Structure) refused when the CALL runs")
+    # D-03 (k.4): a nested occurrence used as a bare body statement is not auto-invoked
+    # any more -- lmx_walk_op's own contract classifies "a nested callable's M" as NONE,
+    # the same rule that already dropped RET-of-ARG auto-invoke above ("an explicit CALL
+    # is the only way to invoke anything"). The reference is skipped, never evaluated;
+    # tracer's own SET never runs, and the body falls through to its own return: 9.
+    st: go(bare_stmt, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && r = 9 && v = 1, "D-03 (k.4): a bare occurrence statement is skipped, then return => 9")
+    check(lmx_int_value_known(lmx_arena_ref_value(tracer, 1U)) = 0, "D-03 (k.4): tracer's own SET never ran; the bare statement was not invoked")
+    # D-03 (k.4): same rule for a plain data Structure -- skipped, never evaluated; the
+    # observable r/v come entirely from data_stmt's own subsequent return: 1.
+    st: go(data_stmt, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && r = 1 && v = 1, "D-03 (k.4): a plain Structure statement is skipped, then return => 1")
+    # A plain Structure child of a call is ONE Structure argument (-133): test2(pair), pair =
+    # (1 2) -- the graph of `test2(((1 2)))` after P0's one-level normalization -- reaches the
+    # formal as that very Structure, as it does natively.  The CALL-only unwrap would have
+    # made it two int arguments and returned the first.
+    tramp2: mk_m(unit, 36U, 2U)
+    n: fr(tramp2, 1U, c.LMX_WALK_OP_RET, 2U)
+    e: fr(n, 1U, c.LMX_WALK_OP_CALL, 5U)
+    ref(e, 1U, test2)
+    ref(e, 2U, test2)
+    if: pair != 0
+        pair\parent: e
+        check(lmx_arena_ref_store(e, 4U, (cast: (@: void) pair)) = 0, "pair under tramp2 CALL")
+    ---
+    st: lmx_walk_run(gctx, tramp2, 0, 0U, gv)
+    check(st = c.LMX_WALK_OK && gv\present != 0 && gv\ref = (cast: (@: void) pair), "a sole Structure argument reaches the formal unchanged")
+    check(pair != 0 && pair\len = 2 && lmx_int_value_known(lmx_arena_ref_value(pair, 0U)) = 1 && lmx_int_value_known(lmx_arena_ref_value(pair, 1U)) = 2, "the Structure argument keeps its two fields")
+
+
+    # ---- G1: native dispatch via prim ABI (FABLE-158; k.4: Lmx.native, not METHOD.addr) -
+    # Prim-ABI callee behind `native`, called from walked op tree with one int operand ->
+    # dest = 7. Mutant: native!=0 refused (old never-METHOD.addr) -> RED.
+    native7: mk_m(unit, 41U, 1U)
+    native2: mk_m(unit, 42U, 1U)
+    caller7: mk_m(unit, 43U, 2U)
+    caller2: mk_m(unit, 44U, 2U)
+    check(native7 != 0 && native2 != 0 && caller7 != 0 && caller2 != 0, "G1 fixtures")
+    native7\native: (cast: (LmxEntry) g1_seven)
+    native2\native: (cast: (LmxEntry) g1_throw2)
+    # caller7: CALL native7(LIT 1) -- one int operand; trampoline writes 7
+    n: fr(caller7, 1U, c.LMX_WALK_OP_CALL, 5U)
+    ref(n, 1U, native7)
+    ref(n, 2U, native7)
+    lit(n, 4U, 1)
+    st: go(caller7, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && v = 1 && r = 7, "G1 native native!=0 CALL with one int -> dest 7 (mutant: native!=0 refused)")
+    # caller2: CALL native2() -- status 2 must reach walk as 2, not LMX_WALK_PRIMITIVE
+    n: fr(caller2, 1U, c.LMX_WALK_OP_CALL, 4U)
+    ref(n, 1U, native2)
+    ref(n, 2U, native2)
+    st: go(caller2, 0, 0U, @ r, @ v)
+    # D-37: throw k is LMX_WALK_THROWN + k (never bare 2 / NO_GRAPH). Mutant: status: said -> RED.
+    check(st = c.LMX_WALK_THROWN + 2, "G1 native throw encoded as THROWN+2 (D-37; mutant: bare 2 collides with NO_GRAPH)")
+    check(st != c.LMX_WALK_PRIMITIVE, "G1 status distinct from LMX_WALK_PRIMITIVE (native trampoline vs LmxPrimitive)")
+    check(st != 2, "D-37: throw 2 must not equal bare walker status 2")
+
+
+    # ---- G3: declarations among root fields (FABLE-158) --------------------------------
+    # body {int cell, callable occurrence (native=0, never run), OP literal 7} -> value 7;
+    # occurrence body untouched (side-effect cell stays 0). Mutant: declared callable
+    # activated -> RED.
+    g3_body: mk_m(unit, 45U, 4U)
+    check(g3_body != 0, "G3 body")
+    icell(g3_body, 1U, 0)
+    g3_decl: mk_m(g3_body, 2U, 3U)
+    check(g3_decl != 0 && g3_decl\parent = g3_body, "G3 declared callable parent is body")
+    icell(g3_decl, 1U, 0)
+    n: fr(g3_decl, 2U, c.LMX_WALK_OP_SET, 3U)
+    own(n, 1U, g3_decl, 1U)
+    lit(n, 2U, 1)
+    n: fr(g3_body, 3U, c.LMX_WALK_OP_LIT, 2U)
+    check(lmx_walk_store_int(ga, n, 1U, 7) = c.LMX_WALK_OK, "G3 LIT 7")
+    st: go(g3_body, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && v = 1 && r = 7, "G3 body {cell, decl callable, LIT 7} -> 7")
+    check(lmx_int_value_known(lmx_arena_ref_value(g3_decl, 1U)) = 0, "G3 declared callable not activated (mutant: activated)")
+
+    # ---- D-45 (F3): eternal branch (parent 0) among root fields ---------------------
+    # body {Structure with parent 0, OP literal 7} -> 7. Mutant (skip only parent=body)
+    # -> LMX_WALK_UNSUPPORTED RED.
+    d45_body: mk_m(unit, 46U, 3U)
+    check(d45_body != 0, "D-45 body")
+    d45_eternal: pl(d45_body, 1U, 1U)
+    check(d45_eternal != 0, "D-45 eternal field")
+    d45_eternal\parent: 0
+    check(d45_eternal\parent = 0, "D-45 eternal parent is 0")
+    n: fr(d45_body, 2U, c.LMX_WALK_OP_LIT, 2U)
+    check(lmx_walk_store_int(ga, n, 1U, 7) = c.LMX_WALK_OK, "D-45 LIT 7")
+    st: go(d45_body, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && v = 1 && r = 7, "D-45 body {eternal parent0, LIT 7} -> 7 (mutant: UNSUPPORTED)")
+
+    free((cast: (@: void) argv))
+    free((cast: (@: void) gv))
+    if: failures != 0
+        c.printf("lmx_walk: %d failed of %d\n", failures, checks)
+        return: 1
+    ---
+    c.printf("lmx_walk: %d checks\n", checks)
+return: 0

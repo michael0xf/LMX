@@ -6,7 +6,8 @@ predef: "l2src/lmx_arena.h.lm1"
 # typed descriptor with len 0 and data 0; it is distinct from a null reference
 # and has no backing interval. Descriptor and backing are TWO arrays of the arena,
 # each with its own descriptor and its own entry in the index; the arena allocates
-# both and owns both, and no owner-local range list exists.
+# both and owns both, and no owner-local range list exists. The backing has exactly
+# `len` cells. Dynamic membership is an L1 list (KIND_LIST), not Array.
 prototype:
     fn: lmx_array_new_owned (int: type; size_t: count; @: LmxArena arena) @: LmxArrayDesc
 end: prototype

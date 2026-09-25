@@ -1,0 +1,25 @@
+fn: test () int
+    return: 1
+end: test
+
+fn: test2 (test: f) int
+    return: f
+end: test2
+
+fn: test3 () int
+end: test3
+
+fn: test4 (test3: f) int
+    return: f
+end: test4
+
+if: test2(test) != 1
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
+---
+if: test4(test) != 1
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
+---
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

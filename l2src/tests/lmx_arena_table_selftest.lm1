@@ -26,7 +26,7 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 # per ARRAY/INTERVAL -- never one per value and never one per constructor call.
 # So the counters below count what the model counts: the arena's list of its N
 # arrays (`table_arrays`), the intervals one array holds (`table_intervals_of`),
-# and the entries in the index (`arena\count`). An array grows by adding a chunk,
+# and the entries in the index (`lmx_arena_index_len(arena)`). An array grows by adding a chunk,
 # which is one more interval of the SAME array, so a second request for the same
 # kind and type adds an entry and NO array.
 
@@ -58,8 +58,8 @@ fn: table_intervals_of (@: LmxArena arena; @: LmxPool array) size_t
     size_t: total 0U
     if: arena = 0 || array = 0
         return: 0U
-    while: index < arena\count
-        entry: arena\index + index
+    while: index < lmx_arena_index_len(arena)
+        entry: lmx_arena_index_data(arena) + index
         if: entry\array = array
             total: total + 1U
         ---
@@ -106,7 +106,7 @@ fn: main () int
     # backing, two blocks and two entries.
     desc: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, 3U, @ arena)
     table_check(counts, desc != 0, "array joins the arena's block list")
-    table_check(counts, arena_at\count = 2U, "descriptor and backing are two entries")
+    table_check(counts, lmx_arena_index_len(arena_at) = 2U, "descriptor and backing are two entries")
     table_check(counts, lmx_range_classify(@ arena, (cast: (@: void) desc)) = c.LMX_KIND_ARRAY, "descriptor kind")
     table_check(counts, lmx_range_type_of(@ arena, (cast: (@: void) desc)) = c.LMX_TYPE_ARRAY_OF_INT, "descriptor type")
     table_check(counts, lmx_range_classify(@ arena, (cast: (@: void) (desc + 1))) = c.LMX_KIND_NONE, "descriptor interval is exact")
@@ -141,14 +141,14 @@ fn: main () int
     mark: lmx_arena_mark(@ arena)
     doomed: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_SIZE_T, 2U, @ arena)
     table_check(counts, doomed != 0, "a marked construction that makes new arrays succeeds")
-    table_check(counts, arena_at\count = 4U, "the marked construction adds its own entries")
+    table_check(counts, lmx_arena_index_len(arena_at) = 4U, "the marked construction adds its own entries")
     stale_desc: lmx_range_pool(@ arena, (cast: (@: void) doomed))
     stale_backing: lmx_range_pool(@ arena, doomed\data)
     table_check(counts, stale_desc != 0 && stale_backing != 0 && stale_desc != stale_backing, "the two new arrays have descriptors of their own")
     table_check(counts, lmx_arena_find(@ arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_SIZE_T) = stale_backing, "the new array of cells is the arena's")
     table_check(counts, table_arrays(@ arena) = 4U, "the arena's list of its N arrays gained the two")
     table_check(counts, lmx_arena_revert(@ arena, mark) = 0, "the revert accepts the mark")
-    table_check(counts, arena_at\count = 2U, "the revert takes the marked entries away")
+    table_check(counts, lmx_arena_index_len(arena_at) = 2U, "the revert takes the marked entries away")
     table_check(counts, lmx_range_classify(@ arena, (cast: (@: void) doomed)) = c.LMX_KIND_NONE, "a reverted construction no longer classifies")
     # The block that CARRIES a descriptor goes with the array it describes: as
     # those blocks left the arena, the arrays they described left the arena's list
@@ -171,10 +171,10 @@ fn: main () int
     # than the ones the mark's construction made. A lookup that still returned the
     # gone descriptors would seat these cells in an array the arena does not hold.
     renewed: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_SIZE_T, 2U, @ arena)
-    table_check(counts, renewed != 0 && renewed != doomed && arena_at\count = 4U, "a later request for that kind and type makes the arrays anew")
+    table_check(counts, renewed != 0 && renewed != doomed && lmx_arena_index_len(arena_at) = 4U, "a later request for that kind and type makes the arrays anew")
     table_check(counts, lmx_range_pool(@ arena, (cast: (@: void) renewed)) != stale_desc && lmx_range_pool(@ arena, renewed\data) != stale_backing, "the new cells come from fresh arrays, not from the gone ones")
     table_check(counts, table_arrays(@ arena) = 4U, "the arena's list holds the fresh arrays")
-    table_check(counts, lmx_arena_revert(@ arena, mark) = 0 && arena_at\count = 2U && table_arrays(@ arena) = 2U, "the second revert takes the renewed arrays away too")
+    table_check(counts, lmx_arena_revert(@ arena, mark) = 0 && lmx_arena_index_len(arena_at) = 2U && table_arrays(@ arena) = 2U, "the second revert takes the renewed arrays away too")
     table_check(counts, desc\data = backing && cells[1] = 73, "addresses and payload unchanged by the revert")
 
     # 3. A one-array constructor: one array of the arena, one entry. The table
@@ -183,7 +183,7 @@ fn: main () int
     # 256 cells asked for.
     table: lmx_chars_new_owned(@ arena)
     table_check(counts, table != 0, "character table constructed")
-    table_check(counts, arena_at\count = 3U, "one array, one entry")
+    table_check(counts, lmx_arena_index_len(arena_at) = 3U, "one array, one entry")
     table_check(counts, lmx_range_classify(@ arena, (cast: (@: void) table)) = c.LMX_KIND_PRIMITIVE && lmx_range_type_of(@ arena, (cast: (@: void) table)) = c.LMX_TYPE_CHAR, "character table kind and type")
     table_check(counts, table[65] = 65, "initialised cell read through its own pointer")
     table_check(counts, lmx_range_classify(@ arena, (cast: (@: void) (table + 256U))) = c.LMX_KIND_NONE, "character interval ends at 256")
@@ -194,7 +194,7 @@ fn: main () int
     # own -- an array is made once per kind and type, and a value is seated in the
     # array of its type -- so the arena's list of its N arrays does not grow here.
     second: lmx_chars_new_owned(@ arena)
-    table_check(counts, second != 0 && second != table && arena_at\count = 4U, "a second table is another interval of the same array -- one more entry")
+    table_check(counts, second != 0 && second != table && lmx_arena_index_len(arena_at) = 4U, "a second table is another interval of the same array -- one more entry")
     table_check(counts, lmx_range_pool(@ arena, (cast: (@: void) table)) = table_array && lmx_range_pool(@ arena, (cast: (@: void) second)) = table_array, "both tables name the same descriptor")
     table_check(counts, table_intervals_of(@ arena, table_array) = 2U && table_arrays(@ arena) = 3U, "two intervals, one array: the arena's list of its N arrays did not grow")
 
@@ -210,23 +210,23 @@ fn: main () int
     table_check(counts, lmx_range_reserve(@ other, 1U) = 0, "room for one entry")
     grown: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, 2U, @ other)
     table_check(counts, grown != 0, "a two-array construction grows the table")
-    table_check(counts, other_at\count = 2U, "both arrays are registered")
+    table_check(counts, lmx_arena_index_len(other_at) = 2U, "both arrays are registered")
     table_check(counts, lmx_range_classify(@ other, (cast: (@: void) grown)) = c.LMX_KIND_ARRAY, "the descriptor is still classified")
     table_check(counts, lmx_range_stride(@ other, grown\data) = c.sizeof(c.int), "the step comes from the array, not the entry")
     pool_seen: lmx_range_pool(@ other, grown\data)
     table_check(counts, pool_seen != 0 && pool_seen\kind = c.LMX_KIND_PRIMITIVE && pool_seen\type = c.LMX_TYPE_INT, "the entry names the array's own descriptor")
     fits: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, 0U, @ other)
-    table_check(counts, fits != 0 && other_at\count = 3U, "an empty array is one more entry")
+    table_check(counts, fits != 0 && lmx_arena_index_len(other_at) = 3U, "an empty array is one more entry")
     table_check(counts, fits != 0 && fits\len = 0U && fits\data = 0, "empty array descriptor")
     table_check(counts, lmx_range_classify(@ other, (cast: (@: void) fits)) = c.LMX_KIND_ARRAY && lmx_range_type_of(@ other, (cast: (@: void) fits)) = c.LMX_TYPE_ARRAY_OF_INT, "an empty array is still typed")
     table_check(counts, table_arrays(@ other) = 2U, "one array of descriptors and one array of int cells, again")
 
     # Releasing an arena retires every entry it held and gives the arena back
     # empty, so nothing of the first arena is disturbed by releasing the second.
-    table_check(counts, lmx_arena_release(@ other) = 0 && other_at\count = 0U, "the second arena released")
+    table_check(counts, lmx_arena_release(@ other) = 0 && lmx_arena_index_len(other_at) = 0U, "the second arena released")
     table_check(counts, table_arrays(@ other) = 0U, "no array of the released arena is left on its list")
-    table_check(counts, arena_at\count = 4U, "releasing the second arena disturbed the first")
-    table_check(counts, lmx_arena_release(@ arena) = 0 && arena_at\count = 0U, "the arena released")
+    table_check(counts, lmx_arena_index_len(arena_at) = 4U, "releasing the second arena disturbed the first")
+    table_check(counts, lmx_arena_release(@ arena) = 0 && lmx_arena_index_len(arena_at) = 0U, "the arena released")
     failures: counts[1]
     c.printf("arena table checks=%d failures=%d\n", counts[0], failures)
     free(counts)

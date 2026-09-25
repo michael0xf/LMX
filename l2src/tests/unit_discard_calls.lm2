@@ -1,0 +1,38 @@
+# An expression statement with calls in it runs them, in order, and drops the value: the calls'
+# own typed temporaries hold it -- a nested call, and int, size_t, unsigned and pointer results
+# (plan §3: "use the temp typing method-call lowering already has").  Each callee adds its own
+# digit: m 1 (twice), g 10, msz 100, mun 1000, mptr 10000 -- 11112.
+int: hits 0
+
+fn: m () int
+    hits: hits + 1
+    return: 2
+end: m
+
+fn: g (int: x) int
+    hits: hits + 10
+    return: x
+end: g
+
+fn: msz () size_t
+    hits: hits + 100
+    return: 3U
+end: msz
+
+fn: mun () unsigned
+    hits: hits + 1000
+    return: 4U
+end: mun
+
+fn: mptr () @: char
+    hits: hits + 10000
+    return: "p"
+end: mptr
+
+g(m()) + 1
+m() * 2
+msz() + 1U
+mun() + 1U
+mptr() = 0
+sendMessage: exit(exit_code: hits; stdout: ""; stderr: "")
+return

@@ -1,50 +1,169 @@
 predef: "l2src/lmx_call.h.lm1"
 predef: "l2src/lmx_arena_refs.h.lm1"
 predef: "l2src/lmx_implements.h.lm1"
+predef: "l2src/lmx_value_owned.h.lm1"
+predef: "l2src/lmx_primitive.h.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<string.h>"
 
 # lmx_call.lm1 - the call.  Every check here is the domain question, and the call itself is one
-# cast: the METHOD's `addr` is a typed entry, and the shape this unit names is the zero-argument
-# one.  A generated body for a callable WITH arguments is called by generated code, which knows
-# the signature it emitted; this unit is what a runtime calls when it holds a Structure and must
-# find out whether it can call it at all.
+# cast: `Lmx.native` is the method's trampoline, the prim ABI LmxPrimitiveEntry
+# (lmx_primitive.h.lm1; FABLE-OPUS-ROOT-WALK-TRANSLATOR-20260924-159, D-38).  A generated body
+# WITH source arguments is called directly by generated code, which knows the signature it
+# emitted; this unit is what a runtime calls when it holds a Structure and must find out
+# whether it can call it at all, and what a dynamic call (lmx_call_prim) goes through.
+#
+# Dispatch (k.4, next_core_tasks.md §3 item 8): `native` != 0 -> native; `native` == 0 ->
+# optional walk hook (lmx_call_install_walk). The walk unit installs the hook so call.o does
+# not link walk/scratch (avoids duplicate symbols with selftests that embed those units).
+
+@: void lmx_call_walk_fn 0
+int: lmx_call_walk_status_mode 0
+# -194 к.4 (G-call): a second, parallel hook for lmx_call_prim's own addr=0 branch alone.
+# lmx_call_walk_fn above stays exactly what lmx_call0's two call sites need (nullary,
+# activation value as int); this one carries data/args/a typed dest through, since a
+# native-0 callee reached dynamically is not necessarily nullary or int-returning.
+@: void lmx_call_prim_walk_fn 0
+
+fn: lmx_call_install_prim_walk (LmxCallPrimWalkFn: fn) void
+    lmx_call_prim_walk_fn: (cast: (@: void) fn)
+
+
+# G2: walk_run failure status observed by call0_dispatch (METHOD throw / walk error).
+# Thread turn reads this to stop the Message; cleared at each call0 walk entry.
+int: lmx_call_walk_fail_status_g 0
+
+fn: lmx_call_walk_fail_status () int
+return: lmx_call_walk_fail_status_g
+
+fn: lmx_call_note_walk_fail (int: st) void
+    # D-37: walker errors (LMX_WALK_INVALID..NOT_CALLABLE) never become a turn
+    # number -- stderr name + abort (X1). Only a throw (THROWN + k) is stored.
+    if: st >= c.LMX_CALL_WALK_ERR_LO && st <= c.LMX_CALL_WALK_ERR_HI
+        if: st = 1
+            c.fprintf(l1_stderr(), "lmx: walk error: INVALID\n")
+        ---
+        if: st = 2
+            c.fprintf(l1_stderr(), "lmx: walk error: NO_GRAPH\n")
+        ---
+        if: st = 3
+            c.fprintf(l1_stderr(), "lmx: walk error: NOMEM\n")
+        ---
+        if: st = 4
+            c.fprintf(l1_stderr(), "lmx: walk error: CHECKPOINT\n")
+        ---
+        if: st = 5
+            c.fprintf(l1_stderr(), "lmx: walk error: UNSUPPORTED\n")
+        ---
+        if: st = 6
+            c.fprintf(l1_stderr(), "lmx: walk error: PRIMITIVE\n")
+        ---
+        if: st = 7
+            c.fprintf(l1_stderr(), "lmx: walk error: NOT_CALLABLE\n")
+        ---
+        c.abort()
+    ---
+    if: st >= c.LMX_CALL_WALK_THROWN
+        lmx_call_walk_fail_status_g: st - c.LMX_CALL_WALK_THROWN
+        return
+    ---
+    c.fprintf(l1_stderr(), "lmx: walk error: unknown status %d\n", st)
+    c.abort()
+
+fn: lmx_call_clear_walk_fail () void
+    lmx_call_walk_fail_status_g: 0
+fn: lmx_call_install_walk (LmxCallWalkFn: fn) void
+    lmx_call_walk_fn: (cast: (@: void) fn)
+    lmx_call_walk_status_mode: 0
+
+fn: lmx_call_install_walk_status (LmxCallWalkFn: fn) void
+    lmx_call_walk_fn: (cast: (@: void) fn)
+    lmx_call_walk_status_mode: 1
+
+fn: lmx_call_walk_returns_status () int
+    if: lmx_call_walk_status_mode = 0
+        return: 0
+return: 1
+
+fn: lmx_call_walk_ready () int
+    if: lmx_call_walk_fn = 0
+        return: 0
+return: 1
 
 fn: lmx_call_ready (@: LmxArena arena; @: Lmx callable) int
-    @: void target
     if: arena = 0 || callable = 0
         return: c.LMX_CALL_NOT_CALLABLE
     if: lmx_domain_kind(arena, (cast: (@: void) callable)) != c.LMX_KIND_STRUCT
         return: c.LMX_CALL_NOT_CALLABLE
-    # A callable with no slot has nothing to hold its method; a structure whose len is 0 is a
-    # value, not an occurrence of a callable.
-    if: callable\len < 1
-        return: c.LMX_CALL_NOT_CALLABLE
-    ---
-    target: lmx_arena_ref_value(callable, 0U)
-    if: target = 0
-        return: c.LMX_CALL_NOT_CALLABLE
-    if: lmx_domain_kind(arena, target) != c.LMX_KIND_METHOD
-        return: c.LMX_CALL_NOT_CALLABLE
     ---
 return: c.LMX_CALL_OK
-
-fn: lmx_call_method (@: LmxArena arena; @: Lmx callable) @: LmxMethod
-    if: lmx_call_ready(arena, callable) != c.LMX_CALL_OK
-        return: 0
-return: (cast: (@: LmxMethod) lmx_arena_ref_value(callable, 0U))
 
 fn: lmx_call_node (@: Lmx callable) @: Lmx
     if: callable = 0
         return: 0
-return: callable
+return: callable\parent
 
 fn: lmx_call0 (@: LmxArena arena; @: Lmx callable) int
-    @: LmxMethod method
-    LmxCallEntry: entry
+    LmxPrimitiveEntry: entry
+    LmxCallWalkFn: walk
+    LmxEntry: addr
+    int: value 0
+    @: void out 0
+    int: st
     if: lmx_call_ready(arena, callable) != c.LMX_CALL_OK
+        # Installed walker (L2 walk / L3 bind): one turn shape still goes through
+        # call0 even when the value is not a Structure.
+        if: lmx_call_walk_fn != 0
+            walk: (cast: (LmxCallWalkFn) lmx_call_walk_fn)
+            return: walk(arena, callable)
+        ---
         return: c.LMX_CALL_NOT_CALLABLE
-    method: (cast: (@: LmxMethod) lmx_arena_ref_value(callable, 0U))
-    if: method = 0 || method\addr = 0
-        return: c.LMX_CALL_NOT_CALLABLE
+    addr: callable\native
+    if: addr = 0
+        # Walk hook: activation value = last evaluated expression. Mutant that
+        # drops the hook / returns 0 without walking goes RED in call_selftest.
+        if: lmx_call_walk_fn = 0
+            return: c.LMX_CALL_NOT_CALLABLE
+        ---
+        # Local fnptr (not a void* cast in the call expr) so l1trans emits commas.
+        walk: (cast: (LmxCallWalkFn) lmx_call_walk_fn)
+        return: walk(arena, callable)
     ---
-    entry: (cast: (LmxCallEntry) method\addr)
-return: entry(lmx_call_node(callable))
+    # The native entry is the method's trampoline (prim ABI): the value through a local int; a
+    # nonzero status is the callee's throw status, noted for the turn as a walk's is.
+    lmx_call_clear_walk_fail()
+    entry: (cast: (LmxPrimitiveEntry) addr)
+    st: entry((cast: (@: void) callable), 0, 0U, (cast: (@: void) (@ value)), @ out)
+    if: st != 0
+        # D-37: encode like the walk METHOD path (THROWN + k).
+        lmx_call_note_walk_fail(c.LMX_CALL_WALK_THROWN + st)
+        return: st
+    ---
+return: value
+
+fn: lmx_call_prim (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    LmxPrimitiveEntry: entry
+    LmxCallPrimWalkFn: prim_walk
+    LmxEntry: addr
+    # Dispatch on CODE's native word. Owner / self = DATA; trampoline builds nothing.
+    if: out = 0 || data = 0 || lmx_call_ready(arena, code) != c.LMX_CALL_OK
+        c.fprintf(l1_stderr(), "lmx: invariant: a dynamic call of a value that is not a Structure\n")
+        c.abort()
+    ---
+    \out: 0
+    addr: code\native
+    if: addr != 0
+        # Local fnptr (not a void* cast in the call expr) so l1trans emits commas.
+        # owner = data = self (node = data.parent inside the trampoline / typed entry).
+        entry: (cast: (LmxPrimitiveEntry) addr)
+        return: entry((cast: (@: void) data), refs, nargs, dest, out)
+    ---
+    # A walked body (-194 к.4, G-call): the prim-walk hook carries data/args/a typed dest
+    # through -- unlike lmx_call0's own nullary hook, this call is not restricted to
+    # nargs = 0 or an int-typed activation value.
+    if: lmx_call_prim_walk_fn = 0
+        c.fprintf(l1_stderr(), "lmx: invariant: a dynamic call of a body with no native entry and no walk for it\n")
+        c.abort()
+    ---
+    prim_walk: (cast: (LmxCallPrimWalkFn) lmx_call_prim_walk_fn)
+return: prim_walk(arena, code, data, refs, nargs, dest, out)

@@ -42,7 +42,7 @@ fn: main () int
     keep_at: @ keep
     sm_check(counts, lmx_arena_open_simple(@ letter) = 0, "open_simple refused")
     sm_check(counts, letter_at\simple = 1U, "open_simple left simple unset")
-    sm_check(counts, letter_at\capacity >= 8U, "open_simple did not prime index capacity")
+    sm_check(counts, lmx_arena_index_cap(letter_at) >= 8U, "open_simple did not prime index capacity")
     int_cell: lmx_int_new_owned(@ letter)
     sm_check(counts, int_cell != 0, "int cell was not taken from simple arena")
     sm_check(counts, lmx_range_classify(@ letter, int_cell) = c.LMX_KIND_PRIMITIVE, "simple index does not classify")
@@ -71,7 +71,7 @@ fn: main () int
     # Attach into a full arena: addresses still classify there; letter emptied.
     sm_check(counts, lmx_arena_open(@ keep) = 0, "keep arena did not open")
     sm_check(counts, lmx_arena_attach(@ keep, @ letter) = 0, "attach from simple refused")
-    sm_check(counts, letter_at\blocks = 0 && letter_at\index = 0 && letter_at\simple = 0U, "donor not emptied after attach")
+    sm_check(counts, letter_at\blocks = 0 && lmx_arena_index_data(letter_at) = 0 && letter_at\simple = 0U, "donor not emptied after attach")
     sm_check(counts, lmx_range_classify(@ keep, int_cell) = c.LMX_KIND_PRIMITIVE, "attached cell lost classification")
     sm_check(counts, lmx_int_value_known(int_cell) = 42, "attached cell address not stable")
     sm_check(counts, lmx_arena_release(@ keep) = 0, "keep release refused")

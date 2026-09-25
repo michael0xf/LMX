@@ -1,4 +1,5 @@
 predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_pool.h.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdlib.h>" "<stddef.h>"
 
@@ -27,21 +28,23 @@ include: "<stdlib.h>" "<stddef.h>"
 # The table GROWS instead of refusing: as many ranges (types) as needed may be created
 # (verbatim: "вы можете этих диапазонов (типов) заводить сколько вам угодно"), so a full
 # table is not an error and no fixed cap exists.  Nothing holds a pointer into the table
-# across calls -- every access is `arena\index + index` -- so the entries may move; the
+# across calls -- every access is `lmx_arena_index_data(arena) + index` -- so the entries may move; the
 # ARRAYS they name never do.
+
+
 fn: lmx_range_reserve (@: LmxArena arena; size_t: need) int
     LmxRange: probe
     size_t: capacity
     @: LmxRange grown
     if: arena = 0
         return: 1
-    if: need <= arena\capacity
+    if: need <= lmx_arena_index_cap(arena)
         return: 0
     # Letter-scale: index stays, but does not grow without bound (Mikhail 19.09).
     if: arena\simple != 0U && need > 32U
         return: 1
     ---
-    capacity: arena\capacity
+    capacity: lmx_arena_index_cap(arena)
     if: capacity = 0U
         capacity: 16U
     ---
@@ -60,17 +63,20 @@ fn: lmx_range_reserve (@: LmxArena arena; size_t: need) int
     ---
     if: capacity > ((cast: (size_t) -1) / c.sizeof(probe))
         return: 1
-    grown: (cast: (@: LmxRange) realloc((cast: (@: void) arena\index), capacity * c.sizeof(probe)))
+    grown: (cast: (@: LmxRange) realloc((cast: (@: void) lmx_arena_index_data(arena)), capacity * c.sizeof(probe)))
     if: grown = 0
         return: 1
     ---
-    arena\index: grown
-    arena\capacity: capacity
+    lmx_arena_index_set_data(arena, grown)
+    lmx_arena_index_set_cap(arena, capacity)
 return: 0
 
 # One interval of one array joins the index.  This IS the insertion into the table, and
 # only the arena's manager performs it (lmx_arena_span is the only caller).
 fn: lmx_range_add (@: LmxArena arena; @: LmxPool array; @: void lo; @: void hi) int
+return: lmx_range_add_view(arena, arena, array, lo, hi)
+
+fn: lmx_range_add_view (@: LmxArena arena; @: LmxArena owner; @: LmxPool array; @: void lo; @: void hi) int
     @: LmxRange entry
     @: LmxRange slot
     size_t: at
@@ -78,17 +84,20 @@ fn: lmx_range_add (@: LmxArena arena; @: LmxPool array; @: void lo; @: void hi) 
     size_t: low 0U
     size_t: high
     size_t: mid
-    if: arena = 0
+    if: arena = 0 || owner = 0
         return: 1
     if: array = 0
         return: 1
     if: array\stride = 0U
         return: 1
+    # A foreign row is a non-owning immutable view.  Keep this invariant at the primitive
+    # boundary as well as in lmx_range_import, so no direct caller can publish a mutable
+    # foreign pool into another arena's type index.
+    if: owner != arena && array\sealed = 0U
+        return: 1
     if: lo = 0
         return: 1
     if: hi <= lo
-        return: 1
-    if: lmx_range_reserve(arena, arena\count + 1U) != 0
         return: 1
     # The entry names ONE array and its interval; stride, kind and type are the array's
     # and stay there.  The table is kept SORTED by base address, because the lookups
@@ -96,10 +105,10 @@ fn: lmx_range_add (@: LmxArena arena; @: LmxPool array; @: void lo; @: void hi) 
     # перебором а нормальным бинарным"), and the position for a new interval is found
     # the same way.  A registration walks the tail up one place; lmx_range_drop keeps the
     # order by shifting the tail down, so both operations preserve it.
-    high: arena\count
+    high: lmx_arena_index_len(arena)
     while: low < high
         mid: low + (high - low) / 2U
-        slot: arena\index + mid
+        slot: lmx_arena_index_data(arena) + mid
         if: lo < slot\lo
             high: mid
         else:
@@ -107,37 +116,55 @@ fn: lmx_range_add (@: LmxArena arena; @: LmxPool array; @: void lo; @: void hi) 
         ---
     ---
     at: low
+    # Re-importing the exact same physical range is a no-op.  Same addresses with a
+    # different descriptor or owner would make physical classification ambiguous.
+    if: at > 0U
+        slot: lmx_arena_index_data(arena) + (at - 1U)
+        if: slot\lo = lo && slot\hi = hi
+            if: slot\array = array && slot\owner = owner
+                return: 0
+            ---
+            return: 1
+        ---
+    ---
     # An address falls in exactly ONE array of the arena (6.5), so two arrays may not
     # share a cell.  Touching intervals are fine (half-open); overlapping ones would make
     # both the lookup and the retirement ambiguous, and they are refused here rather than
     # registered twice.  The neighbours are exactly the two entries the bisection landed
     # between.
     if: at > 0U
-        slot: arena\index + (at - 1U)
+        slot: lmx_arena_index_data(arena) + (at - 1U)
         if: lo < slot\hi
             return: 1
         ---
     ---
-    if: at < arena\count
-        slot: arena\index + at
+    if: at < lmx_arena_index_len(arena)
+        slot: lmx_arena_index_data(arena) + at
         if: hi > slot\lo
             return: 1
         ---
     ---
-    index: arena\count
+    # Reserve only after duplicate/overlap validation.  An idempotent import therefore
+    # cannot fail merely because growing an index that it does not need would fail.
+    if: lmx_arena_index_len(arena) = (cast: (size_t) -1) || lmx_range_reserve(arena, lmx_arena_index_len(arena) + 1U) != 0
+        return: 1
+    ---
+    index: lmx_arena_index_len(arena)
     while: index > at
-        entry: arena\index + index
-        slot: arena\index + (index - 1U)
+        entry: lmx_arena_index_data(arena) + index
+        slot: lmx_arena_index_data(arena) + (index - 1U)
         entry\lo: slot\lo
         entry\hi: slot\hi
         entry\array: slot\array
+        entry\owner: slot\owner
         index: index - 1U
     ---
-    entry: arena\index + at
+    entry: lmx_arena_index_data(arena) + at
     entry\lo: lo
     entry\hi: hi
     entry\array: array
-    arena\count: arena\count + 1U
+    entry\owner: owner
+    lmx_arena_index_set_len(arena, lmx_arena_index_len(arena) + 1U)
 return: 0
 
 # One interval leaves the index.  The caller is the arena's manager, retiring an entry
@@ -146,99 +173,140 @@ fn: lmx_range_drop (@: LmxArena arena; @: void lo; @: void hi) int
     @: LmxRange entry
     @: LmxRange next
     size_t: index
-    if: arena = 0 || lo = 0 || hi = 0 || arena\index = 0
+    if: arena = 0 || lo = 0 || hi = 0 || lmx_arena_index_data(arena) = 0
         return: 1
     index: 0U
-    while: index < arena\count
-        entry: arena\index + index
+    while: index < lmx_arena_index_len(arena)
+        entry: lmx_arena_index_data(arena) + index
         if: entry\lo = lo && entry\hi = hi
-            while: index + 1U < arena\count
+            while: index + 1U < lmx_arena_index_len(arena)
                 next: entry + 1
                 entry\lo: next\lo
                 entry\hi: next\hi
                 entry\array: next\array
+                entry\owner: next\owner
                 index: index + 1U
                 entry: next
             ---
             entry\lo: 0
             entry\hi: 0
             entry\array: 0
-            arena\count: arena\count - 1U
+            entry\owner: 0
+            lmx_arena_index_set_len(arena, lmx_arena_index_len(arena) - 1U)
             return: 0
         index: index + 1U
     ---
 return: 1
 
-# The whole mechanism: no tag is read, only membership is tested.  One entry per
-# interval of one array of the arena: the address says WHICH array contains it, and that
-# array's descriptor says what is in it.  Both are answered by the address alone.
-fn: lmx_range_classify (@: LmxArena arena; @: void p) int
+# The whole mechanism: no value tag and no out-of-band store is read.  One sorted index
+# contains both local ranges and explicitly imported non-owning views.  The address selects
+# the entry; the entry's array gives representation/profile and its owner gives lifetime.
+
+# The one bisection shared by both questions below. It answers only which REGISTERED
+# interval contains `p`; it does not yet say that `p` is a language-level cell. The
+# allocator needs the interval question for an empty-but-registered chunk, while every
+# public typing question needs the stricter live-cell question.
+fn: lmx_range_entry_at (@: LmxArena arena; @: void p) @: LmxRange
     @: LmxRange entry
     size_t: low 0U
     size_t: high
     size_t: mid
-    if: arena = 0 || p = 0 || arena\index = 0
-        return: c.LMX_KIND_NONE
-    high: arena\count
+    if: arena = 0 || p = 0 || lmx_arena_index_data(arena) = 0
+        return: 0
+    high: lmx_arena_index_len(arena)
     while: low < high
         mid: low + (high - low) / 2U
-        entry: arena\index + mid
+        entry: lmx_arena_index_data(arena) + mid
         if: p < entry\lo
             high: mid
         else:
             if: p < entry\hi
-                return: entry\array\kind
+                return: entry
             ---
             low: mid + 1U
         ---
+    ---
+return: 0
+
+# A registered interval's descriptor, irrespective of how many cells of that chunk have
+# been handed out. This is allocator bookkeeping, not value classification: an empty
+# first chunk must still be reused by lmx_pool_take_n instead of being mistaken for an
+# unregistered chunk.  It answers only for local ownership: an imported view must never
+# make the allocator adopt a foreign chunk.
+fn: lmx_range_interval_pool (@: LmxArena arena; @: void p) @: LmxPool
+    @: LmxRange entry
+    entry: lmx_range_entry_at(arena, p)
+    if: entry = 0 || entry\owner != arena
+        return: 0
+return: entry\array
+
+# The exact live cell whose START address is `p`, or null. A range covers the whole
+# allocated chunk, including spare capacity, so interval membership alone is insufficient:
+# after bisection, use that interval's own base and the descriptor's stride, find the
+# corresponding chunk, require cell alignment and require the cell index to be below that
+# chunk's logical count. Matching by entry.lo (not by a cumulative count) is what keeps
+# this correct for one array spread over non-contiguous chunks.
+fn: lmx_range_cell_pool (@: LmxArena arena; @: void p) @: LmxPool
+    @: LmxRange entry
+    @: LmxPool array
+    @: LmxChunk chunk
+    size_t: offset
+    entry: lmx_range_entry_at(arena, p)
+    if: entry = 0 || entry\array = 0
+        return: 0
+    array: entry\array
+    if: array\stride = 0U
+        return: 0
+    ---
+    chunk: array\head
+    while: chunk != 0
+        if: (cast: (@: void) lmx_chunk_data(chunk)) = entry\lo
+            if: lmx_chunk_cells(chunk, array\stride) > lmx_chunk_room(chunk, array\stride)
+                return: 0
+            ---
+            offset: (cast: (size_t) p) - (cast: (size_t) entry\lo)
+            if: offset % array\stride != 0U
+                return: 0
+            if: offset / array\stride >= lmx_chunk_cells(chunk, array\stride)
+                return: 0
+            ---
+            return: array
+        ---
+        chunk: chunk\next
+    ---
+return: 0
+
+fn: lmx_range_classify (@: LmxArena arena; @: void p) int
+    @: LmxPool array
+    if: arena = 0 || p = 0
+        return: c.LMX_KIND_NONE
+    array: lmx_range_cell_pool(arena, p)
+    if: array != 0
+        return: array\kind
     ---
 return: c.LMX_KIND_NONE
 
 # Which element type the array containing the address holds.  The same bisection, read
 # from the descriptor the entry names.
 fn: lmx_range_type_of (@: LmxArena arena; @: void p) int
-    @: LmxRange entry
-    size_t: low 0U
-    size_t: high
-    size_t: mid
-    if: arena = 0 || p = 0 || arena\index = 0
+    @: LmxPool array
+    if: arena = 0 || p = 0
         return: c.LMX_TYPE_NONE
-    high: arena\count
-    while: low < high
-        mid: low + (high - low) / 2U
-        entry: arena\index + mid
-        if: p < entry\lo
-            high: mid
-        else:
-            if: p < entry\hi
-                return: entry\array\type
-            ---
-            low: mid + 1U
-        ---
+    array: lmx_range_cell_pool(arena, p)
+    if: array != 0
+        return: array\type
     ---
 return: c.LMX_TYPE_NONE
 
 # How many bytes one entry of that array occupies.  Read from the same entry, never
 # guessed from the address arithmetic; 0 when the address lies in no array of the arena.
 fn: lmx_range_stride (@: LmxArena arena; @: void p) size_t
-    @: LmxRange entry
-    size_t: low 0U
-    size_t: high
-    size_t: mid
-    if: arena = 0 || p = 0 || arena\index = 0
+    @: LmxPool array
+    if: arena = 0 || p = 0
         return: 0U
-    high: arena\count
-    while: low < high
-        mid: low + (high - low) / 2U
-        entry: arena\index + mid
-        if: p < entry\lo
-            high: mid
-        else:
-            if: p < entry\hi
-                return: entry\array\stride
-            ---
-            low: mid + 1U
-        ---
+    array: lmx_range_cell_pool(arena, p)
+    if: array != 0
+        return: array\stride
     ---
 return: 0U
 
@@ -249,22 +317,118 @@ return: 0U
 # пишет напрямую в ячейку_ _Это обязательно_").  Null when no array of the arena has it.
 fn: lmx_range_pool (@: LmxArena arena; @: void p) @: LmxPool
     @: LmxRange entry
-    size_t: low 0U
-    size_t: high
-    size_t: mid
-    if: arena = 0 || p = 0 || arena\index = 0
+    if: lmx_range_cell_pool(arena, p) = 0
         return: 0
-    high: arena\count
-    while: low < high
-        mid: low + (high - low) / 2U
-        entry: arena\index + mid
-        if: p < entry\lo
-            high: mid
-        else:
-            if: p < entry\hi
-                return: entry\array
+    entry: lmx_range_entry_at(arena, p)
+    if: entry = 0 || entry\owner != arena
+        return: 0
+return: entry\array
+
+# True owner of a live cell selected by this index.  Imported ranges therefore answer their
+# foreign owner, while allocator/GC ownership continues to use lmx_range_pool and sees only
+# local ranges.
+fn: lmx_range_home (@: LmxArena arena; @: void p) @: LmxArena
+    @: LmxRange entry
+    if: arena = 0 || p = 0
+        return: 0
+    if: lmx_range_cell_pool(arena, p) = 0
+        return: 0
+    entry: lmx_range_entry_at(arena, p)
+    if: entry = 0
+        return: 0
+return: (cast: (@: LmxArena) entry\owner)
+
+fn: lmx_range_profile (@: LmxArena arena; @: void p) @: Lmx
+    @: LmxPool array lmx_range_cell_pool(arena, p)
+    if: array = 0
+        return: 0
+return: array\profile
+
+# Import is deliberately a range-table operation, not an arena attachment.  Only sealed
+# arrays may cross owner boundaries; their blocks, descriptors and array-list membership
+# stay with the true owner.  Since source may itself contain imported views, copying each
+# entry's recorded owner makes the operation transitive.  Exact repeats are accepted by
+# lmx_range_add_view and do not consume another index row.
+fn: lmx_range_import_selected (@: LmxArena arena; @: LmxArena source; @: Lmx profile; int: all_profiles) int
+    @: LmxRange entry
+    @: LmxRange present
+    size_t: index 0U
+    size_t: scan 0U
+    size_t: needed 0U
+    int: exact 0
+    int: selected 0
+    if: arena = 0 || source = 0
+        return: 1
+    if: arena = source
+        return: 0
+    # Preflight the complete view before changing the borrower.  A caller must never see
+    # half of a type view merely because a later interval conflicts or index allocation
+    # fails.  Existing exact rows are retained and do not count toward the reservation.
+    while: index < lmx_arena_index_len(source)
+        entry: lmx_arena_index_data(source) + index
+        selected: 0
+        if: entry\array != 0 && entry\array\sealed != 0U
+            if: all_profiles != 0 || entry\array\profile = profile
+                selected: 1
             ---
-            low: mid + 1U
         ---
+        if: selected != 0
+            exact: 0
+            scan: 0U
+            while: scan < lmx_arena_index_len(arena)
+                present: lmx_arena_index_data(arena) + scan
+                if: entry\lo < present\hi && entry\hi > present\lo
+                    if: entry\lo = present\lo && entry\hi = present\hi && entry\array = present\array && entry\owner = present\owner
+                        exact: 1
+                    else:
+                        return: 1
+                    ---
+                    break
+                ---
+                scan: scan + 1U
+            ---
+            if: exact = 0
+                if: needed = (cast: (size_t) -1)
+                    return: 1
+                needed: needed + 1U
+            ---
+        ---
+        index: index + 1U
+    ---
+    if: needed > (cast: (size_t) -1) - lmx_arena_index_len(arena)
+        return: 1
+    if: lmx_range_reserve(arena, lmx_arena_index_len(arena) + needed) != 0
+        return: 1
+    ---
+    # The source index is internally non-overlapping and the preflight validated every
+    # destination overlap.  With capacity reserved, this pass cannot expose a partial
+    # import on an expected error path.
+    index: 0U
+    while: index < lmx_arena_index_len(source)
+        entry: lmx_arena_index_data(source) + index
+        selected: 0
+        if: entry\array != 0 && entry\array\sealed != 0U
+            if: all_profiles != 0 || entry\array\profile = profile
+                selected: 1
+            ---
+        ---
+        if: selected != 0
+            if: lmx_range_add_view(arena, entry\owner, entry\array, entry\lo, entry\hi) != 0
+                return: 1
+            ---
+        ---
+        index: index + 1U
     ---
 return: 0
+
+# Explicit whole-view import, used when a caller intentionally grants every sealed physical
+# domain visible in source (for example, a module-level import).
+fn: lmx_range_import (@: LmxArena arena; @: LmxArena source) int
+return: lmx_range_import_selected(arena, source, 0, 1)
+
+# Narrow import used by a profiled copy/merge: grant only arrays carrying the exact physical
+# profile that was named.  Other sealed profiles and ordinary sealed arrays remain invisible.
+fn: lmx_range_import_profile (@: LmxArena arena; @: LmxArena source; @: Lmx profile) int
+    if: profile = 0
+        return: 1
+return: lmx_range_import_selected(arena, source, profile, 0)

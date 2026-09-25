@@ -65,27 +65,35 @@ fn: lmx_gc_cells (@: LmxArena arena; @: LmxPool pool; @: LmxChunk chunk; unsigne
         return: c.LMX_GC_OK
     ---
     index: 0U
-    while: index < chunk\count
-        cell: (cast: (@: char) chunk\base) + (index * pool\stride)
+    while: index < lmx_chunk_cells(chunk, pool\stride)
+        cell: (cast: (@: char) lmx_chunk_data(chunk)) + (index * pool\stride)
         if: pool\kind = c.LMX_KIND_STRUCT
-            # A header is {node, len, data}: `len` is a count and is never read as an address.
+            # A header is {parent, len, data}: `len` is a count and is never read as an address.
             header: (cast: (@: Lmx) cell)
-            status: lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) header\node), gen, depth + 1))
+            status: lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) header\parent), gen, depth + 1))
             status: lmx_gc_note(status, lmx_gc_mark_value(arena, header\data, gen, depth + 1))
         else:
             if: pool\kind = c.LMX_KIND_ARRAY
-                # A descriptor is {len, data}: the backing is what holds the elements.
+                # A descriptor is {len, data}: data is the current backing.
                 desc: (cast: (@: LmxArrayDesc) cell)
                 status: lmx_gc_note(status, lmx_gc_mark_value(arena, desc\data, gen, depth + 1))
             else:
-                # A child slot, a reference cell, or one of the kernel's own records: every
-                # pointer-sized word is a candidate address.  Over-retention is the only error
-                # this rule can make, and it is the safe direction.
-                words: pool\stride / c.sizeof(@: void)
-                word: 0U
-                while: word < words
-                    status: lmx_gc_note(status, lmx_gc_word(arena, (cast: (@@: void) (cell + (word * c.sizeof(@: void)))), gen, depth))
-                    word: word + 1U
+                if: pool\kind = c.LMX_DOMAIN_KIND_POST
+                    # D-43: Post.nodes.next is the arena->arrays list link. Word-walking a
+                    # live Post would retain every mailbox on the arena. The live mail's
+                    # node pool and inbox are marked explicitly in lmx_gc_mark; the Post
+                    # record's own chunk stays stamped by mark_value.
+                    status: status
+                else:
+                    # A child slot, a reference cell, or one of the kernel's own records: every
+                    # pointer-sized word is a candidate address.  Over-retention is the only error
+                    # this rule can make, and it is the safe direction.
+                    words: pool\stride / c.sizeof(@: void)
+                    word: 0U
+                    while: word < words
+                        status: lmx_gc_note(status, lmx_gc_word(arena, (cast: (@@: void) (cell + (word * c.sizeof(@: void)))), gen, depth))
+                        word: word + 1U
+                    ---
                 ---
             ---
         ---
@@ -107,6 +115,11 @@ fn: lmx_gc_mark_value (@: LmxArena arena; @: void p; unsigned: gen; int: depth) 
         # An address this arena never handed out: not this arena's to keep or to free.
         return: c.LMX_GC_OK
     ---
+    # A sealed typed range is immutable and GC-exempt in its ordinary owner arena. Imported
+    # ranges are non-owning views and lmx_range_pool deliberately does not return them here.
+    if: lmx_pool_is_sealed(pool) != 0
+        return: c.LMX_GC_OK
+    ---
     chunk: lmx_pool_chunk_at(pool, p)
     if: chunk = 0
         return: c.LMX_GC_OK
@@ -123,6 +136,9 @@ fn: lmx_gc_mark_pool (@: LmxArena arena; @: LmxPool pool; unsigned: gen) int
     @: LmxChunk chunk
     int: status
     status: c.LMX_GC_OK
+    if: lmx_pool_is_sealed(pool) != 0
+        return: c.LMX_GC_OK
+    ---
     chunk: lmx_pool_chunk_head(pool)
     while: chunk != 0
         if: chunk\mark != gen
@@ -135,10 +151,11 @@ return: status
 
 fn: lmx_gc_mark (@: LmxArena arena; @: LmxThread t) unsigned
     @: LmxMsg message
-    @: LmxLink node
+    @: LmxThread child
     @: size_t inbox_values
     size_t: inbox_count
     size_t: inbox_index
+    size_t: child_index
     unsigned: gen
     int: status
     int: inbox_status
@@ -151,7 +168,7 @@ fn: lmx_gc_mark (@: LmxArena arena; @: LmxThread t) unsigned
     # The Message's own cells.  A cell that is not in this arena (a runtime may keep its own
     # records in its frame) marks nothing and is not an error.
     status: c.LMX_GC_OK
-    message: t\message
+    message: lmx_thread_message(t)
     status: lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) t), gen, 0))
     status: lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) message), gen, 0))
     status: lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) t\mail), gen, 0))
@@ -183,17 +200,14 @@ fn: lmx_gc_mark (@: LmxArena arena; @: LmxThread t) unsigned
             free((cast: (@: void) inbox_values))
         ---
     ---
-    # The parent's own chain of live direct children (lmx_thread.h.lm1, LmxLink).  Its nodes are
-    # cells of THIS arena, and nothing else reaches them: a live child is found only through its
-    # parent's chain, so the chain is a root for the same reason the mailbox's queue is.  The record
-    # words a node carries (the child's Thread, its Message, its schedule record) come along.
-    node: lmx_thread_child_link(t)
-    while: node != 0
-        status: lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) node), gen, 0))
-        status: lmx_gc_note(status, lmx_gc_mark_value(arena, node\thread, gen, 0))
-        status: lmx_gc_note(status, lmx_gc_mark_value(arena, node\message, gen, 0))
-        status: lmx_gc_note(status, lmx_gc_mark_value(arena, node\slot, gen, 0))
-        node: (cast: (@: LmxLink) node\next)
+    # The one ordinary graph Array is itself reachable through the Thread record marked above.
+    # Walk its physical values as explicit roots too: a child arena is foreign to this arena, but
+    # any parent-owned mechanism reached from the child value must not depend on a shadow chain.
+    child_index: 0U
+    while: child_index < lmx_thread_child_count(t)
+        child: lmx_thread_child_at(t, child_index)
+        status: lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) child), gen, 0))
+        child_index: child_index + 1U
     ---
     if: status != c.LMX_GC_OK
         return: 0U
@@ -219,8 +233,10 @@ fn: lmx_gc_block_live (@: LmxArena arena; @: LmxArenaBlock node; unsigned: gen) 
         ---
         chunk: pool\head
         while: chunk != 0
-            if: chunk\mark = gen && (chunk\base = node\base || (cast: (@: void) chunk) = node\base)
-                return: 1
+            if: (cast: (@: void) lmx_chunk_data(chunk)) = node\base || (cast: (@: void) chunk) = node\base
+                if: lmx_pool_is_sealed(pool) != 0 || chunk\mark = gen
+                    return: 1
+                ---
             ---
             chunk: chunk\next
         ---
@@ -236,14 +252,16 @@ fn: lmx_gc_block_unlink (@: LmxArena arena; @: LmxArenaBlock node; unsigned: gen
     @: LmxChunk chunk
     pool: arena\arrays
     while: pool != 0
-        chunk: pool\head
-        while: chunk != 0
-            if: chunk\mark != gen
-                if: chunk\base = node\base || (cast: (@: void) chunk) = node\base
-                    return: lmx_pool_chunk_drop(pool, chunk)
+        if: lmx_pool_is_sealed(pool) = 0
+            chunk: pool\head
+            while: chunk != 0
+                if: chunk\mark != gen
+                    if: (cast: (@: void) lmx_chunk_data(chunk)) = node\base || (cast: (@: void) chunk) = node\base
+                        return: lmx_pool_chunk_drop(pool, chunk)
+                    ---
                 ---
+                chunk: chunk\next
             ---
-            chunk: chunk\next
         ---
         pool: pool\next
     ---
@@ -259,6 +277,40 @@ fn: lmx_gc_block_dispose (@: LmxArenaBlock node) void
         free((cast: (@: void) node))
     ---
 
+
+# D-43: a pool descriptor embedded in a dying block (LmxPost.nodes) must leave
+# arena->arrays before the block is freed. Otherwise a recycled Post at the same
+# address finds itself already linked and lmx_post_init / lmx_pool_open fails.
+fn: lmx_gc_drop_arrays_in_block (@: LmxArena arena; @: LmxArenaBlock node) void
+    @: LmxPool pool
+    @: LmxPool next
+    @: char lo
+    @: char hi
+    @: char at
+    if: arena = 0 || node = 0 || node\base = 0 || node\n = 0U
+        return
+    ---
+    lo: (cast: (@: char) node\base)
+    hi: lo + node\n
+    pool: arena\arrays
+    while: pool != 0
+        next: pool\next
+        at: (cast: (@: char) pool)
+        if: at >= lo && at < hi
+            lmx_arena_array_drop(arena, pool)
+            pool\head: 0
+            pool\tail: 0
+            pool\next: 0
+            pool\stride: 0U
+            pool\chunk_capacity: 0U
+            pool\kind: 0
+            pool\type: 0
+            pool\profile: 0
+            pool\sealed: 0U
+        ---
+        pool: next
+    ---
+
 fn: lmx_gc_sweep (@: LmxArena arena; unsigned: gen) int
     @: LmxArenaBlock node
     @: LmxArenaBlock next
@@ -268,6 +320,8 @@ fn: lmx_gc_sweep (@: LmxArena arena; unsigned: gen) int
     while: node != 0
         next: node\next
         if: lmx_gc_block_live(arena, node, gen) = 0
+            # D-43: detach embedded pools (Post.nodes) before unlink/free of this block.
+            lmx_gc_drop_arrays_in_block(arena, node)
             lmx_gc_block_unlink(arena, node, gen)
             # The interval leaves the index, the block leaves the list -- and then its storage
             # goes: lmx_arena_drop detaches, it does not free.
@@ -286,6 +340,8 @@ fn: lmx_gc_collect (@: LmxArena arena; @: LmxThread t) int
     if: arena\simple != 0U
         return: c.LMX_GC_OK
     ---
+    # Sealed owner-arena pools are skipped per range. Imported sealed ranges are non-owning views
+    # and never appear in arena\arrays, so neither mark nor sweep can adopt or free them.
     gen: lmx_gc_mark(arena, t)
     if: gen = 0U
         # The walk could not be completed: an object it never reached might be live, and a

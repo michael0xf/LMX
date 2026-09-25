@@ -1,0 +1,28 @@
+# S1.2: declared throws (author Q13).  `inner` declares Oops then Nope and throws both, with a
+# payload and without; its merge throws the implicit name after them (d + 1 = 3).  `outer` lists
+# the same names in the other order and calls inner: a declared name passes by NAME (inner's 1
+# is outer's 2, inner's 2 is outer's 1) and the implicit one keeps its g (3).  E never calls
+# them -- before catch (S1.3) E cannot handle a declared name -- so this row proves the code is
+# emitted, compiles and links; the runtime distinction of declared positions from d + g is
+# S1.3's.
+P:
+    size_t: p 3U
+end: P
+
+fn: inner (int: a) int
+    throws:
+        Oops
+        Nope
+    if: a = 0
+        throw: Oops(a 7)
+    Q: merge: P
+    if: a = 1
+        throw: Nope()
+return: a
+
+fn: outer (int: a) int
+    throws: Nope Oops
+return: inner(a)
+
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

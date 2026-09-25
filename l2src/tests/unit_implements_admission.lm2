@@ -1,0 +1,24 @@
+# Adapted from lingvamyxa_prev/tests/trans_implements_admission.lm2.
+# Same-shape User is admitted. Field reads stay on the named Structure value.
+
+User:
+    size_t: equals 3U
+    size_t: extra 0U
+end: User
+
+fn: m () int
+    size_t: q
+    q: 1U
+    return: 0
+end: m
+
+size_t: got
+got: User\equals
+if: got != 3U
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
+if: implements(User, User, User) != 1
+    sendMessage: exit(exit_code: 2; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

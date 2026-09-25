@@ -1,0 +1,401 @@
+predef: "l2src/lmx_walk.lm1"
+predef: "l2src/lmx_primitive.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# THE PRIMITIVE INSERT, on graphs built by hand (DEEPSEEK-L2-PRIMITIVE-KERNEL-IMPLEMENT-20260921-27).
+# What this file pins, and each line of it is a requirement of the ticket:
+#
+#   * RECOGNITION IS PHYSICAL: a node names its record by address and the walk admits it by
+#     CLASSIFYING that address (LMX_DOMAIN_KIND_PRIMITIVE).  A record that is not a primitive --
+#     a plain Structure, a record with no fn -- is refused whatever its shape.
+#   * k.4 (next_core_tasks.md §3 item 9; no cached plan, no separate prepare pass -- lmx_walk_prepare
+#     is gone with lmx_plan): every check that used to run once "at preparation" now runs every
+#     time the PRIM node is actually reached and evaluated, in lmx_walk_prim itself, not before.  A
+#     violation inside a branch that is never taken is therefore never caught -- there is nothing
+#     left that scans the whole body ahead of running it.  THE IMMUTABLE-PROFILE OWNER REFUSAL:
+#     a primitive whose owner lives in the exact immutable profile is refused when its PRIM step
+#     actually runs (lmx_walk_immutable, asked unconditionally now, not gated by a counting pass).
+#   * STATUS IS NOT VALUE: a primitive that returns VALUE 0 with status OK is NOT a failure (the
+#     value is absence of a value, reported as such); a nonzero status leaves as
+#     LMX_WALK_PRIMITIVE, a status that collides with none of the four readings it must stay
+#     distinct from.
+#   * NO ROLLBACK, AND NONE PRETENDED: what a failing primitive wrote before it failed STANDS.
+#   * A FAILED PRIMITIVE LEAVES NOTHING BEHIND: the scratch slice it was given is rewound, and the
+#     next activation runs normally.
+#   * THE REGISTRY IS MECHANISM ONLY: open, admit into a slot, look up.  Which primitives exist is
+#     registration's act and is not tested here.
+#   * D-49: a PRIMITIVE record is a shared copy terminal by kind, whether or not an exact physical
+#     profile also retains it. Profile retention remains an additional path.
+#
+# FIXED (steps/native-word-191.md): lmx_walk_prim used to read `record\fn` through whatever
+# operand it was handed WITHOUT first classifying it as LMX_DOMAIN_KIND_PRIMITIVE -- the
+# classification guard that used to live in the deleted counting pass was not carried over to
+# the always-run path when the immutable check was.  It now classifies the operand
+# unconditionally before the cast, the same way lmx_walk_slot does for OWN/SET/PUT holders.
+# m_peer below (a Structure where a primitive record is expected) exercises that guard directly.
+
+@: LmxArena ga 0
+@: Lmx groles 0
+@: LmxWalkContext gctx 0
+@: LmxWalkValue gv 0
+size_t: pv_calls 0U
+int: broken 0
+int: checks 0
+int: failures 0
+
+sub: check (int: ok; const: @(char label))
+    checks: checks + 1
+    if: ok = 0
+        failures: failures + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: check
+
+# ---- the primitives themselves: three C functions and the status they report -----------------
+
+fn: pv_ok (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    pv_calls: pv_calls + 1U
+    if: dest = 0
+        return: c.LMX_PRIMITIVE_FAIL
+    ---
+    lmx_int_store_known(dest, 7)
+    \out: dest
+return: c.LMX_PRIMITIVE_OK
+
+# Status OK, and NOTHING written: the caller must read this as no value, not as failure.
+fn: pv_zero (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    pv_calls: pv_calls + 1U
+    \out: 0
+return: c.LMX_PRIMITIVE_OK
+
+# Fails -- after writing into the first reference it was handed: the write STANDS, because there
+# is no rollback engine and this kernel does not pretend to have one.
+fn: pv_fail (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    pv_calls: pv_calls + 1U
+    if: nargs > 0U && refs != 0 && refs[0] != 0
+        lmx_int_store_known(refs[0], 99)
+    ---
+    \out: 0
+return: c.LMX_PRIMITIVE_FAIL
+
+# ---- construction helpers (the same shapes the walk's own selftest uses) ----------------------
+
+fn: fr (@: Lmx parent; size_t: slot; int: op; size_t: children) @: Lmx
+    @: Lmx n lmx_walk_frame(ga, groles, parent, op, children)
+    if: n = 0 || lmx_arena_ref_store(parent, slot, (cast: (@: void) n)) != 0
+        broken: broken + 1
+        return: 0
+    ---
+return: n
+
+fn: pl (@: Lmx parent; size_t: slot; size_t: children) @: Lmx
+    @: Lmx n lmx_walk_plain(ga, parent, children)
+    if: n = 0 || lmx_arena_ref_store(parent, slot, (cast: (@: void) n)) != 0
+        broken: broken + 1
+        return: 0
+    ---
+return: n
+
+sub: ref (@: Lmx code; size_t: slot; @: Lmx target)
+    if: code = 0 || target = 0 || lmx_arena_ref_store(code, slot, (cast: (@: void) target)) != 0
+        broken: broken + 1
+    ---
+end: ref
+
+sub: sz (@: Lmx code; size_t: slot; size_t: value)
+    if: code = 0 || lmx_walk_store_size(ga, code, slot, value) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+end: sz
+
+fn: lit (@: Lmx parent; size_t: slot; int: value) @: Lmx
+    @: Lmx n fr(parent, slot, c.LMX_WALK_OP_LIT, 2U)
+    if: n != 0 && lmx_walk_store_int(ga, n, 1U, value) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+return: n
+
+fn: icell (@: Lmx holder; size_t: slot; int: value) @: void
+    if: holder = 0 || lmx_walk_store_int(ga, holder, slot, value) != c.LMX_WALK_OK
+        broken: broken + 1
+        return: 0
+    ---
+return: lmx_arena_ref_value(holder, slot)
+
+# k.4: an occurrence is an ordinary Structure with `native = 0` (the default lmx_node_new_owned
+# already gives it) -- no descriptor, own fields/body steps start at slot 0.
+fn: mk_m (@: Lmx unit; size_t: slot; size_t: children) @: Lmx
+    @: Lmx m pl(unit, slot, children)
+    if: m = 0
+        broken: broken + 1
+        return: 0
+    ---
+return: m
+
+fn: record_new (@: LmxArena arena; LmxPrimitiveEntry: fn; @: Lmx owner) @: Lmx
+    @: LmxPrimitive r (cast: (@: LmxPrimitive) lmx_arena_take(arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))
+    if: r = 0
+        broken: broken + 1
+        return: 0
+    ---
+    r\fn: fn
+    r\signature: 0
+    r\owner: owner
+return: (cast: (@: Lmx) r)
+
+fn: record_new_profiled (@: LmxArena arena; @: Lmx profile; LmxPrimitiveEntry: fn; @: Lmx owner) @: Lmx
+    @: LmxPrimitive r (cast: (@: LmxPrimitive) lmx_arena_take_profiled(arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, profile))
+    if: r = 0
+        broken: broken + 1
+        return: 0
+    ---
+    r\fn: fn
+    r\signature: 0
+    r\owner: owner
+return: (cast: (@: Lmx) r)
+
+# One direct call: the value comes back as a reference; an int result is read through it.
+fn: go (@: Lmx m; @@: void args; size_t: nargs; @: int v) int
+    int: st
+    st: lmx_walk_run(gctx, m, args, nargs, gv)
+    \v: gv\present
+return: st
+
+fn: main () int
+    LmxArena: arena
+    LmxArena: context_arena
+    LmxPool: context_cells
+    LmxScratch: scratch
+    LmxWalkContext: context
+    @: LmxArena pca 0
+    @: LmxScratch ps 0
+    @: LmxWalkContext pc 0
+    @: Lmx registry 0
+    @: Lmx admitted 0
+    @: Lmx record 0
+    @: Lmx reference 0
+    @: LmxPrimitive bare 0
+    @: Lmx rec_ok 0
+    @: Lmx rec_zero 0
+    @: Lmx rec_fail 0
+    @: Lmx rec_nofn 0
+    @: Lmx rec_bound 0
+    @: Lmx immutable_profile 0
+    @: Lmx immutable_owner 0
+    @: LmxPool immutable_structs 0
+    @: LmxPool immutable_primitives 0
+    @: Lmx unit 0
+    @: Lmx subject 0
+    @: Lmx peer 0
+    @: Lmx m_ok 0
+    @: Lmx m_zero 0
+    @: Lmx m_fail 0
+    @: Lmx m_nofn 0
+    @: Lmx m_peer 0
+    @: Lmx m_absent 0
+    @: Lmx m_immutable 0
+    @: Lmx m_hidden 0
+    @: void cell0 0
+    int: st 0
+    int: v 0
+
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ arena) != 0
+        fputs("lmx_primitive: arena\n", l1_stdout())
+        return: 2
+    ---
+    pca: @ context_arena
+    ps: @ scratch
+    pc: @ context
+    ga: @ arena
+    groles: lmx_walk_roles_open(ga)
+    memset((cast: (@: void) (@ context_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ context_cells)), 0, c.sizeof(c.LmxPool))
+    memset((cast: (@: void) (@ scratch)), 0, c.sizeof(c.LmxScratch))
+    if: lmx_arena_open(pca) != 0 || lmx_scratch_open(ps, pca, @ context_cells, 16U) != c.LMX_SCRATCH_OK
+        fputs("lmx_primitive: context\n", l1_stdout())
+        return: 2
+    ---
+    pc\arena: ga
+    pc\scratch: ps
+    pc\roles: groles
+    pc\classified: 0U
+    gctx: pc
+    gv: (cast: (@: LmxWalkValue) calloc(1U, c.sizeof(c.LmxWalkValue)))
+    unit: lmx_node_new_owned(ga)
+    if: groles = 0 || gv = 0 || unit = 0 || lmx_arena_refs_open_owned(ga, unit, 12U) != 0
+        fputs("lmx_primitive: unit\n", l1_stdout())
+        return: 2
+    ---
+
+    # ---- the registry's mechanism and an exact immutable physical profile ---------------------
+    check(lmx_primitive_registry_open(ga, 4U, @ registry) = c.LMX_PRIMITIVE_REG_OK && registry != 0, "the registry was not opened in its owner arena")
+    if: registry = 0
+        c.printf("lmx_primitive: no registry\n")
+        return: 2
+    ---
+    check(lmx_primitive_record(registry, 0U) = 0 && lmx_primitive_record(registry, 3U) = 0, "a fresh registry already answers with records")
+    check(lmx_primitive_register(ga, registry, 4U, pv_ok, 0, 0, @ record) = c.LMX_PRIMITIVE_REG_REFUSED, "a slot past the registry was admitted")
+    # An OWNERLESS primitive is admitted: a pure function has nothing to act on, and requiring an
+    # owner would be policy this unit does not own.  The design's motivating case (the mailbox)
+    # does have one, and the immutable-profile rule below is what makes that case safe.
+    check(lmx_primitive_register(ga, registry, 1U, pv_ok, 0, 0, @ record) = c.LMX_PRIMITIVE_REG_OK && record != 0, "an ownerless primitive was refused")
+    immutable_profile: lmx_node_new_owned(ga)
+    immutable_owner: lmx_node_new_profiled(ga, immutable_profile)
+    admitted: record_new_profiled(ga, immutable_profile, pv_fail, immutable_owner)
+    check(immutable_profile != 0 && immutable_owner != 0 && admitted != 0, "the immutable profiled primitive was not built")
+    if: immutable_profile != 0 && immutable_owner != 0 && admitted != 0
+        lmx_arena_ref_store(registry, 0U, (cast: (@: void) admitted))
+    ---
+    check(lmx_primitive_record(registry, 0U) = admitted, "the registry does not answer with the record it admitted")
+    check(lmx_range_classify(ga, admitted) = c.LMX_DOMAIN_KIND_PRIMITIVE && lmx_range_profile(ga, admitted) = immutable_profile, "the admitted record has no exact primitive profile")
+    check(lmx_range_profile(ga, (cast: (@: void) immutable_owner)) = immutable_profile, "the primitive owner has no exact immutable profile")
+    check(lmx_copy_is_terminal_profiled(ga, admitted, immutable_profile) = 1 && lmx_copy_is_terminal(ga, admitted) = 1, "D-49: primitive record is a shared terminal; profile path still retains")
+    immutable_structs: lmx_arena_find_profiled(ga, c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT, immutable_profile)
+    immutable_primitives: lmx_arena_find_profiled(ga, c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, immutable_profile)
+    check(immutable_structs != 0 && immutable_primitives != 0 && lmx_pool_seal(immutable_structs) = 0 && lmx_pool_seal(immutable_primitives) = 0, "immutable profile ranges did not seal")
+
+    # The ordinary placement, for the bodies that must RUN: records of the graph's own arena.
+    subject: pl(unit, 0U, 2U)
+    cell0: icell(subject, 0U, 5)
+    icell(subject, 1U, 35)
+    peer: pl(unit, 1U, 2U)
+    rec_ok: record_new(ga, pv_ok, peer)
+    rec_zero: record_new(ga, pv_zero, peer)
+    rec_fail: record_new(ga, pv_fail, peer)
+    # A record with NO fn: admitted to the arena as a cell of the domain, refused by the walk.
+    rec_nofn: record_new(ga, pv_ok, peer)
+    bare: (cast: (@: LmxPrimitive) rec_nofn)
+    if: bare != 0
+        bare\fn: 0
+    ---
+    rec_bound: admitted
+    check(rec_ok != 0 && rec_zero != 0 && rec_fail != 0 && rec_nofn != 0, "a primitive record was not made")
+    check(lmx_copy_is_terminal(ga, rec_ok) = 1, "D-49: ordinary primitive record is a shared copy terminal")
+
+    # ---- the bodies: k.4 -- one slot each (no descriptor slot), the body step at 0 -------------
+    # prim_ok:      return: prim(rec_ok)
+    m_ok: mk_m(unit, 2U, 1U)
+    record: fr(m_ok, 0U, c.LMX_WALK_OP_RET, 2U)
+    reference: fr(record, 1U, c.LMX_WALK_OP_PRIM, 2U)
+    ref(reference, 1U, rec_ok)
+    # prim_zero:    return: prim(rec_zero)
+    m_zero: mk_m(unit, 3U, 1U)
+    record: fr(m_zero, 0U, c.LMX_WALK_OP_RET, 2U)
+    reference: fr(record, 1U, c.LMX_WALK_OP_PRIM, 2U)
+    ref(reference, 1U, rec_zero)
+    # prim_fail:    return: prim(rec_fail, subject\0)
+    m_fail: mk_m(unit, 4U, 1U)
+    record: fr(m_fail, 0U, c.LMX_WALK_OP_RET, 2U)
+    reference: fr(record, 1U, c.LMX_WALK_OP_PRIM, 3U)
+    ref(reference, 1U, rec_fail)
+    record: fr(reference, 2U, c.LMX_WALK_OP_AT, 3U)
+    ref(record, 1U, subject)
+    sz(record, 2U, 0U)
+    # prim_nofn:    return: prim(rec_nofn)
+    m_nofn: mk_m(unit, 5U, 1U)
+    record: fr(m_nofn, 0U, c.LMX_WALK_OP_RET, 2U)
+    reference: fr(record, 1U, c.LMX_WALK_OP_PRIM, 2U)
+    ref(reference, 1U, rec_nofn)
+    # prim_peer:    return: prim(peer)          -- a Structure is not a primitive record.
+    # KNOWN GAP (see header): lmx_walk_prim does not classify this operand before reading it as
+    # an LmxPrimitive, so this fixture is built for the record but deliberately NEVER RUN below.
+    m_peer: mk_m(unit, 6U, 1U)
+    record: fr(m_peer, 0U, c.LMX_WALK_OP_RET, 2U)
+    reference: fr(record, 1U, c.LMX_WALK_OP_PRIM, 2U)
+    ref(reference, 1U, peer)
+    # prim_absent:  return: prim()              -- no record operand at all
+    m_absent: mk_m(unit, 7U, 1U)
+    record: fr(m_absent, 0U, c.LMX_WALK_OP_RET, 2U)
+    reference: fr(record, 1U, c.LMX_WALK_OP_PRIM, 2U)
+    # prim_immutable: return: prim(rec_bound)   -- record and owner use the immutable profile;
+    # this PRIM step is reached directly, so k.4's always-run immutable check refuses it.
+    m_immutable: mk_m(unit, 8U, 1U)
+    record: fr(m_immutable, 0U, c.LMX_WALK_OP_RET, 2U)
+    reference: fr(record, 1U, c.LMX_WALK_OP_PRIM, 2U)
+    ref(reference, 1U, rec_bound)
+    # prim_hidden:  if: 0 { prim(rec_bound) } else { }   -- k.4: the SAME immutable violation,
+    # but inside a branch that is never taken.  There is no separate prepare pass to scan an
+    # untaken branch any more, so this one is NOT refused -- it simply never runs.
+    m_hidden: mk_m(unit, 9U, 1U)
+    record: fr(m_hidden, 0U, c.LMX_WALK_OP_IF, 4U)
+    lit(record, 1U, 0)
+    reference: pl(record, 2U, 1U)
+    pl(record, 3U, 0U)
+    record: fr(reference, 0U, c.LMX_WALK_OP_PRIM, 2U)
+    ref(record, 1U, rec_bound)
+
+    check(broken = 0, "construction")
+    if: broken != 0
+        c.printf("lmx_primitive: %d construction steps failed\n", broken)
+        return: 2
+    ---
+    record: 0
+
+    # ---- boundary refusals: k.4 -- checked when the PRIM step actually runs, not before ---------
+    # (lmx_walk_prepare/lmx_plan are gone; there is no separate whole-body scan any more.)
+    pc\immutable_profile: immutable_profile
+    v: -1
+    st: go(m_nofn, 0, 0U, @ v)
+    check(st = c.LMX_WALK_INVALID, "a primitive record with no fn was admitted")
+    check(ps\used = 0U && ps\top = 0U, "a refused run left scratch occupied (m_nofn)")
+    v: -1
+    # k.4: a Structure where a primitive record is expected is refused by classification,
+    # never read as an LmxPrimitive by a bare cast (the lmx_walk_prim fix this file exists
+    # to pin). Mutant: drop the classification guard -> undefined read / RED here.
+    st: go(m_peer, 0, 0U, @ v)
+    check(st = c.LMX_WALK_INVALID, "a Structure in a PRIM node's record position was admitted")
+    check(ps\used = 0U && ps\top = 0U, "a refused run left scratch occupied (m_peer)")
+    v: -1
+    st: go(m_absent, 0, 0U, @ v)
+    check(st = c.LMX_WALK_INVALID, "a prim node with no record operand was admitted")
+    check(ps\used = 0U && ps\top = 0U, "a refused run left scratch occupied (m_absent)")
+    v: -1
+    st: go(m_immutable, 0, 0U, @ v)
+    check(st = c.LMX_WALK_INVALID, "a primitive whose owner is in the immutable profile was admitted: that is the escape hole")
+    check(ps\used = 0U && ps\top = 0U, "a refused run left scratch occupied (m_immutable)")
+    # k.4: the SAME immutable violation, but inside a branch that is never taken, is NOT refused
+    # -- nothing scans the whole body ahead of running it any more, so an untaken branch's
+    # violation is simply never reached.  This is the behaviour this fixture now pins; it is the
+    # opposite of what the pre-k.4 "preparation" pass used to guarantee, and that is the point.
+    v: -1
+    st: go(m_hidden, 0, 0U, @ v)
+    check(st = c.LMX_WALK_OK && v = 0, "an immutable-profile primitive in a never-taken branch was refused (k.4: it should simply not run)")
+    check(ps\used = 0U && ps\top = 0U, "a run left scratch occupied (m_hidden)")
+
+    # ---- running: the value, the status, and what a failure leaves behind ----------------------
+    pv_calls: 0U
+    v: -1
+    st: go(m_ok, 0, 0U, @ v)
+    check(st = c.LMX_WALK_OK && v = 1 && gv\ref = (cast: (@: void) (@ gv\number)) && gv\number = 7, "the primitive did not run flat and land its integer in the caller's own cell")
+    check(pv_calls = 1U, "the primitive was called a number of times other than once")
+    # STATUS OK WITH THE VALUE ZERO IS NOT FAILURE.
+    st: go(m_zero, 0, 0U, @ v)
+    check(st = c.LMX_WALK_OK && v = 0 && gv\present = 0 && gv\ref = 0, "a primitive reporting status OK with no value was read as a failure")
+    # A nonzero status is its OWN reading, and it collides with none of the four.
+    st: go(m_fail, 0, 0U, @ v)
+    check(st = c.LMX_WALK_PRIMITIVE, "a failing primitive did not report LMX_WALK_PRIMITIVE")
+    check(st != c.LMX_WALK_OK && st != c.LMX_WALK_INVALID && st != c.LMX_WALK_UNSUPPORTED && st != c.LMX_WALK_NO_GRAPH, "the primitive failure collided with a reading it must stay distinct from")
+    check(lmx_int_value_known(cell0) = 99, "what the failing primitive wrote before it failed did not stand: there is no rollback engine")
+    check(ps\used = 0U && ps\top = 0U, "a failed primitive left its scratch slice behind")
+    # The next activation runs, and the failure is repeatable: the second failure is not a
+    # side effect of the first.
+    st: go(m_ok, 0, 0U, @ v)
+    check(st = c.LMX_WALK_OK && gv\number = 7, "the activation AFTER a primitive failure did not run")
+    st: go(m_fail, 0, 0U, @ v)
+    check(st = c.LMX_WALK_PRIMITIVE, "the same failure did not repeat")
+    check(ps\used = 0U && ps\top = 0U, "scratch is not empty after the second failure")
+
+    free((cast: (@: void) gv))
+    if: failures != 0
+        c.printf("lmx_primitive: %d failed of %d\n", failures, checks)
+        return: 1
+    ---
+    c.printf("lmx_primitive: %d checks\n", checks)
+return: 0

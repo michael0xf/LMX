@@ -1,0 +1,26 @@
+# GROK-UNIVERSAL-RESOLUTION-PARTA-20260922-03
+# Three surface forms of the same call must lower to the same physical
+# METHOD invocation. An existing typed non-callable is assigned, not called.
+fn: ping (int: value) int
+    return: value
+end: ping
+
+int: a 0
+int: b 0
+int: x 1
+a: ping(7)
+b: ping: 7
+ping:
+    7
+if: a != 7
+    sendMessage: exit(exit_code: 11; stdout: ""; stderr: "")
+    return
+if: b != 7
+    sendMessage: exit(exit_code: 12; stdout: ""; stderr: "")
+    return
+x: 2
+if: x != 2
+    sendMessage: exit(exit_code: 21; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

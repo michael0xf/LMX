@@ -1,0 +1,24 @@
+Model:
+    size_t: value 1U
+end: Model
+
+Outer:
+    Model: inner
+end: Outer
+
+# FABLE-SONNET-OWN-LOOKUP-AUDIT-20260923-131 part 3: the -92 leftover
+# (next_core_tasks.md, "unsupported terminal Structure assignment-path" --
+# a statement-level ty40 refusal in l2_check_body for a Structure value
+# assigned through a path). Measured clean today: assigning a whole
+# Structure value (`a`) into a path target that ends at a nested
+# Structure-typed field (`o\inner`, not one of its own primitive members)
+# stays a located refusal, not a silent one -- typed-typed rebind through a
+# path is still fail-closed, matching the plain `o\inner: a`-shaped case
+# fable already ruled on. One line of detail, no duplicate silent second
+# "translation failed" line.
+Outer: o
+Model: a
+
+o\inner: a
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

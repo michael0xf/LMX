@@ -1,0 +1,14 @@
+# A bare atom in an executable body is an expression statement (plan §3, "Expression statement
+# и discard"): m resolves to a callable, so it is called with no arguments, on the call path of
+# `m()`, and its result is discarded.  Two calls: 2.
+int: hits 0
+
+fn: m () int
+    hits: hits + 1
+    return: 7
+end: m
+
+m
+m
+sendMessage: exit(exit_code: hits; stdout: ""; stderr: "")
+return

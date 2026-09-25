@@ -1,0 +1,101 @@
+predef: "l2src/lmx_merge_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# Q21 = A override map (FABLE-GROKBOT-MERGE-OVERRIDE-20260924-161 commit 1).
+# Model {x,y}, operand {x'} with map (0 <- 1.0) -> len 2, slot0 = x' value, slot1 = y.
+# Null map -> len 3 (flat append). Mutant (map ignored) fails the len-2 pin -> RED.
+
+sub: ov_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: ov_check
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxArena: arena
+    LmxArena: dst
+    @: Lmx model 0
+    @: Lmx operand 0
+    @: Lmx result 0
+    @: Lmx result_flat 0
+    @: void x_cell 0
+    @: void y_cell 0
+    @: void xp_cell 0
+    @: void got 0
+    @: LmxMergePair one 0
+    @@: Lmx operands 0
+    int: status LMX_MERGE_OK
+    int: failures
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ dst)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ arena) != 0 || lmx_arena_open(@ dst) != 0
+        fputs("lmx: arena open failed\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    operands: (cast: (@@: Lmx) calloc(2U, c.sizeof(@: void)))
+    if: operands = 0
+        free(counts)
+        return: 2
+    ---
+    x_cell: lmx_int_new_owned(@ arena)
+    y_cell: lmx_int_new_owned(@ arena)
+    xp_cell: lmx_int_new_owned(@ arena)
+    lmx_int_store_known(x_cell, 1)
+    lmx_int_store_known(y_cell, 2)
+    lmx_int_store_known(xp_cell, 99)
+    model: lmx_node_new_owned(@ arena)
+    operand: lmx_node_new_owned(@ arena)
+    ov_check(counts, x_cell != 0 && y_cell != 0 && xp_cell != 0 && model != 0 && operand != 0, "cells and structures constructed")
+    ov_check(counts, lmx_arena_refs_open_owned(@ arena, model, 2U) = 0, "model opened {x,y}")
+    ov_check(counts, lmx_arena_refs_open_owned(@ arena, operand, 1U) = 0, "operand opened {x'}")
+    lmx_arena_ref_store(model, 0U, x_cell)
+    lmx_arena_ref_store(model, 1U, y_cell)
+    lmx_arena_ref_store(operand, 0U, xp_cell)
+    operands[0]: model
+    operands[1]: operand
+
+    # Null map: flat append -> len 3.
+    status: lmx_merge_owned(operands, 2U, 0, 0, 0, @ arena, @ dst, 0, 0U, @ result_flat)
+    ov_check(counts, status = LMX_MERGE_OK && result_flat != 0, "null-map merge OK")
+    ov_check(counts, result_flat\len = 3, "null map -> len 3 (append)")
+
+    # Map (0 <- 1.0): override model slot 0 with operand 1 field 0.
+    one: (cast: (@: LmxMergePair) calloc(1U, c.sizeof(c.LmxMergePair)))
+    ov_check(counts, one != 0, "override pair allocated")
+    one\model_slot: 0U
+    one\operand: 1U
+    one\field: 0U
+    status: lmx_merge_owned(operands, 2U, 0, 0, 0, @ arena, @ dst, @ one, 1U, @ result)
+    ov_check(counts, status = LMX_MERGE_OK && result != 0, "mapped merge OK")
+    ov_check(counts, result\len = 2, "map (0 <- 1.0) -> len 2 (mutant: map ignored -> 3 RED)")
+    got: lmx_arena_ref_value(result, 0U)
+    ov_check(counts, got != 0 && lmx_int_value_known(got) = 99, "result[0] = x' value 99")
+    got: lmx_arena_ref_value(result, 1U)
+    ov_check(counts, got != 0 && lmx_int_value_known(got) = 2, "result[1] = y value 2")
+    ov_check(counts, model\len = 2 && operand\len = 1, "operands untouched")
+
+    failures: counts[1]
+    c.printf("lmx_merge_override_selftest: %d checks, %d failed\n", counts[0], failures)
+    free((cast: (@: void) one))
+    free((cast: (@: void) operands))
+    free(counts)
+    lmx_arena_release(@ arena)
+    lmx_arena_release(@ dst)
+    if: failures != 0
+        return: 1
+return: 0

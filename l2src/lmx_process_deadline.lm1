@@ -1,0 +1,80 @@
+predef: "l2src/lmx_process_deadline.h.lm1"
+predef: "l2src/lmx_clock.lm1"
+predef: "l1src/libc_abi.lm1"
+
+# The body of lmx_process_deadline.h.lm1's contract: the watchdog's algorithm, and the only place in
+# the kernel that owns an OS wait of its own.  Every handle it creates is closed on both paths --
+# the setup-failure path closes what it already made and reports refusal before the close cascade
+# starts; the success path closes both handles after joining.  Only an ARMED watchdog whose bound
+# actually expires aborts the process.
+
+fn: lmx_process_deadline_arm (@: LmxProcessDeadline d; size_t: deadline) int
+    size_t: wait 0U
+    size_t: max_wait 0U
+    if: d = 0 || deadline = 0U
+        return: 1
+    ---
+    d\event: 0
+    d\thread: 0
+    d\wait_ms: 0U
+    d\armed: 0
+    # ALREADY EXPIRED IS A ZERO WAIT, never an underflow: the modular helper decides, not a
+    # comparison of raw readings (lmx_deadline_wait documents that shape).
+    wait: lmx_deadline_wait(deadline, lmx_clock_word())
+    # INFINITE is a sentinel for "never", not the longest finite wait.  The watchdog must always
+    # retain a fatal expiry path, so clamp to the greatest finite Windows wait instead.
+    max_wait: (cast: (size_t) c.INFINITE) - 1U
+    if: wait > max_wait
+        wait: max_wait
+    ---
+    d\event: c.CreateEventW(0, 1, 0, 0)
+    if: d\event = 0
+        return: 1
+    ---
+    # THE WAIT IS SET BEFORE THE THREAD EXISTS: the watchdog reads it as its own first act, so
+    # writing it afterwards would be a race for a value that decides when the process dies.
+    d\wait_ms: (cast: (unsigned) wait)
+    d\thread: c.CreateThread(0, 0, (cast: (LPTHREAD_START_ROUTINE) lmx_process_deadline_body), (cast: (@: void) d), 0, 0)
+    if: d\thread = 0
+        c.CloseHandle(d\event)
+        d\event: 0
+        d\wait_ms: 0U
+        return: 1
+    ---
+    d\armed: 1
+return: 0
+
+fn: lmx_process_deadline_disarm (@: LmxProcessDeadline d) int
+    if: d = 0 || d\armed = 0
+        return: 0
+    ---
+    c.SetEvent(d\event)
+    # JOIN, NOT KILL: the watchdog leaves its own wait on the signal and returns, so nothing is
+    # terminated and both handles are closed by the thread that created them.
+    c.WaitForSingleObject(d\thread, c.INFINITE)
+    c.CloseHandle(d\thread)
+    c.CloseHandle(d\event)
+    d\thread: 0
+    d\event: 0
+    d\wait_ms: 0U
+    d\armed: 0
+return: 0
+
+fn: lmx_process_deadline_body (@: void arg) DWORD
+    @: LmxProcessDeadline d
+    ulong: code 0U
+    if: arg = 0
+        return: 0U
+    ---
+    d: (cast: (@: LmxProcessDeadline) arg)
+    code: c.WaitForSingleObject(d\event, (cast: (DWORD) d\wait_ms))
+    if: code = c.WAIT_OBJECT_0
+        return: 0U
+    ---
+    # THE BOUND EXPIRED WITH THE OPERATION STILL RUNNING: say so on stderr, flush, and take the
+    # process down.  Control is NOT expected to return to the caller's stack -- that is exactly the
+    # state this watchdog exists for.
+    c.fputs("lmx: the overall close deadline expired with the close still running; aborting rather than returning a partially closed runtime\n", l1_stderr())
+    c.fflush(0)
+    c.abort()
+return: 0U

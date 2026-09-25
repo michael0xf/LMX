@@ -1,10 +1,11 @@
 predef: "l2src/lmx_implements.lm1"
-predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_arena_blocks.lm1"
 predef: "l2src/lmx_range.lm1"
 predef: "l2src/lmx_value_owned.lm1"
 predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_chars.lm1"
 predef: "l2src/lmx_chars_owned.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
@@ -15,10 +16,12 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 #   * the Consumer IS the used tree: its shape gives the used paths (names are absent at runtime),
 #     and a child it leaves UNSET is not a used path -- "An empty `uses` is true: there is nothing
 #     to use";
-#   * every used path must be PRESENT on both operands, its leaf ADMITTED (one domain kind and one
-#     type on all three), and a callable on a used path must carry the SAME signature on all three;
-#   * a callable is an ordinary Structure, so this falls out of the walk: its physical child[0] is
-#     the METHOD, and that is where the signatures are compared;
+#   * every used path must be PRESENT on both operands and its leaf ADMITTED (one domain kind and
+#     one type on all three);
+#   * k.4 (next_core_tasks.md §3 item 8): a callable is an ordinary Structure with no descriptor
+#     and no separate signature word -- its signature (args/return) is just more lexical fields, so
+#     a callable on a used path is covered by the SAME recursive Structure walk as anything else: a
+#     used field of a different domain/type anywhere in a callable's own shape is a known mismatch;
 #   * anything the walk cannot inspect is UNKNOWN -- never YES: "Unavailable information is not
 #     invented and is not certified by success" (2.5.1).  A known mismatch is NO.
 
@@ -37,37 +40,51 @@ fn: ri_struct (@: LmxArena arena; size_t: slots) @: Lmx
     if: structure = 0
         return: 0
     ---
-    if: lmx_arena_refs_open_owned(arena, structure, slots) != 0
+    if: slots != 0U && lmx_arena_refs_open_owned(arena, structure, slots) != 0
         return: 0
     ---
 return: structure
 
-# The entry `lmx_method_intern` needs: it refuses a zero addr, and this file never calls it.
-fn: ri_entry (@: Lmx node) int
+fn: ri_entry (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    @: Lmx self (cast: (@: Lmx) owner)
+    @: Lmx node 0
+    if: self != 0
+        node: self\parent
+    ---
     if: node = 0
         return: 0
     ---
 return: 0
 
-# A callable occurrence with `sig`: an ordinary Structure whose physical child[0] is a METHOD.
-fn: ri_callable (@: LmxArena arena; @: LmxPool methods; unsigned: sig) @: Lmx
-    @: LmxMethod method
+# k.4: a callable occurrence with `native` set directly and one own field standing in for
+# its signature -- an INT arg cell when `char_arg = 0`, a CHAR arg cell when it is not.  Two
+# occurrences of the same arg type are the "same signature"; different arg types are a known
+# domain/type mismatch the generic Structure walk already catches, with no descriptor and no
+# separate signature comparison needed.
+fn: ri_callable (@: LmxArena arena; int: char_arg) @: Lmx
     @: Lmx callable
-    method: lmx_method_intern(arena, methods, (cast: (LmxEntry) ri_entry), sig)
-    if: method = 0
-        return: 0
-    ---
+    @: void arg
     callable: ri_struct(arena, 1U)
     if: callable = 0
         return: 0
     ---
-    lmx_arena_ref_store(callable, 0U, (cast: (@: void) method))
+    callable\native: (cast: (LmxEntry) ri_entry)
+    if: char_arg = 0
+        arg: lmx_int_new_owned(arena)
+    else:
+        if: lmx_chars_init(arena) != 0 && lmx_arena_find(arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR) = 0
+            return: 0
+        ---
+        arg: lmx_char_cell(arena, 0)
+    ---
+    if: arg = 0 || lmx_arena_ref_store(callable, 0U, arg) != 0
+        return: 0
+    ---
 return: callable
 
 fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxArena: arena
-    LmxPool: methods
     @: LmxArena arena_at 0
     @: Lmx int_cell 0
     @: Lmx char_cell 0
@@ -100,18 +117,12 @@ fn: main () int
     if: counts = 0
         return: 2
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
-    memset((cast: (@: void) (@ methods)), 0, c.sizeof(c.LmxPool))
     if: lmx_arena_open(@ arena) != 0
         fputs("lmx_runtime_implements: the arena did not open\n", l1_stdout())
         free(counts)
         return: 2
     ---
     arena_at: @ arena
-    if: lmx_pool_open(@ arena, @ methods, c.sizeof(c.LmxMethod), 4U, c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD) != 0
-        fputs("lmx_runtime_implements: the method pool did not open\n", l1_stdout())
-        free(counts)
-        return: 2
-    ---
     table: lmx_chars_new_owned(@ arena)
     int_cell: lmx_int_new_owned(@ arena)
     char_cell: lmx_char_cell_known(table, 33)
@@ -198,15 +209,16 @@ fn: main () int
     ri_check(counts, lmx_runtime_implements(arena_at, metro_missing, metro_missing, 0) = c.LMX_IMPLEMENTS_YES, "no consumer at all was not satisfied")
 
     # A callable on a used path: the Consumer's own value at that path IS the callable it invokes,
-    # and another callable is an ordinary Structure -- so the walk descends into it and compares
-    # the signatures where it arrives: at the physical child[0] of each occurrence.
+    # and another callable is an ordinary Structure (k.4: no descriptor, no separate signature
+    # word) -- so the walk descends into it exactly as it would any nested Structure, and a
+    # used own field of a different domain/type anywhere inside it is a known mismatch.
     consumer_call: ri_struct(@ arena, 1U)
     provider_a: ri_struct(@ arena, 1U)
     provider_b: ri_struct(@ arena, 1U)
     provider_c: ri_struct(@ arena, 1U)
-    call_a: ri_callable(@ arena, @ methods, 4U)
-    call_b: ri_callable(@ arena, @ methods, 4U)
-    call_c: ri_callable(@ arena, @ methods, 5U)
+    call_a: ri_callable(@ arena, 0)
+    call_b: ri_callable(@ arena, 0)
+    call_c: ri_callable(@ arena, 1)
     if: consumer_call = 0 || provider_a = 0 || provider_b = 0 || provider_c = 0 || call_a = 0 || call_b = 0 || call_c = 0
         free(counts)
         return: 2
@@ -215,17 +227,17 @@ fn: main () int
     lmx_arena_ref_store(provider_a, 0U, (cast: (@: void) call_a))
     lmx_arena_ref_store(provider_b, 0U, (cast: (@: void) call_b))
     lmx_arena_ref_store(provider_c, 0U, (cast: (@: void) call_c))
-    ri_check(counts, lmx_runtime_implements(arena_at, provider_a, provider_b, consumer_call) = c.LMX_IMPLEMENTS_YES, "two callables of one signature were refused")
-    ri_check(counts, lmx_runtime_implements(arena_at, provider_c, provider_b, consumer_call) = c.LMX_IMPLEMENTS_NO, "a callable of another signature was admitted")
-    # The expected signature is the CONSUMER's own: two providers that agree with each other are
-    # still refused when the consumer expects something else ("== ExpectedSig(Consumer, p)").
+    ri_check(counts, lmx_runtime_implements(arena_at, provider_a, provider_b, consumer_call) = c.LMX_IMPLEMENTS_YES, "two callables of one arg shape were refused")
+    ri_check(counts, lmx_runtime_implements(arena_at, provider_c, provider_b, consumer_call) = c.LMX_IMPLEMENTS_NO, "a callable of another arg shape was admitted")
+    # The expected shape is the CONSUMER's own: two providers that agree with each other are
+    # still refused when the consumer expects another shape ("== ExpectedSig(Consumer, p)").
     consumer_other: ri_struct(@ arena, 1U)
     if: consumer_other = 0
         free(counts)
         return: 2
     ---
     lmx_arena_ref_store(consumer_other, 0U, (cast: (@: void) call_c))
-    ri_check(counts, lmx_runtime_implements(arena_at, provider_a, provider_b, consumer_other) = c.LMX_IMPLEMENTS_NO, "two providers were admitted against a consumer that expects another signature")
+    ri_check(counts, lmx_runtime_implements(arena_at, provider_a, provider_b, consumer_other) = c.LMX_IMPLEMENTS_NO, "two providers were admitted against a consumer that expects another arg shape")
 
     # What cannot be inspected is UNKNOWN, never YES -- and a known mismatch is still NO.
     ri_check(counts, lmx_runtime_implements(arena_at, raw, metro, consumer) = c.LMX_IMPLEMENTS_UNKNOWN, "an address of no known domain was certified")

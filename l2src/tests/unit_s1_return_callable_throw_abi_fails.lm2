@@ -1,0 +1,17 @@
+# The same `return: m`, with m's merge made to fail (mergefail 1): the throw passes through w's
+# nullary call as through any call and reaches the root as merge (1).
+P:
+    size_t: p 3U
+end: P
+
+fn: m () int
+    Q: merge: P
+return: 5
+
+fn: w () int
+    int: k 1
+    return: m
+end: w
+
+sendMessage: exit(exit_code: w(); stdout: ""; stderr: "")
+return

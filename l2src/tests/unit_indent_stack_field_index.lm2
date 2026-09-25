@@ -1,13 +1,27 @@
 # LmP0IndentStack is a foreign pointer type (INDENT_STACK_FOREIGN_DESIGN, 5e's repro
 # 23e2dbb7): `stack\columns[idx]: value` on a formal is admitted and reads back,
 # and a local of the type allocates through the explicit cast.
-fn: store_and_read (@: LmP0IndentStack stack; size_t: idx; size_t: value) size_t
+# FABLE-SONNET-PREDEF-RESULT-TYPE-20260924-160 commit 3 (D-34): every bare
+# LmP0IndentStack spelling respelled c.LmP0IndentStack, per the a2cf69e
+# migration (next_core_tasks.md, "Поля C-структур") every other fixture in
+# the corpus already uses -- measured stale (this file predates that
+# migration): "unknown type" at the formal (was line 11), the local
+# (line 16) and both casts, in that order, one at a time (l2trans stops
+# at the first).
+# FABLE-SONNET-NAME-SPECIALS-20260924-155: lm_own_new_zero used to resolve
+# through l2_is_known's hard-coded adapter list; this predef is the
+# general mechanism's own declaration for it (a prototype-only header,
+# matching every other predef target in this corpus -- l2_predef_file_has_
+# function only recognizes names inside a prototype: block or a chained
+# predef:, never a plain top-level fn:/sub: body like l1src/own.lm1 itself).
+predef: "l1src/own.h.lm1"
+fn: store_and_read (@: c.LmP0IndentStack stack; size_t: idx; size_t: value) size_t
     stack\columns[idx]: value
     return: stack\columns[idx]
 end: store_and_read
 fn: probe () int
-    @: LmP0IndentStack stack
-    stack: (cast: (@: LmP0IndentStack) lm_own_new_zero(c.sizeof(c.LmP0IndentStack)))
+    @: c.LmP0IndentStack stack
+    stack: (cast: (@: c.LmP0IndentStack) lm_own_new_zero(c.sizeof(c.LmP0IndentStack)))
     if: stack = 0
         return: 1
     stack\columns: (cast: (@: size_t) lm_own_new_zero(4U * c.sizeof(c.size_t)))
@@ -19,6 +33,4 @@ fn: probe () int
         return: 4
     return: 5
 end: probe
-fn: main () int
-    return: probe()
-end: main
+return: probe()

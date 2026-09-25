@@ -1,0 +1,34 @@
+# Indexed field paths into a fixed Array field ([]: T x N, kind 5) through the
+# typed roots: an own field of a declared type, a typed formal and the
+# declaration itself.  `@ a\buf[1]` is the element's address in graph storage
+# (L2 spec 18.2), so a store through it is what a later read of a\buf[1] sees.
+Holder:
+    []: int buf 3
+    []: char cs 2
+    size_t: n 3U
+end: Holder
+
+fn: pick (Holder: h) int
+return: h\buf[1]
+
+Holder: a
+@: int p
+if: a\buf[0] != 0 || a\buf[2] != 0
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
+if: length(a\buf) != 3 || length(a\cs) != 2
+    sendMessage: exit(exit_code: 2; stdout: ""; stderr: "")
+    return
+p: @ a\buf[1]
+\p: 9
+if: a\buf[1] != 9
+    sendMessage: exit(exit_code: 3; stdout: ""; stderr: "")
+    return
+if: pick(a) != 9
+    sendMessage: exit(exit_code: 4; stdout: ""; stderr: "")
+    return
+if: Holder\buf[1] != 0
+    sendMessage: exit(exit_code: 5; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

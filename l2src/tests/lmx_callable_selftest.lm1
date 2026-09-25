@@ -1,0 +1,127 @@
+# Same dependency shape as lmx_call_selftest: body-predef the closure so the
+# selftest object defines the symbols itself. Resolve-Link then adds nothing
+# that would collide (missing lmx_pool.lm1 previously left U lmx_pool_* and
+# pulled lmx_root.o / amalgam, duplicating lmx_*_known from value_owned).
+predef: "l2src/lmx_call.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_interp.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# k.4: sets `native` directly on two occurrences and checks ready/call/interp. Does not
+# invent an operator graph. Two occurrences may point their `native` word at the SAME C
+# entry (own storage stays distinct; only self distinguishes them at activation time) --
+# the k.4 analogue of the old shared-method-record test.
+
+size_t: taken 0U
+@: Lmx seen_node 0
+@: Lmx seen_self 0
+@: void seen_own 0
+
+# The occurrence's trampoline (the prim ABI of every dynamic call, D-38): handed the occurrence
+# as its owner, it takes the reserved node from the occurrence's parent; its value 9 comes back
+# through dest/out and its status is 0.
+fn: callable_entry (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    @: Lmx self (cast: (@: Lmx) owner)
+    taken: taken + 1U
+    seen_node: 0
+    if: self != 0
+        seen_node: self\parent
+    ---
+    seen_self: self
+    seen_own: 0
+    if: self != 0 && self\len > 0
+        seen_own: lmx_arena_ref_value(self, 0U)
+    ---
+    if: dest != 0
+        lmx_int_store_known(dest, 9)
+    ---
+    if: out != 0
+        \out: dest
+    ---
+return: 0
+
+sub: fail (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: fail
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxArena: arena
+    @: LmxArena a 0
+    @: Lmx m 0
+    @: Lmx m2 0
+    @: Lmx parent 0
+    @: Lmx parent2 0
+    @: Lmx outer 0
+    @: Lmx control_body 0
+    @: void own 0
+    @: void own2 0
+    int: answer 0
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ arena) != 0
+        fputs("lmx_callable: arena\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    a: @ arena
+    m: lmx_node_new_owned(a)
+    m2: lmx_node_new_owned(a)
+    parent: lmx_node_new_owned(a)
+    parent2: lmx_node_new_owned(a)
+    outer: lmx_node_new_owned(a)
+    control_body: lmx_node_new_owned(a)
+    own: lmx_int_new_owned(a)
+    own2: lmx_int_new_owned(a)
+    if: m = 0 || m2 = 0 || parent = 0 || parent2 = 0 || outer = 0 || control_body = 0 || own = 0 || own2 = 0 || lmx_arena_refs_open_owned(a, m, 2U) != 0 || lmx_arena_refs_open_owned(a, m2, 1U) != 0
+        fputs("lmx_callable: construct\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    m\native: (cast: (LmxEntry) callable_entry)
+    m2\native: (cast: (LmxEntry) callable_entry)
+    parent\parent: outer
+    m\parent: parent
+    m2\parent: parent2
+    control_body\parent: m
+    lmx_arena_ref_store(m, 0U, own)
+    lmx_arena_ref_store(m, 1U, (cast: (@: void) control_body))
+    # A second occurrence points its native word at the SAME C entry but has distinct
+    # parent and own storage.  Only the explicit self argument can distinguish it at
+    # activation time.
+    lmx_arena_ref_store(m2, 0U, own2)
+
+    fail(counts, lmx_call_ready(a, m) = c.LMX_CALL_OK, "occurrence not ready")
+    fail(counts, m\native = (cast: (LmxEntry) callable_entry), "native word did not hold the entry")
+    answer: lmx_call0(a, m)
+    fail(counts, answer = 9, "native addr of nested method")
+    fail(counts, taken = 1U && seen_node = parent, "reserved node is not the callable's above-method space")
+    fail(counts, seen_node != outer, "descriptor ABI skipped M.parent and used its parent's parent")
+    fail(counts, seen_self = m && seen_own = own, "selected occurrence was not passed separately from node")
+    # A nested control/body Structure has its own immediate structural parent chain.  It does
+    # not replace the method activation's reserved source `node`, which stays the space above M.
+    fail(counts, control_body\parent = m && control_body\parent != seen_node && seen_node = m\parent, "nested body parent leaked into the method's reserved node")
+    answer: lmx_call0(a, m2)
+    fail(counts, answer = 9 && taken = 2U, "second occurrence did not run through the shared native entry")
+    fail(counts, seen_node = parent2 && seen_self = m2 && seen_own = own2, "shared native entry lost the second occurrence's parent or own home")
+
+    if: counts[1] != 0
+        c.printf("%d failed of %d\n", counts[1], counts[0])
+        free(counts)
+        return: 1
+    ---
+    c.printf("lmx_callable: %d checks\n", counts[0])
+    free(counts)
+return: 0

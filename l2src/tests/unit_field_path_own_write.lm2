@@ -1,0 +1,22 @@
+Model:
+    size_t: value 1U
+end: Model
+
+# FABLE-SONNET-FIELD-PATHS-20260923-113 Part A: an own field backed by a
+# -105 colon declaration is a Structure reference like any other -- write
+# and read through fresh\value, no reserved-root special case involved.
+fn: build () size_t
+    Model: fresh
+    fresh\value: 99U
+    size_t: got
+    got: fresh\value
+    return: got
+end: build
+
+size_t: got
+got: build()
+if: got != 99U
+    sendMessage: exit(exit_code: 90; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

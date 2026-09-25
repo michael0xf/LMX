@@ -1,0 +1,69 @@
+# Adapted from lingvamyxa_prev/tests/trans_implements_primitives.lm2.
+# Primitive leaves use the hosted primitive.description rows (cell + convert),
+# not the vacuous runtime lmx_implements. Consumer WordMover/OpaqueCloser are
+# named Structures; FILE is the primitive, File is structural.
+
+WordMover:
+    size_t: cell 0U
+end: WordMover
+
+DescriptionWalker:
+    size_t: width 0U
+    size_t: range 0U
+    size_t: signedness 0U
+end: DescriptionWalker
+
+OpaqueCloser:
+    size_t: close 0U
+end: OpaqueCloser
+
+File:
+    size_t: handle 0U
+    size_t: close 0U
+    size_t: read 0U
+end: File
+
+fn: m () int
+    size_t: q
+    q: 1U
+    return: 0
+end: m
+
+if: implements(`int`, `int`, WordMover) != 1
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
+if: implements(`int`, `u32`, WordMover) != 1
+    sendMessage: exit(exit_code: 2; stdout: ""; stderr: "")
+    return
+if: implements(`u32`, `int`, WordMover) != 1
+    sendMessage: exit(exit_code: 3; stdout: ""; stderr: "")
+    return
+if: implements(`int`, `long`, WordMover) != 1
+    sendMessage: exit(exit_code: 4; stdout: ""; stderr: "")
+    return
+if: implements(`int`, `double`, WordMover) != 1
+    sendMessage: exit(exit_code: 5; stdout: ""; stderr: "")
+    return
+if: implements(Boolean, `int`, WordMover) != 1
+    sendMessage: exit(exit_code: 6; stdout: ""; stderr: "")
+    return
+if: implements(`u32`, `FILE`, WordMover) != 1
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+    return
+if: implements(`int`, `u32`, DescriptionWalker) != 1
+    sendMessage: exit(exit_code: 8; stdout: ""; stderr: "")
+    return
+if: implements(`void`, `int`, WordMover) != 0
+    sendMessage: exit(exit_code: 9; stdout: ""; stderr: "")
+    return
+if: implements(`int`, `void`, WordMover) != 0
+    sendMessage: exit(exit_code: 10; stdout: ""; stderr: "")
+    return
+if: implements(`u32`, File, OpaqueCloser) != 0
+    sendMessage: exit(exit_code: 11; stdout: ""; stderr: "")
+    return
+if: implements(File, File, OpaqueCloser) != 1
+    sendMessage: exit(exit_code: 12; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

@@ -1,0 +1,18 @@
+﻿# FABLE-L2-ARG-ADDRESS-PROOF-20260921-84.  THE ONE BOUNDARY: a dynamic input whose source has no value cell.
+#
+# `leaf` reads the free name `label`; its caller has a formal of that name, so a source EXISTS --
+# but its type (a by-value c.LmP0Text) has no value cell a dynamic input could travel through.  That is
+# refused at the caller, by name: "dynamic input type has no value cell".  Before, the same
+# program was refused at `leaf` as an "unresolved name", as if nobody had supplied `label` at all.
+# (Bare const @(LmP0Text) used to be the no-cell witness via fixed ty=4; after deleting that code,
+# by-value c.LmP0Text is the same boundary under the general foreign rule.)
+fn: leaf () int
+    if: label = 0
+        return: 1
+    return: 0
+end: leaf
+
+fn: outer (c.LmP0Text: label) int
+return: leaf()
+
+return: 0

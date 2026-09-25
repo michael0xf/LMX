@@ -1,0 +1,23 @@
+# FABLE-SONNET-OWN-LOOKUP-AUDIT-20260923-131 Part 2 (b): re-verifying
+# l2_check_sizeof's l2_own_find_last call (fired only when l2_own_find
+# already failed) against -129's fallback. `x` is a unit field, read via
+# `sizeof:` from inside a nested method -- backward-visible per the
+# author's norm, same as any other read. Since -129 gave l2_own_find_last
+# the same unit-fallback l2_own_find already had, this call site's second
+# try can now never find anything the first try (l2_own_find, already
+# unit-fallback-aware) didn't -- this fixture confirms the whole chain
+# still resolves `x` correctly (not that l2_own_find_last specifically is
+# what resolves it; see the -131 Part 2 report for that redundancy note).
+int: x 5
+size_t: want
+fn: bump () size_t
+    size_t: got
+    got: sizeof: x
+    return: got
+end: bump
+want: sizeof: int
+size_t: got
+got: bump()
+if: got != want
+    return: 90
+return: 0

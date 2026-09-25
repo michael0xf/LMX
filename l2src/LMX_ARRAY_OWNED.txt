@@ -1,4 +1,39 @@
-CURRENT CORE MODEL / ДЕЙСТВУЮЩАЯ МОДЕЛЬ (2026-09-12)
+DYNAMIC ARRAY DESCRIPTORS / ДЕСКРИПТОРЫ ДИНАМИЧЕСКИХ МАССИВОВ (Q18, 2026-09-23)
+================================================================================
+General rule: a fixed array descriptor is only {size_t len; T *data} with no
+capacity. Any dynamic implementation that needs capacity declares
+{ <T>Array array; size_t capacity } where <T>Array is the already existing fixed
+descriptor of the REAL element type T (never a parallel twin; grep-before-add).
+void is one element type only: today's LmxArrayDesc {size_t len; void *data}
+serves solely arrays of void* (List pointer cells; the type Lmx will embed).
+An int array is {size_t len; int *data} — never the void descriptor with casts.
+
+Type list for the six kernel capacity sites (after FABLE-134 code):
+- LmxArrayDesc (void*) + LmxArrayDynamicArray — List; also void* sides of copier map
+- LmxRangeArray + LmxRangeDynamicArray — arena index
+- LmxServiceEntryArray + LmxServiceEntryDynamicArray — service registry
+- LmxPostInboxSlot (+ Array/DynamicArray) — inbox ring pair record + head/tail
+- LmxPtrArray {len; Lmx *data} + LmxPtrDynamicArray — copier stack
+- LmxCharArray + LmxCharDynamicArray — char-element descriptor (string values AND pool chunk cells; author 2026-09-24). Chunk len/capacity still counted in BYTES; cell arithmetic only via lmx_chunk_cells/lmx_chunk_room
+- LmxChunk { LmxCharDynamicArray cells; next; mark }  /* was LmxByte* twin; removed */
+
+Base Array and mailbox must not be described as carrying capacity on a base
+{len,data} descriptor. Capacity exists only on *DynamicArray fields.
+
+
+ACCEPTED TARGET ABI / ПРИНЯТЫЙ ЦЕЛЕВОЙ ABI (2026-09-23; code not migrated)
+VoidArray is exactly {size_t size, void *data}; Lmx is
+{VoidArray array, Lmx *parent}. The array is first; no separate LmxArrayDesc
+alias is needed in the target. Embedded Lmx.array is the
+actual array of physical child references. Its backing is registered in the
+arena address-range index as CHILDREN/REFS; the Lmx header remains STRUCT,
+and the descriptor itself is not an LmxRange entry.
+The standalone base Array uses the same VoidArray type, with no capacity or
+growth. Dynamic List remains separate. Current source still uses Lmx's flat
+{parent, int len, void *data} and LmxArrayDesc's {size_t len, void *data}; the
+dated evidence below describes that older implementation, not this new ABI.
+
+HISTORICAL CORE MODEL / ИСТОРИЧЕСКАЯ МОДЕЛЬ (2026-09-12)
 Read L2_CORE_AND_MESSAGE_MODEL_20260912.md at repository root: parts I-III
 describe the full core/Message mechanism; part IV records implementation limits,
 and only the final part is the work plan. SPEC and Revision 2 remain normative.
@@ -21,13 +56,14 @@ or null. Null head slots, unsupported type, zero count and overflow return null
 without allocation. Zero is outside this helper's domain; that is neither a
 ban on source empty arrays nor a decision about their open representation.
 
-The descriptor has exactly len and data. It and the contiguous zero-initialized
+The descriptor has logical len and data. The backing has exactly len cells.
+Dynamic membership is an L1 list (KIND_LIST), not Array. It and the contiguous zero-initialized
 mutable backing use separate non-moving allocations, each paired with an
 embedded range and a separate free-compatible block node. sizeof-based padding
 preserves the concrete descriptor/element alignment. The descriptor range has
 ARRAY kind, chosen ARRAY type and descriptor stride. Backing has PRIMITIVE kind,
 CHAR/INT element type and element stride. No per-element Lmx headers, ownership
-links, tags or added descriptor fields. Primitive char backing is MUTABLE array
+links or tags. Primitive char backing is MUTABLE array
 storage, not an immutable 256-byte intern table: it must never be passed to
 lmx_char_rebind_known merely because the element type is CHAR.
 

@@ -1,0 +1,27 @@
+Inner:
+    size_t: c 5U
+end: Inner
+
+Outer:
+    Inner: b
+end: Outer
+
+# FABLE-GROKBOT-NESTED-FIELD-CONSTRUCT-20260923-116: a\b\c chains two hops
+# off a colon-declared own field whose Structure-typed field was materialized
+# as a real typed occurrence at model construction. merge(Outer, empty) deep-
+# copies b; writing 99U round-trips.
+fn: build () size_t
+    Outer: a
+    a\b\c: 99U
+    size_t: got
+    got: a\b\c
+    return: got
+end: build
+
+size_t: got
+got: build()
+if: got != 99U
+    sendMessage: exit(exit_code: 90; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

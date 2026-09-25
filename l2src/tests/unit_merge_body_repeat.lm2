@@ -1,0 +1,42 @@
+Model:
+    size_t: x 1U
+end: Model
+
+B:
+    size_t: z 2U
+end: B
+
+# FABLE-OPUS-MERGE-PARTS-20260926-193 T2 (the author's merge rule, plan §4; kernel -194 K1): the
+# body merges INTO the result like a last operand.  R's body x goes into Model's x (5), so
+# `R\[0]x` is the body's 5 -- one slot; S's body z goes into the slot B added (9), and its w is
+# new.  R is {x} = {5}; S is {x, z, w} = {1, 9, 4}.  Both were located refusals until K1.
+# Success is 19 (= 5 + 1 + 9 + 4).
+fn: m () int
+    size_t: rx
+    size_t: r0
+    size_t: sx
+    size_t: sz
+    size_t: sw
+    R: merge: Model
+        size_t: x 5U
+    end: merge
+    S: merge: Model B
+        size_t: z 9U
+        size_t: w 4U
+    end: merge
+    rx: R\x
+    r0: R\[0]x
+    sx: S\x
+    sz: S\z
+    sw: S\w
+    if: rx != 5U
+        return: 81
+    if: sz != 9U
+        return: 82
+    if: r0 != 5U
+        return: 83
+    return: (cast: (int) (rx + sx + sz + sw))
+end: m
+
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

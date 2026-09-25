@@ -1,0 +1,39 @@
+# Two full qualifier occurrences have identical representation but must receive
+# distinct physical profile identities.  Plain remains mutable/unprofiled in
+# the same owner arena.
+independent:
+    const:
+        immutable:
+            (): FrozenA
+                size_t: value 7U
+                char: tag 'a'
+                []: int cells 2
+            end: FrozenA
+        end: immutable
+    end: const
+end: independent
+
+independent:
+    const:
+        immutable:
+            (): FrozenB
+                size_t: value 7U
+                char: tag 'a'
+                []: int cells 2
+            end: FrozenB
+        end: immutable
+    end: const
+end: independent
+
+Plain:
+    size_t: value 7U
+    char: tag 'a'
+    []: int cells 2
+end: Plain
+
+fn: keep_full_unit () int
+    return: 0
+end: keep_full_unit
+
+sendMessage: exit(exit_code: keep_full_unit(); stdout: ""; stderr: "")
+return

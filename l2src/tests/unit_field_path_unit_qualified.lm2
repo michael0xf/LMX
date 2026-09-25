@@ -1,0 +1,21 @@
+independent:
+    const:
+        immutable:
+            (): Frozen
+                size_t: value 5U
+            end: Frozen
+        end: immutable
+    end: const
+end: independent
+
+# FABLE-SONNET-UNIT-LEVEL-ROOTS-20260923-117: \field read on root category 3
+# -- a named Structure declared at unit level (l2_path_root's pre-existing
+# l2_ns_parent<0 branch, unchanged by -113/-117; this fixture is the S2-era
+# regression witness that it still resolves once E is an ordinary method).
+size_t: got
+got: Frozen\value
+if: got != 5U
+    sendMessage: exit(exit_code: 92; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

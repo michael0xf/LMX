@@ -1,184 +1,24 @@
-predef: "l2src/lmx_root.lm1"
 predef: "l2src/lmx_settle.lm1"
-predef: "l2src/lmx_service.lm1"
-predef: "l2src/lmx_turn.lm1"
 predef: "l2src/lmx_child.lm1"
+predef: "l2src/lmx_turn.lm1"
 predef: "l2src/lmx_post.lm1"
 predef: "l2src/lmx_thread.lm1"
 predef: "l2src/lmx_schedule.lm1"
 predef: "l2src/lmx_manager.lm1"
+predef: "l2src/lmx_service.lm1"
 predef: "l2src/lmx_pool.lm1"
-predef: "l2src/lmx_gc.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_arena_blocks.lm1"
 predef: "l2src/lmx_range.lm1"
 predef: "l2src/lmx_implements.lm1"
 predef: "l2src/lmx_value_owned.lm1"
-predef: "l2src/lmx_chars_owned.lm1"
 predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
 predef: "l2src/lmx_array_owned.lm1"
 predef: "l2src/lmx_array_ref_owned.lm1"
 predef: "l2src/lmx_graph_copy_owned.lm1"
-predef: "l2src/lmx_call.lm1"
-predef: "l2src/lmx_clock.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
-
-# lmx_settle_reads_node_selftest.lm1 -- ticket 20260919-214000 (тот же класс, что 70ba526 и
-# efd2f3a: утилизация не смеет читать запись ребёнка, чья арена уже возвращена).
-#
-# ПРЕДМЕТ. Утилизация ходит по детям родителя и обязана брать свои решения из УЗЛА РОДИТЕЛЯ
-# (LmxLink: thread, message, slot, index, success, gone): узел -- клетка арены родителя, и он
-# остаётся верным, когда арены ребёнка уже нет (`lmx_thread_finish` вернул её целиком).  Обход же
-# читает `next` и запись из САМОГО ребёнка (`lmx_thread_child_next`, `lmx_thread_message`,
-# `lmx_thread_link`) -- для gone-ребёнка это чтение освобождённой памяти, и его последствие
-# проявляется, когда блок уже переиспользован (чужие поля в записи) или не отображён вовсе.
-#
-# ИНСТРУМЕНТ (честный, без UB в замере).  Проба не пишет и не читает освобождённой памяти: она
-# СТАВИТ состояние, которое у gone-ребёнка возникает само, и делает это на ЖИВОЙ записи --
-#  * двое детей R0 кончаются успешно (у каждого своя арена, свой метод, своя почта, свой
-#    планировщик) -- но кончаются БЕЗ акта водителя: их ходы проба проводит сама
-#    (`lmx_thread_turn`), и `lmx_thread_finish` не зовётся, поэтому их арены целы, а записи живы;
-#  * в узле каждого ребёнка ставится `gone = 1` -- ровно то, что оставляет `lmx_thread_finish`,
-#    вернув арену (клетка родителя, писать её -- право пробы);
-#  * в записи каждого ребёнка обнуляются `message` и `link` -- стенд-ин: так выглядит запись,
-#    чей блок переиспользован чужим кодом (и так выглядела бы память, которой уже нет).
-# Дальше -- обычная утилизация.  Родитель, читающий УЗЕЛ, доводит обоих: узел несёт message,
-# index и gone.  Родитель, читающий ЗАПИСЬ, видит `message = 0` -> не readiness, и `link = 0` ->
-# конец цепи: оба ребёнка остаются жить в цепи, в службе и в графе R0.
-#
-# Проба сторожит первое.  Числа -- в printf: кто остался жить (сравнение указателей, безопасно и
-# для освобождённой записи), что со службой, слотами графа и аренами.
-
-@: LmxRoot rn_root 0
-@: LmxArena rn_arena_1 0
-@: LmxArena rn_arena_2 0
-@: Lmx rn_source_1 0
-@: Lmx rn_source_2 0
-@: LmxMsg rn_msg_1 0
-@: LmxThread rn_t_1 0
-@: LmxSchedule rn_sched_1 0
-@: LmxMsg rn_msg_2 0
-@: LmxThread rn_t_2 0
-@: LmxSchedule rn_sched_2 0
-@: LmxLink rn_node_1 0
-@: LmxLink rn_node_2 0
-size_t: rn_phase 0U
-size_t: rn_entry_diag 0U
-size_t: rn_turns_1 0U
-size_t: rn_turns_2 0U
-
-# One body for both children: it takes the letter its turn was given and declares its own work done.
-fn: rn_body (@: Lmx node) int
-    @: LmxThread t
-    @: void letter
-    t: lmx_thread_current()
-    if: t = 0 || t\message = 0
-        return: 0
-    ---
-    if: rn_t_1 != 0 && t = rn_t_1
-        rn_turns_1: rn_turns_1 + 1U
-    else:
-        rn_turns_2: rn_turns_2 + 1U
-    ---
-    if: lmx_thread_mail_count(t, c.LMX_POST_INBOX) > 0U
-        letter: lmx_thread_mail_take(t, c.LMX_POST_INBOX)
-        if: letter != 0
-            t\message\success: 1
-        ---
-    ---
-return: 0
-
-# Wire one child: its OWN graph gets the method (the entry runs inside R0's turn, where `node` is
-# R0's graph -- a method parked there would be overwritten by the child's own publication), then
-# mailbox, thread and schedule come from the child's arena.
-fn: rn_wire (@: LmxMsg child; @: LmxArena arena) @: void
-    @: LmxThread child_t
-    @: LmxPost child_mail
-    @: LmxSchedule child_sched
-    @: LmxMethod method
-    @: LmxPool methods
-    @: Lmx child_graph
-    if: child = 0 || arena = 0
-        return: 0
-    ---
-    child_graph: child\graph
-    if: child_graph = 0
-        return: 0
-    ---
-    methods: lmx_pool_make(arena, 2U * c.sizeof(c.LmxMethod), c.sizeof(c.LmxMethod),
-                           c.LMX_KIND_METHOD, c.LMX_TYPE_METHOD)
-    if: methods = 0
-        return: 0
-    ---
-    method: lmx_method_intern(arena, methods, (cast: (LmxEntry) rn_body), 1U)
-    if: method = 0
-        return: 0
-    ---
-    lmx_arena_ref_store(child_graph, 0U, (cast: (@: void) method))
-    child_mail: (cast: (@: LmxPost) lmx_arena_take(arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
-    child_t: (cast: (@: LmxThread) lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
-    child_sched: (cast: (@: LmxSchedule) lmx_arena_take(arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
-    if: child_mail = 0 || child_t = 0 || child_sched = 0
-        return: 0
-    ---
-    if: lmx_post_init(arena, child_mail) != c.LMX_POST_OK
-        return: 0
-    ---
-    if: lmx_schedule_init(child_sched, arena, (cast: (@: void) child_t), 100000U) != c.LMX_SCHEDULE_OK
-        return: 0
-    ---
-    if: lmx_thread_attach(child_t, child, child_mail, child_sched) != c.LMX_THREAD_OK
-        return: 0
-    ---
-    if: lmx_child_thread(lmx_root_thread(rn_root), child, child_t) != c.LMX_CHILD_OK
-        return: 0
-    ---
-    if: child = rn_msg_1
-        rn_t_1: child_t
-        rn_sched_1: child_sched
-    else:
-        rn_t_2: child_t
-        rn_sched_2: child_sched
-    ---
-return: child_t
-
-fn: rn_root_entry (@: Lmx node) int
-    @: LmxMsg child
-    @: LmxThread child_t
-    if: rn_phase != 0U || rn_root = 0
-        rn_entry_diag: 1U
-        return: 0
-    ---
-    if: rn_arena_1 = 0 || rn_arena_2 = 0 || rn_source_1 = 0 || rn_source_2 = 0
-        rn_entry_diag: 2U
-        return: 0
-    ---
-    child: lmx_root_create(rn_root, rn_arena_1, 0U, rn_source_1)
-    if: child = 0
-        rn_entry_diag: 3U
-        return: 0
-    ---
-    rn_msg_1: child
-    child_t: rn_wire(child, rn_arena_1)
-    if: child_t = 0
-        rn_entry_diag: 4U
-        return: 0
-    ---
-    child: lmx_root_create(rn_root, rn_arena_2, 1U, rn_source_2)
-    if: child = 0
-        rn_entry_diag: 5U
-        return: 0
-    ---
-    rn_msg_2: child
-    child_t: rn_wire(child, rn_arena_2)
-    if: child_t = 0
-        rn_entry_diag: 6U
-        return: 0
-    ---
-    rn_phase: 1U
-    rn_entry_diag: 10U
-return: 0
 
 sub: rn_check (@: int counts; int: ok; const: @(char label))
     counts[0]: counts[0] + 1
@@ -186,209 +26,66 @@ sub: rn_check (@: int counts; int: ok; const: @(char label))
         counts[1]: counts[1] + 1
         c.printf("FAIL %s\n", label)
     ---
-    c.fflush(0)
 end: rn_check
 
-# One child ends its own incarnation: a letter in its box, one turn driven by the probe.  The turn
-# is `lmx_thread_turn` and NOTHING ELSE -- the act that returns a successful child's own arena is
-# the DRIVER's (lmx_thread_finish), and the probe does not call it: the record stays alive, which is
-# exactly what this measurement needs.
-fn: rn_end_child (@: LmxArena letter_arena; @: LmxMsg letter; @: LmxThread t; @: LmxService service; ulong: now) int
-    if: letter = 0
-        return: c.LMX_SERVICE_INVALID
+fn: rn_child (@: LmxArena arena; @@: LmxMsg out_message) @: LmxThread
+    @: Lmx graph lmx_node_new_owned(arena)
+    @: LmxMsg message
+    @: LmxPost mail
+    @: LmxThread thread
+    @: LmxSchedule slot
+    \out_message: 0
+    mail: (cast: (@: LmxPost) lmx_arena_take(arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    thread: (cast: (@: LmxThread) lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
+    slot: (cast: (@: LmxSchedule) lmx_arena_take(arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: graph = 0 || mail = 0 || thread = 0 || slot = 0
+        return: 0
     ---
-    letter\running: 1
-    letter\success: 0
-    letter\handoff_ready: 0
-    letter\graph: 0
-    letter\index: 0U
-    if: lmx_service_post(service, (cast: (@: void) t), letter, letter_arena) != c.LMX_SERVICE_OK
-        return: c.LMX_SERVICE_INVALID
+    message: lmx_thread_message(thread)
+    if: lmx_post_init(arena, mail) != c.LMX_POST_OK || lmx_thread_init(arena, thread, graph, mail, slot) != c.LMX_THREAD_OK || lmx_schedule_init(slot, arena, (cast: (@: void) thread), 1000U) != c.LMX_SCHEDULE_OK
+        return: 0
     ---
-return: lmx_thread_turn(t, 0, now)
+    message\running: 0
+    message\success: 1
+    message\handoff_ready: 1
+    \out_message: message
+return: thread
 
 fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxArena: parent_arena
+    LmxArena: arena_a
+    LmxArena: arena_b
+    @: Lmx graph
+    @: LmxArrayDesc children
+    @: LmxMsg parent_message
+    @: LmxPost parent_mail
+    @: LmxThread parent
+    @: LmxSchedule parent_slot
+    @: LmxThread a
+    @: LmxThread b
+    @: LmxMsg message
     int: failures
-    LmxRoot: root
-    LmxArena: arena_1
-    LmxArena: arena_2
-    LmxArena: letter_arena_1
-    LmxArena: letter_arena_2
-    @: LmxArena a1_at 0
-    @: LmxArena a2_at 0
-    @: LmxArena la1 0
-    @: LmxArena la2 0
-    @: LmxArena root_arena 0
-    @: LmxMsg message 0
-    @: LmxThread r0 0
-    @: Lmx graph 0
-    @: Lmx src1 0
-    @: Lmx src2 0
-    @: LmxMsg letter 0
-    @: LmxThread t_1 0
-    @: LmxThread t_2 0
-    @: LmxLink node 0
-    @: LmxThread walk_t 0
-    @: LmxService service 0
-    @: LmxManager manager 0
-    @: LmxOrphanLedger orphans 0
-    size_t: svc_end 0U
-    size_t: blocks_1 0U
-    size_t: blocks_2 0U
-    int: live_1 0
-    int: live_2 0
-    memset((cast: (@: void) (@ root)), 0, c.sizeof(c.LmxRoot))
-    memset((cast: (@: void) (@ arena_1)), 0, c.sizeof(c.LmxArena))
-    memset((cast: (@: void) (@ arena_2)), 0, c.sizeof(c.LmxArena))
-    memset((cast: (@: void) (@ letter_arena_1)), 0, c.sizeof(c.LmxArena))
-    memset((cast: (@: void) (@ letter_arena_2)), 0, c.sizeof(c.LmxArena))
-    rn_root: @ root
-    rn_arena_1: 0
-    rn_arena_2: 0
-    rn_msg_1: 0
-    rn_t_1: 0
-    rn_sched_1: 0
-    rn_msg_2: 0
-    rn_t_2: 0
-    rn_sched_2: 0
-    rn_node_1: 0
-    rn_node_2: 0
-    rn_phase: 0U
-    rn_entry_diag: 0U
-    rn_turns_1: 0U
-    rn_turns_2: 0U
-    rn_check(counts, lmx_root_open(@ root, rn_root_entry, 120000U, 0U, 0U) = c.LMX_ROOT_OK, "R0 did not open")
-    message: lmx_root_message(@ root)
-    r0: lmx_root_thread(@ root)
-    root_arena: lmx_root_arena(@ root)
-    graph: message\graph
-    service: lmx_root_service(@ root)
-    manager: lmx_root_manager(@ root)
-    orphans: lmx_root_orphans(@ root)
-    rn_check(counts, message != 0 && r0 != 0 && root_arena != 0 && service != 0 && manager != 0 && orphans != 0, "R0 missing pieces")
-    if: message = 0 || r0 = 0 || service = 0 || manager = 0
-        failures: counts[1]
-        c.printf("rn checks=%d failures=%d entry_diag=%u (abort open)\n",
-                 counts[0], failures, (cast: (unsigned) rn_entry_diag))
-        c.fflush(0)
-        free(counts)
-        return: failures
-    ---
-    src1: lmx_node_new_owned(root_arena)
-    src2: lmx_node_new_owned(root_arena)
-    rn_check(counts, src1 != 0 && src2 != 0, "templates not built")
-    rn_check(counts, src1 != 0 && lmx_arena_refs_open_owned(root_arena, src1, 2U) = 0, "template 1 not opened")
-    rn_check(counts, src2 != 0 && lmx_arena_refs_open_owned(root_arena, src2, 2U) = 0, "template 2 not opened")
-    if: src1 = 0 || src2 = 0
-        failures: counts[1]
-        c.printf("rn checks=%d failures=%d entry_diag=%u (abort templates)\n",
-                 counts[0], failures, (cast: (unsigned) rn_entry_diag))
-        c.fflush(0)
-        free(counts)
-        return: failures
-    ---
-    lmx_arena_ref_store(graph, 3U, (cast: (@: void) src1))
-    lmx_arena_ref_store(graph, 4U, (cast: (@: void) src2))
-    rn_source_1: src1
-    rn_source_2: src2
-    a1_at: @ arena_1
-    a2_at: @ arena_2
-    la1: @ letter_arena_1
-    la2: @ letter_arena_2
-    rn_check(counts, lmx_arena_open(@ arena_1) = 0, "arena 1 did not open")
-    rn_check(counts, lmx_arena_open(@ arena_2) = 0, "arena 2 did not open")
-    rn_check(counts, lmx_arena_open_simple(@ letter_arena_1) = 0, "letter arena 1 did not open")
-    rn_check(counts, lmx_arena_open_simple(@ letter_arena_2) = 0, "letter arena 2 did not open")
-    rn_arena_1: @ arena_1
-    rn_arena_2: @ arena_2
-
-    # R0 creates BOTH children in one turn.
-    rn_check(counts, lmx_root_cycle(@ root, 4U) = c.LMX_ROOT_OK, "the create cycle did not run")
-    rn_check(counts, rn_entry_diag = 10U && rn_t_1 != 0 && rn_t_2 != 0, "the entry did not wire both children")
-    if: rn_t_1 = 0 || rn_t_2 = 0 || rn_entry_diag != 10U
-        failures: counts[1]
-        c.printf("rn checks=%d failures=%d entry_diag=%u (STOP: children not wired)\n",
-                 counts[0], failures, (cast: (unsigned) rn_entry_diag))
-        c.fflush(0)
-        free(counts)
-        return: failures
-    ---
-    t_1: rn_t_1
-    t_2: rn_t_2
-    rn_check(counts, lmx_thread_child_is(r0, t_1) != 0 && lmx_thread_child_is(r0, t_2) != 0, "not both children are live under R0")
-    rn_check(counts, lmx_service_find(service, (cast: (@: void) t_1)) = (cast: (@: void) t_1), "child 1 not in service")
-    rn_check(counts, lmx_service_find(service, (cast: (@: void) t_2)) = (cast: (@: void) t_2), "child 2 not in service")
-    rn_check(counts, lmx_arena_ref_value(graph, 0U) = (cast: (@: void) rn_msg_1), "child 1 not published in slot 0")
-    rn_check(counts, lmx_arena_ref_value(graph, 1U) = (cast: (@: void) rn_msg_2), "child 2 not published in slot 1")
-
-    # EACH CHILD ENDS ITS OWN WORK, and only that: success is the body's, running is cleared by the
-    # child's own boundary -- and its arena is NOT returned, because that act belongs to the driver
-    # (lmx_thread_finish) and the probe does not call it.
-    letter: (cast: (@: LmxMsg) lmx_arena_take(la1, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
-    rn_check(counts, rn_end_child(la1, letter, t_1, service, lmx_clock_ticks()) = c.LMX_THREAD_OK, "child 1 did not take its turn")
-    rn_check(counts, rn_turns_1 = 1U && rn_msg_1\success = 1 && rn_msg_1\running = 0, "child 1 did not end by success")
-    rn_check(counts, rn_msg_1\handoff_ready != 0, "child 1 did not mark itself handoff-safe")
-    letter: (cast: (@: LmxMsg) lmx_arena_take(la2, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
-    rn_check(counts, rn_end_child(la2, letter, t_2, service, lmx_clock_ticks()) = c.LMX_THREAD_OK, "child 2 did not take its turn")
-    rn_check(counts, rn_turns_2 = 1U && rn_msg_2\success = 1 && rn_msg_2\running = 0, "child 2 did not end by success")
-    rn_check(counts, rn_msg_2\handoff_ready != 0, "child 2 did not mark itself handoff-safe")
-    rn_check(counts, a1_at\blocks != 0 && a2_at\blocks != 0, "a child's arena was returned without the driver's act")
-    rn_check(counts, lmx_thread_child_is(r0, t_1) != 0 && lmx_thread_child_is(r0, t_2) != 0, "an ended child left R0's chain before the settle")
-
-    # THE STATE A REUSED RECORD HAS: the node says gone (as `lmx_thread_finish` leaves it after
-    # returning the arena -- and the fabricator here is the PROBE, on its own cell, so the
-    # measurement touches no released memory), and the record itself answers nonsense.
-    node: lmx_thread_child_link(r0)
-    rn_check(counts, node != 0, "R0's chain is empty after both children ended")
-    rn_node_1: node
-    walk_t: (cast: (@: LmxThread) node\thread)
-    rn_node_2: (cast: (@: LmxLink) node\next)
-    rn_check(counts, rn_node_2 != 0, "R0's chain does not hold both children")
-    if: walk_t = t_1
-        node\gone: 1
-        if: rn_node_2 != 0
-            rn_node_2\gone: 1
-        ---
-    else:
-        if: rn_node_2 != 0
-            rn_node_2\gone: 1
-        ---
-        node\gone: 1
-    ---
-    t_1\message: 0
-    t_1\link: 0
-    t_2\message: 0
-    t_2\link: 0
-    rn_check(counts, lmx_service_count(service) = 3U, "service is not R0 + both children before the settle")
-
-    # THE ACT UNDER TEST: one ordinary settle of R0's own children.  Everything it needs for a
-    # gone child is in R0's node -- message, index, gone.
-    rn_check(counts, lmx_settle_children(r0, root_arena, service, manager, lmx_clock_ticks()) = c.LMX_SETTLE_OK, "the settle did not run")
-    live_1: lmx_thread_child_is(r0, t_1)
-    live_2: lmx_thread_child_is(r0, t_2)
-    svc_end: lmx_service_count(service)
-    blocks_1: a1_at\blocks
-    blocks_2: a2_at\blocks
-    rn_check(counts, live_1 = 0, "THE WALK READ THE CHILD'S RECORD: the first gone child was left in R0's chain")
-    rn_check(counts, live_2 = 0, "THE WALK READ THE CHILD'S RECORD: the second gone child was left in R0's chain")
-    rn_check(counts, svc_end = 1U, "service is not R0 alone after the settle")
-    rn_check(counts, lmx_arena_ref_value(graph, 0U) = 0, "child 1's slot was not cleared")
-    rn_check(counts, lmx_arena_ref_value(graph, 1U) = 0, "child 2's slot was not cleared")
-    rn_check(counts, orphans != 0 && lmx_orphan_count(orphans) = 0U, "something was adopted instead of settled")
-    # ... and no arena of theirs was released by the settle: their nodes say gone, so the storage
-    # was never this act's (it belongs to whoever ran the driver's act -- here, nobody did).
-    rn_check(counts, blocks_1 != 0U && blocks_2 != 0U, "a gone child's arena was released by the settle")
-    c.printf("RN NODE_WALK gone=1+1 live_after %d/%d svc_end=%u slots %u/%u turns=%u/%u entry_diag=%u\n",
-             live_1, live_2, (cast: (unsigned) svc_end),
-             (cast: (unsigned) lmx_arena_ref_value(graph, 0U)), (cast: (unsigned) lmx_arena_ref_value(graph, 1U)),
-             (cast: (unsigned) rn_turns_1), (cast: (unsigned) rn_turns_2),
-             (cast: (unsigned) rn_entry_diag))
-    c.fflush(0)
-
+    memset((cast: (@: void) (@ parent_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ arena_a)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ arena_b)), 0, c.sizeof(c.LmxArena))
+    rn_check(counts, lmx_arena_open(@ parent_arena) = 0 && lmx_arena_open(@ arena_a) = 0 && lmx_arena_open(@ arena_b) = 0, "arenas")
+    graph: lmx_node_new_owned(@ parent_arena)
+    children: lmx_list_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, @ parent_arena)
+    parent_mail: (cast: (@: LmxPost) lmx_arena_take(@ parent_arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    parent: (cast: (@: LmxThread) lmx_arena_take(@ parent_arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
+    parent_slot: (cast: (@: LmxSchedule) lmx_arena_take(@ parent_arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    parent_message: lmx_thread_message(parent)
+    rn_check(counts, graph != 0 && children != 0 && lmx_arena_refs_open_owned(@ parent_arena, graph, 1U) = 0 && lmx_arena_ref_store(graph, 0U, (cast: (@: void) children)) = 0, "parent graph")
+    rn_check(counts, lmx_post_init(@ parent_arena, parent_mail) = c.LMX_POST_OK && lmx_thread_init(@ parent_arena, parent, graph, parent_mail, parent_slot) = c.LMX_THREAD_OK && lmx_schedule_init(parent_slot, @ parent_arena, (cast: (@: void) parent), 1000U) = c.LMX_SCHEDULE_OK && lmx_thread_children_bind(parent, children, @ parent_arena) = c.LMX_THREAD_OK, "parent init")
+    a: rn_child(@ arena_a, @ message)
+    b: rn_child(@ arena_b, @ message)
+    rn_check(counts, a != 0 && b != 0 && lmx_thread_child_add(parent, a, @ parent_arena) = c.LMX_THREAD_OK && lmx_thread_child_add(parent, b, @ parent_arena) = c.LMX_THREAD_OK, "two children")
+    rn_check(counts, lmx_thread_child_count(parent) = 2U && children\len = 2U, "single membership array")
+    rn_check(counts, lmx_settle_children(parent, @ parent_arena, 0, 0, 1U) = c.LMX_SETTLE_OK, "settle compacted array")
+    rn_check(counts, lmx_thread_child_count(parent) = 0U && children\len = 0U, "both removed before release")
+    rn_check(counts, lmx_arena_release(@ parent_arena) = 0, "parent release")
     failures: counts[1]
-    c.printf("lmx_settle_reads_node checks=%d failures=%d entry_diag=%u\n",
-             counts[0], failures, (cast: (unsigned) rn_entry_diag))
-    c.fflush(0)
+    c.printf("lmx_settle_reads_node: %d checks, %d failures\n", counts[0], failures)
     free(counts)
 return: failures

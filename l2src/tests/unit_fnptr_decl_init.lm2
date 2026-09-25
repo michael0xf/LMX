@@ -1,0 +1,14 @@
+predef: "l2src/tests/fnptr_local_forms.h.lm1"
+
+# GROKBOT-COMPACT-FNPTR-BATCHC-20260922-76
+# Explicit typed fnptr declaration with initializer (only value-init form).
+# Opposite of call: must emit declaration, not f(...).
+fn: probe (const: @(c.L2TestAllocVTable av)) int
+    L2TestAllocFn: f av\alloc
+    if: f = 0
+        return: 1
+    return: 0
+end: probe
+
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

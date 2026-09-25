@@ -1,0 +1,51 @@
+# -193 T4a: control inside a walked method (WalkMethods) -- while, if / else, a short-circuit `&&`
+# (its flag step runs before its statement and again at the end of each turn of a while body).
+fn: tri (int: n) int
+    int: i
+    int: s
+    i: 0
+    s: 0
+    while: i < n
+        i: i + 1
+        s: s + i
+    return: s
+end: tri
+
+fn: clamp (int: v; int: lo; int: hi) int
+    int: out
+    if: v < lo
+        out: lo
+    else:
+        out: v
+    if: out > hi
+        out: hi
+    return: out
+end: clamp
+
+fn: count_in (int: n; int: lo; int: hi) int
+    int: i
+    int: c
+    i: 0
+    c: 0
+    while: i < n && c < 100
+        if: i >= lo && i <= hi
+            c: c + 1
+        i: i + 1
+    return: c
+end: count_in
+
+int: r
+r: tri(4)
+if: r != 10
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+r: clamp(0 - 5, 0, 9) + clamp(12, 0, 9) + clamp(4, 0, 9)
+if: r != 13
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+r: count_in(10, 3, 6)
+if: r != 4
+    sendMessage: exit(exit_code: 83; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

@@ -1,0 +1,30 @@
+# FABLE-SONNET-SEND-REF-20260925-172 commit 3: `sendMessage: Ref X` inside a method body --
+# explicit addressee (m\sender) in place of the implicit lmx_thread_parent(t). R0's own mainArgs
+# letter's sender is the host (R0's parent) -- the same destination the implicit form already
+# reaches, so this witness cannot distinguish Ref from the parent BEHAVIORALLY (no L2-level
+# second sender exists yet: FABLE-GROKBOT-LAUNCH-TAP-20260925-182 pending); it proves the new
+# machinery (evaluating the Ref expression, carrying it as the primitive's own last input, reading
+# it back and posting through it) reaches the SAME destination end to end, without corrupting
+# anything: the exit letter still reaches the host through the NEW explicit path. The generated
+# C's own addressee text (refs[N], not lmx_thread_parent(t)) is this commit's structural witness
+# -- see steps/send-ref-172.md.
+# Only ONE sendMessage site exists in this fixture, deliberately: a fallback (no-Ref) send for
+# the m=0/m\sender=0 cases would ALSO emit lmx_thread_parent(t) for its own k, defeating the
+# Absent = @('lmx_thread_parent') pin below (it would be true of a different generated function,
+# not a real regression). m and m\sender are always live for a real host-launched R0 (the same
+# fact unit_receive_letter_model.lm2 already relies on), so there is nothing to fall back to.
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+
+fn: check () int
+    receiveMessage: m MainLetter
+    if: m = 0
+        return: 90
+    if: m\sender = 0
+        return: 91
+    sendMessage: m\sender exit(exit_code: 0; stdout: ""; stderr: "")
+    return: 0
+
+check()
+return

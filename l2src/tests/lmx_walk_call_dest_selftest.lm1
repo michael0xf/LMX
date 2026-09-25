@@ -1,0 +1,156 @@
+predef: "l2src/lmx_walk.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_chars.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# -174 c4 / k.4: CALL dest is a fresh typed cell of the type the CALL's rtype operand
+# (a reference to the callee's declared result cell) classifies as.
+# A size_t trampoline writes 8 bytes; the evaluator int temp is 4. Mutant: pass
+# dest (int temp) -> truncated / RED.
+
+@: LmxArena ga 0
+@: Lmx groles 0
+@: LmxWalkContext gctx 0
+@: LmxWalkValue gv 0
+int: broken 0
+int: checks 0
+int: failures 0
+
+sub: check (int: ok; const: @(char label))
+    checks: checks + 1
+    if: ok = 0
+        failures: failures + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: check
+
+fn: fr (@: Lmx parent; size_t: slot; int: op; size_t: children) @: Lmx
+    @: Lmx n lmx_walk_frame(ga, groles, parent, op, children)
+    if: n = 0 || lmx_arena_ref_store(parent, slot, (cast: (@: void) n)) != 0
+        broken: broken + 1
+        return: 0
+    ---
+return: n
+
+fn: pl (@: Lmx parent; size_t: slot; size_t: children) @: Lmx
+    @: Lmx n lmx_walk_plain(ga, parent, children)
+    if: n = 0 || lmx_arena_ref_store(parent, slot, (cast: (@: void) n)) != 0
+        broken: broken + 1
+        return: 0
+    ---
+return: n
+
+sub: ref (@: Lmx code; size_t: slot; @: Lmx target)
+    if: code = 0 || target = 0 || lmx_arena_ref_store(code, slot, (cast: (@: void) target)) != 0
+        broken: broken + 1
+    ---
+end: ref
+
+sub: sz (@: Lmx code; size_t: slot; size_t: value)
+    if: code = 0 || lmx_walk_store_size(ga, code, slot, value) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+end: sz
+
+# k.4: a walked/native callable occurrence is just the ordinary body Structure -- no
+# descriptor; `native` stays 0 by construction unless set directly.
+fn: mk_m (@: Lmx unit; size_t: slot; size_t: children) @: Lmx
+return: pl(unit, slot, children)
+
+fn: go (@: Lmx m) int
+    if: m = 0 || gctx = 0 || gv = 0
+        return: c.LMX_WALK_INVALID
+return: lmx_walk_run(gctx, m, 0, 0U, gv)
+
+
+# Wide size_t that does not fit in 32-bit int (and is not 0 when truncated badly).
+fn: g1_wide (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    size_t: w 1U
+    if: dest = 0 || out = 0
+        return: 1
+    ---
+    w: w << 32
+    w: w + 7U
+    if: lmx_size_store_known(dest, w) != 0
+        return: 1
+    ---
+    \out: dest
+return: 0
+
+fn: main () int
+    LmxArena: arena
+    LmxArena: context_arena
+    LmxPool: context_cells
+    LmxScratch: store
+    LmxWalkContext: context
+    @: Lmx unit 0
+    @: Lmx m 0
+    @: Lmx n 0
+    @: Lmx native 0
+    @: Lmx caller 0
+    @: void rtype_cell 0
+    size_t: got 0U
+    size_t: want 1U
+    int: st 0
+
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ arena) != 0
+        return: 2
+    ga: @ arena
+    groles: lmx_walk_roles_open(ga)
+    memset((cast: (@: void) (@ context_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ context_cells)), 0, c.sizeof(c.LmxPool))
+    memset((cast: (@: void) (@ store)), 0, c.sizeof(c.LmxScratch))
+    if: lmx_arena_open(@ context_arena) != 0 || lmx_scratch_open(@ store, @ context_arena, @ context_cells, 16U) != c.LMX_SCRATCH_OK
+        return: 2
+    context.arena: ga
+    context.scratch: @ store
+    context.roles: groles
+    context.immutable_profile: 0
+    context.classified: 0U
+    gctx: @ context
+    gv: (cast: (@: LmxWalkValue) calloc(1U, c.sizeof(c.LmxWalkValue)))
+
+    unit: lmx_node_new_owned(ga)
+    if: unit = 0 || lmx_arena_refs_open_owned(ga, unit, 8U) != 0
+        return: 2
+    ---
+    # k.4: no descriptor, no LmxMethod/LmxCallable -- dispatch is the `native` word
+    # directly, and the result type comes from classifying the CALL's rtype operand
+    # (a reference to a size_t-typed cell here) rather than a sig mark.
+    native: mk_m(unit, 1U, 0U)
+    caller: mk_m(unit, 0U, 1U)
+    rtype_cell: lmx_size_new_owned(ga)
+    if: native = 0 || caller = 0 || rtype_cell = 0
+        return: 2
+    ---
+    native\native: (cast: (LmxEntry) g1_wide)
+
+    n: fr(caller, 0U, c.LMX_WALK_OP_CALL, 4U)
+    ref(n, 1U, native)
+    ref(n, 2U, native)
+    ref(n, 3U, (cast: (@: Lmx) rtype_cell))
+    st: go(caller)
+    want: 1U
+    want: want << 32
+    want: want + 7U
+    if: st = c.LMX_WALK_OK && gv\ref != 0
+        got: lmx_size_value_known(gv\ref)
+    ---
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\ref != 0 && gv\ref != (cast: (@: void) (@ gv\number)))), "CALL dest is not the int temp")
+    check((cast: (int) (st = c.LMX_WALK_OK && got = want)), "size_t trampoline dest holds full 2^32+7")
+    check((cast: (int) (gv\ref != 0 && lmx_walk_numeric_type(ga, gv\ref) = c.LMX_TYPE_SIZE_T)), "dest cell type is SIZE_T")
+
+    c.printf("lmx_walk_call_dest_selftest checks=%d failures=%d broken=%d\n", checks, failures, broken)
+    if: failures != 0 || broken != 0
+        return: 1
+return: 0

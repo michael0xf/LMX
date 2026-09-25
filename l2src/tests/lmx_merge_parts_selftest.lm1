@@ -1,0 +1,245 @@
+predef: "l2src/lmx_merge_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# K1 (FABLE-SONNET-MERGE-KERNEL-20260926-194 k.2), merge-parts-193.md SS2(1) 1a-1d, all
+# against the kernel directly (the translator's own T2 side, emitting these map shapes,
+# is not built yet -- these pairs are hand-built, the way lmx_merge_override_selftest
+# already builds T1's).
+# - 1a: a body field pairs into the model's slot instead of appending; another body
+#   field, with no pair, still appends.
+# - 1b: a later operand's pair targets an EARLIER operand's own appended slot -- the
+#   override wins over the append (mutant: overrides applied before the append pass ->
+#   the earlier operand's own value survives, RED).
+# - 1c: two pairs sharing the same source (operand, field) are refused.
+# - 1d: a nested own-Structure child of the result is re-parented to the result itself,
+#   not left pointing at the orphan operand-copy the copier's own parent-fixup gives it;
+#   proved by merging the result a second time and checking the nested field's address
+#   changes (deep-copied as the SECOND result's own child, not shared by address).
+
+sub: mk_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: mk_check
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxArena: arena
+    LmxArena: dst
+    int: failures
+
+    # -- 1a locals
+    @: Lmx model_a 0
+    @: Lmx body_a 0
+    @: void mx 0
+    @: void bx 0
+    @: void bz 0
+    @: LmxMergePair pair_a 0
+    @@: Lmx op_a 0
+    @: Lmx result_a 0
+    int: status_a LMX_MERGE_OK
+
+    # -- 1b locals
+    @: Lmx model_b 0
+    @: Lmx op1_b 0
+    @: Lmx op2_b 0
+    @: void mbx 0
+    @: void bz1 0
+    @: void bw2 0
+    @: LmxMergePair pair_b 0
+    @@: Lmx ops_b 0
+    @: Lmx result_b 0
+    int: status_b LMX_MERGE_OK
+
+    # -- 1c locals
+    @: Lmx model_c 0
+    @: Lmx op_c 0
+    @: void mcx 0
+    @: void mcy 0
+    @: void ocz 0
+    @: LmxMergePair pair_c0 0
+    @: LmxMergePair pair_c1 0
+    @@: LmxMergePair pairs_c 0
+    @@: Lmx ops_c 0
+    @: Lmx result_c 0
+    int: status_c LMX_MERGE_OK
+
+    # -- 1d locals
+    @: Lmx inner_d 0
+    @: void iv 0
+    @: Lmx model_d 0
+    @@: Lmx op_d1 0
+    @@: Lmx op_d2 0
+    @: Lmx result_d1 0
+    @: Lmx result_d2 0
+    @: void inner1 0
+    @: void inner2 0
+    int: status_d1 LMX_MERGE_OK
+    int: status_d2 LMX_MERGE_OK
+
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ dst)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ arena) != 0 || lmx_arena_open(@ dst) != 0
+        fputs("lmx: arena open failed\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+
+    # ==== 1a: body as a pair source ====
+    mx: lmx_int_new_owned(@ arena)
+    bx: lmx_int_new_owned(@ arena)
+    bz: lmx_int_new_owned(@ arena)
+    lmx_int_store_known(mx, 1)
+    lmx_int_store_known(bx, 99)
+    lmx_int_store_known(bz, 7)
+    model_a: lmx_node_new_owned(@ arena)
+    body_a: lmx_node_new_owned(@ arena)
+    mk_check(counts, mx != 0 && bx != 0 && bz != 0 && model_a != 0 && body_a != 0, "1a cells and structures constructed")
+    mk_check(counts, lmx_arena_refs_open_owned(@ arena, model_a, 1U) = 0, "1a model opened {x}")
+    mk_check(counts, lmx_arena_refs_open_owned(@ arena, body_a, 2U) = 0, "1a body opened {x, z}")
+    lmx_arena_ref_store(model_a, 0U, mx)
+    lmx_arena_ref_store(body_a, 0U, bx)
+    lmx_arena_ref_store(body_a, 1U, bz)
+    op_a: (cast: (@@: Lmx) calloc(1U, c.sizeof(@: void)))
+    mk_check(counts, op_a != 0, "1a operand array allocated")
+    op_a[0]: model_a
+    pair_a: (cast: (@: LmxMergePair) calloc(1U, c.sizeof(c.LmxMergePair)))
+    mk_check(counts, pair_a != 0, "1a pair allocated")
+    pair_a\model_slot: 0U
+    pair_a\operand: 1U
+    pair_a\field: 0U
+    status_a: lmx_merge_owned(op_a, 1U, body_a, 0, 0, @ arena, @ dst, @ pair_a, 1U, @ result_a)
+    mk_check(counts, status_a = LMX_MERGE_OK && result_a != 0, "1a merge OK")
+    mk_check(counts, result_a\len = 2, "1a body's x paired (not appended) -> len 2 (mutant: 1a off -> len 3 RED)")
+    mk_check(counts, lmx_int_value_known(lmx_arena_ref_value(result_a, 0U)) = 99, "1a result[0] = body's x (99), overriding model's own 1")
+    mk_check(counts, lmx_int_value_known(lmx_arena_ref_value(result_a, 1U)) = 7, "1a result[1] = body's unmatched z (7), appended")
+    mk_check(counts, model_a\len = 1 && body_a\len = 2, "1a operands untouched")
+    free((cast: (@: void) op_a))
+    free((cast: (@: void) pair_a))
+
+    # ==== 1b: a pair targets an earlier operand's own appended slot ====
+    mbx: lmx_int_new_owned(@ arena)
+    bz1: lmx_int_new_owned(@ arena)
+    bw2: lmx_int_new_owned(@ arena)
+    lmx_int_store_known(mbx, 1)
+    lmx_int_store_known(bz1, 7)
+    lmx_int_store_known(bw2, 42)
+    model_b: lmx_node_new_owned(@ arena)
+    op1_b: lmx_node_new_owned(@ arena)
+    op2_b: lmx_node_new_owned(@ arena)
+    mk_check(counts, mbx != 0 && bz1 != 0 && bw2 != 0 && model_b != 0 && op1_b != 0 && op2_b != 0, "1b cells and structures constructed")
+    mk_check(counts, lmx_arena_refs_open_owned(@ arena, model_b, 1U) = 0, "1b model opened {x}")
+    mk_check(counts, lmx_arena_refs_open_owned(@ arena, op1_b, 1U) = 0, "1b operand1 opened {z}")
+    mk_check(counts, lmx_arena_refs_open_owned(@ arena, op2_b, 1U) = 0, "1b operand2 opened {w}")
+    lmx_arena_ref_store(model_b, 0U, mbx)
+    lmx_arena_ref_store(op1_b, 0U, bz1)
+    lmx_arena_ref_store(op2_b, 0U, bw2)
+    ops_b: (cast: (@@: Lmx) calloc(3U, c.sizeof(@: void)))
+    mk_check(counts, ops_b != 0, "1b operand array allocated")
+    ops_b[0]: model_b
+    ops_b[1]: op1_b
+    ops_b[2]: op2_b
+    pair_b: (cast: (@: LmxMergePair) calloc(1U, c.sizeof(c.LmxMergePair)))
+    mk_check(counts, pair_b != 0, "1b pair allocated")
+    pair_b\model_slot: 1U
+    pair_b\operand: 2U
+    pair_b\field: 0U
+    status_b: lmx_merge_owned(ops_b, 3U, 0, 0, 0, @ arena, @ dst, @ pair_b, 1U, @ result_b)
+    mk_check(counts, status_b = LMX_MERGE_OK && result_b != 0, "1b merge OK")
+    mk_check(counts, result_b\len = 2, "1b -> len 2 (model's x + one appended slot, z/w share)")
+    mk_check(counts, lmx_int_value_known(lmx_arena_ref_value(result_b, 0U)) = 1, "1b result[0] = model's x, untouched")
+    mk_check(counts, lmx_int_value_known(lmx_arena_ref_value(result_b, 1U)) = 42, "1b result[1] = operand2's w (42), overriding operand1's appended z (mutant: overrides applied before the append pass -> 7 RED)")
+    free((cast: (@: void) ops_b))
+    free((cast: (@: void) pair_b))
+
+    # ==== 1c: two pairs sharing the same source are refused ====
+    mcx: lmx_int_new_owned(@ arena)
+    mcy: lmx_int_new_owned(@ arena)
+    ocz: lmx_int_new_owned(@ arena)
+    lmx_int_store_known(mcx, 1)
+    lmx_int_store_known(mcy, 2)
+    lmx_int_store_known(ocz, 9)
+    model_c: lmx_node_new_owned(@ arena)
+    op_c: lmx_node_new_owned(@ arena)
+    mk_check(counts, mcx != 0 && mcy != 0 && ocz != 0 && model_c != 0 && op_c != 0, "1c cells and structures constructed")
+    mk_check(counts, lmx_arena_refs_open_owned(@ arena, model_c, 2U) = 0, "1c model opened {x, y}")
+    mk_check(counts, lmx_arena_refs_open_owned(@ arena, op_c, 1U) = 0, "1c operand opened {z}")
+    lmx_arena_ref_store(model_c, 0U, mcx)
+    lmx_arena_ref_store(model_c, 1U, mcy)
+    lmx_arena_ref_store(op_c, 0U, ocz)
+    ops_c: (cast: (@@: Lmx) calloc(2U, c.sizeof(@: void)))
+    mk_check(counts, ops_c != 0, "1c operand array allocated")
+    ops_c[0]: model_c
+    ops_c[1]: op_c
+    pair_c0: (cast: (@: LmxMergePair) calloc(1U, c.sizeof(c.LmxMergePair)))
+    pair_c1: (cast: (@: LmxMergePair) calloc(1U, c.sizeof(c.LmxMergePair)))
+    mk_check(counts, pair_c0 != 0 && pair_c1 != 0, "1c pairs allocated")
+    pair_c0\model_slot: 0U
+    pair_c0\operand: 1U
+    pair_c0\field: 0U
+    pair_c1\model_slot: 1U
+    pair_c1\operand: 1U
+    pair_c1\field: 0U
+    pairs_c: (cast: (@@: LmxMergePair) calloc(2U, c.sizeof(@: void)))
+    mk_check(counts, pairs_c != 0, "1c pair array allocated")
+    pairs_c[0]: pair_c0
+    pairs_c[1]: pair_c1
+    status_c: lmx_merge_owned(ops_c, 2U, 0, 0, 0, @ arena, @ dst, pairs_c, 2U, @ result_c)
+    mk_check(counts, status_c = LMX_MERGE_INVALID && result_c = 0, "1c duplicate source refused (mutant: guard off -> OK, last-written wins silently, RED)")
+    free((cast: (@: void) ops_c))
+    free((cast: (@: void) pairs_c))
+    free((cast: (@: void) pair_c0))
+    free((cast: (@: void) pair_c1))
+
+    # ==== 1d: a nested Structure child's parent is re-pointed to the result ====
+    iv: lmx_int_new_owned(@ arena)
+    lmx_int_store_known(iv, 5)
+    inner_d: lmx_node_new_owned(@ arena)
+    mk_check(counts, iv != 0 && inner_d != 0, "1d inner cell/structure constructed")
+    mk_check(counts, lmx_arena_refs_open_owned(@ arena, inner_d, 1U) = 0, "1d inner opened {v}")
+    lmx_arena_ref_store(inner_d, 0U, iv)
+    model_d: lmx_node_new_owned(@ arena)
+    mk_check(counts, model_d != 0, "1d model constructed")
+    mk_check(counts, lmx_arena_refs_open_owned(@ arena, model_d, 1U) = 0, "1d model opened {inner}")
+    lmx_arena_ref_store(model_d, 0U, (cast: (@: void) inner_d))
+    inner_d\parent: model_d
+    op_d1: (cast: (@@: Lmx) calloc(1U, c.sizeof(@: void)))
+    mk_check(counts, op_d1 != 0, "1d first operand array allocated")
+    op_d1[0]: model_d
+    status_d1: lmx_merge_owned(op_d1, 1U, 0, 0, 0, @ arena, @ dst, 0, 0U, @ result_d1)
+    mk_check(counts, status_d1 = LMX_MERGE_OK && result_d1 != 0, "1d first merge OK")
+    mk_check(counts, result_d1\len = 1, "1d first result has one slot")
+    inner1: lmx_arena_ref_value(result_d1, 0U)
+    mk_check(counts, inner1 != 0 && lmx_range_classify(@ dst, inner1) = c.LMX_KIND_STRUCT, "1d first result's slot 0 is a nested Structure copy")
+    mk_check(counts, (cast: (@: Lmx) inner1)\parent = result_d1, "1d first copy's parent re-pointed to result_d1 (mutant: re-parent pass off -> orphan model copy, RED)")
+    op_d2: (cast: (@@: Lmx) calloc(1U, c.sizeof(@: void)))
+    mk_check(counts, op_d2 != 0, "1d second operand array allocated")
+    op_d2[0]: result_d1
+    status_d2: lmx_merge_owned(op_d2, 1U, 0, 0, 0, @ dst, @ dst, 0, 0U, @ result_d2)
+    mk_check(counts, status_d2 = LMX_MERGE_OK && result_d2 != 0, "1d second merge OK")
+    inner2: lmx_arena_ref_value(result_d2, 0U)
+    mk_check(counts, inner2 != 0 && inner2 != inner1, "1d second merge deep-copies the nested field (fresh address, not shared) -- proves the re-parent, not the bug")
+    free((cast: (@: void) op_d1))
+    free((cast: (@: void) op_d2))
+
+    failures: counts[1]
+    c.printf("lmx_merge_parts_selftest: %d checks, %d failed\n", counts[0], failures)
+    free(counts)
+    lmx_arena_release(@ arena)
+    lmx_arena_release(@ dst)
+    if: failures != 0
+        return: 1
+return: 0

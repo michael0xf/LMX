@@ -127,7 +127,7 @@ end: p0_disabled_state_delete
 # LmP0Stack's parents/owners/hard arrays. Ported straight from the
 # oracle; no fragment exists.
 
-fn: p0_stack_ensure (@: LmP0Document document; @: LmP0Stack stack; size_t: level) int
+fn: p0_stack_ensure (@: c.LmP0Document document; @: LmP0Stack stack; size_t: level) int
     @@: LmP0Structure parents
     @@: LmP0Node owners
     @: uchar hard
@@ -247,7 +247,7 @@ fn: p0_structure_last_colon_frame (@: LmP0Structure structure) @: LmP0Node
     return: 0
 end: p0_structure_last_colon_frame
 
-fn: p0_stack_install_node_lineage (@: LmP0Document document; @: LmP0Stack stack; size_t: base_level; @: LmP0Node nd) int
+fn: p0_stack_install_node_lineage (@: c.LmP0Document document; @: LmP0Stack stack; size_t: base_level; @: LmP0Node nd) int
     @: LmP0Node owner
     size_t: level
     if: (p0_node_keeps_source_child_level(nd) = 0)
@@ -281,7 +281,7 @@ fn: p0_stack_install_node_lineage (@: LmP0Document document; @: LmP0Stack stack;
     return: 1
 end: p0_stack_install_node_lineage
 
-fn: p0_stack_ensure_root_level_alias (@: LmP0Document document; @: LmP0Stack stack; size_t: level) int
+fn: p0_stack_ensure_root_level_alias (@: c.LmP0Document document; @: LmP0Stack stack; size_t: level) int
     if: ((level != 1U) || (stack\parents[1] != 0))
         return: 1
     if: (p0_stack_ensure(document, stack, 1U) = 0)
@@ -292,7 +292,7 @@ fn: p0_stack_ensure_root_level_alias (@: LmP0Document document; @: LmP0Stack sta
     return: 1
 end: p0_stack_ensure_root_level_alias
 
-fn: p0_stack_open_implicit_anonymous (@: LmP0Document document; @: LmP0Stack stack; size_t: parent_level; size_t: line; size_t: column; size_t: offset) int
+fn: p0_stack_open_implicit_anonymous (@: c.LmP0Document document; @: LmP0Stack stack; size_t: parent_level; size_t: line; size_t: column; size_t: offset) int
     @: LmP0Node anonymous_node
     @: LmP0Structure parent
     parent: stack\parents[parent_level]
@@ -326,7 +326,7 @@ fn: p0_node_trailer_slot (@: LmP0Node nd) @@: LmP0Trailer
     return: 0
 end: p0_node_trailer_slot
 
-fn: p0_attach_trailer (@: LmP0Document document; @: LmP0Node nd; const: @(char spelling); size_t: spelling_length; unsigned: flags; size_t: line; size_t: column) @: LmP0Trailer
+fn: p0_attach_trailer (@: c.LmP0Document document; @: LmP0Node nd; const: @(char spelling); size_t: spelling_length; unsigned: flags; size_t: line; size_t: column) @: LmP0Trailer
     @@: LmP0Trailer slot
     @: LmP0Trailer trailer
     slot: p0_node_trailer_slot(nd)
@@ -344,7 +344,7 @@ fn: p0_attach_trailer (@: LmP0Document document; @: LmP0Node nd; const: @(char s
     return: trailer
 end: p0_attach_trailer
 
-fn: p0_pending_delimiter_set (@: LmP0Document document; @: LmP0PendingDelimiter pending; const: @(LmP0StreamEvent event)) int
+fn: p0_pending_delimiter_set (@: c.LmP0Document document; @: LmP0PendingDelimiter pending; const: @(LmP0StreamEvent event)) int
     if: (pending = 0)
         return: 0
     p0_pending_delimiter_clear(pending)
@@ -373,7 +373,7 @@ end: p0_pending_delimiter_set
 # block) -- the same forward-dependency shape used throughout this
 # port; the call retargets automatically once Stage e lands.
 
-fn: p0_stream_resolve_pending_delimiter (@: LmP0Document document; @: LmP0Stack stack; @: LmP0PendingDelimiter pending; size_t: next_level) int
+fn: p0_stream_resolve_pending_delimiter (@: c.LmP0Document document; @: LmP0Stack stack; @: LmP0PendingDelimiter pending; size_t: next_level) int
     const: @: LmP0StreamEvent event
     size_t: top_level
     @: LmP0Structure parent
@@ -416,7 +416,7 @@ fn: p0_stream_resolve_pending_delimiter (@: LmP0Document document; @: LmP0Stack 
     return: 1
 end: p0_stream_resolve_pending_delimiter
 
-fn: p0_parse_trailer_item (@: LmP0Document document; @: LmP0Node target; const: @(char text); size_t: length; size_t: line; size_t: column; size_t: offset; unsigned: flags; @@: LmP0Structure out_body) int
+fn: p0_parse_trailer_item (@: c.LmP0Document document; @: LmP0Node target; const: @(char text); size_t: length; size_t: line; size_t: column; size_t: offset; unsigned: flags; @@: LmP0Structure out_body) int
     size_t: colon_index
     size_t: spelling_length
     size_t: body_start
@@ -480,7 +480,7 @@ end: p0_parse_trailer_item
 # any of these. Formals/locals named node in the oracle renamed nd,
 # same rule as every other renamed formal in this port.
 
-fn: p0_pending_mix_push (@: LmP0Document document; @: LmP0PendingMix pending; const: @(LmP0StreamEvent event)) int
+fn: p0_pending_mix_push (@: c.LmP0Document document; @: LmP0PendingMix pending; const: @(LmP0StreamEvent event)) int
     size_t: new_capacity
     @: LmP0StreamEvent events
     if: ((pending = 0) || (event = 0))
@@ -501,15 +501,15 @@ fn: p0_pending_mix_push (@: LmP0Document document; @: LmP0PendingMix pending; co
     return: 1
 end: p0_pending_mix_push
 
-fn: p0_stream_apply_item_event (@: LmP0Document document; @: LmP0Stack stack; const: @(LmP0StreamEvent event)) int
+fn: p0_stream_apply_item_event (@: c.LmP0Document document; @: LmP0Stack stack; const: @(LmP0StreamEvent event)) int
     # Stopgap (l2src/tests/repro_foreign_int_alias_local.lm2, sent to
     # d6, 2026-09-14): l2trans refuses a foreign int-alias type
-    # (l1src/p0.h: `typedef int LmP0TrailerRole`) as a LOCAL variable's
-    # own declared type -- "unsupported body, frame=LmP0TrailerRole" --
+    # (l1src/p0.h: `typedef int c.LmP0TrailerRole`) as a LOCAL variable's
+    # own declared type -- "unsupported body, frame=c.LmP0TrailerRole" --
     # even though the same type already works as a formal/return (d6's
-    # 642b6700). LmP0TrailerRole literally is int, so `int: trailer_
+    # 642b6700). c.LmP0TrailerRole literally is int, so `int: trailer_
     # role` is behaviorally identical, not a logic change. Revert to
-    # `LmP0TrailerRole: trailer_role` once the gap is fixed.
+    # `c.LmP0TrailerRole: trailer_role` once the gap is fixed.
     int: trailer_role
     size_t: top_level
     @: LmP0Structure parent
@@ -626,7 +626,7 @@ fn: p0_stream_apply_item_event (@: LmP0Document document; @: LmP0Stack stack; co
     return: 1
 end: p0_stream_apply_item_event
 
-fn: p0_stream_apply_mix_event (@: LmP0Document document; @: LmP0Stack stack; const: @(LmP0StreamEvent event)) int
+fn: p0_stream_apply_mix_event (@: c.LmP0Document document; @: LmP0Stack stack; const: @(LmP0StreamEvent event)) int
     size_t: top_level
     @: LmP0Structure parent
     @: LmP0Field previous_last
@@ -666,7 +666,7 @@ fn: p0_stream_apply_mix_event (@: LmP0Document document; @: LmP0Stack stack; con
     return: 1
 end: p0_stream_apply_mix_event
 
-fn: p0_stream_apply_event (@: LmP0Document document; @: LmP0Stack stack; @: LmP0PendingDelimiter pending; const: @(LmP0StreamEvent event)) int
+fn: p0_stream_apply_event (@: c.LmP0Document document; @: LmP0Stack stack; @: LmP0PendingDelimiter pending; const: @(LmP0StreamEvent event)) int
     if: (event\kind = c.LM_P0_STREAM_EVENT_DELIM)
         if: (p0_stream_resolve_pending_delimiter(document, stack, pending, event\level) = 0)
             return: 0
@@ -683,7 +683,7 @@ fn: p0_stream_apply_event (@: LmP0Document document; @: LmP0Stack stack; @: LmP0
     return: p0_stream_apply_item_event(document, stack, event)
 end: p0_stream_apply_event
 
-fn: p0_pending_mix_flush (@: LmP0Document document; @: LmP0Stack stack; @: LmP0PendingDelimiter pending_delimiter; @: LmP0PendingMix pending_mix; size_t: level) int
+fn: p0_pending_mix_flush (@: c.LmP0Document document; @: LmP0Stack stack; @: LmP0PendingDelimiter pending_delimiter; @: LmP0PendingMix pending_mix; size_t: level) int
     size_t: i
     if: ((pending_mix = 0) || (pending_mix\count = 0U))
         return: 1

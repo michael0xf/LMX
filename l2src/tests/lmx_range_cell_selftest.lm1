@@ -1,0 +1,123 @@
+predef: "l2src/lmx_thread.h.lm1"
+predef: "l2src/lmx_implements.h.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# Exact-cell address-range regression.
+#
+# A pool registers each whole chunk at allocation time, but only [0,count) contains
+# live language values.  Public kind/type/stride/pool/home queries must therefore
+# accept an exact live cell start and reject both an interior field address and an
+# aligned cell in unused capacity.  The allocator has a separate interval query so
+# it can recognise and reuse a freshly registered empty chunk.
+
+int: checks 0
+int: failures 0
+
+sub: check (int: ok; const: @(char label))
+    checks: checks + 1
+    if: ok = 0
+        failures: failures + 1
+        c.printf("FAIL: %s\n", label)
+    ---
+end: check
+
+sub: check_absent (@: LmxArena arena; @: void p; const: @(char label))
+    check(lmx_range_classify(arena, p) = c.LMX_KIND_NONE, label)
+    check(lmx_range_type_of(arena, p) = c.LMX_TYPE_NONE, label)
+    check(lmx_range_stride(arena, p) = 0U, label)
+    check(lmx_range_pool(arena, p) = 0, label)
+    check(lmx_range_home(arena, p) = 0, label)
+end: check_absent
+
+sub: check_thread (@: LmxArena arena; @: LmxPool pool; @: void p; const: @(char label))
+    check(lmx_range_classify(arena, p) = c.LMX_DOMAIN_KIND_MSG_RECORD, label)
+    check(lmx_range_type_of(arena, p) = c.LMX_DOMAIN_THREAD, label)
+    check(lmx_range_stride(arena, p) = c.sizeof(c.LmxThread), label)
+    check(lmx_range_pool(arena, p) = pool, label)
+    check(lmx_range_home(arena, p) = arena, label)
+end: check_thread
+
+fn: main () int
+    LmxArena: arena
+    @: LmxArena arena_at
+    @: LmxPool pool
+    @: LmxChunk first_chunk
+    @: LmxChunk second_chunk
+    @: LmxThread first
+    @: LmxThread second
+    @: LmxThread third
+    @: LmxThread fourth
+    @: void first_spare
+    @: void second_spare
+    @: void interior
+
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    arena_at: @ arena
+    pool: (cast: (@: LmxPool) calloc(1U, c.sizeof(c.LmxPool)))
+    if: pool = 0 || lmx_arena_open(arena_at) != 0
+        c.printf("lmx_range_cell: setup\n")
+        return: 2
+    ---
+    if: lmx_pool_open(arena_at, pool, c.sizeof(c.LmxThread), 2U, c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD) != 0
+        c.printf("lmx_range_cell: pool open\n")
+        return: 2
+    ---
+
+    first_chunk: pool\head
+    check(first_chunk != 0 && first_chunk = pool\tail && lmx_chunk_cells(first_chunk, pool\stride) = 0U, "open creates one empty chunk")
+    check(lmx_arena_index_len(arena_at) = 1U, "empty chunk has one registered interval")
+    check(lmx_range_interval_pool(arena_at, (cast: (@: void) lmx_chunk_data(first_chunk))) = pool, "allocator finds an empty registered interval")
+    check_absent(arena_at, (cast: (@: void) lmx_chunk_data(first_chunk)), "empty chunk base is not a live cell")
+
+    first: (cast: (@: LmxThread) lmx_pool_take(arena_at, pool))
+    check(first != 0, "first take succeeds")
+    check(pool\head = first_chunk && pool\tail = first_chunk && first_chunk\next = 0, "first take reuses the empty registered chunk")
+    check(lmx_arena_index_len(arena_at) = 1U, "first take does not allocate another interval")
+    check_thread(arena_at, pool, (cast: (@: void) first), "first live Thread cell is accepted")
+
+    # `state` is inside the Thread record, not a second Thread cell.  This is the
+    # regression for an address such as &Thread.field accidentally inheriting the
+    # containing Thread's type.
+    interior: (cast: (@: void) (@ first\state))
+    check(interior != (cast: (@: void) first), "chosen Thread field is interior")
+    check_absent(arena_at, interior, "Thread field address is not a Thread cell")
+
+    first_spare: (cast: (@: void) ((cast: (@: char) (cast: (@: void) lmx_chunk_data(first_chunk))) + pool\stride))
+    check(lmx_range_interval_pool(arena_at, first_spare) = pool, "allocator sees aligned spare capacity")
+    check_absent(arena_at, first_spare, "aligned spare capacity is not a live cell")
+
+    second: (cast: (@: LmxThread) lmx_pool_take(arena_at, pool))
+    check((cast: (@: void) second) = first_spare, "second take activates the aligned spare cell")
+    check_thread(arena_at, pool, (cast: (@: void) second), "second live Thread cell is accepted")
+
+    third: (cast: (@: LmxThread) lmx_pool_take(arena_at, pool))
+    second_chunk: pool\tail
+    check(third != 0 && second_chunk != 0 && second_chunk != first_chunk, "third take adds a second chunk")
+    check(first_chunk\next = second_chunk && second_chunk\next = 0, "chunks form one array chain")
+    check(lmx_arena_index_len(arena_at) = 2U, "both chunk intervals are indexed independently")
+    check_thread(arena_at, pool, (cast: (@: void) first), "first chunk remains accepted after growth")
+    check_thread(arena_at, pool, (cast: (@: void) third), "second chunk live cell is accepted")
+
+    second_spare: (cast: (@: void) ((cast: (@: char) (cast: (@: void) lmx_chunk_data(second_chunk))) + pool\stride))
+    check(lmx_range_interval_pool(arena_at, second_spare) = pool, "allocator sees spare capacity in the second interval")
+    check_absent(arena_at, second_spare, "second interval spare is not confused with cumulative array count")
+    fourth: (cast: (@: LmxThread) lmx_pool_take(arena_at, pool))
+    check((cast: (@: void) fourth) = second_spare, "fourth take activates second chunk spare")
+    check_thread(arena_at, pool, (cast: (@: void) fourth), "activated second chunk spare is accepted")
+
+    check(lmx_pool_release(arena_at, pool) = 0, "pool release succeeds")
+    check(lmx_arena_index_len(arena_at) = 0U, "pool release retires both intervals")
+    check_absent(arena_at, (cast: (@: void) first), "retired first interval answers nothing")
+    check_absent(arena_at, (cast: (@: void) third), "retired second interval answers nothing")
+    check(lmx_arena_release(arena_at) = 0, "arena release succeeds")
+    free((cast: (@: void) pool))
+
+    if: failures != 0
+        c.printf("lmx_range_cell: %d failed of %d\n", failures, checks)
+        return: 1
+    ---
+    c.printf("lmx_range_cell: %d checks\n", checks)
+return: 0

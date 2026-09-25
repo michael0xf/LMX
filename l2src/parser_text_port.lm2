@@ -10,7 +10,7 @@ include: "<string.h>"
 # real port, named p0_* per the ticket (never lm_p0_, the translator's
 # reserved adapter family), and never calls lm_p0_* either.
 
-fn: p0_text_equals (const: @(LmP0Text text); const: @(char value)) int
+fn: p0_text_equals (const: @(c.LmP0Text text); const: @(char value)) int
     size_t: value_length
     if: text = 0 || value = 0
         return: 0
@@ -18,7 +18,7 @@ fn: p0_text_equals (const: @(LmP0Text text); const: @(char value)) int
     return: text\length = value_length && c.memcmp(text\data, value, value_length) = 0
 end: p0_text_equals
 
-fn: p0_identifier_payload (const: @(LmP0Text atom); @: LmP0Text out_payload) int
+fn: p0_identifier_payload (const: @(c.LmP0Text atom); @: c.LmP0Text out_payload) int
     if: atom = 0 || out_payload = 0 || atom\data = 0
         return: 0
     out_payload\data: atom\data
@@ -83,8 +83,8 @@ fn: p0_copy_bytes (const: @(char source); size_t: length) @: char
     return: lm_own_copy_bytes(source, length)
 end: p0_copy_bytes
 
-fn: p0_text_view_new_cstr (const: @(char text)) @: LmP0Text
-    @: LmP0Text result
+fn: p0_text_view_new_cstr (const: @(char text)) @: c.LmP0Text
+    @: c.LmP0Text result
     result: lm_own_new_zero(1U * c.sizeof(c.LmP0Text))
     if: result = 0
         return: 0
@@ -96,10 +96,10 @@ fn: p0_text_view_new_cstr (const: @(char text)) @: LmP0Text
     return: result
 end: p0_text_view_new_cstr
 
-sub: p0_text_view_delete (@: LmP0Text text)
+sub: p0_text_view_delete (@: c.LmP0Text text)
     lm_own_delete(text, 0)
 end: p0_text_view_delete
 
-fn: p0_text_from_cstr (const: @(char text)) @: LmP0Text
+fn: p0_text_from_cstr (const: @(char text)) @: c.LmP0Text
     return: p0_text_view_new_cstr(text)
 end: p0_text_from_cstr

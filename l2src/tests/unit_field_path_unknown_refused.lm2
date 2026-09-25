@@ -1,0 +1,16 @@
+Model:
+    size_t: value 1U
+end: Model
+
+# FABLE-SONNET-FIELD-PATHS-20260923-113 Part A negative: an own-field root
+# resolves, but the field it names does not exist on Model -- the same
+# l2_ns_slot_named-driven "unknown field path segment" diagnostic a
+# namespace-rooted path already gives, not a new message.
+fn: build () int
+    Model: fresh
+    fresh\nope: 99U
+    return: 0
+end: build
+
+sendMessage: exit(exit_code: build(); stdout: ""; stderr: "")
+return

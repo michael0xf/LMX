@@ -11,7 +11,7 @@ predef: "l2src/parser_alloc_port_l2.h.lm1"
 # correct per e2, 2026-09-14, for a not-yet-ported oracle dependency
 # (the Stage A shape for an L1-implemented LMX name, same as lm_own_
 # arena_new_zero). document\tree_arena field access was refused
-# entirely until d6's Stage B step 3 (f7390ded/fb7ab80c, LmP0Document
+# entirely until d6's Stage B step 3 (f7390ded/fb7ab80c, c.LmP0Document
 # a foreign pointer type like LmP0Frame).
 #
 fn: p0_node_kind_class_name (LmP0NodeKind: kind) const: @: char
@@ -35,7 +35,7 @@ sub: p0_free_node (@: LmP0Node nd)
     c.LM_UNUSED(nd)
 end: p0_free_node
 
-fn: p0_new_structure (@: LmP0Document document; size_t: line; size_t: column) @: LmP0Structure
+fn: p0_new_structure (@: c.LmP0Document document; size_t: line; size_t: column) @: LmP0Structure
     @: LmP0Structure structure
     structure: (cast: (@: LmP0Structure) lm_own_arena_new_zero(document\tree_arena, c.sizeof(structure[0])))
     if: (structure = 0)
@@ -44,7 +44,7 @@ fn: p0_new_structure (@: LmP0Document document; size_t: line; size_t: column) @:
     return: structure
 end: p0_new_structure
 
-fn: p0_new_frame (@: LmP0Document document; size_t: line; size_t: column) @: LmP0Frame
+fn: p0_new_frame (@: c.LmP0Document document; size_t: line; size_t: column) @: LmP0Frame
     @: LmP0Frame frame
     frame: (cast: (@: LmP0Frame) lm_own_arena_new_zero(document\tree_arena, c.sizeof(frame[0])))
     if: (frame = 0)
@@ -59,7 +59,7 @@ fn: p0_new_frame (@: LmP0Document document; size_t: line; size_t: column) @: LmP
     return: frame
 end: p0_new_frame
 
-fn: p0_new_node (@: LmP0Document document; LmP0NodeKind: kind) @: LmP0Node
+fn: p0_new_node (@: c.LmP0Document document; LmP0NodeKind: kind) @: LmP0Node
     @: LmP0Node nd
     nd: (cast: (@: LmP0Node) lm_own_arena_new_zero(document\tree_arena, c.sizeof(nd[0])))
     if: (nd = 0)

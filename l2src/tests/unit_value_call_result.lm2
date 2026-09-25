@@ -1,0 +1,27 @@
+# A method named where a value is consumed gives its result (plan §3 native gate (в)): it runs
+# with no arguments, on the call path of `m()`.  (m's occurrence reference used to arrive as the
+# int.)  A declaration, an assignment, an operand, a condition and an argument each run m once:
+# a 7, b 80, c 7, hits 4.  Behind `&&` it runs only when the left side holds: the false test
+# `a = 0` leaves hits at 4.  7000 + 800 + 7 + 4 = 7811.
+int: hits 0
+
+fn: m () int
+    hits: hits + 1
+    return: 7
+end: m
+
+fn: g (int: x) int
+    return: x
+end: g
+
+int: a m
+int: b 0
+b: m + 1
+if: m = 7
+    b: b * 10
+int: c 0
+c: g(m)
+if: a = 0 && m = 7
+    b: 0
+sendMessage: exit(exit_code: a * 1000 + b * 10 + c + hits; stdout: ""; stderr: "")
+return

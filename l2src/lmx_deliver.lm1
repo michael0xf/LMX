@@ -7,11 +7,6 @@ predef: "l2src/lmx_implements.h.lm1"
 fn: lmx_deliver_child_on_path (@: LmxThread postman; @: LmxThread destination) @: LmxThread
     @: LmxThread child
     @: LmxThread walk
-    @: LmxMsg postman_message
-    @: LmxMsg child_message
-    @: Lmx graph
-    size_t: i
-    size_t: n
     if: postman = 0 || destination = 0 || destination = postman
         return: 0
     child: destination
@@ -23,25 +18,11 @@ fn: lmx_deliver_child_on_path (@: LmxThread postman; @: LmxThread destination) @
     if: walk != postman || child = 0
         return: 0
     ---
-    # Publication is the graph slot: a parent link alone is not enough.
-    postman_message: lmx_thread_message(postman)
-    child_message: lmx_thread_message(child)
-    if: postman_message = 0 || child_message = 0
+    # Publication and membership are the same physical Array entry. A parent link alone is not
+    # enough; the direct child on the path must still be in postman's sole graph Array.
+    if: lmx_thread_child_is(postman, child) = 0
         return: 0
-    ---
-    graph: postman_message\graph
-    if: graph = 0
-        return: 0
-    ---
-    n: (cast: (size_t) graph\len)
-    i: 0U
-    while: i < n
-        if: lmx_arena_ref_value(graph, i) = (cast: (@: void) child_message)
-            return: child
-        ---
-        i: i + 1U
-    ---
-return: 0
+return: child
 
 fn: lmx_deliver_step (@: LmxThread postman; @: LmxThread destination) int
     if: postman = 0 || destination = 0

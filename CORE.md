@@ -42,9 +42,10 @@ facts. `myxa_manager` is an application above the kernel, not a reason to put
 application-specific state in the kernel's universal records.
 
 The project has two similarly named source trees. `dev/l2src_sandbox/` is the
-active development implementation and fixture corpus. Root `l2src/` is a
-separate, relatively frozen twin and must not be assumed to contain a recent
-development fix. When the development sandbox exists,
+active development implementation and fixture corpus. Root `l2src/` is a copy
+of it kept in the old place: nothing is built or tested there, and it may lag
+the sandbox between refreshes (author, 2026-09-26; the former frozen twin is
+the tag `l2src-twin-20260926`). When the development sandbox exists,
 [`tools/build_l2src.ps1`](tools/build_l2src.ps1) and
 [`tools/l2_harness.ps1`](tools/l2_harness.ps1) stage that live tree for their
 builds. Verify which tree a reported result actually exercised.
@@ -502,8 +503,7 @@ heads/types/calls, checks the body, then emits L1. Relevant semantic sites
 include `l2_parse_unit`, `l2_check_primary`, `l2_check_body`,
 `l2_head_is_call`, `l2_actual_count`, `l2_admit_implements`,
 `l2_admit_consumer_uses`, `l2_emit_body`, and `l2_emit_unit`. Surface-form
-normalization (`l2_colon_*`) belongs to the live development translator;
-the stable twin does not necessarily contain it. A method-call correction
+normalization (`l2_colon_*`) belongs to the live development translator. A method-call correction
 must reach argument count, check/admission, and emission through one common
 argument sequence, not one more form-specific branch. A general
 expression-statement result can use a typed discard destination (`l2_tN`).

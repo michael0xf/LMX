@@ -1,0 +1,15 @@
+# D-22 (steps/defects.md): L2 spec 18.2 gives `@array[i]` address arithmetic
+# a meaning ("follow the C machine contract"), but l2trans has no
+# expression-type inference to keep a pointer result from silently reaching
+# a numeric target (this exact shape, ex-address_array_element_sum.lm2,
+# used to compile and return a pointer value as `int` with only a gcc
+# warning -Wint-conversion to show it). Refused outright until that type
+# tracking exists; `@ buf[i]` alone (D-21) is unaffected.
+fn: sum_address () int
+    []: int buf 3
+    buf[0]: 1
+    buf[1]: 2
+    buf[2]: 3
+    return: @ buf[0] + buf[1] + buf[2]
+end: sum_address
+return: 0

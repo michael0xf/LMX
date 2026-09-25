@@ -1,0 +1,17 @@
+# `* / %` at the walked root (FABLE-OPUS-ROOT-PUTOF-MUL-20260925-183 commit 2).  2 + 3 * 4 is 14
+# (bit 1); a size_t %: 17U % 5U is 2U (bit 2); an int / with a negative operand: -7 / 2 is -3, as C
+# (bit 4); a % after a *: 3 * 5 % 4 is 3, left to right (bit 8).  All: 15.
+int: r 0
+int: n 0
+n: 0 - 7
+size_t: s 17U
+if: 2 + 3 * 4 = 14
+    r: r + 1
+if: s % 5U = 2U
+    r: r + 2
+if: n / 2 = 0 - 3
+    r: r + 4
+if: 3 * 5 % 4 = 3
+    r: r + 8
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

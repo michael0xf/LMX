@@ -1,0 +1,11 @@
+# D-50 (steps/defects.md; FABLE-OPUS-ROOT-TYPED-20260925-175): a negative int compared at the walked
+# root.  -1 < 0 holds, so r is 1: Entry 1.  Since -167 commit 2 the walker's LT compares its operands
+# as unsigned after loading them at the working width, so an int -1 is a huge value and this row
+# exits 0.  NO HARNESS ROW YET: Grok registers it (eternal-runs, Entry 1) with the walker's fix.
+int: x 0
+x: 0 - 1
+int: r 0
+if: x < 0
+    r: 1
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

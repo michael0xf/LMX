@@ -52,7 +52,10 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 #      LMX_ROOT_OK и опрос видит 0.
 #   3) КОЛЬЦО ПРЕКРАТИЛОСЬ -- и то же окно теперь меряет тишину: опрос видит 1, цикл -- DONE.
 
+@: Lmx rs_node 0
+
 fn: rs_entry (@: Lmx node) int
+    rs_node: node
 return: 0
 
 sub: rs_check (@: int counts; int: ok; const: @(char label))
@@ -70,8 +73,11 @@ fn: main () int
     LmxRoot: root
     @: LmxRoot root_handle 0
     @: LmxMsg root_message 0
+    @: LmxSchedule slot 0
     ulong: base 0U
+    ulong: start 0U
     ulong: now 0U
+    ulong: elapsed 0U
     size_t: i 0U
     size_t: world_cell 0U
     int: code
@@ -83,15 +89,44 @@ fn: main () int
     base: lmx_clock_ticks()
 
     # --- 1. WITHOUT THE STUB'S RING: the root's own wait is a death timer -------------------
-    rs_check(counts, lmx_root_open(@ root, rs_entry, 100U, 0U, 0U) = c.LMX_ROOT_OK, "R0 did not open")
-    rs_check(counts, lmx_root_cycle_at(@ root, 1U, base + 50U) = c.LMX_ROOT_OK, "a cycle inside the window refused")
-    rs_check(counts, lmx_root_hung(@ root, base + 50U) = 0, "a fresh root reads hung")
-    rs_check(counts, lmx_root_cycle_at(@ root, 1U, base + 101U) = c.LMX_ROOT_DONE, "the root outlived its own window with no ring")
+    # Anchor this scene to the wait open actually started (root\now / slot\started), never the
+    # pre-open wall sample `base`.  lmx_clock_ticks is GetTickCount64 and steps ~15.6 ms; a
+    # step between `base` and lmx_root_open's own sample (lmx_root.lm1:215) would put
+    # `base + 101` only ~85 into a window of 100, so cycle_at would correctly return OK while
+    # this scene wants DONE.  Explicit time, no sleep: the supplied `now` is start+N.
+    # Decisive cycle returns are captured before the assertion, and the line prints start,
+    # supplied now, elapsed, expected and actual so a PASS and a FAIL cannot be byte-identical.
+    rs_check(counts, lmx_root_open(@ root, rs_entry, 100U) = c.LMX_ROOT_OK, "R0 did not open")
+    root_handle: @ root
+    slot: root_handle\slot
+    root_message: lmx_thread_message(root_handle\parent)
+    start: lmx_root_clock(@ root)
+    rs_check(counts, slot != 0 && slot\started = start, "open's clock is not the wait's start")
+    now: start + 50U
+    elapsed: now - start
+    code: lmx_root_cycle_at(@ root, 1U, now)
+    c.printf("RS SCENE1 start=%u slot_started=%u now=%u elapsed=%u expected=%d actual=%d\n",
+             (cast: (unsigned) start), (cast: (unsigned) slot\started), (cast: (unsigned) now),
+             (cast: (unsigned) elapsed), c.LMX_ROOT_OK, code)
+    c.fflush(0)
+    rs_check(counts, code = c.LMX_ROOT_OK, "a cycle inside the window refused")
+    # The stub is R0's supervising parent Message, not a lexical space: R0's graph is independent
+    # (parent = 0, author 2026-09-22), so R0's entry receives node 0, never the stub's graph.
+    rs_check(counts, root_message != 0 && rs_node = 0 && lmx_root_message(@ root) != 0 && lmx_root_message(@ root)\graph\parent = 0, "R0 entry did not receive node 0 for its independent graph")
+    rs_check(counts, lmx_root_hung(@ root, now) = 0, "a fresh root reads hung")
+    now: start + 101U
+    elapsed: now - start
+    code: lmx_root_cycle_at(@ root, 1U, now)
+    c.printf("RS SCENE1 start=%u slot_started=%u now=%u elapsed=%u expected=%d actual=%d\n",
+             (cast: (unsigned) start), (cast: (unsigned) slot\started), (cast: (unsigned) now),
+             (cast: (unsigned) elapsed), c.LMX_ROOT_DONE, code)
+    c.fflush(0)
+    rs_check(counts, code = c.LMX_ROOT_DONE, "the root outlived its own window with no ring")
     rs_check(counts, lmx_root_close(@ root) = c.LMX_ROOT_OK, "R0 did not close")
 
     # --- 2. THE STUB RINGS EVERY CYCLE: the same window, but the root is never silent ------
     memset((cast: (@: void) (@ root)), 0, c.sizeof(c.LmxRoot))
-    rs_check(counts, lmx_root_open(@ root, rs_entry, 100U, 0U, 0U) = c.LMX_ROOT_OK, "the second R0 did not open")
+    rs_check(counts, lmx_root_open(@ root, rs_entry, 100U) = c.LMX_ROOT_OK, "the second R0 did not open")
     i: 0U
     while: i < 10U
         now: base + (cast: (ulong) i) * 60U
@@ -117,7 +152,7 @@ fn: main () int
     # stopped writing ends the root -- and the end is the sanctioned stop (running = 0), not a
     # kill: the next turn's entrance refuses it.
     memset((cast: (@: void) (@ root)), 0, c.sizeof(c.LmxRoot))
-    rs_check(counts, lmx_root_open(@ root, rs_entry, 100U, 0U, 0U) = c.LMX_ROOT_OK, "the third R0 did not open")
+    rs_check(counts, lmx_root_open(@ root, rs_entry, 100U) = c.LMX_ROOT_OK, "the third R0 did not open")
     rs_check(counts, lmx_root_supervise_world(@ root, 0) = c.LMX_ROOT_INVALID, "a null world was accepted")
     world_cell: 0U
     rs_check(counts, lmx_root_supervise_world(@ root, @ world_cell) = c.LMX_ROOT_INVALID, "a world that never wrote its cell was accepted")
@@ -128,11 +163,9 @@ fn: main () int
     rs_check(counts, lmx_root_hung(@ root, base + 650U) = 0, "the root reads hung while the world is fresh")
     rs_check(counts, lmx_root_keepalive(@ root, base + 750U) = c.LMX_ROOT_OK, "the ring was refused before the silent-world cycle")
     rs_check(counts, lmx_root_cycle_at(@ root, 1U, base + 751U) = c.LMX_ROOT_DONE, "the root outlived a silent world")
-    # THROUGH A POINTER, never through the by-value handle: the translator emits every `\` step as
-    # `->`, so `root\message` on a by-value local does not compile at all (the quirk
-    # lmx_root_open documents -- that is why the kernel keeps `arena: @ root\arena`).
+    # R0's executable Message is the exact physical prefix of its ordinary Thread.
     root_handle: @ root
-    root_message: root_handle\message
+    root_message: lmx_thread_message(root_handle\thread)
     rs_check(counts, root_message != 0 && root_message\running = 0, "a silent world did not stop the root (the sanctioned stop)")
     rs_check(counts, lmx_root_close(@ root) = c.LMX_ROOT_OK, "the third R0 did not close")
 

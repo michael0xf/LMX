@@ -1,0 +1,13 @@
+# A bare `return` at the opening level closes a sub (P0, author 2026-09-24): the body of s ends
+# there, and each call runs it: 3 + 3 = 6.  (The bare return used to stay an item of the unit,
+# which the translator refused as "unsupported body".)
+int: y 0
+
+sub: s ()
+    y: y + 3
+return
+
+s()
+s
+sendMessage: exit(exit_code: y; stdout: ""; stderr: "")
+return

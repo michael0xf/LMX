@@ -1,0 +1,70 @@
+Model:
+    int: value 1
+    (): inner
+        int: deep 2
+    end: inner
+end: Model
+
+# FABLE-SONNET-DEFECTS-20260924-141 D-15: int fields go through the same
+# field-kind table as size_t (l2_take_ns_body, kind 7) -- an own
+# declaration, a nested path, a formal parameter and a merge copy all
+# read/write it through the ordinary machinery, no special branch.
+# FABLE-OPUS-DISCARD-20260924-147: until the graph builder gave kind 7 its
+# cell, the first write below met an empty slot and a silent bail returned
+# 0 from E, which passed; success is now 7 and the literals are checked.
+# D-28 (steps/defects.md): bump's formal is TYPED as Model, not the
+# generic L1-style `@(Lmx Model)` this fixture used before -- that
+# spelling only ever silently reached the eternal unit-level Model
+# (the same bug D-28 fixed elsewhere), so this "formal" axis was never
+# really testing a formal at all until now.
+fn: bump (Model: Model) int
+    Model\value: 99
+    int: got
+    got: Model\value
+    return: got
+end: bump
+
+fn: make () int
+    Model: fresh
+    return: bump(fresh)
+end: make
+
+Model: fresh
+int: ov
+int: od
+fresh\value: 42
+fresh\inner\deep: 55
+ov: fresh\value
+od: fresh\inner\deep
+if: ov != 42
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+if: od != 55
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+
+copy: merge: Model
+copy\value: 7
+int: ev
+int: cv
+int: ed
+ev: Model\value
+cv: copy\value
+ed: Model\inner\deep
+if: ev != 1
+    sendMessage: exit(exit_code: 83; stdout: ""; stderr: "")
+    return
+if: cv != 7
+    sendMessage: exit(exit_code: 84; stdout: ""; stderr: "")
+    return
+if: ed != 2
+    sendMessage: exit(exit_code: 85; stdout: ""; stderr: "")
+    return
+
+int: fv
+fv: make()
+if: fv != 99
+    sendMessage: exit(exit_code: 90; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

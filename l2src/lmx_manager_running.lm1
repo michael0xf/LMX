@@ -51,18 +51,17 @@ fn: lmx_manager_running_body (@: void arg) DWORD
         lmx_schedule_tick(slot, lane_now)
         c.Sleep(1U)
     ---
-    # The lane ends when its object does, and the last act is the object's own: a successful
-    # incarnation returns its arena (lmx_thread.lm1, lmx_thread_finish).  Nothing of `t` is
-    # touched after it.
+    # The lane ends when its object reaches its safe boundary.  The parent later removes the
+    # physical Thread reference from its sole graph Array and only then releases or attaches the
+    # child's arena.  This lane touches `t` only to publish the final boundary.
     lmx_thread_finish(t)
 return: 0U
 
 fn: lmx_manager_running_init (@: LmxManager m) int
     if: m = 0
         return: c.LMX_MANAGER_INVALID
-    m\head: 0
-    m\tail: 0
-    m\count: 0U
+    m\owner: 0
+    m\cursor: 0U
     m\api.init: lmx_manager_running_init
     m\api.add: lmx_manager_running_add
     m\api.remove: lmx_manager_running_remove
@@ -72,73 +71,36 @@ fn: lmx_manager_running_init (@: LmxManager m) int
     m\api.round: lmx_manager_running_round
 return: c.LMX_MANAGER_OK
 
-# The same admission rules as the stepped binding: a record joins once (its `next` is
-# the queue link), and its owner must be an executable object by the index of the RECORD'S OWN BAND
-# -- the domain question, asked of the address rather than assumed from the caller.
+# The same admission rules as the stepped binding: membership already exists once in the owner's
+# graph Array, and the schedule's owner must be an executable object by the address-range index of
+# the RECORD'S OWN BAND -- the domain question is asked of the address, not assumed from the caller.
 fn: lmx_manager_running_add (@: LmxManager m; @: LmxSchedule slot) int
-    if: m = 0 || slot = 0 || slot\next != 0
+    @: LmxThread child
+    @: LmxThread parent
+    if: m = 0 || slot = 0 || slot\owner = 0
         return: c.LMX_MANAGER_INVALID
-    if: lmx_domain_kind(slot\arena, slot\owner) != c.LMX_DOMAIN_KIND_THREAD
+    if: lmx_domain_type(slot\arena, slot\owner) != c.LMX_DOMAIN_THREAD
         return: c.LMX_MANAGER_INVALID
     ---
-    if: m\tail = 0
-        m\head: slot
-    else:
-        m\tail\next: slot
-    m\tail: slot
-    m\count: m\count + 1U
+    child: (cast: (@: LmxThread) slot\owner)
+    parent: lmx_thread_parent(child)
+    if: parent = 0 || lmx_manager_bind(m, parent) != c.LMX_MANAGER_OK
+        return: c.LMX_MANAGER_INVALID
+    if: lmx_thread_child_is(parent, child) = 0
+        return: c.LMX_MANAGER_INVALID
 return: c.LMX_MANAGER_OK
 
 fn: lmx_manager_running_take (@: LmxManager m) @: LmxSchedule
-    @: LmxSchedule slot
-    if: m = 0 || m\head = 0
-        return: 0
-    slot: m\head
-    m\head: slot\next
-    if: m\head = 0
-        m\tail: 0
-    slot\next: 0
-    m\count: m\count - 1U
-return: slot
+return: lmx_manager_take(m)
 
-# The same walk as the stepped binding's removal -- one queue, one set of rules -- and the lane is
+# The same validation as the stepped binding's removal -- one Array, one set of rules -- and the lane is
 # left alone on purpose: a record leaves because its object is gone, and a lane of a gone object
 # ends by itself (the close of this unit joins the lanes that are still there).
 fn: lmx_manager_running_remove (@: LmxManager m; @: LmxSchedule slot) int
-    @: LmxSchedule walk
-    @: LmxSchedule before
-    if: m = 0 || slot = 0
-        return: c.LMX_MANAGER_INVALID
-    if: m\head = slot
-        m\head: slot\next
-        if: m\head = 0
-            m\tail: 0
-        ---
-        slot\next: 0
-        m\count: m\count - 1U
-        return: c.LMX_MANAGER_OK
-    ---
-    before: m\head
-    walk: m\head
-    while: walk != 0
-        if: walk = slot
-            before\next: slot\next
-            if: m\tail = slot
-                m\tail: before
-            ---
-            slot\next: 0
-            m\count: m\count - 1U
-            return: c.LMX_MANAGER_OK
-        ---
-        before: walk
-        walk: walk\next
-    ---
-return: c.LMX_MANAGER_INVALID
+return: lmx_manager_remove(m, slot)
 
 fn: lmx_manager_running_count (@: LmxManager m) size_t
-    if: m = 0
-        return: 0U
-return: m\count
+return: lmx_manager_count(m)
 
 # A record that has no lane yet gets one, if its letter is still running.  A record
 # whose letter has stopped keeps no lane: there is nothing left to run.
@@ -169,15 +131,23 @@ return: c.LMX_MANAGER_OK
 
 fn: lmx_manager_running_step (@: LmxManager m; ulong: now) int
     @: LmxSchedule slot
+    @: LmxThread child
+    size_t: index
     if: m = 0
         return: c.LMX_MANAGER_INVALID
-    slot: m\head
-    while: slot != 0
+    if: m\owner = 0
+        return: c.LMX_MANAGER_OK
+    index: 0U
+    while: index < lmx_thread_child_count(m\owner)
+        child: lmx_thread_child_at(m\owner, index)
+        if: child = 0
+            return: c.LMX_MANAGER_INVALID
+        slot: child\slot
         if: lmx_manager_running_lane_start(slot) != c.LMX_MANAGER_OK
             return: c.LMX_MANAGER_INVALID
         if: lmx_manager_running_lane_reap(slot) != c.LMX_MANAGER_OK
             return: c.LMX_MANAGER_INVALID
-        slot: slot\next
+        index: index + 1U
     ---
 return: c.LMX_MANAGER_OK
 
@@ -197,23 +167,27 @@ fn: lmx_manager_running_round (@: LmxManager m; unsigned: ticks; ulong: now) int
     ---
 return: c.LMX_MANAGER_OK
 
-# Stop the schedule: every lane still running is JOINED, never killed -- a lane ends
-# by its own letter's success or stop, or by its record going overdue, and the join is
-# bounded by that record's own limit.  Then the records are released.
+# Join and release lanes after their owning parent cascade has requested stop and every
+# lane has reached its safe boundary.  This manager does not infer child ownership and
+# does not initiate the Message close cascade.
 fn: lmx_manager_running_close (@: LmxManager m) int
     @: LmxSchedule slot
+    @: LmxThread child
+    size_t: index
     if: m = 0
         return: c.LMX_MANAGER_INVALID
-    slot: m\head
-    while: slot != 0
+    index: 0U
+    while: m\owner != 0 && index < lmx_thread_child_count(m\owner)
+        child: lmx_thread_child_at(m\owner, index)
+        if: child = 0
+            return: c.LMX_MANAGER_INVALID
+        slot: child\slot
         if: slot\lane != 0
             c.WaitForSingleObject(slot\lane, c.INFINITE)
             c.CloseHandle(slot\lane)
             slot\lane: 0
         ---
-        slot: slot\next
+        index: index + 1U
     ---
-    m\head: 0
-    m\tail: 0
-    m\count: 0U
+    m\cursor: 0U
 return: c.LMX_MANAGER_OK

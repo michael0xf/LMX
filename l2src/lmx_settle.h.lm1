@@ -48,6 +48,14 @@ define: LMX_SETTLE_INVALID 1
 # so this deferral is never forever, and the parent is never retained for good
 # (`RF NO_CLOSING_TURN` / `RF WINDOW_CLOSED`, tests\lmx_app_reroot_forbidden_selftest.lm1).
 define: LMX_SETTLE_DEFERRED 2
+# At least one DIRECT CHILD was CLOSED IN PLACE rather than ENDED: its terminal close ran (its
+# subtree, then its own mailbox) but nothing of it was taken -- record, route and arena stay with
+# their owner -- so the caller must not release its own route, service or arena either.
+define: LMX_SETTLE_CLOSED 3
+# A DIRECT CHILD IS STILL LIVE AND COULD NOT BE CLOSED: it keeps its place in the parent's chain and
+# the level must WAIT for it (its own lane ends it, or the closure's deadline kills the process).
+# Nothing is unlinked and nothing is claimed when this is returned.
+define: LMX_SETTLE_LIVED 4
 
 prototype:
     # Not running AND handoff-safe -- the one predicate the settling side reads.  A child
@@ -66,4 +74,10 @@ prototype:
     # this walk is the only boundary there is (the root is never settled), which is why the rule
     # sits here and in the stop act both.
     fn: lmx_settle_children (@: LmxThread t; @: LmxArena parent_arena; @: LmxService service; @: LmxManager manager; ulong: now) int
+    # The close's own one level: asks each direct child to stop, and CLAIMS the quiescent ones --
+    # running the child's own terminal close for it rather than waiting out its window.  Returns
+    # LMX_SETTLE_CLOSED when any child had to be closed that way.  Service and manager are UNTYPED
+    # here on purpose: this header is predef'd by the thread unit, which cannot name their types
+    # without a cycle.
+    fn: lmx_settle_close_one_level (@: LmxThread t; @: LmxArena arena; @: void service; @: void manager; size_t: deadline) int
 end: prototype

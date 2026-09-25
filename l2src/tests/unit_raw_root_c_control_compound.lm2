@@ -1,0 +1,18 @@
+include: "l1src/p0.lm1.h" "<stdlib.h>"
+
+# Control: c.*-typed root in a compound expression stays raw.
+fn: probe () int
+    @: c.LmP0Text t
+    t: (cast: (@: LmP0Text) c.calloc(1U, c.sizeof(c.LmP0Text)))
+    if: t = 0
+        return: 1
+    t\length: 3U
+    if: t\length != 3U
+        c.free(t)
+        return: 2
+    c.free(t)
+    return: 0
+end: probe
+
+sendMessage: exit(exit_code: probe(); stdout: ""; stderr: "")
+return

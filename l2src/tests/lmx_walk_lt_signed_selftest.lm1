@@ -1,0 +1,166 @@
+predef: "l2src/lmx_walk.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_chars.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# D-50 / D-51 / -174 c0: INT-only signed LT; working width size_t (not ulong).
+# Mutants: unsigned int compare -> negative int LT RED; width back to ulong -> size_t 2^32 EQ RED.
+# Char stays unsigned (0..255).
+
+@: LmxArena ga 0
+@: Lmx groles 0
+@: LmxWalkContext gctx 0
+@: LmxWalkValue gv 0
+int: broken 0
+int: checks 0
+int: failures 0
+
+sub: check (int: ok; const: @(char label))
+    checks: checks + 1
+    if: ok = 0
+        failures: failures + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: check
+
+fn: fr (@: Lmx parent; size_t: slot; int: op; size_t: children) @: Lmx
+    @: Lmx n lmx_walk_frame(ga, groles, parent, op, children)
+    if: n = 0 || lmx_arena_ref_store(parent, slot, (cast: (@: void) n)) != 0
+        broken: broken + 1
+        return: 0
+    ---
+return: n
+
+fn: pl (@: Lmx parent; size_t: slot; size_t: children) @: Lmx
+    @: Lmx n lmx_walk_plain(ga, parent, children)
+    if: n = 0 || lmx_arena_ref_store(parent, slot, (cast: (@: void) n)) != 0
+        broken: broken + 1
+        return: 0
+    ---
+return: n
+
+# k.4: a walked callable occurrence is just the ordinary body Structure -- no descriptor;
+# `native` stays 0 by construction. `children` now counts body steps only, so every call
+# site below shrinks by one and its first body-step frame moves from slot 1 to slot 0.
+fn: mk_m (@: Lmx unit; size_t: slot; size_t: children) @: Lmx
+return: pl(unit, slot, children)
+
+fn: go (@: Lmx m) int
+    if: m = 0 || gctx = 0 || gv = 0
+        return: c.LMX_WALK_INVALID
+return: lmx_walk_run(gctx, m, 0, 0U, gv)
+
+fn: main () int
+    LmxArena: arena
+    LmxArena: context_arena
+    LmxPool: context_cells
+    LmxScratch: store
+    LmxWalkContext: context
+    @: Lmx unit 0
+    @: Lmx m 0
+    @: Lmx n 0
+    @: Lmx lt 0
+    @: Lmx eqn 0
+    @: Lmx litn 0
+    ulong: uzero 0U
+    size_t: szero 0U
+    int: st 0
+
+    c.printf("D-51 measure: sizeof(ulong)=%u sizeof(size_t)=%u\n", (cast: (unsigned) c.sizeof(uzero)), (cast: (unsigned) c.sizeof(szero)))
+
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ arena) != 0
+        return: 2
+    ga: @ arena
+    if: lmx_chars_init(ga) != 0
+        return: 2
+    groles: lmx_walk_roles_open(ga)
+    memset((cast: (@: void) (@ context_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ context_cells)), 0, c.sizeof(c.LmxPool))
+    memset((cast: (@: void) (@ store)), 0, c.sizeof(c.LmxScratch))
+    if: lmx_arena_open(@ context_arena) != 0 || lmx_scratch_open(@ store, @ context_arena, @ context_cells, 16U) != c.LMX_SCRATCH_OK
+        return: 2
+    context.arena: ga
+    context.scratch: @ store
+    context.roles: groles
+    context.immutable_profile: 0
+    context.classified: 0U
+    gctx: @ context
+    gv: (cast: (@: LmxWalkValue) calloc(1U, c.sizeof(c.LmxWalkValue)))
+    unit: lmx_node_new_owned(ga)
+    if: unit = 0 || lmx_arena_refs_open_owned(ga, unit, 4U) != 0
+        return: 2
+    ---
+
+    # ret (lt (lit -1) (lit 0)) -> 1
+    m: mk_m(unit, 0U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
+    lt: fr(n, 1U, c.LMX_WALK_OP_LT, 3U)
+    litn: fr(lt, 1U, c.LMX_WALK_OP_LIT, 2U)
+    if: litn != 0 && lmx_walk_store_int(ga, litn, 1U, 0 - 1) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+    litn: fr(lt, 2U, c.LMX_WALK_OP_LIT, 2U)
+    if: litn != 0 && lmx_walk_store_int(ga, litn, 1U, 0) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\present != 0 && gv\number = 1)), "int -1 < 0")
+
+    # char 200 > char 100: lt(100, 200) = 1 (unsigned order correct for char)
+    m: mk_m(unit, 0U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
+    lt: fr(n, 1U, c.LMX_WALK_OP_LT, 3U)
+    litn: fr(lt, 1U, c.LMX_WALK_OP_LIT, 2U)
+    if: litn != 0 && lmx_walk_store_char(ga, litn, 1U, 100) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+    litn: fr(lt, 2U, c.LMX_WALK_OP_LIT, 2U)
+    if: litn != 0 && lmx_walk_store_char(ga, litn, 1U, 200) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\present != 0 && gv\number = 1)), "char 100 < 200 (200 > 100)")
+
+
+    # D-51: size_t 2^32 equals itself (full width); not equal to 0
+    m: mk_m(unit, 0U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
+    eqn: fr(n, 1U, c.LMX_WALK_OP_EQ, 3U)
+    litn: fr(eqn, 1U, c.LMX_WALK_OP_LIT, 2U)
+    if: litn != 0 && lmx_walk_store_size(ga, litn, 1U, (cast: (size_t) 1U) << 32) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+    litn: fr(eqn, 2U, c.LMX_WALK_OP_LIT, 2U)
+    if: litn != 0 && lmx_walk_store_size(ga, litn, 1U, (cast: (size_t) 1U) << 32) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\present != 0 && gv\number = 1)), "size_t 2^32 == 2^32")
+
+    m: mk_m(unit, 0U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
+    eqn: fr(n, 1U, c.LMX_WALK_OP_EQ, 3U)
+    litn: fr(eqn, 1U, c.LMX_WALK_OP_LIT, 2U)
+    if: litn != 0 && lmx_walk_store_size(ga, litn, 1U, (cast: (size_t) 1U) << 32) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+    litn: fr(eqn, 2U, c.LMX_WALK_OP_LIT, 2U)
+    if: litn != 0 && lmx_walk_store_size(ga, litn, 1U, 0U) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\present != 0 && gv\number = 0)), "size_t 2^32 != 0")
+    c.printf("lmx_walk_lt_signed_selftest checks=%d failures=%d broken=%d\n", checks, failures, broken)
+    if: failures != 0 || broken != 0
+        return: 1
+return: 0

@@ -1,7 +1,11 @@
+# S2: the unit is the entry (L2 has no main) -- the unit's fields are E's own fields, the same
+# mechanism a method body uses. FABLE-SONNET-RECEIVE-RENAME-20260924-166 commit 3 (D-48, Q24 = A):
+# a repeated typed declaration of one name is a new occurrence at unit level too, not refused --
+# this fixture used to pin the OLD "duplicate declaration" refusal (S2 rule 4, self-made, not the
+# author's); now it pins plain admission (translates and runs), matching the new rule.
 L2:
     int: value 1
     int: value 2
-    fn: main () int
-        return: 0
-    end: main
+    sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+    return
 end: L2

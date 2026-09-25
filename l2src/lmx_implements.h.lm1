@@ -58,25 +58,61 @@ define: LMX_DOMAIN_RESERVATION 26
 # A mailbox record that lives as a cell of the arena (a child's own mailbox does: its queue nodes
 # are storage of the child's arena).  Appended, like the domains before it.
 define: LMX_DOMAIN_POST 27
-# One live-direct-child link of a parent's chain (lmx_thread.h.lm1, LmxLink).  The node is a cell
-# of the PARENT's arena -- that is the point of it -- so it needs a domain of its own there.
-define: LMX_DOMAIN_LINK 28
+# Retired ABI value. Live-child membership is now the parent's typed graph Array and no record is
+# allocated in this domain. Keep the number unavailable so later domain values do not shift.
+define: LMX_DOMAIN_RESERVED_28 28
 # Reserved domain number of the former arena-backed fixed inbox ring.  The current mailbox uses
 # a private movable dynamic array whose backing address never enters the graph or the range
 # classifier.  The number remains reserved so later domain values do not change ABI.
 define: LMX_DOMAIN_POST_RING 29
+# k.4 (2026-09-25): LmxCallable is gone (Lmx.native replaces the child[0] descriptor);
+# reserved so later domain values do not change ABI.
+define: LMX_DOMAIN_RESERVED_30 30
+define: LMX_DOMAIN_OP 31
+# A cell of a temporary-frame store (lmx_scratch.h.lm1): pointer-sized storage of an
+# execution context, in an arena of its own that is never attached to a Message.  It is a
+# domain of its own for the reason POST_RING is: the arena seats cells of one (kind, type)
+# in one array by stride, and no other array has this one's meaning.
+define: LMX_DOMAIN_SCRATCH 32
+# A role record (lmx_plan.h.lm1): a cell that exists only to BE an address.  A node names
+# its role by pointing at the shared record of that role; the record's content means
+# nothing and is never read.  Pointer-sized, because the arena refuses a zero stride.
+define: LMX_DOMAIN_ROLE 33
+# A primitive record (lmx_primitive.h.lm1): the physical {fn, physical signature, owner} of one
+# admitted primitive -- the insert an interpreted activation needs where only a native entry could
+# reach a service (the mailbox's count/take today).  Its content IS read (the fn is called), which
+# is exactly why it is NOT seated in LMX_DOMAIN_ROLE above: that domain's documented meaning is
+# "content means nothing and is never read", and seating a read record there would be the
+# overload every domain in this file is split to avoid.  Appended, like every domain before it.
+define: LMX_DOMAIN_PRIMITIVE 34
 
 # The same domains as KINDS -- what lmx_range_classify answers -- appended after
-# LmxKind 0..6.
+# LmxKind 0..6.  Classification has ONE number space: no two answers share a value.
+# LmxKind's later LMX_KIND_LIST therefore sits after these (21, lmx.h.lm1); the next free
+# kind value is 22.
 define: LMX_DOMAIN_KIND_MSG_RECORD 7
-define: LMX_DOMAIN_KIND_THREAD 8
+# Numeric kind 8 remains reserved for ABI stability. Executable Threads use the common
+# LMX_DOMAIN_KIND_MSG_RECORD kind and are distinguished by exact LMX_DOMAIN_THREAD type.
+define: LMX_DOMAIN_KIND_RESERVED_8 8
 define: LMX_DOMAIN_KIND_POST_LINK 9
 define: LMX_DOMAIN_KIND_SCHEDULE 10
 define: LMX_DOMAIN_KIND_MANAGER 11
 define: LMX_DOMAIN_KIND_RESERVATION 12
 define: LMX_DOMAIN_KIND_POST 13
-define: LMX_DOMAIN_KIND_LINK 14
+define: LMX_DOMAIN_KIND_RESERVED_14 14
 define: LMX_DOMAIN_KIND_POST_RING 15
+# k.4 (2026-09-25): the LmxCallable descriptor type is gone (Lmx.native replaces the
+# child[0] descriptor entirely); the domain NUMBER stays defined and in use, though,
+# because it is still the answer lmx_range_classify gives an address in this domain's
+# array -- lmx_fresh.lm1 and lmx_graph_copy_owned.lm1's Q22=II shared-method-reference
+# terminal test still read it (pending a decision on whether Q22=II's own test needs to
+# change shape under k.4 -- see the coding-commit report).  Only the STRUCT this domain
+# used to hold is gone; the domain slot itself is not retired.
+define: LMX_DOMAIN_KIND_CALLABLE 16
+define: LMX_DOMAIN_KIND_OP 17
+define: LMX_DOMAIN_KIND_SCRATCH 18
+define: LMX_DOMAIN_KIND_ROLE 19
+define: LMX_DOMAIN_KIND_PRIMITIVE 20
 
 prototype:
     # Register one whole domain of the arena's index: count cells of `stride`.
@@ -88,14 +124,15 @@ prototype:
     # The runtime predicate of 2.1: walk the used tree the Consumer IS (its shape gives the used
     # paths -- "the used tree is the contract", and names are absent from ordinary execution, so a
     # path is an index path), and answer over what is AVAILABLE:
-    #   every used path present on varA and varB, every leaf of the same domain and type, and
-    #   equal METHOD signatures at a callable on a used path.
+    #   every used path present on varA and varB, every leaf of the same domain and type.  A
+    #   callable's signature (args/return) is ordinary lexical Structure fields (k.4), so the
+    #   same recursion covers it with no separate comparison.
     # An unset child of the Consumer is not a used path ("An empty `uses` is true: there is
     # nothing to use"), a missing path or a known mismatch is NO, and anything the walk cannot
     # inspect is UNKNOWN -- never YES.
     fn: lmx_runtime_implements (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx consumer) int
-    # The walk's own two steps, declared here because the walk is recursive and L1 needs a name
-    # before its use: the used-tree walk, and the signature comparison at a callable path.
+    # The walk itself, declared here because it is recursive and L1 needs a name before its
+    # use.  k.4: a callable's signature is ordinary lexical Structure fields (args/return),
+    # so the used-tree walk alone covers it -- there is no separate signature comparison.
     fn: lmx_implements_walk (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx consumer; int: depth) int
-    fn: lmx_implements_signature (@: LmxMethod a; @: LmxMethod b; @: LmxMethod c) int
 end: prototype

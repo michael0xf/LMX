@@ -1,0 +1,16 @@
+# A trailing `return: m` consumes a value as the `return: m` inside a body does: m runs and its
+# result is returned, 7 + 7 = 14.  (The trailer returned m's occurrence reference.)
+fn: m () int
+    return: 7
+end: m
+
+fn: w () int
+return: m
+
+fn: v () int
+    int: k 1
+    return: m
+end: v
+
+sendMessage: exit(exit_code: w() + v(); stdout: ""; stderr: "")
+return

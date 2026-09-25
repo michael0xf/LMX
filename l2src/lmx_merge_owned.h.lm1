@@ -9,36 +9,41 @@ predef: "lmx_graph_copy_owned.h.lm1"
 # produces a THIRD INDEPENDENT Structure. The operands are never written: two
 # structures in, three out.
 #
-# The result's direct slots are, in order, the copies of each operand's direct
-# children, operand by operand and child by child, then the body's fields. The
-# operand ROOTS are not visible result slots; only their children are. This is
-# what makes the result one flat tree rather than a container of containers,
-# and it is why a method that came in by copying is invoked through the result.
+# With a null override map the result's direct slots are, in order, the copies
+# of each operand's direct children, operand by operand and child by child, then
+# the body's fields (flat append). With a non-null map (Q21 = A): the model
+# (operands[0]) keeps its layout; each pair stores an operand field's value into
+# a model slot; unmatched later-operand fields append; body fields append. The
+# operand ROOTS are not visible result slots; only their children are.
 #
 # ONE lmx_graph_copy_many_owned operation, hence one operation-local map, spans
 # every ordinary operand root and the body root together. An object reachable
 # from two operands is therefore copied ONCE and both references point at that
 # one copy; cross-operand aliases and cycles keep their shape; every copied
-# Structure's node is rewritten to the copy of its lexical parent or to zero.
-# METHOD descriptors stay terminals, shared by address, and every operand is an
-# ordinary Structure: which value is a METHOD is answered by src_arena's table
-# (LMX_KIND_METHOD), never by a list the caller passes in. An operand that does
-# not classify as a Structure is refused -- a METHOD record is not one and
-# cannot be merged.
+# Structure's parent is rewritten to the copy of its structural parent or to zero.
+# k.4: every operand is an ordinary Structure; a shared reference (a Structure whose
+# parent lies outside the copied set -- Q22 = II) stays a terminal by address, decided
+# structurally by the copier, never by a domain classification or a list the caller
+# passes in. An operand that does not classify as a Structure is refused.
 #
-# An eternal branch is a different mechanism (Mikhail, 2026-09-17): its void *
-# data point into the root Message's arena's immutable part, and the translator
-# substitutes its values and explicit types into the code as const. It therefore
-# reaches merge as an ordinary Structure and is copied like one; there is no
-# eternal-range list, and holding one grants nothing else.
+# Qualification is an address-domain property.  A caller may name any number of ordinary
+# graph receiver-expressions whose physical addresses denote full
+# independent+const+immutable profiles.  Only exact membership in an array carrying one of
+# those physical profiles retains an address; another profile with identical kind/type, an
+# unprofiled independent root, foreign ownership, and sealing all take the copy path.
+# A retained foreign address must already be visible through an explicit sealed-range import
+# in dst_arena. Only sealed ranges may be retained; merge never adopts their storage or
+# installs a hidden range view. The caller supplies the profiles as a call-bounded span of
+# physical Lmx references. Duplicates are idempotent; no global set, numeric qualifier or
+# textual identity participates.
 #
 # TWO arenas, because the act has two sides: `src_arena` is the arena the
 # operands, the body and the container live in and answers every classification
 # question; `dst_arena` is the arena the copies and the result are built in.
 #
 # `container` is the live Structure through which the merge receiver executed.
-# It becomes the RESULT's node and nothing else: it is not assigned as the node
-# of any copied child, whose node links come from the map. A nonzero container
+# It becomes the RESULT's parent and nothing else: it is not assigned as the parent
+# of any copied child, whose parent links come from the map. A nonzero container
 # must classify as a Structure of src_arena -- the arena's table answers that,
 # not an inventory -- and a foreign address is refused rather than stored.
 #
@@ -48,6 +53,16 @@ predef: "lmx_graph_copy_owned.h.lm1"
 # together or none of them does. On any failure out stays null, the destination
 # arena is left as it was at the mark, every source graph is unchanged. There is
 # no empty-success substitute for a failed merge.
+# One override pair from the translator: store operand[k].field[j]'s value into
+# the model's slot of the result (Q21 = A specialization). Null map / count 0
+# keeps today's flat append. The graph has no names; the translator resolves
+# matches and hands pairs of positions.
+struct: LmxMergePair
+    size_t: model_slot
+    size_t: operand
+    size_t: field
+end: LmxMergePair
+
 define: LMX_MERGE_OK 0
 define: LMX_MERGE_INVALID 1
 define: LMX_MERGE_NOMEM 2
@@ -59,5 +74,26 @@ prototype:
     # without fabricating a header, and a fabricated header would test the
     # fake rather than the guard.
     fn: lmx_merge_add_width (@: size_t total; @: Lmx x) int
-    fn: lmx_merge_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx out) int
+    # `overrides` null or override_count 0 = flat append (today). Non-null: model
+    # (operands[0]) layout kept; each pair writes operand[k].field[j] into the
+    # model's slot; unmatched later-operand fields append; body appends as today.
+    fn: lmx_merge_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
+    fn: lmx_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
+    # `retain_profile` is the exact physical profile representing the full
+    # independent+const+immutable receiver chain.  No other profile/lifecycle/owner
+    # property retains an address.
+    fn: lmx_merge_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @: Lmx retain_profile; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
+    # One pair's value, copied from src's own field into dst's own slot -- shared by
+    # lmx_merge_profiles_owned's override path and lmx_merge_into_profiles_owned.
+    fn: lmx_merge_apply_pair (@: Lmx src; size_t: field; @: Lmx dst; size_t: target_slot) int
+    # -194 к.3 (Q26.1 / Q1): merge INTO an already-existing target -- op's fields are
+    # copied and written into target's existing slots (target keeps its address and its
+    # own parent; nothing is built fresh). The pair map must be an exact bijection onto a
+    # subset of target's slots: pair_count = op's own width, no source field or target
+    # slot repeated (target's layout is fixed once built, so an unmatched op field is
+    # INVALID, never appended). A target slot no pair names is left untouched.
+    fn: lmx_merge_into_profiles_owned (@: Lmx target; @: Lmx op; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: LmxMergePair pairs; size_t: pair_count) int
+    fn: lmx_merge_into_owned (@: Lmx target; @: Lmx op; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: LmxMergePair pairs; size_t: pair_count) int
+    # -174 c3: walk PRIM entry for Model: m (see lmx_walk.h.lm1).
+    fn: lmx_walk_merge_model (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
 end: prototype

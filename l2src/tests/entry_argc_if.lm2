@@ -1,8 +1,14 @@
-L2:
-    fn: main (int: count; @@: char values) int
-        if: count != 1
-            return: 1
-        return: 0
-    end: main
-end: L2
+# The process arguments arrive inside a letter (author, Q10) whose one field is
+# mainArgs, an Array of references to char Arrays (author, Q15): argv exactly as
+# C passed it, argv[0] included -- so a run with no arguments has one.
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
 
+MainLetter: m
+receiveMessage: m
+if: length(m\mainArgs) != 1
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

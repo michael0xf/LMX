@@ -303,7 +303,7 @@ if (Test-Path -LiteralPath $testsHdr) {
 Write-Output ('l2_harness: staged ' + $staged + ' files into ' + $src)
 if ($provenanceMode) {
     # The staged l2src\l2trans.lm1 and l2_libc.lm1 must be BYTE COPIES of the LIVE dev sandbox
-    # sources, never the frozen root l2src twin.  This matters because the translator is handed the
+    # sources, never the root l2src (a copy of the sandbox kept in the old place, not tested: -198).  This matters because the translator is handed the
     # RELATIVE literal 'l2src/l2trans.lm1' with cwd = $src, so which twin built the translator is
     # decided by this copy alone, and nothing about the literal says so.
     foreach ($s in @(@('l2trans.lm1', 'l2trans'), @('l2_libc.lm1', 'l2_libc'))) {
@@ -1224,6 +1224,27 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_root_decl_init_prev.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
         Absent = @('1U, (cast: (@: void) l2_entry_unit)) != 0 || lmx_walk_store_size(l2_program_arena'); Debt = @() },
+    # THE RAW C DOOR BY TOKEN (-198; spec 6.6.6: a c.* head is foreign C, emitted as written, the C
+    # compiler judges it): c.name(...) is a call in every form -- a statement with an argument or with
+    # none, a value with an argument or with none.  Kept from the retired twin's own gate
+    # (l2_stable_head_call_gate.ps1, Grok -81; tag l2src-twin-20260926).  An empty statement call was
+    # refused on main (D-74: l2_head_is_call counted a one-segment head as an update, whose value of
+    # no fields l2_check_fields refused); for c_empty_abort the translation itself is the witness,
+    # since the preamble's own X1 lines call c.abort() too.
+    [pscustomobject]@{ Name = 'unit_head_call_c_arg_compact.lm2'; Expect = 'translates'; Exit = 0;
+        Absent = @(); Debt = @('    c.bogus(1)') },
+    [pscustomobject]@{ Name = 'unit_head_call_c_empty_abort.lm2'; Expect = 'translates'; Exit = 0;
+        Absent = @(); Debt = @('    c.abort()') },
+    [pscustomobject]@{ Name = 'unit_head_call_c_empty_rand.lm2'; Expect = 'translates'; Exit = 0;
+        Absent = @(); Debt = @('    c.rand()') },
+    [pscustomobject]@{ Name = 'unit_head_call_c_expr_rand.lm2'; Expect = 'translates'; Exit = 0;
+        Absent = @(); Debt = @('(c.rand())') },
+    [pscustomobject]@{ Name = 'unit_head_call_c_expr_strlen.lm2'; Expect = 'translates'; Exit = 0;
+        Absent = @(); Debt = @('(c.strlen("hi"))') },
+    # The same door RUNNING: c.rand() as a value and in a condition, c.abort() as a statement in an if
+    # body; empty_calls(1) is 0.
+    [pscustomobject]@{ Name = 'unit_c_empty_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
+        Absent = @(); Debt = @('(c.rand())', 'if: c.rand() < 0') },
     # STRUCTURE-TYPED ROOT FIELDS (-178 commit 2): `Model: m` is the walker's merge primitive (-174 c3)
     # stored by reference into m's pointer cell (-174 c2); `m\value` opens the reference (DEREF, -174 c1)
     # and takes the field (OF); `Model\value: 7U` writes the named Structure itself (PUT, its node

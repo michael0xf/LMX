@@ -9,8 +9,8 @@ predef: "l2src/lmx_post.h.lm1"
 #
 # Mikhail, 2026-09-18: hierarchical a.b.c.d is WorldWideMix-only. In the L2 kernel the
 # destination is the physical address of an LmxThread. The step compares that pointer to
-# the postman itself and to the postman's published children (graph slots hold the child
-# Messages; the child Thread is found by walking destination's parent links until the
+# the postman itself and to the postman's published children (the graph's one dynamic Array holds
+# physical child Threads; the direct child is found by walking destination's parent links until the
 # postman). Not self and not under a published child -> hand up to the parent.
 #
 # Decisions:
@@ -18,7 +18,7 @@ predef: "l2src/lmx_post.h.lm1"
 #   DOWN      destination is this postman or lies under a published child -- letter goes
 #             to that direct child (one hop);
 #   UP        everything else -- letter goes to this record's parent;
-#   REFUSED   no such hop (root has no parent; a claimed child is not in the graph).
+#   REFUSED   no such hop (the structural top frame has no parent; a claimed child is not in the Array).
 #
 # The hop admits into the NEXT hop's mailbox via lmx_thread_mail_accept. `arena` is the
 # arena of THAT mailbox (the receiver of this hop), which is what lmx_post_accept needs

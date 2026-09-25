@@ -1,0 +1,10 @@
+# FABLE-SONNET-SEND-IN-METHODS-20260925-168 commit 2: `sendMessage: X` inside a method body --
+# a direct native call of the same generated sender the root's own walker step calls. A method
+# called from the root sends exit(exit_code: 7; ...) to the host, which reports 7.
+fn: send_exit () int
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+    return: 0
+end: send_exit
+
+send_exit()
+return

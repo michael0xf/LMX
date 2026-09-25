@@ -1,0 +1,16 @@
+predef: "l2src/tests/fnptr_local_forms.h.lm1"
+
+# BATCHC-76: nested arg-position ty40 call, colon
+fn: wrap (@: void p) @: void
+    return: p
+end: wrap
+
+fn: probe (const: @(c.L2TestAllocVTable av); size_t: n) @: void
+    L2TestAllocFn: f av\alloc
+    if: f = 0
+        return: 0
+    return: wrap(f: n)
+end: probe
+
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

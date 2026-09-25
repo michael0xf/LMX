@@ -1,0 +1,25 @@
+A:
+    fn: M
+    size_t: tag 7U
+end: A
+
+size_t: other 5U
+size_t: tag 3U
+
+fn: M () size_t
+    return: node\tag
+end: M
+
+# q22.md's program (the author, Q22 = II): `A: fn: M` is a reference to the method's occurrence, so
+# merge neither copies it nor moves it, and `node` in M stays M's lexical parent, the file Structure.
+# `R\M()` reads the file's tag: 3, not A's 7 (and not 90, which was a read through R's layout).  The
+# merge is in a method: at the walked root a merge statement is root-pending
+# (FABLE-OPUS-MERGE-PARTS-20260926-193 T1).  Success is 3.
+fn: probe () int
+    R: merge: A
+    size_t: r R\M()
+    return: (cast: (int) r)
+end: probe
+
+sendMessage: exit(exit_code: probe(); stdout: ""; stderr: "")
+return

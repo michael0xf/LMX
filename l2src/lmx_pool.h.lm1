@@ -21,39 +21,42 @@ predef: "l2src/lmx_arena.h.lm1"
 prototype:
     fn: lmx_pool_add_chunk (@: LmxArena arena; @: LmxPool pool) int
     fn: lmx_pool_open (@: LmxArena arena; @: LmxPool pool; size_t: stride; size_t: chunk_capacity; int: kind; int: type) int
+    # A nonzero profile is an ordinary graph Structure already visible in arena's
+    # local/imported address index; arbitrary or activation-local pointers are refused.
+    fn: lmx_pool_open_profiled (@: LmxArena arena; @: LmxPool pool; size_t: stride; size_t: chunk_capacity; int: kind; int: type; @: Lmx profile) int
     # ONE array of the arena holding exactly `bytes` of storage for `bytes / stride`
     # cells, which the arena allocates and owns: the payload block joins the arena's
     # block list, the descriptor record joins it as the array's own, and the array's
     # interval joins the index.  This is how a constructor gets its cell -- the storage
     # of an array of the arena is the arena's, never the caller's.
     fn: lmx_pool_make (@: LmxArena arena; size_t: bytes; size_t: stride; int: kind; int: type) @: LmxPool
+    fn: lmx_pool_make_profiled (@: LmxArena arena; size_t: bytes; size_t: stride; int: kind; int: type; @: Lmx profile) @: LmxPool
     # The same descriptor over caller-provided records and caller-owned storage: nothing
     # is owned or freed, and the array joins the arena and the index all the same.
     fn: lmx_pool_over (@: LmxArena arena; @: LmxPool pool; @: LmxChunk chunk; @: void base; size_t: bytes; size_t: stride; int: kind; int: type) int
+    # Seal after construction.  Sealing is only lifecycle/GC policy: the optional profile
+    # was selected independently when the array was opened/made and is never inferred here.
+    fn: lmx_pool_seal (@: LmxPool pool) int
+    fn: lmx_pool_is_sealed (@: LmxPool pool) int
     fn: lmx_pool_take (@: LmxArena arena; @: LmxPool pool) @: void
     # `count` consecutive cells of one array, in one chunk.  The array grows when the
     # last chunk cannot seat them all, and growth ADDS a chunk (never reallocates), so an
     # address handed out earlier never moves.  A request larger than the array's own
-    # chunk makes that one chunk that big.  Growth is the arena's act: the new chunk's
+    # chunk makes that one chunk that big -- AND RAISES THE POOL'S GROWTH STEP: the
+    # capacity a chunk is allocated at is the pool's, so after one successful oversized
+    # request every LATER chunk is allocated at that size too, for the array's lifetime
+    # (measured: a step of 8 climbed to 36 through SUCCESSFUL requests, not through
+    # failures).  A FAILED growth leaves the step untouched -- it is restored -- so a
+    # refusal cannot poison later, smaller requests.  The cost is memory on a reused
+    # array whose frames differ in size; the gain is that a big frame is not grown
+    # twice.  Growth is the arena's act: the new chunk's
     # storage and the chunk's own record are blocks of the arena's list, so a rollback
     # that drops them drops the interval with them.
     fn: lmx_pool_take_n (@: LmxArena arena; @: LmxPool pool; size_t: count) @: void
     fn: lmx_pool_count (@: LmxPool pool) size_t
-    # An immutable method record (model 2): `addr` is the generated C entry and `sig` fixes the
-    # typed input list.  Neither is interpreted here -- this unit stores them and never calls
-    # `addr`; the call guard (lmx_call) is what asks whether a graph names one.  The encoding of
-    # `sig` is not settled (OPEN_POINTS.txt), which is why a caller passes it as a number.
-    #
-    # DECLARED LATE, and that is worth saying: this act was defined in lmx_pool.lm1 from the
-    # start but named in no header, so only a caller that pulled the SOURCE could use it --
-    # which is exactly what every selftest did.  It is the act that gives a Message its BODY
-    # (interned method -> the Message's graph slot 0 -> lmx_call0), so an application built on
-    # headers could not give a thread a body at all.  Found 20260919 while reviewing the mixa
-    # assembly: four threads with four arenas, four schedules and NO bodies anywhere.
-    fn: lmx_method_intern (@: LmxArena arena; @: LmxPool pool; LmxEntry: addr; unsigned: sig) @: LmxMethod
-    # An Array descriptor: exactly a length and a pointer to element storage -- no node, no name,
-    # no tag (6.5).  Its `len` is an element count and IS settled there, unlike the `len` in the
-    # Lmx header.
+    # An Array descriptor: logical length and a pointer to element storage --
+    # no node, no name, no tag. Its `len` is an element count, unlike the `len` in the Lmx header;
+    # the backing has exactly `len` cells. Dynamic membership is an L1 list (KIND_LIST), not Array.
     fn: lmx_array_desc_new (@: LmxArena arena; @: LmxPool pool; size_t: len; @: void data) @: LmxArrayDesc
     fn: lmx_pool_release (@: LmxArena arena; @: LmxPool pool) int
     # The first chunk of the array's chain: a walk that must see every cell the array handed
@@ -68,4 +71,13 @@ prototype:
     # arena's list, and dropping those (with their interval) is the arena's act, which the
     # caller does next.  A pool that kept a freed chunk would hand out storage nobody owns.
     fn: lmx_pool_chunk_drop (@: LmxPool pool; @: LmxChunk chunk) int
+    # Sole cell-arithmetic helper pair for chunk byte storage (FABLE-134 disposition).
+    # cells = len/stride; room = capacity/stride. All cell counts go through these;
+    # multiply on the way in via lmx_chunk_set_used / lmx_chunk_set_room.
+    fn: lmx_chunk_cells (@: LmxChunk chunk; size_t: stride) size_t
+    fn: lmx_chunk_room (@: LmxChunk chunk; size_t: stride) size_t
+    fn: lmx_chunk_set_used (@: LmxChunk chunk; size_t: stride; size_t: cells) void
+    fn: lmx_chunk_set_room (@: LmxChunk chunk; size_t: stride; size_t: cells) void
+    # Byte base of the chunk payload (unsigned char *).
+    fn: lmx_chunk_data (@: LmxChunk chunk) @: void
 end: prototype

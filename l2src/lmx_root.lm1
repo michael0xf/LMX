@@ -1,6 +1,8 @@
 predef: "l2src/lmx_root.h.lm1"
+predef: "l2src/lmx_process_deadline.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_list_owned.lm1"
 predef: "l2src/lmx_child.lm1"
 predef: "l2src/lmx_clock.lm1"
 predef: "l2src/lmx_implements.h.lm1"
@@ -23,6 +25,12 @@ predef: "l2src/lmx_service.lm1"
 predef: "l2src/lmx_thread.lm1"
 predef: "l2src/lmx_turn.lm1"
 predef: "l2src/lmx_value_owned.lm1"
+# The host's launch builds the mainArgs letter (char Arrays in an Array of descriptors) and its
+# exit slot admits by the runtime `implements`.
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_implements.lm1"
+include: "<stdio.h>" "<string.h>" "<stdlib.h>"
 
 # lmx_root.lm1 - creating the runtime's root, running its turns, its cycle and its teardown.
 #
@@ -32,14 +40,57 @@ predef: "l2src/lmx_value_owned.lm1"
 # that point at it -- and the OPEN state written LAST.  A construction that refuses releases
 # the arena and leaves the handle CLOSED, so a half-made root is reachable from nowhere.
 
-fn: lmx_root_open (@: LmxRoot root; LmxCallEntry: entry; ulong: limit; size_t: eternal; size_t: methods) int
+fn: lmx_root_open_unwind (@: LmxRoot root; int: parent_mail_open; int: mail_open; int: service_open; int: service_registered) int
+    if: root = 0
+        return: c.LMX_ROOT_INVALID
+    ---
+    if: service_registered != 0 && root\thread != 0
+        lmx_service_unregister(@ root\service, root\thread)
+    ---
+    if: service_open != 0
+        lmx_service_release(@ root\service)
+    ---
+    if: mail_open != 0 && root\mail != 0
+        lmx_post_close(@ root\arena, root\mail)
+    ---
+    if: parent_mail_open != 0 && root\parent_mail != 0
+        lmx_post_close(@ root\arena, root\parent_mail)
+    ---
+    lmx_arena_release(@ root\arena)
+    root\thread: 0
+    root\slot: 0
+    root\mail: 0
+    root\parent: 0
+    root\parent_slot: 0
+    root\parent_mail: 0
+    root\parent_children: 0
+    root\manager: 0
+    root\state: c.LMX_ROOT_CLOSED
+return: c.LMX_ROOT_INVALID
+
+fn: lmx_root_open (@: LmxRoot root; LmxCallEntry: entry; ulong: limit) int
+return: lmx_root_open_graph(root, entry, limit, 0U)
+
+# The root's graph is its children list and `fields` empty fields after it (the host's launch keeps
+# R0's result cell, its settings and its own record there).
+fn: lmx_root_open_graph (@: LmxRoot root; LmxCallEntry: entry; ulong: limit; size_t: fields) int
     @: LmxArena arena
+    @: Lmx parent_graph
     @: Lmx graph
-    @: Lmx eternal_graph
-    @: Lmx methods_graph
-    @: LmxMsg message
+    @: LmxArrayDesc parent_children
+    @: LmxArrayDesc children
+    @: LmxThread parent
     @: LmxThread thread
+    @: LmxSchedule parent_slot
     @: LmxSchedule slot
+    @: LmxPost parent_mail
+    @: LmxPost mail
+    @: LmxManager manager
+    @: LmxService service
+    int: parent_mail_open 0
+    int: mail_open 0
+    int: service_opened 0
+    int: service_registered 0
     if: root = 0 || limit = 0U
         return: c.LMX_ROOT_INVALID
     # The handle is cleared field by field before anything is opened on it: opening an arena
@@ -51,15 +102,30 @@ fn: lmx_root_open (@: LmxRoot root; LmxCallEntry: entry; ulong: limit; size_t: e
     arena: @ root\arena
     arena\blocks: 0
     arena\arrays: 0
-    arena\index: 0
-    arena\count: 0U
-    arena\capacity: 0U
+    lmx_arena_index_set_data(arena, 0)
+    lmx_arena_index_set_len(arena, 0U)
+    lmx_arena_index_set_cap(arena, 0U)
     arena\generation: 0U
-    root\message: 0
+    # THE SERVICE IS THE ONE HANDLE THAT REFUSES INSTEAD OF CLEARING ITSELF, so its three fields
+    # are cleared here, by the owner.  lmx_service_open allocates nothing and refuses a handle that
+    # did not arrive zeroed; that refusal is a real detector for a standalone service that is
+    # already open, so it stays exactly as it is, and the owner's half of the contract is this
+    # clear.  Left to the stack, these three words hold whatever was there -- and on Windows the
+    # command line and the environment sit near the stack base, so what they held was UTF-16 slices
+    # of the EXECUTABLE'S OWN PATH (measured 2026-09-21), which is why R0's open depended on the
+    # executable's absolute path length until this clear was added.
+    service: @ root\service
+    lmx_service_entries_set_data(service, 0)
+    lmx_service_entries_set_len(service, 0U)
+    lmx_service_entries_set_cap(service, 0U)
     root\thread: 0
     root\slot: 0
-    root\eternal: 0
-    root\methods: 0
+    root\parent: 0
+    root\parent_slot: 0
+    root\parent_mail: 0
+    root\mail: 0
+    root\parent_children: 0
+    root\manager: 0
     root\entry: entry
     # No world yet: a by-value handle arrives holding whatever was on the stack, and a garbage
     # world pointer would be watched as if it were a stub (19.09).
@@ -69,96 +135,100 @@ fn: lmx_root_open (@: LmxRoot root; LmxCallEntry: entry; ulong: limit; size_t: e
     root\state: c.LMX_ROOT_CLOSED
     if: lmx_arena_open(@ root\arena) != 0
         return: c.LMX_ROOT_INVALID
-    # R0's graph root: a lexical root Structure whose child array is the top level's slots.
-    # A Message's graph is a value of ITS arena, so this too is a cell like any other.
+    ---
+    # The parent frame and R0 use the same ordinary graph shape: one typed field that references
+    # their growable Array<@LmxThread>. The numeric position is not an ABI and is never exposed or
+    # rediscovered; construction passes the physical descriptor directly to Thread.
+    parent_graph: lmx_node_new_owned(@ root\arena)
     graph: lmx_node_new_owned(@ root\arena)
-    if: graph = 0 || lmx_arena_refs_open_owned(@ root\arena, graph, c.LMX_ROOT_SLOTS) != 0
+    if: parent_graph = 0 || graph = 0
         lmx_arena_release(@ root\arena)
         return: c.LMX_ROOT_INVALID
     ---
-    # R0's two const:immutable retention arrays (model 20): the eternal branches and the known
-    # method descriptors.  Their set is known at TRANSLATION time, so their size arrives here and
-    # nothing at runtime grows them; an empty set is one of the two states and needs no storage.
-    # They live in R0's graph, which is what makes them roots of R0's own collection and what
-    # keeps a borrowed branch alive without the collector knowing anything about branches.
-    eternal_graph: lmx_node_new_owned(@ root\arena)
-    methods_graph: lmx_node_new_owned(@ root\arena)
-    if: eternal_graph = 0 || methods_graph = 0
+    if: lmx_arena_refs_open_owned(@ root\arena, parent_graph, 1U) != 0 || lmx_arena_refs_open_owned(@ root\arena, graph, 1U + fields) != 0
         lmx_arena_release(@ root\arena)
         return: c.LMX_ROOT_INVALID
     ---
-    if: eternal > 0U && lmx_arena_refs_open_owned(@ root\arena, eternal_graph, eternal) != 0
+    parent_children: lmx_list_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, @ root\arena)
+    children: lmx_list_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, @ root\arena)
+    if: parent_children = 0 || children = 0
         lmx_arena_release(@ root\arena)
         return: c.LMX_ROOT_INVALID
     ---
-    if: methods > 0U && lmx_arena_refs_open_owned(@ root\arena, methods_graph, methods) != 0
+    if: lmx_arena_ref_store(parent_graph, 0U, (cast: (@: void) parent_children)) != 0 || lmx_arena_ref_store(graph, 0U, (cast: (@: void) children)) != 0
         lmx_arena_release(@ root\arena)
         return: c.LMX_ROOT_INVALID
     ---
-    root\eternal: eternal_graph
-    root\methods: methods_graph
-    if: lmx_arena_ref_store(graph, c.LMX_ROOT_ETERNAL_SLOT, (cast: (@: void) eternal_graph)) != 0 || lmx_arena_ref_store(graph, c.LMX_ROOT_METHOD_SLOT, (cast: (@: void) methods_graph)) != 0
-        lmx_arena_release(@ root\arena)
-        return: c.LMX_ROOT_INVALID
-    ---
-    # R0 itself: the five fields of the closed record, and nothing else.  `index` is 1
-    # because there is nothing above it -- it is the only Message with no parent.
-    message: (cast: (@: LmxMsg) lmx_arena_take(@ root\arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
-    if: message = 0
-        lmx_arena_release(@ root\arena)
-        return: c.LMX_ROOT_INVALID
-    ---
-    message\running: 1
-    message\success: 0
-    message\handoff_ready: 0
-    message\graph: graph
-    message\index: c.LMX_ROOT_INDEX
-    root\message: message
-    # R0 as an executable object, and its own record.  Both are cells of R0's arena, so the
-    # domain question about the record's owner answers in R0's own index.
-    thread: (cast: (@: LmxThread) lmx_arena_take(@ root\arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_THREAD, c.LMX_DOMAIN_THREAD))
+    # The graph hanging in a Thread is independent: its parent is 0 (author, LMX_blog 2026-09-22 --
+    # independence IS parent = 0, and a copy never climbs out of a Thread's graph).  The stub above
+    # R0 is Message supervision, not a lexical space, so the entry's reserved `node` is 0.
+    graph\parent: 0
+    root\parent_children: (cast: (@: void) parent_children)
+    # Qualified sealed ranges are ordinary owner-arena values reached from ordinary graph fields.
+
+    # R0 and its structural parent are each one allocation. Their first by-value LmxMsg prefix
+    # gives the common Message address/kind; exact range type remains Thread.
+    parent: (cast: (@: LmxThread) lmx_arena_take(@ root\arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
+    thread: (cast: (@: LmxThread) lmx_arena_take(@ root\arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
+    parent_slot: (cast: (@: LmxSchedule) lmx_arena_take(@ root\arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
     slot: (cast: (@: LmxSchedule) lmx_arena_take(@ root\arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
-    if: thread = 0 || slot = 0
+    parent_mail: (cast: (@: LmxPost) lmx_arena_take(@ root\arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    mail: (cast: (@: LmxPost) lmx_arena_take(@ root\arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    if: parent = 0 || thread = 0 || parent_slot = 0 || slot = 0 || parent_mail = 0 || mail = 0
         lmx_arena_release(@ root\arena)
         return: c.LMX_ROOT_INVALID
     ---
+    root\parent: parent
+    root\parent_slot: parent_slot
+    root\parent_mail: parent_mail
     root\thread: thread
     root\slot: slot
-    if: lmx_post_init(@ root\arena, @ root\mail) != c.LMX_POST_OK
-        lmx_arena_release(@ root\arena)
-        return: c.LMX_ROOT_INVALID
+    root\mail: mail
+    if: lmx_post_init(@ root\arena, root\parent_mail) != c.LMX_POST_OK
+        return: lmx_root_open_unwind(root, parent_mail_open, mail_open, service_opened, service_registered)
     ---
-    if: lmx_thread_attach(root\thread, message, @ root\mail, root\slot) != c.LMX_THREAD_OK
-        lmx_arena_release(@ root\arena)
-        return: c.LMX_ROOT_INVALID
+    parent_mail_open: 1
+    if: lmx_post_init(@ root\arena, root\mail) != c.LMX_POST_OK
+        return: lmx_root_open_unwind(root, parent_mail_open, mail_open, service_opened, service_registered)
     ---
-    if: lmx_manager_init(@ root\manager) != c.LMX_MANAGER_OK
-        lmx_arena_release(@ root\arena)
-        return: c.LMX_ROOT_INVALID
-    ---
+    mail_open: 1
     # R0's record names R0's arena as its BAND: the creation act is what writes it (lmx_schedule.h.lm1),
     # so the end-turn collection runs on the band that holds the turn and finds the storage it
     # collects here (model 24) without any queue having to know it.
-    if: lmx_schedule_init(root\slot, @ root\arena, (cast: (@: void) root\thread), limit) != c.LMX_SCHEDULE_OK
-        lmx_arena_release(@ root\arena)
-        return: c.LMX_ROOT_INVALID
+    if: lmx_schedule_init(root\parent_slot, @ root\arena, (cast: (@: void) root\parent), limit) != c.LMX_SCHEDULE_OK || lmx_schedule_init(root\slot, @ root\arena, (cast: (@: void) root\thread), limit) != c.LMX_SCHEDULE_OK
+        return: lmx_root_open_unwind(root, parent_mail_open, mail_open, service_opened, service_registered)
+    ---
+    if: lmx_thread_init(@ root\arena, root\parent, parent_graph, root\parent_mail, root\parent_slot) != c.LMX_THREAD_OK || lmx_thread_init(@ root\arena, root\thread, graph, root\mail, root\slot) != c.LMX_THREAD_OK
+        return: lmx_root_open_unwind(root, parent_mail_open, mail_open, service_opened, service_registered)
+    ---
+    if: lmx_thread_children_bind(root\parent, (cast: (@: void) parent_children), @ root\arena) != c.LMX_THREAD_OK || lmx_thread_children_bind(root\thread, (cast: (@: void) children), @ root\arena) != c.LMX_THREAD_OK
+        return: lmx_root_open_unwind(root, parent_mail_open, mail_open, service_opened, service_registered)
+    ---
+    manager: (cast: (@: LmxManager) lmx_arena_take(@ root\arena, c.sizeof(c.LmxManager), c.LMX_DOMAIN_KIND_MANAGER, c.LMX_DOMAIN_MANAGER))
+    if: manager = 0 || lmx_manager_init(manager) != c.LMX_MANAGER_OK
+        return: lmx_root_open_unwind(root, parent_mail_open, mail_open, service_opened, service_registered)
+    ---
+    root\manager: manager
+    root\thread\manager: (cast: (@: void) manager)
+    if: lmx_thread_child_add(root\parent, root\thread, @ root\arena) != c.LMX_THREAD_OK || lmx_manager_bind(root\manager, root\thread) != c.LMX_MANAGER_OK
+        return: lmx_root_open_unwind(root, parent_mail_open, mail_open, service_opened, service_registered)
     ---
     # The runtime's mail service: R0 opens it and registers ITSELF under its physical address.
     if: lmx_service_open(@ root\service) != c.LMX_SERVICE_OK
-        lmx_arena_release(@ root\arena)
-        return: c.LMX_ROOT_INVALID
+        return: lmx_root_open_unwind(root, parent_mail_open, mail_open, service_opened, service_registered)
     ---
+    service_opened: 1
     if: lmx_service_register(@ root\service, root\thread, @ root\arena) != c.LMX_SERVICE_OK
-        lmx_arena_release(@ root\arena)
-        return: c.LMX_ROOT_INVALID
+        return: lmx_root_open_unwind(root, parent_mail_open, mail_open, service_opened, service_registered)
     ---
+    service_registered: 1
     # R0's retention of orphans (19.29.8): the ledger opens empty and the policy starts at its
     # default, from which a caller may set its own before the first release happens.
-    if: lmx_orphan_init(@ root\orphans) != c.LMX_ORPHAN_OK
-        lmx_arena_release(@ root\arena)
-        return: c.LMX_ROOT_INVALID
+    if: lmx_orphan_init(@ root\orphans, root\thread) != c.LMX_ORPHAN_OK
+        return: lmx_root_open_unwind(root, parent_mail_open, mail_open, service_opened, service_registered)
     ---
     root\retention: c.LMX_ROOT_ORPHAN_RETENTION
+    root\close_limit: c.LMX_ROOT_CLOSE_LIMIT
     # The runtime's own wait starts at open -- this is the cycle's first reading.  From here
     # on every reading is handed down by lmx_root_cycle_at, and no other cell reads a clock.
     root\now: lmx_clock_ticks()
@@ -192,9 +262,15 @@ return: c.LMX_ROOT_OK
 fn: lmx_root_cycle_at (@: LmxRoot root; unsigned: ticks; ulong: now) int
     int: code
     size_t: world_reading
+    @: LmxMsg message
     if: root = 0 || root\state != c.LMX_ROOT_OPEN || ticks = 0U
         return: c.LMX_ROOT_INVALID
     root\now: now
+    # The structural parent stub performs the same liveness answer as every parent. It owns no
+    # second registry: it reaches R0 through its sole graph children Array.
+    if: lmx_poll_answer_children(root\parent, now) != c.LMX_THREAD_OK
+        return: c.LMX_ROOT_INVALID
+    ---
     # R0's own turn: ingress, the entry program, and the handling of what arrived.
     if: lmx_root_turn(root, now) != c.LMX_ROOT_OK
         return: c.LMX_ROOT_DONE
@@ -216,8 +292,9 @@ fn: lmx_root_cycle_at (@: LmxRoot root; unsigned: ticks; ulong: now) int
         world_reading: c.__atomic_load_n((cast: (@: size_t) root\world), c.__ATOMIC_RELAXED)
         if: world_reading != 0U
             if: now - (cast: (ulong) world_reading) >= root\slot\limit
-                if: root\message != 0
-                    root\message\running: 0
+                message: lmx_thread_message(root\thread)
+                if: message != 0
+                    message\running: 0
                 ---
                 return: c.LMX_ROOT_DONE
             ---
@@ -225,7 +302,7 @@ fn: lmx_root_cycle_at (@: LmxRoot root; unsigned: ticks; ulong: now) int
     ---
     # The parent's step over the top level: bounded by the caller's budget, never blocking,
     # and handed the same reading.
-    code: lmx_manager_round(@ root\manager, ticks, now)
+    code: lmx_manager_round(root\manager, ticks, now)
     if: code != c.LMX_MANAGER_OK
         return: c.LMX_ROOT_INVALID
     ---
@@ -238,10 +315,13 @@ fn: lmx_root_cycle_at (@: LmxRoot root; unsigned: ticks; ulong: now) int
     # R0's own settling (19.29.8: "Each closing Message settles only its direct children"), at the
     # same serialized owner-only boundary and inside the same reading of the clock.  R0's direct
     # children are the top level, so a child that finished during this cycle is reclaimed here
-    # (successful) or its arena joins R0's and its failure root is retained (unsuccessful).
+    # (successful) or its arena joins R0's and its failure root is retained (unsuccessful) -- in the
+    # result cell its reservation named (lmx_child_publish_prepared writes it, lmx_settle_one clears
+    # it only on success).  A child reserved with no result cell, as lmx_root_create reserves one,
+    # leaves only its storage.
     # An ORPHAN is not this act's case: 19.29.8 settles an orphan only by its own policy, "never
     # by its supervising root's ordinary settle step" -- that is the pass just above.
-    if: lmx_settle_children(root\thread, @ root\arena, @ root\service, @ root\manager, now) != c.LMX_SETTLE_OK
+    if: lmx_settle_children(root\thread, @ root\arena, @ root\service, root\manager, now) != c.LMX_SETTLE_OK
         return: c.LMX_ROOT_INVALID
     ---
 return: c.LMX_ROOT_OK
@@ -252,24 +332,25 @@ fn: lmx_root_cycle (@: LmxRoot root; unsigned: ticks) int
         return: c.LMX_ROOT_INVALID
 return: lmx_root_cycle_at(root, ticks, lmx_clock_ticks())
 
-# 25 (iv): a Message created without a parent is created THROUGH R0.  The parent the child
-# path reserves against is R0's own graph root, so the child's parent capability is R0's, its
-# index is its slot at R0, and no second top level can appear.  The child is RESERVED in R0's
-# own turn (model 26) and becomes visible in R0's graph at the end of that turn -- the
-# boundary of the cycle -- or never, if that turn failed.
-fn: lmx_root_create (@: LmxRoot root; @: LmxArena child_arena; size_t: slot; @: Lmx source) @: LmxMsg
+# 25 (iv): a top-level Message is created THROUGH R0. There is no parentless spawn and no
+# numeric root slot. Its Thread joins R0's ordinary dynamic children Array only at the successful
+# end-turn publication boundary.
+fn: lmx_root_create_profiled (@: LmxRoot root; @: LmxArena child_arena; @: Lmx source; @: Lmx retain_profile) @: LmxMsg
+    @: LmxMsg message
     @: Lmx graph
-    if: root = 0 || root\state != c.LMX_ROOT_OPEN || root\message = 0
+    if: root = 0 || root\state != c.LMX_ROOT_OPEN || root\thread = 0
         return: 0
-    graph: root\message\graph
-    if: graph = 0 || root\thread = 0
-        return: 0
-    # The two retention arrays have slots of their own at the end of R0's graph, and they are NOT
-    # the top level: a child belongs in a child's slot and nowhere else.
-    if: slot >= (cast: (size_t) c.LMX_ROOT_CHILDREN)
+    message: lmx_thread_message(root\thread)
+    if: message = 0
         return: 0
     ---
-return: lmx_child_reserve(root\thread, @ root\arena, child_arena, graph, slot, source)
+    graph: message\graph
+    if: graph = 0 || root\thread = 0
+        return: 0
+return: lmx_child_reserve_profiled(root\thread, @ root\arena, child_arena, 0, source, retain_profile)
+
+fn: lmx_root_create (@: LmxRoot root; @: LmxArena child_arena; @: Lmx source) @: LmxMsg
+return: lmx_root_create_profiled(root, child_arena, source, 0)
 
 # 25 (v): the place of the call and the grandparent's address are all that stage 5 fixed.
 # Supervision is NOT handed over, nothing is written, and the answer says exactly that.
@@ -305,8 +386,8 @@ return: c.LMX_ROOT_OK
 # живет вечно"; in lingvamyxa the same place was held by the WorldWideMix stub, and
 # lmx_root_supervise_world above is still that place).
 #
-# The root has no parent in this kernel -- there is nothing above it to own a handshake word for
-# it (lmx_turn.lm1: a Thread with no parent neither stamps nor ages out).  So the mechanism runs
+# R0 has the structural parent frame above it. That frame owns R0's handshake word through the
+# ordinary parent/child relation; only the frame itself has no parent. So the mechanism runs
 # the other way round, and it is the same arithmetic as every other wait here:
 #
 #   * the RING: `lmx_root_keepalive` renews the root's own wait.  Its record IS the liveness
@@ -344,20 +425,32 @@ fn: lmx_root_hung (@: LmxRoot root; ulong: now) int
     ---
 return: 0
 
-    # (iv), 19.29.8: re-root an orphan under R0.  The root supplies everything the act needs from its
-    # own state -- its graph, its object, its schedule and its retention policy -- and
-    # the reading of the clock is the caller's, so a cycle and a test drive the policy the same way.
-    # The orphan's own scheduler record goes into R0's schedule, which is what makes the root's step
-    # run the orphan's turns like a child's (the drain).
+    # (iv), 19.29.8: move an orphan's physical Thread reference into R0's sole children Array.
+    # Its own schedule still names its own arena; R0's manager merely traverses the Array.
 fn: lmx_root_orphan_adopt (@: LmxRoot root; @: LmxMsg orphan; @: LmxArena orphan_arena; @: LmxThread thread; ulong: now) int
     @: LmxMsg message
     if: root = 0 || root\state != c.LMX_ROOT_OPEN
         return: c.LMX_ORPHAN_INVALID
-    message: root\message
+    message: lmx_thread_message(root\thread)
     if: message = 0 || message\graph = 0
         return: c.LMX_ORPHAN_INVALID
     ---
-return: lmx_orphan_adopt(@ root\orphans, message\graph, orphan, orphan_arena, thread, root\thread, @ root\service, @ root\manager, now, root\retention)
+return: lmx_orphan_adopt(@ root\orphans, orphan, orphan_arena, thread, @ root\service, root\manager, now, root\retention)
+
+fn: lmx_root_close_limit_set (@: LmxRoot root; ulong: limit) int
+    if: root = 0 || root\state != c.LMX_ROOT_OPEN || limit = 0U
+        return: c.LMX_ROOT_INVALID
+    ---
+    # HALF THE WORD RANGE IS THE REFUSAL LINE, and it is the precondition the modular deadline test
+    # depends on (lmx_deadline_passed): a window at or above half the word could span a wrap and the
+    # comparison would read it backwards.  Computed in WORD terms, since the deadline is a word.
+    if: (cast: (size_t) limit) >= lmx_clock_half()
+        return: c.LMX_ROOT_INVALID
+    ---
+    # THE OPEN GUARD IS DELIBERATE, not copied from the retention setter: the close bound must not
+    # change once closing has begun.
+    root\close_limit: limit
+return: c.LMX_ROOT_OK
 
 fn: lmx_root_retention_set (@: LmxRoot root; ulong: limit) int
     if: root = 0 || root\state != c.LMX_ROOT_OPEN || limit = 0U
@@ -371,88 +464,127 @@ fn: lmx_root_orphan_maintain (@: LmxRoot root; ulong: now) int
     @: LmxMsg message
     if: root = 0 || root\state != c.LMX_ROOT_OPEN
         return: c.LMX_ORPHAN_INVALID
-    message: root\message
+    message: lmx_thread_message(root\thread)
     if: message = 0
         return: c.LMX_ORPHAN_INVALID
     ---
-return: lmx_orphan_maintain(@ root\orphans, message\graph, @ root\service, @ root\manager, now)
+return: lmx_orphan_maintain(@ root\orphans, @ root\service, root\manager, now)
 
 # Teardown.  Order matters twice over: the stop request goes first (it is what a turn
 # boundary obeys, so anything still in flight leaves at its next boundary), the mailbox hands
 # its node pool back before the arena that owns the storage goes, and the arena's release is
 # one release of one owner -- R0's cells, its graph, and every attached child's storage.
+# Ordinary linear sync close: OPEN only; local close_deadline; process deadline arm/disarm;
+# G1 mailbox-first order. No CLOSING resume, no POISONED, no stored close_stage/deadline.
 fn: lmx_root_close (@: LmxRoot root) int
+return: lmx_root_close_report(root, 0)
+
+# The close with the host's report of a failure (lmx_root_launch): when `report` is not null and
+# R0's success is 0, R0's arena is printed to it right after the settle -- which is where the
+# arenas of the failed children are attached to it -- and before anything is released.
+fn: lmx_root_close_report (@: LmxRoot root; @: void report) int
     @: LmxMsg message
-    @: Lmx graph 0
-    # ONE reading for both acts below: the close is a boundary of its own, exactly as a cycle is
-    # (lmx_manager.h.lm1: every operation that ages a wait is GIVEN the reading).
-    ulong: reading 0U
+    @: LmxArena arena_at 0
+    # The head of the arena's array list before the settle: whatever stands in front of it after
+    # the settle joined the arena there (lmx_arena_attach splices a donor's arrays in front).
+    @: LmxPool joined_end 0
+    # THE WATCHDOG'S OWN STATE, and it lives on THIS frame for the length of THIS operation --
+    # nowhere else: not in the root, not in a graph record, not in TLS.  `close_deadline` is the one
+    # word every level of the cascade will read back out of its own node.
+    size_t: close_deadline 0U
+    LmxProcessDeadline: deadline_guard
+    int: code 0
     if: root = 0
         return: c.LMX_ROOT_INVALID
     if: root\state != c.LMX_ROOT_OPEN
         return: c.LMX_ROOT_INVALID
     ---
-    message: root\message
+    message: lmx_thread_message(root\thread)
+    # THE CLOSE'S ONE DEADLINE, COMPUTED HERE FROM THE WORD CLOCK AND THE ROOT'S OWN LIMIT, and the
+    # SAME word reaches every level through each child Thread's close_deadline cell.  WORD
+    # arithmetic, not `ulong`: the setter refuses a limit at or above half the word range, so the sum
+    # cannot span a wrap -- and the one value that must be reserved is ZERO, the no-closure sentinel,
+    # which the sum can produce exactly at the wrap point.  There the stored deadline moves one tick
+    # past zero rather than being mistaken for "no closure"; minute-scale tolerance, the author's
+    # explicit allowance.
+    close_deadline: lmx_clock_word() + (cast: (size_t) root\close_limit)
+    if: close_deadline = 0U
+        close_deadline: 1U
+    ---
+    # THE WATCHDOG IS ARMED BEFORE ANY CHILD IS ASKED TO STOP, and it is armed from THIS deadline:
+    # the same value the cooperative checks read, so there is no second moving window.  It is the
+    # only guarantee that survives a child body which never returns (lmx_process_deadline).
+    if: lmx_process_deadline_arm(@ deadline_guard, close_deadline) != 0
+        return: c.LMX_ROOT_INVALID
+    ---
+    # Retention is only a running policy. Teardown returns every retained child to the
+    # ordinary synchronous parent cascade; the Array itself remains the sole membership source.
+    # Refuse stays OPEN so a caller can repair and retry without a half-started close.
+    if: lmx_orphan_release(@ root\orphans, @ root\service, root\manager) != c.LMX_ORPHAN_OK
+        lmx_process_deadline_disarm(@ deadline_guard)
+        return: c.LMX_ROOT_INVALID
+    ---
     if: message != 0
         message\running: 0
-        graph: message\graph
     ---
-    lmx_post_close(@ root\arena, @ root\mail)
-    # THE ORDER OF THE TWO ACTS IS THE WHOLE POINT, and it was measured the wrong way round once
-    # (20260919, ticket lmx_close_chain): settle FIRST, stop SECOND.
-    #
-    # (3) What is ALREADY CLOSED goes through the ORDINARY settle: a successful child's execution
-    #     history is reclaimed, a failed child's arena is attached to R0 -- and the attached ones
-    #     are freed below, by R0's own release, which is user code's business, this close being its
-    #     minimal case (Mikhail, 19.09: "on all four points").
-    #     ONE reading, taken HERE: this close is a boundary of its own, exactly as a cycle is, and
-    #     the reading is given to both acts below rather than read again inside them.
-    reading: lmx_clock_ticks()
-    lmx_settle_children(root\thread, @ root\arena, @ root\service, @ root\manager, reading)
-    # (1) The STILL-LIVE children are STOPPED, and not one byte of theirs is freed: each Thread owns
-    #     its own arena and its own scheduler and works on ITS OWN thread (Mikhail, 19.09), so its
-    #     storage may not be taken from this thread while its own thread is still on it.  The stop
-    #     request is the whole act -- the child's own polling code breaks out to its end-turn and
-    #     does everything itself.
-    #
-    #     WHY THE STOP IS SECOND: the stop is the one act that may write the close mark for a child
-    #     that reaches no boundary of its own (after that child's own window -- lmx_thread.h.lm1,
-    #     lmx_stop_children).  A settle run AFTER it would not tell a child that closed itself from
-    #     one this close has just closed, and would reap the second kind as well -- measured: both
-    #     live children of lmx_close_chain_selftest were attached to R0's arena within the same
-    #     close (`HANDOFF parent=<R0 arena> child=<child arena> ready=1`), and their storage went
-    #     with R0's release.  That is the same defect as the removed cascade, one call further down.
-    #     Spec 19.29.8 names the rule the stop must not be able to fake: "Transfer or reclamation
-    #     requires the handoff-safe boundary in 19.29.7.1, NOT MERELY A STOP REQUEST" -- and since
-    #     19.09 the request really is only a request (it writes `running=0` and, when the child's
-    #     window has passed, the close), which is what keeps the order here a matter of what is
-    #     already closed rather than of who was just asked to close.
-    lmx_stop_children(root\thread, reading)
-    # THE ARENA MAY NOT GO WHILE A LIVE CHILD STILL WRITES INTO IT (Mikhail, 19.09): the handshake
-    # word of every child is an ATOMIC in the PARENT's arena -- the one sanctioned cross-thread cell
-    # there, because the children's own threads write their milliseconds into it.  That is also why a
-    # parent that merely HANGS destroys nothing: its children go on writing, and the arena stays
-    # needed.  So the close releases its own arena only when no live child is left; what is still
-    # live was just given the stop request above and will end on its own thread, and the arena then
-    # belongs to whoever ends the process -- "в минимальном варианте -- закрытие приложения" (his
-    # words).  The root is closed either way: state is the root's, the storage is the children's.
-    if: lmx_thread_child_first(root\thread) != 0
-        root\state: c.LMX_ROOT_CLOSED
-        return: c.LMX_ROOT_OK
+    arena_at: @ root\arena
+    joined_end: arena_at\arrays
+    # THE ONE CLOSE IS SYNCHRONOUS, AND IT WAITS FOR ITS DIRECT CHILDREN ONLY.
+    code: lmx_settle_close_one_level(root\thread, @ root\arena, @ root\service, root\manager, close_deadline)
+    if: code != c.LMX_SETTLE_OK
+        lmx_process_deadline_disarm(@ deadline_guard)
+        return: c.LMX_ROOT_INVALID
     ---
-    # Every retained orphan goes back first: its arena was never R0's and no adopter will ever take
-    # it, so this ledger is the only thing that can return it.
-    lmx_orphan_release(@ root\orphans, graph, @ root\service, @ root\manager)
+    if: report != 0 && message != 0 && message\success = 0
+        lmx_root_report(arena_at, joined_end, report)
+    ---
+    # Ordinary per-record mailbox-first terminal order (AUTHOR-G1-R0-STANDARD-20260922-33 /
+    # AUTHOR-K1-G1-DECISION-20260922-27): same as settle for R0 itself — not an exceptional protocol.
+    if: lmx_thread_mail_close(@ root\arena, root\thread) != c.LMX_POST_OK
+        lmx_process_deadline_disarm(@ deadline_guard)
+        return: c.LMX_ROOT_INVALID
+    ---
+    if: lmx_service_unregister(@ root\service, root\thread) != c.LMX_SERVICE_OK
+        lmx_process_deadline_disarm(@ deadline_guard)
+        return: c.LMX_ROOT_INVALID
+    ---
+    # S4→S5 preserved: structural parent stub owns R0 as any parent owns a direct child.
+    if: lmx_thread_child_remove(root\parent, root\thread) != c.LMX_THREAD_OK
+        lmx_process_deadline_disarm(@ deadline_guard)
+        return: c.LMX_ROOT_INVALID
+    ---
+    if: lmx_thread_mail_close(@ root\arena, root\parent) != c.LMX_POST_OK
+        lmx_process_deadline_disarm(@ deadline_guard)
+        return: c.LMX_ROOT_INVALID
+    ---
     # The service owns its entry array; give it back before the arena that holds the records goes.
-    lmx_service_release(@ root\service)
-    lmx_arena_release(@ root\arena)
+    if: lmx_service_release(@ root\service) != c.LMX_SERVICE_OK
+        lmx_process_deadline_disarm(@ deadline_guard)
+        return: c.LMX_ROOT_INVALID
+    ---
+    # Inlined arena release (no helper). Non-OK after terminal work: INVALID only — no POISONED.
+    if: lmx_arena_release(@ root\arena) != 0
+        lmx_process_deadline_disarm(@ deadline_guard)
+        return: c.LMX_ROOT_INVALID
+    ---
+    root\thread: 0
+    root\slot: 0
+    root\mail: 0
+    root\parent: 0
+    root\parent_slot: 0
+    root\parent_mail: 0
+    root\parent_children: 0
+    root\manager: 0
     root\state: c.LMX_ROOT_CLOSED
+    # THE OPERATION SUCCEEDED, SO THE BOUND IS DISARMED BEFORE THIS FRAME RETURNS.
+    lmx_process_deadline_disarm(@ deadline_guard)
 return: c.LMX_ROOT_OK
+
 
 fn: lmx_root_message (@: LmxRoot root) @: LmxMsg
     if: root = 0
         return: 0
-return: root\message
+return: lmx_thread_message(root\thread)
 
 fn: lmx_root_thread (@: LmxRoot root) @: LmxThread
     if: root = 0
@@ -464,19 +596,7 @@ fn: lmx_root_arena (@: LmxRoot root) @: LmxArena
         return: 0
 return: @ root\arena
 
-fn: lmx_root_eternal (@: LmxRoot root) @: Lmx
-    if: root = 0
-        return: 0
-return: root\eternal
-
-fn: lmx_root_methods (@: LmxRoot root) @: Lmx
-    if: root = 0
-        return: 0
-return: root\methods
-
-# R0's own schedule: the queue its cycle steps -- the top level's children AND every record a
-# re-rooted orphan brought with it (the drain puts them in the same queue).  A caller reads it to
-# know what work the root still holds.
+# R0's scheduler traverses its one children Array. A caller reads it to know what work the root holds.
 
 fn: lmx_root_service (@: LmxRoot root) @: LmxService
     if: root = 0
@@ -485,7 +605,7 @@ return: @ root\service
 fn: lmx_root_manager (@: LmxRoot root) @: LmxManager
     if: root = 0
         return: 0
-return: @ root\manager
+return: root\manager
 
 fn: lmx_root_orphans (@: LmxRoot root) @: LmxOrphanLedger
     if: root = 0
@@ -501,3 +621,690 @@ fn: lmx_root_state (@: LmxRoot root) int
     if: root = 0
         return: c.LMX_ROOT_CLOSED
 return: root\state
+
+# ---- THE HOST ROOT (author 2026-09-24, LMX_blog/2026-09-24.md) --------------------------------
+#
+# The launch runs in R0's parent, the host, and R0 stays user code.  An exit is decided by the host:
+# from R0's exit Message once its spelling exists (lmx_root_exit_admit, not wired yet), otherwise
+# from R0's `success` -- 1 is exit 0, 0 is exit 1 -- with the reasons in the exit's texts, and with
+# success 0 the host's arena printed to stderr after the close's settle (lmx_root_report).
+
+# THE REPORT.  What the kernel keeps of a failed child after settle is its storage: settle attaches
+# the child's arena to its parent's (lmx_child_handoff -> lmx_arena_attach) and records nothing
+# else (D-46).  So the report is the arena's own inventory: every array in the order of the arena's
+# list, and every cell each array handed out (lmx_chunk_cells, the walk lmx_gc_cells makes).  The
+# arrays in front of `joined_end` joined the arena after that point -- attach splices a donor's
+# arrays in front of the list -- and are marked `joined`.  A reference prints as a<array>[<cell>]
+# (the array's place in the list, the cell's place in the array), an address this arena does not
+# own as `ext`, a null one as `-`.  Nothing is printed by name: the graph has none.
+
+# The place of `pool` in the arena's list, -1 when it is not there.
+fn: lmx_root_report_array (@: LmxArena arena; @: LmxPool pool) int
+    @: LmxPool p
+    int: at 0
+    p: arena\arrays
+    while: p != 0 && p != pool
+        at: at + 1
+        p: p\next
+    ---
+    if: p = 0
+        return: 0 - 1
+return: at
+
+# One reference, with a leading space.
+fn: lmx_root_report_ref (@: LmxArena arena; @: void stream; @: void p) int
+    @: LmxPool pool
+    @: LmxChunk chunk
+    @: char data
+    @: char at
+    size_t: base 0U
+    if: p = 0
+        return: c.fprintf(stream, " -")
+    pool: lmx_range_pool(arena, p)
+    if: pool = 0
+        return: c.fprintf(stream, " ext")
+    ---
+    at: (cast: (@: char) p)
+    chunk: lmx_pool_chunk_head(pool)
+    while: chunk != 0
+        data: (cast: (@: char) lmx_chunk_data(chunk))
+        if: at >= data && at < data + lmx_chunk_room(chunk, pool\stride) * pool\stride
+            return: c.fprintf(stream, " a%d[%u]", lmx_root_report_array(arena, pool), (cast: (unsigned) (base + (cast: (size_t) (at - data)) / pool\stride)))
+        ---
+        base: base + lmx_chunk_cells(chunk, pool\stride)
+        chunk: chunk\next
+    ---
+return: c.fprintf(stream, " a%d[?]", lmx_root_report_array(arena, pool))
+
+# Whether the report prints the cells of `pool` one by one: Structures, Messages, Arrays and the
+# numeric primitives.  Every other array -- a Structure's child slots, char backing, the kernel's
+# own records -- is printed as its line alone; its cells are reached through the ones printed.
+fn: lmx_root_report_cells (@: LmxPool pool) int
+    if: pool\kind = c.LMX_KIND_STRUCT || pool\kind = c.LMX_DOMAIN_KIND_MSG_RECORD || pool\kind = c.LMX_KIND_ARRAY
+        return: 1
+    if: pool\kind = c.LMX_KIND_PRIMITIVE && (pool\type = c.LMX_TYPE_INT || pool\type = c.LMX_TYPE_SIZE_T || pool\type = c.LMX_TYPE_UNSIGNED || pool\type = c.LMX_TYPE_ULONG)
+        return: 1
+return: 0
+
+# One cell of `pool`.
+fn: lmx_root_report_cell (@: LmxArena arena; @: void stream; @: LmxPool pool; @: char cell) int
+    @: Lmx header
+    @: LmxArrayDesc desc
+    @: LmxMsg message
+    @: char text
+    size_t: i 0U
+    size_t: n 0U
+    int: ch
+    if: pool\kind = c.LMX_KIND_STRUCT
+        header: (cast: (@: Lmx) cell)
+        c.fprintf(stream, " struct parent")
+        lmx_root_report_ref(arena, stream, (cast: (@: void) header\parent))
+        c.fprintf(stream, " fields %d:", (cast: (int) header\len))
+        if: header\len > 0 && header\data != 0 && lmx_range_classify(arena, header\data) = c.LMX_KIND_CHILDREN
+            while: i < (cast: (size_t) header\len)
+                lmx_root_report_ref(arena, stream, lmx_arena_ref_value(header, i))
+                i: i + 1U
+            ---
+        ---
+        return: 0
+    if: pool\kind = c.LMX_DOMAIN_KIND_MSG_RECORD
+        message: (cast: (@: LmxMsg) cell)
+        c.fprintf(stream, " message running %d success %d graph", (cast: (int) message\running), (cast: (int) message\success))
+        return: lmx_root_report_ref(arena, stream, (cast: (@: void) message\graph))
+    if: pool\kind = c.LMX_KIND_ARRAY
+        desc: (cast: (@: LmxArrayDesc) cell)
+        c.fprintf(stream, " array len %u", (cast: (unsigned) desc\len))
+        if: pool\type = c.LMX_TYPE_ARRAY_OF_CHAR && desc\data != 0 && lmx_range_pool(arena, desc\data) != 0
+            text: (cast: (@: char) desc\data)
+            n: desc\len
+            if: n > 64U
+                n: 64U
+            ---
+            c.fputc(32, stream)
+            c.fputc(34, stream)
+            while: i < n
+                ch: (cast: (int) (cast: (unsigned char) text[i]))
+                if: ch >= 32 && ch < 127 && ch != 34 && ch != 92
+                    c.fputc(ch, stream)
+                else:
+                    c.fprintf(stream, "\\x%02x", (cast: (unsigned) ch))
+                ---
+                i: i + 1U
+            ---
+            return: c.fputc(34, stream)
+        ---
+        c.fprintf(stream, " data")
+        return: lmx_root_report_ref(arena, stream, desc\data)
+    if: pool\type = c.LMX_TYPE_INT
+        return: c.fprintf(stream, " int %d", lmx_int_value_known((cast: (@: void) cell)))
+    if: pool\type = c.LMX_TYPE_SIZE_T
+        return: c.fprintf(stream, " size_t %u", (cast: (unsigned) (cast: (@: size_t) cell)[0]))
+    if: pool\type = c.LMX_TYPE_UNSIGNED
+        return: c.fprintf(stream, " unsigned %u", (cast: (@: unsigned) cell)[0])
+    if: pool\type = c.LMX_TYPE_ULONG
+        return: c.fprintf(stream, " ulong %u", (cast: (unsigned) (cast: (@: ulong) cell)[0]))
+return: 0
+
+fn: lmx_root_report (@: LmxArena arena; @: LmxPool joined_end; @: void stream) int
+    @: LmxPool pool
+    @: LmxChunk chunk
+    @: char data
+    size_t: cells
+    size_t: k
+    size_t: index
+    int: at 0
+    int: joined 1
+    if: arena = 0 || stream = 0
+        return: 1
+    c.fprintf(stream, "lmx: R0 closed with success = 0 -- the host's arena after the close's settle; an array marked joined came in at that settle (the arena of a failed child)\n")
+    pool: arena\arrays
+    while: pool != 0
+        if: pool = joined_end
+            joined: 0
+        ---
+        cells: 0U
+        chunk: lmx_pool_chunk_head(pool)
+        while: chunk != 0
+            cells: cells + lmx_chunk_cells(chunk, pool\stride)
+            chunk: chunk\next
+        ---
+        c.fprintf(stream, "a%d", at)
+        if: joined != 0
+            c.fprintf(stream, " joined")
+        ---
+        c.fprintf(stream, " kind %d type %d stride %u cells %u\n", pool\kind, pool\type, (cast: (unsigned) pool\stride), (cast: (unsigned) cells))
+        if: lmx_root_report_cells(pool) != 0
+            index: 0U
+            chunk: lmx_pool_chunk_head(pool)
+            while: chunk != 0
+                data: (cast: (@: char) lmx_chunk_data(chunk))
+                k: 0U
+                while: k < lmx_chunk_cells(chunk, pool\stride)
+                    c.fprintf(stream, "  a%d[%u]", at, (cast: (unsigned) index))
+                    lmx_root_report_cell(arena, stream, pool, data + k * pool\stride)
+                    c.fputc(10, stream)
+                    k: k + 1U
+                    index: index + 1U
+                ---
+                chunk: chunk\next
+            ---
+        ---
+        pool: pool\next
+        at: at + 1
+    ---
+return: 0
+
+# An exit decided by the host itself: its code, an empty stdout and `why` (a static text) as stderr.
+fn: lmx_root_exit_set (@: LmxRootExit done; int: code; @: char why) int
+    done\exit_code: code
+    done\sender: 0
+    done\out.len: 0U
+    done\out.data: 0
+    done\err.len: 0U
+    done\err.data: why
+    if: why != 0
+        done\err.len: strlen(why)
+    ---
+    # D-66: why is a static string, never this struct's to free.
+    done\owns_text: 0
+return: code
+
+# The exit's texts, written: stdout's to `out`, stderr's to `err`.
+fn: lmx_root_exit_write (@: LmxRootExit done; @: void out; @: void err) int
+    @: char text 0
+    size_t: n 0U
+    if: done = 0
+        return: 1
+    text: done\out.data
+    n: done\out.len
+    if: out != 0 && text != 0 && n != 0U
+        c.fwrite((cast: (@: void) text), 1U, n, out)
+    ---
+    text: done\err.data
+    n: done\err.len
+    if: err != 0 && text != 0 && n != 0U
+        c.fwrite((cast: (@: void) text), 1U, n, err)
+    ---
+    # D-66: written -- lmx_root_exit_admit's own host-seam copies are this struct's alone to
+    # free, and only ever this struct's (never lmx_root_exit_set's static "why" strings).
+    if: done\owns_text != 0
+        free((cast: (@: void) done\out.data))
+        free((cast: (@: void) done\err.data))
+        done\out.data: 0
+        done\err.data: 0
+        done\owns_text: 0
+    ---
+return: 0
+
+# A launch that could not decide R0's exit: what was made is let go, and the exit is 1 with `why`.
+fn: lmx_root_launch_refuse (@: LmxRoot root; @: LmxArena letter; @: char why; @: void out; @: void err) int
+    LmxRootExit: done
+    if: letter != 0
+        lmx_arena_release(letter)
+    ---
+    if: root != 0 && root\state = c.LMX_ROOT_OPEN
+        lmx_root_close(root)
+    ---
+    lmx_root_exit_set(@ done, 1, why)
+    lmx_root_exit_write(@ done, out, err)
+return: 1
+
+# The host's graph after its children list (lmx_root_open_graph): R0's result cell, the settings
+# branch, the launch's own record.  Positions of the host's own graph, built by the launch alone.
+define: LMX_ROOT_HOST_R0 1
+define: LMX_ROOT_HOST_SETTINGS 2
+define: LMX_ROOT_HOST_LAUNCH 3
+define: LMX_ROOT_HOST_FIELDS 3
+
+# THE HOST'S FIRST TURN: R0 is reserved as the host's ordinary child (lmx_child_reserve_profiled) --
+# in its own arena, from a source of `fields` empty fields in the host's arena, with the host's
+# settings profile retained (lmx_child_create_profiled imports the profile's sealed ranges into
+# R0's arena as views, so the branch R0 refers to is the host's own) -- and the result cell is the
+# host's graph field LMX_ROOT_HOST_R0.  Then R0's program is installed in R0's own graph, its
+# mailbox, schedule and Thread are made in its arena, and the Thread joins the reservation.  The
+# end of this turn publishes R0 (lmx_child_publish_prepared): the host's children, the service and
+# the result cell.
+fn: lmx_root_host_make (@: LmxThread host; @: Lmx graph; @: LmxRootLaunch launch) int
+    @: LmxArena arena 0
+    @: LmxArena r0_arena 0
+    @: Lmx source 0
+    @: Lmx profile 0
+    @: Lmx branch 0
+    @: LmxMsg r0 0
+    @: LmxThread r0_thread 0
+    @: LmxPost r0_mail 0
+    @: LmxSchedule r0_slot 0
+    @: LmxPool pool 0
+    # k.4 (authorized by fable, FABLE-SONNET-NATIVE-WORD-20260926-191 c.2): the reserved
+    # child[0] descriptor is gone, so a minimal R0 program needs only its children-list
+    # field -- the floor was 2 (descriptor + children), it is 1 now.
+    if: host = 0 || graph = 0 || launch = 0 || host\slot = 0 || launch\program = 0 || launch\fields < 1U
+        return: 1
+    ---
+    arena: host\slot\arena
+    if: launch\settings != 0
+        # The settings' profile is the physical receiver-expression object of the host's branch: a
+        # node of the host's arena profiled by the host's graph, sealed -- the shape the translator
+        # gives every eternal profile, and what a retaining copy accepts (lmx_copy_profiles_valid).
+        profile: lmx_node_new_profiled(arena, graph)
+        pool: lmx_arena_find_profiled(arena, c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT, graph)
+        if: profile = 0 || pool = 0 || lmx_pool_seal(pool) != 0
+            return: 1
+        ---
+        branch: launch\settings(arena, profile)
+        if: branch = 0 || lmx_arena_ref_store(graph, c.LMX_ROOT_HOST_SETTINGS, (cast: (@: void) branch)) != 0
+            return: 1
+        ---
+        launch\branch: branch
+    ---
+    source: lmx_node_new_owned(arena)
+    if: source = 0 || lmx_arena_refs_open_owned(arena, source, launch\fields) != 0
+        return: 1
+    ---
+    r0_arena: @ launch\arena
+    if: lmx_arena_open(r0_arena) != 0
+        return: 1
+    ---
+    r0: lmx_child_reserve_profiled(host, arena, r0_arena, lmx_arena_ref_cell(graph, c.LMX_ROOT_HOST_R0), source, profile)
+    if: r0 = 0
+        lmx_arena_release(r0_arena)
+        return: 1
+    ---
+    # From here the reservation owns R0's arena: a failure below leaves the reservation without its
+    # Thread, and the boundary releases the arena and fails the host's turn.
+    r0_thread: (cast: (@: LmxThread) r0)
+    if: launch\program(r0_arena, r0\graph, branch) != 0
+        return: 1
+    ---
+    r0_mail: (cast: (@: LmxPost) lmx_arena_take(r0_arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    r0_slot: (cast: (@: LmxSchedule) lmx_arena_take(r0_arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: r0_mail = 0 || r0_slot = 0
+        return: 1
+    ---
+    if: lmx_post_init(r0_arena, r0_mail) != c.LMX_POST_OK
+        return: 1
+    ---
+    if: lmx_schedule_init(r0_slot, r0_arena, (cast: (@: void) r0_thread), launch\limit) != c.LMX_SCHEDULE_OK
+        return: 1
+    ---
+    if: lmx_thread_init(r0_arena, r0_thread, r0\graph, r0_mail, r0_slot) != c.LMX_THREAD_OK
+        return: 1
+    ---
+    if: lmx_thread_scheduler_open(r0_thread, r0_arena) != c.LMX_THREAD_OK
+        return: 1
+    ---
+    if: lmx_child_thread(host, r0, r0_thread) != c.LMX_CHILD_OK
+        return: 1
+    ---
+    launch\thread: r0_thread
+    launch\slot: r0_slot
+    launch\made: 1
+return: 0
+
+# THE HOST'S SECOND TURN: its own inbox, in order.  A letter from R0 whose payload is admitted
+# against the exit model decides the exit; any other letter is taken and left to the host's arena.
+fn: lmx_root_host_take (@: LmxThread host; @: LmxRootLaunch launch) int
+    @: LmxArena arena 0
+    @: Lmx model 0
+    @: LmxMsg letter 0
+    @: void sender 0
+    if: host = 0 || launch = 0 || host\slot = 0 || launch\thread = 0
+        return: 1
+    ---
+    arena: host\slot\arena
+    sender: (cast: (@: void) lmx_thread_message(launch\thread))
+    while: launch\exited = 0 && lmx_thread_mail_count(host, c.LMX_POST_INBOX) > 0U
+        letter: (cast: (@: LmxMsg) lmx_thread_mail_take(host, c.LMX_POST_INBOX))
+        if: letter = 0
+            return: 1
+        ---
+        if: model = 0
+            model: lmx_root_exit_model(arena)
+        ---
+        if: model != 0 && letter\graph != 0 && lmx_root_exit_admit(arena, model, letter\graph, @ launch\done) = c.LMX_ROOT_OK
+            if: launch\done.sender = sender
+                launch\exited: 1
+            ---
+        ---
+    ---
+return: 0
+
+# The host's entry: the launch's code, one act per host turn.  The launch's record is the host's
+# graph field LMX_ROOT_HOST_LAUNCH.
+fn: lmx_root_host_entry (@: Lmx node) int
+    @: LmxThread host
+    @: LmxMsg message
+    @: Lmx graph
+    @: LmxRootLaunch launch
+    host: lmx_thread_current()
+    message: lmx_thread_message(host)
+    if: message = 0 || message\graph = 0
+        return: 0
+    ---
+    graph: message\graph
+    if: graph\len <= c.LMX_ROOT_HOST_LAUNCH
+        return: 0
+    ---
+    launch: (cast: (@: LmxRootLaunch) lmx_arena_ref_value(graph, c.LMX_ROOT_HOST_LAUNCH))
+    if: launch = 0
+        return: 0
+    ---
+    if: launch\phase = 0
+        launch\phase: 1
+        lmx_root_host_make(host, graph, launch)
+        return: 0
+    ---
+    if: launch\phase = 1
+        launch\phase: 2
+        lmx_root_host_take(host, launch)
+    ---
+return: 0
+
+# THE LAUNCH.  The Thread lmx_root_open makes is the host here, and the program's R0 is its child.
+# -182: before_turn tap (nullable). lmx_root_launch wraps this with before_turn = 0.
+fn: lmx_root_launch_tapped (@: LmxRoot root; int: argc; @@: char argv; LmxRootProgram: program; size_t: fields; LmxRootSettings: settings; ulong: limit; LmxRootBeforeTurn: before_turn; @: void out; @: void err) int
+    LmxRootLaunch: launch
+    LmxArena: letter_arena
+    @: LmxRootLaunch at 0
+    @: LmxRootExit done 0
+    @: LmxArena letter_at 0
+    @: LmxMsg letter 0
+    @: Lmx letter_graph 0
+    @: Lmx letter_payload 0
+    @: LmxArrayDesc main_args 0
+    @: LmxArrayDesc main_arg 0
+    @@: void slots 0
+    @: LmxMsg message 0
+    @: Lmx graph 0
+    @: LmxThread r0_thread 0
+    @: LmxMsg r0 0
+    @: void report 0
+    @: void cell 0
+    size_t: alen 0U
+    ulong: now 0U
+    int: ai 0
+    int: post 0
+    int: turn 0
+    int: code 1
+    memset((cast: (@: void) (@ launch)), 0, c.sizeof(c.LmxRootLaunch))
+    memset((cast: (@: void) (@ letter_arena)), 0, c.sizeof(c.LmxArena))
+    at: @ launch
+    # k.4 (authorized by fable, FABLE-SONNET-NATIVE-WORD-20260926-191 c.2): see the same
+    # floor change in lmx_root_host_make -- 1, not 2, now that there is no descriptor slot.
+    if: root = 0 || argc < 1 || argv = 0 || program = 0 || fields < 1U
+        return: lmx_root_launch_refuse(0, 0, (cast: (@: char) "lmx: the host was given no root storage, no program name or no program\n"), out, err)
+    ---
+    at\program: program
+    at\before_turn: before_turn
+    at\settings: settings
+    at\fields: fields
+    at\limit: limit
+    memset((cast: (@: void) root), 0, c.sizeof(c.LmxRoot))
+    if: lmx_root_open_graph(root, lmx_root_host_entry, limit, c.LMX_ROOT_HOST_FIELDS) != c.LMX_ROOT_OK
+        return: lmx_root_launch_refuse(0, 0, (cast: (@: char) "lmx: the host could not open\n"), out, err)
+    ---
+    message: lmx_root_message(root)
+    graph: message\graph
+    if: graph = 0 || lmx_arena_ref_store(graph, c.LMX_ROOT_HOST_LAUNCH, (cast: (@: void) at)) != 0
+        return: lmx_root_launch_refuse(root, 0, (cast: (@: char) "lmx: the host could not open\n"), out, err)
+    ---
+    # THE HOST'S FIRST TURN: it makes R0, published at the turn's end.
+    turn: lmx_root_turn(root, lmx_clock_ticks())
+    r0_thread: at\thread
+    if: at\made != 0
+        r0: lmx_thread_message(r0_thread)
+    ---
+    if: turn != c.LMX_ROOT_OK || r0 = 0 || lmx_arena_ref_value(graph, c.LMX_ROOT_HOST_R0) != (cast: (@: void) r0)
+        return: lmx_root_launch_refuse(root, 0, (cast: (@: char) "lmx: the host could not make R0\n"), out, err)
+    ---
+    # The process arguments travel INSIDE a letter (author, Q10), and a letter is (sender; payload)
+    # like every other (K3 = a; FABLE-OPUS-MAINARGS-SENDER-20260925-173): its graph is an anonymous
+    # Structure whose field 0 is the sender's reference -- the host's Message, which is the host
+    # Thread's address, so R0 can post back to it -- and whose field 1 is the payload, a Structure
+    # whose one field, mainArgs, is an Array of references to char Arrays -- argv[i] with its NUL,
+    # exactly as C passed them.  The letter goes to R0 by the ordinary mail pair; R0 takes it, and an
+    # untaken one is released at close.  A full arena: a simple one seats one chunk per array, so its
+    # char Array pool could not hold a second argument.
+    #
+    # FABLE-SONNET-SEND-REF-20260925-172 commit 4 (lines edited under fable's authorization; author's
+    # Q26.2 ruling): field 0 holds a pointer CELL to the host's Message, not the Message's address
+    # directly -- a direct address would make the host's own Message a CHILD of this letter's graph
+    # (the copier would descend into it); a reference is a reference TO a reference. Same shape
+    # l2trans.lm1's own kind-10/11 prototype cells and its sendMessage letter emission use:
+    # LMX_TYPE_POINTER_BASE + 29 (LmxMsg).
+    if: lmx_arena_open(@ letter_arena) != 0
+        return: lmx_root_launch_refuse(root, 0, (cast: (@: char) "lmx: the host could not build the mainArgs letter\n"), out, err)
+    ---
+    letter_at: @ letter_arena
+    letter: (cast: (@: LmxMsg) lmx_arena_take(letter_at, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
+    letter_graph: lmx_node_new_owned(letter_at)
+    letter_payload: lmx_node_new_owned(letter_at)
+    main_args: lmx_array_ref_new_owned(c.LMX_TYPE_ARRAY_OF_DESC, (cast: (size_t) argc), letter_at)
+    if: letter = 0 || letter_graph = 0 || letter_payload = 0 || main_args = 0
+        return: lmx_root_launch_refuse(root, letter_at, (cast: (@: char) "lmx: the host could not build the mainArgs letter\n"), out, err)
+    ---
+    if: lmx_arena_refs_open_owned(letter_at, letter_graph, 2U) != 0 || lmx_arena_refs_open_owned(letter_at, letter_payload, 1U) != 0
+        return: lmx_root_launch_refuse(root, letter_at, (cast: (@: char) "lmx: the host could not build the mainArgs letter\n"), out, err)
+    ---
+    slots: (cast: (@@: void) main_args\data)
+    while: ai < argc
+        alen: strlen(argv[ai]) + 1U
+        main_arg: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, alen, letter_at)
+        if: main_arg = 0
+            return: lmx_root_launch_refuse(root, letter_at, (cast: (@: char) "lmx: the host could not build the mainArgs letter\n"), out, err)
+        ---
+        memcpy(main_arg\data, (cast: (@: void) argv[ai]), alen)
+        slots[ai]: (cast: (@: void) main_arg)
+        ai: ai + 1
+    ---
+    if: lmx_arena_ref_store(letter_payload, 0U, (cast: (@: void) main_args)) != 0
+        return: lmx_root_launch_refuse(root, letter_at, (cast: (@: char) "lmx: the host could not build the mainArgs letter\n"), out, err)
+    ---
+    cell: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + 29, letter_at)
+    if: cell = 0 || lmx_pointer_store_known(cell, (cast: (@: void) message)) != 0 || lmx_arena_ref_store(letter_graph, 0U, cell) != 0 || lmx_arena_ref_store(letter_graph, 1U, (cast: (@: void) letter_payload)) != 0
+        return: lmx_root_launch_refuse(root, letter_at, (cast: (@: char) "lmx: the host could not build the mainArgs letter\n"), out, err)
+    ---
+    letter\running: 1
+    letter\success: 0
+    letter\handoff_ready: 0
+    letter\graph: letter_graph
+    post: lmx_service_post(lmx_root_service(root), (cast: (@: void) r0_thread), letter, letter_at)
+    # MISSING: the service has released the arena itself; any other refusal leaves it here.
+    if: post != c.LMX_SERVICE_OK && post != c.LMX_SERVICE_MISSING
+        return: lmx_root_launch_refuse(root, letter_at, (cast: (@: char) "lmx: the host could not post the mainArgs letter to R0\n"), out, err)
+    ---
+    if: post != c.LMX_SERVICE_OK
+        return: lmx_root_launch_refuse(root, 0, (cast: (@: char) "lmx: the host could not post the mainArgs letter to R0\n"), out, err)
+    ---
+    # -182 / FABLE-GROKBOT-LAUNCH-TAP-20260925-182: host before_turn seam. R0's mail exists
+    # (host_make) and mainArgs is posted; manager round has not run. 0 skips. Non-zero = launch failure.
+    if: at\before_turn != 0
+        if: at\before_turn(root, r0) != 0
+            return: lmx_root_launch_refuse(root, 0, (cast: (@: char) "lmx: the host before_turn tap failed\n"), out, err)
+        ---
+    ---
+    # R0'S ONE TURN, from the host's cycle: its record waits in the host's manager, which steps it
+    # once.
+    now: lmx_clock_ticks()
+    if: lmx_schedule_wait(at\slot, now) != c.LMX_SCHEDULE_OK || lmx_manager_add(lmx_root_manager(root), at\slot) != c.LMX_MANAGER_OK
+        return: lmx_root_launch_refuse(root, 0, (cast: (@: char) "lmx: the host could not schedule R0\n"), out, err)
+    ---
+    lmx_manager_round(lmx_root_manager(root), 1U, now)
+    # THE HOST'S SECOND TURN: it takes its inbox, where R0's exit letter is.
+    lmx_root_turn(root, lmx_clock_ticks())
+    # THE EXIT: R0's letter, or else R0's success.
+    done: @ at\done
+    if: at\exited = 0
+        if: r0\success != 0
+            lmx_root_exit_set(done, 0, 0)
+        else:
+            if: r0\running = 0
+                lmx_root_exit_set(done, 1, (cast: (@: char) "lmx: R0 closed without an exit Message and with success = 0: R0 was stopped (an uncaught throw or a stop request)\n"))
+            else:
+                lmx_root_exit_set(done, 1, (cast: (@: char) "lmx: R0 closed without an exit Message and with success = 0: its turn ended without setting success\n"))
+            ---
+            report: err
+        ---
+    ---
+    lmx_root_exit_write(done, out, err)
+    code: done\exit_code
+    if: lmx_root_close_report(root, report) != c.LMX_ROOT_OK
+        if: err != 0
+            c.fputs("lmx: the host could not close\n", err)
+        ---
+        return: 1
+    ---
+return: code
+
+fn: lmx_root_launch (@: LmxRoot root; int: argc; @@: char argv; LmxRootProgram: program; size_t: fields; LmxRootSettings: settings; ulong: limit; @: void out; @: void err) int
+return: lmx_root_launch_tapped(root, argc, argv, program, fields, settings, limit, 0, out, err)
+
+# THE EXIT MESSAGE'S MODEL: a Structure of three fields by position -- an int, a char Array, a
+# char Array.
+fn: lmx_root_exit_model (@: LmxArena arena) @: Lmx
+    @: Lmx model 0
+    @: void code 0
+    @: LmxArrayDesc out 0
+    @: LmxArrayDesc err 0
+    if: arena = 0
+        return: 0
+    model: lmx_node_new_owned(arena)
+    code: lmx_int_new_owned(arena)
+    out: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, 1U, arena)
+    err: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, 1U, arena)
+    if: model = 0 || code = 0 || out = 0 || err = 0 || lmx_arena_refs_open_owned(arena, model, 3U) != 0
+        return: 0
+    ---
+    if: lmx_arena_ref_store(model, 0U, code) != 0 || lmx_arena_ref_store(model, 1U, (cast: (@: void) out)) != 0 || lmx_arena_ref_store(model, 2U, (cast: (@: void) err)) != 0
+        return: 0
+    ---
+return: model
+
+# A letter (field 0 its sender, field 1 its payload) whose payload is admitted against the model by
+# position -- the model is its own consumer: its three fields are the used paths, each leaf of the
+# same domain and type -- and read.
+fn: lmx_root_exit_admit (@: LmxArena arena; @: Lmx model; @: Lmx letter; @: LmxRootExit done) int
+    @: Lmx payload 0
+    @: LmxArrayDesc out 0
+    @: LmxArrayDesc err 0
+    @: void sender_cell 0
+    if: arena = 0 || model = 0 || letter = 0 || done = 0
+        return: c.LMX_ROOT_INVALID
+    if: letter\len < 2 || lmx_range_classify(arena, lmx_arena_ref_value(letter, 1U)) != c.LMX_KIND_STRUCT
+        return: c.LMX_ROOT_INVALID
+    ---
+    payload: lmx_arena_ref_struct(letter, 1U)
+    if: lmx_runtime_implements(arena, payload, model, model) != c.LMX_IMPLEMENTS_YES
+        return: c.LMX_ROOT_INVALID
+    ---
+    out: (cast: (@: LmxArrayDesc) lmx_arena_ref_value(payload, 1U))
+    err: (cast: (@: LmxArrayDesc) lmx_arena_ref_value(payload, 2U))
+    done\exit_code: lmx_int_value_known(lmx_arena_ref_value(payload, 0U))
+    # D-66: out/err\data point into the letter's own arena, unreachable to the collector the
+    # instant this call returns (the taken letter is held only by lmx_root_host_take's own
+    # locals, not any graph root the collector's mark walk reaches) -- copy the bytes into
+    # host memory now.  Explicit host-seam ownership (lmx_root_exit_write frees it once
+    # written), not a new reference keeping the letter's arena alive.
+    done\out.len: 0U
+    done\out.data: 0
+    done\err.len: 0U
+    done\err.data: 0
+    done\owns_text: 0
+    if: out\len != 0U && out\data != 0
+        done\out.data: (cast: (@: char) calloc(out\len, 1U))
+        if: done\out.data = 0
+            return: c.LMX_ROOT_INVALID
+        ---
+        memcpy((cast: (@: void) done\out.data), out\data, out\len)
+        done\out.len: out\len
+    ---
+    if: err\len != 0U && err\data != 0
+        done\err.data: (cast: (@: char) calloc(err\len, 1U))
+        if: done\err.data = 0
+            free((cast: (@: void) done\out.data))
+            done\out.data: 0
+            done\out.len: 0U
+            return: c.LMX_ROOT_INVALID
+        ---
+        memcpy((cast: (@: void) done\err.data), err\data, err\len)
+        done\err.len: err\len
+    ---
+    done\owns_text: 1
+    # FABLE-SONNET-SEND-REF-20260925-172 commit 4 (lines edited under fable's authorization;
+    # author's Q26.2 ruling): the sender slot is a pointer CELL, not the Message's address
+    # directly -- classified before reading through it, so a raw address left there (the old
+    # shape) is a located refusal, not a misread (this is also the commit's own mutant: put the
+    # raw address back -> classify fails -> INVALID, RED across the eternal-runs suite).
+    sender_cell: lmx_arena_ref_value(letter, 0U)
+    if: sender_cell = 0 || lmx_domain_kind(arena, sender_cell) != c.LMX_KIND_PRIMITIVE || lmx_domain_type(arena, sender_cell) < c.LMX_TYPE_POINTER_BASE
+        return: c.LMX_ROOT_INVALID
+    ---
+    done\sender: lmx_pointer_value_known(sender_cell)
+return: c.LMX_ROOT_OK
+
+# THE HOST'S SETTINGS (author 2026-09-24): one entry for now, something C cannot give a program --
+# the process's working directory, read from the OS at launch by the host's own code.  An
+# independent: const: immutable branch in the host's arena: a Structure whose one field is a char
+# Array of exact length (no NUL), every array profiled by `profile` and sealed.  R0 receives it by
+# the retained reference (lmx_root_host_make), never a copy.
+os:
+    win:
+        include: "<direct.h>"
+        fn: lmx_root_os_cwd (@: char buffer; size_t: size) @: char
+        return: c._getcwd(buffer, (cast: (int) size))
+    default:
+        include: "<unistd.h>"
+        fn: lmx_root_os_cwd (@: char buffer; size_t: size) @: char
+        return: c.getcwd(buffer, size)
+end: os
+
+fn: lmx_root_settings (@: LmxArena arena; @: Lmx profile) @: Lmx
+    c.array: [4096]: char cwd
+    @: Lmx branch 0
+    @@: void refs 0
+    @: LmxArrayDesc text 0
+    @: char data 0
+    @: LmxPool pool 0
+    size_t: n 0U
+    if: arena = 0 || profile = 0
+        return: 0
+    if: lmx_root_os_cwd(cwd, 4096U) = 0
+        return: 0
+    ---
+    n: strlen(cwd)
+    branch: lmx_node_new_profiled(arena, profile)
+    refs: (cast: (@@: void) lmx_arena_take_n_profiled(arena, c.sizeof(@: void), c.LMX_KIND_CHILDREN, c.LMX_TYPE_REFS, profile, 1U))
+    text: (cast: (@: LmxArrayDesc) lmx_arena_take_profiled(arena, c.sizeof(c.LmxArrayDesc), c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_CHAR, profile))
+    if: branch = 0 || refs = 0 || text = 0
+        return: 0
+    ---
+    text\len: n
+    text\data: 0
+    if: n != 0U
+        data: (cast: (@: char) lmx_arena_take_n_profiled(arena, c.sizeof(c.char), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR, profile, n))
+        if: data = 0
+            return: 0
+        ---
+        memcpy((cast: (@: void) data), (cast: (@: void) cwd), n)
+        text\data: (cast: (@: void) data)
+    ---
+    refs[0]: (cast: (@: void) text)
+    branch\data: (cast: (@: void) refs)
+    branch\len: 1
+    pool: lmx_arena_find_profiled(arena, c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT, profile)
+    if: pool = 0 || lmx_pool_seal(pool) != 0
+        return: 0
+    ---
+    pool: lmx_arena_find_profiled(arena, c.LMX_KIND_CHILDREN, c.LMX_TYPE_REFS, profile)
+    if: pool = 0 || lmx_pool_seal(pool) != 0
+        return: 0
+    ---
+    pool: lmx_arena_find_profiled(arena, c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_CHAR, profile)
+    if: pool = 0 || lmx_pool_seal(pool) != 0
+        return: 0
+    ---
+    pool: lmx_arena_find_profiled(arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR, profile)
+    if: pool != 0 && lmx_pool_seal(pool) != 0
+        return: 0
+    ---
+return: branch

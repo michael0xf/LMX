@@ -1,0 +1,14 @@
+# FABLE-SONNET-ARRAY-WRITE-DISPATCH-20260923-119 originally kept node's
+# own single-hop own-table lookup for array writes (buf has length 3),
+# testing that an out-of-range literal index on it still refuses with
+# l2_own_index_head's own bounds check. FABLE-SONNET-NODE-ROOT-20260923-
+# 121 (author Q9) removed that lookup entirely -- node\buf[5] now refuses
+# earlier, as "unsupported index", exactly like any other general root
+# (unit_array_write_general_root_no_field.lm2). A bare, unrooted buf[5]
+# is the shape that still reaches the bounds check unchanged.
+fn: broken () int
+    []: int buf 3
+    buf[5]: 1
+    return: 0
+
+return: broken()

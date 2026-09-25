@@ -1,0 +1,14 @@
+# receiveMessage is a receiver of the profile, not a reserved word: a declared
+# method of that name takes precedence, as every callable head does. Nothing
+# here takes the letter, so R0 still holds it at close.
+fn: receiveMessage (int: x) int
+return: x + 1
+
+int: r 0
+r: receiveMessage(3)
+receiveMessage: 4
+if: r != 4
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

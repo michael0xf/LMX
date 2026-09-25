@@ -1,0 +1,39 @@
+# FABLE-GROKBOT-MATRIX-20260924-143 cell: existing callable x primitive, three
+# spellings. Physical operation = CALL (never assignment). Side effects on own
+# fields are the observable; dirty/checkpoint runs before each call.
+int: hits 0
+int: last 0
+
+fn: foo (int: n) int
+    hits: hits + 1
+    last: n
+    return: 0
+end: foo
+
+foo: 5
+if: hits != 1
+    sendMessage: exit(exit_code: 90; stdout: ""; stderr: "")
+    return
+if: last != 5
+    sendMessage: exit(exit_code: 91; stdout: ""; stderr: "")
+    return
+
+foo(6)
+if: hits != 2
+    sendMessage: exit(exit_code: 92; stdout: ""; stderr: "")
+    return
+if: last != 6
+    sendMessage: exit(exit_code: 93; stdout: ""; stderr: "")
+    return
+
+foo:
+    7
+if: hits != 3
+    sendMessage: exit(exit_code: 94; stdout: ""; stderr: "")
+    return
+if: last != 7
+    sendMessage: exit(exit_code: 95; stdout: ""; stderr: "")
+    return
+
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

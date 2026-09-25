@@ -1,0 +1,16 @@
+# FABLE-SONNET-DECL-PREPASS-20260923-137 part 3: l2_colon_simple_ty reads
+# a predef'd C function's result as a numeric literal would (the common
+# `status: predef_call(...)` shape, entry_parse_min.lm2) -- l2trans has no
+# way to learn a predef'd function's REAL C return type (the generated
+# predef header supplies the checked prototype; l2trans itself only ever
+# re-parses the predef file for a yes/no existence check, never a
+# signature). A void-returning predef assigned this way is not caught at
+# the L2 level, same as every other predef call already relies on the C
+# compiler for its real type check -- measured: l1trans accepts it, gcc
+# refuses "void value not ignored as it ought to be".
+predef: "l1src/parser.lm1"
+
+@: c.LmP0Document document
+int: status
+status: lm_p0_document_destroy_owners(document)
+return: 0

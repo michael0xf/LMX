@@ -38,6 +38,10 @@ define: LMX_TURN_OK 0
 define: LMX_TURN_INVALID 1
 define: LMX_TURN_SUCCESS 0
 define: LMX_TURN_FAILED 1
+# The BODY's own status, as a turn hands it to the boundary: 0 when the body succeeded, any other
+# value when it failed.  Not a Thread status and not a walk status -- the body's own report, which
+# the boundary turns into the turn's outcome (lmx_turn.lm1, lmx_turn_end_status).
+define: LMX_TURN_BODY_OK 0
 
 prototype:
     # What this turn's outcome is, from the Message's own flags (see above).
@@ -45,4 +49,10 @@ prototype:
     # The boundary: publish or discard, and publish or drop the reservations.  Called once per
     # turn, after the turn has been left (lmx_thread_leave), by whichever binding ran it.
     fn: lmx_turn_end (@: LmxThread t; ulong: now) int
+    # THE SAME BOUNDARY, WITH THE BODY'S OWN STATUS CARRIED IN.  A turn whose body reported a
+    # nonzero status is a FAILED turn even when the Message's flags say the work continues, so its
+    # staged outbox and its reservations are discarded exactly as a stopped turn's are -- while
+    # the turn's graph and own writes stand, as they always did.  The Thread calls THIS form
+    # (lmx_thread.lm1); lmx_turn_end above stays the flags-only form its other callers use.
+    fn: lmx_turn_end_status (@: LmxThread t; ulong: now; int: body_status) int
 end: prototype

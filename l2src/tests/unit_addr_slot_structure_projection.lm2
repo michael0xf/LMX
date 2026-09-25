@@ -1,0 +1,24 @@
+# FABLE-SONNET-ADDRESS-TICKETS-20260922-97 Ticket A positive fixtures.
+#
+# CORE.md 3.1 / L2 spec 18.1: a nonprimitive Structure/model binding already
+# holds a physical descriptor reference (Lmx * in C99); an address slot over
+# it addresses the slot holding that reference (Lmx **), not a C aggregate.
+# l2_ptr_local_ty resolves this through l2_ns_find (the same registry
+# Name: ... end: Name declarations already populate), generic over any
+# Structure name -- Other below proves there is no Model-specific branch.
+# @: int p is the unaffected primitive control.
+Model:
+    size_t: tag 0U
+end: Model
+
+Other:
+    size_t: x 0U
+end: Other
+
+@: Model slot
+@: Other slot2
+int: x 5
+@: int p
+p: @x
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

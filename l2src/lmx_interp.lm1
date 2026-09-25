@@ -1,0 +1,42 @@
+predef: "l2src/lmx_interp.h.lm1"
+predef: "l2src/lmx_walk.lm1"
+predef: "l2src/lmx_call.lm1"
+
+# L3 graph entry: recognises a Structure, then one walk activation.  k.4: no plan, no
+# descriptor home -- lmx_walk_enter needs nothing beyond the Structure itself.
+
+fn: lmx_interp_callable (@: LmxArena arena; @: Lmx node) int
+return: lmx_call_ready(arena, node)
+
+fn: lmx_interp_map (int: st) int
+    if: st = c.LMX_WALK_OK
+        return: c.LMX_INTERP_OK
+    if: st = c.LMX_WALK_NO_GRAPH
+        return: c.LMX_INTERP_NO_GRAPH
+    if: st = c.LMX_WALK_NOT_CALLABLE
+        return: c.LMX_INTERP_NOT_CALLABLE
+    if: st = c.LMX_WALK_UNSUPPORTED
+        return: c.LMX_INTERP_INVALID
+    if: st = c.LMX_WALK_INVALID || st = c.LMX_WALK_CHECKPOINT || st = c.LMX_WALK_NOMEM
+        return: c.LMX_INTERP_INVALID
+return: c.LMX_INTERP_INVALID
+
+fn: lmx_interp_apply (@: LmxWalkContext context; @: Lmx node; @@: void args; size_t: nargs) int
+return: lmx_interp_apply_value(context, node, args, nargs, 0)
+
+# The callable's returned value goes to `out` as lmx_walk_run reports it; a refusal before the
+# walk leaves `out` empty, which is the same answer lmx_walk_run gives when it refuses.
+fn: lmx_interp_apply_value (@: LmxWalkContext context; @: Lmx node; @@: void args; size_t: nargs; @: LmxWalkValue out) int
+    if: out != 0
+        out\ref: 0
+        out\number: 0
+        out\present: 0
+    ---
+    if: context = 0 || node = 0 || context\arena = 0
+        return: c.LMX_INTERP_INVALID
+    if: lmx_interp_callable(context\arena, node) != c.LMX_CALL_OK
+        return: c.LMX_INTERP_INVALID
+return: lmx_interp_map(lmx_walk_run(context, node, args, nargs, out))
+
+fn: lmx_interp_run (@: LmxWalkContext context; @: Lmx node) int
+return: lmx_interp_apply(context, node, 0, 0U)

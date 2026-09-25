@@ -1,4 +1,4 @@
-﻿predef: "l2src/lmx.h.lm1"
+predef: "l2src/lmx.h.lm1"
 predef: "lmx_arena_blocks.h.lm1"
 
 # The arena of a Message (Lingvamyxa_spec.txt 2, 6.5).  Mikhail, 2026-09-17, verbatim:
@@ -19,9 +19,9 @@ predef: "lmx_arena_blocks.h.lm1"
 struct: LmxArena
     @: LmxArenaBlock blocks
     @: LmxPool arrays
-    @: LmxRange index
-    size_t: count
-    size_t: capacity
+    # Sorted address index as one DynamicArray of LmxRange (Q18). len = live entries;
+    # capacity = allocated room. Storage is malloc/realloc, not an arena typed array.
+    LmxRangeDynamicArray: index
     # The mark generation of the last collection pass (lmx_gc).  The pass bumps it and stamps
     # every chunk it walks, so "is this reachable" is one comparison per chunk and nothing has
     # to be cleared between passes.  It is the arena's own bookkeeping, like the index: no
@@ -43,12 +43,17 @@ prototype:
     fn: lmx_arena_open_simple (@: LmxArena arena) int
     # The arena's array of this kind and type, or null when it has none yet.
     fn: lmx_arena_find (@: LmxArena arena; int: kind; int: type) @: LmxPool
+    # The same lookup with an exact physical receiver-profile identity.  profile=0 is the
+    # ordinary unqualified array and is what lmx_arena_find selects.
+    fn: lmx_arena_find_profiled (@: LmxArena arena; int: kind; int: type; @: Lmx profile) @: LmxPool
     # A cell (or `count` consecutive cells) of the arena's array of this kind and type:
     # the array is found among the arena's N arrays, or MADE when the arena has none of
     # that kind and type yet.  A mutable value is therefore an element of THAT array --
     # never an array of its own.
     fn: lmx_arena_take (@: LmxArena arena; size_t: stride; int: kind; int: type) @: void
     fn: lmx_arena_take_n (@: LmxArena arena; size_t: stride; int: kind; int: type; size_t: count) @: void
+    fn: lmx_arena_take_profiled (@: LmxArena arena; size_t: stride; int: kind; int: type; @: Lmx profile) @: void
+    fn: lmx_arena_take_n_profiled (@: LmxArena arena; size_t: stride; int: kind; int: type; @: Lmx profile; size_t: count) @: void
     # An array joins: the descriptor is linked into the arena's arrays and the block
     # carrying the descriptor (when there is one) joins the arena's block list.  The
     # interval is registered by lmx_arena_span, which the same caller does next.
@@ -94,8 +99,22 @@ prototype:
     # and only the arena's manager inserts or retires one.
     fn: lmx_range_reserve (@: LmxArena arena; size_t: need) int
     fn: lmx_range_add (@: LmxArena arena; @: LmxPool array; @: void lo; @: void hi) int
+    # Insert a range view while preserving its true owner.  Used by arena attach and by
+    # transitive import; ordinary allocation always uses lmx_range_add (owner=arena).
+    fn: lmx_range_add_view (@: LmxArena arena; @: LmxArena owner; @: LmxPool array; @: void lo; @: void hi) int
     fn: lmx_range_drop (@: LmxArena arena; @: void lo; @: void hi) int
-    # What the table answers: how to read an address, and which array it came from.
+    # Import every sealed range visible in `source` as non-owning views.  The operation is
+    # idempotent and transitive, preserves each entry's true owner, and never links foreign
+    # arrays into the borrower's local array/ownership lists.
+    fn: lmx_range_import (@: LmxArena arena; @: LmxArena source) int
+    # Narrow form for a profiled copy/merge: import only sealed ranges whose array carries
+    # this exact nonzero physical profile.  Unrelated sealed profiles stay unclassified.
+    fn: lmx_range_import_profile (@: LmxArena arena; @: LmxArena source; @: Lmx profile) int
+    # What the table answers for an EXACT LIVE CELL START: how to read the cell, and
+    # which array it came from. An interior address, an aligned spare-capacity address
+    # and an address in a registered but still empty chunk answer nothing. The range is
+    # bisected first; its lo plus the descriptor's stride identify the cell, and that
+    # range's own chunk count decides whether the cell has been handed out.
     fn: lmx_range_classify (@: LmxArena arena; @: void p) int
     fn: lmx_range_type_of (@: LmxArena arena; @: void p) int
     fn: lmx_range_stride (@: LmxArena arena; @: void p) size_t
@@ -103,4 +122,21 @@ prototype:
     # through ("_Получив дескриптор типа код сразу делает приведение типа указателя и
     # пишет напрямую в ячейку_ _Это обязательно_"), or null when no array has it.
     fn: lmx_range_pool (@: LmxArena arena; @: void p) @: LmxPool
+    # Allocator-only containing-interval lookup. Unlike lmx_range_pool, this accepts
+    # spare capacity and an empty registered chunk; it exists so lmx_pool_take_n can
+    # verify ownership before handing out the first cell. It is local-only and is not
+    # a type/classification result.
+    fn: lmx_range_interval_pool (@: LmxArena arena; @: void p) @: LmxPool
+    # The true owner and physical receiver-profile identity found through the same range
+    # lookup.  Imported views answer their foreign owner/profile.  lmx_range_pool remains
+    # strictly local so allocator and GC ownership can never adopt an imported range.
+    fn: lmx_range_home (@: LmxArena arena; @: void p) @: LmxArena
+    fn: lmx_range_profile (@: LmxArena arena; @: void p) @: Lmx
+    # FABLE-134: address of the by-value index DynamicArray / its fixed base (offsetof 0).
+    fn: lmx_arena_index_data (@: LmxArena arena) @: LmxRange
+    fn: lmx_arena_index_len (@: LmxArena arena) size_t
+    fn: lmx_arena_index_cap (@: LmxArena arena) size_t
+    fn: lmx_arena_index_set_data (@: LmxArena arena; @: LmxRange data) void
+    fn: lmx_arena_index_set_len (@: LmxArena arena; size_t: len) void
+    fn: lmx_arena_index_set_cap (@: LmxArena arena; size_t: capacity) void
 end: prototype

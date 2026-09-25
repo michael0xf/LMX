@@ -94,6 +94,8 @@ git show origin/main:steps/review-log.md
 
 ## 6. Ловушки (проверенные)
 
+- **POSIX-тело машина не компилирует** (стейджинг Windows берёт `_win32`): срез с POSIX-телом не «посажен», пока облако fable не дало число `build_l2src.py`; минимум на машине перед merge — `l1trans` над `_posix`-телом и `gcc -c` с winpthreads. `struct:`/`fnptr:` в теле (не в `.h.lm1`) l1trans B0 отвергает «unsupported L1 form» — записи живут в заголовке (`lmx_posix_abi.h.lm1`). `calloc`/`free` в теле — `include: "<stdlib.h>"` (REVIEW e8daf3a).
+
 - `predef:` резолвится транслятором от cwd; staged root — `l2src/` + `l1src/` ядра (`build_l2src.ps1` комментарии). Предеф тел vs заголовков → multiple definition; предеф только на `.h.lm1`.
 - Буферы транслятора `c.array: [1024]`; проверка строк обязана читать `l2_eternal_driver: N checks`; stdout фикстуры без `\n` склеивается с драйвером.
 - Селфтесты, строящие вложенные Structure вручную, ставят `\parent`; `lmx_walk_plain` требует ненулевой `parent`; `LmxMergePair**` — массив указателей; `LmxPrimitiveEntry` ≠ `LmxEntry`.

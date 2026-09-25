@@ -22,6 +22,7 @@ import argparse
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import time
@@ -251,9 +252,11 @@ def main():
         log.write_text(f'invoke: "{exe}"\nexit {r.returncode}\n--- stdout\n{stdout}\n--- stderr\n{stderr}')
         if base == 'lmx_close_watchdog_running_selftest':
             # THE ONE TARGET ALLOWED TO BE FATAL ON PURPOSE (the .ps1's five-clause contract).
+            # Both bodies end the process with abort(): exit 3 on Windows, SIGABRT (-6) under POSIX.
+            fatal = 3 if os.name == 'nt' else -signal.SIGABRT
             why = ''
-            if r.returncode != 3:
-                why = f'exit {r.returncode}, expected exactly 3'
+            if r.returncode != fatal:
+                why = f'exit {r.returncode}, expected exactly {fatal} (abort)'
             elif 'PROBE-RUNNING armed:' not in stdout:
                 why = 'the armed marker is missing from STDOUT'
             elif 'PROBE-RUNNING the close RETURNED' in stdout:
@@ -263,7 +266,7 @@ def main():
             if why:
                 row('FAIL', f'selftest:{base}', f'expected-fatal FAILED: {why}; log {log}')
             else:
-                row('OK', f'selftest:{base}', 'ran, expected-fatal: exit 3, armed stdout, deadline stderr')
+                row('OK', f'selftest:{base}', f'ran, expected-fatal: exit {fatal} (abort), armed stdout, deadline stderr')
             continue
         if r.returncode == 0:
             row('OK', f'selftest:{base}', 'ran, exit 0')

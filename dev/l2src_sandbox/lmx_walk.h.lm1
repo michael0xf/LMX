@@ -257,7 +257,9 @@ define: LMX_WALK_OP_PUT_REF 24
 define: LMX_WALK_OP_ELEM 25
 define: LMX_WALK_OP_ELEMPUT 26
 define: LMX_WALK_OP_LENGTH 27
-define: LMX_WALK_OP_COUNT 28
+# -201: [pad, param_ref_0 .. param_ref_P-1, body]. Catch landing. Count was 28.
+define: LMX_WALK_OP_PAD 28
+define: LMX_WALK_OP_COUNT 29
 # -174 c4: method.sig = MARK | LMX_TYPE_* names the trampoline result class for CALL dest.
 define: LMX_WALK_RESULT_SIG_MARK 0x57000000
 
@@ -311,6 +313,10 @@ struct: LmxWalkFrame
     int: returned
     int: valued
     @: void result
+    # -201: set when a CALL/PRIM throw names a pad. 0 means the throw propagates.
+    # payload is the thrown record (0 for an implicit throw).
+    @: Lmx landing
+    @: void payload
 end: LmxWalkFrame
 
 prototype:

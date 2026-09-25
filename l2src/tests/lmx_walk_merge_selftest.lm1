@@ -132,12 +132,12 @@ fn: main () int
     caller_a: lmx_node_new_owned(@ arena)
     mw_check(counts, caller_a != 0 && lmx_arena_refs_open_owned(@ arena, caller_a, 1U) = 0, "caller_a opened")
     prim_a: mw_fr(@ arena, roles, caller_a, 0U, c.LMX_WALK_OP_RET, 2U)
-    prim_a: mw_fr(@ arena, roles, prim_a, 1U, c.LMX_WALK_OP_PRIM, 6U)
+    prim_a: mw_fr(@ arena, roles, prim_a, 1U, c.LMX_WALK_OP_PRIM, 7U)
     lmx_arena_ref_store(prim_a, 1U, (cast: (@: void) rec_a))
-    lmx_arena_ref_store(prim_a, 2U, (cast: (@: void) model))
-    lmx_arena_ref_store(prim_a, 3U, (cast: (@: void) operand))
-    # slot 4 (body) left 0: no body operand.
-    lmx_arena_ref_store(prim_a, 5U, (cast: (@: void) pairs_a))
+    lmx_arena_ref_store(prim_a, 3U, (cast: (@: void) model))
+    lmx_arena_ref_store(prim_a, 4U, (cast: (@: void) operand))
+    # slot 5 (body) left 0: no body operand. slot 2 is catch.
+    lmx_arena_ref_store(prim_a, 6U, (cast: (@: void) pairs_a))
     mw_check(counts, prim_a != 0, "caller_a graph built")
 
     st: lmx_walk_activate(@ ctx, caller_a, caller_a, 0, 0U, (cast: (@: void) (@ r_a)), @ out_a, @ present_a)
@@ -163,11 +163,11 @@ fn: main () int
 
     caller_b: lmx_node_new_owned(@ arena)
     mw_check(counts, caller_b != 0 && lmx_arena_refs_open_owned(@ arena, caller_b, 1U) = 0, "caller_b opened")
-    prim_b: mw_fr(@ arena, roles, caller_b, 0U, c.LMX_WALK_OP_PRIM, 5U)
+    prim_b: mw_fr(@ arena, roles, caller_b, 0U, c.LMX_WALK_OP_PRIM, 6U)
     lmx_arena_ref_store(prim_b, 1U, (cast: (@: void) rec_b))
-    lmx_arena_ref_store(prim_b, 2U, (cast: (@: void) target_b))
-    lmx_arena_ref_store(prim_b, 3U, (cast: (@: void) op_b))
-    lmx_arena_ref_store(prim_b, 4U, (cast: (@: void) pairs_b))
+    lmx_arena_ref_store(prim_b, 3U, (cast: (@: void) target_b))
+    lmx_arena_ref_store(prim_b, 4U, (cast: (@: void) op_b))
+    lmx_arena_ref_store(prim_b, 5U, (cast: (@: void) pairs_b))
     mw_check(counts, prim_b != 0, "caller_b graph built (bare PRIM statement, no RET)")
 
     st: lmx_walk_activate(@ ctx, caller_b, caller_b, 0, 0U, (cast: (@: void) (@ r_b)), @ out_b, @ present_b)
@@ -216,7 +216,7 @@ fn: main () int
     caller_c: lmx_node_new_owned(@ arena)
     mw_check(counts, caller_c != 0 && lmx_arena_refs_open_owned(@ arena, caller_c, 1U) = 0, "caller_c opened")
     prim_c: mw_fr(@ arena, roles, caller_c, 0U, c.LMX_WALK_OP_RET, 2U)
-    prim_c: mw_fr(@ arena, roles, prim_c, 1U, c.LMX_WALK_OP_PRIM, 6U)
+    prim_c: mw_fr(@ arena, roles, prim_c, 1U, c.LMX_WALK_OP_PRIM, 7U)
     mw_check(counts, prim_c != 0, "caller_c graph built")
     model_c: lmx_node_new_owned(@ arena)
     mw_check(counts, model_c != 0 && lmx_arena_refs_open_owned(@ arena, model_c, 1U) = 0, "model_c opened {m: 1} (the ordinary, COPIED operand)")
@@ -251,9 +251,9 @@ fn: main () int
     mw_check(counts, seal_pool != 0 && lmx_pool_seal(seal_pool) = 0, "leaf_c's profiled PRIMITIVE pool sealed")
 
     lmx_arena_ref_store(prim_c, 1U, (cast: (@: void) rec_c))
-    lmx_arena_ref_store(prim_c, 2U, (cast: (@: void) model_c))
-    lmx_arena_ref_store(prim_c, 3U, (cast: (@: void) operand_c))
-    # slot 4 (body) and slot 5 (pairs) left 0: two operands, flat append, no map.
+    lmx_arena_ref_store(prim_c, 3U, (cast: (@: void) model_c))
+    lmx_arena_ref_store(prim_c, 4U, (cast: (@: void) operand_c))
+    # slot 2 is catch. slot 5 (body) and slot 6 (pairs) left 0.
 
     st: lmx_walk_activate(@ ctx, caller_c, caller_c, 0, 0U, (cast: (@: void) (@ r_c)), @ out_c, @ present_c)
     mw_check(counts, st = c.LMX_WALK_OK, "merge-map (retained-leaf) PRIM walked OK")

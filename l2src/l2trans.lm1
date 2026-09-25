@@ -108,6 +108,9 @@ int: l2_walk_methods 0
 @: int l2_rw_pre 0
 int: l2_rw_pre_n 0
 int: l2_rw_pre_cap 0
+# T4b class 2: 0 until own row k's binding line in the walk being built, then 1.
+# The native emitter's l2_own_bseq is a different pass and is not this array.
+@: int l2_rw_bseq 0
 # The walked root's sends (`sendMessage: X`), one generated primitive l2_send<k> each: the sites
 # recorded by the top-level count pass (l2_rw_send_rec 1), the next site's number, and per site its
 # payload's field count, each field's kind (1 an int expression, 2 a text literal) and text atom.
@@ -510,6 +513,10 @@ prototype:
     fn: l2_rw_refuse_ty (const: @(LmP0Node node); int: oi) int
     fn: l2_rw_own_ty (const: @(LmP0Text t)) int
     fn: l2_rw_find (const: @(LmP0Text t)) int
+    fn: l2_rw_bound (const: @(LmP0Text t)) int
+    fn: l2_rw_formal_slot (const: @(LmP0Text t)) int
+    fn: l2_rw_bseq_zero () int
+    fn: l2_rw_carry (int: into; int: oi; @: int out) int
     fn: l2_rw_seen (int: oi) int
     fn: l2_rw_arg (int: parent; int: j; @: int out) int
     fn: l2_rw_ret (@: LmP0Field first; int: n; int: into; @: int out) int
@@ -16614,12 +16621,71 @@ return: l2_rw_refuse(node, "a value that is not a number")
 
 # The own field named t that the body being built sees (-193 T4a), or -1: the last one of that
 # name of the method being built (l2_rw_mi; the root's are the unit's), else a unit field the method
-# sees -- l2_own_find_last's own fallback --, never one a formal of the method hides: a formal's
-# name is its input (ARG).
+# sees -- l2_own_find_last's own fallback. A formal's name is its input (ARG) until that formal's
+# numeric field has had its binding line (T4b class 2); from then on it is that field.
 fn: l2_rw_find (const: @(LmP0Text t)) int
+    int: oi
     if: l2_rw_mi != l2_e && l2_formal_find(l2_rw_mi, t) >= 0
+        oi: l2_rw_bound(t)
+        if: oi >= 0
+            return: oi
         return: 0 - 1
 return: l2_own_find_last(l2_rw_mi, t)
+
+# The method-level numeric own field named t that is already bound to a formal, or -1.
+fn: l2_rw_bound (const: @(LmP0Text t)) int
+    int: oi 0
+    int: best 0 - 1
+    if: l2_rw_bseq = 0 || l2_rw_mi = l2_e
+        return: 0 - 1
+    while: oi < l2_own_n
+        if: oi != l2_own_excl && l2_own_mi[oi] = l2_rw_mi && l2_rw_bseq[oi] > 0 && l2_own_host[oi] = 0 && l2_own_fid[oi] < 0 && l2_own_uchild[oi] >= 0 && l2_rw_num_ty(l2_own_ty[oi]) != 0 && l2_text_same(l2_own_name[oi], t) != 0
+            best: oi
+        oi: oi + 1
+    ---
+return: best
+
+# The method-level numeric own field named t that a formal's first store will bind, or -1.
+# It is not bound yet. A hosted field is class 3 and is not this row.
+fn: l2_rw_formal_slot (const: @(LmP0Text t)) int
+    int: oi 0
+    int: best 0 - 1
+    if: l2_rw_bseq = 0 || l2_rw_mi = l2_e || l2_formal_find(l2_rw_mi, t) < 0
+        return: 0 - 1
+    while: oi < l2_own_n
+        if: oi != l2_own_excl && l2_own_mi[oi] = l2_rw_mi && l2_rw_bseq[oi] = 0 && l2_own_host[oi] = 0 && l2_own_fid[oi] < 0 && l2_own_uchild[oi] >= 0 && l2_rw_num_ty(l2_own_ty[oi]) != 0 && l2_text_same(l2_own_name[oi], t) != 0
+            best: oi
+        oi: oi + 1
+    ---
+return: best
+
+# Clear the walk's binding marks. The array lives for the whole translation.
+fn: l2_rw_bseq_zero () int
+    int: i 0
+    if: l2_own_n <= 0
+        return: 0
+    if: l2_rw_bseq = 0
+        l2_rw_bseq: (cast: (@: int) calloc((cast: (size_t) l2_own_n), c.sizeof(c.int)))
+        if: l2_rw_bseq = 0
+            return: 1
+        return: 0
+    ---
+    while: i < l2_own_n
+        l2_rw_bseq[i]: 0
+        i: i + 1
+    ---
+return: 0
+
+# A declaration of a formal's field with no initializer carries the argument into the cell.
+fn: l2_rw_carry (int: into; int: oi; @: int out) int
+    int: arg
+    int: j
+    j: l2_formal_find(l2_rw_mi, l2_own_name[oi])
+    if: j < 0
+        return: 1
+    if: l2_rw_frame(into, "LMX_WALK_OP_PUT", 4, out) != 0 || l2_rw_cell(\out, oi) != 0 || l2_rw_arg(\out, j, @ arg) != 0
+        return: 1
+return: l2_rw_put(\out, 3, arg)
 
 # Is own row oi one the body being built reaches: its own, or the unit's?
 fn: l2_rw_seen (int: oi) int
@@ -16882,6 +16948,9 @@ fn: l2_rw_opty (const: @(LmP0Node node)) int
     if: idx >= 0
         return: l2_rw_elem_ty(idx)
     if: l2_rw_mi != l2_e && l2_formal_find(l2_rw_mi, t) >= 0
+        idx: l2_rw_bound(t)
+        if: idx >= 0
+            return: l2_own_ty[idx]
         return: l2_own_ty_of_param(l2_ft(l2_rw_mi, l2_formal_find(l2_rw_mi, t)))
     ty: l2_rw_own_ty(t)
     if: ty >= 0
@@ -18394,9 +18463,12 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
             return: l2_rw_own(parent, oi, out)
         ---
     ---
-    # A formal of the method being built is its input j (-193 T4a): [arg, j], the reference its
-    # caller passed.
+    # A formal of the method being built is its input j (-193 T4a): [arg, j], until its numeric
+    # field's binding line (T4b class 2); from then on the name is that field.
     if: l2_rw_mi != l2_e && l2_formal_find(l2_rw_mi, t) >= 0
+        oi: l2_rw_bound(t)
+        if: oi >= 0
+            return: l2_rw_own(parent, oi, out)
         return: l2_rw_arg(parent, l2_formal_find(l2_rw_mi, t), out)
     oi: l2_rw_own_row(node, t)
     if: oi = 0 - 1
@@ -19412,6 +19484,15 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
             return: l2_rw_refuse_ty(stmt, oi)
         f: l2_next_active(f\next)
         if: f = 0
+            # T4b class 2: `int: n` with no initializer, n a formal, carries the argument.
+            if: l2_rw_formal_slot(l2_own_name[oi]) = oi
+                if: l2_rw_carry(into, oi, @ node) != 0
+                    return: 1
+                l2_rw_bseq[oi]: 1
+                \made: 1
+                if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, node) < 0
+                    return: 1
+            ---
             return: 0
         n: 0
         cond: f
@@ -19426,6 +19507,8 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
         l2_own_excl: 0 - 1
         if: k != 0
             return: 1
+        if: l2_rw_formal_slot(l2_own_name[oi]) = oi
+            l2_rw_bseq[oi]: 1
         \made: 1
         if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, node) < 0
             return: 1
@@ -19511,6 +19594,20 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
         if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, node) < 0
             return: 1
         return: 0
+    # T4b class 2: the first store of a formal's numeric field. The value was read while the
+    # name was still the argument; the field is bound from the next line.
+    oi: l2_rw_formal_slot(h)
+    if: oi >= 0
+        n: l2_count_active(stmt\as\frame\body)
+        if: n < 1
+            return: l2_rw_refuse(stmt, "this assignment")
+        if: l2_rw_assign(into, oi, stmt\as\frame\body\first_field, n, @ node) != 0
+            return: 1
+        l2_rw_bseq[oi]: 1
+        \made: 1
+        if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, node) < 0
+            return: 1
+        return: 0
     if: l2_ns_find(h) >= 0 || (stmt\as\frame\body != 0 && stmt\as\frame\body\first_field != 0 && l2_frame_head(stmt\as\frame\body\first_field\value, "merge") != 0)
         return: l2_rw_refuse(stmt, "a Structure value")
 return: l2_rw_refuse(stmt, "this statement")
@@ -19574,7 +19671,8 @@ return: 0
 # Its shape first (l2_rw_may): a method with a native body, no dynamic inputs and no throw, a result
 # that is a number (int, size_t, unsigned, ulong) or none, number formals or a Structure formal
 # (`T: m` and `@: T m`, T4b class 1), and own fields that are neither declared in a nested body
-# nor named like a formal. A callable formal and any other non-number formal stay out.
+# nor, unless it is a method-level number, named like a formal (T4b class 2). A callable
+# formal and any other non-number formal stay out. A field declared in a nested body stays out.
 fn: l2_rw_may (int: mi) int
     int: j 0
     int: oi 0
@@ -19594,7 +19692,11 @@ fn: l2_rw_may (int: mi) int
         j: j + 1
     ---
     while: oi < l2_own_n
-        if: l2_own_mi[oi] = mi && (l2_own_host[oi] != 0 || l2_formal_find(mi, l2_own_name[oi]) >= 0)
+        if: l2_own_mi[oi] = mi && l2_own_host[oi] != 0
+            return: 0
+        # A method-level numeric field named like a formal is class 2. A pointer or a
+        # Structure field of that name stays out.
+        if: l2_own_mi[oi] = mi && l2_formal_find(mi, l2_own_name[oi]) >= 0 && (l2_rw_num_ty(l2_own_ty[oi]) = 0 || l2_own_uchild[oi] < 0)
             return: 0
         oi: oi + 1
     ---
@@ -19642,6 +19744,8 @@ fn: l2_rw_methods_count () int
     while: i < l2_m_n
         l2_m_steps[i]: 0 - 1
         if: l2_library_mode = 0 && l2_rw_may(i) != 0
+            if: l2_rw_bseq_zero() != 0
+                return: l2_error(l2_src, 0, "out of memory")
             l2_vis_method(i)
             l2_rw_mi: i
             l2_rw_quiet: 1
@@ -19675,6 +19779,8 @@ fn: l2_rw_methods_emit () int
     int: bad
     while: i < l2_m_n
         if: l2_m_steps[i] > 0
+            if: l2_rw_bseq_zero() != 0
+                return: l2_error(l2_src, 0, "out of memory")
             l2_vis_method(i)
             l2_rw_mi: i
             l2_rw_emit: 1

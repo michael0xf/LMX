@@ -13,26 +13,33 @@
 - `origin/main` = `7ba030b` (или новее): модель code/data, слово `Lmx.native`, merge по карте пар, op-деревья тел методов, массивы в корне (ядро) — всё влито. Гейт на main: `tools/build_l2src.ps1 -Run` 275/275, `tools/l2_harness.ps1` 384/384, `python tools/run_l3_selftest.py` 11/11, `python tools/check_docs.py` OK.
 - Могли остаться не влитыми: `origin/opus/l2src-twin-198` (D-74, twin `l2src` = копия песочницы, `opus_next.md`) и `origin/sonnet/merge-194` (K2 merge в корне, `sonnet_next.md`). Их вливает fable из облака после зелёного гейта.
 
-## 3. Протокол с облачными сессиями (через git)
+## 3. Протокол с облачными сессиями (через git) — действующая форма с 2026-09-25
 
-Пока автор не задаст другую форму, действует такая:
+Общий носитель — только `origin` (`main`). Облачные сессии сами не просыпаются на новые коммиты: их будит автор одной строкой в чат; fable обходит `main` каждые полчаса (в :14 и :44 UTC).
 
-1. **Запрос гейта** от fable/opus/sonnet: файл `steps/gate-request.md` в ветке `fable/requests` (или коммит с текстом `GATE? <ветка> <sha>`). Один запрос — одна ветка/sha.
-2. **Ты** (по одному запросу за раз, никогда два гейта параллельно — машина падает по памяти):
+1. **Запрос гейта.** fable пишет на `main` файл `steps/gate-request.md` с одной строкой `GATE? main <sha>` (или `GATE? <ветка> <sha>`). Ты проверяешь его командой `git fetch origin main && git show origin/main:steps/gate-request.md`. Автор может дать ту же строку в чат — это равнозначно.
+2. **Прогон** (один за раз, никогда два параллельно — машина падает по памяти):
    ```powershell
    Set-Location C:\Nyasha_Planet\LMX
    git fetch --all
-   git checkout <ветка>; git reset --hard <sha>
+   git checkout main; git reset --hard <sha>
    .\tools\build_l2src.ps1 -Run
    .\tools\l2_harness.ps1
    python tools\run_l3_selftest.py
    python tools\check_docs.py
    git diff --check
    ```
-   Результат — в `steps/gate-results.md` (дата, ветка, sha, четыре числа, список красных строк с точным текстом FAIL, пути evidence под `build/`) коммитом `GATE DONE <ветка> <sha>: …` в ветку `grok/results`, push.
-3. **Ничего не чинить** в чужих ветках. Красный гейт — только отчёт с фактами; починка — у владельца (Opus — l2trans и фикстуры harness; Sonnet — ядро/walker/L3/селфтесты).
-4. **Артефакты** (`build/`, `dev/l3_interp/build/`, `%TEMP%`) не коммитить. `claude_chat/profiles/` не коммитить и не читать `.key`.
-5. Если автор попросит тебя сделать содержательную задачу — она берётся из `next_core_tasks.md` §3/§4 по плану в `steps/*.md`, с теми же правилами: к.1 read-only план → код по коммитам с гейтом → RESULT; STARTED/RESULT с ID тикета в сообщении коммита и в `steps/`.
+3. **Ответ.** В `steps/gate-results.md` дописать сверху запись: дата и время UTC, `<sha>`, четыре числа (build N/N, harness N/N, L3 N/N, check_docs OK/FAIL), при красном — точный текст каждой строки FAIL и путь к логу под `build/`. Коммит в ветке `grok/machine` с первой строкой `GATE DONE main <sha>: build N/N, harness N/N, L3 N/N, check_docs OK` (при красном — `GATE RED main <sha>: …`), затем по правилу автора:
+   ```powershell
+   git checkout -b grok/machine origin/main   # или git checkout grok/machine; git merge origin/main
+   git add steps/gate-results.md; git commit -m "GATE DONE main <sha>: build N/N, harness N/N, L3 N/N, check_docs OK"
+   git push -u origin grok/machine
+   git checkout main; git merge --no-ff grok/machine -m "integrate: gate result for <sha>"; git push origin main
+   ```
+   fable прочитает `main` на ближайшем обходе; отдельно сообщать не нужно, но строка `GATE DONE …` в чат автору ускорит.
+4. **Ничего не чинить** в чужих файлах. Красный гейт — только факты; владелец чинит: Opus — `l2trans.lm1` и строки harness; Sonnet — ядро, walker, L3, селфтесты; fable — документы и `steps/`.
+5. **Не коммитить** `build/`, `dev/l3_interp/build/`, `%TEMP%`, `*.stackdump`, `lmx_root_*_selftest.err/.out`; `claude_chat/profiles/` не читать и не коммитить.
+6. **Содержательная задача от автора** — из `next_core_tasks.md` §3/§4 по `steps/*.md`, теми же правилами: к.1 read-only план → код по коммитам → RESULT с ID в `steps/` и в первой строке коммита; своя ветка `grok/<тема>`, влитие в `main` по правилу автора после зелёных проверок.
 
 ## 4. Правила проекта, которые нельзя нарушать (кратко)
 
@@ -44,4 +51,4 @@
 
 ## 5. Что дальше по плану (очередь fable, §3 `fable_next.md`)
 
-T3 (merge в корне, транслятор) → -170 трансляторная половина (ELEM/ELEMPUT/LENGTH в корне, 10 строк) → T4b/T5–T7 (callable merge, PAP, makeAdder, конвертер) → CATCH-роль (ядро + транслятор, 7 строк) → D-67/D-60/D-62/D-12/D-69 → §7 порт implements/admission → GATE «чистое ядро перед самосборкой L2». Открытых вопросов автору нет.
+T3 посажен 2026-09-25 (main `e4fdb62`); дальше: D-76 и -170 трансляторная половина (Opus); D-67 (A), -202 K2b, -201 CATCH к.2, -200 POSIX-двойник (Sonnet); текущее — `steps/tickets-20260925.md`. Прежний порядок: -170 трансляторная половина (ELEM/ELEMPUT/LENGTH в корне, 10 строк) → T4b/T5–T7 (callable merge, PAP, makeAdder, конвертер) → CATCH-роль (ядро + транслятор, 7 строк) → D-67/D-60/D-62/D-12/D-69 → §7 порт implements/admission → GATE «чистое ядро перед самосборкой L2». Открытых вопросов автору нет.

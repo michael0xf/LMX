@@ -1,5 +1,7 @@
 predef: "l2src/lmx_manager.h.lm1"
 
+fnptr: LmxManagerWork (@: void arg) int
+
 # The running manager's header.  It is separate from lmx_manager.h.lm1 on purpose:
 # the manager's INTERFACE is portable and lives there.  The thread entry a platform
 # hands to the OS, and that platform's types, live in the body this header's consumers
@@ -31,6 +33,12 @@ prototype:
     # Has this record's lane already ended? No lane means yes: nothing else is
     # still inside its storage. The body looks; a later reap still owns the join.
     fn: lmx_manager_running_lane_ended (@: LmxSchedule slot) int
-    # Let other threads run for about this many milliseconds. Zero returns at once.
+    # Let other threads run for about this many milliseconds. Zero yields once.
     fn: lmx_manager_running_pause_ms (unsigned: ms) int
+    # A selftest's own thread: start it, ask whether it is still running, then join and release it.
+    fn: lmx_manager_running_thread_start (LmxManagerWork: work) @: void
+    fn: lmx_manager_running_thread_running (@: void handle) int
+    fn: lmx_manager_running_thread_join (@: void handle) int
+    # The calling thread's id, as a number. Zero is not a promise.
+    fn: lmx_manager_running_thread_id () size_t
 end: prototype

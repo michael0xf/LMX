@@ -1252,10 +1252,14 @@ os:
         include: "<direct.h>"
         fn: lmx_root_os_cwd (@: char buffer; size_t: size) @: char
         return: c._getcwd(buffer, (cast: (int) size))
+        fn: lmx_root_os_mkdir (const: @: char path) int
+        return: c._mkdir(path)
     default:
-        include: "<unistd.h>"
+        include: "<unistd.h>" "<sys/stat.h>"
         fn: lmx_root_os_cwd (@: char buffer; size_t: size) @: char
         return: c.getcwd(buffer, size)
+        fn: lmx_root_os_mkdir (const: @: char path) int
+        return: c.mkdir(path, 493)
 end: os
 
 fn: lmx_root_settings (@: LmxArena arena; @: Lmx profile) @: Lmx

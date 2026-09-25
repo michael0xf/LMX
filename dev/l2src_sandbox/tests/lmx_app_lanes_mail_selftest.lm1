@@ -23,7 +23,7 @@ predef: "l2src/lmx_graph_copy_owned.lm1"
 predef: "l2src/lmx_call.lm1"
 predef: "l2src/lmx_clock.lm1"
 predef: "l1src/libc_abi.lm1"
-include: "<stdio.h>" "<stdlib.h>" "<string.h>" "<windows.h>"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
 # lmx_app_lanes_mail_selftest.lm1 -- ЗАМЕР НАСТОЯЩЕЙ МНОГОПОТОЧНОСТИ (19.09).
 #
@@ -37,7 +37,7 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>" "<windows.h>"
 # и письма идут из одной полосы в другую, пока обе крутятся параллельно.
 #
 # ЧТО МЕРИТСЯ (числа, не слова):
-#   * каждая нить записывает в СВОЙ граф идентификатор потока ОС (GetCurrentThreadId) — если он
+#   * каждая нить записывает в СВОЙ граф идентификатор потока ОС (lmx_manager_running_thread_id) — если он
 #     у двух нитей РАЗНЫЙ, многопоточность настоящая, а не эмуляция;
 #   * A кладёт N писем в ящик B через lmx_thread_mail_accept ИЗ СВОЕЙ ПОЛОСЫ;
 #   * B вынимает их ИЗ СВОЕЙ и считает в своём графе;
@@ -102,7 +102,7 @@ fn: lm_a_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: vo
         return: 0
     ---
     if: lmx_size_value_known(tid_cell) = 0U
-        lmx_size_store_known(tid_cell, (cast: (size_t) c.GetCurrentThreadId()))
+        lmx_size_store_known(tid_cell, (cast: (size_t) lmx_manager_running_thread_id()))
     ---
     posted: lmx_size_value_known(posted_cell)
     lm_turns_a: lm_turns_a + 1U
@@ -150,7 +150,7 @@ fn: lm_b_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: vo
         return: 0
     ---
     if: lmx_size_value_known(tid_cell) = 0U
-        lmx_size_store_known(tid_cell, (cast: (size_t) c.GetCurrentThreadId()))
+        lmx_size_store_known(tid_cell, (cast: (size_t) lmx_manager_running_thread_id()))
     ---
     lm_turns_b: lm_turns_b + 1U
     got: lmx_size_value_known(got_cell)
@@ -362,7 +362,7 @@ fn: main () int
             spins: 2000U
         else:
             spins: spins + 1U
-            c.Sleep(1U)
+            lmx_manager_running_pause_ms(1U)
         ---
     ---
     posted: lmx_size_value_known(cell_a)

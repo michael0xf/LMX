@@ -5,7 +5,7 @@ predef: "l2src/lmx_post.lm1"
 predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_manager_running.h.lm1"
-include: "<stdio.h>" "<stdlib.h>" "<string.h>" "<windows.h>"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
 # Two concurrent producers, one owner/consumer, one mailbox.  Producers fill the inbox before
 # the consumer starts, forcing several monitored 3/2 growth steps.  The deterministic prefix
@@ -18,25 +18,25 @@ define: LMX_POST_MPSC_N 10000
 @: void pm_b 0
 int: pm_start 0
 
-fn: pm_produce (@: void target) DWORD
+fn: pm_produce (@: void target) int
     size_t: n 0U
     int: rc
     while: c.__atomic_load_n(@ pm_start, c.__ATOMIC_ACQUIRE) = 0
-        c.Sleep(0U)
+        lmx_manager_running_pause_ms(0U)
     ---
     while: n < c.LMX_POST_MPSC_N
         rc: lmx_post_accept(pm_arena, pm_box, target, c.LMX_POST_INBOX)
         if: rc != c.LMX_POST_OK
-            return: 1U
+            return: 1
         ---
         n: n + 1U
     ---
-return: 0U
+return: 0
 
-fn: pm_produce_a (@: void unused) DWORD
+fn: pm_produce_a (@: void unused) int
 return: pm_produce(pm_a)
 
-fn: pm_produce_b (@: void unused) DWORD
+fn: pm_produce_b (@: void unused) int
 return: pm_produce(pm_b)
 
 fn: main () int
@@ -118,8 +118,8 @@ fn: main () int
         failures: failures + 1
     ---
 
-    ha: (cast: (@: void) c.CreateThread(0, 0U, (cast: (LPTHREAD_START_ROUTINE) pm_produce_a), 0, 0U, 0))
-    hb: (cast: (@: void) c.CreateThread(0, 0U, (cast: (LPTHREAD_START_ROUTINE) pm_produce_b), 0, 0U, 0))
+    ha: lmx_manager_running_thread_start(pm_produce_a)
+    hb: lmx_manager_running_thread_start(pm_produce_b)
     if: ha = 0 || hb = 0
         return: 2
     c.__atomic_store_n(@ pm_start, 1, c.__ATOMIC_RELEASE)
@@ -127,7 +127,7 @@ fn: main () int
     # Snapshot while producers publish. The snapshot holds the same monitor only while copying and
     # therefore sees one complete prefix of pairs: never a torn target/source cell. It is released
     # before the next probe and does not consume anything.
-    while: c.WaitForSingleObject(ha, 0U) = c.WAIT_TIMEOUT || c.WaitForSingleObject(hb, 0U) = c.WAIT_TIMEOUT
+    while: lmx_manager_running_thread_running(ha) != 0 || lmx_manager_running_thread_running(hb) != 0
         if: lmx_post_snapshot_inbox(@ box, @ snapshot, @ snapshot_n) != c.LMX_POST_OK
             failures: failures + 1
             break
@@ -143,16 +143,14 @@ fn: main () int
         free((cast: (@: void) snapshot))
         snapshot: 0
         snapshot_n: 0U
-        c.Sleep(0U)
+        lmx_manager_running_pause_ms(0U)
     ---
     # Do not consume until both producers finish: the ring must grow to hold all 20,000 entries.
-    c.WaitForSingleObject(ha, c.INFINITE)
-    c.WaitForSingleObject(hb, c.INFINITE)
+    lmx_manager_running_thread_join(ha)
+    lmx_manager_running_thread_join(hb)
     if: lmx_post_count(@ box, c.LMX_POST_INBOX) != 2U * c.LMX_POST_MPSC_N || lmx_post_inbox_cap(@ box) < 2U * c.LMX_POST_MPSC_N
         failures: failures + 1
     ---
-    c.CloseHandle(ha)
-    c.CloseHandle(hb)
 
     while: lmx_post_count(@ box, c.LMX_POST_INBOX) != 0U
         got: lmx_post_take(@ box, c.LMX_POST_INBOX)

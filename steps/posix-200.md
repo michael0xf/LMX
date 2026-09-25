@@ -67,3 +67,9 @@ build 279/279 (`build/l2src/20260925_124018`; +2 к 277: `header:lmx_posix_abi` 
 Свидетель — `lmx_domain_selftest`: пауза сдвигает `lmx_clock_word` не меньше чем на 30 мс; живая lane не завершена; после `running: 0` и паузы завершена, reap ещё впереди.
 
 Гейт: build 280/280 (`build/l2src/20260925_133833`; +1 к 279 — `unit:lmx_manager_running_lane`). Harness 399/399 (`build/l2_harness/20260925_134128`). L3 11/11, бюджет имён 68/128. `check_docs` OK. Облако 232/232 измеряет fable.
+
+## Срез селфтестов REVIEW 5bc8ec7 п.1–п.2
+
+`c.Sleep` девяти селфтестов — `lmx_manager_running_pause_ms`. Поток селфтеста — `thread_start` / `thread_running` / `thread_join` / `thread_id` в том же заголовке и той же паре lane, без нового списка имён. `lmx_root_os_mkdir` в том же `os:`-блоке, что `lmx_root_os_cwd`. D-78 не в этом срезе.
+
+Гейт: build 280/280 (`build/l2src/20260925_141743`). Harness 400/400 (`build/l2_harness/20260925_142056`). L3 11/11, бюджет имён 69/128 (`LmxManagerWork`). `check_docs` OK. Облако 233/233 измеряет fable.

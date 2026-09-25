@@ -139,7 +139,7 @@ fn: main () int
 
     # Wait for the state the next call requires: the lane is an OS thread, so the count is what says
     # it ran, and a bounded sleep is how this test asks.
-    c.Sleep(60U)
+    lmx_manager_running_pause_ms(60U)
     rb_check(counts, rb_calls >= 1U, "the lane ran no body")
     rb_check(counts, rb_current = t, "the lane's body did not run inside its own turn")
     rb_check(counts, rb_node = 0, "the lane's body was not handed node 0 for an independent Thread graph")
@@ -148,7 +148,7 @@ fn: main () int
 
     # Stop it and let the lane end by itself, then join.
     message\running: 0
-    c.Sleep(60U)
+    lmx_manager_running_pause_ms(60U)
     rb_check(counts, lmx_manager_running_close(@ running) = c.LMX_MANAGER_OK, "the running manager did not join its lanes")
     rb_check(counts, slotp\lane = 0, "the lane was not released")
     rb_check(counts, rb_calls = 0U || rb_calls >= 1U, "the lane's count went backwards")

@@ -67,7 +67,7 @@ size_t: t6_b_spins 0U
 fn: t6_body_b (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
     t6_b_spins: t6_b_spins + 1U
     while: t6_run = 1
-        c.Sleep(1U)
+        lmx_manager_running_pause_ms(1U)
     ---
 return: 0
 
@@ -330,7 +330,7 @@ fn: main () int
         c.fflush(0)
         return: 2
     ---
-    c.Sleep(50U)
+    lmx_manager_running_pause_ms(50U)
     if: t6_b_spins = 0U
         c.printf("PROBE-RUNNING the child's body never ran: the lane did not enter it\n")
         c.fflush(0)

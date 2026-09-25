@@ -60,8 +60,21 @@ STARTED: `671a161` на `grok/catch-201`, влит `6bde045`, база main `788
 
 Строки, Entry: declared_vs_merge 27 (MergeFail 1), declared_vs_merge_ok 8, t2 103, sibling 3, rethrow 1011, nested_while 122, publish 7, implements 42. Отказы: duplicate, merge params, param, shadow, unhandled. `user_break` — «break and continue».
 
-Свидетель селфтеста добавлен: «throw onto a sibling pad of the same body lands once» (20 проверок, exit 0). Не обнулять `f\landing` на этом селфтесте — RED по проверке `handler throw with no pad propagates`, не по таймеру. Мутант эмиттера не измерялся.
+Свидетель селфтеста добавлен: «throw onto a sibling pad of the same body lands once» (20 проверок, exit 0). Не обнулять `f\landing` на этом селфтесте — RED по проверке `handler throw with no pad propagates`, не по таймеру.
 
-Гейт: селфтест `checks=20 failures=0` (быстрая пересборка на `build/l2src/20260925_104032`; полный `build_l2src` после этого среза не гонялся). Harness 398/398 (`build/l2_harness/20260925_112130`). L3 11/11. `check_docs` OK.
+Гейт: селфтест `checks=20 failures=0` — быстрая пересборка селфтеста, полный `build_l2src` после этого среза не гонялся. Каталог `build/l2src/20260925_104032` — прежний полный прогон, в нём селфтест ещё на 18 проверках. Harness 398/398 (`build/l2_harness/20260925_112130`). L3 11/11. `check_docs` OK.
 
 Гейт ответа: build 277/277 (`build/l2src/20260925_104032`; в том прогоне селфтест ещё на 18 проверках, ядро после него не менялось). После 19-й проверки и после отката мутанта обратного порядка быстрая пересборка того же селфтеста: `checks=19 failures=0`, exit 0. Harness 398/398 (`build/l2_harness/20260925_104719`). L3 11/11. `check_docs` OK.
+
+Мутанты транслятора (REVIEW `9d01eda`), каждый откатан. l2trans пересобран из мутанта, строки — тем же драйвером, что harness `20260925_112130`. Полный harness на мутант не гонялся.
+
+| Что мутировано | Результат |
+| --- | --- |
+| `l2_rw_catch_call`: строка объявленного имени пишет `k + 1` | RED, exit 1 (R0 стоп, бросок не пойман): `declared_vs_merge` ожидался 27; `t2` 103; `sibling` 3; `rethrow` 1011; `nested_while` 122; `publish` 7. `merge_local` зелёный (Entry 50): неявный merge этой строкой не пишется. `unit_s1_catch_tc` зелёный: его `catch` сидит в `fn: tc`, это нативный pad, не `l2_rw_catch_call`. |
+| `l2_catch_find` оставляет самый внешний покрывающий pad, не ближайший | `rethrow` RED: exit 1000, ожидался 1011 (первый `Oops(0)` сел на внешний pad, `n` остался 0). `sibling` и `nested_while` зелёные: у вызова один покрывающий pad; соседний блок в стек областей не входит, «внешний» и «ближайший» — один и тот же. |
+| `l2_rw_admit` не вызывает `l2_rw_catch_fixed` | не RED: `unit_s1_catch_implements` снова Entry 42. В эмиссии admit — аргумент CALL, не первый statement обработчика (обработчик — `r: 42`). Неявная строка CALL с `k_in` 2 ловит `implements` сама. |
+| то же и неявная строка CALL пишет `k_in + 1` | RED: `unit_s1_catch_implements` exit 1, ожидался 42. |
+
+## Открыто
+
+**Перенумерация `(k_in, 0, k_out)` не эмитируется.** `l2_rw_catch_row` пишет `k_out = 0`: строка ловит. Методы с `throws` вне walkable-подмножества (T4b); сайты этого среза — в корне, у корня d = 0, поэтому неявные `merge`/`implements` callee и есть 1/2. Когда T4b впустит `throws` в тела методов, бросок, не пойманный в walked-методе A, придёт на сайт вызова A в нумерации callee, а не вызывающего. Нативно это делает `l2_emit_propagate`. До той посадки строку не эмитировать отдельным режимом. `unit_s1_catch_user_break` остаётся «break and continue». D-55 (`unit_s1_merge_uncaught_entry`) тем же пунктом открыт.

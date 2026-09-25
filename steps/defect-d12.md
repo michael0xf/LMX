@@ -24,3 +24,9 @@ STARTED grok/d12-printtree, база main `338ed30`. REVIEW dd153e2 — OK, не
 ## Проверка
 
 l2trans, l1trans, `gcc -c`. Прогон тем же драйвером, что harness (`-Dmain=l2_generated_main` и переименования запуска): без пути — usage и exit 0; файл `entry_argc_if.lm2` — дамп и exit 0; нет файла — entry 1 и stderr `P0 parse error while reading`. `check_docs`. Полный гейт 282/402 не повторять: ядро, транслятор и строки harness не меняются.
+
+## RESULT
+
+Посажено на `grok/d12-printtree`. `printTree.lm2` в обоих близнецах — одна копия. Корень принимает `MainLetter` / `mainArgs`. `usage()` печатает строку и возвращает 0. `run()` передаёт `@ m\mainArgs[1][0]` и `@ document` в `lm_p0_parse_file`. Выход корня — `sendMessage: exit`.
+
+l2trans exit 0 (L1 31106 байт, `# entry statements: 5`, вызов `lm_p0_parse_file(@ l2_cp1[0U], @ document)`). l1trans exit 0. `gcc -c` exit 0. Связка с `l2_eternal_driver.o`: без пути — `usage: printTree <source>`, exit 0, 12 checks; `entry_argc_if.lm2` — дамп `structure fields=6`, exit 0; нет файла — entry 1, stderr `P0 parse error while reading`. `check_docs` OK. Ядро и транслятор не менялись, полный 282/402 не повторялся.

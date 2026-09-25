@@ -1,38 +1,51 @@
-L2:
-    predef: "l1src/parser.lm1"
-    include: "<stdio.h>"
-    fn: main (int: argc; @@: char argv) int
-        @: LmP0Document document 0
-        const: @(LmP0Diagnostic diagnostic)
-        @: char dump
-        int: status
-        immutable:
-            @: char usage "usage: printTree <source>\n"
-        c.setvbuf: c.stdout 0 c._IONBF 0
-        c.setvbuf: c.stderr 0 c._IONBF 0
-        if: argc != 2
-            c.fputs: usage c.stdout
-            return: 0
-        status: lm_p0_parse_file: argv[1] @ document
-        if: status != 0
-            diagnostic: lm_p0_document_diagnostic: document
-            if: diagnostic != 0
-                c.fprintf: c.stderr "P0 parse error %d at %zu:%zu: %s\n" diagnostic\code diagnostic\line diagnostic\column diagnostic\message
-            if: diagnostic = 0
-                c.fputs: "P0 parse error while reading " c.stderr
-                c.fputs: argv[1] c.stderr
-                c.fputs: "\n" c.stderr
-            lm_p0_document_destroy: document
-            return: 1
-        dump: lm_p0_dump_alloc: document
-        if: dump = 0
-            c.fputs: "P0 dump allocation failed\n" c.stderr
-            lm_p0_document_destroy: document
-            return: 1
-        c.fputs: dump c.stdout
-        c.fflush: c.stdout
-        lm_p0_free: dump
+predef: "l1src/parser.lm1"
+include: "<stdio.h>"
+
+# argv[0] is in the letter, so one source path is length 2. c.* and the
+# parser call stay in a method: the walked root does not build them (Q7).
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+
+MainLetter: m
+
+fn: usage () int
+    c.fputs: "usage: printTree <source>\n" c.stdout
+return: 0
+
+fn: run () int
+    @: c.LmP0Document document
+    const: @(c.LmP0Diagnostic diagnostic)
+    @: char dump
+    int: status
+    c.setvbuf: c.stdout 0 c._IONBF 0
+    c.setvbuf: c.stderr 0 c._IONBF 0
+    status: lm_p0_parse_file: @ m\mainArgs[1][0] @ document
+    if: status != 0
+        diagnostic: lm_p0_document_diagnostic: document
+        if: diagnostic != 0
+            c.fprintf: c.stderr "P0 parse error %d at %zu:%zu: %s\n" diagnostic\code diagnostic\line diagnostic\column diagnostic\message
+        if: diagnostic = 0
+            c.fputs: "P0 parse error while reading " c.stderr
+            c.fputs: @ m\mainArgs[1][0] c.stderr
+            c.fputs: "\n" c.stderr
         lm_p0_document_destroy: document
-        return: 0
-    end: main
-end: L2
+        return: 1
+    dump: lm_p0_dump_alloc: document
+    if: dump = 0
+        c.fputs: "P0 dump allocation failed\n" c.stderr
+        lm_p0_document_destroy: document
+        return: 1
+    c.fputs: dump c.stdout
+    c.fflush: c.stdout
+    lm_p0_free: dump
+    lm_p0_document_destroy: document
+    return: 0
+end: run
+
+receiveMessage: m
+if: length(m\mainArgs) != 2
+    sendMessage: exit(exit_code: usage(); stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

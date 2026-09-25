@@ -130,3 +130,21 @@ cwd = корень LMX.  Читать по порядку:
   2. перевести собранным l2trans;
   3. проверить Needle / Debt / Absent;
   4. eternal-строки — под драйвером `harness/l2_eternal_driver.lm1` с Args и фактами.
+
+## Облако (2026-09-25, после переезда)
+
+- Тикеты и ответы — только через git: `steps/cloud-protocol.md`, `steps/tickets-20260925.md`.  Моя ветка —
+  `claude/continue-opus-next-doc-rvjocj`; автор велел: всё сделанное вливать в main (`--no-ff`) и пушить.
+- Сделано: -199 T3 (`steps/root-merge-199.md`, main `e4fdb62`), D-75 (там же), D-53 (`steps/defect-d53.md`).
+  Открыто за мной: D-76 (чтение поля через `@: T` на именованную Structure), -199 QUESTION (K2b: профили
+  квалифицированных операндов в `lmx_walk_merge_map` — ядро Sonnet; после него снять отказ «a merge of a
+  qualified branch» и перевернуть 5 строк).
+- Рецепт облачного цикла (приватный, в репозиторий не класть):
+  1. `sh tools/bootstrap_l1.sh` → B0 `build/self_build/bootstrap_*/l1trans`;
+  2. PowerShell 7 скачивается с github releases (`powershell-7.4.6-linux-x64.tar.gz`), `ln -s` в `/usr/local/bin/pwsh`;
+  3. заглушка `windows.h` в scratchpad (GetTickCount64/Sleep через clock_gettime/nanosleep, CreateThread/
+     WaitForSingleObject/CloseHandle/CreateEventW/SetEvent через pthread; функции `static inline`), путь в `CPATH`;
+     `ln -s /usr/bin/nm /usr/bin/nm.exe`;
+  4. `CPATH=… pwsh -File tools/l2_harness.ps1 -Translator <B0>` — полный harness (~45 s);
+     `CPATH=… python3 tools/run_l3_selftest.py --translator <B0>` — 11/11; `python3 tools/build_l2src.py` — 174/230 без заглушки.
+  Это свидетельство, не гейт: гейт — машина автора (GATE?).

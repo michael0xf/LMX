@@ -16767,7 +16767,10 @@ return: 0
 #     result (one that can throw included: a throw at the root is uncaught and stops R0),
 #     `implements(candidate, required, consumer)` (its translation-time answer, an int literal), an
 #     expression statement, if/else, an anonymous block, a bare `return`, and
-#     `sendMessage: Name(f: v; ...)` to the parent (l2_rw_send);
+#     `sendMessage: Name(f: v; ...)` to the parent (l2_rw_send); since -196 also `&&` / `||`,
+#     short-circuit, as flag steps (l2_rw_sc), `while:`, a path through a qualified branch (read)
+#     or through a method's occurrence (`M\x`, `M\[N]x`, read and written), a call through a path
+#     (`Holder\viaPath(4U)`), and a string literal alone as a statement (no step);
 #   * otherwise refused, located: «root operation not walkable yet: <op>» -- never dropped and
 #     never run natively.
 # Two passes over the same statements: the first (l2_rw_emit 0) checks and counts the unit's

@@ -456,9 +456,11 @@ fn: lmx_walk_slot (@: LmxWalkFrame f; @: Lmx code; size_t: first; int: write) @@
     if: f = 0 || code = 0
         return: 0
     holder: lmx_arena_ref_value(code, first)
-    if: holder = 0
-        return: 0
     # -188 k.3c: when holder is the running activation's code, use its data (f\node).
+    # K-OT2 (-194 к.5): holder = 0 is no longer refused here outright -- it is now a
+    # valid sentinel lmx_walk_data_holder resolves to this activation's own data;
+    # the classify-as-Structure check just below still refuses it when that
+    # resolution has nothing to give (f\node = 0).
     holder: lmx_walk_data_holder(f, holder)
     if: lmx_walk_kind(f, holder) != c.LMX_KIND_STRUCT
         return: 0
@@ -479,8 +481,28 @@ return: lmx_arena_ref_cell((cast: (@: Lmx) holder), index)
 # k.4: OWN/SET/PUT target = data. A holder that names the running activation's CODE
 # (physical identity with f\code -- no child[0]/CALLABLE indirection left to compare
 # through) means its DATA instead.  Any other holder is a plain graph reference, unchanged.
+# K-OT2 (-194 к.5): a frame naming NO holder at all (a literal 0 slot value -- T4's own
+# form for a method's own-field frames, since the frame's code is shared by address
+# (K-OT1) across every occurrence that runs it, and so cannot embed any ONE occurrence's
+# address to compare) means "this activation's data" UNCONDITIONALLY, the same target
+# the f\code-identity match resolves to above -- not "unchanged" (0), which no caller
+# could ever use as a holder. This is what lets a merge result R correctly run frames it
+# shares with its model M: the frame's holder was never M's address to begin with, so
+# there is no identity to fail to match when the running code differs from M. A
+# genuinely missing/never-stored holder slot (a translator defect, not T4's own
+# sentinel) reads identically as 0 and is resolved the same way; T4 is this sentinel's
+# only emitter and controls both cases, so the two are not otherwise distinguished here.
 fn: lmx_walk_data_holder (@: LmxWalkFrame f; @: void holder) @: void
-    if: f = 0 || holder = 0 || f\code = 0 || f\node = 0
+    if: f = 0
+        return: holder
+    ---
+    if: holder = 0
+        if: f\node = 0
+            return: 0
+        ---
+        return: (cast: (@: void) f\node)
+    ---
+    if: f\code = 0 || f\node = 0
         return: holder
     ---
     if: holder != (cast: (@: void) f\code)
@@ -1126,10 +1148,9 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
         if: (cast: (size_t) code\len) < 4U
             return: c.LMX_WALK_INVALID
         ---
+        # K-OT2 (-194 к.5): holder = 0 is no longer refused outright here either -- the
+        # same sentinel lmx_walk_slot now accepts, resolved the same way.
         other: lmx_arena_ref_value(code, 1U)
-        if: other = 0
-            return: c.LMX_WALK_INVALID
-        ---
         other: lmx_walk_data_holder(f, other)
         if: other = 0 || lmx_walk_kind(f, other) != c.LMX_KIND_STRUCT
             return: c.LMX_WALK_INVALID

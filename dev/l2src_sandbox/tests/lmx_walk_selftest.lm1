@@ -94,9 +94,23 @@ fn: lit (@: Lmx parent; size_t: slot; int: value) @: Lmx
 return: n
 
 # [own, holder, slot]: the field `index` of the Structure `holder`, by reference.
+# An EXPLICIT holder (this one) names that one Structure -- a path, like `M\x` written
+# from outside -- and means it regardless of which occurrence's code the frame runs as
+# part of, copied or not: code is immutable and shared, and copying never rewrites a
+# reference embedded in it (K-OT1/-194 к.5; fable, 2026-09-26 -- the copier's OLD
+# per-copy rewrite was a side effect of the pre-K-OT1 model, never real semantics).
 fn: own (@: Lmx parent; size_t: slot; @: Lmx holder; size_t: index) @: Lmx
     @: Lmx n fr(parent, slot, c.LMX_WALK_OP_OWN, 3U)
     ref(n, 1U, holder)
+    sz(n, 2U, index)
+return: n
+
+# [own, 0, slot]: "this activation's own data" (K-OT2/-194 к.5) -- the ONE form that
+# means the running occurrence itself, holder = f\data, not an address. There is no
+# second frame regime: an explicit holder above is always that Structure; 0 here is the
+# only way a frame means "whichever occurrence is actually running it."
+fn: own0 (@: Lmx parent; size_t: slot; size_t: index) @: Lmx
+    @: Lmx n fr(parent, slot, c.LMX_WALK_OP_OWN, 3U)
     sz(n, 2U, index)
 return: n
 
@@ -225,6 +239,9 @@ fn: main () int
     @: Lmx refuser 0
     @: Lmx stranger 0
     @: Lmx copy 0
+    @: Lmx explicit_target 0
+    @: Lmx explicit_writer 0
+    @: Lmx explicit_writer_copy 0
     @: void cell 0
     @: void xcell 0
     @@: void argv 0
@@ -367,15 +384,36 @@ fn: main () int
     sz(n, 2U, 0U)
     lit(n, 3U, 1)
 
+    # explicit_writer: explicit_target\n: 42 -- an EXPLICIT (non-zero) holder naming a
+    # Structure OTHER than explicit_writer itself. K-OT1/K-OT2 witness (-194 к.5, fable's
+    # ruling): a copy of explicit_writer still writes into explicit_target BY NAME,
+    # never into "the copy's own" anything -- an explicit holder is a path (`M\x`
+    # written from outside), and copying/re-entering the code it lives in never changes
+    # what that path means. This is the counterpart to counter's own own0 frames above
+    # (holder = 0, "this activation's data") -- the two are the whole of what a holder
+    # can mean; there is no third form and no "explicit holder rebinds per copy" case.
+    explicit_target: mk_m(unit, 40U, 2U)
+    icell(explicit_target, 1U, 0)
+    explicit_writer: mk_m(unit, 41U, 2U)
+    n: fr(explicit_writer, 1U, c.LMX_WALK_OP_SET, 3U)
+    own(n, 1U, explicit_target, 1U)
+    lit(n, 2U, 42)
+
     # counter:   own n 0;  n: n + 1;  return: n
+    # K-OT2 (-194 к.5): counter's own frames name NO holder (own0, holder = 0) --
+    # "this activation's own data," resolved to whichever occurrence is actually
+    # running them. This is what makes a COPY of counter correctly own ITS OWN n after
+    # K-OT1 shares the frames by address between counter and its copy: an explicit
+    # holder here (the pre-K-OT1 form) would always mean counter's own n specifically,
+    # copy or not -- see the explicit_writer/explicit_target witness below for that case.
     cell: icell(counter, 1U, 0)
     n: fr(counter, 2U, c.LMX_WALK_OP_SET, 3U)
-    own(n, 1U, counter, 1U)
+    own0(n, 1U, 1U)
     e: fr(n, 2U, c.LMX_WALK_OP_ADD, 3U)
-    own(e, 1U, counter, 1U)
+    own0(e, 1U, 1U)
     lit(e, 2U, 1)
     n: fr(counter, 3U, c.LMX_WALK_OP_RET, 2U)
-    own(n, 1U, counter, 1U)
+    own0(n, 1U, 1U)
 
     # outer:     own x 1;  inner;  return: x          (21.6's worked case)
     # inner:     outer\x: 2                           (explicit field write, no cache)
@@ -840,21 +878,27 @@ fn: main () int
     check(st = c.LMX_WALK_OK && gv\ref = (cast: (@: void) subject) && lmx_int_value_known(lmx_arena_ref_value(poke, 1U)) = 1, "the same program with a good subject runs, and leaves its trace")
     argv[0]: abox
 
-    # A COPY of M runs unchanged on its own state: the copier remaps the references of
-    # the body along with the rest of M's tree, so the copy's nodes point at the copy;
-    # `native` (k.4: a sibling Lmx member, not child[0]) and the role records are carried
-    # verbatim / shared by address.  counter's own `native` is 0 (walked, not native) --
-    # the check below only confirms verbatim copy of that 0, a weak but true check; there
-    # is no fixture elsewhere in this file with a real native word to copy for a stronger one.
+    # A COPY of M runs unchanged on its own state: `native` (k.4: a sibling Lmx member,
+    # not child[0]) is carried verbatim; the role records AND counter's own OP frames
+    # (K-OT1/-194 к.5: code, kept by address, never deep-copied -- the pre-K-OT1 copier
+    # used to copy-and-rewrite them, which is what this block used to check for) are
+    # shared by address between counter and its copy. counter's own DATA field (n, a
+    # plain int cell, not a frame) is still an ordinary own child and IS deep-copied as
+    # data always is; the copy owns ITS OWN n correctly because counter's frames name no
+    # holder at all (own0, holder = 0 -- K-OT2 resolves it to whichever occurrence is
+    # actually running: the copy when the copy runs, counter when counter runs).
+    # counter's own `native` is 0 (walked, not native) -- the check below only confirms
+    # verbatim copy of that 0, a weak but true check; there is no fixture elsewhere in
+    # this file with a real native word to copy for a stronger one.
     before: handed(ga)
     st: lmx_graph_copy_owned(counter, 0, ga, ga, @ copy)
     check(st = c.LMX_GRAPH_COPY_OK && copy != 0 && copy != counter, "counter copied")
     check(handed(ga) > before, "an explicit copy DOES allocate in the graph's arena; an invocation never did")
     if: copy != 0
         check(copy\native = counter\native, "copy carries native verbatim (k.4: sibling member, not child[0])")
-        check(lmx_arena_ref_value(copy, 1U) != cell, "copy has its own n")
+        check(lmx_arena_ref_value(copy, 1U) != cell, "copy has its own n (a data field, still deep-copied)")
         check(lmx_arena_ref_value(lmx_arena_ref_struct(copy, 3U), 0U) = lmx_arena_ref_value(lmx_arena_ref_struct(counter, 3U), 0U), "copy shares the role records")
-        check(lmx_arena_ref_struct(lmx_arena_ref_struct(lmx_arena_ref_struct(copy, 3U), 1U), 1U) = copy, "the copy's node refers to the copy, not to the original")
+        check(lmx_arena_ref_struct(copy, 3U) = lmx_arena_ref_struct(counter, 3U), "K-OT1: copy shares counter's own RET frame by address, not a rewritten copy of it")
         r: -1
         st: go(copy, 0, 0U, @ r, @ v)
         check(st = c.LMX_WALK_OK && r = 3, "copy continues from the copied value")
@@ -868,6 +912,25 @@ fn: main () int
         r: -1
         st: go(counter, 0, 0U, @ r, @ v)
         check(st = c.LMX_WALK_OK && r = 3, "the original keeps running independently of the copy")
+    ---
+
+    # explicit_writer's own holder is NOT 0 -- it names explicit_target explicitly, and
+    # that never changes: copying/re-entering explicit_writer's (shared, K-OT1) frame
+    # still writes into explicit_target BY ADDRESS, regardless of which occurrence ran
+    # the code (fable, 2026-09-26: "явный holder в кадре — это ссылка на КОНКРЕТНУЮ
+    # Structure... и после копирования он обязан по-прежнему означать её"). This is the
+    # expected behavior an explicit holder gives, not a regression of counter's own
+    # independence above -- the two fixtures together are the whole of what a holder can
+    # mean (0 = this activation's data, non-zero = that Structure, always).
+    st: lmx_graph_copy_owned(explicit_writer, 0, ga, ga, @ explicit_writer_copy)
+    check(st = c.LMX_GRAPH_COPY_OK && explicit_writer_copy != 0 && explicit_writer_copy != explicit_writer, "explicit_writer copied")
+    if: explicit_writer_copy != 0
+        check(lmx_arena_ref_struct(explicit_writer_copy, 1U) = lmx_arena_ref_struct(explicit_writer, 1U), "K-OT1: the copy shares explicit_writer's own SET frame by address")
+        check(lmx_int_value_known(lmx_arena_ref_value(explicit_target, 1U)) = 0, "explicit_target starts at 0, untouched")
+        r: -1
+        st: go(explicit_writer_copy, 0, 0U, @ r, @ v)
+        check(st = c.LMX_WALK_OK, "the copy's own run reached the explicit-holder write")
+        check(lmx_int_value_known(lmx_arena_ref_value(explicit_target, 1U)) = 42, "the COPY's run wrote into explicit_target, the Structure the holder names -- not into itself or into explicit_writer (mutant: own0 in place of own here -> writes the running occurrence instead, RED)")
     ---
 
     # ---- Stage C acceptance (GROKBOT-CALLABLE-INTERP-STAGEC-20260922-65) ----------

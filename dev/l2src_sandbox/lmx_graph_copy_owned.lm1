@@ -455,6 +455,8 @@ fn: lmx_copy_value (@: void v; @: char dst_chars; @: LmxArena src_arena; @: LmxA
     int: is_ref 0
     int: pointer_element_type 0
     @: void pointee
+    @: void frame_head 0
+    int: frame_hk 0
     if: v = 0
         return: 0
     if: lmx_copy_retained_profiles(src_arena, v, retain_profiles, retain_count) != 0
@@ -492,6 +494,24 @@ fn: lmx_copy_value (@: void v; @: char dst_chars; @: LmxArena src_arena; @: LmxA
         # no separate METHOD/CALLABLE domain left to ask).  Ancestors queued only for
         # parent fixup are not inside.
         @: Lmx occ (cast: (@: Lmx) v)
+        # K-OT1 (-194 к.5): v is itself an OP/ROLE frame (an ordinary Structure headed
+        # by an op/role record in its own child 0) -- code, kept by address regardless
+        # of its own parent, the same as lmx_copy_is_terminal_profiles above already
+        # does for a BARE role record (child v itself classified OP/ROLE), just one
+        # level up. Checked before the parent-inside test below: merging/copying M
+        # makes M itself "inside" from the start, so every one of M's own frame
+        # children (parent = M) would otherwise pass that test and be deep-copied.
+        # Mutant: skip this check -> a merge result's own copied frames get fresh
+        # addresses, no longer shared code with the model they were copied from.
+        if: (cast: (size_t) occ\len) > 0U
+            frame_head: lmx_arena_ref_value(occ, 0U)
+            if: frame_head != 0
+                frame_hk: lmx_range_classify(src_arena, frame_head)
+                if: frame_hk = c.LMX_DOMAIN_KIND_OP || frame_hk = c.LMX_DOMAIN_KIND_ROLE
+                    return: v
+                ---
+            ---
+        ---
         if: occ\parent = 0 || inside = 0 || lmx_copy_map_get(inside, (cast: (@: void) occ\parent)) = 0
             return: v
         ---

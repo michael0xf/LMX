@@ -48,6 +48,28 @@ fn: lmx_fresh_child (@: LmxArena arena; @: Lmx proto; @: void child; @: Lmx fres
     ---
     if: kind = c.LMX_KIND_STRUCT
         nested: (cast: (@: Lmx) child)
+        # K-OT1 (-194 к.5): nested is itself an OP/ROLE frame (an ordinary Structure
+        # headed by an op/role record in its own child 0) -- code, kept by address
+        # regardless of its own parent, the same way a bare OP/ROLE record already is
+        # above. Checked BEFORE the parent-based recursion below: every one of M's own
+        # body steps has parent = M (the prototype), so without this a frame falls
+        # through to the ordinary own-child recursion and is deep-copied on every
+        # re-entry, instead of shared by address the way code must be.
+        # Mutant: skip this check -> a re-entered method's own frames get fresh
+        # addresses each time, and OWN/SET holders embedded in them (K-OT2) stop
+        # matching the running activation's code.
+        head: 0
+        hk: 0
+        if: (cast: (size_t) nested\len) > 0U
+            head: lmx_arena_ref_value(nested, 0U)
+            if: head != 0
+                hk: lmx_range_classify(arena, head)
+                if: hk = c.LMX_DOMAIN_KIND_OP || hk = c.LMX_DOMAIN_KIND_ROLE
+                    \out: child
+                    return: 0
+                ---
+            ---
+        ---
         # Control-body / field-only Structure whose parent is the prototype: recurse.
         if: nested\parent = proto
             cell: (cast: (@: void) lmx_fresh_struct(arena, nested, fresh_parent))

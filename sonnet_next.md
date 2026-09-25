@@ -25,8 +25,11 @@ LMX — самохостящимся компилятором/ядром L1→L2
 4. `next_core_tasks.md` §3 (разрешение объявления/присваивания/вызова) и §4
    (occurrences, repeated fields, `[N]field`, merge — правило автора) — это
    нормативная модель, на которую опирается ядро merge/walker.
-5. `steps/merge-kernel-194.md` — план текущего тикета (K1/merge-into/K-OT1/
-   K-OT2/G-call/K2), с точными цитатами кода — основа всего, что я делала.
+5. `steps/merge-kernel-194.md` — план тикета -194 (K1/merge-into/K-OT1/
+   K-OT2/G-call/K2; тикет закрыт, влит в `b7cce8c`; §6 п.6 — K3), с
+   точными цитатами кода — основа всего, что я делала. К нему —
+   `steps/merge-parts-193.md` (§2 (1e)/(1f)/(2f), таблица §3 `K3 + T5`) —
+   план следующего ядерного шага, K3.
 6. `steps/native-word-191.md` — модель `Lmx = {array, parent, native}`,
    `VoidArray`, правило "native пусто = интерпретация".
 7. `steps/code-data-split-188.md` — предыдущая модель code/data (уже
@@ -34,55 +37,81 @@ LMX — самохостящимся компилятором/ядром L1→L2
 
 Команды (build/gate) запускать из корня репозитория, не из `build/...`.
 
-## 1. Точное состояние на момент написания (2026-09-25, main = 7ba030b)
+Файлы ядра и транслятора ниже названы голыми путями (`lmx_pool.lm1`,
+`lmx.h.lm1`, `lmx_walk.lm1`, `lmx_merge_owned.lm1`/`.h.lm1`, `l2trans.lm1`,
+`tests/…`) — все они в `dev/l2src_sandbox/` (рабочее дерево ядра,
+транслятора и фикстур); в корне репозитория их нет. Корневой `l2src/` —
+копия песочницы, меняется только копированием (`dev/README.md`); после K2
+скопирован заново (4 файла K2) в той же серии коммитов, что поправила эту
+записку.
 
-- **main** (после интеграции Opus T4a, `7ba030b`): op-trees для walkable
+## 1. Состояние (написано 2026-09-25 на main = `7ba030b`, сверено с main = `daccbb0`)
+
+- **main** = `daccbb0` (только `fable_next.md`) поверх `b7cce8c` (K2, ниже),
+  `da91903` (Opus -198: twin `l2src` = копия песочницы, D-74 F-64, D-12
+  сужен), `0bd9bc3` (записки передачи) и `7ba030b` (Opus T4a):
+  op-trees для walkable
   method bodies рядом с native entry (ARG/RET, holder 0, FRESH при
   повторном входе, флаг `--walk-methods`), differential run 382/382 в обе
-  стороны, D-70..D-73 фикс (F-60..F-63); следом влит grok_bot -170 c2
+  стороны, D-70..D-73 фикс (F-60..F-63); ещё ДО T4a (`5fa1ad4`) влит grok_bot -170 c2
   (walker-роли `ELEM`=25/`ELEMPUT`=26/`LENGTH`=27, `LMX_WALK_OP_COUNT`=28).
-  Гейт на main: build 275/275, harness 384/384, L3 11/11.
-- **моя ветка `sonnet/merge-194`** (запушена, tip `41d646d`): база —
-  СТАРЫЙ `4d427ac` (до T4a и до -170 c2) — **перед следующим гейтом/
-  интеграцией её нужно перебазировать на текущий main** (`git rebase
-  origin/main`); коллизий не ожидается — K2 не трогает `LmxWalkOp`/
+  Гейт на main (`b7cce8c`): build 276/276, harness 390/390, L3 11/11
+  (на `7ba030b` было 275/275, 384/384, 11/11).
+- **K2 ВЛИТ в main** (`b7cce8c`, FABLE-SONNET-MERGE-KERNEL-20260926-194
+  закрыт): моя ветка `sonnet/merge-194` перебазирована на `da91903`, tip
+  `43046fc` (этот файл) — предок main; по ней ничего делать не нужно.
+  Прежние tip'ы `f164d6c`/`41d646d` (база `4d427ac`) — до ребейза, ни одна
+  ветка/тег их не содержит, в облачном клоне их нет. K2 не трогает `LmxWalkOp`/
   `LMX_WALK_OP_COUNT` вообще (см. §3 ниже), только `lmx_merge_owned.lm1`/
   `.h.lm1` и один маленький хук внутри `lmx_walk_prim`'s per-arg loop в
   `lmx_walk.lm1`.
-  - `f164d6c` — K2: ядерные функции `lmx_walk_merge_map`/
+  - `7350002` (до ребейза `f164d6c`) — K2: ядерные функции `lmx_walk_merge_map`/
     `lmx_walk_merge_into_map`/`lmx_walk_merge_pairs_decode`/`_free`
     (реализация, компилируется чисто).
-  - `41d646d` — K2: селфтест `tests/lmx_walk_merge_selftest.lm1` (22
+  - `3c9cc94` (до ребейза `41d646d`) — K2: селфтест `tests/lmx_walk_merge_selftest.lm1` (22
     проверки, 0 провалов) + 2 мутанта, оба пойманы (проверено прямой
     мутацией отслеживаемого файла на этой же ветке: правка →
     `build_l2src -Run` RED → `git checkout --` откат → снова GREEN;
     рабочее дерево оставалось чистым до и после).
-  - **build_l2src -Run: GREEN 275/275** (последний прогон на этой базе).
-  - **L3 + harness ещё НЕ гоняны на этой ветке** — GATE? отправлен fable,
-    в очереди за Opus'ом (T4a только что влит, гейт теперь свободен).
-  - **Рабочее дерево чистое** (`git status --short` пусто) кроме этого
-    самого файла (`sonnet_next.md`), который коммитится отдельным
-    docs-коммитом.
+  - **Гейт GREEN** (интеграция `b7cce8c`): build 276/276, harness 390/390,
+    L3 11/11 (до ребейза, на базе `4d427ac`: build_l2src 275/275).
+  - **Рабочее дерево** (`LMX_sonnet_noderoot`, на `43046fc`) чистое; этот
+    файл закоммичен отдельным docs-коммитом `43046fc`.
 - Остальные мои старые ветки (`sonnet/fixtures-190`, `sonnet/send-ref`,
   `sonnet/send-in-methods`, `sonnet/receive-rename` и т.п.) — тикеты уже
-  ЗАКРЫТЫ и влиты (или ждали интеграции на момент закрытия — см.
-  `MEMORY.md`/`fable_next.md` за подробностями по каждому); для текущей
-  работы актуальна только `sonnet/merge-194`.
+  ЗАКРЫТЫ, их содержимое на main: send-ref `6ade7d7` → `a771048`,
+  receive-rename `ee126fd` → `540c7fe`, send-in-methods — по patch-id
+  (`git cherry`); `sonnet/send-in-methods`/`sonnet/receive-rename` — только
+  локальные, на origin их нет. `MEMORY.md` — локальная автопамять Claude
+  Code, не в репозитории, из облака её не открыть. `sonnet/merge-194` тоже
+  влита (K2, выше) — незавершённых веток у меня нет.
 
 ## 2. Очередь по ядру после K2
 
-По убыванию приоритета (со слов fable, на момент передачи):
+По убыванию приоритета (со слов fable; место K3 — по `fable_next.md` §3):
 
-1. **Догнать K2 до конца**: дождаться очереди на гейт (Opus T4a только что
-   влит — очередь освобождается), перебазировать `sonnet/merge-194` на
-   текущий main, прогнать L3+harness, отправить RESULT к.6 fable (форма —
-   см. §4), дождаться интеграции.
+1. **K3 — ядерная половина T5** (T5 = Sonnet + Opus, `fable_next.md` §3
+   п.3; K2 уже влит, `b7cce8c`): callable-merge по частям — части
+   args/return/тело попарно, рекурсивно (1e), операторы тела операнда
+   ЗАМЕНЯЮТ операторы модели (1f); PAP `add5: merge(y: 5; add)` → 6 (2f)
+   (`steps/merge-parts-193.md` §2 и таблица §3: `K3 + T5 … K1, T4`;
+   `steps/merge-kernel-194.md` §6 п.6). K1 и T4a на main, T4b (Opus) — в
+   том же п.3 fable; в очереди fable перед п.3 — T3 и трансляторная
+   половина -170 (обе Opus). Opus T5–T7 ждут K3 (`opus_next.md` п.5).
+   Тикет — от fable (к.1 read-only план → решения → код).
 2. **CATCH-роль walker'а** (PAD + per-site table + landing) — план уже
-   есть у grok_bot в `steps/root-walk-blocks-arrays.md`, раздел ближе к
-   концу файла (искать "PAD"/"landing"/"catch role"): PAD-шаг пропускается
+   есть у Opus в `steps/root-walk-blocks-arrays.md` (-159, read-only), в
+   НАЧАЛЕ файла: строки S1 :30–:41, «What a catch needs from the walker»
+   :46–:80, п.4 на :129: PAD-шаг пропускается
    при обычном линейном проходе, несёт свои параметрические ячейки
    (хостятся в своём блоке), плюс per-site таблица и посадка (landing) при
-   throw. Соответствует S1's 5 строкам (`unit_s1_catch_publish` и др.).
+   throw. Соответствует 5 строкам S1 (`unit_s1_catch_declared_vs_merge`,
+   `unit_s1_catch_declared_vs_merge_ok`, `unit_s1_catch_sibling`,
+   `unit_s1_catch_rethrow`, `unit_s1_catch_nested_while`) плюс шестой
+   `unit_s1_catch_publish` (catch в самом корне); `fable_next.md` и
+   `opus_next.md` считают 7 строк throw/catch, а в harness на main их 8
+   (root-pending «throw and catch»: ещё `unit_s1_catch_t2` и
+   `unit_s1_catch_implements`).
 3. **D-67** (моя находка, -192 к.2, OPEN, не чинить в -192 по решению
    fable — отдельный тикет ядра): `lmx_pool_add_chunk` (`lmx_pool.lm1:108`)
    растит ПОЗДНИЕ чанки общего пула по `chunk_capacity` ПУЛА (зафиксирован
@@ -92,7 +121,25 @@ LMX — самохостящимся компилятором/ядром L1→L2
 4. **D-60/D-62** (наследие grok_bot/моё, оба OPEN): D-60 — получатель не
    импортирует диапазон Message отправителя автоматически, поэтому merge
    после receive в интерпретируемом корне всё ещё бросает `merge`
-   (`unit_admit_letter_formal` — translates-with-debt); D-62 —
+   (`unit_admit_letter_formal` — translates-with-debt). Невлитый черновик
+   grok_bot -185: `origin/fable/grokbot-185-c1` @ `08e0a4f` (в
+   `lmx_service_post` до `lmx_post_accept_transfer` — view запечатанного
+   MSG_RECORD-диапазона отправителя в арену письма через
+   `lmx_range_add_view`, не импорт всей арены; `lmx_sender_range_selftest`,
+   мутант skip-view). Устарел, НЕ cherry-pick'ать: читает слот 0 письма как
+   голый Message, а с `a771048` там pointer-ячейка
+   (`LMX_TYPE_POINTER_BASE + 29`) — на main блок молча ничего не делает; его
+   hunk в `steps/defects.md` повторно берёт F-54 (на main это D-56, Sonnet
+   -172 к.4) и добавляет второй D-60 «FIXED F-54», хотя и на ветке блокер
+   walked-корня остался. Из черновика: импорт всей арены тянул печати
+   host'а (eternal/profile) в письмо и ломал закрытие host'а (замер); в
+   post не запечатывать — запечатывает производитель, когда можно
+   публиковать (решение); в walked-корне host THREAD pool открыт, поэтому
+   `add_view` отказывает. Перед тикетом перемерить
+   `unit_admit_letter_formal` на main (после `a771048` и копира -186 к.3 —
+   pointee pointer-ячейки общий, копир в него не спускается — путь
+   KIND_NONE мог сдвинуться); если брать подход — читать sender через
+   ячейку (`lmx_pointer_value_known`) и пересобрать письма селфтеста. D-62 —
    `sendMessage: Ref X` с недостижимым/неверным адресатом в интерпретируемом
    корне крашится (`LMX_WALK_PRIMITIVE` generic fallback → abort), а не
    рефьюзится located-отказом или X1, как та же форма в теле метода.
@@ -102,11 +149,13 @@ LMX — самохостящимся компилятором/ядром L1→L2
    Это большая структурная миграция (растёт `sizeof(Lmx)`, слот 0 сдвигается
    для E/именованных Structure — "E loses child 0 entirely, into its own
    `Lmx` member"), читать план целиком прежде чем трогать код.
-6. **D-12** (мелкое, низкий приоритет): `printTree.lm2`-пример (в
-   `dev/l2src_sandbox/` и `l2src/`) написан под старую сигнатуру
+6. **D-12** (мелкое, низкий приоритет): `printTree.lm2`-пример в
+   `dev/l2src_sandbox/` (после -198 дефект сужен до песочницы: `l2src/` —
+   её копия) написан под старую сигнатуру
    `fn: main (int: argc; @@: char argv)`, ничем не собирается, но
-   упоминается в L2-спеке §18.2 — обновить пример под текущую модель или
-   снять ссылку.
+   упоминается в L2-спеке §18.2 — переписать его на корень-вход /
+   `mainArgs` отдельным тикетом от fable (`steps/defects.md` D-12); после
+   него fable переписывает свой пример в L2 §18.2.
 
 ## 3. Правила решений (fable/автор), которые уже действуют
 
@@ -181,7 +230,9 @@ LMX — самохостящимся компилятором/ядром L1→L2
 - **`@@@:`** — валидный L1-синтаксис (тройной указатель), нужен, когда
   выходной параметр сам по себе двух-уровневый указатель (например
   `out_pairs: LmxMergePair**` → параметр `@@@: LmxMergePair out_pairs`).
-  Прецедент: `l2trans.lm1:16165`.
+  Прецеденты: `l2trans.lm1:16190` (эмиссия `@@@: char l2_out_result`),
+  в K2 — `lmx_merge_owned.lm1:660` / `lmx_merge_owned.h.lm1:102`
+  (`lmx_walk_merge_pairs_decode`, `@@@: LmxMergePair out_pairs`).
 - **`LmxPrimitiveEntry` vs `LmxEntry`.** `LmxPrimitive.fn`'s тип —
   `LmxPrimitiveEntry` (`int(*)(void*, void**, size_t, void*, void**)`), НЕ
   общий `LmxEntry` (`void(*)(void)`) — если строить `LmxPrimitive`-запись
@@ -204,8 +255,9 @@ LMX — самохостящимся компилятором/ядром L1→L2
 
 ## 6. Что дальше прямо сейчас
 
-К2 (`sonnet/merge-194`, tip `41d646d`) ждёт: (1) ребейз на текущий main
-(`7ba030b`), (2) L3+harness гейт (GATE OK от fable, после освобождения
-очереди за Opus), (3) RESULT к.6 fable с блоком "состояние для передачи",
-(4) интеграция в main. Это первое, что должна сделать любая сессия,
-подхватывающая эту ветку.
+К2 сделан целиком: ребейз (на `da91903`), гейт и интеграция — `b7cce8c`
+(ядро `7350002`, селфтест+мутанты `3c9cc94`, эта записка `43046fc`; гейт
+build 276/276, harness 390/390, L3 11/11; тикет -194 закрыт). По
+`sonnet/merge-194` ничего не осталось. Первое для новой сессии:
+`git fetch --all`, `git log --oneline -15 origin/main`, `fable_next.md` §3,
+затем тикет fable на K3 (§2 п.1).

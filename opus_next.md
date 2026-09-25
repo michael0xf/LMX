@@ -20,7 +20,7 @@ Opus — транслятор `dev/l2src_sandbox/l2trans.lm1` (построит�
 cwd = корень LMX.  Читать по порядку:
 1. `READ.ME` → `steps/current.md` → `next_core_tasks.md` §0 (доктрина), §3, §4;
 2. `steps/merge-parts-193.md`: план -193 (§2–§3 части merge, §6 план T4), §9 итог T4a;
-3. `steps/next-phase-195.md` §7 (порядок тикетов);
+3. `steps/next-phase-195.md` §7 (порядок тикетов; текущий порядок диспетчера — `fable_next.md` §3);
 4. `steps/gate-cleanup-197.md`, `steps/root-classes-196.md`;
 5. `steps/root-arrays-170.md` §6 (моя трансляторная половина);
 6. `steps/defects.md`.
@@ -28,55 +28,70 @@ cwd = корень LMX.  Читать по порядку:
 Гейт — один на машину, по очереди через fable: GATE? → «GATE OK» → один проход
 `tools\build_l2src.ps1 -Run`, `tools\l2_harness.ps1`, `python tools/run_l3_selftest.py`,
 `python tools/check_docs.py` (каждый < 10 мин) → GATE DONE.  Из облака гейт гоняет Grok CLI на машине
-по просьбе: ветка запушена, просьба — сообщением fable или файлом в `steps/`.
+по просьбе: ветка запушена, просьба — файл `steps/gate-request.md` (или коммит с текстом
+«GATE? <ветка> <sha>») в ветке `fable/requests`; результат — `steps/gate-results.md` коммитом
+«GATE DONE <ветка> <sha>: …» в ветке `grok/results` (`fable_next.md` §5, `grok_next.md` §3).
+Сообщений между сессиями из облака нет, только git.  Этих веток на origin ещё нет — форму
+согласовать с автором.
 
 ## Состояние (конец этапа)
 
-- main = `7ba030b` (T4a влит).  На main уже: -193 T1, T1b, T2, T4a; D-61, D-68; -195, -196, -197.
-- Не влито: ветка `opus/l2src-twin-198` (-198, 3 коммита + этот файл) — гейт и RESULT в этом же
-  этапе; итог в сообщении fable.
+- main = `daccbb0` до этого коммита (гейт на `b7cce8c`: build 276/276, harness 390/390, L3 11/11).
+  На main уже: -193 T1, T1b, T2, T4a; D-61, D-68; -195, -196, -197; -198; K2 Sonnet.
+- -198 влит: `da91903` (ветка `opus/l2src-twin-198` @ `bb4a3f7`: 3 коммита + этот файл;
+  гейт 275/390/11).  K2 Sonnet влит: `b7cce8c` (`sonnet/merge-194` @ `43046fc`; гейт 276/390/11).
 - Тег `l2src-twin-20260926` → `939bfc8`: прежний двойник `l2src/`.  Корневой `l2src/` теперь копия
   песочницы; его не собирать и не тестировать (автор, Q8).  Обновлять копированием, после влития.
+  K2 (`b7cce8c`) менял 4 файла песочницы (`lmx_merge_owned.h.lm1`, `lmx_merge_owned.lm1`,
+  `lmx_walk.lm1`, `tests/lmx_walk_merge_selftest.lm1`) — двойник обновлён копированием следом,
+  коммитом `51c9f30` в этой же ветке.
 - Хвосты веток — всё в main, можно удалять:
   - предками main: `opus/merge-193-t1`, `-t1b`, `-t2`, `-t4a`, `opus/d61-d68`,
-    `opus/root-classes-196`, `opus/gate-cleanup-197`, `opus/split189-c3*`, `-c4b`;
+    `opus/root-classes-196`, `opus/gate-cleanup-197`, `opus/split189-c3*`, `-c4b`,
+    `opus/l2src-twin-198`;
   - другими SHA (`git cherry` = «−»): `opus/merge-193`, `-t4`, `opus/next-phase-195`,
     `opus/split189`, `-c2`, `-c4`.
 - Незакоммиченного нет.  В корне рабочего дерева лежат чужие `lmx_root_*_selftest.err/.out` — не
   коммитить.
 
-## Очередь (по порядку)
+## Очередь (по порядку `fable_next.md` §3)
 
-1. **T4b.** Расширить walkable-подмножество методов по одному классу за шаг, по нужде T5.  Каждый шаг
-   проверяется дифф-прогоном: строки обоими путями, knob `--walk-methods` / свойство строки
-   `WalkMethods`.  Вне подмножества сейчас (§9):
-   - throws;
-   - формал-не-число, Structure-формал, callable-формал;
-   - формал-биндинг;
-   - own-поле во вложенном теле;
-   - почта, `Model: m`;
-   - `M\x` внутри M.
-2. **-170, трансляторная половина.**  Роли на main 5fa1ad4: ELEM 25, ELEMPUT 26, LENGTH 27.
-   - Построитель корня эмитит ELEM, ELEMPUT и length.
-   - Корень допускает объявления `[]:`.
-   - Переворачиваются 10 root-pending строк массивов, и D-39, когда дойдёт.
-   - План — `steps/root-arrays-170.md` §6.
-3. **T3: merge в корне**, после K2 Sonnet.  Форму узла согласовал с ней 2026-09-26:
+1. **T3: merge в корне** — можно начинать: K2 Sonnet на main (`b7cce8c`; `lmx_walk_merge_map` /
+   `lmx_walk_merge_into_map` в `lmx_merge_owned.lm1`).  Форму узла согласовал с ней 2026-09-26, K2
+   посажен в этой форме:
    - `[prim, rec(lmx_walk_merge_map), op0..opN-1, body|0, pairs|0]`;
    - pairs — одна Structure из 3·P size_t-ячеек (model_slot, operand, field), строится один раз при
      сборке программы, как `l2_nsp`; operand N — это тело (конвенция T2);
    - результат — PUT_REF в слот корня, holder 0;
    - merge-into: `[prim, rec(lmx_walk_merge_into_map), target, op, pairs]`, out 0;
-   - просил её: нулевой слот → ссылка 0 в `lmx_walk_prim` (сегодня `lmx_walk_eval(0)` = INVALID).
+   - нулевой слот (body|0, pairs|0) → ссылка 0 в `lmx_walk_prim`: сделано в K2 (`lmx_walk_eval` для
+     него не зовётся, `refs[i]` остаётся 0); нулевой операнд `lmx_walk_merge_map` отвергает.
    Даёт 9 root-pending строк «a Structure value».
-4. **CATCH, трансляторная половина**, после роли CATCH в walker: 7 строк «throw and catch» + 2 строки
-   циклов.
-5. **T5–T7, после K3:**
+2. **-170, трансляторная половина.**  Роли на main 5fa1ad4: ELEM 25, ELEMPUT 26, LENGTH 27.
+   - Построитель корня эмитит ELEM, ELEMPUT и length.
+   - Корень допускает объявления `[]:`.
+   - Переворачиваются 10 root-pending строк массивов, и D-39, когда дойдёт.
+   - План — `steps/root-arrays-170.md` §6.
+3. **T4b.** Расширить walkable-подмножество методов по одному классу за шаг, по нужде T5.  Каждый шаг
+   проверяется дифф-прогоном: строки обоими путями, knob `--walk-methods` / свойство строки
+   `WalkMethods`.  Вне подмножества сейчас (§9):
+   - throws, динамические входы, результат-не-число, нет нативного тела;
+   - формал-не-число, Structure-формал, callable-формал;
+   - формал-биндинг;
+   - own-поле во вложенном теле;
+   - в теле: L2-операции, пути к полям, вызовы с динамическими входами, массивы;
+   - почта, `Model: m`;
+   - `M\x` внутри M.
+4. **T5–T7, после K3:**
    - callable merge по частям: тело — кадры модели из T4a;
    - PAP `add5: merge(y: 5; add)`;
    - makeAdder;
    - конвертер.
    Свидетели: q22 → 3, q20-next §2 → 5.
+5. **CATCH, трансляторная половина**, после роли CATCH в walker: 8 строк «throw and catch».  Ещё 2
+   строки «an admission to a Structure type» (`unit_empty_assign_admit`, `unit_empty_assign_named`)
+   ловят `implements` и ждут той же роли (-196).  `unit_s1_catch_user_break` («break and continue»)
+   стоит на break: роли break у walker'а нет, одной CATCH её не перевернуть.
 6. **D-69.**  Ячейка char-формала в args-части (`l2_emit_parts`) — через таблицу интернированных
    char-ячеек программы, как у own-поля char.  Сейчас `lmx_char_cell_known(process_chars, 0)` не
    объявлена, gcc отказывает.
@@ -86,12 +101,19 @@ cwd = корень LMX.  Читать по порядку:
 
 - D-69 — OPEN, мой.
 - Две строки translates-with-debt:
-  - D-60 — `unit_admit_letter_formal`: диапазон sender'а, Grok -185;
-  - D-55 — `unit_s1_merge_uncaught_entry`.
-  Строка переворачивается, когда дефект починен.
+  - D-60 (OPEN, ядро, теперь Sonnet) — `unit_admit_letter_formal`: диапазон sender'а.  Строка
+    переворачивается, когда D-60 починен.  Черновик Grok -185 `08e0a4f`
+    (`origin/fable/grokbot-185-c1`) не влит и устарел: читает слот 0 письма как сырой Message, а с
+    `a771048` там pointer-ячейка; его строки в `defects.md` (F-54 уже занят, второй D-60 «FIXED»)
+    неверны — не cherry-pick'ать;
+  - D-55 — `unit_s1_merge_uncaught_entry`: D-55 FIXED (F-49, `8ee2d7f`), но строку после фикса не
+    перемеряли.  Её комментарий называет вторую причину: mergefail-ловушка драйвера
+    (`-Dlmx_merge_owned`) не доходит до собственного merge ядра.  Строка ждёт перемера, не фикса
+    ядра.
 - D-12 — пример `printTree.lm2` в песочнице.  Отдельный тикет, потом §18.2 fable.
-- root-pending — 41 строка.  Классы: массивы 10, Structure-значения 9, throw/catch 7 и прочие —
-  `steps/next-phase-195.md` §4.
+- root-pending — 41 строка.  Классы по Needle: массивы 10, Structure-значения 9, «throw and catch» 8,
+  «break and continue» 1, прочие 13 — `steps/next-phase-195.md` §4 с поправкой
+  `steps/root-classes-196.md`.
 
 ## Правила
 
@@ -123,10 +145,12 @@ cwd = корень LMX.  Читать по порядку:
   - Подстановка `~` → `\` съедает Markdown `~~`.
 - Pin'ы Debt у root-pending строк не проверяются и тухнут: обновлять при перевороте строки.
 - Pin'ы с `l2_rwN` зависят от нумерации temp.  Счётный проход вложенных тел её сдвигал (T4a).
-- `l2_head_is_call`: односегментная голова — вызов, только если это метод или (с D-74) `c.*`.
+- `l2_head_is_call`: односегментная голова — вызов, если это формал с callable-сигнатурой
+  (проверяется первым), метод или (с D-74) `c.*`.
 - Строки `WalkMethods` идут через обход в любом прогоне harness.
 - Скретч-инструменты (посрочный чекер, варианты транслятора) были локальными.  В облаке их повторить:
   1. прочитать строки `tools/l2_harness.ps1`;
   2. перевести собранным l2trans;
   3. проверить Needle / Debt / Absent;
-  4. eternal-строки — под драйвером `harness/l2_eternal_driver.lm1` с Args и фактами.
+  4. eternal-строки — под драйвером `dev/l2src_sandbox/harness/l2_eternal_driver.lm1`
+     с Args и фактами.

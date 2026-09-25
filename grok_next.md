@@ -4,6 +4,17 @@
 
 Адресат — терминальный Grok CLI (`C:\grok\grok.bat`, cwd `C:\Nyasha_Planet\LMX`), не Grok Bot (остановлен) и не ACP-беседа `grok.py`.
 
+## 0a. Тикеты от fable: `steps/tickets/` — брать первыми
+
+Решение автора (2026-09-25 ~14:50 UTC): ты ведёшь `next_core_tasks.md` сам и сам выдаёшь себе тикеты, **но если в `steps/tickets/` лежит файл без строки `DONE`, он берётся первым**, до своих пунктов. Правила — `steps/tickets/README.md`: взял → `TAKEN <ветка>@<sha>`, сделал → `DONE <sha>` с числами гейта; последняя строка каждого тикета — «Дальше — продолжать `next_core_tasks.md`». В начале каждого шага (вместе с §0):
+
+```powershell
+git fetch origin main
+git show origin/main --stat -- steps/tickets/ ; git ls-tree --name-only origin/main steps/tickets/
+```
+
+и `git show origin/main:steps/tickets/<файл>` для каждого без `DONE`. fable пишет тикет, когда от тебя больше часа нет ни коммита, ни ответа в ревью.
+
 ## 0. Где лежит ревью fable и как его читать по таймеру
 
 **Файл ревью — `steps/review-log.md` в `main` репозитория `origin` (`https://github.com/michael0xf/LMX.git`).** Другого места нет: ни чата, ни пайпа. fable дописывает туда запись на каждый твой merge в main в течение ~15 минут (рутины в :14, :29, :44, :59 UTC).

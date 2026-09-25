@@ -523,3 +523,132 @@ Rows:
 - Mutants:
   - the body appended instead of joined: body_repeat exits 83;
   - only model slots matchable: added_repeat exits 83.
+
+## 9. T4a: op-trees for walkable method bodies (branch opus/merge-193-t4a, base 939bfc8)
+
+Base: Sonnet's K-OT1 and K-OT2 (-194 k.5, main 939bfc8).
+- K-OT1: OP frames are code, kept by address in `lmx_fresh` and the copier.
+- K-OT2: holder 0 is «this activation's data», f\data, at every holder site.
+
+fable's decisions (§7): Q4 = always emit frames, Q5 = holder 0.
+
+### l2trans.lm1
+
+`l2_rw_*` builds a method's body the way it builds the root's.  `l2_rw_mi` names the body being built; the root is `l2_e`.
+- **Own lookups.** `l2_rw_find` returns the last own field of that name in the body being built, or else a unit field the method sees.  A formal of the method hides both: its name is its input.  `l2_rw_seen` checks that a row is one of those.  The declaration scans ask for `l2_rw_mi`.
+- **Where the frames go.** A method's frames are M's children after its header parts, fields and control bodies (`l2_m_kids`).  The occurrence width is `l2_m_width` = kids + steps.  No field slot moves, so the native code is unchanged.
+- **Frame forms:**
+  - formal j → `[arg, j]` (a size cell in slot 1);
+  - `return: V` → `[ret, V]`, with V typed by the result cell (`l2_ret_cell_ty`);
+  - the return trailer → the last step: `[ret, V]`, or the RET record for a `sub`'s bare `return`;
+  - the body's own field → holder 0 (no holder stored, K-OT2).  **The root's own fields too** (R0, R0);
+  - a unit field read from a method → its holder, the unit;
+  - a call that can re-enter the caller (`l2_reenters`, callee with own fields: the native call site's rule) → data `[fresh, code]`.
+- **The walkable subset.**
+  - Shape (`l2_rw_may`):
+    - a native body;
+    - no dynamic inputs and no throw;
+    - the result is a number or there is none;
+    - the formals are numbers;
+    - no own field is declared in a nested body or named like a formal (the formal-binding rule).
+  - Body: the root's subset, minus mail (take, send) and `Model: m`, and minus `M\x` inside M itself (the occurrence is not the activation's data).
+- **Quiet tries.** While a method's body is tried (`l2_rw_quiet`), `l2_error` says nothing.  A method outside the subset simply gets no frames.
+- **Passes.**
+  - The count runs after the root's (`l2_rw_methods_count` → `l2_m_steps`), before the widths are written.
+  - The emission runs after the root's steps (`l2_rw_methods_emit`), and each method's step count is checked against the count pass.
+  - The library profile gets no frames: its root is not walked.
+- **Knob.** `--walk-methods` is a test knob and goes first, before `--library`.  A method with frames then gets no native word.
+- **The count pass is linear.** In count mode, `l2_rw_body` / `l2_rw_body_pre` no longer call `l2_rw_count` again for each nested body, which was 2^depth.
+  - `l2src/tests/unit_deepif.lm2` (a method with 70 nested ifs) timed out at 120 s and now takes 0.2 s.
+  - The emission renumbers the temps of nested bodies (fewer numbers burned) and changes nothing else.
+
+Fix-forward, of my own -196:
+- D-70: a root `M\x` of a method after the first, in a unit with no named Structure, crashed l2trans.  `l2_rw_path_value` ranked the method's number among the named Structures before checking the path kind.
+- D-71: a repeated declaration's initializer read its own new row at the root.  It now uses `l2_own_excl`, as the native emission does.
+
+### Harness and rows
+
+`tools/l2_harness.ps1` has a new row property, `WalkMethods`, which passes `--walk-methods` to l2trans.  Seven rows:
+- `unit_walk_inputs`: int/size_t/unsigned formals, own fields, value returns, a chain of walked calls.
+- `unit_walk_recursion`: `sum` (direct) and `even`/`odd` (mutual) with fresh data; without FRESH, `sum(4)` ≠ 10.
+- `unit_walk_loop`: while, if/else and `&&` in a method.  Red under the knob until D-72 is fixed.
+- `unit_walk_trailer`:
+  - trailers: a `sub`'s bare return, `return: one` (a call), `return: x + 1`;
+  - a unit field with its holder next to an own field with holder 0.
+- `unit_walk_mixed`: methods that assign a formal keep native (pinned); a walked method's CALL of such a method; a native method's direct call of a walked one.
+- `unit_occ_root_second` (D-70): main's l2trans crashes.
+- `unit_root_decl_init_prev` (D-71): main exits 81.  It also pins the absence of the unit holder on the root's own fields.
+
+The pins are the form:
+- ARG index, RET V, the frame slot after the fields;
+- holder 0 present and the unit holder absent;
+- the FRESH frame and its code;
+- the WHILE frame;
+- the sub trailer's RET record;
+- native absent for walked methods and present for the others.
+
+### Coverage (eternal-runs rows)
+
+77 of 275 methods get frames, in 63 rows.
+
+Shape refusals:
+
+| Reason | Methods |
+|---|---|
+| throws | 65 |
+| formal not a number | 28 |
+| formal-binding | 22 |
+| dynamic inputs | 15 |
+| Structure formal | 13 |
+| own field in a nested body | 9 |
+| callable formal | 6 |
+| result not a number | 2 |
+| no native body | 1 |
+
+Body refusals:
+
+| Reason | Methods |
+|---|---|
+| L2 operations | 16 |
+| field paths | 6 |
+| calls with dynamic inputs | 6 |
+| arrays | 3 |
+| mail | 2 |
+| other | 5 |
+
+### The differential run
+
+First on 939bfc8 (t4a3), before the kernel fixes: knob off 381 of 382 rows green, knob on 380.  The
+only reds came from two kernel gaps, which Sonnet fixed in -194 k.5b (main 7634aa2):
+- `unit_walk_loop`, D-72 (K-RET): a walked callee's number result left as a reference into its
+  data, so in `clamp(..) + clamp(..) + clamp(..)` the next call overwrote the cell before the sum
+  read it.  Now the result is copied into `call_dest` by rtype.
+- `unit_method_sig_distinct`, D-73 (K-ARITY): `a(5)` never reads its formal, so the walked arity
+  (the highest ARG + 1) was 0 against 1 argument.  Now the arity is the width of the args part.
+
+Then, rebased, through the per-row checker (`verify2b`):
+- knob off, on main 4d427ac (k.5b in): 382 of 382 rows green; the gate's harness runs it again on 5fa1ad4;
+- knob on (`--walk-methods`), on main 5fa1ad4 (driver on that kernel): 382 of 382 rows green.
+
+The corpus, compared with main's l2trans on 939bfc8:
+- 1018 tracked `.lm2`: 0 changes of outcome (436 translate on both, 582 refuse on both); 301 outputs
+  differ (root holder 0, frames, widths);
+- the 54 tracked `.lm2` of the mixa sandbox, each translated from its own directory: 0 changes.
+
+### Mutants
+
+All red on the rows, on both kernels.  At run time:
+- ARG off by one: X1 (arity);
+- RET without its value: X1;
+- the unit as a method's own holder: X1;
+- no FRESH on re-entry: `unit_walk_recursion` exits 81.
+
+The pins catch each one as well.
+
+### The joint landing
+
+Sonnet's k.5b (D-72, D-73) is in main, and T4a is rebased onto main 5fa1ad4, which also has
+grok_bot's ELEM / ELEMPUT / LENGTH walker roles.  The mutants above were rerun on that kernel with
+the same outcome.
+
+D-69 (a method with a `char` formal does not compile: the args part's char cell) is open and mine.

@@ -1,0 +1,22 @@
+# -193 T4a side fix: a root path through a method's occurrence (`M\x`, -196) takes M's unit child
+# -- l2_rw_path_value ranked M's NUMBER among the named Structures first, which, for a method after
+# the first in a unit with no named Structure, read past their table: l2trans crashed.  Here bump
+# is the second method.
+fn: first () int
+    return: 0
+end: first
+
+fn: bump () int
+    size_t: val 3U
+    return: 0
+end: bump
+
+int: r
+size_t: got
+r: bump()
+got: bump\val
+if: got != 3U
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

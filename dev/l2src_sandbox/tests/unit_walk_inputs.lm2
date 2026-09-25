@@ -1,0 +1,53 @@
+# -193 T4a: methods WALKED (the row's WalkMethods: every method with frames has native 0).  A formal
+# is the method's input j, [arg, j], of the formal's own type; an own field is a cell of the
+# activation's data (holder 0); `return: V` hands back V, [ret, V]; a walked method calls another
+# (a chain).  Each check exits with its own code.
+fn: add (int: a; int: b) int
+    int: s
+    s: a + b
+    return: s
+end: add
+
+fn: twice (size_t: n) size_t
+    size_t: d
+    d: n + n
+    return: d
+end: twice
+
+fn: low (unsigned: u; int: c) unsigned
+    if: c = 1
+        return: u - 1U
+    return: u
+end: low
+
+fn: chain (int: x) int
+    int: y
+    y: add(x, 10)
+    return: add(y, y)
+end: chain
+
+int: r
+size_t: z
+unsigned: w
+r: add(2, 3)
+if: r != 5
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+z: twice(21U)
+if: z != 42U
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+w: low(7U, 1)
+if: w != 6U
+    sendMessage: exit(exit_code: 83; stdout: ""; stderr: "")
+    return
+w: low(7U, 2)
+if: w != 7U
+    sendMessage: exit(exit_code: 84; stdout: ""; stderr: "")
+    return
+r: chain(1)
+if: r != 22
+    sendMessage: exit(exit_code: 85; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

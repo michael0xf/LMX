@@ -1,0 +1,185 @@
+predef: "l2src/lmx_walk.lm1"
+predef: "l2src/lmx_merge_owned.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# -194 к.6 (K2): merge in the interpreted root as a walker PRIM step with a map, and
+# merge-into (Q26.1) as a prim of the same family. Node shape agreed with Opus (T3's own
+# emitter): [prim, record, op0, ..., opN-1, body_or_0, pairs_or_0] for the fresh
+# multi-operand merge (lmx_walk_merge_map), [prim, record, target, op, pairs] for
+# merge-into (lmx_walk_merge_into_map). Exercised directly against the kernel (T3's own
+# emission is not built yet).
+
+sub: mw_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: mw_check
+
+fn: mw_fr (@: LmxArena arena; @: Lmx roles; @: Lmx parent; size_t: slot; int: op; size_t: children) @: Lmx
+    @: Lmx n lmx_walk_frame(arena, roles, parent, op, children)
+    if: n = 0 || lmx_arena_ref_store(parent, slot, (cast: (@: void) n)) != 0
+        return: 0
+return: n
+
+# A pairs Structure: 3 direct size_t children per pair (model_slot, operand, field).
+# Parentless (lmx_node_new_owned), like the operand Structures below: nothing reads the
+# pairs Structure's own \parent, so it carries none.
+fn: mw_pairs (@: LmxArena arena; size_t: p0_slot; size_t: p0_op; size_t: p0_field) @: Lmx
+    @: Lmx s lmx_node_new_owned(arena)
+    if: s = 0 || lmx_arena_refs_open_owned(arena, s, 3U) != 0
+        return: 0
+    if: lmx_walk_store_size(arena, s, 0U, p0_slot) != c.LMX_WALK_OK
+        return: 0
+    if: lmx_walk_store_size(arena, s, 1U, p0_op) != c.LMX_WALK_OK
+        return: 0
+    if: lmx_walk_store_size(arena, s, 2U, p0_field) != c.LMX_WALK_OK
+        return: 0
+return: s
+
+fn: mw_prim_record (@: LmxArena arena; LmxPrimitiveEntry: fn) @: LmxPrimitive
+    @: LmxPrimitive rec (cast: (@: LmxPrimitive) lmx_arena_take(arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))
+    if: rec = 0
+        return: 0
+    rec\fn: fn
+    rec\signature: 0
+    rec\owner: (cast: (@: Lmx) arena)
+return: rec
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxArena: arena
+    LmxScratch: scratch
+    LmxPool: cells
+    LmxWalkContext: ctx
+    @: Lmx roles 0
+    @: Lmx unit 0
+
+    # -- merge-map fixture: R = merge(model, operand) with a map (model's x <- operand's
+    # x'), model {x: 1}, operand {x': 99}.
+    @: Lmx model 0
+    @: Lmx operand 0
+    @: Lmx pairs_a 0
+    @: Lmx prim_a 0
+    @: LmxPrimitive rec_a 0
+    @: Lmx caller_a 0
+    int: r_a 0
+    @: void out_a 0
+    int: present_a 0
+    int: st
+
+    # -- merge-into fixture: o\inner: a -- target {slot0: 0}, op {a: 42}, target's slot0
+    # <- op's field0 (a full, 1-pair bijection, K1 к.3's own rule).
+    @: Lmx target_b 0
+    @: Lmx op_b 0
+    @: Lmx pairs_b 0
+    @: Lmx prim_b 0
+    @: LmxPrimitive rec_b 0
+    @: Lmx caller_b 0
+    int: r_b 999
+    @: void out_b 0
+    int: present_b 0
+    int: failures 0
+
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ scratch)), 0, c.sizeof(c.LmxScratch))
+    memset((cast: (@: void) (@ cells)), 0, c.sizeof(c.LmxPool))
+    memset((cast: (@: void) (@ ctx)), 0, c.sizeof(c.LmxWalkContext))
+    if: lmx_arena_open(@ arena) != 0
+        fputs("lmx: arena open failed\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    if: lmx_scratch_open(@ scratch, @ arena, @ cells, 64U) != c.LMX_SCRATCH_OK
+        lmx_arena_release(@ arena)
+        free(counts)
+        return: 2
+    ---
+    roles: lmx_walk_roles_open(@ arena)
+    mw_check(counts, roles != 0, "roles opened")
+    ctx.arena: @ arena
+    ctx.scratch: @ scratch
+    ctx.roles: roles
+    unit: lmx_node_new_owned(@ arena)
+    mw_check(counts, unit != 0, "unit built")
+
+    # ==== merge-map ====
+    model: lmx_node_new_owned(@ arena)
+    mw_check(counts, model != 0 && lmx_arena_refs_open_owned(@ arena, model, 1U) = 0, "model opened {x}")
+    lmx_arena_ref_store(model, 0U, (cast: (@: void) lmx_int_new_owned(@ arena)))
+    lmx_int_store_known(lmx_arena_ref_value(model, 0U), 1)
+    operand: lmx_node_new_owned(@ arena)
+    mw_check(counts, operand != 0 && lmx_arena_refs_open_owned(@ arena, operand, 1U) = 0, "operand opened {x'}")
+    lmx_arena_ref_store(operand, 0U, (cast: (@: void) lmx_int_new_owned(@ arena)))
+    lmx_int_store_known(lmx_arena_ref_value(operand, 0U), 99)
+    pairs_a: mw_pairs(@ arena, 0U, 1U, 0U)
+    mw_check(counts, pairs_a != 0, "pairs_a built: model slot 0 <- operand(1) field 0")
+    rec_a: mw_prim_record(@ arena, (cast: (LmxPrimitiveEntry) lmx_walk_merge_map))
+    mw_check(counts, rec_a != 0, "merge-map primitive record built")
+
+    caller_a: lmx_node_new_owned(@ arena)
+    mw_check(counts, caller_a != 0 && lmx_arena_refs_open_owned(@ arena, caller_a, 1U) = 0, "caller_a opened")
+    prim_a: mw_fr(@ arena, roles, caller_a, 0U, c.LMX_WALK_OP_RET, 2U)
+    prim_a: mw_fr(@ arena, roles, prim_a, 1U, c.LMX_WALK_OP_PRIM, 6U)
+    lmx_arena_ref_store(prim_a, 1U, (cast: (@: void) rec_a))
+    lmx_arena_ref_store(prim_a, 2U, (cast: (@: void) model))
+    lmx_arena_ref_store(prim_a, 3U, (cast: (@: void) operand))
+    # slot 4 (body) left 0: no body operand.
+    lmx_arena_ref_store(prim_a, 5U, (cast: (@: void) pairs_a))
+    mw_check(counts, prim_a != 0, "caller_a graph built")
+
+    st: lmx_walk_activate(@ ctx, caller_a, caller_a, 0, 0U, (cast: (@: void) (@ r_a)), @ out_a, @ present_a)
+    mw_check(counts, st = c.LMX_WALK_OK, "merge-map PRIM walked OK")
+    mw_check(counts, present_a != 0 && out_a != 0 && out_a != (cast: (@: void) (@ r_a)), "merge-map result is a Structure reference, not a computed int")
+    mw_check(counts, (cast: (@: Lmx) out_a)\len = 1, "merge result has model's own width (1)")
+    mw_check(counts, lmx_int_value_known(lmx_arena_ref_value((cast: (@: Lmx) out_a), 0U)) = 99, "merge result slot 0 = operand's 99, the paired override (mutant: pairs ignored -> model's own 1, RED)")
+    mw_check(counts, lmx_int_value_known(lmx_arena_ref_value(model, 0U)) = 1, "model itself untouched")
+
+    # ==== merge-into ====
+    target_b: lmx_node_new_owned(@ arena)
+    mw_check(counts, target_b != 0 && lmx_arena_refs_open_owned(@ arena, target_b, 1U) = 0, "target_b opened {slot0}")
+    lmx_arena_ref_store(target_b, 0U, (cast: (@: void) lmx_int_new_owned(@ arena)))
+    lmx_int_store_known(lmx_arena_ref_value(target_b, 0U), 0)
+    op_b: lmx_node_new_owned(@ arena)
+    mw_check(counts, op_b != 0 && lmx_arena_refs_open_owned(@ arena, op_b, 1U) = 0, "op_b opened {a}")
+    lmx_arena_ref_store(op_b, 0U, (cast: (@: void) lmx_int_new_owned(@ arena)))
+    lmx_int_store_known(lmx_arena_ref_value(op_b, 0U), 42)
+    pairs_b: mw_pairs(@ arena, 0U, 0U, 0U)
+    mw_check(counts, pairs_b != 0, "pairs_b built: target slot 0 <- op field 0")
+    rec_b: mw_prim_record(@ arena, (cast: (LmxPrimitiveEntry) lmx_walk_merge_into_map))
+    mw_check(counts, rec_b != 0, "merge-into primitive record built")
+
+    caller_b: lmx_node_new_owned(@ arena)
+    mw_check(counts, caller_b != 0 && lmx_arena_refs_open_owned(@ arena, caller_b, 1U) = 0, "caller_b opened")
+    prim_b: mw_fr(@ arena, roles, caller_b, 0U, c.LMX_WALK_OP_PRIM, 5U)
+    lmx_arena_ref_store(prim_b, 1U, (cast: (@: void) rec_b))
+    lmx_arena_ref_store(prim_b, 2U, (cast: (@: void) target_b))
+    lmx_arena_ref_store(prim_b, 3U, (cast: (@: void) op_b))
+    lmx_arena_ref_store(prim_b, 4U, (cast: (@: void) pairs_b))
+    mw_check(counts, prim_b != 0, "caller_b graph built (bare PRIM statement, no RET)")
+
+    st: lmx_walk_activate(@ ctx, caller_b, caller_b, 0, 0U, (cast: (@: void) (@ r_b)), @ out_b, @ present_b)
+    mw_check(counts, st = c.LMX_WALK_OK, "merge-into PRIM walked OK")
+    mw_check(counts, lmx_int_value_known(lmx_arena_ref_value(target_b, 0U)) = 42, "merge-into wrote op's 42 into target's own slot 0 (mutant: pairs ignored -> INVALID or target untouched, RED)")
+    mw_check(counts, target_b\len = 1, "target's own layout unchanged (nothing built fresh)")
+
+    failures: counts[1]
+    c.printf("lmx_walk_merge_selftest: %d checks, %d failed\n", counts[0], failures)
+    free(counts)
+    lmx_scratch_close(@ scratch)
+    lmx_arena_release(@ arena)
+    if: failures != 0
+        return: 1
+return: 0

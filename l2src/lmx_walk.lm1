@@ -1013,6 +1013,7 @@ fn: lmx_walk_prim (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
     @@: void refs 0
     @@: void cells 0
     @: void target 0
+    @: void child 0
     size_t: n
     size_t: i 0U
     int: status c.LMX_WALK_OK
@@ -1050,10 +1051,17 @@ fn: lmx_walk_prim (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
         refs: (cast: (@@: void) room)
         cells: refs + n
     ---
+    # -194 к.6 (K2): a null argument slot is an explicit "no value" (a merge prim's own
+    # optional body or pair-map, absent), not a translator mistake -- lmx_walk_eval
+    # itself refuses node = 0 outright, so it is never asked here; refs[i] stays the 0
+    # it was already set to just above.
     while: status = c.LMX_WALK_OK && i < n
         refs[i]: 0
         cells[i]: 0
-        status: lmx_walk_eval(f, lmx_arena_ref_value(code, i + 2U), (cast: (@: void) (cells + i)), refs + i)
+        child: lmx_arena_ref_value(code, i + 2U)
+        if: child != 0
+            status: lmx_walk_eval(f, child, (cast: (@: void) (cells + i)), refs + i)
+        ---
         i: i + 1U
     ---
     # 21.6: dirty values are published before every outbound call, and this is one.

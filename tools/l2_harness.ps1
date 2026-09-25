@@ -732,7 +732,7 @@ $fixtures = @(
         Args = @('0');
         Absent = @();
         Debt = @() },
-    [pscustomobject]@{ Name = 'unit_asgn_fallback.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call of a method with dynamic inputs'; Args = @('0');
+    [pscustomobject]@{ Name = 'unit_asgn_fallback.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
         Absent = @(); Debt = @() },
     # FABLE-SONNET-SEND-IN-METHODS-20260925-168 commit 2: sendMessage: X inside a method body --
     # a method called from the root sends exit(exit_code: 7; ...) directly (l2_msend<k>).
@@ -2028,13 +2028,13 @@ $fixtures = @(
         Needle = 'address arithmetic past an own-array element is not yet supported'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_addr_unknown_type_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown type'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_dyn_hidden_from_cross_method.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call of a method with dynamic inputs';
+    [pscustomobject]@{ Name = 'unit_dyn_hidden_from_cross_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Says = @('beta sees shared=0', 'beta sees shared=222');
         Absent = @();
         Debt = @() },
-    [pscustomobject]@{ Name = 'unit_dyn_hidden_from_undeclared_refused.lm2'; Expect = 'root-pending'; Exit = 0;
-        Needle = 'root operation not walkable yet: a call of a method with dynamic inputs'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_dyn_hidden_from_undeclared_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unbound dynamic input shared'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_own_find_last_sizeof.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body';
         Args = @('0');
         Absent = @();

@@ -510,6 +510,8 @@ prototype:
     fn: l2_rw_has_slash (const: @(LmP0Text t)) int
     fn: l2_rw_own_row (const: @(LmP0Node node); const: @(LmP0Text t)) int
     fn: l2_rw_call (const: @(LmP0Node node); int: idx; @: LmP0Field args; int: parent; @: int out) int
+    fn: l2_rw_dyn_arg (const: @(LmP0Node node); int: idx; int: k; int: parent; @: int out) int
+    fn: l2_rw_callee_at (int: parent; int: idx; int: oi; @: int out) int
     fn: l2_rw_pads (@: LmP0Field first; int: into) int
     fn: l2_rw_catch_stmt (const: @(LmP0Node stmt); int: into; int: slot; @: int made) int
     fn: l2_rw_catch_call (int: node; int: callee) int
@@ -18483,11 +18485,16 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; @: LmP0Field args; int: paren
     int: arg
     int: j
     int: fr
+    int: d 0
     # A callee that can throw is called like any other (commit 3; -161 c3 D-37): its trampoline
     # returns the throw's number k, the walk carries it as LMX_WALK_THROWN + k and stops, and the
     # turn's channel holds k.  The root has no catch yet (no walker role), so a throw there is
     # uncaught: R0 stops and the host maps its success 0 to exit 1.
-    if: l2_m_dyn[idx] != 0
+    # A method body tried quietly stays native when it calls a dynamic-input
+    # callee: the count pass refuses, so the walked set does not change. The
+    # root is not quiet. It passes each dynamic input as one more argument,
+    # after the declared ones, in the same activation frame. No third graph.
+    if: l2_m_dyn[idx] != 0 && l2_rw_quiet != 0
         return: l2_rw_refuse(node, "a call of a method with dynamic inputs")
     # A result is an int, a size_t, an unsigned or a ulong (-178): the walk hands a trampoline of a
     # wider type a destination of that type, by the class of the callee's return cell (rtype).
@@ -18519,7 +18526,7 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; @: LmP0Field args; int: paren
     # the native call does (-193 T4a; the native call site's rule: a callee with own fields).
     # rtype is the callee's result cell in its `return` part (l2_emit_parts), by reference: the walk
     # types the call's destination by that cell's range; a `sub` has none (0).
-    if: l2_rw_frame(parent, "LMX_WALK_OP_CALL", 5 + n, out) != 0
+    if: l2_rw_frame(parent, "LMX_WALK_OP_CALL", 5 + n + l2_m_dyn[idx], out) != 0
         return: 1
     if: l2_rw_catch_call(\out, idx) != 0
         return: 1
@@ -18568,6 +18575,65 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; @: LmP0Field args; int: paren
         k: k + 1
         a: l2_skip_span(a, span)
     ---
+    d: 0
+    while: d < l2_m_dyn[idx]
+        if: l2_rw_dyn_arg(node, idx, d, \out, @ arg) != 0 || l2_rw_put(\out, 5 + n + d, arg) != 0
+            return: 1
+        d: d + 1
+    ---
+return: 0
+
+# One dynamic input of callee idx, as one more argument of the call (after the declared
+# formals). Same order as l2_hidden_from: the caller's formal, then the caller's own
+# field, then the callee's lexical field. None of those is a third graph. A miss is the
+# same located refusal the native call emits.
+fn: l2_rw_dyn_arg (const: @(LmP0Node node); int: idx; int: k; int: parent; @: int out) int
+    @: LmP0Text nm
+    int: oty
+    int: oi
+    int: pi
+    c.array: [256]: char msg
+    if: idx < 0 || k < 0 || k >= l2_m_dyn[idx]
+        return: 1
+    nm: l2_dn(idx, k)
+    oty: l2_own_of_dt(l2_dt(idx, k))
+    if: l2_rw_num_ty(oty) = 0
+        return: l2_rw_refuse(node, "a call with an input that is not a number")
+    pi: l2_param_find(l2_rw_mi, nm)
+    if: pi >= 0 && l2_rw_mi != l2_e
+        oi: l2_rw_bound(nm)
+        if: oi >= 0
+            return: l2_rw_own(parent, oi, out)
+        return: l2_rw_arg(parent, pi, out)
+    # The root has no ARG slot for an entry formal. Do not pass the callee's cell instead.
+    if: pi >= 0 && l2_rw_mi = l2_e
+        return: l2_rw_refuse(node, "a call of a method with dynamic inputs")
+    oi: l2_own_find_last(l2_rw_mi, nm)
+    if: oi >= 0 && l2_m_uses[l2_own_off(l2_rw_mi, oi)] != 0 && l2_rw_num_ty(l2_own_ty[oi]) != 0 && l2_own_uchild[oi] >= 0
+        return: l2_rw_own(parent, oi, out)
+    oi: l2_own_find_last(idx, nm)
+    if: oi < 0
+        if: nm = 0
+            return: l2_error(l2_src, node, "unbound dynamic input")
+        if: c.snprintf(msg, 256U, "unbound dynamic input %.*s", (cast: (int) nm\length), nm\data) < 0
+            return: 1
+        return: l2_error(l2_src, node, msg)
+    if: l2_own_mi[oi] = idx && l2_own_uchild[oi] >= 0 && l2_rw_num_ty(l2_own_ty[oi]) != 0
+        return: l2_rw_callee_at(parent, idx, oi, out)
+    if: l2_rw_num_ty(l2_own_ty[oi]) != 0 && l2_own_uchild[oi] >= 0
+        return: l2_rw_own(parent, oi, out)
+return: l2_rw_refuse(node, "a call with an input that is not a number")
+
+# AT of method idx's own field oi: the occurrence itself, not the unit.
+fn: l2_rw_callee_at (int: parent; int: idx; int: oi; @: int out) int
+    if: l2_rw_frame(parent, "LMX_WALK_OP_AT", 3, out) != 0
+        return: 1
+    if: l2_rw_emit = 0
+        return: 0
+    if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, %uU))) != 0\n            return: 1\n", \out, (cast: (unsigned) (l2_unit_base + idx))) < 0
+        return: 1
+    if: c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %uU) != c.LMX_WALK_OK\n            return: 1\n", \out, (cast: (unsigned) l2_own_uchild[oi])) < 0
+        return: 1
 return: 0
 
 # A Structure argument by reference (FABLE-OPUS-ROOT-TAKE-20260925-179 commit 2): the actual is a

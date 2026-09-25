@@ -1003,6 +1003,9 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
     catch_ref: lmx_arena_ref_value(code, 4U)
     addr: lmx_walk_callable_addr(f\arena, callee)
     if: addr = 0
+        # The args-part width is every signature input of this frame: declared
+        # formals and dynamic inputs alike. They are not a third graph. n must
+        # match. An extra argument is INVALID (D-04). A missing one is too.
         if: n != lmx_walk_arg_arity(f, callee)
             return: c.LMX_WALK_INVALID
         ---

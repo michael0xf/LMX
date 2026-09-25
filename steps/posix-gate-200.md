@@ -12,9 +12,15 @@
 `tools/l2_harness.ps1` (2492 строки, машинный eternal-runs драйвер) —
 у обоих оказалась та же стадийная копия, что и у пары build_l2src, см. §3.
 Прочитаны сами `lmx_clock.h.lm1`/`.lm1`, `lmx_process_deadline.h.lm1`/`.lm1`,
-`lmx_manager_running.h.lm1`/`.lm1` целиком. Счётчики вызовов Win32 API
-пересчитаны независимо от текста тикета (см. §1) — совпали с числами fable
-дословно.
+`lmx_manager_running.h.lm1`/`.lm1` целиком, а также фрагменты
+`l1src/make.lm1` (1-40), `l1src/buildCore.lm1` (`os:`-блок 1-224),
+`l1src/l1trans.lm1:4300-4335` (`l1_emit_os`), `tools/bootstrap_l1.sh`
+целиком — на предмет уже существующей ОС-развилки (`os:`-блок,
+`LM_THREAD_PROVIDER`), см. §3.4. Счётчики вызовов Win32 API пересчитаны
+независимо от текста тикета (см. §1/§2) — совпали с числами fable
+дословно, за вычетом одного уточнения (GetTickCount64: 4 реальных
+вызова, не 5 — «×5» в тикете, похоже, считает и одно упоминание в
+комментарии; не блокер, расхождение стоит сверить с fable).
 
 ## 1. (a) Точный контракт `.h.lm1` трёх модулей
 
@@ -129,7 +135,7 @@ four calls and nothing above this file changes."* — автор уже
 
 | модуль | вызов | счёт | POSIX-эквивалент |
 | --- | --- | --- | --- |
-| `lmx_clock` | `GetTickCount64` | 5 (`lmx_clock.lm1:7,13,16,23,26`) | `clock_gettime(CLOCK_MONOTONIC, &ts)`, мс = `ts.tv_sec*1000 + ts.tv_nsec/1000000` |
+| `lmx_clock` | `GetTickCount64` | **4 реальных вызова** (`lmx_clock.lm1:7,13,16,26`); `:23` в моём первом гребе — не вызов, а слово в комментарии (то же для `lmx_clock.h.lm1:27`) | `clock_gettime(CLOCK_MONOTONIC, &ts)`, мс = `ts.tv_sec*1000 + ts.tv_nsec/1000000` |
 | `lmx_process_deadline` | `CreateEventW` | 1 (`:30`) | `pthread_cond_t` + `pthread_mutex_t` (ручной "event" через condvar+флаг) или `pipe(2)` (self-pipe) |
 | | `CreateThread` | 1 (`:37`) | `pthread_create` |
 | | `SetEvent` | 1 (`:51`) | `pthread_cond_signal` под мьютексом / `write` в self-pipe |
@@ -140,17 +146,88 @@ four calls and nothing above this file changes."* — автор уже
 | | `Sleep` | 1 (реально, `:52`) | `nanosleep` |
 | | `CloseHandle` | 2 (`:128,187`) | ничего не нужно — `pthread_join` уже освобождает; `pthread_t` не хендл, закрывать нечего |
 
-Компиляторные флаги: `-pthread` (линковка и `-D_REENTRANT`), и для
-`pthread_condattr_setclock(..., CLOCK_MONOTONIC)` требуется
-`-D_POSIX_C_SOURCE=200112L` (или `_GNU_SOURCE`, если понадобится
-`pthread_tryjoin_np` для неблокирующего reap в `lmx_manager_running_lane_reap`
-— единственное место, где Win32 API формы асимметричны: `WaitForSingleObject(h, 0)`
-имеет прямой POSIX-аналог только через нестандартное расширение или через
-дополнительный флаг "done", выставляемый потоком перед выходом под мьютексом).
+**Главный разрыв `lmx_manager_running` — неблокирующий reap.**
+`lane_reap` (`lmx_manager_running.lm1:123-130`) зовёт
+`WaitForSingleObject(slot->lane, 0)` — нулевой таймаут, «уже
+закончился?», НЕ ждёт (комментарий `:121-122`, «Reap, do not wait»).
+У POSIX threads нет аналога: `pthread_join` ВСЕГДА блокирует до
+завершения потока, `pthread_tryjoin_np` — GNU-расширение, не POSIX,
+несовместимое с базой `_POSIX_C_SOURCE=200809L` (см. ниже). Наивная
+замена `lane_reap` на `pthread_join` сломает контракт «reap, do not
+wait»: раунд заблокируется на первой же ещё бегущей lane вместо того,
+чтобы пропустить её до следующего тика. Минимальный портируемый
+эквивалент: поток-lane, последним актом перед возвратом (после
+`lmx_thread_finish(t)`, `:57`, и до `return: 0U`, `:58`), выставляет
+отдельный флаг «я закончил», который `lane_reap` читает БЕЗ блокировки;
+только когда флаг уже виден, `lane_reap` зовёт `pthread_join`
+(вернётся почти немедленно) и чистит `slot->lane`. Это НЕ однострочная
+замена вызова — нужно новое поле состояния. Поле `lane`
+(`@: void lane`, `dev/l2src_sandbox/lmx_schedule.h.lm1:49`) уже
+существует как «есть ли у записи lane», но булева «уже закончил» там
+нет — новое поле выходит за пределы трёх файлов тикета -200 и
+затрагивает `lmx_schedule.h.lm1` (в пределах владения Sonnet, но не
+один из трёх модулей замера) — факт для к.2, кода не пишу. Что при
+этом УПРОЩАЕТСЯ: на POSIX закрытие потока — один вызов (`pthread_join`
+сам освобождает ресурсы), а не два (`WaitForSingleObject`+`CloseHandle`)
+на каждом из двух сайтов.
+
+Компиляторные флаги: `-pthread` и `-D_POSIX_C_SOURCE=200809L` — и это
+НЕ новые значения для проекта: оба уже используются СЕГОДНЯ для сборки
+самого L1-инструментария (транслятора и его тулинга, не ядра) —
+`tools/bootstrap_l1.sh:54` (`thread_native_flag="-pthread"`) и `:71`
+(`posix_feature_define="-D_POSIX_C_SOURCE=200809L"`),
+`tools/bootstrap_l1.bat` (тот же приём под Windows/MinGW), а также в
+`l1src/buildCore.lm1:571,577` и сгенерированном
+`lm1/build/buildCore.lm1.c:754,762`. Задание POSIX-тела трёх модулей
+должно взять именно `200809L`, не изобретать своё значение.
 Это единственная реальная трудность формы (b) — не количество вызовов, а
 то, что POSIX `pthread_join` не умеет "подождать 0 мс и уйти, если поток
 жив" без ГНУ-расширения или ручного протокола (mutex+flag). Решение —
 предмет к.2+ кода, не этого замера.
+
+**Уточнение по `lmx_process_deadline`'s "event"**: конкретно для этого
+модуля я НЕ беру `pthread_cond_t`+`pthread_mutex_t` значением по
+умолчанию — сам код подсказывает self-pipe. Причины: (1) `event` —
+manual-reset (`CreateEventW(0, 1, 0, 0)`, `lmx_process_deadline.lm1:30`
+— 2-й параметр `1` = `bManualReset=TRUE`), и создаётся ДО потока
+(`:30` раньше `:37`), именно потому что дедлайн уже может быть
+просрочен к моменту `arm` (`lmx_deadline_wait` вправе вернуть 0,
+`lmx_clock.h.lm1:34-42`) — то есть `SetEvent` в принципе может
+опередить начало ожидания; `pthread_cond_signal` НЕ запоминает сигнал,
+если его некому принять в момент вызова (classic lost-wakeup), и
+корректный порт на `cond+mutex` тогда обязан завести ОТДЕЛЬНЫЙ флаг
+`signaled`, проверяемый и до входа в `pthread_cond_timedwait`, и в
+цикле (spurious wakeup); (2) `write()` в pipe, наоборот, оставляет
+байт лежать в буфере до `poll()`/`read()` — потерять сигнал нельзя
+структурно, ближе к тому, что даёт manual-reset event без
+дополнительного флага. `eventfd` дал бы то же одним fd, но это
+Linux-only, не POSIX; `pipe()`+`poll()` — POSIX.1-2001+, совместим с
+базой `_POSIX_C_SOURCE=200809L` (см. ниже). `cond+mutex` с флагом —
+рабочая, но более тяжёлая альтернатива, не предлагаю её умолчанием.
+
+**Числовой зазор, который нельзя перенести буквально**: `max_wait` в
+Windows — `(size_t)c.INFINITE - 1U` (`lmx_process_deadline.lm1:26`) —
+предел конечного ожидания ≈ 2^32-2 мс ≈ 49.7 суток. `poll()` берёт
+`int` миллисекунд, верхняя граница `INT_MAX` ≈ 2^31-1 мс ≈ 24.8 суток
+— ВДВОЕ меньше. POSIX-телу нужна СВОЯ константа максимального ожидания
+(не «DWORD минус один»), это отдельная арифметика, а не деталь.
+
+**`DWORD` в публичном `prototype:` — конфликт с `pthread_create`**:
+`pthread_create` требует вход `void *(*)(void *)`; заголовок сейчас
+объявляет `lmx_process_deadline_body` как `(@: void arg) DWORD` прямо
+в `prototype:` (`lmx_process_deadline.h.lm1:45`), а все флаги сборки,
+что нашлись (`tools/build_l2src.py:33`, `tools/bootstrap_l1.sh:97`,
+`tools/run_self_build.sh:57`), держат
+`-Werror=incompatible-pointer-types` — жёсткая ошибка компиляции при
+прямой подстановке DWORD-функции туда, где ожидается
+`void *(*)(void*)`. Но `lmx_process_deadline_body` нигде не
+упоминается вне своего файла (см. §1 (a)) — и `lmx_manager_running.h.lm1`
+УЖЕ решает точно эту же проблему для своей аналогичной
+`lmx_manager_running_body` иначе: НЕ выносит её в `prototype:` вообще
+(объявлена только внутри `.lm1`, `lmx_manager_running.lm1:33`).
+Простейший путь для к.2 — то же самое для `lmx_process_deadline`: убрать
+`_body` из `prototype:`, по уже принятому в этом же тикете образцу, без
+всякой платформенной развилки внутри заголовка.
 
 ## 3. (c) Форма без переходных двойных режимов
 
@@ -325,6 +402,62 @@ operations, same signatures, same LmxManager; only the binding differs"*
 код (сейчас — всегда `_running`, `lmx_manager.lm1`/`lmx_manager_init`
 не используется в текущей сборке, не проверялось отдельно в рамках
 этого замера), а не как «один header.lm1, тело выбирает сборка по ОС».
+
+### 3.4 Ближайший — и отвергнутый — прецедент: `os:`-блок L1
+
+Есть ЕЩЁ один кандидат в прецеденты, ближе к языку L1, чем к файловой
+системе — и его стоит явно проверить и явно отвергнуть, а не пропустить.
+`l1src/make.lm1:3-10` уже использует языковую конструкцию `os: win: ...
+default: ... end: os`:
+
+```
+os:
+    win:
+        fn: lm_make_auto_thread_provider () @: char
+        return: "win32"
+    default:
+        fn: lm_make_auto_thread_provider () @: char
+        return: "pthread"
+end: os
+```
+
+(то же в `l1src/buildCore.lm1:3-224`). Я проверил, КАК это резолвится:
+`l1src/l1trans.lm1:4300-4335` (`fn: l1_emit_os`) при виде `os:`-блока
+пишет в СГЕНЕРИРОВАННЫЙ `.c` буквально `#ifdef _WIN32` /
+тело `win:` / `#else` / тело `default:` / `#endif` —
+дословно (`l1src/l1trans.lm1:4301`: `l1_write_cstr(out, "#ifdef _WIN32\n")`;
+`:4318`: `"#else\n"`; последняя строка функции — `l1_write_cstr(out,
+"#endif\n")`). То есть `os:` — это НЕ выбор одной ветки на этапе
+трансляции (по хосту, на котором работает `l1trans`), а перенос ОБЕИХ
+веток в один `.c`-файл под настоящий Си-препроцессор `#ifdef _WIN32`.
+Автогенерированный `#ifdef`, но на выходе в Си он ничем не отличается
+от ручного — то есть **это ровно тот переходный двойной режим, который
+доктрина §0 тикета -200 запрещает** («без `#ifdef` в телах»). Значит
+форма, которую просит доктрина («один `.h.lm1`, выбор тела скриптом
+сборки, БЕЗ `#ifdef`»), — это осознанно НЕ `os:`-блок, и `os:` для
+трёх модулей тикета -200 не подходит и не должен использоваться.
+
+Рядом — переменная окружения `LM_THREAD_PROVIDER`
+(`auto|pthread|win32|single`), полноценная и рабочая, но в ДРУГОМ
+слое: `tools/bootstrap_l1.sh:33-64` резолвит её (`auto` → по `uname -s`,
+`:36-41`) в `-DLM_THREAD_PROVIDER=LM_THREAD_PROVIDER_{PTHREAD,WIN32,SINGLE}`
+плюс, для `pthread`, `-pthread`; `l1src/make.lm1:19-36` и
+`l1src/buildCore.lm1:336-342` — те же две копии того же резолвера для
+команд сборки `l1trans`/`make.lm0`/`buildCore.lm0`. Но: (i)
+`tools/run_self_build.sh` на неё вообще НЕ ссылается (grep — 0
+совпадений; его `FLAGS` — фиксированная строка); (ii) макросы
+`LM_THREAD_PROVIDER_*` НИГДЕ не читаются препроцессором (grep
+`#if.*LM_THREAD_PROVIDER` по всему дереву — 0 совпадений) — вся эта
+проводка (env var → `-D`-макрос → опциональный `-pthread`) сегодня
+касается ТОЛЬКО сборки самого L1-транслятора и его инструментов, а не
+`dev/l2src_sandbox`; (iii) `tools/bootstrap_l1.sh:18-20` сам прямо
+ограничивает свою область: «This builds the L1 (translator) bootstrap
+only. It is NOT the L2/kernel chain and NOT the manager (port) chain;
+those stay separate steps.» — автор уже словами зафиксировал именно то,
+что подтверждает grep. `LM_THREAD_PROVIDER` НЕ предвосхищает эту
+платформенную развилку модулей ядра; полезен он тут только КАК ГОТОВОЕ
+ЗНАЧЕНИЕ ДЛЯ ФЛАГОВ (`-pthread`, `_POSIX_C_SOURCE=200809L`, см. §2),
+а не как механизм выбора тела.
 
 **Вывод по (c)-доктрине:** предложенная форма (общий `.h.lm1`,
 platform-body, выбор которым занимается скрипт сборки на этапе

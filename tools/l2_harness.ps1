@@ -303,7 +303,7 @@ if (Test-Path -LiteralPath $testsHdr) {
 Write-Output ('l2_harness: staged ' + $staged + ' files into ' + $src)
 if ($provenanceMode) {
     # The staged l2src\l2trans.lm1 and l2_libc.lm1 must be BYTE COPIES of the LIVE dev sandbox
-    # sources, never the frozen root l2src twin.  This matters because the translator is handed the
+    # sources, never the root l2src (a copy of the sandbox kept in the old place, not tested: -198).  This matters because the translator is handed the
     # RELATIVE literal 'l2src/l2trans.lm1' with cwd = $src, so which twin built the translator is
     # decided by this copy alone, and nothing about the literal says so.
     foreach ($s in @(@('l2trans.lm1', 'l2trans'), @('l2_libc.lm1', 'l2_libc'))) {

@@ -117,14 +117,13 @@ if (-not (Test-Path -LiteralPath $ps51Proc)) { throw "missing process helper: $p
 # A trap named by the channel and confirmed by measurement: dev\l2src_sandbox\L1_PIN.txt holds a
 # DIFFERENT, older pin (0B3D85B3..., 298308 bytes) than the root's (4E0B7F5D..., 300945).  This
 # script reads the pin from $root, so it compares against the translator it actually uses.
-$directSource = Join-Path $root 'l2src'
 $flatSource = Join-Path $root 'dev\l2src_sandbox'
 $sourceProbe = 'lmx.h.lm1'
-# ORDER MATTERS AND IT IS NOT A PREFERENCE: the LIVE copy is the sandbox, and the root l2src is the
-# published snapshot that lags it (measured 20.09: 165 .lm1 against 159, 7 of them differing, 6 only
-# in the sandbox).  My first cut checked the root first and therefore compiled the OLD snapshot --
-# which is how the 28 probes lost their declaration (see below) and why lmx_callable/lmx_walk were
-# never built at all.  The sandbox is checked first now.
+# The sources are the LIVE tree, the sandbox, and only it.  The root l2src is a copy of the sandbox
+# kept in the old place, and nothing is built or tested there (author, 2026-09-26, Q8; -198; the
+# former frozen twin is the tag l2src-twin-20260926).  (A first cut of this script checked the root
+# first and compiled the old snapshot -- which is how the 28 probes lost their declaration, see
+# below.)
 if (Test-Path -LiteralPath (Join-Path $flatSource $sourceProbe)) {
     $staged = Join-Path $OutDir 'src\l2src'
     New-Item -ItemType Directory -Force -Path $staged | Out-Null
@@ -167,12 +166,8 @@ if (Test-Path -LiteralPath (Join-Path $flatSource $sourceProbe)) {
     # are absolute, so nothing else moves.
     Set-Location $sourceBase
     Write-Output "build_l2src: sources STAGED from $flatSource -> $staged ($stagedCount files, incl. kernel-side l1src); cwd moved to $sourceBase so predef paths resolve there"
-} elseif (Test-Path -LiteralPath (Join-Path $directSource $sourceProbe)) {
-    $sourceDir = $directSource
-    $sourceBase = $root
-    Write-Output "build_l2src: sources $sourceDir (l2src\ layout; the sandbox copy was not found)"
 } else {
-    throw "no kernel sources: found neither $flatSource\$sourceProbe nor $directSource\$sourceProbe"
+    throw "no kernel sources: $flatSource\$sourceProbe not found"
 }
 # The default flags are the L2 port runners' shape: no -O level and -Werror on the
 # four hard guards only. -Strict adds the module runners' blanket -Werror -O2; it

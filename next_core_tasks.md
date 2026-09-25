@@ -183,7 +183,7 @@ Acceptance:
 - [x] Аудировать `COMPACT`-ветки function-pointer, raw-field и C/predef call checking/emission по тому же принципу: удалить только form-based precedence, не удаляя правильную проверку разрешённой callable-головы. (GROKBOT-COMPACT-RAWFIELD-BATCHA-72 + COMPACT-FNPTR-BATCHC-76: `rg LM_P0_FRAME_COMPACT` на `dev/l2src_sandbox/l2trans.lm1` = 0 semantic reads; ty40 call = resolved KIND/type 40 in all forms; raw_fld=5 и c.sizeof carve-outs сохранены.)
 - [x] Удалить `COMPACT`-исключения из распознавания локальных объявлений и неподдержанных численных типов. (GROKBOT-COMPACT-DECL-BATCHB-75: `l2_struct_local` + `l2_unimpl_numeric`.)
 - [ ] Удалить `COLON` как признак assignment/unknown-type routing в `l1trans.lm1`, если правило равноценности подтверждено и для L1.
-- [ ] Добавить parity-проверки stable `l2src`, `dev/l2src_sandbox` и self-build mirrors.
+- [x] ~~Добавить parity-проверки stable `l2src`, `dev/l2src_sandbox` и self-build mirrors.~~ **Автор, 2026-09-26 (Q8; FABLE-OPUS-L2SRC-TWIN-20260926-198):** twin = копия рабочего дерева, без тестов и без паритет-гейта; прежний двойник — тег `l2src-twin-20260926`, его собственный гейт `tools/l2_stable_head_call_gate.ps1` удалён (пять форм raw-door c.* перенесены в песочницу строками harness).
 
 ## 3. Разрешение объявления, присваивания и вызова
 

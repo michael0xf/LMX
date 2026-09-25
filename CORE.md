@@ -94,7 +94,8 @@ range. A primitive child points to a primitive cell; a Structure child points
 to an `Lmx` header; an Array child points to its descriptor; a method child
 points to its method record. `void *` does not mean that all referents have the
 same representation. It means the graph stores heterogeneous physical
-references and classification is external to the node.
+references and classification is external to the node. An array of `void *`
+does not care what a slot holds.
 
 There are three different relationships that must not be merged:
 
@@ -212,7 +213,7 @@ argument becomes a data field only by the assignment rule of L3 §12 or by
 binding through merge.
 One graph may stand in both positions: an ordinary call runs `M` over its own
 fields, and the host runs the file root the same way; execution never writes
-operator nodes, literals, or the `native` word, only declared fields. A bare assignment does not open a data slot; it remains a child of the code Structure, as `else` does. A read and a write through `data\x` use that same declared cell. The graph holds no further Structure: what the interpreter needs beyond that code tree and the declared data lives in the activation frame and is not written into the graph. The graph is stored as it is, with its whole contents; that is why any Structure may be placed as code or as data, including a later representation of `Lmx` as an array of `void *`. The graph does not store source text. Body operators such as `if` and `for` are interpreter codes. A native entry neither reads nor writes them, and they remain in the graph. An array of `void *` does not care what those slots hold. A fresh
+operator nodes, literals, or the `native` word, only declared fields. See L2 §10. A fresh
 instance of the data prototype is created only on re-entry (recursion in the
 static call graph, a dynamic call) or when data is passed explicitly; it lives
 in the activation frame and is not visible from outside. Hence `node` is the

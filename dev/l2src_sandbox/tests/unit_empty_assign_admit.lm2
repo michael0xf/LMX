@@ -1,6 +1,7 @@
 # The same for a field of a declared Structure type: admitting () to Model is refused -- () has
 # no `value` -- so `fresh()` throws the implicit implements, taken here by its catch (42), and
-# fresh keeps the Structure it had (value 1U): 42 * 10 + 1 = 421.
+# fresh keeps the Structure it had (value 1U): 42 * 10 + 1 = 421. The root reports that
+# through sendMessage: a valued return is refused at the root.
 Model:
     size_t: value 1U
 end: Model
@@ -12,4 +13,5 @@ catch: implements ()
     r: 42
 if: fresh\value = 1U
     r: r * 10 + 1
-return: r
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

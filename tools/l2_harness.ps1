@@ -1171,8 +1171,11 @@ $fixtures = @(
     # anywhere it is consumed as a value), one diagnostic, now that this fixture's own case is fixed.
     [pscustomobject]@{ Name = 'unit_void_value.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'a callable without a result has no value'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_empty_assign_untyped.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a reference assignment'; Args = @('0');
-        Absent = @(); Debt = @() },
+    # No declared type: E() / E: () / m() store FRESH of an empty node, not an admission.
+    # The driver letter is not null. m() stores over it and does not throw. Success is 4.
+    [pscustomobject]@{ Name = 'unit_empty_assign_untyped.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 4;
+        Absent = @('lmx_walk_admit');
+        Debt = @('c.LMX_WALK_OP_FRESH, 2U') },
     # D-06: the f() assignment's failed rebinding store is an invariant on the X1 route, not a printed line.
     # Empty Structure assigned to a typed binding (book §12): FRESH of an empty node, admitted by
     # lmx_walk_admit.  () does not implement Model / S, so implements is caught and the previous

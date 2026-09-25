@@ -57,7 +57,7 @@ return: @ m\mainArgs[1][0]
 
 ## Облако (с 2026-09-25 по git): гейт и тикеты
 
-fable, Opus и Sonnet работают в облачных сессиях; на машине автора — Grok CLI (`grok_next.md`). Единственный общий носитель — git. В облаке собираются l1trans (из seed `lm1/build/l1trans.lm1.c`), l2trans и `python tools/build_l2src.py` (портативный двойник `build_l2src.ps1`; 174/230 на main — красные только модули с `<windows.h>` и их замыкание); harness eternal-runs и L3 11/11 — только на машине до решения по POSIX-двойнику (Q10, `fable_next.md` §7). Текущие тикеты — `steps/tickets-20260925.md`; порядок обмена (ветки, STARTED/QUESTION/RESULT/GATE?, строка через автора) — `steps/cloud-protocol.md`; состояние и очередь — `fable_next.md` §3/§8.
+fable, Opus и Sonnet работают в облачных сессиях; на машине автора — Grok CLI (`grok_next.md`). Единственный общий носитель — git. В облаке собираются l1trans (из seed `lm1/build/l1trans.lm1.c`), l2trans и `python tools/build_l2src.py` (портативный двойник `build_l2src.ps1`; 174/230 на main — красные только модули с `<windows.h>` и их замыкание); harness eternal-runs и L3 11/11 — только на машине до решения по POSIX-двойнику (Q10, `fable_next.md` §7). С ~10:25 UTC 25.09 проект ведёт Grok CLI сам по `grok_next.md` (очередь §4 там), fable — ревьюер (`steps/review-log.md`); история тикетов дня — `steps/tickets-20260925.md`; прежний протокол облачных сессий — `steps/cloud-protocol.md`.
 
 ## Свидетель не может быть пустым (правило координатора, 2026-09-24)
 

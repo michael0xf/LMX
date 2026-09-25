@@ -1,55 +1,80 @@
-# grok_next.md — записка для Grok CLI на машине автора
+# grok_next.md — Grok CLI ведёт проект LMX сам (инструкция от fable, 2026-09-25)
 
-Написано fable 2026-09-27 по указанию автора. Адресат — **Grok CLI** (терминальный чат `C:\grok\grok.bat`, cwd `C:\Nyasha_Planet\LMX`; см. `grok_read_me.md`), не Grok Bot (он остановлен окончательно) и не ACP-беседа `grok.py`.
+Решение автора (2026-09-25, ~10:25 UTC): облачные сессии Opus и Sonnet остановлены (общая квота). **Grok CLI (Grok 4.7, effort xhigh) на машине автора ведёт `next_core_tasks.md` сам**: планирует, пишет ядро и транслятор, гоняет гейт, вливает в main, обновляет документы. **fable в облаке — ревьюер**: каждые 15 минут читает новые коммиты main и пишет ревью в git (`steps/review-log.md`); тикетов больше не выдаёт, «go» не требуется. Автор — источник норм языка и решений по пробелам контракта.
 
-С этого момента Claude-сессии `fable` (диспетчер), `opus` (транслятор `l2trans.lm1`) и `sonnet` (ядро `dev/l2src_sandbox`, walker, L3) работают **в облаке**. У них нет доступа к машине: ни к named pipe `lmx_uds`, ни к консоли, ни к локальному рабочему дереву. Общий носитель — только git (`origin`, `https://github.com/michael0xf/LMX.git`). Ты — руки на машине: гейты, сборки, локальные замеры, при необходимости push.
+Адресат — терминальный Grok CLI (`C:\grok\grok.bat`, cwd `C:\Nyasha_Planet\LMX`), не Grok Bot (остановлен) и не ACP-беседа `grok.py`.
 
-## 1. Что читать перед первым действием
+## 1. Что читать, в каком порядке (каждый новый контекст)
 
-`READ.ME` → `steps/current.md` → `next_core_tasks.md` §0 (доктрина) и §3 «Пара исполнения code/data» → `fable_next.md` (состояние и очередь) → `opus_next.md`, `sonnet_next.md`. Не импортировать старые записки как норму: `grok_read_me.md` описывает каналы, которых у облачных сессий больше нет.
+1. `READ.ME` — правила проекта: журнал автора `LMX_blog/`, каталоги, построение спецификаций, достоверность.
+2. `steps/current.md` — состояние, стиль записи тел (`end:`/trailer/лестница), правило дефектов, правило «свидетель не может быть пустым», облако.
+3. `next_core_tasks.md` — **план проекта, единственный**: §0 доктрина (обязательна), §1 VoidArray, §2 три формы, §3 объявление/присваивание/вызов и «Пара исполнения code/data» (модель ядра: роль — позиция; `Lmx.native`; walker), §4 occurrences/merge, §7 implements/admission, §7a дверь `c.*`, §GATE, §8 самосборка, §9 myxa_manager, §10 документация. Строки `[x] ПОСАЖЕНО` — что уже сделано, с SHA и числами гейта.
+4. `steps/tickets-20260925.md` §0–§11 — решения fable за 25.09 (форма CATCH §7, форма POSIX-двойника §6, D-67 §6, -203 §9, D-60 §11) и факты облака.
+5. Планы по темам: `steps/array-operand-203.md` (твой, если начат), `steps/sender-range-d60.md`, `steps/catch-role-201.md` + `steps/catch-emitters-201.md`, `steps/posix-gate-200.md`, `steps/walk-methods-t4b.md`, `steps/root-arrays-170.md`, `steps/root-arrays-170-opus.md`, `steps/root-merge-199.md`, `steps/merge-parts-193.md`, `steps/next-phase-195.md`, `steps/gate-cleanup-197.md`, `steps/root-walk-blocks-arrays.md`, `steps/defects.md`.
+6. Записки предшественников — контекст и ловушки, не поручения: `opus_next.md` (транслятор `l2trans.lm1`: очередь, ловушки, скретч-проверка строк), `sonnet_next.md` (ядро: правила решений, ловушки), `fable_next.md` (состояние и очередь диспетчера).
+7. Спеки: `docs/L2_spec_*.md`, `docs/L1_spec_*.md`, `docs/LMX_semantics.*.md` (только через `provenance/semantics-book.md` + `python tools/build_semantics.py`), `CORE.md`.
 
-## 2. Состояние на момент передачи
+## 2. Доктрина (не пересматривать; при сомнении — вопрос автору, не заплатка)
 
-- `origin/main` = `7ba030b` (или новее): модель code/data, слово `Lmx.native`, merge по карте пар, op-деревья тел методов, массивы в корне (ядро) — всё влито. Гейт на main: `tools/build_l2src.ps1 -Run` 275/275, `tools/l2_harness.ps1` 384/384, `python tools/run_l3_selftest.py` 11/11, `python tools/check_docs.py` OK.
-- Могли остаться не влитыми: `origin/opus/l2src-twin-198` (D-74, twin `l2src` = копия песочницы, `opus_next.md`) и `origin/sonnet/merge-194` (K2 merge в корне, `sonnet_next.md`). Их вливает fable из облака после зелёного гейта.
+- `next_core_tasks.md` §0: никаких name specials, allowlist'ов, скрытых реестров, fallback'ов, «переходных двойных режимов», дополнительных полей в базовых типах. Одно правило на форму; исключение = вопрос автору с минимальным примером и точными местами кода.
+- Имена — только в трансляторе; ядро и walker работают по позициям и классификации адресов по арене (`lmx_range_classify`). Маркеров «callable»/«есть части» нет; исполнение выбирается по слову `native` (пусто = walker).
+- Ссылки прежде чисел: число только там, где ссылка невозможна (нумерация throw — свойство callee/caller).
+- Данные всегда передаёт вызывающий; код неизменен в операторах; свежий экземпляр — только при повторном входе или явных данных (Q28); одна ячейка у объявления (Q29).
+- Merge: карта пар позиций от транслятора, результат `native` = 0, дубль источника = INVALID, merge-into — биекция.
+- Спеки описывают язык, без планов и бесед. Реплики автора о языке — дословно в `LMX_blog/<дата>.md` по правилам `READ.ME` (техническое — да, организационное — нет). RU/EN синхронно.
+- Факты harness (Entry/Says/пины) меняются только с обоснованием в отчёте; каждая правка ядра — селфтест + мутант; «проверка доказывает X» подтверждать мутацией; свидетель с ненулевым положительным результатом, инвертированная проверка красная.
+- Дефекты — `steps/defects.md`, чинить сразу, как найдены (D-номер, F-номер фикса, SHA).
 
-## 3. Протокол с облачными сессиями (через git) — действующая форма с 2026-09-25
+## 3. Цикл работы (без «go»: решаешь сам, fable ревьюит после)
 
-Общий носитель — только `origin` (`main`). Облачные сессии сами не просыпаются на новые коммиты: их будит автор одной строкой в чат; fable обходит `main` каждые 15 минут (в :14, :29, :44 и :59 UTC).
+1. **Выбор** — следующий пункт очереди §4 ниже (или дефект, найденный по пути: он вне очереди).
+2. **к.1 план** — `steps/<тема>-<N>.md`: точные строки кода, форма узлов/сигнатур, какие строки harness переворачиваются и их новые факты, свидетели и мутанты, что может сломать доктрину. Коммит `STARTED <ID>: <ветка>@<sha> база main <sha>`. Если план упирается в пробел контракта — раздел «Вопросы автору» и переход к следующему пункту, не ожидание.
+3. **Код** — ветка `grok/<тема>`, коммиты по шагам; после каждого шага ядра `tools\build_l2src.ps1 -Run`.
+4. **Проверки** — все четыре на ветке: `.\tools\build_l2src.ps1 -Run`, `.\tools\l2_harness.ps1`, `python tools\run_l3_selftest.py`, `python tools\check_docs.py`, плюс `git diff --check`. Мутанты — правка → RED → откат → GREEN, каждый раз измерять. Корпус: все `.lm2` песочницы прежним и новым l2trans — изменения исхода только у затронутых строк (`opus_next.md` «скретч-инструменты»).
+5. **RESULT** — тот же файл плана: ветка@tip, база, что и почему, строки, мутанты (как мутировано, что стало RED/GREEN), четыре числа, красное — как есть. Первая строка коммита `RESULT <ID>: <ветка>@<sha>`.
+6. **Документы в том же тикете** — `steps/defects.md` (закрытие с F-номером и SHA), строка `[x] ПОСАЖЕНО` в `next_core_tasks.md` §3 (или в соответствующем разделе), спеки L1/L2/L3, если механизм изменился (симметрично, с якорями и взаимными ссылками), `docs/implementation-notes.*` для ограничений реализации, `steps/current.md` — если изменился процесс.
+7. **Влитие** — `git checkout main; git merge --no-ff grok/<тема>`, в сообщении четыре числа; `git push origin main`; ветку тоже пушить. Twin `l2src/` = копия песочницы — обновить копированием после влития (правило -198).
+8. **Ревью fable** приходит в `steps/review-log.md` (в main) в течение ~15 минут: `REVIEW <sha>: OK` или замечания с номерами. На замечание — ответить в том же файле под записью (`ANSWER <sha>-<n>: сделано <sha2> / не согласен, потому что …`) и, если согласен, поправить следующим коммитом. Спор — к автору одной строкой обоих.
 
-1. **Запрос гейта.** fable пишет на `main` файл `steps/gate-request.md` с одной строкой `GATE? main <sha>` (или `GATE? <ветка> <sha>`). Ты проверяешь его командой `git fetch origin main && git show origin/main:steps/gate-request.md`. Автор может дать ту же строку в чат — это равнозначно.
-2. **Прогон** (один за раз, никогда два параллельно — машина падает по памяти):
-   ```powershell
-   Set-Location C:\Nyasha_Planet\LMX
-   git fetch --all
-   git checkout main; git reset --hard <sha>
-   .\tools\build_l2src.ps1 -Run
-   .\tools\l2_harness.ps1
-   python tools\run_l3_selftest.py
-   python tools\check_docs.py
-   git diff --check
-   ```
-3. **Ответ.** В `steps/gate-results.md` дописать сверху запись: дата и время UTC, `<sha>`, четыре числа (build N/N, harness N/N, L3 N/N, check_docs OK/FAIL), при красном — точный текст каждой строки FAIL и путь к логу под `build/`. Коммит в ветке `grok/machine` с первой строкой `GATE DONE main <sha>: build N/N, harness N/N, L3 N/N, check_docs OK` (при красном — `GATE RED main <sha>: …`), затем по правилу автора:
-   ```powershell
-   git checkout -b grok/machine origin/main   # или git checkout grok/machine; git merge origin/main
-   git add steps/gate-results.md; git commit -m "GATE DONE main <sha>: build N/N, harness N/N, L3 N/N, check_docs OK"
-   git push -u origin grok/machine
-   git checkout main; git merge --no-ff grok/machine -m "integrate: gate result for <sha>"; git push origin main
-   ```
-   fable прочитает `main` на ближайшем обходе; отдельно сообщать не нужно, но строка `GATE DONE …` в чат автору ускорит.
-4. **Ничего не чинить** в чужих файлах. Красный гейт — только факты; владелец чинит: Opus — `l2trans.lm1` и строки harness; Sonnet — ядро, walker, L3, селфтесты; fable — документы и `steps/`.
-5. **Не коммитить** `build/`, `dev/l3_interp/build/`, `%TEMP%`, `*.stackdump`, `lmx_root_*_selftest.err/.out`; `claude_chat/profiles/` не читать и не коммитить.
-6. **Тикеты от fable** — в `steps/tickets-<дата>.md`, раздел «Тикеты Grok CLI» (сейчас `steps/tickets-20260925.md` §8): -202 K2b, D-60, затем D-62/D-12/миграция `Lmx`. Разделение файлов с Sonnet — там же; effort сессии — xhigh (автор).
-7. **Содержательная задача от автора** — из `next_core_tasks.md` §3/§4 по `steps/*.md`, теми же правилами: к.1 read-only план → код по коммитам → RESULT с ID в `steps/` и в первой строке коммита; своя ветка `grok/<тема>`, влитие в `main` по правилу автора после зелёных проверок.
+Один гейт за раз (память машины). Артефакты `build/`, `dev/l3_interp/build/`, `%TEMP%`, `*.stackdump`, `lmx_root_*_selftest.err/.out` не коммитить; `claude_chat/profiles/` не читать и не коммитить.
 
-## 4. Правила проекта, которые нельзя нарушать (кратко)
+## 4. Очередь (порядок и зависимости; актуально на main `67e0ad2`)
 
-- Доктрина `next_core_tasks.md` §0: никаких спец-веток по именам, allowlist'ов, скрытых реестров, fallback'ов, «переходных двойных режимов», дополнительных полей в базовых типах. Пробел контракта — вопрос автору, не заплатка.
-- Имена — только в трансляторе; ядро и walker работают по позициям и классификации адресов по арене. Нет маркеров «callable» — исполнение выбирается по слову `native` (пусто = walker).
-- Спеки (`docs/`) описывают язык, без планов и бесед; RU/EN синхронно; `docs/LMX_semantics.*` только через `provenance/semantics-book.md` + `python tools/build_semantics.py`; реплики автора о языке — дословно в `LMX_blog/<дата>.md`.
-- Факты harness (Says/Entry/пины) меняются только по правилу автора и с обоснованием в отчёте; каждая правка ядра — селфтест + мутант.
-- Один писатель на файл: `l2trans.lm1` — Opus; ядро — Sonnet. Ты не правишь их без явного поручения автора.
+Состояние: гейт main `410761b` GREEN (build 276/276, harness 398/398, L3 11/11, check_docs OK); root-pending 29 строк: throw and catch 8, an array (5b) 5, mixed numeric types 4, call with non-number input 4, admission to a Structure type 2, dynamic inputs 2, break and continue 1, reference assignment 1, non-number call result 1.
 
-## 5. Что дальше по плану (очередь fable, §3 `fable_next.md`)
+1. **D-60** (`steps/sender-range-d60.md`, «go» fable — `steps/tickets-20260925.md` §11): перевести `unit_admit_letter_formal` в eternal-runs и прогнать; зелёный → закрыть как устаревший после -186; красный → точный адрес `KIND_NONE` и вопрос автору об имени арены Message на post — не заплатка копира.
+2. **-203 массивы над вычисленным операндом** (§9 там же): ELEM/ELEMPUT/LENGTH берут операнд-узел, дающий дескриптор массива (OF/DEREF/ELEM массива массивов), классификация по арене, **одна форма** (эмиссия 5a переводится на неё; 5 строк 5a — регрессионный пин); даёт 5 строк 5b (`length(m\mainArgs)`, `m\mainArgs[1][0]`); адреса `@ m\mainArgs[1][0]` в C-вызовах — класс Q7, отдельно. Ядро (`lmx_walk.lm1` :548-:571, армы 25–27) + транслятор (`l2_rw_elem*`, `l2_rw_opty`).
+3. **-201 CATCH** (`steps/catch-role-201.md` план Sonnet, форма — решение fable §7, эмиттеры — `steps/catch-emitters-201.md`): таблица `(k_in, pad, k_out)` на сайте CALL `[call, code, data, rtype, catch, args…]` и PRIM `[prim, rec, catch, ops…]` (фиксированный слот, 0 = нет pad); посадка через `f\landing`/`f\payload` по ссылке на PAD, блок-владелец = `pad\parent`, продолжение со statement после PAD; PAD = `LMX_WALK_OP_PAD` 28, `OP_COUNT` 29; блоки остаются `IF(LIT 1, body)`; payload по позиции в слоты блока (holder 0), Structure — ссылка, тип — путь implements; «свой обработчик исключён» — статически (таблицы внутри тела pad → внешний pad). Закрывает D-55 той же таблицей. 8 строк throw/catch; `break`/`continue` в pad (`unit_s1_catch_user_break`) — отдельный класс, после. Свидетели — §7 плана + 2-параметровый pad + перенумерация k_out + `unit_s1_merge_uncaught_entry`.
+4. **-200 POSIX-двойник** (`steps/posix-gate-200.md`, форма — §6 tickets): один общий `.h.lm1` без Win32-типов в прототипе (`ULONGLONG` → портативный `foreign:` 64 бит; `_body(...) DWORD` — из заголовка в тело), тела `lmx_clock_win32.lm1`/`_posix.lm1` (и для `lmx_process_deadline`, `lmx_manager_running`), без `#ifdef` и без `os:`-блока; выбор тела на стейджинге под нейтральным именем во всех пяти копирующих скриптах (`build_l2src.py`, `build_l2src.ps1`, `run_l3_selftest.py`, `l3_type_budget.py`, `l2_harness.ps1`); reap без блокировки — флаг «lane завершилась» + `pthread_join` по флагу; событие — condvar + mutex + флаг, `CLOCK_MONOTONIC`; `-pthread`/`-D_POSIX_C_SOURCE=200809L` только у POSIX-скриптов. Порядок: (а) заголовки + переименование Win32-тел + таблица выбора (на Windows байтово прежнее поведение — гейт); (б) POSIX-тела. Цель: в облаке `build_l2src.py` 230/230 и L3 11/11 — тогда fable сможет проверять твои ветки сам.
+5. **T4b** (`steps/walk-methods-t4b.md`, план Opus): расширение walkable-подмножества тел методов по одному классу за шаг с дифф-прогоном (`--walk-methods`), по нужде T5.
+6. **Остальные root-pending классы**: mixed numeric types (4) — таблица конверсий §7; call with non-number input (4), non-number result (1) — класс Q7 (адреса в корне) — **вопрос автору**: включать ли в walkable-подмножество или отказывать по правилу; admission to a Structure type (2) — admit PRIM (-180) на результате вызова, транслятор, мало; dynamic inputs (2) — свой тикет; reference assignment (1) — PUT_REF в корне, мало; break/continue в pad (1) — после -201.
+7. **Дефекты открытые** (`steps/defects.md`): D-62 (`sendMessage: Ref` не-Thread в walked-корне крашит — после -201, тот же файл), D-12 (`printTree.lm2` на корень-вход/`mainArgs`, затем пример L2 §18.2), D-36 (`lmx_call_install_walk` глобал), D-39 (динамический индекс own-массива — с -203), D-19/D-20/D-23/D-24/D-27 (транслятор, мелкие и средние), D-09 (S1.5), D-17 (инфра), D-25 (учёт фикстур).
+8. **K3 + T5–T7** (`steps/merge-parts-193.md` §2 (1e)(1f)(2f)(2g)(3)): callable merge по частям (args ← args, return ← return, body ← body; операторы тела последнего операнда с телом заменяют модель), PAP `add5: merge(y: 5; add)` → 6 через `lmx_call_prim`, makeAdder, конвертер «Structure с callable → callable». Свидетели: q22 → 3, q20-next §2 → 5 (`LMX_blog/q/`).
+9. **§7 порт implements/admission** (таблица конверсий §2.2.3/§2.2.4 `lingvamyxa_prev`, Consumer/uses, приёмник, быстрые пути без admission) — после T5–T7; §8-blocking.
+10. **§1 миграция `Lmx` → `{VoidArray array; Lmx *parent; LmxEntry native}`** — **вопрос автору (Q9)** до кода: форма с `native`; один писатель, перед GATE.
+11. **§7a остатки, §GATE «чистое ядро перед самосборкой L2»**, затем §8 самосборка, §9 `myxa_manager`, mixa → `c.NAME` (`steps/next-phase-195.md` §5).
 
-T3 посажен 2026-09-25 (main `e4fdb62`); дальше: D-76 и -170 трансляторная половина (Opus); D-67 (A), -202 K2b, -201 CATCH к.2, -200 POSIX-двойник (Sonnet); текущее — `steps/tickets-20260925.md`. Прежний порядок: -170 трансляторная половина (ELEM/ELEMPUT/LENGTH в корне, 10 строк) → T4b/T5–T7 (callable merge, PAP, makeAdder, конвертер) → CATCH-роль (ядро + транслятор, 7 строк) → D-67/D-60/D-62/D-12/D-69 → §7 порт implements/admission → GATE «чистое ядро перед самосборкой L2». Открытых вопросов автору нет.
+## 5. Что спрашивать у автора (одной строкой, с рекомендацией; не ждать — брать следующий пункт)
+
+- Пробел или противоречие нормы (минимальный пример + места кода).
+- Новый механизм или договорённость уровня сборки, которых в LMX нет (как §6 tickets для POSIX).
+- Q7 (адреса в корне), Q9 (раскладка `Lmx` с `native`), изменение фактов harness, вызванное нормой, а не дефектом.
+- Ревью fable, с которым не согласен после одного обмена в `steps/review-log.md`.
+
+## 6. Ловушки (проверенные)
+
+- `predef:` резолвится транслятором от cwd; staged root — `l2src/` + `l1src/` ядра (`build_l2src.ps1` комментарии). Предеф тел vs заголовков → multiple definition; предеф только на `.h.lm1`.
+- Буферы транслятора `c.array: [1024]`; проверка строк обязана читать `l2_eternal_driver: N checks`; stdout фикстуры без `\n` склеивается с драйвером.
+- Селфтесты, строящие вложенные Structure вручную, ставят `\parent`; `lmx_walk_plain` требует ненулевой `parent`; `LmxMergePair**` — массив указателей; `LmxPrimitiveEntry` ≠ `LmxEntry`.
+- `holder = 0` = данные активации (K-OT2), явный holder — сама Structure; классификация — по арене, чужой адрес — отказ, не тихое чтение.
+- Pin'ы Debt root-pending строк тухнут — обновлять при перевороте; pin'ы с `l2_rwN` зависят от нумерации temp.
+- Python в heredoc: `\x`/`\a`/`\N` — писать скрипты файлом. Файлы CRLF на диске, LF в индексе — предупреждения git безвредны.
+- Один гейт за раз; красный гейт — не садимся; флаки чинятся структурно.
+- `L1_PIN.txt` — хэш `bin/l1trans.exe` (Windows); в облаке fable строит l1trans из seed `lm1/build/l1trans.lm1.c` (`tools/build_l2src.py`), 174/230 до посадки -200.
+
+## 7. Протокол с fable (ревью через git)
+
+- Ты: коммиты в main как в §3. Ничего дополнительно слать не нужно; строка автору в чат — только для срочного.
+- fable: каждые 15 минут `git fetch`, читает новые коммиты main (диффы ядра/транслятора/спек/steps), пишет `steps/review-log.md` (запись на каждый merge: `REVIEW <sha> <дата>`: вердикт OK / замечания с номерами и точными местами; замечания по доктрине §0 — блокирующие, помечены `BLOCK`), вливает в main. При `BLOCK` — следующий шаг тикета не начинать, пока не отвечено.
+- Ты отвечаешь под записью: `ANSWER <sha>-<n>: …` (сделано в <sha2> / не согласен, потому что …). Несогласие после одного обмена — автору.
+- Запросы гейта больше не нужны: гейт у тебя.

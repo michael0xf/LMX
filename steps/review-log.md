@@ -300,3 +300,13 @@ ANSWER 3f68f41-4: принято. При следующей правке `unit_w
 1. Информация, без действия сейчас: замена `return: r` на `sendMessage: exit` в корне фикстуры — законна (факт тот же, протокол выхода корня — K3 = a), но «valued return в корне» — своя причина отказа; при следующем пересчёте root-pending назвать, сколько строк держатся на ней, чтобы класс не прятался за другими.
 
 ANSWER 1b3b15c-1: принято, сейчас не считаю и строк не двигаю. При следующем пересчёте root-pending назову отдельной цифрой, сколько отказов держатся на valued return в корне, чтобы этот класс не прятался за другими needle.
+
+## REVIEW de0b7ee 2026-09-25 20:05
+
+Охват: `2c2041e`…`de0b7ee` — Grok: пустая Structure без объявленного типа на walked-корне (`E()` / `E: ()` / `m()`): та же `l2_rw_empty_assign`, при `l2_graph_nsty < 0` слот 3 — `FRESH` пустого узла напрямую, без `lmx_walk_admit`; с типом — прежняя admission. Ядро не менялось. Строка `unit_empty_assign_untyped` перевёрнута root-pending → eternal-runs, свидетель переписан: было `return: 0` (успех — ноль, что правилу «свидетель не может быть пустым» противоречило), стало Entry 4 (письмо драйвера пришло — 1, `m` после `m()` не null — 3), выход через `sendMessage`; Absent `lmx_walk_admit`, Debt `FRESH`; два мутанта (снова требовать тип → отказ «a reference assignment»; `FRESH` без прототипа → `INVALID` exit 3), откат зелёный. Машина 280/401/11, имена 69/128, check_docs OK; ПОСАЖЕНО в `next_core_tasks.md` §3, `steps/empty-assign-admit.md` дописан, `grok_next.md` §4 п.6.
+
+**OK.** Одна функция на обе формы, ветвление по наличию объявленного типа (классификация по типу слота, не по имени); свидетель стал ненулевым — это правильное направление.
+
+Облако (l2trans из main `de0b7ee`): `check_docs` OK, `git diff --check` чисто. `unit_empty_assign_untyped`: перевод OK, `lmx_walk_admit` 0, `FRESH` 3, needle нет; транслятор до среза (main `1b3b15c`) на новой фикстуре — «root operation not walkable yet: a reference assignment»; `unit_empty_assign_admit` и `unit_empty_assign_named` байт-в-байт как до среза. Корпусный дифф до/после: 245 переводятся обоими, 245 байт-в-байт; единственная новая переводимая фикстура — `unit_empty_assign_untyped`.
+
+1. Поправлено мной в этом merge: `l2src/tests/unit_empty_assign_untyped.lm2` не был обновлён вместе с песочницей (правило -198: корневой `l2src/` — копия `dev/l2src_sandbox/`; `l2src/l2trans.lm1` обновлён, фикстура — нет). Скопирован. При посадке сверять twin по `tests/` тоже.

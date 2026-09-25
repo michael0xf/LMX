@@ -1,0 +1,38 @@
+Model:
+    size_t: x 1U
+end: Model
+
+B:
+    size_t: z 2U
+end: B
+
+# FABLE-OPUS-MERGE-PARTS-20260926-193 T3: the root twin of unit_merge_body_repeat.  The body merges
+# INTO the result like a last operand (operand n of the pair map): R's body x goes into Model's x
+# (5), one slot; S's body z goes into the slot B added (9), and its w is new.  R is {x} = {5}; S is
+# {x, z, w} = {1, 9, 4}.  Success is 7.
+size_t: rx
+size_t: sx
+size_t: sz
+size_t: sw
+R: merge: Model
+    size_t: x 5U
+end: merge
+S: merge: Model B
+    size_t: z 9U
+    size_t: w 4U
+end: merge
+rx: R\x
+sx: S\x
+sz: S\z
+sw: S\w
+if: rx != 5U
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+if: sz != 9U
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+if: sx != 1U || sw != 4U
+    sendMessage: exit(exit_code: 83; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

@@ -666,8 +666,9 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_admit_letter_coarse.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
         Absent = @(); Debt = @() },
     # `T: []: []: x` (author Q15): the outer Array is constructed empty and merge copies it as a new one.
-    [pscustomobject]@{ Name = 'unit_arrarr_field.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure value'; Args = @('0');
-        Absent = @(); Debt = @('lmx_array_ref_new_owned(c.LMX_TYPE_ARRAY_OF_DESC, 0U, l2_program_arena)') },
+    # -193 T3: the merge runs at the walked root (the K2 primitive); success is 7.
+    [pscustomobject]@{ Name = 'unit_arrarr_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @('l2_mops'); Debt = @('lmx_array_ref_new_owned(c.LMX_TYPE_ARRAY_OF_DESC, 0U, l2_program_arena)', '\fn: lmx_walk_merge_map') },
     # INDEXED FIELD PATHS (S3 part 2b): root\seg...[k] / [k][j] into an Array field of a declared
     # type through a typed root; `@` before an element addresses it in graph storage; length() on
     # both levels.  The former formal-`main` fixtures now read argv from the letter (mainArgs);
@@ -792,7 +793,7 @@ $fixtures = @(
                  'l2_entry_unit: graph') },
     # A nested member, a reference to the branch itself, a reference to the OTHER branch, and a
     # mutable Holder beside them: two roots are retained, the nested member and Holder are not.
-    [pscustomobject]@{ Name = 'unit_eternal_shape.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure value';
+    [pscustomobject]@{ Name = 'unit_eternal_shape.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a merge of a qualified branch';
         Args = @('2', 'size', '0', '0', '7', 'size', '0', '4', '13', 'same', '0', '3', '0', 'same', '1', '0', '0', 'size', '1', '1', '17');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
         Debt = @('c.array: [2]: @: Lmx l2_program_qualified_roots',
@@ -808,21 +809,21 @@ $fixtures = @(
                  'l2_program_qualified_roots[1U]: l2_nsp[2]',
                  'l2_entry_unit: graph') },
     # Array records/backing and merge sites use the same exact profiled owner ranges.
-    [pscustomobject]@{ Name = 'unit_array_empty.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure value';
+    [pscustomobject]@{ Name = 'unit_array_empty.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a merge of a qualified branch';
         Args = @('1');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
         Debt = @('c.array: [1]: @: Lmx l2_program_qualified_roots',
                  'l2_profile_array: (cast: (@: LmxArrayDesc) lmx_arena_take_profiled',
                  'l2_program_qualified_roots[0U]: l2_nsp[0]',
                  'l2_entry_unit: graph') },
-    [pscustomobject]@{ Name = 'unit_array_field.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure value';
+    [pscustomobject]@{ Name = 'unit_array_field.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a merge of a qualified branch';
         Args = @('1');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
         Debt = @('c.array: [1]: @: Lmx l2_program_qualified_roots',
                  'l2_profile_array: (cast: (@: LmxArrayDesc) lmx_arena_take_profiled',
                  'l2_program_qualified_roots[0U]: l2_nsp[0]',
                  'l2_entry_unit: graph') },
-    [pscustomobject]@{ Name = 'unit_merge_site.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure value';
+    [pscustomobject]@{ Name = 'unit_merge_site.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a merge of a qualified branch';
         Args = @('3');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
         Debt = @('c.array: [3]: @: Lmx l2_program_qualified_roots',
@@ -848,6 +849,26 @@ $fixtures = @(
         Debt = @('l2_mpp[0U]\operand: 1U', 'l2_mpp[1U]\model_slot: 0U', 'l2_mpp[1U]\operand: 2U',
                  'lmx_merge_owned(l2_mops, 3U, l2_mbody, node, 0, l2_program_arena, l2_program_arena, l2_mpp, 2U, @ l2_mresult)',
                  'if: l2_mresult\len != 3') },
+    # -193 T3 (over Sonnet's K2): merge at the walked root.  The result slot of the unit takes the
+    # walker's merge primitive by reference, PUT_REF(0, slot, PRIM [prim, lmx_walk_merge_map, ops,
+    # body | 0, pairs | 0]); the pairs are the translator's map, a plain Structure of 3·P size cells
+    # made once with the graph.  No native merge is emitted for the root.  Success is 7.
+    # unit_root_merge_three_operands: two pairs on Model's x (C's last), B's z appended, a write
+    # `R\x: 6U` through the result, and S merging the result R (read in the turn) with a body field.
+    [pscustomobject]@{ Name = 'unit_root_merge_three_operands.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @('l2_mops', 'lmx_merge_owned(');
+        Debt = @('\fn: lmx_walk_merge_map', 'c.LMX_WALK_OP_PUT_REF, 4U)', 'c.LMX_WALK_OP_PRIM, 7U)', 'c.LMX_WALK_OP_PRIM, 5U)', 'c.LMX_WALK_OP_PUT_OF, 4U)') },
+    # unit_root_merge_body: the body as the map's operand n -- R's x into Model's x, S's z into B's
+    # appended z, S's w new.
+    [pscustomobject]@{ Name = 'unit_root_merge_body.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @('l2_mops', 'lmx_merge_owned(');
+        Debt = @('\fn: lmx_walk_merge_map', 'c.LMX_WALK_OP_PRIM, 5U)', 'c.LMX_WALK_OP_PRIM, 6U)') },
+    # D-75: a call through a path at the walked root is typed by its method -- a located refusal of
+    # the int/size_t mix (main: walk error INVALID at run time), and its running twin.
+    [pscustomobject]@{ Name = 'unit_root_path_call_type.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: mixed numeric types (a conversion)';
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_root_path_call_typed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_occurrence_range_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'merge occurrence index out of range'; Absent = @(); Debt = @() },
     # -193 T2 (on -194 K1): a later field repeating a name an earlier operand ADDED goes INTO that
@@ -944,7 +965,7 @@ $fixtures = @(
                  'l2_out_throw[0]: 0',
                  'c.fprintf(c.stderr, "lmx: invariant: merge result check 71\n")',
                  'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ') },
-    [pscustomobject]@{ Name = 'unit_throwing_callable.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure value';
+    [pscustomobject]@{ Name = 'unit_throwing_callable.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: mixed numeric types (a conversion)';
         Args = @('0');
         Absent = @('Lmx node; @: Lmx node', 'l2_out_throw[0]: node', 'return: 71');
         Debt = @('fn: l2_m0 (@: Lmx node; @: Lmx self; @: Lmx l2_msg; @: int l2_out_result; @@: Lmx l2_out_throw) int',
@@ -1780,7 +1801,10 @@ $fixtures = @(
     # D-05/D-06: a field path meeting no Structure, an own field without a cell, a method entered
     # without its occurrence, a missing control body and a failed checkpoint are invariants on the
     # X1 route (a message and an abort), never a return from the method or a printed line.
-    [pscustomobject]@{ Name = 'unit_struct_int_field.lm2'; Expect = 'root-pending'; Exit = 0; Entry = 7; Needle = 'root operation not walkable yet: a Structure value';
+    # -193 T3: the root merge `copy: merge: Model` runs, so the row runs; the pins of the native E
+    # body's own-field, control-body and checkpoint invariants rotted while it was root-pending (the
+    # root has been walked only since -159) and are gone -- the methods keep theirs.
+    [pscustomobject]@{ Name = 'unit_struct_int_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'lmx_msg_poll_abort', 'lmx: checkpoint',
                    "if: self = 0`n        return", "if: self = 0`n        l2_out_result",
@@ -1788,14 +1812,10 @@ $fixtures = @(
                    "if: l2_pxp = 0`n        if: l2_q", "if: l2_xp = 0`n        if: l2_q");
         Debt = @('lmx_int_store_known(l2_entry_slot[0], 1)', 'lmx_int_store_known(l2_entry_slot[0], 2)',
                  'c.fprintf(c.stderr, "lmx: invariant: a field path met no Structure\n")',
-                 'c.fprintf(c.stderr, "lmx: invariant: an own field has no cell to load\n")',
-                 'c.fprintf(c.stderr, "lmx: invariant: a method was entered without its occurrence\n")',
-                 'c.fprintf(c.stderr, "lmx: invariant: a control body has no Structure\n")',
-                 'c.fprintf(c.stderr, "lmx: invariant: checkpoint lost own field ',
-                 'c.fprintf(c.stderr, "lmx: invariant: checkpoint store failed for own field ') },
+                 'c.fprintf(c.stderr, "lmx: invariant: a method was entered without its occurrence\n")') },
     # Every numeric field of a named Structure -- size_t, int, unsigned, ulong -- has its own cell
     # holding its literal, in the Structure and in a merge copy (FABLE-OPUS-DISCARD-20260924-147).
-    [pscustomobject]@{ Name = 'unit_struct_num_fields.lm2'; Expect = 'root-pending'; Exit = 0; Entry = 7; Needle = 'root operation not walkable yet: a Structure value';
+    [pscustomobject]@{ Name = 'unit_struct_num_fields.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('lmx_int_store_known(l2_entry_slot[0], 4)', 'lmx_unsigned_store_known(l2_entry_slot[0], 5U)',
@@ -2049,7 +2069,7 @@ $fixtures = @(
     # Filename says refused: the merge result is an ordinary Structure (not a third
     # qualified root). The translator emits merge_profiles_owned and both operands
     # remain exported roots. This is not an l2trans refusal.
-    [pscustomobject]@{ Name = 'unit_eternal_multi_profile_merge_refused.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a Structure value';
+    [pscustomobject]@{ Name = 'unit_eternal_multi_profile_merge_refused.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a merge of a qualified branch';
         Args = @('2', 'size', '0', '0', '1', 'size', '1', '0', '1');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
         Debt = @('c.array: [2]: @: Lmx l2_program_qualified_roots',

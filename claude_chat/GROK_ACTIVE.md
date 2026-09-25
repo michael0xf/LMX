@@ -28,7 +28,7 @@ C:\grok\grok.bat send --timeout 180 "Сообщение Grok"
 
 Ввод посылается прямо в консоль. Чтение `updates.jsonl` — чтение штатного журнала ответа, не файловая почта: в этот файл клиент ничего не записывает.
 
-Пока этот чат занят, inject даёт `Concurrent user input detected` и тикет не попадает в ход. Grok сам опрашивает `lmx_uds` каждые 5 минут: `python claude_chat/grok_uds_pull.py`. Это основной вход, когда консоль недоступна. Не вызывать `grok_active.py` из этой же сессии.
+Пока этот чат занят, inject даёт `Concurrent user input detected` и тикет не попадает в ход. Пятиминутный опрос `python claude_chat/grok_uds_pull.py` закрыт и заново не ставится. Не вызывать `grok_active.py` из этой же сессии.
 
 ## Ограничения
 

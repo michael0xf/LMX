@@ -1,4 +1,4 @@
-include: "<windows.h>"
+include: "<stdint.h>"
 predef: "l2src/lmx.h.lm1"
 
 # The clock of the R0 cycle (model 33), and the only place in the kernel that asks the
@@ -14,13 +14,11 @@ predef: "l2src/lmx.h.lm1"
 # bounded in REAL time and not in loop iterations.  It is not wall time and nothing here
 # pretends it is: what bounds a wait is the cycle's own count, not a calendar.
 #
-# ULONGLONG is the platform's 64-bit unsigned; a record may keep a 32-bit reading, where
+# The reading is a portable 64-bit count. A record may keep a 32-bit reading, where
 # `now - started` stays correct across a wrap because the arithmetic is modulo 2^32 and a
-# limit is small.
-foreign: ULONGLONG
-
+# limit is small. The platform body casts its own clock into this width.
 prototype:
-    fn: lmx_clock_now () ULONGLONG
+    fn: lmx_clock_now () uint64_t
     # The same reading as the 32-bit count a scheduler record keeps.
     fn: lmx_clock_ticks () ulong
     # THE PLATFORM WORD'S READING OF THE SAME CLOCK, and the width a stored close deadline lives in.
@@ -48,5 +46,5 @@ prototype:
     fn: lmx_deadline_wait (size_t: deadline; size_t: now) size_t
     # How long since a reading.  A reading from the future saturates at zero instead of
     # wrapping into a huge wait.
-    fn: lmx_clock_since (ULONGLONG: start) ULONGLONG
+    fn: lmx_clock_since (uint64_t: start) uint64_t
 end: prototype

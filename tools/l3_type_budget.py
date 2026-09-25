@@ -61,12 +61,13 @@ MAX_NAME = 64          # l1_hdr_type_add's buffer: one more maximal name must st
 # FABLE-SONNET-MERGE-KERNEL-20260926-194 к.4 (G-call): fnptr LmxCallPrimWalkFn added to
 # lmx_call.h.lm1 -- the dynamic-call counterpart of LmxCallWalkFn, for lmx_call_prim's own
 # addr=0 branch (which now carries data/args/a typed dest to a walked callee, instead of
-# lmx_call0's narrower nullary-int hook).
+# lmx_call0's narrower nullary-int hook).  EXPECT=68 after -200 slice (a): foreign ULONGLONG
+# left lmx_clock.h.lm1 (the reading is uint64_t from stdint.h, not a named header type).
 EXPECT = {
-    'tests/l3_thread_bind_selftest.lm1': 69,
-    'tests/l3_n9_walk_selftest.lm1': 69,
-    'tests/l3_n10_walk_selftest.lm1': 69,
-    'tests/l3_mail_prim_selftest.lm1': 69,
+    'tests/l3_thread_bind_selftest.lm1': 68,
+    'tests/l3_n9_walk_selftest.lm1': 68,
+    'tests/l3_n10_walk_selftest.lm1': 68,
+    'tests/l3_mail_prim_selftest.lm1': 68,
 }
 
 PREDEF = re.compile(r'^predef:\s*(.*)$')
@@ -78,8 +79,15 @@ def stage(unit_root, l1src):
     """The same staging tools/run_l3_selftest.py does, so the closure is the one the suites translate."""
     for folder in ('l2src', 'l3_interp/tests', 'l1src'):
         (unit_root / folder).mkdir(parents=True)
+    host = 'win32' if os.name == 'nt' else 'posix'
+    twins = {'lmx_clock.lm1', 'lmx_process_deadline.lm1', 'lmx_manager_running.lm1'}
     for source in sorted(SANDBOX.glob('lmx*.lm1')):
+        if source.name.endswith('_win32.lm1') or source.name.endswith('_posix.lm1'):
+            continue
         shutil.copyfile(source, unit_root / 'l2src' / source.name)
+    for logical in sorted(twins):
+        physical = logical.replace('.lm1', '_' + host + '.lm1')
+        shutil.copyfile(SANDBOX / physical, unit_root / 'l2src' / logical)
     shutil.copyfile(SANDBOX / 'l2_libc.lm1', unit_root / 'l2src' / 'l2_libc.lm1')
     for source in sorted(L3.glob('l3*.lm1')):
         shutil.copyfile(source, unit_root / 'l3_interp' / source.name)

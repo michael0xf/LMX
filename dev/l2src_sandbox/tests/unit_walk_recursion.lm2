@@ -1,0 +1,53 @@
+# -193 T4a: walked recursion (WalkMethods).  A call that can re-enter its caller passes fresh data,
+# [fresh, code] (l2_reenters): each activation keeps its own `keep` while the ones it calls run --
+# the direct recursion of sum and the mutual one of even and odd.  Without fresh data the inner
+# activations overwrite the outer ones' keep: sum(4) would not be 10.
+fn: sum (int: n) int
+    int: keep
+    int: rest
+    keep: n
+    rest: 0
+    if: n > 0
+        rest: sum(n - 1)
+    return: keep + rest
+end: sum
+
+fn: even (int: n) int
+    int: keep
+    int: got
+    keep: n
+    if: n = 0
+        return: 1
+    got: odd(n - 1)
+    if: keep != n
+        return: 9
+    return: got
+end: even
+
+fn: odd (int: n) int
+    int: keep
+    int: got
+    keep: n
+    if: n = 0
+        return: 0
+    got: even(n - 1)
+    if: keep != n
+        return: 9
+    return: got
+end: odd
+
+int: r
+r: sum(4)
+if: r != 10
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+r: even(6)
+if: r != 1
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+r: odd(6)
+if: r != 0
+    sendMessage: exit(exit_code: 83; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

@@ -1,0 +1,36 @@
+# -193 T4a: walked and native methods together (WalkMethods).  A method outside the walkable subset
+# gets no frames and keeps its native word -- here `bind` assigns its formal, which binds an own
+# field of the formal's name (the formal-binding rule) --; a walked method's CALL of it runs the
+# native body through its trampoline, and a native method's direct call of a walked one stays a
+# direct native call.
+fn: bind (int: n) int
+    n: n + 100
+    return: n
+end: bind
+
+fn: wrap (int: v) int
+    int: got
+    got: bind(v)
+    return: got + 1
+end: wrap
+
+fn: leaf (int: v) int
+    return: v * 2
+end: leaf
+
+fn: native_caller (int: v) int
+    v: v + 0
+    return: leaf(v)
+end: native_caller
+
+int: r
+r: wrap(1)
+if: r != 102
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+r: native_caller(5)
+if: r != 10
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

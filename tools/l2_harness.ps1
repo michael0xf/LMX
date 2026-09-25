@@ -1184,6 +1184,45 @@ $fixtures = @(
     # toolchain <windows.h>, through lmx_clock, declares memcpy too, so gcc cannot tell; the pins do.)
     [pscustomobject]@{ Name = 'unit_send_text.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
         Absent = @(); Debt = @('include: "<stdio.h>" "<stdlib.h>" "<string.h>"', 'memcpy(text') },
+    # THE WALKED METHODS (-193 T4a): a method whose body is in the walkable subset is built as walker
+    # frames too, M's own children after its fields (steps/merge-parts-193.md §9).  These rows run with
+    # WalkMethods: l2trans's test knob gives every method with frames native 0, so the root's CALL walks
+    # it.  A formal is [arg, j]; an own field is the activation's data, holder 0 (K-OT2: no holder
+    # stored); `return: V` is [ret, V] (and a trailer the last step); a call that can re-enter its
+    # caller passes [fresh, code]; a unit field keeps its holder, the unit.  The pins are the form.
+    [pscustomobject]@{ Name = 'unit_walk_inputs.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0; WalkMethods = $true;
+        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'if: lmx_arena_ref_store(l2_rw76, 1U, (cast: (@: void) l2_entry_unit))');
+        Debt = @('if: lmx_walk_store_size(l2_program_arena, l2_rw76, 2U, 2U) != c.LMX_WALK_OK',
+                 'if: lmx_walk_store_size(l2_program_arena, l2_rw79, 1U, 1U) != c.LMX_WALK_OK',
+                 '@: Lmx l2_rw80 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw75, c.LMX_WALK_OP_RET, 2U)',
+                 'if: lmx_arena_ref_store(l2_rw75, 4U, (cast: (@: void) l2_rw80)) != 0') },
+    [pscustomobject]@{ Name = 'unit_walk_recursion.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0; WalkMethods = $true;
+        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m2_tr)');
+        Debt = @('@: Lmx l2_rw62 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw61, c.LMX_WALK_OP_FRESH, 2U)',
+                 'if: lmx_arena_ref_store(l2_rw62, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 4U))) != 0',
+                 'if: lmx_arena_ref_store(l2_rw61, 2U, (cast: (@: void) l2_rw62)) != 0') },
+    # clamp(..) + clamp(..) + clamp(..) is 13 natively; walked it is red while a walked callee's number
+    # result leaves as a reference into its data (K-RET, Sonnet -194 k.5b).
+    [pscustomobject]@{ Name = 'unit_walk_loop.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0; WalkMethods = $true;
+        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)');
+        Debt = @('@: Lmx l2_rw65 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw60, c.LMX_WALK_OP_WHILE, 3U)') },
+    [pscustomobject]@{ Name = 'unit_walk_trailer.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0; WalkMethods = $true;
+        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m2_tr)');
+        Debt = @('if: lmx_arena_ref_store(l2_rw71, 3U, lmx_arena_ref_value(l2_rw_roles, (cast: (size_t) c.LMX_WALK_OP_RET))) != 0',
+                 '@: Lmx l2_rw80 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw79, c.LMX_WALK_OP_RET, 2U)',
+                 'if: lmx_walk_store_size(l2_program_arena, l2_rw88, 2U, 2U) != c.LMX_WALK_OK',
+                 'if: lmx_arena_ref_store(l2_rw90, 1U, (cast: (@: void) l2_entry_unit)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw90, 2U, 0U) != c.LMX_WALK_OK') },
+    # bind and native_caller assign a formal (the formal-binding rule): no frames, native kept.
+    [pscustomobject]@{ Name = 'unit_walk_mixed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0; WalkMethods = $true;
+        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m2_tr)');
+        Debt = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m3_tr)') },
+    # Side fixes (-193 T4a): a root `M\x` of a method after the first, in a unit with no named Structure
+    # (l2trans crashed); a repeated declaration's initializer reads the occurrence before it
+    # (l2_own_excl, as natively); the root names its own fields by no holder (K-OT2).
+    [pscustomobject]@{ Name = 'unit_occ_root_second.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_root_decl_init_prev.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
+        Absent = @('1U, (cast: (@: void) l2_entry_unit)) != 0 || lmx_walk_store_size(l2_program_arena'); Debt = @() },
     # STRUCTURE-TYPED ROOT FIELDS (-178 commit 2): `Model: m` is the walker's merge primitive (-174 c3)
     # stored by reference into m's pointer cell (-174 c2); `m\value` opens the reference (DEREF, -174 c1)
     # and takes the field (OF); `Model\value: 7U` writes the named Structure itself (PUT, its node
@@ -2175,7 +2214,10 @@ foreach ($fx in $fixtures) {
     $genLm1 = Join-Path $gen ($stem + '.lm1')
     $label = 'fixture.' + $stem + '.l2trans'
     $profileArgs = @()
-    if ($fx.Expect -eq 'library-links') { $profileArgs = @('--library') }
+    # WalkMethods (-193 T4a): the row runs its methods WALKED -- l2trans's test knob `--walk-methods`
+    # gives every method with frames (its body built as walker nodes) native 0, so a CALL of it walks.
+    if ($fx.PSObject.Properties['WalkMethods'] -and $fx.WalkMethods) { $profileArgs += @('--walk-methods') }
+    if ($fx.Expect -eq 'library-links') { $profileArgs += @('--library') }
     $made = Step-Made $label $l2trans ($profileArgs + @($source, $genLm1)) $src $genLm1
 
     # 'root-pending' (FABLE-OPUS-ROOT-WALK-TRANSLATOR-20260924-159): a row whose root uses an operation the

@@ -89,6 +89,14 @@ int: l2_rw_emit 0
 int: l2_rw_t 0
 int: l2_rw_steps 0
 int: l2_rw_base 0
+# THE WALKED METHODS (-193 T4a): the method whose body l2_rw_* builds -- l2_e for the root --; 1
+# while a method's body is only tried (its count pass), when a refusal is not said: a method
+# outside the walkable subset gets no frames; per method its step count, or -1 for none; and the
+# test knob `--walk-methods`: a method with frames gets native 0, so a CALL of it walks them.
+int: l2_rw_mi 0 - 1
+int: l2_rw_quiet 0
+@: int l2_m_steps 0
+int: l2_walk_methods 0
 # Where the static typing of a root expression first met two numeric types (l2_rw_tyof), for the
 # located refusal.
 @: LmP0Node l2_rw_mix_at 0
@@ -477,6 +485,15 @@ prototype:
     fn: l2_rw_num_ty (int: ty) int
     fn: l2_rw_refuse_ty (const: @(LmP0Node node); int: oi) int
     fn: l2_rw_own_ty (const: @(LmP0Text t)) int
+    fn: l2_rw_find (const: @(LmP0Text t)) int
+    fn: l2_rw_seen (int: oi) int
+    fn: l2_rw_arg (int: parent; int: j; @: int out) int
+    fn: l2_rw_ret (@: LmP0Field first; int: n; int: into; @: int out) int
+    fn: l2_rw_trailer (int: mi; int: into; int: slot; @: int made) int
+    fn: l2_rw_may (int: mi) int
+    fn: l2_rw_methods_count () int
+    fn: l2_rw_methods_emit () int
+    fn: l2_m_width (int: mi) int
     fn: l2_rw_num_lit (const: @(LmP0Text t); @: int neg; @: size_t mag; @: int usuf) int
     fn: l2_rw_char_lit (const: @(LmP0Text t); @: int value) int
     fn: l2_rw_clit (int: parent; int: value; @: int out) int
@@ -1006,6 +1023,10 @@ return: 0
 fn: l2_error (const: @(char path); const: @(LmP0Node node); const: @(char msg)) int
     size_t: line 1U
     size_t: column 1U
+    # A method's body tried for the walk (l2_rw_quiet, -193 T4a) is refused silently: it only gets
+    # no frames.
+    if: l2_rw_quiet != 0
+        return: 1
     if: node != 0 && node\span != 0
         line: node\span\line
         column: node\span\column
@@ -16487,10 +16508,23 @@ fn: l2_rw_refuse_ty (const: @(LmP0Node node); int: oi) int
         return: l2_rw_refuse(node, "a Structure-typed field")
 return: l2_rw_refuse(node, "a value that is not a number")
 
+# The own field named t that the body being built sees (-193 T4a), or -1: the last one of that
+# name of the method being built (l2_rw_mi; the root's are the unit's), else a unit field the method
+# sees -- l2_own_find_last's own fallback --, never one a formal of the method hides: a formal's
+# name is its input (ARG).
+fn: l2_rw_find (const: @(LmP0Text t)) int
+    if: l2_rw_mi != l2_e && l2_formal_find(l2_rw_mi, t) >= 0
+        return: 0 - 1
+return: l2_own_find_last(l2_rw_mi, t)
+
+# Is own row oi one the body being built reaches: its own, or the unit's?
+fn: l2_rw_seen (int: oi) int
+return: (cast: (int) (oi >= 0 && (l2_own_mi[oi] = l2_rw_mi || l2_own_mi[oi] = l2_e)))
+
 # The type of the root's own numeric field named t, or -9 (not one: the emission says why).
 fn: l2_rw_own_ty (const: @(LmP0Text t)) int
-    int: oi l2_own_find_last(l2_e, t)
-    if: oi < 0 || l2_own_mi[oi] != l2_e || l2_own_host[oi] != 0 || l2_own_fid[oi] >= 0 || l2_own_uchild[oi] < 0
+    int: oi l2_rw_find(t)
+    if: oi < 0 || l2_rw_seen(oi) = 0 || l2_own_host[oi] != 0 || l2_own_fid[oi] >= 0 || l2_own_uchild[oi] < 0
         return: 0 - 9
     # A reference field (a pointer cell: a letter, a Structure-typed field) has its own type too,
     # 1000 and above: it is compared with 0 or another reference only (-179).
@@ -16718,6 +16752,8 @@ fn: l2_rw_opty (const: @(LmP0Node node)) int
             return: path[3]
         return: 0 - 1
     ---
+    if: l2_rw_mi != l2_e && l2_formal_find(l2_rw_mi, t) >= 0
+        return: l2_own_ty_of_param(l2_ft(l2_rw_mi, l2_formal_find(l2_rw_mi, t)))
     ty: l2_rw_own_ty(t)
     if: ty >= 0
         return: ty
@@ -16887,6 +16923,12 @@ fn: l2_rw_path_occ (const: @(LmP0Node node); const: @(LmP0Text t); size_t: i; in
         if: say != 0
             l2_rw_refuse(node, "a field path")
         return: 1
+    # `M\x` inside M itself: the occurrence is not this activation's data (a re-entry's is fresh),
+    # so it is not built (-193 T4a).
+    if: mi = l2_rw_mi
+        if: say != 0
+            l2_rw_refuse(node, "a field path")
+        return: 1
     l2_rw_seg\data: t\data + b
     l2_rw_seg\length: i - b
     po: l2_own_find_last(mi, l2_rw_seg)
@@ -16948,8 +16990,8 @@ fn: l2_rw_path (const: @(LmP0Node node); const: @(LmP0Text t); int: say; @: int 
     l2_rw_seg\data: t\data
     l2_rw_seg\length: i
     path[5]: 0
-    oi: l2_own_find_last(l2_e, l2_rw_seg)
-    if: oi >= 0 && l2_own_mi[oi] = l2_e && l2_own_host[oi] = 0 && l2_own_fid[oi] < 0 && l2_own_uchild[oi] >= 0 && l2_own_nsty_get(oi) >= 0
+    oi: l2_rw_find(l2_rw_seg)
+    if: l2_rw_seen(oi) != 0 && l2_own_host[oi] = 0 && l2_own_fid[oi] < 0 && l2_own_uchild[oi] >= 0 && l2_own_nsty_get(oi) >= 0
         path[0]: 1
         path[1]: oi
         ni: l2_own_nsty_get(oi)
@@ -17033,11 +17075,17 @@ fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
     # A named Structure, a method's occurrence (-196) or a qualified branch (-196) is a unit child:
     # AT(unit, its child).
     if: level = 0
-        uslot: l2_ns_base + l2_ns_rank(path[1])
+        # path[1] is a named Structure's number only for a named Structure: a method's (3) is not
+        # one, and ranking it among the named Structures read past them.
         if: path[0] = 3
             uslot: l2_unit_base + path[1]
-        if: path[0] = 4
-            uslot: l2_unit_base + l2_occ_n() + l2_ns_eternal[path[1]]
+        else:
+            if: path[0] = 4
+                uslot: l2_unit_base + l2_occ_n() + l2_ns_eternal[path[1]]
+            else:
+                uslot: l2_ns_base + l2_ns_rank(path[1])
+            ---
+        ---
         if: l2_rw_frame(parent, "LMX_WALK_OP_AT", 3, out) != 0
             return: 1
         if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_entry_unit)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, \out, uslot) < 0
@@ -17157,8 +17205,8 @@ fn: l2_rw_admit_assign (const: @(LmP0Node stmt); int: oi; int: into; @: int out)
     f: l2_next_active(stmt\as\frame\body\first_field)
     if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0
         return: l2_rw_refuse(stmt, "an admission to a Structure type")
-    src: l2_own_find_last(l2_e, f\value\as\atom)
-    if: src < 0 || l2_own_mi[src] != l2_e || l2_own_host[src] != 0 || l2_own_fid[src] >= 0 || l2_own_uchild[src] < 0 || l2_own_is_pointer(l2_own_ty[src]) = 0 || l2_own_nsty_get(src) >= 0
+    src: l2_rw_find(f\value\as\atom)
+    if: l2_rw_seen(src) = 0 || l2_own_host[src] != 0 || l2_own_fid[src] >= 0 || l2_own_uchild[src] < 0 || l2_own_is_pointer(l2_own_ty[src]) = 0 || l2_own_nsty_get(src) >= 0
         return: l2_rw_refuse(stmt, "an admission to a Structure type")
     if: l2_rw_frame(into, l2_rw_bind_op(oi), 4, out) != 0 || l2_rw_cell(\out, oi) != 0 || l2_rw_admit(\out, l2_own_nsty_get(oi), l2_rw_is_letter(src), @ adm) != 0
         return: 1
@@ -17194,8 +17242,8 @@ fn: l2_rw_take (const: @(LmP0Node stmt); int: into; @: int out) int
     # admission (-178 c3), not this take.
     if: cmodel != 0
         return: l2_rw_refuse(stmt, "an admission to a Structure type")
-    oi: l2_own_find_last(l2_e, cname)
-    if: oi < 0 || l2_own_mi[oi] != l2_e
+    oi: l2_rw_find(cname)
+    if: l2_rw_seen(oi) = 0
         return: l2_rw_refuse(stmt, "this receiveMessage")
     if: l2_own_host[oi] != 0 || l2_own_fid[oi] >= 0 || l2_own_uchild[oi] < 0
         return: l2_rw_refuse(stmt, "a field declared in a nested body")
@@ -17238,7 +17286,7 @@ fn: l2_rw_model (const: @(LmP0Node stmt); const: @(LmP0Text h); int: into; @: in
     f: l2_next_active(stmt\as\frame\body\first_field)
     if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || l2_next_active(f\next) != 0
         return: l2_rw_refuse(stmt, "this declaration")
-    while: oi < l2_own_n && (l2_own_decl[oi] != stmt || l2_own_mi[oi] != l2_e)
+    while: oi < l2_own_n && (l2_own_decl[oi] != stmt || l2_own_mi[oi] != l2_rw_mi)
         oi: oi + 1
     ---
     if: oi >= l2_own_n
@@ -17255,11 +17303,18 @@ return: l2_rw_put(\out, 3, prim)
 
 # The root's own int field oi is a field of the unit, and a unit field's cell is shared with every
 # method that can see it: a callee's write is what the activation sees.  So the walked root holds
-# no working copy of it: it is read (`at`) and assigned (`put`) in
-# the unit, at the unit's child l2_own_uchild[oi].  Node `node`'s slots 1 and 2 name that cell.
+# no working copy of it: it is read (`at`) and assigned (`put`) in the unit, at the unit's child
+# l2_own_uchild[oi].  Node `node`'s slots 1 and 2 name that cell.
+# The body being built names its OWN fields by no holder (-193 T4a; Sonnet's K-OT2): holder 0 is
+# «this activation's data» -- the root's is the unit, (R0, R0); a method's is its occurrence on an
+# ordinary call, a fresh instance on a re-entry, a merge result's own slots when its frames are a
+# model's -- and the slot is the field's own child (l2_own_mslot).  A unit field a method sees is
+# named by its holder, the unit.
 fn: l2_rw_cell (int: node; int: oi) int
     if: l2_rw_emit = 0
         return: 0
+    if: l2_own_mi[oi] = l2_rw_mi
+        return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %uU) != c.LMX_WALK_OK\n            return: 1\n", node, (cast: (unsigned) l2_own_uchild[oi])) < 0))
 return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_entry_unit)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %uU) != c.LMX_WALK_OK\n            return: 1\n", node, node, (cast: (unsigned) l2_own_uchild[oi])) < 0))
 
 # The walker op that binds the root's own field oi (-189 c3b-3; grok_bot -186): an own Structure
@@ -17297,8 +17352,8 @@ return: 0
 
 # The root's own numeric field named t, or -1 with the refusal made.
 fn: l2_rw_own_row (const: @(LmP0Node node); const: @(LmP0Text t)) int
-    int: oi l2_own_find_last(l2_e, t)
-    if: oi < 0 || l2_own_mi[oi] != l2_e
+    int: oi l2_rw_find(t)
+    if: l2_rw_seen(oi) = 0
         return: 0 - 2
     if: l2_own_host[oi] != 0 || l2_own_fid[oi] >= 0
         l2_rw_refuse(node, "a field declared in a nested body")
@@ -17317,6 +17372,7 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; @: LmP0Field args; int: paren
     int: span
     int: arg
     int: j
+    int: fr
     # A callee that can throw is called like any other (commit 3; -161 c3 D-37): its trampoline
     # returns the throw's number k, the walk carries it as LMX_WALK_THROWN + k and stops, and the
     # turn's channel holds k.  The root has no catch yet (no walker role), so a throw there is
@@ -17348,15 +17404,28 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; @: LmP0Field args; int: paren
         return: l2_rw_refuse(node, "this call's inputs")
     # [call, code, data, rtype, args...] (-188 k.3c; -189 c3a, c4): the code is the occurrence, and
     # so is the data, (M, M).  The root has no name a call or an actual could use, so it is in no
-    # cycle of calls and no call from it is a re-entry (l2_reenters): none needs [fresh, code].
+    # cycle of calls and no call from it is a re-entry (l2_reenters).  A method's call that can
+    # re-enter it -- the callee can lead back to the caller -- passes fresh data, [fresh, code], as
+    # the native call does (-193 T4a; the native call site's rule: a callee with own fields).
     # rtype is the callee's result cell in its `return` part (l2_emit_parts), by reference: the walk
     # types the call's destination by that cell's range; a `sub` has none (0).
     if: l2_rw_frame(parent, "LMX_WALK_OP_CALL", 4 + n, out) != 0
         return: 1
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, %uU))) != 0\n            return: 1\n", \out, (cast: (unsigned) (l2_unit_base + idx))) < 0
         return: 1
-    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 2U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, %uU))) != 0\n            return: 1\n", \out, (cast: (unsigned) (l2_unit_base + idx))) < 0
-        return: 1
+    if: l2_rw_mi != l2_e && l2_reenters(l2_rw_mi, idx) != 0 && l2_m_kids(idx) > l2_m_head(idx)
+        if: l2_rw_frame(\out, "LMX_WALK_OP_FRESH", 2, @ fr) != 0
+            return: 1
+        if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, %uU))) != 0\n            return: 1\n", fr, (cast: (unsigned) (l2_unit_base + idx))) < 0
+            return: 1
+        if: l2_rw_put(\out, 2, fr) != 0
+            return: 1
+        ---
+    else:
+        if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 2U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, %uU))) != 0\n            return: 1\n", \out, (cast: (unsigned) (l2_unit_base + idx))) < 0
+            return: 1
+        ---
+    ---
     if: l2_rw_emit != 0 && l2_m_ret[idx] != 8 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 3U, lmx_arena_ref_value(lmx_arena_ref_struct(lmx_arena_ref_struct(l2_entry_unit, %uU), 1U), 0U)) != 0\n            return: 1\n", \out, (cast: (unsigned) (l2_unit_base + idx))) < 0
         return: 1
     a: l2_next_active(args)
@@ -17399,8 +17468,8 @@ fn: l2_rw_struct_arg (const: @(LmP0Node node); @: LmP0Field a; int: span; int: n
     int: raw
     if: span != 1 || a\value = 0 || a\value\kind != c.LM_P0_NODE_ATOM || a\value\as = 0
         return: l2_rw_refuse(node, "a Structure argument that is not a field's name")
-    oi: l2_own_find_last(l2_e, a\value\as\atom)
-    if: oi < 0 || l2_own_mi[oi] != l2_e || l2_own_host[oi] != 0 || l2_own_fid[oi] >= 0 || l2_own_uchild[oi] < 0 || l2_own_is_pointer(l2_own_ty[oi]) = 0
+    oi: l2_rw_find(a\value\as\atom)
+    if: l2_rw_seen(oi) = 0 || l2_own_host[oi] != 0 || l2_own_fid[oi] >= 0 || l2_own_uchild[oi] < 0 || l2_own_is_pointer(l2_own_ty[oi]) = 0
         return: l2_rw_refuse(node, "a Structure argument that is not a field's name")
     # An untyped graph -- a letter -- is admitted to the formal's type at the call site, the
     # caller's implicit `implements` (-178 commit 3): the input is admit(AT(the field), T), the
@@ -17417,6 +17486,15 @@ fn: l2_rw_struct_arg (const: @(LmP0Node node); @: LmP0Field a; int: span; int: n
     if: l2_rw_frame(parent, "LMX_WALK_OP_DEREF", 2, out) != 0 || l2_rw_own(\out, oi, @ raw) != 0
         return: 1
 return: l2_rw_put(\out, 1, raw)
+
+# Input j of the method being built (-193 T4a): [arg, j], the reference its caller passed (the
+# walker's ARG reads f\args[j]).
+fn: l2_rw_arg (int: parent; int: j; @: int out) int
+    if: l2_rw_frame(parent, "LMX_WALK_OP_ARG", 2, out) != 0
+        return: 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, j) < 0
+        return: 1
+return: 0
 
 # One operand of type ty (resolved by l2_rw_texpr): an atom, a call frame, or a parenthesized
 # expression.
@@ -17491,11 +17569,15 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
     # A reference where a reference is asked (`m = 0`, -179): the field's pointer cell, as AT
     # gives it; the walker's EQ compares the address it holds.
     if: ty >= 1000
-        oi: l2_own_find_last(l2_e, t)
-        if: oi >= 0 && l2_own_mi[oi] = l2_e && l2_own_host[oi] = 0 && l2_own_fid[oi] < 0 && l2_own_uchild[oi] >= 0 && l2_own_is_pointer(l2_own_ty[oi]) != 0
+        oi: l2_rw_find(t)
+        if: l2_rw_seen(oi) != 0 && l2_own_host[oi] = 0 && l2_own_fid[oi] < 0 && l2_own_uchild[oi] >= 0 && l2_own_is_pointer(l2_own_ty[oi]) != 0
             return: l2_rw_own(parent, oi, out)
         ---
     ---
+    # A formal of the method being built is its input j (-193 T4a): [arg, j], the reference its
+    # caller passed.
+    if: l2_rw_mi != l2_e && l2_formal_find(l2_rw_mi, t) >= 0
+        return: l2_rw_arg(parent, l2_formal_find(l2_rw_mi, t), out)
     oi: l2_rw_own_row(node, t)
     if: oi = 0 - 1
         return: 1
@@ -18228,16 +18310,29 @@ fn: l2_emit_send (int: k; int: proto; @: char prefix; @: int count_arr; @: int k
     ---
 return: (cast: (int) (c.fprintf(l2_out, "end: %s%d\n\n", prefix, k) < 0))
 
+# `return: V` in the method being built (-193 T4a): [ret, V], V of the method's result type -- the
+# type of its result cell (l2_ret_cell_ty).
+fn: l2_rw_ret (@: LmP0Field first; int: n; int: into; @: int out) int
+    int: v
+    if: l2_rw_frame(into, "LMX_WALK_OP_RET", 2, out) != 0 || l2_rw_texpr(first, n, l2_ret_cell_ty(l2_rw_mi), \out, @ v) != 0
+        return: 1
+return: l2_rw_put(\out, 1, v)
+
 # A body of the walker (an if's or an else's) under node `parent` at slot `slot`: a plain
 # Structure whose children are its steps.
 fn: l2_rw_body (@: LmP0Field first; int: parent; int: slot) int
-    int: n
+    int: n 0
     int: t
     int: made 0
     c.array: [32]: char pn
-    n: l2_rw_count(first)
-    if: n < 0
-        return: 1
+    # Its size is needed only when it is written: the count pass counts a body's steps where it builds
+    # them (l2_rw_stmts below).  Asking l2_rw_count there too counted each nesting level's body twice,
+    # 2^depth in all (-193 T4a: a method's 70 nested ifs, l2src/tests/unit_deepif.lm2).
+    if: l2_rw_emit != 0
+        n: l2_rw_count(first)
+        if: n < 0
+            return: 1
+    ---
     t: l2_rw_t
     l2_rw_t: l2_rw_t + 1
     if: l2_rw_emit != 0
@@ -18253,13 +18348,15 @@ return: 0
 # A body, as l2_rw_body, that ends with the k flag steps l2_rw_pre[pbase ..] (a while's condition,
 # -196): they run again after the body's own steps.
 fn: l2_rw_body_pre (@: LmP0Field first; int: parent; int: slot; int: pbase; int: k) int
-    int: n
+    int: n 0
     int: t
     int: j
     int: made 0
-    n: l2_rw_count(first)
-    if: n < 0
-        return: 1
+    if: l2_rw_emit != 0
+        n: l2_rw_count(first)
+        if: n < 0
+            return: 1
+    ---
     if: l2_rw_plain(parent, n + k, @ t) != 0
         return: 1
     if: l2_rw_stmts(first, t, 0, @ made) != 0
@@ -18320,7 +18417,7 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
     # l2_emit_stmts): a step IF(LIT 1, body), the if role running a plain body.  One with nothing
     # to run (l2_body_inert) makes no step.
     if: stmt\kind = c.LM_P0_NODE_STRUCTURE
-        if: stmt\as = 0 || stmt\as\structure = 0 || l2_body_inert(stmt\as\structure, l2_e) != 0
+        if: stmt\as = 0 || stmt\as\structure = 0 || l2_body_inert(stmt\as\structure, l2_rw_mi) != 0
             return: 0
         if: l2_rw_frame(into, "LMX_WALK_OP_IF", 3, @ node) != 0 || l2_rw_lit(node, 1, @ t) != 0 || l2_rw_put(node, 1, t) != 0
             return: 1
@@ -18335,7 +18432,15 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
     h: stmt\as\frame\head
     if: l2_text_eq(h, "return")
         if: stmt\as\frame\body != 0 && l2_count_active(stmt\as\frame\body) != 0
-            return: l2_error(l2_src, stmt, "return with a value at the root")
+            if: l2_rw_mi = l2_e
+                return: l2_error(l2_src, stmt, "return with a value at the root")
+            # A method keeps its value returns (-193 T4a): [ret, V].
+            if: l2_rw_ret(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), into, @ node) != 0
+                return: 1
+            \made: 1
+            if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, node) < 0
+                return: 1
+            return: 0
         \made: 1
         if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, lmx_arena_ref_value(l2_rw_roles, (cast: (size_t) c.LMX_WALK_OP_RET))) != 0\n            return: 1\n", pn, slot) < 0
             return: 1
@@ -18418,6 +18523,10 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
     # receiveMessage takes the current Thread's next letter (l2_rw_take, -179).  A method the unit
     # declares under that name takes precedence, as every callable head does
     # (l2_receive_msg_shape): its call is built below (-176).
+    # A method's mail and its `Model: m` stay native in this slice (-193 T4a): the take's and the
+    # send's records are the root's, and a method has its own send path (l2_msend, -168).
+    if: l2_rw_mi != l2_e && ((l2_text_eq(h, "receiveMessage") && l2_find_method(h) < 0) || l2_text_eq(h, "sendMessage"))
+        return: l2_rw_refuse(stmt, "mail in a method")
     if: l2_text_eq(h, "receiveMessage") && l2_find_method(h) < 0
         if: l2_rw_take(stmt, into, @ node) != 0
             return: 1
@@ -18442,6 +18551,8 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
         if: l2_text_eq(h, "int") = 0 && l2_text_eq(h, "char") = 0 && l2_text_eq(h, "size_t") = 0 && l2_text_eq(h, "unsigned") = 0 && l2_text_eq(h, "ulong") = 0
             # A type word names a Structure too (`Model: m`, l2_ptr_type_word): m takes a fresh
             # merge of Model (-178).
+            if: l2_ns_find(h) >= 0 && l2_rw_mi != l2_e
+                return: l2_rw_refuse(stmt, "a Structure-typed field in a method")
             if: l2_ns_find(h) >= 0
                 if: l2_rw_model(stmt, h, into, @ node) != 0
                     return: 1
@@ -18454,7 +18565,7 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
         if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM
             return: l2_rw_refuse(stmt, "this declaration")
         oi: 0
-        while: oi < l2_own_n && (l2_own_decl[oi] != stmt || l2_own_mi[oi] != l2_e)
+        while: oi < l2_own_n && (l2_own_decl[oi] != stmt || l2_own_mi[oi] != l2_rw_mi)
             oi: oi + 1
         ---
         if: oi >= l2_own_n
@@ -18472,7 +18583,12 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
             n: n + 1
             f: l2_next_active(f\next)
         ---
-        if: l2_rw_assign(into, oi, cond, n, @ node) != 0
+        # The declaration's own row is invisible to its own initializer (Q24, D-48; l2_own_excl, as
+        # natively): `int: x (x + 2)` after `int: x 1` reads the first x.
+        l2_own_excl: oi
+        k: l2_rw_assign(into, oi, cond, n, @ node)
+        l2_own_excl: 0 - 1
+        if: k != 0
             return: 1
         \made: 1
         if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, node) < 0
@@ -18500,7 +18616,7 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
     # A declaration by an empty frame (`f()`, `f: ()`): the root's own field it declares is a
     # field of the unit, and nothing runs.
     oi: 0
-    while: oi < l2_own_n && (l2_own_decl[oi] != stmt || l2_own_mi[oi] != l2_e)
+    while: oi < l2_own_n && (l2_own_decl[oi] != stmt || l2_own_mi[oi] != l2_rw_mi)
         oi: oi + 1
     ---
     if: oi < l2_own_n && (stmt\as\frame\body = 0 || l2_count_active(stmt\as\frame\body) = 0)
@@ -18510,8 +18626,8 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
         return: l2_rw_refuse_ty(stmt, oi)
     # An assignment into a reference field (-179): of a declared Structure type it admits the value
     # first -- the caller's implicit `implements` (D-55); an untyped one takes the reference.
-    oi: l2_own_find_last(l2_e, h)
-    if: oi >= 0 && l2_own_mi[oi] = l2_e && l2_own_host[oi] = 0 && l2_own_fid[oi] < 0 && l2_own_uchild[oi] >= 0 && l2_own_is_pointer(l2_own_ty[oi]) != 0
+    oi: l2_rw_find(h)
+    if: l2_rw_seen(oi) != 0 && l2_own_host[oi] = 0 && l2_own_fid[oi] < 0 && l2_own_uchild[oi] >= 0 && l2_own_is_pointer(l2_own_ty[oi]) != 0
         if: l2_own_nsty_get(oi) >= 0
             if: l2_rw_admit_assign(stmt, oi, into, @ node) != 0
                 return: 1
@@ -18581,6 +18697,153 @@ fn: l2_rw_pre_place (int: into; int: s; int: one; int: pbase; int: k) int
         j: j + 1
     ---
 return: 0
+
+# THE WALKED METHODS (-193 T4a; steps/merge-parts-193.md §6, §9).  The body of a method is built
+# as walker frames too, by the same l2_rw_* (l2_rw_mi names the method): M's own children after its
+# fields and control bodies, so no field slot moves and the native code is unchanged.
+#   * a formal j is its input, [arg, j]; `return: V` is [ret, V], and the return trailer one more
+#     step at the end;
+#   * a method's own field is a cell of the activation's data, holder 0 (K-OT2); a unit field it
+#     sees stays the unit's;
+#   * a call that can re-enter the method passes [fresh, code] as its data (l2_reenters).
+# Every method whose body is in the walkable subset gets its frames, always (fable's Q4); its
+# native word stays, so every call of it stays native, but under the test knob `--walk-methods`
+# (native 0).  A method outside the subset gets none, and nothing is said: its body is only tried
+# (l2_rw_quiet); the refusal comes where a walk is needed.
+# Its shape first (l2_rw_may): a method with a native body, no dynamic inputs and no throw, a result
+# that is a number (int, size_t, unsigned, ulong) or none, number formals, and own fields that are
+# neither declared in a nested body nor named like a formal.
+fn: l2_rw_may (int: mi) int
+    int: j 0
+    int: oi 0
+    int: cls
+    if: mi < 0 || mi = l2_e || mi >= l2_m_n || l2_m_native(mi) = 0
+        return: 0
+    if: l2_m_dyn[mi] != 0 || (l2_m_throws != 0 && l2_m_throws[mi] != 0)
+        return: 0
+    cls: l2_tramp_class(mi)
+    if: l2_m_ret[mi] != 8 && (cls < 1 || cls > 4)
+        return: 0
+    while: j < l2_m_arity[mi]
+        if: l2_cf_get(mi, j) >= 0 || l2_nsty_get(mi, j) >= 0 || l2_rw_num_ty(l2_own_ty_of_param(l2_ft(mi, j))) = 0
+            return: 0
+        j: j + 1
+    ---
+    while: oi < l2_own_n
+        if: l2_own_mi[oi] = mi && (l2_own_host[oi] != 0 || l2_formal_find(mi, l2_own_name[oi]) >= 0)
+            return: 0
+        oi: oi + 1
+    ---
+return: 1
+
+# Method mi's return trailer (its column-0 `return: V`), built at slot `slot` of `into`: one step,
+# [ret, V] -- a `sub`'s bare `return` is the RET record --, behind the flag steps its value makes;
+# `made` counts them all.  None without a trailer.
+fn: l2_rw_trailer (int: mi; int: into; int: slot; @: int made) int
+    @: LmP0Structure tr 0
+    c.array: [32]: char pn
+    int: node
+    int: pbase l2_rw_pre_n
+    \made: 0
+    if: l2_m_node[mi] != 0 && l2_m_node[mi]\as != 0
+        tr: l2_ret_tr(l2_m_node[mi]\as\frame)
+    if: tr = 0
+        return: 0
+    l2_rw_name(into, pn)
+    if: l2_count_active(tr) = 0
+        \made: 1
+        if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, lmx_arena_ref_value(l2_rw_roles, (cast: (size_t) c.LMX_WALK_OP_RET))) != 0\n            return: 1\n", pn, slot) < 0
+            return: 1
+        return: 0
+    if: l2_rw_ret(tr\first_field, l2_count_active(tr), into, @ node) != 0
+        return: 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, node) < 0
+        return: 1
+    if: l2_rw_pre_n > pbase && l2_rw_pre_place(into, slot, 1, pbase, l2_rw_pre_n - pbase) != 0
+        return: 1
+    \made: 1 + l2_rw_pre_n - pbase
+    l2_rw_pre_n: pbase
+return: 0
+
+# The count pass of every method (before the occurrences' widths are written): l2_m_steps[i], its
+# steps, or -1 -- outside the walkable subset, or the library profile, whose root is not walked.
+fn: l2_rw_methods_count () int
+    int: i 0
+    int: made
+    int: one
+    int: bad
+    l2_m_steps: (cast: (@: int) calloc((cast: (size_t) (l2_m_n + 1)), c.sizeof(c.int)))
+    if: l2_m_steps = 0
+        return: l2_error(l2_src, 0, "out of memory")
+    while: i < l2_m_n
+        l2_m_steps[i]: 0 - 1
+        if: l2_library_mode = 0 && l2_rw_may(i) != 0
+            l2_vis_method(i)
+            l2_rw_mi: i
+            l2_rw_quiet: 1
+            l2_rw_emit: 0
+            l2_rw_send_rec: 0
+            made: 0
+            one: 0
+            bad: 0
+            if: l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && l2_m_body[i]\as\structure != 0 && l2_rw_stmts(l2_m_body[i]\as\structure\first_field, 0 - 2, 0, @ made) != 0
+                bad: 1
+            if: bad = 0 && l2_rw_trailer(i, 0 - 2, made, @ one) != 0
+                bad: 1
+            if: bad = 0
+                l2_m_steps[i]: made + one
+            l2_rw_quiet: 0
+            l2_rw_pre_n: 0
+            l2_rw_mi: l2_e
+            l2_vis_on: 0
+        ---
+        i: i + 1
+    ---
+return: 0
+
+# The emission of every method's frames, into its occurrence (a node temp, l2_rw<t>), from slot
+# l2_m_kids(i): the same steps the count pass made.
+fn: l2_rw_methods_emit () int
+    int: i 0
+    int: t
+    int: made
+    int: one
+    int: bad
+    while: i < l2_m_n
+        if: l2_m_steps[i] > 0
+            l2_vis_method(i)
+            l2_rw_mi: i
+            l2_rw_emit: 1
+            t: l2_rw_t
+            l2_rw_t: l2_rw_t + 1
+            made: 0
+            one: 0
+            bad: 0
+            if: c.fprintf(l2_out, "        @: Lmx l2_rw%d lmx_arena_ref_struct(l2_entry_unit, %uU)\n        if: l2_rw%d = 0\n            return: 1\n", t, (cast: (unsigned) (l2_unit_base + i)), t) < 0
+                bad: 1
+            if: bad = 0 && l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && l2_m_body[i]\as\structure != 0 && l2_rw_stmts(l2_m_body[i]\as\structure\first_field, t, l2_m_kids(i), @ made) != 0
+                bad: 1
+            if: bad = 0 && l2_rw_trailer(i, t, l2_m_kids(i) + made, @ one) != 0
+                bad: 1
+            l2_rw_emit: 0
+            l2_rw_pre_n: 0
+            l2_rw_mi: l2_e
+            l2_vis_on: 0
+            if: bad != 0
+                return: 1
+            if: made + one != l2_m_steps[i]
+                return: l2_error(l2_src, l2_m_node[i], "internal: a method's steps changed between the passes")
+        ---
+        i: i + 1
+    ---
+return: 0
+
+# The children of method mi's occurrence: its header parts, fields and control bodies (l2_m_kids),
+# then its frames (-193 T4a).
+fn: l2_m_width (int: mi) int
+    if: l2_m_steps != 0 && mi >= 0 && mi < l2_m_n && l2_m_steps[mi] > 0
+        return: l2_m_kids(mi) + l2_m_steps[mi]
+return: l2_m_kids(mi)
 
 # Public C/L1 adapter signature for a source method. The fixed lexical space
 # above the method and selected occurrence remain internal ABI arguments and
@@ -20945,6 +21208,9 @@ fn: l2_emit_parts (int: i) int
     ---
     if: l2_m_native(i) = 0
         return: 0
+    # The test knob `--walk-methods` (-193 T4a): a method with frames is walked.
+    if: l2_walk_methods != 0 && l2_m_steps != 0 && l2_m_steps[i] > 0
+        return: 0
     if: fputs("        l2_entry_leaf\\native: (cast: (LmxEntry) ", l2_out) < 0 || l2_write_sym(l2_out, i) != 0 || fputs("_tr)\n", l2_out) < 0
         return: 1
 return: 0
@@ -21000,6 +21266,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     l2_rw_send_n: 0
     l2_rw_send_i: 0
     l2_rw_send_rec: 1
+    l2_rw_mi: l2_e
     if: l2_library_mode = 0 && l2_e >= 0 && l2_e_n > 0 && l2_rw_stmts(l2_e_fields, 0 - 2, 0, @ l2_rw_steps) != 0
         return: 1
     l2_rw_send_rec: 0
@@ -21008,6 +21275,9 @@ fn: l2_emit_unit (const: @(char out_path)) int
     # It sends no exit and sets no success, so the host maps it to 1 (lmx_root_launch).
     if: l2_library_mode = 0 && l2_e >= 0 && l2_rw_steps = 0
         l2_rw_steps: 1
+    # The methods' frames are counted too (-193 T4a), before the occurrences' widths are written.
+    if: l2_rw_methods_count() != 0
+        return: 1
     # The reserved unit-child bases must be known BEFORE any method body is
     # written: a field path inside a method addresses these same children
     # through the unit reference, and the entry is emitted last. They used to be
@@ -21543,7 +21813,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
         if: i = l2_e
             i: i + 1
             continue
-        if: c.fprintf(l2_out, "        l2_entry_leaf: lmx_struct_new_owned(l2_entry_unit, l2_program_arena)\n        if: l2_entry_leaf = 0\n            return: 1\n        if: lmx_arena_refs_open_owned(l2_program_arena, l2_entry_leaf, %uU) != 0\n            return: 1\n        if: lmx_arena_ref_store(l2_entry_unit, %uU, (cast: (@: void) l2_entry_leaf)) != 0\n            return: 1\n", (cast: (unsigned) l2_m_kids(i)), (cast: (unsigned) (l2_unit_base + i))) < 0
+        if: c.fprintf(l2_out, "        l2_entry_leaf: lmx_struct_new_owned(l2_entry_unit, l2_program_arena)\n        if: l2_entry_leaf = 0\n            return: 1\n        if: lmx_arena_refs_open_owned(l2_program_arena, l2_entry_leaf, %uU) != 0\n            return: 1\n        if: lmx_arena_ref_store(l2_entry_unit, %uU, (cast: (@: void) l2_entry_leaf)) != 0\n            return: 1\n", (cast: (unsigned) l2_m_width(i)), (cast: (unsigned) (l2_unit_base + i))) < 0
             fclose(l2_out)
             return: 1
         i: i + 1
@@ -21826,6 +22096,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     l2_rw_emit: 1
     l2_rw_t: 0
     l2_rw_send_i: 0
+    l2_rw_mi: l2_e
     k: 0
     if: l2_library_mode = 0 && l2_e_n > 0 && l2_rw_stmts(l2_e_fields, 0 - 1, l2_rw_base, @ k) != 0
         l2_rw_emit: 0
@@ -21841,6 +22112,10 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: l2_library_mode = 0 && k != l2_rw_steps
         fclose(l2_out)
         return: l2_error(l2_src, 0, "internal: the root's steps changed between the passes")
+    # Then each walkable method's frames, into its occurrence (-193 T4a).
+    if: l2_library_mode = 0 && l2_rw_methods_emit() != 0
+        fclose(l2_out)
+        return: 1
     if: l2_library_mode = 0 && fputs("        return: 0\n    end: l2_program_build\nend: external\n", l2_out) < 0
         fclose(l2_out)
         return: 1
@@ -21901,13 +22176,18 @@ external:
         const: @: char rt
         c.setvbuf(l1_stdout(), 0, c._IONBF, 0)
         c.setvbuf(l1_stderr(), 0, c._IONBF, 0)
+        # The test knob `--walk-methods` (-193 T4a): a method with frames gets native 0.
+        if: argc >= a + 3 && c.strcmp(argv[a], "--walk-methods") = 0
+            l2_walk_methods: 1
+            a: a + 1
+        ---
         # The library profile is selected here, never inferred from the unit.
-        if: argc = 4 && c.strcmp(argv[1], "--library") = 0
+        if: argc >= a + 3 && c.strcmp(argv[a], "--library") = 0
             l2_library_flag: 1
-            a: 2
+            a: a + 1
         ---
         if: argc != a + 2
-            fputs("usage: l2trans.exe [--library] <source.lm2> <output.lm1>\n", l1_stderr())
+            fputs("usage: l2trans.exe [--walk-methods] [--library] <source.lm2> <output.lm1>\n", l1_stderr())
             return: 1
         rt: c.getenv("L2_RUNTIME_ROOT")
         if: rt != 0 && rt[0] != 0

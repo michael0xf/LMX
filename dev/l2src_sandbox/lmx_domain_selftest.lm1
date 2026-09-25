@@ -87,6 +87,7 @@ fn: main () int
     @: LmxMsg thread_message
     @: LmxThread thread
     @: LmxThread parent_thread
+    size_t: before_pause 0U
     @: LmxPost parent_mail
     @: LmxSchedule parent_slot
     @: Lmx parent_graph
@@ -298,14 +299,20 @@ fn: main () int
     check(lmx_thread_current() = thread3, "this thread's current object is not its own")
     # Give the lane time to run a turn of its own before asking it to stop: the OS
     # schedules that thread, not us, and a lane that stopped before its first turn
-    # would make the next check a lie in the other direction.
-    c.Sleep(50U)
+    # would make the next check a lie in the other direction. The pause is the
+    # platform word, and the clock says it actually waited.
+    before_pause: lmx_clock_word()
+    lmx_manager_running_pause_ms(50U)
+    check(lmx_clock_word() - before_pause >= 30U, "the pause returned without waiting")
     check(thread2\turn >= 1U, "the lane never ran a turn")
+    check(lmx_thread_lane_ended(thread2) = 0, "a live lane was reported ended")
     check(lmx_thread_current() = thread3, "the lane's turn overwrote this thread's current object")
     check(lmx_thread_leave(thread3) = c.LMX_THREAD_OK, "this thread did not leave its own turn")
     check(lmx_thread_current() = 0, "leaving this thread's turn left its object behind")
     check(lmx_post_close(@ arena, mail3) = c.LMX_POST_OK, "the third mailbox did not close")
     letter2\running: 0
+    lmx_manager_running_pause_ms(50U)
+    check(lmx_thread_lane_ended(thread2) != 0, "a finished lane was not visible")
     check(lmx_manager_running_close(@ running) = c.LMX_MANAGER_OK, "the running manager did not join its lanes")
     check(slotp\lane = 0, "the lane was not released")
     check(run_api\count(@ running) = 1U, "running manager invented a second membership set")

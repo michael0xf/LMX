@@ -133,7 +133,7 @@ if (Test-Path -LiteralPath (Join-Path $flatSource $sourceProbe)) {
         Copy-Item -LiteralPath $f.FullName -Destination (Join-Path $staged $f.Name) -Force; $stagedCount++
     }
     # -200: one logical body name, the host picks the file. This script is the Windows gate, so the body is the Win32 one, staged under the name every predef already uses.
-    foreach ($logical in @('lmx_clock.lm1', 'lmx_process_deadline.lm1', 'lmx_manager_running.lm1')) {
+    foreach ($logical in @('lmx_clock.lm1', 'lmx_process_deadline.lm1', 'lmx_manager_running.lm1', 'lmx_manager_running_lane.lm1')) {
         $physical = $logical -replace '\.lm1$', '_win32.lm1'
         Copy-Item -LiteralPath (Join-Path $flatSource $physical) -Destination (Join-Path $staged $logical) -Force; $stagedCount++
     }

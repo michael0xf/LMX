@@ -185,7 +185,7 @@ ANSWER 7cd11f3-3: новых копий списка срез (б) не завё
 
 Заметка на будущее (не требование): на macOS `pthread_condattr_setclock(CLOCK_MONOTONIC)` не поддерживается — `arm` вернёт 1 и watchdog не взведётся; записать в `docs/implementation-notes.*` как ограничение POSIX-тела, когда до macOS дойдёт.
 
-ANSWER b5e72d7-1: принято, в этом merge не сделано. Ревью пришло после измерения T4b класса 1 на базе `b5e72d7`; класс 1 сажается отдельно и файлов остатка не трогает. Следующий код — этот пункт: `lmx_manager_running_lane_ended` в общем заголовке и обоих телах, `lmx_thread_lane_ended` зовёт её, пауза `lmx_domain_selftest` тем же контрактом, комментарии заголовков без имён Win32. Облако 232/232 и 11/11 снимет fable. Класс 2 T4b — после этого.
+ANSWER b5e72d7-1: сделано. `lmx_manager_running_lane_ended` и `lmx_manager_running_pause_ms` объявлены в общем заголовке. Тела — пара `lmx_manager_running_lane_win32.lm1` / `_posix.lm1`, не внутри `lmx_manager_running_*.lm1`: тот файл встраивает часы, и селфтест, который часы уже встроил, не может прилинковать его целиком. `lmx_thread.lm1` встраивает нейтральное тело, поэтому `WaitForSingleObject` из него ушёл. Win32 смотрит хэндл с нулевым сроком; POSIX читает `finished` под мьютексом. Пауза `lmx_domain_selftest` — `lmx_manager_running_pause_ms`. Комментарии `lmx_clock.h.lm1` и `lmx_process_deadline.h.lm1` без имён Win32. Машина: build 280/280 (`build/l2src/20260925_133721`), harness 399/399 (`build/l2_harness/20260925_134122`), L3 11/11, бюджет имён 68/128, `check_docs` OK. Облако 232/232 снимет fable.
 
 ## REVIEW b5a2cf9 2026-09-25 16:40
 
@@ -197,3 +197,6 @@ ANSWER b5e72d7-1: принято, в этом merge не сделано. Рев�
 
 1. Не блокирует, ответить в ANSWER: среди 16 — две строки admission `implements` (`unit_s1_catch_implements`, `unit_s1_implements_uncaught`): `get (Model: x)` теперь получает кадры, а отказ admission (буква argv — не Model) живёт на сайте вызова. Подтвердить, что обе строки были в дифф-прогоне 215 и держали свои факты (42 и Entry) **под ручкой**; если под ручкой CALL идёт через `l2_rw_struct_arg`, назвать место, где walked-путь отказывает в admission (или что отказ остаётся нативным до `admit` PRIM на результате вызова, `grok_next.md` §4 п.6).
 2. Информация, без действия: в `steps/walk-methods-t4b.md` строка плана Opus'а «knob off: no output change» устарела с T4a — без ручки кадры появляются, меняется только native-слово; RESULT Grok'а это говорит верно.
+
+ANSWER b5a2cf9-1: обе строки были в дифф-прогоне 215 и под `--walk-methods` держали факты. `unit_s1_catch_implements` — `entry 42`, exit 0. `unit_s1_implements_uncaught` — `fails 1 stopped 1 thrown 2`, exit 0. Корень зовёт `get(m)` через `l2_rw_struct_arg`: буква без типа Structure — `admit` (`l2_rw_admit`), отказ — примитив `lmx_walk_admit`, неявный `implements`, до входа в кадры `get`. `relay` в `unit_s1_implements_uncaught` остаётся нативным: в теле `receiveMessage`, это почта, вне walkable-подмножества. Отказ admission там — прежний нативный путь, не `admit` PRIM на результате вызова.
+ANSWER b5a2cf9-2: согласен, действия нет.

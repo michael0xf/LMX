@@ -4,6 +4,10 @@ predef: "l2src/lmx_call.lm1"
 predef: "l2src/lmx_turn.lm1"
 predef: "l2src/lmx_clock.lm1"
 predef: "l2src/lmx_manager.lm1"
+# The lane look is the platform body, not the header alone. The root inlines this
+# unit, and the harness driver links nothing else, so the definition has to come
+# with the call. The manager body cannot carry it: that body inlines the clock.
+predef: "l2src/lmx_manager_running_lane.lm1"
 predef: "l2src/lmx_settle.lm1"
 predef: "l2src/lmx_list_owned.lm1"
 predef: "l2src/lmx_arena_refs.h.lm1"
@@ -856,10 +860,10 @@ return: c.LMX_THREAD_OK
 # published" from "the record's own thread is still unwinding".  A record with NO lane of its own
 # (the stepped manager's normal state, and every child that was never started) answers YES: there is
 # no other thread that could still be inside its storage.  A lane that HAS ended is observed the same
-# way the running manager observes it -- a zero-timeout reap -- so nothing new is invented here: the
-# handle already exists (LmxSchedule.lane) and the join already exists
-# (lmx_manager_running_lane_reap).  A handle that has ended but not yet been reaped answers YES:
-# the thread is gone either way, and the reap itself stays with the queue that owns the lane.
+# way the running manager observes it.  The look lives in that body
+# (lmx_manager_running_lane_ended).  A lane that has ended but not yet been reaped
+# answers yes: the thread is gone either way, and the reap itself stays with the
+# queue that owns the lane.
 fn: lmx_thread_lane_ended (@: LmxThread t) int
     @: LmxSchedule slot
     if: t = 0
@@ -867,11 +871,7 @@ fn: lmx_thread_lane_ended (@: LmxThread t) int
     slot: t\slot
     if: slot = 0
         return: 1
-    if: slot\lane = 0
-        return: 1
-    if: c.WaitForSingleObject(slot\lane, 0U) = c.WAIT_OBJECT_0
-        return: 1
-return: 0
+return: lmx_manager_running_lane_ended(slot)
 
 fn: lmx_stop_children (@: LmxThread t; ulong: now; size_t: deadline) int
     @: LmxThread child

@@ -113,6 +113,13 @@ int: l2_rw_pre_cap 0
 # it, as l2_emit_body does. The native emitter's l2_own_bseq is a different pass.
 @: int l2_rw_bseq 0
 int: l2_rw_bseq_n 0
+# Whiles whose body is being built. break and continue are emitted only inside one.
+int: l2_rw_loops 0
+# Root if and while bodies stay off the scope stack, so a second receiveMessage
+# in one remains the root field. Their catches are still handlers of the calls
+# inside them: the bodies being built, innermost first.
+c.array: [64]: @: LmP0Structure l2_rw_cblk
+int: l2_rw_cblk_n 0
 # The walked root's sends (`sendMessage: X`), one generated primitive l2_send<k> each: the sites
 # recorded by the top-level count pass (l2_rw_send_rec 1), the next site's number, and per site its
 # payload's field count, each field's kind (1 an int expression, 2 a text literal) and text atom.
@@ -764,6 +771,8 @@ prototype:
     fn: l2_block_catch (const: @(LmP0Structure blk); const: @(LmP0Text tname); const: @(char cname); @: int out_idx) @: LmP0Node
     fn: l2_block_has_catch (const: @(LmP0Structure blk)) int
     fn: l2_catch_find (int: mi; const: @(LmP0Text tname); const: @(char cname); @@: LmP0Structure out_blk; @: int out_idx) @: LmP0Node
+    fn: l2_rw_cblk_push (const: @(LmP0Structure blk)) int
+    fn: l2_rw_cblk_pop () int
     fn: l2_lp_push (int: kind; int: pad) int
     fn: l2_lp_pop () int
     fn: l2_pad_of (const: @(LmP0Structure blk)) int
@@ -10180,16 +10189,47 @@ fn: l2_block_has_catch (const: @(LmP0Structure blk)) int
         f: l2_next_active(f\next)
 return: 0
 
+# A root if or while body, while its steps are being built. 0: the stack is deeper than 64.
+fn: l2_rw_cblk_push (const: @(LmP0Structure blk)) int
+    if: blk = 0
+        return: 0
+    if: l2_rw_cblk_n >= 64
+        return: l2_error(l2_src, 0, "loops and catch blocks nested too deeply")
+    l2_rw_cblk[l2_rw_cblk_n]: (cast: (@: LmP0Structure) blk)
+    l2_rw_cblk_n: l2_rw_cblk_n + 1
+return: 0
+
+fn: l2_rw_cblk_pop () int
+    if: l2_rw_cblk_n > 0
+        l2_rw_cblk_n: l2_rw_cblk_n - 1
+        l2_rw_cblk[l2_rw_cblk_n]: 0
+return: 0
+
 # THE HANDLER OF A NAME thrown at the point being checked or emitted: the enclosing blocks from
-# the innermost out -- the scope stack, then the method body -- and in each the catch of that
-# name, unless it is the very handler the point is in (the same name inside its own handler goes
-# to the enclosing context).  0: no handler in this method.
+# the innermost out -- a root if or while body being built, then the scope stack, then the method
+# body -- and in each the catch of that name, unless it is the very handler the point is in (the
+# same name inside its own handler goes to the enclosing context).  0: no handler in this method.
 fn: l2_catch_find (int: mi; const: @(LmP0Text tname); const: @(char cname); @@: LmP0Structure out_blk; @: int out_idx) @: LmP0Node
     int: lv
+    int: i
     int: idx 0
     @: LmP0Node prev 0
     @: LmP0Node cf 0
     @: LmP0Structure blk 0
+    if: l2_scope_n > 0 && l2_frame_head(l2_scope_at[l2_scope_n - 1], "catch")
+        prev: l2_scope_at[l2_scope_n - 1]
+    i: l2_rw_cblk_n - 1
+    while: i >= 0
+        blk: l2_rw_cblk[i]
+        cf: l2_block_catch(blk, tname, cname, @ idx)
+        if: cf != 0 && cf != prev
+            if: out_blk != 0
+                \out_blk: blk
+            if: out_idx != 0
+                \out_idx: idx
+            return: cf
+        i: i - 1
+    prev: 0
     lv: l2_scope_n - 1
     while: lv >= -1
         blk: 0
@@ -19500,7 +19540,16 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
                 return: 1
             return: 0
         if: l2_text_eq(h, "break") || l2_text_eq(h, "continue")
-            return: l2_rw_refuse(stmt, "break and continue")
+            if: l2_rw_loops = 0
+                return: l2_rw_refuse(stmt, "break and continue")
+            if: l2_text_eq(h, "break") && l2_rw_frame(into, "LMX_WALK_OP_BREAK", 1, @ node) != 0
+                return: 1
+            if: l2_text_eq(h, "continue") && l2_rw_frame(into, "LMX_WALK_OP_CONTINUE", 1, @ node) != 0
+                return: 1
+            \made: 1
+            if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, node) < 0
+                return: 1
+            return: 0
         return: l2_rw_refuse(stmt, "this statement")
     # An anonymous block (`---`, `( ... )`) is a nested executable body, as natively (§14, Q14 K;
     # l2_emit_stmts): a step IF(LIT 1, body), the if role running a plain body.  One with nothing
@@ -19570,12 +19619,19 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
             return: 1
         # The root does not push this scope: a second receiveMessage inside a
         # while stays the root field (unit_next_message_loop). A method does.
+        # The body's catches stay visible through l2_rw_cblk.
         if: l2_rw_mi != l2_e && l2_rw_enter(last\value, @ bsave) != 0
+            return: 1
+        if: l2_rw_mi = l2_e && l2_rw_cblk_push(last\value\as\structure) != 0
             return: 1
         if: l2_rw_body(last\value\as\structure\first_field, node, 2) != 0
             if: l2_rw_mi != l2_e
                 l2_rw_leave(bsave)
+            if: l2_rw_mi = l2_e
+                l2_rw_cblk_pop()
             return: 1
+        if: l2_rw_mi = l2_e
+            l2_rw_cblk_pop()
         if: l2_rw_mi != l2_e && l2_rw_leave(bsave) != 0
             return: 1
         if: els != 0
@@ -19583,10 +19639,16 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
                 return: l2_rw_refuse(els\value, "this else")
             if: l2_rw_mi != l2_e && l2_rw_enter(els\value, @ bsave) != 0
                 return: 1
+            if: l2_rw_mi = l2_e && l2_rw_cblk_push(els\value\as\frame\body) != 0
+                return: 1
             if: l2_rw_body(els\value\as\frame\body\first_field, node, 3) != 0
                 if: l2_rw_mi != l2_e
                     l2_rw_leave(bsave)
+                if: l2_rw_mi = l2_e
+                    l2_rw_cblk_pop()
                 return: 1
+            if: l2_rw_mi = l2_e
+                l2_rw_cblk_pop()
             if: l2_rw_mi != l2_e && l2_rw_leave(bsave) != 0
                 return: 1
             \next: l2_next_active(els\next)
@@ -19619,10 +19681,19 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
             return: 1
         if: l2_rw_mi != l2_e && l2_rw_enter(last\value, @ bsave) != 0
             return: 1
+        if: l2_rw_mi = l2_e && l2_rw_cblk_push(last\value\as\structure) != 0
+            return: 1
+        l2_rw_loops: l2_rw_loops + 1
         if: l2_rw_body_pre(last\value\as\structure\first_field, node, 2, k, l2_rw_pre_n - k) != 0
+            l2_rw_loops: l2_rw_loops - 1
             if: l2_rw_mi != l2_e
                 l2_rw_leave(bsave)
+            if: l2_rw_mi = l2_e
+                l2_rw_cblk_pop()
             return: 1
+        l2_rw_loops: l2_rw_loops - 1
+        if: l2_rw_mi = l2_e
+            l2_rw_cblk_pop()
         if: l2_rw_mi != l2_e && l2_rw_leave(bsave) != 0
             return: 1
         \made: 1

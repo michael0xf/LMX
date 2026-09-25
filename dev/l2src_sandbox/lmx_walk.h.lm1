@@ -259,7 +259,15 @@ define: LMX_WALK_OP_ELEMPUT 26
 define: LMX_WALK_OP_LENGTH 27
 # -201: [pad, param_ref_0 .. param_ref_P-1, body]. Catch landing. Count was 28.
 define: LMX_WALK_OP_PAD 28
-define: LMX_WALK_OP_COUNT 29
+# User break and continue. A body propagates them. WHILE consumes them:
+# break ends the loop as success, continue starts the next turn. They are
+# not walker errors (1..7) and not throws (>= THROWN). A jump that escapes
+# the walk is an unknown status.
+define: LMX_WALK_BREAK -2
+define: LMX_WALK_CONTINUE -3
+define: LMX_WALK_OP_BREAK 29
+define: LMX_WALK_OP_CONTINUE 30
+define: LMX_WALK_OP_COUNT 31
 # -174 c4: method.sig = MARK | LMX_TYPE_* names the trampoline result class for CALL dest.
 define: LMX_WALK_RESULT_SIG_MARK 0x57000000
 

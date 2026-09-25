@@ -1,10 +1,18 @@
 # `f()` when f already binds an ordinary Structure is ordinary assignment of the empty Structure
-# (the book §12), not a declaration and not a call.  E, declared empty by `E()`, has no declared
-# Structure type to be admitted to, so `E()` and `E: ()` bind a fresh empty Structure; so does
-# `m()` for the untyped letter m.  They used to be refused.  0.
+# (the book §12), not a declaration and not a call. E, declared empty by `E()`, has no declared
+# Structure type, so `E()` and `E: ()` store a fresh empty node. `m()` does the same for the
+# untyped letter. The driver posts one letter, so m is not null. m() stores a
+# fresh empty node over it and does not throw. E() and E: () are the same store.
+# Success is 4. The root reports it through sendMessage.
 E()
 E()
 E: ()
+int: r 0
 receiveMessage: m
+if: m != 0
+    r: r + 1
 m()
-return: 0
+if: m != 0
+    r: r + 3
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

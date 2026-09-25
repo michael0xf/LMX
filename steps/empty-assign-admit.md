@@ -31,3 +31,19 @@ Base: main `3f68f41`. Branch `grok/empty-assign-admit`. Kernel unchanged.
 Branch `grok/empty-assign-admit`, base main `3f68f41`. Kernel unchanged. Twin `l2src/l2trans.lm1` is the sandbox copy.
 
 Gate: build 280/280 (`build/l2src/20260925_161945`), harness 401/401 (`build/l2_harness/empty_admit_gate`), L3 11/11, names 69/128, check_docs OK. `git diff --check` clean.
+
+## Untyped reference store
+
+Base: main `c11100e`. Same function. A declared type still admits. No declared type (`l2_graph_nsty < 0`) stores `FRESH` of a 0-child Structure directly: `PUT` / `PUT_REF`, slot 3 is that `FRESH`, no `lmx_walk_admit`. `E()` and `E: ()` are that store. `m()` is the same store over the driver letter.
+
+The driver posts one letter, so `m` is not null before `m()`. Success is 4: the letter arrived (1) and `m` is still non-null after the store (3). A valued `return` stays refused at the root; the exit is `sendMessage`. Comparing the empty name `E` with 0 is refused by the body checker (`unsupported body`). Copying the letter into a second untyped name is the checker's fail-closed graph rebinding, not this store.
+
+## Mutants (measured, then restored)
+
+| What changed | Result |
+| --- | --- |
+| The caller again requires a declared type (`l2_graph_nsty >= 0`) | l2trans exit 1, `root operation not walkable yet: a reference assignment`, frame `E` |
+| `FRESH` of the untyped store has no prototype child | `lmx: walk error: INVALID`, process exit 3, not entry 4 |
+| Both restored | entry 4, driver exit 0, 12 checks |
+
+Gate: build 280/280 (`build/l2src/20260925_164317`), harness 401/401 (`build/l2_harness/20260925_164120`), L3 11/11, names 69/128, check_docs OK. Kernel unchanged.

@@ -17594,10 +17594,17 @@ fn: l2_rw_empty_assign (const: @(LmP0Node stmt); int: into; @: int out) int
     if: easn = 1
         oi: l2_own_find_last(l2_rw_mi, h)
         ni: l2_graph_nsty(l2_rw_mi, h)
-        if: ni < 0 || l2_rw_seen(oi) = 0 || l2_own_host[oi] != 0 || l2_own_fid[oi] >= 0 || l2_own_uchild[oi] < 0
-            return: l2_rw_refuse(stmt, "an admission to a Structure type")
+        if: l2_rw_seen(oi) = 0 || l2_own_host[oi] != 0 || l2_own_fid[oi] >= 0 || l2_own_uchild[oi] < 0
+            return: l2_rw_refuse(stmt, "a reference assignment")
         if: l2_rw_frame(into, l2_rw_bind_op(oi), 4, out) != 0 || l2_rw_cell(\out, oi) != 0
             return: 1
+        # No declared type (E(), m()): the value is the fresh empty node. Admission is the
+        # typed store below, not this one.
+        if: ni < 0
+            if: l2_rw_frame(\out, "LMX_WALK_OP_FRESH", 2, @ fr) != 0 || l2_rw_plain(fr, 0, @ proto) != 0 || l2_rw_put(fr, 1, proto) != 0
+                return: 1
+            return: l2_rw_put(\out, 3, fr)
+        ---
     ---
     if: easn != 1 && easn != 2
         return: l2_rw_refuse(stmt, "an admission to a Structure type")
@@ -19779,10 +19786,10 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
     # A declaration of a root field that is not a number (`Model: m`): what it is.
     if: oi < l2_own_n && l2_rw_num_ty(l2_own_ty[oi]) = 0
         return: l2_rw_refuse_ty(stmt, oi)
-    # `f()` when f already binds an ordinary Structure of a declared type (l2_empty_struct_assign_shape
-    # = 1; the book §12): the same admission the native emitter writes with l2_emit_admit, through
-    # l2_rw_admit.  No declared type is a reference assignment, refused below.
-    if: l2_empty_struct_assign_shape(stmt, l2_rw_mi) = 1 && l2_graph_nsty(l2_rw_mi, h) >= 0
+    # `f()` when f already binds an ordinary Structure (l2_empty_struct_assign_shape = 1;
+    # the book §12). A declared type admits through l2_rw_admit. No declared type stores the
+    # fresh empty node itself (PUT / PUT_REF of FRESH).
+    if: l2_empty_struct_assign_shape(stmt, l2_rw_mi) = 1
         if: l2_rw_empty_assign(stmt, into, @ node) != 0
             return: 1
         \made: 1

@@ -108,9 +108,11 @@ int: l2_walk_methods 0
 @: int l2_rw_pre 0
 int: l2_rw_pre_n 0
 int: l2_rw_pre_cap 0
-# T4b class 2: 0 until own row k's binding line in the walk being built, then 1.
-# The native emitter's l2_own_bseq is a different pass and is not this array.
+# T4b class 2: 0 until own row k's binding line in the walk being built, then a
+# sequence number (l2_rw_bseq_n). Leaving a nested body clears marks set inside
+# it, as l2_emit_body does. The native emitter's l2_own_bseq is a different pass.
 @: int l2_rw_bseq 0
+int: l2_rw_bseq_n 0
 # The walked root's sends (`sendMessage: X`), one generated primitive l2_send<k> each: the sites
 # recorded by the top-level count pass (l2_rw_send_rec 1), the next site's number, and per site its
 # payload's field count, each field's kind (1 an int expression, 2 a text literal) and text atom.
@@ -16632,28 +16634,32 @@ fn: l2_rw_find (const: @(LmP0Text t)) int
         return: 0 - 1
 return: l2_own_find_last(l2_rw_mi, t)
 
-# The method-level numeric own field named t that is already bound to a formal, or -1.
+# The numeric own field named t that is already bound to a formal, or -1.
+# The latest mark wins (l2_formal_row). A hosted field counts once its line has
+# run; leaving its body clears that mark.
 fn: l2_rw_bound (const: @(LmP0Text t)) int
     int: oi 0
     int: best 0 - 1
+    int: bestn 0
     if: l2_rw_bseq = 0 || l2_rw_mi = l2_e
         return: 0 - 1
     while: oi < l2_own_n
-        if: oi != l2_own_excl && l2_own_mi[oi] = l2_rw_mi && l2_rw_bseq[oi] > 0 && l2_own_host[oi] = 0 && l2_own_fid[oi] < 0 && l2_own_uchild[oi] >= 0 && l2_rw_num_ty(l2_own_ty[oi]) != 0 && l2_text_same(l2_own_name[oi], t) != 0
+        if: oi != l2_own_excl && l2_own_mi[oi] = l2_rw_mi && l2_rw_bseq[oi] > bestn && (l2_own_uchild[oi] >= 0 || l2_own_fchild[oi] >= 0) && l2_rw_num_ty(l2_own_ty[oi]) != 0 && l2_text_same(l2_own_name[oi], t) != 0
             best: oi
+            bestn: l2_rw_bseq[oi]
         oi: oi + 1
     ---
 return: best
 
-# The method-level numeric own field named t that a formal's first store will bind, or -1.
-# It is not bound yet. A hosted field is class 3 and is not this row.
+# The visible numeric own field named t that a formal's first store will bind, or -1.
+# Not bound yet. A hosted field is visible only while its body is the scope (class 3).
 fn: l2_rw_formal_slot (const: @(LmP0Text t)) int
     int: oi 0
     int: best 0 - 1
     if: l2_rw_bseq = 0 || l2_rw_mi = l2_e || l2_formal_find(l2_rw_mi, t) < 0
         return: 0 - 1
     while: oi < l2_own_n
-        if: oi != l2_own_excl && l2_own_mi[oi] = l2_rw_mi && l2_rw_bseq[oi] = 0 && l2_own_host[oi] = 0 && l2_own_fid[oi] < 0 && l2_own_uchild[oi] >= 0 && l2_rw_num_ty(l2_own_ty[oi]) != 0 && l2_text_same(l2_own_name[oi], t) != 0
+        if: oi != l2_own_excl && l2_own_mi[oi] = l2_rw_mi && l2_rw_bseq[oi] = 0 && (l2_own_host[oi] = 0 || l2_scope_has(l2_own_host[oi]) != 0) && (l2_own_uchild[oi] >= 0 || l2_own_fchild[oi] >= 0) && l2_rw_num_ty(l2_own_ty[oi]) != 0 && l2_text_same(l2_own_name[oi], t) != 0 && l2_frame_head(l2_own_host[oi], "catch") = 0
             best: oi
         oi: oi + 1
     ---
@@ -16662,6 +16668,7 @@ return: best
 # Clear the walk's binding marks. The array lives for the whole translation.
 fn: l2_rw_bseq_zero () int
     int: i 0
+    l2_rw_bseq_n: 0
     if: l2_own_n <= 0
         return: 0
     if: l2_rw_bseq = 0
@@ -16675,6 +16682,107 @@ fn: l2_rw_bseq_zero () int
         i: i + 1
     ---
 return: 0
+
+# Remember that own row oi's binding line has been reached.
+fn: l2_rw_bseq_mark (int: oi) int
+    if: l2_rw_bseq = 0 || oi < 0 || oi >= l2_own_n
+        return: 1
+    l2_rw_bseq_n: l2_rw_bseq_n + 1
+    l2_rw_bseq[oi]: l2_rw_bseq_n
+return: 0
+
+# Enter host's body. saved is the mark counter; marks above it belong to this body.
+fn: l2_rw_enter (const: @(LmP0Node host); @: int saved) int
+    \saved: l2_rw_bseq_n
+return: l2_scope_push(host)
+
+# Leave the body: drop its scope and every binding mark made inside it (l2_emit_body).
+fn: l2_rw_leave (int: saved) int
+    int: k 0
+    if: l2_scope_pop() != 0
+        return: 1
+    if: l2_rw_bseq = 0
+        return: 0
+    while: k < l2_own_n
+        if: l2_rw_bseq[k] > saved
+            l2_rw_bseq[k]: 0
+        k: k + 1
+    ---
+return: 0
+
+# A numeric own field declared in a nested body, not a catch parameter (T4b class 3).
+fn: l2_rw_is_hosted (int: oi) int
+    if: oi < 0 || oi >= l2_own_n || l2_own_host[oi] = 0
+        return: 0
+    if: l2_own_fid[oi] < 0 || l2_own_fchild[oi] < 0 || l2_rw_num_ty(l2_own_ty[oi]) = 0
+        return: 0
+    if: l2_frame_head(l2_own_host[oi], "catch") != 0
+        return: 0
+return: 1
+
+# The control body fid, as a reference from this activation's data (holder 0).
+# A top-level body is AT(holder 0, its child). A nested body is OF of its parent.
+fn: l2_rw_host_at (int: parent; int: fid; @: int out) int
+    int: base
+    if: fid < 0 || fid >= l2_for_n || l2_for_uchild[fid] < 0
+        return: 1
+    if: l2_for_parent[fid] < 0
+        if: l2_rw_frame(parent, "LMX_WALK_OP_AT", 3, out) != 0
+            return: 1
+        if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %uU) != c.LMX_WALK_OK\n            return: 1\n", \out, (cast: (unsigned) l2_for_uchild[fid])) < 0
+            return: 1
+        return: 0
+    ---
+    if: l2_rw_frame(parent, "LMX_WALK_OP_OF", 3, out) != 0
+        return: 1
+    if: l2_rw_host_at(\out, l2_for_parent[fid], @ base) != 0 || l2_rw_put(\out, 1, base) != 0
+        return: 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %uU) != c.LMX_WALK_OK\n            return: 1\n", \out, (cast: (unsigned) l2_for_uchild[fid])) < 0
+        return: 1
+return: 0
+
+# Read hosted field oi: OF(its control body, its child). The cell, as AT is for a method field.
+fn: l2_rw_host_read (int: parent; int: oi; @: int out) int
+    int: base
+    if: l2_rw_frame(parent, "LMX_WALK_OP_OF", 3, out) != 0
+        return: 1
+    if: l2_rw_host_at(\out, l2_own_fid[oi], @ base) != 0 || l2_rw_put(\out, 1, base) != 0
+        return: 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %uU) != c.LMX_WALK_OK\n            return: 1\n", \out, (cast: (unsigned) l2_own_fchild[oi])) < 0
+        return: 1
+return: 0
+
+# Write hosted field oi: PUT_OF(its control body, its child, value).
+fn: l2_rw_host_put (int: into; int: oi; @: LmP0Field first; int: n; @: int out) int
+    int: value
+    int: h
+    if: l2_rw_frame(into, "LMX_WALK_OP_PUT_OF", 4, out) != 0
+        return: 1
+    if: l2_rw_host_at(\out, l2_own_fid[oi], @ h) != 0 || l2_rw_put(\out, 1, h) != 0
+        return: 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %uU) != c.LMX_WALK_OK\n            return: 1\n", \out, (cast: (unsigned) l2_own_fchild[oi])) < 0
+        return: 1
+    if: l2_rw_texpr(first, n, l2_own_ty[oi], \out, @ value) != 0
+        return: 1
+return: l2_rw_put(\out, 3, value)
+
+# Carry a formal into a hosted field: PUT_OF of the argument, read before the mark.
+fn: l2_rw_host_carry (int: into; int: oi; @: int out) int
+    int: arg
+    int: h
+    int: j
+    j: l2_formal_find(l2_rw_mi, l2_own_name[oi])
+    if: j < 0
+        return: 1
+    if: l2_rw_frame(into, "LMX_WALK_OP_PUT_OF", 4, out) != 0
+        return: 1
+    if: l2_rw_host_at(\out, l2_own_fid[oi], @ h) != 0 || l2_rw_put(\out, 1, h) != 0
+        return: 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %uU) != c.LMX_WALK_OK\n            return: 1\n", \out, (cast: (unsigned) l2_own_fchild[oi])) < 0
+        return: 1
+    if: l2_rw_arg(\out, j, @ arg) != 0
+        return: 1
+return: l2_rw_put(\out, 3, arg)
 
 # A declaration of a formal's field with no initializer carries the argument into the cell.
 fn: l2_rw_carry (int: into; int: oi; @: int out) int
@@ -16697,7 +16805,10 @@ fn: l2_rw_own_ty (const: @(LmP0Text t)) int
     if: oi < 0 || l2_rw_seen(oi) = 0
         return: 0 - 9
     # A catch parameter is a hosted numeric cell of its catch frame (l2_b of that frame).
+    # T4b class 3: any other numeric field declared in a nested body, in a method.
     if: l2_own_host[oi] != 0
+        if: l2_rw_is_hosted(oi) != 0 && l2_rw_mi != l2_e
+            return: l2_own_ty[oi]
         if: l2_frame_head(l2_own_host[oi], "catch") = 0 || l2_own_fid[oi] < 0 || l2_own_fchild[oi] < 0 || l2_rw_num_ty(l2_own_ty[oi]) = 0
             return: 0 - 9
         return: l2_own_ty[oi]
@@ -17976,6 +18087,8 @@ fn: l2_rw_elemput (int: into; int: oi; size_t: index; @: LmP0Field first; int: n
 return: l2_rw_put(\out, 3, value)
 
 fn: l2_rw_own (int: parent; int: oi; @: int out) int
+    if: l2_rw_is_hosted(oi) != 0 && l2_rw_mi != l2_e
+        return: l2_rw_host_read(parent, oi, out)
     if: l2_rw_frame(parent, "LMX_WALK_OP_AT", 3, out) != 0
         return: 1
 return: l2_rw_cell(\out, oi)
@@ -17983,6 +18096,8 @@ return: l2_rw_cell(\out, oi)
 # An assignment of the root's own int field oi from the n fields at `first`, a node of `into`.
 fn: l2_rw_assign (int: into; int: oi; @: LmP0Field first; int: n; @: int out) int
     int: value
+    if: l2_rw_is_hosted(oi) != 0 && l2_rw_mi != l2_e
+        return: l2_rw_host_put(into, oi, first, n, out)
     if: l2_rw_frame(into, "LMX_WALK_OP_PUT", 4, out) != 0 || l2_rw_cell(\out, oi) != 0 || l2_rw_texpr(first, n, l2_own_ty[oi], \out, @ value) != 0
         return: 1
 return: l2_rw_put(\out, 3, value)
@@ -18005,6 +18120,8 @@ fn: l2_rw_own_row (const: @(LmP0Node node); const: @(LmP0Text t)) int
     if: l2_rw_seen(oi) = 0
         return: 0 - 2
     if: l2_own_host[oi] != 0
+        if: l2_rw_is_hosted(oi) != 0 && l2_rw_mi != l2_e
+            return: oi
         if: l2_frame_head(l2_own_host[oi], "catch") = 0 || l2_own_fid[oi] < 0 || l2_own_fchild[oi] < 0 || l2_rw_num_ty(l2_own_ty[oi]) = 0
             l2_rw_refuse(node, "a field declared in a nested body")
             return: 0 - 1
@@ -18783,13 +18900,37 @@ fn: l2_rw_count (@: LmP0Field first) int
     int: save l2_rw_emit
     int: save_i l2_rw_send_i
     int: save_rec l2_rw_send_rec
+    int: save_n l2_rw_bseq_n
     int: made 0
     int: bad 0
+    int: i 0
+    @: int snap 0
+    # The count walk is a second pass over the same statements (emit calls it before
+    # writing). Binding marks it sets must not stick, or the emit walk would see a
+    # field as already bound on its binding line.
+    if: l2_rw_bseq != 0 && l2_own_n > 0
+        snap: (cast: (@: int) calloc((cast: (size_t) l2_own_n), c.sizeof(c.int)))
+        if: snap = 0
+            return: 0 - 1
+        while: i < l2_own_n
+            snap[i]: l2_rw_bseq[i]
+            i: i + 1
+        ---
+    ---
     l2_rw_emit: 0
     l2_rw_send_rec: 0
     if: l2_rw_stmts(first, 0 - 2, 0, @ made) != 0
         bad: 1
     ---
+    if: snap != 0
+        i: 0
+        while: i < l2_own_n
+            l2_rw_bseq[i]: snap[i]
+            i: i + 1
+        ---
+        free((cast: (@: void) snap))
+    ---
+    l2_rw_bseq_n: save_n
     l2_rw_emit: save
     l2_rw_send_i: save_i
     l2_rw_send_rec: save_rec
@@ -19277,6 +19418,7 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
     int: node
     int: oi
     int: idx
+    int: bsave 0
     c.array: [32]: char pn
     \made: 0
     stmt: field\value
@@ -19314,12 +19456,12 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
             return: 0
         if: l2_rw_frame(into, "LMX_WALK_OP_IF", 3, @ node) != 0 || l2_rw_lit(node, 1, @ t) != 0 || l2_rw_put(node, 1, t) != 0
             return: 1
-        if: l2_scope_push(stmt) != 0
+        if: l2_rw_enter(stmt, @ bsave) != 0
             return: 1
         if: l2_rw_body(stmt\as\structure\first_field, node, 2) != 0
-            l2_scope_pop()
+            l2_rw_leave(bsave)
             return: 1
-        if: l2_scope_pop() != 0
+        if: l2_rw_leave(bsave) != 0
             return: 1
         \made: 1
         if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, node) < 0
@@ -19372,12 +19514,22 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
             return: 1
         if: l2_rw_expr(cond, n - 1, node, @ t) != 0 || l2_rw_put(node, 1, t) != 0
             return: 1
+        if: l2_rw_enter(last\value, @ bsave) != 0
+            return: 1
         if: l2_rw_body(last\value\as\structure\first_field, node, 2) != 0
+            l2_rw_leave(bsave)
+            return: 1
+        if: l2_rw_leave(bsave) != 0
             return: 1
         if: els != 0
             if: els\value\as\frame\body = 0
                 return: l2_rw_refuse(els\value, "this else")
+            if: l2_rw_enter(els\value, @ bsave) != 0
+                return: 1
             if: l2_rw_body(els\value\as\frame\body\first_field, node, 3) != 0
+                l2_rw_leave(bsave)
+                return: 1
+            if: l2_rw_leave(bsave) != 0
                 return: 1
             \next: l2_next_active(els\next)
         ---
@@ -19407,7 +19559,12 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
             return: 1
         if: l2_rw_expr(cond, n - 1, node, @ t) != 0 || l2_rw_put(node, 1, t) != 0
             return: 1
+        if: l2_rw_enter(last\value, @ bsave) != 0
+            return: 1
         if: l2_rw_body_pre(last\value\as\structure\first_field, node, 2, k, l2_rw_pre_n - k) != 0
+            l2_rw_leave(bsave)
+            return: 1
+        if: l2_rw_leave(bsave) != 0
             return: 1
         \made: 1
         if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, node) < 0
@@ -19478,17 +19635,21 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
         ---
         if: oi >= l2_own_n
             return: l2_rw_refuse(stmt, "this declaration")
-        if: l2_own_host[oi] != 0 || l2_own_fid[oi] >= 0
+        if: (l2_own_host[oi] != 0 || l2_own_fid[oi] >= 0) && (l2_rw_is_hosted(oi) = 0 || l2_rw_mi = l2_e)
             return: l2_rw_refuse(stmt, "a field declared in a nested body")
-        if: l2_rw_num_ty(l2_own_ty[oi]) = 0 || l2_own_uchild[oi] < 0
+        if: l2_rw_is_hosted(oi) = 0 && (l2_rw_num_ty(l2_own_ty[oi]) = 0 || l2_own_uchild[oi] < 0)
             return: l2_rw_refuse_ty(stmt, oi)
         f: l2_next_active(f\next)
         if: f = 0
             # T4b class 2: `int: n` with no initializer, n a formal, carries the argument.
+            # Class 3: the same carry into a field declared in the nested body.
             if: l2_rw_formal_slot(l2_own_name[oi]) = oi
-                if: l2_rw_carry(into, oi, @ node) != 0
+                if: l2_rw_is_hosted(oi) != 0 && l2_rw_host_carry(into, oi, @ node) != 0
                     return: 1
-                l2_rw_bseq[oi]: 1
+                if: l2_rw_is_hosted(oi) = 0 && l2_rw_carry(into, oi, @ node) != 0
+                    return: 1
+                if: l2_rw_bseq_mark(oi) != 0
+                    return: 1
                 \made: 1
                 if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, node) < 0
                     return: 1
@@ -19507,8 +19668,8 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
         l2_own_excl: 0 - 1
         if: k != 0
             return: 1
-        if: l2_rw_formal_slot(l2_own_name[oi]) = oi
-            l2_rw_bseq[oi]: 1
+        if: l2_rw_formal_slot(l2_own_name[oi]) = oi && l2_rw_bseq_mark(oi) != 0
+            return: 1
         \made: 1
         if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, node) < 0
             return: 1
@@ -19580,6 +19741,25 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
         ---
         return: l2_rw_refuse(stmt, "a reference assignment")
     ---
+    # An assignment whose name is a field of the nested body (collect_asgn binds a
+    # parameter's store to that body's own field). It hides an outer field of the
+    # same name for the body only. The value is read before this store binds it.
+    oi: l2_own_find_last(l2_rw_mi, h)
+    if: l2_rw_is_hosted(oi) != 0 && l2_scope_has(l2_own_host[oi]) != 0
+        n: l2_count_active(stmt\as\frame\body)
+        if: n < 1
+            return: l2_rw_refuse(stmt, "this assignment")
+        k: 0
+        if: l2_rw_bseq != 0 && l2_rw_bseq[oi] = 0 && l2_own_formal(l2_rw_mi, oi) >= 0
+            k: 1
+        if: l2_rw_assign(into, oi, stmt\as\frame\body\first_field, n, @ node) != 0
+            return: 1
+        if: k != 0 && l2_rw_bseq_mark(oi) != 0
+            return: 1
+        \made: 1
+        if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, node) < 0
+            return: 1
+        return: 0
     # An assignment of the root's own numeric field.
     oi: l2_rw_own_row(stmt, h)
     if: oi = 0 - 1
@@ -19603,7 +19783,8 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
             return: l2_rw_refuse(stmt, "this assignment")
         if: l2_rw_assign(into, oi, stmt\as\frame\body\first_field, n, @ node) != 0
             return: 1
-        l2_rw_bseq[oi]: 1
+        if: l2_rw_bseq_mark(oi) != 0
+            return: 1
         \made: 1
         if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, node) < 0
             return: 1
@@ -19670,9 +19851,10 @@ return: 0
 # (l2_rw_quiet); the refusal comes where a walk is needed.
 # Its shape first (l2_rw_may): a method with a native body, no dynamic inputs and no throw, a result
 # that is a number (int, size_t, unsigned, ulong) or none, number formals or a Structure formal
-# (`T: m` and `@: T m`, T4b class 1), and own fields that are neither declared in a nested body
-# nor, unless it is a method-level number, named like a formal (T4b class 2). A callable
-# formal and any other non-number formal stay out. A field declared in a nested body stays out.
+# (`T: m` and `@: T m`, T4b class 1), and own fields that are neither a non-numeric field
+# declared in a nested body nor, unless it is a number, named like a formal (T4b class 2).
+# A numeric field declared in a nested body is class 3. A callable formal and any other
+# non-number formal stay out. A catch parameter stays out.
 fn: l2_rw_may (int: mi) int
     int: j 0
     int: oi 0
@@ -19692,11 +19874,13 @@ fn: l2_rw_may (int: mi) int
         j: j + 1
     ---
     while: oi < l2_own_n
-        if: l2_own_mi[oi] = mi && l2_own_host[oi] != 0
+        # Class 3 admits a numeric field of a nested body. A catch parameter, an array
+        # and a Structure field declared there still keep the method out.
+        if: l2_own_mi[oi] = mi && l2_own_host[oi] != 0 && l2_rw_is_hosted(oi) = 0
             return: 0
         # A method-level numeric field named like a formal is class 2. A pointer or a
-        # Structure field of that name stays out.
-        if: l2_own_mi[oi] = mi && l2_formal_find(mi, l2_own_name[oi]) >= 0 && (l2_rw_num_ty(l2_own_ty[oi]) = 0 || l2_own_uchild[oi] < 0)
+        # Structure field of that name stays out. A hosted numeric field is class 3.
+        if: l2_own_mi[oi] = mi && l2_formal_find(mi, l2_own_name[oi]) >= 0 && l2_rw_is_hosted(oi) = 0 && (l2_rw_num_ty(l2_own_ty[oi]) = 0 || l2_own_uchild[oi] < 0)
             return: 0
         oi: oi + 1
     ---

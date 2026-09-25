@@ -1,0 +1,46 @@
+# T4b class 3. A numeric field declared in a nested body is a cell of that body's
+# Structure (OF / PUT_OF from holder 0), not a slot of the method. A formal's binding
+# line inside the body ends with the body (l2_emit_body): after it the name is the
+# argument again. A binding made before the body still holds after it.
+# nest(1) is 4 and nest(0) is 3, so nest(1) * 10 + nest(0) is 43.
+# keep(3) is 3: `n: n + 1` inside the if binds the if's own field, and the
+# return after the if reads the method field the declaration carried.
+# branch(3) is 43. Success is 7.
+fn: nest (int: c) int
+    int: a 0
+    int: i 0
+    if: c
+        int: x 2
+        a: x
+    else:
+        int: y 1
+        a: y
+    while: i < 2
+        int: z 1
+        a: a + z
+        i: i + 1
+    return: a
+
+fn: keep (int: n) int
+    int: n
+    if: 1
+        n: n + 1
+    return: n
+
+fn: branch (int: n) int
+    int: a 0
+    if: 1
+        int: n
+        n: n + 1
+        a: n
+    return: a * 10 + n
+
+int: r 0
+if: nest(1) * 10 + nest(0) = 43
+    r: r + 1
+if: keep(3) = 3
+    r: r + 2
+if: branch(3) = 43
+    r: r + 4
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

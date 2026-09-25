@@ -478,6 +478,10 @@ prototype:
     fn: l2_rw_lit (int: parent; int: value; @: int out) int
     fn: l2_rw_cell (int: node; int: oi) int
     fn: l2_rw_own (int: parent; int: oi; @: int out) int
+    fn: l2_rw_elem_of (const: @(LmP0Text t); @: size_t index) int
+    fn: l2_rw_elem_ty (int: oi) int
+    fn: l2_rw_elem (int: parent; int: oi; size_t: index; @: int out) int
+    fn: l2_rw_elemput (int: into; int: oi; size_t: index; @: LmP0Field first; int: n; @: int out) int
     fn: l2_rw_plain (int: parent; int: n; @: int out) int
     fn: l2_rw_assign (int: into; int: oi; @: LmP0Field first; int: n; @: int out) int
     fn: l2_rw_has_slash (const: @(LmP0Text t)) int
@@ -16811,6 +16815,7 @@ fn: l2_rw_opty (const: @(LmP0Node node)) int
     int: ty
     int: idx
     int: pmi 0 - 1
+    size_t: eix 0U
     c.array: [40]: int path
     if: node = 0
         return: 0 - 1
@@ -16844,6 +16849,9 @@ fn: l2_rw_opty (const: @(LmP0Node node)) int
             return: path[3]
         return: 0 - 1
     ---
+    idx: l2_rw_elem_of(t, @ eix)
+    if: idx >= 0
+        return: l2_rw_elem_ty(idx)
     if: l2_rw_mi != l2_e && l2_formal_find(l2_rw_mi, t) >= 0
         return: l2_own_ty_of_param(l2_ft(l2_rw_mi, l2_formal_find(l2_rw_mi, t)))
     ty: l2_rw_own_ty(t)
@@ -16905,6 +16913,16 @@ fn: l2_rw_path_run (@: LmP0Field f; int: avail) int
         ---
         n: n + 2
         s: l2_next_active(g\next)
+    ---
+    # An element `x[N]` of a bare name (-170): its four fields x [ N ] are one operand, spelled as a
+    # statement's head spells it (l2_rw_elem_of).
+    if: n = 1 && avail >= 4 && s != 0 && s\value != 0 && s\value\kind = c.LM_P0_NODE_ATOM && s\value\as != 0 && l2_text_eq(s\value\as\atom, "[") != 0
+        p3: l2_next_active(s\next)
+        p4: 0
+        if: p3 != 0
+            p4: l2_next_active(p3\next)
+        if: p4 != 0 && p3\value != 0 && p3\value\kind = c.LM_P0_NODE_ATOM && p4\value != 0 && p4\value\kind = c.LM_P0_NODE_ATOM && l2_text_eq(p4\value\as\atom, "]") != 0
+            return: 4
     ---
 return: n
 
@@ -17540,6 +17558,50 @@ fn: l2_rw_bind_op (int: oi) const: @: char
 return: "LMX_WALK_OP_PUT"
 
 # A read of the root's own int field oi.
+# ARRAYS IN THE BODY BEING BUILT (-170, over grok_bot's ELEM / ELEMPUT roles): an element `x[i]` of
+# an own Array x of the body -- the Array's descriptor in the own field's slot, [op, holder, slot]
+# as AT has it (l2_rw_cell), the literal index next -- for the element types the roles take: int,
+# char, size_t, ulong (own storage 4, 5, 7, 37).  x's row, or -1 when t is not such an element; the
+# index goes to `index`.
+fn: l2_rw_elem_of (const: @(LmP0Text t); @: size_t index) int
+    int: oi 0 - 1
+    if: t = 0 || l2_own_index_head(t, l2_rw_mi, @ oi, index) != 0 || oi < 0
+        return: 0 - 1
+    if: l2_rw_seen(oi) = 0 || l2_own_host[oi] != 0 || l2_own_fid[oi] >= 0 || l2_own_uchild[oi] < 0 || l2_rw_elem_ty(oi) < 0
+        return: 0 - 1
+return: oi
+
+# The element's number type (own storage code) of own Array oi, or -1.
+fn: l2_rw_elem_ty (int: oi) int
+    if: l2_own_ty[oi] = 4
+        return: 0
+    if: l2_own_ty[oi] = 5
+        return: 1
+    if: l2_own_ty[oi] = 7
+        return: 2
+    if: l2_own_ty[oi] = 37
+        return: 36
+return: 0 - 1
+
+# ELEM [elem, holder, slot, index]: the element's value.
+fn: l2_rw_elem (int: parent; int: oi; size_t: index; @: int out) int
+    if: l2_rw_frame(parent, "LMX_WALK_OP_ELEM", 4, out) != 0 || l2_rw_cell(\out, oi) != 0
+        return: 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 3U, %zuU) != c.LMX_WALK_OK\n            return: 1\n", \out, index) < 0
+        return: 1
+return: 0
+
+# ELEMPUT [elemput, holder, slot, index, value]: `x[i]: v`, v at the element's type.
+fn: l2_rw_elemput (int: into; int: oi; size_t: index; @: LmP0Field first; int: n; @: int out) int
+    int: value
+    if: l2_rw_frame(into, "LMX_WALK_OP_ELEMPUT", 5, out) != 0 || l2_rw_cell(\out, oi) != 0
+        return: 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 3U, %zuU) != c.LMX_WALK_OK\n            return: 1\n", \out, index) < 0
+        return: 1
+    if: l2_rw_texpr(first, n, l2_rw_elem_ty(oi), \out, @ value) != 0
+        return: 1
+return: l2_rw_put(\out, 4, value)
+
 fn: l2_rw_own (int: parent; int: oi; @: int out) int
     if: l2_rw_frame(parent, "LMX_WALK_OP_AT", 3, out) != 0
         return: 1
@@ -17714,6 +17776,7 @@ return: 0
 # expression.
 fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) int
     int: v 0
+    size_t: eix 0U
     int: oi
     int: idx
     int: pmi 0 - 1
@@ -17780,6 +17843,9 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
         return: l2_rw_l2(node)
     if: l2_rw_has_slash(t) != 0
         return: l2_rw_path_read(node, t, parent, out)
+    oi: l2_rw_elem_of(t, @ eix)
+    if: oi >= 0
+        return: l2_rw_elem(parent, oi, eix, out)
     # A reference where a reference is asked (`m = 0`, -179): the field's pointer cell, as AT
     # gives it; the walker's EQ compares the address it holds.
     if: ty >= 1000
@@ -18586,6 +18652,7 @@ return: l2_rw_put(parent, slot, t)
 # Statement `field`: its step (if it makes one) goes to container `into` at slot `slot`, and
 # `made` says whether one was made; `next` is the field after the statement.
 fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @: int made) int
+    size_t: eix 0U
     @: LmP0Node stmt
     @: LmP0Text h
     @: LmP0Field f
@@ -18757,7 +18824,15 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
         return: 0
     if: l2_text_eq(h, "implements")
         return: l2_rw_refuse(stmt, "implements")
+    # `[]: T x n`, an own Array of the body (-170): the graph build makes its descriptor in the
+    # field's slot, as natively; nothing runs.
     if: l2_text_eq(h, "[]")
+        oi: 0
+        while: oi < l2_own_n && (l2_own_decl[oi] != stmt || l2_own_mi[oi] != l2_rw_mi)
+            oi: oi + 1
+        ---
+        if: oi < l2_own_n && l2_own_host[oi] = 0 && l2_own_fid[oi] < 0 && l2_own_uchild[oi] >= 0 && l2_rw_elem_ty(oi) >= 0 && stmt\as\frame\body != 0 && l2_count_active(stmt\as\frame\body) = 3
+            return: 0
         return: l2_rw_refuse(stmt, "an array")
     # A declaration of the root's own field: a number (int, char, size_t, unsigned, ulong), set by
     # its initializer if it has one.
@@ -18812,6 +18887,20 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
     idx: l2_find_method(h)
     if: idx >= 0 && idx != l2_e
         if: l2_rw_call(stmt, idx, stmt\as\frame\body\first_field, into, @ node) != 0
+            return: 1
+        \made: 1
+        if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, node) < 0
+            return: 1
+        return: 0
+    # `x[i]: v` into an own Array's element (-170): ELEMPUT.
+    oi: l2_rw_elem_of(h, @ eix)
+    if: oi >= 0
+        n: 0
+        if: stmt\as\frame\body != 0
+            n: l2_count_active(stmt\as\frame\body)
+        if: n < 1
+            return: l2_rw_refuse(stmt, "this assignment")
+        if: l2_rw_elemput(into, oi, eix, stmt\as\frame\body\first_field, n, @ node) != 0
             return: 1
         \made: 1
         if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, node) < 0

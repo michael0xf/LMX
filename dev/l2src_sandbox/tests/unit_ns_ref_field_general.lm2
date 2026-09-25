@@ -4,15 +4,11 @@
 # Message-only kind. Holder declares one of each: @: int p (a core word) and
 # @: Model q (another named Structure), proving both spellings are ADMITTED.
 # p round-trips a live address at runtime (non-null after assignment,
-# pointer-identical to the address taken). q's own runtime round-trip is
-# left out here: taking the address of a Structure-typed own field (`@mo`,
-# needed to get a Model address to assign into q) hits a separate, pre-
-# existing bug (l2_eval_fields's naive "@ " + token emission takes the
-# address of the working-copy POINTER variable instead of using its value --
-# a double-indirection -- unrelated to this ticket's field-kind work, found
-# while building this witness since no prior fixture ever executed that
-# combination; reported separately, not fixed here). Holder\q is exercised
-# for declaration only until that is fixed.
+# pointer-identical to the address taken).
+# D-53: q round-trips too.  An own Structure field is a slot holding the
+# Structure itself (-189 c3b-3), so `@mo` is that reference, the slot's value:
+# h\q takes it, is non-null and identical to `@mo`.  (A field read THROUGH
+# h\q, `h\q\value`, is D-76, not this witness.)  Success is 7.
 Model:
     size_t: value 1U
 end: Model
@@ -24,6 +20,7 @@ end: Holder
 
 fn: check () int
     Holder: h
+    Model: mo
     int: n
     @: int pn
     n: 5
@@ -33,12 +30,14 @@ fn: check () int
         return: 1
     if: h\p != pn
         return: 3
-return: 0
+    h\q: @mo
+    if: h\q = 0
+        return: 4
+    if: h\q != @mo
+        return: 5
+    if: h\q != mo
+        return: 6
+return: 7
 
-int: got
-got: check()
-if: got != 0
-    sendMessage: exit(exit_code: got; stdout: ""; stderr: "")
-    return
-sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
 return

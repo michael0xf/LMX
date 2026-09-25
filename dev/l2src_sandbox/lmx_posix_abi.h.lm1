@@ -1,0 +1,36 @@
+include: "<pthread.h>" "<time.h>" "<errno.h>"
+
+# Names the POSIX bodies need and the shared headers must not grow.
+# Only those bodies predef this unit. The Windows body does not, so the L3
+# type budget on Windows stays the count from slice (a). foreign: emits no C;
+# the structs below are the heap records stored in the portable void* slots
+# (LmxProcessDeadline.event / LmxSchedule.lane). pthread_t is not a pointer,
+# so it lives in the record, not in the slot.
+
+foreign: pthread_mutex_t
+foreign: pthread_cond_t
+foreign: pthread_condattr_t
+foreign: pthread_t
+# The C type is `struct timespec`, not a typedef. The alias is the L1 name.
+type: LmxPosixTimespec struct timespec
+
+# One manual-reset wait: the flag remembers a signal that arrived before the
+# waiter, which a bare condvar does not. The condvar clock is CLOCK_MONOTONIC.
+struct: LmxPosixDeadline
+    pthread_mutex_t: mu
+    pthread_cond_t: cv
+    int: signaled
+    pthread_t: thread
+end: LmxPosixDeadline
+
+# One lane. `finished` is set by the lane as its last act. Reap reads it and
+# joins only when it is already set, so a still-running lane is not waited on.
+# `slot` is the schedule record the lane was started for.
+struct: LmxPosixLane
+    pthread_mutex_t: mu
+    int: finished
+    pthread_t: thread
+    @: void slot
+end: LmxPosixLane
+
+fnptr: LmxPosixStart (@: void arg) @: void

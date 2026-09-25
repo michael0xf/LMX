@@ -1,0 +1,198 @@
+predef: "l2src/lmx_manager.h.lm1"
+predef: "l2src/lmx_manager_running.h.lm1"
+predef: "l2src/lmx_implements.h.lm1"
+predef: "l2src/lmx_clock.lm1"
+predef: "l2src/lmx_turn.lm1"
+predef: "l2src/lmx_posix_abi.h.lm1"
+predef: "l1src/libc_abi.lm1"
+
+# lmx_manager_running.lm1 - the SECOND implementation of the manager interface: it
+# gives every record a lane of its own, an OS thread that loops over that one object's
+# turns. Same six operations, same signatures, same LmxManager; only the binding differs.
+#
+# The platform is reached only through pthread_create, pthread_join, and nanosleep.
+# A lane ends by itself. Nothing kills a lane; a close joins the ones that are still there.
+#
+# Reap does not wait. pthread_join would. The lane sets `finished` as its last act;
+# reap joins only when that flag is already set. pthread_tryjoin_np is not used.
+
+fn: lmx_manager_running_body (@: void arg) @: void
+    @: LmxPosixLane lane
+    @: LmxSchedule slot
+    @: LmxThread t
+    ulong: lane_now 0U
+    LmxPosixTimespec: pause
+    if: arg = 0
+        return: 0
+    ---
+    lane: (cast: (@: LmxPosixLane) arg)
+    slot: (cast: (@: LmxSchedule) lane\slot)
+    if: slot = 0 || slot\owner = 0
+        c.pthread_mutex_lock(@ lane\mu)
+        lane\finished: 1
+        c.pthread_mutex_unlock(@ lane\mu)
+        return: 0
+    ---
+    t: (cast: (@: LmxThread) slot\owner)
+    c.pause.tv_sec: 0
+    c.pause.tv_nsec: 1000000
+    while: lmx_thread_running(t) != 0 && lmx_schedule_state(slot) = c.LMX_SCHEDULE_WAITING
+        lane_now: lmx_clock_ticks()
+        lmx_thread_turn(t, 0, lane_now)
+        lmx_schedule_tick(slot, lane_now)
+        c.nanosleep(@ pause, (cast: (@: LmxPosixTimespec) 0))
+    ---
+    lmx_thread_finish(t)
+    c.pthread_mutex_lock(@ lane\mu)
+    lane\finished: 1
+    c.pthread_mutex_unlock(@ lane\mu)
+return: 0
+
+fn: lmx_manager_running_init (@: LmxManager m) int
+    if: m = 0
+        return: c.LMX_MANAGER_INVALID
+    m\owner: 0
+    m\cursor: 0U
+    m\api.init: lmx_manager_running_init
+    m\api.add: lmx_manager_running_add
+    m\api.remove: lmx_manager_running_remove
+    m\api.take: lmx_manager_running_take
+    m\api.count: lmx_manager_running_count
+    m\api.step: lmx_manager_running_step
+    m\api.round: lmx_manager_running_round
+return: c.LMX_MANAGER_OK
+
+fn: lmx_manager_running_add (@: LmxManager m; @: LmxSchedule slot) int
+    @: LmxThread child
+    @: LmxThread parent
+    if: m = 0 || slot = 0 || slot\owner = 0
+        return: c.LMX_MANAGER_INVALID
+    if: lmx_domain_type(slot\arena, slot\owner) != c.LMX_DOMAIN_THREAD
+        return: c.LMX_MANAGER_INVALID
+    ---
+    child: (cast: (@: LmxThread) slot\owner)
+    parent: lmx_thread_parent(child)
+    if: parent = 0 || lmx_manager_bind(m, parent) != c.LMX_MANAGER_OK
+        return: c.LMX_MANAGER_INVALID
+    if: lmx_thread_child_is(parent, child) = 0
+        return: c.LMX_MANAGER_INVALID
+return: c.LMX_MANAGER_OK
+
+fn: lmx_manager_running_take (@: LmxManager m) @: LmxSchedule
+return: lmx_manager_take(m)
+
+fn: lmx_manager_running_remove (@: LmxManager m; @: LmxSchedule slot) int
+return: lmx_manager_remove(m, slot)
+
+fn: lmx_manager_running_count (@: LmxManager m) size_t
+return: lmx_manager_count(m)
+
+fn: lmx_manager_running_lane_start (@: LmxSchedule slot) int
+    @: LmxThread t
+    @: LmxPosixLane lane
+    if: slot = 0 || slot\owner = 0
+        return: c.LMX_MANAGER_INVALID
+    if: slot\lane != 0
+        return: c.LMX_MANAGER_OK
+    t: (cast: (@: LmxThread) slot\owner)
+    if: lmx_thread_running(t) = 0
+        return: c.LMX_MANAGER_OK
+    lane: (cast: (@: LmxPosixLane) calloc(1U, c.sizeof(c.LmxPosixLane)))
+    if: lane = 0
+        return: c.LMX_MANAGER_INVALID
+    ---
+    if: c.pthread_mutex_init(@ lane\mu, 0) != 0
+        free((cast: (@: void) lane))
+        return: c.LMX_MANAGER_INVALID
+    ---
+    lane\finished: 0
+    lane\slot: (cast: (@: void) slot)
+    slot\lane: (cast: (@: void) lane)
+    if: c.pthread_create(@ lane\thread, 0, (cast: (LmxPosixStart) lmx_manager_running_body), (cast: (@: void) lane)) != 0
+        slot\lane: 0
+        c.pthread_mutex_destroy(@ lane\mu)
+        free((cast: (@: void) lane))
+        return: c.LMX_MANAGER_INVALID
+    ---
+return: c.LMX_MANAGER_OK
+
+# Reap, do not wait. The flag is the lane's last act. A lane that has not set it
+# stays running into the next tick. Join runs only after the flag is visible.
+fn: lmx_manager_running_lane_reap (@: LmxSchedule slot) int
+    @: LmxPosixLane lane
+    int: done
+    if: slot = 0 || slot\lane = 0
+        return: c.LMX_MANAGER_OK
+    lane: (cast: (@: LmxPosixLane) slot\lane)
+    c.pthread_mutex_lock(@ lane\mu)
+    done: lane\finished
+    c.pthread_mutex_unlock(@ lane\mu)
+    if: done = 0
+        return: c.LMX_MANAGER_OK
+    ---
+    c.pthread_join(lane\thread, (cast: (@@: void) 0))
+    c.pthread_mutex_destroy(@ lane\mu)
+    free((cast: (@: void) lane))
+    slot\lane: 0
+return: c.LMX_MANAGER_OK
+
+fn: lmx_manager_running_step (@: LmxManager m; ulong: now) int
+    @: LmxSchedule slot
+    @: LmxThread child
+    size_t: index
+    if: m = 0
+        return: c.LMX_MANAGER_INVALID
+    if: m\owner = 0
+        return: c.LMX_MANAGER_OK
+    index: 0U
+    while: index < lmx_thread_child_count(m\owner)
+        child: lmx_thread_child_at(m\owner, index)
+        if: child = 0
+            return: c.LMX_MANAGER_INVALID
+        slot: child\slot
+        if: lmx_manager_running_lane_start(slot) != c.LMX_MANAGER_OK
+            return: c.LMX_MANAGER_INVALID
+        if: lmx_manager_running_lane_reap(slot) != c.LMX_MANAGER_OK
+            return: c.LMX_MANAGER_INVALID
+        index: index + 1U
+    ---
+return: c.LMX_MANAGER_OK
+
+fn: lmx_manager_running_round (@: LmxManager m; unsigned: ticks; ulong: now) int
+    unsigned: i
+    int: code
+    if: m = 0 || ticks = 0U
+        return: c.LMX_MANAGER_INVALID
+    i: 0U
+    while: i < ticks
+        code: lmx_manager_running_step(m, now)
+        if: code != c.LMX_MANAGER_OK
+            return: code
+        i: i + 1U
+    ---
+return: c.LMX_MANAGER_OK
+
+fn: lmx_manager_running_close (@: LmxManager m) int
+    @: LmxSchedule slot
+    @: LmxThread child
+    @: LmxPosixLane lane
+    size_t: index
+    if: m = 0
+        return: c.LMX_MANAGER_INVALID
+    index: 0U
+    while: m\owner != 0 && index < lmx_thread_child_count(m\owner)
+        child: lmx_thread_child_at(m\owner, index)
+        if: child = 0
+            return: c.LMX_MANAGER_INVALID
+        slot: child\slot
+        if: slot\lane != 0
+            lane: (cast: (@: LmxPosixLane) slot\lane)
+            c.pthread_join(lane\thread, (cast: (@@: void) 0))
+            c.pthread_mutex_destroy(@ lane\mu)
+            free((cast: (@: void) lane))
+            slot\lane: 0
+        ---
+        index: index + 1U
+    ---
+    m\cursor: 0U
+return: c.LMX_MANAGER_OK

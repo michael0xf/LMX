@@ -1,0 +1,164 @@
+predef: "l2src/lmx_process_deadline.h.lm1"
+predef: "l2src/lmx_clock.lm1"
+predef: "l2src/lmx_posix_abi.h.lm1"
+predef: "l1src/libc_abi.lm1"
+
+prototype:
+    fn: lmx_process_deadline_body (@: void arg) @: void
+    fn: lmx_posix_deadline_abs (@: LmxPosixTimespec ts; unsigned: wait_ms) int
+end: prototype
+
+# The body of lmx_process_deadline.h.lm1's contract. The wait is one condvar whose
+# clock is CLOCK_MONOTONIC, plus a flag: a signal that lands before the waiter
+# must still be observed (a condvar alone forgets it). The record is heap-allocated
+# and stored in the portable void* slots. Only an ARMED watchdog whose bound
+# actually expires aborts the process.
+
+fn: lmx_posix_deadline_abs (@: LmxPosixTimespec ts; unsigned: wait_ms) int
+    uint64_t: sec
+    uint64_t: nsec
+    if: ts = 0
+        return: 1
+    if: c.clock_gettime(c.CLOCK_MONOTONIC, ts) != 0
+        return: 1
+    ---
+    sec: (cast: (uint64_t) c.ts\tv_sec) + (cast: (uint64_t) wait_ms) / 1000U
+    nsec: (cast: (uint64_t) c.ts\tv_nsec) + ((cast: (uint64_t) wait_ms) % 1000U) * 1000000U
+    if: nsec >= 1000000000U
+        sec: sec + nsec / 1000000000U
+        nsec: nsec % 1000000000U
+    ---
+    c.ts\tv_sec: sec
+    c.ts\tv_nsec: nsec
+return: 0
+
+fn: lmx_process_deadline_arm (@: LmxProcessDeadline d; size_t: deadline) int
+    size_t: wait 0U
+    size_t: max_wait 0U
+    @: LmxPosixDeadline w
+    pthread_condattr_t: attr
+    int: rc
+    if: d = 0 || deadline = 0U
+        return: 1
+    ---
+    d\event: 0
+    d\thread: 0
+    d\wait_ms: 0U
+    d\armed: 0
+    wait: lmx_deadline_wait(deadline, lmx_clock_word())
+    # The Windows body clamps to the greatest finite DWORD wait. This body clamps
+    # to the same order of magnitude so the added seconds fit in the monotonic
+    # reading. The wait stays finite: there is no "never" sentinel.
+    max_wait: 49U * 86400000U
+    if: wait > max_wait
+        wait: max_wait
+    ---
+    w: (cast: (@: LmxPosixDeadline) calloc(1U, c.sizeof(c.LmxPosixDeadline)))
+    if: w = 0
+        return: 1
+    ---
+    if: c.pthread_mutex_init(@ w\mu, 0) != 0
+        free((cast: (@: void) w))
+        return: 1
+    ---
+    if: c.pthread_condattr_init(@ attr) != 0
+        c.pthread_mutex_destroy(@ w\mu)
+        free((cast: (@: void) w))
+        return: 1
+    ---
+    if: c.pthread_condattr_setclock(@ attr, c.CLOCK_MONOTONIC) != 0
+        c.pthread_condattr_destroy(@ attr)
+        c.pthread_mutex_destroy(@ w\mu)
+        free((cast: (@: void) w))
+        return: 1
+    ---
+    rc: c.pthread_cond_init(@ w\cv, @ attr)
+    c.pthread_condattr_destroy(@ attr)
+    if: rc != 0
+        c.pthread_mutex_destroy(@ w\mu)
+        free((cast: (@: void) w))
+        return: 1
+    ---
+    w\signaled: 0
+    # THE WAIT IS SET BEFORE THE THREAD EXISTS: the watchdog reads it as its own first act.
+    d\wait_ms: (cast: (unsigned) wait)
+    d\event: (cast: (@: void) w)
+    d\thread: (cast: (@: void) w)
+    if: c.pthread_create(@ w\thread, 0, (cast: (LmxPosixStart) lmx_process_deadline_body), (cast: (@: void) d)) != 0
+        d\event: 0
+        d\thread: 0
+        d\wait_ms: 0U
+        c.pthread_cond_destroy(@ w\cv)
+        c.pthread_mutex_destroy(@ w\mu)
+        free((cast: (@: void) w))
+        return: 1
+    ---
+    d\armed: 1
+return: 0
+
+fn: lmx_process_deadline_disarm (@: LmxProcessDeadline d) int
+    @: LmxPosixDeadline w
+    if: d = 0 || d\armed = 0
+        return: 0
+    ---
+    w: (cast: (@: LmxPosixDeadline) d\event)
+    if: w = 0
+        d\armed: 0
+        return: 0
+    ---
+    # JOIN, NOT KILL. The flag is set under the same mutex the waiter holds, so a
+    # signal that lands before the wait is not lost.
+    c.pthread_mutex_lock(@ w\mu)
+    w\signaled: 1
+    c.pthread_cond_signal(@ w\cv)
+    c.pthread_mutex_unlock(@ w\mu)
+    c.pthread_join(w\thread, (cast: (@@: void) 0))
+    c.pthread_cond_destroy(@ w\cv)
+    c.pthread_mutex_destroy(@ w\mu)
+    free((cast: (@: void) w))
+    d\thread: 0
+    d\event: 0
+    d\wait_ms: 0U
+    d\armed: 0
+return: 0
+
+fn: lmx_process_deadline_body (@: void arg) @: void
+    @: LmxProcessDeadline d
+    @: LmxPosixDeadline w
+    LmxPosixTimespec: abs
+    int: rc
+    int: signaled
+    if: arg = 0
+        return: 0
+    ---
+    d: (cast: (@: LmxProcessDeadline) arg)
+    w: (cast: (@: LmxPosixDeadline) d\event)
+    if: w = 0
+        return: 0
+    ---
+    if: d\wait_ms != 0U
+        if: lmx_posix_deadline_abs(@ abs, d\wait_ms) != 0
+            c.fputs("lmx: the overall close deadline expired with the close still running; aborting rather than returning a partially closed runtime\n", l1_stderr())
+            c.fflush(0)
+            c.abort()
+        ---
+    ---
+    c.pthread_mutex_lock(@ w\mu)
+    while: w\signaled = 0
+        if: d\wait_ms = 0U
+            break
+        ---
+        rc: c.pthread_cond_timedwait(@ w\cv, @ w\mu, @ abs)
+        if: rc = c.ETIMEDOUT
+            break
+        ---
+    ---
+    signaled: w\signaled
+    c.pthread_mutex_unlock(@ w\mu)
+    if: signaled != 0
+        return: 0
+    ---
+    c.fputs("lmx: the overall close deadline expired with the close still running; aborting rather than returning a partially closed runtime\n", l1_stderr())
+    c.fflush(0)
+    c.abort()
+return: 0

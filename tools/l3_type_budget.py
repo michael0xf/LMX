@@ -63,11 +63,14 @@ MAX_NAME = 64          # l1_hdr_type_add's buffer: one more maximal name must st
 # addr=0 branch (which now carries data/args/a typed dest to a walked callee, instead of
 # lmx_call0's narrower nullary-int hook).  EXPECT=68 after -200 slice (a): foreign ULONGLONG
 # left lmx_clock.h.lm1 (the reading is uint64_t from stdint.h, not a named header type).
+# Slice (b): the POSIX clock body predefs lmx_posix_abi.h.lm1 (8 names:
+# 4 foreign, 1 type, 2 struct, 1 fnptr). Windows does not.
+_POSIX_ABI = 0 if os.name == 'nt' else 8
 EXPECT = {
-    'tests/l3_thread_bind_selftest.lm1': 68,
-    'tests/l3_n9_walk_selftest.lm1': 68,
-    'tests/l3_n10_walk_selftest.lm1': 68,
-    'tests/l3_mail_prim_selftest.lm1': 68,
+    'tests/l3_thread_bind_selftest.lm1': 68 + _POSIX_ABI,
+    'tests/l3_n9_walk_selftest.lm1': 68 + _POSIX_ABI,
+    'tests/l3_n10_walk_selftest.lm1': 68 + _POSIX_ABI,
+    'tests/l3_mail_prim_selftest.lm1': 68 + _POSIX_ABI,
 }
 
 PREDEF = re.compile(r'^predef:\s*(.*)$')

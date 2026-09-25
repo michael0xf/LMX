@@ -796,7 +796,7 @@ $fixtures = @(
                  'l2_program_qualified_roots[1U]: l2_nsp[2]',
                  'l2_entry_unit: graph') },
     # A cross-reference INTO another branch: F\into is E's member `deep`, not a copy of it.
-    [pscustomobject]@{ Name = 'unit_eternal_xref.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a field path';
+    [pscustomobject]@{ Name = 'unit_eternal_xref.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 0;
         Args = @('2', 'slot', '1', '0', '0', '0', 'size', '0', '1', '7', 'size', '1', '1', '23');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
         Debt = @('c.array: [2]: @: Lmx l2_program_qualified_roots',
@@ -947,12 +947,11 @@ $fixtures = @(
                  'l2_m0(l2_c0\parent, l2_c0, l2_msg, @ l2_t1, @ l2_te1)',
                  'l2_out_throw[0]: 0',
                  'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ') },
-    [pscustomobject]@{ Name = 'unit_recursion.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a field path';
+    [pscustomobject]@{ Name = 'unit_recursion.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 0;
         Args = @('0');
         Absent = @('Lmx node; @: Lmx node', 'l2_p2_0; @: Lmx node', 'l2_out_throw[0]: node', 'return: 71');
         Debt = @('fn: l2_m2 (@: Lmx node; @: Lmx self; size_t: l2_p2_0; @: Lmx l2_msg; @: size_t l2_out_result; @@: Lmx l2_out_throw) int',
-                 'l2_m2(l2_c0\parent, l2_c0, l2_q7, l2_msg, @ l2_t1, @ l2_te1)',
-                 'l2_m2(l2_c4\parent, l2_c4, 2U, l2_msg, @ l2_t5, @ l2_te5)',
+                 'l2_ts1: l2_m2(l2_c0\parent, l2_c0, lmx_size_value_known(l2_q7_from[0]), l2_msg, @ l2_t1, @ l2_te1)',
                  'l2_out_throw[0]: 0',
                  'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ') },
     # S1.1, THE STATUS DISCIPLINE OF THE IMPLICIT CHANNEL (FABLE-OPUS-S1-STATUS-20260923-133).  One
@@ -1478,7 +1477,7 @@ $fixtures = @(
         Says = @('9', '42 42');
         Absent = @();
         Debt = @() },
-    [pscustomobject]@{ Name = 'unit_occ_root_field.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a field path';
+    [pscustomobject]@{ Name = 'unit_occ_root_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 0;
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_entry_unit: graph') },
@@ -1675,7 +1674,7 @@ $fixtures = @(
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'c.LMX_WALK_OP_DEREF');
         Debt = @('c.LMX_WALK_OP_PUT_OF, 4U)', 'c.LMX_WALK_OP_PUT_REF, 4U)', 'l2_entry_unit: graph') },
-    [pscustomobject]@{ Name = 'unit_field_path_unit_qualified.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a field path';
+    [pscustomobject]@{ Name = 'unit_field_path_unit_qualified.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 0;
         Args = @('1');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_entry_unit: graph') },
@@ -2042,7 +2041,7 @@ $fixtures = @(
     # occurrence index, test\[N]arg, resolved through l2_own_find_occ --
     # the same lookup the rootless \[N]arg form already uses, no second
     # scanner.
-    [pscustomobject]@{ Name = 'unit_occ_root_named.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: this expression';
+    [pscustomobject]@{ Name = 'unit_occ_root_named.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 0;
         Args = @('0');
         Absent = @();
         Debt = @() },

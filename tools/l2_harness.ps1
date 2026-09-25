@@ -603,6 +603,9 @@ $fixtures = @(
     # FABLE-SONNET-SEND-REF-20260925-172 commit 3: `sendMessage: Ref X` at the walked root refuses
     # a Ref that is not a reference (l2_rw_fields_ty, ty < 1000) -- on-topic negative witness for
     # the new type-check, at the exact statement.
+    # D-62: posting the letter itself (not a Thread) aborts with the method's X1.
+    [pscustomobject]@{ Name = 'unit_send_ref_root_fail.lm2'; Expect = 'send-abort'; Exit = 3; Needle = 'lmx: invariant: sendMessage failed';
+        Args = @('0'); Absent = @('lmx: walk error: PRIMITIVE'); Debt = @('l2_send_fail()') },
     [pscustomobject]@{ Name = 'unit_send_ref_root_type_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'root operation not walkable yet: a Ref that is not a reference';
         Absent = @(); Debt = @() },
@@ -2345,7 +2348,7 @@ foreach ($fx in $fixtures) {
         Add-Row 'OK' ('fixture:' + $stem) ('refused as expected: ' + $fx.Needle); continue
     }
     if (-not $made) { Add-Row 'FAIL' ('fixture:' + $stem) 'l2trans produced no L1; see the log'; continue }
-    if ($fx.Expect -eq 'eternal-runs') {
+    if ($fx.Expect -eq 'eternal-runs' -or $fx.Expect -eq 'send-abort') {
         $entryLine = [regex]::Match((Get-Content -LiteralPath $genLm1 -Raw), '(?m)^# entry statements: (\d+)\s*$')
         if (-not $entryLine.Success) { Add-Row 'FAIL' ('fixture:' + $stem) 'the generated L1 does not state `# entry statements: N`'; continue }
         $emptyOk = $fx.PSObject.Properties['EmptyEntry'] -and $fx.EmptyEntry
@@ -2464,7 +2467,7 @@ foreach ($fx in $fixtures) {
         Add-Row 'OK' ('fixture:' + $stem) ($units.Count.ToString() + ' library units in one relocatable link, own cells ' + ($cells -join ' ') + ', no unhashed external name; LINK and SYMBOLS only, nothing was run'); continue
     }
 
-    if ($fx.Expect -eq 'eternal-runs') {
+    if ($fx.Expect -eq 'eternal-runs' -or $fx.Expect -eq 'send-abort') {
         $l1 = (Get-Content -LiteralPath $genLm1 -Raw)
         $why = ''
         foreach ($a in $fx.Absent) {
@@ -2504,6 +2507,15 @@ foreach ($fx in $fixtures) {
         if ($fx.PSObject.Properties['Thrown']) { $runArgs = $runArgs + @('thrown', [string]$fx.Thrown) }
         if ($fx.PSObject.Properties['Argv']) { $runArgs = $runArgs + @('--') + @($fx.Argv | ForEach-Object { $_.Replace('{source}', $source) }) }
         $ran = Invoke-Step ('fixture.' + $stem + '.run') $exe $runArgs $bin
+        if ($fx.Expect -eq 'send-abort') {
+            $slog = Log-Text ('fixture.' + $stem + '.run')
+            if ($ran -ne 3 -or $slog -notmatch 'lmx: invariant: sendMessage failed' -or $slog -match 'lmx: walk error: PRIMITIVE') {
+                Add-Row 'FAIL' ('fixture:' + $stem) ('send abort expected exit 3 and the invariant line, got exit ' + $ran)
+                continue
+            }
+            Add-Row 'OK' ('fixture:' + $stem) 'abort exit 3, invariant sendMessage failed, no PRIMITIVE'
+            continue
+        }
         $said = ((Log-Text ('fixture.' + $stem + '.run')) -split "`r?`n" | Where-Object { $_ -match '^l2_eternal_driver: \d+ checks' } | Select-Object -Last 1)
         # A run that completed but whose entry returned nonzero is a RESULT failure, named as such.
         $entrySaid = ((Log-Text ('fixture.' + $stem + '.run')) -split "`r?`n" | Where-Object { $_ -match '^l2_eternal_driver: entry returned ' } | Select-Object -Last 1)

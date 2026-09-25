@@ -24,6 +24,14 @@ STARTED grok/d62-send-fail@база main `9f6dbb6`. REVIEW 5de4c45 — OK, не 
 
 Мутант: пост снова делает `return: 1`. Строка красная: stderr снова `walk error: PRIMITIVE`. Откат — зелёный. Существующие `unit_send_ref_method` и `unit_send_ref_driver_tap` остаются exit 0.
 
+## RESULT
+
+Посажено на `grok/d62-send-fail`. Тело `l2_send`/`l2_msend` зовёт один `l2_send_fail`: `fprintf` строки `lmx: invariant: sendMessage failed` и `abort`. Успех по-прежнему `return: 0`. `lmx_walk.lm1` не менялся.
+
+Свидетель `unit_send_ref_root_fail`: exit 3, строка инварианта есть, `walk error: PRIMITIVE` нет. Мутант: пост снова `return: 1` — stderr `lmx: walk error: PRIMITIVE`. Откат — зелёный harness. `unit_send_ref_method` и `unit_send_ref_driver_tap` остались exit 0.
+
+Гейт: build 282/282 (`build/l2src/20260925_192806`), harness 402/402 (`build/l2_harness/20260925_192542`), L3 11/11, имена 69/128, check_docs OK.
+
 ## Не входит
 
 `lmx_walk_dyn_selftest`, ширина args-part, mixed numeric types, Q7, Q9, раскладка `Lmx`.

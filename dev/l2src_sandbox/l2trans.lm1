@@ -413,6 +413,7 @@ prototype:
     fn: l2_intern_mi (int: mi) unsigned
     fn: l2_intern_prove (const: @(char path); const: @(LmP0Node node)) int
     fn: l2_emit_cell_new (int: oi; const: @(char ind); const: @(char slot); const: @(char chr0); const: @(char fail); const: @(char fail2)) int
+    fn: l2_parts_have_char () int
     fn: l2_emit_cell_new_ty (int: ty; size_t: n; const: @(char ind); const: @(char slot); const: @(char chr0); const: @(char fail); const: @(char fail2)) int
     fn: l2_m_head (int: mi) int
     fn: l2_ret_cell_ty (int: mi) int
@@ -21491,6 +21492,25 @@ return: 0 - 1
 # - return, slot 1: no child for a `sub`, else one -- the result's typed cell, or empty when the
 #   result type has no cell.  The walked root's CALL refers to that cell (l2_rw_call).
 # Then `native`: the trampoline for a method with a native body, 0 otherwise.
+# Does a method's header part hold a char cell -- a char formal in `args`, a char result in
+# `return` (l2_emit_parts)?  Its cell is the program's interned char, as an own char field's is, so
+# the table and its predef exist (D-69).
+fn: l2_parts_have_char () int
+    int: i 0
+    int: j
+    while: i < l2_m_n
+        j: 0
+        while: i != l2_e && j < l2_m_arity[i]
+            if: l2_cf_get(i, j) < 0 && l2_nsty_get(i, j) < 0 && l2_own_ty_of_param(l2_ft(i, j)) = 1
+                return: 1
+            j: j + 1
+        ---
+        if: i != l2_e && l2_m_ret[i] != 8 && l2_ret_cell_ty(i) = 1
+            return: 1
+        i: i + 1
+    ---
+return: 0
+
 fn: l2_emit_parts (int: i) int
     int: j 0
     int: ty
@@ -21614,7 +21634,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: (l2_has_own_ty(4) != 0 || l2_has_own_ty(5) != 0 || l2_has_own_ty(7) != 0 || l2_has_own_ty(8) != 0 || l2_has_own_ty(37) != 0 || l2_has_pointer_array() != 0 || l2_ns_has_array != 0 || l2_library_mode = 0) && c.fprintf(l2_out, "predef: \"%slmx_array_owned.h.lm1\"\n", l2_rt_root) < 0
         fclose(l2_out)
         return: 1
-    if: (l2_has_own_ty(1) != 0 || l2_ns_has_char != 0) && c.fprintf(l2_out, "predef: \"%slmx_chars_owned.h.lm1\"\n", l2_rt_root) < 0
+    if: (l2_has_own_ty(1) != 0 || l2_ns_has_char != 0 || l2_parts_have_char() != 0) && c.fprintf(l2_out, "predef: \"%slmx_chars_owned.h.lm1\"\n", l2_rt_root) < 0
         fclose(l2_out)
         return: 1
     # WHAT STOOD HERE AND IS GONE (FABLE-SONNET-NAME-SPECIALS-20260924-155
@@ -22090,7 +22110,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: l2_library_mode = 0 && fputs("        l2_program_arena: arena\n", l2_out) < 0
         fclose(l2_out)
         return: 1
-    if: (l2_has_own_ty(1) != 0 || l2_ns_has_char != 0) && fputs("        @: char process_chars lmx_chars_new_owned(l2_program_arena)\n        if: process_chars = 0\n            return: 1\n", l2_out) < 0
+    if: (l2_has_own_ty(1) != 0 || l2_ns_has_char != 0 || l2_parts_have_char() != 0) && fputs("        @: char process_chars lmx_chars_new_owned(l2_program_arena)\n        if: process_chars = 0\n            return: 1\n", l2_out) < 0
         fclose(l2_out)
         return: 1
     if: l2_library_mode = 0 && c.fprintf(l2_out, "        l2_entry_unit: graph\n        if: l2_program_arena = 0 || l2_entry_unit = 0 || (cast: (unsigned) l2_entry_unit\\len) != %uU\n            return: 1\n", kids) < 0

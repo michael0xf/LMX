@@ -1,0 +1,21 @@
+# D-69: a method's char formal has a typed cell in its `args` header part (slot 0; -189 c4) -- the
+# program's interned char cell, as an own char field's is.  Main did not compile (lmx_char_cell_known
+# and process_chars undeclared).  lo(5U, 'a') reads its char formal and is 5; lo(5U, 'b') is 0.
+# Success is 7.
+fn: lo (unsigned: u; char: c) unsigned
+    if: c = 'a'
+        return: u
+return: 0U
+
+fn: check () int
+    unsigned: v
+    v: lo(5U, 'a')
+    if: v != 5U
+        return: 1
+    v: lo(5U, 'b')
+    if: v != 0U
+        return: 2
+return: 7
+
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

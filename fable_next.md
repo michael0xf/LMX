@@ -25,13 +25,13 @@
 - **Уборка:** `l2_upper_name` (all-caps = C-константа) снят — `define:` имена объявленные, остальное `c.NAME`; сканы C-заголовков удалены; преамбула по использованию; вид harness `translates` (22 пина), twd = D-60/D-55; мёртвые helper'ы удалены; twin `l2src` = точная копия песочницы без своих тестов (тег `l2src-twin-20260926`).
 - **Дефекты:** закрыты D-08, D-48, D-61 (F-57), D-63 (F-55), D-65 (F-59), D-66 (F-56), D-68 (F-58), D-70…D-73 (F-60…F-63), D-74 (F-64). Открыты: D-12 (сужен до песочницы: `printTree.lm2` на старом `main`), D-36, D-39, D-55/D-60 (twd, ядро, бывшие grok_bot), D-62 (walked-root `sendMessage: Ref` не-Thread крашит), D-67 (`lmx_pool_add_chunk` растит по chunk_capacity пула), D-69 (формал `char:` — эмиссия args-части).
 
-Последний известный мне main: `7ba030b` (T4a влит). Гейт на нём: build_l2src 275/275, harness 384/384, L3 11/11, check_docs OK. Пин harness — прежний `AC4A2210`.
+Последний main этапа: `b7cce8c`. Гейт: build_l2src 276/276, harness 390/390, L3 11/11, check_docs OK. Пин harness — прежний `AC4A2210`.
 
-## 2. Что могло остаться не влитым (проверить первым делом)
+## 2. Состояние на момент остановки (всё влито)
 
-- `origin/opus/l2src-twin-198` — D-74 + удаление гейта двойника + `l2src/` = копия песочницы (918 файлов) + `opus_next.md`. Ожидался RESULT с зелёным гейтом. Если ветка есть, а в `origin/main` её коммитов нет — влить `--no-ff` (сообщение: «integrate: opus -198 …»), сверить `git diff --stat main..ветка` (только `l2src/`, `tools/`, `steps/`, `defects.md`, фикстуры, `opus_next.md`).
-- `origin/sonnet/merge-194` @ `41d646d`+ — K2 (merge в корне как PRIM: `lmx_walk_merge_map` / `lmx_walk_merge_into_map`, селфтесты + мутанты; build 275/275 у неё) и `sonnet_next.md`. Гейт L3 + harness ещё не гонялся: попросить Grok CLI прогнать (см. §5), затем влить.
-- После обоих: обновить `next_core_tasks.md` §3 строку «ПОСАЖЕНО» (добавить T4a, -170 c2, -198, K2) и `steps/defects.md` при необходимости.
+- `origin/main` = `b7cce8c`: влиты Opus -198 (`da91903`: twin `l2src` = копия песочницы, D-74 F-64, `opus_next.md`) и Sonnet -194 к.6 K2 (`b7cce8c`: merge в корне как PRIM `lmx_walk_merge_map` / `lmx_walk_merge_into_map`, селфтест 22/22 + 2 мутанта, `sonnet_next.md`). Гейт на main: build_l2src 276/276, harness 390/390, L3 11/11, check_docs OK.
+- Записки всех сессий на main: `fable_next.md`, `opus_next.md`, `sonnet_next.md`, `grok_next.md`. Рабочие деревья пусты; все ветки помощников влиты; grok_bot остановлен.
+- Первое действие после переезда: `next_core_tasks.md` §3 строка «ПОСАЖЕНО» — дописать T4a, -170 c2, -198, K2 (не сделано на машине, чтобы не гонять ещё один check_docs после последней интеграции); в `steps/defects.md` D-53 (Sonnet, -172: `@x` на Structure-own берёт адрес рабочей копии указателя — после c3b-3 рабочих копий нет, перепроверить и закрыть или переформулировать).
 
 ## 3. Очередь дальше (порядок из `steps/next-phase-195.md` §7, уточнён)
 

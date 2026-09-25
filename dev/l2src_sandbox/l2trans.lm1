@@ -19514,22 +19514,26 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
             return: 1
         if: l2_rw_expr(cond, n - 1, node, @ t) != 0 || l2_rw_put(node, 1, t) != 0
             return: 1
-        if: l2_rw_enter(last\value, @ bsave) != 0
+        # The root does not push this scope: a second receiveMessage inside a
+        # while stays the root field (unit_next_message_loop). A method does.
+        if: l2_rw_mi != l2_e && l2_rw_enter(last\value, @ bsave) != 0
             return: 1
         if: l2_rw_body(last\value\as\structure\first_field, node, 2) != 0
-            l2_rw_leave(bsave)
+            if: l2_rw_mi != l2_e
+                l2_rw_leave(bsave)
             return: 1
-        if: l2_rw_leave(bsave) != 0
+        if: l2_rw_mi != l2_e && l2_rw_leave(bsave) != 0
             return: 1
         if: els != 0
             if: els\value\as\frame\body = 0
                 return: l2_rw_refuse(els\value, "this else")
-            if: l2_rw_enter(els\value, @ bsave) != 0
+            if: l2_rw_mi != l2_e && l2_rw_enter(els\value, @ bsave) != 0
                 return: 1
             if: l2_rw_body(els\value\as\frame\body\first_field, node, 3) != 0
-                l2_rw_leave(bsave)
+                if: l2_rw_mi != l2_e
+                    l2_rw_leave(bsave)
                 return: 1
-            if: l2_rw_leave(bsave) != 0
+            if: l2_rw_mi != l2_e && l2_rw_leave(bsave) != 0
                 return: 1
             \next: l2_next_active(els\next)
         ---
@@ -19559,12 +19563,13 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
             return: 1
         if: l2_rw_expr(cond, n - 1, node, @ t) != 0 || l2_rw_put(node, 1, t) != 0
             return: 1
-        if: l2_rw_enter(last\value, @ bsave) != 0
+        if: l2_rw_mi != l2_e && l2_rw_enter(last\value, @ bsave) != 0
             return: 1
         if: l2_rw_body_pre(last\value\as\structure\first_field, node, 2, k, l2_rw_pre_n - k) != 0
-            l2_rw_leave(bsave)
+            if: l2_rw_mi != l2_e
+                l2_rw_leave(bsave)
             return: 1
-        if: l2_rw_leave(bsave) != 0
+        if: l2_rw_mi != l2_e && l2_rw_leave(bsave) != 0
             return: 1
         \made: 1
         if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, node) < 0

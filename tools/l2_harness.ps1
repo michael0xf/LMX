@@ -2320,10 +2320,11 @@ $fixtures = @(
         Needle = 'root operation not walkable yet: a Structure assigned through a path'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_matrix_path_array_elem.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0'); Absent = @(); Debt = @('c.LMX_WALK_OP_ELEMPUT, 4U)', 'c.LMX_WALK_OP_ELEM, 3U)') },
-    # (e) empty Structure as ONE named value vs empty arg list. Named form is
-    # measured refuse today (D-21); arglist is nullary CALL.
-    [pscustomobject]@{ Name = 'unit_matrix_empty_named_value.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unknown method'; Absent = @(); Debt = @() },
+    # (e) empty Structure as ONE named value vs empty arg list. D-23: `take(x: ())`
+    # admits the empty Structure to E and returns 7. Arglist is a nullary CALL.
+    # Mutant: treat the named frame as a call again -- unknown method, this row RED.
+    [pscustomobject]@{ Name = 'unit_matrix_empty_named_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Entry = 7; Absent = @(); Debt = @('lmx_walk_admit', 'LMX_WALK_OP_FRESH') },
     [pscustomobject]@{ Name = 'unit_matrix_empty_arglist.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0'); Absent = @(); Debt = @() },
     # Parity native for D-04 (walker FIXED -140): extra Structure arg to nullary.

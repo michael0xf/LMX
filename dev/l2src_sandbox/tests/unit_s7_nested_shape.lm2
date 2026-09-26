@@ -1,0 +1,30 @@
+# Non-identity nested admit. Other is not Outer: it has the same
+# Inner\x and an unread extra. The read is slot\in\x.
+
+Inner:
+    size_t: x 0U
+end: Inner
+
+Outer:
+    Inner: in
+end: Outer
+
+Other:
+    Inner: in
+    size_t: extra 0U
+end: Other
+
+fn: take (Outer: slot) int
+    slot\in\x: 1U
+return: 4
+
+fn: go () int
+return: take(Other)
+
+int: k
+k: go()
+if: k = 4
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+return

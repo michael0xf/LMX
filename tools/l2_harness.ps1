@@ -714,18 +714,20 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'entry_arg_len.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('ok'); Entry = 7;
         Absent = @(); Debt = @() },
     # D-81, Q31 answer: a method is a sufficient receiver for the c.* door, so c.puts moved
-    # into printArg (predef own.h.lm1, lm_own_copy_bytes makes the NUL-terminated copy
-    # explicitly -- alloc len+1, memcpy, copy[len]=0, not a read past the array's own bytes).
-    # Mutant (deterministic, not "drop +1U" -- that reads OOB, not reproducible): copy n-1U
-    # bytes instead of n inside printArg -- argv "word" then prints "wor", reddening Says.
+    # into printArg -- `@: void buf` / `buf: c.calloc(1U, n + 1U)` makes the NUL-terminated
+    # copy explicitly (zero-init guarantees buf[n] is a real NUL, not a lucky byte), then
+    # c.memcpy(buf, @ letter\mainArgs[1][0], n) fills it. Mutant (deterministic, not "drop
+    # +1U" -- that reads OOB, not reproducible): copy n-1U bytes instead of n inside printArg
+    # -- argv "word" then prints "wor", reddening Says.
     [pscustomobject]@{ Name = 'entry_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('word'); Says = @('word');
         Absent = @(); Debt = @() },
-    # D-81, same Q31 answer: c.strcmp moved into argIsOk (same lm_own_copy_bytes copy). The
-    # three earlier checks (letter shape, arg count, raw bytes o/k) still refuse first for any
-    # argv other than exactly "ok", so this row's own normal run never exercises argIsOk's r!=0
+    # D-81, same Q31 answer: c.strcmp moved into argIsOk (same calloc+memcpy copy). The three
+    # earlier checks (letter shape, arg count, raw bytes o/k) still refuse first for any argv
+    # other than exactly "ok", so this row's own normal run never exercises argIsOk's r!=0
     # branch -- the same deterministic mutant as entry_index (copy n-1U bytes) is the witness
-    # that the copy and c.strcmp are load-bearing: "ok" then reddens from Entry 0 to Entry 4.
-    [pscustomobject]@{ Name = 'entry_strcmp.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('ok'); Entry = 0;
+    # that the copy and c.strcmp are load-bearing: "ok" then reddens from Entry 7 to Entry 4.
+    # Success is 7, not 0 (fable_pc, REVIEW 4dc3423/ab8b245): a silent 0 is not a witness (D-15).
+    [pscustomobject]@{ Name = 'entry_strcmp.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('ok'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_charpp_return.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
         Absent = @(); Debt = @() },

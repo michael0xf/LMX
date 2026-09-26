@@ -745,6 +745,7 @@ prototype:
     fn: l2_admit_finish (int: cand; int: req; int: status; int: compatible; const: @(LmP0Text cand_name); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
     fn: l2_admit_implements (int: cand; int: req; int: cons; const: @(LmP0Text cand_name); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
     fn: l2_admit_paths (int: cand; int: req; @: char paths; size_t: path_count; const: @(LmP0Text cand_name); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
+    fn: l2_admit_consumer_ix (int: cand; int: req; const: @(LmP0Text varb); const: @(LmP0Frame consumer); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
     fn: l2_admit_consumer_uses (const: @(LmP0Text cand_name); int: req; const: @(LmP0Text varb); const: @(LmP0Frame consumer); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
     fn: l2_fn_frame (int: mi) @: LmP0Frame
     fn: l2_ebr_find (const: @(LmP0Text t)) int
@@ -2759,6 +2760,13 @@ fn: l2_check_ret_tr (int: mi; const: @(char path); const: @(LmP0Structure body);
         return: l2_error(path, at, "unsupported body")
     if: l2_check_return_literal(mi, body, path, at) != 0
         return: 1
+    # A named Structure result is admitted as a name (`return: Plain`). A path
+    # such as `return: h\p` is three trailer fields. Emitting that path has no
+    # located diagnostic, so the refusal is here, on the trailer itself.
+    if: l2_nsty_get(mi, 0 - 1) >= 0 && n != 1
+        if: body\first_field != 0 && body\first_field\value != 0
+            return: l2_error(path, body\first_field\value, "a Structure return must be a name")
+        return: l2_error(path, at, "a Structure return must be a name")
     if: n != 0 && l2_check_fields(body\first_field, n, mi, path, at) != 0
         return: 1
 return: 0
@@ -2781,6 +2789,10 @@ fn: l2_emit_ret_tr (int: mi; const: @(char ind); const: @(LmP0Structure body)) i
     if: n = 0
         return: 1
     if: l2_eval_fields(body\first_field, n, mi, ind, l2_tok) != 0
+        if: l2_nsty_get(mi, 0 - 1) >= 0
+            if: body\first_field != 0 && body\first_field\value != 0
+                return: l2_error(l2_src, body\first_field\value, "a Structure return must be a name")
+            return: l2_error(l2_src, 0, "a Structure return must be a name")
         return: 1
     if: (l2_m_throws = 0 || l2_m_throws[mi] = 0) && c.fprintf(l2_out, "%sreturn: %s\n", ind, l2_tok) < 0
         return: 1
@@ -10310,18 +10322,14 @@ fn: l2_admit_paths (int: cand; int: req; @: char paths; size_t: path_count; cons
     status: l2_descriptor_used(cand, req, paths, path_count, @ compatible)
 return: l2_admit_finish(cand, req, status, compatible, cand_name, path, at, context)
 
-fn: l2_admit_consumer_uses (const: @(LmP0Text cand_name); int: req; const: @(LmP0Text varb); const: @(LmP0Frame consumer); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
-    int: cand
+fn: l2_admit_consumer_ix (int: cand; int: req; const: @(LmP0Text varb); const: @(LmP0Frame consumer); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
     int: status 0
     @: char paths
     size_t: path_count 0U
-    if: cand_name = 0 || req < 0
-        return: 0
-    cand: l2_ns_find_payload(cand_name)
-    if: cand < 0
+    if: cand < 0 || req < 0
         return: 0
     if: consumer = 0
-        return: l2_admit_implements(cand, req, req, cand_name, path, at, context)
+        return: l2_admit_implements(cand, req, req, 0, path, at, context)
     l2_uses_full: 0
     paths: (cast: (@: char) l2_xmalloc(64U * 128U))
     if: paths = 0
@@ -10333,9 +10341,18 @@ fn: l2_admit_consumer_uses (const: @(LmP0Text cand_name); int: req; const: @(LmP
     if: l2_uses_full != 0
         l2_xfree((cast: (@: void) paths))
         return: l2_error(path, at, "a uses list is full")
-    status: l2_admit_paths(cand, req, paths, path_count, cand_name, path, at, context)
+    status: l2_admit_paths(cand, req, paths, path_count, 0, path, at, context)
     l2_xfree((cast: (@: void) paths))
 return: status
+
+fn: l2_admit_consumer_uses (const: @(LmP0Text cand_name); int: req; const: @(LmP0Text varb); const: @(LmP0Frame consumer); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
+    int: cand
+    if: cand_name = 0 || req < 0
+        return: 0
+    cand: l2_ns_find_payload(cand_name)
+    if: cand < 0
+        return: 0
+return: l2_admit_consumer_ix(cand, req, varb, consumer, path, at, context)
 
 # An otherwise unrecognized unit-level frame with a matching end is an ordinary
 # named Structure. Reserved heads are matched before this is ever reached, so a
@@ -14205,6 +14222,97 @@ fn: l2_emit_empty_actual (int: idx; int: k; int: mi; const: @(char ind); @: char
         return: 1
 return: 0
 
+fn: l2_bound_nsty (int: mi; const: @(LmP0Text name)) int
+    int: oi
+    if: name = 0
+        return: 0 - 1
+    if: l2_formal_find(mi, name) >= 0
+        return: l2_nsty_of_name(mi, name)
+    oi: l2_own_find(mi, name)
+    if: oi >= 0
+        return: l2_own_nsty_get(oi)
+return: 0 - 1
+
+# 0: *out_ni is the Structure index of this actual. 1: a located error was
+# reported. 2: not a Structure actual (a primitive expression stays on the
+# ordinary check).
+fn: l2_actual_ns (int: mi; @: LmP0Field a0; int: span; const: @(char path); const: @(LmP0Node at); @: int out_ni) int
+    @: LmP0Field sl
+    @: LmP0Field mem
+    int: cmi
+    int: owner
+    int: fx
+    size_t: off
+    @: LmP0Text left
+    c.array: [128]: char buf
+    \out_ni: 0 - 1
+    if: a0 = 0 || a0\value = 0 || out_ni = 0
+        return: 2
+    if: span = 1 && a0\value\kind = c.LM_P0_NODE_ATOM && a0\value\as != 0 && a0\value\as\atom != 0
+        cmi: l2_ns_find_payload(a0\value\as\atom)
+        if: cmi >= 0
+            \out_ni: cmi
+            return: 0
+        off: 0U
+        if: a0\value\as\atom\data != 0 && a0\value\as\atom\length > 2U && a0\value\as\atom\length < 128U
+            while: off < a0\value\as\atom\length && a0\value\as\atom\data[off] != 92
+                off: off + 1U
+            if: off > 0U && off + 1U < a0\value\as\atom\length
+                memcpy(buf, a0\value\as\atom\data, a0\value\as\atom\length)
+                buf[a0\value\as\atom\length]: 0
+                buf[off]: 0
+                left: (cast: (@: LmP0Text) l2_xmalloc(c.sizeof(c.LmP0Text)))
+                if: left = 0
+                    return: l2_error(path, a0\value, "out of memory")
+                left\data: buf
+                left\length: off
+                owner: l2_bound_nsty(mi, left)
+                l2_xfree((cast: (@: void) left))
+                if: owner < 0
+                    return: l2_error(path, a0\value, "unresolved name")
+                fx: l2_ns_field_ix(owner, buf + off + 1U)
+                if: fx < 0
+                    return: l2_error(path, a0\value, "unresolved name")
+                if: l2_nsf_kind[fx] != 3 || l2_nsf_ref[fx] < 0
+                    return: l2_error(path, a0\value, "a field path must end at a Structure")
+                \out_ni: l2_nsf_ref[fx]
+                return: 0
+            ---
+        ---
+        return: 2
+    if: span = 1 && a0\value\kind = c.LM_P0_NODE_FRAME && a0\value\as != 0 && a0\value\as\frame != 0 && a0\value\as\frame\head != 0
+        cmi: l2_find_method(a0\value\as\frame\head)
+        if: cmi < 0
+            return: 2
+        owner: l2_nsty_get(cmi, 0 - 1)
+        if: owner < 0
+            return: l2_error(path, at, "implements is false in function argument")
+        \out_ni: owner
+        return: 0
+    if: span = 3 && a0\value\kind = c.LM_P0_NODE_ATOM && a0\value\as != 0
+        sl: l2_next_active(a0\next)
+        mem: 0
+        if: sl != 0
+            mem: l2_next_active(sl\next)
+        if: sl != 0 && sl\value != 0 && sl\value\kind = c.LM_P0_NODE_ATOM && l2_is_slash(sl\value\as\atom) != 0 && mem != 0 && mem\value != 0 && mem\value\kind = c.LM_P0_NODE_ATOM && mem\value\as != 0 && mem\value\as\atom != 0 && l2_ident(mem\value\as\atom) != 0
+            owner: l2_bound_nsty(mi, a0\value\as\atom)
+            if: owner < 0
+                return: l2_error(path, a0\value, "unresolved name")
+            if: mem\value\as\atom\length = 0U || mem\value\as\atom\length >= 128U || mem\value\as\atom\data = 0
+                return: l2_error(path, mem\value, "unresolved name")
+            memcpy(buf, mem\value\as\atom\data, mem\value\as\atom\length)
+            buf[mem\value\as\atom\length]: 0
+            fx: l2_ns_field_ix(owner, buf)
+            if: fx < 0
+                return: l2_error(path, mem\value, "unresolved name")
+            if: l2_nsf_kind[fx] != 3 || l2_nsf_ref[fx] < 0
+                return: l2_error(path, mem\value, "a field path must end at a Structure")
+            \out_ni: l2_nsf_ref[fx]
+            return: 0
+        ---
+    ---
+return: 2
+
 # A CALL OF THE RESOLVED CALLEE idx (FABLE-OPUS-RECEIVER-CONTRACT-20260924-139): one check for
 # every spelling of a call -- `m(args)`, `m: args`, the vertical form, and a bare atom `m`, which
 # has no argument Structure (body 0) and so no actuals.  fi is the callable formal the call goes
@@ -14216,6 +14324,10 @@ fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Stru
     int: actual_i
     int: req_mi
     int: cand_mi
+    int: cand_ns
+    int: ast
+    int: nst
+    int: handled
     int: k
     if: body != 0
         a0: l2_next_active(body\first_field)
@@ -14260,10 +14372,29 @@ fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Stru
                 return: l2_error(path, node, "internal: admission outside a method")
             ---
         else:
-            if: req_mi < 0 && (actual_span < 1 || l2_check_fields(a0, actual_span, mi, path, node) != 0)
+            handled: 0
+            nst: l2_nsty_get(idx, actual_i)
+            if: req_mi < 0 && nst >= 0
+                ast: l2_actual_ns(mi, a0, actual_span, path, node, @ cand_ns)
+                if: ast = 1
+                    return: 1
+                if: ast = 0
+                    if: l2_m_node[idx] != 0 && l2_m_node[idx]\as != 0
+                        if: l2_admit_consumer_ix(cand_ns, nst, l2_fn(idx, actual_i), l2_m_node[idx]\as\frame, path, node, "function argument") != 0
+                            return: 1
+                        ---
+                    else:
+                        if: l2_admit_implements(cand_ns, nst, nst, 0, path, node, "function argument") != 0
+                            return: 1
+                        ---
+                    ---
+                    handled: 1
+                ---
+            ---
+            if: handled = 0 && req_mi < 0 && (actual_span < 1 || l2_check_fields(a0, actual_span, mi, path, node) != 0)
                 return: 1
-            if: actual_span = 1 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_ATOM && l2_nsty_get(idx, actual_i) >= 0 && l2_m_node[idx] != 0 && l2_m_node[idx]\as != 0
-                if: l2_admit_consumer_uses(a0\value\as\atom, l2_nsty_get(idx, actual_i), l2_fn(idx, actual_i), l2_m_node[idx]\as\frame, path, node, "function argument") != 0
+            if: handled = 0 && actual_span = 1 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_ATOM && nst >= 0 && l2_m_node[idx] != 0 && l2_m_node[idx]\as != 0
+                if: l2_admit_consumer_uses(a0\value\as\atom, nst, l2_fn(idx, actual_i), l2_m_node[idx]\as\frame, path, node, "function argument") != 0
                     return: 1
                 ---
                 if: l2_untyped_graph(mi, a0\value) != 0 && l2_admit_site(mi) != 0
@@ -14724,6 +14855,7 @@ fn: l2_discard_run (@: LmP0Field field) int
 return: 0
 
 fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); int: depth) int
+    size_t: off
     int: nmk
     int: msk
     int: msni
@@ -15176,10 +15308,23 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             if: l2_admit_consumer_uses(l2_next_active(fr\body\first_field)\value\as\atom, l2_nsty_get(mi, 0 - 1), l2_next_active(fr\body\first_field)\value\as\atom, l2_fn_frame(mi), path, stmt, "return value") != 0
                 return: 1
             ---
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_count_active(fr\body) >= 1 && l2_next_active(fr\body\first_field) != 0 && l2_next_active(fr\body\first_field)\value != 0 && l2_nsty_get(mi, 0 - 1) >= 0 && l2_expr_span(l2_next_active(fr\body\first_field)) != 1
+            return: l2_error(path, stmt, "a Structure return must be a name")
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_count_active(fr\body) = 1 && l2_next_active(fr\body\first_field) != 0 && l2_next_active(fr\body\first_field)\value != 0 && l2_next_active(fr\body\first_field)\value\kind = c.LM_P0_NODE_FRAME && l2_nsty_get(mi, 0 - 1) >= 0
+            return: l2_error(path, stmt, "a Structure return must be a name")
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_count_active(fr\body) = 1 && l2_next_active(fr\body\first_field) != 0 && l2_next_active(fr\body\first_field)\value != 0 && l2_next_active(fr\body\first_field)\value\kind = c.LM_P0_NODE_ATOM && l2_next_active(fr\body\first_field)\value\as != 0 && l2_next_active(fr\body\first_field)\value\as\atom != 0 && l2_next_active(fr\body\first_field)\value\as\atom\data != 0 && l2_nsty_get(mi, 0 - 1) >= 0
+            off: 0U
+            while: off < l2_next_active(fr\body\first_field)\value\as\atom\length && l2_next_active(fr\body\first_field)\value\as\atom\data[off] != 92
+                off: off + 1U
+            if: off < l2_next_active(fr\body\first_field)\value\as\atom\length
+                return: l2_error(path, stmt, "a Structure return must be a name")
+            ---
         ---
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_check_return_literal(mi, fr\body, path, stmt) != 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_count_active(fr\body) != 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && l2_check_fields(fr\body\first_field, l2_count_active(fr\body), mi, path, stmt) != 0
+            if: l2_nsty_get(mi, 0 - 1) >= 0
+                return: l2_error(path, stmt, "a Structure return must be a name")
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0
             field: l2_next_active(field\next)
@@ -24409,6 +24554,8 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         # `return: v` evaluates v as every value is evaluated -- a callable named there is called
         # (l2_prep), in a body and in a trailer (l2_emit_ret_tr) alike.
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_eval_fields(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok) != 0
+            if: l2_nsty_get(mi, 0 - 1) >= 0
+                return: l2_error(l2_src, stmt, "a Structure return must be a name")
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_emit_poll(mi, ind) != 0
             return: 1

@@ -1,0 +1,29 @@
+# mk returns Rich, which is not Equatable. take reads slot\equals.
+# Rich has equals and an unread extra. The path list admits the call result.
+
+Rich:
+    size_t: equals 0U
+    size_t: extra 0U
+end: Rich
+
+Equatable:
+    size_t: equals 0U
+end: Equatable
+
+fn: mk () Rich
+return: Rich
+
+fn: take (Equatable: slot) int
+    slot\equals: 1U
+return: 4
+
+fn: go () int
+return: take(mk())
+
+int: k
+k: go()
+if: k = 4
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+return

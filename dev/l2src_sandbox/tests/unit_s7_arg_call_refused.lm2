@@ -1,0 +1,20 @@
+# take(mk()) is a call result. mk returns Plain. take reads slot\equals.
+# Plain has no equals, so the path list refuses.
+
+Plain:
+    size_t: toString 0U
+end: Plain
+
+Equatable:
+    size_t: equals 0U
+end: Equatable
+
+fn: mk () Plain
+return: Plain
+
+fn: take (Equatable: slot) int
+    slot\equals: 1U
+return: 4
+
+fn: go () int
+return: take(mk())

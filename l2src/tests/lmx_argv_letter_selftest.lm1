@@ -13,7 +13,7 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 # and posted to R0 by the ordinary mail pair before R0's turn.  The letter is (sender; payload) like
 # every letter (K3 = a; FABLE-OPUS-MAINARGS-SENDER-20260925-173): an anonymous root Structure whose
 # field 0 is the sender's Message and whose field 1 is the payload, a Structure whose one field,
-# mainArgs, is an Array of references to char Arrays, argv[i] with its NUL.  This selftest builds
+# mainArgs, is an Array of references to char Arrays, argv[i] at exact strlen, no NUL.  This selftest builds
 # the same letter by the same acts (al_make) and witnesses both ends of it:
 #   A. untaken: R0's turn takes nothing; close releases the donor arena (P5), so that arena is
 #      empty afterwards, and R0 never owned the letter;
@@ -67,11 +67,12 @@ fn: al_make (@: LmxArena arena; @: void sender; int: argc; @@: char argv) @: Lmx
         return: 0
     slots: (cast: (@@: void) args\data)
     while: i < argc
-        len: strlen(argv[i]) + 1U
+        len: strlen(argv[i])
         arg: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, len, arena)
         if: arg = 0
             return: 0
-        memcpy(arg\data, (cast: (@: void) argv[i]), len)
+        if: len != 0U
+            memcpy(arg\data, (cast: (@: void) argv[i]), len)
         slots[i]: (cast: (@: void) arg)
         i: i + 1
     ---
@@ -95,7 +96,7 @@ return: letter
 
 # The letter's graph is an independent Structure with two fields: `sender`, then the payload -- an
 # independent Structure of `arena` with one field: an Array of references to char Arrays,
-# classified as such in `arena`, holding exactly these words with their NUL.
+# classified as such in `arena`, holding exactly these words at strlen, with no NUL.
 fn: al_holds (@: LmxArena arena; @: Lmx graph; @: void sender; int: argc; @@: char argv) int
     @: Lmx payload
     @: LmxArrayDesc args
@@ -126,7 +127,12 @@ fn: al_holds (@: LmxArena arena; @: Lmx graph; @: void sender; int: argc; @@: ch
         arg: (cast: (@: LmxArrayDesc) slots[i])
         if: arg = 0 || lmx_domain_type(arena, (cast: (@: void) arg)) != c.LMX_TYPE_ARRAY_OF_CHAR
             return: 0
-        if: arg\len != strlen(argv[i]) + 1U || memcmp(arg\data, (cast: (@: void) argv[i]), arg\len) != 0
+        if: arg\len != strlen(argv[i])
+            return: 0
+        if: arg\len != 0U && memcmp(arg\data, (cast: (@: void) argv[i]), arg\len) != 0
+            return: 0
+        # "ok" is len 2 and data[1] is 'k'. A copy that keeps the C NUL (len + 1) fails here.
+        if: arg\len = 2U && argv[i][0] = 111 && (cast: (@: char) arg\data)[1] != 107
             return: 0
         i: i + 1
     ---
@@ -218,7 +224,7 @@ fn: main () int
     al_check(counts, lmx_arena_open(@ untaken_arena) = 0, "A: the letter's own full arena opened")
     al_sender: (cast: (@: void) lmx_root_message(@ root))
     letter: al_make(@ untaken_arena, al_sender, 3, words)
-    al_check(counts, letter != 0 && al_holds(@ untaken_arena, letter\graph, al_sender, 3, words) != 0, "A: the letter is (sender; payload) and its payload carries an Array of char Arrays, NUL kept (mutant: al_make flat)")
+    al_check(counts, letter != 0 && al_holds(@ untaken_arena, letter\graph, al_sender, 3, words) != 0, "A: the letter is (sender; payload) and its payload carries char Arrays of exact len, no NUL (mutant: al_make flat)")
     al_check(counts, letter != 0 && lmx_service_post(lmx_root_service(@ root), (cast: (@: void) lmx_root_thread(@ root)), letter, @ untaken_arena) = c.LMX_SERVICE_OK, "A: posted to R0")
     al_check(counts, lmx_thread_mail_count(lmx_root_thread(@ root), c.LMX_POST_INBOX) = 1U, "A: R0's inbox holds the letter")
     al_check(counts, lmx_arena_index_len(untaken_at) != 0U && untaken_at\blocks != 0, "A: the producer owns the letter's arena before any take")

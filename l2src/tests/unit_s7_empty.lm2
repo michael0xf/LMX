@@ -1,0 +1,26 @@
+# Empty uses still succeeds, and the admission call runs.
+# take(Plain): Plain has no equals. The body of take does not field-follow
+# slot, so uses is empty. Consumer is that empty field list, not Equatable.
+# Passing Equatable as Consumer would refuse this call.
+
+Plain:
+    size_t: toString 0U
+end: Plain
+
+Equatable:
+    size_t: equals 0U
+end: Equatable
+
+fn: take (Equatable: slot) int
+return: 4
+
+fn: go () int
+return: take(Plain)
+
+int: k
+k: go()
+if: k = 4
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+return

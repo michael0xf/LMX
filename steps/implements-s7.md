@@ -15,7 +15,7 @@ STARTED grok/implements-s7, база main `fd074ca`. Тикета без `DONE` 
 - `dev/l2src_sandbox/l2trans.lm1` `l2_admit_implements` :10190–:10191, `cand = req` до `l2_descriptor_implements`.
 - `l2_admit_consumer_uses` :10223–:10224, `path_count = 0` до `l2_admit_implements`.
 
-Вызов `l2_descriptor_implements(cand, req, req)` на пустом `uses`, когда индексы разные, сравнил бы все поля required и отказал бы случай, который спека 2.1 считает истинным. Отказ даёт третий аргумент `req`, не точка вызова (REVIEW ae4fcc4 п.1): `l2_descriptor_implements` при `cons_n = 0` возвращает успех внутри функции (`l2trans.lm1` :9725–:9727). Пустой `uses` на этот обход не переводится. Срез «Consumer третьим аргументом» не начат: родитель его не назвал. `l2trans.lm1` этот ответ не меняет.
+Вызов `l2_descriptor_implements(cand, req, req)` на пустом `uses`, когда индексы разные, сравнил бы все поля required и отказал бы случай, который спека 2.1 считает истинным. Отказ даёт третий аргумент `req`, не точка вызова (REVIEW ae4fcc4 п.1): `l2_descriptor_implements` при `cons_n = 0` возвращает успех внутри функции. Пустой `uses` идёт в тот же вызов с Consumer без полей: третий аргумент `l2_ns_n`, у этого индекса нет строк, `cons_n = 0`, успех внутри функции. Непустой `uses` по-прежнему передаёт `req`.
 
 ## Срез 1 — посажен
 
@@ -26,6 +26,14 @@ STARTED grok/implements-s7, база main `fd074ca`. Тикета без `DONE` 
 Мутант: в начале `l2_descriptor_implements` при `cand = req` вернуть 1. `unit_s7_identity.lm2:15` — «malformed implements descriptor», frame=keep, exit 1. Откат: тот же файл переводится, exit 0. Живой исходник мутантом не оставался: правка была в копии evidence.
 
 Ядро не менялось. Близнецы: `dev/l2src_sandbox/l2trans.lm1` и `l2src/l2trans.lm1`, фикстура в обоих `tests/`.
+
+## Пустой uses — через тот же вызов
+
+`l2_admit_implements` принимает Consumer. Непустой `uses` и отсутствие кадра передают `req`. Пустой `uses` передаёт `l2_ns_n`: у этого индекса нет полей, `l2_descriptor_implements` видит `cons_n = 0` и возвращает успех внутри вызова. `Plain` без `equals` допускается в `Equatable`, пока тело `take` не читает поле.
+
+Свидетель `unit_s7_empty.lm2`, Entry 7: `take(Plain)` → 4. `unit_s7_identity` остаётся Entry 7. `unit_invalid_implements_used_field` по-прежнему «implements is false in function argument». Гейт: build 282/282 (`build/l2src/20260926_085629`), harness 422/422 (`build/l2_harness/s7empty`), L3 11/11, имена 69/128, check_docs OK.
+
+Мутант: в `l2_descriptor_implements` при `cons >= l2_ns_n` вернуть 1. `unit_s7_empty.lm2:18` — «malformed implements descriptor», frame=take, exit 1. `unit_s7_identity` при этом мутанте переводится. Откат: `unit_s7_empty` переводится, exit 0. Живой исходник мутантом не оставался.
 
 ## Срез 2, после среза 1
 

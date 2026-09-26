@@ -448,13 +448,21 @@ int: l2_rw_pn 0
 @@: int l2_it_hty 0
 []: char l2_tok 1024
 []: char l2_ctok 2048
-int: l2_convert_mask 0
 int: l2_cv_ready 0
+int: l2_cv_failed 0
 int: l2_cv_cell_n 0
 int: l2_cv_gap 0
 int: l2_cv_used 0
-int: l2_cv_tmp_n 0
 []: @(char) l2_cv_cell 960
+# Q33: the impl sources rows name, parsed once; the receivers the edges need.
+[]: @(char) l2_cv_impl_path 8
+[]: @(LmP0Document) l2_cv_impl_doc 8
+int: l2_cv_impl_n 0
+@: LmP0Node l2_cv_body 0
+[]: @(LmP0Node) l2_cv_need 64
+int: l2_cv_need_n 0
+int: l2_cv_inj_n 0
+int: l2_call_convert 0
 []: char l2_addr_path 1024
 @: char l2_ccall_into 0
 
@@ -650,9 +658,10 @@ prototype:
     fn: l2_colon_simple_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
     fn: l2_prim_code_name (int: ty) @: char
     fn: l2_convert_load (const: @(char src)) int
-    fn: l2_convert_hit (const: @(char from_n); const: @(char to_n); @: int bit) @: char
-    fn: l2_convert_on_store (int: mi; int: oi; const: @(LmP0Frame fr); const: @(char ind)) int
-    fn: l2_emit_convert_defs () int
+    fn: l2_convert_hit (const: @(char from_n); const: @(char to_n)) @: char
+    fn: l2_convert_method (const: @(LmP0Node body)) int
+    fn: l2_convert_edge (int: mi; const: @(char path); const: @(LmP0Node stmt)) int
+    fn: l2_convert_on_store (int: mi; int: oi; const: @(LmP0Node stmt); const: @(LmP0Frame fr); const: @(char ind)) int
     fn: l2_colon_types_compatible (int: target_ty; int: value_ty) int
     fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
     fn: l2_colon_decl_shape (const: @(LmP0Node stmt); @@: LmP0Text out_model; @@: LmP0Text out_name) int
@@ -817,7 +826,6 @@ prototype:
     fn: l2_untyped_graph (int: mi; const: @(LmP0Node value)) int
     fn: l2_type_inst (int: ni; @: char dest) int
     fn: l2_admit_site (int: mi) int
-    fn: l2_convert_site (int: mi) int
     fn: l2_emit_admit (int: mi; int: ni; const: @(char value); const: @(char ind)) int
     fn: l2_implicit_name (int: g) const: @: char
     fn: l2_throws_frame (int: mi) @: LmP0Node
@@ -3122,6 +3130,21 @@ fn: l2_translate_unit (const: @(LmP0Structure unit); const: @(char path)) int
     int: role
     int: i
     l2_library_mode: l2_library_flag
+    # A unit may be translated twice (Q33, l2_translate): every registry of the
+    # unit starts empty, as in the first translation.
+    l2_ns_n: 0
+    l2_nsf_n: 0
+    l2_nsty_n: 0
+    l2_ebr_n: 0
+    l2_mres_n: 0
+    l2_mrs_n: 0
+    l2_msrc_n: 0
+    l2_cf_n: 0
+    l2_lp_n: 0
+    l2_pad_n: 0
+    l2_pad_seq: 0
+    l2_bseq_n: 0
+    l2_letter_model_n: 0
     l2_m_n: 0
     l2_own_n: 0
     l2_own_free()
@@ -3218,6 +3241,14 @@ fn: l2_translate_unit (const: @(LmP0Structure unit); const: @(char path)) int
         ---
         field: l2_next_active(field\next)
     ---
+    # The receivers conversion edges call (Q33): ordinary methods, from the
+    # impl source a convert.lm2 row names.
+    i: 0
+    while: i < l2_cv_inj_n
+        if: l2_collect_method(l2_cv_need[i], path) != 0
+            return: 1
+        i: i + 1
+    ---
     if: l2_ns_resolve_refs(path, first_stmt) != 0
         return: 1
     # The library profile is methods only: nothing would ever execute a
@@ -3293,6 +3324,7 @@ return: 0
 
 fn: l2_translate (const: @(char in_path); const: @(char out_path)) int
     @: LmP0Document document 0
+    @: LmP0Document spent 0
     const: @: LmP0Diagnostic diagnostic
     const: @: LmP0Node root
     @: LmP0Structure unit 0
@@ -3301,8 +3333,8 @@ fn: l2_translate (const: @(char in_path); const: @(char out_path)) int
     if: l2_path_is_lm2(in_path) = 0
         c.fprintf(l1_stderr(), "l2trans error: %s:1:1: expected a .lm2 source\n", in_path)
         return: 1
-    if: l2_convert_load(in_path) != 0
-        return: 1
+    l2_cv_need_n: 0
+    l2_cv_inj_n: 0
     l2_module_hash_a: 2166136261U
     l2_module_hash_b: 5381U
     while: in_path[path_i] != 0
@@ -3334,8 +3366,29 @@ fn: l2_translate (const: @(char in_path); const: @(char out_path)) int
     if: l2_translate_unit(unit, in_path) != 0
         lm_p0_document_destroy(document)
         return: 1
+    # An edge found a receiver the unit has not taken yet (Q33): translate the
+    # source again with every receiver noted so far, from where a new process
+    # would start -- l2_release, and a new parse, because a translation writes
+    # into its tree (l2_mad_take_nested). A receiver's own body needs none, so
+    # this settles; the bound is the table.
+    while: l2_cv_need_n > l2_cv_inj_n
+        l2_cv_inj_n: l2_cv_need_n
+        l2_release()
+        if: spent != 0
+            lm_p0_document_destroy(spent)
+        spent: document
+        document: 0
+        unit: 0
+        if: lm_p0_parse_file(in_path, @ document) != 0 || document = 0 || l2_unit_from_root(lm_p0_document_root(document), in_path, @ unit) != 0 || l2_translate_unit(unit, in_path) != 0
+            lm_p0_document_destroy(spent)
+            if: document != 0
+                lm_p0_document_destroy(document)
+            return: 1
+        ---
     status: l2_emit_unit(out_path)
     lm_p0_document_destroy(document)
+    if: spent != 0
+        lm_p0_document_destroy(spent)
     if: status != 0
         if: l2_alloc_err != 0
             return: l2_alloc_or(in_path, 0, "translation failed")
@@ -5901,7 +5954,10 @@ fn: l2_prim_code_name (int: ty) @: char
 # The conversion rows are the `table:` in the translation input convert.lm2,
 # read by the same P0 parser as any other source. The table's own name is
 # not consulted. implements does not call a receiver: the assignment edge does.
-# l2_cv_gap 1: no usable row. 2: the row names a receiver whose body is not ported.
+# The table is read at the first pair of different names, so a source that
+# converts nothing needs none. l2_cv_gap 1: no usable row. 2: the row's
+# receiver has no fn: in its impl source. 3: the table cannot be read. 4: the
+# impl source cannot be read.
 fn: l2_convert_keep (const: @(LmP0Text t)) int
     []: char buf 128
     @: char copy
@@ -5948,21 +6004,20 @@ fn: l2_convert_walk (const: @(LmP0Node node)) int
         return: 0
 return: 0
 
-# The table sits beside the source file. The launch directory is not a second place to look.
-fn: l2_convert_beside (const: @(char src); @: char dst; size_t: cap) int
+# A file beside the source: the table, or the impl source a row names. The
+# launch directory is not a second place to look.
+fn: l2_convert_beside (const: @(char src); const: @(char leaf); @: char dst; size_t: cap) int
     size_t: n 0U
     size_t: cut 0U
     size_t: i 0U
     size_t: k 0U
-    const: @(char leaf)
-    leaf: "convert.lm2"
-    if: src = 0 || dst = 0 || cap < 16U
+    if: src = 0 || leaf = 0 || dst = 0 || cap < 16U
         return: 1
     while: src[n] != 0
         if: src[n] = 47 || src[n] = 92
             cut: n + 1U
         n: n + 1U
-    if: cut + 12U >= cap
+    if: cut + c.strlen(leaf) + 1U >= cap
         return: 1
     while: i < cut
         dst[i]: src[i]
@@ -5974,91 +6029,170 @@ fn: l2_convert_beside (const: @(char src); @: char dst; size_t: cap) int
     dst[i]: 0
 return: 0
 
+# Read once, at the first pair that asks. A table that cannot be read stays
+# unread for the whole source: every pair then refuses at its own line.
 fn: l2_convert_load (const: @(char src)) int
     @: FILE raw 0
     @: LmP0Document document 0
     const: @: LmP0Node root
     []: char path 1024
     if: l2_cv_ready != 0
-        return: 0
+        return: l2_cv_failed
     l2_cv_ready: 1
+    l2_cv_failed: 1
     l2_cv_cell_n: 0
-    if: src = 0 || l2_convert_beside(src, path, 1024U) != 0
-        return: l2_error(src, 0, "cannot read the conversion table")
+    if: src = 0 || l2_convert_beside(src, "convert.lm2", path, 1024U) != 0
+        return: 1
     raw: c.fopen(path, "rb")
     if: raw = 0
-        return: l2_error(src, 0, "cannot read the conversion table")
+        return: 1
     fclose(raw)
     if: lm_p0_parse_file(path, @ document) != 0 || document = 0
-        return: l2_error(src, 0, "cannot read the conversion table")
+        return: 1
     root: lm_p0_document_root(document)
     if: root = 0 || l2_convert_walk(root) != 0
         lm_p0_document_destroy(document)
-        return: l2_error(src, 0, "cannot read the conversion table")
+        return: 1
     if: l2_cv_cell_n = 0 || (l2_cv_cell_n % 6) != 0
         lm_p0_document_destroy(document)
         return: l2_error("convert.lm2", 0, "conversion table rows are not from, to, forbidden, kind, receiver, impl")
     lm_p0_document_destroy(document)
+    l2_cv_failed: 0
 return: 0
 
-fn: l2_convert_bit (const: @(char recv)) int
-    if: recv = 0
-        return: 0
-    if: c.strcmp(recv, "lm_stg_convert_size_t_int") = 0
-        return: 1
-    if: c.strcmp(recv, "lm_stg_convert_int_size_t") = 0
-        return: 2
-    if: c.strcmp(recv, "lm_stg_convert_char_int") = 0
-        return: 4
-    if: c.strcmp(recv, "lm_stg_convert_int_char") = 0
-        return: 8
-    if: c.strcmp(recv, "lm_stg_convert_int_unsigned") = 0
-        return: 16
-    if: c.strcmp(recv, "lm_stg_convert_unsigned_int") = 0
-        return: 32
-    if: c.strcmp(recv, "lm_stg_convert_unsigned_ulong") = 0
-        return: 64
-    if: c.strcmp(recv, "lm_stg_convert_ulong_unsigned") = 0
-        return: 128
-return: 0
-
-fn: l2_convert_hit (const: @(char from_n); const: @(char to_n); @: int bit) @: char
+# The impl source a row names, beside the source, parsed once and kept for
+# the whole translation: the receivers taken from it are nodes of that tree.
+fn: l2_convert_impl (const: @(char impl)) @: LmP0Document
     int: i 0
-    int: b 0
-    const: @(char recv)
+    @: LmP0Document document 0
+    @: char copy 0
+    size_t: n
+    []: char leaf 256
+    []: char path 1024
+    if: impl = 0 || l2_src = 0
+        return: 0
+    while: i < l2_cv_impl_n
+        if: c.strcmp(l2_cv_impl_path[i], impl) = 0
+            return: l2_cv_impl_doc[i]
+        i: i + 1
+    # The cell is the table's string token, quotes included.
+    n: c.strlen(impl)
+    if: n < 3U || n > 255U || impl[0] != 34 || impl[n - 1U] != 34
+        return: 0
+    memcpy(leaf, impl + 1, n - 2U)
+    leaf[n - 2U]: 0
+    if: l2_cv_impl_n >= 8 || l2_convert_beside(l2_src, leaf, path, 1024U) != 0
+        return: 0
+    if: lm_p0_parse_file(path, @ document) != 0 || document = 0 || lm_p0_document_root(document) = 0
+        return: 0
+    n: c.strlen(impl) + 1U
+    copy: (cast: (@: char) l2_xmalloc(n))
+    if: copy = 0
+        return: 0
+    memcpy(copy, impl, n)
+    l2_cv_impl_path[l2_cv_impl_n]: copy
+    l2_cv_impl_doc[l2_cv_impl_n]: document
+    l2_cv_impl_n: l2_cv_impl_n + 1
+return: document
+
+# A row's receiver is the fn: of that name at the top of the row's impl source
+# (author, Q33): an ordinary L2 method. 0 when there is none (l2_cv_gap 2) or
+# the source cannot be read (4).
+fn: l2_convert_body (const: @(char recv); const: @(char impl)) @: LmP0Node
+    @: LmP0Document document
+    const: @: LmP0Node root
+    @: LmP0Field f
+    @: LmP0Field g
+    document: l2_convert_impl(impl)
+    if: document = 0
+        l2_cv_gap: 4
+        return: 0
+    root: lm_p0_document_root(document)
+    if: root = 0 || root\kind != c.LM_P0_NODE_STRUCTURE || root\as = 0 || root\as\structure = 0
+        l2_cv_gap: 4
+        return: 0
+    f: l2_next_active(root\as\structure\first_field)
+    while: f != 0
+        if: l2_frame_head(f\value, "fn") != 0 && f\value\as\frame\body != 0
+            g: l2_next_active(f\value\as\frame\body\first_field)
+            if: g != 0 && g\value != 0 && g\value\kind = c.LM_P0_NODE_ATOM && g\value\as != 0 && l2_text_eq(g\value\as\atom, recv)
+                return: f\value
+            ---
+        f: l2_next_active(f\next)
+    l2_cv_gap: 2
+return: 0
+
+# The row for from_n -> to_n. Its receiver's fn: is left in l2_cv_body.
+fn: l2_convert_hit (const: @(char from_n); const: @(char to_n)) @: char
+    int: i 0
     l2_cv_gap: 0
-    if: bit != 0
-        \bit: 0
+    l2_cv_body: 0
     if: from_n = 0 || to_n = 0
+        return: 0
+    if: l2_convert_load(l2_src) != 0
+        l2_cv_gap: 3
         return: 0
     while: i + 5 < l2_cv_cell_n
         if: c.strcmp(l2_cv_cell[i], from_n) = 0 && c.strcmp(l2_cv_cell[i + 1], to_n) = 0
             if: c.strcmp(l2_cv_cell[i + 2], "1") = 0 || c.strcmp(l2_cv_cell[i + 4], "None") = 0
                 l2_cv_gap: 1
                 return: 0
-            recv: l2_cv_cell[i + 4]
-            b: l2_convert_bit(recv)
-            if: b = 0
-                l2_cv_gap: 2
+            l2_cv_body: l2_convert_body(l2_cv_cell[i + 4], l2_cv_cell[i + 5])
+            if: l2_cv_body = 0
                 return: 0
-            \bit: b
-            return: (cast: (@: char) recv)
+            return: l2_cv_cell[i + 4]
         i: i + 6
     l2_cv_gap: 1
 return: 0
 
-# The value token is already in l2_tok. A different keyed pair with a row
-# becomes receiver(token, @ temp). No row is not a store. A receiver that
-# refuses the value leaves this method as the implicit throw `convert`.
-fn: l2_convert_on_store (int: mi; int: oi; const: @(LmP0Frame fr); const: @(char ind)) int
+# The unit's method whose node is this receiver's fn:, or -1.
+fn: l2_convert_method (const: @(LmP0Node body)) int
+    int: i 0
+    while: body != 0 && i < l2_m_n
+        if: l2_m_node[i] = body
+            return: i
+        i: i + 1
+return: 0 - 1
+
+# A conversion edge calls its receiver, a method of the unit taken from the
+# impl source (Q33). A receiver not taken yet is noted, and l2_translate
+# translates the unit again with it. A unit method that already has the
+# receiver's name is not that receiver.
+fn: l2_convert_edge (int: mi; const: @(char path); const: @(LmP0Node stmt)) int
+    int: idx
+    int: i 0
+    @: LmP0Field g
+    idx: l2_convert_method(l2_cv_body)
+    if: idx >= 0
+        l2_m_edge[l2_edge_off(mi, idx)]: l2_m_edge[l2_edge_off(mi, idx)] | 1
+        return: 0
+    if: l2_cv_body = 0
+        return: l2_error(path, stmt, "internal: a conversion without its receiver")
+    g: l2_next_active(l2_cv_body\as\frame\body\first_field)
+    if: l2_find_method(g\value\as\atom) >= 0
+        return: l2_error(path, stmt, "a converter's name is taken by a method of the unit")
+    while: i < l2_cv_need_n
+        if: l2_cv_need[i] = l2_cv_body
+            return: 0
+        i: i + 1
+    if: l2_cv_need_n >= 64
+        return: l2_error(path, stmt, "too many converters")
+    l2_cv_need[l2_cv_need_n]: l2_cv_body
+    l2_cv_need_n: l2_cv_need_n + 1
+return: 0
+
+# The store of a keyed pair calls the receiver: the value is its actual and
+# the result is the stored token (l2_tok). A refusal of the receiver is the
+# implicit throw `convert` of this method (l2_emit_call). 0: no conversion
+# here. 1: error. 2: no row. 3: the call is emitted.
+fn: l2_convert_on_store (int: mi; int: oi; const: @(LmP0Node stmt); const: @(LmP0Frame fr); const: @(char ind)) int
     int: from_ft 0
     int: to_ft
-    int: n
-    int: bit 0
+    int: idx
+    int: rc
     @: LmP0Field only
     const: @(char from_n)
     const: @(char to_n)
-    const: @(char recv)
     if: oi < 0 || fr = 0 || fr\body = 0 || l2_count_active(fr\body) != 1
         return: 0
     only: l2_next_active(fr\body\first_field)
@@ -6069,46 +6203,17 @@ fn: l2_convert_on_store (int: mi; int: oi; const: @(LmP0Frame fr); const: @(char
     to_n: l2_prim_code_name(to_ft)
     if: from_n = 0 || to_n = 0 || c.strcmp(from_n, to_n) = 0
         return: 0
-    recv: l2_convert_hit(from_n, to_n, @ bit)
-    if: recv = 0
+    if: l2_convert_hit(from_n, to_n) = 0
         return: 2
-    if: l2_m_throws = 0 || l2_m_throws[mi] = 0
-        return: l2_error(l2_src, 0, "internal: a conversion site was not checked")
-    n: l2_cv_tmp_n
-    l2_cv_tmp_n: l2_cv_tmp_n + 1
-    if: c.fprintf(l2_out, "%s%s: l2_cvt%d\n%sif: %s(%s, @ l2_cvt%d) != 0\n", ind, to_n, n, ind, recv, l2_tok, n) < 0
+    idx: l2_convert_method(l2_cv_body)
+    if: idx < 0
+        return: l2_error(l2_src, stmt, "internal: a conversion site was not checked")
+    l2_call_convert: 1
+    rc: l2_emit_call(stmt, idx, 0, 0 - 1, fr\body, mi, ind, l2_tok)
+    l2_call_convert: 0
+    if: rc != 0
         return: 1
-    if: l2_emit_implicit_throw(mi, "convert", ind) != 0
-        return: 1
-    if: c.snprintf(l2_tok, 1024U, "l2_cvt%d", n) < 0
-        return: 1
-    l2_convert_mask: l2_convert_mask | bit
-return: 0
-
-# Bodies for receivers declared in convert_impl.lm2 and named by a row.
-# A receiver answers 0 and writes the value, or refuses a value outside the
-# destination range with a nonzero answer and writes nothing. The edge turns
-# the refusal into the implicit throw `convert` (D-83). It does not become 0.
-fn: l2_emit_convert_defs () int
-    if: l2_convert_mask = 0
-        return: 0
-    if: (l2_convert_mask & 1) != 0 && fputs("fn: lm_stg_convert_size_t_int (size_t: n; @: int out) int\n    if: n > 2147483647U\n        return: 1\n    \\out: (cast: int n)\n    return: 0\nend: lm_stg_convert_size_t_int\n\n", l2_out) < 0
-        return: 1
-    if: (l2_convert_mask & 2) != 0 && fputs("fn: lm_stg_convert_int_size_t (int: n; @: size_t out) int\n    if: n < 0\n        return: 1\n    \\out: (cast: size_t n)\n    return: 0\nend: lm_stg_convert_int_size_t\n\n", l2_out) < 0
-        return: 1
-    if: (l2_convert_mask & 4) != 0 && fputs("fn: lm_stg_convert_char_int (int: n; @: int out) int\n    \\out: n\n    return: 0\nend: lm_stg_convert_char_int\n\n", l2_out) < 0
-        return: 1
-    if: (l2_convert_mask & 8) != 0 && fputs("fn: lm_stg_convert_int_char (int: n; @: char out) int\n    if: n > 255 || n < 0\n        return: 1\n    \\out: (cast: char n)\n    return: 0\nend: lm_stg_convert_int_char\n\n", l2_out) < 0
-        return: 1
-    if: (l2_convert_mask & 16) != 0 && fputs("fn: lm_stg_convert_int_unsigned (int: n; @: unsigned out) int\n    if: n < 0\n        return: 1\n    \\out: (cast: unsigned n)\n    return: 0\nend: lm_stg_convert_int_unsigned\n\n", l2_out) < 0
-        return: 1
-    if: (l2_convert_mask & 32) != 0 && fputs("fn: lm_stg_convert_unsigned_int (unsigned: n; @: int out) int\n    if: n > 2147483647U\n        return: 1\n    \\out: (cast: int n)\n    return: 0\nend: lm_stg_convert_unsigned_int\n\n", l2_out) < 0
-        return: 1
-    if: (l2_convert_mask & 64) != 0 && fputs("fn: lm_stg_convert_unsigned_ulong (unsigned: n; @: ulong out) int\n    \\out: (cast: ulong n)\n    return: 0\nend: lm_stg_convert_unsigned_ulong\n\n", l2_out) < 0
-        return: 1
-    if: (l2_convert_mask & 128) != 0 && fputs("fn: lm_stg_convert_ulong_unsigned (ulong: n; @: unsigned out) int\n    if: n > 4294967295U\n        return: 1\n    \\out: (cast: unsigned n)\n    return: 0\nend: lm_stg_convert_ulong_unsigned\n\n", l2_out) < 0
-        return: 1
-return: 0
+return: 3
 
 # Named primitive value codes are l2_primitive_leaf_implements. The lists
 # below are the literal class (-10), a quoted pointer (-11), and a code that
@@ -6121,7 +6226,6 @@ fn: l2_colon_types_compatible (int: target_ty; int: value_ty) int
     @: LmP0Text req 0
     int: result 0
     int: status 0
-    int: bit 0
     int: target_numeric 0
     int: value_numeric 0
     l2_cv_gap: 0
@@ -6148,10 +6252,9 @@ fn: l2_colon_types_compatible (int: target_ty; int: value_ty) int
             return: result
         if: status = 0 && result = 0
             return: 0
-        if: status = 0 && l2_convert_hit(cn, rn, @ bit) = 0
+        if: status = 0 && l2_convert_hit(cn, rn) = 0
             return: 0
         if: status = 0
-            l2_convert_mask: l2_convert_mask | bit
             l2_cv_used: 1
             return: 1
         if: status = 1
@@ -6212,15 +6315,19 @@ fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char p
     if: value_ty = 8
         return: l2_error(path, stmt, "a callable without a result has no value")
     cok: l2_colon_types_compatible(target_ty, value_ty)
+    if: cok = 0 && l2_cv_gap = 3
+        return: l2_error(path, stmt, "cannot read the conversion table")
+    if: cok = 0 && l2_cv_gap = 4
+        return: l2_error(path, stmt, "cannot read the converter source")
     if: cok = 0 && l2_cv_gap = 2
         return: l2_error(path, stmt, "no converter body ported")
     if: cok = 0 && l2_cv_gap = 1
         return: l2_error(path, stmt, "mixed numeric types (a conversion)")
     if: cok = 0
         return: l2_error(path, stmt, "assignment value has incompatible type")
-    # A converter is a receiver that can refuse: its edge puts this method on
-    # the throw channel, as an admission site does (D-83).
-    if: l2_cv_used != 0 && l2_convert_site(mi) != 0
+    # A converter is a receiver (Q33): the edge is a call of it, so a refusing
+    # receiver puts this method on the throw channel (l2_throws_close).
+    if: l2_cv_used != 0 && l2_convert_edge(mi, path, stmt) != 0
         return: 1
     if: only\value != 0 && only\value\kind = c.LM_P0_NODE_ATOM && l2_check_literal_kind(only\value\as\atom, l2_lit_kind_from_ft(target_ty), path, stmt) != 0
         return: 1
@@ -10799,14 +10906,6 @@ fn: l2_admit_site (int: mi) int
     l2_need_admit: 1
 return: 0
 
-# A conversion edge calls a receiver that can refuse, so its method takes the
-# status ABI the same way: the refusal leaves as the implicit throw `convert`.
-fn: l2_convert_site (int: mi) int
-    if: mi < 0 || l2_m_throws = 0
-        return: 1
-    l2_m_throws[mi]: 1
-return: 0
-
 # THE IMPLICIT THROW NAMES (S1.1).  An operator that fails throws its own name; nobody has to
 # catch it, and uncaught it reaches the root of the executing Message, which stops (author Q11).
 # The team names them (Q17 = A), and this table is the one place that spells them.  Its ORDER is
@@ -10816,7 +10915,7 @@ return: 0
 # knows every implicit status the callee can return.  No other status is on the channel: the
 # translator's and the kernel's own broken promises take the diagnostic route (X1,
 # l2_emit_invariant), never a status.  `convert` is a converter's refusal at a conversion edge
-# (D-83): the receiver a convert.lm2 row names refuses a value outside the destination range.
+# (D-83, Q33): whatever the receiver a convert.lm2 row names throws arrives as `convert`.
 fn: l2_implicit_name (int: g) const: @: char
     if: g = 1
         return: "merge"
@@ -15767,7 +15866,6 @@ return: 0
 
 fn: l2_parse_unit (const: @(char path)) int
     int: i 0
-    l2_convert_mask: 0
     # Merge result names are reserved here, before any statement is checked: a
     # field path rooted at a bound result is otherwise an unknown head at the
     # moment the unsupported-body guard runs. The scan is idempotent, and the
@@ -17056,7 +17154,13 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
     # Publish writes already known to this activation after the call and before
     # a following explicit node\field read. Merely taking an address does not
     # mark a graph-backed own cache dirty.
-    if: l2_m_throws[idx] != 0 && l2_emit_propagate(mi, idx, t, ind) != 0
+    # A conversion edge's call (Q33): whatever its receiver throws is this
+    # method's implicit throw `convert`; the receiver's names are not the caller's.
+    if: l2_m_throws[idx] != 0 && l2_call_convert != 0
+        if: c.fprintf(l2_out, "%sif: l2_ts%d != 0\n", ind, t) < 0 || l2_emit_implicit_throw(mi, "convert", ind) != 0
+            return: 1
+        ---
+    if: l2_m_throws[idx] != 0 && l2_call_convert = 0 && l2_emit_propagate(mi, idx, t, ind) != 0
         return: 1
     # A callable without a result names no value: its temporary is never declared.
     if: l2_m_ret[idx] = 8
@@ -25042,15 +25146,15 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             fi: l2_param_find(mi, fr\head)
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0
             fi: l2_m_alias[l2_own_off(mi, oi)]
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && l2_eval_fields(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok) != 0
-            return: 1
         cst: 0
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0
-            cst: l2_convert_on_store(mi, oi, fr, ind)
+            cst: l2_convert_on_store(mi, oi, stmt, fr, ind)
         if: cst = 1
             return: 1
         if: cst = 2
             return: l2_error(l2_src, stmt, "mixed numeric types (a conversion)")
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && cst != 3 && l2_eval_fields(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok) != 0
+            return: 1
         # An untyped graph into a Structure-typed own field (S3): admitted at run time, then
         # bound like receiveMessage and `Model: fresh`: its slot takes it (l2_own_store).
         rbadmit: 0
@@ -25545,10 +25649,6 @@ fn: l2_emit_unit (const: @(char out_path)) int
             return: 1
         k: k + 1
     ---
-    # Receivers named by convert.lm2, for the assignment edges this unit uses.
-    if: l2_emit_convert_defs() != 0
-        fclose(l2_out)
-        return: 1
     # The root (E) is walked and has no prototype: a file whose only method is its root has an
     # empty prototype list, and L1 refuses an empty colon frame, so the block is then left out.
     k: l2_m_n + l2_rw_send_n

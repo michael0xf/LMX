@@ -307,6 +307,9 @@ if (Test-Path -LiteralPath $testsHdr) {
 }
 Copy-Item -LiteralPath (Join-Path $sandbox 'convert.lm2') -Destination (Join-Path $src 'convert.lm2') -Force
 $staged++
+# The receivers the rows name (Q33): ordinary L2 methods beside the table.
+Copy-Item -LiteralPath (Join-Path $sandbox 'convert_impl.lm2') -Destination (Join-Path $src 'convert_impl.lm2') -Force
+$staged++
 Write-Output ('l2_harness: staged ' + $staged + ' files into ' + $src)
 if ($provenanceMode) {
     # The staged l2src\l2trans.lm1 and l2_libc.lm1 must be BYTE COPIES of the LIVE dev sandbox
@@ -2311,21 +2314,29 @@ $fixtures = @(
     # Mutant: same-name success stores 0 → unit_s7_prim_same refuses.
     # Mutant: cross-leaf success stores 0 → unit_s7_prim_cross refuses
     # and unit_s7_prim_same still translates.
-    # The cross row is convert.lm2 size_t → int, receiver lm_stg_convert_size_t_int.
+    # The cross row is convert.lm2 size_t → int, receiver lm_stg_convert_size_t_int: since Q33 an
+    # ordinary method of the unit from convert_impl.lm2, pinned by its range test.
     [pscustomobject]@{ Name = 'unit_s7_prim_same.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_prim_cross.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @(); Debt = @('lm_stg_convert_size_t_int') },
+        Absent = @('fn: lm_stg_convert_'); Debt = @('> 2147483647U') },
     [pscustomobject]@{ Name = 'unit_s7_conv_norow.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'mixed numeric types (a conversion)'; Absent = @('assignment value has incompatible type'); Debt = @() },
     # D-83: a converter's refusal is the implicit throw `convert` (g = 3), not c.abort() and not 0.
     # Uncaught it reaches the root: no value, Message stopped, status 3.  Caught, the handler runs
     # and the destination keeps its value.  Mutant: a body without its range test -- the first row
     # completes with 7, the second skips the handler with 3.
+    # Q33: the receiver is an ordinary method of the unit taken from convert_impl.lm2 (throws: range);
+    # the edge calls it and turns its refusal into the caller's `convert`.  No converter is an L1
+    # function spelled by the translator any more.
     [pscustomobject]@{ Name = 'unit_s7_conv_range.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
-        Absent = @('lmx: converter range'); Debt = @('fn: lm_stg_convert_size_t_int (size_t: n; @: int out) int', 'if: lm_stg_convert_size_t_int(') },
+        Absent = @('lmx: converter range', 'fn: lm_stg_convert_'); Debt = @('> 2147483647U') },
     [pscustomobject]@{ Name = 'unit_s7_conv_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @('lmx: converter range'); Debt = @('fn: lm_stg_convert_int_size_t (int: n; @: size_t out) int') },
+        Absent = @('lmx: converter range', 'fn: lm_stg_convert_'); Debt = @('< 0') },
+    # Q33: a row whose receiver has no fn: in its impl source refuses at the edge.  The row's own
+    # convert_impl.lm2 is tests\unit_s7_conv_nobody_impl.lm2, which has no lm_stg_convert_size_t_int.
+    [pscustomobject]@{ Name = 'unit_s7_conv_nobody.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Impl = 'unit_s7_conv_nobody_impl.lm2';
+        Needle = 'no converter body ported'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_invalid_implements_unknown_candidate.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown candidate descriptor'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_invalid_implements_unknown_required.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -2478,8 +2489,16 @@ foreach ($fx in $fixtures) {
     $source = Join-Path $sandbox ('tests\' + $fx.Name)
     if (-not (Test-Path -LiteralPath $source)) { Add-Row 'FAIL' ('fixture:' + $stem) 'fixture file is missing'; continue }
     # The conversion table is the convert.lm2 beside the source, not the launch directory.
-    # Stage the fixture next to the copy made at the top of this script.
+    # Stage the fixture next to the copy made at the top of this script.  A row with Impl gets a
+    # directory of its own: the same table, and tests\<Impl> as its convert_impl.lm2.
     $stagedLm2 = Join-Path $src $fx.Name
+    if ($fx.PSObject.Properties['Impl'] -and $fx.Impl) {
+        $own = Join-Path $src $stem
+        New-Item -ItemType Directory -Force -Path $own | Out-Null
+        Copy-Item -LiteralPath (Join-Path $sandbox 'convert.lm2') -Destination (Join-Path $own 'convert.lm2') -Force
+        Copy-Item -LiteralPath (Join-Path $sandbox ('tests\' + $fx.Impl)) -Destination (Join-Path $own 'convert_impl.lm2') -Force
+        $stagedLm2 = Join-Path $own $fx.Name
+    }
     Copy-Item -LiteralPath $source -Destination $stagedLm2 -Force
     $source = $stagedLm2
     $genLm1 = Join-Path $gen ($stem + '.lm1')

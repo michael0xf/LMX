@@ -1,0 +1,48 @@
+# Receivers named by the rows of convert.lm2 (author, Q33, 2026-09-26; LMX_blog/q/q33.md).
+# Each is an ordinary L2 method. A value outside the destination range is refused with the
+# declared throw `range`; the call the assignment edge inserts turns any refusal of its receiver
+# into the caller's implicit throw `convert`. A refusal is never a 0.
+# A row whose receiver has no fn: here refuses "no converter body ported".
+# lingvamyxa_prev/lm2/convert_impl.lm2 declares these receivers without bodies.
+
+fn: lm_stg_convert_size_t_int (size_t: n) int
+    throws: range
+    if: n > 2147483647U
+        throw: range
+return: (cast: (int) n)
+
+fn: lm_stg_convert_int_size_t (int: n) size_t
+    throws: range
+    if: n < 0
+        throw: range
+return: (cast: (size_t) n)
+
+fn: lm_stg_convert_char_int (char: n) int
+return: (cast: (int) n)
+
+fn: lm_stg_convert_int_char (int: n) char
+    throws: range
+    if: n > 255 || n < 0
+        throw: range
+return: (cast: (char) n)
+
+fn: lm_stg_convert_int_unsigned (int: n) unsigned
+    throws: range
+    if: n < 0
+        throw: range
+return: (cast: (unsigned) n)
+
+fn: lm_stg_convert_unsigned_int (unsigned: n) int
+    throws: range
+    if: n > 2147483647U
+        throw: range
+return: (cast: (int) n)
+
+fn: lm_stg_convert_unsigned_ulong (unsigned: n) ulong
+return: (cast: (ulong) n)
+
+fn: lm_stg_convert_ulong_unsigned (ulong: n) unsigned
+    throws: range
+    if: n > 4294967295U
+        throw: range
+return: (cast: (unsigned) n)

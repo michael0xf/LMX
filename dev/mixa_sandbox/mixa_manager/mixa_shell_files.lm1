@@ -1,0 +1,87 @@
+predef: "mixa_manager/mixa_file_manager.h.lm1"
+include: "<stdlib.h>"
+
+# Files owner, same-owner calls only. One header: the real
+# mixa_file_manager.h.lm1, not the *_l2 mirror.
+#
+# list / up / refresh call mixa_fm_goto / mixa_fm_parent / mixa_fm_refresh.
+# On success the new snapshot is moved out of MixaFm. Files keeps the
+# directory strings and does not keep a second copy of the rows. The caller
+# receives the row storage itself, not a pointer at the MixaFm object.
+# On failure the caller's outs are left untouched and the previous directory
+# stays, which is mixa_fm_goto's own rule.
+# mixa_fm_select is not called here. Selection belongs to Shell.
+
+sub: mixa_shell_files_free (@: MixaFm fm; @: void p)
+    const: @(MixaFmAllocVTable av)
+    MixaFmFreeFn: f
+    if: p = 0
+        return
+    ---
+    f: 0
+    if: fm != 0
+        av: fm\av
+        if: av != 0
+            f: av\free
+        ---
+    ---
+    if: f != 0
+        f(p)
+        return
+    ---
+    c.free(p)
+end: mixa_shell_files_free
+
+fn: mixa_shell_files_release (@: MixaFm fm; @: MixaFmEntry rows; size_t: count) int
+    size_t: i
+    @: MixaFmEntry cur
+    if: rows = 0
+        return: MIXA_FM_OK
+    i: 0U
+    while: i < count
+        cur: rows + i
+        mixa_shell_files_free(fm, (cast: (@: void) cur\name))
+        mixa_shell_files_free(fm, (cast: (@: void) cur\path))
+        i: i + 1U
+    ---
+    mixa_shell_files_free(fm, (cast: (@: void) rows))
+return: MIXA_FM_OK
+
+fn: mixa_shell_files_take (@: MixaFm fm; @@: MixaFmEntry out_rows; @: size_t out_count) int
+    if: fm = 0 || out_rows = 0 || out_count = 0
+        return: MIXA_FM_ERR_ARG
+    \out_rows: fm\entries
+    \out_count: fm\count
+    fm\entries: 0
+    fm\count: 0U
+return: MIXA_FM_OK
+
+fn: mixa_shell_files_list (@: MixaFm fm; const: @(char path); @@: MixaFmEntry out_rows; @: size_t out_count) int
+    int: rc
+    if: fm = 0 || path = 0 || out_rows = 0 || out_count = 0
+        return: MIXA_FM_ERR_ARG
+    rc: mixa_fm_goto(fm, path)
+    if: rc != MIXA_FM_OK
+        return: rc
+    ---
+    return: mixa_shell_files_take(fm, out_rows, out_count)
+
+fn: mixa_shell_files_up (@: MixaFm fm; @@: MixaFmEntry out_rows; @: size_t out_count) int
+    int: rc
+    if: fm = 0 || out_rows = 0 || out_count = 0
+        return: MIXA_FM_ERR_ARG
+    rc: mixa_fm_parent(fm)
+    if: rc != MIXA_FM_OK
+        return: rc
+    ---
+    return: mixa_shell_files_take(fm, out_rows, out_count)
+
+fn: mixa_shell_files_refresh (@: MixaFm fm; @@: MixaFmEntry out_rows; @: size_t out_count) int
+    int: rc
+    if: fm = 0 || out_rows = 0 || out_count = 0
+        return: MIXA_FM_ERR_ARG
+    rc: mixa_fm_refresh(fm)
+    if: rc != MIXA_FM_OK
+        return: rc
+    ---
+    return: mixa_shell_files_take(fm, out_rows, out_count)

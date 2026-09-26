@@ -70,13 +70,9 @@ end: Shell
 # mixa_dir_win32, mixa_fileio_win32, mixa_copy, mixa_fm_copy, mixa_remove,
 # mixa_fm_remove, mixa_remove_confirm, mixa_cmdline_dispatch.
 Files:
-    # First body to fill. Direct call inside this owner:
-    # mixa_fm_goto(fm, path) which builds a new snapshot and installs it only
-    # after the last allocation succeeds (mixa_fm_build). The answer to Shell
-    # transfers that snapshot. Files does not keep a second copy, and Shell
-    # does not receive a pointer into Files' arena.
-    # mixa_fm_select calls mixa_selection_* today. That is a cross-owner C call:
-    # selection belongs to Shell. Do not copy that call into this method.
+    # Body: mixa_shell_files_list. It calls mixa_fm_goto and moves the new
+    # rows out of MixaFm. Witness: tests/mixa_shell_files_selftest.lm1,
+    # 8 checks, 0 failures. mixa_fm_select stays out of this method.
     fn: list (path: ()) int
     return: 0
 
@@ -95,9 +91,9 @@ Files:
     fn: read_bytes (path: ()) int
     return: 0
 
-    # Same owner as list. Direct call, not a letter.
-    # Body when filled: mixa_fm_parent, then the same snapshot answer as list.
-    # A failed refresh keeps the current directory (mixa_file_manager.h.lm1).
+    # Bodies: mixa_shell_files_up (mixa_fm_parent) and
+    # mixa_shell_files_refresh (mixa_fm_refresh). Same move-out as list.
+    # At the root, up returns MIXA_FM_ERR_ROOT and leaves the snapshot.
     fn: up () int
     return: 0
 

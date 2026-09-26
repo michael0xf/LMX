@@ -33,4 +33,8 @@ fn: probe () int
         return: 4
     return: 5
 end: probe
-return: probe()
+if: probe() != 5
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

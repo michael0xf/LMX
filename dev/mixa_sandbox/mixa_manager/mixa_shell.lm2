@@ -21,7 +21,22 @@
 #
 # It is not required to translate yet. The bodies named in comments are the
 # modules already in this directory. Filling a method means calling that
-# module, not rewriting ClearShell.
+# module, not rewriting ClearShell. The order for the next agent is
+# mixa_shell_next.md in this directory.
+
+# One row of a directory snapshot. Same fields as MixaFmEntry. The storage
+# travels with the letter. Shell does not keep a pointer into Files.
+Row:
+    @: char name
+    @: char path
+    int: is_dir
+end: Row
+
+Snapshot:
+    @: Row rows
+    size_t: count
+    int: status
+end: Snapshot
 
 # Window lane. Same OS thread as the window. Answers land here.
 # ClearShell: FirstScreen, ButtonPanel, ShellButton, CustomAction, Layout,
@@ -33,7 +48,7 @@
 # mixa_overlay, mixa_pump, mixa_event_fifo, mixa_event_source,
 # mixa_console_window, mixa_help, mixa_cmdline.
 Shell:
-    fn: show_rows () int
+    fn: show_rows (shot: Snapshot) int
     return: 0
 
     fn: show_text () int
@@ -55,6 +70,13 @@ end: Shell
 # mixa_dir_win32, mixa_fileio_win32, mixa_copy, mixa_fm_copy, mixa_remove,
 # mixa_fm_remove, mixa_remove_confirm, mixa_cmdline_dispatch.
 Files:
+    # First body to fill. Direct call inside this owner:
+    # mixa_fm_goto(fm, path) which builds a new snapshot and installs it only
+    # after the last allocation succeeds (mixa_fm_build). The answer to Shell
+    # transfers that snapshot. Files does not keep a second copy, and Shell
+    # does not receive a pointer into Files' arena.
+    # mixa_fm_select calls mixa_selection_* today. That is a cross-owner C call:
+    # selection belongs to Shell. Do not copy that call into this method.
     fn: list (path: ()) int
     return: 0
 
@@ -71,6 +93,20 @@ Files:
     return: 0
 
     fn: read_bytes (path: ()) int
+    return: 0
+
+    # Same owner as list. Direct call, not a letter.
+    # Body when filled: mixa_fm_parent, then the same snapshot answer as list.
+    # A failed refresh keeps the current directory (mixa_file_manager.h.lm1).
+    fn: up () int
+    return: 0
+
+    fn: refresh () int
+    return: 0
+
+    # Body when filled: mixa_fm_remove / mixa_remove. Confirm stays on Shell
+    # before this letter is sent. This method does not draw the question.
+    fn: remove (paths: ()) int
     return: 0
 end: Files
 
@@ -187,6 +223,54 @@ Mixa:
         post:
             ask:
                 process\share: paths
+            unanswered:
+                shell\note_refused: ()
+    return: 0
+
+    fn: up () int
+        post:
+            ask:
+                files\up: ()
+            answer:
+                shell\show_rows: ()
+            unanswered:
+                shell\note_refused: ()
+    return: 0
+
+    fn: refresh () int
+        post:
+            ask:
+                files\refresh: ()
+            answer:
+                shell\show_rows: ()
+            unanswered:
+                shell\note_refused: ()
+    return: 0
+
+    fn: remove (paths: ()) int
+        post:
+            ask:
+                files\remove: paths
+            answer:
+                shell\show_rows: ()
+            unanswered:
+                shell\note_refused: ()
+    return: 0
+
+    fn: stop () int
+        post:
+            ask:
+                audio\stop: ()
+            unanswered:
+                shell\note_refused: ()
+    return: 0
+
+    fn: scan (path: ()) int
+        post:
+            ask:
+                audio\scan: path
+            answer:
+                shell\show_rows: ()
             unanswered:
                 shell\note_refused: ()
     return: 0

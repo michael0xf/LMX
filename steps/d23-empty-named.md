@@ -12,7 +12,7 @@
 
 ## RESULT
 
-Ветка `grok/d23-empty-named`. База main `587e05e`.
+Ветка `grok/d23-empty-named` @ `3c43e83`. База main `587e05e`. Посадка `8c897ac`.
 
 Свидетель Entry 7. Мутант измерен: `l2_named_empty_actual` сразу `return: 0` — `unknown method`, frame=x; откат переводит.
 

@@ -1,0 +1,193 @@
+# One ClearShell port. This file is the application. It is not a second main
+# beside mixa_app_main.lm2 and mixa_app_main_msg.lm1, and it does not predef
+# their headers.
+#
+# What kept the sandbox from becoming one program:
+#   The modules were translated and linked as separate C units. Two header
+#   families (*_l2.h.lm1 and the real .h.lm1) declared the same types, so a
+#   joint predef stopped with "duplicate type name". Bodies that were predef'd
+#   as well as compiled produced multiple definitions at link. Two entries
+#   remained: mixa_app_main (a C controller loop) and mixa_app_main_msg (four
+#   L3 threads on lmx_service_post, one shared child arena). Neither entry owns
+#   the modules. A module kept calling another module as a C function.
+#   PORT_OF_CLEARSHELL 1.1 left Message delivery for later, so the gap stayed.
+#
+# This graph is that delivery. A module is not a thread. Four owners are the
+# running Messages. Several modules share one owner and call each other
+# directly. A call that crosses an owner is an ordinary call carried by post.
+# The map library (mtk_*) and mixa_calculator_syntax are values, not Messages.
+# Win32 and headless backends are the native word of Shell, not a fifth owner.
+# native is a word of that Structure, not a field of any array.
+#
+# It is not required to translate yet. The bodies named in comments are the
+# modules already in this directory. Filling a method means calling that
+# module, not rewriting ClearShell.
+
+# Window lane. Same OS thread as the window. Answers land here.
+# ClearShell: FirstScreen, ButtonPanel, ShellButton, CustomAction, Layout,
+# ListPanel, ListView0, SF, TextAdapter.
+# Modules: mixa_app_controller, mixa_app_window, mixa_app_panel, mixa_app_path,
+# mixa_buttons, mixa_button_dispatch, mixa_share_button, mixa_share_action,
+# mixa_draw, mixa_composite, mixa_composite_glyphs, mixa_tiles, mixa_text_rect,
+# mixa_palette, mixa_highlight, mixa_pointer, mixa_selection, mixa_selection_walk,
+# mixa_overlay, mixa_pump, mixa_event_fifo, mixa_event_source,
+# mixa_console_window, mixa_help, mixa_cmdline.
+Shell:
+    fn: show_rows () int
+    return: 0
+
+    fn: show_text () int
+    return: 0
+
+    fn: show_audio () int
+    return: 0
+
+    fn: show_progress () int
+    return: 0
+
+    fn: note_refused () int
+    return: 0
+end: Shell
+
+# ClearShell: FileAdapter, DirAdapter, FindAdapter, ZipAdapter, FSync, Files,
+# StorageList, ZipList. One mailbox, serial turns.
+# Modules: mixa_file, mixa_file_manager, mixa_file_win32, mixa_files,
+# mixa_dir_win32, mixa_fileio_win32, mixa_copy, mixa_fm_copy, mixa_remove,
+# mixa_fm_remove, mixa_remove_confirm, mixa_cmdline_dispatch.
+Files:
+    fn: list (path: ()) int
+    return: 0
+
+    fn: read_text (path: ()) int
+    return: 0
+
+    fn: copy (paths: ()) int
+    return: 0
+
+    fn: remove (paths: ()) int
+    return: 0
+
+    fn: find (path: ()) int
+    return: 0
+
+    fn: read_bytes (path: ()) int
+    return: 0
+end: Files
+
+# ClearShell: Mp3Adapter, AudioService.
+# Modules: mixa_audio, mixa_audio_mp3, mixa_audio_launch, mixa_audio_scan,
+# mixa_audio_panel, mixa_audio_button, mixa_audio_win32.
+# The file bytes come from Files by a letter. `files` is that one Files
+# message, not a second copy of the file graph.
+Audio:
+    Files: files
+
+    fn: play (path: ()) int
+        post:
+            ask:
+                files\read_bytes: path
+            answer:
+                have_bytes: ()
+            unanswered:
+                stop: ()
+    return: 0
+
+    fn: stop () int
+    return: 0
+
+    fn: scan (path: ()) int
+    return: 0
+
+    fn: have_bytes () int
+    return: 0
+end: Audio
+
+# ClearShell: Apps, ClearShellService, AutoStartClearShell,
+# AppPermissionsActivity, NotificationLogService.
+# Modules: mixa_process, mixa_process_win32, mixa_process_marker, mixa_share,
+# mixa_share_win32, mixa_service, mixa_autostart, mixa_permissions,
+# mixa_notification_log.
+Process:
+    fn: launch (path: ()) int
+    return: 0
+
+    fn: share (paths: ()) int
+    return: 0
+end: Process
+
+# The one program. shell is the root Message. files, audio and process are
+# its child Messages, each with its own arena. Letters below are the whole
+# joint of the port: every cross-owner call ClearShell used a Thread or a
+# Service for.
+Mixa:
+    Shell: shell
+    Files: files
+    Audio: audio
+    Process: process
+
+    fn: start (root: ()) int
+        post:
+            ask:
+                files\list: root
+            answer:
+                shell\show_rows: ()
+            unanswered:
+                shell\note_refused: ()
+    return: 0
+
+    fn: open_text (path: ()) int
+        post:
+            ask:
+                files\read_text: path
+            answer:
+                shell\show_text: ()
+            unanswered:
+                shell\note_refused: ()
+    return: 0
+
+    fn: play (path: ()) int
+        post:
+            ask:
+                audio\play: path
+            answer:
+                shell\show_audio: ()
+            unanswered:
+                shell\note_refused: ()
+    return: 0
+
+    fn: copy_paths (paths: ()) int
+        post:
+            ask:
+                files\copy: paths
+            answer:
+                shell\show_progress: ()
+            unanswered:
+                shell\note_refused: ()
+    return: 0
+
+    fn: find (path: ()) int
+        post:
+            ask:
+                files\find: path
+            answer:
+                shell\show_rows: ()
+            unanswered:
+                shell\note_refused: ()
+    return: 0
+
+    fn: launch (path: ()) int
+        post:
+            ask:
+                process\launch: path
+            unanswered:
+                shell\note_refused: ()
+    return: 0
+
+    fn: share (paths: ()) int
+        post:
+            ask:
+                process\share: paths
+            unanswered:
+                shell\note_refused: ()
+    return: 0
+end: Mixa

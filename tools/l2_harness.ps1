@@ -2228,6 +2228,11 @@ $fixtures = @(
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_entry_unit: graph', 'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ') },
+    # S7 slice 1: cand = req still succeeds after l2_descriptor_implements.
+    # Mutant: that function returns 1 when cand = req → this row refuses
+    # "malformed implements descriptor".
+    [pscustomobject]@{ Name = 'unit_s7_identity.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_invalid_implements_unknown_candidate.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown candidate descriptor'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_invalid_implements_unknown_required.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

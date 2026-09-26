@@ -84,3 +84,13 @@ Primitive fast path `l2_colon_types_compatible` против `l2_primitive_leaf_
 Одинаковое имя — успех листа (`unit_s7_prim_same` Entry 7). Два keyed-листа — тоже успех листа, как `implements(int, u32)` (`unit_s7_prim_cross` Entry 7: `int` из `size_t`). Конвертер не вставляется. Ядро не менялось.
 
 Мутант: одинаковое имя в `l2_primitive_leaf_implements` пишет 0. `unit_s7_prim_same.lm2:9` — «assignment value has incompatible type», frame=a. `unit_s7_prim_cross` на этом мутанте отказывает позже, на `k: go()` (тоже пара `int`), не на `a: b`. Мутант: успех разных keyed-листьев пишет 0. `unit_s7_prim_cross.lm2:10` — та же фраза, frame=a. `unit_s7_prim_same` при этом переводится. Откат — оба переводятся. Живой исходник мутантом не оставался. Ядро внутрь `ARRAY_OF_DESC` не этот срез. Таблица преобразований не начата. Гейт: build 282/282 (`build/l2src/20260926_120249`), harness 435/435 (`build/l2_harness/s7leaf`), L3 11/11, имена 69/128, check_docs OK.
+
+REVIEW 61c2597-1: `unit_s7_prim_cross` измеряет успех листа, конвертер не вставляется. Форму строки (долг таблицы или отказ «mixed numeric types») выбирает автор. До этого выбора строка остаётся Entry 7.
+
+## Return — полный дескриптор
+
+Вызывающих на точке return нет, поэтому Consumer — сам required: `l2_admit_implements(cand, req, req)`. Одно правило для trailer и для тела. cand — тип имени, тип связанной переменной, тип результата вызова или тип одного поля Structure (`l2_nsf_ref`).
+
+`unit_s7_ret_name` — `return: Plain` в `Equatable`: «implements is false in return value». `unit_s7_ret_call` — `return: mk()` при `mk () Plain`: та же фраза. `unit_s7_ret_body` — тот же отказ у indented `return:`. `unit_s7_ret_path` — `return: h\p` при поле `Plain`: та же фраза. `unit_s7_ret_rich` — `return: Rich` (`equals` и непрочитанный `extra`), `take` читает `equals`, Entry 7. `unit_s7_ret_field` — `return: h\p` при поле `Rich`, Entry 7. D-82 закрыт: поле Structure возвращается, фразы «a Structure return must be a name» нет.
+
+Мутант: `l2_admit_return` сразу возвращает 0. `unit_s7_ret_name` переводится, exit 0. Откат — отказ `:12`, frame=fn. Живой исходник мутантом не оставался. Глубокий путь `take(h\a\p)` не этот срез. Таблица преобразований не начата. Гейт: build 282/282 (`build/l2src/20260926_122104`), harness 440/440 (`build/l2_harness/s7ret`), L3 11/11, имена 69/128, check_docs OK.

@@ -1,0 +1,29 @@
+# return: Rich into Equatable. Rich has equals and an unread extra.
+# take reads equals. Entry 7.
+
+Rich:
+    size_t: equals 0U
+    size_t: extra 0U
+end: Rich
+
+Equatable:
+    size_t: equals 0U
+end: Equatable
+
+fn: pass () Equatable
+return: Rich
+
+fn: take (Equatable: slot) int
+    slot\equals: 1U
+return: 4
+
+fn: go () int
+return: take(pass())
+
+int: k
+k: go()
+if: k = 4
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+return

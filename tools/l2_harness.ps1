@@ -2272,7 +2272,20 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_s7_arg_path.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'implements is false in function argument'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_ret_path.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'a Structure return must be a name'; Absent = @(); Debt = @() },
+        Needle = 'implements is false in return value'; Absent = @(); Debt = @() },
+    # A return's Consumer is the required descriptor. Callers are not in the body.
+    # Mutant: l2_admit_return returns 0 before the descriptor call
+    # → unit_s7_ret_name translates.
+    [pscustomobject]@{ Name = 'unit_s7_ret_name.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'implements is false in return value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_ret_call.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'implements is false in return value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_ret_body.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'implements is false in return value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_ret_rich.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_ret_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
     # Named primitive value codes call l2_primitive_leaf_implements.
     # Mutant: same-name success stores 0 → unit_s7_prim_same refuses.
     # Mutant: cross-leaf success stores 0 → unit_s7_prim_cross refuses

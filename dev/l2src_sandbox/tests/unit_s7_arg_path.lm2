@@ -1,0 +1,21 @@
+# take(h\p): the actual is a field path. The field type is Plain.
+# take reads equals. Plain has no equals.
+
+Plain:
+    size_t: toString 0U
+end: Plain
+
+Equatable:
+    size_t: equals 0U
+end: Equatable
+
+Holder:
+    Plain: p
+end: Holder
+
+fn: take (Equatable: slot) int
+    slot\equals: 1U
+return: 4
+
+fn: go (Holder: h) int
+return: take(h\p)

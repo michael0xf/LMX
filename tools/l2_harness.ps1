@@ -2262,6 +2262,17 @@ $fixtures = @(
         Needle = 'implements is false in function argument'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_leaf_kind.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'implements is false in function argument'; Absent = @(); Debt = @() },
+    # A call result and a field path are the same admit point as an atom.
+    # Mutant: l2_actual_ns treats a call frame as not a Structure actual
+    # → unit_s7_arg_call_refused translates.
+    [pscustomobject]@{ Name = 'unit_s7_arg_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'implements is false in function argument'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_arg_call_ok.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_arg_path.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'implements is false in function argument'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_ret_path.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a Structure return must be a name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_invalid_implements_unknown_candidate.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown candidate descriptor'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_invalid_implements_unknown_required.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

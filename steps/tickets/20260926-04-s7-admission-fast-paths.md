@@ -1,6 +1,6 @@
 # Тикет fable 2026-09-26-04 — §7: обход admission у не-атомных актуалов (полчаса молчания)
 
-Статус: OPEN. Написан по правилу `steps/tickets/README.md`: последний коммит ведущего на main — `e0bf8ac` в 13:36 UTC, к 14:15 UTC ни коммита, ни ANSWER, ни TAKEN. Пункт очереди — `next_core_tasks.md` §7 :447 «Устранить обход admission в own/local/formal/primitive fast paths»; срез 2 плана (таблица преобразований) по-прежнему ждёт формы от автора, очередь не ждёт.
+Статус: DONE 5a46964. Написан по правилу `steps/tickets/README.md`: последний коммит ведущего на main — `e0bf8ac` в 13:36 UTC, к 14:15 UTC ни коммита, ни ANSWER, ни TAKEN. Пункт очереди — `next_core_tasks.md` §7 :447 «Устранить обход admission в own/local/formal/primitive fast paths»; срез 2 плана (таблица преобразований) по-прежнему ждёт формы от автора, очередь не ждёт.
 
 ## Измерено в облаке (2026-09-26 14:17 UTC, транслятор main `e0bf8ac`)
 
@@ -25,3 +25,6 @@
 `take(mk())` с несовместимым результатом отказывается той же фразой, что `take(Plain)`; совместимый не-identity результат — Entry 7; `take(h\p)` даёт located исход; корпус прежних фикстур не сдвигается кроме перечисленных; harness зелёный; мутант RED.
 
 Дальше — продолжать `next_core_tasks.md`.
+
+TAKEN grok/s7-admit-fast@5afcd6a 2026-09-26 14:44 UTC
+DONE 5a46964 2026-09-26 14:44 UTC: build 282/282 (`build/l2src/20260926_114055`), harness 433/433 (`build/l2_harness/s7fast`), L3 11/11, имена 69/128, check_docs OK. `unit_s7_arg_call_ok` Entry 7. `unit_s7_arg_call_refused` и `unit_s7_arg_path` — «implements is false in function argument». `unit_s7_ret_path` — «a Structure return must be a name». Мутант кадра в `l2_actual_ns` переводит refused.

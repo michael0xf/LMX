@@ -66,3 +66,13 @@ STARTED grok/implements-s7, база main `fd074ca`. Тикета без `DONE` 
 Вопрос автору (рекомендация в чате, очередь не ждёт): первый кодовый срез таблицы читает такую же `table:` из Structure файла — это данные корневого Message — и вставляет конвертер только при наличии строки. Нет строки — остаётся сегодняшний отказ «mixed numeric types (a conversion)». Тихого каста нет. `implements` конвертер не вызывает. Отбор не по литеральному имени `` `primitive.convert` ``: это name-special (§0). Приёмник — по объявлению (тип таблицы или merge-ключ, §2.2.4), не по имени. Форму таблицы вопрос не предрешает. Глобальный реестр не заводится. Код таблицы не начат.
 
 Пока форма таблицы не подтверждена, строки harness с «mixed numeric types» не переворачивать.
+
+## Результат вызова и путь поля (тикет 20260926-04)
+
+Актуал, который не является голым именем Structure, больше не минует допуск. `l2_actual_ns` берёт тип результата вызова (`l2_nsty_get` callee, ключ -1) и тип поля пути (`l2_nsf_ref`, kind 3). Оба идут в `l2_admit_consumer_ix`: Consumer — буфер путей после `l2_uses_walk_frame`, не `req` и не `l2_ns_n`. Кадра у callee нет — `l2_admit_implements` по дескриптору required.
+
+`unit_s7_arg_call_refused` — `take(mk())`, `mk` возвращает `Plain`, `take` читает `equals`: «implements is false in function argument», frame=take. `unit_s7_arg_call_ok` — `mk` возвращает `Rich` (`equals` и непрочитанный `extra`), Entry 7. `unit_s7_arg_path` — `take(h\p)`, тип поля `Plain`: та же фраза, frame=take. Trailer `return: h\p` эмиттер не диагностирует; `l2_check_ret_tr` отказывает «a Structure return must be a name» (`unit_s7_ret_path`). `return: Plain` и `return: h` переводятся.
+
+Мутант: ветка кадра в `l2_actual_ns` возвращает 2. `unit_s7_arg_call_refused` переводится, exit 0. Откат — отказ `:20`, frame=take. Живой исходник мутантом не оставался.
+
+Primitive fast path `l2_colon_types_compatible` против `l2_primitive_leaf_implements` этой строкой не закрыт. Ядро внутрь `ARRAY_OF_DESC` не этот срез. Таблица преобразований не начата. Гейт: build 282/282 (`build/l2src/20260926_114055`), harness 433/433 (`build/l2_harness/s7fast`), L3 11/11, имена 69/128, check_docs OK.

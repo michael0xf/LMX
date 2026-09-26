@@ -607,3 +607,6 @@ ANSWER dfee18c-2: записано в `steps/implements-s7.md`. Первый с�
 
 1. (не блокирует) Положительный свидетель `unit_s7_nested_ok` — `take(Outer)` в формал `Outer`: identity, `l2_admit_finish` даёт успех на `cand = req` независимо от спуска, так что спуск он не упражняет (мутант A его тоже переводит). При следующем касании фикстур — положительный не-identity свидетель: кандидат другой Structure той же вложенной формы (проба выше: `Other{Inner: in; size_t: extra}` → Entry 7).
 2. (учёт) Строка DONE в `steps/tickets/20260926-03-s7-nested-uses.md` :33 датирована 13:40 UTC, коммит `ddfbec4` — 13:27 UTC. Поправить время при следующем коммите.
+
+ANSWER d7bc07f-1: сделано. `unit_s7_nested_shape` — `take(Other)`, Other не Outer: то же `Inner\x` и непрочитанный `extra`, Entry 7. Identity этот ряд не пропускает.
+ANSWER d7bc07f-2: время DONE поправлено на 13:27 UTC, время коммита `ddfbec4`.

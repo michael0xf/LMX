@@ -2254,6 +2254,10 @@ $fixtures = @(
     # → unit_s7_leaf_kind translates.
     [pscustomobject]@{ Name = 'unit_s7_nested_ok.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
+    # Other is not Outer. Identity does not admit this row; the nested
+    # shape does. Unread extra is not required.
+    [pscustomobject]@{ Name = 'unit_s7_nested_shape.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_nested_missing.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'implements is false in function argument'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_leaf_kind.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

@@ -568,7 +568,7 @@ prototype:
     fn: l2_rw_count (@: LmP0Field first) int
     fn: l2_rw_send (@: LmP0Node stmt; int: into; @: int out) int
     fn: l2_emit_send (int: k; int: proto; @: char prefix; @: int count_arr; @: int kind_arr; @@: LmP0Text text_arr; @: int has_ref_arr) int
-    fn: l2_msend_register (const: @(LmP0Node stmt); const: @(char path); @: int out_k; @: int out_ni) int
+    fn: l2_msend_register (const: @(LmP0Node stmt); const: @(char path); int: mi; @: int out_k; @: int out_ni) int
     fn: l2_emit_msend (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
     fn: l2_rw_body (@: LmP0Field first; int: parent; int: slot) int
     fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @: int made) int
@@ -14555,7 +14555,7 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             field: l2_next_active(field\next)
             continue
         if: l2_frame_head(stmt, "sendMessage") != 0
-            if: l2_msend_register(stmt, path, @ msk, @ msni) != 0
+            if: l2_msend_register(stmt, path, mi, @ msk, @ msni) != 0
                 return: 1
             field: l2_next_active(field\next)
             continue
@@ -19466,7 +19466,7 @@ return: made
 # several -- a field path like `m\sender` is itself several sibling P0 fields, merged back into
 # one expression only by l2_eval_fields/l2_rw_texpr's own tokenizer) is the Ref expression.  No
 # field before the last means no Ref: the ordinary form, unchanged.
-fn: l2_msend_register (const: @(LmP0Node stmt); const: @(char path); @: int out_k; @: int out_ni) int
+fn: l2_msend_register (const: @(LmP0Node stmt); const: @(char path); int: mi; @: int out_k; @: int out_ni) int
     @: LmP0Field f
     @: LmP0Field mf
     @: LmP0Field g
@@ -19481,6 +19481,8 @@ fn: l2_msend_register (const: @(LmP0Node stmt); const: @(char path); @: int out_
     int: total
     int: refn
     int: has_ref 0
+    int: refty 0
+    int: save_mi 0
     size_t: i
     \out_k: -1
     \out_ni: 0
@@ -19515,6 +19517,15 @@ fn: l2_msend_register (const: @(LmP0Node stmt); const: @(char path); @: int out_
         ---
     ---
     l2_msend_has_ref[k]: has_ref
+    if: has_ref != 0
+        save_mi: l2_rw_mi
+        l2_rw_mi: mi
+        refty: l2_rw_fields_ty(f, refn)
+        l2_rw_mi: save_mi
+        if: refty >= 1000 && refty != 1000 + 29
+            return: l2_error(path, f\value, "a plain Message does not implement Thread")
+        ---
+    ---
     g: l2_next_active(x\as\frame\body\first_field)
     while: g != 0
         v: g\value
@@ -19613,6 +19624,12 @@ fn: l2_rw_send (@: LmP0Node stmt; int: into; @: int out) int
         refty: l2_rw_fields_ty(f, refn)
         if: refty < 1000
             return: l2_rw_refuse(f\value, "a Ref that is not a reference")
+        # Structures share one address range. The first variant of implements is
+        # this static check: a Thread address is `@: LmxMsg` (pointee 29, the type
+        # of `m\sender`). A letter or a user Structure is a plain Message and does
+        # not have Thread's fields. The full implements port stays in §7.
+        if: refty != 1000 + 29
+            return: l2_rw_refuse(f\value, "a plain Message does not implement Thread")
         ---
     ---
     k: l2_rw_send_i
@@ -19731,7 +19748,7 @@ fn: l2_emit_msend (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
     int: has_ref
     c.array: [1024]: char tok
     c.array: [1024]: char reftok
-    if: l2_msend_register(stmt, l2_src, @ k, @ ni) != 0
+    if: l2_msend_register(stmt, l2_src, mi, @ k, @ ni) != 0
         return: 1
     nf: l2_msend_count[k]
     has_ref: l2_msend_has_ref[k]

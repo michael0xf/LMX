@@ -1,0 +1,24 @@
+# A read of slot\in\x admits a candidate with the same nested shape.
+
+Inner:
+    size_t: x 0U
+end: Inner
+
+Outer:
+    Inner: in
+end: Outer
+
+fn: take (Outer: slot) int
+    slot\in\x: 1U
+return: 4
+
+fn: go () int
+return: take(Outer)
+
+int: k
+k: go()
+if: k = 4
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+return

@@ -51,6 +51,12 @@ STARTED grok/implements-s7, база main `fd074ca`. Тикета без `DONE` 
 
 Мутант: `l2_admit_paths` снова зовёт `l2_descriptor_implements(cand, req, req)`. `unit_s7_empty.lm2:18` и `unit_s7_used.lm2:19` — «implements is false in function argument», frame=take. `unit_s7_identity` переводится. Откат: `unit_s7_used` переводится. Гейт: build 282/282 (`build/l2src/20260926_093437`), harness 425/425 (`build/l2_harness/s7paths2`), L3 11/11, имена 69/128, check_docs OK.
 
+## Вложенный путь и вид листа (тикет 20260926-03)
+
+До среза `slot\in\x` при отсутствии `x` у кандидата переводился, и лист `size_t` против `int` тоже переводился (прогон `build/l2_harness/s7paths2/bin/l2trans.exe`). Теперь каждый сегмент, который required объявляет, обязателен у кандидата. Поле kind 3 спускает пару в `l2_nsf_ref`. Последний сегмент сравнивает `l2_nsf_kind`. Имени нет у required на этом уровне — сегмент не входит в Consumer.
+
+`unit_s7_nested_ok` — Entry 7. `unit_s7_nested_missing.lm2:25` и `unit_s7_leaf_kind.lm2:17` — «implements is false in function argument», frame=take. Непрочитанное поле по-прежнему не требуется (`unit_s7_used`). Мутант без спуска: `unit_s7_nested_missing` переводится. Мутант без сравнения вида: `unit_s7_leaf_kind` переводится. Откат — оба отказа. Ядерный обход внутрь `ARRAY_OF_DESC` не этот срез. Гейт: build 282/282 (`build/l2src/20260926_102400`), harness 428/428 (`build/l2_harness/s7nest`), L3 11/11, имена 69/128, check_docs OK.
+
 Мутант в начале `l2_descriptor_used` (до ветки нуля путей): `unit_s7_empty.lm2:18` frame=take, `unit_s7_used.lm2:19` frame=take, `unit_s7_identity.lm2:15` frame=keep — все «malformed implements descriptor», exit 1. Откат: `unit_s7_empty` переводится. Гейт: build 282/282 (`build/l2src/20260926_091745`), harness 423/423 (`build/l2_harness/s7paths`), L3 11/11, имена 69/128, check_docs OK.
 
 ## Срез 2, после среза 1

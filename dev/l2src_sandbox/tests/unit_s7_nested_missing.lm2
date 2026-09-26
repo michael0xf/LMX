@@ -1,0 +1,25 @@
+# slot\in\x is read. Shell\in is a Structure that has no x.
+# Today, before this slice, the first segment `in` was enough and this translated.
+
+Inner:
+    size_t: x 0U
+end: Inner
+
+Bare:
+    size_t: y 0U
+end: Bare
+
+Outer:
+    Inner: in
+end: Outer
+
+Shell:
+    Bare: in
+end: Shell
+
+fn: take (Outer: slot) int
+    slot\in\x: 1U
+return: 4
+
+fn: go () int
+return: take(Shell)

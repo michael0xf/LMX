@@ -1,0 +1,17 @@
+# The read leaf n is size_t on Req and int on Got.
+# Today, before this slice, the shared name was enough and this translated.
+
+Req:
+    size_t: n 0U
+end: Req
+
+Got:
+    int: n 0
+end: Got
+
+fn: take (Req: slot) int
+    slot\n: 1U
+return: 4
+
+fn: go () int
+return: take(Got)

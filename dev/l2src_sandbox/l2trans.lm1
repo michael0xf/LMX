@@ -640,6 +640,7 @@ prototype:
     fn: l2_colon_bound_before (const: @(LmP0Structure body); const: @(LmP0Node stop); int: mi; const: @(LmP0Text name)) int
     fn: l2_colon_bound_ty (int: mi; const: @(LmP0Text name); @: int out_ty) int
     fn: l2_colon_simple_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
+    fn: l2_prim_code_name (int: ty) @: char
     fn: l2_colon_types_compatible (int: target_ty; int: value_ty) int
     fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
     fn: l2_colon_decl_shape (const: @(LmP0Node stmt); @@: LmP0Text out_model; @@: LmP0Text out_name) int
@@ -5863,9 +5864,58 @@ fn: l2_colon_simple_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
         \out_ty: 17
 return: 0
 
+# Formal/value codes that name a primitive leaf. Pointer codes are not these
+# names: mapping them would make `@: int` implement `@: char`.
+fn: l2_prim_code_name (int: ty) @: char
+    if: ty = 0
+        return: "int"
+    if: ty = 1
+        return: "char"
+    if: ty = 2
+        return: "size_t"
+    if: ty = 34
+        return: "unsigned"
+    if: ty = 36
+        return: "ulong"
+    if: ty = 8
+        return: "void"
+    return: 0
+
+# Named primitive value codes are l2_primitive_leaf_implements. The lists
+# below are the literal class (-10), a quoted pointer (-11), and a code that
+# is not one of those names. They are not a second primitive predicate.
 fn: l2_colon_types_compatible (int: target_ty; int: value_ty) int
+    const: @(char cn)
+    const: @(char rn)
+    @: LmP0Text cand 0
+    @: LmP0Text req 0
+    int: result 0
+    int: status 0
     int: target_numeric 0
     int: value_numeric 0
+    cn: l2_prim_code_name(value_ty)
+    rn: l2_prim_code_name(target_ty)
+    if: cn != 0 && rn != 0
+        cand: (cast: (@: LmP0Text) l2_xmalloc(c.sizeof(c.LmP0Text)))
+        req: (cast: (@: LmP0Text) l2_xmalloc(c.sizeof(c.LmP0Text)))
+        if: cand = 0 || req = 0
+            if: cand != 0
+                l2_xfree((cast: (@: void) cand))
+            if: req != 0
+                l2_xfree((cast: (@: void) req))
+            return: 0
+        cand\data: cn
+        cand\length: strlen(cn)
+        req\data: rn
+        req\length: strlen(rn)
+        status: l2_primitive_leaf_implements(cand, req, @ result)
+        l2_xfree((cast: (@: void) cand))
+        l2_xfree((cast: (@: void) req))
+        if: status = 0
+            return: result
+        if: status = 1
+            return: 0
+        ---
     if: target_ty = 0 || target_ty = 1 || target_ty = 2 || target_ty = 10 || target_ty = 34 || target_ty = 36
         target_numeric: 1
     if: value_ty = -10 || value_ty = 0 || value_ty = 1 || value_ty = 2 || value_ty = 10 || value_ty = 34 || value_ty = 36

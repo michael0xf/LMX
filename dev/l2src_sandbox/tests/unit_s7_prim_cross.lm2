@@ -1,0 +1,19 @@
+# int assigned from size_t. Both are keyed primitive leaves, so
+# l2_primitive_leaf_implements accepts the pair. This is that result,
+# not a conversion row. Mutant: the cross-leaf success stores 0.
+# This file then refuses "assignment value has incompatible type".
+# unit_s7_prim_same still translates: same-name returns earlier.
+
+fn: go () int
+    int: a 1
+    size_t: b 2U
+    a: b
+    return: a
+
+int: k
+k: go()
+if: k = 2
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+return

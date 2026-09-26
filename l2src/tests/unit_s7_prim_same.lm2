@@ -1,0 +1,18 @@
+# int assigned from int. The pair is a primitive leaf, so the admission
+# call is l2_primitive_leaf_implements. Mutant: that function's same-name
+# success stores 0. This file then refuses
+# "assignment value has incompatible type".
+
+fn: go () int
+    int: a 1
+    int: b 2
+    a: b
+    return: a
+
+int: k
+k: go()
+if: k = 2
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+return

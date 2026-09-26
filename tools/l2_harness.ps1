@@ -705,10 +705,15 @@ $fixtures = @(
     # not the walker's silent 0. An inverted entry 0 is red.
     [pscustomobject]@{ Name = 'entry_argc_if.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
+    # D-20: argv "ok" is len 2, bytes o,k, no NUL. Before this slice the kernel stored strlen+1.
+    [pscustomobject]@{ Name = 'entry_arg_len.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('ok'); Entry = 7;
+        Absent = @(); Debt = @() },
     # The index itself translates. What remains is c.puts, an L2 operation outside a method (Q7).
+    # The graph value has no NUL; a C string at this door is a later copy, not this row.
     [pscustomobject]@{ Name = 'entry_index.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Argv = @('word'); Says = @('word');
         Absent = @(); Debt = @() },
     # length and m\mainArgs[1][0] translate. What remains is c.strcmp, same Q7 class.
+    # "ok" is len 2. The row does not run, so its Entry is not a NUL fact.
     [pscustomobject]@{ Name = 'entry_strcmp.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Argv = @('ok');
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_charpp_return.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');

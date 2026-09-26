@@ -1,0 +1,19 @@
+# argv "ok" is a char Array of exact len 2. The third byte is not in the
+# graph: success is exit 7 only when length is 2 and the bytes are o, k.
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+
+MainLetter: m
+receiveMessage: m
+if: length(m\mainArgs) != 2
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
+if: length(m\mainArgs[1]) != 2
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
+if: m\mainArgs[1][0] != 111 || m\mainArgs[1][1] != 107
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

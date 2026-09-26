@@ -25,8 +25,8 @@ predef: "l2src/lmx_service.lm1"
 predef: "l2src/lmx_thread.lm1"
 predef: "l2src/lmx_turn.lm1"
 predef: "l2src/lmx_value_owned.lm1"
-# The host's launch builds the mainArgs letter (char Arrays in an Array of descriptors) and its
-# exit slot admits by the runtime `implements`.
+# The host's launch builds the mainArgs letter (char Arrays of exact len, no NUL, in an Array
+# of descriptors) and its exit slot admits by the runtime `implements`.
 predef: "l2src/lmx_array_owned.lm1"
 predef: "l2src/lmx_array_ref_owned.lm1"
 predef: "l2src/lmx_implements.lm1"
@@ -1061,8 +1061,9 @@ fn: lmx_root_launch_tapped (@: LmxRoot root; int: argc; @@: char argv; LmxRootPr
     # like every other (K3 = a; FABLE-OPUS-MAINARGS-SENDER-20260925-173): its graph is an anonymous
     # Structure whose field 0 is the sender's reference -- the host's Message, which is the host
     # Thread's address, so R0 can post back to it -- and whose field 1 is the payload, a Structure
-    # whose one field, mainArgs, is an Array of references to char Arrays -- argv[i] with its NUL,
-    # exactly as C passed them.  The letter goes to R0 by the ordinary mail pair; R0 takes it, and an
+    # whose one field, mainArgs, is an Array of references to char Arrays -- each argv[i] copied
+    # with len = strlen and no terminating NUL (author, 2026-09-24).  The letter goes to R0 by the
+    # ordinary mail pair; R0 takes it, and an
     # untaken one is released at close.  A full arena: a simple one seats one chunk per array, so its
     # char Array pool could not hold a second argument.
     #
@@ -1088,12 +1089,14 @@ fn: lmx_root_launch_tapped (@: LmxRoot root; int: argc; @@: char argv; LmxRootPr
     ---
     slots: (cast: (@@: void) main_args\data)
     while: ai < argc
-        alen: strlen(argv[ai]) + 1U
+        alen: strlen(argv[ai])
         main_arg: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, alen, letter_at)
         if: main_arg = 0
             return: lmx_root_launch_refuse(root, letter_at, (cast: (@: char) "lmx: the host could not build the mainArgs letter\n"), out, err)
         ---
-        memcpy(main_arg\data, (cast: (@: void) argv[ai]), alen)
+        if: alen != 0U
+            memcpy(main_arg\data, (cast: (@: void) argv[ai]), alen)
+        ---
         slots[ai]: (cast: (@: void) main_arg)
         ai: ai + 1
     ---

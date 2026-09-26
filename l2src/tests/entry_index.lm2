@@ -1,5 +1,7 @@
-# An argument read by index: m\mainArgs[1] is argv[1]'s own char Array, NUL
-# included, so `@ m\mainArgs[1][0]` is its C string in graph storage.
+# An argument read by index: m\mainArgs[1] is argv[1]'s char Array at exact
+# len, no NUL. c.puts wants a C string; that copy is the c.* door. This row
+# stays root-pending because the call is outside a method (Q7), not because
+# the graph stores a NUL.
 MainLetter:
     char: []: []: mainArgs
 end: MainLetter

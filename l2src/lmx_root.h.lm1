@@ -287,7 +287,7 @@ prototype:
     # makes the host's eternal settings; `limit` is both Threads' own deadline.  The process's
     # arguments go to R0 inside a letter (sender; payload), like every letter (K3 = a): field 0 is
     # the host's Message, field 1 a Structure whose one field, mainArgs, is an Array of char Arrays
-    # (argv[i] with its NUL).  After R0's one turn the exit is decided, its texts go to `out`
+    # (argv[i] at exact strlen, no NUL).  After R0's one turn the exit is decided, its texts go to `out`
     # and `err` (FILE *), the host is closed -- with the report to `err` when R0 sent no exit and
     # its success is 0 -- and the exit code is returned.
     fn: lmx_root_launch (@: LmxRoot root; int: argc; @@: char argv; LmxRootProgram: program; size_t: fields; LmxRootSettings: settings; ulong: limit; @: void out; @: void err) int

@@ -14,7 +14,7 @@ include: "<stdio.h>" "<string.h>" "<stddef.h>" "l1src/p0.lm1.h"
 #     the byte tables); g_fail keeps its name, as the C file already had it at file
 #     scope.
 #   * The C original's `static const char body[]` tables lived inside main.  They are
-#     file-scope `c.array` constants here, with the extents the C left to `[]`.
+#     file-scope `[]:` rows of an `immutable:` block here, with the extents the C left to `[]`.
 #   * `(char)255` is written -1: a cast frame is refused inside an initializer list
 #     ("unsupported initializer"), and the byte is the same.  Both tables that carry
 #     it are marked.
@@ -31,33 +31,39 @@ end: prototype
 
 int: g_fail 0
 
-c.array: const: [2]: char fmt_buf_qbody 34 0
-c.array: const: [2]: char fmt_buf_bsbody 92 0
-c.array: const: [2]: char fmt_buf_nlbody 10 0
-c.array: const: [2]: char fmt_buf_crbody 13 0
-c.array: const: [2]: char fmt_buf_qmark 63 0
-c.array: const: [1]: char fmt_buf_nulbody 0
+immutable:
+    []: char fmt_buf_qbody 2 34 0
+    []: char fmt_buf_bsbody 2 92 0
+    []: char fmt_buf_nlbody 2 10 0
+    []: char fmt_buf_crbody 2 13 0
+    []: char fmt_buf_qmark 2 63 0
+    []: char fmt_buf_nulbody 1 0
+end: immutable
 # hibody: bytes 34, 255, 0 -- the C wrote (char)255, -1 is the same byte.
-c.array: const: [2]: char fmt_buf_hibody -1 0
-c.array: const: [3]: char fmt_buf_empty_out 34 34 0
-c.array: const: [4]: char fmt_buf_a_out 34 97 34 0
-c.array: const: [5]: char fmt_buf_q_out 34 92 34 34 0
-c.array: const: [5]: char fmt_buf_bs_out 34 92 92 34 0
-c.array: const: [5]: char fmt_buf_nl_out 34 92 110 34 0
-c.array: const: [5]: char fmt_buf_cr_out 34 92 114 34 0
-c.array: const: [5]: char fmt_buf_qm_out 34 92 63 34 0
-c.array: const: [7]: char fmt_buf_nul_out 34 92 48 48 48 34 0
-c.array: const: [7]: char fmt_buf_hi_out 34 92 51 55 55 34 0
-c.array: const: [4]: char fmt_buf_dq 34 120 34 0
-c.array: const: [4]: char fmt_buf_sq 39 120 39 0
-c.array: const: [9]: char fmt_buf_trip_dq 34 34 34 97 98 34 34 34 0
-c.array: const: [9]: char fmt_buf_trip_sq 39 39 39 97 98 39 39 39 0
-c.array: const: [7]: char fmt_buf_trip_empty_dq 34 34 34 34 34 34 0
-c.array: const: [7]: char fmt_buf_trip_empty_sq 39 39 39 39 39 39 0
-c.array: const: [8]: char fmt_buf_trip_nul_dq 34 34 34 0 34 34 34 0
+immutable:
+    []: char fmt_buf_hibody 2 -1 0
+    []: char fmt_buf_empty_out 3 34 34 0
+    []: char fmt_buf_a_out 4 34 97 34 0
+    []: char fmt_buf_q_out 5 34 92 34 34 0
+    []: char fmt_buf_bs_out 5 34 92 92 34 0
+    []: char fmt_buf_nl_out 5 34 92 110 34 0
+    []: char fmt_buf_cr_out 5 34 92 114 34 0
+    []: char fmt_buf_qm_out 5 34 92 63 34 0
+    []: char fmt_buf_nul_out 7 34 92 48 48 48 34 0
+    []: char fmt_buf_hi_out 7 34 92 51 55 55 34 0
+    []: char fmt_buf_dq 4 34 120 34 0
+    []: char fmt_buf_sq 4 39 120 39 0
+    []: char fmt_buf_trip_dq 9 34 34 34 97 98 34 34 34 0
+    []: char fmt_buf_trip_sq 9 39 39 39 97 98 39 39 39 0
+    []: char fmt_buf_trip_empty_dq 7 34 34 34 34 34 34 0
+    []: char fmt_buf_trip_empty_sq 7 39 39 39 39 39 39 0
+    []: char fmt_buf_trip_nul_dq 8 34 34 34 0 34 34 34 0
+end: immutable
 # trip_hi_dq: bytes 34, 34, 34, 255, 34, 34, 34, 0 -- same -1 for the C's (char)255.
-c.array: const: [8]: char fmt_buf_trip_hi_dq 34 34 34 -1 34 34 34 0
-c.array: const: [5]: char fmt_buf_ab_out 34 97 98 34 0
+immutable:
+    []: char fmt_buf_trip_hi_dq 8 34 34 34 -1 34 34 34 0
+    []: char fmt_buf_ab_out 5 34 97 98 34 0
+end: immutable
 
 sub: fmt_buf_fail (const: @(char msg))
     c.fprintf(l1_stderr(), "fmt_buf fail: %s\n", msg)
@@ -76,7 +82,7 @@ fn: fmt_buf_oob (const: @(char arena); size_t: cap; size_t: arena_n) int
 end: fmt_buf_oob
 
 sub: fmt_buf_expect_fmt_ok (size_t: cap; const: @(char data); size_t: n; const: @(char want); size_t: wantn; const: @(char what))
-    c.array: []: char arena 64
+    []: char arena 64
     int: rc
     memset(arena, 0xAA, c.sizeof(arena))
     rc: l2_fmt_l1_string(arena, cap, data, n)
@@ -97,7 +103,7 @@ sub: fmt_buf_expect_fmt_ok (size_t: cap; const: @(char data); size_t: n; const: 
 end: fmt_buf_expect_fmt_ok
 
 sub: fmt_buf_expect_fmt_overflow (size_t: cap; const: @(char data); size_t: n; const: @(char what))
-    c.array: []: char arena 64
+    []: char arena 64
     int: rc
     memset(arena, 0xAA, c.sizeof(arena))
     rc: l2_fmt_l1_string(arena, cap, data, n)
@@ -118,7 +124,7 @@ sub: fmt_buf_tok_from (@: LmP0Text t; const: @(char data); size_t: n)
 end: fmt_buf_tok_from
 
 sub: fmt_buf_expect_tok_ok (size_t: cap; const: @(char data); size_t: n; const: @(char want); size_t: wantn; const: @(char what))
-    c.array: []: char arena 64
+    []: char arena 64
     []: LmP0Text t 1
     int: rc
     fmt_buf_tok_from(@ t[0], data, n)
@@ -141,7 +147,7 @@ sub: fmt_buf_expect_tok_ok (size_t: cap; const: @(char data); size_t: n; const: 
 end: fmt_buf_expect_tok_ok
 
 sub: fmt_buf_expect_tok_overflow (size_t: cap; const: @(char data); size_t: n; int: untouched; const: @(char what))
-    c.array: []: char arena 64
+    []: char arena 64
     []: LmP0Text t 1
     int: rc
     fmt_buf_tok_from(@ t[0], data, n)
@@ -163,7 +169,7 @@ sub: fmt_buf_expect_tok_overflow (size_t: cap; const: @(char data); size_t: n; i
 end: fmt_buf_expect_tok_overflow
 
 fn: main () int
-    c.array: []: char tiny 2
+    []: char tiny 2
     []: LmP0Text t 1
 
     g_fail: 0

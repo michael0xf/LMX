@@ -710,13 +710,19 @@ $fixtures = @(
     # D-20: argv "ok" is len 2, bytes o,k, no NUL. Before this slice the kernel stored strlen+1.
     [pscustomobject]@{ Name = 'entry_arg_len.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('ok'); Entry = 7;
         Absent = @(); Debt = @() },
-    # The index itself translates. What remains is c.puts, an L2 operation outside a method (Q7).
-    # The graph value has no NUL; a C string at this door is a later copy, not this row.
-    [pscustomobject]@{ Name = 'entry_index.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Argv = @('word'); Says = @('word');
+    # D-81, Q31 answer: a method is a sufficient receiver for the c.* door, so c.puts moved
+    # into printArg (predef own.h.lm1, lm_own_copy_bytes makes the NUL-terminated copy
+    # explicitly -- alloc len+1, memcpy, copy[len]=0, not a read past the array's own bytes).
+    # Mutant (deterministic, not "drop +1U" -- that reads OOB, not reproducible): copy n-1U
+    # bytes instead of n inside printArg -- argv "word" then prints "wor", reddening Says.
+    [pscustomobject]@{ Name = 'entry_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('word'); Says = @('word');
         Absent = @(); Debt = @() },
-    # length and m\mainArgs[1][0] translate. What remains is c.strcmp, same Q7 class.
-    # "ok" is len 2. The row does not run, so its Entry is not a NUL fact.
-    [pscustomobject]@{ Name = 'entry_strcmp.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Argv = @('ok');
+    # D-81, same Q31 answer: c.strcmp moved into argIsOk (same lm_own_copy_bytes copy). The
+    # three earlier checks (letter shape, arg count, raw bytes o/k) still refuse first for any
+    # argv other than exactly "ok", so this row's own normal run never exercises argIsOk's r!=0
+    # branch -- the same deterministic mutant as entry_index (copy n-1U bytes) is the witness
+    # that the copy and c.strcmp are load-bearing: "ok" then reddens from Entry 0 to Entry 4.
+    [pscustomobject]@{ Name = 'entry_strcmp.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('ok'); Entry = 0;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_charpp_return.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
         Absent = @(); Debt = @() },

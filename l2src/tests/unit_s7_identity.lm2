@@ -1,0 +1,23 @@
+# Equal descriptor indexes still succeed, and the admission call runs.
+# keep(User): the argument atom is the structure name, so cand = req.
+# slot\equals makes uses nonempty, which is when l2_admit_implements runs.
+# Empty uses stays the earlier success.
+
+User:
+    size_t: equals 3U
+end: User
+
+fn: keep (User: slot) int
+    slot\equals: 1U
+return: 3
+
+fn: go () int
+return: keep(User)
+
+int: k
+k: go()
+if: k = 3
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+return

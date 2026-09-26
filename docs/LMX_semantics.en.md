@@ -536,7 +536,7 @@ Field count and slots are fixed. Ordinary field operations may replace the `void
 <a id="admission-case-12"></a>
 ### 12. Reliable numeric conversion
 
-Use an available explicitly keyed converter with a destination-range contract: `u16(255) → u8` is admitted, while `u16(256) → u8` is a range error, not zero. In-range rounding and precision loss are a separate numeric-profile policy. Successful analytical checking does not permit silent modular wrapping.
+Use an available explicitly keyed converter with a destination-range contract: `u16(255) → u8` is admitted, while `u16(256) → u8` is a range error, not zero. In-range rounding and precision loss are a separate numeric-profile policy. Successful analytical checking does not permit silent modular wrapping. A converter's refusal at the edge is an ordinary receiver refusal; it leaves as the implicit named failure of that edge (`convert`) in the method that owns the edge: the caller does not declare the converter's own names (for example `range`), a `catch: convert ()` handler handles such a refusal like any implicit one, and an uncaught one flies to the root of the executing Message.
 
 <a id="admission-case-13"></a>
 ### 13. What a broad converter table provides

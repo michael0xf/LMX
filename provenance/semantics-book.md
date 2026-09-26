@@ -853,7 +853,7 @@ Consumer определяет область аналитической пров
 
 ### 12. Надёжное численное преобразование
 
-Используется доступный преобразователь по явному ключу с контрактом диапазона назначения: `u16(255) → u8` допустимо, `u16(256) → u8` — ошибка диапазона, а не ноль. Округление и потеря точности внутри диапазона задаются отдельной политикой численного профиля. Прохождение аналитической проверки не даёт разрешения молча обернуть значение по модулю.
+Используется доступный преобразователь по явному ключу с контрактом диапазона назначения: `u16(255) → u8` допустимо, `u16(256) → u8` — ошибка диапазона, а не ноль. Округление и потеря точности внутри диапазона задаются отдельной политикой численного профиля. Прохождение аналитической проверки не даёт разрешения молча обернуть значение по модулю. Отказ преобразователя на ребре — обычный отказ приёмника; наружу он выходит как неявный именованный отказ этого ребра (`convert`) в методе, которому ребро принадлежит: собственные объявленные имена преобразователя (например `range`) вызывающий не объявляет, обработчик `catch: convert ()` обрабатывает такой отказ, как любой неявный, а неотловленный улетает в корень исполняющегося Message.
 
 ### 13. Значение широкой таблицы преобразователей
 
@@ -913,7 +913,7 @@ Field count and slots are fixed. Ordinary field operations may replace the `void
 
 ### 12. Reliable numeric conversion
 
-Use an available explicitly keyed converter with a destination-range contract: `u16(255) → u8` is admitted, while `u16(256) → u8` is a range error, not zero. In-range rounding and precision loss are a separate numeric-profile policy. Successful analytical checking does not permit silent modular wrapping.
+Use an available explicitly keyed converter with a destination-range contract: `u16(255) → u8` is admitted, while `u16(256) → u8` is a range error, not zero. In-range rounding and precision loss are a separate numeric-profile policy. Successful analytical checking does not permit silent modular wrapping. A converter's refusal at the edge is an ordinary receiver refusal; it leaves as the implicit named failure of that edge (`convert`) in the method that owns the edge: the caller does not declare the converter's own names (for example `range`), a `catch: convert ()` handler handles such a refusal like any implicit one, and an uncaught one flies to the root of the executing Message.
 
 ### 13. What a broad converter table provides
 

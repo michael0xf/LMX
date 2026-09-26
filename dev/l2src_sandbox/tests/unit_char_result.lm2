@@ -1,0 +1,15 @@
+# D-77: a char result is the same word a char formal already is.
+# first('q') is q, not zero. first('z') is z. A constant 'a' would fail the second check.
+
+fn: first (char: c) char
+return: c
+
+fn: check () int
+    if: first('q') != 'q'
+        return: 1
+    if: first('z') != 'z'
+        return: 2
+return: 7
+
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

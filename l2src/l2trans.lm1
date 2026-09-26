@@ -21776,6 +21776,28 @@ fn: l2_rw_may (int: mi) int
     ---
 return: 1
 
+# Whether l2_rw_may(mi) = 0 is specifically because of a callable result (code 16, T6's `fn:
+# (...) ...` header) or a callable formal (l2_cf_get): the PAP/merge-callable class named in
+# next_core_tasks.md's "Интерпретаторы: те же два примера или явное unsupported" (T6/T7,
+# steps/interpreters-callable-parity-t6t7.md). Re-checks only the gates l2_rw_may itself would
+# already have applied first (mi valid, native body, no dynamic inputs, no throw) so a method
+# excluded for one of THOSE other reasons is never misreported as "callable" here -- they keep
+# their existing silent-native treatment under --walk-methods, unchanged.
+fn: l2_rw_callable_excluded (int: mi) int
+    int: j 0
+    if: mi < 0 || mi = l2_e || mi >= l2_m_n || l2_m_native(mi) = 0
+        return: 0
+    if: l2_m_dyn[mi] != 0 || (l2_m_throws != 0 && l2_m_throws[mi] != 0)
+        return: 0
+    if: l2_m_ret[mi] = 16
+        return: 1
+    while: j < l2_m_arity[mi]
+        if: l2_cf_get(mi, j) >= 0
+            return: 1
+        j: j + 1
+    ---
+return: 0
+
 # Method mi's return trailer (its column-0 `return: V`), built at slot `slot` of `into`: one step,
 # [ret, V] -- a `sub`'s bare `return` is the RET record --, behind the flag steps its value makes;
 # `made` counts them all.  None without a trailer.
@@ -22971,6 +22993,13 @@ fn: l2_rw_methods_count () int
             l2_rw_pre_n: 0
             l2_rw_mi: l2_e
             l2_vis_on: 0
+        # --walk-methods (-193 T4a) walks every method it can; a PAP/merge-callable class it
+        # cannot (callable result or formal, l2_rw_callable_excluded) used to stay silently
+        # native, indistinguishable from "not translated yet". Diagnose it instead, located at
+        # the method's own declaration -- only under the knob, so ordinary translation (the
+        # knob off) is unaffected.
+        if: l2_walk_methods != 0 && l2_library_mode = 0 && l2_pap_on(i) = 0 && l2_rw_may(i) = 0 && l2_rw_callable_excluded(i) != 0
+            return: l2_error(l2_src, l2_m_node[i], "a callable result or a callable formal is outside the walkable subset (--walk-methods)")
         ---
         i: i + 1
     ---

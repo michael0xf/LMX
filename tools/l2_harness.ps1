@@ -2233,8 +2233,8 @@ $fixtures = @(
     # "malformed implements descriptor".
     [pscustomobject]@{ Name = 'unit_s7_identity.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
-    # S7 empty uses: Consumer has no fields, so Plain is admitted to Equatable.
-    # Mutant: l2_descriptor_implements returns 1 when cons >= l2_ns_n →
+    # S7 empty uses: zero paths succeed inside l2_descriptor_used.
+    # Mutant: that function returns 1 before the zero-path success →
     # this row refuses "malformed implements descriptor".
     [pscustomobject]@{ Name = 'unit_s7_empty.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
@@ -2243,6 +2243,12 @@ $fixtures = @(
     # → this row and unit_s7_identity refuse "malformed implements descriptor".
     [pscustomobject]@{ Name = 'unit_s7_used.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
+    # 64 used paths still run. The 65th is a located refusal. Mutant: leave
+    # l2_uses_full unset → unit_s7_uses65 translates.
+    [pscustomobject]@{ Name = 'unit_s7_uses64.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_uses65.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a uses list is full'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_invalid_implements_unknown_candidate.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown candidate descriptor'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_invalid_implements_unknown_required.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

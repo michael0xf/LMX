@@ -971,6 +971,18 @@ $fixtures = @(
     # wrap(100)(1)=101, the first again 6, passed()=5. Entry 7. take: bin stays native.
     [pscustomobject]@{ Name = 'unit_t7_convert.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @('lmx_call_prim(', 'lmx_int_store_known(', 'c.LMX_WALK_OP_AT, 3U)') },
+    # next_core_tasks.md §7 "Интерпретаторы": a callable result (T6's makeAdder/addN shape) or a
+    # callable formal (T7's take (bin: op) shape) is outside l2_rw_may's walkable subset --
+    # --walk-methods now refuses it, located, instead of silently leaving it native
+    # (steps/interpreters-callable-parity-t6t7.md). Same two shapes as unit_make_adder.lm2/
+    # unit_t7_convert.lm2 above, minimised and re-staged under their own Name so this row can
+    # run WITH the knob while those two keep testing the native (non-knob) path. Mutant:
+    # l2_rw_callable_excluded hardcoded to `return: 0` -- both rows go back to translating
+    # silently under the knob (l2trans ACCEPTS a fixture that must be refused), RED.
+    [pscustomobject]@{ Name = 'unit_walk_methods_callable_result_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'a callable result or a callable formal is outside the walkable subset'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_methods_callable_formal_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'a callable result or a callable formal is outside the walkable subset'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_t7_two.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'a callable merge needs one model'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_t7_none.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

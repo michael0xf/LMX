@@ -457,12 +457,14 @@ int: l2_cv_used 0
 # Q33: the impl sources rows name, parsed once; the receivers the edges need.
 []: @(char) l2_cv_impl_path 8
 []: @(LmP0Document) l2_cv_impl_doc 8
+[]: @(char) l2_cv_impl_file 8
+int: l2_cv_doc_at 0
 int: l2_cv_impl_n 0
 @: LmP0Node l2_cv_body 0
 []: @(LmP0Node) l2_cv_need 64
+[]: int l2_cv_need_doc 64
 int: l2_cv_need_n 0
 int: l2_cv_inj_n 0
-int: l2_call_convert 0
 []: char l2_addr_path 1024
 @: char l2_ccall_into 0
 
@@ -504,7 +506,7 @@ prototype:
     fn: l2_frame_void_call (const: @(LmP0Node node); int: mi) int
     fn: l2_discard_run (@: LmP0Field field) int
     fn: l2_body_inert (const: @(LmP0Structure body); int: mi) int
-    fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @(LmP0Structure body); int: mi; const: @(char ind); @: char dest) int
+    fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @(LmP0Structure body); int: mi; const: @(char ind); @: char dest; int: edge) int
     fn: l2_check_value_call (const: @(LmP0Node node); int: idx; int: fi; int: mi; const: @(char path)) int
     fn: l2_tok_method_occ (int: idx; @: char dest) int
     fn: l2_empty_struct_assign_shape (const: @(LmP0Node stmt); int: mi) int
@@ -661,6 +663,7 @@ prototype:
     fn: l2_convert_hit (const: @(char from_n); const: @(char to_n)) @: char
     fn: l2_convert_method (const: @(LmP0Node body)) int
     fn: l2_convert_edge (int: mi; const: @(char path); const: @(LmP0Node stmt)) int
+    fn: l2_method_src (int: mi; const: @(char path)) const: @: char
     fn: l2_convert_on_store (int: mi; int: oi; const: @(LmP0Node stmt); const: @(LmP0Frame fr); const: @(char ind)) int
     fn: l2_colon_types_compatible (int: target_ty; int: value_ty) int
     fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
@@ -3245,7 +3248,7 @@ fn: l2_translate_unit (const: @(LmP0Structure unit); const: @(char path)) int
     # impl source a convert.lm2 row names.
     i: 0
     while: i < l2_cv_inj_n
-        if: l2_collect_method(l2_cv_need[i], path) != 0
+        if: l2_collect_method(l2_cv_need[i], l2_cv_impl_file[l2_cv_need_doc[i]]) != 0
             return: 1
         i: i + 1
     ---
@@ -3292,9 +3295,9 @@ fn: l2_parse_library (const: @(char path)) int
         if: l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && l2_ml_rebuild(l2_m_body[i]\as\structure, path) != 0
             return: 1
         l2_cur_mi: i
-        if: l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && l2_check_body(l2_m_body[i]\as\structure, i, path, 0) != 0
+        if: l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && l2_check_body(l2_m_body[i]\as\structure, i, l2_method_src(i, path), 0) != 0
             return: 1
-        if: l2_m_node[i] != 0 && l2_m_node[i]\as != 0 && l2_check_ret_tr(i, path, l2_ret_tr(l2_m_node[i]\as\frame), l2_m_node[i]) != 0
+        if: l2_m_node[i] != 0 && l2_m_node[i]\as != 0 && l2_check_ret_tr(i, l2_method_src(i, path), l2_ret_tr(l2_m_node[i]\as\frame), l2_m_node[i]) != 0
             return: 1
         i: i + 1
     l2_cur_mi: 0 - 1
@@ -6073,6 +6076,7 @@ fn: l2_convert_impl (const: @(char impl)) @: LmP0Document
         return: 0
     while: i < l2_cv_impl_n
         if: c.strcmp(l2_cv_impl_path[i], impl) = 0
+            l2_cv_doc_at: i
             return: l2_cv_impl_doc[i]
         i: i + 1
     # The cell is the table's string token, quotes included.
@@ -6091,7 +6095,14 @@ fn: l2_convert_impl (const: @(char impl)) @: LmP0Document
         return: 0
     memcpy(copy, impl, n)
     l2_cv_impl_path[l2_cv_impl_n]: copy
+    n: c.strlen(path) + 1U
+    copy: (cast: (@: char) l2_xmalloc(n))
+    if: copy = 0
+        return: 0
+    memcpy(copy, path, n)
+    l2_cv_impl_file[l2_cv_impl_n]: copy
     l2_cv_impl_doc[l2_cv_impl_n]: document
+    l2_cv_doc_at: l2_cv_impl_n
     l2_cv_impl_n: l2_cv_impl_n + 1
 return: document
 
@@ -6178,8 +6189,19 @@ fn: l2_convert_edge (int: mi; const: @(char path); const: @(LmP0Node stmt)) int
     if: l2_cv_need_n >= 64
         return: l2_error(path, stmt, "too many converters")
     l2_cv_need[l2_cv_need_n]: l2_cv_body
+    l2_cv_need_doc[l2_cv_need_n]: l2_cv_doc_at
     l2_cv_need_n: l2_cv_need_n + 1
 return: 0
+
+# The source a method was read from: a receiver taken from an impl source is
+# located in that file, every other method in the unit's own (REVIEW 38fe8b8-1).
+fn: l2_method_src (int: mi; const: @(char path)) const: @: char
+    int: i 0
+    while: mi >= 0 && mi < l2_m_n && i < l2_cv_inj_n
+        if: l2_m_node[mi] = l2_cv_need[i]
+            return: l2_cv_impl_file[l2_cv_need_doc[i]]
+        i: i + 1
+return: path
 
 # The store of a keyed pair calls the receiver: the value is its actual and
 # the result is the stored token (l2_tok). A refusal of the receiver is the
@@ -6208,9 +6230,7 @@ fn: l2_convert_on_store (int: mi; int: oi; const: @(LmP0Node stmt); const: @(LmP
     idx: l2_convert_method(l2_cv_body)
     if: idx < 0
         return: l2_error(l2_src, stmt, "internal: a conversion site was not checked")
-    l2_call_convert: 1
-    rc: l2_emit_call(stmt, idx, 0, 0 - 1, fr\body, mi, ind, l2_tok)
-    l2_call_convert: 0
+    rc: l2_emit_call(stmt, idx, 0, 0 - 1, fr\body, mi, ind, l2_tok, 1)
     if: rc != 0
         return: 1
 return: 3
@@ -15909,9 +15929,9 @@ fn: l2_parse_unit (const: @(char path)) int
             return: 1
         l2_cur_mi: i
         # An entry with no statement is an empty program; nothing to check.
-        if: l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && (i != l2_e || l2_e_n != 0) && l2_check_body(l2_m_body[i]\as\structure, i, path, 0) != 0
+        if: l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && (i != l2_e || l2_e_n != 0) && l2_check_body(l2_m_body[i]\as\structure, i, l2_method_src(i, path), 0) != 0
             return: 1
-        if: l2_m_node[i] != 0 && l2_m_node[i]\as != 0 && l2_check_ret_tr(i, path, l2_ret_tr(l2_m_node[i]\as\frame), l2_m_node[i]) != 0
+        if: l2_m_node[i] != 0 && l2_m_node[i]\as != 0 && l2_check_ret_tr(i, l2_method_src(i, path), l2_ret_tr(l2_m_node[i]\as\frame), l2_m_node[i]) != 0
             return: 1
         i: i + 1
     l2_cur_mi: 0 - 1
@@ -16713,7 +16733,7 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
         # (l2_check_primary): called with no arguments through lmx_call0.
         idx: l2_param_find(mi, node\as\atom)
         if: idx >= 0 && idx < l2_m_arity[mi] && l2_cf_get(mi, idx) >= 0
-            return: l2_emit_call(node, l2_cf_get(mi, idx), 2, idx, 0, mi, ind, dest)
+            return: l2_emit_call(node, l2_cf_get(mi, idx), 2, idx, 0, mi, ind, dest, 0)
         if: idx >= 0
             return: l2_tok_formal(mi, idx, dest)
         ---
@@ -16743,7 +16763,7 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
         # `m()` (l2_check_primary refused one without a result).
         idx: l2_find_method(node\as\atom)
         if: idx >= 0
-            return: l2_emit_call(node, idx, 0, 0 - 1, 0, mi, ind, dest)
+            return: l2_emit_call(node, idx, 0, 0 - 1, 0, mi, ind, dest, 0)
         ---
         return: l2_tok_text(node\as\atom, dest, 256U)
     if: node\kind = c.LM_P0_NODE_FRAME && l2_frame_head(node, "@")
@@ -16929,7 +16949,7 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
         return: l2_tok_temp(t, dest)
     if: idx < 0
         return: 1
-return: l2_emit_call(node, idx, l2_call_sel, l2_call_fi, call\body, mi, ind, dest)
+return: l2_emit_call(node, idx, l2_call_sel, l2_call_fi, call\body, mi, ind, dest, 0)
 
 # THE CALL (FABLE-OPUS-RECEIVER-CONTRACT-20260924-139).  One emission for every spelling of a call
 # of the resolved callee idx: l2_prep's call Frame, and a bare atom statement, which has no
@@ -16937,7 +16957,7 @@ return: l2_emit_call(node, idx, l2_call_sel, l2_call_fi, call\body, mi, ind, des
 # occurrence of the method, 1 the occurrence a method path has just selected (l2_pst), 2 the one
 # the callable formal fi holds.  sel and fi arrive as values: a call among the actuals goes
 # through l2_prep again and must not re-select this one.
-fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @(LmP0Structure body); int: mi; const: @(char ind); @: char dest) int
+fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @(LmP0Structure body); int: mi; const: @(char ind); @: char dest; int: edge) int
     @: LmP0Field a0 0
     int: t
     int: self_t
@@ -17154,13 +17174,13 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
     # Publish writes already known to this activation after the call and before
     # a following explicit node\field read. Merely taking an address does not
     # mark a graph-backed own cache dirty.
-    # A conversion edge's call (Q33): whatever its receiver throws is this
+    # A conversion edge's call (Q33, `edge`): whatever its receiver throws is this
     # method's implicit throw `convert`; the receiver's names are not the caller's.
-    if: l2_m_throws[idx] != 0 && l2_call_convert != 0
+    if: l2_m_throws[idx] != 0 && edge != 0
         if: c.fprintf(l2_out, "%sif: l2_ts%d != 0\n", ind, t) < 0 || l2_emit_implicit_throw(mi, "convert", ind) != 0
             return: 1
         ---
-    if: l2_m_throws[idx] != 0 && l2_call_convert = 0 && l2_emit_propagate(mi, idx, t, ind) != 0
+    if: l2_m_throws[idx] != 0 && edge = 0 && l2_emit_propagate(mi, idx, t, ind) != 0
         return: 1
     # A callable without a result names no value: its temporary is never declared.
     if: l2_m_ret[idx] = 8
@@ -24143,9 +24163,9 @@ fn: l2_eval_discard (@: LmP0Field field; int: span; int: mi; const: @(char ind))
     if: span = 1 && e\kind = c.LM_P0_NODE_ATOM
         idx: l2_atom_callee(e\as\atom, mi, @ fi)
         if: idx >= 0 && fi >= 0
-            return: l2_emit_call(e, idx, 2, fi, 0, mi, ind, l2_tok)
+            return: l2_emit_call(e, idx, 2, fi, 0, mi, ind, l2_tok, 0)
         if: idx >= 0
-            return: l2_emit_call(e, idx, 0, 0 - 1, 0, mi, ind, l2_tok)
+            return: l2_emit_call(e, idx, 0, 0 - 1, 0, mi, ind, l2_tok, 0)
         return: 0
     if: span = 1
         return: l2_prep(e, mi, ind, l2_tok)

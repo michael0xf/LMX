@@ -2339,6 +2339,12 @@ $fixtures = @(
     # convert_impl.lm2 is tests\unit_s7_conv_nobody_impl.lm2, which has no lm_stg_convert_size_t_int.
     [pscustomobject]@{ Name = 'unit_s7_conv_nobody.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Impl = 'unit_s7_conv_nobody_impl.lm2';
         Needle = 'no converter body ported'; Absent = @(); Debt = @() },
+    # REVIEW 38fe8b8-1: a receiver is checked as a method of the impl source it came from, so a
+    # refusal inside its body names convert_impl.lm2 (and that file's line), not the program.
+    # Mutant: collect and check receivers with the program's path -- the same refusal names
+    # unit_s7_conv_badbody.lm2:6:9, a line of a different file.
+    [pscustomobject]@{ Name = 'unit_s7_conv_badbody.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Impl = 'unit_s7_conv_badbody_impl.lm2';
+        Needle = 'convert_impl.lm2:6:9: throw of an undeclared name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_invalid_implements_unknown_candidate.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown candidate descriptor'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_invalid_implements_unknown_required.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

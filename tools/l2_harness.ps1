@@ -2238,6 +2238,11 @@ $fixtures = @(
     # this row refuses "malformed implements descriptor".
     [pscustomobject]@{ Name = 'unit_s7_empty.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
+    # S7 nonempty uses: only the read path is the Consumer. Plain lacks
+    # Equatable\extra and still runs. Mutant: l2_descriptor_used returns 1
+    # → this row and unit_s7_identity refuse "malformed implements descriptor".
+    [pscustomobject]@{ Name = 'unit_s7_used.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_invalid_implements_unknown_candidate.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown candidate descriptor'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_invalid_implements_unknown_required.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

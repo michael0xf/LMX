@@ -1,0 +1,27 @@
+# A nonempty uses checks the paths that were read.
+# take reads slot\equals. Plain has equals and lacks extra.
+# Equatable's extra is not in this Consumer, so Plain is admitted.
+
+Plain:
+    size_t: equals 0U
+end: Plain
+
+Equatable:
+    size_t: equals 0U
+    size_t: extra 0U
+end: Equatable
+
+fn: take (Equatable: slot) int
+    slot\equals: 1U
+return: 4
+
+fn: go () int
+return: take(Plain)
+
+int: k
+k: go()
+if: k = 4
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+return

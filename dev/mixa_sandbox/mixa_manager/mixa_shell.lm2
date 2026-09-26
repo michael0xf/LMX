@@ -81,12 +81,15 @@ Files:
     fn: read_text (path: ()) int
     return: 0
 
+    # Body: mixa_shell_files_copy_file. One file, then one progress
+    # step. A tree still belongs to mixa_copy_run.
     fn: copy (paths: ()) int
     return: 0
 
     fn: remove (paths: ()) int
     return: 0
 
+    # No FSync body exists. This letter stays named and does not walk.
     fn: find (path: ()) int
     return: 0
 
@@ -104,8 +107,8 @@ Files:
     fn: refresh () int
     return: 0
 
-    # Body when filled: mixa_fm_remove / mixa_remove. Confirm stays on Shell
-    # before this letter is sent. This method does not draw the question.
+    # Body: mixa_shell_files_remove, which is mixa_dir_remove of the path
+    # Shell already confirmed. It does not read Shell's selection.
     fn: remove (paths: ()) int
     return: 0
 end: Files
@@ -118,6 +121,7 @@ end: Files
 Audio:
     Files: files
 
+    # After the bytes arrive, the body is mixa_shell_audio_play.
     fn: play (path: ()) int
         post:
             ask:
@@ -128,9 +132,11 @@ Audio:
                 stop: ()
     return: 0
 
+    # Body: mixa_shell_audio_stop.
     fn: stop () int
     return: 0
 
+    # Body: mixa_shell_audio_scan. The names are transferred to the caller.
     fn: scan (path: ()) int
     return: 0
 
@@ -144,9 +150,12 @@ end: Audio
 # mixa_share_win32, mixa_service, mixa_autostart, mixa_permissions,
 # mixa_notification_log.
 Process:
+    # Body: mixa_shell_process_launch. stdin stays closed. A spawn
+    # refusal is not an exit code. Output is appended to the console file.
     fn: launch (path: ()) int
     return: 0
 
+    # Body: mixa_shell_process_share. Records the paths. Does not open UI.
     fn: share (paths: ()) int
     return: 0
 end: Process

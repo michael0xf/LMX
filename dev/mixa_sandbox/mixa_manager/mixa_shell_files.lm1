@@ -1,5 +1,6 @@
 predef: "mixa_manager/mixa_file_manager.h.lm1"
 predef: "mixa_manager/mixa_fileio.h.lm1"
+predef: "mixa_manager/mixa_dir.h.lm1"
 include: "<stdlib.h>"
 
 # Files owner, same-owner calls only. One header: the real
@@ -165,3 +166,66 @@ return: mixa_shell_files_read(path, out_bytes, out_len)
 sub: mixa_shell_files_release_bytes (@: char bytes)
     c.free(bytes)
 end: mixa_shell_files_release_bytes
+
+# One file, then one progress call. A refusal does not call progress and
+# does not leave the destination. A tree copy remains mixa_copy_run; this
+# is the single-file letter. find has no FSync body and is not invented here.
+fn: mixa_shell_files_copy_file (const: @(char src); const: @(char dst); @: int step) int
+    []: (@: MixaFio) rslot 1
+    []: (@: MixaFio) wslot 1
+    @: MixaFio rd
+    @: MixaFio wr
+    []: char chunk 4096
+    size_t: n
+    size_t: done
+    int: st
+    if: src = 0 || dst = 0
+        return: MIXA_FIO_ERR_ARG
+    rslot[0]: 0
+    wslot[0]: 0
+    st: mixa_fio_open_read(rslot, src)
+    if: st != MIXA_FIO_OK
+        return: st
+    ---
+    rd: rslot[0]
+    st: mixa_fio_open_write_new(wslot, dst)
+    if: st != MIXA_FIO_OK
+        mixa_fio_close(rd)
+        return: st
+    ---
+    wr: wslot[0]
+    done: 0U
+    while: 1
+        n: 0U
+        st: mixa_fio_read(rd, chunk, 4096U, @ n, 0, done)
+        if: st != MIXA_FIO_OK
+            mixa_fio_close(wr)
+            mixa_fio_close(rd)
+            mixa_dir_remove(dst)
+            return: st
+        ---
+        if: n = 0U
+            break
+        ---
+        st: mixa_fio_write(wr, chunk, n, 0, done)
+        if: st != MIXA_FIO_OK
+            mixa_fio_close(wr)
+            mixa_fio_close(rd)
+            mixa_dir_remove(dst)
+            return: st
+        ---
+        done: done + n
+    ---
+    mixa_fio_close(wr)
+    mixa_fio_close(rd)
+    if: step != 0
+        \step: \step + 1
+    ---
+return: MIXA_FIO_OK
+
+# Shell already asked. This deletes the named path. It does not look at
+# Shell's selection.
+fn: mixa_shell_files_remove (const: @(char path)) int
+    if: path = 0
+        return: MIXA_DIR_ERR_ARG
+return: mixa_dir_remove(path)

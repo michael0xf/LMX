@@ -1,0 +1,69 @@
+predef: "mixa_manager/mixa_event_fifo.lm1"
+predef: "mixa_manager/mixa_pump.lm1"
+predef: "mixa_manager/mixa_backend_headless.lm1"
+predef: "mixa_manager/mixa_backend_table.lm1"
+predef: "mixa_manager/mixa_shell_turn.lm1"
+include: "<stdio.h>" "<string.h>" "<stdlib.h>"
+
+# One turn against the headless backend. Poll has nothing, so the turn
+# returns without waiting and without sending a letter.
+
+fn: mixa_backend_ctors_count () size_t
+return: 1U
+
+fn: mixa_backend_ctors_get (size_t: i) const: @(MixaBackendVTable)
+    if: i = 0U
+        return: mixa_backend_headless_table()
+    ---
+return: 0
+
+fn: main () int
+    @: MixaCellMetrics metrics
+    MixaPump: pump
+    @: MixaBackend backend
+    const: @(MixaBackendVTable vt)
+    int: events
+    int: checks
+    int: failures
+    int: rc
+    checks: 0
+    failures: 0
+    metrics: (cast: (@: MixaCellMetrics) c.calloc(1U, c.sizeof(c.MixaCellMetrics)))
+    metrics\text_cell_width: 8U
+    metrics\text_cell_height: 8U
+    metrics\upper_cell_width: 8U
+    metrics\upper_cell_height: 8U
+    metrics\pointer_cell_width: 8U
+    metrics\pointer_cell_height: 8U
+    vt: mixa_backend_headless_table()
+    backend: 0
+    rc: mixa_backend_open(vt, @ backend, 4U, 4U, metrics)
+    checks: checks + 1
+    if: rc != 0 || backend = 0
+        failures: failures + 1
+        c.printf("shell-turn: headless open %d\n", rc)
+    ---
+    c.memset(@ pump, 0, c.sizeof(c.MixaPump))
+    rc: mixa_pump_open(@ pump)
+    checks: checks + 1
+    if: rc != 0
+        failures: failures + 1
+        c.printf("shell-turn: pump open %d\n", rc)
+    ---
+    events: -1
+    rc: mixa_shell_turn(@ pump, backend, @ events)
+    checks: checks + 1
+    if: rc != 0 || events != 0
+        failures: failures + 1
+        c.printf("shell-turn: turn rc %d events %d\n", rc, events)
+    ---
+    mixa_pump_release(@ pump)
+    if: backend != 0
+        mixa_backend_close(backend)
+    ---
+    c.free(metrics)
+    c.printf("shell-turn: %d checks, %d failures\n", checks, failures)
+    if: failures != 0
+        return: 1
+    ---
+return: 0

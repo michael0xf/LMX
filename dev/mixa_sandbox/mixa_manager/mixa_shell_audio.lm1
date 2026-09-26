@@ -1,0 +1,15 @@
+predef: "mixa_manager/mixa_audio_scan.h.lm1"
+
+# Audio owner. Scan does not open a device. play and stop are the
+# controller calls. The panel and the buttons stay on Shell.
+# Bytes of the file arrive by the Files letter; this owner does not
+# keep a second copy of them.
+
+fn: mixa_shell_audio_scan (const: @(MixaAudioVTable vt); const: @(char dir_utf8); @: MixaAudioScanResult out) int
+return: mixa_audio_scan_directory_vt(vt, dir_utf8, out)
+
+fn: mixa_shell_audio_play (@: MixaAudio a) int
+return: mixa_audio_play(a)
+
+fn: mixa_shell_audio_stop (@: MixaAudio a) int
+return: mixa_audio_stop(a)

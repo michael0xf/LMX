@@ -1,0 +1,42 @@
+predef: "mixa_manager/mixa_process_win32.h.lm1"
+predef: "mixa_manager/mixa_share.h.lm1"
+
+# Process owner. spawn with stdin_enabled 0 closes the child's input.
+# read does not block. A spawn refusal is MIXA_PROC_ERR_SPAWN, which is
+# not an exit code of a child that did start.
+# share records the paths and does not open the platform UI.
+
+fn: mixa_shell_process_launch (const: @(char command); const: @(char cwd); int: stdin_enabled; @@: MixaProcess out) int
+return: mixa_process_spawn(out, command, cwd, stdin_enabled)
+
+fn: mixa_shell_process_read (@: MixaProcess p; @: void buf; size_t: cap; @: size_t got) int
+return: mixa_process_read(p, buf, cap, got)
+
+fn: mixa_shell_process_write (@: MixaProcess p; const: @(void buf); size_t: n; @: size_t wrote) int
+return: mixa_process_write(p, buf, n, wrote)
+
+fn: mixa_shell_process_status (@: MixaProcess p; @: int running; @: int exit_code) int
+return: mixa_process_status(p, running, exit_code)
+
+fn: mixa_shell_process_kill (@: MixaProcess p) int
+return: mixa_process_kill(p)
+
+sub: mixa_shell_process_close (@@: MixaProcess p)
+    mixa_process_close(p)
+end: mixa_shell_process_close
+
+fn: mixa_shell_process_share (const: @(MixaShareVTable vt); @@: char paths; size_t: count; @@: MixaShareRequest out; @: size_t skipped) int
+    int: st
+    if: out = 0
+        return: MIXA_SHARE_ERR_ARG
+    st: mixa_share_create(out, vt)
+    if: st != MIXA_SHARE_OK
+        return: st
+    ---
+    st: mixa_share_set_files(out[0], paths, count, skipped)
+    if: st != MIXA_SHARE_OK
+        mixa_share_destroy(out[0])
+        out[0]: 0
+        return: st
+    ---
+return: MIXA_SHARE_OK

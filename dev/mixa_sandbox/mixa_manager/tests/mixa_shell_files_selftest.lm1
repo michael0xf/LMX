@@ -12,6 +12,7 @@ include: "<stdio.h>" "<string.h>" "<stdlib.h>"
 # It is not the joint binary.
 
 int: g_alloc_live
+int: g_steps
 
 fn: t_alloc (size_t: n) @: void
     @: void p
@@ -222,6 +223,46 @@ fn: main (int: argc; @: @(char) argv) int
         c.printf("shell-files: line file was truncated\n")
     ---
     mixa_shell_files_release_bytes(text)
+    g_steps: 0
+    c.snprintf(file, 1200U, "%s\\a.txt", root)
+    c.snprintf(cmd, 2400U, "%s\\b.txt", root)
+    rc: mixa_shell_files_copy_file("Z:\\no\\such\\mixa_shell_copy", cmd, @ g_steps)
+    checks: checks + 1
+    if: rc = MIXA_FIO_OK || g_steps != 0
+        failures: failures + 1
+        c.printf("shell-files: missing copy reported progress\n")
+    ---
+    rc: mixa_shell_files_copy_file(file, cmd, @ g_steps)
+    checks: checks + 1
+    if: rc != MIXA_FIO_OK || g_steps != 1
+        failures: failures + 1
+        c.printf("shell-files: copy status %d steps %d\n", rc, g_steps)
+    ---
+    rc: mixa_shell_files_read_bytes(cmd, @ bytes, @ blen)
+    checks: checks + 1
+    if: rc != MIXA_FIO_OK || blen != 1U || bytes = 0 || bytes[0] != 120
+        failures: failures + 1
+        c.printf("shell-files: copied bytes mismatch\n")
+    ---
+    mixa_shell_files_release_bytes(bytes)
+    rc: mixa_shell_files_remove(cmd)
+    checks: checks + 1
+    if: rc != MIXA_DIR_OK
+        failures: failures + 1
+        c.printf("shell-files: remove copy returned %d\n", rc)
+    ---
+    rc: mixa_shell_files_read_text(cmd, @ text, @ tlen)
+    checks: checks + 1
+    if: rc = MIXA_FIO_OK
+        failures: failures + 1
+        c.printf("shell-files: removed file still reads\n")
+    ---
+    rc: mixa_shell_files_remove(cmd)
+    checks: checks + 1
+    if: rc = MIXA_DIR_OK
+        failures: failures + 1
+        c.printf("shell-files: second remove succeeded\n")
+    ---
     checks: checks + 1
     if: g_alloc_live != 0
         failures: failures + 1

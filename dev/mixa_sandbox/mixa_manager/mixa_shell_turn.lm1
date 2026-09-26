@@ -1,0 +1,24 @@
+predef: "mixa_manager/mixa_pump.h.lm1"
+
+# One Shell turn. Drain what poll has now, then take those events.
+# The drain stops when poll says there is nothing. It does not wait.
+
+fn: mixa_shell_turn (@: MixaPump pump; @: MixaBackend backend; @: int out_events) int
+    MixaEvent: ev
+    int: rc
+    int: n
+    if: pump = 0 || backend = 0 || out_events = 0
+        return: 1
+    rc: mixa_pump_drain(pump, backend)
+    if: rc != 0
+        return: rc
+    ---
+    n: 0
+    while: mixa_pump_next(pump, @ ev) = 0
+        n: n + 1
+        if: n > 64
+            return: 1
+        ---
+    ---
+    \out_events: n
+return: 0

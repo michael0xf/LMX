@@ -1,0 +1,79 @@
+predef: "mixa_manager/mixa_dir_win32.lm1"
+predef: "mixa_manager/mixa_audio.lm1"
+predef: "mixa_manager/mixa_audio_scan.lm1"
+predef: "mixa_manager/mixa_shell_audio.lm1"
+include: "<stdio.h>" "<string.h>" "<stdlib.h>"
+
+# Scan keeps mp3 names and drops the rest. play and stop refuse a null
+# controller. No device is opened.
+
+fn: main (int: argc; @: @(char) argv) int
+    []: char base 520
+    []: char root 1040
+    []: char file 1200
+    []: char cmd 2400
+    []: (@: void) fh 1
+    @: MixaAudioVTable vt
+    @: MixaAudioScanResult got
+    int: checks
+    int: failures
+    int: rc
+    checks: 0
+    failures: 0
+    if: argc >= 2
+        c.snprintf(base, 520U, "%s", argv[1])
+    ---
+    if: argc < 2
+        c.snprintf(base, 520U, "build/mixa/tmp_shell_audio")
+    ---
+    c.snprintf(cmd, 2400U, "cmd /c rmdir /s /q \"%s\" 2>nul & mkdir \"%s\" 2>nul", base, base)
+    c.system(cmd)
+    c.snprintf(root, 1040U, "%s\\root", base)
+    c.snprintf(cmd, 2400U, "cmd /c mkdir \"%s\" 2>nul", root)
+    c.system(cmd)
+    c.snprintf(file, 1200U, "%s\\note.txt", root)
+    fh[0]: c.fopen(file, "wb")
+    if: fh[0] != 0
+        c.fclose(fh[0])
+    ---
+    c.snprintf(file, 1200U, "%s\\song.mp3", root)
+    fh[0]: c.fopen(file, "wb")
+    if: fh[0] != 0
+        c.fclose(fh[0])
+    ---
+    vt: (cast: (@: MixaAudioVTable) c.calloc(1U, c.sizeof(c.MixaAudioVTable)))
+    vt\name: "shell"
+    vt\audio_exts: "mp3"
+    got: (cast: (@: MixaAudioScanResult) c.calloc(1U, c.sizeof(c.MixaAudioScanResult)))
+    rc: mixa_shell_audio_scan(vt, "Z:\\no\\such\\mixa_shell_audio", got)
+    checks: checks + 1
+    if: rc = MIXA_DIR_OK || got\count != 0U
+        failures: failures + 1
+        c.printf("shell-audio: missing dir returned rows\n")
+    ---
+    rc: mixa_shell_audio_scan(vt, root, got)
+    checks: checks + 1
+    if: rc != MIXA_DIR_OK || got\count != 1U || got\items = 0 || c.strstr(got\items[0], "song.mp3") = 0
+        failures: failures + 1
+        c.printf("shell-audio: scan count %d\n", (cast: (int) got\count))
+    ---
+    mixa_audio_scan_free_items(got\items, got\count)
+    rc: mixa_shell_audio_play(0)
+    checks: checks + 1
+    if: rc != MIXA_AUDIO_ERR_ARG
+        failures: failures + 1
+        c.printf("shell-audio: null play returned %d\n", rc)
+    ---
+    rc: mixa_shell_audio_stop(0)
+    checks: checks + 1
+    if: rc != MIXA_AUDIO_ERR_ARG
+        failures: failures + 1
+        c.printf("shell-audio: null stop returned %d\n", rc)
+    ---
+    c.free(got)
+    c.free(vt)
+    c.printf("shell-audio: %d checks, %d failures\n", checks, failures)
+    if: failures != 0
+        return: 1
+    ---
+return: 0

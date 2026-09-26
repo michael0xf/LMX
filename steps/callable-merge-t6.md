@@ -58,3 +58,13 @@ add100: makeAdder 100
 ## Вопросы автору
 
 Нет. Форма и три операнда уже в блоге и в §7. Срез не выбирает другое представление.
+
+## RESULT
+
+`unit_make_adder` Entry 7. `add5: 1` = 6, `add100: 1` = 101, снова `add5: 1` = 6. Узел на каждый `return: addN`: слот `n` — своя ячейка, кадр модели — тот же адрес. Вызов — `lmx_call_prim`, code и data — этот узел. `lmx_fresh(` в переводе нет.
+
+Мутант: одна ячейка `n` на оба результата (последняя запись 100). `entry 7` — exit 0, не 7. Откат — снова 7.
+
+PAP: другое имя формала `(int: z)` и другой тип результата `size_t` — «a callable merge header does not match the model». `unit_pap_add5` по-прежнему переводится.
+
+Ядро не менялось. Harness 415/415 (`build/l2_harness/t6`). check_docs OK. `build_l2src -Run` и L3 не гонялись. Twin `l2src/l2trans.lm1` и `l2src/tests/unit_make_adder.lm2` — копия. D-81 и полный `implements` не начинались. Третьего графа нет.

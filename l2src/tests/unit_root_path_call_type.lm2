@@ -1,0 +1,16 @@
+A:
+    fn: M
+    size_t: tag 1U
+end: A
+
+fn: M () int
+    return: 5
+end: M
+
+# D-75: a call through a path at the walked root (`A\M()`, -196) is typed by the method it resolves
+# to.  Untyped, M's int result met the size_t place a1 only when R0's turn ran it (walk error INVALID,
+# an abort); typed, it is the located refusal of a conversion, as `a1: M()` is.
+size_t: a1
+a1: A\M()
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

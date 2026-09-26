@@ -1,0 +1,27 @@
+Model:
+    size_t: value 1U
+end: Model
+
+Holder:
+    @: Model q
+end: Holder
+
+# D-76: a path goes on through a reference field `@: Model q` into its pointee: `h\q\value` is mo's
+# own field, read and written.  Success is 7.
+fn: check () int
+    Model: mo
+    Holder: h
+    size_t: v
+    h\q: @mo
+    mo\value: 9U
+    v: h\q\value
+    if: v != 9U
+        return: 1
+    h\q\value: 12U
+    v: mo\value
+    if: v != 12U
+        return: 2
+return: 7
+
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

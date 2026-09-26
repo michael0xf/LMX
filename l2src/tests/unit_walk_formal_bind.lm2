@@ -1,0 +1,30 @@
+# T4b class 2. A numeric field named like a formal is the argument until its binding
+# line and the field after. `int: n` with no initializer carries the argument.
+# bump(3) is 4, see(3) is 34 (3 before the line, 4 after), twice(3) is 5. Success is 7.
+fn: bump (int: n) int
+    int: n
+    n: n + 1
+return: n
+
+fn: see (int: n) int
+    int: a
+    a: n
+    int: n
+    n: n + 1
+return: a * 10 + n
+
+fn: twice (int: n) int
+    int: n
+    n: n + 1
+    n: n + 1
+return: n
+
+int: r 0
+if: bump(3) = 4
+    r: r + 1
+if: see(3) = 34
+    r: r + 2
+if: twice(3) = 5
+    r: r + 4
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

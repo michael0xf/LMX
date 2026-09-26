@@ -94,3 +94,11 @@ REVIEW 61c2597-1: `unit_s7_prim_cross` измеряет успех листа, �
 `unit_s7_ret_name` — `return: Plain` в `Equatable`: «implements is false in return value». `unit_s7_ret_call` — `return: mk()` при `mk () Plain`: та же фраза. `unit_s7_ret_body` — тот же отказ у indented `return:`. `unit_s7_ret_path` — `return: h\p` при поле `Plain`: та же фраза. `unit_s7_ret_rich` — `return: Rich` (`equals` и непрочитанный `extra`), `take` читает `equals`, Entry 7. `unit_s7_ret_field` — `return: h\p` при поле `Rich`, Entry 7. D-82 закрыт: поле Structure возвращается, фразы «a Structure return must be a name» нет.
 
 Мутант: `l2_admit_return` сразу возвращает 0. `unit_s7_ret_name` переводится, exit 0. Откат — отказ `:12`, frame=fn. Живой исходник мутантом не оставался. Глубокий путь `take(h\a\p)` не этот срез. Таблица преобразований не начата. Гейт: build 282/282 (`build/l2src/20260926_122104`), harness 440/440 (`build/l2_harness/s7ret`), L3 11/11, имена 69/128, check_docs OK.
+
+## Путь глубже одного поля (REVIEW 4812c2a-2)
+
+`l2_actual_path` читает `name\seg\seg` любой нечётной длины от 3. Корень — связанное имя Structure. Каждый сегмент — поле kind 3; лист — `out_ni`. Нет имени — «unresolved name». Сегмент не Structure — «a field path must end at a Structure». Иначе 2, и прежняя проверка выражения остаётся. Допуск тот же `l2_admit_consumer_ix` / `l2_admit_implements(cand, req, req)`.
+
+Значение — вложенный `lmx_arena_ref_struct` (`l2_emit_actual_path`). Один сегмент по-прежнему `lmx_arena_ref_struct(l2_p0_0, 0U)` (`unit_s7_ret_field`). Два сегмента — то же, вложенное.
+
+`unit_s7_arg_deep` — `take(h\a\p)`, лист `Rich`, Entry 7. `unit_s7_arg_deep_refused` — лист `Plain`, «implements is false in function argument», frame=take. `unit_s7_ret_deep` — `return: h\a\p`, лист `Rich`, Entry 7. Мутант: `l2_actual_path` при span > 3 возвращает 2. `unit_s7_arg_deep_refused` переводится (ложный допуск). `unit_s7_ret_deep` — «implements is false in return value». `unit_s7_arg_path` остаётся прежним отказом. Откат — прежние исходы. Живой исходник мутантом не оставался. Ядро не менялось. Таблица преобразований не начата. `unit_s7_prim_cross` не переворачивался. Гейт: build 282/282 (`build/l2src/s7span`), harness 443/443 (`build/l2_harness/s7span2`), L3 11/11, имена 69/128, check_docs OK.

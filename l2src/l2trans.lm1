@@ -452,6 +452,7 @@ int: l2_convert_mask 0
 int: l2_cv_ready 0
 int: l2_cv_cell_n 0
 int: l2_cv_gap 0
+int: l2_cv_used 0
 int: l2_cv_tmp_n 0
 []: @(char) l2_cv_cell 960
 []: char l2_addr_path 1024
@@ -816,6 +817,7 @@ prototype:
     fn: l2_untyped_graph (int: mi; const: @(LmP0Node value)) int
     fn: l2_type_inst (int: ni; @: char dest) int
     fn: l2_admit_site (int: mi) int
+    fn: l2_convert_site (int: mi) int
     fn: l2_emit_admit (int: mi; int: ni; const: @(char value); const: @(char ind)) int
     fn: l2_implicit_name (int: g) const: @: char
     fn: l2_throws_frame (int: mi) @: LmP0Node
@@ -6046,7 +6048,8 @@ fn: l2_convert_hit (const: @(char from_n); const: @(char to_n); @: int bit) @: c
 return: 0
 
 # The value token is already in l2_tok. A different keyed pair with a row
-# becomes receiver(token). No row is not a store.
+# becomes receiver(token, @ temp). No row is not a store. A receiver that
+# refuses the value leaves this method as the implicit throw `convert`.
 fn: l2_convert_on_store (int: mi; int: oi; const: @(LmP0Frame fr); const: @(char ind)) int
     int: from_ft 0
     int: to_ft
@@ -6069,9 +6072,13 @@ fn: l2_convert_on_store (int: mi; int: oi; const: @(LmP0Frame fr); const: @(char
     recv: l2_convert_hit(from_n, to_n, @ bit)
     if: recv = 0
         return: 2
+    if: l2_m_throws = 0 || l2_m_throws[mi] = 0
+        return: l2_error(l2_src, 0, "internal: a conversion site was not checked")
     n: l2_cv_tmp_n
     l2_cv_tmp_n: l2_cv_tmp_n + 1
-    if: c.fprintf(l2_out, "%s%s: l2_cvt%d\n%sl2_cvt%d: %s(%s)\n", ind, to_n, n, ind, n, recv, l2_tok) < 0
+    if: c.fprintf(l2_out, "%s%s: l2_cvt%d\n%sif: %s(%s, @ l2_cvt%d) != 0\n", ind, to_n, n, ind, recv, l2_tok, n) < 0
+        return: 1
+    if: l2_emit_implicit_throw(mi, "convert", ind) != 0
         return: 1
     if: c.snprintf(l2_tok, 1024U, "l2_cvt%d", n) < 0
         return: 1
@@ -6079,25 +6086,27 @@ fn: l2_convert_on_store (int: mi; int: oi; const: @(LmP0Frame fr); const: @(char
 return: 0
 
 # Bodies for receivers declared in convert_impl.lm2 and named by a row.
-# A value outside the destination range throws Range. It does not become 0.
+# A receiver answers 0 and writes the value, or refuses a value outside the
+# destination range with a nonzero answer and writes nothing. The edge turns
+# the refusal into the implicit throw `convert` (D-83). It does not become 0.
 fn: l2_emit_convert_defs () int
     if: l2_convert_mask = 0
         return: 0
-    if: (l2_convert_mask & 1) != 0 && fputs("fn: lm_stg_convert_size_t_int (size_t: n) int\n    if: n > 2147483647U\n        c.fprintf(c.stderr, \"lmx: converter range\\n\")\n        c.abort()\n    return: (cast: int n)\nend: lm_stg_convert_size_t_int\n\n", l2_out) < 0
+    if: (l2_convert_mask & 1) != 0 && fputs("fn: lm_stg_convert_size_t_int (size_t: n; @: int out) int\n    if: n > 2147483647U\n        return: 1\n    \\out: (cast: int n)\n    return: 0\nend: lm_stg_convert_size_t_int\n\n", l2_out) < 0
         return: 1
-    if: (l2_convert_mask & 2) != 0 && fputs("fn: lm_stg_convert_int_size_t (int: n) size_t\n    if: n < 0\n        c.fprintf(c.stderr, \"lmx: converter range\\n\")\n        c.abort()\n    return: (cast: size_t n)\nend: lm_stg_convert_int_size_t\n\n", l2_out) < 0
+    if: (l2_convert_mask & 2) != 0 && fputs("fn: lm_stg_convert_int_size_t (int: n; @: size_t out) int\n    if: n < 0\n        return: 1\n    \\out: (cast: size_t n)\n    return: 0\nend: lm_stg_convert_int_size_t\n\n", l2_out) < 0
         return: 1
-    if: (l2_convert_mask & 4) != 0 && fputs("fn: lm_stg_convert_char_int (int: n) int\n    return: n\nend: lm_stg_convert_char_int\n\n", l2_out) < 0
+    if: (l2_convert_mask & 4) != 0 && fputs("fn: lm_stg_convert_char_int (int: n; @: int out) int\n    \\out: n\n    return: 0\nend: lm_stg_convert_char_int\n\n", l2_out) < 0
         return: 1
-    if: (l2_convert_mask & 8) != 0 && fputs("fn: lm_stg_convert_int_char (int: n) int\n    if: n > 255 || n < 0\n        c.fprintf(c.stderr, \"lmx: converter range\\n\")\n        c.abort()\n    return: n\nend: lm_stg_convert_int_char\n\n", l2_out) < 0
+    if: (l2_convert_mask & 8) != 0 && fputs("fn: lm_stg_convert_int_char (int: n; @: char out) int\n    if: n > 255 || n < 0\n        return: 1\n    \\out: (cast: char n)\n    return: 0\nend: lm_stg_convert_int_char\n\n", l2_out) < 0
         return: 1
-    if: (l2_convert_mask & 16) != 0 && fputs("fn: lm_stg_convert_int_unsigned (int: n) unsigned\n    if: n < 0\n        c.fprintf(c.stderr, \"lmx: converter range\\n\")\n        c.abort()\n    return: (cast: unsigned n)\nend: lm_stg_convert_int_unsigned\n\n", l2_out) < 0
+    if: (l2_convert_mask & 16) != 0 && fputs("fn: lm_stg_convert_int_unsigned (int: n; @: unsigned out) int\n    if: n < 0\n        return: 1\n    \\out: (cast: unsigned n)\n    return: 0\nend: lm_stg_convert_int_unsigned\n\n", l2_out) < 0
         return: 1
-    if: (l2_convert_mask & 32) != 0 && fputs("fn: lm_stg_convert_unsigned_int (unsigned: n) int\n    if: n > 2147483647U\n        c.fprintf(c.stderr, \"lmx: converter range\\n\")\n        c.abort()\n    return: (cast: int n)\nend: lm_stg_convert_unsigned_int\n\n", l2_out) < 0
+    if: (l2_convert_mask & 32) != 0 && fputs("fn: lm_stg_convert_unsigned_int (unsigned: n; @: int out) int\n    if: n > 2147483647U\n        return: 1\n    \\out: (cast: int n)\n    return: 0\nend: lm_stg_convert_unsigned_int\n\n", l2_out) < 0
         return: 1
-    if: (l2_convert_mask & 64) != 0 && fputs("fn: lm_stg_convert_unsigned_ulong (unsigned: n) ulong\n    return: (cast: ulong n)\nend: lm_stg_convert_unsigned_ulong\n\n", l2_out) < 0
+    if: (l2_convert_mask & 64) != 0 && fputs("fn: lm_stg_convert_unsigned_ulong (unsigned: n; @: ulong out) int\n    \\out: (cast: ulong n)\n    return: 0\nend: lm_stg_convert_unsigned_ulong\n\n", l2_out) < 0
         return: 1
-    if: (l2_convert_mask & 128) != 0 && fputs("fn: lm_stg_convert_ulong_unsigned (ulong: n) unsigned\n    return: (cast: unsigned n)\nend: lm_stg_convert_ulong_unsigned\n\n", l2_out) < 0
+    if: (l2_convert_mask & 128) != 0 && fputs("fn: lm_stg_convert_ulong_unsigned (ulong: n; @: unsigned out) int\n    if: n > 4294967295U\n        return: 1\n    \\out: (cast: unsigned n)\n    return: 0\nend: lm_stg_convert_ulong_unsigned\n\n", l2_out) < 0
         return: 1
 return: 0
 
@@ -6116,6 +6125,7 @@ fn: l2_colon_types_compatible (int: target_ty; int: value_ty) int
     int: target_numeric 0
     int: value_numeric 0
     l2_cv_gap: 0
+    l2_cv_used: 0
     cn: l2_prim_code_name(value_ty)
     rn: l2_prim_code_name(target_ty)
     if: cn != 0 && rn != 0
@@ -6142,6 +6152,7 @@ fn: l2_colon_types_compatible (int: target_ty; int: value_ty) int
             return: 0
         if: status = 0
             l2_convert_mask: l2_convert_mask | bit
+            l2_cv_used: 1
             return: 1
         if: status = 1
             return: 0
@@ -6207,6 +6218,10 @@ fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char p
         return: l2_error(path, stmt, "mixed numeric types (a conversion)")
     if: cok = 0
         return: l2_error(path, stmt, "assignment value has incompatible type")
+    # A converter is a receiver that can refuse: its edge puts this method on
+    # the throw channel, as an admission site does (D-83).
+    if: l2_cv_used != 0 && l2_convert_site(mi) != 0
+        return: 1
     if: only\value != 0 && only\value\kind = c.LM_P0_NODE_ATOM && l2_check_literal_kind(only\value\as\atom, l2_lit_kind_from_ft(target_ty), path, stmt) != 0
         return: 1
     # Reference rebinding requires execution of the receiving expression's
@@ -10784,6 +10799,14 @@ fn: l2_admit_site (int: mi) int
     l2_need_admit: 1
 return: 0
 
+# A conversion edge calls a receiver that can refuse, so its method takes the
+# status ABI the same way: the refusal leaves as the implicit throw `convert`.
+fn: l2_convert_site (int: mi) int
+    if: mi < 0 || l2_m_throws = 0
+        return: 1
+    l2_m_throws[mi]: 1
+return: 0
+
 # THE IMPLICIT THROW NAMES (S1.1).  An operator that fails throws its own name; nobody has to
 # catch it, and uncaught it reaches the root of the executing Message, which stops (author Q11).
 # The team names them (Q17 = A), and this table is the one place that spells them.  Its ORDER is
@@ -10792,12 +10815,15 @@ return: 0
 # a caller that knows a callee's d -- from the callee, or from a callable formal's signature --
 # knows every implicit status the callee can return.  No other status is on the channel: the
 # translator's and the kernel's own broken promises take the diagnostic route (X1,
-# l2_emit_invariant), never a status.
+# l2_emit_invariant), never a status.  `convert` is a converter's refusal at a conversion edge
+# (D-83): the receiver a convert.lm2 row names refuses a value outside the destination range.
 fn: l2_implicit_name (int: g) const: @: char
     if: g = 1
         return: "merge"
     if: g = 2
         return: "implements"
+    if: g = 3
+        return: "convert"
 return: 0
 
 # THE DECLARED THROW NAMES (S1.2).  `throws:` is the first item of a method head (author Q13):

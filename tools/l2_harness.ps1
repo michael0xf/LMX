@@ -2312,6 +2312,14 @@ $fixtures = @(
         Absent = @(); Debt = @('lm_stg_convert_size_t_int') },
     [pscustomobject]@{ Name = 'unit_s7_conv_norow.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'mixed numeric types (a conversion)'; Absent = @('assignment value has incompatible type'); Debt = @() },
+    # D-83: a converter's refusal is the implicit throw `convert` (g = 3), not c.abort() and not 0.
+    # Uncaught it reaches the root: no value, Message stopped, status 3.  Caught, the handler runs
+    # and the destination keeps its value.  Mutant: a body without its range test -- the first row
+    # completes with 7, the second skips the handler with 3.
+    [pscustomobject]@{ Name = 'unit_s7_conv_range.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
+        Absent = @('lmx: converter range'); Debt = @('fn: lm_stg_convert_size_t_int (size_t: n; @: int out) int', 'if: lm_stg_convert_size_t_int(') },
+    [pscustomobject]@{ Name = 'unit_s7_conv_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @('lmx: converter range'); Debt = @('fn: lm_stg_convert_int_size_t (int: n; @: size_t out) int') },
     [pscustomobject]@{ Name = 'unit_invalid_implements_unknown_candidate.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown candidate descriptor'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_invalid_implements_unknown_required.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

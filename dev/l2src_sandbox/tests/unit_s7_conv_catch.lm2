@@ -1,0 +1,17 @@
+# D-83: `catch: convert ()` takes a converter's refusal like any implicit name.  -1 does not fit
+# size_t, so the row int -> size_t of convert.lm2 calls lm_stg_convert_int_size_t, which refuses,
+# and the handler after the store runs.  A refusal writes nothing: b keeps 5, and the handler
+# gives 7.  Mutant: a body that stores the wrapped value completes the store, the handler does
+# not run, and the entry is 3.
+fn: go () int
+    int: r 3
+    int: a -1
+    size_t: b 5U
+    b: a
+    catch: convert ()
+        if: b = 5U
+            r: 7
+return: r
+
+sendMessage: exit(exit_code: go(); stdout: ""; stderr: "")
+return

@@ -1,0 +1,14 @@
+# D-83: a converter's refusal is the implicit throw `convert` (Q17 = A: g = 3, after merge = 1 and
+# implements = 2), not an abort and not 0.  3000000000U does not fit int, so the row size_t -> int
+# of convert.lm2 calls lm_stg_convert_size_t_int, which refuses: `go` leaves with status d + 3 = 3,
+# E re-encodes it and the root receives 3.  The entry has no value (exit 1) and the Message is
+# stopped.  Completing would give 7.  Mutant: the body without its range test stores the wrapped
+# value, `go` completes and the entry is 7.
+fn: go () int
+    int: a 1
+    size_t: b 3000000000U
+    a: b
+    return: 7
+
+sendMessage: exit(exit_code: go(); stdout: ""; stderr: "")
+return

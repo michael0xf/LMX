@@ -808,7 +808,7 @@ Clarifies / overrides overstatements in -19. Unhold from -18 stands (no global-c
 - [ ] Source inventory: удалённые helpers имеют **ноль** ссылок; выполнен поиск остаточных special-case `c.puts` / `c.array` (translator, docs, fixtures, corpus).
 - [ ] Если L1 `c.array` ещё нельзя убрать — это явный отдельно owned blocker / foreign-backend debt, **не** L2-семантика; до author-approved границы **не** заявлять kernel-clean / self-build-ready.
 
-Измерено на `218709f`, затем автор велел писать ряд через `[]:`: сканеры C-заголовков сняты (`3e2cefb`); `<stdio.h>`/`<stdlib.h>` — правило эмиссии (`4b1ada5`); мёртвых `fn:` в `l2trans.lm1` нет. Порождённый `c.array:` снят. §1 `VoidArray` не начат. D-83 открыт. Поэтому раздел GATE не закрыт, §8 не начинается.
+Измерено на `218709f`, затем автор велел писать ряд через `[]:`: сканеры C-заголовков сняты (`3e2cefb`); `<stdio.h>`/`<stdlib.h>` — правило эмиссии (`4b1ada5`); мёртвых `fn:` в `l2trans.lm1` нет. Порождённый `c.array:` снят. §1 `VoidArray` не начат. D-83 закрыт: отказ конвертера — неявный throw `convert` (g = 3), не `c.abort()`. Восемь тел приёмников и маска битов ещё в коде транслятора (REVIEW 2975115-1). Поэтому раздел GATE не закрыт, §8 не начинается.
 
 Порядок: сделать raw-C door syntax-transparent + bounded cleanup (`c.puts` specials + L2 `c.array` + expression-statement/discard; §3 / §7a), inventory/remove obsolete scanners/dictionaries (coordinate DeepSeek ownership), закрыть этот GATE (**включая zero stale c.* machinery**) **до** любого шага §8. L1 `c.array` — отдельно owned measurement boundary и не смешивается с L2 cleanup.
 

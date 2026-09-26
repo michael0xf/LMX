@@ -48,7 +48,7 @@ git status -sb
 
 `unit_s7_prim_cross`: `size_t` → `int` зовёт `lm_stg_convert_size_t_int`, значение 2, Entry 7. Строка harness не переворачивается в отказ. Мутант: убрать строку `size_t int` из `convert.lm2` — тот же файл отказывает «mixed numeric types (a conversion)», frame=a. Пара без строки — `unit_s7_conv_norow`, одна фраза, та же.
 
-Диапазон: не 0. Сейчас приёмник печатает `lmx: converter range` и вызывает `c.abort()`. Это ответ ANSWER 65dba4c-2. Канал неявного throw `merge`/`implements` не открыт: L1 не принимает `throw:` внутри метода, который сам не объявил `throws`, а такое объявление меняет ABI вызова. Если fable снова поставит BLOCK на канал — чинить канал, не возвращать 0 и не откатывать чтение файла.
+Диапазон: не 0 и не `c.abort()`. Приёмник отвечает статусом, ребро выпускает неявный throw `convert` (g = 3 после `merge` и `implements`), `catch: convert ()` его берёт (D-83 закрыт, Opus). Свидетели `unit_s7_conv_range` и `unit_s7_conv_catch`.
 
 Последний гейт этого среза: build 282/282 (`build/l2src/s7cvt3`), harness 445/445 (`build/l2_harness/s7cvt2`), L3 11/11, имена 69/128, `check_docs` OK.
 

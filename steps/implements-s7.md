@@ -35,6 +35,14 @@ STARTED grok/implements-s7, база main `fd074ca`. Тикета без `DONE` 
 
 Мутант: в `l2_descriptor_implements` при `cons >= l2_ns_n` вернуть 1. `unit_s7_empty.lm2:18` — «malformed implements descriptor», frame=take, exit 1. `unit_s7_identity` при этом мутанте переводится. Откат: `unit_s7_empty` переводится, exit 0. Живой исходник мутантом не оставался.
 
+## Непустой uses — пути, которые прочитаны
+
+`l2_descriptor_used` берёт первый сегмент каждого пути. Имя, которое есть у required и нет у кандидата, — отказ. Поле required, которое тело не читало, в проверку не входит. В таблицу структур этот список не пишется.
+
+Свидетель `unit_s7_used.lm2`, Entry 7: `Plain` имеет `equals` и не имеет `extra`, `take` пишет `slot\equals`, `take(Plain)` → 4. До среза тот же текст отказывал «implements is false in function argument» (Consumer был всем `Equatable`). `unit_invalid_implements_used_field` по-прежнему отказывает: `Plain` не имеет прочитанного `equals`. `unit_s7_empty` и `unit_s7_identity` остаются Entry 7. Гейт: build 282/282 (`build/l2src/20260926_090918`), harness 423/423 (`build/l2_harness/s7used`), L3 11/11, имена 69/128, check_docs OK.
+
+Мутант: `l2_descriptor_used` сразу возвращает 1. `unit_s7_used.lm2:19` и `unit_s7_identity.lm2:15` — «malformed implements descriptor» (frame=take и frame=keep), exit 1. `unit_s7_empty` переводится. Откат: `unit_s7_used` переводится, exit 0. Живой исходник мутантом не оставался.
+
 ## Срез 2, после среза 1
 
 Таблица преобразований. Книга §6: контекст Message, явные данные, без процессного реестра и без наследования ребёнком. `lingvamyxa_prev/lm2/convert.lm2` — `table:` с именем `` `primitive.convert` ``, колонки from, to, forbidden, kind, receiver, impl. Это данные, не спрятанный список в трансляторе.

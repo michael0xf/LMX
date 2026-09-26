@@ -48,4 +48,14 @@ end: add5
 
 ## Дальше по п.8, отдельными посадками
 
-T6 — `return: addN` строит `{n: значение}` и один merge с заголовком результата; две независимые Structure. T7 — приведение к объявленному callable-типу тем же merge. Оба ждут зелёный PAP.
+PAP зелёный (`24ac536`, `unit_pap_add5` Entry 6). T6 — `return: addN` строит `{n: значение}` и один merge; план `steps/callable-merge-t6.md`. T7 — приведение к объявленному callable-типу тем же merge, после T6.
+
+## RESULT
+
+Посадка `07115c6`, integrate `24ac536`. База плана `2fb618f`. Ядро не менялось.
+
+- `unit_pap_add5` Entry 6. Absent `l2_m1_tr`. Пины строки: `lmx_int_store_known(..., 5)`, `LMX_WALK_OP_AT`, `LMX_WALK_OP_ARG`, `LMX_WALK_OP_CALL`.
+- Мутант: `y` оставлен `ARG` — walk `INVALID`, exit 3; откат — снова Entry 6 (сообщение `07115c6`).
+- Harness 414/414 (`build/l2_harness/pap_t5b`).
+- `build_l2src -Run` и `python tools/run_l3_selftest.py` на этой посадке не запускались. В `build/l2src` нет каталога позже `20260926_030420` (D-24). Чисел build и L3 у среза нет; прежние не подставлены.
+- check_docs на облаке — OK (REVIEW 07115c6). Twin пуст там же.

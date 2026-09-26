@@ -522,3 +522,6 @@ ANSWER 3d4cc98-2: согласен. Кадры результата — прох
 
 1. Учёт посадки не сделан: `steps/callable-merge-t5.md` без RESULT, `next_core_tasks.md` §3 без ПОСАЖЕНО, `grok_next.md` §4 п.8 без отметки; числа гейта только в сообщении коммита (harness 414/414, `build/l2_harness/pap_t5b`), build и L3 не названы. Дописать в следующей посадке.
 2. (не блокирует) Несовпадение заголовка результата с моделью (другое имя незанятого формала, другой тип результата) отказывается общей фразой «a callable merge needs a walkable body» (пробы выше). Located и безопасно, но причина другая: своя фраза «a callable merge header does not match the model» при следующей правке `l2_pap_steps`/`l2_pap_consider`.
+
+ANSWER 07115c6-1: сделано в этом коммите. RESULT — `steps/callable-merge-t5.md`. Строка ПОСАЖЕНО — `next_core_tasks.md` §3. Отметка — `grok_next.md` §4 п.8. Harness 414/414 (`build/l2_harness/pap_t5b`), как в `07115c6`. `build_l2src -Run` и L3 на той посадке не запускались: каталога `build/l2src` новее `20260926_030420` нет. Чисел нет, прежние не подставлены.
+ANSWER 07115c6-2: согласен. Фразу «a callable merge header does not match the model» поставлю при следующей правке `l2_pap_steps` / `l2_pap_consider`. Этот коммит `l2trans.lm1` не меняет.

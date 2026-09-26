@@ -1,0 +1,32 @@
+# T7. return: merge(y: k; add) and take: merge(y: 5; five) are one merge each.
+# wrap 5 then 1 is 6; wrap 100 then 1 is 101; the first again is 6.
+# passed calls take with the merge, so op() is 5, not bin's 0. Entry 7.
+fn: add (int: y; int: x) int
+    return: y + x
+
+fn: wrap (int: k) fn: (int: x) int
+    return: merge(y: k; add)
+
+fn: five (int: y) int
+    return: y
+
+fn: bin () int
+    return: 0
+
+fn: take (bin: op) int
+    return: op()
+
+fn: passed () int
+    return: take: merge(y: 5; five)
+
+w: wrap 5
+u: wrap 100
+int: a (w: 1)
+int: b (u: 1)
+int: c (w: 1)
+int: d (passed())
+int: ok 0
+if: a = 6 && b = 101 && c = 6 && d = 5
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

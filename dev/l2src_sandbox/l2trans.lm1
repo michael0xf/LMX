@@ -10187,10 +10187,12 @@ fn: l2_admit_implements (int: cand; int: req; const: @(LmP0Text cand_name); cons
     int: compatible 0
     if: cand < 0 || req < 0
         return: 0
-    if: cand = req
-        return: 0
+    # Identity still succeeds. The call is the admission point: equal indexes
+    # compare a descriptor with itself and stay compatible (steps/implements-s7.md).
     if: l2_descriptor_implements(cand, req, req, @ compatible) != 0
         return: l2_error(path, at, "malformed implements descriptor")
+    if: cand = req
+        return: 0
     if: compatible = 0
         if: context != 0 && strcmp(context, "function argument") = 0
             return: l2_error(path, at, "implements is false in function argument")

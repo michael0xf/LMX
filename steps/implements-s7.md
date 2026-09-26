@@ -17,17 +17,15 @@ STARTED grok/implements-s7, база main `fd074ca`. Тикета без `DONE` 
 
 Вызов жирного `l2_descriptor_implements(cand, req, req)` на пустом `uses`, когда индексы разные, сравнил бы все поля required. Спека 2.1: пустой `uses` истинен. Такой вызов отказал бы случай, который сегодня проходит. Его не делаем.
 
-## Срез 1 (этот план, код следующим коммитом)
+## Срез 1 — посажен
 
-Только identity, индексы совпали и `uses` уже непустой (иначе `l2_admit_implements` не вызывается).
+`l2_admit_implements` вызывает `l2_descriptor_implements` и при `cand = req` возвращает успех после вызова. Пустой `uses` остаётся ранним успехом в `l2_admit_consumer_uses`: жирный обход там добавил бы отказ.
 
-В `l2_admit_implements` вызвать `l2_descriptor_implements` и при `cand = req` вернуть успех после вызова. Для равных индексов обход видит те же поля: `compatible` становится 1, отказ не появляется. Пустой `uses` остаётся ранним успехом в `l2_admit_consumer_uses`.
+Свидетель `unit_s7_identity.lm2`, Entry 7. `keep(User)`: атом аргумента — имя Structure, поэтому `cand = req`. `slot\equals` делает `uses` непустым, и вызов admission происходит. Гейт: build 282/282 (`build/l2src/20260926_083021`), harness 421/421 (`build/l2_harness/s7id2`), L3 11/11, имена 69/128, check_docs OK.
 
-Свидетель — новое `unit_s7_identity.lm2`, успех Entry 7: два поля одного типа Structure, тело метода читает поле цели, затем присваивает одно другому. Сегодня этот путь возвращает успех на `cand = req` до вызова. После среза успех тот же.
+Мутант: в начале `l2_descriptor_implements` при `cand = req` вернуть 1. `unit_s7_identity.lm2:15` — «malformed implements descriptor», frame=keep, exit 1. Откат: тот же файл переводится, exit 0. Живой исходник мутантом не оставался: правка была в копии evidence.
 
-Мутант: в начале `l2_descriptor_implements` при `cand = req` вернуть 1 (malformed). Свидетель становится «malformed implements descriptor». Откат — снова Entry 7. Так видно, что вызов стоит на пути.
-
-Ядро не меняется. Близнецы: `dev/l2src_sandbox/l2trans.lm1` и `l2src/l2trans.lm1`, фикстура в обоих `tests/`.
+Ядро не менялось. Близнецы: `dev/l2src_sandbox/l2trans.lm1` и `l2src/l2trans.lm1`, фикстура в обоих `tests/`.
 
 ## Срез 2, после среза 1
 

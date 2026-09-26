@@ -17713,7 +17713,8 @@ fn: l2_rw_path (const: @(LmP0Node node); const: @(LmP0Text t); int: say; @: int 
     if: l2_rw_mi != l2_e
         fi: l2_formal_find(l2_rw_mi, l2_rw_seg)
     oi: l2_rw_find(l2_rw_seg)
-    if: l2_rw_seen(oi) != 0 && l2_own_host[oi] = 0 && l2_own_fid[oi] < 0 && l2_own_uchild[oi] >= 0 && l2_own_nsty_get(oi) >= 0
+    # A method-local Structure (a letter) has a namespace and no unit child.
+    if: l2_rw_seen(oi) != 0 && l2_own_host[oi] = 0 && l2_own_fid[oi] < 0 && l2_own_nsty_get(oi) >= 0
         path[0]: 1
         path[1]: oi
         ni: l2_own_nsty_get(oi)
@@ -17798,6 +17799,12 @@ fn: l2_rw_path (const: @(LmP0Node node); const: @(LmP0Text t); int: say; @: int 
         path[3]: 3
     if: kind = 9
         path[3]: 36
+    # A reference field (`@: LmxMsg sender` is kind 10, pointee 29). Its static type is the
+    # pointer, the same 1000+pointee a formal of that type has. Structures share one address
+    # range; this is the type, not a range.
+    if: kind = 10
+        path[3]: 1000 + ent
+    ---
 return: 0
 
 # The value of a resolved path at `level` (0 its root, path[2] its last name), a node under
@@ -19522,8 +19529,11 @@ fn: l2_msend_register (const: @(LmP0Node stmt); const: @(char path); int: mi; @:
         l2_rw_mi: mi
         refty: l2_rw_fields_ty(f, refn)
         l2_rw_mi: save_mi
-        if: refty >= 1000 && refty != 1000 + 29
+        if: refty != 1000 + 29
+            if: refty < 1000
+                return: l2_error(path, f\value, "a Ref that is not a reference")
             return: l2_error(path, f\value, "a plain Message does not implement Thread")
+        ---
         ---
     ---
     g: l2_next_active(x\as\frame\body\first_field)

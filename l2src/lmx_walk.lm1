@@ -1224,6 +1224,27 @@ fn: lmx_walk_prim (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
     ---
 return: status
 
+# The index of ELEM / ELEMPUT (-203, D-39). The child is a value node, evaluated like any
+# other operand: a LIT size, or a cell read (AT / ARG). Only a size_t value is an index.
+# An int is not cast. A raw size cell stored in the slot is not a node and is INVALID.
+# Mutant: lmx_size_value_known on the child itself -> LIT and dynamic indices fail.
+fn: lmx_walk_index (@: LmxWalkFrame f; @: void node; @: size_t out_index) int
+    @: void cell 0
+    @: void value 0
+    int: status
+    if: f = 0 || node = 0 || out_index = 0 || f\arena = 0
+        return: c.LMX_WALK_INVALID
+    cell: lmx_size_new_owned(f\arena)
+    if: cell = 0
+        return: c.LMX_WALK_NOMEM
+    status: lmx_walk_eval(f, node, cell, @ value)
+    if: status != c.LMX_WALK_OK
+        return: status
+    if: value = 0 || lmx_walk_numeric_type(f\arena, value) != c.LMX_TYPE_SIZE_T
+        return: c.LMX_WALK_INVALID
+    \out_index: lmx_size_value_known(value)
+return: c.LMX_WALK_OK
+
 # The value of one node.  `dest` is the cell of whoever consumes it; `out` receives the
 # reference that IS the value: `dest` for an integer computed here, a reference into the
 # graph, or 0 for no value.
@@ -1759,7 +1780,9 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
         if: adesc = 0
             return: c.LMX_WALK_INVALID
         ---
-        index: lmx_size_value_known(lmx_arena_ref_value(code, 2U))
+        status: lmx_walk_index(f, lmx_arena_ref_value(code, 2U), @ index)
+        if: status != c.LMX_WALK_OK
+            return: status
         if: index >= adesc\len || adesc\data = 0
             return: c.LMX_WALK_INVALID
         ---
@@ -1800,7 +1823,9 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
         if: adesc = 0
             return: c.LMX_WALK_INVALID
         ---
-        index: lmx_size_value_known(lmx_arena_ref_value(code, 2U))
+        status: lmx_walk_index(f, lmx_arena_ref_value(code, 2U), @ index)
+        if: status != c.LMX_WALK_OK
+            return: status
         if: index >= adesc\len || adesc\data = 0
             return: c.LMX_WALK_INVALID
         ---

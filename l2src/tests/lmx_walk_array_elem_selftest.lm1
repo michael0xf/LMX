@@ -59,6 +59,15 @@ sub: sz (@: Lmx code; size_t: slot; size_t: value)
     ---
 end: sz
 
+# D-39: the index child is a LIT size node, not a raw size cell in the slot.
+fn: ix (@: Lmx op; size_t: value) int
+    @: Lmx lit
+    lit: fr(op, 2U, c.LMX_WALK_OP_LIT, 2U)
+    if: lit = 0
+        return: 1
+    sz(lit, 1U, value)
+return: 0
+
 # -203: child 1 of an array op is an AT. holder 0 is this activation's data.
 fn: atop (@: Lmx op; @: Lmx holder; size_t: slot) @: Lmx
     @: Lmx at
@@ -104,6 +113,8 @@ fn: main () int
     @: LmxArrayDesc outer 0
     @: Lmx prof 0
     @: Lmx nest 0
+    @: Lmx atn 0
+    @: void idxcell 0
     @: void got 0
     int: st 0
 
@@ -144,7 +155,7 @@ fn: main () int
     m: mk_m(unit, 1U, 1U)
     n: fr(m, 0U, c.LMX_WALK_OP_ELEMPUT, 4U)
     atop(n, data, 1U)
-    sz(n, 2U, 1U)
+    ix(n, 1U)
     litn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
     lit_int(litn, 1U, 9)
     st: go(m)
@@ -154,10 +165,26 @@ fn: main () int
     m: mk_m(unit, 2U, 1U)
     n: fr(m, 0U, c.LMX_WALK_OP_ELEM, 3U)
     atop(n, data, 1U)
-    sz(n, 2U, 1U)
+    ix(n, 1U)
     st: go(m)
     got: gv\ref
     check((cast: (int) (st = c.LMX_WALK_OK && got != 0 && lmx_int_value_known(got) = 9)), "ELEM int[1] -> 9")
+
+    # D-39: the index is a size cell in the holder, read by AT, not a literal.
+    # Mutant: treat child 2 as a raw size -> this read is not 9.
+    idxcell: lmx_size_new_owned(ga)
+    if: idxcell = 0 || lmx_size_store_known(idxcell, 1U) != 0 || lmx_arena_ref_store(data, 0U, idxcell) != 0
+        return: 2
+    ---
+    m: mk_m(unit, 22U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_ELEM, 3U)
+    atop(n, data, 1U)
+    atn: fr(n, 2U, c.LMX_WALK_OP_AT, 3U)
+    ref(atn, 1U, data)
+    sz(atn, 2U, 0U)
+    st: go(m)
+    got: gv\ref
+    check((cast: (int) (st = c.LMX_WALK_OK && got != 0 && lmx_int_value_known(got) = 9)), "ELEM dynamic index AT -> 9")
 
     # ---- LENGTH ----
     m: mk_m(unit, 3U, 1U)
@@ -171,14 +198,14 @@ fn: main () int
     m: mk_m(unit, 4U, 1U)
     n: fr(m, 0U, c.LMX_WALK_OP_ELEM, 3U)
     atop(n, data, 1U)
-    sz(n, 2U, 3U)
+    ix(n, 3U)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_INVALID)), "ELEM index==len -> INVALID")
 
     m: mk_m(unit, 5U, 1U)
     n: fr(m, 0U, c.LMX_WALK_OP_ELEMPUT, 4U)
     atop(n, data, 1U)
-    sz(n, 2U, 3U)
+    ix(n, 3U)
     litn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
     lit_int(litn, 1U, 1)
     st: go(m)
@@ -188,7 +215,7 @@ fn: main () int
     m: mk_m(unit, 6U, 1U)
     n: fr(m, 0U, c.LMX_WALK_OP_ELEMPUT, 4U)
     atop(n, data, 1U)
-    sz(n, 2U, 2U)
+    ix(n, 2U)
     litn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
     lit_int(litn, 1U, 42)
     st: go(m)
@@ -203,7 +230,7 @@ fn: main () int
     m: mk_m(unit, 8U, 1U)
     n: fr(m, 0U, c.LMX_WALK_OP_ELEMPUT, 4U)
     atop(n, data, 1U)
-    sz(n, 2U, 0U)
+    ix(n, 0U)
     litn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
     lit_char(litn, 1U, 65)
     st: go(m)
@@ -213,7 +240,7 @@ fn: main () int
     m: mk_m(unit, 9U, 1U)
     n: fr(m, 0U, c.LMX_WALK_OP_ELEM, 3U)
     atop(n, data, 1U)
-    sz(n, 2U, 0U)
+    ix(n, 0U)
     st: go(m)
     got: gv\ref
     check((cast: (int) (st = c.LMX_WALK_OK && got != 0 && got = lmx_char_cell(ga, 65))), "ELEM char -> interned 'A'")
@@ -222,7 +249,7 @@ fn: main () int
     m: mk_m(unit, 10U, 1U)
     n: fr(m, 0U, c.LMX_WALK_OP_ELEMPUT, 4U)
     atop(n, data, 1U)
-    sz(n, 2U, 1U)
+    ix(n, 1U)
     litn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
     lit_int(litn, 1U, 1)
     st: go(m)
@@ -237,7 +264,7 @@ fn: main () int
     m: mk_m(unit, 12U, 1U)
     n: fr(m, 0U, c.LMX_WALK_OP_ELEMPUT, 4U)
     atop(n, data, 1U)
-    sz(n, 2U, 0U)
+    ix(n, 0U)
     litn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
     lit_char(litn, 1U, 7)
     st: go(m)
@@ -253,7 +280,7 @@ fn: main () int
     n: fr(m, 0U, c.LMX_WALK_OP_ELEMPUT, 4U)
     # AT holder 0 -> K-OT2 this activation data
     atop(n, 0, 1U)
-    sz(n, 2U, 0U)
+    ix(n, 0U)
     litn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
     lit_int(litn, 1U, 77)
     st: go(m)
@@ -275,7 +302,7 @@ fn: main () int
     n: fr(m, 0U, c.LMX_WALK_OP_ELEM, 3U)
     litn: fr(n, 1U, c.LMX_WALK_OP_LIT, 2U)
     lit_int(litn, 1U, 1)
-    sz(n, 2U, 0U)
+    ix(n, 0U)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_INVALID)), "ELEM non-array -> INVALID")
 
@@ -290,7 +317,7 @@ fn: main () int
     m: mk_m(unit, 17U, 1U)
     n: fr(m, 0U, c.LMX_WALK_OP_ELEMPUT, 4U)
     atop(n, data, 1U)
-    sz(n, 2U, 0U)
+    ix(n, 0U)
     litn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
     lit_int(litn, 1U, 5)
     st: go(m)
@@ -302,7 +329,7 @@ fn: main () int
     ---
     n: fr(m, 0U, c.LMX_WALK_OP_ELEMPUT, 4U)
     atop(n, m, 1U)
-    sz(n, 2U, 0U)
+    ix(n, 0U)
     nest: fr(n, 3U, c.LMX_WALK_OP_AT, 3U)
     ref(nest, 1U, data)
     sz(nest, 2U, 1U)
@@ -313,8 +340,8 @@ fn: main () int
     n: fr(m, 0U, c.LMX_WALK_OP_ELEM, 3U)
     nest: fr(n, 1U, c.LMX_WALK_OP_ELEM, 3U)
     atop(nest, litn, 1U)
-    sz(nest, 2U, 0U)
-    sz(n, 2U, 0U)
+    ix(nest, 0U)
+    ix(n, 0U)
     st: go(m)
     got: gv\ref
     check((cast: (int) (st = c.LMX_WALK_OK && got != 0 && lmx_int_value_known(got) = 5)), "ELEM(ELEM(outer)) -> 5")
@@ -338,7 +365,7 @@ fn: main () int
     m: mk_m(unit, 21U, 1U)
     n: fr(m, 0U, c.LMX_WALK_OP_ELEMPUT, 4U)
     atop(n, data, 1U)
-    sz(n, 2U, 0U)
+    ix(n, 0U)
     litn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
     lit_int(litn, 1U, 3)
     st: go(m)

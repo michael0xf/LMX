@@ -525,6 +525,13 @@ $fixtures = @(
     # is ELEMPUT [elemput, 0, slot, N, v] and `x[N]` ELEM [elem, 0, slot, N], N a literal.  Each row
     # writes and reads back; success 7 (it was 0, an empty witness).
     [pscustomobject]@{ Name = 'entry_array.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0'); Absent = @('c.array'); Debt = @('c.LMX_WALK_OP_ELEMPUT, 4U)', 'c.LMX_WALK_OP_ELEM, 3U)') },
+    # D-39: index is a size_t field, evaluated, not a literal cell. int index is not cast.
+    [pscustomobject]@{ Name = 'entry_dyn_array_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0'); Absent = @('c.array'); Debt = @('c.LMX_WALK_OP_ELEMPUT, 4U)', 'c.LMX_WALK_OP_ELEM, 3U)', 'c.LMX_WALK_OP_AT, 3U)') },
+    [pscustomobject]@{ Name = 'entry_dyn_array_index_int_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
+    # D-39: stack\columns[idx] is a raw C member index, not an own-array literal.
+    # lm_own_new_zero is outside the kernel closure, so this row checks the spelling only.
+    [pscustomobject]@{ Name = 'unit_indent_stack_field_index.lm2'; Expect = 'translates'; Exit = 0; Needle = '';
+        Absent = @(); Debt = @('l2_p0_0\columns[l2_p0_1]', 'stack\columns[2]') },
     [pscustomobject]@{ Name = 'entry_array_leading_zero.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0'); Absent = @('c.array'); Debt = @('c.LMX_WALK_OP_ELEMPUT, 4U)', 'c.LMX_WALK_OP_ELEM, 3U)') },
     [pscustomobject]@{ Name = 'entry_nul.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0'); Absent = @('c.array'); Debt = @('c.LMX_WALK_OP_ELEMPUT, 4U)', 'c.LMX_WALK_OP_ELEM, 3U)') },
     # THE UNIT IS THE ENTRY (FABLE-OPUS-S2-UNIT-IS-ENTRY-20260923-112).  Every non-callable is

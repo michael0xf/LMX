@@ -1,0 +1,13 @@
+# D-39: a size_t field is the index of an own array. The walker evaluates it.
+# An int index is not cast (unit is separate). Success is 7.
+L2:
+    []: int buf 4
+    size_t: i
+    i: 2U
+    buf[i]: 7
+    if: buf[i] != 7
+        sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+        return
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+    return
+end: L2

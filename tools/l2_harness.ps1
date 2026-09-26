@@ -729,6 +729,14 @@ $fixtures = @(
     # Success is 7, not 0 (fable_pc, REVIEW 4dc3423/ab8b245): a silent 0 is not a witness (D-15).
     [pscustomobject]@{ Name = 'entry_strcmp.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('ok'); Entry = 7;
         Absent = @(); Debt = @() },
+    # §7a "L2-библиотека puts": l2_puts is ordinary L2 (a c.putchar byte loop), no c.puts at the
+    # call site at all -- unlike D-81's printArg, no NUL-terminated copy is needed either, since
+    # putchar takes one byte at a time. Named boundary (not solved): l2_puts is not yet a
+    # separately predef'd/shared library -- the generic eternal-runs link step below only links
+    # <fixture>.o with the driver and l2_libc.o, so it lives in this one unit for now (see the
+    # fixture's own header comment; same class of gap as D-84/l1src/own.h.lm1's dead link).
+    [pscustomobject]@{ Name = 'unit_l2_puts_library.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('word'); Says = @('word');
+        Absent = @('c.puts'); Debt = @() },
     [pscustomobject]@{ Name = 'unit_charpp_return.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
         Absent = @(); Debt = @() },
     # plus_one's formal is int; length() is size_t. No conversion yet (S7).

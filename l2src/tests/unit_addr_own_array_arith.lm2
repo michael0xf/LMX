@@ -1,0 +1,28 @@
+# D-24 (L2 spec 18.2): `@array[i] + n` and `@array[i] - n` are the element's
+# address, C pointer arithmetic. A store through that pointer reaches the
+# element. A numeric landing of the same shape stays refused
+# (unit_addr_own_array_arithmetic_refused).
+fn: step () int
+    []: int buf 3
+    buf[0]: 1
+    buf[1]: 2
+    buf[2]: 3
+    @: int q
+    @: int r
+    q: @ buf[0] + 1
+    \q: 9
+    if: buf[1] != 9
+        return: 81
+    r: @ buf[2] - 1
+    \r: 8
+    if: buf[1] != 8
+        return: 82
+return: 7
+
+int: got
+got: step()
+if: got != 7
+    sendMessage: exit(exit_code: 3; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

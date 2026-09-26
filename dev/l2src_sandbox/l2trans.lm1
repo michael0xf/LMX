@@ -14051,6 +14051,114 @@ return: l2_m_ret[idx] = 8
 fn: l2_check_expr (const: @(LmP0Node node); int: mi; const: @(char path)) int
 return: l2_check_primary(node, mi, path)
 
+# D-24 (L2 spec 18.2). Address of a primitive own-array element is that
+# element's pointer (the same codes as `@: int` and its siblings). `+` / `-`
+# of a number keeps the pointer. Other element kinds have no code here and
+# stay on the D-22 refusal rather than a guessed depth.
+fn: l2_elem_ptr_ty (int: oty) int
+    if: oty = 4
+        return: 11
+    if: oty = 5
+        return: 12
+    if: oty = 7
+        return: 9
+    if: oty = 37
+        return: 38
+    return: 0 - 1
+
+fn: l2_ty_number (int: ty) int
+    if: ty = -10 || ty = 0 || ty = 1 || ty = 2 || ty = 10 || ty = 34 || ty = 36
+        return: 1
+    return: 0
+
+# One numeric operand: an element of a primitive own array, a numeric literal,
+# or a name whose bound type is already a number. 0 = consumed, out_after is
+# the next field. 1 = not a number.
+fn: l2_int_span (@: LmP0Field f; int: mi; @@: LmP0Field out_after) int
+    int: oi
+    int: k
+    int: ty 0
+    int: count
+    size_t: index
+    @: LmP0Field after
+    if: out_after = 0
+        return: 1
+    \out_after: 0
+    k: l2_own_index_tail(f, mi, @ oi, @ index, @ after, @ count)
+    if: k = 2
+        return: 1
+    if: k = 0
+        if: l2_elem_ptr_ty(l2_own_ty[oi]) < 0
+            return: 1
+        \out_after: after
+        return: 0
+    ---
+    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0
+        return: 1
+    if: l2_num(f\value\as\atom) != 0 || l2_signed_num(f\value\as\atom) != 0
+        \out_after: l2_next_active(f\next)
+        return: 0
+    if: l2_ident(f\value\as\atom) != 0 && l2_colon_bound_ty(mi, f\value\as\atom, @ ty) = 0 && l2_ty_number(ty) != 0
+        \out_after: l2_next_active(f\next)
+        return: 0
+    return: 1
+
+# 0 = the run from f is `@ array[i]` plus at least one `+`/`-` number, and
+# nothing follows that run. out_ty is the element pointer. 1 = not this shape.
+fn: l2_ptr_arith_ty (@: LmP0Field f; int: mi; @: int out_ty) int
+    int: oi
+    int: pty
+    int: nstep 0
+    int: count
+    size_t: index
+    @: LmP0Field after
+    @: LmP0Field op
+    if: out_ty = 0 || f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0
+        return: 1
+    if: l2_text_eq(f\value\as\atom, "@") = 0
+        return: 1
+    f: l2_next_active(f\next)
+    if: l2_own_index_tail(f, mi, @ oi, @ index, @ after, @ count) != 0
+        return: 1
+    pty: l2_elem_ptr_ty(l2_own_ty[oi])
+    if: pty < 0
+        return: 1
+    f: after
+    while: f != 0 && f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && (l2_text_eq(f\value\as\atom, "+") != 0 || l2_text_eq(f\value\as\atom, "-") != 0)
+        op: l2_next_active(f\next)
+        if: l2_int_span(op, mi, @ after) != 0
+            return: 1
+        nstep: nstep + 1
+        f: after
+    ---
+    if: nstep < 1 || f != 0
+        return: 1
+    \out_ty: pty
+    return: 0
+
+# Where a pointer result may land: an assignment whose head already has a
+# type, or a method return (return codes brought into the value-type space
+# the same way l2_colon_simple_ty does). 1 = this statement is not a landing.
+fn: l2_ptr_land_ty (const: @(LmP0Node at); int: mi; @: int out_ty) int
+    int: rt
+    if: out_ty = 0 || at = 0 || mi < 0
+        return: 1
+    if: l2_frame_head(at, "return") != 0
+        rt: l2_m_ret[mi]
+        if: rt = 33
+            rt: 34
+        if: rt = 3
+            rt: 12
+        if: rt = 35
+            rt: 3
+        if: rt = 32
+            rt: 17
+        \out_ty: rt
+        return: 0
+    if: l2_is_asgn(at) = 0 || at\as = 0 || at\as\frame = 0 || at\as\frame\head = 0
+        return: 1
+    return: l2_colon_bound_ty(mi, at\as\frame\head, out_ty)
+
 fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); const: @(LmP0Node at)) int
     @: LmP0Field f
     size_t: cpn 0U
@@ -14089,6 +14197,8 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
     size_t: ai1 0U
     @: LmP0Field aafter 0
     @: LmP0Field aidx_f
+    int: pty 0
+    int: tty 0
     if: n <= 0
         return: l2_error(path, at, "unsupported body")
     cpn: l2_join_path(field, n, cpbuf, 255U)
@@ -14244,23 +14354,21 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
         if: f\value\kind = c.LM_P0_NODE_ATOM && l2_text_eq(f\value\as\atom, "@") && l2_addr_flat_eternal(f) != 0
             return: l2_error(path, f\value, "the address of an eternal branch field cannot be taken")
         if: f\value\kind = c.LM_P0_NODE_ATOM && l2_text_eq(f\value\as\atom, "@")
-            # D-22 (steps/defects.md): L2 spec 18.2 gives `@array[i]` address
-            # arithmetic a meaning ("subsequent loads, stores and address
-            # arithmetic follow the C machine contract"), but l2trans has no
-            # expression-type inference to carry a pointer result through
-            # the rest of a compound expression and refuse it landing in a
-            # numeric target -- return-statement and assignment checking
-            # both stop at a single value (l2_colon_simple_ty's own comment:
-            # "the general expression checker still owns compound
-            # expressions", and that checker has no out_ty at all). Until
-            # that type tracking exists, refuse the compound shape outright
-            # at the point it becomes ambiguous, rather than let a pointer
-            # reach a numeric target unnoticed the way D-21's own fixture
-            # family did. `@ buf[i]` alone, with nothing after the addressed
-            # element, is the D-21 shape and is unaffected.
+            # D-24: `@ array[i] + n` is the element pointer (l2_ptr_arith_ty).
+            # It lands only in that pointer type. A numeric landing is an
+            # incompatible type, not a silent pointer-as-int (D-22). Any
+            # other tail stays the D-22 refusal. `@ array[i]` alone is D-21.
             aidx_f: l2_next_active(f\next)
             if: aidx_f != 0 && l2_own_index_tail(aidx_f, mi, @ po, @ array_index, @ p2, @ array_count) = 0 && p2 != 0
-                return: l2_error(path, f\value, "address arithmetic past an own-array element is not yet supported")
+                pty: 0
+                tty: 0
+                if: l2_ptr_arith_ty(f, mi, @ pty) = 0 && l2_ptr_land_ty(at, mi, @ tty) = 0
+                    if: l2_colon_types_compatible(tty, pty) = 0
+                        return: l2_error(path, f\value, "assignment value has incompatible type")
+                    ---
+                else:
+                    return: l2_error(path, f\value, "address arithmetic past an own-array element is not yet supported")
+                ---
             skip: 1
             have_value: 0
         if: f\value\kind = c.LM_P0_NODE_ATOM && l2_is_binop(f\value\as\atom)

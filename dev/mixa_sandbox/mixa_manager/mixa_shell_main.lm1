@@ -1,0 +1,62 @@
+predef: "mixa_manager/mixa_shell_main.h.lm1"
+predef: "mixa_manager/mixa_backend_headless.h.lm1"
+predef: "mixa_manager/mixa_shell_turn.lm1"
+predef: "mixa_manager/mixa_shell_files.lm1"
+include: "<string.h>"
+
+# The one application entry. native is the headless backend table.
+# It is a word of this host, not a fifth Message and not a dictionary
+# of mail methods. mixa_backend_table only opens and polls through that
+# one pointer. The old mixa_app_main and mixa_app_main_msg stay in the
+# tree for their own witnesses; they are not this entry.
+
+fn: mixa_shell_bind_native (@: MixaShellHost host) int
+    if: host = 0
+        return: 1
+    host\native: mixa_backend_headless_table()
+    if: host\native = 0
+        return: 1
+return: 0
+
+fn: mixa_shell_close (@: MixaShellHost host; @: MixaPump pump) int
+    if: pump != 0
+        mixa_pump_release(pump)
+    ---
+    if: host != 0
+        if: host\backend != 0
+            mixa_backend_close(host\backend)
+            host\backend: 0
+        ---
+    ---
+return: 0
+
+# Bind native, open that backend, list the root, take one turn, close.
+# list is the start letter. The turn does not wait.
+fn: mixa_shell_run (@: MixaShellHost host; @: MixaCellMetrics metrics; @: MixaFm fm; const: @(char root); @@: MixaFmEntry rows; @: size_t count; @: int out_events) int
+    MixaPump: pump
+    int: rc
+    int: listed
+    if: host = 0 || metrics = 0 || fm = 0 || root = 0 || rows = 0 || count = 0 || out_events = 0
+        return: 1
+    rc: mixa_shell_bind_native(host)
+    if: rc != 0
+        return: rc
+    ---
+    host\backend: 0
+    rc: mixa_backend_open(host\native, @ host\backend, 4U, 4U, metrics)
+    if: rc != 0
+        return: rc
+    ---
+    c.memset(@ pump, 0, c.sizeof(c.MixaPump))
+    rc: mixa_pump_open(@ pump)
+    if: rc != 0
+        mixa_shell_close(host, 0)
+        return: rc
+    ---
+    listed: mixa_shell_files_list(fm, root, rows, count)
+    rc: mixa_shell_turn(@ pump, host\backend, out_events)
+    mixa_shell_close(host, @ pump)
+    if: listed != MIXA_FM_OK
+        return: listed
+    ---
+return: rc

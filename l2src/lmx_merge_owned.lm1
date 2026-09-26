@@ -8,17 +8,14 @@ include: "<stdlib.h>" "<string.h>" "<limits.h>"
 # anything else (a METHOD record, a primitive cell, an address no array of that
 # arena contains) is refused.
 
-# Direct child count of a live Structure. len counts child slots only.
+# Direct child count of a live Structure. array.size counts child slots only.
 fn: lmx_merge_width (@: Lmx x) size_t
     if: x = 0
         return: 0U
-    if: x\len <= 0
-        return: 0U
-return: (cast: (size_t) x\len)
+return: x\array.size
 
-# Checked accumulation of a direct child count. result\len is an int, so the
-# total must fit INT_MAX as well as SIZE_MAX; neither may wrap, and there is
-# no fixed cap anywhere.
+# Checked accumulation of a direct child count. result\array.size is a size_t:
+# the total must not wrap SIZE_MAX, and there is no fixed cap anywhere.
 fn: lmx_merge_add_width (@: size_t total; @: Lmx x) int
     size_t: w lmx_merge_width(x)
     size_t: sum 0U
@@ -29,8 +26,6 @@ fn: lmx_merge_add_width (@: size_t total; @: Lmx x) int
     # Decide on a local and store only on success: a refused add must leave the
     # caller's total exactly as it was, or a later guard sees a poisoned value.
     sum: \total + w
-    if: sum > (cast: (size_t) c.INT_MAX)
-        return: 1
     \total: sum
 return: 0
 
@@ -185,7 +180,7 @@ fn: lmx_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: L
                 j: j + 1U
             ---
         ---
-        if: unmatched > ((cast: (size_t) c.INT_MAX) - total)
+        if: unmatched > ((cast: (size_t) -1) - total)
             return: LMX_MERGE_INVALID
         total: total + unmatched
         # Pass 2 (1b): a pair's target must be a slot the merge places -- the model's own
@@ -651,8 +646,8 @@ fn: lmx_walk_merge_pairs_free (@@: LmxMergePair pairs; size_t: n) void
 # Decode the translator's pair-map Structure (built once at program build, like l2_nsp
 # for named Structures -- Opus, -194 к.6) into the LmxMergePair** shape lmx_merge_owned
 # and lmx_merge_into_owned already take: 3 direct size_t children per pair, flattened
-# (model_slot, operand, field) in order, P = len / 3U. pairs_s = 0 (no map at all) or an
-# empty one (len = 0) both decode to \out_pairs = 0 / \out_count = 0U, not a refusal --
+# (model_slot, operand, field) in order, P = array.size / 3U. pairs_s = 0 (no map at all) or an
+# empty one (array.size = 0) both decode to \out_pairs = 0 / \out_count = 0U, not a refusal --
 # "no pairs" is the flat-append merge's own ordinary case; the caller (lmx_merge_owned
 # or lmx_merge_into_owned) decides whether zero pairs is valid for what it is doing.
 # Returns 0 OK, 1 a malformed pairs_s (not a Structure, or a length not a multiple of 3)
@@ -668,10 +663,10 @@ fn: lmx_walk_merge_pairs_decode (@: LmxArena arena; @: Lmx pairs_s; @@@: LmxMerg
         return: 0
     if: lmx_range_classify(arena, (cast: (@: void) pairs_s)) != c.LMX_KIND_STRUCT
         return: 1
-    if: (cast: (size_t) pairs_s\len) % 3U != 0U
+    if: pairs_s\array.size % 3U != 0U
         return: 1
     ---
-    n: (cast: (size_t) pairs_s\len) / 3U
+    n: pairs_s\array.size / 3U
     if: n = 0U
         return: 0
     pairs: (cast: (@@: LmxMergePair) calloc(n, c.sizeof(@: void)))

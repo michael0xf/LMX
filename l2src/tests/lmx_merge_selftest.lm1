@@ -166,8 +166,8 @@ fn: main () int
     merge_check(counts, status = LMX_MERGE_OK, "merge succeeded")
     merge_check(counts, result != 0 && result != a && result != b, "the result is a third independent structure")
     merge_check(counts, result\parent = container, "the result's structural parent is the execution container")
-    merge_check(counts, result\len = 3, "two operands, three slots")
-    merge_check(counts, a\len = 2 && b\len = 1, "the operands were not written")
+    merge_check(counts, (result\array.size) = 3U, "two operands, three slots")
+    merge_check(counts, (a\array.size) = 2U && (b\array.size) = 1U, "the operands were not written")
     merge_check(counts, lmx_arena_index_len(dst_at) != 0U, "the destination arena holds the copies")
     # The positive side of the same walk, so a walker that could only fail would
     # show up here rather than hide in the refusal below: after a merge that
@@ -199,6 +199,12 @@ fn: main () int
     merge_check(counts, lmx_range_pool(@ arena, slot_addr) != 0, "the entry names the slot array's descriptor")
     merge_check(counts, lmx_range_stride(@ arena, slot_addr) = c.sizeof(@: void), "a slot is one pointer wide")
     merge_check(counts, lmx_range_type_of(@ arena, lmx_arena_ref_value(a, 0U)) = c.LMX_TYPE_CHAR, "the child in the slot keeps its own type")
+    # 3c. The embedded child array is Lmx.array, FIRST (L2_spec §2): its address is the node's own
+    # address, and it classifies as the Structure it is inside -- never as a standalone Array
+    # descriptor.  Its backing is the slot storage above.
+    merge_check(counts, (cast: (@: void) @ a\array) = (cast: (@: void) a), "the child array is at the node's own address")
+    merge_check(counts, lmx_range_classify(@ arena, (cast: (@: void) @ a\array)) = c.LMX_KIND_STRUCT, "the embedded child array classifies as the Structure, not as an Array")
+    merge_check(counts, (a\array.data) = (cast: (@: void) slot_addr), "the embedded array's data is the slot storage")
 
     # 4. An operand that is not a Structure is refused. The refusal is decided before
     # the destination's mark is taken, so the destination is not even touched -- and
@@ -232,7 +238,7 @@ fn: main () int
     refused: 0
     status: lmx_merge_owned(operands, 1U, 0, container, 0, @ arena, @ dst, 0, 0U, @ refused)
     merge_check(counts, status = LMX_MERGE_UNSUPPORTED && refused = 0, "an unclassified child refuses the merge")
-    merge_check(counts, bad\len = 1, "the refused source is untouched")
+    merge_check(counts, (bad\array.size) = 1U, "the refused source is untouched")
     merge_check(counts, lmx_arena_index_len(dst_at) = held, "a refused merge left the destination arena as it was")
     merge_check(counts, merge_arrays(@ dst) = held_arrays, "a refused merge left the destination with the arrays it had")
     merge_check(counts, merge_arrays_live(@ dst) = 1, "a refused merge left no array of the destination hanging")

@@ -38,8 +38,8 @@ fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxArena: link_arena
     @: Lmx graph 0
-    @: LmxArrayDesc children 0
-    @: LmxArrayDesc stray 0
+    @: VoidArray children 0
+    @: VoidArray stray 0
     @: LmxMsg parent_message 0
     @: LmxPost parent_mail 0
     @: LmxSchedule parent_slot 0
@@ -98,9 +98,9 @@ fn: main () int
         return: 2
     ---
     tc_check(counts, lmx_thread_children_bind(parent, stray, @ link_arena) = c.LMX_THREAD_INVALID, "off-graph Array bound as membership")
-    children\len: 1U
+    children\size: 1U
     tc_check(counts, lmx_thread_children_bind(parent, children, @ link_arena) = c.LMX_THREAD_INVALID, "pre-populated membership Array bound")
-    children\len: 0U
+    children\size: 0U
     tc_check(counts, lmx_thread_children_bind(parent, children, @ link_arena) = c.LMX_THREAD_OK, "children graph Array did not bind")
     tc_check(counts, lmx_thread_children(parent) = children && lmx_arena_ref_value(graph, 0U) = (cast: (@: void) children), "Thread did not cache the graph's exact descriptor")
 

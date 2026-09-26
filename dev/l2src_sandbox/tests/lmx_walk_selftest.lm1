@@ -1017,7 +1017,7 @@ fn: main () int
     ---
     st: lmx_walk_run(gctx, tramp2, 0, 0U, gv)
     check(st = c.LMX_WALK_OK && gv\present != 0 && gv\ref = (cast: (@: void) pair), "a sole Structure argument reaches the formal unchanged")
-    check(pair != 0 && pair\len = 2 && lmx_int_value_known(lmx_arena_ref_value(pair, 0U)) = 1 && lmx_int_value_known(lmx_arena_ref_value(pair, 1U)) = 2, "the Structure argument keeps its two fields")
+    check(pair != 0 && (pair\array.size) = 2U && lmx_int_value_known(lmx_arena_ref_value(pair, 0U)) = 1 && lmx_int_value_known(lmx_arena_ref_value(pair, 1U)) = 2, "the Structure argument keeps its two fields")
 
 
     # ---- G1: native dispatch via prim ABI (FABLE-158; k.4: Lmx.native, not METHOD.addr) -

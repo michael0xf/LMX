@@ -143,7 +143,7 @@ fn: main () int
     st: lmx_walk_activate(@ ctx, caller_a, caller_a, 0, 0U, (cast: (@: void) (@ r_a)), @ out_a, @ present_a)
     mw_check(counts, st = c.LMX_WALK_OK, "merge-map PRIM walked OK")
     mw_check(counts, present_a != 0 && out_a != 0 && out_a != (cast: (@: void) (@ r_a)), "merge-map result is a Structure reference, not a computed int")
-    mw_check(counts, (cast: (@: Lmx) out_a)\len = 1, "merge result has model's own width (1)")
+    mw_check(counts, ((cast: (@: Lmx) out_a)\array.size) = 1U, "merge result has model's own width (1)")
     mw_check(counts, lmx_int_value_known(lmx_arena_ref_value((cast: (@: Lmx) out_a), 0U)) = 99, "merge result slot 0 = operand's 99, the paired override (mutant: pairs ignored -> model's own 1, RED)")
     mw_check(counts, lmx_int_value_known(lmx_arena_ref_value(model, 0U)) = 1, "model itself untouched")
 
@@ -173,7 +173,7 @@ fn: main () int
     st: lmx_walk_activate(@ ctx, caller_b, caller_b, 0, 0U, (cast: (@: void) (@ r_b)), @ out_b, @ present_b)
     mw_check(counts, st = c.LMX_WALK_OK, "merge-into PRIM walked OK")
     mw_check(counts, lmx_int_value_known(lmx_arena_ref_value(target_b, 0U)) = 42, "merge-into wrote op's 42 into target's own slot 0 (mutant: pairs ignored -> INVALID or target untouched, RED)")
-    mw_check(counts, target_b\len = 1, "target's own layout unchanged (nothing built fresh)")
+    mw_check(counts, (target_b\array.size) = 1U, "target's own layout unchanged (nothing built fresh)")
 
     # ==== merge-map, K2b (-202): a profiled OPERAND's own branch is RETAINED (shared by
     # address), not copied -- matching the native emission (l2trans.lm1:20390-20399),
@@ -257,7 +257,7 @@ fn: main () int
 
     st: lmx_walk_activate(@ ctx, caller_c, caller_c, 0, 0U, (cast: (@: void) (@ r_c)), @ out_c, @ present_c)
     mw_check(counts, st = c.LMX_WALK_OK, "merge-map (retained-leaf) PRIM walked OK")
-    mw_check(counts, present_c != 0 && out_c != 0 && out_c != (cast: (@: void) operand_c) && (cast: (@: Lmx) out_c)\len = 2, "merge result is a FRESH Structure (not operand_c itself), width 2 (model_c's + operand_c's own)")
+    mw_check(counts, present_c != 0 && out_c != 0 && out_c != (cast: (@: void) operand_c) && ((cast: (@: Lmx) out_c)\array.size) = 2U, "merge result is a FRESH Structure (not operand_c itself), width 2 (model_c's + operand_c's own)")
     mw_check(counts, lmx_arena_ref_value((cast: (@: Lmx) out_c), 0U) != model_field_c && lmx_int_value_known(lmx_arena_ref_value((cast: (@: Lmx) out_c), 0U)) = 1, "the ORDINARY operand's field is COPIED: same value 1, a DIFFERENT address than model_field_c")
     mw_check(counts, lmx_arena_ref_value((cast: (@: Lmx) out_c), 1U) = leaf_c, "the PROFILED operand's field is RETAINED: result slot 1 is the SAME address as leaf_c, not a copy (mutant: retain_profiles not passed -> a fresh copy, different address, RED)")
     mw_check(counts, lmx_int_value_known(lmx_arena_ref_value((cast: (@: Lmx) out_c), 1U)) = 77, "the retained leaf's value still reads 77 through the result")

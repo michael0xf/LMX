@@ -115,10 +115,10 @@ fn: main () int
     status_a: lmx_merge_into_owned(target_a, op_a, 0, @ arena, @ arena, @ pair_a, 1U)
     mi_check(counts, status_a = LMX_MERGE_OK, "basic merge-into OK")
     mi_check(counts, (cast: (@: void) target_a) = target_a_before, "basic target's own address unchanged (nothing built fresh)")
-    mi_check(counts, target_a\len = 2, "basic target's layout unchanged (no growth)")
+    mi_check(counts, (target_a\array.size) = 2U, "basic target's layout unchanged (no growth)")
     mi_check(counts, lmx_int_value_known(lmx_arena_ref_value(target_a, 0U)) = 99, "basic target[0] = op's paired value 99")
     mi_check(counts, lmx_int_value_known(lmx_arena_ref_value(target_a, 1U)) = 2, "basic target[1] untouched (2)")
-    mi_check(counts, op_a\len = 1, "basic op untouched")
+    mi_check(counts, (op_a\array.size) = 1U, "basic op untouched")
     free((cast: (@: void) pair_a))
 
     # ==== an op field with no pair is refused ====

@@ -863,14 +863,14 @@ $fixtures = @(
         Args = @('1');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
         Debt = @('[]: @(Lmx) l2_program_qualified_roots 1',
-                 'l2_profile_array: (cast: (@: LmxArrayDesc) lmx_arena_take_profiled',
+                 'l2_profile_array: (cast: (@: VoidArray) lmx_arena_take_profiled',
                  'l2_program_qualified_roots[0U]: l2_nsp[0]',
                  'l2_entry_unit: graph') },
     [pscustomobject]@{ Name = 'unit_array_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('1');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
         Debt = @('[]: @(Lmx) l2_program_qualified_roots 1',
-                 'l2_profile_array: (cast: (@: LmxArrayDesc) lmx_arena_take_profiled',
+                 'l2_profile_array: (cast: (@: VoidArray) lmx_arena_take_profiled',
                  'l2_program_qualified_roots[0U]: l2_nsp[0]',
                  'l2_entry_unit: graph') },
     [pscustomobject]@{ Name = 'unit_merge_site.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
@@ -891,14 +891,14 @@ $fixtures = @(
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_mpp[0U]\model_slot: 0U', 'l2_mpp[0U]\operand: 1U', 'l2_mpp[0U]\field: 0U',
                  'lmx_merge_owned(l2_mops, 2U, l2_mbody, node, 0, l2_program_arena, l2_program_arena, l2_mpp, 1U, @ l2_mresult)',
-                 'if: l2_mresult\len != 2') },
+                 'if: l2_mresult\array.size != 2U') },
     # -193 T1: later operands merge INTO the model in operand order -- two pairs on one model slot, the
     # last one C's -- and a new name is added.  R = {3, 2, 9}.  Success is 4.
     [pscustomobject]@{ Name = 'unit_merge_three_operands.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 4;
         Absent = @();
         Debt = @('l2_mpp[0U]\operand: 1U', 'l2_mpp[1U]\model_slot: 0U', 'l2_mpp[1U]\operand: 2U',
                  'lmx_merge_owned(l2_mops, 3U, l2_mbody, node, 0, l2_program_arena, l2_program_arena, l2_mpp, 2U, @ l2_mresult)',
-                 'if: l2_mresult\len != 3') },
+                 'if: l2_mresult\array.size != 3U') },
     # -193 T3 (over Sonnet's K2): merge at the walked root.  The result slot of the unit takes the
     # walker's merge primitive by reference, PUT_REF(0, slot, PRIM [prim, lmx_walk_merge_map, ops,
     # body | 0, pairs | 0]); the pairs are the translator's map, a plain Structure of 3·P size cells
@@ -929,10 +929,10 @@ $fixtures = @(
     # placed field's stays refused.  4 and 19.
     [pscustomobject]@{ Name = 'unit_merge_added_repeat.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 4;
         Absent = @();
-        Debt = @('l2_mpp[0U]\model_slot: 1U', 'l2_mpp[0U]\operand: 2U', 'lmx_merge_owned(l2_mops, 3U, l2_mbody, node, 0, l2_program_arena, l2_program_arena, l2_mpp, 1U, @ l2_mresult)', 'if: l2_mresult\len != 2') },
+        Debt = @('l2_mpp[0U]\model_slot: 1U', 'l2_mpp[0U]\operand: 2U', 'lmx_merge_owned(l2_mops, 3U, l2_mbody, node, 0, l2_program_arena, l2_program_arena, l2_mpp, 1U, @ l2_mresult)', 'if: l2_mresult\array.size != 2U') },
     [pscustomobject]@{ Name = 'unit_merge_body_repeat.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 19;
         Absent = @();
-        Debt = @('lmx_merge_owned(l2_mops, 1U, l2_mbody, node, 0, l2_program_arena, l2_program_arena, l2_mpp, 1U, @ l2_mresult)', 'lmx_merge_owned(l2_mops, 2U, l2_mbody, node, 0, l2_program_arena, l2_program_arena, l2_mpp, 1U, @ l2_mresult)', 'if: l2_mresult\len != 1', 'if: l2_mresult\len != 3') },
+        Debt = @('lmx_merge_owned(l2_mops, 1U, l2_mbody, node, 0, l2_program_arena, l2_program_arena, l2_mpp, 1U, @ l2_mresult)', 'lmx_merge_owned(l2_mops, 2U, l2_mbody, node, 0, l2_program_arena, l2_program_arena, l2_mpp, 1U, @ l2_mresult)', 'if: l2_mresult\array.size != 1U', 'if: l2_mresult\array.size != 3U') },
     [pscustomobject]@{ Name = 'unit_merge_field_type_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'a merge operand field has another type than the model field of its name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_field_entry_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -942,7 +942,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_merge_eternal_pair.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('2', 'size', '0', '0', '1', 'size', '1', '0', '2'); Entry = 2;
         Absent = @();
         Debt = @('lmx_merge_profiles_owned(l2_mops, 2U, l2_mbody, node, 0, l2_program_arena, l2_program_arena, l2_mprofiles, 2U, l2_mpp, 1U, @ l2_mresult)',
-                 'if: l2_mresult\len != 1', 'merge result check 80') },
+                 'if: l2_mresult\array.size != 1U', 'merge result check 80') },
     # Q22 = II (q22.md, q20-next.md §2): `A: fn: M` is a shared occurrence; merge keeps its address
     # and storage, and `node` in M stays the file Structure.  In methods, since a root merge is
     # root-pending.  q22: R\M() = 3.  q20-next §2: A\M(), R\M(), Q\M() all 3.  merged_callable: the

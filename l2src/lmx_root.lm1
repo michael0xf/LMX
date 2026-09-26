@@ -77,8 +77,8 @@ fn: lmx_root_open_graph (@: LmxRoot root; LmxCallEntry: entry; ulong: limit; siz
     @: LmxArena arena
     @: Lmx parent_graph
     @: Lmx graph
-    @: LmxArrayDesc parent_children
-    @: LmxArrayDesc children
+    @: VoidArray parent_children
+    @: VoidArray children
     @: LmxThread parent
     @: LmxThread thread
     @: LmxSchedule parent_slot
@@ -689,7 +689,7 @@ return: 0
 # One cell of `pool`.
 fn: lmx_root_report_cell (@: LmxArena arena; @: void stream; @: LmxPool pool; @: char cell) int
     @: Lmx header
-    @: LmxArrayDesc desc
+    @: VoidArray desc
     @: LmxMsg message
     @: char text
     size_t: i 0U
@@ -699,9 +699,9 @@ fn: lmx_root_report_cell (@: LmxArena arena; @: void stream; @: LmxPool pool; @:
         header: (cast: (@: Lmx) cell)
         c.fprintf(stream, " struct parent")
         lmx_root_report_ref(arena, stream, (cast: (@: void) header\parent))
-        c.fprintf(stream, " fields %d:", (cast: (int) header\len))
-        if: header\len > 0 && header\data != 0 && lmx_range_classify(arena, header\data) = c.LMX_KIND_CHILDREN
-            while: i < (cast: (size_t) header\len)
+        c.fprintf(stream, " fields %d:", (cast: (int) header\array.size))
+        if: header\array.size > 0U && header\array.data != 0 && lmx_range_classify(arena, (header\array.data)) = c.LMX_KIND_CHILDREN
+            while: i < header\array.size
                 lmx_root_report_ref(arena, stream, lmx_arena_ref_value(header, i))
                 i: i + 1U
             ---
@@ -712,11 +712,11 @@ fn: lmx_root_report_cell (@: LmxArena arena; @: void stream; @: LmxPool pool; @:
         c.fprintf(stream, " message running %d success %d graph", (cast: (int) message\running), (cast: (int) message\success))
         return: lmx_root_report_ref(arena, stream, (cast: (@: void) message\graph))
     if: pool\kind = c.LMX_KIND_ARRAY
-        desc: (cast: (@: LmxArrayDesc) cell)
-        c.fprintf(stream, " array len %u", (cast: (unsigned) desc\len))
+        desc: (cast: (@: VoidArray) cell)
+        c.fprintf(stream, " array len %u", (cast: (unsigned) desc\size))
         if: pool\type = c.LMX_TYPE_ARRAY_OF_CHAR && desc\data != 0 && lmx_range_pool(arena, desc\data) != 0
             text: (cast: (@: char) desc\data)
-            n: desc\len
+            n: desc\size
             if: n > 64U
                 n: 64U
             ---
@@ -982,7 +982,7 @@ fn: lmx_root_host_entry (@: Lmx node) int
         return: 0
     ---
     graph: message\graph
-    if: graph\len <= c.LMX_ROOT_HOST_LAUNCH
+    if: graph\array.size <= c.LMX_ROOT_HOST_LAUNCH
         return: 0
     ---
     launch: (cast: (@: LmxRootLaunch) lmx_arena_ref_value(graph, c.LMX_ROOT_HOST_LAUNCH))
@@ -1011,8 +1011,8 @@ fn: lmx_root_launch_tapped (@: LmxRoot root; int: argc; @@: char argv; LmxRootPr
     @: LmxMsg letter 0
     @: Lmx letter_graph 0
     @: Lmx letter_payload 0
-    @: LmxArrayDesc main_args 0
-    @: LmxArrayDesc main_arg 0
+    @: VoidArray main_args 0
+    @: VoidArray main_arg 0
     @@: void slots 0
     @: LmxMsg message 0
     @: Lmx graph 0
@@ -1167,8 +1167,8 @@ return: lmx_root_launch_tapped(root, argc, argv, program, fields, settings, limi
 fn: lmx_root_exit_model (@: LmxArena arena) @: Lmx
     @: Lmx model 0
     @: void code 0
-    @: LmxArrayDesc out 0
-    @: LmxArrayDesc err 0
+    @: VoidArray out 0
+    @: VoidArray err 0
     if: arena = 0
         return: 0
     model: lmx_node_new_owned(arena)
@@ -1188,20 +1188,20 @@ return: model
 # same domain and type -- and read.
 fn: lmx_root_exit_admit (@: LmxArena arena; @: Lmx model; @: Lmx letter; @: LmxRootExit done) int
     @: Lmx payload 0
-    @: LmxArrayDesc out 0
-    @: LmxArrayDesc err 0
+    @: VoidArray out 0
+    @: VoidArray err 0
     @: void sender_cell 0
     if: arena = 0 || model = 0 || letter = 0 || done = 0
         return: c.LMX_ROOT_INVALID
-    if: letter\len < 2 || lmx_range_classify(arena, lmx_arena_ref_value(letter, 1U)) != c.LMX_KIND_STRUCT
+    if: letter\array.size < 2U || lmx_range_classify(arena, lmx_arena_ref_value(letter, 1U)) != c.LMX_KIND_STRUCT
         return: c.LMX_ROOT_INVALID
     ---
     payload: lmx_arena_ref_struct(letter, 1U)
     if: lmx_runtime_implements(arena, payload, model, model) != c.LMX_IMPLEMENTS_YES
         return: c.LMX_ROOT_INVALID
     ---
-    out: (cast: (@: LmxArrayDesc) lmx_arena_ref_value(payload, 1U))
-    err: (cast: (@: LmxArrayDesc) lmx_arena_ref_value(payload, 2U))
+    out: (cast: (@: VoidArray) lmx_arena_ref_value(payload, 1U))
+    err: (cast: (@: VoidArray) lmx_arena_ref_value(payload, 2U))
     done\exit_code: lmx_int_value_known(lmx_arena_ref_value(payload, 0U))
     # D-66: out/err\data point into the letter's own arena, unreachable to the collector the
     # instant this call returns (the taken letter is held only by lmx_root_host_take's own
@@ -1213,24 +1213,24 @@ fn: lmx_root_exit_admit (@: LmxArena arena; @: Lmx model; @: Lmx letter; @: LmxR
     done\err.len: 0U
     done\err.data: 0
     done\owns_text: 0
-    if: out\len != 0U && out\data != 0
-        done\out.data: (cast: (@: char) calloc(out\len, 1U))
+    if: out\size != 0U && out\data != 0
+        done\out.data: (cast: (@: char) calloc(out\size, 1U))
         if: done\out.data = 0
             return: c.LMX_ROOT_INVALID
         ---
-        memcpy((cast: (@: void) done\out.data), out\data, out\len)
-        done\out.len: out\len
+        memcpy((cast: (@: void) done\out.data), out\data, out\size)
+        done\out.len: out\size
     ---
-    if: err\len != 0U && err\data != 0
-        done\err.data: (cast: (@: char) calloc(err\len, 1U))
+    if: err\size != 0U && err\data != 0
+        done\err.data: (cast: (@: char) calloc(err\size, 1U))
         if: done\err.data = 0
             free((cast: (@: void) done\out.data))
             done\out.data: 0
             done\out.len: 0U
             return: c.LMX_ROOT_INVALID
         ---
-        memcpy((cast: (@: void) done\err.data), err\data, err\len)
-        done\err.len: err\len
+        memcpy((cast: (@: void) done\err.data), err\data, err\size)
+        done\err.len: err\size
     ---
     done\owns_text: 1
     # FABLE-SONNET-SEND-REF-20260925-172 commit 4 (lines edited under fable's authorization;
@@ -1279,7 +1279,7 @@ fn: lmx_root_settings (@: LmxArena arena; @: Lmx profile) @: Lmx
     c.array: [4096]: char cwd
     @: Lmx branch 0
     @@: void refs 0
-    @: LmxArrayDesc text 0
+    @: VoidArray text 0
     @: char data 0
     @: LmxPool pool 0
     size_t: n 0U
@@ -1291,11 +1291,11 @@ fn: lmx_root_settings (@: LmxArena arena; @: Lmx profile) @: Lmx
     n: strlen(cwd)
     branch: lmx_node_new_profiled(arena, profile)
     refs: (cast: (@@: void) lmx_arena_take_n_profiled(arena, c.sizeof(@: void), c.LMX_KIND_CHILDREN, c.LMX_TYPE_REFS, profile, 1U))
-    text: (cast: (@: LmxArrayDesc) lmx_arena_take_profiled(arena, c.sizeof(c.LmxArrayDesc), c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_CHAR, profile))
+    text: (cast: (@: VoidArray) lmx_arena_take_profiled(arena, c.sizeof(c.VoidArray), c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_CHAR, profile))
     if: branch = 0 || refs = 0 || text = 0
         return: 0
     ---
-    text\len: n
+    text\size: n
     text\data: 0
     if: n != 0U
         data: (cast: (@: char) lmx_arena_take_n_profiled(arena, c.sizeof(c.char), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR, profile, n))
@@ -1306,8 +1306,8 @@ fn: lmx_root_settings (@: LmxArena arena; @: Lmx profile) @: Lmx
         text\data: (cast: (@: void) data)
     ---
     refs[0]: (cast: (@: void) text)
-    branch\data: (cast: (@: void) refs)
-    branch\len: 1
+    branch\array.data: (cast: (@: void) refs)
+    branch\array.size: 1U
     pool: lmx_arena_find_profiled(arena, c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT, profile)
     if: pool = 0 || lmx_pool_seal(pool) != 0
         return: 0

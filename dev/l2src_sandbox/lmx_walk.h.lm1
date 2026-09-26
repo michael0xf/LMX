@@ -74,7 +74,7 @@ predef: "l2src/lmx_scratch.h.lm1"
 # cached "which own fields exist" set either.  What replaces plan MEMBERSHIP (was: a slot
 # must be one lmx_walk_prepare's scan found) is two direct questions asked of the arena at
 # the point of use, in lmx_walk_slot: the holder must classify as a Structure and the slot
-# index must be within its `len`; the VALUE the slot holds is then classified on its own
+# index must be within its `array.size`; the VALUE the slot holds is then classified on its own
 # terms (a typed primitive cell, a pointer cell, or a Structure) by the OWN/SET/PUT sites
 # themselves, exactly as they already did.  A translator mistake that names an operator node
 # or a literal as an own slot is caught the same way: it does not classify as a plain data
@@ -253,7 +253,7 @@ define: LMX_WALK_OP_PUT_REF 24
 # -170 c2: array element / length at the walked root (Grok). Contiguous claim after
 # PUT_REF; Sonnet MERGE prim takes 28+ (OP_COUNT coord via lmx_uds 2026-09-25).
 # [elem, holder, slot, index] / [elemput, holder, slot, index, value] / [length, holder, slot].
-# holder 0 = this activation data (K-OT2). Bounds by descriptor.len. Char via lmx_char_cell.
+# holder 0 = this activation data (K-OT2). Bounds by descriptor.size. Char via lmx_char_cell.
 define: LMX_WALK_OP_ELEM 25
 define: LMX_WALK_OP_ELEMPUT 26
 define: LMX_WALK_OP_LENGTH 27

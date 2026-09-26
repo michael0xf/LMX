@@ -149,7 +149,7 @@ fn: main () int
     first_m: lmx_node_new_owned(@ arena)
     rc_check(counts, first_m != 0 && lmx_arena_refs_open_owned(@ arena, first_m, 2U) = 0, "first opened {args, RET}")
     lmx_arena_ref_store(first_m, 0U, (cast: (@: void) lmx_walk_plain(@ arena, first_m, 2U)))
-    rc_check(counts, lmx_arena_ref_value(first_m, 0U) != 0 && (cast: (@: Lmx) lmx_arena_ref_value(first_m, 0U))\len = 2, "first's args-part built, 2 formals")
+    rc_check(counts, lmx_arena_ref_value(first_m, 0U) != 0 && ((cast: (@: Lmx) lmx_arena_ref_value(first_m, 0U))\array.size) = 2U, "first's args-part built, 2 formals")
     rc_fr(@ arena, roles, first_m, 1U, c.LMX_WALK_OP_RET, 2U)
     rc_argn(@ arena, roles, lmx_arena_ref_struct(first_m, 1U), 1U, 0U)
 

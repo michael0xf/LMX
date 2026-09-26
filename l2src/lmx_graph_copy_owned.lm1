@@ -6,112 +6,112 @@ include: "<stdlib.h>" "<string.h>" "<stdint.h>"
 
 
 fn: lmx_copy_map_keys_data (@: LmxCopyMap m) @@: void
-    @: LmxArrayDynamicArray da
-    @: LmxArrayDesc base
+    @: VoidDynamicArray da
+    @: VoidArray base
     if: m = 0
         return: 0
     da: @ m\keys
-    base: (cast: (@: LmxArrayDesc) da)
+    base: (cast: (@: VoidArray) da)
 return: (cast: (@@: void) base\data)
 
 fn: lmx_copy_map_vals_data (@: LmxCopyMap m) @@: void
-    @: LmxArrayDynamicArray da
-    @: LmxArrayDesc base
+    @: VoidDynamicArray da
+    @: VoidArray base
     if: m = 0
         return: 0
     da: @ m\vals
-    base: (cast: (@: LmxArrayDesc) da)
+    base: (cast: (@: VoidArray) da)
 return: (cast: (@@: void) base\data)
 
 fn: lmx_copy_map_keys_cap (@: LmxCopyMap m) size_t
-    @: LmxArrayDynamicArray da
+    @: VoidDynamicArray da
     if: m = 0
         return: 0U
     da: @ m\keys
 return: da\capacity
 
 fn: lmx_copy_map_set_keys_data (@: LmxCopyMap m; @@: void data) void
-    @: LmxArrayDynamicArray da
-    @: LmxArrayDesc base
+    @: VoidDynamicArray da
+    @: VoidArray base
     if: m = 0
         return
     da: @ m\keys
-    base: (cast: (@: LmxArrayDesc) da)
+    base: (cast: (@: VoidArray) da)
     base\data: (cast: (@: void) data)
 return
 
 fn: lmx_copy_map_set_vals_data (@: LmxCopyMap m; @@: void data) void
-    @: LmxArrayDynamicArray da
-    @: LmxArrayDesc base
+    @: VoidDynamicArray da
+    @: VoidArray base
     if: m = 0
         return
     da: @ m\vals
-    base: (cast: (@: LmxArrayDesc) da)
+    base: (cast: (@: VoidArray) da)
     base\data: (cast: (@: void) data)
 return
 
 fn: lmx_copy_map_set_keys_cap (@: LmxCopyMap m; size_t: capacity) void
-    @: LmxArrayDynamicArray da
-    @: LmxArrayDesc base
+    @: VoidDynamicArray da
+    @: VoidArray base
     if: m = 0
         return
     da: @ m\keys
     da\capacity: capacity
-    base: (cast: (@: LmxArrayDesc) da)
-    base\len: capacity
+    base: (cast: (@: VoidArray) da)
+    base\size: capacity
     da: @ m\vals
     da\capacity: capacity
-    base: (cast: (@: LmxArrayDesc) da)
-    base\len: capacity
+    base: (cast: (@: VoidArray) da)
+    base\size: capacity
 return
 
 fn: lmx_copy_stack_items_data (@: LmxCopyStack s) @@: Lmx
-    @: LmxArrayDynamicArray da
-    @: LmxArrayDesc base
+    @: VoidDynamicArray da
+    @: VoidArray base
     if: s = 0
         return: 0
     da: @ s\items
-    base: (cast: (@: LmxArrayDesc) da)
+    base: (cast: (@: VoidArray) da)
 return: (cast: (@@: Lmx) base\data)
 
 fn: lmx_copy_stack_items_len (@: LmxCopyStack s) size_t
-    @: LmxArrayDynamicArray da
-    @: LmxArrayDesc base
+    @: VoidDynamicArray da
+    @: VoidArray base
     if: s = 0
         return: 0U
     da: @ s\items
-    base: (cast: (@: LmxArrayDesc) da)
-return: base\len
+    base: (cast: (@: VoidArray) da)
+return: base\size
 
 fn: lmx_copy_stack_items_cap (@: LmxCopyStack s) size_t
-    @: LmxArrayDynamicArray da
+    @: VoidDynamicArray da
     if: s = 0
         return: 0U
     da: @ s\items
 return: da\capacity
 
 fn: lmx_copy_stack_set_items_data (@: LmxCopyStack s; @@: Lmx data) void
-    @: LmxArrayDynamicArray da
-    @: LmxArrayDesc base
+    @: VoidDynamicArray da
+    @: VoidArray base
     if: s = 0
         return
     da: @ s\items
-    base: (cast: (@: LmxArrayDesc) da)
+    base: (cast: (@: VoidArray) da)
     base\data: (cast: (@: void) data)
 return
 
 fn: lmx_copy_stack_set_items_len (@: LmxCopyStack s; size_t: len) void
-    @: LmxArrayDynamicArray da
-    @: LmxArrayDesc base
+    @: VoidDynamicArray da
+    @: VoidArray base
     if: s = 0
         return
     da: @ s\items
-    base: (cast: (@: LmxArrayDesc) da)
-    base\len: len
+    base: (cast: (@: VoidArray) da)
+    base\size: len
 return
 
 fn: lmx_copy_stack_set_items_cap (@: LmxCopyStack s; size_t: capacity) void
-    @: LmxArrayDynamicArray da
+    @: VoidDynamicArray da
     if: s = 0
         return
     da: @ s\items
@@ -444,10 +444,10 @@ fn: lmx_copy_value (@: void v; @: char dst_chars; @: LmxArena src_arena; @: LmxA
     int: vtype 0
     @: void known
     @: void cell 0
-    @: LmxArrayDesc src_desc
-    @: LmxArrayDesc dst_desc 0
-    @: LmxArrayDesc src_list
-    @: LmxArrayDesc dst_list 0
+    @: VoidArray src_desc
+    @: VoidArray dst_desc 0
+    @: VoidArray src_list
+    @: VoidArray dst_list 0
     @@: void src_refs
     @@: void dst_refs
     size_t: i 0U
@@ -503,7 +503,7 @@ fn: lmx_copy_value (@: void v; @: char dst_chars; @: LmxArena src_arena; @: LmxA
         # children (parent = M) would otherwise pass that test and be deep-copied.
         # Mutant: skip this check -> a merge result's own copied frames get fresh
         # addresses, no longer shared code with the model they were copied from.
-        if: (cast: (size_t) occ\len) > 0U
+        if: occ\array.size > 0U
             frame_head: lmx_arena_ref_value(occ, 0U)
             if: frame_head != 0
                 frame_hk: lmx_range_classify(src_arena, frame_head)
@@ -585,7 +585,7 @@ fn: lmx_copy_value (@: void v; @: char dst_chars; @: LmxArena src_arena; @: LmxA
             return: 0
         return: cell
     if: kind = c.LMX_KIND_LIST
-        src_list: (cast: (@: LmxArrayDesc) v)
+        src_list: (cast: (@: VoidArray) v)
         dst_list: lmx_list_new_owned(vtype, dst_arena)
         if: dst_list = 0
             \status: LMX_GRAPH_COPY_NOMEM
@@ -594,7 +594,7 @@ fn: lmx_copy_value (@: void v; @: char dst_chars; @: LmxArena src_arena; @: LmxA
             \status: LMX_GRAPH_COPY_NOMEM
             return: 0
         i: 0U
-        while: i < src_list\len
+        while: i < src_list\size
             if: lmx_list_append_owned(dst_list, lmx_copy_value(lmx_list_value(src_list, i), dst_chars, src_arena, dst_arena, retain_profiles, retain_count, map, inside, todo, status), dst_arena) != c.LMX_LIST_OK
                 if: \status = LMX_GRAPH_COPY_OK
                     \status: LMX_GRAPH_COPY_NOMEM
@@ -605,14 +605,14 @@ fn: lmx_copy_value (@: void v; @: char dst_chars; @: LmxArena src_arena; @: LmxA
         ---
         return: (cast: (@: void) dst_list)
     if: kind = c.LMX_KIND_ARRAY
-        src_desc: (cast: (@: LmxArrayDesc) v)
-        if: src_desc\len != 0U && src_desc\data = 0
+        src_desc: (cast: (@: VoidArray) v)
+        if: src_desc\size != 0U && src_desc\data = 0
             \status: LMX_GRAPH_COPY_UNSUPPORTED
             return: 0
-        if: src_desc\len = 0U && src_desc\data != 0
+        if: src_desc\size = 0U && src_desc\data != 0
             \status: LMX_GRAPH_COPY_UNSUPPORTED
             return: 0
-        if: src_desc\len != 0U
+        if: src_desc\size != 0U
             # The backing cells are an array of the source arena like any other:
             # what they are is answered by classification, never by an inventory.
             if: lmx_range_classify(src_arena, src_desc\data) = c.LMX_KIND_NONE
@@ -620,16 +620,16 @@ fn: lmx_copy_value (@: void v; @: char dst_chars; @: LmxArena src_arena; @: LmxA
                 return: 0
             ---
         if: vtype = c.LMX_TYPE_ARRAY_OF_CHAR || vtype = c.LMX_TYPE_ARRAY_OF_INT || vtype = c.LMX_TYPE_ARRAY_OF_SIZE_T || vtype = c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR || vtype = c.LMX_TYPE_ARRAY_OF_ULONG
-            dst_desc: lmx_array_new_owned(vtype, src_desc\len, dst_arena)
+            dst_desc: lmx_array_new_owned(vtype, src_desc\size, dst_arena)
             if: dst_desc = 0
                 \status: LMX_GRAPH_COPY_NOMEM
                 return: 0
-            if: src_desc\len != 0U
-                memcpy(dst_desc\data, src_desc\data, src_desc\len * lmx_range_stride(src_arena, src_desc\data))
+            if: src_desc\size != 0U
+                memcpy(dst_desc\data, src_desc\data, src_desc\size * lmx_range_stride(src_arena, src_desc\data))
             ---
         if: vtype = c.LMX_TYPE_ARRAY_OF_LMX || vtype = c.LMX_TYPE_ARRAY_OF_DESC
             is_ref: 1
-            dst_desc: lmx_array_ref_new_owned(vtype, src_desc\len, dst_arena)
+            dst_desc: lmx_array_ref_new_owned(vtype, src_desc\size, dst_arena)
             if: dst_desc = 0
                 \status: LMX_GRAPH_COPY_NOMEM
                 return: 0
@@ -638,11 +638,11 @@ fn: lmx_copy_value (@: void v; @: char dst_chars; @: LmxArena src_arena; @: LmxA
             if: vtype >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
                 is_ref: 1
                 pointer_element_type: c.LMX_TYPE_POINTER_BASE + (vtype - c.LMX_TYPE_ARRAY_OF_POINTER_BASE)
-                if: src_desc\len != 0U && (lmx_range_classify(src_arena, src_desc\data) != c.LMX_KIND_PRIMITIVE || lmx_range_type_of(src_arena, src_desc\data) != pointer_element_type || lmx_range_stride(src_arena, src_desc\data) != c.sizeof(@: void))
+                if: src_desc\size != 0U && (lmx_range_classify(src_arena, src_desc\data) != c.LMX_KIND_PRIMITIVE || lmx_range_type_of(src_arena, src_desc\data) != pointer_element_type || lmx_range_stride(src_arena, src_desc\data) != c.sizeof(@: void))
                     \status: LMX_GRAPH_COPY_UNSUPPORTED
                     return: 0
                 ---
-                dst_desc: lmx_array_new_owned(vtype, src_desc\len, dst_arena)
+                dst_desc: lmx_array_new_owned(vtype, src_desc\size, dst_arena)
                 if: dst_desc = 0
                     \status: LMX_GRAPH_COPY_NOMEM
                     return: 0
@@ -660,7 +660,7 @@ fn: lmx_copy_value (@: void v; @: char dst_chars; @: LmxArena src_arena; @: LmxA
         if: is_ref != 0
             src_refs: (cast: (@@: void) src_desc\data)
             dst_refs: (cast: (@@: void) dst_desc\data)
-            while: i < src_desc\len
+            while: i < src_desc\size
                 dst_refs[i]: lmx_copy_value(src_refs[i], dst_chars, src_arena, dst_arena, retain_profiles, retain_count, map, inside, todo, status)
                 if: \status != LMX_GRAPH_COPY_OK
                     return: 0
@@ -697,20 +697,17 @@ fn: lmx_copy_process (@: Lmx src; @: char dst_chars; @: LmxArena src_arena; @: L
             ---
         ---
     ---
-    if: src\len < 0
-        \status: LMX_GRAPH_COPY_INVALID
-        return: 1
-    if: src\len = 0 || src\data = 0
+    if: src\array.size = 0U || src\array.data = 0
         return: 0
-    # A Structure's `data` IS its child-pointer array, reached through the
+    # A Structure's `array.data` IS its child-pointer array, reached through the
     # Structure: finding it needs no lookup, even though the array is an array of
     # the arena and is in the index like every other one. What is classified is
     # every child VALUE read out of it.
-    if: lmx_arena_refs_open_owned(dst_arena, dst, (cast: (size_t) src\len)) != 0
+    if: lmx_arena_refs_open_owned(dst_arena, dst, (src\array.size)) != 0
         \status: LMX_GRAPH_COPY_NOMEM
         return: 1
-    src_slots: (cast: (@@: void) src\data)
-    while: i < (cast: (size_t) src\len)
+    src_slots: (cast: (@@: void) src\array.data)
+    while: i < src\array.size
         copied: lmx_copy_value(src_slots[i], dst_chars, src_arena, dst_arena, retain_profiles, retain_count, map, inside, todo, status)
         if: \status != LMX_GRAPH_COPY_OK
             return: 1

@@ -58,7 +58,7 @@ fn: lmx_gc_cells (@: LmxArena arena; @: LmxPool pool; @: LmxChunk chunk; unsigne
     size_t: word
     @: char cell
     @: Lmx header
-    @: LmxArrayDesc desc
+    @: VoidArray desc
     int: status
     status: c.LMX_GC_OK
     if: pool = 0 || chunk = 0 || lmx_gc_scalar(pool) != 0
@@ -68,14 +68,14 @@ fn: lmx_gc_cells (@: LmxArena arena; @: LmxPool pool; @: LmxChunk chunk; unsigne
     while: index < lmx_chunk_cells(chunk, pool\stride)
         cell: (cast: (@: char) lmx_chunk_data(chunk)) + (index * pool\stride)
         if: pool\kind = c.LMX_KIND_STRUCT
-            # A header is {parent, len, data}: `len` is a count and is never read as an address.
+            # A header is {array, parent, native}: `array.size` is a count and is never read as an address.
             header: (cast: (@: Lmx) cell)
             status: lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) header\parent), gen, depth + 1))
-            status: lmx_gc_note(status, lmx_gc_mark_value(arena, header\data, gen, depth + 1))
+            status: lmx_gc_note(status, lmx_gc_mark_value(arena, (header\array.data), gen, depth + 1))
         else:
             if: pool\kind = c.LMX_KIND_ARRAY
-                # A descriptor is {len, data}: data is the current backing.
-                desc: (cast: (@: LmxArrayDesc) cell)
+                # A descriptor is {size, data}: data is the current backing.
+                desc: (cast: (@: VoidArray) cell)
                 status: lmx_gc_note(status, lmx_gc_mark_value(arena, desc\data, gen, depth + 1))
             else:
                 if: pool\kind = c.LMX_DOMAIN_KIND_POST

@@ -11420,7 +11420,7 @@ fn: l2_emit_handler (const: @(LmP0Node cf); int: p; int: i; int: mi; const: @(ch
         return: 1
     if: l2_scope_push(cf) != 0
         return: 1
-    if: np > 0 && c.fprintf(l2_out, "%sif: l2_pl%d = 0 || l2_pl%d\\len < %d\n", d2, p, p, np) < 0
+    if: np > 0 && c.fprintf(l2_out, "%sif: l2_pl%d = 0 || l2_pl%d\\array.size < %dU\n", d2, p, p, np) < 0
         return: 1
     if: np > 0 && l2_emit_implicit_throw(mi, "implements", d2) != 0
         return: 1
@@ -13507,12 +13507,12 @@ fn: l2_emit_arr_operand (int: mi; const: @(char pd); size_t: pn; int: kind; int:
         return: l2_error(l2_src, at, "internal: the indexed path changed its leaf")
     t: l2_tn
     l2_tn: l2_tn + 1
-    if: c.fprintf(l2_out, "%s@: LmxArrayDesc l2_ao%d (cast: (@: LmxArrayDesc) l2_pxp[0])\n%sif: l2_ao%d = 0\n", ind, t, ind, t) < 0
+    if: c.fprintf(l2_out, "%s@: VoidArray l2_ao%d (cast: (@: VoidArray) l2_pxp[0])\n%sif: l2_ao%d = 0\n", ind, t, ind, t) < 0
         return: 1
     if: l2_emit_path_bail(mi, ind) != 0
         return: 1
     if: want_len != 0 && depth = 0
-        if: c.fprintf(l2_out, "%ssize_t: l2_t%d\n%sl2_t%d: l2_ao%d\\len\n", ind, t, ind, t, t) < 0
+        if: c.fprintf(l2_out, "%ssize_t: l2_t%d\n%sl2_t%d: l2_ao%d\\size\n", ind, t, ind, t, t) < 0
             return: 1
         return: l2_tok_temp(t, dest)
     ---
@@ -13523,12 +13523,12 @@ fn: l2_emit_arr_operand (int: mi; const: @(char pd); size_t: pn; int: kind; int:
             return: 1
         return: 0
     ---
-    if: c.fprintf(l2_out, "%s@@: void l2_as%d (cast: (@@: void) l2_ao%d\\data)\n%s@: LmxArrayDesc l2_ai%d (cast: (@: LmxArrayDesc) l2_as%d[%zuU])\n%sif: l2_ai%d = 0\n", ind, t, t, ind, t, t, i0, ind, t) < 0
+    if: c.fprintf(l2_out, "%s@@: void l2_as%d (cast: (@@: void) l2_ao%d\\data)\n%s@: VoidArray l2_ai%d (cast: (@: VoidArray) l2_as%d[%zuU])\n%sif: l2_ai%d = 0\n", ind, t, t, ind, t, t, i0, ind, t) < 0
         return: 1
     if: l2_emit_path_bail(mi, ind) != 0
         return: 1
     if: want_len != 0
-        if: c.fprintf(l2_out, "%ssize_t: l2_t%d\n%sl2_t%d: l2_ai%d\\len\n", ind, t, ind, t, t) < 0
+        if: c.fprintf(l2_out, "%ssize_t: l2_t%d\n%sl2_t%d: l2_ai%d\\size\n", ind, t, ind, t, t) < 0
             return: 1
         return: l2_tok_temp(t, dest)
     ---
@@ -17200,7 +17200,7 @@ fn: l2_emit_array_ptr (int: oi; const: @(char ind); @: char dest) int
         ---
     t: l2_tn
     l2_tn: l2_tn + 1
-    if: c.fprintf(l2_out, "%s@@: void l2_a%d_leaf\n%s@: LmxArrayDesc l2_a%d_desc\n", ind, t, ind, t) < 0
+    if: c.fprintf(l2_out, "%s@@: void l2_a%d_leaf\n%s@: VoidArray l2_a%d_desc\n", ind, t, ind, t) < 0
         return: 1
     if: l2_own_ty[oi] != 8 && l2_own_ty[oi] < 2000 && c.fprintf(l2_out, "%s@: %s l2_a%d_data\n", ind, element, t) < 0
         return: 1
@@ -17216,7 +17216,7 @@ fn: l2_emit_array_ptr (int: oi; const: @(char ind); @: char dest) int
         return: 1
     if: c.fprintf(l2_out, "%sl2_a%d_leaf: %s\n", ind, t, l2_eap_expr) < 0
         return: 1
-    if: c.fprintf(l2_out, "%sl2_a%d_desc: (cast: (@: LmxArrayDesc) l2_a%d_leaf[0])\n", ind, t, t) < 0
+    if: c.fprintf(l2_out, "%sl2_a%d_desc: (cast: (@: VoidArray) l2_a%d_leaf[0])\n", ind, t, t) < 0
         return: 1
     if: l2_own_ty[oi] != 8 && l2_own_ty[oi] < 2000 && c.fprintf(l2_out, "%sl2_a%d_data: (cast: (@: %s) l2_a%d_desc\\data)\n", ind, t, element, t) < 0
         return: 1
@@ -17239,13 +17239,13 @@ fn: l2_emit_array_length (int: oi; const: @(char ind); @: char dest) int
         return: 1
     t: l2_tn
     l2_tn: l2_tn + 1
-    if: c.fprintf(l2_out, "%s@@: void l2_a%d_leaf\n%s@: LmxArrayDesc l2_a%d_desc\n%ssize_t: l2_t%d\n", ind, t, ind, t, ind, t) < 0
+    if: c.fprintf(l2_out, "%s@@: void l2_a%d_leaf\n%s@: VoidArray l2_a%d_desc\n%ssize_t: l2_t%d\n", ind, t, ind, t, ind, t) < 0
         return: 1
     if: l2_own_from_expr(oi, l2_eal_expr) != 0
         return: 1
     if: c.fprintf(l2_out, "%sl2_a%d_leaf: %s\n", ind, t, l2_eal_expr) < 0
         return: 1
-    if: c.fprintf(l2_out, "%sl2_a%d_desc: (cast: (@: LmxArrayDesc) l2_a%d_leaf[0])\n%sl2_t%d: l2_a%d_desc\\len\n", ind, t, t, ind, t, t) < 0
+    if: c.fprintf(l2_out, "%sl2_a%d_desc: (cast: (@: VoidArray) l2_a%d_leaf[0])\n%sl2_t%d: l2_a%d_desc\\size\n", ind, t, t, ind, t, t) < 0
         return: 1
 return: l2_tok_temp(t, dest)
 
@@ -21095,7 +21095,7 @@ fn: l2_emit_send (int: k; int: proto; @: char prefix; @: int count_arr; @: int k
         return: (cast: (int) (c.fprintf(l2_out, "    fn: %s%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n", prefix, k) < 0))
     if: c.fprintf(l2_out, "fn: %s%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n", prefix, k) < 0
         return: 1
-    if: fputs("    @: LmxThread t lmx_thread_current()\n    @: LmxArena a (cast: (@: LmxArena) calloc(1U, c.sizeof(c.LmxArena)))\n    @: LmxMsg m 0\n    @: Lmx g 0\n    @: Lmx p 0\n    @: void cell 0\n    @: LmxArrayDesc text 0\n    if: t = 0 || a = 0 || lmx_arena_open(a) != 0\n        l2_send_fail()\n", l2_out) < 0
+    if: fputs("    @: LmxThread t lmx_thread_current()\n    @: LmxArena a (cast: (@: LmxArena) calloc(1U, c.sizeof(c.LmxArena)))\n    @: LmxMsg m 0\n    @: Lmx g 0\n    @: Lmx p 0\n    @: void cell 0\n    @: VoidArray text 0\n    if: t = 0 || a = 0 || lmx_arena_open(a) != 0\n        l2_send_fail()\n", l2_out) < 0
         return: 1
     j: 0
     while: j < nf
@@ -24424,7 +24424,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             # The generated program checks the SHAPE it was promised: the result width
             # the map gives, known here. Without this the merge could succeed and produce
             # anything.
-            if: c.fprintf(l2_out, "%sif: l2_mresult\\len != %d\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 71\\n\")\n%s    c.abort()\n", ind, bw, ind, ind) < 0
+            if: c.fprintf(l2_out, "%sif: l2_mresult\\array.size != %dU\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 71\\n\")\n%s    c.abort()\n", ind, bw, ind, ind) < 0
                 return: 1
             # Second walk, now that the result exists: each operand field that SURVIVED
             # in the result (l2_msrc_at: no later operand wrote its slot again) is checked
@@ -24495,11 +24495,11 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                 while: ni >= 0 && aj < l2_ns_count[ni]
                     if: l2_ns_field_kind(ni, aj) = 0 && l2_msrc_at(sl, k, aj) >= 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), %dU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] = l2_myp[0]\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 90\\n\")\n%s    c.abort()\n", ind, l2_msrc_at(sl, k, aj), ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni))), aj, ind, ind, ind) < 0
                         return: 1
-                    if: l2_ns_field_kind(ni, aj) = 5 && l2_ns_field_len(ni, aj) > 0U && l2_msrc_at(sl, k, aj) >= 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), %dU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] = l2_myp[0]\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 91\\n\")\n%s    c.abort()\n%sif: (cast: (@: LmxArrayDesc) l2_mxp[0])\\len != %zuU\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 91\\n\")\n%s    c.abort()\n%sif: (cast: (@: LmxArrayDesc) l2_mxp[0])\\data = (cast: (@: LmxArrayDesc) l2_myp[0])\\data\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 91\\n\")\n%s    c.abort()\n", ind, l2_msrc_at(sl, k, aj), ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni))), aj, ind, ind, ind, ind, l2_ns_field_len(ni, aj), ind, ind, ind, ind, ind) < 0
+                    if: l2_ns_field_kind(ni, aj) = 5 && l2_ns_field_len(ni, aj) > 0U && l2_msrc_at(sl, k, aj) >= 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), %dU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] = l2_myp[0]\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 91\\n\")\n%s    c.abort()\n%sif: (cast: (@: VoidArray) l2_mxp[0])\\size != %zuU\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 91\\n\")\n%s    c.abort()\n%sif: (cast: (@: VoidArray) l2_mxp[0])\\data = (cast: (@: VoidArray) l2_myp[0])\\data\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 91\\n\")\n%s    c.abort()\n", ind, l2_msrc_at(sl, k, aj), ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni))), aj, ind, ind, ind, ind, l2_ns_field_len(ni, aj), ind, ind, ind, ind, ind) < 0
                         return: 1
-                    if: l2_ns_field_kind(ni, aj) = 5 && l2_ns_field_len(ni, aj) = 0U && l2_msrc_at(sl, k, aj) >= 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), %dU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] = l2_myp[0]\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 91\\n\")\n%s    c.abort()\n%sif: (cast: (@: LmxArrayDesc) l2_mxp[0])\\len != 0U || (cast: (@: LmxArrayDesc) l2_mxp[0])\\data != 0 || (cast: (@: LmxArrayDesc) l2_myp[0])\\data != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 91\\n\")\n%s    c.abort()\n", ind, l2_msrc_at(sl, k, aj), ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni))), aj, ind, ind, ind, ind, ind, ind) < 0
+                    if: l2_ns_field_kind(ni, aj) = 5 && l2_ns_field_len(ni, aj) = 0U && l2_msrc_at(sl, k, aj) >= 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), %dU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] = l2_myp[0]\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 91\\n\")\n%s    c.abort()\n%sif: (cast: (@: VoidArray) l2_mxp[0])\\size != 0U || (cast: (@: VoidArray) l2_mxp[0])\\data != 0 || (cast: (@: VoidArray) l2_myp[0])\\data != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 91\\n\")\n%s    c.abort()\n", ind, l2_msrc_at(sl, k, aj), ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni))), aj, ind, ind, ind, ind, ind, ind) < 0
                         return: 1
-                    if: l2_ns_field_kind(ni, aj) = 6 && l2_msrc_at(sl, k, aj) >= 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), %dU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] = l2_myp[0]\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 91\\n\")\n%s    c.abort()\n%sif: (cast: (@: LmxArrayDesc) l2_mxp[0])\\len != 0U || (cast: (@: LmxArrayDesc) l2_mxp[0])\\data != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 91\\n\")\n%s    c.abort()\n", ind, l2_msrc_at(sl, k, aj), ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni))), aj, ind, ind, ind, ind, ind, ind) < 0
+                    if: l2_ns_field_kind(ni, aj) = 6 && l2_msrc_at(sl, k, aj) >= 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sl2_myp: lmx_arena_ref_cell(lmx_arena_ref_struct(%s, %uU), %dU)\n%sif: l2_mxp = 0 || l2_myp = 0 || l2_mxp[0] = l2_myp[0]\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 91\\n\")\n%s    c.abort()\n%sif: (cast: (@: VoidArray) l2_mxp[0])\\size != 0U || (cast: (@: VoidArray) l2_mxp[0])\\data != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 91\\n\")\n%s    c.abort()\n", ind, l2_msrc_at(sl, k, aj), ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni))), aj, ind, ind, ind, ind, ind, ind) < 0
                         return: 1
                     if: l2_ns_field_kind(ni, aj) = 3 && l2_ns_eternal[l2_ns_field_ref(ni, aj)] >= 0 && l2_msrc_at(sl, k, aj) >= 0 && c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mresult, %dU)\n%sif: l2_mxp = 0 || l2_mxp[0] != (cast: (@: void) lmx_arena_ref_struct(%s, %uU))\n%s    c.fprintf(c.stderr, \"lmx: invariant: merge result check 80\\n\")\n%s    c.abort()\n", ind, l2_msrc_at(sl, k, aj), ind, l2_unit_ref, (cast: (unsigned) (l2_unit_base + l2_occ_n() + l2_ns_eternal[l2_ns_field_ref(ni, aj)])), ind, ind) < 0
                         return: 1
@@ -25936,10 +25936,10 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: l2_library_mode = 0 && fputs("external:\n    # R0's program: the host calls it right after it reserved R0; R0's turn walks the unit.\n    fn: l2_program_build (@: LmxArena arena; @: Lmx graph; @: Lmx settings", l2_out) < 0
         fclose(l2_out)
         return: 1
-    if: fputs(") int\n        @: Lmx l2_entry_unit 0\n        @: Lmx l2_entry_leaf 0\n        @@: void l2_entry_slot 0\n        @: Lmx l2_ebr 0\n        @: Lmx l2_fkid 0\n        @: Lmx l2_pst 0\n        @@: void l2_pxp 0\n        @: LmxThread l2_current 0\n        @: LmxMsg l2_message 0\n        @: LmxArrayDesc l2_children 0\n", l2_out) < 0
+    if: fputs(") int\n        @: Lmx l2_entry_unit 0\n        @: Lmx l2_entry_leaf 0\n        @@: void l2_entry_slot 0\n        @: Lmx l2_ebr 0\n        @: Lmx l2_fkid 0\n        @: Lmx l2_pst 0\n        @@: void l2_pxp 0\n        @: LmxThread l2_current 0\n        @: LmxMsg l2_message 0\n        @: VoidArray l2_children 0\n", l2_out) < 0
         fclose(l2_out)
         return: 1
-    if: l2_ebr_n != 0 && fputs("        @: LmxPool l2_profile_pool 0\n        @: void l2_profile_refs 0\n        @: LmxArrayDesc l2_profile_array 0\n        @: char l2_profile_char 0\n        ulong: l2_ulong_probe 0U\n", l2_out) < 0
+    if: l2_ebr_n != 0 && fputs("        @: LmxPool l2_profile_pool 0\n        @: void l2_profile_refs 0\n        @: VoidArray l2_profile_array 0\n        @: char l2_profile_char 0\n        ulong: l2_ulong_probe 0U\n", l2_out) < 0
         fclose(l2_out)
         return: 1
     # Construction-time handles preserve the exact parent of every executable
@@ -25977,7 +25977,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: (l2_has_own_ty(1) != 0 || l2_ns_has_char != 0 || l2_parts_have_char() != 0) && fputs("        @: char process_chars lmx_chars_new_owned(l2_program_arena)\n        if: process_chars = 0\n            return: 1\n", l2_out) < 0
         fclose(l2_out)
         return: 1
-    if: l2_library_mode = 0 && c.fprintf(l2_out, "        l2_entry_unit: graph\n        if: l2_program_arena = 0 || l2_entry_unit = 0 || (cast: (unsigned) l2_entry_unit\\len) != %uU\n            return: 1\n", kids) < 0
+    if: l2_library_mode = 0 && c.fprintf(l2_out, "        l2_entry_unit: graph\n        if: l2_program_arena = 0 || l2_entry_unit = 0 || l2_entry_unit\\array.size != %uU\n            return: 1\n", kids) < 0
         fclose(l2_out)
         return: 1
     if: l2_library_mode != 0 && c.fprintf(l2_out, "        l2_entry_unit: lmx_node_new_owned(l2_program_arena)\n        if: l2_entry_unit = 0\n            return: 1\n        if: lmx_arena_refs_open_owned(l2_program_arena, l2_entry_unit, %uU) != 0\n            return: 1\n", kids) < 0
@@ -26105,7 +26105,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
         if: l2_ns_eternal[k] < 0 && l2_ns_count[k] = 0 && c.fprintf(l2_out, "        if: l2_nsp[%d] = 0\n            return: 1\n", k) < 0
             fclose(l2_out)
             return: 1
-        if: l2_ns_eternal[k] >= 0 && l2_ns_count[k] > 0 && c.fprintf(l2_out, "        if: l2_nsp[%d] = 0\n            return: 1\n        l2_profile_refs: lmx_arena_take_n_profiled(l2_program_arena, c.sizeof(@: void), c.LMX_KIND_CHILDREN, c.LMX_TYPE_REFS, l2_eprofile%u, %uU)\n        if: l2_profile_refs = 0\n            return: 1\n        l2_nsp[%d]\\data: l2_profile_refs\n        l2_nsp[%d]\\len: %d\n", k, (cast: (unsigned) l2_ns_eternal[k]), (cast: (unsigned) l2_ns_count[k]), k, k, l2_ns_count[k]) < 0
+        if: l2_ns_eternal[k] >= 0 && l2_ns_count[k] > 0 && c.fprintf(l2_out, "        if: l2_nsp[%d] = 0\n            return: 1\n        l2_profile_refs: lmx_arena_take_n_profiled(l2_program_arena, c.sizeof(@: void), c.LMX_KIND_CHILDREN, c.LMX_TYPE_REFS, l2_eprofile%u, %uU)\n        if: l2_profile_refs = 0\n            return: 1\n        l2_nsp[%d]\\array.data: l2_profile_refs\n        l2_nsp[%d]\\array.size: %dU\n", k, (cast: (unsigned) l2_ns_eternal[k]), (cast: (unsigned) l2_ns_count[k]), k, k, l2_ns_count[k]) < 0
             fclose(l2_out)
             return: 1
         if: l2_ns_eternal[k] >= 0 && l2_ns_count[k] = 0 && c.fprintf(l2_out, "        if: l2_nsp[%d] = 0\n            return: 1\n", k) < 0
@@ -26151,17 +26151,17 @@ fn: l2_emit_unit (const: @(char out_path)) int
             if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 6 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: (cast: (@: void) lmx_array_ref_new_owned(c.LMX_TYPE_ARRAY_OF_DESC, 0U, l2_program_arena))\n        if: l2_entry_slot[0] = 0\n            return: 1\n", k, (cast: (unsigned) oi)) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 6 && l2_ns_eternal[k] >= 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_profile_array: (cast: (@: LmxArrayDesc) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxArrayDesc), c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_DESC, l2_eprofile%u))\n        if: l2_profile_array = 0\n            return: 1\n        l2_profile_array\\len: 0U\n        l2_profile_array\\data: 0\n        l2_entry_slot[0]: (cast: (@: void) l2_profile_array)\n", k, (cast: (unsigned) oi), (cast: (unsigned) l2_ns_eternal[k])) < 0
+            if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 6 && l2_ns_eternal[k] >= 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_profile_array: (cast: (@: VoidArray) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.VoidArray), c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_DESC, l2_eprofile%u))\n        if: l2_profile_array = 0\n            return: 1\n        l2_profile_array\\size: 0U\n        l2_profile_array\\data: 0\n        l2_entry_slot[0]: (cast: (@: void) l2_profile_array)\n", k, (cast: (unsigned) oi), (cast: (unsigned) l2_ns_eternal[k])) < 0
                 fclose(l2_out)
                 return: 1
             if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 5 && l2_ns_eternal[k] >= 0
-                if: l2_nsf_ref[fx] = 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_profile_array: (cast: (@: LmxArrayDesc) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxArrayDesc), c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_INT, l2_eprofile%u))\n        if: l2_profile_array = 0\n            return: 1\n        l2_profile_array\\len: %zuU\n        l2_profile_array\\data: 0\n", k, (cast: (unsigned) oi), (cast: (unsigned) l2_ns_eternal[k]), l2_nsf_val[fx]) < 0
+                if: l2_nsf_ref[fx] = 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_profile_array: (cast: (@: VoidArray) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.VoidArray), c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_INT, l2_eprofile%u))\n        if: l2_profile_array = 0\n            return: 1\n        l2_profile_array\\size: %zuU\n        l2_profile_array\\data: 0\n", k, (cast: (unsigned) oi), (cast: (unsigned) l2_ns_eternal[k]), l2_nsf_val[fx]) < 0
                     fclose(l2_out)
                     return: 1
                 if: l2_nsf_ref[fx] = 0 && l2_nsf_val[fx] != 0U && c.fprintf(l2_out, "        l2_profile_array\\data: lmx_arena_take_n_profiled(l2_program_arena, c.sizeof(c.int), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT, l2_eprofile%u, %zuU)\n        if: l2_profile_array\\data = 0\n            return: 1\n", (cast: (unsigned) l2_ns_eternal[k]), l2_nsf_val[fx]) < 0
                     fclose(l2_out)
                     return: 1
-                if: l2_nsf_ref[fx] = 1 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_profile_array: (cast: (@: LmxArrayDesc) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxArrayDesc), c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_CHAR, l2_eprofile%u))\n        if: l2_profile_array = 0\n            return: 1\n        l2_profile_array\\len: %zuU\n        l2_profile_array\\data: 0\n", k, (cast: (unsigned) oi), (cast: (unsigned) l2_ns_eternal[k]), l2_nsf_val[fx]) < 0
+                if: l2_nsf_ref[fx] = 1 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_profile_array: (cast: (@: VoidArray) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.VoidArray), c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_CHAR, l2_eprofile%u))\n        if: l2_profile_array = 0\n            return: 1\n        l2_profile_array\\size: %zuU\n        l2_profile_array\\data: 0\n", k, (cast: (unsigned) oi), (cast: (unsigned) l2_ns_eternal[k]), l2_nsf_val[fx]) < 0
                     fclose(l2_out)
                     return: 1
                 if: l2_nsf_ref[fx] = 1 && l2_nsf_val[fx] != 0U && c.fprintf(l2_out, "        l2_profile_array\\data: lmx_arena_take_n_profiled(l2_program_arena, c.sizeof(c.char), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR, l2_eprofile%u, %zuU)\n        if: l2_profile_array\\data = 0\n            return: 1\n", (cast: (unsigned) l2_ns_eternal[k]), l2_nsf_val[fx]) < 0

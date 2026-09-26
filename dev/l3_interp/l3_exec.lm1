@@ -42,7 +42,7 @@ fn: l3_is_self_field (@: L3Frame f; @: void v) int
     if: f = 0 || f\self = 0 || v = 0
         return: 0
     i: 1U
-    while: i < (cast: (size_t) f\self\len)
+    while: i < f\self\array.size
         if: lmx_arena_ref_value(f\self, i) = v
             return: 1
         ---
@@ -74,10 +74,10 @@ fn: l3_exec_op (@: LmxArena arena; @: L3Frame f; @: Lmx host; @: LmxOp op) int
     code: op\code
     if: code = c.L3_NODE_RETURN
         f\has_ret: 0
-        if: host = 0 || host\len < 2
+        if: host = 0 || host\array.size < 2U
             return: c.L3_RETURN
         ---
-        if: host\len > 2
+        if: host\array.size > 2U
             return: c.L3_UNSUPPORTED
         arg: lmx_arena_ref_value(host, 1U)
         if: arg = 0
@@ -96,7 +96,7 @@ fn: l3_exec_op (@: LmxArena arena; @: L3Frame f; @: Lmx host; @: LmxOp op) int
     if: code = c.L3_NODE_EXPECT_INT
         if: f\subject = 0
             return: c.L3_UNSUPPORTED
-        if: host = 0 || host\len < 3
+        if: host = 0 || host\array.size < 3U
             return: c.L3_INVALID
         if: lmx_domain_kind(arena, lmx_arena_ref_value(host, 1U)) != c.LMX_KIND_STRUCT
             return: c.L3_UNSUPPORTED
@@ -116,12 +116,12 @@ fn: l3_exec_op (@: LmxArena arena; @: L3Frame f; @: Lmx host; @: LmxOp op) int
     if: host = 0
         return: c.L3_INVALID
     if: code = c.L3_NODE_ASSIGN
-        if: host\len < 3 || f\self = 0
+        if: host\array.size < 3U || f\self = 0
             return: c.L3_INVALID
         st: l3_cond_int(arena, lmx_arena_ref_value(host, 1U), @ idx)
         if: st != c.L3_OK
             return: st
-        if: idx < 1 || (cast: (size_t) idx) >= (cast: (size_t) f\self\len)
+        if: idx < 1 || (cast: (size_t) idx) >= f\self\array.size
             return: c.L3_UNSUPPORTED
         ---
         arg: lmx_arena_ref_value(host, 2U)
@@ -132,19 +132,19 @@ fn: l3_exec_op (@: LmxArena arena; @: L3Frame f; @: Lmx host; @: LmxOp op) int
         return: c.L3_OK
     ---
     if: code = c.L3_NODE_IF
-        if: host\len < 3
+        if: host\array.size < 3U
             return: c.L3_INVALID
         st: l3_cond_int(arena, lmx_arena_ref_value(host, 1U), @ cond)
         if: st != c.L3_OK
             return: st
         if: cond != 0
             return: l3_exec_stmt(arena, f, lmx_arena_ref_value(host, 2U))
-        if: host\len > 3
+        if: host\array.size > 3U
             return: l3_exec_stmt(arena, f, lmx_arena_ref_value(host, 3U))
         return: c.L3_OK
     ---
     if: code = c.L3_NODE_WHILE
-        if: host\len < 3
+        if: host\array.size < 3U
             return: c.L3_INVALID
         body: lmx_arena_ref_value(host, 2U)
         while: n < c.L3_WHILE_CAP
@@ -163,7 +163,7 @@ fn: l3_exec_op (@: LmxArena arena; @: L3Frame f; @: Lmx host; @: LmxOp op) int
         return: c.L3_UNSUPPORTED
     ---
     if: code = c.L3_NODE_CALL
-        if: host\len < 4
+        if: host\array.size < 4U
             return: c.L3_INVALID
         ---
         callee: (cast: (@: Lmx) lmx_arena_ref_value(host, 1U))
@@ -224,7 +224,7 @@ fn: l3_exec_stmt (@: LmxArena arena; @: L3Frame f; @: void v) int
     ---
     if: kind = c.LMX_KIND_STRUCT
         host: (cast: (@: Lmx) v)
-        if: host\len >= 1
+        if: host\array.size >= 1U
             head: lmx_arena_ref_value(host, 0U)
             if: head != 0 && lmx_domain_kind(arena, head) = c.LMX_DOMAIN_KIND_OP
                 return: l3_exec_op(arena, f, host, (cast: (@: LmxOp) head))
@@ -243,7 +243,7 @@ fn: l3_exec_range (@: LmxArena arena; @: L3Frame f; @: Lmx node; size_t: from) i
     if: node = 0
         return: c.L3_INVALID
     i: from
-    while: i < (cast: (size_t) node\len)
+    while: i < node\array.size
         st: l3_exec_stmt(arena, f, lmx_arena_ref_value(node, i))
         if: st = c.L3_RETURN
             return: c.L3_RETURN

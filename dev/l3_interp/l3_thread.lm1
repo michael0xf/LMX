@@ -5,7 +5,7 @@ predef: "l2src/lmx_scratch.lm1"
 predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_primitive.lm1"
-include: "<string.h>" "<limits.h>"
+include: "<string.h>"
 
 # Thread interpreted path: lmx_interp_apply_value -> lmx_walk_run.
 # Dispatch receives only the Thread. Per-turn L2 scratch/context are automatic.
@@ -47,8 +47,8 @@ fn: l3_profile_open (@: LmxArena arena) @: Lmx
         return: 0
     profile: (cast: (@: Lmx) lmx_chunk_data(pool\head))
     profile\parent: 0
-    profile\len: 0
-    profile\data: 0
+    profile\array.size: 0U
+    profile\array.data: 0
     # Bootstrap without a wrapper: before publication the one-cell pool can name the
     # very graph value it contains. From this store onward even the profile identity's
     # own range carries that exact physical identity, and the ordinary profile=0
@@ -72,8 +72,8 @@ fn: l3_profile_node_new (@: LmxArena arena; @: Lmx profile) @: Lmx
         return: 0
     value: (cast: (@: Lmx) lmx_chunk_data(pool\head))
     value\parent: 0
-    value\len: 0
-    value\data: 0
+    value\array.size: 0U
+    value\array.data: 0
 return: value
 
 # Child slots are storage too. Keeping them in the exact profile avoids an
@@ -84,7 +84,7 @@ fn: l3_profile_refs_open (@: LmxArena arena; @: Lmx parent; size_t: children; @:
     size_t: bytes 0U
     if: arena = 0 || parent = 0 || profile = 0 || children = 0U
         return: 1
-    if: parent\data != 0 || parent\len != 0 || children > (cast: (size_t) c.INT_MAX)
+    if: parent\array.data != 0 || parent\array.size != 0U
         return: 1
     if: children > ((cast: (size_t) -1) / slot)
         return: 1
@@ -92,8 +92,8 @@ fn: l3_profile_refs_open (@: LmxArena arena; @: Lmx parent; size_t: children; @:
     refs: lmx_pool_make_profiled(arena, bytes, slot, c.LMX_KIND_CHILDREN, c.LMX_TYPE_REFS, profile)
     if: refs = 0 || refs\head = 0 || lmx_chunk_data(refs\head) = 0
         return: 1
-    parent\data: lmx_chunk_data(refs\head)
-    parent\len: (cast: (int) children)
+    parent\array.data: lmx_chunk_data(refs\head)
+    parent\array.size: children
 return: 0
 
 fn: l3_walk_roles_open_profiled (@: LmxArena arena; @: Lmx profile) @: Lmx
@@ -122,7 +122,7 @@ return: registry
 
 fn: l3_primitive_register_profiled (@: LmxArena arena; @: Lmx registry; size_t: slot; LmxPrimitiveEntry: fn; @: Lmx owner; @: Lmx profile) @: Lmx
     @: LmxPrimitive record 0
-    if: arena = 0 || registry = 0 || fn = 0 || profile = 0 || slot >= (cast: (size_t) registry\len)
+    if: arena = 0 || registry = 0 || fn = 0 || profile = 0 || slot >= registry\array.size
         return: 0
     record: (cast: (@: LmxPrimitive) lmx_arena_take_profiled(arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, profile))
     if: record = 0

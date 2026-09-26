@@ -20,8 +20,8 @@ fn: lmx_fresh_child (@: LmxArena arena; @: Lmx proto; @: void child; @: Lmx fres
     int: vtype 0
     @: void cell 0
     @: Lmx nested 0
-    @: LmxArrayDesc src_arr 0
-    @: LmxArrayDesc dst_arr 0
+    @: VoidArray src_arr 0
+    @: VoidArray dst_arr 0
     size_t: n 0U
     size_t: stride 0U
     int: preserve 0
@@ -60,7 +60,7 @@ fn: lmx_fresh_child (@: LmxArena arena; @: Lmx proto; @: void child; @: Lmx fres
         # matching the running activation's code.
         head: 0
         hk: 0
-        if: (cast: (size_t) nested\len) > 0U
+        if: nested\array.size > 0U
             head: lmx_arena_ref_value(nested, 0U)
             if: head != 0
                 hk: lmx_range_classify(arena, head)
@@ -85,7 +85,7 @@ fn: lmx_fresh_child (@: LmxArena arena; @: Lmx proto; @: void child; @: Lmx fres
         # Mutant: always keep-by-address -> fresh own slot still shares code's M RED.
         head: 0
         hk: 0
-        if: proto != 0 && (cast: (size_t) proto\len) > 0U
+        if: proto != 0 && proto\array.size > 0U
             head: lmx_arena_ref_value(proto, 0U)
             if: head != 0
                 hk: lmx_range_classify(arena, head)
@@ -106,7 +106,7 @@ fn: lmx_fresh_child (@: LmxArena arena; @: Lmx proto; @: void child; @: Lmx fres
         preserve: 0
         head: 0
         hk: 0
-        if: proto != 0 && (cast: (size_t) proto\len) > 0U
+        if: proto != 0 && proto\array.size > 0U
             head: lmx_arena_ref_value(proto, 0U)
             if: head != 0
                 hk: lmx_range_classify(arena, head)
@@ -239,8 +239,8 @@ fn: lmx_fresh_child (@: LmxArena arena; @: Lmx proto; @: void child; @: Lmx fres
         return: 1
     ---
     if: kind = c.LMX_KIND_ARRAY
-        src_arr: (cast: (@: LmxArrayDesc) child)
-        n: src_arr\len
+        src_arr: (cast: (@: VoidArray) child)
+        n: src_arr\size
         dst_arr: lmx_array_new_owned(vtype, n, arena)
         if: dst_arr = 0
             return: 1
@@ -294,7 +294,7 @@ fn: lmx_fresh_struct (@: LmxArena arena; @: Lmx proto; @: Lmx fresh_parent) @: L
     ---
     out\parent: fresh_parent
     out\native: proto\native
-    n: (cast: (size_t) proto\len)
+    n: proto\array.size
     if: n != 0U
         if: lmx_arena_refs_open_owned(arena, out, n) != 0
             return: 0

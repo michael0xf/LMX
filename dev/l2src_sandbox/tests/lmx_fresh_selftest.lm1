@@ -40,8 +40,8 @@ fn: main () int
     @: void ccell 0
     @: void pcell 0
     @: void got 0
-    @: LmxArrayDesc adesc 0
-    @: LmxArrayDesc farr 0
+    @: VoidArray adesc 0
+    @: VoidArray farr 0
     int: pty c.LMX_TYPE_POINTER_BASE + 3
 
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
@@ -99,7 +99,7 @@ fn: main () int
     check(fresh != 0, "fresh non-null")
     check(fresh != code, "fresh is a new Structure")
     check(fresh\parent = unit, "fresh.parent = code.parent")
-    check(fresh\len = 5, "fresh.len = code.len")
+    check((fresh\array.size) = 5U, "fresh.len = code.len")
 
     # k.4: native is a sibling Lmx member, copied verbatim (mutant: drop it -> RED).
     check(fresh\native = code\native, "native word copied verbatim onto the fresh instance")
@@ -119,8 +119,8 @@ fn: main () int
     got: lmx_arena_ref_value(fresh_body, 0U)
     check(got != 0 && lmx_int_value_known(got) = 0, "nested int fresh 0")
 
-    farr: (cast: (@: LmxArrayDesc) lmx_arena_ref_value(fresh, 4U))
-    check(farr != 0 && farr != adesc && farr\len = 3U, "array fresh same length")
+    farr: (cast: (@: VoidArray) lmx_arena_ref_value(fresh, 4U))
+    check(farr != 0 && farr != adesc && farr\size = 3U, "array fresh same length")
     check(farr\data != 0 && lmx_int_value_known(farr\data) = 0, "array zeroed")
 
     # Refusal: unclassified raw pointer as a fake "code" child is not built here;

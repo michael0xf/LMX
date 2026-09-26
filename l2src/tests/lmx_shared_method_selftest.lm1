@@ -91,7 +91,7 @@ fn: main () int
 
     status: lmx_merge_owned(operands, 1U, 0, 0, 0, @ arena, @ dst, 0, 0U, @ result)
     sh_check(counts, status = LMX_MERGE_OK && result != 0, "merge A OK")
-    sh_check(counts, result\len = 2, "result has two slots")
+    sh_check(counts, (result\array.size) = 2U, "result has two slots")
 
     # Shared external method: same address as A's field; parent untouched.
     got: lmx_arena_ref_value(result, 0U)

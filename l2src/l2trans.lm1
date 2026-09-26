@@ -748,6 +748,9 @@ prototype:
     fn: l2_admit_paths (int: cand; int: req; @: char paths; size_t: path_count; const: @(LmP0Text cand_name); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
     fn: l2_admit_consumer_ix (int: cand; int: req; const: @(LmP0Text varb); const: @(LmP0Frame consumer); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
     fn: l2_admit_consumer_uses (const: @(LmP0Text cand_name); int: req; const: @(LmP0Text varb); const: @(LmP0Frame consumer); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
+    fn: l2_admit_return (int: mi; @: LmP0Field first; int: n; const: @(char path); const: @(LmP0Node at)) int
+    fn: l2_bound_nsty (int: mi; const: @(LmP0Text name)) int
+    fn: l2_emit_return_path (int: mi; @: LmP0Field first; int: n; const: @(char ind); const: @(LmP0Node at)) int
     fn: l2_fn_frame (int: mi) @: LmP0Frame
     fn: l2_ebr_find (const: @(LmP0Text t)) int
     fn: l2_emit_ns_num_cell (int: k; int: oi; int: fx) int
@@ -2761,19 +2764,16 @@ fn: l2_check_ret_tr (int: mi; const: @(char path); const: @(LmP0Structure body);
         return: l2_error(path, at, "unsupported body")
     if: l2_check_return_literal(mi, body, path, at) != 0
         return: 1
-    # A named Structure result is admitted as a name (`return: Plain`). A path
-    # such as `return: h\p` is three trailer fields. Emitting that path has no
-    # located diagnostic, so the refusal is here, on the trailer itself.
-    if: l2_nsty_get(mi, 0 - 1) >= 0 && n != 1
-        if: body\first_field != 0 && body\first_field\value != 0
-            return: l2_error(path, body\first_field\value, "a Structure return must be a name")
-        return: l2_error(path, at, "a Structure return must be a name")
+    # Callers are not in this body. The Consumer is the required descriptor.
+    if: l2_nsty_get(mi, 0 - 1) >= 0 && n > 0
+        return: l2_admit_return(mi, body\first_field, n, path, at)
     if: n != 0 && l2_check_fields(body\first_field, n, mi, path, at) != 0
         return: 1
 return: 0
 
 fn: l2_emit_ret_tr (int: mi; const: @(char ind); const: @(LmP0Structure body)) int
     int: n
+    int: pret 2
     if: body = 0 || ind = 0
         return: 0
     n: l2_count_active(body)
@@ -2789,11 +2789,12 @@ fn: l2_emit_ret_tr (int: mi; const: @(char ind); const: @(LmP0Structure body)) i
         return: 0
     if: n = 0
         return: 1
-    if: l2_eval_fields(body\first_field, n, mi, ind, l2_tok) != 0
-        if: l2_nsty_get(mi, 0 - 1) >= 0
-            if: body\first_field != 0 && body\first_field\value != 0
-                return: l2_error(l2_src, body\first_field\value, "a Structure return must be a name")
-            return: l2_error(l2_src, 0, "a Structure return must be a name")
+    if: l2_nsty_get(mi, 0 - 1) >= 0
+        pret: l2_emit_return_path(mi, body\first_field, n, ind, body\first_field\value)
+        if: pret = 1
+            return: 1
+        ---
+    if: pret = 2 && l2_eval_fields(body\first_field, n, mi, ind, l2_tok) != 0
         return: 1
     if: (l2_m_throws = 0 || l2_m_throws[mi] = 0) && c.fprintf(l2_out, "%sreturn: %s\n", ind, l2_tok) < 0
         return: 1
@@ -14363,6 +14364,70 @@ fn: l2_actual_ns (int: mi; @: LmP0Field a0; int: span; const: @(char path); cons
     ---
 return: 2
 
+# The callers of a return are not in this body, so the Consumer is the
+# required descriptor. A type name, a bound variable, a call result, and one
+# structure field share that call.
+fn: l2_admit_return (int: mi; @: LmP0Field first; int: n; const: @(char path); const: @(LmP0Node at)) int
+    int: req
+    int: cand
+    int: ast
+    int: cmi
+    req: l2_nsty_get(mi, 0 - 1)
+    if: req < 0 || n < 1 || first = 0 || first\value = 0
+        return: 0
+    cand: 0 - 1
+    if: n = 1 && first\value\kind = c.LM_P0_NODE_FRAME && first\value\as != 0 && first\value\as\frame != 0 && first\value\as\frame\head != 0
+        cmi: l2_find_method(first\value\as\frame\head)
+        if: cmi >= 0
+            cand: l2_nsty_get(cmi, 0 - 1)
+            if: cand < 0
+                return: l2_error(path, at, "implements is false in return value")
+            return: l2_admit_implements(cand, req, req, 0, path, at, "return value")
+        ---
+    ---
+    ast: l2_actual_ns(mi, first, n, path, at, @ cand)
+    if: ast = 1
+        return: 1
+    if: ast = 2 && n = 1 && first\value\kind = c.LM_P0_NODE_ATOM && first\value\as != 0
+        cand: l2_bound_nsty(mi, first\value\as\atom)
+        if: cand >= 0
+            ast: 0
+        ---
+    ---
+    if: ast = 2
+        return: l2_error(path, at, "implements is false in return value")
+return: l2_admit_implements(cand, req, req, 0, path, at, "return value")
+
+# One structure field as a return value: the child of the bound root.
+# 0: l2_tok holds the expression. 1: located failure. 2: not this shape.
+fn: l2_emit_return_path (int: mi; @: LmP0Field first; int: n; const: @(char ind); const: @(LmP0Node at)) int
+    @: LmP0Field sl
+    @: LmP0Field mem
+    int: owner
+    int: kind 0
+    int: ent 0
+    int: slot
+    c.array: [256]: char root
+    if: n != 3 || ind = 0 || first = 0 || first\value = 0 || first\value\kind != c.LM_P0_NODE_ATOM || first\value\as = 0 || first\value\as\atom = 0
+        return: 2
+    sl: l2_next_active(first\next)
+    mem: 0
+    if: sl != 0
+        mem: l2_next_active(sl\next)
+    if: sl = 0 || sl\value = 0 || sl\value\kind != c.LM_P0_NODE_ATOM || l2_is_slash(sl\value\as\atom) = 0 || mem = 0 || mem\value = 0 || mem\value\kind != c.LM_P0_NODE_ATOM || mem\value\as = 0 || mem\value\as\atom = 0 || mem\value\as\atom\data = 0
+        return: 2
+    owner: l2_bound_nsty(mi, first\value\as\atom)
+    if: owner < 0
+        return: 2
+    slot: l2_ns_slot_named(owner, mem\value\as\atom\data, 0U, mem\value\as\atom\length, @ kind, @ ent)
+    if: slot < 0 || kind != 3
+        return: 2
+    if: l2_prep(first\value, mi, ind, root) != 0
+        return: 1
+    if: c.sprintf(l2_tok, "lmx_arena_ref_struct(%s, %uU)", root, (cast: (unsigned) slot)) < 0
+        return: 1
+return: 0
+
 # A CALL OF THE RESOLVED CALLEE idx (FABLE-OPUS-RECEIVER-CONTRACT-20260924-139): one check for
 # every spelling of a call -- `m(args)`, `m: args`, the vertical form, and a bare atom `m`, which
 # has no argument Structure (body 0) and so no actuals.  fi is the callable formal the call goes
@@ -14905,7 +14970,6 @@ fn: l2_discard_run (@: LmP0Field field) int
 return: 0
 
 fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); int: depth) int
-    size_t: off
     int: nmk
     int: msk
     int: msni
@@ -15354,27 +15418,13 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && l2_check_fields(fr\body\first_field, l2_count_active(fr\body), mi, path, stmt) != 0
             return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_count_active(fr\body) = 1 && l2_next_active(fr\body\first_field) != 0 && l2_next_active(fr\body\first_field)\value != 0 && l2_next_active(fr\body\first_field)\value\kind = c.LM_P0_NODE_ATOM && l2_nsty_get(mi, 0 - 1) >= 0
-            if: l2_admit_consumer_uses(l2_next_active(fr\body\first_field)\value\as\atom, l2_nsty_get(mi, 0 - 1), l2_next_active(fr\body\first_field)\value\as\atom, l2_fn_frame(mi), path, stmt, "return value") != 0
-                return: 1
-            ---
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_count_active(fr\body) >= 1 && l2_next_active(fr\body\first_field) != 0 && l2_next_active(fr\body\first_field)\value != 0 && l2_nsty_get(mi, 0 - 1) >= 0 && l2_expr_span(l2_next_active(fr\body\first_field)) != 1
-            return: l2_error(path, stmt, "a Structure return must be a name")
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_count_active(fr\body) = 1 && l2_next_active(fr\body\first_field) != 0 && l2_next_active(fr\body\first_field)\value != 0 && l2_next_active(fr\body\first_field)\value\kind = c.LM_P0_NODE_FRAME && l2_nsty_get(mi, 0 - 1) >= 0
-            return: l2_error(path, stmt, "a Structure return must be a name")
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_count_active(fr\body) = 1 && l2_next_active(fr\body\first_field) != 0 && l2_next_active(fr\body\first_field)\value != 0 && l2_next_active(fr\body\first_field)\value\kind = c.LM_P0_NODE_ATOM && l2_next_active(fr\body\first_field)\value\as != 0 && l2_next_active(fr\body\first_field)\value\as\atom != 0 && l2_next_active(fr\body\first_field)\value\as\atom\data != 0 && l2_nsty_get(mi, 0 - 1) >= 0
-            off: 0U
-            while: off < l2_next_active(fr\body\first_field)\value\as\atom\length && l2_next_active(fr\body\first_field)\value\as\atom\data[off] != 92
-                off: off + 1U
-            if: off < l2_next_active(fr\body\first_field)\value\as\atom\length
-                return: l2_error(path, stmt, "a Structure return must be a name")
-            ---
-        ---
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_check_return_literal(mi, fr\body, path, stmt) != 0
             return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_count_active(fr\body) != 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && l2_check_fields(fr\body\first_field, l2_count_active(fr\body), mi, path, stmt) != 0
-            if: l2_nsty_get(mi, 0 - 1) >= 0
-                return: l2_error(path, stmt, "a Structure return must be a name")
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_nsty_get(mi, 0 - 1) >= 0 && l2_count_active(fr\body) > 0
+            if: l2_admit_return(mi, fr\body\first_field, l2_count_active(fr\body), path, stmt) != 0
+                return: 1
+            ---
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_nsty_get(mi, 0 - 1) < 0 && l2_count_active(fr\body) != 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && l2_check_fields(fr\body\first_field, l2_count_active(fr\body), mi, path, stmt) != 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0
             field: l2_next_active(field\next)
@@ -23670,6 +23720,7 @@ return: 1
 
 fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field stop; int: mi; const: @(char ind)) int
     int: rbadmit 0
+    int: pret 2
     int: array_own
     size_t: array_index
     c.array: [1024]: char array_ptr
@@ -24603,9 +24654,13 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             field: l2_next_active(field\next)
         # `return: v` evaluates v as every value is evaluated -- a callable named there is called
         # (l2_prep), in a body and in a trailer (l2_emit_ret_tr) alike.
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_eval_fields(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok) != 0
-            if: l2_nsty_get(mi, 0 - 1) >= 0
-                return: l2_error(l2_src, stmt, "a Structure return must be a name")
+        pret: 2
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_nsty_get(mi, 0 - 1) >= 0
+            pret: l2_emit_return_path(mi, fr\body\first_field, l2_count_active(fr\body), ind, stmt)
+            if: pret = 1
+                return: 1
+            ---
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && pret = 2 && l2_eval_fields(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok) != 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_emit_poll(mi, ind) != 0
             return: 1

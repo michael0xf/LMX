@@ -1,0 +1,14 @@
+# D-27: a non-parameter local has one cell. Bare stores are not occurrences.
+# \[0]x reads that cell (20). The bare \[0]x on its own line is that expression,
+# not the tail of the assignment above it.
+fn: test () int
+    int: x
+    x: 10
+    x: 20
+    \[0]x
+    if: \[0]x != 20
+        return: 1
+    return: 7
+end: test
+sendMessage: exit(exit_code: test(); stdout: ""; stderr: "")
+return

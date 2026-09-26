@@ -878,6 +878,9 @@ prototype:
     fn: l2_check_os (const: @(LmP0Node item); const: @(char path)) int
     fn: l2_index_tail (@: LmP0Field f; @@: LmP0Field out_idx; @@: LmP0Field out_after) int
     fn: l2_addr_tail (@: LmP0Field f; @@: LmP0Field out_name; @@: LmP0Field out_after) int
+    fn: l2_occ_run (@: LmP0Field field) int
+    fn: l2_span_occ_expr (@: LmP0Field field) int
+    fn: l2_int_literal_bits (const: @(LmP0Text text); @: size_t out_bits) int
     fn: l2_expr_span (@: LmP0Field field) int
     fn: l2_actual_count (@: LmP0Field field) int
     fn: l2_skip_span (@: LmP0Field a; int: span) @: LmP0Field
@@ -2390,6 +2393,41 @@ fn: l2_int_fits (const: @(LmP0Text text)) int
         i: i + 1U
 return: 1
 
+# 1 = bits holds the int (a leading minus is part of the literal, D-19). 2 = an int literal
+# that does not fit. 0 = not an int literal. INT_MIN is the one magnitude past INT_MAX.
+fn: l2_int_literal_bits (const: @(LmP0Text text); @: size_t out_bits) int
+    size_t: i 1U
+    size_t: acc 0U
+    size_t: d 0U
+    size_t: lim
+    int: v 0
+    if: text = 0 || out_bits = 0
+        return: 0
+    if: l2_num(text) != 0
+        if: l2_int_fits(text) = 0
+            return: 2
+        \out_bits: l2_literal_value(text)
+        return: 1
+    if: l2_signed_num(text) = 0
+        return: 0
+    lim: (cast: (size_t) c.INT_MAX) + 1U
+    while: i < text\length
+        d: (cast: (size_t) (text\data[i] - 48))
+        if: acc > (lim - d) / 10U
+            return: 2
+        acc: acc * 10U + d
+        i: i + 1U
+    ---
+    if: acc > lim
+        return: 2
+    if: acc = lim
+        v: 0 - c.INT_MAX - 1
+    else:
+        v: 0 - (cast: (int) acc)
+    ---
+    \out_bits: (cast: (size_t) v)
+return: 1
+
 # ONE LITERAL-RANGE RULE. Kind 0=int 1=char 2=size_t 3=unsigned 4=ulong; kind<0 skips.
 fn: l2_lit_kind_from_ft (int: ft) int
     if: ft = 0
@@ -2519,8 +2557,17 @@ fn: l2_literal_fits_kind (const: @(LmP0Text text); int: kind) int
 return: 1
 
 fn: l2_check_literal_kind (const: @(LmP0Text text); int: kind; const: @(char path); const: @(LmP0Node at)) int
+    size_t: bits 0U
+    int: st 0
     if: kind < 0 || text = 0
         return: 0
+    if: kind = 0
+        st: l2_int_literal_bits(text, @ bits)
+        if: st = 2
+            return: l2_error(path, at, "literal not representable as int")
+        if: st = 1
+            return: 0
+    ---
     if: kind = 0 || kind = 1
         if: l2_digits(text) = 0
             return: 0
@@ -7809,6 +7856,74 @@ fn: l2_index_token (const: @(LmP0Text t); int: mi; const: @(char ind); @: char d
     dest[out_n]: 0
 return: 0
 
+# Five flat tokens `\ [ N ] name` are one occurrence operand, not a prefix plus a bracket.
+fn: l2_occ_run (@: LmP0Field field) int
+    @: LmP0Field p1
+    @: LmP0Field p2
+    @: LmP0Field p3
+    @: LmP0Field p4
+    if: field = 0 || field\value = 0 || field\value\kind != c.LM_P0_NODE_ATOM || field\value\as = 0
+        return: 0
+    if: l2_is_slash(field\value\as\atom) = 0
+        return: 0
+    p1: l2_next_active(field\next)
+    if: p1 = 0 || p1\value = 0 || p1\value\kind != c.LM_P0_NODE_ATOM || p1\value\as = 0 || l2_text_eq(p1\value\as\atom, "[") = 0
+        return: 0
+    p2: l2_next_active(p1\next)
+    if: p2 = 0 || p2\value = 0 || p2\value\kind != c.LM_P0_NODE_ATOM || p2\value\as = 0 || l2_num(p2\value\as\atom) = 0
+        return: 0
+    p3: l2_next_active(p2\next)
+    if: p3 = 0 || p3\value = 0 || p3\value\kind != c.LM_P0_NODE_ATOM || p3\value\as = 0 || l2_text_eq(p3\value\as\atom, "]") = 0
+        return: 0
+    p4: l2_next_active(p3\next)
+    if: p4 = 0 || p4\value = 0 || p4\value\kind != c.LM_P0_NODE_ATOM || p4\value\as = 0 || l2_ident(p4\value\as\atom) = 0
+        return: 0
+return: 5
+
+# Span of an occurrence operand, including a following operator chain (`\[0]x != 20`).
+fn: l2_span_occ_expr (@: LmP0Field field) int
+    @: LmP0Field f
+    @: LmP0Field index
+    @: LmP0Field after
+    @: LmP0Field slash
+    @: LmP0Field member
+    int: span 5
+    int: operand 1
+    int: k 0
+    f: field
+    while: k < 5 && f != 0
+        f: l2_next_active(f\next)
+        k: k + 1
+    ---
+    while: f != 0 && f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM && l2_is_binop(f\value\as\atom)
+        f: l2_next_active(f\next)
+        if: f = 0 || f\value = 0
+            return: 0
+        span: span + 1
+        operand: 1
+        if: l2_index_tail(f, @ index, @ after) = 0
+            operand: 4
+            f: after
+            operand: operand + l2_index_chain(f, @ f)
+        else:
+            f: l2_next_active(f\next)
+            slash: f
+            if: slash != 0 && slash\value != 0 && slash\value\kind = c.LM_P0_NODE_ATOM && l2_is_slash(slash\value\as\atom)
+                member: l2_next_active(slash\next)
+                if: member = 0 || member\value = 0 || member\value\kind != c.LM_P0_NODE_ATOM
+                    return: 0
+                operand: 3
+                f: l2_next_active(member\next)
+                if: l2_index_tail(member, @ index, @ after) = 0
+                    operand: 6
+                    f: after
+                    operand: operand + l2_index_chain(f, @ f)
+                ---
+            ---
+        span: span + operand
+    ---
+return: span
+
 fn: l2_expr_span (@: LmP0Field field) int
     @: LmP0Field f
     @: LmP0Field index
@@ -7832,6 +7947,8 @@ fn: l2_expr_span (@: LmP0Field field) int
     # address prefix above does: one actual, not two. Counting the prefix
     # separately made a well-formed call look like the wrong arity.
     if: field\value\kind = c.LM_P0_NODE_ATOM && field\value\as != 0 && l2_is_slash(field\value\as\atom)
+        if: l2_occ_run(field) = 5
+            return: l2_span_occ_expr(field)
         n: l2_expr_span(l2_next_active(field\next))
         if: n < 1
             return: 0
@@ -7842,6 +7959,13 @@ fn: l2_expr_span (@: LmP0Field field) int
         span: span + l2_index_chain(f, @ f)
     else:
         f: l2_next_active(field\next)
+        # A frame followed by `\` is the next statement (`x: 20` then `\[0]x`), not a path.
+        # An atom, including `for\j`, still continues.
+        if: field\value\kind != c.LM_P0_NODE_ATOM
+            if: f != 0 && f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && l2_is_slash(f\value\as\atom)
+                f: 0
+            ---
+        ---
         slash: f
         if: slash != 0 && slash\value != 0 && slash\value\kind = c.LM_P0_NODE_ATOM && l2_is_slash(slash\value\as\atom)
             member: l2_next_active(slash\next)
@@ -11137,6 +11261,8 @@ fn: l2_take_ns_body (const: @(LmP0Text name); int: parent; const: @(LmP0Structur
     int: cval
     int: rdepth
     int: rty
+    size_t: bits 0U
+    int: st 0
     if: body = 0
         return: l2_error(path, at, "a named Structure needs at least one field")
     me: l2_ns_push(name, parent, at)
@@ -11212,9 +11338,16 @@ fn: l2_take_ns_body (const: @(LmP0Text name); int: parent; const: @(LmP0Structur
                         return: l2_error(path, at, "a named Structure field needs a name")
                     fname: (cast: (@: LmP0Text) g\value\as\atom)
                     g: l2_next_active(g\next)
-                    if: g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || l2_num(g\value\as\atom) = 0
+                    bits: 0U
+                    st: 0
+                    if: g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM
                         return: l2_error(path, at, "a named Structure field needs a literal")
-                    if: l2_nsf_push(7, l2_literal_value(g\value\as\atom), 0 - 1, me) < 0
+                    st: l2_int_literal_bits(g\value\as\atom, @ bits)
+                    if: st = 2
+                        return: l2_error(path, at, "literal not representable as int")
+                    if: st != 1
+                        return: l2_error(path, at, "a named Structure field needs a literal")
+                    if: l2_nsf_push(7, bits, 0 - 1, me) < 0
                         return: l2_error(path, at, "out of memory")
                     l2_nsf_fname[l2_nsf_n - 1]: fname
                     ---
@@ -11622,15 +11755,21 @@ fn: l2_path_rhs (const: @(LmP0Structure body); int: kind; @: size_t out_v) int
     @: LmP0Field f
     const: @: LmP0Text t
     int: cv
+    int: st
     if: body = 0 || l2_count_active(body) != 1
         return: 1
     f: l2_next_active(body\first_field)
     if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM
         return: 1
     t: f\value\as\atom
-    if: (kind = 0 || kind = 7 || kind = 8 || kind = 9) && l2_num(t) = 0
+    if: kind = 7
+        st: l2_int_literal_bits(t, out_v)
+        if: st != 1
+            return: 1
+        return: 0
+    if: (kind = 0 || kind = 8 || kind = 9) && l2_num(t) = 0
         return: 1
-    if: kind = 0 || kind = 7 || kind = 8 || kind = 9
+    if: kind = 0 || kind = 8 || kind = 9
         \out_v: l2_literal_value(t)
         return: 0
     cv: l2_char_literal(t)
@@ -13591,9 +13730,9 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
             if: onm != 0
                 l2_xfree((cast: (@: void) onm))
             if: idx < 0
-                return: l2_error(path, node, "unresolved name")
+                return: l2_error(path, node, "no such occurrence")
             if: l2_m_uses[l2_own_off(mi, idx)] = 0
-                return: l2_error(path, node, "unresolved name")
+                return: l2_error(path, node, "no such occurrence")
             return: 0
         ---
         raw: l2_prefix_deref(node\as\atom, mi, 0, cast_ty)
@@ -13992,7 +14131,7 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
                 return: l2_error(path, p2\value, "unsupported index")
             po: l2_own_find_occ(l2_find_method(f\value\as\atom), p5\value\as\atom, (cast: (int) l2_literal_value(p3\value\as\atom)))
             if: po < 0 || l2_m_uses[l2_own_off(l2_find_method(f\value\as\atom), po)] = 0
-                return: l2_error(path, p5\value, "own occurrence index out of range")
+                return: l2_error(path, p5\value, "no such occurrence")
             have_value: 1
             i: i + 6
             f: l2_next_active(p5\next)
@@ -15414,19 +15553,19 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
     if: node\kind = c.LM_P0_NODE_ATOM
         k: l2_occ_head(node\as\atom, @ occ, @ onm)
         if: k = 2
-            return: 1
+            return: l2_error(l2_src, node, "unsupported index")
         if: k = 0
             idx: l2_own_find_occ(mi, onm, occ)
             if: onm != 0
                 l2_xfree((cast: (@: void) onm))
             if: idx < 0
-                return: l2_error(l2_src, node, "own occurrence index out of range")
+                return: l2_error(l2_src, node, "no such occurrence")
             if: l2_m_uses[l2_own_off(mi, idx)] != 0
                 if: l2_own_load(idx, dest) != 0
                     return: 1
                 return: 0
             ---
-            return: 1
+            return: l2_error(l2_src, node, "no such occurrence")
         ---
         k: l2_prefix_deref(node\as\atom, mi, ind, dest)
         if: k = 0
@@ -16097,7 +16236,7 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
                 return: 1
             po: l2_own_find_occ(l2_find_method(f\value\as\atom), p5\value\as\atom, (cast: (int) l2_literal_value(p3\value\as\atom)))
             if: po < 0 || l2_m_uses[l2_own_off(l2_find_method(f\value\as\atom), po)] = 0
-                return: l2_error(l2_src, p5\value, "own occurrence index out of range")
+                return: l2_error(l2_src, p5\value, "no such occurrence")
             # This own row belongs to ANOTHER method's activation, not the
             # one this C function is being emitted for: l2_q%d is that
             # OTHER method's own local, out of scope here (a same-method
@@ -16129,7 +16268,7 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
         if: f\value\kind = c.LM_P0_NODE_ATOM && l2_ident(f\value\as\atom) != 0 && l2_find_method(f\value\as\atom) >= 0 && p1 != 0 && p1\value != 0 && p1\value\kind = c.LM_P0_NODE_ATOM && l2_is_slash(p1\value\as\atom) && p2 != 0 && p2\value != 0 && p2\value\kind = c.LM_P0_NODE_ATOM && l2_ident(p2\value\as\atom) != 0
             po: l2_own_find_last(l2_find_method(f\value\as\atom), p2\value\as\atom)
             if: po < 0 || l2_m_uses[l2_own_off(l2_find_method(f\value\as\atom), po)] = 0
-                return: l2_error(l2_src, p5\value, "own occurrence index out of range")
+                return: l2_error(l2_src, p5\value, "no such occurrence")
             if: l2_own_from_expr(po, occx) != 0
                 return: 1
             if: c.fprintf(l2_out, "%sl2_xp: %s\n", ind, occx) < 0
@@ -16213,7 +16352,7 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
             if: have_value = 0 && p1 != 0 && p2 != 0 && p3 != 0 && p4 != 0 && p1\value != 0 && p2\value != 0 && p3\value != 0 && p4\value != 0 && p1\value\kind = c.LM_P0_NODE_ATOM && p2\value\kind = c.LM_P0_NODE_ATOM && p3\value\kind = c.LM_P0_NODE_ATOM && p4\value\kind = c.LM_P0_NODE_ATOM && l2_text_eq(p1\value\as\atom, "[") != 0 && l2_num(p2\value\as\atom) != 0 && l2_text_eq(p3\value\as\atom, "]") != 0 && l2_ident(p4\value\as\atom) != 0
                 po: l2_own_find_occ(mi, p4\value\as\atom, (cast: (int) l2_literal_value(p2\value\as\atom)))
                 if: po < 0 || l2_m_uses[l2_own_off(mi, po)] = 0
-                    return: l2_error(l2_src, p4\value, "own occurrence index out of range")
+                    return: l2_error(l2_src, p4\value, "no such occurrence")
                 if: l2_own_load(po, piece) != 0
                     return: 1
                 if: l2_cat(buf, piece) != 0

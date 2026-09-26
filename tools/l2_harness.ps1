@@ -610,9 +610,10 @@ $fixtures = @(
     # FABLE-SONNET-SEND-REF-20260925-172 commit 3: `sendMessage: Ref X` at the walked root refuses
     # a Ref that is not a reference (l2_rw_fields_ty, ty < 1000) -- on-topic negative witness for
     # the new type-check, at the exact statement.
-    # D-62: posting the letter itself (not a Thread) aborts with the method's X1.
-    [pscustomobject]@{ Name = 'unit_send_ref_root_fail.lm2'; Expect = 'send-abort'; Exit = 3; Needle = 'lmx: invariant: sendMessage failed';
-        Args = @('0'); Absent = @('lmx: walk error: PRIMITIVE'); Debt = @('l2_send_fail()') },
+    # D-80: the letter is a plain Message. It does not implement Thread. Type error
+    # at translation. send-abort stays for a mutant that drops this check.
+    [pscustomobject]@{ Name = 'unit_send_ref_root_fail.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'a plain Message does not implement Thread';
+        Args = @('0'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_send_ref_root_type_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'root operation not walkable yet: a Ref that is not a reference';
         Absent = @(); Debt = @() },

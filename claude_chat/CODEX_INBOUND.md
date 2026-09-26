@@ -1,5 +1,7 @@
 # Inbound messages to the existing Codex task
 
+Закрыто 2026-09-26: Codex нет. Канал не использовать. Откроем заново, когда Codex снова будет. Код клиента на диске остаётся.
+
 Client: `codex_inbound.py`. Grok and user-authorized Claude peers can call it from the LMX root. It uses the installed bundled codex-app-tools MCP adapter and its native send_message_to_thread tool. It does not create another task, launch another model, change model/effort, or type into the UI.
 
 ## Bind inside the intended Codex task

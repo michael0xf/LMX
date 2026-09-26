@@ -4,7 +4,7 @@ Current status: BOT-ARMED-20260919-204214 returned ACK from the configured webho
 
 **All-agent route matrix and current verification rules:** [work_chat/README.md](work_chat/README.md). Read this first for Codex, Grok CLI, Grok Bot and Claude combinations.
 
-**Inbound Codex channel:** [CODEX_INBOUND.md](claude_chat/CODEX_INBOUND.md). Delivery to this existing task is verified both during a turn and from idle (CODEX-IDLE-WAKE-68143, separate local test process). Grok can invoke the same client; its own live send remains untested because its console input was nonempty.
+**Inbound Codex channel — закрыт 2026-09-26 (Codex нет; откроем заново):** [CODEX_INBOUND.md](claude_chat/CODEX_INBOUND.md). Delivery to this existing task is verified both during a turn and from idle (CODEX-IDLE-WAKE-68143, separate local test process). Grok can invoke the same client; its own live send remains untested because its console input was nonempty.
 
 Updated 2026-09-19. Run commands from `C:\Nyasha_Planet\LMX`. This is the common entry point for both agents. Historical investigation is preserved in [steps/chat_config_investigation_20260919.md](steps/chat_config_investigation_20260919.md), not the operating procedure.
 

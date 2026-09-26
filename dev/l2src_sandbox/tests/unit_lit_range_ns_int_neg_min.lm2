@@ -1,0 +1,11 @@
+# INT_MIN is representable as int. One past it is unit_lit_range_decl_int_neg_overflow.lm2.
+Model:
+    int: x -2147483648
+end: Model
+fn: read () int
+    if: Model\x + 2147483647 != 0 - 1
+        return: 1
+    return: 7
+end: read
+sendMessage: exit(exit_code: read(); stdout: ""; stderr: "")
+return

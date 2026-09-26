@@ -762,6 +762,11 @@ $fixtures = @(
         Args = @('0'); Absent = @(); Debt = @('return: 2147483647') },
     # T1b literal-range at every conversion point (FABLE-GROKBOT-LITERAL-RANGE-AND-FORMAL-TYPES-20260922-106 PART1).
     [pscustomobject]@{ Name = 'unit_lit_range_decl_int_overflow.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'literal not representable as int'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_lit_range_decl_int_neg_overflow.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'literal not representable as int'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns_int_neg.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
+        Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_lit_range_ns_int_neg_min.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
+        Args = @('0'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_lit_range_asgn_int_overflow.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'literal not representable as int'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_lit_range_arg_int_overflow.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'literal not representable as int'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_lit_range_decl_unsigned_overflow.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'literal not representable as unsigned'; Absent = @(); Debt = @() },
@@ -2210,7 +2215,15 @@ $fixtures = @(
         Debt = @('l2_entry_unit: graph', 'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ',
                  'l2_q0_from: lmx_arena_ref_cell(self, 2U)') },
     [pscustomobject]@{ Name = 'unit_occ_arg_second_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'own occurrence index out of range'; Absent = @(); Debt = @() },
+        Needle = 'no such occurrence'; Absent = @(); Debt = @() },
+    # D-27: \[N] numbers declarations. One `int: x`, then two bare stores, is still one cell;
+    # \[0]x reads 20. A following line that starts with `\` is that statement, not the tail of `x: 20`.
+    [pscustomobject]@{ Name = 'unit_occ_local_read.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
+        Args = @('0');
+        Absent = @();
+        Debt = @() },
+    [pscustomobject]@{ Name = 'unit_occ_local_second_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'no such occurrence'; Absent = @(); Debt = @() },
     # FABLE-SONNET-OCC-ROOT-20260924-146 commit 1: a named (method) root's
     # occurrence index, test\[N]arg, resolved through l2_own_find_occ --
     # the same lookup the rootless \[N]arg form already uses, no second
@@ -2220,7 +2233,7 @@ $fixtures = @(
         Absent = @();
         Debt = @() },
     [pscustomobject]@{ Name = 'unit_occ_root_out_of_range_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'own occurrence index out of range'; Absent = @(); Debt = @() },
+        Needle = 'no such occurrence'; Absent = @(); Debt = @() },
     # FABLE-SONNET-LAST-OCCURRENCE-20260924-164: unqualified test\arg is the
     # LAST occurrence of a repeated plain own field (not argument-bound, so
     # first-vs-last is the only thing deciding the read) -- test\[N]arg still

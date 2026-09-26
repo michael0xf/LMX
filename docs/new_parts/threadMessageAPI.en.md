@@ -1,6 +1,6 @@
 # Thread Message API and the `post` protocol
 
-**Task to Fable: update the specification and implement the agreed model.**  
+**Task to Fable: update the specification and implement the agreed model.**
 Companion document: [Russian version](threadMessageAPI.ru.md).
 
 ## 0. Scope, authority, and expected result

@@ -200,7 +200,7 @@ Size: a ticket of its own, off the GATE path (§9: mixa builds after the self-bu
 | D-20 | OPEN, a string literal as LmxCharArray | not re-measured | own ticket (translator + kernel); §8-blocking |
 | D-23 | OPEN, `f(x: ())` | not re-measured | Opus, translator, small |
 | D-24 | OPEN, address arithmetic | needs expression typing | later; with the root-address class |
-| D-25 | OPEN, orphan fixtures | not re-measured | Sonnet (-146 owner): re-count |
+| D-25 | CLOSED, recount 2026-09-26 (`steps/d25-fixtures.md`) | 14 named: 7 deleted in `298ef1e`, 7 still registered | — |
 | D-27 | OPEN, `\[N]x` crash on a twice-assigned local | not re-measured | Opus, translator |
 | D-33 | measured, reading past a Structure | the static bound is still absent | Opus, translator (a static bound on `node\x`) |
 | D-36 | OPEN, `lmx_call_install_walk` global | 7 references | Sonnet, with G-call (-194) |

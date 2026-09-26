@@ -15,11 +15,11 @@ STARTED grok/implements-s7, база main `fd074ca`. Тикета без `DONE` 
 - `dev/l2src_sandbox/l2trans.lm1` `l2_admit_implements` :10190–:10191, `cand = req` до `l2_descriptor_implements`.
 - `l2_admit_consumer_uses` :10223–:10224, `path_count = 0` до `l2_admit_implements`.
 
-Вызов жирного `l2_descriptor_implements(cand, req, req)` на пустом `uses`, когда индексы разные, сравнил бы все поля required. Спека 2.1: пустой `uses` истинен. Такой вызов отказал бы случай, который сегодня проходит. Его не делаем.
+Вызов `l2_descriptor_implements(cand, req, req)` на пустом `uses`, когда индексы разные, сравнил бы все поля required и отказал бы случай, который спека 2.1 считает истинным. Отказ даёт третий аргумент `req`, не точка вызова (REVIEW ae4fcc4 п.1): `l2_descriptor_implements` при `cons_n = 0` возвращает успех внутри функции (`l2trans.lm1` :9725–:9727). Пустой `uses` на этот обход не переводится. Срез «Consumer третьим аргументом» не начат: родитель его не назвал. `l2trans.lm1` этот ответ не меняет.
 
 ## Срез 1 — посажен
 
-`l2_admit_implements` вызывает `l2_descriptor_implements` и при `cand = req` возвращает успех после вызова. Пустой `uses` остаётся ранним успехом в `l2_admit_consumer_uses`: жирный обход там добавил бы отказ.
+`l2_admit_implements` вызывает `l2_descriptor_implements` и при `cand = req` возвращает успех после вызова. Пустой `uses` остаётся ранним успехом в `l2_admit_consumer_uses`. Обход с третьим аргументом `req` туда не ставится: он отказал бы истинный пустой `uses`.
 
 Свидетель `unit_s7_identity.lm2`, Entry 7. `keep(User)`: атом аргумента — имя Structure, поэтому `cand = req`. `slot\equals` делает `uses` непустым, и вызов admission происходит. Гейт: build 282/282 (`build/l2src/20260926_083021`), harness 421/421 (`build/l2_harness/s7id2`), L3 11/11, имена 69/128, check_docs OK.
 
@@ -31,6 +31,6 @@ STARTED grok/implements-s7, база main `fd074ca`. Тикета без `DONE` 
 
 Таблица преобразований. Книга §6: контекст Message, явные данные, без процессного реестра и без наследования ребёнком. `lingvamyxa_prev/lm2/convert.lm2` — `table:` с именем `` `primitive.convert` ``, колонки from, to, forbidden, kind, receiver, impl. Это данные, не спрятанный список в трансляторе.
 
-Вопрос автору (рекомендация в чате, очередь не ждёт): первый кодовый срез таблицы читает такую же `table:` из Structure файла — это данные корневого Message — и вставляет конвертер только при наличии строки. Нет строки — остаётся сегодняшний отказ «mixed numeric types (a conversion)». Тихого каста нет. `implements` конвертер не вызывает.
+Вопрос автору (рекомендация в чате, очередь не ждёт): первый кодовый срез таблицы читает такую же `table:` из Structure файла — это данные корневого Message — и вставляет конвертер только при наличии строки. Нет строки — остаётся сегодняшний отказ «mixed numeric types (a conversion)». Тихого каста нет. `implements` конвертер не вызывает. Отбор не по литеральному имени `` `primitive.convert` ``: это name-special (§0). Приёмник — по объявлению (тип таблицы или merge-ключ, §2.2.4), не по имени. Форму таблицы вопрос не предрешает. Глобальный реестр не заводится. Код таблицы не начат.
 
 Пока форма таблицы не подтверждена, строки harness с «mixed numeric types» не переворачивать.

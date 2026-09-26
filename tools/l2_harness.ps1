@@ -1958,6 +1958,15 @@ $fixtures = @(
     # one, unifying this row's message with unit_void_value.lm2's; Needle updated accordingly.
     [pscustomobject]@{ Name = 'unit_predef_result_void_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'a callable without a result has no value'; Absent = @(); Debt = @() },
+    # D-88: a predef result type is read from its prototype, never stood in for by the numeric-
+    # literal class: an unreadable `fn` result is an unknown type at the store.  The stand-in is not
+    # reached on this path; the translator before D-88 refused the call as "unsupported body".
+    [pscustomobject]@{ Name = 'unit_predef_result_unknown_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'assignment value has unknown type'; Absent = @(); Debt = @() },
+    # D-89: a literal written through a field path fits the field, as an ordinary assignment's does.
+    # Mutant (no range check): the size_t field stores 0 and the program runs on.
+    [pscustomobject]@{ Name = 'unit_path_lit_overflow_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'literal not representable as size_t'; Absent = @(); Debt = @() },
     # FABLE-SONNET-PREDEF-RESULT-TYPE-20260924-160 commit 2: the primary motivating case --
     # lm_own_copy_bytes's declared `@: char` return now matches copy's `@: char` target (was
     # refused under the old numeric-only -10 code, found during -155, recorded as D-35).

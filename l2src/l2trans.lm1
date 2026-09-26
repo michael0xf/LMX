@@ -4930,9 +4930,18 @@ fn: l2_predef_file_result_ty (const: @(LmP0Text name); const: @(LmP0Text quoted)
                                 rtnode: 0
                                 if: rtf != 0
                                     rtnode: rtf\value
-                                if: l2_ret_type_node(rtnode, out_ty) != 0
-                                    \out_ty: -10
+                                # A `sub` has no result: the void code, so the one
+                                # "no result" refusal applies.  A `fn` whose result type
+                                # cannot be read is refused by the caller (D-88), never
+                                # stood in for by the numeric-literal class.
                                 found: 1
+                                if: l2_frame_head(decl, "sub")
+                                    \out_ty: 8
+                                else:
+                                    if: l2_ret_type_node(rtnode, out_ty) != 0
+                                        found: 2
+                                    ---
+                                ---
                             ---
                         ---
                         pf: l2_next_active(pf\next)
@@ -4956,9 +4965,11 @@ fn: l2_predef_result_ty (const: @(LmP0Text name); @: int out_ty) int
     int: i 0
     if: name = 0 || out_ty = 0
         return: 0
+    int: st
     while: i < l2_pd_n
-        if: l2_predef_file_result_ty(name, l2_pd[i], out_ty) != 0
-            return: 1
+        st: l2_predef_file_result_ty(name, l2_pd[i], out_ty)
+        if: st != 0
+            return: st
         i: i + 1
     ---
 return: 0
@@ -5909,7 +5920,15 @@ fn: l2_colon_simple_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
     # (measured, commit 1: no corpus fixture assigns one into a non-numeric
     # target; the norm gives raw door text to gcc, not to L2 type inference).
     if: m < 0 && l2_is_known(value\as\frame\head) != 0
-        if: l2_predef_result_ty(value\as\frame\head, out_ty) = 0
+        # -10 stands only for a genuine c.* door call (no prototype anywhere to read). A predef
+        # function's result is its prototype's; an unreadable one is an unknown type (D-88).
+        int: rt
+        rt: l2_predef_result_ty(value\as\frame\head, out_ty)
+        if: rt = 2
+            return: 1
+        if: rt = 0 && (value\as\frame\head\length < 3U || value\as\frame\head\data[0] != 99 || value\as\frame\head\data[1] != 46)
+            return: 1
+        if: rt = 0
             \out_ty: -10
         return: 0
     if: m < 0
@@ -12459,6 +12478,26 @@ fn: l2_join_path (@: LmP0Field field; int: cnt; @: char buf; size_t: cap) size_t
         return: 0U
 return: n
 
+# D-89: the literal a field-path statement writes into a size_t, unsigned or
+# ulong field (path kinds 0, 8, 9) must be representable there -- the same
+# check an ordinary assignment makes (l2_check_literal_kind), not a store of
+# the 0 l2_literal_value leaves for what does not fit.
+fn: l2_path_rhs_range (const: @(LmP0Structure body); int: kind; const: @(LmP0Node stmt)) int
+    @: LmP0Field f
+    int: lk 0 - 1
+    if: kind = 0
+        lk: 2
+    if: kind = 8
+        lk: 3
+    if: kind = 9
+        lk: 4
+    if: lk < 0 || body = 0 || l2_count_active(body) != 1
+        return: 0
+    f: l2_next_active(body\first_field)
+    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || l2_num(f\value\as\atom) = 0
+        return: 0
+return: l2_check_literal_kind(f\value\as\atom, lk, l2_src, stmt)
+
 # The value a field-path statement stores: a literal, or a char literal. Only
 # what the declared field kinds already admit.
 fn: l2_path_rhs (const: @(LmP0Structure body); int: kind; @: size_t out_v) int
@@ -16033,7 +16072,6 @@ fn: l2_hidden_from (int: mi; int: callee; int: k; int: callee_self; const: @(cha
     int: t
     int: child
     int: ni
-    @: char deep 0
     []: char l2_hf_msg 1024
     if: dest = 0 || callee < 0 || k < 0 || k >= l2_m_dyn[callee]
         return: 1
@@ -16076,21 +16114,11 @@ fn: l2_hidden_from (int: mi; int: callee; int: k; int: callee_self; const: @(cha
         return: l2_error(l2_src, at, l2_hf_msg)
     if: l2_own_uchild[child] < 0 || l2_call_node = 0
         return: 1
-    if: l2_bump_ind(ind, @ deep) != 0
-        return: 1
     if: c.fprintf(l2_out, "%sl2_xp: lmx_arena_ref_cell(%s, %uU)\n%sif: l2_xp = 0\n", ind, l2_own_ctr(child), (cast: (unsigned) l2_own_uchild[child]), ind) < 0
         return: 1
-    if: l2_m_ret[mi] = 8 && (l2_m_throws = 0 || l2_m_throws[mi] = 0) && c.fprintf(l2_out, "%sreturn\n", deep) < 0
-        return: 1
-    if: l2_m_ret[mi] = 8 && l2_m_throws != 0 && l2_m_throws[mi] != 0 && c.fprintf(l2_out, "%sreturn: 0\n", deep) < 0
-        return: 1
-    if: l2_ret_uns(mi) != 0 && (l2_m_throws = 0 || l2_m_throws[mi] = 0) && c.fprintf(l2_out, "%sreturn: 0U\n", deep) < 0
-        return: 1
-    if: l2_ret_uns(mi) != 0 && l2_m_throws != 0 && l2_m_throws[mi] != 0 && c.fprintf(l2_out, "%sl2_out_result[0]: 0U\n%sreturn: 0\n", deep, deep) < 0
-        return: 1
-    if: l2_ret_uns(mi) = 0 && l2_m_ret[mi] != 8 && (l2_m_throws = 0 || l2_m_throws[mi] = 0) && c.fprintf(l2_out, "%sreturn: 0\n", deep) < 0
-        return: 1
-    if: l2_ret_uns(mi) = 0 && l2_m_ret[mi] != 8 && l2_m_throws != 0 && l2_m_throws[mi] != 0 && c.fprintf(l2_out, "%sl2_out_result[0]: 0\n%sreturn: 0\n", deep, deep) < 0
+    # A missing cell of a bound hidden input is a broken promise (D-87, as D-05 for a loaded own
+    # field): X1, not a return of 0 that the caller would read as the callee's value.
+    if: l2_emit_invariant(ind, "a dynamic input has no cell to read") != 0
         return: 1
     t: l2_tn
     l2_tn: l2_tn + 1
@@ -24594,6 +24622,8 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             # folded node/for writes into this general path-write branch (which
             # only ever parsed a literal), restored here rather than left a
             # silent narrowing of what a path write accepts.
+            if: l2_path_rhs_range(stmt\as\frame\body, l2_pkind, stmt) != 0
+                return: 1
             l2_prhs_lit: l2_path_rhs(stmt\as\frame\body, l2_pkind, @ l2_pv) = 0
             if: l2_prhs_lit = 0 && l2_eval_fields(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), mi, ind, l2_tok) != 0
                 return: 1

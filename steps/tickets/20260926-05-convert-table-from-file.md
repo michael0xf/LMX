@@ -1,6 +1,9 @@
 # Тикет fable 2026-09-26-05 — конвертеры: таблица читается из `convert.lm2`, отказ диапазона вместо нуля (BLOCK REVIEW 65dba4c)
 
-Статус: OPEN. Написан по правилу `steps/tickets/README.md`: последний коммит ведущего на main — `65dba4c` в 17:26 UTC, к 18:20 UTC ни коммита, ни ANSWER, ни TAKEN; открытое замечание ревью — BLOCK REVIEW 65dba4c п.1–п.2 (срез `e2c62d0` «convert.lm2 receivers on a primitive assignment»).
+Статус: DONE. Написан по правилу `steps/tickets/README.md`: последний коммит ведущего на main — `65dba4c` в 17:26 UTC, к 18:20 UTC ни коммита, ни ANSWER, ни TAKEN; открытое замечание ревью — BLOCK REVIEW 65dba4c п.1–п.2 (срез `e2c62d0` «convert.lm2 receivers on a primitive assignment»).
+
+TAKEN main@f664681 2026-09-26 19:10 UTC
+DONE этот коммит: build 282/282 (`build/l2src/s7cvt3`), harness 445/445 (`build/l2_harness/s7cvt2`), L3 11/11, имена 69/128. `unit_s7_prim_cross` Entry 7. `unit_s7_conv_norow` — «mixed numeric types (a conversion)». Мутант без строки `size_t int` отказывает тот же `unit_s7_prim_cross`. Диапазон — `c.abort()`, не 0; неявный throw не открыт (ANSWER 65dba4c-2).
 
 ## Норма
 

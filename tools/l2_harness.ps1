@@ -305,6 +305,8 @@ if (Test-Path -LiteralPath $testsHdr) {
         Copy-Item -LiteralPath $f.FullName -Destination (Join-Path $destTests $f.Name) -Force; $staged++
     }
 }
+Copy-Item -LiteralPath (Join-Path $sandbox 'convert.lm2') -Destination (Join-Path $src 'convert.lm2') -Force
+$staged++
 Write-Output ('l2_harness: staged ' + $staged + ' files into ' + $src)
 if ($provenanceMode) {
     # The staged l2src\l2trans.lm1 and l2_libc.lm1 must be BYTE COPIES of the LIVE dev sandbox
@@ -2308,6 +2310,8 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_prim_cross.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @('lm_stg_convert_size_t_int') },
+    [pscustomobject]@{ Name = 'unit_s7_conv_norow.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'mixed numeric types (a conversion)'; Absent = @('assignment value has incompatible type'); Debt = @() },
     [pscustomobject]@{ Name = 'unit_invalid_implements_unknown_candidate.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown candidate descriptor'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_invalid_implements_unknown_required.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

@@ -449,6 +449,11 @@ int: l2_rw_pn 0
 c.array: [1024]: char l2_tok
 c.array: [2048]: char l2_ctok
 int: l2_convert_mask 0
+int: l2_cv_ready 0
+int: l2_cv_cell_n 0
+int: l2_cv_gap 0
+int: l2_cv_tmp_n 0
+c.array: [960]: @: char l2_cv_cell
 c.array: [1024]: char l2_addr_path
 @: char l2_ccall_into 0
 
@@ -643,8 +648,9 @@ prototype:
     fn: l2_colon_bound_ty (int: mi; const: @(LmP0Text name); @: int out_ty) int
     fn: l2_colon_simple_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
     fn: l2_prim_code_name (int: ty) @: char
+    fn: l2_convert_load () int
     fn: l2_convert_hit (const: @(char from_n); const: @(char to_n); @: int bit) @: char
-    fn: l2_convert_on_store (int: mi; int: oi; const: @(LmP0Frame fr)) int
+    fn: l2_convert_on_store (int: mi; int: oi; const: @(LmP0Frame fr); const: @(char ind)) int
     fn: l2_emit_convert_defs () int
     fn: l2_colon_types_compatible (int: target_ty; int: value_ty) int
     fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
@@ -3293,6 +3299,8 @@ fn: l2_translate (const: @(char in_path); const: @(char out_path)) int
     if: l2_path_is_lm2(in_path) = 0
         c.fprintf(l1_stderr(), "l2trans error: %s:1:1: expected a .lm2 source\n", in_path)
         return: 1
+    if: l2_convert_load() != 0
+        return: 1
     l2_module_hash_a: 2166136261U
     l2_module_hash_b: 5381U
     while: in_path[path_i] != 0
@@ -5890,44 +5898,129 @@ fn: l2_prim_code_name (int: ty) @: char
         return: "void"
     return: 0
 
-# Rows of lingvamyxa_prev/lm2/convert.lm2 whose from and to are primitive
-# value codes this translator names. The file is the table. A hit is the
-# row's receiver. implements does not call it: the assignment edge does.
-# Identity rows (receiver None) are the same name and are not a call.
+# The conversion rows are the `table:` in the translation input convert.lm2,
+# read by the same P0 parser as any other source. The table's own name is
+# not consulted. implements does not call a receiver: the assignment edge does.
+# l2_cv_gap 1: no usable row. 2: the row names a receiver whose body is not ported.
+fn: l2_convert_keep (const: @(LmP0Text t)) int
+    c.array: [128]: char buf
+    @: char copy
+    size_t: n
+    if: l2_cv_cell_n >= 960
+        return: l2_error("convert.lm2", 0, "conversion table is too large")
+    if: l2_tok_text(t, buf, 128U) != 0
+        return: 1
+    n: c.strlen(buf) + 1U
+    copy: (cast: (@: char) l2_xmalloc(n))
+    if: copy = 0
+        return: 1
+    memcpy(copy, buf, n)
+    l2_cv_cell[l2_cv_cell_n]: copy
+    l2_cv_cell_n: l2_cv_cell_n + 1
+return: 0
+
+fn: l2_convert_walk (const: @(LmP0Node node)) int
+    @: LmP0Field f
+    if: node = 0
+        return: 0
+    if: node\kind = c.LM_P0_NODE_STRUCTURE && node\as != 0 && node\as\structure != 0
+        f: l2_next_active(node\as\structure\first_field)
+        while: f != 0
+            if: l2_convert_walk(f\value) != 0
+                return: 1
+            f: l2_next_active(f\next)
+        return: 0
+    if: l2_frame_head(node, "rows") != 0 && node\as != 0 && node\as\frame != 0 && node\as\frame\body != 0
+        f: l2_next_active(node\as\frame\body\first_field)
+        while: f != 0
+            if: f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && l2_convert_keep(f\value\as\atom) != 0
+                return: 1
+            if: f\value != 0 && f\value\kind != c.LM_P0_NODE_ATOM && l2_convert_walk(f\value) != 0
+                return: 1
+            f: l2_next_active(f\next)
+        return: 0
+    if: node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && node\as\frame != 0 && node\as\frame\body != 0
+        f: l2_next_active(node\as\frame\body\first_field)
+        while: f != 0
+            if: l2_convert_walk(f\value) != 0
+                return: 1
+            f: l2_next_active(f\next)
+        return: 0
+return: 0
+
+fn: l2_convert_load () int
+    @: FILE raw 0
+    @: LmP0Document document 0
+    const: @: LmP0Node root
+    if: l2_cv_ready != 0
+        return: 0
+    l2_cv_ready: 1
+    l2_cv_cell_n: 0
+    raw: c.fopen("convert.lm2", "rb")
+    if: raw = 0
+        return: 0
+    fclose(raw)
+    if: lm_p0_parse_file("convert.lm2", @ document) != 0 || document = 0
+        return: l2_error("convert.lm2", 0, "cannot read the conversion table")
+    root: lm_p0_document_root(document)
+    if: root = 0 || l2_convert_walk(root) != 0
+        lm_p0_document_destroy(document)
+        return: l2_error("convert.lm2", 0, "cannot read the conversion table")
+    if: l2_cv_cell_n = 0 || (l2_cv_cell_n % 6) != 0
+        lm_p0_document_destroy(document)
+        return: l2_error("convert.lm2", 0, "conversion table rows are not from, to, forbidden, kind, receiver, impl")
+    lm_p0_document_destroy(document)
+return: 0
+
+fn: l2_convert_bit (const: @(char recv)) int
+    if: recv = 0
+        return: 0
+    if: c.strcmp(recv, "lm_stg_convert_size_t_int") = 0
+        return: 1
+    if: c.strcmp(recv, "lm_stg_convert_int_size_t") = 0
+        return: 2
+    if: c.strcmp(recv, "lm_stg_convert_char_int") = 0
+        return: 4
+    if: c.strcmp(recv, "lm_stg_convert_int_char") = 0
+        return: 8
+    if: c.strcmp(recv, "lm_stg_convert_int_unsigned") = 0
+        return: 16
+    if: c.strcmp(recv, "lm_stg_convert_unsigned_int") = 0
+        return: 32
+    if: c.strcmp(recv, "lm_stg_convert_unsigned_ulong") = 0
+        return: 64
+    if: c.strcmp(recv, "lm_stg_convert_ulong_unsigned") = 0
+        return: 128
+return: 0
+
 fn: l2_convert_hit (const: @(char from_n); const: @(char to_n); @: int bit) @: char
+    int: i 0
+    int: b 0
+    const: @(char recv)
+    l2_cv_gap: 0
     if: bit != 0
         \bit: 0
     if: from_n = 0 || to_n = 0
         return: 0
-    if: c.strcmp(from_n, "size_t") = 0 && c.strcmp(to_n, "int") = 0
-        \bit: 1
-        return: "lm_stg_convert_size_t_int"
-    if: c.strcmp(from_n, "int") = 0 && c.strcmp(to_n, "size_t") = 0
-        \bit: 2
-        return: "lm_stg_convert_int_size_t"
-    if: c.strcmp(from_n, "char") = 0 && c.strcmp(to_n, "int") = 0
-        \bit: 4
-        return: "lm_stg_convert_char_int"
-    if: c.strcmp(from_n, "int") = 0 && c.strcmp(to_n, "char") = 0
-        \bit: 8
-        return: "lm_stg_convert_int_char"
-    if: c.strcmp(from_n, "int") = 0 && c.strcmp(to_n, "unsigned") = 0
-        \bit: 16
-        return: "lm_stg_convert_int_unsigned"
-    if: c.strcmp(from_n, "unsigned") = 0 && c.strcmp(to_n, "int") = 0
-        \bit: 32
-        return: "lm_stg_convert_unsigned_int"
-    if: c.strcmp(from_n, "unsigned") = 0 && c.strcmp(to_n, "ulong") = 0
-        \bit: 64
-        return: "lm_stg_convert_unsigned_ulong"
-    if: c.strcmp(from_n, "ulong") = 0 && c.strcmp(to_n, "unsigned") = 0
-        \bit: 128
-        return: "lm_stg_convert_ulong_unsigned"
+    while: i + 5 < l2_cv_cell_n
+        if: c.strcmp(l2_cv_cell[i], from_n) = 0 && c.strcmp(l2_cv_cell[i + 1], to_n) = 0
+            if: c.strcmp(l2_cv_cell[i + 2], "1") = 0 || c.strcmp(l2_cv_cell[i + 4], "None") = 0
+                l2_cv_gap: 1
+                return: 0
+            recv: l2_cv_cell[i + 4]
+            b: l2_convert_bit(recv)
+            if: b = 0
+                l2_cv_gap: 2
+                return: 0
+            \bit: b
+            return: (cast: (@: char) recv)
+        i: i + 6
+    l2_cv_gap: 1
 return: 0
 
 # The value token is already in l2_tok. A different keyed pair with a row
 # becomes receiver(token). No row is not a store.
-fn: l2_convert_on_store (int: mi; int: oi; const: @(LmP0Frame fr)) int
+fn: l2_convert_on_store (int: mi; int: oi; const: @(LmP0Frame fr); const: @(char ind)) int
     int: from_ft 0
     int: to_ft
     int: n
@@ -5949,31 +6042,31 @@ fn: l2_convert_on_store (int: mi; int: oi; const: @(LmP0Frame fr)) int
     recv: l2_convert_hit(from_n, to_n, @ bit)
     if: recv = 0
         return: 2
-    n: c.snprintf(l2_ctok, 2048U, "%s(%s)", recv, l2_tok)
-    if: n < 0 || n >= 1024
+    n: l2_cv_tmp_n
+    l2_cv_tmp_n: l2_cv_tmp_n + 1
+    if: c.fprintf(l2_out, "%s%s: l2_cvt%d\n%sl2_cvt%d: %s(%s)\n", ind, to_n, n, ind, n, recv, l2_tok) < 0
         return: 1
-    if: c.snprintf(l2_tok, 1024U, "%s", l2_ctok) < 0
+    if: c.snprintf(l2_tok, 1024U, "l2_cvt%d", n) < 0
         return: 1
     l2_convert_mask: l2_convert_mask | bit
 return: 0
 
-# Bodies for the rows this translator can emit. The hosted convert_impl.lm2
-# gives these names as the receivers. A narrowing or sign step that does not
-# fit returns 0, the same shape as lm_stg_convert_long_int. A widen is a cast.
+# Bodies for receivers declared in convert_impl.lm2 and named by a row.
+# A value outside the destination range throws Range. It does not become 0.
 fn: l2_emit_convert_defs () int
     if: l2_convert_mask = 0
         return: 0
-    if: (l2_convert_mask & 1) != 0 && fputs("fn: lm_stg_convert_size_t_int (size_t: n) int\n    if: n > 2147483647U\n        return: 0\n    return: (cast: int n)\nend: lm_stg_convert_size_t_int\n\n", l2_out) < 0
+    if: (l2_convert_mask & 1) != 0 && fputs("fn: lm_stg_convert_size_t_int (size_t: n) int\n    if: n > 2147483647U\n        c.fprintf(c.stderr, \"lmx: converter range\\n\")\n        c.abort()\n    return: (cast: int n)\nend: lm_stg_convert_size_t_int\n\n", l2_out) < 0
         return: 1
-    if: (l2_convert_mask & 2) != 0 && fputs("fn: lm_stg_convert_int_size_t (int: n) size_t\n    if: n < 0\n        return: 0U\n    return: (cast: size_t n)\nend: lm_stg_convert_int_size_t\n\n", l2_out) < 0
+    if: (l2_convert_mask & 2) != 0 && fputs("fn: lm_stg_convert_int_size_t (int: n) size_t\n    if: n < 0\n        c.fprintf(c.stderr, \"lmx: converter range\\n\")\n        c.abort()\n    return: (cast: size_t n)\nend: lm_stg_convert_int_size_t\n\n", l2_out) < 0
         return: 1
     if: (l2_convert_mask & 4) != 0 && fputs("fn: lm_stg_convert_char_int (int: n) int\n    return: n\nend: lm_stg_convert_char_int\n\n", l2_out) < 0
         return: 1
-    if: (l2_convert_mask & 8) != 0 && fputs("fn: lm_stg_convert_int_char (int: n) int\n    if: n > 255 || n < 0\n        return: 0\n    return: n\nend: lm_stg_convert_int_char\n\n", l2_out) < 0
+    if: (l2_convert_mask & 8) != 0 && fputs("fn: lm_stg_convert_int_char (int: n) int\n    if: n > 255 || n < 0\n        c.fprintf(c.stderr, \"lmx: converter range\\n\")\n        c.abort()\n    return: n\nend: lm_stg_convert_int_char\n\n", l2_out) < 0
         return: 1
-    if: (l2_convert_mask & 16) != 0 && fputs("fn: lm_stg_convert_int_unsigned (int: n) unsigned\n    if: n < 0\n        return: 0U\n    return: (cast: unsigned n)\nend: lm_stg_convert_int_unsigned\n\n", l2_out) < 0
+    if: (l2_convert_mask & 16) != 0 && fputs("fn: lm_stg_convert_int_unsigned (int: n) unsigned\n    if: n < 0\n        c.fprintf(c.stderr, \"lmx: converter range\\n\")\n        c.abort()\n    return: (cast: unsigned n)\nend: lm_stg_convert_int_unsigned\n\n", l2_out) < 0
         return: 1
-    if: (l2_convert_mask & 32) != 0 && fputs("fn: lm_stg_convert_unsigned_int (unsigned: n) int\n    if: n > 2147483647U\n        return: 0\n    return: (cast: int n)\nend: lm_stg_convert_unsigned_int\n\n", l2_out) < 0
+    if: (l2_convert_mask & 32) != 0 && fputs("fn: lm_stg_convert_unsigned_int (unsigned: n) int\n    if: n > 2147483647U\n        c.fprintf(c.stderr, \"lmx: converter range\\n\")\n        c.abort()\n    return: (cast: int n)\nend: lm_stg_convert_unsigned_int\n\n", l2_out) < 0
         return: 1
     if: (l2_convert_mask & 64) != 0 && fputs("fn: lm_stg_convert_unsigned_ulong (unsigned: n) ulong\n    return: (cast: ulong n)\nend: lm_stg_convert_unsigned_ulong\n\n", l2_out) < 0
         return: 1
@@ -5995,6 +6088,7 @@ fn: l2_colon_types_compatible (int: target_ty; int: value_ty) int
     int: bit 0
     int: target_numeric 0
     int: value_numeric 0
+    l2_cv_gap: 0
     cn: l2_prim_code_name(value_ty)
     rn: l2_prim_code_name(target_ty)
     if: cn != 0 && rn != 0
@@ -6051,6 +6145,7 @@ fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char p
     @: LmP0Field only
     int: target_ty
     int: value_ty
+    int: cok 0
     if: l2_is_asgn(stmt) = 0 || stmt = 0 || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\head = 0 || stmt\as\frame\body = 0
         return: 0
     if: l2_count_active(stmt\as\frame\body) != 1
@@ -6078,7 +6173,12 @@ fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char p
     # (the bare-atom case) and l2_check_call's own argument-position check.
     if: value_ty = 8
         return: l2_error(path, stmt, "a callable without a result has no value")
-    if: l2_colon_types_compatible(target_ty, value_ty) = 0
+    cok: l2_colon_types_compatible(target_ty, value_ty)
+    if: cok = 0 && l2_cv_gap = 2
+        return: l2_error(path, stmt, "no converter body ported")
+    if: cok = 0 && l2_cv_gap = 1
+        return: l2_error(path, stmt, "mixed numeric types (a conversion)")
+    if: cok = 0
         return: l2_error(path, stmt, "assignment value has incompatible type")
     if: only\value != 0 && only\value\kind = c.LM_P0_NODE_ATOM && l2_check_literal_kind(only\value\as\atom, l2_lit_kind_from_ft(target_ty), path, stmt) != 0
         return: 1
@@ -24893,7 +24993,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             return: 1
         cst: 0
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0
-            cst: l2_convert_on_store(mi, oi, fr)
+            cst: l2_convert_on_store(mi, oi, fr, ind)
         if: cst = 1
             return: 1
         if: cst = 2

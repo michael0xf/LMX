@@ -60,4 +60,10 @@ STARTED grok/callable-merge-t7, база main `1438946`. REVIEW ceaa0f6 — OK, 
 
 ## RESULT
 
-Нет. Кода нет.
+`unit_t7_convert` Entry 7. `wrap 5` затем `1` = 6, `wrap 100` затем `1` = 101, снова первый = 6, `passed()` = 5. Узел на каждый `return: merge` и на `take: merge(y: 5; five)`. Связанное имя — `AT` слота 2, прочий формал — `ARG 0`. Кадры общие по адресу, не кадры прямого вызова модели. `native` узла 0. `take: bin` остаётся на `lmx_fresh`. Ядро не менялось.
+
+Отказы: два метода и ноль методов — «a callable merge needs one model»; заголовок `(int: z)` — «a callable merge header does not match the model»; `return: merge` из `int` — «merge needs at least one operand». `unit_make_adder` и `unit_pap_add5` зелёные.
+
+Мутант: в слот `y` пишется 0 вместо формала `k` — exit 0, ожидался 7 (`l2_eternal_driver: exit 0, expected 7`). Откат исходника не требовался: мутант был в уже собранном C, исходный перевод снова хранит `l2_p1_0`.
+
+Harness 420/420 (`build/l2_harness/t7b`). check_docs OK. `build_l2src -Run` и L3 не гонялись: ядро не менялось. Twin `l2src/l2trans.lm1` и фикстуры — копия. D-81 и полный `implements` не начинались. Третьего графа нет.

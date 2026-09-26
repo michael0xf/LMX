@@ -946,6 +946,18 @@ $fixtures = @(
     # Mutant: one field n for both results — the second call is not 101. Entry 7, 0 is refusal.
     [pscustomobject]@{ Name = 'unit_make_adder.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @('lmx_fresh('); Debt = @('lmx_call_prim(', 'lmx_int_store_known(', 'c.LMX_WALK_OP_AT, 3U)') },
+    # T7: return merge and a merge actual of a callable formal. wrap(5)(1)=6,
+    # wrap(100)(1)=101, the first again 6, passed()=5. Entry 7. take: bin stays native.
+    [pscustomobject]@{ Name = 'unit_t7_convert.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @('lmx_call_prim(', 'lmx_int_store_known(', 'c.LMX_WALK_OP_AT, 3U)') },
+    [pscustomobject]@{ Name = 'unit_t7_two.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a callable merge needs one model'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_none.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a callable merge needs one model'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_header.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a callable merge header does not match the model'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_from_int.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'merge needs at least one operand'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merged_callable.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 5;
         Absent = @(); Debt = @('merge result check 77', 'merge result check 79') },
     # -193 T1b (Q6 = a): no name is decided by its spelling.  l2_upper_name (all-caps = a C constant

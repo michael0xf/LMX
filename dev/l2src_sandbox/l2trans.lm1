@@ -106,6 +106,35 @@ int: l2_walk_methods 0
 @: int l2_mad_host 0
 int: l2_mad_cap 0
 int: l2_mad_need_call 0
+# T7: one merge into an already-declared callable type. Kind 1 is `return: merge`
+# of a host whose result is `fn:`. Kind 2 is that merge as a callable formal's actual.
+# Frames of the model are walked once with the binding in effect and shared by address.
+int: l2_t7_n 0
+int: l2_t7_walk 0
+int: l2_t7_dyn_here 0
+int: l2_t7_dyn_n 0
+int: l2_t7b_n 0
+int: l2_t7h_n 0
+c.array: [8]: int l2_t7_kind
+c.array: [8]: int l2_t7_host
+c.array: [8]: int l2_t7_model
+c.array: [8]: int l2_t7_ret
+c.array: [8]: int l2_t7_argc
+c.array: [8]: int l2_t7_h0
+c.array: [8]: int l2_t7_nb
+c.array: [8]: int l2_t7_b0
+c.array: [8]: int l2_t7_steps
+c.array: [8]: int l2_t7_base
+c.array: [8]: int l2_t7_anchor
+c.array: [8]: @: LmP0Node l2_t7_at
+c.array: [16]: int l2_t7b_how
+c.array: [16]: int l2_t7b_val
+c.array: [16]: int l2_t7b_slot
+c.array: [16]: @: LmP0Text l2_t7b_nm
+c.array: [16]: int l2_t7h_ty
+c.array: [16]: @: LmP0Text l2_t7h_nm
+c.array: [8]: int l2_t7_dyn_mi
+c.array: [8]: int l2_t7_dyn_fi
 # Where the static typing of a root expression first met two numeric types (l2_rw_tyof), for the
 # located refusal.
 @: LmP0Node l2_rw_mix_at 0
@@ -954,6 +983,18 @@ prototype:
     fn: l2_mad_slot (int: mi; const: @(LmP0Text name)) int
     fn: l2_mad_caps (int: mi) int
     fn: l2_mad_emit (int: mi; const: @(char ind)) int
+    fn: l2_t7_bound_slot (const: @(LmP0Text name)) int
+    fn: l2_t7_arg_of (const: @(LmP0Text name)) int
+    fn: l2_t7_arg_ty (const: @(LmP0Text name)) int
+    fn: l2_t7_extra (int: mi) int
+    fn: l2_t7_host_site (int: mi) int
+    fn: l2_t7_dyn_has (int: mi; int: fi) int
+    fn: l2_t7_from_return (int: mi; const: @(LmP0Node node); const: @(char path)) int
+    fn: l2_t7_from_actual (int: mi; int: callee; int: fi; const: @(LmP0Node node); const: @(char path)) int
+    fn: l2_t7_emit_actual (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest) int
+    fn: l2_t7_write (int: site; const: @(char ind); int: do_ret) int
+    fn: l2_t7_count () int
+    fn: l2_t7_emit_frames () int
     fn: l2_emit_mad_call () int
     fn: l2_rw_mad_at (int: parent; int: slot; @: int out) int
     fn: l2_rw_mad_store (const: @(LmP0Node stmt); int: into; @: int out) int
@@ -1236,6 +1277,12 @@ fn: l2_release () int
     l2_mad_host: 0
     l2_mad_cap: 0
     l2_mad_need_call: 0
+    l2_t7_n: 0
+    l2_t7_walk: 0
+    l2_t7_dyn_here: 0
+    l2_t7_dyn_n: 0
+    l2_t7b_n: 0
+    l2_t7h_n: 0
     l2_it_ar: 0
     l2_it_dyn: 0
     l2_it_ret: 0
@@ -14082,12 +14129,18 @@ fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Stru
         # checked against the formal's contract -- not a call (plan §3 native gate (г)).
         req_mi: l2_cf_get(idx, actual_i)
         if: req_mi >= 0
-            if: actual_span != 1 || a0\value = 0 || a0\value\kind != c.LM_P0_NODE_ATOM
-                return: l2_error(path, node, "incompatible entry signature")
-            cand_mi: l2_find_method(a0\value\as\atom)
-            if: cand_mi < 0 || l2_method_sig_compatible(cand_mi, req_mi) = 0
-                return: l2_error(path, node, "incompatible entry signature")
-            l2_m_value_used[cand_mi]: 1
+            if: actual_span = 1 && a0\value != 0 && l2_frame_head(a0\value, "merge") != 0
+                if: l2_t7_from_actual(mi, idx, actual_i, a0\value, path) != 0
+                    return: 1
+                ---
+            else:
+                if: actual_span != 1 || a0\value = 0 || a0\value\kind != c.LM_P0_NODE_ATOM
+                    return: l2_error(path, node, "incompatible entry signature")
+                cand_mi: l2_find_method(a0\value\as\atom)
+                if: cand_mi < 0 || l2_method_sig_compatible(cand_mi, req_mi) = 0
+                    return: l2_error(path, node, "incompatible entry signature")
+                l2_m_value_used[cand_mi]: 1
+            ---
         ---
         if: req_mi < 0 && l2_named_empty_actual(a0, idx, actual_i) != 0
             if: l2_admit_site(mi) != 0
@@ -16147,9 +16200,17 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
         if: t >= nact
             return: l2_prep_drop(acts, hides)
         actual_span: l2_expr_span(a0)
-        # A callable formal takes the occurrence its actual names (l2_check_call), not a call.
-        if: l2_cf_get(idx, t) >= 0 && (actual_span != 1 || a0\value = 0 || a0\value\kind != c.LM_P0_NODE_ATOM || l2_tok_method_occ(l2_find_method(a0\value\as\atom), l2_act_at(acts, t)) != 0)
-            return: l2_prep_drop(acts, hides)
+        # A callable formal takes the occurrence its actual names, or one merge
+        # built here in the caller's native code (T7). Not a call.
+        if: l2_cf_get(idx, t) >= 0 && actual_span = 1 && a0\value != 0 && l2_frame_head(a0\value, "merge") != 0
+            if: l2_t7_emit_actual(a0\value, mi, ind, l2_act_at(acts, t)) != 0
+                return: l2_prep_drop(acts, hides)
+            ---
+        else:
+            if: l2_cf_get(idx, t) >= 0 && (actual_span != 1 || a0\value = 0 || a0\value\kind != c.LM_P0_NODE_ATOM || l2_tok_method_occ(l2_find_method(a0\value\as\atom), l2_act_at(acts, t)) != 0)
+                return: l2_prep_drop(acts, hides)
+            ---
+        ---
         if: l2_cf_get(idx, t) < 0 && l2_named_empty_actual(a0, idx, t) != 0 && l2_emit_empty_actual(idx, t, mi, ind, l2_act_at(acts, t)) != 0
             return: l2_prep_drop(acts, hides)
         if: l2_cf_get(idx, t) < 0 && l2_named_empty_actual(a0, idx, t) = 0 && (actual_span < 1 || l2_emit_fields(a0, actual_span, mi, ind, l2_act_at(acts, t)) != 0)
@@ -16238,8 +16299,16 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
         # status apart from the value.  A throwing callable's status is its throw status, carried
         # on by l2_emit_propagate exactly as a direct call's, with the thrown record from `out`;
         # a callable that cannot throw and reports a status is a broken promise (X1).
+        # T7: a node with native 0 is the value itself (no fresh). Other rows stay
+        # on the fresh path, so their text does not change unless this formal
+        # received a merge.
+        l2_t7_dyn_here: 0
+        if: l2_t7_dyn_has(mi, fi) != 0
+            l2_t7_dyn_here: 1
         if: l2_emit_dyn_call(idx, t, self_t, ind) != 0
+            l2_t7_dyn_here: 0
             return: l2_prep_drop(acts, hides)
+        l2_t7_dyn_here: 0
         l2_prep_drop(acts, hides)
         if: l2_m_throws[idx] != 0 && l2_emit_propagate(mi, idx, t, ind) != 0
             return: 1
@@ -17042,22 +17111,18 @@ fn: l2_tramp_store (int: cls) const: @: char
         return: "lmx_ulong_store_known"
 return: "lmx_int_store_known"
 
-# The dynamic call of the callable formal occurrence l2_c<self_t> that carries the signature of
-# method idx (l2_emit_call, sel 2): nullary, through lmx_call_prim.  The value lands the way the
-# method's trampoline delivers it (l2_tramp_class): a scalar or a foreign value in l2_t<t> through
-# dest; a pointer through out, then into l2_t<t>.  On a throw `out` is the thrown record.
-fn: l2_emit_dyn_call (int: idx; int: t; int: self_t; const: @(char ind)) int
+# fresh = 0 calls lmx_call_prim(code, code) with no lmx_fresh (native 0). fresh = 1 is today's path.
+fn: l2_emit_dyn_tail (int: idx; int: t; int: self_t; const: @(char ind); int: fresh) int
     int: cls l2_tramp_class(idx)
-    if: c.fprintf(l2_out, "%s@: void l2_o%d 0\n", ind, t) < 0
+    if: fresh != 0 && (c.fprintf(l2_out, "%s@: Lmx l2_d%d lmx_fresh(l2_program_arena, l2_c%d)\n%sif: l2_d%d = 0\n", ind, t, self_t, ind, t) < 0 || l2_emit_invariant(ind, "a fresh instance could not be made") != 0)
         return: 1
-    # -189 c3a (Q28): a call by reference runs over a fresh instance of the callee, made from its
-    # code by the kernel (lmx_fresh): the caller does not know the callee's prototype.  The data
-    # is lmx_call_prim's operand; the trampoline makes nothing.
-    if: c.fprintf(l2_out, "%s@: Lmx l2_d%d lmx_fresh(l2_program_arena, l2_c%d)\n%sif: l2_d%d = 0\n", ind, t, self_t, ind, t) < 0 || l2_emit_invariant(ind, "a fresh instance could not be made") != 0
+    if: fresh != 0 && l2_m_throws[idx] != 0 && c.fprintf(l2_out, "%sl2_ts%d: lmx_call_prim(l2_program_arena, l2_c%d, l2_d%d, 0, 0U, ", ind, t, self_t, t) < 0
         return: 1
-    if: l2_m_throws[idx] != 0 && c.fprintf(l2_out, "%sl2_ts%d: lmx_call_prim(l2_program_arena, l2_c%d, l2_d%d, 0, 0U, ", ind, t, self_t, t) < 0
+    if: fresh != 0 && l2_m_throws[idx] = 0 && c.fprintf(l2_out, "%sif: lmx_call_prim(l2_program_arena, l2_c%d, l2_d%d, 0, 0U, ", ind, self_t, t) < 0
         return: 1
-    if: l2_m_throws[idx] = 0 && c.fprintf(l2_out, "%sif: lmx_call_prim(l2_program_arena, l2_c%d, l2_d%d, 0, 0U, ", ind, self_t, t) < 0
+    if: fresh = 0 && l2_m_throws[idx] != 0 && c.fprintf(l2_out, "%sl2_ts%d: lmx_call_prim(l2_program_arena, l2_c%d, l2_c%d, 0, 0U, ", ind, t, self_t, self_t) < 0
+        return: 1
+    if: fresh = 0 && l2_m_throws[idx] = 0 && c.fprintf(l2_out, "%sif: lmx_call_prim(l2_program_arena, l2_c%d, l2_c%d, 0, 0U, ", ind, self_t, self_t) < 0
         return: 1
     if: (cls = 0 || cls = 5) && fputs("0", l2_out) < 0
         return: 1
@@ -17074,6 +17139,37 @@ fn: l2_emit_dyn_call (int: idx; int: t; int: self_t; const: @(char ind)) int
     if: cls = 5 && l2_m_throws[idx] != 0 && c.fprintf(l2_out, "%sif: l2_ts%d = 0\n%s    l2_t%d: l2_o%d\n", ind, t, ind, t, t) < 0
         return: 1
 return: 0
+
+# The dynamic call of the callable formal occurrence l2_c<self_t> that carries the signature of
+# method idx (l2_emit_call, sel 2): nullary, through lmx_call_prim.  The value lands the way the
+# method's trampoline delivers it (l2_tramp_class): a scalar or a foreign value in l2_t<t> through
+# dest; a pointer through out, then into l2_t<t>.  On a throw `out` is the thrown record.
+# When this formal received a merge, native 0 uses the node as code and data. Otherwise the
+# fresh path is the only text emitted.
+fn: l2_emit_dyn_call (int: idx; int: t; int: self_t; const: @(char ind)) int
+    @: char deep 0
+    if: c.fprintf(l2_out, "%s@: void l2_o%d 0\n", ind, t) < 0
+        return: 1
+    if: l2_t7_dyn_here != 0
+        if: c.fprintf(l2_out, "%sif: l2_c%d\\native = 0\n", ind, self_t) < 0
+            return: 1
+        if: l2_bump_ind(ind, @ deep) != 0
+            return: 1
+        if: l2_emit_dyn_tail(idx, t, self_t, deep, 0) != 0
+            return: 1
+        if: c.fprintf(l2_out, "%s---\n", deep) < 0
+            return: 1
+        if: c.fprintf(l2_out, "%selse:\n", ind) < 0
+            return: 1
+        if: l2_emit_dyn_tail(idx, t, self_t, deep, 1) != 0
+            return: 1
+        if: c.fprintf(l2_out, "%s---\n", deep) < 0
+            return: 1
+        return: 0
+    # -189 c3a (Q28): a call by reference runs over a fresh instance of the callee, made from its
+    # code by the kernel (lmx_fresh): the caller does not know the callee's prototype.  The data
+    # is lmx_call_prim's operand; the trampoline makes nothing.
+    return: l2_emit_dyn_tail(idx, t, self_t, ind, 1)
 
 # The call of method i from its trampoline: node, self, the inputs, and for the declared-throw
 # ABI l2_msg 0, the result local and the thrown-record local.
@@ -17711,6 +17807,10 @@ fn: l2_rw_opty (const: @(LmP0Node node)) int
         return: l2_rw_elem_ty(idx)
     if: pmi = 2
         return: 0 - 3
+    if: l2_t7_walk != 0 && l2_t7_bound_slot(t) >= 0
+        return: 0
+    if: l2_t7_walk != 0 && l2_t7_arg_ty(t) >= 0
+        return: l2_t7_arg_ty(t)
     if: l2_rw_mi != l2_e && l2_formal_find(l2_rw_mi, t) >= 0
         idx: l2_rw_bound(t)
         if: idx >= 0
@@ -19428,6 +19528,16 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
     ---
     # A formal of the method being built is its input j (-193 T4a): [arg, j], until its numeric
     # field's binding line (T4b class 2); from then on the name is that field.
+    # T7 walks the model with the binding in effect: a bound name is AT of its
+    # field, a remaining formal is ARG of the declared header.
+    if: l2_t7_walk != 0
+        idx: l2_t7_bound_slot(t)
+        if: idx >= 0
+            return: l2_rw_mad_at(parent, idx, out)
+        idx: l2_t7_arg_of(t)
+        if: idx >= 0
+            return: l2_rw_arg(parent, idx, out)
+        ---
     if: l2_rw_mi != l2_e && l2_formal_find(l2_rw_mi, t) >= 0
         oi: l2_rw_bound(t)
         if: oi >= 0
@@ -20934,11 +21044,13 @@ fn: l2_mad_slot (int: mi; const: @(LmP0Text name)) int
     j: l2_formal_find(host, name)
     if: j < 0 || l2_ft(host, j) != 0
         return: 0 - 1
-    if: l2_mad_mentions(l2_m_body[mi], name) = 0
+    # Capture is resolution, not a textual mention: a host formal the model
+    # already has as a formal or an own field is not a capture.
+    if: l2_formal_find(mi, name) >= 0 || l2_own_find(mi, name) >= 0
         return: 0 - 1
     while: k < j
         fnm: l2_fn(host, k)
-        if: l2_ft(host, k) = 0 && fnm != 0 && l2_mad_mentions(l2_m_body[mi], fnm) != 0
+        if: l2_ft(host, k) = 0 && fnm != 0 && l2_formal_find(mi, fnm) < 0 && l2_own_find(mi, fnm) < 0
             slot: slot + 1
         k: k + 1
     ---
@@ -20956,7 +21068,7 @@ fn: l2_mad_caps (int: host) int
         return: 0
     while: j < l2_m_arity[host]
         fnm: l2_fn(host, j)
-        if: l2_ft(host, j) = 0 && fnm != 0 && l2_mad_mentions(l2_m_body[model], fnm) != 0
+        if: l2_ft(host, j) = 0 && fnm != 0 && l2_formal_find(model, fnm) < 0 && l2_own_find(model, fnm) < 0
             n: n + 1
         j: j + 1
     ---
@@ -20972,11 +21084,15 @@ fn: l2_mad_take_nested (int: mi; @: LmP0Node body; const: @(char path)) int
     int: model 0 - 1
     int: idx
     int: selfret
+    int: merges 0
+    @: LmP0Node mnode 0
     if: l2_mad_ensure(l2_m_n) != 0
         return: l2_error(path, body, "out of memory")
-    if: body = 0 || body\kind != c.LM_P0_NODE_STRUCTURE || body\as = 0 || body\as\structure = 0
+    if: body != 0 && (body\kind != c.LM_P0_NODE_STRUCTURE || body\as = 0 || body\as\structure = 0)
         return: l2_error(path, body, "a callable merge needs one model")
-    field: l2_next_active(body\as\structure\first_field)
+    field: 0
+    if: body != 0
+        field: l2_next_active(body\as\structure\first_field)
     while: field != 0
         stmt: field\value
         selfret: 0
@@ -21009,10 +21125,56 @@ fn: l2_mad_take_nested (int: mi; @: LmP0Node body; const: @(char path)) int
                 if: idx >= 0 && idx != l2_e
                     model: idx
                 ---
+            if: only != 0 && only\value != 0 && l2_frame_head(only\value, "merge") != 0
+                merges: merges + 1
+                mnode: only\value
             ---
         field: l2_next_active(field\next)
+    # A lone `return:` is the method trailer, not a body statement.
+    if: merges = 0 && model < 0 && l2_m_node[mi] != 0 && l2_m_node[mi]\as != 0
+        tr: l2_ret_tr(l2_m_node[mi]\as\frame)
+        if: tr != 0 && l2_count_active(tr) = 1
+            only: l2_next_active(tr\first_field)
+            if: only != 0 && only\value != 0 && only\value\kind = c.LM_P0_NODE_ATOM && only\value\as != 0
+                idx: l2_find_method(only\value\as\atom)
+                if: idx >= 0 && idx != l2_e
+                    model: idx
+                ---
+            if: only != 0 && only\value != 0 && l2_frame_head(only\value, "merge") != 0
+                merges: 1
+                mnode: only\value
+            ---
+        ---
+    # The indented return of `fn: name (...) fn: ...` hangs on the signature frame.
+    if: merges = 0 && model < 0 && l2_m_node[mi] != 0 && l2_m_node[mi]\as != 0 && l2_m_node[mi]\as\frame\body != 0
+        field: l2_next_active(l2_m_node[mi]\as\frame\body\first_field)
+        if: field != 0
+            field: l2_next_active(field\next)
+        if: field != 0
+            field: l2_next_active(field\next)
+        if: field != 0 && field\value != 0 && l2_frame_head(field\value, "fn") != 0
+            tr: l2_ret_tr(field\value\as\frame)
+            if: tr != 0 && l2_count_active(tr) = 1
+                only: l2_next_active(tr\first_field)
+                if: only != 0 && only\value != 0 && only\value\kind = c.LM_P0_NODE_ATOM && only\value\as != 0
+                    idx: l2_find_method(only\value\as\atom)
+                    if: idx >= 0 && idx != l2_e
+                        model: idx
+                    ---
+                if: only != 0 && only\value != 0 && l2_frame_head(only\value, "merge") != 0
+                    merges: 1
+                    mnode: only\value
+                    frw: field\value\as\frame
+                    frw\trailer: 0
+                ---
+            ---
+        ---
+    if: merges > 1 || (merges = 1 && model >= 0)
+        return: l2_error(path, mnode, "a callable merge needs one model")
+    if: merges = 1
+        return: l2_t7_from_return(mi, mnode, path)
     if: model < 0
-        return: l2_error(path, body, "a callable merge needs one model")
+        return: l2_error(path, l2_m_node[mi], "a callable merge needs one model")
     if: l2_mad_ensure(l2_m_n) != 0
         return: l2_error(path, body, "out of memory")
     l2_mad_model[mi]: model
@@ -21070,7 +21232,11 @@ fn: l2_mad_emit (int: mi; const: @(char ind)) int
     int: j 0
     int: slot 2
     int: base
+    int: site
     @: LmP0Text fnm
+    site: l2_t7_host_site(mi)
+    if: site >= 0
+        return: l2_t7_write(site, ind, 1)
     model: l2_mad_model[mi]
     if: model < 0 || l2_m_steps = 0 || l2_m_steps[model] <= 0
         return: l2_error(l2_src, l2_m_node[mi], "a callable merge needs a walkable body")
@@ -21079,7 +21245,8 @@ fn: l2_mad_emit (int: mi; const: @(char ind)) int
     if: caps < 1
         return: l2_error(l2_src, l2_m_node[mi], "a callable merge binds a name that is not a formal")
     arity: l2_mad_hdr_arity(mi)
-    if: arity < 1
+    # A declared header of width 0 is that header. Do not borrow the model's width.
+    if: arity < 1 && l2_m_ret[mi] != 16
         arity: l2_m_arity[model]
     width: 2 + caps + steps
     base: l2_m_kids(model)
@@ -21204,6 +21371,526 @@ fn: l2_pap_is_bind (const: @(LmP0Node node)) int
     if: l2_pap_bind(node, @ nm, @ lit) != 0
         return: 0
 return: 1
+
+# T7. A bound name of the merge being walked, or -1. Slot is on the result node.
+fn: l2_t7_bound_slot (const: @(LmP0Text name)) int
+    int: site
+    int: i 0
+    int: at
+    if: l2_t7_walk = 0 || name = 0
+        return: 0 - 1
+    site: l2_t7_walk - 1
+    if: site < 0 || site >= l2_t7_n
+        return: 0 - 1
+    while: i < l2_t7_nb[site]
+        at: l2_t7_b0[site] + i
+        if: l2_text_same(l2_t7b_nm[at], name) != 0
+            return: l2_t7b_slot[at]
+        i: i + 1
+    ---
+return: 0 - 1
+
+# Index of name in the declared header, or -1.
+fn: l2_t7_arg_of (const: @(LmP0Text name)) int
+    int: site
+    int: i 0
+    int: at
+    if: l2_t7_walk = 0 || name = 0
+        return: 0 - 1
+    site: l2_t7_walk - 1
+    if: site < 0 || site >= l2_t7_n
+        return: 0 - 1
+    while: i < l2_t7_argc[site]
+        at: l2_t7_h0[site] + i
+        if: l2_text_same(l2_t7h_nm[at], name) != 0
+            return: i
+        i: i + 1
+    ---
+return: 0 - 1
+
+fn: l2_t7_arg_ty (const: @(LmP0Text name)) int
+    int: site
+    int: i
+    i: l2_t7_arg_of(name)
+    if: i < 0
+        return: 0 - 1
+    site: l2_t7_walk - 1
+return: l2_own_ty_of_param(l2_t7h_ty[l2_t7_h0[site] + i])
+
+fn: l2_t7_extra (int: mi) int
+    int: s 0
+    int: n 0
+    while: s < l2_t7_n
+        if: l2_t7_anchor[s] = mi
+            n: n + l2_t7_steps[s]
+        s: s + 1
+    ---
+return: n
+
+fn: l2_t7_host_site (int: mi) int
+    int: s 0
+    while: s < l2_t7_n
+        if: l2_t7_kind[s] = 1 && l2_t7_host[s] = mi
+            return: s
+        s: s + 1
+    ---
+return: 0 - 1
+
+fn: l2_t7_dyn_has (int: mi; int: fi) int
+    int: i 0
+    while: i < l2_t7_dyn_n
+        if: l2_t7_dyn_mi[i] = mi && l2_t7_dyn_fi[i] = fi
+            return: 1
+        i: i + 1
+    ---
+return: 0
+
+fn: l2_t7_dyn_add (int: mi; int: fi) int
+    int: i 0
+    while: i < l2_t7_dyn_n
+        if: l2_t7_dyn_mi[i] = mi && l2_t7_dyn_fi[i] = fi
+            return: 0
+        i: i + 1
+    ---
+    if: l2_t7_dyn_n >= 8
+        return: 1
+    l2_t7_dyn_mi[l2_t7_dyn_n]: mi
+    l2_t7_dyn_fi[l2_t7_dyn_n]: fi
+    l2_t7_dyn_n: l2_t7_dyn_n + 1
+return: 0
+
+fn: l2_t7_name_bound (int: b0; int: nb; const: @(LmP0Text name)) int
+    int: i 0
+    int: at
+    if: name = 0
+        return: 0
+    while: i < nb
+        at: b0 + i
+        if: l2_text_same(l2_t7b_nm[at], name) != 0
+            return: 1
+        i: i + 1
+    ---
+return: 0
+
+# Remaining model formals, in order, are the declared header. Bound names are fields.
+fn: l2_t7_header_match (int: model; int: h0; int: argc; int: ret; int: b0; int: nb) int
+    int: j 0
+    int: r 0
+    int: at
+    @: LmP0Text nm
+    while: j < l2_m_arity[model]
+        nm: l2_fn(model, j)
+        if: l2_t7_name_bound(b0, nb, nm) = 0
+            if: r >= argc
+                return: 0
+            at: h0 + r
+            if: nm = 0 || l2_text_same(nm, l2_t7h_nm[at]) = 0 || l2_ft(model, j) != l2_t7h_ty[at]
+                return: 0
+            r: r + 1
+        j: j + 1
+    ---
+    if: r != argc
+        return: 0
+    if: l2_m_ret[model] != ret
+        return: 0
+return: 1
+
+fn: l2_t7_host_sig (int: mi) @: LmP0Node
+    @: LmP0Field f
+    if: l2_m_node[mi] = 0 || l2_m_node[mi]\as = 0 || l2_m_node[mi]\as\frame = 0 || l2_m_node[mi]\as\frame\body = 0
+        return: 0
+    f: l2_next_active(l2_m_node[mi]\as\frame\body\first_field)
+    if: f != 0
+        f: l2_next_active(f\next)
+    if: f != 0
+        f: l2_next_active(f\next)
+    if: f = 0 || f\value = 0 || l2_frame_head(f\value, "fn") = 0
+        return: 0
+return: f\value
+
+# Writes the declared fn: header at l2_t7h_n. Returns its arity, or -1.
+fn: l2_t7_take_sig (const: @(LmP0Node sig); const: @(char path); @: int out_ret) int
+    @: LmP0Field args
+    @: LmP0Field retf
+    @: LmP0Field p
+    @: LmP0Text nm
+    int: ty 0
+    int: n 0
+    int: saved
+    if: out_ret = 0 || sig = 0 || l2_mad_sig(sig) = 0
+        return: 0 - 1
+    args: l2_next_active(sig\as\frame\body\first_field)
+    retf: l2_next_active(args\next)
+    if: args = 0 || retf = 0 || retf\value = 0 || retf\value\as = 0
+        return: 0 - 1
+    if: l2_ret_type_word(retf\value\as\atom, 0, 0, @ ty) != 0
+        return: 0 - 1
+    \out_ret: ty
+    saved: l2_last_cf_req
+    p: l2_next_active(args\value\as\structure\first_field)
+    while: p != 0
+        if: l2_t7h_n >= 16
+            l2_last_cf_req: saved
+            return: 0 - 1
+        nm: 0
+        ty: 0
+        if: l2_typed_formal(p\value, path, @ nm, @ ty) != 0
+            l2_last_cf_req: saved
+            return: 0 - 1
+        l2_t7h_nm[l2_t7h_n]: nm
+        l2_t7h_ty[l2_t7h_n]: ty
+        l2_t7h_n: l2_t7h_n + 1
+        l2_last_cf_req: saved
+        n: n + 1
+        p: l2_next_active(p\next)
+    ---
+    l2_last_cf_req: saved
+return: n
+
+fn: l2_t7_take_contract (int: req; @: int out_ret) int
+    int: j 0
+    if: out_ret = 0 || req < 0 || req >= l2_m_n
+        return: 0 - 1
+    \out_ret: l2_m_ret[req]
+    while: j < l2_m_arity[req]
+        if: l2_t7h_n >= 16
+            return: 0 - 1
+        l2_t7h_nm[l2_t7h_n]: l2_fn(req, j)
+        l2_t7h_ty[l2_t7h_n]: l2_ft(req, j)
+        l2_t7h_n: l2_t7h_n + 1
+        j: j + 1
+    ---
+return: j
+
+# One merge. kind 1: the host's return. kind 2: an actual of a callable formal.
+# req is the formal's contract method for kind 2.
+fn: l2_t7_fill (const: @(LmP0Node node); int: host; int: kind; int: req; const: @(char path)) int
+    @: LmP0Field f
+    @: LmP0Field only
+    @: LmP0Frame fr
+    @: LmP0Text nm
+    @: LmP0Node sig
+    int: methods 0
+    int: model 0 - 1
+    int: md
+    int: h_save
+    int: b_save
+    int: argc
+    int: ret 0
+    int: nb
+    int: fj
+    int: how
+    int: val
+    int: slot
+    int: at
+    size_t: bits 0U
+    if: node = 0 || l2_frame_head(node, "merge") = 0 || node\as = 0 || node\as\frame = 0 || node\as\frame\body = 0
+        return: l2_error(path, node, "a callable merge needs one model")
+    f: l2_next_active(node\as\frame\body\first_field)
+    if: f = 0
+        return: l2_error(path, node, "a callable merge needs one model")
+    while: f != 0
+        md: l2_pap_method_of(f\value)
+        if: md >= 0
+            methods: methods + 1
+            model: md
+        else:
+            if: f\value = 0 || f\value\kind != c.LM_P0_NODE_FRAME || f\value\as = 0 || f\value\as\frame = 0
+                return: l2_error(path, f\value, "a callable merge binds a name that is not a formal")
+            fr: f\value\as\frame
+            if: fr\head = 0 || l2_ident(fr\head) = 0 || fr\body = 0 || fr\trailer != 0 || l2_count_active(fr\body) != 1
+                return: l2_error(path, f\value, "a callable merge binds a name that is not a formal")
+            ---
+        ---
+        f: l2_next_active(f\next)
+    ---
+    if: methods != 1 || model < 0
+        return: l2_error(path, node, "a callable merge needs one model")
+    h_save: l2_t7h_n
+    b_save: l2_t7b_n
+    if: kind = 1
+        sig: l2_t7_host_sig(host)
+        if: sig = 0
+            return: l2_error(path, node, "a callable merge header does not match the model")
+        argc: l2_t7_take_sig(sig, path, @ ret)
+    else:
+        argc: l2_t7_take_contract(req, @ ret)
+    ---
+    if: argc < 0
+        l2_t7h_n: h_save
+        return: l2_error(path, node, "out of memory")
+    f: l2_next_active(node\as\frame\body\first_field)
+    while: f != 0
+        if: l2_pap_method_of(f\value) < 0
+            fr: f\value\as\frame
+            only: l2_next_active(fr\body\first_field)
+            nm: fr\head
+            fj: l2_formal_find(model, nm)
+            if: fj < 0
+                l2_t7h_n: h_save
+                l2_t7b_n: b_save
+                return: l2_error(path, f\value, "a callable merge binds a name that is not a formal")
+            if: l2_ft(model, fj) != 0
+                l2_t7h_n: h_save
+                l2_t7b_n: b_save
+                return: l2_error(path, f\value, "a callable merge binds an int formal")
+            if: l2_t7_name_bound(b_save, l2_t7b_n - b_save, nm) != 0
+                l2_t7h_n: h_save
+                l2_t7b_n: b_save
+                return: l2_error(path, f\value, "a callable merge binds one field once")
+            how: 0 - 1
+            val: 0
+            if: only != 0 && only\value != 0 && only\value\kind = c.LM_P0_NODE_ATOM && only\value\as != 0 && l2_int_literal_bits(only\value\as\atom, @ bits) = 1
+                how: 0
+                val: (cast: (int) bits)
+            if: how < 0 && only != 0 && only\value != 0 && only\value\kind = c.LM_P0_NODE_ATOM && only\value\as != 0 && l2_ident(only\value\as\atom) != 0
+                val: l2_formal_find(host, only\value\as\atom)
+                if: val >= 0 && l2_ft(host, val) = 0
+                    how: 1
+                ---
+            if: how < 0
+                l2_t7h_n: h_save
+                l2_t7b_n: b_save
+                return: l2_error(path, f\value, "a callable merge binds an int formal")
+            if: l2_t7b_n >= 16
+                l2_t7h_n: h_save
+                l2_t7b_n: b_save
+                return: l2_error(path, f\value, "out of memory")
+            slot: 2 + l2_t7b_n - b_save
+            at: l2_t7b_n
+            l2_t7b_nm[at]: nm
+            l2_t7b_how[at]: how
+            l2_t7b_val[at]: val
+            l2_t7b_slot[at]: slot
+            l2_t7b_n: l2_t7b_n + 1
+        f: l2_next_active(f\next)
+    ---
+    nb: l2_t7b_n - b_save
+    if: l2_t7_header_match(model, h_save, argc, ret, b_save, nb) = 0
+        l2_t7h_n: h_save
+        l2_t7b_n: b_save
+        return: l2_error(path, node, "a callable merge header does not match the model")
+    if: l2_t7_n >= 8
+        l2_t7h_n: h_save
+        l2_t7b_n: b_save
+        return: l2_error(path, node, "out of memory")
+    at: l2_t7_n
+    l2_t7_kind[at]: kind
+    l2_t7_host[at]: host
+    l2_t7_model[at]: model
+    l2_t7_ret[at]: ret
+    l2_t7_argc[at]: argc
+    l2_t7_h0[at]: h_save
+    l2_t7_nb[at]: nb
+    l2_t7_b0[at]: b_save
+    l2_t7_steps[at]: 0
+    l2_t7_base[at]: 0
+    l2_t7_anchor[at]: host
+    l2_t7_at[at]: (cast: (@: LmP0Node) node)
+    l2_t7_n: l2_t7_n + 1
+    if: kind = 1
+        if: l2_mad_model = 0 || host < 0 || host >= l2_mad_cap
+            l2_t7_n: l2_t7_n - 1
+            l2_t7h_n: h_save
+            l2_t7b_n: b_save
+            return: l2_error(path, node, "out of memory")
+        l2_mad_model[host]: model
+    return: 0
+
+fn: l2_t7_from_return (int: mi; const: @(LmP0Node node); const: @(char path)) int
+return: l2_t7_fill(node, mi, 1, 0 - 1, path)
+
+fn: l2_t7_from_actual (int: mi; int: callee; int: fi; const: @(LmP0Node node); const: @(char path)) int
+    int: req
+    if: mi < 0 || mi = l2_e
+        return: l2_error(path, node, "incompatible entry signature")
+    req: l2_cf_get(callee, fi)
+    if: req < 0
+        return: l2_error(path, node, "incompatible entry signature")
+    if: l2_t7_fill(node, mi, 2, req, path) != 0
+        return: 1
+    if: l2_t7_dyn_add(callee, fi) != 0
+        return: l2_error(path, node, "out of memory")
+return: 0
+
+fn: l2_t7_write (int: site; const: @(char ind); int: do_ret) int
+    int: steps
+    int: nb
+    int: arity
+    int: width
+    int: anchor
+    int: base
+    int: host
+    int: j 0
+    int: at
+    int: slot
+    int: b0
+    int: how
+    int: val
+    if: site < 0 || site >= l2_t7_n
+        return: 1
+    if: l2_t7_ret[site] != 0
+        return: l2_error(l2_src, l2_t7_at[site], "a callable merge needs a walkable body")
+    steps: l2_t7_steps[site]
+    if: steps < 1
+        return: l2_error(l2_src, l2_t7_at[site], "a callable merge needs a walkable body")
+    nb: l2_t7_nb[site]
+    arity: l2_t7_argc[site]
+    anchor: l2_t7_anchor[site]
+    base: l2_t7_base[site]
+    host: l2_t7_host[site]
+    b0: l2_t7_b0[site]
+    width: 2 + nb + steps
+    if: c.fprintf(l2_out, "%s@: Lmx l2_t7n%d 0\n%s@: Lmx l2_t7p%d 0\n%s@: Lmx l2_t7s%d 0\n%s@: void l2_t7c%d 0\n%sint: l2_t7k%d 0\n", ind, site, ind, site, ind, site, ind, site, ind, site) < 0
+        return: 1
+    if: c.fprintf(l2_out, "%sl2_t7n%d: lmx_struct_new_owned(node, l2_program_arena)\n%sif: l2_t7n%d = 0 || lmx_arena_refs_open_owned(l2_program_arena, l2_t7n%d, %uU) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: a callable merge could not be built\\n\")\n%s    c.abort()\n", ind, site, ind, site, site, (cast: (unsigned) width), ind, ind) < 0
+        return: 1
+    if: arity > 0 && c.fprintf(l2_out, "%sl2_t7p%d: lmx_struct_new_owned(l2_t7n%d, l2_program_arena)\n%sif: l2_t7p%d = 0 || lmx_arena_refs_open_owned(l2_program_arena, l2_t7p%d, %uU) != 0 || lmx_arena_ref_store(l2_t7n%d, 0U, (cast: (@: void) l2_t7p%d)) != 0\n%s    c.abort()\n", ind, site, site, ind, site, site, (cast: (unsigned) arity), site, site, ind) < 0
+        return: 1
+    if: arity = 0 && c.fprintf(l2_out, "%sl2_t7p%d: lmx_struct_new_owned(l2_t7n%d, l2_program_arena)\n%sif: l2_t7p%d = 0 || lmx_arena_ref_store(l2_t7n%d, 0U, (cast: (@: void) l2_t7p%d)) != 0\n%s    c.abort()\n", ind, site, site, ind, site, site, site, ind) < 0
+        return: 1
+    while: j < arity
+        if: c.fprintf(l2_out, "%sl2_t7c%d: lmx_int_new_owned(l2_program_arena)\n%sif: l2_t7c%d = 0 || lmx_arena_ref_store(l2_t7p%d, %uU, l2_t7c%d) != 0\n%s    c.abort()\n", ind, site, ind, site, site, (cast: (unsigned) j), site, ind) < 0
+            return: 1
+        j: j + 1
+    ---
+    if: c.fprintf(l2_out, "%sl2_t7p%d: lmx_struct_new_owned(l2_t7n%d, l2_program_arena)\n%sif: l2_t7p%d = 0 || lmx_arena_refs_open_owned(l2_program_arena, l2_t7p%d, 1U) != 0 || lmx_arena_ref_store(l2_t7n%d, 1U, (cast: (@: void) l2_t7p%d)) != 0\n%s    c.abort()\n%sl2_t7c%d: lmx_int_new_owned(l2_program_arena)\n%sif: l2_t7c%d = 0 || lmx_arena_ref_store(l2_t7p%d, 0U, l2_t7c%d) != 0\n%s    c.abort()\n", ind, site, site, ind, site, site, site, site, ind, ind, site, ind, site, site, site, ind) < 0
+        return: 1
+    j: 0
+    while: j < nb
+        at: b0 + j
+        how: l2_t7b_how[at]
+        val: l2_t7b_val[at]
+        slot: l2_t7b_slot[at]
+        if: how = 0 && c.fprintf(l2_out, "%sl2_t7c%d: lmx_int_new_owned(l2_program_arena)\n%sif: l2_t7c%d = 0 || lmx_int_store_known(l2_t7c%d, %d) != 0 || lmx_arena_ref_store(l2_t7n%d, %uU, l2_t7c%d) != 0\n%s    c.abort()\n", ind, site, ind, site, site, val, site, (cast: (unsigned) slot), site, ind) < 0
+            return: 1
+        if: how != 0 && c.fprintf(l2_out, "%sl2_t7c%d: lmx_int_new_owned(l2_program_arena)\n%sif: l2_t7c%d = 0 || lmx_int_store_known(l2_t7c%d, l2_p%d_%d) != 0 || lmx_arena_ref_store(l2_t7n%d, %uU, l2_t7c%d) != 0\n%s    c.abort()\n", ind, site, ind, site, site, host, val, site, (cast: (unsigned) slot), site, ind) < 0
+            return: 1
+        j: j + 1
+    ---
+    if: c.fprintf(l2_out, "%sl2_t7s%d: lmx_arena_ref_struct(node, %uU)\n%sif: l2_t7s%d = 0\n%s    c.abort()\n", ind, site, (cast: (unsigned) (l2_unit_base + anchor)), ind, site, ind) < 0
+        return: 1
+    if: c.fprintf(l2_out, "%sl2_t7k%d: 0\n%swhile: l2_t7k%d < %d\n", ind, site, ind, site, steps) < 0
+        return: 1
+    if: c.fprintf(l2_out, "%s    if: lmx_arena_ref_store(l2_t7n%d, %uU + (cast: (unsigned) l2_t7k%d), lmx_arena_ref_value(l2_t7s%d, %uU + (cast: (unsigned) l2_t7k%d))) != 0\n%s        c.abort()\n%s    l2_t7k%d: l2_t7k%d + 1\n", ind, site, (cast: (unsigned) (2 + nb)), site, site, (cast: (unsigned) base), site, ind, ind, site, site) < 0
+        return: 1
+    if: do_ret != 0 && c.fprintf(l2_out, "%sreturn: (cast: (@: void) l2_t7n%d)\n", ind, site) < 0
+        return: 1
+return: 0
+
+fn: l2_t7_emit_actual (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest) int
+    int: s 0
+    if: dest = 0
+        return: 1
+    while: s < l2_t7_n
+        if: l2_t7_at[s] = node && l2_t7_host[s] = mi
+            if: l2_t7_write(s, ind, 0) != 0
+                return: 1
+            if: c.sprintf(dest, "l2_t7n%d", s) < 0
+                return: 1
+            return: 0
+        s: s + 1
+    ---
+return: l2_error(l2_src, node, "a callable merge needs one model")
+
+fn: l2_t7_count () int
+    int: s 0
+    int: made
+    int: one
+    int: bad
+    int: model
+    int: base
+    int: k
+    int: a
+    while: s < l2_t7_n
+        model: l2_t7_model[s]
+        if: l2_rw_bseq_zero() != 0
+            return: l2_error(l2_src, l2_t7_at[s], "out of memory")
+        l2_vis_method(model)
+        l2_t7_walk: s + 1
+        l2_rw_mi: model
+        l2_rw_quiet: 1
+        l2_rw_emit: 0
+        l2_rw_send_rec: 0
+        made: 0
+        one: 0
+        bad: 0
+        if: l2_m_body[model] != 0 && l2_m_body[model]\as != 0 && l2_m_body[model]\as\structure != 0 && l2_rw_stmts(l2_m_body[model]\as\structure\first_field, 0 - 2, 0, @ made) != 0
+            bad: 1
+        if: bad = 0 && l2_rw_trailer(model, 0 - 2, made, @ one) != 0
+            bad: 1
+        l2_t7_walk: 0
+        l2_rw_quiet: 0
+        l2_rw_pre_n: 0
+        l2_rw_mi: l2_e
+        l2_vis_on: 0
+        if: bad != 0 || made + one <= 0
+            return: l2_error(l2_src, l2_t7_at[s], "a callable merge needs a walkable body")
+        l2_t7_steps[s]: made + one
+        if: l2_m_value_used != 0
+            l2_m_value_used[model]: 1
+        s: s + 1
+    ---
+    s: 0
+    while: s < l2_t7_n
+        a: l2_t7_anchor[s]
+        base: l2_m_kids(a)
+        if: l2_m_steps != 0 && a >= 0 && a < l2_m_n && l2_m_steps[a] > 0
+            base: base + l2_m_steps[a]
+        k: 0
+        while: k < s
+            if: l2_t7_anchor[k] = a
+                base: base + l2_t7_steps[k]
+            k: k + 1
+        ---
+        l2_t7_base[s]: base
+        s: s + 1
+    ---
+return: 0
+
+fn: l2_t7_emit_frames () int
+    int: s 0
+    int: t
+    int: made
+    int: one
+    int: bad
+    int: model
+    int: anchor
+    int: base
+    while: s < l2_t7_n
+        model: l2_t7_model[s]
+        anchor: l2_t7_anchor[s]
+        base: l2_t7_base[s]
+        if: l2_rw_bseq_zero() != 0
+            return: l2_error(l2_src, l2_t7_at[s], "out of memory")
+        l2_vis_method(model)
+        l2_t7_walk: s + 1
+        l2_rw_mi: model
+        l2_rw_emit: 1
+        l2_rw_send_rec: 0
+        t: l2_rw_t
+        l2_rw_t: l2_rw_t + 1
+        made: 0
+        one: 0
+        bad: 0
+        if: c.fprintf(l2_out, "        @: Lmx l2_rw%d lmx_arena_ref_struct(l2_entry_unit, %uU)\n        if: l2_rw%d = 0\n            return: 1\n", t, (cast: (unsigned) (l2_unit_base + anchor)), t) < 0
+            bad: 1
+        if: bad = 0 && l2_m_body[model] != 0 && l2_m_body[model]\as != 0 && l2_m_body[model]\as\structure != 0 && l2_rw_stmts(l2_m_body[model]\as\structure\first_field, t, base, @ made) != 0
+            bad: 1
+        if: bad = 0 && l2_rw_trailer(model, t, base + made, @ one) != 0
+            bad: 1
+        l2_t7_walk: 0
+        l2_rw_emit: 0
+        l2_rw_pre_n: 0
+        l2_rw_mi: l2_e
+        l2_vis_on: 0
+        if: bad != 0
+            return: 1
+        if: made + one != l2_t7_steps[s]
+            return: l2_error(l2_src, l2_t7_at[s], "internal: a method's steps changed between the passes")
+        s: s + 1
+    ---
+return: 0
 
 fn: l2_pap_sole (int: mi) @: LmP0Node
     @: LmP0Field f
@@ -21421,6 +22108,8 @@ fn: l2_rw_methods_count () int
         ---
         i: i + 1
     ---
+    if: l2_t7_count() != 0
+        return: 1
 return: 0
 
 # The emission of every method's frames, into its occurrence (a node temp, l2_rw<t>), from slot
@@ -21465,14 +22154,19 @@ fn: l2_rw_methods_emit () int
         ---
         i: i + 1
     ---
+    if: l2_t7_emit_frames() != 0
+        return: 1
 return: 0
 
 # The children of method mi's occurrence: its header parts, fields and control bodies (l2_m_kids),
-# then its frames (-193 T4a).
+# then its frames (-193 T4a). T7 frame packs sit after that walked region.
 fn: l2_m_width (int: mi) int
+    int: n
+    n: l2_m_kids(mi)
     if: l2_m_steps != 0 && mi >= 0 && mi < l2_m_n && l2_m_steps[mi] > 0
-        return: l2_m_kids(mi) + l2_m_steps[mi]
-return: l2_m_kids(mi)
+        n: n + l2_m_steps[mi]
+    n: n + l2_t7_extra(mi)
+return: n
 
 # Public C/L1 adapter signature for a source method. The fixed lexical space
 # above the method and selected occurrence remain internal ABI arguments and
@@ -23854,7 +24548,9 @@ fn: l2_emit_parts (int: i) int
         if: fputs("        l2_entry_slot: lmx_arena_ref_cell(l2_fkid, 0U)\n        if: l2_entry_slot = 0\n            return: 1\n", l2_out) < 0 || l2_emit_cell_new_ty(l2_ret_cell_ty(i), 0U, "        ", "l2_entry_slot", "lmx_char_cell_known(process_chars, 0)", "return: 1", 0) != 0
             return: 1
     ---
-    if: l2_m_native(i) = 0
+    # A T7 host's return is the signature frame's trailer, so the method body is
+    # empty, but the native function still builds the node. It is not walked.
+    if: l2_m_native(i) = 0 && l2_mad_on(i) = 0
         return: 0
     # A callable merge is walked (native 0), not the model's trampoline.
     if: l2_pap_on(i) != 0
@@ -24150,7 +24846,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     # Each native method's trampoline (l2_emit_trampoline): its METHOD.addr.
     i: 0
     while: i < l2_m_n
-        if: l2_m_native(i) != 0 && i != l2_e && l2_pap_on(i) = 0 && l2_mad_host_of(i) < 0 && l2_emit_trampoline(i, 1) != 0
+        if: (l2_m_native(i) != 0 || l2_mad_on(i) != 0) && i != l2_e && l2_pap_on(i) = 0 && l2_mad_host_of(i) < 0 && l2_emit_trampoline(i, 1) != 0
             fclose(l2_out)
             return: 1
         i: i + 1
@@ -24309,6 +25005,10 @@ fn: l2_emit_unit (const: @(char out_path)) int
         if: l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && l2_emit_body(l2_m_body[i]\as\structure, i, "    ") != 0
             fclose(l2_out)
             return: 1
+        # T7: `return: merge` is the signature frame's trailer, so the host body is empty.
+        if: l2_m_body[i] = 0 && l2_mad_on(i) != 0 && l2_mad_emit(i, "    ") != 0
+            fclose(l2_out)
+            return: 1
         # Descriptor-only rows emit no native body (catalog addr stays 0).
         if: l2_m_node[i] != 0 && l2_m_node[i]\as != 0 && l2_emit_ret_tr(i, "    ", l2_ret_tr(l2_m_node[i]\as\frame)) != 0
             fclose(l2_out)
@@ -24338,7 +25038,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     # Each native method's trampoline, after every body it calls (l2_emit_trampoline).
     i: 0
     while: i < l2_m_n
-        if: l2_m_native(i) != 0 && i != l2_e && l2_pap_on(i) = 0 && l2_mad_host_of(i) < 0 && l2_emit_trampoline(i, 0) != 0
+        if: (l2_m_native(i) != 0 || l2_mad_on(i) != 0) && i != l2_e && l2_pap_on(i) = 0 && l2_mad_host_of(i) < 0 && l2_emit_trampoline(i, 0) != 0
             fclose(l2_out)
             return: 1
         i: i + 1

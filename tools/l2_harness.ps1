@@ -942,6 +942,10 @@ $fixtures = @(
     # add5(1) = 6. Mutant: read y as ARG — INVALID, not 6.
     [pscustomobject]@{ Name = 'unit_pap_add5.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 6;
         Absent = @('l2_m1_tr'); Debt = @('lmx_int_store_known(l2_entry_slot[0], 5)', 'c.LMX_WALK_OP_AT, 3U)', 'c.LMX_WALK_OP_ARG, 2U)', 'c.LMX_WALK_OP_CALL, 6U)') },
+    # T6: return: addN builds {n: value} and one merge. add5(1)=6, add100(1)=101, add5(1)=6.
+    # Mutant: one field n for both results — the second call is not 101. Entry 7, 0 is refusal.
+    [pscustomobject]@{ Name = 'unit_make_adder.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @('lmx_fresh('); Debt = @('lmx_call_prim(', 'lmx_int_store_known(', 'c.LMX_WALK_OP_AT, 3U)') },
     [pscustomobject]@{ Name = 'unit_merged_callable.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 5;
         Absent = @(); Debt = @('merge result check 77', 'merge result check 79') },
     # -193 T1b (Q6 = a): no name is decided by its spelling.  l2_upper_name (all-caps = a C constant

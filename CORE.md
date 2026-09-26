@@ -443,7 +443,10 @@ ordinary direct-child protocol, not a special R0 graph algorithm.
 
 ## 6. Mail, ownership transfer, and collection
 
-Each Thread owns an [`LmxPost`](dev/l2src_sandbox/lmx_post.h.lm1). It has
+Each Thread owns an [`LmxPost`](dev/l2src_sandbox/lmx_post.h.lm1). Language
+`post` carries an ordinary call through this mailbox; it does not add a
+second queue or turn the Thread graph into an exported method dictionary.
+The language contract is semantics chapter 28. The record has
 three roles: owner-local `staged` entries prepared during the turn;
 owner-local published `outbox`; and synchronized `inbox` awaiting the
 receiver. The one simplified monitor protects admission, take, and count on

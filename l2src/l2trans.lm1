@@ -14284,12 +14284,129 @@ fn: l2_bound_nsty (int: mi; const: @(LmP0Text name)) int
         return: l2_own_nsty_get(oi)
 return: 0 - 1
 
-# 0: *out_ni is the Structure index of this actual. 1: a located error was
-# reported. 2: not a Structure actual (a primitive expression stays on the
-# ordinary check).
-fn: l2_actual_ns (int: mi; @: LmP0Field a0; int: span; const: @(char path); const: @(LmP0Node at); @: int out_ni) int
+# A field path name\seg\seg of any depth. 0: *out_ni is the leaf Structure.
+# 1: located. 2: not this shape (the ordinary check still owns it).
+fn: l2_actual_path (int: mi; @: LmP0Field a0; int: span; const: @(char path); const: @(LmP0Node at); @: int out_ni) int
     @: LmP0Field sl
     @: LmP0Field mem
+    int: owner
+    int: fx
+    int: consumed
+    c.array: [128]: char buf
+    if: span < 3 || (span % 2) = 0 || a0 = 0 || a0\value = 0 || a0\value\kind != c.LM_P0_NODE_ATOM || a0\value\as = 0 || a0\value\as\atom = 0
+        return: 2
+    sl: l2_next_active(a0\next)
+    mem: 0
+    if: sl != 0
+        mem: l2_next_active(sl\next)
+    if: sl = 0 || sl\value = 0 || sl\value\kind != c.LM_P0_NODE_ATOM || sl\value\as = 0 || l2_is_slash(sl\value\as\atom) = 0 || mem = 0 || mem\value = 0 || mem\value\kind != c.LM_P0_NODE_ATOM || mem\value\as = 0 || mem\value\as\atom = 0 || l2_ident(mem\value\as\atom) = 0
+        return: 2
+    owner: l2_bound_nsty(mi, a0\value\as\atom)
+    if: owner < 0
+        return: l2_error(path, a0\value, "unresolved name")
+    consumed: 3
+    while: consumed <= span
+        if: mem\value\as\atom\length = 0U || mem\value\as\atom\length >= 128U || mem\value\as\atom\data = 0
+            return: l2_error(path, mem\value, "unresolved name")
+        memcpy(buf, mem\value\as\atom\data, mem\value\as\atom\length)
+        buf[mem\value\as\atom\length]: 0
+        fx: l2_ns_field_ix(owner, buf)
+        if: fx < 0
+            return: l2_error(path, mem\value, "unresolved name")
+        if: l2_nsf_kind[fx] != 3 || l2_nsf_ref[fx] < 0
+            return: l2_error(path, mem\value, "a field path must end at a Structure")
+        if: consumed = span
+            \out_ni: l2_nsf_ref[fx]
+            return: 0
+        owner: l2_nsf_ref[fx]
+        sl: l2_next_active(mem\next)
+        mem: 0
+        if: sl != 0
+            mem: l2_next_active(sl\next)
+        if: sl = 0 || sl\value = 0 || sl\value\kind != c.LM_P0_NODE_ATOM || sl\value\as = 0 || l2_is_slash(sl\value\as\atom) = 0 || mem = 0 || mem\value = 0 || mem\value\kind != c.LM_P0_NODE_ATOM || mem\value\as = 0 || mem\value\as\atom = 0 || l2_ident(mem\value\as\atom) = 0
+            return: 2
+        consumed: consumed + 2
+    ---
+return: 2
+
+# The same path as a value: the child at the last Structure field.
+# 0: dest holds it. 1: located or a prep failure. 2: not this shape.
+fn: l2_emit_actual_path (int: mi; @: LmP0Field a0; int: span; const: @(char ind); const: @(LmP0Node at); @: char dest) int
+    @: LmP0Field sl
+    @: LmP0Field mem
+    int: owner
+    int: slot
+    int: kind
+    int: ent
+    int: consumed
+    int: nseg
+    int: i
+    int: s
+    size_t: nlen
+    c.array: [32]: int slots
+    c.array: [128]: char buf
+    c.array: [1024]: char cur
+    c.array: [1024]: char nxt
+    if: dest = 0 || ind = 0 || span < 3 || (span % 2) = 0 || a0 = 0 || a0\value = 0 || a0\value\kind != c.LM_P0_NODE_ATOM || a0\value\as = 0 || a0\value\as\atom = 0
+        return: 2
+    sl: l2_next_active(a0\next)
+    mem: 0
+    if: sl != 0
+        mem: l2_next_active(sl\next)
+    if: sl = 0 || sl\value = 0 || sl\value\kind != c.LM_P0_NODE_ATOM || sl\value\as = 0 || l2_is_slash(sl\value\as\atom) = 0 || mem = 0 || mem\value = 0 || mem\value\kind != c.LM_P0_NODE_ATOM || mem\value\as = 0 || mem\value\as\atom = 0 || l2_ident(mem\value\as\atom) = 0
+        return: 2
+    owner: l2_bound_nsty(mi, a0\value\as\atom)
+    if: owner < 0
+        return: 2
+    consumed: 3
+    nseg: 0
+    while: consumed <= span
+        if: mem\value\as\atom\data = 0 || mem\value\as\atom\length = 0U || mem\value\as\atom\length >= 128U
+            return: 2
+        memcpy(buf, mem\value\as\atom\data, mem\value\as\atom\length)
+        buf[mem\value\as\atom\length]: 0
+        slot: l2_ns_slot_named(owner, buf, 0U, mem\value\as\atom\length, @ kind, @ ent)
+        if: slot < 0 || kind != 3 || ent < 0
+            return: 2
+        if: nseg >= 32
+            return: l2_error(l2_src, at, "expression too long")
+        slots[nseg]: slot
+        nseg: nseg + 1
+        if: consumed = span
+            consumed: span + 1
+        else:
+            owner: ent
+            sl: l2_next_active(mem\next)
+            mem: 0
+            if: sl != 0
+                mem: l2_next_active(sl\next)
+            if: sl = 0 || sl\value = 0 || sl\value\kind != c.LM_P0_NODE_ATOM || sl\value\as = 0 || l2_is_slash(sl\value\as\atom) = 0 || mem = 0 || mem\value = 0 || mem\value\kind != c.LM_P0_NODE_ATOM || mem\value\as = 0 || mem\value\as\atom = 0 || l2_ident(mem\value\as\atom) = 0
+                return: 2
+            consumed: consumed + 2
+        ---
+    ---
+    if: nseg < 1
+        return: 2
+    if: l2_prep(a0\value, mi, ind, cur) != 0
+        return: 1
+    i: 0
+    while: i < nseg
+        nlen: strlen(cur)
+        if: nlen + 48U >= 1024U
+            return: l2_error(l2_src, at, "expression too long")
+        s: slots[i]
+        if: c.sprintf(nxt, "lmx_arena_ref_struct(%s, %uU)", cur, (cast: (unsigned) s)) < 0
+            return: 1
+        memcpy(cur, nxt, strlen(nxt) + 1U)
+        i: i + 1
+    ---
+    memcpy(dest, cur, strlen(cur) + 1U)
+return: 0
+
+# 0: *out_ni is the Structure index of this actual. 1: a located error was
+# reported. 2: not a Structure actual (a primitive expression stays on the
+# ordinary check). A field path of any depth is the leaf Structure.
+fn: l2_actual_ns (int: mi; @: LmP0Field a0; int: span; const: @(char path); const: @(LmP0Node at); @: int out_ni) int
     int: cmi
     int: owner
     int: fx
@@ -14340,33 +14457,13 @@ fn: l2_actual_ns (int: mi; @: LmP0Field a0; int: span; const: @(char path); cons
             return: l2_error(path, at, "implements is false in function argument")
         \out_ni: owner
         return: 0
-    if: span = 3 && a0\value\kind = c.LM_P0_NODE_ATOM && a0\value\as != 0
-        sl: l2_next_active(a0\next)
-        mem: 0
-        if: sl != 0
-            mem: l2_next_active(sl\next)
-        if: sl != 0 && sl\value != 0 && sl\value\kind = c.LM_P0_NODE_ATOM && l2_is_slash(sl\value\as\atom) != 0 && mem != 0 && mem\value != 0 && mem\value\kind = c.LM_P0_NODE_ATOM && mem\value\as != 0 && mem\value\as\atom != 0 && l2_ident(mem\value\as\atom) != 0
-            owner: l2_bound_nsty(mi, a0\value\as\atom)
-            if: owner < 0
-                return: l2_error(path, a0\value, "unresolved name")
-            if: mem\value\as\atom\length = 0U || mem\value\as\atom\length >= 128U || mem\value\as\atom\data = 0
-                return: l2_error(path, mem\value, "unresolved name")
-            memcpy(buf, mem\value\as\atom\data, mem\value\as\atom\length)
-            buf[mem\value\as\atom\length]: 0
-            fx: l2_ns_field_ix(owner, buf)
-            if: fx < 0
-                return: l2_error(path, mem\value, "unresolved name")
-            if: l2_nsf_kind[fx] != 3 || l2_nsf_ref[fx] < 0
-                return: l2_error(path, mem\value, "a field path must end at a Structure")
-            \out_ni: l2_nsf_ref[fx]
-            return: 0
-        ---
-    ---
+    if: span >= 3
+        return: l2_actual_path(mi, a0, span, path, at, out_ni)
 return: 2
 
 # The callers of a return are not in this body, so the Consumer is the
-# required descriptor. A type name, a bound variable, a call result, and one
-# structure field share that call.
+# required descriptor. A type name, a bound variable, a call result, and a
+# field path share that call.
 fn: l2_admit_return (int: mi; @: LmP0Field first; int: n; const: @(char path); const: @(LmP0Node at)) int
     int: req
     int: cand
@@ -14398,35 +14495,12 @@ fn: l2_admit_return (int: mi; @: LmP0Field first; int: n; const: @(char path); c
         return: l2_error(path, at, "implements is false in return value")
 return: l2_admit_implements(cand, req, req, 0, path, at, "return value")
 
-# One structure field as a return value: the child of the bound root.
+# A Structure field path as a return value, one field or deeper.
 # 0: l2_tok holds the expression. 1: located failure. 2: not this shape.
 fn: l2_emit_return_path (int: mi; @: LmP0Field first; int: n; const: @(char ind); const: @(LmP0Node at)) int
-    @: LmP0Field sl
-    @: LmP0Field mem
-    int: owner
-    int: kind 0
-    int: ent 0
-    int: slot
-    c.array: [256]: char root
-    if: n != 3 || ind = 0 || first = 0 || first\value = 0 || first\value\kind != c.LM_P0_NODE_ATOM || first\value\as = 0 || first\value\as\atom = 0
+    if: ind = 0 || first = 0
         return: 2
-    sl: l2_next_active(first\next)
-    mem: 0
-    if: sl != 0
-        mem: l2_next_active(sl\next)
-    if: sl = 0 || sl\value = 0 || sl\value\kind != c.LM_P0_NODE_ATOM || l2_is_slash(sl\value\as\atom) = 0 || mem = 0 || mem\value = 0 || mem\value\kind != c.LM_P0_NODE_ATOM || mem\value\as = 0 || mem\value\as\atom = 0 || mem\value\as\atom\data = 0
-        return: 2
-    owner: l2_bound_nsty(mi, first\value\as\atom)
-    if: owner < 0
-        return: 2
-    slot: l2_ns_slot_named(owner, mem\value\as\atom\data, 0U, mem\value\as\atom\length, @ kind, @ ent)
-    if: slot < 0 || kind != 3
-        return: 2
-    if: l2_prep(first\value, mi, ind, root) != 0
-        return: 1
-    if: c.sprintf(l2_tok, "lmx_arena_ref_struct(%s, %uU)", root, (cast: (unsigned) slot)) < 0
-        return: 1
-return: 0
+return: l2_emit_actual_path(mi, first, n, ind, at, l2_tok)
 
 # A CALL OF THE RESOLVED CALLEE idx (FABLE-OPUS-RECEIVER-CONTRACT-20260924-139): one check for
 # every spelling of a call -- `m(args)`, `m: args`, the vertical form, and a bare atom `m`, which
@@ -16516,6 +16590,7 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
     int: ai
     int: prty
     int: prsty
+    int: er
     # Capture the selected physical occurrence before evaluating actuals: a
     # nested call may reuse l2_pst, but `self` for this call must remain the
     # originally selected callable. Source `node` is self\parent; own storage
@@ -16571,8 +16646,15 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
         ---
         if: l2_cf_get(idx, t) < 0 && l2_named_empty_actual(a0, idx, t) != 0 && l2_emit_empty_actual(idx, t, mi, ind, l2_act_at(acts, t)) != 0
             return: l2_prep_drop(acts, hides)
-        if: l2_cf_get(idx, t) < 0 && l2_named_empty_actual(a0, idx, t) = 0 && (actual_span < 1 || l2_emit_fields(a0, actual_span, mi, ind, l2_act_at(acts, t)) != 0)
-            return: l2_prep_drop(acts, hides)
+        if: l2_cf_get(idx, t) < 0 && l2_named_empty_actual(a0, idx, t) = 0
+            er: 2
+            if: actual_span >= 3 && l2_nsty_get(idx, t) >= 0
+                er: l2_emit_actual_path(mi, a0, actual_span, ind, node, l2_act_at(acts, t))
+            if: er = 1
+                return: l2_prep_drop(acts, hides)
+            if: er = 2 && (actual_span < 1 || l2_emit_fields(a0, actual_span, mi, ind, l2_act_at(acts, t)) != 0)
+                return: l2_prep_drop(acts, hides)
+            ---
         # A letter goes to a typed formal as its payload, admitted (D-57).
         if: actual_span = 1 && l2_nsty_get(idx, t) >= 0 && l2_untyped_graph(mi, a0\value) != 0 && l2_is_letter_name(mi, a0\value) != 0 && l2_payload_expr(l2_act_at(acts, t)) != 0
             return: l2_prep_drop(acts, hides)

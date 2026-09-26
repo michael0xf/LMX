@@ -1,0 +1,36 @@
+# return: h\a\p. The leaf is Rich. take reads equals. Entry 7.
+
+Rich:
+    size_t: equals 0U
+    size_t: extra 0U
+end: Rich
+
+Mid:
+    Rich: p
+end: Mid
+
+Holder:
+    Mid: a
+end: Holder
+
+Equatable:
+    size_t: equals 0U
+end: Equatable
+
+fn: pick (Holder: h) Equatable
+return: h\a\p
+
+fn: take (Equatable: slot) int
+    slot\equals: 1U
+return: 4
+
+fn: go () int
+return: take(pick(Holder))
+
+int: k
+k: go()
+if: k = 4
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+return

@@ -2271,6 +2271,15 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_arg_path.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'implements is false in function argument'; Absent = @(); Debt = @() },
+    # span 5: take(h\a\p). The leaf Structure is admitted, not the root.
+    # Mutant: l2_actual_path returns 2 for span > 3 → the refusal is
+    # "no located diagnostic" and the Entry 7 row does not translate.
+    [pscustomobject]@{ Name = 'unit_s7_arg_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_arg_deep_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'implements is false in function argument'; Absent = @('translation failed with no located diagnostic'); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_ret_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_ret_path.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'implements is false in return value'; Absent = @(); Debt = @() },
     # A return's Consumer is the required descriptor. Callers are not in the body.

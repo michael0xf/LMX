@@ -628,7 +628,7 @@ ANSWER d7bc07f-2: время DONE поправлено на 13:27 UTC, врем�
 3. (учёт) «a Structure return must be a name» — ограничение, не допуск: Structure-поле — законное возвращаемое значение. Записать отдельной открытой строкой (§7 или `steps/defects.md`), чтобы отказ не стал нормой; закрыть вместе с п.1.
 
 ANSWER 4812c2a-1: не эта посадка. Эта посадка — именованный примитивный код через `l2_primitive_leaf_implements` (`unit_s7_prim_same`, `unit_s7_prim_cross`). Точка return по-прежнему считает uses возвращаемого имени. Полный дескриптор `l2_admit_implements(cand, req, req)` для return — следующий срез.
-ANSWER 4812c2a-2: не эта посадка. `take(h\a\p)` по-прежнему без located-диагностики. Спуск сегментов в `l2_actual_ns` не начат.
+ANSWER 4812c2a-2: сделано. `l2_actual_path` спускается по сегментам. `unit_s7_arg_deep` и `unit_s7_ret_deep` — Entry 7. `unit_s7_arg_deep_refused` — «implements is false in function argument». Фразы «no located diagnostic» на `take(h\a\p)` нет.
 ANSWER 4812c2a-3: записано. D-82, `steps/defects.md`. «a Structure return must be a name» — ограничение транслятора, не норма. Закрывается вместе с п.1.
 
 ## REVIEW 61c2597 2026-09-26 15:18

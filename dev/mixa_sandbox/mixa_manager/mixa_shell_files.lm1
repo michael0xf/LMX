@@ -1,4 +1,5 @@
 predef: "mixa_manager/mixa_file_manager.h.lm1"
+predef: "mixa_manager/mixa_fileio.h.lm1"
 include: "<stdlib.h>"
 
 # Files owner, same-owner calls only. One header: the real
@@ -85,3 +86,82 @@ fn: mixa_shell_files_refresh (@: MixaFm fm; @@: MixaFmEntry out_rows; @: size_t 
         return: rc
     ---
     return: mixa_shell_files_take(fm, out_rows, out_count)
+
+# Whole file, one buffer. read_text and read_bytes are this transfer:
+# the console is the file, and audio takes the same bytes. No second
+# decoded copy is made. Files does not keep the buffer. A refusal leaves
+# the caller's outs untouched. len is the file size; the byte after it is 0
+# so the same storage can be drawn as text.
+fn: mixa_shell_files_read (const: @(char path); @@: char out_bytes; @: size_t out_len) int
+    []: (@: MixaFio) slot 1
+    @: MixaFio f
+    @: char buf
+    @: char fresh
+    size_t: cap
+    size_t: len
+    size_t: n
+    size_t: room
+    int: st
+    int: more
+    if: path = 0 || out_bytes = 0 || out_len = 0
+        return: MIXA_FIO_ERR_ARG
+    slot[0]: 0
+    st: mixa_fio_open_read(slot, path)
+    if: st != MIXA_FIO_OK
+        return: st
+    ---
+    f: slot[0]
+    cap: 64U
+    buf: (cast: (@: char) c.malloc(cap + 1U))
+    if: buf = 0
+        mixa_fio_close(f)
+        return: MIXA_FIO_ERR_NOMEM
+    ---
+    len: 0U
+    more: 1
+    while: more != 0
+        room: cap - len
+        n: 0U
+        st: mixa_fio_read(f, buf + len, room, @ n, 0, len)
+        if: st != MIXA_FIO_OK
+            c.free(buf)
+            mixa_fio_close(f)
+            return: st
+        ---
+        if: n = 0U
+            more: 0
+        ---
+        if: n != 0U
+            len: len + n
+            if: len = cap
+                if: cap > (((size_t) -1) / 2U)
+                    c.free(buf)
+                    mixa_fio_close(f)
+                    return: MIXA_FIO_ERR_NOMEM
+                ---
+                fresh: (cast: (@: char) c.realloc(buf, (cap * 2U) + 1U))
+                if: fresh = 0
+                    c.free(buf)
+                    mixa_fio_close(f)
+                    return: MIXA_FIO_ERR_NOMEM
+                ---
+                buf: fresh
+                cap: cap * 2U
+            ---
+        ---
+    ---
+    buf[len]: 0
+    mixa_fio_close(f)
+    \out_bytes: buf
+    \out_len: len
+return: MIXA_FIO_OK
+
+fn: mixa_shell_files_read_text (const: @(char path); @@: char out_bytes; @: size_t out_len) int
+return: mixa_shell_files_read(path, out_bytes, out_len)
+
+fn: mixa_shell_files_read_bytes (const: @(char path); @@: char out_bytes; @: size_t out_len) int
+return: mixa_shell_files_read(path, out_bytes, out_len)
+
+sub: mixa_shell_files_release_bytes (@: char bytes)
+    c.free(bytes)
+end: mixa_shell_files_release_bytes

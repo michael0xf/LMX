@@ -1,13 +1,15 @@
 predef: "mixa_manager/mixa_selection.lm1"
 predef: "mixa_manager/mixa_dir_win32.lm1"
+predef: "mixa_manager/mixa_fileio_win32.lm1"
 predef: "mixa_manager/mixa_file_manager.h.lm1"
 predef: "mixa_manager/mixa_file_manager.lm1"
 predef: "mixa_manager/mixa_shell_files.lm1"
 include: "<stdio.h>" "<string.h>" "<stdlib.h>"
 
-# Witness for Files\list, Files\up and Files\refresh.
-# The snapshot leaves MixaFm. A refused path does not replace it.
-# This unit pastes the file-manager body once. It is not the joint binary.
+# Witness for Files list, up, refresh, read_text and read_bytes.
+# The snapshot and the file bytes leave Files. A refused path does not
+# replace a buffer already delivered. This unit pastes each body once.
+# It is not the joint binary.
 
 int: g_alloc_live
 
@@ -53,6 +55,13 @@ fn: main (int: argc; @: @(char) argv) int
     const: @(char dir_before)
     size_t: count
     size_t: kept_count
+    @: char text
+    @: char bytes
+    @: char kept_text
+    size_t: tlen
+    size_t: blen
+    size_t: kept_tlen
+    int: wi
     int: checks
     int: failures
     int: rc
@@ -132,6 +141,87 @@ fn: main (int: argc; @: @(char) argv) int
     mixa_shell_files_release(@ fm, rows, count)
     mixa_fm_release(@ fm)
     c.free(av)
+    text: 0
+    tlen: 0U
+    rc: mixa_shell_files_read_text("Z:\\no\\such\\mixa_shell_files_read", @ text, @ tlen)
+    checks: checks + 1
+    if: rc = MIXA_FIO_OK || text != 0 || tlen != 0U
+        failures: failures + 1
+        c.printf("shell-files: missing file produced bytes\n")
+    ---
+    rc: mixa_shell_files_read_text(root, @ text, @ tlen)
+    checks: checks + 1
+    if: rc = MIXA_FIO_OK
+        failures: failures + 1
+        c.printf("shell-files: directory read returned %d\n", rc)
+    ---
+    c.snprintf(file, 1200U, "%s\\a.txt", root)
+    rc: mixa_shell_files_read_text(file, @ text, @ tlen)
+    checks: checks + 1
+    if: rc != MIXA_FIO_OK || text = 0 || tlen != 1U || text[0] != 120 || text[1] != 0
+        failures: failures + 1
+        c.printf("shell-files: text read of a.txt failed\n")
+    ---
+    kept_text: text
+    kept_tlen: tlen
+    rc: mixa_shell_files_read_text("Z:\\no\\such\\mixa_shell_files_read", @ text, @ tlen)
+    checks: checks + 1
+    if: rc = MIXA_FIO_OK || text != kept_text || tlen != kept_tlen
+        failures: failures + 1
+        c.printf("shell-files: refused read replaced the text\n")
+    ---
+    rc: mixa_shell_files_read_bytes(file, @ bytes, @ blen)
+    checks: checks + 1
+    if: rc != MIXA_FIO_OK || bytes = 0 || bytes = text || blen != 1U || bytes[0] != 120
+        failures: failures + 1
+        c.printf("shell-files: byte read did not transfer its own buffer\n")
+    ---
+    mixa_shell_files_release_bytes(text)
+    mixa_shell_files_release_bytes(bytes)
+    text: 0
+    bytes: 0
+    c.snprintf(file, 1200U, "%s\\empty.txt", root)
+    fh[0]: c.fopen(file, "wb")
+    if: fh[0] != 0
+        c.fclose(fh[0])
+    ---
+    rc: mixa_shell_files_read_text(file, @ text, @ tlen)
+    checks: checks + 1
+    if: rc != MIXA_FIO_OK || text = 0 || tlen != 0U || text[0] != 0
+        failures: failures + 1
+        c.printf("shell-files: empty file was not an empty transfer\n")
+    ---
+    mixa_shell_files_release_bytes(text)
+    c.snprintf(file, 1200U, "%s\\wide.txt", root)
+    fh[0]: c.fopen(file, "wb")
+    wi: 0
+    if: fh[0] != 0
+        while: wi < 80
+            c.fputc(113, fh[0])
+            wi: wi + 1
+        ---
+        c.fclose(fh[0])
+    ---
+    rc: mixa_shell_files_read_bytes(file, @ bytes, @ blen)
+    checks: checks + 1
+    if: rc != MIXA_FIO_OK || bytes = 0 || blen != 80U || bytes[0] != 113 || bytes[79] != 113 || bytes[80] != 0
+        failures: failures + 1
+        c.printf("shell-files: wide file len %d\n", (cast: (int) blen))
+    ---
+    mixa_shell_files_release_bytes(bytes)
+    c.snprintf(file, 1200U, "%s\\lines.txt", root)
+    fh[0]: c.fopen(file, "wb")
+    if: fh[0] != 0
+        c.fputs("ab\ncd", fh[0])
+        c.fclose(fh[0])
+    ---
+    rc: mixa_shell_files_read_text(file, @ text, @ tlen)
+    checks: checks + 1
+    if: rc != MIXA_FIO_OK || tlen != 5U || text[2] != 10 || text[3] != 99
+        failures: failures + 1
+        c.printf("shell-files: line file was truncated\n")
+    ---
+    mixa_shell_files_release_bytes(text)
     checks: checks + 1
     if: g_alloc_live != 0
         failures: failures + 1

@@ -47,7 +47,9 @@ STARTED grok/implements-s7, база main `fd074ca`. Тикета без `DONE` 
 
 ## Список путей — одна функция (ANSWER c35e3da-1)
 
-Допуск по `uses` всегда передаёт буфер путей в `l2_descriptor_used`. Ноль путей — успех в начале этой функции. Непустой список сверяет прочитанные имена. Индекс `l2_ns_n` больше не аргумент. Кадра нет — списка путей нет, остаётся `l2_descriptor_implements` по дескриптору `req`. Явный `implements(candidate, required, consumer)` тоже на дескрипторе.
+Допуск после `l2_uses_walk_frame` идёт в `l2_admit_paths`: Consumer — сам буфер путей, `req` третьим аргументом не передаётся, `l2_ns_n` не передаётся. Ноль путей — успех в `l2_descriptor_used`. Непустой список сверяет прочитанные имена. Кадра нет — списка путей нет, остаётся `l2_descriptor_implements` по дескриптору. Явный `implements(candidate, required, consumer)` тоже на дескрипторе.
+
+Мутант: `l2_admit_paths` снова зовёт `l2_descriptor_implements(cand, req, req)`. `unit_s7_empty.lm2:18` и `unit_s7_used.lm2:19` — «implements is false in function argument», frame=take. `unit_s7_identity` переводится. Откат: `unit_s7_used` переводится. Гейт: build 282/282 (`build/l2src/20260926_093437`), harness 425/425 (`build/l2_harness/s7paths2`), L3 11/11, имена 69/128, check_docs OK.
 
 Мутант в начале `l2_descriptor_used` (до ветки нуля путей): `unit_s7_empty.lm2:18` frame=take, `unit_s7_used.lm2:19` frame=take, `unit_s7_identity.lm2:15` frame=keep — все «malformed implements descriptor», exit 1. Откат: `unit_s7_empty` переводится. Гейт: build 282/282 (`build/l2src/20260926_091745`), harness 423/423 (`build/l2_harness/s7paths`), L3 11/11, имена 69/128, check_docs OK.
 

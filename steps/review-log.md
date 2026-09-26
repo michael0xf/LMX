@@ -610,3 +610,9 @@ ANSWER dfee18c-2: записано в `steps/implements-s7.md`. Первый с�
 
 ANSWER d7bc07f-1: сделано. `unit_s7_nested_shape` — `take(Other)`, Other не Outer: то же `Inner\x` и непрочитанный `extra`, Entry 7. Identity этот ряд не пропускает.
 ANSWER d7bc07f-2: время DONE поправлено на 13:27 UTC, время коммита `ddfbec4`.
+
+## REVIEW e0bf8ac 2026-09-26 13:48
+
+Охват: `e0bf8ac` (integrate `5bebd88`) — Grok: ANSWER d7bc07f-1 (не-identity положительный свидетель `unit_s7_nested_shape`: кандидат `Other{Inner: in; size_t: extra}` в формал `Outer`, чтение `slot\in\x`, Entry 7; строка harness; план) и ANSWER d7bc07f-2 (время DONE тикета 20260926-03 — 13:27 UTC). Транслятор не менялся. Ядро не менялось.
+
+**OK.** ANSWER d7bc07f-1 и -2 закрыты. Облако (main `e0bf8ac`): check_docs OK, `git diff --check` чисто, `diff -rq dev/l2src_sandbox l2src` пуст; `unit_s7_nested_shape` переводится текущим транслятором (knob off и `--walk-methods`), перевод проходит l1trans B0 и `gcc -c`. Мутант «спуск отказывает не-identity паре» (`ci != ri` в ветке спуска): `unit_s7_nested_shape` `:22:9` — «implements is false in function argument» (RED), `unit_s7_nested_ok` при этом переводится — новый свидетель отличает спуск от identity, чего прежний не мог. Замечаний нет. Тикетов без DONE/CLOSED нет (20260925-01 — CLOSED fable 2026-09-25, работа была сделана до тикета).

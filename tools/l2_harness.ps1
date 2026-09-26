@@ -2249,6 +2249,15 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_uses65.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'a uses list is full'; Absent = @(); Debt = @() },
+    # Nested used path and leaf kind. Mutant: stop after the first segment
+    # → unit_s7_nested_missing translates. Mutant: skip the kind compare
+    # → unit_s7_leaf_kind translates.
+    [pscustomobject]@{ Name = 'unit_s7_nested_ok.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_nested_missing.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'implements is false in function argument'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_leaf_kind.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'implements is false in function argument'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_invalid_implements_unknown_candidate.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown candidate descriptor'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_invalid_implements_unknown_required.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

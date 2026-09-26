@@ -938,6 +938,10 @@ $fixtures = @(
         Absent = @(); Debt = @('merge result check 77') },
     [pscustomobject]@{ Name = 'unit_q20_merge_in_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 5;
         Absent = @(); Debt = @('merge result check 77') },
+    # T5 slice 1: add5 is merge(y: 5; add). y is a data field, x stays ARG 0, native is 0.
+    # add5(1) = 6. Mutant: read y as ARG — INVALID, not 6.
+    [pscustomobject]@{ Name = 'unit_pap_add5.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 6;
+        Absent = @('l2_m1_tr'); Debt = @('lmx_int_store_known(l2_entry_slot[0], 5)', 'c.LMX_WALK_OP_AT, 3U)', 'c.LMX_WALK_OP_ARG, 2U)', 'c.LMX_WALK_OP_CALL, 6U)') },
     [pscustomobject]@{ Name = 'unit_merged_callable.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 5;
         Absent = @(); Debt = @('merge result check 77', 'merge result check 79') },
     # -193 T1b (Q6 = a): no name is decided by its spelling.  l2_upper_name (all-caps = a C constant

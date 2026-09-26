@@ -97,6 +97,8 @@ int: l2_rw_mi 0 - 1
 int: l2_rw_quiet 0
 @: int l2_m_steps 0
 int: l2_walk_methods 0
+# T5 slice 1: model method of a callable-merge result, or -1. The result's native stays 0.
+@: int l2_pap_model 0
 # Where the static typing of a root expression first met two numeric types (l2_rw_tyof), for the
 # located refusal.
 @: LmP0Node l2_rw_mix_at 0
@@ -931,6 +933,8 @@ prototype:
     fn: l2_prep_drop (@: char acts; @: char hides) int
     fn: l2_act_at (@: char base; int: i) @: char
     fn: l2_release () int
+    fn: l2_pap_on (int: mi) int
+    fn: l2_pap_prepare (const: @(char path)) int
 end: prototype
 
 # A numeric field of a named Structure -- size_t, int, unsigned or ulong (l2_nsf_kind 0/7/8/9) --
@@ -1198,6 +1202,9 @@ fn: l2_release () int
         l2_xfree((cast: (@: void) l2_it_hty))
     if: l2_m_throws != 0
         l2_xfree((cast: (@: void) l2_m_throws))
+    if: l2_pap_model != 0
+        l2_xfree((cast: (@: void) l2_pap_model))
+    l2_pap_model: 0
     l2_it_ar: 0
     l2_it_dyn: 0
     l2_it_ret: 0
@@ -6919,6 +6926,10 @@ fn: l2_scan_node (const: @(LmP0Node node); int: mi; @: int seen) int
             ---
             return: 0
         ---
+        # A callable merge is not a free name. Its model and bindings are resolved by l2_pap_prepare.
+        if: l2_frame_head(node, "merge") != 0
+            return: 0
+        ---
         if: l2_scan_ident(mi, node\as\frame\head, seen) != 0
             return: 1
         f: node\as\frame\body\first_field
@@ -7177,6 +7188,11 @@ fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
             l2_scope_pop()
             field: l2_next_active(field\next)
             continue
+        # A callable merge binds names; it does not read them as free inputs.
+        if: l2_frame_head(stmt, "merge") != 0
+            field: l2_next_active(field\next)
+            continue
+        ---
         if: l2_frame_head(stmt, "if") = 0 && l2_frame_head(stmt, "while") = 0 && l2_frame_head(stmt, "for") = 0 && l2_is_asgn(stmt)
             if: stmt\as\frame\body != 0 && l2_scan_fields(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), mi, seen) != 0
                 return: 1
@@ -10915,6 +10931,12 @@ return: 0
 fn: l2_emit_body_in (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
     if: body = 0
         return: 0
+    # The walked body is the model's frames (l2_pap_steps). This native function is not the call.
+    if: l2_pap_on(mi) != 0
+        if: l2_m_ret[mi] != 8 && c.fprintf(l2_out, "%sreturn: 0\n", ind) < 0
+            return: 1
+        return: 0
+    ---
     if: l2_block_has_catch(body) != 0
         return: l2_emit_pad(body, mi, ind)
 return: l2_emit_stmts(body, l2_next_active(body\first_field), 0, mi, ind)
@@ -14495,6 +14517,10 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
     while: field != 0
         stmt: field\value
         l2_vis_stmt(mi, stmt)
+        if: l2_pap_on(mi) != 0 && l2_frame_head(stmt, "merge") != 0
+            field: l2_next_active(field\next)
+            continue
+        ---
         # An expression statement (l2_check_discard); the walker moves past its whole run.
         n: l2_discard_run(field)
         if: n > 0
@@ -14948,6 +14974,8 @@ fn: l2_parse_unit (const: @(char path)) int
             l2_m_throws[i]: l2_body_throws(l2_m_body[i]\as\structure, i)
         i: i + 1
     ---
+    if: l2_pap_prepare(path) != 0
+        return: 1
     i: 0
     l2_msend_i: 0
     while: i < l2_m_n
@@ -20704,6 +20732,198 @@ fn: l2_rw_trailer (int: mi; int: into; int: slot; @: int made) int
     l2_rw_pre_n: pbase
 return: 0
 
+# T5 slice 1. A method whose whole body is one `merge(name: literal; Model)` is that model
+# with the named formals bound as its own data fields. The declared header stays the signature.
+fn: l2_pap_on (int: mi) int
+    if: l2_pap_model = 0 || mi < 0 || mi >= l2_m_n
+        return: 0
+return: l2_pap_model[mi] >= 0
+
+fn: l2_pap_method_of (const: @(LmP0Node node)) int
+    int: idx
+    if: node = 0 || node\kind != c.LM_P0_NODE_ATOM || node\as = 0 || node\as\atom = 0
+        return: 0 - 1
+    idx: l2_find_method(node\as\atom)
+    if: idx < 0 || idx = l2_e
+        return: 0 - 1
+return: idx
+
+fn: l2_pap_bind (const: @(LmP0Node node); @@: LmP0Text name; @@: LmP0Text lit) int
+    @: LmP0Frame fr
+    @: LmP0Field only
+    size_t: bits 0U
+    if: name = 0 || lit = 0
+        return: 1
+    \name: 0
+    \lit: 0
+    if: node = 0 || node\kind != c.LM_P0_NODE_FRAME || node\as = 0 || node\as\frame = 0
+        return: 1
+    fr: node\as\frame
+    if: fr\head = 0 || l2_ident(fr\head) = 0 || fr\body = 0 || fr\trailer != 0 || fr\body\trailer != 0 || l2_count_active(fr\body) != 1
+        return: 1
+    only: l2_next_active(fr\body\first_field)
+    if: only = 0 || only\value = 0 || only\value\kind != c.LM_P0_NODE_ATOM || only\value\as = 0 || only\value\as\atom = 0
+        return: 1
+    if: l2_int_literal_bits(only\value\as\atom, @ bits) != 1
+        return: 1
+    \name: fr\head
+    \lit: only\value\as\atom
+return: 0
+
+fn: l2_pap_is_bind (const: @(LmP0Node node)) int
+    @: LmP0Text nm 0
+    @: LmP0Text lit 0
+    if: l2_pap_bind(node, @ nm, @ lit) != 0
+        return: 0
+return: 1
+
+fn: l2_pap_sole (int: mi) @: LmP0Node
+    @: LmP0Field f
+    if: mi < 0 || mi >= l2_m_n || l2_m_body[mi] = 0 || l2_m_body[mi]\as = 0 || l2_m_body[mi]\as\structure = 0
+        return: 0
+    if: l2_m_node[mi] != 0 && l2_m_node[mi]\as != 0 && l2_ret_tr(l2_m_node[mi]\as\frame) != 0
+        return: 0
+    if: l2_count_active(l2_m_body[mi]\as\structure) != 1
+        return: 0
+    f: l2_next_active(l2_m_body[mi]\as\structure\first_field)
+    if: f = 0
+        return: 0
+return: f\value
+
+fn: l2_pap_consider (int: mi; const: @(char path)) int
+    @: LmP0Node stmt
+    @: LmP0Field f
+    @: LmP0Text nm
+    @: LmP0Text lit
+    int: methods 0
+    int: model 0 - 1
+    int: md
+    int: oi
+    int: fj
+    size_t: off
+    stmt: l2_pap_sole(mi)
+    if: stmt = 0 || l2_frame_head(stmt, "merge") = 0 || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\body = 0
+        return: 0
+    f: l2_next_active(stmt\as\frame\body\first_field)
+    if: f = 0
+        return: 0
+    while: f != 0
+        md: l2_pap_method_of(f\value)
+        if: md >= 0
+            methods: methods + 1
+            model: md
+        else:
+            if: l2_pap_is_bind(f\value) = 0
+                return: 0
+            ---
+        ---
+        f: l2_next_active(f\next)
+    ---
+    if: methods != 1 || model < 0
+        return: l2_error(path, stmt, "a callable merge needs one model")
+    f: l2_next_active(stmt\as\frame\body\first_field)
+    while: f != 0
+        if: l2_pap_method_of(f\value) < 0
+            nm: 0
+            lit: 0
+            if: l2_pap_bind(f\value, @ nm, @ lit) != 0
+                return: l2_error(path, f\value, "a callable merge binds a name that is not a formal")
+            fj: l2_formal_find(model, nm)
+            if: fj < 0
+                return: l2_error(path, f\value, "a callable merge binds a name that is not a formal")
+            if: l2_formal_find(mi, nm) >= 0
+                return: l2_error(path, f\value, "a callable merge binds a formal the result still declares")
+            if: l2_ft(model, fj) != 0
+                return: l2_error(path, f\value, "a callable merge binds an int formal")
+            if: l2_own_find(mi, nm) >= 0
+                return: l2_error(path, f\value, "a callable merge binds one field once")
+            if: l2_check_literal_kind(lit, 0, path, f\value) != 0
+                return: 1
+            oi: l2_own_add(mi, nm, 0, path, f\value)
+            if: oi < 0
+                return: 1
+            off: l2_own_off(mi, oi)
+            if: off = (cast: (size_t) -1)
+                return: l2_error(path, f\value, "size overflow")
+            l2_m_uses[off]: 1
+            l2_m_own[mi]: l2_m_own[mi] + 1
+            if: l2_bind_own(mi, oi, path, f\value) != 0
+                return: 1
+            ---
+        ---
+        f: l2_next_active(f\next)
+    ---
+    l2_pap_model[mi]: model
+return: 0
+
+fn: l2_pap_prepare (const: @(char path)) int
+    int: i 0
+    if: l2_pap_model != 0
+        l2_xfree((cast: (@: void) l2_pap_model))
+    l2_pap_model: 0
+    if: l2_m_n <= 0
+        return: 0
+    l2_pap_model: (cast: (@: int) calloc((cast: (size_t) l2_m_n), c.sizeof(c.int)))
+    if: l2_pap_model = 0
+        return: l2_error(path, 0, "out of memory")
+    while: i < l2_m_n
+        l2_pap_model[i]: 0 - 1
+        i: i + 1
+    ---
+    i: 0
+    while: i < l2_m_n
+        if: l2_pap_consider(i, path) != 0
+            return: 1
+        i: i + 1
+    ---
+return: 0
+
+fn: l2_pap_store (int: oi) int
+    @: LmP0Text nm 0
+    @: LmP0Text lit 0
+    size_t: bits 0U
+    if: oi < 0 || oi >= l2_own_n || l2_pap_on(l2_own_mi[oi]) = 0 || l2_own_ty[oi] != 0
+        return: 0
+    if: l2_pap_bind(l2_own_decl[oi], @ nm, @ lit) != 0
+        return: 0
+    if: l2_int_literal_bits(lit, @ bits) != 1
+        return: 0
+    if: c.fprintf(l2_out, "        if: lmx_int_store_known(l2_entry_slot[0], %d) != 0\n            return: 1\n", (cast: (int) bits)) < 0
+        return: 1
+return: 0
+
+# Frames of the model, names resolved in the result: a bound formal is AT of its field,
+# any other formal is ARG of the declared header. No name is stored in the node.
+fn: l2_pap_steps (int: mi) int
+    int: model
+    int: made 0
+    int: one 0
+    int: bad 0
+    @: LmP0Node stmt
+    model: l2_pap_model[mi]
+    stmt: l2_pap_sole(mi)
+    if: model < 0 || l2_rw_may(model) = 0
+        return: l2_error(l2_src, stmt, "a callable merge needs a walkable body")
+    if: l2_rw_bseq_zero() != 0
+        return: l2_error(l2_src, stmt, "out of memory")
+    l2_vis_method(mi)
+    l2_rw_mi: mi
+    l2_rw_quiet: 1
+    l2_rw_emit: 0
+    l2_rw_send_rec: 0
+    if: l2_m_body[model] != 0 && l2_m_body[model]\as != 0 && l2_m_body[model]\as\structure != 0 && l2_rw_stmts(l2_m_body[model]\as\structure\first_field, 0 - 2, 0, @ made) != 0
+        bad: 1
+    if: bad = 0 && l2_rw_trailer(model, 0 - 2, made, @ one) != 0
+        bad: 1
+    l2_rw_quiet: 0
+    l2_rw_pre_n: 0
+    l2_rw_mi: l2_e
+    l2_vis_on: 0
+    if: bad != 0 || made + one <= 0
+        return: l2_error(l2_src, stmt, "a callable merge needs a walkable body")
+    l2_m_steps[mi]: made + one
+return: 0
+
 # The count pass of every method (before the occurrences' widths are written): l2_m_steps[i], its
 # steps, or -1 -- outside the walkable subset, or the library profile, whose root is not walked.
 fn: l2_rw_methods_count () int
@@ -20716,7 +20936,12 @@ fn: l2_rw_methods_count () int
         return: l2_error(l2_src, 0, "out of memory")
     while: i < l2_m_n
         l2_m_steps[i]: 0 - 1
-        if: l2_library_mode = 0 && l2_rw_may(i) != 0
+        if: l2_library_mode = 0 && l2_pap_on(i) != 0
+            if: l2_pap_steps(i) != 0
+                return: 1
+            ---
+        ---
+        if: l2_library_mode = 0 && l2_pap_on(i) = 0 && l2_rw_may(i) != 0
             if: l2_rw_bseq_zero() != 0
                 return: l2_error(l2_src, 0, "out of memory")
             l2_vis_method(i)
@@ -20750,6 +20975,7 @@ fn: l2_rw_methods_emit () int
     int: made
     int: one
     int: bad
+    int: src
     while: i < l2_m_n
         if: l2_m_steps[i] > 0
             if: l2_rw_bseq_zero() != 0
@@ -20762,11 +20988,15 @@ fn: l2_rw_methods_emit () int
             made: 0
             one: 0
             bad: 0
+            src: i
+            if: l2_pap_on(i) != 0
+                src: l2_pap_model[i]
+            ---
             if: c.fprintf(l2_out, "        @: Lmx l2_rw%d lmx_arena_ref_struct(l2_entry_unit, %uU)\n        if: l2_rw%d = 0\n            return: 1\n", t, (cast: (unsigned) (l2_unit_base + i)), t) < 0
                 bad: 1
-            if: bad = 0 && l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && l2_m_body[i]\as\structure != 0 && l2_rw_stmts(l2_m_body[i]\as\structure\first_field, t, l2_m_kids(i), @ made) != 0
+            if: bad = 0 && l2_m_body[src] != 0 && l2_m_body[src]\as != 0 && l2_m_body[src]\as\structure != 0 && l2_rw_stmts(l2_m_body[src]\as\structure\first_field, t, l2_m_kids(i), @ made) != 0
                 bad: 1
-            if: bad = 0 && l2_rw_trailer(i, t, l2_m_kids(i) + made, @ one) != 0
+            if: bad = 0 && l2_rw_trailer(src, t, l2_m_kids(i) + made, @ one) != 0
                 bad: 1
             l2_rw_emit: 0
             l2_rw_pre_n: 0
@@ -23170,6 +23400,10 @@ fn: l2_emit_parts (int: i) int
     ---
     if: l2_m_native(i) = 0
         return: 0
+    # A callable merge is walked (native 0), not the model's trampoline.
+    if: l2_pap_on(i) != 0
+        return: 0
+    ---
     # The test knob `--walk-methods` (-193 T4a): a method with frames is walked.
     if: l2_walk_methods != 0 && l2_m_steps != 0 && l2_m_steps[i] > 0
         return: 0
@@ -23458,7 +23692,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     # Each native method's trampoline (l2_emit_trampoline): its METHOD.addr.
     i: 0
     while: i < l2_m_n
-        if: l2_m_native(i) != 0 && i != l2_e && l2_emit_trampoline(i, 1) != 0
+        if: l2_m_native(i) != 0 && i != l2_e && l2_pap_on(i) = 0 && l2_emit_trampoline(i, 1) != 0
             fclose(l2_out)
             return: 1
         i: i + 1
@@ -23646,7 +23880,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     # Each native method's trampoline, after every body it calls (l2_emit_trampoline).
     i: 0
     while: i < l2_m_n
-        if: l2_m_native(i) != 0 && i != l2_e && l2_emit_trampoline(i, 0) != 0
+        if: l2_m_native(i) != 0 && i != l2_e && l2_pap_on(i) = 0 && l2_emit_trampoline(i, 0) != 0
             fclose(l2_out)
             return: 1
         i: i + 1
@@ -23796,6 +24030,9 @@ fn: l2_emit_unit (const: @(char out_path)) int
             fclose(l2_out)
             return: 1
         if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_emit_cell_new(k, "        ", "l2_entry_slot", "lmx_char_cell_known(process_chars, 0)", "return: 1", 0) != 0
+            fclose(l2_out)
+            return: 1
+        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_pap_store(k) != 0
             fclose(l2_out)
             return: 1
         k: k + 1

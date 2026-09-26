@@ -1,0 +1,13 @@
+# T5 slice 1. add5 is merge(y: 5; add): the header stays (int: x) int,
+# y is a data field holding 5, and the body is add's. native is 0.
+# add5(1) is 6.
+fn: add (int: x; int: y) int
+    return: x + y
+end: add
+
+fn: add5 (int: x) int
+    merge(y: 5; add)
+end: add5
+
+sendMessage: exit(exit_code: add5(1); stdout: ""; stderr: "")
+return

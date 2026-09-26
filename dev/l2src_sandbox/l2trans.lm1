@@ -441,6 +441,7 @@ prototype:
     fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); int: depth) int
     fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest) int
     fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Structure body); int: mi; const: @(char path)) int
+    fn: l2_named_empty_actual (@: LmP0Field field; int: idx; int: k) int
     fn: l2_atom_callee (const: @(LmP0Text t); int: mi; @: int fi) int
     fn: l2_bare_structure (const: @(LmP0Text t); int: mi) int
     fn: l2_check_discard (@: LmP0Field field; int: span; int: mi; const: @(char path)) int
@@ -6862,6 +6863,7 @@ fn: l2_scan_node (const: @(LmP0Node node); int: mi; @: int seen) int
     @: LmP0Field f
     int: n
     int: oi
+    int: span
     if: node = 0
         return: 0
     if: node\kind = c.LM_P0_NODE_ATOM
@@ -6899,6 +6901,24 @@ fn: l2_scan_node (const: @(LmP0Node node); int: mi; @: int seen) int
             return: l2_scan_fields(f, l2_count_active(node\as\frame\body) - 1, mi, seen)
         return: l2_scan_node(f\value, mi, seen)
     if: node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && node\as\frame != 0 && node\as\frame\body != 0
+        oi: l2_find_method(node\as\frame\head)
+        if: oi >= 0 && oi != l2_e
+            if: l2_scan_ident(mi, node\as\frame\head, seen) != 0
+                return: 1
+            # A named empty actual's head is the formal, not a free name.
+            f: l2_next_active(node\as\frame\body\first_field)
+            n: 0
+            while: f != 0
+                span: l2_expr_span(f)
+                if: span < 1
+                    return: 1
+                if: l2_named_empty_actual(f, oi, n) = 0 && l2_scan_fields(f, span, mi, seen) != 0
+                    return: 1
+                f: l2_skip_span(f, span)
+                n: n + 1
+            ---
+            return: 0
+        ---
         if: l2_scan_ident(mi, node\as\frame\head, seen) != 0
             return: 1
         f: node\as\frame\body\first_field
@@ -11270,8 +11290,12 @@ fn: l2_take_ns_body (const: @(LmP0Text name); int: parent; const: @(LmP0Structur
         return: l2_error(path, at, "out of memory")
     l2_ns_first[me]: l2_nsf_n
     f: l2_next_active(body\first_field)
-    if: f = 0
-        return: l2_error(path, at, "a named Structure needs at least one field")
+    # A named Structure with no fields is the empty Structure type (book §9).
+    # `E: ()` / `end: E` is one empty Structure field; refs_open refuses a
+    # zero count, so the shape stays a node of length 0.
+    if: f = 0 || (l2_next_active(f\next) = 0 && l2_empty_struct(f\value) != 0)
+        l2_ns_count[me]: 0
+        return: 0
     while: f != 0
         fld: f\value
         if: fld = 0 || fld\kind != c.LM_P0_NODE_FRAME || fld\as = 0 || fld\as\frame = 0 || fld\as\frame\body = 0
@@ -13881,6 +13905,50 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
         return: l2_error(path, node, "unsupported trailer")
 return: l2_check_call(node, idx, fi, call\body, mi, path)
 
+# `Name: ()` in a call, Name this structure formal: the empty Structure value.
+# P0 flattens the sole anonymous (), so the frame has no fields -- the same
+# tree as a nullary call. The formal name is what makes it the value.
+fn: l2_named_empty_actual (@: LmP0Field field; int: idx; int: k) int
+    @: LmP0Frame fr
+    @: LmP0Field only
+    int: n
+    if: idx < 0 || k < 0 || field = 0 || field\value = 0 || field\value\kind != c.LM_P0_NODE_FRAME || field\value\as = 0
+        return: 0
+    if: l2_nsty_get(idx, k) < 0
+        return: 0
+    fr: field\value\as\frame
+    if: fr = 0 || fr\head = 0 || fr\trailer != 0 || l2_text_same(fr\head, l2_fn(idx, k)) = 0
+        return: 0
+    if: fr\body = 0
+        return: 1
+    if: fr\body\trailer != 0
+        return: 0
+    n: l2_count_active(fr\body)
+    if: n = 0
+        return: 1
+    if: n != 1
+        return: 0
+    only: l2_next_active(fr\body\first_field)
+    if: only = 0
+        return: 0
+return: l2_empty_struct(only\value)
+
+fn: l2_emit_empty_actual (int: idx; int: k; int: mi; const: @(char ind); @: char dest) int
+    int: tn
+    int: ni
+    ni: l2_nsty_get(idx, k)
+    tn: l2_tn
+    l2_tn: l2_tn + 1
+    if: c.fprintf(l2_out, "%s@: Lmx l2_t%d\n%sl2_t%d: lmx_node_new_owned(l2_program_arena)\n%sif: l2_t%d = 0\n", ind, tn, ind, tn, ind, tn) < 0
+        return: 1
+    if: l2_emit_invariant(ind, "a fresh empty Structure did not allocate") != 0
+        return: 1
+    if: c.sprintf(dest, "l2_t%d", tn) < 0
+        return: 1
+    if: l2_emit_admit(mi, ni, dest, ind) != 0
+        return: 1
+return: 0
+
 # A CALL OF THE RESOLVED CALLEE idx (FABLE-OPUS-RECEIVER-CONTRACT-20260924-139): one check for
 # every spelling of a call -- `m(args)`, `m: args`, the vertical form, and a bare atom `m`, which
 # has no argument Structure (body 0) and so no actuals.  fi is the callable formal the call goes
@@ -13925,19 +13993,25 @@ fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Stru
                 return: l2_error(path, node, "incompatible entry signature")
             l2_m_value_used[cand_mi]: 1
         ---
-        if: req_mi < 0 && (actual_span < 1 || l2_check_fields(a0, actual_span, mi, path, node) != 0)
-            return: 1
-        if: actual_span = 1 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_ATOM && l2_nsty_get(idx, actual_i) >= 0 && l2_m_node[idx] != 0 && l2_m_node[idx]\as != 0
-            if: l2_admit_consumer_uses(a0\value\as\atom, l2_nsty_get(idx, actual_i), l2_fn(idx, actual_i), l2_m_node[idx]\as\frame, path, node, "function argument") != 0
-                return: 1
-            ---
-            if: l2_untyped_graph(mi, a0\value) != 0 && l2_admit_site(mi) != 0
+        if: req_mi < 0 && l2_named_empty_actual(a0, idx, actual_i) != 0
+            if: l2_admit_site(mi) != 0
                 return: l2_error(path, node, "internal: admission outside a method")
             ---
-        ---
-        if: actual_span = 1 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_ATOM
-            if: l2_check_literal_kind(a0\value\as\atom, l2_lit_kind_from_ft(l2_ft(idx, actual_i)), path, node) != 0
+        else:
+            if: req_mi < 0 && (actual_span < 1 || l2_check_fields(a0, actual_span, mi, path, node) != 0)
                 return: 1
+            if: actual_span = 1 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_ATOM && l2_nsty_get(idx, actual_i) >= 0 && l2_m_node[idx] != 0 && l2_m_node[idx]\as != 0
+                if: l2_admit_consumer_uses(a0\value\as\atom, l2_nsty_get(idx, actual_i), l2_fn(idx, actual_i), l2_m_node[idx]\as\frame, path, node, "function argument") != 0
+                    return: 1
+                ---
+                if: l2_untyped_graph(mi, a0\value) != 0 && l2_admit_site(mi) != 0
+                    return: l2_error(path, node, "internal: admission outside a method")
+                ---
+            ---
+            if: actual_span = 1 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_ATOM
+                if: l2_check_literal_kind(a0\value\as\atom, l2_lit_kind_from_ft(l2_ft(idx, actual_i)), path, node) != 0
+                    return: 1
+                ---
             ---
         ---
         k: 0
@@ -15860,7 +15934,9 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
         # A callable formal takes the occurrence its actual names (l2_check_call), not a call.
         if: l2_cf_get(idx, t) >= 0 && (actual_span != 1 || a0\value = 0 || a0\value\kind != c.LM_P0_NODE_ATOM || l2_tok_method_occ(l2_find_method(a0\value\as\atom), l2_act_at(acts, t)) != 0)
             return: l2_prep_drop(acts, hides)
-        if: l2_cf_get(idx, t) < 0 && (actual_span < 1 || l2_emit_fields(a0, actual_span, mi, ind, l2_act_at(acts, t)) != 0)
+        if: l2_cf_get(idx, t) < 0 && l2_named_empty_actual(a0, idx, t) != 0 && l2_emit_empty_actual(idx, t, mi, ind, l2_act_at(acts, t)) != 0
+            return: l2_prep_drop(acts, hides)
+        if: l2_cf_get(idx, t) < 0 && l2_named_empty_actual(a0, idx, t) = 0 && (actual_span < 1 || l2_emit_fields(a0, actual_span, mi, ind, l2_act_at(acts, t)) != 0)
             return: l2_prep_drop(acts, hides)
         # A letter goes to a typed formal as its payload, admitted (D-57).
         if: actual_span = 1 && l2_nsty_get(idx, t) >= 0 && l2_untyped_graph(mi, a0\value) != 0 && l2_is_letter_name(mi, a0\value) != 0 && l2_payload_expr(l2_act_at(acts, t)) != 0
@@ -18810,6 +18886,20 @@ fn: l2_rw_catch_stmt (const: @(LmP0Node stmt); int: into; int: slot; @: int made
         return: 1
 return: 0
 
+# Fresh empty Structure, admitted to ni, as one call input (D-23).
+fn: l2_rw_empty_arg (int: ni; int: parent; @: int out) int
+    int: adm
+    int: fr
+    int: proto
+    if: l2_rw_admit(parent, ni, 0, @ adm) != 0
+        return: 1
+    if: l2_rw_frame(adm, "LMX_WALK_OP_FRESH", 2, @ fr) != 0 || l2_rw_plain(fr, 0, @ proto) != 0 || l2_rw_put(fr, 1, proto) != 0
+        return: 1
+    if: l2_rw_put(adm, 3, fr) != 0
+        return: 1
+    \out: adm
+return: 0
+
 # A call of method idx under container parent: the occurrence by reference, then each input from
 # `args` (a field run, split by l2_expr_span like any actual list).
 fn: l2_rw_call (const: @(LmP0Node node); int: idx; @: LmP0Field args; int: parent; @: int out) int
@@ -18898,8 +18988,14 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; @: LmP0Field args; int: paren
             ---
         else:
             if: l2_nsty_get(idx, k) >= 0
-                if: l2_rw_struct_arg(node, a, span, l2_nsty_get(idx, k), \out, @ arg) != 0 || l2_rw_put(\out, 5 + k, arg) != 0
-                    return: 1
+                if: l2_named_empty_actual(a, idx, k) != 0
+                    if: l2_rw_empty_arg(l2_nsty_get(idx, k), \out, @ arg) != 0 || l2_rw_put(\out, 5 + k, arg) != 0
+                        return: 1
+                    ---
+                else:
+                    if: l2_rw_struct_arg(node, a, span, l2_nsty_get(idx, k), \out, @ arg) != 0 || l2_rw_put(\out, 5 + k, arg) != 0
+                        return: 1
+                    ---
                 ---
             else:
                 if: l2_rw_texpr(a, span, l2_own_ty_of_param(l2_input_ft(idx, k)), \out, @ arg) != 0 || l2_rw_put(\out, 5 + k, arg) != 0
@@ -23661,7 +23757,10 @@ fn: l2_emit_unit (const: @(char out_path)) int
         if: l2_ns_parent[k] >= 0 && l2_ns_eternal[k] >= 0 && c.fprintf(l2_out, "        l2_nsp[%d]: lmx_node_new_profiled(l2_program_arena, l2_eprofile%u)\n        if: l2_nsp[%d] != 0\n            l2_nsp[%d]\\parent: l2_nsp[%d]\n", k, (cast: (unsigned) l2_ns_eternal[k]), k, k, l2_ns_parent[k]) < 0
             fclose(l2_out)
             return: 1
-        if: l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        if: l2_nsp[%d] = 0\n            return: 1\n        if: lmx_arena_refs_open_owned(l2_program_arena, l2_nsp[%d], %uU) != 0\n            return: 1\n", k, k, (cast: (unsigned) l2_ns_count[k])) < 0
+        if: l2_ns_eternal[k] < 0 && l2_ns_count[k] > 0 && c.fprintf(l2_out, "        if: l2_nsp[%d] = 0\n            return: 1\n        if: lmx_arena_refs_open_owned(l2_program_arena, l2_nsp[%d], %uU) != 0\n            return: 1\n", k, k, (cast: (unsigned) l2_ns_count[k])) < 0
+            fclose(l2_out)
+            return: 1
+        if: l2_ns_eternal[k] < 0 && l2_ns_count[k] = 0 && c.fprintf(l2_out, "        if: l2_nsp[%d] = 0\n            return: 1\n", k) < 0
             fclose(l2_out)
             return: 1
         if: l2_ns_eternal[k] >= 0 && l2_ns_count[k] > 0 && c.fprintf(l2_out, "        if: l2_nsp[%d] = 0\n            return: 1\n        l2_profile_refs: lmx_arena_take_n_profiled(l2_program_arena, c.sizeof(@: void), c.LMX_KIND_CHILDREN, c.LMX_TYPE_REFS, l2_eprofile%u, %uU)\n        if: l2_profile_refs = 0\n            return: 1\n        l2_nsp[%d]\\data: l2_profile_refs\n        l2_nsp[%d]\\len: %d\n", k, (cast: (unsigned) l2_ns_eternal[k]), (cast: (unsigned) l2_ns_count[k]), k, k, l2_ns_count[k]) < 0

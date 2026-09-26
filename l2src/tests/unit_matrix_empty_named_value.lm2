@@ -1,9 +1,15 @@
-# FABLE-GROKBOT-MATRIX-20260924-143 (e): empty Structure as ONE named value
-# `f(x: ())` (book SS12 opaque/named position) -- distinct from empty arg list.
-# measured: 2026-09-23 -- translator refuses ("unknown method", frame=x);
-# named call-argument fields are not yet admitted. Defect listed; no translator patch.
-fn: f (int: n) int
-    return: n
-end: f
+# D-23: empty Structure as ONE named argument (book §9, opaque named position).
+# `take(x: ())` admits () to E. Not a call of x. Contrast unit_matrix_empty_arglist.
+E: ()
+end: E
 
-return: f(x: ())
+fn: take (E: x) int
+return: 7
+
+int: r 0
+r: take(x: ())
+if: r != 7
+    sendMessage: exit(exit_code: 3; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return
